@@ -1254,8 +1254,10 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/domain/pm-notes-lint.ts": ["lintPmNotes"],
   "core/src/domain/project-groups.ts": [
+    "aggregateProjectMemberOutcomes",
     "projectGroupDeclared",
     "projectGroupMemberSelectors",
+    "projectMemberOutcomeOfHealth",
     "selectProjectGroups",
     "validateProjectGroupsDocument",
   ],
@@ -2309,7 +2311,11 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "resolveProjectGroupMember",
     "selectDaemonReachability",
   ],
-  "cli/src/commands/projects.ts": ["createProjectsCommandDefinition"],
+  "cli/src/commands/projects.ts": [
+    "createProjectsCommandDefinition",
+    "isProjectScopedWorkData",
+    "renderProjectScopedWorkText",
+  ],
   "cli/src/output/projects-text.ts": [
     "daemonCell",
     "isProjectGroupsListData",

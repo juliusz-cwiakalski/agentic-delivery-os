@@ -12,6 +12,8 @@
 import {
   PROJECTS_LIST_VERB,
   type ProjectGroupsListData,
+  type ProjectScopedMemberWork,
+  type ProjectScopedWorkData,
   type ProjectsListData,
 } from "@delivery-os/core/contracts";
 import type { CommandDefinition } from "../index.js";
@@ -50,6 +52,73 @@ export type ProjectsCommandRuntime = {
   readonly readProjectGroup: (
     groupKey: string,
   ) => ProjectGroupRuntimeRead | Promise<ProjectGroupRuntimeRead>;
+};
+
+/**
+ * One group-scoped work read (GH-309 F-5, F-6): the `queue list --project` and
+ * `status --project` payload, or one of the classified identities
+ * `projects.config-invalid` (exit 1), `projects.unknown-group` (exit 1), or
+ * `projects.scope-unavailable` (exit 2).
+ */
+export type ProjectGroupWorkRead =
+  | { readonly ok: true; readonly data: ProjectScopedWorkData }
+  | { readonly ok: false; readonly code: string; readonly summary?: string };
+
+/** Whether one command payload is the group-scoped work projection. */
+export const isProjectScopedWorkData = (value: unknown): value is ProjectScopedWorkData => {
+  if (typeof value !== "object" || value === null) return false;
+  const record = value as Record<string, unknown>;
+  return typeof record.groupKey === "string" && Array.isArray(record.members);
+};
+
+/**
+ * Render the group-scoped work projection deterministically (GH-309 F-6):
+ * one row per contributed queue entry, grouped by member in declared order and
+ * split by the scheduling read's own state. A member that contributes no
+ * records still renders its classification, so a degraded member never
+ * silently vanishes from the text form.
+ */
+export const renderProjectScopedWorkText = (data: ProjectScopedWorkData): string => {
+  const columns = ["GROUP", "MEMBER", "TRACKER", "OUTCOME", "BUCKET", "REF", "STATE"];
+  const rows: string[] = [columns.join("\t")];
+  for (const member of data.members) {
+    const buckets: readonly (readonly [string, ProjectScopedMemberWork["running"]])[] = [
+      ["running", member.running],
+      ["waiting", member.waiting],
+      ["parked", member.parked],
+    ];
+    let rendered = 0;
+    for (const [bucket, entries] of buckets) {
+      for (const entry of entries) {
+        rows.push(
+          [
+            data.groupKey,
+            member.repoKey,
+            member.trackerKind,
+            member.outcome,
+            bucket,
+            entry.ref,
+            entry.state,
+          ].join("\t"),
+        );
+        rendered += 1;
+      }
+    }
+    if (rendered === 0) {
+      rows.push(
+        [
+          data.groupKey,
+          member.repoKey,
+          member.trackerKind,
+          member.outcome,
+          "none",
+          "-",
+          member.health,
+        ].join("\t"),
+      );
+    }
+  }
+  return `${rows.join("\n")}\n`;
 };
 
 const refusal = (verb: string | undefined): { readonly error: Record<string, string> } => ({

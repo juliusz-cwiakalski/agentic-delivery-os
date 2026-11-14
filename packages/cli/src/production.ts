@@ -64,6 +64,7 @@ import {
   resolveCheckoutGitDirectories,
 } from "@delivery-os/adapters/repo";
 import {
+  aggregateProjectMemberOutcomes,
   type AuthorityEvidence,
   assembleHarnessLiveness,
   buildHarnessSpawnEnvironment,
@@ -105,6 +106,7 @@ import {
   projectHandoverState,
   projectListEntry,
   projectMemberHealth,
+  projectMemberOutcomeOfHealth,
   projectStateRoot,
   readDaemonHeartbeat,
   readDaemonInstance,
@@ -171,9 +173,13 @@ import {
   type ProjectGroupEntry,
   type ProjectGroupMemberEntry,
   type ProjectGroupMemberSelected,
+  type ProjectGroupsConfig,
   type ProjectGroupValidated,
   type ProjectsListEntry,
+  type ProjectScopedMemberWork,
+  QUEUE_DEFAULT_NEXT_ACTIONS,
   type QueueDegradationReason,
+  type QueueEntryProjection,
   type QueueTrackerRead,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
@@ -201,7 +207,11 @@ import {
 } from "@delivery-os/core/state";
 import type { CoordinatorSessionFacts } from "./commands/coordinator-loop.js";
 import type { DaemonCommandRuntime } from "./commands/daemon.js";
-import type { ProjectGroupRuntimeRead, ProjectsRuntimeRead } from "./commands/projects.js";
+import type {
+  ProjectGroupRuntimeRead,
+  ProjectGroupWorkRead,
+  ProjectsRuntimeRead,
+} from "./commands/projects.js";
 import { createDaemonCommandRuntime, resolveProjectDaemonSettings } from "./daemon-compose.js";
 import {
   type ConfigProgramOptions,
@@ -215,9 +225,11 @@ import {
   createPhaseCommitExtension,
   createPlanCommandRuntime,
   createProductionCommitRuntimeOptions,
+  createQueueCommandRuntime,
   createResolvedProviderProbe,
   createStatusCommandRuntime,
   createTelemetryIngestSink,
+  type QueueComposition,
   createVerifyCommandRuntime,
   createVerifyDeployCommandRuntime,
   createVerifyGatesCommandRuntime,
@@ -480,6 +492,32 @@ const withScopeWarnings = (
   }
   return { commands };
 };
+
+/**
+ * The pair-or-absent queue repository binding (F-1). The binding is present only
+ * when both the contention-domain repository key and the resolved checkout root
+ * exist; otherwise it is absent. It is never a one-sided pair, and this is the
+ * one place the pair literal is constructed.
+ */
+const repositoryBindingOf = (
+  repository: string | undefined,
+  repositoryRoot: string | undefined,
+): { readonly repository: string; readonly repositoryRoot: string } | undefined =>
+  repository === undefined || repositoryRoot === undefined
+    ? undefined
+    : { repository, repositoryRoot };
+
+/**
+ * Attach the derived binding to a queue composition. This is the one place a
+ * composition declares its `repositoryBinding` property, so every composition —
+ * the checkout-scoped one and each group member's per-checkout one — carries a
+ * binding produced by the same derivation.
+ */
+const withRepositoryBinding = (
+  composition: QueueComposition,
+  binding: QueueComposition["repositoryBinding"],
+): QueueComposition =>
+  binding === undefined ? composition : { ...composition, repositoryBinding: binding };
 
 /**
  * The classified scope-refusal program (GH-288 F-1, DEC-16, DEC-17).
@@ -932,10 +970,10 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     // One total derivation: the binding is present only when the GitHub target,
     // the contention-domain key, and the resolved checkout root all resolve. Any
     // failed condition yields no binding at all, never a one-sided pair (F-1).
-    const repositoryBinding =
-      target !== undefined && repositoryKey !== undefined && repositoryFacts.root !== undefined
-        ? { repository: repositoryKey, repositoryRoot: repositoryFacts.root }
-        : undefined;
+    const repositoryBinding = repositoryBindingOf(
+      target !== undefined ? repositoryKey : undefined,
+      repositoryFacts.root,
+    );
     const harnessSpawnRunner = facts.harnessSpawnRunner ?? createHostSpawnRunner();
     const harnessSpawnStarter = facts.harnessSpawnStarter ?? createHostSpawnStarter();
     const clientTarget = target ?? { owner: "unresolved", name: "unresolved" };
@@ -947,6 +985,17 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     });
     const pmContextPath = `${cwd}/.ai/local/pm-context.yaml`;
 
+    /**
+     * The group-scoped work read (GH-309 F-5, F-6). The production closure is
+     * assigned below once the group read helpers exist; every composed runtime
+     * only invokes it after composition has completed.
+     */
+    let readProjectGroupWork: (groupKey: string) => Promise<ProjectGroupWorkRead> = async () => ({
+      ok: false,
+      code: "projects.scope-unavailable",
+      summary: "the project group scope is not composed",
+    });
+
     const statusComposition = () => ({
       store,
       credentials,
@@ -956,6 +1005,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       clock: { nowMs, nowIso },
       github: { instance },
       readOwnerHold,
+      readProjectGroup: (groupKey: string) => readProjectGroupWork(groupKey),
       ...(truthReadCredential === undefined ? {} : { credentialReference: truthReadCredential }),
     });
     const noChain = () => ({
@@ -1043,44 +1093,51 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         : ["daemon-unreachable"];
     };
 
-    const queueComposition = {
-      store,
-      facts: queueFacts,
-      ...(repositoryBinding === undefined ? {} : { repositoryBinding }),
-      nowIso,
-      nowMs,
-      newFenceToken,
-      degraded: daemonReachability,
-      readyRuntime: createStatusCommandRuntime(statusComposition(), noChain),
-      readOwnerHold,
-      // GH-292 F-5: the per-item tracker delivery-state read for `queue
-      // reconcile`, riding the same verified GitHub client the closeout
-      // composition reads with. No ambient credential read: the client uses
-      // the already-injected declared credential port. `provider.not-found`
-      // is a truthful observation (the item is retained and reported
-      // unobserved); an unavailable read surfaces its provider identity and
-      // the sweep stops.
-      readTrackerDeliveryState: async (ref: string): Promise<QueueTrackerRead> => {
-        const issueNumber = /^[A-Za-z]+-([0-9]+)$/.exec(ref)?.[1];
-        if (issueNumber === undefined) {
-          return { ok: false, failureCode: "provider.payload.invalid" };
-        }
-        const observation = await client.readWorkItemObservation(issueNumber);
-        if (observation.observation === "observed") {
-          return { ok: true, kind: "state", deliveryState: observation.value.status.deliveryState };
-        }
-        if (observation.observation === "not-found") {
-          return { ok: true, kind: "not-found" };
-        }
-        return {
-          ok: false,
-          failureCode:
-            observation.observation === "invalid" && observation.code !== undefined
-              ? observation.code
-              : "provider.outage",
-        };
+    const queueComposition = withRepositoryBinding(
+      {
+        store,
+        facts: queueFacts,
+        nowIso,
+        nowMs,
+        newFenceToken,
+        degraded: daemonReachability,
+        readyRuntime: createStatusCommandRuntime(statusComposition(), noChain),
+        readOwnerHold,
+        readProjectGroup: (groupKey: string) => readProjectGroupWork(groupKey),
+        // GH-292 F-5: the per-item tracker delivery-state read for `queue
+        // reconcile`, riding the same verified GitHub client the closeout
+        // composition reads with. No ambient credential read: the client uses
+        // the already-injected declared credential port. `provider.not-found`
+        // is a truthful observation (the item is retained and reported
+        // unobserved); an unavailable read surfaces its provider identity and
+        // the sweep stops.
+        readTrackerDeliveryState: async (ref: string): Promise<QueueTrackerRead> => {
+          const issueNumber = /^[A-Za-z]+-([0-9]+)$/.exec(ref)?.[1];
+          if (issueNumber === undefined) {
+            return { ok: false, failureCode: "provider.payload.invalid" };
+          }
+          const observation = await client.readWorkItemObservation(issueNumber);
+          if (observation.observation === "observed") {
+            return {
+              ok: true,
+              kind: "state",
+              deliveryState: observation.value.status.deliveryState,
+            };
+          }
+          if (observation.observation === "not-found") {
+            return { ok: true, kind: "not-found" };
+          }
+          return {
+            ok: false,
+            failureCode:
+              observation.observation === "invalid" && observation.code !== undefined
+                ? observation.code
+                : "provider.outage",
+          };
+        },
       },
-    };
+      repositoryBinding,
+    );
 
     const gates = createVerifyGatesCommandRuntime({
       store,
@@ -2571,17 +2628,15 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     };
 
     /**
-     * The group read behind `projects list --project <groupKey>` (GH-309 F-1,
-     * F-2, F-4): the configuration document is the sole membership source, and
-     * the enumeration is over every configured group in declared order, filtered
-     * to the requested key only when one is supplied. The delivered default form
-     * is untouched here — the group enumeration reaches the CLI only through the
-     * scoped grammar until the rename phase. An absent or empty configuration is
-     * the valid empty listing at exit 0; a readable-but-invalid document is
-     * `projects.config-invalid`; a document or invoking scope that cannot be read
-     * is `projects.scope-unavailable`.
+     * Load and validate the configuration document once for every
+     * group-scoped read (GH-309 F-1, F-2, F-5). An absent or empty
+     * configuration is the valid empty listing (opt-in adoption); a readable
+     * but invalid document is `projects.config-invalid`; a document or
+     * invoking scope that cannot be read is `projects.scope-unavailable`.
      */
-    const readProjectGroups = async (groupKey?: string): Promise<ProjectGroupRuntimeRead> => {
+    const readProjectGroupsConfiguration = ():
+      | { readonly ok: true; readonly config: ProjectGroupsConfig }
+      | { readonly ok: false; readonly code: string; readonly summary: string } => {
       const gitRoot = gitRootForConfig();
       if (gitRoot === undefined) {
         return {
@@ -2620,21 +2675,13 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             describeConfigInvalid(validated.reason),
         };
       }
-      const groupsConfig = validated.config;
-      // Absent or empty configuration is the valid empty listing (opt-in
-      // adoption): zero configured groups is legitimate zero-group truth, never
-      // a silently empty group for a document that exists but cannot be read.
-      if (groupsConfig.state === "empty") {
-        return { ok: true, data: { groups: [] } };
-      }
-      if (groupKey !== undefined && !projectGroupDeclared(groupsConfig, groupKey)) {
-        return {
-          ok: false,
-          code: "projects.unknown-group",
-          summary: `project group "${groupKey}" is not declared by the configuration document`,
-        };
-      }
-      const groups = selectProjectGroups(groupsConfig, groupKey);
+      return { ok: true, config: validated.config };
+    };
+
+    /** The one host-index read every group-scoped read shares (no maintenance). */
+    const readProjectGroupsHostIndex = ():
+      | { readonly ok: true; readonly index: readonly HostIndexEntry[] }
+      | { readonly ok: false; readonly code: string; readonly summary: string } => {
       hostIndexAccess.countList();
       const indexRead = readHostIndexFile(hostRoot);
       const indexPath = hostIndexDocumentPath(hostRoot);
@@ -2654,29 +2701,215 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           summary: `the host index at ${indexPath} is present but cannot be parsed`,
         };
       }
-      const index = document?.projects ?? [];
+      return { ok: true, index: document?.projects ?? [] };
+    };
+
+    /** Observe one validated group's declared members in declared order. */
+    const observeProjectGroup = async (
+      group: ProjectGroupValidated,
+      index: readonly HostIndexEntry[],
+    ): Promise<ProjectGroupEntry> => {
+      const workspace = scanGroupWorkspace(group);
+      const members: ProjectGroupMemberEntry[] = [];
+      for (const member of group.members) {
+        members.push(await readGroupMember(member, index, workspace));
+      }
+      return projectGroupEntry({
+        groupKey: group.groupKey,
+        name: group.name,
+        ...(group.workspaceRoot === undefined ? {} : { workspaceRoot: group.workspaceRoot }),
+        members,
+      });
+    };
+
+    /** The three queue-state buckets one observed member contributes (F-6). */
+    type MemberQueueWork =
+      | {
+          readonly ok: true;
+          readonly running: readonly QueueEntryProjection[];
+          readonly waiting: readonly QueueEntryProjection[];
+          readonly parked: readonly QueueEntryProjection[];
+        }
+      | { readonly ok: false };
+
+    /**
+     * Read one observed member's queue work over its own per-checkout state
+     * (GH-309 F-5, F-6): the state layer's scope stays per-checkout, never a
+     * group-scoped store. Each member opens its own state handle and computes
+     * the delivered schedule, and the entries are split by that read's own
+     * states: held entries run, ready/not-ready entries wait, parked/stuck
+     * entries are parked. A state read that fails classifies the member
+     * `state-unavailable` instead of failing the aggregate.
+     */
+    const readMemberQueueWork = (member: ProjectGroupMemberEntry): MemberQueueWork => {
+      const memberStore = createStateStore(
+        {
+          level: "local",
+          workspaceId,
+          fenceNamespace: "cli",
+          schemaVersion: STATE_SCHEMA_VERSION,
+          stateDirectory: projectStateRoot(hostRoot, member.repoKey),
+        },
+        { driver: "jsonl", edge: createNodeStateEdge() },
+      );
+      const composition: QueueComposition = withRepositoryBinding(
+        {
+          store: memberStore,
+          facts: queueFacts,
+          nowIso,
+          nowMs,
+          newFenceToken,
+          degraded: daemonReachability,
+        },
+        repositoryBindingOf(member.repoKey, member.root),
+      );
+      const read = createQueueCommandRuntime(composition).readSchedule(QUEUE_DEFAULT_NEXT_ACTIONS);
+      if (!read.ok) return { ok: false };
+      const entries = read.schedule.entries;
+      // The scheduling read projects a lease per repository, so the running
+      // bucket is exactly the entries a live lease names. Parked entries are
+      // the ones the same read reports parked or stuck (or an active park
+      // projection names); every other contributed entry waits.
+      const runningRefs = new Set(read.schedule.leases.map((lease) => lease.ref));
+      const parkedRefs = new Set(
+        read.schedule.parks
+          .filter((park) => park.recoveryState === "parked")
+          .map((park) => park.ref),
+      );
+      const isParked = (ref: string, state: string): boolean =>
+        parkedRefs.has(ref) || state === "parked" || state === "stuck";
+      const isRunning = (ref: string): boolean => runningRefs.has(ref);
+      return {
+        ok: true,
+        running: entries.filter((entry) => isRunning(entry.ref)),
+        parked: entries.filter(
+          (entry) => !isRunning(entry.ref) && isParked(entry.ref, entry.state),
+        ),
+        waiting: entries.filter(
+          (entry) => !isRunning(entry.ref) && !isParked(entry.ref, entry.state),
+        ),
+      };
+    };
+
+    /**
+     * The group read behind `projects list --project <groupKey>` (GH-309 F-1,
+     * F-2, F-4): the configuration document is the sole membership source, and
+     * the enumeration is over every configured group in declared order, filtered
+     * to the requested key only when one is supplied. The delivered default form
+     * is untouched here — the group enumeration reaches the CLI only through the
+     * scoped grammar until the rename phase. An absent or empty configuration is
+     * the valid empty listing at exit 0. The aggregation keys are applied once
+     * over the selected groups' members (F-5).
+     */
+    const readProjectGroups = async (groupKey?: string): Promise<ProjectGroupRuntimeRead> => {
+      const configRead = readProjectGroupsConfiguration();
+      if (!configRead.ok) return configRead;
+      const groupsConfig = configRead.config;
+      if (groupsConfig.state === "empty") {
+        return { ok: true, data: { groups: [] } };
+      }
+      if (groupKey !== undefined && !projectGroupDeclared(groupsConfig, groupKey)) {
+        return {
+          ok: false,
+          code: "projects.unknown-group",
+          summary: `project group "${groupKey}" is not declared by the configuration document`,
+        };
+      }
+      const indexRead = readProjectGroupsHostIndex();
+      if (!indexRead.ok) return indexRead;
+      const groups = selectProjectGroups(groupsConfig, groupKey);
       const entries: ProjectGroupEntry[] = [];
       for (const group of groups) {
-        const workspace = scanGroupWorkspace(group);
-        const members: ProjectGroupMemberEntry[] = [];
-        for (const member of group.members) {
-          members.push(await readGroupMember(member, index, workspace));
-        }
-        entries.push(
-          projectGroupEntry({
-            groupKey: group.groupKey,
-            name: group.name,
-            ...(group.workspaceRoot === undefined ? {} : { workspaceRoot: group.workspaceRoot }),
-            members,
-          }),
-        );
+        entries.push(await observeProjectGroup(group, indexRead.index));
       }
-      return { ok: true, data: { groups: entries } };
+      const aggregation = aggregateProjectMemberOutcomes(
+        entries.flatMap((group) =>
+          group.members.map((member) => ({
+            repoKey: member.repoKey,
+            outcome: projectMemberOutcomeOfHealth(member.health),
+          })),
+        ),
+      );
+      return { ok: true, data: { groups: entries, ...aggregation } };
     };
 
     /** The scoped read the command surface exposes until the rename phase. */
     const readProjectGroup = async (groupKey: string): Promise<ProjectGroupRuntimeRead> =>
       readProjectGroups(groupKey);
+
+    /**
+     * The group-scoped work read behind `queue list --project <groupKey>` and
+     * `status --project <groupKey>` (GH-309 F-5, F-6): the same configuration
+     * load, the same refusal identities, and the same per-member resolution as
+     * the group surface, then one per-checkout queue read per observed member.
+     * Members are returned in declared order; a non-observed member contributes
+     * no records but stays classified, and one `state-unavailable` member
+     * yields `data.partial` true with `data.degradedMembers[]` while readable
+     * members are still returned.
+     */
+    const readProjectGroupWorkFor = async (groupKey: string): Promise<ProjectGroupWorkRead> => {
+      const configRead = readProjectGroupsConfiguration();
+      if (!configRead.ok) return configRead;
+      const config = configRead.config;
+      if (config.state === "empty") {
+        return { ok: true, data: { groupKey, members: [] } };
+      }
+      const group = selectProjectGroups(config, groupKey)[0];
+      if (group === undefined || !projectGroupDeclared(config, groupKey)) {
+        return {
+          ok: false,
+          code: "projects.unknown-group",
+          summary: `project group "${groupKey}" is not declared by the configuration document`,
+        };
+      }
+      const indexRead = readProjectGroupsHostIndex();
+      if (!indexRead.ok) return indexRead;
+      const observed = await observeProjectGroup(group, indexRead.index);
+      const members: ProjectScopedMemberWork[] = [];
+      for (const memberEntry of observed.members) {
+        const outcome = projectMemberOutcomeOfHealth(memberEntry.health);
+        if (outcome !== "observed") {
+          members.push({
+            repoKey: memberEntry.repoKey,
+            root: memberEntry.root,
+            trackerKind: memberEntry.trackerKind,
+            outcome,
+            health: memberEntry.health,
+            running: [],
+            waiting: [],
+            parked: [],
+          });
+          continue;
+        }
+        const work = readMemberQueueWork(memberEntry);
+        if (!work.ok) {
+          members.push({
+            repoKey: memberEntry.repoKey,
+            root: memberEntry.root,
+            trackerKind: memberEntry.trackerKind,
+            outcome: "state-unavailable",
+            health: "state-unavailable",
+            running: [],
+            waiting: [],
+            parked: [],
+          });
+          continue;
+        }
+        members.push({
+          repoKey: memberEntry.repoKey,
+          root: memberEntry.root,
+          trackerKind: memberEntry.trackerKind,
+          outcome: "observed",
+          health: memberEntry.health,
+          running: work.running,
+          waiting: work.waiting,
+          parked: work.parked,
+        });
+      }
+      const aggregation = aggregateProjectMemberOutcomes(members);
+      return { ok: true, data: { groupKey, members, ...aggregation } };
+    };
+    readProjectGroupWork = readProjectGroupWorkFor;
 
     const configured: ConfigProgramOptions = {
       workingName: facts.workingName,

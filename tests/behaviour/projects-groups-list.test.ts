@@ -13,7 +13,7 @@
  * absence.
  */
 import { describe, expect, test } from "bun:test";
-import { chmodSync, mkdirSync } from "node:fs";
+import { chmodSync, mkdirSync, writeFileSync } from "node:fs";
 import { createServer, type Server } from "node:net";
 import { join } from "node:path";
 import { probeDaemonSocket } from "../../packages/adapters/src/daemon/unix";
@@ -387,6 +387,45 @@ describe("TC-GRPSURF-002 text is deterministic and order follows configuration",
         fixture.b.repoKey,
         fixture.a.repoKey,
       ]);
+    } finally {
+      fixture.dispose();
+    }
+  });
+});
+
+describe("TC-GRPAGG-001 one degraded member yields a classified partial result at exit 0", () => {
+  test("a state-unavailable member degrades the read without failing it", async () => {
+    const fixture = createWorkspaceFixture("grpagg-001");
+    try {
+      // Member b's state location is a regular file: the member classifies
+      // state-unavailable while member a stays readable.
+      const unavailableState = projectStateRoot(fixture.host.hostRoot, fixture.b.repoKey);
+      mkdirSync(join(fixture.host.hostRoot, "projects"), { recursive: true });
+      writeFileSync(unavailableState, "not a state directory\n");
+      writeProjectGroupsConfig(
+        fixture.harness,
+        projectGroupsDocument({
+          groupKey: "platform",
+          members: [
+            { selector: "root", value: fixture.a.root },
+            { selector: "root", value: fixture.b.root },
+          ],
+        }),
+      );
+
+      const run = await scopedList(fixture.harness, "platform");
+      expect(run.exitCode, run.stderr).toBe(0);
+      const data = dataOf(run);
+      expect(data.partial).toBe(true);
+      expect(data.degradedMembers).toEqual([
+        { repoKey: fixture.b.repoKey, outcome: "state-unavailable" },
+      ]);
+
+      const members = membersOf(run);
+      expect(members).toHaveLength(2);
+      const byKey = new Map(members.map((member) => [member.repoKey, member]));
+      expect(byKey.get(fixture.b.repoKey)?.health).toBe("state-unavailable");
+      expect(byKey.get(fixture.a.repoKey)?.health).not.toBe("state-unavailable");
     } finally {
       fixture.dispose();
     }

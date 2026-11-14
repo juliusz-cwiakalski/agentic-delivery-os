@@ -210,3 +210,45 @@ notes:
       rename code."
     type: info
     date: "2026-11-14"
+  - text: "Plan phase 3 'Workspace discovery (declared members only) and the
+      project-groups.v1 group surface' complete: commit 8f47d0b3 (primitive
+      template subject, which named the changeset because that path sorted
+      first). Obligations 3.1-3.6 verified: adapters/file/workspace-scan.ts
+      (containment invariant, declared members only at any depth, no scan
+      without a configured workspaceRoot); member resolution with 1:1
+      no-workspace parity and per-member observation reusing the delivered
+      per-checkout machinery; the closed OQ-3 health vocabulary with
+      not-yet-supported mandatory for unimplemented tracker kinds; group
+      enumeration and deterministic text rendering in declared order;
+      tests/behaviour/projects-groups-list.test.ts (TC-GRPWORK-001..003,
+      TC-GRPSURF-001..003) and tests/structure/projects-groups-envelope.test.ts
+      (DM-2 envelope, closed health vocabulary, TC-GRPENV group cases) plus the
+      groups fixture helper and inventory rows. Intermediate-state rule held:
+      the default `projects list` form still returns the delivered flat
+      projects.v1 payload; the flip stays in phase 5. Test result: 31 pass / 0
+      fail / 0 skip across the five projects suites (groups-list, envelope,
+      config, list-contract, help). Phase commit landed BEFORE its pm-notes
+      evidence entry (the run was interrupted); the evidence is recorded here
+      and lands with the phase-4 commit."
+    type: info
+    date: "2026-11-14"
+  - text: "PLAN AMENDMENT (mechanical, in commit 8f47d0b3): phase 3 scope gained
+      .changeset/gh-309-project-groups-minor.md, with a comment recording why —
+      the branch-diff release gate requires exactly one five-package minor
+      changeset once the first publishable sources land. No phase count, id,
+      ordering, or obligation changed. No further plan amendment is expected."
+    type: decision
+    date: "2026-11-14"
+  - text: "RISK (gate environment contract): the plan's C-7 gate command
+      `TMPDIR=$PWD/tmp/tmpdir pnpm check` is unusable in this checkout.
+      tests/fixtures/projects/state-scope.ts nonCheckoutDirectory() requires a
+      temp parent that is outside EVERY git work tree (the GH-273 rule) and
+      walks tmpdir(), dirname(cwd), then APPROVED_BASE (= cwd/tmp/tmpdir).
+      With TMPDIR inside the work tree all three candidates resolve inside it,
+      so it throws and three suites fail (TC-PROJ-013, TC-PROJ-041,
+      TC-GRPDOC-003) — an environment failure, not a code defect; all 31 tests
+      pass with TMPDIR outside the work tree. All gates from here run with
+      TMPDIR=/tmp/opencode/tmpdir. This is a permanent-fixture versus
+      plan-command mismatch worth fixing outside this ticket."
+    type: risk
+    date: "2026-11-14"

@@ -11,10 +11,13 @@
 import {
   PROJECT_GROUPS_CONFIG_SCHEMA,
   type ProjectConfigInvalidReason,
+  type ProjectDegradedMember,
   type ProjectGroupMemberDeclaration,
   type ProjectGroupMemberSelected,
   type ProjectGroupsConfig,
   type ProjectGroupValidated,
+  type ProjectMemberHealth,
+  type ProjectMemberOutcome,
 } from "../contracts/projects.js";
 
 /** One declared-member selector shape: exactly one of the two keys carries a non-empty string. */
@@ -213,3 +216,46 @@ export const projectGroupMemberSelectors = (
   roots: group.members.flatMap((member) => (member.kind === "root" ? [member.root] : [])),
   repoKeys: group.members.flatMap((member) => (member.kind === "repoKey" ? [member.repoKey] : [])),
 });
+
+/**
+ * The aggregation outcome a member's health records (GH-309 OQ-3, DM-5).
+ *
+ * The three non-`observed` outcomes map to same-named health values; an
+ * `observed` health — `healthy` or `degraded` — resolves to the one `observed`
+ * outcome. Every health therefore resolves to exactly one closed outcome, and
+ * the mapping is defined once for every group-scoped read.
+ */
+export const projectMemberOutcomeOfHealth = (health: ProjectMemberHealth): ProjectMemberOutcome =>
+  health === "healthy" || health === "degraded" ? "observed" : health;
+
+/**
+ * The aggregation keys every group-scoped read carries (GH-309 F-5, DM-2).
+ *
+ * Defined once and applied to the group surface and the scoped queue/status
+ * reads: one `state-unavailable` member degrades the result, never fails it —
+ * `partial` is true and `degradedMembers[]` names the degraded member by its
+ * `repoKey` and outcome, while every readable member is still returned. A
+ * `not-yet-supported` member contributes no records and never degrades the
+ * read; an `unregistered` member stays classified in `members[]` and likewise
+ * never fails the read. The keys are omitted entirely when no member degraded,
+ * so a clean read adds nothing to `data`.
+ */
+export const aggregateProjectMemberOutcomes = (
+  members: readonly {
+    readonly repoKey: string;
+    readonly outcome: ProjectMemberOutcome;
+  }[],
+): {
+  readonly partial?: boolean;
+  readonly degradedMembers?: readonly ProjectDegradedMember[];
+} => {
+  const degraded = members.filter((member) => member.outcome === "state-unavailable");
+  if (degraded.length === 0) return {};
+  return {
+    partial: true,
+    degradedMembers: degraded.map((member) => ({
+      repoKey: member.repoKey,
+      outcome: member.outcome,
+    })),
+  };
+};

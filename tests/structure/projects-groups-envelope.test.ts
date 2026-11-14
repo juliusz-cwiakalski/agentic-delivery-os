@@ -37,9 +37,12 @@ import {
   PROJECT_GROUPS_LIST_SCHEMA,
   PROJECT_MEMBER_HEALTH_VALUES,
   PROJECT_MEMBER_OUTCOMES,
+  type ProjectMemberHealth,
 } from "../../packages/core/src/contracts/projects";
 import {
+  aggregateProjectMemberOutcomes,
   projectGroupMemberSelectors,
+  projectMemberOutcomeOfHealth,
   selectProjectGroups,
   validateProjectGroupsDocument,
 } from "../../packages/core/src/domain/project-groups";
@@ -252,6 +255,37 @@ describe("TC-GRPAGG-002 the outcome and health vocabularies are closed", () => {
     );
     expect([...new Set(produced)].sort()).toEqual([...PROJECT_MEMBER_HEALTH_VALUES].sort());
   });
+
+  test("every closed health resolves to exactly one closed aggregation outcome", () => {
+    for (const health of PROJECT_MEMBER_HEALTH_VALUES) {
+      expect(PROJECT_MEMBER_OUTCOMES).toContain(projectMemberOutcomeOfHealth(health));
+    }
+    expect(PROJECT_MEMBER_HEALTH_VALUES.map(projectMemberOutcomeOfHealth)).toEqual([
+      "observed",
+      "observed",
+      "state-unavailable",
+      "not-yet-supported",
+      "unregistered",
+    ]);
+
+    // One state-unavailable member degrades the aggregate; a not-yet-supported
+    // member contributes nothing and never degrades the read.
+    expect(
+      aggregateProjectMemberOutcomes([
+        { repoKey: "member-a-1a2b3c4d", outcome: "observed" },
+        { repoKey: "member-b-5e6f7a8b", outcome: "state-unavailable" },
+      ]),
+    ).toEqual({
+      partial: true,
+      degradedMembers: [{ repoKey: "member-b-5e6f7a8b", outcome: "state-unavailable" }],
+    });
+    expect(
+      aggregateProjectMemberOutcomes([
+        { repoKey: "member-a-1a2b3c4d", outcome: "observed" },
+        { repoKey: "member-c-9a8b7c6d", outcome: "not-yet-supported" },
+      ]),
+    ).toEqual({});
+  });
 });
 
 describe("TC-GRPSURF-001 the daemon reason vocabulary stays closed and ordered", () => {
@@ -441,6 +475,17 @@ describe("TC-GRPENV-001 and the OQ-3 health cases over the delivered group envel
         "unregistered",
         "healthy",
         "degraded",
+      ]);
+      // TC-GRPAGG-002: every member resolves to exactly one closed outcome, and
+      // the declared-but-unlocated member stays classified rather than
+      // vanishing from members[].
+      expect(
+        members.map((member) => projectMemberOutcomeOfHealth(member.health as ProjectMemberHealth)),
+      ).toEqual(["state-unavailable", "not-yet-supported", "unregistered", "observed", "observed"]);
+      expect(members[2]?.repoKey).toBe(missingUnregistered);
+      expect(dataOf(run).partial).toBe(true);
+      expect(dataOf(run).degradedMembers).toEqual([
+        { repoKey: unavailable.repoKey, outcome: "state-unavailable" },
       ]);
       expect(members[0]?.trackerKind).toBe("github");
       expect(members[1]?.trackerKind).toBe("jira");

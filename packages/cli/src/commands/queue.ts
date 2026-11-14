@@ -58,6 +58,11 @@ import {
   type QueueWeightClassSource,
 } from "@delivery-os/core/contracts";
 import type { CommandDefinition } from "../index.js";
+import {
+  isProjectScopedWorkData,
+  type ProjectGroupWorkRead,
+  renderProjectScopedWorkText,
+} from "./projects.js";
 import { collectStatusFacts, type StatusCommandRuntime } from "./status.js";
 
 /** The queue command reuses the delivered status reader set verbatim. */
@@ -253,6 +258,13 @@ export type QueueCommandRuntime = {
   readonly reconcile: (input: { readonly ref?: string }) => Promise<QueueRuntimeReconcile>;
   /** The delivered ready-only definition, preserved byte-for-byte. */
   readonly readyDefinition?: CommandDefinition;
+  /**
+   * The group-scoped work read behind `queue list --project <groupKey>`
+   * (GH-309 F-5, F-6). Absent means group scoping is not composed.
+   */
+  readonly readProjectGroup?: (
+    groupKey: string,
+  ) => ProjectGroupWorkRead | Promise<ProjectGroupWorkRead>;
   /** The additive live watch stream (GH-238 F-13); absent stays truthful. */
   readonly watch?: () => AsyncIterable<string>;
 };
@@ -491,6 +503,7 @@ export const createQueueCommandDefinition = (runtime: QueueCommandRuntime): Comm
     "--until",
     "--reason",
     "--ref",
+    "--project",
     "--watch",
   ],
   ...(runtime.watch === undefined
@@ -508,9 +521,13 @@ export const createQueueCommandDefinition = (runtime: QueueCommandRuntime): Comm
     "--until",
     "--reason",
     "--ref",
+    "--project",
   ],
   positionals: { max: QUEUE_READY_MAX_POSITIONALS },
-  humanText: (data: unknown): string => renderQueueHuman(data as never),
+  humanText: (data: unknown): string =>
+    isProjectScopedWorkData(data)
+      ? renderProjectScopedWorkText(data)
+      : renderQueueHuman(data as never),
   humanFailureText: (): string => humanFailure(),
   handler: async (invocation) => {
     if (invocation.flags["--watch"] !== undefined) {
@@ -523,6 +540,11 @@ export const createQueueCommandDefinition = (runtime: QueueCommandRuntime): Comm
     if (invocation.flags["--ref"] !== undefined && subcommand !== "reconcile") {
       return fullGrammarRejection("ref-unsupported");
     }
+    // `--project` belongs to `queue list` only (GH-309 F-6, NG-3): no other
+    // queue verb gains group scoping.
+    if (invocation.flags["--project"] !== undefined && subcommand !== "list") {
+      return fullGrammarRejection("project-unsupported");
+    }
     if (subcommand === "ready") {
       if (runtime.readyDefinition === undefined) {
         return fullGrammarRejection("ready-unavailable");
@@ -532,6 +554,26 @@ export const createQueueCommandDefinition = (runtime: QueueCommandRuntime): Comm
     }
     if (subcommand === "list") {
       if (first !== undefined) return fullGrammarRejection("list-positionals");
+      // The additive group form (GH-309 F-6): `queue list --project
+      // <groupKey>` applies the one aggregation clause; the unscoped form is
+      // untouched.
+      const groupKey = invocation.flags["--project"];
+      if (groupKey !== undefined) {
+        if (typeof groupKey !== "string" || runtime.readProjectGroup === undefined) {
+          return invocationRefusal("project-scope-unavailable");
+        }
+        const scoped = await runtime.readProjectGroup(groupKey);
+        if (!scoped.ok) {
+          return {
+            error: {
+              kind: "projects",
+              code: scoped.code,
+              ...(scoped.summary === undefined ? {} : { summary: scoped.summary }),
+            },
+          };
+        }
+        return { data: scoped.data };
+      }
       const read = runtime.readSchedule(QUEUE_DEFAULT_NEXT_ACTIONS);
       if (!read.ok) return runtimeFailure(read);
       return { data: toQueueReadData(read.schedule, read.degraded) };

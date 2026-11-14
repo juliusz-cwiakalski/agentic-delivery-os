@@ -1501,6 +1501,8 @@ export {
   type ProjectMemberHealth,
   type ProjectMemberOutcome,
   type ProjectScope,
+  type ProjectScopedMemberWork,
+  type ProjectScopedWorkData,
   type ProjectStateLocation,
   type ProjectsErrorCode,
   type ProjectsListData,

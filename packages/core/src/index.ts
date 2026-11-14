@@ -881,6 +881,10 @@ export {
   weightLoads,
 } from "./domain/index.js";
 export {
+  aggregateProjectMemberOutcomes,
+  projectMemberOutcomeOfHealth,
+} from "./domain/project-groups.js";
+export {
   createLaneLaunchPlanner,
   type LaneLaunchPlanFacts,
   planLaneLaunch,

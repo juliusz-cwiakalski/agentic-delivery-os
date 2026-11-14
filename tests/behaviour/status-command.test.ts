@@ -150,9 +150,10 @@ describe("TC-STATUS-001 status command surface", () => {
     expect(restored.exitCode).toBe(0);
   });
 
-  test("the definition declares no command flags and no positionals", async () => {
+  test("the definition declares exactly --project and no positionals", async () => {
     const definition = createStatusCommandDefinition(statusRuntime(baseFacts()));
-    expect(definition.flags).toEqual([]);
+    expect(definition.flags).toEqual(["--project"]);
+    expect(definition.requiresValue).toEqual(["--project"]);
     expect(definition.positionals).toEqual({ max: 0 });
     const run = await runStatusCli(["--json", "status"], statusRuntime(baseFacts()));
     expect(run.exitCode).toBe(0);

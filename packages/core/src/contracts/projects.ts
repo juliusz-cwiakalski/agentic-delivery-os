@@ -9,6 +9,8 @@
  * name resolves from the injected brand identity.
  */
 
+import type { QueueEntryProjection } from "./queue.js";
+
 /** The git-common-directory marker holding one checkout's minted identity. */
 export const PROJECT_IDENTITY_MARKER_NAME = "project-identity.json" as const;
 
@@ -393,6 +395,37 @@ export type ProjectGroupEntry = {
  */
 export type ProjectGroupsListData = {
   readonly groups: readonly ProjectGroupEntry[];
+  readonly partial?: boolean;
+  readonly degradedMembers?: readonly ProjectDegradedMember[];
+};
+
+/**
+ * One member's contribution to a group-scoped work read (GH-309 F-5, F-6):
+ * the same classification the group surface carries plus the queue entries the
+ * member contributes, split by the scheduling read's own states. A member whose
+ * outcome is not `observed` contributes no records — its three collections stay
+ * empty rather than vanishing from `members[]`.
+ */
+export type ProjectScopedMemberWork = {
+  readonly repoKey: string;
+  readonly root: string;
+  readonly trackerKind: string;
+  readonly outcome: ProjectMemberOutcome;
+  readonly health: ProjectMemberHealth;
+  readonly running: readonly QueueEntryProjection[];
+  readonly waiting: readonly QueueEntryProjection[];
+  readonly parked: readonly QueueEntryProjection[];
+};
+
+/**
+ * The group-scoped work payload behind `queue list --project <groupKey>` and
+ * `status --project <groupKey>` (F-5, F-6): per-member work in declared order
+ * plus the same aggregation keys the group surface carries. Every new key lives
+ * under `data`; no top-level envelope key is added.
+ */
+export type ProjectScopedWorkData = {
+  readonly groupKey: string;
+  readonly members: readonly ProjectScopedMemberWork[];
   readonly partial?: boolean;
   readonly degradedMembers?: readonly ProjectDegradedMember[];
 };

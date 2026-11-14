@@ -408,6 +408,7 @@ import {
 import { createPlanCommandDefinition, type PlanCommandRuntime } from "./commands/plan.js";
 import {
   createProjectsCommandDefinition,
+  type ProjectGroupWorkRead,
   type ProjectsCommandRuntime,
 } from "./commands/projects.js";
 import {
@@ -1541,6 +1542,13 @@ export type StatusComposition = {
   readonly credentialReference?: { readonly referenceName: string; readonly sourceKey: string };
   /** The per-pass owner-hold reader supplied by the production composition. */
   readonly readOwnerHold?: () => OwnerHoldFact;
+  /**
+   * The group-scoped work read behind `status --project <groupKey>`
+   * (GH-309 F-5, F-6); absent leaves the digest-only surface.
+   */
+  readonly readProjectGroup?: (
+    groupKey: string,
+  ) => ProjectGroupWorkRead | Promise<ProjectGroupWorkRead>;
 };
 
 /**
@@ -2607,6 +2615,9 @@ export const createStatusCommandRuntime = (
     readSpend: (): SpendDigestSection => spendDigestFor(options),
     readCredentialPrerequisite: () => (admitted ? options.credentialReference : undefined),
     ...(options.readOwnerHold === undefined ? {} : { readOwnerHold: options.readOwnerHold }),
+    ...(options.readProjectGroup === undefined
+      ? {}
+      : { readProjectGroup: options.readProjectGroup }),
     nowIso: options.clock.nowIso,
     nowMs: options.clock.nowMs,
   };
@@ -4287,6 +4298,13 @@ export type QueueComposition = {
   /** The per-pass owner-hold reader supplied by the production composition. */
   readonly readOwnerHold?: () => OwnerHoldFact;
   /**
+   * The group-scoped work read behind `queue list --project <groupKey>`
+   * (GH-309 F-5, F-6); absent leaves the repository-scoped read only.
+   */
+  readonly readProjectGroup?: (
+    groupKey: string,
+  ) => ProjectGroupWorkRead | Promise<ProjectGroupWorkRead>;
+  /**
    * The per-item tracker delivery-state read for `queue reconcile` (GH-292
    * F-5): the verified closeout/verify read bridge wired by the composition.
    * Absent means the tracker surface is not wired and reconcile refuses.
@@ -4750,6 +4768,9 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
   };
   return {
     readSchedule,
+    ...(composition.readProjectGroup === undefined
+      ? {}
+      : { readProjectGroup: composition.readProjectGroup }),
     watch: watchStreamFor(composition, "queue", () => {
       const read = readSchedule(20);
       return read.ok
