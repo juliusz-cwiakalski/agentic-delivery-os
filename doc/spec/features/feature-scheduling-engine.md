@@ -3,7 +3,7 @@ ados_distribution: internal
 id: SPEC-SCHEDULING-ENGINE
 status: Current
 created: 2026-11-07
-last_updated: 2026-11-13
+last_updated: 2026-11-14
 owners: ["engineering"]
 service: delivery-os
 summary: "The daemon-free scheduling engine: one fenced, replay-idempotent queue graph; readiness re-derived on the delivered six-condition model with scheduler sources; a global owner-hold gate that outranks parks and provider windows; repo-exclusive leases with a fence-token claim, release, and evidenced stale takeover; build weight as a per-runner resource class; producer-before-consumer batching with a producer-bound deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, a durable clear-observed marker, recovery incidents, and the classified stuck finding, over the closed five-cause park vocabulary (`peak-window` and `owner-hold` riding the delivered condition types); the complete queue lifecycle — reason-bearing append-only removal whose append position decides presence, the `dep add`/`dep remove` edge grammar, the per-ref single-flight admission refusal that names the holder at the envelope root, and bounded tracker-truth reconciliation; the queue and lanes command surfaces with bounded payloads, closed vocabularies, truthful daemon-down degradation, the `peakEnforcement` machine read, and truthful read-surface exits; and the additive record kinds, error rows, collector ids, and typed configuration branch, all synchronized in-change; the typed dispatch engine claims and releases the same repository lease for one-shot execution."
@@ -214,8 +214,10 @@ than discovering work by hand.
   amplification, which are `null` with an `economics-underivable` warning
   rather than a fabricated zero.
   The `lanes --json` machine read carries the additive `peakEnforcement` block —
-  `mode` (`window-watch` with a resident daemon,
-  `iteration-start-gating` without one) and `parkClaimed` (read from the
+  `mode` (`window-watch` iff the running composition actually supplies the
+  profile-window watcher ports, otherwise `iteration-start-gating`; a
+  composition fact, never an inference from daemon reachability) and
+  `parkClaimed` (read from the
   durable park records, false when none exists) — so the read declares which
   peak enforcement is active and never claims a park that did not happen.
   `failed` is reserved for a delivery past its restart budget and carries

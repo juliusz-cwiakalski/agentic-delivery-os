@@ -9,7 +9,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-13T16:45:40.106Z }
   delivery: { started: null, completed: 2026-11-13T20:31:08.380Z }
   system_spec_update: { started: null, completed: 2026-11-13T21:20:05.593Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-14T00:02:00.571Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -420,9 +420,9 @@ notes:
       provider.profile.absent per the branch's own DEC-9 contract),
       daemon-compose forwards the supervision nominate port before the claim;
       composed proofs in tests/behaviour/peak-pause-composed-edge.test.ts
-      (attempt+history+lane records carry providerProfile; all four no-nomination
-      shapes refuse at their delivered exits through the composed CLI;
-      supervision claim parity). F-2 edge release guards treat peak-window
+      (attempt+history+lane records carry providerProfile; all four
+      no-nomination shapes refuse at their delivered exits through the composed
+      CLI; supervision claim parity). F-2 edge release guards treat peak-window
       exactly like provider-window (until required and accepted; owner-hold
       refuses until); composed happy path lands the park via the CLI harness.
       F-4 projection stop/parked emission gated on the DM-4 episode fields
@@ -439,15 +439,15 @@ notes:
       composition fact); parkClaimed purely record-derived; status.md corrected
       (spec-page wording is the DOC-SYNC HANDOFF to @doc-syncer). F-6 matrix
       half: tier-domain-not-provider rule in .dependency-cruiser.cjs with the
-      peak.js pathNot exception + firing negative fixture
-      (tier-domain-provider) and clean control (peak-boundary) registered in
-      tests/boundaries - the move half was non-compliant because
-      TC-PROFILE-055/039 pin contracts/provider-profile.ts data-only (verified
-      by execution); #contracts import style aligned for the queue contracts.
-      F-7 session-resume skips when no session reference resolves (stay parked,
+      peak.js pathNot exception + firing negative fixture (tier-domain-provider)
+      and clean control (peak-boundary) registered in tests/boundaries - the
+      move half was non-compliant because TC-PROFILE-055/039 pin
+      contracts/provider-profile.ts data-only (verified by execution);
+      #contracts import style aligned for the queue contracts. F-7
+      session-resume skips when no session reference resolves (stay parked,
       re-observe). F-8 SpendWindowExclusion reason set extended additively
-      (other-lane, unreadable-instant); boundary gate split from lane scope.
-      F-9 queue.ts comments repaired (QueueLanesData comment reattached, DEC-2
+      (other-lane, unreadable-instant); boundary gate split from lane scope. F-9
+      queue.ts comments repaired (QueueLanesData comment reattached, DEC-2
       many-to-one pairing header). F-10 decidePeakStops caches {rules, window}.
       Gate results: pnpm typecheck green; the six GH-294 suites + composed-edge
       suite 43 pass / 0 fail (plus the daemon/window/taxonomy suites re-run
@@ -459,17 +459,17 @@ notes:
       registry, verified by executing the scan's own logic over the committed
       content; the test goes green at this commit. lint, format, typecheck,
       boundaries, prompt-conformance, help-guide-coverage, exports-parity all
-      green in the same run, after the mechanical fixture/registry updates
-      named below. Post-commit boundary re-verification (parity test +
-      delivery-os lint GH-294) to be recorded in the coder report; the
-      commit-pending disclosure stands. Commit-pending
-      disclosure: this note precedes the phase-12 commit; the parity test's
-      post-commit pass and delivery-os lint GH-294 are recorded here as the
-      observed boundary results. Mechanical consequences outside declared
-      scope.files (disclosed): packages/core/src/contracts/index.ts (barrel
-      re-export of the two new spend names), packages/core/src/provider/index.ts
-      (barrel export of nominateProviderProfile), the delivered fixtures/tests
-      the always-on nomination gate and the status read bound moved:
+      green in the same run, after the mechanical fixture/registry updates named
+      below. Post-commit boundary re-verification (parity test + delivery-os
+      lint GH-294) to be recorded in the coder report; the commit-pending
+      disclosure stands. Commit-pending disclosure: this note precedes the
+      phase-12 commit; the parity test's post-commit pass and delivery-os lint
+      GH-294 are recorded here as the observed boundary results. Mechanical
+      consequences outside declared scope.files (disclosed):
+      packages/core/src/contracts/index.ts (barrel re-export of the two new
+      spend names), packages/core/src/provider/index.ts (barrel export of
+      nominateProviderProfile), the delivered fixtures/tests the always-on
+      nomination gate and the status read bound moved:
       tests/fixtures/dispatch/admission.ts,
       tests/fixtures/queue/production/harness.ts (writeProviderProfilesConfig -
       the shipped-empty profiles branch fails closed, so delivered fixtures
@@ -484,5 +484,33 @@ notes:
       two new spend exports), scripts/checks/forbidden-literals.registry.json
       (feature-peak-pausing.md registered as a new user-facing doc - the page
       had landed unregistered in phase 11)."
+    type: "info"
+    date: "2026-11-14"
+  - text: "Doc-syncer re-run after Phase 12 (review-loop re-run + F-5 DOC-SYNC
+      HANDOFF): 9 pages aligned - F-5 composition-fact mode rule stated
+      identically across feature-peak-pausing (sections 8/9), resident-daemon,
+      scheduling-engine, glossary, 00-index; F-4 emission gating into
+      event-taxonomy + peak-pausing section 6; F-2 writer-stamp into
+      peak-pausing section 8; F-3 read-budget truth (3 to 4 bounded reads) into
+      status-digest; F-8 closed exclusion-reason set into spend + peak-pausing
+      section 7; composed-edge suite row in the QA map; F-6 tier rule into the
+      monorepo-toolchain tier matrix. Guards green: doc-conformance 11/0,
+      content-inventory 6/0, doc-distribution no drift, prompt-conformance
+      clean, help-coverage all covered, composed-edge + status-performance 17/0.
+      Uncommitted for the review_fix phase commit. Residual gaps: none."
+    type: "info"
+    date: "2026-11-14"
+  - text: "Code review iteration 2 verdict PASS (review at
+      code-review/review-iter-2.md): F-1..F-10 all CLOSED, re-verified from
+      source and re-proven by execution with no carry-over credit (F-2 probe now
+      exit 0 parked; F-4 probe emits exactly one park-edge pre/post-fix shapes;
+      423 targeted tests green; ci-baseline-parity green at HEAD). Scope drift
+      verified as disclosed. 4 new NON-BLOCKING observations: N-1 low
+      (park-fixture readQueueParks-failure fallback masks reader regressions -
+      the pattern that hid the latent defect), N-2..N-4 info (comment slip,
+      untested daemon-compose forwarding, missing isParkRecord negative test).
+      Reviewer directs: land the 9-page docs reconciliation with the change.
+      Proceeding to quality_gates; N-1..N-4 recorded for the owner at PR review
+      as non-gating."
     type: "info"
     date: "2026-11-14"

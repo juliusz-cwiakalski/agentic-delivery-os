@@ -3,12 +3,12 @@ ados_distribution: internal
 id: GLOSSARY
 status: Current
 created: 2026-10-29
-last_updated: 2026-11-13
+last_updated: 2026-11-14
 owners: ["engineering"]
 area: domain
 document_classification: current-truth
 links:
-  related_changes: ["GH-290", "GH-291", "GH-292"]
+  related_changes: ["GH-290", "GH-291", "GH-292", "GH-294"]
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0007", "TDR-0008", "TDR-0009", "TDR-0011", "TDR-0012", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0023", "TDR-0024", "TDR-0025"]
 summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer validation and salvage, audit-ledger, retro-evidence-pipeline, adapter-port, provider-client-seed, provider-profile, session-lifecycle-economics, status-digest and attention-state, typed blocker channel, spend-read-side, harness-telemetry-v2, closeout, change-capsule, judgment-residue, queue-readiness, owner-hold, queue-scheduling, owner-gate SLA, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, closeout, commit-primitive, watchdog/lane, brief-render, doctor, MCP-surface, merge/verify-deploy, entrypoint, prompt-conformance, resident-daemon, event-taxonomy, coordinator-supervision, and harness-adapter terms used across the repository."
 ---
@@ -162,7 +162,7 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Preservation classification | The closed park-record value `preserved | session-state-not-preserved` describing whether session state survived a peak stop; a not-preserved park never refuses and routes window-end recovery through the restart budget. | Peak pausing | [feature-peak-pausing.md](../spec/features/feature-peak-pausing.md) |
 | Window-end resume | The automatic resume of a lane parked for a peak window at the effective window end, from preserved session state on the same branch; never a fresh re-dispatch. | Peak pausing | [feature-peak-pausing.md](../spec/features/feature-peak-pausing.md) |
 | Zero-spend evidence | The window-scoped, lane-attributed billable-call count from park timestamp through window end over telemetry v2, surfaced by `spend --window-evidence`; a classified telemetry absence is never reported as zero. | Peak pausing | [feature-peak-pausing.md](../spec/features/feature-peak-pausing.md) |
-| Peak enforcement read | The `peakEnforcement` block on the `lanes --json` machine read: `mode` (`window-watch` with a resident daemon, `iteration-start-gating` without one) and `parkClaimed`; no surface claims a park that did not happen. | Peak pausing | [feature-peak-pausing.md](../spec/features/feature-peak-pausing.md) |
+| Peak enforcement read | The `peakEnforcement` block on the `lanes --json` machine read: `mode` (`window-watch` iff the running composition supplies the profile-window watcher ports — a composition fact, not daemon reachability; `iteration-start-gating` otherwise) and `parkClaimed`; no surface claims a park that did not happen. | Peak pausing | [feature-peak-pausing.md](../spec/features/feature-peak-pausing.md) |
 | Quota transport | The injectable provider quota request edge at `adapters ./provider-quota`: one bounded GET, in-memory authorization header, no credential storage. | Provider engine | [feature-provider-engine.md](../spec/features/feature-provider-engine.md) |
 | Package matrix | The table of which packages may import which other packages. Forbidden edges are enforced by dependency-cruiser, one rule per importer row; declared edges are enforced by the workspace-entrypoints check. | Boundaries | — |
 | Phase ledger | The append-only record of `phase.transition` landings for a change: change ref, phase id, operation (`complete` or `reopen`), timestamp, outcome, and a reopen-only reason. No-op transitions append nothing; the last record for a change carries the full verified history. | Delivery state | [feature-pm-notes-lint-and-phase-transitions.md](../spec/features/feature-pm-notes-lint-and-phase-transitions.md) |

@@ -3,10 +3,10 @@ ados_distribution: internal
 id: SPEC-EVENT-TAXONOMY
 status: Current
 created: 2026-11-12
-last_updated: 2026-11-13
+last_updated: 2026-11-14
 owners: ["engineering"]
 service: delivery-os
-summary: "The published event taxonomy v2 on the resident daemon's subscribe surface and its reference command family: six closed topics (`queue` and `lanes` snapshot topics; `queue.graph`, `dispatch.attempt`, `phase.state`, and `blockers.state` event topics), the eight-field event envelope with its per-topic `lane` and `ref` rule, per-`(topic, lane)` process-scoped `sequence` as the only ordering guarantee with gap-to-repoll, preserved overflow carriage stamped `overflow: \"repoll\"`, the peak-pause kinds `stop`/`parked`/`resumed`/`park-edge` carried by taxonomy v2 as the single spoken version with every v1 kind and payload byte-identical and v1 retired, the unknown-topic subscribe refusal, the generated `events list` / `events describe <topic>` surface with its three error identities and `{0, 1, 2}` exits, every declared kind with a producer, and the mount as one prompt-required unit."
+summary: "The published event taxonomy v2 on the resident daemon's subscribe surface and its reference command family: six closed topics (`queue` and `lanes` snapshot topics; `queue.graph`, `dispatch.attempt`, `phase.state`, and `blockers.state` event topics), the eight-field event envelope with its per-topic `lane` and `ref` rule, per-`(topic, lane)` process-scoped `sequence` as the only ordering guarantee with gap-to-repoll, preserved overflow carriage stamped `overflow: \"repoll\"`, the peak-pause kinds `stop`/`parked`/`resumed`/`park-edge` carried by taxonomy v2 as the single spoken version with every v1 kind and payload byte-identical and v1 retired, the watcher's episode frames emitted only over records whose episode frame is complete while operator-shaped parks project the `park-edge` alone, the unknown-topic subscribe refusal, the generated `events list` / `events describe <topic>` surface with its three error identities and `{0, 1, 2}` exits, every declared kind with a producer, and the mount as one prompt-required unit."
 links:
   related_changes: ["GH-290", "GH-292", "GH-294"]
   related_decisions: ["TDR-0025", "TDR-0005", "TDR-0029"]
@@ -156,11 +156,11 @@ Three emission facts are declared rather than inferred:
 
 Three further facts pin the peak-pause episode kinds ([Provider Peak Pausing](feature-peak-pausing.md)):
 
-- **Exactly once per episode.** A parked-state `queue.park` record emits exactly
-  one `stop`, one `parked`, and one `park-edge`; a recovered record of a
-  preserved episode emits exactly one `resumed`. The shared `episodeId`
-  reconstructs the whole episode from the ledger alone across many supervision
-  ticks.
+- **Exactly once per episode.** A parked-state `queue.park` record whose
+  episode frame is complete emits exactly one `stop`, one `parked`, and one
+  `park-edge`; a recovered record of a preserved episode emits exactly one
+  `resumed`. The shared `episodeId` reconstructs the whole episode from the
+  ledger alone across many supervision ticks.
 - **`resumed` is the session-resume transition's event.** Its payload always
   carries a real preserved session-state reference, the same branch, and the
   `reDispatched: false` fact. A `session-state-not-preserved` lane's
@@ -168,8 +168,11 @@ Three further facts pin the peak-pause episode kinds ([Provider Peak Pausing](fe
   emits no `resumed` frame; its episode's ledger truth is exactly one `stop`
   plus one `parked` carrying the failure classification.
 - **`park-edge` carries the park lifecycle edge.** An `owner-hold` park emits
-  `park-edge` with `until` as a declared classified absence; the delivered park
-  causes (`provider-window`, `provider-quota`, `preempted-for-close-item`)
+  `park-edge` with `until` as a declared classified absence; an operator-shaped
+  `peak-window` park — the release writer stamps only the minimal episode
+  identity and the operator-declared `until`, not the watcher's episode fields —
+  emits the `park-edge` alone, never a `stop` or `parked` frame; the delivered
+  park causes (`provider-window`, `provider-quota`, `preempted-for-close-item`)
   emit nothing.
 
 A `dependency-edge` event is emitted only when the folded edge set differs from
@@ -178,9 +181,9 @@ nothing, and a `dep remove` of an absent edge publishes nothing. A `queue releas
 --park` writes a separate `queue.park` record: the `release` payload carries no
 park cause, and the park withdrawal a removal appends
 for the same reason publishes nothing. A peak-window or owner-hold park record is
-the durable source of its episode's `park-edge` and — for a peak-window episode —
-its `stop` and `parked` frames, so the park lifecycle is observable without any
-new write path.
+the durable source of its episode's `park-edge` and — for a watcher-written
+peak-window episode carrying the complete episode frame — its `stop` and
+`parked` frames, so the park lifecycle is observable without any new write path.
 
 ## Emission model
 
