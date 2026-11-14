@@ -94,3 +94,15 @@ If option 1 is chosen, the gate can be recorded as PASS with the N6 metadata cor
 - This is iteration 3. The substantive iteration-2 findings N1, N3, N4, N5, N9, N10 are closed in the text; N2, N7, N8 are closed in plan revision 1.3. N6 is the sole remaining inconsistency and is documentation-only.
 - Counts and traceability remain exact: 37 ACs / 51 TCs / 5 phases / 37-of-37 AC ownership / 51-of-51 TC ownership / 39 suite-or-type-test homes. No dangling AC, TC, DM, DEC, RSK, or DoD link was found.
 - No source, spec, test-plan, plan, or pm-notes file was modified; only this record was written. Zero git operations.
+
+---
+
+## Confirmation (post-N6)
+
+**Date:** 2026-11-14 · **Test plan:** v1.5 (metadata-only refresh; commit 47b76b42 as reported) · **Verdict:** **READY**
+
+N6 is closed. `chg-GH-310-test-plan.md` §2 now states that plan revision 1.3 exists and is reconciled, that all **39/39 suite/type-test homes** (38 unique `.test.ts` paths plus `tests/types/cross-repository-report.type-test.ts`) are inside an owning phase scope, and that N2/N7/N8 are closed by plan 1.3 and are not deferred to delivery_planning. The stale "adds no suite file" claim is gone. §8.3 rows B3/B4/B8/B10 and the v1.4 closure table (including the N6 and N2/N7/N8 rows) record the closed state accurately. §2's 39/39 count and phase-5 `test(GH-310): …` subject agree with plan revision 1.3 (39 homes; subject `test(GH-310): parity goldens, contract continuity and the full gate battery`).
+
+No technical change is detectable: spec remains v1.4 and plan remains revision 1.3; 37 ACs; 51 TCs with the identical ID set (51 §5.1 index rows = 51 §5.2 detail headings = 51 §7 rows); 37/37 AC coverage; 37/37 plan AC ownership; 51/51 TC ownership; DM-1..DM-11; DEC-1..DEC-21; RSK-1..RSK-11; DoD-1..DoD-15. The v1.4 technical assertions (the N1 verdict/status rule, the synthetic citation, the distinct `CrossRepositoryVerifyGatesReport`/`CrossRepositoryVerifyGateRecord` types, and the mode-scoped closeout columns) remain present and unchanged. No new blocking issue was found.
+
+**Final verdict: READY.** No further artifact revision is required; the non-blocking phase-7 wording/edge notes in the body of this record remain optional documentation cleanups.
