@@ -39,11 +39,12 @@ const DELIVERED = [
   "coordinator",
   "daemon",
   "projects",
+  "repos",
 ] as const;
 
 describe("TC-EVT-060 events production composition", () => {
-  test("events is prompt-required exactly once and the delivered eighteen survive", () => {
-    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(19);
+  test("events is prompt-required exactly once and the delivered nineteen survive", () => {
+    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(20);
     expect(PROMPT_REQUIRED_COMMANDS.filter((name) => name === "events")).toHaveLength(1);
     for (const name of DELIVERED) expect(PROMPT_REQUIRED_COMMANDS).toContain(name);
     expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 1]).toBe("events");
@@ -63,7 +64,7 @@ describe("TC-EVT-060 events production composition", () => {
       expect(events?.positionals).toEqual({ max: 2 });
       expect(events?.flags).toBeUndefined();
       const selected = selectPromptRequiredProgram(program);
-      expect(Object.keys(selected.commands)).toHaveLength(19);
+      expect(Object.keys(selected.commands)).toHaveLength(20);
       expect(selected.commands.events).toBeDefined();
     } finally {
       rmSync(root, { recursive: true, force: true });

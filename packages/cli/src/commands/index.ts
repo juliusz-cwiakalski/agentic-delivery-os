@@ -90,6 +90,8 @@ export {
   toQueuePlanData,
   toQueueReadData,
 } from "./queue.js";
+export type { ReposCommandRuntime, ReposRuntimeRead } from "./repos.js";
+export { createReposCommandDefinition } from "./repos.js";
 export type { RetroCommandRuntime } from "./retro.js";
 export { createRetroCommandDefinition } from "./retro.js";
 export type { SpendCommandRuntime } from "./spend.js";

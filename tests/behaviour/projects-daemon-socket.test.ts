@@ -124,7 +124,7 @@ describe("TC-PROJ-023 the production caller supplies the project root to the com
         expect((await record.run(["queue", "add", "GH-241", "--json"])).exitCode).toBe(0);
       }
 
-      const listed = await harness.run(["projects", "list", "--json"]);
+      const listed = await harness.run(["projects", "list", "--flat", "--json"]);
       expect(listed.exitCode).toBe(0);
       expect(socketPaths.length).toBeGreaterThanOrEqual(2);
       for (const path of socketPaths) {

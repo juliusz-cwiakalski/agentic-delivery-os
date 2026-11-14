@@ -313,7 +313,7 @@ describe("TC-GRPDOC-004 an unknown group key is refused at exit 1", () => {
 });
 
 describe("TC-GRPDOC-005 absent or empty configuration is a valid empty listing at exit 0", () => {
-  test("an absent document, an empty groups[] document, and the unflipped default form", async () => {
+  test("an absent document, an empty groups[] document, the flipped default, and the alias", async () => {
     const fixture = await twoMemberFixture("grpdoc-005");
     try {
       // Absent document: no config file at all.
@@ -327,9 +327,15 @@ describe("TC-GRPDOC-005 absent or empty configuration is a valid empty listing a
       expect(empty.exitCode, empty.stderr).toBe(0);
       expect(groupsOf(empty)).toEqual([]);
 
-      // The intermediate-state rule: the default form still returns the
-      // delivered flat payload, not the group envelope.
-      const flat = await fixture.a.run(["projects", "list", "--json"]);
+      // After the rename the default form is the group envelope.
+      const groups = await fixture.a.run(["projects", "list", "--json"]);
+      expect(groups.exitCode, groups.stderr).toBe(0);
+      const groupsData = dataOf(groups);
+      expect(Array.isArray(groupsData.groups)).toBe(true);
+      expect(groupsData.projects).toBeUndefined();
+
+      // The alias alone keeps the delivered flat payload reachable (C-2).
+      const flat = await fixture.a.run(["projects", "list", "--flat", "--json"]);
       expect(flat.exitCode, flat.stderr).toBe(0);
       const flatData = dataOf(flat);
       expect(Array.isArray(flatData.projects)).toBe(true);

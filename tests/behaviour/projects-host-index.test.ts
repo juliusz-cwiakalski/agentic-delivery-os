@@ -283,12 +283,12 @@ describe("TC-PROJ-006 an absent index is an ordinary first run", () => {
       expect(hostIndexTextOf(host.hostRoot)).toBeUndefined();
       expect(existsSync(join(host.hostRoot, "projects"))).toBe(false);
 
-      const empty = await outsideHarness.run(["projects", "list", "--json"]);
+      const empty = await outsideHarness.run(["projects", "list", "--flat", "--json"]);
       expect(empty.exitCode).toBe(0);
       expect(dataOf(empty).projects).toEqual([]);
       expect(dataOf(empty).hostIndexRevision).toBe(0);
       expect(errorOf(empty)).toBeUndefined();
-      expect(empty.stdout + empty.stderr).not.toContain("projects.registry-corrupt");
+      expect(empty.stdout + empty.stderr).not.toContain("repos.registry-corrupt");
       expect(hostIndexTextOf(host.hostRoot)).toBeUndefined();
       expect(existsSync(join(host.hostRoot, "projects"))).toBe(false);
 
@@ -301,15 +301,15 @@ describe("TC-PROJ-006 an absent index is an ordinary first run", () => {
       expect(document?.projects[0]?.stateLocation).toBe(harness.stateLocation);
       expect(existsSync(harness.stateLocation)).toBe(false);
 
-      const fromOutside = await outsideHarness.run(["projects", "list", "--json"]);
-      const fromInside = await harness.run(["projects", "list", "--json"]);
+      const fromOutside = await outsideHarness.run(["projects", "list", "--flat", "--json"]);
+      const fromInside = await harness.run(["projects", "list", "--flat", "--json"]);
       expect(fromOutside.exitCode).toBe(0);
       expect(fromInside.exitCode).toBe(0);
       expect(dataOf(fromOutside)).toEqual(dataOf(fromInside));
       expect(dataOf(fromInside).hostIndexRevision).toBe(1);
       expect(dataOf(fromInside).projects as readonly Record<string, unknown>[]).toHaveLength(1);
       for (const run of [empty, opened, fromOutside, fromInside]) {
-        expect(run.stdout + run.stderr).not.toContain("projects.registry-corrupt");
+        expect(run.stdout + run.stderr).not.toContain("repos.registry-corrupt");
       }
     } finally {
       for (const harness of harnesses) harness.dispose();
@@ -349,9 +349,9 @@ describe("TC-PROJ-007 discovery without a registry", () => {
         }
       }
 
-      const fromA = await a.run(["projects", "list", "--json"]);
-      const fromB = await b.run(["projects", "list", "--json"]);
-      const fromOutside = await outsideHarness.run(["projects", "list", "--json"]);
+      const fromA = await a.run(["projects", "list", "--flat", "--json"]);
+      const fromB = await b.run(["projects", "list", "--flat", "--json"]);
+      const fromOutside = await outsideHarness.run(["projects", "list", "--flat", "--json"]);
       for (const run of [fromA, fromB, fromOutside]) expect(run.exitCode).toBe(0);
       const entries = dataOf(fromA).projects as readonly Record<string, unknown>[];
       expect(entries).toHaveLength(2);
@@ -400,9 +400,9 @@ describe("TC-PROJ-008 a corrupt index refuses honestly, then recovers preserving
       writeFileSync(hostIndexDocumentPath(host.hostRoot), corruptBytes);
       const hostListing = readdirSync(host.hostRoot).sort();
 
-      const refused = await outsideHarness.run(["projects", "list", "--json"]);
+      const refused = await outsideHarness.run(["projects", "list", "--flat", "--json"]);
       expect(refused.exitCode).toBe(2);
-      expect(errorOf(refused)?.code).toBe("projects.registry-corrupt");
+      expect(errorOf(refused)?.code).toBe("repos.registry-corrupt");
       expect(errorOf(refused)?.summary ?? "").toContain("host-index.json");
       expect(refused.envelope?.data).toBeUndefined();
       expect(readFileSync(hostIndexDocumentPath(host.hostRoot), "utf8")).toBe(corruptBytes);
@@ -419,11 +419,11 @@ describe("TC-PROJ-008 a corrupt index refuses honestly, then recovers preserving
       expect(fresh?.projects.map((entry) => entry.projectKey)).toEqual([harness.projectKey]);
       expect(existsSync(harness.stateLocation)).toBe(true);
 
-      const recovered = await outsideHarness.run(["projects", "list", "--json"]);
+      const recovered = await outsideHarness.run(["projects", "list", "--flat", "--json"]);
       expect(recovered.exitCode).toBe(0);
       expect(dataOf(recovered).projects as readonly unknown[]).toHaveLength(1);
       expect(dataOf(recovered).hostIndexRevision).toBe(1);
-      expect(recovered.stdout + recovered.stderr).not.toContain("projects.registry-corrupt");
+      expect(recovered.stdout + recovered.stderr).not.toContain("repos.registry-corrupt");
 
       // A second maintenance pass over the now-valid index adds no sibling.
       await harness.run(["status", "--json"]);
@@ -440,9 +440,9 @@ describe("TC-PROJ-008 a corrupt index refuses honestly, then recovers preserving
           originUrl: "https://github.com/owner/clean.git",
         });
         harnesses.push(cleanHarness);
-        const clean = await cleanHarness.run(["projects", "list", "--json"]);
+        const clean = await cleanHarness.run(["projects", "list", "--flat", "--json"]);
         expect(clean.exitCode).toBe(0);
-        expect(clean.stdout + clean.stderr).not.toContain("projects.registry-corrupt");
+        expect(clean.stdout + clean.stderr).not.toContain("repos.registry-corrupt");
         removeDirectory(`${cleanHost.hostRoot}-repos`);
       } finally {
         cleanHost.dispose();
@@ -495,7 +495,7 @@ describe("TC-PROJ-010 revision, re-derived state location, and the recorded-valu
 
       // Step 3: the list reports the revision it read and performs no write.
       const beforeList = counter();
-      const listed = await harness.run(["projects", "list", "--json"]);
+      const listed = await harness.run(["projects", "list", "--flat", "--json"]);
       expect(listed.exitCode).toBe(0);
       expect(dataOf(listed).hostIndexRevision).toBe(beforeList.revision);
       expect(counter().writes).toBe(beforeList.writes);
@@ -510,7 +510,7 @@ describe("TC-PROJ-010 revision, re-derived state location, and the recorded-valu
         hostIndexDocumentPath(host.hostRoot),
         `${JSON.stringify({ schema: document?.schema, revision: document?.revision, projects: tampered }, null, 2)}\n`,
       );
-      const tamperedList = await harness.run(["projects", "list", "--json"]);
+      const tamperedList = await harness.run(["projects", "list", "--flat", "--json"]);
       expect(tamperedList.exitCode).toBe(0);
       const rows = dataOf(tamperedList).projects as readonly Record<string, unknown>[];
       const row = rows.find((entry) => entry.projectKey === harness.projectKey);
@@ -542,7 +542,7 @@ describe("TC-PROJ-010 revision, re-derived state location, and the recorded-valu
         hostIndexDocumentPath(host.hostRoot),
         `${JSON.stringify({ schema: current?.schema, revision: current?.revision, projects: vanishedRoot }, null, 2)}\n`,
       );
-      const changed = await harness.run(["projects", "list", "--json"]);
+      const changed = await harness.run(["projects", "list", "--flat", "--json"]);
       expect(changed.exitCode).toBe(0);
       const changedRow = (dataOf(changed).projects as readonly Record<string, unknown>[]).find(
         (entry) => entry.projectKey === harness.projectKey,
@@ -551,7 +551,7 @@ describe("TC-PROJ-010 revision, re-derived state location, and the recorded-valu
       expect(hostIndexEntryOf(host.hostRoot, harness.projectKey)?.root).toBe("/nowhere/at/all");
 
       writeFileSync(hostIndexDocumentPath(host.hostRoot), restoredDocument ?? "");
-      const restoredRun = await harness.run(["projects", "list", "--json"]);
+      const restoredRun = await harness.run(["projects", "list", "--flat", "--json"]);
       const restoredRow = (dataOf(restoredRun).projects as readonly Record<string, unknown>[]).find(
         (entry) => entry.projectKey === harness.projectKey,
       );

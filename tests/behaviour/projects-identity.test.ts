@@ -374,7 +374,7 @@ describe("TC-PROJ-005 the declared unbound scope outside any work tree", () => {
       expect(inside.exitCode).toBe(unbound.exitCode);
 
       // `projects list` does not report the unbound scope as a project row.
-      const listed = await outsideHarness.run(["projects", "list", "--json"]);
+      const listed = await outsideHarness.run(["projects", "list", "--flat", "--json"]);
       expect(listed.exitCode).toBe(0);
       const listedData = listed.envelope?.data as
         | { readonly projects?: readonly Record<string, unknown>[] }

@@ -461,3 +461,49 @@ describe("TC-GRPSURF-003 mixed tracker kinds classify not-yet-supported", () => 
     }
   });
 });
+
+describe("TC-GRPREN-004 the default form returns project-groups.v1, not the flat payload", () => {
+  test("the three synopsis forms are distinct on one host", async () => {
+    const fixture = createWorkspaceFixture("grpren-004");
+    try {
+      writeProjectGroupsConfig(
+        fixture.harness,
+        projectGroupsDocument({
+          groupKey: "platform",
+          workspaceRoot: fixture.workspace,
+          members: [
+            { selector: "repoKey", value: fixture.a.repoKey },
+            { selector: "repoKey", value: fixture.b.repoKey },
+          ],
+        }),
+      );
+
+      // Default: every configured group.
+      const byDefault = await fixture.harness.run(["projects", "list", "--json"]);
+      expect(byDefault.exitCode, byDefault.stderr).toBe(0);
+      const defaultData = dataOf(byDefault);
+      expect(Array.isArray(defaultData.groups)).toBe(true);
+      expect(defaultData.projects).toBeUndefined();
+      expect((defaultData.groups as readonly Record<string, unknown>[])[0]?.groupKey).toBe(
+        "platform",
+      );
+      expect(JSON.stringify(defaultData)).not.toContain("projectKey");
+
+      // Scoped: exactly the requested group.
+      const scoped = await scopedList(fixture.harness, "platform");
+      expect(scoped.exitCode, scoped.stderr).toBe(0);
+      expect(groupsOf(scoped)).toHaveLength(1);
+      expect(groupsOf(scoped)[0]?.groupKey).toBe("platform");
+
+      // Alias: the delivered flat payload, not a group record set.
+      const alias = await fixture.harness.run(["projects", "list", "--flat", "--json"]);
+      expect(alias.exitCode, alias.stderr).toBe(0);
+      const aliasData = dataOf(alias);
+      expect(Array.isArray(aliasData.projects)).toBe(true);
+      expect(aliasData.groups).toBeUndefined();
+      expect(JSON.stringify(aliasData)).not.toContain("groupKey");
+    } finally {
+      fixture.dispose();
+    }
+  });
+});

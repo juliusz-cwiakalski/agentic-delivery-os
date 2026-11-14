@@ -1,0 +1,19 @@
+{
+  "hostIndexRevision": 7,
+  "projects": [
+    {
+      "projectKey": "alpha-repo-1a2b3c4d",
+      "root": "<repo-root-alpha>",
+      "stateLocation": "<host-root>/projects/alpha-repo-1a2b3c4d",
+      "daemonReachable": { "reachable": false, "reason": "daemon-not-mounted" },
+      "handoverState": "shell"
+    },
+    {
+      "projectKey": "beta-repo-5e6f7a8b",
+      "root": "<repo-root-beta>",
+      "stateLocation": "<host-root>/projects/beta-repo-5e6f7a8b",
+      "daemonReachable": { "reachable": false, "reason": "daemon-not-mounted" },
+      "handoverState": "shell"
+    }
+  ]
+}

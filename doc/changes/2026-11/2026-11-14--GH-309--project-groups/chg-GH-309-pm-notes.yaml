@@ -252,3 +252,39 @@ notes:
       plan-command mismatch worth fixing outside this ticket."
     type: risk
     date: "2026-11-14"
+  - text: "Plan phase 4 'Project-scoped aggregation clause with group-scoped
+      queue list and status reads' complete: commit d525f852 (primitive
+      template subject, which named the change folder because that path sorted
+      first). Obligations 4.1-4.4 verified: the one aggregation clause in
+      packages/core/src/domain/project-groups.ts (declared order over
+      per-checkout state, never a group-scoped store; every member resolves to
+      exactly one closed outcome; one state-unavailable member yields
+      data.partial true with degradedMembers[] naming it by repoKey and outcome
+      at exit 0 while readable members are still returned; not-yet-supported
+      contributes no records; exit 2 only for unreadable configuration/scope);
+      the additive `queue list --project <groupKey>` and `status --project
+      <groupKey>` grammar with the unscoped forms unchanged; the one refusal
+      rule (`projects.unknown-group`, exit 1) on projects, queue, and status;
+      `board --project` untouched; TC-GRPSREAD-001..002 and the TC-GRPDOC-004
+      queue/status refusal steps in tests/behaviour/queue-status-project-scope.test.ts,
+      and TC-GRPAGG-001/002 in the extended
+      tests/behaviour/projects-groups-list.test.ts and
+      tests/structure/projects-groups-envelope.test.ts. Test result: 63 pass /
+      0 fail / 553 expect() calls across the nine boundary suites (18.58s);
+      the non-behaviour full-suite chunk `bun test tests/structure tests/checks
+      tests/types tests/golden tests/conformance packages` reported 2416 pass /
+      0 fail / 2416 tests across 307 files (24030 expect() calls, 194.74s).
+      Gate-environment finding: TMPDIR must be outside EVERY git work tree AND
+      on the same filesystem as the repo; the workspace parent is itself an
+      umbrella git repo, so a sibling of the checkout still fails, and the OS
+      temp root is a different device; the correct value is an approved
+      external temp directory on the repo's filesystem (correcting the earlier
+      risk note's /tmp value). Three gate defects fixed at this
+      boundary: the single queue repository-binding derivation in
+      packages/cli/src/production.ts; the ProjectScopedMemberWork /
+      ProjectScopedWorkData rows in tests/fixtures/ports/v1-contract-inventory.json;
+      and the TC-STATUS-001 pin updated to the delivered [\"--project\"] surface
+      in tests/behaviour/status-command.test.ts.
+      tests/structure/queue-binding-derivation.test.ts was NOT edited."
+    type: info
+    date: "2026-11-14"

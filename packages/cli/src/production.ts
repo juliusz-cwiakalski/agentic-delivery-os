@@ -64,8 +64,8 @@ import {
   resolveCheckoutGitDirectories,
 } from "@delivery-os/adapters/repo";
 import {
-  aggregateProjectMemberOutcomes,
   type AuthorityEvidence,
+  aggregateProjectMemberOutcomes,
   assembleHarnessLiveness,
   buildHarnessSpawnEnvironment,
   type CoordinatorSettings,
@@ -114,6 +114,7 @@ import {
   readDispatchHandover,
   readQueueEntries,
   releaseQueueLease,
+  reposListDataOf,
   resolveConfig,
   resolveCoordinatorSettings,
   resolveDispatchIdentity,
@@ -175,12 +176,13 @@ import {
   type ProjectGroupMemberSelected,
   type ProjectGroupsConfig,
   type ProjectGroupValidated,
-  type ProjectsListEntry,
   type ProjectScopedMemberWork,
+  type ProjectsListEntry,
   QUEUE_DEFAULT_NEXT_ACTIONS,
   type QueueDegradationReason,
   type QueueEntryProjection,
   type QueueTrackerRead,
+  REPOS_COMMAND_FAMILY,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
   type StateStorePort,
@@ -212,6 +214,7 @@ import type {
   ProjectGroupWorkRead,
   ProjectsRuntimeRead,
 } from "./commands/projects.js";
+import type { ReposRuntimeRead } from "./commands/repos.js";
 import { createDaemonCommandRuntime, resolveProjectDaemonSettings } from "./daemon-compose.js";
 import {
   type ConfigProgramOptions,
@@ -229,13 +232,13 @@ import {
   createResolvedProviderProbe,
   createStatusCommandRuntime,
   createTelemetryIngestSink,
-  type QueueComposition,
   createVerifyCommandRuntime,
   createVerifyDeployCommandRuntime,
   createVerifyGatesCommandRuntime,
   type DispatchCommandRuntime,
   type DispatchComposition,
   type DispatchLaneFacts,
+  type QueueComposition,
   resolveAgentIdentity,
 } from "./edge.js";
 import type { EntrypointComposer, EntrypointInvocationFact } from "./entrypoint.js";
@@ -537,19 +540,39 @@ const scopeRefusalProgram = (
       ? `the state-directory scope is invalid (${failure.key})`
       : failure.summary;
   const kind = failure.kind === "config" ? "config" : "projects";
-  const definition: CommandDefinition = {
+  // The flat record set owns its failure identities after the rename (GH-309
+  // F-7): the `repos` command and the `projects list --flat` alias classify
+  // identity and state failures under `repos.*`, while every other command —
+  // and the group surface's default form — keeps the composition-level
+  // `projects.*` refusal (TC-PROJ-022 pins that parity with the MCP surface,
+  // which this change does not touch).
+  const flatCode = (): string =>
+    failure.kind === "identity"
+      ? "repos.identity-unreadable"
+      : failure.kind === "state"
+        ? "repos.state-unavailable"
+        : failure.code;
+  const flatKind = (): string => (failure.kind === "config" ? "config" : "repos");
+  const definitionFor = (name: string): CommandDefinition => ({
     // The refusal is the same for every command, so the grammar admits any flag
     // and positional shape and the classified scope failure answers instead of
     // the parser: the identity outcome must not depend on which command was asked.
     acceptsAnyFlag: true,
     positionals: { max: 3 },
-    handler: () => ({
-      error: { kind, code: failure.code, summary },
-      ...(warnings.length === 0 ? {} : { warnings }),
-    }),
-  };
+    handler: (invocation) => {
+      const flat =
+        name === REPOS_COMMAND_FAMILY ||
+        (name === PROJECTS_COMMAND_FAMILY && invocation.flags["--flat"] === true);
+      return {
+        error: flat
+          ? { kind: flatKind(), code: flatCode(), summary }
+          : { kind, code: failure.code, summary },
+        ...(warnings.length === 0 ? {} : { warnings }),
+      };
+    },
+  });
   const commands: Record<string, CommandDefinition> = {};
-  for (const name of PROMPT_REQUIRED_COMMANDS) commands[name] = definition;
+  for (const name of PROMPT_REQUIRED_COMMANDS) commands[name] = definitionFor(name);
   return { commands };
 };
 
@@ -722,7 +745,11 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         ? { state: "uncertain" }
         : { state: "resolved", projectIdentifier: marker.projectIdentifier };
     };
-    const maintainsIndex = invocation?.command !== PROJECTS_COMMAND_FAMILY;
+    // The two read-only enumerations never maintain the index: both the group
+    // surface and the flat record set are list reads (GH-288 F-2, GH-309 F-7).
+    const maintainsIndex =
+      invocation?.command !== PROJECTS_COMMAND_FAMILY &&
+      invocation?.command !== REPOS_COMMAND_FAMILY;
     // The legacy detection (GH-288 F-8, AC-F8-2): an unmigrated host root is
     // reported once per state-opening invocation, moves nothing, deletes
     // nothing, and never changes the exit code. A migrated host emits nothing.
@@ -2402,7 +2429,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       if (read.state === "unreadable") {
         return {
           ok: false,
-          code: "projects.registry-corrupt",
+          code: "repos.registry-corrupt",
           summary: `the host index at ${indexPath} is present but unreadable`,
         };
       }
@@ -2410,7 +2437,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       if (document === undefined) {
         return {
           ok: false,
-          code: "projects.registry-corrupt",
+          code: "repos.registry-corrupt",
           summary: `the host index at ${indexPath} is present but cannot be parsed`,
         };
       }
@@ -2429,7 +2456,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           stat = undefined;
         }
         // A bounded directory listing proves readability, so a present but
-        // unreadable root reaches `projects.state-unavailable` here rather than
+        // unreadable root reaches `repos.state-unavailable` here rather than
         // only failing later inside the store open.
         let readable = false;
         if (stat?.isDirectory() === true) {
@@ -2447,7 +2474,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         });
         if (classification === "first-use" && !legacyChecked) {
           // AC-F3-5 cell 2: an absent root beside a host-root store is a
-          // warning, never `projects.state-unavailable`, and the list stays
+          // warning, never `repos.state-unavailable`, and the list stays
           // write-free while reporting it once.
           legacyChecked = true;
           const legacy = legacyStoreWarning({
@@ -2459,7 +2486,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         if (classification === "state-unavailable") {
           return {
             ok: false,
-            code: "projects.state-unavailable",
+            code: "repos.state-unavailable",
             summary: `project ${entry.projectKey} has a state location that is not a readable directory (${stateLocation})`,
           };
         }
@@ -2468,11 +2495,11 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             ? ({ ok: true, state: "shell" } as const)
             : readProjectHandover(stateLocation, entry.projectKey);
         if (!handover.ok) {
-          return { ok: false, code: "projects.state-unavailable", summary: handover.summary };
+          return { ok: false, code: "repos.state-unavailable", summary: handover.summary };
         }
         const daemon = await readDaemonReachability(stateLocation, classification === "ready");
         if (!daemon.ok) {
-          return { ok: false, code: "projects.state-unavailable", summary: daemon.summary };
+          return { ok: false, code: "repos.state-unavailable", summary: daemon.summary };
         }
         if (entry.stateLocation !== stateLocation) {
           warnings.push(
@@ -2495,6 +2522,24 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         ok: true,
         data: { projects: orderProjectEntries(entries), hostIndexRevision: document.revision },
         ...(warnings.length === 0 ? {} : { warnings }),
+      };
+    };
+
+    /**
+     * The `repos list` flat record set (GH-309 F-7, DM-3): one read over the
+     * same host index, projected onto the renamed `repos.v1` shape. The alias
+     * path never passes through this projection, so `projects list --flat`
+     * keeps the delivered payload byte-identical (C-2).
+     */
+    const readRepos = async (): Promise<ReposRuntimeRead> => {
+      const read = await readProjects();
+      if (!read.ok) return read;
+      return {
+        ok: true,
+        data: reposListDataOf(read.data),
+        ...(read.warnings === undefined || read.warnings.length === 0
+          ? {}
+          : { warnings: read.warnings }),
       };
     };
 
@@ -2792,14 +2837,13 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     };
 
     /**
-     * The group read behind `projects list --project <groupKey>` (GH-309 F-1,
-     * F-2, F-4): the configuration document is the sole membership source, and
-     * the enumeration is over every configured group in declared order, filtered
-     * to the requested key only when one is supplied. The delivered default form
-     * is untouched here — the group enumeration reaches the CLI only through the
-     * scoped grammar until the rename phase. An absent or empty configuration is
-     * the valid empty listing at exit 0. The aggregation keys are applied once
-     * over the selected groups' members (F-5).
+     * The group read behind `projects list` (GH-309 F-1, F-2, F-4): the
+     * configuration document is the sole membership source, and the enumeration
+     * is over every configured group in declared order, filtered to the
+     * requested key only when one is supplied. The default form enumerates every
+     * configured group; `--project <groupKey>` scopes it to one. An absent or
+     * empty configuration is the valid empty listing at exit 0. The aggregation
+     * keys are applied once over the selected groups' members (F-5).
      */
     const readProjectGroups = async (groupKey?: string): Promise<ProjectGroupRuntimeRead> => {
       const configRead = readProjectGroupsConfiguration();
@@ -2833,7 +2877,10 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       return { ok: true, data: { groups: entries, ...aggregation } };
     };
 
-    /** The scoped read the command surface exposes until the rename phase. */
+    /** The default group enumeration over every configured group (the flip). */
+    const readEveryProjectGroup = async (): Promise<ProjectGroupRuntimeRead> => readProjectGroups();
+
+    /** The scoped read behind `projects list --project <groupKey>`. */
     const readProjectGroup = async (groupKey: string): Promise<ProjectGroupRuntimeRead> =>
       readProjectGroups(groupKey);
 
@@ -2963,7 +3010,12 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         newFenceToken,
       },
       coordinator: createProductionCoordinatorComposition(),
-      projects: { readProjects, readProjectGroup },
+      projects: {
+        readProjects,
+        readProjectGroups: readEveryProjectGroup,
+        readProjectGroup,
+      },
+      repos: { readRepos },
       // The taxonomy reference surface needs nothing: the runtime is the
       // compiled declaration, so the production composer supplies it
       // unconditionally (GH-290 F-2, DEC-F).

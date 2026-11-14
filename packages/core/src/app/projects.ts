@@ -23,7 +23,10 @@ import {
   type ProjectGroupMemberSelected,
   type ProjectMemberHealth,
   type ProjectMemberOutcome,
+  type ProjectsListData,
   type ProjectsListEntry,
+  type ReposListData,
+  type ReposListEntry,
 } from "../contracts/projects.js";
 
 /** The folded latest handover evidence for the project, or none. */
@@ -154,6 +157,48 @@ export const orderProjectEntries = (
   [...entries].sort((left, right) =>
     left.projectKey < right.projectKey ? -1 : left.projectKey > right.projectKey ? 1 : 0,
   );
+
+/** Build one flat repo row with exactly the five renamed contract fields (F-7). */
+export const repoListEntry = (input: {
+  readonly repoKey: string;
+  readonly root: string;
+  readonly stateLocation: string;
+  readonly daemonReachable: DaemonReachability;
+  readonly handoverState: HandoverState;
+}): ReposListEntry => ({
+  repoKey: input.repoKey,
+  root: input.root,
+  stateLocation: input.stateLocation,
+  daemonReachable: input.daemonReachable,
+  handoverState: input.handoverState,
+});
+
+/** Order flat rows by repo key ascending; the index's own order never leaks (F-7). */
+export const orderRepoEntries = (entries: readonly ReposListEntry[]): readonly ReposListEntry[] =>
+  [...entries].sort((left, right) =>
+    left.repoKey < right.repoKey ? -1 : left.repoKey > right.repoKey ? 1 : 0,
+  );
+
+/**
+ * Project the delivered flat `projects.v1` data onto the renamed `repos.v1`
+ * shape (F-7, DM-3). The mapping is field-for-field: every value is carried
+ * unchanged and only the key's name moves. The alias never passes through this
+ * projection, so the delivered payload stays byte-identical (C-2).
+ */
+export const reposListDataOf = (data: ProjectsListData): ReposListData => ({
+  repos: orderRepoEntries(
+    data.projects.map((entry) =>
+      repoListEntry({
+        repoKey: entry.projectKey,
+        root: entry.root,
+        stateLocation: entry.stateLocation,
+        daemonReachable: entry.daemonReachable,
+        handoverState: entry.handoverState,
+      }),
+    ),
+  ),
+  hostIndexRevision: data.hostIndexRevision,
+});
 
 /** The state-location classification the row read applies (DEC-8, AC-F3-5). */
 export const classifyProjectStateLocation = (input: {

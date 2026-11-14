@@ -517,4 +517,93 @@ describe("TC-GRPENV-001 and the OQ-3 health cases over the delivered group envel
       host.dispose();
     }
   });
+
+  test("every delivered envelope of the change is the five-field shape with keys under data", async () => {
+    const host = createHostFixture("grpenv-full-set");
+    const workspace = `${host.hostRoot}-workspace`;
+    mkdirSync(workspace, { recursive: true });
+    const member = createMemberCheckout(workspace, "member", host);
+    const controller = createRepository(`${host.hostRoot}-controller`, "controller");
+    const harness = createProductionProjectsHarness({
+      label: "grpenv-full-set-controller",
+      host,
+      workingDirectory: controller,
+    });
+    try {
+      writeProjectGroupsConfig(
+        harness,
+        projectGroupsDocument({
+          groupKey: "platform",
+          workspaceRoot: workspace,
+          members: [{ selector: "repoKey", value: member.repoKey }],
+        }),
+      );
+
+      const success = [
+        await harness.run(["projects", "list", "--json"]),
+        await harness.run(["projects", "list", "--project", "platform", "--json"]),
+        await harness.run(["projects", "list", "--flat", "--json"]),
+        await harness.run(["repos", "list", "--json"]),
+        await harness.run(["queue", "list", "--project", "platform", "--json"]),
+        await harness.run(["status", "--project", "platform", "--json"]),
+      ];
+      for (const run of success) {
+        expect(run.exitCode, run.stderr).toBe(0);
+        const envelope = envelopeOf(run);
+        if (envelope === undefined) throw new Error("no success envelope");
+        expect(Object.keys(envelope).sort()).toEqual([
+          "data",
+          "exitCode",
+          "runId",
+          "schemaVersion",
+          "timing",
+        ]);
+        expect(Object.hasOwn(envelope, "ok")).toBe(false);
+        expect(Object.hasOwn(envelope, "command")).toBe(false);
+        expect(envelope.schemaVersion).toBe("delivery.result.v1");
+      }
+
+      const failure = [
+        await harness.run(["projects", "list", "--project", "missing", "--json"]),
+        await harness.run(["projects", "list", "--flat", "--project", "platform", "--json"]),
+        await harness.run(["repos", "frobnicate", "--json"]),
+      ];
+      for (const run of failure) {
+        expect(run.exitCode).toBeGreaterThan(0);
+        const envelope = envelopeOf(run);
+        if (envelope === undefined) throw new Error("no failure envelope");
+        expect(Object.keys(envelope).sort()).toEqual([
+          "error",
+          "exitCode",
+          "runId",
+          "schemaVersion",
+          "timing",
+        ]);
+        expect(Object.hasOwn(envelope, "ok")).toBe(false);
+        expect(Object.hasOwn(envelope, "command")).toBe(false);
+        expect(envelope.schemaVersion).toBe("delivery.result.v1");
+        expect(envelope.data).toBeUndefined();
+      }
+
+      // No delivered envelope serializes an `ok` or `command` field anywhere.
+      for (const run of [...success, ...failure]) {
+        const text = JSON.stringify(run.envelope);
+        expect(text).not.toContain('"ok"');
+        expect(text).not.toContain('"command"');
+      }
+      // Every new key lives under data: the flat payload carries exactly the
+      // delivered data keys, and no envelope gained a top-level key.
+      const flatData = dataOf(success[2] as ProductionRun);
+      expect(Object.keys(flatData).sort()).toEqual(["hostIndexRevision", "projects"]);
+      const reposData = dataOf(success[3] as ProductionRun);
+      expect(Object.keys(reposData).sort()).toEqual(["hostIndexRevision", "repos"]);
+      const groupsData = dataOf(success[0] as ProductionRun);
+      expect(Object.keys(groupsData).sort()).toEqual(["groups"]);
+    } finally {
+      harness.dispose();
+      removeDirectory(workspace);
+      removeDirectory(`${host.hostRoot}-controller`);
+      host.dispose();
+    }
+  });
 });

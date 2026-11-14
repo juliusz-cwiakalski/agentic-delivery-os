@@ -109,7 +109,7 @@ describe("TC-PROJ-011 envelope shape", () => {
       await register(a);
       await register(b);
 
-      const run = await a.run(["projects", "list", "--json"]);
+      const run = await a.run(["projects", "list", "--flat", "--json"]);
       expect(run.exitCode).toBe(0);
       const envelope = envelopeOf(run) ?? {};
       // No new top-level key: the delivered success envelope, unchanged.
@@ -147,7 +147,7 @@ describe("TC-PROJ-011 envelope shape", () => {
       // Reversing the index's own entry order cannot change the output order.
       const recorded = hostIndexEntriesOf(host.hostRoot);
       writeIndex(host.hostRoot, [...recorded].reverse());
-      const reordered = await a.run(["projects", "list", "--json"]);
+      const reordered = await a.run(["projects", "list", "--flat", "--json"]);
       expect(reordered.exitCode).toBe(0);
       expect(entriesOf(reordered).map((entry) => entry.projectKey)).toEqual(keys);
     } finally {
@@ -175,8 +175,8 @@ describe("TC-PROJ-012 deterministic table and a read-only list", () => {
 
       const fingerprint = hostRootFingerprint(host.hostRoot);
       const revision = hostIndexRevisionOf(host.hostRoot);
-      const first = await a.run(["projects", "list"]);
-      const second = await a.run(["projects", "list"]);
+      const first = await a.run(["projects", "list", "--flat"]);
+      const second = await a.run(["projects", "list", "--flat"]);
       expect(first.exitCode).toBe(0);
       expect(second.exitCode).toBe(0);
       expect(first.stdout).toBe(second.stdout);
@@ -196,8 +196,8 @@ describe("TC-PROJ-012 deterministic table and a read-only list", () => {
       expect(hostRootFingerprint(host.hostRoot)).toBe(fingerprint);
       expect(hostIndexRevisionOf(host.hostRoot)).toBe(revision);
 
-      const firstJson = await a.run(["projects", "list", "--json"]);
-      const secondJson = await a.run(["projects", "list", "--json"]);
+      const firstJson = await a.run(["projects", "list", "--flat", "--json"]);
+      const secondJson = await a.run(["projects", "list", "--flat", "--json"]);
       expect(dataOf(firstJson)).toEqual(dataOf(secondJson));
     } finally {
       for (const harness of harnesses) harness.dispose();
@@ -226,7 +226,7 @@ describe("TC-PROJ-013 exit matrix, DEC-16 naming, and the three identities", () 
       const keys = { a: a.projectKey, b: b.projectKey, g: g.projectKey };
 
       // Step 1: healthy host.
-      const healthy = await a.run(["projects", "list", "--json"]);
+      const healthy = await a.run(["projects", "list", "--flat", "--json"]);
       expect(healthy.exitCode).toBe(0);
       observedExits.add(healthy.exitCode);
 
@@ -247,9 +247,9 @@ describe("TC-PROJ-013 exit matrix, DEC-16 naming, and the three identities", () 
       writeFileSync(join(emptyGitdir, ".git"), "gitdir:   \n");
       const emptyHarness = harnessFor(host, "empty-gitdir", emptyGitdir);
       harnesses.push(emptyHarness);
-      const emptyRun = await emptyHarness.run(["projects", "list", "--json"]);
+      const emptyRun = await emptyHarness.run(["projects", "list", "--flat", "--json"]);
       expect(emptyRun.exitCode).toBe(1);
-      expect(envelopeOf(emptyRun)?.error?.code).toBe("projects.identity-unreadable");
+      expect(envelopeOf(emptyRun)?.error?.code).toBe("repos.identity-unreadable");
       expect(emptyRun.stdout + emptyRun.stderr).toContain(emptyGitdir);
       expect(emptyRun.stdout + emptyRun.stderr).toContain(".git");
       observedExits.add(1);
@@ -285,9 +285,9 @@ describe("TC-PROJ-013 exit matrix, DEC-16 naming, and the three identities", () 
         harnesses.push(harness);
         await register(harness);
         corrupt(join(checkout, ".git"));
-        const run = await harness.run(["projects", "list", "--json"]);
+        const run = await harness.run(["projects", "list", "--flat", "--json"]);
         expect(run.exitCode, label).toBe(1);
-        expect(envelopeOf(run)?.error?.code, label).toBe("projects.identity-unreadable");
+        expect(envelopeOf(run)?.error?.code, label).toBe("repos.identity-unreadable");
         expect(run.stdout + run.stderr, label).toContain(checkout);
         const capture = run.stdout + run.stderr;
         markerCaptures.push(capture);
@@ -304,7 +304,7 @@ describe("TC-PROJ-013 exit matrix, DEC-16 naming, and the three identities", () 
       writeFileSync(join(nonGitdirFile, ".git"), "this is not a gitdir pointer\n");
       const nonGitdirHarness = harnessFor(host, "non-gitdir", nonGitdirFile);
       harnesses.push(nonGitdirHarness);
-      const nonGitdirRun = await nonGitdirHarness.run(["projects", "list", "--json"]);
+      const nonGitdirRun = await nonGitdirHarness.run(["projects", "list", "--flat", "--json"]);
       expect(nonGitdirRun.exitCode).toBe(0);
       expect(envelopeOf(nonGitdirRun)?.error).toBeUndefined();
       // Warnings travel the error stream once each, in every mode.
@@ -320,7 +320,7 @@ describe("TC-PROJ-013 exit matrix, DEC-16 naming, and the three identities", () 
         originUrl: "https://github.com/owner/no-git.git",
       });
       harnesses.push(noGitHarness);
-      const noGitRun = await noGitHarness.run(["projects", "list", "--json"]);
+      const noGitRun = await noGitHarness.run(["projects", "list", "--flat", "--json"]);
       expect(noGitRun.exitCode).toBe(0);
       observedExits.add(0);
 
@@ -329,9 +329,9 @@ describe("TC-PROJ-013 exit matrix, DEC-16 naming, and the three identities", () 
       removeDirectory(blockedLocation);
       mkdirSync(dirname(blockedLocation), { recursive: true });
       writeFileSync(blockedLocation, "not a directory\n");
-      const blocked = await a.run(["projects", "list", "--json"]);
+      const blocked = await a.run(["projects", "list", "--flat", "--json"]);
       expect(blocked.exitCode).toBe(2);
-      expect(envelopeOf(blocked)?.error?.code).toBe("projects.state-unavailable");
+      expect(envelopeOf(blocked)?.error?.code).toBe("repos.state-unavailable");
       expect(blocked.stdout + blocked.stderr).toContain(keys.g);
       expect(blocked.stdout + blocked.stderr).toContain(blockedLocation);
       expect(envelopeOf(blocked)?.data).toBeUndefined();
@@ -381,10 +381,10 @@ describe("TC-PROJ-041 projects list writes nothing", () => {
       const before = hostRootFingerprint(host.hostRoot);
       const revision = hostIndexRevisionOf(host.hostRoot);
       for (const argv of [
-        ["projects", "list", "--json"],
-        ["projects", "list"],
-        ["projects", "list", "--json"],
-        ["projects", "list"],
+        ["projects", "list", "--flat", "--json"],
+        ["projects", "list", "--flat"],
+        ["projects", "list", "--flat", "--json"],
+        ["projects", "list", "--flat"],
       ] as const) {
         const run = await a.run([...argv]);
         expect(run.exitCode).toBe(0);
@@ -446,7 +446,7 @@ describe("TC-PROJ-041 projects list writes nothing", () => {
       });
       harnesses.push(harness);
       expect(existsSync(absentRoot)).toBe(false);
-      const run = await harness.run(["projects", "list", "--json"]);
+      const run = await harness.run(["projects", "list", "--flat", "--json"]);
       expect(run.exitCode).toBe(0);
       expect(dataOf(run).projects).toEqual([]);
       expect(dataOf(run).hostIndexRevision).toBe(0);
@@ -457,7 +457,7 @@ describe("TC-PROJ-041 projects list writes nothing", () => {
       const checkout = createRepository(base, "list-only-repo");
       const listOnly = harnessFor(host, "list-only", checkout);
       harnesses.push(listOnly);
-      const listOnlyRun = await listOnly.run(["projects", "list", "--json"]);
+      const listOnlyRun = await listOnly.run(["projects", "list", "--flat", "--json"]);
       expect(listOnlyRun.exitCode).toBe(0);
       expect(existsSync(hostIndexDocumentPath(host.hostRoot))).toBe(false);
       expect(existsSync(join(host.hostRoot, "projects"))).toBe(false);
@@ -487,7 +487,7 @@ describe("TC-PROJ-042 cells 1 and 3 — first use and a present-but-unreadable r
       await register(b);
 
       // Cell 1: the registered checkout has never opened a store.
-      const firstUse = await a.run(["projects", "list", "--json"]);
+      const firstUse = await a.run(["projects", "list", "--flat", "--json"]);
       expect(firstUse.exitCode).toBe(0);
       expect(firstUse.stderr).not.toContain("migration");
       const row = entriesOf(firstUse).find((entry) => entry.projectKey === a.projectKey);
@@ -498,7 +498,7 @@ describe("TC-PROJ-042 cells 1 and 3 — first use and a present-but-unreadable r
       // A state-opening command then creates the store; the row is unchanged.
       expect((await a.run(["queue", "add", REF, "--priority", "1", "--json"])).exitCode).toBe(0);
       expect(existsSync(a.stateLocation)).toBe(true);
-      const after = await a.run(["projects", "list", "--json"]);
+      const after = await a.run(["projects", "list", "--flat", "--json"]);
       const rowAfter = entriesOf(after).find((entry) => entry.projectKey === a.projectKey);
       expect(rowAfter?.handoverState).toBe("shell");
 
@@ -507,12 +507,12 @@ describe("TC-PROJ-042 cells 1 and 3 — first use and a present-but-unreadable r
       removeDirectory(location);
       mkdirSync(dirname(location), { recursive: true });
       writeFileSync(location, "opaque\n");
-      const failed = await a.run(["projects", "list", "--json"]);
+      const failed = await a.run(["projects", "list", "--flat", "--json"]);
       expect(failed.exitCode).toBe(2);
       const error = failed.envelope?.error as
         | { readonly code?: string; readonly summary?: string }
         | undefined;
-      expect(error?.code).toBe("projects.state-unavailable");
+      expect(error?.code).toBe("repos.state-unavailable");
       expect(error?.summary ?? "").toContain(b.projectKey);
       expect(error?.summary ?? "").toContain(location);
       expect(failed.envelope?.data).toBeUndefined();
@@ -559,9 +559,9 @@ describe("F-1 a tampered index key is corruption, never a traversed path", () =>
         writeIndex(host.hostRoot, [
           { ...baseEntry, projectKey: key, stateLocation: `${host.hostRoot}/projects/${key}` },
         ]);
-        const run = await harness.run(["projects", "list", "--json"]);
+        const run = await harness.run(["projects", "list", "--flat", "--json"]);
         expect(run.exitCode, label).toBe(2);
-        expect(envelopeOf(run)?.error?.code, label).toBe("projects.registry-corrupt");
+        expect(envelopeOf(run)?.error?.code, label).toBe("repos.registry-corrupt");
         expect(run.envelope?.data, label).toBeUndefined();
         // No store was opened through a traversed path: the host root gains no
         // store artifact, and the escaped `<host root>/projects/..` is the host
@@ -631,7 +631,7 @@ describe("F-4 the narrowed write-free claim for projects list", () => {
       const before = snapshotTree(container);
       const indexBefore = hostIndexTextOf(host.hostRoot);
 
-      const run = await harness.run(["projects", "list", "--json"]);
+      const run = await harness.run(["projects", "list", "--flat", "--json"]);
       expect(run.exitCode).toBe(0);
 
       // The permitted write: the store's own cleanup of a leftover temp sibling.
@@ -664,7 +664,7 @@ describe("F-4 the narrowed write-free claim for projects list", () => {
       rmSync(join(checkout, ".git", PROJECT_IDENTITY_MARKER_NAME), { force: true });
       const hostBefore = readdirSync(host.hostRoot).sort();
 
-      const run = await harness.run(["projects", "list", "--json"]);
+      const run = await harness.run(["projects", "list", "--flat", "--json"]);
       expect(run.exitCode).toBe(0);
 
       // The permitted write: the create-once marker inside the checkout's git
@@ -684,7 +684,7 @@ describe("F-4 the narrowed write-free claim for projects list", () => {
 });
 
 describe("F-9 a present but unreadable directory is classified, not discovered later", () => {
-  test("an unreadable state root reaches projects.state-unavailable with key and location", async () => {
+  test("an unreadable state root reaches repos.state-unavailable with key and location", async () => {
     // A root-owned process can read any directory, so the permission cell is
     // skipped there; the regular-file cell above is root-proof.
     if (process.getuid?.() === 0) return;
@@ -700,12 +700,12 @@ describe("F-9 a present but unreadable directory is classified, not discovered l
       mkdirSync(location, { recursive: true, mode: 0o700 });
       chmodSync(location, 0o100);
       try {
-        const run = await harness.run(["projects", "list", "--json"]);
+        const run = await harness.run(["projects", "list", "--flat", "--json"]);
         expect(run.exitCode).toBe(2);
         const error = run.envelope?.error as
           | { readonly code?: string; readonly summary?: string }
           | undefined;
-        expect(error?.code).toBe("projects.state-unavailable");
+        expect(error?.code).toBe("repos.state-unavailable");
         expect(error?.summary ?? "").toContain(harness.projectKey);
         expect(error?.summary ?? "").toContain(location);
         expect(run.envelope?.data).toBeUndefined();

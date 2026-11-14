@@ -427,6 +427,7 @@ import {
   type QueueRuntimeSchedule,
   toQueueReadData,
 } from "./commands/queue.js";
+import { createReposCommandDefinition, type ReposCommandRuntime } from "./commands/repos.js";
 import { createRetroCommandDefinition } from "./commands/retro.js";
 import { createSpendCommandDefinition, type SpendCommandRuntime } from "./commands/spend.js";
 import { createStatusCommandDefinition, type StatusCommandRuntime } from "./commands/status.js";
@@ -3221,6 +3222,7 @@ export type ConfigProgramOptions = {
   readonly retro?: RetroCompositionOptions;
   readonly spend?: SpendCompositionOptions;
   readonly projects?: ProjectsCommandRuntime;
+  readonly repos?: ReposCommandRuntime;
   readonly events?: EventsCommandRuntime;
 };
 
@@ -3704,6 +3706,9 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   // throws for a prompt-required name the program lacks (GH-288 F-9, DEC-13).
   if (options.projects !== undefined) {
     commands.projects = createProjectsCommandDefinition(options.projects);
+  }
+  if (options.repos !== undefined) {
+    commands.repos = createReposCommandDefinition(options.repos);
   }
   // The taxonomy reference surface (GH-290 F-2, DEC-F): registered when the edge
   // is given the runtime, which is the declaration itself.

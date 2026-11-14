@@ -34,6 +34,7 @@ export const DOMAIN_KINDS = [
   "daemon",
   "coordinator",
   "projects",
+  "repos",
   "events",
 ] as const;
 
@@ -1517,6 +1518,39 @@ export const ERROR_TABLE = [
       "Run the read inside a checkout whose scope and configuration document can be read, then retry; the group answer is refused rather than silently empty.",
     projectionClass: "platform-provider",
     summary: "The invoking scope or the configuration document cannot be read.",
+  },
+  {
+    code: "repos.identity-unreadable",
+    domainKind: "repos",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Repair the named checkout's identity: resolve the named `.git` metadata or restore a readable, internally consistent identity marker, then retry; no path-derived key is ever substituted.",
+    projectionClass: "user-validation",
+    summary: "The flat record set cannot read the invoking checkout's identity.",
+  },
+  {
+    code: "repos.registry-corrupt",
+    domainKind: "repos",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Run a state-opening command inside a checkout to repair the host index (the corrupt bytes are preserved as a timestamped sibling), then retry the listing; the failed read changed nothing.",
+    projectionClass: "platform-provider",
+    summary: "The flat record set's host index is present but cannot be parsed.",
+  },
+  {
+    code: "repos.state-unavailable",
+    domainKind: "repos",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Repair the named repository state location or the named identity marker path and retry; the flat listing answers honestly or fails, and never fabricates a row or a handover state.",
+    projectionClass: "platform-provider",
+    summary: "A repository state location cannot be established or read.",
   },
   {
     code: "events.topic-unknown",

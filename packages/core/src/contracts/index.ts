@@ -1507,6 +1507,14 @@ export {
   type ProjectsErrorCode,
   type ProjectsListData,
   type ProjectsListEntry,
+  REPOS_COMMAND_FAMILY,
+  REPOS_ENTRY_FIELDS,
+  REPOS_ERROR_CODES,
+  REPOS_LIST_DATA_FIELDS,
+  REPOS_LIST_VERB,
+  type ReposErrorCode,
+  type ReposListData,
+  type ReposListEntry,
   STATE_MIGRATION_NOTE_PATH,
 } from "./projects.js";
 // Provider-engine vocabulary (GH-182 F-1..F-9, DM-1..DM-13): types and the

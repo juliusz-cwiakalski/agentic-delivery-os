@@ -174,6 +174,7 @@ export const DELIVERED_INLINE_NAMES = [
   "coordinator",
   "daemon",
   "projects",
+  "repos",
 ] as const;
 
 /** Files under the packages tree, for the tree-vs-inventory direction. */

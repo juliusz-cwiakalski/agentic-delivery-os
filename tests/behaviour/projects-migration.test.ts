@@ -349,11 +349,11 @@ describe("TC-PROJ-042 cells 2 and 4 — the legacy warning and the uncreatable m
       // The project root was never written and the host root holds a store.
       mkdirSync(join(host.hostRoot, "documents.default"), { recursive: true });
       writeFileSync(join(host.hostRoot, "ledger.default.jsonl"), "");
-      const listed = await harness.run(["projects", "list", "--json"]);
+      const listed = await harness.run(["projects", "list", "--flat", "--json"]);
       expect(listed.exitCode).toBe(0);
       expect(listed.envelope?.error).toBeUndefined();
       expect(listed.stderr.split(STATE_MIGRATION_NOTE_PATH).length - 1).toBe(1);
-      expect(listed.stdout + listed.stderr).not.toContain("projects.state-unavailable");
+      expect(listed.stdout + listed.stderr).not.toContain("repos.state-unavailable");
       expect(listed.exitCode).toBe(0);
     } finally {
       for (const record of harnesses) record.dispose();
@@ -390,10 +390,10 @@ describe("TC-PROJ-042 cells 2 and 4 — the legacy warning and the uncreatable m
       expect(error?.summary ?? "").toContain(checkout);
       expect(error?.summary ?? "").toContain("project-identity.json");
 
-      const listed = await harness.run(["projects", "list", "--json"]);
+      const listed = await harness.run(["projects", "list", "--flat", "--json"]);
       expect(listed.exitCode).toBe(2);
       expect((listed.envelope?.error as { readonly code?: string } | undefined)?.code).toBe(
-        "projects.state-unavailable",
+        "repos.state-unavailable",
       );
       expect(listed.envelope?.data).toBeUndefined();
     } finally {

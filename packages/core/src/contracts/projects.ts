@@ -429,3 +429,48 @@ export type ProjectScopedWorkData = {
   readonly partial?: boolean;
   readonly degradedMembers?: readonly ProjectDegradedMember[];
 };
+
+/**
+ * The flat record set's command family (GH-309 F-7, ODR-0004): the delivered
+ * name of the per-checkout enumeration. `projects` names the group surface;
+ * `repos` names the flat record set.
+ */
+export const REPOS_COMMAND_FAMILY = "repos" as const;
+
+/** The flat family's only verb (F-7); the token is shared with `projects`. */
+export const REPOS_LIST_VERB = PROJECTS_LIST_VERB;
+
+/** The flat surface's three contract error identities, moved by the rename (F-7). */
+export const REPOS_ERROR_CODES = [
+  "repos.identity-unreadable",
+  "repos.registry-corrupt",
+  "repos.state-unavailable",
+] as const;
+export type ReposErrorCode = (typeof REPOS_ERROR_CODES)[number];
+
+/** The exact flat entry field set, in output order (F-7, DM-3). */
+export const REPOS_ENTRY_FIELDS = [
+  "repoKey",
+  "root",
+  "stateLocation",
+  "daemonReachable",
+  "handoverState",
+] as const;
+
+/** The exact flat `data` field set, in output order; no new top-level key (F-7). */
+export const REPOS_LIST_DATA_FIELDS = ["repos", "hostIndexRevision"] as const;
+
+/** One `repos list` row: exactly the five contract fields, with the renamed key. */
+export type ReposListEntry = {
+  readonly repoKey: string;
+  readonly root: string;
+  readonly stateLocation: string;
+  readonly daemonReachable: DaemonReachability;
+  readonly handoverState: HandoverState;
+};
+
+/** The `repos.v1` machine payload: the renamed rows plus the producing revision. */
+export type ReposListData = {
+  readonly repos: readonly ReposListEntry[];
+  readonly hostIndexRevision: number;
+};

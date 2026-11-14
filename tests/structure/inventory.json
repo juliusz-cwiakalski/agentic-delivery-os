@@ -317,6 +317,7 @@
     "src/commands/projects.ts",
     "src/commands/provider.ts",
     "src/commands/queue.ts",
+    "src/commands/repos.ts",
     "src/commands/retro.ts",
     "src/commands/spend.ts",
     "src/commands/status.ts",
@@ -340,6 +341,7 @@
     "src/output/merge-text.ts",
     "src/output/plan-text.ts",
     "src/output/projects-text.ts",
+    "src/output/repos-text.ts",
     "src/output/serialize.ts",
     "src/production.ts",
     "src/projection.ts"

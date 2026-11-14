@@ -237,12 +237,15 @@ export {
   daemonReasonFor,
   type HandoverEvidence,
   orderProjectEntries,
+  orderRepoEntries,
   type ProjectGroupMemberResolution,
   projectGroupEntry,
   projectGroupMemberEntry,
   projectHandoverState,
   projectListEntry,
   projectMemberHealth,
+  repoListEntry,
+  reposListDataOf,
   resolveProjectGroupMember,
   selectDaemonReachability,
   type WorkspaceLocatedMember,
@@ -881,10 +884,6 @@ export {
   weightLoads,
 } from "./domain/index.js";
 export {
-  aggregateProjectMemberOutcomes,
-  projectMemberOutcomeOfHealth,
-} from "./domain/project-groups.js";
-export {
   createLaneLaunchPlanner,
   type LaneLaunchPlanFacts,
   planLaneLaunch,
@@ -895,6 +894,10 @@ export {
   resolveOwnerHoldFact,
   sanitizeOwnerHoldReason,
 } from "./domain/owner-hold.js";
+export {
+  aggregateProjectMemberOutcomes,
+  projectMemberOutcomeOfHealth,
+} from "./domain/project-groups.js";
 export {
   attemptOutOfSeamEvidenceWrite,
   collectRetro,

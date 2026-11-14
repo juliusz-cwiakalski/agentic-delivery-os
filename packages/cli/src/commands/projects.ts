@@ -1,13 +1,18 @@
 /**
- * The `projects list` command (GH-288 F-3, DEC-5, DEC-16, DEC-17; GH-309 F-1).
+ * The `projects list` command (GH-288 F-3, DEC-5, DEC-16, DEC-17; GH-309 F-1,
+ * F-7, DM-2, DM-4).
  *
- * The handler owns no stream writes and chooses no exit code: it returns the
- * `projects.v1` payload (the delivered flat form, unchanged until the rename
- * phase) or the `project-groups.v1` scoped read selected by `--project
- * <groupKey>` — never both, and never an intermediate shape. A classified
- * failure carries the identity its table row projects. The family has exactly
- * one verb, so any other token is refused through the shared invocation
- * classification *before* the host index is read.
+ * After the rename, the default form returns the `project-groups.v1` group
+ * enumeration (`--project <groupKey>` scopes it to one configured group), while
+ * `--flat` is the deprecation alias that returns the delivered `projects.v1`
+ * payload unchanged (C-2). The handler owns no stream writes and chooses no
+ * exit code: it returns exactly one of the three synopsis forms, never an
+ * intermediate shape. `--flat` and `--project` are mutually exclusive and are
+ * refused through the shared user-validation identity `input.value.rejected`
+ * (OQ-2), never silently coerced. A classified failure carries the identity its
+ * table row projects. The family has exactly one verb, so any other token is
+ * refused through the shared invocation classification *before* the host index
+ * is read.
  */
 import {
   PROJECTS_LIST_VERB,
@@ -48,7 +53,11 @@ export type ProjectGroupRuntimeRead =
 
 /** Everything the handler reads, injected at the edge. */
 export type ProjectsCommandRuntime = {
+  /** The delivered flat payload behind the `--flat` alias (C-2). */
   readonly readProjects: () => ProjectsRuntimeRead | Promise<ProjectsRuntimeRead>;
+  /** The group enumeration over every configured group (the default form). */
+  readonly readProjectGroups: () => ProjectGroupRuntimeRead | Promise<ProjectGroupRuntimeRead>;
+  /** The one-group scoped read behind `--project <groupKey>`. */
   readonly readProjectGroup: (
     groupKey: string,
   ) => ProjectGroupRuntimeRead | Promise<ProjectGroupRuntimeRead>;
@@ -137,6 +146,7 @@ export const createProjectsCommandDefinition = (
   runtime: ProjectsCommandRuntime,
 ): CommandDefinition => ({
   positionals: { max: 2 },
+  flags: ["--flat"],
   requiresValue: ["--project"],
   humanText: (data: unknown): string =>
     isProjectGroupsListData(data)
@@ -145,13 +155,26 @@ export const createProjectsCommandDefinition = (
   handler: async (invocation) => {
     const [verb, ...extra] = invocation.positionals;
     if (verb !== PROJECTS_LIST_VERB || extra.length > 0) return refusal(verb);
+    const flat = invocation.flags["--flat"] === true;
     const groupKey = invocation.flags["--project"];
-    if (typeof groupKey === "string") {
-      const read = await runtime.readProjectGroup(groupKey);
+    // OQ-2: the alias takes no group scoping. The combination is refused at
+    // exit 1 under the shared broken-invocation identity, never coerced.
+    if (flat && typeof groupKey === "string") {
+      return {
+        error: {
+          kind: "input",
+          code: "input.value.rejected",
+          summary:
+            "--flat and --project are mutually exclusive; the flat alias takes no group scoping",
+        },
+      };
+    }
+    if (flat) {
+      const read = await runtime.readProjects();
       if (!read.ok) {
         return {
           error: {
-            kind: "projects",
+            kind: "repos",
             code: read.code,
             ...(read.summary === undefined ? {} : { summary: read.summary }),
           },
@@ -164,7 +187,10 @@ export const createProjectsCommandDefinition = (
           : { warnings: read.warnings }),
       };
     }
-    const read = await runtime.readProjects();
+    const read =
+      typeof groupKey === "string"
+        ? await runtime.readProjectGroup(groupKey)
+        : await runtime.readProjectGroups();
     if (!read.ok) {
       return {
         error: {
