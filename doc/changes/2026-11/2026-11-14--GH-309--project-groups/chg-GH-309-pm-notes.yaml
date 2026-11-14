@@ -4,7 +4,7 @@ delivery_mode: interactive
 phases:
   clarify_scope: { started: null, completed: 2026-11-14T04:59:42.655Z }
   specification: { started: null, completed: 2026-11-14T05:46:03.292Z }
-  test_planning: { started: null, completed: 2026-11-14T05:37:26.838Z }
+  test_planning: { started: null, completed: 2026-11-14T05:51:58.807Z }
   delivery_planning: { started: null, completed: 2026-11-14T05:37:34.264Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }

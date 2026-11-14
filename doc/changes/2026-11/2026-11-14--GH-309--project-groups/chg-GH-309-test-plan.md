@@ -77,8 +77,8 @@ Every one of the sixteen §17 acceptance criteria is covered; no AC is left as T
 | AC-F4-2 | Group listing carries member `health` + `daemonReachable` closed reasons (seed SC-M2-S18-03) | TC-GRPSURF-001, TC-GRPSURF-002 | Covered |
 | AC-F5-1 | One `state-unavailable` member → exit 0, `data.partial` true, `data.degradedMembers[]`; readable members returned (seed SC-M2-S18-07) | TC-GRPAGG-001, TC-GRPAGG-002 | Covered |
 | AC-F6-1 | `queue list --project` / `status --project` return only the group's work at exit 0 (seed SC-M2-S18-04) | TC-GRPSREAD-001, TC-GRPSREAD-002 | Covered |
-| AC-F7-1 | Alias returns delivered `projects.v1` unchanged; default returns `project-groups.v1` (seed SC-M2-S18-08) | TC-GRPREN-003, TC-GRPREN-004, TC-GRPREN-005 | Covered |
-| AC-F7-2 | `repos list --json` returns `repos.v1` (exact fields, sorted table, `unbound` rule, `repos.*` identities) | TC-GRPREN-001, TC-GRPREN-002 | Covered |
+| AC-F7-1 | Alias returns delivered `projects.v1` unchanged; default returns `project-groups.v1` (seed SC-M2-S18-08) | TC-GRPREN-003, TC-GRPREN-004, TC-GRPREN-005, TC-GRPREN-006 | Covered |
+| AC-F7-2 | `repos list --json` returns `repos.v1` (exact fields, sorted table, `unbound` rule, `repos.*` identities) | TC-GRPREN-001, TC-GRPREN-002, TC-GRPREN-006 | Covered |
 | AC-F8-1 | Naming boundary holds everywhere; permanent repository vocabulary unchanged; board stays repository-keyed | TC-GRPBOUND-001, TC-GRPBOUND-002, TC-GRPSREAD-003 | Covered |
 | AC-F9-1 | `repos` at root `--help` with reference page; migration guide speaks delivered vocabulary | TC-GRPREG-001, TC-GRPREG-002 | Covered |
 | AC-F10-1 | Superseding decision record exists before rename code; registry row moves only with the code change | TC-GRPDR-001 | Covered |
@@ -147,6 +147,7 @@ Per `.ai/rules/testing-strategy.md`, this is a TypeScript workspace behavior cha
 | TC-GRPREN-003 | Alias `projects list --flat --json` returns the delivered `projects.v1` payload unchanged (C-2) | Regression | Automated | Critical | AC-F7-1, DoD-8, DM-4, C-2 |
 | TC-GRPREN-004 | Default `projects list --json` returns `project-groups.v1`, not the flat payload (SC-M2-S18-08) | Regression | Automated | Critical | AC-F7-1, DoD-8, DM-2 |
 | TC-GRPREN-005 | `--flat --project` combination refused as mutually exclusive at exit 1 (OQ-2, pinned at delivery planning) | Edge Case | Automated | Medium | DoD-8, OQ-2, AC-F7-1 |
+| TC-GRPREN-006 | Alias failure probe: `--flat` failures carry the moved `repos.*` identities, not `projects.*` (spec v1.1 DoD-8) | Negative | Automated | Critical | AC-F7-1, AC-F7-2, DoD-8, C-2, RSK-1 |
 | TC-GRPENV-001 | Every delivered envelope: five-field `delivery.result.v1`, keys under `data`, zero `ok`/`command` | Contract | Automated | Critical | AC-NFR1-1, DoD-12, C-1 |
 | TC-GRPRO-001 | Group and flat reads perform exactly the two permitted side effects | Negative | Automated | Critical | AC-NFR2-1, DoD-13, NFR-2, C-4 |
 | TC-GRPBOUND-001 | Naming boundary consistent across surfaces, help, and docs | Regression | Semi-automated | High | AC-F8-1, DoD-9, F-8 |
@@ -718,8 +719,8 @@ Per `.ai/rules/testing-strategy.md`, this is a TypeScript workspace behavior cha
 **Steps**:
 
 1. Run `projects list --flat --project <groupKey> --json`.
-2. Assert the expected behavior per the OQ-2 proposed resolution: the combination is refused as mutually exclusive at exit 1 — the alias takes no group scoping.
-3. Assert the refusal identity is the pinned one from the plan (expected: the alias's own refusal classification; if the plan pins a distinct identity, this TC reconciles).
+2. Assert the pinned resolution (§9 v1.2): the combination is refused as mutually exclusive at exit 1 — the alias takes no group scoping.
+3. Assert the refusal envelope carries the pinned shared user-validation identity `input.value.rejected` — no new `projects.*` identity is invented for the grammar refusal.
 
 **Expected Outcome**:
 
@@ -727,7 +728,39 @@ Per `.ai/rules/testing-strategy.md`, this is a TypeScript workspace behavior cha
 
 **Notes / Clarifications**:
 
-- **Flagged pending plan pinning:** the spec's pack defines three separate synopsis forms and never the combination; the proposed resolution (mutually-exclusive refusal at exit 1) is asserted here as expected behavior. OQ-2 is **pinned at delivery planning** — a plan decision that differs (e.g., alias-wins precedence) forces a test-plan reconciliation (Section 9), never a silent drift.
+- **Pinned and reconciled (OQ-2; §9 v1.2):** the pack defines three separate synopsis forms and never the combination; the plan pinned the mutually-exclusive refusal at exit 1 under the shared delivered identity `input.value.rejected`. This TC asserts the pinned identity; the earlier "pending plan pinning" flag is resolved.
+
+#### TC-GRPREN-006 - Alias failure probe: `--flat` failures carry the moved `repos.*` identities
+
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-7, AC-F7-1, AC-F7-2, DoD-8, DM-3, C-2, RSK-1 (spec v1.1: identities follow the surface, not the token)
+**Test Type(s)**: Integration (failure envelope) + Contract (identity/exit mapping)
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/projects-flat-alias.test.ts` (To Implement — same home as TC-GRPREN-003/005), reusing the GH-288 failure fixtures (corrupt/unreadable registry or store, unavailable state location)
+**Tags**: @bun, @behaviour, @projects, @repos
+
+**Preconditions**:
+
+- Fixture host manipulable into the delivered flat-surface failure modes per the GH-288 fixture patterns: corrupt/unreadable registry or store (`registry-corrupt`), state location that prevents an honest answer (`state-unavailable`).
+- Spec v1.1 remediation in effect: the alias returns the delivered payload unchanged on SUCCESS only; failure envelopes carry the moved `repos.*` identities.
+
+**Steps**:
+
+1. Run `projects list --flat --json` against a host whose registry/store is corrupt or unreadable; assert the failure envelope carries `repos.registry-corrupt` — not `projects.registry-corrupt` — at the identity's mapped exit code 2 (spec F-7).
+2. Run `projects list --flat --json` against a host whose state location prevents an honest answer; assert `repos.state-unavailable` — not `projects.state-unavailable` — at exit 2.
+3. Assert no delivered `projects.*` flat-surface identity (`projects.identity-unreadable`, `projects.registry-corrupt`, `projects.state-unavailable`) appears on any alias failure envelope: identities follow the surface, not the token.
+4. Assert the split rule TC-GRPREN-003 pins holds: C-2's unchanged-payload guarantee binds the SUCCESS envelope only; the failure path is governed by the moved identities (DoD-8 alias failure probe).
+
+**Expected Outcome**:
+
+- Every alias failure envelope is classified under the moved `repos.*` identities with the correct exit codes; the retired `projects.*` flat identities never fire on the `--flat` token.
+
+**Notes / Clarifications**:
+
+- Closes the DoR iter-1 MAJOR: without this probe, a failure-path regression could emit the retired `projects.*` identities from the `--flat` token while the success path stayed green.
+- The full identity row set (`repos.identity-unreadable` exit 1; `repos.registry-corrupt` / `repos.state-unavailable` exit 2) is pinned by TC-GRPREN-002's error-table rows; this TC proves the alias token rides those same envelopes.
 
 #### TC-GRPENV-001 - Every delivered envelope: five-field `delivery.result.v1`, keys under `data`, zero `ok`/`command`
 
@@ -850,7 +883,7 @@ Per `.ai/rules/testing-strategy.md`, this is a TypeScript workspace behavior cha
 
 1. At review time, list the change's files (`git diff --name-only <base>...HEAD`).
 2. Assert none of the forbidden areas appear: no cross-repository change mechanics or queue-and-lane representation (NG-1/NG-2/DEC-4); no board surface change (NG-3/DEC-3); no alias retirement (NG-4); no new tracker adapter (NG-5); no state-layer, host-index, identity-marker, or envelope-shape rework (NG-8).
-3. Assert current-truth feature specs are not pre-flipped in the delivery diff (C-6/DEC-1: they flip in phase 7).
+3. Assert current-truth feature specs are not pre-flipped in the delivery diff (C-6/DEC-1: they flip in phase 7) — with the C-6 v1.1 sync-carrier exception: error-identity rows for identities this change introduces are REQUIRED in `doc/spec/features/feature-result-contract.md` in the same delivering boundary (the error-table sync gate inside `pnpm check`); their presence in the delivery diff is compliant, not a violation. Only behavioral current-truth prose flips remain phase-7 violations.
 
 **Expected Outcome**:
 
@@ -859,6 +892,7 @@ Per `.ai/rules/testing-strategy.md`, this is a TypeScript workspace behavior cha
 **Notes / Clarifications**:
 
 - Review-time by design: `.ai/rules/testing-strategy.md` forbids permanent suites from asserting branch diffs. This is DoD-14's verification ("every delivery phase's gate").
+- C-6 v1.1 exception (spec v1.1, DoR iter-1): `feature-result-contract.md` is a sync carrier — the registry/code-table binding check requires the identities this change introduces (`projects.config-invalid`, `projects.unknown-group`, `projects.scope-unavailable`, and the moved `repos.*` rows) there in the same boundary. A reviewer must not flag those rows as pre-flipped current truth; only behavioral prose flips violate C-6.
 
 #### TC-GRPREG-001 - `repos` registered at the root listing with help entry and reference page
 
@@ -985,7 +1019,7 @@ Proposed homes below; the implementation plan pins exact file names (this plan's
 | TC-GRPSREAD-001..002 | `tests/behaviour/queue-status-project-scope.test.ts` | `bun test tests/behaviour/queue-status-project-scope.test.ts` | Fixture queue/status content per member | To Implement |
 | TC-GRPSREAD-003 | `tests/structure/naming-boundary.test.ts` (scan) + review confirmation | `bun test tests/structure/naming-boundary.test.ts` | None (tree scan) | To Implement + Manual step |
 | TC-GRPREN-001..002 | `tests/behaviour/repos-list-contract.test.ts` + `tests/structure/error-table.test.ts` (update) | `bun test tests/behaviour/repos-list-contract.test.ts && bun test tests/structure/error-table.test.ts` | Failure-path fixtures (marker/registry/state) | To Implement; error-table rows Existing – Update |
-| TC-GRPREN-003..005 | `tests/behaviour/projects-flat-alias.test.ts` | `bun test tests/behaviour/projects-flat-alias.test.ts` | Committed normalized golden of the delivered `projects.v1` shape | To Implement |
+| TC-GRPREN-003..006 | `tests/behaviour/projects-flat-alias.test.ts` | `bun test tests/behaviour/projects-flat-alias.test.ts` | Committed normalized golden of the delivered `projects.v1` shape; GH-288 failure fixtures for the GRPREN-006 probe | To Implement |
 | TC-GRPENV-001 | `tests/structure/projects-groups-envelope.test.ts` | `bun test tests/structure/projects-groups-envelope.test.ts` | Envelopes captured from the behaviour harness runs | To Implement |
 | TC-GRPRO-001 | `tests/behaviour/projects-read-only-audit.test.ts` | `bun test tests/behaviour/projects-read-only-audit.test.ts` | `snapshotTree`/`snapshotDifferences` host-root snapshots | To Implement (extends GH-288 audit pattern) |
 | TC-GRPBOUND-001..002 | `tests/structure/naming-boundary.test.ts` | `bun test tests/structure/naming-boundary.test.ts` | Content anchors over help/reference/guide texts | To Implement |
@@ -1018,10 +1052,10 @@ Proposed homes below; the implementation plan pins exact file names (this plan's
 | ID | Question | Status | Owner |
 |----|----------|--------|-------|
 | OQ-1 | `groupKey` format/uniqueness constraints and duplicate-declaration handling | **Pinned at delivery planning.** This plan asserts the spec's proposed resolution (non-empty host-unique keys; duplicates and self-contradictory member declarations → `projects.config-invalid`; no new public key pattern) in TC-GRPDOC-001/002. A differing plan pin forces test-plan reconciliation via Section 9 | Plan-writer |
-| OQ-2 | `projects list --flat --project <groupKey>` combination behavior | **Pinned at delivery planning.** This plan asserts the proposed resolution (mutually-exclusive refusal, exit 1) in TC-GRPREN-005 as expected behavior, flagged there. A differing plan pin (e.g., alias-wins) forces reconciliation | Plan-writer |
+| OQ-2 | `projects list --flat --project <groupKey>` combination behavior | **Pinned (reconciled, §9 v1.2):** mutually-exclusive refusal at exit 1 under the shared delivered user-validation identity `input.value.rejected`; asserted by TC-GRPREN-005 | Plan (pinned) |
 | OQ-3 | Member `health` value set on group entries | **Pinned at delivery planning.** This plan asserts the proposed resolution (closed health vocabulary declared with the group contract; `not-yet-supported` mandatory for unimplemented kinds) in TC-GRPAGG-002. A differing plan pin forces reconciliation | Plan-writer |
 | TP-Q1 | Does the group surface / `--project` scoping extend to the delivered MCP scope? Repo truth has a projects MCP scope (`tests/behaviour/projects-scope-mcp.test.ts`), but spec §16 lists CLI families only and no AC claims MCP parity | Open — **non-blocking for this plan** (no TC covers MCP; none is required by any AC). The plan should pin the MCP-surface expectation; if it declares MCP scope, this test plan reconciles with added TCs | Plan-writer |
-| TP-Q2 | Exact refusal identity for the OQ-2 combination refusal (a dedicated identity vs. a generic one) | Open — resolved by the plan's pinning of OQ-2; TC-GRPREN-005 asserts whichever identity the plan pins | Plan-writer |
+| TP-Q2 | Exact refusal identity for the OQ-2 combination refusal (a dedicated identity vs. a generic one) | **Closed (§9 v1.2):** the pinned identity is `input.value.rejected`, the shared delivered user-validation identity — no new `projects.*` identity; asserted by TC-GRPREN-005 | Resolved (plan) |
 
 ## 9. Plan Revision Log
 
@@ -1032,6 +1066,7 @@ Proposed homes below; the implementation plan pins exact file names (this plan's
 | 1.2 | 2026-11-14 | test-plan-writer (GLM-5.3-Flash) | Plan pins reconciled per §9 rule — OQ-2/TP-Q2 refusal identity PINNED: `projects list --flat` combined with `--project <groupKey>` is mutually exclusive and refused at exit 1 under the shared delivered user-validation identity `input.value.rejected`; no new `projects.*` identity is invented for the grammar refusal. TC-GRPREN-005 asserted the refusal behavior; the expected error identity is recorded as `input.value.rejected` and the test asserts the identity too (assertion extension carried by this row; no TC/coverage row rewritten in this pass) |
 | 1.3 | 2026-11-14 | test-plan-writer (GLM-5.3-Flash) | OQ-1 pinned exactly as this plan's TCs already assert: non-empty, host-unique `groupKey`; duplicates and the four self-contradictory member declaration cases → `projects.config-invalid`. No TC change needed; logged for completeness |
 | 1.4 | 2026-11-14 | test-plan-writer (GLM-5.3-Flash) | TP-Q1 (MCP parity) resolved by PM — closed: no MCP parity work in this change; `tests/behaviour/projects-scope-mcp.test.ts` is state-root parity only. Consistent with §1.2 (no TC covers MCP because no AC claims it); logged so the DoR gate sees the open question closed |
+| 1.5 | 2026-11-14 | test-plan-writer (GLM-5.3-Flash) | DoR iter-1 remediation: alias failure probe added (GRPREN-006, per spec v1.1 DoD-8); GRPBOUND-003 carries the C-6 sync-carrier exception; GRPREN-005 asserts `input.value.rejected`. Coverage counts updated: 30 → 31 TCs (automated 26 → 27); AC-F7-1/F7-2 matrix rows extended; §7 automation row and §8.3 OQ-2/TP-Q2 cross-references synced. TC numbering unchanged (no renumbering) |
 
 **Reconciliation rule:** when the implementation plan pins OQ-1/OQ-2/OQ-3, names the suite files, or declares MCP scope (TP-Q1) differently from this plan's asserted expectations, this test plan MUST be revised (new row above; affected TCs updated) before the DoR gate passes — never left to drift silently.
 
