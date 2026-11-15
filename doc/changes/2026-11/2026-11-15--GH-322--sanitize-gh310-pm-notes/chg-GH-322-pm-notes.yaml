@@ -14,7 +14,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-15T09:36:31.089Z }
   review_fix: { started: null, completed: 2026-11-15T09:41:09.756Z }
   quality_gates: { started: null, completed: 2026-11-15T10:18:57.267Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-15T10:21:26.850Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "Substitute the absolute gate temp root with the repository-relative
@@ -247,6 +247,22 @@ notes:
       out-of-work-tree temp root as the gate convention. Requires its own
       ticket."
     type: risk
+    date: "2026-11-15"
+  - text: "PLAN PHASE COMMIT MAP (DoD evidence; authoritative). Plan phase 1
+      (delivery) = 77bec424, subject `feat(GH-322): sanitize the recorded
+      absolute gate temp root`, one removed / one added line on the GH-310
+      pm-notes line 279 (byte-identical after masking the TMPDIR token) plus the
+      phase-state entry; test result at that commit: privacy-literals exit 0 / 0
+      violations (4077 files), lint GH-310 conforms, doc-conformance 11 pass / 0
+      fail, diff 1/1 with 2 changed lines. Lifecycle commits: clarify_scope
+      dc8f7642; specification f82c0dbb (v1.0), 99cc7c6a (v1.1 remediation),
+      43fdc505 (v1.2 remediation); test_planning dfdfda4b (v1.0), 313f472b
+      (v1.1); delivery_planning ddb0e8b3 (1.0), 040b7cef (1.1); dor_check
+      fc7abd4b (iteration 1-2 record), f535c1cb (iteration 3 READY);
+      system_spec_update 576d3a28; review_fix 211489bf; quality_gates 503f91d9.
+      Range HEAD at this entry: 503f91d9, 14 commits ahead of main-tools
+      c1f0d6fa, of which exactly one is the delivery commit."
+    type: info
     date: "2026-11-15"
   - text: "RETRO: the spec writer's non-goals were written before the in-scope edit
       was pinned, so a blanket 'no other change artifact' clause contradicted
