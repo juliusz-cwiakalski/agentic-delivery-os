@@ -12,7 +12,7 @@ phases:
   delivery: { started: null, completed: 2026-11-15T14:30:49.026Z }
   system_spec_update: { started: null, completed: 2026-11-15T12:11:25.019Z }
   review_fix: { started: null, completed: 2026-11-15T12:48:17.746Z }
-  quality_gates: { started: null, completed: 2026-11-15T14:06:20.889Z }
+  quality_gates: { started: null, completed: 2026-11-15T14:54:17.918Z }
   dod_check: { started: null, completed: 2026-11-15T14:08:27.161Z }
   pr_creation: { started: null, completed: null }
 decisions:
@@ -541,5 +541,31 @@ notes:
       divergence from the authoritative registry, spec citations of test plan
       v1.6, and one info wording nit; none affects an AC, a gate or the PR
       contract."
+    type: info
+    date: "2026-11-15"
+  - text: "PR #324 CI remediation and final gate. Root causes: (1) the phase-9
+      evidence entry quoted an absolute scratch-home path, tripping the CI-only
+      `privacy-literals` invariant (local `pnpm check` does not run it); (2) the
+      `doc-distribution-guard` and `bash-tests` CI jobs run the install-set
+      oracle (`install.sh --local`), which now needs Bun at install time, and
+      neither job installed it. Fixed in f69b66b6: the pm-notes path is
+      sanitized, and `.github/workflows/ci.yml` adds the pinned Bun setup
+      (`oven-sh/setup-bun@0c5077e5…`, `${{ env.BUN_VERSION }}`) to those two
+      jobs only. Local verification: privacy-literals 0 violations;
+      doc-distribution no drift (94 docs); doc-distribution modes 5/5;
+      test-install 56/56; run-bash-suites 27/27; privacy suites 53 pass;
+      shellcheck clean; ci-topology / ci-bindingness / ci-supply-chain green;
+      workflow YAML parses. Spec v1.9 and plan r1.6 declare the workflow file;
+      spec §7.2 no longer claims no CI change is required."
+    type: info
+    date: "2026-11-15"
+  - text: "Final phase-9 gate at head ceb88482: GATE_EXIT=0, 8631 pass / 4 skip / 0
+      fail (8635 tests, 1091 files, 1265 s), with lint, format:check, typecheck,
+      check:boundaries, prompt-conformance, help-guide-coverage and
+      exports-parity green. Commit-range gate: base origin/main-tools,
+      merge-base 8a1f77ad, head ceb88482, 51 commits, 0 offending, 0 rule hits,
+      commitlint repository-local, mode none. Privacy invariant separately 0
+      violations. This supersedes the earlier phase-9 note recorded before the
+      PR-CI fix."
     type: info
     date: "2026-11-15"
