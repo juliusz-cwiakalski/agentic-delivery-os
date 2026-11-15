@@ -5,8 +5,70 @@
  * generated.
  */
 import { describe, expect, test } from "bun:test";
-import { CHANGE_REF } from "../fixtures/cross-repository/constants";
+import {
+  API_MEMBER,
+  CHANGE_REF,
+  DOCS_MEMBER,
+  WEB_MEMBER,
+} from "../fixtures/cross-repository/constants";
+import {
+  declaredMember,
+  greenMemberReads,
+  landingObservation,
+  type MemberGatesWorld,
+  runMemberGates,
+} from "../fixtures/cross-repository/facts";
 import { createMemberQueueHarness, MEMBER_REFS } from "../fixtures/cross-repository/queue";
+import { reviewFor } from "../fixtures/cross-repository/review";
+
+describe("TC-XBOUND-001 gate report repeated-run determinism", () => {
+  const world = (): MemberGatesWorld => ({
+    members: [
+      declaredMember(API_MEMBER, { gates: ["ci-green", "push-parity"] }),
+      declaredMember(WEB_MEMBER, { gates: ["ci-green"] }),
+      declaredMember(DOCS_MEMBER, { gates: ["owner-gate"] }),
+    ],
+    reads: {
+      [API_MEMBER.repoKey]: greenMemberReads(API_MEMBER),
+      [WEB_MEMBER.repoKey]: greenMemberReads(WEB_MEMBER),
+      [DOCS_MEMBER.repoKey]: greenMemberReads(DOCS_MEMBER),
+    },
+    landings: [
+      landingObservation(WEB_MEMBER, true, 1),
+      landingObservation(API_MEMBER, false),
+      landingObservation(DOCS_MEMBER, false),
+    ],
+    reviews: [reviewFor(API_MEMBER), reviewFor(WEB_MEMBER)],
+  });
+
+  test("stdout, stderr, exit, and every derived order are byte-identical", async () => {
+    const first = await runMemberGates(world());
+    const second = await runMemberGates(world());
+    expect(second.stdout).toBe(first.stdout);
+    expect(second.stderr).toBe(first.stderr);
+    expect(second.exitCode).toBe(first.exitCode);
+    expect(second.stdout.length).toBe(first.stdout.length);
+
+    const data = (JSON.parse(first.stdout) as { readonly data: Record<string, unknown> }).data as {
+      readonly definitionOfDone: {
+        readonly members: readonly { repoKey: string }[];
+        readonly evidence: readonly { repoKey: string }[];
+      };
+      readonly blockingMembers: readonly string[];
+      readonly reviewFlow: { readonly runId: string; readonly verdicts: readonly unknown[] };
+    };
+    const replay = (JSON.parse(second.stdout) as { readonly data: typeof data }).data;
+    expect(replay.definitionOfDone.members.map((entry) => entry.repoKey)).toEqual(
+      data.definitionOfDone.members.map((entry) => entry.repoKey),
+    );
+    expect(replay.definitionOfDone.evidence.map((entry) => entry.repoKey)).toEqual(
+      data.definitionOfDone.evidence.map((entry) => entry.repoKey),
+    );
+    expect(replay.blockingMembers).toEqual(data.blockingMembers);
+    expect(replay.reviewFlow.verdicts).toEqual(data.reviewFlow.verdicts);
+    expect(replay.reviewFlow.runId).toBe(data.reviewFlow.runId);
+  });
+});
 
 describe("TC-XBOUND-003 queue and lanes repeated-run determinism", () => {
   test("list, ready, plan, and lanes list are byte-identical across two runs each", async () => {

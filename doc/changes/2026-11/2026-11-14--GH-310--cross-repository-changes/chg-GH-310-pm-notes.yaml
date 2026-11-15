@@ -268,3 +268,56 @@ notes:
       composes the declared two-member plan over the shared constants."
     type: info
     date: "2026-11-15"
+  - text: "Plan phase 3 'Cross-repository definition of done and one review flow'
+      complete (commit hash assigned at commit time; `git log` on
+      feat/GH-310/cross-repository-changes is the record). Delivered:
+      `CrossRepositoryVerifyGatesReport`/`CrossRepositoryVerifyGateRecord` (member
+      REQUIRED) as distinct additive types while the delivered `VerifyGatesReport`
+      keeps literal `overall: \"pass\"`, member-less records, its envelope and its
+      exits; `VERIFY_GATES_MAX_MEMBERS = 8`; closed `VERIFY_GATES_CI_READINGS`,
+      `VERIFY_GATES_MEMBER_VERDICTS`, `VERIFY_GATES_DEFINITION_OF_DONE_STATUSES`,
+      `VERIFY_GATES_REVIEW_VERDICTS`, `VERIFY_GATES_REVIEW_OBSERVATION_VERDICTS`;
+      `MemberLandingObservation` and `ReviewObservation` carriers; new pure
+      `domain/verify-gates-members.ts` (one record per declared (member, gate) in
+      member then gate order, pinned synthetic `read-failed` record for an
+      unresolvable identifier, mechanical member verdict over records AND
+      `gates.ci`, `blocked`/`incomplete`/`green` aggregation with `blocked`
+      winning, never-truncated `blockingMembers[]`, landing-ordered `evidence[]`
+      with PR-less omission) and `domain/review-flow.ts` (sorted-declared-set
+      `sha256Hex` runId with the empty pull-request marker, one verdict per
+      declared member, duplication -> fail/incomplete); the handler emits the
+      union discriminated by `definitionOfDone`, is always data-bearing for the
+      cross-repository type with `overall: \"fail\"` the sole carrier of
+      `verify.gates.failed`, appends exactly one gate-verification record per
+      battery evaluation, and `commands/verify.ts` projects exit 1 through
+      `exitProjection`; the member seam (declared-member read, one bounded read
+      bundle per member, injected landing/review observations) is an additive
+      OPTIONAL composition seam in `edge.ts` (absent = delivered path unchanged).
+      Tests: 137 pass / 1 skip / 0 fail across the 18-file gate battery
+      (`verify-gates-members`, `-members-evidence`, `-members-bounds`,
+      `verify-gates-review-flow`, the extended `verify-gates-read-budget`,
+      `verify-gates-target`, `cross-repository-determinism` TC-XBOUND-001,
+      `entrypoint-help` TC-XREV-005, `golden/cross-repository-members` plus every
+      delivered `verify-gates-*` suite), 887 expect calls; `tests/structure` 1233
+      pass / 0 fail; `pnpm -r typecheck` clean; `tsc -p
+      tests/types/tsconfig.json` clean; `pnpm check:boundaries` clean;
+      `pnpm format:check` clean. Two documented readings: (1) the TC-XBOUND-004
+      byte bound is asserted on the serialized machine report
+      (`JSON.stringify(data)`), which is the documented definition of
+      `VERIFY_GATES_MAX_MACHINE_BYTES`, because the envelope stdout is the
+      pretty-printed projection of that same data and cannot fit 65 536 bytes at
+      128 records; (2) unresolved-gate resolution lives in the new pure members
+      module (called from the handler) rather than in `domain/verify-gates.ts`,
+      keeping the delivered evaluator untouched. Fixtures:
+      `tests/fixtures/cross-repository/facts.ts` and `review.ts`, goldens
+      `gates-members-green.json`/`gates-review-flow.json` (reviewFlow.runId
+      pinned). Mechanical inventory seam updated:
+      `tests/fixtures/ports/v1-contract-inventory.json` (verify-gates.ts and
+      index.ts additive names), `tests/structure/inventory.json` and the
+      content-inventory executable allowances for the two new domain modules and
+      six new contract constants. Pre-existing branch conditions unchanged by this
+      phase: `check:privacy-literals` flags the recorded
+      `/home/juliusz/tmp` gate-TMPDIR strings in the change artifacts, and
+      TC-RELEASE-001 expects the phase-5 changeset."
+    type: info
+    date: "2026-11-15"

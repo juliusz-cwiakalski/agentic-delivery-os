@@ -64,4 +64,11 @@ describe("TC-ENTRY-003 root help", () => {
     expect(run.composeCalls).toBe(0);
     expect(run.stderr).toBe("");
   });
+
+  test("TC-XREV-005: no review command family is added", async () => {
+    const run = await rootHelp();
+    expect(run.stdout).not.toContain("  review  ");
+    expect(run.stdout).not.toContain("  reviews  ");
+    expect(run.stdout).toContain("  verify  ");
+  });
 });

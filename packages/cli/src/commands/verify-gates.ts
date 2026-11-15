@@ -13,6 +13,7 @@ import {
   capsuleGateEventKey,
   classifyVerifyDocument,
   EvaluateVerifyChange,
+  evaluateCrossRepositoryGates,
   evaluateDeclaredBattery,
   isFullHexSha,
   renderVerifyGatesFailureSummary,
@@ -20,6 +21,7 @@ import {
   type VerifyGatesCheckRunPage,
   type VerifyGatesDetail,
   type VerifyGatesFacts,
+  type VerifyGatesMemberReads,
   type VerifyGatesOpenPrPage,
   type VerifyGatesReadResult,
   type VerifyGatesRepositoryFacts,
@@ -30,12 +32,17 @@ import {
 import {
   type CapsuleDisclosure,
   type CapsuleProducerPort,
+  type CrossRepositoryVerifyGatesReport,
   MERGE_GATE_VERIFICATION_SCHEMA,
+  type MemberLandingObservation,
   type MergeGateVerificationRecord,
   type PhaseTransitionRecord,
+  type PlanMemberDeclaration,
   type PmNotesParseFailure,
+  type ReviewObservation,
   type StateFailure,
   VERIFY_GATES_CI_RUN_LIMIT,
+  VERIFY_GATES_MAX_MEMBERS,
   VERIFY_GATES_OPEN_PR_LIMIT,
   VERIFY_GATES_SCHEMA_VERSION,
 } from "@delivery-os/core/contracts";
@@ -63,6 +70,30 @@ export type VerifyGatesRegistryRead =
     }
   | { readonly ok: false; readonly error: StateFailure };
 
+/** One member's injected reads, bounded to the delivered provider shapes. */
+export type VerifyGatesMemberReadsInput = VerifyGatesMemberReads;
+
+/**
+ * The additive cross-repository composition seam (GH-310 F-3, F-6, DEC-17,
+ * DEC-19). Absent, the delivered single-target handler runs unchanged and the
+ * member-less bytes stay identical. Present, the handler performs exactly one
+ * bounded read per declared member (one open-PR page, one detail read, one
+ * check-run page inside the supplied read), with no retry and no pagination,
+ * and landing/review truth arrive only as injected observations.
+ */
+export type VerifyGatesMemberRuntime = {
+  /** The declared member set for the change (one bounded local plan read). */
+  readonly readMembers: (changeRef: string) => readonly PlanMemberDeclaration[] | undefined;
+  /** One bounded read bundle per declared member. */
+  readonly readMemberReads: (
+    member: PlanMemberDeclaration,
+  ) => Promise<VerifyGatesMemberReadsInput> | VerifyGatesMemberReadsInput;
+  /** The injected landing observations, one per declared member (DM-10). */
+  readonly readLandingObservations?: (changeRef: string) => readonly MemberLandingObservation[];
+  /** The injected review observations (DEC-17). */
+  readonly readReviewObservations?: (changeRef: string) => readonly ReviewObservation[];
+};
+
 /** Every gates read, injected; all I/O and provider access stays at the edge. */
 export type VerifyGatesCommandRuntime = {
   readonly readLifecycle: (changeRef: string) => {
@@ -82,6 +113,8 @@ export type VerifyGatesCommandRuntime = {
     limit: number,
   ) => Promise<VerifyGatesReadResult<VerifyGatesCheckRunPage>>;
   readonly readWorkItem: (changeRef: string) => Promise<VerifyGatesReadResult<VerifyGatesWorkItem>>;
+  /** The additive cross-repository seam; absent keeps the delivered path. */
+  readonly members?: VerifyGatesMemberRuntime;
   /** The resolved declared gate set (or a classified configuration failure). */
   readonly readGateSet: () =>
     | { readonly ok: true; readonly value: MergeEffectiveGateSet }
@@ -263,6 +296,81 @@ const readProviderFacts = async (
   };
 };
 
+/**
+ * Evaluate one change over its declared member set (GH-310 F-3, F-6).
+ *
+ * One bounded read bundle per declared member; no retry, no pagination, and no
+ * read outside the declared set. The report is data-bearing on every status and
+ * `overall: "fail"` is the sole carrier of the delivered `verify.gates.failed`
+ * classification; no error envelope is produced for a negative verdict.
+ */
+const crossRepositoryEvaluation = async (
+  runtime: VerifyGatesCommandRuntime,
+  members: VerifyGatesMemberRuntime,
+  changeRef: string,
+  declared: readonly PlanMemberDeclaration[],
+  gateSet: MergeEffectiveGateSet,
+): Promise<VerifyGatesSuccess | VerifyGatesFailure> => {
+  const repository = runtime.readRepository();
+  const evaluation = lifecycleEvaluation(runtime, changeRef);
+  const workflow = runtime.readWorkflow();
+  const workItem = await runtime.readWorkItem(changeRef);
+  const readings: { readonly member: PlanMemberDeclaration; readonly facts: VerifyGatesFacts }[] =
+    [];
+  for (const member of declared.slice(0, VERIFY_GATES_MAX_MEMBERS)) {
+    const reads = await members.readMemberReads(member);
+    readings.push({
+      member,
+      facts: {
+        changeRef,
+        lifecycle: { evaluation },
+        repository: reads.repository,
+        workflow,
+        openPullRequests: reads.openPullRequests,
+        deliveryRequestDetail: reads.deliveryRequestDetail,
+        checkRuns: reads.checkRuns,
+        workItem,
+      },
+    });
+  }
+  const report: CrossRepositoryVerifyGatesReport = evaluateCrossRepositoryGates({
+    changeRef,
+    readings,
+    batteryEntries: gateSet.batteryEntries,
+    landings: members.readLandingObservations?.(changeRef) ?? [],
+    reviews: members.readReviewObservations?.(changeRef) ?? [],
+  });
+  const ownerGate = report.gates.find((gate) => gate.id === "owner-gate");
+  const ownerNames = ownerGate?.citation.names.find((list) => list.kind === "owner-labels");
+  const record: MergeGateVerificationRecord = {
+    schema: MERGE_GATE_VERIFICATION_SCHEMA,
+    changeRef,
+    headSha: repository.head.sha ?? "",
+    verifiedAt: new Date(runtime.nowMs()).toISOString(),
+    gateSet: { schemaVersion: gateSet.schemaVersion, ids: gateSet.ids },
+    gates: report.gates,
+    trackerPosture: {
+      labels: [],
+      ownerLabels: ownerNames?.values ?? [],
+    },
+  };
+  const appended = runtime.appendVerification(record);
+  if (!appended.ok) {
+    return failure("state", appended.code, `result=error; condition=${appended.code}`);
+  }
+  const capsule = appendGateCapsule(runtime, {
+    changeRef,
+    gateSet: `${gateSet.schemaVersion}:${gateSet.ids.join(",")}`,
+    headSha: record.headSha,
+    gates: report.gates,
+  });
+  const data: Record<string, unknown> = {
+    ...report,
+    ...(capsule === undefined ? {} : { capsule }),
+  };
+  return { ok: true, data } satisfies VerifyGatesSuccess;
+};
+
 /** Build the gates handler over the injected read seam. */
 export const createVerifyGatesHandler = (runtime: VerifyGatesCommandRuntime): CommandHandler => {
   return async (invocation) => {
@@ -282,6 +390,11 @@ export const createVerifyGatesHandler = (runtime: VerifyGatesCommandRuntime): Co
         gateSet.code,
         `result=failed; condition=${gateSet.code}${gateSet.detail === undefined ? "" : `; evidence=${gateSet.detail}`}`,
       );
+    }
+    const members = runtime.members;
+    const declared = members?.readMembers(ref);
+    if (members !== undefined && declared !== undefined && declared.length > 0) {
+      return crossRepositoryEvaluation(runtime, members, ref, declared, gateSet.value);
     }
     const repository = runtime.readRepository();
     const evaluation = lifecycleEvaluation(runtime, ref);

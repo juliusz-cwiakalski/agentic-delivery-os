@@ -1095,6 +1095,12 @@ export type VerifyGatesRuntimeOptions = {
   /** The non-gating capsule producer port (GH-240 F-2). */
   readonly capsule?: CapsuleProducerPort;
   /**
+   * The additive cross-repository seam (GH-310 F-3, F-6): the declared member
+   * read plus the injected landing/review observations. Absent keeps the
+   * delivered single-target handler and the member-less bytes unchanged.
+   */
+  readonly members?: VerifyGatesCommandRuntime["members"];
+  /**
    * Additive redrive evidence source (TDR-0014 INV-8): the durable DM-18 receipt
    * for the change ref and phase, supplying the proven discovered SHA.
    */
@@ -1242,6 +1248,7 @@ export const createVerifyGatesCommandRuntime = (
     appendVerification: options.appendVerification ?? (() => ({ ok: true as const })),
     nowMs: options.nowMs ?? (() => Date.now()),
     ...(options.capsule === undefined ? {} : { capsule: options.capsule }),
+    ...(options.members === undefined ? {} : { members: options.members }),
   };
 };
 

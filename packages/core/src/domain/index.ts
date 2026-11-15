@@ -650,6 +650,10 @@ export {
   selectRetroTarget,
 } from "./retro.js";
 export {
+  reviewFlowFor,
+  reviewRunId,
+} from "./review-flow.js";
+export {
   classifyPruneCandidate,
   computeDbCutoffMs,
   computeDbLiveBoundaryMs,
@@ -736,6 +740,18 @@ export {
   type VerifyGatesWorkItem,
   verifyGatesUnknownIdentity,
 } from "./verify-gates.js";
+export {
+  blockingMembersOf,
+  type CrossRepositoryMemberOutcome,
+  crossRepositoryReport,
+  evaluateCrossRepositoryGates,
+  evaluateCrossRepositoryMember,
+  isCrossRepositoryVerifyGatesReport,
+  memberCiReading,
+  memberVerdict,
+  renderCrossRepositoryVerifyGatesHuman,
+  type VerifyGatesMemberReads,
+} from "./verify-gates-members.js";
 export {
   boundWatchLine,
   createWatchProjection,
