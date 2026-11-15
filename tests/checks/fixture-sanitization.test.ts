@@ -275,3 +275,32 @@ describe("TC-FIXTURE-002 the sanitization canary fires", () => {
     }
   });
 });
+
+/**
+ * GH-300: the new suite-map fixtures and goldens carry declared identifiers and
+ * example paths only — no absolute home path, no token shape, no secret.
+ */
+describe("TC-SHERM-001 the suite-map fixtures stay sanitized", () => {
+  const files = [
+    "tests/fixtures/verify-gates/suite-map/parity-baseline.json",
+    "tests/fixtures/verify-gates/suite-map/parity-scope.json",
+    "tests/fixtures/verify-gates/golden/suite-map-success-data.json",
+    "tests/fixtures/verify-gates/golden/suite-map-narrowed-envelope.json",
+    "tests/fixtures/verify-gates/golden/suite-map-narrowed-member-envelope.json",
+    "tests/fixtures/cross-repository/goldens/suite-map-report.json",
+  ] as const;
+
+  test("no home absolute path or token shape appears in a new fixture", () => {
+    const failures: string[] = [];
+    for (const relative of files) {
+      const text = readFileSync(join(ROOT, relative), "utf8");
+      if (/\/home\/[A-Za-z0-9._-]+/.test(text)) failures.push(`${relative}: home path`);
+      for (const shape of SHAPES) {
+        if (new RegExp(shape.regex.source, shape.regex.flags).test(text)) {
+          failures.push(`${relative}: ${shape.detail}`);
+        }
+      }
+    }
+    expect(failures).toEqual([]);
+  });
+});

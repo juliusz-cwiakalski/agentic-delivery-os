@@ -17,6 +17,12 @@ const DEFAULT_MODULES = [
   "packages/cli/src/commands/verify-gates.ts",
   "tests/fixtures/verify-gates/cases/harness.ts",
   "tests/fixtures/verify-gates/cases/facts.ts",
+  "tests/fixtures/verify-gates/suite-map/cases.ts",
+  "tests/fixtures/verify-gates/suite-map/parity-corpus.ts",
+  "tests/fixtures/verify-gates/suite-map/golden-cases.ts",
+  "tests/fixtures/cross-repository/suite-map.ts",
+  "tests/fixtures/mcp/parity/cases.ts",
+  "packages/adapters/src/file/config-source.ts",
 ] as const;
 
 describe("TC-VGATES-059 no live calls", () => {

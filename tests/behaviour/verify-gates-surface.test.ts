@@ -1,11 +1,11 @@
 /** TC-VGATES-008..010, 069 — grammar before reads and five-record reporting. */
 import { describe, expect, test } from "bun:test";
+import { baseFacts, clone, EXPECTED_JOBS, run } from "../fixtures/verify-gates/cases/facts";
 import {
   combinedRuntime,
   runVerify,
   throwingRuntime,
 } from "../fixtures/verify-gates/cases/harness";
-import { baseFacts, clone, EXPECTED_JOBS, run } from "../fixtures/verify-gates/cases/facts";
 
 const errorCode = (result: { envelope?: Record<string, unknown> }): unknown =>
   (result.envelope?.error as { code?: unknown } | undefined)?.code;
@@ -99,5 +99,53 @@ describe("TC-VGATES-010 failure preserves five records as five summary lines", (
     expect(lines[3]).toContain("push-parity");
     expect(lines[4]).toContain("owner-gate");
     expect(lines[5]).toContain("squash-preflight");
+  });
+});
+
+describe("TC-SPAR-005 the grammar is unchanged by the suite map", () => {
+  const throwingMapRuntime = () => {
+    const base = combinedRuntime();
+    const gates = base.gates;
+    if (gates === undefined) throw new Error("missing gates runtime");
+    return {
+      ...base,
+      gates: {
+        ...gates,
+        readSuiteMap: (): never => {
+          throw new Error("the map must not be resolved before grammar acceptance");
+        },
+      },
+    };
+  };
+
+  test("a third positional or unknown flag rejects before any map resolution", async () => {
+    for (const args of [
+      ["gates", "GH-300", "extra"],
+      ["gates", "GH-300", "--gate", "ci-green"],
+    ]) {
+      const result = await runVerify(throwingMapRuntime(), args);
+      expect(result.exitCode).toBe(1);
+      expect(errorCode(result)).toBe("fallback.invocation");
+      expect(result.envelope?.data).toBeUndefined();
+    }
+  });
+
+  test("the accepted grammar runs normally with the map read", async () => {
+    const result = await runVerify(combinedRuntime({ facts: clone(baseFacts()) }), [
+      "gates",
+      "GH-178",
+    ]);
+    expect(result.exitCode).toBe(0);
+    const name = EXPECTED_JOBS[0] as string;
+    expect(name.length).toBeGreaterThan(0);
+  });
+
+  test("the command definition still declares two positionals and no flags", async () => {
+    const { createVerifyCommandDefinition } = await import(
+      "../../packages/cli/src/commands/verify"
+    );
+    const definition = createVerifyCommandDefinition(combinedRuntime());
+    expect(definition.positionals?.max).toBe(2);
+    expect(definition.flags ?? []).toEqual([]);
   });
 });

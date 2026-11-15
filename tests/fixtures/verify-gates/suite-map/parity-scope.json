@@ -1,0 +1,76 @@
+{
+  "schemaVersion": "delivery.verify.suite-map.parity-scope.v1",
+  "baseline": "tests/fixtures/verify-gates/suite-map/parity-baseline.json",
+  "states": [
+    {
+      "id": "absent-no-root",
+      "documentState": "absent",
+      "classification": "parity",
+      "baselineEntry": true,
+      "note": "no selection in play and no repository root"
+    },
+    {
+      "id": "absent-no-file",
+      "documentState": "absent",
+      "classification": "parity",
+      "baselineEntry": true,
+      "note": "no selection in play and a root without the committed file"
+    },
+    {
+      "id": "selected-missing",
+      "documentState": "selected-but-missing-or-unreadable",
+      "classification": "refusal",
+      "baselineEntry": false,
+      "note": "a selection naming a path that does not exist: the unusable-selector refusal"
+    },
+    {
+      "id": "selected-unreadable",
+      "documentState": "selected-but-missing-or-unreadable",
+      "classification": "refusal",
+      "baselineEntry": false,
+      "note": "a selection naming an unreadable path: the unusable-selector refusal"
+    },
+    {
+      "id": "parsed-no-node",
+      "documentState": "parsed-no-node",
+      "classification": "parity",
+      "baselineEntry": true,
+      "note": "the document parses and declares no verify.suite-map node"
+    },
+    {
+      "id": "parsed-valid-equality",
+      "documentState": "parsed-valid",
+      "classification": "resolved-equality",
+      "baselineEntry": false,
+      "note": "a valid declaration that resolves to equality and cites the fields"
+    },
+    {
+      "id": "defective-node-schema-version",
+      "documentState": "defective-node",
+      "classification": "refusal",
+      "baselineEntry": false,
+      "note": "the map node fails the resolver's rules"
+    },
+    {
+      "id": "unreadable-eacces",
+      "documentState": "unreadable",
+      "classification": "refusal",
+      "baselineEntry": false,
+      "note": "the document exists but cannot be read"
+    },
+    {
+      "id": "unparseable-duplicate-key",
+      "documentState": "unparseable",
+      "classification": "refusal",
+      "baselineEntry": false,
+      "note": "a parser-level failure anywhere refuses the whole document"
+    },
+    {
+      "id": "defect-outside-node",
+      "documentState": "defect-elsewhere",
+      "classification": "resolved-equality",
+      "baselineEntry": false,
+      "note": "a schema or semantic defect outside the node is not interpreted"
+    }
+  ]
+}
