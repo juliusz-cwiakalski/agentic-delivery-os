@@ -7,9 +7,14 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
+  type MergeGateVerificationRecord,
   type PlanMemberDeclaration,
   VERIFY_GATES_MAX_MACHINE_BYTES,
 } from "../../packages/core/src/contracts/index";
+import {
+  appendMergeGateVerification,
+  readMergeGateVerifications,
+} from "../../packages/core/src/state/index";
 import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
 import {
   memberCloseoutFacts,
@@ -36,6 +41,7 @@ import {
   planRuntime,
   runPlanCli,
 } from "../fixtures/plan/harness/index";
+import { makeAuditStore, removeRoot } from "../fixtures/state/harness";
 import { runVerify } from "../fixtures/verify-gates/cases/harness";
 
 const ZERO_WRITE_FIELDS = [
@@ -166,6 +172,42 @@ describe("TC-XCTR-002 a full battery appends exactly one gate-verification recor
     const run = await runMemberGates(twoMemberWorld());
     expect(run.exitCode).toBe(0);
     expect(run.stdout).toContain('"definitionOfDone"');
+  });
+
+  test("the one append is a real delivered-shape ledger write (DEC-22)", async () => {
+    const fixture = makeAuditStore("gh310-readonly-real-append");
+    try {
+      const runtime = memberGatesRuntime(twoMemberWorld());
+      const gates = runtime.gates;
+      if (gates === undefined) throw new Error("missing gates runtime");
+      const run = await runVerify(
+        {
+          ...runtime,
+          gates: {
+            ...gates,
+            appendVerification: (record: MergeGateVerificationRecord) => {
+              const appended = appendMergeGateVerification(fixture.store, {
+                record,
+                fenceToken: "fixture-gh310-readonly",
+              });
+              return appended.ok
+                ? { ok: true as const }
+                : { ok: false as const, code: appended.error.code };
+            },
+          },
+        },
+        ["gates", CHANGE_REF],
+      );
+      expect(run.exitCode).toBe(0);
+      const read = readMergeGateVerifications(fixture.store, CHANGE_REF);
+      expect(read.ok).toBe(true);
+      if (!read.ok) return;
+      expect(read.records).toHaveLength(1);
+      expect(read.records[0]?.gates.every((gate) => !("member" in gate))).toBe(true);
+      expect(read.records[0]?.gates).toHaveLength(4);
+    } finally {
+      removeRoot(fixture.root);
+    }
   });
 });
 

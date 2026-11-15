@@ -1203,7 +1203,9 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/domain/closeout-diff-sweep.ts": ["diffMarkerVocabulary", "evaluateDiffSweep"],
   "core/src/domain/closeout-members.ts": [
+    "CLOSEOUT_MEMBER_FOLD_PRECEDENCE",
     "closeoutMemberRef",
+    "foldCloseoutMemberOutcomes",
     "projectCloseoutMember",
     "projectCloseoutMemberCleanup",
     "projectCloseoutMemberIssueClosure",

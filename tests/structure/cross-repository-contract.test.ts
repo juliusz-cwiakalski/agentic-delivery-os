@@ -35,6 +35,10 @@ import {
 } from "../../packages/core/src/contracts/index";
 import { canonicalChangeRef, parseMemberRef } from "../../packages/core/src/domain/plan-members";
 import {
+  appendMergeGateVerification,
+  readMergeGateVerifications,
+} from "../../packages/core/src/state/index";
+import {
   planDocumentFromValidateData,
   validatePlan,
 } from "../../packages/core/src/domain/plan-validate";
@@ -55,6 +59,7 @@ import {
 import {
   declaredMember,
   greenMemberReads,
+  memberGatesRuntime,
   type MemberGatesWorld,
   runMemberGates,
 } from "../fixtures/cross-repository/facts";
@@ -66,6 +71,7 @@ import {
   planYamlParser,
   runPlanCli,
 } from "../fixtures/plan/harness/index";
+import { makeAuditStore, removeRoot } from "../fixtures/state/harness";
 import { combinedRuntime, runVerify } from "../fixtures/verify-gates/cases/harness";
 
 const ROOT = process.cwd();
@@ -519,6 +525,60 @@ describe("TC-XCTR-007 identity reuse and the distinct report types", () => {
     ];
     for (const text of contractFiles()) {
       for (const pattern of forbidden) expect(text).not.toMatch(pattern);
+    }
+  });
+
+  test("the ledger projection contract: the member record is never a ledger record", async () => {
+    const fixture = makeAuditStore("gh310-contract-projection");
+    try {
+      const runtime = memberGatesRuntime(twoMemberGatesWorld());
+      const gates = runtime.gates;
+      if (gates === undefined) throw new Error("missing gates runtime");
+      const captured: { readonly gates: readonly { readonly member?: string }[] }[] = [];
+      const capturing = await runVerify(
+        {
+          ...runtime,
+          gates: {
+            ...gates,
+            appendVerification: (record) => {
+              captured.push(record);
+              return { ok: true as const };
+            },
+          },
+        },
+        ["gates", CHANGE_REF],
+      );
+      expect(capturing.exitCode).toBe(0);
+      const projected = captured[0];
+      if (projected === undefined) throw new Error("the handler must append one record");
+      for (const gate of projected.gates) expect(gate.member).toBeUndefined();
+
+      // The projected record is accepted and reads back non-torn.
+      const accepted = appendMergeGateVerification(fixture.store, {
+        record: projected as never,
+        fenceToken: "fixture-gh310-contract",
+      });
+      expect(accepted.ok).toBe(true);
+      const read = readMergeGateVerifications(fixture.store, CHANGE_REF);
+      expect(read.ok).toBe(true);
+
+      // An unprojected record is refused, so the shape cannot be asserted valid.
+      const unprojected = {
+        ...projected,
+        gates: projected.gates.map((gate) => ({ ...gate, member: API_MEMBER.repoKey })),
+      };
+      const refused = appendMergeGateVerification(fixture.store, {
+        record: unprojected as never,
+        fenceToken: "fixture-gh310-contract",
+      });
+      expect(refused.ok).toBe(false);
+      if (refused.ok) return;
+      expect(refused.error.code).toBe("state.store.torn");
+      expect(refused.error.consequence).toBe("not_landed");
+      const afterRefusal = readMergeGateVerifications(fixture.store, CHANGE_REF);
+      expect(afterRefusal.ok).toBe(false);
+    } finally {
+      removeRoot(fixture.root);
     }
   });
 

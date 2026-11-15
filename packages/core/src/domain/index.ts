@@ -93,10 +93,13 @@ export {
 } from "./closeout.js";
 export { evaluateDiffSweep } from "./closeout-diff-sweep.js";
 export {
+  CLOSEOUT_MEMBER_FOLD_PRECEDENCE,
+  type CloseoutMemberFoldTier,
   type CloseoutMemberOperationOutcome,
   type CloseoutMemberOutcomeIndex,
   type CloseoutMemberReportMode,
   closeoutMemberRef,
+  foldCloseoutMemberOutcomes,
   projectCloseoutMember,
   projectCloseoutMemberCleanup,
   projectCloseoutMemberIssueClosure,

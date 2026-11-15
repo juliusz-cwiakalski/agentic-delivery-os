@@ -33,19 +33,30 @@ import {
 } from "../closeout/harness";
 import { CHANGE_REF, type MemberFixture } from "./constants";
 
-/** One member's injected closeout observation; both merged by default. */
+/** Overrides that can also drop the member tracked-issue identity (DM-8). */
+export type MemberObservationOverrides = Omit<
+  Partial<CrossRepositoryCloseoutObservation>,
+  "issue"
+> & { readonly issue?: string | undefined };
+
+/** One member's injected closeout observation; both merged and open by default. */
 export const memberCloseoutObservation = (
   member: MemberFixture,
-  overrides: Partial<CrossRepositoryCloseoutObservation> = {},
-): CrossRepositoryCloseoutObservation => ({
-  repoKey: member.repoKey,
-  pullRequest: member.pullRequest,
-  merged: true,
-  headSha: member.headSha,
-  branch: member.branch,
-  issueClosure: "open",
-  ...overrides,
-});
+  overrides: MemberObservationOverrides = {},
+): CrossRepositoryCloseoutObservation => {
+  const { issue: issueOverride, ...rest } = overrides;
+  const issue = "issue" in overrides ? issueOverride : member.issue;
+  return {
+    repoKey: member.repoKey,
+    pullRequest: member.pullRequest,
+    merged: true,
+    headSha: member.headSha,
+    branch: member.branch,
+    ...(issue === undefined ? {} : { issue }),
+    issueClosure: "open",
+    ...rest,
+  };
+};
 
 /** The member branch facts, one per observation, in declared order. */
 export const memberCloseoutBranches = (

@@ -67,6 +67,12 @@ export type FakeProviderOptions = {
   readonly writeWorkItem?: CloseoutWriteOutcome;
   readonly transitionWorkItem?: CloseoutWriteOutcome;
   readonly resolveDeliveryThread?: CloseoutWriteOutcome;
+  /**
+   * Opt-in strict identity set (GH-310 DM-8): when supplied, a
+   * `transition-work-item` naming an id outside the set fails as an unavailable
+   * provider. Absent, the fake keeps its permissive delivered behaviour.
+   */
+  readonly knownEntityIds?: readonly string[];
 };
 
 export type FakeProvider = {
@@ -185,6 +191,12 @@ export const makeProvider = (options: FakeProviderOptions = {}): FakeProvider =>
     },
     transitionWorkItem: async (input) => {
       calls.push({ kind: "transitionWorkItem", target: input.entityId, args: input });
+      if (
+        options.knownEntityIds !== undefined &&
+        !options.knownEntityIds.includes(input.entityId)
+      ) {
+        return { ok: false, code: "closeout.provider.unavailable", detail: "unknown entity" };
+      }
       return options.transitionWorkItem ?? { ok: true };
     },
     resolveDeliveryThread: async (input) => {

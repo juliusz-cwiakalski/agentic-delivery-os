@@ -12,6 +12,8 @@ export type MemberFixture = {
   readonly branch: string;
   readonly pullRequest: string;
   readonly headSha: string;
+  /** The member's tracker work-item identity (DM-8): never derived from the ref. */
+  readonly issue: string;
   readonly label: string;
 };
 
@@ -21,6 +23,7 @@ export const API_MEMBER: MemberFixture = {
   branch: "feat/GH-310/api-slice",
   pullRequest: "311",
   headSha: "1111111111111111111111111111111111111111",
+  issue: "411",
   label: "api-service",
 };
 
@@ -30,6 +33,7 @@ export const WEB_MEMBER: MemberFixture = {
   branch: "feat/GH-310/web-slice",
   pullRequest: "312",
   headSha: "2222222222222222222222222222222222222222",
+  issue: "412",
   label: "web-ui",
 };
 
@@ -39,6 +43,7 @@ export const DOCS_MEMBER: MemberFixture = {
   branch: "feat/GH-310/docs-slice",
   pullRequest: "313",
   headSha: "3333333333333333333333333333333333333333",
+  issue: "413",
   label: "docs-site",
 };
 

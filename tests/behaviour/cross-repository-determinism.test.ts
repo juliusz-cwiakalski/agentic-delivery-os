@@ -129,9 +129,22 @@ describe("TC-XBOUND-002 closeout member report repeated-run determinism", () => 
   ];
 
   test("plan and apply data are byte-identical over unchanged facts", async () => {
+    // The unmerged member's branch is already absent, so the DEC-23 fold does
+    // not turn this determinism case into a squash-safety refusal.
+    const factsOverrides = {
+      branches: [{ name: API_MEMBER.branch, head: API_MEMBER.headSha }],
+    };
     for (const apply of [false, true]) {
-      const first = await runMemberCloseout({ observations: observations(), apply });
-      const second = await runMemberCloseout({ observations: observations(), apply });
+      const first = await runMemberCloseout({
+        observations: observations(),
+        apply,
+        factsOverrides,
+      });
+      const second = await runMemberCloseout({
+        observations: observations(),
+        apply,
+        factsOverrides,
+      });
       if (!first.result.ok || !second.result.ok) throw new Error("closeout failed");
       expect(JSON.stringify(second.result.data)).toBe(JSON.stringify(first.result.data));
     }

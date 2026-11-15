@@ -8,7 +8,12 @@ import { describe, expect, test } from "bun:test";
 import type {
   CrossRepositoryVerifyGateRecord,
   CrossRepositoryVerifyGatesReport,
+  MergeGateVerificationRecord,
 } from "../../packages/core/src/contracts/index";
+import {
+  appendMergeGateVerification,
+  readMergeGateVerifications,
+} from "../../packages/core/src/state/index";
 import {
   API_MEMBER,
   CHANGE_REF,
@@ -19,13 +24,15 @@ import {
   declaredMember,
   greenMemberReads,
   landingObservation,
+  memberGatesRuntime,
   type MemberGatesWorld,
   redReads,
   reviewObservation,
   runMemberGates,
   unavailableReads,
 } from "../fixtures/cross-repository/facts";
-import type { Run } from "../fixtures/verify-gates/cases/harness";
+import { makeAuditStore, removeRoot } from "../fixtures/state/harness";
+import { type Run, runVerify } from "../fixtures/verify-gates/cases/harness";
 
 const report = (run: Run): CrossRepositoryVerifyGatesReport =>
   run.envelope?.data as CrossRepositoryVerifyGatesReport;
@@ -351,5 +358,136 @@ describe("TC-XDOD-008 summary counts the synthetic record exactly once", () => {
     expect(synthetic[0]?.citation.identity).toEqual({ changeRef: CHANGE_REF });
     expect(data.summary.unknown).toBe(1);
     expect(data.definitionOfDone.status).toBe("blocked");
+  });
+});
+
+/** Append through the REAL delivered state module, as the merge composition wires it. */
+const realAppender =
+  (fixture: ReturnType<typeof makeAuditStore>) => (record: MergeGateVerificationRecord) => {
+    const appended = appendMergeGateVerification(fixture.store, {
+      record,
+      fenceToken: "fixture-gh310-members",
+    });
+    return appended.ok ? { ok: true as const } : { ok: false as const, code: appended.error.code };
+  };
+
+describe("TC-XDOD-001/002 the durable append is the delivered ledger projection (DEC-22)", () => {
+  test("the positive report round-trips through the real state module, not torn", async () => {
+    const fixture = makeAuditStore("gh310-members-green");
+    try {
+      const runtime = memberGatesRuntime(twoMembers());
+      const gates = runtime.gates;
+      if (gates === undefined) throw new Error("missing gates runtime");
+      const run = await runVerify(
+        { ...runtime, gates: { ...gates, appendVerification: realAppender(fixture) } },
+        ["gates", CHANGE_REF],
+      );
+      expect(run.exitCode).toBe(0);
+      const data = report(run);
+      const read = readMergeGateVerifications(fixture.store, CHANGE_REF);
+      expect(read.ok).toBe(true);
+      if (!read.ok) return;
+      expect(read.records).toHaveLength(1);
+      const record = read.records[0];
+      // Gate count equals the member records' count (members x declared gates).
+      expect(record?.gates).toHaveLength(data.gates.length);
+      expect(record?.gates).toHaveLength(5);
+      // `member` is dropped; id/verdict/reason/citation are preserved in order.
+      for (const gate of record?.gates ?? []) expect("member" in gate).toBe(false);
+      expect(record?.gates.map((gate) => `${gate.id}:${gate.verdict}:${gate.reason}`)).toEqual(
+        data.gates.map((gate) => `${gate.id}:${gate.verdict}:${gate.reason}`),
+      );
+      expect(record?.gates.map((gate) => gate.citation)).toEqual(
+        data.gates.map((gate) => gate.citation),
+      );
+      // The appended posture keeps its delivered change-level derivation.
+      expect(record?.trackerPosture).toEqual({ labels: [], ownerLabels: [] });
+    } finally {
+      removeRoot(fixture.root);
+    }
+  });
+
+  test("the negative report's failing record is preserved in place and count", async () => {
+    const fixture = makeAuditStore("gh310-members-red");
+    try {
+      const world = twoMembers();
+      const runtime = memberGatesRuntime({
+        ...world,
+        reads: { ...world.reads, [WEB_MEMBER.repoKey]: redReads(WEB_MEMBER) },
+      });
+      const gates = runtime.gates;
+      if (gates === undefined) throw new Error("missing gates runtime");
+      const run = await runVerify(
+        { ...runtime, gates: { ...gates, appendVerification: realAppender(fixture) } },
+        ["gates", CHANGE_REF],
+      );
+      expect(run.exitCode).toBe(1);
+      const data = report(run);
+      const read = readMergeGateVerifications(fixture.store, CHANGE_REF);
+      expect(read.ok).toBe(true);
+      if (!read.ok) return;
+      const record = read.records[0];
+      const failing = data.gates.filter((gate) => gate.verdict === "fail");
+      expect(failing.length).toBeGreaterThanOrEqual(1);
+      expect(record?.gates).toHaveLength(data.gates.length);
+      for (const gate of failing) {
+        expect(
+          record?.gates.some(
+            (candidate) =>
+              candidate.id === gate.id &&
+              candidate.verdict === gate.verdict &&
+              candidate.reason === gate.reason &&
+              JSON.stringify(candidate.citation) === JSON.stringify(gate.citation),
+          ),
+        ).toBe(true);
+      }
+    } finally {
+      removeRoot(fixture.root);
+    }
+  });
+
+  test("an unprojected member record is refused and its history reads torn", async () => {
+    const fixture = makeAuditStore("gh310-members-unprojected");
+    try {
+      const runtime = memberGatesRuntime(twoMembers());
+      const gates = runtime.gates;
+      if (gates === undefined) throw new Error("missing gates runtime");
+      const captured: MergeGateVerificationRecord[] = [];
+      await runVerify(
+        {
+          ...runtime,
+          gates: {
+            ...gates,
+            appendVerification: (record) => {
+              captured.push(record);
+              return { ok: true as const };
+            },
+          },
+        },
+        ["gates", CHANGE_REF],
+      );
+      const projected = captured[0];
+      if (projected === undefined) throw new Error("the handler must append one record");
+      // Re-append the record with the report's `member` discriminator restored,
+      // i.e. the shape the delivered closed-key validation must refuse.
+      const unprojected = {
+        ...projected,
+        gates: projected.gates.map((gate) => ({ ...gate, member: API_MEMBER.repoKey })),
+      } as unknown as MergeGateVerificationRecord;
+      const appended = appendMergeGateVerification(fixture.store, {
+        record: unprojected,
+        fenceToken: "fixture-gh310-unprojected",
+      });
+      expect(appended.ok).toBe(false);
+      if (appended.ok) return;
+      expect(appended.error.code).toBe("state.store.torn");
+      expect(appended.error.consequence).toBe("not_landed");
+      const read = readMergeGateVerifications(fixture.store, CHANGE_REF);
+      expect(read.ok).toBe(false);
+      if (read.ok) return;
+      expect(read.reason).toBe("torn");
+    } finally {
+      removeRoot(fixture.root);
+    }
   });
 });

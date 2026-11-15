@@ -18,26 +18,39 @@
       "outcome": "applied",
       "operations": [
         {
-          "operationId": "ddbc56abfe91c96f9cb13715551a1c59911c6f930e16088086c8c3502ed84e80",
+          "operationId": "de036411401596109f8121cc365387f2711a05d10806cbdd757c493e46727a81",
           "name": "transition-work-item",
           "engine": "github",
           "capabilityContext": "supported",
           "target": {
             "systemName": "github",
-            "entityId": "GH-310@api-service-1a2b3c4d"
+            "entityId": "183"
           },
           "arguments": {
             "deliveryState": "done"
           }
         },
         {
-          "operationId": "d9e5e9d57bb85ba9539d9ffb368d52699b5e2498610a372501bb70d05999bcf5",
+          "operationId": "afd85c5df96d01b41aa49c81a6a0c368848c350c4ef3d02ed2adea23464b5765",
           "name": "transition-work-item",
           "engine": "github",
           "capabilityContext": "supported",
           "target": {
             "systemName": "github",
-            "entityId": "GH-310@web-ui-5e6f7a8b"
+            "entityId": "411"
+          },
+          "arguments": {
+            "deliveryState": "done"
+          }
+        },
+        {
+          "operationId": "8cb7becfcc15428c3fdd5a79a7fa38fa528d97d4658764c5f8664c674c298e1a",
+          "name": "transition-work-item",
+          "engine": "github",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "github",
+            "entityId": "412"
           },
           "arguments": {
             "deliveryState": "done"
@@ -407,7 +420,7 @@
     }
   ],
   "summary": {
-    "totalOperations": 13,
+    "totalOperations": 14,
     "counts": {
       "would-apply": 0,
       "satisfied": 4,

@@ -142,23 +142,20 @@ describe("TC-XCLOSE-001 both merged: ordered six-field entries and apply-column 
             memberCloseoutObservation(WEB_MEMBER),
           ],
           apply: true,
-          git: {
-            deleteBranchFor: (branch) =>
-              branch === API_MEMBER.branch
-                ? { ok: false, code: "closeout.branch.unsafe", detail: "provider gap" }
-                : { ok: true },
-          },
+          provider: { transitionWorkItem: { ok: true } },
         })
       ).result,
     );
     expect(memberOf(gap, API_MEMBER.repoKey)).toMatchObject({
-      cleanup: "skipped-gap",
+      cleanup: "applied",
       issueClosure: "skipped-gap",
     });
     expect(memberOf(gap, WEB_MEMBER.repoKey)).toMatchObject({
       cleanup: "applied",
       issueClosure: "applied",
     });
+    // DEC-23: the gap tier outranks the applied tier, so the aggregate is a gap.
+    expect(stepOutcome(gap, "ticket-to-done")).toBe("skipped-gap");
   });
 
   test("each landing removes only its own member ref with reason landed", async () => {
@@ -205,11 +202,21 @@ describe("TC-XCLOSE-002 partial landing: nothing claims an unlanded member", () 
   test("A merged/B not: A removed, B retained and disclosed", async () => {
     const observations = [
       memberCloseoutObservation(API_MEMBER),
-      memberCloseoutObservation(WEB_MEMBER, { merged: false }),
+      // B carries no tracked-issue identity: it schedules no transition.
+      memberCloseoutObservation(WEB_MEMBER, { merged: false, issue: undefined }),
     ];
-    const report = applied((await runMemberCloseout({ observations, apply: true })).result);
+    // B's branch is already absent, so its cleanup is satisfied and the
+    // unmerged member cannot trigger the delivered squash-safety refusal.
+    const branches = { branches: [{ name: API_MEMBER.branch, head: API_MEMBER.headSha }] };
+    const report = applied(
+      (await runMemberCloseout({ observations, apply: true, factsOverrides: branches })).result,
+    );
     expect(memberOf(report, API_MEMBER.repoKey).landed).toBe(true);
     expect(memberOf(report, WEB_MEMBER.repoKey).landed).toBe(false);
+    expect(memberOf(report, WEB_MEMBER.repoKey).issueClosure).toBe("skipped-noop");
+    // The change-level transition is still planned and applied.
+    expect(stepOutcome(report, "ticket-to-done")).toBe("applied");
+    expect(stepOutcome(report, "branch-cleanup")).toBe("applied");
 
     const harness = createQueueRemovalHarness({
       label: "members-partial",
@@ -313,24 +320,129 @@ describe("TC-XCLOSE-003 unsafe squash predicate: refused without deleting or dis
       expect(CLOSEOUT_MEMBER_CLEANUP_PLAN_OUTCOMES).toContain(entry.cleanup as never);
       expect(CLOSEOUT_MEMBER_ISSUE_PLAN_OUTCOMES).toContain(entry.issueClosure as never);
     }
+    // DEC-23: the refusal tier wins over the applied tier, and one member's
+    // value never rewrites the aggregate.
+    expect(stepOutcome(data, "branch-cleanup")).toBe("would-refuse");
   });
 
-  test("apply mode refuses the unsafe member, applies the safe one, and keeps the branch", async () => {
+  test("apply mode folds to a refusal: the delivered closeout.branch.unsafe is reachable", async () => {
     const harness = await runMemberCloseout({
       observations: observations(),
       apply: true,
       branchHeads: unsafeHeads(),
       misleadingDetail: true,
     });
-    const data = applied(harness.result);
-    expect(memberOf(data, WEB_MEMBER.repoKey).cleanup).toBe("refused");
-    expect(memberOf(data, API_MEMBER.repoKey).cleanup).toBe("applied");
-    expect(data.steps.find((step) => step.stepId === "branch-cleanup")?.outcome).toBe("applied");
+    // A member refusal makes the aggregate refused, so the delivered refusal is
+    // the command outcome and no success data is served.
+    expect(harness.result.ok).toBe(false);
+    if (harness.result.ok) return;
+    expect(harness.result.error.code).toBe("closeout.branch.unsafe");
     expect(harness.git.calls.filter((call) => call.kind === "deleteBranch")).toEqual([
       expect.objectContaining({ target: API_MEMBER.branch }),
     ]);
-    expect(memberOf(data, WEB_MEMBER.repoKey).landed).toBe(true);
-    expect(data.members?.every((entry) => entry.landed)).toBe(true);
+  });
+
+  test("all declared members unsafe still folds to the refusal and deletes nothing", async () => {
+    const heads = { [API_MEMBER.branch]: "e".repeat(40), [WEB_MEMBER.branch]: "f".repeat(40) };
+    const plan = applied(
+      (await runMemberCloseout({ observations: observations(), apply: false, branchHeads: heads }))
+        .result,
+    );
+    expect(plan.members?.map((entry) => entry.cleanup)).toEqual(["would-refuse", "would-refuse"]);
+    expect(stepOutcome(plan, "branch-cleanup")).toBe("would-refuse");
+
+    const appliedRun = await runMemberCloseout({
+      observations: observations(),
+      apply: true,
+      branchHeads: heads,
+    });
+    expect(appliedRun.result.ok).toBe(false);
+    if (appliedRun.result.ok) return;
+    expect(appliedRun.result.error.code).toBe("closeout.branch.unsafe");
+    expect(appliedRun.git.calls.some((call) => call.kind === "deleteBranch")).toBe(false);
+  });
+});
+
+describe("TC-XCLOSE-001/002 DEC-23 fold, the member issue identity, and the change-level transition", () => {
+  test("every member transition targets exactly its observation's issue and none is synthesized", async () => {
+    const observations = bothMerged();
+    const known = ["183", API_MEMBER.issue, WEB_MEMBER.issue];
+    const harness = await runMemberCloseout({
+      observations,
+      apply: true,
+      provider: { knownEntityIds: known },
+    });
+    const data = applied(harness.result);
+    expect(data.members?.map((entry) => entry.issueClosure)).toEqual(["applied", "applied"]);
+    const targets = harness.provider.calls
+      .filter((call) => call.kind === "transitionWorkItem")
+      .map((call) => call.target);
+    // The change's own tracked item first, then each member's own issue identity.
+    expect(targets).toEqual(["183", API_MEMBER.issue, WEB_MEMBER.issue]);
+    for (const target of targets) {
+      expect(target).not.toContain("@");
+      expect(target).not.toBe(memberRef(API_MEMBER.repoKey));
+      expect(target).not.toBe(memberRef(WEB_MEMBER.repoKey));
+    }
+    expect(stepOutcome(data, "ticket-to-done")).toBe("applied");
+  });
+
+  test("a member without an issue identity is skipped-noop with no transition", async () => {
+    const observations = [
+      memberCloseoutObservation(API_MEMBER, { issue: undefined }),
+      memberCloseoutObservation(WEB_MEMBER),
+    ];
+    const harness = await runMemberCloseout({
+      observations,
+      apply: true,
+      provider: { knownEntityIds: ["183", WEB_MEMBER.issue] },
+    });
+    const data = applied(harness.result);
+    expect(memberOf(data, API_MEMBER.repoKey).issueClosure).toBe("skipped-noop");
+    const targets = harness.provider.calls
+      .filter((call) => call.kind === "transitionWorkItem")
+      .map((call) => call.target);
+    expect(targets).toEqual(["183", WEB_MEMBER.issue]);
+    const ticket = harness.plan.steps.find((step) => step.stepId === "ticket-to-done");
+    expect(ticket?.operations.map((operation) => operation.target.entityId)).toEqual([
+      "183",
+      WEB_MEMBER.issue,
+    ]);
+  });
+
+  test("the change-level transition is always planned, even when no member transitions run", async () => {
+    const observations = [
+      memberCloseoutObservation(API_MEMBER, { issue: undefined, issueClosure: "closed" }),
+      memberCloseoutObservation(WEB_MEMBER, { issue: undefined, issueClosure: "closed" }),
+    ];
+    const plan = applied((await runMemberCloseout({ observations, apply: false })).result);
+    const ticket = plan.steps.find((step) => step.stepId === "ticket-to-done");
+    expect(ticket?.operations.map((operation) => operation.target.entityId)).toEqual(["183"]);
+    expect(stepOutcome(plan, "ticket-to-done")).toBe("would-apply");
+    // The identity rule takes precedence: no issue identity means no transition.
+    expect(plan.members?.map((entry) => entry.issueClosure)).toEqual([
+      "skipped-noop",
+      "skipped-noop",
+    ]);
+  });
+
+  test("an operation-level failure shares the top tier with a safety refusal", async () => {
+    const harness = await runMemberCloseout({
+      observations: bothMerged(),
+      apply: true,
+      git: {
+        deleteBranchFor: (branch) =>
+          branch === API_MEMBER.branch
+            ? { ok: false, code: "closeout.branch.unsafe", detail: "provider gap" }
+            : { ok: true },
+      },
+    });
+    expect(harness.result.ok).toBe(false);
+    if (harness.result.ok) return;
+    expect(harness.result.error.code).toBe("closeout.write.failed");
+    // The successful member's own operation still ran: the fold never stops the
+    // transaction or rewrites another member's value.
+    expect(harness.git.calls.filter((call) => call.kind === "deleteBranch")).toHaveLength(2);
   });
 });
 

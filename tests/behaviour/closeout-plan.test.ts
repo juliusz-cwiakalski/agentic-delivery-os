@@ -491,8 +491,14 @@ describe("TC-XCLOSE-004 member plan shape rides the delivered step ids", () => {
       API_MEMBER.branch,
       WEB_MEMBER.branch,
     ]);
+    // The change's own transition is planned first, then one per member issue.
     const ticket = stepById(plan.steps, "ticket-to-done");
-    expect(ticket.operations).toHaveLength(2);
+    expect(ticket.operations.map((operation) => operation.target.entityId)).toEqual([
+      "183",
+      API_MEMBER.issue,
+      WEB_MEMBER.issue,
+    ]);
+    expect(ticket.outcome).toBe("would-apply");
   });
 
   test("a member-less plan carries no members projection", () => {

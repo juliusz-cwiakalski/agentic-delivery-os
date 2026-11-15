@@ -16,6 +16,7 @@ import {
   evaluateCrossRepositoryGates,
   evaluateDeclaredBattery,
   isFullHexSha,
+  ownerAttentionLabels,
   renderVerifyGatesFailureSummary,
   resolveOpenPr,
   type VerifyGatesCheckRunPage,
@@ -304,6 +305,21 @@ const readProviderFacts = async (
  * `overall: "fail"` is the sole carrier of the delivered `verify.gates.failed`
  * classification; no error envelope is produced for a negative verdict.
  */
+/**
+ * The change-level tracker posture of the appended record (DEC-22): the
+ * delivered derivation reads the change's own work item through the declared
+ * `owner-gate` entry, so a member-declaring run reports the change's own
+ * attention labels rather than whichever member happens to hold the first
+ * `owner-gate` record.
+ */
+const changeLevelOwnerLabels = (
+  workItem: VerifyGatesReadResult<VerifyGatesWorkItem>,
+  batteryEntries: MergeEffectiveGateSet["batteryEntries"],
+): readonly string[] => {
+  if (!batteryEntries.some((entry) => entry.id === "owner-gate")) return [];
+  return workItem.ok ? ownerAttentionLabels(workItem.value.item.labels) : [];
+};
+
 const crossRepositoryEvaluation = async (
   runtime: VerifyGatesCommandRuntime,
   members: VerifyGatesMemberRuntime,
@@ -340,18 +356,25 @@ const crossRepositoryEvaluation = async (
     landings: members.readLandingObservations?.(changeRef) ?? [],
     reviews: members.readReviewObservations?.(changeRef) ?? [],
   });
-  const ownerGate = report.gates.find((gate) => gate.id === "owner-gate");
-  const ownerNames = ownerGate?.citation.names.find((list) => list.kind === "owner-labels");
+  // DEC-22: the durable ledger never carries the report's `member` discriminator.
+  // Each member record is projected to the delivered record shape, preserving
+  // `id`, `verdict`, `reason`, and `citation` in record order and count.
+  const ledgerGates = report.gates.map(({ id, verdict, reason, citation }) => ({
+    id,
+    verdict,
+    reason,
+    citation,
+  }));
   const record: MergeGateVerificationRecord = {
     schema: MERGE_GATE_VERIFICATION_SCHEMA,
     changeRef,
     headSha: repository.head.sha ?? "",
     verifiedAt: new Date(runtime.nowMs()).toISOString(),
     gateSet: { schemaVersion: gateSet.schemaVersion, ids: gateSet.ids },
-    gates: report.gates,
+    gates: ledgerGates,
     trackerPosture: {
       labels: [],
-      ownerLabels: ownerNames?.values ?? [],
+      ownerLabels: changeLevelOwnerLabels(workItem, gateSet.batteryEntries),
     },
   };
   const appended = runtime.appendVerification(record);

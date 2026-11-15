@@ -268,6 +268,15 @@ export type CrossRepositoryCloseoutObservation = {
   readonly merged: boolean;
   readonly headSha?: string;
   readonly branch: string;
+  /**
+   * The member's tracker work-item identity (DM-8): the tracked item that
+   * member's delivery lands, supplied by the composition exactly like
+   * `headSha`. It is the only permitted target of a member `ticket-to-done`
+   * transition; a member without it reports `issueClosure: skipped-noop` and
+   * schedules no transition, and no identity is ever synthesized from the
+   * member ref or the change ref (DEC-12).
+   */
+  readonly issue?: string;
   /** The observed tracked-issue fact input to the DM-5 mapping. */
   readonly issueClosure?: CloseoutMemberIssueFact;
 };
@@ -520,6 +529,13 @@ export type CloseoutPlan = {
   readonly summary: CloseoutSummary;
   /** Additive per-member planned projections, in declared order (GH-310 DM-5). */
   readonly members?: readonly CloseoutMemberPlan[];
+  /**
+   * The delivered change-level `ticket-to-done` plan outcome in member mode
+   * (GH-310 DEC-23). Member transitions ride the same step additively, so the
+   * apply-mode aggregate folds this contribution together with the members'
+   * mode-scoped values. Absent in member-less mode and never emitted as data.
+   */
+  readonly changeTicketOutcome?: CloseoutPlanOutcome;
   /** Additive planned residue (thread policy and diff ambiguous hits). */
   readonly residue?: readonly CloseoutResidueItem[];
 };
