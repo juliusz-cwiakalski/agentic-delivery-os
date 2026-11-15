@@ -12,7 +12,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-15T15:56:35.881Z }
   review_fix: { started: null, completed: 2026-11-15T17:31:19.035Z }
   quality_gates: { started: null, completed: 2026-11-15T17:48:24.417Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-15T17:49:34.867Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "DEC-1 scope: deliver M2-S8 exactly as the backlog task list states
@@ -676,6 +676,49 @@ notes:
       inside the enclosing jaiship repository; a same-filesystem directory
       outside every work tree was used and is disclosed."
     type: info
+    date: "2026-11-15"
+  - text: "DOD CHECK (phase 10) verification: (1) chg-GH-301-pm-notes.yaml exists
+      and the registry records every prior lifecycle phase completed
+      (clarify_scope, specification, test_planning, delivery_planning,
+      dor_check, delivery, system_spec_update, review_fix, quality_gates). (2)
+      Plan completion: all 8 declared plan phases carry a pm-notes entry naming
+      the plan phase id, the commit hash and the test result — ids 1-8 at
+      d7fbc56b, 2ea319dd, 8dc40fc3, 8d39e4f8, edf44fc6, ccf14fb5, e4bb8541,
+      73048dce (+ 04c6d4da for the F-4 seam placement); plan validate = valid,
+      readyForDevelopment=true. (3) AC satisfaction: 30 ACs independently
+      verified by review iteration 2 — 29 PASS; AC-NFR8-1 is PARTIAL and carried
+      honestly (the literal repository-local TMPDIR precondition cannot be met
+      in this nested-git checkout; a same-filesystem outside-repo directory was
+      used and the full suite is green, 8668 pass / 4 skip / 0 fail). The
+      reviewer recorded it as an owner-accepted environment partial, not a
+      silent pass. (4) Current-truth documentation: @doc-syncer reports zero
+      residual documentation gaps and zero spec-coverage gaps; doc-distribution
+      93 in-scope docs with no drift. (5) Quality gates 8/8 green including the
+      mandatory range lint (PASS, 53 commits at that time, 0 offending)."
+    type: info
+    date: "2026-11-15"
+  - text: "DOD DEBT CARRIED TO THE PR GATE (explicit, not silent): (a) AC-NFR8-1
+      environment partial as described above; (b) ADR-0011 remains Proposed —
+      owner ratification is required by the R2 rule and happens at the open-PR
+      gate; (c) TC-MEMWRITE-003's manual consolidation half was not re-executed
+      in phase 8 (its phase-6 evidence pointer stands) — the reviewer named the
+      lifecycle review as owner and recorded it as PARTIAL; (d) F-11 residual
+      (performance cell vocabulary) and F-12's kind-to-home-area rule remain
+      documented residuals, not gated; (e) the `supersedeRecord`
+      `authoritative`-target limit stays documented and out of AC scope."
+    type: risk
+    date: "2026-11-15"
+  - text: "RETRO: the delivery converged after one remediation cycle, but the
+      dominant cost was not implementation — it was four DoR rounds (20 -> 7 ->
+      2 -> 0 findings) plus review iteration 1's high finding on a writer path
+      the test plan never round-tripped. Two process observations for the next
+      change: (1) a specification that introduces a validator must name the
+      writers it will re-drive, and the test plan must own at least one
+      writer->validator round trip per writer; (2) closed finding registers and
+      AC ownership partitions should be authored together, because every round
+      of the DoR gate that failed on ownership (not content) came from writing
+      them in separate sittings."
+    type: retro
     date: "2026-11-15"
   - text: "Open questions carried by the spec (all non-blocking, deferred): OQ-1
       distribute the invariant to bootstrapped projects (NG-7, would retire the
