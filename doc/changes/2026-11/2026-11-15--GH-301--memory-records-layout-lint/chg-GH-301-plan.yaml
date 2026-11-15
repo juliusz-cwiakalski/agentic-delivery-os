@@ -1,12 +1,14 @@
-# GH-301 delivery plan — machine-readable document (delivery.plan.v1), revision 1.4
+# GH-301 delivery plan — machine-readable document (delivery.plan.v1), revision 1.5
 # (2026-11-15). Authored against chg-GH-301-spec.md v1.3 (30 ACs, §17.1 DoD,
 # Appendix A closed finding register with the schema/provenance presence
 # partition, DM-6's non-projectable-scope projection rule, DEC-5..DEC-13,
 # Appendix C C-1..C-11, ADR-0011 as the schema authority) and
-# chg-GH-301-test-plan.md v1.3 (40 TCs, AC matrix, §6 fixture discipline, §7
-# file mapping and shared implementation homes, the scanner/edge read boundary,
-# the resolved-invocation parity assertion, and the phase homes the two v1.3
-# relocations settle).
+# chg-GH-301-test-plan.md v1.4 at this revision (40 TCs, AC matrix, §6 fixture
+# discipline, §7 file mapping and shared implementation homes, the scanner/edge
+# read boundary, the resolved-invocation parity assertion, and the phase homes
+# the v1.3 relocations settle). Phase 8 lands test plan v1.5: the same 40 TCs
+# and 30 ACs, with the missing cells added to their owning scenarios and §10
+# turned into the delivery-time execution record.
 #
 # REVISION LOG
 #   revision 1.0 (2026-11-15) — initial plan from spec v1.0 + test plan v1.0.
@@ -124,8 +126,25 @@
 #     phases by step while the table still totals 40 distinct TCs (the id is
 #     counted once) and 30 ACs. No phase, scope, AC ownership or closed
 #     obligation changes; nothing here is a new requirement.
+#   revision 1.5 (2026-11-15) — REVIEW-ITERATION-1 REMEDIATION. Review verdict
+#     `code-review/review-iter-1.yaml` is FAIL on a delivered range whose seven
+#     phases are all COMPLETE and whose gate is green: the change's own new
+#     invariant rejects the output of a supported write path (F-1), and six
+#     further correctness/contract drifts plus a coverage gap are reachable. The
+#     PM's remediation decision (`chg-GH-301-pm-notes.yaml`, "REMEDIATION
+#     DECISION (review iteration 1)") puts F-1..F-10 in scope and fixes them in
+#     ONE appended remediation phase — no separate ticket, because the plan is
+#     the work record. This revision therefore adds phase 8 (`delivery`), extends
+#     `tier.phases` to 8, and adds the phase-8 scope, content/test obligations,
+#     done-when and commit subject. It changes no existing phase, no scope of an
+#     existing phase, no AC ownership, no closed obligation and no recorded
+#     evidence: the remediation is ADDITIVE, and no AC or plan-phase verdict is
+#     rewritten. F-11 (NFR evidence gaps) and F-12's kind-to-home-area
+#     enforcement stay documented residuals; F-12's duplicated area constant is
+#     folded in only because it is a zero-behaviour single-sourcing fix inside
+#     an already-declared file, and it adds no lint rule.
 #
-# One ticket, one PR against main-tools, seven delivery phases. Every phase is an
+# One ticket, one PR against main-tools, eight delivery phases. Every phase is an
 # independently committable slice that is green at its own boundary, and every
 # phase is ONE commit through the commit primitive (conventional subject, scope
 # GH-301 per repo convention `feat(GH-301): ...`, every body/footer line
@@ -471,7 +490,7 @@ schemaVersion: delivery.plan.v1
 workItemRef: GH-301
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6, 7]
+  phases: [1, 2, 3, 4, 5, 6, 7, 8]
   escalationTriggers:
     - index-or-entry-point-exceeds-its-published-cap-after-the-schema-rewrite
     - a-required-schema-key-is-absent-from-a-rendered-record
@@ -1537,4 +1556,273 @@ phases:
         - AGENTS.md
         - .ai/memory/README.md
         - .opencode/skills/consolidate-memory/SKILL.md
+    weightClass: heavy
+
+  # ---------------------------------------------------------------------------
+  # Phase 8 — Review-iteration-1 remediation (F-1..F-10)
+  # Commit: fix(GH-301): close the review-iteration-1 findings
+  #
+  # Goal: close every finding the FAIL review iteration 1 records
+  # (code-review/review-iter-1.yaml, F-1..F-10) so a supported write path can no
+  # longer produce a red build, the promotion contract cannot render a record the
+  # invariant rejects, the lint's suppression and link/line/date/statement/output
+  # behaviour matches its published contract, and the test suite actually proves
+  # each of those paths. The phase is ADDITIVE: it lands AFTER phase 7 and BEFORE
+  # the lifecycle review and quality gates (lifecycle phases 8-9), rewrites no AC,
+  # no closed finding identity and no earlier phase's status or evidence, and
+  # keeps the delivered tree green at its own commit boundary. The PM's
+  # remediation decision (chg-GH-301-pm-notes.yaml) is the authority for scope;
+  # F-11 and F-12's kind-to-home-area enforcement stay documented residuals.
+  #
+  # Content obligations (each names the finding it closes and the exact expected
+  # behaviour after the fix; no obligation adds a finding identity, a command, a
+  # doctor area, an error-table row, a domain kind, or a published doc):
+  #  8.1 F-1 — supersession writes its replacement link (HIGH). In
+  #      `packages/adapters/src/file/memory-promotion.ts`, `supersedeRecord` takes
+  #      the promoted record id (from `write.recordId`) and, when it rewrites the
+  #      target's `status` to `superseded`, writes `superseded_by:
+  #      "<new-record-id>"` into that target's frontmatter so the pair is
+  #      symmetric with the new record's `supersedes`. That is the ONLY added
+  #      write: statement, evidence, trust, dates, body and every other key are
+  #      untouched (a supersession is not a content rewrite), the write stays
+  #      confined by the existing `underRoot` check, and a target that is already
+  #      superseded with the same link is a no-op (idempotent re-run). A
+  #      `supersedes` naming an `authoritative` record remains the documented,
+  #      out-of-AC case the reviewer note records (D-6): it is left untouched and
+  #      the limit is stated in the completion note. Proof is a ROUND TRIP, not a
+  #      synthetic fixture: promote a lesson that carries `supersedes: [<target>]`
+  #      over a schema-valid `status: candidate` target, then scan the resulting
+  #      tree and run `evaluateMemory` — the result is ZERO findings, with no
+  #      `memory.schema.superseded-by-missing` and no
+  #      `memory.reference.supersede-asymmetry`, and the target carries both the
+  #      superseded status and the `superseded_by` link. MUT-CAP-39, MUT-CAP-40
+  #      and MUT-CAP-41 anchors (including the `'$1"superseded"'` replacement
+  #      literal) are preserved; if a refactor cannot preserve an anchor, the
+  #      mutant fixture moves with it in the same commit and the mutant still
+  #      kills its declared suite.
+  #  8.2 F-2 — the read-when hint is never a truncated statement. In
+  #      `packages/core/src/domain/capsule-candidates.ts`, `deriveHint` never
+  #      slices `applies_when` or `statement`. The rule is: a collapsed
+  #      `applies_when` that fits `HINT_MAX_CHARS` is used whole; with no
+  #      `applies_when`, a collapsed statement that fits is used whole (the
+  #      declared fallback); when the chosen source exceeds the bound, the writer
+  #      emits a deterministic read-when phrase derived from structured candidate
+  #      fields (class/kind and scope) that is non-empty, within
+  #      `HINT_MAX_CHARS`, and is NOT a prefix or slice of the statement or the
+  #      applicability string. Two runs over one candidate render the same row.
+  #      `doc/spec/features/feature-memory-lint.md` promotion paragraph is
+  #      corrected to this rule (ADR-0011 D6, DEC-7: a read-when hint, not a
+  #      truncated statement). No AC is edited: AC-F3-1's fallback clause
+  #      continues to hold whenever the statement fits whole.
+  #  8.3 F-3 — the candidate statement is bounded at candidate-schema time. In
+  #      `packages/core/src/domain/capsule-candidates.ts`, `validateCandidate`
+  #      imports and enforces `STATEMENT_MAX_CHARS`: a candidate whose statement
+  #      exceeds it is refused through the EXISTING `closeout.capsule-invalid`
+  #      identity with zero writes (no record file, no index row, no promoted
+  #      decision) and no new register id or identity. A statement exactly at the
+  #      bound validates, promotes, and lints clean. Tests express the boundary
+  #      as `STATEMENT_MAX_CHARS` and `STATEMENT_MAX_CHARS + 1`, never as
+  #      restated literals.
+  #  8.4 F-4 — secret suppression is scoped to the delivered value segment. The
+  #      guard's semantics are the contract: `suppressionValueFor` in
+  #      `packages/adapters/src/io/privacy-rules.ts` already evaluates markers
+  #      only against the value a rule protects, so the memory lint must do the
+  #      same instead of testing the whole matched span. Implement ONE seam, not
+  #      a second copy: `MemoryPrivacyRule` in
+  #      `packages/core/src/contracts/memory-record.ts` gains an injected
+  #      value-segment function; `scripts/checks/memory-lint.ts` injects the
+  #      guard's own `suppressionValueFor` (exported additively from the adapter
+  #      module, its logic unchanged); `packages/core/src/domain/memory-lint.ts`
+  #      evaluates suppression markers against that segment only. The whole-tree
+  #      privacy guard is NOT weakened: the export changes no guard behaviour and
+  #      `matchGenericRules` still returns an UNSUPPRESSED
+  #      `secret.credential-assignment` for a value whose marker sits in the key.
+  #      After the fix, `fake_token: <real-secret token>` produces a
+  #      `memory.secret.*` finding in the memory lint exactly as the guard
+  #      reports it, a marker inside the value still suppresses, and a marker
+  #      elsewhere on the line still does not. The new export is declared in
+  #      `EXECUTABLE_ALLOWANCES` in `tests/structure/content-inventory.test.ts`.
+  #      VERIFIED before authoring: the seam adds one export inside an existing
+  #      adapter module, no new module and no new core-contract export symbol, so
+  #      `tests/structure/inventory.json` and
+  #      `tests/fixtures/ports/v1-contract-inventory.json` are NOT touched.
+  #  8.5 F-5 — links that leave the memory tree are out of scope, not dangling.
+  #      In `packages/core/src/domain/memory-lint.ts`, a record-body link is
+  #      resolved against the record's directory and evaluated only when the
+  #      normalized resolution stays inside `MEMORY_ROOT`; a link whose resolution
+  #      escapes the tree produces NO finding (that is the published scope: an
+  #      in-tree relative link). An in-tree link that resolves to no scanned path
+  #      remains exactly one `memory.reference.link-dangling`, and a resolvable
+  #      in-tree link stays silent. So `../../../AGENTS.md` and
+  #      `/doc/spec/...`-style citations no longer trip the gate, while a missing
+  #      sibling link still does. Doc line "An in-tree relative Markdown link in
+  #      a record body must resolve to a scanned file" is clarified in
+  #      `doc/spec/features/feature-memory-lint.md` to name the boundary.
+  #  8.6 F-6 — line counting has no phantom trailing element. In
+  #      `packages/core/src/domain/memory-lint.ts`, `measureLines` counts a
+  #      newline-terminated file as the number of lines it contains (a trailing
+  #      newline is a terminator, not an empty line). A newline-terminated
+  #      surface exactly at its published cap is SILENT; one line over reports the
+  #      true measured value and the cap. The budget boundary fixtures in
+  #      `tests/fixtures/memory/tree.ts` are newline-terminated so the at-cap case
+  #      exercises a real file shape, and they keep importing
+  #      `MEMORY_INDEX_MAX_LINES`, `MEMORY_ENTRY_MAX_LINES` and
+  #      `MEMORY_ARCHIVE_INDEX_MAX_LINES` rather than restating them. Kernel
+  #      measurement (the OQ-TP-5 anchor) is unchanged.
+  #  8.7 F-7 — the capture-line date heuristic is restricted to capture lines. In
+  #      `packages/core/src/domain/memory-lint.ts`, `memory.dating.entry-line-date`
+  #      fires only when a bullet's leading token is date-like (a calendar-shaped
+  #      candidate such as `YYYY-MM-DD`, optionally with a time) and is not
+  #      exactly `YYYY-MM-DD`. A bullet whose leading token merely carries a digit
+  #      but is not date-like (`- GH-301: ...`, `- T0-T5: ...`) produces NO
+  #      finding. A malformed date-like token still fires one dating finding. The
+  #      published sentence in `doc/spec/features/feature-memory-lint.md` names
+  #      the date-like shape so the doc and the heuristic agree.
+  #  8.8 F-8 — statement non-emptiness is enforced. In
+  #      `packages/core/src/domain/memory-lint.ts`, a `statement` that is
+  #      absent-as-empty (missing, null, an empty or whitespace-only string) or a
+  #      non-string value is exactly one `memory.schema.keys-missing` finding
+  #      naming the file and the key — no `statement-too-long`, no second finding
+  #      from another area, no new identity. A non-empty statement over
+  #      `STATEMENT_MAX_CHARS` remains one `memory.schema.statement-too-long`.
+  #      The empty-statement case is added to the isolated-defect table in
+  #      `tests/fixtures/memory/mutants.ts`.
+  #  8.9 F-9 — the printed report IS the declared area order. In
+  #      `packages/core/src/domain/memory-lint.ts`, the emitted lines are ONE
+  #      stream in the findings' declared order (area, then path, then line, then
+  #      rule id), severity shown by the FAIL/WARN prefix, instead of all errors
+  #      followed by all advisories. The two print ceilings stay SEPARATE budgets
+  #      applied while selecting from that ordered stream (at most
+  #      `MEMORY_MAX_PRINTED_ERRORS` error lines and
+  #      `MEMORY_MAX_PRINTED_ADVISORIES` advisory lines), and the single
+  #      truncation line keeps the true totals and the printed counts. On a mixed
+  #      tree a derivable advisory (area 7) therefore prints before a secret error
+  #      (area 8); repeated runs stay byte-identical; the exit code and the
+  #      summary counts are unchanged. The delivered doc already declares area
+  #      order, so it is not edited for this finding.
+  #  8.10 F-12 (free part only) — the evaluator's local `RECORD_AREAS` list is
+  #      replaced by the imported `MEMORY_RECORD_AREAS` in
+  #      `packages/core/src/domain/memory-lint.ts`: one authority, zero behaviour
+  #      change. Enforcing `MEMORY_RECORD_HOME_BY_KIND` in the lint is explicitly
+  #      NOT added — it would be a new rule outside the closed register and stays
+  #      a documented residual (F-12's informational half).
+  #  8.11 F-10 — the missing coverage, at the homes its owning TC declares. Every
+  #      case below is additive to an existing scenario (no new TC id; the
+  #      40-TC / 30-AC count is unchanged):
+  #        (a) supersession round trip through the invariant (writer ->
+  #            invariant -> zero findings) in
+  #            `tests/behaviour/closeout-capsule-supersession.test.ts` and
+  #            `tests/behaviour/memory-promotion-schema.test.ts`;
+  #        (b) a candidate over the statement bound is refused with zero writes
+  #            and one exactly at the bound promotes and lints clean, in
+  #            `tests/behaviour/memory-promotion-schema.test.ts` with the
+  #            `tests/fixtures/capsule/promotion.ts` fixture;
+  #        (c) a newline-terminated file at exactly the cap is silent and cap+1
+  #            fires, in `tests/checks/memory-lint-budget.test.ts` with the
+  #            `tests/fixtures/memory/tree.ts` filler;
+  #        (d) an out-of-tree link is silent while an in-tree missing link fires,
+  #            in `tests/checks/memory-lint-reference.test.ts`;
+  #        (e) a marker in the key does not suppress, a marker in the value does,
+  #            and a marker elsewhere on the line does not, in
+  #            `tests/checks/memory-lint-secret.test.ts`;
+  #        (f) an empty statement yields one `memory.schema.keys-missing`, in
+  #            `tests/checks/memory-lint-schema.test.ts` (+ the mutants fixture);
+  #        (g) the mixed-tree printed order assertion, in
+  #            `tests/checks/memory-lint-output.test.ts`;
+  #        (h) the hint is not a truncation of a statement over the hint bound, in
+  #            `tests/behaviour/memory-promotion-schema.test.ts`.
+  #      `chg-GH-301-test-plan.md` records them: each case lands under the TC that
+  #      owns its area in §5.2, the AC matrix notes the strengthened cells without
+  #      changing any verdict language, §9 gains a v1.5 revision row, and §10
+  #      becomes the delivery-time execution record the test plan's own rule
+  #      demands — populated rows for the phase-8 suites and the re-run gate
+  #      battery with pm-notes pointers, replacing the all-"Not run" table, since
+  #      an unrecorded scenario is not executed. The same §10/notes record F-11's
+  #      measured `pnpm check` delta and the outside-repo TMPDIR constraint (D-5);
+  #      F-11 changes no code.
+  #  8.12 Boundary and evidence discipline. This phase rewrites NO acceptance
+  #      criterion, adds NO closed finding identity, reopens NO earlier plan
+  #      phase and edits NO recorded phase evidence; the 30 ACs keep their owners
+  #      and the invariant remains green at the phase-8 commit boundary exactly as
+  #      it is green at the phase-7 boundary. Nothing here is a new requirement on
+  #      the product: every obligation closes a finding the review filed against
+  #      behaviour the spec and ADR-0011 already declare.
+  #
+  # Test obligations: the eight added cells of 8.11 (a)-(h) each FAIL against the
+  # pre-remediation code and PASS after it; the supersession cell drives the real
+  # writer and the real invariant (not a fixture-only assertion); the budget cell
+  # uses a newline-terminated fixture; the suppression cell asserts the guard and
+  # the lint agree; the output cell asserts order across severities. Targeted run:
+  # `bun test tests/behaviour/memory-promotion-schema.test.ts
+  # tests/behaviour/closeout-capsule-supersession.test.ts
+  # tests/checks/memory-lint-schema.test.ts tests/checks/memory-lint-dating.test.ts
+  # tests/checks/memory-lint-reference.test.ts tests/checks/memory-lint-budget.test.ts
+  # tests/checks/memory-lint-secret.test.ts tests/checks/memory-lint-output.test.ts
+  # tests/structure/content-inventory.test.ts tests/checks/capsule-mutants.test.ts`.
+  #
+  # Done when: the targeted suites exit 0; a closeout supersession over a
+  # schema-valid target leaves the tree lint-clean (zero findings, round-trip
+  # proven); a candidate over the statement bound is refused with zero writes and
+  # one at the bound promotes clean; a newline-terminated surface at exactly its
+  # cap is silent; an out-of-tree link is silent while an in-tree missing link
+  # fires; a key-half marker no longer suppresses a secret the guard reports; an
+  # empty statement is one `memory.schema.keys-missing`; the printed stream is
+  # area-ordered across severities and byte-identical across runs;
+  # `bun run scripts/checks/memory-lint.ts` exits 0 with `errors=0 advisories=0`;
+  # `bash scripts/.tests/test-doc-distribution.sh` and
+  # `bun run scripts/checks/forbidden-literals.ts` exit 0; `git diff --check` is
+  # clean; the test plan §10 execution record is populated and §9 carries v1.5;
+  # and no AC or plan-phase evidence was rewritten.
+  # Verify: `mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check` exits 0 —
+  # with the documented caveat that AC-NFR8-1's repository-local TMPDIR literal
+  # precondition is not demonstrable in this nested-git workspace (four
+  # pre-existing suites require a same-filesystem directory outside it), so the
+  # battery evidence uses an outside-repo TMPDIR and the constraint is recorded
+  # in the completion note and PR body (review D-5 / F-11). Also run
+  # `bun run scripts/checks/memory-lint.ts`, the targeted `bun test` set above,
+  # `bash scripts/.tests/test-doc-distribution.sh`,
+  # `bun run scripts/checks/forbidden-literals.ts` and `git diff --check`.
+  # ---------------------------------------------------------------------------
+  - id: 8
+    title: "Review-iteration-1 remediation: supersession link, hint and statement bounds, guard-identical suppression, link scope, line counting, date shape, empty statement, printed order, and the missing coverage"
+    kind: delivery
+    summary: >-
+      Close review findings F-1..F-10 additively after phase 7: write the
+      supersession's replacement link so a closeout supersession leaves the tree
+      lint-clean (proven by a writer -> invariant round trip), derive the
+      read-when hint without truncating a statement, bound the candidate
+      statement at the published bound through the existing capsule-invalid
+      identity, scope secret suppression to the guard's delivered value segment,
+      treat out-of-tree links as out of scope, count lines without a phantom
+      trailing element, restrict the capture-line date heuristic to date-like
+      tokens, enforce statement non-emptiness, print one globally area-ordered
+      stream with separate severity budgets, and add the missing behaviour cells
+      plus the test plan's execution record.
+    scope:
+      files:
+        - packages/adapters/src/file/memory-promotion.ts
+        - packages/adapters/src/io/privacy-rules.ts
+        - packages/core/src/contracts/memory-record.ts
+        - packages/core/src/domain/capsule-candidates.ts
+        - packages/core/src/domain/memory-lint.ts
+        - scripts/checks/memory-lint.ts
+        - tests/behaviour/closeout-capsule-supersession.test.ts
+        - tests/behaviour/memory-promotion-schema.test.ts
+        - tests/checks/memory-lint-budget.test.ts
+        - tests/checks/memory-lint-dating.test.ts
+        - tests/checks/memory-lint-output.test.ts
+        - tests/checks/memory-lint-reference.test.ts
+        - tests/checks/memory-lint-schema.test.ts
+        - tests/checks/memory-lint-secret.test.ts
+        - tests/fixtures/capsule/mutants.ts
+        - tests/fixtures/capsule/promotion.ts
+        - tests/fixtures/memory/mutants.ts
+        - tests/fixtures/memory/tree.ts
+        - tests/structure/content-inventory.test.ts
+        - doc/spec/features/feature-memory-lint.md
+        - doc/changes/2026-11/2026-11-15--GH-301--memory-records-layout-lint/chg-GH-301-test-plan.md
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/memory-record.ts
+        role: producer
     weightClass: heavy

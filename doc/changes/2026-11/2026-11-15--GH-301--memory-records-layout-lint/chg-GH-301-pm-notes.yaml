@@ -531,6 +531,51 @@ notes:
       here."
     type: risk
     date: "2026-11-15"
+  - text: "REVIEW (review_fix, iteration 1) = FAIL. Record:
+      code-review/review-iter-1.yaml, commit 1959528e. 12 findings: 0 critical,
+      1 high, 6 medium, 3 low, 2 info. Plan compliance PASS — all 7 declared plan
+      phases complete with per-phase evidence (d7fbc56b, 2ea319dd, 8dc40fc3,
+      8d39e4f8, edf44fc6, ccf14fb5, e4bb8541); every disclosed deviation judged
+      COMPLIANT (port inventory fixture, milestone-gate pin, changeset, template
+      commit subjects); outside-repo TMPDIR ACCEPTED_WITH_CAVEAT. ACs: 26 PASS,
+      AC-F3-1 FAIL, AC-F4-1/AC-F10-1/AC-NFR8-1 PARTIAL. Blocking set: F-1 (high)
+      supersedeRecord rewrites status but never writes superseded_by, so a
+      supported closeout write path produces two schema/reference errors and a red
+      build; F-2 hint produced by truncating the statement (ADR-0011 D6 forbids
+      it); F-3 validateCandidate does not bound statement at 280, so a
+      candidate-valid record renders a record the lint rejects — breaks AC-F3-1;
+      F-4 secret suppression evaluated on the whole matched span, so a marker in
+      the key suppresses a value the whole-tree guard flags (false negative);
+      F-5 links leaving .ai/memory are rewritten under the root and falsely
+      reported link-dangling; F-6 line counting adds a phantom trailing element so
+      a newline-terminated file at exactly the cap measures cap+1; F-10 the test
+      plan execution log is entirely Not run and no suite exercises supersession
+      or an over-bound statement. Lows: entry-line-date fires on any digit-bearing
+      bullet; empty/non-string statement unenforced; printed order groups errors
+      before advisories. Infos: NFR evidence gaps and duplicated area constants."
+    type: risk
+    date: "2026-11-15"
+  - text: "REMEDIATION DECISION (review iteration 1): F-1 to F-10 are in scope and
+      are fixed in a new remediation plan phase appended to chg-GH-301-plan.yaml
+      (the plan is the work record; no separate ticket). F-11/F-12 are
+      informational and stay as documented residual except where a fix is free
+      (duplicated constants risk drift, so it is folded into the remediation if it
+      does not widen scope). The reviewer's partial acceptance of my earlier
+      reviewer-note is honoured: the `authoritative`-case limit stays documented
+      and out of ACs, while the ordinary candidate supersession is fixed."
+    type: info
+    date: "2026-11-15"
+  - text: "RETRO: the review caught a class of defect the DoR gate could not — a
+      supported write path (closeout supersession) now violates an invariant the
+      same change introduced, and no test ran the invariant after a supersession.
+      Root cause: the test plan enumerated lint outcomes per area but never
+      exercised the writer + lint round-trip for supersession, and the boundary
+      fixtures hid the line-count off-by-one by not using a newline-terminated
+      file at exactly the cap. Lesson for future changes: when a change introduces
+      a validator, at least one test must drive each existing writer through it and
+      re-run it (round-trip), not just feed the validator synthetic fixtures."
+    type: retro
+    date: "2026-11-15"
   - text: "Open questions carried by the spec (all non-blocking, deferred): OQ-1
       distribute the invariant to bootstrapped projects (NG-7, would retire the
       manual checklist); OQ-2 when confidence/evaluation become required; OQ-3
