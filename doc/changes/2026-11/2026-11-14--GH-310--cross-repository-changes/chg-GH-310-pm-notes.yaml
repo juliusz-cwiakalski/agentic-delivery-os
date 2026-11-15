@@ -12,7 +12,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-15T07:53:20.797Z }
   review_fix: { started: null, completed: 2026-11-15T08:04:10.303Z }
   quality_gates: { started: null, completed: 2026-11-15T08:22:20.870Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-15T08:23:53.313Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "Scope is the M2 blueprint contract, not an open-ended multi-repo engine:
@@ -292,6 +292,15 @@ notes:
       repository-local from node_modules/.bin/commitlint (non-vacuous). No
       isolated re-runs were needed. Raw logs under
       tmp/run-logs-runner/2026-11-15/."
+    type: info
+    date: "2026-11-15"
+  - text: "PLAN PHASE COMMIT MAP (DoD evidence; each plan phase is exactly one
+      commit through the commit primitive, in order): phase 1 = 5f56f518; phase
+      2 = 27f2115a; phase 3 = 7868c727; phase 4 = f8a23525; phase 5 = fee4a2cd;
+      phase 6 = af46d0dc. Lifecycle: delivery 2bdf9195, system_spec_update
+      cdee503e (first pass) then fddf059a (post-phase-6 re-sync), review_fix
+      25215e26, quality_gates 09aac39e. The earlier phase entries point at `git
+      log` for hashes; this entry is the authoritative hash map."
     type: info
     date: "2026-11-15"
   - text: "Delivery conventions for this change: full 11-phase lifecycle; plan
