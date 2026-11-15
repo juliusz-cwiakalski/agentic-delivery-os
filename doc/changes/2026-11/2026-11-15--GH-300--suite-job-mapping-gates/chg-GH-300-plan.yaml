@@ -179,6 +179,76 @@
 #            threshold, so the citation's substance holds; the quoted phrase is
 #            rev 1.3's wording, and this plan does not edit the test plan.
 #
+#   1.5 (2026-11-15) — review iteration-1 remediation owned by delivery
+#       planning, after code-review/review-iter-1.yaml returned FAIL
+#       (spec_compliance FAIL, plan_compliance FAIL; 1 high, 5 medium, 3 low,
+#       1 info). ADDS PLAN PHASE 8 AND CHANGES NOTHING ELSE: phases 1-7 are
+#       carried as delivered, no phase id or title intent moves, no TC owner
+#       moves, and no AC/TC total changes (38/38 TCs, 30/30 ACs). No requirement
+#       is invented: every obligation below restates a spec rule the delivered
+#       code violates, a test-plan suite that already exists, or a file the
+#       delivery already changed.
+#       (F-1, high) LINT IS A PHASE BOUNDARY. 8.1 removes the duplicate `clone`
+#            declaration in
+#            tests/behaviour/verify-gates-suite-map.test.ts and makes `pnpm lint`
+#            green, so `pnpm check` and DoD-10 stop being red.
+#       (F-2) THE `job` CLASS IS THE FULL SINGLE-LINE PRINTABLE CLASS. 8.2
+#            extends the control-character predicate to Unicode line and
+#            paragraph separators (U+2028/U+2029) and Unicode format controls
+#            (Cf) in packages/core/src/domain/verify-gates-suite-map.ts and
+#            packages/cli/src/index.ts — one shared predicate, or two conforming
+#            copies — and adds U+2028/U+2029 regression cases for the structural
+#            refusal AND for the rendered header and `cause:` line, so AC-F1-2
+#            and Appendix A rows 4 and 26 hold at both ends instead of only on
+#            the resolver.
+#       (F-3) THE THREE SUITES BECOME HERMETIC. 8.3 creates each temporary root
+#            inside the test that uses it (or uses an OS temp root through the
+#            existing `makeTempRoot`) in the adapter, layer-posture, and MCP
+#            composition suites, and requires each to be proven alone on a clean
+#            tree, so no suite rides another module's top-level `mkdir`.
+#       (F-4) THE EIGHT UNDECLARED FILES ARE DECLARED. 8.4 declares
+#            scripts/checks/error-table-sync.ts,
+#            tests/fixtures/events/error-table-baseline.json,
+#            tests/fixtures/mcp/golden/gate-report/gate-equality-map.json,
+#            tests/fixtures/ports/v1-contract-inventory.json,
+#            tests/structure/dispatch-attempts-taxonomy.test.ts, doc/00-index.md,
+#            doc/planning/oss-tooling/cli-command-registry.md, and
+#            doc/planning/oss-tooling/user-journeys.md in phase 8 scope, each with
+#            a justification obligation. DECLARATION SITE: phase 8, NOT an
+#            owning-phase amendment — phases 1-7 are completed and their scope is
+#            delivered history, so retroactively widening a completed phase would
+#            misstate what that phase was gated against and would move this
+#            revision's diff into phases the review already audited; phase 8 is
+#            the phase whose job is to reconcile the drift.
+#       (F-5) PER-PHASE TEST EVIDENCE. 8.5 states the obligation: the coder
+#            supplies per-phase test counts for plan phases 1-7 from the delivery
+#            report and phase 8 records its own; the pm-notes entries are the PM
+#            lane's, not a phase-8 file edit.
+#       (F-6) THE COMPOSITION IS PROVEN BEHAVIOURALLY. 8.6 drives
+#            `createProductionComposer` in a test-authored checkout instead of
+#            injecting a test-built `readSuiteMap` and text-grepping
+#            packages/cli/src/production.ts, and declares the residual if the
+#            composer genuinely cannot be driven to that observation point.
+#       (F-7) VACUOUS AND DUPLICATED ASSERTIONS ARE REPLACED. 8.7 fixes the
+#            duplicated `undeclaredRead` loop, the duplicated corpus names, and
+#            the mislabelled member-mode determinism case.
+#       (F-8) THE VALID SELECTED-CONFIG PATH IS COVERED. 8.8 exercises a selected
+#            file occupying the committed slot and supplying the map (equality and
+#            narrowed variants) with no committed-path or overlay read.
+#       (F-9) THE DELIVERED `holder` PREDICATE IS RESTORED. 8.9 keeps `holder`
+#            on the delivered `/[\r\n\u0080-\u009f]/` predicate (DM-6: `holder` is
+#            unchanged) and applies the stricter single-line printable class only
+#            to `suiteBreadth` and the `cause:` payload.
+#       TOTALS: unchanged — 38/38 TCs owned exactly once, 30/30 ACs named at least
+#            once, 67/67 writable suite and fixture homes. Phase 8 adds NO TC id:
+#            its regression cases extend TC-SMAP-003, TC-SMAP-004, TC-SMAP-006,
+#            TC-SMAP-008, TC-SNARR-001, TC-SPAR-001, TC-SCITE-005, and
+#            TC-SCTR-002, all owned by phases 2-6 and never renumbered. The test
+#            plan (v1.6) is not edited by this revision, so no new TC id is
+#            introduced and every new case is a sub-case of an existing TC.
+#       Validator verdict: `plan validate GH-300` returns `valid`,
+#            readyForDevelopment=true.
+#
 # SOURCES (single source of truth; this plan invents no requirement):
 #   - Spec:     ./chg-GH-300-spec.md (v1.4) — F-1..F-5, GAP-1..GAP-6,
 #               DM-1..DM-9, NFR-1..NFR-10, RSK-1..RSK-11, OQ-1..OQ-3,
@@ -437,6 +507,13 @@
 #        TC-SPAR-005, TC-SPAR-006, TC-SCITE-002, TC-SDET-001, TC-SDET-002,
 #        TC-SHERM-001.
 #   Phase 7 docs/release        (0): DoD-9, DoD-10, D-1..D-28.
+#   Phase 8 review remediation  (0 new ids): owns no TC id; re-proves TC-SMAP-003
+#        (job character class and rendered grammar), TC-SMAP-004 (composition
+#        end-to-end), TC-SMAP-006 (injected document seam), TC-SMAP-008 (real
+#        adapter, including the valid selected path), TC-SNARR-001 (rendered
+#        header), TC-SPAR-001 (parity non-vacuity), TC-SCITE-005 (MCP
+#        composition supplement), and TC-SCTR-002 (restored `holder` predicate)
+#        through regression cases owned by no new id.
 #   Totals: 38/38 TCs owned; 30/30 ACs named (§17 AC -> phase table below).
 #
 # AC -> PHASE (every §17 criterion named at least once; a criterion proven by
@@ -451,6 +528,9 @@
 #   (TC-SMAP-008 adds AC-F1-2 and AC-NFR8-1 to this phase).
 #   P6: AC-F5-1, AC-F5-3, AC-F5-4, AC-F5-5, AC-F2-2, AC-F1-4, AC-NFR2-1,
 #   AC-NFR3-1, AC-NFR5-1, AC-NFR8-1.
+#   P8 (re-proves, adds no criterion): AC-F1-1, AC-F1-2, AC-F1-4, AC-F1-5,
+#   AC-F2-1, AC-F3-1, AC-F4-2, AC-F4-3, AC-F5-1, AC-NFR1-1, AC-NFR3-1,
+#   AC-NFR8-1 — each already named by the phase that owns its TC.
 #   Unique criteria named across phases: 30/30 (§17). No criterion is orphaned;
 #   each listing is either the phase that owns the criterion's TC, the phase that
 #   proves its pure half, or a re-run of an owning suite.
@@ -552,6 +632,22 @@
 #       `{ok: true, declared: false}`, which is the shape the seam suite cannot
 #       distinguish (DoR iteration-2 finding 3; root input pinned in revision
 #       1.4 for DoR iteration-3 finding 3).
+#   P-9 (residual, declared not closed — added by revision 1.5) THE COMPOSITION
+#       PROOF'S CEILING. The production composer is injectable at its facts
+#       boundary (environment, cwd, homeDirectory, workingName) but not at its
+#       provider-read boundary, so the behavioural proof of the CLI map seam
+#       (8.6) pins the strongest observation the composed surface exposes: the
+#       classification and refusal paths that complete BEFORE any provider read
+#       (defective/unreadable/unparseable document, valid selection honoured or
+#       refused, narrowed member-declaring declaration). A composition that wired
+#       the map seam to a valid-equality declaration and then mis-read a provider
+#       fact cannot be distinguished from a correct one without provider
+#       injection, which is a change to the delivered composition surface this
+#       change does not make. If the 8.6 probe cannot reach even the
+#       pre-provider observation point, the residual widens accordingly and is
+#       recorded in pm-notes; the source-text assertions stay only as a labelled
+#       supplement and are never the proof. This residual is declared, not
+#       closed, and it is what keeps AC-F1-4/AC-F1-5's composition claim honest.
 #
 # RELEASE: one lockstep minor changeset over the five publishables
 #   (`@delivery-os/core`, `adapters`, `cli`, `mcp`, `opencode`) matching the
@@ -575,7 +671,7 @@ schemaVersion: delivery.plan.v1
 workItemRef: GH-300
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6, 7]
+  phases: [1, 2, 3, 4, 5, 6, 7, 8]
   escalationTriggers:
     - "A second mapping source would be added (workflow step parsing, a durable local-run record, or a matrix expansion); the declaration must stay the only record of CI breadth (NG-1, NG-2, DEC-1, OQ-1, OQ-2)"
     - "The suite map would need an invocation flag, a third positional, or any grammar change; the delivered `verify gates <ref>` surface must not move (NG-3, AC-F5-5, DEC-1)"
@@ -1886,3 +1982,258 @@ phases:
       mergeRequestUrl: "pull request for feat/GH-300/suite-job-mapping-gates targeting main-tools"
       pipelineId: "CI pipeline for the GH-300 delivery branch"
       trackerTransition: "in-review"
+
+  # ---------------------------------------------------------------------------
+  # Phase 8 — Review iteration-1 remediation (code-review/review-iter-1.yaml:
+  # FAIL, 1 high / 5 medium / 3 low / 1 info).
+  #
+  # Goal: close the review findings without moving any surface this change
+  # protects. No AC is relaxed and no delivered behaviour is redefined: the error
+  # identities and exits, the narrowed header tokens, the two `cause:` grammars
+  # and their derived bounds, the report field order, the record shape, the CI
+  # gate, the shipped five-gate battery, the read budget (exactly one bounded
+  # configuration-document resolution attempt per invocation), the no-append
+  # rule, and the invocation grammar stay byte-identical. Every obligation is a
+  # defect repair, a declaration the plan already owed, or a proof the review
+  # showed was not behavioural.
+  #
+  # Why a declared phase and not a warm fix: F-2, F-3, F-6, F-7, F-8 and F-9
+  #   change what "done" means for suites phases 2-6 already declared, and F-4 is
+  #   a scope-contract defect in this plan itself. A declared phase keeps phase 10
+  #   (dod_check) mechanical: the remediation has its own commit, its own
+  #   boundary gate, and its own pm-notes evidence.
+  #
+  # Obligations:
+  #   8.1 F-1 (high, quality gate). Remove the duplicate `clone` declaration in
+  #       tests/behaviour/verify-gates-suite-map.test.ts: the fixture import of
+  #       `clone` from tests/fixtures/verify-gates/cases/facts and the local
+  #       `const clone` are the same JSON clone. Keep exactly one, use it at every
+  #       call site, and leave every assertion unchanged. `pnpm lint` exits 0 at
+  #       this boundary, so `pnpm check` and DoD-10 stop being red.
+  #   8.2 F-2 (AC-F1-2, Appendix A rows 4 and 26). The `job` class is the FULL
+  #       single-line printable class. Extend the control-character predicate in
+  #       packages/core/src/domain/verify-gates-suite-map.ts and
+  #       packages/cli/src/index.ts so a `job` carrying U+2028 LINE SEPARATOR,
+  #       U+2029 PARAGRAPH SEPARATOR, or a Unicode format control (Cf, i.e. the
+  #       bidi and zero-width controls) is refused in addition to C0 (0x00-0x1f)
+  #       and C1 (0x7f-0x9f). Then the accepted class can carry neither a line
+  #       break nor a control character, and the pinned one-physical-line header
+  #       and one-line `cause:` grammar cannot be broken by a declaration.
+  #       - ONE predicate, or two conforming copies: prefer one shared exported
+  #         predicate over two literal copies; if it is exported, declare the
+  #         export surface (packages/core/src/domain/index.ts,
+  #         packages/core/src/index.ts) and update
+  #         tests/structure/verify-gates-exports.test.ts in the same commit so
+  #         exports parity stays green.
+  #       - `holder` is NOT governed by this predicate: the delivered predicate
+  #         is restored exactly (8.9).
+  #       - Regression cases (one U+2028 `job` and one U+2029 `job` at minimum):
+  #         (a) structural refusal — the pure resolver and bounds table
+  #             (tests/fixtures/verify-gates/suite-map/cases.ts,
+  #             tests/behaviour/verify-gates-suite-map.test.ts), the injected
+  #             handler seam
+  #             (tests/behaviour/verify-gates-config-document-posture.test.ts),
+  #             and the real adapter
+  #             (tests/behaviour/verify-gates-config-document-adapter.test.ts)
+  #             each refuse `config.value.invalid` at exit 1 with no `data`, no
+  #             `detail`, no `cause:` line, and no gates source read;
+  #         (b) rendered header (tests/behaviour/verify-gates-narrowed-scope
+  #             .test.ts) and rendered `cause:` line
+  #             (tests/behaviour/verify-gates-suite-map-corpus.test.ts): the
+  #             U+2028/U+2029 job never reaches a renderer, and every accepted
+  #             job renders exactly one physical line containing no U+2028,
+  #             U+2029, or Cf control — the no-line-break/no-control rule is
+  #             asserted at both ends, not only where the node is validated.
+  #       - No new error row, no new bound, no new field, no new constant: this is
+  #         a defect in the delivered predicate, not a requirement change.
+  #   8.3 F-3 (hermetic, independently runnable suites). Create the temporary root
+  #       inside the test that uses it — `mkdirSync(TMP, { recursive: true })`
+  #       before each `mkdtempSync`, or an OS temp root under `os.tmpdir()`
+  #       through the existing `makeTempRoot` helper — in
+  #       tests/behaviour/verify-gates-config-document-adapter.test.ts,
+  #       tests/behaviour/verify-gates-config-layer-posture.test.ts, and
+  #       tests/structure/mcp-gate-map-composition.test.ts, so no suite depends on
+  #       another module's top-level `mkdir` side effect. Each suite disposes its
+  #       own roots and leaves no residue.
+  #       PROOF OBLIGATION: run each of the three suites ALONE on a clean tree
+  #       (a fresh worktree, or the repo-relative temp parent moved aside) and
+  #       record the pass count; a suite that still needs a sibling module is not
+  #       remediated.
+  #   8.4 F-4 (plan compliance; the scope contract). The eight changed files that
+  #       fell outside every declared phase are declared by THIS phase, each with
+  #       a one-line justification in the commit body and in the pm-notes delivery
+  #       entry:
+  #         scripts/checks/error-table-sync.ts
+  #           — the 135 -> 136 two-way sync gate for the new row;
+  #         tests/fixtures/events/error-table-baseline.json
+  #           — the delivered row baseline the sync gate compares against;
+  #         tests/fixtures/mcp/golden/gate-report/gate-equality-map.json
+  #           — the MCP gate-report mirror golden carrying the two report fields;
+  #         tests/fixtures/ports/v1-contract-inventory.json
+  #           — the port inventory entry for the new adapter read;
+  #         tests/structure/dispatch-attempts-taxonomy.test.ts
+  #           — the taxonomy count moved by the added identity;
+  #         doc/00-index.md
+  #           — the documentation index citation for the reconciled pages;
+  #         doc/planning/oss-tooling/cli-command-registry.md
+  #           — the registry row for the additive detail member;
+  #         doc/planning/oss-tooling/user-journeys.md
+  #           — the journey citation of the narrowed refusal.
+  #       DECLARATION SITE: phase 8 scope, NOT an owning-phase amendment. Phases
+  #       1-7 are completed and their scope is delivered history; retroactively
+  #       widening a completed phase would misstate what that phase was gated
+  #       against and would move this revision's diff into phases the review
+  #       already audited. Phase 8 is the phase whose stated job is to reconcile
+  #       the drift, so it is where the declaration belongs. These entries declare
+  #       edits already made, not new edits: a declared file that ends up untouched
+  #       is a `plan diff` observation, never a gate failure.
+  #   8.5 F-5 (plan compliance; evidence). Per-phase test evidence is a pm-notes
+  #       obligation owned by the PM lane, not a phase-8 file edit. The obligation
+  #       is: the coder supplies, in the delivery report, one line per plan phase
+  #       1-7 naming the phase id, the phase commit hash, and the boundary gate
+  #       result with the test counts the suite runner reported; phase 8 records
+  #       its own line the same way. The PM lane appends those entries through the
+  #       pm-notes surface. This phase writes no pm-notes file and the change
+  #       folder stays PM-owned.
+  #   8.6 F-6 (proof, not text-grep). The shipped CLI composition's map seam is
+  #       proven behaviourally: drive `createProductionComposer` in a temp
+  #       checkout whose committed-slot document the test authors, and assert the
+  #       composed surface's own behaviour:
+  #         (a) a defective, unreadable, or unparseable committed document refuses
+  #             `config.value.invalid` at exit 1 with no `data` and zero provider
+  #             reads — proving the production wiring resolves the committed slot
+  #             and classifies it before any source read;
+  #         (b) a narrowed declaration on a member-declaring change refuses
+  #             `verify.narrowed-scope` at exit 1 with `detail.suiteBreadth` and
+  #             zero member, ledger, repository, and provider reads — proving the
+  #             real read is consumed by the real breadth decision;
+  #         (c) a `${environmentPrefix}CONFIG` selection naming a missing path is
+  #             the delivered unusable-selector refusal, never undeclared;
+  #         (d) an overlay narrowing declaration with the committed document
+  #             absent produces no refusal attributable to the overlay.
+  #       tests/structure/verify-gates-suite-map-reference.test.ts stops building
+  #       its own memoized `readSuiteMap` for the "end-to-end" claim. If a probe
+  #       shows the production composer cannot be driven to that observation point
+  #       (for example because provider facts are not injectable at the facts
+  #       boundary), the strongest available behavioural proof is pinned instead,
+  #       the source-text `toContain` assertions survive only as a labelled
+  #       supplement, and the residual is declared in pm-notes and in this plan's
+  #       residual list (P-9). The claim is lowered, never left implied.
+  #   8.7 F-7 (test quality). Remove or replace the vacuous and duplicated
+  #       assertions, keeping every existing assertion that is not a duplicate:
+  #       - tests/behaviour/verify-gates-parity-suite-map.test.ts loops over
+  #         `[undeclaredRead, undeclaredRead]`; it must exercise the two genuinely
+  #         distinct undeclared states (absent document with no selection in play,
+  #         and parsed-without-node);
+  #       - tests/behaviour/verify-gates-suite-map-corpus.test.ts reuses the same
+  #         `"TS aggregate check"` name in both corpus loops and never asserts the
+  #         equality branch of its equality/narrowing/not-evaluated case; each
+  #         case carries its own name and the equality branch is asserted;
+  #       - tests/behaviour/verify-gates-suite-map-determinism.test.ts labels a
+  #         member-less six-line run "member-mode"; it is relabelled, and the real
+  #         member-mode case stays in the member-posture suite.
+  #   8.8 F-8 (coverage). Cover the VALID selected-config path: a selected file
+  #       occupying the committed slot and supplying the map is honoured — the
+  #       equality and narrowed variants — through the existing real-adapter
+  #       harness, asserting that the committed path and every overlay are NOT
+  #       read (DM-9, DEC-19, AC-F1-4, AC-F1-5). The unused `selectedConfig`
+  #       parameter in the layer-posture suite is used by these cases or removed.
+  #   8.9 F-9 (backward compatibility; DM-6). Restore the DELIVERED `holder`
+  #       predicate in `explicitDetail`: `holder` projects when it is a
+  #       1..COMMAND_FAILURE_DETAIL_MAX_CHARS string with no CR, no LF, and no C1
+  #       control (`/[\r\n\u0080-\u009f]/`), exactly as delivered — DM-6 says
+  #       `holder` is unchanged. The stricter single-line printable class governs
+  #       `suiteBreadth` and the `cause:` payload only; the detail validation for
+  #       `suiteBreadth` must not tighten `holder`. A holder value the delivered
+  #       projection accepted still projects (regression case in
+  #       tests/structure/verify-gates-suite-map-contract.test.ts), while a
+  #       `suiteBreadth` element carrying TAB, DEL, another C0 control, U+2028, or
+  #       U+2029 is never projected.
+  #   8.10 Boundary discipline. One commit for this phase, with the declared
+  #        subject, and every suite touched here re-runs the gate of the phase
+  #        that owns it before the phase closes (the review-iteration-1 retro
+  #        action: no post-gate edit without a re-run).
+  #
+  # AC/TC: owns no TC id. Its regression cases extend TC-SMAP-003 (job character
+  #   class and rendered grammar), TC-SMAP-004 (composition-level end-to-end
+  #   proof), TC-SMAP-006 (injected document seam), TC-SMAP-008 (real adapter,
+  #   including the valid selected path), TC-SNARR-001 (rendered header),
+  #   TC-SPAR-001 (parity non-vacuity), TC-SCITE-005 (MCP composition supplement),
+  #   and TC-SCTR-002 (restored `holder` predicate beside `suiteBreadth`). No id is
+  #   renumbered, no TC changes owner, and the totals stay 38/38 TCs and 30/30
+  #   ACs. ACs named (all re-proved, none added): AC-F1-1, AC-F1-2, AC-F1-4,
+  #   AC-F1-5, AC-F2-1, AC-F3-1, AC-F4-2, AC-F4-3, AC-F5-1, AC-NFR1-1,
+  #   AC-NFR3-1, AC-NFR8-1.
+  #
+  # Gate (phase boundary; every command from the measured pm-notes environment,
+  #   each targeted suite ALSO run alone per F-3):
+  #   pnpm lint
+  #   pnpm format:check
+  #   pnpm typecheck
+  #   bun test tests/behaviour/verify-gates-suite-map.test.ts
+  #   bun test tests/behaviour/verify-gates-suite-map-corpus.test.ts
+  #   bun test tests/behaviour/verify-gates-suite-map-determinism.test.ts
+  #   bun test tests/behaviour/verify-gates-config-document-posture.test.ts
+  #   bun test tests/behaviour/verify-gates-config-document-adapter.test.ts
+  #   bun test tests/behaviour/verify-gates-config-layer-posture.test.ts
+  #   bun test tests/behaviour/verify-gates-narrowed-scope.test.ts
+  #   bun test tests/behaviour/verify-gates-parity-suite-map.test.ts
+  #   bun test tests/structure/mcp-gate-map-composition.test.ts
+  #   bun test tests/structure/verify-gates-suite-map-contract.test.ts
+  #   bun test tests/structure/verify-gates-suite-map-reference.test.ts
+  #   bun test tests/structure/verify-gates-exports.test.ts
+  #   bun test tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts
+  #   bun test tests/checks/fixture-sanitization.test.ts
+  #   bun run scripts/checks/error-table-sync.ts
+  #   bun run scripts/checks/exports-parity.ts
+  #   delivery-os plan validate GH-300
+  #
+  # Isolation proof (F-3, in addition to the per-suite runs above): each of the
+  #   three hermeticity suites run alone with the repo-relative temp parent
+  #   absent, recorded as the phase-8 pm-notes line.
+  #
+  # Suites left green: the suite-map family (resolver, corpus, determinism,
+  #   narrowed header, cause lines), the three hermetic suites, the reference and
+  #   parity suites, the restored holder projection, the error-table sync pair,
+  #   exports parity, fixture sanitization, lint/format/typecheck, and
+  #   `plan validate`.
+  # ---------------------------------------------------------------------------
+  - id: 8
+    title: "Review iteration-1 remediation: remove the duplicate clone (lint green), complete the job-name character class, make the three suites hermetic, declare the drift files, prove the shipped composition behaviourally, replace vacuous assertions, cover the valid selected config, and restore the delivered holder predicate"
+    kind: delivery
+    summary: "fix(GH-300): remediate review iteration one findings"
+    scope:
+      files:
+        - tests/behaviour/verify-gates-suite-map.test.ts
+        - packages/core/src/domain/verify-gates-suite-map.ts
+        - packages/cli/src/index.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - tests/fixtures/verify-gates/suite-map/cases.ts
+        - tests/behaviour/verify-gates-suite-map-corpus.test.ts
+        - tests/behaviour/verify-gates-suite-map-determinism.test.ts
+        - tests/behaviour/verify-gates-config-document-posture.test.ts
+        - tests/behaviour/verify-gates-config-document-adapter.test.ts
+        - tests/behaviour/verify-gates-config-layer-posture.test.ts
+        - tests/behaviour/verify-gates-narrowed-scope.test.ts
+        - tests/behaviour/verify-gates-parity-suite-map.test.ts
+        - tests/structure/mcp-gate-map-composition.test.ts
+        - tests/structure/verify-gates-suite-map-contract.test.ts
+        - tests/structure/verify-gates-suite-map-reference.test.ts
+        - tests/structure/verify-gates-exports.test.ts
+        - packages/cli/src/production.ts
+        - packages/cli/src/edge.ts
+        - scripts/checks/error-table-sync.ts
+        - tests/fixtures/events/error-table-baseline.json
+        - tests/fixtures/mcp/golden/gate-report/gate-equality-map.json
+        - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/structure/dispatch-attempts-taxonomy.test.ts
+        - doc/00-index.md
+        - doc/planning/oss-tooling/cli-command-registry.md
+        - doc/planning/oss-tooling/user-journeys.md
+      folders:
+        - tests/fixtures/verify-gates/suite-map
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/index.ts
+        role: consumer

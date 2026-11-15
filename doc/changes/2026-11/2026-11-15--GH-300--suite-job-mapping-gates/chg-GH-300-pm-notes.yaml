@@ -7,9 +7,9 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-15T10:40:44.109Z }
   specification: { started: null, completed: 2026-11-15T13:15:19.678Z }
   test_planning: { started: null, completed: 2026-11-15T13:37:51.542Z }
-  delivery_planning: { started: null, completed: 2026-11-15T13:30:45.687Z }
+  delivery_planning: { started: null, completed: 2026-11-15T15:24:51.343Z }
   dor_check: { started: null, completed: 2026-11-15T13:41:36.071Z }
-  delivery: { started: null, completed: 2026-11-15T14:40:28.959Z }
+  delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: 2026-11-15T14:52:03.018Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -347,4 +347,36 @@ notes:
       primitive's plan-phase contract, or have the plan use lifecycle phase ids
       that map 1:1."
     type: retro
+    date: "2026-11-15"
+  - text: "Review iteration 1 verdict: FAIL — spec_compliance FAIL, plan_compliance
+      FAIL. Record: code-review/review-iter-1.yaml. High: (F-1)
+      tests/behaviour/verify-gates-suite-map.test.ts re-declares `clone`, so
+      `pnpm lint` exits 1 and `pnpm check`/DoD-10 are red. Medium: (F-2) the job
+      class rejects only C0/C1, so U+2028/U+2029 pass and can break the one-line
+      header/cause grammar (AC-F1-2); (F-3) three suites call mkdtempSync under
+      a repo-relative tmp/tmpdir they never create, so they are not independent;
+      (F-4) eight changed files are outside every declared plan phase
+      (mechanically necessary but undeclared); (F-5) pm-notes delivery evidence
+      carries no per-phase test result; (F-6) the reference-declaration proof
+      injects a test-built readSuiteMap and only greps production.ts, so the
+      shipped CLI composition is not exercised behaviourally (RSK-4/DoD-8). Low:
+      F-7 vacuous/ duplicated tests, F-8 valid selected-config path untested,
+      F-9 explicitDetail tightened the delivered `holder` predicate, F-10
+      `.delivery-os/` remains in .git/info/exclude."
+    type: risk
+    date: "2026-11-15"
+  - text: "RETRO: the review found a lint-red tree that the plan's per-phase gates
+      did not catch, because the phase-4 gate ran targeted suites and typecheck
+      but not `pnpm lint`, and the dup was introduced by a later remediation
+      commit after that gate. Improvement: every plan phase gate must include
+      `pnpm lint` and `pnpm format:check`, and any post-gate remediation commit
+      must re-run the owning phase's gate."
+    type: retro
+    date: "2026-11-15"
+  - text: "DoR iteration-1 remediation (review_fix): reopen `delivery_planning` to
+      add plan phase 8 (remediation) covering F-1..F-9 and the file-scope gap
+      F-4; then `@coder` executes phase 8; then re-run `@doc-syncer` (the
+      job-class fix changes documented behaviour) and `@reviewer` for iteration
+      2."
+    type: info
     date: "2026-11-15"
