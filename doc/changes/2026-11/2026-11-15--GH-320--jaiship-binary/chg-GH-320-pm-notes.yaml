@@ -1,0 +1,92 @@
+change_id: GH-320
+title: "M4-S1a: jaiship executable binary and local install"
+delivery_mode: autonomous
+milestone: "M4: Public release readiness"
+story_code: M4-S1a
+phases:
+  clarify_scope: { started: "2026-11-15T06:02:06Z", completed: 2026-11-15T06:10:17.425Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions:
+  - text: "Legacy identity fallback is the chosen mechanism (not a migration
+      command): AC4 requires `jaiship status --json` to read the existing
+      `.delivery-os/config.yaml` and `~/.delivery-os-state` when the `.jaiship`
+      equivalents are absent, with a classified one-time warning. The ticket
+      offers fallback OR documented migration command; AC4 selects fallback."
+    date: "2026-11-15"
+  - text: "Scope boundary kept deliberately narrow: this slice adds the `jaiship`
+      executable and its identity paths plus the legacy read fallback. Package
+      scope (@delivery-os/*), repositoryUrl, docsBaseUrl, README and public docs
+      stay unchanged per the ticket. The branding resolver keeps its neutral
+      `@delivery-os` scope org, so a `jaiship` working name still derives
+      `https://github.com/delivery-os/jaiship`; that is accepted and must be
+      stated as out of scope in the spec, not silently 'fixed'."
+    date: "2026-11-15"
+  - text: "AC6 (`a local install from the change branch yields
+      ~/.jaiship/bin/jaiship`) supersedes the current spec sentence that the bin
+      is not part of the install surface. The spec must state the new install
+      posture explicitly: a user-level local install registers a `jaiship`
+      launcher at `~/.jaiship/bin/jaiship`, while the `delivery-os` bin mapping
+      and the existing installer arrays for scripts/tools stay unchanged."
+    date: "2026-11-15"
+  - text: "`DELIVERY_OS_WORKING_NAME` remains the working-name override for both
+      bins (ticket requirement). The `delivery-os` bin keeps its current
+      configured default so its behaviour, including `.delivery-os` paths, is
+      unchanged; only the new `jaiship` bin defaults to the `jaiship` identity."
+    date: "2026-11-15"
+open_questions: []
+blockers: []
+notes:
+  - text: "State detection: issue GH-320 OPEN, label `change`, milestone M4 (#4,
+      'M4: Public release readiness'), no assignees. No PR in any state for head
+      feat/GH-320/jaiship-binary. Branch exists locally at origin/main-tools
+      HEAD 573be730 with 0 unique commits, clean tree. No GH-320 change folder.
+      Fresh delivery."
+    type: info
+    date: "2026-11-15"
+  - text: "Clarify-scope cross-check vs current truth (doc/spec/features):
+      feature-cli-entrypoint.md declares one non-installed bin
+      (packages/cli/bin/delivery-os.ts) and an explicit install posture that
+      excludes the bin; feature-branding-seam.md defines the 12-value derivation
+      (working name `jaiship` yields binaryName `jaiship`, configDirectoryName
+      `.jaiship`, stateDirectoryName `.jaiship-state`, installPath
+      `~/.jaiship/bin/jaiship`); feature-config-layer.md and feature-projects.md
+      define `<repo>/<configDirectoryName>/config.yaml` and the host root
+      `<PREFIX>_STATE_DIR` else `<home>/<stateDirectoryName>`. The existing
+      legacy adapter covers ADOS_/.ados with a one-time warning and does not
+      read a legacy config file, so a delivery-os -> jaiship read fallback is a
+      new capability rather than an extension of the existing adapter."
+    type: info
+    date: "2026-11-15"
+  - text: "Ticket dependency note: GH-310 (M2-S19 cross-repository changes) is still
+      OPEN with no PR. The ticket's out-of-scope line forbids merging before
+      GH-310 lands because the change shares entrypoint hot files. This delivery
+      therefore stops at an open PR; it does not merge."
+    type: risk
+    date: "2026-11-15"
+  - text: "Known design tension to resolve in the spec, not to invent around:
+      packages/mcp/src/serve.ts has its own `delivery-os` default and its own
+      DELIVERY_OS_WORKING_NAME read. If the CLI defaults to the jaiship identity
+      while MCP keeps the delivery-os identity, host state and project config
+      can diverge between the two surfaces. MCP identity is out of this ticket's
+      scope; the spec must record the divergence as a documented transitional
+      limitation with the explicit override seam, not as an unstated behaviour."
+    type: risk
+    date: "2026-11-15"
+  - text: "Documentation impact map for phase 7: feature-cli-entrypoint.md (install
+      posture, bin list, identity resolution), feature-branding-seam.md
+      (neutral-default wording, installPath consumption, prior-identity read
+      fallback), feature-config-layer.md (config directory fallback and state
+      root fallback), feature-projects.md (host root fallback), README/install
+      docs for the local install path, and the doc-distribution marker for any
+      changed guide."
+    type: info
+    date: "2026-11-15"
