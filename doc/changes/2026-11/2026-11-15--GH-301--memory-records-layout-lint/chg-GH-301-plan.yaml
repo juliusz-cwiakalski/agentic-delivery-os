@@ -1,7 +1,35 @@
-# GH-301 delivery plan — machine-readable document (delivery.plan.v1), revision 1.0
-# (2026-11-15). Authored against chg-GH-301-spec.md v1.0 (30 ACs, §17.1 DoD,
-# Appendix A closed finding register, DEC-5..DEC-13) and
-# chg-GH-301-test-plan.md v1.0 (40 TCs, AC matrix, §7 file mapping).
+# GH-301 delivery plan — machine-readable document (delivery.plan.v1), revision 1.1
+# (2026-11-15). Authored against chg-GH-301-spec.md v1.1 (30 ACs, §17.1 DoD,
+# Appendix A closed finding register, DEC-5..DEC-13, Appendix C C-1..C-11,
+# ADR-0011 as the schema authority) and chg-GH-301-test-plan.md v1.1 (40 TCs,
+# AC matrix, §6 fixture discipline, §7 file mapping).
+#
+# REVISION LOG
+#   revision 1.0 (2026-11-15) — initial plan from spec v1.0 + test plan v1.0.
+#   revision 1.1 (2026-11-15) — Definition-of-Ready iteration-1 revision of the
+#     `delivery_planning` findings (`readiness-review/readiness-iter-1.md` 1, 13,
+#     14, 16, 18), plus the ADR-0011 landing, aligned to spec v1.1 and test plan
+#     v1.1. Findings 2/4/6/8/9/10/11/12/17 (specification) and 3/5/7/15/19 (test
+#     planning) are consumed from the revised upstream artifacts; finding 20
+#     (decision capture) is answered by ADR-0011 and changes no phase here.
+#       1  (critical) the phase-2 red-tree collision is removed by the SPLIT
+#          replacement: phase 2 narrows the GH-302 guard to a sanctioned-module
+#          scan, phase 4 completes the AC-F14-1 replacement. The evaluator keeps
+#          its name `packages/core/src/domain/memory-lint.ts`.
+#       13 phase 1 declares that an `EXECUTABLE_ALLOWANCES` row IS required for
+#          the new contracts module, that it lists every exported const name,
+#          and that it therefore pins the contract's export surface.
+#       14 phase 4's atomic commit set now names the TC-MEMDOCT-001 pinned-string
+#          update in `doc/templates/memory-doctor-checklist-template.md` and its
+#          assertion in the structure suite.
+#       16 phase 5's do-not-move pin list is extended to MUT-CAP-31..41, naming
+#          that MUT-CAP-39/40/41 pin `memory-promotion.ts` lines.
+#       18 the injected privacy-vocabulary STRUCTURAL TYPE is declared in the
+#          core contracts module; the edge injects the adapter's data.
+#       NEW ADR-0011 (`doc/decisions/ADR-0011-canonical-memory-record-schema.md`,
+#          untracked) and its already-committed index row in
+#          `doc/decisions/00-index.md` land in phase 1 — the earliest phase whose
+#          content obligations touch the schema authority.
 #
 # One ticket, one PR against main-tools, seven delivery phases. Every phase is an
 # independently committable slice that is green at its own boundary, and every
@@ -15,13 +43,21 @@
 # only, never a `tasks` key, and progress is a pm-notes `notes:` entry.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:       ./chg-GH-301-spec.md (v1.0; F-1..F-14, DM-1..DM-6,
+#   - Spec:       ./chg-GH-301-spec.md (v1.1; F-1..F-14, DM-1..DM-6,
 #                 AC-F1-1..AC-NFR10-1 — 30 criteria; NFR-1..NFR-11;
 #                 DEC-1..DEC-13; §17.1 DoD-1..DoD-19; Appendix A register;
-#                 Appendix C constraint register C-1..C-8)
-#   - Test plan:  ./chg-GH-301-test-plan.md (v1.0; 40 TCs across 14 families;
-#                 §4 gate battery; §6 boundary matrix; §7 automation mapping and
-#                 the shared implementation homes; OQ-TP-1..OQ-TP-5 resolved below)
+#                 Appendix C constraint register C-1..C-11)
+#   - Test plan:  ./chg-GH-301-test-plan.md (v1.1; 40 TCs across 14 families;
+#                 §4 gate battery; §6 fixture and bound discipline; §7 automation
+#                 mapping and the shared implementation homes; §8.2 assumptions;
+#                 OQ-TP-1..OQ-TP-5 resolved below)
+#   - Decision:   doc/decisions/ADR-0011-canonical-memory-record-schema.md
+#                 (Proposed; the schema authority this change consumes — required
+#                 spine, closed optional set, concept-key dispositions, the
+#                 `kind` → home-area mapping, conditional requirements, and the
+#                 single-sourced 280/120 bounds. The plan never restates a bound
+#                 or a vocabulary the ADR owns; C-11 resolves a conflicting
+#                 delivery detail in the ADR's favour)
 #   - PM notes:   ./chg-GH-301-pm-notes.yaml (DEC-1..DEC-4 binding; two in-change
 #                 risks — the GH-302 negative guard and record-schema drift;
 #                 doc impacts for lifecycle phase 7; delivery conventions;
@@ -54,14 +90,29 @@
 # PINNED IMPLEMENTATION CONTRACTS (do not reshape at delivery):
 #   - Phase order follows the spec's §18 ordering with one declared deviation:
 #     layout + migration + schema publication first, then the evaluator's areas,
-#     then the invariant and its wiring. The GH-302 negative guard is replaced in
-#     the SAME commit as the check edge (phase 4) because the old guard fails the
-#     moment `scripts/checks/memory-lint.ts` exists; splitting them would land a
-#     red tree, which the tree-green rule forbids. The write path follows in
-#     phase 5 and the documentation/boundary reconciliation in phase 6. Phases
-#     1-3 make the delivered tree conformant and the evaluator complete, phase 4
-#     turns the gate on. No phase lands a red tree (spec §17.1 framing rule 1,
-#     RSK-3).
+#     then the invariant and its wiring. The write path follows in phase 5 and
+#     the documentation/boundary reconciliation in phase 6. Phases 1-3 make the
+#     delivered tree conformant and the evaluator complete, phase 4 turns the
+#     gate on. No phase lands a red tree (spec §17.1 framing rule 1, RSK-3).
+#   - GH-302 NEGATIVE-GUARD REPLACEMENT IS SPLIT ACROSS TWO PHASES, and the split
+#     is the pinned choice (readiness iteration-1 finding 1). The delivered guard
+#     (`tests/structure/memory-bootstrap-templates.test.ts`, TC-MEMDOCT-002) walks
+#     `scripts/`, `tools` and `packages/` and fails on any FILE NAME matching
+#     `/memory[-_](doctor|lint)|memoryDoctor|memoryLint/i`; it also asserts that
+#     no `package.json` script value matches that pattern. Phase 2 lands
+#     `packages/core/src/domain/memory-lint.ts`, which therefore collides.
+#     Because AC-F14-1 sanctions exactly the module names that match — the
+#     invariant's check, the pure evaluator, the schema contract module — the
+#     evaluator keeps its name and phase 2 NARROWS the guard into a sanctioned-set
+#     scan that permits only `packages/core/src/domain/memory-lint.ts` while the
+#     `package.json` script-value assertion stays a blanket absence (no script
+#     names a memory check yet). Phase 4 then completes the replacement in the
+#     SAME commit as the check edge and the `check:memory` script: it adds
+#     `scripts/checks/memory-lint.ts` to the sanctioned set, adds the presence and
+#     both-gate-citation assertions, and turns the script-value assertion into a
+#     sanctioned-value assertion (the aggregate chain cites the check path). The
+#     intermediate phase-2 form is never the delivered shape; AC-F14-1's shape is
+#     reached at phase 4, and no phase boundary is red.
 #   - The check edge is `scripts/checks/memory-lint.ts`; the pure evaluation is
 #     `packages/core/src/domain/memory-lint.ts` (no I/O, no clock, no fs); the
 #     scanner is `packages/adapters/src/file/memory-scan.ts`; the schema
@@ -69,24 +120,74 @@
 #     types only). The capsule contract keeps its candidate model; only the
 #     `source` channel set is tightened, and it is validated in
 #     `packages/core/src/domain/capsule-candidates.ts` so the existing
-#     `closeout.capsule-invalid` identity carries the refusal (DEC-8).
-#   - One schema authority, two renderings, no fifth variation (C-1): the
-#     backlog's seven conceptual fields are the required spine; the concept's
-#     richer keys stay OPTIONAL and type-checked; `created` is the single
-#     validity start; `fleet` stays candidate-only; status keeps five lifecycle
-#     values while writers emit only `candidate`/`superseded`.
+#     `closeout.capsule-invalid` identity carries it (DEC-8).
+#   - PRIVACY-VOCABULARY TYPE PLACEMENT (readiness iteration-1 finding 18). The
+#     pure evaluation receives the vocabulary, it does not import it: the
+#     STRUCTURAL TYPE (recognizer classes plus suppression markers, and the
+#     shape of one rule) is declared in
+#     `packages/core/src/contracts/memory-record.ts` under the domain tier, and
+#     the edge injects the adapter's data from
+#     `packages/adapters/src/io/privacy-rules.ts`. `.dependency-cruiser.cjs`
+#     rule `matrix-core-importer` forbids `packages/core/**` importing
+#     `packages/adapters/**`, so no core file may name an adapter type or path;
+#     the injected classes are asserted EQUAL to the adapter's recognizer classes
+#     AT THE EDGE (test plan §8.2), which is what keeps one vocabulary rather
+#     than a second table.
+#   - BOUNDS AND BUDGETS ARE SINGLE-SOURCED (DM-5, ADR-0011 D6). The statement
+#     bound (280) and the hint bound (120) are `STATEMENT_MAX_CHARS` /
+#     `HINT_MAX_CHARS` in the contracts module, as are the budget caps (index 200
+#     lines / 25 KB, entry point 150, archive index 200, kernel 200 warn / 220
+#     error). No test, fixture or implementation source restates a number: suites
+#     and fixtures IMPORT these constants and generate their boundary rows from
+#     them (`bound-1`/`bound`/`bound+1`), so a deliberate bound change moves the
+#     fixtures with it. This plan and the human rendering in
+#     `.ai/memory/README.md` quote the current published values for the reader;
+#     neither is their source.
+#   - ADR-0011 IS THE SCHEMA AUTHORITY AND MUST LAND TRACKED. The record is
+#     untracked, uncommitted and Proposed at this revision, while its row in
+#     `doc/decisions/00-index.md` is ALREADY COMMITTED — so the index currently
+#     links a file that does not exist. Phase 1 lands the file and resolves the
+#     dangling row (see phase 1, obligation 1.8). The record stays `Proposed`
+#     with `decision_date: null`: owner ratification or veto happens at the GH-301
+#     open-PR gate (R2), and no delivery phase self-accepts it.
+#   - One schema authority, two renderings, no fifth variation (C-1, C-11): the
+#     backlog's seven conceptual fields are the required spine; every concept key
+#     has a recorded disposition (accepted-optional, renamed, or rejected by
+#     design with its home named) and the closed optional set is exactly the ten
+#     keys DM-1 lists; `created` is the single validity start; `fleet` stays
+#     candidate-only; status keeps five lifecycle values while writers emit only
+#     `candidate`/`superseded`.
+#   - CONDITIONAL REQUIREMENTS ARE DECLARED, NOT ASSUMED (DM-1, ADR-0011 D5).
+#     `basis` is REQUIRED on every promotion-written record — promotion already
+#     refuses an empty basis — and OPTIONAL on a hand-authored record, omitted
+#     when absent; the writer therefore always renders it, and its absence on a
+#     hand-authored record is silent. `revalidate_after` is required for an
+#     authoritative behaviour-changing lesson; `guild` is required exactly under
+#     a guild folder and forbidden outside one; `superseded_by` is required when
+#     `status` is `superseded`; a `preference` record's `source` is
+#     `human_correction`. One table enforces them so a hand-authored record
+#     cannot be stricter or looser than a promoted one.
 #   - The record `kind` vocabulary is `lesson | tacit_fragment | preference`.
 #     The capsule class token `tacit` renders as `kind: "tacit_fragment"`; the
 #     capsule class token `lesson` renders as `kind: "lesson"`. `preference` and
 #     `fleet` candidates keep their delivered rejections (NG-6).
 #   - The index row's second column is the read-when hint: derived from the
 #     record's `applies_when`, falling back to `statement`, whitespace-collapsed,
-#     non-empty, <= 120 characters (DEC-7).
+#     non-empty, at or under the published hint bound (DEC-7).
 #   - Severity (DEC-6): schema, dating, provenance, reference, index, budget and
 #     secret findings are `error`; `memory.derivable.*` and
 #     `memory.dating.revalidate-expired` are `warn`. Advisories never change the
 #     exit. Kernel lines >200 and <=220 is one `memory.budget.kernel-lines`
 #     advisory; >220 is the same identity as an error (DEC-9).
+#   - DETERMINISM IS DEFINED AGAINST A FIXED INJECTED DATE (NFR-1,
+#     AC-NFR1-1/NFR-1 as amended by spec v1.1). The thin edge performs EXACTLY ONE
+#     date read per run and injects it; the pure evaluation reads no clock of its
+#     own. For one tree and one injected date the output — order, truncation and
+#     detail included — is byte-identical across runs, and repeated runs read no
+#     clock, so the tree's own mtime or the wall clock cannot change a verdict.
+#     The single injection point is asserted by a test (TC-MEMNFR-001), not
+#     assumed: no phase spreads a `new Date()` or a `Date.now()` call through the
+#     domain, the scanner or a helper.
 #   - Secret findings reuse the delivered privacy vocabulary
 #     (`packages/adapters/src/io/privacy-rules.ts`) INCLUDING its three
 #     suppression classes; the memory lint defines no pattern of its own and
@@ -95,6 +196,15 @@
 #   - The finding register is closed (Appendix A): area order
 #     `schema, dating, provenance, reference, index, budget, derivable, secret`;
 #     no id outside the register is emitted.
+#   - INDEX COVERAGE IS TWO EVALUATIONS OVER TWO DECLARED UNIVERSES (C-10, DM-3,
+#     AC-F9-2). U-1 is the memory index over its covered paths (every record in
+#     the four record areas, every per-agent entry point, every guild entry point,
+#     the archive index itself); U-2 is the archive index over the retro notes it
+#     represents. `memory.index.record-uncovered` and `memory.index.row-unbacked`
+#     run ONCE PER UNIVERSE over that universe's own path set and row set, and
+#     every finding names its universe in the detail — so no rule identity outside
+#     the register is invented, and the memory index is still not a covering
+#     surface for retro notes.
 #   - Boundary rule (C-2, NG-1/NG-4/NG-6): no memory subcommand, no sixth doctor
 #     area, no new error-table identity, no domain kind, no state record, no
 #     event topic, no installed-script distribution of the invariant.
@@ -201,6 +311,9 @@ tier:
     - inventory-or-executable-allowance-not-updated-for-a-new-core-module
     - a-capsule-mutation-pinned-guard-line-moves-without-updating-the-mutant
     - the-kernel-memory-section-anchor-is-missing-or-exceeds-220-lines
+    - the-adr-0011-index-row-does-not-resolve-to-a-tracked-file
+    - a-memory-named-module-appears-outside-the-sanctioned-guard-set
+    - a-bound-reaches-a-test-fixture-or-doc-as-a-restated-literal
 defaultLeases:
   - repo:main-tools
 defaultWeightClass: standard
@@ -220,20 +333,29 @@ phases:
   #      is fabricated; `.gitkeep` is never a record, an index target or a
   #      finding. `external/` stays absent by decision (NG-5, DEC-2).
   #  1.2 Index rewrite (DM-1, DM-2, DM-3, DM-5). `.ai/memory/README.md` publishes
-  #      the record schema (required spine, closed optional set, closed
-  #      vocabularies with the compact T0-T5 trust table, id and file-name
-  #      grammar, validity start), the canonical layout, the budgets (index 200
-  #      lines / 25 KB, entry points 150, archive index 200, kernel 200 warn /
-  #      220 error) and the lint contract (the invariant, the eight areas, the
-  #      advisory class, one read-when row per covered path). Duplicated kernel
-  #      prose is COMPRESSED to pointers so the file stays <= 200 lines and
-  #      <= 25 KB with the added content (measured, DoD-2/DoD-11). The lint
-  #      contract is stated as the invariant this change delivers; phase 4
-  #      enables it, and nothing asserts the claim before the check exists.
+  #      the record schema (required spine, closed optional set with the
+  #      concept-key dispositions ADR-0011 D3 owns, closed vocabularies with the
+  #      compact T0-T5 trust table, id and file-name grammar, validity start), the
+  #      conditional requirements (`basis` required on a promotion-written record
+  #      and optional on a hand-authored one, `revalidate_after` for an
+  #      authoritative behaviour-changing lesson, `guild` exactly under a guild
+  #      folder, `superseded_by` on a superseded record, a preference record's
+  #      `human_correction` source), the canonical layout, the published bounds
+  #      and budgets (statement 280, read-when hint 120, index 200 lines / 25 KB,
+  #      entry points 150, archive index 200, kernel 200 warn / 220 error) and the
+  #      lint contract (the invariant, the eight areas, the advisory class, one
+  #      read-when row per covered path, the two coverage universes). Every number
+  #      published here is the constant the machine contract declares — the doc
+  #      restates no arithmetic. Duplicated kernel prose is COMPRESSED to pointers
+  #      so the file stays <= 200 lines and <= 25 KB with the added content
+  #      (measured, DoD-2/DoD-11). The lint contract is stated as the invariant
+  #      this change delivers; phase 4 enables it, and nothing asserts the claim
+  #      before the check exists.
   #  1.3 Index rows (DM-3). Exactly one row per covered path: the four agent
   #      entry points, the three lesson records, and `retro/INDEX.md`. Each
-  #      second column is a read-when hint <= 120 chars. No directory rows for
-  #      `lessons/`, `tacit/`, `preferences/`, `guilds/`, `retro/`.
+  #      second column is a read-when hint at or under the published hint bound.
+  #      No directory rows for `lessons/`, `tacit/`, `preferences/`, `guilds/`,
+  #      `retro/`.
   #  1.4 Record backfill (DEC-12, AC-F7-2). The three lesson records gain the
   #      required `trust` level (from their recorded `merged_pr` channel under
   #      the published trust table) and a shaped `merged-pr:` evidence link
@@ -245,21 +367,54 @@ phases:
   #  1.6 Machine contract `packages/core/src/contracts/memory-record.ts`: data
   #      and types only — required/optional key sets, kind/scope/status/trust/
   #      source/basis/evidence vocabularies, id and file-name grammar sources,
-  #      budget constants, the statement bound, the 120-character hint bound,
-  #      the closed finding register with area order and severity. Re-exported
-  #      from `packages/core/src/contracts/index.ts`. No executable export
-  #      (inventory rule), no `node:` import.
+  #      the budget constants, `STATEMENT_MAX_CHARS` (280), `HINT_MAX_CHARS`
+  #      (120), the privacy-vocabulary STRUCTURAL TYPE (recognizer classes plus
+  #      suppression markers, injected by the edge — never an adapter import; see
+  #      the pinned privacy-vocabulary-placement contract above), and the closed
+  #      finding register with area order and severity. Re-exported from
+  #      `packages/core/src/contracts/index.ts`. `as const` data plus `type`
+  #      aliases only: no function body, no `node:` import, no I/O.
+  #  1.7 Inventory allowance for the contract (readiness iteration-1 finding 13).
+  #      `tests/structure/content-inventory.test.ts` counts any statement outside
+  #      its types-only set as executable and rejects a bare `export const` with
+  #      "executable statement VariableStatement is not permitted at scaffold", so
+  #      the new module REQUIRES an `EXECUTABLE_ALLOWANCES` row
+  #      (`"core/src/contracts/memory-record.ts": [...]`), exactly as every
+  #      existing contracts module has one. The row MUST list EVERY exported const
+  #      name, because an exported name missing from the row fails as "undeclared
+  #      executable export"; the row therefore PINS the contract's export surface,
+  #      so adding, renaming or removing an exported constant is a declared design
+  #      edit to this row in the same commit and never a silent inventory drift.
+  #      `tests/structure/inventory.json` gains the module path in the core list.
+  #  1.8 ADR-0011 landing (decision capture; the schema authority). Land
+  #      `doc/decisions/ADR-0011-canonical-memory-record-schema.md` with its
+  #      content unchanged — status `Proposed`, `decision_date: null`, owner
+  #      ratification or veto at the GH-301 open-PR gate (R2; no AI acceptance).
+  #      If the file is already tracked when the phase runs, VERIFY that and edit
+  #      nothing: the obligation is that the record is tracked and its row
+  #      resolves, not that a particular commit performed the add.
+  #      `doc/decisions/00-index.md` is ALREADY COMMITTED and already carries the
+  #      ADR-0011 row, so it needs no textual edit; it is declared in scope so
+  #      that the row and the file are visible together and the dangling link is
+  #      resolved by this phase. The landing sits in phase 1 because phase 1 is
+  #      the EARLIEST phase whose content obligations touch the schema authority:
+  #      it delivers the machine contract and the human rendering that ADR-0011
+  #      D1-D6 owns (C-11), and every later phase cites that record as the
+  #      authority it consumes.
   #
   # Test obligations: `tests/structure/memory-layout.test.ts` (TC-MEMLAY-001,
   # -002, -003 with the temp-copy negative mutant), `tests/structure/
   # memory-record-schema.test.ts` (TC-MEMSCHEMA-001 human/machine/capsule parity
-  # + reconciliation table; TC-MEMPROV-002 migration block), `tests/fixtures/
-  # memory/tree.ts` builders (`emptyTree()`, `populatedTree()`, valid baseline
-  # record).
-  # Inventory: add `src/contracts/memory-record.ts` to `tests/structure/
-  # inventory.json` (core list) and confirm no `EXECUTABLE_ALLOWANCES` row is
-  # needed for a consts-only module; mirror in the inventory equality test if its
-  # fixture lists are asserted.
+  # + reconciliation table, with `STATEMENT_MAX_CHARS`/`HINT_MAX_CHARS` and the
+  # vocabularies IMPORTED from the machine contract and never restated;
+  # TC-MEMPROV-002 migration block), `tests/fixtures/memory/tree.ts` builders
+  # (`emptyTree()`, `populatedTree()`, valid baseline record) whose boundary rows
+  # are generated from the imported constants.
+  # Inventory (see 1.7): `tests/structure/inventory.json` gains
+  # `src/contracts/memory-record.ts` in the core list and
+  # `tests/structure/content-inventory.test.ts` gains exactly one
+  # `EXECUTABLE_ALLOWANCES` row for it, listing every exported const name; mirror
+  # in the inventory equality test if its fixture lists are asserted.
   # Change artifacts: the phase declares the change folder as a folder (the
   # repository precedent for plans that must be committed by the primitive while
   # they are still untracked), so this plan file, the test-plan execution log and
@@ -268,22 +423,37 @@ phases:
   # Done when: the tree matches DM-2 exactly (no invented area, `external/`
   # absent, every empty area proved by `.gitkeep`); the three records carry
   # `trust` and a shaped evidence link with unchanged statements/statuses;
-  # `.ai/memory/README.md` measures <= 200 lines and <= 25 KB; schema parity
-  # (required set, optional set, vocabularies, capsule overlap) is green; every
-  # agent entry point is <= 150 lines and date-shaped.
+  # `.ai/memory/README.md` measures <= 200 lines and <= 25 KB and publishes the
+  # same bounds the contract declares; schema parity (required set, optional set,
+  # conditional requirements, vocabularies, capsule overlap) is green; every agent
+  # entry point is <= 150 lines and date-shaped; the contract module's
+  # `EXECUTABLE_ALLOWANCES` row lists every exported const name (so the inventory
+  # suite is green); and `doc/decisions/ADR-0011-canonical-memory-record-schema.md`
+  # is TRACKED while the ADR-0011 row in `doc/decisions/00-index.md` resolves to
+  # that tracked file — asserted as
+  # `test -f` on the file plus
+  # `git ls-files --error-unmatch doc/decisions/ADR-0011-canonical-memory-record-schema.md`
+  # exiting 0 and `git status --porcelain` showing neither path as untracked or
+  # modified after the commit.
   # Verify: `TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/memory-layout.test.ts
-  # tests/structure/memory-record-schema.test.ts`, then
-  # `mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check`.
+  # tests/structure/memory-record-schema.test.ts
+  # tests/structure/content-inventory.test.ts`, then
+  # `mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check`;
+  # `bun run scripts/checks/forbidden-literals.ts` and
+  # `bun run scripts/checks/privacy-literals.ts` (the ADR file enters the tracked
+  # scan sets when it lands).
   # ---------------------------------------------------------------------------
   - id: 1
-    title: "Canonical memory tree, published record schema, and record backfill"
+    title: "Canonical memory tree, published record schema, record backfill, and the schema-authority decision record"
     kind: delivery
     summary: >-
       Complete .ai/memory to the canonical layout (preferences, guilds, retro
-      archive with its index), publish the one record schema and the budgets in
-      .ai/memory/README.md inside 200 lines and 25 KB, land the machine schema
-      contract with the closed finding register, and backfill the three lessons
-      with their trust level and a shaped evidence link.
+      archive with its index), publish the one record schema, its conditional
+      requirements and the budgets in .ai/memory/README.md inside 200 lines and
+      25 KB, land the machine schema contract with the closed finding register and
+      its executable-allowance row, land ADR-0011 as the tracked schema authority
+      behind its already-committed index row, and backfill the three lessons with
+      their trust level and a shaped evidence link.
     scope:
       files:
         - .ai/memory/README.md
@@ -299,6 +469,8 @@ phases:
         - .ai/memory/agents/pm/README.md
         - packages/core/src/contracts/memory-record.ts
         - packages/core/src/contracts/index.ts
+        - doc/decisions/ADR-0011-canonical-memory-record-schema.md
+        - doc/decisions/00-index.md
         - tests/fixtures/memory/tree.ts
         - tests/structure/memory-layout.test.ts
         - tests/structure/memory-record-schema.test.ts
@@ -320,28 +492,64 @@ phases:
   # four areas with one finding per defect (F-5, F-6, F-7, F-8, DM-4).
   #
   # Content obligations:
+  #  2.0 GH-302 GUARD NARROWING — the phase's red-tree gate (readiness
+  #      iteration-1 finding 1, CRITICAL). The delivered guard in
+  #      `tests/structure/memory-bootstrap-templates.test.ts` (TC-MEMDOCT-002,
+  #      lines 258-287) walks `scripts`, `tools` AND `packages` and fails on any
+  #      FILE NAME matching `/memory[-_](doctor|lint)|memoryDoctor|memoryLint/i`.
+  #      This phase creates `packages/core/src/domain/memory-lint.ts`, which
+  #      matches, so leaving the guard untouched would make this phase's own
+  #      done-when (`pnpm check`) impossible — a red boundary, forbidden by the
+  #      tree-green rule. The CHOSEN resolution is the SPLIT replacement, not a
+  #      rename: because AC-F14-1 sanctions exactly the module names that match
+  #      (the invariant's check, the pure evaluator, the schema contract module),
+  #      the evaluator keeps `memory-lint.ts` and this phase edits the guard into
+  #      its narrowed form — a FILE-NAME SCAN OVER THE SAME THREE TREES whose
+  #      permitted match set is exactly `packages/core/src/domain/memory-lint.ts`
+  #      (the sanctioned set), with the still-blanket `package.json` script-value
+  #      absence assertion kept (no script names a memory check yet),
+  #      the self-referential marker string preserved, and the
+  #      no-memory-member doctor assertion preserved. Phase 4 completes the
+  #      replacement (presence assertion, both gate citations, `scripts/checks/
+  #      memory-lint.ts` added to the sanctioned set, sanctioned script-value
+  #      assertion) in the same commit as the check edge. Every colliding file is
+  #      therefore owned by a phase that also owns the guard edit: phase 2 owns
+  #      both `packages/core/src/domain/memory-lint.ts` and
+  #      `tests/structure/memory-bootstrap-templates.test.ts`.
   #  2.1 `packages/core/src/domain/memory-lint.ts` (new, exported from
   #      `packages/core/src/domain/index.ts`): one pure entry taking an injected
-  #      file list, a repository-relative text map, the privacy vocabulary and a
-  #      fixed "today", returning ordered findings plus counts. No I/O, no fs, no
-  #      clock, no randomness, no network (NFR-1, NFR-4).
+  #      file list, a repository-relative text map, the privacy vocabulary and ONE
+  #      fixed "today", returning ordered findings plus counts. The vocabulary
+  #      arrives as the phase-1 structural type from
+  #      `packages/core/src/contracts/memory-record.ts`: this module imports
+  #      `#contracts` only and must never name `packages/adapters/**`
+  #      (`matrix-core-importer`); the adapter's data is injected at the edge in
+  #      phase 4. No I/O, no fs, no clock (the date is a parameter, never read
+  #      here), no randomness, no network (NFR-1, NFR-4).
   #  2.2 Schema area: frontmatter missing/malformed, required keys
   #      (`memory.schema.keys-missing` also owns an absent `created`, OQ-TP-2),
   #      unknown key, id grammar, duplicate/reused id, file-name mismatch,
-  #      closed-vocabulary value, statement bound, preference source must be
-  #      `human_correction`, guild tag vs folder (and guild outside a guild
-  #      folder), superseded record without `superseded_by`. One defect => ONE
-  #      finding in the schema area only (no double reporting).
+  #      closed-vocabulary value, statement bound, the conditional requirements
+  #      (`basis`, `revalidate_after`, `guild`, `superseded_by`, preference
+  #      `source`), guild tag vs folder (and guild outside a guild folder),
+  #      superseded record without `superseded_by`. One defect => ONE finding in
+  #      the schema area only (no double reporting).
   #      Cross-area ownership of the presence checks: `evidence`, `created_by`
   #      and `source` presence/shape belong to the PROVENANCE area (AC-F7-1);
   #      `created` presence belongs to `memory.schema.keys-missing`; the schema
   #      required-key pass covers the remaining spine keys (id, kind, scope,
-  #      statement, trust, status). The statement bound is ONE published
-  #      constant in the schema contract and stated in the README; every test
-  #      imports it instead of repeating a literal.
-  #  2.3 Dating area: created malformed/future, revalidation required for an
-  #      authoritative behaviour-changing lesson, revalidation malformed,
-  #      revalidation expired as `warn`, entry-point capture-line date shape.
+  #      statement, trust, status). The statement bound is ONE published constant
+  #      (`STATEMENT_MAX_CHARS`) in the schema contract and stated in the README;
+  #      this module and every test IMPORT it instead of repeating a literal.
+  #  2.3 Dating area (AC-F6-1 as amended in spec v1.1): an ABSENT `created` is
+  #      NOT a dating finding — it is the single `memory.schema.keys-missing` of
+  #      the required-key pass, asserted in both directions so no record is
+  #      double-reported. The dating area owns only a PRESENT value: created
+  #      malformed, created future (compared against the single injected date),
+  #      revalidation required for an authoritative behaviour-changing lesson,
+  #      revalidation malformed, revalidation expired as `warn`, entry-point
+  #      capture-line date shape. The date is never inferred from a file name, a
+  #      commit, or anything else.
   #  2.4 Provenance area: evidence missing, evidence shape outside the five
   #      prefixes, `created_by` missing, `source` outside the four channels. A
   #      finding names the path and the field, never a full evidence value.
@@ -350,35 +558,53 @@ phases:
   #      resolvable reference produces no finding.
   #  2.6 Severity and register: every emitted id comes from the phase-1 register
   #      (area order, declared severity); advisories never change the exit.
+  #  2.7 Guard narrowing (2.0 executed): the structure suite's TC-MEMDOCT-002
+  #      block becomes a sanctioned-set file-name scan plus the preserved
+  #      assertions, and the suite is green at this phase boundary. This is the
+  #      INTERMEDIATE form and is deliberately not the delivered shape of
+  #      AC-F14-1; phase 4 completes it.
   #
   # Test obligations: `tests/checks/memory-lint-schema.test.ts` (TC-MEMSCHEMA-002
-  # 13-row one-defect table, TC-MEMSCHEMA-004 register conformance),
-  # `tests/checks/memory-lint-dating.test.ts` (TC-MEMDATE-001/002),
+  # 13-row one-defect table with the statement boundary generated from
+  # `STATEMENT_MAX_CHARS`, TC-MEMSCHEMA-004 register conformance),
+  # `tests/checks/memory-lint-dating.test.ts` (TC-MEMDATE-001 four unambiguous
+  # classification rows — absent `created` → `memory.schema.keys-missing` only,
+  # malformed/future → the dating ids — and TC-MEMDATE-002),
   # `tests/checks/memory-lint-provenance.test.ts` (TC-MEMPROV-001),
   # `tests/checks/memory-lint-reference.test.ts` (TC-MEMREF-001/002),
-  # `tests/fixtures/memory/mutants.ts`, tree builders extended.
+  # `tests/fixtures/memory/mutants.ts`, tree builders extended,
+  # `tests/structure/memory-bootstrap-templates.test.ts` (narrowed TC-MEMDOCT-002
+  # block, 2.0/2.7).
   # Inventory: add `src/domain/memory-lint.ts` to `tests/structure/inventory.json`
   # and its exported entry to `EXECUTABLE_ALLOWANCES` in
   # `tests/structure/content-inventory.test.ts`.
   #
   # Done when: every isolated defect row produces exactly one finding of the
-  # expected id naming the file and field, with zero cross-area noise; register
-  # severity projection is green; the suite is green with no `scripts/checks`
-  # file yet (so `ci-topology` stays green).
+  # expected id naming the file and field, with zero cross-area noise; the
+  # absent-`created` row produces the schema finding and ZERO dating findings;
+  # register severity projection is green; the narrowed GH-302 guard permits the
+  # pure evaluator and nothing else under `scripts/`, `tools`, `packages/`; and
+  # the suite is green with no `scripts/checks` file yet (so `ci-topology` stays
+  # green).
   # Verify: `TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/memory-lint-schema.test.ts
   # tests/checks/memory-lint-dating.test.ts
   # tests/checks/memory-lint-provenance.test.ts
-  # tests/checks/memory-lint-reference.test.ts`, then
+  # tests/checks/memory-lint-reference.test.ts
+  # tests/structure/memory-bootstrap-templates.test.ts`, then
   # `mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check`.
   # ---------------------------------------------------------------------------
   - id: 2
-    title: "Pure memory evaluation core: schema, dating, provenance, reference"
+    title: "Pure memory evaluation core: schema, dating, provenance, reference, and the narrowed GH-302 guard"
     kind: delivery
     summary: >-
       Land the pure domain evaluator with the schema, dating, provenance and
       reference areas: one finding per isolated defect from the closed register,
-      advisories that never gate, an injected date and privacy vocabulary, and a
-      one-defect-per-case mutation table that proves no cross-area reporting.
+      an absent creation date classified once by the schema area with dating
+      owning present values only, advisories that never gate, an injected date
+      and the contracts-declared privacy vocabulary, and a one-defect-per-case
+      mutation table that proves no cross-area reporting — while narrowing the
+      GH-302 file-name guard to the sanctioned module set so the evaluator's own
+      file cannot land a red tree.
     scope:
       files:
         - packages/core/src/domain/memory-lint.ts
@@ -389,6 +615,7 @@ phases:
         - tests/checks/memory-lint-reference.test.ts
         - tests/fixtures/memory/tree.ts
         - tests/fixtures/memory/mutants.ts
+        - tests/structure/memory-bootstrap-templates.test.ts
         - tests/structure/inventory.json
         - tests/structure/content-inventory.test.ts
       folders:
@@ -407,47 +634,73 @@ phases:
   # DoD-6 pure half).
   #
   # Content obligations:
-  #  3.1 Index area: both directions over the DM-3 coverage universe —
-  #      `record-uncovered` for a record with no row and `row-unbacked` for a row
-  #      naming no covered path, reported independently; `row-duplicate`;
-  #      `row-malformed` for a hint longer than 120 characters and for a row
-  #      targeting a topic file, a retro note or an area directory;
-  #      `hint-missing` for an empty second column. Topic files, retro notes,
-  #      `.gitkeep`, the index itself and area directories are explicitly NOT
-  #      covered. The archive index covers its notes exactly, both ways.
+  #  3.1 Index area — TWO EVALUATIONS OVER TWO UNIVERSES (C-10, DM-3, AC-F9-2).
+  #      U-1 (memory index): `record-uncovered` for a covered path with no row and
+  #      `row-unbacked` for a row naming no covered path, reported independently —
+  #      one of each yields exactly two findings. U-2 (archive index): the same two
+  #      rule ids evaluated over the retro notes and the archive index's own rows,
+  #      so a note with no archive row is `record-uncovered` and an archive row
+  #      backed by no note is `row-unbacked`. EVERY index finding carries its
+  #      universe (`memory-index` / `archive-index`) in the detail; no rule
+  #      identity outside the register is emitted, and the memory index is not a
+  #      covering surface for retro notes. Row shape: `hint-missing` for an empty
+  #      second column, `row-malformed` for a hint longer than `HINT_MAX_CHARS`,
+  #      `row-duplicate` for a second row for one covered path. Explicitly not
+  #      covered in U-1: topic files, retro notes, `.gitkeep`, the index itself,
+  #      and area directories (so a directory row is `row-unbacked`, not a new
+  #      wrong-target identity).
   #  3.2 Budget area: index lines (200) and bytes (25 KB, `Buffer.byteLength`
   #      at the edge / injected byte counts in the pure pass), agent and guild
   #      entry points (150), archive index (200), kernel section (warn >200 and
-  #      <=220, error >220) under the pinned anchor (OQ-TP-5). Exactly at cap
-  #      passes; the detail names file, measured value and cap.
+  #      <=220, error >220) under the pinned anchor (OQ-TP-5). Every cap is
+  #      IMPORTED from the phase-1 contract constants — no literal is restated in
+  #      the evaluator, the suites or the fixtures: the boundary matrix is
+  #      generated as `cap-1` / `cap` / `cap+1` from the constant, so raising a cap
+  #      moves the fixtures with it. Exactly at cap passes; the detail names file,
+  #      measured value and cap.
   #  3.3 Derivable area: two closed deterministic heuristics over record bodies
   #      — a fenced block that is a repository file listing, and a fenced block
   #      that restates a declared workspace command. Both `warn` only.
   #  3.4 Secret area: match every scanned file with the delivered privacy rules
   #      and their suppression classes; emit one `memory.secret.<class>` per
   #      recognizer class, path and line, never the value. Rule-id derivation
-  #      comes from the vocabulary, not a local list.
+  #      comes from the injected vocabulary, not a local list.
   #  3.5 Output model: deterministic order (area, path, line, rule id), one line
   #      per finding, the summary line carrying record/area/error/advisory
   #      counts, the <= 100 / <= 100 print ceiling with one truncation line
   #      carrying true totals, and the exit projection (non-zero iff at least one
-  #      error). Byte-identical repeated runs.
+  #      error). Byte-identical repeated runs AT ONE FIXED INJECTED DATE: the
+  #      suite passes the date in explicitly and asserts the same bytes twice, so
+  #      determinism is proven without a clock in the evaluation.
   #
   # Test obligations: `tests/checks/memory-lint-index.test.ts`
-  # (TC-MEMINDEX-001/002/003), `tests/checks/memory-lint-budget.test.ts`
-  # (TC-MEMBUDGET-001 boundary matrix incl. cap-1/cap/cap+1, TC-MEMBUDGET-002
-  # measured delivered tree), `tests/checks/memory-lint-derivable.test.ts`
-  # (TC-MEMHEUR-001/002), `tests/checks/memory-lint-secret.test.ts`
-  # (TC-MEMSECRET-001/002 with fabricated suppression-marked fixtures),
+  # (TC-MEMINDEX-001 the two directions independently; TC-MEMINDEX-002 row shape,
+  # duplicates and target rows with `HINT_MAX_CHARS` IMPORTED and the boundary
+  # generated from it; TC-MEMINDEX-003 the archive universe U-2 with the universe
+  # named in each detail), `tests/checks/memory-lint-budget.test.ts`
+  # (TC-MEMBUDGET-001 boundary matrix generated from the imported caps, including
+  # `cap-1`/`cap`/`cap+1`, TC-MEMBUDGET-002 measured delivered tree),
+  # `tests/checks/memory-lint-derivable.test.ts` (TC-MEMHEUR-001/002),
+  # `tests/checks/memory-lint-secret.test.ts` (TC-MEMSECRET-001/002 with tokens
+  # ASSEMBLED AT RUNTIME from non-matching fragments — no suppression marker in a
+  # positive case, so the case is observable rather than suppressed; the
+  # suppressed half of TC-MEMSECRET-002 is a contiguous marker-carrying literal;
+  # this route needs NO `scripts/checks/privacy-literals.registry.json` change, so
+  # that file is deliberately outside every phase's scope),
   # `tests/checks/memory-lint-output.test.ts` (TC-MEMLAY-004 verdict stability,
-  # TC-MEMGATE-001 exit/summary, TC-MEMGATE-002 order/determinism,
-  # TC-MEMNFR-003 ceiling), `tests/fixtures/memory/bodies.ts`,
-  # `tests/fixtures/memory/secrets.ts`.
+  # TC-MEMGATE-001 exit/summary, TC-MEMGATE-002 order/determinism at a fixed
+  # injected date, TC-MEMNFR-003 ceiling), `tests/fixtures/memory/bodies.ts`,
+  # `tests/fixtures/memory/secrets.ts` (one runtime builder per recognizer class),
+  # `tests/fixtures/memory/agents/` (entry-point fixtures).
   #
   # Done when: all eight areas are implemented in the pure evaluator; the
-  # boundary matrix is exact at cap-1/cap/cap+1; the delivered tree evaluates
-  # with ZERO error findings and disclosed advisories; the rule-id set equals the
-  # privacy vocabulary's recognizer classes; two runs are byte-identical.
+  # boundary matrix is exact at cap-1/cap/cap+1 from the imported constants; every
+  # index finding names its universe and the two universes are evaluated
+  # separately; the delivered tree evaluates with ZERO error findings and
+  # disclosed advisories; the rule-id set equals the privacy vocabulary's
+  # recognizer classes with no local pattern; two runs at one injected date are
+  # byte-identical; and the committed secret fixtures trip neither
+  # `scripts/checks/privacy-literals.ts` nor a suppression marker.
   # Verify: `TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/memory-lint-index.test.ts
   # tests/checks/memory-lint-budget.test.ts
   # tests/checks/memory-lint-derivable.test.ts
@@ -496,8 +749,13 @@ phases:
   #      <detail>` per finding and one summary line
   #      `memory-lint: records=<n> areas=8 errors=<n> advisories=<n>`, then the
   #      truncation line when the ceiling binds. No writes, no network, no state
-  #      append; the edge supplies today's date as the injected "today" and the
-  #      pure pass never reads a clock (test-plan §8.2 assumption).
+  #      append. THE EDGE IS THE ONLY CLOCK CONTACT: it performs exactly ONE date
+  #      read, injects that value as "today", and also injects the adapter's
+  #      privacy vocabulary data (recognizers plus suppression classes) as the
+  #      phase-1 structural type, asserting the injected recognizer classes EQUAL
+  #      the adapter's at this boundary. The pure pass never reads a clock and
+  #      never imports `packages/adapters/**` from core (NFR-1, NFR-4, test-plan
+  #      §8.2 assumption).
   #  4.3 `package.json`: add `"check:memory": "bun run scripts/checks/memory-lint.ts"`
   #      and insert `pnpm check:memory` after `pnpm check:boundaries` in the
   #      aggregate `check` chain (order pin: lint -> format:check -> typecheck ->
@@ -512,41 +770,74 @@ phases:
   #      to the `ts-invariants` step's run block. `ci-topology` requires every
   #      `scripts/checks/*.ts` to be wired, so the check file and its wiring land
   #      together.
-  #  4.5 Guard replacement (DEC-12): rewrite the block at
+  #  4.5 Guard replacement COMPLETED (DEC-12, AC-F14-1, C-9): finish the split
+  #      begun in phase 2. Rewrite the block at
   #      `tests/structure/memory-bootstrap-templates.test.ts` lines 258-287 into
-  #      a positive assertion — `scripts/checks/memory-lint.ts` exists and both
-  #      gate surfaces cite it — PLUS the preserved absences: no memory
-  #      subcommand in the CLI command inventory, `DOCTOR_AREAS` unchanged at
-  #      five with no memory member, error-table row count and domain-kind
-  #      membership unchanged. The old absence-only scan is removed.
+  #      the delivered shape — a positive presence assertion
+  #      (`scripts/checks/memory-lint.ts` exists and BOTH gate surfaces cite it),
+  #      ONE narrowed negative file-name scan over `scripts/`, `tools` and
+  #      `packages/` whose permitted matches are exactly the sanctioned memory
+  #      modules (`scripts/checks/memory-lint.ts`,
+  #      `packages/core/src/domain/memory-lint.ts`, and the schema contract module
+  #      named in the set although its name does not match the pattern), and the
+  #      preserved absences: no memory subcommand in the CLI command inventory,
+  #      `DOCTOR_AREAS` unchanged at five with no memory member, error-table row
+  #      count and domain-kind membership unchanged. The `package.json`
+  #      script-value assertion becomes a SANCTIONED-VALUE assertion, because
+  #      `check:memory` legitimately contains `memory-lint`: the aggregate chain
+  #      must cite the check path and no other script may name a memory-lint
+  #      component (the phase-2 blanket absence cannot survive 4.3). The old
+  #      absence-only scan and the self-referential marker line are replaced
+  #      consciously; the test's own comment names this change as the owner.
   #  4.6 `doc/templates/memory-doctor-checklist-template.md`: replace the
   #      "manual until memory lint lands (GH-301)" sentence with a current-state
   #      automation-boundary statement (a project whose gates run the invariant
   #      gets these areas checked mechanically; otherwise this checklist is the
-  #      audit path). Keep the `ados_distribution: redistributable` marker, keep
-  #      the six area headings, the 150/200 numbers, "per retro", "periodic
-  #      cadence" and "performs nothing"; do NOT introduce the strings
-  #      `preferences`, `retro archive` or `retro-archive` (TC-MEMSCAF-002 pins
-  #      their absence in every memory template). Update the matching row in
-  #      `doc/templates/README.md` so the template index states the same
-  #      automation boundary (its row currently repeats the manual wording).
+  #      audit path). THIS EDIT IS PART OF THE PHASE'S ATOMIC COMMIT SET and is
+  #      named specifically because TC-MEMDOCT-001 asserts that sentence VERBATIM
+  #      at `tests/structure/memory-bootstrap-templates.test.ts:252`; the template
+  #      edit and the corresponding assertion rewrite
+  #      (`expect(doctor).toContain(<new automation-boundary wording>)`) land in
+  #      the SAME commit, or the suite is red at the boundary. Keep the
+  #      `ados_distribution: redistributable` marker, keep the six area headings,
+  #      the 150/200 numbers, "per retro", "periodic cadence" and "performs
+  #      nothing"; do NOT introduce the strings `preferences`, `retro archive` or
+  #      `retro-archive` (TC-MEMSCAF-002 pins their absence in every memory
+  #      template). Update the matching row in `doc/templates/README.md` so the
+  #      template index states the same automation boundary (its row currently
+  #      repeats the manual wording).
+  #  4.7 THE PHASE'S ATOMIC COMMIT SET IS COMPLETE AS DECLARED — nothing outside
+  #      the listed scope is needed to reach a green boundary:
+  #      the scanner (`memory-scan.ts` + `file/index.ts`), the check edge,
+  #      `package.json`, `ci.yml`, the three aggregate-string pin suites, the
+  #      guard replacement block AND the TC-MEMDOCT-001 pinned-string pair
+  #      (checklist template + its assertion), `doc/templates/README.md`, the
+  #      wiring/perf/output/whole-tree suites, and the inventory pair. The
+  #      evaluator (`packages/core/src/domain/memory-lint.ts`) is edited only if
+  #      the live-tree run exposes a defect; it is already in scope through the
+  #      phase-3 boundary and may be re-touched here.
   #
   # Test obligations: `tests/structure/memory-lint-wiring.test.ts`
   # (TC-MEMGATE-004 aggregate/CI parity, TC-MEMGUARD-002 inventory equality),
   # `tests/checks/memory-lint-performance.test.ts` (TC-MEMNFR-002 scan cost and
   # gate delta), `tests/checks/memory-lint-output.test.ts` live-tree blocks
-  # (TC-MEMGATE-003 read-only and state-free, TC-MEMNFR-001 byte-identical),
-  # `tests/structure/memory-record-schema.test.ts` whole-tree block
-  # (TC-MEMSCHEMA-003 zero schema findings at the delivered HEAD).
+  # (TC-MEMGATE-003 read-only and state-free, TC-MEMNFR-001 byte-identical and
+  # exactly-one-date-read), `tests/structure/memory-record-schema.test.ts`
+  # whole-tree block (TC-MEMSCHEMA-003 zero schema findings at the delivered
+  # HEAD), `tests/structure/memory-bootstrap-templates.test.ts` (TC-MEMGUARD-001
+  # replacement completed, and TC-MEMDOCT-001's pinned automation-boundary string
+  # updated in lockstep with 4.6).
   # Inventory: add `src/file/memory-scan.ts` to `tests/structure/inventory.json`
   # and its exported factory to `EXECUTABLE_ALLOWANCES`.
   #
   # Done when: `bun run scripts/checks/memory-lint.ts` exits 0 on the delivered
-  # tree with a summary line and zero error findings; both gate surfaces cite
-  # the same path and the parity test is green; the replaced guard asserts
-  # presence + the three preserved absences and the old absence-only assertion
-  # is gone; `git status` is clean before and after a lint run; measured gate
-  # delta <= 1 s is recorded as evidence.
+  # tree with a summary line and zero error findings; exactly one date read by
+  # the edge is asserted; both gate surfaces cite the same path and the parity
+  # test is green; the replaced guard asserts the presence, the sanctioned-set
+  # negative scan, the sanctioned script value and the three preserved absences,
+  # with the old absence-only assertion gone; TC-MEMDOCT-001 passes against the
+  # rewritten template sentence in the same commit; `git status` is clean before
+  # and after a lint run; measured gate delta <= 1 s is recorded as evidence.
   # Verify: `bun run scripts/checks/memory-lint.ts`;
   # `TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/memory-lint-wiring.test.ts
   # tests/structure/memory-record-schema.test.ts
@@ -562,10 +853,13 @@ phases:
     title: "Memory lint check edge, scanner, gate wiring, and guard replacement"
     kind: delivery
     summary: >-
-      Add the bun-run check edge and the read-only scanner, wire the invariant
-      into the aggregate gate and the CI invariants job with a parity assertion,
-      and replace the GH-302 negative guard with a positive presence assertion
-      plus the preserved boundary absences in the same commit.
+      Add the bun-run check edge and the read-only scanner with its single date
+      read and injected privacy vocabulary, wire the invariant into the aggregate
+      gate and the CI invariants job with a parity assertion, and complete the
+      GH-302 guard replacement in the same commit — the positive presence
+      assertion, the sanctioned-set file-name scan, the sanctioned script value,
+      and the preserved boundary absences — including the doctor checklist's
+      automation-boundary rewording and its pinned assertion.
     scope:
       files:
         - scripts/checks/memory-lint.ts
@@ -600,20 +894,33 @@ phases:
   #
   # Content obligations:
   #  5.1 `packages/core/src/domain/capsule-candidates.ts`:
-  #      - `recordContent` renders every required schema key: `trust` and
-  #        `basis` are added, and the `kind` value is mapped
-  #        (`tacit` -> `tacit_fragment`, `lesson` -> `lesson`) so a promoted
-  #        record is schema-conformant.
+  #      - `recordContent` renders every required schema key plus the conditional
+  #        requirements promotion triggers: `trust` and `basis` are added
+  #        (`basis` is REQUIRED on a promotion-written record and OPTIONAL on a
+  #        hand-authored one, so the writer always renders it while the lint
+  #        accepts a hand-authored record that omits it), and the `kind` value is
+  #        mapped (`tacit` -> `tacit_fragment`, `lesson` -> `lesson`) so a
+  #        promoted record is schema-conformant.
   #      - the index row's second column becomes the read-when hint: derived
   #        from `applies_when`, statement as fallback, whitespace collapsed,
-  #        non-empty, <= 120 characters (DEC-7).
+  #        non-empty, <= `HINT_MAX_CHARS` imported from the contract (DEC-7).
   #      - `validateCandidate` tightens `source` to the schema's four channels
   #        (DEC-8) and refuses through the EXISTING detail path so
   #        `closeout.capsule-invalid` carries it. Id allocation, supersession
   #        marking, confinement, read scope and exact-row dedup are unchanged.
   #      - Do NOT move the guard lines pinned by `tests/fixtures/capsule/
-  #        mutants.ts` (MUT-CAP-31..36, MUT-CAP-37/38); additive edits only. If a
-  #        pinned line must move, update the mutant in the same commit.
+  #        mutants.ts` — the pinned set for this phase is MUT-CAP-31..41, not the
+  #        previously declared 31..38: MUT-CAP-31..36 and 37/38 pin
+  #        `packages/core/src/domain/capsule-candidates.ts` lines (capture bar,
+  #        evidence link, dedup, contradiction, candidate-id naming, index budget,
+  #        the class vocabulary guard and the `fleet` refusal), and
+  #        MUT-CAP-39/40/41 pin `packages/adapters/src/file/memory-promotion.ts`
+  #        lines specifically — `if (!underRoot(memoryRoot, target)) {`,
+  #        `if (fs.exists(target)) {`, and the `'$1"superseded"'` supersede
+  #        replacement — three lines this phase's `tacit/` home-area fix touches.
+  #        Additive edits only around those lines; if a pinned line must move,
+  #        update the mutant in MUT-CAP-31..41 in the SAME commit and say which
+  #        pin moved.
   #  5.2 Home-directory mapping (DM-2, F-3, AC-F1-1). The writer's and reader's
   #      record-area home is the declared area name, not the naive
   #      `<class>s` interpolation: `lesson` -> `lessons/`, `tacit` ->
@@ -635,19 +942,30 @@ phases:
   #      (trust/basis added); the test's meaning is unchanged.
   #
   # Test obligations: `tests/behaviour/memory-promotion-schema.test.ts`
-  # (TC-MEMWRITE-001 full spine + zero findings, TC-MEMWRITE-002 hint derivation
-  # and bound, TC-MEMWRITE-004 capsule reconciliation/refusal),
-  # `tests/behaviour/memory-concurrency-merge.test.ts` (TC-MEMCONC-001
-  # two-branch temp-git merge with zero conflicts and post-merge coverage,
-  # TC-MEMCONC-002 two promotion writes with union-resolved rows and idempotent
-  # re-run), `tests/structure/memory-record-schema.test.ts` capsule block.
+  # (TC-MEMWRITE-001 full spine including the always-rendered `basis` plus zero
+  # findings, TC-MEMWRITE-002 hint derivation with `HINT_MAX_CHARS` imported and
+  # its boundary, TC-MEMWRITE-004 capsule reconciliation/refusal),
+  # `tests/behaviour/memory-concurrency-merge.test.ts` — TC-MEMCONC-001 asserts
+  # the COMPLETE conflicted path set is exactly `[".ai/memory/README.md"]` (the
+  # single shared index; no record file and no creator's own entry point is
+  # conflicted), then applies the scripted union resolution, asserts exactly two
+  # new rows and both records covered once each, and adds the take-ours
+  # NON-VACUITY control that must yield exactly one
+  # `memory.index.record-uncovered`; the same-role parallel-worktree case stays a
+  # documented manual+scripted procedure (no suite claims it away).
+  # TC-MEMCONC-002 covers two promotion writes with union-resolved rows and an
+  # idempotent re-run; `tests/structure/memory-record-schema.test.ts` capsule
+  # block.
   #
   # Done when: a promoted record plus its row evaluate with zero findings; a
   # promoted tacit record lands under `tacit/` and is covered by its row; the
-  # hint is non-empty and <= 120 characters; a candidate outside the four source
-  # channels is refused with `closeout.capsule-invalid`; two parallel branches
-  # each adding one record merge with zero conflicts and both are covered; a
-  # re-run adds no file and no row.
+  # hint is non-empty and <= the imported hint bound; a candidate outside the
+  # four source channels is refused with `closeout.capsule-invalid`; two parallel
+  # branches each adding one record merge with exactly the shared index as the
+  # conflicted path, resolve by the scripted union, and both are covered; the
+  # take-ours control shows the union step (not luck) produces coverage; a re-run
+  # adds no file and no row; and the capsule mutants MUT-CAP-31..41 are green
+  # with no pinned line moved.
   # Verify: `TMPDIR=$PWD/tmp/tmpdir bun test
   # tests/behaviour/memory-promotion-schema.test.ts
   # tests/behaviour/memory-concurrency-merge.test.ts
@@ -661,12 +979,14 @@ phases:
     title: "Promotion renders the full record schema, the read-when hint, and closed source channels"
     kind: delivery
     summary: >-
-      Align the promotion writer with the schema: render trust and basis, map
-      the record kind and its declared home area (tacit renders as
+      Align the promotion writer with the schema: render trust and the always-
+      present basis (required on promotion, optional on a hand-authored record),
+      map the record kind and its declared home area (tacit renders as
       tacit_fragment under tacit/), derive the read-when hint from applicability
       with the statement as fallback, tighten the candidate source to the four
       closed channels through the existing capsule-invalid identity, and prove
-      conflict-free parallel creation and idempotent promotion.
+      that record files and own entry points merge with exactly the shared index
+      as the conflicted path and that promotion is idempotent after the union.
     scope:
       files:
         - packages/core/src/domain/capsule-candidates.ts
@@ -703,12 +1023,17 @@ phases:
   #      its 200/220-line band under the OQ-TP-5 anchor, and keep the wording
   #      current-state (no evolution history, no ticket narration).
   #  6.2 `.opencode/skills/consolidate-memory/SKILL.md`: align the written rules
-  #      with the schema (required spine, kind vocabulary, id allocation, status
-  #      transitions, validity start), the budgets (index 200 lines / 25 KB,
-  #      entry point 150, archive index 200) and the row shape (read-when hint,
-  #      <= 120 characters, one row per covered path including the archive
-  #      index, no directory rows). Current-state only; `pnpm check:prompt` must
-  #      stay green (no raw git writes, no plan progress, no retired literals).
+  #      with the schema (required spine, the conditional requirements including
+  #      `basis` required on a promotion-written record and optional on a
+  #      hand-authored one, kind vocabulary, id allocation, status transitions,
+  #      validity start), the published bounds and budgets (statement 280,
+  #      read-when hint 120, index 200 lines / 25 KB, entry point 150, archive
+  #      index 200) and the row shape (read-when hint, one row per covered path,
+  #      no directory rows, and the two coverage universes — a retro note is
+  #      covered by the archive index only). Current-state only; each number the
+  #      skill states is the contract's published value, not a new constant.
+  #      `pnpm check:prompt` must stay green (no raw git writes, no plan progress,
+  #      no retired literals).
   #  6.3 `tests/structure/memory-record-schema.test.ts`: add the curator block
   #      (TC-MEMWRITE-003 automated half) asserting the skill states the schema,
   #      the id rule, the status transitions, the budgets and the row shape with
@@ -718,8 +1043,14 @@ phases:
   #      README.md` row carry a current-state automation-boundary statement and
   #      the checklist keeps its distribution marker, no new user-facing doc
   #      under `doc/**` is unregistered (registry unchanged in delivery), and the
-  #      distribution guard's marker set holds for every touched doc. No new doc
-  #      under `doc/**` is created by this change.
+  #      distribution guard's marker set holds for every touched doc. The only new
+  #      `doc/**` file this change adds is
+  #      `doc/decisions/ADR-0011-canonical-memory-record-schema.md` (phase 1),
+  #      which is a decision record: `doc/decisions/**` requires no
+  #      `ados_distribution` marker and no forbidden-literal registry row, so the
+  #      delivery adds neither. No new user-facing doc is created by this change;
+  #      `doc/spec/features/feature-memory-lint.md` is the lifecycle-phase-7
+  #      handoff and is registered there.
   #
   # Done when: AGENTS.md carries the gate clause and schema pointer inside its
   # band; the curator skill agrees with the schema, the id rule, the transitions,
@@ -775,13 +1106,22 @@ phases:
   #      evidence recorded in the test plan §10 log: aggregate gate, memory
   #      invariant, doc-distribution guard, forbidden-literal and privacy scans,
   #      `git diff --check`.
+  #  7.4 Release bookkeeping and the decision record: confirm
+  #      `doc/decisions/ADR-0011-canonical-memory-record-schema.md` is TRACKED and
+  #      that the ADR-0011 row in `doc/decisions/00-index.md` resolves to it at
+  #      the delivered HEAD (the phase-1 landing is a release precondition), and
+  #      record in the change notes that the record remains `Proposed` with
+  #      `decision_date: null` for the owner's ratification or veto at the GH-301
+  #      open-PR gate. No delivery phase edits the record's status.
   #
   # Done when: the backlog M2-S8 entry carries Ticket + Progress markers; the
   # three alignment surfaces agree; `mkdir -p tmp/tmpdir` then
   # `TMPDIR=$PWD/tmp/tmpdir pnpm check` exits 0 (including the memory invariant,
   # the boundary check, the prompt/help conformance checks and the
   # doc-distribution guard); `bun run scripts/checks/memory-lint.ts` exits 0 with
-  # a summary line; `git diff --check` is clean.
+  # a summary line; `git ls-files --error-unmatch
+  # doc/decisions/ADR-0011-canonical-memory-record-schema.md` exits 0 while the
+  # index row still resolves to that path; `git diff --check` is clean.
   # Verify: `mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check`;
   # `bun run scripts/checks/memory-lint.ts`;
   # `bash scripts/.tests/test-doc-distribution.sh`;
@@ -794,8 +1134,9 @@ phases:
     summary: >-
       Mark M2-S8 delivered in the backlog with its Ticket and Progress lines,
       run the final alignment pass across the kernel section, the memory index
-      and the curator skill, and prove the full gate battery green at the
-      delivered HEAD.
+      and the curator skill, confirm the ADR-0011 landing still resolves at the
+      delivered HEAD with the record left Proposed for the owner gate, and prove
+      the full gate battery green at the delivered HEAD.
     scope:
       files:
         - doc/planning/oss-tooling/backlog.md
