@@ -1,14 +1,14 @@
 ---
 id: chg-GH-301-test-plan
 status: Updated
-version: 1.1
+version: 1.2
 created: 2026-11-15
 last_updated: 2026-11-15
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 labels: [milestone-m2, memory, quality-gates, repository-invariants, schema]
 version_impact: minor
-summary: "Verification strategy for M2-S8 memory records, layout, and lint: one canonical tree, one typed record schema reconciled across README/writer/capsule/lint with ADR-0011 as the authority and the 280/120 bounds imported rather than restated, eight lint areas with failing-fixture mutation tests, both-direction index coverage over two declared universes, enforced budgets, deterministic and bounded output at a fixed injected date, conflict-free parallel record creation across record files and own entry points with union-resolved index rows, and the sanctioned replacement of the GH-302 negative guard."
+summary: "Verification strategy for M2-S8 memory records, layout, and lint: one canonical tree, one typed record schema reconciled across README/writer/capsule/lint with ADR-0011 as the authority and the 280/120 bounds imported rather than restated, eight lint areas with failing-fixture mutation tests, both-direction index coverage over two declared universes, enforced budgets, deterministic and bounded output at a fixed injected date, conflict-free parallel record creation across record files and own entry points with union-resolved index rows, and the sanctioned replacement of the GH-302 negative guard in its three declared parts — presence, a narrowed file-name sanction scan whose permitted-match set equals the sanctioned module set (mutant-proven), and the preserved boundary absences — with the scanner adapter owning every read and the edge owning the single ambient date read."
 links:
   change_spec: ./chg-GH-301-spec.md
   implementation_plan: ./chg-GH-301-plan.yaml
@@ -35,9 +35,9 @@ Verification is layered: a pure domain evaluation with injected file maps (unit)
 - One-schema parity between the machine contract, the memory README, the capsule contract, the promotion writer, and the lint, including the capsule reconciliation dispositions.
 - Promotion-writer alignment (full required spine + read-when hint) and curator-rule alignment.
 - Concurrency: parallel-branch record creation with zero merge conflicts across record files and each creator's own entry-point namespace, plus the shared index row resolved by the documented union rule for both the agent case and two promotion writes.
-- The sanctioned replacement of the GH-302 negative guard (positive presence plus preserved boundary absences) and inventory equality.
+- The sanctioned replacement of the GH-302 negative guard in its three declared parts — (a) the positive presence assertion that the invariant exists and is cited by both gate surfaces; (b) one narrowed file-name sanction scan over `scripts/`, `tools/`, and `packages/` whose permitted-match set equals the sanctioned memory module set (the check edge, the pure evaluator, and the schema contract module), proven non-vacuous and proven to fail on a planted unsanctioned module; and (c) the preserved boundary absences (no memory subcommand, five doctor checks, unchanged error-table rows and domain kinds) — plus inventory equality.
 - Gate wiring: aggregate `pnpm check` membership, CI `ts-invariants` step, parity assertions, read-only/deterministic behaviour.
-- Documentation conformance: forbidden-literal registration and `ados_distribution` markers under marker-required roots.
+- Documentation conformance at delivery time: unchanged forbidden-literal registry, `ados_distribution` markers intact under marker-required roots, zero distribution drift, with the phase-7 feature spec named as a handoff rather than asserted into existence.
 
 ### 1.2 Out of Scope & Known Gaps
 
@@ -49,12 +49,13 @@ Verification is layered: a pure domain evaluation with injected file maps (unit)
 - **Timing bounds are environment-sensitive.** TC-MEMNFR-002 records the measured cost and asserts the declared ceiling on the CI runner; local figures are evidence, not a second contract.
 - **The index row is not conflict-free by construction.** Two branches appending different rows at end-of-file of the one two-column table conflict, so the plan never asserts a zero-conflict merge of the index. TC-MEMCONC-001 bounds its zero-conflict claim to record files and each creator's own entry-point namespace and resolves the single index-file conflict by the documented union rule; TC-MEMCONC-002 applies the same union state for two promotion writes (F-13, AC-F13-1/AC-F13-2).
 - **Same-role parallel worktrees remain merge-conflict capable** and resolve by the documented union rule. That path is a documented manual+scripted procedure (TC-MEMCONC-001 notes), not automated; the change does not claim it away (F-13).
+- **The new `doc/spec/features/feature-memory-lint.md` is a lifecycle-phase-7 `@doc-syncer` handoff**, not a delivery artifact. No delivery phase creates a user-facing `doc/**` doc, so TC-MEMNFR-004 asserts delivery-time documentation state only; the new feature spec and its registration are verified by a post-landing guard run recorded in the phase-7 notes.
 - **Known gap by testing-strategy rule:** permanent suites must not assert a branch diff, so "this change adds no forbidden surface" is an inventory/boundary invariant (TC-MEMGUARD-002) plus review-time changed-file inspection, not a diff assertion against a moving base.
 
 ## 2. References
 
-- Change specification: `./chg-GH-301-spec.md` (v1.1) — 30 acceptance criteria (AC-F1-1…AC-NFR10-1), functional capabilities F-1…F-14, data-model contracts DM-1…DM-6, NFR-1…NFR-11, decision log DEC-1…DEC-13, §17.1 Definition of Done (19 rows), Appendix A closed finding-identity register, Appendix B scenario seeds SC-M2-S8-01/02, Appendix C constraint register C-1…C-11.
-- Implementation plan: `./chg-GH-301-plan.yaml` (delivered, 7 phases) — owns layout/schema (phase 1), the evaluator core (phase 2), coverage/budgets/derivables/secrets/output (phase 3), the check edge and gate wiring (phase 4), write-path alignment and the concurrency proofs (phase 5), kernel/curator and doc conformance (phase 6), and finalization (phase 7). Its declarations this plan depends on: the write-path `source` tightening and kind/home-area mapping land in `packages/core/src/domain/capsule-candidates.ts` (phase 5), the curator skill is reconciled in **phase 6**, and every file this plan names as a test home is inside its owning phase's scope.
+- Change specification: `./chg-GH-301-spec.md` (v1.2) — 30 acceptance criteria (AC-F1-1…AC-NFR10-1), functional capabilities F-1…F-14, data-model contracts DM-1…DM-6, NFR-1…NFR-11, decision log DEC-1…DEC-13, §17.1 Definition of Done (19 rows), Appendix A closed finding-identity register with its schema/provenance presence partition, Appendix B scenario seeds SC-M2-S8-01/02, Appendix C constraint register C-1…C-11. Two v1.2 declarations this plan depends on: the presence partition (`source` is schema-owned — absent `source` → `memory.schema.keys-missing`, out-of-channel `source` → `memory.schema.value-unknown`; `evidence` and `created_by` are provenance-owned) and DoD-15's three-part guard replacement (presence, the narrowed file-name sanction scan with its mutant and non-vacuity check, and the preserved absences).
+- Implementation plan: `./chg-GH-301-plan.yaml` (delivered, 7 phases) — owns layout/schema (phase 1), the evaluator core (phase 2), coverage/budgets/derivables/secrets/output (phase 3), the check edge and gate wiring (phase 4), write-path alignment and the concurrency proofs (phase 5), kernel/curator and doc conformance (phase 6), and finalization (phase 7). Its declarations this plan depends on: the write-path `source` tightening, the `scope: fleet` refusal, and the kind/home-area mapping land in `packages/core/src/domain/capsule-candidates.ts` (phase 5), the scanner adapter and the guard replacement land in phase 4, the curator skill is reconciled in **phase 6**, and every file this plan names as a test home is inside its owning phase's scope.
 - Decision record: `doc/decisions/ADR-0011-canonical-memory-record-schema.md` (Proposed) — the system-level schema authority this change consumes: required spine, closed optional set, concept-key dispositions, the `kind` → home-area mapping (`tacit_fragment` → `tacit/`, removing the `tacits/` defect), conditional requirements, and the single-sourced 280/120 bounds. Tests import the schema's declarations from the machine contract module; they never restate a bound or a vocabulary.
 - Testing strategy: `.ai/rules/testing-strategy.md` — module→test mapping (`scripts/checks/<check>.ts` → `bun run` plus `tests/checks/**` mutation tests; `packages/**` → `bun test tests/structure tests/behaviour` plus boundaries/typecheck; `doc/**` → static/content checks), bun:test authoring rules, invariant-test authoring (tree invariants, not branch diffs), and the gate battery.
 - TypeScript rules: `.ai/rules/typescript.md` — strict TS, tier/purity, contracts-vs-domain-vs-adapter separation, error contract, bun:test conventions.
@@ -76,7 +77,7 @@ Verification is layered: a pure domain evaluation with injected file maps (unit)
 | AC-F1-1 | Canonical tree: index, four record areas, retro archive + archive index, per-agent and guild entry points; empty areas proved by placeholders; no fleet quarantine area | TC-MEMLAY-001, TC-MEMLAY-003, TC-MEMLAY-004 | Covered |
 | AC-F1-2 | Placeholder is not a record/index target/finding; no directory rows; topic files and retro notes represented by entry point/archive index | TC-MEMLAY-002 | Covered |
 | AC-F2-1 | Required spine, closed optional set, and closed vocabularies identical across human format, machine contract, and capsule overlap; reconciliation table names each capsule element's disposition | TC-MEMSCHEMA-001 | Covered |
-| AC-F2-2 | Each isolated schema violation yields exactly one matching `memory.schema.*` error naming file, field, and value name; no double-reporting under another area | TC-MEMSCHEMA-002, TC-MEMSCHEMA-004 | Covered |
+| AC-F2-2 | Each isolated schema violation yields exactly one matching `memory.schema.*` error naming file, field, and value name; no double-reporting under another area, including the schema-owned `source` presence and channel rows | TC-MEMSCHEMA-002, TC-MEMSCHEMA-004, TC-MEMPROV-001 (the two `source` rows) | Covered |
 | AC-F2-3 | Whole migrated tree renders every required key, zero schema findings, zero required-field drift | TC-MEMSCHEMA-003 | Covered |
 | AC-F3-1 | Promotion home write renders full required spine (trust, basis — `basis` required on promotion-written records, optional on hand-authored ones) and a non-empty read-when hint of at most the published bound (120) derived from applicability with statement fallback; zero findings for record and row | TC-MEMWRITE-001, TC-MEMWRITE-002, TC-MEMWRITE-004 | Covered |
 | AC-F3-2 | Curator rules agree with schema, id rule, status transitions, budgets, and row shape; consolidation pass yields a clean tree | TC-MEMWRITE-003 | Covered |
@@ -84,7 +85,7 @@ Verification is layered: a pure domain evaluation with injected file maps (unit)
 | AC-F4-2 | Aggregate gate and CI invariants job invoke the same invariant, parity-tested; command inventory, error rows, domain kinds, doctor checks unchanged | TC-MEMGATE-004 | Covered |
 | AC-F6-1 | Absent `created` is exactly one `memory.schema.keys-missing` with no dating finding; present-but-malformed and future `created` are each one `memory.dating.*` error; date never inferred from a file name, a commit, or anything else | TC-MEMDATE-001 | Covered |
 | AC-F6-2 | Revalidation required for authoritative behaviour-changing lesson; malformed is error; expired is non-gating advisory; entry-point capture-line dates match the declared shape | TC-MEMDATE-002 | Covered |
-| AC-F7-1 | Evidence presence and shape, writer presence, source channel each classified; findings never echo a full evidence value | TC-MEMPROV-001 | Covered |
+| AC-F7-1 | Evidence presence and shape and writer presence are classified in `memory.provenance.*`; under the v1.2 presence partition `source` is schema-owned (absent → `memory.schema.keys-missing`, out-of-channel → `memory.schema.value-unknown`), so no key is classified twice; findings never echo a full evidence value | TC-MEMPROV-001 | Covered |
 | AC-F7-2 | Three migrated records carry a trust level consistent with their recorded channel and a shaped evidence link, statements and statuses unchanged | TC-MEMPROV-002 | Covered |
 | AC-F8-1 | Dangling supersedes/superseded_by/contradicts/link and asymmetric supersession each one `memory.reference.*` error; resolvable references produce none | TC-MEMREF-001, TC-MEMREF-002 | Covered |
 | AC-F9-1 | Record without row → `memory.index.record-uncovered`; row without covered path → `memory.index.row-unbacked`; independent, one of each yields exactly two findings | TC-MEMINDEX-001 | Covered |
@@ -96,7 +97,7 @@ Verification is layered: a pure domain evaluation with injected file maps (unit)
 | AC-F12-2 | Documented placeholder or suppression marker inside a matched span produces no finding; markerless value of the same shape produces the finding | TC-MEMSECRET-002 | Covered |
 | AC-F13-1 | Two agents on parallel branches create records in their own namespace; zero merge conflicts across the record files and each creator's own entry-point namespace; the index-row pair is outside that claim and resolves by union (AC-F13-2); both records covered by exactly one row each after resolution | TC-MEMCONC-001 | Covered |
 | AC-F13-2 | Two promotion writes land two record files plus two index rows; no file conflict, both rows survive union resolution, no duplicate/orphan row, re-run adds nothing | TC-MEMCONC-002 | Covered |
-| AC-F14-1 | Replacement guard asserts the invariant exists and is cited by both gate surfaces, and still asserts no memory subcommand, five doctor checks, unchanged error-table rows; old absence-only assertion gone | TC-MEMGUARD-001 | Covered |
+| AC-F14-1 | Replacement guard asserts the invariant exists and is cited by both gate surfaces, retains the narrowed file-name sanction scan over `scripts/`, `tools/`, `packages/` whose permitted-match set equals the sanctioned module set (check edge, pure evaluator, schema contract module) and fails on a planted unsanctioned module, and still asserts no memory subcommand, five doctor checks, unchanged error-table rows; old absence-only assertion gone | TC-MEMGUARD-001 | Covered |
 | AC-NFR1-1 | Byte-identical output including order and truncation for a fixed tree and a fixed injected date; exactly one date read at the edge and no ambient clock in the pure evaluation; zero writes, no network; at a later injected date only date-derived findings differ | TC-MEMGATE-002, TC-MEMGATE-003, TC-MEMNFR-001 | Covered |
 | AC-NFR2-1 | Declared size bound completes inside the wall-clock bound, one read per file, no shell-out | TC-MEMNFR-002 | Covered |
 | AC-NFR5-1 | At most 100 error findings and 100 advisories printed in deterministic order, followed by one truncation line with true totals | TC-MEMNFR-003 | Covered |
@@ -112,7 +113,7 @@ No HTTP or event surface is added or changed (spec §8.1/§8.2). The data-model 
 
 | ID | Element | TC ID(s) | Status |
 |----|---------|----------|--------|
-| DM-1 | Canonical typed-record schema: required spine, closed optional set, closed vocabularies, id and file-name grammar, validity start, conditional requirements (`basis`, `revalidate_after`, `guild`, `superseded_by`, preference `source`), the published 280/120 bounds, precedence rule | TC-MEMSCHEMA-001, TC-MEMSCHEMA-002, TC-MEMSCHEMA-003, TC-MEMSCHEMA-004 | Covered |
+| DM-1 | Canonical typed-record schema: required spine, closed optional set, closed vocabularies, id and file-name grammar, validity start, conditional requirements (`basis`, `revalidate_after`, `guild`, `superseded_by`, preference `source`), the published 280/120 bounds, precedence rule, and the `scope: fleet` value refused on a promotable record | TC-MEMSCHEMA-001, TC-MEMSCHEMA-002, TC-MEMSCHEMA-003, TC-MEMSCHEMA-004, TC-MEMWRITE-004 | Covered |
 | DM-2 | Canonical tree layout and per-area budgets; placeholder semantics; absent fleet quarantine | TC-MEMLAY-001, TC-MEMLAY-002, TC-MEMLAY-003, TC-MEMLAY-004 | Covered |
 | DM-3 | Index row and coverage contract: row shape, hint bound, the two coverage universes (U-1 memory index, U-2 archive index), explicitly-not-covered set, both-direction findings | TC-MEMINDEX-001, TC-MEMINDEX-002, TC-MEMINDEX-003, TC-MEMLAY-002 | Covered |
 | DM-4 | Finding model: identity shape/register, area order, fields, severity, emission, exit, ceiling | TC-MEMSCHEMA-004, TC-MEMGATE-001, TC-MEMGATE-002, TC-MEMNFR-003 | Covered |
@@ -129,7 +130,7 @@ No HTTP or event surface is added or changed (spec §8.1/§8.2). The data-model 
 | NFR-4 | Tier and purity: pure domain evaluation, contracts data-only, file reading at adapter/edge, boundaries green | TC-MEMGATE-003, TC-MEMNFR-005 (boundary job) | Covered |
 | NFR-5 | Bounded output: ≤100 errors and ≤100 advisories, one truncation line with true totals, deterministic under truncation | TC-MEMNFR-003 | Covered |
 | NFR-6 | Local/CI parity on one invocation with a parity test | TC-MEMGATE-004 | Covered |
-| NFR-7 | Documentation conformance: forbidden-literal registration and distribution markers, zero drift | TC-MEMNFR-004 | Covered |
+| NFR-7 | Documentation conformance at delivery time: registry unchanged, markers intact under marker roots, zero drift; the phase-7 feature spec is a handoff verified post-landing | TC-MEMNFR-004 | Covered |
 | NFR-8 | Authoring-time gate green on a clean checkout with a repository-local TMPDIR | TC-MEMNFR-005 | Covered |
 | NFR-9 | Secret hygiene of findings: path, line, class only — never a matched value | TC-MEMSECRET-001, TC-MEMPROV-001 | Covered |
 | NFR-10 | No new surface: command, flag, error row, domain kind, state record, event, or doctor check | TC-MEMGUARD-002, TC-MEMGATE-004 | Covered |
@@ -140,7 +141,7 @@ No HTTP or event surface is added or changed (spec §8.1/§8.2). The data-model 
 Per `.ai/rules/testing-strategy.md`, this is a mixed TypeScript + docs change and runs every applicable layer. The pure evaluation is exercised in-process; the executable check and its mutations run through the check tier; tree and contract assertions live in the structure tier; promotion-writer and concurrency exercises live in the behaviour/integration tier.
 
 - **Unit (pure domain evaluation).** `packages/core/src/domain/memory-lint.ts` and `packages/core/src/contracts/memory-record.ts` — pure functions over an injected file list and text map, with the privacy vocabulary and a fixed date injected. Tests import the module directly from `tests/checks/**` and feed fixture trees in memory; no filesystem writes inside the evaluation. Runner: `bun test`.
-- **Check (repository invariant).** `scripts/checks/memory-lint.ts` — the bun-run edge that enumerates `.ai/memory/**`, parses YAML frontmatter, calls the pure evaluation, prints findings and the summary, and projects the exit. Mutation tests build a temporary tree, invoke the exported pure scan, and assert the exact finding identities. Execution of the live check: `bun run scripts/checks/memory-lint.ts`.
+- **Check (repository invariant).** `scripts/checks/memory-lint.ts` — the bun-run edge: it calls the scanner, calls the pure evaluation with the scanned text map, the injected privacy vocabulary, the published constants, and its one date read, then prints findings and the summary and projects the exit. The edge owns **the single ambient date read and printing**; every file read and the YAML frontmatter parse belong to the scanner adapter, and contracts/domain perform no I/O. Mutation tests build a temporary tree, invoke the exported pure scan, and assert the exact finding identities. Execution of the live check: `bun run scripts/checks/memory-lint.ts`.
 - **Behaviour.** `tests/behaviour/memory-promotion-schema.test.ts` uses `tests/fixtures/capsule/promotion.ts` (`makeTempMemory`, `makePromotionRuntime`, `candidateYaml`) to run the real promotion writer over a temporary memory root, then evaluate the written tree with the lint.
 - **Integration (git).** `tests/behaviour/memory-concurrency-merge.test.ts` builds a temporary git repository, creates two branches that each add a distinct record file plus a line in that creator's own entry point, merges both, asserts zero conflicts across the record files and the entry-point namespaces, resolves the single index-file conflict by the documented union rule, and asserts a clean post-merge lint with both records covered.
 - **Structure.** `tests/structure/**` asserts the committed tree shape, the three-way schema parity, the curator-rule parity, the gate/CI citation parity, and inventory equality.
@@ -182,7 +183,7 @@ git diff --check
 ./scripts/lint-commit-range.sh --base <base>
 ```
 
-`pnpm check` is `lint → format:check → typecheck → test → check:boundaries → prompt-conformance → help-guide-coverage → exports-parity`. The new `check:memory` invocation joins `check` and the CI `ts-invariants` step; the parity assertion in TC-MEMGATE-004 pins both citations. `bunfig.toml` discovery covers `tests/**`; fixtures stay un-named as `*.test.ts`.
+`pnpm check` is `lint → format:check → typecheck → test → check:boundaries → check:memory → prompt-conformance → help-guide-coverage → exports-parity`. `check:memory` resolves to `bun run scripts/checks/memory-lint.ts`, and the CI `ts-invariants` step cites that same path directly; the parity assertion in TC-MEMGATE-004 compares the **resolved** invocation on both surfaces, not the raw strings. `bunfig.toml` discovery covers `tests/**`; fixtures stay un-named as `*.test.ts`.
 
 ## 5. Test Scenarios
 
@@ -201,14 +202,14 @@ git diff --check
 | TC-MEMWRITE-001 | Promotion write renders full schema and hint; zero findings | Behaviour | Automated | Critical | AC-F3-1 |
 | TC-MEMWRITE-002 | Read-when hint derivation and bound | Behaviour | Automated | High | AC-F3-1, DM-3 |
 | TC-MEMWRITE-003 | Curator rules agree; consolidation pass clean | Structure + Manual | Semi-automated | High | AC-F3-2 |
-| TC-MEMWRITE-004 | Capsule reconciliation and `source` tightening | Behaviour + Structure | Automated | High | AC-F3-1, DM-6 |
+| TC-MEMWRITE-004 | Capsule reconciliation: `source` channels and `scope: fleet` refusals | Behaviour + Structure | Automated | High | AC-F3-1, DM-1, DM-6 |
 | TC-MEMGATE-001 | Exit verdict, finding lines, summary counts | Check | Automated | Critical | AC-F4-1 (seed SC-M2-S8-01) |
 | TC-MEMGATE-002 | Determinism and declared ordering | Check | Automated | Critical | AC-F4-1, AC-NFR1-1 |
 | TC-MEMGATE-003 | Read-only, clock-free, offline evaluation | Check + Structure | Automated | Critical | AC-NFR1-1, NFR-4 |
 | TC-MEMGATE-004 | Aggregate gate and CI invariants wiring parity | Structure | Automated | Critical | AC-F4-2, AC-NFR10-1, NFR-6 |
 | TC-MEMDATE-001 | Creation-date classification: absent, malformed, future | Check | Automated | Critical | AC-F6-1 (seed SC-M2-S8-01) |
 | TC-MEMDATE-002 | Revalidation windows and capture-line dates | Check | Automated | High | AC-F6-2 |
-| TC-MEMPROV-001 | Evidence presence/shape, writer, source channel | Check | Automated | Critical | AC-F7-1 (seed SC-M2-S8-01), NFR-9 |
+| TC-MEMPROV-001 | Evidence presence/shape and writer in provenance; `source` presence/channel in schema per the partition | Check | Automated | Critical | AC-F7-1, AC-F2-2 (seed SC-M2-S8-01), NFR-9 |
 | TC-MEMPROV-002 | Migrated-records backfill fidelity | Structure + Manual | Semi-automated | High | AC-F7-2 |
 | TC-MEMREF-001 | Dangling supersedes/superseded_by/contradicts/link | Check | Automated | High | AC-F8-1 |
 | TC-MEMREF-002 | Resolvable references and asymmetry control | Check | Automated | High | AC-F8-1 |
@@ -223,12 +224,12 @@ git diff --check
 | TC-MEMSECRET-002 | Suppression classes and markerless control | Check | Automated | Critical | AC-F12-2 |
 | TC-MEMCONC-001 | Parallel-branch record creation: zero conflicts on records and own entry points, union-resolved index pair, coverage after merge | Integration | Automated | Critical | AC-F13-1 (seed SC-M2-S8-02) |
 | TC-MEMCONC-002 | Two promotion writes and union-resolved index rows | Behaviour | Automated | Critical | AC-F13-2 (seed SC-M2-S8-02) |
-| TC-MEMGUARD-001 | Negative guard replaced by presence + preserved absences | Structure | Automated | Critical | AC-F14-1 |
+| TC-MEMGUARD-001 | Negative guard replaced: presence + narrowed sanction scan + preserved absences | Structure | Automated | Critical | AC-F14-1 |
 | TC-MEMGUARD-002 | Inventory equality (no new surface) | Structure | Automated | Critical | AC-NFR10-1 |
 | TC-MEMNFR-001 | Byte-identical output and state-free run | Check | Automated | Critical | AC-NFR1-1 |
 | TC-MEMNFR-002 | Scan cost and gate overhead | Check (performance) | Automated | Medium | AC-NFR2-1, NFR-3 |
 | TC-MEMNFR-003 | Output ceiling and truncation line | Check | Automated | High | AC-NFR5-1 |
-| TC-MEMNFR-004 | Documentation conformance and distribution drift | Structure + shell guard | Automated | High | AC-NFR7-1 |
+| TC-MEMNFR-004 | Delivery-time doc conformance: registry unchanged, markers intact, zero drift | Structure + shell guard | Automated | High | AC-NFR7-1 |
 | TC-MEMNFR-005 | Full gate battery green at delivered HEAD | Manual execution of automated commands | Semi-automated | Critical | AC-NFR8-1 |
 
 ### 5.2 Scenario Details
@@ -386,13 +387,13 @@ git diff --check
 1. Import the machine contract's required keys, optional keys, and closed vocabulary constants.
 2. Parse the README's record-format example and extract the keys it presents as required and optional.
 3. Assert set equality for required and optional key sets, and assert every vocabulary constant appears verbatim in the README's documented value lists.
-4. Assert the capsule overlap: `trust` equals `CAPSULE_CANDIDATE_TRUST`; the evidence-link prefixes match the capsule's five prefixes; `source` equals the schema's four-value channel set; `status` is the schema subset declared for the capsule.
+4. Assert the capsule overlap by behaviour, not by a constant the capsule does not expose: `trust` equals `CAPSULE_CANDIDATE_TRUST`; the evidence-link prefixes match the capsule's five prefixes; `status` is the schema subset declared for the capsule. The capsule contract is **read for parity only** and carries no `source` vocabulary (`readonly source: string`), so no source-constant equality is asserted: instead, `validateCandidate` is exercised to assert it accepts exactly the schema's four channels and refuses a fifth through the existing capsule-invalid identity (the tightening lives in `packages/core/src/domain/capsule-candidates.ts`, and TC-MEMWRITE-004 owns the refusal path in full).
 5. Parse the reconciliation table and assert it names each DM-6 capsule element (candidate required set, trust vocabulary, evidence shapes, read projection, promotion write content, promotion read scope, events/naming/close) with a change/no-change disposition.
 6. Assert the README's published format is labelled the human rendering of the machine contract (precedence rule present).
 
 **Expected Outcome**:
 
-- Zero drift between the human format and the machine contract; the capsule overlap is exact; the reconciliation table is complete.
+- Zero drift between the human format and the machine contract; the capsule overlap is asserted where the capsule exposes the vocabulary (trust, evidence prefixes, status subset) and behaviourally where it does not (`source`, via `validateCandidate`); the reconciliation table is complete.
 
 **Notes / Clarifications**:
 
@@ -469,7 +470,7 @@ git diff --check
 **Related IDs**: F-2, AC-F2-3, DM-1, NFR-11
 **Test Type(s)**: Check + Structure
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/checks/memory-lint-schema.test.ts` (live-tree block) and `tests/structure/memory-record-schema.test.ts`
+**Target Layer / Location**: `tests/structure/memory-record-schema.test.ts` (whole-tree block — plan phase 4 scope), with the live check run as the paired evidence of step 1
 **Tags**: @bun, @check, @structure, @memory
 
 **Given / When / Then**: Given the whole migrated tree, when the invariant runs at the delivered HEAD, then every record renders every required key, zero schema findings are reported, and no required field exists in the schema and is absent from a rendered record.
@@ -478,6 +479,7 @@ git diff --check
 
 - Layout and migration have landed (tree-green rule: the gate is enabled only after this passes).
 - The delivered tree contains the three migrated records and any new records added by this change.
+- Both halves live in `tests/structure/memory-record-schema.test.ts`, which plan phase 4 declares in scope; `tests/checks/memory-lint-schema.test.ts` (phase 2) is **not** the home of this block.
 
 **Steps**:
 
@@ -635,33 +637,37 @@ git diff --check
 **Scenario Type**: Regression
 **Impact Level**: High
 **Priority**: High
-**Related IDs**: F-3, AC-F3-1, DM-6, DEC-8, RSK-7
+**Related IDs**: F-3, AC-F3-1, DM-1, DM-6, DEC-8, NG-6, RSK-7
 **Test Type(s)**: Behaviour + Structure
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/memory-promotion-schema.test.ts` (capsule block) and `tests/structure/memory-record-schema.test.ts`
 **Tags**: @bun, @behaviour, @structure, @memory
 
-**Given / When / Then**: Given a candidate whose `source` is free text outside the four declared channels, when candidate schema validation runs, then closeout refuses it through the existing `closeout.capsule-invalid` identity; given a valid candidate, then the memory-record read projection is unchanged (`{id, class, statement, status, path}`) and no candidate field, event, or naming rule changed.
+**Given / When / Then**: Given a candidate whose `source` is free text outside the four declared channels, when candidate schema validation runs, then closeout refuses it through the existing `closeout.capsule-invalid` identity; given a `lesson` or `tacit` candidate carrying `scope: fleet`, then it is refused at candidate-schema time through that same identity, the writer renders nothing, and no promoted record is created; given a valid candidate, then the memory-record read projection is unchanged (`{id, class, statement, status, path}`) and no candidate field, event, or naming rule changed.
 
 **Preconditions**:
 
-- The candidate contract tightening is additive on an already-required key (DEC-8).
+- The candidate contract tightening is additive on an already-required key (DEC-8); the `scope: fleet` refusal is a projection rule added in `validateCandidate` (plan phase 5), not a widening of the capsule contract.
 - `runPromotionCloseout` returns the envelope error code.
 
 **Steps**:
 
 1. Run a candidate with `source: "anecdotally"`; assert exit 1 and error code `closeout.capsule-invalid`.
 2. Run a candidate with each of the four valid channels; assert acceptance and a promotion decision.
-3. Assert the read projection keys and the candidate required-key set are unchanged apart from `source`'s closed validation.
-4. Assert the candidate file naming (`<id>.yaml`), event topics, and terminal-close behaviour are untouched by a focused structure assertion over the capsule contract and closeout fixtures.
+3. **`scope: fleet` refusal, `lesson` class:** run a `lesson` candidate carrying `scope: fleet`; assert the candidate is refused at candidate-schema time (`validateCandidate`) through the existing `closeout.capsule-invalid` identity, assert the writer produced **no record file and no index row** in the temp memory root, and assert no record carrying `scope: "fleet"` exists anywhere in the written tree — the value DM-1 calls "deliberately the value with no implemented home".
+4. **`scope: fleet` refusal, `tacit` class:** repeat step 3 with a `tacit` candidate; same refusal, same zero writes.
+5. **Do not widen the capsule contract:** assert `CAPSULE_CANDIDATE_SCOPES` still declares `fleet` (the candidate vocabulary keeps the value; the refusal lives in the projection, not in a narrowed contract), and assert no candidate field, event topic, candidate file-naming rule, or terminal-close behaviour changed.
+6. **Class-level `fleet` is a different, delivered rejection:** assert an existing `class: fleet` candidate still yields its delivered `owner-approval-required` rejection (NG-6), so the scope-level refusal is proven not to have replaced or duplicated the class-level routing rejection.
+7. Assert the read projection keys and the candidate required-key set are unchanged apart from `source`'s closed validation.
+8. Assert the candidate file naming (`<id>.yaml`), event topics, and terminal-close behaviour are untouched by a focused structure assertion over the capsule contract and closeout fixtures.
 
 **Expected Outcome**:
 
-- The tightening refuses an illegitimate source without widening the capsule contract; no other capsule element changed.
+- The tightening refuses an illegitimate source and refuses a `fleet`-scoped promotable record without widening the capsule contract; both refusals reuse the capsule-invalid identity, render nothing, and no other capsule element changed.
 
 **Notes / Clarifications**:
 
-- **Fixture / mutant**: `candidateYaml({ source: ... })`; the existing `tests/behaviour/closeout-capsule-schema.test.ts` table is extended only if the plan places it there, otherwise this test owns it.
+- **Fixture / mutant**: `candidateYaml({ source: ... })` and `candidateYaml({ scope: "fleet" })` for the lesson and tacit classes; the existing `tests/behaviour/closeout-capsule-schema.test.ts` table is extended only if the plan places it there, otherwise this test owns it.
 
 #### TC-MEMGATE-001 - Exit verdict, finding lines, summary counts
 
@@ -741,22 +747,22 @@ git diff --check
 **Target Layer / Location**: `tests/checks/memory-lint-output.test.ts` (read-only block) + boundary suite
 **Tags**: @bun, @check, @boundaries, @memory
 
-**Given / When / Then**: Given the live repository, when the invariant runs, then the working tree is byte-identical before and after; the pure evaluation receives an injected file map and an injected date value (no filesystem access, no network, no ambient clock); and the domain/contract modules declare no runtime I/O import.
+**Given / When / Then**: Given the live repository, when the invariant runs, then the working tree is byte-identical before and after; the pure evaluation receives an injected file list, text map, and date value (no filesystem access, no network, no ambient clock); the scanner adapter owns every file read and the YAML frontmatter parse; the check edge owns the single ambient date read and printing; and contracts/domain perform no I/O.
 
 **Preconditions**:
 
-- The scanner adapter is the only fs-reading module; the pure evaluation is in the domain tier; the only ambient date read sits in the check edge and is injected once (NFR-1, NFR-4).
+- `packages/adapters/src/file/memory-scan.ts` is the only fs-reading module (the plan makes it "the only reader/parser", 4.1); the pure evaluation is in the domain tier; the only ambient date read sits in the check edge and is injected once (NFR-1, NFR-4).
 
 **Steps**:
 
 1. Record `git status --porcelain` before and after `bun run scripts/checks/memory-lint.ts`; assert equality (mirrors `forbidden-literals.test.ts`).
-2. Static assertion: the domain module's imports contain no `node:fs`, `node:child_process`, `node:net`, or `fetch`; the contract module exports data/types only; neither module reads a clock (no `Date.now`, no `new Date()` without an argument).
-3. Static assertion: the edge module owns the only `readFileSync`/`readdirSync` usage, the only YAML parse, and the only ambient date read (exactly one call site, whose value is passed to the evaluation).
+2. Static assertion (domain and contracts): `packages/core/src/domain/memory-lint.ts` imports no `node:fs`, `node:child_process`, `node:net`, `fetch`, or YAML parser; `packages/core/src/contracts/**` exports data/types only; neither module reads a clock (no `Date.now`, no `new Date()` without an argument) and neither imports `packages/adapters/**` (the `matrix-core-importer` rule).
+3. Static assertion (the declared three-way boundary, stated as the plan states it): **the scanner adapter (`packages/adapters/src/file/memory-scan.ts`) owns every file read and the YAML frontmatter parse; the check edge owns the single ambient date read and printing; contracts/domain perform no I/O.** Concretely: `readFileSync`/`readdirSync`/frontmatter parse appear in the scanner and in no other module of this check; `scripts/checks/memory-lint.ts` imports the scanner factory, contains exactly one ambient date read call site whose value is passed into the evaluation, and performs no fs read or YAML parse of its own; no module outside the scanner reads a memory-tree file.
 4. Run `pnpm check:boundaries` (or `bun test tests/boundaries`) and assert green, including the new modules in the inventory.
 
 **Expected Outcome**:
 
-- The invariant mutates nothing, calls no network, and reads no clock outside its single injected date read; purity and boundary rules hold.
+- The invariant mutates nothing, calls no network, and reads no clock outside its single injected date read; the read/parse boundary sits in the adapter, the date/print boundary at the edge, and purity and boundary rules hold.
 
 **Notes / Clarifications**:
 
@@ -773,24 +779,25 @@ git diff --check
 **Target Layer / Location**: `tests/structure/memory-lint-wiring.test.ts`, using the aggregate-string pin technique of `tests/checks/ci-wiring.test.ts` and the inventory pattern of `tests/structure/content-inventory.test.ts`
 **Tags**: @bun, @structure, @ci, @memory
 
-**Given / When / Then**: Given the delivered gate surfaces, when the aggregate local gate and the CI invariants job are inspected, then both execute the same `scripts/checks/memory-lint.ts` invocation, a parity test asserts both citations, and the command inventory, error-table rows, domain kinds, and doctor check set are unchanged.
+**Given / When / Then**: Given the delivered gate surfaces, when the aggregate local gate and the CI invariants job are inspected, then both resolve to the same `scripts/checks/memory-lint.ts` invocation, a parity test asserts both citations, and the command inventory, error-table rows, domain kinds, and doctor check set are unchanged.
 
 **Preconditions**:
 
 - Package scripts and `.github/workflows/ci.yml` are edited in the enforcement phase.
+- The `check:memory` indirection is resolved before comparison: the aggregate cites the script, the CI job cites the path, so only the resolved invocation can be equal.
 
 **Steps**:
 
-1. Read `package.json`; assert `scripts.check` contains the memory check invocation and a dedicated `check:memory` script points at `scripts/checks/memory-lint.ts`.
-2. Read `.github/workflows/ci.yml`; assert the `ts-invariants` job's static-check step runs the same path.
-3. Assert both citations use the identical command string (parity helper shared with the check).
+1. Read `package.json`; assert `scripts.check` contains `pnpm check:memory`, and assert `scripts["check:memory"]` equals `bun run scripts/checks/memory-lint.ts`.
+2. Read `.github/workflows/ci.yml`; assert the `ts-invariants` job's static-check step cites `bun run scripts/checks/memory-lint.ts` — the same path `check:memory` resolves to.
+3. **Resolved-invocation parity, not string equality:** resolve `check:memory` through the manifest to its command (its path operand, `scripts/checks/memory-lint.ts`) and assert that resolved invocation equals the invocation the CI `ts-invariants` step runs. The raw strings are not compared, because the aggregate legitimately cites `pnpm check:memory` while CI cites the path (plan 4.3).
 4. Assert `tests/structure/inventory.json` lists the new `packages/**` modules and the check's exported entry, so the inventory equality test stays green.
 5. Assert the aggregate-string pins are updated in the three suites the plan declares for phase 4 (`tests/checks/ci-checks.test.ts`, `tests/checks/privacy-ci-wiring.test.ts`, `tests/checks/license-ci-binding.test.ts`), and that mutating either surface in a temp copy makes the parity assertion fail naming the surface. `tests/checks/ci-wiring.test.ts` is **not** edited: it passes unchanged, and this suite does not require its modification.
 6. Assert no new doctor check, CLI command, error-table row, or domain kind appears (delegated to TC-MEMGUARD-002 for the full inventory).
 
 **Expected Outcome**:
 
-- One invocation, two surfaces, parity proven; the aggregate command string is pinned; mutation of either surface fails loudly.
+- One resolved invocation, two surfaces, parity proven; the aggregate cites the script, CI cites the path, and both resolve to the same check; mutation of either surface fails loudly.
 
 **Notes / Clarifications**:
 
@@ -874,43 +881,50 @@ git diff --check
 
 - **Fixture / mutant**: entry-point fixture under `tests/fixtures/memory/agents/`; revalidation rows in `mutants.ts`.
 
-#### TC-MEMPROV-001 - Evidence presence/shape, writer, source channel
+#### TC-MEMPROV-001 - Evidence and writer in provenance; `source` presence/channel in schema
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-7, AC-F7-1, DM-1, DM-4, NFR-9 (seed SC-M2-S8-01)
+**Related IDs**: F-5, F-7, AC-F2-2, AC-F7-1, DM-1, DM-4, NFR-9 (seed SC-M2-S8-01)
 **Test Type(s)**: Check
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/checks/memory-lint-provenance.test.ts`
 **Tags**: @bun, @check, @memory, @provenance
 
-**Given / When / Then**: Given a record with no evidence link, an empty evidence link, or a non-empty evidence value outside the five declared shapes, then each is exactly one `memory.provenance.*` error naming the file and never echoing a full evidence value; given a record missing its writer or a source outside the four channels, then each is one error of the matching rule id.
+**Given / When / Then**: Given a record with a missing or empty evidence link, or a non-empty evidence value outside the five declared shapes, then each is exactly one `memory.provenance.*` error naming the file and never echoing a full evidence value; given a record missing its writer, then it is one `memory.provenance.created-by-missing` error; given a record with an absent `source`, then it is exactly one `memory.schema.keys-missing` naming `source`; given a `source` outside the four declared channels, then it is exactly one `memory.schema.value-unknown` naming `source`; and no record yields findings from both areas for one key.
 
 **Preconditions**:
 
 - The five evidence prefixes are imported from the capsule contract (single source).
+- The presence partition is the spec v1.2 declaration: `source` is schema-owned (presence and channel vocabulary alike), `evidence` and `created_by` are provenance-owned, and the partition is exhaustive and disjoint, so one defect in one key yields exactly one finding.
 
 **Steps**:
 
-1. Mutant table:
-   - `evidence` absent → `memory.provenance.evidence-missing`.
-   - `evidence: ""` → `evidence-missing` (empty is not a shape).
-   - `evidence: "we all agreed"` → `evidence-shape-unknown`.
-   - `created_by` absent → `created-by-missing`.
-   - `source: "slack"` → the matching provenance rule for an unknown channel (as classified in the register).
-2. For each, assert exactly one finding in the `provenance` area, naming the path and the field.
+1. Mutant table — one unambiguous row per case, with the owning area fixed by the partition:
+
+   | # | Mutant | Expected finding(s) | Expected silence |
+   |---|--------|---------------------|------------------|
+   | 1 | `evidence` key absent | exactly one `memory.provenance.evidence-missing` naming the file and `evidence` | zero `memory.schema.keys-missing` for `evidence`; no `schema` finding for that key |
+   | 2 | `evidence: ""` | exactly one `memory.provenance.evidence-missing` | zero `evidence-shape-unknown` for that record |
+   | 3 | `evidence: "we all agreed"` | exactly one `memory.provenance.evidence-shape-unknown` | zero `evidence-missing` for that record |
+   | 4 | `created_by` absent | exactly one `memory.provenance.created-by-missing` naming the file and `created_by` | zero `memory.schema.keys-missing` for `created_by` |
+   | 5 | `source` key absent | exactly one `memory.schema.keys-missing` naming the file and `source` | zero `memory.provenance.*` findings for that record |
+   | 6 | `source: "slack"` (out of channel) | exactly one `memory.schema.value-unknown` naming the file and `source` | zero `memory.provenance.*` findings for that record |
+
+2. For each row, assert the total finding count for that record is exactly one, in the stated area — the single-area rule is asserted, not left to whichever branch runs first.
 3. Assert the finding text never contains the full evidence value or any recognizer-matched substring; only the field name is echoed.
 4. Assert each of the five valid evidence shapes produces no finding; assert each of the four source channels produces no finding.
 
 **Expected Outcome**:
 
-- Provenance is enforced; findings are redaction-safe; valid shapes and channels pass.
+- Provenance is enforced for `evidence` and `created_by` only; `source` presence and channel are classified by the schema area; no key is double-reported; findings are redaction-safe; valid shapes and channels pass.
 
 **Notes / Clarifications**:
 
 - Ticket artifact 1's "missing evidence → fail" is this table plus TC-MEMGATE-001.
-- **Fixture / mutant**: `mutants.ts` provenance rows; the valid-shape matrix is generated from the imported prefix constants.
+- **Superseded expectation, recorded deliberately:** v1.0–v1.1 of this plan classified an out-of-channel `source` under `memory.provenance.*` and hedged ("as classified in the register"), which the closed register cannot satisfy. Spec v1.2 F-7/AC-F7-1/AC-F2-2 and Appendix A's presence partition own the classification: `source` is schema-owned both for presence and for channel vocabulary, while `evidence` and `created_by` are provenance-owned. The id is kept; the content is rewritten, and one row per case is asserted with no conditional branch.
+- **Fixture / mutant**: `mutants.ts` provenance rows plus the two `source` rows; the valid-shape matrix is generated from the imported prefix constants.
 
 #### TC-MEMPROV-002 - Migrated-records backfill fidelity
 
@@ -1405,7 +1419,7 @@ git diff --check
 - The merge aspect (two branches) is TC-MEMCONC-001, whose step 6 performs the same union resolution on a real conflicted file; here the union state is applied directly because the row is append-only text. This split is deliberate and stated.
 - **Fixture / mutant**: two `candidateYaml` documents with distinct ids; a third run for idempotency.
 
-#### TC-MEMGUARD-001 - Negative guard replaced by presence + preserved absences
+#### TC-MEMGUARD-001 - Negative guard replaced: presence + narrowed sanction scan + preserved absences
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
@@ -1416,30 +1430,37 @@ git diff --check
 **Target Layer / Location**: `tests/structure/memory-bootstrap-templates.test.ts` (replacing the block at lines 258-287) and/or `tests/structure/memory-lint-wiring.test.ts`
 **Tags**: @bun, @structure, @memory, @guard
 
-**Given / When / Then**: Given the delivered structure suite, when the memory-tooling guard runs, then it asserts the memory invariant exists (`scripts/checks/memory-lint.ts` plus its exported pure entry) and is cited by both gate surfaces, and it still asserts the preserved absences: no memory subcommand on the CLI, the doctor check set unchanged at five with no memory member, and the error-table row set unchanged; the former absence-only assertion no longer exists in its old form.
+**Given / When / Then**: Given the delivered structure suite, when the memory-tooling guard runs, then it carries all three declared parts: (a) it asserts the memory invariant exists (`scripts/checks/memory-lint.ts` plus its exported pure entry) and is cited by both gate surfaces; (b) it runs one narrowed file-name sanction scan over `scripts/`, `tools/`, and `packages/` whose permitted-match set equals the sanctioned memory module set — the check edge, the pure evaluator, and the schema contract module — so a stray `memory-doctor` or a second memory health surface fails, and the scan is proven non-vacuous and proven to fail on a planted unsanctioned module; and (c) it still asserts the preserved boundary absences: no memory subcommand on the CLI, the doctor check set unchanged at five with no memory member, and the error-table row set unchanged; the former absence-only assertion no longer exists in its old form.
 
 **Preconditions**:
 
 - The old guard's intent (no memory tooling) is replaced, not silently deleted.
 - The doctor CLI command path and its five-check contract are known.
+- The sanctioned module set is defined once in the suite as a constant of exactly three paths: `scripts/checks/memory-lint.ts` (the invariant's check), `packages/core/src/domain/memory-lint.ts` (the pure evaluator), and `packages/core/src/contracts/memory-record.ts` (the schema contract module — named in the set **although its file name does not match the scan pattern**).
+- The scan pattern is the narrowed file-name pattern the delivered guard carries (the shape `memory[-_](doctor|lint)|memoryDoctor|memoryLint`, applied to paths under the three trees), not a blanket memory-word match.
 
 **Steps**:
 
-1. Assert `scripts/checks/memory-lint.ts` exists, exports a pure evaluation entry, and has a thin `import.meta.main` edge.
-2. Assert both `package.json` `check` and `.github/workflows/ci.yml` `ts-invariants` cite it (shared with TC-MEMGATE-004).
-3. Preserved absence 1: scan the CLI command registry for any `memory` subcommand; assert none.
-4. Preserved absence 2: assert the doctor check set is exactly five (`repo`, `tracker`, `provider`, `state`, `ci`) and contains no memory member.
-5. Preserved absence 3: assert the error-table row set and domain-kind membership are unchanged (delegated in detail to TC-MEMGUARD-002).
-6. Assert the old test no longer asserts "no memory-lint component exists anywhere" — replaced by the presence assertion; a comment or test name records the sanctioned replacement.
+1. **Part (a) — presence:** assert `scripts/checks/memory-lint.ts` exists, exports a pure evaluation entry, and has a thin `import.meta.main` edge.
+2. **Part (a) — citation:** assert both `package.json` `check` (through the resolved `check:memory` script) and `.github/workflows/ci.yml` `ts-invariants` cite the check path (shared with TC-MEMGATE-004).
+3. **Part (b) — the narrowed sanction scan, as set equality:** walk `scripts/`, `tools/`, and `packages/` with the narrowed pattern, collect every matching file, add the schema contract module by its declared path, and assert the resulting permitted-match set **equals** the three-path sanctioned module set — no more (an unsanctioned memory-named module fails) and no fewer (a scan that stops reporting a sanctioned module fails).
+4. **Part (b) — non-vacuity:** assert the permitted-match set is non-empty, that the raw narrowed pattern matched at least the check edge and the pure evaluator **before** the declared schema-contract path was added, and that the declared path is the only non-pattern member — so a pattern typo that silently matches nothing cannot pass through the declared exception.
+5. **Part (b) — planted-mutant proof (two cases, temp copy):** copy the three scanned trees to a temporary root; in case 1 add a second memory-named module (`packages/core/src/domain/memory-doctor.ts`); in case 2 add a stray `scripts/checks/memory-lint-extra.ts`. Run the same scan helper against each copy and assert it reports the planted offender and that the set-equality assertion fails; assert the unmutated copy passes. The mutant lives in the temp copy, never in the committed trees.
+6. **Part (b) — sanctioned script value:** assert the manifest assertion is the sanctioned-value form: `check:memory` is the only script whose value names the check path, and no other script value names a memory-lint component (the phase-2 blanket absence cannot survive the aggregate citation).
+7. **Part (c) — preserved absence 1:** scan the CLI command registry for any `memory` subcommand; assert none.
+8. **Part (c) — preserved absence 2:** assert the doctor check set is exactly five (`repo`, `tracker`, `provider`, `state`, `ci`) and contains no memory member.
+9. **Part (c) — preserved absence 3:** assert the error-table row set and domain-kind membership are unchanged (delegated in detail to TC-MEMGUARD-002).
+10. Assert the old test no longer asserts "no memory-lint component exists anywhere" — replaced by the presence assertion and the sanctioned-set scan; a comment or test name records the sanctioned replacement.
 
 **Expected Outcome**:
 
-- The guard now protects the boundary rather than the absence; the invariant exists and is cited; the absences it protected still hold.
+- The guard protects the boundary rather than the absence: the invariant exists and is cited; the narrowed scan's permitted-match set equals the sanctioned module set and is non-vacuous; a planted stray module turns the suite red; the absences it protected still hold.
 
 **Notes / Clarifications**:
 
-- Old guard location: `tests/structure/memory-bootstrap-templates.test.ts:258-287`; its comment names GH-301 as the owner of this replacement (pm-notes RISK).
-- **Fixture / mutant**: live files; a temp-copy mutation that adds a memory doctor check to a copied doctor module makes assertion 4 fail, proving non-vacuity.
+- Old guard location: `tests/structure/memory-bootstrap-templates.test.ts:258-287`; its comment names GH-301 as the owner of this replacement (pm-notes RISK). The delivered block keeps the narrowed pattern's shape so the sanction scan is a narrowing, not a rewrite of intent.
+- **Fixture / mutant**: live files for the presence assertion, the sanctioned-set scan, and the three absences; temp-copy mutations for the two planted-module cases (a second memory-named module and a stray `memory-doctor`/`memory-lint-extra`) and a temp-copy doctor-module mutation that adds a sixth memory check, making the absence assertions fail and proving them non-vacuous.
+- This scenario is the test-plan counterpart of spec DoD-15: presence, the narrowed sanction scan with its permitted-match equality and mutant, and the preserved absences. A delivery that implements presence plus absences and drops the scan fails step 3, exactly as AC-F14-1 requires.
 
 #### TC-MEMGUARD-002 - Inventory equality (no new surface)
 
@@ -1593,28 +1614,32 @@ git diff --check
 **Target Layer / Location**: `tests/structure/memory-lint-docs.test.ts` + `bash scripts/.tests/test-doc-distribution.sh` + `bun run scripts/checks/forbidden-literals.ts`
 **Tags**: @bun, @structure, @bash-guard, @docs
 
-**Given / When / Then**: Given the change's documentation output, when the conformance guards run, then every new user-facing doc is registered where the registry requires it, every new doc under a distribution-marker root carries `ados_distribution`, and the distribution guard reports zero drift.
+**Given / When / Then**: Given the change's **delivery-time** documentation state, when the conformance guards run, then no delivery phase has added a user-facing `doc/**` doc or an unregistered/undecorated one: the forbidden-literal registry that delivery produces is unchanged, every doc delivery touches under a marker-required root still carries a valid `ados_distribution` marker, and the distribution guard reports zero drift. The new `doc/spec/features/feature-memory-lint.md` is **not** asserted here: it is a lifecycle-phase-7 `@doc-syncer` handoff created after delivery, and its registration and marker (if any) are verified by a post-landing guard run recorded in the phase-7 notes.
 
 **Preconditions**:
 
-- The new feature spec under `doc/spec/features/**` and any new doc under a marker root are known.
-- The forbidden-literal registry's scope classes and allowlist are understood.
+- The delivery-touched docs are known: `doc/templates/memory-doctor-checklist-template.md` (rewritten automation-boundary sentence, marker retained) and its row in `doc/templates/README.md`; plus `doc/decisions/ADR-0011-canonical-memory-record-schema.md` (a decision record, which requires neither a marker nor a registry row).
+- The forbidden-literal registry's scope classes and allowlist are understood, and the registry is unchanged in delivery (plan 6.4).
+- The new feature spec does not exist during delivery and is therefore out of this scenario's assertion set.
 
 **Steps**:
 
-1. Enumerate docs added by the change (feature spec, updated memory index is not a doc-root carrier, updated templates remain under `doc/templates/**`).
-2. For each new doc under a marker-required root, assert an `ados_distribution` value in (`redistributable`, `internal`, `project-generated`).
-3. Run `bash scripts/.tests/test-doc-distribution.sh`; assert zero drift.
-4. Run `bun run scripts/checks/forbidden-literals.ts`; assert the registry shape and zero violations, with any newly registered user-facing doc present where required.
-5. Assert no `.md` file gained a second frontmatter block or a license header for the marker.
+1. Assert the delivery adds **no** user-facing `doc/**` doc: the only new `doc/**` file is `doc/decisions/ADR-0011-canonical-memory-record-schema.md`, and no `doc/spec/features/feature-memory-lint.md` exists yet at this phase boundary.
+2. Assert `scripts/checks/forbidden-literals.registry.json` is unchanged by the delivery — no new row is introduced, and no memory-tree file needs one.
+3. For each delivery-touched doc under a marker-required root, assert an `ados_distribution` value in (`redistributable`, `internal`, `project-generated`), and assert the memory index and the decision record are not treated as marker-required docs.
+4. Run `bash scripts/.tests/test-doc-distribution.sh`; assert zero drift.
+5. Run `bun run scripts/checks/forbidden-literals.ts`; assert the registry shape and zero violations with the registry unchanged.
+6. Assert no `.md` file gained a second frontmatter block or a license header for the marker.
+7. Record explicitly in Section 10 that the new feature spec's registration belongs to the lifecycle-phase-7 handoff and is verified by a post-landing guard run there — never by this delivery-time scenario.
 
 **Expected Outcome**:
 
-- Conformance guards green; no marker or registration drift; no duplicated frontmatter.
+- Conformance guards green against the delivery-time state; the registry and marker set are unchanged by delivery; the phase-7 doc handoff is named rather than silently asserted into existence.
 
 **Notes / Clarifications**:
 
 - **Fixture / mutant**: shell guard and registry check are run against the live tree; a temp-copy mutant with a removed marker is caught by the guard (existing negative modes in `test-doc-distribution-modes.sh`).
+- **Phase-7 handoff, stated so the phase boundary is honest:** `doc/spec/features/feature-memory-lint.md` is created by the lifecycle-phase-7 `@doc-syncer` run after delivery, so this scenario asserts the delivery-time state and names the handoff; the new spec's own conformance is checked by a post-landing guard run recorded in the phase-7 notes (plan 6.4).
 
 #### TC-MEMNFR-005 - Full gate battery green at delivered HEAD
 
@@ -1694,7 +1719,8 @@ Test files are the intended homes and match `chg-GH-301-plan.yaml`'s phase scope
 | TC-MEMLAY-001, TC-MEMLAY-002, TC-MEMLAY-003 | `tests/structure/memory-layout.test.ts` | `bun test tests/structure/memory-layout.test.ts` | To Implement |
 | TC-MEMLAY-004 | `tests/checks/memory-lint-output.test.ts` | `bun test tests/checks/memory-lint-output.test.ts` | To Implement |
 | TC-MEMSCHEMA-001 | `tests/structure/memory-record-schema.test.ts` | `bun test tests/structure/memory-record-schema.test.ts` | To Implement |
-| TC-MEMSCHEMA-002, TC-MEMSCHEMA-003, TC-MEMSCHEMA-004 | `tests/checks/memory-lint-schema.test.ts` | `bun test tests/checks/memory-lint-schema.test.ts` | To Implement |
+| TC-MEMSCHEMA-002, TC-MEMSCHEMA-004 | `tests/checks/memory-lint-schema.test.ts` | `bun test tests/checks/memory-lint-schema.test.ts` | To Implement |
+| TC-MEMSCHEMA-003 | `tests/structure/memory-record-schema.test.ts` (whole-tree block, plan phase 4 scope) | `bun test tests/structure/memory-record-schema.test.ts` | To Implement |
 | TC-MEMWRITE-001, TC-MEMWRITE-002, TC-MEMWRITE-004 | `tests/behaviour/memory-promotion-schema.test.ts` | `bun test tests/behaviour/memory-promotion-schema.test.ts` | To Implement |
 | TC-MEMWRITE-003 | `tests/structure/memory-record-schema.test.ts` (automated half) | `bun test tests/structure/memory-record-schema.test.ts` | To Implement (manual half recorded in §10) |
 | TC-MEMGATE-001, TC-MEMGATE-002, TC-MEMGATE-003, TC-MEMNFR-001, TC-MEMNFR-003 | `tests/checks/memory-lint-output.test.ts` | `bun test tests/checks/memory-lint-output.test.ts` | To Implement |
@@ -1720,7 +1746,7 @@ Test files are the intended homes and match `chg-GH-301-plan.yaml`'s phase scope
 - `packages/core/src/contracts/memory-record.ts` — the schema authority: required/optional keys, closed vocabularies, id and file-name grammar, `STATEMENT_MAX_CHARS`, `HINT_MAX_CHARS`, budget constants, finding register. Data and types only (plan phase 1).
 - `packages/core/src/domain/memory-lint.ts` — the pure evaluation (no I/O, no clock, no fs) (plan phases 2–3).
 - `packages/adapters/src/file/memory-scan.ts` — the tree scanner: repository-relative enumeration, text reads, YAML-frontmatter parse (plan phase 4).
-- `scripts/checks/memory-lint.ts` — the bun-run edge: enumerate → parse → evaluate → print → exit; owns the single ambient date read; registers the check namespace (plan phase 4).
+- `scripts/checks/memory-lint.ts` — the bun-run edge: scan → evaluate → print → exit; it calls the scanner adapter for every read and the frontmatter parse, owns the single ambient date read and the printing, and registers the check namespace (plan phase 4).
 - `packages/core/src/domain/capsule-candidates.ts` — the promotion writer: `recordContent` renders the full spine (trust, basis), the `kind` mapping and the declared home area (`tacit_fragment` → `tacit/`), the read-when hint; `validateCandidate` tightens `source` to the four channels (plan phase 5).
 - `packages/adapters/src/file/memory-promotion.ts` — the writer/reader home-area mapping mirrored on the read path; index-row append unchanged (plan phase 5).
 - `package.json`, `.github/workflows/ci.yml`, `tests/structure/inventory.json` — wiring and inventory (plan phase 4).
@@ -1760,7 +1786,7 @@ Test files are the intended homes and match `chg-GH-301-plan.yaml`'s phase scope
 
 | ID | Question | Blocking? | Owner | Proposed resolution |
 |----|----------|-----------|-------|---------------------|
-| OQ-TP-1 | Is the dedicated script named `check:memory` or `check:memory-lint`? | No | plan-writer | Either name is acceptable if `scripts.check` and CI cite the same path; TC-MEMGATE-004 asserts the path, not the script name |
+| OQ-TP-1 | Is the dedicated script named `check:memory` or `check:memory-lint`? | Resolved — no longer blocking | plan-writer (plan 4.3) | Plan 4.3 pins `"check:memory": "bun run scripts/checks/memory-lint.ts"` and inserts `pnpm check:memory` into the aggregate chain, so TC-MEMGATE-004 asserts that name, its resolved path, and the CI step's matching path; the parity is asserted on the resolved invocation, not on raw string equality |
 | OQ-TP-2 | When `created` is absent, which area classifies it? | Resolved — no longer blocking | spec-writer (spec v1.1) | Closed by AC-F6-1: an absent `created` is exactly one `memory.schema.keys-missing` with no dating finding, because the closed dating register has no absent-date identity; dating owns present-but-malformed and future values. TC-MEMDATE-001 asserts the single classification without a conditional branch |
 | OQ-TP-3 | Does the promotion writer's index-row dedup use exact-row equality or path equality? | No | plan-writer | The existing writer checks exact-row inclusion; TC-MEMCONC-002 asserts idempotency under the delivered rule and `row-duplicate` under an injected duplicate |
 | OQ-TP-4 | Should the same-role parallel-worktree union resolution gain automation? | No | PM / future story | Not in this change: it is a human/scripted workflow, explicitly manual here. A future story may automate the merge exercise |
@@ -1774,6 +1800,8 @@ No open question blocks safe delivery; each has a proposed resolution and a sing
 |---------|------|--------|---------|
 | 1.0 | 2026-11-15 | test-plan-writer (DeepSeek V4.1 Flash 1017) | Initial test plan from `chg-GH-301-spec.md`: 40 TCs across 14 families, full coverage of 30 ACs, the eight lint areas with failing-fixture mutation tests, both-direction index coverage, budget boundary matrix, output determinism/exit/order/truncation, conflict-free concurrency (automated git two-branch + honest manual same-role note), schema reconciliation, guard replacement, gate wiring, and documentation conformance |
 | 1.1 | 2026-11-15 | test-plan-writer (DeepSeek V4.1 Flash 1017) | Readiness iteration-1 revision (findings 3, 5, 7, 15, 19) aligned to `chg-GH-301-spec.md` v1.1 and ADR-0011. 3 — TC-MEMCONC-001 rewritten: zero-conflict claim scoped to record files and each creator's own entry-point namespace, with the one conflicted path pinned to the shared index and a scripted union resolution (mirroring TC-MEMCONC-002) plus a take-ours non-vacuity control; the contradictory "each creator writes only new files" justification deleted. 5 — TC-MEMDATE-001 rewritten as one unambiguous row per classification: absent `created` → `memory.schema.keys-missing` only, malformed/future → dating ids; conditional text removed. 7 — §6 secret-fixture discipline rewritten around runtime-assembled tokens from non-matching fragments, with the guard-silence and no-marker proofs added to TC-MEMSECRET-001, span-scoped suppression and a markerless control in TC-MEMSECRET-002, TR-2 realigned, and the registry-allowlist contingency named with its phase-scope requirement. 15 — §7 drops `packages/core/src/contracts/capsule.ts` as a changed home (the tightening is `packages/core/src/domain/capsule-candidates.ts`), drops the `tests/checks/ci-wiring.test.ts` update row, and names the three aggregate-string pin suites the plan actually scopes; TC-MEMGATE-004 step 5 aligned. 19 — TC-MEMWRITE-003 names plan phase 6, and TC-MEMLAY-002/TC-MEMINDEX-002 pin the register identity (`row-unbacked` for a row resolving to no covered path; `row-malformed` reserved for hint shape). Spec-v1.1 propagation: 280/120 imported as `STATEMENT_MAX_CHARS`/`HINT_MAX_CHARS` in every bound-bearing suite, the `basis` conditional asserted (promotion always renders it; a hand-authored omission is silent), TC-MEMINDEX-003 asserts the two coverage universes with the universe in each detail, and TC-MEMGATE-002/TC-MEMGATE-003/TC-MEMNFR-001 fix the injected date, assert exactly one edge date read, and assert that a later injected date changes only date-derived findings. 40 TCs unchanged (no ids added, removed, or renamed); 30/30 ACs still covered; zero orphan TCs |
+
+| 1.2 | 2026-11-15 | test-plan-writer (DeepSeek V4.1 Flash 1017) | Readiness iteration-2 revision (findings 4, 5, 6, 8, 9, 10 and the consequential parts of findings 1 and 2) aligned to `chg-GH-301-spec.md` v1.2. 4 — TC-MEMGUARD-001 rewritten into the three declared parts of AC-F14-1/DoD-15: presence and citation, the narrowed file-name sanction scan over `scripts/`/`tools/`/`packages/` asserted as **set equality** with the three-path sanctioned module set (check edge, pure evaluator, schema contract module declared by path because its name does not match the pattern), a non-vacuity assertion, two temp-copy planted-module mutants (a second memory-named module and a stray `memory-lint-extra`), the sanctioned script-value assertion, and the three preserved absences; §1.1 framing changed from "presence plus absences" to the three-part replacement. 5 — TC-MEMGATE-003 step 3 and §4/§7 restated as the plan's boundary: the scanner adapter (`packages/adapters/src/file/memory-scan.ts`) owns every file read and the YAML frontmatter parse, the check edge owns the single ambient date read and printing, contracts/domain perform no I/O; the false "edge owns every read" claim removed. 6 — TC-MEMGATE-004 step 3 asserts the **resolved** invocation (`scripts.check` contains `pnpm check:memory`; `scripts["check:memory"]` equals `bun run scripts/checks/memory-lint.ts`; the CI `ts-invariants` step cites that path) instead of raw string equality; OQ-TP-1 closed against plan 4.3. 8 — TC-MEMSCHEMA-001 step 4 asserts the capsule `source` overlap behaviourally (`validateCandidate` accepts exactly four channels and refuses a fifth through the existing capsule-invalid identity) and states the capsule contract is read for parity only, since it exposes `readonly source: string`. 9 — TC-MEMSCHEMA-003 moved to `tests/structure/memory-record-schema.test.ts` (plan phase 4 scope) in §7 and in the scenario's location/preconditions, removing the phase-2 file contradiction. 10 — TC-MEMNFR-004 asserts delivery-time state only (registry unchanged, no new user-facing doc, markers intact) and names `doc/spec/features/feature-memory-lint.md` as the lifecycle-phase-7 handoff verified by a post-landing guard run. 1 (consequential) — TC-MEMPROV-001 aligned to the v1.2 presence partition with one unambiguous row per case (absent `source` → `memory.schema.keys-missing`; out-of-channel `source` → `memory.schema.value-unknown`; `evidence`/`created_by` provenance-owned) and no hedging text. 2 (consequential) — TC-MEMWRITE-004 adds the `scope: fleet` refusal for `lesson` and `tacit` candidates at candidate-schema time through the existing capsule-invalid identity, with zero writes, the contract left unwidened, and the delivered class-level `fleet` rejection distinguished. 40 TC ids retained (no replacements; content rewrites only), 30/30 AC traceability, zero orphans; the coverage matrix gained the `source` partition on AC-F2-2/AC-F7-1 and the three-part guard on AC-F14-1 |
 
 ## 10. Test Execution Log
 
