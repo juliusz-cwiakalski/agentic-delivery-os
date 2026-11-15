@@ -7,7 +7,7 @@ phases:
   specification: { started: null, completed: 2026-11-15T12:10:30.219Z }
   test_planning: { started: null, completed: 2026-11-15T12:11:35.809Z }
   delivery_planning: { started: null, completed: 2026-11-15T12:12:02.178Z }
-  dor_check: { started: null, completed: null }
+  dor_check: { started: null, completed: 2026-11-15T12:46:42.772Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -311,6 +311,44 @@ notes:
       negative-scan / preserved- absences parts before the test plan is
       authored."
     type: retro
+    date: "2026-11-15"
+  - text: "DOR CHECK iteration 3 = NOT_READY (record: readiness-iter-3.md, commit
+      eab0346b): 9/10 facets PASS, one FAIL — cross_artifact_consistency, with
+      exactly two blocking findings, both phase-ownership defects in the test
+      plan (TC-MEMSCHEMA-001 step 4 asserted a phase-5 capsule behaviour while
+      the TC is phase-1-owned; TC-MEMGATE-002 step 4 injected a date reader that
+      phase 4 creates while the TC is phase-3-owned). Both were closed by
+      keeping the assertions in their correct homes (TC-MEMWRITE-004 phase 5,
+      TC-MEMNFR-001 phase 4) rather than deleting them, together with the
+      reviewer's non-blocking sweeps: spec v1.3 (DM-6 projection rule + DEC-5
+      fleet refusal, concept Record-model rewrite named in §7.1/§16/DoD-17,
+      guard skip set), plan 1.3 (sources re-cited, AC-F3-1 typo, phase-7
+      verification-only wording, v1.3 relocations), plan 1.4 (TC-MEMLAY-002
+      split by phase home across phases 1 and 3, 40/40 distinct TCs preserved)."
+    type: info
+    date: "2026-11-15"
+  - text: "DOR CHECK iteration 4 (confirmation pass; iteration 3 was the final
+      remediation round of the cap, this pass only confirms it) = READY. Record:
+      readiness-review/readiness-iter-4.md, commit f64abf1a. 10/10 facets PASS,
+      zero blocking findings. Blocking-defect verification: TC-MEMSCHEMA-001
+      step 4 is parity-only and executable at phase 1; TC-MEMGATE-002 has no
+      counting reader and its four steps are executable at phase 3; the
+      preserved assertions live in TC-MEMWRITE-004 (phase 5) and TC-MEMNFR-001
+      (phase 4). Version skew clean (spec v1.3, test plan v1.3, plan 1.4), plan
+      validate valid + readyForDevelopment, 30/30 ACs, 40/40 distinct TCs (41
+      phase mentions). Residual NON-BLOCKING observations carried to the PR gate
+      (also for @doc-syncer/@reviewer): (1) TC-MEMGATE-004 step 4 says
+      inventory.json lists the check's exported entry while the plan puts
+      exported entries in EXECUTABLE_ALLOWANCES — correct opportunistically, do
+      not add a scripts key; (2) lifecycle-phase-7 must reconcile
+      feature-capsule.md's `source` row and the new scope-level fleet refusal;
+      (3) TC-MEMWRITE-004 has two homes, §7 lists one; (4) TC-MEMGATE-001's 'CLI
+      entry for the live run' precondition needs a one-line clarification; (5)
+      plan header still says documentation/boundary reconciliation lands in
+      phase 6 though the guard lands in phase 4; (6) carried: concept
+      lighter-headers prose, >120-char statement fallback, and ADR-0011
+      remaining Proposed pending owner ratification at the PR."
+    type: info
     date: "2026-11-15"
   - text: "Open questions carried by the spec (all non-blocking, deferred): OQ-1
       distribute the invariant to bootstrapped projects (NG-7, would retire the
