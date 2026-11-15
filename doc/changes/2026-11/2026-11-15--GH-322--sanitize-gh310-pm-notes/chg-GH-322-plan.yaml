@@ -1,0 +1,114 @@
+# GH-322 delivery plan — machine-readable document (delivery.plan.v1), revision 1.1
+# Authored 2026-11-15 against ./chg-GH-322-spec.md and ./chg-GH-322-test-plan.md
+# on branch fix/GH-322/sanitize-gh310-pm-notes.
+#
+# REVISION 1.1 — single reason: the phase 1 `summary` is the subject source for
+# the `commit` primitive, whose deterministic template renders
+# `feat(GH-322): <collapsed phase summary>` (capped at 72 characters). The
+# previous capitalised, tracker-bearing summary could not be committed. Nothing
+# else in this document changed: scope, tier, escalation triggers, bounds, and
+# the phase count are as authored in 1.0.
+#
+# One ticket, one PR against main-tools, exactly ONE plan phase. The change is a
+# docs-only one-literal CI fix-forward that un-reds the `TS repository
+# invariants` job on main-tools (spec §1, §3, G-1..G-3).
+#
+# SOURCES (single source of truth; this plan invents no requirement):
+#   - Spec: ./chg-GH-322-spec.md — F-1, DM-1, NFR-1..NFR-5, RSK-1..RSK-3,
+#     DEC-1, AC-F1-1..AC-F1-5, NG-1..NG-4.
+#   - Test plan: ./chg-GH-322-test-plan.md — TC-PRIV-001..TC-PRIV-006, §5.2
+#     scenario steps and §7 execution commands; no test files are created.
+#   - PM notes: ./chg-GH-322-pm-notes.yaml — intake, baseline reproduction
+#     (one violation, rule `private.absolute-user-path`, 4070 files scanned),
+#     and the DEC-1 substitution decision.
+#   - Ticket: juliusz-cwiakalski/agentic-delivery-os#322 (authoritative issue).
+#
+# CHANGE SHAPE: one value on one line of one pre-existing file. Line 279 of the
+# GH-310 pm-notes carries the operator-local absolute temp root as the TMPDIR
+# value of a recorded phase-9 gate command; it becomes the repository-relative
+# gate convention TMPDIR=$PWD/tmp/tmpdir. Nothing else in that file moves:
+# recorded verdicts, pass/skip/fail counts, file counts, commit hashes, phase
+# timestamps, decisions, key order, and formatting stay byte-identical
+# (AC-F1-3, NFR-2, DM-1). The other gate temp-root mentions in that file
+# already use the placeholder form and are not touched.
+#
+# SCOPE DISCIPLINE: the only product path in any declared scope is the affected
+# GH-310 pm-notes. No path under doc/spec/**, packages/**, tests/**, scripts/**,
+# .opencode/**, .ai/**, .github/**, doc/guides/**, doc/templates/**, or any
+# other change folder may change (NFR-4, AC-F1-5, NG-1..NG-4). This ticket's own
+# artifacts in its change folder are lifecycle-managed, not product scope.
+# The privacy-literals check, its registry, and its allowlist are verification
+# only and stay unmodified (NG-3).
+#
+# PHASE 1 OBLIGATIONS:
+#  1.1 Substitute exactly one literal on line 279 of the GH-310 pm-notes: the
+#      absolute operator temp root becomes TMPDIR=$PWD/tmp/tmpdir. Keep the
+#      surrounding command text, quoting, and YAML indentation byte-identical.
+#  1.2 Make no other edit. No reflowing, no reformatting, no key reordering,
+#      no verdict/count/hash/timestamp change, no allowlist or rule change.
+#  1.3 Verify (TC-PRIV-001): `bun run scripts/checks/privacy-literals.ts`
+#      exits 0 and reports 0 violations.
+#  1.4 Verify (TC-PRIV-002):
+#      `grep -rInE '/(home|Users)/[A-Za-z0-9._-]+/'
+#      doc/changes/2026-11/2026-11-14--GH-310--cross-repository-changes/`
+#      returns no match.
+#  1.5 Verify (TC-PRIV-003): `git diff --numstat` for the affected file is
+#      `1	1`, the diff is a single value substitution after masking the
+#      temp-root token, `git diff --check` is clean, and the file still parses
+#      as YAML.
+#  1.6 Verify (TC-PRIV-004, best-effort): the aggregate battery is green when
+#      feasible, run as
+#      `TMPDIR=$PWD/tmp/tmpdir GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
+#      GIT_CONFIG_VALUE_0=false pnpm check`. A recorded skip does not override
+#      obligation 1.3, which stays binding (AC-F1-4).
+#  1.7 Record the command output excerpts and exit codes as pm-notes notes:
+#      evidence. Never record an absolute temp path in the plan or in any
+#      artifact; use TMPDIR=$PWD/tmp/tmpdir / $GATE_TMPDIR-style placeholders.
+#  1.8 Produce ONE delivery commit and no more: it is the single commit the
+#      `commit` primitive produces for this change (scope GH-322, type feat,
+#      subject derived by the primitive from this phase's summary under the
+#      revision 1.1 template rule above, no pinned literal subject), landing
+#      the sanitized line and the phase state atomically. The commit body/footer
+#      lines stay within the repository line limit.
+#  1.9 Caution: do not hand-edit, amend, or reword the primitive-produced
+#      subject, and do not add a tracker reference other than GH-322 to any
+#      commit message.
+#
+# BOUND: F-1, DM-1, AC-F1-1..AC-F1-5, NFR-1..NFR-5, DEC-1, RSK-1..RSK-3;
+# TC-PRIV-001..TC-PRIV-006 from ./chg-GH-322-test-plan.md §5.2.
+#
+# LIFECYCLE PHASE 7 (system_spec_update, @doc-syncer; NOT plan scope): the
+# reconciliation verdict for this change is "no current-truth change required" —
+# no file under doc/spec/** is edited, because the change alters no documented
+# behaviour, contract, or convention (NG-4, NFR-4).
+#
+# LIFECYCLE PHASE 11 (pr_creation): PR against main-tools, left open for merge
+# authority (AC-F1-5); TC-PRIV-005 and TC-PRIV-006 are checked at that boundary.
+# PR creation is not a plan phase.
+schemaVersion: delivery.plan.v1
+workItemRef: GH-322
+tier:
+  name: lite
+  phases: [1]
+  escalationTriggers:
+    - edit-outside-the-single-evidence-line
+    - recorded-verdict-count-hash-or-timestamp-altered
+    - second-file-changed-in-the-gh-310-change-folder
+    - absolute-temp-root-recorded-in-the-plan-or-any-artifact
+    - source-prompt-workflow-or-system-spec-file-changed
+    - privacy-literals-rule-registry-or-allowlist-edited
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  # Commit: the ONE delivery commit for this change is produced by the `commit`
+  # primitive (scope GH-322, type feat, subject derived by the primitive from
+  # this phase's summary), landing the sanitized line and the phase state
+  # atomically. No literal subject is pinned here.
+  - id: 1
+    title: "Sanitize the absolute gate temp root in the GH-310 pm-notes and verify the invariant"
+    kind: delivery
+    summary: "sanitize the recorded absolute gate temp root"
+    scope:
+      files:
+        - doc/changes/2026-11/2026-11-14--GH-310--cross-repository-changes/chg-GH-310-pm-notes.yaml

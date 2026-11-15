@@ -276,7 +276,7 @@ notes:
     type: resolved
     date: "2026-11-15"
   - text: "QUALITY GATE (lifecycle phase 9) verdicts. Aggregate battery:
-      `PATH=$PWD/node_modules/.bin:$PATH TMPDIR=/home/juliusz/tmp
+      `PATH=$PWD/node_modules/.bin:$PATH TMPDIR=$PWD/tmp/tmpdir
       GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
       GIT_CONFIG_VALUE_0=false pnpm check` -> exit 0: 8496 pass / 4 skip / 0
       fail across 1082 files (949s); lint 2532 files 0 errors; format:check 2391

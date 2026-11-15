@@ -1,0 +1,323 @@
+change_id: GH-322
+title: "fix: privacy-literals red on main-tools — absolute user path in GH-310
+  pm-notes"
+milestone: "M2: Ceremonies, measurement, and memory"
+delivery_mode: autonomous
+variant: full
+phases:
+  clarify_scope: { started: null, completed: 2026-11-15T08:57:27.390Z }
+  specification: { started: null, completed: 2026-11-15T09:26:50.741Z }
+  test_planning: { started: null, completed: 2026-11-15T09:13:03.028Z }
+  delivery_planning: { started: null, completed: 2026-11-15T09:27:08.625Z }
+  dor_check: { started: null, completed: 2026-11-15T09:31:33.835Z }
+  delivery: { started: null, completed: 2026-11-15T09:33:48.374Z }
+  system_spec_update: { started: null, completed: 2026-11-15T09:36:31.089Z }
+  review_fix: { started: null, completed: 2026-11-15T09:41:09.756Z }
+  quality_gates: { started: null, completed: 2026-11-15T10:18:57.267Z }
+  dod_check: { started: null, completed: 2026-11-15T10:21:26.850Z }
+  pr_creation: { started: null, completed: 2026-11-15T10:23:32.591Z }
+decisions:
+  - text: "Substitute the absolute gate temp root with the repository-relative
+      convention `TMPDIR=$PWD/tmp/tmpdir` in the recorded GH-310 quality-gate
+      evidence line, leaving every recorded verdict, count, and hash untouched.
+      Rationale: the privacy-literals invariant is the binding authority and the
+      value being recorded is a command line, not a measurement; the
+      substitution is literal-only and changes no outcome."
+    date: "2026-11-15"
+  - text: "Accept the commit subject the `commit` primitive generates instead of the
+      ticket's literal `fix(GH-322): sanitize absolute user path in GH-310
+      pm-notes`. MEASURED constraint: the primitive validates every message
+      against its change ref and rejects any other tracker reference
+      (`packages/core/src/domain/commit-message.ts`, invented-tracker rule), and
+      it offers no message override (`commit [<ref>] [--phase] [--dry-run]`
+      only). A standalone template subject is `update <first staged path>`,
+      which embeds the GH-310 path and is refused; the phase-scoped template
+      subject is `feat(GH-322): <plan phase summary>`, refused only because the
+      summary began with a capital (commitlint subject-case). The achievable
+      form keeps the ticket's intent — one conventional commit, scope GH-322 —
+      while DoD-4 states the subject the primitive actually produces.
+      Reversible; no rule, config, or prompt change."
+    date: "2026-11-15"
+open_questions: []
+blockers: []
+notes:
+  - text: "Intake: directive to deliver GH-322 as a one-line CI fix-forward. State:
+      issue OPEN with label change and milestone 'M2: Ceremonies, measurement,
+      and memory'; branch fix/GH-322/sanitize-gh310-pm-notes checked out,
+      working tree clean; no change folder existed."
+    type: info
+    date: "2026-11-15"
+  - text: "Reproduced the red gate before any edit: `bun run
+      scripts/checks/privacy-literals.ts` exit 1 with exactly one violation,
+      `private.absolute-user-path` at
+      doc/changes/2026-11/2026-11-14--GH-310--cross-repository-changes/chg-GH-3\
+      10-pm-notes.yaml:279; 4070 files scanned, 0 allowlist-independent
+      violations elsewhere. Only one absolute user path remains in that file
+      (lines 77, 409, 514, 531 already carry the `$GATE_TMPDIR` placeholder)."
+    type: info
+    date: "2026-11-15"
+  - text: "Scope discipline: docs-only, one literal in one committed change
+      artifact. No source, spec, prompt, or workflow change; no other ticket."
+    type: info
+    date: "2026-11-15"
+  - text: "DoR gate ITERATION 1 verdict: NOT_READY (2 blocking, both spec text). F-1
+      ac_quality + cross_artifact_consistency: AC-F1-5 ('touches no other
+      ticket's artifacts') and NG-2 ('editing any other change artifact or
+      pm-notes record') literally forbid the in-scope GH-310 pm-notes edit and
+      contradict test plan TC-PRIV-006; the carve-out exists in spec §7.1 only.
+      F-2 dod_defined: no change-specific Definition of Done section (hard DoR
+      facet; uniform repo precedent, including docs-only GH-85/GH-302/GH-313).
+      Non-blocking: test plan front matter claims no implementation plan
+      authored while the plan exists; TC-PRIV-003 settles for YAML parsing where
+      `lint GH-310` is the authoritative conformance surface; the 'AGENTS.md
+      gate convention' citation is inherited from the ticket and unsupported by
+      that file. Reviewer record: readiness-review/readiness-iter-1.md. The gate
+      also proved the red state is the sole blocker in the `TS repository
+      invariants` job (17 of 18 checks green) and that the one-token
+      substitution removes the violation without re-firing any rule."
+    type: risk
+    date: "2026-11-15"
+  - text: "DoR iteration-1 remediation: reopening specification (F-1 carve-out in
+      AC-F1-5 and NG-2, F-2 change-specific DoD, N-3 citation) and test_planning
+      (N-1 plan link, N-2 lint as the conformance step), then re-running the
+      gate. No AC intent, test target, or plan scope changes."
+    type: info
+    date: "2026-11-15"
+  - text: "DoR gate ITERATION 2 verdict: READY. F-1 closed (NG-2 and AC-F1-5 now
+      carry the §7.1 carve-out; test plan §3.1 and TC-PRIV-006 restate the same
+      wording; plan scope lists only that file). F-2 closed (§17.1 DoD-1..DoD-5,
+      each binding ACs/NFRs, naming verification and a plan obligation).
+      N-1/N-2/ N-3 closed. Remediation damage checks: spec §§1-25 with §17.1 in
+      place, test plan §§1-10 with §3.4, 5 ACs / 6 TCs all traced, plan
+      validates, `lint GH-322` and `lint GH-310` conform, doc-conformance 11/11,
+      no absolute user path in the change folder. One advisory left open: DoD-4
+      also names a capsule commit event as evidence, and the capsule producer
+      has no production call site, so the event may not be appended;
+      non-blocking because DoD-4's real condition (one delivery commit with the
+      exact subject) is provable from `git log`, which is what dod_check reads.
+      Record: readiness-review/readiness-iter-2.md."
+    type: resolved
+    date: "2026-11-15"
+  - text: "DELIVERY ATTEMPT 1: BLOCKED at the commit step, not at the edit. The
+      product edit is applied and every check passes: `bun run
+      scripts/checks/privacy-literals.ts` exit 0 with 0 violations (4076 files
+      scanned), `delivery-os lint GH-310` conforms, the home-path scan is empty,
+      `git diff --numstat` is 1/1 with exactly two diff lines, doc-conformance
+      11/11. The `commit` primitive refuses to land it: `commit GH-322
+      --dry-run` -> commit.commitlint-failed 'invented tracker references are
+      not allowed: GH-310' (standalone template subject is `update <first staged
+      path>`), and `commit GH-322 --phase delivery --dry-run` ->
+      commit.commitlint-failed 'subject must not be sentence-case' (phase
+      template subject is `feat(GH-322): <plan phase summary>`, summary began
+      with a capital). No message transport is wired, so the template is the
+      only path, and no `--message` override exists. No commit landed; no phase
+      state moved; the verified edit stays uncommitted in the working tree."
+    type: blocker
+    date: "2026-11-15"
+  - text: "BLOCKER RESOLVED (delivery attempt 1): reopen delivery_planning to give
+      the single plan phase a lowercase, tracker-free summary so the
+      phase-scoped template subject passes commitlint and the invented-tracker
+      rule, and reopen specification to make DoD-4 state the achievable subject
+      (the ticket's literal subject embeds a foreign tracker ref and cannot be
+      landed through the primitive). DoR gate re-run required afterwards.
+      CORRECTION: both phases were reopened, re-authored, and re-completed
+      (specification 09:26:50.741Z, delivery_planning 09:27:08.625Z), and
+      dor_check was then reopened for the re-confirmation pass."
+    type: resolved
+    date: "2026-11-15"
+  - text: "DoR gate ITERATION 3 verdict: READY. DoD-4 verified satisfiable by a
+      measured non-destructive dry run (`commit GH-322 --phase delivery
+      --dry-run` exit 0, messageSource template, subject `feat(GH-322): sanitize
+      the recorded absolute gate temp root`, 59 chars), and spec, plan and test
+      plan agree on that subject byte-for-byte. Iteration-2 PASS reaffirmed; no
+      new inconsistency. Residual non-blocking nits accepted (not remediated, to
+      avoid further artifact churn): test plan §2 still says 'obligations
+      1.1-1.8' while revision 1.1 added 1.9; no DEC record for the forced
+      fix->feat type change; TC-PRIV-005 reads the subject but not `git show
+      --stat` for the atomic two-file landing; DoD-4 still names a capsule
+      commit event that no production writer appends (contractually non-gating);
+      obligation 1.5 and DoD-2 still settle at YAML parse rather than `lint
+      GH-310`. Record: readiness-review/readiness-iter-3.md."
+    type: resolved
+    date: "2026-11-15"
+  - text: "RETRO: the ticket's mandated commit subject was impossible to satisfy and
+      nobody checked it against the commit primitive until the delivery phase,
+      costing an extra artifact cycle. The DoR gate had even read the subject as
+      'matches the ticket byte-for-byte' without checking whether the primitive
+      could produce it. Improvement: when a ticket pins a commit subject,
+      validate it against the primitive with `commit --dry-run` during
+      delivery_planning, and forbid foreign tracker references in pinned
+      subjects."
+    type: retro
+    date: "2026-11-15"
+  - text: "DoR iteration-2 remediation, second pass (delivery attempt 1): the plan
+      now carries summary `sanitize the recorded absolute gate temp root` and no
+      pinned subject (revision 1.1), the spec DoD-4 and §18 state the
+      primitive-derived subject (v1.2), and the test plan DoD-4/TC-PRIV-005
+      assert the same derived subject (1.2). A non-destructive `commit GH-322
+      --phase delivery --dry-run` proved the derived subject `feat(GH-322):
+      sanitize the recorded absolute gate temp root` (59 chars) validates and
+      that staging includes the GH-310 pm-notes."
+    type: info
+    date: "2026-11-15"
+  - text: "RETRO: the commit primitive stages EVERY tracked pending file, so the
+      uncommitted GH-310 product edit hijacked the template subject of the next
+      phase commit (`update <first staged path>` picks the GH-310 path, which
+      the invented-tracker rule refuses). Measured during the artifact
+      re-completion cycle. Handling: the product edit is reverted before the
+      artifact phases re-complete and re-applied inside the delivery phase, so
+      the sanitization lands exactly once, in the delivery commit, with the
+      derived subject. Improvement candidate for tooling: a phase commit whose
+      staging set is dominated by an out-of-scope tracked file should either
+      fall back to the declared plan summary or refuse with a scope-drift error
+      instead of deriving a subject from a foreign change folder."
+    type: retro
+    date: "2026-11-15"
+  - text: "Lifecycle phase 7 (system_spec_update) verdict: no current-truth change
+      required, verified rather than assumed. The gate temp-root convention is
+      not documented in any current-truth root (it lives only in agent prompts
+      and a candidate memory lesson), so nothing became inaccurate; no
+      current-truth page describes pm-notes or landed artifacts as immutable
+      (append-only claims are scoped to the state ledger and events.jsonl, and
+      the GH-310 folder has neither); feature-privacy-guard.md already states
+      the whole-working-tree scan boundary and that a pre-guard literal stays in
+      history until a separate owner action — which is exactly this change; no
+      index or registry lists 2026-11 change folders. Residual (out of scope by
+      NFR-4/§7.2/NG-4): the repository-relative gate temp-root convention has no
+      doc/spec or doc/guides home; route it through its own change, not this
+      one-literal fix."
+    type: info
+    date: "2026-11-15"
+  - text: "Review iteration 1 verdict: PASS — spec_compliance PASS, plan_compliance
+      PASS; 0 critical / 0 high / 0 medium / 4 low / 2 info. Independently
+      re-derived: red-before reproduced at parent c1f0d6fa in a throwaway
+      worktree (exit 1, one private.absolute-user-path at the GH-310 line 279,
+      fingerprint c796b58bf3a81320, 4070 files) and green at HEAD (exit 0, 0
+      violations, 4077 files); the delivery diff is one removed / one added line
+      that are byte-identical after masking the TMPDIR token; the range touches
+      only the GH-310 pm-notes plus 7 GH-322 folder files; plan validates; both
+      documents lint; phase stamps equal the registry; all 12 commit subjects
+      are conventional and the delivery subject is the derived one with no
+      foreign tracker ref. Low residuals (accepted, no remediation phase): test
+      plan §10 execution log unpopulated while evidence lives in pm-notes; test
+      plan §2 still says obligations 1.1-1.8; no DEC-2 for the forced fix->feat
+      subject type; DoD-4 cites a capsule event no production writer appends.
+      Info: AC-F1-4 is owed by lifecycle phase 9 and the PR-open clause of
+      AC-F1-5 by phase 11. Record: code-review/review-iter-1.yaml."
+    type: resolved
+    date: "2026-11-15"
+  - text: "QUALITY GATE (lifecycle phase 9) verdicts at HEAD 211489bf. COMMIT-RANGE
+      GATE — `./scripts/lint-commit-range.sh --base main-tools`: VERDICT PASS,
+      base main-tools (explicit), merge-base c1f0d6fa, head 211489bf, 13 commits
+      in range, 0 offending commits, mode none, 0 distinct rules hit, commitlint
+      resolved repository-local from node_modules/.bin/commitlint (origin ref
+      refs/remotes/main-tools, non-vacuous). PRIVACY-LITERALS: `bun run
+      scripts/checks/privacy-literals.ts` exit 0, 4078 files scanned, 0
+      violations. AGGREGATE BATTERY: run as `PATH=$PWD/node_modules/.bin:$PATH
+      TMPDIR=<gate temp root outside every work tree> GIT_CONFIG_COUNT=1
+      GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false pnpm check` ->
+      exit 0: 8496 pass / 4 skip / 0 fail across 1082 files (1024.88s); lint
+      2532 files 0 errors (83 warnings / 33 infos, pre-existing); format:check
+      2391 files no drift; typecheck six packages + tests/types; boundaries 405
+      modules / 1234 deps no violations; ambient-globals 191 files clean;
+      workspace-entrypoints match the DEC-2 matrices; secret-read-boundary 373
+      files clean; prompt-conformance 5 prompts clean; help-guide-coverage all
+      covered; exports-parity 5 publishables pass. DEVIATION (measured, not
+      assumed): the ticket's `TMPDIR=$PWD/tmp/tmpdir` cannot run this battery
+      green in this checkout. With it, `bun test` produces 15 failures in 10
+      hermeticity suites (58 pass / 15 fail) and the chain short-circuits.
+      Cause: `nonCheckoutDirectory` tries [tmpdir(), dirname(cwd), APPROVED_BASE
+      = <cwd>/tmp/tmpdir]; a repo-local TMPDIR makes tmpdir() and APPROVED_BASE
+      one repo-local path, and dirname(cwd) is the umbrella repository, which is
+      itself a work tree, so every candidate is rejected. Control run of the
+      same 10 files with a temp root outside every work tree: 73 pass / 0 fail.
+      The full battery under that external temp root is the green run recorded
+      here. Nothing was fixed: the fixture locator is source code and outside
+      this change's scope; the aggregate gate is AC-F1-4 'best-effort'. Raw logs
+      under tmp/run-logs-runner/2026-11-15/ (A-1 repro, B-1 control, C-1 full
+      battery)."
+    type: info
+    date: "2026-11-15"
+  - text: "RESIDUAL RISK (out of scope, for the owner): the repository-relative gate
+      temp root `TMPDIR=$PWD/tmp/tmpdir` is incompatible with this checkout's
+      hermeticity fixtures (15 failures, cause above), while the convention is
+      what GH-310's record and this change now state. Two candidate follow-ups,
+      neither created here: (a) extend nonCheckoutDirectory's candidate list so
+      it can escape an enclosing umbrella work tree, or (b) state an external
+      out-of-work-tree temp root as the gate convention. Requires its own
+      ticket."
+    type: risk
+    date: "2026-11-15"
+  - text: "PLAN PHASE COMMIT MAP (DoD evidence; authoritative). Plan phase 1
+      (delivery) = 77bec424, subject `feat(GH-322): sanitize the recorded
+      absolute gate temp root`, one removed / one added line on the GH-310
+      pm-notes line 279 (byte-identical after masking the TMPDIR token) plus the
+      phase-state entry; test result at that commit: privacy-literals exit 0 / 0
+      violations (4077 files), lint GH-310 conforms, doc-conformance 11 pass / 0
+      fail, diff 1/1 with 2 changed lines. Lifecycle commits: clarify_scope
+      dc8f7642; specification f82c0dbb (v1.0), 99cc7c6a (v1.1 remediation),
+      43fdc505 (v1.2 remediation); test_planning dfdfda4b (v1.0), 313f472b
+      (v1.1); delivery_planning ddb0e8b3 (1.0), 040b7cef (1.1); dor_check
+      fc7abd4b (iteration 1-2 record), f535c1cb (iteration 3 READY);
+      system_spec_update 576d3a28; review_fix 211489bf; quality_gates 503f91d9.
+      Range HEAD at this entry: 503f91d9, 14 commits ahead of main-tools
+      c1f0d6fa, of which exactly one is the delivery commit."
+    type: info
+    date: "2026-11-15"
+  - text: "PR created and left OPEN for CEO/human merge:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/323 — base
+      main-tools, head fix/GH-322/sanitize-gh310-pm-notes at 38a8917e, title
+      'fix(GH-322): sanitize absolute user path in GH-310 pm-notes'. The body
+      discloses the two deviations (primitive-derived delivery subject; the
+      aggregate battery's out-of-work-tree TMPDIR requirement and the 15
+      environmental hermeticity failures with a repo-local temp root) and the
+      gate evidence, and references the issue without a closing keyword.
+      Delivery stops here: no merge, no other ticket."
+    type: info
+    date: "2026-11-15"
+  - text: "RETRO: end-to-end cost was dominated by two avoidable cycles — a
+      template-compression omission (missing DoD section, blanket non-goal) and
+      an unvalidated pinned commit subject that the primitive cannot produce.
+      Both were caught by gates, not by authors, and neither touched the actual
+      fix, which was one literal and passed every check on the first attempt.
+      Working pattern worth repeating: prove the commit message with `commit
+      --dry-run` during delivery_planning, and keep artifact authors' attention
+      on the DoD + scope-clause pairing for tiny changes."
+    type: retro
+    date: "2026-11-15"
+  - text: "RETRO: the spec writer's non-goals were written before the in-scope edit
+      was pinned, so a blanket 'no other change artifact' clause contradicted
+      the single intended change, and the DoD section was dropped while
+      compressing a feature template to a one-line fix. Cost: one extra gate
+      iteration (~10 min). Improvement: when compressing a spec template, never
+      drop the DoD section, and scope-limit every 'out of scope' clause against
+      the named in-scope edit rather than against the change class."
+    type: retro
+    date: "2026-11-15"
+  - text: "PLAN PHASE 1 (delivery) COMPLETE: sanitized the recorded absolute gate
+      temp root in the GH-310 pm-notes. Edit: exactly one literal on line 279 —
+      the recorded phase-9 aggregate-gate command's TMPDIR value moved from the
+      operator-local absolute temp root to the repository-relative convention
+      TMPDIR=$PWD/tmp/tmpdir. Nothing else in the file moved: no reflow,
+      re-indent, or key reorder; every recorded verdict string, pass/skip/fail
+      count, commit hash, and phase timestamp is byte-identical. Verification,
+      all green: (1) `bun run scripts/checks/privacy-literals.ts` -> exit 0, OK
+      privacy-literals: 4077 file(s) scanned, 7 rule(s), 0 violation(s)
+      (baseline before the edit: exit 1, one private.absolute-user-path at that
+      same file:279). (2) `delivery-os lint GH-310` on the pm-notes target ->
+      exit 0, evidence class conforms. (3) home-rooted absolute-path scan of the
+      GH-310 change folder -> no match (grep exit 1). (4) `git diff --numstat`
+      for the affected file -> 1 1; `git diff -U0 | grep '^[-+]' | wc -l` -> 2
+      (one removed plus one added line = a single value substitution); `git diff
+      --check` -> exit 0, clean; the document still parses (30 notes). (5) `bun
+      test tests/checks/doc-conformance.test.ts` -> exit 0, 11 pass / 0 fail, 25
+      expect() calls. The aggregate `pnpm check` was not run in this phase:
+      lifecycle phase 9 owns the full battery (obligation 1.6 is best-effort and
+      AC-F1-1 stays binding). Commit: the single delivery commit produced by the
+      `commit` primitive with --phase delivery, derived subject `feat(GH-322):
+      sanitize the recorded absolute gate temp root`, landing this note, the
+      sanitized line, and the delivery phase state atomically; its sha is quoted
+      in the delivery run report, because a commit sha cannot be embedded in the
+      tree it hashes and the one-commit rule forbids a follow-up note commit."
+    type: info
+    date: "2026-11-15"
