@@ -440,7 +440,9 @@ const IDENTITY_ROWS: readonly IdentityRow[] = [
   },
   {
     page: "doc/spec/features/feature-projects.md",
-    stale: ["| Host root | `<PREFIX>_STATE_DIR` (absolute) else `<home>/<brand.stateDirectoryName>` |"],
+    stale: [
+      "| Host root | `<PREFIX>_STATE_DIR` (absolute) else `<home>/<brand.stateDirectoryName>` |",
+    ],
     required: [
       "Prior-identity host root",
       "prior default root",

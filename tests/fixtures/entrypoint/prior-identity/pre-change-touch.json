@@ -10,12 +10,6 @@
     "summary": "command \"status\" is not part of the composed prompt-required set",
     "stderr": "delivery-os: fallback.internal\nsummary: command \"status\" is not part of the composed prompt-required set\n"
   },
-  "homeEntriesAfter": [
-    ".delivery-os-state/",
-    ".delivery-os-state/host-index.json"
-  ],
-  "repoEntriesAfter": [
-    ".delivery-os/",
-    ".delivery-os/config.yaml"
-  ]
+  "homeEntriesAfter": [".delivery-os-state/", ".delivery-os-state/host-index.json"],
+  "repoEntriesAfter": [".delivery-os/", ".delivery-os/config.yaml"]
 }

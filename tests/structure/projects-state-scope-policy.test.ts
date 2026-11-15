@@ -349,10 +349,10 @@ describe("TC-PROJ-023 the settings resolution has one call site, taking the proj
  */
 describe("TC-BIN-065 prior-root selection stays inside the one policy", () => {
   const input = {
-    environment: { HOME: "/home/operator" },
+    environment: { HOME: "/srv/operator" },
     environmentPrefix: "JAISHIP_",
     stateDirectoryName: ".jaiship-state",
-    homeDirectory: "/home/operator",
+    homeDirectory: "/srv/operator",
   } as const;
 
   it("the policy derives both default roots and selects the prior root over facts", () => {
@@ -364,8 +364,8 @@ describe("TC-BIN-065 prior-root selection stays inside the one policy", () => {
         priorStateDirectoryName: ".delivery-os-state",
       }),
     ).toEqual({
-      currentDefaultRoot: "/home/operator/.jaiship-state",
-      priorDefaultRoot: "/home/operator/.delivery-os-state",
+      currentDefaultRoot: "/srv/operator/.jaiship-state",
+      priorDefaultRoot: "/srv/operator/.delivery-os-state",
     });
     const selected = selectHostStateRoot({
       ...input,
@@ -375,7 +375,7 @@ describe("TC-BIN-065 prior-root selection stays inside the one policy", () => {
     expect(selected.ok).toBe(true);
     if (selected.ok) {
       expect(selected.value.kind).toBe("prior");
-      expect(selected.value.root).toBe("/home/operator/.delivery-os-state");
+      expect(selected.value.root).toBe("/srv/operator/.delivery-os-state");
     }
     const firstUse = selectHostStateRoot({
       ...input,
@@ -384,7 +384,7 @@ describe("TC-BIN-065 prior-root selection stays inside the one policy", () => {
     expect(firstUse.ok).toBe(true);
     if (firstUse.ok) {
       expect(firstUse.value.kind).toBe("first-use");
-      expect(firstUse.value.root).toBe("/home/operator/.jaiship-state");
+      expect(firstUse.value.root).toBe("/srv/operator/.jaiship-state");
     }
   });
 
@@ -405,7 +405,7 @@ describe("TC-BIN-065 prior-root selection stays inside the one policy", () => {
     expect(policy).not.toContain("existsSync");
     const refusal = selectHostStateRoot({
       ...input,
-      environment: { HOME: "/home/operator", JAISHIP_STATE_DIR: "relative/path" },
+      environment: { HOME: "/srv/operator", JAISHIP_STATE_DIR: "relative/path" },
       defaultRootExists: { current: false, prior: true },
     });
     expect(refusal.ok).toBe(false);

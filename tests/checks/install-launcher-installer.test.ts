@@ -39,7 +39,8 @@ type Scratch = {
 };
 
 const REAL_GIT =
-  spawnSync("bash", ["-lc", "command -v git"], { encoding: "utf8" }).stdout.trim() || "/usr/bin/git";
+  spawnSync("bash", ["-lc", "command -v git"], { encoding: "utf8" }).stdout.trim() ||
+  "/usr/bin/git";
 
 const makeShim = (shim: string, log: string): void => {
   mkdirSync(shim, { recursive: true });
@@ -75,10 +76,22 @@ const scratch = (label: string): Scratch => {
   writeFileSync(join(project, "product.yaml"), "product: fixture\n");
   spawnSync("git", ["init", "-q", "."], { cwd: project });
   spawnSync("git", ["add", "-A"], { cwd: project });
-  spawnSync("git", ["-c", "user.email=f@e", "-c", "user.name=f", "commit", "-qm", "init"], {
-    cwd: project,
-  }, 120_000);
-  return { root, home, project, shim, log, dispose: () => rmSync(root, { recursive: true, force: true }) };
+  spawnSync(
+    "git",
+    ["-c", "user.email=f@e", "-c", "user.name=f", "commit", "-qm", "init"],
+    {
+      cwd: project,
+    },
+    120_000,
+  );
+  return {
+    root,
+    home,
+    project,
+    shim,
+    log,
+    dispose: () => rmSync(root, { recursive: true, force: true }),
+  };
 };
 
 type RunResult = { readonly status: number; readonly stdout: string; readonly stderr: string };
@@ -92,21 +105,17 @@ const runInstaller = (
     readonly args?: readonly string[];
   } = {},
 ): RunResult => {
-  const result = spawnSync(
-    "bash",
-    [INSTALLER, "--local", "--no-fetch", ...(options.args ?? [])],
-    {
-      cwd: s.project,
-      encoding: "utf8",
-      maxBuffer: 64 * 1024 * 1024,
-      env: {
-        PATH: options.path ?? `${s.shim}:${process.env.PATH ?? ""}`,
-        HOME: s.home,
-        ADOS_SOURCE_DIR: options.source ?? REPO,
-        ...options.environment,
-      },
+  const result = spawnSync("bash", [INSTALLER, "--local", "--no-fetch", ...(options.args ?? [])], {
+    cwd: s.project,
+    encoding: "utf8",
+    maxBuffer: 64 * 1024 * 1024,
+    env: {
+      PATH: options.path ?? `${s.shim}:${process.env.PATH ?? ""}`,
+      HOME: s.home,
+      ADOS_SOURCE_DIR: options.source ?? REPO,
+      ...options.environment,
     },
-  );
+  });
   return {
     status: result.status ?? -1,
     stdout: result.stdout ?? "",
@@ -119,17 +128,30 @@ const launcherPath = (s: Scratch): string => join(s.home, ".jaiship/bin/jaiship"
 const digest = (path: string): string =>
   createHash("sha256").update(readFileSync(path)).digest("hex");
 
-const runLauncher = (s: Scratch, argv: readonly string[], env: Readonly<Record<string, string>> = {}) => {
-  const result = spawnSync(launcherPath(s), [...argv], {
-    cwd: s.home,
-    encoding: "utf8",
-    env: { PATH: process.env.PATH ?? "", HOME: s.home, ...env },
-  }, 120_000);
+const runLauncher = (
+  s: Scratch,
+  argv: readonly string[],
+  env: Readonly<Record<string, string>> = {},
+) => {
+  const result = spawnSync(
+    launcherPath(s),
+    [...argv],
+    {
+      cwd: s.home,
+      encoding: "utf8",
+      env: { PATH: process.env.PATH ?? "", HOME: s.home, ...env },
+    },
+    120_000,
+  );
   return { status: result.status ?? -1, stdout: result.stdout ?? "", stderr: result.stderr ?? "" };
 };
 
 const networkLog = (s: Scratch): readonly string[] =>
-  existsSync(s.log) ? readFileSync(s.log, "utf8").split("\n").filter((line) => line !== "") : [];
+  existsSync(s.log)
+    ? readFileSync(s.log, "utf8")
+        .split("\n")
+        .filter((line) => line !== "")
+    : [];
 
 const installOnce = (s: Scratch, source: string = REPO): void => {
   const result = runInstaller(s, { source });
@@ -351,7 +373,9 @@ describe("TC-BIN-056 the installer's preconditions are classified, not skipped",
       "stat",
       "sha256sum",
     ]) {
-      const found = spawnSync("bash", ["-lc", `command -v ${name}`], { encoding: "utf8" }).stdout.trim();
+      const found = spawnSync("bash", ["-lc", `command -v ${name}`], {
+        encoding: "utf8",
+      }).stdout.trim();
       if (found !== "") spawnSync("ln", ["-sf", found, join(dir, name)]);
     }
     return dir;

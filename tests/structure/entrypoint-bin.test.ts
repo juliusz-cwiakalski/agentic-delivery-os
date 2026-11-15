@@ -15,10 +15,7 @@ import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import ts from "typescript";
 import { ERROR_TABLE } from "../../packages/core/src/contracts/index";
-import {
-  PROMPT_REQUIRED_COMMANDS,
-  runEntrypoint,
-} from "../../packages/cli/src/entrypoint";
+import { PROMPT_REQUIRED_COMMANDS, runEntrypoint } from "../../packages/cli/src/entrypoint";
 import { renderRootHelp } from "../../packages/cli/src/help";
 import { resolveBrandIdentity } from "../../packages/core/src/branding";
 import { validateSeam } from "./branding-seam.test";
@@ -108,7 +105,11 @@ export const literalSites = (root: string): readonly LiteralSite[] => {
 
 /** The declared inventory, held here so the inventory is the assertion's input. */
 const DECLARED_SELECTORS: readonly Omit<LiteralSite, "exported">[] = [
-  { file: "packages/cli/bin/delivery-os.ts", constant: "DEFAULT_WORKING_NAME", value: "delivery-os" },
+  {
+    file: "packages/cli/bin/delivery-os.ts",
+    constant: "DEFAULT_WORKING_NAME",
+    value: "delivery-os",
+  },
   { file: "packages/cli/bin/jaiship.ts", constant: "DEFAULT_WORKING_NAME", value: "jaiship" },
   { file: "packages/cli/bin/jaiship.ts", constant: "PRIOR_WORKING_NAME", value: "delivery-os" },
 ];
@@ -152,7 +153,8 @@ export const inventoryViolations = (sites: readonly LiteralSite[]): string[] => 
   return failures;
 };
 
-const tempRoot = (label: string): string => mkdtempSync(join(tmpdir(), `gh320-structure-${label}-`));
+const tempRoot = (label: string): string =>
+  mkdtempSync(join(tmpdir(), `gh320-structure-${label}-`));
 
 const write = (root: string, relative: string, content: string): void => {
   const path = join(root, relative);
@@ -296,7 +298,11 @@ describe("TC-BIN-062 identity literals are exactly the declared five sites", () 
   });
 
   test("literals: no declared default yields the containment identity, never a substitute", async () => {
-    for (const argv of [["--version", "--json"], ["--help", "--json"], ["status", "--json"]]) {
+    for (const argv of [
+      ["--version", "--json"],
+      ["--help", "--json"],
+      ["status", "--json"],
+    ]) {
       const stdout = bufferSink();
       const stderr = bufferSink();
       const exitCode = await runEntrypoint(argv, {
@@ -351,10 +357,7 @@ describe("TC-BIN-062 identity literals are exactly the declared five sites", () 
       expect(inventoryViolations(literalSites(root)).join("\n")).toContain("entrypoint.ts");
       // The accessor control (a re-declared `neutralWorkingName` export) lives in
       // the content-inventory allowance case, where the allowance is the guard.
-      seed(
-        "packages/cli/src/production.ts",
-        'const identity = { binaryName: "jaiship" };\n',
-      );
+      seed("packages/cli/src/production.ts", 'const identity = { binaryName: "jaiship" };\n');
       expect(validateSeam(root).join("\n")).toContain("production.ts");
     });
   });
@@ -363,10 +366,7 @@ describe("TC-BIN-062 identity literals are exactly the declared five sites", () 
 describe("TC-BIN-063 one shared launcher composition; neither bin duplicates the body", () => {
   const binNames = ["delivery-os", "jaiship"] as const;
   const bins = Object.fromEntries(
-    binNames.map((name) => [
-      name,
-      readFileSync(join(ROOT, `packages/cli/bin/${name}.ts`), "utf8"),
-    ]),
+    binNames.map((name) => [name, readFileSync(join(ROOT, `packages/cli/bin/${name}.ts`), "utf8")]),
   ) as Record<(typeof binNames)[number], string>;
 
   test("shared-composition: both bins delegate to the one launcher and declare only facts", () => {
@@ -376,8 +376,11 @@ describe("TC-BIN-063 one shared launcher composition; neither bin duplicates the
       expect(source).toContain("runBinLauncher(");
       expect(source).not.toContain("createProductionComposer");
       expect(source).not.toContain("runEntrypoint");
-      expect(source).not.toContain("process.env");
-      expect(source).not.toContain("process.cwd()");
+      // The bin is the declared process edge: it observes the process facts
+      // once and passes them in; the composition body lives in the launcher.
+      expect(source).toContain("process.env");
+      expect(source).toContain("process.cwd()");
+      expect(source).toContain("runBinLauncher({");
       expect(source).toContain("export const completion");
     }
   });
@@ -393,6 +396,9 @@ describe("TC-BIN-063 one shared launcher composition; neither bin duplicates the
     expect(callSites).toEqual(["packages/cli/src/bin-launcher.ts:1"]);
     const launcher = readFileSync(join(ROOT, "packages/cli/src/bin-launcher.ts"), "utf8");
     expect(launcher).toContain("export const runBinLauncher");
+    // No ambient read and no second serialization import in the launcher.
+    expect(launcher).not.toContain("process.");
+    expect(launcher).not.toContain("output/serialize");
     // A module-level string literal is not permitted in the launcher surface.
     const launcherSource = parse(ROOT, "packages/cli/src/bin-launcher.ts");
     for (const statement of launcherSource.statements) {
@@ -417,7 +423,7 @@ describe("TC-BIN-063 one shared launcher composition; neither bin duplicates the
         root,
         "packages/cli/bin/inlined.ts",
         'import { createProductionComposer } from "../src/production.js";\n' +
-          "const DEFAULT_WORKING_NAME = \"delivery-os\";\n",
+          'const DEFAULT_WORKING_NAME = "delivery-os";\n',
       );
       write(
         root,
@@ -449,19 +455,11 @@ describe("TC-BIN-064 the branding seam still passes and still rejects injected v
         "packages/core/src/branding/index.ts",
         readFileSync(join(ROOT, "packages/core/src/branding/index.ts"), "utf8"),
       );
-      write(
-        root,
-        "packages/cli/bin/jaiship.ts",
-        'export const PRODUCT = "jaiship";\n',
-      );
+      write(root, "packages/cli/bin/jaiship.ts", 'export const PRODUCT = "jaiship";\n');
       expect(validateSeam(root).join("\n")).toContain(
         "packages/cli/bin/jaiship.ts: exported module-level string constant PRODUCT",
       );
-      write(
-        root,
-        "packages/cli/src/entrypoint.ts",
-        'const brand = { binaryName: "jaiship" };\n',
-      );
+      write(root, "packages/cli/src/entrypoint.ts", 'const brand = { binaryName: "jaiship" };\n');
       expect(validateSeam(root).join("\n")).toContain(
         "packages/cli/src/entrypoint.ts: field binaryName is assigned a string literal",
       );
@@ -501,7 +499,9 @@ describe("TC-BIN-067 no new family row and no new error row", () => {
     ]);
     const help = renderRootHelp(brand);
     expect(help).not.toContain("--print-install-path");
-    expect(help.split("\n").filter((line) => /^ {2}[a-z][a-z0-9-]* {2}/u.test(line)).length).toBe(20);
+    expect(help.split("\n").filter((line) => /^ {2}[a-z][a-z0-9-]* {2}/u.test(line)).length).toBe(
+      20,
+    );
   });
 
   test("family-and-error-table: no error-table row and no error code for the notice", () => {

@@ -300,7 +300,7 @@ describe("TC-BIN-034 prior-prefix overrides are never read", () => {
 
   test("only the invoking identity's override name is consulted", () => {
     const { environment, reads } = countingEnvironment({
-      HOME: "/home/operator",
+      HOME: "/srv/operator",
       JAISHIP_STATE_DIR: "/srv/current",
       DELIVERY_OS_STATE_DIR: "/srv/prior",
     });
@@ -309,7 +309,7 @@ describe("TC-BIN-034 prior-prefix overrides are never read", () => {
       environmentPrefix: "JAISHIP_",
       stateDirectoryName: ".jaiship-state",
       priorStateDirectoryName: ".delivery-os-state",
-      homeDirectory: "/home/operator",
+      homeDirectory: "/srv/operator",
       defaultRootExists: { current: false, prior: true },
     });
     expect(selected.ok).toBe(true);
@@ -320,7 +320,7 @@ describe("TC-BIN-034 prior-prefix overrides are never read", () => {
 
   test("the alias reads its own prefix and never the new identity's", () => {
     const { environment, reads } = countingEnvironment({
-      HOME: "/home/operator",
+      HOME: "/srv/operator",
       JAISHIP_STATE_DIR: "/srv/next",
       DELIVERY_OS_STATE_DIR: "/srv/alias",
     });
@@ -328,7 +328,7 @@ describe("TC-BIN-034 prior-prefix overrides are never read", () => {
       environment,
       environmentPrefix: "DELIVERY_OS_",
       stateDirectoryName: ".delivery-os-state",
-      homeDirectory: "/home/operator",
+      homeDirectory: "/srv/operator",
     });
     expect(selected.ok).toBe(true);
     if (selected.ok) expect(selected.value.root).toBe("/srv/alias");

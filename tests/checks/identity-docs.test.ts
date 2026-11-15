@@ -150,8 +150,7 @@ describe("TC-BIN-072 the four divergences are stated, the guide stays seed-free,
     expect(branding).toContain('PACKAGE_SCOPE = "@delivery-os"');
     expect(branding).toContain('SCOPE_ORG = "delivery-os"');
     const manifests = ["core", "adapters", "cli", "mcp", "opencode", "testkit"].map(
-      (name) =>
-        JSON.parse(read(`packages/${name}/package.json`)) as { readonly name?: string },
+      (name) => JSON.parse(read(`packages/${name}/package.json`)) as { readonly name?: string },
     );
     expect(manifests.map((manifest) => manifest.name)).toEqual([
       "@delivery-os/core",
@@ -209,17 +208,14 @@ describe("TC-BIN-072 the four divergences are stated, the guide stays seed-free,
   test("seed-cleanliness: an unregistered guide fails the scan closed", () => {
     const temp = mkdtempSync(join(tmpdir(), "gh320-registry-"));
     try {
-      writeFileSync(
-        join(temp, "guide.md"),
-        read(GUIDE).replace("\nA body line", "\nA body line"),
-      );
+      writeFileSync(join(temp, "guide.md"), read(GUIDE).replace("\nA body line", "\nA body line"));
       const bodyWithoutMarker = body(read(GUIDE));
       expect(bodyWithoutMarker.length).toBeGreaterThan(0);
       // The registry is the single authority: dropping the entry from a copy is
       // what makes an unregistered user-facing doc fail closed.
-      const registryCopy = JSON.parse(
-        read("scripts/checks/forbidden-literals.registry.json"),
-      ) as { registered: string[] };
+      const registryCopy = JSON.parse(read("scripts/checks/forbidden-literals.registry.json")) as {
+        registered: string[];
+      };
       registryCopy.registered = registryCopy.registered.filter((entry) => entry !== GUIDE);
       expect(registryCopy.registered).not.toContain(GUIDE);
     } finally {

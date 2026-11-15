@@ -529,7 +529,10 @@ export const resolveProjectScope = (
               return false;
             }
           };
-          return { current: probe(candidates.currentDefaultRoot), prior: probe(candidates.priorDefaultRoot) };
+          return {
+            current: probe(candidates.currentDefaultRoot),
+            prior: probe(candidates.priorDefaultRoot),
+          };
         })()
       : input.defaultRootExists;
   const selection = selectHostStateRoot({

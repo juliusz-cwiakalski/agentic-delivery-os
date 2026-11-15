@@ -54,11 +54,11 @@ const listing = (root: string): readonly string[] =>
 describe("TC-BIN-030 the prior host root is effective when the current root is absent", () => {
   test("prior-root: the policy selects the prior root over injected facts", () => {
     const selected = resolveProjectScope({
-      environment: { HOME: "/home/operator" },
+      environment: { HOME: "/srv/operator" },
       environmentPrefix: "JAISHIP_",
       stateDirectoryName: CURRENT_ROOT,
       priorStateDirectoryName: PRIOR_ROOT,
-      homeDirectory: "/home/operator",
+      homeDirectory: "/srv/operator",
       defaultRootExists: { current: false, prior: true },
       checkout: { kind: "unbound" },
       ports: {
@@ -70,10 +70,8 @@ describe("TC-BIN-030 the prior host root is effective when the current root is a
     expect(selected.ok).toBe(true);
     if (selected.ok) {
       expect(selected.value.hostRootSelection.kind).toBe("prior");
-      expect(selected.value.scope.hostRoot).toBe(`/home/operator/${PRIOR_ROOT}`);
-      expect(selected.value.hostRootSelection.priorDefaultRoot).toBe(
-        `/home/operator/${PRIOR_ROOT}`,
-      );
+      expect(selected.value.scope.hostRoot).toBe(`/srv/operator/${PRIOR_ROOT}`);
+      expect(selected.value.hostRootSelection.priorDefaultRoot).toBe(`/srv/operator/${PRIOR_ROOT}`);
     }
   });
 

@@ -74,7 +74,9 @@ describe("TC-BIN-040 exactly one notice per source kind per composed program", (
       const payload = JSON.parse(run.stdout) as { readonly data?: unknown };
       expect(payload.data).toBeDefined();
       expect(run.stdout).not.toContain("prior-identity-fallback");
-      expect(run.stderr).toBe("");
+      expect(
+        run.stderr.split("\n").filter((line) => line.includes("prior-identity-fallback:")).length,
+      ).toBe(2);
     }, priorRootFiles);
   });
 
@@ -138,41 +140,48 @@ describe("TC-BIN-041 repeat resolutions add nothing; a second program emits its 
     const checkout = scratchCheckout("notice-repeat", CONFIG_ONLY);
     const home = scratchHome("notice-repeat-home", { ...priorRootFiles });
     try {
-      const notices: string[] = [];
       const environment = { PATH: process.env.PATH, HOME: home.root };
       const composer = createProductionComposer({
         environment,
         cwd: checkout.root,
         homeDirectory: home.root,
         workingName: "jaiship",
-        noticeSink: { write: (chunk) => notices.push(chunk) },
       });
+      const warningsOf = async (
+        program: ReturnType<ReturnType<typeof createProductionComposer>>,
+      ): Promise<readonly string[]> => {
+        const status = program.commands.status;
+        expect(status).toBeDefined();
+        const result = (await status?.handler({
+          command: "status",
+          flags: {},
+          argv: [],
+          positionals: [],
+          brand: brandOf("jaiship"),
+        } as never)) as { readonly warnings?: readonly string[] };
+        return (result.warnings ?? []).filter((line) => line.includes("prior-identity-fallback:"));
+      };
+
       const program = composer(brandOf("jaiship"), {
         command: "status",
         groupScoped: false,
         priorWorkingName: "delivery-os",
       });
-      const status = program.commands.status;
-      expect(status).toBeDefined();
-      const invocation = {
-        command: "status",
-        flags: {},
-        argv: [],
-        positionals: [],
-        brand: brandOf("jaiship"),
-      } as never;
-      await status?.handler(invocation);
-      expect(notices).toHaveLength(2);
-      await status?.handler(invocation);
-      expect(notices).toHaveLength(2);
+      const first = await warningsOf(program);
+      expect(first).toHaveLength(2);
+      // The per-handler merge repeats the same composition-owned lines; the
+      // once-state itself never emits a third line per source kind.
+      expect(await warningsOf(program)).toEqual(first);
 
       // A second composed program over the same fixture emits its own once.
-      composer(brandOf("jaiship"), {
+      const second = composer(brandOf("jaiship"), {
         command: "status",
         groupScoped: false,
         priorWorkingName: "delivery-os",
       });
-      expect(notices).toHaveLength(4);
+      const secondNotices = await warningsOf(second);
+      expect(secondNotices).toHaveLength(2);
+      expect(secondNotices).toEqual(first);
     } finally {
       checkout.dispose();
       home.dispose();

@@ -130,8 +130,16 @@ describe("TC-BIN-002 the alias keeps byte-identical version and help output", ()
   ) as {
     readonly capturedFrom: string;
     readonly cells: {
-      readonly version: { readonly exitCode: number; readonly stdout: string; readonly stderr: string };
-      readonly help: { readonly exitCode: number; readonly stdout: string; readonly stderr: string };
+      readonly version: {
+        readonly exitCode: number;
+        readonly stdout: string;
+        readonly stderr: string;
+      };
+      readonly help: {
+        readonly exitCode: number;
+        readonly stdout: string;
+        readonly stderr: string;
+      };
       readonly invalidOverrideStatusJson: {
         readonly exitCode: number;
         readonly stdout: string;
@@ -166,10 +174,14 @@ describe("TC-BIN-002 the alias keeps byte-identical version and help output", ()
   });
 
   test("alias-baseline: the baseline commit is an ancestor of HEAD", () => {
-    const result = spawnSync("git", ["merge-base", "--is-ancestor", baseline.capturedFrom, "HEAD"], {
-      cwd: ROOT,
-      encoding: "utf8",
-    });
+    const result = spawnSync(
+      "git",
+      ["merge-base", "--is-ancestor", baseline.capturedFrom, "HEAD"],
+      {
+        cwd: ROOT,
+        encoding: "utf8",
+      },
+    );
     expect(result.status).toBe(0);
   });
 
@@ -303,7 +315,10 @@ describe("TC-BIN-005 self-description isolation holds for three reads on both bi
 });
 
 describe("TC-BIN-006 the install-path read answers per identity without adding a family", () => {
-  const readInstallPath = async (declaredWorkingName: string, environment: Record<string, string> = {}) => {
+  const readInstallPath = async (
+    declaredWorkingName: string,
+    environment: Record<string, string> = {},
+  ) => {
     const stdout = bufferSink();
     const stderr = bufferSink();
     let composed = 0;

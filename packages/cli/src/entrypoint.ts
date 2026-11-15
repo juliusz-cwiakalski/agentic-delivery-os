@@ -144,8 +144,8 @@ const entrypointBrandOutcome = (options: {
   if (branded.ok) return { ok: true, brand: branded.value };
   for (const candidate of [options.declaredWorkingName, options.configuredWorkingName]) {
     if (candidate === undefined || candidate.length === 0) continue;
-    const fallback = resolveBrandIdentity({ workingName: candidate });
-    if (fallback.ok) return { ok: true, brand: fallback.value };
+    const resolvedCandidate = resolveBrandIdentity({ workingName: candidate });
+    if (resolvedCandidate.ok) return { ok: true, brand: resolvedCandidate.value };
   }
   return { ok: false };
 };

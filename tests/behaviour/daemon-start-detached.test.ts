@@ -704,7 +704,10 @@ describe("TC-BIN-083 child-environment allowlist admits both identities", () => 
   };
 
   test("child-environment: the delivered allowlist literal is unchanged", () => {
-    const source = readFileSync(join(process.cwd(), "tests/behaviour/daemon-start-detached.test.ts"), "utf8");
+    const source = readFileSync(
+      join(process.cwd(), "tests/behaviour/daemon-start-detached.test.ts"),
+      "utf8",
+    );
     expect(source).toContain(
       "/^(PATH|HOME|USERPROFILE|DELIVERY_OS_WORKING_NAME|[A-Z0-9_]*_STATE_DIR)$/u",
     );

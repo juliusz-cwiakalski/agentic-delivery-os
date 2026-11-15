@@ -1,27 +1,32 @@
 /**
  * The one shared launcher composition (GH-320 F-1, DEC-5).
  *
- * Both executable entries delegate here: the launcher reads the environment,
- * the working directory, and the home directory exactly once, composes the
- * production program, and returns an exit code. Behaviour is exported as a
- * function (never as a module-level literal), the command runtime is never
- * called directly, and each bin declares only its own identity facts.
+ * Both executable entries delegate here: the launcher composes the production
+ * program from the process facts its bin injects and returns an exit code.
+ * Behaviour is exported as a function (never as a module-level literal), the
+ * command runtime is never called directly, and no ambient global is read: the
+ * bins are the declared process edges and pass the facts in.
  */
 
 import { createProductionComposer, DECLARED_CREDENTIAL_REFERENCES } from "./production.js";
 import { runEntrypoint } from "./entrypoint.js";
-import type { CliStreams } from "./output/serialize.js";
 
-/** The invoking bin's declared facts, plus test-injectable process facts. */
+/** The one sink shape the launcher forwards to the entrypoint. */
+export type LauncherStreams = {
+  readonly stdout: { readonly write: (chunk: string) => void };
+  readonly stderr: { readonly write: (chunk: string) => void };
+};
+
+/** The invoking bin's declared facts, plus the process facts it observes. */
 export type BinLauncherOptions = {
   /** The invoking bin's own identity, declared at the process edge. */
   readonly declaredWorkingName: string;
   /** The identity's declared prior identity, when the bin has one. */
   readonly priorWorkingName?: string;
-  readonly argv?: readonly string[];
-  readonly environment?: Readonly<Record<string, string | undefined>>;
-  readonly cwd?: string;
-  readonly streams?: CliStreams;
+  readonly argv: readonly string[];
+  readonly environment: Readonly<Record<string, string | undefined>>;
+  readonly cwd: string;
+  readonly streams: LauncherStreams;
   readonly processId?: number;
   readonly signalHost?: {
     readonly once: (event: "SIGINT" | "SIGTERM", listener: () => void) => void;
@@ -41,17 +46,12 @@ const WORKING_NAME_OVERRIDE = "DELIVERY_OS_WORKING_NAME";
  * the floor when it is absent.
  */
 export const runBinLauncher = async (options: BinLauncherOptions): Promise<number> => {
-  const environment: Readonly<Record<string, string | undefined>> =
-    options.environment ?? process.env;
-  const cwd = options.cwd ?? process.cwd();
-  const argv = options.argv ?? process.argv.slice(2);
-  const homeDirectory = environment.HOME ?? environment.USERPROFILE ?? "";
+  const environment = options.environment;
   const override = environment[WORKING_NAME_OVERRIDE];
   const workingName =
     override !== undefined && override.length > 0 ? override : options.declaredWorkingName;
-  const daemonEntry = options.daemonEntry ?? process.argv[1];
-  return runEntrypoint(argv, {
-    streams: options.streams ?? { stdout: process.stdout, stderr: process.stderr },
+  return runEntrypoint(options.argv, {
+    streams: options.streams,
     environment,
     declaredWorkingName: options.declaredWorkingName,
     ...(options.priorWorkingName === undefined
@@ -60,12 +60,12 @@ export const runBinLauncher = async (options: BinLauncherOptions): Promise<numbe
     credentialReferences: DECLARED_CREDENTIAL_REFERENCES,
     composeProgram: createProductionComposer({
       environment,
-      cwd,
-      homeDirectory,
+      cwd: options.cwd,
+      homeDirectory: environment.HOME ?? environment.USERPROFILE ?? "",
       workingName,
-      processId: options.processId ?? process.pid,
-      ...(options.signalHost === undefined ? { signalHost: process } : { signalHost: options.signalHost }),
-      ...(daemonEntry === undefined ? {} : { daemonEntry }),
+      processId: options.processId ?? 0,
+      ...(options.signalHost === undefined ? {} : { signalHost: options.signalHost }),
+      ...(options.daemonEntry === undefined ? {} : { daemonEntry: options.daemonEntry }),
     }),
   });
 };

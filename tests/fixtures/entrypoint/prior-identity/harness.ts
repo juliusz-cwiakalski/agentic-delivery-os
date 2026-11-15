@@ -143,7 +143,6 @@ export const runThroughComposition = async (input: {
   }
   const stdout = bufferSink();
   const stderr = bufferSink();
-  const notices: string[] = [];
   const exitCode = await runEntrypoint(input.argv, {
     streams: { stdout, stderr },
     environment,
@@ -156,9 +155,14 @@ export const runThroughComposition = async (input: {
       homeDirectory: input.home,
       workingName: input.bin,
       configurationFs: fs,
-      noticeSink: { write: (chunk) => notices.push(chunk) },
     }),
   });
+  // The notice travels the delivered stderr warning channel; the harness derives
+  // the lines from that channel rather than from an injected sink.
+  const notices = stderr.value
+    .split("\n")
+    .filter((line) => line.includes("prior-identity-fallback:"))
+    .map((line) => `${line}\n`);
   return { exitCode, stdout: stdout.value, stderr: stderr.value, notices, fs };
 };
 

@@ -321,3 +321,57 @@ notes:
       missing-runtime and no-CLI-entry failures apply to a real run."
     type: info
     date: "2026-11-15"
+  - text: "Plan phase 4 (documentation truth) delivered by commit
+      2046d21a5846aa41ebb3f6fdc5a34d28710c2624. Gates green: doc-conformance
+      (16 pass); identity-docs (9 pass); forbidden-literals 5/5 scope classes,
+      0 violations; forbidden-literals.test (27 pass);
+      test-doc-distribution.sh no drift (94 in-scope docs), guide registered and
+      seed-clean; pnpm check:help; pnpm check:prompt; git diff --check. The
+      guide declares ados_distribution: redistributable, received its licence
+      header only via scripts/add-header-location.sh on the single path, and is
+      linked from all four affected spec pages (the landing page stays
+      untouched)."
+    type: info
+    date: "2026-11-15"
+  - text: "Plan phase 5 (hermeticity guard, changeset, gates, reconciliation)
+      state at the final phase boundary. Gates green:
+      prior-identity-hermetic (5 pass: static surface scan, spawned preload run
+      over the nine named suites, five-class canary); changesets-group OK
+      (exactly one fixed group of five, testkit excluded); the single
+      same-device gate `TMPDIR=$(mktemp -d "$HOME/.cache/ados-check-XXXXXX")
+      pnpm check` exited 0 with 8434 pass / 4 skip / 0 fail (8438 tests, 1074
+      files); `./scripts/lint-commit-range.sh --base main-tools` PASS (20
+      commits, repository-local commitlint); `delivery-os plan validate GH-320`
+      valid/full; `git diff --check` clean. Recorded evidence, not a gate: the
+      repo-local `TMPDIR=$PWD/tmp/tmpdir pnpm check` run is red with 14
+      projects/queue/state cells (the GH-313 mechanism: fixtures need a temp
+      directory outside every work tree). DoR-4 residuals (c)-(f) applied to
+      test plan v1.5; (a)/(b) were applied in phase 2."
+    type: info
+    date: "2026-11-15"
+
+  - text: "Delivery deviations and discovered gaps, recorded rather than
+      silently widened. (1) Scope gaps: `packages/core/src/index.ts` and
+      `packages/adapters/src/file/projects-config.ts` are not declared in any
+      phase, so the policy is exported from the committed root entry only for
+      what already existed (the new selector is reached through the injected
+      `probeDefaultRoot` port instead) and the project-groups document read does
+      not fall back. (2) `tests/structure/port-contract-inventory.test.ts`'s
+      fixture `tests/fixtures/ports/v1-contract-inventory.json` is not declared
+      and had to gain the six additive contract exports for its two-way guard.
+      (3) The notice travels the delivered `warnings` channel (stderr through
+      the serializer, never the payload) instead of a new sink, because the
+      delivered CLI guards forbid ambient reads and stream writes outside the
+      serialization chokepoint. (4) Formatting of files declared in earlier
+      phases was corrected in the final commit so `pnpm format:check` is green;
+      no behaviour changed. (5) Each phase landed through the commit primitive
+      in standalone mode, whose deterministic template subject is used because
+      any lifecycle id maps multiple delivery-kind plan phases to the union
+      scope and therefore no single plan `summary`; phase 2 needed a second
+      corrective commit after the primitive excluded two undeclared paths and a
+      fixture sibling outside the declared folder. (6) The installer launcher
+      step reports the planned registration and exits 0 under `DRY_RUN` even
+      from a source tree without the CLI entry, because the delivered
+      `scripts/.tests/test-install.sh` dry-run control must stay green."
+    type: risk
+    date: "2026-11-15"

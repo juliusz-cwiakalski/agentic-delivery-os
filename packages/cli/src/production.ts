@@ -463,11 +463,6 @@ export type ProductionCompositionFacts = {
    */
   readonly daemon?: DaemonComposition;
   /**
-   * The prior-identity notice channel (GH-320 DM-4). Production writes stderr;
-   * a test may inject a recording sink so the notice is observable in-process.
-   */
-  readonly noticeSink?: { readonly write: (chunk: string) => void };
-  /**
    * The configuration filesystem facts (GH-320 F-3). Production uses the node
    * facts; a test may inject counting facts so per-layer reads are observable.
    */
@@ -709,15 +704,15 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         : undefined;
     })();
     // The notice's once-state belongs to this composed program (DEC-10): one
-    // emission per source kind, never a process global.
+    // emission per source kind, never a process global. The rendered lines travel
+    // the delivered warning channel, which the surface writes to stderr through
+    // the serializer in every mode and never into the payload.
     const emittedNotices = new Set<string>();
-    const noticeSink = facts.noticeSink ?? {
-      write: (chunk: string) => process.stderr.write(chunk),
-    };
+    const compositionNotices: string[] = [];
     const emitNotice = (notice: PriorIdentityNotice): void => {
       if (emittedNotices.has(notice.reason)) return;
       emittedNotices.add(notice.reason);
-      noticeSink.write(`${renderPriorIdentityNotice(notice)}\n`);
+      compositionNotices.push(renderPriorIdentityNotice(notice));
     };
     const emitConfigNotice = (prior: readonly ConfigPriorOutcome[] | undefined): void => {
       if (prior === undefined || prior.length === 0) return;
@@ -3119,8 +3114,8 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     // index) travel the same channel and never change an outcome.
     const warnings =
       scope.value.outcome === "unbound"
-        ? [UNBOUND_SCOPE_WARNING, ...maintenanceWarnings]
-        : maintenanceWarnings;
+        ? [UNBOUND_SCOPE_WARNING, ...maintenanceWarnings, ...compositionNotices]
+        : [...maintenanceWarnings, ...compositionNotices];
     return warnings.length === 0 ? program.program : withScopeWarnings(program.program, warnings);
   };
 };
