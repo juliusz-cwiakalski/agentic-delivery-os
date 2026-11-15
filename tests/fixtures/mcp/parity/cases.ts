@@ -61,6 +61,11 @@ import {
   gatesRuntime,
   runVerify,
 } from "../../../fixtures/verify-gates/cases/harness";
+import {
+  declaredRead,
+  narrowedMap,
+  validEqualityMap,
+} from "../../../fixtures/verify-gates/suite-map/cases";
 import { SYNTHETIC_BRAND } from "../../../golden/helpers";
 import { type CaseOutcome, fromEnvelope, fromToolResult } from "./harness";
 
@@ -491,6 +496,7 @@ const recordedGatesRuntime = (
     readGateSet: () => base.readGateSet(),
     appendVerification: (record) => base.appendVerification(record),
     nowMs: () => base.nowMs(),
+    ...(overrides.suiteMap === undefined ? {} : { readSuiteMap: overrides.suiteMap }),
   };
 };
 
@@ -543,6 +549,17 @@ const gateCase = (
     readsCli: async () => (await run("cli")).reads,
     readsMcp: async () => (await run("mcp")).reads,
   };
+};
+
+const suiteMapGateFacts = () => {
+  const facts = clone(gatesBaseFacts());
+  const names = [...EXPECTED_JOBS, "TS aggregate check"];
+  facts.workflow = { outcome: "read", names };
+  facts.checkRuns = {
+    ok: true,
+    value: { items: names.map((name) => run(name, "succeeded")), pageItemCount: names.length },
+  };
+  return facts;
 };
 
 const redGateFacts = () => {
@@ -645,6 +662,16 @@ export const GATE_CASES: readonly ToolParityCase[] = [
       kind: "failure",
       code: "state.store.torn",
     },
+  ),
+  gateCase(
+    "gate-equality-map",
+    { facts: suiteMapGateFacts(), suiteMap: declaredRead(validEqualityMap()) },
+    { kind: "success", schemaVersion: "delivery.verify-gates.v1" },
+  ),
+  gateCase(
+    "gate-narrowed",
+    { facts: suiteMapGateFacts(), suiteMap: declaredRead(narrowedMap()) },
+    { kind: "failure", code: "verify.narrowed-scope" },
   ),
   gateThrowingCase(),
 ];

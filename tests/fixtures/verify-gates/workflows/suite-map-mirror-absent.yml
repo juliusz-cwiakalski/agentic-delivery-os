@@ -1,0 +1,12 @@
+name: CI
+on:
+  pull_request:
+jobs:
+  ts-aggregate:
+    name: TS-aggregate-check
+    runs-on: ubuntu-latest
+    steps: [{ run: echo ok }]
+  other:
+    name: other job
+    runs-on: ubuntu-latest
+    steps: [{ run: echo ok }]

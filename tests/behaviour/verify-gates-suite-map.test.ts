@@ -24,6 +24,7 @@ import {
   resolveVerifySuiteMapFromConfig,
   suiteBreadthCitationOf,
 } from "../../packages/core/src/domain/index";
+import { combinedRuntime, gatesRuntime, runVerify } from "../fixtures/verify-gates/cases/harness";
 import { createNoNetworkGuard } from "../fixtures/verify-gates/cases/network-guard";
 import {
   atBoundMap,
@@ -291,5 +292,82 @@ describe("TC-SRES-005 the four-outcome totality matrix", () => {
     });
     expect(outcome.kind).toBe("unmirrored");
     expect(suiteBreadthCitationOf(outcome)).toBeUndefined();
+  });
+});
+
+describe("TC-SMAP-001/002/003 the handler refuses every defect before any source read", () => {
+  const recordingRuntime = () => {
+    const calls: string[] = [];
+    const base = gatesRuntime();
+    const wrap =
+      <Args extends readonly unknown[], Result>(name: string, call: (...args: Args) => Result) =>
+      (...args: Args): Result => {
+        calls.push(name);
+        return call(...args);
+      };
+    return {
+      calls,
+      runtime: {
+        ...base,
+        readLifecycle: wrap("readLifecycle", base.readLifecycle),
+        readRepository: wrap("readRepository", base.readRepository),
+        readWorkflow: wrap("readWorkflow", base.readWorkflow),
+        readOpenPullRequests: wrap("readOpenPullRequests", base.readOpenPullRequests),
+        readDeliveryRequestDetail: wrap(
+          "readDeliveryRequestDetail",
+          base.readDeliveryRequestDetail,
+        ),
+        readCheckRuns: wrap("readCheckRuns", base.readCheckRuns),
+        readWorkItem: wrap("readWorkItem", base.readWorkItem),
+      },
+    };
+  };
+
+  const runWith = async (read: () => ReturnType<typeof resolveVerifySuiteMap>) => {
+    const recording = recordingRuntime();
+    const result = await runVerify(
+      {
+        ...combinedRuntime(),
+        gates: { ...recording.runtime, readSuiteMap: read },
+      },
+      ["gates", "GH-300"],
+    );
+    return { result, calls: recording.calls };
+  };
+
+  test("a valid declaration reports and names the mirror", async () => {
+    const { result } = await runWith(() => resolveVerifySuiteMap(validEqualityMap()));
+    expect(result.exitCode).toBe(0);
+    const data = result.envelope?.data as Record<string, unknown>;
+    expect(data.mirrorsJob).toBe("job-01");
+    expect(data.suiteBreadth).toEqual([...REFERENCE_SUITES]);
+  });
+
+  test("every defect refuses config.value.invalid with the closed error key set", async () => {
+    for (const [name, raw] of Object.entries(DEFECTS)) {
+      const { result, calls } = await runWith(() => resolveVerifySuiteMap(raw));
+      expect(result.exitCode, name).toBe(1);
+      expect(result.envelope?.data, name).toBeUndefined();
+      const error = result.envelope?.error as Record<string, unknown> | undefined;
+      expect(error?.code, name).toBe("config.value.invalid");
+      expect(error?.category, name).toBe("user");
+      expect(error?.retryable, name).toBe(false);
+      expect(error?.consequence, name).toBe("not_landed");
+      expect(Object.keys(error ?? {}).sort(), name).toEqual(
+        ["category", "code", "consequence", "remediationHint", "retryable", "summary"].sort(),
+      );
+      expect(error?.summary, name).toBe("A configuration value is invalid.");
+      expect(calls, name).toEqual([]);
+      expect(result.stderr, name).not.toContain("cause:");
+    }
+  });
+
+  test("every defect renders deterministically", async () => {
+    const raw = DEFECTS["schema-version-unsupported"];
+    const first = await runWith(() => resolveVerifySuiteMap(raw));
+    const second = await runWith(() => resolveVerifySuiteMap(raw));
+    expect(second.result.stdout).toBe(first.result.stdout);
+    expect(second.result.stderr).toBe(first.result.stderr);
+    expect(second.result.exitCode).toBe(first.result.exitCode);
   });
 });

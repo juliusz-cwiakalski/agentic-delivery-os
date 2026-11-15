@@ -184,3 +184,57 @@ export const ninePlusUnmirroredMap = (): VerifySuiteMap => {
   const local = Array.from({ length: 9 }, (_, index) => `unmirrored-${index + 1}`);
   return map([{ job: "job-01", suites: ["tests"] }], local);
 };
+
+/** An injected declared read over one map. */
+export const declaredRead =
+  (value: VerifySuiteMap) =>
+  (): { readonly ok: true; readonly declared: true; readonly value: VerifySuiteMap } => ({
+    ok: true,
+    declared: true,
+    value,
+  });
+
+/** An injected undeclared read (absent document or parsed-without-node). */
+export const undeclaredRead = (): { readonly ok: true; readonly declared: false } => ({
+  ok: true,
+  declared: false,
+});
+
+/** An injected unusable-document read: the config-shaped refusal. */
+export const invalidRead = (
+  detail?: string,
+): { readonly ok: false; readonly code: "config.value.invalid"; readonly detail?: string } => ({
+  ok: false,
+  code: "config.value.invalid",
+  ...(detail === undefined ? {} : { detail }),
+});
+
+/** A read that counts its own invocations. */
+export const countedRead = (
+  outcome:
+    | ReturnType<typeof declaredRead>
+    | { readonly ok: true; readonly declared: false }
+    | { readonly ok: false; readonly code: "config.value.invalid" },
+): {
+  readonly read: () => typeof outcome;
+  readonly calls: string[];
+} => {
+  const calls: string[] = [];
+  return {
+    read: () => {
+      calls.push("readSuiteMap");
+      return outcome;
+    },
+    calls,
+  };
+};
+
+/** A narrowing against the standard green workflow's `job-01`. */
+export const narrowedJob01Map = (): VerifySuiteMap =>
+  map([{ job: "job-01", suites: REFERENCE_SUITES }], ["tests"]);
+
+/** The maximal narrowing against the reference job name (golden-visible mirror). */
+export const maxNarrowingReferenceMap = (): VerifySuiteMap => {
+  const mirror = Array.from({ length: 32 }, (_, index) => `suite-${index + 1}`);
+  return map([{ job: REFERENCE_JOB, suites: mirror }], mirror.slice(0, 31));
+};

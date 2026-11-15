@@ -13,7 +13,10 @@ import {
   evaluateVerifyGates,
   isFullHexSha,
   renderVerifyGatesFailureSummary,
+  renderVerifyGatesNarrowedFailureSummary,
   resolveOpenPr,
+  resolveVerifySuiteBreadth,
+  suiteBreadthCitationOf,
   type VerifyGatesCheckRunPage,
   type VerifyGatesDetail,
   type VerifyGatesFacts,
@@ -32,6 +35,7 @@ import {
   VERIFY_GATES_OPEN_PR_LIMIT,
   VERIFY_GATES_SCHEMA_VERSION,
   type VerifyGatesReport,
+  type VerifySuiteMapRead,
 } from "@delivery-os/core/contracts";
 import { failureFromValue, type McpToolResult } from "../output/payload.js";
 
@@ -76,6 +80,8 @@ export type GateReportToolRuntime = {
     limit: number,
   ) => Promise<VerifyGatesReadResult<VerifyGatesCheckRunPage>>;
   readonly readWorkItem: (changeRef: string) => Promise<VerifyGatesReadResult<VerifyGatesWorkItem>>;
+  /** The one bounded configuration-document read (GH-300 DM-9); absent = undeclared. */
+  readonly readSuiteMap?: () => VerifySuiteMapRead;
 };
 
 const GRAMMAR_SUMMARY = "result=failed; variant=unknown; missing=-";
@@ -192,9 +198,16 @@ export const runGateReportTool = async (
   runtime: GateReportToolRuntime,
   changeRef: string,
 ): Promise<McpToolResult<VerifyGatesReport>> => {
+  const mapRead = runtime.readSuiteMap?.() ?? { ok: true, declared: false };
+  if (!mapRead.ok) return failureFromValue({ kind: "config", code: mapRead.code });
+  const map = mapRead.declared ? mapRead.value : undefined;
   const repository = runtime.readRepository();
   const evaluation = lifecycleEvaluation(runtime, changeRef);
   const workflow = runtime.readWorkflow();
+  const breadth = map === undefined ? undefined : resolveVerifySuiteBreadth({ map, workflow });
+  if (breadth?.kind === "unmirrored" || breadth?.kind === "uncorroborated") {
+    return failureFromValue({ kind: "config", code: "config.value.invalid" });
+  }
   const provider = await readProviderFacts(runtime, changeRef, repository);
   const facts: VerifyGatesFacts = {
     changeRef,
@@ -204,6 +217,17 @@ export const runGateReportTool = async (
     ...provider,
   };
   const evaluated = evaluateVerifyGates(facts);
+  if (breadth?.kind === "narrower") {
+    return failureFromValue({
+      kind: "verify",
+      code: "verify.narrowed-scope",
+      summary: renderVerifyGatesNarrowedFailureSummary(evaluated, {
+        mirrorsJob: breadth.mirrorsJob,
+        mirrorBreadth: breadth.mirrorBreadth,
+      }),
+    });
+  }
+  const citation = breadth === undefined ? undefined : suiteBreadthCitationOf(breadth);
   if (evaluated.overall === "pass") {
     const data: VerifyGatesReport = {
       schemaVersion: VERIFY_GATES_SCHEMA_VERSION,
@@ -212,6 +236,9 @@ export const runGateReportTool = async (
       overall: "pass",
       summary: evaluated.summary,
       gates: evaluated.gates,
+      ...(citation === undefined
+        ? {}
+        : { suiteBreadth: [...citation.suiteBreadth], mirrorsJob: citation.mirrorsJob }),
     };
     return { ok: true, data };
   }

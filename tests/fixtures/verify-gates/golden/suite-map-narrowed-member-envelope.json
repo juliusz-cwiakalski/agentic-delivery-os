@@ -1,0 +1,21 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-verify-gates-fixture",
+  "exitCode": 1,
+  "timing": {
+    "totalMs": 7
+  },
+  "error": {
+    "code": "verify.narrowed-scope",
+    "category": "user",
+    "retryable": false,
+    "consequence": "not_landed",
+    "remediationHint": "Run the local gate over the declared full suite breadth, or update the declared suite map so the local suite set matches the mirrored CI job, then re-run the gates.",
+    "summary": "result=unknown; gates=0/0 passed, 0 failed, 0 unknown; scope=narrowed mirror=job-01 breadth=tests,lint,format,typecheck,boundaries,prompt-conformance,help-guide-coverage,exports-parity"
+  },
+  "detail": {
+    "suiteBreadth": [
+      "tests"
+    ]
+  }
+}

@@ -1,0 +1,2 @@
+example-product: config.value.invalid
+cause: breadth=tests,lint,format,typecheck,boundaries,prompt-conformance,help-guide-coverage,exports-parity omitted=1

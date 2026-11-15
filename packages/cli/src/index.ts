@@ -20,6 +20,10 @@ import {
   FALLBACK_INVOCATION_CODE,
   type ProjectionClass,
   RESULT_SCHEMA_VERSION,
+  VERIFY_GATES_MAX_EXPECTED_JOB_NAME_CHARS,
+  VERIFY_SUITE_ID_PATTERN,
+  VERIFY_SUITE_MAX_BREADTH,
+  VERIFY_SUITE_MAX_ID_CHARS,
 } from "@delivery-os/core/contracts";
 import { classifyThrown, resolveAppErrorCode } from "./classify.js";
 import { type CliStreams, redact, serializeStreamLine, writeOutput } from "./output/serialize.js";
@@ -140,6 +144,8 @@ type Outcome =
       readonly value?: unknown;
       /** The record-shaped envelope detail (TDR-0027); projected only when declared. */
       readonly detail?: CommandResultDetail;
+      /** The one bounded identifier-only cause payload (GH-300 DEC-16). */
+      readonly cause?: string;
       /** Safe structured notices; emitted once each on stderr in every mode. */
       readonly warnings?: readonly string[];
     };
@@ -184,15 +190,85 @@ const explicitRemediationHint = (value: unknown): string | undefined => {
  * `detail` (lease-conflict evidence prose) is not record-shaped and never
  * reaches the envelope.
  */
+const SUITE_ID = new RegExp(VERIFY_SUITE_ID_PATTERN);
+
+/** True when the value carries a control character or a line break. */
+const hasControlCharacter = (value: string): boolean => {
+  for (const character of value) {
+    const point = character.codePointAt(0) ?? 0;
+    if (point <= 0x1f || (point >= 0x7f && point <= 0x9f)) return true;
+  }
+  return false;
+};
+
+/** Read the explicitly declared bounded `detail.suiteBreadth` member. */
+const explicitSuiteBreadth = (value: unknown): readonly string[] | undefined => {
+  if (!Array.isArray(value)) return undefined;
+  if (value.length === 0 || value.length > VERIFY_SUITE_MAX_BREADTH) return undefined;
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const entry of value) {
+    if (typeof entry !== "string") return undefined;
+    if (entry.length === 0 || entry.length > VERIFY_SUITE_MAX_ID_CHARS) return undefined;
+    if (!SUITE_ID.test(entry) || hasControlCharacter(entry) || seen.has(entry)) return undefined;
+    seen.add(entry);
+    result.push(entry);
+  }
+  return result;
+};
+
 const explicitDetail = (value: unknown): CommandResultDetail | undefined => {
   if (!isRecord(value) || !isRecord(value.detail)) return undefined;
   const raw = value.detail;
+  const detail: { holder?: string; suiteBreadth?: readonly string[] } = {};
   const holder = raw.holder;
-  if (holder === undefined) return undefined;
-  if (typeof holder !== "string" || holder.length === 0) return undefined;
-  if (holder.length > COMMAND_FAILURE_DETAIL_MAX_CHARS) return undefined;
-  if (/[\r\n\u0080-\u009f]/.test(holder)) return undefined;
-  return { holder };
+  if (typeof holder === "string" && holder.length > 0) {
+    if (holder.length <= COMMAND_FAILURE_DETAIL_MAX_CHARS && !hasControlCharacter(holder)) {
+      detail.holder = holder;
+    }
+  }
+  const suiteBreadth = explicitSuiteBreadth(raw.suiteBreadth);
+  if (suiteBreadth !== undefined) detail.suiteBreadth = suiteBreadth;
+  return Object.keys(detail).length === 0 ? undefined : detail;
+};
+
+/** The derived bounds of the one bounded cause line (GH-300 DEC-16). */
+const CAUSE_MIRROR_MAX_CHARS = 14 + VERIFY_GATES_MAX_EXPECTED_JOB_NAME_CHARS;
+const CAUSE_BREADTH_MAX_CHARS = 15 + 8 * VERIFY_SUITE_MAX_ID_CHARS + 7 + 9 + 2;
+
+const explicitCausePayload = (value: unknown): string | undefined => {
+  if (!isRecord(value)) return undefined;
+  const cause = value.cause;
+  if (typeof cause !== "string" || cause.length === 0 || hasControlCharacter(cause)) {
+    return undefined;
+  }
+  const line = `cause: ${cause}`;
+  if (cause.startsWith("mirror=")) {
+    const job = cause.slice("mirror=".length);
+    if (job.length === 0 || job.length > VERIFY_GATES_MAX_EXPECTED_JOB_NAME_CHARS) return undefined;
+    if (job.trim() !== job) return undefined;
+    return line.length <= CAUSE_MIRROR_MAX_CHARS ? cause : undefined;
+  }
+  if (cause.startsWith("breadth=")) {
+    const body = cause.slice("breadth=".length);
+    const omitted = / omitted=(\d+)$/.exec(body);
+    const list = omitted === null ? body : body.slice(0, omitted.index);
+    const identifiers = list.split(",");
+    if (identifiers.length === 0 || identifiers.length > 8) return undefined;
+    for (const identifier of identifiers) {
+      if (identifier.length === 0 || identifier.length > VERIFY_SUITE_MAX_ID_CHARS)
+        return undefined;
+      if (!SUITE_ID.test(identifier)) return undefined;
+    }
+    if (omitted !== null) {
+      const count = Number.parseInt(omitted[1] ?? "", 10);
+      if (!Number.isInteger(count) || count < 1 || count > VERIFY_SUITE_MAX_BREADTH - 8) {
+        return undefined;
+      }
+    }
+    return line.length <= CAUSE_BREADTH_MAX_CHARS ? cause : undefined;
+  }
+  return undefined;
 };
 
 /**
@@ -217,11 +293,13 @@ const failureOutcome = (entry: ErrorTableEntry, value?: unknown): Outcome => {
   const hint = suppressed ? undefined : explicitRemediationHint(value);
   const resolved = hint === undefined ? entry : { ...entry, remediationHint: hint };
   const detail = explicitDetail(value);
+  const cause = resolved.code === "config.value.invalid" ? explicitCausePayload(value) : undefined;
   return {
     type: "failure",
     entry: resolved,
     ...(summary === undefined ? {} : { summary }),
     ...(detail === undefined ? {} : { detail }),
+    ...(cause === undefined ? {} : { cause }),
     ...(value === undefined ? {} : { value }),
   };
 };
@@ -361,6 +439,7 @@ const buildEnvelope = (
 const diagnosticFor = (outcome: Outcome, brand: BrandIdentity): string | undefined => {
   if (outcome.type === "success") return undefined;
   const lines = [`${brand.binaryName}: ${outcome.message ?? outcome.entry.code}`];
+  if (outcome.cause !== undefined) lines.push(`cause: ${outcome.cause}`);
   if (outcome.summary !== undefined) lines.push(`summary: ${outcome.summary}`);
   return `${lines.join("\n")}\n`;
 };

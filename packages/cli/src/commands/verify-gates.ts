@@ -17,8 +17,12 @@ import {
   evaluateDeclaredBattery,
   isFullHexSha,
   ownerAttentionLabels,
+  renderSuiteMapCauseLine,
   renderVerifyGatesFailureSummary,
+  renderVerifyGatesNarrowedFailureSummary,
   resolveOpenPr,
+  resolveVerifySuiteBreadth,
+  suiteBreadthCitationOf,
   type VerifyGatesCheckRunPage,
   type VerifyGatesDetail,
   type VerifyGatesFacts,
@@ -28,6 +32,8 @@ import {
   type VerifyGatesRepositoryFacts,
   type VerifyGatesWorkflowFacts,
   type VerifyGatesWorkItem,
+  type VerifySuiteBreadthCitation,
+  type VerifySuiteBreadthEvaluation,
   verifyGatesUnknownIdentity,
 } from "@delivery-os/core";
 import {
@@ -46,6 +52,8 @@ import {
   VERIFY_GATES_MAX_MEMBERS,
   VERIFY_GATES_OPEN_PR_LIMIT,
   VERIFY_GATES_SCHEMA_VERSION,
+  type VerifySuiteMap,
+  type VerifySuiteMapRead,
 } from "@delivery-os/core/contracts";
 import type { CommandHandler } from "../index.js";
 
@@ -116,6 +124,12 @@ export type VerifyGatesCommandRuntime = {
   readonly readWorkItem: (changeRef: string) => Promise<VerifyGatesReadResult<VerifyGatesWorkItem>>;
   /** The additive cross-repository seam; absent keeps the delivered path. */
   readonly members?: VerifyGatesMemberRuntime;
+  /**
+   * The one bounded configuration-document read (GH-300 DM-9): absent means
+   * undeclared. It performs no I/O of its own; the composition memoizes the
+   * single resolution attempt and serves this seam.
+   */
+  readonly readSuiteMap?: () => VerifySuiteMapRead;
   /** The resolved declared gate set (or a classified configuration failure). */
   readonly readGateSet: () =>
     | { readonly ok: true; readonly value: MergeEffectiveGateSet }
@@ -181,14 +195,50 @@ type VerifyGatesSuccess = { readonly ok: true; readonly data: Record<string, unk
 
 const GRAMMAR_SUMMARY = "result=failed; variant=unknown; missing=-";
 
-const failure = (kind: string, code: string, summary?: string): VerifyGatesFailure => ({
+const failure = (
+  kind: string,
+  code: string,
+  summary?: string,
+  extra: {
+    readonly cause?: string;
+    readonly detail?: Readonly<Record<string, unknown>>;
+  } = {},
+): VerifyGatesFailure => ({
   ok: false,
   error: {
     kind,
     code,
     ...(summary === undefined ? {} : { summary }),
+    ...(extra.cause === undefined ? {} : { cause: extra.cause }),
+    ...(extra.detail === undefined ? {} : { detail: extra.detail }),
   },
 });
+
+/** Refuse a map-side breadth contradiction with the table's own config prose. */
+const mapRefusal = (
+  map: VerifySuiteMap,
+  outcome: VerifySuiteBreadthEvaluation,
+): VerifyGatesFailure => {
+  const cause = renderSuiteMapCauseLine(outcome, map.local);
+  return failure("config", "config.value.invalid", undefined, cause === undefined ? {} : { cause });
+};
+
+/** The narrowed-scope refusal, shared by both report paths. */
+const narrowedRefusal = (map: VerifySuiteMap, summary: string): VerifyGatesFailure =>
+  failure("verify", "verify.narrowed-scope", summary, { detail: { suiteBreadth: [...map.local] } });
+
+const breadthCitation = (
+  outcome: VerifySuiteBreadthEvaluation | undefined,
+): VerifySuiteBreadthCitation | undefined =>
+  outcome === undefined ? undefined : suiteBreadthCitationOf(outcome);
+
+/** The report fields appended after every delivered report key (DM-2). */
+const breadthFields = (
+  citation: VerifySuiteBreadthCitation | undefined,
+): Record<string, unknown> =>
+  citation === undefined
+    ? {}
+    : { suiteBreadth: [...citation.suiteBreadth], mirrorsJob: citation.mirrorsJob };
 
 const notAttempted = <T>(
   reason: "address-unresolved" | "not-attempted",
@@ -326,10 +376,25 @@ const crossRepositoryEvaluation = async (
   changeRef: string,
   declared: readonly PlanMemberDeclaration[],
   gateSet: MergeEffectiveGateSet,
+  map: VerifySuiteMap | undefined,
+  workflow: VerifyGatesWorkflowFacts,
 ): Promise<VerifyGatesSuccess | VerifyGatesFailure> => {
+  // The breadth decision precedes every per-member read bundle and the
+  // repository read (DEC-6, AC-F3-6): a narrowed declaration appends nothing.
+  const breadth = map === undefined ? undefined : resolveVerifySuiteBreadth({ map, workflow });
+  if (breadth?.kind === "narrower") {
+    const summary = renderVerifyGatesNarrowedFailureSummary(
+      { overall: "pass", summary: { gates: 0, passed: 0, failed: 0, unknown: 0 }, gates: [] },
+      { mirrorsJob: breadth.mirrorsJob, mirrorBreadth: breadth.mirrorBreadth },
+    );
+    return narrowedRefusal(map as VerifySuiteMap, summary);
+  }
+  if (breadth?.kind === "unmirrored" || breadth?.kind === "uncorroborated") {
+    return mapRefusal(map as VerifySuiteMap, breadth);
+  }
+  const citation = breadthCitation(breadth);
   const repository = runtime.readRepository();
   const evaluation = lifecycleEvaluation(runtime, changeRef);
-  const workflow = runtime.readWorkflow();
   const workItem = await runtime.readWorkItem(changeRef);
   const readings: { readonly member: PlanMemberDeclaration; readonly facts: VerifyGatesFacts }[] =
     [];
@@ -355,15 +420,16 @@ const crossRepositoryEvaluation = async (
     batteryEntries: gateSet.batteryEntries,
     landings: members.readLandingObservations?.(changeRef) ?? [],
     reviews: members.readReviewObservations?.(changeRef) ?? [],
+    ...(citation === undefined ? {} : { breadth: citation }),
   });
   // DEC-22: the durable ledger never carries the report's `member` discriminator.
   // Each member record is projected to the delivered record shape, preserving
   // `id`, `verdict`, `reason`, and `citation` in record order and count.
-  const ledgerGates = report.gates.map(({ id, verdict, reason, citation }) => ({
+  const ledgerGates = report.gates.map(({ id, verdict, reason, citation: gateCitation }) => ({
     id,
     verdict,
     reason,
-    citation,
+    citation: gateCitation,
   }));
   const record: MergeGateVerificationRecord = {
     schema: MERGE_GATE_VERIFICATION_SCHEMA,
@@ -406,6 +472,11 @@ export const createVerifyGatesHandler = (runtime: VerifyGatesCommandRuntime): Co
     ) {
       return failure("input", "input.value.rejected", GRAMMAR_SUMMARY);
     }
+    // The one bounded configuration-document classification precedes every
+    // gates source read (DM-9, DEC-18, AC-F1-4).
+    const mapRead = runtime.readSuiteMap?.() ?? { ok: true, declared: false };
+    if (!mapRead.ok) return failure("config", mapRead.code);
+    const map = mapRead.declared ? mapRead.value : undefined;
     const gateSet = runtime.readGateSet();
     if (!gateSet.ok) {
       return failure(
@@ -417,11 +488,26 @@ export const createVerifyGatesHandler = (runtime: VerifyGatesCommandRuntime): Co
     const members = runtime.members;
     const declared = members?.readMembers(ref);
     if (members !== undefined && declared !== undefined && declared.length > 0) {
-      return crossRepositoryEvaluation(runtime, members, ref, declared, gateSet.value);
+      // The one workflow read is hoisted above the breadth decision on this
+      // path and feeds corroboration and every member's CI gate (NFR-4).
+      const workflow = runtime.readWorkflow();
+      return crossRepositoryEvaluation(
+        runtime,
+        members,
+        ref,
+        declared,
+        gateSet.value,
+        map,
+        workflow,
+      );
     }
     const repository = runtime.readRepository();
     const evaluation = lifecycleEvaluation(runtime, ref);
     const workflow = runtime.readWorkflow();
+    const breadth = map === undefined ? undefined : resolveVerifySuiteBreadth({ map, workflow });
+    if (breadth?.kind === "unmirrored" || breadth?.kind === "uncorroborated") {
+      return mapRefusal(map as VerifySuiteMap, breadth);
+    }
     const provider = await readProviderFacts(runtime, ref, repository);
     const facts: VerifyGatesFacts = {
       changeRef: ref,
@@ -431,6 +517,16 @@ export const createVerifyGatesHandler = (runtime: VerifyGatesCommandRuntime): Co
       ...provider,
     };
     const evaluated = evaluateDeclaredBattery(facts, gateSet.value.batteryEntries);
+    // The narrowed refusal precedes the verdict projection, the classified
+    // unknown reuse, and both appends (DEC-6, DEC-7).
+    if (breadth?.kind === "narrower") {
+      const summary = renderVerifyGatesNarrowedFailureSummary(evaluated, {
+        mirrorsJob: breadth.mirrorsJob,
+        mirrorBreadth: breadth.mirrorBreadth,
+      });
+      return narrowedRefusal(map as VerifySuiteMap, summary);
+    }
+    const citation = breadthCitation(breadth);
     const ownerGate = evaluated.gates.find((gate) => gate.id === "owner-gate");
     const ownerNames = ownerGate?.citation.names.find((list) => list.kind === "owner-labels");
     const record: MergeGateVerificationRecord = {
@@ -464,6 +560,7 @@ export const createVerifyGatesHandler = (runtime: VerifyGatesCommandRuntime): Co
         overall: "pass",
         summary: evaluated.summary,
         gates: evaluated.gates,
+        ...breadthFields(citation),
         ...(capsule === undefined ? {} : { capsule }),
       };
       return { ok: true, data } satisfies VerifyGatesSuccess;
