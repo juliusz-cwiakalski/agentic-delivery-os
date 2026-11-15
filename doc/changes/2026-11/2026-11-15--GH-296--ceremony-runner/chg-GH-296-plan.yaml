@@ -4,24 +4,26 @@
 # directly.
 #
 # SOURCES (single source of truth):
-#   - Spec:     ./chg-GH-296-spec.md (v1.0; 9 capabilities F-1..F-9; data model
-#               DM-1..DM-9; NFR-1..NFR-14; 45 ACs in §17 — AC-F1-1..4,
-#               AC-F2-1..3, AC-F3-1..7, AC-F4-1..6, AC-F5-1..3, AC-F6-1..3,
+#   - Spec:     ./chg-GH-296-spec.md (v1.1; 9 capabilities F-1..F-9; data model
+#               DM-1..DM-9; NFR-1..NFR-14; 49 ACs in §17 — AC-F1-1..4,
+#               AC-F2-1..4, AC-F3-1..8, AC-F4-1..8, AC-F5-1..3, AC-F6-1..3,
 #               AC-F7-1..5, AC-F8-1..3, AC-F9-1..6, AC-NFR2-1, AC-NFR8-1,
-#               AC-NFR9-1, AC-NFR12-1, AC-NFR14-1; §18 rollout order binds the
-#               phase order below; Appendix B constraints C-1..C-10; Appendix C
-#               documentation deltas; Appendix D single-source tier mapping;
-#               Appendix E testability notes; DEC-1..DEC-15; RSK-1..RSK-12;
-#               OQ-1..OQ-3).
-#   - Tests:    ./chg-GH-296-test-plan.md (v1.0, 60 TCs TC-CEREMONY-001..060;
+#               AC-NFR9-1, AC-NFR12-1, AC-NFR14-1; edge cases E-1..E-20; §18
+#               rollout order binds the phase order below; Appendix B
+#               constraints C-1..C-10; Appendix C documentation deltas;
+#               Appendix D single-source tier mapping; Appendix E testability
+#               notes; DEC-1..DEC-18; RSK-1..RSK-12; OQ-1..OQ-3).
+#   - Tests:    ./chg-GH-296-test-plan.md (v1.1, 64 TCs TC-CEREMONY-001..064;
 #               §4 layer table; §4.3 exit/outcome oracle; §4.4 catch-up matrix
 #               CU-01..CU-09; §4.5 tier verdict matrix T-01..T-11; §4.6 defect
-#               corpus D-01..D-14; §4.7 resume matrix R-01..R-08; §4.8 gate
+#               corpus D-01..D-18; §4.7 resume matrix R-01..R-08; §4.8 gate
 #               mapping; binding fixture contract §4.1 and non-vacuity contract
-#               §4.2; §7 automation map; GAP-1..GAP-6; OQ-T1..OQ-T5, OQ-T5
-#               resolved). GAP-1 (this plan's TC mapping) is satisfied by the
-#               TC -> PHASE MAP below WITHOUT reshaping any TC's oracle,
-#               identity, exit, bound, or AC/NFR mapping; no TC id changes.
+#               §4.2; §7 automation map; §7.1 phase ownership of all 64 ids;
+#               GAP-1..GAP-7; OQ-T1..OQ-T9, OQ-T5 resolved). GAP-1 and GAP-7
+#               (this plan's TC mapping, including the v1.1 ids
+#               TC-CEREMONY-061..064) are satisfied by the TC -> PHASE MAP
+#               below WITHOUT reshaping any TC's oracle, identity, exit,
+#               bound, or AC/NFR mapping; no TC id changes.
 #   - PM record: ./chg-GH-296-pm-notes.yaml (milestone M2, story M2-S3,
 #               variant full; the two recorded scope decisions carried into the
 #               spec as DEC-1 and DEC-2).
@@ -112,16 +114,22 @@
 #   phase scope. A semantic assertion change in any delivered suite is the
 #   escalation trigger this plan reserves.
 #
-# TC -> PHASE MAP (60 ids = TC-CEREMONY-001..060; every id is owned by exactly
+# TC -> PHASE MAP (64 ids = TC-CEREMONY-001..064; every id is owned by exactly
 #   one phase — the phase which first makes its complete suite set green.
 #   Suite halves proven earlier are named in that phase's gate without a second
 #   TC row):
-#   Phase 1 declaration and validator (5): TC-CEREMONY-007 (vocabulary/bounds
+#   Phase 1 declaration and validator (6): TC-CEREMONY-007 (vocabulary/bounds
 #            half; its six-built-in validation half completes in Phase 5),
-#            TC-CEREMONY-008, 009, 010, 049
+#            TC-CEREMONY-008, 009, 010, 049, 061 (fixture/validator half over
+#            the committed derivation corpus; its six-built-in scopeKey sweep
+#            rides the TC-CEREMONY-007 completion in Phase 5)
 #   Phase 2 record boundary (1): TC-CEREMONY-040 (plus the state-read half of
 #            TC-CEREMONY-022)
-#   Phase 3 runner engine (7): TC-CEREMONY-020, 021, 022, 023, 025, 039, 047
+#   Phase 3 runner engine (10): TC-CEREMONY-020, 021, 022, 023, 025, 039, 047,
+#            062, 063, 064 (062's retro-declaration assertions are carried by
+#            TC-CEREMONY-014 in the Phase 5 gate; 063/064 run fixture
+#            declarations mirroring the `morning-brief` and mirror-sync shapes
+#            and are re-exercised on the production declarations in Phase 5)
 #   Phase 4 catch-up (4): TC-CEREMONY-026, 027, 028, 029
 #   Phase 5 built-ins and retro levels (16): TC-CEREMONY-011, 012, 013, 014,
 #            015, 016, 017, 018, 019, 024, 043, 044, 045, 046, 048, 052 (plus
@@ -161,21 +169,34 @@ phases:
   # contracts data plus one pure validator used by built-ins and projects
   # alike: the `delivery.ceremony.declarations.v1` member set and bounds
   # (16 ceremonies/document, 12 phases, 32 steps, 16 inputs, 8 targets,
-  # 1 MiB, id grammar <= 64, unique); the closed vocabularies (step kinds,
-  # output slots, verification modes, trigger events, cadences, catch-up
-  # modes, assess verdicts, run verdicts, carry-over reasons — GAP-2 literals
-  # pinned here as contract constants); the note contract
-  # `delivery.ceremony.note.v1` with `scopeKey` as the idempotency anchor and
-  # the retro fixed members; the run/step payload schema shapes
-  # (`delivery.ceremony.run.v1`, `delivery.ceremony.step.v1`), tier verdict
+  # triggers 1..8 with at most one `schedule` per declaration, 1 MiB, id
+  # grammar <= 64, unique); the closed vocabularies (step kinds, output
+  # slots, verification modes, trigger events, cadences, catch-up modes,
+  # scope-key derivations (`literal`, `repository`, `note`), recorded
+  # trigger kinds (`schedule`, `event`, `catch-up`, `explicit`), recorded
+  # trigger resolutions (`note`, `declaration`, `unspecified`), assess
+  # verdicts, run verdicts, carry-over reasons — GAP-2 literals pinned here
+  # as contract constants); the required `scopeKey` declaration member with
+  # its closed derivation set and one precedence rule (a `note` derivation
+  # only where a note is required; no default, no implied source; a missing
+  # derivation, a `note` derivation without a note requirement, a malformed
+  # literal token, or two `schedule` triggers refused as
+  # `ceremony.declaration.invalid` naming `scopeKey` or `triggers[]` —
+  # DEC-16, E-19); the note contract `delivery.ceremony.note.v1` with
+  # `scopeKey` as the idempotency anchor and the retro fixed members; the
+  # run/step payload schema shapes (`delivery.ceremony.run.v1`,
+  # `delivery.ceremony.step.v1`) carrying the recorded trigger kind,
+  # resolution, and declared-trigger/set members (DM-3), tier verdict
   # types (DM-7), and comparison record types (DM-8); and the two additive
   # error identities (`ceremony.note-invalid`, `ceremony.declaration.invalid`)
   # under the new `ceremony` domain kind, with the reserved two-segment
   # allowlist 52 -> 53 and the documented table 136 -> 138 — code rows and
   # the documented rows land in ONE commit because the error-table sync gate
   # lives in `pnpm check` (Appendix C #2, delivering). No behaviour change
-  # runs yet: no engine, no state, no surface. The defect corpus
-  # (D-01..D-14) and the bound ladder are committed fixtures.
+  # runs yet: no engine, no state, no surface. The defect corpus (D-01..D-18,
+  # the D-15..D-18 scopeKey/trigger half), one committed declaration per
+  # legal derivation with the repository-identity fixture, and the bound
+  # ladder including the 8/9-trigger rung are committed fixtures.
   #
   # Gate:
   #   pnpm typecheck
@@ -188,7 +209,7 @@ phases:
   - id: 1
     title: "Ceremony declaration contracts, closed vocabularies, and the single validator"
     kind: delivery
-    summary: "feat(ceremony): declare the ceremony vocabulary and single validator; delivers AC-F2-1..AC-F2-3 and AC-NFR8-1; TC-CEREMONY-007 (vocabulary half), TC-CEREMONY-008..010, TC-CEREMONY-049"
+    summary: "feat(ceremony): declare the ceremony vocabulary, scope-key derivation, and single validator; delivers AC-F2-1..AC-F2-4 and AC-NFR8-1; TC-CEREMONY-007 (vocabulary half), TC-CEREMONY-008..010, TC-CEREMONY-049, TC-CEREMONY-061 (fixture half; its six-built-in sweep rides the Phase 5 completion of TC-CEREMONY-007)"
     leases:
       - repo:main-tools
     scope:
@@ -242,7 +263,7 @@ phases:
   - id: 2
     title: "Ceremony record boundary: run/step kinds, fenced appends, folds, and the artifact family"
     kind: delivery
-    summary: "feat(ceremony): land the ceremony record boundary and artifact family; delivers the DM-3..DM-6 substrate for AC-F4-3 and AC-F8-1; TC-CEREMONY-040 (plus the state half of TC-CEREMONY-022)"
+    summary: "feat(ceremony): land the ceremony record boundary and artifact family; delivers AC-F8-1 and the DM-3..DM-6 substrate for AC-F4-3 (delivered in Phase 3); TC-CEREMONY-040 (plus the state half of TC-CEREMONY-022)"
     leases:
       - repo:main-tools
     scope:
@@ -269,13 +290,27 @@ phases:
   # compaction, resume (F-4; DM-2 intake; C-1, C-3, C-5).
   #
   # Goal: execute a validated declaration deterministically over injected
-  # ports. Intake resolves the declaration, validates the note when one is
-  # required (absent note -> `input.value.rejected`; missing member, wrong
-  # ceremony, invalid window -> `ceremony.note-invalid` naming the field; a
-  # `--window` disagreement names both; a note without `scopeKey` refuses
-  # before any output — SC-M2-S3-02), computes the run identity
-  # `(ceremony, scopeKey, window)`, and returns the recorded verdict with
-  # `data.reused: true` on an identical identity with zero appends. The
+  # ports. Intake resolves the declaration; resolves its scope key by the
+  # F-2 derivation precedence (the note's `scopeKey` where the declaration
+  # derives from `note`, else the `literal` token or the `repository`
+  # identity, a disagreement refused — DEC-16); resolves the window by the
+  # F-1 order (the note's window, else `--window`, else the single declared
+  # cadence's window derived from the injected clock at its UTC unit — a
+  # note-less event-triggered declaration declares none, so an invocation
+  # without `--window` is refused as `input.value.rejected` naming
+  # `--window` before any read or write — DEC-18, E-18); validates the note
+  # when one is required (absent note -> `input.value.rejected`; missing
+  # member, wrong ceremony, invalid window -> `ceremony.note-invalid` naming
+  # the field; a `--window` disagreement names both; a note without
+  # `scopeKey` or naming a trigger the declaration does not declare refuses
+  # before any output — SC-M2-S3-02, DEC-17); records an explicit run's
+  # trigger as `kind: "explicit"` with resolution `note`, `declaration`, or
+  # `unspecified` naming the declared set, never counted as a scheduled or
+  # event obligation (DEC-17, E-20); computes the run identity
+  # `(ceremony, scopeKey, window)` — note-less declarations included, keyed
+  # by their declared derivation and resolved window; and returns the
+  # recorded verdict with `data.reused: true` on an identical identity with
+  # zero appends. The
   # agenda executes in declared order; each step writes its declared slot,
   # reads it back, and is `verified` only when the read-back passes the
   # declared mode; a failed verification stops the agenda, makes the run
@@ -291,14 +326,14 @@ phases:
   #
   # Gate:
   #   pnpm typecheck
-  #   bun test tests/behaviour/{ceremony-run,ceremony-resume,ceremony-notes}.test.ts
+  #   bun test tests/behaviour/{ceremony-run,ceremony-run-triggers,ceremony-resume,ceremony-notes}.test.ts
   #   bun test tests/behaviour/ceremony-state-boundary.test.ts
   #   bun run scripts/checks/ambient-globals.ts
   # ---------------------------------------------------------------------------
   - id: 3
     title: "Runner engine: note intake, run identity, artifact-verified agenda, compaction, and resume"
     kind: delivery
-    summary: "feat(ceremony): run artifact-verified agendas with intake, compaction, and resume; delivers AC-F4-1..AC-F4-4, AC-F4-6, AC-F9-1; TC-CEREMONY-020..023, TC-CEREMONY-025, TC-CEREMONY-039, TC-CEREMONY-047"
+    summary: "feat(ceremony): run artifact-verified agendas with intake, window resolution, explicit-run trigger recording, compaction, and resume; delivers AC-F3-8, AC-F4-1..AC-F4-4, AC-F4-6..AC-F4-8, and AC-F9-1; TC-CEREMONY-020..023, TC-CEREMONY-025, TC-CEREMONY-039, TC-CEREMONY-047, TC-CEREMONY-062..064"
     leases:
       - repo:main-tools
     scope:
@@ -309,9 +344,11 @@ phases:
         - packages/core/src/domain/index.ts
         - packages/core/src/state/ceremony.ts
         - tests/behaviour/ceremony-run.test.ts
+        - tests/behaviour/ceremony-run-triggers.test.ts
         - tests/behaviour/ceremony-resume.test.ts
         - tests/behaviour/ceremony-notes.test.ts
       folders:
+        - tests/fixtures/ceremony/declarations
         - tests/fixtures/ceremony/notes
     interactions:
       - kind: contract-file
@@ -386,7 +423,12 @@ phases:
   # follow-through verification declared and asserted FIRST, fixed-schema
   # validation on write and read-back, addendum-not-rewrite, null-retro
   # success, read-only fold over the delivered evidence sidecar and
-  # `retro.run` records, actions as a handoff section only), and the
+  # `retro.run` records, actions as a handoff section only — the declaration
+  # carrying exactly the four sub-R1 level triggers and no `change-merged`
+  # trigger, each manual level run recorded as `trigger.kind: "explicit"`
+  # with resolution `note` through the recording rule Phase 3 delivers, and
+  # a note naming an undeclared trigger refused as `input.value.rejected`
+  # — DEC-17), and the
   # mirror-sync planning (declared write set, clean/declared-base
   # preconditions with no force path, `artifact-equals-source` both
   # directions, dry-run default, the delivered commit primitive composed and
@@ -410,7 +452,7 @@ phases:
   - id: 5
     title: "Six built-in declarations with one parity suite and the four retro ceremony levels"
     kind: delivery
-    summary: "feat(ceremony): ship the six built-ins with parity and the retro levels; delivers AC-F3-1..AC-F3-7, AC-F4-5, AC-F9-2..AC-F9-6, and the AC-F2-1 completion; TC-CEREMONY-011..019, TC-CEREMONY-024, TC-CEREMONY-043..046, TC-CEREMONY-048, TC-CEREMONY-052 (plus the TC-CEREMONY-007 completion)"
+    summary: "feat(ceremony): ship the six built-ins with parity and the retro levels; delivers AC-F3-1..AC-F3-7, the retro-declaration half of AC-F3-8 (TC-CEREMONY-014; the explicit-run recording rule is delivered in Phase 3), AC-F4-5, AC-F9-2..AC-F9-6, AC-NFR12-1, and the AC-F2-1 completion; TC-CEREMONY-011..019, TC-CEREMONY-024, TC-CEREMONY-043..046, TC-CEREMONY-048, TC-CEREMONY-052 (plus the TC-CEREMONY-007 completion)"
     leases:
       - repo:main-tools
     scope:
@@ -570,7 +612,7 @@ phases:
   - id: 8
     title: "Measurement records: duration folds and the committed ceremony-share comparison"
     kind: delivery
-    summary: "feat(ceremony): record run durations and the ceremony-share comparison; delivers AC-F8-1..AC-F8-3; TC-CEREMONY-041..042"
+    summary: "feat(ceremony): record run durations and the ceremony-share comparison; delivers AC-F8-2..AC-F8-3 (AC-F8-1 is delivered in Phase 2 by TC-CEREMONY-040); TC-CEREMONY-041..042"
     leases:
       - repo:main-tools
     scope:
