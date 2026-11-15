@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-FEATURE-PROJECT-GROUPS
 status: Current
 created: 2026-11-14
-last_updated: 2026-11-14
+last_updated: 2026-11-15
 owners: ["engineering"]
 service: delivery-os
-summary: "Project groups: the configuration-only membership document (`<configDirectoryName>/projects.yaml`, schema `delivery.projects.groups.v1`) with load-time validation and its three classified identities, the optional workspace discovery root that locates declared member clones only, the `projects list` group surface under `project-groups.v1` with the closed five-value member health vocabulary and the closed daemon-reachability reasons, the one aggregation clause with its four per-member outcomes and the `data.partial`/`data.degradedMembers[]` projection, and the additive group-scoped `queue list --project` and `status --project` reads."
+summary: "Project groups: the configuration-only membership document (`<configDirectoryName>/projects.yaml`, schema `delivery.projects.groups.v1`) with load-time validation and its three classified identities, the optional workspace discovery root that locates declared member clones only, the `projects list` group surface under `project-groups.v1` with the closed five-value member health vocabulary and the closed daemon-reachability reasons, the one aggregation clause with its four per-member outcomes and the `data.partial`/`data.degradedMembers[]` projection, and the additive group-scoped `queue list --project` and `status --project` reads; the group is never a change's member set, which a cross-repository change declares in its plan."
 links:
-  related_changes: ["GH-309"]
+  related_changes: ["GH-309", "GH-310"]
   related_decisions: ["ODR-0004", "TDR-0022"]
   contracts:
     - "packages/core/src/contracts/projects.ts"
@@ -39,6 +39,13 @@ documented in [Repositories and the Host Overview](feature-projects.md);
 repository key and the board is never group-scoped. The rename that establishes
 the boundary is recorded in
 [ODR-0004](../../decisions/ODR-0004-flat-record-set-rename-projects-to-repos.md).
+
+**Relation to a cross-repository change.** A group defines which repositories
+belong together; a change declares which of them it spans. The change's member
+set is plan data (`members[]`, one entry per member repository) and supplies the
+member refs the queue and gate surfaces use and the repo keys the closeout member
+report carries; the group owns no store and is never the member set. See
+[Machine-Readable Plan Schema](feature-plan-schema.md).
 
 ## Project configuration document
 

@@ -11,6 +11,8 @@
 import {
   classifyVerifyChange,
   classifyVerifyDocument,
+  isCrossRepositoryVerifyGatesReport,
+  renderCrossRepositoryVerifyGatesHuman,
   renderVerifyGatesHuman,
 } from "@delivery-os/core";
 import type {
@@ -137,12 +139,22 @@ export const createVerifyCommandDefinition = (runtime: VerifyCommandRuntime): Co
     flags: [],
     positionals: { max: 2 },
     humanSuccess: true,
+    /**
+     * A cross-repository negative report is data-bearing at exit 1; the
+     * delivered single-target path keeps its error envelope and exit taxonomy.
+     */
+    exitProjection: (data) =>
+      isCrossRepositoryVerifyGatesReport(data) && data.overall === "fail"
+        ? "user-validation"
+        : "success",
     humanText: (data, brand) =>
-      isGatesReport(data)
-        ? renderVerifyGatesHuman(data, brand)
-        : isDeployReport(data)
-          ? renderDeployHuman(data, brand)
-          : undefined,
+      isCrossRepositoryVerifyGatesReport(data)
+        ? renderCrossRepositoryVerifyGatesHuman(data, brand)
+        : isGatesReport(data)
+          ? renderVerifyGatesHuman(data, brand)
+          : isDeployReport(data)
+            ? renderDeployHuman(data, brand)
+            : undefined,
     handler: (invocation) => {
       const grammar = parseGrammar(invocation.positionals);
       if ("ok" in grammar && grammar.ok === false) {

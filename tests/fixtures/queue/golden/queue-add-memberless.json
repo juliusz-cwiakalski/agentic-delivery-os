@@ -1,0 +1,25 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-queue-edge",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 10
+  },
+  "data": {
+    "ref": "GH-310",
+    "entry": {
+      "ref": "GH-310",
+      "repository": "github.com/owner/repo-alpha",
+      "state": "ready",
+      "rankClass": "merge-ready",
+      "priority": 100,
+      "weightClass": "standard",
+      "weightClassSource": "absent",
+      "deps": [],
+      "blocking": []
+    },
+    "edges": [],
+    "result": "added",
+    "degraded": ["daemon-unreachable"]
+  }
+}

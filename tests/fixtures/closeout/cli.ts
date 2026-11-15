@@ -13,9 +13,8 @@ import type {
   CloseoutDiffRead,
   CloseoutExpectedCapsuleEvent,
   CloseoutPromotionRuntime,
-  CloseoutRetroFacts,
-  CloseoutSessionFacts,
   CloseoutTelemetryRuntime,
+  CrossRepositoryCloseoutObservation,
 } from "../../../packages/core/src/contracts/index";
 import { bufferSink, SYNTHETIC_BRAND } from "../../golden/helpers";
 import {
@@ -51,6 +50,8 @@ export type RunCloseoutCliOptions = {
   readonly promotion?: CloseoutPromotionRuntime;
   readonly diffRead?: CloseoutDiffRead;
   readonly telemetry?: CloseoutTelemetryRuntime;
+  /** The injected per-member closeout observations (GH-310 DM-8). */
+  readonly members?: readonly CrossRepositoryCloseoutObservation[];
 };
 
 export const runCloseoutCli = async (
@@ -83,6 +84,7 @@ export const runCloseoutCli = async (
     ...(facts.retro === undefined ? {} : { retro: facts.retro }),
     ...(facts.sessions === undefined ? {} : { sessions: facts.sessions }),
     ...(options.telemetry === undefined ? {} : { telemetry: options.telemetry }),
+    ...(options.members === undefined ? {} : { readMembers: () => options.members }),
   };
   const runtime = createCloseoutCommandRuntime(composition);
   const program: CommandProgram = {

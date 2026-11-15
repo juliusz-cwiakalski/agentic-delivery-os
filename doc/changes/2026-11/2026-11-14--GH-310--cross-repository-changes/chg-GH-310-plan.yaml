@@ -1,0 +1,1605 @@
+# GH-310 delivery plan — machine-readable document (delivery.plan.v1), revision 1.4
+# (2026-11-15). Authored against spec v1.5 (37 ACs, DEC-1..DEC-23, DM-1..DM-11,
+# NFR-1..NFR-9, DoD-1..DoD-15, OQ-3 and OQ-6 resolved-with-deferral) and test
+# plan v1.6 (51 TCs = 50 automated + 1 gate-only) on branch
+# feat/GH-310/cross-repository-changes from main-tools tip 404e9bf8.
+#
+# REVISION NOTE (revision 1.4, review-iteration-1 remediation, spec v1.5 /
+# test plan v1.6 reconciliation): the code review of iteration 1
+# (code-review/review-iter-1.yaml, status FAIL, 2 high + 5 medium findings)
+# found that two delivered seams contradict the delivered contracts — the
+# member gate records were handed to the ledger unprojected (F-1, high), and
+# the member `ticket-to-done` transition targeted a synthesized
+# `<changeRef>@<repoKey>` entity because DM-8 carried no member issue identity
+# (F-2, high) — plus a member-mode aggregate that reported `satisfied` while a
+# declared member refused (F-3/F-5, medium). Spec v1.5 pins the remedy as
+# DEC-22 (the append is projected to the delivered ledger shape), DEC-23 (the
+# mode-scoped worst-case aggregate fold) and the new `issue?` carrier on
+# `CrossRepositoryCloseoutObservation` (DM-8), and corrects the AC-F2-2
+# vocabulary (F-15) and the read-seam deferral statement (F-16). This revision
+# ADDS phase id 6 (delivery, lease-taking) as the remediation phase and re-points
+# the ownership of the amended assertions to it; NO earlier phase id, title, or
+# ordering changed, the AC set stays 37 and the TC set 51 (no AC or TC added,
+# removed, or renumbered), and phases 1..5 keep their existing declarations
+# except the phase-5 tracker/scope wording that now refers to phases 1-5.
+#
+# REVISION NOTE (revision 1.3, spec v1.4 / test plan v1.4 reconciliation):
+# DoR iteration-2 plan-side residuals closed: N2 — phase 3 now declares
+# tests/behaviour/cross-repository-determinism.test.ts, the closeout-removal
+# extension targets TC-XQUEUE-003 uses are declared in phase 2, the
+# TC-XCTR-002 extension targets plan-readonly.test.ts and
+# verify-gates-read-budget.test.ts are declared in phase 5, and the new static
+# home tests/types/cross-repository-report.type-test.ts is declared in phase 3
+# (and phase 5 for the TCs that run it); N7 — the phase-5 commit subject is
+# `test(GH-310): parity goldens, contract continuity and the full gate battery`,
+# not `docs(...)`, because the commit ships test suites, goldens, and a
+# changeset; N8 — the reproducible suite-home count is 38 unique `.test.ts`
+# paths in test plan section 7 plus the new
+# tests/types/cross-repository-report.type-test.ts static probe = 39
+# suite/type-test paths (the earlier "41" figure counted two fixture `.ts`
+# paths and is corrected). No DoR iteration-2 plan-side residual is deferred.
+# Spec v1.4 also pins DM-11 (distinct `CrossRepositoryVerifyGatesReport`/
+# `CrossRepositoryVerifyGateRecord`; delivered `VerifyGatesReport` unchanged),
+# the corrected member verdict rule including `gates.ci`, the synthetic
+# unresolvable-gate citation shape, the mode-scoped closeout mapping, and
+# `overall: "fail"` as the sole carrier of `verify.gates.failed`. No phase
+# count, phase id, or phase ordering changed; the AC set stays 37 and the TC
+# set 51.
+#
+# REVISION NOTE (revision 1.2, spec v1.3 / test plan v1.3 reconciliation):
+# DoR iteration-1 findings closed in the plan: B3 (declared scope missed suite
+# homes the test plan names) — every suite file named in test plan section 7 is
+# now inside at least one phase's scope, with the owning phase chosen by
+# first-fully-green; B4 (member-less `queue add` parity golden provenance) — the
+# exact golden `tests/fixtures/queue/golden/queue-add-memberless.json` is
+# captured from main-tools tip 404e9bf8 before any production edit and declared
+# in phase 1. No DoR iteration-1 finding is deferred. Spec v1.3 pinned DM-9
+# (per-(member, gate) `gates[]`/`summary` projection) and DM-10
+# (`MemberLandingObservation`), and introduced the scoped DEC-18 gate-report
+# supersession. Revision 1.3 reconciles that text with v1.4's DM-11 distinct
+# report types. The AC set is unchanged at 37 and the TC set unchanged at 51;
+# no phase count, phase id, or phase ordering changed.
+#
+# REVISION NOTE (revision 1.1, spec v1.2 / test plan v1.2 reconciliation):
+# spec v1.2 pinned the four literals revision 1.0 reported as ambiguities —
+# DEC-18 (report `overall` mapping), DEC-19 (`landed`/`landingPosition` are
+# injected observation facts and add no provider read), DEC-20
+# (`CrossRepositoryCloseoutObservation` supplied through the closeout
+# composition; no new port/operation/store; durable carrier deferred), and
+# DEC-21 (`queue add` returns the delivered payload plus additive ordered
+# `data.members[]` `{ref, repoKey, lane}`; member-less add byte-identical).
+# Revision 1.2 supersedes revision 1.1's DEC-18 wording with the v1.3 scoped
+# supersession (pass|fail only; `unknown` is never emitted).
+#
+# One ticket, one PR against main-tools, six delivery phases. Every phase is
+# an independently committable slice that is green at its own boundary, and
+# every phase is ONE delivery commit through the commit primitive (conventional
+# subject, scope GH-310 per repo convention, every body/footer line <= 100
+# characters; lifecycle phase 9 lints the branch range with
+# ./scripts/lint-commit-range.sh --base main-tools). Extra phase data (content
+# obligations, AC/TC ownership, done-when, gate commands) is carried in YAML
+# comments so the parsed document stays schema-strict: the only parsed keys are
+# schemaVersion, workItemRef, tier, defaultLeases, defaultWeightClass and
+# phases (id, title, kind, summary, scope, interactions, doneArtifacts,
+# leases, weightClass, leaseClass). The plan declares phases and scope only;
+# progress is a pm-notes `notes:` entry naming the plan phase id, commit hash,
+# and test result; there is no `tasks` key and no progress log.
+#
+# SOURCES (single source of truth; this plan invents no requirement):
+#   - Spec:      ./chg-GH-310-spec.md v1.5 — F-1..F-7; DM-1..DM-11;
+#                NFR-1..NFR-9; NG-1..NG-9; DEC-1..DEC-23; RSK-1..RSK-14;
+#                37 ACs AC-F1-1..AC-NFR7-1 (section 17; AC-F2-2 carries the
+#                v1.5 `held` + `dependency-open` vocabulary); DoD-1..DoD-15
+#                (section 17.1) with per-condition plan-phase ownership;
+#                OQ-1..OQ-6 (section 14; OQ-3 and OQ-6 resolved-with-deferral,
+#                OQ-6 now naming the unwired member READ seam beside the
+#                observation carriers); Appendix A pinned literals 1..28
+#                (row 27 ledger append projection, row 28 member-mode
+#                aggregate fold); Appendix C constraints C-1..C-9.
+#   - Test plan: ./chg-GH-310-test-plan.md v1.6 — 51 TCs in 11 families
+#                TC-XPLAN-001..TC-XGATE-001; coverage matrix 37/37 ACs;
+#                section 6 fixture/gate environment (including the 404e9bf8
+#                member-less queue-add golden); section 7 suite homes;
+#                section 8.3 SG-1..SG-7 plus DoR-1/DoR-2 closure and the
+#                reconciliation rule. The v1.6 amendment re-points the
+#                DEC-22/DEC-23/DM-8 assertion cells (TC-XDOD-001/002,
+#                TC-XCTR-002/007, TC-XCLOSE-001/002/003, TC-XQUEUE-002/003,
+#                TC-XDEP-001) without adding, removing, or renumbering a TC.
+#   - Review:    ./code-review/review-iter-1.yaml — iteration 1, status FAIL;
+#                F-1 (high), F-2 (high), F-3/F-5 (medium) remediated by phase 6;
+#                F-15/F-16 (info) confirmed already satisfied; the remaining
+#                findings (F-4, F-6..F-14, F-17..F-20) are NOT closed by this
+#                plan revision and stay open in the review record.
+#   - PM notes:  ./chg-GH-310-pm-notes.yaml — gate environment
+#                (TMPDIR=$GATE_TMPDIR; commit.gpgsign=false), fixture
+#                decision (two local temporary repositories, injected facts,
+#                no live network), delivery conventions (DEC-14), and the
+#                PATH="$PWD/node_modules/.bin:$PATH" lifecycle workaround.
+#   - Blueprint: doc/planning/oss-tooling/milestones/m2/contracts.md
+#                ("Cross-repository change plan shape", "Queue and lane
+#                representation"), architecture.md ("Cross-repository change"),
+#                test-scenarios.md (SC-M2-S19-01..05 inherited by name).
+#   - Repo truth verified at plan time: packages/core/src/contracts/plan.ts,
+#                domain/plan-validate.ts (unknown top-level/per-phase keys are
+#                silently ignored today); domain/queue-graph.ts
+#                `canonicalQueueRef` + `foldQueueGraph` keyed by canonical ref;
+#                domain/queue-readiness.ts already emits `dependency-open`;
+#                domain/queue-lease.ts / app/queue.ts release keyed by the
+#                entry's own repository; domain/verify-gates.ts
+#                `evaluateDeclaredBattery` + the CLI handler in
+#                commands/verify-gates.ts; domain/closeout.ts twelve-step
+#                transaction + app/queue.ts `queueRemovalForCloseout`;
+#                cli/edge.ts is the verification/queue/closeout composition;
+#                cli/production.ts is the production wiring;
+#                contracts/projects.ts exports the delivered repo-key grammar
+#                PROJECT_KEY_PATTERN (reused, never duplicated).
+#
+# PHASE ORDER AND WHY:
+#   1 Plan declaration first — every other surface consumes the declared member
+#     set, and the schema must be strengthened (validated, echoed, closed) before
+#     anything depends on it. Plan-surface member-less parity is proven here.
+#   2 Queue representation next — member ref identity, one entry/lane per member,
+#     per-member edges, readiness, release and removal are the substrate for
+#     dependency ordering and for the member refs used by gates and closeout.
+#     The plan-cycle half of AC-F4-2 is already produced by phase 1; the queue
+#     cycle/refusal halves land here.
+#   3 Shared definition of done — consumes the declared set and decides green;
+#     per-member CI corroboration, blockers, evidence order, and the single
+#     review flow ride the same verification composition.
+#   4 Closeout member report — per-member merge truth, cleanup, issue closure and
+#     landing removal; consumes the member refs and per-member removal from
+#     phase 2.
+#   5 Parity, contract continuity, read-only/determinism/hermetic proofs, M2
+#     bookkeeping, and the full gate battery — the consolidated release
+#     boundary of the member feature as first authored (spec v1.4).
+#   6 Review-iteration-1 remediation — the two seams phase 3 and phase 4 could
+#     not prove while every member test stubbed the appender and the ledger
+#     contract was never exercised, and while DM-8 carried no member issue
+#     identity: the ledger-compatible append projection (DEC-22), the member
+#     `issue` transition target (DM-8), and the mode-scoped worst-case aggregate
+#     fold (DEC-23). It runs last because it is a correction of delivered
+#     behaviour against a reopened specification (spec v1.5), not a new slice,
+#     and because it must re-prove the gate battery at the corrected HEAD.
+#
+# AC OWNERSHIP (37/37; exactly one owning phase each; an earlier phase may
+# produce a partial verdict, which is additive and never transfers ownership):
+#   phase 1  AC-F1-1, AC-F1-2, AC-F1-3, AC-F1-4, AC-F1-5, AC-F1-6
+#   phase 2  AC-F2-1, AC-F2-2, AC-F2-3, AC-F2-4, AC-F2-5, AC-F4-1, AC-F4-2
+#   phase 3  AC-F3-3, AC-F3-4, AC-F3-5, AC-F3-6, AC-F3-7, AC-F3-8,
+#            AC-F6-1, AC-F6-2, AC-F6-3, AC-F6-4, AC-NFR6-1
+#   phase 4  AC-F5-4
+#   phase 5  AC-F7-1, AC-NFR1-1, AC-NFR2-1, AC-NFR3-1, AC-NFR5-1,
+#            AC-NFR7-1
+#   phase 6  AC-F3-1, AC-F3-2, AC-F5-1, AC-F5-2, AC-F5-3, AC-NFR4-1
+#   Count: 6 + 7 + 11 + 1 + 6 + 6 = 37.
+#   RE-POINTED AT REVISION 1.4 (review iteration-1 remediation, spec v1.5):
+#   AC-F3-1 and AC-F3-2 gained the append-then-read-through-the-real-state-
+#   module assertion (DEC-22), AC-F5-1/AC-F5-2/AC-F5-3 gained the `issue`
+#   transition target and the DEC-23 aggregate fold, and AC-NFR4-1 gained the
+#   delivered-ledger-shape qualifier — so phase 6 is their FINAL owner; phases
+#   3/4/5 produced the earlier partial verdicts and keep their delivery
+#   commits. AC-F4-1 and AC-F4-2 are NOT re-pointed: iteration 1 did not touch
+#   their text or behaviour, so they stay with phase 2. AC-F2-2 keeps phase 2
+#   as owner (its v1.5 wording correction is the `held`/`dependency-open`
+#   vocabulary the delivered code already emits); only the TC cells that
+#   literalise it move to phase 6.
+#
+# TC OWNERSHIP (51/51; ownership = the phase that lands the asserted content
+# and where the TC's verdict is first fully green):
+#   phase 1  TC-XPLAN-001..TC-XPLAN-007, TC-XPAR-001            (8)
+#   phase 2  TC-XQUEUE-001, TC-XQUEUE-004, TC-XQUEUE-005,
+#            TC-XQUEUE-006, TC-XDEP-002, TC-XBOUND-003           (6)
+#   phase 3  TC-XDOD-003..TC-XDOD-009, TC-XREV-001..TC-XREV-006,
+#            TC-XCTR-006, TC-XBOUND-001, TC-XBOUND-004           (16)
+#   phase 4  TC-XCLOSE-004, TC-XBOUND-002, TC-XPAR-002          (3)
+#   phase 5  TC-XPAR-003, TC-XCTR-001, TC-XCTR-003, TC-XCTR-004,
+#            TC-XCTR-005, TC-XHERM-001, TC-XHERM-002,
+#            TC-XGATE-001                                        (8)
+#   phase 6  TC-XDOD-001, TC-XDOD-002, TC-XCTR-002, TC-XCTR-007,
+#            TC-XCLOSE-001, TC-XCLOSE-002, TC-XCLOSE-003,
+#            TC-XQUEUE-002, TC-XQUEUE-003, TC-XDEP-001           (10)
+#   Count: 8 + 6 + 16 + 3 + 8 + 10 = 51. TC-XGATE-001 is verification-only
+#   (gate evidence), never automated test code; it is still owned here.
+#   RE-POINTED AT REVISION 1.4: test plan v1.6 amends the assertion cells of
+#   TC-XDOD-001/002 (real state-module append→read plus the unprojected-record
+#   refusal, DEC-22), TC-XCTR-002 (the one append is a real delivered-shape
+#   write) and TC-XCTR-007 (the ledger projection contract), TC-XCLOSE-001/002
+#   (member `issue` target, no synthesized identity, DEC-23 folds) and
+#   TC-XCLOSE-003 (mixed and all-members-unsafe folds, `closeout.branch.unsafe`
+#   reachable), and the F-15 vocabulary cells of TC-XQUEUE-002/003 and
+#   TC-XDEP-001 — so phase 6 becomes the final owner of exactly those ten. No
+#   TC was added, removed, or renumbered, and TC-XGATE-001 stays with phase 5
+#   (phase 6 re-establishes its verdict by re-running the battery; no TC
+#   content changed).
+#   TEST PLAN v1.4 RECONCILIATION (unchanged by 1.4): spec v1.2/v1.3/v1.4 add
+#   no AC or TC ID. Spec v1.4 asserts DM-11 (distinct
+#   `CrossRepositoryVerifyGatesReport`/`CrossRepositoryVerifyGateRecord`
+#   discriminated by `definitionOfDone`) in TC-XPAR-003/TC-XCTR-007, the
+#   corrected member-verdict rule over records AND `gates.ci` in
+#   TC-XDOD-001/002/003/004/005, the N3 synthetic citation in TC-XDOD-008, the
+#   mode-scoped closeout mapping in TC-XCLOSE-001/003, and the `overall: "fail"`
+#   classification carrier in TC-XDOD-002.
+#
+# DoD MAPPING (spec section 17.1 "Proven in plan" -> this plan's phases):
+#   DoD-1 -> 1; DoD-2 -> 1; DoD-3 -> 2; DoD-4 -> 3; DoD-5 -> 3; DoD-6 -> 3;
+#   DoD-7 -> 2; DoD-8 -> 4 with the fold/`issue`/all-unsafe cells re-proven in
+#   6 (AC-F5-1..AC-F5-3); DoD-9 -> 3; DoD-10 -> every phase (per-surface
+#   parity) with the consolidated proof in 5; DoD-11 -> 2 + 3 with the
+#   identity-row/kind count re-proven in 5 (AC-NFR7-1/TC-XCTR-007) and held
+#   open through 6 (no new row or kind in the remediation);
+#   DoD-12 -> 3 + 4 with the cross-surface write budget and the real
+#   append→read re-proven in 6 (AC-NFR4-1/TC-XCTR-002/TC-XDOD-001);
+#   DoD-13 -> lifecycle phase 7 (@doc-syncer); DoD-14 -> per phase, roll-up in
+#   6 (the last phase); DoD-15 -> lifecycle phase 11 (quality gates / PR
+#   creation), not a plan phase.
+#
+# COMMIT CONVENTION (one commit per plan phase; subjects declared here so the
+# commit path and review agree; scope is the workItemRef per repo convention):
+#   phase 1  feat(GH-310): plan member declarations with closed validation and echo
+#   phase 2  feat(GH-310): per-member queue entries, dependency edges, and release
+#   phase 3  feat(GH-310): cross-repository definition of done and review flow
+#   phase 4  feat(GH-310): per-member closeout report and landing removal
+#   phase 5  test(GH-310): parity goldens, contract continuity and the full gate battery
+#   phase 6  fix(GH-310): ledger-compatible gate append, member issue identity and aggregate fold
+#
+# CONSTRAINTS BINDING ON EVERY PHASE (spec Appendix C; do not reshape at
+# delivery):
+#   - Envelope continuity (C-1/NFR-1/AC-NFR1-1): every new key is additive and
+#     optional and lives under `data`; the envelope stays the five-field
+#     `delivery.result.v1` shape; zero `ok` or `command` top-level fields.
+#   - Identity reuse (C-3/NFR-7/AC-NFR7-1/DEC-13): NO new error-table row and
+#     NO new domain kind. Reuse plan.schema.invalid, queue.precondition.unmet,
+#     queue.dependency-cycle, verify.gates.failed, and the delivered closeout
+#     outcome/skip vocabularies. If an identity ever proves necessary, STOP and
+#     declare it explicitly with its feature-result-contract row in the same
+#     commit (the error-table sync gate is bidirectional); NFR-7 forbids it, so
+#     the expected change is zero rows and zero documentation edits.
+#   - Member-less parity is absolute (C-1/NFR-8/AC-F1-3/AC-F5-4/AC-F7-1): a
+#     plan/change without `members[]` is byte-identical to pre-change behaviour
+#     on plan, gates, closeout and queue, with identical exits. Parity goldens
+#     are READ UNCHANGED, never regenerated post-change. The named pre-change
+#     references already exist on main-tools at 404e9bf8:
+#     tests/golden/plan/validate-baseline.json,
+#     tests/golden/plan/{diff-outside,overlap-parallel,overlap-sequence}.json,
+#     tests/golden/plan-text.test.ts,
+#     tests/fixtures/verify-gates/golden/{success-data.json,human-success.txt,
+#     failure-summary.txt}, tests/fixtures/closeout/golden/{envelope-data.json,
+#     human.txt}, tests/fixtures/queue/golden/{queue-list,queue-plan,
+#     lanes-list,...}.json. If any named member-less golden is nevertheless
+#     absent, capture it at the branch base BEFORE the first production edit,
+#     commit it in the owning phase, and record the command in pm-notes; a
+#     post-change regeneration is allowed only with a review-visible diff and a
+#     recorded reason. Envelope `runId` and `timing` are the only normalized
+#     keys; `reviewFlow.runId` is pinned and never normalized.
+#   - Member refs (C-4/DEC-2/AC-F2-4): the member form is
+#     `<canonicalChangeRef>@<repoKey>`, bounded by QUEUE_MAX_REF_CHARS = 64.
+#     Canonicalization is EXTENDED, never narrowed: the delivered
+#     `<PREFIX>-<digits>` form canonicalizes exactly as before and
+#     `ref-not-canonical` never applies to a declared member ref. Reconcile
+#     resolves the change-ref part before the `@`.
+#   - Bounds (C-5/DEC-10): PLAN_MAX_MEMBERS = 8, PLAN_MAX_MEMBER_DEPENDS_ON = 8,
+#     PLAN_MAX_MEMBER_GATES = 16, VERIFY_GATES_MAX_MEMBERS = 8,
+#     CLOSEOUT_MAX_MEMBERS = 8; member ref <= 64 chars. A declaration must never
+#     be valid where it cannot be reported. `blockingMembers[]` is never
+#     truncated; report-level truncation may never remove a blocking member.
+#   - Fail-closed CI (C-2/DEC-4/NFR-5): `gates.ci` is closed
+#     pass|fail|unavailable|absent; member verdict is closed pass|fail|unknown;
+#     `unavailable` and `absent` are never green and `unknown` is never a pass.
+#   - Review seam (C-6/DEC-17/AC-F6-4): inputs are injected
+#     `ReviewObservation` values { repoKey, pullRequest, verdicts[] } supplied
+#     through the existing verification composition; no store, no command, no
+#     live model call. The durable production carrier beyond the injection is
+#     deferred and non-blocking (OQ-3).
+#   - Report types and `overall` (DEC-18/DM-11/DM-2/AC-F3-2/AC-F3-4/RSK-10):
+#     the delivered `VerifyGatesReport` is NOT widened or re-typed. It keeps the
+#     literal `overall: "pass"`, `gates[]: VerifyGateRecord[]` with no `member`,
+#     its failure envelope, and its exits for every report without
+#     `definitionOfDone`. A distinct additive `CrossRepositoryVerifyGatesReport`
+#     carries the same required delivered fields (`schemaVersion`, `changeRef`,
+#     `target`, `summary`, `gates[]`) plus `overall: "pass" | "fail"`,
+#     `definitionOfDone`, `blockingMembers[]`, and `reviewFlow`, with
+#     `gates[]: CrossRepositoryVerifyGateRecord[]` (required `member`). The
+#     command emits the union discriminated by the PRESENCE of
+#     `definitionOfDone`. For the cross-repository type only, exactly three
+#     delivered behaviours differ: (1) `overall` may be `"fail"`; (2) a negative
+#     report is data-bearing — the delivered "a failure emits no `data`" rule
+#     does not apply — and the delivered `verify.gates.failed` classification is
+#     carried by `overall: "fail"` itself, with NO separate classification field
+#     and no error envelope; (3) `gates[]` records are the cross-repository type
+#     with a REQUIRED `member`. Mapping: green -> overall: pass / exit 0,
+#     blocked -> overall: fail / exit 1, incomplete -> overall: fail / exit 1.
+#     `overall: "unknown"` is NEVER emitted by this type, so the delivered
+#     classified-unknown / verify.gates.unavailable exit-2 path is untouched.
+#     RSK-10 mitigation: the phase-5 contract suite and the
+#     `tests/types/cross-repository-report.type-test.ts` static probe prove the
+#     member-less literal type/value and unchanged failure envelope.
+#   - Member verdict and status rule (DM-2/DM-3/DEC-3/DEC-4/AC-F3-1..AC-F3-5):
+#     a member's `verdict` is mechanical over BOTH its gate records and its CI
+#     reading — `pass` iff every declared record for that member is `pass` AND
+#     `gates.ci` is `pass`; `fail` iff any record is `fail` OR `gates.ci` is
+#     `fail`; `unknown` otherwise (any record `unknown`, or `gates.ci`
+#     `unavailable`/`absent`), so all-pass records with unavailable/absent CI are
+#     never `pass`. `definitionOfDone.status` aggregates: `blocked` iff any
+#     member is `fail`, any member's `gates.ci` is `unavailable`, or any member
+#     carries a synthetic unresolvable-identifier record; `incomplete` iff none
+#     of those hold and at least one member is `unknown` (with `absent` CI and an
+#     unestablished resolvable-gate reading named as its instances); `green` iff
+#     every member is `pass`. `blocked` wins over `incomplete`, and
+#     `blockingMembers[]` names every member that is not `pass`, in declared
+#     order.
+#   - Gate-record projection (DM-9/DM-11/AC-F3-1/AC-F3-2/AC-F3-7): the
+#     cross-repository `gates[]` carries one `CrossRepositoryVerifyGateRecord`
+#     per declared (member, gate) evaluation — members in declared order, then
+#     each member's declared gate order — being the delivered `VerifyGateRecord`
+#     fields (`id`, `verdict`, `reason`, `citation`) plus a REQUIRED `member`
+#     holding the member `repoKey`; no cross-repository record exists without a
+#     member. `summary.gates` equals the record count and
+#     `passed`/`failed`/`unknown` count records by verdict. An unresolvable
+#     declared identifier contributes exactly one `unknown` record shaped
+#     exactly as: `id` = the declared identifier, `member` = the declaring
+#     `repoKey`, `verdict: unknown`, `reason: read-failed` (delivered
+#     vocabulary), `citation` = the delivered citation shape carrying
+#     `identity: { changeRef }` only, `sources: []`, `counts: []`, `names: []`,
+#     and `reasons: ["read-failed"]` — no provider source, count, name list,
+#     branch, or SHA is invented or attributed to a real read (N3). The
+#     single-repository report keeps the delivered `VerifyGateRecord[]` with no
+#     `member` field.
+#   - Injected landing/merge truth (DEC-19/DM-10/DM-4/NFR-6/AC-F3-6/
+#     AC-NFR6-1): `landed`, `landingPosition`, and per-member merge truth arrive
+#     as injected `MemberLandingObservation` entries, one per declared member
+#     `{ repoKey, merged, headSha?, landingPosition? }`, supplied through the
+#     verification composition (DM-10); `landingPosition` is a 1-based integer
+#     present only when `merged` is true. They are never obtained by an
+#     additional provider read, and no repo-diff or merge reader is added. The
+#     per-member read budget is unchanged: one open-PR page, one detail read,
+#     one check-run page per declared member, zero retries, zero pagination.
+#   - Closeout carrier and mapping (DEC-20/DEC-12/DM-8/DM-5/AC-F5-1/AC-F5-3):
+#     per-member merge truth, branch, and issue-closure facts arrive as
+#     `CrossRepositoryCloseoutObservation` entries, one per declared member
+#     `{ repoKey, pullRequest, merged, headSha?, branch, issue?, issueClosure? }`,
+#     supplied through the closeout composition. `issue?` is the member's
+#     tracker work-item identity and the ONLY permitted target of a member
+#     `ticket-to-done` transition; a member without it reports
+#     `issueClosure: skipped-noop` and plans no transition, and no entity
+#     identity is ever synthesized from `repoKey`, the member ref, or the change
+#     ref (DEC-12/DEC-23). No new port, no new provider operation, and no
+#     durable store are added; the durable production carrier
+#     beyond the injection is deferred and non-blocking (OQ-6). Per-member
+#     `cleanup`/`issueClosure` are computed from that member's observation plus
+#     its own closeout operations, NEVER by parsing free-form step `detail`,
+#     under the mode-scoped mapping — cleanup plan: would-apply | satisfied |
+#     would-refuse | skipped-gap; cleanup apply: applied | satisfied | refused |
+#     skipped-gap; issueClosure plan: would-apply | satisfied | skipped-noop |
+#     skipped-gap; issueClosure apply: applied | satisfied | skipped-noop |
+#     skipped-gap. Exactly one value per field per member; the aggregate step
+#     outcome is never rewritten by a single member value.
+#   - Ledger-compatible gate append (DEC-22/DM-9/DM-11/NFR-4/AC-F3-1/AC-F3-2/
+#     AC-NFR4-1/RSK-12): the cross-repository report keeps `member` on every
+#     `CrossRepositoryVerifyGateRecord`, but the ONE appended
+#     `MergeGateVerificationRecord` carries the projected records — `member`
+#     dropped, `id`/`verdict`/`reason`/`citation` preserved in record order and
+#     count — so the delivered closed-key validation, the post-append equality
+#     check, and read tolerance accept it and the change's verification history
+#     never reads `torn`. `MergeGateVerificationRecord`, `GATE_VERDICT_KEYS`,
+#     `packages/core/src/state/merge.ts`, and every ledger consumer are NOT
+#     widened.
+#   - Member-mode aggregate fold (DEC-23/DM-5/AC-F5-1/AC-F5-2/AC-F5-3/RSK-13):
+#     the member-mode `branch-cleanup` and `ticket-to-done` step outcomes are a
+#     deterministic worst-case fold over the declared members' mode-scoped
+#     values in declared order with precedence `failed|refused` > `skipped-gap`
+#     > `applied|would-apply` > `satisfied` > `skipped-noop`, plan values folded
+#     only in plan mode (`would-refuse` in the refusal tier) and apply values
+#     only in apply mode. Any member refusal makes the aggregate `refused`, so
+#     the delivered `closeout.branch.unsafe` refusal stays reachable; the
+#     aggregate `ticket-to-done` folds over the combined operation set, so the
+#     delivered change-level transition to the change's own tracked item is
+#     never dropped.
+#   - `queue add` member payload (DEC-21/DM-6/AC-F2-1): on a plan declaring
+#     members, `queue add` returns the delivered `queue add` payload unchanged
+#     plus an additive ordered `data.members[]` array of
+#     `{ ref, repoKey, lane }` in declared order; auto-declared `dependsOn[]`
+#     edges are reported through the delivered `edges[]` field. A change whose
+#     plan declares no members returns the delivered payload byte-identically
+#     (no `members` array, no extra edge), which TC-XPAR-003 proves.
+#   - Hermetic tests (C-7/NFR-3/AC-NFR3-1): default suites use two real local
+#     temporary repositories from tests/fixtures/projects/temp-repos.ts plus
+#     injected provider/review observations; zero live network, zero real second
+#     remote, zero credentials, no ambient $HOME, no daemon, no composition from
+#     this checkout.
+#   - Read/write posture (NFR-4/AC-NFR4-1): plan validation writes nothing; a
+#     full battery evaluation appends exactly ONE gate-verification record
+#     regardless of member count, in the delivered ledger shape (member records
+#     projected, DEC-22), so append-then-read is not `torn`; closeout plan mode
+#     writes nothing.
+#   - Current-truth boundary (C-8/NG-9): doc/spec/** flips only in lifecycle
+#     phase 7 (@doc-syncer), never in a delivery phase. The bidirectional
+#     error-table sync is the only same-commit exception, and it is expected to
+#     be a no-op here (zero new rows).
+#
+# GATE ENVIRONMENT (pm-notes; binding on every phase boundary and the final
+# battery):
+#   TMPDIR=$GATE_TMPDIR \
+#   GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign \
+#   GIT_CONFIG_VALUE_0=false pnpm check
+#   Lifecycle commands (phase complete, commit) run with
+#   PATH="$PWD/node_modules/.bin:$PATH" so the commitlint probe resolves.
+#   Do not use /tmp, /tmp/opencode (tmpfs, different device) or the repo-local
+#   tmp/tmpdir (inside a work tree) as fixture bases.
+#
+# LIFECYCLE PHASE 7 HANDOFF OBLIGATIONS (system_spec_update, @doc-syncer;
+# declared here so nothing is dropped after DoD — NOT plan scope, and no
+# delivery phase edits doc/spec/**):
+#   - doc/spec/features/feature-plan-schema.md: additive `members[]` declaration,
+#     closed member validation, the `plan validate` echo, and the pinned bounds.
+#   - doc/spec/features/feature-verify-gates.md: `definitionOfDone`,
+#     `blockingMembers[]`, the per-(member, gate) `gates[]`/`summary`
+#     projection (DM-9), the scoped `overall` supersession (DEC-18),
+#     per-member CI corroboration over injected `MemberLandingObservation`
+#     facts (DEC-19/DM-10), evidence landing order, `reviewFlow`, and the
+#     bounded per-member read budget. The appended gate-verification record is
+#     the delivered ledger shape with the member records projected (DEC-22) —
+#     the page's "carrying the member records" wording is corrected to the
+#     projected ledger record plus the report's per-member records, and the
+#     unwired member READ seam is stated as current truth (§7.3/OQ-6, F-16).
+#   - doc/spec/features/feature-closeout.md: `data.members[]` report, the
+#     retired "cross-repository closeout" non-goal for the member-reporting
+#     slice, and the injected `CrossRepositoryCloseoutObservation` seam with its
+#     deferred durable production carrier (DEC-20/DM-8/OQ-6). The member
+#     `ticket-to-done` transition targets the observation's `issue` identity and
+#     nothing else (a member without it reports `skipped-noop`, DEC-12), the
+#     change-level transition is always planned, and the member-mode
+#     `branch-cleanup`/`ticket-to-done` aggregates are the DEC-23 worst-case
+#     fold.
+#   - doc/spec/features/feature-scheduling-engine.md: one entry/lane per member,
+#     member-ref identity, per-member dependency edges, release and removal.
+#   - doc/spec/features/feature-delivery-lifecycle.md: one lifecycle over a
+#     declared member set and one review flow.
+#   - Planning corpus: backlog M2-S19 progress marker and status snapshot
+#     (delivered in phase 5); m2/contracts.md ownership line (delivered in
+#     phase 5); doc/00-index.md only if a new feature page is created.
+#   - feature-result-contract.md: verify no row change was needed (expected).
+#
+# ---------------------------------------------------------------------------
+# Phase 1 — Plan member declarations, member-ref identity/bounds, validate echo
+# Commit: feat(GH-310): plan member declarations with closed validation and echo
+#
+# Goal: a change can declare its member set, and the plan surface is stronger
+# (validated, echoed, closed) without weakening any delivered rejection or
+# moving member-less output by a byte (F-1, F-7, DM-1, AC-F1-1..AC-F1-6).
+#
+# Obligations:
+#  1.0 PRE-CHANGE PARITY CAPTURE — BEFORE any production edit in this phase,
+#      with the production code still at the main-tools 404e9bf8 baseline (only
+#      change artifacts may have landed on the branch), capture the delivered
+#      member-less `queue add` payload as
+#      `tests/fixtures/queue/golden/queue-add-memberless.json` (B4). Capture
+#      command: the delivered `queue add` invocation used by
+#      tests/fixtures/queue/cli/harness.ts over the member-less fixture; record
+#      the exact command and the 404e9bf8 provenance in pm-notes. Normalize ONLY
+#      envelope `runId` and `timing`; keep every delivered payload field and the
+#      absence of `data.members[]`/extra `edges[]`. Commit the golden in this
+#      phase's commit. It is read unchanged by phase 5 TC-XPAR-003 and is NEVER
+#      regenerated post-change without a review-visible diff and a recorded
+#      reason (spec RSK-11 / test plan 6.4).
+#  1.1 packages/core/src/contracts/plan.ts — additive optional document-level
+#      `members[]` on the unchanged `delivery.plan.v1` (DEC-1, DM-1): each entry
+#      has required `repoKey`, `slice`, `branch`, `gates` and optional
+#      `pullRequest`, `dependsOn[]` (DEC-15); `PlanValidateData.members?` and
+#      `PlanDocument.members?` echo types; bounds PLAN_MAX_MEMBERS = 8,
+#      PLAN_MAX_MEMBER_DEPENDS_ON = 8, PLAN_MAX_MEMBER_GATES = 16 (DEC-10); the
+#      schema identifier never bumps.
+#  1.2 packages/core/src/domain/plan-members.ts (NEW) — pure member parsing,
+#      member-ref derivation `<canonicalChangeRef>@<repoKey>` and the member-ref
+#      parser shared with the queue; closed member field set; missing/empty
+#      required values and empty `dependsOn` elements are classified (DEC-15);
+#      `repoKey` reuses the delivered PROJECT_KEY_PATTERN grammar from
+#      contracts/projects.ts (no second vocabulary); duplicate repoKey, unknown
+#      dependency target, self edge and dependency cycle are classified; the
+#      derived member ref must be <= QUEUE_MAX_REF_CHARS = 64; every defect is
+#      `plan.schema.invalid` naming `members[i].<field>`; declared order is
+#      preserved; each gate identifier is shape-checked only — a non-empty
+#      string of at most 64 characters (v1.3 DEC-9/B12) — and no configuration
+#      is read; everything is pure (no I/O).
+#  1.3 packages/core/src/domain/plan-validate.ts — parse `members` as a known
+#      key and echo it verbatim in declared order only for a valid plan; an
+#      invalid verdict carries NO `members` key at all (v1.3 AC-F1-2/B7), not a
+#      partial or redacted echo; `plan diff`/`plan overlap` ignore members
+#      entirely (NG-8); unknown top-level/per-phase key tolerance is unchanged.
+#      `planDocumentFromValidateData` carries members only as declaration data,
+#      never as scope.
+#  1.4 CLI plan surface — `plan validate --json` data gains `members[]`; the
+#      lint target reuses the delivered `location.field` carrying
+#      `members[i].<field>` (no new location vocabulary) and exits 1 on invalid;
+#      valid stays exit 0. No new command, no new flag.
+#  1.5 Tests — tests/behaviour/plan-members.test.ts (TC-XPLAN-001, 002, 004,
+#      005, 006, 007), tests/behaviour/plan-members-bounds.test.ts
+#      (TC-XPLAN-003), tests/behaviour/plan-readonly.test.ts extended with the
+#      configuration-read recorder (TC-XPLAN-005), the delivered suites
+#      tests/behaviour/plan-lint.test.ts, plan-validate.test.ts,
+#      plan-validate-rejections.test.ts and plan-determinism.test.ts extended
+#      with the member cases, and tests/behaviour/cross-repository-parity.test.ts
+#      with the plan-surface member-less parity case (TC-XPAR-001).
+#      DECISION: TC-XPLAN-004's closed-field-set assertion also lives in
+#      tests/structure/cross-repository-contract.test.ts (test plan 5.2), so
+#      that suite is created here and TC-XPLAN-004 is first fully green in
+#      phase 1; phase 5 extends the same suite for the continuity cases
+#      (TC-XCTR-001..005/007). Fixture tables live under
+#      tests/fixtures/plan/{members-invalid,members-bounds,members-required,
+#      members-grammar}/; the valid two-member baseline is built by
+#      tests/fixtures/cross-repository/plan.ts; two real member checkouts come
+#      from tests/fixtures/cross-repository/two-members.ts over the delivered
+#      temp-repos.ts/groups.ts seam. The plan echo golden lands in
+#      tests/golden/cross-repository-members.test.ts + the committed payload in
+#      tests/fixtures/cross-repository/goldens/.
+#  1.6 Mechanical seam — tests/structure/inventory.json rows and
+#      tests/structure/content-inventory.test.ts executable allowances for the
+#      new domain module; contracts/index.ts, domain/index.ts and core/index.ts
+#      re-export the new types/functions.
+#
+# Bound: AC-F1-1, AC-F1-2, AC-F1-3, AC-F1-4, AC-F1-5, AC-F1-6; DoD-1, DoD-2,
+# DoD-10 (plan surface), F-1, F-7, DM-1, DM-6, DEC-1, DEC-9, DEC-10, DEC-15,
+# RSK-11 (pre-change queue-add golden provenance).
+# Test obligations: TC-XPLAN-001..007 (TC-XPLAN-004's field-set assertion is
+# first fully green here in tests/structure/cross-repository-contract.test.ts),
+# TC-XPAR-001.
+#
+# Done when: the member-less `queue add` golden
+# `tests/fixtures/queue/golden/queue-add-memberless.json` was captured at
+# main-tools tip 404e9bf8 BEFORE the first production edit, with only envelope
+# `runId`/`timing` normalized and the capture command recorded in pm-notes; a
+# two-member plan validates with `readyForDevelopment: true` at exit 0 and
+# echoes both entries in declared order with exactly the declared fields; every
+# missing/empty/duplicate/unknown-dependency/self-edge/cycle/over-bound/
+# over-length/grammar/gate-shape defect is `plan.schema.invalid` naming the
+# member position and field in validate and lint with a document location; an
+# invalid verdict carries NO `members` key; boundary values (8 members, 8
+# edges, 16 gates, 64-char member ref, 64-char gate id) validate; gate
+# identifiers are shape-only (non-empty, <=64 chars) and no configuration read
+# occurs; a member-less plan validate/lint/diff/overlap stays byte-identical
+# with no `members` key; TMPDIR=$GATE_TMPDIR GIT_CONFIG_COUNT=1
+# GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false pnpm check is green.
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Phase 2 — Per-member queue representation
+# Commit: feat(GH-310): per-member queue entries, dependency edges, and release
+#
+# Goal: the declared member set becomes one queue entry and one lane per member
+# ref, with per-member edges, readiness, release and removal, and no
+# cross-repository lane (F-2, F-4, DM-6, AC-F2-1..AC-F2-5, AC-F4-1, AC-F4-2).
+#
+# Obligations:
+#  2.1 packages/core/src/contracts/queue.ts — the single member-ref separator
+#      literal `QUEUE_MEMBER_REF_SEPARATOR = "@"`; no new record kind, no new
+#      payload schema, no new error row (NFR-7). QUEUE_MAX_REF_CHARS stays the
+#      one length bound.
+#  2.2 packages/core/src/domain/queue-graph.ts — extend `canonicalQueueRef` to
+#      recognize `<canonicalChangeRef>@<repoKey>`: canonicalize the change-ref
+#      part exactly as delivered, preserve the declared repoKey, reject a
+#      malformed/over-length member ref with `undefined`, and leave the
+#      delivered `<PREFIX>-<digits>` form byte-identical (`GH-010` -> `GH-10`,
+#      `pdev-7` -> `PDEV-7`). Fold keys, edge identity, lease lookup keys and
+#      removal keys follow the same canonical member ref. The member form is
+#      accepted wherever the delivered form is accepted, so
+#      `ref-not-canonical` never applies to a declared member ref.
+#  2.3 packages/core/src/app/queue.ts — reconcile resolves the change-ref part
+#      before the `@` for the tracker read (DEC-2); removal/release keep their
+#      delivered semantics keyed by the entry's own canonical ref and bound
+#      repository (one member's lease never blocks another member's release).
+#      No new record kind and no state migration.
+#  2.4 packages/cli/src/edge.ts + packages/cli/src/production.ts — the queue
+#      composition gains one bounded plan-member read (local plan read, no
+#      configuration, no network). The read is an additive OPTIONAL composition
+#      seam: when absent, the delivered single-ref queue path runs unchanged, so
+#      existing runtime literals and member-less bytes stay green. A `queue add`
+#      on a change whose plan declares members creates exactly one entry per
+#      declared member ref, each bound to that member's repository identity and
+#      carrying its own lease/lane, and returns the delivered `queue add`
+#      payload UNCHANGED plus an additive ordered `data.members[]` array of
+#      `{ ref, repoKey, lane }` in declared order (DEC-21/DM-6). The declared
+#      `dependsOn[]` materializes as per-member dependency edges onto the
+#      prerequisite member refs and is reported through the delivered `edges[]`
+#      field; no entry is keyed by the bare change ref and no lane spans both
+#      members. A change whose plan declares no members returns the delivered
+#      payload byte-identically with no `members` array and no extra edge
+#      (TC-XPAR-003). An unmet declared edge makes the member entry `not-ready`
+#      with the delivered `dependency-open` reason; a start on it is refused
+#      with `queue.precondition.unmet` naming the member and its unlanded
+#      prerequisite; a member-ref edge cycle is refused with
+#      `queue.dependency-cycle`; a plan cycle never reaches a queue write (it is
+#      phase 1's `plan.schema.invalid`). `commands/queue.ts` carries the
+#      additive `data.members[]` payload type; `queue list`/`lanes list` remain
+#      the asserted projections and the delivered bare-ref output is unchanged.
+#  2.5 Tests — tests/behaviour/queue-members.test.ts (TC-XQUEUE-001, 002, 005,
+#      006), tests/behaviour/queue-members-removal.test.ts (TC-XQUEUE-003),
+#      tests/behaviour/queue-member-ref.test.ts (TC-XQUEUE-004),
+#      tests/behaviour/queue-members-dependency.test.ts (TC-XDEP-001, 002), and
+#      the extensions tests/behaviour/queue-readiness.test.ts,
+#      queue-lease.test.ts, queue-dep-cycle.test.ts. Queue-member fixture state
+#      lives under tests/fixtures/queue/members/.
+#      tests/behaviour/cross-repository-determinism.test.ts starts here with
+#      the queue/lanes repeated-run case (TC-XBOUND-003).
+#
+# Bound: AC-F2-1, AC-F2-2, AC-F2-3, AC-F2-4, AC-F2-5, AC-F4-1, AC-F4-2;
+# DoD-3, DoD-7, DoD-10 (queue surface), DoD-11 (queue half), F-2, F-4, DM-6,
+# DEC-2, DEC-7, DEC-21.
+# Test obligations: TC-XQUEUE-001..006 (TC-XQUEUE-001 asserts the DEC-21 add
+# payload `{ref, repoKey, lane}` in declared order), TC-XDEP-001..002,
+# TC-XBOUND-003.
+#
+# Done when: a two-member change produces exactly two entries and two lanes
+# keyed by the member refs, each bound to its own repository, with no bare-ref
+# entry; the dependent member reads `not-ready`/`dependency-open` and a start is
+# refused with `queue.precondition.unmet` naming both members until the
+# prerequisite lands; a member-ref edge cycle is `queue.dependency-cycle`; one
+# member landing removes only its entry with reason `landed` and re-evaluates
+# the rest; `queue release <changeRef>@<repoKeyB>` releases exactly B while A's
+# held lease and entry are untouched and both entries remain; the delivered
+# `<PREFIX>-<digits>` canonicalization and all member-less queue bytes/exits are
+# unchanged; TMPDIR=$GATE_TMPDIR GIT_CONFIG_COUNT=1
+# GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false pnpm check is green.
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Phase 3 — Cross-repository definition of done and one review flow
+# Commit: feat(GH-310): cross-repository definition of done and review flow
+#
+# Goal: one shared verdict decides the change while every member's evidence is
+# visible, unavailable/absent CI never reads green, a failing or unresolved
+# member is named, and exactly one review run covers the declared pull-request
+# set (F-3, F-6, DM-2..DM-4, DM-7, DM-9, DM-10, DM-11, AC-F3-1..AC-F3-8,
+# AC-F6-1..AC-F6-4, AC-NFR6-1).
+#
+# Obligations:
+#  3.1 packages/core/src/contracts/verify-gates.ts — DM-11 distinct report
+#      types, not a widened shared type. The delivered `VerifyGatesReport` is
+#      UNCHANGED: `overall` stays the literal `"pass"`, `gates[]` stays
+#      `VerifyGateRecord[]` (no `member`), and its success/failure envelope and
+#      exits are untouched. A new additive `CrossRepositoryVerifyGatesReport`
+#      carries the same required delivered fields (`schemaVersion`, `changeRef`,
+#      `target`, `summary`, `gates[]`) plus `overall: "pass" | "fail"`,
+#      `definitionOfDone`, `blockingMembers[]`, and `reviewFlow`, with
+#      `gates[]: CrossRepositoryVerifyGateRecord[]` (DM-9, required `member`).
+#      The command emits the UNION discriminated by the PRESENCE of
+#      `definitionOfDone`. For the cross-repository type only, exactly three
+#      delivered behaviours differ: (1) `overall` may be `"fail"`; (2) a negative
+#      report is data-bearing — the delivered "a failure emits no `data`" rule
+#      does not apply — and the delivered `verify.gates.failed` classification
+#      is carried by `overall: "fail"` ITSELF, with no separate classification
+#      field and no error envelope; (3) `gates[]` records are the
+#      cross-repository type with a REQUIRED `member`. Mapping: green -> overall:
+#      pass / exit 0, blocked -> overall: fail / exit 1, incomplete -> overall:
+#      fail / exit 1. `overall: "unknown"` is NEVER emitted by this type, so the
+#      delivered classified-unknown / verify.gates.unavailable exit-2 path is
+#      untouched. Additive data blocks: `definitionOfDone` { status:
+#      green|blocked|incomplete; members[]: { repoKey, gates.ci, verdict };
+#      evidence[]: { repoKey, pullRequest, landed, landingPosition? } }, sibling
+#      `blockingMembers[]`, and `reviewFlow` { runId, complete, verdicts[]:
+#      { repoKey, pullRequest, verdict: pass|fail|unreviewed } }; closed
+#      vocabularies gates.ci = pass|fail|unavailable|absent, member verdict =
+#      pass|fail|unknown (DEC-3, DEC-4, DEC-6, DEC-16, DEC-8); ReviewObservation
+#      { repoKey, pullRequest, verdicts[] } (DEC-17); DM-10
+#      `MemberLandingObservation` { repoKey, merged, headSha?,
+#      landingPosition? } (1-based position only when merged); VERIFY_GATES_MAX_MEMBERS
+#      = 8; the delivered VERIFY_GATES_MAX_MACHINE_BYTES = 65 536 is reused. No
+#      schema identifier bump and no new top-level envelope key.
+#  3.2 packages/core/src/domain/verify-gates-members.ts (NEW) — pure shared
+#      verdict derivation. (a) DM-9 gate-record projection: exactly one
+#      `CrossRepositoryVerifyGateRecord` per declared (member, gate) evaluation
+#      — members in declared order, then each member's declared gate order —
+#      carrying the delivered `VerifyGateRecord` fields plus the REQUIRED
+#      `member` repoKey; no cross-repository record exists without a member.
+#      `summary.gates` equals the record count and `passed`/`failed`/`unknown`
+#      count records by verdict. An unresolvable declared identifier contributes
+#      exactly one `unknown` record shaped exactly as: `id` = the declared
+#      identifier, `member` = the declaring repoKey, `verdict: unknown`,
+#      `reason: read-failed` (delivered vocabulary), `citation` = the delivered
+#      citation shape carrying `identity: { changeRef }` only, `sources: []`,
+#      `counts: []`, `names: []`, and `reasons: ["read-failed"]` — no provider
+#      source, count, name list, branch, or SHA is invented or attributed (N3).
+#      (b) exactly one `definitionOfDone.members[]` entry per declared member in
+#      declared order; per-member `gates.ci` classification on that member's own
+#      pushed head (unavailable = classified reading failure; absent = no pushed
+#      head, no declared pullRequest, or no run for the head per DEC-4). The
+#      member `verdict` is MECHANICAL over BOTH its records and its CI reading:
+#      `pass` iff every declared record for that member is `pass` AND
+#      `gates.ci` is `pass`; `fail` iff any record is `fail` OR `gates.ci` is
+#      `fail`; `unknown` otherwise (any record `unknown`, or `gates.ci`
+#      `unavailable`/`absent`), so all-pass records with unavailable/absent CI
+#      are never `pass`. `definitionOfDone.status` aggregates: `blocked` iff any
+#      member is `fail`, any member's `gates.ci` is `unavailable`, or any member
+#      carries a synthetic unresolvable-identifier record; `incomplete` iff none
+#      of those hold and at least one member is `unknown` (with `absent` CI and
+#      an unestablished resolvable-gate reading named as its instances); `green`
+#      iff every member is `pass`. `blocked` wins over `incomplete`, and
+#      `blockingMembers[]` names EVERY member that is not `pass`, in declared
+#      order, never truncated. (c) Evidence ordering: landed members by ascending
+#      1-based `landingPosition`, then unlanded members in declared order, ties
+#      by declared order; a member with no declared pullRequest stays in
+#      `members[]` with `gates.ci: absent` and is omitted from `evidence[]`
+#      (DEC-6, DEC-16). `landed` and `landingPosition` are read from the injected
+#      `MemberLandingObservation` entries (DM-10) — never from an additional
+#      provider read, repo-diff read, or merge reader (DEC-19). The per-member
+#      read budget is unchanged: one open-PR page, one detail read, one
+#      check-run page per declared member, zero retries, zero pagination.
+#  3.3 packages/core/src/domain/review-flow.ts (NEW) — pure review flow:
+#      `runId` is a stable digest over the change ref and the sorted DECLARED
+#      MEMBER SET, where each element is the member `repoKey` plus its
+#      `pullRequest` or an explicit empty marker when the member declares none,
+#      so adding, removing, or re-pointing any declared member (including a
+#      PR-less member) changes the identity (DEC-8/AC-F6-3); unchanged set =
+#      same run, no added verdict. Exactly one verdict per declared member in
+#      declared order; each verdict derives from that member's own observation
+#      (matched by repoKey and pullRequest, never by position); no observation
+#      = `unreviewed`; two or more observations for one member = `fail` with
+#      `complete: false` and still one entry; an observation for an undeclared
+#      member contributes no entry.
+#  3.4 packages/core/src/domain/verify-gates.ts — declared gate identifiers are
+#      resolved against the effective gate set here (never in plan validation);
+#      an unresolved identifier yields exactly one `unknown`
+#      `CrossRepositoryVerifyGateRecord` with the pinned synthetic citation of
+#      3.2 (`id` = declared identifier, required `member`, `read-failed`,
+#      `identity: { changeRef }` only, empty `sources`/`counts`/`names`,
+#      `reasons: ["read-failed"]`) and never a `pass`; no gate record invents a
+#      provider source, name list, branch, SHA, or `pass` for it; the human
+#      rendering surfaces the blocking member(s) (TC-XBOUND-004).
+#  3.5 packages/cli/src/commands/verify-gates.ts + commands/verify.ts +
+#      packages/cli/src/edge.ts + production.ts — the cross-repository handler
+#      path reads at most one open-PR page, one detail read and one check-run
+#      page per declared member, with zero retries, zero pagination and no call
+#      outside the declared member set (DEC-10, NFR-6, DEC-19); no repo-diff or
+#      merge reader is added — landing/merge truth is the injected
+#      `MemberLandingObservation` fact of 3.2. `ReviewObservation` values arrive
+#      through this verification composition (no store, no command, no live
+#      call). The member reads and the observation inputs are additive OPTIONAL
+#      composition seams: when absent, the delivered single-target handler and
+#      the member-less bytes run unchanged. The report types are owned by
+#      contracts/verify-gates.ts; the command emits the union discriminated by
+#      the presence of `definitionOfDone` and `commands/verify.ts` owns the exit
+#      projection: green -> overall: pass / exit 0, blocked -> overall: fail /
+#      exit 1, incomplete -> overall: fail / exit 1, with the negative
+#      cross-repository report data-bearing and `overall: "fail"` the sole
+#      carrier of `verify.gates.failed`; `overall: unknown` is never emitted. A
+#      member-less report is the delivered `VerifyGatesReport` value and static
+#      type byte-for-byte (literal `overall: "pass"`, failure envelope, exits
+#      1/2, no `member` field), proven by
+#      tests/types/cross-repository-report.type-test.ts. Exactly one
+#      gate-verification record is appended per battery evaluation regardless of
+#      member count.
+#  3.6 Tests — tests/behaviour/verify-gates-members.test.ts (TC-XDOD-001, 002,
+#      003, 005, 006, 008), verify-gates-members-evidence.test.ts (TC-XDOD-004,
+#      007, 009), verify-gates-members-bounds.test.ts (TC-XBOUND-004),
+#      verify-gates-review-flow.test.ts (TC-XREV-001..006), the extensions
+#      verify-gates-read-budget.test.ts (TC-XCTR-006),
+#      tests/behaviour/cross-repository-determinism.test.ts (N2; the gate
+#      determinism case, TC-XBOUND-001), verify-gates-target.test.ts
+#      (per-member target resolution), and entrypoint-help.test.ts (TC-XREV-005
+#      root-family set assertion); the report-type static/contract probe
+#      tests/types/cross-repository-report.type-test.ts; and the gate/review
+#      golden additions in tests/golden/cross-repository-members.test.ts. The
+#      DM-9 `gates[]`/`summary` and synthetic-citation assertions live in
+#      TC-XDOD-001/002/008; the corrected member-verdict rule over records AND
+#      `gates.ci` is asserted in TC-XDOD-001/002/003/004/005; the DM-10
+#      `MemberLandingObservation` assertions live in TC-XDOD-007 and
+#      TC-XCTR-006; the DEC-8 PR-less runId case lives in TC-XREV-003; the
+#      DM-11 distinct-type union and static literals are asserted in
+#      TC-XPAR-003 and TC-XCTR-007. Per-member provider bundles live in
+#      tests/fixtures/cross-repository/facts.ts, landing observations in the
+#      same fixture module, and review observations in review.ts.
+#
+# Bound: AC-F3-1..AC-F3-8, AC-F6-1..AC-F6-4, AC-NFR6-1; DoD-4, DoD-5, DoD-6,
+# DoD-9, DoD-11 (shared-verdict half), DoD-12 (gates half), F-3, F-6, DM-2,
+# DM-3, DM-4, DM-7, DM-9, DM-10, DM-11, DEC-3, DEC-4, DEC-6, DEC-8, DEC-9,
+# DEC-10, DEC-11, DEC-16, DEC-17, DEC-18 (distinct report type/scoped
+# supersession), DEC-19, RSK-10 (member-less type/value contract proof in
+# phase 5).
+# Test obligations: TC-XDOD-001..009 (TC-XDOD-001/002/003/004/005 assert the
+# corrected member-verdict rule over records AND `gates.ci` plus the status
+# aggregation; TC-XDOD-001/002/008 assert DM-9/required-member records and the
+# N3 synthetic citation; TC-XDOD-007 asserts the DM-10 injected landing facts
+# with zero extra read), TC-XREV-001..006 (TC-XREV-003 asserts the PR-less
+# runId digest; TC-XREV-005 extends entrypoint-help), TC-XCTR-006 (DM-10
+# zero-extra-read half), TC-XPAR-003 and TC-XCTR-007 (DM-11 distinct report
+# types and the static probe), TC-XBOUND-001, TC-XBOUND-004.
+#
+# Done when: both members pass on their own heads -> `green`, report
+# `overall: pass`, one `gates[]` record per declared (member, gate) pair with
+# the REQUIRED `member` discriminator and all `pass`, `summary` equal to the
+# record counts, each member `pass` only because its records AND `gates.ci` are
+# `pass`, two ordered member entries, empty blockers, both PRs in evidence,
+# exit 0; a failing member (any record `fail` or `gates.ci: fail`) or an
+# unavailable CI member -> `blocked`, report `overall: fail`, the failing
+# record attributable to its member, `summary.gates` still equal to the pair
+# count, `blockingMembers[]` naming every non-`pass` member, exit 1; an absent
+# evidence member with no fail/unavailable/synthetic condition -> `incomplete`,
+# report `overall: fail` (NEVER `unknown`), `gates.ci: absent`, member
+# `verdict: unknown`, blocker named, exit 1; an unresolvable declared identifier
+# -> exactly one synthetic `unknown` record with the pinned empty citation and
+# no provider attribution, `blocked`, `overall: fail`, exit 1; all three
+# cross-repository reports are data-bearing with `gates[]`/`summary` present
+# (no error envelope) and carry `verify.gates.failed` through `overall: "fail"`
+# with no separate classification field; a partly landed change lists landed
+# evidence first by ascending landingPosition then unlanded in declared order
+# from injected `MemberLandingObservation` facts only, stable on repeat; review
+# flow gives one verdict per member with a stable runId that changes when a
+# PR-less member is added or removed, duplicated observations degrade to
+# fail/incomplete, and no member is pass without its own observation;
+# per-member reads stay bounded and recorded with zero retries/pagination and no
+# landing/merge reader; the member-less report is the delivered
+# `VerifyGatesReport` with literal `overall: "pass"`, no `member`, the
+# delivered failure envelope and exits, byte-identical and statically proven;
+# TMPDIR=$GATE_TMPDIR GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
+# GIT_CONFIG_VALUE_0=false pnpm check is green.
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Phase 4 — Per-member closeout report and landing removal
+# Commit: feat(GH-310): per-member closeout report and landing removal
+#
+# Goal: post-merge reporting enumerates every declared member with its branch,
+# cleanup outcome, pull request, issue-closure outcome and merge-truth landing,
+# never claims an unlanded member, and retires each landing only for that
+# member (F-5, DM-5, DM-8, AC-F5-1..AC-F5-4).
+#
+# Obligations:
+#  4.1 packages/core/src/contracts/closeout.ts — additive optional
+#      `data.members[]` with exactly repoKey, branch, cleanup, pullRequest,
+#      issueClosure, landed (DM-5); CLOSEOUT_MAX_MEMBERS = 8; no new step id
+#      (the twelve delivered step ids stay unchanged); consumers still resolve
+#      steps by stepId and tolerate additive fields (DEC-12); no schema
+#      identifier bump. This file also declares the DM-8
+#      `CrossRepositoryCloseoutObservation` input type: one entry per declared
+#      member `{ repoKey, pullRequest, merged, headSha?, branch, issueClosure? }`,
+#      supplied through the closeout composition; it carries per-member merge
+#      truth and branch facts only and adds no port, no provider operation, and
+#      no durable store (DEC-20/OQ-6; durable production carrier deferred).
+#  4.2 packages/core/src/domain/closeout-members.ts (NEW) — pure per-member
+#      report projection in declared order. `cleanup` and `issueClosure` are
+#      computed from authoritative inputs — that member's DM-8
+#      `CrossRepositoryCloseoutObservation` entry plus that member's own
+#      closeout operations — NEVER by parsing free-form step `detail`, under the
+#      exact mode-scoped mapping: CLEANUP (plan): branch present and the
+#      squash-safety predicate safe => would-apply; branch already absent =>
+#      satisfied; predicate unsafe => would-refuse; provider or git gap =>
+#      skipped-gap. CLEANUP (apply): branch deleted => applied; already absent
+#      => satisfied; refused => refused; gap => skipped-gap. ISSUE CLOSURE
+#      (plan): the member's tracked issue is open => would-apply; already closed
+#      => satisfied; no tracked issue => skipped-noop; tracker read/write gap =>
+#      skipped-gap. ISSUE CLOSURE (apply): applied | satisfied | skipped-noop |
+#      skipped-gap under the same conditions. Every member carries exactly one
+#      value per field from its column's closed set; a member value never
+#      rewrites the aggregate `branch-cleanup`/`ticket-to-done` step outcome,
+#      which stays the delivered step's own outcome for that mode. `landed` is
+#      boolean merge truth and is true only when the member's merge is observed
+#      (never inferred from a green pipeline or a closed branch); a member with
+#      absent merge truth keeps the delivered skip semantics and is never
+#      landed; an unsafe squash predicate yields `would-refuse` (plan) /
+#      `refused` (apply) without deleting the branch and without rewriting
+#      `landed`.
+#  4.3 packages/core/src/domain/closeout.ts — per-member work rides the existing
+#      steps: `branch-cleanup` expands to one member branch per declared member
+#      under the delivered squash-safety predicate, `ticket-to-done` expands to
+#      one transition per member's tracked item, and `comment-resolution`
+#      iterates the member pull-request set; the twelve step ids and the
+#      member-less report/ledger/human output are byte-identical.
+#  4.4 packages/core/src/app/queue.ts + packages/cli/src/edge.ts +
+#      production.ts — landing removal happens per member inside the held
+#      closeout fence: an observed merged member pull request retires that
+#      member's member-ref entry with reason `landed`, leaving the other
+#      members' entries untouched; a skipped removal (lease-held,
+#      no-merge-truth, state-unavailable) stays disclosed and never silently
+#      dropped; no bare-ref removal and no cross-repository lane. Per-member
+#      merge/branch/issue facts arrive ONLY as the injected DM-8
+#      `CrossRepositoryCloseoutObservation` entries supplied through the
+#      closeout composition — no new port, no provider operation, no durable
+#      store, and no live network in default runs (DEC-20/OQ-6). The per-member
+#      facts and the member removal loop are additive OPTIONAL composition
+#      seams: when absent, the delivered single-request closeout runs unchanged.
+#  4.5 Tests — tests/behaviour/closeout-members.test.ts (TC-XCLOSE-001..004),
+#      the extensions tests/behaviour/closeout-plan.test.ts (TC-XCLOSE-004),
+#      closeout-queue-removal-skips.test.ts (TC-XCLOSE-002) and
+#      closeout-queue-removal.test.ts (per-member landing-removal path),
+#      tests/behaviour/cross-repository-determinism.test.ts closeout case
+#      (TC-XBOUND-002), the closeout parity case in
+#      tests/behaviour/cross-repository-parity.test.ts (TC-XPAR-002), and the
+#      closeout golden additions in tests/golden/cross-repository-members.test.ts.
+#      Fixtures extend tests/fixtures/closeout/{request,branch,queue-removal}.ts.
+#
+# Bound: AC-F5-1..AC-F5-4; DoD-8, DoD-10 (closeout surface), DoD-12 (closeout
+# half), F-5, DM-5, DM-8, DEC-12 (mode-scoped per-member mapping), DEC-20,
+# OQ-5, OQ-6.
+# Test obligations: TC-XCLOSE-001..004 (TC-XCLOSE-001/002 assert the DEC-20
+# `CrossRepositoryCloseoutObservation` input and that no production carrier is
+# required; TC-XCLOSE-001/003 assert the exact DEC-12 mode-scoped columns, one
+# value per field, no step-`detail` parsing, and the unchanged aggregate
+# outcome), TC-XBOUND-002, TC-XPAR-002.
+#
+# Done when: both members merged, expressed through one DM-8
+# `CrossRepositoryCloseoutObservation` per member -> two ordered `data.members[]`
+# entries with all six fields, exactly one mode-scoped value per field
+# (cleanup plan would-apply|satisfied|would-refuse|skipped-gap; cleanup apply
+# applied|satisfied|refused|skipped-gap; issueClosure plan
+# would-apply|satisfied|skipped-noop|skipped-gap; issueClosure apply
+# applied|satisfied|skipped-noop|skipped-gap), derived from the member
+# observation plus its own operations and never from parsing step `detail`, and
+# `landed: true`, with the aggregate step outcomes unchanged, and each landing
+# removes only its own member-ref entry; only one merged -> that member landed,
+# the other false and retained or disclosed with a delivered skip reason, with
+# nothing claiming it landed; an unsafe squash predicate yields `would-refuse`
+# in plan / `refused` in apply for the failing member, the other member's own
+# value, the branch survives, the aggregate `branch-cleanup` outcome is not
+# rewritten, and `landed` remains merge truth; closeout plan mode reports
+# members with zero writes; the report needs no new port, provider operation, or
+# store; member-less closeout plan/apply data, steps, ledger, human bytes and
+# exits are byte-identical;
+# TMPDIR=$GATE_TMPDIR GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
+# GIT_CONFIG_VALUE_0=false pnpm check is green.
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Phase 5 — Parity, contract continuity, read-only/determinism/hermetic proofs,
+# M2 bookkeeping, and the full gate battery (release phase)
+# Commit: test(GH-310): parity goldens, contract continuity and the full gate battery
+#
+# N7 COMMIT-TYPE RATIONALE: this phase ships three new test suites, committed
+# goldens, the report-type static probe, and the five-package minor changeset,
+# plus the planning-corpus bookkeeping. A `docs(...)` subject would understate
+# the test and release content, so the subject is `test(...)`; the changeset is
+# the release artifact carried in this commit, and the corpus edits are the
+# bookkeeping tail of the same release boundary.
+#
+# Goal: the member-less surface is proven byte-identical, the contract and
+# identity posture is proven unchanged, every touched surface is proven
+# read-only/bounded/deterministic/hermetic, the M2 corpus records delivery
+# truth, and the full battery is green at the delivered HEAD (F-7,
+# AC-F7-1, AC-NFR1-1, AC-NFR2-1, AC-NFR3-1, AC-NFR4-1, AC-NFR5-1,
+# AC-NFR7-1, DoD-10..DoD-15).
+#
+# Obligations:
+#  5.1 tests/behaviour/cross-repository-parity.test.ts — the committed parity
+#      fixture set: member-less plan validate/lint/diff/overlap, verify gates
+#      (pass and fail variants), closeout (plan and apply), `queue add`, and
+#      queue/lanes projections are byte-identical to the pre-change goldens with
+#      identical exits; no `members`/`definitionOfDone`/`blockingMembers`/
+#      `reviewFlow` key at any depth; the member-less `queue add` payload is read
+#      from the phase-1-captured
+#      `tests/fixtures/queue/golden/queue-add-memberless.json` (404e9bf8
+#      provenance, never regenerated post-change), keeps the delivered fields,
+#      has no `members` array and no extra `edges[]` entry (DEC-21); the
+#      member-less verify-gates report is the delivered `VerifyGatesReport`
+#      (DM-11) — selected by the ABSENCE of `definitionOfDone` — with the literal
+#      `overall: "pass"`, `VerifyGateRecord[]` and no `member`, the delivered
+#      failure envelope and the delivered exits 1/2 (DEC-18/RSK-10); the
+#      normalizer replaces only envelope `runId`/`timing`. TC-XPAR-003 owns the
+#      gates/queue/add half and the report-type static probe; the plan/closeout
+#      halves are owned by phases 1/4 and are re-read here unchanged.
+#  5.2 tests/behaviour/cross-repository-readonly.test.ts — plan validation over
+#      valid and invalid member plans writes nothing; a full member battery
+#      appends exactly one gate-verification record regardless of member count;
+#      closeout plan mode writes nothing; guarded stores record reads only
+#      (NFR-4, AC-NFR4-1).
+#  5.3 tests/structure/cross-repository-contract.test.ts +
+#      tests/types/cross-repository-report.type-test.ts + the extensions
+#      tests/structure/envelope-contract.test.ts,
+#      tests/structure/error-table.test.ts,
+#      tests/structure/event-state-additivity.test.ts,
+#      tests/checks/error-table-sync.test.ts — five-field
+#      `delivery.result.v1` on every touched surface with all new keys under
+#      `data` and zero `ok`/`command`; the closed vocabularies and the five
+#      member bounds exported exactly once; zero new error-table rows, zero new
+#      domain kinds, zero new identity strings; every exercised refusal resolves
+#      to a delivered identity; consumer tolerance of additive fields (repoKey
+#      resolution, stepId resolution) via the extended
+#      tests/fixtures/closeout/legacy-consumer.ts. DM-11 TYPE PROOF: the
+#      contract suite and the static probe assert the union discriminated by
+#      `definitionOfDone` — delivered `VerifyGatesReport` keeps literal
+#      `overall: "pass"`, `VerifyGateRecord[]`, no `member`; the
+#      `CrossRepositoryVerifyGatesReport` has `overall: "pass" | "fail"`,
+#      required `member` on every `gates[]` record, and
+#      `definitionOfDone`/`blockingMembers[]`/`reviewFlow`; the two are mutually
+#      non-assignable. RSK-10 MITIGATION: this suite proves the member-less
+#      literal type/value and the unchanged failure envelope (no `data` on a
+#      delivered failure, delivered exits 1/2, no `member`), so the scoped
+#      cross-repository type cannot be mistaken for delivered behaviour. The
+#      bidirectional error-table/documentation sync is expected to require NO row
+#      change or doc edit; if an identity proves necessary, STOP, declare it
+#      explicitly with its feature-result-contract row in the same commit, and
+#      report the deviation to the PM (NFR-7 forbids it).
+#  5.4 tests/checks/cross-repository-hermetic.test.ts + the extension
+#      tests/checks/fixture-sanitization.test.ts — every case builds two real
+#      local temporary repositories through tests/fixtures/projects/temp-repos.ts
+#      and mints repoKeys through tests/fixtures/projects/groups.ts; all
+#      provider/review facts are injected; zero live network, zero real second
+#      remote, zero credentials, no ambient $HOME, no daemon, no composition
+#      from this checkout, deterministic repeats (NFR-3, AC-NFR3-1); the
+#      fixture base is mkdtemp under the gate TMPDIR, outside every work tree
+#      (tests/fixtures/projects/state-scope.ts may gain an explicit-base
+#      fixture-only extension if its APPROVED_BASE blocks it).
+#  5.5 Planning corpus bookkeeping — doc/planning/oss-tooling/backlog.md gains
+#      the M2-S19 delivery marker (Ticket + Progress) per convention;
+#      doc/planning/oss-tooling/status.md gains the M2-S19 delivery snapshot
+#      addendum; doc/planning/oss-tooling/milestones/m2/contracts.md marks the
+#      two M2-S19 sections delivered by GH-310 (ownership line). No
+#      cli-command-registry row moves because no command surface is added.
+#  5.6 Final battery — run
+#      TMPDIR=$GATE_TMPDIR GIT_CONFIG_COUNT=1
+#      GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false pnpm check at
+#      the delivered HEAD, record the command/result in pm-notes, and run
+#      ./scripts/lint-commit-range.sh --base main-tools as the supplementary
+#      pre-PR range gate (PASS, or SKIP only when no commitlint configuration
+#      exists; an ERROR is never recorded as a pass). TC-XGATE-001 is
+#      verification-only: no new test code. PR creation against main-tools and
+#      staying open is lifecycle phase 11, not a plan phase.
+#  5.7 Release artifact — .changeset/gh-310-cross-repository-changes-minor.md
+#      declares the five-package minor changeset for the publishable sources.
+#      JUSTIFICATION: this is the repository's lockstep release convention for a
+#      version_impact: minor change (the fixed group of five publishables in
+#      .changeset/config.json; GH-309 precedent) — it is NOT a spec or test-plan
+#      requirement and it changes no contract or acceptance surface. It is
+#      declared here, in the release phase, so the change's release artifact
+#      ships with the final delivery commit and never gates an implementation
+#      phase.
+#
+# Bound: AC-F7-1, AC-NFR1-1, AC-NFR2-1, AC-NFR3-1, AC-NFR4-1, AC-NFR5-1,
+# AC-NFR7-1; DoD-10 (consolidated), DoD-11, DoD-12, DoD-14 (roll-up), DoD-15,
+# F-7, NFR-1, NFR-2, NFR-3, NFR-4, NFR-7, NFR-9, DM-11 (distinct report types),
+# DEC-18 (member-less literal `overall: "pass"`, no `member`, unchanged failure
+# envelope), DEC-21 (member-less add parity), RSK-10 (mitigation contract test),
+# RSK-11 (golden provenance).
+# Test obligations: TC-XPAR-003 (gates/queue/add parity and the DM-11 report-type
+# static probe, including the DEC-21 member-less `queue add` byte-identical
+# payload read from the 404e9bf8 golden and the DEC-18/RSK-10 literal
+# `overall: "pass"` plus unchanged failure envelope), TC-XCTR-001..005,
+# TC-XCTR-007 (DM-11 distinct types + identity reuse), TC-XHERM-001..002,
+# TC-XGATE-001.
+#
+# Done when: the parity fixture set is byte-identical with identical exits and
+# no member keys anywhere, including the member-less `queue add` payload with no
+# `members` array read unchanged from the phase-1-captured 404e9bf8 golden
+# (DEC-21/RSK-11), the member-less delivered `VerifyGatesReport` with literal
+# `overall: "pass"`, `VerifyGateRecord[]` with no `member`, unchanged failure
+# envelope and exits 1/2 (DEC-18/DM-11/RSK-10), and the static type proof that
+# the delivered and cross-repository report types are distinct and mutually
+# non-assignable; plan/gates/closeout write budgets hold; the envelope,
+# vocabulary, bounds and identity-reuse contract suite is green with 0 new rows
+# and 0 new kinds; every case is hermetic and deterministic; the backlog, status
+# and M2 contract ownership line state delivery truth; the five-package minor
+# changeset is present (repo convention, not a spec requirement); the full gate
+# battery is green and recorded; phases 1-5 are complete with per-phase pm-notes
+# evidence (dod_check reads that evidence, not this file). The change as a whole
+# is released only after phase 6 (review-iteration-1 remediation) is complete.
+# ---------------------------------------------------------------------------
+#
+# Phase 6 — Close review-iteration-1 findings: ledger-compatible gate append,
+# member issue identity, member-mode aggregate fold, and the real-writer round
+# trip
+# Commit: fix(GH-310): ledger-compatible gate append, member issue identity and aggregate fold
+#
+# WHY THIS PHASE EXISTS: the iteration-1 code review
+# (code-review/review-iter-1.yaml, status FAIL) found that the member path
+# contradicts two delivered contracts and one delivered exit expectation. The
+# member gate records carry a required `member` and were handed unprojected to
+# `MergeGateVerificationRecord.gates[]`, whose delivered validation applies a
+# "no other keys" rule on read AND as the post-append equality check, so the
+# only delivered appender refuses the record with `state.store.torn`
+# (`not_landed`) and every later read of that change's verification history is
+# `torn` (F-1, high). The member `ticket-to-done` transition targeted a
+# synthesized `<changeRef>@<repoKey>` string because DM-8 carried no member
+# tracked-issue identity, so a transition could be recorded against a
+# non-existent work item and `issueClosure: applied` was asserted against a fake
+# that accepts any id (F-2, high). The member-mode `branch-cleanup` aggregate
+# was `operations.length > 0 ? … : "satisfied"`, so an all-refused member set
+# reported `satisfied` and bypassed the delivered `closeout.branch.unsafe`
+# refusal, and `ticket-to-done` replaced instead of extended the change-level
+# transition (F-3/F-5, medium). Spec v1.5 pins the remedies as DEC-22 (append
+# projection), DEC-23 (worst-case aggregate fold) and DM-8's `issue?`, and
+# corrects the AC-F2-2 vocabulary (F-15) and the read-seam deferral (F-16).
+#
+# AC/TC OWNERSHIP: this phase is the FINAL owner of AC-F3-1, AC-F3-2, AC-F5-1,
+# AC-F5-2, AC-F5-3, AC-NFR4-1 and of TC-XDOD-001/002, TC-XCTR-002/007,
+# TC-XCLOSE-001/002/003, TC-XQUEUE-002/003 and TC-XDEP-001 (see the ownership
+# maps in the header). Phases 3, 4 and 5 produced the earlier PARTIAL verdicts
+# for those items against spec v1.4 and keep their delivery commits; the
+# re-pointing transfers FINAL ownership only, and no AC or TC is owned twice.
+#
+# Obligations:
+#  6.1 F-1 — LEDGER-COMPATIBLE GATE APPEND (DEC-22, DM-9, DM-11, NFR-4,
+#      AC-F3-1, AC-F3-2, AC-NFR4-1, RSK-12).
+#      a. packages/cli/src/commands/verify-gates.ts — before
+#         `runtime.appendVerification(record)`, project every
+#         `CrossRepositoryVerifyGateRecord` of `report.gates` to the delivered
+#         ledger shape `{ id, verdict, reason, citation }`: drop `member` and
+#         preserve `id`, `verdict`, `citation`, `reason` in record order and
+#         count. The EMITTED report keeps `member` on every record (DM-9/DM-11);
+#         only the durable append is projected.
+#      b. Derive the appended record's `trackerPosture` (labels and
+#         `ownerLabels`) from the change-level owner-gate read exactly as the
+#         member-less path does, instead of `labels: []` plus whichever member
+#         holds the first `owner-gate` record — DEC-22 keeps "the appended
+#         record's remaining fields … delivered derivation", and an
+#         "observed empty" posture is not a delivered derivation (F-1 secondary,
+#         F-20).
+#      c. Do NOT widen `MergeGateVerificationRecord`, `GATE_VERDICT_KEYS`, the
+#         read tolerance, or the post-append equality check in
+#         packages/core/src/state/merge.ts; the delivered state contract is
+#         untouched (zero new error rows, zero new domain kinds).
+#      d. PROVE the round trip through the REAL state module: at least one
+#         member case wires `appendVerification` to the real
+#         `appendMergeGateVerification` over a fixture host root and reads the
+#         change back with `readMergeGateVerifications` — exactly one record,
+#         `ok: true` (never `torn`), `gates[]` length equal to members ×
+#         declared gates, no `member` key on any appended record, and every
+#         projected `verdict`/`reason`/`citation` equal to the corresponding
+#         report record at the same index (AC-F3-1 positive, AC-F3-2 negative).
+#      e. Add the NEGATIVE half: an unprojected record (a member record carrying
+#         `member`) handed to the real appender is refused — `state.store.torn`
+#         with consequence `not_landed` — and a read of that change's history
+#         returns `torn`; the test asserts the refusal and never asserts the
+#         unprojected shape as valid.
+#      f. Replace the stubbed `appendVerification` in at least one member
+#         suite with the real appender (tests/behaviour/verify-gates-members.test.ts);
+#         tests/behaviour/cross-repository-readonly.test.ts keeps its counting
+#         guard and gains the real-writer case, so a stubbed port can never hide
+#         this class again.
+#  6.2 F-2 — MEMBER ISSUE IDENTITY (DM-8, F-5, DEC-12, DEC-20, AC-F5-1,
+#      AC-F5-2).
+#      a. packages/core/src/contracts/closeout.ts — add the optional
+#         `issue?: string` to `CrossRepositoryCloseoutObservation`: the member's
+#         tracker work-item identity, supplied by the composition exactly like
+#         `headSha`, and the ONLY permitted target of a member
+#         `ticket-to-done` transition.
+#      b. packages/core/src/domain/closeout.ts `memberTicketStep` — the
+#         transition target is `{ systemName, entityId: member.issue }` and
+#         nothing else. Absent `issue` ⇒ `issueClosure: skipped-noop` with ZERO
+#         scheduled operations for that member. Remove every synthesized
+#         `<changeRef>@<repoKey>` entity identity from a transition target.
+#      c. Keep the `issueClosure` fact mapping unchanged, with the identity rule
+#         taking precedence: an absent `issue` ⇒ `skipped-noop` even when the
+#         observation carries an `open` fact; otherwise `open` ⇒ one transition
+#         scheduled / `applied`; `closed` ⇒ `satisfied`; `none` ⇒
+#         `skipped-noop`; tracker read/write gap ⇒ `skipped-gap`.
+#      d. `closeoutMemberRef` (`<changeRef>@<repoKey>`) stays ONLY as the queue
+#         identity for per-member landing removal (DEC-2/DM-8); it is never a
+#         tracker entity id.
+#      e. Fixtures — extend tests/fixtures/closeout/harness.ts with an OPT-IN
+#         known-entity-id set so a `transition-work-item` to an id the fake does
+#         not know FAILS; the default (absent option) behaviour is unchanged for
+#         every delivered closeout suite. Member observations in
+#         tests/fixtures/cross-repository/closeout.ts carry `issue` per member.
+#      f. Assert: the transition target equals exactly the observation's `issue`;
+#         a member without `issue` schedules zero operations and reports
+#         `skipped-noop`; no record in the report, the ledger, the human digest,
+#         or the golden carries a `GH-310@<repoKey>`-shaped identity.
+#  6.3 F-3/F-5 — MEMBER-MODE AGGREGATE FOLD (DEC-23, DM-5, F-5, DEC-12,
+#      AC-F5-1, AC-F5-2, AC-F5-3, DoD-8, RSK-13).
+#      a. Implement the deterministic worst-case fold for the member-mode
+#         `branch-cleanup` and `ticket-to-done` step outcomes in
+#         packages/core/src/domain/closeout.ts (plan aggregates in
+#         `memberBranchStep`/`memberTicketStep`, apply aggregate in the apply
+#         loop): precedence `failed|refused` > `skipped-gap` >
+#         `applied|would-apply` > `satisfied` > `skipped-noop`, folded over the
+#         declared members' values in declared order, MODE-SCOPED (plan values
+#         only in plan mode with `would-refuse` in the refusal tier and
+#         `would-apply` in the applied tier; apply values only in apply mode;
+#         an operation-level `failed` and a safety `refused` share the top
+#         tier).
+#      b. `branch-cleanup` aggregate is derived from the MEMBERS, not from
+#         `operations.length`: an all-unsafe declaration with zero planned
+#         operations folds to `would-refuse` (plan) / `refused` (apply) and is
+#         never `satisfied`.
+#      c. Any member refusal in apply mode makes the aggregate `refused`, so the
+#         delivered `closeout.branch.unsafe` refusal is reachable in member mode
+#         through the existing exit contract (no new error row, no new code).
+#      d. `ticket-to-done` aggregate folds over the COMBINED operation set: the
+#         delivered change-level `ticketStep(facts)` transition to the change's
+#         own tracked item is ALWAYS planned and its operations are combined
+#         with the member transitions, so the change-level transition is never
+#         dropped (F-5); the aggregate is recomputed from that combined set.
+#      e. Each member still reports exactly one value from its own mode column;
+#         the fold never rewrites a member value (DM-5).
+#      f. Implement the precedence ONCE in packages/core/src/domain/closeout-members.ts
+#         as a pure exported helper used by both the plan and the apply paths
+#         (one precedence table, no second copy); re-export it through
+#         packages/core/src/domain/index.ts and packages/core/src/index.ts when
+#         it leaves the module.
+#      g. Tests assert both columns' aggregates, the mixed case, the
+#         all-members-unsafe case, an operation-level `failed` sharing the top
+#         tier, the member values staying unchanged, the change-level transition
+#         still present in `ticket-to-done`, and the exit class
+#         (`closeout.branch.unsafe` instead of success data).
+#      h. Regenerate ONLY the member-mode golden
+#         tests/fixtures/cross-repository/goldens/closeout-members-applied.json
+#         (review-visible diff: the two synthesized entity ids become the
+#         members' `issue` ids, the change-level transition appears, the
+#         operation count and the fold outcome change). Every MEMBER-LESS golden
+#         is read unchanged and is never regenerated (AC-F7-1/NFR-8/RSK-11).
+#  6.4 F-15/F-16 — NONE-CODE CONFIRMATION, no behaviour change.
+#      a. F-15: spec v1.5 states the delivered readiness vocabulary — `held`
+#         with the closed `dependency-open` reason, never `not-ready`, for an
+#         unmet declared dependency (AC-F2-2/F-2/F-4/Flow 4). The delivered code
+#         already emits `held`/`dependency-open`; this phase only verifies that
+#         tests/behaviour/queue-members.test.ts,
+#         tests/behaviour/queue-readiness.test.ts,
+#         tests/behaviour/queue-members-removal.test.ts and
+#         tests/behaviour/queue-members-dependency.test.ts assert that
+#         vocabulary and that no delivered page under doc/spec/** claims
+#         `not-ready` for an unmet dependency. Report a contradiction to the PM;
+#         do not edit doc/spec/** in this phase.
+#      b. F-16: spec v1.5 declares the unwired member READ seam
+#         (`readMembers` and the per-member read bundle) as part of the
+#         deferred, non-blocking posture beside the observation carriers
+#         (§7.3/OQ-6). Verify the shipped composition
+#         (packages/cli/src/production.ts) still wires no member read seam and
+#         that no delivery-phase document states otherwise; the deferral is
+#         current truth, so there is no code change to make.
+#      c. Neither item adds, changes, or removes an AC or a TC; items 6.1-6.3
+#         carry all behavioural change in this phase.
+#
+# NOT IN THIS PHASE: the review's other findings stay open in
+# code-review/review-iter-1.yaml and are NOT claimed closed by this plan
+# revision — F-4 (apply-mode member operation failure does not fail the
+# command), F-6 (member `gates.ci` reading ignores the expected job set), F-7
+# (no member read-bundle identity check), F-8 (capsule gate payload drops
+# `member`), F-9 (`complete` with an empty verdict list), F-10 (per-member
+# `queue add` fences are not atomic), F-11 (duplicate change-ref
+# canonicalization), F-12 (`queue ready` rejects the member grammar), F-13
+# (six changed files outside the declared phase scopes), F-14 (misleading
+# `provider-unsupported` reason on an observation gap), F-17 (CLI dependency
+# placement on the first member only), F-18 (`members: []` echoed as valid),
+# F-19 (`QueueEntryRecord.repository` dual namespace), F-20 (per-member
+# `trackerPosture`; the posture derivation is corrected in 6.1b because the
+# appended record cannot otherwise keep its delivered derivation).
+#
+# Bound: AC-F3-1, AC-F3-2, AC-F5-1, AC-F5-2, AC-F5-3, AC-NFR4-1; DoD-8, DoD-11
+# (identity reuse held: zero new rows, zero new kinds), DoD-12, DoD-14 (final
+# roll-up); F-1, F-2, F-3, F-5, F-15, F-16; DM-5, DM-8, DM-9, DM-11; NFR-4,
+# NFR-5, NFR-7, NFR-8; DEC-12, DEC-20, DEC-22, DEC-23; RSK-12, RSK-13;
+# Appendix A rows 27 (ledger append projection) and 28 (member-mode aggregate
+# fold); Appendix C C-1 (envelope continuity), C-2 (fail-closed CI, untouched),
+# C-3 (identity reuse), C-8 (no doc/spec edit in a delivery phase).
+# Test obligations: TC-XDOD-001 (real append→read round trip, projected count,
+# no `member`, plus the unprojected-record refusal), TC-XDOD-002 (the negative
+# report's ledger projection), TC-XCTR-002 (the one append is a real
+# delivered-shape write), TC-XCTR-007 (the ledger projection contract:
+# unprojected refused, projected append→read not `torn`), TC-XCLOSE-001/002
+# (`issue` target, absent `issue` ⇒ `skipped-noop` with no operation, no
+# synthesized identity, change-level transition still planned, DEC-23 folds),
+# TC-XCLOSE-003 (mixed and all-members-unsafe folds, `closeout.branch.unsafe`
+# reachable in apply mode), TC-XQUEUE-002/003 and TC-XDEP-001 (the F-15
+# `held` + `dependency-open` vocabulary cells, verified; no code change).
+#
+# RELEASE AND SPEC-RECONCILIATION OBLIGATIONS AT THIS BOUNDARY (this is the last
+# plan phase): the five-package minor changeset shipped in phase 5
+# (.changeset/gh-310-cross-repository-changes-minor.md) is NOT edited — a fix
+# inside an unreleased minor bump does not change the bump — so this phase
+# re-runs the full battery and the supplementary range gate at the corrected
+# HEAD and records both in pm-notes; the lifecycle phase 7 handoff obligations
+# listed above are extended with the ledger projection and the `issue`/fold
+# wording, and doc/spec/** still flips only in lifecycle phase 7.
+#
+# Done when: the projected append round-trips through the real state module
+# (exactly one record, not `torn`, gate count = members × declared gates,
+# `id`/`verdict`/`reason`/`citation` preserved in order) and an unprojected
+# member record is refused with `state.store.torn`/`not_landed`; the emitted
+# report still carries `member` on every record and the appended `trackerPosture`
+# is the change-level derivation; every member `ticket-to-done` transition
+# targets exactly its observation's `issue`, a member without `issue` schedules
+# no operation and reports `skipped-noop`, and no synthesized
+# `<changeRef>@<repoKey>` entity id exists in any output or golden; the
+# member-mode `branch-cleanup` and `ticket-to-done` aggregates are the DEC-23
+# worst-case fold in both modes, the all-members-unsafe case folds to
+# `refused`/`would-refuse`, `closeout.branch.unsafe` is reachable in apply mode,
+# and the change-level `ticket-to-done` transition is still planned; the F-15
+# and F-16 confirmations hold with no contradicting code or delivered page; all
+# six plan phases are complete with per-phase pm-notes evidence and the final
+# battery plus range-gate verdicts are recorded there (dod_check reads that
+# evidence, not this file).
+# ---------------------------------------------------------------------------
+schemaVersion: delivery.plan.v1
+workItemRef: GH-310
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6]
+  escalationTriggers:
+    - new-error-table-row-or-new-domain-kind
+    - new-top-level-envelope-key-or-ok-command-field
+    - member-less-output-not-byte-identical
+    - unavailable-or-absent-ci-reading-counted-as-green
+    - member-ref-canonicalization-narrowing-the-delivered-form
+    - report-bound-truncating-a-blocking-member
+    - live-network-second-remote-or-credentials-in-default-tests
+    - current-truth-feature-spec-pre-flipped-in-a-delivery-phase
+    - member-declaration-valid-where-the-bound-cannot-be-reported
+    - pnpm-check-not-green-at-a-phase-boundary
+    - gate-append-not-proven-through-the-real-state-module
+    - member-closeout-transition-targeting-a-synthesized-entity-identity
+    - member-mode-aggregate-not-the-declared-worst-case-fold
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  - id: 1
+    title: "Plan member declarations: closed validation, member-ref identity and bounds, and the plan validate echo"
+    kind: delivery
+    summary: >-
+      Add the additive optional plan members[] declaration, the pure member
+      parser and member-ref identity, the DEC-15 field grammar and the DEC-10
+      bounds, and the plan validate echo plus lint locations, without weakening
+      any delivered rejection or moving member-less plan output by a byte.
+    scope:
+      files:
+        - packages/core/src/contracts/plan.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/domain/plan-members.ts
+        - packages/core/src/domain/plan-validate.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - tests/behaviour/plan-members.test.ts
+        - tests/behaviour/plan-members-bounds.test.ts
+        - tests/behaviour/plan-readonly.test.ts
+        - tests/behaviour/plan-lint.test.ts
+        - tests/behaviour/plan-validate.test.ts
+        - tests/behaviour/plan-validate-rejections.test.ts
+        - tests/behaviour/plan-determinism.test.ts
+        - tests/behaviour/cross-repository-parity.test.ts
+        - tests/structure/cross-repository-contract.test.ts
+        - tests/golden/cross-repository-members.test.ts
+        - tests/fixtures/queue/golden/queue-add-memberless.json
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+      folders:
+        - tests/fixtures/plan/members-invalid
+        - tests/fixtures/plan/members-bounds
+        - tests/fixtures/plan/members-required
+        - tests/fixtures/plan/members-grammar
+        - tests/fixtures/cross-repository
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/plan.ts
+        role: producer
+
+  - id: 2
+    title: "Per-member queue representation: member refs, one entry and lane per member, dependency edges, release and removal"
+    kind: delivery
+    summary: >-
+      Extend queue canonicalization with the bounded member ref, materialize one
+      entry and one lane per declared member bound to its own repository, carry
+      per-member dependency edges and readiness, keep per-member release and
+      removal, and return the delivered queue add payload plus additive ordered
+      data.members[] {ref, repoKey, lane} while the delivered canonical form
+      stays byte-identical.
+    scope:
+      files:
+        - packages/core/src/contracts/queue.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/domain/queue-graph.ts
+        - packages/core/src/app/queue.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - packages/cli/src/commands/queue.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - tests/behaviour/queue-members.test.ts
+        - tests/behaviour/queue-members-removal.test.ts
+        - tests/behaviour/queue-member-ref.test.ts
+        - tests/behaviour/queue-members-dependency.test.ts
+        - tests/behaviour/queue-readiness.test.ts
+        - tests/behaviour/queue-lease.test.ts
+        - tests/behaviour/queue-dep-cycle.test.ts
+        - tests/behaviour/queue-cli.test.ts
+        - tests/behaviour/queue-graph.test.ts
+        - tests/behaviour/closeout-queue-removal.test.ts
+        - tests/behaviour/closeout-queue-removal-skips.test.ts
+        - tests/behaviour/cross-repository-determinism.test.ts
+      folders:
+        - tests/fixtures/queue/members
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/queue.ts
+        role: consumer
+
+  - id: 3
+    title: "Cross-repository definition of done: per-member CI corroboration, blockers, evidence order, and the single review flow"
+    kind: delivery
+    summary: >-
+      Report the distinct CrossRepositoryVerifyGatesReport (delivered
+      VerifyGatesReport unchanged) with data.definitionOfDone,
+      data.blockingMembers[] and data.reviewFlow, expose the per-(member, gate)
+      gates[]/summary projection with its required member discriminator, project
+      overall pass/fail (unknown never emitted) with the negative report
+      data-bearing and overall: fail the sole verify.gates.failed carrier,
+      compute each member verdict over both its records and gates.ci, read CI
+      on each member's own pushed head with unavailable and absent never green,
+      order evidence from injected MemberLandingObservation facts, and derive
+      one review verdict per member from injected ReviewObservation values
+      through the verification composition.
+    scope:
+      files:
+        - packages/core/src/contracts/verify-gates.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/domain/verify-gates.ts
+        - packages/core/src/domain/verify-gates-members.ts
+        - packages/core/src/domain/review-flow.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - packages/cli/src/commands/verify-gates.ts
+        - packages/cli/src/commands/verify.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - tests/behaviour/verify-gates-members.test.ts
+        - tests/behaviour/verify-gates-members-evidence.test.ts
+        - tests/behaviour/verify-gates-members-bounds.test.ts
+        - tests/behaviour/verify-gates-review-flow.test.ts
+        - tests/behaviour/verify-gates-read-budget.test.ts
+        - tests/behaviour/verify-gates-target.test.ts
+        - tests/behaviour/entrypoint-help.test.ts
+        - tests/behaviour/cross-repository-determinism.test.ts
+        - tests/types/cross-repository-report.type-test.ts
+        - tests/golden/cross-repository-members.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+      folders:
+        - tests/fixtures/cross-repository
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/verify-gates.ts
+        role: producer
+
+  - id: 4
+    title: "Per-member closeout report: merge-truth landing, per-member cleanup and issue closure, and per-member landing removal"
+    kind: delivery
+    summary: >-
+      Add the additive optional closeout data.members[] report with delivered
+      outcome vocabularies and merge-truth landed, consume injected
+      CrossRepositoryCloseoutObservation entries (no new port, operation, or
+      store), ride per-member branch cleanup, issue closure and thread
+      resolution on the unchanged twelve steps, and retire each landing only for
+      its own member-ref entry.
+    scope:
+      files:
+        - packages/core/src/contracts/closeout.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/domain/closeout.ts
+        - packages/core/src/domain/closeout-members.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - packages/core/src/app/queue.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - tests/behaviour/closeout-members.test.ts
+        - tests/behaviour/closeout-plan.test.ts
+        - tests/behaviour/closeout-queue-removal-skips.test.ts
+        - tests/behaviour/closeout-queue-removal.test.ts
+        - tests/behaviour/cross-repository-determinism.test.ts
+        - tests/behaviour/cross-repository-parity.test.ts
+        - tests/golden/cross-repository-members.test.ts
+        - tests/fixtures/closeout/request.ts
+        - tests/fixtures/closeout/branch.ts
+        - tests/fixtures/closeout/queue-removal.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+      folders:
+        - tests/fixtures/cross-repository
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/closeout.ts
+        role: producer
+
+  - id: 5
+    title: "Parity goldens, contract and identity continuity, read-only and determinism proofs, M2 bookkeeping, and the full gate battery"
+    kind: delivery
+    summary: >-
+      Prove the member-less surface byte-identical across plan, gates, closeout
+      and queue (including the member-less queue add golden, the delivered
+      VerifyGatesReport literal overall pass with no member, and the unchanged
+      failure envelope), prove the distinct report types and envelope,
+      vocabulary, bounds and identity reuse with zero new rows or kinds, prove
+      read-only, bounded, deterministic and hermetic behaviour, record M2-S19
+      delivery truth, ship the five-package minor changeset, and run the full
+      gate battery at the delivered HEAD.
+    scope:
+      files:
+        - .changeset/gh-310-cross-repository-changes-minor.md
+        - tests/behaviour/cross-repository-parity.test.ts
+        - tests/behaviour/cross-repository-readonly.test.ts
+        - tests/behaviour/plan-readonly.test.ts
+        - tests/behaviour/verify-gates-read-budget.test.ts
+        - tests/structure/cross-repository-contract.test.ts
+        - tests/types/cross-repository-report.type-test.ts
+        - tests/structure/envelope-contract.test.ts
+        - tests/structure/error-table.test.ts
+        - tests/structure/event-state-additivity.test.ts
+        - tests/checks/error-table-sync.test.ts
+        - tests/checks/cross-repository-hermetic.test.ts
+        - tests/checks/fixture-sanitization.test.ts
+        - tests/golden/plan-text.test.ts
+        - tests/golden/closeout-envelope.test.ts
+        - tests/golden/closeout-human.test.ts
+        - tests/golden/closeout-residue.test.ts
+        - tests/golden/verify-gates.test.ts
+        - tests/golden/queue-list.test.ts
+        - tests/golden/queue-plan.test.ts
+        - tests/golden/lanes-list.test.ts
+        - tests/golden/lanes-show.test.ts
+        - tests/fixtures/closeout/legacy-consumer.ts
+        - tests/fixtures/projects/state-scope.ts
+        - doc/planning/oss-tooling/backlog.md
+        - doc/planning/oss-tooling/status.md
+        - doc/planning/oss-tooling/milestones/m2/contracts.md
+      folders:
+        - tests/fixtures/cross-repository
+    interactions:
+      - kind: contract-file
+        target: doc/planning/oss-tooling/milestones/m2/contracts.md
+        role: producer
+    doneArtifacts:
+      trackerTransition: "GH-310 phases 1-5 done: member feature delivered, parity and identity proofs recorded, M2-S19 bookkeeping updated, full gate battery green; review-iteration-1 remediation is phase 6"
+
+  - id: 6
+    title: "Close review-iteration-1 findings: ledger-compatible gate append, member issue identity, member-mode aggregate fold, and the real-writer round trip"
+    kind: delivery
+    leases:
+      - repo:main-tools
+    summary: >-
+      Close review-iteration-1 findings: ledger-compatible gate append, member
+      issue identity, member-mode aggregate fold, and the real-writer round
+      trip — project the cross-repository gate
+      records to the delivered ledger shape before the one append and prove
+      append-then-read through the real state module (DEC-22), target the member
+      `ticket-to-done` transition at the observation's `issue` identity and
+      synthesize none (DM-8), implement DEC-23's mode-scoped worst-case aggregate
+      fold so a member refusal makes the aggregate refused and the change-level
+      transition is never dropped, and confirm the F-15/F-16 corrections need no
+      code.
+    scope:
+      files:
+        # Core: the issue carrier, the member projection modules, and the state
+        # module the round trip is proven through (read-only proof target: the
+        # delivered validation and read tolerance are not widened).
+        - packages/core/src/contracts/closeout.ts
+        - packages/core/src/domain/closeout.ts
+        - packages/core/src/domain/closeout-members.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - packages/core/src/state/merge.ts
+        # CLI: the append projection plus the member report/append seam.
+        - packages/cli/src/commands/verify-gates.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        # Suites whose amended assertion cells phase 6 owns.
+        - tests/behaviour/verify-gates-members.test.ts
+        - tests/behaviour/verify-gates-members-evidence.test.ts
+        - tests/behaviour/closeout-members.test.ts
+        - tests/behaviour/closeout-plan.test.ts
+        - tests/behaviour/closeout-queue-removal.test.ts
+        - tests/behaviour/closeout-queue-removal-skips.test.ts
+        - tests/behaviour/cross-repository-readonly.test.ts
+        - tests/structure/cross-repository-contract.test.ts
+        - tests/types/cross-repository-report.type-test.ts
+        - tests/golden/cross-repository-members.test.ts
+        # The F-15 vocabulary carriers (read-verified; expected to stay
+        # unedited, declared so a necessary correction cannot fall outside
+        # scope). The remaining closeout-queue-removal* suites are member-less
+        # and are read unchanged.
+        - tests/behaviour/queue-members.test.ts
+        - tests/behaviour/queue-readiness.test.ts
+        - tests/behaviour/queue-members-removal.test.ts
+        - tests/behaviour/queue-members-dependency.test.ts
+        # Fixtures the member suites use, including the opt-in strict provider
+        # fake and the member-mode golden that the corrected behaviour
+        # regenerates (member-less goldens are read unchanged).
+        - tests/fixtures/cross-repository/closeout.ts
+        - tests/fixtures/cross-repository/facts.ts
+        - tests/fixtures/cross-repository/goldens/closeout-members-applied.json
+        - tests/fixtures/closeout/harness.ts
+        - tests/fixtures/closeout/request.ts
+        - tests/fixtures/closeout/branch.ts
+        - tests/fixtures/closeout/queue-removal.ts
+        - tests/fixtures/state/harness.ts
+      folders:
+        - tests/fixtures/cross-repository
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/closeout.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/state/merge.ts
+        role: consumer
+    doneArtifacts:
+      trackerTransition: "GH-310 delivery complete: all six plan phases done, the gate append round-trips through the real state module, member transitions target the observation issue identity, the member-mode aggregates are the DEC-23 worst-case fold, the final gate battery and commit-range verdicts are recorded; PR-ready against main-tools (PR creation is lifecycle phase 11)"

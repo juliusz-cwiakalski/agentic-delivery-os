@@ -86,3 +86,19 @@ describe("TC-DPLAN-024 byte-identical replay", () => {
     expect(shuffled).toBe(baseline);
   });
 });
+
+describe("TC-XPLAN-001 member echo is deterministic", () => {
+  test("two runs over the unchanged member plan are byte-identical", async () => {
+    const { twoMemberPlanYaml } = await import("../fixtures/cross-repository/plan");
+    const world = {
+      artifacts: {
+        "GH-310": [
+          { kind: "yaml" as const, path: "chg-GH-310-plan.yaml", text: twoMemberPlanYaml() },
+        ],
+      },
+    };
+    const first = await runPlanCli(["plan", "validate", "GH-310", "--json"], planRuntime(world));
+    const second = await runPlanCli(["plan", "validate", "GH-310", "--json"], planRuntime(world));
+    expect(first.stdout).toBe(second.stdout);
+  });
+});

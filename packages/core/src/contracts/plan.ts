@@ -83,6 +83,34 @@ export const PLAN_ARTIFACT_KINDS = ["yaml", "markdown"] as const;
 /** The documented base used when `--against` is omitted. */
 export const PLAN_DEFAULT_DIFF_BASE = "main-tools" as const;
 
+/* ------------------------- member declarations --------------------------- */
+
+/**
+ * The additive optional document-level member declaration (GH-310 DEC-1,
+ * DM-1). A member-declaring plan still validates as `delivery.plan.v1`.
+ */
+export const PLAN_MEMBER_KEY = "members" as const;
+
+/** The closed member-entry field set, in declaration order (DM-1, DEC-15). */
+export const PLAN_MEMBER_FIELDS = [
+  "repoKey",
+  "slice",
+  "branch",
+  "pullRequest",
+  "dependsOn",
+  "gates",
+] as const;
+
+/** The required member fields; `pullRequest` and `dependsOn` are optional. */
+export const PLAN_MEMBER_REQUIRED_FIELDS = ["repoKey", "slice", "branch", "gates"] as const;
+
+/** Member bounds, shared with the gate and closeout surfaces (DEC-10). */
+export const PLAN_MAX_MEMBERS = 8 as const;
+export const PLAN_MAX_MEMBER_DEPENDS_ON = 8 as const;
+export const PLAN_MAX_MEMBER_GATES = 16 as const;
+/** A member gate identifier is shape-bounded only (DEC-9). */
+export const PLAN_MAX_MEMBER_GATE_CHARS = 64 as const;
+
 /** Bounds keep every verdict payload finite and deterministic (NFR-4). */
 export const PLAN_MAX_PHASES = 64 as const;
 export const PLAN_MAX_SCOPE_PATHS = 512 as const;
@@ -188,6 +216,19 @@ export type PlanPhase = {
   readonly leaseClass?: PlanLeaseClass;
 };
 
+/** One declared member repository of a cross-repository change (GH-310 DM-1). */
+export type PlanMemberDeclaration = {
+  readonly repoKey: string;
+  readonly slice: string;
+  readonly branch: string;
+  readonly pullRequest?: string;
+  readonly dependsOn?: readonly string[];
+  readonly gates: readonly string[];
+};
+
+/** The verbatim echo of one declared member, in declared order (DM-1). */
+export type PlanMember = PlanMemberDeclaration;
+
 /** Ceremony tier as plan data: phase set and escalation triggers (DM-6). */
 export type PlanTierDeclaration = {
   readonly name: string;
@@ -203,6 +244,8 @@ export type PlanDocument = {
   readonly defaultLeases?: readonly string[];
   readonly defaultWeightClass?: string;
   readonly phases: readonly PlanPhase[];
+  /** Additive declaration data only; never scope, diff, or overlap input. */
+  readonly members?: readonly PlanMemberDeclaration[];
 };
 
 /** The artifact identity read for a ref. */
@@ -247,6 +290,8 @@ export type PlanValidateData = {
   readonly schemaVersion?: string;
   readonly tier?: string;
   readonly tierDeclaration?: PlanTierDeclaration;
+  /** Present only on a valid verdict that declared members, in declared order. */
+  readonly members?: readonly PlanMember[];
 };
 
 /** `plan overlap` envelope data (DM-7, F-10). */

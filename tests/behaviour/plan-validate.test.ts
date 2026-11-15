@@ -146,3 +146,24 @@ describe("TC-DPLAN-001 CLI edge and text mode", () => {
     expect(run.stdout).toContain("readyForDevelopment=true");
   });
 });
+
+describe("TC-XPLAN-001 member echo", () => {
+  test("a two-member plan echoes members[] in declared order", async () => {
+    const { twoMemberPlanYaml } = await import("../fixtures/cross-repository/plan");
+    const { planYamlParser } = await import("../fixtures/plan/harness/index");
+    const verdict = validatePlan({
+      workItemRef: "GH-310",
+      read: {
+        ok: true,
+        artifact: { kind: "yaml", path: "chg-GH-310-plan.yaml" },
+        text: twoMemberPlanYaml(),
+      },
+      parseYaml: planYamlParser,
+    });
+    expect(verdict.verdict).toBe("valid");
+    expect(verdict.members?.map((member) => member.repoKey)).toEqual([
+      "api-service-1a2b3c4d",
+      "web-ui-5e6f7a8b",
+    ]);
+  });
+});

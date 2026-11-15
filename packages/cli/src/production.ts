@@ -99,6 +99,7 @@ import {
   PRODUCTION_DEFAULTS,
   type ProjectsScopeFailure,
   parseHostIndexDocument,
+  parsePlanMembers,
   parseProjectIdentityMarker,
   projectGroupDeclared,
   projectGroupEntry,
@@ -1212,6 +1213,25 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       deploy: { expectations: {}, verdicts: {} },
     };
     /**
+     * The bounded local plan-member read (GH-310 F-2, DEC-21, DM-6): one plan
+     * read plus the injected YAML parse. No configuration and no network are
+     * read; an absent, unreadable, unparseable, member-less, or invalid plan
+     * leaves the delivered single-ref queue path untouched.
+     */
+    const readPlanMembers: NonNullable<QueueComposition["readPlanMembers"]> = (ref) => {
+      const read = plan.readPlan(ref);
+      if (!read.ok) return undefined;
+      const parsed = plan.parseYaml(read.text);
+      if (!parsed.ok) return undefined;
+      const document = parsed.value;
+      if (typeof document !== "object" || document === null || Array.isArray(document)) {
+        return undefined;
+      }
+      const raw = (document as { readonly members?: unknown }).members;
+      if (raw === undefined) return undefined;
+      return parsePlanMembers(raw, ref).members;
+    };
+    /**
      * The durable reachability marker (DM-4, AC-F5-1..AC-F5-8), folded from the
      * one production predicate over the composed staleness bound. It performs no
      * socket connect, no process probe, and no sleep.
@@ -1237,6 +1257,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         degraded: daemonReachability,
         readyRuntime: createStatusCommandRuntime(statusComposition(), noChain),
         readOwnerHold,
+        readPlanMembers,
         readProjectGroup: (groupKey: string) => readProjectGroupWork(groupKey),
         // GH-292 F-5: the per-item tracker delivery-state read for `queue
         // reconcile`, riding the same verified GitHub client the closeout

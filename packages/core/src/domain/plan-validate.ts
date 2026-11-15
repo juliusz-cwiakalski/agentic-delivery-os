@@ -28,6 +28,7 @@ import {
   type PlanDocument,
   type PlanDoneArtifacts,
   type PlanInteraction,
+  type PlanMember,
   type PlanPhaseKind,
   type PlanPhaseVerdict,
   type PlanScopeEcho,
@@ -37,6 +38,7 @@ import {
   type PlanYamlParser,
   planArtifactPath,
 } from "#contracts";
+import { parsePlanMembers } from "./plan-members.js";
 import { scopeCoversPath } from "./plan-paths.js";
 
 /** The injected facts for one validation. */
@@ -376,11 +378,12 @@ type ValidatedDocument = {
   readonly tier?: string;
   readonly tierDeclaration?: PlanTierDeclaration;
   readonly perPhase: readonly PlanPhaseVerdict[];
+  readonly members?: readonly PlanMember[];
   readonly errors: readonly PlanValidationError[];
 };
 
 /** Validate a parsed plan value; pure and total. */
-export const validatePlanValue = (value: unknown): ValidatedDocument => {
+export const validatePlanValue = (value: unknown, changeRef = ""): ValidatedDocument => {
   const errors: PlanValidationError[] = [];
   const perPhase: PlanPhaseVerdict[] = [];
   if (!isRecord(value)) {
@@ -480,6 +483,9 @@ export const validatePlanValue = (value: unknown): ValidatedDocument => {
     errors.push(schemaError("defaultWeightClass", "invalid", { detail: "expected a string" }));
   }
 
+  const members = parsePlanMembers(value.members, changeRef);
+  errors.push(...members.errors);
+
   const phasesRaw = value.phases;
   if (!Array.isArray(phasesRaw)) {
     errors.push(schemaError("phases", "missing", { detail: "expected a non-empty array" }));
@@ -517,6 +523,7 @@ export const validatePlanValue = (value: unknown): ValidatedDocument => {
     ...(tierName === undefined ? {} : { tier: tierName }),
     ...(tierDeclaration === undefined ? {} : { tierDeclaration }),
     perPhase: perPhase.sort((left, right) => left.id - right.id),
+    ...(members.members === undefined ? {} : { members: members.members }),
     errors: sorted,
   };
 };
@@ -626,7 +633,11 @@ export const validatePlan = (input: PlanValidateInput): PlanValidateData => {
     );
   }
 
-  const validated = validatePlanValue(parsed.value);
+  const validated = validatePlanValue(
+    parsed.value,
+    nonEmptyString((parsed.value as { readonly workItemRef?: unknown }).workItemRef) ??
+      input.workItemRef,
+  );
   if (validated.errors.length === 0) {
     const shape = bounded(validated.errors);
     return {
@@ -642,6 +653,7 @@ export const validatePlan = (input: PlanValidateInput): PlanValidateData => {
       ...(validated.tierDeclaration === undefined
         ? {}
         : { tierDeclaration: validated.tierDeclaration }),
+      ...(validated.members === undefined ? {} : { members: validated.members }),
     };
   }
   return invalid(validated.errors, {
@@ -679,5 +691,6 @@ export const planDocumentFromValidateData = (data: PlanValidateData): PlanDocume
       ...(phase.weightClass === undefined ? {} : { weightClass: phase.weightClass }),
       leases: phase.leases,
     })),
+    ...(data.members === undefined ? {} : { members: data.members }),
   };
 };

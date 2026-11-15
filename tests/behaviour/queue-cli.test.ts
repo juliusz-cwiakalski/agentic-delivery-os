@@ -596,3 +596,35 @@ describe("GH-280 held bookkeeping", () => {
     expect(String(error(claim.stdout)?.summary)).toContain("reason=owner-hold");
   });
 });
+
+describe("GH-310 the delivered queue grammar accepts a canonical member ref", () => {
+  const MEMBER_REF = "GH-310@api-service-1a2b3c4d";
+
+  test("add, list, and remove accept the member ref and never report ref-not-canonical", async () => {
+    const harness = createQueueEdgeHarness("member-ref-grammar");
+    const added = await harness.run(["queue", "add", MEMBER_REF, "--json"]);
+    expect(added.exitCode).toBe(0);
+    expect(error(added.stdout)).toBeUndefined();
+    expect(data(added.stdout).ref).toBe(MEMBER_REF);
+    expect(data(added.stdout).members).toBeUndefined();
+
+    const listed = await harness.run(["queue", "list", "--json"]);
+    expect(listed.exitCode).toBe(0);
+    expect(
+      (data(listed.stdout).entries as Array<Record<string, unknown>>).some(
+        (entry) => entry.ref === MEMBER_REF,
+      ),
+    ).toBe(true);
+
+    const removed = await harness.run([
+      "queue",
+      "remove",
+      MEMBER_REF,
+      "--reason",
+      "abandoned",
+      "--json",
+    ]);
+    expect(removed.exitCode).toBe(0);
+    expect(data(removed.stdout).reason).toBe("abandoned");
+  });
+});

@@ -3,15 +3,17 @@ ados_distribution: internal
 id: SPEC-VERIFY-GATES
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-07
+last_updated: 2026-11-15
 owners: ["engineering"]
 service: delivery-os
-summary: "The verify gates surface: the config-declared merge battery (default five built-ins in shipped order), cited pass/fail/unknown verdicts, structured VerifyLedgerEvaluation consumption, deterministic open-PR resolution, read-specific 404 absence, shared status vocabulary, bounded deterministic output, the appended EVT-1 gate-verification record with byte-identical verdicts, the non-gating capsule `gate.outcome` append with a bounded disclosure, and the two verify.gates.* error rows."
+summary: "The verify gates surface: the config-declared merge battery (default five built-ins in shipped order), cited pass/fail/unknown verdicts, structured VerifyLedgerEvaluation consumption, deterministic open-PR resolution, read-specific 404 absence, shared status vocabulary, bounded deterministic output, the appended EVT-1 gate-verification record with byte-identical verdicts, the delivered-shape projection of that record's member gates (`member` dropped, order and count preserved) so the ledger reads back non-`torn`, the non-gating capsule `gate.outcome` append with a bounded disclosure, the two verify.gates.* error rows, and the additive cross-repository report type: one shared definition of done over the declared member set with per-(member, gate) records, per-member CI corroboration and member verdicts, landing-ordered evidence, an untruncated blocking-member list, one review flow with a stable run identity, and the data-bearing negative report at exit 1 while the delivered member-less report keeps its literal overall and exits."
 links:
-  related_changes: ["GH-178", "GH-225", "GH-240"]
+  related_changes: ["GH-178", "GH-225", "GH-240", "GH-310"]
   related_decisions: ["ADR-0003", "ADR-0006", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/verify-gates.ts"
+    - "packages/core/src/domain/verify-gates-members.ts"
+    - "packages/core/src/domain/review-flow.ts"
 ---
 
 # Feature: Verify Gates
@@ -36,12 +38,30 @@ appends exactly one fenced gate-verification record per full battery evaluation
 and nothing else. The report schema is `delivery.verify-gates.v1`; the envelope
 schema remains `delivery.result.v1`.
 
+When the composing surface supplies the member runtime, a change whose plan
+declares `members[]` reports one shared definition of done over the declared
+member set: a distinct additive report type
+(`CrossRepositoryVerifyGatesReport`) carrying the same required report fields
+plus `overall: pass|fail`, `definitionOfDone`, `blockingMembers[]`, and
+`reviewFlow`. It reports one gate record per declared (member, gate) pair, a
+per-member CI reading taken on that member's own pushed head, and a mechanical
+member verdict over both; the report is data-bearing on every status and a
+negative verdict is exit `1`. The delivered `VerifyGatesReport` — its literal
+`overall: "pass"`, its member-less record shape, its failure envelope, and its
+exits — is unchanged, and a change whose plan declares no members produces that
+report byte-identically.
+
+The durable ledger keeps its delivered record shape independently of that report:
+the one appended gate-verification record carries every member gate projected to
+the delivered `{id, verdict, reason, citation}` set with the `member`
+discriminator dropped, while `member` stays on every report record.
+
 ## Command surface
 
 | Invocation | Outcome |
 |---|---|
 | `verify gates GH-178` | Evaluate the declared battery (default five gates); a success prints the deterministic six-line human report; a failure prints the bounded gate summary. |
-| `verify gates GH-178 --json` | Exactly one machine envelope on stdout; on success `data` is the full `delivery.verify-gates.v1` report, on failure there is no `data`. |
+| `verify gates GH-178 --json` | Exactly one machine envelope on stdout; on success `data` is the full `delivery.verify-gates.v1` report, on failure there is no `data` — except a negative cross-repository report, which is data-bearing at exit `1`. |
 | `verify gates` / `verify gates GH-178 extra` / unknown flag | Rejected before any read: a missing or empty ref is `input.value.rejected`; a third positional or unknown flag is `fallback.invocation`. |
 
 `verify` is one top-level command with three subcommands, `change`, `gates`,
@@ -109,7 +129,11 @@ A success exits `0`; any definitive gate failure reuses `verify.gates.failed`
 (exit `1`); an unclassified unknown uses `verify.gates.unavailable` (exit `2`).
 A classified unknown reuses the first unknown gate's error-table identity and
 its projection, for example `config.credential.missing` (exit `1`) or
-`state.store.torn` (exit `2`).
+`state.store.torn` (exit `2`). A negative cross-repository report is the third
+shape: it is data-bearing at exit `1` through the `user-validation` projection
+class, so the report names the blocking member and the delivered
+`verify.gates.failed` classification is carried by `overall: "fail"` rather than
+by an error envelope. No error-table row is added for it.
 
 ## Error rows
 
@@ -119,7 +143,10 @@ its projection, for example `config.credential.missing` (exit `1`) or
 | `verify.gates.unavailable` | `verify` | platform | `platform-provider` | `2` | The overall result is `unknown` and no first-unknown gate carries a resolvable error-table identity. |
 
 Both rows are additive members of the existing `verify` kind;
-`verify.ledger.incomplete` remains the `verify change` row and is unchanged.
+`verify.ledger.incomplete` remains the `verify change` row and is unchanged. The
+cross-repository report adds no row and no domain kind: its negative verdict is
+data-bearing at exit `1` and is classified by `overall: "fail"`, and its
+per-member and per-gate outcomes are report data rather than error identities.
 
 ## Bounds and read budget
 
@@ -136,6 +163,7 @@ Both rows are additive members of the existing `verify` kind;
 | `VERIFY_GATES_MAX_SUMMARY_LINES` | 6 | Maximum failure-summary lines. |
 | `VERIFY_GATES_MAX_SUMMARY_BYTES` | 4096 | Maximum failure-summary bytes. |
 | `VERIFY_GATES_MAX_MACHINE_BYTES` | 65536 | Maximum serialized machine report bytes. |
+| `VERIFY_GATES_MAX_MEMBERS` | 8 | Maximum declared members evaluated in one cross-repository report; `blockingMembers[]` is never truncated. |
 
 The read budget is bounded per source: one local ledger read (pm-notes plus
 the verified registry), one local repository HEAD/branch read, one local
@@ -143,6 +171,158 @@ CI-workflow read, at most one bounded open-PR page, one resolved detail read,
 one check-run page, and one work-item read per invocation. There are no
 retries and no pagination. The only write is one appended gate-verification
 record per full battery evaluation.
+
+## Cross-repository report
+
+A change whose plan declares `members[]` is evaluated over that declared member
+set when the composition supplies the member reads. The command emits the union
+of two report types, discriminated by the presence of `definitionOfDone`: a
+report without it is the delivered `VerifyGatesReport`, and a report with it is
+the additive `CrossRepositoryVerifyGatesReport`. The delivered type is never
+widened — its `overall` stays the literal `"pass"` and its `gates[]` stays
+`VerifyGateRecord[]` with no `member` field.
+
+### Report fields
+
+The cross-repository report carries `schemaVersion`
+(`delivery.verify-gates.v1`), `changeRef`, `target: "gates"`,
+`overall: "pass" | "fail"`, `summary`, `gates[]`, `definitionOfDone`,
+`blockingMembers[]`, and `reviewFlow`. There is no separate classification field
+and no error envelope: `overall: "fail"` is itself the carrier of the delivered
+`verify.gates.failed` classification.
+
+### Per-(member, gate) records
+
+`gates[]` carries exactly one record per declared (member, gate) evaluation:
+members in declared order, then each member's declared gate order. Each record is
+a `CrossRepositoryVerifyGateRecord` — the delivered `id`, `verdict`, `reason`,
+and `citation` fields plus a **required** `member` holding the member `repoKey` —
+so every record is attributable to exactly one member and no record exists
+without a member. `summary` counts those records: `gates` is the record count and
+`passed`, `failed`, and `unknown` count records by verdict, so a fully resolved
+gate set yields `summary.gates` equal to the total number of declared (member,
+gate) pairs.
+
+A declared gate identifier the effective gate set does not resolve contributes
+exactly one synthetic `unknown` record and never a `pass`, shaped as `id` = the
+declared identifier, `member` = the declaring `repoKey`, `verdict: "unknown"`,
+`reason: "read-failed"`, and a citation of `identity: { changeRef }` only with
+`sources: []`, `counts: []`, `names: []`, and `reasons: ["read-failed"]`. No
+provider source, count, name list, branch, or SHA is invented or attributed to a
+real read.
+
+### Durable ledger projection
+
+The durable gate-verification ledger keeps its delivered closed record shape, so a
+cross-repository evaluation appends exactly one `MergeGateVerificationRecord`
+whose `gates[]` is each member gate record projected to the delivered
+`{id, verdict, reason, citation}` set: the `member` discriminator is dropped and
+the four delivered fields are preserved in record order and count, so the appended
+gate count equals the report record count (members × declared gates) and every
+projected `verdict`, `reason`, and `citation` matches the corresponding report
+record. Member attribution is report data only: the report's
+`CrossRepositoryVerifyGateRecord` entries keep `member`, no ledger gate record
+carries one, and the delivered closed-key validation, post-append equality check,
+and read tolerance are untouched — the history reads back non-`torn`. An append
+offered an unprojected member record is refused by that validation
+(`state.store.torn`, consequence `not_landed`), so the projection is the only
+accepted shape. The appended record's remaining fields keep their delivered
+derivation, including a `trackerPosture.ownerLabels` read from the change's own
+work item rather than from a member's `owner-gate` record.
+
+### Member verdicts, CI corroboration, and status
+
+`definitionOfDone.members[]` carries exactly one entry per declared member in
+declared order: `repoKey`, `gates.ci`, and `verdict`.
+
+- `gates.ci` is the closed four-value reading on that member's own pushed head:
+  `pass`, `fail`, `unavailable`, or `absent`. `unavailable` is a classified
+  reading failure; `absent` means the CI truth could not be established for any
+  reason — no declared pull request, no pushed head, or no run for the head.
+  Neither is ever green, and one member's reading is never reused for another.
+  A reading is `pass` only when the member's pushed head has at least one succeeded
+  job and no failed, canceled, pending, or missing job; a zero-run page, an
+  unresolvable detail read, or a non-hex head is never `pass`.
+- `verdict` is the closed three-value member verdict `pass`, `fail`, or
+  `unknown`, computed mechanically from both the member's own records and its CI
+  reading: `pass` iff every declared gate record for that member is `pass` and
+  `gates.ci` is `pass`; `fail` iff any record is `fail` or `gates.ci` is `fail`;
+  `unknown` otherwise. A member whose records all pass but whose CI is
+  unavailable or absent is therefore never `pass`.
+- `status` aggregates the members. `blocked` iff any member is `fail`, any
+  member's `gates.ci` is `unavailable`, or any member carries a synthetic
+  unresolvable-identifier record. `incomplete` iff none of those hold and at
+  least one member is `unknown`. `green` iff every member is `pass`. `blocked`
+  wins over `incomplete`, and both non-green statuses are never green.
+- `blockingMembers[]` names every member whose verdict is not `pass`, in
+  declared order. It is never truncated, including under the report's byte bound.
+
+`evidence[]` enumerates the declared member pull requests in landing order, with
+entries carrying exactly `repoKey`, `pullRequest`, `landed`, and — only when
+`landed` is true — the 1-based `landingPosition` that justifies the order.
+Landed members come first in ascending `landingPosition` (ties broken by declared
+order), then unlanded members in declared order. A member with no declared pull
+request is omitted from `evidence[]` while remaining present in `members[]`.
+
+`landed`, `landingPosition`, and per-member merge truth arrive as injected
+`MemberLandingObservation` entries — one per declared member `{ repoKey, merged,
+headSha?, landingPosition? }`, with `landingPosition` present only when `merged`
+is true — supplied through the verification composition. They are never obtained
+by an additional provider read, so the bounded read budget is unchanged.
+
+### Review flow
+
+`reviewFlow` is one run over the declared member pull-request set:
+`{ runId, complete, verdicts[] }`.
+
+| Field | Contract |
+|---|---|
+| `runId` | A stable digest over the change ref and the sorted declared member set, where each element is the member `repoKey` plus its `pullRequest` or an explicit empty marker when the member declares none. An unchanged set is the same run and adds no verdict entry; adding, removing, or re-pointing any declared member — including a member with no pull request — changes the identity. |
+| `verdicts[]` | Exactly one entry per declared member in declared order with `repoKey`, `pullRequest` (absent for a member that declares none), and `verdict` from the closed set `pass`, `fail`, `unreviewed`. |
+| `complete` | `true` only when every declared member has exactly one recorded review observation. |
+
+Each member's verdict derives from its own observation only. One observation maps
+to the member verdict — `pass` when every observation verdict is `pass`, `fail`
+otherwise — an empty verdict list is `unreviewed`, zero matching observations is
+`unreviewed`, and two or more matching observations make the member `fail` with
+`complete: false`. The flow is pure over injected `ReviewObservation` values
+`{ repoKey, pullRequest, verdicts[] }` supplied through the existing verification
+composition that composes this surface: no store, no command, no live model call,
+and no live network in default runs. A member is only matched against an
+observation naming both its `repoKey` and its declared `pullRequest`.
+
+### Exits, human output, and read budget
+
+| Status | `overall` | Exit | Data |
+|---|---|---|---|
+| `green` | `pass` | `0` | The full report. |
+| `blocked` | `fail` | `1` | The full report, including `gates[]` and `summary`. |
+| `incomplete` | `fail` | `1` | The full report, including `gates[]` and `summary`. |
+
+`overall: "unknown"` is never emitted by this report type, so no cross-repository
+report follows the delivered classified-unknown or `verify.gates.unavailable`
+exit-`2` path. Command-level failures that prevent a report at all — an invalid
+plan, an unreadable gate set, a registry append failure — keep their delivered
+identities and exits. The human report is bounded and deterministic: a header
+naming the change ref, `overall`, the passed/gate count, and the status; one line
+per declared member with its `repoKey`, `verdict`, and `ci=` reading; and one
+`blocking=` line naming every blocking member or `-` when none.
+
+The read budget extends the delivered per-source budget per member: one bounded
+open-PR page, one resolved detail read, and one check-run page per member, with
+no retries and no pagination, plus the one bounded local plan read that supplies
+the member set, the delivered single ledger read, repository HEAD/branch read,
+CI-workflow read, and work-item read. Per-member reads are injected at the
+composition edge, and the evaluation never short-circuits: every member is
+evaluated and reported. The append posture is unchanged — exactly one
+gate-verification record per full battery evaluation, carrying the member gates
+projected to the delivered ledger shape, plus the non-gating capsule append.
+
+The cross-repository evaluation is selected by the composed member runtime: when
+the composition supplies the member reads, declarations, landing observations,
+and review observations, a member-declaring plan takes this path; a plan that
+declares no members, or a composition that supplies no member runtime, keeps the
+delivered single-target path and the delivered report type.
 
 ## Quality evidence
 
@@ -157,6 +337,21 @@ network-free path. Provider gate-fact traps live under
 opt-in live smoke (`tests/behaviour/verify-gates-live.test.ts`) asserts
 structural invariants only and runs only under `VERIFY_GATES_LIVE=1`.
 
+The cross-repository surface is proven by `tests/behaviour/verify-gates-members.test.ts`
+(shared verdict, per-member records and summary, blockers, statuses),
+`verify-gates-members-evidence.test.ts` (landing order, injected observations,
+evidence element shape), `verify-gates-members-bounds.test.ts` (eight-member
+bound, byte bound, untruncated blockers), `verify-gates-review-flow.test.ts`
+(run identity, one verdict per member, duplicate observation), and
+`verify-gates-read-budget.test.ts` (per-member read counts, no retry, no
+pagination). Contract and export facts are pinned by
+`tests/structure/cross-repository-contract.test.ts` and the report union by
+`tests/types/cross-repository-report.type-test.ts`; the two-member report
+goldens live under `tests/fixtures/cross-repository/goldens/`, and parity,
+determinism, read-only posture, and hermeticity are covered by
+`tests/behaviour/cross-repository-{parity,determinism,readonly}.test.ts` and
+`tests/checks/cross-repository-hermetic.test.ts`.
+
 ## Limitations
 
 The owner gate's declared signal is labels; comment-based owner asks are not
@@ -167,6 +362,13 @@ cleanliness remain outside this surface. Merge execution is the merge
 transaction's surface, specified in
 [Merge and Verify Deploy](feature-merge-verify-deploy.md).
 
+The shipped composition does not yet supply a member read runtime (`readMembers`
+and the per-member read bundle), so a member-declaring plan takes the delivered
+single-target path in the shipped CLI. The cross-repository report is produced
+when the composition supplies the member reads, declarations, landing
+observations, and review observations, and the contracts, report types, and
+seams are complete and exercised through that composition.
+
 ## Capsule gate append
 
 After the gate-verification state append, a full battery evaluation also appends one `gate.outcome` capsule event when a capsule producer port is injected. The event carries the gate-set identity (`<schemaVersion>:<id,id,...>`), the head SHA, and one bounded `{gateId, verdict, reason}` entry per evaluated gate. The event key is derived from the gate-set identity and head SHA, so a re-run of the same evaluation appends nothing. The append is non-gating: a failed or thrown append becomes a bounded `capsule` disclosure on the success data or on the classified failure envelope, and the gate verdicts, the verification record, and the exit projection are unchanged. The capsule contract is in [Change Capsule](feature-capsule.md).
@@ -174,6 +376,10 @@ After the gate-verification state append, a full battery evaluation also appends
 ## Related
 
 - [Verify Change and Exit Taxonomy](feature-verify-change-and-exit-taxonomy.md)
+- [Machine-Readable Plan Schema](feature-plan-schema.md)
+- [Scheduling Engine](feature-scheduling-engine.md)
+- [Closeout Transaction](feature-closeout.md)
+- [Delivery Lifecycle](feature-delivery-lifecycle.md)
 - [Status Digest](feature-status-digest.md)
 - [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md)
 - [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md)
@@ -186,7 +392,7 @@ After the gate-verification state append, a full battery evaluation also appends
 - [ADR-0003 — OSS Tooling Monorepo Structure](../../decisions/ADR-0003-oss-monorepo-structure.md)
 - [ADR-0006 — Work-Item Custom Fields and Comment-Omission Representation](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md)
 
-**Change record:** `doc/changes/2026-10/2026-10-31--GH-178--verify-gates-v1/`; `doc/changes/2026-11/2026-11-06--GH-225--merge-verify-deploy/`; `doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/`.
+**Change record:** `doc/changes/2026-10/2026-10-31--GH-178--verify-gates-v1/`; `doc/changes/2026-11/2026-11-06--GH-225--merge-verify-deploy/`; `doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/`; `doc/changes/2026-11/2026-11-14--GH-310--cross-repository-changes/`.
 
 ## Config-declared gate set and verification record
 

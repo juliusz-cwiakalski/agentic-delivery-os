@@ -453,3 +453,31 @@ describe("fail-closed ledger reads", () => {
     if (!read.ok) expect(read.code).toBe("state.schema.mismatch");
   });
 });
+
+describe("GH-310 member-ref canonicalization and fold identity", () => {
+  const MEMBER_REF = "GH-310@api-service-1a2b3c4d";
+
+  test("the member form canonicalizes while the delivered form is unchanged", () => {
+    expect(canonicalQueueRef(MEMBER_REF)).toBe(MEMBER_REF);
+    expect(canonicalQueueRef("gh-0310@api-service-1a2b3c4d")).toBe(MEMBER_REF);
+    expect(canonicalQueueRef("GH-010")).toBe("GH-10");
+    expect(canonicalQueueRef("pdev-7")).toBe("PDEV-7");
+    expect(canonicalQueueRef("GH-310@nope")).toBeUndefined();
+  });
+
+  test("a member entry folds under its canonical member ref with its own repository", () => {
+    const store = storeOf("member-fold").store;
+    const declared = declareQueueEntry(store, {
+      ref: "GH-0310@api-service-1a2b3c4d",
+      repository: "api-service-1a2b3c4d",
+      recordedAt: NOW,
+      fenceToken: "member-fold-fence",
+    });
+    expect(declared.ok).toBe(true);
+    const read = readQueueEntries(store);
+    expect(read.ok).toBe(true);
+    if (!read.ok) return;
+    expect(read.records.map((record) => record.ref)).toEqual([MEMBER_REF]);
+    expect(read.records[0]?.repository).toBe("api-service-1a2b3c4d");
+  });
+});

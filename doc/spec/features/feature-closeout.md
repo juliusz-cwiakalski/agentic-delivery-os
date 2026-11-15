@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-CLOSEOUT
 status: Current
 created: 2026-11-01
-last_updated: 2026-11-13
+last_updated: 2026-11-15
 owners: ["engineering"]
 service: delivery-os
-summary: "The delivered closeout transaction: a dry-run-by-default `closeout <workItemRef>` command, the deterministic twelve-step plan, SHA-256 operation identities and the append-only `closeout.operation` ledger over the real JSONL state driver, a production CLI composition over the real provider clients, git seam (including bounded merged-diff and worktree facts), state store, and resolved harness settings, GitHub and Jira writes with declared GitLab gaps, authorship-gated review-thread resolution, the tracker-relation owed-flip sweep, checkout restore, local worktree cleanup, squash-safe local branch cleanup, the detection-only merged-diff sweep, read-only retro coverage, the bounded session-compaction checkpoint, the change-capsule validation and promotion ceremony, the automatic `landed` queue-entry removal after the closeout writes inside the held fence with its additive non-step `queueRemoval` disclosure and fail-open skips, the bounded deterministically ordered judgment residue with the additive `attention` exit class, the discriminated work-item read observation and the separate reverse-dependent no-surface vocabulary, provider-asserted label/relation availability signals, bounded output measured in UTF-8 bytes, the five `closeout` error identities plus the `closeout.step.<id>.failed` family, and the non-gating, idempotent harness telemetry capture built from the configured harness settings with bounded disclosure."
+summary: "The delivered closeout transaction: a dry-run-by-default `closeout <workItemRef>` command, the deterministic twelve-step plan, SHA-256 operation identities and the append-only `closeout.operation` ledger over the real JSONL state driver, a production CLI composition over the real provider clients, git seam (including bounded merged-diff and worktree facts), state store, and resolved harness settings, GitHub and Jira writes with declared GitLab gaps, authorship-gated review-thread resolution, the tracker-relation owed-flip sweep, checkout restore, local worktree cleanup, squash-safe local branch cleanup, the detection-only merged-diff sweep, read-only retro coverage, the bounded session-compaction checkpoint, the change-capsule validation and promotion ceremony, the automatic `landed` queue-entry removal after the closeout writes inside the held fence with its additive non-step `queueRemoval` disclosure and fail-open skips, the additive per-member report `data.members[]` for a plan declaring members (repo key, branch, mode-scoped cleanup, delivery request, mode-scoped issue closure, merge-truth landed) with one landing removal per member, the member tracked-issue identity `issue` as the only permitted member `ticket-to-done` target, the mode-scoped worst-case aggregate fold for member-mode `branch-cleanup` and `ticket-to-done` in which a member refusal keeps the delivered `closeout.branch.unsafe` refusal reachable and the change-level `ticket-to-done` transition is never dropped, the bounded deterministically ordered judgment residue with the additive `attention` exit class, the discriminated work-item read observation and the separate reverse-dependent no-surface vocabulary, provider-asserted label/relation availability signals, bounded output measured in UTF-8 bytes, the five `closeout` error identities plus the `closeout.step.<id>.failed` family, and the non-gating, idempotent harness telemetry capture built from the configured harness settings with bounded disclosure."
 links:
-  related_changes: ["GH-183", "GH-221", "GH-231", "GH-233", "GH-240", "GH-242", "GH-291", "GH-292"]
+  related_changes: ["GH-183", "GH-221", "GH-231", "GH-233", "GH-240", "GH-242", "GH-291", "GH-292", "GH-310"]
   related_decisions: ["TDR-0008", "ODR-0003", "ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0008", "TDR-0026"]
   contracts:
     - "packages/core/src/contracts/closeout.ts"
@@ -27,7 +27,7 @@ links:
 
 `closeout <workItemRef>` is the Deliver-family post-merge transaction. One invocation computes a deterministic twelve-step plan across the tracker, review, checkout, local git, merged-diff, retro-registry, harness session-store, and change-capsule surfaces, renders it in dry-run mode by default, and applies it only with `--apply`. Every operation carries a deterministic operation identity; terminal outcomes are persisted in the append-only state ledger as `closeout.operation` records, so a re-run reuses completed work and converges instead of repeating effects. After a merge is observed, an apply run also retires the work item's queue entry with reason `landed`, inside the fence the transaction already holds and without changing a step outcome or the exit code.
 
-Provider writes are delivered for GitHub and Jira. GitLab remains a read slice with declared write gaps. Checkout restore and local branch deletion run through a dedicated git branch/checkout seam, and branch deletion is permitted only when a squash-safety predicate proves the branch's work landed. The transaction is bounded in operations, time, and output, and it is proven offline against committed fixtures and temporary local repositories.
+Provider writes are delivered for GitHub and Jira. GitLab remains a read slice with declared write gaps. Checkout restore and local branch deletion run through a dedicated git branch/checkout seam, and branch deletion is permitted only when a squash-safety predicate proves the branch's work landed. When the composition supplies member facts for a change that spans several member repositories, the same run also reports one additive `data.members[]` entry per member, with that member's branch, merge-truth landing, and its own mode-scoped cleanup and issue-closure outcome, and retires each landed member's queue entry independently. A member's `ticket-to-done` transition targets only that member's injected `issue` identity, and the member-mode `branch-cleanup` and `ticket-to-done` step outcomes are a mode-scoped worst-case fold over the members, so a refused member keeps the delivered `closeout.branch.unsafe` refusal reachable and a member never rewrites the aggregate. The transaction is bounded in operations, time, and output, and it is proven offline against committed fixtures and temporary local repositories.
 
 ## 2. Business Context
 
@@ -50,7 +50,7 @@ Provider writes are delivered for GitHub and Jira. GitLab remains a read slice w
 - The full GitHub adapter, full issue lifecycle, releases, and operations beyond closeout (M3-S3).
 - Posting a closure comment or arbitrary tracker/PR comment writes; `write-comment` remains a declared gap.
 - Merge execution or merge verification.
-- Cross-repository closeout, global state, or multi-repo fan-out.
+- A global closeout or group-scoped store, and multi-repository fan-out beyond one change's declared member set: closeout reports the member facts supplied through its composition and adds no store, no provider operation, and no discovery of repositories it was not given.
 - MCP and OpenCode/host closeout surfaces.
 - A new archive tree, capsule relocation, capsule compaction, or a full memory-index rebuild engine; "close the capsule" is a terminal event and closed state.
 - Typed memory records, the preferences tree, guild trees, memory lint, the memory doctor, and the memory command family (M2-S8, M3-S8, M3-S9).
@@ -245,7 +245,7 @@ The outcome is disclosed in one additive non-step `data` block, `queueRemoval`:
 - **Idempotent.** A re-run over an already-removed ref, and a closeout for a ref that never entered the queue, both report `satisfied` at exit `0` with zero appends. The explicit `queue remove` verb is not idempotent; the automatic path must converge, because closeout is a re-runnable transaction.
 - **Fail-open.** No merge truth, a live lane lease, unreadable queue state, or a non-canonical ref reports `skipped` with its closed reason and appends nothing. A skipped removal never changes a step outcome, the summary counts, or the exit code; the lease case is the normal one for a change still being dispatched.
 - **Append-only.** A recorded removal is one `queue.removal` record, preceded by the delivered `queue.park` withdrawal record (`recoveryState: released`) when the entry had an active park. Nothing is deleted, and the scheduling engine's append-position presence rule makes the entry absent from every queue read and from the derived graph document.
-- **Bounded cost.** At most one queue fold and two appends are added to an apply, and at most one read when no entry exists.
+- **Bounded cost.** At most one queue fold and two appends are added to an apply, and at most one read when no entry exists. On a member-declaring change the same removal runs once per declared member ref under the same fence, and the disclosures appear in `data.queueRemovals[]` in declared order.
 
 #### Judgment residue and exit semantics
 
@@ -276,6 +276,92 @@ The merged delivery request is resolved by a bounded source-ref lookup that retu
 
 `DeliveryRequest` carries an additive optional `headSha`: the provider-resolved head commit of the merged request, copied verbatim. Absent means unknown, never a guessed or derived value. GitHub normalizes the pull-request head SHA and GitLab normalizes the merge-request SHA when present; a provider that cannot supply it leaves it absent and branch cleanup refuses. The lookup and the field use the existing injected transport and credential port; no new network runtime location is introduced.
 
+#### Member report
+
+When the closeout composition supplies member observations for a change, the run
+reports one additive optional `data.members[]` array: exactly one entry per
+supplied member, in declared order, capped at eight.
+
+| Field | Contract |
+|---|---|
+| `repoKey` | The member repository key, the same identity the plan declares. |
+| `branch` | The member branch from that member's `CrossRepositoryCloseoutObservation`. |
+| `cleanup` | The member's own branch-cleanup outcome, from that mode's closed column (below). |
+| `pullRequest` | The member delivery-request identity. |
+| `issueClosure` | The member's own tracked-issue closure outcome, from that mode's closed column (below). |
+| `landed` | Boolean merge truth: `true` only when the member's merge is observed, never inferred from a green pipeline or a closed branch. |
+
+Each member carries exactly one value per field from its mode's column:
+
+| Mode | `cleanup` | `issueClosure` |
+|---|---|---|
+| plan | `would-apply`, `satisfied`, `would-refuse`, `skipped-gap` | `would-apply`, `satisfied`, `skipped-noop`, `skipped-gap` |
+| applied | `applied`, `satisfied`, `refused`, `skipped-gap` | `applied`, `satisfied`, `skipped-noop`, `skipped-gap` |
+
+`cleanup` is `satisfied` when the member branch is already absent, `would-refuse`
+in plan mode and `refused` in apply mode when the delivered squash-safety
+predicate is unsafe, and `skipped-gap` for a provider or git gap. `issueClosure`
+is `skipped-noop` when the member observation carries no `issue` identity or when
+its observed tracked-issue fact is `none`, `would-apply` in plan mode and
+`applied`/`satisfied` in apply mode when the member's tracked issue transitions or
+already reads closed, and `skipped-gap` for a tracker read or write gap. Each
+value is computed from authoritative inputs — that member's
+`CrossRepositoryCloseoutObservation` entry plus that member's own closeout
+operations — and never by parsing free-form step `detail`.
+
+The delivered twelve step ids are unchanged and consumers still resolve steps by
+`stepId`. Per-member work rides the existing steps: `branch-cleanup` expands to
+one member branch per declared member under the delivered squash-safety
+predicate, and `ticket-to-done` keeps the delivered change-level transition to the
+change's own tracked item and adds one transition per member whose observation
+carries the member tracked-issue identity `issue`. That identity is the only
+permitted member transition target: a member without it schedules no transition
+and reports `issueClosure: skipped-noop` regardless of its observed fact, and no
+entity identity is ever synthesized from the member ref, the change ref, or any
+other derived value, so a transition is never recorded against a non-existent work
+item. For a member that carries an `issue`, the observed fact (`open`, `closed`,
+`none`, or `unavailable`) decides that member's issue-closure value.
+
+The member-mode `branch-cleanup` and `ticket-to-done` step outcomes are a
+deterministic worst-case fold over the declared members' mode-scoped values in
+declared order — for `ticket-to-done` including the change-level transition's own
+outcome — with precedence `failed|refused` > `skipped-gap` > `applied|would-apply`
+> `satisfied` > `skipped-noop`. The fold is mode-scoped: plan values are folded
+only in plan mode, with `would-refuse` in the refusal tier and `would-apply` in the
+applied tier, and apply values only in apply mode. The aggregate never claims a
+better outcome than its worst input and is never rewritten by a single member
+value, so a member refusal makes `branch-cleanup` `refused` in apply mode and
+`would-refuse` in plan mode and the delivered `closeout.branch.unsafe` refusal
+stays reachable in member mode; an operation-level `failed` shares the top tier
+and surfaces as the step's `failed` outcome. Applied member steps still execute
+their pending operations when the planned aggregate is already a refusal or a gap,
+and a member's own recorded outcome is unchanged. A member whose observation
+reports no merge keeps the delivered skip semantics, reports `landed: false`, and
+is never retired from the queue as landed.
+
+Landing removal happens per member. Each member ref
+`<canonicalWorkItemRef>@<repoKey>` is retired with reason `landed` only when that
+member's merge is observed, inside the fence the transaction already holds; the
+disclosures are reported in the additive `data.queueRemovals[]` array, one entry
+per declared member in declared order, under the delivered removal outcomes and
+skip reasons. A skipped member removal leaves that member's entry in place and is
+disclosed. The member-less path keeps the delivered single `data.queueRemoval`
+block.
+
+Per-member merge truth, branch, head, tracked-issue identity, and tracked-issue
+fact arrive as `CrossRepositoryCloseoutObservation` entries — one per declared
+member `{ repoKey, pullRequest, merged, headSha?, branch, issue?, issueClosure? }` —
+supplied through the closeout composition by the embedder that holds those facts.
+`issue` is that member's tracker work-item identity and the only permitted target
+of a member `ticket-to-done` transition; `issueClosure` is the observed
+tracked-issue fact that feeds the mapping and is never an output value. The seam
+adds no port, no provider operation, no durable store, and no global state; a
+composition that supplies no member observations keeps the delivered
+single-request closeout. Member reporting is bounded at eight members
+(`CLOSEOUT_MAX_MEMBERS`), and the injected observation set is the member set the
+report enumerates: closeout resolves no member repository and reads no plan
+itself.
+
 #### Read observation
 
 Closeout-relevant work-item reads return a discriminated `CloseoutReadObservation`:
@@ -291,9 +377,9 @@ A target work-item read maps `not-found` to `closeout.target.unobserved`, `unava
 
 #### Output and evidence
 
-Machine mode returns one `CommandResult` envelope whose `data` is a bounded `delivery.closeout.v1` payload: schema id, command `closeout`, work-item ref, mode (`plan` | `applied`), resolved base ref, optional bounded delivery-request summary (system, entity, refs, optional `headSha`), ordered steps with operations, outcomes, and an optional bounded `detail`, a summary count by outcome, truncation markers, the ledger key, an optional `telemetryCapture` disclosure, an optional bounded `residue[]`, an optional applied `capsule {closed, events, candidates[]}`, and an optional non-step `queueRemoval` block.
+Machine mode returns one `CommandResult` envelope whose `data` is a bounded `delivery.closeout.v1` payload: schema id, command `closeout`, work-item ref, mode (`plan` | `applied`), resolved base ref, optional bounded delivery-request summary (system, entity, refs, optional `headSha`), ordered steps with operations, outcomes, and an optional bounded `detail`, a summary count by outcome, truncation markers, the ledger key, an optional `telemetryCapture` disclosure, an optional bounded `residue[]`, an optional applied `capsule {closed, events, candidates[]}`, an optional non-step `queueRemoval` block, an optional ordered `members[]` report, and, on a member-declaring change, the member-mode `queueRemovals[]` disclosures.
 
-The schema id stays `delivery.closeout.v1`. `residue`, `capsule`, `queueRemoval`, and the step `detail` are additive optional fields; no field is removed or renamed. Consumers must resolve steps by `stepId` and tolerate unknown step ids and the additive fields. The `queueRemoval` block is machine data: the human digest renders the same steps, residue, and capsule summary and adds no queue line.
+The schema id stays `delivery.closeout.v1`. `residue`, `capsule`, `queueRemoval`, `members`, `queueRemovals`, and the step `detail` are additive optional fields; no field is removed or renamed. Consumers must resolve steps by `stepId`, resolve members by `repoKey`, and tolerate unknown step ids and the additive fields. The `queueRemoval` and `queueRemovals` blocks are machine data: the human digest renders the same steps, residue, capsule summary, and — when members are reported — a `MEMBERS` section with one bounded line per member, and adds no queue line.
 
 Plan mode uses `would-apply`, `satisfied`, `skipped-gap`, `skipped-noop`, and `would-refuse`. Apply mode uses `applied`, `satisfied`, `skipped-gap`, `skipped-noop`, `failed`, and `refused`. Human mode renders a deterministic digest from the same data without extra reads. When residue is present the digest includes a `JUDGMENT RESIDUE` section with one bounded line per item (`kind`, item, location, including the `+N` cap item), and an applied run with a capsule result includes a `capsule: closed=<bool> events=<n> candidates=<n>` summary line. The digest stays inside the human line and byte bounds.
 
@@ -349,7 +435,7 @@ The feature adds one domain kind, `closeout`, five concrete rows, and one open-s
 | `closeout.capsule-invalid` | user | false | not_landed | user-validation | The change capsule is damaged and no promotion write landed. |
 | `closeout.step.<id>.failed` | user | false | not_landed | user-validation | A closeout step failed; the slot must name a declared `CLOSEOUT_STEP_IDS` member (for example `closeout.step.capsule.failed`). |
 
-Declared gaps are data outcomes, never error rows. State, config, input, and credential-resolution failures reuse their delivered identities. The adapter-local `provider.payload.invalid` is a distinct recognized identity for a malformed payload or an authentication/transport/server failure on a non-404 read; it is not an error-table row and is never used for an explicit provider not-found. A busy capsule lock is the retryable `state.lock.busy`, never `closeout.capsule-invalid`. In plan mode a checkout, worktree, or branch safety refusal is rendered as `would-refuse` plan data, and a branch ambiguity renders the `would-refuse` branch step for inspection; apply returns `closeout.branch.unsafe` or projects `closeout.target.ambiguous` before any mutation. A target not-found or an invalid target payload fails the command in both modes.
+Declared gaps are data outcomes, never error rows. State, config, input, and credential-resolution failures reuse their delivered identities. The adapter-local `provider.payload.invalid` is a distinct recognized identity for a malformed payload or an authentication/transport/server failure on a non-404 read; it is not an error-table row and is never used for an explicit provider not-found. A busy capsule lock is the retryable `state.lock.busy`, never `closeout.capsule-invalid`. In plan mode a checkout, worktree, or branch safety refusal is rendered as `would-refuse` plan data, and a branch ambiguity renders the `would-refuse` branch step for inspection; apply returns `closeout.branch.unsafe` or projects `closeout.target.ambiguous` before any mutation. A target not-found or an invalid target payload fails the command in both modes. In member mode the worst-case aggregate carries the same projection: an aggregate `refused` on `branch-cleanup` returns `closeout.branch.unsafe` at exit 1, and an operation-level `failed` returns `closeout.write.failed` at exit 2, after the already-applied member operations have persisted.
 
 Exit codes remain only in the CLI projection: `user-validation` → 1, `platform-provider` → 2, `attention` → 1, success → 0. The `attention` class is data-bearing: apply returns a success envelope with `data.residue[]` and exits 1 when residue remains and no command-level failure occurred. The documented table and the machine table are bidirectionally synchronized.
 
@@ -404,6 +490,10 @@ The git branch/checkout seam is a dedicated adapter I/O subpath behind a port. I
 - A candidate file that is not named `<id>.yaml` or whose stem differs from its id is `closeout.capsule-invalid` before any home write; plan mode renders `would-refuse`.
 - A candidate schema failure refuses the capsule step with `closeout.capsule-invalid` and performs no promotion write; an empty basis or evidence is a candidate rejection, not capsule damage.
 - A candidate with zero or multiple promotion decisions is `closeout.capsule-invalid` before the terminal close; plan mode renders `would-refuse`.
+- A declared member whose injected observation reports no merge keeps the delivered skip semantics and reports `landed: false`; the member report enumerates the injected observations, so a member with no observation is not reported.
+- A member operation failure is disclosed as that member's `skipped-gap` and never rewrites another member's value; it enters the aggregate fold as an operation-level `failed`, so the member step reports `failed` and apply returns `closeout.write.failed` while the operations that already landed persist.
+- A member whose branch is already absent reports `cleanup: satisfied`, and an unsafe member branch reports `would-refuse` in plan mode and `refused` in apply mode without deleting the branch; a refused member makes the folded aggregate the refusal, so apply returns `closeout.branch.unsafe` even when another member's branch was cleaned.
+- A member observation without an `issue` identity reports `issueClosure: skipped-noop` and schedules no transition, whatever its tracked-issue fact says; the change-level `ticket-to-done` transition still runs.
 - An invalid capsule is refused in pre-flight before any provider write, git mutation, or state append, so it produces zero effects.
 - A promotion home outside the memory root is `closeout.step.capsule.failed` with zero writes; plan mode renders `would-refuse`.
 - A missing expected capsule event is residue, never capsule damage.
@@ -424,12 +514,13 @@ The closeout feature follows the delivered tier split. The runtime-neutral contr
 
 | Path | Responsibility |
 |---|---|
-| `packages/core/src/contracts/closeout.ts` | `delivery.closeout.v1` vocabulary: step ids, outcomes, gap reasons, operation names, disposition and protected-ref data, bounds, plan/step/operation/data types, work-item and reverse-dependent observations (`CLOSEOUT_REVERSE_DEPENDENT_OBSERVATIONS`), canonical argument unions, identity inputs, ledger payload type, provider/git/state runtime contracts, and the additive residue/capsule/detail/worktree/retro/session facts. Types and `as const` data only. |
+| `packages/core/src/contracts/closeout.ts` | `delivery.closeout.v1` vocabulary: step ids, outcomes, gap reasons, operation names, disposition and protected-ref data, bounds, plan/step/operation/data types, work-item and reverse-dependent observations (`CLOSEOUT_REVERSE_DEPENDENT_OBSERVATIONS`), canonical argument unions, identity inputs, ledger payload type, provider/git/state runtime contracts, the additive residue/capsule/detail/worktree/retro/session facts, the member-mode fold precedence, and the additive member-report types (`CloseoutMemberReport`, the four mode-scoped outcome columns, `CLOSEOUT_MAX_MEMBERS`, the `changeTicketOutcome` plan field, and `CrossRepositoryCloseoutObservation` with its optional `issue` identity). Types and `as const` data only. |
 | `packages/core/src/contracts/capsule.ts` | The capsule event envelope, closed event-kind/writer vocabularies, payload field sets, caps, candidate model, promotion routing/rejection vocabularies, residue kinds, and merged-diff marker/action data. |
 | `packages/core/src/contracts/ports.ts` | The primitive ports; `DeliveryRequest` carries the additive optional `headSha`. |
 | `packages/core/src/contracts/adapter-capabilities.ts` | The closed `ADAPTER_OPERATIONS` set including `resolve-delivery-thread`, and capability/gap types. |
 | `packages/core/src/contracts/error-table.ts` | The `closeout` domain kind, five concrete rows, and the `closeout.step.<id>.failed` family. |
-| `packages/core/src/domain/closeout.ts` | Pure planner, canonical JSON and SHA-256 operation identity, branch selection and safety predicate, outcome fold, summary, output bounding, residue dedupe/ordering, complete capsule pre-flight/close orchestration, apply orchestrator, and human renderer. |
+| `packages/core/src/domain/closeout.ts` | Pure planner, canonical JSON and SHA-256 operation identity, branch selection and safety predicate, outcome fold, summary, output bounding, residue dedupe/ordering, complete capsule pre-flight/close orchestration, apply orchestrator, the member-mode expanded `branch-cleanup`/`ticket-to-done` steps, the mode-scoped worst-case aggregate fold over the declared members and the change-level transition, the per-member landing-removal disclosures, and human renderer. |
+| `packages/core/src/domain/closeout-members.ts` | Pure per-member report projection: one entry per declared member in declared order, the mode-scoped `cleanup` and `issueClosure` columns applied over that member's observation and its own operation outcomes, merge-truth `landed`, the member-mode outcome fold (`foldCloseoutMemberOutcomes` with its closed precedence), and the member-ref form shared with the queue. |
 | `packages/core/src/app/queue.ts` | The scheduling engine's reason-bearing removal seam (`removeQueueEntryWithinFence`) that the closeout hook shares its fence with, and the one total closeout-removal function (`queueRemovalForCloseout`) that maps merge truth, the folded queue, and lease liveness to the closed outcome. |
 | `packages/core/src/domain/capsule.ts`, `capsule-candidates.ts` | Pure capsule parsing/serialization, event-key and digest derivation, review ingestion and gap detection, candidate validation and evaluation, and confined promotion planning. |
 | `packages/core/src/domain/closeout-diff-sweep.ts` | The bounded detection-only merged-diff classification. |
@@ -551,6 +642,7 @@ No localization or accessibility surface is added. The human digest is determini
 |---|---|---|
 | Structure | `tests/structure/closeout-contract.test.ts`, `closeout-imports.test.ts`, `closeout-additive.test.ts`, `closeout-contracts-git.test.ts`, `conformance-coverage.test.ts`, `error-table.test.ts` | Contract vocabulary, step/operation order, additive extensions, conformance operation set, error rows and the family slot, read-only import isolation, and the git-seam capability shapes. |
 | Behaviour | `tests/behaviour/closeout-{plan,idempotency,request,branch,checkout,ticket-labels,unassign,owed-flip,threads,capabilities,output,read-observation,hermetic,integration,bounds}.test.ts` | Determinism, restart and retry, merged-request selection, branch safety, checkout restore, label sweep, unassign, owed-flip, thread resolution, capability gaps, UTF-8 bounds, output, read observations, the real JSONL ledger, and in-process CLI integration through the production composition over the real git seam. |
+| Member report | `tests/behaviour/closeout-members.test.ts`, `closeout-plan.test.ts`, `closeout-queue-removal{,-skips}.test.ts`; `tests/fixtures/cross-repository/` | The declared-order member report, both mode-scoped columns, per-member derivation from the observation and that member's operations, merge-truth `landed`, the member tracked-issue identity and its precedence over the observed fact, the mode-scoped worst-case aggregate fold including operation-level `failed` and safety refusal, partial landing, unsafe-member refusal with the delivered `closeout.branch.unsafe` and `closeout.write.failed` projections, per-member landing removal, and the member-less byte parity of the plan, steps, ledger, and output. |
 | Ceremony behaviour | `tests/behaviour/closeout-{worktree,worktree-refusal,worktree-idempotency,merged-diff,merged-diff-ambiguous,merged-diff-bounds,merged-diff-gap,retro-coverage,compaction,compaction-edges,residue,residue-provenance,attention-exit,thread-caps,telemetry-production,convergence}.test.ts`; `github-closeout-thread-{authorship,privacy}.test.ts` | Worktree cleanup and refusal matrix, diff attribution and bounds, retro coverage, compaction edges, residue ordering and provenance, the attention exit matrix, thread caps, production telemetry wiring, and convergence. |
 | Production composition | `tests/behaviour/closeout-composition-facts.test.ts`; `tests/behaviour/github-closeout-thread-{authorship,privacy}.test.ts` | A real composition over a temp repository and harness store: worktree-cleanup and merged-diff-sweep reach `would-apply`/`applied`, session attribution feeds the checkpoint, a broken/unattributable store is a gap plus residue, no sessions is a no-op, harness telemetry lands in the state log while the capsule stays statistics-free, retro coverage reads the real registry, a human thread remains unresolved with identity-only residue, and an invalid capsule produces zero provider/git effects. |
 | Capsule behaviour | `tests/behaviour/closeout-capsule-{validation,close,backfill,review-ingest,plan,schema,dedup,decisions,supersession,payload,gap,idempotency,promotion,routing,naming}.test.ts`; `tests/behaviour/capsule-{append,lock,reader,bounds,commit-producer,phase-producer,verify-producer,producer-nongating}.test.ts` | Capsule validation and backfill (including first-event and decision completeness), candidate file naming, review ingestion, candidate schema and dedup, promotion routing and confinement, cross-check residue, terminal close, re-run convergence, and the producer append points. |
@@ -594,6 +686,8 @@ Closeout adds no runtime dependency, service, daemon, or scheduled job. It reuse
 - **Depends on** the merge transaction ([Merge and Verify Deploy](feature-merge-verify-deploy.md)) for the recorded squash SHA that anchors the merged-diff sweep.
 - **Depends on** the session administration seam ([Session Database Administration](feature-session-database-admin.md)) for the read-only session-store discipline; `db` is consumed unchanged and supplies no attribution field.
 - **Depends on** the adapter conformance suite ([Adapter Conformance](feature-adapter-conformance.md)) for the eight-operation registry and write execution.
+- **Depends on** the plan's member declaration ([Machine-Readable Plan Schema](feature-plan-schema.md)) for the member identity the report and its landing removals reuse, and on the scheduling engine's member-ref form for the entry each landing retires.
+- **Deferred member read seam:** the shipped composition does not yet supply a member read runtime (`readMembers` and the per-member read bundle), so the injected `CrossRepositoryCloseoutObservation` entries are the only input path and a member-declaring plan behaves member-less in the shipped CLI. The per-member report, the tracked-issue mapping, and the aggregate fold are complete and exercised through that seam.
 - **Consumed by** coordinators and delivery agents performing post-merge closeout; the memory curator consumes the promotion decisions and home-written records, and later retro/ceremony surfaces consume the capsule coverage and residue.
 - **Risk — provider write semantics diverge:** mitigated by offline write fixtures, trap catalogs, declared gaps, and capability-gated conformance.
 - **Risk — unsafe branch or worktree deletion:** mitigated by the full safety predicates, merged-head equality, protected-ref and current/foreign/locked checks, dry-run default, and zero action on refusal.
@@ -625,7 +719,11 @@ Closeout adds no runtime dependency, service, daemon, or scheduled job. It reuse
 | Promotion decision | Exactly one `promoted` or `rejected` verdict per candidate, with a home/mode or a closed rejection reason. |
 | Judgment residue | The bounded, ordered, body-free `residue[]` of items needing human attention after the sweep: human threads, ambiguous diff hits, capsule gaps, unreadable verdicts, retained worktrees, coverage/attribution gaps, and cap marks. Human mode renders it as a bounded `JUDGMENT RESIDUE` section. |
 | Queue removal block | The additive non-step `queueRemoval` `data` block disclosing the landing removal: `outcome` (`removed`, `would-remove`, `satisfied`, `skipped`), the ref, the reason where recorded, and the skip reason where skipped. It never changes a step outcome or the exit code. |
-| Landed removal | The automatic queue-entry removal closeout appends with reason `landed` after its writes, when the merged delivery request is observed; idempotent (`satisfied`) and fail-open (`skipped`). |
+| Landed removal | The automatic queue-entry removal closeout appends with reason `landed` after its writes, when the merged delivery request is observed; idempotent (`satisfied`) and fail-open (`skipped`). On a member-declaring change it runs once per declared member ref, and the disclosures appear in `queueRemovals[]`. |
+| Member report | The additive `data.members[]` array of a member-declaring change: one entry per declared member in declared order with `repoKey`, `branch`, `cleanup`, `pullRequest`, `issueClosure`, and merge-truth `landed`. |
+| Member-mode aggregate | The step outcome of `branch-cleanup` or `ticket-to-done` on a member-declaring change: the mode-scoped worst-case fold over the declared members' values plus, for `ticket-to-done`, the change-level transition's outcome, with precedence `failed\|refused` > `skipped-gap` > `applied\|would-apply` > `satisfied` > `skipped-noop`. A member refusal makes the aggregate the refusal value (`refused` in apply mode, `would-refuse` in plan mode), and the aggregate never claims a better outcome than its worst input. |
+| Member tracked-issue identity | The optional `issue` on a member's `CrossRepositoryCloseoutObservation`: that member's tracker work-item identity and the only permitted target of a member `ticket-to-done` transition. A member without it reports `issueClosure: skipped-noop` and no identity is ever synthesized. |
+| `CrossRepositoryCloseoutObservation` | The injected per-member closeout fact set `{ repoKey, pullRequest, merged, headSha?, branch, issue?, issueClosure? }` supplied through the closeout composition; it adds no port, provider operation, or store. |
 | `attention` outcome | The additive result-contract projection class that carries `data` plus residue and exits 1 for a non-failed applied run. |
 | Lifecycle label sweep | The bounded removal of stale lifecycle-state labels and the addition of `delivered`, while preserving type and non-lifecycle labels. |
 | Squash-safe | A deletion predicate that proves the branch's work landed through the merged delivery request's head identity, not through git ancestry. |
@@ -636,7 +734,7 @@ Closeout adds no runtime dependency, service, daemon, or scheduled job. It reuse
 
 See also: [Change Capsule](feature-capsule.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Harness Adapters](feature-harness-adapters.md), [Retro Evidence Pipeline](feature-retro-pipeline.md), [Session Database Administration](feature-session-database-admin.md), [Merge and Verify Deploy](feature-merge-verify-deploy.md), [Adapter Conformance Suite](feature-adapter-conformance.md), [Watchdog and Lane Contracts](feature-watchdog-lane-contracts.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), the [repository glossary](../../overview/glossary.md), [TDR-0008](../../decisions/TDR-0008-additive-adapter-contract-extensions-closeout-v1.md), and [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md).
 
-**Change records:** `doc/changes/2026-11/2026-11-01--GH-183--closeout-v1-branch-cleanup/`, `doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/`, and `doc/changes/2026-11/2026-11-12--GH-292--queue-lifecycle/` (the automatic `landed` queue removal and its `queueRemoval` block).
+**Change records:** `doc/changes/2026-11/2026-11-01--GH-183--closeout-v1-branch-cleanup/`, `doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/`, and `doc/changes/2026-11/2026-11-12--GH-292--queue-lifecycle/` (the automatic `landed` queue removal and its `queueRemoval` block), `doc/changes/2026-11/2026-11-14--GH-310--cross-repository-changes/` (the additive per-member report, the member tracked-issue identity, the member-mode aggregate fold, and per-member landing removal).
 
 ## Related
 

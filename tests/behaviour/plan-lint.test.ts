@@ -4,8 +4,8 @@
  * distinctly (exit 2), and leaves the pm-notes/registry targets unchanged.
  */
 import { describe, expect, test } from "bun:test";
-import { emptyRegistry, runLint, runtimeForFixture } from "./pm-notes-lint-command-support";
 import { markdownFixture, planLintRuntime, planWorld } from "../fixtures/plan/harness/index";
+import { emptyRegistry, runLint, runtimeForFixture } from "./pm-notes-lint-command-support";
 
 describe("TC-DPLAN-020 lint plan conformance", () => {
   test("a conformant plan reports valid with no errors and exits 0", async () => {
@@ -91,5 +91,36 @@ describe("TC-DPLAN-020 additive lint surface", () => {
     } finally {
       fixture.cleanup();
     }
+  });
+});
+
+describe("TC-XPLAN-002 member defects carry a document location", () => {
+  test("a duplicate member repoKey is reported at members[1].repoKey", async () => {
+    const { INVALID_MEMBER_CASES } = await import("../fixtures/plan/members-invalid/cases");
+    const entry = INVALID_MEMBER_CASES.at(0);
+    if (entry === undefined) throw new Error("missing invalid member fixture");
+    const world = {
+      artifacts: {
+        "GH-310": [{ kind: "yaml" as const, path: "chg-GH-310-plan.yaml", text: entry.plan }],
+      },
+    };
+    const run = await runLint(planLintRuntime(world), ["plan", "GH-310"]);
+    expect(run.exitCode).toBe(1);
+    const data = run.envelope?.data as {
+      readonly documents?: readonly {
+        readonly verdict?: string;
+        readonly errors?: readonly {
+          readonly code?: string;
+          readonly location?: { readonly field?: string };
+        }[];
+      }[];
+    };
+    const documents = data?.documents ?? [];
+    expect(documents?.[0]?.verdict).toBe("invalid");
+    expect(
+      documents?.[0]?.errors?.some(
+        (error) => error.code === "plan.schema.invalid" && error.location?.field === entry.field,
+      ),
+    ).toBe(true);
   });
 });
