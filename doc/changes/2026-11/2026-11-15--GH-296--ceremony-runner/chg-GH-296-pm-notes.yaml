@@ -10,7 +10,7 @@ phases:
     completed: 2026-11-15T22:09:02.033Z
   specification:
     started: null
-    completed: 2026-11-15T22:18:33.483Z
+    completed: 2026-11-15T22:28:15.123Z
   test_planning:
     started: null
     completed: null
@@ -73,5 +73,12 @@ notes:
   - text: "Ran `pnpm build` before any lifecycle command; the CLI resolves workspace
       packages from dist, so an unbuilt tree fails at module load (missing
       @delivery-os/adapters/credentials)."
+    type: retro
+    date: "2026-11-15"
+  - text: "Specification was reopened once: Appendix B cited AC-NFR1-1, which
+      section 17 never declared. The test-plan author caught it, not the spec
+      author. A mechanical defined-vs-referenced id diff over the whole spec is
+      cheap and should run immediately after every spec authoring, before the
+      downstream artifacts are written."
     type: retro
     date: "2026-11-15"

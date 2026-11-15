@@ -825,7 +825,7 @@ The ticket's three tasks map as: "reduce ceremony share" → F-7 tiered intake a
 
 ### Appendix B — Constraint register (carried into plan and test authoring)
 
-- **C-1 — Envelope continuity.** Five-field `delivery.result.v1`, new keys under `data`, no new top-level key, no `ok`/`command`, `data` XOR `error` (NFR-1, AC-F1-3, AC-NFR1-1).
+- **C-1 — Envelope continuity.** Five-field `delivery.result.v1`, new keys under `data`, no new top-level key, no `ok`/`command`, `data` XOR `error` (NFR-1, AC-F1-3).
 - **C-2 — Exit projection.** `0` declared verdict, `1` refusal or data-bearing negative verdict, `2` platform/state/provider; no new exit value; the `attention` class is not used by this family (NFR-1).
 - **C-3 — State discipline.** Every ceremony write goes through a boundary-validated, fenced append with a post-append verified re-read; no derived run document; a contradicted record sequence is `state.store.torn` and is never repaired by the runner (DM-3..DM-5, AC-F4-3).
 - **C-4 — Runtime neutrality.** Contracts are types and `as const` data only; domain is pure over injected ports; runtime APIs stay in the delivered driver edge; no new package or subpath (NFR-2, AC-NFR2-1).
