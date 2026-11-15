@@ -1,9 +1,9 @@
-# GH-320 delivery plan — machine-readable document (delivery.plan.v1), revision 1.6
-# (2026-11-15; PR-CI close-out of the code-review iteration-1 remediation). Revision 1.0 was authored in
+# GH-320 delivery plan — machine-readable document (delivery.plan.v1), revision 1.7
+# (2026-11-15; PR-CI round-2 close-out of the code-review iteration-1 remediation). Revision 1.0 was authored in
 # lifecycle phase 4 (`delivery_planning`) against spec v1.1 / test plan v1.1.
 # Revision 1.1 remediated readiness iter-1 findings 3, 4, 6, 9, 19, 20, 21, 22,
 # 23 against the then-current spec v1.2, test plan v1.2, and PM decisions
-# D5..D11 (historical baseline; superseded by the current v1.7 / v1.6 sources):
+# D5..D11 (historical baseline; superseded by the current v1.10 / v1.8 sources):
 #   - F3  phase 1 is now green at its own boundary: the two delivered suites
 #         that relied on the removed neutral identity are phase-1 scope, and the
 #         selector input design is pinned with every affected call site named.
@@ -167,6 +167,19 @@
 #   Both root causes are recorded here because they are gate-coverage facts, not
 #   coder slips: a local green cannot stand in for the CI-only invariants.
 #
+# Revision 1.7 completes that close-out with PR CI round 2. Installing Bun in the
+#   two install-set-oracle jobs was necessary but not sufficient: with Bun
+#   present, the launcher executes `packages/cli/bin/jaiship.ts`, whose
+#   `@delivery-os/*` imports require an installed workspace, so a dependency-free
+#   checkout fails with `Cannot find module '@delivery-os/adapters/credentials'`
+#   and the oracle still cannot derive the set. Obligation 6.19 now also sets up
+#   pnpm (the repository's pinned action, which reads `packageManager`) and runs
+#   `pnpm install --frozen-lockfile` in those same two jobs, immediately after
+#   the Bun setup. No other workflow behaviour changes; no scope path, TC, or
+#   product behaviour changes. The notice-bound correction from the same PR round
+#   is spec v1.10 / test plan v1.8 (path-independent <= 400 bound) and needs no
+#   plan scope — reaffirmed inside 6.19.
+#
 # REVISION LOG: 1.0 initial plan (spec v1.1 / test plan v1.1);
 #   1.1 DoR iter-1 remediation (spec v1.2 / test plan v1.2 / D5..D11);
 #   1.2 DoR iter-2 remediation (spec v1.4 / test plan v1.3);
@@ -179,7 +192,16 @@
 #   1.6 PR-CI close-out (plan r1.6): `.github/workflows/ci.yml` declared with the
 #   two Bun installs, the pm-notes absolute-path sanitization obligation, the
 #   CI-root-cause note, and three gate additions (privacy-literals and both
-#   doc-distribution modes).
+#   doc-distribution modes);
+#   1.7 PR-CI round-2 completion (plan r1.7): obligation 6.19 now also installs
+#   pnpm (`pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320`) and runs
+#   `pnpm install --frozen-lockfile` in the same two jobs, because with Bun
+#   present the launcher still could not execute a workspace-importing entry in a
+#   DEPENDENCY-FREE checkout (`Cannot find module '@delivery-os/adapters/credentials'`).
+#   SECOND PR-CI ROOT CAUSE, recorded: the local gate cannot see it (a local
+#   `pnpm check` always has `node_modules`); the dependency-free checkout is a
+#   CI-only condition. The amendment adds no scope path, no TC, and no product
+#   change; the notice-bound correction remains spec v1.10 / test plan v1.8.
 #   Delivery phase order, the TC ownership rule (55 cases, unchanged homes), and
 #   the product scope are unchanged by all revisions; the declared scope grows
 #   by the six documentation reconciliations and the two revert paths recorded
@@ -195,7 +217,7 @@
 # gate, the branch-range commit-message gate, and `plan validate GH-320`.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec: ./chg-GH-320-spec.md (v1.7) — F-1..F-8, DM-1..DM-6, NFR-1..NFR-9,
+#   - Spec: ./chg-GH-320-spec.md (v1.10) — F-1..F-8, DM-1..DM-6, NFR-1..NFR-9,
 #     DEC-1..DEC-15 (DEC-14 the composition-time acquisition on `status --json`,
 #     DEC-15 the installer's declared-identity query and classified
 #     preconditions), §15.1 (DEC-5/DEC-9 precedent status, no new decision
@@ -217,8 +239,13 @@
 #     `tests/fixtures/ports/v1-contract-inventory.json` change (required by
 #     `tests/structure/port-contract-inventory.test.ts`) and keeps
 #     `packages/core/src/index.ts` OUT of the map because its re-export change is
-#     reverted.
-#   - Test plan: ./chg-GH-320-test-plan.md (v1.6) — 55 cases
+#     reverted. v1.9 declares `.github/workflows/ci.yml` CHANGED for the one
+#     in-scope CI edit (install the runtime in the two install-set-oracle jobs).
+#     v1.10 makes the notice bound path-INDEPENDENT: NFR-3/AC-F5-6 now bound one
+#     line whose fixed prose, with both absolute location strings removed, is
+#     <= 400 characters and those two locations are the only variable content
+#     (the runner's longer checkout path made the absolute bound 425 on CI).
+#   - Test plan: ./chg-GH-320-test-plan.md (v1.8) — 55 cases
 #     TC-BIN-001..TC-BIN-084 in nine blocks; 11/11 ACs, 0 orphans; §3.5
 #     substitute assertions BYTE-TP-1 (now including the invalid-override
 #     projection), LIVE-TP-1, SURF-TP-1, PAR-TP-1, DOC-TP-1, plus the DIRECT
@@ -320,9 +347,9 @@
 #        control (it calls `install_local_files` directly and never enters the
 #        launcher step).
 #   R-D  The guide is discoverable through links from ALL FOUR affected spec
-#        pages (test plan v1.6 TC-BIN-071 step 5 requires all four; a page
+#        pages (test plan v1.8 TC-BIN-071 step 5 requires all four; a page
 #        missing a link fails by name). The documentation landing page IS
-#        reconciled by this change, but only as a descriptor row: spec v1.7 §16
+#        reconciled by this change, but only as a descriptor row: spec v1.10 §16
 #        lists `doc/00-index.md` as CHANGED (the CLI-entrypoint descriptor
 #        refreshed to two executables over one shared launcher plus
 #        `--help`/`--version`/`--print-install-path`), with no rebranding and NO
@@ -429,7 +456,7 @@
 #   Control re-runs in the Phase 6 gate: prior-identity-notice,
 #   prior-identity-hermetic, content-inventory.
 #
-# BINDING SPEC-v1.7 CONTRACTS THE PHASES MUST NOT CONTRADICT:
+# BINDING SPEC-v1.10 CONTRACTS THE PHASES MUST NOT CONTRADICT:
 #   * Identity literals: exactly FIVE declared sites under the declared
 #     `packages/**` string-literal scan rule — `bin/delivery-os.ts` default,
 #     `bin/jaiship.ts` default, `bin/jaiship.ts` prior, the unchanged MCP default
@@ -439,7 +466,7 @@
 #     a sixth site fails by name. The resolver is code-UNCHANGED and is NOT in
 #     any phase scope (DM-6, D7).
 #   * Invalid working-name override: the DELIVERED behaviour stays exactly as
-#     delivered, per invocation shape (spec v1.7 §8.5 / AC-F2-7 / D13; test plan
+#     delivered, per invocation shape (spec v1.10 §8.5 / AC-F2-7 / D13; test plan
 #     v1.6 TC-BIN-012). A positional-free `status --json` yields the containment
 #     identity `fallback.internal` at exit `2` for BOTH bins (resolver-level
 #     input error wrapped inside; the alias's summary byte-identical to its
@@ -465,7 +492,7 @@
 #     URLs, and the installer's own pre-freeze home / environment-variable
 #     surface. The guide states the fourth BY ROLE (no pre-freeze seed tokens)
 #     and delegates the exact identifiers to `scripts/install.sh --help` and this
-#     change record (spec v1.7 F-8/NFR-8/AC-F8-11); package scope and public docs
+#     change record (spec v1.10 F-8/NFR-8/AC-F8-11); package scope and public docs
 #     stay pre-freeze by non-goal (NG-1/NG-2).
 #   * Installer: the declared-identity query scrubs `DELIVERY_OS_WORKING_NAME`
 #     from the child environment; the install-time Bun requirement, a source
@@ -479,19 +506,16 @@
 #
 # SCOPE CONVENTION: concrete files are exact repository-relative paths; folders
 #   are declared by the phase that writes new files inside them. Declared after
-#   r1.6: 54 distinct file paths + 2 folders (the prior-identity fixture folder
-#   and the change-folder staging prefix). Spec v1.7 §16 lists 51 CHANGED/NEW
-#   file paths plus that fixture folder. The sets differ by THREE paths, all in
-#   Phase 6: `packages/adapters/src/file/projects-config.ts` (F-6 revert) and
-#   `packages/core/src/index.ts` (close-out revert) — both absent from the
-#   delivered diff after the revert, so §16 correctly does not list them — and
-#   `.github/workflows/ci.yml`, which the PR-CI close-out declares (delivering
-#   the two Bun installs) and which §16 does not yet list: spec v1.7 §7.2 still
-#   carries a stale [OUT] bullet saying no CI change is required, disclosed in
-#   obligation 6.19 and flagged for the spec owner because this plan does not
-#   edit the spec. Every other declared path is in §16,
-#   including the ports contract-inventory fixture that v1.7 added. R-H is only
-#   the preload reconciliation record.
+#   r1.7: 54 distinct file paths + 2 folders (the prior-identity fixture folder
+#   and the change-folder staging prefix). Spec v1.10 §16 lists 52 CHANGED/NEW
+#   file paths plus that fixture folder. The sets differ by exactly TWO paths,
+#   both in Phase 6 and both REVERTED there:
+#   `packages/adapters/src/file/projects-config.ts` (F-6) and
+#   `packages/core/src/index.ts` (close-out). After the reverts both are absent
+#   from the delivered diff, so §16 correctly does not list them. Every other
+#   declared path is in §16, including the ports contract-inventory fixture that
+#   v1.7 added and `.github/workflows/ci.yml` that v1.9 declared.
+#   R-H is only the preload reconciliation record.
 #
 # ONE-PHASE RULE AND PHASE 6 (resolution recorded): the plan schema does NOT
 #   prohibit one path from appearing in more than one phase (`plan diff` reports
@@ -503,7 +527,8 @@
 #   primitive can stage the remediation. Phase 6 introduces exactly 10 new paths
 #   (the six documentation reconciliations, the two revert paths, the ports
 #   contract-inventory fixture, and the CI workflow) and re-declares 15
-#   already-declared files. An untouched declared file is a `plan diff`
+#   already-declared files. The r1.7 amendment adds no path: it completes that
+#   already-declared CI edit. An untouched declared file is a `plan diff`
 #   observation, never a gate failure.
 
 # PHASE 6 (review-iter-1 remediation) DECLARATION NOTE: Phase 6 is a delivery
@@ -529,7 +554,7 @@
 #
 # DOC BOUNDARY: the documentation blast radius has TWO declared halves.
 #   (1) Phase 4 reconciles the four affected feature pages plus the
-#   install-set/distribution-marker page (five paths, all in spec v1.7 §16).
+#   install-set/distribution-marker page (five paths, all in spec v1.10 §16).
 #   (2) Phase 6 declares the SIX phase-7 current-truth reconciliations that spec
 #   v1.7 §16 lists as CHANGED: the `doc/00-index.md` CLI-entrypoint
 #   DESCRIPTOR row (two executables over one shared launcher plus
@@ -777,7 +802,7 @@ phases:
   #      re-entry environment.
   #  2.6 Tests: identity-override (010-014) must assert the delivered
   #      invalid-override behaviour PER INVOCATION SHAPE, exactly as test plan
-  #      v1.6 (TC-BIN-012) and spec v1.7 §8.5 / AC-F2-7 / D13 pin it:
+  #      v1.6 (TC-BIN-012) and spec v1.10 §8.5 / AC-F2-7 / D13 pin it:
   #      - positional-free `status --json`: exit `2`, the delivered containment
   #        identity `fallback.internal`, the delivered summary, for BOTH bins,
   #        with the alias projection byte-compared to its baseline;
@@ -949,14 +974,14 @@ phases:
   # declared divergences (MCP default and override read, the delivery-script
   # shell fallback host root, the scope-derived repository/docs URLs, and the
   # installer's own pre-freeze home and environment-variable surface — the
-  # fourth BY ROLE, per spec v1.7 F-8/NFR-8/AC-F8-11).
+  # fourth BY ROLE, per spec v1.10 F-8/NFR-8/AC-F8-11).
   #
   # DISCOVERABILITY (iter-1 finding 21, iter-2 finding 8, iter-3 finding 4,
   # review F-5, R-D): the guide is linked from ALL FOUR affected spec pages —
   # each of `feature-cli-entrypoint.md`, `feature-branding-seam.md`,
   # `feature-config-layer.md`, `feature-projects.md` carries a link and a page
-  # missing one fails by name (test plan v1.6 TC-BIN-071 step 5).
-  # `doc/00-index.md` is NOT untouched: spec v1.7 §16 declares it CHANGED as a
+  # missing one fails by name (test plan v1.8 TC-BIN-071 step 5).
+  # `doc/00-index.md` is NOT untouched: spec v1.10 §16 declares it CHANGED as a
   # descriptor-only CLI-entrypoint refresh (no rebranding, no guide link), and
   # Phase 6 owns that reconciliation. Adding a guide row to the landing page
   # remains deferred to the M4-S1 remainder.
@@ -990,9 +1015,9 @@ phases:
   #          any pre-freeze seed token, because the guide is a registered
   #          document inside the seeded `doc/**` scan; the guide points the
   #          reader at `scripts/install.sh --help` and this change record for the
-  #          exact identifiers (spec v1.7 F-8, NFR-8, AC-F8-11; iter-2 finding 2);
+  #          exact identifiers (spec v1.10 F-8, NFR-8, AC-F8-11; iter-2 finding 2);
   #      (d) the guide is SEED-CLEAN UNDER THE DELIVERED SCAN, not under a bare
-  #          whole-text matcher (test plan v1.6 TC-BIN-072 step 7; DoR iter-3
+  #          whole-text matcher (test plan v1.8 TC-BIN-072 step 7; DoR iter-3
   #          finding 1). A whole-text assertion is impossible on a compliant
   #          guide: the mandatory `ados_distribution:` marker contains the seed
   #          `ados`, and the delivered `scanFile` line-allowlists that marker
@@ -1196,7 +1221,7 @@ phases:
   #      replaced: the run DOES read and DOES notify; the alias/jaiship
   #      projection and the pre-composition touch stay unchanged (step 6's
   #      equality assertion is unaffected). The test plan's step-5 notice clause
-  #      is superseded by AC-F5-6 + spec v1.7 and by this cell.
+  #      is superseded by AC-F5-6 + spec v1.10 and by this cell.
   #  6.2 F-9 — `bin-launcher.ts` imports `workingNameEnvironmentVariable()` from
   #      `./entrypoint.js` and drops its local override-name literal, so the
   #      override name stays a single site (the accessor keeps its reason) and
@@ -1218,7 +1243,7 @@ phases:
   #      documented code added to the header's list), keeping the "no launcher
   #      written" ordering.
   #  6.6 F-4 — `DRY_RUN` is declared as a PLAN-ONLY PREVIEW that evaluates NO
-  #      install-time precondition (spec v1.7 F-6/DEC-15/NFR-5/AC-F6-8): under
+  #      install-time precondition (spec v1.10 F-6/DEC-15/NFR-5/AC-F6-8): under
   #      `DRY_RUN` the step reports the planned registration and writes nothing
   #      even when the runtime is unresolvable or the source tree carries no CLI
   #      entry, and the plan line is intentionally pre-precondition — it is not a
@@ -1233,7 +1258,7 @@ phases:
   #      two-way inventory, and add an EXPRESSION-POSITION control
   #      (`resolveBrandIdentity({ workingName: "<name>" })`, an object property,
   #      and an argument default) that fails by name. The rule wording mirrors
-  #      spec v1.7 DM-6/AC-F7-10/NFR-6.
+  #      spec v1.10 DM-6/AC-F7-10/NFR-6.
   #  6.8 F-3 — replace the four tautologies with live guards driven by the
   #      production scanners:
   #      (a) installer arrays — add `installerArrayViolations` (or extend
@@ -1263,13 +1288,13 @@ phases:
   #      pre-change content (delete the dead optional prior-directory branch; no
   #      caller supplies it and the covered fallback lives in `config-source.ts`).
   #      After the revert the file is absent from the delivered diff, which is
-  #      why spec v1.7 §16 does not list it; it is declared here only so the
+  #      why spec v1.10 §16 does not list it; it is declared here only so the
   #      revert can be committed.
   #  6.11 F-12 — `arm-counters.preload.ts` additionally arms the `node:fs` write
   #      entry points (`writeFileSync`, `mkdirSync`, `appendFileSync`) and
   #      `Bun.spawn`, each with a canary cell proving the counter trips. If any
   #      class cannot be armed reliably, narrow the guard's stated claim in the
-  #      suite and the change record instead of overstating it (spec v1.7 §16
+  #      suite and the change record instead of overstating it (spec v1.10 §16
   #      already narrowed the preload row).
   #  6.12 F-5 — documentation-scope truth. `doc/00-index.md` is reconciled as a
   #      DESCRIPTOR-ONLY CLI-entrypoint row (two executables over one shared
@@ -1278,7 +1303,7 @@ phases:
   #      (`doc/spec/nonfunctional.md`, `doc/spec/features/feature-state-layer.md`,
   #      `doc/overview/architecture-overview.md`, `doc/overview/glossary.md`,
   #      `doc/quality/test-specs/test-spec-state-layer.md`) are reconciled and
-  #      declared CHANGED exactly as spec v1.7 §16 lists them. `identity-docs`
+  #      declared CHANGED exactly as spec v1.10 §16 lists them. `identity-docs`
   #      pins both landing-page facts (descriptor-only, no guide link) and the
   #      five pages' statements.
   #  6.13 Plan scope sentences (F-5, this revision's own text): the DOC BOUNDARY
@@ -1317,7 +1342,7 @@ phases:
   #      `priorIdentityNoticeToken`, `renderPriorIdentityNotice`) because
   #      `tests/structure/port-contract-inventory.test.ts` requires every
   #      exported contract surface to be listed; the entries are the delivered
-  #      state, are now declared in spec v1.7 §16, and the suite must stay green.
+  #      state, are now declared in spec v1.10 §16, and the suite must stay green.
   #      Do not trim the inventory to make another check pass.
   #  6.18 CLOSE-OUT (r1.5) — `tests/structure/content-inventory.test.ts` is
   #      declared in Phase 1 and is NOT re-declared here. Its second edit in this
@@ -1326,25 +1351,50 @@ phases:
   #      environment needs); that allowance is the declared reason for the
   #      file's phase-6 touch, and the exact file-set equality plus the
   #      retired-`neutralWorkingName` allowance stay unchanged.
-  #  6.19 PR-CI CLOSE-OUT (r1.6) — `.github/workflows/ci.yml`: install Bun in
-  #      the `doc-distribution-guard` job AND in the `bash-tests` job, using the
-  #      repository's existing pin (`oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6`
-  #      with `bun-version: ${{ env.BUN_VERSION }}`, i.e. 1.4.4). Reason: both
-  #      jobs run `scripts/.tests/test-doc-distribution.sh`, whose install-set
-  #      oracle executes `install.sh --local`; the launcher step now requires Bun
-  #      at install time and neither job installed it (every Bun setup today is
-  #      per-job in the `ts-*` jobs). NO other workflow behaviour changes: no
-  #      job, trigger, permission, exclusion, or command is added, removed, or
-  #      reordered beyond those two setup steps.
-  #      SPEC-CONFLICT, DISCLOSED (not silently absorbed): spec v1.7 §7.2 [OUT]
-  #      still says "Changing the CI workflow … no `.github/workflows/ci.yml`
-  #      change is required", and §16 does not list the file, because that
-  #      statement was written before the PR pipeline ran the doc-distribution
-  #      oracle. The PR evidence overrides the assumption: the install-set oracle
-  #      cannot execute the launcher step without Bun. This plan therefore
-  #      declares the minimal two-step change and flags the sentence for the spec
-  #      owner's next revision; the coder must NOT edit the spec, and a reviewer
-  #      must treat §7.2's bullet as superseded by this declared obligation.
+  #  6.19 PR-CI CLOSE-OUT (r1.6, completed in r1.7) — `.github/workflows/ci.yml`,
+  #      the ONE declared CI edit. In BOTH the `doc-distribution-guard` job and
+  #      the `bash-tests` job, and in this order:
+  #        (a) install the Bun runtime with the repository's pinned setup action
+  #            (`oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6`,
+  #            `bun-version: ${{ env.BUN_VERSION }}`, i.e. 1.4.4);
+  #        (b) immediately after it, set up pnpm with the same pinned action the
+  #            other jobs use (`pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320`,
+  #            which reads `packageManager` from the root manifest — no version
+  #            argument is added);
+  #        (c) then run `pnpm install --frozen-lockfile`.
+  #      Both jobs run `scripts/.tests/test-doc-distribution.sh`, whose
+  #      install-set oracle executes `install.sh --local`; the launcher step
+  #      requires Bun at install time, so round 1 added (a). Round 2 proved (a)
+  #      necessary but NOT sufficient: with Bun present the launcher executes
+  #      `packages/cli/bin/jaiship.ts`, whose `@delivery-os/*` imports need an
+  #      INSTALLED workspace, and a dependency-free checkout fails with
+  #      `Cannot find module '@delivery-os/adapters/credentials'`, so the oracle
+  #      still cannot derive the install set. Steps (b)+(c) supply exactly that
+  #      install and nothing more.
+  #      CI-ONLY CONDITION, recorded: the local gate cannot see this failure
+  #      because a local `pnpm check` always runs against a populated
+  #      `node_modules`; a dependency-free checkout is a CI-only condition. That
+  #      is why round 2 is a gate-coverage fact rather than a coder slip.
+  #      NOTHING ELSE CHANGES: no job, trigger, permission, exclusion, cache
+  #      config, or command is added, removed, or reordered beyond (a)-(c) in
+  #      those two jobs.
+  #      SPEC ALIGNMENT, DISCLOSED: spec v1.10 §16 declares
+  #      `.github/workflows/ci.yml` CHANGED for this one in-scope CI edit (the
+  #      runtime installation in the two install-set-oracle jobs), and §7.2 reads
+  #      "changing CI beyond one declared runtime installation" as out of scope.
+  #      Steps (b)+(c) are the dependency install that the same oracle needs for
+  #      that declared edit to work; this plan therefore treats them as part of
+  #      the same one-file edit and flags the wording for the spec owner rather
+  #      than editing the spec. The coder must NOT edit the spec, the test plan,
+  #      or the reviews.
+  #      NOTICE-BOUND CHANGE, REAFFIRMED (no additional plan scope): the
+  #      notice-bound correction from PR CI is spec v1.10 / test plan v1.8 — the
+  #      bound is path-INDEPENDENT (one line; fixed prose with both absolute
+  #      location strings removed <= 400 characters; those two locations are the
+  #      only variable content), superseding the absolute-character bound. It
+  #      changes NO other test or product behaviour, requires no new TC, no new
+  #      scope, and no product edit; Phase 6's `prior-identity-notice` re-run in
+  #      the gate proves it against the remediated suites.
   #  6.20 PR-CI CLOSE-OUT (r1.6) — `chg-GH-320-pm-notes.yaml` must carry NO
   #      absolute user-path literal anywhere (the phase-9 evidence entry quoted a
   #      branch-introduced fixture path; the privacy invariant scan rejects it).
