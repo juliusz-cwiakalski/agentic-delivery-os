@@ -853,7 +853,7 @@ notes:
       untouched by GH-301. GATE VERDICTS: pnpm check with
       TMPDIR=$PWD/tmp/tmpdir => exit 1, 9043 pass / 4 skip / 18 fail / 1 error
       (the fifteen environment cells plus the three timing cells). pnpm check
-      with TMPDIR=/home/juliusz/git/ados-tmp-pm/gh301-full (outside every work
+      with TMPDIR=<outside-worktree same-filesystem dir> (outside every work
       tree) => exit 1, 9058 pass / 4 skip / 3 fail, and the three are
       TC-ATTEMPT-003, TC-ATTEMPT-009/010/037 and TC-BIN-043, i.e. exactly the
       pre-existing/load cells above; nothing else fails and the fifteen
