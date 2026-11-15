@@ -1,0 +1,48 @@
+change_id: GH-322
+title: "fix: privacy-literals red on main-tools — absolute user path in GH-310
+  pm-notes"
+milestone: "M2: Ceremonies, measurement, and memory"
+delivery_mode: autonomous
+variant: full
+phases:
+  clarify_scope: { started: null, completed: 2026-11-15T08:57:27.390Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions:
+  - text: "Substitute the absolute gate temp root with the repository-relative
+      convention `TMPDIR=$PWD/tmp/tmpdir` in the recorded GH-310 quality-gate
+      evidence line, leaving every recorded verdict, count, and hash untouched.
+      Rationale: the privacy-literals invariant is the binding authority and the
+      value being recorded is a command line, not a measurement; the
+      substitution is literal-only and changes no outcome."
+    date: "2026-11-15"
+open_questions: []
+blockers: []
+notes:
+  - text: "Intake: directive to deliver GH-322 as a one-line CI fix-forward. State:
+      issue OPEN with label change and milestone 'M2: Ceremonies, measurement,
+      and memory'; branch fix/GH-322/sanitize-gh310-pm-notes checked out,
+      working tree clean; no change folder existed."
+    type: info
+    date: "2026-11-15"
+  - text: "Reproduced the red gate before any edit: `bun run
+      scripts/checks/privacy-literals.ts` exit 1 with exactly one violation,
+      `private.absolute-user-path` at
+      doc/changes/2026-11/2026-11-14--GH-310--cross-repository-changes/chg-GH-3\
+      10-pm-notes.yaml:279; 4070 files scanned, 0 allowlist-independent
+      violations elsewhere. Only one absolute user path remains in that file
+      (lines 77, 409, 514, 531 already carry the `$GATE_TMPDIR` placeholder)."
+    type: info
+    date: "2026-11-15"
+  - text: "Scope discipline: docs-only, one literal in one committed change
+      artifact. No source, spec, prompt, or workflow change; no other ticket."
+    type: info
+    date: "2026-11-15"
