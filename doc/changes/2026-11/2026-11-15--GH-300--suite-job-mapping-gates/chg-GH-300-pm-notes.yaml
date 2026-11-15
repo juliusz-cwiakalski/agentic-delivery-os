@@ -5,9 +5,9 @@ variant: full
 milestone: "M2: Ceremonies, measurement, and memory"
 phases:
   clarify_scope: { started: null, completed: 2026-11-15T10:40:44.109Z }
-  specification: { started: null, completed: 2026-11-15T11:58:19.591Z }
-  test_planning: { started: null, completed: 2026-11-15T12:08:31.679Z }
-  delivery_planning: { started: null, completed: 2026-11-15T12:26:15.447Z }
+  specification: { started: null, completed: 2026-11-15T12:45:42.248Z }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -178,5 +178,48 @@ notes:
       F10, F11), then `test_planning` (F6), then `delivery_planning` (F1, F4,
       F8, F9); re-run the gate afterwards (max 3 iterations). No phase reopens
       to `delivery`."
+    type: info
+    date: "2026-11-15"
+  - text: "DoR gate ITERATION 2 verdict: NOT_READY (3 blocking findings; six facets
+      FAIL: spec_completeness, ac_quality, plan_coverage,
+      cross_artifact_consistency, system_spec_consistency,
+      plan_doc_update_coverage). Iteration-1 F1-F6 and F8-F11 verified closed;
+      F7 only partially. Blocking: (N1) the narrowed no-append rule is also
+      stated in current-truth sentences outside Appendix D —
+      feature-verify-gates.md lines 172/217/318/374/407, feature-capsule.md
+      129/205, feature-verify-change-and-exit-taxonomy.md 43/49, and
+      overview/architecture-overview.md 179 — so Appendix D's 'no other sentence
+      changes' is false and phase 7 is under-scoped; (N2) several ACs/TCs assert
+      `error.kind` (`verify`/`config`) on the envelope or tool result, but the
+      delivered `delivery.result.v1` error object carries exactly
+      code/category/retryable/consequence/remediationHint/summary — `kind` is a
+      handler/table discriminant only, so satisfying the ACs as written would
+      add an unlisted contract member; (N3) the fail-closed document
+      classification (AC-F1-4/NFR-10/DEC-18) has no witness through the real
+      adapter — phase 4 tests an injected seam and phase 5 only covers
+      valid/absent, so a real adapter that maps a read/parse failure to
+      'undeclared' would pass. Minors: read-budget wording, parser-level
+      strictness vs NFR-10 tolerance, `job` character class, C-10 vs phase 2,
+      stale test-plan handoff paragraph, member-path read hoisting and the
+      selected-file channel, 'catalog and resolver agree' claim, DEC-19
+      precedent capture, reopen provenance, one vacuous assertion. Record:
+      readiness-review/readiness-iter-2.md."
+    type: risk
+    date: "2026-11-15"
+  - text: "RETRO: iteration 2 caught two classes that iteration 1's remediation
+      introduced — a wrong envelope field (`error.kind`) repeated across four
+      ACs and six TCs, and a doc-delta list derived from the spec's own claims
+      instead of a repo-wide search for the sentence being retired. Improvement:
+      assert envelope fields by reading the delivered result type, never from
+      the error table's column names; enumerate doc deltas by grepping the
+      invariant, not by trusting the previous appendix."
+    type: retro
+    date: "2026-11-15"
+  - text: "DoR iteration-2 remediation plan (iteration 3 is the last before
+      escalation): reopen `specification` (N2 AC/DM field corrections, N1 doc
+      delta completion, plus the minors owned by the spec), `test_planning` (N2
+      assertions, the adapter witness TC, vacuous assertion), and
+      `delivery_planning` (N3 adapter obligation, phase-7 scope, C-10,
+      wording)."
     type: info
     date: "2026-11-15"
