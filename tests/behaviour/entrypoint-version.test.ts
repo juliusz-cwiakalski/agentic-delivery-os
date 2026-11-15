@@ -10,6 +10,7 @@ import { bufferSink } from "../golden/helpers";
 
 const versionRun = async (options: {
   readonly configuredWorkingName?: string;
+  readonly declaredWorkingName?: string;
   readonly environment?: Readonly<Record<string, string | undefined>>;
   readonly composeCalls?: () => number;
 }) => {
@@ -19,6 +20,7 @@ const versionRun = async (options: {
   const exitCode = await runEntrypoint(["--version"], {
     streams: { stdout, stderr },
     environment: options.environment ?? {},
+    declaredWorkingName: options.declaredWorkingName ?? "example-default",
     ...(options.configuredWorkingName === undefined
       ? {}
       : { configuredWorkingName: options.configuredWorkingName }),
@@ -77,10 +79,11 @@ describe("TC-ENTRY-002 identity precedence", () => {
     expect(run.stdout).not.toContain("configured-product");
   });
 
-  test("neither source renders the neutral default delivery-os", async () => {
+  test("the invoking bin's declared default is the identity floor", async () => {
     const run = await versionRun({});
     expect(run.exitCode).toBe(0);
-    expect(run.stdout).toContain("delivery-os");
+    expect(run.stdout).toContain("example-default");
+    expect(run.stdout).not.toContain("delivery-os");
   });
 
   test("no rendered identity contains a seed literal", async () => {

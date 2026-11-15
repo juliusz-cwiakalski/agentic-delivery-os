@@ -5,7 +5,8 @@
   "type": "module",
   "main": "./dist/entrypoint.js",
   "bin": {
-    "delivery-os": "./bin/delivery-os.ts"
+    "delivery-os": "./bin/delivery-os.ts",
+    "jaiship": "./bin/jaiship.ts"
   },
   "files": [
     "dist"

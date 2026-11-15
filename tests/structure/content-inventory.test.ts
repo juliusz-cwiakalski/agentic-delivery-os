@@ -1937,8 +1937,9 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "cli/src/index.ts": ["runCli"],
   "cli/bin/delivery-os.ts": ["completion"],
+  "cli/bin/jaiship.ts": ["completion"],
+  "cli/src/bin-launcher.ts": ["runBinLauncher"],
   "cli/src/entrypoint.ts": [
-    "neutralWorkingName",
     "workingNameEnvironmentVariable",
     "PROMPT_REQUIRED_COMMANDS",
     "resolveWorkingName",
@@ -2789,4 +2790,121 @@ test("the runtime-engine exemption is path-scoped to the state driver edge", () 
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+/**
+ * GH-320 TC-BIN-061 — the new executable entries join the inventory with a
+ * per-file allowance, and the retired neutral accessor leaves exactly one name
+ * from the entrypoint module's allowance while the protocol accessor stays.
+ */
+const declaredExports = (root: string, packageName: string, relative: string): string[] => {
+  const file = join(root, "packages", packageName, relative);
+  const source = ts.createSourceFile(
+    file,
+    readFileSync(file, "utf8"),
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const names: string[] = [];
+  for (const statement of source.statements) {
+    if (
+      ts.isExportDeclaration(statement) &&
+      !statement.isTypeOnly &&
+      statement.exportClause !== undefined
+    ) {
+      if (ts.isNamedExports(statement.exportClause)) {
+        for (const element of statement.exportClause.elements) {
+          if (!element.isTypeOnly) names.push(element.name.text);
+        }
+      }
+      continue;
+    }
+    if (!isExported(statement)) continue;
+    if (ts.isFunctionDeclaration(statement) && statement.name !== undefined) {
+      names.push(statement.name.text);
+      continue;
+    }
+    if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        if (ts.isIdentifier(declaration.name)) names.push(declaration.name.text);
+      }
+    }
+  }
+  return names.sort();
+};
+
+test("TC-BIN-061 the new bins join the file set with per-file allowances", () => {
+  expect(inventory.cli).toContain("bin/jaiship.ts");
+  expect(inventory.cli).toContain("src/bin-launcher.ts");
+  expect(inventory.cli).toContain("src/entrypoint.ts");
+  expect(EXECUTABLE_ALLOWANCES["cli/bin/jaiship.ts"]).toEqual(["completion"]);
+  expect(EXECUTABLE_ALLOWANCES["cli/bin/delivery-os.ts"]).toEqual(["completion"]);
+  expect(EXECUTABLE_ALLOWANCES["cli/src/bin-launcher.ts"]).toEqual(["runBinLauncher"]);
+  for (const relative of ["bin/jaiship.ts", "bin/delivery-os.ts", "src/bin-launcher.ts"]) {
+    expect(declaredExports(ROOT, "cli", relative).sort()).toEqual(
+      [...(EXECUTABLE_ALLOWANCES[`cli/${relative}`] ?? [])].sort(),
+    );
+  }
+});
+
+test("TC-BIN-061 the entrypoint allowance retires one name and keeps the other", () => {
+  const exports = declaredExports(ROOT, "cli", "src/entrypoint.ts");
+  expect(exports).toContain("workingNameEnvironmentVariable");
+  expect(exports).not.toContain("neutralWorkingName");
+  const allowance = EXECUTABLE_ALLOWANCES["cli/src/entrypoint.ts"] ?? [];
+  expect(allowance).toContain("workingNameEnvironmentVariable");
+  expect(allowance).not.toContain("neutralWorkingName");
+  // Both directions: no allowance entry without a declaration, and vice versa.
+  expect([...allowance].sort()).toEqual([...exports].sort());
+  const production = readFileSync(join(ROOT, "packages/cli/src/production.ts"), "utf8");
+  expect(production).toContain("workingNameEnvironmentVariable()");
+});
+
+test("TC-BIN-061 no file declares the retired accessor", () => {
+  const offenders: string[] = [];
+  for (const packageName of PACKAGE_NAMES) {
+    for (const relative of inventory[packageName] ?? []) {
+      const text = readFileSync(join(ROOT, "packages", packageName, relative), "utf8");
+      if (/neutralWorkingName|NEUTRAL_WORKING_NAME/u.test(text)) {
+        offenders.push(`${packageName}/${relative}`);
+      }
+    }
+  }
+  expect(offenders).toEqual([]);
+});
+
+test("TC-BIN-061 an undeclared executable export in the new bin fails by name", () => {
+  const root = makeTempFile(
+    "cli",
+    "bin/jaiship.ts",
+    '#!/usr/bin/env bun\nexport const completion = Promise.resolve();\nexport const extra = 1;\n',
+  );
+  try {
+    const violations = executableViolations(root, "cli", "bin/jaiship.ts");
+    expect(violations).toEqual(["cli/bin/jaiship.ts: undeclared executable export extra"]);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("TC-BIN-061 a re-added neutralWorkingName export fails naming the symbol", () => {
+  const entrypoint = readFileSync(join(ROOT, "packages/cli/src/entrypoint.ts"), "utf8");
+  const root = makeTempFile(
+    "cli",
+    "src/entrypoint.ts",
+    `${entrypoint}\nexport const neutralWorkingName = (): string => "delivery-os";\n`,
+  );
+  try {
+    const violations = executableViolations(root, "cli", "src/entrypoint.ts");
+    expect(violations).toContain("cli/src/entrypoint.ts: undeclared executable export neutralWorkingName");
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("TC-BIN-061 a new file without an inventory entry fails the equality", () => {
+  const actual = listTypeScriptFiles(join(ROOT, "packages/cli"));
+  const expected = [...(inventory.cli ?? [])].sort();
+  expect(actual).toEqual(expected);
 });

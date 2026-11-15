@@ -1,6 +1,7 @@
 /**
  * TC-ENTRY-005/006 — help and version succeed without a configuration file or a
- * project checkout, render the neutral default when no name source exists, and
+ * project checkout, render the invoking bin's declared default when no name
+ * source exists, and
  * perform zero composition, state, network, git, or configuration reads within
  * the suite's fixed timeout.
  */
@@ -33,6 +34,7 @@ const run = async (args: readonly string[], environment: Record<string, string> 
   const exitCode = await runEntrypoint(args, {
     streams: { stdout, stderr },
     environment,
+    declaredWorkingName: "delivery-os",
     composeProgram: () => {
       composed += 1;
       throw new Error("the composer must not run for self-description");
@@ -50,7 +52,7 @@ const run = async (args: readonly string[], environment: Record<string, string> 
 };
 
 describe("TC-ENTRY-005/006 help and version isolation", () => {
-  test("both succeed in an empty directory and render the neutral default", async () => {
+  test("both succeed in an empty directory and render the declared default", async () => {
     const root = tempRoot();
     const before = readdirSync(root);
     for (const args of [["--help"], ["--version"]]) {
