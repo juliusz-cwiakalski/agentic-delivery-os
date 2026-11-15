@@ -13,7 +13,7 @@ phases:
   delivery: { started: null, completed: 2026-11-15T09:33:48.374Z }
   system_spec_update: { started: null, completed: 2026-11-15T09:36:31.089Z }
   review_fix: { started: null, completed: 2026-11-15T09:41:09.756Z }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: null, completed: 2026-11-15T10:18:57.267Z }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
@@ -205,6 +205,48 @@ notes:
       Info: AC-F1-4 is owed by lifecycle phase 9 and the PR-open clause of
       AC-F1-5 by phase 11. Record: code-review/review-iter-1.yaml."
     type: resolved
+    date: "2026-11-15"
+  - text: "QUALITY GATE (lifecycle phase 9) verdicts at HEAD 211489bf. COMMIT-RANGE
+      GATE — `./scripts/lint-commit-range.sh --base main-tools`: VERDICT PASS,
+      base main-tools (explicit), merge-base c1f0d6fa, head 211489bf, 13 commits
+      in range, 0 offending commits, mode none, 0 distinct rules hit, commitlint
+      resolved repository-local from node_modules/.bin/commitlint (origin ref
+      refs/remotes/main-tools, non-vacuous). PRIVACY-LITERALS: `bun run
+      scripts/checks/privacy-literals.ts` exit 0, 4078 files scanned, 0
+      violations. AGGREGATE BATTERY: run as `PATH=$PWD/node_modules/.bin:$PATH
+      TMPDIR=<gate temp root outside every work tree> GIT_CONFIG_COUNT=1
+      GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false pnpm check` ->
+      exit 0: 8496 pass / 4 skip / 0 fail across 1082 files (1024.88s); lint
+      2532 files 0 errors (83 warnings / 33 infos, pre-existing); format:check
+      2391 files no drift; typecheck six packages + tests/types; boundaries 405
+      modules / 1234 deps no violations; ambient-globals 191 files clean;
+      workspace-entrypoints match the DEC-2 matrices; secret-read-boundary 373
+      files clean; prompt-conformance 5 prompts clean; help-guide-coverage all
+      covered; exports-parity 5 publishables pass. DEVIATION (measured, not
+      assumed): the ticket's `TMPDIR=$PWD/tmp/tmpdir` cannot run this battery
+      green in this checkout. With it, `bun test` produces 15 failures in 10
+      hermeticity suites (58 pass / 15 fail) and the chain short-circuits.
+      Cause: `nonCheckoutDirectory` tries [tmpdir(), dirname(cwd), APPROVED_BASE
+      = <cwd>/tmp/tmpdir]; a repo-local TMPDIR makes tmpdir() and APPROVED_BASE
+      one repo-local path, and dirname(cwd) is the umbrella repository, which is
+      itself a work tree, so every candidate is rejected. Control run of the
+      same 10 files with a temp root outside every work tree: 73 pass / 0 fail.
+      The full battery under that external temp root is the green run recorded
+      here. Nothing was fixed: the fixture locator is source code and outside
+      this change's scope; the aggregate gate is AC-F1-4 'best-effort'. Raw logs
+      under tmp/run-logs-runner/2026-11-15/ (A-1 repro, B-1 control, C-1 full
+      battery)."
+    type: info
+    date: "2026-11-15"
+  - text: "RESIDUAL RISK (out of scope, for the owner): the repository-relative gate
+      temp root `TMPDIR=$PWD/tmp/tmpdir` is incompatible with this checkout's
+      hermeticity fixtures (15 failures, cause above), while the convention is
+      what GH-310's record and this change now state. Two candidate follow-ups,
+      neither created here: (a) extend nonCheckoutDirectory's candidate list so
+      it can escape an enclosing umbrella work tree, or (b) state an external
+      out-of-work-tree temp root as the gate convention. Requires its own
+      ticket."
+    type: risk
     date: "2026-11-15"
   - text: "RETRO: the spec writer's non-goals were written before the in-scope edit
       was pinned, so a blanket 'no other change artifact' clause contradicted
