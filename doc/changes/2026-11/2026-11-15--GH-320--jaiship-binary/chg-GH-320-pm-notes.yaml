@@ -14,7 +14,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-15T12:48:17.746Z }
   quality_gates: { started: null, completed: 2026-11-15T14:54:17.918Z }
   dod_check: { started: null, completed: 2026-11-15T14:54:46.111Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-15T14:55:44.056Z }
 decisions:
   - text: "Legacy identity fallback is the chosen mechanism (not a migration
       command): AC4 requires `jaiship status --json` to read the existing
@@ -567,5 +567,15 @@ notes:
       commitlint repository-local, mode none. Privacy invariant separately 0
       violations. This supersedes the earlier phase-9 note recorded before the
       PR-CI fix."
+    type: info
+    date: "2026-11-15"
+  - text: "Pull request:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/324 — base
+      main-tools, head feat/GH-320/jaiship-binary, created by @pr-manager at
+      head 8c77e014 and later advanced by the PR-CI fix and close-out commits
+      (f69b66b6, ceb88482, 2633d9ba, f49d7be7, 478e5401, a3c5ded0). Left OPEN
+      for review; merge authority is the CEO (Mode A) or the human via
+      batch-deliver.sh (Mode B). The ticket is assigned to juliusz-cwiakalski
+      for review."
     type: info
     date: "2026-11-15"
