@@ -1078,8 +1078,8 @@ const baselineViolations = (live: readonly ErrorTableEntry[]): string[] => {
       failures.push(`${expected[0]}: pre-existing row changed`);
     }
   }
-  if (live.length !== BASELINE_ROWS.length + 101) {
-    failures.push(`table length ${live.length} != baseline + 101 (${BASELINE_ROWS.length + 101})`);
+  if (live.length !== BASELINE_ROWS.length + 102) {
+    failures.push(`table length ${live.length} != baseline + 102 (${BASELINE_ROWS.length + 102})`);
   }
   return failures;
 };
@@ -1088,7 +1088,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
   test("the live table is exactly the frozen baseline plus the one verify row", () => {
     expect(baselineViolations(ERROR_TABLE as readonly ErrorTableEntry[])).toEqual([]);
     const live = ERROR_TABLE as readonly ErrorTableEntry[];
-    expect(live.filter((entry) => entry.domainKind === "verify")).toHaveLength(6);
+    expect(live.filter((entry) => entry.domainKind === "verify")).toHaveLength(7);
     expect(
       live.filter((entry) => entry.code === "verify.ledger.incomplete")[0]?.projectionClass,
     ).toBe("user-validation");
@@ -1101,7 +1101,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
       state: 9,
       lint: 6,
       plan: 5,
-      verify: 6,
+      verify: 7,
       closeout: 5,
       watchdog: 4,
       commit: 5,
@@ -1159,7 +1159,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
     expect((await runSyncCheck({ root: ROOT })).counts.sourceEntries).toBe(
-      BASELINE_ROWS.length + 101,
+      BASELINE_ROWS.length + 102,
     );
   });
 
@@ -1182,7 +1182,7 @@ describe("TC-DB-004 db rows synchronize in both directions", () => {
   test("the delivered state is green with the four db rows and non-zero counts", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 101);
+    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 102);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     const doc = readFile(ROOT, DOC);
@@ -1769,7 +1769,7 @@ describe("TC-BLK-007 blockers family mutations fail by name", () => {
 
 /**
  * TC-COORD-082 (GH-241): the six coordinator rows bind two-way against the
- * documented table, the total is 135 (GH-292 added the two queue lifecycle
+ * documented table, the total is 136 (GH-292 added the two queue lifecycle
  * identities, GH-309 the three group-surface identities, and GH-309 the moved
  * three repos flat identities), and the corpora
  * are non-vacuous.
@@ -1784,11 +1784,11 @@ describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
     "coordinator.wake.delivery-failed",
   ] as const;
 
-  test("the live tree is green at 135 entries and 135 documented rows", async () => {
+  test("the live tree is green at 136 entries and 136 documented rows", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(135);
-    expect(result.counts.documentedRows).toBe(135);
+    expect(result.counts.sourceEntries).toBe(136);
+    expect(result.counts.documentedRows).toBe(136);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     expect(result.counts.recognizedS3).toBeGreaterThan(0);
     expect(result.counts.corpusRows).toBeGreaterThan(0);
@@ -1799,7 +1799,7 @@ describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
     for (const code of COORDINATOR_CODES) {
       expect(doc.split(`| ${code} |`).length - 1, code).toBe(1);
     }
-    expect(doc).toContain("135 identities");
+    expect(doc).toContain("136 identities");
   });
 
   test("removing a documented coordinator row fails naming the code", async () => {

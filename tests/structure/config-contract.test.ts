@@ -12,6 +12,7 @@ describe("TC-CONFIG-023 pure root API and unchanged composition declaration", ()
       "commit",
       "merge",
       "harness",
+      "verify",
       "lane",
       "queue",
       "daemon",

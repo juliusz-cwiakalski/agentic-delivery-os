@@ -60,3 +60,43 @@ describe("TC-MCP-007 gate-report parity", () => {
     });
   }
 });
+
+describe("TC-SCITE-004 the gate-report mirror inherits the suite-breadth fields", () => {
+  const byId = (id: string) => {
+    const found = GATE_CASES.find((entry) => entry.id === id);
+    if (found === undefined) throw new Error(`missing parity case ${id}`);
+    return found;
+  };
+
+  test("the equality case carries the same two fields on both surfaces", async () => {
+    const parityCase = byId("gate-equality-map");
+    const cli = await parityCase.runCli();
+    const mcp = await parityCase.runMcp();
+    expect(cli.ok).toBe(true);
+    expect(mcp.ok).toBe(true);
+    if (!cli.ok || !mcp.ok) return;
+    const cliData = cli.data as Record<string, unknown>;
+    const mcpData = mcp.data as Record<string, unknown>;
+    expect(cliData.mirrorsJob).toBe("job-01");
+    expect(cliData.suiteBreadth).toEqual(mcpData.suiteBreadth);
+    expect(cliData.mirrorsJob).toBe(mcpData.mirrorsJob);
+    expect(mcpData.suiteBreadth).toHaveLength(8);
+  });
+
+  test("the narrowed case fails with the same identity on both surfaces and no data", async () => {
+    const parityCase = byId("gate-narrowed");
+    const cli = await parityCase.runCli();
+    const mcp = await parityCase.runMcp();
+    expect(cli.ok).toBe(false);
+    expect(mcp.ok).toBe(false);
+    if (cli.ok || mcp.ok) return;
+    expect(mcp.error).toEqual(cli.error);
+    expect(mcp.error.code).toBe("verify.narrowed-scope");
+    expect(mcp.error.category).toBe("user");
+    expect(mcp.error.retryable).toBe(false);
+    expect(mcp.error.consequence).toBe("not_landed");
+    expect(Object.hasOwn(mcp.error, "kind")).toBe(false);
+    expect(Object.hasOwn(mcp.error, "gates")).toBe(false);
+    expect(Object.hasOwn(mcp.error, "detail")).toBe(false);
+  });
+});

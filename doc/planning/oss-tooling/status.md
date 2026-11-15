@@ -454,3 +454,25 @@ write, and the parity, contract, read-only, determinism, and hermetic proofs are
 committed suites. The delivery runs on `feat/GH-310/cross-repository-changes`;
 M2 has not exited, and the remaining M2 stories (S2–S10, S16) are unaffected by
 this delivery and stay planned.
+
+## M2 delivery snapshot addendum (2026-11-15): M2-S7 delivered by GH-300
+
+M2-S7 (suite-to-job mapping in gates) was delivered by GH-300 on
+`feat/GH-300/suite-job-mapping-gates`. A repository now declares one versioned
+`verify.suite-map` in its project-committed configuration document — `jobs[]`
+of `{ job, suites }` plus the `local` set — and `verify gates` reads exactly
+that one document through one bounded resolution attempt (at most one existence
+probe and at most one content read), never the merged layer tree. A resolved
+equality cites the mirrored CI breadth and job on both report types
+(`data.suiteBreadth`/`data.mirrorsJob`), a strict narrowing refuses at exit `1`
+with `verify.narrowed-scope` — naming the local set in `detail.suiteBreadth` and
+the mirror's breadth in the pinned header — and appends neither the verification
+record nor the capsule event, an unattributable local breadth or a drifted
+mirror refuses `config.value.invalid` with one bounded `cause:` line, and a
+present-but-unusable document never becomes undeclared. The policy is live on
+both shipped surfaces (the CLI and the shipped MCP `gate-report`), this
+repository's own declaration resolves to equality end-to-end, and the five
+gates, the record and capsule shapes, the invocation grammar, and the
+enumerable source read counts are unchanged. The delivery runs on
+`feat/GH-300/suite-job-mapping-gates`; M2 has not exited, and the remaining M2
+stories are unaffected by this delivery.

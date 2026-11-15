@@ -6,13 +6,14 @@ created: 2026-10-31
 last_updated: 2026-11-15
 owners: ["engineering"]
 service: delivery-os
-summary: "The verify gates surface: the config-declared merge battery (default five built-ins in shipped order), cited pass/fail/unknown verdicts, structured VerifyLedgerEvaluation consumption, deterministic open-PR resolution, read-specific 404 absence, shared status vocabulary, bounded deterministic output, the appended EVT-1 gate-verification record with byte-identical verdicts, the delivered-shape projection of that record's member gates (`member` dropped, order and count preserved) so the ledger reads back non-`torn`, the non-gating capsule `gate.outcome` append with a bounded disclosure, the two verify.gates.* error rows, and the additive cross-repository report type: one shared definition of done over the declared member set with per-(member, gate) records, per-member CI corroboration and member verdicts, landing-ordered evidence, an untruncated blocking-member list, one review flow with a stable run identity, and the data-bearing negative report at exit 1 while the delivered member-less report keeps its literal overall and exits."
+summary: "The verify gates surface: the config-declared merge battery (default five built-ins in shipped order), cited pass/fail/unknown verdicts, structured VerifyLedgerEvaluation consumption, deterministic open-PR resolution, read-specific 404 absence, shared status vocabulary, bounded deterministic output, the appended EVT-1 gate-verification record with byte-identical verdicts, the delivered-shape projection of that record's member gates (`member` dropped, order and count preserved) so the ledger reads back non-`torn`, the non-gating capsule `gate.outcome` append with a bounded disclosure, the three verify gates rows (`verify.gates.failed`, `verify.gates.unavailable`, and the narrowed-scope refusal with its `detail.suiteBreadth` evidence member), the additive `data.suiteBreadth`/`data.mirrorsJob` suite-breadth fields on both report types, the suite-map declaration's fail-closed document posture, its four-outcome breadth resolution, and its two map-side refusals with their one bounded `cause:` line, and the additive cross-repository report type: one shared definition of done over the declared member set with per-(member, gate) records, per-member CI corroboration and member verdicts, landing-ordered evidence, an untruncated blocking-member list, one review flow with a stable run identity, and the data-bearing negative report at exit 1 while the delivered member-less report keeps its literal overall and exits."
 links:
-  related_changes: ["GH-178", "GH-225", "GH-240", "GH-310"]
+  related_changes: ["GH-178", "GH-225", "GH-240", "GH-310", "GH-300"]
   related_decisions: ["ADR-0003", "ADR-0006", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/verify-gates.ts"
     - "packages/core/src/domain/verify-gates-members.ts"
+    - "packages/core/src/domain/verify-gates-suite-map.ts"
     - "packages/core/src/domain/review-flow.ts"
 ---
 
@@ -31,12 +32,23 @@ any `fail` is definitive; `unknown` is never a pass. The battery is evaluated
 without short-circuit, so every report is complete.
 
 The command performs no merge, auto-merge, provider mutation, or child
-process. It performs bounded local reads (ledger, repository HEAD/branch, CI
-workflow) and at most one bounded page or item per provider source: one open-PR
-page, one matched detail read, one check-run page, and one work-item read. It
-appends exactly one fenced gate-verification record per full battery evaluation
-and nothing else. The report schema is `delivery.verify-gates.v1`; the envelope
-schema remains `delivery.result.v1`.
+process. It performs bounded local reads (ledger, repository HEAD/branch, CI workflow,
+and the project-committed configuration document) and at most one bounded page
+or item per provider source: one open-PR page, one matched detail read, one
+check-run page, and one work-item read. One bounded configuration-document
+resolution attempt is the only added access: at most one stat-class existence
+probe and at most one bounded content read, with no content read when the
+document is absent, performed with or without a declaration and adding no read of
+any other configuration layer. It appends exactly one fenced gate-verification
+record per full battery evaluation that is not refused for narrowed suite
+breadth; a refused run appends neither the record nor the capsule event. The
+report schema is `delivery.verify-gates.v1`; the envelope schema remains
+`delivery.result.v1`. Both emitted report types carry two additive
+optional root fields, present together or absent together: `suiteBreadth` (the
+mirrored CI job's declared `suites`, in declared order) and `mirrorsJob` (that
+job's declared name). They are absent when no `verify.suite-map` is declared and
+on every non-report outcome; `suiteBreadth` is the CI job breadth, never the
+local declaration and never a union.
 
 When the composing surface supplies the member runtime, a change whose plan
 declares `members[]` reports one shared definition of done over the declared
@@ -96,7 +108,12 @@ The expected job set is read from `.github/workflows/ci.yml` at the edge,
 using each job's display `name` and falling back to the job id; an absent,
 unreadable, empty, duplicate, or over-cap set is `ci-expected-jobs-invalid`,
 never green. The repository declares 23 jobs across the bash and TypeScript
-pipelines.
+pipelines. The same single workflow read also corroborates the declared mirror
+job's presence for the suite-breadth citation: a resolved mirror that the read
+job-name set does not contain, by exact string match, is a `config.value.invalid`
+refusal. The declared suite map adds no expected job and no CI-gate condition,
+so the CI gate's expected set, reasons, counts, names, and verdict are unchanged
+by the map.
 
 ## Target resolution
 
@@ -133,20 +150,38 @@ its projection, for example `config.credential.missing` (exit `1`) or
 shape: it is data-bearing at exit `1` through the `user-validation` projection
 class, so the report names the blocking member and the delivered
 `verify.gates.failed` classification is carried by `overall: "fail"` rather than
-by an error envelope. No error-table row is added for it.
+by an error envelope. No error-table row is added for it. A narrowed declared
+breadth refuses at exit `1` with `verify.narrowed-scope` before the verdict
+projection, keeps every evaluated gate's verdict and reason in the summary (one
+header line only on the member-declaring path), names the local breadth in
+`detail.suiteBreadth`, and appends nothing.
 
 ## Error rows
 
-| Code | Domain kind | Category | Projection class | Exit | Emitted when |
-|---|---|---|---|---|---|
-| `verify.gates.failed` | `verify` | user | `user-validation` | `1` | The overall result is `fail`. |
-| `verify.gates.unavailable` | `verify` | platform | `platform-provider` | `2` | The overall result is `unknown` and no first-unknown gate carries a resolvable error-table identity. |
+| Code | Domain kind | Category | Retryable | Consequence | Projection class | Exit | Emitted when |
+|---|---|---|---|---|---|---|---|
+| `verify.gates.failed` | `verify` | user | `false` | `not_landed` | `user-validation` | `1` | The overall result is `fail`. |
+| `verify.gates.unavailable` | `verify` | platform | `false` | `not_landed` | `platform-provider` | `2` | The overall result is `unknown` and no first-unknown gate carries a resolvable error-table identity. |
+| `verify.narrowed-scope` | `verify` | user | `false` | `not_landed` | `user-validation` | `1` | The declared local suite set is a strict subset of the mirrored CI job's declared suite set, so the run cannot report full green. |
 
-Both rows are additive members of the existing `verify` kind;
+The `verify.narrowed-scope` row is the additive member; the two delivered
+`verify.gates.*` rows keep their category, retryability, consequence, and
+projection class.
+
+The three `verify gates` rows are additive members of the existing `verify` kind;
 `verify.ledger.incomplete` remains the `verify change` row and is unchanged. The
 cross-repository report adds no row and no domain kind: its negative verdict is
 data-bearing at exit `1` and is classified by `overall: "fail"`, and its
 per-member and per-gate outcomes are report data rather than error identities.
+
+The narrowed refusal keeps the delivered summary shape (a header plus one line
+per evaluated gate): the header keeps `result=`/`gates=` byte-identical and
+appends `; scope=narrowed mirror=<job> breadth=<id[,id]*>[ omitted=<n>]`,
+naming the mirror job's declared breadth (at most eight identifiers, then the
+count of unprinted identifiers). On the member-declaring path no gate is
+evaluated, so the summary is the one header line. The complete narrowed local
+breadth is carried as `detail.suiteBreadth` (identifiers only, never truncated),
+and the run appends neither the verification record nor the capsule event.
 
 ## Bounds and read budget
 
@@ -164,13 +199,98 @@ per-member and per-gate outcomes are report data rather than error identities.
 | `VERIFY_GATES_MAX_SUMMARY_BYTES` | 4096 | Maximum failure-summary bytes. |
 | `VERIFY_GATES_MAX_MACHINE_BYTES` | 65536 | Maximum serialized machine report bytes. |
 | `VERIFY_GATES_MAX_MEMBERS` | 8 | Maximum declared members evaluated in one cross-repository report; `blockingMembers[]` is never truncated. |
+| `VERIFY_SUITE_MAP_SCHEMA_VERSION` | `delivery.verify.suite-map.v1` | The declared suite-to-job map schema. |
+| `VERIFY_SUITE_MAP_CONFIG_KEY` | `verify.suite-map` | The declaration key. |
+| `VERIFY_SUITE_MAP_MAX_JOBS` | 64 | Maximum declared `jobs[]` entries. |
+| `VERIFY_SUITE_MAP_MAX_SUITES_PER_JOB` | 32 | Maximum suites in one `suites` list. |
+| `VERIFY_SUITE_MAX_BREADTH` | 32 | Maximum `local` identifiers and detail entries. |
+| `VERIFY_SUITE_MAX_ID_CHARS` | 64 | Maximum characters in one suite identifier. |
+
+A suite identifier matches the single declared pattern `^[a-z][a-z0-9-]*$` at
+1..64 characters and is unique within one list; each `job` value is unique. The
+declared `job` is a
+single-line printable name of 1..120 characters — no C0 control, no DEL or C1
+control, no U+2028 or U+2029 line or paragraph separator, and no Unicode `Cf`
+format control — with no leading or trailing whitespace, compared by exact
+string match; the job-name bound reuses
+`VERIFY_GATES_MAX_EXPECTED_JOB_NAME_CHARS`, and the narrowed header reuses the
+citation-name, summary-line, and summary-byte bounds. A declared job therefore
+can never break the one-physical-line narrowed header or the one-line `cause:`
+diagnostic. The map adds exactly one bounded configuration-document resolution
+attempt per invocation — at most one stat-class existence probe plus at most one
+bounded content read, and no content read when no document exists — and no
+retry; the per-source budget below is unchanged.
 
 The read budget is bounded per source: one local ledger read (pm-notes plus
 the verified registry), one local repository HEAD/branch read, one local
 CI-workflow read, at most one bounded open-PR page, one resolved detail read,
 one check-run page, and one work-item read per invocation. There are no
 retries and no pagination. The only write is one appended gate-verification
-record per full battery evaluation.
+record per full battery evaluation that is not refused for narrowed suite
+breadth; a refused run writes nothing. The map's one bounded resolution attempt
+is the added access; on the single-target path a declaration that reaches the
+battery reads the same seven enumerable sources as an undeclared run, a
+structural declaration refuses before any gates source read, an unmirrored or
+uncorroborated declaration refuses before the provider reads, and a narrowed
+member-declaring declaration refuses before every member read, so those refusals
+read less.
+
+## Suite-to-job map and suite breadth
+
+The suite-to-job map is the one declaration that states which CI job runs which
+suite set and which suite set the local gate evaluates. It is the optional
+`verify.suite-map` configuration branch (schema
+`delivery.verify.suite-map.v1`) whose shape, default, and refusal semantics are
+specified in [Configuration Layer](feature-config-layer.md); its one home is the
+document occupying the project-committed configuration layer slot. One bounded
+resolution attempt reads only that document. An absent document — no
+`${environmentPrefix}CONFIG` selection in play and no committed document — and a
+document without the node are undeclared, and the run keeps its report, human
+text, exits, and appended record unchanged. A selection naming a missing or
+unreadable path, an unreadable or unparseable document, and a defective node are
+`config.value.invalid` at exit `1` with no `data`, raised before any gates source
+read; a schema or semantic defect elsewhere in the document is not interpreted,
+so it neither refuses the run nor removes a valid declaration.
+
+Breadth resolution compares the declared `local` set with the declared `jobs[]`
+sets as sets (order-insensitive) and cites them in declared order. Exactly one
+outcome resolves, and only equality is reportable:
+
+| Outcome | Condition | Result |
+|---|---|---|
+| Equality | The first job in declared order whose `suites` set equals `local`, and that job's declared name is in the read CI-workflow job-name set. | A report carrying `suiteBreadth` (that job's `suites` in declared order) and `mirrorsJob` (its declared name), present together on both report types. |
+| Narrowing | No job's set equals `local`, and the first job whose set is a strict superset of `local` is corroborated. | The `verify.narrowed-scope` refusal at exit `1`; no report and no append. |
+| Unmirrored | No single declared job's set covers `local`. | `config.value.invalid` at exit `1` with no `data`. |
+| Uncorroborated | The resolved mirror is absent, by exact string match, from a validly read job-name set. | `config.value.invalid` at exit `1` with no `data`. |
+
+When the CI-workflow read is absent, unreadable, empty, duplicate, or over-cap,
+no breadth outcome exists and the delivered `ci-expected-jobs-invalid` failure
+stands, citing no breadth. No breadth fact is inferred from observed check-run
+names, and the map never executes a suite, a workflow step, or a child process.
+
+Both report paths resolve the same map against the same single workflow read, so
+a narrowed declaration refuses identically on each; on a member-declaring change
+the decision precedes every member read and the data-bearing cross-repository
+report.
+
+### Map-side refusal diagnosis
+
+An unmirrored or uncorroborated declaration keeps the `config.value.invalid`
+row's own category, retryability, consequence, summary, remediation hint, exit
+`1`, and absent `data`; `detail` stays absent. The CLI names the cause on
+exactly one bounded identifier-only line after the delivered
+`<binary>: config.value.invalid` line on the error stream:
+
+| Cause | Line | Meaning |
+|---|---|---|
+| Uncorroborated | `cause: mirror=<job>` | The declared mirror job is not in the read CI job-name set. |
+| Unmirrored | `cause: breadth=<id[,id]*>[ omitted=<n>]` | The local declaration is covered by no single job; the ids are `local` in declared order, at most eight are printed, and `omitted` counts the unprinted ones and is absent when all are printed. |
+
+The mirror form is bounded to the job-name bound plus the fixed `cause: mirror=`
+token (134 characters in total), and the breadth form to eight identifiers of
+`VERIFY_SUITE_MAX_ID_CHARS` plus its delimiters and `omitted` marker (545
+characters in total). No other failure writes a `cause:` line, and neither line
+enters the failure envelope or an MCP tool result.
 
 ## Cross-repository report
 
@@ -187,9 +307,12 @@ widened — its `overall` stays the literal `"pass"` and its `gates[]` stays
 The cross-repository report carries `schemaVersion`
 (`delivery.verify-gates.v1`), `changeRef`, `target: "gates"`,
 `overall: "pass" | "fail"`, `summary`, `gates[]`, `definitionOfDone`,
-`blockingMembers[]`, and `reviewFlow`. There is no separate classification field
-and no error envelope: `overall: "fail"` is itself the carrier of the delivered
-`verify.gates.failed` classification.
+`blockingMembers[]`, and `reviewFlow`. When a declared suite map resolves to
+equality, the report also carries the two additive optional root fields
+`suiteBreadth` and `mirrorsJob`, present together; they describe the invoking
+repository's declaration and are member-independent. There is no separate
+classification field and no error envelope: `overall: "fail"` is itself the
+carrier of the delivered `verify.gates.failed` classification.
 
 ### Per-(member, gate) records
 
@@ -215,7 +338,9 @@ real read.
 
 The durable gate-verification ledger keeps its delivered closed record shape, so a
 cross-repository evaluation appends exactly one `MergeGateVerificationRecord`
-whose `gates[]` is each member gate record projected to the delivered
+for an evaluation that is not refused for narrowed suite breadth; a narrowed
+member path appends none, so the newest record stays the previous one. Its
+`gates[]` is each member gate record projected to the delivered
 `{id, verdict, reason, citation}` set: the `member` discriminator is dropped and
 the four delivered fields are preserved in record order and count, so the appended
 gate count equals the report record count (members × declared gates) and every
@@ -312,11 +437,15 @@ The read budget extends the delivered per-source budget per member: one bounded
 open-PR page, one resolved detail read, and one check-run page per member, with
 no retries and no pagination, plus the one bounded local plan read that supplies
 the member set, the delivered single ledger read, repository HEAD/branch read,
-CI-workflow read, and work-item read. Per-member reads are injected at the
+CI-workflow read, work-item read, and the one configuration-document resolution
+attempt (at most one stat-class existence probe and at most one bounded content
+read, with no content read when the document is absent). Per-member reads are injected at the
 composition edge, and the evaluation never short-circuits: every member is
 evaluated and reported. The append posture is unchanged — exactly one
-gate-verification record per full battery evaluation, carrying the member gates
-projected to the delivered ledger shape, plus the non-gating capsule append.
+gate-verification record per full battery evaluation that is not refused for
+narrowed suite breadth, carrying the member gates projected to the delivered
+ledger shape, plus the non-gating capsule append on that same non-refused path;
+a narrowed refusal appends neither.
 
 The cross-repository evaluation is selected by the composed member runtime: when
 the composition supplies the member reads, declarations, landing observations,
@@ -330,10 +459,16 @@ Default tests make no live calls. Behaviour and golden suites are
 fixture-driven (`tests/behaviour/verify-gates-*.test.ts`,
 `tests/golden/verify-gates.test.ts`), structure tests
 (`tests/structure/verify-gates-*.test.ts`) pin the contract and exports,
-fixtures live under `tests/fixtures/verify-gates/{cases,corpus,golden,workflows}`,
+fixtures live under `tests/fixtures/verify-gates/{cases,corpus,golden,suite-map,workflows}`,
 and `tests/checks/verify-gates-no-live-calls.test.ts` guards the default
-network-free path. Provider gate-fact traps live under
-`tests/fixtures/providers/traps/` and `tests/fixtures/providers/github/`. The
+network-free path. The `suite-map` fixture family is the declaration/refusal
+corpus: the declaration builders and defect nodes, the golden cases, the
+pre-change parity baseline, and the parity scope manifest; the workflow
+job-name fixtures live in `workflows/`. Each committed-document case creates its
+own temporary root inside the suite that uses it, so no suite depends on another
+suite's fixture directory or on the process working directory. Provider
+gate-fact traps live under `tests/fixtures/providers/traps/` and
+`tests/fixtures/providers/github/`. The
 opt-in live smoke (`tests/behaviour/verify-gates-live.test.ts`) asserts
 structural invariants only and runs only under `VERIFY_GATES_LIVE=1`.
 
@@ -355,8 +490,12 @@ determinism, read-only posture, and hermeticity are covered by
 ## Limitations
 
 The owner gate's declared signal is labels; comment-based owner asks are not
-read (ADR-0006). The CI gate detects job display-name presence only; matrix
-expansion, suite-to-job mapping, and job-level `if` conditions are deferred.
+read (ADR-0006). The CI gate detects job display-name presence only; matrix expansion and
+job-level `if` conditions remain deferred. Suite-to-job mapping is not a CI-gate
+feature: suite breadth is declared in `verify.suite-map`, cited on a report as
+`data.suiteBreadth`/`data.mirrorsJob`, and refused as `verify.narrowed-scope`
+when the local declaration is narrower than the mirrored CI job, while the CI
+gate itself stays job-presence only.
 Review approval, unresolved threads, branch protection, and worktree
 cleanliness remain outside this surface. Merge execution is the merge
 transaction's surface, specified in
@@ -371,7 +510,7 @@ seams are complete and exercised through that composition.
 
 ## Capsule gate append
 
-After the gate-verification state append, a full battery evaluation also appends one `gate.outcome` capsule event when a capsule producer port is injected. The event carries the gate-set identity (`<schemaVersion>:<id,id,...>`), the head SHA, and one bounded `{gateId, verdict, reason}` entry per evaluated gate. The event key is derived from the gate-set identity and head SHA, so a re-run of the same evaluation appends nothing. The append is non-gating: a failed or thrown append becomes a bounded `capsule` disclosure on the success data or on the classified failure envelope, and the gate verdicts, the verification record, and the exit projection are unchanged. The capsule contract is in [Change Capsule](feature-capsule.md).
+After the gate-verification state append, a full battery evaluation that is not refused for narrowed suite breadth also appends one `gate.outcome` capsule event when a capsule producer port is injected; a `verify.narrowed-scope` refusal appends no capsule event. The event carries the gate-set identity (`<schemaVersion>:<id,id,...>`), the head SHA, and one bounded `{gateId, verdict, reason}` entry per evaluated gate. The event key is derived from the gate-set identity and head SHA, so a re-run of the same evaluation appends nothing. The append is non-gating: a failed or thrown append becomes a bounded `capsule` disclosure on the success data or on the classified failure envelope, and the gate verdicts, the verification record, and the exit projection are unchanged. The capsule contract is in [Change Capsule](feature-capsule.md).
 
 ## Related
 
@@ -392,7 +531,7 @@ After the gate-verification state append, a full battery evaluation also appends
 - [ADR-0003 — OSS Tooling Monorepo Structure](../../decisions/ADR-0003-oss-monorepo-structure.md)
 - [ADR-0006 — Work-Item Custom Fields and Comment-Omission Representation](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md)
 
-**Change record:** `doc/changes/2026-10/2026-10-31--GH-178--verify-gates-v1/`; `doc/changes/2026-11/2026-11-06--GH-225--merge-verify-deploy/`; `doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/`; `doc/changes/2026-11/2026-11-14--GH-310--cross-repository-changes/`.
+**Change record:** `doc/changes/2026-10/2026-10-31--GH-178--verify-gates-v1/`; `doc/changes/2026-11/2026-11-06--GH-225--merge-verify-deploy/`; `doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/`; `doc/changes/2026-11/2026-11-14--GH-310--cross-repository-changes/`; `doc/changes/2026-11/2026-11-15--GH-300--suite-job-mapping-gates/`.
 
 ## Config-declared gate set and verification record
 
@@ -404,11 +543,13 @@ entry is evaluated and cited exactly like a built-in; `merge`-only entries never
 appear on the battery. The five built-in ids stay reserved and mandatory in any
 declared set.
 
-Every full battery evaluation appends exactly one fenced, post-append-verified
-EVT-1 gate-verification record (`merge.gate-verification`) carrying the change
-ref, head SHA, verification time, declared gate-set identity, per-gate verdicts
-with citations, and the tracker posture. Verdicts, citations, ordering, and
+Every full battery evaluation that is not refused for narrowed suite breadth
+appends exactly one fenced, post-append-verified EVT-1 gate-verification record
+(`merge.gate-verification`) carrying the change ref, head SHA, verification
+time, declared gate-set identity, per-gate verdicts with citations, and the
+tracker posture. Verdicts, citations, ordering, and
 human bytes are pinned byte-identically by goldens; the append is the only
-output effect. An append failure is a classified state failure, never a verdict
+output effect for every non-refused evaluation, and a narrowed refusal appends
+none. An append failure is a classified state failure, never a verdict
 change. `merge` consumes the record. See
 [Merge and Verify Deploy](feature-merge-verify-deploy.md).

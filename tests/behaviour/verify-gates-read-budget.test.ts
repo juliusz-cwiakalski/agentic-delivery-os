@@ -21,7 +21,12 @@ import {
 } from "../fixtures/cross-repository/facts";
 import { createNoSpawnGuard } from "../fixtures/result/no-spawn-guard";
 import { baseFacts, clone, EXPECTED_JOBS, run } from "../fixtures/verify-gates/cases/facts";
-import { combinedRuntime, pmNotesValue, runVerify } from "../fixtures/verify-gates/cases/harness";
+import {
+  combinedRuntime,
+  gatesRuntime,
+  pmNotesValue,
+  runVerify,
+} from "../fixtures/verify-gates/cases/harness";
 import { createNoNetworkGuard } from "../fixtures/verify-gates/cases/network-guard";
 import {
   appendLanding,
@@ -290,5 +295,147 @@ describe("TC-VGATES-051 read-only composition and read budget", () => {
       first.cleanup();
       second.cleanup();
     }
+  });
+});
+
+import type { VerifySuiteMapRead } from "../../packages/core/src/contracts/index";
+import {
+  declaredRead,
+  narrowedMap,
+  REFERENCE_JOB,
+  validEqualityMap,
+} from "../fixtures/verify-gates/suite-map/cases";
+
+const suiteMapBudgetFacts = () => {
+  const facts = clone(baseFacts());
+  const names = [...new Set([...EXPECTED_JOBS, REFERENCE_JOB])];
+  facts.workflow = { outcome: "read", names };
+  facts.checkRuns = {
+    ok: true,
+    value: { items: names.map((name) => run(name, "succeeded")), pageItemCount: names.length },
+  };
+  return facts;
+};
+
+const suiteMapBudget = () => {
+  const reads: RecordedRead[] = [];
+  const mapReads: string[] = [];
+  const base = gatesRuntime({ facts: suiteMapBudgetFacts() });
+  const record =
+    <Args extends readonly unknown[], Result>(name: string, call: (...args: Args) => Result) =>
+    (...args: Args): Result => {
+      reads.push({ name, args });
+      return call(...args);
+    };
+  const suiteFacts = suiteMapBudgetFacts();
+  const runtime: VerifyGatesCommandRuntime = {
+    ...base,
+    readLifecycle: record("readLifecycle", base.readLifecycle),
+    readRepository: record("readRepository", base.readRepository),
+    readWorkflow: record("readWorkflow", base.readWorkflow),
+    readOpenPullRequests: record("readOpenPullRequests", base.readOpenPullRequests),
+    readDeliveryRequestDetail: record("readDeliveryRequestDetail", base.readDeliveryRequestDetail),
+    readCheckRuns: record("readCheckRuns", base.readCheckRuns),
+    readWorkItem: record("readWorkItem", base.readWorkItem),
+  };
+  return {
+    reads,
+    mapReads,
+    runtime: (map: VerifySuiteMapRead): VerifyGatesCommandRuntime => ({
+      ...runtime,
+      readSuiteMap: () => {
+        mapReads.push("readSuiteMap");
+        return map;
+      },
+    }),
+    facts: suiteFacts,
+  };
+};
+
+describe("TC-SPAR-004 the map adds no source read and exactly one resolution attempt", () => {
+  test("the seven enumerable source counts are identical with and without a map", async () => {
+    const budget = suiteMapBudget();
+    const withoutMap = await runVerify(
+      {
+        ...combinedRuntime({ facts: budget.facts }),
+        gates: budget.runtime({ ok: true, declared: false }),
+      },
+      ["gates", "GH-300"],
+    );
+    expect(withoutMap.exitCode).toBe(0);
+    const firstReads = budget.reads.map((entry) => entry.name);
+    const firstCount = firstReads.length;
+    budget.reads.length = 0;
+    budget.mapReads.length = 0;
+
+    const withMap = await runVerify(
+      {
+        ...combinedRuntime({ facts: budget.facts }),
+        gates: budget.runtime(declaredRead(validEqualityMap())()),
+      },
+      ["gates", "GH-300"],
+    );
+    expect(withMap.exitCode).toBe(0);
+    expect(budget.reads.map((entry) => entry.name)).toEqual(firstReads);
+    expect(budget.reads.length).toBe(firstCount);
+    expect(budget.mapReads).toEqual(["readSuiteMap"]);
+  });
+
+  test("the single workflow read feeds the CI gate and the corroboration", async () => {
+    const budget = suiteMapBudget();
+    await runVerify(
+      {
+        ...combinedRuntime({ facts: budget.facts }),
+        gates: budget.runtime(declaredRead(validEqualityMap())()),
+      },
+      ["gates", "GH-300"],
+    );
+    expect(budget.reads.filter((entry) => entry.name === "readWorkflow")).toHaveLength(1);
+    const provider = new Set([
+      "readOpenPullRequests",
+      "readDeliveryRequestDetail",
+      "readCheckRuns",
+      "readWorkItem",
+    ]);
+    for (const name of provider) {
+      expect(budget.reads.filter((entry) => entry.name === name)).toHaveLength(1);
+    }
+  });
+
+  test("a defective map performs zero enumerable source reads", async () => {
+    const budget = suiteMapBudget();
+    const result = await runVerify(
+      {
+        ...combinedRuntime({ facts: budget.facts }),
+        gates: budget.runtime({ ok: false, code: "config.value.invalid" }),
+      },
+      ["gates", "GH-300"],
+    );
+    expect(result.exitCode).toBe(1);
+    expect(budget.reads).toEqual([]);
+    expect(budget.mapReads).toEqual(["readSuiteMap"]);
+  });
+
+  test("a narrowed member-less run reads the same seven sources as a non-narrowed run", async () => {
+    const budget = suiteMapBudget();
+    await runVerify(
+      {
+        ...combinedRuntime({ facts: budget.facts }),
+        gates: budget.runtime({ ok: true, declared: false }),
+      },
+      ["gates", "GH-300"],
+    );
+    const control = budget.reads.map((entry) => entry.name);
+    budget.reads.length = 0;
+    const narrowed = await runVerify(
+      {
+        ...combinedRuntime({ facts: budget.facts }),
+        gates: budget.runtime(declaredRead(narrowedMap())()),
+      },
+      ["gates", "GH-300"],
+    );
+    expect(narrowed.exitCode).toBe(1);
+    expect(budget.reads.map((entry) => entry.name)).toEqual(control);
+    expect(budget.reads).toHaveLength(control.length);
   });
 });

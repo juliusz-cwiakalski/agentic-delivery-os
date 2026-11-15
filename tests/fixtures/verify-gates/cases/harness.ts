@@ -5,8 +5,8 @@ import { parse } from "yaml";
 import type { VerifyCommandRuntime } from "../../../../packages/cli/src/commands/verify";
 import { createVerifyCommandDefinition } from "../../../../packages/cli/src/commands/verify";
 import type { VerifyGatesCommandRuntime } from "../../../../packages/cli/src/commands/verify-gates";
-import type { CapsuleProducerPort } from "../../../../packages/core/src/contracts/index";
 import { type CliDependencies, runCli } from "../../../../packages/cli/src/index";
+import type { CapsuleProducerPort } from "../../../../packages/core/src/contracts/index";
 import { resolveMergeGateSet } from "../../../../packages/core/src/domain/merge-gate-set";
 import { bufferSink, SYNTHETIC_BRAND } from "../../../golden/helpers";
 import { baseFacts, type VerifyGatesFacts } from "./facts";
@@ -22,6 +22,12 @@ export type RuntimeOverrides = {
   readonly facts?: Partial<VerifyGatesFacts>;
   readonly registryFailure?: { readonly code: string };
   readonly gateSet?: VerifyGatesCommandRuntime["readGateSet"];
+  /**
+   * The declared suite-map read (GH-300). Absent keeps the delivered path: the
+   * handler's own `() => ({ ok: true, declared: false })` default means
+   * undeclared, so no existing suite needs a new argument.
+   */
+  readonly suiteMap?: VerifyGatesCommandRuntime["readSuiteMap"];
   readonly appendVerification?: VerifyGatesCommandRuntime["appendVerification"];
   readonly nowMs?: () => number;
   readonly capsule?: CapsuleProducerPort;
@@ -68,6 +74,7 @@ export const gatesRuntime = (overrides: RuntimeOverrides = {}): VerifyGatesComma
     appendVerification: overrides.appendVerification ?? (() => ({ ok: true })),
     nowMs: overrides.nowMs ?? (() => Date.parse("2026-11-06T12:00:00Z")),
     ...(overrides.capsule === undefined ? {} : { capsule: overrides.capsule }),
+    ...(overrides.suiteMap === undefined ? {} : { readSuiteMap: overrides.suiteMap }),
   };
 };
 

@@ -1,0 +1,538 @@
+change_id: GH-300
+title: "M2-S7: Suite-to-job mapping in gates (M2)"
+delivery_mode: autonomous
+variant: full
+milestone: "M2: Ceremonies, measurement, and memory"
+phases:
+  clarify_scope: { started: null, completed: 2026-11-15T10:40:44.109Z }
+  specification: { started: null, completed: 2026-11-15T13:15:19.678Z }
+  test_planning: { started: null, completed: 2026-11-15T13:37:51.542Z }
+  delivery_planning: { started: null, completed: 2026-11-15T15:24:51.343Z }
+  dor_check: { started: null, completed: 2026-11-15T13:41:36.071Z }
+  delivery: { started: null, completed: 2026-11-15T15:51:39.054Z }
+  system_spec_update: { started: null, completed: 2026-11-15T15:51:17.762Z }
+  review_fix: { started: null, completed: 2026-11-15T16:13:16.810Z }
+  quality_gates: { started: null, completed: 2026-11-15T16:50:45.993Z }
+  dod_check: { started: null, completed: 2026-11-15T16:53:06.393Z }
+  pr_creation: { started: null, completed: 2026-11-15T16:56:45.019Z }
+decisions:
+  - text: "Scope is the M2-S7 contract in the milestone pack, not a general CI
+      matrix engine: `verify gates` must cite the suite breadth it evaluated and
+      the CI job that breadth mirrors (`data.suiteBreadth`, `data.mirrorsJob`),
+      and a narrowed local suite must refuse full green (exit 1, `error.code ==
+      verify.narrowed-scope`, narrowed breadth named). Matrix expansion,
+      reusable-workflow mapping, job-level `if` awareness, and merge execution
+      stay out of scope. Source: backlog M2-S7 and
+      doc/planning/oss-tooling/milestones/m2/test-scenarios.md SC-M2-S7-01/02."
+    date: "2026-11-15"
+  - text: "The mechanism that supplies local breadth (config-declared suite-to-job
+      map, a recorded local run, or workflow-derived job mapping) is a technical
+      design decision owned by the spec, recorded as a DEC entry with its
+      rejected options. The observable contract (fields, error code, exit, and
+      the read-only posture) is fixed by the milestone scenarios and the
+      delivered verify-gates spec."
+    date: "2026-11-15"
+open_questions: []
+blockers: []
+notes:
+  - text: "Intake: explicit directive to deliver GH-300 (M2-S7 Suite-to-job mapping
+      in gates) end-to-end, PR only (no merge). State detection: issue OPEN,
+      label `change`, milestone M2 attached, no PR in any state, branch
+      feat/GH-300/suite-job-mapping-gates at main-tools tip 8a1f77ad with zero
+      commits ahead, no change folder. Fresh delivery; no resume sync needed."
+    type: info
+    date: "2026-11-15"
+  - text: "Dependency M0-S9 (GH-178 verify gates v1) is landed current truth:
+      doc/spec/features/feature-verify-gates.md defines the five-gate battery,
+      citations, exits, config-declared gate set, and the verification record;
+      its CI gate reads the workflow job set by display name. M2-S7 tightens
+      exactly the deferral those docs declare."
+    type: info
+    date: "2026-11-15"
+  - text: "Current-truth cross-check (doc/spec/**): (1) feature-verify-gates.md
+      'Limitations' states suite-to-job mapping is deferred — this change
+      supersedes that deferral for the suite-breadth slice only; (2) the report
+      vocabulary and gates[] records in the delivered contract carry no breadth
+      or job-mirror field, so the change is additive and must keep member-less
+      bytes/exits for the existing fields; (3) the command is read-only with no
+      write path, so any new input must be a read. No contradiction requires
+      human confirmation."
+    type: info
+    date: "2026-11-15"
+  - text: "Documentation impacts for phase 7 (@doc-syncer): reconcile
+      doc/spec/features/feature-verify-gates.md (suite breadth + mirrored job
+      fields, narrowed-scope refusal, retired deferral sentence), the
+      error-table row for verify.narrowed-scope, the merge gate-verification
+      projection if the record shape changes, plus doc/planning/oss-tooling/**
+      bookkeeping (backlog M2-S7 progress marker, status snapshot) and any
+      affected command reference page (help-guide-coverage requires a page per
+      prompt-required command)."
+    type: risk
+    date: "2026-11-15"
+  - text: "Gate environment (measured): run gates with
+      `PATH=$PWD/node_modules/.bin:$PATH TMPDIR=$PWD/tmp/tmpdir
+      GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
+      GIT_CONFIG_VALUE_0=false pnpm check`; the host sets commit.gpgsign=true so
+      lifecycle commits need the override, and the commitlint probe needs the
+      node_modules/.bin prefix."
+    type: risk
+    date: "2026-11-15"
+  - text: "Delivery conventions for this change: full 11-phase lifecycle; plan
+      phases declared in chg-GH-300-plan.yaml; one delivery commit per plan
+      phase through the commit primitive; conventional subjects scoped GH-300;
+      PR targets main-tools and stays open (merge authority: CEO/human)."
+    type: info
+    date: "2026-11-15"
+  - text: "Spec v1.0 authored: config-declared suite-to-job map (`verify.suite-map`,
+      schema delivery.verify.suite-map.v1), report-root
+      `data.suiteBreadth`/`data.mirrorsJob` on both report types, total
+      equality/narrowing/unmirrored/uncorroborated resolution, the
+      `verify.narrowed-scope` refusal at exit 1 with no record/capsule append,
+      and parity for an undeclared map. 5 features, 25 ACs, 14 decisions, 7 DM
+      rows, 9 risks. Mechanism choice (DEC-1) is the config-declared map;
+      workflow-step derivation, a recorded local run, and an invocation flag
+      were rejected with reasons."
+    type: info
+    date: "2026-11-15"
+  - text: "REOPEN 1 (specification): test-plan authoring found two unpinned
+      narrowed-header literals — whose breadth the header names (F-3 prose vs
+      AC-F3-1) and the header token separator. Closed additively in spec v1.1 as
+      DEC-15 (header grammar byte-pinned) and DEC-16 (map-side `cause:` line),
+      plus DM-8/DEC-17 pinning the repository reference declaration (path
+      `<repo>/.delivery-os/config.yaml`, job `TS aggregate check`, eight suite
+      ids in declared order). No AC or id renumbered; 25 ACs intact. Test plan
+      refreshed in place to v1.1 (31 TCs, 25/25 ACs) closing OQ-T1/T2/T3/T5."
+    type: info
+    date: "2026-11-15"
+  - text: "REOPEN 2 (test_planning): plan authoring found TC-SNARR-001 step 2
+      asserting `error.summary` equals the error-table row text verbatim while
+      its own steps 3 and 8 assert the pinned six-line summary block. Resolved
+      to the spec reading: `error.summary` is the rendered block (header + one
+      line per gate); the DM-5 row sentence stays the table default asserted in
+      TC-SCTR-003; `error.remediationHint` is the row hint. Test plan v1.2; 31
+      TCs and 25/25 ACs unchanged."
+    type: info
+    date: "2026-11-15"
+  - text: "RETRO: both reopens were caught by the sequential-authoring rule before
+      the DoR gate — the spec pinned the narrow refusal but left the header
+      grammar and its breadth ownership implicit, and the test plan then re-used
+      one field for two different values. Cost: two artifact revision cycles
+      (~20 min), no rework in code. Improvement: when a spec introduces a new
+      human-rendered line, pin its byte grammar and the owner of every value it
+      prints in the same pass; when a refusal reuses an existing envelope field,
+      state which value wins."
+    type: retro
+    date: "2026-11-15"
+  - text: "Plan authored: 7 delivery phases, all `delivery` tier full — (1)
+      pre-change parity baseline capture, (2) contract layer, (3) pure
+      evaluation, (4) runtime wiring (the only runtime-behaviour phase), (5)
+      reference declaration + production composition, (6) cross-cutting battery,
+      (7) docs/planning/changeset. 25/25 ACs and 31/31 TCs owned, 53/53 suite
+      homes scoped, `plan validate` green. OQ-T4 pinned: a second optional
+      injected `readSuiteMap` beside `readGateSet` on the gates runtime, both
+      fed from one memoized config snapshot (zero added I/O)."
+    type: info
+    date: "2026-11-15"
+  - text: "DELIVERY HAZARD (P-3, carried into phase 6): this worktree's
+      `.git/info/exclude` lists `.delivery-os/`, so the reference declaration at
+      `<repo>/.delivery-os/config.yaml` would be silently omitted by a plain
+      `git add` while tests pass on the working tree. Phase 5 must force-add the
+      file and gate on `git ls-files --error-unmatch .delivery-os/config.yaml`
+      before claiming DoD-8."
+    type: risk
+    date: "2026-11-15"
+  - text: "DoR gate ITERATION 1 verdict: NOT_READY (12 blocking findings; seven
+      facets FAIL: spec_completeness, plan_coverage, test_traceability,
+      cross_artifact_consistency, decision_capture, system_spec_consistency,
+      plan_doc_update_coverage). Critical: (F1) the plan's fail-open
+      whole-document fallback contradicts AC-F1-2/TC-SMAP-002 because the config
+      catalog is strict, turning a malformed map into a silent 'undeclared'.
+      Major: (F2) the unreadable-document posture is unpinned and the plan's
+      fail-open contradicts spec §21 fail-closed; (F3) the cross-repository
+      member path resolves no breadth and still appends the record, so a narrow
+      member-mode run can leave fresh full-green evidence; (F4) the plan's
+      `readGateSet` wiring would activate config-declared `merge.gates` in
+      production for the first time; (F5) the map's configuration-layer posture
+      is unpinned and a user-global/local file could replace project-committed
+      policy; (F6) no fixture has set-equal but differently ordered local/mirror
+      lists, so copying `suiteBreadth` from `local` would pass every TC; (F7)
+      Appendix D omits `feature-merge-verify-deploy.md` and
+      `doc/quality/test-specs/test-spec-merge-verify-deploy.md`, both stating
+      the append rule. Minor: (F8) plan cites test-plan v1.1; (F9) phase 6
+      scopes the read-only corpus file; (F10) SC-M2-S7-02's invocation-scoped
+      Given is re-read as declaration-scoped without recording it; (F11) the MCP
+      `gate-report` shipped-composition posture is unpinned. Record:
+      readiness-review/readiness-iter-1.md."
+    type: risk
+    date: "2026-11-15"
+  - text: "RETRO: the DoR gate caught three false premises that three artifact
+      authors had accepted — that a strict config catalog can fail open into
+      'undeclared', that the cross-repository path shares the single-path
+      refusal, and that the delivered composition already supplies the declared
+      gate set from config. Improvement: any artifact statement of the form 'the
+      same values that supply X' must cite the delivered call site, and any
+      refusal/no-append rule must be stated once for BOTH report paths."
+    type: retro
+    date: "2026-11-15"
+  - text: "DoR iteration-1 remediation plan: reopen `specification` (F2, F3, F5, F7,
+      F10, F11), then `test_planning` (F6), then `delivery_planning` (F1, F4,
+      F8, F9); re-run the gate afterwards (max 3 iterations). No phase reopens
+      to `delivery`."
+    type: info
+    date: "2026-11-15"
+  - text: "DoR gate ITERATION 2 verdict: NOT_READY (3 blocking findings; six facets
+      FAIL: spec_completeness, ac_quality, plan_coverage,
+      cross_artifact_consistency, system_spec_consistency,
+      plan_doc_update_coverage). Iteration-1 F1-F6 and F8-F11 verified closed;
+      F7 only partially. Blocking: (N1) the narrowed no-append rule is also
+      stated in current-truth sentences outside Appendix D —
+      feature-verify-gates.md lines 172/217/318/374/407, feature-capsule.md
+      129/205, feature-verify-change-and-exit-taxonomy.md 43/49, and
+      overview/architecture-overview.md 179 — so Appendix D's 'no other sentence
+      changes' is false and phase 7 is under-scoped; (N2) several ACs/TCs assert
+      `error.kind` (`verify`/`config`) on the envelope or tool result, but the
+      delivered `delivery.result.v1` error object carries exactly
+      code/category/retryable/consequence/remediationHint/summary — `kind` is a
+      handler/table discriminant only, so satisfying the ACs as written would
+      add an unlisted contract member; (N3) the fail-closed document
+      classification (AC-F1-4/NFR-10/DEC-18) has no witness through the real
+      adapter — phase 4 tests an injected seam and phase 5 only covers
+      valid/absent, so a real adapter that maps a read/parse failure to
+      'undeclared' would pass. Minors: read-budget wording, parser-level
+      strictness vs NFR-10 tolerance, `job` character class, C-10 vs phase 2,
+      stale test-plan handoff paragraph, member-path read hoisting and the
+      selected-file channel, 'catalog and resolver agree' claim, DEC-19
+      precedent capture, reopen provenance, one vacuous assertion. Record:
+      readiness-review/readiness-iter-2.md."
+    type: risk
+    date: "2026-11-15"
+  - text: "RETRO: iteration 2 caught two classes that iteration 1's remediation
+      introduced — a wrong envelope field (`error.kind`) repeated across four
+      ACs and six TCs, and a doc-delta list derived from the spec's own claims
+      instead of a repo-wide search for the sentence being retired. Improvement:
+      assert envelope fields by reading the delivered result type, never from
+      the error table's column names; enumerate doc deltas by grepping the
+      invariant, not by trusting the previous appendix."
+    type: retro
+    date: "2026-11-15"
+  - text: "DoR iteration-2 remediation plan (iteration 3 is the last before
+      escalation): reopen `specification` (N2 AC/DM field corrections, N1 doc
+      delta completion, plus the minors owned by the spec), `test_planning` (N2
+      assertions, the adapter witness TC, vacuous assertion), and
+      `delivery_planning` (N3 adapter obligation, phase-7 scope, C-10,
+      wording)."
+    type: info
+    date: "2026-11-15"
+  - text: "REOPEN PROVENANCE: `specification`, `test_planning`, and
+      `delivery_planning` were reopened once at 12:38Z for the iteration-2
+      remediation (reasons recorded in the phase registry), then completed again
+      in order — specification at 12:45:42Z, test_planning at 12:53:33Z,
+      delivery_planning at 13:01:59Z (authoritative values are the `phases:`
+      block above; this note is narrative only). Earlier reopens: specification
+      12:09Z (header grammar), test_planning 12:32Z (TC-SNARR-001 summary
+      value), specification 12:44Z (iteration 1). No `delivery` reopen
+      occurred."
+    type: info
+    date: "2026-11-15"
+  - text: "ARTIFACT VERSIONS at DoR iteration 3: spec v1.3 (30 ACs, DM-1..DM-9,
+      DEC-1..DEC-20, NFR-1..NFR-10, Appendix A rows 1..28, C-1..C-17,
+      D-1..D-26); test plan v1.4 (38 TCs, 30/30 ACs); plan revision 1.3 (7
+      phases, 30/30 ACs, 38/38 TCs, 67 writable suite/fixture homes, `plan
+      validate` green)."
+    type: info
+    date: "2026-11-15"
+  - text: "DoR gate ITERATION 3 verdict: NOT_READY — 10 of 13 iteration-2 findings
+      verified closed (N2 `error.kind` removal, N3 adapter witness ownership,
+      read-budget split, tolerance scope, `job` class, handler order/hoist,
+      resolver authority, DEC-19 scope, TC-SCITE-005). Residuals: (major) the
+      test plan's §2/§8.3/§9 still describe plan revision 1.2, 37 TCs, and an
+      unresolved `error.kind` in plan 5.7 — all false against rev 1.3; (minor)
+      Appendix D omits the two read-budget sentences; (minor) the absent-vs-
+      selected-missing carve-out is unpinned and unwitnessed; (minor)
+      TC-SCTR-003 still frames the error-row doc edit as phase 7; (minor) the
+      reopen-provenance note contradicts the phase block. Record:
+      readiness-review/readiness-iter-3.md."
+    type: risk
+    date: "2026-11-15"
+  - text: "DoR iteration-3 disposition: iteration 3 is the third gate run, so this
+      is a surgical metadata/consistency pass rather than a new adversarial
+      iteration — the same disposition recorded for GH-310's metadata-only
+      residual. Reopen `specification` (D-27/D-28 read-budget rows, the
+      absent-vs-selected-missing carve-out, NFR-10 wording), `test_planning`
+      (stale plan references, TC-SCTR-003 framing, the third absent sub-case in
+      TC-SMAP-006/008, nits), and `delivery_planning` (root-input pin in 5.3,
+      citations). AC/TC sets stay 30/38; no new criterion. Then one confirmation
+      run of the gate before `dor_check` completes."
+    type: info
+    date: "2026-11-15"
+  - text: "ARTIFACT VERSIONS after the iteration-3 surgical pass: spec v1.4 (30 ACs,
+      D-1..D-28, selector carve-out, precise one-resolution-attempt read count);
+      test plan v1.5 (38 TCs, 30/30 ACs, plan-rev 1.3/1.4 references corrected,
+      TC-SCTR-003 phase-2 framing, absent sub-case c, nits closed); plan
+      revision 1.4 (7 phases, 30/30 ACs, 38/38 TCs, 67/67 homes, D-1..D-28,
+      root-input pin, `plan validate` green). No AC or TC added, removed, or
+      renumbered."
+    type: info
+    date: "2026-11-15"
+  - text: "OPERATIONAL: `phase` writes transiently failed with `state.lock.busy`.
+      Root cause: this repository's worktrees (GH-300, GH-301, GH-320) share one
+      state store and one `fence.default.lock`; `acquireFence` has no retry, so
+      a concurrent lane write fails a phase command outright. All subsequent
+      lifecycle writes use a bounded retry loop (8 attempts, 3s backoff). Also
+      observed: a stale daemon instance record (dead pid, heartbeat stopped) —
+      unrelated to phase writes but visible in `daemon status`."
+    type: risk
+    date: "2026-11-15"
+  - text: "RETRO: two DoR iterations were spent on artifact-internal consistency a
+      mechanical pass would have caught — the envelope `error.kind` assertion
+      (four ACs, six TCs) and an incomplete doc-delta register. The `error.kind`
+      error came from reading the error table's columns as envelope fields.
+      Improvement: before the DoR gate, assert every envelope field against
+      `packages/core/src/contracts/result.ts`, and enumerate doc deltas by
+      grepping the retired sentence across `doc/**`."
+    type: retro
+    date: "2026-11-15"
+  - text: "DoR CONFIRMATION 1 (iteration 4): NOT_READY on one minor residual — the
+      test plan still named plan revision 1.3 and described the D-27/D-28
+      obligations as pending; everything else confirmed closed and all counts
+      re-derived (30 ACs, 38 TCs, DM 9/9, D-1..D-28 each covered once). Record:
+      readiness-review/readiness-iter-4-confirmation.md."
+    type: risk
+    date: "2026-11-15"
+  - text: "Test plan v1.6 (metadata-only refresh) re-cites plan revision 1.4 and
+      states obligation 7.22 delivers D-27/D-28; no TC/AC change. DoR
+      CONFIRMATION 2 (iteration 5): READY — single finding closed, no
+      regression, 30 ACs / 38 TCs / DM 9/9, plan validates. Record:
+      readiness-review/readiness-iter-5-confirmation.md."
+    type: resolved
+    date: "2026-11-15"
+  - text: "RETRO: the DoR gate took five runs (three iterations plus two
+      confirmations) and every finding after iteration 1 was an
+      artifact-internal consistency defect, not a design gap: stale revision
+      citations, an envelope field that does not exist, and a doc register
+      derived from the wrong source. Cost: roughly two hours of artifact churn
+      before any code. Improvement: add a mechanical pre-gate pass — grep every
+      cross-artifact version citation, diff every asserted envelope/tool-result
+      field against the delivered contract, and enumerate doc deltas by
+      searching the retired sentence."
+    type: retro
+    date: "2026-11-15"
+  - text: "DELIVERY (lifecycle phase 6) executed by @coder. Plan phase commit map:
+      phase 1 = 1ebd1684; phase 2 = 21db3202; phase 3 = 36d09e34; phase 4 =
+      a2b7a1c3; phase 5 = 2b585e5a; phase 6 = f7a27fe3; phase 7 = 7fd7f97d; plus
+      two remediation commits 2b0e6a72 (contract/port inventory registration)
+      and 51695412 (AC-F4-1 invalid-workflow witness). 26 commits ahead of
+      origin/main-tools; range lint PASS (0 offending); working tree clean;
+      `plan validate` green; 99 files changed, 13370 insertions."
+    type: info
+    date: "2026-11-15"
+  - text: "Delivery deviations recorded by @coder: (1) the commit primitive derives
+      subjects from a lifecycle plan-phase match, so each plan phase's declared
+      subject was supplied through the primitive's supported model transport
+      (`messageSource: model`); staging, safety scan, commitlint, and commit
+      creation stayed inside `runCommitAct`; no raw git writes. (2) The shared
+      `.git/info/exclude` `.delivery-os/` line blocked the phase-5 add; it was
+      temporarily removed, the phase-5 commit ran, and the line was restored
+      (verified present at line 21). (3) The reference end-to-end proof drives
+      the real composition with the real committed-document read because the
+      production composer cannot inject provider facts. (4) Full `pnpm check` is
+      deferred to phase 9 by instruction."
+    type: risk
+    date: "2026-11-15"
+  - text: "RETRO: the commit-subject path is lossy for a 7-phase `kind: delivery`
+      plan — the primitive's lifecycle-phase match sees a union and falls back
+      to a template subject, so every phase subject required model transport.
+      Cost: extra care on each of 7 commits and a deviation to explain.
+      Improvement: let a plan phase declare its own commit subject through the
+      primitive's plan-phase contract, or have the plan use lifecycle phase ids
+      that map 1:1."
+    type: retro
+    date: "2026-11-15"
+  - text: "Review iteration 1 verdict: FAIL — spec_compliance FAIL, plan_compliance
+      FAIL. Record: code-review/review-iter-1.yaml. High: (F-1)
+      tests/behaviour/verify-gates-suite-map.test.ts re-declares `clone`, so
+      `pnpm lint` exits 1 and `pnpm check`/DoD-10 are red. Medium: (F-2) the job
+      class rejects only C0/C1, so U+2028/U+2029 pass and can break the one-line
+      header/cause grammar (AC-F1-2); (F-3) three suites call mkdtempSync under
+      a repo-relative tmp/tmpdir they never create, so they are not independent;
+      (F-4) eight changed files are outside every declared plan phase
+      (mechanically necessary but undeclared); (F-5) pm-notes delivery evidence
+      carries no per-phase test result; (F-6) the reference-declaration proof
+      injects a test-built readSuiteMap and only greps production.ts, so the
+      shipped CLI composition is not exercised behaviourally (RSK-4/DoD-8). Low:
+      F-7 vacuous/ duplicated tests, F-8 valid selected-config path untested,
+      F-9 explicitDetail tightened the delivered `holder` predicate, F-10
+      `.delivery-os/` remains in .git/info/exclude."
+    type: risk
+    date: "2026-11-15"
+  - text: "RETRO: the review found a lint-red tree that the plan's per-phase gates
+      did not catch, because the phase-4 gate ran targeted suites and typecheck
+      but not `pnpm lint`, and the dup was introduced by a later remediation
+      commit after that gate. Improvement: every plan phase gate must include
+      `pnpm lint` and `pnpm format:check`, and any post-gate remediation commit
+      must re-run the owning phase's gate."
+    type: retro
+    date: "2026-11-15"
+  - text: "DoR iteration-1 remediation (review_fix): reopen `delivery_planning` to
+      add plan phase 8 (remediation) covering F-1..F-9 and the file-scope gap
+      F-4; then `@coder` executes phase 8; then re-run `@doc-syncer` (the
+      job-class fix changes documented behaviour) and `@reviewer` for iteration
+      2."
+    type: info
+    date: "2026-11-15"
+  - text: "REVIEW-ITERATION-1 REMEDIATION: plan revision 1.5 added phase 8; @coder
+      delivered it as commit 380c5b1a (`fix(GH-300): remediate review iteration
+      one findings`, 13 files). F-1..F-9 closed: duplicate `clone` removed (lint
+      exit 0); job class rejects C0/DEL/C1/U+2028/U+2029/Cf in core and CLI with
+      structural and rendered regressions; the three suites are hermetic and
+      pass alone on a clean tree (33/9/5); the eight drift files are declared in
+      phase 8 scope; per-phase evidence recorded below;
+      `createProductionComposer` is driven behaviourally with the P-9 residual
+      declared; parity/corpus/ determinism tests de-vacuumed; valid
+      selected-config path covered; `explicitDetail` restores the delivered
+      `holder` predicate. Phase-8 gates: lint 0, format:check 0, typecheck 0,
+      targeted 416 pass / 0 fail over 15 files, error-table sync 136/136,
+      exports parity 5 publishables, plan validate green, range lint PASS (30
+      commits)."
+    type: info
+    date: "2026-11-15"
+  - text: "PLAN PHASE EVIDENCE (per plan phase; re-run at the phase-8 tip by @coder;
+      suites later extended by phase 8 include those additions): phase 1 commit
+      1ebd1684 = 23 pass / 4 files (fixture-sanitization, no-live-calls,
+      delivered verify-gates golden, corpus); phase 2 commit 21db3202 = 391 pass
+      / 15 files + error-table sync 136/136 + ambient-globals OK + typecheck
+      green; phase 3 commit 36d09e34 = 113 pass / 4 files + ambient-globals OK +
+      dependency-cruiser clean; phase 4 commit a2b7a1c3 = 202 pass / 14 files +
+      depcruise clean + ambient-globals OK + typecheck green; phase 5 commit
+      2b585e5a = 92 pass / 9 files + reference document tracked + exports parity
+      + ambient-globals OK; phase 6 commit f7a27fe3 = 188 pass / 11 files +
+      error-table sync OK + ambient-globals OK; phase 7 commit 7fd7f97d =
+      doc-distribution guard OK (93 docs, no drift) + changesets-group OK +
+      help-guide-coverage OK + plan validate valid; phase 8 commit 380c5b1a =
+      416 pass / 0 fail over 15 files, each affected suite also green alone.
+      Full `pnpm check` is phase 9 and is not claimed here."
+    type: info
+    date: "2026-11-15"
+  - text: "Review iteration 2 verdict: PASS — spec_compliance PASS, plan_compliance
+      PASS; 0 critical/high/medium, 3 low, 2 info. Record:
+      code-review/review-iter-2.yaml. F-1..F-9 all verified closed against the
+      code (lint green; job class rejects C0/DEL/C1/U+2028/U+2029/Cf with
+      structural and rendered regressions; three suites hermetic and green when
+      run alone; all 103 changed files inside a declared scope; per-phase
+      evidence recorded; shipped-composer behavioural proof with the P-9
+      ceiling; vacuous tests fixed; selected-config path covered; delivered
+      `holder` predicate restored). Residuals to disclose in the PR body: (F-11)
+      the composer reference suite's zero-provider-call assertion is vacuous on
+      an unresolved checkout and a resolved checkout performs credential reads
+      before the narrowed refusal; (F-12) P-9's stated rationale (provider facts
+      not injectable) is inaccurate — the real ceiling is the missing passing
+      battery/provider fixture; (F-13) test plan v1.6 still cites plan revision
+      1.4/7 phases and plan SOURCES cites test plan v1.5; (F-14) the printable
+      predicate is triplicated; (F-15) `.git/info/exclude` still lists
+      `.delivery-os/`."
+    type: resolved
+    date: "2026-11-15"
+  - text: "QUALITY GATE (lifecycle phase 9) verdicts. Full battery: `pnpm check`
+      exit 0 with `TMPDIR` set to a measured temp root OUTSIDE every git work
+      tree (`$GATE_TMPDIR`, the operator's measured gate temp root; the literal
+      machine path is not committed): 8753 pass / 4 skip / 0 fail
+      across 1097 files (1024s); lint 2564 files 0 errors (83 warnings);
+      format:check 2422 files no drift; typecheck 6 packages + tests/types;
+      boundaries 406 modules / 1237 deps no violations; ambient-globals 192
+      files clean; workspace-entrypoints match; secret-read-boundary 374 files
+      clean; prompt-conformance 5 prompts clean; help-guide-coverage all
+      covered; exports-parity 5 publishables pass. The repo-local
+      `TMPDIR=$PWD/tmp/tmpdir` form is NOT usable on this host:
+      `tests/fixtures/projects/state-scope.ts` rejects every candidate because
+      the parent of the checkout directory is itself a git repo, producing 15
+      guard failures plus one 250.21 ms latency boundary (TC-DAEMON-121).
+      Re-running the same battery with the outside temp root is green, so the
+      failures are environmental, not regressions. Commit-range gate
+      `./scripts/lint-commit-range.sh --base main-tools`: verdict PASS, base
+      main-tools, merge-base 8a1f77ad, head 2d9f93a5, 33 commits in range, 0
+      offending commits, mode none, commitlint resolved repository-local from
+      node_modules/.bin/commitlint. Raw logs under
+      tmp/run-logs-runner/2026-11-15/."
+    type: info
+    date: "2026-11-15"
+  - text: "QUALITY-GATE HEAD REFRESH (DoD check): the gate entry above was recorded
+      at head 2d9f93a5 (33 commits); the phase-complete commit moved the tip to
+      2fb5797c. The commit-range gate was re-run at the delivered head and
+      returned `VERDICT: PASS — 34 commits in range; all satisfy the
+      configuration` (merge-base 8a1f77ad, 0 offending commits). The `pnpm
+      check` battery result is unaffected (its scope is the working tree, which
+      was clean at the same code state)."
+    type: info
+    date: "2026-11-15"
+  - text: "DoD CHECK (lifecycle phase 10): all nine prior phases completed in the
+      registry; plan revision 1.5 validates (8 delivery phases, 30/30 ACs, 38/38
+      TCs) and pm-notes carries per-phase commit and test evidence for phases
+      1-8; review iteration 2 is PASS with the residuals disclosed; system docs
+      reconciled with no gap; `pnpm check` green with the outside-worktree
+      TMPDIR; commit-range gate PASS at the delivered head (34 commits).
+      Remaining work is phase 11 (PR creation)."
+    type: resolved
+    date: "2026-11-15"
+  - text: "PR created and left OPEN for CEO/human merge:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/325 — base
+      main-tools, head feat/GH-300/suite-job-mapping-gates. Title 'feat(GH-300):
+      suite-to-job mapping in gates — cite breadth and refuse a narrowed local
+      suite'. The branch was pushed with an explicit refspec
+      (HEAD:refs/heads/feat/GH-300/suite-job-mapping-gates) because this
+      worktree's upstream was misconfigured to origin/main-tools; a bare push
+      would have written to main-tools. The PR body carries the acceptance
+      evidence, the gate evidence, and all disclosed residuals (F-11..F-15 plus
+      the temporary `.delivery-os/` exclude removal). Commit-range gate re-run
+      at the actual PR head d05c01d0: PASS, 35 commits, 0 offending. Delivery
+      stops here — no merge, no other ticket."
+    type: info
+    date: "2026-11-15"
+  - text: "CI REMEDIATION (post-pr_creation): the privacy-literal scan failed on this
+      pm-notes because the quality-gate evidence recorded two absolute machine
+      paths — the measured gate temp root and the checkout's parent directory.
+      Both were replaced with the declared placeholder form (`$GATE_TMPDIR`, the
+      operator's measured gate temp root, and 'the parent of the checkout
+      directory'), matching the GH-322 sanitization applied to GH-310. No
+      behaviour, gate result, or acceptance claim changes; TC-PRIVACY-020 and
+      TC-WIRE-002 failed only as consequences of the scan and pass after the
+      sanitize. Committed on the same branch and pushed; no new PR and no phase
+      reopened."
+    type: resolved
+    date: "2026-11-15"
+  - text: "RETRO: a gate-evidence note leaked machine paths that the privacy scan
+      rejects — the same defect class GH-322 fixed in GH-310. Root cause: I copied
+      the operator's temp-root semantics into prose instead of using the
+      placeholder convention the change-lifecycle note already defines. Improvement:
+      write every gate command and path in pm-notes with placeholders only
+      (`$PWD/...`, `$GATE_TMPDIR`) and run `scripts/checks/privacy-literals.ts`
+      before completing quality_gates."
+    type: retro
+    date: "2026-11-15"
+  - text: "CI REMEDIATION ROUND 2 (post-rebase, sync-only): two GH-320 tests failed
+      after #324 landed as a squash. (1) TC-BIN-002 'the baseline commit is an
+      ancestor of HEAD': `tests/fixtures/entrypoint/alias-baseline.json` pinned
+      `capturedFrom` to `1d4431eb`, a pre-code GH-320 branch commit orphaned by
+      the #324 squash; it is unreachable from main-tools, so the ancestry
+      assertion cannot hold. DELIBERATE REGENERATION MARKER: `capturedFrom` now
+      names `8a1f77ad` (the pre-change commit in main-tools history, parent of the
+      squash), the original pin is retained as `capturedFromOriginal`, and a
+      `captureProvenanceNote` records why; no baseline cell value changed (the
+      version/help/invalid-override bytes are identical from the original capture
+      through HEAD, and the fixture is a byte-identity control). The ancestry
+      assertion is kept, not deleted. (2) TC-BIN-084 half (b) failed only because
+      its guarded preload run executes `entrypoint-two-bins.test.ts`; with the
+      ancestry pin corrected (and a stale local workspace link refreshed via
+      `pnpm install --frozen-lockfile`, which CI does on a fresh clone) the
+      guarded run reports exit 0 and zero acquisition tallies. Local results:
+      `entrypoint-two-bins` 18 pass / 0 fail; `prior-identity-hermetic` 5 pass /
+      0 fail."
+    type: resolved
+    date: "2026-11-15"
+  - text: "RETRO: the baseline fixture pinned a provenance commit from a feature
+      branch, which a squash merge orphans — so a later rebase breaks an
+      ancestry assertion while the baseline bytes stay valid. Improvement: pin
+      provenance to a commit that exists in the integration history (the squash
+      parent), keep the original pin as secondary metadata, and record the
+      deliberate regeneration in the change record."
+    type: retro
+    date: "2026-11-15"

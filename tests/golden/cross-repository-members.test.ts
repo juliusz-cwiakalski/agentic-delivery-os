@@ -100,3 +100,75 @@ describe("TC-XCLOSE-001 member-form closeout report golden", () => {
     expect(closeoutData(run.envelope)).toEqual(golden("closeout-members-applied.json"));
   });
 });
+
+import { renderCrossRepositoryVerifyGatesHuman } from "../../packages/core/src/domain/index";
+import { memberGatesRuntime } from "../fixtures/cross-repository/facts";
+import { suiteMapMemberWorld } from "../fixtures/cross-repository/suite-map";
+import { runVerify } from "../fixtures/verify-gates/cases/harness";
+import {
+  declaredRead,
+  REFERENCE_SUITES,
+  validEqualityMap,
+} from "../fixtures/verify-gates/suite-map/cases";
+
+describe("TC-SCITE-002 the cross-repository report carries the member-independent fields", () => {
+  const runWorld = (world: ReturnType<typeof suiteMapMemberWorld>, withMap: boolean) => {
+    const base = memberGatesRuntime(world);
+    const gates = base.gates;
+    if (gates === undefined) throw new Error("missing gates runtime");
+    return runVerify(
+      {
+        ...base,
+        gates: { ...gates, ...(withMap ? { readSuiteMap: declaredRead(validEqualityMap()) } : {}) },
+      },
+      ["gates", CHANGE_REF],
+    );
+  };
+
+  test("the equality map adds only the two fields and keeps every delivered field", async () => {
+    const world = suiteMapMemberWorld();
+    const without = await runWorld(world, false);
+    const withMap = await runWorld(world, true);
+    expect(without.exitCode).toBe(0);
+    expect(withMap.exitCode).toBe(0);
+    const control = without.envelope?.data as Record<string, unknown>;
+    const data = withMap.envelope?.data as Record<string, unknown>;
+    expect(data.suiteBreadth).toEqual([...REFERENCE_SUITES]);
+    expect(data.mirrorsJob).toBe("job-01");
+    const added = Object.keys(data).filter((key) => !Object.hasOwn(control, key));
+    expect(added.sort()).toEqual(["mirrorsJob", "suiteBreadth"]);
+    for (const field of [
+      "definitionOfDone",
+      "blockingMembers",
+      "reviewFlow",
+      "gates",
+      "summary",
+      "overall",
+    ]) {
+      expect(JSON.stringify(data[field])).toBe(JSON.stringify(control[field]));
+    }
+  });
+
+  test("the fields equal a member-less report for the same declaration and never nest", async () => {
+    const world = suiteMapMemberWorld();
+    const result = await runWorld(world, true);
+    const data = result.envelope?.data as Record<string, unknown>;
+    expect(data.suiteBreadth).toEqual([...REFERENCE_SUITES]);
+    for (const record of data.gates as readonly Record<string, unknown>[]) {
+      expect(Object.hasOwn(record, "suiteBreadth")).toBe(false);
+      expect(Object.hasOwn(record, "mirrorsJob")).toBe(false);
+      expect(Object.hasOwn(record.citation as object, "suiteBreadth")).toBe(false);
+    }
+    const human = renderCrossRepositoryVerifyGatesHuman(data as never, {
+      binaryName: "example-product",
+    });
+    expect(human).not.toContain("breadth");
+    expect(human).not.toContain("mirrors");
+  });
+
+  test("the report data matches the committed suite-map golden", async () => {
+    const world = suiteMapMemberWorld();
+    const result = await runWorld(world, true);
+    expect(result.envelope?.data).toEqual(golden("suite-map-report.json"));
+  });
+});

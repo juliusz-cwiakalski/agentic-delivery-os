@@ -223,6 +223,10 @@ export const crossRepositoryReport = (input: {
   readonly outcomes: readonly CrossRepositoryMemberOutcome[];
   readonly landings: readonly MemberLandingObservation[];
   readonly reviews: readonly ReviewObservation[];
+  readonly breadth?: {
+    readonly mirrorsJob: string;
+    readonly suiteBreadth: readonly string[];
+  };
 }): CrossRepositoryVerifyGatesReport => {
   const status = statusOf(input.outcomes);
   const gates = input.outcomes.flatMap((outcome) => outcome.records);
@@ -245,6 +249,12 @@ export const crossRepositoryReport = (input: {
       members: input.outcomes.map((outcome) => outcome.member),
       observations: input.reviews,
     }),
+    ...(input.breadth === undefined
+      ? {}
+      : {
+          suiteBreadth: [...input.breadth.suiteBreadth],
+          mirrorsJob: input.breadth.mirrorsJob,
+        }),
   };
 };
 
@@ -258,6 +268,10 @@ export const evaluateCrossRepositoryGates = (input: {
   readonly batteryEntries: readonly MergeGateEntry[];
   readonly landings: readonly MemberLandingObservation[];
   readonly reviews: readonly ReviewObservation[];
+  readonly breadth?: {
+    readonly mirrorsJob: string;
+    readonly suiteBreadth: readonly string[];
+  };
 }): CrossRepositoryVerifyGatesReport =>
   crossRepositoryReport({
     changeRef: input.changeRef,
@@ -271,6 +285,7 @@ export const evaluateCrossRepositoryGates = (input: {
     ),
     landings: input.landings,
     reviews: input.reviews,
+    ...(input.breadth === undefined ? {} : { breadth: input.breadth }),
   });
 
 /** True when the report is the cross-repository type (presence of the block). */

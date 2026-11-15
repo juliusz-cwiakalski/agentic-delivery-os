@@ -1156,6 +1156,13 @@ the project family separately.
 - Tasks: local gates must cite the same suite breadth as CI.
 - AC: a narrower local suite cannot masquerade as full green.
 - Depends on: M0-S9.
+- Progress: delivered by GH-300 — the versioned `verify.suite-map` declaration
+  in the project-committed configuration document, the additive
+  `data.suiteBreadth`/`data.mirrorsJob` fields on both report types, the
+  `verify.narrowed-scope` refusal (exit 1, `detail.suiteBreadth`, pinned header,
+  no record and no capsule event), the bounded single-document map read shared
+  by the CLI and the shipped MCP `gate-report` composition, and this
+  repository's own reference declaration resolving to equality end-to-end.
 
 ### M2-S8 Memory records, layout, and lint
 - Ticket: GH-301 (milestone M2)

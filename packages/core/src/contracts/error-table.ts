@@ -685,6 +685,17 @@ export const ERROR_TABLE = [
     summary: "Merge-gate evidence could not be read.",
   },
   {
+    code: "verify.narrowed-scope",
+    domainKind: "verify",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Run the local gate over the declared full suite breadth, or update the declared suite map so the local suite set matches the mirrored CI job, then re-run the gates.",
+    projectionClass: "user-validation",
+    summary: "The local gate breadth is narrower than the CI job it mirrors.",
+  },
+  {
     code: "plan.schema.invalid",
     domainKind: "plan",
     category: "user",

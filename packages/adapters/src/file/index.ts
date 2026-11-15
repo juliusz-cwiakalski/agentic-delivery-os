@@ -32,6 +32,7 @@ export {
   neutralEnvironmentFacts,
   nodeFileSystemFacts,
   type RuntimePlatform,
+  readCommittedConfigDocument,
   runtimePlatform,
 } from "./config-source.js";
 export {

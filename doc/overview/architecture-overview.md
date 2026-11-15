@@ -9,7 +9,7 @@ area: engineering
 document_classification: working-analysis
 links:
   related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, TDR-0012, ADR-0010, TDR-0016, TDR-0023, TDR-0024, TDR-0025]
-  related_changes: ["GH-290", "GH-291", "GH-292", "GH-320"]
+  related_changes: ["GH-290", "GH-291", "GH-292", "GH-300", "GH-320"]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
 
@@ -176,7 +176,8 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
 - `verify change <ref>` classifies ledger/document completeness, not merge readiness.
   `verify gates <ref>` evaluates the config-declared battery (CI, push parity,
   squash surface, address completion, lifecycle, and any declared battery gate)
-  and appends one gate-verification record. `verify deploy <ref>` reads the deploy
+  and, for a full battery evaluation that is not refused for narrowed suite
+  breadth, appends one gate-verification record. `verify deploy <ref>` reads the deploy
   job trace once and renders a verified/unknown/failed verdict. See the
   [handler](../../packages/cli/src/commands/verify.ts),
   [gate contract](../spec/features/feature-verify-gates.md), and

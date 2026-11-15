@@ -1,0 +1,2239 @@
+# GH-300 delivery plan — machine-readable document (delivery.plan.v1).
+# M2-S7: Suite-to-job mapping in gates.
+#
+# REVISION NOTES
+#   1.0 (initial) — authored against spec v1.1 and test plan v1.1: 7 phases,
+#       31 TCs owned exactly once, 25 ACs named at least once.
+#   1.1 (not issued as a separate artifact) — the test-plan v1.2 correction of
+#       the TC-SNARR-001 `error.summary` wording was tracked as P-4 and closed
+#       without changing this plan; revision 1.2 records that closure and adopts
+#       the spec v1.2 / test plan v1.3 additions.
+#   1.2 (2026-11-15) — DoR iteration-1 remediation owned by delivery planning;
+#       reconciled with chg-GH-300-spec.md v1.2 and chg-GH-300-test-plan.md
+#       v1.3. No phase id, title intent, or earlier valid obligation removed.
+#       (F1) WITHDRAWN the fail-open whole-document fallback. The configuration
+#            document is now classified fail-closed by the spec's own posture:
+#            absent, and parsed-without-the-node, are undeclared parity;
+#            present-but-unreadable, unparseable-as-a-whole, and a defective map
+#            node are `config.value.invalid` at exit 1 before any gates source
+#            read; a defect elsewhere in the document is not interpreted, so it
+#            neither refuses nor removes a valid declaration. One bounded read
+#            of the committed-slot document; no overlay and no merged-tree read
+#            (DM-9, DEC-18, DEC-19, NFR-10, AC-F1-4, AC-F1-5).
+#       (F4) The delivered gate-set seam is unchanged. This change wires only
+#            the suite-map read; no config-declared `merge.gates` is activated
+#            and the shipped five-gate battery stays byte-identical for every
+#            adopter (NG-7, DEC-11, AC-F5-1, AC-F5-3). `readGateSet` is never
+#            sourced from configuration values by this plan.
+#       (F8) Citations refreshed: spec v1.2 (F-1..F-5, DM-1..DM-9,
+#            DEC-1..DEC-20, 30 ACs, DoD-1..DoD-12, Appendix A rows 1..24,
+#            C-1..C-17, D-1..D-16) and test plan v1.3 (37 TCs in nine families,
+#            30/30 ACs). The TC-SNARR-001 `error.summary` conflict is recorded
+#            CLOSED (test plan v1.2 §9) rather than pending.
+#       (F9) Phase 6 no longer declares the read-only control
+#            `tests/fixtures/verify-gates/corpus/cases.json` as a writable
+#            scope path; it is read by Phase 1 and Phase 6, never edited.
+#       ADOPTION: 6 new TCs (TC-SMAP-006, TC-SMAP-007, TC-SNARR-006,
+#            TC-SCITE-005, TC-SCITE-006, TC-SPAR-006) are each owned by exactly
+#            one phase; 5 new ACs (AC-F1-4, AC-F1-5, AC-F3-6, AC-F5-6,
+#            AC-NFR8-1) are named at least once. Totals: 37/37 TCs, 30/30 ACs.
+#   1.3 (2026-11-15) — DoR iteration-2 remediation owned by delivery planning;
+#       reconciled with chg-GH-300-spec.md v1.3 (30 ACs) and
+#       chg-GH-300-test-plan.md v1.4 (38 TCs). No phase id, title intent, or
+#       earlier valid obligation removed; no requirement invented.
+#       (N3 / finding 3) THE REAL-ADAPTER WITNESS IS OWNED HERE. TC-SMAP-008 is
+#            owned by phase 5, its suite home
+#            `tests/behaviour/verify-gates-config-document-adapter.test.ts` is
+#            declared in phase 5 scope, and obligation 5.11 states the
+#            obligation: the real `readCommittedConfigDocument`, with only
+#            `FileSystemFacts` injected, maps absent -> undeclared parity;
+#            present-but-unreadable, unparseable, and a defective map node ->
+#            `config.value.invalid` before any gates source read; a valid map
+#            beside an outside-node defect -> the declaration honoured; and an
+#            implementation mapping a read or parse failure to
+#            `{ok: true, declared: false}` must FAIL the suite. Phase 4 keeps
+#            TC-SMAP-006 (the injected handler seam), so each TC is owned
+#            exactly once and the posture is witnessed at both layers (P-8).
+#       (N1 / finding 1) DOCUMENTATION SCOPE BOUND TO THE COMPLETED REGISTER.
+#            Phase 7 applies exactly D-1..D-26 and declares
+#            `doc/spec/features/feature-capsule.md`,
+#            `doc/spec/features/feature-verify-change-and-exit-taxonomy.md`, and
+#            `doc/overview/architecture-overview.md` in its scope files, so the
+#            append rule and the capsule append rule are reconciled everywhere
+#            current truth states them unconditionally.
+#       (finding 9) PRECISION. 4.2 gives the delivered handler order and the
+#            exact position of the map classification (after grammar, before
+#            any gates source read), states that `readGateSet` IS invoked and is
+#            a zero-I/O seam rather than a source read, states the member-path
+#            hoist of the ONE workflow read above the breadth decision, and
+#            states that no member read occurs on a narrowed declaration. 5.3
+#            names the delivered selected-file channel that can occupy the
+#            committed slot — the `${environmentPrefix}CONFIG` environment
+#            selector (TDR-0003), the only reachable selection input because
+#            `verify` declares `flags: []` so `--config` is
+#            `fallback.invocation` — and states that the adapter takes injected
+#            `FileSystemFacts`.
+#       (finding 4) READ BUDGET. 6.4 no longer claims identical counts for every
+#            state: the seven enumerable gates sources are read identically with
+#            and without a declaration, exactly ONE bounded configuration-
+#            document read is added and is counted by the instrumented-read
+#            assertions in both states, and a narrowed member-declaring run
+#            legitimately reads less (no member read) than a non-narrowed one.
+#       (finding 7) C-10 EXCEPTION. 2.8 and P-2 name the documented
+#            `verify.narrowed-scope` row (D-7) as the one sanctioned in-change
+#            documentation edit — it lands with the `ERROR_TABLE` row because
+#            the delivered two-way sync gate binds them — while every other
+#            current-truth reconciliation stays in phase 7 (Appendix A row 28).
+#       (finding 2 / N2) NO DOMAIN-KIND MEMBER IN THE FAILURE SURFACE. Every
+#            obligation asserts the envelope's own fields — `error.code`,
+#            `error.category`, `error.retryable`, `error.consequence`,
+#            `error.summary`, `error.remediationHint`, `detail.suiteBreadth`,
+#            and the exit — and the domain kind only through the error table
+#            (AC-NFR7-1).
+#       (findings 5, 6, 10) Carried from spec v1.3: tolerance is scoped to
+#            schema or semantic defects outside the map node, while a
+#            document-level parser failure anywhere is the unparseable-as-a-
+#            whole refusal; `job` is the single-line printable class (no control
+#            character, no line break, no leading or trailing whitespace, 1..120
+#            characters); and the map resolver is the only validator for the
+#            node — the catalog branch constrains whole-document validity for
+#            other consumers only and its outcome is never consumed here.
+#       (finding 11a) DEC-19's committed-slot-only posture is carried as scoped
+#            to the suite-map read.
+#       (citations) Refreshed to spec v1.3 (F-1..F-5, DM-1..DM-9,
+#            DEC-1..DEC-20, NFR-1..NFR-10, RSK-1..RSK-11, DoD-1..DoD-12,
+#            Appendix A rows 1..28, C-1..C-17, D-1..D-26) and test plan v1.4
+#            (38 TCs in nine families: SMAP 8, SCITE 6, SNARR 6, SRES 5,
+#            SPAR 6, SCTR 3, SDET 2, SHERM 1, SWRITE 1; 30/30 ACs).
+#       TOTALS: 38/38 TCs owned exactly once, 30/30 ACs named at least once,
+#            67/67 writable suite and fixture homes inside a declared phase
+#            scope (the two additions over v1.2 are the real-adapter behaviour
+#            suite and its per-case fixture-root pattern, both in phase 5).
+#   1.4 (2026-11-15) — DoR iteration-3 remediation owned by delivery planning
+#       (readiness-review/readiness-iter-3.md); reconciled with
+#       chg-GH-300-spec.md v1.4 (30 ACs, Appendix A rows 1..28, D-1..D-28) and
+#       chg-GH-300-test-plan.md v1.5 (38 TCs, 30/30 ACs; no TC added,
+#       renumbered, or reassigned). No phase id, title intent, earlier valid
+#       obligation, TC owner, or scope entry is removed, and no requirement is
+#       invented: each change restates a spec v1.4 statement this plan had not
+#       yet carried, or names an input the delivered code already exposes.
+#       (finding 3, root input) THE PER-CASE FIXTURE ROOT IS NAMED. 4.2's
+#            selected-file residual, 5.3 and 5.11 now state the input that
+#            supplies `<root>`: `FileAcquisitionInput.explicitProjectRoot`,
+#            falling back to its `gitRoot` — the same pair `acquireFileConfig`
+#            resolves (`explicitProjectRoot || gitRoot`) — with a selection
+#            arriving as that same interface's `selectedConfig` and
+#            `FileSystemFacts` (`exists`, `readText`) as the ONLY other
+#            substitution. So "the only substitution is `FileSystemFacts`"
+#            stays literally true for the adapter's code path: the roots are
+#            production inputs, not a test-only back door, and no case mutates
+#            the process cwd.
+#       (finding 3, carve-out) SELECTED-BUT-MISSING IS NEVER PARITY. The
+#            selected-file residual and every document-state list now match
+#            spec v1.4: "absent" means NO SELECTION IN PLAY (the
+#            `${environmentPrefix}CONFIG` selector unset) AND no committed
+#            document; a selector naming a missing or unreadable path is the
+#            delivered unusable-selector `config.value.invalid` refusal at
+#            exit 1 with no `data` before any read, never the
+#            absent/undeclared parity path, because it is a selection failure
+#            and not a document-content defect, so the outside-node tolerance
+#            does not reach it (DM-9, AC-F1-4, AC-NFR8-1, Appendix A row 22,
+#            C-15; TC-SMAP-006/TC-SMAP-008 step 1(c), TC-SPAR-006). Tolerance
+#            therefore covers document CONTENT only.
+#       (D register) PHASE 7 BINDS D-1..D-28. Spec v1.4's two rows are applied
+#            by obligation 7.22: D-27 amends the §Overview local-read
+#            enumeration in doc/spec/features/feature-verify-gates.md and D-28
+#            amends the cross-repository read budget in the same document, so
+#            the phase's `scope.files` set does not grow — both target a file
+#            already declared. The three invariants this change narrows (the
+#            append rule, the capsule append rule, and the read budget) are the
+#            register's own search keys, which is what makes the binding a
+#            closure rather than a sample.
+#       (NFR-10 nit) READ COUNT MADE LITERALLY OBSERVABLE. 5.11(g), 6.4, 4.14,
+#            5.6, 5.9, 7.5, C-7, and the OQ-T4 read accounting now state the
+#            spec's literal threshold instead of "one bounded read in every
+#            state": exactly ONE bounded configuration-document RESOLUTION
+#            ATTEMPT per invocation — at most one stat-class existence probe
+#            and at most one bounded content read, with ZERO content reads when
+#            neither a selected nor a committed path exists — while the seven
+#            enumerable gates source counts stay identical with and without a
+#            declaration.
+#       (citations) Refreshed to spec v1.4 (F-1..F-5, DM-1..DM-9,
+#            DEC-1..DEC-20, NFR-1..NFR-10, RSK-1..RSK-11, DoD-1..DoD-12,
+#            Appendix A rows 1..28, C-1..C-17, D-1..D-28) and test plan v1.5
+#            (38 TCs in nine families: SMAP 8, SCITE 6, SNARR 6, SRES 5,
+#            SPAR 6, SCTR 3, SDET 2, SHERM 1, SWRITE 1; 30/30 ACs; the selector
+#            carve-out and the literal read threshold carried in TC-SMAP-006
+#            step 1(c)/9, TC-SMAP-008 step 1(c)/7, TC-SPAR-004, and
+#            TC-SPAR-006). Readiness record for this iteration:
+#            readiness-review/readiness-iter-3.md.
+#       TOTALS: 38/38 TCs owned exactly once (phase 2: 1, phase 4: 24, phase 5:
+#            4, phase 6: 9), 30/30 ACs named at least once, 67/67 writable
+#            suite and fixture homes inside a declared phase scope — unchanged,
+#            because test plan v1.5 adds no TC and no home. Validator verdict
+#            unchanged: `plan validate GH-300` returns `valid`.
+#       CROSS-ARTIFACT NOTE: test-plan v1.5 TC-SMAP-008 step 7 cites "plan rev
+#            1.3 obligation 5.11(g)'s 'one bounded read per invocation' is this
+#            one resolution attempt". Revision 1.4 keeps that obligation at the
+#            same letter and states the same fact at the spec's literal
+#            threshold, so the citation's substance holds; the quoted phrase is
+#            rev 1.3's wording, and this plan does not edit the test plan.
+#
+#   1.5 (2026-11-15) — review iteration-1 remediation owned by delivery
+#       planning, after code-review/review-iter-1.yaml returned FAIL
+#       (spec_compliance FAIL, plan_compliance FAIL; 1 high, 5 medium, 3 low,
+#       1 info). ADDS PLAN PHASE 8 AND CHANGES NOTHING ELSE: phases 1-7 are
+#       carried as delivered, no phase id or title intent moves, no TC owner
+#       moves, and no AC/TC total changes (38/38 TCs, 30/30 ACs). No requirement
+#       is invented: every obligation below restates a spec rule the delivered
+#       code violates, a test-plan suite that already exists, or a file the
+#       delivery already changed.
+#       (F-1, high) LINT IS A PHASE BOUNDARY. 8.1 removes the duplicate `clone`
+#            declaration in
+#            tests/behaviour/verify-gates-suite-map.test.ts and makes `pnpm lint`
+#            green, so `pnpm check` and DoD-10 stop being red.
+#       (F-2) THE `job` CLASS IS THE FULL SINGLE-LINE PRINTABLE CLASS. 8.2
+#            extends the control-character predicate to Unicode line and
+#            paragraph separators (U+2028/U+2029) and Unicode format controls
+#            (Cf) in packages/core/src/domain/verify-gates-suite-map.ts and
+#            packages/cli/src/index.ts — one shared predicate, or two conforming
+#            copies — and adds U+2028/U+2029 regression cases for the structural
+#            refusal AND for the rendered header and `cause:` line, so AC-F1-2
+#            and Appendix A rows 4 and 26 hold at both ends instead of only on
+#            the resolver.
+#       (F-3) THE THREE SUITES BECOME HERMETIC. 8.3 creates each temporary root
+#            inside the test that uses it (or uses an OS temp root through the
+#            existing `makeTempRoot`) in the adapter, layer-posture, and MCP
+#            composition suites, and requires each to be proven alone on a clean
+#            tree, so no suite rides another module's top-level `mkdir`.
+#       (F-4) THE EIGHT UNDECLARED FILES ARE DECLARED. 8.4 declares
+#            scripts/checks/error-table-sync.ts,
+#            tests/fixtures/events/error-table-baseline.json,
+#            tests/fixtures/mcp/golden/gate-report/gate-equality-map.json,
+#            tests/fixtures/ports/v1-contract-inventory.json,
+#            tests/structure/dispatch-attempts-taxonomy.test.ts, doc/00-index.md,
+#            doc/planning/oss-tooling/cli-command-registry.md, and
+#            doc/planning/oss-tooling/user-journeys.md in phase 8 scope, each with
+#            a justification obligation. DECLARATION SITE: phase 8, NOT an
+#            owning-phase amendment — phases 1-7 are completed and their scope is
+#            delivered history, so retroactively widening a completed phase would
+#            misstate what that phase was gated against and would move this
+#            revision's diff into phases the review already audited; phase 8 is
+#            the phase whose job is to reconcile the drift.
+#       (F-5) PER-PHASE TEST EVIDENCE. 8.5 states the obligation: the coder
+#            supplies per-phase test counts for plan phases 1-7 from the delivery
+#            report and phase 8 records its own; the pm-notes entries are the PM
+#            lane's, not a phase-8 file edit.
+#       (F-6) THE COMPOSITION IS PROVEN BEHAVIOURALLY. 8.6 drives
+#            `createProductionComposer` in a test-authored checkout instead of
+#            injecting a test-built `readSuiteMap` and text-grepping
+#            packages/cli/src/production.ts, and declares the residual if the
+#            composer genuinely cannot be driven to that observation point.
+#       (F-7) VACUOUS AND DUPLICATED ASSERTIONS ARE REPLACED. 8.7 fixes the
+#            duplicated `undeclaredRead` loop, the duplicated corpus names, and
+#            the mislabelled member-mode determinism case.
+#       (F-8) THE VALID SELECTED-CONFIG PATH IS COVERED. 8.8 exercises a selected
+#            file occupying the committed slot and supplying the map (equality and
+#            narrowed variants) with no committed-path or overlay read.
+#       (F-9) THE DELIVERED `holder` PREDICATE IS RESTORED. 8.9 keeps `holder`
+#            on the delivered `/[\r\n\u0080-\u009f]/` predicate (DM-6: `holder` is
+#            unchanged) and applies the stricter single-line printable class only
+#            to `suiteBreadth` and the `cause:` payload.
+#       TOTALS: unchanged — 38/38 TCs owned exactly once, 30/30 ACs named at least
+#            once, 67/67 writable suite and fixture homes. Phase 8 adds NO TC id:
+#            its regression cases extend TC-SMAP-003, TC-SMAP-004, TC-SMAP-006,
+#            TC-SMAP-008, TC-SNARR-001, TC-SPAR-001, TC-SCITE-005, and
+#            TC-SCTR-002, all owned by phases 2-6 and never renumbered. The test
+#            plan (v1.6) is not edited by this revision, so no new TC id is
+#            introduced and every new case is a sub-case of an existing TC.
+#       Validator verdict: `plan validate GH-300` returns `valid`,
+#            readyForDevelopment=true.
+#
+# SOURCES (single source of truth; this plan invents no requirement):
+#   - Spec:     ./chg-GH-300-spec.md (v1.4) — F-1..F-5, GAP-1..GAP-6,
+#               DM-1..DM-9, NFR-1..NFR-10, RSK-1..RSK-11, OQ-1..OQ-3,
+#               DEC-1..DEC-20, AC-F1-1..AC-NFR8-1 (30 ACs, §17),
+#               DoD-1..DoD-12 (§17.1), Flow 1..6 (§6), §8.3 enumerated literal
+#               deltas (ten items), Appendix A pinned literals rows 1..28,
+#               Appendix C constraints C-1..C-17, Appendix D documentation
+#               deltas D-1..D-28, the DM-9/AC-F1-4/Appendix A row 22 selector
+#               carve-out (a selected-but-missing or unreadable path is the
+#               unusable-selector refusal, never parity), and NFR-10's literal
+#               read threshold (exactly one bounded configuration-document
+#               resolution attempt per invocation).
+#   - Tests:    ./chg-GH-300-test-plan.md (v1.5) — 38 TCs in nine families
+#               (SMAP 8, SCITE 6, SNARR 6, SRES 5, SPAR 6, SCTR 3, SDET 2,
+#               SHERM 1, SWRITE 1), 30/30 ACs covered, DM 9/9, seeds
+#               SC-M2-S7-01/02 inherited by name, §4 layers, §6.1 binding gate
+#               environment, §6.2/§6.3 fixture homes (including the per-case
+#               adapter roots), §6.4 golden provenance and parity scope, §7
+#               suite homes and execution commands, §8.3 OQ-T4 (plan-owned
+#               seam), OQ-T6 (non-shipped MCP), and the closed OQ-T7..OQ-T14.
+#   - Readiness: ./readiness-review/readiness-iter-1.md — findings F1, F4, F8,
+#               and F9 are closed by revision 1.2; findings F2/F3/F5/F6/F7/
+#               F10/F11 are closed by spec v1.2 and test plan v1.3.
+#               ./readiness-review/readiness-iter-2.md — findings 1, 3, 4, 7,
+#               and 9 are closed by revision 1.3; findings 2, 5, 6, 8, 10, 11,
+#               and 12 are closed by spec v1.3 and test plan v1.4.
+#               ./readiness-review/readiness-iter-3.md — finding 3's root-input
+#               part and the citation refresh are closed by revision 1.4; its
+#               carve-out and D-register parts are closed by spec v1.4, its
+#               absent-sub-case and nit parts by test plan v1.5, and its process
+#               part is the PM lane's (no artifact edit here).
+#   - PM notes: ./chg-GH-300-pm-notes.yaml — scope decision, documentation
+#               impacts for phase 7, measured gate environment, delivery
+#               conventions (full 11-phase lifecycle, one commit per plan phase,
+#               subjects scoped GH-300, PR to main-tools staying open), branch
+#               feat/GH-300/suite-job-mapping-gates from main-tools tip 8a1f77ad.
+#   - Schema:   doc/templates/implementation-plan-template.md +
+#               doc/spec/features/feature-plan-schema.md (scope keys
+#               files/packages/folders, doneArtifacts slots, leases, weightClass,
+#               interactions, tier; no tasks key, no progress log).
+#   - Delivered code seams inspected for this plan:
+#               packages/core/src/contracts/{verify-gates,result,error-table,
+#               config,index,plan}.ts; packages/core/src/config/catalog.ts;
+#               packages/core/src/domain/{verify-gates,verify-gates-members,
+#               merge-gate-set,plan-validate}.ts; packages/adapters/src/file/
+#               {config-source,yaml-parser,index}.ts; packages/cli/src/commands/
+#               verify-gates.ts; packages/cli/src/{edge,production,index}.ts;
+#               packages/mcp/src/commands/gate-report.ts; packages/mcp/src/serve.ts;
+#               tests/fixtures/verify-gates/{cases/harness,corpus/cases.json,
+#               golden/*}; tests/golden/verify-gates.test.ts;
+#               scripts/checks/{error-table-sync,exports-parity,ambient-globals}.ts;
+#               .github/workflows/ci.yml (job ts-aggregate, name
+#               "TS aggregate check").
+#
+# OQ-T4 RESOLUTION — how the suite map reaches the gates runtime
+# (test-plan §8.3 OQ-T4 is the one plan-owned seam question; spec DEC-11 names
+# `readSuiteMap` and pins "defaulting to undeclared"):
+#   CHOSEN: a SECOND injected read function `readSuiteMap` beside the delivered
+#     `readGateSet`, OPTIONAL, absent meaning "undeclared". It returns a closed
+#     union and performs no I/O:
+#       export type VerifySuiteMapRead =
+#         | { readonly ok: true; readonly declared: false }            // absent / no node
+#         | { readonly ok: true; readonly declared: true;
+#             readonly value: VerifySuiteMap }                          // parsed map
+#         | { readonly ok: false; readonly code: "config.value.invalid";
+#             readonly detail?: string };                               // unreadable / unparseable / defective
+#       // VerifyGatesCommandRuntime          (packages/cli/src/commands/verify-gates.ts)
+#       readonly readSuiteMap?: () => VerifySuiteMapRead;
+#       // VerifyGatesRuntimeOptions          (packages/cli/src/edge.ts)
+#       readonly readSuiteMap?: VerifyGatesCommandRuntime["readSuiteMap"];
+#       // GateReportToolRuntime              (packages/mcp/src/commands/gate-report.ts)
+#       readonly readSuiteMap?: () => VerifySuiteMapRead;
+#     The edge default is `() => ({ ok: true, declared: false })`, so a
+#     composition that supplies nothing yields the delivered behaviour exactly.
+#     The read is the ONE bounded configuration-document RESOLUTION ATTEMPT on
+#     the project-committed layer slot (or the explicitly selected file in that
+#     slot): at most one stat-class existence probe plus at most one bounded
+#     content read, and zero content reads when neither a selected nor a
+#     committed path exists; the map node is validated by the map's own
+#     resolver, and the whole-document catalog-resolution outcome is never
+#     consumed for the map.
+#   DOCUMENT CLASSIFICATION (DM-9, DEC-18, NFR-10, AC-F1-4):
+#       absent: NO SELECTION IN PLAY (the
+#         `${environmentPrefix}CONFIG` selector unset)
+#         AND no committed document — no root, or no
+#         such file                               -> { ok: true, declared: false }
+#         (an existence probe only; zero content reads)
+#       selection names a MISSING or UNREADABLE path -> { ok: false, config.value.invalid }
+#         (the delivered unusable-selector refusal,
+#          never the absent/parity path; it is a
+#          selection failure, not a document-content
+#          defect, so the tolerance does not reach it)
+#       parsed, no `verify.suite-map` node             -> { ok: true, declared: false }
+#       parsed, valid node                             -> { ok: true, declared: true, value }
+#       parsed, defective node                         -> { ok: false, config.value.invalid }
+#       present but unreadable                         -> { ok: false, config.value.invalid }
+#       unparseable as a whole, i.e. a parser-level
+#         failure anywhere (duplicate key, unsupported
+#         YAML tag, non-JSON scalar, non-mapping root,
+#         over-cap document)                           -> { ok: false, config.value.invalid }
+#       schema/semantic defect elsewhere in the
+#         document (another branch, unknown key,
+#         forbidden value)                             -> not interpreted; a valid map
+#                                                         declaration stands
+#     The node is validated by the map's own resolver, which is the ONLY validator
+#     for it: the catalog branch can express only type/required/additionalProperty
+#     facts, cannot express the identifier grammar, the length and cap bounds, or
+#     list uniqueness, and its whole-document outcome is never consumed here.
+#     The refusal is evaluated before any ledger, repository, workflow, or
+#     provider read. No document and no selection state yields a report, breadth
+#     fact, record, or pass except a declaration that resolves to equality.
+#   LAYER POSTURE (DEC-19, AC-F1-5): the map read consults exactly one source —
+#     the repository document at `<repo>/<configDirectoryName>/config.yaml`, or
+#     the explicitly selected file occupying that slot. System, user-global,
+#     project-local, environment, and CLI sources are never read for the map;
+#     the merged layer tree is never consulted. An overlay declaration has no
+#     effect and is not a refusal. This posture is SCOPED to the suite-map read:
+#     it is not a general committed-slot-only rule for all policy data, and
+#     nothing in this plan cites it as that precedent.
+#   GATE-SET POSTURE (NG-7, DEC-11, F-4): the delivered `readGateSet` seam is
+#     byte-identical. The production composition still supplies no declared gate
+#     set, so `verify gates` evaluates the shipped five; `resolveMergeGateSetFromConfig`
+#     is not called from `packages/cli` or `packages/mcp` by this change. The map
+#     read is independent and must not alter the battery for any adopter.
+#   REJECTED: (a) one combined resolved-config call returning gate set plus map —
+#     it would activate a config-declared `merge.gates` in production (NG-7) and
+#     change the delivered construction-site shape (harness, MCP parity fixture,
+#     exports asserted by tests/structure/verify-gates-exports.test.ts), weakening
+#     the AC-F5-1 parity guarantee; (b) reusing `acquireFileConfig`'s merged tree
+#     and filtering by origin — the delivered acquisition reads ambient overlays
+#     and fails fast across layers, so it cannot satisfy DEC-19's
+#     committed-slot-only isolation.
+#   COMPOSITION: one new adapter read (`readCommittedConfigDocument`) resolves the
+#     committed-slot path from the branding seam and the delivered selection rule
+#     and performs the single bounded resolution attempt; one pure projection
+#     extracts `verify["suite-map"]` and hands it to
+#     `resolveVerifySuiteMapFromConfig`; the CLI and MCP compositions memoize the
+#     result and serve the `readSuiteMap` seam. The seam gains one pure call.
+#     Read accounting is NOT a parity claim: the seven enumerable gates sources
+#     are read exactly as delivered in both states, and the change adds exactly
+#     ONE bounded configuration-document resolution attempt per invocation — at
+#     most one stat-class existence probe and at most one bounded content read,
+#     with zero content reads when neither a selected nor a committed path exists
+#     — performed with or without a declaration and counted by the
+#     instrumented-read assertions (NFR-4, NFR-10, AC-F5-4, TC-SPAR-004). The
+#     zero-I/O edge default above is the absent-composition path only (an
+#     embedding that supplies no read at all); both shipped compositions do
+#     supply the real read, so on every shipped surface the budget counts exactly
+#     one resolution attempt whether or not the document declares a map.
+#
+# PRE-CHANGE PARITY PROVENANCE (NFR-8, AC-F5-1, AC-NFR8-1, TR-1):
+#   Phase 1 captures `tests/fixtures/verify-gates/suite-map/parity-baseline.json`
+#   from branch base 8a1f77ad BEFORE any production edit (all 48 delivered
+#   corpus cases in JSON and human modes, no map: caseId, stdout, stderr,
+#   exitCode, plus appended record bytes where the case appends). Provenance is
+#   recorded inside the fixture (base sha, corpus case count, modes, capture
+#   command, capture timestamp) and in pm-notes by the PM lane. The delivered
+#   goldens `success-data.json`, `human-success.txt`, and `failure-summary.txt`
+#   are read UNCHANGED for the whole change; regeneration after the change is
+#   allowed only with a review-visible diff and a recorded reason, otherwise the
+#   parity proof becomes a tautology (TR-1). PARITY IS SCOPED:
+#   only the two undeclared states (absent document with no selection in play;
+#   document parsed without a map node) carry a parity claim. A selection naming
+#   a missing or unreadable path, and unreadable, unparseable, and defective-node
+#   documents, are the AC-F1-4 refusal and are excluded from the baseline; the
+#   scope manifest `tests/fixtures/verify-gates/suite-map/parity-scope.json`
+#   classifies every state exactly once (`parity` / `refusal` /
+#   `resolved-equality`), so no state is claimed as both (NFR-8, NFR-10,
+#   AC-NFR8-1, TC-SPAR-006).
+#
+# CONSTRAINTS CARRIED FROM THE SPEC (Appendix C, binding on every phase):
+#   C-1 no execution — no suite, workflow step, child process, or provider write
+#       is ever run; breadth is declared and read (NG-2, DEC-1).
+#   C-2 two declared sides, one comparison — a single-sided declaration cannot
+#       produce a check (DEC-1, DEC-2).
+#   C-3 a report exists only on equality; every other outcome is a refusal or
+#       the delivered failure (DEC-5, NFR-6).
+#   C-4 `suiteBreadth` is the mirrored CI breadth, never the local declaration
+#       and never a union (DEC-4).
+#   C-5 a narrowed refusal appends nothing — no record, no capsule event (DEC-7).
+#   C-6 exactly one new error row and one new `detail` member; no new domain
+#       kind, no reworded row (NFR-7, DEC-8).
+#   C-7 exactly one bounded configuration-document resolution attempt per
+#       invocation and no other added read — at most one stat-class existence
+#       probe and at most one bounded content read (zero content reads when
+#       neither a selected nor a committed path exists), performed with or
+#       without a declaration; corroboration reuses the workflow read — 0
+#       provider, network, transport, or state reads added, and the seven
+#       enumerable gates source counts unchanged (NFR-4, NFR-10, DEC-11,
+#       DEC-19).
+#   C-8 the record, the CI gate, the five gates, the grammar, and the human
+#       output do not move (DEC-9, DEC-10, DEC-12).
+#   C-9 default tests are configuration- and workflow-fixture driven, zero live
+#       calls (NFR-3).
+#   C-10 current-truth specifications flip in phase 7 only, per D-1..D-28
+#       (NG-5, DoD-9). One sanctioned in-change exception: the two-way
+#       error-table sync edit — the documented `verify.narrowed-scope` row in
+#       doc/spec/features/feature-result-contract.md (D-7) lands in the same
+#       commit as the `ERROR_TABLE` row because the delivered sync gate binds
+#       them together; every other current-truth reconciliation stays in phase 7
+#       (Appendix A row 28).
+#   C-11 gates and commit hygiene: `pnpm check` with the pm-notes environment
+#       before the PR, subjects scoped GH-300, body/footer lines <= 100
+#       characters, PR to main-tools staying open (DEC-13, NFR-9).
+#   C-12 the narrowed header names the mirrored CI breadth, never the local set;
+#       the local set is `detail.suiteBreadth` and nothing else (DEC-15).
+#   C-13 the map-side cause reaches only the bounded error-stream `cause:` line;
+#       the envelope stays the table's own and gains no line and no member
+#       (DEC-16).
+#   C-14 this repository's reference declaration is pinned literal data and must
+#       resolve to equality end-to-end, not by fixture reasoning (DEC-17, DM-8).
+#   C-15 the declaration is enforced exactly when declared — only an absent
+#       document (no selection in play and no committed document) or one without
+#       the node is "undeclared"; a `${environmentPrefix}CONFIG` selection naming
+#       a missing or unreadable path is the delivered unusable-selector refusal,
+#       a selection failure rather than a document-content defect; a schema or
+#       semantic defect outside that node has no opinion on the gate run or on
+#       the declaration, and a parser-level failure anywhere in the document
+#       refuses the whole document (DEC-18, NFR-10, Appendix A rows 22 and 27).
+#   C-16 the map comes from the project-committed layer slot only; an overlay
+#       never supplies, completes, or replaces it, and an overlay declaration is
+#       not a refusal either (DEC-19).
+#   C-17 both report paths share one breadth resolution and one refusal; a
+#       member-declaring narrowing refuses before any member read and appends
+#       nothing (DEC-6, AC-F3-6).
+#
+# SCOPE CONVENTION: `files` are exact repository-relative paths; `folders` are
+#   boundary-aware prefixes declared by every phase that writes a NEW file inside
+#   them; a file edited in two phases is declared in both phases. A declared file
+#   that ends up untouched is a `plan diff` observation, never a gate failure
+#   (the conditional/control rows below are declared for exactly that reason).
+#   `tests/fixtures/verify-gates/corpus/cases.json` is a READ-ONLY control: the
+#   new declaration matrix lives in tests/fixtures/verify-gates/suite-map/cases.ts
+#   and the corpus stays at 48 cases, so the baseline's "48" stays true. It is
+#   deliberately NOT a `scope.files` entry in any phase (DoR iteration-1 F9).
+#
+# TC -> PHASE MAP (38 ids; every id owned by exactly ONE phase — the phase that
+#   first makes its complete suite set green):
+#   Phase 1 baseline            (0): owns no TC; supplies the pre-change
+#        baseline that Phase 6's TC-SPAR-001/TC-SPAR-006 consume.
+#   Phase 2 contract layer      (1): TC-SCTR-003.
+#   Phase 3 evaluation core     (0): proves the pure halves of SMAP-001/003/005,
+#        SCITE-001/003/006, SNARR-001/005, SRES-002/003/004/005, SCTR-001/002.
+#   Phase 4 runtime wiring     (24): TC-SMAP-001, TC-SMAP-002, TC-SMAP-003,
+#        TC-SMAP-005, TC-SMAP-006, TC-SCITE-001, TC-SCITE-003, TC-SCITE-004,
+#        TC-SCITE-006, TC-SNARR-001, TC-SNARR-002, TC-SNARR-003, TC-SNARR-004,
+#        TC-SNARR-005, TC-SNARR-006, TC-SRES-001, TC-SRES-002, TC-SRES-003,
+#        TC-SRES-004, TC-SRES-005, TC-SCTR-001, TC-SCTR-002, TC-SPAR-002,
+#        TC-SWRITE-001.
+#   Phase 5 reference decl.     (4): TC-SMAP-004, TC-SMAP-007, TC-SMAP-008,
+#        TC-SCITE-005. TC-SMAP-008 is the REAL-ADAPTER witness of the document
+#        classification (DoR iteration-2 finding 3); TC-SMAP-006 stays in
+#        Phase 4 as the injected handler-seam witness, so the two are never
+#        duplicates and each is owned once (P-8).
+#   Phase 6 cross-cutting       (9): TC-SPAR-001, TC-SPAR-003, TC-SPAR-004,
+#        TC-SPAR-005, TC-SPAR-006, TC-SCITE-002, TC-SDET-001, TC-SDET-002,
+#        TC-SHERM-001.
+#   Phase 7 docs/release        (0): DoD-9, DoD-10, D-1..D-28.
+#   Phase 8 review remediation  (0 new ids): owns no TC id; re-proves TC-SMAP-003
+#        (job character class and rendered grammar), TC-SMAP-004 (composition
+#        end-to-end), TC-SMAP-006 (injected document seam), TC-SMAP-008 (real
+#        adapter, including the valid selected path), TC-SNARR-001 (rendered
+#        header), TC-SPAR-001 (parity non-vacuity), TC-SCITE-005 (MCP
+#        composition supplement), and TC-SCTR-002 (restored `holder` predicate)
+#        through regression cases owned by no new id.
+#   Totals: 38/38 TCs owned; 30/30 ACs named (§17 AC -> phase table below).
+#
+# AC -> PHASE (every §17 criterion named at least once; a criterion proven by
+#   two TCs is listed in both phases where those TCs live):
+#   P2: AC-NFR7-1, AC-NFR1-1 (static `detail` key set). P3 (pure halves):
+#   AC-F1-1, AC-F1-2, AC-F1-3, AC-F2-1, AC-F2-3, AC-F3-1, AC-F3-5, AC-F3-6,
+#   AC-F4-1, AC-F4-2, AC-F4-3, AC-F4-4, AC-NFR2-1.
+#   P4: AC-F1-1, AC-F1-2, AC-F1-3, AC-F1-4, AC-F2-1, AC-F2-3, AC-F3-1,
+#   AC-F3-2, AC-F3-3, AC-F3-4, AC-F3-5, AC-F3-6, AC-F4-1, AC-F4-2, AC-F4-3,
+#   AC-F4-4, AC-F5-2, AC-NFR1-1, AC-NFR2-1, AC-NFR5-1, AC-NFR8-1.
+#   P5: AC-F1-1, AC-F1-2, AC-F1-4, AC-F1-5, AC-F2-1, AC-F5-6, AC-NFR8-1
+#   (TC-SMAP-008 adds AC-F1-2 and AC-NFR8-1 to this phase).
+#   P6: AC-F5-1, AC-F5-3, AC-F5-4, AC-F5-5, AC-F2-2, AC-F1-4, AC-NFR2-1,
+#   AC-NFR3-1, AC-NFR5-1, AC-NFR8-1.
+#   P8 (re-proves, adds no criterion): AC-F1-1, AC-F1-2, AC-F1-4, AC-F1-5,
+#   AC-F2-1, AC-F3-1, AC-F4-2, AC-F4-3, AC-F5-1, AC-NFR1-1, AC-NFR3-1,
+#   AC-NFR8-1 — each already named by the phase that owns its TC.
+#   Unique criteria named across phases: 30/30 (§17). No criterion is orphaned;
+#   each listing is either the phase that owns the criterion's TC, the phase that
+#   proves its pure half, or a re-run of an owning suite.
+#
+# SUITE-HOME COVERAGE: 67/67 writable suite and fixture homes named by test-plan
+#   v1.5 §7 and §6.2-§6.4 (37 test/type homes including
+#   tests/structure/inventory.json, and 30 fixture/contract-data homes; the five
+#   `suite-map/layers/*.yaml` overlays count as one home and the per-case
+#   `suite-map/config/adapter/<case>/` roots count as one home) are inside a
+#   declared phase scope. Test plan v1.5 adds no TC and no home, so the total is
+#   unchanged. The two additions over revision 1.2 are
+#   `tests/behaviour/verify-gates-config-document-adapter.test.ts` (phase 5
+#   scope.files) and the per-case adapter fixture roots under
+#   `tests/fixtures/verify-gates/suite-map/config/adapter/` (phase 5
+#   scope.folders `tests/fixtures/verify-gates/suite-map`), which carry the
+#   selected-but-missing and selected-but-unreadable roots as well as the
+#   document-content states. Three inputs are
+#   READ-ONLY and deliberately outside every scope, exactly as before: the
+#   delivered corpus control `tests/fixtures/verify-gates/corpus/cases.json`
+#   (read by Phase 1 and Phase 6, DoR F9), the delivered cross-repository golden
+#   `tests/fixtures/cross-repository/goldens/gates-members-green.json` and the
+#   other delivered goldens read unchanged, and the existing type-test config
+#   `tests/types/tsconfig.json` that Phase 2/4/6 invoke.
+#
+# PLAN-OWNED PINS AND RESIDUAL GAPS (nothing below invents a requirement; each
+#   item is either a plan decision inside a spec-declared freedom or a recorded
+#   inconsistency for its owner):
+#   P-1 (spec-pinned; no plan discretion) CONFIGURATION-DOCUMENT POSTURE. The
+#       document occupying the project-committed layer slot is classified
+#       fail-closed: absent (no selection in play and no committed document) and
+#       parsed-without-node are undeclared parity; a selection naming a missing
+#       or unreadable path is the delivered unusable-selector refusal, never
+#       parity; present-but-unreadable, unparseable-as-a-whole, and a defective
+#       map node are `config.value.invalid` at exit 1 with no `data`, before any
+#       gates source read; a schema or semantic defect elsewhere in the document
+#       is not interpreted, so it neither refuses the run nor removes a valid
+#       declaration, while a document-level parser failure anywhere (duplicate
+#       key, unsupported YAML tag, non-JSON scalar, non-mapping root, over-cap
+#       document) is the unparseable-as-a-whole refusal. The node is decided by
+#       the map's own resolver, the only validator for it; the catalog branch's
+#       whole-document outcome is never consumed here. One bounded resolution
+#       attempt (at most one existence probe, at most one content read); no
+#       overlay and no merged-tree read; no document or selection state yields a
+#       report, breadth fact, record, or pass except a resolved equality (DM-9,
+#       DEC-18, DEC-19, NFR-10, AC-F1-4, AC-F1-5, Appendix A rows 22 and 27).
+#       The former fail-open plan pin is withdrawn (DoR F1).
+#   P-2 (plan decision, sequencing; sanctioned exception) THE DOCUMENTED ERROR
+#       ROW LANDS IN PHASE 2, in the same commit as the code row, because the
+#       delivered two-way sync gate runs inside `pnpm test` and would otherwise
+#       fail a phase boundary. This is the one in-change current-truth edit C-10
+#       sanctions (Appendix A row 28, D-7): test plan v1.5's TC-SCTR-003
+#       precondition and §6.6 now state the same thing — the documented row, the
+#       135 -> 136 count assertion, and the true-positive corpus entry land in
+#       phase 2 before any boundary that runs the sync gate (DoR iteration-3
+#       finding 4) — and Phase 7 then reconciles only D-7's surrounding
+#       prose. The 135 -> 136 count, the live/mirrored assertion pair, and the
+#       true-positive corpus entry move together; every other current-truth
+#       reconciliation stays in Phase 7.
+#   P-3 (delivery hazard, not a spec gap) `.delivery-os/` IS LISTED IN THIS
+#       WORKTREE'S REPOSITORY-LEVEL `.git/info/exclude`, so a plain `git add`
+#       would silently leave the DM-8/DEC-17 reference declaration out of the
+#       commit while TC-SMAP-004 still passed against the working tree (a fake
+#       DoD-8). Phase 5 therefore declares the forced add and the
+#       `git ls-files --error-unmatch .delivery-os/config.yaml` gate assertion.
+#   P-4 (CLOSED — test plan v1.2 §9) The former TC-SNARR-001 `error.summary`
+#       contradiction is resolved: the narrowed envelope `error.summary` is the
+#       rendered failure-summary block (the delivered header plus one line per
+#       gate on the member-less path, and exactly one header line on the
+#       member-declaring path), the DM-5 one-sentence summary remains the row
+#       default asserted only on the table and its documented mirror, and
+#       `error.remediationHint` is the row's hint. This plan binds the spec v1.4
+#       reading (unchanged since v1.2); no obligation changes and no TC moved.
+#   P-5 (verification, not a gap) The suite-map node adds no byte bound of its
+#       own (DM-3): it is a node of the already-bounded configuration-document
+#       resolution attempt and every collection in it is capped, so no new
+#       document bound is declared and none is needed.
+#   P-6 (spec-pinned) GATE-SET POSTURE. The delivered `readGateSet` seam is
+#       untouched and production still supplies no declared gate set; the map
+#       read is independent and must not alter the battery for adopters. No
+#       config-declared `merge.gates` becomes live (NG-7, DEC-11, F-4).
+#   P-7 (spec-pinned) PARITY SCOPE. The undeclared-map parity claim covers only
+#       an absent document (no selection in play and no committed document) or
+#       one without the node; a selection naming a missing or unreadable path and
+#       every unusable document state are the AC-F1-4 refusal with no parity
+#       claim, and the outside-node tolerance is bounded to schema or semantic
+#       defects in exactly the other branches, keys, and values — never to a
+#       selection failure and never to document content the parser rejects
+#       (NFR-8, NFR-10, AC-NFR8-1, Appendix A rows 22 and 27).
+#   P-8 (plan decision, verification layering) THE DOCUMENT-CLASSIFICATION
+#       POSTURE HAS TWO WITNESSES AND EACH TC IS OWNED ONCE. Phase 4 owns
+#       TC-SMAP-006 — the handler branch over the injected configuration seam,
+#       which is the only shape that exists at that boundary — and Phase 5 owns
+#       TC-SMAP-008 — the real `readCommittedConfigDocument` composed as
+#       production composes it, with each case's `<root>` supplied through
+#       `FileAcquisitionInput.explicitProjectRoot`/`gitRoot` (or a path through
+#       its `selectedConfig`), so the only substituted seam is `FileSystemFacts`.
+#       Neither suite restates the other's assertions; the adapter suite fails an
+#       implementation that maps a read or parse failure to
+#       `{ok: true, declared: false}`, which is the shape the seam suite cannot
+#       distinguish (DoR iteration-2 finding 3; root input pinned in revision
+#       1.4 for DoR iteration-3 finding 3).
+#   P-9 (residual, declared not closed — added by revision 1.5) THE COMPOSITION
+#       PROOF'S CEILING. The production composer is injectable at its facts
+#       boundary (environment, cwd, homeDirectory, workingName) but not at its
+#       provider-read boundary, so the behavioural proof of the CLI map seam
+#       (8.6) pins the strongest observation the composed surface exposes: the
+#       classification and refusal paths that complete BEFORE any provider read
+#       (defective/unreadable/unparseable document, valid selection honoured or
+#       refused, narrowed member-declaring declaration). A composition that wired
+#       the map seam to a valid-equality declaration and then mis-read a provider
+#       fact cannot be distinguished from a correct one without provider
+#       injection, which is a change to the delivered composition surface this
+#       change does not make. If the 8.6 probe cannot reach even the
+#       pre-provider observation point, the residual widens accordingly and is
+#       recorded in pm-notes; the source-text assertions stay only as a labelled
+#       supplement and are never the proof. This residual is declared, not
+#       closed, and it is what keeps AC-F1-4/AC-F1-5's composition claim honest.
+#
+# RELEASE: one lockstep minor changeset over the five publishables
+#   (`@delivery-os/core`, `adapters`, `cli`, `mcp`, `opencode`) matching the
+#   GH-291/GH-310 precedent (version_impact: minor, spec §18). No new dependency,
+#   no data migration, no backfill, no record-shape change (DEC-9); rollback is a
+#   declaration change plus a changeset revert (spec §18, DEC-12).
+#
+# COMMIT DISCIPLINE: one commit per phase through the commit primitive; every
+#   `summary` below IS the commit subject (conventional `type(GH-300): ...`,
+#   <= 72 characters); body/footer lines <= 100 characters; phase-9 range gate
+#   `./scripts/lint-commit-range.sh --base main-tools` lints the whole branch.
+#
+# GATE ENVIRONMENT (measured, pm-notes, binding at every phase boundary):
+#   PATH=$PWD/node_modules/.bin:$PATH TMPDIR=$PWD/tmp/tmpdir \
+#   GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign \
+#   GIT_CONFIG_VALUE_0=false pnpm check
+#   Temporary fixture roots resolve under the git-ignored tmp/ tree; no suite
+#   reads a credential environment variable, provider socket, or network.
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-300
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8]
+  escalationTriggers:
+    - "A second mapping source would be added (workflow step parsing, a durable local-run record, or a matrix expansion); the declaration must stay the only record of CI breadth (NG-1, NG-2, DEC-1, OQ-1, OQ-2)"
+    - "The suite map would need an invocation flag, a third positional, or any grammar change; the delivered `verify gates <ref>` surface must not move (NG-3, AC-F5-5, DEC-1)"
+    - "A breadth fact would enter `merge.gate-verification` or the capsule `gate.outcome` payload, or a second append path would exist beside the delivered one (DM-7, DEC-7, DEC-9, NFR-5)"
+    - "A second error-table row, a new domain kind, or a reworded delivered row would be needed; the change carries exactly one row and one `detail` member (NFR-7, DEC-8, DM-5, DM-6)"
+    - "`suiteBreadth` would be derived from the local declaration, a union of jobs, or observed check-run names instead of the mirror job's declared `suites` in declared order (C-4, DEC-3, DEC-4)"
+    - "The narrowed header would name the local set, print more than eight identifiers without ` omitted=<n>`, change a delivered header token, or be truncated instead of the gate lines (DEC-15, C-12)"
+    - "A map-side refusal would put its cause in the envelope, reuse a command-supplied config summary, or write more than one error-stream `cause:` line (DEC-14, DEC-16, C-13)"
+    - "The map would add a source read, a transport call, a retry, or pagination; corroboration must reuse the single delivered workflow read (NFR-4, DEC-10, C-7)"
+    - "The map read would use the merged configuration acquisition, read any layer other than the project-committed document, treat a `${environmentPrefix}CONFIG` selection naming a missing or unreadable path as undeclared instead of the delivered unusable-selector refusal, or fail open on an unreadable, unparseable, or defective-node document — including through the real committed-document adapter, which must never map any such state to `{ ok: true, declared: false }` (DM-9, DEC-18, DEC-19, NFR-10, AC-F1-4, AC-F1-5, TC-SMAP-008)"
+    - "A config-declared `merge.gates` would become live, the shipped gate battery would change, or `readGateSet` would be sourced from configuration values (NG-7, DEC-11, AC-F5-1, AC-F5-3)"
+    - "An undeclared map would change any delivered byte, exit, summary, record, or human line; or parity would be claimed for an unusable document state (NFR-8, AC-F5-1, AC-NFR8-1, DEC-12)"
+    - "The reference declaration would resolve to a refusal, be committed only as a fixture, or silently stay untracked because `.delivery-os/` is locally excluded in this worktree (DM-8, DEC-17, DoD-8, RSK-4)"
+    - "A delivered verify-gates, config, result, MCP, cross-repository, or error-table suite would need a semantic assertion change outside the update rows this plan declares"
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  # ---------------------------------------------------------------------------
+  # Phase 1 — Pre-change parity baseline capture (no production edit).
+  #
+  # Goal: make the undeclared-map parity claim (AC-F5-1, AC-NFR8-1, NFR-8)
+  # provable by capturing the delivered behaviour BEFORE any suite-map code
+  # exists.
+  #
+  # Obligations:
+  #   1.1 Capture at branch base 8a1f77ad with the production tree untouched:
+  #       `git diff --quiet 8a1f77ad -- packages scripts` must succeed at the
+  #       capture point. No file under packages/ may be edited in this phase.
+  #   1.2 Capture ALL 48 delivered corpus cases (tests/.../corpus/cases.json)
+  #       in JSON mode and in human mode with NO map, recording
+  #       {caseId, mode, stdout, stderr, exitCode} and, where a case appends,
+  #       the appended `merge.gate-verification` record bytes. This is the
+  #       absent-document state; it is also the reference for the
+  #       parsed-without-node state (both are undeclared and byte-identical).
+  #   1.3 Record provenance inside the fixture: base sha "8a1f77ad", corpus
+  #       case count 48, the two modes, the exact capture command, and the
+  #       capture timestamp (a fixed literal, never a moving clock read at
+  #       assertion time).
+  #   1.4 Read the delivered goldens unchanged: success-data.json,
+  #       human-success.txt, failure-summary.txt. No regeneration anywhere in
+  #       this change except with a review-visible diff and a recorded reason.
+  #   1.5 Sanitization and privacy: no absolute home path, no secret, no
+  #       machine-specific path in the captured bytes; the existing guards must
+  #       stay green with the new fixture present.
+  #   1.6 Parity scoping: the baseline carries no entry for an unusable document
+  #       state (unreadable, unparseable, defective node); those states are the
+  #       AC-F1-4 refusal (TC-SMAP-006 at the seam, TC-SMAP-008 through the real
+  #       adapter) and Phase 6's scope manifest classifies them explicitly, so a
+  #       later regeneration cannot reclassify one as parity (NFR-8, AC-NFR8-1).
+  #   1.7 The capture command and the baseline provenance go into pm-notes by
+  #       the PM lane (this phase writes no pm-notes file).
+  #
+  # AC/TC: enables AC-F5-1 / TC-SPAR-001 and AC-NFR8-1 / TC-SPAR-006 (both
+  #   owned by Phase 6); owns no complete TC.
+  #
+  # Gate:
+  #   bun test tests/checks/fixture-sanitization.test.ts
+  #   bun test tests/checks/verify-gates-no-live-calls.test.ts
+  #   bun test tests/golden/verify-gates.test.ts
+  #   bun test tests/behaviour/verify-gates-corpus.test.ts
+  #   git diff --quiet 8a1f77ad -- packages scripts
+  #
+  # Suites left green: fixture-sanitization (new capture scanned),
+  #   verify-gates-no-live-calls (delivered control), verify-gates golden
+  #   (delivered control, unchanged), verify-gates-corpus (48 cases,
+  #   unchanged), plus the production tree proven unedited against the base.
+  # ---------------------------------------------------------------------------
+  - id: 1
+    title: "Pre-change parity baseline capture with provenance, before any production edit"
+    kind: delivery
+    summary: "test(GH-300): capture the undeclared-map parity baseline"
+    scope:
+      folders:
+        - tests/fixtures/verify-gates/suite-map
+
+  # ---------------------------------------------------------------------------
+  # Phase 2 — The contract layer: constants, types, error row, config branch,
+  # the document-classification vocabulary, and the pure declaration resolver.
+  #
+  # Goal: land every pinned contract literal and the closed declaration
+  # resolution, with NO runtime behaviour change. The handler still runs exactly
+  # as delivered at this boundary: nothing reads a map yet, so no intermediate
+  # commit can produce a breadth claim or a narrowed refusal.
+  #
+  # Obligations:
+  #   2.1 Six constants, each declared exactly once, in
+  #       packages/core/src/contracts/verify-gates.ts beside the delivered
+  #       VERIFY_GATES_* bounds, exported through contracts/index.ts and the core
+  #       index (DM-3):
+  #         VERIFY_SUITE_MAP_SCHEMA_VERSION   = "delivery.verify.suite-map.v1"
+  #         VERIFY_SUITE_MAP_CONFIG_KEY       = "verify.suite-map"
+  #         VERIFY_SUITE_MAP_MAX_JOBS         = 64
+  #         VERIFY_SUITE_MAP_MAX_SUITES_PER_JOB = 32
+  #         VERIFY_SUITE_MAX_BREADTH          = 32
+  #         VERIFY_SUITE_MAX_ID_CHARS         = 64
+  #       plus the single suite-id pattern literal `^[a-z][a-z0-9-]*$`. The job
+  #       name bound REUSES VERIFY_GATES_MAX_EXPECTED_JOB_NAME_CHARS (120) and
+  #       is never redeclared; the narrowed header REUSES
+  #       VERIFY_GATES_MAX_CITATION_NAMES (8), VERIFY_GATES_MAX_SUMMARY_LINES (6),
+  #       and VERIFY_GATES_MAX_SUMMARY_BYTES (4096). No node-byte bound is added.
+  #   2.2 The DM-1 declaration types (`VerifySuiteMap`, `VerifySuiteMapJob`) and
+  #       the closed resolution union, with the four-outcome vocabulary of DM-4
+  #       declared as a closed list (the breadth resolver itself lands in
+  #       Phase 3, its vocabulary is fixed here so Phase 3 adds no literal).
+  #   2.3 `resolveVerifySuiteMap(raw)` and `resolveVerifySuiteMapFromConfig
+  #       (values)` in packages/core/src/domain/verify-gates-suite-map.ts:
+  #       pure, no I/O, no clock, no environment; the config form reads only
+  #       `values.verify["suite-map"]` from the parsed document and never
+  #       consumes a whole-document catalog-resolution outcome; ABSENT is
+  #       `declared: false` and no default map is ever invented (DM-1, DEC-2,
+  #       DEC-11, DEC-18).
+  #   2.4 Every DM-1 defect refuses as the delivered `config.value.invalid`:
+  #       missing/unsupported schemaVersion, missing or undeclared top-level key,
+  #       non-list or empty `jobs`/`local`, over-cap lists (64/32/32), missing or
+  #       undeclared entry key, non-string/empty/121-character `job`, a `job`
+  #       carrying a control character or a line break, a `job` with leading or
+  #       trailing whitespace, duplicate `job`, empty `suites`, identifier
+  #       grammar/length failure, duplicate identifier in one `suites` list or in
+  #       `local`. The `job` class is the single-line printable class of
+  #       Appendix A rows 4 and 26 (1..120 characters, no control characters, no
+  #       leading or trailing whitespace, compared by exact string match), so a
+  #       declaration can never break the one-line header or the one-line
+  #       `cause:` grammar. Absent is never a defect.
+  #   2.5 Two additive optional report-root fields on BOTH report types
+  #       (`suiteBreadth?: readonly string[]`, `mirrorsJob?: string`) — types
+  #       only in this phase, appended after every delivered key so the delivered
+  #       prefix stays byte-identical (DM-2, DEC-4).
+  #   2.6 `CommandResultDetail` gains `suiteBreadth?: readonly string[]` beside
+  #       the unchanged `holder`; the closed set becomes exactly
+  #       {holder, suiteBreadth}; never an open key-value map (DM-6, DEC-8). The
+  #       new member's bound is its OWN declaration — VERIFY_SUITE_MAX_BREADTH
+  #       (32) entries of at most VERIFY_SUITE_MAX_ID_CHARS (64) characters —
+  #       and it does NOT reuse COMMAND_FAILURE_DETAIL_MAX_CHARS (128), which
+  #       stays the `holder` bound and is never widened or reinterpreted.
+  #   2.7 One ERROR_TABLE row under the existing `verify` kind with the DM-5
+  #       fields verbatim: code `verify.narrowed-scope`, category `user`,
+  #       retryable false, consequence `not_landed`, projectionClass
+  #       `user-validation`, summary "The local gate breadth is narrower than
+  #       the CI job it mirrors.", and the pinned remediation hint. The `verify`
+  #       kind moves 6 -> 7 identities and `verify gates` 2 -> 3 rows; no domain
+  #       kind is added and no delivered row is reworded (NFR-7, DM-5).
+  #   2.8 The documented mirror row lands in the SAME commit as the code row,
+  #       because the two-way sync gate binds them: add the
+  #       `verify.narrowed-scope` row to doc/spec/features/feature-result-contract
+  #       .md, move the documented count sentence 135 -> 136, update the live
+  #       assertions (tests/structure/error-table.test.ts,
+  #       tests/checks/error-table-sync.test.ts) to 136/136, and add one
+  #       true-positive corpus entry in
+  #       tests/fixtures/result/code-corpora/true-positives.json. The delivered
+  #       rows are deep-equal to their pre-change snapshots. Landing the row
+  #       here satisfies TC-SCTR-003's "no later than phase 7" sequencing
+  #       dependency without deferring the sync gate past a green boundary, and
+  #       it is the ONE current-truth edit C-10 sanctions (Appendix A row 28,
+  #       D-7); no other documentation surface moves in this phase.
+  #   2.9 The configuration catalog declares one `verify` branch whose only key
+  #       is `suite-map`, default ABSENT, no invented default map, and no new
+  #       read of any kind (DM-1, §8.3 item 6). tests/structure/
+  #       verify-gates-suite-map-contract.test.ts proves the branch exists
+  #       exactly once and that the delivered catalog key order/default artefact
+  #       expectations were updated, not bypassed. The catalog schema keeps the
+  #       document valid for every other consumer that resolves the merged tree;
+  #       it is NOT a validator for this node — it cannot express the identifier
+  #       grammar, the length and cap bounds, or list uniqueness — and the gates
+  #       surface never consumes its whole-document resolution for the map
+  #       (DEC-18, DM-9).
+  #   2.10 Register the new domain module in tests/structure/inventory.json and
+  #        the content-inventory expectations; assert no new import edge beyond
+  #        contracts -> domain (verify-gates-imports), and keep exports parity
+  #        green (verify-gates-exports).
+  #   2.11 Type contract: both report types carry the two optional fields, the
+  #        report union stays discriminated by `definitionOfDone`, the `detail`
+  #        member is optional and closed, and no gate-record or citation type
+  #        gained a field (tests/types/verify-gates-suite-map.type-test.ts).
+  #   2.12 The seam's closed read vocabulary is declared here, without any I/O:
+  #        `VerifySuiteMapRead` (declared / undeclared / `config.value.invalid`)
+  #        and the document-classification arm names from DM-9 (absent with no
+  #        selection in play, selected-but-missing-or-unreadable,
+  #        parsed-no-node, parsed-valid, defective-node, unreadable, unparseable,
+  #        defect-elsewhere). This fixes the vocabulary Phase 4 consumes and
+  #        Phase 5 maps one bounded configuration-document resolution attempt
+  #        into (DM-9, DEC-18, AC-F1-4, NFR-10).
+  #
+  # AC/TC: owns TC-SCTR-003 (AC-NFR7-1). Proves the static halves of AC-NFR1-1
+  #   (detail key set), AC-F2-3 (field types), AC-F1-1/AC-F1-2/AC-F1-4 (pure
+  #   resolver and node extraction).
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/structure/verify-gates-suite-map-contract.test.ts
+  #   bun test tests/structure/config-contract.test.ts
+  #   bun test tests/structure/error-table.test.ts
+  #   bun test tests/structure/delivery-result-contract.test.ts
+  #   bun test tests/structure/result-contract.test.ts
+  #   bun test tests/structure/envelope-contract.test.ts
+  #   bun test tests/structure/verify-gates-contract.test.ts
+  #   bun test tests/behaviour/config-schema.test.ts tests/behaviour/config-cli.test.ts
+  #   bun test tests/checks/config-default-positions.test.ts
+  #   bun test tests/checks/error-table-sync.test.ts
+  #   bun test tests/behaviour/verify-gates-suite-map.test.ts
+  #   bun test tests/structure/verify-gates-exports.test.ts
+  #   bun test tests/structure/verify-gates-imports.test.ts
+  #   bun test tests/structure/content-inventory.test.ts
+  #   bun run scripts/checks/error-table-sync.ts
+  #   bun run scripts/checks/exports-parity.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  #   pnpm exec tsc -p tests/types/tsconfig.json
+  #
+  # Suites left green: verify-gates-suite-map-contract (constants, types, error
+  #   row, branch, read vocabulary), config-contract/config-schema/config-cli/
+  #   config-default-positions (the new branch, updated expectations), error-table
+  #   + error-table-sync (136/136, true positive recognized), result-contract/
+  #   delivery-result-contract/envelope-contract (closed detail set), verify-gates
+  #   -contract, verify-gates-exports/imports, content-inventory, the pure
+  #   suite-map resolver cases, exports-parity, ambient-globals, and the type
+  #   tests.
+  # ---------------------------------------------------------------------------
+  - id: 2
+    title: "Contract layer: suite constants and types, the verify.narrowed-scope row, the verify config branch, the document-classification vocabulary, and the pure declaration resolver"
+    kind: delivery
+    summary: "feat(GH-300): declare the suite-map contract and config branch"
+    scope:
+      files:
+        - packages/core/src/contracts/verify-gates.ts
+        - packages/core/src/contracts/result.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/contracts/config.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/config/catalog.ts
+        - packages/core/src/domain/verify-gates-suite-map.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - doc/spec/features/feature-result-contract.md
+        - tests/structure/verify-gates-suite-map-contract.test.ts
+        - tests/structure/verify-gates-contract.test.ts
+        - tests/structure/verify-gates-exports.test.ts
+        - tests/structure/verify-gates-imports.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/config-contract.test.ts
+        - tests/structure/error-table.test.ts
+        - tests/structure/delivery-result-contract.test.ts
+        - tests/structure/result-contract.test.ts
+        - tests/structure/envelope-contract.test.ts
+        - tests/checks/error-table-sync.test.ts
+        - tests/checks/config-default-positions.test.ts
+        - tests/behaviour/config-schema.test.ts
+        - tests/behaviour/config-cli.test.ts
+        - tests/behaviour/verify-gates-suite-map.test.ts
+        - tests/types/verify-gates-suite-map.type-test.ts
+        - tests/fixtures/result/envelope-key-set.json
+        - tests/fixtures/result/code-corpora/true-positives.json
+      folders:
+        - tests/fixtures/verify-gates/suite-map
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/verify-gates.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/result.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 — The pure evaluation core: node extraction, the four-outcome
+  # breadth rule, and the two pinned renderers.
+  #
+  # Goal: make breadth decidable, total, and renderable as pure domain code with
+  # no runtime wiring. Nothing in this phase can emit output: no handler, no
+  # edge, no MCP call site changes.
+  #
+  # Obligations:
+  #   3.1 `resolveVerifySuiteBreadth({ map, workflow })` in
+  #       packages/core/src/domain/verify-gates-suite-map.ts returns exactly one
+  #       closed outcome (DM-4, DEC-3, DEC-5):
+  #         { kind: "not-evaluated" }                     workflow not validly read
+  #         { kind: "equal"; mirrorsJob; suiteBreadth }    reportable
+  #         { kind: "narrower"; mirrorsJob; mirrorBreadth } refuse
+  #         { kind: "unmirrored" }                         config.value.invalid
+  #         { kind: "uncorroborated"; mirrorsJob }         config.value.invalid
+  #       `not-evaluated` is the workflow precondition, NOT a fifth breadth
+  #       outcome: when the workflow is absent, unreadable, empty, duplicate, or
+  #       over-cap, no breadth outcome exists and the delivered
+  #       `verify.gates.failed` path stays in force (AC-F4-1).
+  #   3.2 Resolution order is declared order and set semantics: exact set match
+  #       first (order-insensitive), mirror = FIRST such job; otherwise the first
+  #       job whose set is a STRICT superset; otherwise unmirrored. The citation
+  #       uses the mirror's declared `suites` order. No sort, digest, union,
+  #       partial match, check-run-derived attribution, or invented tie-break.
+  #   3.3 Corroboration is exact string equality against the read job-name set:
+  #       no case folding, trimming, or punctuation normalization; a near-match
+  #       is `uncorroborated` (AC-F1-3, DEC-5).
+  #   3.4 One header source. Extract the delivered header formula
+  #       `result=<fail or unknown>; gates=<p>/<t> passed, <f> failed,
+  #       <u> unknown` from renderVerifyGatesFailureSummary into a shared private
+  #       helper and add `renderVerifyGatesNarrowedFailureSummary(evaluation,
+  #       mirrorsJob, mirrorBreadth)`. The delivered renderer's bytes must stay
+  #       identical (proven by the unchanged `failure-summary.txt` golden and the
+  #       parity suite); the narrowed renderer appends exactly
+  #       `; scope=narrowed mirror=<job> breadth=<id[,id]*>[ omitted=<n>]`
+  #       (DEC-15, Appendix A rows 9 and 19):
+  #         - one `; ` between segments, one ASCII space between tokens;
+  #         - `<job>` verbatim (spaces preserved, never quoted, escaped,
+  #           case-folded, trimmed, or truncated), terminated by the final
+  #           literal ` breadth=`. The resolver guarantees this is safe: `job` is
+  #           the single-line printable class, so it can carry neither a line
+  #           break nor a control character (Appendix A rows 4 and 26);
+  #         - identifiers are the MIRROR's declared breadth in declared order,
+  #           `,`-delimited with no spaces, never the local set (C-12);
+  #         - 0 identifiers unreachable, 1..8 printed with no marker, 9..32 =
+  #           first eight + ` omitted=<n>` counting only unprinted identifiers;
+  #         - `result=` reuses the delivered formula verbatim (fail when the
+  #           battery overall is fail, else unknown), so an all-pass narrow
+  #           battery renders `result=unknown`;
+  #         - the header is NEVER truncated; the delivered name-budget shrink
+  #           applies to the gate lines only; six lines and 4096 bytes hold;
+  #         - the member-declaring path renders the same formula over ZERO
+  #           evaluated gates (`result=unknown; gates=0/0 passed, 0 failed,
+  #           0 unknown`) plus the pinned segment, exactly one line
+  #           (AC-F3-6, TC-SNARR-006).
+  #   3.5 `renderSuiteMapCauseLine(outcome)` renders the one bounded
+  #       identifier-only payload `mirror=<job>` (uncorroborated) or
+  #       `breadth=<id[,id]*>[ omitted=<n>]` (unmirrored) reusing 3.4's
+  #       identifier grammar; one physical line, never multi-line, never
+  #       truncated inside an identifier; bounds are DERIVED, never new
+  #       constants: <= 14 + 120 = 134 characters (mirror form) and
+  #       <= 15 + 8x64 + 7 + 9 + 2 = 545 characters (breadth form) (DEC-16,
+  #       Appendix A row 20).
+  #   3.6 Report-field projection: the pure evaluators accept an optional
+  #       breadth fact and append `suiteBreadth` then `mirrorsJob` after the
+  #       delivered keys of each report type (delivered prefix byte-identical,
+  #       DM-2). On the cross-repository report the values describe the invoking
+  #       repository's declaration and are member-independent — never inside a
+  #       member record and never inside a citation (NG-6, DEC-4).
+  #   3.7 Purity: no I/O, clock, randomness, or environment; ambient-globals and
+  #       the dependency-cruiser boundaries stay green (core takes no adapter
+  #       dependency, NFR-3).
+  #   3.8 Pure node extraction: one helper takes the parsed configuration
+  #       document and returns the `verify["suite-map"]` node or "absent", and
+  #       interprets nothing else in the document — no sibling branch, key, or
+  #       value is validated, so a schema or semantic defect elsewhere can
+  #       neither refuse the run nor remove a valid declaration. Tolerance stops
+  #       at the parser: an unparseable document, a duplicate key, an unsupported
+  #       YAML tag, a non-mapping root, or an over-cap document is rejected
+  #       before this helper is reached and is the unparseable-as-a-whole
+  #       refusal, because no node can be read out of a document the parser
+  #       rejects (DM-9, DEC-18, AC-F1-4, Appendix A rows 22 and 27). It performs
+  #       no I/O; the single bounded configuration-document resolution attempt is
+  #       Phase 5's adapter.
+  #
+  # AC/TC: proves the pure halves of AC-F1-1, AC-F1-2, AC-F1-3, AC-F1-4,
+  #   AC-F2-1, AC-F2-3, AC-F3-1, AC-F3-5, AC-F3-6, AC-F4-1, AC-F4-2, AC-F4-3,
+  #   AC-F4-4, AC-NFR2-1; owns no complete TC (the CLI-level halves belong to Phase 4,
+  #   the parity and determinism halves to Phase 6). The four-outcome totality
+  #   matrix, the exact-match predicate, the order-witness data set, and the
+  #   member-mode one-line renderer all have their pure data sets here and are
+  #   owned end-to-end by Phase 4.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/verify-gates-suite-map.test.ts
+  #   bun test tests/behaviour/verify-gates-suite-map-corpus.test.ts
+  #   bun test tests/structure/verify-gates-suite-map-contract.test.ts
+  #   bun test tests/golden/verify-gates.test.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  #   pnpm exec depcruise packages
+  #
+  # Suites left green: the pure halves of suite-map and suite-map-corpus, the
+  #   contract suite (node extraction + outcome vocabulary + renderers), the
+  #   delivered verify-gates golden proving the header refactor moved no byte,
+  #   ambient-globals, and the package boundaries.
+  # ---------------------------------------------------------------------------
+  - id: 3
+    title: "Pure evaluation core: node extraction, the four-outcome breadth rule, exact corroboration, and the pinned narrowed-header and cause-line renderers"
+    kind: delivery
+    summary: "feat(GH-300): resolve suite breadth and render the narrowed summary"
+    scope:
+      files:
+        - packages/core/src/domain/verify-gates-suite-map.ts
+        - packages/core/src/domain/verify-gates.ts
+        - packages/core/src/domain/verify-gates-members.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - tests/behaviour/verify-gates-suite-map.test.ts
+        - tests/behaviour/verify-gates-suite-map-corpus.test.ts
+        - tests/structure/verify-gates-suite-map-contract.test.ts
+        - tests/golden/verify-gates.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/verify-gates-suite-map.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 4 — Runtime wiring: the seam, the fail-closed document classification,
+  # the handler on both report paths, the CLI projection, and the MCP command
+  # mirror — the whole breadth behaviour in ONE commit.
+  #
+  # Goal: turn the pure rule into the observable contract. Equality reports, a
+  # narrowing refuses, an unattributable declaration refuses, an unusable
+  # document refuses before any source read, an invalid workflow keeps the
+  # delivered path. This phase is deliberately the ONLY phase that changes
+  # runtime behaviour: a narrowed declaration must never be able to produce a
+  # full-green report in any committed state (no false pass, AC-F3-1..AC-F3-6,
+  # NFR-6).
+  #
+  # Obligations:
+  #   4.1 Seam (pinned shape, see OQ-T4 RESOLUTION): optional `readSuiteMap`
+  #       beside the untouched `readGateSet` on VerifyGatesCommandRuntime,
+  #       optional on VerifyGatesRuntimeOptions, edge default
+  #       `{ ok: true, declared: false }`, and the same optional seam on
+  #       GateReportToolRuntime. The seam performs no I/O: the read it exposes is
+  #       the composition's single bounded configuration-document resolution
+  #       attempt. The gate-set seam is
+  #       NOT wired to configuration values and the delivered default
+  #       (shipped five) is unchanged (NG-7, DEC-11).
+  #   4.2 Handler order (packages/cli/src/commands/verify-gates.ts). The
+  #       delivered prologue is grammar -> `readGateSet()` -> `readMembers(ref)`;
+  #       this phase keeps it and places the map classification immediately after
+  #       grammar, before every gates source read:
+  #         grammar
+  #         -> readSuiteMap classification (the ONE bounded configuration-document
+  #            resolution attempt of this invocation): [absent (no selection in
+  #            play and no committed document) / no node: undeclared, continue |
+  #            selection names a missing or unreadable path: the delivered
+  #            unusable-selector `config.value.invalid` refusal |
+  #            unreadable / unparseable / defective node: `config.value.invalid`,
+  #            exit 1, no `data`, NO `cause:` line, before any ledger,
+  #            repository, workflow, or provider read]. "Absent" is the
+  #            no-selection, no-committed-document state; a SELECTED path that is
+  #            missing or unreadable is the delivered unusable-selector refusal
+  #            (TDR-0003, see SELECTED-FILE RESIDUAL below), never undeclared.
+  #         -> readGateSet() (delivered, untouched, ZERO I/O, shipped five)
+  #         -> members.readMembers(ref) (the plan-declaration read, delivered)
+  #         -> the ONE workflow read, hoisted (see THE HOIST below)
+  #         -> breadth resolution: [unmirrored / uncorroborated:
+  #            `config.value.invalid` + the one cause line, NO append, NO
+  #            capsule | not-evaluated (invalid workflow): delivered
+  #            `verify.gates.failed` path, no breadth | equal / narrower:
+  #            continue]
+  #         -> member-declaring path: a narrower declaration refuses HERE, then
+  #            crossRepositoryEvaluation(repository/lifecycle/work-item reads and
+  #            the per-member bundle) -> report -> append -> capsule
+  #         -> member-less path: battery evaluation over the delivered reads
+  #            (repository, lifecycle, detail, check-run, open-PR, work-item —
+  #            the workflow read is the one already performed) -> (narrower:
+  #            refusal with the six-line summary) -> equality -> append +
+  #            capsule -> report with the two fields
+  #       `readGateSet` IS listed because the delivered handler invokes it; it is
+  #       a zero-I/O injected seam that returns the shipped five, it is NOT a
+  #       gates source read and NOT configuration input, and this change neither
+  #       sources it from configuration values nor moves it (NG-7, DEC-11). It
+  #       must never be confused with the one configuration-document resolution
+  #       attempt this change adds.
+  #       THE HOIST (member-declaring path only): `runtime.readRepository()` and
+  #       `runtime.readWorkflow()` currently live inside `crossRepositoryEvaluation`,
+  #       and the workflow job-name set is exactly what breadth corroboration
+  #       needs. Of those two, only the WORKFLOW read is hoisted, to before the
+  #       breadth decision on that path; the already-read facts are passed in, so
+  #       `crossRepositoryEvaluation` performs only its remaining reads
+  #       (repository, lifecycle/ledger, work item) and the per-member bundle.
+  #       The repository read therefore stays AFTER the refusal on that path,
+  #       which is why a narrowed member-declaring run performs no repository
+  #       read. The workflow read stays ONE bounded read — no path reads it twice
+  #       and nothing doubles the budget (NFR-4, AC-F5-4, C-7).
+  #       MEMBER-READ POSTURE (AC-F3-6): on a narrower declaration the
+  #       per-member read bundle (`members.readMemberReads`, one bounded call per
+  #       member) is never invoked, so a throwing member recorder observes zero
+  #       calls; `runtime.appendVerification(record)` is never reached, so no
+  #       ledger append and no capsule event occur, and the data-bearing
+  #       `overall: "fail"` report, every member verdict, and every
+  #       `definitionOfDone.status` are unreachable. The refusal is decided
+  #       BEFORE the bundle, not after it (DEC-6, DEC-7, C-17).
+  #       SELECTED-FILE RESIDUAL (DEC-19, RSK-11): the delivered channel that
+  #       can occupy the committed slot is the `${environmentPrefix}CONFIG`
+  #       environment selector (TDR-0003; brand-derived, i.e.
+  #       `DELIVERY_OS_CONFIG` for this repository's working name). It is the
+  #       ONLY reachable selection input for this grammar: `verify` declares
+  #       `flags: []`, so `--config` is `fallback.invocation` and never reaches
+  #       the handler. When the selector names an existing readable file, that
+  #       file is the document read and classified; when it names a MISSING or
+  #       unreadable path, delivered selection semantics apply and the run is the
+  #       unusable-selector `config.value.invalid` refusal — never the
+  #       absent/undeclared parity path; when it is unset, the read resolves
+  #       `<root>/<configDirectoryName>/config.yaml`. This plan adds no selection
+  #       arm, reinterprets no selection semantics, and claims no closure of the
+  #       residual.
+  #       ROOT INPUT (DoR iteration-3 finding 3): `<root>` is not a test-only
+  #       knob. `readCommittedConfigDocument` takes the delivered
+  #       `FileAcquisitionInput` shape, so a caller supplies `<root>` as
+  #       `explicitProjectRoot`, falling back to `gitRoot` — the same pair
+  #       `acquireFileConfig` resolves (`explicitProjectRoot || gitRoot`) — and
+  #       supplies a selection as `selectedConfig`; `FileSystemFacts` (`exists`,
+  #       `readText`) is the ONLY other substitution, which is what keeps "the
+  #       only substitution is `FileSystemFacts`" literally true for the
+  #       adapter's code path. Phase 5's per-case adapter roots (TC-SMAP-008) use
+  #       exactly those inputs and never mutate the process cwd.
+  #   4.3 Document-state matrix (TC-SMAP-006, the injected boundary): the injected
+  #       read classifies every state exactly once — absent (no selection in play,
+  #       no repository root or no file) and parsed-without-node are undeclared
+  #       parity; a selection naming a missing or unreadable path is the delivered
+  #       unusable-selector `config.value.invalid` refusal and never parity;
+  #       present-but-unreadable, unparseable-as-a-whole, and a defective map
+  #       node are `config.value.invalid`, with the node defect decided by the
+  #       map resolver alone (the only validator for this node); a schema or
+  #       semantic defect elsewhere in the document is not interpreted and an
+  #       otherwise valid declaration still reports, while a parser-level failure
+  #       anywhere is the unparseable-as-a-whole refusal. A structural map defect
+  #       writes NO `cause:` line; the delivered config-shaped summary/hint
+  #       suppression is untouched; no document state yields a report, breadth
+  #       fact, record, capsule event, or pass except a resolved equality. The
+  #       classification is asserted before any source read by a recording
+  #       runtime (DM-9, DEC-18, NFR-10, AC-F1-4). This obligation is the HANDLER
+  #       BRANCH only: the same posture through the real adapter is Phase 5's
+  #       TC-SMAP-008, which is the only suite that can fail a fail-open adapter
+  #       mapping (P-8).
+  #   4.4 Narrowed refusal envelope: exit 1, no `data`, `error.code`
+  #       `verify.narrowed-scope`, `error.category` `user`, `error.retryable`
+  #       false, `error.consequence` `not_landed`, `error.remediationHint` the
+  #       row's hint, `error.summary` = the narrowed six-line block (member-less
+  #       path) or the one-line block (member-declaring path), and
+  #       `detail.suiteBreadth` = the COMPLETE local declaration in declared
+  #       order, never truncated (<= 32 x <= 64). The domain kind is an error-table
+  #       column and a handler discriminant only: NO `kind` member is added to the
+  #       envelope or to any tool result, and the kind is asserted only through
+  #       the error table (AC-NFR7-1, Appendix A rows 7 and 25). The observable
+  #       surface is exactly those five `error` fields, `detail.suiteBreadth`,
+  #       and the exit (DM-5, DM-6, AC-F3-1, AC-F3-5, AC-F3-6).
+  #   4.5 CLI projection (packages/cli/src/index.ts):
+  #       - `explicitDetail` honours `suiteBreadth` beside the unchanged
+  #         `holder`: array of <= 32 identifiers, each 1..64 chars matching the
+  #         suite-id grammar, no control characters; a malformed, over-bound, or
+  #         non-array value is NEVER projected and NEVER clipped. The member is
+  #         validated by its own declared bound (DM-6), never by the delivered
+  #         `holder` bound, and its presence never displaces `holder` for a
+  #         holder-carrying refusal (TC-SCTR-002);
+  #       - an `explicitCause` reader honours `cause` ONLY when the resolved code
+  #         is `config.value.invalid` and the payload matches the two pinned
+  #         grammars within the derived bounds (134 / 545); no other failure may
+  #         carry one;
+  #       - `diagnosticFor` writes exactly `<binary>: <code>` then
+  #         `cause: <payload>` for those two refusals and nothing else; the
+  #         config-shaped summary/hint suppression is untouched, so the envelope
+  #         keeps the table's own prose and no `detail` (DEC-14, DEC-16);
+  #       - the delivered `<binary>: <code>` / `summary:` rendering and every
+  #         other failure's stderr bytes are unchanged.
+  #   4.6 Report assembly: the CLI success `data` and the cross-repository report
+  #       append `suiteBreadth` then `mirrorsJob` after their delivered keys; the
+  #       fields are present together on equality and absent on every other
+  #       outcome (both report types, DM-2). `suiteBreadth` reproduces the
+  #       mirror's declared order even when `local` is set-equal but ordered
+  #       differently (AC-F2-1, AC-F2-3, DEC-3, DEC-4, C-4).
+  #   4.7 Preserved surfaces: one `merge.gate-verification` append and one
+  #       non-gating capsule `gate.outcome` event on a non-refused full
+  #       evaluation (pass OR gate failure), ZERO on a narrowed or configuration
+  #       refusal; record shape, schema, closed gate-record key set, gate-set
+  #       identity, capsule payload, gate ids/order/verdicts/reasons/citations,
+  #       CI-gate conditions, exits, and the invocation grammar unchanged
+  #       (DM-7, DEC-7, DEC-9, DEC-10, AC-F5-2, AC-F5-5).
+  #   4.8 MCP command mirror (packages/mcp/src/commands/gate-report.ts): the tool
+  #       gains the same optional `readSuiteMap`, the same breadth resolution
+  #       and refusal, and the same two data fields; the input schema stays
+  #       exactly `{ ref }` with no additional properties and the tool catalog
+  #       stays `status`, `verify-artifact`, `gate-report` (§8.1, TC-SCITE-004).
+  #       The shipped composition that supplies the read is Phase 5 (DEC-20).
+  #   4.9 Shared harness: tests/fixtures/verify-gates/cases/harness.ts gains an
+  #       optional `suiteMap` override plus a `configDocument` outcome override
+  #       (absent with no selection in play / no-node / selected-but-missing /
+  #       selected-but-unreadable / unreadable / unparseable / defective-node /
+  #       defect-outside-node) whose DEFAULT stays undeclared, so every existing
+  #       suite keeps the delivered path and no delivered fixture needs a new
+  #       argument. The two selected-but-* arms are selection failures and are
+  #       asserted on the refusal side, never the parity side (spec v1.4
+  #       AC-F1-4 carve-out).
+  #   4.10 First-capture goldens (no pre-change reference; generated by this
+  #        implementation, reviewed as a diff, then asserted byte-for-byte):
+  #        suite-map-success-data.json, suite-map-success-data-reordered.json,
+  #        suite-map-human-success.txt, suite-map-narrowed-envelope.json,
+  #        suite-map-narrowed-member-envelope.json, suite-map-cause-mirror.txt,
+  #        suite-map-cause-breadth.txt. The DEC-15 header grammar and the DEC-16
+  #        cause grammar are ALSO asserted independently and byte-exactly in
+  #        TC-SNARR-001/003/005/006 and TC-SRES-002/003, so a golden can never
+  #        mask a grammar drift.
+  #   4.11 Fixtures: the declaration corpus (valid equality, equality with a
+  #        reordered `local` for the order witness, two-equal, narrowed, wider,
+  #        disjoint, mirror-absent, maximal narrowing, 32-entry projection, one
+  #        builder per structural/cap/grammar/duplicate defect), the end-to-end
+  #        configuration documents for the document-state matrix — including the
+  #        `${environmentPrefix}CONFIG` selection set for step 1(c): a path that
+  #        does not exist and a path that exists but cannot be read — and the
+  #        three workflow fixtures (mirror-present, mirror-absent,
+  #        case-variants).
+  #   4.12 Member-path parity (TC-SNARR-006): a narrowed declaration on a
+  #        two-member change refuses before any member read (a throwing recorder
+  #        wired to `members.readMemberReads`, the delivered per-member bundle,
+  #        observes zero calls while the plan-declaration read has already run as
+  #        the control),
+  #        with the same identity/exit/`detail`, exactly the one-line member-mode
+  #        summary, no `definitionOfDone`/`blockingMembers[]`/`reviewFlow`/
+  #        member-bearing record anywhere, no appended record, no capsule event,
+  #        and no `cause:` line (AC-F3-6, DEC-6, DEC-7, C-17).
+  #   4.13 Order witness (TC-SCITE-006): an equality fixture whose `local` is
+  #        set-equal to the mirror's `suites` but reversed (plus a third
+  #        permutation) proves `data.suiteBreadth` follows the mirror's declared
+  #        order at every position and fails if copied from `local`
+  #        (AC-F2-1/AC-F2-3, DEC-3, DEC-4, C-4).
+  #   4.14 Bounded-read claim at the seam: the handler calls `readSuiteMap` at
+  #        most once per invocation, and the injected read represents exactly ONE
+  #        bounded configuration-document resolution attempt — at most one
+  #        stat-class existence probe and at most one bounded content read, with
+  #        zero content reads when neither a selected nor a committed path exists
+  #        — and it introduces no overlay/merged-tree/other-layer read
+  #        (NFR-4, NFR-10, DEC-18, DEC-19).
+  #
+  # AC/TC: owns TC-SMAP-001, TC-SMAP-002, TC-SMAP-003, TC-SMAP-005,
+  #   TC-SMAP-006, TC-SCITE-001, TC-SCITE-003, TC-SCITE-004, TC-SCITE-006,
+  #   TC-SNARR-001..TC-SNARR-006, TC-SRES-001..TC-SRES-005, TC-SCTR-001,
+  #   TC-SCTR-002, TC-SPAR-002, TC-SWRITE-001 (24 TCs). ACs: AC-F1-1, AC-F1-2,
+  #   AC-F1-3, AC-F1-4, AC-F2-1, AC-F2-3, AC-F3-1, AC-F3-2, AC-F3-3, AC-F3-4,
+  #   AC-F3-5, AC-F3-6, AC-F4-1, AC-F4-2, AC-F4-3, AC-F4-4, AC-F5-2,
+  #   AC-NFR1-1, AC-NFR2-1, AC-NFR5-1, AC-NFR8-1. The REAL-ADAPTER witness of
+  #   the same document posture is Phase 5's TC-SMAP-008 (5.11, P-8); this phase
+  #   owns only the injected handler-seam witness and claims nothing about the
+  #   adapter boundary.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/verify-gates-suite-map.test.ts
+  #   bun test tests/behaviour/verify-gates-suite-map-corpus.test.ts
+  #   bun test tests/behaviour/verify-gates-config-document-posture.test.ts
+  #   bun test tests/behaviour/verify-gates-breadth-report.test.ts
+  #   bun test tests/behaviour/verify-gates-narrowed-scope.test.ts
+  #   bun test tests/behaviour/verify-gates-suite-map-member-posture.test.ts
+  #   bun test tests/behaviour/verify-gates-suite-map-write-posture.test.ts
+  #   bun test tests/golden/verify-gates-suite-map.test.ts
+  #   bun test tests/behaviour/mcp-gate-report-parity.test.ts
+  #   bun test tests/structure/mcp-contract.test.ts
+  #   bun test tests/structure/verify-gates-suite-map-contract.test.ts
+  #   bun test tests/golden/verify-gates.test.ts tests/behaviour/verify-gates-output.test.ts
+  #   bun test tests/checks/fixture-sanitization.test.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  #   bun run scripts/checks/exports-parity.ts
+  #   pnpm exec tsc -p tests/types/tsconfig.json
+  #
+  # Suites left green: suite-map (resolver + CLI refusals + grammar),
+  #   suite-map-corpus (four-outcome matrix, invalid workflow, cause lines,
+  #   totality), config-document-posture (the full state matrix and
+  #   classification-before-read order), breadth-report (equality report,
+  #   order witness, unchanged gate records and human six lines), narrowed-scope
+  #   (identity, pinned header, precedence, bounds), member-posture (the
+  #   member-declaring one-line refusal before any member read), suite-map-write
+  #   -posture (no append on refusal, one append otherwise), the new goldens,
+  #   MCP parity + tool schema, the delivered verify-gates golden + output suite
+  #   (unchanged bytes), fixture-sanitization, exports-parity, ambient-globals,
+  #   type tests.
+  # ---------------------------------------------------------------------------
+  - id: 4
+    title: "Runtime wiring: the readSuiteMap seam, the fail-closed document classification, the refused-before-projection handler on both report paths, the detail and cause projection, and the MCP gate-report mirror"
+    kind: delivery
+    summary: "feat(GH-300): cite suite breadth and refuse a narrowed gate run"
+    scope:
+      files:
+        - packages/cli/src/commands/verify-gates.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/index.ts
+        - packages/mcp/src/commands/gate-report.ts
+        - tests/fixtures/verify-gates/cases/harness.ts
+        - tests/fixtures/verify-gates/suite-map/cases.ts
+        - tests/fixtures/verify-gates/workflows/suite-map-mirror-present.yml
+        - tests/fixtures/verify-gates/workflows/suite-map-mirror-absent.yml
+        - tests/fixtures/verify-gates/workflows/suite-map-case-variants.yml
+        - tests/behaviour/verify-gates-suite-map.test.ts
+        - tests/behaviour/verify-gates-suite-map-corpus.test.ts
+        - tests/behaviour/verify-gates-config-document-posture.test.ts
+        - tests/behaviour/verify-gates-breadth-report.test.ts
+        - tests/behaviour/verify-gates-narrowed-scope.test.ts
+        - tests/behaviour/verify-gates-suite-map-member-posture.test.ts
+        - tests/behaviour/verify-gates-suite-map-write-posture.test.ts
+        - tests/behaviour/mcp-gate-report-parity.test.ts
+        - tests/fixtures/mcp/parity/cases.ts
+        - tests/structure/mcp-contract.test.ts
+        - tests/structure/verify-gates-suite-map-contract.test.ts
+        - tests/golden/verify-gates-suite-map.test.ts
+        - tests/fixtures/cross-repository/suite-map.ts
+      folders:
+        - tests/fixtures/verify-gates/golden
+        - tests/fixtures/verify-gates/suite-map
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/commands/verify-gates.ts
+        role: consumer
+
+  # ---------------------------------------------------------------------------
+  # Phase 5 — This repository's reference declaration, the one-document
+  # committed-slot read, the real-adapter classification witness, and the two
+  # shipped compositions that make the policy live (DoD-8, DM-8, DEC-17,
+  # DEC-20, DoD-11).
+  #
+  # Goal: the policy must not be inert, and its failure posture must not depend
+  # on the injection seam. Author the pinned document, read exactly that document
+  # through one bounded committed-slot read, prove the layer isolation, prove the
+  # classification through the REAL adapter with only `FileSystemFacts` injected,
+  # and prove the CLI and the shipped MCP `gate-report` composition end-to-end.
+  # The delivered gate-set seam stays untouched (NG-7).
+  #
+  # Obligations:
+  #   5.1 Author `<repo>/.delivery-os/config.yaml` with the pinned literal
+  #       document (Appendix A row 21): `verify.suite-map` with
+  #       `schemaVersion: "delivery.verify.suite-map.v1"`, ONE `jobs[]` entry
+  #       `{ job: "TS aggregate check", suites: [tests, lint, format, typecheck,
+  #       boundaries, prompt-conformance, help-guide-coverage, exports-parity] }`,
+  #       and `local` = the same eight identifiers in the same order. The path is
+  #       the delivered project-committed layer `<repo>/<configDirectoryName>/
+  #       config.yaml` with `configDirectoryName` derived from the working name
+  #       `delivery-os` — never a hardcoded product name.
+  #   5.2 TRACKING HAZARD (must be closed, not assumed): this worktree's
+  #       repository-level `.git/info/exclude` lists `.delivery-os/`, so a plain
+  #       `git add` silently drops the document and TC-SMAP-004 would pass on a
+  #       local file the PR never carries. The phase forces the add
+  #       (`git add -f .delivery-os/config.yaml`, or records that the commit
+  #       primitive's staging resolves the path) and the boundary gate asserts
+  #       `git ls-files --error-unmatch .delivery-os/config.yaml` succeeds and
+  #       that the file is present in the phase commit (RSK-4, DoD-8).
+  #   5.3 The single-document read: add `readCommittedConfigDocument` to
+  #       packages/adapters/src/file/config-source.ts (exported through
+  #       packages/adapters/src/file/index.ts). It takes the delivered
+  #       `FileAcquisitionInput` shape, so `<root>` reaches it as
+  #       `explicitProjectRoot`, falling back to `gitRoot` (exactly the pair
+  #       `acquireFileConfig` resolves as `explicitProjectRoot || gitRoot`), and a
+  #       selection reaches it as `selectedConfig`; `FileSystemFacts` (`exists`,
+  #       `readText`) is the injected I/O seam and the ONLY other substitution —
+  #       the same injection point production uses, which is what makes
+  #       TC-SMAP-007's isolation assertions and TC-SMAP-008's per-case fixture
+  #       roots possible without moving the process cwd. It resolves EXACTLY ONE
+  #       path: the file selected by the delivered selected-file channel when one
+  #       occupies the slot, else `<root>/<configDirectoryName>/config.yaml`. It
+  #       performs at most ONE bounded resolution attempt on that path — at most
+  #       one stat-class existence probe and at most one bounded content read,
+  #       with zero content reads when neither a selected nor a committed path
+  #       exists. The selection channel is concrete, not
+  #       hypothetical: the delivered `${environmentPrefix}CONFIG` environment
+  #       selector (TDR-0003; brand-derived, i.e. `DELIVERY_OS_CONFIG` for this
+  #       repository's working name) is the ONLY reachable selection input,
+  #       because `verify` declares `flags: []` so `--config` is
+  #       `fallback.invocation` and never reaches the handler; when the selector
+  #       is unset the committed document is resolved. Delivered selection
+  #       semantics are PRESERVED, not reinterpreted: a selected path that is
+  #       missing or unreadable is TDR-0003's unusable-selector refusal
+  #       (`config.value.invalid`), NOT the absent/undeclared state, so
+  #       "absent" applies only where no selection exists and the committed
+  #       document is not there. It classifies absent / parsed / unreadable /
+  #       unparseable and never calls the merged `acquireFileConfig` path for
+  #       the map, never reads a system, user-global, project-local,
+  #       environment, or CLI source, and never consults the merged layer tree
+  #       (DM-9, DEC-18, DEC-19, NFR-4, NFR-10, RSK-11). This residual is
+  #       declared, not closed by the plan.
+  #   5.4 Classification posture (spec v1.4 pin, replacing the withdrawn
+  #       fail-open pin): absent (no selection in play and no committed document —
+  #       no root, or no such file) -> undeclared and the delivered parity path;
+  #       parsed without the node -> undeclared; a `${environmentPrefix}CONFIG`
+  #       selection naming a missing or unreadable path -> the delivered
+  #       unusable-selector `config.value.invalid` refusal at exit 1 with no
+  #       `data`, NEVER the parity path (a selection failure, not a
+  #       document-content defect); present but unreadable, unparseable as a
+  #       whole, or a defective map node ->
+  #       `config.value.invalid` at exit 1 with no `data`, before any gates
+  #       source read. The node defect is decided by the map resolver alone — it
+  #       is the only validator for this node; the catalog branch constrains
+  #       whole-document validity for other consumers and its outcome is never
+  #       consumed here. A schema or semantic defect elsewhere in the document
+  #       (another branch, an unknown key, a forbidden value) is not interpreted,
+  #       so it neither refuses the gate run nor removes a valid declaration,
+  #       while a document-level parser failure anywhere (an unparseable
+  #       document, a duplicate key, an unsupported YAML tag, a non-mapping root,
+  #       an over-cap document) is the unparseable-as-a-whole refusal. A
+  #       present-but-unusable document is NEVER reclassified as undeclared, and
+  #       no state yields a report except a resolved equality (DM-9, DEC-18,
+  #       NFR-10, AC-F1-4, AC-NFR8-1, Appendix A rows 22 and 27). The plan adds
+  #       no posture here; the spec's single identity is the one this phase
+  #       wires.
+  #   5.5 Layer posture (AC-F1-5): the map is honoured only from the
+  #       project-committed slot. An overlay declaration in a system, user-global,
+  #       project-local, environment, or CLI source has no effect and is not a
+  #       refusal; the read isolation is structural (one source read), not a
+  #       filter over a merged tree or origin evidence. The same repository
+  #       therefore resolves the same map locally as in CI (DEC-19, RSK-10,
+  #       RSK-11). This posture is SCOPED to the suite-map read: it decides only
+  #       where this declaration is honoured and is not a general rule for all
+  #       policy data (Appendix A row 23).
+  #   5.6 Composition (packages/cli/src/production.ts, packages/cli/src/edge.ts,
+  #       packages/mcp/src/serve.ts): memoize the one `readCommittedConfigDocument`
+  #       result per invocation, extract `verify["suite-map"]` with the pure
+  #       helper, resolve it with `resolveVerifySuiteMapFromConfig`, and supply
+  #       the resulting `readSuiteMap` to BOTH the CLI gates runtime and the
+  #       shipped MCP `gate-report` runtime. The delivered `readGateSet` seam is
+  #       NOT supplied from configuration values: the production composition
+  #       still passes no declared gate set, the edge default still yields the
+  #       shipped five, and `resolveMergeGateSetFromConfig` is not called from
+  #       `packages/cli` or `packages/mcp` by this change (NG-7, DEC-11, AC-F5-1,
+  #       AC-F5-3). The map read is independent of the battery and adds no
+  #       per-invocation I/O beyond the one configuration-document resolution
+  #       attempt (at most one existence probe, at most one bounded content read)
+  #       (NFR-4, NFR-10, AC-F5-4).
+  #   5.7 Shipped MCP composition (DEC-20, AC-F5-6, TC-SCITE-005): the served
+  #       `gate-report` runtime receives the same single-document map read. A
+  #       narrowed declaration fails the tool call with `error.code`
+  #       `verify.narrowed-scope`, the row's `error.category`/`error.retryable`/
+  #       `error.consequence` and `error.remediationHint`, and the same bounded
+  #       summary header, and returns no report; its no-append clause is
+  #       structurally satisfied because the shipped tool engine composes no
+  #       state or capsule appender, so the no-append evidence lives where an
+  #       append surface exists (TC-SNARR-002/TC-SNARR-006/TC-SWRITE-001). No
+  #       `kind` member appears in the tool result (Appendix A row 25). An
+  #       undeclared or equality map leaves the delivered tool outcome unchanged
+  #       (the shipped provider reads stay `credential-unavailable`), with no
+  #       breadth field and no evidence member where the delivered shape has
+  #       none. The input schema, tool set, and tool-result shape are unchanged;
+  #       `detail.suiteBreadth` is not projected into the tool result.
+  #   5.8 End-to-end proof (tests/structure/verify-gates-suite-map-reference
+  #       .test.ts, TC-SMAP-004): assert the document path via the branding seam;
+  #       read the committed document through the delivered configuration adapter;
+  #       assert the closed shape and every pinned literal (schema, one job, the
+  #       eight identifiers in order, equal `local` in the same order); read the
+  #       real `.github/workflows/ci.yml` job-name set through
+  #       `readCiWorkflowJobNames` and assert a valid `read` outcome; assert the
+  #       breadth outcome is `equal` (never narrower/unmirrored/uncorroborated)
+  #       with `mirrorsJob == "TS aggregate check"` present in the set by exact
+  #       string match; then drive `createProductionComposer` + the in-process CLI
+  #       with injected provider facts (hermetic) and assert exit 0,
+  #       `data.overall: pass`, `data.mirrorsJob`, `data.suiteBreadth` in declared
+  #       order, and NO `verify.narrowed-scope`. Assert the composition supplies
+  #       the map read on the same injection point, does not fall back to the
+  #       shipped-default-only path, and supplies NO configured gate set (the
+  #       battery remains the shipped five) (RSK-4, NG-7).
+  #   5.9 Layer isolation proof (tests/behaviour/verify-gates-config-layer-posture
+  #       .test.ts, TC-SMAP-007): with the committed document absent, a narrowed
+  #       map in each overlay has no effect (parity path, zero reads of that
+  #       source); with the committed document valid, the committed declaration
+  #       is honoured despite overlays that would narrow or complete it; assert
+  #       exactly one bounded configuration-document resolution attempt (one
+  #       existence probe plus, for a present document, one bounded content read),
+  #       zero merged-tree reads,
+  #       zero other-layer reads, no refusal attributable to an overlay, and
+  #       identical outcomes across ambient postures (AC-F1-5, DEC-19, NFR-10).
+  #   5.10 Live evidence: after this phase the change's own phase-9/10 gate run
+  #        cites breadth instead of refusing; the PM lane records that run in
+  #        pm-notes (this phase writes no pm-notes file).
+  #   5.11 REAL-ADAPTER CLASSIFICATION WITNESS (TC-SMAP-008, DoR iteration-2
+  #        finding 3, root input pinned in revision 1.4 for DoR iteration-3
+  #        finding 3; suite home
+  #        tests/behaviour/verify-gates-config-document-adapter.test.ts). Drive
+  #        the REAL `readCommittedConfigDocument` inside the real production
+  #        composition, substituting ONLY `FileSystemFacts` (`exists`,
+  #        `readText`) — never an injected `readSuiteMap` outcome, which is
+  #        Phase 4's TC-SMAP-006 layer. The `<root>` each case resolves is
+  #        supplied the way production supplies it: through
+  #        `FileAcquisitionInput.explicitProjectRoot`, falling back to its
+  #        `gitRoot` (the same pair `acquireFileConfig` resolves as
+  #        `explicitProjectRoot || gitRoot`), never by mutating the process cwd;
+  #        a selection case supplies the same interface's `selectedConfig`. Those
+  #        root and selection inputs are production inputs, so `FileSystemFacts`
+  #        stays the only substitution and the adapter's classifying code path is
+  #        real. One per-case fixture root per state under
+  #        tests/fixtures/verify-gates/suite-map/config/adapter/<case>/
+  #        <configDirectoryName>/config.yaml, created under
+  #        `TMPDIR=$PWD/tmp/tmpdir` and disposed per case. The obligation is:
+  #          (a) absent, with no selection in play (the
+  #              `${environmentPrefix}CONFIG` selector unset; no repository root;
+  #              and a root without the file) -> undeclared, the delivered parity
+  #              path, no `error`, no breadth field, bytes equal to the Phase-1
+  #              baseline. The third sub-case of the same step is NEVER parity: a
+  #              selector naming a MISSING or unreadable path is the delivered
+  #              unusable-selector `config.value.invalid` refusal at exit 1 with
+  #              no `data`, before any read — a selection failure, not a
+  #              document-content defect, so the outside-node tolerance does not
+  #              reach it and no baseline equality is claimed (spec v1.4 DM-9,
+  #              AC-F1-4, Appendix A row 22, C-15);
+  #          (b) present but unreadable -> `config.value.invalid` at exit 1 with
+  #              no `data`, the table's own `error.summary` and
+  #              `error.remediationHint`, no `detail`, no report, no record, no
+  #              capsule event, and ZERO ledger, repository, workflow, provider,
+  #              open-PR, detail, check-run, and work-item reads — i.e. before any
+  #              gates source read. Both failure classes are produced at the
+  #              `FileSystemFacts` boundary while the classifying code stays
+  #              real: `EACCES`, and `ENOENT` after a successful existence probe;
+  #          (c) present but unparseable as a whole, one document per parser-level
+  #              class (duplicate key, unsupported YAML tag, non-mapping root,
+  #              over-cap document) -> the same refusal and the same
+  #              before-any-source-read order, and NEVER undeclared;
+  #          (d) present, parses, and carries a defective map node, one case per
+  #              AC-F1-2 class (including the `job` control-character,
+  #              line-break, and leading/trailing-whitespace classes) -> the same
+  #              refusal at exit 1, no `data`, no `detail`, no `cause:` line, no
+  #              `kind` member, zero gates source reads, no record, no capsule
+  #              event;
+  #          (e) present, parses, and carries a VALID map beside a schema or
+  #              semantic defect outside the node -> the declaration is HONOURED
+  #              (exit 0, `data.suiteBreadth`/`data.mirrorsJob` with the declared
+  #              values, no refusal attributable to the outside defect), proving
+  #              the tolerance stops at the node while (c) remains the only
+  #              document-wide refusal class;
+  #          (f) FAIL-OPEN DISCRIMINATOR (non-vacuity): an implementation that
+  #              maps any read failure or parse failure to
+  #              `{ ok: true, declared: false }` — the shape DoR iteration 1
+  #              rejected — must FAIL this suite, and so must a resolver that
+  #              treats a defective node as absent. The suite therefore cannot
+  #              pass an adapter that deletes the change's only enforcement;
+  #          (g) read accounting: exactly ONE bounded configuration-document
+  #              RESOLUTION ATTEMPT per invocation in every state — at most one
+  #              stat-class existence probe and at most one bounded content read,
+  #              with ZERO content reads in the absent and selected-but-missing
+  #              states — observed on the injected `FileSystemFacts` call log;
+  #              zero other-layer reads, zero retries, zero merged-tree reads;
+  #          (h) every state twice -> identical stdout, stderr, and exit.
+  #        The two TCs are never duplicates and neither restates the other:
+  #        TC-SMAP-006 is the handler branch over the injected seam (Phase 4);
+  #        TC-SMAP-008 is the real adapter in the production composition (P-8).
+  #
+  # AC/TC: owns TC-SMAP-004, TC-SMAP-007, TC-SMAP-008, TC-SCITE-005 (4 TCs).
+  #   ACs: AC-F1-1, AC-F1-2, AC-F1-4, AC-F1-5, AC-F2-1, AC-F5-6, AC-NFR8-1,
+  #   and DoD-8/DoD-11 end-to-end.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/structure/verify-gates-suite-map-reference.test.ts
+  #   bun test tests/behaviour/verify-gates-config-layer-posture.test.ts
+  #   bun test tests/behaviour/verify-gates-config-document-adapter.test.ts
+  #   bun test tests/structure/mcp-gate-map-composition.test.ts
+  #   bun test tests/behaviour/mcp-gate-report-parity.test.ts
+  #   bun test tests/structure/mcp-contract.test.ts
+  #   bun test tests/structure/coordinator-production-composition.test.ts
+  #   bun test tests/checks/config-default-positions.test.ts
+  #   bun test tests/structure/config-contract.test.ts
+  #   git ls-files --error-unmatch .delivery-os/config.yaml
+  #   bun run scripts/checks/exports-parity.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  #
+  # Suites left green: verify-gates-suite-map-reference (document literals +
+  #   equality + composed end-to-end run), config-layer-posture (the committed
+  #   slot is the only source), config-document-adapter (the real adapter maps
+  #   every unusable state to the refusal and fails a fail-open mapping),
+  #   mcp-gate-map-composition (the shipped mirror is live, not inert), MCP
+  #   parity + contract, the delivered production-composition control, config
+  #   default-position and config-contract suites, the tracked document
+  #   assertion, exports-parity, ambient-globals.
+  # ---------------------------------------------------------------------------
+  - id: 5
+    title: "The pinned reference declaration, the one-document committed-slot read, the real-adapter classification witness, and the live CLI and shipped MCP compositions"
+    kind: delivery
+    summary: "feat(GH-300): declare the repo suite map and wire the config seam"
+    scope:
+      files:
+        - .delivery-os/config.yaml
+        - packages/adapters/src/file/config-source.ts
+        - packages/adapters/src/file/index.ts
+        - packages/cli/src/production.ts
+        - packages/cli/src/edge.ts
+        - packages/mcp/src/serve.ts
+        - tests/structure/verify-gates-suite-map-reference.test.ts
+        - tests/behaviour/verify-gates-config-layer-posture.test.ts
+        - tests/behaviour/verify-gates-config-document-adapter.test.ts
+        - tests/structure/mcp-gate-map-composition.test.ts
+        - tests/behaviour/mcp-gate-report-parity.test.ts
+        - tests/structure/mcp-contract.test.ts
+        - tests/fixtures/mcp/parity/cases.ts
+        - tests/checks/config-default-positions.test.ts
+        - tests/structure/config-contract.test.ts
+      folders:
+        - tests/fixtures/verify-gates/suite-map
+    interactions:
+      - kind: contract-file
+        target: .delivery-os/config.yaml
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 6 — The cross-cutting verification battery: scoped parity, read budget,
+  # determinism, bounds, cross-repository coherence, hermeticity.
+  #
+  # Goal: prove the invariants that span paths and modules, and close the
+  # undeclared-map parity claim against the Phase-1 baseline without ever
+  # claiming parity for an unusable document state.
+  #
+  # Obligations:
+  #   6.1 Parity (TC-SPAR-001, AC-F5-1, NFR-8): every one of the 48 corpus cases
+  #       in the two undeclared states (absent document with no selection in
+  #       play; parsed without the node) is byte-equal to parity-baseline.json
+  #       (stdout, stderr, exitCode, and appended record bytes) and to the
+  #       delivered goldens read UNCHANGED;
+  #       neither `suiteBreadth` nor `mirrorsJob` appears anywhere. Regeneration
+  #       only with a review-visible diff and a recorded reason.
+  #   6.2 Scoped parity manifest (TC-SPAR-006, AC-NFR8-1, NFR-10): every fixture
+  #       document state appears exactly once in parity-scope.json with exactly
+  #       one classification (`parity` / `refusal` / `resolved-equality`);
+  #       a selection naming a missing or unreadable path, and unreadable,
+  #       unparseable, and defective-node states, are the AC-F1-4 refusal and
+  #       carry NO baseline entry — a selection failure is refused at the probe
+  #       and is never classified as parity; the two sets are disjoint; pair
+  #       every outside-node schema/semantic defect (reports the delivered bytes
+  #       plus the two additive fields) with an inside-node defect (refuses) and
+  #       with a parser-level failure anywhere (refuses as unparseable), proving
+  #       the tolerance is bounded to the other branches, keys, and values and
+  #       that the scoped divergence is stated, not silent (Appendix A row 27).
+  #   6.3 CI-gate parity (TC-SPAR-003, AC-F5-3): the `ci-green` record (verdict,
+  #       reason, sources, counts, names) is deep-equal with and without a map
+  #       across green, missing-job, and red-run facts; a map job that is not a
+  #       workflow job contributes no expected job, no name, and no citation
+  #       entry; the map can neither pass nor fail the CI gate (DEC-10).
+  #   6.4 Read budget (TC-SPAR-004, AC-F5-4, NFR-4, NFR-10). Two distinct claims,
+  #       stated separately because they are not the same claim:
+  #         (a) THE SEVEN ENUMERABLE GATES SOURCES ARE IDENTICAL in both states —
+  #             with and without a declaration the instrumented call names,
+  #             arguments, and counts are one ledger read (pm-notes + registry),
+  #             one repository HEAD/branch read, one CI-workflow read, <= 1
+  #             open-PR page (100), one resolved detail read, one check-run page
+  #             (100), and one work-item read, with zero retries and zero
+  #             pagination. The single workflow read feeds both the CI gate and
+  #             the mirror corroboration; it is never issued twice.
+  #         (b) EXACTLY ONE BOUNDED CONFIGURATION-DOCUMENT RESOLUTION ATTEMPT PER
+  #             INVOCATION IS ADDED, and it is performed WITH OR WITHOUT a
+  #             declaration (an absent document is still resolved once): at most
+  #             ONE stat-class existence probe plus at most ONE bounded content
+  #             read, and ZERO content reads when neither a selected nor a
+  #             committed path exists — so the instrumented-read assertions count
+  #             one attempt in both states and a content read only in the
+  #             present state, exactly as NFR-10 states it. It is the only
+  #             addition, with zero reads of any other configuration layer and
+  #             zero merged-tree reads.
+  #       A state that REFUSES on the document (unreadable, unparseable,
+  #       defective node) performs ZERO gates source reads and only the one
+  #       resolution attempt. A narrowed MEMBER-LESS run performs the seven source
+  #       reads plus the one resolution attempt (the battery is evaluated, so the
+  #       refusal can carry its gate lines). A narrowed MEMBER-DECLARING run
+  #       legitimately reads LESS than a non-narrowed member run: the one
+  #       resolution attempt, the delivered plan-declaration read, and the one
+  #       workflow read needed for corroboration — and ZERO member, ledger,
+  #       repository, and provider reads, because the refusal precedes the member
+  #       bundle and the repository read (AC-F3-6). No state inflates the
+  #       delivered counts.
+  #   6.5 Grammar (TC-SPAR-005, AC-F5-5): a third positional or an unknown flag
+  #       is `fallback.invocation` before any read, with no map resolution;
+  #       `positionals.max` stays 2, the three subcommands stay
+  #       change/gates/deploy, and no command-specific flag exists.
+  #   6.6 Determinism (TC-SDET-001/002, AC-NFR2-1): every declared-map case is
+  #       byte-identical across two runs in JSON and human modes; mirror
+  #       selection is the first declared match; the max-breadth case
+  #       (31 local / 32-suite mirror / 120-character job name) renders the
+  #       mirror's first eight plus ` omitted=24` identically on every run; a
+  #       reversed local order moves `detail.suiteBreadth` (local declared order)
+  #       while the header list keeps the MIRROR's declared order; six lines and
+  #       4096 bytes hold.
+  #   6.7 Cross-repository coherence (TC-SCITE-002, AC-F2-2): the two fields are
+  #       present with the same values as a member-less report and are
+  #       member-independent; `definitionOfDone`, `blockingMembers`, `reviewFlow`,
+  #       and every `member`-bearing record deep-equal the GH-310 goldens; the
+  #       fields appear once at the report root and never inside a member record
+  #       or a citation; the cross-repository human bytes are unchanged; new
+  #       golden `suite-map-report.json`.
+  #   6.8 Hermeticity (TC-SHERM-001, AC-NFR3-1, NFR-3): zero network calls, zero
+  #       credentials resolved, zero provider sockets, zero child processes in
+  #       every new suite; the source scan covers the new fixture/harness modules;
+  #       fixture sanitization/privacy stays green over the new fixtures and
+  #       goldens.
+  #   6.9 Controls: the delivered verify-gates behaviour family, the delivered
+  #       goldens, the error-table sync gate, and the type tests are re-run as
+  #       unchanged controls at this boundary.
+  #
+  # AC/TC: owns TC-SPAR-001, TC-SPAR-003, TC-SPAR-004, TC-SPAR-005,
+  #   TC-SPAR-006, TC-SCITE-002, TC-SDET-001, TC-SDET-002, TC-SHERM-001
+  #   (9 TCs). ACs: AC-F5-1, AC-F5-3, AC-F5-4, AC-F5-5, AC-F2-2, AC-F1-4,
+  #   AC-NFR2-1, AC-NFR3-1, AC-NFR5-1 (re-run), AC-NFR8-1.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/verify-gates-parity-suite-map.test.ts
+  #   bun test tests/behaviour/verify-gates-suite-map-determinism.test.ts
+  #   bun test tests/behaviour/verify-gates-read-budget.test.ts
+  #   bun test tests/behaviour/verify-gates-surface.test.ts
+  #   bun test tests/behaviour/verify-gates-ci.test.ts
+  #   bun test tests/golden/cross-repository-members.test.ts
+  #   bun test tests/golden/verify-gates.test.ts tests/golden/verify-gates-suite-map.test.ts
+  #   bun test tests/checks/verify-gates-no-live-calls.test.ts
+  #   bun test tests/checks/fixture-sanitization.test.ts
+  #   bun test tests/checks/error-table-sync.test.ts
+  #   bun run scripts/checks/error-table-sync.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  #   pnpm exec tsc -p tests/types/tsconfig.json
+  #
+  # Suites left green: parity-suite-map (48-case baseline + scoped manifest),
+  #   suite-map-determinism (all outcomes + max breadth), read-budget (identical
+  #   seven-source counts, one configuration-document resolution attempt, zero
+  #   other layers), surface (grammar),
+  #   verify-gates-ci (unchanged CI gate), cross-repository-members (new golden,
+  #   delivered fields intact), both delivered goldens, the no-live-calls and
+  #   sanitization guards, error-table sync (136/136), the behaviour controls,
+  #   ambient-globals, type tests.
+  # ---------------------------------------------------------------------------
+  - id: 6
+    title: "Cross-cutting battery: scoped undeclared-map parity, CI-gate parity, read budget, grammar, determinism, cross-repository coherence, hermeticity"
+    kind: delivery
+    summary: "test(GH-300): pin parity, read budget, determinism and hermeticity"
+    scope:
+      files:
+        - tests/behaviour/verify-gates-parity-suite-map.test.ts
+        - tests/behaviour/verify-gates-suite-map-determinism.test.ts
+        - tests/behaviour/verify-gates-read-budget.test.ts
+        - tests/behaviour/verify-gates-surface.test.ts
+        - tests/behaviour/verify-gates-ci.test.ts
+        - tests/golden/cross-repository-members.test.ts
+        - tests/golden/verify-gates.test.ts
+        - tests/checks/verify-gates-no-live-calls.test.ts
+        - tests/checks/fixture-sanitization.test.ts
+        - tests/fixtures/cross-repository/suite-map.ts
+        - tests/fixtures/cross-repository/goldens/suite-map-report.json
+        - tests/fixtures/verify-gates/suite-map/parity-scope.json
+    interactions:
+      - kind: contract-file
+        target: tests/fixtures/cross-repository/goldens/suite-map-report.json
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 7 — Documentation, planning bookkeeping, and the release obligations.
+  #
+  # Goal: make every page that states the verify-gates, result-contract,
+  # config-layer, MCP, merge-record, and policy surfaces true again, record the
+  # story in the planning corpus, and declare the release. The lifecycle's own
+  # phase 7 (`system_spec_update`) VERIFIES this work; it does not add it.
+  #
+  # Obligations (exactly the spec's Appendix D list, D-1..D-28, nothing else
+  # moves; the register's search keys ARE the three invariants this change
+  # narrows — the append rule, the capsule append rule, and the read budget — so
+  # D-2, D-14, D-15, and D-17..D-26 close the two append rules and D-5, D-27, and
+  # D-28 close the read budget; the reconciled set MUST include
+  # feature-capsule.md, feature-verify-change-and-exit-taxonomy.md, and
+  # architecture-overview.md in addition to the files named in D-1..D-16; D-27
+  # and D-28 both target feature-verify-gates.md, already declared, so this
+  # phase's `scope.files` does not grow). The one documentation edit that
+  # does NOT wait for this phase is D-7's documented error-table row, already
+  # landed in Phase 2 because the delivered two-way sync gate binds it (C-10,
+  # Appendix A row 28); this phase reconciles only D-7's surrounding prose.
+  #   7.1 D-1 feature-verify-gates.md §Limitations: keep the CI gate's
+  #       job-presence wording and the matrix/`if` deferrals, strike
+  #       `suite-to-job mapping` from the deferred list, and state that suite
+  #       breadth is declared (`verify.suite-map`), cited (`data.suiteBreadth`/
+  #       `data.mirrorsJob`), and refused when narrowed.
+  #   7.2 D-2 same §Overview: the append sentence gains
+  #       "that is not refused for narrowed suite breadth; a refused run appends
+  #       neither the record nor the capsule event".
+  #   7.3 D-3 same §Gate rules: the same single workflow read also corroborates
+  #       the declared mirror job's presence; the map adds no expected job and no
+  #       CI-gate condition.
+  #   7.4 D-4 same §Error rows: three `verify gates` rows, the new row with its
+  #       category, retryability, consequence, projection class, exit, and
+  #       trigger.
+  #   7.5 D-5 same §Bounds and read budget: the six suite constants plus the
+  #       single suite-id pattern; the map adds exactly one bounded
+  #       configuration-document resolution attempt (at most one stat-class
+  #       existence probe, at most one bounded content read) and no retry; the
+  #       per-source budget is unchanged.
+  #   7.6 D-6 same report description: the two additive optional report fields on
+  #       both report types, present together.
+  #   7.7 D-7 feature-result-contract.md capability prose: seven `verify`
+  #       identities, `verify gates` carries three, plus the additive
+  #       `detail.suiteBreadth` member beside `holder` (the row and the 136 count
+  #       already landed in Phase 2 for the sync gate).
+  #   7.8 D-8 feature-config-layer.md: a `## The verify configuration branch`
+  #       section (single key `verify.suite-map`, shape, default absent, refusal
+  #       semantics), record that the gates surface reads exactly that node from
+  #       the project-committed document alone (never the merged tree), that the
+  #       catalog schema keeps the document valid for every other consumer, and
+  #       the catalog branch-list sentences.
+  #   7.9 D-9 feature-mcp-surface.md `gate-report` row: the additive fields, the
+  #       new mirrored identity, and that the shipped composition supplies the
+  #       single-document map read so the tool refuses exactly as the CLI does;
+  #       input schema, tool set, and tool-result shape unchanged.
+  #   7.10 D-10 policy-as-code.md: move the
+  #        "Local gate breadth must equal CI breadth" rule from §C to §B as an
+  #        enforced check and adjust the M2-S7 story-mapping line.
+  #   7.11 D-11 change-lifecycle.md and definition-of-done.md: a reported run
+  #        cites its suite breadth and mirrored CI job; a narrowed run refuses at
+  #        exit 1 and records no fresh verification.
+  #   7.12 D-12 glossary.md: the §23 terms (suite, suite id, suite breadth, local
+  #        breadth, CI job breadth, mirror job, narrowed scope, declaration home,
+  #        unusable declaration document, cause line, reference declaration).
+  #   7.13 D-13 backlog.md M2-S7 progress marker naming this change and the
+  #        delivered surfaces, plus the status.md snapshot for M2-S7.
+  #   7.14 D-14 feature-merge-verify-deploy.md: the append rule narrows to a full
+  #        evaluation that is not refused for narrowed suite breadth; a
+  #        `verify gates` run refused with `verify.narrowed-scope` appends no
+  #        record and no capsule event, so `merge`'s freshness read sees only the
+  #        previous record. Record shape, schema, derivation, and one-append
+  #        counting for every non-refused evaluation are unchanged.
+  #   7.15 D-15 test-spec-merge-verify-deploy.md row "verify-gates
+  #        non-regression": exactly one appended record per full battery
+  #        evaluation that is not refused, and none on a narrowed refusal.
+  #   7.16 D-16 feature-verify-gates.md §Quality evidence: add the `suite-map`
+  #        fixture root to the list (`{cases,corpus,golden,suite-map,workflows}`)
+  #        and name the suite-map fixture family as the declaration/refusal
+  #        corpus.
+  #   7.17 D-17, D-18, D-19 feature-verify-gates.md append posture: quote and
+  #        reconcile the three remaining unconditional append sentences — D-17
+  #        §Bounds and read budget lines 172-173 ("The only write is one appended
+  #        gate-verification record per full battery evaluation"), D-18 §Durable
+  #        ledger projection lines 216-217 ("a cross-repository evaluation
+  #        appends exactly one `MergeGateVerificationRecord` …"), and D-19 the
+  #        cross-repository read-budget/append posture lines 317-319 ("The append
+  #        posture is unchanged — exactly one gate-verification record per full
+  #        battery evaluation …") — to "that is not refused for narrowed suite
+  #        breadth", with a narrowed refusal appending neither the record nor the
+  #        capsule event. The projection, the closed-key validation, the
+  #        non-`torn` read, the per-member reads, the no-short-circuit rule, and
+  #        the per-source budget stand unchanged.
+  #   7.18 D-20 feature-verify-gates.md §Capsule gate append line 374: scope the
+  #        `gate.outcome` append to a full battery evaluation that is not refused,
+  #        with the payload, key derivation, and non-gating disclosure unchanged.
+  #        D-21 same file §Config-declared gate set and verification record lines
+  #        407-412: scope the one appended fenced EVT-1 record to an evaluation
+  #        that is not refused, keeping the append as the only output effect on
+  #        every non-refused evaluation and the record content and `merge`
+  #        consumption unchanged.
+  #   7.19 D-22, D-23 doc/spec/features/feature-capsule.md §Producers line 129 and
+  #        §3.2 User Flows line 205: scope the `gate.outcome` append to a full
+  #        battery evaluation that is not refused and state that a
+  #        `verify.narrowed-scope` refusal appends no capsule event.
+  #   7.20 D-24, D-25 doc/spec/features/feature-verify-change-and-exit-taxonomy.md
+  #        §Goals & Success Metrics line 43 and §Command surface line 49: scope
+  #        the one-gate-verification-record sentence to a full battery evaluation
+  #        that is not refused, keeping the KPI's zero-write claims for
+  #        `verify change` and `verify deploy` unchanged.
+  #   7.21 D-26 doc/overview/architecture-overview.md line 179: scope the append
+  #        sentence to a full battery evaluation that is not refused for narrowed
+  #        suite breadth.
+  #   7.22 D-27, D-28 feature-verify-gates.md read-budget enumerations (spec v1.4;
+  #        both rows target a file already in this phase's scope): D-27 the
+  #        §Overview lines 34-36 local-read list ("It performs bounded local reads
+  #        (ledger, repository HEAD/branch, CI workflow) …") gains the
+  #        project-committed configuration document, and D-28 the cross-repository
+  #        read budget lines 311-315 gains the one configuration-document
+  #        resolution attempt beside the delivered single ledger read, repository
+  #        HEAD/branch read, CI-workflow read, and work-item read. Both
+  #        reconciliations state the same threshold as NFR-10 — at most one
+  #        stat-class existence probe and at most one bounded content read per
+  #        invocation — and leave the per-member budget, the no-retry and
+  #        no-pagination rule, and the seven enumerable gates source counts
+  #        unchanged, so no page states the added access in §Bounds and omits it
+  #        in these two enumerations. This closes the read-budget search key of
+  #        the register (DoR iteration-3 finding 2).
+  #   7.23 Distribution: every changed redistributable doc keeps (or gains) its
+  #        `ados_distribution` marker inside the existing frontmatter; run
+  #        `bash scripts/.tests/test-doc-distribution.sh`.
+  #   7.24 Release: one lockstep minor changeset
+  #        `.changeset/gh-300-suite-job-mapping-minor.md` over the five
+  #        publishables (spec §18, version_impact minor). No new dependency, no
+  #        migration, no backfill, no record-shape change; rollback is a
+  #        declaration removal plus a changeset revert (DEC-12).
+  #   7.25 Final battery: the full aggregate gate with the pm-notes environment,
+  #        the branch-range commit gate, the doc-distribution guard, the
+  #        changeset-group check, whitespace, and `plan validate GH-300`.
+  #
+  # AC/TC: owns no TC; covers DoD-9, DoD-10, C-10, C-11, and D-1..D-28.
+  #
+  # Gate:
+  #   PATH=$PWD/node_modules/.bin:$PATH TMPDIR=$PWD/tmp/tmpdir \
+  #     GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign \
+  #     GIT_CONFIG_VALUE_0=false pnpm check
+  #   ./scripts/lint-commit-range.sh --base main-tools
+  #   bash scripts/.tests/test-doc-distribution.sh
+  #   bun run scripts/checks/changesets-group.ts
+  #   bun run scripts/checks/help-guide-coverage.ts
+  #   delivery-os plan validate GH-300
+  #   git diff --check
+  #
+  # Exit: every AC met and every declared phase complete per the TC -> PHASE MAP;
+  #   the delivered-surfaces parity holds and is scoped to the two undeclared
+  #   states (absent with no selection in play; parsed without the node), with a
+  #   selected-but-missing path refused and never treated as parity; the document
+  #   posture is fail-closed, the committed slot is the
+  #   only map source, and the read budget is one resolution attempt per
+  #   invocation; both shipped compositions are live for the map and the
+  #   gate battery is unchanged; the record and capsule shapes are unchanged;
+  #   exactly one error row and one `detail` member are two-way synced; the
+  #   reference declaration resolves to equality end-to-end and its own gate run
+  #   cites breadth; the release obligations are declared; the PR targets
+  #   main-tools and stays open.
+  # ---------------------------------------------------------------------------
+  - id: 7
+    title: "Documentation reconciliation (D-1..D-28), planning bookkeeping, changeset, and release obligations"
+    kind: delivery
+    summary: "docs(GH-300): reconcile spec and planning pages and declare release"
+    scope:
+      files:
+        - .changeset/gh-300-suite-job-mapping-minor.md
+        - doc/spec/features/feature-verify-gates.md
+        - doc/spec/features/feature-result-contract.md
+        - doc/spec/features/feature-config-layer.md
+        - doc/spec/features/feature-mcp-surface.md
+        - doc/spec/features/feature-merge-verify-deploy.md
+        - doc/spec/features/feature-capsule.md
+        - doc/spec/features/feature-verify-change-and-exit-taxonomy.md
+        - doc/overview/architecture-overview.md
+        - doc/quality/test-specs/test-spec-merge-verify-deploy.md
+        - doc/planning/concepts/policy-as-code.md
+        - doc/guides/change-lifecycle.md
+        - doc/guides/definition-of-done.md
+        - doc/overview/glossary.md
+        - doc/planning/oss-tooling/backlog.md
+        - doc/planning/oss-tooling/status.md
+      folders:
+        - doc/changes/2026-11/2026-11-15--GH-300--suite-job-mapping-gates
+    doneArtifacts:
+      mergeRequestUrl: "pull request for feat/GH-300/suite-job-mapping-gates targeting main-tools"
+      pipelineId: "CI pipeline for the GH-300 delivery branch"
+      trackerTransition: "in-review"
+
+  # ---------------------------------------------------------------------------
+  # Phase 8 — Review iteration-1 remediation (code-review/review-iter-1.yaml:
+  # FAIL, 1 high / 5 medium / 3 low / 1 info).
+  #
+  # Goal: close the review findings without moving any surface this change
+  # protects. No AC is relaxed and no delivered behaviour is redefined: the error
+  # identities and exits, the narrowed header tokens, the two `cause:` grammars
+  # and their derived bounds, the report field order, the record shape, the CI
+  # gate, the shipped five-gate battery, the read budget (exactly one bounded
+  # configuration-document resolution attempt per invocation), the no-append
+  # rule, and the invocation grammar stay byte-identical. Every obligation is a
+  # defect repair, a declaration the plan already owed, or a proof the review
+  # showed was not behavioural.
+  #
+  # Why a declared phase and not a warm fix: F-2, F-3, F-6, F-7, F-8 and F-9
+  #   change what "done" means for suites phases 2-6 already declared, and F-4 is
+  #   a scope-contract defect in this plan itself. A declared phase keeps phase 10
+  #   (dod_check) mechanical: the remediation has its own commit, its own
+  #   boundary gate, and its own pm-notes evidence.
+  #
+  # Obligations:
+  #   8.1 F-1 (high, quality gate). Remove the duplicate `clone` declaration in
+  #       tests/behaviour/verify-gates-suite-map.test.ts: the fixture import of
+  #       `clone` from tests/fixtures/verify-gates/cases/facts and the local
+  #       `const clone` are the same JSON clone. Keep exactly one, use it at every
+  #       call site, and leave every assertion unchanged. `pnpm lint` exits 0 at
+  #       this boundary, so `pnpm check` and DoD-10 stop being red.
+  #   8.2 F-2 (AC-F1-2, Appendix A rows 4 and 26). The `job` class is the FULL
+  #       single-line printable class. Extend the control-character predicate in
+  #       packages/core/src/domain/verify-gates-suite-map.ts and
+  #       packages/cli/src/index.ts so a `job` carrying U+2028 LINE SEPARATOR,
+  #       U+2029 PARAGRAPH SEPARATOR, or a Unicode format control (Cf, i.e. the
+  #       bidi and zero-width controls) is refused in addition to C0 (0x00-0x1f)
+  #       and C1 (0x7f-0x9f). Then the accepted class can carry neither a line
+  #       break nor a control character, and the pinned one-physical-line header
+  #       and one-line `cause:` grammar cannot be broken by a declaration.
+  #       - ONE predicate, or two conforming copies: prefer one shared exported
+  #         predicate over two literal copies; if it is exported, declare the
+  #         export surface (packages/core/src/domain/index.ts,
+  #         packages/core/src/index.ts) and update
+  #         tests/structure/verify-gates-exports.test.ts in the same commit so
+  #         exports parity stays green.
+  #       - `holder` is NOT governed by this predicate: the delivered predicate
+  #         is restored exactly (8.9).
+  #       - Regression cases (one U+2028 `job` and one U+2029 `job` at minimum):
+  #         (a) structural refusal — the pure resolver and bounds table
+  #             (tests/fixtures/verify-gates/suite-map/cases.ts,
+  #             tests/behaviour/verify-gates-suite-map.test.ts), the injected
+  #             handler seam
+  #             (tests/behaviour/verify-gates-config-document-posture.test.ts),
+  #             and the real adapter
+  #             (tests/behaviour/verify-gates-config-document-adapter.test.ts)
+  #             each refuse `config.value.invalid` at exit 1 with no `data`, no
+  #             `detail`, no `cause:` line, and no gates source read;
+  #         (b) rendered header (tests/behaviour/verify-gates-narrowed-scope
+  #             .test.ts) and rendered `cause:` line
+  #             (tests/behaviour/verify-gates-suite-map-corpus.test.ts): the
+  #             U+2028/U+2029 job never reaches a renderer, and every accepted
+  #             job renders exactly one physical line containing no U+2028,
+  #             U+2029, or Cf control — the no-line-break/no-control rule is
+  #             asserted at both ends, not only where the node is validated.
+  #       - No new error row, no new bound, no new field, no new constant: this is
+  #         a defect in the delivered predicate, not a requirement change.
+  #   8.3 F-3 (hermetic, independently runnable suites). Create the temporary root
+  #       inside the test that uses it — `mkdirSync(TMP, { recursive: true })`
+  #       before each `mkdtempSync`, or an OS temp root under `os.tmpdir()`
+  #       through the existing `makeTempRoot` helper — in
+  #       tests/behaviour/verify-gates-config-document-adapter.test.ts,
+  #       tests/behaviour/verify-gates-config-layer-posture.test.ts, and
+  #       tests/structure/mcp-gate-map-composition.test.ts, so no suite depends on
+  #       another module's top-level `mkdir` side effect. Each suite disposes its
+  #       own roots and leaves no residue.
+  #       PROOF OBLIGATION: run each of the three suites ALONE on a clean tree
+  #       (a fresh worktree, or the repo-relative temp parent moved aside) and
+  #       record the pass count; a suite that still needs a sibling module is not
+  #       remediated.
+  #   8.4 F-4 (plan compliance; the scope contract). The eight changed files that
+  #       fell outside every declared phase are declared by THIS phase, each with
+  #       a one-line justification in the commit body and in the pm-notes delivery
+  #       entry:
+  #         scripts/checks/error-table-sync.ts
+  #           — the 135 -> 136 two-way sync gate for the new row;
+  #         tests/fixtures/events/error-table-baseline.json
+  #           — the delivered row baseline the sync gate compares against;
+  #         tests/fixtures/mcp/golden/gate-report/gate-equality-map.json
+  #           — the MCP gate-report mirror golden carrying the two report fields;
+  #         tests/fixtures/ports/v1-contract-inventory.json
+  #           — the port inventory entry for the new adapter read;
+  #         tests/structure/dispatch-attempts-taxonomy.test.ts
+  #           — the taxonomy count moved by the added identity;
+  #         doc/00-index.md
+  #           — the documentation index citation for the reconciled pages;
+  #         doc/planning/oss-tooling/cli-command-registry.md
+  #           — the registry row for the additive detail member;
+  #         doc/planning/oss-tooling/user-journeys.md
+  #           — the journey citation of the narrowed refusal.
+  #       DECLARATION SITE: phase 8 scope, NOT an owning-phase amendment. Phases
+  #       1-7 are completed and their scope is delivered history; retroactively
+  #       widening a completed phase would misstate what that phase was gated
+  #       against and would move this revision's diff into phases the review
+  #       already audited. Phase 8 is the phase whose stated job is to reconcile
+  #       the drift, so it is where the declaration belongs. These entries declare
+  #       edits already made, not new edits: a declared file that ends up untouched
+  #       is a `plan diff` observation, never a gate failure.
+  #   8.5 F-5 (plan compliance; evidence). Per-phase test evidence is a pm-notes
+  #       obligation owned by the PM lane, not a phase-8 file edit. The obligation
+  #       is: the coder supplies, in the delivery report, one line per plan phase
+  #       1-7 naming the phase id, the phase commit hash, and the boundary gate
+  #       result with the test counts the suite runner reported; phase 8 records
+  #       its own line the same way. The PM lane appends those entries through the
+  #       pm-notes surface. This phase writes no pm-notes file and the change
+  #       folder stays PM-owned.
+  #   8.6 F-6 (proof, not text-grep). The shipped CLI composition's map seam is
+  #       proven behaviourally: drive `createProductionComposer` in a temp
+  #       checkout whose committed-slot document the test authors, and assert the
+  #       composed surface's own behaviour:
+  #         (a) a defective, unreadable, or unparseable committed document refuses
+  #             `config.value.invalid` at exit 1 with no `data` and zero provider
+  #             reads — proving the production wiring resolves the committed slot
+  #             and classifies it before any source read;
+  #         (b) a narrowed declaration on a member-declaring change refuses
+  #             `verify.narrowed-scope` at exit 1 with `detail.suiteBreadth` and
+  #             zero member, ledger, repository, and provider reads — proving the
+  #             real read is consumed by the real breadth decision;
+  #         (c) a `${environmentPrefix}CONFIG` selection naming a missing path is
+  #             the delivered unusable-selector refusal, never undeclared;
+  #         (d) an overlay narrowing declaration with the committed document
+  #             absent produces no refusal attributable to the overlay.
+  #       tests/structure/verify-gates-suite-map-reference.test.ts stops building
+  #       its own memoized `readSuiteMap` for the "end-to-end" claim. If a probe
+  #       shows the production composer cannot be driven to that observation point
+  #       (for example because provider facts are not injectable at the facts
+  #       boundary), the strongest available behavioural proof is pinned instead,
+  #       the source-text `toContain` assertions survive only as a labelled
+  #       supplement, and the residual is declared in pm-notes and in this plan's
+  #       residual list (P-9). The claim is lowered, never left implied.
+  #   8.7 F-7 (test quality). Remove or replace the vacuous and duplicated
+  #       assertions, keeping every existing assertion that is not a duplicate:
+  #       - tests/behaviour/verify-gates-parity-suite-map.test.ts loops over
+  #         `[undeclaredRead, undeclaredRead]`; it must exercise the two genuinely
+  #         distinct undeclared states (absent document with no selection in play,
+  #         and parsed-without-node);
+  #       - tests/behaviour/verify-gates-suite-map-corpus.test.ts reuses the same
+  #         `"TS aggregate check"` name in both corpus loops and never asserts the
+  #         equality branch of its equality/narrowing/not-evaluated case; each
+  #         case carries its own name and the equality branch is asserted;
+  #       - tests/behaviour/verify-gates-suite-map-determinism.test.ts labels a
+  #         member-less six-line run "member-mode"; it is relabelled, and the real
+  #         member-mode case stays in the member-posture suite.
+  #   8.8 F-8 (coverage). Cover the VALID selected-config path: a selected file
+  #       occupying the committed slot and supplying the map is honoured — the
+  #       equality and narrowed variants — through the existing real-adapter
+  #       harness, asserting that the committed path and every overlay are NOT
+  #       read (DM-9, DEC-19, AC-F1-4, AC-F1-5). The unused `selectedConfig`
+  #       parameter in the layer-posture suite is used by these cases or removed.
+  #   8.9 F-9 (backward compatibility; DM-6). Restore the DELIVERED `holder`
+  #       predicate in `explicitDetail`: `holder` projects when it is a
+  #       1..COMMAND_FAILURE_DETAIL_MAX_CHARS string with no CR, no LF, and no C1
+  #       control (`/[\r\n\u0080-\u009f]/`), exactly as delivered — DM-6 says
+  #       `holder` is unchanged. The stricter single-line printable class governs
+  #       `suiteBreadth` and the `cause:` payload only; the detail validation for
+  #       `suiteBreadth` must not tighten `holder`. A holder value the delivered
+  #       projection accepted still projects (regression case in
+  #       tests/structure/verify-gates-suite-map-contract.test.ts), while a
+  #       `suiteBreadth` element carrying TAB, DEL, another C0 control, U+2028, or
+  #       U+2029 is never projected.
+  #   8.10 Boundary discipline. One commit for this phase, with the declared
+  #        subject, and every suite touched here re-runs the gate of the phase
+  #        that owns it before the phase closes (the review-iteration-1 retro
+  #        action: no post-gate edit without a re-run).
+  #
+  # AC/TC: owns no TC id. Its regression cases extend TC-SMAP-003 (job character
+  #   class and rendered grammar), TC-SMAP-004 (composition-level end-to-end
+  #   proof), TC-SMAP-006 (injected document seam), TC-SMAP-008 (real adapter,
+  #   including the valid selected path), TC-SNARR-001 (rendered header),
+  #   TC-SPAR-001 (parity non-vacuity), TC-SCITE-005 (MCP composition supplement),
+  #   and TC-SCTR-002 (restored `holder` predicate beside `suiteBreadth`). No id is
+  #   renumbered, no TC changes owner, and the totals stay 38/38 TCs and 30/30
+  #   ACs. ACs named (all re-proved, none added): AC-F1-1, AC-F1-2, AC-F1-4,
+  #   AC-F1-5, AC-F2-1, AC-F3-1, AC-F4-2, AC-F4-3, AC-F5-1, AC-NFR1-1,
+  #   AC-NFR3-1, AC-NFR8-1.
+  #
+  # Gate (phase boundary; every command from the measured pm-notes environment,
+  #   each targeted suite ALSO run alone per F-3):
+  #   pnpm lint
+  #   pnpm format:check
+  #   pnpm typecheck
+  #   bun test tests/behaviour/verify-gates-suite-map.test.ts
+  #   bun test tests/behaviour/verify-gates-suite-map-corpus.test.ts
+  #   bun test tests/behaviour/verify-gates-suite-map-determinism.test.ts
+  #   bun test tests/behaviour/verify-gates-config-document-posture.test.ts
+  #   bun test tests/behaviour/verify-gates-config-document-adapter.test.ts
+  #   bun test tests/behaviour/verify-gates-config-layer-posture.test.ts
+  #   bun test tests/behaviour/verify-gates-narrowed-scope.test.ts
+  #   bun test tests/behaviour/verify-gates-parity-suite-map.test.ts
+  #   bun test tests/structure/mcp-gate-map-composition.test.ts
+  #   bun test tests/structure/verify-gates-suite-map-contract.test.ts
+  #   bun test tests/structure/verify-gates-suite-map-reference.test.ts
+  #   bun test tests/structure/verify-gates-exports.test.ts
+  #   bun test tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts
+  #   bun test tests/checks/fixture-sanitization.test.ts
+  #   bun run scripts/checks/error-table-sync.ts
+  #   bun run scripts/checks/exports-parity.ts
+  #   delivery-os plan validate GH-300
+  #
+  # Isolation proof (F-3, in addition to the per-suite runs above): each of the
+  #   three hermeticity suites run alone with the repo-relative temp parent
+  #   absent, recorded as the phase-8 pm-notes line.
+  #
+  # Suites left green: the suite-map family (resolver, corpus, determinism,
+  #   narrowed header, cause lines), the three hermetic suites, the reference and
+  #   parity suites, the restored holder projection, the error-table sync pair,
+  #   exports parity, fixture sanitization, lint/format/typecheck, and
+  #   `plan validate`.
+  # ---------------------------------------------------------------------------
+  - id: 8
+    title: "Review iteration-1 remediation: remove the duplicate clone (lint green), complete the job-name character class, make the three suites hermetic, declare the drift files, prove the shipped composition behaviourally, replace vacuous assertions, cover the valid selected config, and restore the delivered holder predicate"
+    kind: delivery
+    summary: "fix(GH-300): remediate review iteration one findings"
+    scope:
+      files:
+        - tests/behaviour/verify-gates-suite-map.test.ts
+        - packages/core/src/domain/verify-gates-suite-map.ts
+        - packages/cli/src/index.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - tests/fixtures/verify-gates/suite-map/cases.ts
+        - tests/behaviour/verify-gates-suite-map-corpus.test.ts
+        - tests/behaviour/verify-gates-suite-map-determinism.test.ts
+        - tests/behaviour/verify-gates-config-document-posture.test.ts
+        - tests/behaviour/verify-gates-config-document-adapter.test.ts
+        - tests/behaviour/verify-gates-config-layer-posture.test.ts
+        - tests/behaviour/verify-gates-narrowed-scope.test.ts
+        - tests/behaviour/verify-gates-parity-suite-map.test.ts
+        - tests/structure/mcp-gate-map-composition.test.ts
+        - tests/structure/verify-gates-suite-map-contract.test.ts
+        - tests/structure/verify-gates-suite-map-reference.test.ts
+        - tests/structure/verify-gates-exports.test.ts
+        - packages/cli/src/production.ts
+        - packages/cli/src/edge.ts
+        - scripts/checks/error-table-sync.ts
+        - tests/fixtures/events/error-table-baseline.json
+        - tests/fixtures/mcp/golden/gate-report/gate-equality-map.json
+        - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/structure/dispatch-attempts-taxonomy.test.ts
+        - doc/00-index.md
+        - doc/planning/oss-tooling/cli-command-registry.md
+        - doc/planning/oss-tooling/user-journeys.md
+      folders:
+        - tests/fixtures/verify-gates/suite-map
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/index.ts
+        role: consumer

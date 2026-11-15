@@ -1087,6 +1087,12 @@ export type VerifyGatesRuntimeOptions = {
     readonly credentials: CredentialPort;
     readonly transport: StatusTransport;
   };
+  /**
+   * The one bounded configuration-document map read (GH-300 DM-9). The
+   * composition memoizes the single resolution attempt; absent means undeclared
+   * and the delivered behaviour stands.
+   */
+  readonly readSuiteMap?: VerifyGatesCommandRuntime["readSuiteMap"];
   /** The resolved declared gate set; absent yields the shipped default. */
   readonly readGateSet?: VerifyGatesCommandRuntime["readGateSet"];
   /** The EVT-1 append seam; absent leaves the evaluation unrecorded. */
@@ -1250,6 +1256,7 @@ export const createVerifyGatesCommandRuntime = (
     nowMs: options.nowMs ?? (() => Date.now()),
     ...(options.capsule === undefined ? {} : { capsule: options.capsule }),
     ...(options.members === undefined ? {} : { members: options.members }),
+    ...(options.readSuiteMap === undefined ? {} : { readSuiteMap: options.readSuiteMap }),
   };
 };
 

@@ -766,6 +766,21 @@ export {
   type VerifyGatesMemberReads,
 } from "./verify-gates-members.js";
 export {
+  extractVerifySuiteMapNode,
+  renderSuiteMapCauseLine,
+  renderVerifyGatesNarrowedFailureSummary,
+  resolveVerifySuiteBreadth,
+  resolveVerifySuiteMap,
+  resolveVerifySuiteMapFromConfig,
+  suiteBreadthCitationOf,
+  suiteMapReadOfDocument,
+  VERIFY_SUITE_MAP_BRANCH_KEY,
+  type VerifySuiteBreadthCitation,
+  type VerifySuiteBreadthEvaluation,
+  type VerifySuiteBreadthWorkflowFacts,
+  type VerifySuiteMapNode,
+} from "./verify-gates-suite-map.js";
+export {
   boundWatchLine,
   createWatchProjection,
   type WatchLine,

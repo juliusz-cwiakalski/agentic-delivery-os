@@ -233,6 +233,12 @@
       "text": "coordinator.wake.delivery-failed",
       "recognized": true,
       "resolves": true
+    },
+    {
+      "id": "verify-narrowed-scope",
+      "text": "verify.narrowed-scope",
+      "recognized": true,
+      "resolves": true
     }
   ]
 }

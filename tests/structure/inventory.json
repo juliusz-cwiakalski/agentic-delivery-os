@@ -173,6 +173,7 @@
     "src/domain/verify-deploy.ts",
     "src/domain/verify-gates.ts",
     "src/domain/verify-gates-members.ts",
+    "src/domain/verify-gates-suite-map.ts",
     "src/domain/watch-stream.ts",
     "src/domain/watchdog.ts",
     "src/index.ts",

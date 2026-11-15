@@ -294,6 +294,38 @@ const MERGE_BRANCH = {
 } as const satisfies CatalogField;
 
 /**
+ * The typed `verify` branch (GH-300 DM-1, D-6 item 6).
+ *
+ * One key, `verify.suite-map`, default absent: no default map is invented. The
+ * branch constrains whole-document validity for consumers that resolve the
+ * merged tree; it is NOT a validator for this node (it cannot express the
+ * identifier grammar, the length and cap bounds, or list uniqueness), and the
+ * gates surface never consumes its whole-document outcome for the map.
+ */
+export const VERIFY_BRANCH = {
+  type: "object",
+  fields: {
+    "suite-map": {
+      type: "object",
+      fields: {
+        schemaVersion: { type: "string" },
+        jobs: {
+          type: "array",
+          items: {
+            type: "object",
+            fields: {
+              job: { type: "string" },
+              suites: { type: "array", items: { type: "string" } },
+            },
+          },
+        },
+        local: { type: "array", items: { type: "string" } },
+      },
+    },
+  },
+} as const satisfies CatalogField;
+
+/**
  * The typed `harness` branch (GH-233 F-6, DM-3, DEC-8).
  *
  * Selection, per-harness store locations, and the declared environment
@@ -463,6 +495,7 @@ export const PRODUCTION_CATALOG = {
   },
   merge: MERGE_BRANCH,
   harness: HARNESS_BRANCH,
+  verify: VERIFY_BRANCH,
   lane: LANE_BRANCH,
   queue: QUEUE_BRANCH,
   daemon: DAEMON_BRANCH,

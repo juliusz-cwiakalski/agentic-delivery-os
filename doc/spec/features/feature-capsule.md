@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-CAPSULE
 status: Current
 created: 2026-11-07
-last_updated: 2026-11-07
+last_updated: 2026-11-15
 owners: ["engineering"]
 service: delivery-os
 summary: "The change capsule: the existing change folder as a self-contained memory episode, an append-only delivery.capsule.event.v1 events.jsonl stream with a closed eleven-kind/four-writer vocabulary, deterministic per-capsule sequences and event keys, per-capsule append locking, torn-tail refusal, the first-event `capsule.opened` rule, and a terminal capsule.closed; the phase, commit, and verify producers with non-gating disclosure; the one-file-per-candidate `<id>.yaml` candidates/ layout, the candidate schema, capture bar, five evidence-link shapes, deterministic dedup and contradiction predicate; the closed promotion routing table with exactly one decision per candidate, confined lessons/tacit home writes, and sanctioned handoffs; and closeout's read-only validation, pre-contract backfill, review-verdict ingestion, per-candidate promotion decisions, and terminal close."
 links:
-  related_changes: ["GH-240"]
+  related_changes: ["GH-240", "GH-300"]
   contracts:
     - "packages/core/src/contracts/capsule.ts"
     - "packages/core/src/domain/capsule.ts"
@@ -126,7 +126,7 @@ Producers write only the event kinds they own, only into the capsule of the chan
 
 - **`phase`** appends one `phase.transition` event when a phase completion or reopen lands. The payload carries `phaseId`, the operation (`complete` or `reopen`), `outcome: "landed"`, the commit intent (`atomic` or `record-only`), and the commit SHA when present. The event key is derived from the change ref, phase id, operation, and the commit SHA when present; when no commit SHA exists, the persisted phase-record timestamp is the deterministic `transitionId` discriminator. Two distinct no-commit transitions of one phase therefore produce distinct events, while re-running the same landed transition (same `transitionId`) appends nothing.
 - **`commit`** appends one `commit.landed` event per landed commit. The payload carries the commit SHA, the parent SHA when known, the message source, and the change ref. The event key is the commit SHA. A landed commit without a SHA cannot be keyed and is disclosed as `capsule.commit-sha-absent` with no append.
-- **`verify gates`** appends one `gate.outcome` event after the gate-verification state append for a full battery evaluation. The payload carries the gate-set identity (`<schemaVersion>:<id,id,...>`), the head SHA, and one bounded `{gateId, verdict, reason}` entry per evaluated gate. The event key is derived from the gate-set identity and head SHA.
+- **`verify gates`** appends one `gate.outcome` event after the gate-verification state append for a full battery evaluation that is not refused for narrowed suite breadth; a `verify.narrowed-scope` refusal appends no capsule event. The payload carries the gate-set identity (`<schemaVersion>:<id,id,...>`), the head SHA, and one bounded `{gateId, verdict, reason}` entry per evaluated gate. The event key is derived from the gate-set identity and head SHA.
 
 Each producer returns a bounded disclosure `{appended, eventKey, code?, retryable?, detail?}` when the capsule port is present. An append failure or a thrown append becomes that disclosure; the command's primary outcome and its durable state record are unchanged. `verify gates` carries the disclosure on both its success data and its classified failure envelope. A producer never writes another change's capsule.
 
@@ -202,7 +202,7 @@ The `capsule.compaction-checkpoint` event carries bounded session identities or 
 
 ### 3.2 User Flows
 
-**Capsule across phases 1–10.** Planning agents author the spec, plan, test plan, and PM notes in the change folder. `phase complete` appends a `phase.transition` event beside its state record; `commit` appends a `commit.landed` event; `verify gates` appends a `gate.outcome` event. Review artifacts stay plain files until closeout. A producer append failure is disclosed and does not change the command outcome. No command touches another change's capsule.
+**Capsule across phases 1–10.** Planning agents author the spec, plan, test plan, and PM notes in the change folder. `phase complete` appends a `phase.transition` event beside its state record; `commit` appends a `commit.landed` event; `verify gates` appends a `gate.outcome` event for a full battery evaluation that is not refused for narrowed suite breadth (none on a `verify.narrowed-scope` refusal). Review artifacts stay plain files until closeout. A producer append failure is disclosed and does not change the command outcome. No command touches another change's capsule.
 
 **Closeout validation and close.** `closeout <ref> --apply` resolves the folder and runs the full read-only pre-flight in both modes: `events.jsonl` parsing (including the first-event rule), candidate count/size caps, `<id>.yaml` naming, candidate schema, exactly one promotion decision per candidate, and promotion path confinement. The pre-flight completes before any provider write, git mutation, or state append; an invalid capsule renders `would-refuse` in plan mode and returns `closeout.capsule-invalid` in apply mode with zero effects. A folder with no events is completed with `capsule.opened` and `capsule.backfill-gap`. Readable review verdicts are ingested; candidates are evaluated and routed; one `capsule.promotion` event is appended per decision; before close the capsule verifies that every candidate has exactly one decision, and one terminal `capsule.closed` event completes it. The applied payload reports the closed state, event count, and per-candidate decision projection.
 
@@ -359,4 +359,4 @@ The capsule adds no runtime dependency, daemon, scheduled job, or network call. 
 
 See also: [Closeout Transaction](feature-closeout.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Harness Adapters](feature-harness-adapters.md), [pm-notes lint and phase transitions](feature-pm-notes-lint-and-phase-transitions.md), [Commit Primitive](feature-commit-primitive.md), [Verify Gates](feature-verify-gates.md), [Retro Evidence Pipeline](feature-retro-pipeline.md), [Session Database Administration](feature-session-database-admin.md), [Merge and Verify Deploy](feature-merge-verify-deploy.md), and the [repository glossary](../../overview/glossary.md).
 
-**Change record:** `doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/`.
+**Change record:** `doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/`; `doc/changes/2026-11/2026-11-15--GH-300--suite-job-mapping-gates/`.

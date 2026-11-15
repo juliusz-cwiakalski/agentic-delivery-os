@@ -1,0 +1,317 @@
+{
+  "schemaVersion": "delivery.verify-gates.v1",
+  "changeRef": "GH-310",
+  "target": "gates",
+  "overall": "pass",
+  "summary": {
+    "gates": 4,
+    "passed": 4,
+    "failed": 0,
+    "unknown": 0
+  },
+  "gates": [
+    {
+      "id": "ci-green",
+      "verdict": "pass",
+      "reason": "ci-green",
+      "citation": {
+        "sources": [
+          {
+            "name": "repository-ci-workflow",
+            "outcome": "read"
+          },
+          {
+            "name": "github-delivery-request-detail",
+            "outcome": "read"
+          },
+          {
+            "name": "github-check-runs",
+            "outcome": "read"
+          }
+        ],
+        "identity": {
+          "changeRef": "GH-310",
+          "deliveryRequest": "311",
+          "headSha": "1111111111111111111111111111111111111111"
+        },
+        "counts": [
+          {
+            "name": "expected",
+            "value": 23
+          },
+          {
+            "name": "runs",
+            "value": 23
+          },
+          {
+            "name": "succeeded",
+            "value": 23
+          },
+          {
+            "name": "failed",
+            "value": 0
+          },
+          {
+            "name": "pending",
+            "value": 0
+          },
+          {
+            "name": "skipped",
+            "value": 0
+          },
+          {
+            "name": "canceled",
+            "value": 0
+          },
+          {
+            "name": "missing",
+            "value": 0
+          }
+        ],
+        "names": [
+          {
+            "kind": "missing-jobs",
+            "values": [],
+            "omitted": 0
+          },
+          {
+            "kind": "failed-jobs",
+            "values": [],
+            "omitted": 0
+          },
+          {
+            "kind": "pending-jobs",
+            "values": [],
+            "omitted": 0
+          }
+        ],
+        "reasons": ["ci-green"]
+      },
+      "member": "api-service-1a2b3c4d"
+    },
+    {
+      "id": "push-parity",
+      "verdict": "pass",
+      "reason": "parity-matched",
+      "citation": {
+        "sources": [
+          {
+            "name": "repository-head",
+            "outcome": "read"
+          },
+          {
+            "name": "github-delivery-request-list",
+            "outcome": "read"
+          },
+          {
+            "name": "github-delivery-request-detail",
+            "outcome": "read"
+          }
+        ],
+        "identity": {
+          "changeRef": "GH-310",
+          "branch": "feat/GH-310/api-slice",
+          "localSha": "1111111111111111111111111111111111111111",
+          "deliveryRequest": "311",
+          "baseRef": "main-tools",
+          "headSha": "1111111111111111111111111111111111111111"
+        },
+        "counts": [
+          {
+            "name": "compared",
+            "value": 1
+          },
+          {
+            "name": "matched",
+            "value": 1
+          }
+        ],
+        "names": [],
+        "reasons": ["parity-matched"]
+      },
+      "member": "api-service-1a2b3c4d"
+    },
+    {
+      "id": "ci-green",
+      "verdict": "pass",
+      "reason": "ci-green",
+      "citation": {
+        "sources": [
+          {
+            "name": "repository-ci-workflow",
+            "outcome": "read"
+          },
+          {
+            "name": "github-delivery-request-detail",
+            "outcome": "read"
+          },
+          {
+            "name": "github-check-runs",
+            "outcome": "read"
+          }
+        ],
+        "identity": {
+          "changeRef": "GH-310",
+          "deliveryRequest": "312",
+          "headSha": "2222222222222222222222222222222222222222"
+        },
+        "counts": [
+          {
+            "name": "expected",
+            "value": 23
+          },
+          {
+            "name": "runs",
+            "value": 23
+          },
+          {
+            "name": "succeeded",
+            "value": 23
+          },
+          {
+            "name": "failed",
+            "value": 0
+          },
+          {
+            "name": "pending",
+            "value": 0
+          },
+          {
+            "name": "skipped",
+            "value": 0
+          },
+          {
+            "name": "canceled",
+            "value": 0
+          },
+          {
+            "name": "missing",
+            "value": 0
+          }
+        ],
+        "names": [
+          {
+            "kind": "missing-jobs",
+            "values": [],
+            "omitted": 0
+          },
+          {
+            "kind": "failed-jobs",
+            "values": [],
+            "omitted": 0
+          },
+          {
+            "kind": "pending-jobs",
+            "values": [],
+            "omitted": 0
+          }
+        ],
+        "reasons": ["ci-green"]
+      },
+      "member": "web-ui-5e6f7a8b"
+    },
+    {
+      "id": "push-parity",
+      "verdict": "pass",
+      "reason": "parity-matched",
+      "citation": {
+        "sources": [
+          {
+            "name": "repository-head",
+            "outcome": "read"
+          },
+          {
+            "name": "github-delivery-request-list",
+            "outcome": "read"
+          },
+          {
+            "name": "github-delivery-request-detail",
+            "outcome": "read"
+          }
+        ],
+        "identity": {
+          "changeRef": "GH-310",
+          "branch": "feat/GH-310/web-slice",
+          "localSha": "2222222222222222222222222222222222222222",
+          "deliveryRequest": "312",
+          "baseRef": "main-tools",
+          "headSha": "2222222222222222222222222222222222222222"
+        },
+        "counts": [
+          {
+            "name": "compared",
+            "value": 1
+          },
+          {
+            "name": "matched",
+            "value": 1
+          }
+        ],
+        "names": [],
+        "reasons": ["parity-matched"]
+      },
+      "member": "web-ui-5e6f7a8b"
+    }
+  ],
+  "definitionOfDone": {
+    "status": "green",
+    "members": [
+      {
+        "repoKey": "api-service-1a2b3c4d",
+        "gates": {
+          "ci": "pass"
+        },
+        "verdict": "pass"
+      },
+      {
+        "repoKey": "web-ui-5e6f7a8b",
+        "gates": {
+          "ci": "pass"
+        },
+        "verdict": "pass"
+      }
+    ],
+    "evidence": [
+      {
+        "repoKey": "api-service-1a2b3c4d",
+        "pullRequest": "311",
+        "landed": true,
+        "landingPosition": 1
+      },
+      {
+        "repoKey": "web-ui-5e6f7a8b",
+        "pullRequest": "312",
+        "landed": true,
+        "landingPosition": 2
+      }
+    ]
+  },
+  "blockingMembers": [],
+  "reviewFlow": {
+    "runId": "76f83b608bc31cad65d8207f15bb3a50779e01405f5d31408919aa545589bd36",
+    "complete": true,
+    "verdicts": [
+      {
+        "repoKey": "api-service-1a2b3c4d",
+        "pullRequest": "311",
+        "verdict": "pass"
+      },
+      {
+        "repoKey": "web-ui-5e6f7a8b",
+        "pullRequest": "312",
+        "verdict": "pass"
+      }
+    ]
+  },
+  "suiteBreadth": [
+    "tests",
+    "lint",
+    "format",
+    "typecheck",
+    "boundaries",
+    "prompt-conformance",
+    "help-guide-coverage",
+    "exports-parity"
+  ],
+  "mirrorsJob": "job-01"
+}

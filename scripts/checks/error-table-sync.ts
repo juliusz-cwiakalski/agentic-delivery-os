@@ -215,6 +215,8 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "repos.identity-unreadable",
   "repos.registry-corrupt",
   "repos.state-unavailable",
+  // GH-300 pins the narrowed-scope identity exactly; it is a two-segment code.
+  "verify.narrowed-scope",
   // GH-290 pins the three events-surface identities exactly; they are
   // kind-first two-segment codes, so they join the exact allowlist.
   "events.topic-unknown",

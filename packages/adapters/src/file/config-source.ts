@@ -6,6 +6,7 @@ import type {
   ConfigPriorOutcome,
   ConfigSkippedLayer,
   ConfigSourceFacts,
+  VerifyCommittedConfigDocumentRead,
 } from "@delivery-os/core/contracts";
 import { parseConfigYaml } from "./yaml-parser.js";
 
@@ -218,6 +219,53 @@ export const acquireFileConfig = (input: FileAcquisitionInput): ConfigAcquisitio
   }
 
   return { ok: true, sources, skipped: skips, ...(prior.length === 0 ? {} : { prior }) };
+};
+
+/**
+ * Read the one document that occupies the project-committed layer slot (DM-9).
+ *
+ * Exactly one path is resolved: the explicitly selected file when a selection is
+ * in play, else `<root>/<configDirectoryName>/config.yaml` where `<root>` is
+ * `explicitProjectRoot`, falling back to `gitRoot` — the same pair
+ * `acquireFileConfig` resolves. At most one stat-class existence probe and at
+ * most one bounded content read are performed, with zero content reads when
+ * neither a selected nor a committed path exists. No system, user-global,
+ * project-local, environment, or CLI source is read and the merged layer tree is
+ * never consulted. The document's content is classified, never interpreted: a
+ * parser-level failure anywhere is `unparseable`, an unreadable path is
+ * `unreadable`, and a selection naming a missing or unreadable path is
+ * `selected-unusable`, which the map read refuses rather than treating as
+ * undeclared.
+ */
+export const readCommittedConfigDocument = (
+  input: FileAcquisitionInput,
+): VerifyCommittedConfigDocumentRead => {
+  const root = input.explicitProjectRoot || input.gitRoot || undefined;
+  const selected = input.selectedConfig;
+
+  const readPath = (file: string): VerifyCommittedConfigDocumentRead => {
+    let text: string;
+    try {
+      text = input.fs.readText(file);
+    } catch {
+      return { ok: false, state: "unreadable" };
+    }
+    const parsed = parseConfigYaml(text, "project-committed", file);
+    if (!parsed.ok) return { ok: false, state: "unparseable" };
+    return { ok: true, state: "parsed", document: parsed.facts.values };
+  };
+
+  if (selected !== undefined) {
+    if (selected.length === 0 || !input.fs.exists(selected)) {
+      return { ok: false, state: "selected-unusable" };
+    }
+    const outcome = readPath(selected);
+    return outcome.ok ? outcome : { ok: false, state: "selected-unusable" };
+  }
+  if (root === undefined) return { ok: true, state: "absent" };
+  const file = under(root, input.configurationDirectoryName, "config.yaml");
+  if (!input.fs.exists(file)) return { ok: true, state: "absent" };
+  return readPath(file);
 };
 
 /**

@@ -1,0 +1,238 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-300
+branch: feat/GH-300/suite-job-mapping-gates
+status: FAIL
+summary: >-
+  The M2-S7 implementation is functionally strong: the pure suite-map resolver,
+  four-outcome breadth rule, narrowed-scope refusal, committed-slot document
+  posture, report/detail projection, MCP mirror, no-append rule, parity, read
+  budget and reference declaration all pass their targeted suites (424 tests
+  green) and the delivered surfaces are preserved. The change cannot pass the
+  repository quality gate yet: `pnpm lint` fails because
+  `tests/behaviour/verify-gates-suite-map.test.ts` redeclares `clone`, so
+  `pnpm check` and DoD-10 are red. Three medium issues additionally need
+  remediation: the job-name class accepts Unicode line/paragraph separators
+  (AC-F1-2), three new suites depend on a pre-existing `tmp/tmpdir` and fail in
+  isolation on a clean checkout, and the plan under-declares eight changed files
+  while the delivery note records no per-phase test results. The reference
+  declaration is tracked and resolves to equality, but its "end-to-end" proof
+  bypasses the shipped CLI composition (text-grep only).
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 5
+  low: 3
+  info: 1
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: quality-gate
+    location: tests/behaviour/verify-gates-suite-map.test.ts:45
+    message: >-
+      The file imports `clone` from `tests/fixtures/verify-gates/cases/facts`
+      (line 27) and also declares `const clone = ...` at line 45. Biome reports
+      `lint/suspicious/noRedeclare`; `pnpm lint` exits 1, so `pnpm check` and
+      DoD-10 cannot be green. The duplicate was introduced by the
+      invalid-workflow remediation import.
+    suggestion: >-
+      Remove the local `const clone` at line 45 and use the fixture import (it
+      is the same JSON clone), or drop `clone` from the import and keep the
+      local helper. Re-run `pnpm lint` afterwards.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/verify-gates-suite-map.ts:33
+    message: >-
+      `hasControlCharacter` rejects only C0 (0x00-0x1f) and C1 (0x7f-0x9f)
+      characters. A job name containing U+2028 LINE SEPARATOR or U+2029
+      PARAGRAPH SEPARATOR (and Unicode Cf bidi/format controls) is accepted,
+      although AC-F1-2 requires a `job` carrying a control character or a line
+      break to be refused and Appendix A row 26 requires a single-line
+      printable class. A parsed `job: "TS\u2028aggregate check"` resolves, and
+      the rendered `cause: mirror=` line then contains U+2028, violating the
+      pinned one-physical-line grammar. The same predicate is duplicated in
+      `packages/cli/src/index.ts:196`.
+    suggestion: >-
+      Reject Unicode line/paragraph separators and format controls in the
+      shared job-name class (for example `\p{Zl}`, `\p{Zp}`, and `\p{Cf}`, or a
+      strict printable single-line allowlist), use one shared predicate instead
+      of two copies, and add U+2028/U+2029 fixtures to `DEFECTS` and the
+      adapter/handler expectations.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: testing
+    location: tests/behaviour/verify-gates-config-document-adapter.test.ts:52
+    message: >-
+      Three new suites call `mkdtempSync` under the repo-relative
+      `tmp/tmpdir` without ensuring the directory exists. On a fresh checkout
+      the parent is absent, so running the suite in isolation throws ENOENT;
+      I reproduced 27/28 failures in
+      `tests/behaviour/verify-gates-config-document-adapter.test.ts` after
+      moving `tmp/tmpdir` aside. The same pattern is at
+      `tests/behaviour/verify-gates-config-layer-posture.test.ts:58` and
+      `tests/structure/mcp-gate-map-composition.test.ts:53`. Full-suite runs
+      pass only because another loaded module creates the directory as a
+      top-level side effect, which makes the suites order-dependent.
+    suggestion: >-
+      Call `mkdirSync(TMP, { recursive: true })` before each `mkdtempSync`
+      (as existing suites do) or use `os.tmpdir()` via `makeTempRoot`; then
+      verify each suite runs alone in a clean tree.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-15--GH-300--suite-job-mapping-gates/chg-GH-300-plan.yaml:1
+    message: >-
+      Eight changed files are outside every declared phase scope (plan
+      revision 1.4): `scripts/checks/error-table-sync.ts`,
+      `tests/fixtures/events/error-table-baseline.json`,
+      `tests/fixtures/mcp/golden/gate-report/gate-equality-map.json`,
+      `tests/fixtures/ports/v1-contract-inventory.json`,
+      `tests/structure/dispatch-attempts-taxonomy.test.ts`,
+      `doc/00-index.md`, `doc/planning/oss-tooling/cli-command-registry.md` and
+      `doc/planning/oss-tooling/user-journeys.md`. They are mechanical
+      consequences of the new error row, exports and report fields, but the
+      plan is the scope contract and these edits are undeclared.
+    suggestion: >-
+      Add the six code/test files to the owning phase scopes (phase 2 for the
+      row/exports/inventory, phase 4/6 for the MCP golden/taxonomy count) and
+      the three docs to phase 7, or record an explicit scope deviation in
+      pm-notes. `plan validate` remains green either way.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-15--GH-300--suite-job-mapping-gates/chg-GH-300-pm-notes.yaml:320
+    message: >-
+      The single DELIVERY note maps the seven plan phases to commit hashes and
+      records `plan validate` green and range lint PASS, but it records no
+      per-phase test result. The plan's phases each declare a gate command and
+      "suites left green"; the reviewer plan audit expects every completed phase
+      to have a pm-notes entry naming the phase id, commit hash and test result.
+    suggestion: >-
+      Append one pm-notes `notes:` entry per plan phase (or one combined entry
+      listing each phase) with the gate command result, or cite the command
+      output/log file that holds it; keep the existing commit map.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: medium
+    confidence: high
+    category: testing
+    location: tests/structure/verify-gates-suite-map-reference.test.ts:123
+    message: >-
+      The reference-declaration "end-to-end" proof builds its own memoized
+      `readSuiteMap` from the real document and injects it into
+      `combinedRuntime`; the shipped CLI composition is only asserted with
+      source-text `toContain` checks at lines 137-147. A wrong `gitRoot`,
+      configuration directory, selection handling or memoization in
+      `packages/cli/src/production.ts` would not fail any test, which is exactly
+      the inert/miswired-composition risk RSK-4 and DEC-17/DoD-8 call out. The
+      MCP composition is behaviourally covered; the CLI composition is not.
+    suggestion: >-
+      Add a behavioural composition test that drives the production composer's
+      `readSuiteMap` (export/inject the seam or provide a fake provider read) and
+      asserts equality for the real document plus a selected-file/overlay
+      negative, or record the limitation explicitly in pm-notes/spec and lower
+      the proof claim.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: low
+    confidence: high
+    category: testing
+    location: tests/behaviour/verify-gates-parity-suite-map.test.ts:169
+    message: >-
+      Several assertions are vacuous or mislabelled. The parity test loops over
+      `[undeclaredRead, undeclaredRead]` (the same state twice) instead of the
+      two declared no-selection states; the corpus test loops over the same
+      `["TS aggregate check"]` names twice and never exercises equality in the
+      "equality, narrowing, and not-evaluated" case; the determinism test at
+      `tests/behaviour/verify-gates-suite-map-determinism.test.ts:137` labels a
+      member-less six-line run "member-mode".
+    suggestion: >-
+      Use distinct fixture reads/names for each state and correct the
+      member-mode label (the real member-mode case lives in the member-posture
+      suite), so a regression in one state cannot hide behind a duplicate.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-8
+    severity: low
+    confidence: high
+    category: testing
+    location: tests/behaviour/verify-gates-config-document-adapter.test.ts:118
+    message: >-
+      The adapter's selected-config path is covered only for a missing or
+      unreadable selected file. The valid case - a selected file occupying the
+      committed slot and supplying the map (DM-9/DEC-19) - is never tested;
+      `readWith`'s `selectedConfig` parameter in the layer-posture suite is
+      unused. A regression where a valid selection is treated as absent would
+      pass the suite.
+    suggestion: >-
+      Add a case where a valid selected file is honoured (equality and narrowed
+      variants) and assert no overlay/committed path is read, using the existing
+      adapter harness.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-9
+    severity: low
+    confidence: high
+    category: backward-compatibility
+    location: packages/cli/src/index.ts:225
+    message: >-
+      Refactoring `explicitDetail` changed the delivered `holder` predicate:
+      the old regex rejected only CR/LF and C1 controls, while the new
+      `hasControlCharacter` also rejects TAB, DEL and every other C0 control.
+      DM-6 and the spec state the existing `holder` member is unchanged, so a
+      holder value that previously projected now silently disappears.
+    suggestion: >-
+      Keep the delivered `holder` predicate for `holder` (and use the stricter
+      predicate only for `suiteBreadth`/cause), or document the tightening as a
+      deliberate spec/decision change rather than an unmentioned side effect.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-10
+    severity: info
+    confidence: high
+    category: environment
+    location: .git/info/exclude:22
+    message: >-
+      The shared worktree exclude file still lists `.delivery-os/`. The
+      reference document is tracked at HEAD, so the current change and CI are
+      unaffected, but a future `git add` under `.delivery-os/` will be silently
+      skipped unless forced; the reference test reads the working tree and does
+      not assert git tracking. pm-notes says the line was restored "at line 21"
+      but it is line 22.
+    suggestion: >-
+      Remove the local `.delivery-os/` exclude entry or document the force-add
+      requirement, and consider asserting `git ls-files` tracking of the
+      reference document in the reference suite.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-15T15:19:36Z
+next_step: EXECUTE_REMEDIATION_PHASE

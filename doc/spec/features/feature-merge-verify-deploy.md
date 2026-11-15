@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-MERGE-VERIFY-DEPLOY
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-08
+last_updated: 2026-11-15
 owners: ["engineering"]
 service: delivery-os
 summary: "The merge transaction and verify-deploy engine: the config-declared versioned gate registry shared by verify gates and merge, the fenced EVT-1 gate-verification record and freshness envelope, the post-verification tracker and CI probe, owner-gate classification as merge authority, recorded authorized waivers, the single rebase-refresh with no force path, the verified squash landing with idempotent convergence and dry-run, the lifecycle merge path the coordinator uses, the verify deploy trace verdict taxonomy, the recorded squash SHA and parent that anchor closeout's merged-diff sweep, and the merge.* / verify.deploy.* error identities."
 links:
-  related_changes: ["GH-225", "GH-237", "GH-240", "GH-242"]
+  related_changes: ["GH-225", "GH-237", "GH-240", "GH-242", "GH-300"]
   related_decisions: ["ADR-0003", "ADR-0004", "PDR-0003"]
   contracts:
     - "packages/core/src/contracts/merge.ts"
@@ -74,10 +74,15 @@ declared comparator is `>=`: at-bound is stale.
 
 ## Gate-verification record and freshness envelope
 
-Every full evaluation appends exactly one fenced, post-append-verified record
+Every full evaluation that is not refused for narrowed suite breadth appends
+exactly one fenced, post-append-verified record
 (`delivery.merge.gate-verification.v1`, record kind
 `merge.gate-verification`): `verify gates` records the battery entries and
-`merge --dry-run` records the merge-applicable entries. The record carries the
+`merge --dry-run` records the merge-applicable entries. A `verify gates` run
+refused with `verify.narrowed-scope` appends no record and no capsule event, so
+`merge`'s freshness read sees only the previous record. The record shape,
+schema, derivation, and the one-append counting for every non-refused evaluation
+are unchanged. The record carries the
 change ref, head SHA, verification time, gate-set identity, per-gate verdicts
 with bounded citations, and the observed tracker posture. An append failure is
 a classified state failure and is never consumable evidence. `verify gates`
