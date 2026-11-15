@@ -752,3 +752,43 @@ notes:
       delivery; each is stated in the artifact."
     type: info
     date: "2026-11-15"
+  - text: "POST-PR CI REMEDIATION (ts-invariants; CI-only fix, no lifecycle phase
+      reopened): the first CI run on PR #326 failed job `ts-invariants` at step
+      'Run static invariant checks', on its last command `bun run
+      scripts/checks/memory-lint.ts`, with: error: Cannot find module
+      '@delivery-os/core/contracts' from
+      'packages/adapters/src/file/memory-scan.ts'. VERIFIED ROOT CAUSE —
+      specifier resolution, not export registration: `MEMORY_ROOT`,
+      `MemoryFrontmatter`, `MemoryScannedFile` and the rest were already
+      exported from the contracts barrel, so this was never a missing-export
+      defect. The check's import closure reached two package-manifest
+      specifiers that resolve to dist — the scanner's
+      `@delivery-os/core/contracts` (package `exports` -> ./dist/contracts/)
+      and the core domain's `#contracts` (package `imports` -> ./dist/contracts/)
+      — while the `ts-invariants` job installs and runs with NO build step, so
+      packages/*/dist does not exist in that tier. WHY LOCAL GATES HID IT:
+      `pnpm check` builds before it verifies (pretypecheck runs `pnpm build`,
+      plus the package pretest hooks), so a dist always existed locally and the
+      same specifiers resolved; the check therefore passed locally even against
+      a stale dist and could fail only on a build-free tier. FIX — make the
+      check closure dist-free, minimally: (1) the core domain imports the
+      sibling contract leaf `../contracts/memory-record.js` instead of the
+      `#contracts` alias; (2) the adapter scanner keeps only a TYPE-ONLY
+      `@delivery-os/core/contracts` import, erased under
+      `verbatimModuleSyntax`, and takes the memory root as an injected input —
+      `scanMemoryTree(repoRoot, memoryRoot, fs?)` — so the adapter never imports
+      `MEMORY_ROOT`; (3) the check edge imports `MEMORY_ROOT` from the same
+      contract leaf and passes it in. No `package.json` exports/imports map
+      changed, no CI build step added, the aggregate chain is unchanged, and no
+      check was weakened. PREVENTION: any future invariant check that imports
+      package code must be verified with `dist` absent, because the CI invariant
+      tier is build-free by design. That method is the acceptance evidence here:
+      with packages/core/dist and packages/adapters/dist moved aside the check
+      exits 1 with the CI error before the fix and exits 0 printing
+      'memory-lint: records=3 areas=8 errors=0 advisories=0' after it; a new
+      case in tests/checks/memory-lint-output.test.ts pins the dist-free closure
+      so the regression cannot return silently. Gate evidence after the fix:
+      full `pnpm check` exit 0 (8669 pass, 4 skip, 0 fail) and the commit-range
+      gate PASS (56 commits in range, 0 offending)."
+    type: retro
+    date: "2026-11-15"
