@@ -162,13 +162,13 @@ This change is done when every condition below holds. Each condition binds §17 
 | DoD-1 | All five §17 acceptance criteria are satisfied, each with its command output excerpt and exit code recorded | AC-F1-1, AC-F1-2, AC-F1-3, AC-F1-4, AC-F1-5, NFR-1..NFR-5 | TC-PRIV-001..TC-PRIV-006 execution log and the pm-notes `notes:` evidence entries | Phase 1 (obligation 1.7) |
 | DoD-2 | Exactly one substituted token on one line of the GH-310 pm-notes, with every recorded verdict, count, commit hash, and phase timestamp byte-identical | AC-F1-3, F-1, DM-1, NFR-2 | TC-PRIV-003: masked diff is a single substitution, changed-line count `1`/`1` in one pre-existing file, `git diff --check` clean, document still parses | Phase 1 (obligations 1.1, 1.2, 1.5) |
 | DoD-3 | Neither this change's artifacts nor its plan contain an absolute user path | AC-F1-2, NFR-5 | TC-PRIV-002-style home-rooted absolute-path scan of this change folder returns no match; review-time inspection of every artifact and the plan | Phase 1 (obligation 1.7) |
-| DoD-4 | Exactly one delivery commit, created through the `commit` primitive, bearing the ticket's subject `fix(GH-322): sanitize absolute user path in GH-310 pm-notes` | §18, NFR-4 | Commit log for the branch plus the capsule's recorded commit event show exactly one commit with that subject; no second delivery commit | Phase 1 (obligation 1.8) |
+| DoD-4 | Exactly ONE delivery commit, created through the `commit` primitive and scoped `GH-322`, whose subject the primitive produces from the plan phase summary — a conventional `feat(GH-322): <summary>` subject that carries no tracker reference other than `GH-322` — landing both the sanitized GH-310 pm-notes line and the phase state atomically; the subject is derived rather than pinned because the primitive rejects foreign tracker references and offers no subject override, so a pinned literal subject naming the other ticket could never land | §18, NFR-4 | `git log --format=%s origin/main-tools..HEAD` shows exactly one delivery commit, and `git log --format=%s -1 <delivery sha>` shows its derived `feat(GH-322): …` subject; the capsule's recorded commit event agrees; no second delivery commit, and no hand-written subject is asserted | Phase 1 (obligation 1.8) |
 | DoD-5 | A pull request is open against `main-tools` with merge authority left to the CEO, and no other ticket is touched | AC-F1-5, NFR-4 | TC-PRIV-005 (PR target and open state) and TC-PRIV-006 (changed-file set limited to the §7.1 paths) | Lifecycle phase 11 (not a plan phase) |
 
 A condition without passing evidence is not done; `dod_check` reopens the owning plan phase rather than waiving a row.
 
 ## 18. ROLLOUT & CHANGE MANAGEMENT (HIGH-LEVEL)
-One commit through the commit primitive with a conventional `fix` subject; PR to `main-tools`, left open. No rollout, migration, or communication step.
+One commit through the `commit` primitive, whose subject the primitive derives from the plan phase summary as `feat(GH-322): …` (scope `GH-322`); PR to `main-tools`, left open. No rollout, migration, or communication step.
 
 ## 19. DATA MIGRATION / SEEDING (IF APPLICABLE)
 N/A.
@@ -197,6 +197,7 @@ N/A.
 |---------|------|--------|---------|
 | 1.0 | 2026-11-15 | @spec-writer (delegated by @pm) | Initial specification |
 | 1.1 | 2026-11-15 | @spec-writer (delegated by @pm) | DoR iteration 1 remediation: F-1 — AC-F1-5 and NG-2 qualified with the §7.1 carve-out for the GH-310 pm-notes line; F-2 — §17.1 change-specific Definition of Done (DoD-1..DoD-5); N-3 — gate-convention attribution corrected from `AGENTS.md` to `lesson-2026-001`, noting the ticket's shorthand |
+| 1.2 | 2026-11-15 | @spec-writer (delegated by @pm) | Satisfiability remediation, one row plus its repeated wording: DoD-4 and §18 replaced the pinned `fix(GH-322)` commit subject — which could never land, because the `commit` primitive rejects foreign tracker references and offers no subject override — with the primitive-derived `feat(GH-322): <summary>` subject from the plan phase summary, verified via `git log` rather than from a hand-written subject |
 
 ---
 

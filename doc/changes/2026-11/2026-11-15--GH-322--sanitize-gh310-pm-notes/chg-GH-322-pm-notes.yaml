@@ -6,9 +6,9 @@ delivery_mode: autonomous
 variant: full
 phases:
   clarify_scope: { started: null, completed: 2026-11-15T08:57:27.390Z }
-  specification: { started: null, completed: 2026-11-15T09:12:44.523Z }
+  specification: { started: null, completed: 2026-11-15T09:26:50.741Z }
   test_planning: { started: null, completed: 2026-11-15T09:13:03.028Z }
-  delivery_planning: { started: null, completed: 2026-11-15T09:04:09.636Z }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: 2026-11-15T09:17:07.301Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -23,6 +23,20 @@ decisions:
       Rationale: the privacy-literals invariant is the binding authority and the
       value being recorded is a command line, not a measurement; the
       substitution is literal-only and changes no outcome."
+    date: "2026-11-15"
+  - text: "Accept the commit subject the `commit` primitive generates instead of the
+      ticket's literal `fix(GH-322): sanitize absolute user path in GH-310
+      pm-notes`. MEASURED constraint: the primitive validates every message
+      against its change ref and rejects any other tracker reference
+      (`packages/core/src/domain/commit-message.ts`, invented-tracker rule), and
+      it offers no message override (`commit [<ref>] [--phase] [--dry-run]`
+      only). A standalone template subject is `update <first staged path>`,
+      which embeds the GH-310 path and is refused; the phase-scoped template
+      subject is `feat(GH-322): <plan phase summary>`, refused only because the
+      summary began with a capital (commitlint subject-case). The achievable
+      form keeps the ticket's intent — one conventional commit, scope GH-322 —
+      while DoD-4 states the subject the primitive actually produces.
+      Reversible; no rule, config, or prompt change."
     date: "2026-11-15"
 open_questions: []
 blockers: []
@@ -83,6 +97,63 @@ notes:
       exact subject) is provable from `git log`, which is what dod_check reads.
       Record: readiness-review/readiness-iter-2.md."
     type: resolved
+    date: "2026-11-15"
+  - text: "DELIVERY ATTEMPT 1: BLOCKED at the commit step, not at the edit. The
+      product edit is applied and every check passes: `bun run
+      scripts/checks/privacy-literals.ts` exit 0 with 0 violations (4076 files
+      scanned), `delivery-os lint GH-310` conforms, the home-path scan is empty,
+      `git diff --numstat` is 1/1 with exactly two diff lines, doc-conformance
+      11/11. The `commit` primitive refuses to land it: `commit GH-322
+      --dry-run` -> commit.commitlint-failed 'invented tracker references are
+      not allowed: GH-310' (standalone template subject is `update <first staged
+      path>`), and `commit GH-322 --phase delivery --dry-run` ->
+      commit.commitlint-failed 'subject must not be sentence-case' (phase
+      template subject is `feat(GH-322): <plan phase summary>`, summary began
+      with a capital). No message transport is wired, so the template is the
+      only path, and no `--message` override exists. No commit landed; no phase
+      state moved; the verified edit stays uncommitted in the working tree."
+    type: blocker
+    date: "2026-11-15"
+  - text: "BLOCKER RESOLVED (delivery attempt 1): reopen delivery_planning to give
+      the single plan phase a lowercase, tracker-free summary so the
+      phase-scoped template subject passes commitlint and the invented-tracker
+      rule, and reopen specification to make DoD-4 state the achievable subject
+      (the ticket's literal subject embeds a foreign tracker ref and cannot be
+      landed through the primitive). DoR gate re-run required afterwards."
+    type: resolved
+    date: "2026-11-15"
+  - text: "RETRO: the ticket's mandated commit subject was impossible to satisfy and
+      nobody checked it against the commit primitive until the delivery phase,
+      costing an extra artifact cycle. The DoR gate had even read the subject as
+      'matches the ticket byte-for-byte' without checking whether the primitive
+      could produce it. Improvement: when a ticket pins a commit subject,
+      validate it against the primitive with `commit --dry-run` during
+      delivery_planning, and forbid foreign tracker references in pinned
+      subjects."
+    type: retro
+    date: "2026-11-15"
+  - text: "DoR iteration-2 remediation, second pass (delivery attempt 1): the plan
+      now carries summary `sanitize the recorded absolute gate temp root` and no
+      pinned subject (revision 1.1), the spec DoD-4 and §18 state the
+      primitive-derived subject (v1.2), and the test plan DoD-4/TC-PRIV-005
+      assert the same derived subject (1.2). A non-destructive `commit GH-322
+      --phase delivery --dry-run` proved the derived subject `feat(GH-322):
+      sanitize the recorded absolute gate temp root` (59 chars) validates and
+      that staging includes the GH-310 pm-notes."
+    type: info
+    date: "2026-11-15"
+  - text: "RETRO: the commit primitive stages EVERY tracked pending file, so the
+      uncommitted GH-310 product edit hijacked the template subject of the next
+      phase commit (`update <first staged path>` picks the GH-310 path, which
+      the invented-tracker rule refuses). Measured during the artifact
+      re-completion cycle. Handling: the product edit is reverted before the
+      artifact phases re-complete and re-applied inside the delivery phase, so
+      the sanitization lands exactly once, in the delivery commit, with the
+      derived subject. Improvement candidate for tooling: a phase commit whose
+      staging set is dominated by an out-of-scope tracked file should either
+      fall back to the declared plan summary or refuse with a scope-drift error
+      instead of deriving a subject from a foreign change folder."
+    type: retro
     date: "2026-11-15"
   - text: "RETRO: the spec writer's non-goals were written before the in-scope edit
       was pinned, so a blanket 'no other change artifact' clause contradicted

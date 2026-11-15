@@ -65,7 +65,7 @@ F-1 is covered by TC-PRIV-001 (green), TC-PRIV-002 (no residual path), TC-PRIV-0
 | DoD-1 | All five §17 acceptance criteria satisfied, each with its command output excerpt and exit code recorded | TC-PRIV-001…TC-PRIV-006, evidenced in §10 of this plan and in the pm-notes `notes:` entries | Planned |
 | DoD-2 | Exactly one substituted token on one line of the GH-310 pm-notes; verdicts, counts, commit hashes, and phase timestamps byte-identical | TC-PRIV-003 (masked diff, `1`/`1` numstat, `git diff --check` clean, `delivery-os lint GH-310` conforms) | Planned |
 | DoD-3 | Neither this change's artifacts nor its plan contain an absolute user path | TC-PRIV-002 method applied to this change folder — `grep -rInE '/(home\|Users)/[A-Za-z0-9._-]+/' doc/changes/2026-11/2026-11-15--GH-322--sanitize-gh310-pm-notes/` returns no match — plus review-time inspection of every artifact and the plan; recorded as an evidence step in §10 (no dedicated TC) | Planned |
-| DoD-4 | Exactly one delivery commit, created through the `commit` primitive, subject `fix(GH-322): sanitize absolute user path in GH-310 pm-notes` | TC-PRIV-005 step (3): `git log --format=%s origin/main-tools..HEAD` shows exactly one commit bearing that subject and no second delivery commit | Planned |
+| DoD-4 | Exactly one delivery commit, created through the `commit` primitive, scoped `GH-322`, whose subject is the template-derived `feat(GH-322): sanitize the recorded absolute gate temp root` (59 chars, within the 72-char cap), landing the sanitized line and the delivery phase state atomically; the subject is derived rather than pinned because the primitive rejects tracker references other than the change ref and offers no message override, so a pinned literal subject naming the other ticket could never land | TC-PRIV-005 step (3): `git log --format=%s origin/main-tools..HEAD` lists exactly one delivery commit, and `git log --format=%s -1 <delivery sha>` shows that derived subject; no second delivery commit exists | Planned |
 | DoD-5 | A pull request is open against `main-tools` with merge authority left to the CEO, and no other ticket is touched | TC-PRIV-005 steps (1)–(2) (PR base and open state) and TC-PRIV-006 (changed-file set limited to the §7.1 paths) | Planned |
 
 ## 4. Test Types and Layers
@@ -124,8 +124,8 @@ Layer 1 static/diff checks (`git diff --check`, changed-file review) and Layer 2
 **Scenario Type**: Happy Path · **Impact Level**: Important · **Priority**: High
 **Related IDs**: AC-F1-5, DoD-4, DoD-5 · **Test Type(s)**: Manual · **Automation Level**: Manual · **Target Layer**: GitHub PR and branch commit range · **Tags**: @delivery
 **Preconditions**: Commits pushed; PR created by the PR phase.
-**Steps**: (1) inspect the PR base branch and state; (2) `git log --oneline origin/main-tools..HEAD`; (3) `git log --format=%s origin/main-tools..HEAD`.
-**Expected Outcome**: base is `main-tools`; PR stays open for merge authority; every listed commit belongs to GH-322. Step (3) evidences DoD-4: exactly one delivery commit bears the subject `fix(GH-322): sanitize absolute user path in GH-310 pm-notes`, and no second delivery commit exists.
+**Steps**: (1) inspect the PR base branch and state; (2) `git log --oneline origin/main-tools..HEAD`; (3) `git log --format=%s origin/main-tools..HEAD`, then `git log --format=%s -1 <delivery sha>` for the single delivery commit.
+**Expected Outcome**: base is `main-tools`; PR stays open for merge authority; every listed commit belongs to GH-322. Step (3) evidences DoD-4: exactly one delivery commit bears the template-derived subject `feat(GH-322): sanitize the recorded absolute gate temp root` — derived by the `commit` primitive from the plan revision 1.1 phase summary `sanitize the recorded absolute gate temp root`, not pinned, because the primitive rejects tracker references other than the change ref and has no message override — and no second delivery commit exists.
 
 #### TC-PRIV-006 - Scope contains no code/prompt/spec files
 
@@ -148,7 +148,7 @@ Local worktree at the repository root, branch `fix/GH-322/sanitize-gh310-pm-note
 | TC-PRIV-002 | `grep -rInE '/(home\|Users)/[A-Za-z0-9._-]+/' <GH-310 folder>` | Manual Only |
 | TC-PRIV-003 | `git diff --numstat` / `git diff -U0` + `git diff --check` + `delivery-os lint GH-310` (exit 0, `evidence.class: conforms`; optional YAML parse) | Manual Only (review-time) |
 | TC-PRIV-004 | `TMPDIR=$PWD/tmp/tmpdir … pnpm check` (best-effort) | Manual Only |
-| TC-PRIV-005 | PR inspection + `git log --oneline origin/main-tools..HEAD` + `git log --format=%s origin/main-tools..HEAD` | Manual Only |
+| TC-PRIV-005 | PR inspection + `git log --oneline origin/main-tools..HEAD` + `git log --format=%s origin/main-tools..HEAD` + `git log --format=%s -1 <delivery sha>` | Manual Only |
 | TC-PRIV-006 | `git diff --name-only origin/main-tools...HEAD` | Manual Only |
 
 No test files are created or updated: the change touches no code, and permanent diff-against-base assertions are excluded by the testing strategy. Evidence is recorded in §10. TC-PRIV-003's lint step is the authoritative conformance surface for the affected pm-notes document — `delivery-os lint GH-310` is read-only and currently returns exit 0 with `evidence.class: conforms` — while YAML parsing is kept only as a secondary sanity check.
@@ -165,6 +165,7 @@ No test files are created or updated: the change touches no code, and permanent 
 |---------|------|--------|---------|
 | 1.0 | 2026-11-15 | @test-plan-writer (delegated by @pm) | Initial test plan for the one-literal sanitizing fix-forward |
 | 1.1 | 2026-11-15 | @test-plan-writer (delegated by @pm) | DoR iteration 1 remediation: N-1 — `links.implementation_plan` points at `./chg-GH-322-plan.yaml` and the plan is cited in §2; N-2 — TC-PRIV-003 step (5) now prescribes `delivery-os lint GH-310` (exit 0, `evidence.class: conforms`) as the authoritative conformance surface, with YAML parsing demoted to an optional secondary check; N-3 — gate-convention attribution corrected from `AGENTS.md` to `.ai/memory/lessons/lesson-2026-001-ci-baseline-parity-tmpdir.md` in §2, §6, and §8; AC-F1-5 wording realigned with spec v1.1 including the §7.1 carve-out (§3.1, TC-PRIV-006); new §3.4 maps spec §17.1 DoD-1…DoD-5 to covering TCs/verifying steps, with DoD-4 verified by TC-PRIV-005 step (3) and DoD-5 by TC-PRIV-005 steps (1)–(2) plus TC-PRIV-006 |
+| 1.2 | 2026-11-15 | @test-plan-writer (delegated by @pm) | Satisfiability remediation: DoD-4 (§3.4) and TC-PRIV-005 step (3)/expected outcome replaced the pinned `fix(GH-322)` subject — unproducible by the `commit` primitive, whose template supplies the subject and which rejects tracker references other than the change ref — with the template-derived `feat(GH-322): sanitize the recorded absolute gate temp root` from the plan revision 1.1 summary, verified by `git log --format=%s origin/main-tools..HEAD` and `git log --format=%s -1 <delivery sha>`; §7's TC-PRIV-005 command list mirrors the added check |
 
 ## 10. Test Execution Log
 

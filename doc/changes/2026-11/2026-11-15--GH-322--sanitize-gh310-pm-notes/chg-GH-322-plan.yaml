@@ -1,6 +1,13 @@
-# GH-322 delivery plan — machine-readable document (delivery.plan.v1), revision 1.0
+# GH-322 delivery plan — machine-readable document (delivery.plan.v1), revision 1.1
 # Authored 2026-11-15 against ./chg-GH-322-spec.md and ./chg-GH-322-test-plan.md
 # on branch fix/GH-322/sanitize-gh310-pm-notes.
+#
+# REVISION 1.1 — single reason: the phase 1 `summary` is the subject source for
+# the `commit` primitive, whose deterministic template renders
+# `feat(GH-322): <collapsed phase summary>` (capped at 72 characters). The
+# previous capitalised, tracker-bearing summary could not be committed. Nothing
+# else in this document changed: scope, tier, escalation triggers, bounds, and
+# the phase count are as authored in 1.0.
 #
 # One ticket, one PR against main-tools, exactly ONE plan phase. The change is a
 # docs-only one-literal CI fix-forward that un-reds the `TS repository
@@ -57,10 +64,15 @@
 #  1.7 Record the command output excerpts and exit codes as pm-notes notes:
 #      evidence. Never record an absolute temp path in the plan or in any
 #      artifact; use TMPDIR=$PWD/tmp/tmpdir / $GATE_TMPDIR-style placeholders.
-#  1.8 Produce ONE delivery commit through the commit primitive, conventional
-#      scope GH-322, subject:
-#      `fix(GH-322): sanitize absolute user path in GH-310 pm-notes`.
-#      The commit body/footer lines stay within the repository line limit.
+#  1.8 Produce ONE delivery commit and no more: it is the single commit the
+#      `commit` primitive produces for this change (scope GH-322, type feat,
+#      subject derived by the primitive from this phase's summary under the
+#      revision 1.1 template rule above, no pinned literal subject), landing
+#      the sanitized line and the phase state atomically. The commit body/footer
+#      lines stay within the repository line limit.
+#  1.9 Caution: do not hand-edit, amend, or reword the primitive-produced
+#      subject, and do not add a tracker reference other than GH-322 to any
+#      commit message.
 #
 # BOUND: F-1, DM-1, AC-F1-1..AC-F1-5, NFR-1..NFR-5, DEC-1, RSK-1..RSK-3;
 # TC-PRIV-001..TC-PRIV-006 from ./chg-GH-322-test-plan.md §5.2.
@@ -89,11 +101,14 @@ defaultLeases:
   - repo:main-tools
 defaultWeightClass: standard
 phases:
-  # Commit: fix(GH-322): sanitize absolute user path in GH-310 pm-notes
+  # Commit: the ONE delivery commit for this change is produced by the `commit`
+  # primitive (scope GH-322, type feat, subject derived by the primitive from
+  # this phase's summary), landing the sanitized line and the phase state
+  # atomically. No literal subject is pinned here.
   - id: 1
     title: "Sanitize the absolute gate temp root in the GH-310 pm-notes and verify the invariant"
     kind: delivery
-    summary: "Replace the single absolute operator temp root on line 279 of the GH-310 pm-notes with the repository-relative gate convention, leave every other byte of that file unchanged, and prove the privacy-literals invariant exits 0 with a 1/1 diff."
+    summary: "sanitize the recorded absolute gate temp root"
     scope:
       files:
         - doc/changes/2026-11/2026-11-14--GH-310--cross-repository-changes/chg-GH-310-pm-notes.yaml
