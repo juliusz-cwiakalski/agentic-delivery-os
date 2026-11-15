@@ -5,9 +5,9 @@ milestone: "M4: Public release readiness"
 story_code: M4-S1a
 phases:
   clarify_scope: { started: "2026-11-15T06:02:06Z", completed: 2026-11-15T06:10:17.425Z }
-  specification: { started: null, completed: 2026-11-15T07:49:35.156Z }
+  specification: { started: null, completed: 2026-11-15T11:33:41.757Z }
   test_planning: { started: null, completed: 2026-11-15T07:54:24.256Z }
-  delivery_planning: { started: null, completed: 2026-11-15T07:57:44.580Z }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: 2026-11-15T08:06:12.535Z }
   delivery: { started: null, completed: 2026-11-15T10:22:01.462Z }
   system_spec_update: { started: null, completed: 2026-11-15T11:17:14.977Z }
@@ -409,4 +409,39 @@ notes:
       docs, no drift. No residual documentation gap; no contradiction with
       GH-310 or GH-322 current truth."
     type: info
+    date: "2026-11-15"
+  - text: "Review iteration 1: FAIL (spec_compliance FAIL, plan_compliance FAIL); 16
+      findings — 3 high, 5 medium, 6 low, 2 info. Blocking: F-1 a prior-identity
+      read during composition emits no notice when composition then fails
+      (invalid override), so AC-F5-6 is unmet on the containment path; F-2 the
+      generated launcher interpolates the target unescaped, so a path containing
+      a single quote produces a broken/injectable launcher; F-3 several
+      'injected fixture' non-vacuity controls never invoke a guard
+      (installer-array splice is a tautology, the daemon cell reads its own test
+      file, the identity-docs registration/splice controls assert nothing).
+      Medium: F-4 DRY_RUN reports a registration for a non-existent entry and
+      the carve-out is unreconciled in spec/AC/test plan; F-5 six current-truth
+      pages and doc/00-index.md changed outside spec §16 and the plan's scope
+      invariants (pm-notes count also wrong); F-6 dead optional prior-directory
+      branch in the undeclared projects-config.ts; F-7 TC-BIN-072 step 9 has no
+      delivered assertion and step 8 is the vacuous cell; F-8 the
+      identity-literal scan collects only top-level module string declarations,
+      narrower than DM-6's declared rule. Low/info: duplicate override-name
+      literal in bin-launcher.ts, install.sh header/usage silent on the launcher
+      and Bun requirement, exit 1 outside the declared exit taxonomy, the
+      preload arms no fs writes/Bun.spawn, the §10 gate row and two citations
+      are pre-sync, the pre-change touch control captures no read counts, a
+      digest self-compare, and a tautological parity mutant. Routing:
+      specification (F-4, F-5, F-8, citations/gate row), delivery_planning (F-5
+      scope, remediation phase), coder (F-1, F-2, F-3, F-6, F-7, lows)."
+    type: retro
+    date: "2026-11-15"
+  - text: "Retro (test quality): three of five 'injected fixture' controls could not
+      fail, so AC-F7-10's non-vacuity clause was satisfied only on paper. The
+      plan and test plan demanded failing negative controls; the implementation
+      asserted spliced text instead of invoking the guard. Improvement: when a
+      negative control is written, run the production scanner/guard over the
+      seeded source and assert the failure message, never assert the seed text
+      itself."
+    type: retro
     date: "2026-11-15"

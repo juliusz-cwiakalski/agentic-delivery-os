@@ -1,0 +1,588 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-320
+branch: feat/GH-320/jaiship-binary
+status: FAIL
+summary: >-
+  GH-320 is a careful, well-documented delivery: the two-bin process edge over one
+  shared launcher, the required `declaredWorkingName` floor with the delivered
+  lenient/strict split, the read-only prior-identity configuration and host-root
+  fallback with one composition-scoped notice, the state-free
+  `--print-install-path` self-description, the installer launcher step, the
+  five-site literal guard, the documentation truth pass, and the two-half
+  hermeticity guard all exist and the delivered acceptance scenarios behave as
+  specified — independently re-verified live for AC-F1-1, AC-F2-3, AC-F2-7,
+  AC-F3-4, AC-F4-5 and AC-F5-6's normal path, and by the targeted suites for
+  AC-F1-2, AC-F6-8 and AC-F7-10. Three items still block a clean PASS. (1) On the
+  invalid-override containment path a prior-identity configuration read really
+  happens (strace: two `openat` calls on `.delivery-os/config.yaml`) but the
+  queued `prior-identity-fallback` notice is discarded when composition throws, so
+  AC-F5-6's "given a fallback read ... exactly one notice ... is written to
+  stderr" is not met on that path, and TC-BIN-012 step 5's rationale ("the run
+  never reaches the prior-identity fallback in this state") is factually wrong.
+  (2) The generated launcher embeds the absolute target in single quotes without
+  escaping; a source path containing `'` produces a launcher that fails `bash -n`
+  (reproduced) and is an injection-shaped construction in executable content.
+  (3) Several delivered "injected fixture" negative controls are tautologies that
+  never run a guard (the installer-array rule in both suites, the daemon
+  allowlist self-read, the unregistered-guide cell), so AC-F7-10's "when any one
+  of these is violated by an injected fixture, then the corresponding guard fails
+  by name" is only true for some rules. Five medium findings follow: the DRY_RUN
+  precondition inconsistency (NFR-5/AC-F6-8 versus the delivered control), the
+  `doc/00-index.md` edit that spec §16 and the plan declare UNCHANGED (plus six
+  further out-of-map current-truth pages), a dead prior-directory branch in
+  `projects-config.ts`, the narrowed identity-literal scan, and the test-plan
+  assertions that the delivered suite does not make. The four recorded deviations
+  the review was asked to judge are each honest and acceptable as records — the
+  `warnings` channel, the bins' `process.env` reads, the behaviour-only notice
+  token, and the phase-7 doc corrections — except where they leave the acceptance
+  or plan wording contradicting the tree, which is called out below. No delivered
+  test was relaxed or skipped, the alias baseline is a genuine pre-change capture,
+  and nothing in the change mutates the operator's real home or state root.
+severity_breakdown:
+  critical: 0
+  high: 3
+  medium: 5
+  low: 6
+  info: 2
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/production.ts:3136
+    message: >-
+      [B | owner: plan Phase 2 — notice surface on a failed composition] A
+      prior-identity configuration read that happens during composition is never
+      reported when composition then fails. `createProductionComposer` collects
+      notices in `compositionNotices` and only hands them to the caller through
+      `withScopeWarnings` on the success return (production.ts:3136-3140); the
+      composition-time acquisition (`readDaemonConfiguration` ->
+      `acquireProjectConfiguration` -> `emitConfigNotice`, production.ts:713-737,
+      945-967) runs before `createConfigProgram`, and for an invalid override
+      `createConfigProgram` fails and the composer throws
+      (`brand resolution failed`), which `runEntrypoint`'s catch
+      (packages/cli/src/entrypoint.ts:373-383) turns into
+      `{ commands: {} }` and then the `fallback.internal` containment. Every
+      queued notice is dropped. Reproduced against the delivered bin in a fixture
+      checkout (scratch HOME under /tmp, real home untouched):
+      `HOME=<scratch> DELIVERY_OS_WORKING_NAME='bad/name' jaiship status --json`
+      exits 2 with stderr `jaiship: fallback.internal` /
+      `summary: command "status" is not part of the composed prompt-required set`
+      and no `prior-identity-fallback` line, while
+      `strace -f -e trace=openat` shows two
+      `openat(..., "<repo>/.delivery-os/config.yaml", O_RDONLY...)` calls during
+      that same run. AC-F5-6 reads "Given a fallback read, when any command runs
+      in any mode including `--json`, then exactly one notice per source kind per
+      composed program is written to stderr", with no containment carve-out, and
+      test plan v1.5 TC-BIN-012 step 5 asserts only "no fallback identity is
+      substituted and no `prior-identity-fallback` notice is emitted (the run
+      never reaches the prior-identity fallback in this state)" — the delivered
+      suite scopes that assertion to the alias, but the test-plan rationale still
+      states the false reason for both bins. DoR-4 residual (a) is therefore only
+      half applied (assertion scoped; rationale not replaced).
+    suggestion: >-
+      Make the composition-scoped notices survive a failed composition: e.g. pass
+      an injected notice sink (or a `readNotices()` accessor on the composer
+      result) into `createEntrypoint`/`runEntrypoint` and flush the collected
+      lines through the delivered `writeOutput` warnings channel on the
+      containment path, or return a containment program that carries the collected
+      warnings instead of throwing. Add one TC-BIN-012 cell that runs
+      `jaiship status --json` with `DELIVERY_OS_WORKING_NAME='bad/name'` and a
+      fixture `.delivery-os/config.yaml` and asserts the `config-read` notice on
+      stderr beside the exit `2` containment. If suppressing the notice on a
+      containment failure is the intended contract, say so in spec §8.5/F-5/AC-F5-6
+      explicitly and record it in the test plan; do not leave the AC unconditional.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: high
+    confidence: high
+    category: correctness
+    location: scripts/install.sh:1020
+    message: >-
+      [B | owner: plan Phase 3 — launcher content] The generated launcher embeds
+      the absolute target in a single-quoted assignment
+      (`readonly TARGET='${entry}'`, scripts/install.sh:1024) with no escaping of
+      the recorded path. Bash single quotes cannot contain a `'`, so a checkout
+      path containing one yields a syntactically broken launcher: reproduced with
+      `entry=/tmp/o'brien/repo/packages/cli/bin/jaiship.ts` and the exact heredoc
+      body, `bash -n` reports `unexpected EOF while looking for matching ''`
+      (exit 2). Because the same interpolation is the only quoting authority for
+      executable content, a crafted directory name is also an injection vector at
+      launcher run time, which contradicts spec §21's claim that the launcher
+      "removes the usual PATH-hijack and injection surface for an installed shim"
+      and F-6's "no argument interpolation". No delivered case exercises a path
+      with a quote or a backslash (every scratch path comes from `mkdtemp`), so
+      the defect is invisible to the green suite.
+    suggestion: >-
+      Quote the recorded target safely when rendering the launcher — e.g. build
+      the assignment with `printf '%q'` on the path, or replace every `'` in
+      `${entry}` with `'\''` before interpolation — and add an
+      `install-launcher-installer` case whose source directory name contains a
+      single quote and a space, asserting `bash -n` passes and the launcher runs
+      (`--version`). Keep the "one absolute target" and content-idempotence
+      assertions unchanged.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: high
+    confidence: high
+    category: testing
+    location: tests/structure/entrypoint-installer-absence.test.ts:86
+    message: >-
+      [B | owner: plan Phase 3/5 — non-vacuity controls] Several delivered
+      "injected fixture" controls never invoke a guard, so AC-F7-10's "when any
+      one of these is violated by an injected fixture, then the corresponding
+      guard fails by name" is not met for those rules.
+      (a) Installer-arrays rule: `tests/structure/entrypoint-installer-absence.test.ts:86`
+      ("an injected array member naming the CLI entry is visible to the guard")
+      splices the path into the script text and then asserts the injected slice
+      contains the path — a tautology; `tests/structure/install-launcher.test.ts:167`
+      ("an injected array entry fails by name") does the same. `launcherStepViolations`
+      does not check arrays at all, so no guard can fail for this rule.
+      (b) `tests/behaviour/daemon-start-detached.test.ts:706` ("the delivered
+      allowlist literal is unchanged") reads *its own test file* and asserts its
+      own regex literal is present — self-referential and unfalsifiable; the real
+      pin is the pre-existing cell at line 621.
+      (c) `tests/checks/identity-docs.test.ts:208` ("an unregistered guide fails
+      the scan closed") performs a no-op `replace("\nA body line", "\nA body line")`,
+      writes a temp guide that is never read, filters a copy of the registry in
+      memory and asserts the copy no longer contains the guide — it would pass with
+      any content.
+      (d) The same suite's splice control (identity-docs.test.ts:188) writes a
+      spliced temp copy and calls `matchSeedLiteral` on one line instead of running
+      the delivered scan over the splice, leaving the temp file unused, so test plan
+      TC-BIN-072 step 7's "assert the delivered scan fails naming the token and the
+      line" is not delivered (see also F-7).
+    suggestion: >-
+      Give each rule a real guard function and drive it with a seeded source that
+      must fail by name: extend `launcherStepViolations` (or add an
+      `installerArrayViolations`) to reject a `packages/cli`/`bin/*`/`bin-launcher`
+      member and assert the injected fixture fails; replace the daemon self-read
+      with an assertion over the production re-entry derivation (a hostile key must
+      be dropped); make the registration control run `scan()` over a temp root whose
+      registry omits the guide; run the delivered scan (or a `scanFile`-equivalent
+      over the temp copy) for the splice. Remove any cell that cannot fail.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: scripts/install.sh:992
+    message: >-
+      [M | owner: SPEC/plan `DRY_RUN` semantics] Under `DRY_RUN=true` the launcher
+      step evaluates no precondition and reports a plan a real run would not
+      follow. Reproduced: `DRY_RUN=true ADOS_SOURCE_DIR=<docs-only source> bash
+      scripts/install.sh --local --no-fetch` exits 0 and prints
+      `[DRY-RUN] Would register the launcher for the CLI entry
+      <docs-only>/packages/cli/bin/jaiship.ts`, although that entry does not exist
+      and a real run fails classified (verified by the delivered
+      `install-launcher-installer` case). NFR-5 says "0 silent skips (a missing
+      runtime or a source without the CLI entry is a classified failure)" and
+      AC-F6-8's last clause says the install "fails classified naming what is
+      missing and writes no launcher"; neither carve-out mentions `DRY_RUN`, while
+      F-6/DEC-15 only say `DRY_RUN` "reports the planned registration and writes
+      nothing". The delivered resolution is forced by the plan's own constraint set
+      — the delivered `scripts/.tests/test-install.sh` dry-run control installs from
+      a mock source without the CLI entry and must stay green unchanged — so this is
+      an internal inconsistency of the artefacts, not a coder slip, but it is
+      currently disclosed only in pm-notes and unreconciled in the spec, the AC, the
+      test plan and the code, and no test covers it.
+    suggestion: >-
+      Resolve the artefact inconsistency explicitly, one of two ways: (a) declare in
+      spec F-6/DEC-15, NFR-5 and AC-F6-8 that `DRY_RUN` is a plan-only preview that
+      does not evaluate the install-time preconditions (and add a TC-BIN-056 cell
+      asserting the no-CLI-source dry run exits 0, writes nothing, and prints the
+      plan line), or (b) keep the preconditions live in `DRY_RUN` and add a declared
+      opt-out the delivered control can use. Either way, stop reporting a
+      registration for an entry that does not exist, or state that the dry-run line
+      is intentionally pre-precondition.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: doc/00-index.md:39
+    message: >-
+      [M | owner: SPEC §16 + plan scope] The change edits `doc/00-index.md`, which
+      spec §16 lists as `UNCHANGED` ("`README.md`, `doc/00-index.md` | UNCHANGED")
+      and which the plan declares twice as untouched (DOC BOUNDARY: "README.md,
+      doc/00-index.md, and doc/documentation-handbook.md are unchanged"; R-D: "spec
+      §16 keeps `doc/00-index.md` UNCHANGED, so the landing page is not touched").
+      The edit rewrites the CLI-entrypoint descriptor row. It is disclosed in
+      pm-notes (residual gap R1, commit `3ab205b2`), and the content is accurate
+      current truth, but the plan's declared scope invariant ("every file is
+      declared in EXACTLY ONE phase") and §16 are now false. Beyond that, six
+      further current-truth pages are changed outside §16 — `doc/spec/nonfunctional.md`,
+      `doc/spec/features/feature-state-layer.md`, `doc/overview/architecture-overview.md`,
+      `doc/overview/glossary.md`, `doc/quality/test-specs/test-spec-state-layer.md`
+      and `doc/00-index.md` — while pm-notes describes them as "ten further
+      current-truth documents" (the other five it lists are the declared pages).
+      Scope reconciliation (script over `git diff --name-status
+      origin/main-tools...HEAD` against the plan's 44 declared files): all 44
+      declared files changed; undeclared = these 6 docs, `packages/core/src/index.ts`,
+      `packages/adapters/src/file/projects-config.ts`,
+      `tests/fixtures/ports/v1-contract-inventory.json`, plus the 2 files inside the
+      declared prior-identity fixture folder and the 8 change-folder files
+      (declared folder). Total 63 paths.
+    suggestion: >-
+      Amend spec §16 and the plan scope to declare the six reconciled pages (which
+      are correct current truth and worth keeping), and correct the pm-notes count
+      and the R-D/DOC-BOUNDARY sentences so no artefact claims `doc/00-index.md` is
+      untouched. If the landing-page edit is deliberately out of this change, revert
+      it instead; do not leave three artefacts contradicting the tree.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/file/projects-config.ts:67
+    message: >-
+      [M | owner: plan Phase 2 — undeclared file] `readProjectGroupsConfig` gained
+      an optional `priorConfigurationDirectoryName` with a prior-file fallback
+      branch, but no production or test caller ever supplies it: the single caller
+      (`readProjectGroupsConfiguration`, packages/cli/src/production.ts:2793) passes
+      only `gitRoot` and `configurationDirectoryName`, and `grep` over `packages`
+      and `tests` finds no other call site or assertion. The branch is therefore
+      dead code in a file the plan does not declare, and the pm-notes justification
+      for the file ("the project-groups document read" needs it) does not hold. It
+      also widens the reviewed surface without a test.
+    suggestion: >-
+      Revert the `projects-config.ts` change (the config-file fallback lives in
+      `config-source.ts` and is fully covered), or wire and test it deliberately if
+      the project-groups document is also meant to fall back — that would be a spec
+      extension (F-3 currently scopes the fallback to project configuration), so it
+      needs a spec line and a case rather than a silent optional parameter.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: medium
+    confidence: high
+    category: testing
+    location: doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary/chg-GH-320-test-plan.md:1600
+    message: >-
+      [M | owner: test plan v1.5 / plan Phase 4] Test plan v1.5 declares assertions
+      the delivered suite does not make, so the pm-notes claim that DoR-4 residuals
+      (c)-(f) were "applied" is true only of the text. TC-BIN-072 step 9 (installer
+      identifier discoverability: script header names all five identifiers, `--help`
+      Environment documents four and prints the fifth's expanded value, and the
+      one-liner expectation is the raw-URL default plus `/scripts/install.sh`) has
+      no corresponding assertion in `tests/checks/identity-docs.test.ts` or
+      anywhere else — the suite only asserts the guide mentions
+      `scripts/install.sh --help` and `chg-GH-320-spec.md`. TC-BIN-072 step 8 exists
+      only as the vacuous cell of F-3(c). Residual (f) removed the duplicated text
+      but the replacement step-8 cell proves nothing.
+    suggestion: >-
+      Implement the step-9 assertions (or delete step 9 and record why the
+      identifier-discoverability claim is dropped), and either implement or remove
+      the registration control so test plan v1.5 and the delivered suite agree. Keep
+      the plan's obligation 4.6 in sync with whatever is chosen.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-8
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: tests/structure/entrypoint-bin.test.ts:78
+    message: >-
+      [M | owner: SPEC DM-6 / plan Phase 1] The delivered identity-literal guard is
+      narrower than the rule it is declared to implement. DM-6 (and plan §DM-6,
+      LIT-TP-1) define the scan as "a `packages/**` **string-literal** scan ...
+      collecting every literal byte-equal to a declared working name"; the
+      implementation iterates only top-level `VariableStatement` declarations whose
+      initializer is a string literal (`literalSites`,
+      tests/structure/entrypoint-bin.test.ts:78-104). A working-name literal in
+      expression position — `resolveBrandIdentity({ workingName: "jaiship" })`,
+      an object property, a nested `const`, a template head, an argument default —
+      is not collected, so a genuine sixth site could be introduced and the guard
+      would stay green. Today the tree is exactly the five declared sites (verified
+      by grepping `packages/**` for `"delivery-os"`/`"jaiship"`: the three bin
+      constants, the MCP default, `SCOPE_ORG`), so the inventory is currently
+      complete and both directions are asserted; the gap is in the rule's reach,
+      not in today's count.
+    suggestion: >-
+      Either widen the scan to every `ts.StringLiteral`/`ts.NoSubstitutionTemplateLiteral`
+      node under `packages/**` (a `ts.forEachChild` walk, excluding comments and
+      JSDoc, keeping the declared inventory two-way comparison and the sixth-site
+      control), or restate DM-6/AC-F7-10 and the guard's comment as "top-level
+      module-level identity literal declarations" so the declared rule and the code
+      agree. Add a control with an expression-position literal so the rule's reach
+      is itself asserted.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-9
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/cli/src/bin-launcher.ts:39
+    message: >-
+      [L | owner: plan Phase 1] The shared launcher re-declares the override
+      variable name (`const WORKING_NAME_OVERRIDE = "DELIVERY_OS_WORKING_NAME"`,
+      bin-launcher.ts:39) although `entrypoint.ts` already exposes it as
+      `workingNameEnvironmentVariable()` and `production.ts` consumes that accessor.
+      The working-name override is now a two-site string rather than one, which the
+      spec presents as a single seam ("`DELIVERY_OS_WORKING_NAME` remains the single
+      override"), and the plan's obligation 1.3 said the bin reads it once —
+      delivered the launcher reads it once, on behalf of both bins.
+    suggestion: >-
+      Import `workingNameEnvironmentVariable()` from `./entrypoint.js` in
+      `bin-launcher.ts` and drop the local literal, so the variable name stays a
+      single site (and the existing accessor keeps its reason to exist).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-10
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: scripts/install.sh:1
+    message: >-
+      [L | owner: plan Phase 3 obligation 3.1] The plan requires the launcher step
+      to be "own function called from do_local_install, header/usage documented".
+      The function and the section comment exist, but the script's own header
+      (modes, dependencies, exit codes) and the `--help`/usage output say nothing
+      about the launcher or the new install-time Bun requirement, so an operator who
+      inspects only `install.sh --help` does not learn the step exists or that Bun
+      must be resolvable at install time. The guide and the
+      distribution-marker page do document it, so the spec's F-6 declaration is
+      satisfied at the documentation level; the installer's usage surface is the gap.
+    suggestion: >-
+      Add one short paragraph to the script header and the `--help` Environment/Mode
+      text ("local install also registers the product launcher at the brand install
+      path; requires the Bun runtime at install time"), keeping the assertions in
+      `scripts/.tests/test-install.sh` that you choose to keep. If the unchanged
+      control forbids touching the help text, record the deviation in the plan.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-11
+    severity: low
+    confidence: medium
+    category: correctness
+    location: scripts/install.sh:1008
+    message: >-
+      [L | owner: plan Phase 3] A classified launcher precondition failure returns
+      1 from `install_local_launcher`, which under `set -Eeuo pipefail` aborts the
+      script through the `ERR` trap with status 1. The script's own header declares
+      the exit taxonomy 0/2/3/4/5 (`log_fatal` uses 4, `die` uses 2), so a missing
+      runtime or a source without the CLI entry exits outside the documented set.
+      AC-F6-8 only requires "non-zero", so no acceptance is broken, but the
+      installer's declared exit contract is.
+    suggestion: >-
+      Use `log_fatal`/a declared runtime code for these two precondition failures
+      (and keep the "no launcher written" ordering), or document exit 1 in the
+      header as "install step refused".
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-12
+    severity: low
+    confidence: medium
+    category: testing
+    location: tests/checks/support/arm-counters.preload.ts:101
+    message: >-
+      [L | owner: plan Phase 5 obligation 5 / D11] The hermeticity preload arms
+      writes only for `Bun.write` and spawns only for `Bun.spawnSync`; a guarded
+      suite that writes outside the allowed roots with `node:fs`
+      (`writeFileSync`, `mkdirSync`, `appendFileSync` — which is how every fixture
+      harness in these suites writes) or spawns with `Bun.spawn` is not counted, so
+      "zero real-home state" is enforced only by the scratch `HOME`/`TMPDIR`
+      environment and by the static half's heuristic regex
+      (`/writeFileSync\(join\(homedir\(\)/`), which misses an indirect
+      `const home = homedir()`. The canary proves the armed classes trip, not that
+      all acquisition classes are armed.
+    suggestion: >-
+      Also wrap the `node:fs` write entry points (or assert with a
+      `fs` instrumentation/monkey-patch in the preload) and `Bun.spawn`, or narrow
+      the guard's stated claim to "network, network-capable spawn, secret-shaped env
+      reads, sleeps, and `Bun.write`" in the test plan and the spec evidence row, so
+      the asserted property matches the armed counters.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-13
+    severity: low
+    confidence: high
+    category: artifact-consistency
+    location: doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary/chg-GH-320-test-plan.md:1945
+    message: >-
+      [L | owner: test plan §10 / §5.2] Two evidence and citation drifts. (a) §10
+      TC-BIN-080 records the pre-sync gate (`8434 pass, 4 skip, 0 fail`, 1074 files)
+      as the gate verdict; the branch head's recorded gate after the two GH-310
+      syncs is `8624 pass, 4 skip, 0 fail` (8628 tests, 1091 files) in pm-notes, and
+      four doc-sync commits landed after the pre-sync run, so §10 does not describe
+      the tree under review. (b) TC-BIN-012's and TC-BIN-072's objectives still say
+      "as spec v1.4 pins it/them" (test plan lines 473 and 1561) while the spec under
+      review is v1.5, so DoR-4 residual (e) is only partly applied (the §9 log and
+      the reference table were bumped).
+    suggestion: >-
+      Replace the §10 gate row with the final post-sync run (numbers, test and file
+      counts, and the fact that the doc-sync commits followed), keep the repo-local
+      red run as the labelled evidence row, and bump the two scenario citations to
+      spec v1.5.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-14
+    severity: low
+    confidence: high
+    category: testing
+    location: tests/fixtures/entrypoint/prior-identity/pre-change-touch.json:1
+    message: >-
+      [L | owner: test plan TC-BIN-012 step 6] The declared "pre-composition touch
+      unchanged" control captures `exitCode`, `errorCode`, `summary`,
+      `homeEntriesAfter` and `repoEntriesAfter` — but not the configuration
+      probe/read counts, which are exactly what step 6 claims to compare ("assert
+      the same configuration probe/read outcome"). Reading a file leaves no
+      directory entry, so the delivered equality (`identity-override.test.ts:291-318`)
+      proves the touch's directory effect and exit projection, not the read itself.
+      Two further cells in this change are weaker than their labels: the digest
+      assertion at `install-launcher-installer.test.ts:199` compares the launcher to
+      itself (the mtime/size/mode assertions in the same block carry the real
+      idempotence proof), and `entrypoint-bin.test.ts:535` recomputes an `Array.filter`
+      as the family-parity mutant (the real PAR-TP-1 control lives in
+      `entrypoint-two-bins.test.ts:217`).
+    suggestion: >-
+      Add a read-count field to the capture (e.g. via the counting fs facts the
+      suites already inject) and compare it, or reword step 6 to "the same directory
+      effect and exit projection". Replace the self-comparison digest with
+      `before`/`after` digests captured around the second run, and drop or re-point
+      the tautological parity mutant.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-15
+    severity: info
+    confidence: high
+    category: performance
+    location: packages/core/src/app/state-scope.ts:606
+    message: >-
+      [I | owner: plan Phase 2] `resolveProjectScope` now probes the two default
+      host roots through the injected port on every call, so every composed
+      invocation (the alias included, which declares no prior identity) performs a
+      `stat` of `<home>/<stateDirectoryName>` it did not perform before. Behaviour is
+      neutral (the selected root is unchanged) and self-description never composes,
+      so NFR-2 is intact; but spec F-4's "the composition tier, which already probes
+      with the delivered filesystem facts" reads as if the probe pre-existed, and
+      the added read on the hot path is not stated anywhere.
+    suggestion: >-
+      Keep the probe (it is the honest way to stay pure) and note in F-4/§8.3 that
+      the composition performs one existence probe per default root on every
+      composed invocation, or skip the probe when the identity declares no prior
+      identity and no override is set.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-16
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/core/src/contracts/config.ts:97
+    message: >-
+      [I | owner: review judgement on the four declared deviations] Each recorded
+      deviation was checked and is acceptable as a record. (1) The notice travels
+      the delivered `warnings` channel: verified end to end — `serialize.ts:114`
+      writes each warning to stderr in every mode, the payload stays clean, the
+      token never appears in stdout, and the notice is redacted through the same
+      chokepoint; `PRIOR_IDENTITY_NOTICE_TOKEN` is module-private with
+      `priorIdentityNoticeToken()` exposing behaviour, so the branding-seam
+      no-exported-literal guard stays green. (2) The bins keep `process.env` because
+      `tests/structure/cli-edge-seam.test.ts` scans `packages/cli/src` only, and the
+      launcher (under `src/`) reads no ambient global — verified. (3) The five-site
+      inventory is exactly the tree's literal set. (4) The phase-7 doc corrections
+      are accurate current truth (checked page by page; the TDR-0022 extension and
+      the five-site wording are correct) — only their declaration is wrong (F-5).
+      One residual wording nit: `feature-cli-entrypoint.md` still says "Help and
+      version are the one surface callable before trust is established" one sentence
+      after introducing `--print-install-path`.
+    suggestion: >-
+      No action required beyond F-1/F-5; optionally include `--print-install-path`
+      in the "one surface callable before trust is established" sentence.
+    suppressed: false
+    published_url: null
+    published_at: null
+ac_verdicts:
+  AC-F1-1: PASS
+  AC-F1-2: PASS
+  AC-F2-3: PASS
+  AC-F2-7: PASS
+  AC-F3-4: PASS
+  AC-F4-5: PASS
+  AC-F5-6: "FAIL (narrow: F-1 — a prior configuration read on the containment path emits no notice; every other cell passes)"
+  AC-F6-8: "PASS (real-run scenarios verified; see F-4 for the DRY_RUN precondition inconsistency that the AC/NFR-5 wording does not cover)"
+  AC-F7-9: "PASS (evidence: pm-notes + test plan §10 post-sync run 8624/4/0; commit-range gate recorded PASS but not re-run in this review; targeted suites re-run green)"
+  AC-F7-10: "FAIL (narrow: F-3 vacuous injected-fixture controls for the installer-arrays rule and the daemon allowlist; F-8 scan narrower than the declared rule)"
+  AC-F8-11: "PASS (all four divergences stated with the fourth by role, guide registered and seed-clean, all four pages link it, public surfaces unchanged; see F-5 for the doc-scope declaration)"
+verification:
+  mode: local
+  diff_base: origin/main-tools
+  merge_base: 8a1f77ad
+  head: 7c8c4c4e
+  changed_paths: 63
+  plan_validate: "delivery-os plan validate GH-320 -> verdict=valid, tier=full, readyForDevelopment=true"
+  scope_reconciliation: >-
+    Script over `git diff --name-status origin/main-tools...HEAD` vs the plan's 44
+    declared files: 0 declared-but-unchanged, 44 declared-and-changed. Undeclared
+    outside the change folder: doc/00-index.md, doc/overview/architecture-overview.md,
+    doc/overview/glossary.md, doc/quality/test-specs/test-spec-state-layer.md,
+    doc/spec/features/feature-state-layer.md, doc/spec/nonfunctional.md,
+    packages/core/src/index.ts, packages/adapters/src/file/projects-config.ts,
+    tests/fixtures/ports/v1-contract-inventory.json; plus harness.ts and
+    pre-change-touch.json inside the declared fixture folder, and the 8 change-folder
+    files under the declared folder.
+  suites_re_run:
+    - "bun test tests/checks/doc-conformance.test.ts tests/checks/identity-docs.test.ts tests/structure/entrypoint-bin.test.ts tests/structure/content-inventory.test.ts tests/structure/state-scope.test.ts tests/structure/projects-state-scope-policy.test.ts tests/structure/install-launcher.test.ts tests/structure/entrypoint-installer-absence.test.ts -> 94 pass / 0 fail"
+    - "bun test tests/behaviour/prior-identity-config-fallback.test.ts tests/behaviour/prior-identity-state-fallback.test.ts tests/behaviour/prior-identity-notice.test.ts tests/behaviour/identity-override.test.ts tests/behaviour/entrypoint-two-bins.test.ts -> 68 pass / 0 fail"
+    - "bun test tests/checks/install-launcher-installer.test.ts -> 7 pass / 0 fail"
+    - "bun test tests/checks/prior-identity-hermetic.test.ts -> 5 pass / 0 fail"
+    - "bun run scripts/checks/forbidden-literals.ts -> 5/5 scope classes, 0 violations, guide registered"
+  live_probes:
+    - "fixture checkout with .delivery-os/config.yaml + scratch HOME: `jaiship status --json` exit 0, stderr `prior-identity-fallback: config-read ...`, payload clean"
+    - "scratch HOME with .delivery-os-state: `jaiship status --json` exit 0, stderr `state-read` notice, no .jaiship-state created"
+    - "invalid override: `jaiship status --json` exit 2 fallback.internal; stderr has no notice; strace shows 2 openat of .delivery-os/config.yaml (F-1)"
+    - "delivery-os/jaiship `--version` with invalid override -> declared default, exit 0; `--print-install-path` per identity, honours override, absent from root help"
+    - "DRY_RUN=true from a docs-only source -> exit 0 with a fictitious plan line (F-4)"
+    - "launcher heredoc with a single quote in the target -> `bash -n` syntax error (F-2)"
+  not_re_run:
+    - "full `pnpm check` (21 min); the recorded post-sync 8624 pass / 4 skip / 0 fail is accepted and cross-checked against pm-notes"
+    - "./scripts/lint-commit-range.sh --base main-tools (recorded PASS; commit messages were spot-checked only)"
+  real_home_safety: >-
+    Every probe used HOME/TMPDIR under /tmp/opencode; the operator's real
+    ~/.delivery-os-state and ~/.jaiship* were only stat-ed, never written.
+reviewed_at: 2026-11-15T12:45:00Z
+next_step: EXECUTE_REMEDIATION_PHASE
+plan_gaps: >-
+  Plan completion is clean: all five phases have pm-notes commit/test evidence and
+  `plan validate` reports valid/full, so OPEN_PHASES and EVIDENCE_MISSING do not
+  fire. SCOPE_DEVIATION fires: six current-truth docs plus `doc/00-index.md` sit
+  outside spec §16 and the plan's 44-file set (F-5), and three code/fixture files
+  (`packages/core/src/index.ts`, `packages/adapters/src/file/projects-config.ts`,
+  `tests/fixtures/ports/v1-contract-inventory.json`) are likewise undeclared —
+  disclosed in pm-notes, but the disclosure for `projects-config.ts` is inaccurate
+  (F-6). Declared obligations not met: Phase 3's "header/usage documented" (F-10)
+  and Phase 3/4/5's non-vacuity claim for the installer-array and registration
+  controls (F-3), plus test plan step TC-BIN-072.9 (F-7).
+test_coverage_gaps: >-
+  (1) No case covers the `jaiship` containment path with a prior configuration
+  present, which is why F-1 is invisible. (2) No case runs the launcher step under
+  `DRY_RUN` from a source without the CLI entry (F-4). (3) No case uses a source
+  path containing a quote/backslash, so F-2 is invisible. (4) The installer-array
+  rule has no live guard to drive, and the daemon allowlist assertion is
+  self-referential (F-3). (5) TC-BIN-072 step 9 has no assertion (F-7). (6) The
+  pre-composition touch control does not capture read counts (F-14). (7) The
+  hermetic preload does not arm `node:fs` writes or `Bun.spawn` (F-12).
