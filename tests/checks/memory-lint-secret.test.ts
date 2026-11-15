@@ -37,12 +37,12 @@ const VOCABULARY: MemoryPrivacyVocabulary = {
     patternSource: rule.patternSource,
     flags: rule.flags,
     minimumMatchLength: rule.minimumMatchLength,
+    suppressionValueFor: (matchedText) => suppressionValueFor(rule.id, matchedText),
   })),
   suppressionClasses: PRIVACY_SUPPRESSION_CLASSES.map((entry) => ({
     id: entry.id,
     markers: entry.markers,
   })),
-  suppressionValueFor,
 };
 const CLASSES = PRIVACY_RULES.map((rule) => rule.recognizerClass);
 

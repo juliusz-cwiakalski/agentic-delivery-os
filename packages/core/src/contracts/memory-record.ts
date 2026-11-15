@@ -331,6 +331,13 @@ export type MemoryPrivacyRule = {
   readonly patternSource: string;
   readonly flags: string;
   readonly minimumMatchLength: number;
+  /**
+   * The injected value-segment seam: the opaque value this rule protects,
+   * which is the only region suppression markers are evaluated against. The
+   * check edge binds the delivered privacy guard's own implementation per
+   * rule so the lint and the whole-tree guard cannot drift (GH-301 F-4).
+   */
+  readonly suppressionValueFor?: (matchedText: string) => string;
 };
 
 /** One suppression class of the injected privacy vocabulary. */
@@ -343,13 +350,6 @@ export type MemoryPrivacySuppressionClass = {
 export type MemoryPrivacyVocabulary = {
   readonly rules: readonly MemoryPrivacyRule[];
   readonly suppressionClasses: readonly MemoryPrivacySuppressionClass[];
-  /**
-   * The injected value-segment seam: the opaque value a rule protects, which
-   * is the only region suppression markers are evaluated against. The check
-   * edge injects the delivered privacy guard's own implementation so the lint
-   * and the whole-tree guard cannot drift (GH-301 F-4).
-   */
-  readonly suppressionValueFor?: (ruleId: string, matchedText: string) => string;
 };
 
 /** The pure evaluation input: file list, one fixed today, and the vocabulary. */

@@ -35,12 +35,12 @@ export const memoryPrivacyVocabulary = (): MemoryPrivacyVocabulary => ({
     patternSource: rule.patternSource,
     flags: rule.flags,
     minimumMatchLength: rule.minimumMatchLength,
+    suppressionValueFor: (matchedText) => suppressionValueFor(rule.id, matchedText),
   })),
   suppressionClasses: PRIVACY_SUPPRESSION_CLASSES.map((entry) => ({
     id: entry.id,
     markers: entry.markers,
   })),
-  suppressionValueFor,
 });
 
 const defaultReadToday = (): string => new Date().toISOString().slice(0, 10);

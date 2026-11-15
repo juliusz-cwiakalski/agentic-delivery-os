@@ -696,7 +696,7 @@ export const evaluateMemory = (input: MemoryEvaluationInput): MemoryEvaluationRe
         // Suppression is evaluated against the value the rule protects, exactly
         // as the delivered whole-tree guard does; a marker in the key half must
         // not silence a real value (F-4).
-        const segment = input.privacy.suppressionValueFor?.(rule.id, matched) ?? matched;
+        const segment = rule.suppressionValueFor?.(matched) ?? matched;
         const lowered = segment.toLowerCase();
         const suppressed = input.privacy.suppressionClasses.some((entry) =>
           entry.markers.some((marker) => lowered.includes(marker.toLowerCase())),
