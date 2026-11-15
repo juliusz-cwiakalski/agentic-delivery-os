@@ -1,10 +1,12 @@
-# GH-301 delivery plan — machine-readable document (delivery.plan.v1), revision 1.2
-# (2026-11-15). Authored against chg-GH-301-spec.md v1.2 (30 ACs, §17.1 DoD,
+# GH-301 delivery plan — machine-readable document (delivery.plan.v1), revision 1.3
+# (2026-11-15). Authored against chg-GH-301-spec.md v1.3 (30 ACs, §17.1 DoD,
 # Appendix A closed finding register with the schema/provenance presence
-# partition, DEC-5..DEC-13, Appendix C C-1..C-11, ADR-0011 as the schema
-# authority) and chg-GH-301-test-plan.md v1.2 (40 TCs, AC matrix, §6 fixture
-# discipline, §7 file mapping, the scanner/edge read boundary and the
-# resolved-invocation parity assertion).
+# partition, DM-6's non-projectable-scope projection rule, DEC-5..DEC-13,
+# Appendix C C-1..C-11, ADR-0011 as the schema authority) and
+# chg-GH-301-test-plan.md v1.3 (40 TCs, AC matrix, §6 fixture discipline, §7
+# file mapping and shared implementation homes, the scanner/edge read boundary,
+# the resolved-invocation parity assertion, and the phase homes the two v1.3
+# relocations settle).
 #
 # REVISION LOG
 #   revision 1.0 (2026-11-15) — initial plan from spec v1.0 + test plan v1.0.
@@ -82,6 +84,34 @@
 #          compares the RESOLVED invocation rather than raw strings;
 #          TC-MEMSCHEMA-003 lives in `tests/structure/memory-record-schema.test.ts`
 #          (phase 4); and no user-facing doc lands in delivery.
+#   revision 1.3 (2026-11-15) — Definition-of-Ready iteration-3 alignment sweep
+#     (`readiness-review/readiness-iter-3.md` non-blocking observations 6 and 7,
+#     `delivery_planning` facet), against spec v1.3 and test plan v1.3. No phase,
+#     no scope, no AC or TC ownership and no closed obligation changes; nothing
+#     here is a new requirement.
+#       SOURCES are re-cited to spec v1.3 (DM-6 gains the projection-rule row and
+#         DEC-5 restates the same fleet refusal) and test plan v1.3 (the two
+#         phase-placement relocations below, §7's shared homes, the delivered
+#         skip set). This document's own revision is 1.3.
+#       the `OA-F3-1` typo in phase 5.1 is corrected to the spec id `AC-F3-1`.
+#       phase 5.1's fleet-refusal parenthetical cites the spec rows that now
+#         state the rule (DM-1 `scope` row, DM-6 projection-rule row, DEC-5) plus
+#         AC-F3-1 and ADR-0011 D7; the obligation text itself is unchanged and
+#         not duplicated.
+#       phase 1's TC-MEMSCHEMA-001 obligation is stated as the PARITY-ONLY test
+#         that test plan v1.3 declares: the capsule contract is read for every
+#         vocabulary it exposes (trust, evidence prefixes, status subset) and for
+#         the reconciliation table, `validateCandidate` is not exercised, and the
+#         four-channel accept/refuse behaviour belongs to TC-MEMWRITE-004 in
+#         phase 5.
+#       phase 3's TC-MEMGATE-002 obligation no longer implies a counting
+#         date-reader injection (the check edge lands in phase 4); the
+#         exactly-one-edge-read proof is named as TC-MEMNFR-001 in phase 4, and
+#         the domain-side proof stays the throwing clock in phase 3.
+#       phase 7 and obligation 7.2 state the verification phase 7 performs and
+#         nothing it authors: the phase-6 concept example is schema-legal and the
+#         `memory-practices.md` bootstrapping checklist is byte-identical, so the
+#         finalize phase carries no concept authoring.
 #
 # One ticket, one PR against main-tools, seven delivery phases. Every phase is an
 # independently committable slice that is green at its own boundary, and every
@@ -95,12 +125,14 @@
 # only, never a `tasks` key, and progress is a pm-notes `notes:` entry.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:       ./chg-GH-301-spec.md (v1.2; F-1..F-14, DM-1..DM-6,
+#   - Spec:       ./chg-GH-301-spec.md (v1.3; F-1..F-14, DM-1..DM-6 — DM-6
+#                 carries the non-projectable-scope projection rule —,
 #                 AC-F1-1..AC-NFR10-1 — 30 criteria; NFR-1..NFR-11;
-#                 DEC-1..DEC-13; §17.1 DoD-1..DoD-19; Appendix A register with the
+#                 DEC-1..DEC-13 — DEC-5 states that same fleet refusal;
+#                 §17.1 DoD-1..DoD-19; Appendix A register with the
 #                 schema/provenance presence partition; Appendix C constraint
 #                 register C-1..C-11)
-#   - Test plan:  ./chg-GH-301-test-plan.md (v1.2; 40 TCs across 14 families;
+#   - Test plan:  ./chg-GH-301-test-plan.md (v1.3; 40 TCs across 14 families;
 #                 §4 gate battery; §6 fixture and bound discipline; §7 automation
 #                 mapping and the shared implementation homes; §8.2 assumptions;
 #                 OQ-TP-1..OQ-TP-5 resolved below)
@@ -176,7 +208,7 @@
 #     names a memory-lint component). The intermediate phase-2 form is never the
 #     delivered shape; AC-F14-1's shape is reached at phase 4, and no phase
 #     boundary is red.
-#   - READ / PARSE / DATE / PRINT BOUNDARY (test plan v1.2 TC-MEMGATE-003, §4).
+#   - READ / PARSE / DATE / PRINT BOUNDARY (test plan v1.3 TC-MEMGATE-003, §4).
 #     The boundary is stated once, and the suites assert exactly this: the
 #     SCANNER ADAPTER (`packages/adapters/src/file/memory-scan.ts`) owns every
 #     file read and the YAML frontmatter parse; the CHECK EDGE
@@ -196,7 +228,7 @@
 #     PROJECTION rule in `validateCandidate`, never a widened or narrowed
 #     contract.
 #   - PRESENCE PARTITIONS BY KEY AND THE PARTITION IS EXHAUSTIVE AND DISJOINT
-#     (spec v1.2 F-5/F-7, AC-F2-2/AC-F7-1, Appendix A; test plan TC-MEMPROV-001).
+#     (spec v1.3 F-5/F-7, AC-F2-2/AC-F7-1, Appendix A; test plan TC-MEMPROV-001).
 #     `source` is SCHEMA-owned: an absent `source` is `memory.schema.keys-missing`
 #     and an out-of-channel `source` is `memory.schema.value-unknown`. `evidence`
 #     and `created_by` are PROVENANCE-owned: `memory.provenance.evidence-missing`,
@@ -531,8 +563,15 @@ phases:
   #
   # Test obligations: `tests/structure/memory-layout.test.ts` (TC-MEMLAY-001,
   # -002, -003 with the temp-copy negative mutant), `tests/structure/
-  # memory-record-schema.test.ts` (TC-MEMSCHEMA-001 human/machine/capsule parity
-  # + reconciliation table, with `STATEMENT_MAX_CHARS`/`HINT_MAX_CHARS` and the
+  # memory-record-schema.test.ts` (TC-MEMSCHEMA-001 PARITY ONLY — the
+  # human/machine required and optional sets, every closed vocabulary, the
+  # capsule overlap asserted over exactly the vocabulary the capsule exposes
+  # (`trust` = `CAPSULE_CANDIDATE_TRUST`, the five evidence-link prefixes, the
+  # status subset) plus the ABSENCE of a capsule `source` vocabulary, and the
+  # reconciliation table; the capsule contract is read for parity only,
+  # `validateCandidate` is not exercised here and no four-channel
+  # accept/refuse claim is made — that behaviour lands in phase 5 and is owned
+  # by TC-MEMWRITE-004; with `STATEMENT_MAX_CHARS`/`HINT_MAX_CHARS` and the
   # vocabularies IMPORTED from the machine contract and never restated;
   # TC-MEMPROV-002 migration block), `tests/fixtures/memory/tree.ts` builders
   # (`emptyTree()`, `populatedTree()`, valid baseline record) whose boundary rows
@@ -666,7 +705,7 @@ phases:
   #      `source`), guild tag vs folder (and guild outside a guild folder),
   #      superseded record without `superseded_by`. One defect => ONE finding in
   #      the schema area only (no double reporting).
-  #      PRESENCE PARTITION (spec v1.2 F-5/F-7, AC-F2-2/AC-F7-1, Appendix A;
+  #      PRESENCE PARTITION (spec v1.3 F-5/F-7, AC-F2-2/AC-F7-1, Appendix A;
   #      pinned contract above). `source` is SCHEMA-OWNED for presence AND
   #      channel: an absent `source` is `memory.schema.keys-missing` naming
   #      `source`, and a `source` outside the four declared channels is
@@ -844,7 +883,10 @@ phases:
   # that file is deliberately outside every phase's scope),
   # `tests/checks/memory-lint-output.test.ts` (TC-MEMLAY-004 verdict stability,
   # TC-MEMGATE-001 exit/summary, TC-MEMGATE-002 order/determinism at a fixed
-  # injected date, TC-MEMNFR-003 ceiling), `tests/fixtures/memory/bodies.ts`,
+  # injected date — its clock proof here is the domain-side throwing clock, NOT
+  # a counting date reader, because the check edge lands in phase 4; the
+  # exactly-one-edge-read proof is TC-MEMNFR-001 in phase 4 — TC-MEMNFR-003
+  # ceiling), `tests/fixtures/memory/bodies.ts`,
   # `tests/fixtures/memory/secrets.ts` (one runtime builder per recognizer class),
   # `tests/fixtures/memory/agents/` (entry-point fixtures).
   #
@@ -898,7 +940,7 @@ phases:
   #      `packages/adapters/src/file/index.ts`): repository-relative enumeration
   #      of `.ai/memory/**` plus `AGENTS.md`, one read per file, YAML-frontmatter
   #      parse, covered-path set, no writes. The evaluation stays pure; THE
-  #      SCANNER OWNS EVERY FILE READ AND THE FRONTMATTER PARSE (test plan v1.2
+  #      SCANNER OWNS EVERY FILE READ AND THE FRONTMATTER PARSE (test plan v1.3
   #      TC-MEMGATE-003 step 3) — `readFileSync`/`readdirSync`/frontmatter parse
   #      appear here and in no other module of this check.
   #  4.2 `scripts/checks/memory-lint.ts` (new): scan -> evaluate -> print -> exit,
@@ -930,7 +972,7 @@ phases:
   #      to the `ts-invariants` step's run block. `ci-topology` requires every
   #      `scripts/checks/*.ts` to be wired, so the check file and its wiring land
   #      together. PARITY IS ASSERTED ON THE RESOLVED INVOCATION, NOT ON RAW
-  #      STRINGS (test plan v1.2 TC-MEMGATE-004 step 3): the aggregate legitimately
+  #      STRINGS (test plan v1.3 TC-MEMGATE-004 step 3): the aggregate legitimately
   #      cites `pnpm check:memory` while the CI job cites the path, so the test
   #      resolves `check:memory` through the manifest to its path operand
   #      (`scripts/checks/memory-lint.ts`) and compares that resolved invocation
@@ -1013,7 +1055,7 @@ phases:
   # exactly-one-date-read), `tests/structure/memory-record-schema.test.ts`
   # whole-tree block (TC-MEMSCHEMA-003 zero schema findings at the delivered
   # HEAD — this file, NOT `tests/checks/memory-lint-schema.test.ts`, is
-  # TC-MEMSCHEMA-003's home per test plan v1.2 §7),
+  # TC-MEMSCHEMA-003's home per test plan v1.3 §7),
   # `tests/structure/memory-bootstrap-templates.test.ts` (TC-MEMGUARD-001
   # replacement completed as the three-part set with its set-equality,
   # non-vacuity and planted-mutant proofs, and TC-MEMDOCT-001's pinned
@@ -1108,7 +1150,8 @@ phases:
   #        `closeout.capsule-invalid` carries it. Id allocation, supersession
   #        marking, confinement, read scope and exact-row dedup are unchanged.
   #      - `validateCandidate` ALSO refuses the NON-PROJECTABLE SCOPE (readiness
-  #        iteration-2 finding 2; spec DM-1 `scope` row, ADR-0011 D7, OA-F3-1):
+  #        iteration-2 finding 2; spec DM-1 `scope` row, DM-6 projection-rule
+  #        row and DEC-5, which state this refusal, ADR-0011 D7, AC-F3-1):
   #        a `lesson` or `tacit` candidate carrying `scope: fleet` is refused at
   #        CANDIDATE-SCHEMA TIME through the same EXISTING `closeout.capsule-invalid`
   #        identity, before any render step, so the writer produces NO record file
@@ -1378,6 +1421,8 @@ phases:
   #
   # Goal: the ticket's own bookkeeping, the final alignment pass and the full
   # gate battery are green at the delivered HEAD (DoD-18, DoD-19; AC-NFR8-1).
+  # The alignment pass is a VERIFICATION: the concept Record-model rewrite is
+  # phase 6's obligation and lands there, so nothing is authored here.
   #
   # Content obligations:
   #  7.1 `doc/planning/oss-tooling/backlog.md` M2-S8: keep the existing
@@ -1388,13 +1433,28 @@ phases:
   #      budgets, the advisory derivable heuristics, the privacy-vocabulary
   #      secret scan, and the sanctioned guard replacement. No other story line is
   #      edited.
-  #  7.2 Final alignment pass (verification edits only where a gate demands it):
-  #      `AGENTS.md` memory section, `.ai/memory/README.md` index,
-  #      `.opencode/skills/consolidate-memory/SKILL.md` and the phase-6-rewritten
-  #      `doc/planning/concepts/memory-architecture.md` `## Record model` must
-  #      state the same schema, budgets and gate as the delivered code. The
-  #      concept rewrite itself belongs to phase 6; this phase VERIFIES it and
-  #      adds nothing that would make the spec's F-2 claim false again.
+  #  7.2 Final alignment PASS — verification, no authoring. The concept
+  #      Record-model rewrite is phase 6's and is already landed there, so this
+  #      phase writes no concept content and declares none: it VERIFIES the
+  #      reconciled state, and the verification is exact —
+  #        (a) the `## Record model` frontmatter example in
+  #            `doc/planning/concepts/memory-architecture.md` is SCHEMA-LEGAL:
+  #            it carries `created` and no `valid_from`, a scalar `source` channel
+  #            with the ref half in exactly one shaped `evidence` link, no
+  #            list-valued `evidence`, no `rationale:` frontmatter key, a
+  #            `T0`-`T5` trust token, a scalar `applies_when`, and no `fleet`
+  #            record scope; and
+  #        (b) the `## Bootstrapping a project (adoption checklist)` section of
+  #            `doc/planning/concepts/memory-practices.md` is BYTE-IDENTICAL to
+  #            its pre-change state — no phase edits that file and
+  #            TC-MEMALIGN-001 is green.
+  #      `AGENTS.md` memory section, `.ai/memory/README.md` index and
+  #      `.opencode/skills/consolidate-memory/SKILL.md` must state the same
+  #      schema, budgets and gate as the delivered code; an alignment edit forced
+  #      by a gate is confined to those three files. A finding that would require
+  #      re-authoring the concept example (a departure from (a) or (b)) is an
+  #      escalation, never a phase-7 edit, because the spec's F-2 claim must not
+  #      be made false again.
   #  7.3 The full gate battery at the delivered HEAD, with the measured
   #      evidence recorded in the test plan §10 log: aggregate gate, memory
   #      invariant, doc-distribution guard, forbidden-literal and privacy scans,
@@ -1412,7 +1472,8 @@ phases:
   # alignment surfaces agree, including the phase-6 concept Record-model example
   # (still schema-legal, still no `valid_from`/`rationale` key, scalar `source`
   # and `applies_when`, no `fleet` record scope) with the `memory-practices.md`
-  # Bootstrapping checklist untouched; `mkdir -p tmp/tmpdir` then
+  # Bootstrapping checklist BYTE-IDENTICAL to its pre-change state;
+  # `mkdir -p tmp/tmpdir` then
   # `TMPDIR=$PWD/tmp/tmpdir pnpm check` exits 0 (including the memory invariant,
   # the boundary check, the prompt/help conformance checks and the
   # doc-distribution guard); `bun run scripts/checks/memory-lint.ts` exits 0 with
@@ -1430,8 +1491,10 @@ phases:
     kind: delivery
     summary: >-
       Mark M2-S8 delivered in the backlog with its Ticket and Progress lines,
-      run the final alignment pass across the kernel section, the memory index,
-      the curator skill and the already-reconciled concept record model,
+      run the final alignment pass over the kernel section, the memory index and
+      the curator skill, verify that the phase-6-reconciled concept record model
+      is schema-legal while the pinned memory-practices bootstrapping checklist
+      is byte-identical (verification only, no concept authoring here),
       confirm the tracked ADR-0011 still resolves at the
       delivered HEAD with the record left Proposed for the owner gate, and prove
       the full gate battery green at the delivered HEAD.
