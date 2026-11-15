@@ -7,7 +7,7 @@ phases:
   clarify_scope: { started: "2026-11-15T06:02:06Z", completed: 2026-11-15T06:10:17.425Z }
   specification: { started: null, completed: 2026-11-15T07:29:22.967Z }
   test_planning: { started: null, completed: 2026-11-15T07:32:59.739Z }
-  delivery_planning: { started: null, completed: 2026-11-15T07:18:56.811Z }
+  delivery_planning: { started: null, completed: 2026-11-15T07:37:51.612Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -197,4 +197,29 @@ notes:
       transient registration. The change must not rely on or mutate that state
       further; flag at review if the host index shows residue."
     type: risk
+    date: "2026-11-15"
+  - text: "DoR iteration 1 disposition correction: finding 1's premise was wrong. A
+      hermetic fixture probe (git worktree with `.delivery-os/config.yaml`,
+      scratch HOME, strace) shows `status --json` opens and reads that file four
+      times, as do `daemon status`, `coordinator status`, and `dispatch
+      attempts`. `statusComposition`'s empty provider chain is a different fact.
+      Spec v1.4 keeps the ticket's literal `status --json` surface (DEC-14);
+      `config --json` is unreachable (`fallback.internal`). Lesson: verify a
+      reviewer's negative probe with a positive fixture before re-scoping a
+      ticket AC."
+    type: retro
+    date: "2026-11-15"
+  - text: "DoR iteration 2: NOT_READY, 1 blocking + 1 major + minors. Blocking:
+      TC-BIN-012 (added during iter-1 remediation) asserted `daemon status`
+      gives exit 2 `fallback.internal` under an invalid override, but a
+      subcommand-bearing invocation fails argument parsing first at exit 1
+      `fallback.invocation`; fixed by asserting the projection per invocation
+      shape. Major: the guide cannot spell the installer's `ADOS_*` surface
+      because registered user-facing docs are seed-scanned over `doc/**`; fixed
+      by a spec v1.4 by-role rule plus plan/test-plan obligations and a
+      seed-free negative control. Minors fixed in plan r1.2: stale citations, 44
+      files + 2 folders arithmetic, `--filter` is not a Bun flag, missing
+      case-to-AC trace for TC-BIN-083/084, vacuous phrase row. Iter-2 verified
+      independently that iter-1's other findings are genuinely fixed."
+    type: retro
     date: "2026-11-15"
