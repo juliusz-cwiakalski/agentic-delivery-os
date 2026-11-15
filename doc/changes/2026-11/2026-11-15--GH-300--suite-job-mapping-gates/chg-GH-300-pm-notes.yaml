@@ -9,7 +9,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-15T13:37:51.542Z }
   delivery_planning: { started: null, completed: 2026-11-15T13:30:45.687Z }
   dor_check: { started: null, completed: 2026-11-15T13:41:36.071Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-15T14:40:28.959Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -315,5 +315,36 @@ notes:
       cross-artifact version citation, diff every asserted envelope/tool-result
       field against the delivered contract, and enumerate doc deltas by
       searching the retired sentence."
+    type: retro
+    date: "2026-11-15"
+  - text: "DELIVERY (lifecycle phase 6) executed by @coder. Plan phase commit map:
+      phase 1 = 1ebd1684; phase 2 = 21db3202; phase 3 = 36d09e34; phase 4 =
+      a2b7a1c3; phase 5 = 2b585e5a; phase 6 = f7a27fe3; phase 7 = 7fd7f97d; plus
+      two remediation commits 2b0e6a72 (contract/port inventory registration)
+      and 51695412 (AC-F4-1 invalid-workflow witness). 26 commits ahead of
+      origin/main-tools; range lint PASS (0 offending); working tree clean;
+      `plan validate` green; 99 files changed, 13370 insertions."
+    type: info
+    date: "2026-11-15"
+  - text: "Delivery deviations recorded by @coder: (1) the commit primitive derives
+      subjects from a lifecycle plan-phase match, so each plan phase's declared
+      subject was supplied through the primitive's supported model transport
+      (`messageSource: model`); staging, safety scan, commitlint, and commit
+      creation stayed inside `runCommitAct`; no raw git writes. (2) The shared
+      `.git/info/exclude` `.delivery-os/` line blocked the phase-5 add; it was
+      temporarily removed, the phase-5 commit ran, and the line was restored
+      (verified present at line 21). (3) The reference end-to-end proof drives
+      the real composition with the real committed-document read because the
+      production composer cannot inject provider facts. (4) Full `pnpm check` is
+      deferred to phase 9 by instruction."
+    type: risk
+    date: "2026-11-15"
+  - text: "RETRO: the commit-subject path is lossy for a 7-phase `kind: delivery`
+      plan — the primitive's lifecycle-phase match sees a union and falls back
+      to a template subject, so every phase subject required model transport.
+      Cost: extra care on each of 7 commits and a deviation to explain.
+      Improvement: let a plan phase declare its own commit subject through the
+      primitive's plan-phase contract, or have the plan use lifecycle phase ids
+      that map 1:1."
     type: retro
     date: "2026-11-15"
