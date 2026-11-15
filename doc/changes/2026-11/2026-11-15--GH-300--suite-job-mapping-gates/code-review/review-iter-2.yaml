@@ -1,0 +1,239 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-300
+branch: feat/GH-300/suite-job-mapping-gates
+base: main-tools
+merge_base: 8a1f77ad
+head_commit: 40828897
+status: PASS
+summary: >-
+  Remediation commit 380c5b1a closes every iteration-1 finding against the code,
+  not just the report: the duplicate `clone` is gone and `pnpm lint` exits 0; the
+  job-name class now refuses C0/DEL/C1/U+2028/U+2029/Cf in the core resolver, the
+  CLI projection and the corpus oracle, with structural (resolver, adapter,
+  injected seam via the shared DEFECTS map) and rendered (narrowed header,
+  cause-line) regressions; the three previously order-dependent suites each create
+  their own temp root and pass alone with `tmp/tmpdir` moved aside (33/9/5); all
+  103 changed files fall inside a declared phase scope; per-phase pm-notes evidence
+  exists; the CLI composition is now driven behaviourally through
+  `createProductionComposer` with a declared P-9 residual; the parity/corpus/
+  determinism vacuities are fixed; the valid selected-config path is covered in
+  both the adapter and layer-posture suites; and `holder` is restored to the
+  delivered `/[\r\n\u0080-\u009f]/` predicate while `suiteBreadth`/`cause` keep the
+  stricter class. `pnpm lint`, `biome format`, the tests/types typecheck,
+  `error-table-sync` (136/136), `exports-parity`, `plan validate` (`valid`,
+  readyForDevelopment=true) and the targeted suites (structure 1292 pass, plus the
+  verify-gates family) are green. Remaining findings are low/info accuracy and
+  test-quality nits, none blocking.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 3
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+publication:
+  state: draft
+  published_at: null
+  summary_url: null
+  published_count: 0
+  error_count: 0
+  errors: []
+
+iteration1_closure:
+  - id: F-1
+    severity: high
+    status: CLOSED
+    evidence: >-
+      tests/behaviour/verify-gates-suite-map.test.ts no longer declares a local
+      `clone`; it imports `clone` from the facts fixture (line 27) and uses it at
+      both call sites. `npx biome lint .` exits 0 (83 warnings / 33 infos, no
+      errors), so `pnpm lint`, `pnpm check` and DoD-10 are no longer red.
+  - id: F-2
+    severity: medium
+    status: CLOSED
+    evidence: >-
+      `hasSingleLineControlCharacter` in
+      packages/core/src/domain/verify-gates-suite-map.ts:42 and the conforming copy
+      in packages/cli/src/index.ts:203 reject point<=0x1f, 0x7f-0x9f, U+2028,
+      U+2029 and `\p{Cf}`. Fixtures job-line-separator/paragraph-separator/
+      bidi-control/zero-width-control were added to DEFECTS (structural refusal via
+      the resolver suite, the shared DEFECTS loop in the posture suite, and the real
+      adapter); rendered regressions cover the narrowed header
+      (verify-gates-narrowed-scope.test.ts) and the accepted-job one-line/no-control
+      invariant (verify-gates-suite-map-corpus.test.ts). All green.
+  - id: F-3
+    severity: medium
+    status: CLOSED
+    evidence: >-
+      Each of the adapter, layer-posture and MCP-composition suites now calls
+      `mkdirSync(TMP, { recursive: true })` before `mkdtempSync`. With `tmp/tmpdir`
+      moved aside they pass alone: 33/9/5 pass, 0 fail — matching the pm-notes line.
+  - id: F-4
+    severity: medium
+    status: CLOSED
+    evidence: >-
+      Phase 8 declares the eight drift files with a one-line justification in the
+      commit body and pm-notes. A scripted coverage check over the full change range
+      (103 files at 8a1f77ad..HEAD) found zero files outside a declared phase
+      `scope.files`/`folders`; the change artifacts are covered by phase 7's folder
+      scope.
+  - id: F-5
+    severity: medium
+    status: CLOSED
+    evidence: >-
+      pm-notes records a per-plan-phase evidence entry naming phase, commit hash and
+      the gate/test result for phases 1-8, and marks delivery/system_spec_update
+      complete. `plan validate GH-300` returns valid, readyForDevelopment=true.
+  - id: F-6
+    severity: medium
+    status: CLOSED
+    evidence: >-
+      verify-gates-suite-map-reference.test.ts now drives `createProductionComposer`
+      + `runEntrypoint` against a test-authored checkout instead of injecting a
+      test-built read. Defective/unreadable/unparseable documents, a missing
+      selected path and an overlay-only narrowing all produce the correct refusal
+      through the shipped composer; the source-text checks are labelled a
+      supplement. Residual P-9 is declared; see F-12/F-11 for its accuracy nits.
+  - id: F-7
+    severity: low
+    status: CLOSED
+    evidence: >-
+      Parity test now iterates two genuinely distinct undeclared states
+      (absent-document vs parsed-without-node); the corpus test uses distinct
+      equality/narrowing/not-evaluated maps and asserts the equality branch; the
+      determinism case is relabelled "member-less six-line" and the real member-mode
+      case remains in the member-posture suite.
+  - id: F-8
+    severity: low
+    status: CLOSED
+    evidence: >-
+      A valid selected file honouring the committed slot is now covered in both
+      verify-gates-config-document-adapter.test.ts (equality and narrowed, asserting
+      only the selected path is probed/read) and
+      verify-gates-config-layer-posture.test.ts (readWith now uses selectedConfig and
+      asserts `world.reads == [selected]`).
+  - id: F-9
+    severity: low
+    status: CLOSED
+    evidence: >-
+      explicitDetail keeps `holder` on the delivered `/[\r\n\u0080-\u009f]/`
+      (HOLDER_CONTROL) while suiteBreadth and the cause payload use the stricter
+      class. The contract suite proves TAB/BEL/DEL still project as `holder` and
+      CR/LF/C1 do not, and that suiteBreadth U+2028/U+2029/U+202E/TAB and cause
+      U+2028/U+2029/U+202E/TAB are never projected.
+  - id: F-10
+    severity: info
+    status: OPEN (unchanged, non-blocking)
+    evidence: >-
+      The common git exclude still lists `.delivery-os/` (line 21), but
+      `git ls-files --error-unmatch .delivery-os/config.yaml` succeeds and the whole
+      suite passes; see F-15.
+
+findings:
+  - id: F-11
+    severity: low
+    confidence: high
+    category: testing
+    location: tests/structure/verify-gates-suite-map-reference.test.ts:338
+    message: >-
+      The narrowed and equality composer cases assert `transportCalls`/`credentialCalls`
+      are empty, but their checkouts pass no `origin` option, so the repository
+      binding is unresolved and provider reads are `notAttempted` regardless of the
+      breadth decision — the zero-read assertion is vacuous. A probe on a resolved
+      (origin) checkout shows the same narrowed declaration performs two credential
+      resolves before the narrowed refusal, so the test's implied claim ("narrowed
+      reads no provider facts") is not true and only passes because the fixture
+      suppresses provider reads. The equality case (line 376) is likewise
+      non-discriminating: an unwired map yields the same `verify.gates.failed`
+      outcome.
+    suggestion: >-
+      Either drive the narrowed case on a resolved checkout and assert the actual
+      ordering (breadth resolved from the local workflow read with no member read),
+      or drop the "zero provider reads" claim and keep only the refusal/detail
+      assertions. Give the equality case an observable discriminator (or state the
+      P-9 residual there) so a mis-wired seam cannot pass it.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-12
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-15--GH-300--suite-job-mapping-gates/chg-GH-300-plan.yaml:635
+    message: >-
+      P-9's stated reason is inaccurate. It says the production composer is "not
+      injectable at its provider-read boundary", but
+      `ProductionCompositionFacts` exposes `githubTransport` (production.ts:411) and
+      `credentials` (:421), and this very reference suite injects both. The real
+      ceiling is that no full passing battery/provider/lifecycle fixture is
+      constructed, not that provider injection is impossible.
+    suggestion: >-
+      Reword P-9 (plan and pm-notes) to state the actual residual: the equality
+      success path through the shipped composer is not exercised with a passing
+      provider/lifecycle fixture; the wiring and the pre-provider refusals are
+      proven. The residual scope is otherwise acceptable.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-13
+    severity: low
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-15--GH-300--suite-job-mapping-gates/chg-GH-300-test-plan.md:61
+    message: >-
+      Cross-artifact citations are stale after plan revision 1.5. Test plan v1.6
+      §2/§8.3 and line 61 cite "Implementation plan revision 1.4 ... 7 phases",
+      while the plan is revision 1.5 with 8 phases. Conversely the plan's SOURCES
+      section cites "test plan (v1.5)" (plan line 264) while its revision-1.5 note
+      cites test plan v1.6. Plan/target totals (38 TCs, 30 ACs) are unchanged, so
+      this is citation drift only.
+    suggestion: >-
+      Refresh the test-plan §2/§8.3 plan reference to revision 1.5 and 8 phases (a
+      metadata-only v1.7), and align the plan SOURCES citation to test plan v1.6, or
+      record the deliberate non-edit in the pm-notes evidence. Does not affect
+      `plan validate`.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-14
+    severity: info
+    confidence: high
+    category: maintainability
+    location: packages/core/src/domain/verify-gates-suite-map.ts:33
+    message: >-
+      The single-line printable predicate now exists in three copies: the core
+      resolver (line 33/42), the CLI projection (packages/cli/src/index.ts:196/203),
+      and the corpus test oracle
+      (tests/behaviour/verify-gates-suite-map-corpus.test.ts:33/36). The two
+      production copies are plan-sanctioned (8.2 "one predicate, or two conforming
+      copies") and currently identical; a future edit to one and not the other would
+      silently drift.
+    suggestion: >-
+      Optional: export one predicate from the core domain and consume it from the
+      CLI (updating the exports parity test), or add a test that asserts the two
+      literals are equal, to remove the drift risk.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-15
+    severity: info
+    confidence: high
+    category: environment
+    location: .git/info/exclude:21
+    message: >-
+      Carry-forward of F-10: the common git exclude still lists `.delivery-os/`
+      (line 21). The reference document is tracked and every suite passes, so there
+      is no impact, but the reference suite still depends on the documented forced
+      add rather than asserting `git ls-files` tracking.
+    suggestion: >-
+      Optional: remove the local exclude entry and/or assert tracking of
+      `.delivery-os/config.yaml` in the reference suite.
+    suppressed: false
+    published_url: null
+    published_at: null
+
+reviewed_at: 2026-11-15T17:10:00Z
+next_step: PROCEED

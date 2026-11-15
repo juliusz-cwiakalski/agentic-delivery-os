@@ -11,7 +11,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-15T13:41:36.071Z }
   delivery: { started: null, completed: 2026-11-15T15:51:39.054Z }
   system_spec_update: { started: null, completed: 2026-11-15T15:51:17.762Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-15T16:13:16.810Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -412,4 +412,23 @@ notes:
       416 pass / 0 fail over 15 files, each affected suite also green alone.
       Full `pnpm check` is phase 9 and is not claimed here."
     type: info
+    date: "2026-11-15"
+  - text: "Review iteration 2 verdict: PASS — spec_compliance PASS, plan_compliance
+      PASS; 0 critical/high/medium, 3 low, 2 info. Record:
+      code-review/review-iter-2.yaml. F-1..F-9 all verified closed against the
+      code (lint green; job class rejects C0/DEL/C1/U+2028/U+2029/Cf with
+      structural and rendered regressions; three suites hermetic and green when
+      run alone; all 103 changed files inside a declared scope; per-phase
+      evidence recorded; shipped-composer behavioural proof with the P-9
+      ceiling; vacuous tests fixed; selected-config path covered; delivered
+      `holder` predicate restored). Residuals to disclose in the PR body: (F-11)
+      the composer reference suite's zero-provider-call assertion is vacuous on
+      an unresolved checkout and a resolved checkout performs credential reads
+      before the narrowed refusal; (F-12) P-9's stated rationale (provider facts
+      not injectable) is inaccurate — the real ceiling is the missing passing
+      battery/provider fixture; (F-13) test plan v1.6 still cites plan revision
+      1.4/7 phases and plan SOURCES cites test plan v1.5; (F-14) the printable
+      predicate is triplicated; (F-15) `.git/info/exclude` still lists
+      `.delivery-os/`."
+    type: resolved
     date: "2026-11-15"
