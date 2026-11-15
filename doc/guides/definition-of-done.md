@@ -9,7 +9,7 @@ created: 2026-06-28
 owners: ["engineering"]
 summary: "Human-readable Definition of Done: the post-implementation acceptance gate (dod_check) that closes delivery, including the read-only variant-aware verify-change ledger verdict."
 links:
-  related_changes: ["GH-177", "GH-226"]
+  related_changes: ["GH-177", "GH-226", "GH-300"]
 ---
 
 # Definition of Done (DoD)

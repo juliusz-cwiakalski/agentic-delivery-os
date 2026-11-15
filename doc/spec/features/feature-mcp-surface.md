@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-MCP-SURFACE
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-07
+last_updated: 2026-11-15
 owners: ["engineering"]
 service: delivery-os
-summary: "The minimal read-only MCP surface: a thin Node-hosted stdio JSON-RPC 2.0 server in packages/mcp, exactly three branding-projected tools mirroring the status digest, verify-change, and verify-gates engines, CLI data-shape and error-table payload parity with no envelope or exit-code leakage, single-flight calls, the {0, 1, 2} server lifecycle exit vocabulary owned by the lifecycle module, runtime-neutral composition with the documented serve-root allowances, and untrusted-input plus inert-content handling."
+summary: "The minimal read-only MCP surface: a thin Node-hosted stdio JSON-RPC 2.0 server in packages/mcp, exactly three branding-projected tools mirroring the status digest, verify-change, and verify-gates engines, CLI data-shape and error-table payload parity with no envelope or exit-code leakage, single-flight calls, the {0, 1, 2} server lifecycle exit vocabulary owned by the lifecycle module, the shared single-document `verify.suite-map` read that makes the `gate-report` mirror refuse a narrowed declaration with the same identity and summary as the CLI, runtime-neutral composition with the documented serve-root allowances, and untrusted-input plus inert-content handling."
 links:
-  related_changes: ["GH-231", "GH-236", "GH-286", "GH-288"]
+  related_changes: ["GH-231", "GH-236", "GH-286", "GH-288", "GH-300"]
   related_decisions: ["ADR-0003", "TDR-0005"]
   contracts:
     - "packages/mcp/src/commands/catalog.ts"
@@ -120,4 +120,4 @@ The surface has no live provider tier; its CI evidence is the hermetic fixture s
 - [ADR-0003 — OSS Tooling Monorepo Structure](../../decisions/ADR-0003-oss-monorepo-structure.md)
 - [TDR-0005 — Delivery Result Enum and CLI Exit Taxonomy](../../decisions/TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md)
 
-**Change record:** `doc/changes/2026-11/2026-11-06--GH-231--minimal-mcp/`.
+**Change record:** `doc/changes/2026-11/2026-11-06--GH-231--minimal-mcp/`; `doc/changes/2026-11/2026-11-15--GH-300--suite-job-mapping-gates/`.

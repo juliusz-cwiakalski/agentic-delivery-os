@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-CAPSULE
 status: Current
 created: 2026-11-07
-last_updated: 2026-11-07
+last_updated: 2026-11-15
 owners: ["engineering"]
 service: delivery-os
 summary: "The change capsule: the existing change folder as a self-contained memory episode, an append-only delivery.capsule.event.v1 events.jsonl stream with a closed eleven-kind/four-writer vocabulary, deterministic per-capsule sequences and event keys, per-capsule append locking, torn-tail refusal, the first-event `capsule.opened` rule, and a terminal capsule.closed; the phase, commit, and verify producers with non-gating disclosure; the one-file-per-candidate `<id>.yaml` candidates/ layout, the candidate schema, capture bar, five evidence-link shapes, deterministic dedup and contradiction predicate; the closed promotion routing table with exactly one decision per candidate, confined lessons/tacit home writes, and sanctioned handoffs; and closeout's read-only validation, pre-contract backfill, review-verdict ingestion, per-candidate promotion decisions, and terminal close."
 links:
-  related_changes: ["GH-240"]
+  related_changes: ["GH-240", "GH-300"]
   contracts:
     - "packages/core/src/contracts/capsule.ts"
     - "packages/core/src/domain/capsule.ts"
@@ -359,4 +359,4 @@ The capsule adds no runtime dependency, daemon, scheduled job, or network call. 
 
 See also: [Closeout Transaction](feature-closeout.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Harness Adapters](feature-harness-adapters.md), [pm-notes lint and phase transitions](feature-pm-notes-lint-and-phase-transitions.md), [Commit Primitive](feature-commit-primitive.md), [Verify Gates](feature-verify-gates.md), [Retro Evidence Pipeline](feature-retro-pipeline.md), [Session Database Administration](feature-session-database-admin.md), [Merge and Verify Deploy](feature-merge-verify-deploy.md), and the [repository glossary](../../overview/glossary.md).
 
-**Change record:** `doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/`.
+**Change record:** `doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/`; `doc/changes/2026-11/2026-11-15--GH-300--suite-job-mapping-gates/`.
