@@ -13,7 +13,7 @@ phases:
     completed: 2026-11-15T22:28:15.123Z
   test_planning:
     started: null
-    completed: null
+    completed: 2026-11-15T22:29:07.412Z
   delivery_planning:
     started: null
     completed: null
@@ -81,4 +81,9 @@ notes:
       cheap and should run immediately after every spec authoring, before the
       downstream artifacts are written."
     type: retro
+    date: "2026-11-15"
+  - text: "test_planning: 60 test cases, 45/45 spec ACs traced, SC-M2-S3-01/02
+      adopted by id, DM-1..DM-9 and NFR-1..NFR-14 all mapped. AC-NFR14-1 is
+      process-evidenced (gate log + PR metadata), not suite-asserted."
+    type: info
     date: "2026-11-15"
