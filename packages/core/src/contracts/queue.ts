@@ -569,6 +569,8 @@ export const QUEUE_MAX_DEPLOY_READS = 3 as const;
 export const QUEUE_MAX_REF_CHARS = 64 as const;
 /** Safe evidence detail character cap. */
 export const QUEUE_MAX_DETAIL_CHARS = 160 as const;
+/** The single member-ref separator literal (GH-310 DEC-2, DM-6). */
+export const QUEUE_MEMBER_REF_SEPARATOR = "@" as const;
 
 /* ------------------------------- envelopes ------------------------------- */
 
@@ -811,6 +813,16 @@ export type QueueDependencyRemovalData = {
   readonly degraded: readonly QueueDegradationReason[];
 };
 
+/**
+ * One declared member entry on a `queue add` payload (GH-310 DEC-21, DM-6):
+ * the member ref, the member repository key, and the member's own lane id.
+ */
+export type QueueMemberEntry = {
+  readonly ref: string;
+  readonly repoKey: string;
+  readonly lane: string;
+};
+
 /** The `queue add | prioritize | dep` payload (Appendix C). */
 export type QueueMutationData = {
   readonly ref: string;
@@ -818,6 +830,8 @@ export type QueueMutationData = {
   readonly edges: readonly string[];
   readonly result: QueueMutationResult;
   readonly degraded: readonly QueueDegradationReason[];
+  /** Additive ordered member entries; present only on a member-declaring plan. */
+  readonly members?: readonly QueueMemberEntry[];
 };
 
 /** The claim result vocabulary (Appendix C). */

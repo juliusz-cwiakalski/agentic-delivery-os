@@ -1,0 +1,553 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-310
+branch: feat/GH-310/cross-repository-changes
+status: PASS
+summary: >-
+  Phase 6 closes the two iteration-1 blockers against the real contracts, not
+  against the narrative. The cross-repository gate append now projects every
+  member record to the delivered `{id, verdict, reason, citation}` ledger shape
+  before the one `appendVerification` (DEC-22), and a real
+  `appendMergeGateVerification` -> `readMergeGateVerifications` round trip over an
+  audit store proves exactly one record, not `torn`, no `member` key, count =
+  members x declared gates, and matching `verdict`/`reason`/`citation`; an
+  unprojected record is refused with `state.store.torn`/`not_landed` and the
+  history then reads `torn`. The member `ticket-to-done` transition now targets
+  only `observation.issue` (DM-8), an absent `issue` schedules zero operations and
+  reports `skipped-noop`, no `<changeRef>@<repoKey>` identity reaches any
+  transition target, the change-level transition is always planned and folded with
+  the members (DEC-23), and both member aggregates are the pinned mode-scoped
+  worst-case fold so an all-unsafe set folds to `would-refuse`/`refused` and
+  `closeout.branch.unsafe` is reachable. F-15/F-16 are consistent across code,
+  spec and docs. No critical/high finding remains. Four medium and nine low/info
+  residuals survive; none violates a delivered contract or produces a false
+  success, and each is listed for PR disclosure (the AC-F5-2/AC-F5-3
+  observability wording, the F-6 member CI reading, F-7 no read-bundle identity
+  check, and the phase-6 commit subject are the ones a PR body must name).
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 4
+  low: 9
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-6
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/verify-gates-members.ts:71
+    message: >-
+      [accepted-residual | origin: review-iter-1 F-6] `memberCiReading` still
+      derives `gates.ci` only from the check-run page: detail resolved + hex head +
+      non-empty page + every `run.jobs[0].jobState` in {succeeded, skipped} + at
+      least one `succeeded` => `pass`; it ignores `pageItemCount`/truncation and
+      the workflow's expected job set that the delivered `ci-green` gate uses
+      (`ci-truncated`, `ci-missing-jobs`). A member that does not declare
+      `ci-green` can therefore reach `gates.ci: pass` and `verdict: pass` on a
+      partial/truncated page. This does not contradict the pinned DEC-4 `gates.ci`
+      definition (a read on the member's pushed head), so it is not an AC
+      violation, but it is a fail-open reading in a fail-closed change.
+    suggestion: >-
+      Fold the member reading over the same expected-job set and truncation rule
+      as the delivered `ci-green` gate (or project that gate's verdict into the
+      four-value vocabulary), map a truncated page to `unavailable`/`absent`, and
+      add the partial-page cell. Until then, disclose it in the PR and track it as
+      a follow-up.
+    disposition: accepted-residual
+    origin: F-6
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/verify-gates-members.ts:107
+    message: >-
+      [accepted-residual | origin: review-iter-1 F-7] `evaluateCrossRepositoryMember`
+      consumes whatever bundle `readMemberReads(member)` returns and never checks
+      that `deliveryRequestDetail.value.request.identity.entityId` equals
+      `member.pullRequest` (or that the repository facts belong to
+      `member.repoKey`). AC-F3-5 ("no cross-member reuse of a CI verdict") is
+      therefore enforced by the injected seam's discipline rather than by the
+      evaluator; a composition returning a sibling member's bundle silently
+      corroborates the wrong head.
+    suggestion: >-
+      Fail closed on an identity mismatch (map to `unavailable` with no invented
+      citation) and add a fixture cell that supplies one member's bundle for
+      another. Disclose as a composition-discipline residual until then.
+    disposition: accepted-residual
+    origin: F-7
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: N-1
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/closeout.ts:2614
+    message: >-
+      [accepted-residual | coder-declared residual 1] In apply mode a refused
+      member makes the DEC-23 aggregate `refused`, and `runCloseout` returns the
+      delivered `closeout.branch.unsafe` error envelope with no `data`
+      (closeout.ts:2685-2704). AC-F5-3's apply-mode half asks for both member
+      values (`refused` / `applied`) *and* the reachable refusal; the per-member
+      apply values are therefore not observable through the command response. The
+      member mapping is exercised at the domain seam only indirectly (the fold
+      reaches `refused`; TC-XCLOSE-003 asserts plan-mode values, the refusal code,
+      and the delete calls, not `data.members`).
+    suggestion: >-
+      Pin the intended truth in the spec/AC: either state that a refused aggregate
+      is an error envelope and the apply-mode member values are asserted at the
+      domain result before the exit projection, or emit data with the refusal (a
+      delivered-exit-contract change). Disclose it in the PR body now.
+    disposition: accepted-residual
+    origin: coder-residual-1
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: N-2
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/closeout.ts:608
+    message: >-
+      [accepted-residual | coder-declared residual 2] AC-F5-2's data-bearing
+      partial-landing apply is reachable only when the unmerged member's branch is
+      already absent: a present unmerged branch is unsafe under the delivered
+      squash-safety predicate (`mergedObserved: false`), reports
+      `would-refuse`/`refused`, and DEC-23 folds the aggregate to `refused`, so
+      `closeout.branch.unsafe` is returned with no data. The TC-XCLOSE-002 cell
+      builds exactly that branch-absent variant (its own comment says so). The
+      AC's "only member A is merged" wording does not pin the branch state.
+    suggestion: >-
+      Amend AC-F5-2 (and feature-closeout) to say the partial-landing report is
+      data-bearing when the unmerged member's branch is already absent, and that a
+      present unmerged branch is refused with no data. Disclose it in the PR body
+      now.
+    disposition: accepted-residual
+    origin: coder-residual-2
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-8
+    severity: low
+    confidence: high
+    category: observability
+    location: packages/cli/src/commands/verify-gates.ts:160
+    message: >-
+      [accepted-residual | origin: review-iter-1 F-8] The non-gating capsule
+      append still maps each gate to `{gateId, verdict, reason}`, dropping
+      `member`; for a member-declaring change the durable `gate.outcome` payload
+      can repeat a `gateId` across members and cannot attribute a verdict to a
+      member. `feature-verify-gates.md` now states that flat shape, so this is
+      documented behaviour rather than a doc contradiction.
+    suggestion: >-
+      Either add `member` to the capsule payload (it is additive-tolerant) or keep
+      the flat projection and state explicitly that member attribution lives only
+      in the report.
+    disposition: accepted-residual
+    origin: F-8
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-9
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/review-flow.ts:46
+    message: >-
+      [accepted-residual | origin: review-iter-1 F-9] `complete` is computed from
+      "exactly one matching observation" only; a single observation with an empty
+      `verdicts` list yields `verdict: unreviewed` while `complete` stays `true`.
+      DM-7 pins `complete` only as a boolean, so no AC is contradicted.
+    suggestion: >-
+      Treat an `unreviewed` observation as incomplete, or reject an empty
+      verdict list at the seam, and pin the reading in DM-7.
+    disposition: accepted-residual
+    origin: F-9
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-10
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/cli/src/edge.ts:4889
+    message: >-
+      [accepted-residual | origin: review-iter-1 F-10] `queue add` on a member
+      plan declares each member entry in its own fenced append inside a loop and
+      returns `mapQueueFailure` on the first failure, so a mid-loop failure leaves
+      a partial member set. A retry converges (`added`/`updated`/`noop` per
+      member); no AC requires atomicity.
+    suggestion: >-
+      Document the per-member, per-fence semantics as the contract, or declare all
+      member entries under one fence.
+    disposition: accepted-residual
+    origin: F-10
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-11
+    severity: low
+    confidence: medium
+    category: correctness
+    location: packages/core/src/domain/plan-members.ts:41
+    message: >-
+      [accepted-residual | origin: review-iter-1 F-11] `canonicalChangeRef`
+      re-implements the delivered change-ref canonicalization that
+      `queue-graph.ts` keeps for the plain form; two copies can drift silently.
+      Behavior is currently identical.
+    suggestion: >-
+      Export one canonicalizer from a single module and have `canonicalQueueRef`
+      use it for the plain form too.
+    disposition: accepted-residual
+    origin: F-11
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-12
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/cli/src/commands/queue.ts:73
+    message: >-
+      [accepted-residual | origin: review-iter-1 F-12] `queue ready` validates its
+      candidate positionals with `QUEUE_READY_WORK_ITEM_REF_PATTERN`
+      (`^[A-Za-z][A-Za-z0-9]*-[0-9]+$`, queue.ts:73,102), so a member ref is a
+      grammar refusal while `add`, `claim`, `release`, `dep`, `remove` and `list`
+      accept it.
+    suggestion: >-
+      Accept the member form in the `ready` candidate grammar (via the shared
+      helper) or state in the spec/feature page that `ready` is
+      change-ref-scoped.
+    disposition: accepted-residual
+    origin: F-12
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-13
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-14--GH-310--cross-repository-changes/chg-GH-310-plan.yaml:993
+    message: >-
+      [accepted-residual | origin: review-iter-1 F-13] Five changed files sit
+      outside every declared phase `scope`:
+      `tests/fixtures/ports/v1-contract-inventory.json`,
+      `tests/checks/planning-truth.test.ts`,
+      `doc/planning/oss-tooling/milestones/m2/README.md`,
+      `tests/fixtures/closeout/cli.ts`, and
+      `tests/fixtures/plan/harness/index.ts`. The first three are disclosed in
+      pm-notes prose; the two fixture extensions are not named.
+      `tests/fixtures/closeout/harness.ts` is now inside phase-6 scope. `doc/spec/**`
+      edits are lifecycle phase 7, not plan scope.
+    suggestion: >-
+      Add the five paths to the owning phase scopes or record them as an explicit
+      scope amendment; name the two fixture extensions in the phase evidence.
+    disposition: accepted-residual
+    origin: F-13
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-14
+    severity: low
+    confidence: high
+    category: observability
+    location: packages/core/src/domain/closeout.ts:576
+    message: >-
+      [accepted-residual | origin: review-iter-1 F-14] `memberTicketStep` attaches
+      `reason: "provider-unsupported"` to any `skipped-gap` aggregate
+      (closeout.ts:576), including a member tracker-read gap
+      (`issueClosure === "unavailable"`) or a change-level observation gap on a
+      provider that does support `transition-work-item`. The fold widened the set
+      of inputs that can yield a gap, so the mislabel is now reachable from more
+      causes.
+    suggestion: >-
+      Derive the reason from the cause (`provider-unsupported` only when
+      `supports(...)` is false; a gap/read-failed reason otherwise).
+    disposition: accepted-residual
+    origin: F-14
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-18
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/plan-members.ts:149
+    message: >-
+      [accepted-residual | origin: review-iter-1 F-18] `members: []` is accepted
+      and echoed as `"members": []` on a `valid` verdict (no minimum entry count),
+      while every other surface treats an empty declaration as member-less, so the
+      verdict carries a `members` key for a plan the spec describes as "absent
+      means single-repository".
+    suggestion: >-
+      Decide and pin: reject an empty declaration, or document that it is valid,
+      echoed, and member-less downstream.
+    disposition: accepted-residual
+    origin: F-18
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-19
+    severity: info
+    confidence: medium
+    category: correctness
+    location: packages/cli/src/edge.ts:4892
+    message: >-
+      [accepted-residual | origin: review-iter-1 F-19] Member entries record the
+      member `repoKey` in the delivered `repository` field (which otherwise holds
+      the normalized `host/owner/name` key), and the `isEntryRecord`/`desiredEntry`
+      pair-or-absent rule is relaxed for every member-shaped ref. No collision
+      exists; `feature-scheduling-engine.md` now states the member entry "binds the
+      member repository key without a recorded root", partly documenting the dual
+      namespace.
+    suggestion: >-
+      Document the dual namespace on `QueueEntryRecord.repository` explicitly (or
+      add a dedicated `memberRepoKey`), and scope the relaxation to declared refs
+      if checkable at read time.
+    disposition: accepted-residual
+    origin: F-19
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: N-3
+    severity: low
+    confidence: high
+    category: observability
+    location: packages/core/src/domain/closeout.ts:2679
+    message: >-
+      [accepted-residual | coder-declared residual 3] The DEC-23 top tier maps a
+      member operation failure to a step `failed` outcome, and `runCloseout` then
+      returns `closeout.write.failed` with no `data` (closeout.ts:2679-2683). The
+      failing member's own value (which the mapping would report as `skipped-gap`)
+      is therefore not observable, though the already-applied member operations
+      persist and the command fails closed (exit 2).
+    suggestion: >-
+      Accept and document: the feature page already states the exit projection;
+      add a sentence that the per-member failing value is a domain-only value in
+      this path, or extend the `attention`/data-bearing projection if the
+      observability is wanted.
+    disposition: accepted-residual
+    origin: coder-residual-3
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: N-4
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: packages/cli/src/commands/verify-gates.ts:362
+    message: >-
+      [accepted-residual | phase-6 commit hygiene] The phase-6 delivery commit
+      `af46d0dc` ships six `packages/**` source files but its subject is
+      `docs(GH-310): update doc/changes/...` with a literal trailing ellipsis and an
+      empty body, not the plan-declared `fix(GH-310): ledger-compatible gate
+      append, member issue identity and aggregate fold` (plan line 1072). The same
+      generic-subject pattern runs across most of the branch's commits (e.g.
+      `f8a23525`, `7868c727`, `27f2115a`). The phase-9 range gate reportedly
+      PASSed because commitlint checks the subject shape, not that the type matches
+      the changed files.
+    suggestion: >-
+      Have the PR carry a clear title/description (phase 11) and, if history
+      hygiene matters for the public baseline, squash or reword the delivery
+      commits before merge. No code change required.
+    disposition: accepted-residual
+    origin: phase-6-commit
+    suppressed: false
+    published_url: null
+    published_at: null
+iteration_1_dispositions:
+  F-1:
+    disposition: closed
+    evidence: >-
+      DEC-22 projection at verify-gates.ts:362-374 (`{id,verdict,reason,citation}`);
+      real `appendMergeGateVerification` -> `readMergeGateVerifications` round trip
+      asserts one record, not `torn`, 5 gates for 2 members, no `member` key, and
+      matching order (verify-gates-members.test.ts); the negative case restores
+      `member` and is refused with `state.store.torn`/`not_landed` and reads `torn`;
+      `trackerPosture.ownerLabels` now derives from the change-level work-item read
+      (verify-gates.ts:315-321,377) and `labels: []` matches the delivered
+      member-less path (verify-gates.ts:444).
+  F-2:
+    disposition: closed
+    evidence: >-
+      `CrossRepositoryCloseoutObservation.issue?` added (contracts/closeout.ts:279);
+      the member transition target is `{systemName, entityId: issue}` only
+      (closeout.ts:565), an absent `issue` reports `skipped-noop` with no operation
+      (closeout.ts:534-539), and the change-level transition is always planned
+      (closeout.ts:529-530). The opt-in strict fake (`knownEntityIds`,
+      fixtures/closeout/harness.ts:192-200) makes an unknown id fail; the test
+      proves targets `["183", 411, 412]` with no `@`/member-ref identity, and the
+      regenerated golden carries 183/411/412.
+  F-3:
+    disposition: closed
+    evidence: >-
+      `memberBranchStep` folds the per-member projections, not `operations.length`
+      (closeout.ts:645-648), and the apply path folds `memberStepValues` through
+      `foldCloseoutMemberOutcomes` (closeout.ts:2614-2618). The all-unsafe plan
+      folds `would-refuse`, apply folds `refused`, and `closeout.branch.unsafe` is
+      asserted with zero deletions (closeout-members.test.ts:345-363).
+  F-4:
+    disposition: closed
+    evidence: >-
+      A failed member operation sets `memberOutcomes[op]="failed"` and `anyFailed`,
+      the top tier folds to `failed`, `runCloseout` returns `closeout.write.failed`
+      (closeout.ts:2578-2599, 2614-2618, 2679-2683), and the operation-failure cell
+      asserts that code while the other member's deletion still runs
+      (closeout-members.test.ts:429-446). Residual N-3 (no data) disclosed.
+  F-5:
+    disposition: closed
+    evidence: >-
+      `memberTicketStep` seeds `operations` from `ticketStep(facts).operations`
+      and folds `change.outcome` first (closeout.ts:529-532,573); the apply fold
+      also includes the change-level contribution (closeout.ts:690-705). Tests
+      assert the change's own item `183` is planned and transitioned alongside
+      member issues (closeout-members.test.ts:367-388, 413-427) and the golden
+      contains `entityId: 183`.
+  F-6:
+    disposition: accepted-residual
+    evidence: >-
+      `memberCiReading` (verify-gates-members.ts:71-87) still reads only the
+      check-run page and ignores truncation/expected jobs; DEC-4's pinned
+      `gates.ci` definition does not require the expected job set, so no AC is
+      contradicted. Disclose and follow up.
+  F-7:
+    disposition: accepted-residual
+    evidence: >-
+      `evaluateCrossRepositoryMember` (verify-gates-members.ts:107-143) never
+      compares the detail entity id to `member.pullRequest`; the seam's discipline
+      is the only guard. Disclose.
+  F-8:
+    disposition: accepted-residual
+    evidence: >-
+      `appendGateCapsule` still emits `{gateId, verdict, reason}`
+      (verify-gates.ts:160-164); feature-verify-gates.md now states that flat
+      shape, so it is documented rather than contradicted.
+  F-9:
+    disposition: accepted-residual
+    evidence: >-
+      `reviewFlowFor` keeps `complete=true` for one observation with empty
+      `verdicts` (review-flow.ts:46-56); DM-7 pins only a boolean.
+  F-10:
+    disposition: accepted-residual
+    evidence: >-
+      `declaredMemberTargets` + per-target `declareQueueEntry` loop (edge.ts add
+      branch) keeps the per-member fences non-atomic; retry converges and no AC
+      requires atomicity.
+  F-11:
+    disposition: accepted-residual
+    evidence: >-
+      `canonicalChangeRef` (plan-members.ts:41-48) still duplicates the
+      queue-graph canonicalizer; behavior is identical today.
+  F-12:
+    disposition: accepted-residual
+    evidence: >-
+      `queue ready` still uses `QUEUE_READY_WORK_ITEM_REF_PATTERN`
+      (queue.ts:73,102), so `GH-310@repo` is a grammar refusal.
+  F-13:
+    disposition: accepted-residual
+    evidence: >-
+      Five changed files remain outside declared scopes; three are disclosed in
+      pm-notes, `tests/fixtures/closeout/cli.ts` and
+      `tests/fixtures/plan/harness/index.ts` are not named. Harness.ts moved into
+      phase-6 scope.
+  F-14:
+    disposition: accepted-residual
+    evidence: >-
+      `memberTicketStep` still sets `reason: "provider-unsupported"` for any
+      `skipped-gap` aggregate (closeout.ts:576); with the fold this now includes
+      member observation gaps.
+  F-15:
+    disposition: closed
+    evidence: >-
+      queue-members.test.ts asserts `state: "held"` with the closed
+      `dependency-open` reason (lines 72-90), and
+      `doc/spec/features/feature-scheduling-engine.md` now reads `held` (lines
+      418-424). Spec AC-F2-2 uses the same vocabulary.
+  F-16:
+    disposition: closed
+    evidence: >-
+      Spec §7.3 (line 204) and OQ-6 (line 319) declare the unwired member read
+      seam; `packages/cli/src/production.ts` still supplies no `readMembers`
+      (grep shows no member seam in the composition).
+  F-17:
+    disposition: closed
+    evidence: >-
+      Behavior is unchanged (`index === 0` in `declaredMemberTargets`) and is now
+      documented as current truth: `feature-scheduling-engine.md` states "an extra
+      `--dep` argument attaches to the first declared member".
+  F-18:
+    disposition: accepted-residual
+    evidence: >-
+      `parsePlanMembers` accepts an empty array and returns `members: []`
+      (plan-members.ts:149-157,260); downstream length checks treat it as
+      member-less.
+  F-19:
+    disposition: accepted-residual
+    evidence: >-
+      Member entries still store `repoKey` in `repository` and the pair-or-absent
+      rule is relaxed for member-shaped refs; the scheduling doc now states the
+      member entry binds the repo key without a recorded root.
+  F-20:
+    disposition: closed
+    evidence: >-
+      `ownerLabels` now comes from the change-level work-item read via
+      `changeLevelOwnerLabels` (verify-gates.ts:315-321,377) instead of the first
+      member's `owner-gate` citation; `labels: []` is the delivered member-less
+      derivation, so parity holds. (The plan's 6.1b "labels and ownerLabels ...
+      instead of labels: []" wording is internally inconsistent; the code chose
+      delivered parity. No positive distinguishing test exists - see test gaps.)
+residuals:
+  - >-
+    AC-F5-3 apply observability: a refused member makes the DEC-23 aggregate
+    `refused`, so `closeout --apply` returns `closeout.branch.unsafe` with no
+    `data`; the member's apply value is not observable through the command
+    response (plan-mode values, the refusal code, and the delete calls are
+    asserted).
+  - >-
+    AC-F5-2 reachability: the data-bearing partial-landing apply holds only when
+    the unmerged member's branch is already absent; a present unmerged branch is
+    refused by the delivered squash-safety predicate and the aggregate folds to
+    `refused`.
+  - >-
+    DEC-23 `failed` tier: a member operation failure fails the step and the
+    command (`closeout.write.failed`, exit 2) with no `data`; the member's own
+    value is a domain-only `skipped-gap`, and already-applied member operations
+    persist.
+  - >-
+    F-6 fail-open member CI reading: `gates.ci` can be `pass` on a
+    truncated/partial check-run page for a member that does not declare
+    `ci-green`; not a DEC-4 violation, but a known limitation to disclose.
+  - >-
+    F-7 no member read-bundle identity check: a composition that returns a
+    sibling member's bundle is not detected by the evaluator.
+  - >-
+    Commit hygiene: phase-6 source ships under a generic `docs(GH-310): update
+    doc/changes/...` subject (empty body), not the plan-declared `fix(GH-310): ...`;
+    most of the branch's commits share that placeholder pattern.
+plan_gaps: >-
+  NONE for phase completion: all six phases are complete with pm-notes evidence;
+  phase 6 is commit af46d0dc and records the full battery plus the range-gate
+  verdict (PASS, 20 commits, 0 offending). Scope hygiene only: five changed files
+  remain outside the declared phase scopes (F-13), three disclosed, two not named.
+test_coverage_gaps: >-
+  (1) The 6.1b posture derivation has no positive distinguishing cell: the real
+  round trip asserts `{labels: [], ownerLabels: []}` and the shared work item
+  carries no owner-attention label, so the change-level derivation is not
+  distinguished from the old first-member citation. (2) No apply-mode cell
+  asserts the per-member apply values in a refused aggregate (unobservable
+  through the command; N-1) or the safe member's `cleanup: applied` value (only
+  the delete call is asserted). (3) No cell covers a truncated/partial member
+  check-run page (F-6) or a mismatched member read bundle (F-7). (4) The
+  `projectCloseoutMemberCleanup("would-refuse","applied") -> refused` path is
+  exercised only indirectly through the aggregate. Environment note: the only
+  failing test in this review's run is `tests/checks/ci-baseline-parity.test.ts`,
+  which fails because `git clone --local` cannot hardlink across the sandbox's
+  `/tmp` filesystem (`Invalid cross-device link`); it is unrelated to GH-310.
+reviewed_at: 2026-11-15T10:30:00Z
+next_step: PROCEED

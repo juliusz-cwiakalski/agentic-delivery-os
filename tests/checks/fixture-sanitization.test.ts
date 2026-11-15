@@ -87,6 +87,27 @@ export const readPlaceholders = (root: string): string[] | undefined => {
 };
 
 /** The audit: committed fixtures contain no secret, PII, or live-tenant host. */
+/** Shape scan for one arbitrary fixture text (no placeholder-registry rules). */
+export const scanFixtureText = (file: string, text: string): SanitizationFinding[] => {
+  const findings: SanitizationFinding[] = [];
+  for (const shape of SHAPES) {
+    for (const match of text.matchAll(shape.regex)) {
+      findings.push({ file, line: lineAt(text, match.index ?? 0), detail: shape.detail });
+    }
+  }
+  for (const match of text.matchAll(URL_REGEX)) {
+    const host = match[1];
+    if (host !== undefined && !hostAllowed(host)) {
+      findings.push({
+        file,
+        line: lineAt(text, match.index ?? 0),
+        detail: "non-example provider host",
+      });
+    }
+  }
+  return findings;
+};
+
 export const scan = (root: string): SanitizationFinding[] => {
   const findings: SanitizationFinding[] = [];
   const placeholders = readPlaceholders(root);
@@ -199,6 +220,24 @@ describe("TC-FIXTURE-001 committed fixtures are sanitized", () => {
     const before = gitStatus();
     scan(ROOT);
     expect(gitStatus()).toBe(before);
+  });
+
+  test("the cross-repository member fixtures carry no secret, PII, or live host (GH-310)", () => {
+    const base = "tests/fixtures/cross-repository";
+    const files: string[] = [];
+    const walk = (relative: string): void => {
+      for (const entry of readdirSync(join(ROOT, relative), { withFileTypes: true })) {
+        const path = `${relative}/${entry.name}`;
+        if (entry.isDirectory()) walk(path);
+        else files.push(path);
+      }
+    };
+    walk(base);
+    expect(files.length).toBeGreaterThan(0);
+    const findings = files.flatMap((file) =>
+      scanFixtureText(file, readFileSync(join(ROOT, file), "utf8")),
+    );
+    expect(findings).toEqual([]);
   });
 });
 

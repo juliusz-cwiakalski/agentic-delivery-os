@@ -9,7 +9,16 @@
  */
 import { describe, expect, test } from "bun:test";
 import type { VerifyGatesCommandRuntime } from "../../packages/cli/src/commands/verify-gates";
+import type { CrossRepositoryVerifyGatesReport } from "../../packages/core/src/contracts/index";
 import { readChangeTransitionsTolerant } from "../../packages/core/src/state/index";
+import { API_MEMBER, CHANGE_REF, WEB_MEMBER } from "../fixtures/cross-repository/constants";
+import {
+  declaredMember,
+  greenMemberReads,
+  landingObservation,
+  memberGatesRuntime,
+  runMemberGates,
+} from "../fixtures/cross-repository/facts";
 import { createNoSpawnGuard } from "../fixtures/result/no-spawn-guard";
 import { baseFacts, clone, EXPECTED_JOBS, run } from "../fixtures/verify-gates/cases/facts";
 import { combinedRuntime, pmNotesValue, runVerify } from "../fixtures/verify-gates/cases/harness";
@@ -113,6 +122,73 @@ const redFacts = () => {
   };
   return facts;
 };
+
+describe("TC-XCTR-006 per-member read budget", () => {
+  test("one read bundle per declared member, zero retries, no out-of-set call", async () => {
+    const readLog: string[] = [];
+    const world = {
+      members: [
+        declaredMember(API_MEMBER, { gates: ["ci-green"] }),
+        declaredMember(WEB_MEMBER, { gates: ["ci-green"] }),
+      ],
+      reads: {
+        [API_MEMBER.repoKey]: greenMemberReads(API_MEMBER),
+        [WEB_MEMBER.repoKey]: greenMemberReads(WEB_MEMBER),
+      },
+      landings: [landingObservation(API_MEMBER, true, 1), landingObservation(WEB_MEMBER, false)],
+      readLog,
+    };
+    const spawnGuard = createNoSpawnGuard();
+    const networkGuard = createNoNetworkGuard();
+    try {
+      spawnGuard.install();
+      const result = await runMemberGates(world);
+      expect(result.exitCode).toBe(0);
+      expect(readLog).toEqual([API_MEMBER.repoKey, WEB_MEMBER.repoKey]);
+      expect(new Set(readLog).size).toBe(readLog.length);
+
+      const withoutLanding = await runMemberGates({ ...world, landings: undefined });
+      expect(withoutLanding.exitCode).toBe(0);
+      expect(readLog).toHaveLength(4);
+      const firstData = JSON.parse(result.stdout) as {
+        readonly data: CrossRepositoryVerifyGatesReport;
+      };
+      const secondData = JSON.parse(withoutLanding.stdout) as {
+        readonly data: CrossRepositoryVerifyGatesReport;
+      };
+      expect(firstData.data.definitionOfDone.evidence).not.toEqual(
+        secondData.data.definitionOfDone.evidence,
+      );
+      expect(spawnGuard.violations).toEqual([]);
+      expect(networkGuard.calls).toEqual([]);
+
+      // Exactly one gate-verification record per battery evaluation, whatever
+      // the member count (DoD-12): the append seam is called once.
+      let appends = 0;
+      const counted = memberGatesRuntime(world);
+      const countedGates = counted.gates;
+      if (countedGates === undefined) throw new Error("missing gates runtime");
+      const appended = await runVerify(
+        {
+          ...counted,
+          gates: {
+            ...countedGates,
+            appendVerification: () => {
+              appends += 1;
+              return { ok: true as const };
+            },
+          },
+        },
+        ["gates", CHANGE_REF],
+      );
+      expect(appended.exitCode).toBe(0);
+      expect(appends).toBe(1);
+    } finally {
+      networkGuard.restore();
+      spawnGuard.restore();
+    }
+  });
+});
 
 describe("TC-VGATES-051 read-only composition and read budget", () => {
   test("one invocation performs exactly four provider reads, one each, with no writes or spawns", async () => {

@@ -4,12 +4,19 @@
  * and the closeout transaction stands.
  */
 import { describe, expect, test } from "bun:test";
-import { claimQueueLease, readQueueRemovals } from "../../packages/core/src/app/index";
+import {
+  claimQueueLease,
+  readQueueFold,
+  readQueueRemovals,
+} from "../../packages/core/src/app/index";
 import {
   CLOSEOUT_WORK_ITEM_REF,
   createQueueRemovalHarness,
+  hookFor,
   seedQueueEntry,
 } from "../fixtures/closeout/queue-removal";
+import { memberCloseoutObservation } from "../fixtures/cross-repository/closeout";
+import { API_MEMBER, memberRef, WEB_MEMBER } from "../fixtures/cross-repository/constants";
 
 const WORK_ITEM_REF = CLOSEOUT_WORK_ITEM_REF;
 
@@ -68,6 +75,61 @@ describe("TC-QLC-020 a stale lease is not live", () => {
       expect(removals.records).toEqual([
         expect.objectContaining({ ref: WORK_ITEM_REF, reason: "landed" }),
       ]);
+    } finally {
+      harness.dispose();
+    }
+  });
+});
+
+describe("GH-310 a member-ref skip keeps the delivered reason vocabulary", () => {
+  test("no merge truth names the member ref, never ref-not-canonical", () => {
+    const harness = createQueueRemovalHarness({ label: "member-skip", apply: true });
+    try {
+      const ref = "GH-183@web-ui-5e6f7a8b";
+      const data = hookFor(harness, {
+        mode: "apply",
+        mergedObserved: false,
+        workItemRef: ref,
+      });
+      expect(data.outcome).toBe("skipped");
+      expect("skipReason" in data ? data.skipReason : undefined).toBe("no-merge-truth");
+      expect("ref" in data ? data.ref : undefined).toBe(ref);
+    } finally {
+      harness.dispose();
+    }
+  });
+});
+
+describe("GH-310 member-mode skip discloses one member without touching the other", () => {
+  test("an unlanded member keeps its entry and is disclosed in data", async () => {
+    const observations = [
+      memberCloseoutObservation(API_MEMBER),
+      memberCloseoutObservation(WEB_MEMBER, { merged: false }),
+    ];
+    const harness = createQueueRemovalHarness({
+      label: "member-skip-partial",
+      apply: true,
+      members: observations,
+    });
+    try {
+      const apiRef = memberRef(API_MEMBER.repoKey, CLOSEOUT_WORK_ITEM_REF);
+      const webRef = memberRef(WEB_MEMBER.repoKey, CLOSEOUT_WORK_ITEM_REF);
+      seedQueueEntry(harness, apiRef, "host/owner/api");
+      seedQueueEntry(harness, webRef, "host/owner/web");
+      const result = await harness.run();
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.queueRemovals).toEqual([
+        { outcome: "removed", ref: apiRef, reason: "landed" },
+        { outcome: "skipped", skipReason: "no-merge-truth", ref: webRef },
+      ]);
+      expect(
+        result.data.members?.find((entry) => entry.repoKey === WEB_MEMBER.repoKey)?.landed,
+      ).toBe(false);
+      const fold = readQueueFold(harness.store);
+      expect(fold.ok).toBe(true);
+      if (!fold.ok) return;
+      expect(fold.value.entries.map((entry) => entry.ref)).toEqual([webRef]);
     } finally {
       harness.dispose();
     }

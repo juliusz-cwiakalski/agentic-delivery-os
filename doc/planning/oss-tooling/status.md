@@ -425,3 +425,32 @@ contiguous with the M2 rows in backlog order, and the M2 pack carries the
 M2-S20 row and its five scenario seeds. The delivery runs on
 `feat/GH-313/milestone-first-planning`; M2 has not exited, and the remaining M2
 stories (S2–S10, S16, S19) are unaffected by this delivery and stay planned.
+
+## M2 delivery snapshot addendum (2026-11-15): M2-S19 delivered by GH-310
+
+M2-S19 (cross-repository changes) was delivered by GH-310 on
+`feat/GH-310/cross-repository-changes`. One change now declares its member set
+in `plan.data.members[]` with closed per-member validation and the `plan
+validate` echo, and member-less plan validation, lint, diff, and overlap stay
+byte-identical. The queue holds one entry and one lane per member ref
+(`<canonicalChangeRef>@<repoKey>`) with per-member dependency edges, per-member
+release, and landing removal that retires only the member it observes;
+`queue add` returns the delivered payload plus an additive ordered
+`data.members[]`, and the member-less payload is read unchanged from a
+pre-change golden. `verify gates` reports one shared definition of done as the
+distinct `CrossRepositoryVerifyGatesReport` — per-(member, gate) records with a
+required `member`, per-member `gates.ci` and `verdict`, landing-ordered
+`evidence[]` from injected landing facts, `blockingMembers[]` that is never
+truncated, and one `reviewFlow` run over the declared pull-request set — while
+the delivered `VerifyGatesReport` keeps its literal `overall: "pass"`, its
+member-less records, its failure envelope, and exits 1/2. Closeout reports one
+ordered `closeout.data.members[]` entry per member with merge-truth `landed`,
+the mode-scoped cleanup and issue-closure columns derived from the member's own
+observation and operations, and per-member landing removal; the member-less
+closeout data, steps, ledger, and human output are unchanged. The change adds
+zero error-table rows and zero domain kinds, every observed surface appends
+exactly one gate-verification record and no plan-validation or closeout-plan
+write, and the parity, contract, read-only, determinism, and hermetic proofs are
+committed suites. The delivery runs on `feat/GH-310/cross-repository-changes`;
+M2 has not exited, and the remaining M2 stories (S2–S10, S16) are unaffected by
+this delivery and stay planned.

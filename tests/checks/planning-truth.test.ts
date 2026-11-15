@@ -260,26 +260,48 @@ describe("TC-PLAN-004 M2 pack row, resolvable seeds, and the S20 range", () => {
   });
 });
 
+type StatusAddendum = { readonly line: string; readonly index: number };
+
+const statusAddenda = (): readonly StatusAddendum[] =>
+  read(STATUS)
+    .split("\n")
+    .map((line, index) => ({ line, index }))
+    .filter(({ line }) => line.startsWith("## M2 delivery snapshot addendum "));
+
+const addendumBody = (code: string): string => {
+  const text = read(STATUS);
+  const matches = [...text.matchAll(/^## M2 delivery snapshot addendum .*$/gmu)];
+  const position = matches.findIndex((match) => (match[0] ?? "").includes(code));
+  if (position < 0) throw new Error(`no status addendum for ${code}`);
+  const start = matches[position]?.index ?? 0;
+  const end = matches[position + 1]?.index ?? text.length;
+  return text.slice(start, end);
+};
+
 describe("TC-PLAN-005 status addendum in the established form", () => {
-  test("exactly one M2-S20 addendum exists at the tail", () => {
-    const lines = read(STATUS).split("\n");
-    const headings = lines
-      .map((line, index) => ({ line, index }))
-      .filter(({ line }) => line.startsWith("## M2 delivery snapshot addendum "));
-    const s20 = headings.filter(({ line }) => line.includes("M2-S20 delivered by GH-313"));
-    expect(s20).toHaveLength(1);
-    expect(s20[0]?.line).toMatch(
-      /^## M2 delivery snapshot addendum \(\d{4}-\d{2}-\d{2}\): M2-S20 delivered by GH-313$/,
-    );
-    expect(headings.at(-1)?.line).toBe(s20[0]?.line);
+  test("every addendum is dated, uniquely named, and appended in chronological order", () => {
+    const addenda = statusAddenda();
+    expect(addenda.length).toBeGreaterThanOrEqual(4);
+    const codes: string[] = [];
+    const dates: string[] = [];
+    for (const { line } of addenda) {
+      const match = /^## M2 delivery snapshot addendum \((\d{4}-\d{2}-\d{2})\): .+ GH-\d+$/u.exec(
+        line,
+      );
+      expect(match, line).not.toBeNull();
+      dates.push(match?.[1] ?? "");
+      codes.push(/(GH-\d+)$/u.exec(line)?.[1] ?? "");
+    }
+    expect(new Set(codes).size).toBe(codes.length);
+    expect(dates).toEqual([...dates].sort());
+    for (const delivery of ["GH-294", "GH-309", "GH-313", "GH-310"]) {
+      expect(codes, delivery).toContain(delivery);
+    }
+    expect(read(STATUS)).toContain("GH-291");
   });
 
   test("the body states M2 has not exited and does not claim acceptance", () => {
-    const text = read(STATUS);
-    const start = text.indexOf(
-      "## M2 delivery snapshot addendum (2026-11-14): M2-S20 delivered by GH-313",
-    );
-    const body = text.slice(start);
+    const body = addendumBody("GH-313");
     expect(body).toContain("M2 has not exited");
     expect(body).toMatch(/remaining M2[\s]+stories/i);
     expect(body).toMatch(/M2-S20/);
@@ -288,14 +310,21 @@ describe("TC-PLAN-005 status addendum in the established form", () => {
     expect(body).not.toMatch(/owner accepted|milestone exit recorded/i);
   });
 
-  test("prior addenda remain ordered before the new tail", () => {
-    const text = read(STATUS);
-    const headings = text
-      .split("\n")
-      .filter((line) => line.startsWith("## M2 delivery snapshot addendum "));
-    expect(text).toContain("GH-291");
-    expect(headings.some((line) => line.includes("GH-294"))).toBe(true);
-    expect(headings.some((line) => line.includes("GH-309"))).toBe(true);
-    expect(headings.at(-1)).toContain("GH-313");
+  test("the cross-repository addendum states delivery truth without a milestone exit", () => {
+    const body = addendumBody("GH-310");
+    expect(body).toContain("M2 has not exited");
+    expect(body).toMatch(/remaining M2[\s]+stories/i);
+    expect(body).toMatch(/M2-S19/);
+    expect(body).toMatch(/GH-310/);
+    expect(body).not.toMatch(/M2 has exited(?!\s*\.)/i);
+    expect(body).not.toMatch(/owner accepted|milestone exit recorded/i);
+  });
+
+  test("prior addenda remain ordered before the later ones", () => {
+    const codes = statusAddenda().map(({ line }) => /(GH-\d+)$/u.exec(line)?.[1] ?? "");
+    const position = (code: string): number => codes.indexOf(code);
+    expect(position("GH-294")).toBeLessThan(position("GH-309"));
+    expect(position("GH-309")).toBeLessThan(position("GH-313"));
+    expect(position("GH-313")).toBeLessThan(position("GH-310"));
   });
 });

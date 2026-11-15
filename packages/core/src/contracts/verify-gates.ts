@@ -334,6 +334,117 @@ export type VerifyGatesReport = {
   readonly gates: readonly VerifyGateRecord[];
 };
 
+/** Closed per-member CI reading vocabulary (GH-310 DM-3, DEC-4). */
+export const VERIFY_GATES_CI_READINGS = ["pass", "fail", "unavailable", "absent"] as const;
+export type VerifyGatesCiReading = (typeof VERIFY_GATES_CI_READINGS)[number];
+
+/** Closed member verdict vocabulary (GH-310 DM-3, DEC-3). */
+export const VERIFY_GATES_MEMBER_VERDICTS = ["pass", "fail", "unknown"] as const;
+export type VerifyGatesMemberVerdict = (typeof VERIFY_GATES_MEMBER_VERDICTS)[number];
+
+/** Closed shared-verdict status vocabulary (GH-310 DM-2, DEC-3). */
+export const VERIFY_GATES_DEFINITION_OF_DONE_STATUSES = ["green", "blocked", "incomplete"] as const;
+export type VerifyGatesDefinitionOfDoneStatus =
+  (typeof VERIFY_GATES_DEFINITION_OF_DONE_STATUSES)[number];
+
+/** Closed review verdict vocabulary (GH-310 DM-7, DEC-8). */
+export const VERIFY_GATES_REVIEW_VERDICTS = ["pass", "fail", "unreviewed"] as const;
+export type VerifyGatesReviewVerdict = (typeof VERIFY_GATES_REVIEW_VERDICTS)[number];
+
+/** Closed injected review-observation verdicts (GH-310 DEC-17). */
+export const VERIFY_GATES_REVIEW_OBSERVATION_VERDICTS = ["pass", "fail"] as const;
+export type VerifyGatesReviewObservationVerdict =
+  (typeof VERIFY_GATES_REVIEW_OBSERVATION_VERDICTS)[number];
+
+/** The declared member cap shared by the plan and the shared verdict (DEC-10). */
+export const VERIFY_GATES_MAX_MEMBERS = 8 as const;
+
+/**
+ * One injected member landing observation (GH-310 DM-10, DEC-19). `landingPosition`
+ * is a 1-based integer present only when `merged` is true; it supplies landing
+ * order and merge truth with no provider read.
+ */
+export type MemberLandingObservation = {
+  readonly repoKey: string;
+  readonly merged: boolean;
+  readonly headSha?: string;
+  readonly landingPosition?: number;
+};
+
+/** One injected review observation (GH-310 DM-7, DEC-17). */
+export type ReviewObservation = {
+  readonly repoKey: string;
+  readonly pullRequest: string;
+  readonly verdicts: readonly VerifyGatesReviewObservationVerdict[];
+};
+
+/** A gate record attributable to exactly one declared member (DM-9, DM-11). */
+export type CrossRepositoryVerifyGateRecord = VerifyGateRecord & {
+  readonly member: string;
+};
+
+/** One member's CI reading, in the report shape (DM-2, DM-3). */
+export type VerifyGatesMemberReading = {
+  readonly ci: VerifyGatesCiReading;
+};
+
+/** One `definitionOfDone.members[]` entry, in declared order (DM-2). */
+export type CrossRepositoryVerifyGatesMember = {
+  readonly repoKey: string;
+  readonly gates: VerifyGatesMemberReading;
+  readonly verdict: VerifyGatesMemberVerdict;
+};
+
+/** One `evidence[]` entry; `landingPosition` only when landed (DEC-16). */
+export type CrossRepositoryVerifyGatesEvidence = {
+  readonly repoKey: string;
+  readonly pullRequest: string;
+  readonly landed: boolean;
+  readonly landingPosition?: number;
+};
+
+/** The shared verdict block (GH-310 F-3, DM-2, DM-4). */
+export type CrossRepositoryDefinitionOfDone = {
+  readonly status: VerifyGatesDefinitionOfDoneStatus;
+  readonly members: readonly CrossRepositoryVerifyGatesMember[];
+  readonly evidence: readonly CrossRepositoryVerifyGatesEvidence[];
+};
+
+/** One `reviewFlow.verdicts[]` entry, in declared order (DM-7). */
+export type CrossRepositoryReviewFlowVerdict = {
+  readonly repoKey: string;
+  readonly pullRequest?: string;
+  readonly verdict: VerifyGatesReviewVerdict;
+};
+
+/** The one review run over the declared member set (GH-310 F-6, DM-7, DEC-8). */
+export type CrossRepositoryReviewFlow = {
+  readonly runId: string;
+  readonly complete: boolean;
+  readonly verdicts: readonly CrossRepositoryReviewFlowVerdict[];
+};
+
+/**
+ * The additive cross-repository report (GH-310 DM-11, DEC-18). It carries the
+ * required delivered report fields plus `overall: pass|fail`, the shared verdict
+ * block, the ordered blockers, and the review flow. It is selected by the
+ * PRESENCE of `definitionOfDone`; never a widened `VerifyGatesReport`.
+ */
+export type CrossRepositoryVerifyGatesReport = {
+  readonly schemaVersion: typeof VERIFY_GATES_SCHEMA_VERSION;
+  readonly changeRef: string;
+  readonly target: "gates";
+  readonly overall: "pass" | "fail";
+  readonly summary: VerifyGatesSummary;
+  readonly gates: readonly CrossRepositoryVerifyGateRecord[];
+  readonly definitionOfDone: CrossRepositoryDefinitionOfDone;
+  readonly blockingMembers: readonly string[];
+  readonly reviewFlow: CrossRepositoryReviewFlow;
+};
+
+/** The emitted report union, discriminated by the presence of `definitionOfDone`. */
+export type VerifyGatesReportUnion = VerifyGatesReport | CrossRepositoryVerifyGatesReport;
+
 /** The deterministic shared open-PR resolution outcome (DM-13). */
 export type OpenPrResolutionOutcome =
   | "resolved"

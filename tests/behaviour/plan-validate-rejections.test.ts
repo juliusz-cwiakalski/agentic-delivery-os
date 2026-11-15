@@ -96,3 +96,39 @@ describe("TC-DPLAN-003 parsed-value validation", () => {
     expect(planYamlParser("schemaVersion: delivery.plan.v1\n").ok).toBe(true);
   });
 });
+
+describe("TC-XPLAN-002 members is a validated key, not an ignored one", () => {
+  test("a non-array members value is rejected", () => {
+    const verdict = validatePlanValue({
+      schemaVersion: "delivery.plan.v1",
+      tier: { name: "full" },
+      members: { repoKey: "api-service-1a2b3c4d" },
+      phases: [
+        {
+          id: 1,
+          title: "one",
+          kind: "delivery",
+          scope: { files: ["a.ts"] },
+        },
+      ],
+    });
+    expect(verdict.errors.some((error) => error.field === "members")).toBe(true);
+  });
+
+  test("an unknown top-level key is still tolerated", () => {
+    const verdict = validatePlanValue({
+      schemaVersion: "delivery.plan.v1",
+      tier: { name: "full" },
+      owner: "someone",
+      phases: [
+        {
+          id: 1,
+          title: "one",
+          kind: "delivery",
+          scope: { files: ["a.ts"] },
+        },
+      ],
+    });
+    expect(verdict.errors).toEqual([]);
+  });
+});

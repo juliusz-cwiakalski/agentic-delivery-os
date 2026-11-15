@@ -10,6 +10,8 @@
 import type {
   AdapterCapabilityDeclaration,
   CapabilityGapReason,
+  CloseoutMemberPlan,
+  CrossRepositoryCloseoutObservation,
   DeliveryRequest,
   ProviderQualifiedIdentity,
   WorkItem,
@@ -27,6 +29,7 @@ import {
   CLOSEOUT_MAX_HUMAN_BYTES,
   CLOSEOUT_MAX_HUMAN_LINES,
   CLOSEOUT_MAX_MACHINE_BYTES,
+  CLOSEOUT_MAX_MEMBERS,
   CLOSEOUT_MAX_THREADS,
   CLOSEOUT_SCHEMA_ID,
   type CloseoutApplyOutcome,
@@ -93,6 +96,15 @@ import {
   validateCandidate,
 } from "./capsule-candidates.js";
 import { evaluateDiffSweep } from "./closeout-diff-sweep.js";
+import {
+  type CloseoutMemberOperationOutcome,
+  type CloseoutMemberOutcomeIndex,
+  closeoutMemberRef,
+  foldCloseoutMemberOutcomes,
+  projectCloseoutMemberCleanup,
+  projectCloseoutMemberIssueClosure,
+  projectCloseoutMembers,
+} from "./closeout-members.js";
 import { evaluateThreadPolicy } from "./closeout-thread-policy.js";
 import { sha256Hex } from "./sha256.js";
 
@@ -158,6 +170,12 @@ export type CloseoutPlanFacts = {
       readonly location: string;
     }[];
   };
+  /**
+   * The injected per-member closeout observations, one per declared member in
+   * declared order (GH-310 DM-8, DEC-20). Absent leaves the delivered
+   * single-request closeout path byte-identical.
+   */
+  readonly members?: readonly CrossRepositoryCloseoutObservation[];
 };
 
 /** The branch-selection outcome. */
@@ -460,6 +478,13 @@ const outcomeFor = (
     : "would-apply";
 };
 
+/** The member-operation planned outcome: only apply-or-satisfied is possible. */
+const memberOutcomeFor = (
+  persisted: Readonly<Record<string, CloseoutOperationRecord>>,
+  operations: readonly CloseoutOperation[],
+): "would-apply" | "satisfied" =>
+  outcomeFor(persisted, operations, "satisfied") === "would-apply" ? "would-apply" : "satisfied";
+
 const deliverySummary = (request: DeliveryRequest): CloseoutDeliverySummary => ({
   systemName: request.identity.systemName,
   entityId: request.identity.entityId,
@@ -467,6 +492,220 @@ const deliverySummary = (request: DeliveryRequest): CloseoutDeliverySummary => (
   targetRef: request.targetRef,
   ...(request.headSha === undefined ? {} : { headSha: request.headSha }),
 });
+
+const declaredMembers = (facts: CloseoutPlanFacts): readonly CrossRepositoryCloseoutObservation[] =>
+  (facts.members ?? []).slice(0, CLOSEOUT_MAX_MEMBERS);
+
+type MemberIssueProjection = {
+  readonly issueClosure: CloseoutMemberPlan["issueClosure"];
+  readonly issueOperationId?: string;
+};
+
+type MemberCleanupProjection = {
+  readonly cleanup: CloseoutMemberPlan["cleanup"];
+  readonly cleanupOperationId?: string;
+};
+
+/**
+ * The member-mode `ticket-to-done` step (GH-310 DM-5, DM-8, DEC-12, DEC-23).
+ *
+ * The delivered change-level transition to the change's own tracked item is
+ * always planned and its operations are combined with the member transitions,
+ * so it is never dropped. A member transition runs only for a member whose
+ * observation carries the tracked-issue identity `issue`, and it targets exactly
+ * that identity; a member without one reports `skipped-noop` and schedules no
+ * transition, so no entity identity is ever synthesized. The aggregate outcome
+ * is the DEC-23 worst-case fold over the change-level outcome and the declared
+ * members' mode-scoped values.
+ */
+const memberTicketStep = (
+  facts: CloseoutPlanFacts,
+  members: readonly CrossRepositoryCloseoutObservation[],
+): {
+  readonly step: CloseoutStep;
+  readonly projections: readonly MemberIssueProjection[];
+  readonly changeOutcome: CloseoutPlanOutcome;
+} => {
+  const change = ticketStep(facts);
+  const operations: CloseoutOperation[] = [...change.operations];
+  const projections: MemberIssueProjection[] = [];
+  const folded: CloseoutOutcome[] = [change.outcome];
+  for (const member of members) {
+    const issue = member.issue;
+    if (issue === undefined) {
+      projections.push({ issueClosure: "skipped-noop" });
+      folded.push("skipped-noop");
+      continue;
+    }
+    const fact = member.issueClosure ?? "unavailable";
+    if (fact === "none") {
+      projections.push({ issueClosure: "skipped-noop" });
+      folded.push("skipped-noop");
+      continue;
+    }
+    if (fact === "closed") {
+      projections.push({ issueClosure: "satisfied" });
+      folded.push("satisfied");
+      continue;
+    }
+    if (fact === "unavailable") {
+      projections.push({ issueClosure: "skipped-gap" });
+      folded.push("skipped-gap");
+      continue;
+    }
+    if (!supports(facts.provider.capabilities, "transition-work-item")) {
+      projections.push({ issueClosure: "skipped-gap" });
+      folded.push("skipped-gap");
+      continue;
+    }
+    const args: CloseoutTransitionArguments = { deliveryState: "done" };
+    const operation = operationFor(
+      facts,
+      "transition-work-item",
+      { systemName: facts.provider.systemName, entityId: issue },
+      args,
+    );
+    operations.push(operation);
+    const projected = memberOutcomeFor(facts.persisted, [operation]);
+    projections.push({ issueClosure: projected, issueOperationId: operation.operationId });
+    folded.push(projected);
+  }
+  const outcome = foldCloseoutMemberOutcomes(folded, "plan");
+  return {
+    step: planStep("ticket-to-done", outcome, {
+      ...(outcome === "skipped-gap" ? { reason: "provider-unsupported" } : {}),
+      operations,
+      evidence: evidence(
+        field("operation", "transition-work-item"),
+        field("members", members.length),
+      ),
+    }),
+    projections,
+    // `ticketStep` only ever yields plan-mode outcomes.
+    changeOutcome: change.outcome as CloseoutPlanOutcome,
+  };
+};
+
+/**
+ * The member-mode `branch-cleanup` step: one member branch per declared member
+ * under the delivered squash-safety predicate (GH-310 DM-5, DEC-12). Unsafe
+ * members contribute no operation and are disclosed per member only; the
+ * aggregate outcome is the DEC-23 worst-case fold over the members' values, so
+ * an all-unsafe declaration folds to a refusal and never `satisfied`.
+ */
+const memberBranchStep = (
+  facts: CloseoutPlanFacts,
+  baseRef: string,
+  checkout: CloseoutStep,
+  members: readonly CrossRepositoryCloseoutObservation[],
+): {
+  readonly step: CloseoutStep;
+  readonly projections: readonly MemberCleanupProjection[];
+} => {
+  const operations: CloseoutOperation[] = [];
+  const projections: MemberCleanupProjection[] = [];
+  for (const member of members) {
+    const branch = facts.branches.find((entry) => entry.name === member.branch);
+    if (branch === undefined || isProtectedRef(member.branch, [baseRef])) {
+      projections.push({ cleanup: "satisfied" });
+      continue;
+    }
+    const restoreRequired =
+      checkout.stepId === "checkout-restore" &&
+      (checkout.operations.length > 0 || checkout.outcome !== "satisfied");
+    const verdict = evaluateBranchSafety({
+      mergedObserved: member.merged,
+      sourceRef: member.branch,
+      branchName: member.branch,
+      ...(branch.head === undefined ? {} : { localHead: branch.head }),
+      ...(member.headSha === undefined ? {} : { mergedHeadSha: member.headSha }),
+      protectedRefs: [baseRef],
+      checkedOutElsewhere: facts.checkedOutElsewhere.includes(member.branch),
+      currentCheckout: facts.checkout.state,
+      restoreRequired,
+      restoreSucceeded: checkout.outcome !== "would-refuse",
+      earlierFailure: false,
+    });
+    if (!verdict.safe) {
+      projections.push({ cleanup: "would-refuse" });
+      continue;
+    }
+    const operation = operationFor(
+      facts,
+      "delete-branch",
+      { systemName: "git", entityId: member.branch },
+      { branch: member.branch },
+    );
+    operations.push(operation);
+    projections.push({
+      cleanup: memberOutcomeFor(facts.persisted, [operation]),
+      cleanupOperationId: operation.operationId,
+    });
+  }
+  const outcome = foldCloseoutMemberOutcomes(
+    projections.map((projection) => projection.cleanup),
+    "plan",
+  );
+  return {
+    step: planStep("branch-cleanup", outcome, {
+      operations,
+      evidence: evidence(field("branches", operations.length), field("members", members.length)),
+    }),
+    projections,
+  };
+};
+
+/**
+ * The apply-mode fold inputs for one member step (GH-310 DEC-23): each member's
+ * mode-scoped apply value projected from its planned projection plus its own
+ * executed outcome, the change-level `ticket-to-done` contribution (its own
+ * operations' outcomes, or its planned outcome when it schedules none), and an
+ * operation-level `failed` — which shares the top tier with a safety refusal.
+ */
+const memberStepValues = (
+  plan: CloseoutPlan,
+  step: CloseoutStep,
+  members: readonly CloseoutMemberPlan[],
+  outcomes: CloseoutMemberOutcomeIndex,
+  anyFailed: boolean,
+): readonly CloseoutOutcome[] => {
+  const memberOperationIds = new Set<string>();
+  for (const member of members) {
+    if (member.cleanupOperationId !== undefined) memberOperationIds.add(member.cleanupOperationId);
+    if (member.issueOperationId !== undefined) memberOperationIds.add(member.issueOperationId);
+  }
+  const values: CloseoutOutcome[] = members.map((member) =>
+    step.stepId === "branch-cleanup"
+      ? projectCloseoutMemberCleanup(
+          member.cleanup,
+          "applied",
+          member.cleanupOperationId === undefined ? undefined : outcomes[member.cleanupOperationId],
+        )
+      : projectCloseoutMemberIssueClosure(
+          member.issueClosure,
+          "applied",
+          member.issueOperationId === undefined ? undefined : outcomes[member.issueOperationId],
+        ),
+  );
+  if (step.stepId === "ticket-to-done") {
+    const changeOperations = step.operations.filter(
+      (operation) => !memberOperationIds.has(operation.operationId),
+    );
+    if (changeOperations.length > 0) {
+      values.push(
+        changeOperations.some((operation) => outcomes[operation.operationId] === "failed")
+          ? "failed"
+          : changeOperations.some((operation) => outcomes[operation.operationId] === "applied")
+            ? "applied"
+            : "satisfied",
+      );
+    } else if (plan.changeTicketOutcome !== undefined) {
+      values.push(PLAN_TO_APPLY[plan.changeTicketOutcome] ?? plan.changeTicketOutcome);
+    }
+  }
+  if (anyFailed) values.push("failed");
+  return values;
+};
 
 const ticketStep = (facts: CloseoutPlanFacts): CloseoutStep => {
   const observation = facts.observedWorkItem;
@@ -1017,20 +1256,57 @@ const capsuleStep = (facts: CloseoutPlanFacts): CloseoutStep => {
 /** Build the deterministic plan from pure facts (F-2). */
 export const buildCloseoutPlan = (facts: CloseoutPlanFacts): CloseoutPlan => {
   const baseRef = resolveCloseoutBaseRef(facts.mergedRequest);
+  const members = declaredMembers(facts);
   const steps: CloseoutStep[] = [];
-  steps.push(ticketStep(facts));
-  steps.push(labelStep(facts));
-  steps.push(unassignStep(facts));
-  steps.push(owedFlipStep(facts));
-  steps.push(threadStep(facts));
-  const checkout = checkoutStep(facts, baseRef);
-  steps.push(checkout);
-  steps.push(worktreeStep(facts));
-  steps.push(branchStep(facts, baseRef, checkout));
-  steps.push(diffSweepStep(facts));
-  steps.push(retroStep(facts));
-  steps.push(compactionStep(facts));
-  steps.push(capsuleStep(facts));
+  let memberPlans: readonly CloseoutMemberPlan[] | undefined;
+  let changeTicketOutcome: CloseoutPlanOutcome | undefined;
+  if (members.length === 0) {
+    steps.push(ticketStep(facts));
+    steps.push(labelStep(facts));
+    steps.push(unassignStep(facts));
+    steps.push(owedFlipStep(facts));
+    steps.push(threadStep(facts));
+    const checkout = checkoutStep(facts, baseRef);
+    steps.push(checkout);
+    steps.push(worktreeStep(facts));
+    steps.push(branchStep(facts, baseRef, checkout));
+    steps.push(diffSweepStep(facts));
+    steps.push(retroStep(facts));
+    steps.push(compactionStep(facts));
+    steps.push(capsuleStep(facts));
+  } else {
+    const ticket = memberTicketStep(facts, members);
+    changeTicketOutcome = ticket.changeOutcome;
+    steps.push(ticket.step);
+    steps.push(labelStep(facts));
+    steps.push(unassignStep(facts));
+    steps.push(owedFlipStep(facts));
+    steps.push(threadStep(facts));
+    const checkout = checkoutStep(facts, baseRef);
+    steps.push(checkout);
+    steps.push(worktreeStep(facts));
+    const branch = memberBranchStep(facts, baseRef, checkout, members);
+    steps.push(branch.step);
+    steps.push(diffSweepStep(facts));
+    steps.push(retroStep(facts));
+    steps.push(compactionStep(facts));
+    steps.push(capsuleStep(facts));
+    memberPlans = members.map((observation, index) => {
+      const cleanup = branch.projections[index] ?? { cleanup: "skipped-gap" as const };
+      const issue = ticket.projections[index] ?? { issueClosure: "skipped-gap" as const };
+      return {
+        observation,
+        cleanup: cleanup.cleanup,
+        ...(cleanup.cleanupOperationId === undefined
+          ? {}
+          : { cleanupOperationId: cleanup.cleanupOperationId }),
+        issueClosure: issue.issueClosure,
+        ...(issue.issueOperationId === undefined
+          ? {}
+          : { issueOperationId: issue.issueOperationId }),
+      };
+    });
+  }
   const ordered = steps;
   const retroResidue =
     facts.retro === undefined || !facts.retro.available
@@ -1099,6 +1375,8 @@ export const buildCloseoutPlan = (facts: CloseoutPlanFacts): CloseoutPlan => {
       : {}),
     steps: ordered,
     summary: summarizeCloseout(ordered),
+    ...(memberPlans === undefined ? {} : { members: memberPlans }),
+    ...(changeTicketOutcome === undefined ? {} : { changeTicketOutcome }),
     ...(policy.residue.length === 0 &&
     policy.omitted === 0 &&
     retainedWorktree.length === 0 &&
@@ -1849,9 +2127,38 @@ const capsulePreflightOf = (
   return undefined;
 };
 
+/**
+ * One landed-removal disclosure per declared member, in declared order (GH-310
+ * DM-8): each member ref is retired only when that member's merge is observed,
+ * and a skip is disclosed rather than silently dropped.
+ */
+const memberRemovalDisclosures = (
+  input: CloseoutRunInput,
+  mode: "plan" | "apply",
+  members: readonly CloseoutMemberPlan[],
+  handle?: StateFenceHandle,
+): readonly CloseoutQueueRemovalData[] => {
+  if (input.queueRemoval === undefined) return [];
+  const disclosures: CloseoutQueueRemovalData[] = [];
+  for (const member of members) {
+    const disclosure = input.queueRemoval({
+      mode,
+      workItemRef: closeoutMemberRef(input.plan.workItemRef, member.observation.repoKey),
+      mergedObserved: member.observation.merged,
+      ...(handle === undefined ? {} : { handle }),
+    });
+    if (disclosure !== undefined) disclosures.push(disclosure);
+  }
+  return disclosures;
+};
+
 export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunResult> => {
   const failure = targetFailure(input.plan, input.apply);
   if (failure !== undefined) return failure;
+  const members =
+    input.plan.members === undefined || input.plan.members.length === 0
+      ? undefined
+      : input.plan.members;
   const preflightFailure = capsulePreflightOf(input);
   if (input.apply && preflightFailure !== undefined) {
     return {
@@ -1987,7 +2294,12 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
       summary: summarizeCloseout(steps),
       ledgerKey: `closeout.operations:${input.plan.workItemRef}`,
       ...(residue.length === 0 ? {} : { residue }),
+      ...(members === undefined ? {} : { members: projectCloseoutMembers(members, "plan", {}) }),
       ...(() => {
+        if (members !== undefined) {
+          const removals = memberRemovalDisclosures(input, "plan", members);
+          return removals.length === 0 ? {} : { queueRemovals: removals };
+        }
         const queueRemoval = input.queueRemoval?.({
           mode: "plan",
           workItemRef: input.plan.workItemRef,
@@ -2019,6 +2331,9 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
   // GH-292 F-2: the additive non-step queue-removal disclosure, assigned
   // inside the fence and disclosed in the applied data.
   let queueRemoval: CloseoutQueueRemovalData | undefined;
+  let queueRemovals: readonly CloseoutQueueRemovalData[] | undefined;
+  // GH-310 DM-5: per-member executed outcomes, keyed by operation id.
+  const memberOutcomes: Record<string, CloseoutMemberOperationOutcome> = {};
 
   const append = (record: CloseoutOperationRecord): boolean => {
     const appended = input.state.append(handle, record);
@@ -2240,23 +2555,47 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
         capsuleResidue.push(...executed.residue);
         continue;
       }
-      if (step.outcome !== "would-apply") {
+      const memberStep =
+        members !== undefined &&
+        (step.stepId === "branch-cleanup" || step.stepId === "ticket-to-done");
+      // A member step's aggregate is the DEC-23 fold over every member value, so
+      // its planned outcome may already be a refusal or a gap while safe members
+      // still carry pending operations: those always run.
+      if (step.outcome !== "would-apply" && !(memberStep && step.operations.length > 0)) {
         steps.push({ ...step, outcome: PLAN_TO_APPLY[step.outcome] ?? step.outcome });
         continue;
       }
       let applied = 0;
-      let _satisfied = 0;
       let failed = 0;
       for (const operation of step.operations) {
         if (stateFailure !== undefined) break;
         const existing = persisted[operation.operationId];
         if (existing !== undefined && TERMINAL_OUTCOMES.has(existing.outcome)) {
-          _satisfied += 1;
+          if (memberStep) memberOutcomes[operation.operationId] = "satisfied";
           continue;
         }
         const result = await executeOperation(operation, input.provider, input.git, mergedHeadSha);
         if (!result.ok) {
           failed += 1;
+          if (memberStep) {
+            // A member's own failure is a disclosed per-member gap (DM-5); it
+            // never rewrites another member's value or stops the transaction.
+            memberOutcomes[operation.operationId] = "failed";
+            if (
+              !append(
+                recordFor(
+                  operation,
+                  input.plan.workItemRef,
+                  "failed",
+                  input.timestamp,
+                  result.code,
+                ),
+              )
+            ) {
+              break;
+            }
+            continue;
+          }
           earlierFailure = true;
           if (
             !append(
@@ -2269,22 +2608,35 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
         }
         const outcome = operationOutcome(result);
         if (outcome === "applied") applied += 1;
-        else _satisfied += 1;
+        if (memberStep) memberOutcomes[operation.operationId] = outcome;
         if (!append(recordFor(operation, input.plan.workItemRef, outcome, input.timestamp))) break;
       }
-      const outcome: CloseoutOutcome =
-        failed > 0 ? "failed" : applied > 0 ? "applied" : "satisfied";
+      const outcome: CloseoutOutcome = memberStep
+        ? foldCloseoutMemberOutcomes(
+            memberStepValues(input.plan, step, members ?? [], memberOutcomes, failed > 0),
+            "applied",
+          )
+        : failed > 0
+          ? "failed"
+          : applied > 0
+            ? "applied"
+            : "satisfied";
       steps.push({ ...step, outcome });
     }
     // GH-292 F-2: the landed-removal hook runs after the closeout writes and
     // inside the fence the transaction already holds; it is fail-open and
-    // never changes a step outcome or the exit code.
-    queueRemoval = input.queueRemoval?.({
-      mode: "apply",
-      workItemRef: input.plan.workItemRef,
-      mergedObserved: input.plan.deliveryRequest !== undefined,
-      handle,
-    });
+    // never changes a step outcome or the exit code. GH-310 DM-8: in member
+    // mode each member ref is retired on its own observed merge truth.
+    if (members === undefined) {
+      queueRemoval = input.queueRemoval?.({
+        mode: "apply",
+        workItemRef: input.plan.workItemRef,
+        mergedObserved: input.plan.deliveryRequest !== undefined,
+        handle,
+      });
+    } else {
+      queueRemovals = memberRemovalDisclosures(input, "apply", members, handle);
+    }
   } finally {
     input.state.releaseFence(handle);
   }
@@ -2318,7 +2670,11 @@ export const runCloseout = async (input: CloseoutRunInput): Promise<CloseoutRunR
     ...(telemetryCapture === undefined ? {} : { telemetryCapture }),
     ...(capsuleData === undefined ? {} : { capsule: capsuleData }),
     ...(capsuleResidue.length === 0 ? {} : { residue: orderResidue(capsuleResidue) }),
+    ...(members === undefined
+      ? {}
+      : { members: projectCloseoutMembers(members, "applied", memberOutcomes) }),
     ...(queueRemoval === undefined ? {} : { queueRemoval }),
+    ...(queueRemovals === undefined ? {} : { queueRemovals }),
   };
   if (steps.some((step) => step.outcome === "failed")) {
     return {
@@ -2383,6 +2739,15 @@ export const renderCloseoutHuman = (data: CloseoutData): string => {
     lines.push(
       `capsule: closed=${String(data.capsule.closed)} events=${data.capsule.events} candidates=${data.capsule.candidates.length}`,
     );
+  }
+  if (data.members !== undefined && data.members.length > 0) {
+    lines.push("");
+    lines.push("MEMBERS");
+    for (const member of data.members) {
+      lines.push(
+        `- ${member.repoKey} ${member.branch} pr=${member.pullRequest} cleanup=${member.cleanup} issue=${member.issueClosure} landed=${String(member.landed)}`,
+      );
+    }
   }
   const counts = data.summary.counts;
   const summaryParts: string[] = [];

@@ -6,7 +6,11 @@
  * state, and a non-canonical ref.
  */
 import { describe, expect, test } from "bun:test";
-import { readQueueFold, readQueueRemovals } from "../../packages/core/src/app/index";
+import {
+  queueRemovalForCloseout,
+  readQueueFold,
+  readQueueRemovals,
+} from "../../packages/core/src/app/index";
 import { CLOSEOUT_QUEUE_REMOVAL_SKIP_REASONS } from "../../packages/core/src/contracts/index";
 import {
   CLOSEOUT_WORK_ITEM_REF,
@@ -15,6 +19,8 @@ import {
   seedQueueEntry,
   seedQueueLease,
 } from "../fixtures/closeout/queue-removal";
+import { memberCloseoutObservation } from "../fixtures/cross-repository/closeout";
+import { API_MEMBER, memberRef, WEB_MEMBER } from "../fixtures/cross-repository/constants";
 
 const WORK_ITEM_REF = CLOSEOUT_WORK_ITEM_REF;
 
@@ -157,5 +163,70 @@ describe("TC-QLC-022 the closed skip reasons", () => {
       "state-unavailable",
       "ref-not-canonical",
     ]);
+  });
+});
+
+describe("GH-310 a member-ref landing removes only that member ref", () => {
+  test("the hook removes the member ref with reason landed", () => {
+    const harness = createQueueRemovalHarness({ label: "member-ref", apply: true });
+    try {
+      const ref = "GH-183@api-service-1a2b3c4d";
+      seedQueueEntry(harness, ref);
+      const fence = harness.store.acquireFence("member-ref-fence");
+      expect(fence.ok).toBe(true);
+      if (!fence.ok) return;
+      try {
+        const data = queueRemovalForCloseout(harness.store, {
+          mode: "apply",
+          mergedObserved: true,
+          workItemRef: ref,
+          recordedAt: "2026-11-12T10:00:00Z",
+          nowMs: Date.parse("2026-11-12T10:00:00Z"),
+          handle: fence.value.handle,
+        });
+        expect(data).toEqual({ outcome: "removed", ref, reason: "landed" });
+      } finally {
+        harness.store.releaseFence(fence.value.handle);
+      }
+      const removals = readQueueRemovals(harness.store);
+      expect(removals.ok).toBe(true);
+      if (!removals.ok) return;
+      expect(removals.records.map((record) => record.ref)).toEqual([ref]);
+    } finally {
+      harness.dispose();
+    }
+  });
+});
+
+describe("GH-310 per-member landing removal inside the closeout fence", () => {
+  test("one member's landing removes only its own member-ref entry", async () => {
+    const observations = [
+      memberCloseoutObservation(API_MEMBER),
+      memberCloseoutObservation(WEB_MEMBER, { merged: false }),
+    ];
+    const harness = createQueueRemovalHarness({
+      label: "member-landing-partial",
+      apply: true,
+      members: observations,
+    });
+    try {
+      const apiRef = memberRef(API_MEMBER.repoKey, CLOSEOUT_WORK_ITEM_REF);
+      const webRef = memberRef(WEB_MEMBER.repoKey, CLOSEOUT_WORK_ITEM_REF);
+      seedQueueEntry(harness, apiRef, "host/owner/api");
+      seedQueueEntry(harness, webRef, "host/owner/web");
+      const result = await harness.run();
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.queueRemovals).toEqual([
+        { outcome: "removed", ref: apiRef, reason: "landed" },
+        { outcome: "skipped", skipReason: "no-merge-truth", ref: webRef },
+      ]);
+      const fold = readQueueFold(harness.store);
+      expect(fold.ok).toBe(true);
+      if (!fold.ok) return;
+      expect(fold.value.entries.map((entry) => entry.ref)).toEqual([webRef]);
+    } finally {
+      harness.dispose();
+    }
   });
 });

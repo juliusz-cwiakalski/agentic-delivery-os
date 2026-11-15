@@ -1,0 +1,67 @@
+{
+  "verdict": "valid",
+  "readyForDevelopment": true,
+  "perPhase": [
+    {
+      "id": 1,
+      "title": "Declare the change",
+      "kind": "planning",
+      "leaseClass": "lease-free",
+      "scope": {
+        "files": ["doc/changes/chg-GH-310-plan.yaml"],
+        "packages": [],
+        "folders": []
+      },
+      "leases": ["repo:main-tools"],
+      "interactions": [],
+      "tier": "full",
+      "weightClass": "standard"
+    },
+    {
+      "id": 2,
+      "title": "Deliver the change",
+      "kind": "delivery",
+      "leaseClass": "lease-taking",
+      "scope": {
+        "files": ["packages/core/src/index.ts"],
+        "packages": [],
+        "folders": []
+      },
+      "leases": ["repo:main-tools"],
+      "interactions": [],
+      "tier": "full",
+      "weightClass": "standard"
+    }
+  ],
+  "errors": [],
+  "truncated": false,
+  "totalErrors": 0,
+  "artifact": {
+    "kind": "yaml",
+    "path": "chg-GH-310-plan.yaml"
+  },
+  "schemaVersion": "delivery.plan.v1",
+  "tier": "full",
+  "tierDeclaration": {
+    "name": "full",
+    "phases": [1, 2]
+  },
+  "members": [
+    {
+      "repoKey": "api-service-1a2b3c4d",
+      "slice": "packages/api — HTTP surface",
+      "branch": "feat/GH-310/api-slice",
+      "pullRequest": "311",
+      "dependsOn": [],
+      "gates": ["ci-green", "push-parity", "owner-gate"]
+    },
+    {
+      "repoKey": "web-ui-5e6f7a8b",
+      "slice": "packages/web — console",
+      "branch": "feat/GH-310/web-slice",
+      "pullRequest": "312",
+      "dependsOn": ["api-service-1a2b3c4d"],
+      "gates": ["ci-green", "push-parity"]
+    }
+  ]
+}

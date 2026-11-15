@@ -67,6 +67,12 @@ export type FakeProviderOptions = {
   readonly writeWorkItem?: CloseoutWriteOutcome;
   readonly transitionWorkItem?: CloseoutWriteOutcome;
   readonly resolveDeliveryThread?: CloseoutWriteOutcome;
+  /**
+   * Opt-in strict identity set (GH-310 DM-8): when supplied, a
+   * `transition-work-item` naming an id outside the set fails as an unavailable
+   * provider. Absent, the fake keeps its permissive delivered behaviour.
+   */
+  readonly knownEntityIds?: readonly string[];
 };
 
 export type FakeProvider = {
@@ -185,6 +191,12 @@ export const makeProvider = (options: FakeProviderOptions = {}): FakeProvider =>
     },
     transitionWorkItem: async (input) => {
       calls.push({ kind: "transitionWorkItem", target: input.entityId, args: input });
+      if (
+        options.knownEntityIds !== undefined &&
+        !options.knownEntityIds.includes(input.entityId)
+      ) {
+        return { ok: false, code: "closeout.provider.unavailable", detail: "unknown entity" };
+      }
       return options.transitionWorkItem ?? { ok: true };
     },
     resolveDeliveryThread: async (input) => {
@@ -207,6 +219,8 @@ export type FakeGitOptions = {
   readonly checkedOutElsewhere?: readonly string[];
   readonly restore?: CloseoutWriteOutcome;
   readonly deleteBranch?: CloseoutWriteOutcome;
+  /** A per-branch delete outcome override (GH-310 member gap fixtures). */
+  readonly deleteBranchFor?: (branch: string) => CloseoutWriteOutcome;
 };
 
 export type FakeGit = {
@@ -248,7 +262,7 @@ export const makeGit = (options: FakeGitOptions = {}): FakeGit => {
     },
     deleteBranch: async (input) => {
       calls.push({ kind: "deleteBranch", target: input.branch, args: input });
-      return options.deleteBranch ?? { ok: true };
+      return options.deleteBranchFor?.(input.branch) ?? options.deleteBranch ?? { ok: true };
     },
   };
   return { runtime, calls };
@@ -288,7 +302,7 @@ export const makeState = (options: FakeStateOptions = {}): FakeState => {
       fence.acquired += 1;
       return { ok: true, value: { handle: handleFor(token), token } };
     },
-    append: (handle, record) => {
+    append: (_handle, record) => {
       fence.appends += 1;
       records.push(record);
       return {

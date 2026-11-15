@@ -24,6 +24,7 @@ import {
   type QueueGraphDocument,
   type QueueGraphEntry,
 } from "#contracts";
+import { memberRefFor, parseMemberRef } from "./plan-members.js";
 
 const REF_PARTS = /^([A-Za-z][A-Za-z0-9]*)-([0-9]+)$/;
 
@@ -56,11 +57,17 @@ export const compareText = (left: string, right: string): number => {
 
 /**
  * Canonical queue-ref identity: uppercase the ASCII prefix and normalize the
- * numeric suffix so `GH-010` and `GH-10` are one identity. Returns `undefined`
- * for a value outside the declared grammar or length bound.
+ * numeric suffix so `GH-010` and `GH-10` are one identity. A declared member
+ * ref `<canonicalChangeRef>@<repoKey>` canonicalizes its change-ref part exactly
+ * the same way and preserves the declared repository key (GH-310 DEC-2, DM-6).
+ * Returns `undefined` for a value outside either declared grammar or the length
+ * bound.
  */
 export const canonicalQueueRef = (value: string): string | undefined => {
-  const match = REF_PARTS.exec(value.trim());
+  const text = value.trim();
+  const member = parseMemberRef(text);
+  if (member !== undefined) return memberRefFor(member.changeRef, member.repoKey);
+  const match = REF_PARTS.exec(text);
   if (match === null) return undefined;
   const prefix = (match[1] ?? "").toUpperCase();
   const digits = BigInt(match[2] ?? "0").toString();

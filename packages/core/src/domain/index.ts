@@ -92,6 +92,19 @@ export {
   summarizeCloseout,
 } from "./closeout.js";
 export { evaluateDiffSweep } from "./closeout-diff-sweep.js";
+export {
+  CLOSEOUT_MEMBER_FOLD_PRECEDENCE,
+  type CloseoutMemberFoldTier,
+  type CloseoutMemberOperationOutcome,
+  type CloseoutMemberOutcomeIndex,
+  type CloseoutMemberReportMode,
+  closeoutMemberRef,
+  foldCloseoutMemberOutcomes,
+  projectCloseoutMember,
+  projectCloseoutMemberCleanup,
+  projectCloseoutMemberIssueClosure,
+  projectCloseoutMembers,
+} from "./closeout-members.js";
 export { evaluateWorktreeSafety } from "./closeout-worktree.js";
 export {
   type CommitActFailure,
@@ -473,6 +486,15 @@ export {
   sanitizeOwnerHoldReason,
 } from "./owner-hold.js";
 export { computePlanDiff, type PlanDiffInput } from "./plan-diff.js";
+export {
+  canonicalChangeRef,
+  isMemberRef,
+  MEMBER_REF_SEPARATOR,
+  memberRefFor,
+  type ParsedMemberRef,
+  parseMemberRef,
+  parsePlanMembers,
+} from "./plan-members.js";
 export { computePlanOverlap, type PlanOverlapInput } from "./plan-overlap.js";
 export {
   globToRegExp,
@@ -641,6 +663,10 @@ export {
   selectRetroTarget,
 } from "./retro.js";
 export {
+  reviewFlowFor,
+  reviewRunId,
+} from "./review-flow.js";
+export {
   classifyPruneCandidate,
   computeDbCutoffMs,
   computeDbLiveBoundaryMs,
@@ -727,6 +753,18 @@ export {
   type VerifyGatesWorkItem,
   verifyGatesUnknownIdentity,
 } from "./verify-gates.js";
+export {
+  blockingMembersOf,
+  type CrossRepositoryMemberOutcome,
+  crossRepositoryReport,
+  evaluateCrossRepositoryGates,
+  evaluateCrossRepositoryMember,
+  isCrossRepositoryVerifyGatesReport,
+  memberCiReading,
+  memberVerdict,
+  renderCrossRepositoryVerifyGatesHuman,
+  type VerifyGatesMemberReads,
+} from "./verify-gates-members.js";
 export {
   boundWatchLine,
   createWatchProjection,

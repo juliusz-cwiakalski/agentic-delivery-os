@@ -1,7 +1,14 @@
 /** TC-VGATES-011/012/060 — target resolution through the in-process command. */
 import { describe, expect, test } from "bun:test";
-import { combinedRuntime, runVerify } from "../fixtures/verify-gates/cases/harness";
+import type { CrossRepositoryVerifyGatesReport } from "../../packages/core/src/contracts/index";
+import { API_MEMBER, WEB_MEMBER } from "../fixtures/cross-repository/constants";
+import {
+  declaredMember,
+  greenMemberReads,
+  runMemberGates,
+} from "../fixtures/cross-repository/facts";
 import { baseFacts, clone, request } from "../fixtures/verify-gates/cases/facts";
+import { combinedRuntime, runVerify } from "../fixtures/verify-gates/cases/harness";
 
 const gate = (result: Awaited<ReturnType<typeof runVerify>>, id: string) => {
   const summary = (result.envelope?.error as { summary?: string } | undefined)?.summary ?? "";
@@ -69,5 +76,36 @@ describe("TC-VGATES-011/012/060 target resolution", () => {
     expect(gate(result, "push-parity")).toContain("reason=branch-unresolved");
     expect(gate(result, "squash-preflight")).toContain("reason=branch-unresolved");
     expect(gate(result, "squash-preflight")).toContain("counts=- names=-");
+  });
+});
+
+describe("TC-XDOD-002 per-member target resolution", () => {
+  test("each member resolves against its own head, never the local target", async () => {
+    const world = {
+      members: [
+        declaredMember(API_MEMBER, { gates: ["ci-green", "push-parity"] }),
+        declaredMember(WEB_MEMBER, { gates: ["ci-green", "push-parity"] }),
+      ],
+      reads: {
+        [API_MEMBER.repoKey]: greenMemberReads(API_MEMBER),
+        [WEB_MEMBER.repoKey]: greenMemberReads(WEB_MEMBER),
+      },
+    };
+    const result = await runMemberGates(world);
+    expect(result.exitCode).toBe(0);
+    const data = result.envelope?.data as CrossRepositoryVerifyGatesReport;
+    expect(data.gates).toHaveLength(4);
+    expect(data.gates.map((record) => record.member)).toEqual([
+      API_MEMBER.repoKey,
+      API_MEMBER.repoKey,
+      WEB_MEMBER.repoKey,
+      WEB_MEMBER.repoKey,
+    ]);
+    expect(data.gates.map((record) => record.citation.identity.headSha)).toEqual([
+      API_MEMBER.headSha,
+      API_MEMBER.headSha,
+      WEB_MEMBER.headSha,
+      WEB_MEMBER.headSha,
+    ]);
   });
 });

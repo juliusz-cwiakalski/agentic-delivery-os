@@ -1,0 +1,559 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-310
+branch: feat/GH-310/cross-repository-changes
+status: FAIL
+summary: >-
+  GH-310 is a large, disciplined delivery: the additive `plan.data.members[]`
+  declaration with closed validation, the member-ref identity
+  (`<canonicalChangeRef>@<repoKey>`) with per-member queue entries, lanes, edges,
+  release and landing removal, the distinct `CrossRepositoryVerifyGatesReport`
+  with per-(member, gate) records, the mechanical verdict over records AND
+  `gates.ci`, landing-ordered evidence, untruncated blockers and one review flow,
+  and the additive per-member closeout report all land as specified; 37/37 ACs
+  are covered by 50 automated TCs plus the verification-only gate TC, member-less
+  parity is compared against genuine pre-change goldens (`validate-baseline`,
+  `success-data`, `queue-add-memberless` from 404e9bf8, `closeout/envelope-data`)
+  rather than a regenerated one, no delivered test was weakened or skipped, the
+  error table and domain-kind set are provably unchanged, the four documented
+  deviations are honest, and the five plan phases carry pm-notes commit/test
+  evidence. Two blockers survive the green battery. First, the cross-repository
+  gate records carry a required `member`, and they are handed to the delivered
+  `MergeGateVerificationRecord.gates`; the state layer validates that ledger with
+  `hasOnlyKeys(GATE_VERDICT_KEYS)` both on read and as the post-append equality
+  check, so the only natural implementation of the injected `appendVerification`
+  port (`appendMergeGateVerification`) refuses with `state.store.torn` and every
+  later read of that change's verification history returns torn — empirically
+  confirmed (see F-1), and invisible today only because the member runtime is
+  unwired and every test stubs the appender. Second, the per-member
+  `ticket-to-done` transition targets the fabricated entity
+  `<changeRef>@<repoKey>` because DM-8 carries no member tracked-issue identity,
+  so AC-F5-1's "one transition per member's tracked item" cannot be satisfied and
+  `issueClosure: applied` is asserted against a fake that accepts any id — a
+  genuine spec defect that must be closed by reopening the specification, not by
+  patching code (F-2). Five medium findings follow from the same two seams plus
+  three member-mode reporting/exit inconsistencies (F-3..F-7).
+severity_breakdown:
+  critical: 0
+  high: 2
+  medium: 5
+  low: 7
+  info: 6
+spec_compliance: FAIL
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: correctness
+    location: packages/cli/src/commands/verify-gates.ts:351
+    message: >-
+      [B | owner: plan Phase 3 — cross-repository report/append seam] The
+      handler builds `MergeGateVerificationRecord` with `gates: report.gates`,
+      i.e. `CrossRepositoryVerifyGateRecord[]` where every record carries the
+      required `member` field beyond the delivered `id`/`verdict`/`reason`/
+      `citation`. The delivered state contract refuses that shape: `isGateVerdict`
+      in `packages/core/src/state/merge.ts:136` requires
+      `hasOnlyKeys(value, GATE_VERDICT_KEYS)` (`id`,`verdict`,`reason`,`citation`),
+      and `appendMergeGateVerification` uses the same `isVerification` predicate as
+      its post-append equality check, while `readMergeGateVerifications` returns
+      `torn` for it. Empirically confirmed with the real state module: appending
+      one member record returns
+      `{"kind":"state","code":"state.store.torn","consequence":"not_landed"}` and
+      reading it back returns `{ok:false, reason:"torn"}`. Consequences when the
+      injected `appendVerification` port is wired to the only delivered
+      implementation (the private `appendMergeGateVerification` used by the merge
+      composition): a member `verify gates` run appends a record, fails post-append
+      verification, and returns the failure envelope instead of the
+      data-bearing cross-repository report (exit 2, `state.store.torn`), and that
+      change's whole gate-verification history then reads as torn for every
+      consumer (merge freshness/probe). The defect is invisible today only because
+      `createVerifyGatesCommandRuntime` defaults `appendVerification` to a no-op
+      and every member test stubs it (`cross-repository-readonly.test.ts:143`,
+      `verify-gates-read-budget.test.ts:176`), and the doc states the opposite
+      ("exactly one gate-verification record per full battery evaluation, carrying
+      the member records", `doc/spec/features/feature-verify-gates.md`).
+      Secondary: the same record sets `trackerPosture.labels` to `[]` and takes
+      `ownerLabels` from whichever member happens to hold the first `owner-gate`
+      record, so even a successful append degrades the delivered posture data.
+      Note AC-NFR4-1/NFR-4 ("exactly one appended gate-verification record") is
+      therefore satisfied only in the stubbed sense.
+    suggestion: >-
+      Persist a projection to the delivered shape — map each cross-repository
+      record to `{id, verdict, reason, citation}` for the ledger (member
+      attribution stays in the report and in a per-member key inside the citation
+      or an additive, state-contract-approved field), and compute
+      `trackerPosture` from the change-level owner-gate read as the member-less
+      path does. If member attribution in the ledger is genuinely wanted, amend
+      the `MergeGateVerificationRecord`/`GATE_VERDICT_KEYS` contract deliberately
+      (spec + `state/merge.ts` validation + read tolerance) and add a test that
+      appends and reads the real `appendMergeGateVerification` for a member run.
+      Replace the stubbed `appendVerification` in at least one member test with
+      the real state module so this class of defect cannot ship again.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/closeout.ts:548
+    message: >-
+      [B | owner: SPEC — DM-8 / AC-F5-1 — spec defect, then plan Phase 4] The
+      member-mode `ticket-to-done` step creates a `transition-work-item`
+      operation whose target is
+      `{systemName, entityId: closeoutMemberRef(facts.workItemRef, member.repoKey)}`
+      — i.e. `GH-310@api-…`, a derived queue identity that is not a tracker work
+      item. AC-F5-1 requires `issueClosure` to be "derived from that member's
+      observation entry plus that member's own closeout operations" and F-5 says
+      `ticket-to-done` "expands to one transition per member's tracked item", but
+      DM-8's carrier is `{repoKey, pullRequest, merged, headSha?, branch,
+      issueClosure?}`: it carries no tracked-issue identity, so no
+      implementation can name "that member's tracked item". The coder resolved
+      the gap by inventing an entity id (disclosed in the phase-4 pm-note, "no AC
+      asserts the entity id"), and the fixture provider accepts any id
+      (`tests/fixtures/closeout/harness.ts:186`), so
+      `TC-XCLOSE-001` asserts `issueClosure: applied` for a transition that no
+      real adapter could perform. Against a real GitHub/Jira adapter the same
+      call would fail and be reported as `skipped-gap`, so the delivered column
+      value is only reachable in a fake world, and the durable ledger records a
+      transition against a non-existent entity. This is a specification defect
+      (an unpinned input required by a pinned output), not only a code defect.
+    suggestion: >-
+      Reopen the specification: either add the member tracked-issue identity to
+      DM-8 (e.g. `issue?: string`, supplied by the composition exactly like
+      `headSha`) so the transition names a real item, or pin the behaviour for a
+      member with no issue identity (`issueClosure: skipped-gap` with a named
+      reason, and no operation). Then align the code, the fake provider (reject
+      ids it does not know so the test proves the mapping rather than the fake's
+      tolerance), the `ticket-to-done` evidence, and the closeout feature page,
+      which currently repeats "one transition per member's tracked item".
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/closeout.ts:632
+    message: >-
+      [M | owner: plan Phase 4] The member-mode `branch-cleanup` aggregate is
+      `operations.length > 0 ? memberOutcomeFor(...) : "satisfied"`. When every
+      declared member branch is absent, protected, or refused by the squash-safety
+      predicate, no operation is planned and the step reports `satisfied` while
+      each member reports `would-refuse` (plan) or `refused` (apply). Two
+      consequences: a plan/apply run can print `branch-cleanup satisfied` with no
+      branch deleted, and the delivered exit contract is bypassed —
+      `runCloseout` fails with `closeout.branch.unsafe` when any step outcome is
+      `refused` (closeout.ts:2616), and member mode never produces a `refused`
+      step, so `closeout --apply` returns success data at exit 0 for the exact
+      condition the delivered single-repository path treats as a failure. The
+      analogous `ticket-to-done` aggregate does distinguish the case
+      (`anyOpen || anyGap → skipped-gap`), so the two member steps disagree.
+      AC-F5-3 only pins the member values and "the aggregate step outcome is not
+      rewritten by either member value"; it does not pin how the member-mode
+      aggregate is computed, so the current reading is defensible against the AC
+      text but not against the delivered operator expectation.
+    suggestion: >-
+      Derive the member-mode branch aggregate from its members (e.g. `refused`
+      when any member refused and none applied, `would-refuse` in plan mode,
+      otherwise the current operation-derived value) so the aggregate never
+      claims `satisfied` while a declared member is refused, and let the delivered
+      `closeout.branch.unsafe` refusal stand for member mode. Pin the member-mode
+      aggregate rule in DM-5/DEC-12 and in `feature-closeout.md`, and add a
+      cell for "all members unsafe".
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: error-handling
+    location: packages/core/src/domain/closeout.ts:2544
+    message: >-
+      [M | owner: plan Phase 4] In apply mode the member step outcome is
+      `applied > 0 ? "applied" : (_satisfied > 0 || failed === 0) ? "satisfied" :
+      "skipped-gap"`. A member operation that fails is recorded per member and
+      appended as `failed` to the ledger, but `earlierFailure` is not set and the
+      step never becomes `failed`, so `steps.some(outcome === "failed")` is false
+      and `runCloseout` returns success data. A member-mode `closeout --apply`
+      whose branch deletion and tracker write both failed therefore exits 0 with
+      `branch-cleanup`/`ticket-to-done` reported `skipped-gap`, where the
+      delivered single-repository path returns `closeout.write.failed` with no
+      data. Partial failure is honest per member but the command-level outcome
+      under-reports it, and a partially applied closeout is indistinguishable
+      from a successful one by exit code — the one signal automation reads.
+      No AC covers an apply-mode member operation failure, so the current
+      behaviour is un-pinned rather than contradicted.
+    suggestion: >-
+      Set the step (and command) failure when any member operation failed —
+      keeping the per-member `skipped-gap` disclosure — or add the member failure
+      to the existing `attention` projection so the exit class at least differs
+      from a clean apply. Pin whichever choice in DM-5/DEC-12 and add an
+      apply-mode test that asserts the exit code, not only the member value.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/closeout.ts:1209
+    message: >-
+      [M | owner: plan Phase 4 + spec F-5 wording] In member mode
+      `buildCloseoutPlan` replaces `ticketStep(facts)` with `memberTicketStep`,
+      so for a plan declaring members the change's own tracked item is never
+      transitioned to done, while `lifecycle-label-sweep`, `unassign`,
+      `owed-flip-sweep` and `comment-resolution` still operate on the change
+      itself. A member-declaring change therefore gets labelled and unassigned but
+      left open in its own tracker, and the aggregate `ticket-to-done` outcome is
+      computed only from member operations (`TC-XCLOSE-004` pins
+      `ticket.operations` length 2 for two members, i.e. no change-level
+      operation). F-5 says the step "expands to one transition per member's
+      tracked item", which reads as additive over the delivered change
+      transition; neither the spec nor `feature-closeout.md` states that the
+      change-level transition is dropped, and no AC asserts either way.
+    suggestion: >-
+      Keep the delivered change-level transition and add the member transitions,
+      or pin the replacement explicitly in F-5/AC-F5-1 and in
+      `feature-closeout.md` ("in member mode the step transitions only the
+      declared member items"). Either way the aggregate outcome must be
+      recomputed from the combined operation set.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/verify-gates-members.ts:71
+    message: >-
+      [M | owner: plan Phase 3] `memberCiReading` derives `gates.ci` only from the
+      check-run page: `detail` resolved + hex head + non-empty page + every
+      `run.jobs[0].jobState` not in {failed, canceled, pending, missing} + at
+      least one `succeeded` ⇒ `pass`. It never consults the workflow's expected
+      job set, which is what makes the delivered `ci-green` gate fail with
+      `ci-missing-jobs`. Empirically: a page holding a single `succeeded` job for
+      a member whose effective set expects several returns `gates.ci: "pass"`, so
+      a member declaring only e.g. `push-parity` can reach `verdict: pass` and
+      `status: green` on one run out of many — a fail-open reading in a change
+      whose stated invariant is fail-closed (NFR-5, AC-F3-3/AC-F3-5). Two smaller
+      classification issues in the same function: a check run with an empty
+      `jobs` array maps to `fail` (should be `unavailable`/`absent`), and
+      `jobs[0]` alone stands in for the run's jobs (the delivered gate folds the
+      whole run). The member-level record gate (`ci-green` via
+      `evaluateDeclaredBattery`) partly compensates, but only when the member
+      declares `ci-green`, which the plan schema does not require.
+    suggestion: >-
+      Compute the member reading over the same expected-job set the delivered
+      `ci-green` gate uses (or reuse `ciGate` itself and project its verdict into
+      the four-value vocabulary), map a run with no job evidence to `absent`/
+      `unavailable` rather than `fail`, and add a cell asserting that a partial
+      check-run page for a member whose declared gates exclude `ci-green` is never
+      `pass`.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/cli/src/commands/verify-gates.ts:319
+    message: >-
+      [M | owner: plan Phase 3] The member loop consumes whatever bundle
+      `readMemberReads(member)` returns and `evaluateCrossRepositoryMember` then
+      reads `deliveryRequestDetail.value.request.sourceHeadSha` and the
+      check-run page without ever asserting that the detail belongs to
+      `member.pullRequest` (or that the repository facts belong to
+      `member.repoKey`). AC-F3-5 ("no cross-member reuse of a CI verdict") is
+      therefore enforced only by the injected seam's discipline: a composition
+      that returns the change-level (or a sibling member's) read bundle for every
+      member silently corroborates the wrong head and can report every member
+      `pass`. The fixtures always supply the matching bundle, so nothing exercises
+      the mismatch.
+    suggestion: >-
+      Fail closed on an identity mismatch: compare
+      `detail.value.request.identity.entityId` to `member.pullRequest` (and the
+      repository binding to `member.repoKey`) inside
+      `evaluateCrossRepositoryMember`/`memberCiReading`, mapping a mismatch to
+      `unavailable` with no invented citation, and add a fixture cell where one
+      member's bundle is supplied for another.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-8
+    severity: low
+    confidence: high
+    category: observability
+    location: packages/cli/src/commands/verify-gates.ts:159
+    message: >-
+      [L | owner: plan Phase 3] The non-gating capsule append maps each gate to
+      `{gateId, verdict, reason}`, dropping `member`. For a member-declaring
+      change the durable `gate.outcome` payload therefore contains 2–128 records
+      that are indistinguishable per member and can repeat the same `gateId`
+      (e.g. five members declaring `owner-gate`), so the capsule cannot attribute
+      a verdict to a member. `feature-verify-gates.md` claims the append carries
+      "the member records".
+    suggestion: >-
+      Include `member` in the capsule gate payload (the capsule payload is
+      additive-tolerant) or state in the doc and the payload comment that the
+      capsule records are the flat projection and member attribution lives only
+      in the report.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-9
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/review-flow.ts:54
+    message: >-
+      [L | owner: plan Phase 3] `complete` is computed from "exactly one matching
+      observation" only. A member whose single observation carries an empty
+      `verdicts` list yields `verdict: "unreviewed"` while `complete` stays
+      `true` (empirically: `{complete:true, verdicts:[{verdict:"unreviewed"}]}`),
+      so a consumer treating `complete` as "every member was reviewed" is misled.
+      DM-7 only pins `complete` as a boolean and DEC-8 pins the duplication rule.
+    suggestion: >-
+      Treat an observation that yields `unreviewed` as incomplete
+      (`complete=false`), or reject an empty observation verdict list at the
+      composition seam; pin the reading in DM-7/`feature-verify-gates.md`.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-10
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/cli/src/edge.ts:4889
+    message: >-
+      [L | owner: plan Phase 2] `queue add` on a member plan declares each member
+      entry in its own fenced append inside a loop and returns
+      `mapQueueFailure` on the first failure, so a failure after member 1 leaves a
+      partial member set in the ledger with an error envelope. A retry converges
+      (`added`/`updated`/`noop` per member), and no AC requires atomicity, but
+      "one entry per member" is only eventually true.
+    suggestion: >-
+      Either document the per-member, per-fence semantics as the contract, or
+      declare all member entries under one fence so the add is all-or-nothing.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-11
+    severity: low
+    confidence: medium
+    category: correctness
+    location: packages/core/src/domain/plan-members.ts:41
+    message: >-
+      [L | owner: plan Phase 1] `canonicalChangeRef` re-implements the delivered
+      change-ref canonicalization (same regex, uppercase prefix, BigInt digit
+      normalization) that `packages/core/src/domain/queue-graph.ts:29,66` keeps
+      for the plain form, and `canonicalQueueRef` now delegates the member form to
+      the copy. AC-F2-4 requires the delivered form to canonicalize "exactly as
+      before" forever; two independent copies can drift silently.
+    suggestion: >-
+      Export one `canonicalChangeRef` from a single module and have
+      `canonicalQueueRef` use it for the plain form too (behavior is already
+      identical, so the delivered bytes cannot change).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-12
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/cli/src/commands/queue.ts:102
+    message: >-
+      [L | owner: plan Phase 2] `queue ready` validates its candidate positionals
+      with `QUEUE_READY_WORK_ITEM_REF_PATTERN` (`^[A-Za-z][A-Za-z0-9]*-[0-9]+$`),
+      so `queue ready GH-310@api-…` is a grammar refusal, while `add`, `claim`,
+      `release`, `dep`, `remove` and `list` all accept the member ref. F-2 presents
+      the member ref as the queue identity of the member entry; one queue surface
+      rejects it.
+    suggestion: >-
+      Accept the member form in the `ready` candidate grammar (canonicalizing
+      through the shared helper) or state in the spec/feature page that `ready`
+      is change-ref-scoped.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-13
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-14--GH-310--cross-repository-changes/chg-GH-310-plan.yaml:993
+    message: >-
+      [L | owner: plan + pm-notes] Six changed files fall outside every declared
+      phase `scope`: `tests/fixtures/ports/v1-contract-inventory.json`,
+      `tests/checks/planning-truth.test.ts`,
+      `doc/planning/oss-tooling/milestones/m2/README.md`,
+      `tests/fixtures/closeout/cli.ts`, `tests/fixtures/closeout/harness.ts`, and
+      `tests/fixtures/plan/harness/index.ts` (the last adds `configReads` to the
+      recorder and a `runLintCli` helper and is not named in any pm-note). Five of
+      the six are disclosed in pm-notes prose (mechanical inventory seam,
+      addendum invariant relaxation, bookkeeping row, extended fixtures), so this
+      is undeclared scope hygiene rather than hidden work; the content of each
+      edit is additive and strengthening (the `planning-truth` change keeps
+      uniqueness, dating and chronological order and adds the GH-310 row).
+    suggestion: >-
+      Add the six paths to the owning phase scopes (or record them as an explicit
+      scope amendment in pm-notes) so `plan diff`/dod_check reads the same scope
+      the delivery used; name `tests/fixtures/plan/harness/index.ts` in the
+      phase-1/5 evidence.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-14
+    severity: low
+    confidence: high
+    category: observability
+    location: packages/core/src/domain/closeout.ts:566
+    message: >-
+      [L | owner: plan Phase 4] `memberTicketStep` attaches
+      `reason: "provider-unsupported"` to any `skipped-gap` aggregate, including
+      the case where the gap is a tracker read gap
+      (`CrossRepositoryCloseoutObservation.issueClosure === "unavailable"`) on a
+      provider that does support `transition-work-item`. The reason field then
+      mislabels the cause in machine output.
+    suggestion: >-
+      Derive the reason from the cause (capability gap vs. observation gap), e.g.
+      `provider-unsupported` only when `supports(...)` is false and a
+      gap/`read-failed` reason otherwise.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-15
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-14--GH-310--cross-repository-changes/chg-GH-310-spec.md:373
+    message: >-
+      [I | owner: spec AC-F2-2 wording] AC-F2-2 (and F-2) say the dependent
+      member entry "reads `not-ready`"; the delivered readiness vocabulary
+      distinguishes `held` (an unmet dependency) from `not-ready` (other
+      blockers), and the implementation correctly reports `held` with the closed
+      `dependency-open` reason (declared deviation; `queue-members.test.ts`
+      asserts `state: "held"`). No behavioural gap — only the AC literal is
+      unreachable.
+    suggestion: >-
+      On the next spec revision say "not startable (`held` with the delivered
+      `dependency-open` reason)" so `dod_check` cannot read a false gap.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-16
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/production.ts:1194
+    message: >-
+      [I | owner: spec OQ-3/OQ-6 or pm-notes] The shipped composition supplies
+      neither the verify-gates member runtime (`readMembers`,
+      `readMemberReads`, `readLandingObservations`, `readReviewObservations`) nor
+      the closeout `readMembers` seam, so no user of the shipped CLI can obtain a
+      cross-repository report or a member closeout report; the tests drive the
+      seams directly. The deferral is documented as current truth and named in
+      the phase-3/4 pm-notes, but the spec's open questions name only the
+      observation carriers (OQ-3, OQ-6), not the member *read* seam that is
+      equally unwired.
+    suggestion: >-
+      Add the read-side deferral to the spec's open questions (or a §7.3 deferred
+      bullet) so the spec and the shipped composition state the same truth.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-17
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/cli/src/edge.ts:4814
+    message: >-
+      [I | owner: plan Phase 2 / spec DEC-21] On a member plan, `queue add <ref>
+      --dep <dep>` attaches the CLI dependency only to the first declared member
+      (`index === 0 ? (cliDeps ?? []) : []`). DEC-21 pins only that auto-declared
+      `dependsOn[]` edges are reported through `edges[]`; the placement of a
+      user-supplied dependency on a member plan is unpinned and undocumented.
+    suggestion: >-
+      Document the rule (first-member placement) or apply the CLI dependency to
+      every member entry, and pin it in DEC-21's successor / the scheduling page.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-18
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/plan-members.ts:150
+    message: >-
+      [I | owner: plan Phase 1 / spec DM-1] `members: []` is accepted and echoed
+      as `"members": []` on a `valid` verdict (no minimum entry count is
+      declared), while every other surface treats an empty declaration as
+      member-less. The verdict then carries a `members` key for a plan the spec
+      describes as "absent means single-repository", which is a (narrow) parity
+      edge for any consumer that keys on the presence of `members`.
+    suggestion: >-
+      Decide and pin: reject an empty declaration as `plan.schema.invalid`, or
+      document that an empty array is valid, echoed, and member-less downstream.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-19
+    severity: info
+    confidence: medium
+    category: correctness
+    location: packages/cli/src/edge.ts:4892
+    message: >-
+      [I | owner: plan Phase 2 / spec DM-6] Member entries record the member
+      `repoKey` in the delivered `repository` field, which for delivered entries
+      holds the normalized `host/owner/name` key; the `isEntryRecord`/
+      `desiredEntry` pair-or-absent rule is also relaxed for every member-shaped
+      ref (`app/queue.ts:287-296`, `850`), including refs no plan declares. No
+      collision exists (a repoKey cannot contain `/`), but a consumer comparing
+      `entry.repository` to a normalized remote cannot match a member entry, and a
+      stored member-shaped record with a repository and no root now validates.
+    suggestion: >-
+      Document the dual namespace on `QueueEntryRecord.repository` (or add a
+      dedicated `memberRepoKey` field) and scope the pair-or-absent relaxation to
+      refs that a composed plan declares, if that is checkable at record-read
+      time.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-20
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/cli/src/commands/verify-gates.ts:352
+    message: >-
+      [I | owner: plan Phase 3] The member-run verification record sets
+      `trackerPosture.labels` to `[]` unconditionally and derives `ownerLabels`
+      from the first `owner-gate` record found, i.e. from one member's citation,
+      while the delivered single-target path derives the posture from the change's
+      own owner-gate read. Truthful for no member (the labels are unknown), but
+      the field silently looks "observed empty" rather than "not attempted".
+    suggestion: >-
+      Reuse the change-level owner-gate read for posture, or model "not
+      attempted" explicitly instead of an empty label list (see also F-1, where
+      this record cannot currently be persisted at all).
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-15T00:00:00Z
+next_step: EXECUTE_REMEDIATION_PHASE
+plan_gaps: >-
+  NONE for phase completion (all five phases complete with pm-notes evidence;
+  OPEN_PHASES/EVIDENCE_MISSING do not fire). Scope hygiene: six changed files
+  sit outside the declared phase scopes (F-13) — five disclosed in pm-notes,
+  `tests/fixtures/plan/harness/index.ts` undisclosed.
+test_coverage_gaps: >-
+  (1) No test wires the real `appendMergeGateVerification` for a member run, so
+  the ledger-contract incompatibility of F-1 is invisible; both member append
+  assertions stub the port. (2) No cell exercises a mismatched member read bundle
+  (F-7) or a partial check-run page for a member whose declared gates exclude
+  `ci-green` (F-6). (3) No cell covers an apply-mode member operation failure and
+  its exit code (F-4), an apply-mode "all declared member branches unsafe"
+  aggregate (F-3), or a member-mode closeout that must still transition the
+  change's own ticket (F-5). (4) TC-CLOSE-* / member fixtures use a provider fake
+  that accepts any `entityId`, so the invented member tracked-item target (F-2)
+  passes as `applied`.
