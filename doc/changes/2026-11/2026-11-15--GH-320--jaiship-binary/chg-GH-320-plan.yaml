@@ -1,0 +1,621 @@
+# GH-320 delivery plan — machine-readable document (delivery.plan.v1), revision 1.0
+# (2026-11-15). Authored in lifecycle phase 4 (`delivery_planning`) against the
+# remediated spec v1.1 and test plan v1.1 on branch
+# feat/GH-320/jaiship-binary.
+#
+# One ticket, one pull request against main-tools, five delivery phases. Every
+# phase is an independently committable slice that is green at its own boundary
+# and is ONE commit through the commit primitive (conventional subject carried
+# in `summary`, every body/footer line <= 100 characters). The final phase runs
+# the aggregate gate, the branch-range commit-message gate, and
+# `plan validate GH-320`.
+#
+# SOURCES (single source of truth; this plan invents no requirement):
+#   - Spec: ./chg-GH-320-spec.md (v1.1) — F-1..F-8, DM-1..DM-6, NFR-1..NFR-9,
+#     DEC-1..DEC-13, OQ-1..OQ-2, AC-F1-1, AC-F1-2, AC-F2-3, AC-F3-4, AC-F4-5,
+#     AC-F5-6, AC-F2-7, AC-F6-8, AC-F7-9, AC-F7-10, AC-F8-11, §5.1 capability
+#     details, §6 flows 1-5, §7 scope boundaries, §8.1 interface table, §8.3
+#     data model, §8.5 backward compatibility, §12 assumptions, §16 affected
+#     components + file impact map, §19 no migration, §22 maintenance.
+#   - Test plan: ./chg-GH-320-test-plan.md (v1.1) — 54 cases
+#     TC-BIN-001..TC-BIN-084 in nine blocks; 11/11 ACs covered, 0 orphans;
+#     §3.5 substitute assertions BYTE-TP-1, LIVE-TP-1, SURF-TP-1, LIT-TP-1,
+#     PAR-TP-1, DOC-TP-1; §6 environments; §7 per-case suite homes and
+#     commands; §8.3 findings B-1 (resolved), B-2, and OQ-TP-1..OQ-TP-6.
+#     Phase ownership of every id is declared in the TC -> PHASE MAP below.
+#   - PM record: ./chg-GH-320-pm-notes.yaml — delivery_mode autonomous,
+#     decisions D1..D4, documentation impact map, the GH-310 sequencing
+#     constraint (the delivery stops at an open PR and never merges).
+#   - Schema: doc/spec/features/feature-plan-schema.md.
+#   - Precedent: ../2026-11-13--GH-294--provider-peak-pausing/chg-GH-294-plan.yaml
+#     and ../2026-11-14--GH-313--milestone-first-planning/chg-GH-313-plan.yaml.
+#
+# TEST-PLAN RECONCILIATIONS (delivery-bound names resolved here, never invented
+#   around; each is reported to the PM because the test plan names a slightly
+#   different home):
+#   R-A  TC-BIN-070's precondition says the "§16.1.1 stale/required phrase
+#        table" lives in doc/documentation-handbook.md. It does not: the table
+#        lives in the historical change spec
+#        doc/changes/2026-11/2026-11-07--GH-242--agent-integration/chg-GH-242-spec.md,
+#        and tests/checks/doc-conformance.test.ts pins that table's page set to
+#        an exact array (`expect(pages).toEqual(FULL_PHRASE_PAGES)`), so adding
+#        rows there would edit a historical artifact AND a pinned fixture.
+#        Resolution: Phase 4 extends tests/checks/doc-conformance.test.ts with a
+#        SELF-CONTAINED four-page requirement table (stale + required phrases,
+#        both directions, exact page set, negative control). The GH-242 spec and
+#        doc/documentation-handbook.md are not modified.
+#   R-B  Spec §16 names one new behaviour file
+#        tests/behaviour/prior-identity-fallback.test.ts. Test plan §7 splits it
+#        into three homes: prior-identity-config-fallback.test.ts,
+#        prior-identity-state-fallback.test.ts, prior-identity-notice.test.ts.
+#        Resolution: the plan declares the test plan's three files (the test
+#        plan is the verification map) and no combined file.
+#   R-C  Spec §16 says "scripts/.tests/test-install.sh (or a sibling installer
+#        test) CHANGED". Test plan §7 chooses the sibling
+#        scripts/.tests/test-install-jaiship-launcher.sh (new). Resolution: the
+#        plan declares the sibling only; the delivered test-install.sh is re-run
+#        unchanged as a control at the Phase 3 boundary.
+#   R-D  TC-BIN-072 step 5 asks the guide to be discoverable from "the
+#        documentation landing page or the affected spec pages", while spec §16
+#        marks doc/00-index.md UNCHANGED. Resolution: discoverability is
+#        satisfied by links from the four affected spec pages (Phase 4); the
+#        landing page is not touched.
+#   R-E  TC-BIN-073's Status is "Existing - No Change": its registry controls
+#        are extended by the new guide's registration, not by editing
+#        tests/checks/forbidden-literals.test.ts. Resolution: only
+#        scripts/checks/forbidden-literals.registry.json is declared; the test
+#        file is re-run as a control.
+#   R-F  TC-BIN-005 ("extends entrypoint-help-isolation.test.ts") and
+#        TC-BIN-010/012 ("extends entrypoint-version.test.ts") would put two
+#        test files in two phases. Resolution: TC-BIN-005's isolation half is
+#        proven in its PRIMARY suite (entrypoint-two-bins.test.ts) at Phase 1,
+#        where the delivered isolation suite runs unchanged as a control; the
+#        two delivered suites gain their per-bin/override matrix in Phase 2,
+#        where those cases are owned. Each file lives in exactly one phase.
+#   R-G  Test plan §6 asks each prior-identity fixture to carry "a real .git
+#        directory". A nested .git cannot be committed. Resolution: the
+#        committed fixtures hold the config/state SHAPE (values distinguishable
+#        per file); each case materialises a scratch checkout (git init + the
+#        identity marker) from that shape under tmp/.
+#
+# TEST-PLAN OQ PINS (§8.3; a pin that cannot hold fails its named TC, never
+#   skips):
+#   OQ-TP-1 (which surface reports the effective host root) — pinned in PHASE 2.
+#        No new payload field is invented: the effective root is asserted at the
+#        composition seam (the resolved host root handed to the store/scope
+#        composition) and by where follow-on store operations land; status
+#        --json keeps its delivered shape. TC-BIN-030/033/035 fail naming the
+#        missing seam (SURF-TP-1).
+#   OQ-TP-2 (exact projection of the resolver's BrandingInputError) — the
+#        ownership question the test plan refers to @plan-writer is PINNED TO
+#        PHASE 2: the configuration-bearing path surfaces the classified
+#        resolver input error (field `override`, closed resolver code) for BOTH
+#        bins instead of the generic `fallback.internal` containment, while
+#        self-description keeps the invoking bin's declared default. TC-BIN-012
+#        asserts the classified projection and rejects `fallback.internal`.
+#   OQ-TP-3 (exact notice wording) — PHASE 2. The sentence is delivery-bound;
+#        TC-BIN-043 asserts the semantic components (token, reason, both
+#        locations, the no-move/no-copy/no-delete statement, <= 400 chars, no
+#        value), never one exact string.
+#   OQ-TP-4 (launcher missing-target mechanism) — PHASE 3. Pin: a shell-level
+#        target guard in the launcher (existence check on the recorded absolute
+#        entry, no PATH search, no version probe, no runtime invocation to
+#        test), one bounded stderr line naming the target and the remedy, exit
+#        1 (the shared user-error projection). TC-BIN-052 asserts non-zero,
+#        one line, the named target, the remedy, and no PATH fallback.
+#   OQ-TP-5 (is the install-path read public?) — PHASE 4. Pin: it is documented
+#        as a root-level read in the guide (`<binary> --print-install-path`),
+#        and it adds no family row and no global flag. TC-BIN-006 and
+#        TC-BIN-071 assert the invocation and the guide's mention.
+#   OQ-TP-6 (may a delivered configuration warning surface from a prior file?) —
+#        PHASE 2. Pin: yes. The prior file is read AS ITS LAYER, so a delivered
+#        `deprecated`/`shadowed` warning may legitimately appear; the fallback
+#        ITSELF is only the notice and never travels the warning channel, and no
+#        new warning kind exists. TC-BIN-026 records which delivered warning
+#        appeared and asserts no new kind.
+#
+# PHASE ORDERING AND TESTABILITY (each phase is one commit, green at its
+#   boundary):
+#   Phase 1 lands the structural foundation: the second bin, the ONE shared
+#     launcher composition, the manifest's two identities, and per-bin identity
+#     selection at the process edge including the state-free install-path read
+#     and the retired neutral default. Every later phase composes the program
+#     through this edge. The alias baseline fixture is captured from HEAD's
+#     pre-phase code as the FIRST act of the phase (BYTE-TP-1).
+#   Phase 2 lands the prior-identity read fallback as ONE phase, deliberately:
+#     the optional acquisition input (contracts + adapters), the pure host-root
+#     policy (core), the edge config program, and the production composition all
+#     meet in packages/cli/src/production.ts and packages/cli/src/edge.ts, and
+#     production.ts is also the once-per-source notice owner. Splitting config,
+#     state, and notice into separate phases would edit those same files twice
+#     and leave one half unproven at a boundary; the test plan's own TC-BIN-030/
+#     040 cells run the COMPOSED `jaiship status --json`, which requires the
+#     whole threading in one place. The suggested notice phase (spec F-5) folds
+#     here for the same reason. Phase 2 is therefore the only large phase and is
+#     internally ordered: contracts -> acquisition -> policy -> edge ->
+#     production -> behaviour suites.
+#   Phase 3 lands the install posture: the launcher registration step in local
+#     mode, the structural launcher guard, and the hermetic installer test.
+#   Phase 4 lands documentation truth: the four affected spec pages, the new
+#     distributable guide with its marker and registry entry, the planning
+#     backlog markers, and the three documentation guards.
+#   Phase 5 lands the hermeticity guard, the changeset, the aggregate and range
+#     gates, the change-folder residue, and the release/reconciliation
+#     obligations.
+#
+# TC -> PHASE MAP (54 ids = TC-BIN-001..TC-BIN-084; every id is owned by exactly
+#   one phase — the phase that first makes its COMPLETE suite set green):
+#   Phase 1 process edge (13): TC-BIN-001, 002, 003, 004, 005, 006, 060, 061,
+#            062, 063, 064, 067, 083
+#   Phase 2 prior-identity fallback (26): TC-BIN-010, 011, 012, 013, 014, 020,
+#            021, 022, 023, 024, 025, 026, 030, 031, 032, 033, 034, 035, 036,
+#            040, 041, 042, 043, 044, 045, 065
+#   Phase 3 local install (7): TC-BIN-050, 051, 052, 053, 054, 055, 066
+#   Phase 4 documentation truth (4): TC-BIN-070, 071, 072, 073
+#   Phase 5 gate and release (4): TC-BIN-080, 081, 082, 084
+#   Total 13 + 26 + 7 + 4 + 4 = 54. No id is unassigned and none is assigned
+#   twice.
+#
+# AC -> PHASE MATRIX (11 ACs):
+#   AC-F1-1  -> Phase 1 (001, 005)
+#   AC-F1-2  -> Phase 1 (003, 004, 067)
+#   AC-F2-3  -> Phase 1 (002), Phase 2 (013)
+#   AC-F2-7  -> Phase 2 (010, 011, 012, 014)
+#   AC-F3-4  -> Phase 2 (020..026)
+#   AC-F4-5  -> Phase 2 (030..036)
+#   AC-F5-6  -> Phase 2 (040..045)
+#   AC-F6-8  -> Phase 1 (006), Phase 3 (050..055)
+#   AC-F7-9  -> Phase 5 (080, 081, 082; the delivered regression controls run at
+#              every phase boundary and the complete battery at Phase 5)
+#   AC-F7-10 -> Phase 1 (060, 061, 062, 063, 064, 067), Phase 2 (065),
+#              Phase 3 (054, 066), Phase 4 (073)
+#   AC-F8-11 -> Phase 4 (070, 071, 072, 073)
+#
+# SCOPE CONVENTION: concrete files are exact repository-relative paths; folders
+#   are declared by every phase that writes NEW files inside them (the commit
+#   primitive stages only the declared phase scope). Every file the change
+#   touches is declared in EXACTLY ONE phase; the only repeated declaration is
+#   the fixture folder tests/fixtures/entrypoint/prior-identity, which carries
+#   only new files created in Phase 2 (Phase 1 creates no file there). An
+#   untouched declared file is a `plan diff` observation, never a gate failure.
+#
+# DECLARED CONTROLS, NOT EDITS: the delivered suites below are re-run in phase
+#   gates as controls and are NOT edited, so none is declared in a phase scope:
+#   tests/structure/branding-seam.test.ts, branding-contract.test.ts,
+#   error-table.test.ts, tests/behaviour/entrypoint-help.test.ts,
+#   entrypoint-help-coverage.test.ts, entrypoint-composition.test.ts,
+#   config-sources.test.ts, projects-config.test.ts, daemon-state-scope.test.ts,
+#   legacy-adapter.test.ts, tests/checks/forbidden-literals.test.ts,
+#   prompt-conformance.test.ts, help-guide-coverage.test.ts, and
+#   scripts/.tests/test-install.sh. scripts/checks/manifest-privacy.ts,
+#   publish-guard.ts, scripts/lib/dispatch-authority.sh, packages/mcp/src/serve.ts,
+#   and packages/core/src/branding/index.ts are UNCHANGED (spec §16) and are
+#   asserted unchanged by the new checks, not edited.
+#
+# DOC BOUNDARY: the four affected current-truth pages are part of this change's
+#   file impact map (spec §16) and are reconciled in Phase 4 so the plan's
+#   declared scope covers them. Lifecycle phase 7 (`system_spec_update`,
+#   @doc-syncer) then VERIFIES and reconciles any delivery drift; it does not
+#   re-author the pages in a later plan phase. doc/guides/local-install.md is a
+#   redistributable document: it declares `ados_distribution`, gets its license
+#   header only via scripts/add-header-location.sh on the single file path, and
+#   is registered in scripts/checks/forbidden-literals.registry.json in the same
+#   phase (spec §22). doc/documentation-handbook.md, doc/00-index.md, and
+#   README.md are unchanged (R-A, R-D).
+#
+# RELEASE: one lockstep minor changeset over the five publishables
+#   (`@delivery-os/core`, `adapters`, `cli`, `mcp`, `opencode`) matching the
+#   GH-294 precedent (version_impact minor). No dependency addition, no data
+#   migration, no state-schema change (spec §19). The pull request targets
+#   main-tools and STOPS OPEN: the change must not merge before GH-310 lands
+#   (spec §7.2, §18; RSK-9).
+#
+# COMMIT DISCIPLINE: conventional subjects <= 72 chars (carried in each phase
+#   `summary`); body and footer lines <= 100 chars; commits through the commit
+#   primitive against this plan's phase scope; `plan validate GH-320` before the
+#   final phase-mode commit.
+#
+schemaVersion: delivery.plan.v1
+workItemRef: GH-320
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5]
+  escalationTriggers:
+    - "A second composition body, a second identity derivation, or an exported module-level identity literal appears beside the two declared selectors (DEC-5, F-1, NFR-1)"
+    - "An identity literal appears outside the declared four-site inventory, or packages/cli/src/entrypoint.ts keeps a neutral default or a neutralWorkingName accessor (DM-6, AC-F7-10)"
+    - "The prior-identity notice becomes an error-table row, a configuration warning kind, or a machine payload field, or it emits more than once per source kind per process (DM-4, NFR-3, NG-8)"
+    - "A write, move, copy, or deletion targets the prior configuration directory, or a current-identity default host root is created while the fallback holds (NFR-4, DEC-8, DEC-9)"
+    - "A prior-prefix environment override is read, or the fallback extends to a machine-global layer or to an explicitly selected file (DEC-7, DEC-9)"
+    - "The installer composes the install path from a name-derived shell literal instead of the executable's state-free install-path read, or a delivery array names the bin, entrypoint, or composer (DEC-12, NG-7)"
+    - "The launcher searches PATH, probes a version, performs network access, or exits zero on a missing target (DEC-13, RSK-4)"
+    - "Package scope, the scope org, repositoryUrl, docsBaseUrl, README, the documentation profile, the MCP default, or the delivery-script shell fallback host root changes (NG-1..NG-4, NFR-8)"
+    - "The forbidden-literal seed set or corpus baseline grows with the decided public name, or the rename drill document changes (NG-9)"
+    - "A new prompt-required command family or error-table row appears, or `--print-install-path` becomes a family or a global flag (NG-8, §8.1)"
+    - "A delivered suite assertion is relaxed to make this change pass, or a new suite needs live network, the real $HOME as mutable state, or real sleeps (NFR-5, NFR-7, R-TP-9)"
+    - "The delivery merges before GH-310 lands, or an operator's real ~/.delivery-os-state is mutated by a test (§7.2, §18, LIVE-TP-1)"
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  # ---------------------------------------------------------------------------
+  # Phase 1 — Two executable identity selectors over one shared launcher.
+  #
+  # Goal: make `jaiship` a real process edge without forking the executable
+  # surface. The manifest declares exactly two bins mapping to two distinct
+  # existing entry files; `packages/cli/src/bin-launcher.ts` holds the ONE
+  # launcher composition (read environment/cwd/home once, compose the production
+  # program, return an exit code; behaviour exported as a function, never a
+  # literal; never the command runtime); both bins are thin selectors declaring
+  # non-exported local facts and delegating to it. entrypoint.ts takes the
+  # invoking bin's declared default as the identity floor (the neutral default
+  # constant AND `neutralWorkingName` are removed, `workingNameEnvironmentVariable`
+  # stays), passes the optional prior identity through, adds the state-free
+  # `--print-install-path` self-description member (one line, exit 0, answered
+  # before composition, no family row, no global flag), and keeps the lenient
+  # self-description / strict configuration split: an invalid override or name
+  # falls back to the invoking bin's default, a missing declared default is the
+  # delivered containment identity, never a substituted name.
+  #
+  # BYTE-TP-1 FIRST ACT: before any bin edit, capture
+  #   bun packages/cli/bin/delivery-os.ts --version
+  #   bun packages/cli/bin/delivery-os.ts --help
+  # with the injected version/build the alias case uses, into
+  # tests/fixtures/entrypoint/alias-baseline.json with a `capturedFrom` field
+  # naming the pre-phase commit; regenerate only deliberately.
+  #
+  # B-2: run `pnpm install --frozen-lockfile` after the manifest change so
+  # `node_modules/.bin/jaiship` exists; the semantic cell targets the entry file
+  # and the linked cell fails with a named setup instruction, never skips.
+  #
+  # Obligations:
+  #  1.1 packages/cli/package.json: two bins, `delivery-os` -> ./bin/delivery-os.ts
+  #      (unchanged) and `jaiship` -> ./bin/jaiship.ts (new); no other manifest
+  #      field changes (private, files, exports, workspaceImports untouched).
+  #  1.2 bin-launcher.ts: the single shared composition; no duplicate body in
+  #      either bin; no direct command-runtime call.
+  #  1.3 bin/jaiship.ts: Bun shebang; declares default `jaiship` and prior
+  #      `delivery-os` as non-exported locals; reads the override once; delegates.
+  #  1.4 bin/delivery-os.ts: declares default `delivery-os`, no prior identity;
+  #      observable behaviour unchanged; keeps its `completion` export.
+  #  1.5 entrypoint.ts as described in the goal.
+  #  1.6 Structure truth: entrypoint-bin.test.ts (two bins, two distinct existing
+  #      files, shared composition via AST/diff, the declared four-site literal
+  #      inventory per LIT-TP-1 with no residual neutral default, family and
+  #      error-table parity with a failing extra-family mutant, and a
+  #      branding-seam corpus probe through the EXPORTED validateSeam over
+  #      bin/** and src/entrypoint.ts); content-inventory.test.ts + inventory.json
+  #      (exact file-set equality gains bin/jaiship.ts and src/bin-launcher.ts;
+  #      per-file executable allowances; the entrypoint allowance loses exactly
+  #      `neutralWorkingName` and keeps `workingNameEnvironmentVariable`).
+  #  1.7 daemon-start-detached.test.ts gains the identity matrix proving the
+  #      delivered child-environment allowlist already admits the working-name
+  #      override and the brand-derived state-directory name for BOTH identities;
+  #      no allowlist change (§8.5).
+  #
+  # Gate:
+  #   pnpm install --frozen-lockfile
+  #   pnpm typecheck
+  #   bun test tests/behaviour/entrypoint-two-bins.test.ts
+  #   bun test tests/structure/entrypoint-bin.test.ts tests/structure/content-inventory.test.ts
+  #   bun test tests/structure/branding-seam.test.ts tests/structure/branding-contract.test.ts
+  #   bun test tests/behaviour/entrypoint-version.test.ts tests/behaviour/entrypoint-help.test.ts \
+  #     tests/behaviour/entrypoint-help-coverage.test.ts \
+  #     tests/behaviour/entrypoint-help-isolation.test.ts \
+  #     tests/behaviour/entrypoint-composition.test.ts
+  #   bun test tests/behaviour/daemon-start-detached.test.ts --filter child-environment
+  #   bun run scripts/checks/exports-parity.ts
+  # ---------------------------------------------------------------------------
+  - id: 1
+    title: "Two executable identity selectors over one shared launcher composition, with the install-path self-description"
+    kind: delivery
+    summary: "feat(cli): add the jaiship bin over one shared launcher composition"
+    scope:
+      files:
+        - packages/cli/package.json
+        - packages/cli/bin/jaiship.ts
+        - packages/cli/bin/delivery-os.ts
+        - packages/cli/src/bin-launcher.ts
+        - packages/cli/src/entrypoint.ts
+        - tests/behaviour/entrypoint-two-bins.test.ts
+        - tests/behaviour/daemon-start-detached.test.ts
+        - tests/structure/entrypoint-bin.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+        - tests/fixtures/entrypoint/alias-baseline.json
+    interactions:
+      - kind: contract-file
+        target: packages/cli/package.json
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 2 — Prior-identity read fallback (configuration, host state, notice).
+  #
+  # Goal: a `jaiship` invocation that finds no current-identity artifact reads
+  # the prior identity's project configuration per eligible layer and selects the
+  # prior host root, reporting itself once per source kind and never moving,
+  # copying, or deleting anything. Ordering is pinned by spec §8.3:
+  #   config (project-committed, project-local only): current file -> prior file
+  #     -> delivered `missing` skip; current always wins; prior reported
+  #     `config-skipped`; a selected file occupies the project-committed slot and
+  #     disables every layer's fallback; machine-global layers never fall back.
+  #   state: absolute current `<PREFIX>_STATE_DIR` (wins, disables fallback) ->
+  #     current default root if present -> prior default root if present ->
+  #     current default root (first use); no current default root is created
+  #     while the fallback holds; no prior-prefix override is read; ONE root
+  #     serves reads and the ordinary store operations that follow.
+  #   notice: token `prior-identity-fallback`, reasons config-read,
+  #     config-skipped, state-read, state-skipped; <= 1 per source kind per
+  #     process on stderr in EVERY mode including --json; never in a payload;
+  #     never an exit-code change; distinct from the pre-GH-288 store warning,
+  #     the ADOS_/.ados legacy notice, and every configuration warning kind.
+  #
+  # WHY ONE PHASE: the optional acquisition input (contracts + adapters), the
+  # pure host-root policy (core), the edge config program, and the production
+  # composition meet in packages/cli/src/production.ts and
+  # packages/cli/src/edge.ts; production.ts is also the once-per-source notice
+  # owner. Splitting config/state/notice would edit the same files twice and
+  # leave the composed `jaiship status --json` cells unprovable at a boundary
+  # (the notice phase of the suggested shape F-5 folds here).
+  #
+  # OQ pins honoured here: OQ-TP-1 (effective root asserted at the composition
+  # seam and by write location, no new payload field), OQ-TP-2 (classified
+  # resolver input error on the configuration path for both bins, not
+  # `fallback.internal`), OQ-TP-3 (semantic notice text contract), OQ-TP-6 (a
+  # delivered warning may surface from a prior file read as its layer; the
+  # fallback itself never uses the warning channel and adds no kind).
+  #
+  # Obligations:
+  #  2.1 contracts/config.ts + contracts/index.ts: additive prior-identity
+  #      acquisition input/outcome (per-layer `read`/`not used` with layer and
+  #      prior absolute path) and the notice classification vocabulary; no new
+  #      skip reason, error code, or warning kind.
+  #  2.2 adapters/file/config-source.ts: optional prior configuration-directory
+  #      name; per-layer candidate ordering for the two repository-owned layers
+  #      only; current-wins; the prior file is recorded as the loaded file and as
+  #      the origin of every value it supplies (no laundered current-identity
+  #      path); strictly read-only.
+  #  2.3 core/app/state-scope.ts: pure prior-root selection over injected
+  #      existence facts; one home-plus-directory helper and one `_STATE_DIR`
+  #      read preserved; no filesystem access and no prior-prefix env read.
+  #  2.4 cli/edge.ts: the config program receives the prior directory and
+  #      resolves through the fallback-aware acquisition.
+  #  2.5 cli/production.ts: threads the prior identity into every acquisition
+  #      site and the host-root input; probes both default roots (adapter-tier
+  #      facts) and passes them; owns the once-per-source notice state; emits on
+  #      the delivered notice channel; never creates the current default root
+  #      while the fallback holds.
+  #  2.6 Tests: identity-override (010-014 incl. the classified projection),
+  #      prior-identity-config-fallback (020-026), prior-identity-state-fallback
+  #      (030-036), prior-identity-notice (040-045); entrypoint-version.test.ts
+  #      and entrypoint-help-isolation.test.ts gain the per-bin override matrix
+  #      (R-F); state-scope.test.ts gains the pure prior-prefix and single
+  #      `_STATE_DIR` read cases; projects-state-scope-policy.test.ts re-expresses
+  #      the composition predicate around the one helper with its negative
+  #      controls preserved.
+  #  2.7 Fixtures under tests/fixtures/entrypoint/prior-identity/: config-only,
+  #      both-layers, mixed-layers, local-only, selected-config, global-layers,
+  #      no-config, host-root, current-root. Each case materialises a scratch
+  #      checkout (git init + identity marker) and a scratch HOME from the shape
+  #      (R-G); the real ~/.delivery-os-state is never mutated.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/prior-identity-config-fallback.test.ts
+  #   bun test tests/behaviour/prior-identity-state-fallback.test.ts
+  #   bun test tests/behaviour/prior-identity-notice.test.ts
+  #   bun test tests/behaviour/identity-override.test.ts
+  #   bun test tests/behaviour/entrypoint-version.test.ts tests/behaviour/entrypoint-help-isolation.test.ts
+  #   bun test tests/structure/state-scope.test.ts tests/structure/projects-state-scope-policy.test.ts
+  #   bun test tests/behaviour/entrypoint-two-bins.test.ts
+  #   bun test tests/behaviour/config-sources.test.ts tests/behaviour/projects-config.test.ts \
+  #     tests/behaviour/daemon-state-scope.test.ts tests/behaviour/legacy-adapter.test.ts
+  # ---------------------------------------------------------------------------
+  - id: 2
+    title: "Prior-identity configuration and host-state fallback with one classified, once-per-source notice"
+    kind: delivery
+    summary: "feat(config): read prior-identity config and state with a bounded notice"
+    scope:
+      files:
+        - packages/core/src/contracts/config.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/app/state-scope.ts
+        - packages/adapters/src/file/config-source.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - tests/behaviour/identity-override.test.ts
+        - tests/behaviour/prior-identity-config-fallback.test.ts
+        - tests/behaviour/prior-identity-state-fallback.test.ts
+        - tests/behaviour/prior-identity-notice.test.ts
+        - tests/behaviour/entrypoint-version.test.ts
+        - tests/behaviour/entrypoint-help-isolation.test.ts
+        - tests/structure/state-scope.test.ts
+        - tests/structure/projects-state-scope-policy.test.ts
+      folders:
+        - tests/fixtures/entrypoint/prior-identity
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/config.ts
+        role: producer
+      - kind: generated-code
+        target: packages/cli/src/production.ts
+        role: consumer
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 — User-level local install launcher at the brand install path.
+  #
+  # Goal: a local-mode install registers ONE executable launcher at
+  # `~/.jaiship/bin/jaiship` whose single target is the installed source tree's
+  # absolute CLI entry, so the product runs from outside a checkout. The path is
+  # NOT composed in bash: it is read from the CLI entry's state-free
+  # `--print-install-path` (Phase 1) and only the leading home marker is
+  # expanded against the invoking home (DEC-12). The launcher execs one absolute
+  # target with arguments passed through, streams inherited, environment
+  # unmodified; content-idempotent on re-run; repoints from another source; a
+  # missing target is one bounded stderr line naming the target and the remedy
+  # with a non-zero exit (pinned shell-level guard, exit 1, OQ-TP-4), never a
+  # PATH search, version probe, or network call. Delivery arrays, the
+  # delivery-os bin mapping, the template set, the hook examples, and the plugin
+  # projection are unchanged; no `delivery-os` launcher and no uninstall path
+  # (NG-7, §7.2).
+  #
+  # Obligations:
+  #  3.1 scripts/install.sh: one declared launcher registration step (own
+  #      function + call from do_local_install, header/usage documented).
+  #  3.2 scripts/.tests/test-install-jaiship-launcher.sh (new): mktemp scratch
+  #      HOME and project root, --no-fetch, isolated HOME, PATH shim recording
+  #      curl/wget/git fetch|pull|clone, absence precondition, first-run digest
+  #      change, second-run byte identity, repoint from a second source, removed
+  #      target, arguments/streams/environment/exit passthrough, write
+  #      confinement, real-home existence/mtime snapshot only.
+  #  3.3 tests/structure/install-launcher.test.ts (new) and
+  #      entrypoint-installer-absence.test.ts (extended): launcher step declared,
+  #      neither array names a binary/entrypoint/composer, the one layout
+  #      reference to the CLI entry file, temp-copy negative controls.
+  #  3.4 tests/checks deliverable: scripts/.tests/test-install.sh re-run unchanged
+  #      as the delivered control (R-C).
+  #
+  # Gate:
+  #   bash scripts/.tests/test-install-jaiship-launcher.sh
+  #   bun test tests/structure/install-launcher.test.ts tests/structure/entrypoint-installer-absence.test.ts
+  #   bash scripts/.tests/test-install.sh
+  #   bun test tests/behaviour/entrypoint-two-bins.test.ts --filter install-path
+  # ---------------------------------------------------------------------------
+  - id: 3
+    title: "Local install registers an executable launcher at the brand install path, content-idempotent and classified on a missing target"
+    kind: delivery
+    summary: "feat(install): register the jaiship launcher at the brand install path"
+    scope:
+      files:
+        - scripts/install.sh
+        - scripts/.tests/test-install-jaiship-launcher.sh
+        - tests/structure/install-launcher.test.ts
+        - tests/structure/entrypoint-installer-absence.test.ts
+    interactions:
+      - kind: contract-file
+        target: scripts/install.sh
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 4 — Documentation truth: two executables, the fallback, the install
+  # posture, and the declared divergences.
+  #
+  # Goal: the four affected current-truth pages state the new reality (two
+  # executables and per-bin selectors, the prior-identity read and its notice,
+  # the install-path read and install posture replacing the delivered exclusion
+  # sentence, host-root prior selection and the no-second-root guarantee, the
+  # bounded four-site literal inventory, and `installPath` consumption); the new
+  # user-facing guide states the install shape, the notice, what the fallback
+  # covers and does not cover, and every declared divergence (MCP default and
+  # override read, the delivery-script shell fallback host root, the
+  # scope-derived repository/docs URLs, the unchanged README/scope/profile).
+  #
+  # Obligations:
+  #  4.1 Four spec pages reconciled (feature-cli-entrypoint.md,
+  #      feature-branding-seam.md, feature-config-layer.md, feature-projects.md).
+  #      The stale sentence "The bin is not part of the install or release
+  #      surface." is removed from the entrypoint page, not softened (DEC-3).
+  #      The guide is linked from the affected pages so it is discoverable
+  #      without touching doc/00-index.md (R-D).
+  #  4.2 doc/guides/local-install.md (new): frontmatter declares
+  #      `ados_distribution: redistributable`; its license header is added ONLY
+  #      by `scripts/add-header-location.sh doc/guides/local-install.md` on the
+  #      single file path (never the directory, never hand-written). Content:
+  #      install command shape with --no-fetch, where the launcher lands, what it
+  #      executes, the notice meaning, fallback coverage and non-coverage
+  #      (machine-global layers, prior-prefix environment names), the
+  #      `--print-install-path` read (OQ-TP-5), the optional operator one-step
+  #      move (§19, not automated), and the explicit "what is NOT renamed in this
+  #      slice" list.
+  #  4.3 scripts/checks/forbidden-literals.registry.json: register
+  #      doc/guides/local-install.md under `registered` (alphabetical); seed set
+  #      and corpusBaseline unchanged (NG-9, TC-BIN-073).
+  #  4.4 doc/planning/oss-tooling/backlog.md gains the M4-S1 delivered marker
+  #      ("- Progress: delivered by GH-320 - the executable name and local
+  #      install posture; the naming freeze and the wider rename remain");
+  #      doc/planning/oss-tooling/cli-command-registry.md's M4-S1 row reflects
+  #      the delivered first slice.
+  #  4.5 tests/checks/doc-conformance.test.ts gains the self-contained four-page
+  #      requirement table (stale + required phrases, exact page set, both
+  #      directions, negative control) per R-A; tests/checks/identity-docs.test.ts
+  #      (new) asserts the guide marker, registry registration, content,
+  #      discoverability, the declared divergences, and the unchanged public
+  #      surfaces (DOC-TP-1).
+  #
+  # Gate:
+  #   bun test tests/checks/doc-conformance.test.ts
+  #   bun test tests/checks/identity-docs.test.ts
+  #   bun run scripts/checks/forbidden-literals.ts
+  #   bun test tests/checks/forbidden-literals.test.ts
+  #   bash scripts/.tests/test-doc-distribution.sh
+  #   pnpm check:help
+  #   pnpm check:prompt
+  #   bun test tests/checks/prompt-conformance.test.ts tests/checks/help-guide-coverage.test.ts
+  #   git diff --check
+  # ---------------------------------------------------------------------------
+  - id: 4
+    title: "Documented two-executable reality, prior-identity fallback, install path, and the declared divergences"
+    kind: delivery
+    summary: "docs(identity): document the local install and the two-bin reality"
+    scope:
+      files:
+        - doc/spec/features/feature-cli-entrypoint.md
+        - doc/spec/features/feature-branding-seam.md
+        - doc/spec/features/feature-config-layer.md
+        - doc/spec/features/feature-projects.md
+        - doc/guides/local-install.md
+        - doc/planning/oss-tooling/backlog.md
+        - doc/planning/oss-tooling/cli-command-registry.md
+        - scripts/checks/forbidden-literals.registry.json
+        - tests/checks/doc-conformance.test.ts
+        - tests/checks/identity-docs.test.ts
+
+  # ---------------------------------------------------------------------------
+  # Phase 5 — Hermeticity guard, changeset, aggregate and range gates, and
+  # release/reconciliation obligations.
+  #
+  # Goal: prove the whole battery and land the release obligations. The new
+  # hermeticity guard arms network/credential/sleep/write counters with canaries
+  # over the suites this change added, so hermeticity cannot pass vacuously
+  # (NFR-2, NFR-5). One lockstep minor changeset covers the five publishables.
+  # The aggregate gate runs twice and BOTH invocations are recorded (TC-BIN-080):
+  # the declared `TMPDIR=$PWD/tmp/tmpdir` form and the working same-device temp
+  # dir OUTSIDE every worktree form required by the GH-313 lesson - a repo-local
+  # TMPDIR reds queue-production-binding and projects-config, and a
+  # foreign-filesystem TMPDIR reds ci-baseline-parity; no failure is reclassified
+  # without naming the mechanism. The branch-range commit-message gate must
+  # report PASS. `plan validate GH-320` must be valid at the final commit.
+  #
+  # Release and reconciliation obligations (declared as scope, not prose):
+  #  - the four affected spec pages are reconciled HERE; lifecycle phase 7
+  #    (@doc-syncer) verifies and reconciles any delivery drift, and no later
+  #    plan phase re-authors current truth;
+  #  - the pull request targets main-tools and STOPS OPEN: no merge before
+  #    GH-310 lands (spec §7.2, §18, RSK-9);
+  #  - the change folder (plan, spec, test plan, pm-notes, capsule residue) is
+  #    declared so the final phase-mode commit stages any residue;
+  #  - the launcher remains an operator-owned artifact: reinstall is the update
+  #    path and no uninstall is delivered.
+  #
+  # Gate:
+  #   bun test tests/checks/prior-identity-hermetic.test.ts
+  #   bun run scripts/checks/changesets-group.ts
+  #   mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check
+  #   TMPDIR="$(mktemp -d "<same-device-parent>/ados-check-XXXXXX")" pnpm check
+  #   ./scripts/lint-commit-range.sh --base main-tools
+  #   PATH="$PWD/node_modules/.bin:$PATH" delivery-os plan validate GH-320
+  #   git diff --check
+  # ---------------------------------------------------------------------------
+  - id: 5
+    title: "Hermeticity guard, changeset, aggregate and range gates, and the release and reconciliation obligations"
+    kind: delivery
+    summary: "chore(release): land GH-320 gates, changeset, and delivery evidence"
+    scope:
+      files:
+        - .changeset/gh-320-jaiship-binary-minor.md
+        - tests/checks/prior-identity-hermetic.test.ts
+      folders:
+        - doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary
+    doneArtifacts:
+      mergeRequestUrl: "pull request for feat/GH-320/jaiship-binary targeting main-tools, left open until GH-310 lands"
+      pipelineId: "CI pipeline for the GH-320 delivery branch"
+      trackerTransition: "in-review"
