@@ -67,6 +67,8 @@ The committed tree carries exactly these areas:
 
 Per-agent memory is the free-text episodic tier: a charter, its read/write policy, dated capture lines, and optional topic files. It is not converted to record files and produces no record findings; the lint checks its entry-point budget, capture-line date shape, and secret patterns.
 
+The delivered layout is this repository's committed tree, which the invariant scans. The bootstrap scaffold provisions the memory index, the per-agent entry points, `lessons/`, and `tacit/`, and installs no invariant ([Bootstrapper](feature-bootstrapper.md)).
+
 #### Canonical record schema
 
 `packages/core/src/contracts/memory-record.ts` is the schema authority. `.ai/memory/README.md` publishes its human rendering. Reconciliation runs one way — authority → rendering and authority → capsule projection; a divergence is a defect in the rendering or projection, never a second schema. ADR-0011 owns the record-model decision.
@@ -106,7 +108,7 @@ Closeout promotion renders the full required spine plus the conditional requirem
 
 #### Index rows and coverage
 
-The memory index has a two-column table: the covered path in backticks, then a non-empty read-when hint of at most **120 characters** that answers when to read the path. Coverage is evaluated independently over two universes, and each finding names its universe:
+The memory index has a two-column table under its `## Index` heading: the covered path in backticks, then a non-empty read-when hint of at most **120 characters** that answers when to read the path. Row parsing starts at that heading and stops at the next second-level heading, so the index's other tables are never read as coverage rows; the archive index has the same two-column shape and is read as a whole file. Coverage is evaluated independently over two universes, and each finding names its universe:
 
 - **Memory index (U-1)** covers every record file in the four record areas, every per-agent entry point, every guild entry point, and `retro/INDEX.md`.
 - **Archive index (U-2)** covers every dated retro note under `retro/<year>/`.
@@ -159,7 +161,7 @@ A `supersedes`, `superseded_by`, or `contradicts` value must name an existing re
 | Per-agent entry point | 150 lines |
 | Guild entry point | 150 lines |
 | Archive index | 200 lines |
-| `AGENTS.md` memory section | 200 lines advisory, 220 lines error |
+| `AGENTS.md` `## Agent memory` section | 200 lines advisory, 220 lines error |
 
 Each numeric bound is declared once in the contract module; the lint and its fixtures import that value rather than restating it. A surface exactly at its cap produces no finding.
 
@@ -168,7 +170,7 @@ Each numeric bound is declared once in the contract module; the lint and its fix
 Two deterministic heuristics over record bodies produce advisories only:
 
 - **File listing:** a fenced block of at least two lines where every line is a repository path under `packages/`, `scripts/`, `tests/`, `tools/`, `doc/`, `.opencode/`, `.ai/`, or `.github/`.
-- **Command echo:** a fenced block containing a line equal to, or beginning with, a declared workspace command (`pnpm check`, `pnpm test`, `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm build`, `bun test`).
+- **Command echo:** a fenced block containing a line equal to a declared workspace command, or beginning with one followed by a space (`pnpm check`, `pnpm test`, `pnpm lint`, `pnpm format:check`, `pnpm typecheck`, `pnpm build`, `bun test`).
 
 #### Secret patterns
 
