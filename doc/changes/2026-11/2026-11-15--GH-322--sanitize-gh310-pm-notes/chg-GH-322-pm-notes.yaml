@@ -15,7 +15,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-15T09:41:09.756Z }
   quality_gates: { started: null, completed: 2026-11-15T10:18:57.267Z }
   dod_check: { started: null, completed: 2026-11-15T10:21:26.850Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-15T10:23:32.591Z }
 decisions:
   - text: "Substitute the absolute gate temp root with the repository-relative
       convention `TMPDIR=$PWD/tmp/tmpdir` in the recorded GH-310 quality-gate
@@ -263,6 +263,27 @@ notes:
       Range HEAD at this entry: 503f91d9, 14 commits ahead of main-tools
       c1f0d6fa, of which exactly one is the delivery commit."
     type: info
+    date: "2026-11-15"
+  - text: "PR created and left OPEN for CEO/human merge:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/323 — base
+      main-tools, head fix/GH-322/sanitize-gh310-pm-notes at 38a8917e, title
+      'fix(GH-322): sanitize absolute user path in GH-310 pm-notes'. The body
+      discloses the two deviations (primitive-derived delivery subject; the
+      aggregate battery's out-of-work-tree TMPDIR requirement and the 15
+      environmental hermeticity failures with a repo-local temp root) and the
+      gate evidence, and references the issue without a closing keyword.
+      Delivery stops here: no merge, no other ticket."
+    type: info
+    date: "2026-11-15"
+  - text: "RETRO: end-to-end cost was dominated by two avoidable cycles — a
+      template-compression omission (missing DoD section, blanket non-goal) and
+      an unvalidated pinned commit subject that the primitive cannot produce.
+      Both were caught by gates, not by authors, and neither touched the actual
+      fix, which was one literal and passed every check on the first attempt.
+      Working pattern worth repeating: prove the commit message with `commit
+      --dry-run` during delivery_planning, and keep artifact authors' attention
+      on the DoD + scope-clause pairing for tiny changes."
+    type: retro
     date: "2026-11-15"
   - text: "RETRO: the spec writer's non-goals were written before the in-scope edit
       was pinned, so a blanket 'no other change artifact' clause contradicted
