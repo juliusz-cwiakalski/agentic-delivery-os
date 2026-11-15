@@ -7,7 +7,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-15T10:40:44.109Z }
   specification: { started: null, completed: 2026-11-15T12:45:42.248Z }
   test_planning: { started: null, completed: 2026-11-15T12:53:33.330Z }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: 2026-11-15T13:01:59.428Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -222,4 +222,31 @@ notes:
       `delivery_planning` (N3 adapter obligation, phase-7 scope, C-10,
       wording)."
     type: info
+    date: "2026-11-15"
+  - text: "REOPEN PROVENANCE: `specification`, `test_planning`, and
+      `delivery_planning` were reopened once at 12:38Z for the iteration-2
+      remediation (reasons recorded in the phase registry), then completed again
+      in order — specification at 12:45:42Z, test_planning at 13:53:27Z,
+      delivery_planning pending. Earlier reopens: specification 12:09Z (header
+      grammar), test_planning 12:32Z (TC-SNARR-001 summary value), specification
+      12:44Z (iteration 1). No `delivery` reopen occurred."
+    type: info
+    date: "2026-11-15"
+  - text: "OPERATIONAL: `phase` writes transiently failed with `state.lock.busy`.
+      Root cause: this repository's worktrees (GH-300, GH-301, GH-320) share one
+      state store and one `fence.default.lock`; `acquireFence` has no retry, so
+      a concurrent lane write fails a phase command outright. All subsequent
+      lifecycle writes use a bounded retry loop (8 attempts, 3s backoff). Also
+      observed: a stale daemon instance record (dead pid, heartbeat stopped) —
+      unrelated to phase writes but visible in `daemon status`."
+    type: risk
+    date: "2026-11-15"
+  - text: "RETRO: two DoR iterations were spent on artifact-internal consistency a
+      mechanical pass would have caught — the envelope `error.kind` assertion
+      (four ACs, six TCs) and an incomplete doc-delta register. The `error.kind`
+      error came from reading the error table's columns as envelope fields.
+      Improvement: before the DoR gate, assert every envelope field against
+      `packages/core/src/contracts/result.ts`, and enumerate doc deltas by
+      grepping the retired sentence across `doc/**`."
+    type: retro
     date: "2026-11-15"

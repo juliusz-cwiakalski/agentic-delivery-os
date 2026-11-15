@@ -37,25 +37,101 @@
 #            TC-SCITE-005, TC-SCITE-006, TC-SPAR-006) are each owned by exactly
 #            one phase; 5 new ACs (AC-F1-4, AC-F1-5, AC-F3-6, AC-F5-6,
 #            AC-NFR8-1) are named at least once. Totals: 37/37 TCs, 30/30 ACs.
+#   1.3 (2026-11-15) — DoR iteration-2 remediation owned by delivery planning;
+#       reconciled with chg-GH-300-spec.md v1.3 (30 ACs) and
+#       chg-GH-300-test-plan.md v1.4 (38 TCs). No phase id, title intent, or
+#       earlier valid obligation removed; no requirement invented.
+#       (N3 / finding 3) THE REAL-ADAPTER WITNESS IS OWNED HERE. TC-SMAP-008 is
+#            owned by phase 5, its suite home
+#            `tests/behaviour/verify-gates-config-document-adapter.test.ts` is
+#            declared in phase 5 scope, and obligation 5.11 states the
+#            obligation: the real `readCommittedConfigDocument`, with only
+#            `FileSystemFacts` injected, maps absent -> undeclared parity;
+#            present-but-unreadable, unparseable, and a defective map node ->
+#            `config.value.invalid` before any gates source read; a valid map
+#            beside an outside-node defect -> the declaration honoured; and an
+#            implementation mapping a read or parse failure to
+#            `{ok: true, declared: false}` must FAIL the suite. Phase 4 keeps
+#            TC-SMAP-006 (the injected handler seam), so each TC is owned
+#            exactly once and the posture is witnessed at both layers (P-8).
+#       (N1 / finding 1) DOCUMENTATION SCOPE BOUND TO THE COMPLETED REGISTER.
+#            Phase 7 applies exactly D-1..D-26 and declares
+#            `doc/spec/features/feature-capsule.md`,
+#            `doc/spec/features/feature-verify-change-and-exit-taxonomy.md`, and
+#            `doc/overview/architecture-overview.md` in its scope files, so the
+#            append rule and the capsule append rule are reconciled everywhere
+#            current truth states them unconditionally.
+#       (finding 9) PRECISION. 4.2 gives the delivered handler order and the
+#            exact position of the map classification (after grammar, before
+#            any gates source read), states that `readGateSet` IS invoked and is
+#            a zero-I/O seam rather than a source read, states the member-path
+#            hoist of the ONE workflow read above the breadth decision, and
+#            states that no member read occurs on a narrowed declaration. 5.3
+#            names the delivered selected-file channel that can occupy the
+#            committed slot — the `${environmentPrefix}CONFIG` environment
+#            selector (TDR-0003), the only reachable selection input because
+#            `verify` declares `flags: []` so `--config` is
+#            `fallback.invocation` — and states that the adapter takes injected
+#            `FileSystemFacts`.
+#       (finding 4) READ BUDGET. 6.4 no longer claims identical counts for every
+#            state: the seven enumerable gates sources are read identically with
+#            and without a declaration, exactly ONE bounded configuration-
+#            document read is added and is counted by the instrumented-read
+#            assertions in both states, and a narrowed member-declaring run
+#            legitimately reads less (no member read) than a non-narrowed one.
+#       (finding 7) C-10 EXCEPTION. 2.8 and P-2 name the documented
+#            `verify.narrowed-scope` row (D-7) as the one sanctioned in-change
+#            documentation edit — it lands with the `ERROR_TABLE` row because
+#            the delivered two-way sync gate binds them — while every other
+#            current-truth reconciliation stays in phase 7 (Appendix A row 28).
+#       (finding 2 / N2) NO DOMAIN-KIND MEMBER IN THE FAILURE SURFACE. Every
+#            obligation asserts the envelope's own fields — `error.code`,
+#            `error.category`, `error.retryable`, `error.consequence`,
+#            `error.summary`, `error.remediationHint`, `detail.suiteBreadth`,
+#            and the exit — and the domain kind only through the error table
+#            (AC-NFR7-1).
+#       (findings 5, 6, 10) Carried from spec v1.3: tolerance is scoped to
+#            schema or semantic defects outside the map node, while a
+#            document-level parser failure anywhere is the unparseable-as-a-
+#            whole refusal; `job` is the single-line printable class (no control
+#            character, no line break, no leading or trailing whitespace, 1..120
+#            characters); and the map resolver is the only validator for the
+#            node — the catalog branch constrains whole-document validity for
+#            other consumers only and its outcome is never consumed here.
+#       (finding 11a) DEC-19's committed-slot-only posture is carried as scoped
+#            to the suite-map read.
+#       (citations) Refreshed to spec v1.3 (F-1..F-5, DM-1..DM-9,
+#            DEC-1..DEC-20, NFR-1..NFR-10, RSK-1..RSK-11, DoD-1..DoD-12,
+#            Appendix A rows 1..28, C-1..C-17, D-1..D-26) and test plan v1.4
+#            (38 TCs in nine families: SMAP 8, SCITE 6, SNARR 6, SRES 5,
+#            SPAR 6, SCTR 3, SDET 2, SHERM 1, SWRITE 1; 30/30 ACs).
+#       TOTALS: 38/38 TCs owned exactly once, 30/30 ACs named at least once,
+#            67/67 writable suite and fixture homes inside a declared phase
+#            scope (the two additions over v1.2 are the real-adapter behaviour
+#            suite and its per-case fixture-root pattern, both in phase 5).
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:     ./chg-GH-300-spec.md (v1.2) — F-1..F-5, GAP-1..GAP-6,
+#   - Spec:     ./chg-GH-300-spec.md (v1.3) — F-1..F-5, GAP-1..GAP-6,
 #               DM-1..DM-9, NFR-1..NFR-10, RSK-1..RSK-11, OQ-1..OQ-3,
 #               DEC-1..DEC-20, AC-F1-1..AC-NFR8-1 (30 ACs, §17),
-#               DoD-1..DoD-12 (§17.1), Flow 1..5 (§6), §8.3 enumerated literal
-#               deltas (nine items), Appendix A pinned literals rows 1..24,
+#               DoD-1..DoD-12 (§17.1), Flow 1..6 (§6), §8.3 enumerated literal
+#               deltas (ten items), Appendix A pinned literals rows 1..28,
 #               Appendix C constraints C-1..C-17, Appendix D documentation
-#               deltas D-1..D-16.
-#   - Tests:    ./chg-GH-300-test-plan.md (v1.3) — 37 TCs in nine families
-#               (SMAP 7, SCITE 6, SNARR 6, SRES 5, SPAR 6, SCTR 3, SDET 2,
+#               deltas D-1..D-26.
+#   - Tests:    ./chg-GH-300-test-plan.md (v1.4) — 38 TCs in nine families
+#               (SMAP 8, SCITE 6, SNARR 6, SRES 5, SPAR 6, SCTR 3, SDET 2,
 #               SHERM 1, SWRITE 1), 30/30 ACs covered, DM 9/9, seeds
 #               SC-M2-S7-01/02 inherited by name, §4 layers, §6.1 binding gate
-#               environment, §6.2/§6.3 fixture homes, §6.4 golden provenance
-#               and parity scope, §7 suite homes and execution commands,
-#               §8.3 OQ-T4 (plan-owned seam) and OQ-T6 (non-shipped MCP).
+#               environment, §6.2/§6.3 fixture homes (including the per-case
+#               adapter roots), §6.4 golden provenance and parity scope, §7
+#               suite homes and execution commands, §8.3 OQ-T4 (plan-owned
+#               seam), OQ-T6 (non-shipped MCP), and the closed OQ-T7..OQ-T14.
 #   - Readiness: ./readiness-review/readiness-iter-1.md — findings F1, F4, F8,
-#               and F9 are closed by this revision; findings F2/F3/F5/F6/F7/
+#               and F9 are closed by revision 1.2; findings F2/F3/F5/F6/F7/
 #               F10/F11 are closed by spec v1.2 and test plan v1.3.
+#               ./readiness-review/readiness-iter-2.md — findings 1, 3, 4, 7,
+#               and 9 are closed by this revision; findings 2, 5, 6, 8, 10, 11,
+#               and 12 are closed by spec v1.3 and test plan v1.4.
 #   - PM notes: ./chg-GH-300-pm-notes.yaml — scope decision, documentation
 #               impacts for phase 7, measured gate environment, delivery
 #               conventions (full 11-phase lifecycle, one commit per plan phase,
@@ -109,9 +185,18 @@
 #       parsed, valid node                             -> { ok: true, declared: true, value }
 #       parsed, defective node                         -> { ok: false, config.value.invalid }
 #       present but unreadable                         -> { ok: false, config.value.invalid }
-#       unparseable as a whole                         -> { ok: false, config.value.invalid }
-#       defect elsewhere in the document               -> not interpreted; a valid map
+#       unparseable as a whole, i.e. a parser-level
+#         failure anywhere (duplicate key, unsupported
+#         YAML tag, non-JSON scalar, non-mapping root,
+#         over-cap document)                           -> { ok: false, config.value.invalid }
+#       schema/semantic defect elsewhere in the
+#         document (another branch, unknown key,
+#         forbidden value)                             -> not interpreted; a valid map
 #                                                         declaration stands
+#     The node is validated by the map's own resolver, which is the ONLY validator
+#     for it: the catalog branch can express only type/required/additionalProperty
+#     facts, cannot express the identifier grammar, the length and cap bounds, or
+#     list uniqueness, and its whole-document outcome is never consumed here.
 #     The refusal is evaluated before any ledger, repository, workflow, or
 #     provider read. No document state yields a report, breadth fact, record,
 #     or pass except a declaration that resolves to equality.
@@ -120,7 +205,9 @@
 #     the explicitly selected file occupying that slot. System, user-global,
 #     project-local, environment, and CLI sources are never read for the map;
 #     the merged layer tree is never consulted. An overlay declaration has no
-#     effect and is not a refusal.
+#     effect and is not a refusal. This posture is SCOPED to the suite-map read:
+#     it is not a general committed-slot-only rule for all policy data, and
+#     nothing in this plan cites it as that precedent.
 #   GATE-SET POSTURE (NG-7, DEC-11, F-4): the delivered `readGateSet` seam is
 #     byte-identical. The production composition still supplies no declared gate
 #     set, so `verify gates` evaluates the shipped five; `resolveMergeGateSetFromConfig`
@@ -135,12 +222,20 @@
 #     and fails fast across layers, so it cannot satisfy DEC-19's
 #     committed-slot-only isolation.
 #   COMPOSITION: one new adapter read (`readCommittedConfigDocument`) resolves the
-#     committed-slot path from the branding seam and the selected-file rule and
-#     performs the single bounded read; one pure projection extracts
+#     committed-slot path from the branding seam and the delivered selection rule
+#     and performs the single bounded read; one pure projection extracts
 #     `verify["suite-map"]` and hands it to `resolveVerifySuiteMapFromConfig`;
 #     the CLI and MCP compositions memoize the result and serve the `readSuiteMap`
-#     seam. The seam gains one pure call; the counted gates source read budget
-#     gains nothing (NFR-4, AC-F5-4, TC-SPAR-004).
+#     seam. The seam gains one pure call. Read accounting is NOT a parity claim:
+#     the seven enumerable gates sources are read exactly as delivered in both
+#     states, and the change adds exactly ONE bounded read of the
+#     project-committed configuration document, performed with or without a
+#     declaration and counted by the instrumented-read assertions (NFR-4,
+#     AC-F5-4, TC-SPAR-004). The zero-I/O edge default above is the
+#     absent-composition path only (an embedding that supplies no read at all);
+#     both shipped compositions do supply the real read, so on every shipped
+#     surface the budget counts exactly one document read whether or not the
+#     document declares a map.
 #
 # PRE-CHANGE PARITY PROVENANCE (NFR-8, AC-F5-1, AC-NFR8-1, TR-1):
 #   Phase 1 captures `tests/fixtures/verify-gates/suite-map/parity-baseline.json`
@@ -174,14 +269,21 @@
 #   C-6 exactly one new error row and one new `detail` member; no new domain
 #       kind, no reworded row (NFR-7, DEC-8).
 #   C-7 one bounded read of the project-committed configuration document and no
-#       other added read; corroboration reuses the workflow read — 0 provider,
-#       network, transport, or state reads added (NFR-4, DEC-11, DEC-19).
+#       other added read, performed with or without a declaration; corroboration
+#       reuses the workflow read — 0 provider, network, transport, or state reads
+#       added, and the seven enumerable gates source counts unchanged (NFR-4,
+#       DEC-11, DEC-19).
 #   C-8 the record, the CI gate, the five gates, the grammar, and the human
 #       output do not move (DEC-9, DEC-10, DEC-12).
 #   C-9 default tests are configuration- and workflow-fixture driven, zero live
 #       calls (NFR-3).
-#   C-10 current-truth specifications flip in phase 7 only, per D-1..D-16
-#       (NG-5, DoD-9).
+#   C-10 current-truth specifications flip in phase 7 only, per D-1..D-26
+#       (NG-5, DoD-9). One sanctioned in-change exception: the two-way
+#       error-table sync edit — the documented `verify.narrowed-scope` row in
+#       doc/spec/features/feature-result-contract.md (D-7) lands in the same
+#       commit as the `ERROR_TABLE` row because the delivered sync gate binds
+#       them together; every other current-truth reconciliation stays in phase 7
+#       (Appendix A row 28).
 #   C-11 gates and commit hygiene: `pnpm check` with the pm-notes environment
 #       before the PR, subjects scoped GH-300, body/footer lines <= 100
 #       characters, PR to main-tools staying open (DEC-13, NFR-9).
@@ -193,9 +295,10 @@
 #   C-14 this repository's reference declaration is pinned literal data and must
 #       resolve to equality end-to-end, not by fixture reasoning (DEC-17, DM-8).
 #   C-15 the declaration is enforced exactly when declared — only an absent
-#       document or one without the node is "undeclared", and no defect outside
-#       that node has an opinion on the gate run or on the declaration (DEC-18,
-#       NFR-10).
+#       document or one without the node is "undeclared", a schema or semantic
+#       defect outside that node has no opinion on the gate run or on the
+#       declaration, and a parser-level failure anywhere in the document refuses
+#       the whole document (DEC-18, NFR-10, Appendix A rows 22 and 27).
 #   C-16 the map comes from the project-committed layer slot only; an overlay
 #       never supplies, completes, or replaces it, and an overlay declaration is
 #       not a refusal either (DEC-19).
@@ -213,7 +316,7 @@
 #   and the corpus stays at 48 cases, so the baseline's "48" stays true. It is
 #   deliberately NOT a `scope.files` entry in any phase (DoR iteration-1 F9).
 #
-# TC -> PHASE MAP (37 ids; every id owned by exactly ONE phase — the phase that
+# TC -> PHASE MAP (38 ids; every id owned by exactly ONE phase — the phase that
 #   first makes its complete suite set green):
 #   Phase 1 baseline            (0): owns no TC; supplies the pre-change
 #        baseline that Phase 6's TC-SPAR-001/TC-SPAR-006 consume.
@@ -226,12 +329,16 @@
 #        TC-SNARR-005, TC-SNARR-006, TC-SRES-001, TC-SRES-002, TC-SRES-003,
 #        TC-SRES-004, TC-SRES-005, TC-SCTR-001, TC-SCTR-002, TC-SPAR-002,
 #        TC-SWRITE-001.
-#   Phase 5 reference decl.     (3): TC-SMAP-004, TC-SMAP-007, TC-SCITE-005.
+#   Phase 5 reference decl.     (4): TC-SMAP-004, TC-SMAP-007, TC-SMAP-008,
+#        TC-SCITE-005. TC-SMAP-008 is the REAL-ADAPTER witness of the document
+#        classification (DoR iteration-2 finding 3); TC-SMAP-006 stays in
+#        Phase 4 as the injected handler-seam witness, so the two are never
+#        duplicates and each is owned once (P-8).
 #   Phase 6 cross-cutting       (9): TC-SPAR-001, TC-SPAR-003, TC-SPAR-004,
 #        TC-SPAR-005, TC-SPAR-006, TC-SCITE-002, TC-SDET-001, TC-SDET-002,
 #        TC-SHERM-001.
-#   Phase 7 docs/release        (0): DoD-9, DoD-10, D-1..D-16.
-#   Totals: 37/37 TCs owned; 30/30 ACs named (§17 AC -> phase table below).
+#   Phase 7 docs/release        (0): DoD-9, DoD-10, D-1..D-26.
+#   Totals: 38/38 TCs owned; 30/30 ACs named (§17 AC -> phase table below).
 #
 # AC -> PHASE (every §17 criterion named at least once; a criterion proven by
 #   two TCs is listed in both phases where those TCs live):
@@ -241,20 +348,30 @@
 #   P4: AC-F1-1, AC-F1-2, AC-F1-3, AC-F1-4, AC-F2-1, AC-F2-3, AC-F3-1,
 #   AC-F3-2, AC-F3-3, AC-F3-4, AC-F3-5, AC-F3-6, AC-F4-1, AC-F4-2, AC-F4-3,
 #   AC-F4-4, AC-F5-2, AC-NFR1-1, AC-NFR2-1, AC-NFR5-1, AC-NFR8-1.
-#   P5: AC-F1-1, AC-F1-4, AC-F1-5, AC-F2-1, AC-F5-6.
+#   P5: AC-F1-1, AC-F1-2, AC-F1-4, AC-F1-5, AC-F2-1, AC-F5-6, AC-NFR8-1
+#   (TC-SMAP-008 adds AC-F1-2 and AC-NFR8-1 to this phase).
 #   P6: AC-F5-1, AC-F5-3, AC-F5-4, AC-F5-5, AC-F2-2, AC-F1-4, AC-NFR2-1,
 #   AC-NFR3-1, AC-NFR5-1, AC-NFR8-1.
 #   Unique criteria named across phases: 30/30 (§17). No criterion is orphaned;
 #   each listing is either the phase that owns the criterion's TC, the phase that
 #   proves its pure half, or a re-run of an owning suite.
 #
-# SUITE-HOME COVERAGE: 65/65 writable suite and fixture homes named by test-plan
-#   v1.3 §7 and §6.2-§6.4 (36 test/type homes including
-#   tests/structure/inventory.json, and 29 fixture/contract-data homes) are
-#   inside a declared phase scope. The read-only corpus control
-#   `tests/fixtures/verify-gates/corpus/cases.json` is read by Phase 1 and
-#   Phase 6 and is intentionally not declared writable (DoR F9); the delivered
-#   goldens are read unchanged.
+# SUITE-HOME COVERAGE: 67/67 writable suite and fixture homes named by test-plan
+#   v1.4 §7 and §6.2-§6.4 (37 test/type homes including
+#   tests/structure/inventory.json, and 30 fixture/contract-data homes; the five
+#   `suite-map/layers/*.yaml` overlays count as one home and the per-case
+#   `suite-map/config/adapter/<case>/` roots count as one home) are inside a
+#   declared phase scope. The two additions over revision 1.2 are
+#   `tests/behaviour/verify-gates-config-document-adapter.test.ts` (phase 5
+#   scope.files) and the per-case adapter fixture roots under
+#   `tests/fixtures/verify-gates/suite-map/config/adapter/` (phase 5
+#   scope.folders `tests/fixtures/verify-gates/suite-map`). Three inputs are
+#   READ-ONLY and deliberately outside every scope, exactly as before: the
+#   delivered corpus control `tests/fixtures/verify-gates/corpus/cases.json`
+#   (read by Phase 1 and Phase 6, DoR F9), the delivered cross-repository golden
+#   `tests/fixtures/cross-repository/goldens/gates-members-green.json` and the
+#   other delivered goldens read unchanged, and the existing type-test config
+#   `tests/types/tsconfig.json` that Phase 2/4/6 invoke.
 #
 # PLAN-OWNED PINS AND RESIDUAL GAPS (nothing below invents a requirement; each
 #   item is either a plan decision inside a spec-declared freedom or a recorded
@@ -264,18 +381,26 @@
 #       fail-closed: absent and parsed-without-node are undeclared parity;
 #       present-but-unreadable, unparseable-as-a-whole, and a defective map node
 #       are `config.value.invalid` at exit 1 with no `data`, before any gates
-#       source read; a defect elsewhere in the document is not interpreted, so it
-#       neither refuses the run nor removes a valid declaration. One bounded
-#       read; no overlay and no merged-tree read; no state yields a report,
-#       breadth fact, record, or pass except a resolved equality (DM-9, DEC-18,
-#       DEC-19, NFR-10, AC-F1-4, AC-F1-5). The former fail-open plan pin is
-#       withdrawn (DoR F1).
-#   P-2 (plan decision, sequencing) THE DOCUMENTED ERROR ROW LANDS IN PHASE 2,
-#       in the same commit as the code row, because the delivered two-way sync
-#       gate runs inside `pnpm test` and would otherwise fail a phase boundary.
-#       TC-SCTR-003's own note allows "no later than phase 7"; Phase 7 then
-#       completes D-7's capability prose. The 135 -> 136 count, the live/mirrored
-#       assertion pair, and the true-positive corpus entry move together.
+#       source read; a schema or semantic defect elsewhere in the document is not
+#       interpreted, so it neither refuses the run nor removes a valid
+#       declaration, while a document-level parser failure anywhere (duplicate
+#       key, unsupported YAML tag, non-JSON scalar, non-mapping root, over-cap
+#       document) is the unparseable-as-a-whole refusal. The node is decided by
+#       the map's own resolver, the only validator for it; the catalog branch's
+#       whole-document outcome is never consumed here. One bounded read; no
+#       overlay and no merged-tree read; no state yields a report, breadth fact,
+#       record, or pass except a resolved equality (DM-9, DEC-18, DEC-19,
+#       NFR-10, AC-F1-4, AC-F1-5, Appendix A rows 22 and 27). The former
+#       fail-open plan pin is withdrawn (DoR F1).
+#   P-2 (plan decision, sequencing; sanctioned exception) THE DOCUMENTED ERROR
+#       ROW LANDS IN PHASE 2, in the same commit as the code row, because the
+#       delivered two-way sync gate runs inside `pnpm test` and would otherwise
+#       fail a phase boundary. This is the one in-change current-truth edit C-10
+#       sanctions (Appendix A row 28, D-7): TC-SCTR-003's own note allows "no
+#       later than phase 7", and Phase 7 then reconciles only D-7's surrounding
+#       prose. The 135 -> 136 count, the live/mirrored assertion pair, and the
+#       true-positive corpus entry move together; every other current-truth
+#       reconciliation stays in Phase 7.
 #   P-3 (delivery hazard, not a spec gap) `.delivery-os/` IS LISTED IN THIS
 #       WORKTREE'S REPOSITORY-LEVEL `.git/info/exclude`, so a plain `git add`
 #       would silently leave the DM-8/DEC-17 reference declaration out of the
@@ -288,8 +413,8 @@
 #       gate on the member-less path, and exactly one header line on the
 #       member-declaring path), the DM-5 one-sentence summary remains the row
 #       default asserted only on the table and its documented mirror, and
-#       `error.remediationHint` is the row's hint. This plan binds the spec v1.2
-#       reading; no obligation changes and no TC id moved.
+#       `error.remediationHint` is the row's hint. This plan binds the spec v1.3
+#       reading (unchanged since v1.2); no obligation changes and no TC moved.
 #   P-5 (verification, not a gap) The suite-map node adds no byte bound of its
 #       own (DM-3): it is a node of the already-bounded configuration read and
 #       every collection in it is capped, so no new document bound is declared
@@ -301,7 +426,18 @@
 #   P-7 (spec-pinned) PARITY SCOPE. The undeclared-map parity claim covers only
 #       an absent document or one without the node; unusable document states are
 #       the AC-F1-4 refusal with no parity claim, and the outside-node tolerance
-#       is bounded to exactly that node (NFR-8, NFR-10, AC-NFR8-1).
+#       is bounded to schema or semantic defects in exactly the other branches,
+#       keys, and values (NFR-8, NFR-10, AC-NFR8-1, Appendix A row 27).
+#   P-8 (plan decision, verification layering) THE DOCUMENT-CLASSIFICATION
+#       POSTURE HAS TWO WITNESSES AND EACH TC IS OWNED ONCE. Phase 4 owns
+#       TC-SMAP-006 — the handler branch over the injected configuration seam,
+#       which is the only shape that exists at that boundary — and Phase 5 owns
+#       TC-SMAP-008 — the real `readCommittedConfigDocument` composed as
+#       production composes it with only `FileSystemFacts` injected. Neither
+#       suite restates the other's assertions; the adapter suite fails an
+#       implementation that maps a read or parse failure to
+#       `{ok: true, declared: false}`, which is the shape the seam suite cannot
+#       distinguish (DoR iteration-2 finding 3).
 #
 # RELEASE: one lockstep minor changeset over the five publishables
 #   (`@delivery-os/core`, `adapters`, `cli`, `mcp`, `opencode`) matching the
@@ -335,7 +471,7 @@ tier:
     - "The narrowed header would name the local set, print more than eight identifiers without ` omitted=<n>`, change a delivered header token, or be truncated instead of the gate lines (DEC-15, C-12)"
     - "A map-side refusal would put its cause in the envelope, reuse a command-supplied config summary, or write more than one error-stream `cause:` line (DEC-14, DEC-16, C-13)"
     - "The map would add a source read, a transport call, a retry, or pagination; corroboration must reuse the single delivered workflow read (NFR-4, DEC-10, C-7)"
-    - "The map read would use the merged configuration acquisition, read any layer other than the project-committed document, or fail open on an unreadable, unparseable, or defective-node document (DM-9, DEC-18, DEC-19, NFR-10, AC-F1-4, AC-F1-5)"
+    - "The map read would use the merged configuration acquisition, read any layer other than the project-committed document, or fail open on an unreadable, unparseable, or defective-node document — including through the real committed-document adapter, which must never map any such state to `{ ok: true, declared: false }` (DM-9, DEC-18, DEC-19, NFR-10, AC-F1-4, AC-F1-5, TC-SMAP-008)"
     - "A config-declared `merge.gates` would become live, the shipped gate battery would change, or `readGateSet` would be sourced from configuration values (NG-7, DEC-11, AC-F5-1, AC-F5-3)"
     - "An undeclared map would change any delivered byte, exit, summary, record, or human line; or parity would be claimed for an unusable document state (NFR-8, AC-F5-1, AC-NFR8-1, DEC-12)"
     - "The reference declaration would resolve to a refusal, be committed only as a fixture, or silently stay untracked because `.delivery-os/` is locally excluded in this worktree (DM-8, DEC-17, DoD-8, RSK-4)"
@@ -373,9 +509,9 @@ phases:
   #       stay green with the new fixture present.
   #   1.6 Parity scoping: the baseline carries no entry for an unusable document
   #       state (unreadable, unparseable, defective node); those states are the
-  #       AC-F1-4 refusal (TC-SMAP-006) and Phase 6's scope manifest classifies
-  #       them explicitly, so a later regeneration cannot reclassify one as
-  #       parity (NFR-8, AC-NFR8-1).
+  #       AC-F1-4 refusal (TC-SMAP-006 at the seam, TC-SMAP-008 through the real
+  #       adapter) and Phase 6's scope manifest classifies them explicitly, so a
+  #       later regeneration cannot reclassify one as parity (NFR-8, AC-NFR8-1).
   #   1.7 The capture command and the baseline provenance go into pm-notes by
   #       the PM lane (this phase writes no pm-notes file).
   #
@@ -441,9 +577,15 @@ phases:
   #   2.4 Every DM-1 defect refuses as the delivered `config.value.invalid`:
   #       missing/unsupported schemaVersion, missing or undeclared top-level key,
   #       non-list or empty `jobs`/`local`, over-cap lists (64/32/32), missing or
-  #       undeclared entry key, non-string/empty/121-character `job`, duplicate
-  #       `job`, empty `suites`, identifier grammar/length failure, duplicate
-  #       identifier in one `suites` list or in `local`. Absent is never a defect.
+  #       undeclared entry key, non-string/empty/121-character `job`, a `job`
+  #       carrying a control character or a line break, a `job` with leading or
+  #       trailing whitespace, duplicate `job`, empty `suites`, identifier
+  #       grammar/length failure, duplicate identifier in one `suites` list or in
+  #       `local`. The `job` class is the single-line printable class of
+  #       Appendix A rows 4 and 26 (1..120 characters, no control characters, no
+  #       leading or trailing whitespace, compared by exact string match), so a
+  #       declaration can never break the one-line header or the one-line
+  #       `cause:` grammar. Absent is never a defect.
   #   2.5 Two additive optional report-root fields on BOTH report types
   #       (`suiteBreadth?: readonly string[]`, `mirrorsJob?: string`) — types
   #       only in this phase, appended after every delivered key so the delivered
@@ -472,15 +614,20 @@ phases:
   #       tests/fixtures/result/code-corpora/true-positives.json. The delivered
   #       rows are deep-equal to their pre-change snapshots. Landing the row
   #       here satisfies TC-SCTR-003's "no later than phase 7" sequencing
-  #       dependency without deferring the sync gate past a green boundary.
+  #       dependency without deferring the sync gate past a green boundary, and
+  #       it is the ONE current-truth edit C-10 sanctions (Appendix A row 28,
+  #       D-7); no other documentation surface moves in this phase.
   #   2.9 The configuration catalog declares one `verify` branch whose only key
   #       is `suite-map`, default ABSENT, no invented default map, and no new
   #       read of any kind (DM-1, §8.3 item 6). tests/structure/
   #       verify-gates-suite-map-contract.test.ts proves the branch exists
   #       exactly once and that the delivered catalog key order/default artefact
   #       expectations were updated, not bypassed. The catalog schema keeps the
-  #       document valid for every other consumer; the gates surface does not
-  #       consume its whole-document resolution for the map (DEC-18).
+  #       document valid for every other consumer that resolves the merged tree;
+  #       it is NOT a validator for this node — it cannot express the identifier
+  #       grammar, the length and cap bounds, or list uniqueness — and the gates
+  #       surface never consumes its whole-document resolution for the map
+  #       (DEC-18, DM-9).
   #   2.10 Register the new domain module in tests/structure/inventory.json and
   #        the content-inventory expectations; assert no new import edge beyond
   #        contracts -> domain (verify-gates-imports), and keep exports parity
@@ -616,7 +763,9 @@ phases:
   #         - one `; ` between segments, one ASCII space between tokens;
   #         - `<job>` verbatim (spaces preserved, never quoted, escaped,
   #           case-folded, trimmed, or truncated), terminated by the final
-  #           literal ` breadth=`;
+  #           literal ` breadth=`. The resolver guarantees this is safe: `job` is
+  #           the single-line printable class, so it can carry neither a line
+  #           break nor a control character (Appendix A rows 4 and 26);
   #         - identifiers are the MIRROR's declared breadth in declared order,
   #           `,`-delimited with no spaces, never the local set (C-12);
   #         - 0 identifiers unreachable, 1..8 printed with no marker, 9..32 =
@@ -649,10 +798,15 @@ phases:
   #       dependency, NFR-3).
   #   3.8 Pure node extraction: one helper takes the parsed configuration
   #       document and returns the `verify["suite-map"]` node or "absent", and
-  #       interprets nothing else in the document — no sibling branch is
-  #       validated, so a defect elsewhere can neither refuse the run nor remove
-  #       a valid declaration (DM-9, DEC-18, AC-F1-4). It performs no I/O; the
-  #       single bounded document read is Phase 5's adapter.
+  #       interprets nothing else in the document — no sibling branch, key, or
+  #       value is validated, so a schema or semantic defect elsewhere can
+  #       neither refuse the run nor remove a valid declaration. Tolerance stops
+  #       at the parser: an unparseable document, a duplicate key, an unsupported
+  #       YAML tag, a non-mapping root, or an over-cap document is rejected
+  #       before this helper is reached and is the unparseable-as-a-whole
+  #       refusal, because no node can be read out of a document the parser
+  #       rejects (DM-9, DEC-18, AC-F1-4, Appendix A rows 22 and 27). It performs
+  #       no I/O; the single bounded document read is Phase 5's adapter.
   #
   # AC/TC: proves the pure halves of AC-F1-1, AC-F1-2, AC-F1-3, AC-F1-4,
   #   AC-F2-1, AC-F2-3, AC-F3-1, AC-F3-5, AC-F3-6, AC-F4-1, AC-F4-2, AC-F4-3,
@@ -718,43 +872,103 @@ phases:
   #       the composition's single bounded document read. The gate-set seam is
   #       NOT wired to configuration values and the delivered default
   #       (shipped five) is unchanged (NG-7, DEC-11).
-  #   4.2 Handler order (packages/cli/src/commands/verify-gates.ts):
-  #       grammar -> readSuiteMap classification -> [absent or no-node:
-  #       undeclared, continue; unreadable / unparseable / defective node:
-  #       `config.value.invalid`, exit 1, no `data`, BEFORE any ledger,
-  #       repository, workflow, or provider read] -> readGateSet (delivered
-  #       shipped five) -> repository/lifecycle/workflow/provider reads in the
-  #       delivered order -> breadth resolution -> (unmirrored/uncorroborated:
-  #       `config.value.invalid` + the one cause line, NO append, NO capsule) ->
-  #       battery evaluation -> (narrower: `verify.narrowed-scope`,
-  #       `detail.suiteBreadth`, narrowed summary, NO append, NO capsule) ->
-  #       equality -> delivered append + capsule -> report with the two fields.
-  #       The refusal is evaluated BEFORE the verdict projection and BEFORE the
-  #       delivered append (DEC-6, DEC-7). On a member-declaring change the
-  #       breadth resolution and the narrowed refusal happen BEFORE
-  #       `crossRepositoryEvaluation`: before any member read and before the
-  #       `runtime.appendVerification(record)` call, so the data-bearing
+  #   4.2 Handler order (packages/cli/src/commands/verify-gates.ts). The
+  #       delivered prologue is grammar -> `readGateSet()` -> `readMembers(ref)`;
+  #       this phase keeps it and places the map classification immediately after
+  #       grammar, before every gates source read:
+  #         grammar
+  #         -> readSuiteMap classification (the ONE bounded committed-document
+  #            read): [absent / no node: undeclared, continue |
+  #            unreadable / unparseable / defective node: `config.value.invalid`,
+  #            exit 1, no `data`, NO `cause:` line, before any ledger,
+  #            repository, workflow, or provider read]. "Absent" is the
+  #            no-selection, no-committed-document state; a SELECTED path that is
+  #            missing or unreadable is the delivered unusable-selector refusal
+  #            (TDR-0003, see SELECTED-FILE RESIDUAL below), never undeclared.
+  #         -> readGateSet() (delivered, untouched, ZERO I/O, shipped five)
+  #         -> members.readMembers(ref) (the plan-declaration read, delivered)
+  #         -> the ONE workflow read, hoisted (see THE HOIST below)
+  #         -> breadth resolution: [unmirrored / uncorroborated:
+  #            `config.value.invalid` + the one cause line, NO append, NO
+  #            capsule | not-evaluated (invalid workflow): delivered
+  #            `verify.gates.failed` path, no breadth | equal / narrower:
+  #            continue]
+  #         -> member-declaring path: a narrower declaration refuses HERE, then
+  #            crossRepositoryEvaluation(repository/lifecycle/work-item reads and
+  #            the per-member bundle) -> report -> append -> capsule
+  #         -> member-less path: battery evaluation over the delivered reads
+  #            (repository, lifecycle, detail, check-run, open-PR, work-item —
+  #            the workflow read is the one already performed) -> (narrower:
+  #            refusal with the six-line summary) -> equality -> append +
+  #            capsule -> report with the two fields
+  #       `readGateSet` IS listed because the delivered handler invokes it; it is
+  #       a zero-I/O injected seam that returns the shipped five, it is NOT a
+  #       gates source read and NOT configuration input, and this change neither
+  #       sources it from configuration values nor moves it (NG-7, DEC-11). It
+  #       must never be confused with the one configuration-document read this
+  #       change adds.
+  #       THE HOIST (member-declaring path only): `runtime.readRepository()` and
+  #       `runtime.readWorkflow()` currently live inside `crossRepositoryEvaluation`,
+  #       and the workflow job-name set is exactly what breadth corroboration
+  #       needs. Of those two, only the WORKFLOW read is hoisted, to before the
+  #       breadth decision on that path; the already-read facts are passed in, so
+  #       `crossRepositoryEvaluation` performs only its remaining reads
+  #       (repository, lifecycle/ledger, work item) and the per-member bundle.
+  #       The repository read therefore stays AFTER the refusal on that path,
+  #       which is why a narrowed member-declaring run performs no repository
+  #       read. The workflow read stays ONE bounded read — no path reads it twice
+  #       and nothing doubles the budget (NFR-4, AC-F5-4, C-7).
+  #       MEMBER-READ POSTURE (AC-F3-6): on a narrower declaration the
+  #       per-member read bundle (`members.readMemberReads`, one bounded call per
+  #       member) is never invoked, so a throwing member recorder observes zero
+  #       calls; `runtime.appendVerification(record)` is never reached, so no
+  #       ledger append and no capsule event occur, and the data-bearing
   #       `overall: "fail"` report, every member verdict, and every
-  #       `definitionOfDone.status` are unreachable (AC-F3-6, C-17).
-  #   4.3 Document-state matrix (TC-SMAP-006): the injected read classifies
-  #       every state exactly once — absent (no repository root or no file) and
-  #       parsed-without-node are undeclared parity; present-but-unreadable,
-  #       unparseable-as-a-whole, and a defective map node are
-  #       `config.value.invalid` with one identity whichever layer (catalog
-  #       schema or map resolver) catches it; a defect elsewhere in the document
-  #       is not interpreted and an otherwise valid declaration still reports.
-  #       A structural map defect writes NO `cause:` line; the delivered
-  #       config-shaped summary/hint suppression is untouched; no document state
-  #       yields a report, breadth fact, record, capsule event, or pass except a
-  #       resolved equality. The classification is asserted before any source
-  #       read by a recording runtime (DM-9, DEC-18, NFR-10, AC-F1-4).
-  #   4.4 Narrowed refusal envelope: exit 1, no `data`, `error.kind: verify`,
-  #       `error.code: verify.narrowed-scope`, category user, retryable false,
-  #       consequence not_landed, summary = the narrowed six-line block
-  #       (member-less path) or the one-line block (member-declaring path),
+  #       `definitionOfDone.status` are unreachable. The refusal is decided
+  #       BEFORE the bundle, not after it (DEC-6, DEC-7, C-17).
+  #       SELECTED-FILE RESIDUAL (DEC-19, RSK-11): the delivered channel that
+  #       can occupy the committed slot is the `${environmentPrefix}CONFIG`
+  #       environment selector (TDR-0003; brand-derived, i.e.
+  #       `DELIVERY_OS_CONFIG` for this repository's working name). It is the
+  #       ONLY reachable selection input for this grammar: `verify` declares
+  #       `flags: []`, so `--config` is `fallback.invocation` and never reaches
+  #       the handler. When the selector names an existing readable file, that
+  #       file is the document read and classified; when it names a MISSING or
+  #       unreadable path, delivered selection semantics apply and the run is the
+  #       unusable-selector `config.value.invalid` refusal — never the
+  #       absent/undeclared parity path; when it is unset, the read resolves
+  #       `<root>/<configDirectoryName>/config.yaml`. This plan adds no selection
+  #       arm, reinterprets no selection semantics, and claims no closure of the
+  #       residual.
+  #   4.3 Document-state matrix (TC-SMAP-006, the injected boundary): the injected
+  #       read classifies every state exactly once — absent (no repository root
+  #       or no file) and parsed-without-node are undeclared parity;
+  #       present-but-unreadable, unparseable-as-a-whole, and a defective map
+  #       node are `config.value.invalid`, with the node defect decided by the
+  #       map resolver alone (the only validator for this node); a schema or
+  #       semantic defect elsewhere in the document is not interpreted and an
+  #       otherwise valid declaration still reports, while a parser-level failure
+  #       anywhere is the unparseable-as-a-whole refusal. A structural map defect
+  #       writes NO `cause:` line; the delivered config-shaped summary/hint
+  #       suppression is untouched; no document state yields a report, breadth
+  #       fact, record, capsule event, or pass except a resolved equality. The
+  #       classification is asserted before any source read by a recording
+  #       runtime (DM-9, DEC-18, NFR-10, AC-F1-4). This obligation is the HANDLER
+  #       BRANCH only: the same posture through the real adapter is Phase 5's
+  #       TC-SMAP-008, which is the only suite that can fail a fail-open adapter
+  #       mapping (P-8).
+  #   4.4 Narrowed refusal envelope: exit 1, no `data`, `error.code`
+  #       `verify.narrowed-scope`, `error.category` `user`, `error.retryable`
+  #       false, `error.consequence` `not_landed`, `error.remediationHint` the
+  #       row's hint, `error.summary` = the narrowed six-line block (member-less
+  #       path) or the one-line block (member-declaring path), and
   #       `detail.suiteBreadth` = the COMPLETE local declaration in declared
-  #       order, never truncated (<= 32 x <= 64) (DM-5, DM-6, AC-F3-1,
-  #       AC-F3-5, AC-F3-6).
+  #       order, never truncated (<= 32 x <= 64). The domain kind is an error-table
+  #       column and a handler discriminant only: NO `kind` member is added to the
+  #       envelope or to any tool result, and the kind is asserted only through
+  #       the error table (AC-NFR7-1, Appendix A rows 7 and 25). The observable
+  #       surface is exactly those five `error` fields, `detail.suiteBreadth`,
+  #       and the exit (DM-5, DM-6, AC-F3-1, AC-F3-5, AC-F3-6).
   #   4.5 CLI projection (packages/cli/src/index.ts):
   #       - `explicitDetail` honours `suiteBreadth` beside the unchanged
   #         `holder`: array of <= 32 identifiers, each 1..64 chars matching the
@@ -835,7 +1049,10 @@ phases:
   #   TC-SCTR-002, TC-SPAR-002, TC-SWRITE-001 (24 TCs). ACs: AC-F1-1, AC-F1-2,
   #   AC-F1-3, AC-F1-4, AC-F2-1, AC-F2-3, AC-F3-1, AC-F3-2, AC-F3-3, AC-F3-4,
   #   AC-F3-5, AC-F3-6, AC-F4-1, AC-F4-2, AC-F4-3, AC-F4-4, AC-F5-2,
-  #   AC-NFR1-1, AC-NFR2-1, AC-NFR5-1, AC-NFR8-1.
+  #   AC-NFR1-1, AC-NFR2-1, AC-NFR5-1, AC-NFR8-1. The REAL-ADAPTER witness of
+  #   the same document posture is Phase 5's TC-SMAP-008 (5.11, P-8); this phase
+  #   owns only the injected handler-seam witness and claims nothing about the
+  #   adapter boundary.
   #
   # Gate:
   #   pnpm typecheck
@@ -905,13 +1122,17 @@ phases:
         role: consumer
 
   # ---------------------------------------------------------------------------
-  # Phase 5 — This repository's reference declaration and the two shipped
-  # compositions that make the policy live (DoD-8, DM-8, DEC-17, DEC-20).
+  # Phase 5 — This repository's reference declaration, the one-document
+  # committed-slot read, the real-adapter classification witness, and the two
+  # shipped compositions that make the policy live (DoD-8, DM-8, DEC-17,
+  # DEC-20, DoD-11).
   #
-  # Goal: the policy must not be inert. Author the pinned document, read exactly
-  # that document through one bounded committed-slot read, prove the layer
-  # isolation, and prove the CLI and the shipped MCP `gate-report` composition
-  # end-to-end. The delivered gate-set seam stays untouched (NG-7).
+  # Goal: the policy must not be inert, and its failure posture must not depend
+  # on the injection seam. Author the pinned document, read exactly that document
+  # through one bounded committed-slot read, prove the layer isolation, prove the
+  # classification through the REAL adapter with only `FileSystemFacts` injected,
+  # and prove the CLI and the shipped MCP `gate-report` composition end-to-end.
+  # The delivered gate-set seam stays untouched (NG-7).
   #
   # Obligations:
   #   5.1 Author `<repo>/.delivery-os/config.yaml` with the pinned literal
@@ -933,32 +1154,58 @@ phases:
   #       that the file is present in the phase commit (RSK-4, DoD-8).
   #   5.3 The single-document read: add `readCommittedConfigDocument` to
   #       packages/adapters/src/file/config-source.ts (exported through
-  #       packages/adapters/src/file/index.ts). It resolves exactly one path —
-  #       the explicitly selected file when one occupies the slot (RSK-11), else
-  #       `<root>/<configDirectoryName>/config.yaml` — and performs at most ONE
-  #       bounded read of it. It classifies absent / parsed / unreadable /
-  #       unparseable and never calls the merged `acquireFileConfig` path for the
-  #       map, never reads a system, user-global, project-local, environment, or
-  #       CLI source, and never consults the merged layer tree (DM-9, DEC-18,
-  #       DEC-19, NFR-4).
-  #   5.4 Classification posture (spec v1.2 pin, replacing the withdrawn
+  #       packages/adapters/src/file/index.ts). It takes injected
+  #       `FileSystemFacts` (`exists`, `readText`) — the same injection point
+  #       production uses, which is what makes TC-SMAP-007's isolation
+  #       assertions and TC-SMAP-008's per-case fixture roots possible — and it
+  #       resolves EXACTLY ONE path: the file selected by the delivered
+  #       selected-file channel when one occupies the slot, else
+  #       `<root>/<configDirectoryName>/config.yaml`. It performs at most ONE
+  #       bounded read of that path. The selection channel is concrete, not
+  #       hypothetical: the delivered `${environmentPrefix}CONFIG` environment
+  #       selector (TDR-0003; brand-derived, i.e. `DELIVERY_OS_CONFIG` for this
+  #       repository's working name) is the ONLY reachable selection input,
+  #       because `verify` declares `flags: []` so `--config` is
+  #       `fallback.invocation` and never reaches the handler; when the selector
+  #       is unset the committed document is read. Delivered selection
+  #       semantics are PRESERVED, not reinterpreted: a selected path that is
+  #       missing or unreadable is TDR-0003's unusable-selector refusal
+  #       (`config.value.invalid`), NOT the absent/undeclared state, so
+  #       "absent" applies only where no selection exists and the committed
+  #       document is not there. It classifies absent / parsed / unreadable /
+  #       unparseable and never calls the merged `acquireFileConfig` path for
+  #       the map, never reads a system, user-global, project-local,
+  #       environment, or CLI source, and never consults the merged layer tree
+  #       (DM-9, DEC-18, DEC-19, NFR-4, RSK-11). This residual is declared, not
+  #       closed by the plan.
+  #   5.4 Classification posture (spec v1.3 pin, replacing the withdrawn
   #       fail-open pin): absent (no root, or no such file) -> undeclared and the
   #       delivered parity path; parsed without the node -> undeclared; present
   #       but unreadable, unparseable as a whole, or a defective map node ->
   #       `config.value.invalid` at exit 1 with no `data`, before any gates
-  #       source read, whichever layer catches the defect; a defect elsewhere in
-  #       the document is not interpreted, so it neither refuses the gate run nor
-  #       removes a valid declaration. A present-but-unusable document is NEVER
-  #       reclassified as undeclared, and no state yields a report except a
-  #       resolved equality (DM-9, DEC-18, NFR-10, AC-F1-4). The plan adds no
-  #       posture here; the spec's single identity is the one this phase wires.
+  #       source read. The node defect is decided by the map resolver alone — it
+  #       is the only validator for this node; the catalog branch constrains
+  #       whole-document validity for other consumers and its outcome is never
+  #       consumed here. A schema or semantic defect elsewhere in the document
+  #       (another branch, an unknown key, a forbidden value) is not interpreted,
+  #       so it neither refuses the gate run nor removes a valid declaration,
+  #       while a document-level parser failure anywhere (an unparseable
+  #       document, a duplicate key, an unsupported YAML tag, a non-mapping root,
+  #       an over-cap document) is the unparseable-as-a-whole refusal. A
+  #       present-but-unusable document is NEVER reclassified as undeclared, and
+  #       no state yields a report except a resolved equality (DM-9, DEC-18,
+  #       NFR-10, AC-F1-4, AC-NFR8-1, Appendix A rows 22 and 27). The plan adds
+  #       no posture here; the spec's single identity is the one this phase
+  #       wires.
   #   5.5 Layer posture (AC-F1-5): the map is honoured only from the
   #       project-committed slot. An overlay declaration in a system, user-global,
   #       project-local, environment, or CLI source has no effect and is not a
   #       refusal; the read isolation is structural (one source read), not a
   #       filter over a merged tree or origin evidence. The same repository
   #       therefore resolves the same map locally as in CI (DEC-19, RSK-10,
-  #       RSK-11).
+  #       RSK-11). This posture is SCOPED to the suite-map read: it decides only
+  #       where this declaration is honoured and is not a general rule for all
+  #       policy data (Appendix A row 23).
   #   5.6 Composition (packages/cli/src/production.ts, packages/cli/src/edge.ts,
   #       packages/mcp/src/serve.ts): memoize the one `readCommittedConfigDocument`
   #       result per invocation, extract `verify["suite-map"]` with the pure
@@ -973,14 +1220,19 @@ phases:
   #       per-invocation I/O beyond the one document read (NFR-4, AC-F5-4).
   #   5.7 Shipped MCP composition (DEC-20, AC-F5-6, TC-SCITE-005): the served
   #       `gate-report` runtime receives the same single-document map read. A
-  #       narrowed declaration fails the tool call with `error.kind` `verify` /
-  #       `error.code` `verify.narrowed-scope` and the same bounded summary
-  #       header, appends no record and no capsule event, and returns no report.
-  #       An undeclared or equality map leaves the delivered tool outcome
-  #       unchanged (the shipped provider reads stay `credential-unavailable`),
-  #       with no breadth field and no evidence member where the delivered shape
-  #       has none. The input schema, tool set, and tool-result shape are
-  #       unchanged; `detail.suiteBreadth` is not projected into the tool result.
+  #       narrowed declaration fails the tool call with `error.code`
+  #       `verify.narrowed-scope`, the row's `error.category`/`error.retryable`/
+  #       `error.consequence` and `error.remediationHint`, and the same bounded
+  #       summary header, and returns no report; its no-append clause is
+  #       structurally satisfied because the shipped tool engine composes no
+  #       state or capsule appender, so the no-append evidence lives where an
+  #       append surface exists (TC-SNARR-002/TC-SNARR-006/TC-SWRITE-001). No
+  #       `kind` member appears in the tool result (Appendix A row 25). An
+  #       undeclared or equality map leaves the delivered tool outcome unchanged
+  #       (the shipped provider reads stay `credential-unavailable`), with no
+  #       breadth field and no evidence member where the delivered shape has
+  #       none. The input schema, tool set, and tool-result shape are unchanged;
+  #       `detail.suiteBreadth` is not projected into the tool result.
   #   5.8 End-to-end proof (tests/structure/verify-gates-suite-map-reference
   #       .test.ts, TC-SMAP-004): assert the document path via the branding seam;
   #       read the committed document through the delivered configuration adapter;
@@ -1008,14 +1260,68 @@ phases:
   #   5.10 Live evidence: after this phase the change's own phase-9/10 gate run
   #        cites breadth instead of refusing; the PM lane records that run in
   #        pm-notes (this phase writes no pm-notes file).
+  #   5.11 REAL-ADAPTER CLASSIFICATION WITNESS (TC-SMAP-008, DoR iteration-2
+  #        finding 3; suite home
+  #        tests/behaviour/verify-gates-config-document-adapter.test.ts). Drive
+  #        the REAL `readCommittedConfigDocument` inside the real production
+  #        composition, substituting ONLY `FileSystemFacts` (`exists`,
+  #        `readText`) — never an injected `readSuiteMap` outcome, which is
+  #        Phase 4's TC-SMAP-006 layer. One per-case fixture root per state under
+  #        tests/fixtures/verify-gates/suite-map/config/adapter/<case>/
+  #        <configDirectoryName>/config.yaml, created under
+  #        `TMPDIR=$PWD/tmp/tmpdir` and disposed per case. The obligation is:
+  #          (a) absent, with no selection in play (no repository root; and a
+  #              root without the file) -> undeclared, the delivered parity
+  #              path, no `error`, no breadth field, bytes equal to the Phase-1
+  #              baseline;
+  #          (b) present but unreadable -> `config.value.invalid` at exit 1 with
+  #              no `data`, the table's own `error.summary` and
+  #              `error.remediationHint`, no `detail`, no report, no record, no
+  #              capsule event, and ZERO ledger, repository, workflow, provider,
+  #              open-PR, detail, check-run, and work-item reads — i.e. before any
+  #              gates source read. Both failure classes are produced at the
+  #              `FileSystemFacts` boundary while the classifying code stays
+  #              real: `EACCES`, and `ENOENT` after a successful existence probe;
+  #          (c) present but unparseable as a whole, one document per parser-level
+  #              class (duplicate key, unsupported YAML tag, non-mapping root,
+  #              over-cap document) -> the same refusal and the same
+  #              before-any-source-read order, and NEVER undeclared;
+  #          (d) present, parses, and carries a defective map node, one case per
+  #              AC-F1-2 class (including the `job` control-character,
+  #              line-break, and leading/trailing-whitespace classes) -> the same
+  #              refusal at exit 1, no `data`, no `detail`, no `cause:` line, no
+  #              `kind` member, zero gates source reads, no record, no capsule
+  #              event;
+  #          (e) present, parses, and carries a VALID map beside a schema or
+  #              semantic defect outside the node -> the declaration is HONOURED
+  #              (exit 0, `data.suiteBreadth`/`data.mirrorsJob` with the declared
+  #              values, no refusal attributable to the outside defect), proving
+  #              the tolerance stops at the node while (c) remains the only
+  #              document-wide refusal class;
+  #          (f) FAIL-OPEN DISCRIMINATOR (non-vacuity): an implementation that
+  #              maps any read failure or parse failure to
+  #              `{ ok: true, declared: false }` — the shape DoR iteration 1
+  #              rejected — must FAIL this suite, and so must a resolver that
+  #              treats a defective node as absent. The suite therefore cannot
+  #              pass an adapter that deletes the change's only enforcement;
+  #          (g) read accounting: exactly one bounded read of the committed
+  #              document per invocation in every state, observed on the injected
+  #              `FileSystemFacts` call log; zero other-layer reads, zero retries,
+  #              zero merged-tree reads;
+  #          (h) every state twice -> identical stdout, stderr, and exit.
+  #        The two TCs are never duplicates and neither restates the other:
+  #        TC-SMAP-006 is the handler branch over the injected seam (Phase 4);
+  #        TC-SMAP-008 is the real adapter in the production composition (P-8).
   #
-  # AC/TC: owns TC-SMAP-004, TC-SMAP-007, TC-SCITE-005 (3 TCs). ACs: AC-F1-1,
-  #   AC-F1-4, AC-F1-5, AC-F2-1, AC-F5-6, and DoD-8/DoD-11 end-to-end.
+  # AC/TC: owns TC-SMAP-004, TC-SMAP-007, TC-SMAP-008, TC-SCITE-005 (4 TCs).
+  #   ACs: AC-F1-1, AC-F1-2, AC-F1-4, AC-F1-5, AC-F2-1, AC-F5-6, AC-NFR8-1,
+  #   and DoD-8/DoD-11 end-to-end.
   #
   # Gate:
   #   pnpm typecheck
   #   bun test tests/structure/verify-gates-suite-map-reference.test.ts
   #   bun test tests/behaviour/verify-gates-config-layer-posture.test.ts
+  #   bun test tests/behaviour/verify-gates-config-document-adapter.test.ts
   #   bun test tests/structure/mcp-gate-map-composition.test.ts
   #   bun test tests/behaviour/mcp-gate-report-parity.test.ts
   #   bun test tests/structure/mcp-contract.test.ts
@@ -1028,13 +1334,15 @@ phases:
   #
   # Suites left green: verify-gates-suite-map-reference (document literals +
   #   equality + composed end-to-end run), config-layer-posture (the committed
-  #   slot is the only source), mcp-gate-map-composition (the shipped mirror is
-  #   live, not inert), MCP parity + contract, the delivered production-composition
-  #   control, config default-position and config-contract suites, the tracked
-  #   document assertion, exports-parity, ambient-globals.
+  #   slot is the only source), config-document-adapter (the real adapter maps
+  #   every unusable state to the refusal and fails a fail-open mapping),
+  #   mcp-gate-map-composition (the shipped mirror is live, not inert), MCP
+  #   parity + contract, the delivered production-composition control, config
+  #   default-position and config-contract suites, the tracked document
+  #   assertion, exports-parity, ambient-globals.
   # ---------------------------------------------------------------------------
   - id: 5
-    title: "The pinned reference declaration, the one-document committed-slot read, and the live CLI and shipped MCP compositions"
+    title: "The pinned reference declaration, the one-document committed-slot read, the real-adapter classification witness, and the live CLI and shipped MCP compositions"
     kind: delivery
     summary: "feat(GH-300): declare the repo suite map and wire the config seam"
     scope:
@@ -1047,6 +1355,7 @@ phases:
         - packages/mcp/src/serve.ts
         - tests/structure/verify-gates-suite-map-reference.test.ts
         - tests/behaviour/verify-gates-config-layer-posture.test.ts
+        - tests/behaviour/verify-gates-config-document-adapter.test.ts
         - tests/structure/mcp-gate-map-composition.test.ts
         - tests/behaviour/mcp-gate-report-parity.test.ts
         - tests/structure/mcp-contract.test.ts
@@ -1080,26 +1389,42 @@ phases:
   #       one classification (`parity` / `refusal` / `resolved-equality`);
   #       unreadable, unparseable, and defective-node states are the AC-F1-4
   #       refusal and carry NO baseline entry; the two sets are disjoint; pair
-  #       every outside-node defect (reports the delivered bytes plus the two
-  #       additive fields) with an inside-node defect (refuses), proving the
-  #       tolerance is bounded to exactly the map node and the scoped divergence
-  #       is stated, not silent.
+  #       every outside-node schema/semantic defect (reports the delivered bytes
+  #       plus the two additive fields) with an inside-node defect (refuses) and
+  #       with a parser-level failure anywhere (refuses as unparseable), proving
+  #       the tolerance is bounded to the other branches, keys, and values and
+  #       that the scoped divergence is stated, not silent (Appendix A row 27).
   #   6.3 CI-gate parity (TC-SPAR-003, AC-F5-3): the `ci-green` record (verdict,
   #       reason, sources, counts, names) is deep-equal with and without a map
   #       across green, missing-job, and red-run facts; a map job that is not a
   #       workflow job contributes no expected job, no name, and no citation
   #       entry; the map can neither pass nor fail the CI gate (DEC-10).
-  #   6.4 Read budget (TC-SPAR-004, AC-F5-4, NFR-4): instrumented call names,
-  #       arguments, and counts are identical with and without the map — one
-  #       ledger read (pm-notes + registry), one repository HEAD/branch read, one
-  #       CI-workflow read, <= 1 open-PR page (100), one resolved detail read,
-  #       one check-run page (100), one work-item read — zero retries, zero
-  #       pagination; the ONE workflow read feeds both the CI gate and the mirror
-  #       corroboration; the map adds exactly ONE bounded read of the
-  #       project-committed document, ZERO reads of any other configuration
-  #       layer, and ZERO merged-tree reads; the invalid-map case performs ZERO
-  #       source reads and the narrowed case performs exactly the same reads as a
-  #       non-narrowed run.
+  #   6.4 Read budget (TC-SPAR-004, AC-F5-4, NFR-4). Two distinct claims, stated
+  #       separately because they are not the same claim:
+  #         (a) THE SEVEN ENUMERABLE GATES SOURCES ARE IDENTICAL in both states —
+  #             with and without a declaration the instrumented call names,
+  #             arguments, and counts are one ledger read (pm-notes + registry),
+  #             one repository HEAD/branch read, one CI-workflow read, <= 1
+  #             open-PR page (100), one resolved detail read, one check-run page
+  #             (100), and one work-item read, with zero retries and zero
+  #             pagination. The single workflow read feeds both the CI gate and
+  #             the mirror corroboration; it is never issued twice.
+  #         (b) EXACTLY ONE BOUNDED CONFIGURATION-DOCUMENT READ IS ADDED, and it
+  #             is performed WITH OR WITHOUT a declaration (an absent document is
+  #             still resolved once), so the instrumented-read assertions count
+  #             exactly one such read in both states; it is the only addition,
+  #             with zero reads of any other configuration layer and zero
+  #             merged-tree reads.
+  #       A state that REFUSES on the document (unreadable, unparseable,
+  #       defective node) performs ZERO gates source reads and that one document
+  #       read. A narrowed MEMBER-LESS run performs the seven source reads plus
+  #       the one document read (the battery is evaluated, so the refusal can
+  #       carry its gate lines). A narrowed MEMBER-DECLARING run legitimately
+  #       reads LESS than a non-narrowed member run: one document read, the
+  #       delivered plan-declaration read, and the one workflow read needed for
+  #       corroboration — and ZERO member, ledger, repository, and provider
+  #       reads, because the refusal precedes the member bundle and the
+  #       repository read (AC-F3-6). No state inflates the delivered counts.
   #   6.5 Grammar (TC-SPAR-005, AC-F5-5): a third positional or an unknown flag
   #       is `fallback.invocation` before any read, with no map resolution;
   #       `positionals.max` stays 2, the three subcommands stay
@@ -1188,8 +1513,14 @@ phases:
   # story in the planning corpus, and declare the release. The lifecycle's own
   # phase 7 (`system_spec_update`) VERIFIES this work; it does not add it.
   #
-  # Obligations (exactly the spec's Appendix D list, D-1..D-16, nothing else
-  # moves):
+  # Obligations (exactly the spec's Appendix D list, D-1..D-26, nothing else
+  # moves; the register is exhaustive for the append rule and the capsule append
+  # rule, so the reconciled set MUST include feature-capsule.md,
+  # feature-verify-change-and-exit-taxonomy.md, and architecture-overview.md in
+  # addition to the files named in D-1..D-16). The one documentation edit that
+  # does NOT wait for this phase is D-7's documented error-table row, already
+  # landed in Phase 2 because the delivered two-way sync gate binds it (C-10,
+  # Appendix A row 28); this phase reconciles only D-7's surrounding prose.
   #   7.1 D-1 feature-verify-gates.md §Limitations: keep the CI gate's
   #       job-presence wording and the matrix/`if` deferrals, strike
   #       `suite-to-job mapping` from the deferred list, and state that suite
@@ -1248,19 +1579,52 @@ phases:
   #        fixture root to the list (`{cases,corpus,golden,suite-map,workflows}`)
   #        and name the suite-map fixture family as the declaration/refusal
   #        corpus.
-  #   7.17 Distribution: every changed redistributable doc keeps (or gains) its
+  #   7.17 D-17, D-18, D-19 feature-verify-gates.md append posture: quote and
+  #        reconcile the three remaining unconditional append sentences — D-17
+  #        §Bounds and read budget lines 172-173 ("The only write is one appended
+  #        gate-verification record per full battery evaluation"), D-18 §Durable
+  #        ledger projection lines 216-217 ("a cross-repository evaluation
+  #        appends exactly one `MergeGateVerificationRecord` …"), and D-19 the
+  #        cross-repository read-budget/append posture lines 317-319 ("The append
+  #        posture is unchanged — exactly one gate-verification record per full
+  #        battery evaluation …") — to "that is not refused for narrowed suite
+  #        breadth", with a narrowed refusal appending neither the record nor the
+  #        capsule event. The projection, the closed-key validation, the
+  #        non-`torn` read, the per-member reads, the no-short-circuit rule, and
+  #        the per-source budget stand unchanged.
+  #   7.18 D-20 feature-verify-gates.md §Capsule gate append line 374: scope the
+  #        `gate.outcome` append to a full battery evaluation that is not refused,
+  #        with the payload, key derivation, and non-gating disclosure unchanged.
+  #        D-21 same file §Config-declared gate set and verification record lines
+  #        407-412: scope the one appended fenced EVT-1 record to an evaluation
+  #        that is not refused, keeping the append as the only output effect on
+  #        every non-refused evaluation and the record content and `merge`
+  #        consumption unchanged.
+  #   7.19 D-22, D-23 doc/spec/features/feature-capsule.md §Producers line 129 and
+  #        §3.2 User Flows line 205: scope the `gate.outcome` append to a full
+  #        battery evaluation that is not refused and state that a
+  #        `verify.narrowed-scope` refusal appends no capsule event.
+  #   7.20 D-24, D-25 doc/spec/features/feature-verify-change-and-exit-taxonomy.md
+  #        §Goals & Success Metrics line 43 and §Command surface line 49: scope
+  #        the one-gate-verification-record sentence to a full battery evaluation
+  #        that is not refused, keeping the KPI's zero-write claims for
+  #        `verify change` and `verify deploy` unchanged.
+  #   7.21 D-26 doc/overview/architecture-overview.md line 179: scope the append
+  #        sentence to a full battery evaluation that is not refused for narrowed
+  #        suite breadth.
+  #   7.22 Distribution: every changed redistributable doc keeps (or gains) its
   #        `ados_distribution` marker inside the existing frontmatter; run
   #        `bash scripts/.tests/test-doc-distribution.sh`.
-  #   7.18 Release: one lockstep minor changeset
+  #   7.23 Release: one lockstep minor changeset
   #        `.changeset/gh-300-suite-job-mapping-minor.md` over the five
   #        publishables (spec §18, version_impact minor). No new dependency, no
   #        migration, no backfill, no record-shape change; rollback is a
   #        declaration removal plus a changeset revert (DEC-12).
-  #   7.19 Final battery: the full aggregate gate with the pm-notes environment,
+  #   7.24 Final battery: the full aggregate gate with the pm-notes environment,
   #        the branch-range commit gate, the doc-distribution guard, the
   #        changeset-group check, whitespace, and `plan validate GH-300`.
   #
-  # AC/TC: owns no TC; covers DoD-9, DoD-10, C-10, C-11, and D-1..D-16.
+  # AC/TC: owns no TC; covers DoD-9, DoD-10, C-10, C-11, and D-1..D-26.
   #
   # Gate:
   #   PATH=$PWD/node_modules/.bin:$PATH TMPDIR=$PWD/tmp/tmpdir \
@@ -1284,7 +1648,7 @@ phases:
   #   main-tools and stays open.
   # ---------------------------------------------------------------------------
   - id: 7
-    title: "Documentation reconciliation (D-1..D-16), planning bookkeeping, changeset, and release obligations"
+    title: "Documentation reconciliation (D-1..D-26), planning bookkeeping, changeset, and release obligations"
     kind: delivery
     summary: "docs(GH-300): reconcile spec and planning pages and declare release"
     scope:
@@ -1295,6 +1659,9 @@ phases:
         - doc/spec/features/feature-config-layer.md
         - doc/spec/features/feature-mcp-surface.md
         - doc/spec/features/feature-merge-verify-deploy.md
+        - doc/spec/features/feature-capsule.md
+        - doc/spec/features/feature-verify-change-and-exit-taxonomy.md
+        - doc/overview/architecture-overview.md
         - doc/quality/test-specs/test-spec-merge-verify-deploy.md
         - doc/planning/concepts/policy-as-code.md
         - doc/guides/change-lifecycle.md
