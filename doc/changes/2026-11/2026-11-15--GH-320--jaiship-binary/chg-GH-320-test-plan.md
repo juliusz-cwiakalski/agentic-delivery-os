@@ -1,17 +1,17 @@
 ---
 id: chg-GH-320-test-plan
 status: Updated
-version: 1.1
+version: 1.2
 created: 2026-11-15
 last_updated: 2026-11-15
 owners: [engineering]
 service: delivery-os
 labels: [cli, entrypoint, branding, config, state, installer, compatibility, m4]
 version_impact: minor
-summary: "Pin the two-executable identity as comparisons a test runs: `jaiship` and `delivery-os` are two declared selectors over one shared launcher composition and one resolver, with the alias observably unchanged; the prior-identity read fallback (project configuration per repository-owned layer, host state root through the one pure policy) keeps `.delivery-os` artifacts visible under the new identity, current-wins, read-only, with no second root created; one classified `prior-identity-fallback` notice per source kind per process on stderr in every mode with no payload or exit change and no collision with the delivered store warning or the `ADOS_`/`.ados` notice; a user-level local install registers an executable launcher at the brand install path, content-idempotent, working outside the checkout, failing classified when its target is gone; and the structural truth (two bins, the declared four-site non-exported identity-literal inventory — three CLI selector sites plus the unchanged MCP default — with no residual neutral default in the entrypoint module, exact inventory with per-file executable allowance, preserved installer absence) plus the documentation and the aggregate gate."
+summary: "Pin the two-executable identity as comparisons a test runs: `jaiship` and `delivery-os` are two declared selectors over one shared launcher composition and one resolver, with the alias observably unchanged (including its delivered `fallback.internal` invalid-override projection); the prior-identity read fallback (project configuration over the delivered composition-time acquisition that every composed invocation already performs, so `status --json` exercises it on the ticket's own literal surface; host state root through the one pure policy) keeps `.delivery-os` artifacts visible under the new identity, current-wins, read-only, with no second root created and no command gaining a read; one classified `prior-identity-fallback` notice per source kind per composed program (once per process in production) on stderr in every mode with no payload or exit change and no collision with the delivered store warning or the `ADOS_`/`.ados` notice; a user-level local install — run as a Bun test that shells out to `scripts/install.sh` in a scratch home and project root, with the install-time runtime and no-CLI-source preconditions failing classified — registers an executable launcher at the brand install path, content-idempotent, working outside the checkout; and the structural truth (two bins, the declared five-site non-exported identity-literal inventory under its declared scan rule — three CLI selector sites, the unchanged MCP default, and the resolver's scope-org derivation input — with no residual neutral default in the entrypoint module, exact inventory with per-file executable allowance, preserved installer absence) plus the documentation and the single executable same-device aggregate gate."
 links:
   change_spec: ./chg-GH-320-spec.md
-  implementation_plan: ./chg-GH-320-plan.yaml
+  implementation_plan: ./chg-GH-320-plan.yaml   # plan revision 1.x (1.0 at this writing)
   testing_strategy: ../../../../.ai/rules/testing-strategy.md
 ---
 
@@ -19,27 +19,27 @@ links:
 
 ## 1. Scope and Objectives
 
-This change adds a second executable identity and a read fallback across two delivered subsystems, so the risk is not a missing feature — it is a change that *looks* additive while one of its four independent truths is false. Each truth is proven as a comparison a test runs, never as a prose claim. **First, the two bins are one program.** `jaiship` and `delivery-os` are declared selectors over one shared launcher composition and one resolver; the alias keeps byte-identical `--version`/`--help` output and `.delivery-os` paths (`TC-BIN-002`, `TC-BIN-013`), the new bin answers its own identity at the process edge (`TC-BIN-001`), the help families are identical in content and order with the binary name as the only difference (`TC-BIN-003`, `TC-BIN-004`), self-description stays isolated from state, git, and configuration for three reads on both bins (`TC-BIN-005`), the install-path read answers per identity without adding a family row (`TC-BIN-006`), and the override seam behaves identically for both bins (`TC-BIN-010`..`TC-BIN-012`). **Second, the fallback can never launder an artifact.** The prior project file is read as the project-committed layer with its real path recorded as the loaded file and as the origin of every value it supplies (`TC-BIN-020`), the current file always wins (`TC-BIN-021`), layers are independent (`TC-BIN-022`), an explicit selection disables every fallback (`TC-BIN-023`), machine-global layers never fall back (`TC-BIN-024`), the prior directory is byte-identical after the run (`TC-BIN-025`), and `--strict` does not move (`TC-BIN-026`).
+This change adds a second executable identity and a read fallback across two delivered subsystems, so the risk is not a missing feature — it is a change that *looks* additive while one of its six independent truths is false. Each truth is proven as a comparison a test runs, never as a prose claim. **First, the two bins are one program.** `jaiship` and `delivery-os` are declared selectors over one shared launcher composition and one resolver; the alias keeps byte-identical `--version`/`--help` output and `.delivery-os` paths (`TC-BIN-002`, `TC-BIN-013`), the new bin answers its own identity at the process edge (`TC-BIN-001`), the help families are identical in content and order with the binary name as the only difference (`TC-BIN-003`, `TC-BIN-004`), self-description stays isolated from state, git, and configuration for three reads on both bins (`TC-BIN-005`), the install-path read answers per identity without adding a family row (`TC-BIN-006`), and the override seam behaves identically for both bins (`TC-BIN-010`..`TC-BIN-012`). **Second, the fallback can never launder an artifact.** The prior project file is read as the project-committed layer with its real path recorded as the loaded file and as the origin of every value it supplies (`TC-BIN-020`), on the ticket's literal `status --json` surface because the delivered composition-time acquisition already runs on every composed invocation and this change adds no read to any command (DEC-14), the current file always wins (`TC-BIN-021`), layers are independent (`TC-BIN-022`), an explicit selection disables every fallback (`TC-BIN-023`), machine-global layers never fall back (`TC-BIN-024`), the prior directory is byte-identical after the run (`TC-BIN-025`), and `--strict` does not move (`TC-BIN-026`).
 
-**Third, the host state keeps one root.** With no current override and no current default root, the prior root is the effective root and reads plus the ordinary store operations that follow it use it (`TC-BIN-030`, `TC-BIN-035`); no current root is created while the fallback holds (`TC-BIN-031`); an absolute current override wins and disables the fallback (`TC-BIN-032`); both roots present means current wins and the prior root is reported as not used (`TC-BIN-033`); the prior prefix's override is never read (`TC-BIN-034`); and the ordinary first-use path is untouched (`TC-BIN-036`). **Fourth, the notice is bounded and quiet.** One line per source kind per process on stderr in every mode including `--json` (`TC-BIN-040`), no repetition within an invocation (`TC-BIN-041`), nothing when no fallback applies (`TC-BIN-042`), a text contract that names both locations and the no-move fact and carries no value (`TC-BIN-043`), distinctness from the two delivered notices (`TC-BIN-044`), and no payload or exit change (`TC-BIN-045`).
+**Third, the host state keeps one root.** With no current override and no current default root, the prior root is the effective root and reads plus the ordinary store operations that follow it use it (`TC-BIN-030`, `TC-BIN-035`); no current root is created while the fallback holds (`TC-BIN-031`); an absolute current override wins and disables the fallback (`TC-BIN-032`); both roots present means current wins and the prior root is reported as not used (`TC-BIN-033`); the prior prefix's override is never read (`TC-BIN-034`); and the ordinary first-use path is untouched (`TC-BIN-036`). **Fourth, the notice is bounded and quiet.** One line per source kind per composed program (once per process in production) on stderr in every mode including `--json` (`TC-BIN-040`), no repetition from further resolutions inside the same composed program (`TC-BIN-041`), nothing when no fallback applies (`TC-BIN-042`), a text contract that names both locations and the no-move fact and carries no value (`TC-BIN-043`), distinctness from the two delivered notices (`TC-BIN-044`), and no payload or exit change (`TC-BIN-045`).
 
-**Fifth, the install posture is real and hermetic.** A local install with fetching disabled, a scratch home, and a scratch project root registers an executable launcher at the brand install path whose single target is the checkout's CLI entry (`TC-BIN-050`), a re-run rewrites nothing (`TC-BIN-051`), a removed target is one bounded line with a non-zero exit (`TC-BIN-052`), arguments, streams, environment, and exit codes pass through (`TC-BIN-053`), the installer arrays still name no binary (`TC-BIN-054`), and the whole run stays inside the scratch roots with zero network (`TC-BIN-055`). **Sixth, the structural description tells the new truth.** Two declared bins mapping to two distinct existing files (`TC-BIN-060`), exact inventory equality with per-file executable allowances (`TC-BIN-061`), exactly the declared non-exported identity literals (`TC-BIN-062`), one shared composition (`TC-BIN-063`), and every delivered guard still green *and still able to fail* (`TC-BIN-064`..`TC-BIN-067`). Documentation (`TC-BIN-070`..`TC-BIN-073`) and the aggregate gate (`TC-BIN-080`..`TC-BIN-084`) close the plan.
+**Fifth, the install posture is real and hermetic.** A local install with fetching disabled, a scratch home, and a scratch project root — driven from a Bun test that shells out to `scripts/install.sh`, so it runs in the Bun-bearing test job with no CI-workflow change (D9) — registers an executable launcher at the brand install path whose single target is the checkout's CLI entry (`TC-BIN-050`), a re-run rewrites nothing (`TC-BIN-051`), a removed target is one bounded line with a non-zero exit (`TC-BIN-052`), arguments, streams, environment, and exit codes pass through (`TC-BIN-053`), the installer arrays still name no binary (`TC-BIN-054`), the whole run stays inside the scratch roots with zero network (`TC-BIN-055`), and the install-time runtime, a source without the CLI entry, `DRY_RUN`, and an ambient override are all declared rather than implied (`TC-BIN-056`). **Sixth, the structural description tells the new truth.** Two declared bins mapping to two distinct existing files (`TC-BIN-060`), exact inventory equality with per-file executable allowances (`TC-BIN-061`), exactly the declared five-site non-exported identity-literal inventory (`TC-BIN-062`), one shared composition (`TC-BIN-063`), and every delivered guard still green *and still able to fail* (`TC-BIN-064`..`TC-BIN-067`). Documentation (`TC-BIN-070`..`TC-BIN-073`) and the aggregate gate (`TC-BIN-080`..`TC-BIN-084`) close the plan.
 
-The plan is deliberately adversarial about the failure modes the spec names. **A parity test that cannot fail**: both bins render help through one table, so parity alone is tautological — `TC-BIN-003` pairs the diff with a family-set equality against the declared twenty and a comparator mutant that removes a row and must fail by name (PAR-TP-1). **A fallback that only checks "config loaded"**: such a test passes with a laundered path, so `TC-BIN-020` and `TC-BIN-021` assert the recorded origin path identity, not just the value. **A no-second-root claim proven by a read-only command**: a command that never opens state cannot create a root, so `TC-BIN-031` drives a state-opening command and snapshots the home listing, both roots, and the parent directory. **A notice asserted in a silent mode**: `TC-BIN-040` runs `--json` and asserts the notice is present on stderr while stdout stays one parseable payload with an unchanged exit code. **An installer test that passes with a no-op installer**: `TC-BIN-050` requires the file to be absent before the run, and `TC-BIN-051` requires the first run to change the digest and the second to leave it untouched, plus a repoint from a second source. **A structure guard with an empty corpus**: every guard ships a failing negative control, including the new literal scan, which must reject an injected fourth site (`TC-BIN-062`).
+The plan is deliberately adversarial about the failure modes the spec names. **A parity test that cannot fail**: both bins render help through one table, so parity alone is tautological — `TC-BIN-003` pairs the diff with a family-set equality against the declared twenty and a comparator mutant that removes a row and must fail by name (PAR-TP-1). **A fallback that only checks "config loaded"**: such a test passes with a laundered path, so `TC-BIN-020` and `TC-BIN-021` assert the recorded origin path identity, not just the value. **A no-second-root claim proven by a read-only command**: a command that never opens state cannot create a root, so `TC-BIN-031` drives a state-opening command and snapshots the home listing, both roots, and the parent directory. **A notice asserted in a silent mode**: `TC-BIN-040` runs `--json` and asserts the notice is present on stderr while stdout stays one parseable payload with an unchanged exit code. **An installer test that passes with a no-op installer**: `TC-BIN-050` requires the file to be absent before the run, and `TC-BIN-051` requires the first run to change the digest and the second to leave it untouched, plus a repoint from a second source. **A structure guard with an empty corpus**: every guard ships a failing negative control, including the new literal scan, which must reject an injected sixth site and report a missing declared site by name (`TC-BIN-062`).
 
-This document is a verification map, not an execution claim: no command was run against a new implementation at authoring time, and phase ownership is declared in `chg-GH-320-plan.yaml` (authored in phase 4, `delivery_planning`), not asserted here. All eleven acceptance criteria are covered; there are no TODO rows and no orphan cases. Five properties are observed through a named substitute assertion (§3.5) because one half of the wording is a byte baseline, an operator's real host root, a surface the spec does not pin, or a permanent-suite rule, and one further property is a declared-inventory assertion (§3.5, `LIT-TP-1`) rather than a substitution; each is recorded, not smoothed over. The former blocking wording finding against `AC-F7-10` / DM-6 is **resolved in spec v1.1** (four declared sites, and the entrypoint's neutral default plus its `neutralWorkingName` accessor are removed rather than retained); this revision reconciles the plan with that text and no blocking finding remains.
+This document is a verification map, not an execution claim: no command was run against a new implementation at authoring time, and phase ownership is declared in `chg-GH-320-plan.yaml` (plan revision 1.x, authored in phase 4 `delivery_planning`, with the test-plan reconciliations R-A..R-G), not asserted here. All eleven acceptance criteria are covered; there are no TODO rows and no orphan cases. Five properties are observed through a named substitute assertion (§3.5) because one half of the wording is a byte baseline, an operator's real host root, a surface the spec does not pin, or a permanent-suite rule, and one further property is a declared-inventory assertion (§3.5, `LIT-TP-1`) rather than a substitution; each is recorded, not smoothed over. **This revision reconciles the plan with spec v1.2 and the DoR iter-1 decisions D5–D11:** the configuration half runs on the ticket's literal `status --json` surface via the delivered composition-time acquisition (D5/DEC-14); the invalid-override projection is the delivered `fallback.internal` containment at exit `2` for both bins (D6/DEC-11); the literal inventory is five declared sites under its scan rule (D7/DM-6); the installer integration cases live in a Bun test (D9); the single executable gate is the same-device `mktemp` invocation with the repo-local run kept as evidence (D10); and the hermeticity guard uses a static scan plus a spawned `--preload` subprocess (D11). No blocking finding remains.
 
 ### 1.1 In Scope
 
 - The two-bin process edge: the second native bin and the thin alias, both over one shared launcher composition, the per-bin declared default identity and the optional declared prior identity, and the unchanged `DELIVERY_OS_WORKING_NAME` override with the corrected lenient fallback to the invoking bin's default (F-1, F-2; AC-F1-1, AC-F1-2, AC-F2-3, AC-F2-7; DM-1; DEC-4, DEC-5, DEC-11).
 - Help and version rendering per identity: the twenty prompt-required families identical in content and order, the binary name the only difference, per-command help parity, and the state-free install-path self-description member with no added family (F-1, F-6; AC-F1-2, AC-F6-8; NFR-2, NFR-9; §8.1).
-- Prior-identity project configuration read: per-layer ordering over the two repository-owned layers, current-wins precedence, honest origins, unchanged `missing` skip, read-only semantics, no new warning kind, no `--strict` change, and no fallback for machine-global layers or an explicitly selected file (F-3; AC-F3-4; DM-2; DEC-7, DEC-8; NFR-4).
+- Prior-identity project configuration read: per-layer ordering over the two repository-owned layers, current-wins precedence, honest origins, unchanged `missing` skip, read-only semantics, no new warning kind, no `--strict` change, and no fallback for machine-global layers or an explicitly selected file — exercised through the delivered composition-time acquisition on the ticket's literal `jaiship status --json` surface, with zero acquisitions added to any command (F-3; AC-F3-4; DM-2; DEC-7, DEC-8, DEC-14; NFR-4).
 - Prior-identity host state root selection inside the one pure policy over injected existence facts: absolute current override precedence, current default root, prior default root, first-use creation, no current root created while the fallback holds, no prior-prefix environment read, and one root for the whole invocation including the ordinary store operations that follow (F-4; AC-F4-5; DM-3; DEC-9; NFR-4).
-- The prior-identity fallback notice: one concept, one classification token, the four closed reasons, once per source kind per process, stderr in every mode including `--json`, the text contract, distinctness from the pre-GH-288 store warning and the `ADOS_`/`.ados` notice, and no payload or exit change (F-5; AC-F5-6; DM-4; DEC-10; NFR-3; Appendix B).
-- The user-level local install and launcher: scratch-home local install with fetching disabled, the launcher at the brand install path with one absolute target, execution from outside the checkout, content-idempotent re-runs, repointing, the classified missing-target failure, passthrough of arguments/streams/environment/exit codes, and the unchanged delivery script/tool arrays (F-6; AC-F6-8; DM-5; DEC-12, DEC-13; NFR-5).
-- Structural truth: the two-bin manifest with two distinct existing entry files, exact inventory equality plus per-file executable allowance (including the entrypoint module's allowance losing exactly `neutralWorkingName`), the declared four-site identity-literal inventory with no residual neutral default in the entrypoint module, one shared composition, the preserved installer absence with the declared launcher step, the unchanged family list and error table, and a failing negative control per guard (F-7; AC-F7-10; DM-6; DEC-5; NFR-6).
-- Documentation truth: the four affected specification pages, the new local-install guide with its distribution marker and forbidden-literal registration, the declared divergences, and the unchanged public surfaces (F-8; AC-F8-11; NG-1..NG-4, NG-9; NFR-8).
-- The aggregate gate, the branch-range commit-message gate, the delivered regression suites, the unchanged detached-child environment contract, and suite hermeticity (AC-F7-9; NFR-7; §8.5; NFR-2, NFR-5).
+- The prior-identity fallback notice: one concept, one classification token, the four closed reasons, once per source kind per composed program (once per process in production) with a composition-owned once-state, stderr in every mode including `--json`, the text contract, distinctness from the pre-GH-288 store warning and the `ADOS_`/`.ados` notice, and no payload or exit change (F-5; AC-F5-6; DM-4; DEC-10; NFR-3; Appendix B).
+- The user-level local install and launcher: a Bun test that shells out to `scripts/install.sh` with fetching disabled in a scratch home and scratch project root, the launcher at the brand install path with one absolute target, execution from outside the checkout, content-idempotent re-runs, repointing, the classified missing-target failure, passthrough of arguments/streams/environment/exit codes, the install-time runtime and no-CLI-source classified failures with no silent skip, `DRY_RUN` writing nothing, the declared-identity query that scrubs an ambient override, and the unchanged delivery script/tool arrays (F-6; AC-F6-8; DM-5; DEC-12, DEC-13, DEC-15; NFR-5).
+- Structural truth: the two-bin manifest with two distinct existing entry files, exact inventory equality plus per-file executable allowance (including the entrypoint module's allowance losing exactly `neutralWorkingName`), the declared **five-site** identity-literal inventory under its `packages/**` string-literal scan rule (three CLI selector sites, the unchanged MCP default, and the resolver's scope-org derivation input) with no residual neutral default in the entrypoint module, one shared composition with the pinned `completion` export set, the preserved installer absence with the declared launcher step, the unchanged family list and error table, and a failing negative control per guard (F-7; AC-F7-10; DM-6; DEC-5; NFR-6).
+- Documentation truth: the four affected specification pages plus the install-set/distribution-marker page, the new local-install guide with its distribution marker and forbidden-literal registration, the four declared divergences (MCP, the shell fallback host root, the scope-derived URLs, and the installer's own `~/.ados`/`ADOS_*` surface), and the unchanged public surfaces (F-8; AC-F8-11; NG-1..NG-4, NG-9; NFR-8).
+- The single executable same-device aggregate gate (the repo-local invocation recorded as evidence only), the branch-range commit-message gate, the delivered regression suites including the conformance isolation cell the neutral-default removal touches, the unchanged detached-child environment contract, and suite hermeticity (AC-F7-9; NFR-7; §8.5; NFR-2, NFR-5; D10, D11).
 
 ### 1.2 Out of Scope & Known Gaps
 
@@ -47,41 +47,44 @@ This document is a verification map, not an execution claim: no command was run 
 - [OUT] The MCP surface's identity default and override read: `TC-BIN-072` asserts its delivered default is byte-identical; no case drives an MCP identity change (NG-4, §8.5).
 - [OUT] The `ADOS_`/`.ados` legacy adapter's mapping, text, and once-per-process discipline beyond the distinctness assertion in `TC-BIN-044` (NG-5).
 - [OUT] The pre-GH-288 store warning's trigger, layout, and wording beyond the distinctness assertion in `TC-BIN-044` (NG-6).
-- [OUT] The delivery script/tool arrays, hook examples, template set, and plugin projection beyond the absence assertions in `TC-BIN-054` and `TC-BIN-066` (NG-7).
+- [OUT] The delivery script/tool arrays, hook examples, template set, and plugin projection beyond the absence assertions in `TC-BIN-054` and `TC-BIN-066` (NG-7). The installer's own `~/.ados` / `ADOS_*` surface and the `DRY_RUN`/`--tool` behaviour beyond the assertions in `TC-BIN-056` and `TC-BIN-072` are likewise unchanged (NFR-8, DEC-15).
 - [OUT] A migration, seeding, or backfill command: `TC-BIN-025` and `TC-BIN-031` assert the *absence* of writes and creations; no case migrates anything (§19, NG-3).
 - [OUT] Removing or uninstalling a registered launcher, and registering a launcher for the alias: no case drives either (§7.2).
 - [OUT] Extending the fallback to machine-global layers or mapping prior-prefix environment names: `TC-BIN-024` and `TC-BIN-034` assert those absences (DEC-7, DEC-9).
 - [OUT] Growing the forbidden-literal seed set with the decided public name, or re-baselining the scan corpus: `TC-BIN-073` asserts the seed set is unchanged (NG-9).
 - [OUT] Merging this change before GH-310 lands: the delivery stops at an open pull request; no case exercises `main-tools` beyond `TC-BIN-081`'s commit-range base.
+- [OUT] The test-only composition helper in `packages/cli/src/edge.ts` that resolves its own state directory without prior-identity facts: the spec declares it out of the fallback path (§7.2). No case drives it as a production surface; `TC-BIN-035` asserts the one-root guarantee on the production composition instead.
+- [OUT] CI workflow changes: the installer integration cases run inside the Bun test job, so no `.github/workflows/ci.yml` edit is declared or asserted (D9).
 - [GAP-T1 — the bin files are not typechecked] `packages/cli/tsconfig.json` includes `src/**` only, so both bin files are outside the typecheck. They are therefore tested by **execution** (process edge, `TC-BIN-001`, `TC-BIN-005`, `TC-BIN-006`) and by **structure** (shebang, single delegation, declared literals; `TC-BIN-060`, `TC-BIN-062`, `TC-BIN-063`). No case claims type-level coverage of a bin.
 - [GAP-T2 — "byte-identical alias output" has no pre-change artifact] See BYTE-TP-1 (§3.5). Cases: 002.
 - [GAP-T3 — the state half's "matches the delivered state of that root"] A permanent suite must not read or write the operator's real `~/.delivery-os-state`. See LIVE-TP-1 and SURF-TP-1 (§3.5). Cases: 030, 031, 033, 035.
 - [GAP-T4 — which surface reports the effective root is delivery-bound] See SURF-TP-1 (§3.5). Cases: 030, 033, 035.
-- [GAP-T5 — documentation content checks] The "affected pages state the new reality" half is enforced through the delivered `doc-conformance` phrase table plus a new guide guard (`TC-BIN-070`, `TC-BIN-071`); prose review is attested at phase 8. See DOC-TP-1.
-- [GAP-T6 — delivery-bound names] Module paths, suite names, the shared launcher's signature, the exact `BrandingInputError` projection on a configuration-bearing command, and the launcher's literal text are delivery-bound. Behaviours, identities, exits, closed vocabularies, precedence, and AC traceability are not. A case that cannot resolve its seam fails naming the missing contract; it never skips.
+- [GAP-T5 — documentation content checks] The "affected pages state the new reality" half is enforced by a **self-contained** requirement table added inside `tests/checks/doc-conformance.test.ts` (stale + required phrases, both directions, an exact page set, and a negative control), plus the guide guard in `tests/checks/identity-docs.test.ts`. The historical GH-242 spec's phrase table and `doc/documentation-handbook.md` §16.1.1 are **not** this change's home: the delivered check pins an exact page set over the historical table, so extending it would edit a pinned fixture and a historical artifact (plan reconciliation R-A). Prose review is attested at phase 8. See DOC-TP-1.
+- [GAP-T6 — delivery-bound names] Module paths, suite names, the shared launcher's signature, the exact wording of the notice and of the installer diagnostics, and the launcher's literal text are delivery-bound. Behaviours, identities, exits, closed vocabularies, precedence, the delivered `fallback.internal` projection, and AC traceability are not. A case that cannot resolve its seam fails naming the missing contract; it never skips.
 
 ## 2. References
 
 | Reference | Role in this plan |
 |---|---|
-| [`chg-GH-320-spec.md`](./chg-GH-320-spec.md) **v1.1** | Binding source: F-1..F-8, **11 ACs** (`AC-F1-1`, `AC-F1-2`, `AC-F2-3`, `AC-F3-4`, `AC-F4-5`, `AC-F5-6`, `AC-F2-7`, `AC-F6-8`, `AC-F7-9`, `AC-F7-10`, `AC-F8-11`), NFR-1..NFR-9, DM-1..DM-6 (DM-6 = the declared **four-site** identity-literal inventory: three CLI selector sites plus the unchanged MCP default, with the entrypoint neutral default and its `neutralWorkingName` accessor removed), DEC-1..DEC-13, OQ-1..OQ-2, §5.1 capability details, §6 flows 1–5, §7 scope boundaries, §8 interfaces, §17 traceability, Appendix A (identity derivation), Appendix B (notice inventory), Appendix C (source anchors). v1.1 is the re-authored specification after the reopened specification phase: it resolves the former three-site literal conflict (`B-1`). |
-| [`chg-GH-320-pm-notes.yaml`](./chg-GH-320-pm-notes.yaml) | Context only: clarify-scope findings, the four binding PM decisions D1–D4, the documentation impact map, and the GH-310 sequencing constraint. The specification is the source of truth. |
-| `./chg-GH-320-plan.yaml` | **Authored in phase 4** (`delivery_planning`) and absent at authoring time. Phase ownership, per-phase test obligations, and task ordering are declared there; this plan declares what must be proven, not who proves it. |
+| [`chg-GH-320-spec.md`](./chg-GH-320-spec.md) **v1.2** | Binding source: F-1..F-8, **11 ACs** (`AC-F1-1`, `AC-F1-2`, `AC-F2-3`, `AC-F3-4`, `AC-F4-5`, `AC-F5-6`, `AC-F2-7`, `AC-F6-8`, `AC-F7-9`, `AC-F7-10`, `AC-F8-11`), NFR-1..NFR-9, DM-1..DM-6 (DM-6 = the declared **five-site** identity-literal inventory under its `packages/**` string-literal scan rule: three CLI selector sites, the unchanged MCP default, and the resolver's `SCOPE_ORG` scope-org derivation input; the entrypoint neutral default and its `neutralWorkingName` accessor removed), DEC-1..DEC-15 (DEC-14: the configuration half runs on the delivered composition-time acquisition and the ticket's literal `status --json` surface; DEC-15: the installer queries the declared identity with the override scrubbed and classifies its preconditions), OQ-1..OQ-2, §2.1 (the acquisition and containment facts), §5.1 capability details, §6 flows 1–5, §7 scope boundaries, §8.3/§8.5, §16 impact map, §17 traceability and verification intent, Appendix B (notice inventory). v1.2 is the DoR iter-1 remediation; it supersedes v1.1's four-site count, its CLI-visible classified-error wording, and its assumed `status` acquisition gap. |
+| [`chg-GH-320-pm-notes.yaml`](./chg-GH-320-pm-notes.yaml) | Context only: clarify-scope findings; binding decisions **D1–D11** (D5 withdrew the "status acquires nothing" premise on verified fixture evidence and records the ticket's literal surface; D6 pins the delivered `fallback.internal` projection; D7 the five-site inventory; D8 no new decision record; D9 the installer integration cases in a Bun test; D10 the single executable gate; D11 the hermeticity mechanism); the documentation impact map; the GH-310 sequencing constraint. The specification is the source of truth. |
+| `./chg-GH-320-plan.yaml` **revision 1.x** (1.0 at this writing) | Phase ownership, per-phase test obligations, and task ordering are declared there; this plan declares what must be proven, not who proves it. Its header carries the test-plan reconciliations R-A..R-G this revision absorbs: R-A the self-contained doc-conformance table, R-B the three prior-identity suites, R-C the installer suite home, R-D guide discoverability via the spec pages, R-E registry-only literal controls, R-F one phase per test file, R-G shape-only committed fixtures with scratch checkouts. |
 | [`.ai/rules/testing-strategy.md`](../../../../.ai/rules/testing-strategy.md) | `bun:test` under `tests/**/*.test.ts`; fixtures never named `*.test.ts`; suites under `tests/{structure,behaviour,golden,checks,boundaries}`; permanent suites assert the current tree, never a moving base branch; goldens regenerate only by an explicit command; `pnpm check` is the aggregate gate; a boundary-rule change without a failing fixture is a gap. |
 | [`.ai/rules/typescript.md`](../../../../.ai/rules/typescript.md) | Strict typing, injected environment/clock/randomness, data-only contracts, pure domain, adapters own I/O, injected fakes over `mock.module`. |
-| [`.ai/rules/bash.md`](../../../../.ai/rules/bash.md) | Applies to the installer test `scripts/.tests/test-install-jaiship-launcher.sh`: `test-*.sh` naming in the adjacent `.tests/` folder, `set -Eeuo pipefail`, no unquoted expansions, hermetic temp handling. |
+| [`.ai/rules/bash.md`](../../../../.ai/rules/bash.md) | Applies to the `scripts/install.sh` launcher step this change edits (strict mode, quoting, hermetic temp handling). The installer integration cases are **not** a `scripts/.tests` bash suite: they live in `tests/checks/install-launcher-installer.test.ts` so they run in the Bun-bearing test job (D9). |
 | [`doc/templates/test-plan-template.md`](../../../templates/test-plan-template.md) | Structural template for this document (sections, front matter, scenario fields). |
 | [`chg-GH-294-test-plan.md`](../2026-11-13--GH-294--provider-peak-pausing/chg-GH-294-test-plan.md) | Format precedent: verification-map framing, exact-set-equality discipline, substitute-assertion registration (§3.5), coverage-matrix integrity table, and the automation table that lists every case. |
 | **Current-truth specification pages** | [`feature-cli-entrypoint.md`](../../../spec/features/feature-cli-entrypoint.md) (one non-installed bin, the three-step identity chain, install exclusion, help/version isolation), [`feature-branding-seam.md`](../../../spec/features/feature-branding-seam.md) (twelve values, no exported literals, the `installPath` value with no consumer today), [`feature-config-layer.md`](../../../spec/features/feature-config-layer.md) (seven layers, single directory name, first-match skips), [`feature-projects.md`](../../../spec/features/feature-projects.md) (host root, project root, one policy, the pre-GH-288 store warning). |
-| **Delivered structural guards consumed under test** | `tests/structure/entrypoint-bin.test.ts`, `entrypoint-installer-absence.test.ts`, `content-inventory.test.ts` + `inventory.json` (exact file-set equality and per-file executable allowances, `cli/bin/delivery-os.ts` → `["completion"]`), `branding-seam.test.ts` (no exported module-level string constant, no `BrandIdentity` field literal or twelve-field literal outside `branding`/`contracts`, with three failing negative controls), `projects-state-scope-policy.test.ts` (one home-plus-brand composition, one `_STATE_DIR` read, injected negative controls), `tests/checks/doc-conformance.test.ts` (the §16.1.1 stale/required phrase table). |
-| **Delivered behaviour suites consumed as controls or extended** | `tests/behaviour/entrypoint-version.test.ts`, `entrypoint-help.test.ts`, `entrypoint-help-coverage.test.ts`, `entrypoint-help-isolation.test.ts`, `entrypoint-composition.test.ts`; `config-sources.test.ts`, `projects-config.test.ts`, `state-scope` suites; `daemon-start-detached.test.ts` (the child-environment allowlist pin at line 618); `legacy-adapter.test.ts`; `scripts/.tests/test-install.sh`; `tests/checks/prompt-conformance.ts`, `help-guide-coverage.ts`, `forbidden-literals.ts` + `forbidden-literals.registry.json`. |
+| **Delivered structural guards consumed under test** | `tests/structure/entrypoint-bin.test.ts`, `entrypoint-installer-absence.test.ts`, `content-inventory.test.ts` + `inventory.json` (exact file-set equality and per-file executable allowances, `cli/bin/delivery-os.ts` → `["completion"]`, and the same allowance for the new bin), `branding-seam.test.ts` (no exported module-level string constant, no `BrandIdentity` field literal or twelve-field literal outside `branding`/`contracts`, with three failing negative controls), `projects-state-scope-policy.test.ts` (one home-plus-brand composition, one `_STATE_DIR` read, injected negative controls), `tests/checks/doc-conformance.test.ts` (a pinned page set over the **historical** GH-242 phrase table — this change adds a self-contained table rather than editing it, R-A). |
+| **Delivered behaviour suites consumed as controls or extended** | `tests/behaviour/entrypoint-version.test.ts`, `entrypoint-help.test.ts`, `entrypoint-help-coverage.test.ts`, `entrypoint-help-isolation.test.ts`, `entrypoint-composition.test.ts`; `config-sources.test.ts`, `projects-config.test.ts`, `state-scope` suites; `tests/conformance/pilot/pilot-isolation.test.ts` (its neutral-identity cell moves to an injected declared default); `daemon-start-detached.test.ts` (the child-environment allowlist pin at line 618); `legacy-adapter.test.ts`; `scripts/.tests/test-install.sh` (re-run **unchanged** as a control: it calls `install_local_files` directly, outside the launcher step); `tests/checks/prompt-conformance.ts`, `help-guide-coverage.ts`, `forbidden-literals.ts` + `forbidden-literals.registry.json`. |
 | **Ticket** | GitHub issue `juliusz-cwiakalski/agentic-delivery-os#320` (milestone "M4: Public release readiness", story M4-S1a; six verbatim ACs, five tasks). |
-| **Gate-environment findings** | `.ai/memory/lessons/lesson-2026-001-ci-baseline-parity-tmpdir.md` and `chg-GH-313-pm-notes.yaml` (2026-11-14 entries): the repo-local `TMPDIR` breaks `queue-production-binding` and `projects-config` (fixtures need a temp dir outside every worktree) and a foreign-filesystem `TMPDIR` breaks `ci-baseline-parity`; a same-device temp dir outside every worktree satisfies all three. `TC-BIN-080` records both invocations. |
-| **Notices inventory** | Spec Appendix B: the new prior-identity notice beside the `ADOS_`/`.ados` legacy notice, the pre-GH-288 store warning, the configuration warning kinds, and the new launcher missing-target failure. |
+| **Gate-environment findings** | `.ai/memory/lessons/lesson-2026-001-ci-baseline-parity-tmpdir.md` and `chg-GH-313-pm-notes.yaml` (2026-11-14 entries): the repo-local `TMPDIR` breaks `queue-production-binding` and `projects-config` (fixtures need a temp dir outside every worktree) and a foreign-filesystem `TMPDIR` breaks `ci-baseline-parity`; a same-device temp dir outside every worktree satisfies all three. Per D10 the **only gate** is `TMPDIR=$(mktemp -d "$HOME/.cache/ados-check-XXXXXX") pnpm check`; the repo-local invocation is recorded evidence, never a gate (`TC-BIN-080`). |
+| **Notices inventory** | Spec Appendix B: the new prior-identity notice beside the `ADOS_`/`.ados` legacy notice, the pre-GH-288 store warning, the configuration warning kinds, the **delivered, unchanged** invalid-override `fallback.internal` failure, the new launcher missing-target failure, and the new installer launcher preconditions. |
+| [`readiness-iter-1.md`](./readiness-review/readiness-iter-1.md) | The DoR iter-1 verdict this revision remediates (findings 1, 2, 5, 8, 10–13, 20–23). Its finding 1 and 2 premises were corrected by verified fixture evidence and PM decisions D5/D6; finding 5 by D7; finding 8 by the fourth declared divergence and DEC-15; findings 10–13 and 22 by D9/D11 and the pinned `completion` difference set. |
 
 ## 3. Coverage Overview
 
-All 11 acceptance criteria map to at least one named case, and no case is an orphan. The plan carries **54 cases** in nine blocks. The mapping is intentionally uneven in one direction: a criterion whose wording spans several independent observables is covered by more than one case (`AC-F3-4` by seven, `AC-F4-5` by seven, `AC-F6-8` by seven, `AC-F7-10` by nine across manifest, inventory, literals, composition, and the delivered guards), while every case names at least one AC. Five properties carry a declared substitute assertion (§3.5) and one carries a declared-inventory assertion (`LIT-TP-1`); all are counted as covered, with the basis stated. The former blocking wording finding (`B-1`) is **resolved in spec v1.1**: DM-6 and `AC-F7-10` now declare four sites — three CLI selector sites plus the unchanged MCP default — and require the entrypoint module to hold no residual neutral identity literal, so `TC-BIN-062` asserts that declared inventory directly instead of arguing a conflicting count.
+All 11 acceptance criteria map to at least one named case, and no case is an orphan. The plan carries **55 cases** in nine blocks. The mapping is intentionally uneven in one direction: a criterion whose wording spans several independent observables is covered by more than one case (`AC-F3-4` by seven, `AC-F4-5` by seven, `AC-F6-8` by eight, `AC-F7-10` by nine across manifest, inventory, literals, composition, and the delivered guards), while every case names at least one AC. Five properties carry a declared substitute assertion (§3.5) and one carries a declared-inventory assertion (`LIT-TP-1`); all are counted as covered, with the basis stated. `B-1` was resolved in spec v1.1 and **extended in v1.2 (D7)**: DM-6 and `AC-F7-10` now declare **five** sites under a stated `packages/**` string-literal scan rule — the three CLI selector sites, the unchanged MCP default, and the resolver's `SCOPE_ORG` derivation input — with every declared site found and every found literal declared, so `TC-BIN-062` asserts that inventory and its scan rule rather than a bare count. Spec v1.2 additionally pins the ticket's literal `status --json` surface for the configuration half (D5/DEC-14) and the delivered `fallback.internal` invalid-override projection (D6/DEC-11); `TC-BIN-020` and `TC-BIN-012` follow those pins.
 
 ### 3.1 Functional Coverage (F-#, AC-#)
 
@@ -89,19 +92,19 @@ All 11 acceptance criteria map to at least one named case, and no case is an orp
 |---|---|---|---|
 | AC-F1-1 | `pnpm exec jaiship --version` prints `jaiship <version> (build <build>)` on one line with exit `0`, identically under a poisoned environment or an unreadable configuration file, with no state, git, or configuration read | TC-BIN-001, TC-BIN-005 | Covered |
 | AC-F1-2 | `jaiship --help` and `delivery-os --help` carry the same twenty families in content and order with the binary name as the only difference, and the comparison fails when a family is removed rather than passing vacuously | TC-BIN-003, TC-BIN-004, TC-BIN-067 | Covered (PAR-TP-1) |
-| AC-F2-3 | `delivery-os --version` and `--help` are byte-identical to the delivered behaviour for the same injected version and build; `delivery-os` resolves `.delivery-os` configuration and `~/.delivery-os-state` with no prior-identity fallback | TC-BIN-002, TC-BIN-013 | Covered (BYTE-TP-1) |
-| AC-F3-4 | With no `.jaiship` configuration and a `.delivery-os/config.yaml`, the prior file is read as the project-committed layer with its real path reported as the loaded file and as the origin of its values, and no write, move, copy, or deletion touches the prior directory; when both files exist the current wins and the prior is reported not used; an explicitly selected file disables every layer's fallback | TC-BIN-020, TC-BIN-021, TC-BIN-022, TC-BIN-023, TC-BIN-024, TC-BIN-025, TC-BIN-026 | Covered |
+| AC-F2-3 | `delivery-os --version` and `--help` are byte-identical to the delivered behaviour for the same injected version and build; `delivery-os` resolves `.delivery-os` configuration and `~/.delivery-os-state` with no prior-identity fallback; and an invalid override yields the delivered containment projection recorded in the alias baseline | TC-BIN-002, TC-BIN-013 | Covered (BYTE-TP-1) |
+| AC-F3-4 | With no `.jaiship` configuration and a `.delivery-os/config.yaml`, **`jaiship status --json`** reads the prior file as the project-committed layer through the delivered composition-time acquisition (which every composed invocation already performs, so no command gains a read), reports its real path as the loaded file and as the origin of its values, and performs no write, move, copy, or deletion in the prior directory; when both files exist the current wins and the prior is reported not used; an explicitly selected file disables every layer's fallback (DEC-14) | TC-BIN-020, TC-BIN-021, TC-BIN-022, TC-BIN-023, TC-BIN-024, TC-BIN-025, TC-BIN-026 | Covered |
 | AC-F4-5 | With no override, no `~/.jaiship-state`, and a populated `~/.delivery-os-state`, the prior host root is effective and the reported state matches that root while no `~/.jaiship-state` is created; an absolute `JAISHIP_STATE_DIR` wins with no fallback; when both default roots exist the current wins and the prior is reported not used | TC-BIN-030, TC-BIN-031, TC-BIN-032, TC-BIN-033, TC-BIN-034, TC-BIN-035, TC-BIN-036 | Covered (LIVE-TP-1, SURF-TP-1) |
-| AC-F5-6 | A fallback read emits exactly one notice per source kind on stderr in any mode including `--json`, beginning with the classification token and reason, naming both locations and stating nothing was moved, copied, or deleted; repeated resolutions add none; no fallback means no notice; the delivered store warning and `ADOS_`/`.ados` notice still appear as their own distinct lines; payload and exit code unchanged | TC-BIN-040, TC-BIN-041, TC-BIN-042, TC-BIN-043, TC-BIN-044, TC-BIN-045 | Covered |
-| AC-F2-7 | `DELIVERY_OS_WORKING_NAME` supplies the identity for both bins; an invalid override leaves `--version`/`--help` answering the invoking bin's default without failing while a configuration-bearing command fails closed with the resolver's classified input error and no fallback | TC-BIN-010, TC-BIN-011, TC-BIN-012, TC-BIN-014 | Covered |
-| AC-F6-8 | A hermetic local install produces an executable `~/.jaiship/bin/jaiship` whose single target is the checkout's CLI entry, `jaiship --version` works from outside the checkout, an unchanged re-run does not rewrite the launcher, and a removed target exits non-zero with one bounded line naming the target and the remedy | TC-BIN-006, TC-BIN-050, TC-BIN-051, TC-BIN-052, TC-BIN-053, TC-BIN-054, TC-BIN-055 | Covered |
+| AC-F5-6 | A fallback read emits exactly one notice per source kind **per composed program** (once per process in production) on stderr in any mode including `--json`, beginning with the classification token and reason, naming both locations and stating nothing was moved, copied, or deleted; further resolutions inside the same composed program add none; no fallback means no notice; the delivered store warning and `ADOS_`/`.ados` notice still appear as their own distinct lines; payload and exit code unchanged | TC-BIN-040, TC-BIN-041, TC-BIN-042, TC-BIN-043, TC-BIN-044, TC-BIN-045 | Covered |
+| AC-F2-7 | `DELIVERY_OS_WORKING_NAME` supplies the identity for both bins; an invalid override leaves `--version`/`--help` answering the invoking bin's default without failing, while any configuration-bearing command fails closed through the **delivered** containment identity `fallback.internal` at exit `2` (the resolver-level input error wrapped inside it, never CLI-visible) with no fallback identity substituted; the alias's projection is exactly the delivered one, summary included (DEC-11, D6) | TC-BIN-010, TC-BIN-011, TC-BIN-012, TC-BIN-014 | Covered |
+| AC-F6-8 | A hermetic local install with an ambient working-name override in the installing environment produces an executable `~/.jaiship/bin/jaiship` — the brand path, not an override-derived path — whose single target is the checkout's CLI entry, `jaiship --version` works from outside the checkout, an unchanged re-run does not rewrite the launcher, a removed target exits non-zero with one bounded line naming the target and the remedy, and a missing install-time runtime or a source tree without the CLI entry fails classified naming what is missing and writes no launcher (DEC-15) | TC-BIN-006, TC-BIN-050, TC-BIN-051, TC-BIN-052, TC-BIN-053, TC-BIN-054, TC-BIN-055, TC-BIN-056 | Covered |
 | AC-F7-9 | `pnpm check` is green including the branch-range commit-message gate and the delivered entrypoint, configuration, state-scope, daemon-mount, events-mount, installer, and content-inventory suites | TC-BIN-080, TC-BIN-081, TC-BIN-082, TC-BIN-083 | Covered |
-| AC-F7-10 | The manifest declares exactly two identities mapping to two distinct existing entry files; the inventory equals the actual file set with a per-file executable allowance; the committed identity literals are exactly the four declared sites (the three CLI selector sites plus the unchanged MCP default) with no residual neutral default in the entrypoint module; neither installer array names a binary, entrypoint, or composer while the launcher step is declared; an injected fixture makes each guard fail by name | TC-BIN-054, TC-BIN-060, TC-BIN-061, TC-BIN-062, TC-BIN-063, TC-BIN-064, TC-BIN-065, TC-BIN-066, TC-BIN-067 | Covered |
-| AC-F8-11 | The affected specification pages state the two-executable reality, the fallback and its notice, the install posture, and the host-root selection; the guide states the install path, the transitional behaviour, and every declared divergence; the public surfaces (package scope, scope org, `repositoryUrl`, `docsBaseUrl`, README, docs profile, MCP default, shell fallback) are unchanged | TC-BIN-070, TC-BIN-071, TC-BIN-072, TC-BIN-073 | Covered (DOC-TP-1) |
+| AC-F7-10 | The manifest declares exactly two identities mapping to two distinct existing entry files; the inventory equals the actual file set with a per-file executable allowance; the committed identity literals match the declared five-site inventory under the declared `packages/**` scan rule — the three CLI selector sites, the unchanged MCP default, and the resolver's scope-org derivation input — with every declared site found and every found literal declared, and no residual neutral default in the entrypoint module; neither installer array names a binary, entrypoint, or composer while the launcher step is declared; an injected fixture makes each guard fail by name | TC-BIN-054, TC-BIN-060, TC-BIN-061, TC-BIN-062, TC-BIN-063, TC-BIN-064, TC-BIN-065, TC-BIN-066, TC-BIN-067 | Covered |
+| AC-F8-11 | The affected specification pages state the two-executable reality, the fallback and its notice, the install posture **with its install-time runtime requirement and failure modes**, the **composition-time acquisition fact**, and the host-root selection; the install-set/distribution-marker page states the launcher in the install set; the guide states the install path, the transitional behaviour, and **all four** declared divergences; the public surfaces (package scope, scope org, `repositoryUrl`, `docsBaseUrl`, README, docs profile, MCP default, shell fallback, installer `ADOS_*` surface) are unchanged | TC-BIN-070, TC-BIN-071, TC-BIN-072, TC-BIN-073 | Covered (DOC-TP-1) |
 
-**Capability coverage** (every F-# has at least one TC): F-1 → 001, 003, 004, 005, 006, 063, 067; F-2 → 001, 002, 010, 011, 012, 013, 014; F-3 → 020, 021, 022, 023, 024, 025, 026; F-4 → 030, 031, 032, 033, 034, 035, 036, 065; F-5 → 040, 041, 042, 043, 044, 045; F-6 → 006, 050, 051, 052, 053, 054, 055; F-7 → 054, 060, 061, 062, 063, 064, 065, 066, 067, 073; F-8 → 070, 071, 072, 073.
+**Capability coverage** (every F-# has at least one TC): F-1 → 001, 003, 004, 005, 006, 063, 067; F-2 → 001, 002, 010, 011, 012, 013, 014; F-3 → 020, 021, 022, 023, 024, 025, 026; F-4 → 030, 031, 032, 033, 034, 035, 036, 065; F-5 → 040, 041, 042, 043, 044, 045; F-6 → 006, 050, 051, 052, 053, 054, 055, 056; F-7 → 054, 060, 061, 062, 063, 064, 065, 066, 067, 073; F-8 → 070, 071, 072, 073.
 
-**Decision coverage**: DEC-1 (fallback, not migration) → 020, 030, 035; DEC-2 (scope stays pre-freeze) → 072; DEC-3 (install posture) → 050, 052, 054; DEC-4 → 010, 013; DEC-5 → 062, 063; DEC-6 → 020, 021, 034; DEC-7 → 023, 024; DEC-8 → 020, 021, 025, 026; DEC-9 → 030, 031, 032, 033, 034, 035, 036; DEC-10 → 040, 043, 044; DEC-11 → 005, 012; DEC-12 → 050, 054; DEC-13 → 051, 052, 053.
+**Decision coverage**: DEC-1 (fallback, not migration) → 020, 030, 035; DEC-14 (ticket's literal surface, composition-time acquisition) → 020, 040; DEC-2 (scope stays pre-freeze) → 072; DEC-3 (install posture) → 050, 052, 054; DEC-4 → 010, 013; DEC-5 → 062, 063; DEC-6 → 020, 021, 034; DEC-7 → 023, 024; DEC-8 → 020, 021, 025, 026; DEC-9 → 030, 031, 032, 033, 034, 035, 036; DEC-10 → 040, 043, 044; DEC-11 → 005, 012; DEC-12 → 050, 054; DEC-13 → 051, 052, 053; DEC-15 (declared-identity query, classified installer preconditions) → 050, 056.
 
 ### 3.2 Interface Coverage (API-#, EVT-#, DM-#)
 
@@ -112,14 +115,16 @@ The specification declares no REST/HTTP endpoint (§8.1: N/A) and no event, topi
 | DM-1 Executable identity selector (per bin) | 001, 002, 010, 013, 060, 062 | Two bins, each declaring one default working name; the new bin additionally declaring one prior working name; all derived values come from the resolver; no `BrandIdentity` field or resolver change. |
 | DM-2 Prior-identity configuration acquisition input | 020, 021, 022, 023, 024 | An optional prior directory name plus a per-layer prior outcome (`read` or `not used`) with the layer and the prior path; skips, error codes, and warning kinds unchanged. |
 | DM-3 Prior-identity host-root input | 030, 032, 033, 034, 035, 036 | Two injected existence facts (current and prior default root); the policy stays pure and filesystem-free; one home-plus-directory helper and one `<PREFIX>_STATE_DIR` read (`TC-BIN-065`). |
-| DM-4 Prior-identity fallback notice | 040, 041, 042, 043, 044, 045 | One classification token `prior-identity-fallback`, four closed reasons, ≤ 1 line per source kind per process, stderr in every mode, never in a payload, never an exit change, distinct from both delivered notices. |
-| DM-5 Launcher registration | 006, 050, 051, 052, 053 | One executable file at the brand install path whose content is the runtime exec of one absolute target plus the arguments; content compared on re-run; no record written anywhere else. |
-| DM-6 Bounded identity-literal sites | 062, 063 | Exactly the declared selector sites, each non-exported; no working-name literal elsewhere in the CLI executable surface; the installer's one declared layout reference to the CLI entry file (`TC-BIN-066`). |
+| DM-4 Prior-identity fallback notice | 040, 041, 042, 043, 044, 045 | One classification token `prior-identity-fallback`, four closed reasons, ≤ 1 line per source kind **per composed program** with a composition-owned once-state, stderr in every mode, never in a payload, never an exit change, distinct from both delivered notices. |
+| DM-5 Launcher registration | 006, 050, 051, 052, 053, 056 | One executable file at the brand install path whose content is the runtime exec of one absolute target plus the arguments; content compared on re-run; no record written anywhere else; the path is queried from the executable with the ambient override scrubbed, and a missing runtime or missing CLI entry is a classified failure with no file written. |
+| DM-6 Declared identity-literal inventory | 062, 063 | Five declared sites under the `packages/**` string-literal scan rule (three CLI selector sites, non-exported; the unchanged MCP default; the resolver's `SCOPE_ORG` derivation input, declared rather than exempted); every declared site found and every found literal declared; no residual neutral default in the entrypoint module; the installer's one declared layout reference to the CLI entry file (`TC-BIN-066`). |
 | §8.1 `<binary> --version` | 001, 002, 010, 011, 012 | `<the invoking bin's binary name> <version> (build <build>)`, one line, exit `0`, no state/git/configuration read. |
 | §8.1 `<binary> --help` / `<command> --help` | 003, 004, 005 | Same families, same order, binary name the only difference; per-command help follows the invoking identity; no composition. |
 | §8.1 `<binary> --print-install-path` | 006, 010 | Brand install path for the invoking identity, one line, no other output, exit `0`, no composition, no added family row. |
 | §8.1 `<binary> <command> [options] [args]` | 045, 053 | The command's own `{0, 1, 2}` exit projection through the one composed program, unchanged by any notice. |
 | §8.1 `<binary> <uncomposed command>` | 067 | Delivered `fallback.internal` containment naming the missing composition, exit `2`; the family set and error table gain no row. |
+| §8.1 invalid-override configuration-bearing invocation | 012 | Delivered containment identity `fallback.internal` at exit `2` for both bins with the resolver-level input error wrapped inside; the alias projection (summary included) is byte-identical to its baseline; `--version`/`--help` still answer the invoking bin's declared default. |
+| §8.5 installer preconditions | 056 | Missing install-time runtime and a source without the CLI entry are classified failures naming what is missing, with no launcher written; `DRY_RUN` writes nothing; the step is independent of `--tool`; an ambient override does not redirect the install path. |
 
 ### 3.3 Non-Functional Coverage (NFR-#)
 
@@ -127,12 +132,12 @@ The specification declares no REST/HTTP endpoint (§8.1: N/A) and no event, topi
 |---|---|---|---|
 | NFR-1 | Same declared selector, override, and injected environment produce the same twelve values across repeated runs; 0 name-derived values outside the resolver; 0 exported module-level identity literals | TC-BIN-010, TC-BIN-014, TC-BIN-062 | Covered |
 | NFR-2 | `--version`, `--help`, and the install-path read perform 0 state reads, 0 git reads, 0 configuration reads, 0 writes, 0 network calls, and 0 composer invocations for both bins, including with a poisoned environment or an unreadable configuration file | TC-BIN-005, TC-BIN-084 | Covered |
-| NFR-3 | ≤ 1 notice per source kind per process; exactly 0 when no fallback applies; 0 further notices from repeated resolutions; 0 notices carrying a value, file content, or secret; ≤ 1 line and ≤ 400 characters per notice | TC-BIN-040, TC-BIN-041, TC-BIN-042, TC-BIN-043 | Covered |
-| NFR-4 | 0 writes, moves, copies, or deletions in the prior configuration directory; 0 current default root creations while the fallback holds; 0 prior-prefix override reads; 0 `--strict` changes | TC-BIN-025, TC-BIN-026, TC-BIN-031, TC-BIN-034, TC-BIN-035, TC-BIN-065 | Covered |
-| NFR-5 | Re-running an unchanged local install writes 0 files in the launcher step; the gate run performs 0 network accesses with fetching disabled and writes only under the scratch home and scratch project root | TC-BIN-050, TC-BIN-051, TC-BIN-055 | Covered |
-| NFR-6 | 2 declared executables, 2 distinct entry files, the declared bounded identity-literal sites, exact inventory equality, a per-file executable allowance for every executable file, and a failing negative control per guard | TC-BIN-060, TC-BIN-061, TC-BIN-062, TC-BIN-063, TC-BIN-064, TC-BIN-065, TC-BIN-066 | Covered |
-| NFR-7 | `pnpm check` green including the branch-range commit-message gate; 0 regressions in the delivered alias, entrypoint, configuration, state-scope, daemon-mount, events-mount, and installer suites | TC-BIN-080, TC-BIN-081, TC-BIN-082, TC-BIN-083 | Covered |
-| NFR-8 | Every remaining pre-freeze identity consumer (MCP, the delivery-script shell fallback, repository URLs, docs domain) is stated in the specification, the guide, and the change record; 0 undocumented identity paths | TC-BIN-070, TC-BIN-071, TC-BIN-072 | Covered |
+| NFR-3 | ≤ 1 notice per source kind **per composed program** (once per process in production); exactly 0 when no fallback applies; 0 further notices from repeated resolutions; 0 notices from self-description; 0 notices carrying a value, file content, or secret; ≤ 1 line and ≤ 400 characters per notice | TC-BIN-040, TC-BIN-041, TC-BIN-042, TC-BIN-043 | Covered |
+| NFR-4 | 0 writes, moves, copies, or deletions in the prior configuration directory; 0 current default root creations while the fallback holds; 0 prior-prefix override reads; 0 `--strict` changes; **0 added acquisitions on any command** | TC-BIN-020, TC-BIN-025, TC-BIN-026, TC-BIN-031, TC-BIN-034, TC-BIN-035, TC-BIN-065 | Covered |
+| NFR-5 | Re-running an unchanged local install writes 0 files in the launcher step; the gate run performs 0 network accesses with fetching disabled and writes only under the scratch home and scratch project root; 0 silent skips (a missing runtime or a source without the CLI entry is a classified failure) | TC-BIN-050, TC-BIN-051, TC-BIN-055, TC-BIN-056 | Covered |
+| NFR-6 | 2 declared executables, 2 distinct entry files, the 5 declared identity-literal sites under the declared scan rule with every declared site found and every found literal declared, exact inventory equality, a per-file executable allowance for every executable file, and a failing negative control per guard | TC-BIN-060, TC-BIN-061, TC-BIN-062, TC-BIN-063, TC-BIN-064, TC-BIN-065, TC-BIN-066 | Covered |
+| NFR-7 | `pnpm check` green under the plan's **single executable same-device** invocation, including the branch-range commit-message gate; 0 regressions in the delivered alias, entrypoint, configuration, state-scope, daemon-mount, events-mount, installer, and conformance isolation suites | TC-BIN-080, TC-BIN-081, TC-BIN-082, TC-BIN-083 | Covered |
+| NFR-8 | Every remaining pre-freeze consumer — the MCP default and override read, the delivery-script shell fallback host root, the scope-derived repository and docs URLs, and the installer's own `~/.ados` / `ADOS_*` surface — is stated in the specification, the guide, and the change record; 0 undocumented identity paths | TC-BIN-070, TC-BIN-071, TC-BIN-072 | Covered |
 | NFR-9 | `jaiship --help` and `delivery-os --help` differ only in the binary name; family rows identical in content and order | TC-BIN-003, TC-BIN-004 | Covered (PAR-TP-1) |
 
 ### 3.4 Coverage-Matrix Integrity
@@ -142,45 +147,46 @@ The specification declares no REST/HTTP endpoint (§8.1: N/A) and no event, topi
 | Acceptance criteria in the specification | 11 (`AC-F1-1`, `AC-F1-2`, `AC-F2-3`, `AC-F3-4`, `AC-F4-5`, `AC-F5-6`, `AC-F2-7`, `AC-F6-8`, `AC-F7-9`, `AC-F7-10`, `AC-F8-11`) | — |
 | Acceptance criteria with at least one case | 11 | Pass |
 | Acceptance criteria uncovered / TODO | 0 | Pass |
-| Cases in this plan | 54 (`TC-BIN-001`..`TC-BIN-084`, block-structured) | — |
-| Cases naming at least one AC (no orphans) | 54 | Pass |
+| Cases in this plan | 55 (`TC-BIN-001`..`TC-BIN-084`, block-structured; includes `TC-BIN-056`) | — |
+| Cases naming at least one AC (no orphans) | 55 | Pass |
 | Cases that are manual-only | 0 | Pass |
 | Cases with a substitute assertion recorded (§3.5) | 5 properties across 9 case references (8 distinct cases) | Declared |
 | Cases with a declared-inventory assertion (not a substitution, §3.5) | 1 property (`LIT-TP-1`) across 1 case | Pass |
 | Capabilities covered | F-1..F-8 (8/8) | Pass |
 | NFRs covered | NFR-1..NFR-9 (9/9) | Pass |
-| Interfaces covered | DM-1..DM-6 (6/6), §8.1 invocations (6/6) | Pass |
-| Decisions covered | DEC-1..DEC-13 (13/13) | Pass |
+| Interfaces covered | DM-1..DM-6 (6/6), §8.1 invocations (7/7), §8.5 installer preconditions (1/1) | Pass |
+| Decisions covered | DEC-1..DEC-15 (15/15) | Pass |
 | AC → TC direction present | §3.1 | Pass |
 | TC → AC direction present | §5.1 index and every §5.2 header | Pass |
-| Cases appearing in the Automation Plan (§7) | 54 of 54 | Pass |
-| Blocking findings | 0 (`B-1` resolved in spec v1.1) | Pass |
+| Cases appearing in the Automation Plan (§7) | 55 of 55 | Pass |
+| Blocking findings | 0 (`B-1` resolved in spec v1.1; v1.2 extends the inventory to five sites) | Pass |
+| DoR iter-1 findings remediated by this revision | 11 (1, 2, 5, 8, 10, 11, 12, 13, 20, 21, 22 — see §8.3) | Pass |
 
 ### 3.5 Declared gaps, boundaries, and assertion bases
 
 | ID | What is asserted, and how | Cases | AC / NFR |
 |---|---|---|---|
-| **BYTE-TP-1 — "byte-identical alias output"** | No pre-change artifact exists in the tree. **Substitute:** a committed baseline fixture `tests/fixtures/entrypoint/alias-baseline.json` is captured from the **pre-change** code path with an explicit documented command (the same injected version/build the case uses) before the bin refactor lands, and the post-change alias run must match it byte-for-byte for `--version` and `--help`. The fixture carries a `capturedFrom` field naming the commit. It is regenerated only deliberately, never by blanket rewrite (testing-strategy golden rule). | 002 | AC-F2-3 |
-| **LIVE-TP-1 — "the reported state matches the delivered state of that root"** | A permanent suite must not read or write the operator's real `~/.delivery-os-state` (NFR-5, NFR-2 hermeticity) and must not depend on a workstation fact. **Substitute:** the case populates a **scratch** home with a prior root whose artifact names and store facts are a byte copy of the delivered shape, seeds one recognizable delivery record, and asserts the effective root selects it and `status --json` reports the seeded facts. Equivalence to a real moved-in workstation is demonstrated by the same code path over the copied root; a one-off **read-only** verification against the real root is recorded in §10 at delivery, never in a permanent suite. | 030, 031 | AC-F4-5 |
+| **BYTE-TP-1 — "byte-identical alias output"** | No pre-change artifact exists in the tree. **Substitute:** a committed baseline fixture `tests/fixtures/entrypoint/alias-baseline.json` is captured from the **pre-change** code path with an explicit documented command (the same injected version/build the case uses) before the bin refactor lands, and the post-change alias run must match it byte-for-byte — `--version`, `--help`, and the invalid-override `fallback.internal` projection with its summary (DEC-11, D6). The fixture carries a `capturedFrom` field naming the commit. It is regenerated only deliberately, never by blanket rewrite (testing-strategy golden rule). | 002, 012 | AC-F2-3, AC-F2-7 |
+| **LIVE-TP-1 — "the reported state matches the delivered state of that root"** | A permanent suite must not read or write the operator's real `~/.delivery-os-state` (NFR-5, NFR-2 hermeticity) and must not depend on a workstation fact. **Substitute:** the case populates a **scratch** home with a prior root whose artifact names and store facts are a byte copy of the delivered shape, seeds one recognizable delivery record, and asserts the effective root selects it and `status --json` reports the seeded facts. Equivalence to a real moved-in workstation is demonstrated by the same code path over the copied root; a one-off **read-only** verification against the real root is recorded in §10 at delivery, never in a permanent suite. The configuration half uses the same construction over a fixture checkout: a scratch checkout carrying `.delivery-os/config.yaml`, driven through the delivered composition-time acquisition on `status --json` (DEC-14). | 030, 031 | AC-F4-5 |
 | **SURF-TP-1 — the effective-host-root reporting surface is delivery-bound** | The spec does not pin a payload field naming the effective root. **Substitute:** the effective root is asserted at the composition seam (the resolved value handed to the store/scope composition) **and** by where follow-on store operations land (`TC-BIN-035`), with `status --json` used for the seeded delivery facts. A case that cannot resolve either seam fails naming the missing contract. | 030, 033, 035 | AC-F4-5, NFR-3 |
-| **LIT-TP-1 — the declared four-site identity-literal inventory (spec v1.1 DM-6)** | DM-6 now declares exactly four committed identity-literal sites under `packages/**` and the absence of a neutral identity literal in the entrypoint module. **Asserted directly, not substituted:** the case compares the scan result against a **declared inventory** in two scopes — the CLI scope (exactly three selector sites: `bin/jaiship.ts` default `jaiship`, `bin/jaiship.ts` prior `delivery-os`, `bin/delivery-os.ts` default `delivery-os`, all non-exported) and the unchanged-MCP scope (exactly one site: `packages/mcp/src/serve.ts` default `delivery-os`, byte-identical to the delivered value) — and additionally asserts that `packages/cli/src/entrypoint.ts` holds no identity literal and declares no `neutralWorkingName`, and that a call with no declared default produces the declared composition error / classified resolver error rather than a substituted name. Any site outside the declared inventory fails by name. Recorded here because §3.4 counts substitutions separately; this row is a direct assertion. | 062 | AC-F7-10, NFR-1, NFR-6 |
+| **LIT-TP-1 — the declared five-site identity-literal inventory under its scan rule (spec v1.2 DM-6, D7)** | DM-6 declares the guard's rule — a `packages/**` **string-literal** scan (comments are not literals) collecting every literal byte-equal to a declared working name — and an inventory of five sites, then requires the inventory to be the assertion: every declared site found and every found literal declared. **Asserted directly, not substituted:** the case compares the scan result against the declared inventory in two scopes — the **CLI scope** (exactly three selector sites: `bin/delivery-os.ts` default `delivery-os`, `bin/jaiship.ts` default `jaiship`, `bin/jaiship.ts` prior `delivery-os`; all non-exported) and the **unchanged/inventory scope** (`packages/mcp/src/serve.ts` default `delivery-os`, byte-identical to the delivered value; and `packages/core/src/branding/index.ts` `SCOPE_ORG = "delivery-os"`, declared as a **scope-org derivation input** consumed by `docsBaseUrl`/`repositoryUrl`, byte-equal to a working name but not an identity selector, with the resolver code unchanged) — and additionally asserts that `packages/cli/src/entrypoint.ts` holds no identity literal and declares no `neutralWorkingName`, and that a call with no declared default produces the delivered `fallback.internal` containment rather than a substituted name. A sixth site, or a declared site that disappears, fails by name. Recorded here because §3.4 counts substitutions separately; this row is a direct assertion. | 062 | AC-F7-10, NFR-1, NFR-6 |
 | **PAR-TP-1 — help parity non-vacuity** | Both bins render help through one table, so a pure A/B diff passes even when a family is missing from both. **Substitute:** the case pairs the diff (binary name normalised) with a **family-set equality** against the declared `PROMPT_REQUIRED_COMMANDS` twenty in both directions, plus a comparator mutant that removes one row and one that adds an extra row; each mutant must fail by name. | 003, 067 | AC-F1-2, NFR-9 |
-| **DOC-TP-1 — "README, URLs, scope unchanged"** | A permanent suite must not diff against a moving base branch. **Substitute:** property assertions on the current tree — `packageScope`/scope org unchanged in the resolver and package manifests, `repositoryUrl`/`docsBaseUrl` still the pre-freeze values for both identities, README contains no installed-`jaiship` claim, the docs profile is absent, the MCP default and the shell fallback host root are byte-identical — plus the review-attested byte diff at phase 8. | 072 | AC-F8-11, NFR-8 |
+| **DOC-TP-1 — "README, URLs, scope unchanged"** | A permanent suite must not diff against a moving base branch. **Substitute:** property assertions on the current tree — `packageScope`/scope org unchanged in the resolver and package manifests, `repositoryUrl`/`docsBaseUrl` still the pre-freeze values for both identities, README contains no installed-`jaiship` claim, the docs profile is absent, the MCP default, the shell fallback host root, and the installer's `ADOS_HOME`/`ADOS_REPO_DIR`/`ADOS_SOURCE_DIR`/`ADOS_RAW_URL`/`ADOS_REPO_URL` values are byte-identical — plus the review-attested byte diff at phase 8. | 072 | AC-F8-11, NFR-8 |
 
 ## 4. Test Types and Layers
 
-- **Behaviour (integration over the delivered seams), `bun:test` under `tests/behaviour/`** — the majority of the plan. The two-bin process edge runs both an in-process `runEntrypoint` cell with an injected declaring default and a real subprocess cell per bin (`bun packages/cli/bin/jaiship.ts`, and `pnpm exec jaiship` for the workspace-linked cell). Configuration fallback runs over the real file acquisition with injected filesystem facts **and** over a real fixture checkout on disk, so both the pure ordering rules and the end-to-end origin report are exercised. State fallback runs over the pure policy with injected existence facts **and** over a scratch home on disk. Notices are observed on injected stderr sinks and, for one cell per source kind, on the real subprocess stderr.
-- **Structure (tree invariants), `bun:test` under `tests/structure/`** — manifest shape, entry-file existence, inventory equality and per-file executable allowances (including the entrypoint allowance's one-name retirement), the declared four-site identity-literal inventory, one shared composition, installer absence and the declared launcher step, plus the delivered branding-seam and state-scope scans extended in place. Every guard has a failing injected fixture; the established pattern is `validateSeam(root)`/`executableViolations(root, ...)`-style exported scanners driven over a temp root, so a mutant is proven against the production scanner rather than a re-implementation.
-- **Checks (guards and doc conformance), `bun:test` under `tests/checks/`** — the hermeticity counter guard for the new suites, the documentation truth guard (phrase-table rows, guide marker, registry registration), and the forbidden-literal scan controls.
-- **Bash installer test, `scripts/.tests/test-install-jaiship-launcher.sh`** — embedded assertion framework as delivered in `scripts/.tests/test-install.sh`: `mktemp -d` scratch home and scratch project root, `--no-fetch`, an isolated `HOME`, and a `PATH` shim that records any network-capable invocation (`curl`, `wget`, `git fetch|pull|clone`) so "zero network" is proven by a counter, not by the absence of an error.
-- **Measured / counted bounds** — notice counts per source kind, line length (≤ 400 characters), composer-invocation counts, write counters, and launcher digest comparisons. Absences (no write, no created root, no notice, no prior-prefix read, no second composition body) are each proven three ways per the house discipline: a recording fake or armed guard, a zero counter, and an unchanged durable record or byte-level snapshot.
-- **Not used:** `mock.module` substitution of the modules under test; real network; the operator's real `$HOME` as state; the real `~/.delivery-os-state` as a mutable fixture; real sleeps; `git fetch`/`git pull` in any installer test.
+- **Behaviour (integration over the delivered seams), `bun:test` under `tests/behaviour/`** — the majority of the plan. The two-bin process edge runs both an in-process `runEntrypoint` cell with an injected declaring default and a real subprocess cell per bin (`bun packages/cli/bin/jaiship.ts`, and `pnpm exec jaiship` for the workspace-linked cell). Configuration fallback runs through the **delivered composition-time acquisition** on `jaiship status --json` in a fixture checkout (the ticket's literal surface, DEC-14), with the pure acquisition also driven over injected filesystem facts so both the ordering rules and the end-to-end origin report are exercised. State fallback runs over the pure policy with injected existence facts **and** over a scratch home on disk. Notices are observed on injected stderr sinks and, for one cell per source kind, on the real subprocess stderr.
+- **Structure (tree invariants), `bun:test` under `tests/structure/`** — manifest shape, entry-file existence, inventory equality and per-file executable allowances (including the entrypoint allowance's one-name retirement), the declared five-site identity-literal inventory under its scan rule, one shared composition with the pinned `completion` export set, installer absence and the declared launcher step, plus the delivered branding-seam and state-scope scans extended in place. Every guard has a failing injected fixture; the established pattern is `validateSeam(root)`/`executableViolations(root, ...)`-style exported scanners driven over a temp root, so a mutant is proven against the production scanner rather than a re-implementation.
+- **Checks — installer integration, `bun:test` under `tests/checks/`** — `tests/checks/install-launcher-installer.test.ts` shells out to `scripts/install.sh` (spawned, never `mock.module`) with a `mkdtemp` scratch HOME and scratch project root, `--no-fetch`, an isolated `HOME`, and a `PATH` shim directory that records any network-capable invocation (`curl`, `wget`, `git fetch|pull|clone`), so "zero network" is proven by a counter, not by the absence of an error. It runs in the Bun-bearing test job, which is why no `scripts/.tests` shell suite and no CI-workflow change exist (D9).
+- **Checks — guards and doc conformance, `bun:test` under `tests/checks/`** — the hermeticity guard for the new suites, the documentation truth guard (the self-contained requirement table, the guide marker, registry registration), and the forbidden-literal scan controls. The hermeticity guard has two implementable halves: (a) a **static import/surface scan** over the named modules proving they reach no network API and no real-home/state acquisition; and (b) a **spawned subprocess** `bun --preload <arm-counters module> test <named suite files>` whose exit code and captured violation report are asserted (D11). Half (a) proves the surface cannot acquire; half (b) proves the executed suites do not acquire at run time. In-process arming around other suites is not used.
+- **Measured / counted bounds** — notice counts per source kind per composed program, line length (≤ 400 characters), composer-invocation counts, acquisition counters (zero added on any command), write counters, and launcher digest comparisons. Absences (no write, no created root, no notice, no prior-prefix read, no second composition body) are each proven three ways per the house discipline: a recording fake or armed guard, a zero counter, and an unchanged durable record or byte-level snapshot.
+- **Not used:** `mock.module` substitution of the modules under test; real network; the operator's real `$HOME` as state; the real `~/.delivery-os-state` as a mutable fixture; real sleeps; `git fetch`/`git pull` in any installer test; in-process counter arming wrapped around *other* suites (the preload-subprocess mechanism replaces it).
 - **The bin files are outside the typecheck.** `packages/cli/tsconfig.json` includes `src/**` only. Both bins are therefore covered by execution and structure assertions (GAP-T1), never by a claim of type-level checking.
 - **Boundaries:** no new cross-package edge is expected; `check:boundaries` runs inside the aggregate gate. If delivery introduces a declared `workspaceImports` edge, the fixture-coverage meta-check requires the negative fixture in the same change (testing-strategy fallback rule).
 
 ## 5. Test Scenarios
 
-TC IDs use the `BIN` feature prefix and follow the capability blocks of the specification: `001`–`006` the two-bin process edge and self-description; `010`–`014` identity selection and the override seam; `020`–`026` prior-identity project configuration; `030`–`036` prior-identity host state; `040`–`045` notice discipline; `050`–`055` local install and launcher; `060`–`067` structural truth; `070`–`073` documentation truth; `080`–`084` gate and cross-cutting invariants. A new sequence appends at the end of its block; an ID is never reused for a different scenario. Every ID in this plan appears exactly once in §5.1, exactly once in §5.2, and exactly once in the §7 automation table — 54 in each.
+TC IDs use the `BIN` feature prefix and follow the capability blocks of the specification: `001`–`006` the two-bin process edge and self-description; `010`–`014` identity selection and the override seam; `020`–`026` prior-identity project configuration; `030`–`036` prior-identity host state; `040`–`045` notice discipline; `050`–`056` local install and launcher; `060`–`067` structural truth; `070`–`073` documentation truth; `080`–`084` gate and cross-cutting invariants. A new sequence appends at the end of its block; an ID is never reused for a different scenario. Every ID in this plan appears exactly once in §5.1, exactly once in §5.2, and exactly once in the §7 automation table — 55 in each.
 
 ### 5.1 Scenario Index
 
@@ -194,10 +200,10 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 | TC-BIN-006 | The install-path read answers per identity without adding a family | Happy Path | Important | High | AC-F6-8, AC-F1-2; F-6; DM-5 |
 | TC-BIN-010 | `DELIVERY_OS_WORKING_NAME` governs both bins end to end | Happy Path | Critical | Critical | AC-F2-7; F-2; NFR-1; DEC-4 |
 | TC-BIN-011 | An empty override is ignored for both bins | Edge Case | Important | High | AC-F2-7; F-2; NFR-1 |
-| TC-BIN-012 | An invalid override keeps self-description usable and fails configuration closed | Negative | Critical | Critical | AC-F2-7; F-2; NFR-1; DEC-11 |
+| TC-BIN-012 | An invalid override keeps self-description usable and yields the delivered containment projection | Negative | Critical | Critical | AC-F2-7; F-2; NFR-1; DEC-11; BYTE-TP-1 |
 | TC-BIN-013 | The alias declares no prior identity and never reads forward | Regression | Critical | Critical | AC-F2-3; F-2; NFR-7; DEC-4 |
 | TC-BIN-014 | Identity resolution is deterministic across repeated runs and both entry paths | Corner Case | Important | High | AC-F2-7; F-2; NFR-1 |
-| TC-BIN-020 | The prior configuration file is read as project-committed with honest origins | Happy Path | Critical | Critical | AC-F3-4; F-3; DM-2; NFR-4; DEC-8 |
+| TC-BIN-020 | `status --json` reads the prior configuration file as project-committed with honest origins | Happy Path | Critical | Critical | AC-F3-4; F-3; DM-2; NFR-4; DEC-8, DEC-14 |
 | TC-BIN-021 | The current configuration file wins and the prior file is reported not used | Happy Path | Critical | Critical | AC-F3-4; F-3; DM-2; DEC-8 |
 | TC-BIN-022 | Repository-owned layers fall back independently | Corner Case | Important | High | AC-F3-4; F-3; DM-2; DEC-8 |
 | TC-BIN-023 | An explicitly selected file disables fallback of every layer | Negative | Critical | High | AC-F3-4; F-3; DM-2; DEC-7 |
@@ -211,33 +217,34 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 | TC-BIN-034 | Prior-prefix state overrides are never read | Negative | Critical | High | AC-F4-5; F-4; NFR-4; DEC-9 |
 | TC-BIN-035 | One effective root serves reads and the store operations that follow | Corner Case | Critical | Critical | AC-F4-5; F-4; NFR-4; DEC-9; SURF-TP-1 |
 | TC-BIN-036 | First use with neither root creates the current root and emits no notice | Regression | Important | High | AC-F4-5; F-4; DM-3; DEC-9 |
-| TC-BIN-040 | Exactly one notice per source kind per process, in every mode including `--json` | Happy Path | Critical | Critical | AC-F5-6; F-5; DM-4; NFR-3 |
-| TC-BIN-041 | Repeated configuration resolutions in one process add no notice | Corner Case | Critical | Critical | AC-F5-6; F-5; DM-4; NFR-3 |
+| TC-BIN-040 | Exactly one notice per source kind per composed program, in every mode including `--json` | Happy Path | Critical | Critical | AC-F5-6; F-5; DM-4; NFR-3; DEC-14 |
+| TC-BIN-041 | Repeated resolutions in one composed program add no notice; a second composed program emits its own | Corner Case | Critical | Critical | AC-F5-6; F-5; DM-4; NFR-3 |
 | TC-BIN-042 | No notice appears when no fallback applies, including for the alias | Negative | Critical | High | AC-F5-6; F-5; DM-4; NFR-3 |
 | TC-BIN-043 | The notice text is bounded, classified, and redaction-safe | Contract | Critical | Critical | AC-F5-6; F-5; DM-4; NFR-3 |
 | TC-BIN-044 | The new notice is distinct from the store warning and the legacy notice | Regression | Critical | Critical | AC-F5-6; F-5; DM-4; NG-5, NG-6 |
 | TC-BIN-045 | The notice changes no payload and no exit projection | Regression | Critical | Critical | AC-F5-6; F-5; DM-4; NFR-3 |
-| TC-BIN-050 | A hermetic local install registers one executable launcher at the install path | Happy Path | Critical | Critical | AC-F6-8; F-6; DM-5; NFR-5; RSK-5 |
+| TC-BIN-050 | A hermetic local install registers one executable launcher at the brand install path | Happy Path | Critical | Critical | AC-F6-8; F-6; DM-5; NFR-5; DEC-15; RSK-5 |
 | TC-BIN-051 | An unchanged re-run rewrites nothing; another source repoints the launcher | Corner Case | Critical | Critical | AC-F6-8; F-6; DM-5; NFR-5; DEC-13 |
 | TC-BIN-052 | A removed target fails classified with one bounded line and a non-zero exit | Negative | Critical | Critical | AC-F6-8; F-6; DM-5; RSK-4; DEC-13 |
 | TC-BIN-053 | The launcher passes arguments, streams, environment, and exit codes through | Contract | Critical | High | AC-F6-8; F-6; DM-5; DEC-13 |
 | TC-BIN-054 | Installer arrays still name no binary; the launcher step is declared | Regression | Critical | High | AC-F6-8, AC-F7-10; F-6, F-7; NG-7 |
-| TC-BIN-055 | The install run is hermetic: scratch roots only, zero network, real home untouched | Negative | Critical | Critical | AC-F6-8; F-6; NFR-5; RSK-5 |
+| TC-BIN-055 | The install run is hermetic: scratch roots only, zero network, real home unchanged | Negative | Critical | Critical | AC-F6-8; F-6; NFR-5; RSK-5 |
+| TC-BIN-056 | The installer's preconditions are declared: missing runtime, no-CLI source, `DRY_RUN`, `--tool`, and the ambient override | Negative | Critical | Critical | AC-F6-8; F-6; NFR-5; DEC-15 |
 | TC-BIN-060 | Two declared bins map to two distinct existing entry files | Happy Path | Critical | Critical | AC-F7-10; F-7; DM-1, DM-6; NFR-6 |
 | TC-BIN-061 | The content inventory equals the file set with per-file executable allowances, and retires exactly one entrypoint export | Regression | Critical | Critical | AC-F7-10; F-7; NFR-6 |
-| TC-BIN-062 | Identity literals are exactly the declared four sites, none exported, with no residual neutral default | Contract | Critical | Critical | AC-F7-10; F-7; DM-6; NFR-1, NFR-6; DEC-5; LIT-TP-1 |
+| TC-BIN-062 | Identity literals are exactly the declared five sites under their scan rule, none exported, with no residual neutral default | Contract | Critical | Critical | AC-F7-10; F-7; DM-6; NFR-1, NFR-6; DEC-5; LIT-TP-1 |
 | TC-BIN-063 | One shared launcher composition; neither bin duplicates the body | Contract | Critical | Critical | AC-F7-10; F-1, F-7; NFR-6; DEC-5 |
 | TC-BIN-064 | The branding seam still passes and still rejects injected violations | Regression | Critical | Critical | AC-F7-10; F-7; NFR-6 |
 | TC-BIN-065 | The state-scope policy still proves one composition and one override read | Regression | Critical | Critical | AC-F7-10; F-4, F-7; NFR-4, NFR-6 |
 | TC-BIN-066 | Installer absence is preserved and the launcher step is its own declaration | Regression | Important | High | AC-F7-10; F-7; NG-7 |
 | TC-BIN-067 | No new family row and no new error row; parity stays non-vacuous | Regression | Critical | High | AC-F1-2, AC-F7-10; F-1, F-7; NG-8; PAR-TP-1 |
-| TC-BIN-070 | The four affected specification pages state the new reality | Contract | Critical | Critical | AC-F8-11; F-8; NFR-8; DOC-TP-1 |
+| TC-BIN-070 | The four affected specification pages plus the install-set page state the new reality | Contract | Critical | Critical | AC-F8-11; F-8; NFR-8; DOC-TP-1 |
 | TC-BIN-071 | The local-install guide ships with its marker, registration, and content | Happy Path | Critical | Critical | AC-F8-11; F-8; NFR-8 |
-| TC-BIN-072 | The declared divergences are stated and the public surfaces are unchanged | Regression | Critical | Critical | AC-F8-11; F-8; NFR-8; NG-1..NG-4; DOC-TP-1 |
+| TC-BIN-072 | The four declared divergences are stated and the public surfaces are unchanged | Regression | Critical | Critical | AC-F8-11; F-8; NFR-8; NG-1..NG-4; DOC-TP-1 |
 | TC-BIN-073 | The forbidden-literal scan stays green with an unchanged seed set | Regression | Important | High | AC-F8-11; F-7, F-8; NG-9 |
-| TC-BIN-080 | The aggregate gate is green with the recorded temp-dir invocation | Happy Path | Critical | Critical | AC-F7-9; NFR-7 |
+| TC-BIN-080 | The single executable same-device aggregate gate is green; the repo-local run is recorded evidence | Happy Path | Critical | Critical | AC-F7-9; NFR-7 |
 | TC-BIN-081 | The branch-range commit-message gate reports PASS | Happy Path | Important | High | AC-F7-9; NFR-7 |
-| TC-BIN-082 | The delivered regression suites are green under the changed surface | Regression | Critical | Critical | AC-F7-9; NFR-7 |
+| TC-BIN-082 | The delivered regression suites, including the conformance isolation cell, are green under the changed surface | Regression | Critical | Critical | AC-F7-9; NFR-7 |
 | TC-BIN-083 | The detached-child environment allowlist is unchanged and still admits both identities | Corner Case | Critical | High | AC-F7-9; NFR-7; §8.5 |
 | TC-BIN-084 | The new suites are hermetic: zero network, zero real-home state, zero sleeps | Negative | Critical | Critical | AC-F1-1..AC-F8-11 (guard); NFR-2, NFR-5 |
 
@@ -384,7 +391,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Scenario Type**: Happy Path
 **Impact Level**: Important
 **Priority**: High
-**Related IDs**: AC-F6-8, AC-F1-2, F-6, DM-5
+**Related IDs**: AC-F6-8, AC-F1-2, F-6, DM-5, DEC-15
 **Test Type(s)**: Contract, Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/entrypoint-two-bins.test.ts` (new)
@@ -397,7 +404,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Steps**:
 1. Run `--print-install-path` through the `jaiship` selector; assert stdout is exactly `~/.jaiship/bin/jaiship\n`, exit `0`, stderr empty, composer invocations `0`.
 2. Repeat through the `delivery-os` selector; assert exactly `~/.delivery-os/bin/delivery-os\n`.
-3. With `DELIVERY_OS_WORKING_NAME=acme`, assert both selectors answer `~/.acme/bin/acme` (the override wins for the path too).
+3. With `DELIVERY_OS_WORKING_NAME=acme`, assert both selectors answer `~/.acme/bin/acme` (the override wins for the path too): the self-description member answers the invoking identity. The **installer** does not inherit that behaviour — it queries the path with the override removed from the child environment, so a local install always lands at the brand path (`TC-BIN-056` step 5, DEC-15); this case pins the member, not the installer's query.
 4. Assert the token does not appear in `PROMPT_REQUIRED_COMMANDS`, is not listed as a global flag in root help, and root help's family rows are unchanged by its presence (family count still 20).
 5. Assert the value is the resolver's `installPath` (prefix `~/` unexpanded) and not a shell-composed path: the same value is read from the identity resolver for the same input.
 
@@ -456,32 +463,34 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Expected Outcome**:
 - Empty and whitespace-only overrides are ignored; each bin answers its declared default; configuration path unaffected; no notice.
 
-#### TC-BIN-012 - An invalid override keeps self-description usable and fails configuration closed
+#### TC-BIN-012 - An invalid override keeps self-description usable and yields the delivered containment projection
 
-**Objective**: Prove DEC-11 and AC-F2-7: an invalid override leaves `--version`/`--help` answering the **invoking bin's** declared default identity without failing, while a configuration-bearing command fails closed with the resolver's classified input error and no fallback.
+**Objective**: Prove DEC-11 and AC-F2-7 as spec v1.2 pins them: an invalid override leaves `--version`/`--help` answering the **invoking bin's** declared default identity without failing, while any configuration-bearing command fails closed through the **delivered** containment identity `fallback.internal` at exit `2` — the resolver-level input error wrapped inside it, never surfaced as a CLI-visible classified error — with no fallback identity substituted and, for the alias, a projection byte-identical to its baseline, summary included (D6).
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F2-7, F-2, NFR-1, DEC-11
+**Related IDs**: AC-F2-7, F-2, NFR-1, DEC-11; BYTE-TP-1
 **Test Type(s)**: Negative, Contract
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/identity-override.test.ts` (new); extends `entrypoint-help-isolation.test.ts`
+**Target Layer / Location**: `tests/behaviour/identity-override.test.ts` (new); extends `entrypoint-help-isolation.test.ts`; alias baseline `tests/fixtures/entrypoint/alias-baseline.json`
 **Harness entry**: `bun test tests/behaviour/identity-override.test.ts --filter invalid-override`
 **Tags**: @backend, @behaviour, @negative
 
 **Preconditions**:
 - Invalid override set: `bad/name` (path separator), `   ` (whitespace-only), a 65-character name (too long) — at least the path-separator case is mandatory.
 - A fixture checkout with `.delivery-os/config.yaml` present, so a fallback *would* be possible if the failure were mishandled.
+- The alias baseline's invalid-override record (`capturedFrom` plus the exact envelope, summary, and exit) captured from the pre-change tree (BYTE-TP-1).
 
 **Steps**:
 1. For each bin and each invalid override, run `--version` and `--help`; assert exit `0`, the invoking bin's declared default identity in the output (`jaiship ...` / `delivery-os ...`), empty stderr, and composer invocations `0`.
-2. Run a configuration-bearing command (`status --json`) with the invalid override through each bin; assert a non-zero exit and a **classified** resolver-input failure naming the `override` field with a code from the closed `BrandingInputErrorCode` set (`path-separator`, `whitespace-only`, `too-long`, …).
-3. Assert the failure is not `fallback.internal` containment and not a silent fallback to the invoking bin's declared default: the error identity names `override`.
-4. Assert no prior-identity read occurred (zero filesystem reads of `.delivery-os`/`.jaiship` through the injected facts), no notice was emitted, and no state root was opened.
-5. Assert the self-description output with the invalid override equals the self-description output with no override for the same bin.
+2. For each bin and each invalid override, run a configuration-bearing command (`status --json`) **and** one state-opening configuration-bearing command (`daemon status`); assert exit `2` and the delivered containment identity `fallback.internal`, with the summary naming the missing composition.
+3. Assert the projection is **not** a CLI-visible classified resolver error: no `override` field and no `BrandingInputErrorCode` value appears on either stream, and the envelope's code is exactly `fallback.internal`.
+4. For the alias, compare the whole projection (exit, envelope code, summary text) byte-for-byte with its baseline record; assert it is unchanged, so the alias keeps 0 observable behaviour change on this path (D6).
+5. Assert no fallback identity was substituted and no prior-identity read occurred: the injected filesystem facts show zero reads of `.delivery-os`/`.jaiship` configuration, no notice is emitted, and no state root is opened.
+6. Assert the self-description output with the invalid override equals the self-description output with no override for the same bin.
 
 **Expected Outcome**:
-- Self-description always answers the invoking bin's default; the configuration path fails closed with the classified `override` error; no fallback, no notice, no state.
+- Self-description always answers the invoking bin's declared default; configuration-bearing commands of both bins exit `2` with the delivered `fallback.internal` containment and its delivered summary; the alias projection matches its baseline exactly; no classified resolver error is exposed; no fallback, notice, read, or state.
 
 #### TC-BIN-013 - The alias declares no prior identity and never reads forward
 
@@ -535,32 +544,36 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Expected Outcome**:
 - Identical values per cell across repetitions and paths; no cwd/home dependence; resolver is the single derivation point.
 
-#### TC-BIN-020 - The prior configuration file is read as project-committed with honest origins
+#### TC-BIN-020 - `status --json` reads the prior configuration file as project-committed with honest origins
 
-**Objective**: Prove the visible half of AC-F3-4: with no `.jaiship` configuration and a `.delivery-os/config.yaml`, the prior file is read **as the project-committed layer**, its real path is the loaded file, and every value it supplies reports that path as origin.
+**Objective**: Prove the visible half of AC-F3-4 **on the ticket's literal surface** (DEC-14): with no `.jaiship` configuration and a `.delivery-os/config.yaml`, a `jaiship status --json` invocation in a fixture checkout runs the delivered composition-time configuration acquisition, reads the prior file **as the project-committed layer**, records its real path as the loaded file and as the origin of every value it supplies, and emits one `config-read` notice — while no command gains an acquisition.
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F3-4, F-3, DM-2, NFR-4, DEC-8
+**Related IDs**: AC-F3-4, F-3, DM-2, NFR-4, DEC-8, DEC-14
 **Test Type(s)**: Integration
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/prior-identity-config-fallback.test.ts` (new); fixture checkout `tests/fixtures/entrypoint/prior-identity/config-only/.delivery-os/config.yaml`
+**Target Layer / Location**: `tests/behaviour/prior-identity-config-fallback.test.ts` (new); scratch checkout materialised from `tests/fixtures/entrypoint/prior-identity/config-only/` (shape only, `git init` + marker per case)
 **Harness entry**: `bun test tests/behaviour/prior-identity-config-fallback.test.ts --filter prior-read`
 **Tags**: @backend, @behaviour, @config, @fallback
 
 **Preconditions**:
-- A fixture checkout with a real git root, no `.jaiship/` directory, and `.delivery-os/config.yaml` declaring at least two keys (one typed, one unrelated) with distinguishable values.
-- File acquisition runs with production filesystem facts over the fixture root (real disk), and the pure acquisition also runs with injected facts for the ordering half.
+- A **scratch** checkout materialised per case from the committed shape: `git init`, the identity marker, no `.jaiship/` directory, and `.delivery-os/config.yaml` declaring at least two keys (one typed, one unrelated) with distinguishable values.
+- The composition is built through the production composition, and the acquisition is instrumented with a counting filesystem-fact wrapper.
+- A control invocation on a checkout with no `.delivery-os` directory, to count the same command's baseline acquisitions.
 
 **Steps**:
-1. Resolve configuration for the `jaiship` identity in the fixture checkout.
-2. Assert exactly one source fact carries layer `project-committed`, and its `file` is the absolute `.delivery-os/config.yaml` path (not a synthesized `.jaiship` path).
-3. Assert each value supplied by that file reports the same absolute prior path through the delivered origin label; assert no origin reads `.jaiship/config.yaml`.
-4. Assert the fallback outcome records `read` for the project-committed layer with the prior path, and that the skip list contains no new reason (project-committed is not also `missing`).
-5. Run `jaiship status --json`; assert exit `0`, a single parseable payload, and stderr carrying exactly one `prior-identity-fallback: config-read` line.
+1. Run `jaiship status --json` in the scratch checkout; assert exit `0` and exactly one parseable payload.
+2. Assert the composition-time acquisition ran (a non-zero acquisition counter) and that it completed **before** the handler ran (ordering asserted by the counter's position relative to handler entry).
+3. Assert exactly one source fact carries layer `project-committed`, and its `file` is the absolute `.delivery-os/config.yaml` path (not a synthesized `.jaiship` path).
+4. Assert each value supplied by that file reports the same absolute prior path through the delivered origin label; assert no origin reads `.jaiship/config.yaml`.
+5. Assert the fallback outcome records `read` for the project-committed layer with the prior path, and that the skip list contains no new reason (project-committed is not also `missing`).
+6. Assert stderr carries exactly one `prior-identity-fallback: config-read` line naming both locations, and that stdout carries no notice text.
+7. Compare the acquisition count with the control invocation's count and assert equality — the change adds **zero** acquisitions to `status` (NFR-4, DEC-14).
+8. Probe that `jaiship config --json` is **not** a usable surface: it answers `fallback.internal` at exit `2` because `config` is not prompt-required. This is asserted as the reason the ticket's surface is `status`, so no case may rely on `config`.
 
 **Expected Outcome**:
-- Prior file read as project-committed, real path as loaded file and as origin of every value, one `config-read` notice, unchanged payload shape and exit.
+- Prior file read as project-committed through the delivered composition-time acquisition on `status --json`; real path as loaded file and as origin of every value; one `config-read` notice; unchanged payload shape and exit; zero added acquisitions; `config --json` proven unreachable.
 
 #### TC-BIN-021 - The current configuration file wins and the prior file is reported not used
 
@@ -898,9 +911,9 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Expected Outcome**:
 - Ordinary first use for both identities; current root created; no notice; no prior path involvement.
 
-#### TC-BIN-040 - Exactly one notice per source kind per process, in every mode including `--json`
+#### TC-BIN-040 - Exactly one notice per source kind per composed program, in every mode including `--json`
 
-**Objective**: Prove AC-F5-6's cardinality and channel: one line per source kind per process, on stderr, in every mode including `--json`, with the payload untouched.
+**Objective**: Prove AC-F5-6's cardinality and channel: one line per source kind **per composed program** (once per process in production), on stderr, in every mode including `--json`, with the payload untouched — observed on `status --json` in a fixture checkout that carries `.delivery-os/config.yaml`, so the configuration half actually fires (DEC-14).
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
@@ -912,11 +925,11 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Tags**: @backend, @behaviour, @notice
 
 **Preconditions**:
-- A fixture where both halves fall back (prior config file + prior host root), in one scratch checkout/home.
+- A fixture where both halves fall back: a scratch checkout carrying `.delivery-os/config.yaml` (so the composition-time acquisition reads it) plus a scratch home with a populated prior host root.
 - A control fixture where neither falls back.
 
 **Steps**:
-1. Run `jaiship status --json`; capture stdout and stderr separately.
+1. Run `jaiship status --json` in the fallback fixture; capture stdout and stderr separately.
 2. Assert stderr has exactly two lines: one `prior-identity-fallback: config-read …`, one `prior-identity-fallback: state-read …`; assert no third line and no duplicate token+reason.
 3. Assert stdout is exactly one parseable JSON payload containing no occurrence of `prior-identity-fallback`.
 4. Run the same fixture through the human `status` mode; assert the same two stderr lines and that the human text contains no notice text.
@@ -926,31 +939,32 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Expected Outcome**:
 - Exactly one line per source kind, on stderr, in scripted and interactive modes; never in the payload; zero when no fallback applies.
 
-#### TC-BIN-041 - Repeated configuration resolutions in one process add no notice
+#### TC-BIN-041 - Repeated resolutions in one composed program add no notice; a second composed program emits its own
 
-**Objective**: Prove the once-per-process half of NFR-3: additional resolutions inside the same invocation add no further notice, and a new process emits it again.
+**Objective**: Prove the once-per-source-per-**composed-program** semantics of NFR-3 and DEC-10: the once-state lives in the composition (the delivered legacy adapter's pattern), never in a process global, so further resolutions inside one composed program emit nothing while a second independently composed program in the same process emits its own once — and a fresh process emits again.
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F5-6, F-5, DM-4, NFR-3
+**Related IDs**: AC-F5-6, F-5, DM-4, NFR-3, DEC-10
 **Test Type(s)**: Corner Case, Integration
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/prior-identity-notice.test.ts` (new); uses the composition's once-per-source notice state owner
+**Target Layer / Location**: `tests/behaviour/prior-identity-notice.test.ts` (new); the composition-owned notice state owner
 **Harness entry**: `bun test tests/behaviour/prior-identity-notice.test.ts --filter repeat-resolution`
 **Tags**: @backend, @behaviour, @notice
 
 **Preconditions**:
-- A composed program where two different handlers resolve configuration in the same process (or a handler that resolves twice), with the notice owner created once.
+- A composed program built over the fallback fixture (scratch checkout with `.delivery-os/config.yaml` plus a seeded prior host root), with the notice owner created once per composition.
 - A stderr sink that records every write with a sequence number.
 
 **Steps**:
-1. In one process, invoke the composed program twice for a configuration-bearing command on the fallback fixture; assert exactly one `config-read` line and exactly one `state-read` line across both invocations.
-2. Assert the second invocation's payload is identical to the first (nothing suppressed beyond the notice).
-3. In a second process (same fixture), assert the notice is emitted again (once per process, not once per machine).
-4. Assert the notice owner rejects a second emission for the same source kind (an armed guard that counts attempted emissions versus accepted ones).
+1. Inside **one** composed program, resolve configuration twice (two argument vectors or two handler invocations over the same composition); assert exactly one `config-read` line and exactly one `state-read` line across both.
+2. Assert each invocation's payload is identical to the other (nothing suppressed beyond the notice).
+3. Build a **second** composed program in the same process over the same fixture; run it once; assert it emits its own `config-read` and `state-read` lines (the once-state is composition-owned, not process-global), so the total rises to two per kind.
+4. Run a third invocation in a **fresh subprocess** over the same fixture; assert it emits again (once per composed program, and in production once per process).
+5. Assert the notice owner rejects a second emission for the same source kind within one composition (an armed guard counting attempted versus accepted emissions), so the suppression is provable rather than incidental.
 
 **Expected Outcome**:
-- One emission per source kind per process; no further lines on repeat resolutions; re-emission in a new process; the guard proves the suppression is real.
+- One emission per source kind per composed program; no further lines from repeat resolutions inside it; a second composed program and a new process each emit their own; the owner guard proves the suppression.
 
 #### TC-BIN-042 - No notice appears when no fallback applies, including for the alias
 
@@ -966,12 +980,13 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Tags**: @backend, @behaviour, @notice, @negative
 
 **Preconditions**:
-- Four fixtures: current config + current root only; no config + no root; prior config only with current config also present (shadowed — this *does* notice, so excluded from the silence set); alias with prior-identity artifacts absent.
+- Four fixtures: current config + current root only; no config + no root; prior config only with current config also present (shadowed — this *does* notice, so it is excluded from the silence set); alias with prior-identity artifacts absent.
+- Each fixture checkout carries the intended `.jaiship`/`.delivery-os` shape, because `status --json` runs the composition-time acquisition and reads whatever is there (DEC-14).
 
 **Steps**:
 1. For each silence fixture, run `status --json` through the relevant bin; assert stderr contains no `prior-identity-fallback` token.
 2. Assert the alias run against a checkout with only `.delivery-os` artifacts emits no notice (it declares no prior identity).
-3. Assert an invocation with neither artifact emits no notice and no warning (first use, delivered behaviour).
+3. Assert an invocation with neither artifact emits no notice and no warning (first use, delivered behaviour), and that a self-description invocation (`--version`, `--help`, `--print-install-path`) never emits one even in the fallback fixture, because those reads acquire nothing (NFR-2).
 4. Assert the positive control in the same suite still emits (so the assertion is not vacuous).
 
 **Expected Outcome**:
@@ -1047,7 +1062,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Tags**: @backend, @behaviour, @regression
 
 **Preconditions**:
-- Two paired fixtures that resolve to the **same logical facts**: (a) current-identity artifacts with identical content (no fallback), (b) prior-identity artifacts (fallback), with paths normalised in the comparison.
+- Two paired scratch checkouts that resolve to the **same logical facts**: (a) current-identity artifacts with identical content (no fallback), (b) prior-identity artifacts (fallback), each carrying a `.delivery-os`/`.jaiship` config file so the composition-time acquisition fires on `status --json`, with paths normalised in the comparison (DEC-14).
 - A failing command fixture producing a delivered exit `1` and one producing exit `2`.
 
 **Steps**:
@@ -1060,34 +1075,37 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Expected Outcome**:
 - Byte-equivalent payloads after path normalisation, identical exit projections, zero notice footprint on stdout or in envelopes.
 
-#### TC-BIN-050 - A hermetic local install registers one executable launcher at the install path
+#### TC-BIN-050 - A hermetic local install registers one executable launcher at the brand install path
 
-**Objective**: Prove the first clause of AC-F6-8: a local install with fetching disabled, a scratch home, and a scratch project root creates an executable launcher at the brand install path whose single target is that checkout's CLI entry.
+**Objective**: Prove the first clause of AC-F6-8 and DEC-15: a local install with fetching disabled, a scratch home, a scratch project root, and an **ambient working-name override in the installing environment** creates an executable launcher at the brand install path (`~/.jaiship/bin/jaiship`, not an override-derived path) whose single target is that checkout's CLI entry; the installer asks the executable's declared identity with the override removed from that child's environment.
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F6-8, F-6, DM-5, NFR-5, RSK-5
+**Related IDs**: AC-F6-8, F-6, DM-5, NFR-5, DEC-15, RSK-5
 **Test Type(s)**: Integration, E2E
 **Automation Level**: Automated
-**Target Layer / Location**: `scripts/.tests/test-install-jaiship-launcher.sh` (new); structural half in `tests/structure/install-launcher.test.ts` (new)
-**Harness entry**: `bash scripts/.tests/test-install-jaiship-launcher.sh`
-**Tags**: @bash, @installer, @e2e
+**Target Layer / Location**: `tests/checks/install-launcher-installer.test.ts` (new, Bun test that spawns `scripts/install.sh`); structural half in `tests/structure/install-launcher.test.ts` (new)
+**Harness entry**: `bun test tests/checks/install-launcher-installer.test.ts --filter register`
+**Tags**: @backend, @checks, @installer, @e2e
 
 **Preconditions**:
-- `mktemp -d` scratch HOME and scratch project root (a git repository with one commit); the real `$HOME` never exported or read.
-- A `PATH` shim directory first on `PATH` recording `curl`, `wget`, `git fetch`, `git pull`, `git clone` invocations.
-- Precondition assertion: `$SCRATCH_HOME/.jaiship/bin/jaiship` does **not** exist.
+- `mkdtemp` scratch HOME and scratch project root (the latter `git init`-ed with one commit); the real `$HOME` is never exported or read.
+- `bun` resolvable on the spawned `PATH` (the install-time runtime requirement, DEC-15), plus a `PATH` shim directory first on `PATH` recording `curl`, `wget`, `git fetch`, `git pull`, `git clone`.
+- Ambient `DELIVERY_OS_WORKING_NAME=acme` in the spawned environment, to prove the install is not redirected.
+- Precondition assertion: `$SCRATCH_HOME/.jaiship/bin/jaiship` and `$SCRATCH_HOME/.acme` do **not** exist.
 
 **Steps**:
-1. Run `ADOS_SOURCE_DIR=<checkout> HOME=<scratch> ./scripts/install.sh --local --no-fetch` from the scratch project root.
-2. Assert the exit code is `0`, `$SCRATCH_HOME/.jaiship/bin/jaiship` exists, is a regular file, and has an executable mode for the owner.
-3. Assert the launcher's content names exactly one absolute target and that the target equals `<checkout>/packages/cli/bin/jaiship.ts`; assert the target string occurs exactly once and no second path is executed.
-4. Assert the launcher performs no `PATH` search for the product (`command -v jaiship`, `which jaiship` absent) and no version probe.
-5. From a directory outside the checkout (e.g. the scratch `HOME`), run the launcher `--version`; assert `jaiship 0.0.0 (build dev)` and exit `0`.
-6. Assert the network shim recorded zero invocations.
+1. Spawn `scripts/install.sh --local --no-fetch` from the scratch project root with `HOME=<scratch>` and `ADOS_SOURCE_DIR=<checkout>`.
+2. Assert exit `0`; assert `$SCRATCH_HOME/.jaiship/bin/jaiship` exists (the brand path) and that `$SCRATCH_HOME/.acme` does **not** exist — the ambient override did not redirect the registration (DEC-15).
+3. Assert the launcher is a regular file with an executable mode for the owner.
+4. Assert its content names exactly one absolute target, equal to `<checkout>/packages/cli/bin/jaiship.ts`; assert the target string occurs exactly once and no second path is executed.
+5. Assert the install-path query ran with the override scrubbed: the recorded child invocation of `--print-install-path` carries no `DELIVERY_OS_WORKING_NAME`, and the resulting path is the declared-identity path rather than the `acme` path.
+6. Assert the launcher performs no `PATH` search for the product (`command -v jaiship`, `which jaiship` absent) and no version probe.
+7. From a directory outside the checkout (the scratch HOME), run the launcher `--version`; assert `jaiship 0.0.0 (build dev)` and exit `0`.
+8. Assert the network shim recorded zero invocations.
 
 **Expected Outcome**:
-- Executable launcher at the brand install path, one absolute target equal to the checkout's CLI entry, working from outside the checkout, zero network.
+- Executable launcher at the brand install path regardless of the ambient override, one absolute target equal to the checkout's CLI entry, working from outside the checkout, zero network.
 
 #### TC-BIN-051 - An unchanged re-run rewrites nothing; another source repoints the launcher
 
@@ -1098,13 +1116,13 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Related IDs**: AC-F6-8, F-6, DM-5, NFR-5, DEC-13
 **Test Type(s)**: Corner Case, Integration
 **Automation Level**: Automated
-**Target Layer / Location**: `scripts/.tests/test-install-jaiship-launcher.sh` (new)
-**Harness entry**: `bash scripts/.tests/test-install-jaiship-launcher.sh`
-**Tags**: @bash, @installer, @idempotence
+**Target Layer / Location**: `tests/checks/install-launcher-installer.test.ts` (new)
+**Harness entry**: `bun test tests/checks/install-launcher-installer.test.ts --filter idempotence`
+**Tags**: @backend, @checks, @installer, @idempotence
 
 **Preconditions**:
 - The installed state of `TC-BIN-050`.
-- A second copy of the checkout (or a second worktree) at a different absolute path.
+- A second copy of the checkout (or a second worktree) at a different absolute path, under the same scratch root.
 
 **Steps**:
 1. Record the launcher's digest, mode, size, and mtime after the first install.
@@ -1125,9 +1143,9 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Related IDs**: AC-F6-8, F-6, DM-5, RSK-4, DEC-13
 **Test Type(s)**: Negative, E2E
 **Automation Level**: Automated
-**Target Layer / Location**: `scripts/.tests/test-install-jaiship-launcher.sh` (new)
-**Harness entry**: `bash scripts/.tests/test-install-jaiship-launcher.sh`
-**Tags**: @bash, @installer, @negative
+**Target Layer / Location**: `tests/checks/install-launcher-installer.test.ts` (new)
+**Harness entry**: `bun test tests/checks/install-launcher-installer.test.ts --filter missing-target`
+**Tags**: @backend, @checks, @installer, @negative
 
 **Preconditions**:
 - The installed launcher of `TC-BIN-050`, pointed at a **copied** source tree (so removing it does not touch the real checkout).
@@ -1151,9 +1169,9 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Related IDs**: AC-F6-8, F-6, DM-5, DEC-13
 **Test Type(s)**: Contract, Integration
 **Automation Level**: Automated
-**Target Layer / Location**: `scripts/.tests/test-install-jaiship-launcher.sh` (new)
-**Harness entry**: `bash scripts/.tests/test-install-jaiship-launcher.sh`
-**Tags**: @bash, @installer, @contract
+**Target Layer / Location**: `tests/checks/install-launcher-installer.test.ts` (new)
+**Harness entry**: `bun test tests/checks/install-launcher-installer.test.ts --filter passthrough`
+**Tags**: @backend, @checks, @installer, @contract
 
 **Preconditions**:
 - The installed launcher of `TC-BIN-050`.
@@ -1162,12 +1180,12 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 1. Run `launcher --version` and `launcher status --json` from outside the checkout; assert stdout content equals the direct entry's output for the same arguments.
 2. With `DELIVERY_OS_WORKING_NAME=acme`, assert `launcher --version` prints `acme …` (the override reaches the entry unmodified).
 3. With `JAISHIP_STATE_DIR=<scratch absolute>` in a fixture checkout, assert the state read comes from that root (the state override reaches the entry).
-4. Pipe stdin through the launcher and assert it arrives (a command that reads stdin, or a byte-for-byte pipe check); redirect stdout and stderr to files and assert each stream carries exactly its own content.
+4. Redirect stdout and stderr to separate files and assert each stream carries exactly its own content for a mixed-output invocation (no interleaving, no stream swap). No stdin cell is asserted: no composed command reads stdin, so a pipe check would prove nothing about the launcher (DoR iter-1 finding 22).
 5. Run an invocation that exits `1` and one that exits `2`; assert the launcher's exit codes are `1` and `2`.
 6. Assert no version probe (`--version` is not injected in step 1's observed arguments) and no network call.
 
 **Expected Outcome**:
-- Arguments, streams, environment, and exit codes pass through unchanged; no augmentation, no probe, no network.
+- Arguments, streams (separately), environment, and exit codes pass through unchanged; no augmentation, no probe, no network, and no unsupported stdin claim.
 
 #### TC-BIN-054 - Installer arrays still name no binary; the launcher step is declared
 
@@ -1195,33 +1213,62 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Expected Outcome**:
 - Arrays unchanged and still populated; launcher step declared and path-authority-correct; injected violation fails by name.
 
-#### TC-BIN-055 - The install run is hermetic: scratch roots only, zero network, real home untouched
+#### TC-BIN-055 - The install run is hermetic: scratch roots only, zero network, real home unchanged
 
-**Objective**: Prove NFR-5 and RSK-5: the install gate writes only under the scratch home and scratch project root, performs zero network access with fetching disabled, and leaves the operator's real home untouched.
+**Objective**: Prove NFR-5 and RSK-5: the install run writes only under the scratch home and scratch project root, performs zero network access with fetching disabled, and leaves the operator's real home **unchanged** — asserted as an existence-and-mtime snapshot only, never as an absence claim.
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
 **Related IDs**: AC-F6-8, F-6, NFR-5, RSK-5
 **Test Type(s)**: Negative, Measured
 **Automation Level**: Automated
-**Target Layer / Location**: `scripts/.tests/test-install-jaiship-launcher.sh` (new)
-**Harness entry**: `bash scripts/.tests/test-install-jaiship-launcher.sh`
-**Tags**: @bash, @installer, @hermeticity
+**Target Layer / Location**: `tests/checks/install-launcher-installer.test.ts` (new)
+**Harness entry**: `bun test tests/checks/install-launcher-installer.test.ts --filter hermeticity`
+**Tags**: @backend, @checks, @installer, @hermeticity
 
 **Preconditions**:
-- A snapshot of the real home's relevant entries (`~/.jaiship`, `~/.jaiship-state`, `~/.delivery-os-state` — existence and mtimes only, no content reads).
-- Network shim as in `TC-BIN-050`; `git` wrapper that records `fetch|pull|clone` and fails the test if invoked.
+- A snapshot of the real home's relevant entries (`~/.jaiship`, `~/.jaiship-state`, `~/.delivery-os-state`) recording **existence, size, and mtime only** — no content reads and no absence assumption. On the delivery workstation `~/.jaiship/bin` already exists, so the assertion is "unchanged", never "still absent" (DoR iter-1 finding 11).
+- Network shim and `git` wrapper as in `TC-BIN-050`.
 
 **Steps**:
 1. Before the install, snapshot the real home entries and the scratch trees.
-2. Run the install with `--no-fetch` and the scratch `HOME`.
-3. Assert the real home entries are unchanged (existence and mtimes identical; `~/.jaiship` still absent on the deliverer's workstation).
-4. Assert every created file is under the scratch home or the scratch project root: list the new files from the before/after diff and assert every path prefix.
+2. Run the install with `--no-fetch` and the scratch `HOME` (ambient override present, as in `TC-BIN-050`).
+3. Assert every real-home entry is **unchanged**: the same existence, size, and mtime as the snapshot. No entry is asserted to be absent.
+4. Assert every created file is under the scratch home or the scratch project root: list the before/after diff of the scratch trees and assert every path prefix.
 5. Assert the network shim recorded zero network-capable invocations and the `git` wrapper recorded zero fetch/pull/clone.
-6. Assert the real `~/.delivery-os-state` was never opened for write by comparing its mtime and a shallow listing.
+6. Assert the real `~/.delivery-os-state` was never opened for write by comparing its mtime and a shallow listing (unchanged before/after).
 
 **Expected Outcome**:
-- All writes confined to the scratch roots; zero network; real home and real prior state untouched.
+- All writes confined to the scratch roots; zero network; the real home and real prior state unchanged, with no absence claim anywhere.
+
+#### TC-BIN-056 - The installer's preconditions and failure modes are classified, not skipped
+
+**Objective**: Prove DEC-15 and the preconditions clause of AC-F6-8: the launcher step requires the Bun runtime at install time, a resolved source tree without the CLI entry is a classified failure, `DRY_RUN` writes nothing, the step is independent of `--tool`, and an ambient working-name override neither redirects the install path nor leaks into the path query.
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: Critical
+**Related IDs**: AC-F6-8, F-6, NFR-5, DEC-15
+**Test Type(s)**: Negative, Integration
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/checks/install-launcher-installer.test.ts` (new)
+**Harness entry**: `bun test tests/checks/install-launcher-installer.test.ts --filter preconditions`
+**Tags**: @backend, @checks, @installer, @negative
+
+**Preconditions**:
+- A "no-Bun" `PATH` built as a symlink farm containing the installer's non-Bun utilities (`bash`, `git`, `diff`, `cp`, `mkdir`, `mktemp`, `sed`, `awk`, `grep`, `sort`, `chmod`, …) but **no** `bun`, so the runtime is genuinely unresolvable.
+- A docs-only scratch source tree (AGENTS.md, `.opencode/agent/`, `doc/guides/`, `scripts/`, no `packages/cli/bin/jaiship.ts`).
+- A normal source checkout with `bun` available, for the `DRY_RUN` and `--tool` cells.
+- Each cell uses a fresh `mkdtemp` scratch HOME and scratch project root.
+
+**Steps**:
+1. **Missing runtime:** spawn the local install with the no-Bun `PATH`; assert a non-zero exit, one bounded stderr line naming the missing runtime (Bun), and no launcher written anywhere under the scratch home. Assert it is a failure, never a skip (no "skip" wording, exit non-zero).
+2. **No-CLI source:** point `ADOS_SOURCE_DIR` at the docs-only scratch tree with `bun` available; assert a non-zero exit, one bounded stderr line naming the missing CLI entry (the expected absolute path), and no launcher written.
+3. **`DRY_RUN`:** run with `--dry-run`; assert exit `0`, no launcher file created, and the planned registration reported on stdout/stderr.
+4. **`--tool` independence:** run with `--tool opencode` and with the deprecated `--tool claude`; assert both register the same launcher content (the launcher is the product's, not the tool's) and that the deprecated warning, if any, does not change the registration.
+5. **Override scrub:** run with an ambient `DELIVERY_OS_WORKING_NAME=acme` and record the installer's path query; assert the query child environment carries no override, the registered path is the brand path, and the installed launcher then forwards the override unchanged at run time (`launcher --version` under `acme` prints `acme …`).
+
+**Expected Outcome**:
+- Missing runtime and no-CLI source are classified failures naming what is missing with no launcher written; `DRY_RUN` writes nothing; `--tool` does not alter the launcher; the install path is the declared identity's path while the run-time override still governs the installed launcher.
 
 #### TC-BIN-060 - Two declared bins map to two distinct existing entry files
 
@@ -1277,9 +1324,9 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Expected Outcome**:
 - Exact equality for both directions; every executable file individually allowed; the new bin cannot appear without an allowance; the retired accessor cannot reappear and the retained accessor cannot lose its allowance.
 
-#### TC-BIN-062 - Identity literals are exactly the declared four sites, none exported, with no residual neutral default
+#### TC-BIN-062 - Identity literals are exactly the declared five sites under their scan rule, none exported, with no residual neutral default
 
-**Objective**: Prove DM-6's declared four-site inventory — three CLI selector sites plus the unchanged MCP default — with none exported, prove the entrypoint module holds no identity literal and no `neutralWorkingName`, and prove the entrypoint can **no longer be called with a neutral fallback**: a missing or unusable declared default is the declared composition error on the self-description path and the classified resolver-input error on the configuration path, never a substituted name.
+**Objective**: Prove DM-6's declared scan rule and **five-site** inventory (D7): a `packages/**` string-literal scan collecting every literal byte-equal to a declared working name finds exactly the three CLI selector sites, the unchanged MCP default, and the resolver's `SCOPE_ORG` scope-org derivation input — and nothing else; none is exported; the entrypoint module holds no identity literal and no `neutralWorkingName`; and the entrypoint cannot be called with a neutral fallback (a missing declared default is the delivered `fallback.internal` containment, never a substituted name).
 **Scenario Type**: Contract
 **Impact Level**: Critical
 **Priority**: Critical
@@ -1291,7 +1338,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Tags**: @structure, @contract, @security
 
 **Preconditions**:
-- An AST scan over `packages/**` (excluding `dist`, `node_modules`) collecting string literals equal to a working name (case-insensitive on the declared names) together with their file, enclosing declaration, export status, and role.
+- The **scan rule** is the one DM-6 declares: an AST walk over `packages/**` (excluding `dist`, `node_modules`) collecting every **string literal** (single-quoted, double-quoted, and no-substitution template literals) whose bytes equal a declared working name. Comments, JSDoc text, and documentation prose are **not** literals and are not collected; identifiers and property names are not values.
 - The declared inventory, held in the test as two scopes:
 
   | Scope | File | Role | Value | Export |
@@ -1299,21 +1346,22 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
   | CLI (selector) | `packages/cli/bin/delivery-os.ts` | default working name | `delivery-os` | non-exported local |
   | CLI (selector) | `packages/cli/bin/jaiship.ts` | default working name | `jaiship` | non-exported local |
   | CLI (selector) | `packages/cli/bin/jaiship.ts` | prior identity | `delivery-os` | non-exported local |
-  | MCP (unchanged) | `packages/mcp/src/serve.ts` | default working name | `delivery-os` | unchanged delivered site |
+  | Inventory — MCP (unchanged) | `packages/mcp/src/serve.ts` | default working name (declared divergence 1) | `delivery-os` | unchanged delivered site |
+  | Inventory — resolver (unchanged) | `packages/core/src/branding/index.ts` | `SCOPE_ORG` scope-org **derivation input** consumed by `docsBaseUrl`/`repositoryUrl`; byte-equal to a working name but not an identity selector | `delivery-os` | unchanged delivered site |
 
 - The retired-symbol list: `neutralWorkingName` must not exist anywhere; `workingNameEnvironmentVariable` must still exist and stay in the entrypoint module's executable allowance (`TC-BIN-061`).
 
 **Steps**:
-1. Collect all working-name literals; assert the **CLI scope** equals exactly the three declared selector sites with the declared values and roles, and the **MCP scope** equals exactly one site whose bytes are identical to the delivered value.
-2. Assert the total is exactly 4 and that zero sites exist outside the declared inventory: any fifth site fails by name with its file and constant.
-3. Assert every CLI site is a non-exported local value (no `export const`/`export let`, no exported object property) and that no working-name value is exported anywhere; assert no `BrandIdentity` field is assigned a literal outside `branding`/`contracts` (the delivered seam rule, re-asserted for the new files).
+1. Collect all working-name literals under the scan rule; assert the **CLI scope** equals exactly the three declared selector sites with the declared values and roles, and the **inventory scope** equals exactly the two declared unchanged sites whose bytes are identical to the delivered values.
+2. Assert the total is exactly 5, and assert the inventory in **both directions**: every declared site is found (a declared site that disappears fails by name) and every found literal matches a declared entry (a sixth site fails by name with its file and constant).
+3. Assert every CLI site is a non-exported local value (no `export const`/`export let`, no exported object property) and that no working-name value is exported anywhere; assert no `BrandIdentity` field is assigned a literal outside `branding`/`contracts` (the delivered seam rule, re-asserted for the new files). Assert the resolver's derivation code is unchanged: `SCOPE_ORG` is declared in the inventory, not exempted by an allowlist entry.
 4. Assert `packages/cli/src/entrypoint.ts` holds **no** identity literal, no `NEUTRAL_WORKING_NAME` declaration, and no `neutralWorkingName` declaration, export, or import; assert the module's identity input is the invoking bin's declared default, carried as a required input (never an optional-with-internal-fallback parameter).
-5. Behaviour half, in-process in the same file: call the entrypoint with **no** declared default. Assert `--version`/`--help` return the delivered containment identity with a non-zero exit, and that a configuration-bearing command returns the classified resolver-input error; assert neither path substitutes a working name (no `delivery-os` and no `jaiship` identity is invented), so the removed fallback cannot be reintroduced as a shim.
+5. Behaviour half, in-process in the same file: call the entrypoint with **no** declared default. Assert `--version`/`--help` return the delivered containment identity `fallback.internal` with exit `2`, and that a configuration-bearing command also returns the containment identity; assert neither path substitutes a working name (no `delivery-os` and no `jaiship` identity is invented), so the removed fallback cannot be reintroduced as a shim.
 6. Assert `workingNameEnvironmentVariable` still exists and is still consumed by `packages/cli/src/production.ts`, so the removal is confined to the identity *value* and does not disturb the protocol variable *name*.
-7. Negative controls: (a) a temp-root fifth site (an exported `const PRODUCT = "<name>"`) fails naming the file and the constant; (b) a temp-root `entrypoint.ts` re-declaring `neutralWorkingName` fails naming the symbol; (c) a `binaryName: "<name>"` assignment in `production.ts` fails naming the field.
+7. Negative controls: (a) a temp-root sixth site (an exported `const PRODUCT = "<name>"`) fails naming the file and the constant; (b) a temp-root tree in which one declared site is removed fails naming the missing site; (c) a temp-root `entrypoint.ts` re-declaring `neutralWorkingName` fails naming the symbol; (d) a `binaryName: "<name>"` assignment in `production.ts` fails naming the field.
 
 **Expected Outcome**:
-- Exactly four declared sites in two scopes, none exported, and zero undeclared sites; the entrypoint module is free of identity literals and of the retired accessor; a missing declared default yields the declared containment/classified failure rather than a neutral substitute; all three injected violations fail by name.
+- Exactly the five declared sites under the stated scan rule, none exported, with every declared site found and every found literal declared; the entrypoint module is free of identity literals and of the retired accessor; a missing declared default yields the delivered containment failure rather than a neutral substitute; all four injected violations fail by name.
 
 #### TC-BIN-063 - One shared launcher composition; neither bin duplicates the body
 
@@ -1336,11 +1384,11 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 2. Assert the launcher module is the only file declaring the composition body: search for the body's distinctive operations (`createProductionComposer(`, the environment/home/cwd read, the `runEntrypoint` call) and assert exactly one occurrence site (the launcher).
 3. Assert the launcher exports a function and no module-level string literal (branding-seam compatibility); assert the bins export no module-level string constant either.
 4. Assert the entrypoint module exposes no identity value and no retired accessor: it declares and imports neither `NEUTRAL_WORKING_NAME` nor `neutralWorkingName`, and the protocol accessor `workingNameEnvironmentVariable` is the only module-level *name* it still exposes (it carries a variable name, not an identity value) and is passed through to the production composition unchanged.
-5. Assert the two bins' only differences are the declared selector facts: a structural diff of the two files shows only the literals and the optional prior argument.
-6. Negative control: a temp-root bin that inlines the composition body fails by name (duplicated body detected); a temp-root launcher that hardcodes a default identity instead of accepting it from the bin fails naming the literal.
+5. Assert the **exact allowed difference set** between the two bins: both export `completion` (the delivered export kept on the alias and carried onto the new bin), the content-inventory allowance lists `completion` for **both** bin files, and the only remaining differences are the declared selector facts (the default working name literal and the optional prior literal). A bin missing `completion`, or an allowance naming it for one bin only, fails by name; any third difference fails by name.
+6. Negative control: a temp-root bin that inlines the composition body fails by name (duplicated body detected); a temp-root launcher that hardcodes a default identity instead of accepting it from the bin fails naming the literal; a temp-root bin without the `completion` export fails naming the missing export.
 
 **Expected Outcome**:
-- One composition body, two thin selectors, one shared export, and an entrypoint module that carries no identity value and no retired accessor; a duplicated body or a launcher-side default is rejected by name.
+- One composition body, two thin selectors with the same `completion` export, one shared export surface, and an entrypoint module that carries no identity value and no retired accessor; a duplicated body, a launcher-side default, or a missing `completion` export is rejected by name.
 
 #### TC-BIN-064 - The branding seam still passes and still rejects injected violations
 
@@ -1446,31 +1494,32 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Expected Outcome**:
 - Twenty families unchanged, no new error identity, containment intact, mutation detected.
 
-#### TC-BIN-070 - The four affected specification pages state the new reality
+#### TC-BIN-070 - The four affected specification pages plus the install-set page state the new reality
 
-**Objective**: Prove the specification is reconciled, not merely edited: the four pages state the two-executable reality, the fallback and its notice, the install posture, and the host-root selection, and no stale sentence survives.
+**Objective**: Prove the specification is reconciled, not merely edited: the four behaviour pages state the two-executable reality, the fallback and its notice on the composition-time acquisition, the install posture with its install-time runtime requirement and failure modes, and the host-root selection; the install-set/distribution-marker page states the launcher in the install set; and no stale sentence survives — enforced by a **self-contained** requirement table added to `tests/checks/doc-conformance.test.ts`, never by editing the historical GH-242 phrase table or `doc/documentation-handbook.md` §16.1.1 (plan reconciliation R-A; DoR iter-1 finding 12).
 **Scenario Type**: Contract
 **Impact Level**: Critical
 **Priority**: Critical
 **Related IDs**: AC-F8-11, F-8, NFR-8; DOC-TP-1
 **Test Type(s)**: Structure, Contract
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/checks/doc-conformance.test.ts` (extended §16.1.1 phrase-table rows for the four pages)
+**Target Layer / Location**: `tests/checks/doc-conformance.test.ts` (extended with this change's own page/phrase table and its negative controls)
 **Harness entry**: `bun test tests/checks/doc-conformance.test.ts`
 **Tags**: @checks, @docs
 
 **Preconditions**:
-- `doc/documentation-handbook.md` §16.1.1 stale/required phrase table gains rows for `feature-cli-entrypoint.md`, `feature-branding-seam.md`, `feature-config-layer.md`, `feature-projects.md`.
+- The test file gains a **new, self-contained** table with an exact page set of five pages — `doc/spec/features/feature-cli-entrypoint.md`, `feature-branding-seam.md`, `feature-config-layer.md`, `feature-projects.md`, and `feature-doc-distribution-marker.md` — plus, per page, at least one stale phrase (present today, must disappear) and at least one required phrase (absent today, must appear).
+- The delivered check's exact-page-set assertion over the historical GH-242 table is left untouched; the historical spec and the handbook are not modified (R-A).
 
 **Steps**:
-1. Assert every new row exists and carries at least one stale phrase and one required phrase (a row with an empty list would pass vacuously — fail it).
-2. Run the phrase check: every stale phrase is absent (notably the delivered "the bin is not part of the install surface" sentence) and every required phrase is present (two executables, per-bin identity selector and prior identity, the prior-identity read fallback and its notice, the install-path read, the install posture, the host-root prior selection, the no-second-root guarantee).
-3. Assert each of the four pages is named by at least one row (no affected page left unreconciled).
-4. Negative control: a synthetic page text containing a stale phrase fails naming the page and the phrase; a required phrase removed fails naming the page and the phrase.
-5. Assert the notice vocabulary and the four reasons appear on the configuration and projects pages, so the pages and the code share one vocabulary.
+1. Assert the new table's page set equals exactly the five declared pages (a missing or extra page fails by name), and that each page carries at least one stale and one required phrase (an empty list would pass vacuously — fail it).
+2. Run the stale check: every stale phrase is absent, notably the delivered "the bin is not part of the install surface" sentence, and any statement that `status` acquires no project configuration.
+3. Run the required check: every required phrase is present — two executables and per-bin identity selectors, the prior-identity fallback and its notice, the **composition-time acquisition** fact on the configuration page, the install-path read, the install posture **including the install-time runtime requirement and the classified failure modes**, the host-root prior selection and the no-second-root guarantee, and on the distribution-marker page the launcher in the install set with its runtime requirement.
+4. Assert the notice vocabulary and the four reasons appear on the configuration and projects pages, so the pages and the code share one vocabulary.
+5. Negative control: a synthetic page text containing a stale phrase fails naming the page and the phrase; a required phrase removed fails naming the page and the phrase; a page missing from the table fails naming the page.
 
 **Expected Outcome**:
-- Four pages reconciled; stale sentence gone; required statements present; the guard proves both directions.
+- Five pages reconciled, stale sentences gone, required statements present (including the composition-time acquisition and the install-time runtime requirement), the install-set page updated, and the guard proven in both directions without touching a historical artifact.
 
 #### TC-BIN-071 - The local-install guide ships with its marker, registration, and content
 
@@ -1493,15 +1542,15 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 2. Assert the guide path is registered in `scripts/checks/forbidden-literals.registry.json`'s registered user-facing docs — the delivered lesson: a new guide left unregistered fails the scan closed and breaks `ci-baseline-parity` at HEAD.
 3. Run `bash scripts/.tests/test-doc-distribution.sh`; assert exit `0` (marker-driven install set includes the guide; no drift).
 4. Assert the guide's content covers: the install command shape with fetching disabled, where the launcher lands, what it executes, what the notice means, what the fallback covers, what it deliberately does not cover (machine-global layers, prior-prefix environment names), and the explicit "what is not renamed in this slice" list.
-5. Assert the guide is referenced from the documentation landing page or the affected spec pages (a discoverable link exists).
+5. Assert the guide is discoverable from the **four affected spec pages** (at least one links to it). The documentation landing page `doc/00-index.md` is deliberately untouched, because spec §16 marks it UNCHANGED and every existing redistributable guide is already listed there; discoverability via the spec pages is the declared resolution (plan reconciliation R-D; DoR iter-1 finding 21).
 6. Negative control: removing the marker from a temp copy fails the drift guard naming the file; removing the registry entry fails the literal scan naming the path.
 
 **Expected Outcome**:
 - Marker present, registry entry present, drift guard green, promised content present and discoverable; both negations fail by name.
 
-#### TC-BIN-072 - The declared divergences are stated and the public surfaces are unchanged
+#### TC-BIN-072 - The four declared divergences are stated and the public surfaces are unchanged
 
-**Objective**: Prove NFR-8 and the unchanged half of AC-F8-11: every remaining pre-freeze identity consumer is stated, and the package scope, scope org, URLs, README, docs profile, MCP default, and shell fallback host root are unchanged.
+**Objective**: Prove NFR-8 and the unchanged half of AC-F8-11 after DoR iter-1 finding 8: **all four** remaining pre-freeze consumers are stated in the spec and the guide — MCP's default and override read, the delivery-script shell fallback host root, the scope-derived repository/docs URLs, and the installer's own `~/.ados` / `ADOS_*` surface with its install-time runtime requirement — and the package scope, scope org, URLs, README, docs profile, MCP default, shell fallback, and installer values are unchanged.
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: Critical
@@ -1513,17 +1562,19 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Tags**: @checks, @docs, @regression
 
 **Preconditions**:
-- The spec §8.5 divergence list, the guide's divergence section, and the delivered value sources.
+- The spec §8.5 four-divergence list, the guide's divergence section, the delivered value sources, and the installer's declared variable defaults.
 
 **Steps**:
 1. Assert `packageScope`/`PACKAGE_SCOPE` is still `@delivery-os` and the scope org is `delivery-os` in the resolver; assert every package manifest name is unchanged (`manifest-privacy`/publish-guard controls pass).
-2. Assert the resolver's `repositoryUrl` and `docsBaseUrl` for both identities are the pre-freeze scope-derived values (`https://github.com/delivery-os/<binary>`, `https://delivery-os.github.io/<binary>/`), including for `jaiship`.
+2. Assert the resolver's `repositoryUrl` and `docsBaseUrl` for both identities are the pre-freeze scope-derived values (`https://github.com/delivery-os/<binary>`, `https://delivery-os.github.io/<binary>/`), including for `jaiship` (divergence 3).
 3. Assert `README.md` contains no claim of an installed `jaiship` executable at a new public location and still carries the pre-freeze URLs; assert `doc/documentation-profile.md` is absent.
-4. Assert `packages/mcp/src/serve.ts`'s default working name and override read are byte-identical to the delivered values, and `scripts/lib/dispatch-authority.sh`'s host root is unchanged.
-5. Assert each of those four consumers is named in the spec §8.5 list **and** in the guide's divergence section (zero undocumented identity paths: a consumer found in code but absent from both lists fails by name).
+4. Assert `packages/mcp/src/serve.ts`'s default working name and override read are byte-identical to the delivered values (divergence 1), and `scripts/lib/dispatch-authority.sh`'s host root is unchanged (divergence 2).
+5. Assert the installer's own pre-freeze surface is unchanged and declared (divergence 4): `ADOS_HOME` still defaults to `~/.ados`, `ADOS_REPO_DIR` to `~/.ados/repo`, and `ADOS_SOURCE_DIR`, `ADOS_RAW_URL`, `ADOS_REPO_URL` still carry their delivered values; assert none of them is rebranded.
+6. Assert the guide states the installer's declared install-time behaviour as part of divergence 4: the Bun requirement, the classified failure when the runtime is missing or the source has no CLI entry, `DRY_RUN` writing nothing, and `--tool` independence (DEC-15).
+7. Assert each of the four consumers is named in the spec §8.5 list **and** in the guide's divergence section (zero undocumented identity paths: a consumer found in code but absent from both lists fails by name).
 
 **Expected Outcome**:
-- Public surfaces unchanged; the four declared divergences stated in both documents; zero undocumented consumers.
+- Public surfaces unchanged and the installer's surface declared; all four divergences stated in both documents with the install-time requirement among them; zero undocumented consumers.
 
 #### TC-BIN-073 - The forbidden-literal scan stays green with an unchanged seed set
 
@@ -1550,9 +1601,9 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Expected Outcome**:
 - Scan green with unchanged seed set and baseline; the new guide registered; both negations fail by name.
 
-#### TC-BIN-080 - The aggregate gate is green with the recorded temp-dir invocation
+#### TC-BIN-080 - The single executable same-device aggregate gate is green; the repo-local run is recorded evidence
 
-**Objective**: Prove AC-F7-9's aggregate half while recording the documented temp-dir constraint honestly: the gate is green, and any environment-class failure is named by mechanism rather than waived.
+**Objective**: Prove AC-F7-9's aggregate half under the plan's **one** executable gate: `TMPDIR=$(mktemp -d "$HOME/.cache/ados-check-XXXXXX") pnpm check` is green. The `TMPDIR=$PWD/tmp/tmpdir` form that GH-313 recorded as red is run once as **evidence** of the mechanism, never as a gate (D10; DoR iter-1 findings 9 and 20–21 context).
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
@@ -1560,21 +1611,22 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Manual (gate execution), Automation-adjacent
 **Automation Level**: Semi-automated
 **Target Layer / Location**: repository root; evidence recorded in §10 and the change record
-**Harness entry**: `mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check`
+**Harness entry**: `mkdir -p "$HOME/.cache" && TMPDIR=$(mktemp -d "$HOME/.cache/ados-check-XXXXXX") pnpm check`
 **Tags**: @gate
 
 **Preconditions**:
-- `pnpm install --frozen-lockfile` completed; `tmp/tmpdir` exists.
+- `pnpm install --frozen-lockfile` completed and the build artefacts present (the `pretest` step builds).
+- `$HOME/.cache` exists or is created; `$HOME` is on the same filesystem as the checkout, so the `git clone --local` hardlink assertion in `ci-baseline-parity` holds.
 
 **Steps**:
-1. Run the declared gate: `TMPDIR=$PWD/tmp/tmpdir pnpm check`; record the full log path and the exit code.
-2. If `tests/behaviour/queue-production-binding.test.ts` or `tests/behaviour/projects-config.test.ts` fail (their fixtures require a temp directory **outside** every git worktree), re-run the identical gate with `TMPDIR` set to a **same-device** directory outside every worktree; record both invocations, the failing suite names, and the reason.
-3. If `tests/checks/ci-baseline-parity.test.ts` fails (a foreign-filesystem temp dir breaks `git clone --local`), the same re-run with a same-device temp dir must pass; record it.
-4. Assert no other failure is reclassified: any non-temp-dir failure is a genuine red gate and blocks the quality gate.
-5. Record the final verdict, the command actually used, and the failing-then-green evidence for each affected suite.
+1. Run the **only** declared gate: `TMPDIR=$(mktemp -d "$HOME/.cache/ados-check-XXXXXX") pnpm check`; record the temp directory, the full log path, and the exit code.
+2. Assert exit `0`. Any failure is a red gate; no failure is reclassified as environmental.
+3. Record the `queue-production-binding`, `projects-config`, and `ci-baseline-parity` verdicts explicitly, since those are the three suites the temp-dir mechanism affects.
+4. **Evidence only, not a gate:** run `mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check` once and record the outcome, naming the GH-313 mechanism (a repo-local `TMPDIR` reds `queue-production-binding` and `projects-config` because their fixtures need a temp dir outside every worktree). Label it "recorded evidence, not a gate" in §10; a red result here does **not** fail this case and a green result does not replace step 1.
+5. Record the final verdict, the exact gate command, the temp directory used, and the three named suite verdicts.
 
 **Expected Outcome**:
-- A green gate with the exact command(s) and the mechanism for any temp-dir-class re-run recorded; no failure waived without a named mechanism.
+- The single same-device gate is green with its command and temp directory recorded; the repo-local invocation is documented as evidence with its mechanism; no failure is waived without a named mechanism.
 
 #### TC-BIN-081 - The branch-range commit-message gate reports PASS
 
@@ -1611,17 +1663,17 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Regression
 **Automation Level**: Automated
 **Target Layer / Location**: the delivered suites, run individually for a named verdict
-**Harness entry**: `bun test tests/behaviour/entrypoint-*.test.ts tests/behaviour/config-*.test.ts tests/behaviour/projects-config.test.ts tests/behaviour/daemon-*.test.ts tests/behaviour/events-*.test.ts tests/structure/entrypoint-*.test.ts tests/structure/content-inventory.test.ts && bash scripts/.tests/test-install.sh`
+**Harness entry**: `bun test tests/behaviour/entrypoint-*.test.ts tests/behaviour/config-*.test.ts tests/behaviour/projects-config.test.ts tests/behaviour/daemon-*.test.ts tests/behaviour/events-*.test.ts tests/conformance/pilot/pilot-isolation.test.ts tests/structure/entrypoint-*.test.ts tests/structure/content-inventory.test.ts && bash scripts/.tests/test-install.sh`
 **Tags**: @regression
 
 **Preconditions**:
 - The build artefacts present (`pnpm build` as the `pretest` step provides).
 
 **Steps**:
-1. Run the entrypoint suites (`entrypoint-version`, `entrypoint-help`, `entrypoint-help-coverage`, `entrypoint-help-isolation`, `entrypoint-composition`) and record pass/fail per file.
+1. Run the entrypoint suites (`entrypoint-version`, `entrypoint-help`, `entrypoint-help-coverage`, `entrypoint-help-isolation`, `entrypoint-composition`) and record pass/fail per file. Include `tests/conformance/pilot/pilot-isolation.test.ts`, whose neutral-identity cell this change moves to an injected declared default (spec §16): it must be green, and it must have been updated rather than deleted.
 2. Run the configuration and state-scope suites (`config-*`, `config-sources`, `projects-config`, `projects-state-scope-policy`, `state-scope`) and record per file.
 3. Run the daemon-mount and events-mount suites and record per file.
-4. Run `bash scripts/.tests/test-install.sh` and record the pass/fail counts, asserting the delivered installer tests still pass unchanged.
+4. Run `bash scripts/.tests/test-install.sh` and record the pass/fail counts, asserting the delivered installer tests still pass unchanged: they call `install_local_files` directly and never enter the launcher step, so the control stays valid (plan reconciliation R-C).
 5. Assert no delivered assertion was edited to accommodate the change without a declared reason in the change record (search the diff for edits inside the delivered suites and require a justification per edit).
 
 **Expected Outcome**:
@@ -1654,47 +1706,50 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 
 #### TC-BIN-084 - The new suites are hermetic: zero network, zero real-home state, zero sleeps
 
-**Objective**: Prove the delivering suite itself is safe: the new cases perform no network access, read no real provider credentials, sleep no real time, and never use the operator's home or the real `~/.delivery-os-state` as mutable state.
-**Scenario Type**: Negative
+**Objective**: Prove the delivering suite itself is safe with an **implementable** mechanism (D11; DoR iter-1 finding 10): half (a) a static import/surface scan over the named modules proves they reach no network API and no real-home/state acquisition; half (b) a spawned `bun --preload <arm-counters module> test <named suite files>` subprocess proves the executed suites perform zero network connects, zero credential reads, zero real sleeps, and zero writes outside the temp roots. In-process counter arming wrapped around *other* suites is not used, because it cannot observe them.
+**Scenario Type**: Negative, Guard
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F1-1..AC-F8-11 (guard half), NFR-2, NFR-5
+**Related IDs**: AC-F1-1..AC-F8-11 (guard half), NFR-2, NFR-5; D11
 **Test Type(s)**: Negative, Guard
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/checks/prior-identity-hermetic.test.ts` (new); mirrors the delivered `daemon-hermetic` pattern
+**Target Layer / Location**: `tests/checks/prior-identity-hermetic.test.ts` (new) plus the preload module it spawns (e.g. `tests/checks/support/arm-counters.preload.ts`)
 **Harness entry**: `bun test tests/checks/prior-identity-hermetic.test.ts`
 **Tags**: @checks, @hermeticity
 
 **Preconditions**:
-- Armed counters for network connects/DNS, environment reads of secret-shaped keys, sleeps, and filesystem writes outside an allowlist.
-- A static assertion that no new suite references the real `os.homedir()` / `$HOME` as a fixture root (except where explicitly snapshotted read-only, as in `TC-BIN-055`).
+- A preload module that installs the counters (`globalThis.fetch` wrapper, DNS/connect attempts, secret-shaped environment reads, `setTimeout`/sleep interception, and a write-path allowlist rooted at the temp directories) and **writes a violation report to a file named by an environment variable**, exiting non-zero when any counter is non-zero.
+- The named suite list under guard: `tests/behaviour/entrypoint-two-bins.test.ts`, `identity-override.test.ts`, `prior-identity-config-fallback.test.ts`, `prior-identity-state-fallback.test.ts`, `prior-identity-notice.test.ts`, `tests/structure/entrypoint-bin.test.ts`, `install-launcher.test.ts`, `tests/checks/install-launcher-installer.test.ts`, `identity-docs.test.ts`.
+- A static-scan target list: the new modules plus the modules they import at the test boundary (`packages/cli/src/bin-launcher.ts`, `packages/cli/src/entrypoint.ts`, `packages/cli/src/production.ts`), scanned for forbidden network/state APIs.
 
 **Steps**:
-1. Run the plan's new behaviour and structure suites under the armed counters; assert zero network connects, zero credential reads, zero real sleeps, and zero writes outside the temp roots.
-2. Assert no suite opens the real `~/.delivery-os-state` for write (path-based guard, not a content read).
-3. Assert the counters are live: a canary that performs a recorded fake network call and one that writes outside the allowlist both trip their counter (the guard is not vacuously green).
-4. Print the counters with the suite list as the hermeticity evidence record.
+1. **Half (a) — static surface scan.** Parse the target modules and their import graph; assert no import or call reaches a network primitive (`fetch`, `node:http(s)`, `node:dns`, `node:net`) and no module reads `os.homedir()`/`$HOME` to compose a real-state path. Assert the scan itself is non-vacuous: a temp-root module importing `node:https` and one calling `os.homedir()` both fail by name.
+2. **Half (b) — spawned preload run.** Spawn `bun --preload <arm-counters module> test <named suite files>` with `BUN_TEST_PRELOAD_VIOLATIONS=<temp file>` and a scrubbed `HOME`; assert the subprocess exit code is `0` and that the captured violation report is empty.
+3. Assert each counter is non-zero when it should be: a canary suite (a temp fixture) that fetches, reads a secret-shaped env key, sleeps, and writes outside the allowlist makes the preload run exit non-zero and names each violation class — so the guard cannot pass vacuously.
+4. Assert no guarded suite opens the real `~/.delivery-os-state` for write: the write-path allowlist contains only temp roots, and a deliberate attempt to write under the real state path is recorded as a violation by the canary cell.
+5. Print the counter report and the guarded suite list as the hermeticity evidence record for the quality gate.
 
 **Expected Outcome**:
-- Zero live effects across the plan's suites; counters proven live; evidence recorded for the quality gate.
+- The static half proves the surface cannot acquire; the spawned half proves the executed suites do not acquire at run time; both canaries fail loudly, so the guard is neither vacuous nor narrowed at delivery.
 
 ## 6. Environments and Test Data
 
-- **Environments.** One hermetic local environment: `bun:test` over temp directories under the workspace's `tmp/` (which is git-ignored) or `mkdtemp`, plus one bash installer test. No staging, no external system, no tracker, no provider.
-- **The aggregate gate's temp-dir constraint — recorded, not waived.** The declared gate is `TMPDIR=$PWD/tmp/tmpdir pnpm check`. Two delivered suites (`tests/behaviour/queue-production-binding.test.ts`, `tests/behaviour/projects-config.test.ts`) require a temp directory **outside every git worktree**, and `tests/checks/ci-baseline-parity.test.ts` requires a **same-device** temp directory (a foreign filesystem breaks its `git clone --local` hardlink assertion). A repo-local `TMPDIR` therefore greens the parity suite and reds the two fixtures; the working invocation uses a same-device temp directory **outside** every worktree. `TC-BIN-080` records both invocations and the mechanism; the new suites must not depend on either property, and no failure is reclassified without naming the mechanism.
-- **This checkout's facts.** `~/.delivery-os-state` exists and is populated (`host-index.json`, `projects/`, ledger artifacts); there is no `~/.jaiship-state`; the checkout has no `.delivery-os/config.yaml`; no `DELIVERY_OS_*`/`JAISHIP_*` variable is set. Therefore the **configuration** half of the fallback is proven only over fixture checkouts, and the **state** half is proven over scratch homes populated with the delivered artifact shape. **No test mutates the real `~/.delivery-os-state`**; the only contact with the real home is the read-only existence/mtime snapshot in `TC-BIN-055`.
-- **Fixture checkouts.** Committed under `tests/fixtures/entrypoint/prior-identity/` (never named `*.test.ts`), each with a real `.git` directory and an identity marker so project-key derivation is exercised: `config-only/`, `both-layers/`, `mixed-layers/`, `local-only/`, `selected-config/`, `global-layers/`, `no-config/`. Values are distinguishable per file (a shared key with different values, plus a unique key per file) so "read" versus "merged" is observable.
-- **Scratch homes.** `host-root/` fixture supplies the delivered host-root artifact shape and a seeded delivery record; the suite copies it into a scratch home per test and derives a matching project key from a matching fixture checkout marker. A second seeded record exists in a separate `current-root/` fixture so "which root was read" is unambiguous.
-- **Injected facts.** File acquisition runs twice where useful: over the real disk (end-to-end) and over deterministic injected filesystem facts (ordering, skip vocabulary, read counters). The host-root policy always receives injected existence facts; a counting environment record proves the single override read and the absence of prior-prefix reads.
-- **Subprocess cells.** One per bin for the process edge (`bun packages/cli/bin/<bin>.ts`), one for the `pnpm exec` link, and one for the installed launcher — all with scrubbed environments and an explicit `HOME` under temp. No subscriber uses the real `$HOME`.
-- **Network proof.** The installer test puts a shim directory first on `PATH` that records and fails `curl`/`wget`/`git fetch|pull|clone`; assertion is on the recorded counter, not on an absent error message.
-- **Goldens and baselines.** The alias baseline fixture is captured **before** the bin refactor with an explicit documented command and a `capturedFrom` commit; it is regenerated only deliberately. No other golden is added.
+- **Environments.** One hermetic local environment: `bun:test` over temp directories under the workspace's `tmp/` (which is git-ignored) or `mkdtemp`. There is no bash test suite in this change: the installer integration cases are a Bun test that spawns `scripts/install.sh` (`tests/checks/install-launcher-installer.test.ts`), which keeps them in the Bun-bearing CI test job and requires no `.github/workflows/ci.yml` change (D9). No staging, no external system, no tracker, no provider.
+- **The aggregate gate — one executable invocation.** The **only** gate is `TMPDIR=$(mktemp -d "$HOME/.cache/ados-check-XXXXXX") pnpm check` (D10). The mechanism it satisfies: `tests/behaviour/queue-production-binding.test.ts` and `tests/behaviour/projects-config.test.ts` require a temp directory **outside every git worktree**, and `tests/checks/ci-baseline-parity.test.ts` requires a **same-device** temp directory (a foreign filesystem breaks its `git clone --local` hardlink assertion). `$HOME/.cache/...` is same-device and outside every worktree, so all three hold. The repo-local `TMPDIR=$PWD/tmp/tmpdir` form that GH-313 recorded as red is run **once as recorded evidence**, never as a gate, and its result neither fails nor substitutes for the gate (`TC-BIN-080`). The new suites must not depend on either property.
+- **This checkout's facts, and what they do not license.** `~/.delivery-os-state` exists and is populated; `~/.jaiship/bin` **already exists on the delivery workstation**; the checkout has no `.delivery-os/config.yaml`; no `DELIVERY_OS_*`/`JAISHIP_*` variable is set. Therefore: the configuration half is proven on **fixture** checkouts carrying `.delivery-os/config.yaml`, driven through the delivered composition-time acquisition on `status --json` (DEC-14); the state half is proven over scratch homes populated with the delivered artifact shape; and no case asserts the absence of a real-home path — the only real-home contact is the existence/size/mtime snapshot in `TC-BIN-055`. **No test mutates the real `~/.delivery-os-state`.**
+- **Fixture checkouts hold the shape; the suite materialises the checkout.** Committed fixtures under `tests/fixtures/entrypoint/prior-identity/` (never named `*.test.ts`) carry the config/state **shape** — `config-only/`, `both-layers/`, `mixed-layers/`, `local-only/`, `selected-config/`, `global-layers/`, `no-config/` — with values distinguishable per file (a shared key with different values, plus a unique key per file) so "read" versus "merged" is observable. A nested `.git` cannot be committed, so each case materialises a **scratch checkout** under `tmp/` (`git init`, one commit, the identity marker) from that shape (plan reconciliation R-G).
+- **Scratch homes.** `host-root/` supplies the delivered host-root artifact shape and a seeded delivery record; the suite copies it into a `mkdtemp` home per test and derives a matching project key from the materialised checkout's marker. A second seeded record exists in a separate `current-root/` fixture so "which root was read" is unambiguous.
+- **Injected facts.** The composition runs through the production composition; the acquisition is additionally instrumented with counting filesystem facts (to assert per-layer reads, the zero-added-acquisition equality, and the absence of prior-prefix reads) and the host-root policy always receives injected existence facts. A counting environment record proves the single override read.
+- **Subprocess cells.** One per bin for the process edge (`bun packages/cli/bin/<bin>.ts`), one for the `pnpm exec` link, one for the installed launcher, and the preload hermeticity run (`TC-BIN-084`) — all with scrubbed environments and an explicit `HOME` under temp. No subscriber uses the real `$HOME` for state.
+- **Network proof.** The installer test puts a shim directory first on `PATH` that records and fails `curl`/`wget`/`git fetch|pull|clone`; the assertion is on the recorded counter, not on an absent error message. The hermeticity guard's preload module is the second, general network guard.
+- **Goldens and baselines.** The alias baseline fixture (`tests/fixtures/entrypoint/alias-baseline.json`) is captured **before** the bin refactor with an explicit documented command and a `capturedFrom` commit; it records `--version`, `--help`, and the invalid-override `fallback.internal` projection with its summary. It is regenerated only deliberately. No other golden is added.
 - **Isolation and determinism.** Every suite constructs its own temp roots and removes them in `finally`; no cross-suite shared state; no real sleeps; identity determinism is asserted by paired runs (`TC-BIN-014`).
-- **Commands used while iterating** (narrow first, per the testing strategy): `bun test tests/behaviour/entrypoint-two-bins.test.ts`, `identity-override.test.ts`, `prior-identity-*.test.ts`; `bun test tests/structure/entrypoint-bin.test.ts content-inventory.test.ts projects-state-scope-policy.test.ts install-launcher.test.ts`; `bash scripts/.tests/test-install-jaiship-launcher.sh`; `bun test tests/checks/identity-docs.test.ts prior-identity-hermetic.test.ts doc-conformance.test.ts`.
+- **Execution order** (narrow first, structure before behaviour, gates last): (1) `TC-BIN-060`→`067` structure; (2) `TC-BIN-001`→`006` with the alias baseline captured **before** the refactor; (3) `TC-BIN-010`→`014`; (4) `TC-BIN-020`→`026`; (5) `TC-BIN-030`→`036`; (6) `TC-BIN-040`→`045`; (7) `TC-BIN-050`→`056` (the Bun installer test, whose structural half is already green); (8) `TC-BIN-070`→`073`; (9) `TC-BIN-084`, then `TC-BIN-082`, then `TC-BIN-083`, then the single gate `TC-BIN-080`, and finally `TC-BIN-081` once the commits exist.
+- **Commands used while iterating**: `bun test tests/behaviour/entrypoint-two-bins.test.ts`, `identity-override.test.ts`, `prior-identity-*.test.ts`; `bun test tests/structure/entrypoint-bin.test.ts content-inventory.test.ts projects-state-scope-policy.test.ts install-launcher.test.ts`; `bun test tests/checks/install-launcher-installer.test.ts`; `bun test tests/checks/identity-docs.test.ts prior-identity-hermetic.test.ts doc-conformance.test.ts`.
 
 ## 7. Automation Plan and Implementation Mapping
 
-Every case is automated: `bun test` for the TypeScript cases and the embedded assertion framework in `scripts/.tests/test-install-jaiship-launcher.sh` for the installer case; `TC-BIN-080` and `TC-BIN-081` are gate executions whose evidence is recorded in §10. Rows marked **Existing – Update** extend delivered suites in place; **New** files are created in this change. Delivery owns exact module paths (GAP-T6): the files below are the planned locations following repo conventions, and a case that cannot resolve its seam fails naming the missing contract rather than skipping. Aggregate verification: `TMPDIR=$PWD/tmp/tmpdir pnpm check` with the §6 re-run rule.
+Every case is automated in `bun test` — the installer integration cases spawn `scripts/install.sh` from `tests/checks/install-launcher-installer.test.ts`, so there is no `scripts/.tests` shell suite and no CI-workflow change (D9); `TC-BIN-080` and `TC-BIN-081` are gate executions whose evidence is recorded in §10. Rows marked **Existing – Update** extend delivered suites in place; **New** files are created in this change. Delivery owns exact module paths (GAP-T6): the files below are the planned locations following repo conventions, and a case that cannot resolve its seam fails naming the missing contract rather than skipping. Aggregate verification is the single executable same-device gate `TMPDIR=$(mktemp -d "$HOME/.cache/ados-check-XXXXXX") pnpm check`; the repo-local form is recorded evidence only (§6, D10).
 
 | TC ID | Suite / file | Command | Injection / fixture requirements | Status |
 |---|---|---|---|---|
@@ -1703,13 +1758,13 @@ Every case is automated: `bun test` for the TypeScript cases and the embedded as
 | TC-BIN-003 | `tests/behaviour/entrypoint-two-bins.test.ts` | `bun test … --filter family-parity` | `PROMPT_REQUIRED_COMMANDS` import; comparator mutants | New |
 | TC-BIN-004 | `tests/behaviour/entrypoint-two-bins.test.ts` | `bun test … --filter per-command-help` | `allHelpEntries()` inventory; two identities | New |
 | TC-BIN-005 | `tests/behaviour/entrypoint-two-bins.test.ts`; extends `entrypoint-help-isolation.test.ts` | `bun test … --filter isolation` | Poisoned env, invalid YAML in both config dirs, throwing composer, counting ports | New + Existing – Update |
-| TC-BIN-006 | `tests/behaviour/entrypoint-two-bins.test.ts` | `bun test … --filter install-path` | Throwing composer; override matrix | New |
+| TC-BIN-006 | `tests/behaviour/entrypoint-two-bins.test.ts` | `bun test … --filter install-path` | Throwing composer; override matrix; asserts the member (not the installer's scrubbed query) | New |
 | TC-BIN-010 | `tests/behaviour/identity-override.test.ts`; extends `entrypoint-version.test.ts` | `bun test tests/behaviour/identity-override.test.ts` | `.acme` fixture checkout; scratch `~/.acme-state` | New + Existing – Update |
 | TC-BIN-011 | `tests/behaviour/identity-override.test.ts` | `bun test … --filter empty-override` | Empty and whitespace-only override variants | New |
-| TC-BIN-012 | `tests/behaviour/identity-override.test.ts`; extends `entrypoint-help-isolation.test.ts` | `bun test … --filter invalid-override` | Invalid override matrix; fixture checkout with a prior file present | New + Existing – Update |
+| TC-BIN-012 | `tests/behaviour/identity-override.test.ts`; extends `entrypoint-help-isolation.test.ts` | `bun test … --filter invalid-override` | Invalid override matrix; prior file present; alias baseline (exit, envelope, summary) | New + Existing – Update |
 | TC-BIN-013 | `tests/behaviour/prior-identity-config-fallback.test.ts`, `prior-identity-state-fallback.test.ts` | `bun test … --filter alias` | Alias fixtures with current/prior artifacts in both directions | New |
 | TC-BIN-014 | `tests/behaviour/identity-override.test.ts` | `bun test … --filter determinism` | Input matrix; two cwd/home variants | New |
-| TC-BIN-020 | `tests/behaviour/prior-identity-config-fallback.test.ts` | `bun test … --filter prior-read` | `config-only/` fixture; injected + real-disk acquisition | New |
+| TC-BIN-020 | `tests/behaviour/prior-identity-config-fallback.test.ts` | `bun test … --filter prior-read` | Scratch checkout from `config-only/` shape; counting acquisition facts; zero-added-acquisition control; `config --json` unreachable probe | New |
 | TC-BIN-021 | `tests/behaviour/prior-identity-config-fallback.test.ts` | `bun test … --filter current-wins` | `both-layers/` fixture with shared + unique keys | New |
 | TC-BIN-022 | `tests/behaviour/prior-identity-config-fallback.test.ts` | `bun test … --filter per-layer` | `mixed-layers/`, `local-only/` fixtures | New |
 | TC-BIN-023 | `tests/behaviour/prior-identity-config-fallback.test.ts` | `bun test … --filter selected-config` | `selected-config/` fixture; external selected file; delivered skips | New |
@@ -1723,35 +1778,36 @@ Every case is automated: `bun test` for the TypeScript cases and the embedded as
 | TC-BIN-034 | `tests/behaviour/prior-identity-state-fallback.test.ts`; extends `tests/structure/state-scope.test.ts` | `bun test … --filter prior-prefix` | Counting environment record; both identities | New + Existing – Update |
 | TC-BIN-035 | `tests/behaviour/prior-identity-state-fallback.test.ts` | `bun test … --filter single-root` | Mutating command fixture; append path assertion; one-resolution counter | New |
 | TC-BIN-036 | `tests/behaviour/prior-identity-state-fallback.test.ts` | `bun test … --filter first-use` | Empty scratch home; marker checkout; alias twin | New |
-| TC-BIN-040 | `tests/behaviour/prior-identity-notice.test.ts` | `bun test … --filter once-per-source` | Both-halves fallback fixture; separate stdout/stderr capture; one real subprocess cell | New |
-| TC-BIN-041 | `tests/behaviour/prior-identity-notice.test.ts` | `bun test … --filter repeat-resolution` | Composition with two resolving handlers; sequence-numbered sink; emission guard | New |
-| TC-BIN-042 | `tests/behaviour/prior-identity-notice.test.ts` | `bun test … --filter no-fallback` | Silence fixtures plus a positive control in the same suite | New |
+| TC-BIN-040 | `tests/behaviour/prior-identity-notice.test.ts` | `bun test … --filter once-per-source` | Both-halves fallback fixture (scratch checkout with `.delivery-os/config.yaml` + seeded prior root); separate stdout/stderr capture; one real subprocess cell | New |
+| TC-BIN-041 | `tests/behaviour/prior-identity-notice.test.ts` | `bun test … --filter repeat-resolution` | Two composed programs over one fixture; sequence-numbered sink; emission guard; one fresh subprocess cell | New |
+| TC-BIN-042 | `tests/behaviour/prior-identity-notice.test.ts` | `bun test … --filter no-fallback` | Silence fixtures with their config shape; self-description silence cell; positive control in the same suite | New |
 | TC-BIN-043 | `tests/behaviour/prior-identity-notice.test.ts` | `bun test … --filter text-contract` | Canary values and canary path segment; all four reasons | New |
 | TC-BIN-044 | `tests/behaviour/prior-identity-notice.test.ts`; `legacy-adapter.test.ts` as control | `bun test … --filter distinctness` | Pre-GH-288 layout fixture; `.ados` + `ADOS_` fixture; delivered controls | New + Existing – No Change |
-| TC-BIN-045 | `tests/behaviour/prior-identity-notice.test.ts` | `bun test … --filter invariance` | Paired equivalent fixtures; path normalisation; exit-1 and exit-2 fixtures | New |
-| TC-BIN-050 | `scripts/.tests/test-install-jaiship-launcher.sh`; `tests/structure/install-launcher.test.ts` | `bash scripts/.tests/test-install-jaiship-launcher.sh` | `mktemp` scratch HOME + project root; network/git shim; absence precondition | New |
-| TC-BIN-051 | `scripts/.tests/test-install-jaiship-launcher.sh` | `bash …` | Second source copy; digest/mode/mtime comparison | New |
-| TC-BIN-052 | `scripts/.tests/test-install-jaiship-launcher.sh` | `bash …` | Copied source tree removed; fake `jaiship` earlier on `PATH` | New |
-| TC-BIN-053 | `scripts/.tests/test-install-jaiship-launcher.sh` | `bash …` | Override + state override; stream redirection; exit 1/2 fixtures | New |
+| TC-BIN-045 | `tests/behaviour/prior-identity-notice.test.ts` | `bun test … --filter invariance` | Paired equivalent scratch checkouts with config files; path normalisation; exit-1 and exit-2 fixtures | New |
+| TC-BIN-050 | `tests/checks/install-launcher-installer.test.ts`; `tests/structure/install-launcher.test.ts` | `bun test … --filter register` | `mkdtemp` scratch HOME + scratch project root; ambient override; network/git shim; absence precondition; scrubbed-query evidence | New |
+| TC-BIN-051 | `tests/checks/install-launcher-installer.test.ts` | `bun test … --filter idempotence` | Second source copy; digest/mode/mtime comparison | New |
+| TC-BIN-052 | `tests/checks/install-launcher-installer.test.ts` | `bun test … --filter missing-target` | Copied source tree removed; fake `jaiship` earlier on `PATH` | New |
+| TC-BIN-053 | `tests/checks/install-launcher-installer.test.ts` | `bun test … --filter passthrough` | Override + state override; separated stdout/stderr capture; exit 1/2 fixtures; no stdin cell | New |
 | TC-BIN-054 | `tests/structure/entrypoint-installer-absence.test.ts`; `tests/structure/install-launcher.test.ts` | `bun test tests/structure/entrypoint-installer-absence.test.ts tests/structure/install-launcher.test.ts` | Installer source parse; temp-copy negative control | Existing – Update + New |
-| TC-BIN-055 | `scripts/.tests/test-install-jaiship-launcher.sh` | `bash …` | Real-home existence/mtime snapshot; write-prefix allowlist; network/git shim | New |
+| TC-BIN-055 | `tests/checks/install-launcher-installer.test.ts` | `bun test … --filter hermeticity` | Real-home existence/size/mtime snapshot (no absence claim); write-prefix allowlist; network/git shim | New |
+| TC-BIN-056 | `tests/checks/install-launcher-installer.test.ts` | `bun test … --filter preconditions` | No-Bun symlink-farm `PATH`; docs-only source tree; `--dry-run`; `--tool` matrix; override-scrub evidence | New |
 | TC-BIN-060 | `tests/structure/entrypoint-bin.test.ts` | `bun test tests/structure/entrypoint-bin.test.ts` | Manifest parse; temp-root manifest mutants | Existing – Update |
 | TC-BIN-061 | `tests/structure/content-inventory.test.ts` + `inventory.json` | `bun test tests/structure/content-inventory.test.ts` | Inventory entries for new files; allowance entries; entrypoint allowance loses `neutralWorkingName` and keeps `workingNameEnvironmentVariable`; temp-root mutants | Existing – Update |
-| TC-BIN-062 | `tests/structure/entrypoint-bin.test.ts` | `bun test … --filter literals` | Working-name AST scan; declared CLI + unchanged-MCP inventory; entrypoint no-literal/no-accessor assertions; one in-process call with no declared default; temp-root injected sites | Existing – Update |
-| TC-BIN-063 | `tests/structure/entrypoint-bin.test.ts` | `bun test … --filter shared-composition` | AST diff of the two bins; body-site search; entrypoint exports only the protocol accessor; temp-root duplicate body and launcher-side default | Existing – Update |
+| TC-BIN-062 | `tests/structure/entrypoint-bin.test.ts` | `bun test … --filter literals` | Declared `packages/**` string-literal scan; five-site inventory in two scopes; entrypoint no-literal/no-accessor assertions; one in-process call with no declared default; temp-root sixth site, missing-site, re-declared accessor, and field-literal controls | Existing – Update |
+| TC-BIN-063 | `tests/structure/entrypoint-bin.test.ts` | `bun test … --filter shared-composition` | Pinned allowed difference set (`completion` on both bins + selector facts); body-site search; entrypoint exports only the protocol accessor; temp-root duplicate body, launcher-side default, missing `completion` | Existing – Update |
 | TC-BIN-064 | `tests/structure/branding-seam.test.ts` (unchanged) + probe in `tests/structure/entrypoint-bin.test.ts` | `bun test tests/structure/branding-seam.test.ts tests/structure/entrypoint-bin.test.ts` | Delivered scanner + three delivered negative controls; `bin/**` and `src/entrypoint.ts` corpus probes through the exported `validateSeam` | Existing – No Change (seam file) / probe New |
 | TC-BIN-065 | `tests/structure/projects-state-scope-policy.test.ts`; `tests/structure/state-scope.test.ts` | `bun test tests/structure/projects-state-scope-policy.test.ts tests/structure/state-scope.test.ts` | Delivered AST scan; helper call-count assertion; injected re-derived path | Existing – Update |
 | TC-BIN-066 | `tests/structure/entrypoint-installer-absence.test.ts` | `bun test …` | Array parse; step declaration search; temp-copy array mutation | Existing – Update |
 | TC-BIN-067 | `tests/structure/entrypoint-bin.test.ts`; delivered error-table sync check | `bun test … --filter family-and-error-table` | Family declaration; error-table source; extra-family mutant | Existing – Update |
-| TC-BIN-070 | `tests/checks/doc-conformance.test.ts` (+ handbook §16.1.1 rows) | `bun test tests/checks/doc-conformance.test.ts` | Four new phrase-table rows; synthetic stale/required texts for the negative controls | Existing – Update |
-| TC-BIN-071 | `tests/checks/identity-docs.test.ts`; `scripts/.tests/test-doc-distribution.sh` | `bun test tests/checks/identity-docs.test.ts && bash scripts/.tests/test-doc-distribution.sh` | New guide; registry JSON; temp-copy marker/registry mutations | New |
-| TC-BIN-072 | `tests/checks/identity-docs.test.ts`; delivered branding-contract and manifest-privacy checks | `bun test tests/checks/identity-docs.test.ts --filter divergences` | Spec §8.5 list; guide divergence section; delivered value sources | New |
+| TC-BIN-070 | `tests/checks/doc-conformance.test.ts` (self-contained table) | `bun test tests/checks/doc-conformance.test.ts` | Five-page exact set (incl. the distribution-marker page); stale/required phrases both directions; synthetic texts and a missing-page control | Existing – Update |
+| TC-BIN-071 | `tests/checks/identity-docs.test.ts`; `scripts/.tests/test-doc-distribution.sh` | `bun test tests/checks/identity-docs.test.ts && bash scripts/.tests/test-doc-distribution.sh` | New guide; registry JSON; spec-page link (R-D); temp-copy marker/registry mutations | New |
+| TC-BIN-072 | `tests/checks/identity-docs.test.ts`; delivered branding-contract and manifest-privacy checks | `bun test tests/checks/identity-docs.test.ts --filter divergences` | Spec §8.5 four-divergence list; guide section; installer `ADOS_*` defaults; delivered value sources | New |
 | TC-BIN-073 | `scripts/checks/forbidden-literals.ts`; `tests/checks/forbidden-literals.test.ts` | `bun run scripts/checks/forbidden-literals.ts && bun test tests/checks/forbidden-literals.test.ts` | Registry seed set/baseline; unregistered-doc and seeded-literal mutants | Existing – No Change (controls extended by the new guide) |
-| TC-BIN-080 | repository root | `mkdir -p tmp/tmpdir && TMPDIR=$PWD/tmp/tmpdir pnpm check` (+ §6 re-run) | Installed workspace; `tmp/tmpdir`; recorded logs | Gate |
+| TC-BIN-080 | repository root | `TMPDIR=$(mktemp -d "$HOME/.cache/ados-check-XXXXXX") pnpm check` (repo-local run recorded as evidence only) | Installed workspace; same-device `$HOME/.cache` temp dir; recorded logs and the three named suite verdicts | Gate |
 | TC-BIN-081 | repository root | `./scripts/lint-commit-range.sh --base main-tools` | Change branch with commits; local commitlint | Gate |
-| TC-BIN-082 | delivered suites (named in the case) | `bun test …` per file + `bash scripts/.tests/test-install.sh` | Built artefacts; per-file verdicts | Existing – No Change |
+| TC-BIN-082 | delivered suites (named in the case) incl. `tests/conformance/pilot/pilot-isolation.test.ts` | `bun test …` per file + `bash scripts/.tests/test-install.sh` | Built artefacts; per-file verdicts; the conformance cell updated, not deleted | Existing – Update (conformance) / No Change (others) |
 | TC-BIN-083 | `tests/behaviour/daemon-start-detached.test.ts` | `bun test … --filter child-environment` | Delivered allowlist pin; identity matrix; installed-unit renderer | Existing – Update |
-| TC-BIN-084 | `tests/checks/prior-identity-hermetic.test.ts` | `bun test tests/checks/prior-identity-hermetic.test.ts` | Network/credential/sleep/write counters; two canaries | New |
+| TC-BIN-084 | `tests/checks/prior-identity-hermetic.test.ts` + preload module | `bun test tests/checks/prior-identity-hermetic.test.ts` | Static import/surface scan; spawned `bun --preload … test <named suites>`; violation report; canary cell per counter class | New |
 
 ## 8. Risks, Assumptions, and Open Questions
 
@@ -1763,14 +1819,16 @@ Every case is automated: `bun test` for the TypeScript cases and the embedded as
 | **R-TP-2 — A fallback test proves a read but not honest origins**, letting a laundered path pass. | `TC-BIN-020` asserts the recorded loaded-file path and the origin of every prior-supplied value; `TC-BIN-025` counts origins under the current directory name and requires zero. |
 | **R-TP-3 — The "no second root" claim passes vacuously** because a read-only command never opens state. | `TC-BIN-031` drives read-only, store-opening, and mutating invocations, snapshots the home listing, and arms a create guard that must record zero violations (and is proven live). |
 | **R-TP-4 — The notice is asserted only in an injected sink** and never on the real channel. | `TC-BIN-040` includes one real-subprocess cell; the payload assertion proves the notice never leaks into stdout. |
-| **R-TP-5 — The installer test passes with a no-op installer or an in-place re-run.** | `TC-BIN-050` requires the file to be absent before the run; `TC-BIN-051` requires the first run to change the digest and the second to leave it untouched, plus a repoint from a second source; `TC-BIN-055` proves write confinement. |
-| **R-TP-6 — The gate's temp-dir constraint is mistaken for a red gate** (or a genuine red is waived as environmental). | `TC-BIN-080` names the two fixture suites and the parity suite, records both invocations, and forbids reclassifying any other failure; §6 records the mechanism. |
-| **R-TP-7 — The new files escape a structure scan silently** (for example a scan whose corpus excludes `bin/**`). | Every structure case includes a temp-root injection into the *new* file path (`TC-BIN-064` step 3, `TC-BIN-061` negative control, `TC-BIN-062` fourth-site control) so the corpus is proven to include them. |
+| **R-TP-5 — The installer test passes with a no-op installer or an in-place re-run, or fails CI for lack of Bun.** | `TC-BIN-050` requires the file to be absent before the run and asserts the brand path under an ambient override; `TC-BIN-051` requires the first run to change the digest and the second to leave it untouched, plus a repoint from a second source; `TC-BIN-055` proves write confinement; `TC-BIN-056` proves the classified preconditions. The cases live in `tests/checks/install-launcher-installer.test.ts`, which runs in the Bun-bearing test job, so no `.github/workflows/ci.yml` change is needed (D9). |
+| **R-TP-6 — The gate is run in a form GH-313 recorded as red** (a repo-local `TMPDIR`), so the phase is not green at its boundary. | `TC-BIN-080` names the single executable same-device gate (`mktemp -d "$HOME/.cache/ados-check-XXXXXX"`), records the three affected suite verdicts, and demotes the repo-local run to labelled evidence that neither fails nor substitutes for the gate (D10); §6 records the mechanism. |
+| **R-TP-7 — The new files escape a structure scan silently** (for example a scan whose corpus excludes `bin/**`). | Every structure case includes a temp-root injection into the *new* file path (`TC-BIN-064` step 3, `TC-BIN-061` negative control, `TC-BIN-062` sixth-site and missing-site controls) so the corpus is proven to include them. |
 | **R-TP-8 — The state half accidentally touches the operator's real state.** | §6 forbids mutable use of `~/.delivery-os-state`; `TC-BIN-084` fails on any write outside the temp roots; `TC-BIN-055` is the only reader of the real home (existence/mtime only). |
 | **R-TP-9 — A delivered assertion is relaxed to make the change pass.** | `TC-BIN-082` step 5 requires a declared justification for every edit inside a delivered suite; `TC-BIN-064`/`TC-BIN-065` re-run the delivered negative controls unchanged. |
-| **R-TP-10 — The literal-count guard drifts into matching the tree rather than the declared rule.** | `TC-BIN-062` compares against a **declared four-site inventory held in the test** (three CLI selector sites in the CLI scope plus the unchanged MCP default in its own scope) and fails by name on any undeclared site *and* on a declared site that disappears, so the inventory is the assertion's input rather than its output; the entrypoint no-literal/no-accessor assertions and the no-declared-default call add the direction that a count-only guard would miss. |
+| **R-TP-10 — The literal guard drifts into matching the tree rather than the declared rule.** | `TC-BIN-062` states DM-6's scan rule (a `packages/**` **string-literal** walk; comments are not literals) and compares against a **declared five-site inventory held in the test** — three CLI selector sites, the unchanged MCP default, and the resolver's `SCOPE_ORG` derivation input — failing by name on any undeclared site *and* on a declared site that disappears, so the inventory is the assertion's input rather than its output; the entrypoint no-literal/no-accessor assertions and the no-declared-default call add the direction a count-only guard would miss. |
 | **R-TP-11 — The `pnpm exec jaiship` cell is environment-dependent** (the workspace link exists only after install). | `TC-BIN-001` makes the semantic assertion against the entry file and treats the linked cell as an additional assertion that fails with a named setup instruction, never skips (finding `B-2`). |
-| **R-TP-12 — Documentation truth is asserted by prose reading**, which no gate enforces. | `TC-BIN-070` rides the delivered phrase table (both directions), `TC-BIN-071`/`TC-BIN-073` ride machine guards (marker, registry, scan), and `TC-BIN-072` asserts the unchanged values mechanically; prose quality remains review-attested (DOC-TP-1, GAP-T5). |
+| **R-TP-12 — Documentation truth is asserted by prose reading**, which no gate enforces. | `TC-BIN-070` adds a **self-contained** page/phrase table to `tests/checks/doc-conformance.test.ts` (both directions, exact five-page set, negative controls) without editing the historical table; `TC-BIN-071`/`TC-BIN-073` ride machine guards (marker, registry, scan), and `TC-BIN-072` asserts the unchanged values and the four divergences mechanically; prose quality remains review-attested (DOC-TP-1, GAP-T5). |
+| **R-TP-13 — The configuration half silently depends on a delivered acquisition that a later change could remove.** | `TC-BIN-020` asserts the acquisition actually ran (non-zero counter), that it ran before the handler, and that the count equals the control's — so a lost acquisition fails naming the missing read rather than passing on a vacuous "no fallback" outcome. Spec §22 records the dependency (DEC-14). |
+| **R-TP-14 — The installer cases are moved out of shell-suite discovery and could lose CI coverage.** | The cases live in `tests/checks/install-launcher-installer.test.ts`, which `bun test` discovers in the Bun-bearing job; `TC-BIN-050` fails (never skips) if the spawn cannot find `bun` or the installer, and no CI-workflow edit is required (D9). |
 
 ### 8.2 Assumptions
 
@@ -1778,34 +1836,55 @@ Every case is automated: `bun test` for the TypeScript cases and the embedded as
 - The delivered structure suites (`branding-seam`, `projects-state-scope-policy`, `content-inventory`) expose scanners that accept an injected root, which is how every negative control is built over the production scanner instead of a re-implementation. Where a scanner does not, the case extends it in the same change rather than duplicating the logic in the test.
 - The delivered notice channel is stderr through the composition's warning/write path; the prior-identity notice uses that channel as a notice, not as a configuration warning, so the payload warning list stays empty (`TC-BIN-026`, `TC-BIN-045`).
 - A project store is single-rooted (spec §12), so a fallback invocation writes into the prior root; the cases assert single-rootedness and the absence of migration-shaped writes, not read-only store access (`TC-BIN-035`).
-- The alias's invalid-override failure projection may change from the currently observed `fallback.internal` containment to a classified resolver-input failure, because `AC-F2-7` requires the classified error for **both** bins while `AC-F2-3`'s byte-identity is scoped to `--version`/`--help` and `.delivery-os` paths. `TC-BIN-002` therefore pins version/help bytes only, and `TC-BIN-012` asserts the classified projection (OQ-TP-2).
-- Suite file names and module seams are delivery-bound (GAP-T6); behaviours, identities, exits, closed vocabularies, precedence, and AC traceability are not.
-- The operator-workstation facts in §6 describe the delivery environment; no case depends on them, so the suite is green on a clean CI runner.
+- The invalid-override projection is the **delivered** `fallback.internal` containment at exit `2` for both bins, with the resolver-level input error wrapped inside and never CLI-visible (spec v1.2 DEC-11, D6). `TC-BIN-002` pins `--version`/`--help` **and** the alias's containment projection against the baseline; `TC-BIN-012` asserts the containment identity and rejects a classified projection on either stream. No case expects a CLI-visible resolver error.
+- `status --json` performs the delivered composition-time project-configuration acquisition on every composed invocation, so the configuration half is proven on the ticket's literal surface with zero acquisitions added (spec v1.2 §2.1, DEC-14, D5). The alternative `config --json` surface is unreachable (`fallback.internal`, exit `2`) and is asserted as such rather than used.
+- The installer integration cases run inside the Bun test job and need no workflow change (D9); the installer's install-time Bun requirement is a declared precondition whose absence is a classified failure, not a skip (DEC-15).
+- Suite file names and module seams are delivery-bound (GAP-T6); behaviours, identities, exits, closed vocabularies, precedence, the delivered containment projection, and AC traceability are not. Phase ownership is declared in `chg-GH-320-plan.yaml` revision 1.x, whose R-A..R-G reconciliations this plan absorbs.
+- The operator-workstation facts in §6 describe the delivery environment; no case depends on them (in particular, no case asserts that `~/.jaiship` or any real-home path is absent), so the suite is green on a clean CI runner and on a workstation where `~/.jaiship/bin` already exists.
 - Privacy posture (spec §20/§21: paths only, no values, no new data flow) carries no NFR row; it is covered by `TC-BIN-043`'s no-value/no-secret assertion and by review attestation. No dedicated privacy case is invented beyond the declared requirements.
 
 ### 8.3 Open Questions and Findings
 
 | ID | Question / finding | Status / Owner | Blocking |
 |---|---|---|---|
-| **B-1** (resolved in spec v1.1) | Historical, kept short: DM-6's "exactly three declared committed literal sites under `packages/**`" conflicted with the delivered `packages/mcp/src/serve.ts` default, which §16 declares UNCHANGED. **Resolution in spec v1.1:** DM-6, `AC-F7-10`, and NFR-6 now declare **four** sites — the three CLI selector sites plus the unchanged MCP default — and require the entrypoint module's neutral default constant *and* its `neutralWorkingName` accessor to be removed (reducing that module's executable allowance by exactly that one name, with `workingNameEnvironmentVariable` retained and still consumed by production). No blocking finding remains; `TC-BIN-062` and `TC-BIN-061` assert the reconciled text. | Resolved — spec v1.1 | No |
+| **B-1** (resolved in spec v1.1, extended in v1.2) | Historical, kept short: DM-6's original "exactly three declared committed literal sites under `packages/**`" conflicted with delivered literals. **Resolution:** spec v1.1 declared four sites and removed the entrypoint's neutral default plus its `neutralWorkingName` accessor; spec v1.2 / D7 replaced the count with a stated scan rule and a **five-site** inventory (three CLI selector sites, the unchanged MCP default, and the resolver's `SCOPE_ORG` derivation input), requiring every declared site found and every found literal declared. No blocking finding remains; `TC-BIN-062` and `TC-BIN-061` assert the reconciled text. | Resolved — spec v1.1/v1.2 | No |
 | **B-2** | **Non-blocking environment finding.** `AC-F1-1` names `pnpm exec jaiship --version`, which requires the workspace bin link created by `pnpm install`. The link is absent on a clean checkout until install, so a cell that only spawns `pnpm exec` is environment-dependent. | Resolved in-plan: `TC-BIN-001` asserts the semantics through the entry file and treats the linked cell as an additional assertion that fails with a named setup instruction (`pnpm install`), never skips. | No |
 | **OQ-TP-1** | Which surface reports the effective host root? The spec does not pin a payload field, and `status --json`'s shape is delivered. | Open — `@coder` selects; `TC-BIN-030`/`033`/`035` assert the root at the composition seam and by write location, and fail naming the missing surface (SURF-TP-1). | No |
-| **OQ-TP-2** | Exact projection of the resolver's `BrandingInputError` on a configuration-bearing command. Today the composed program throws and the entrypoint converts it to `fallback.internal` containment (exit `2`), which is not a classified input error. `AC-F2-7` requires the classified error. | Open — `@coder` surfaces the classified identity; `TC-BIN-012` asserts `field: "override"` plus a closed code and rejects `fallback.internal`; `@plan-writer` should declare which phase owns it. | No (an explicit delivery obligation) |
+| **OQ-TP-2** (resolved by D6 / spec v1.2) | Projection of the resolver's `BrandingInputError` on a configuration-bearing command. **Resolved:** the delivered behaviour is the containment identity `fallback.internal` at exit `2` for both bins, with the resolver-level error wrapped inside and never CLI-visible; AC-F2-7 and DEC-11 record it, and the alias keeps 0 observable change. | Resolved — `TC-BIN-012` asserts the containment identity and the alias baseline | No |
 | **OQ-TP-3** | Exact wording of the "nothing was moved, copied, or deleted" clause and the location-naming form. The spec pins the requirement, not the sentence. | Open — `@coder`; `TC-BIN-043` asserts the semantic components (token, reason, both locations, no-move statement, ≤ 400 characters), not one exact sentence. | No |
 | **OQ-TP-4** | Whether the launcher's missing-target failure is a shell `exec` guard or a Bun-side check, and therefore its exact exit code beyond "non-zero". | Open — `@coder`; `TC-BIN-052` asserts non-zero, one bounded line, the named target and remedy, and no `PATH` fallback — not a specific code. | No |
 | **OQ-TP-5** | Whether the install-path self-description is exposed only to the installer or also documented as a user command. §8.1 pins the invocation, so the test treats it as public. | Open — `@doc-syncer`; `TC-BIN-006` and `TC-BIN-071` assert the invocation and the guide's mention respectively. | No |
 | **OQ-TP-6** | Whether a prior-identity fallback read may legitimately surface a *delivered* configuration warning (for example `deprecated`) from the prior file. The spec forbids a *new* warning kind and forbids the fallback itself becoming a warning. | Open — `TC-BIN-026` records which delivered warning appears and asserts only that no new kind appears and that the notice never travels the warning channel. | No |
+| **OQ-TP-7** | The exact exit code and wording of the two new installer failures (missing install-time runtime; source without the CLI entry). DEC-15 pins "classified failure naming what is missing, no launcher written", not a code. | Open — `@coder`; `TC-BIN-056` asserts non-zero exit, one bounded line naming the missing item, no "skip" wording, and no launcher file; it does not pin a specific code. | No |
+
+**DoR iter-1 findings disposition (this artefact).** Findings 3, 4, 6, 7, 9, 14–19 are specification/plan-side and are closed by spec v1.2 and the plan's own revision (D5–D11); the table below records what this test-plan revision changed for the findings assigned to `test_planning`.
+
+| Finding | Disposition in this revision |
+|---|---|
+| 1 (status acquisition premise) | **Premise corrected by verified fixture evidence and D5.** `TC-BIN-020`, `TC-BIN-040`, `TC-BIN-041`, `TC-BIN-042`, `TC-BIN-045` all run on `status --json` in a fixture checkout carrying `.delivery-os/config.yaml`; the acquisition is documented as composition-time and applying to every composed invocation; `TC-BIN-020` asserts zero added acquisitions and that `config --json` is unreachable; no case claims `status` acquires nothing. |
+| 2 (invalid-override projection) | **Pinned to the delivered behaviour (D6).** `TC-BIN-012` asserts `fallback.internal` at exit `2` for both bins, rejects a CLI-visible classified error, and byte-compares the alias projection (summary included) with its baseline; the baseline record is added to BYTE-TP-1. |
+| 5 (literal inventory) | **Five declared sites under the stated scan rule (D7).** `TC-BIN-062` and `LIT-TP-1` assert the inventory in both directions, including `SCOPE_ORG` as a declared derivation input; `TC-BIN-063` pins the `completion` export set. |
+| 8 (installer divergence) | **Fourth divergence declared (DEC-15).** `TC-BIN-072` asserts the installer's `ADOS_HOME`/`ADOS_REPO_DIR`/`ADOS_SOURCE_DIR`/`ADOS_RAW_URL`/`ADOS_REPO_URL` values and requires the guide to state the install-time Bun requirement, the no-CLI-source failure, `DRY_RUN`, and `--tool` independence; `TC-BIN-056` tests them. |
+| 10 (hermeticity mechanism) | **Two implementable halves (D11).** `TC-BIN-084` now has a static import/surface scan plus a spawned `bun --preload … test <named suites>` subprocess with a violation report and per-class canaries; in-process arming around other suites is dropped. |
+| 11 (real-home absence claim) | **Removed.** `TC-BIN-055` asserts `~/.jaiship` unchanged by existence/size/mtime only; no absence claim anywhere in the plan or §6. |
+| 12 (stale homes) | **Corrected.** `TC-BIN-070` uses a self-contained five-page table in `tests/checks/doc-conformance.test.ts` (handbook §16.1.1 and the GH-242 spec untouched); §6 materialises scratch checkouts from shape-only fixtures (R-G); the plan reference is revision 1.x, not "absent". |
+| 13 (completion export) | **Pinned.** `TC-BIN-063` requires `completion` on both bins, the allowance listing it for both, and only the declared selector facts as the remaining difference; a missing export fails by name. |
+| 20 (acquisition sites) | **Plan-side, mirrored here.** `TC-BIN-020`'s instrumentation and `TC-BIN-040`/`045` run through the production composition, so the tested acquisition is the real one; the per-site enumeration is plan scope. |
+| 21 (landing-page link) | **Resolved as R-D.** `TC-BIN-071` step 5 requires discoverability from the four spec pages and states why `doc/00-index.md` is untouched. |
+| 22 (stdin cell) | **Dropped.** `TC-BIN-053` step 4 now proves separate stdout/stderr capture and states that no composed command reads stdin, so no pipe claim is made. |
+| 23 (shellcheck on a bash suite) | **Not applicable.** There is no `scripts/.tests` shell suite (D9); the shellcheck obligation attaches to the edited `scripts/install.sh`, which the plan's gates cover. |
 
 ## 9. Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-15 | @test-plan-writer | Initial test plan against spec v1.0: all 11 ACs (`AC-F1-1`, `AC-F1-2`, `AC-F2-3`, `AC-F3-4`, `AC-F4-5`, `AC-F5-6`, `AC-F2-7`, `AC-F6-8`, `AC-F7-9`, `AC-F7-10`, `AC-F8-11`) bound to 54 cases in nine blocks (process edge 001–006, identity/override 010–014, configuration fallback 020–026, host-state fallback 030–036, notice discipline 040–045, local install 050–055, structural truth 060–067, documentation 070–073, gate 080–084); F-1..F-8, NFR-1..NFR-9, DM-1..DM-6, and DEC-4..DEC-13 mapped; six substitute assertions registered (§3.5); one blocking wording finding (`B-1`, the MCP literal versus DM-6) and one resolved environment finding (`B-2`) reported; six open questions logged; no TODO rows, no orphans. |
+| 1.2 | 2026-11-15 | @test-plan-writer | Reconciled with spec **v1.2** and DoR iter-1 (findings 1, 2, 5, 8, 10–13, 20–23): the configuration half, and the notice cases `TC-BIN-040`/`041`/`042`/`045`, run on the ticket's literal `status --json` surface through the delivered composition-time acquisition (D5/DEC-14), with `TC-BIN-020` asserting zero added acquisitions and `config --json` unreachable; `TC-BIN-012` asserts the delivered `fallback.internal` containment at exit `2` for both bins with the alias projection byte-compared to its baseline (D6/DEC-11, BYTE-TP-1 extended); `TC-BIN-062`/`LIT-TP-1` assert the declared **five-site** inventory under its `packages/**` string-literal scan rule (D7); `TC-BIN-084` uses a static surface scan plus a spawned `--preload` subprocess (D11); `TC-BIN-055` drops the real-home absence claim; `TC-BIN-070` uses a self-contained five-page table and §6 materialises scratch checkouts; `TC-BIN-063` pins the `completion` export set; the installer integration cases move to the Bun test `tests/checks/install-launcher-installer.test.ts` with `TC-BIN-056` added for the declared preconditions and failures (D9/DEC-15); `TC-BIN-072` declares the installer as the fourth divergence; `TC-BIN-080` runs the single executable same-device gate with the repo-local run as evidence (D10); `TC-BIN-082` adds the conformance isolation cell; 55 cases, 11/11 ACs, 15/15 decisions, 0 orphans, 0 blocking findings. |
 | 1.1 | 2026-11-15 | @test-plan-writer | Reconciled with spec **v1.1** (`B-1` resolved): `TC-BIN-062` now asserts the declared **four-site** inventory in two scopes — CLI (three selector sites) and unchanged MCP (one delivered default) — with no residual neutral default and a no-declared-default call proving the removal is not a shim; `TC-BIN-061` asserts the entrypoint module's executable allowance loses exactly `neutralWorkingName`, keeps `workingNameEnvironmentVariable`, and leaves file-set equality unchanged; `TC-BIN-063`/`TC-BIN-064` assert the entrypoint exposes no identity value, no retired accessor, and cannot be passed a neutral fallback, with the seam file still byte-identical; `LIT-TP-1` reclassified from substitute to direct assertion (five substitutions remain); `B-1` moved to resolved, blocking findings now 0; AC traceability, coverage intent, the gate invocation, and the execution-order recommendation unchanged. |
 
 ## 10. Test Execution Log
 
-No case has been executed against an implementation at authoring time; this plan is a verification map. Results are recorded here as delivery proceeds, including the gate invocations of `TC-BIN-080`/`TC-BIN-081` and the one-off read-only equivalence observation against the operator's real prior host root (LIVE-TP-1, never part of a permanent suite).
+No case has been executed against an implementation at authoring time; this plan is a verification map. Results are recorded here as delivery proceeds, including the **single** gate invocation of `TC-BIN-080` plus its labelled repo-local evidence run, the `TC-BIN-081` commit-range verdict, and the one-off read-only equivalence observation against the operator's real prior host root (LIVE-TP-1, never part of a permanent suite).
 
 | TC ID | Run Date | Result | Notes |
 |-------|----------|--------|-------|

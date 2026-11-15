@@ -5,7 +5,7 @@ change:
   status: Proposed
   slug: jaiship-binary
   title: "M4-S1a: jaiship executable binary and local install"
-  version: "1.2"
+  version: "1.3"
   owners: ["engineering"]
   service: delivery-os
   milestone: "M4: Public release readiness"
@@ -489,6 +489,7 @@ The readiness gate asked whether DEC-5 and DEC-9 are precedent-setting and requi
 | `tests/conformance/pilot/pilot-isolation.test.ts` | CHANGED | The delivered conformance cell that asserted the neutral identity now asserts an injected declared default |
 | `tests/checks/identity-docs.test.ts` | NEW | Documentation-truth guard for the identity statements and the four declared divergences |
 | `tests/checks/prior-identity-hermetic.test.ts` | NEW | Hermeticity guard: the fallback cases never read or write the operator's real home or state root |
+| `tests/checks/support/arm-counters.preload.ts` | NEW | Test-only preload module arming the network/credential/sleep/write counters for the spawned hermeticity run (the static half lives in the hermeticity suite) |
 | `tests/checks/install-launcher-installer.test.ts` | NEW | Installer integration cases: shells out to `scripts/install.sh` in a scratch home and project root, proving launcher registration, `--no-fetch`, idempotence, repointing, the classified failures, and outside-repository `--version` in the Bun-bearing test job (D9; replaces the shell suite) |
 | `tests/checks/doc-conformance.test.ts` | CHANGED | The phrase-table page set reflects the corrected identity wording |
 | `tests/fixtures/entrypoint/alias-baseline.json` | NEW | The delivered alias's observable baseline (version, help, paths, invalid-override projection) used as the byte-identity control |
@@ -630,6 +631,7 @@ No new personal data is collected, stored, or transmitted. The fallback reads lo
 | 1.0 | 2026-11-15 | @spec-writer | Initial specification |
 | 1.1 | 2026-11-15 | @spec-writer | B-1 remediation: declared four-site identity-literal inventory; entrypoint neutral default removed rather than retained |
 | 1.2 | 2026-11-15 | @spec-writer | DoR iter-1 remediation: AC4 configuration half proven on `status --json` via the delivered composition-time acquisition (unreachable inspection command recorded); delivered `fallback.internal` invalid-override projection restored for both bins; five-site identity-literal inventory declared under its scan rule; DEC-5/DEC-9 precedent status recorded without a new decision record; §16 reconciled to the plan's blast radius; installer preconditions, failures, `DRY_RUN`, and its `ADOS_*` divergence declared; doc-distribution page added; minors 14–19 addressed |
+| 1.3 | 2026-11-15 | @pm | Blast-radius reconciliation: added `tests/checks/support/arm-counters.preload.ts` to the impact map (the D11 hermeticity harness half-b module) so the spec map and the plan scope are identical |
 
 ---
 
