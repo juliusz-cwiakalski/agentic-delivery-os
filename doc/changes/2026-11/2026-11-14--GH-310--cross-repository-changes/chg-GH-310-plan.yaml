@@ -1,8 +1,27 @@
-# GH-310 delivery plan — machine-readable document (delivery.plan.v1), revision 1.3
-# (2026-11-14). Authored against spec v1.4 (37 ACs, DEC-1..DEC-21, DM-1..DM-11,
+# GH-310 delivery plan — machine-readable document (delivery.plan.v1), revision 1.4
+# (2026-11-15). Authored against spec v1.5 (37 ACs, DEC-1..DEC-23, DM-1..DM-11,
 # NFR-1..NFR-9, DoD-1..DoD-15, OQ-3 and OQ-6 resolved-with-deferral) and test
-# plan v1.4 (51 TCs = 50 automated + 1 gate-only) on branch
+# plan v1.6 (51 TCs = 50 automated + 1 gate-only) on branch
 # feat/GH-310/cross-repository-changes from main-tools tip 404e9bf8.
+#
+# REVISION NOTE (revision 1.4, review-iteration-1 remediation, spec v1.5 /
+# test plan v1.6 reconciliation): the code review of iteration 1
+# (code-review/review-iter-1.yaml, status FAIL, 2 high + 5 medium findings)
+# found that two delivered seams contradict the delivered contracts — the
+# member gate records were handed to the ledger unprojected (F-1, high), and
+# the member `ticket-to-done` transition targeted a synthesized
+# `<changeRef>@<repoKey>` entity because DM-8 carried no member issue identity
+# (F-2, high) — plus a member-mode aggregate that reported `satisfied` while a
+# declared member refused (F-3/F-5, medium). Spec v1.5 pins the remedy as
+# DEC-22 (the append is projected to the delivered ledger shape), DEC-23 (the
+# mode-scoped worst-case aggregate fold) and the new `issue?` carrier on
+# `CrossRepositoryCloseoutObservation` (DM-8), and corrects the AC-F2-2
+# vocabulary (F-15) and the read-seam deferral statement (F-16). This revision
+# ADDS phase id 6 (delivery, lease-taking) as the remediation phase and re-points
+# the ownership of the amended assertions to it; NO earlier phase id, title, or
+# ordering changed, the AC set stays 37 and the TC set 51 (no AC or TC added,
+# removed, or renumbered), and phases 1..5 keep their existing declarations
+# except the phase-5 tracker/scope wording that now refers to phases 1-5.
 #
 # REVISION NOTE (revision 1.3, spec v1.4 / test plan v1.4 reconciliation):
 # DoR iteration-2 plan-side residuals closed: N2 — phase 3 now declares
@@ -52,7 +71,7 @@
 # Revision 1.2 supersedes revision 1.1's DEC-18 wording with the v1.3 scoped
 # supersession (pass|fail only; `unknown` is never emitted).
 #
-# One ticket, one PR against main-tools, five delivery phases. Every phase is
+# One ticket, one PR against main-tools, six delivery phases. Every phase is
 # an independently committable slice that is green at its own boundary, and
 # every phase is ONE delivery commit through the commit primitive (conventional
 # subject, scope GH-310 per repo convention, every body/footer line <= 100
@@ -67,19 +86,30 @@
 # and test result; there is no `tasks` key and no progress log.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:      ./chg-GH-310-spec.md v1.4 — F-1..F-7; DM-1..DM-11;
-#                NFR-1..NFR-9; NG-1..NG-9; DEC-1..DEC-21; RSK-1..RSK-11;
-#                37 ACs AC-F1-1..AC-NFR7-1 (section 17); DoD-1..DoD-15
+#   - Spec:      ./chg-GH-310-spec.md v1.5 — F-1..F-7; DM-1..DM-11;
+#                NFR-1..NFR-9; NG-1..NG-9; DEC-1..DEC-23; RSK-1..RSK-14;
+#                37 ACs AC-F1-1..AC-NFR7-1 (section 17; AC-F2-2 carries the
+#                v1.5 `held` + `dependency-open` vocabulary); DoD-1..DoD-15
 #                (section 17.1) with per-condition plan-phase ownership;
-#                OQ-1..OQ-6 (section 14; OQ-3 and OQ-6 resolved-with-deferral);
-#                Appendix A pinned literals 1..26; Appendix C constraints
-#                C-1..C-9.
-#   - Test plan: ./chg-GH-310-test-plan.md v1.4 — 51 TCs in 11 families
+#                OQ-1..OQ-6 (section 14; OQ-3 and OQ-6 resolved-with-deferral,
+#                OQ-6 now naming the unwired member READ seam beside the
+#                observation carriers); Appendix A pinned literals 1..28
+#                (row 27 ledger append projection, row 28 member-mode
+#                aggregate fold); Appendix C constraints C-1..C-9.
+#   - Test plan: ./chg-GH-310-test-plan.md v1.6 — 51 TCs in 11 families
 #                TC-XPLAN-001..TC-XGATE-001; coverage matrix 37/37 ACs;
 #                section 6 fixture/gate environment (including the 404e9bf8
 #                member-less queue-add golden); section 7 suite homes;
 #                section 8.3 SG-1..SG-7 plus DoR-1/DoR-2 closure and the
-#                reconciliation rule.
+#                reconciliation rule. The v1.6 amendment re-points the
+#                DEC-22/DEC-23/DM-8 assertion cells (TC-XDOD-001/002,
+#                TC-XCTR-002/007, TC-XCLOSE-001/002/003, TC-XQUEUE-002/003,
+#                TC-XDEP-001) without adding, removing, or renumbering a TC.
+#   - Review:    ./code-review/review-iter-1.yaml — iteration 1, status FAIL;
+#                F-1 (high), F-2 (high), F-3/F-5 (medium) remediated by phase 6;
+#                F-15/F-16 (info) confirmed already satisfied; the remaining
+#                findings (F-4, F-6..F-14, F-17..F-20) are NOT closed by this
+#                plan revision and stay open in the review record.
 #   - PM notes:  ./chg-GH-310-pm-notes.yaml — gate environment
 #                (TMPDIR=$GATE_TMPDIR; commit.gpgsign=false), fixture
 #                decision (two local temporary repositories, injected facts,
@@ -120,54 +150,88 @@
 #     landing removal; consumes the member refs and per-member removal from
 #     phase 2.
 #   5 Parity, contract continuity, read-only/determinism/hermetic proofs, M2
-#     bookkeeping, and the final full gate — the consolidated release boundary.
+#     bookkeeping, and the full gate battery — the consolidated release
+#     boundary of the member feature as first authored (spec v1.4).
+#   6 Review-iteration-1 remediation — the two seams phase 3 and phase 4 could
+#     not prove while every member test stubbed the appender and the ledger
+#     contract was never exercised, and while DM-8 carried no member issue
+#     identity: the ledger-compatible append projection (DEC-22), the member
+#     `issue` transition target (DM-8), and the mode-scoped worst-case aggregate
+#     fold (DEC-23). It runs last because it is a correction of delivered
+#     behaviour against a reopened specification (spec v1.5), not a new slice,
+#     and because it must re-prove the gate battery at the corrected HEAD.
 #
 # AC OWNERSHIP (37/37; exactly one owning phase each; an earlier phase may
 # produce a partial verdict, which is additive and never transfers ownership):
 #   phase 1  AC-F1-1, AC-F1-2, AC-F1-3, AC-F1-4, AC-F1-5, AC-F1-6
 #   phase 2  AC-F2-1, AC-F2-2, AC-F2-3, AC-F2-4, AC-F2-5, AC-F4-1, AC-F4-2
-#   phase 3  AC-F3-1, AC-F3-2, AC-F3-3, AC-F3-4, AC-F3-5, AC-F3-6, AC-F3-7,
-#            AC-F3-8, AC-F6-1, AC-F6-2, AC-F6-3, AC-F6-4, AC-NFR6-1
-#   phase 4  AC-F5-1, AC-F5-2, AC-F5-3, AC-F5-4
-#   phase 5  AC-F7-1, AC-NFR1-1, AC-NFR2-1, AC-NFR3-1, AC-NFR4-1,
-#            AC-NFR5-1, AC-NFR7-1
-#   Count: 6 + 7 + 13 + 4 + 7 = 37.
+#   phase 3  AC-F3-3, AC-F3-4, AC-F3-5, AC-F3-6, AC-F3-7, AC-F3-8,
+#            AC-F6-1, AC-F6-2, AC-F6-3, AC-F6-4, AC-NFR6-1
+#   phase 4  AC-F5-4
+#   phase 5  AC-F7-1, AC-NFR1-1, AC-NFR2-1, AC-NFR3-1, AC-NFR5-1,
+#            AC-NFR7-1
+#   phase 6  AC-F3-1, AC-F3-2, AC-F5-1, AC-F5-2, AC-F5-3, AC-NFR4-1
+#   Count: 6 + 7 + 11 + 1 + 6 + 6 = 37.
+#   RE-POINTED AT REVISION 1.4 (review iteration-1 remediation, spec v1.5):
+#   AC-F3-1 and AC-F3-2 gained the append-then-read-through-the-real-state-
+#   module assertion (DEC-22), AC-F5-1/AC-F5-2/AC-F5-3 gained the `issue`
+#   transition target and the DEC-23 aggregate fold, and AC-NFR4-1 gained the
+#   delivered-ledger-shape qualifier — so phase 6 is their FINAL owner; phases
+#   3/4/5 produced the earlier partial verdicts and keep their delivery
+#   commits. AC-F4-1 and AC-F4-2 are NOT re-pointed: iteration 1 did not touch
+#   their text or behaviour, so they stay with phase 2. AC-F2-2 keeps phase 2
+#   as owner (its v1.5 wording correction is the `held`/`dependency-open`
+#   vocabulary the delivered code already emits); only the TC cells that
+#   literalise it move to phase 6.
 #
 # TC OWNERSHIP (51/51; ownership = the phase that lands the asserted content
 # and where the TC's verdict is first fully green):
 #   phase 1  TC-XPLAN-001..TC-XPLAN-007, TC-XPAR-001            (8)
-#   phase 2  TC-XQUEUE-001..TC-XQUEUE-006, TC-XDEP-001..TC-XDEP-002,
-#            TC-XBOUND-003                                       (9)
-#   phase 3  TC-XDOD-001..TC-XDOD-009, TC-XREV-001..TC-XREV-006,
-#            TC-XCTR-006, TC-XBOUND-001, TC-XBOUND-004          (18)
-#   phase 4  TC-XCLOSE-001..TC-XCLOSE-004, TC-XBOUND-002,
-#            TC-XPAR-002                                         (6)
-#   phase 5  TC-XPAR-003, TC-XCTR-001..TC-XCTR-005, TC-XCTR-007,
-#            TC-XHERM-001..TC-XHERM-002, TC-XGATE-001           (10)
-#   Count: 8 + 9 + 18 + 6 + 10 = 51. TC-XGATE-001 is verification-only
+#   phase 2  TC-XQUEUE-001, TC-XQUEUE-004, TC-XQUEUE-005,
+#            TC-XQUEUE-006, TC-XDEP-002, TC-XBOUND-003           (6)
+#   phase 3  TC-XDOD-003..TC-XDOD-009, TC-XREV-001..TC-XREV-006,
+#            TC-XCTR-006, TC-XBOUND-001, TC-XBOUND-004           (16)
+#   phase 4  TC-XCLOSE-004, TC-XBOUND-002, TC-XPAR-002          (3)
+#   phase 5  TC-XPAR-003, TC-XCTR-001, TC-XCTR-003, TC-XCTR-004,
+#            TC-XCTR-005, TC-XHERM-001, TC-XHERM-002,
+#            TC-XGATE-001                                        (8)
+#   phase 6  TC-XDOD-001, TC-XDOD-002, TC-XCTR-002, TC-XCTR-007,
+#            TC-XCLOSE-001, TC-XCLOSE-002, TC-XCLOSE-003,
+#            TC-XQUEUE-002, TC-XQUEUE-003, TC-XDEP-001           (10)
+#   Count: 8 + 6 + 16 + 3 + 8 + 10 = 51. TC-XGATE-001 is verification-only
 #   (gate evidence), never automated test code; it is still owned here.
-#   TEST PLAN v1.4 RECONCILIATION: spec v1.2/v1.3/v1.4 add no AC or TC ID. The
-#   amended TCs keep exactly these owning phases — TC-XQUEUE-001/003 (phase 2);
-#   TC-XDOD-001/002/003/004/005/007/008 and TC-XCTR-006 (phase 3);
-#   TC-XCLOSE-001/002/003 (phase 4); TC-XPAR-003 and TC-XCTR-007 (phase 5);
-#   TC-XPLAN-002/004/005 (phase 1); TC-XREV-003 (phase 3). Spec v1.4 asserts
-#   DM-11 (distinct `CrossRepositoryVerifyGatesReport`/`CrossRepositoryVerifyGateRecord`
+#   RE-POINTED AT REVISION 1.4: test plan v1.6 amends the assertion cells of
+#   TC-XDOD-001/002 (real state-module append→read plus the unprojected-record
+#   refusal, DEC-22), TC-XCTR-002 (the one append is a real delivered-shape
+#   write) and TC-XCTR-007 (the ledger projection contract), TC-XCLOSE-001/002
+#   (member `issue` target, no synthesized identity, DEC-23 folds) and
+#   TC-XCLOSE-003 (mixed and all-members-unsafe folds, `closeout.branch.unsafe`
+#   reachable), and the F-15 vocabulary cells of TC-XQUEUE-002/003 and
+#   TC-XDEP-001 — so phase 6 becomes the final owner of exactly those ten. No
+#   TC was added, removed, or renumbered, and TC-XGATE-001 stays with phase 5
+#   (phase 6 re-establishes its verdict by re-running the battery; no TC
+#   content changed).
+#   TEST PLAN v1.4 RECONCILIATION (unchanged by 1.4): spec v1.2/v1.3/v1.4 add
+#   no AC or TC ID. Spec v1.4 asserts DM-11 (distinct
+#   `CrossRepositoryVerifyGatesReport`/`CrossRepositoryVerifyGateRecord`
 #   discriminated by `definitionOfDone`) in TC-XPAR-003/TC-XCTR-007, the
 #   corrected member-verdict rule over records AND `gates.ci` in
 #   TC-XDOD-001/002/003/004/005, the N3 synthetic citation in TC-XDOD-008, the
 #   mode-scoped closeout mapping in TC-XCLOSE-001/003, and the `overall: "fail"`
-#   classification carrier in TC-XDOD-002; no ownership moves and no TC is added
-#   or removed.
+#   classification carrier in TC-XDOD-002.
 #
 # DoD MAPPING (spec section 17.1 "Proven in plan" -> this plan's phases):
 #   DoD-1 -> 1; DoD-2 -> 1; DoD-3 -> 2; DoD-4 -> 3; DoD-5 -> 3; DoD-6 -> 3;
-#   DoD-7 -> 2; DoD-8 -> 4; DoD-9 -> 3; DoD-10 -> every phase (per-surface
+#   DoD-7 -> 2; DoD-8 -> 4 with the fold/`issue`/all-unsafe cells re-proven in
+#   6 (AC-F5-1..AC-F5-3); DoD-9 -> 3; DoD-10 -> every phase (per-surface
 #   parity) with the consolidated proof in 5; DoD-11 -> 2 + 3 with the
-#   identity-row/kind count re-proven in 5 (AC-NFR7-1/TC-XCTR-007);
-#   DoD-12 -> 3 + 4 with the cross-surface write budget re-proven in 5
-#   (AC-NFR4-1/TC-XCTR-002); DoD-13 -> lifecycle phase 7 (@doc-syncer);
-#   DoD-14 -> per phase, roll-up in 5; DoD-15 -> lifecycle phase 11
-#   (quality gates / PR creation), not a plan phase.
+#   identity-row/kind count re-proven in 5 (AC-NFR7-1/TC-XCTR-007) and held
+#   open through 6 (no new row or kind in the remediation);
+#   DoD-12 -> 3 + 4 with the cross-surface write budget and the real
+#   append→read re-proven in 6 (AC-NFR4-1/TC-XCTR-002/TC-XDOD-001);
+#   DoD-13 -> lifecycle phase 7 (@doc-syncer); DoD-14 -> per phase, roll-up in
+#   6 (the last phase); DoD-15 -> lifecycle phase 11 (quality gates / PR
+#   creation), not a plan phase.
 #
 # COMMIT CONVENTION (one commit per plan phase; subjects declared here so the
 # commit path and review agree; scope is the workItemRef per repo convention):
@@ -176,6 +240,7 @@
 #   phase 3  feat(GH-310): cross-repository definition of done and review flow
 #   phase 4  feat(GH-310): per-member closeout report and landing removal
 #   phase 5  test(GH-310): parity goldens, contract continuity and the full gate battery
+#   phase 6  fix(GH-310): ledger-compatible gate append, member issue identity and aggregate fold
 #
 # CONSTRAINTS BINDING ON EVERY PHASE (spec Appendix C; do not reshape at
 # delivery):
@@ -291,9 +356,14 @@
 #   - Closeout carrier and mapping (DEC-20/DEC-12/DM-8/DM-5/AC-F5-1/AC-F5-3):
 #     per-member merge truth, branch, and issue-closure facts arrive as
 #     `CrossRepositoryCloseoutObservation` entries, one per declared member
-#     `{ repoKey, pullRequest, merged, headSha?, branch, issueClosure? }`,
-#     supplied through the closeout composition. No new port, no new provider
-#     operation, and no durable store are added; the durable production carrier
+#     `{ repoKey, pullRequest, merged, headSha?, branch, issue?, issueClosure? }`,
+#     supplied through the closeout composition. `issue?` is the member's
+#     tracker work-item identity and the ONLY permitted target of a member
+#     `ticket-to-done` transition; a member without it reports
+#     `issueClosure: skipped-noop` and plans no transition, and no entity
+#     identity is ever synthesized from `repoKey`, the member ref, or the change
+#     ref (DEC-12/DEC-23). No new port, no new provider operation, and no
+#     durable store are added; the durable production carrier
 #     beyond the injection is deferred and non-blocking (OQ-6). Per-member
 #     `cleanup`/`issueClosure` are computed from that member's observation plus
 #     its own closeout operations, NEVER by parsing free-form step `detail`,
@@ -302,7 +372,28 @@
 #     skipped-gap; issueClosure plan: would-apply | satisfied | skipped-noop |
 #     skipped-gap; issueClosure apply: applied | satisfied | skipped-noop |
 #     skipped-gap. Exactly one value per field per member; the aggregate step
-#     outcome is never rewritten.
+#     outcome is never rewritten by a single member value.
+#   - Ledger-compatible gate append (DEC-22/DM-9/DM-11/NFR-4/AC-F3-1/AC-F3-2/
+#     AC-NFR4-1/RSK-12): the cross-repository report keeps `member` on every
+#     `CrossRepositoryVerifyGateRecord`, but the ONE appended
+#     `MergeGateVerificationRecord` carries the projected records — `member`
+#     dropped, `id`/`verdict`/`reason`/`citation` preserved in record order and
+#     count — so the delivered closed-key validation, the post-append equality
+#     check, and read tolerance accept it and the change's verification history
+#     never reads `torn`. `MergeGateVerificationRecord`, `GATE_VERDICT_KEYS`,
+#     `packages/core/src/state/merge.ts`, and every ledger consumer are NOT
+#     widened.
+#   - Member-mode aggregate fold (DEC-23/DM-5/AC-F5-1/AC-F5-2/AC-F5-3/RSK-13):
+#     the member-mode `branch-cleanup` and `ticket-to-done` step outcomes are a
+#     deterministic worst-case fold over the declared members' mode-scoped
+#     values in declared order with precedence `failed|refused` > `skipped-gap`
+#     > `applied|would-apply` > `satisfied` > `skipped-noop`, plan values folded
+#     only in plan mode (`would-refuse` in the refusal tier) and apply values
+#     only in apply mode. Any member refusal makes the aggregate `refused`, so
+#     the delivered `closeout.branch.unsafe` refusal stays reachable; the
+#     aggregate `ticket-to-done` folds over the combined operation set, so the
+#     delivered change-level transition to the change's own tracked item is
+#     never dropped.
 #   - `queue add` member payload (DEC-21/DM-6/AC-F2-1): on a plan declaring
 #     members, `queue add` returns the delivered `queue add` payload unchanged
 #     plus an additive ordered `data.members[]` array of
@@ -317,7 +408,9 @@
 #     this checkout.
 #   - Read/write posture (NFR-4/AC-NFR4-1): plan validation writes nothing; a
 #     full battery evaluation appends exactly ONE gate-verification record
-#     regardless of member count; closeout plan mode writes nothing.
+#     regardless of member count, in the delivered ledger shape (member records
+#     projected, DEC-22), so append-then-read is not `torn`; closeout plan mode
+#     writes nothing.
 #   - Current-truth boundary (C-8/NG-9): doc/spec/** flips only in lifecycle
 #     phase 7 (@doc-syncer), never in a delivery phase. The bidirectional
 #     error-table sync is the only same-commit exception, and it is expected to
@@ -343,11 +436,20 @@
 #     projection (DM-9), the scoped `overall` supersession (DEC-18),
 #     per-member CI corroboration over injected `MemberLandingObservation`
 #     facts (DEC-19/DM-10), evidence landing order, `reviewFlow`, and the
-#     bounded per-member read budget.
+#     bounded per-member read budget. The appended gate-verification record is
+#     the delivered ledger shape with the member records projected (DEC-22) —
+#     the page's "carrying the member records" wording is corrected to the
+#     projected ledger record plus the report's per-member records, and the
+#     unwired member READ seam is stated as current truth (§7.3/OQ-6, F-16).
 #   - doc/spec/features/feature-closeout.md: `data.members[]` report, the
 #     retired "cross-repository closeout" non-goal for the member-reporting
 #     slice, and the injected `CrossRepositoryCloseoutObservation` seam with its
-#     deferred durable production carrier (DEC-20/DM-8/OQ-6).
+#     deferred durable production carrier (DEC-20/DM-8/OQ-6). The member
+#     `ticket-to-done` transition targets the observation's `issue` identity and
+#     nothing else (a member without it reports `skipped-noop`, DEC-12), the
+#     change-level transition is always planned, and the member-mode
+#     `branch-cleanup`/`ticket-to-done` aggregates are the DEC-23 worst-case
+#     fold.
 #   - doc/spec/features/feature-scheduling-engine.md: one entry/lane per member,
 #     member-ref identity, per-member dependency edges, release and removal.
 #   - doc/spec/features/feature-delivery-lifecycle.md: one lifecycle over a
@@ -959,14 +1061,241 @@
 # and 0 new kinds; every case is hermetic and deterministic; the backlog, status
 # and M2 contract ownership line state delivery truth; the five-package minor
 # changeset is present (repo convention, not a spec requirement); the full gate
-# battery is green and recorded; all five plan phases are complete with
-# per-phase pm-notes evidence (dod_check reads that evidence, not this file).
+# battery is green and recorded; phases 1-5 are complete with per-phase pm-notes
+# evidence (dod_check reads that evidence, not this file). The change as a whole
+# is released only after phase 6 (review-iteration-1 remediation) is complete.
+# ---------------------------------------------------------------------------
+#
+# Phase 6 — Close review-iteration-1 findings: ledger-compatible gate append,
+# member issue identity, member-mode aggregate fold, and the real-writer round
+# trip
+# Commit: fix(GH-310): ledger-compatible gate append, member issue identity and aggregate fold
+#
+# WHY THIS PHASE EXISTS: the iteration-1 code review
+# (code-review/review-iter-1.yaml, status FAIL) found that the member path
+# contradicts two delivered contracts and one delivered exit expectation. The
+# member gate records carry a required `member` and were handed unprojected to
+# `MergeGateVerificationRecord.gates[]`, whose delivered validation applies a
+# "no other keys" rule on read AND as the post-append equality check, so the
+# only delivered appender refuses the record with `state.store.torn`
+# (`not_landed`) and every later read of that change's verification history is
+# `torn` (F-1, high). The member `ticket-to-done` transition targeted a
+# synthesized `<changeRef>@<repoKey>` string because DM-8 carried no member
+# tracked-issue identity, so a transition could be recorded against a
+# non-existent work item and `issueClosure: applied` was asserted against a fake
+# that accepts any id (F-2, high). The member-mode `branch-cleanup` aggregate
+# was `operations.length > 0 ? … : "satisfied"`, so an all-refused member set
+# reported `satisfied` and bypassed the delivered `closeout.branch.unsafe`
+# refusal, and `ticket-to-done` replaced instead of extended the change-level
+# transition (F-3/F-5, medium). Spec v1.5 pins the remedies as DEC-22 (append
+# projection), DEC-23 (worst-case aggregate fold) and DM-8's `issue?`, and
+# corrects the AC-F2-2 vocabulary (F-15) and the read-seam deferral (F-16).
+#
+# AC/TC OWNERSHIP: this phase is the FINAL owner of AC-F3-1, AC-F3-2, AC-F5-1,
+# AC-F5-2, AC-F5-3, AC-NFR4-1 and of TC-XDOD-001/002, TC-XCTR-002/007,
+# TC-XCLOSE-001/002/003, TC-XQUEUE-002/003 and TC-XDEP-001 (see the ownership
+# maps in the header). Phases 3, 4 and 5 produced the earlier PARTIAL verdicts
+# for those items against spec v1.4 and keep their delivery commits; the
+# re-pointing transfers FINAL ownership only, and no AC or TC is owned twice.
+#
+# Obligations:
+#  6.1 F-1 — LEDGER-COMPATIBLE GATE APPEND (DEC-22, DM-9, DM-11, NFR-4,
+#      AC-F3-1, AC-F3-2, AC-NFR4-1, RSK-12).
+#      a. packages/cli/src/commands/verify-gates.ts — before
+#         `runtime.appendVerification(record)`, project every
+#         `CrossRepositoryVerifyGateRecord` of `report.gates` to the delivered
+#         ledger shape `{ id, verdict, reason, citation }`: drop `member` and
+#         preserve `id`, `verdict`, `citation`, `reason` in record order and
+#         count. The EMITTED report keeps `member` on every record (DM-9/DM-11);
+#         only the durable append is projected.
+#      b. Derive the appended record's `trackerPosture` (labels and
+#         `ownerLabels`) from the change-level owner-gate read exactly as the
+#         member-less path does, instead of `labels: []` plus whichever member
+#         holds the first `owner-gate` record — DEC-22 keeps "the appended
+#         record's remaining fields … delivered derivation", and an
+#         "observed empty" posture is not a delivered derivation (F-1 secondary,
+#         F-20).
+#      c. Do NOT widen `MergeGateVerificationRecord`, `GATE_VERDICT_KEYS`, the
+#         read tolerance, or the post-append equality check in
+#         packages/core/src/state/merge.ts; the delivered state contract is
+#         untouched (zero new error rows, zero new domain kinds).
+#      d. PROVE the round trip through the REAL state module: at least one
+#         member case wires `appendVerification` to the real
+#         `appendMergeGateVerification` over a fixture host root and reads the
+#         change back with `readMergeGateVerifications` — exactly one record,
+#         `ok: true` (never `torn`), `gates[]` length equal to members ×
+#         declared gates, no `member` key on any appended record, and every
+#         projected `verdict`/`reason`/`citation` equal to the corresponding
+#         report record at the same index (AC-F3-1 positive, AC-F3-2 negative).
+#      e. Add the NEGATIVE half: an unprojected record (a member record carrying
+#         `member`) handed to the real appender is refused — `state.store.torn`
+#         with consequence `not_landed` — and a read of that change's history
+#         returns `torn`; the test asserts the refusal and never asserts the
+#         unprojected shape as valid.
+#      f. Replace the stubbed `appendVerification` in at least one member
+#         suite with the real appender (tests/behaviour/verify-gates-members.test.ts);
+#         tests/behaviour/cross-repository-readonly.test.ts keeps its counting
+#         guard and gains the real-writer case, so a stubbed port can never hide
+#         this class again.
+#  6.2 F-2 — MEMBER ISSUE IDENTITY (DM-8, F-5, DEC-12, DEC-20, AC-F5-1,
+#      AC-F5-2).
+#      a. packages/core/src/contracts/closeout.ts — add the optional
+#         `issue?: string` to `CrossRepositoryCloseoutObservation`: the member's
+#         tracker work-item identity, supplied by the composition exactly like
+#         `headSha`, and the ONLY permitted target of a member
+#         `ticket-to-done` transition.
+#      b. packages/core/src/domain/closeout.ts `memberTicketStep` — the
+#         transition target is `{ systemName, entityId: member.issue }` and
+#         nothing else. Absent `issue` ⇒ `issueClosure: skipped-noop` with ZERO
+#         scheduled operations for that member. Remove every synthesized
+#         `<changeRef>@<repoKey>` entity identity from a transition target.
+#      c. Keep the `issueClosure` fact mapping unchanged, with the identity rule
+#         taking precedence: an absent `issue` ⇒ `skipped-noop` even when the
+#         observation carries an `open` fact; otherwise `open` ⇒ one transition
+#         scheduled / `applied`; `closed` ⇒ `satisfied`; `none` ⇒
+#         `skipped-noop`; tracker read/write gap ⇒ `skipped-gap`.
+#      d. `closeoutMemberRef` (`<changeRef>@<repoKey>`) stays ONLY as the queue
+#         identity for per-member landing removal (DEC-2/DM-8); it is never a
+#         tracker entity id.
+#      e. Fixtures — extend tests/fixtures/closeout/harness.ts with an OPT-IN
+#         known-entity-id set so a `transition-work-item` to an id the fake does
+#         not know FAILS; the default (absent option) behaviour is unchanged for
+#         every delivered closeout suite. Member observations in
+#         tests/fixtures/cross-repository/closeout.ts carry `issue` per member.
+#      f. Assert: the transition target equals exactly the observation's `issue`;
+#         a member without `issue` schedules zero operations and reports
+#         `skipped-noop`; no record in the report, the ledger, the human digest,
+#         or the golden carries a `GH-310@<repoKey>`-shaped identity.
+#  6.3 F-3/F-5 — MEMBER-MODE AGGREGATE FOLD (DEC-23, DM-5, F-5, DEC-12,
+#      AC-F5-1, AC-F5-2, AC-F5-3, DoD-8, RSK-13).
+#      a. Implement the deterministic worst-case fold for the member-mode
+#         `branch-cleanup` and `ticket-to-done` step outcomes in
+#         packages/core/src/domain/closeout.ts (plan aggregates in
+#         `memberBranchStep`/`memberTicketStep`, apply aggregate in the apply
+#         loop): precedence `failed|refused` > `skipped-gap` >
+#         `applied|would-apply` > `satisfied` > `skipped-noop`, folded over the
+#         declared members' values in declared order, MODE-SCOPED (plan values
+#         only in plan mode with `would-refuse` in the refusal tier and
+#         `would-apply` in the applied tier; apply values only in apply mode;
+#         an operation-level `failed` and a safety `refused` share the top
+#         tier).
+#      b. `branch-cleanup` aggregate is derived from the MEMBERS, not from
+#         `operations.length`: an all-unsafe declaration with zero planned
+#         operations folds to `would-refuse` (plan) / `refused` (apply) and is
+#         never `satisfied`.
+#      c. Any member refusal in apply mode makes the aggregate `refused`, so the
+#         delivered `closeout.branch.unsafe` refusal is reachable in member mode
+#         through the existing exit contract (no new error row, no new code).
+#      d. `ticket-to-done` aggregate folds over the COMBINED operation set: the
+#         delivered change-level `ticketStep(facts)` transition to the change's
+#         own tracked item is ALWAYS planned and its operations are combined
+#         with the member transitions, so the change-level transition is never
+#         dropped (F-5); the aggregate is recomputed from that combined set.
+#      e. Each member still reports exactly one value from its own mode column;
+#         the fold never rewrites a member value (DM-5).
+#      f. Implement the precedence ONCE in packages/core/src/domain/closeout-members.ts
+#         as a pure exported helper used by both the plan and the apply paths
+#         (one precedence table, no second copy); re-export it through
+#         packages/core/src/domain/index.ts and packages/core/src/index.ts when
+#         it leaves the module.
+#      g. Tests assert both columns' aggregates, the mixed case, the
+#         all-members-unsafe case, an operation-level `failed` sharing the top
+#         tier, the member values staying unchanged, the change-level transition
+#         still present in `ticket-to-done`, and the exit class
+#         (`closeout.branch.unsafe` instead of success data).
+#      h. Regenerate ONLY the member-mode golden
+#         tests/fixtures/cross-repository/goldens/closeout-members-applied.json
+#         (review-visible diff: the two synthesized entity ids become the
+#         members' `issue` ids, the change-level transition appears, the
+#         operation count and the fold outcome change). Every MEMBER-LESS golden
+#         is read unchanged and is never regenerated (AC-F7-1/NFR-8/RSK-11).
+#  6.4 F-15/F-16 — NONE-CODE CONFIRMATION, no behaviour change.
+#      a. F-15: spec v1.5 states the delivered readiness vocabulary — `held`
+#         with the closed `dependency-open` reason, never `not-ready`, for an
+#         unmet declared dependency (AC-F2-2/F-2/F-4/Flow 4). The delivered code
+#         already emits `held`/`dependency-open`; this phase only verifies that
+#         tests/behaviour/queue-members.test.ts,
+#         tests/behaviour/queue-readiness.test.ts,
+#         tests/behaviour/queue-members-removal.test.ts and
+#         tests/behaviour/queue-members-dependency.test.ts assert that
+#         vocabulary and that no delivered page under doc/spec/** claims
+#         `not-ready` for an unmet dependency. Report a contradiction to the PM;
+#         do not edit doc/spec/** in this phase.
+#      b. F-16: spec v1.5 declares the unwired member READ seam
+#         (`readMembers` and the per-member read bundle) as part of the
+#         deferred, non-blocking posture beside the observation carriers
+#         (§7.3/OQ-6). Verify the shipped composition
+#         (packages/cli/src/production.ts) still wires no member read seam and
+#         that no delivery-phase document states otherwise; the deferral is
+#         current truth, so there is no code change to make.
+#      c. Neither item adds, changes, or removes an AC or a TC; items 6.1-6.3
+#         carry all behavioural change in this phase.
+#
+# NOT IN THIS PHASE: the review's other findings stay open in
+# code-review/review-iter-1.yaml and are NOT claimed closed by this plan
+# revision — F-4 (apply-mode member operation failure does not fail the
+# command), F-6 (member `gates.ci` reading ignores the expected job set), F-7
+# (no member read-bundle identity check), F-8 (capsule gate payload drops
+# `member`), F-9 (`complete` with an empty verdict list), F-10 (per-member
+# `queue add` fences are not atomic), F-11 (duplicate change-ref
+# canonicalization), F-12 (`queue ready` rejects the member grammar), F-13
+# (six changed files outside the declared phase scopes), F-14 (misleading
+# `provider-unsupported` reason on an observation gap), F-17 (CLI dependency
+# placement on the first member only), F-18 (`members: []` echoed as valid),
+# F-19 (`QueueEntryRecord.repository` dual namespace), F-20 (per-member
+# `trackerPosture`; the posture derivation is corrected in 6.1b because the
+# appended record cannot otherwise keep its delivered derivation).
+#
+# Bound: AC-F3-1, AC-F3-2, AC-F5-1, AC-F5-2, AC-F5-3, AC-NFR4-1; DoD-8, DoD-11
+# (identity reuse held: zero new rows, zero new kinds), DoD-12, DoD-14 (final
+# roll-up); F-1, F-2, F-3, F-5, F-15, F-16; DM-5, DM-8, DM-9, DM-11; NFR-4,
+# NFR-5, NFR-7, NFR-8; DEC-12, DEC-20, DEC-22, DEC-23; RSK-12, RSK-13;
+# Appendix A rows 27 (ledger append projection) and 28 (member-mode aggregate
+# fold); Appendix C C-1 (envelope continuity), C-2 (fail-closed CI, untouched),
+# C-3 (identity reuse), C-8 (no doc/spec edit in a delivery phase).
+# Test obligations: TC-XDOD-001 (real append→read round trip, projected count,
+# no `member`, plus the unprojected-record refusal), TC-XDOD-002 (the negative
+# report's ledger projection), TC-XCTR-002 (the one append is a real
+# delivered-shape write), TC-XCTR-007 (the ledger projection contract:
+# unprojected refused, projected append→read not `torn`), TC-XCLOSE-001/002
+# (`issue` target, absent `issue` ⇒ `skipped-noop` with no operation, no
+# synthesized identity, change-level transition still planned, DEC-23 folds),
+# TC-XCLOSE-003 (mixed and all-members-unsafe folds, `closeout.branch.unsafe`
+# reachable in apply mode), TC-XQUEUE-002/003 and TC-XDEP-001 (the F-15
+# `held` + `dependency-open` vocabulary cells, verified; no code change).
+#
+# RELEASE AND SPEC-RECONCILIATION OBLIGATIONS AT THIS BOUNDARY (this is the last
+# plan phase): the five-package minor changeset shipped in phase 5
+# (.changeset/gh-310-cross-repository-changes-minor.md) is NOT edited — a fix
+# inside an unreleased minor bump does not change the bump — so this phase
+# re-runs the full battery and the supplementary range gate at the corrected
+# HEAD and records both in pm-notes; the lifecycle phase 7 handoff obligations
+# listed above are extended with the ledger projection and the `issue`/fold
+# wording, and doc/spec/** still flips only in lifecycle phase 7.
+#
+# Done when: the projected append round-trips through the real state module
+# (exactly one record, not `torn`, gate count = members × declared gates,
+# `id`/`verdict`/`reason`/`citation` preserved in order) and an unprojected
+# member record is refused with `state.store.torn`/`not_landed`; the emitted
+# report still carries `member` on every record and the appended `trackerPosture`
+# is the change-level derivation; every member `ticket-to-done` transition
+# targets exactly its observation's `issue`, a member without `issue` schedules
+# no operation and reports `skipped-noop`, and no synthesized
+# `<changeRef>@<repoKey>` entity id exists in any output or golden; the
+# member-mode `branch-cleanup` and `ticket-to-done` aggregates are the DEC-23
+# worst-case fold in both modes, the all-members-unsafe case folds to
+# `refused`/`would-refuse`, `closeout.branch.unsafe` is reachable in apply mode,
+# and the change-level `ticket-to-done` transition is still planned; the F-15
+# and F-16 confirmations hold with no contradicting code or delivered page; all
+# six plan phases are complete with per-phase pm-notes evidence and the final
+# battery plus range-gate verdicts are recorded there (dod_check reads that
+# evidence, not this file).
 # ---------------------------------------------------------------------------
 schemaVersion: delivery.plan.v1
 workItemRef: GH-310
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5]
+  phases: [1, 2, 3, 4, 5, 6]
   escalationTriggers:
     - new-error-table-row-or-new-domain-kind
     - new-top-level-envelope-key-or-ok-command-field
@@ -978,6 +1307,9 @@ tier:
     - current-truth-feature-spec-pre-flipped-in-a-delivery-phase
     - member-declaration-valid-where-the-bound-cannot-be-reported
     - pnpm-check-not-green-at-a-phase-boundary
+    - gate-append-not-proven-through-the-real-state-module
+    - member-closeout-transition-targeting-a-synthesized-entity-identity
+    - member-mode-aggregate-not-the-declared-worst-case-fold
 defaultLeases:
   - repo:main-tools
 defaultWeightClass: standard
@@ -1197,4 +1529,77 @@ phases:
         target: doc/planning/oss-tooling/milestones/m2/contracts.md
         role: producer
     doneArtifacts:
-      trackerTransition: "GH-310 delivery complete: all five plan phases done, parity and identity proofs recorded, M2-S19 bookkeeping updated, full gate battery green; PR-ready against main-tools (PR creation is lifecycle phase 11)"
+      trackerTransition: "GH-310 phases 1-5 done: member feature delivered, parity and identity proofs recorded, M2-S19 bookkeeping updated, full gate battery green; review-iteration-1 remediation is phase 6"
+
+  - id: 6
+    title: "Close review-iteration-1 findings: ledger-compatible gate append, member issue identity, member-mode aggregate fold, and the real-writer round trip"
+    kind: delivery
+    leases:
+      - repo:main-tools
+    summary: >-
+      Close review-iteration-1 findings: ledger-compatible gate append, member
+      issue identity, member-mode aggregate fold, and the real-writer round
+      trip — project the cross-repository gate
+      records to the delivered ledger shape before the one append and prove
+      append-then-read through the real state module (DEC-22), target the member
+      `ticket-to-done` transition at the observation's `issue` identity and
+      synthesize none (DM-8), implement DEC-23's mode-scoped worst-case aggregate
+      fold so a member refusal makes the aggregate refused and the change-level
+      transition is never dropped, and confirm the F-15/F-16 corrections need no
+      code.
+    scope:
+      files:
+        # Core: the issue carrier, the member projection modules, and the state
+        # module the round trip is proven through (read-only proof target: the
+        # delivered validation and read tolerance are not widened).
+        - packages/core/src/contracts/closeout.ts
+        - packages/core/src/domain/closeout.ts
+        - packages/core/src/domain/closeout-members.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - packages/core/src/state/merge.ts
+        # CLI: the append projection plus the member report/append seam.
+        - packages/cli/src/commands/verify-gates.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        # Suites whose amended assertion cells phase 6 owns.
+        - tests/behaviour/verify-gates-members.test.ts
+        - tests/behaviour/verify-gates-members-evidence.test.ts
+        - tests/behaviour/closeout-members.test.ts
+        - tests/behaviour/closeout-plan.test.ts
+        - tests/behaviour/closeout-queue-removal.test.ts
+        - tests/behaviour/closeout-queue-removal-skips.test.ts
+        - tests/behaviour/cross-repository-readonly.test.ts
+        - tests/structure/cross-repository-contract.test.ts
+        - tests/types/cross-repository-report.type-test.ts
+        - tests/golden/cross-repository-members.test.ts
+        # The F-15 vocabulary carriers (read-verified; expected to stay
+        # unedited, declared so a necessary correction cannot fall outside
+        # scope). The remaining closeout-queue-removal* suites are member-less
+        # and are read unchanged.
+        - tests/behaviour/queue-members.test.ts
+        - tests/behaviour/queue-readiness.test.ts
+        - tests/behaviour/queue-members-removal.test.ts
+        - tests/behaviour/queue-members-dependency.test.ts
+        # Fixtures the member suites use, including the opt-in strict provider
+        # fake and the member-mode golden that the corrected behaviour
+        # regenerates (member-less goldens are read unchanged).
+        - tests/fixtures/cross-repository/closeout.ts
+        - tests/fixtures/cross-repository/facts.ts
+        - tests/fixtures/cross-repository/goldens/closeout-members-applied.json
+        - tests/fixtures/closeout/harness.ts
+        - tests/fixtures/closeout/request.ts
+        - tests/fixtures/closeout/branch.ts
+        - tests/fixtures/closeout/queue-removal.ts
+        - tests/fixtures/state/harness.ts
+      folders:
+        - tests/fixtures/cross-repository
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/closeout.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/state/merge.ts
+        role: consumer
+    doneArtifacts:
+      trackerTransition: "GH-310 delivery complete: all six plan phases done, the gate append round-trips through the real state module, member transitions target the observation issue identity, the member-mode aggregates are the DEC-23 worst-case fold, the final gate battery and commit-range verdicts are recorded; PR-ready against main-tools (PR creation is lifecycle phase 11)"
