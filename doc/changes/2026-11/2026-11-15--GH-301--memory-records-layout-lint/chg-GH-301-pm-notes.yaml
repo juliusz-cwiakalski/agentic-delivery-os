@@ -11,7 +11,7 @@ phases:
   delivery: { started: null, completed: 2026-11-15T15:00:12.962Z }
   system_spec_update: { started: null, completed: 2026-11-15T15:56:35.881Z }
   review_fix: { started: null, completed: 2026-11-15T17:31:19.035Z }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: null, completed: 2026-11-15T17:48:24.417Z }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
@@ -655,6 +655,26 @@ notes:
       gaps NONE. The two corrected spec files were outside phase 8's declared
       file list and the primitive disclosed the scope drift — judged COMPLIANT
       by the reviewer."
+    type: info
+    date: "2026-11-15"
+  - text: "QUALITY GATES (phase 9) = 8/8 PASS. RANGE LINT GATE: PASS — base
+      origin/main-tools (source explicit), merge-base 8a1f77ad, head 690c2a32;
+      53 commits in range; 0 offending commits; 0 distinct rules hit; mode none
+      (no remediation mode emitted on PASS); commitlint binary
+      node_modules/.bin/commitlint, origin repository-local, ref
+      origin/main-tools. Aggregate: TMPDIR=<outside-repo same-filesystem dir>
+      pnpm check exit 0 — 8668 pass / 4 skip / 0 fail, 76149 expects, 8672 tests
+      across 1098 files (901 s); depcruise no violations (408 modules, 1242
+      deps); ambient-globals 193 clean; workspace-entrypoints OK;
+      secret-read-boundary 376 clean; exports-parity 5 publishables pass attw.
+      doc-distribution exit 0 (93 in-scope docs, no drift). memory-lint exit 0
+      (records=3 areas=8 errors=0 advisories=0). privacy-literals exit 0 (4118
+      files, 7 rules, 0 violations). forbidden-literals exit 0 (5/5 classes, 0
+      violations). pnpm build exit 0 (6 of 7 projects; core config-artifacts
+      deterministic). Working tree clean at gate start and end. NOTE: the
+      repo-local TMPDIR form cannot be used because this checkout is nested
+      inside the enclosing jaiship repository; a same-filesystem directory
+      outside every work tree was used and is disclosed."
     type: info
     date: "2026-11-15"
   - text: "Open questions carried by the spec (all non-blocking, deferred): OQ-1
