@@ -1,8 +1,34 @@
-# GH-297 delivery plan — machine-readable document (delivery.plan.v1), revision 1.1
-# (2026-11-16). Authored against spec v1.2 (29 ACs, DEC-1..DEC-20, DM-1..DM-11,
-# NFR-1..NFR-10, RSK-1..RSK-9, DoD-1..DoD-18, OQ-1..OQ-8 all closed, Appendix C
-# constraints C-1..C-16) and test plan v1.2 (48 TCs = 47 automated + 1 gate-only
-# record) on branch feat/GH-297/board from main-tools tip eca76523.
+# GH-297 delivery plan — machine-readable document (delivery.plan.v1), revision 1.2
+# (2026-11-16). Authored against spec v1.3 (29 ACs, DEC-1..DEC-20, DM-1..DM-11,
+# NFR-1..NFR-10, RSK-1..RSK-9, DoD-1..DoD-18, OQ-1..OQ-10 all closed, Appendix C
+# constraints C-1..C-16, Appendix D count-pinning sites D-1..D-23) and test plan
+# v1.3 (48 TCs = 47 automated + 1 gate-only record) on branch feat/GH-297/board
+# from main-tools tip eca76523.
+#
+# REVISION NOTE (revision 1.2, DoR iteration-2 remediation, spec v1.3 / test
+# plan v1.3 reconciliation): the iteration-2 DoR review found the count story
+# still incomplete. The repo-wide scan the spec now mandates (DEC-20 amended,
+# OQ-9/OQ-10 closed) locates **23 count-pinning sites across five files**, not
+# the mirror-plus-carrier set revision 1.1 declared: two suites were absent
+# from every phase scope — tests/structure/dispatch-attempts-taxonomy.test.ts
+# (header comment "135 identities", test name "136 identities",
+# `toHaveLength(136)`) and tests/structure/verify-gates-suite-map-contract.
+# test.ts (`sourceEntries`/`documentedRows` = 136) — and the sync-side suite
+# carries four `BASELINE_ROWS.length + 102` arithmetic/message sites plus its
+# own header-comment/test-name/doc-content pins. Spec v1.3 replaces the
+# shorthand with the exhaustive, binding **Appendix D (D-1..D-23)**; test plan
+# v1.3 re-points TC-BOARD-053 (same id) to own all 23 sites as per-file
+# assertion groups, the repo-wide no-leftover scan for 136/135/53/52 with a
+# small declared residual list, the four-way classifier/check/mirror/carrier
+# agreement (138 entries / 137 delivered rows / 55 allowlist codes / 2 board
+# rows / 138 documented identities), and six mutation arms A..F (adding the
+# non-mirror stale-site arm E and mirror drift F to v1.2's five). This
+# revision adds both suites to the phase-3 scope, rewrites obligation 3.5c as
+# the Appendix D per-file groups, adds the scan/agreement/non-mirror-mutant
+# obligations, and tightens the phase-3 done-when to require every Appendix D
+# site moved with the scan and agreement green inside `pnpm check`. No phase
+# id, title, or ordering changed; the AC set stays 29 and the TC set 48 with
+# every AC and TC still owned exactly once; commit subjects are unchanged.
 #
 # REVISION NOTE (revision 1.1, DoR iteration-1 remediation, spec v1.2 / test
 # plan v1.2 reconciliation): the iteration-1 DoR review found two plan gaps.
@@ -49,23 +75,30 @@
 # no progress log.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:      ./chg-GH-297-spec.md v1.2 — F-1..F-9; DM-1..DM-11;
-#                NFR-1..NFR-10; NG-1..NG-9; DEC-1..DEC-20; RSK-1..RSK-9;
+#   - Spec:      ./chg-GH-297-spec.md v1.3 — F-1..F-9; DM-1..DM-11;
+#                NFR-1..NFR-10; NG-1..NG-9; DEC-1..DEC-20 (DEC-20 amended
+#                at v1.3); RSK-1..RSK-9;
 #                29 ACs AC-F1-1..AC-NFR9-1 incl. AC-F8-3 (section 17);
 #                DoD-1..DoD-18 (section 17.1) with per-condition plan-phase
-#                ownership; section 14 OQ-1..OQ-8 all closed (OQ-8 = the DoR
-#                iteration-1 allowlist finding, closed by DEC-20); section 18
-#                sequencing (shared source before consumer; leaseHolder
-#                before the lane row; error-table registration with the
-#                classification; the prompt-set entry after the surface is
-#                complete); Appendix B ticket-AC mapping and the binding
-#                test-plan mapping note; Appendix C constraints C-1..C-16.
-#   - Test plan: ./chg-GH-297-test-plan.md v1.2 — 48 TCs in nine blocks
+#                ownership; section 14 OQ-1..OQ-10 all closed (OQ-9 = the
+#                DoR iteration-2 count-pinning finding, closed by Appendix
+#                D); section 18 sequencing (shared source before consumer;
+#                leaseHolder before the lane row; error-table registration
+#                with the classification; the prompt-set entry after the
+#                surface is complete); Appendix B ticket-AC mapping and the
+#                binding test-plan mapping note; Appendix C constraints
+#                C-1..C-16; **Appendix D — the exhaustive, binding list of
+#                23 count-pinning sites (D-1..D-23) across five files, with
+#                same-commit movement, the repo-wide no-leftover scan for
+#                136/135/53/52, and the four-way agreement requirement**.
+#   - Test plan: ./chg-GH-297-test-plan.md v1.3 — 48 TCs in nine blocks
 #                (TC-BOARD-001..TC-BOARD-085); coverage matrix 29/29 ACs
-#                (AC-F8-3 owned by TC-BOARD-053, extended in place at v1.2
-#                with the exact allowlist set, the count bumps, the carrier
-#                paragraph, near-miss probes, and five temp-copy mutation
-#                arms — same id, no new id, no orphan); section 4 layers
+#                (AC-F8-3 owned by TC-BOARD-053, extended in place at v1.3
+#                to own Appendix D D-1..D-23 as per-file assertion groups,
+#                the no-leftover scan with a declared residual list, the
+#                four-way agreement read from one tree, the near-miss and
+#                lookalike probes, and six mutation arms A..F — same id, no
+#                new id, no orphan); section 4 layers
 #                (the real-production-composition case list
 #                010/011/012/014/015/016/061/064 and the seeded-index
 #                cases); section 6 fixture/golden environment; section 7
@@ -117,7 +150,17 @@
 #                delivered 52-entry enumeration omits
 #                `verify.narrowed-scope`; 53 delivered + 2 board = 55 per
 #                DEC-20); tests/checks/error-table-sync.test.ts asserts the
-#                same 136 source/documented counts;
+#                same 136 source/documented counts and carries four
+#                `BASELINE_ROWS.length + 102` arithmetic/message sites
+#                (~1081/1082/1161-1162/1185) plus its own header/test-name/
+#                doc-content 136 pins; the count pins extend beyond the
+#                mirror and the sync suite into
+#                tests/structure/dispatch-attempts-taxonomy.test.ts (header
+#                "135 identities" ~L2, test name "136 identities" ~L48,
+#                `toHaveLength(136)` ~L50) and
+#                tests/structure/verify-gates-suite-map-contract.test.ts
+#                (`sourceEntries`/`documentedRows` = 136 ~L149/150) — the
+#                exhaustive binding list is spec Appendix D (D-1..D-23);
 #                tests/fixtures/projects/{production,state-scope,host-index,
 #                temp-repos,host-root}.ts; .changeset/config.json fixed group
 #                of five publishables (GH-309/GH-310 changeset precedent).
@@ -222,6 +265,14 @@
 #   (board-escalation, board-aging, board-records, board-waiver-recording,
 #   board-privacy, board-corpus) assert already-owned AC-F4-1/AC-F4-2
 #   content — they are stay-green obligations, not new TC owners.
+#   REVISION 1.2: per test plan v1.3, TC-BOARD-053's unit is the full
+#   Appendix D list — all 23 count-pinning sites as per-file assertion
+#   groups (adding dispatch-attempts-taxonomy and verify-gates-suite-map-
+#   contract to its suite set), the no-leftover scan with a declared
+#   residual list, the four-way agreement read from one tree, and six
+#   mutation arms A..F (E = a non-mirror site left stale per file, F =
+#   mirror drift); it stays with phase 3 and owns no new AC beyond
+#   AC-F8-3.
 #
 # DoD MAPPING (spec section 17.1 "Proven in plan" -> this plan's phases):
 #   DoD-1 -> 2; DoD-2 -> 1; DoD-3 -> 3; DoD-4 -> 3; DoD-5 -> 2; DoD-6 -> 2;
@@ -229,9 +280,10 @@
 #   (the 128-repository cap) with the consolidated bound proof in 5;
 #   DoD-10 -> 5; DoD-11 -> 4; DoD-12 -> every phase's gate with the
 #   consolidated purity proof in 5; DoD-13 -> 4; DoD-14 -> 3 (the error-table
-#   carrier, the exact allowlist widening 53 -> 55, and the identity-count
-#   expectations land with the classification rows per AC-F8-3/C-16/DEC-20);
-#   DoD-15 -> 5; DoD-16 ->
+#   carrier, the exact allowlist widening 53 -> 55, and every Appendix D
+#   count-pinning site land with the classification rows per
+#   AC-F8-3/C-16/DEC-20/Appendix D, with the no-leftover scan and the
+#   four-way agreement); DoD-15 -> 5; DoD-16 ->
 #   per-phase, roll-up in 5; DoD-17 -> 5; DoD-18 -> lifecycle phase 11
 #   (quality gates / PR creation), not a plan phase.
 #
@@ -305,13 +357,21 @@
 #     (53 -> 55) in BOTH scripts/checks/error-table-sync.ts and its
 #     structural mirror tests/structure/error-table.test.ts (whose
 #     exact-length assertion moves with it), with no `board.*` family, no
-#     pattern widening, and no near-miss acceptance; the identity-table
-#     counts move with the rows — `ERROR_TABLE` entries 136 -> 138 (all four
-#     structural count assertions), delivered/spend-exclusion rows
-#     135 -> 137, exactly 2 `board` domain-kind rows, and the carrier's
-#     documented identities 136 -> 138 with the allowlist paragraph
-#     reconciled 52 -> 55 and an enumeration that sums to it (53 delivered
-#     + 2 board = 55; DEC-20). Grammar refusals
+#     pattern widening, and no near-miss acceptance; EVERY count-pinning
+#     site enumerated in spec **Appendix D (D-1..D-23, 23 sites across
+#     five files)** moves to its declared post-change value in the SAME
+#     commit as the two rows — `ERROR_TABLE` entries 136 -> 138, delivered/
+#     spend-exclusion rows 135 -> 137, the allowlist 53 -> 55 and the
+#     carrier's 52-entry paragraph reconciled to 55 with an enumeration
+#     that sums to it (53 delivered + 2 board = 55), the sync suite's four
+#     `BASELINE_ROWS.length + 102` sites -> + 104, and the
+#     dispatch-taxonomy / verify-suite-map / sync-suite comment, name, and
+#     doc-content pins with them (DEC-20, C-16); a repo-wide scan of the
+#     five named files reports no leftover identity-count pin at 136, 135,
+#     53, or 52 (residuals only as declared non-count prose), and the
+#     classifier, sync check, structural mirror, and carrier agree on
+#     138 entries / 137 delivered rows / 55 allowlist codes / 2 board rows
+#     / 138 documented identities. Grammar refusals
 #     (unknown flag, positional, `--all` with `--project`, valueless
 #     `--project`) keep the delivered `fallback.invocation` at exit 1 with NO
 #     `board.*` grammar identity; the delivered
@@ -723,9 +783,9 @@
 #      different repositories sharing a ref stay distinct (identity includes
 #      the repository key); `--all` section counts equal the sum of the
 #      included per-repository boards before any byte-guard drop.
-#  3.5 Error identities, the closed two-segment allowlist, and the
-#      in-boundary carrier (DM-8, DEC-8, DEC-20, C-7, C-10, C-16, AC-F8-3,
-#      DoR iteration-1 F1):
+#  3.5 Error identities, the closed two-segment allowlist, every Appendix D
+#      count pin, and the in-boundary carrier (DM-8, DEC-8, DEC-20, C-7,
+#      C-10, C-16, AC-F8-3, Appendix D; DoR iterations 1 and 2, F1/OQ-9):
 #      a. packages/core/src/contracts/error-table.ts gains the `board`
 #         domain kind exactly once and exactly two rows —
 #         `board.repository-unknown` (user category, exit 1, not retryable)
@@ -746,31 +806,75 @@
 #         check and by `scanReferences` rather than family-matched, while a
 #         three-segment lookalike (`board.state-unavailable.extra`,
 #         `board.other.thing`) resolves to no table row.
-#      c. IDENTITY-COUNT UPDATES that move with the rows, all in the same
-#         commit: the four `expect(entries).toHaveLength(136)` structural
-#         assertions in tests/structure/error-table.test.ts become 138 (and
-#         the suite scans that no 136 count remains); the
-#         delivered/spend-exclusion assertion
-#         (`entries.filter(domainKind !== "spend")`) moves 135 -> 137;
-#         exactly 2 `board` domain-kind rows are asserted;
-#         tests/checks/error-table-sync.test.ts's live-tree assertions move
-#         with the table (`sourceEntries`/`documentedRows` 136 -> 138 and
-#         the "136 identities" doc-content expectation -> "138 identities");
-#         and the carrier doc/spec/features/feature-result-contract.md
-#         documents 138 identities (136 -> 138) with its allowlist
-#         paragraph reconciled 52 -> 55 and an enumerated sum that equals 55
-#         (53 delivered + 2 board; the delivered 52-entry enumeration omits
-#         `verify.narrowed-scope`, DEC-20). A half-updated widening (one
-#         file, one count, or the paragraph left behind) is a red gate, not
+#      c. IDENTITY-COUNT UPDATES: every count-pinning site enumerated in
+#         spec **Appendix D (D-1..D-23, 23 sites across five files)** moves
+#         to its declared post-change value in the SAME commit as the two
+#         rows, grouped per file (the spec's Appendix D is the binding
+#         locator list; its baseline line numbers are search anchors, not
+#         the contract — the file plus the quoted expression identifies each
+#         site):
+#         - tests/structure/error-table.test.ts (D-1..D-7): the four
+#           `expect(entries).toHaveLength(136)` entry pins -> 138; the
+#           `[...RESERVED_TWO_SEGMENT_CODES]` exact-length pin 53 -> 55;
+#           the delivered/spend-exclusion pin
+#           (`entries.filter(domainKind !== "spend")`) 135 -> 137; the
+#           doc-content pin "136 identities" -> "138 identities".
+#         - tests/structure/dispatch-attempts-taxonomy.test.ts (D-8..D-10):
+#           the header comment "the registry stays at 135 identities" ->
+#           137; the test name "the registry holds exactly 136 identities
+#           and four dispatch rows" -> 138; the `toHaveLength(136)`
+#           assertion -> 138.
+#         - tests/structure/verify-gates-suite-map-contract.test.ts
+#           (D-11..D-12): `result.counts.sourceEntries` and
+#           `result.counts.documentedRows` 136 -> 138 (both reads).
+#         - tests/checks/error-table-sync.test.ts (D-13..D-21): all four
+#           `BASELINE_ROWS.length + 102` arithmetic/message sites ->
+#           `+ 104` (the live-length guard ~1081, its failure-message
+#           interpolation ~1082, the `sourceEntries` arithmetic ~1161-1162,
+#           and the second `sourceEntries` arithmetic ~1185); the header
+#           comment "the total is 136" -> 138; the test name "green at 136
+#           entries and 136 documented rows" -> 138/138; the two explicit
+#           `sourceEntries`/`documentedRows` reads 136 -> 138; the
+#           doc-content pin "136 identities" -> "138 identities".
+#         - doc/spec/features/feature-result-contract.md (D-22..D-23): both
+#           documented-identity mentions ("136 machine identities" and "the
+#           same 136 identities") -> 138; the closed two-segment allowlist
+#           paragraph 52 -> 55 with a `board` entry of 2 whose enumeration
+#           sums to 55 (53 delivered + 2 board; the delivered 52-entry
+#           enumeration omits `verify.narrowed-scope`, DEC-20).
+#         A half-updated widening — one file, one count, one comment or
+#         test-name pin, or the paragraph left behind — is a red gate, not
 #         a warning.
-#      d. TC-BOARD-053 (test plan v1.2) owns the whole unit — rows, kind,
-#         the 55-member allowlist in both files, the four 138 count
-#         assertions with no leftover 136, the 137 delivered rows, the 2
-#         board rows, the carrier's 138 identities and 55-paragraph
-#         enumeration, the near-miss probes, and the five temp-copy mutation
-#         arms (planted near miss in a scanned corpus, deleted documentation
-#         row, check-side omission of the widening, family widening to a
-#         `board.` prefix, count drift).
+#      d. NO-LEFTOVER SCAN AND FOUR-WAY AGREEMENT: after the move, a
+#         repo-wide scan of the five named files (the four suites above's
+#         files plus the carrier) asserts no remaining identity-count pin
+#         at 136, 135, 53, or 52 — every residual occurrence of those
+#         tokens is either absent or matched by a declared non-count
+#         pattern (a byte/character/line-length number, an array index or
+#         offset, or a cited spec/commit reference), the accepted-residual
+#         list is small and named (never a wildcard), and no `+ 102`
+#         arithmetic survives in the sync suite; and the classifier
+#         resolves both board codes while the sync check, the structural
+#         mirror, and the carrier — read in the same run of the same tree —
+#         agree on 138 entries / 137 delivered (spend-exclusion) rows /
+#         55 allowlist codes / 2 board rows / 138 documented identities.
+#         Any disagreement between those four surfaces is a failed
+#         deliverable, not a deferred doc fix (Appendix D agreement
+#         requirement, AC-F8-3 (c)/(d)).
+#      e. TC-BOARD-053 (test plan v1.3) owns the whole unit — rows, kind,
+#         the 55-member allowlist in both the check and the mirror, the
+#         per-file Appendix D assertion groups, the no-leftover scan with
+#         its declared residual list, the four-way agreement, the near-miss
+#         and three-segment-lookalike probes, and the six temp-copy
+#         mutation arms A..F: (A) a planted two-segment near-miss in a
+#         scanned corpus, (B) a deleted documentation row, (C) a check-side
+#         omission of the widening, (D) family widening to a `board.`
+#         prefix, (E) a NON-MIRROR Appendix D site left stale per file
+#         (dispatch-taxonomy header/name/length, verify-map reads, the
+#         sync suite's `+104` arithmetic, the carrier paragraph 52) — the
+#         arm that proves the 23-site list is exercised beyond the mirror —
+#         and (F) mirror drift (allowlist left at 53 or an entry pin at
+#         136).
 #  3.6 Production board composition (F-7 composition half, DEC-6):
 #      packages/cli/src/production.ts composes the board runtime
 #      unconditionally over the delivered adapters (tracker factory, state
@@ -807,11 +911,16 @@
 #      with readable twins), board-bounds (TC-BOARD-082 omission arithmetic
 #      incl. the 129-repository counter cell), tests/structure/error-table.test.ts,
 #      tests/checks/error-table-sync.test.ts, and
-#      scripts/checks/error-table-sync.ts (TC-BOARD-053 per 3.5b..d: rows,
+#      scripts/checks/error-table-sync.ts (TC-BOARD-053 per 3.5b..e: rows,
 #      kind, the 55-member allowlist in both the check and the mirror, the
-#      138/137/2 count updates with no leftover 136, the carrier's 138
-#      identities and 55 paragraph, the collector wording, no grammar row,
-#      the near-miss probes, and the five mutation arms),
+#      Appendix D per-file groups with all 23 pins moved, the no-leftover
+#      scan and four-way agreement, the carrier's 138 identities and 55
+#      paragraph, the collector wording, no grammar row, the near-miss
+#      probes, and the six mutation arms A..F),
+#      tests/structure/dispatch-attempts-taxonomy.test.ts and
+#      tests/structure/verify-gates-suite-map-contract.test.ts (the
+#      non-mirror Appendix D pin holders D-8..D-12, moved with the rows and
+#      covered by TC-BOARD-053's per-file groups and mutation arm E),
 #      tests/structure/board-contract.test.ts (the BOARD_MAX_REPOSITORIES
 #      constant half).
 #
@@ -837,12 +946,20 @@
 # documented in-boundary with the delivered families untouched; the closed
 # two-segment allowlist holds exactly 55 members in BOTH the sync check and
 # its structural mirror with exactly the two declared `board.*` codes and
-# the 53 delivered members unchanged, the identity-table counts read 138
-# entries / 137 delivered rows / 2 board rows with no leftover 136 anywhere,
-# the carrier declares 138 identities with its allowlist paragraph at 55
-# summing to it, and a near-miss two-segment `board.*` code is rejected —
-# the error-table sync check, the structural mirror, and the sync-side
-# suite are all green inside `pnpm check`; production
+# the 53 delivered members unchanged; EVERY Appendix D site (D-1..D-23
+# across tests/structure/error-table.test.ts, dispatch-attempts-taxonomy,
+# verify-gates-suite-map-contract, error-table-sync.test.ts, and the
+# carrier) is moved to its post-change value in the same commit — 138
+# entry/test-name/header pins, 137 delivered pins, 55 allowlist pins,
+# + 104 arithmetic, 138 documented identities, paragraph 55 summing to it;
+# the repo-wide no-leftover scan for 136/135/53/52 across the five named
+# files is green with only declared non-count residuals (no `+ 102`
+# survives); the classifier, sync check, structural mirror, and carrier
+# agree on 138 entries / 137 delivered rows / 55 allowlist codes / 2 board
+# rows / 138 documented identities read from one tree; and a near-miss
+# two-segment `board.*` code is rejected — the error-table sync check, the
+# structural mirror, the sync-side suite, and both non-mirror suites are
+# all green inside `pnpm check`; production
 # composes board unconditionally with zero index maintenance; TMPDIR=$PWD/
 # tmp/tmpdir pnpm check is green.
 # ---------------------------------------------------------------------------
@@ -1168,10 +1285,14 @@ phases:
       per-repository reads — register board.repository-unknown and
       board.state-unavailable with their error-table rows, the exact closed
       two-segment allowlist widening (53 to 55 in the sync check and its
-      structural mirror), the identity-count updates (138 entries, 137
-      delivered rows, 2 board rows, 138 documented identities, allowlist
-      paragraph 55), and the in-boundary result-contract carrier, refuse
-      grammar through the delivered fallback.invocation before any read, and
+      structural mirror), every Appendix D count-pinning site moved in the
+      same commit (23 sites across the mirror, dispatch-attempts-taxonomy,
+      verify-gates-suite-map-contract, the sync suite's +104 arithmetic and
+      name pins, and the carrier: 138 entries, 137 delivered rows, 55
+      allowlist codes, 2 board rows, 138 documented identities, paragraph
+      55) with the repo-wide no-leftover scan for 136/135/53/52 and
+      four-way classifier/check/mirror/carrier agreement, refuse grammar
+      through the delivered fallback.invocation before any read, and
       compose the board runtime unconditionally in the production root.
     scope:
       files:
@@ -1183,9 +1304,11 @@ phases:
         - packages/cli/src/edge.ts
         - packages/cli/src/production.ts
         - doc/spec/features/feature-result-contract.md
-        # DoR iteration-1 F1: the closed two-segment allowlist and the
-        # identity-count assertions live here and in the structural mirror;
-        # obligation 3.5b..c (AC-F8-3, DEC-20, C-16).
+        # DoR iterations 1 and 2 (F1/OQ-9): the closed two-segment allowlist
+        # and the identity-count pins live here, in the structural mirror,
+        # in the dispatch-taxonomy and verify-suite-map suites, and in the
+        # sync-side suite; obligation 3.5b..e (AC-F8-3, DEC-20, C-16,
+        # Appendix D D-1..D-23).
         - scripts/checks/error-table-sync.ts
         - tests/fixtures/board/harness.ts
         - tests/fixtures/board/selection.ts
@@ -1207,6 +1330,10 @@ phases:
         - tests/behaviour/board-never-silence.test.ts
         - tests/behaviour/board-bounds.test.ts
         - tests/structure/error-table.test.ts
+        # DoR iteration-2: the non-mirror Appendix D pin holders (D-8..D-12),
+        # moved with the rows in the same commit (obligation 3.5c).
+        - tests/structure/dispatch-attempts-taxonomy.test.ts
+        - tests/structure/verify-gates-suite-map-contract.test.ts
         - tests/structure/board-contract.test.ts
         - tests/checks/error-table-sync.test.ts
     interactions:
