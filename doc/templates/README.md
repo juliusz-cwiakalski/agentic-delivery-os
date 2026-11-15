@@ -120,8 +120,10 @@ memory tree is seeded empty — structure and conventions, not records.
 | `memory-coordinator-wiring-template.md` | Coordinator memory wiring rendered into `.ai/agent/pm-instructions.md`: capture bar, promotion path, curation mandate |
 | `memory-instruction-expectations-template.md` | Companion per-role memory expectations rendered into the PR/MR, decision, and code-review instruction files: read own entry point, write own folder, no cross-agent memory edits |
 | `memory-retro-notes-template.md` | Retro-note conventions: append-only notes with a generated index; documentation only, no ceremony |
-| `memory-doctor-checklist-template.md` | Manual memory-health doctor checklist: six audit areas, manual until memory lint lands, prescribes a cadence and performs nothing |
+| `memory-doctor-checklist-template.md` | Manual memory-health doctor checklist: six audit areas, a prescribed cadence, and an automation boundary; performs nothing |
 | `memory-adoption-checklist-template.md` | Manual adoption checklist for previously bootstrapped projects: adopt kernel section, instruction wiring, and tree scaffold by hand |
+
+A project whose gates run the memory invariant gets these areas checked mechanically; otherwise the manual checklist is the audit path. The memory invariant is a repository check of the delivery repository, not an installed bootstrap artifact; the template set installs the manual checklist.
 
 ## Business/Product Strategy Templates (Optional Profile)
 

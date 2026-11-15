@@ -4,7 +4,7 @@ ados_distribution: redistributable
 
 # Memory Doctor Checklist Template
 
-Template for the manual memory-health checklist installed into a bootstrapped project. Documentation only: it prescribes an audit cadence and performs nothing — no script, gate, or automation ships with it. The checklist stays manual until memory lint lands in the quality gates (GH-301); when that tooling lands, it replaces this checklist.
+Template for the manual memory-health checklist installed into a bootstrapped project. Documentation only: it prescribes an audit cadence and performs nothing — no script, gate, or automation ships with it. A project whose gates run the memory invariant gets these areas checked mechanically; otherwise this checklist is the audit path. The memory invariant is a repository check of the delivery repository; the bootstrap template set installs this checklist, not the invariant.
 
 ## Cadence
 

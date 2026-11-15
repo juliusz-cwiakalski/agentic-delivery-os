@@ -38,6 +38,7 @@ export {
   validateBlockerPublish,
 } from "./blockers.js";
 export { projectBrief, renderBriefHuman } from "./brief.js";
+export { evaluateMemory } from "./memory-lint.js";
 export {
   type CapsuleReviewIngestion,
   canonicalCapsuleJson,

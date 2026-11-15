@@ -278,6 +278,7 @@ jobs:
           bun run scripts/checks/privacy-literals.ts
           bun run scripts/checks/retro-render-purity.ts
           bun run scripts/checks/retro-key-containment.ts
+          bun run scripts/checks/memory-lint.ts
 
   ts-typecheck:
     name: TS typecheck

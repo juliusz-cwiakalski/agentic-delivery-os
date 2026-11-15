@@ -1,0 +1,770 @@
+/**
+ * The pure memory evaluation (GH-301 F-5..F-8, DM-4; NFR-1, NFR-4).
+ *
+ * One deterministic pass over an injected file list, a repository-relative text
+ * map (carried by the scanned files), the injected privacy vocabulary, and ONE
+ * fixed "today". No I/O, no fs, no clock, no randomness, no network. The
+ * scanner owns reads and frontmatter parsing; the check edge owns the single
+ * ambient date read and the actual printing. This module composes the
+ * deterministic lines the edge writes.
+ */
+import {
+  HINT_MAX_CHARS,
+  MEMORY_ARCHIVE_INDEX_MAX_LINES,
+  MEMORY_ARCHIVE_INDEX_PATH,
+  MEMORY_DERIVABLE_COMMANDS,
+  MEMORY_ENTRY_MAX_LINES,
+  MEMORY_FINDING_AREA_ORDER,
+  MEMORY_FINDING_REGISTER,
+  MEMORY_INDEX_MAX_BYTES,
+  MEMORY_INDEX_MAX_LINES,
+  MEMORY_INDEX_PATH,
+  MEMORY_KERNEL_BAND_SEVERITY,
+  MEMORY_KERNEL_ERROR_LINES,
+  MEMORY_KERNEL_WARN_LINES,
+  MEMORY_MAX_PRINTED_ADVISORIES,
+  MEMORY_MAX_PRINTED_ERRORS,
+  MEMORY_RECORD_AREAS,
+  MEMORY_RECORD_BASIS_VALUES,
+  MEMORY_RECORD_EVIDENCE_PREFIXES,
+  MEMORY_RECORD_FILE_NAME_PATTERN,
+  MEMORY_RECORD_ID_PATTERN,
+  MEMORY_RECORD_KINDS,
+  MEMORY_RECORD_OPTIONAL_KEYS,
+  MEMORY_RECORD_REQUIRED_KEYS,
+  MEMORY_RECORD_SCOPES,
+  MEMORY_RECORD_SOURCES,
+  MEMORY_RECORD_STATUSES,
+  MEMORY_RECORD_TRUST,
+  MEMORY_REVALIDATION_MARKER_KEY,
+  MEMORY_ROOT,
+  MEMORY_SECRET_RULE_PREFIX,
+  MEMORY_WARN_RULE_IDS,
+  type MemoryEvaluationInput,
+  type MemoryEvaluationResult,
+  type MemoryFinding,
+  type MemoryFindingArea,
+  type MemoryFindingSeverity,
+  type MemoryScannedFile,
+  type MemorySummary,
+  STATEMENT_MAX_CHARS,
+} from "../contracts/memory-record.js";
+
+type IndexRow = {
+  readonly path: string;
+  readonly hint: string;
+  readonly line: number;
+};
+
+const parseIndexRows = (text: string, heading: string | undefined): readonly IndexRow[] => {
+  const lines = text.split("\n");
+  const start = heading === undefined ? 0 : lines.findIndex((line) => line.trim() === heading);
+  if (start === -1) return [];
+  const rows: IndexRow[] = [];
+  for (let index = start; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
+    if (heading !== undefined && index > start && /^##\s/.test(line)) break;
+    if (!line.trim().startsWith("|")) continue;
+    if (/^\|[\s:|-]+\|$/.test(line.trim())) continue;
+    const cells = line
+      .split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim());
+    if (cells.length < 2) continue;
+    const path = (cells[0] ?? "").replace(/^`|`$/g, "");
+    if (path.length === 0 || path === "Path") continue;
+    rows.push({ path, hint: cells[1] ?? "", line: index + 1 });
+  }
+  return rows;
+};
+
+const ID_PATTERN = new RegExp(MEMORY_RECORD_ID_PATTERN);
+const FILE_NAME_PATTERN = new RegExp(MEMORY_RECORD_FILE_NAME_PATTERN);
+
+/** A flat record area: a record file directly inside it, never the guild tree. */
+const isFlatRecordArea = (area: string): boolean =>
+  (MEMORY_RECORD_AREAS as readonly string[]).includes(area) && area !== "guilds";
+
+type ParsedRecord = {
+  readonly file: MemoryScannedFile;
+  readonly relative: string;
+  readonly fields: Readonly<Record<string, unknown>>;
+};
+
+const relativeOf = (path: string): string =>
+  path.startsWith(`${MEMORY_ROOT}/`) ? path.slice(MEMORY_ROOT.length + 1) : path;
+
+const partsOf = (relative: string): readonly string[] => relative.split("/");
+
+const isRecordRelative = (relative: string): boolean => {
+  const parts = partsOf(relative);
+  const [area, name, third] = parts;
+  if (area === undefined || name === undefined) return false;
+  if (isFlatRecordArea(area)) {
+    return parts.length === 2 && name.endsWith(".md");
+  }
+  if (area === "guilds") {
+    return (
+      parts.length === 3 && third !== undefined && third !== "README.md" && third.endsWith(".md")
+    );
+  }
+  return false;
+};
+
+const isEntryPoint = (relative: string): boolean => /^agents\/[^/]+\/README\.md$/.test(relative);
+
+const hasOwn = (value: Readonly<Record<string, unknown>>, key: string): boolean =>
+  Object.hasOwn(value, key);
+
+const stringOf = (value: unknown): string | undefined =>
+  typeof value === "string" ? value : undefined;
+
+const nonEmpty = (value: string | undefined): value is string =>
+  value !== undefined && value.trim().length > 0;
+
+const idListOf = (value: unknown): readonly string[] => {
+  if (typeof value === "string") return [value];
+  if (Array.isArray(value) && value.every((entry) => typeof entry === "string")) {
+    return value as readonly string[];
+  }
+  return [];
+};
+
+const isIsoDate = (value: string): boolean => {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const time = Date.parse(`${value}T00:00:00Z`);
+  return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === value;
+};
+
+const fileNameMatches = (relative: string, id: string): boolean => {
+  const name = partsOf(relative).at(-1) ?? "";
+  return name === `${id}.md` || (name.startsWith(`${id}-`) && FILE_NAME_PATTERN.test(name));
+};
+
+const areaOf = (ruleId: string): MemoryFindingArea => {
+  const area = ruleId.split(".")[1];
+  if (area === undefined || !(MEMORY_FINDING_AREA_ORDER as readonly string[]).includes(area)) {
+    throw new Error(`unregistered memory finding identity ${ruleId}`);
+  }
+  return area as MemoryFindingArea;
+};
+
+const severityOf = (ruleId: string, area: MemoryFindingArea): MemoryFindingSeverity => {
+  if (area === "derivable") return "warn";
+  if ((MEMORY_WARN_RULE_IDS as readonly string[]).includes(ruleId)) return "warn";
+  if (area === "secret") return MEMORY_FINDING_REGISTER.secret.severity;
+  return MEMORY_FINDING_REGISTER[area].severity;
+};
+
+/** The pure evaluation. */
+export const evaluateMemory = (input: MemoryEvaluationInput): MemoryEvaluationResult => {
+  const findings: MemoryFinding[] = [];
+  const add = (
+    ruleId: string,
+    path: string,
+    detail: string,
+    options: { readonly line?: number; readonly severity?: MemoryFindingSeverity } = {},
+  ): void => {
+    const area = areaOf(ruleId);
+    findings.push({
+      ruleId,
+      area,
+      severity: options.severity ?? severityOf(ruleId, area),
+      path,
+      ...(options.line === undefined ? {} : { line: options.line }),
+      detail,
+    });
+  };
+
+  const records: ParsedRecord[] = [];
+  for (const file of input.files) {
+    const relative = relativeOf(file.path);
+    if (!isRecordRelative(relative)) continue;
+    if (file.frontmatter.state === "absent") {
+      add("memory.schema.frontmatter-missing", file.path, "frontmatter block is absent");
+      continue;
+    }
+    if (file.frontmatter.state === "malformed") {
+      add("memory.schema.frontmatter-malformed", file.path, "frontmatter is not parseable YAML");
+      continue;
+    }
+    records.push({ file, relative, fields: file.frontmatter.value });
+  }
+
+  const required = new Set<string>(MEMORY_RECORD_REQUIRED_KEYS);
+  const optional = new Set<string>(MEMORY_RECORD_OPTIONAL_KEYS);
+  const seenIds = new Map<string, string>();
+
+  for (const record of records) {
+    const { file, relative, fields } = record;
+    const path = file.path;
+    for (const key of MEMORY_RECORD_REQUIRED_KEYS) {
+      if (key === "evidence" || key === "created_by") continue;
+      if (!hasOwn(fields, key)) {
+        add("memory.schema.keys-missing", path, `required key ${key} is absent`);
+      }
+    }
+    for (const key of Object.keys(fields)) {
+      if (!required.has(key) && !optional.has(key)) {
+        add("memory.schema.key-unknown", path, `undeclared key ${key}`);
+      }
+    }
+    const id = stringOf(fields.id);
+    if (id !== undefined && !ID_PATTERN.test(id)) {
+      add("memory.schema.id-malformed", path, `id ${id} is outside the declared grammar`);
+    }
+    if (id !== undefined && ID_PATTERN.test(id)) {
+      if (!fileNameMatches(relative, id)) {
+        add("memory.schema.file-name-mismatch", path, `file name does not begin with id ${id}`);
+      }
+      const first = seenIds.get(id);
+      if (first === undefined) seenIds.set(id, path);
+      else add("memory.schema.id-duplicate", path, `id ${id} is already used by ${first}`);
+    }
+
+    const vocabulary = (key: string, values: readonly string[]): string | undefined => {
+      if (!hasOwn(fields, key)) return undefined;
+      const value = fields[key];
+      if (typeof value !== "string" || !values.includes(value)) {
+        add("memory.schema.value-unknown", path, `${key} is outside the closed vocabulary`);
+        return undefined;
+      }
+      return value;
+    };
+
+    vocabulary("kind", MEMORY_RECORD_KINDS);
+    vocabulary("scope", MEMORY_RECORD_SCOPES);
+    vocabulary("trust", MEMORY_RECORD_TRUST);
+    const status = vocabulary("status", MEMORY_RECORD_STATUSES);
+    const source = vocabulary("source", MEMORY_RECORD_SOURCES);
+    if (hasOwn(fields, "basis")) {
+      const basis = fields.basis;
+      if (
+        typeof basis !== "string" ||
+        !(MEMORY_RECORD_BASIS_VALUES as readonly string[]).includes(basis)
+      ) {
+        add("memory.schema.value-unknown", path, "basis is outside the capture-bar set");
+      }
+    }
+    if (hasOwn(fields, "applies_when")) {
+      const applies = fields.applies_when;
+      const scalar =
+        typeof applies === "string" || (Array.isArray(applies) && applies.length === 1);
+      if (!scalar) {
+        add("memory.schema.value-unknown", path, "applies_when is not a scalar predicate");
+      }
+    }
+    if (hasOwn(fields, "confidence") && typeof fields.confidence !== "number") {
+      add("memory.schema.value-unknown", path, "confidence is not a number");
+    }
+    if (
+      hasOwn(fields, "evaluation") &&
+      (typeof fields.evaluation !== "object" ||
+        fields.evaluation === null ||
+        Array.isArray(fields.evaluation))
+    ) {
+      add("memory.schema.value-unknown", path, "evaluation is not a mapping");
+    }
+    const rawStatement = fields.statement;
+    const statement = stringOf(rawStatement);
+    if (statement === undefined || rawStatement === null || statement.trim().length === 0) {
+      if (hasOwn(fields, "statement")) {
+        add("memory.schema.keys-missing", path, "required key statement is empty");
+      }
+    } else if (statement.length > STATEMENT_MAX_CHARS) {
+      add(
+        "memory.schema.statement-too-long",
+        path,
+        `statement length ${statement.length} exceeds the published bound ${STATEMENT_MAX_CHARS}`,
+      );
+    }
+    const kind = stringOf(fields.kind);
+    if (kind === "preference" && source !== undefined && source !== "human_correction") {
+      add(
+        "memory.schema.preference-source",
+        path,
+        "a preference record source is not human_correction",
+      );
+    }
+    const guildFolder = relative.startsWith("guilds/") ? partsOf(relative)[1] : undefined;
+    const guild = stringOf(fields.guild);
+    if (guildFolder !== undefined) {
+      if (guild !== guildFolder) {
+        add("memory.schema.guild-mismatch", path, "guild does not equal its folder name");
+      }
+    } else if (hasOwn(fields, "guild")) {
+      add("memory.schema.guild-mismatch", path, "guild is present outside a guild folder");
+    }
+    if (status === "superseded" && !hasOwn(fields, "superseded_by")) {
+      add("memory.schema.superseded-by-missing", path, "a superseded record lacks superseded_by");
+    }
+
+    const created = stringOf(fields.created);
+    if (created !== undefined) {
+      if (!isIsoDate(created)) {
+        add("memory.dating.created-malformed", path, "created is not YYYY-MM-DD");
+      } else if (created > input.today) {
+        add("memory.dating.created-future", path, `created ${created} is after the injected date`);
+      }
+    }
+    if (hasOwn(fields, "revalidate_after")) {
+      const revalidate = stringOf(fields.revalidate_after);
+      if (revalidate === undefined || !isIsoDate(revalidate)) {
+        add("memory.dating.revalidate-malformed", path, "revalidate_after is not YYYY-MM-DD");
+      } else if (revalidate < input.today) {
+        add("memory.dating.revalidate-expired", path, "the revalidation window has passed");
+      }
+    }
+    if (
+      status === "authoritative" &&
+      kind === "lesson" &&
+      hasOwn(fields, MEMORY_REVALIDATION_MARKER_KEY) &&
+      !hasOwn(fields, "revalidate_after")
+    ) {
+      add(
+        "memory.dating.revalidate-missing",
+        path,
+        "an authoritative behaviour-changing lesson lacks revalidate_after",
+      );
+    }
+
+    if (!hasOwn(fields, "evidence")) {
+      add("memory.provenance.evidence-missing", path, "the evidence link is absent");
+    } else {
+      const evidence = stringOf(fields.evidence);
+      const prefix = MEMORY_RECORD_EVIDENCE_PREFIXES.find(
+        (entry) => evidence?.startsWith(entry) === true,
+      );
+      if (evidence === undefined || !nonEmpty(evidence.slice(prefix?.length ?? 0))) {
+        add("memory.provenance.evidence-missing", path, "the evidence link is empty");
+      } else if (prefix === undefined) {
+        add(
+          "memory.provenance.evidence-shape-unknown",
+          path,
+          "evidence is outside the five shapes",
+        );
+      }
+    }
+    if (!hasOwn(fields, "created_by") || !nonEmpty(stringOf(fields.created_by))) {
+      add("memory.provenance.created-by-missing", path, "created_by is absent");
+    }
+  }
+
+  for (const file of input.files) {
+    const relative = relativeOf(file.path);
+    if (!isEntryPoint(relative)) continue;
+    const lines = file.text.split("\n");
+    for (const [index, line] of lines.entries()) {
+      // A capture line carries a calendar-shaped leading token, optionally with
+      // a time; a bullet whose leading token is not date-like is not a capture
+      // line and produces no dating finding (F-7).
+      const capture =
+        /^\s*-\s+(\d{4}[-/]\d{1,2}[-/]\d{1,2}(?:[T ]\d{1,2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:?\d{2})?)?)\s*:/.exec(
+          line,
+        );
+      const token = capture?.[1];
+      if (token === undefined) continue;
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(token)) {
+        add(
+          "memory.dating.entry-line-date",
+          file.path,
+          `capture line date ${token} is not YYYY-MM-DD`,
+          {
+            line: index + 1,
+          },
+        );
+      }
+    }
+  }
+
+  const ids = new Map<string, ParsedRecord>();
+  for (const record of records) {
+    const id = stringOf(record.fields.id);
+    if (id !== undefined && ID_PATTERN.test(id) && !ids.has(id)) ids.set(id, record);
+  }
+  const allPaths = new Set(input.files.map((file) => file.path));
+  const resolveLink = (directory: string, target: string): { path: string; escaped: boolean } => {
+    const stack = directory.length === 0 ? [] : directory.split("/");
+    let escaped = false;
+    for (const segment of target.split("/")) {
+      if (segment === "" || segment === ".") continue;
+      if (segment === "..") {
+        if (stack.length === 0) escaped = true;
+        else stack.pop();
+      } else stack.push(segment);
+    }
+    return { path: stack.join("/"), escaped };
+  };
+  for (const record of records) {
+    const { file, relative, fields } = record;
+    const recordId = stringOf(fields.id) ?? "";
+    for (const target of idListOf(fields.supersedes)) {
+      if (!ids.has(target)) {
+        add(
+          "memory.reference.supersedes-dangling",
+          file.path,
+          `supersedes names unknown id ${target}`,
+        );
+        continue;
+      }
+      const targetRecord = ids.get(target);
+      if (stringOf(targetRecord?.fields.superseded_by) !== recordId) {
+        add(
+          "memory.reference.supersede-asymmetry",
+          file.path,
+          `${target} does not name ${recordId} in superseded_by`,
+        );
+      }
+    }
+    const replacement = stringOf(fields.superseded_by);
+    if (replacement !== undefined && !ids.has(replacement)) {
+      add(
+        "memory.reference.superseded-by-dangling",
+        file.path,
+        `superseded_by names unknown id ${replacement}`,
+      );
+    }
+    if (replacement !== undefined && ids.has(replacement)) {
+      const replacementRecord = ids.get(replacement);
+      const reciprocal = replacementRecord?.fields.supersedes;
+      if (!idListOf(reciprocal).includes(recordId)) {
+        add(
+          "memory.reference.supersede-asymmetry",
+          file.path,
+          `${replacement} does not name ${recordId} in supersedes`,
+        );
+      }
+    }
+    for (const target of idListOf(fields.contradicts)) {
+      if (!ids.has(target)) {
+        add(
+          "memory.reference.contradicts-dangling",
+          file.path,
+          `contradicts names unknown id ${target}`,
+        );
+      }
+    }
+    const bodyStart = file.text.indexOf("\n---", 3);
+    const body = bodyStart === -1 ? "" : file.text.slice(bodyStart + 4);
+    const directory = partsOf(relative).slice(0, -1).join("/");
+    for (const match of body.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)) {
+      const rawTarget = match[1];
+      if (rawTarget === undefined) continue;
+      const target = rawTarget.split("#")[0] ?? "";
+      if (
+        target.length === 0 ||
+        /^[a-z]+:/i.test(target) ||
+        target.startsWith("#") ||
+        target.startsWith("/")
+      ) {
+        continue;
+      }
+      const resolved = resolveLink(directory, target);
+      // Only an in-tree relative link is in scope; a link whose resolution
+      // leaves `.ai/memory/` (or an absolute repository path) is a citation,
+      // not a dangling memory reference (F-5).
+      if (resolved.escaped) continue;
+      const repoPath = `${MEMORY_ROOT}/${resolved.path}`;
+      if (!allPaths.has(repoPath)) {
+        add(
+          "memory.reference.link-dangling",
+          file.path,
+          `link target ${target} resolves to no file`,
+        );
+      }
+    }
+  }
+
+  // --- index coverage over the two declared universes (DM-3, AC-F9-2) ---
+  const indexFile = input.files.find((file) => file.path === MEMORY_INDEX_PATH);
+  const archiveFile = input.files.find((file) => file.path === MEMORY_ARCHIVE_INDEX_PATH);
+  const coveredByMemory = new Set<string>();
+  for (const file of input.files) {
+    const relative = relativeOf(file.path);
+    if (relative === "README.md" || relative === "retro/INDEX.md") {
+      if (relative === "retro/INDEX.md") coveredByMemory.add(relative);
+      continue;
+    }
+    if (
+      isRecordRelative(relative) ||
+      /^agents\/[^/]+\/README\.md$/.test(relative) ||
+      /^guilds\/[^/]+\/README\.md$/.test(relative)
+    ) {
+      coveredByMemory.add(relative);
+    }
+  }
+  const coveredByArchive = new Set(
+    input.files
+      .map((file) => relativeOf(file.path))
+      .filter((relative) => /^retro\/\d{4}\/.+\.md$/.test(relative)),
+  );
+  const normalizeRowPath = (value: string): string =>
+    value.startsWith(`${MEMORY_ROOT}/`) ? value.slice(MEMORY_ROOT.length + 1) : value;
+  const evaluateUniverse = (
+    universe: "memory-index" | "archive-index",
+    index: MemoryScannedFile | undefined,
+    covered: ReadonlySet<string>,
+    heading: string | undefined,
+  ): void => {
+    const rows = index === undefined ? [] : parseIndexRows(index.text, heading);
+    const seen = new Map<string, number>();
+    for (const row of rows) {
+      const rowPath = normalizeRowPath(row.path);
+      const path = `${MEMORY_ROOT}/${rowPath}`;
+      if (row.hint.length === 0) {
+        add(
+          "memory.index.hint-missing",
+          index?.path ?? MEMORY_INDEX_PATH,
+          `empty read-when hint for ${rowPath} (universe ${universe})`,
+          { line: row.line },
+        );
+      } else if (row.hint.length > HINT_MAX_CHARS) {
+        add(
+          "memory.index.row-malformed",
+          index?.path ?? MEMORY_INDEX_PATH,
+          `hint ${row.hint.length} exceeds cap ${HINT_MAX_CHARS} for ${rowPath} (universe ${universe})`,
+          { line: row.line },
+        );
+      }
+      const first = seen.get(rowPath);
+      if (first !== undefined) {
+        add(
+          "memory.index.row-duplicate",
+          path,
+          `duplicate row (first at line ${first}, universe ${universe})`,
+          { line: row.line },
+        );
+      } else {
+        seen.set(rowPath, row.line);
+      }
+    }
+    for (const relative of covered) {
+      if (!seen.has(relative)) {
+        add(
+          "memory.index.record-uncovered",
+          `${MEMORY_ROOT}/${relative}`,
+          `no index row covers ${relative} (universe ${universe})`,
+        );
+      }
+    }
+    for (const rowPath of seen.keys()) {
+      if (!covered.has(rowPath)) {
+        add(
+          "memory.index.row-unbacked",
+          `${MEMORY_ROOT}/${rowPath}`,
+          `row path ${rowPath} is not covered (universe ${universe})`,
+        );
+      }
+    }
+  };
+  evaluateUniverse("memory-index", indexFile, coveredByMemory, "## Index");
+  evaluateUniverse("archive-index", archiveFile, coveredByArchive, undefined);
+
+  // --- budgets at their published caps (DM-5, AC-F10-1) ---
+  // A trailing newline terminates the last line; it is not an empty line, so a
+  // newline-terminated surface exactly at its cap measures at the cap (F-6).
+  const measureLines = (file: MemoryScannedFile): number => {
+    const lines = file.text.split("\n");
+    return file.text.endsWith("\n") ? lines.length - 1 : lines.length;
+  };
+  if (indexFile !== undefined) {
+    const lines = measureLines(indexFile);
+    if (lines > MEMORY_INDEX_MAX_LINES) {
+      add(
+        "memory.budget.index-lines",
+        indexFile.path,
+        `${lines} lines exceed cap ${MEMORY_INDEX_MAX_LINES}`,
+      );
+    }
+    if (indexFile.bytes > MEMORY_INDEX_MAX_BYTES) {
+      add(
+        "memory.budget.index-bytes",
+        indexFile.path,
+        `${indexFile.bytes} bytes exceed cap ${MEMORY_INDEX_MAX_BYTES}`,
+      );
+    }
+  }
+  for (const file of input.files) {
+    const relative = relativeOf(file.path);
+    if (/^agents\/[^/]+\/README\.md$/.test(relative)) {
+      const lines = measureLines(file);
+      if (lines > MEMORY_ENTRY_MAX_LINES) {
+        add(
+          "memory.budget.agent-entry-lines",
+          file.path,
+          `${lines} lines exceed cap ${MEMORY_ENTRY_MAX_LINES}`,
+        );
+      }
+    }
+    if (/^guilds\/[^/]+\/README\.md$/.test(relative)) {
+      const lines = measureLines(file);
+      if (lines > MEMORY_ENTRY_MAX_LINES) {
+        add(
+          "memory.budget.guild-entry-lines",
+          file.path,
+          `${lines} lines exceed cap ${MEMORY_ENTRY_MAX_LINES}`,
+        );
+      }
+    }
+    if (file.path === MEMORY_ARCHIVE_INDEX_PATH) {
+      const lines = measureLines(file);
+      if (lines > MEMORY_ARCHIVE_INDEX_MAX_LINES) {
+        add(
+          "memory.budget.archive-index-lines",
+          file.path,
+          `${lines} lines exceed cap ${MEMORY_ARCHIVE_INDEX_MAX_LINES}`,
+        );
+      }
+    }
+    if (file.path === "AGENTS.md") {
+      const lines = file.text.split("\n");
+      const start = lines.findIndex((line) => line === "## Agent memory");
+      if (start !== -1) {
+        const end = lines.findIndex((line, position) => position > start && /^## /.test(line));
+        const measured = (end === -1 ? lines.length : end) - start;
+        if (measured > MEMORY_KERNEL_ERROR_LINES) {
+          add(
+            "memory.budget.kernel-lines",
+            file.path,
+            `${measured} lines exceed cap ${MEMORY_KERNEL_ERROR_LINES}`,
+          );
+        } else if (measured > MEMORY_KERNEL_WARN_LINES) {
+          add(
+            "memory.budget.kernel-lines",
+            file.path,
+            `${measured} lines are in the advisory band above ${MEMORY_KERNEL_WARN_LINES}`,
+            { severity: MEMORY_KERNEL_BAND_SEVERITY },
+          );
+        }
+      }
+    }
+  }
+
+  // --- derivable content: two closed advisories (F-11) ---
+  const fencedBlocks = (text: string): readonly string[] => {
+    const blocks: string[] = [];
+    for (const match of text.matchAll(/```[^\n]*\n([\s\S]*?)```/g)) {
+      if (match[1] !== undefined) blocks.push(match[1]);
+    }
+    return blocks;
+  };
+  for (const record of records) {
+    const blocks = fencedBlocks(record.file.text);
+    const listing = blocks.some((block) => {
+      const lines = block
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+      return (
+        lines.length >= 2 &&
+        lines.every((line) =>
+          /^(?:packages|scripts|tests|tools|doc|\.opencode|\.ai|\.github)\/[\w./-]+$/.test(line),
+        )
+      );
+    });
+    if (listing) {
+      add(
+        "memory.derivable.file-listing",
+        record.file.path,
+        "fenced block is a repository file listing",
+      );
+    }
+    const command = blocks.some((block) =>
+      block
+        .split("\n")
+        .map((line) => line.trim())
+        .some((line) =>
+          MEMORY_DERIVABLE_COMMANDS.some((entry) => line === entry || line.startsWith(`${entry} `)),
+        ),
+    );
+    if (command) {
+      add(
+        "memory.derivable.command-echo",
+        record.file.path,
+        "fenced block restates a declared workspace command",
+      );
+    }
+  }
+
+  // --- secret findings from the injected privacy vocabulary (F-12) ---
+  for (const file of input.files) {
+    for (const rule of input.privacy.rules) {
+      const pattern = new RegExp(rule.patternSource, rule.flags);
+      for (let match = pattern.exec(file.text); match !== null; match = pattern.exec(file.text)) {
+        const matched = match[0];
+        if (matched.length < rule.minimumMatchLength) continue;
+        // Suppression is evaluated against the value the rule protects, exactly
+        // as the delivered whole-tree guard does; a marker in the key half must
+        // not silence a real value (F-4).
+        const segment = rule.suppressionValueFor?.(matched) ?? matched;
+        const lowered = segment.toLowerCase();
+        const suppressed = input.privacy.suppressionClasses.some((entry) =>
+          entry.markers.some((marker) => lowered.includes(marker.toLowerCase())),
+        );
+        if (suppressed) continue;
+        const line = file.text.slice(0, match.index).split("\n").length;
+        add(
+          `${MEMORY_SECRET_RULE_PREFIX}${rule.recognizerClass}`,
+          file.path,
+          `recognizer class ${rule.recognizerClass}`,
+          { line },
+        );
+      }
+    }
+  }
+
+  const order = new Map(MEMORY_FINDING_AREA_ORDER.map((area, index) => [area, index]));
+  const sorted = [...findings].sort((left, right) => {
+    const area = (order.get(left.area) ?? 0) - (order.get(right.area) ?? 0);
+    if (area !== 0) return area;
+    if (left.path !== right.path) return left.path < right.path ? -1 : 1;
+    const line = (left.line ?? 0) - (right.line ?? 0);
+    if (line !== 0) return line;
+    return left.ruleId < right.ruleId ? -1 : left.ruleId > right.ruleId ? 1 : 0;
+  });
+  const errors = sorted.filter((finding) => finding.severity === "error");
+  const advisories = sorted.filter((finding) => finding.severity === "warn");
+  const format = (finding: MemoryFinding): string =>
+    `${finding.severity === "error" ? "FAIL" : "WARN"} memory-lint: ${finding.ruleId} ${finding.path}${
+      finding.line === undefined ? "" : `:${finding.line}`
+    } ${finding.detail}`;
+  // One stream in the findings' declared order, with the two severity ceilings
+  // applied as separate print budgets while selecting from it (F-9).
+  const printed: string[] = [];
+  let printedErrors = 0;
+  let printedAdvisories = 0;
+  for (const finding of sorted) {
+    if (finding.severity === "error") {
+      if (printedErrors >= MEMORY_MAX_PRINTED_ERRORS) continue;
+      printedErrors += 1;
+    } else {
+      if (printedAdvisories >= MEMORY_MAX_PRINTED_ADVISORIES) continue;
+      printedAdvisories += 1;
+    }
+    printed.push(format(finding));
+  }
+  const lines: string[] = [
+    ...printed,
+    `memory-lint: records=${records.length} areas=${MEMORY_FINDING_AREA_ORDER.length} errors=${errors.length} advisories=${advisories.length}`,
+  ];
+  if (
+    errors.length > MEMORY_MAX_PRINTED_ERRORS ||
+    advisories.length > MEMORY_MAX_PRINTED_ADVISORIES
+  ) {
+    lines.push(
+      `memory-lint: truncated errors=${errors.length} advisories=${advisories.length} printed-errors=${Math.min(errors.length, MEMORY_MAX_PRINTED_ERRORS)} printed-advisories=${Math.min(advisories.length, MEMORY_MAX_PRINTED_ADVISORIES)}`,
+    );
+  }
+  const summary: MemorySummary = {
+    records: records.length,
+    areas: MEMORY_FINDING_AREA_ORDER.length,
+    errors: errors.length,
+    advisories: advisories.length,
+  };
+  return {
+    findings: sorted,
+    summary,
+    exitCode: errors.length > 0 ? 1 : 0,
+    lines,
+  };
+};
