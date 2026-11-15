@@ -473,6 +473,15 @@ export {
   sanitizeOwnerHoldReason,
 } from "./owner-hold.js";
 export { computePlanDiff, type PlanDiffInput } from "./plan-diff.js";
+export {
+  canonicalChangeRef,
+  isMemberRef,
+  MEMBER_REF_SEPARATOR,
+  memberRefFor,
+  type ParsedMemberRef,
+  parseMemberRef,
+  parsePlanMembers,
+} from "./plan-members.js";
 export { computePlanOverlap, type PlanOverlapInput } from "./plan-overlap.js";
 export {
   globToRegExp,

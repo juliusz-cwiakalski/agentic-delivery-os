@@ -203,6 +203,31 @@ notes:
       readiness-review/readiness-iter-3.md (with the Confirmation addendum)."
     type: resolved
     date: "2026-11-14"
+  - text: "Plan phase 1 'Plan member declarations: closed validation, member-ref
+      identity and bounds, and the plan validate echo' complete (commit hash
+      assigned at commit time; `git log` on feat/GH-310/cross-repository-changes
+      is the record). Delivered: additive `members[]` contract types and bounds
+      in `contracts/plan.ts` (PLAN_MEMBER_FIELDS, PLAN_MEMBER_REQUIRED_FIELDS,
+      PLAN_MAX_MEMBERS=8, PLAN_MAX_MEMBER_DEPENDS_ON=8, PLAN_MAX_MEMBER_GATES=16,
+      PLAN_MAX_MEMBER_GATE_CHARS=64), pure `domain/plan-members.ts`
+      (parsePlanMembers, parseMemberRef, canonicalChangeRef, memberRefFor,
+      isMemberRef, MEMBER_REF_SEPARATOR), `validatePlanValue` wiring that echoes
+      only a valid plan's members and carries NO `members` key on an invalid
+      verdict, plus the additive exports in `contracts/index.ts`,
+      `domain/index.ts`, and `core/src/index.ts` (verified additions-only; no
+      corrupted exports). Pre-change parity golden captured from the
+      pre-member baseline before any production edit:
+      `tests/fixtures/queue/golden/queue-add-memberless.json` (no `members` key,
+      no `data.members[]`). Test result: 97 pass / 0 fail / 381 expect across the
+      nine phase-1 suites (plan-validate, plan-validate-rejections, plan-lint,
+      plan-determinism, plan-readonly, plan-members, plan-members-bounds,
+      structure/cross-repository-contract, golden/cross-repository-members);
+      `tsc -p tests/types/tsconfig.json` clean. Scope drift reconciled: the
+      additivity/inventory pins (`tests/fixtures/ports/v1-contract-inventory.json`,
+      `tests/structure/{inventory.json,content-inventory.test.ts}`) are the
+      mechanical inventory seam for the new domain module."
+    type: info
+    date: "2026-11-15"
   - text: "Delivery conventions for this change: full 11-phase lifecycle; plan
       phases declared in chg-GH-310-plan.yaml; one delivery commit per plan
       phase through the commit primitive; conventional subjects scoped GH-310;

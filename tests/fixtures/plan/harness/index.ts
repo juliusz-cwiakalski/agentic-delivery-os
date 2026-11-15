@@ -57,6 +57,8 @@ export type Recorder = {
   spawns: number;
   credentialReads: number;
   networkCalls: number;
+  /** Configuration reads: plan validation must never consult configuration. */
+  configReads: number;
 };
 
 export const createRecorder = (): Recorder => ({
@@ -67,6 +69,7 @@ export const createRecorder = (): Recorder => ({
   spawns: 0,
   credentialReads: 0,
   networkCalls: 0,
+  configReads: 0,
 });
 
 const rank = (kind: PlanFixture["kind"]): number => (kind === "yaml" ? 0 : 1);
@@ -154,6 +157,7 @@ export const expectReadOnly = (recorder: Recorder, reads: readonly string[]): st
     "spawns",
     "credentialReads",
     "networkCalls",
+    "configReads",
   ] as const) {
     if (recorder[field] !== 0) problems.push(`${field} was ${recorder[field]}`);
   }
@@ -240,6 +244,18 @@ export const runPlanCli = async (
     "../../../../packages/cli/src/commands/plan"
   );
   return runProgram(argv, { commands: { plan: createPlanCommandDefinition(runtime) } }, options);
+};
+
+/** Run the lint command in process over an injected plan lint runtime. */
+export const runLintCli = async (
+  argv: readonly string[],
+  runtime: LintCommandRuntime,
+  options: QueueCliOptions = {},
+): Promise<QueueCliRun> => {
+  const { createLintCommandDefinition } = await import(
+    "../../../../packages/cli/src/commands/lint"
+  );
+  return runProgram(argv, { commands: { lint: createLintCommandDefinition(runtime) } }, options);
 };
 
 /** Parse a machine envelope from stdout, failing loudly on non-JSON output. */

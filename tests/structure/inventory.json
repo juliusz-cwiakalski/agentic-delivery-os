@@ -142,6 +142,7 @@
     "src/domain/owner-gate-sla.ts",
     "src/domain/owner-hold.ts",
     "src/domain/plan-diff.ts",
+    "src/domain/plan-members.ts",
     "src/domain/plan-overlap.ts",
     "src/domain/plan-paths.ts",
     "src/domain/plan-validate.ts",

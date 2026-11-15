@@ -894,6 +894,16 @@ export {
   resolveOwnerHoldFact,
   sanitizeOwnerHoldReason,
 } from "./domain/owner-hold.js";
+// The pure plan-member declaration parser and member-ref identity (GH-310 F-1, DM-1).
+export {
+  canonicalChangeRef,
+  isMemberRef,
+  MEMBER_REF_SEPARATOR,
+  memberRefFor,
+  type ParsedMemberRef,
+  parseMemberRef,
+  parsePlanMembers,
+} from "./domain/plan-members.js";
 export {
   aggregateProjectMemberOutcomes,
   projectMemberOutcomeOfHealth,

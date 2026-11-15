@@ -3,14 +3,15 @@
  * zero writes, fences, mutations, spawns, credential reads, or network calls.
  */
 import { describe, expect, test } from "bun:test";
+import { twoMemberPlanYaml } from "../fixtures/cross-repository/plan";
 import {
   createRecorder,
   expectReadOnly,
   markdownFixture,
+  type PlanWorld,
   planRuntime,
   planWorld,
   runPlanCli,
-  type PlanWorld,
 } from "../fixtures/plan/harness/index";
 
 type Path = {
@@ -30,6 +31,17 @@ const sequenceWorld = planWorld({
   "GH-306": "overlap/sequence/gh-306.yaml",
   "GH-307": "overlap/sequence/gh-307.yaml",
 });
+const memberWorld: PlanWorld = {
+  artifacts: {
+    "GH-310": [
+      {
+        kind: "yaml",
+        path: "chg-GH-310-plan.yaml",
+        text: twoMemberPlanYaml(),
+      },
+    ],
+  },
+};
 const parallelWorld = planWorld({
   "GH-306": "overlap/parallel/gh-306.yaml",
   "GH-307": "overlap/parallel/gh-307.yaml",
@@ -53,6 +65,12 @@ const paths: readonly Path[] = [
     argv: ["plan", "validate", "GH-307"],
     world: legacyWorld,
     reads: ["plan:GH-307"],
+  },
+  {
+    id: "validate-member-plan",
+    argv: ["plan", "validate", "GH-310"],
+    world: memberWorld,
+    reads: ["plan:GH-310"],
   },
   {
     id: "validate-absent",
@@ -99,5 +117,13 @@ describe("TC-DPLAN-023 read-only posture", () => {
     expect(recorder.spawns).toBe(0);
     expect(recorder.credentialReads).toBe(0);
     expect(recorder.networkCalls).toBe(0);
+    expect(recorder.configReads).toBe(0);
+  });
+
+  test("a member plan performs no configuration read (TC-XPLAN-005)", async () => {
+    const recorder = createRecorder();
+    await runPlanCli(["plan", "validate", "GH-310"], planRuntime(memberWorld, recorder));
+    expect(recorder.configReads).toBe(0);
+    expect(recorder.reads).toEqual(["plan:GH-310"]);
   });
 });
