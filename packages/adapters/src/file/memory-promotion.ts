@@ -74,16 +74,20 @@ export const readMemoryFacts = (
   },
 ): CapsuleMemoryFacts => {
   const records: CapsuleMemoryRecord[] = [];
-  for (const candidateClass of ["lesson", "tacit"] as const) {
-    const directory = join(memoryRoot, `${candidateClass}s`);
+  const areas = [
+    { token: "lesson", area: "lessons" },
+    { token: "tacit", area: "tacit" },
+  ] as const;
+  for (const entry of areas) {
+    const directory = join(memoryRoot, entry.area);
     if (!fs.exists(directory)) continue;
     for (const name of [...fs.listDirectory(directory)].sort()) {
       if (!/\.md$/.test(name)) continue;
       try {
         const record = recordOf(
-          `${candidateClass}s/${name}`,
+          `${entry.area}/${name}`,
           fs.readText(join(directory, name)),
-          candidateClass,
+          entry.token,
         );
         if (record !== undefined) records.push(record);
       } catch {
@@ -122,8 +126,9 @@ const underRoot = (root: string, target: string): boolean => {
 };
 
 const supersedeRecord = (memoryRoot: string, recordId: string): PromotionWriteResult => {
-  for (const candidateClass of ["lesson", "tacit"] as const) {
-    const directory = join(memoryRoot, `${candidateClass}s`);
+  const areas = ["lessons", "tacit"] as const;
+  for (const area of areas) {
+    const directory = join(memoryRoot, area);
     if (!existsSync(directory)) continue;
     for (const name of readdirSync(directory)) {
       const path = join(directory, name);

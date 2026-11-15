@@ -16,6 +16,9 @@ import {
   CAPSULE_EVIDENCE_PREFIXES,
   CAPSULE_MAX_INDEX_LINES,
   CAPSULE_SLUG_PATTERN,
+  HINT_MAX_CHARS,
+  MEMORY_RECORD_HOME_BY_KIND,
+  MEMORY_RECORD_SOURCES,
   type CapsuleCandidate,
   type CapsuleCandidateClass,
   type CapsuleCandidateDecision,
@@ -87,6 +90,13 @@ export const validateCandidate = (
   ) {
     return { ok: false, detail: "scope is outside the closed set" };
   }
+  if ((candidateClass === "lesson" || candidateClass === "tacit") && scope === "fleet") {
+    return {
+      ok: false,
+      detail:
+        "scope fleet has no implemented home and is not projectable on a promotable candidate",
+    };
+  }
   const status = value.status;
   if (
     typeof status !== "string" ||
@@ -108,6 +118,9 @@ export const validateCandidate = (
   const source = stringOf(value.source);
   if (source === undefined || source.trim().length === 0) {
     return { ok: false, detail: "source is empty" };
+  }
+  if (!(MEMORY_RECORD_SOURCES as readonly string[]).includes(source)) {
+    return { ok: false, detail: "source is outside the four declared channels" };
   }
   const createdBy = stringOf(value.created_by);
   if (createdBy === undefined || createdBy.trim().length === 0) {
@@ -192,16 +205,19 @@ const recordContent = (input: {
   readonly recordId: string;
   readonly candidate: CapsuleCandidate;
   readonly supersedes: readonly string[];
+  readonly kind: "lesson" | "tacit_fragment";
 }): string => {
-  const { candidate, recordId, supersedes } = input;
+  const { candidate, recordId, supersedes, kind } = input;
   const lines = [
     "---",
     `id: "${recordId}"`,
-    `kind: "${candidate.class}"`,
+    `kind: "${kind}"`,
     `scope: "${candidate.scope}"`,
     `statement: "${escapeYaml(candidate.statement)}"`,
     `evidence: "${escapeYaml(candidate.evidence)}"`,
     `source: "${escapeYaml(candidate.source)}"`,
+    `trust: "${candidate.trust}"`,
+    `basis: "${escapeYaml(candidate.basis)}"`,
     `created_by: "${escapeYaml(candidate.created_by)}"`,
     `created: "${candidate.created}"`,
     'status: "candidate"',
@@ -216,10 +232,15 @@ const recordContent = (input: {
   return lines.join("\n");
 };
 
-const indexRowOf = (relative: string, statement: string): string => {
-  const bounded = statement.trim().replace(/\s+/g, " ").slice(0, 120);
-  return `| \`${relative}\` | ${bounded} |`;
+const deriveHint = (candidate: CapsuleCandidate): string => {
+  const collapse = (value: string): string => value.trim().replace(/\s+/g, " ");
+  const applicability =
+    candidate.applies_when === undefined ? "" : collapse(candidate.applies_when);
+  const source = applicability.length > 0 ? applicability : collapse(candidate.statement);
+  return source.length <= HINT_MAX_CHARS ? source : source.slice(0, HINT_MAX_CHARS).trimEnd();
 };
+
+const indexRowOf = (relative: string, hint: string): string => `| \`${relative}\` | ${hint} |`;
 
 /**
  * Evaluate every candidate deterministically (F-4).
@@ -350,14 +371,16 @@ export const evaluateCandidates = (input: {
     }
     const slug = candidate.id.replace(/[^a-z0-9-]/g, "-").slice(0, 64);
     const fileName = `${recordId}-${slug}.md`;
-    const relative = `${candidate.class}s/${fileName}`;
+    const kind = candidate.class === "tacit" ? "tacit_fragment" : "lesson";
+    const area = MEMORY_RECORD_HOME_BY_KIND[kind];
+    const relative = `${area}/${fileName}`;
     const write: CapsulePromotionWrite = {
       candidateId: candidate.id,
       class: candidate.class,
       recordId,
       path: relative,
-      content: recordContent({ recordId, candidate, supersedes }),
-      indexRow: indexRowOf(relative, candidate.statement),
+      content: recordContent({ recordId, candidate, supersedes, kind }),
+      indexRow: indexRowOf(relative, deriveHint(candidate)),
       ...(supersedes.length === 0 ? {} : { supersedes }),
     };
     writes.push(write);

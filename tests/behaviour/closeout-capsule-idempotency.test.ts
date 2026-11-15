@@ -41,7 +41,7 @@ describe("TC-CAP-022/023 promotion idempotency", () => {
 
   test("a byte-identical pre-existing target is a satisfied no-op", async () => {
     const statement = "Run the scoped gate first when the full gate is slow.";
-    const content = `---\nid: "lesson-2026-001"\nkind: "lesson"\nscope: "repo"\nstatement: "${statement}"\nevidence: "review-verdict:review-iter-1"\nsource: "review_verdict"\ncreated_by: "coder"\ncreated: "2026-11-07"\nstatus: "candidate"\nsupersedes: []\n---\n`;
+    const content = `---\nid: "lesson-2026-001"\nkind: "lesson"\nscope: "repo"\nstatement: "${statement}"\nevidence: "review-verdict:review-iter-1"\nsource: "review_verdict"\ntrust: "T3"\nbasis: "review-catch"\ncreated_by: "coder"\ncreated: "2026-11-07"\nstatus: "candidate"\nsupersedes: []\n---\n`;
     const run = await runPromotionCloseout({
       candidates: { "a.yaml": candidateYaml({ id: "lesson-2026-001", statement }) },
       memory: {

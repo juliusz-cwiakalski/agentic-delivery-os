@@ -50,6 +50,23 @@ open_questions: []
 blockers: []
 notes:
   - text: >-
+      Delivery plan phase 4 (plan id 4) complete. Commit: 8d39e4f8. Delivered
+      the scanner (packages/adapters/src/file/memory-scan.ts, one read per file
+      plus the YAML frontmatter parse), the check edge
+      scripts/checks/memory-lint.ts (single ambient date read, printing, no fs
+      read or parse), the check:memory script and aggregate/CI wiring with
+      resolved-invocation parity, the three-part sanctioned guard replacement
+      (presence + narrowed set-equality scan with non-vacuity and planted
+      mutants + preserved absences and sanctioned script value), and the doctor
+      checklist automation-boundary rewording with its pinned assertion. Tests:
+      memory-lint-wiring/performance/output, memory-record-schema whole-tree,
+      memory-bootstrap-templates = 53 pass; ci-checks/privacy-ci-wiring/
+      license-ci-binding = 59 pass; live check exits 0 with records=3 errors=0;
+      boundaries, doc-distribution, forbidden-literals, privacy-literals and
+      ci-topology green.
+    type: info
+    date: "2026-11-15"
+  - text: >-
       Delivery plan phase 3 (plan id 3) complete. Commit: 8dc40fc3. Delivered
       the remaining evaluator areas: both-direction index coverage over the two
       universes, every budget at its published boundary, the two closed

@@ -172,7 +172,7 @@ describe("TC-CAP-012 candidate rows", () => {
 
 describe("TC-CAP-012 capsule validation completeness", () => {
   const candidateFile = (id: string): string =>
-    `id: "${id}"\nclass: "lesson"\nscope: "repo"\nstatement: "Decision check."\nevidence: "test:case"\nbasis: "verified-outcome"\nsource: "test"\ntrust: "T3"\nstatus: "candidate"\ncreated_by: "coder"\ncreated: "2026-11-07"\n`;
+    `id: "${id}"\nclass: "lesson"\nscope: "repo"\nstatement: "Decision check."\nevidence: "test:case"\nbasis: "verified-outcome"\nsource: "ci_verdict"\ntrust: "T3"\nstatus: "candidate"\ncreated_by: "coder"\ncreated: "2026-11-07"\n`;
 
   test("a first event other than capsule.opened is capsule-invalid", async () => {
     const tree = makeChangeTree({

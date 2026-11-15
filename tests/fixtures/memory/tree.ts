@@ -5,6 +5,8 @@
  * produce the same structural shape for pure-evaluation tests. No builder
  * writes the live tree.
  */
+import { readFileSync, readdirSync } from "node:fs";
+import { join } from "node:path";
 import { parse } from "yaml";
 import {
   HINT_MAX_CHARS,
@@ -262,3 +264,20 @@ export const liveIndexPath = MEMORY_INDEX_PATH;
 
 /** The live delivered archive-index path, exported for live assertions. */
 export const liveArchiveIndexPath = MEMORY_ARCHIVE_INDEX_PATH;
+
+/** Scan a bare memory folder (a temp root with README/areas directly inside). */
+export const scanMemoryFolder = (root: string): MemoryScannedFile[] => {
+  const files: MemoryScannedFile[] = [];
+  const walk = (relative: string): void => {
+    for (const entry of readdirSync(join(root, relative), { withFileTypes: true })) {
+      const next = relative.length === 0 ? entry.name : `${relative}/${entry.name}`;
+      if (entry.isDirectory()) {
+        walk(next);
+      } else {
+        files.push(scannedFile(`${MEMORY_ROOT}/${next}`, readFileSync(join(root, next), "utf8")));
+      }
+    }
+  };
+  walk("");
+  return files.sort((left, right) => (left.path < right.path ? -1 : 1));
+};
