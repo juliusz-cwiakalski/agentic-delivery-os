@@ -6,7 +6,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-15T10:43:33.032Z }
   specification: { started: null, completed: 2026-11-15T10:50:32.216Z }
   test_planning: { started: null, completed: 2026-11-15T10:56:14.874Z }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: 2026-11-15T11:08:05.638Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -151,6 +151,29 @@ notes:
       union resolution is honestly labelled manual+scripted. Gate battery
       commands pinned verbatim."
     type: info
+    date: "2026-11-15"
+  - text: "Delivery plan authored by @plan-writer (chg-GH-301-plan.yaml, tier full,
+      plan validate = valid + readyForDevelopment=true, lint plan valid): 7
+      phases. (1) canonical layout + published schema + budgets in
+      .ai/memory/README.md + machine contract + backfill of the 3 lessons; (2)
+      pure evaluator — schema/dating/provenance/references; (3) evaluator
+      completion — both-direction coverage, budgets at cap-1/cap/cap+1, two
+      derivable advisories, secret classes from privacy-rules, bounded ordered
+      output; (4) check edge + scanner + aggregate/CI wiring + sanctioned
+      negative guard replacement + doctor-checklist reword in ONE commit; (5)
+      write path (trust/basis/hint/closed source channels) plus the tacit
+      home-area fix (writer and reader emit 'tacits/' vs the declared 'tacit/'
+      area) plus concurrency proofs; (6) kernel clause + curator-skill alignment
+      + doc-conformance suite; (7) release — backlog markers, final alignment,
+      full gate battery. AC ownership 30/30, TC ownership 40/40."
+    type: info
+    date: "2026-11-15"
+  - text: "Plan-time defect discovery (feeds delivery): the delivered promotion
+      writer and reader interpolate the tacit area as `tacits/`, outside the
+      declared `tacit/` area, so a promoted tacit record would land uncovered
+      and the new index-coverage lint would flag it. Phase 5 owns the two-sided
+      fix; it widens phase 5 to reader code as well as the writer."
+    type: risk
     date: "2026-11-15"
   - text: "Open questions carried by the spec (all non-blocking, deferred): OQ-1
       distribute the invariant to bootstrapped projects (NG-7, would retire the
