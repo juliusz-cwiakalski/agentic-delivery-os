@@ -24,6 +24,7 @@ import {
   resolveVerifySuiteMapFromConfig,
   suiteBreadthCitationOf,
 } from "../../packages/core/src/domain/index";
+import { baseFacts, clone } from "../fixtures/verify-gates/cases/facts";
 import { combinedRuntime, gatesRuntime, runVerify } from "../fixtures/verify-gates/cases/harness";
 import { createNoNetworkGuard } from "../fixtures/verify-gates/cases/network-guard";
 import {
@@ -369,5 +370,33 @@ describe("TC-SMAP-001/002/003 the handler refuses every defect before any source
     expect(second.result.stdout).toBe(first.result.stdout);
     expect(second.result.stderr).toBe(first.result.stderr);
     expect(second.result.exitCode).toBe(first.result.exitCode);
+  });
+});
+
+describe("TC-SRES-001 an invalid workflow keeps the delivered CI failure and cites no breadth", () => {
+  const invalidWorkflowFacts = () => {
+    const facts = clone(baseFacts());
+    facts.workflow = { outcome: "failed", names: [] };
+    return facts;
+  };
+
+  test("a declared map over an invalid workflow yields verify.gates.failed with no breadth", async () => {
+    for (const read of [
+      () => resolveVerifySuiteMap(validEqualityMap()),
+      () => resolveVerifySuiteMap(narrowedMap()),
+    ]) {
+      const result = await runVerify(
+        combinedRuntime({ facts: invalidWorkflowFacts(), suiteMap: read }),
+        ["gates", "GH-300"],
+      );
+      expect(result.exitCode).toBe(1);
+      expect(result.envelope?.data).toBeUndefined();
+      expect(result.envelope?.error?.code).toBe("verify.gates.failed");
+      expect(JSON.stringify(result.envelope)).not.toContain("suiteBreadth");
+      expect(JSON.stringify(result.envelope)).not.toContain("mirrorsJob");
+      const summary = String(result.envelope?.error?.summary ?? "");
+      const ciLine = summary.split("\n").find((line) => line.startsWith("ci-green"));
+      expect(ciLine).toContain("fail reason=ci-expected-jobs-invalid");
+    }
   });
 });
