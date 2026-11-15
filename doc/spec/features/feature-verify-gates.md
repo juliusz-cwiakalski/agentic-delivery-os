@@ -6,7 +6,7 @@ created: 2026-10-31
 last_updated: 2026-11-15
 owners: ["engineering"]
 service: delivery-os
-summary: "The verify gates surface: the config-declared merge battery (default five built-ins in shipped order), cited pass/fail/unknown verdicts, structured VerifyLedgerEvaluation consumption, deterministic open-PR resolution, read-specific 404 absence, shared status vocabulary, bounded deterministic output, the appended EVT-1 gate-verification record with byte-identical verdicts, the non-gating capsule `gate.outcome` append with a bounded disclosure, the two verify.gates.* error rows, and the additive cross-repository report type: one shared definition of done over the declared member set with per-(member, gate) records, per-member CI corroboration and member verdicts, landing-ordered evidence, an untruncated blocking-member list, one review flow with a stable run identity, and the data-bearing negative report at exit 1 while the delivered member-less report keeps its literal overall and exits."
+summary: "The verify gates surface: the config-declared merge battery (default five built-ins in shipped order), cited pass/fail/unknown verdicts, structured VerifyLedgerEvaluation consumption, deterministic open-PR resolution, read-specific 404 absence, shared status vocabulary, bounded deterministic output, the appended EVT-1 gate-verification record with byte-identical verdicts, the delivered-shape projection of that record's member gates (`member` dropped, order and count preserved) so the ledger reads back non-`torn`, the non-gating capsule `gate.outcome` append with a bounded disclosure, the two verify.gates.* error rows, and the additive cross-repository report type: one shared definition of done over the declared member set with per-(member, gate) records, per-member CI corroboration and member verdicts, landing-ordered evidence, an untruncated blocking-member list, one review flow with a stable run identity, and the data-bearing negative report at exit 1 while the delivered member-less report keeps its literal overall and exits."
 links:
   related_changes: ["GH-178", "GH-225", "GH-240", "GH-310"]
   related_decisions: ["ADR-0003", "ADR-0006", "TDR-0005"]
@@ -50,6 +50,11 @@ negative verdict is exit `1`. The delivered `VerifyGatesReport` — its literal
 `overall: "pass"`, its member-less record shape, its failure envelope, and its
 exits — is unchanged, and a change whose plan declares no members produces that
 report byte-identically.
+
+The durable ledger keeps its delivered record shape independently of that report:
+the one appended gate-verification record carries every member gate projected to
+the delivered `{id, verdict, reason, citation}` set with the `member`
+discriminator dropped, while `member` stays on every report record.
 
 ## Command surface
 
@@ -206,6 +211,25 @@ declared identifier, `member` = the declaring `repoKey`, `verdict: "unknown"`,
 provider source, count, name list, branch, or SHA is invented or attributed to a
 real read.
 
+### Durable ledger projection
+
+The durable gate-verification ledger keeps its delivered closed record shape, so a
+cross-repository evaluation appends exactly one `MergeGateVerificationRecord`
+whose `gates[]` is each member gate record projected to the delivered
+`{id, verdict, reason, citation}` set: the `member` discriminator is dropped and
+the four delivered fields are preserved in record order and count, so the appended
+gate count equals the report record count (members × declared gates) and every
+projected `verdict`, `reason`, and `citation` matches the corresponding report
+record. Member attribution is report data only: the report's
+`CrossRepositoryVerifyGateRecord` entries keep `member`, no ledger gate record
+carries one, and the delivered closed-key validation, post-append equality check,
+and read tolerance are untouched — the history reads back non-`torn`. An append
+offered an unprojected member record is refused by that validation
+(`state.store.torn`, consequence `not_landed`), so the projection is the only
+accepted shape. The appended record's remaining fields keep their delivered
+derivation, including a `trackerPosture.ownerLabels` read from the change's own
+work item rather than from a member's `owner-gate` record.
+
 ### Member verdicts, CI corroboration, and status
 
 `definitionOfDone.members[]` carries exactly one entry per declared member in
@@ -291,8 +315,8 @@ the member set, the delivered single ledger read, repository HEAD/branch read,
 CI-workflow read, and work-item read. Per-member reads are injected at the
 composition edge, and the evaluation never short-circuits: every member is
 evaluated and reported. The append posture is unchanged — exactly one
-gate-verification record per full battery evaluation, carrying the member
-records, plus the non-gating capsule append.
+gate-verification record per full battery evaluation, carrying the member gates
+projected to the delivered ledger shape, plus the non-gating capsule append.
 
 The cross-repository evaluation is selected by the composed member runtime: when
 the composition supplies the member reads, declarations, landing observations,
@@ -337,6 +361,13 @@ Review approval, unresolved threads, branch protection, and worktree
 cleanliness remain outside this surface. Merge execution is the merge
 transaction's surface, specified in
 [Merge and Verify Deploy](feature-merge-verify-deploy.md).
+
+The shipped composition does not yet supply a member read runtime (`readMembers`
+and the per-member read bundle), so a member-declaring plan takes the delivered
+single-target path in the shipped CLI. The cross-repository report is produced
+when the composition supplies the member reads, declarations, landing
+observations, and review observations, and the contracts, report types, and
+seams are complete and exercised through that composition.
 
 ## Capsule gate append
 

@@ -418,8 +418,11 @@ declared member rather than one entry for the change.
   configured repositories of a project group.
 - **Edges.** Every `dependsOn[]` declaration materializes as one dependency edge
   onto the prerequisite member's member ref, and an unsatisfied edge makes the
-  member entry `not-ready` with the delivered `dependency-open` blocking reason
-  while its prerequisite is unlanded. A start attempt on that member ref —
+  member entry `held` with the delivered `dependency-open` blocking reason while
+  its prerequisite is unlanded. An unmet dependency is a hold in the delivered
+  readiness vocabulary: `held` is the state an unmet dependency produces, and
+  `not-ready` stays reserved for the other blockers a member entry can carry. A
+  start attempt on that member ref —
   claim, dispatch, or any start path — is refused with the delivered
   `queue.precondition.unmet`, and the bounded refusal summary names the member
   and its unlanded prerequisites; once the prerequisite's delivery request lands,

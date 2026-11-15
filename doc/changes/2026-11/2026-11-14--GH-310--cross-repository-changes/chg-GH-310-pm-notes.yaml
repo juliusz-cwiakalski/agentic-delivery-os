@@ -9,7 +9,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-15T07:22:33.310Z }
   dor_check: { started: null, completed: 2026-11-14T20:13:53.199Z }
   delivery: { started: null, completed: 2026-11-15T06:39:21.422Z }
-  system_spec_update: { started: null, completed: 2026-11-15T06:54:04.749Z }
+  system_spec_update: { started: null, completed: 2026-11-15T07:53:20.797Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -485,11 +485,11 @@ notes:
       real-writer round trip' complete (commit hash assigned at commit time;
       `git log` on feat/GH-310/cross-repository-changes is the record).
       Delivered: (DEC-22) the cross-repository evaluation projects every
-      `CrossRepositoryVerifyGateRecord` to the delivered ledger shape
-      `{id, verdict, reason, citation}` with `member` dropped and record order
-      and count preserved before the one `appendVerification`, the emitted
-      report keeps `member`, and the appended `trackerPosture.ownerLabels` is
-      the change-level derivation (`ownerAttentionLabels` over the change's own
+      `CrossRepositoryVerifyGateRecord` to the delivered ledger shape `{id,
+      verdict, reason, citation}` with `member` dropped and record order and
+      count preserved before the one `appendVerification`, the emitted report
+      keeps `member`, and the appended `trackerPosture.ownerLabels` is the
+      change-level derivation (`ownerAttentionLabels` over the change's own
       work-item read through the declared `owner-gate` entry) instead of the
       first member's citation; `MergeGateVerificationRecord`,
       `GATE_VERDICT_KEYS`, the read tolerance and the post-append equality check
@@ -509,24 +509,24 @@ notes:
       dropped; a member step now executes its pending safe operations even when
       its planned aggregate is a refusal or a gap. Proof: the member gate report
       round-trips through the REAL `appendMergeGateVerification` /
-      `readMergeGateVerifications` over an audit store — exactly one record,
-      not `torn`, 5 projected gates for two members (3 + 2 declared gates), no
+      `readMergeGateVerifications` over an audit store — exactly one record, not
+      `torn`, 5 projected gates for two members (3 + 2 declared gates), no
       `member` key, `id`/`verdict`/`reason`/`citation` equal to the report at
       the same index, including the negative report's failing record; an
       unprojected record (member key restored) is REFUSED with
       `state.store.torn`/`not_landed` and the history then reads `torn`; the
       same real appender is wired in `cross-repository-readonly` and the
-      structure contract suite. The strict provider fake
-      (`knownEntityIds`) proves the transition targets are exactly
-      `183`, `411`, `412` (change, api, web) and never a `GH-310@…` identity;
-      the all-members-unsafe case folds to `would-refuse` (plan) / `refused`
-      (apply) with zero deletions and `closeout.branch.unsafe` reachable; the
-      operation-failure top tier is proven. Test result: 1461 pass / 2 skip / 0
-      fail across the 220-file closeout/queue/lane/verify-gates/plan/
-      cross-repository/golden/structure regression battery (14808 expect), plus
-      the focused suites (`verify-gates-members` 12, `closeout-members` 17,
-      `closeout-plan`, `cross-repository-readonly` 8, `cross-repository-contract`
-      21, content-inventory); `pnpm -r typecheck` and `pnpm exec tsc -p
+      structure contract suite. The strict provider fake (`knownEntityIds`)
+      proves the transition targets are exactly `183`, `411`, `412` (change,
+      api, web) and never a `GH-310@…` identity; the all-members-unsafe case
+      folds to `would-refuse` (plan) / `refused` (apply) with zero deletions and
+      `closeout.branch.unsafe` reachable; the operation-failure top tier is
+      proven. Test result: 1461 pass / 2 skip / 0 fail across the 220-file
+      closeout/queue/lane/verify-gates/plan/ cross-repository/golden/structure
+      regression battery (14808 expect), plus the focused suites
+      (`verify-gates-members` 12, `closeout-members` 17, `closeout-plan`,
+      `cross-repository-readonly` 8, `cross-repository-contract` 21,
+      content-inventory); `pnpm -r typecheck` and `pnpm exec tsc -p
       tests/types/tsconfig.json` clean; biome format applied to the 17 touched
       files and biome lint reports no new errors. Mechanical seams:
       `tests/structure/content-inventory.test.ts` executable allowance gains
@@ -540,24 +540,24 @@ notes:
       (never emitted as command data) so the apply path can fold the
       change-level `ticket-to-done` contribution without parsing step detail;
       (2) `tests/behaviour/cross-repository-determinism.test.ts` (phases 3/4
-      scope) needed a branch-facts override because the unmerged member's present
-      branch now correctly folds to a refusal under DEC-23. NOT claimed closed
-      (left for the next review cycle to judge): F-4, F-6..F-14, F-17..F-20.
-      Spec/doc contradictions reported, not edited (no doc/spec change in a
-      delivery phase): (a) `doc/spec/features/feature-scheduling-engine.md:421`
-      still says the dependent member entry reads `not-ready` with
-      `dependency-open`, while spec v1.5 and the delivered code use `held`;
-      (b) AC-F5-3's apply-mode half asks for both member values (`refused` /
-      `applied`) and the reachable `closeout.branch.unsafe`, but the delivered
-      refusal is an error envelope with no `data`, so a refused member's apply
-      value is not observable through the command response — TC-XCLOSE-003
-      asserts the plan-mode values plus the apply-mode refusal, no deletion of
-      the unsafe branch, and the deletion of the safe one; (c) TC-XCLOSE-002's
-      partial-landing report is only reachable when the unmerged member's branch
-      is already absent (a present unmerged branch is refused by the delivered
-      squash-safety predicate), which is how the cell is now built. F-15/F-16
-      confirmed with no code change: the queue suites assert `held` +
-      `dependency-open` and `packages/cli/src/production.ts` supplies no member
-      read seam."
+      scope) needed a branch-facts override because the unmerged member's
+      present branch now correctly folds to a refusal under DEC-23. NOT claimed
+      closed (left for the next review cycle to judge): F-4, F-6..F-14,
+      F-17..F-20. Spec/doc contradictions reported, not edited (no doc/spec
+      change in a delivery phase): (a)
+      `doc/spec/features/feature-scheduling-engine.md:421` still says the
+      dependent member entry reads `not-ready` with `dependency-open`, while
+      spec v1.5 and the delivered code use `held`; (b) AC-F5-3's apply-mode half
+      asks for both member values (`refused` / `applied`) and the reachable
+      `closeout.branch.unsafe`, but the delivered refusal is an error envelope
+      with no `data`, so a refused member's apply value is not observable
+      through the command response — TC-XCLOSE-003 asserts the plan-mode values
+      plus the apply-mode refusal, no deletion of the unsafe branch, and the
+      deletion of the safe one; (c) TC-XCLOSE-002's partial-landing report is
+      only reachable when the unmerged member's branch is already absent (a
+      present unmerged branch is refused by the delivered squash-safety
+      predicate), which is how the cell is now built. F-15/F-16 confirmed with
+      no code change: the queue suites assert `held` + `dependency-open` and
+      `packages/cli/src/production.ts` supplies no member read seam."
     type: info
     date: "2026-11-15"
