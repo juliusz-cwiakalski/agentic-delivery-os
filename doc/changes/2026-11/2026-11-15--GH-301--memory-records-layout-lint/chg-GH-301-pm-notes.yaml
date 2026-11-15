@@ -9,7 +9,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-15T12:12:02.178Z }
   dor_check: { started: null, completed: 2026-11-15T12:46:42.772Z }
   delivery: { started: null, completed: 2026-11-15T15:00:12.962Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-15T15:56:35.881Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -56,8 +56,8 @@ notes:
       memory-practices bootstrapping checklist is untouched; ADR-0011 is tracked
       with its index row resolving and remains Proposed with decision_date null
       for the owner gate. Full battery at the delivered HEAD:
-      TMPDIR=<outside-repo same-filesystem dir> pnpm check = 8653 pass, 4 skip, 0 fail
-      (EXIT 0), including build/lint/format/typecheck/tests/boundaries/
+      TMPDIR=<outside-repo same-filesystem dir> pnpm check = 8653 pass, 4 skip,
+      0 fail (EXIT 0), including build/lint/format/typecheck/tests/boundaries/
       check:memory/prompt/help/exports; bun run scripts/checks/memory-lint.ts =
       records=3 areas=8 errors=0 advisories=0; doc-distribution,
       forbidden-literals, privacy-literals and git diff --check clean. The
@@ -504,6 +504,32 @@ notes:
       in some full runs; each passed individually on re-run. Recorded so
       dod_check and the PR body state the gate invocation honestly."
     type: info
+    date: "2026-11-15"
+  - text: "SYSTEM SPEC UPDATE (phase 7): @doc-syncer reconciled the current truth in
+      three passes — 4ca099e9 (new doc/spec/features/feature-memory-lint.md +
+      capsule/closeout/bootstrapper/document-templates/monorepo-scaffold/templa\
+      tes/ concept/backlog/overview/index reconciliation + forbidden-literals
+      registration), 3b829b7a (verification pass: index-section parsing,
+      bootstrap vs scanned-tree distinction, kernel anchor, command-echo rule,
+      supersession status rewrite limit, aggregate-chain wording, glossary row),
+      82225897 (concept layout sketch reconciled to the delivered layout with
+      staged items marked). No spec-coverage gap: the capability had no spec and
+      now has one; no other affected surface lacked a spec. Residual
+      documentation gaps: NONE. Guard state at HEAD: pnpm check green (8657 pass
+      / 4 skip / 0 fail with a same-filesystem outside-repo TMPDIR),
+      doc-distribution 93 docs no drift, forbidden-literals 0, privacy-literals
+      0, memory-lint records=3 areas=8 errors=0 advisories=0, doc-conformance
+      11/11."
+    type: info
+    date: "2026-11-15"
+  - text: "REVIEWER NOTE (behaviour observation surfaced by doc-syncer, not a
+      documentation defect): `supersedeRecord` rewrites only a line matching
+      `status: candidate`; a named record already `authoritative` is left
+      untouched. The delivered docs now state that limit. Whether promotion
+      supersession must also close an `authoritative` record is a product/review
+      question for the PR — it is outside this change's ACs and was not changed
+      here."
+    type: risk
     date: "2026-11-15"
   - text: "Open questions carried by the spec (all non-blocking, deferred): OQ-1
       distribute the invariant to bootstrapped projects (NG-7, would retire the
