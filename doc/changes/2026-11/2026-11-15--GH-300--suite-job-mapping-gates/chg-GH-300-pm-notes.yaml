@@ -508,3 +508,31 @@ notes:
       before completing quality_gates."
     type: retro
     date: "2026-11-15"
+  - text: "CI REMEDIATION ROUND 2 (post-rebase, sync-only): two GH-320 tests failed
+      after #324 landed as a squash. (1) TC-BIN-002 'the baseline commit is an
+      ancestor of HEAD': `tests/fixtures/entrypoint/alias-baseline.json` pinned
+      `capturedFrom` to `1d4431eb`, a pre-code GH-320 branch commit orphaned by
+      the #324 squash; it is unreachable from main-tools, so the ancestry
+      assertion cannot hold. DELIBERATE REGENERATION MARKER: `capturedFrom` now
+      names `8a1f77ad` (the pre-change commit in main-tools history, parent of the
+      squash), the original pin is retained as `capturedFromOriginal`, and a
+      `captureProvenanceNote` records why; no baseline cell value changed (the
+      version/help/invalid-override bytes are identical from the original capture
+      through HEAD, and the fixture is a byte-identity control). The ancestry
+      assertion is kept, not deleted. (2) TC-BIN-084 half (b) failed only because
+      its guarded preload run executes `entrypoint-two-bins.test.ts`; with the
+      ancestry pin corrected (and a stale local workspace link refreshed via
+      `pnpm install --frozen-lockfile`, which CI does on a fresh clone) the
+      guarded run reports exit 0 and zero acquisition tallies. Local results:
+      `entrypoint-two-bins` 18 pass / 0 fail; `prior-identity-hermetic` 5 pass /
+      0 fail."
+    type: resolved
+    date: "2026-11-15"
+  - text: "RETRO: the baseline fixture pinned a provenance commit from a feature
+      branch, which a squash merge orphans — so a later rebase breaks an
+      ancestry assertion while the baseline bytes stay valid. Improvement: pin
+      provenance to a commit that exists in the integration history (the squash
+      parent), keep the original pin as secondary metadata, and record the
+      deliberate regeneration in the change record."
+    type: retro
+    date: "2026-11-15"

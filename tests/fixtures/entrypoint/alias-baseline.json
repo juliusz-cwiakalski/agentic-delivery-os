@@ -1,5 +1,7 @@
 {
-  "capturedFrom": "1d4431eb94d1b225ea45a6c1ee892224c8a0e7ce",
+  "capturedFrom": "8a1f77adb3b2d8f95fd9c3766b071642e3af5a7b",
+  "capturedFromOriginal": "1d4431eb94d1b225ea45a6c1ee892224c8a0e7ce",
+  "captureProvenanceNote": "The baseline cells were first captured from 1d4431eb, a GH-320 pre-code branch commit that the #324 squash landed as 40dc45a4; the orphaned commit is unreachable from main-tools, so the ancestry assertion cannot name it. The cells are byte-invariant from that capture through 8a1f77ad (the pre-change commit in main-tools history) to HEAD, so capturedFrom names the in-history pre-change commit. Regenerated deliberately on 2026-11-15 during GH-300's CI sync; no cell value changed.",
   "capturedCommand": "bun packages/cli/bin/delivery-os.ts <args> from the pre-phase tree (see capturedFrom)",
   "cells": {
     "version": {
