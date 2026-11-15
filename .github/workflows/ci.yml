@@ -46,6 +46,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+
       # GH-67: forces the ados_distribution marker + install-set invariants.
       # Fails (non-zero) on missing/invalid markers or install-set drift, blocking merge.
       - name: Run doc-distribution drift guard
@@ -121,6 +126,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
 
       # GH-251: runs every CI-safe test-*.sh suite under tools/.tests/ and
       # scripts/.tests/ through scripts/run-bash-suites.sh. The runner discovers

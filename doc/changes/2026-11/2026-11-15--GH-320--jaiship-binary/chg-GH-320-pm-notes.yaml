@@ -507,8 +507,9 @@ notes:
     type: risk
     date: "2026-11-15"
   - text: "Quality-gate iterations (phase 9). Run 1: FAIL 8630-8635-test run with 5
-      failures — a branch-introduced absolute user path literal (`HOME:
-      \"/home/fixture\"`) at tests/behaviour/daemon-start-detached.test.ts:710
+      failures — a branch-introduced absolute user path literal (a `HOME` value
+      pointing at an absolute scratch home path under the system temp dir) at
+      tests/behaviour/daemon-start-detached.test.ts:710
       tripping private.absolute-user-path, which reddened TC-PRIVACY-020 and two
       TC-WIRE-002 cells, plus load-dependent timeouts in
       telemetry-storage-growth and state-fence (both green in isolation). Fixed
