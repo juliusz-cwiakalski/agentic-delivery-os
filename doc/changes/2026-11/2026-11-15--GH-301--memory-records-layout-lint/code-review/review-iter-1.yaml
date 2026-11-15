@@ -1,0 +1,617 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-301
+branch: feat/GH-301/memory-records-layout-lint
+status: FAIL
+summary: >-
+  First review iteration of the GH-301 range (origin/main-tools...HEAD, 76 files,
+  +11103/-327). The eight lint areas, the closed finding register, the two
+  coverage universes, the budget/bound surface, the deterministic bounded output,
+  the sanctioned three-part replacement of the GH-302 guard, the gate/CI parity,
+  the layout completion, the record migration, and the documentation
+  reconciliation are all delivered and independently green: the live check exits
+  0 (records=3 areas=8 errors=0 advisories=0) and the memory, wiring, guard,
+  schema-parity, layout, docs and behaviour suites pass (I re-ran 191 memory-scope
+  test cases plus prompt-conformance, forbidden-literals, privacy-literals, and
+  the doc-distribution guard). However the change cannot PASS yet. The delivered
+  promotion supersession path marks a target record `status: superseded` without
+  writing `superseded_by`, so a normal closeout supersession leaves the tree
+  failing the new gate with two errors (memory.schema.superseded-by-missing and
+  memory.reference.supersede-asymmetry) - a supported write path now produces a
+  red build, and no test exercises the invariant after a supersession. Three
+  further contract drifts are real and reachable: the promotion hint truncates the
+  statement (ADR-0011 D6 / DEC-7 say a hint is never a truncated statement), the
+  candidate contract does not bound `statement` at 280 so a schema-valid
+  candidate can render an over-bound record, and the memory secret suppression is
+  evaluated over the whole match span rather than the delivered
+  suppression-value seam, so a marker in the key (e.g. `fake_token: <secret>`)
+  suppresses a hit the whole-tree privacy guard reports. Two latent false-positive
+  sources (out-of-memory-tree links, digit-bearing entry bullets), an off-by-one
+  at the published line caps for newline-terminated files, and an unpopulated
+  test-plan execution log round out the findings.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 6
+  low: 3
+  info: 2
+spec_compliance: FAIL
+plan_compliance: PASS
+verification:
+  tree_layout:
+    verdict: PASS
+    evidence: >-
+      tests/structure/memory-layout.test.ts green (canonical areas, .gitkeep
+      placeholders, no external/, temp-copy invented-area mutant fails);
+      committed tree holds README.md, agents/{ceo,coder,fixer,pm}/README.md,
+      lessons/, tacit/, preferences/, guilds/, retro/INDEX.md.
+  record_schema_single_source:
+    verdict: PASS
+    evidence: >-
+      packages/core/src/contracts/memory-record.ts is the authority and imports
+      capsule vocabularies rather than restating them; required/optional sets,
+      all closed vocabularies, 280/120 bounds and budgets are imported by the
+      lint, the parity test, the promotion writer and the fixtures.
+  schema_parity:
+    verdict: PASS
+    evidence: >-
+      tests/structure/memory-record-schema.test.ts parses the README required
+      spine and optional set against the machine contract, asserts capsule
+      overlap only where capsule exposes a vocabulary, and includes a negative
+      parity control.
+  promotion_write_path:
+    verdict: FAIL
+    evidence: >-
+      TC-MEMWRITE-001/002/004 green for the happy path, but supersession over an
+      existing record produces memory.schema.superseded-by-missing and
+      memory.reference.supersede-asymmetry (F-1); a >280-char statement passes
+      candidate validation and renders memory.schema.statement-too-long (F-3);
+      the statement-fallback hint is a truncation (F-2).
+  capsule_projection:
+    verdict: PASS
+    evidence: >-
+      `source` tightened to the four channels and `scope: fleet` refused for
+      lesson/tacit at candidate-schema time through closeout.capsule-invalid with
+      zero writes (memory-promotion-schema.test.ts); tacit home-area fix is
+      two-sided in reader (memory-promotion.ts) and writer (capsule-candidates.ts).
+  lint_areas_registers_severity:
+    verdict: PASS
+    evidence: >-
+      All eight areas emit register-only ids; severity is error except
+      derivable, dating.revalidate-expired, and the kernel warn band; exit is
+      0/1 only; secret ids derive from the injected vocabulary classes.
+  deterministic_bounded_output:
+    verdict: PASS_WITH_NOTE
+    evidence: >-
+      Repeated runs byte-identical at a fixed date; 100/100 ceiling plus a
+      truncation line with true totals; internal findings array is area-ordered,
+      but the printed lines group all errors before all advisories (F-9).
+  index_coverage_two_universes:
+    verdict: PASS
+    evidence: >-
+      record-uncovered and row-unbacked each evaluated independently per universe
+      with the universe named; row-shape, duplicate and directory/topic rows
+      covered; live tree fully covered.
+  budgets:
+    verdict: PASS_WITH_NOTE
+    evidence: >-
+      Delivered surfaces all within cap (index 177 split-lines / 8831 bytes,
+      entries 13-40 lines, archive 9 lines, kernel 16 lines); boundary matrix
+      green, but the line measure counts the trailing empty element, so a
+      newline-terminated file at exactly the cap measures cap+1 (F-6).
+  concurrency:
+    verdict: PASS
+    evidence: >-
+      tests/behaviour/memory-concurrency-merge.test.ts runs a real two-branch git
+      merge: only .ai/memory/README.md conflicts, union resolution yields one row
+      per record, zero findings, and a take-ours control drops a row to a single
+      uncovered finding; idempotent re-run adds nothing.
+  guard_replacement:
+    verdict: PASS
+    evidence: >-
+      tests/structure/memory-bootstrap-templates.test.ts TC-MEMDOCT-002 asserts
+      presence + citation on both surfaces, set equality against the three
+      sanctioned modules with a non-vacuity check, two temp-copy planted mutants
+      (memory-doctor.ts, memory-lint-extra.ts) that turn it red, the sanctioned
+      script value, and the preserved absences (no memory subcommand/script, five
+      doctor areas, no memory error-table row or domain kind).
+  gate_wiring:
+    verdict: PASS
+    evidence: >-
+      package.json check chains pnpm check:memory after check:boundaries;
+      check:memory = bun run scripts/checks/memory-lint.ts; the CI ts-invariants
+      job runs the same resolved path; the aggregate-string pins (ci-checks,
+      privacy-ci-wiring, license-ci-binding, milestone-gate) are updated
+      consistently and pass.
+  boundary_preservation:
+    verdict: PASS
+    evidence: >-
+      No CLI command, flag, doctor area, error-table row, domain kind, state
+      record, event, or installed-script distribution added
+      (memory-lint-wiring.test.ts).
+  documentation:
+    verdict: PASS_WITH_NOTE
+    evidence: >-
+      doc/spec/features/feature-memory-lint.md is accurate on areas, registers,
+      universes, budgets, output and wiring; feature-capsule/closeout/
+      bootstrapper/document-templates/glossary/UL/architecture overview are
+      reconciled. The new spec, doctor template and templates README carry
+      ados_distribution; the forbidden-literal registry row and doc/00-index row
+      resolve. Doc text repeats the code's boundary/link/hint claims that F-2,
+      F-5, F-6, F-8 show are not fully honoured.
+  repository_rules:
+    verdict: PASS
+    evidence: >-
+      No license headers added by agents; no plan progress recorded in the plan
+      file; phase state only in command-owned pm-notes; no forbidden literals;
+      distribution guard 93 docs no drift.
+acceptance_criteria:
+  AC-F1-1: PASS
+  AC-F1-2: PASS
+  AC-F2-1: PASS
+  AC-F2-2: PASS
+  AC-F2-3: PASS
+  AC-F3-1: FAIL   # F-1 supersession gate-red; F-3 over-bound statement; F-2 hint truncation
+  AC-F3-2: PASS
+  AC-F4-1: PARTIAL # exit/summary/determinism pass; F-9 printed order across severities
+  AC-F4-2: PASS
+  AC-F6-1: PASS
+  AC-F6-2: PASS
+  AC-F7-1: PASS
+  AC-F7-2: PASS
+  AC-F8-1: PASS   # in-tree links correct; F-5 is an out-of-tree false positive beyond the AC
+  AC-F9-1: PASS
+  AC-F9-2: PASS
+  AC-F10-1: PARTIAL # F-6 line-cap off-by-one for newline-terminated files; kernel band correct
+  AC-F10-2: PASS
+  AC-F11-1: PASS
+  AC-F12-1: PASS
+  AC-F12-2: PASS  # F-4 is a suppression-scope drift from the delivered guard, not an AC clause
+  AC-F13-1: PASS
+  AC-F13-2: PASS
+  AC-F14-1: PASS
+  AC-NFR1-1: PASS
+  AC-NFR2-1: PASS
+  AC-NFR5-1: PASS
+  AC-NFR7-1: PASS
+  AC-NFR8-1: PARTIAL # gate green, but not with a repository-local TMPDIR (F-11)
+  AC-NFR10-1: PASS
+plan_task_status:
+  artifact: chg-GH-301-plan.yaml (revision 1.4)
+  plan_validate: "valid, tier=full, readyForDevelopment=true"
+  open_phases: []
+  evidence_missing: []
+  phases:
+    - id: 1
+      title: Canonical memory tree, published schema, backfill, ADR-0011
+      status: COMPLETE
+      commit: d7fbc56b
+      evidence: >-
+        177 targeted structure tests; ADR-0011 tracked with a resolving index
+        row; tree + machine contract + README schema + backfill within caps.
+    - id: 2
+      title: Pure evaluation core (schema/dating/provenance/reference) + guard narrowing
+      status: COMPLETE
+      commit: 2ea319dd
+      evidence: memory-lint-schema/dating/provenance/reference + narrowed guard + inventory, 92 pass.
+    - id: 3
+      title: Index coverage, budgets, derivable, secrets, output model
+      status: COMPLETE
+      commit: 8dc40fc3
+      evidence: memory-lint-index/budget/derivable/secret/output, 61 pass.
+    - id: 4
+      title: Check edge, scanner, gate wiring, three-part guard replacement, doctor reword
+      status: COMPLETE
+      commit: 8d39e4f8
+      evidence: wiring/performance/output + ci/privacy/license pins, 112 pass; live check exits 0.
+    - id: 5
+      title: Promotion renders full schema, hint, closed source, fleet refusal, tacit fix, concurrency
+      status: COMPLETE
+      commit: edf44fc6
+      evidence: >-
+        promotion-schema/concurrency/record-schema/closeout suites, 39 pass;
+        MUT-CAP pins unmoved (behavioural gap found: F-1/F-2/F-3).
+    - id: 6
+      title: Kernel clause, curator alignment, concept Record-model rewrite, doc conformance
+      status: COMPLETE
+      commit: ccf14fb5
+      evidence: memory-lint-docs + memory-record-schema, 15 pass; prompt-conformance and doc-distribution green.
+    - id: 7
+      title: Backlog markers, alignment pass, full gate battery
+      status: COMPLETE
+      commit: e4bb8541
+      evidence: >-
+        Full pnpm check reported 8653 pass / 4 skip / 0 fail; memory-lint
+        records=3 errors=0; the evidence note is 02e7afa3.
+  scope_deviations:
+    - path: tests/fixtures/ports/v1-contract-inventory.json
+      disclosed: true
+      decision: COMPLIANT
+    - path: tests/checks/milestone-gate.test.ts
+      disclosed: true
+      decision: COMPLIANT
+    - path: .changeset/gh-301-memory-records-layout-lint.md
+      disclosed: true
+      decision: COMPLIANT
+    - path: doc/spec/**, doc/00-index.md, doc/overview/**, scripts/checks/forbidden-literals.registry.json
+      disclosed: true
+      decision: COMPLIANT
+      note: lifecycle-phase-7 @doc-syncer reconciliation and registry registration, outside the delivery-plan phases by design
+    - path: .ai/memory/tacit/.gitkeep
+      disclosed: false
+      decision: COMPLIANT
+      note: pre-existing placeholder, unchanged by the range (not in the diff)
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/file/memory-promotion.ts:132
+    message: >-
+      `supersedeRecord` rewrites a target record's `status: candidate` line to
+      `superseded` but never writes `superseded_by`. A normal closeout
+      supersession (a promoted record carrying `supersedes: [<id>]`) therefore
+      leaves the target superseded with no replacement link, and the new
+      invariant immediately fails the tree with
+      `memory.schema.superseded-by-missing` and
+      `memory.reference.supersede-asymmetry` (reproduced against a
+      schema-valid candidate target). A supported write path now produces a red
+      build on the next gate run, contradicting AC-F3-1/DoD-4 and DM-1's
+      conditional `superseded_by` requirement. The pm-notes reviewer note names
+      only the `authoritative`-target case; the `candidate` case is the more
+      common and is also broken, and no test runs the invariant after a
+      supersession promotion.
+    suggestion: >-
+      Pass the new record id into `supersedeRecord` and write
+      `superseded_by: "<new-id>"` (or update the target's status and replacement
+      link together) as an additive change, then add a behaviour test that
+      promotes a supersession over an existing conformant record and asserts the
+      invariant reports zero findings over the resulting tree.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/capsule-candidates.ts:236
+    message: >-
+      `deriveHint` returns `source.slice(0, HINT_MAX_CHARS).trimEnd()` whenever
+      the applicability string or the fallback statement exceeds 120 characters.
+      ADR-0011 D6 and DEC-7 bind the hint as "a read-when hint, not a truncated
+      statement", and the ADR's own context rejects a writer that derives the
+      hint by truncating a statement. With no `applies_when` and a statement in
+      the 121-280 range, the row's second column is exactly a truncated
+      statement (verified: a 300-char statement yields a 120-char statement
+      prefix). The readiness residual (<120-char statement fallback) was
+      disclosed, but it is a live contract violation, not a wording nuance.
+    suggestion: >-
+      Do not truncate the statement into the hint. Either require/derive a
+      read-when phrasing (e.g. reject or advise on a promotion without
+      `applies_when` when the statement exceeds the bound, or synthesise a
+      "when ..." hint from structured candidate fields), or formally amend D6 to
+      permit a bounded statement fallback - the spec must not claim both.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/capsule-candidates.ts:114
+    message: >-
+      `validateCandidate` checks `statement` is non-empty but never against
+      `STATEMENT_MAX_CHARS`, so a candidate with a 300-char statement passes
+      candidate-schema validation and the promotion writer renders a record the
+      invariant rejects with `memory.schema.statement-too-long` (reproduced).
+      This breaks AC-F3-1's zero-findings promise for a candidate that passed
+      the capture bar, evidence rules, and candidate schema, and it is the same
+      class of projection gap the readiness gate forced the plan to close for
+      `source` (DEC-8) and `scope: fleet` (DEC-5).
+    suggestion: >-
+      Import `STATEMENT_MAX_CHARS` into `validateCandidate` and refuse an
+      over-bound statement through the existing `closeout.capsule-invalid`
+      identity (no new register id), with a behaviour test that a 281-char
+      candidate is refused with zero writes and a 280-char one promotes clean.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: security
+    location: packages/core/src/domain/memory-lint.ts:661
+    message: >-
+      The memory secret scan tests suppression markers against the entire
+      matched span (`lowered = matched.toLowerCase()`), while the delivered
+      whole-tree guard scopes markers to the protected value via
+      `suppressionValueFor` (privacy-rules.ts). A marker appearing in the key
+      half therefore suppresses a real value: `fake_token: <real-secret>` yields
+      no memory finding while `matchGenericRules` reports an unsuppressed
+      `secret.credential-assignment` (verified). This is a false negative in the
+      security area and a drift from the "same suppression behaviour, no drift"
+      guarantee (F-12, GAP-9, spec section 20, DEC-4).
+    suggestion: >-
+      Replicate the delivered value-segment scoping for the rules that need it
+      (credential-assignment, bearer, connection-string, absolute-user-path) in
+      the injected vocabulary contract or in the domain matcher, and add a
+      marker-in-key case that must still fire, alongside the existing
+      marker-elsewhere-on-line control.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-5
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/memory-lint.ts:437
+    message: >-
+      Markdown links are resolved relative to the memory root and then required
+      to exist under `.ai/memory/`, so a link that leaves the tree is rewritten
+      under it and reported as `memory.reference.link-dangling`. A record
+      linking to the repository's real `AGENTS.md` (`../../../AGENTS.md`) or to
+      `/doc/spec/...` produces a false dangling finding (reproduced) even though
+      the target exists, contradicting the doc claim that only an in-tree
+      relative link is checked and the spec's F-8 scope. Any agent writing a
+      record that cites a repo doc will trip the gate.
+    suggestion: >-
+      Resolve the link against the repository root (the scan already knows both
+      `.ai/memory/**` and `AGENTS.md` paths) or skip links whose resolution
+      escapes `MEMORY_ROOT`, and add a positive control asserting an out-of-tree
+      link is silent (and an in-tree missing link still fires).
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-6
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/memory-lint.ts:534
+    message: >-
+      `measureLines` counts `text.split("\n").length`, which adds a phantom
+      final element for a newline-terminated file. A file with exactly the
+      published cap (200 index lines, 150 entry-point lines) measures cap+1 and
+      errors (verified: a 200-line newline-terminated file yields
+      `memory.budget.index-lines 201 ... cap 200`), contradicting AC-F10-1 and
+      the doc statement that "a surface exactly at its cap produces no finding".
+      The boundary fixtures use `lineFiller()` joined without a trailing newline,
+      so they hide the off-by-one.
+    suggestion: >-
+      Count lines as `text.endsWith("\n") ? split.length - 1 : split.length`, and
+      make the budget boundary fixtures newline-terminated so the at-cap case is
+      exercised against a real file shape.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-7
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/memory-lint.ts:349
+    message: >-
+      `entry-line-date` fires on any entry-point bullet whose leading token has
+      a digit but is not `YYYY-MM-DD` (`^\s*-\s+(\S+)\s*:`), not only on dated
+      capture lines. A legitimate bullet such as `- GH-301: delivered memory
+      lint` or `- T0-T5: ...` would be reported as a dating error. The
+      documented contract is that a capture line carries a YYYY-MM-DD date; no
+      current entry point triggers it, so the gap is latent.
+    suggestion: >-
+      Restrict the heuristic to the documented capture-line shape (a date-like
+      token, e.g. `\d{4}[-/]\d{1,2}[-/]\d{1,2}` or a leading capture marker) so
+      an ordinary bullet with a numeric token is not a finding, and add a
+      negative control for a `GH-NNN:` bullet.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-8
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/memory-lint.ts:264
+    message: >-
+      DM-1 and the human rendering state `statement` is non-empty, but the
+      schema pass only inspects `statement.length` when it is a string; an empty
+      string or a non-string statement yields no finding (verified). The
+      contract declares a non-empty requirement the lint does not enforce.
+    suggestion: >-
+      Emit a schema finding (e.g. `memory.schema.value-unknown` or
+      `keys-missing`, no new id) when `statement` is absent-as-empty or
+      non-string, or narrow the published wording if non-emptiness is not
+      intended to be enforced.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-9
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/memory-lint.ts:692
+    message: >-
+      The printed report concatenates all error lines then all advisory lines,
+      so on a mixed tree the printed order is not the declared area order (a
+      derivable advisory in area 7 prints after a secret error in area 8). The
+      in-memory `findings` array is area-ordered and determinism is preserved,
+      but DM-4's "ordering is area order, then path, then line, then rule id"
+      describes the emitted lines, and the suites only assert the array and the
+      per-severity counts.
+    suggestion: >-
+      Either emit one globally area-ordered stream (severity shown by the
+      FAIL/WARN prefix) and keep the two ceilings as separate print budgets, or
+      amend DM-4 to state that errors print before advisories as two ordered
+      streams; add a mixed-tree ordering assertion either way.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-10
+    severity: medium
+    confidence: high
+    category: testing
+    location: doc/changes/2026-11/2026-11-15--GH-301--memory-records-layout-lint/chg-GH-301-test-plan.md:1812
+    message: >-
+      The test plan's section 10 execution log is unpopulated: every one of the
+      40 TCs reads "Not run" (and section 7 reads "To Implement"), while the test
+      plan's own rule says "an unrecorded scenario is not executed". pm-notes
+      carries only aggregate counts, and the promotion suites never exercise a
+      supersession promotion or an over-bound statement, which is exactly why
+      F-1 and F-3 shipped. DoD-18 ("execution evidence in the phase notes", no
+      uncovered criterion) is therefore weakly evidenced.
+    suggestion: >-
+      Populate section 10 (or replace it with a delivery-time placeholder plus
+      pm-notes pointers, matching the GH-302 precedent) and add the two missing
+      behaviour cells (supersession + invariant, over-bound statement refusal)
+      before re-review.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-11
+    severity: info
+    confidence: high
+    category: testing
+    location: tests/checks/memory-lint-performance.test.ts:56
+    message: >-
+      NFR-2 is measured with `EMPTY_VOCABULARY`, so the real per-file secret
+      scan (seven regex passes over every file) is outside the timed bound; NFR-3
+      ("adds <=1s to pnpm check, measured and recorded") is not quantified in
+      pm-notes; and AC-NFR8-1's literal "repository-local temporary directory"
+      precondition was not met - the disclosed evidence uses an outside-repo
+      same-filesystem TMPDIR because four pre-existing suites require it. None is
+      a live defect, but the evidence is weaker than the DoD wording.
+    suggestion: >-
+      Re-run the performance cell with the delivered vocabulary, record the
+      measured gate delta in pm-notes, and state the TMPDIR constraint explicitly
+      in the DoD/PR body so the deviation is owned rather than inferred.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-12
+    severity: info
+    confidence: high
+    category: design
+    location: packages/core/src/domain/memory-lint.ts:82
+    message: >-
+      The evaluator hardcodes `RECORD_AREAS = ["lessons","tacit","preferences"]`
+      instead of importing `MEMORY_RECORD_AREAS`, and it does not enforce the
+      kind-to-home-area mapping (`MEMORY_RECORD_HOME_BY_KIND`) that DM-1/D4
+      declare - a `kind: preference` record placed under `lessons/` passes the
+      lint; only the whole-tree structure test checks kind vs area. No AC
+      requires a lint rule here, so this is a single-source and coverage note,
+      not a defect against a criterion.
+    suggestion: >-
+      Import the area/kind constants into the evaluator (or drop the duplicate
+      local list) and, if kind/area mismatch should be gated, add a schema-area
+      finding under an existing id via a spec amendment rather than a new
+      identity.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+decisions:
+  - id: D-1
+    subject: Disclosed deviation - port contract inventory fixture
+    verdict: COMPLIANT
+    rationale: >-
+      tests/fixtures/ports/v1-contract-inventory.json is a fail-closed inventory
+      of every contracts module and export; the new module had to be enumerated
+      or port-contract suites fail. The edit is data-consistent and disclosed.
+  - id: D-2
+    subject: Disclosed deviation - milestone-gate aggregate pin
+    verdict: COMPLIANT
+    rationale: >-
+      tests/checks/milestone-gate.test.ts pins the aggregate chain length; the
+      change adds `pnpm check:memory`. The pin now asserts the inserted index and
+      length+1, and passes. The pin edit is the correct, minimal update.
+  - id: D-3
+    subject: Disclosed deviation - five-package minor changeset
+    verdict: COMPLIANT
+    rationale: >-
+      The release test plan requires a lockstep minor changeset; the file lists
+      the five publishable packages and was staged manually because the primitive
+      stages only in-scope untracked files. Justified and disclosed.
+  - id: D-4
+    subject: Disclosed deviation - plan-phase commit subjects
+    verdict: COMPLIANT
+    rationale: >-
+      The commit primitive rejects a plan-phase id (`--phase` expects a canonical
+      lifecycle phase), so plan-phase commits carry the template `chore(GH-301):`
+      subject. Conventional and within the declared set; the phase-9 commit-range
+      gate remains the message authority.
+  - id: D-5
+    subject: Disclosed deviation - outside-repo TMPDIR for the gate battery
+    verdict: ACCEPTED_WITH_CAVEAT
+    rationale: >-
+      The DoD/AC-NFR8-1 wording requires a repository-local temporary directory;
+      the nested-git workspace makes that impossible for four pre-existing
+      suites, so the evidence uses an outside-repo same-filesystem TMPDIR. The
+      battery is green and the constraint is disclosed, but the literal
+      precondition is not demonstrated (F-11).
+  - id: D-6
+    subject: Reviewer note - supersedeRecord only rewrites status candidate
+    verdict: PARTIALLY_ACCEPTED
+    rationale: >-
+      Treating a named `authoritative` record as left untouched is acceptable as
+      documented and outside the ACs. But the note understates the problem: even
+      the ordinary `candidate` target is rewritten to `superseded` without
+      `superseded_by`, which the new invariant rejects (F-1). That case is in
+      scope (it is the delivered write path producing a red gate) and must be
+      fixed, not merely documented.
+  - id: D-7
+    subject: Hint derivation truncation (readiness residual)
+    verdict: NOT_COMPLIANT
+    rationale: >-
+      ADR-0011 D6 and DEC-7 are unambiguous that the hint is not a truncated
+      statement. Carrying the residual to the PR gate does not make the delivered
+      behaviour conform; F-2 stands.
+reviewed_at: 2026-11-15T00:00:00Z
+next_step: CALL_CODER
+remediation_hint: >-
+  Fix F-1 (write superseded_by on supersession), F-2 (no statement-truncated
+  hint), F-3 (bound candidate statement), F-4 (value-segment suppression
+  scoping), F-5 (out-of-tree link resolution), F-6 (line count off-by-one), then
+  add the supersession+invariant and over-bound-statement behaviour cells and
+  populate the test-plan execution log. Re-run the memory, wiring, guard,
+  schema, layout, docs, promotion and concurrency suites plus the full gate
+  battery before re-review. No `phase complete` was run and no remediation phase
+  was appended to the plan (review record only).
+plan_gaps: >-
+  NONE for phase completion: all seven declared phases are COMPLETE with pm-notes
+  evidence naming the plan phase id, commit hash, and test results; plan validate
+  is valid and readyForDevelopment=true; OPEN_PHASES and EVIDENCE_MISSING do not
+  fire. Scope hygiene: five changed paths sit outside the declared phase scopes
+  and all are disclosed (port inventory fixture, milestone-gate pin, changeset,
+  and the lifecycle-phase-7 doc/registry reconciliation); no undisclosed product
+  code path exists. DoD-18's per-scenario execution evidence is weak (F-10).
+test_coverage_gaps: >-
+  (1) No test runs the invariant after a supersession promotion, so F-1 is
+  invisible; closeout-capsule-supersession asserts only `status: superseded`.
+  (2) No test feeds a >280-char statement through candidate validation, so F-3 is
+  invisible. (3) The budget boundary fixtures omit the trailing newline, hiding
+  F-6. (4) The secret suppression tests cover a marker inside the span and
+  elsewhere on the line, but not a marker in the key half, hiding F-4. (5) The
+  link tests cover only in-tree targets, hiding F-5. (6) The performance cell
+  uses an empty privacy vocabulary (F-11). All 40 declared TCs map to real,
+  passing suites; the gaps are in what those suites assert, not in their
+  existence.
