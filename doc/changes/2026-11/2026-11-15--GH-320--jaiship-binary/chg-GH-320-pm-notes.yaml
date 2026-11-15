@@ -13,7 +13,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-15T12:11:25.019Z }
   review_fix: { started: null, completed: 2026-11-15T12:48:17.746Z }
   quality_gates: { started: null, completed: 2026-11-15T14:06:20.889Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-15T14:08:27.161Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "Legacy identity fallback is the chosen mechanism (not a migration
@@ -458,19 +458,19 @@ notes:
       annotated as superseded."
     type: info
     date: "2026-11-15"
-  - text: "Review remediation evidence (phase 6, plan r1.5). Commits: 9464de36 (F-1
-      notice flush, F-2 safe quoting, F-3 live guards, F-4 DRY_RUN preview, F-6
-      revert, F-7 step-9 assertions, F-8 node-level scan, F-9..F-14), 217b5b38
-      (revert packages/core/src/index.ts), 9059598e (delivery complete),
-      719f6e53 (docs re-verified), c370f8b4 (phase close). Gates at that
-      boundary: pnpm typecheck; structure trio 33 pass; port-contract-inventory
-      11 pass; install-launcher-installer 8 pass; identity-docs 12 pass;
-      daemon-start-detached 22 pass; identity-override + prior-identity-notice
-      23 pass; prior-identity-hermetic 5 pass; content-inventory 12 pass;
-      exports-parity OK; shellcheck clean; test-install.sh 56/56;
-      forbidden-literals 5/5 classes 0 violations; doc-distribution no drift;
-      commit-range PASS; plan validate valid/full; 0 undeclared paths in the
-      62-entry diff."
+  - text: "Plan phase 6 (review-iteration-1 remediation) evidence at plan r1.5.
+      Commits: 9464de36 (F-1 notice flush, F-2 safe quoting, F-3 live guards,
+      F-4 DRY_RUN preview, F-6 revert, F-7 step-9 assertions, F-8 node-level
+      scan, F-9..F-14), 217b5b38 (revert packages/core/src/index.ts), 9059598e
+      (delivery complete), 719f6e53 (docs re-verified), c370f8b4 (phase close).
+      Gates at that boundary: pnpm typecheck; structure trio 33 pass;
+      port-contract-inventory 11 pass; install-launcher-installer 8 pass;
+      identity-docs 12 pass; daemon-start-detached 22 pass; identity-override +
+      prior-identity-notice 23 pass; prior-identity-hermetic 5 pass;
+      content-inventory 12 pass; exports-parity OK; shellcheck clean;
+      test-install.sh 56/56; forbidden-literals 5/5 classes 0 violations;
+      doc-distribution no drift; commit-range PASS; plan validate valid/full; 0
+      undeclared paths in the 62-entry diff."
     type: info
     date: "2026-11-15"
   - text: "Review iteration 2: FAIL, one blocking. New defect introduced by the
@@ -527,5 +527,18 @@ notes:
       hit, commitlint resolved repository-local (node_modules/.bin/commitlint,
       origin=repository-local), mode none. Recorded as the phase-9 range
       verdict."
+    type: info
+    date: "2026-11-15"
+  - text: "DoD check: all ten prior phases completed in the registry; plan phases
+      1-6 each carry a pm-notes evidence entry naming the phase id, commit(s)
+      and the gate result; review iteration 3 = PASS with all 11 ACs PASS
+      (AC-F7-9 no longer provisional: the aggregate gate is green); the
+      documentation set reports no residual gap after the phase-7
+      re-verification; 0 undeclared paths against plan r1.5; plan validate
+      valid/full. Accepted, recorded non-blocking nits: the preload docstring
+      'every write' overstatement, the pm-notes delivery_planning timestamp
+      divergence from the authoritative registry, spec citations of test plan
+      v1.6, and one info wording nit; none affects an AC, a gate or the PR
+      contract."
     type: info
     date: "2026-11-15"
