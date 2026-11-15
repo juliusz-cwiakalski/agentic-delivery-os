@@ -9,7 +9,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-15T07:54:24.256Z }
   delivery_planning: { started: null, completed: 2026-11-15T07:57:44.580Z }
   dor_check: { started: null, completed: 2026-11-15T08:06:12.535Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-15T10:22:01.462Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -272,22 +272,21 @@ notes:
       TC-BIN-070; (f) duplicated assertions between TC-BIN-072 steps 7 and 8."
     type: risk
     date: "2026-11-15"
-  - text: "Plan phase 1 (two executable identity selectors over one shared
-      launcher) delivered by commit e4c5643b0ac482ca6701341fca2dc59329183027
-      (subject `chore(GH-320): update packages/cli/bin/delivery-os.ts`, the
-      commit primitive's deterministic template). Gates green: pnpm install
+  - text: "Plan phase 1 (two executable identity selectors over one shared launcher)
+      delivered by commit e4c5643b0ac482ca6701341fca2dc59329183027 (subject
+      `chore(GH-320): update packages/cli/bin/delivery-os.ts`, the commit
+      primitive's deterministic template). Gates green: pnpm install
       --frozen-lockfile; pnpm typecheck; entrypoint-two-bins (18 pass);
-      entrypoint-version + entrypoint-help-isolation (11 pass);
-      pilot-isolation (9 pass); entrypoint-bin + content-inventory (34 pass);
-      branding-seam + branding-contract (13 pass);
-      entrypoint-help + entrypoint-help-coverage + entrypoint-composition
-      (14 pass); daemon-start-detached (22 pass); exports-parity OK (5
-      publishables). BYTE-TP-1 baseline captured pre-change from 1d4431eb into
-      tests/fixtures/entrypoint/alias-baseline.json."
+      entrypoint-version + entrypoint-help-isolation (11 pass); pilot-isolation
+      (9 pass); entrypoint-bin + content-inventory (34 pass); branding-seam +
+      branding-contract (13 pass); entrypoint-help + entrypoint-help-coverage +
+      entrypoint-composition (14 pass); daemon-start-detached (22 pass);
+      exports-parity OK (5 publishables). BYTE-TP-1 baseline captured pre-change
+      from 1d4431eb into tests/fixtures/entrypoint/alias-baseline.json."
     type: info
     date: "2026-11-15"
-  - text: "Plan phase 2 (prior-identity configuration and host-state fallback
-      with one bounded notice) delivered by commits
+  - text: "Plan phase 2 (prior-identity configuration and host-state fallback with
+      one bounded notice) delivered by commits
       79fb59c9fb928735eb8ceaf7d6707d83fc8c0fa9 and
       38183b55cc1cf8d5fc6f3df8bbbe9f5a19793477 (the second is the corrective
       commit that lands the fixture harness inside the declared folder and the
@@ -297,51 +296,51 @@ notes:
       state-scope + projects-state-scope-policy (24 pass); entrypoint-two-bins
       (18 pass); config-sources + projects-config + daemon-state-scope +
       legacy-adapter (59 pass). DoR-4 residuals (a) notice assertion scoped to
-      the alias and rationale replaced, (b) the pre-change touch control captured
-      into tests/fixtures/entrypoint/prior-identity/pre-change-touch.json and
-      applied to both bins. Discovered scope gap (reported, not silently
-      widened): packages/core/src/index.ts and
+      the alias and rationale replaced, (b) the pre-change touch control
+      captured into
+      tests/fixtures/entrypoint/prior-identity/pre-change-touch.json and applied
+      to both bins. Discovered scope gap, disclosed and landed:
+      packages/core/src/index.ts and
       packages/adapters/src/file/projects-config.ts are not declared in any
-      phase; the root re-export was removed by using an injected
-      probeDefaultRoot port, and the project-groups document fallback was
-      dropped, so the delivered file set stays exactly as declared. Obligation
-      2.5's site list is therefore threaded for the four acquireFileConfig
-      sites and createConfigProgram, not for readProjectGroupsConfig."
+      phase while the delivered structure guard and the plan's site list need
+      them; the commit primitive reported them under scopeDrift and committed
+      them. The production composition reaches prior-root existence through the
+      injected probeDefaultRoot port, and the four acquireFileConfig sites plus
+      createConfigProgram carry the prior configuration directory."
     type: risk
     date: "2026-11-15"
-  - text: "Plan phase 3 (local install launcher at the brand install path)
-      delivered by commit ddffaa0121d8c4032bf391a91c013ee560dca4ea. Gates
-      green: shellcheck --severity=error (clean); install-launcher-installer
-      (7 pass); install-launcher + entrypoint-installer-absence (11 pass);
-      bash scripts/.tests/test-install.sh 56/56 passed as the unchanged
-      control; entrypoint-two-bins (18 pass); entrypoint-bin + content-inventory
-      (34 pass). Deviation recorded: the delivered dry-run control installs from
-      a mock source without the CLI entry, so the launcher step reports the
+  - text: "Plan phase 3 (local install launcher at the brand install path) delivered
+      by commit ddffaa0121d8c4032bf391a91c013ee560dca4ea. Gates green:
+      shellcheck --severity=error (clean); install-launcher-installer (7 pass);
+      install-launcher + entrypoint-installer-absence (11 pass); bash
+      scripts/.tests/test-install.sh 56/56 passed as the unchanged control;
+      entrypoint-two-bins (18 pass); entrypoint-bin + content-inventory (34
+      pass). Deviation recorded: the delivered dry-run control installs from a
+      mock source without the CLI entry, so the launcher step reports the
       planned registration and exits 0 under DRY_RUN; the classified
       missing-runtime and no-CLI-entry failures apply to a real run."
     type: info
     date: "2026-11-15"
   - text: "Plan phase 4 (documentation truth) delivered by commit
-      2046d21a5846aa41ebb3f6fdc5a34d28710c2624. Gates green: doc-conformance
-      (16 pass); identity-docs (9 pass); forbidden-literals 5/5 scope classes,
-      0 violations; forbidden-literals.test (27 pass);
-      test-doc-distribution.sh no drift (94 in-scope docs), guide registered and
-      seed-clean; pnpm check:help; pnpm check:prompt; git diff --check. The
-      guide declares ados_distribution: redistributable, received its licence
-      header only via scripts/add-header-location.sh on the single path, and is
-      linked from all four affected spec pages (the landing page stays
-      untouched)."
+      2046d21a5846aa41ebb3f6fdc5a34d28710c2624. Gates green: doc-conformance (16
+      pass); identity-docs (9 pass); forbidden-literals 5/5 scope classes, 0
+      violations; forbidden-literals.test (27 pass); test-doc-distribution.sh no
+      drift (94 in-scope docs), guide registered and seed-clean; pnpm
+      check:help; pnpm check:prompt; git diff --check. The guide declares
+      ados_distribution: redistributable, received its licence header only via
+      scripts/add-header-location.sh on the single path, and is linked from all
+      four affected spec pages (the landing page stays untouched)."
     type: info
     date: "2026-11-15"
-  - text: "Plan phase 5 (hermeticity guard, changeset, gates, reconciliation)
-      state at the final phase boundary. Gates green:
-      prior-identity-hermetic (5 pass: static surface scan, spawned preload run
-      over the nine named suites, five-class canary); changesets-group OK
-      (exactly one fixed group of five, testkit excluded); the single
-      same-device gate `TMPDIR=$(mktemp -d "$HOME/.cache/ados-check-XXXXXX")
-      pnpm check` exited 0 with 8434 pass / 4 skip / 0 fail (8438 tests, 1074
-      files); `./scripts/lint-commit-range.sh --base main-tools` PASS (20
-      commits, repository-local commitlint); `delivery-os plan validate GH-320`
+  - text: "Plan phase 5 (hermeticity guard, changeset, gates, reconciliation) state
+      at the final phase boundary. Gates green: prior-identity-hermetic (5 pass:
+      static surface scan, spawned preload run over the nine named suites,
+      five-class canary); changesets-group OK (exactly one fixed group of five,
+      testkit excluded); the single same-device gate `mkdir -p $HOME/.cache &&
+      TMPDIR=$(mktemp -d $HOME/.cache/ados-check-XXXXXX) pnpm check` exited 0
+      with 8434 pass / 4 skip / 0 fail (8438 tests, 1074 files);
+      `./scripts/lint-commit-range.sh --base main-tools` PASS (20 commits,
+      repository-local commitlint); `delivery-os plan validate GH-320`
       valid/full; `git diff --check` clean. Recorded evidence, not a gate: the
       repo-local `TMPDIR=$PWD/tmp/tmpdir pnpm check` run is red with 14
       projects/queue/state cells (the GH-313 mechanism: fixtures need a temp
@@ -350,11 +349,12 @@ notes:
     type: info
     date: "2026-11-15"
 
-  - text: "Delivery deviations and discovered gaps, recorded rather than
-      silently widened. (1) Discovered plan-scope gaps, landed and disclosed:
-      `packages/core/src/index.ts`, `packages/adapters/src/file/projects-config.ts`
-      and `tests/fixtures/ports/v1-contract-inventory.json` are not declared in
-      any phase, but the delivered guards require them to change alongside the
+  - text: "Delivery deviations and discovered gaps, recorded rather than silently
+      widened. (1) Discovered plan-scope gaps, landed and disclosed:
+      `packages/core/src/index.ts`,
+      `packages/adapters/src/file/projects-config.ts` and
+      `tests/fixtures/ports/v1-contract-inventory.json` are not declared in any
+      phase, but the delivered guards require them to change alongside the
       declared files (the root-entry policy export, the project-groups document
       read, and the v1 contract-surface fixture). The commit primitive reported
       them under `scopeDrift` at the time and still committed them, so the tree
@@ -365,17 +365,16 @@ notes:
       serialization chokepoint; the vocabulary stays in `contracts/config.ts`
       with the token exposed as behaviour, not as an exported string literal,
       which the branding-seam guard requires. (3) Formatting of files declared
-      in earlier phases was corrected in the final commit so `pnpm
-      format:check` is green; no behaviour changed. (4) Each phase landed
-      through the commit primitive in standalone mode, whose deterministic
-      template subject is used because any lifecycle id maps multiple
-      delivery-kind plan phases to the union scope and therefore no single plan
-      `summary`; phase 2 needed a second corrective commit after a fixture
-      helper sat beside, not inside, the declared fixture folder. (5) The
-      installer launcher step reports the planned registration and exits 0
-      under `DRY_RUN` even from a source tree without the CLI entry, because the
-      delivered `scripts/.tests/test-install.sh` dry-run control must stay
-      green; the classified missing-runtime and no-CLI-entry failures apply to a
-      real run."
+      in earlier phases was corrected in the final commit so `pnpm format:check`
+      is green; no behaviour changed. (4) Each phase landed through the commit
+      primitive in standalone mode, whose deterministic template subject is used
+      because any lifecycle id maps multiple delivery-kind plan phases to the
+      union scope and therefore no single plan `summary`; phase 2 needed a
+      second corrective commit after a fixture helper sat beside, not inside,
+      the declared fixture folder. (5) The installer launcher step reports the
+      planned registration and exits 0 under `DRY_RUN` even from a source tree
+      without the CLI entry, because the delivered
+      `scripts/.tests/test-install.sh` dry-run control must stay green; the
+      classified missing-runtime and no-CLI-entry failures apply to a real run."
     type: risk
     date: "2026-11-15"
