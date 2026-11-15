@@ -211,6 +211,34 @@ export const VERIFY_SUITE_MAP_DOCUMENT_STATES = [
 ] as const;
 export type VerifySuiteMapDocumentState = (typeof VERIFY_SUITE_MAP_DOCUMENT_STATES)[number];
 
+/** The closed classification of the one committed configuration document (DM-9). */
+export const VERIFY_COMMITTED_CONFIG_STATES = [
+  "absent",
+  "parsed",
+  "selected-unusable",
+  "unreadable",
+  "unparseable",
+] as const;
+export type VerifyCommittedConfigState = (typeof VERIFY_COMMITTED_CONFIG_STATES)[number];
+
+/**
+ * The bounded committed-document read outcome (DM-9, DEC-18). The adapter
+ * resolves exactly one path, performs at most one existence probe and at most
+ * one bounded content read, and classifies the document without interpreting
+ * its content; the composition maps this outcome onto the map read.
+ */
+export type VerifyCommittedConfigDocumentRead =
+  | { readonly ok: true; readonly state: "absent" }
+  | {
+      readonly ok: true;
+      readonly state: "parsed";
+      readonly document: Readonly<Record<string, unknown>>;
+    }
+  | {
+      readonly ok: false;
+      readonly state: "selected-unusable" | "unreadable" | "unparseable";
+    };
+
 /** The closed injected map-read result (OQ-T4 resolution, DM-9). */
 export type VerifySuiteMapRead =
   | { readonly ok: true; readonly declared: false }

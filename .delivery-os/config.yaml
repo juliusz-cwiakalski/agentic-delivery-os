@@ -1,0 +1,26 @@
+# GH-300 reference declaration: the aggregate CI job's declared suite breadth.
+# This is the one document that may supply `verify.suite-map`; overlays are never
+# read for the map. Keep it equal to the local aggregate's suite set.
+verify:
+  suite-map:
+    schemaVersion: "delivery.verify.suite-map.v1"
+    jobs:
+      - job: "TS aggregate check"
+        suites:
+          - tests
+          - lint
+          - format
+          - typecheck
+          - boundaries
+          - prompt-conformance
+          - help-guide-coverage
+          - exports-parity
+    local:
+      - tests
+      - lint
+      - format
+      - typecheck
+      - boundaries
+      - prompt-conformance
+      - help-guide-coverage
+      - exports-parity

@@ -18,6 +18,7 @@ import {
   VERIFY_SUITE_MAP_SCHEMA_VERSION,
   VERIFY_SUITE_MAX_BREADTH,
   VERIFY_SUITE_MAX_ID_CHARS,
+  type VerifyCommittedConfigDocumentRead,
   type VerifyGateRecord,
   type VerifyGatesSummary,
   type VerifySuiteMap,
@@ -150,6 +151,22 @@ export const resolveVerifySuiteMapFromConfig = (values: unknown): VerifySuiteMap
   return extracted.kind === "absent"
     ? { ok: true, declared: false }
     : resolveVerifySuiteMap(extracted.node);
+};
+
+/**
+ * Map the one bounded committed-document read onto the map read (DM-9, DEC-18).
+ *
+ * Absent and parsed-without-node are undeclared; every unusable state, including
+ * a selection naming a missing or unreadable path, is the `config.value.invalid`
+ * refusal. A parsed document is classified by the map's own resolver alone.
+ */
+export const suiteMapReadOfDocument = (
+  read: VerifyCommittedConfigDocumentRead,
+): VerifySuiteMapRead => {
+  if (!read.ok)
+    return { ok: false, code: "config.value.invalid", detail: `document.${read.state}` };
+  if (read.state === "absent") return { ok: true, declared: false };
+  return resolveVerifySuiteMapFromConfig(read.document);
 };
 
 /** The workflow facts the breadth rule consumes, structurally typed. */

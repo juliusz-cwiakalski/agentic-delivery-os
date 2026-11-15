@@ -773,6 +773,7 @@ export {
   resolveVerifySuiteMap,
   resolveVerifySuiteMapFromConfig,
   suiteBreadthCitationOf,
+  suiteMapReadOfDocument,
   VERIFY_SUITE_MAP_BRANCH_KEY,
   type VerifySuiteBreadthCitation,
   type VerifySuiteBreadthEvaluation,

@@ -26,6 +26,7 @@ import {
   nodeOwnerHoldMarkerFileSystem,
   nodePmNotesFileSystemFacts,
   preserveCorruptHostIndex,
+  readCommittedConfigDocument,
   readDispatchAuthorityFact,
   readDispatchIdentityMarkerText,
   readHostIndexFile,
@@ -131,6 +132,7 @@ import {
   serializeIdentityMarker,
   stateScopeEnvironmentName,
   stateScopeRoots,
+  suiteMapReadOfDocument,
   type TelemetryAttributionSubstrates,
   type TelemetryClaimedIdentity,
   type TelemetrySessionTotalsReader,
@@ -1314,6 +1316,33 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       repositoryBinding,
     );
 
+    /**
+     * The gates surface's one bounded configuration-document resolution
+     * attempt (GH-300 DM-9). The result is memoized for the invocation, the map
+     * node is extracted and resolved by the map's own resolver, and no other
+     * configuration layer is read. The gate-set seam stays untouched.
+     */
+    let committedSuiteMapRead: ReturnType<typeof readCommittedConfigDocument> | undefined;
+    const readSuiteMap = (): ReturnType<typeof suiteMapReadOfDocument> => {
+      if (committedSuiteMapRead === undefined) {
+        const gitRoot = gitRootForConfig();
+        const selectedConfig = environment[`${brand.environmentPrefix}CONFIG`];
+        committedSuiteMapRead = readCommittedConfigDocument({
+          platform: runtimePlatform(),
+          homeDirectory,
+          environment,
+          ...(gitRoot === undefined ? {} : { gitRoot }),
+          ...(selectedConfig === undefined ? {} : { selectedConfig }),
+          enableSystemConfig: false,
+          enableUserConfig: false,
+          enableProjectLocalConfig: false,
+          configurationDirectoryName: brand.configDirectoryName,
+          fs: localFs,
+        });
+      }
+      return suiteMapReadOfDocument(committedSuiteMapRead);
+    };
+
     const gates = createVerifyGatesCommandRuntime({
       store,
       changesDirectory,
@@ -1322,6 +1351,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       workflow: { baseDirectory: cwd, fs: localFs },
       github: { instance, credentials, transport },
       nowMs,
+      readSuiteMap,
     });
 
     const merge = createMergeCommandRuntime({

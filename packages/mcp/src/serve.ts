@@ -20,6 +20,7 @@ import {
   nodeOwnerHoldMarkerFileSystem,
   nodePmNotesFileSystemFacts,
   readCiWorkflowJobNames,
+  readCommittedConfigDocument,
   readLocalPmContext,
   readOwnerHoldMarker,
   readPmNotesText,
@@ -37,6 +38,7 @@ import {
   resolveProjectScope,
   type StateScopeRoots,
   stateScopeRoots,
+  suiteMapReadOfDocument,
 } from "@delivery-os/core";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
 import type { BrandIdentity, OwnerHoldFact, StateStorePort } from "@delivery-os/core/contracts";
@@ -173,29 +175,61 @@ const buildVerifyRuntime = (
   readRegistry: (changeRef) => registryRead(store, changeRef),
 });
 
+/**
+ * The shipped `gate-report` composition's one bounded document read (GH-300
+ * DM-9, DEC-20). The first call resolves the single committed-slot document and
+ * every later call in the same composition reuses it; the map node is resolved
+ * by the map's own resolver and no other configuration layer is read.
+ */
+const buildSuiteMapRead = (
+  facts: ServeStateFacts,
+): (() => ReturnType<typeof suiteMapReadOfDocument>) => {
+  let memo: ReturnType<typeof readCommittedConfigDocument> | undefined;
+  const root = readRepositoryFacts({ cwd: facts.cwd, io: nodeRepositoryIo() }).root;
+  const selectedConfig = facts.environment[`${facts.brand.environmentPrefix}CONFIG`];
+  return () => {
+    if (memo === undefined) {
+      memo = readCommittedConfigDocument({
+        platform: runtimePlatform(),
+        homeDirectory: facts.homeDirectory,
+        environment: facts.environment,
+        ...(root === undefined ? {} : { gitRoot: root }),
+        ...(selectedConfig === undefined ? {} : { selectedConfig }),
+        enableSystemConfig: false,
+        enableUserConfig: false,
+        enableProjectLocalConfig: false,
+        configurationDirectoryName: facts.brand.configDirectoryName,
+        fs: nodeFileSystemFacts(),
+      });
+    }
+    return suiteMapReadOfDocument(memo);
+  };
+};
+
 const buildGateRuntime = (
   store: ReturnType<typeof createStateStore>,
-  cwd: string,
+  facts: ServeStateFacts,
 ): GateReportToolRuntime => ({
+  readSuiteMap: buildSuiteMapRead(facts),
   readLifecycle: (changeRef) => ({
-    document: pmNotesRead(cwd, changeRef),
+    document: pmNotesRead(facts.cwd, changeRef),
     registry: registryRead(store, changeRef),
   }),
   readRepository: () => {
-    const facts = readRepositoryFacts({ cwd, io: nodeRepositoryIo() });
-    const parsed = parseGitHubRemote(facts.originUrl);
+    const repositoryFacts = readRepositoryFacts({ cwd: facts.cwd, io: nodeRepositoryIo() });
+    const parsed = parseGitHubRemote(repositoryFacts.originUrl);
     return {
       binding: parsed.ok
         ? "resolved"
         : parsed.reason === "remote-unsupported"
           ? "remote-unsupported"
           : "address-unresolved",
-      head: facts.head,
+      head: repositoryFacts.head,
     };
   },
   readWorkflow: () => {
     const read = readCiWorkflowJobNames({
-      baseDirectory: cwd,
+      baseDirectory: facts.cwd,
       fs: nodeFileSystemFacts(),
     });
     return { outcome: read.outcome, names: read.names };
@@ -305,7 +339,7 @@ export const composeServeSurface = (facts: ServeStateFacts): ServeSurface => {
     brand: facts.brand,
     status: buildStatusRuntime(facts.cwd, state.store, state.readOwnerHold),
     verify: buildVerifyRuntime(state.store, facts.cwd),
-    gates: buildGateRuntime(state.store, facts.cwd),
+    gates: buildGateRuntime(state.store, facts),
   });
   return { ok: true, toolset, state };
 };

@@ -868,6 +868,7 @@ export {
   staticPrefix,
   stripInventedRefs,
   suiteBreadthCitationOf,
+  suiteMapReadOfDocument,
   summarizeCloseout,
   templateCommitMessage,
   templateSubject,
