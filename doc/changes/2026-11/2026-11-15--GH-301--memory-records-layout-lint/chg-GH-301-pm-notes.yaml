@@ -4,7 +4,7 @@ milestone: "M2: Ceremonies, measurement, and memory"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: null, completed: 2026-11-15T10:43:33.032Z }
-  specification: { started: null, completed: null }
+  specification: { started: null, completed: 2026-11-15T11:42:26.712Z }
   test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
@@ -223,6 +223,38 @@ notes:
       file:line probe, not an inference from which guard 'owns' which scope
       class."
     type: retro
+    date: "2026-11-15"
+  - text: "DOR REMEDIATION APPLIED (iteration 1 -> 2): spec v1.1 (commit 72d357d4)
+      closed findings 2,4,6,8,9,10,11,12,17,20 — AC-F13-1 scoped to record files
+      + own entry-point namespaces with the shared index row routed to the
+      scripted union resolution; absent `created` classified
+      memory.schema.keys-missing; the false 'outside every secret scan' premise
+      corrected with the privacy guard's real enumeration; determinism restated
+      as byte-identical for a fixed injected date with exactly one edge date
+      read; F-14 narrowed-guard intent; DM-3 two coverage universes U-1/U-2;
+      concept-key dispositions delegated to ADR-0011; published bounds 280/120;
+      basis made conditional; ADR-0011 cited as decision of record. Test plan
+      v1.1 (commit 3469dcb9) closed 3,5,7,15,19 — TC-MEMCONC-001 asserts the
+      complete conflicted set {.ai/memory/README.md} plus scripted union and a
+      take-ours non-vacuity control; TC-MEMDATE-001 split per classification;
+      secret fixtures assembled at runtime from non-matching fragments; §7 homes
+      corrected; phase-6 reference and real identity names. Plan 1.1 (commit
+      207ae73d) closed 1,13,14,16,18 — chose the SPLIT guard replacement (phase
+      2 narrows the filename scan to the sanctioned evaluator set, phase 4
+      completes it) over a module rename because AC-F14-1's sanction list names
+      the evaluator; EXECUTABLE_ALLOWANCES row required and pins the contract
+      export surface; phase 4 commit set now includes the TC-MEMDOCT-001 pinned
+      string; mutant pins MUT-CAP-31..41; privacy vocabulary structural type
+      declared in core contracts with edge injection."
+    type: info
+    date: "2026-11-15"
+  - text: "Decision record landed: ADR-0011-canonical-memory-record-schema.md
+      (Proposed, R2; owner ratifies/vetoes at the open-PR gate) plus its
+      00-index.md row. The index row was committed one commit before the record
+      file (scope-drift staging of an out-of-change-folder file); the plan's
+      phase-1 scope now declares both paths, the record is tracked and the row
+      resolves. No dangling link remains at HEAD."
+    type: info
     date: "2026-11-15"
   - text: "Open questions carried by the spec (all non-blocking, deferred): OQ-1
       distribute the invariant to bootstrapped projects (NG-7, would retire the
