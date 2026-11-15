@@ -9,7 +9,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-15T15:19:07.371Z }
   delivery_planning: { started: null, completed: 2026-11-15T16:30:23.901Z }
   dor_check: { started: null, completed: 2026-11-15T08:06:12.535Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-15T16:54:10.019Z }
   system_spec_update: { started: null, completed: 2026-11-15T12:11:25.019Z }
   review_fix: { started: null, completed: 2026-11-15T12:48:17.746Z }
   quality_gates: { started: null, completed: null }
@@ -629,10 +629,10 @@ notes:
       path, with the gate explicitly excluded. This removes both the
       `$!`/direct-child assumption and the `*lint-commit-range.sh*` substring
       matcher. Non-vacuity proof: with the gate's missing-record fail-closed
-      branch temporarily replaced by `continue` (not committed), the case
-      failed by name (`[FAIL] worker pool: killed worker is ERROR (F-2)`; the
-      gate rendered `VERDICT: PASS`); after restoring the gate the suite was
-      50/50. Verification: default, `TMPDIR=$PWD/tmp/tmpdir`, and
+      branch temporarily replaced by `continue` (not committed), the case failed
+      by name (`[FAIL] worker pool: killed worker is ERROR (F-2)`; the gate
+      rendered `VERDICT: PASS`); after restoring the gate the suite was 50/50.
+      Verification: default, `TMPDIR=$PWD/tmp/tmpdir`, and
       `PATH=$PWD/node_modules/.bin:$PATH` runs were each 50/50 with
       `HOST_COMMITLINT_AVAILABLE=true`; `run-bash-suites.sh` 27/27 suites;
       `shellcheck --severity=error` clean; `git diff --check` clean."
