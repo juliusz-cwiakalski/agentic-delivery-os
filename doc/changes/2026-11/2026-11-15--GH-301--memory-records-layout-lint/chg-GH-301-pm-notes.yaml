@@ -10,7 +10,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-15T12:46:42.772Z }
   delivery: { started: null, completed: 2026-11-15T15:00:12.962Z }
   system_spec_update: { started: null, completed: 2026-11-15T15:56:35.881Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-15T17:31:19.035Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -51,28 +51,28 @@ blockers: []
 notes:
   - text: >-
       Plan phase 8 follow-up (plan id 8): commit 04c6d4da places the F-4
-      value-segment seam on MemoryPrivacyRule exactly as obligation 8.4
-      declares (the check edge binds the guard's suppressionValueFor per rule;
-      the vocabulary carries no second seam), with no behaviour change. Final
-      full battery on HEAD: TMPDIR=<outside-worktree sibling dir> pnpm check =
-      8668 pass / 4 skip / 0 fail (exit 0); bun run
-      scripts/checks/memory-lint.ts = records=3 areas=8 errors=0 advisories=0;
-      doc-distribution, forbidden-literals, privacy-literals and git diff
-      --check clean. Phase 8 evidence is commits 73048dce and 04c6d4da.
+      value-segment seam on MemoryPrivacyRule exactly as obligation 8.4 declares
+      (the check edge binds the guard's suppressionValueFor per rule; the
+      vocabulary carries no second seam), with no behaviour change. Final full
+      battery on HEAD: TMPDIR=<outside-worktree sibling dir> pnpm check = 8668
+      pass / 4 skip / 0 fail (exit 0); bun run scripts/checks/memory-lint.ts =
+      records=3 areas=8 errors=0 advisories=0; doc-distribution,
+      forbidden-literals, privacy-literals and git diff --check clean. Phase 8
+      evidence is commits 73048dce and 04c6d4da.
     type: info
     date: "2026-11-15"
   - text: >-
       Delivery plan phase 8 (plan id 8) complete — review-iteration-1
-      remediation. Commit: 73048dce. F-1: supersedeRecord writes
-      superseded_by from write.recordId on the superseded target, idempotent,
-      proven by a writer -> invariant round trip with zero findings in
+      remediation. Commit: 73048dce. F-1: supersedeRecord writes superseded_by
+      from write.recordId on the superseded target, idempotent, proven by a
+      writer -> invariant round trip with zero findings in
       memory-promotion-schema and closeout-capsule-supersession. F-2: deriveHint
       never slices; a source over the bound renders a class/scope read-when
       phrase. F-3: validateCandidate refuses a statement over
       STATEMENT_MAX_CHARS through closeout.capsule-invalid with zero writes; at
       the bound it promotes and lints clean. F-4: suppression markers are
-      evaluated against the guard's own injected suppressionValueFor segment;
-      a key-half marker no longer suppresses. F-5: links resolving outside
+      evaluated against the guard's own injected suppressionValueFor segment; a
+      key-half marker no longer suppresses. F-5: links resolving outside
       .ai/memory or absolute repo paths are out of scope. F-6: measureLines does
       not count a trailing newline as a line; budget fixtures are
       newline-terminated. F-7: entry-line-date fires only on date-like tokens.
@@ -83,21 +83,20 @@ notes:
       MEMORY_RECORD_AREAS. Evidence: targeted memory-scope run 18 files / 194
       pass / 0 fail; capsule-mutants 2 pass (44 mutants, MUT-CAP-41 preserved);
       bun run scripts/checks/memory-lint.ts = records=3 areas=8 errors=0
-      advisories=0; TMPDIR=<outside-worktree sibling dir> pnpm check = 8668
-      pass / 4 skip / 0 fail (exit 0; phase-7 baseline 8653, so +15 new
-      assertions); doc-distribution 93 docs no drift; forbidden-literals,
-      privacy-literals and git diff --check clean. Test plan v1.5 carries the
-      added cells, the AC-matrix strengthening note, §9 v1.5 and the populated
-      §10 execution record. Deviations: AC-NFR8-1's literal repository-local
-      TMPDIR precondition is not demonstrable in this nested-git workspace ($PWD
-      is inside the jaiship work tree, so fifteen pre-existing project/group
-      suites need a directory outside every work tree), so a sibling directory
-      on the same filesystem outside every work tree was used (D-5/F-11); the
-      commit subject is the primitive's template (no inference transport
-      configured) rather than the plan-declared fix subject (review D-4); no
-      phase complete was run (PM owns the lifecycle boundary); F-11 evidence
-      caveats and F-12's kind-to-home-area enforcement remain documented
-      residuals.
+      advisories=0; TMPDIR=<outside-worktree sibling dir> pnpm check = 8668 pass
+      / 4 skip / 0 fail (exit 0; phase-7 baseline 8653, so +15 new assertions);
+      doc-distribution 93 docs no drift; forbidden-literals, privacy-literals
+      and git diff --check clean. Test plan v1.5 carries the added cells, the
+      AC-matrix strengthening note, §9 v1.5 and the populated §10 execution
+      record. Deviations: AC-NFR8-1's literal repository-local TMPDIR
+      precondition is not demonstrable in this nested-git workspace ($PWD is
+      inside the jaiship work tree, so fifteen pre-existing project/group suites
+      need a directory outside every work tree), so a sibling directory on the
+      same filesystem outside every work tree was used (D-5/F-11); the commit
+      subject is the primitive's template (no inference transport configured)
+      rather than the plan-declared fix subject (review D-4); no phase complete
+      was run (PM owns the lifecycle boundary); F-11 evidence caveats and F-12's
+      kind-to-home-area enforcement remain documented residuals.
     type: info
     date: "2026-11-15"
   - text: >-
@@ -584,48 +583,79 @@ notes:
     date: "2026-11-15"
   - text: "REVIEW (review_fix, iteration 1) = FAIL. Record:
       code-review/review-iter-1.yaml, commit 1959528e. 12 findings: 0 critical,
-      1 high, 6 medium, 3 low, 2 info. Plan compliance PASS — all 7 declared plan
-      phases complete with per-phase evidence (d7fbc56b, 2ea319dd, 8dc40fc3,
-      8d39e4f8, edf44fc6, ccf14fb5, e4bb8541); every disclosed deviation judged
-      COMPLIANT (port inventory fixture, milestone-gate pin, changeset, template
-      commit subjects); outside-repo TMPDIR ACCEPTED_WITH_CAVEAT. ACs: 26 PASS,
-      AC-F3-1 FAIL, AC-F4-1/AC-F10-1/AC-NFR8-1 PARTIAL. Blocking set: F-1 (high)
+      1 high, 6 medium, 3 low, 2 info. Plan compliance PASS — all 7 declared
+      plan phases complete with per-phase evidence (d7fbc56b, 2ea319dd,
+      8dc40fc3, 8d39e4f8, edf44fc6, ccf14fb5, e4bb8541); every disclosed
+      deviation judged COMPLIANT (port inventory fixture, milestone-gate pin,
+      changeset, template commit subjects); outside-repo TMPDIR
+      ACCEPTED_WITH_CAVEAT. ACs: 26 PASS, AC-F3-1 FAIL,
+      AC-F4-1/AC-F10-1/AC-NFR8-1 PARTIAL. Blocking set: F-1 (high)
       supersedeRecord rewrites status but never writes superseded_by, so a
-      supported closeout write path produces two schema/reference errors and a red
-      build; F-2 hint produced by truncating the statement (ADR-0011 D6 forbids
-      it); F-3 validateCandidate does not bound statement at 280, so a
+      supported closeout write path produces two schema/reference errors and a
+      red build; F-2 hint produced by truncating the statement (ADR-0011 D6
+      forbids it); F-3 validateCandidate does not bound statement at 280, so a
       candidate-valid record renders a record the lint rejects — breaks AC-F3-1;
       F-4 secret suppression evaluated on the whole matched span, so a marker in
       the key suppresses a value the whole-tree guard flags (false negative);
       F-5 links leaving .ai/memory are rewritten under the root and falsely
-      reported link-dangling; F-6 line counting adds a phantom trailing element so
-      a newline-terminated file at exactly the cap measures cap+1; F-10 the test
-      plan execution log is entirely Not run and no suite exercises supersession
-      or an over-bound statement. Lows: entry-line-date fires on any digit-bearing
-      bullet; empty/non-string statement unenforced; printed order groups errors
-      before advisories. Infos: NFR evidence gaps and duplicated area constants."
+      reported link-dangling; F-6 line counting adds a phantom trailing element
+      so a newline-terminated file at exactly the cap measures cap+1; F-10 the
+      test plan execution log is entirely Not run and no suite exercises
+      supersession or an over-bound statement. Lows: entry-line-date fires on
+      any digit-bearing bullet; empty/non-string statement unenforced; printed
+      order groups errors before advisories. Infos: NFR evidence gaps and
+      duplicated area constants."
     type: risk
     date: "2026-11-15"
   - text: "REMEDIATION DECISION (review iteration 1): F-1 to F-10 are in scope and
       are fixed in a new remediation plan phase appended to chg-GH-301-plan.yaml
       (the plan is the work record; no separate ticket). F-11/F-12 are
       informational and stay as documented residual except where a fix is free
-      (duplicated constants risk drift, so it is folded into the remediation if it
-      does not widen scope). The reviewer's partial acceptance of my earlier
+      (duplicated constants risk drift, so it is folded into the remediation if
+      it does not widen scope). The reviewer's partial acceptance of my earlier
       reviewer-note is honoured: the `authoritative`-case limit stays documented
       and out of ACs, while the ordinary candidate supersession is fixed."
     type: info
     date: "2026-11-15"
   - text: "RETRO: the review caught a class of defect the DoR gate could not — a
       supported write path (closeout supersession) now violates an invariant the
-      same change introduced, and no test ran the invariant after a supersession.
-      Root cause: the test plan enumerated lint outcomes per area but never
-      exercised the writer + lint round-trip for supersession, and the boundary
-      fixtures hid the line-count off-by-one by not using a newline-terminated
-      file at exactly the cap. Lesson for future changes: when a change introduces
-      a validator, at least one test must drive each existing writer through it and
-      re-run it (round-trip), not just feed the validator synthetic fixtures."
+      same change introduced, and no test ran the invariant after a
+      supersession. Root cause: the test plan enumerated lint outcomes per area
+      but never exercised the writer + lint round-trip for supersession, and the
+      boundary fixtures hid the line-count off-by-one by not using a
+      newline-terminated file at exactly the cap. Lesson for future changes:
+      when a change introduces a validator, at least one test must drive each
+      existing writer through it and re-run it (round-trip), not just feed the
+      validator synthetic fixtures."
     type: retro
+    date: "2026-11-15"
+  - text: "REVIEW (review_fix, iteration 2) = PASS. Record:
+      code-review/review-iter-2.yaml, commit 49f9c2e1. 0 critical / 0 high / 0
+      medium / 0 low / 2 info (both owner-accepted residuals re-listed and
+      suppressed: F-11 performance-cell vocabulary + the literal repo-local
+      TMPDIR partial; F-12's free part closed by importing MEMORY_RECORD_AREAS,
+      the kind-to-home-area rule still not gated). Every iteration-1 finding was
+      re-verified non-vacuously: each fix was reverted and the new test failed
+      (F-1 3 failures, F-2 2, F-3 refusal test, F-4 key-half test, F-5 control,
+      F-6 boundary matrix, F-9 order test). Plan compliance: 8/8 declared phases
+      complete with per-phase evidence (…, phase 8: 73048dce + 04c6d4da, 8668
+      pass / 4 skip / 0 fail). ACs: all green except AC-NFR8-1 PARTIAL, accepted
+      for the nested-worktree TMPDIR environment caveat. Gates run by the
+      reviewer: memory battery 194 pass, promotion/supersession 20 pass, capsule
+      mutants 44, privacy-literals 39, live lint records=3 errors=0
+      advisories=0."
+    type: info
+    date: "2026-11-15"
+  - text: "POST-PHASE DOC RE-SYNC: after the remediation, @doc-syncer verified and
+      corrected feature-memory-lint.md (F-1/F-4/F-6/F-8/F-9 behaviour now
+      stated), feature-capsule.md (280-char statement bound, non-truncating
+      hint, supersession writes superseded_by and leaves non-candidate targets
+      untouched) and feature-closeout.md (the only frontmatter rewrite writes
+      both the status and the superseded_by link). Commit 47918467; residual
+      gaps NONE. The two corrected spec files were outside phase 8's declared
+      file list and the primitive disclosed the scope drift — judged COMPLIANT
+      by the reviewer."
+    type: info
     date: "2026-11-15"
   - text: "Open questions carried by the spec (all non-blocking, deferred): OQ-1
       distribute the invariant to bootstrapped projects (NG-7, would retire the
