@@ -15,8 +15,18 @@
  * checks (TC-MEMSCAF-004 / TC-MEMWIRE-004).
  */
 import { describe, expect, test } from "bun:test";
-import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import {
+  copyFileSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join } from "node:path";
 
 const ROOT = process.cwd();
 const PROMPT = ".opencode/agent/bootstrapper.md";
@@ -27,6 +37,62 @@ const DECISIONS_INDEX = "doc/decisions/00-index.md";
 const SPEC =
   "doc/changes/2026-11/2026-11-14--GH-302--memory-conventions-bootstrap-templates/chg-GH-302-spec.md";
 const DOCTOR_COMMAND = "packages/cli/src/commands/doctor.ts";
+
+/** The three sanctioned memory modules (AC-F14-1): check, evaluator, schema. */
+const SANCTIONED_MEMORY_MODULES = [
+  "packages/core/src/contracts/memory-record.ts",
+  "packages/core/src/domain/memory-lint.ts",
+  "scripts/checks/memory-lint.ts",
+] as const;
+const MEMORY_TOOLING_PATTERN = /memory[-_](doctor|lint)|memoryDoctor|memoryLint/i;
+const MEMORY_WALK_SKIP = new Set(["node_modules", "dist", ".tests"]);
+
+const walkMemoryTooling = (root: string, directory: string): string[] => {
+  const out: string[] = [];
+  let entries: ReturnType<typeof readdirSync>;
+  try {
+    entries = readdirSync(join(root, directory), { withFileTypes: true });
+  } catch {
+    return out;
+  }
+  for (const entry of entries) {
+    const relative = `${directory}/${entry.name}`;
+    if (entry.isDirectory()) {
+      if (!MEMORY_WALK_SKIP.has(entry.name)) out.push(...walkMemoryTooling(root, relative));
+    } else {
+      out.push(relative);
+    }
+  }
+  return out;
+};
+
+/** The raw file-name matches over the three scanned trees. */
+const memoryNameMatches = (root: string): string[] =>
+  [
+    ...walkMemoryTooling(root, "scripts"),
+    ...walkMemoryTooling(root, "tools"),
+    ...walkMemoryTooling(root, "packages"),
+  ]
+    .filter((file) => MEMORY_TOOLING_PATTERN.test(file))
+    .sort();
+
+/** The permitted-match set: raw matches plus the declared contracts module. */
+const memoryToolingMatches = (root: string): string[] =>
+  [...memoryNameMatches(root), "packages/core/src/contracts/memory-record.ts"].sort();
+
+const jobBlock = (text: string, jobId: string): string => {
+  const lines = text.split("\n");
+  const start = lines.findIndex((line) => line === `  ${jobId}:`);
+  if (start === -1) return "";
+  let end = lines.length;
+  for (let index = start + 1; index < lines.length; index += 1) {
+    if (/^ {2}[a-z0-9-]+:\s*$/.test(lines[index] as string)) {
+      end = index;
+      break;
+    }
+  }
+  return lines.slice(start, end).join("\n");
+};
 
 const TEMPLATES = [
   "memory-index-template.md",
@@ -249,40 +315,78 @@ describe("TC-MEMDOCT manual doctor", () => {
     }
     expect(doctor).toContain("150 lines");
     expect(doctor).toContain("200");
-    expect(doctor).toContain("manual until memory lint lands in the quality gates (GH-301)");
+    expect(doctor).toContain(
+      "A project whose gates run the memory invariant gets these areas checked mechanically",
+    );
     expect(doctor).toContain("per retro");
     expect(doctor).toContain("periodic cadence");
     expect(doctor).toContain("performs nothing");
   });
 
-  test("TC-MEMDOCT-002 only the sanctioned memory module exists under the scanned trees", () => {
-    // GH-301 owns the deliberate update of this negative guard: when memory
-    // lint lands legitimately in the gates, replace this scan consciously.
-    const self = readFileSync(import.meta.path, "utf8");
-    expect(self).toContain("GH-301 owns the deliberate update of this negative guard");
-    const pattern = /memory[-_](doctor|lint)|memoryDoctor|memoryLint/i;
-    const skipDirs = new Set(["node_modules", "dist", ".tests"]);
-    const walk = (dir: string): string[] => {
-      const out: string[] = [];
-      for (const entry of readdirSync(join(ROOT, dir), { withFileTypes: true })) {
-        const relative = `${dir}/${entry.name}`;
-        if (entry.isDirectory()) {
-          if (!skipDirs.has(entry.name)) out.push(...walk(relative));
-        } else {
-          out.push(relative);
-        }
-      }
-      return out;
-    };
-    const scanned = [...walk("scripts"), ...walk("tools"), ...walk("packages")];
-    expect(scanned.length).toBeGreaterThan(0);
-    const sanctioned = new Set(["packages/core/src/domain/memory-lint.ts"]);
-    const offenders = scanned.filter((file) => pattern.test(file) && !sanctioned.has(file));
-    expect(offenders).toEqual([]);
+  test("TC-MEMDOCT-002 the memory tooling guard is the sanctioned three-part replacement", () => {
+    // The former blanket absence guard is replaced, not deleted (DEC-12,
+    // AC-F14-1): presence, one narrowed sanction scan, and the absences.
+    expect(existsSync(join(ROOT, "scripts/checks/memory-lint.ts"))).toBe(true);
+    const edge = read("scripts/checks/memory-lint.ts");
+    expect(edge).toContain("evaluateMemory");
+    expect(edge).toContain("import.meta.main");
     const manifest = JSON.parse(read("package.json")) as { scripts?: Record<string, string> };
-    const scriptValues = Object.values(manifest.scripts ?? {}).join("\n");
-    expect(pattern.test(scriptValues)).toBe(false);
-    // The existing doctor command surface is unchanged in memory scope.
+    const resolved = /^bun run (\S+)$/.exec(manifest.scripts?.["check:memory"] ?? "")?.[1];
+    expect(resolved).toBe("scripts/checks/memory-lint.ts");
+    expect(manifest.scripts?.check ?? "").toContain("pnpm check:memory");
+    const ci = read(".github/workflows/ci.yml");
+    expect(jobBlock(ci, "ts-invariants")).toContain(`bun run ${resolved as string}`);
+
+    const raw = memoryNameMatches(ROOT);
+    expect(raw).toEqual([
+      "packages/core/src/domain/memory-lint.ts",
+      "scripts/checks/memory-lint.ts",
+    ]);
+    expect(raw.some((file) => file.includes("/dist/"))).toBe(false);
+    expect(memoryToolingMatches(ROOT)).toEqual([...SANCTIONED_MEMORY_MODULES].sort());
+    const permitted = memoryToolingMatches(ROOT);
+    expect(permitted).toContain("packages/core/src/contracts/memory-record.ts");
+    expect(permitted.filter((file) => !MEMORY_TOOLING_PATTERN.test(file))).toEqual([
+      "packages/core/src/contracts/memory-record.ts",
+    ]);
+
+    const tempRoot = mkdtempSync(join(tmpdir(), "gh301-guard-"));
+    try {
+      for (const module of SANCTIONED_MEMORY_MODULES) {
+        mkdirSync(dirname(join(tempRoot, module)), { recursive: true });
+        copyFileSync(join(ROOT, module), join(tempRoot, module));
+      }
+      mkdirSync(join(tempRoot, "packages/core/dist/domain"), { recursive: true });
+      writeFileSync(join(tempRoot, "packages/core/dist/domain/memory-lint.js"), "export {};\n");
+      expect(memoryNameMatches(tempRoot)).toEqual([
+        "packages/core/src/domain/memory-lint.ts",
+        "scripts/checks/memory-lint.ts",
+      ]);
+      expect(memoryToolingMatches(tempRoot)).toEqual([...SANCTIONED_MEMORY_MODULES].sort());
+      writeFileSync(join(tempRoot, "packages/core/src/domain/memory-doctor.ts"), "export {};\n");
+      expect(memoryNameMatches(tempRoot)).toContain("packages/core/src/domain/memory-doctor.ts");
+      expect(memoryToolingMatches(tempRoot)).not.toEqual([...SANCTIONED_MEMORY_MODULES].sort());
+      rmSync(join(tempRoot, "packages/core/src/domain/memory-doctor.ts"));
+      writeFileSync(join(tempRoot, "scripts/checks/memory-lint-extra.ts"), "export {};\n");
+      expect(memoryNameMatches(tempRoot)).toContain("scripts/checks/memory-lint-extra.ts");
+      expect(memoryToolingMatches(tempRoot)).not.toEqual([...SANCTIONED_MEMORY_MODULES].sort());
+    } finally {
+      rmSync(tempRoot, { recursive: true, force: true });
+    }
+
+    const scripts = manifest.scripts ?? {};
+    expect(scripts["check:memory"]).toBe("bun run scripts/checks/memory-lint.ts");
+    for (const [name, value] of Object.entries(scripts)) {
+      if (name === "check:memory") continue;
+      expect({ name, namesComponent: value.includes("memory-lint") }).toEqual({
+        name,
+        namesComponent: false,
+      });
+    }
+    expect(manifest.scripts?.check ?? "").toContain("pnpm check:memory");
+    const commands = readdirSync(join(ROOT, "packages/cli/src/commands"));
+    expect(commands.filter((name) => /memory/i.test(name))).toEqual([]);
+    expect(read("packages/cli/src/commands/index.ts")).not.toContain("createMemory");
     expect(read(DOCTOR_COMMAND).length).toBeGreaterThan(0);
     expect(/memory/i.test(read(DOCTOR_COMMAND))).toBe(false);
   });

@@ -67,6 +67,13 @@ export {
   readMemoryFacts,
 } from "./memory-promotion.js";
 export {
+  type MemoryScanDirectoryEntry,
+  type MemoryScanFileSystem,
+  type MemoryScanResult,
+  nodeMemoryScanFileSystem,
+  scanMemoryTree,
+} from "./memory-scan.js";
+export {
   nodeOwnerHoldMarkerFileSystem,
   type OwnerHoldMarkerFileSystem,
   type OwnerHoldMarkerReadInput,

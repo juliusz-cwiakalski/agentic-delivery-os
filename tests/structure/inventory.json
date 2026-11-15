@@ -241,6 +241,7 @@
     "src/file/host-index-store.ts",
     "src/file/index.ts",
     "src/file/memory-promotion.ts",
+    "src/file/memory-scan.ts",
     "src/file/owner-hold-marker.ts",
     "src/file/plan-artifact.ts",
     "src/file/pm-context.ts",

@@ -2673,6 +2673,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "adapters/src/file/plan-artifact.ts": ["readPlanArtifact"],
   "adapters/src/file/pm-context.ts": ["readLocalPmContext"],
+  "adapters/src/file/memory-scan.ts": ["nodeMemoryScanFileSystem", "scanMemoryTree"],
   "adapters/src/legacy/index.ts": [
     "createLegacyCompat",
     "resolveProcessLegacy",

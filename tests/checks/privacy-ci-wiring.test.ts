@@ -25,7 +25,7 @@ import {
 const CI_PATH = ".github/workflows/ci.yml";
 const GUARD_COMMAND = "bun run scripts/checks/privacy-literals.ts";
 const AGGREGATE =
-  "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries && bun run scripts/checks/prompt-conformance.ts && bun run scripts/checks/help-guide-coverage.ts && bun run scripts/checks/exports-parity.ts";
+  "pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm check:boundaries && pnpm check:memory && bun run scripts/checks/prompt-conformance.ts && bun run scripts/checks/help-guide-coverage.ts && bun run scripts/checks/exports-parity.ts";
 const NEW_SUITES = [
   "tests/checks/privacy-literals.test.ts",
   "tests/checks/privacy-registry.test.ts",

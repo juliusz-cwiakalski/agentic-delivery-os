@@ -3,6 +3,7 @@
  * conformance (TC-MEMSCHEMA-001, TC-MEMPROV-002, TC-MEMSCHEMA-003).
  */
 import { describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse } from "yaml";
@@ -21,6 +22,9 @@ import {
   MEMORY_RECORD_STATUSES,
   MEMORY_RECORD_TRUST,
 } from "../../packages/core/src/contracts/index";
+import { MEMORY_RECORD_HOME_BY_KIND } from "../../packages/core/src/contracts/index";
+import { frontmatterOf, relativeToMemory } from "../fixtures/memory/tree";
+import { scanMemoryTree } from "../../packages/adapters/src/file/memory-scan";
 
 const ROOT = process.cwd();
 const read = (relative: string): string => readFileSync(join(ROOT, relative), "utf8");
@@ -167,5 +171,57 @@ describe("TC-MEMPROV-002 migrated record backfill fidelity", () => {
       .filter((name) => name.endsWith(".md"))
       .sort();
     expect(lessons).toEqual(MIGRATED.map((record) => record.path.split("/").at(-1) as string));
+  });
+});
+
+describe("TC-MEMSCHEMA-003 whole-tree conformance at the delivered HEAD", () => {
+  test("the check exits zero with no schema findings and a summary", () => {
+    const run = spawnSync("bun", ["run", "scripts/checks/memory-lint.ts"], {
+      cwd: ROOT,
+      encoding: "utf8",
+      timeout: 120_000,
+    });
+    expect(run.status).toBe(0);
+    expect(run.stdout).not.toContain("memory.schema.");
+    expect(run.stdout).toContain("memory-lint: records=");
+  });
+
+  test("every record renders the required spine and its kind matches its area", () => {
+    const files = scanMemoryTree(ROOT).files;
+    const records = files.filter((file) => {
+      const relative = relativeToMemory(file.path);
+      return (
+        /^(?:lessons|tacit|preferences)\/[^/]+\.md$/.test(relative) ||
+        /^guilds\/[^/]+\/[^/]+\.md$/.test(relative)
+      );
+    });
+    expect(records.length).toBeGreaterThan(0);
+    const rendered = new Set<string>();
+    for (const file of records) {
+      const relative = relativeToMemory(file.path);
+      const fields =
+        file.frontmatter.state === "parsed" ? file.frontmatter.value : frontmatterOf(file.text);
+      const value =
+        typeof fields === "object" && fields !== null && "state" in fields ? {} : fields;
+      for (const key of MEMORY_RECORD_REQUIRED_KEYS) {
+        expect({ path: file.path, key, present: Object.hasOwn(value, key) }).toEqual({
+          path: file.path,
+          key,
+          present: true,
+        });
+        rendered.add(key);
+      }
+      const kind = String((value as Record<string, unknown>).kind);
+      const area = relative.split("/")[0];
+      if (relative.startsWith("guilds/")) {
+        expect((value as Record<string, unknown>).guild).toBe(relative.split("/")[1]);
+      } else {
+        expect(MEMORY_RECORD_HOME_BY_KIND[kind as keyof typeof MEMORY_RECORD_HOME_BY_KIND]).toBe(
+          area,
+        );
+      }
+    }
+    const drift = MEMORY_RECORD_REQUIRED_KEYS.filter((key) => !rendered.has(key));
+    expect(drift).toEqual([]);
   });
 });

@@ -3,14 +3,22 @@
  * (TC-MEMLAY-004, TC-MEMGATE-001, TC-MEMGATE-002, TC-MEMNFR-003).
  */
 import { describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
 import type {
   MemoryEvaluationResult,
   MemoryScannedFile,
 } from "../../packages/core/src/contracts/index";
 import { fileListingBody } from "../fixtures/memory/bodies";
+import { runMemoryLint } from "../../scripts/checks/memory-lint";
 import {
   emptyTree,
+  indexReadme,
+  indexRow,
+  memoryFile,
   populatedTree,
   recordText,
   treeWith,
@@ -185,5 +193,130 @@ describe("TC-MEMNFR-003 print ceiling and truncation line", () => {
     const first = evaluate(truncatingTree({ errors: 150, advisories: 0 }));
     const second = evaluate(truncatingTree({ errors: 150, advisories: 0 }));
     expect(first.lines).toEqual(second.lines);
+  });
+});
+
+// --------------------------------------------------------------------------
+// Phase 4 live-tree, boundary, and single-date-read blocks (TC-MEMGATE-003,
+// TC-MEMNFR-001).
+// --------------------------------------------------------------------------
+
+const REPO = process.cwd();
+
+describe("TC-MEMGATE-003 read-only, clock-free, offline evaluation", () => {
+  test("the live lint run leaves the working tree byte-identical", () => {
+    const before = spawnSync("git", ["status", "--porcelain"], {
+      cwd: REPO,
+      encoding: "utf8",
+    }).stdout;
+    const run = spawnSync("bun", ["run", "scripts/checks/memory-lint.ts"], {
+      cwd: REPO,
+      encoding: "utf8",
+      timeout: 120_000,
+    });
+    const after = spawnSync("git", ["status", "--porcelain"], {
+      cwd: REPO,
+      encoding: "utf8",
+    }).stdout;
+    expect(run.status).toBe(0);
+    expect(run.stdout).toContain("memory-lint: records=");
+    expect(after).toBe(before);
+  });
+
+  test("the read/parse/date/print boundary is stated in the sources", () => {
+    const domain = readFileSync(join(REPO, "packages/core/src/domain/memory-lint.ts"), "utf8");
+    const scanner = readFileSync(join(REPO, "packages/adapters/src/file/memory-scan.ts"), "utf8");
+    const edge = readFileSync(join(REPO, "scripts/checks/memory-lint.ts"), "utf8");
+    expect(domain).not.toContain("node:fs");
+    expect(domain).not.toContain("node:child_process");
+    expect(domain).not.toContain("node:net");
+    expect(domain).not.toContain("fetch(");
+    expect(domain).not.toContain('from "yaml"');
+    expect(domain).not.toContain("Date.now");
+    expect(domain).not.toContain("new Date()");
+    expect(domain).not.toContain("packages/adapters");
+    expect(scanner).toContain("readFileSync");
+    expect(scanner).toContain("readdirSync");
+    expect(scanner).toContain('from "yaml"');
+    expect(edge).not.toContain("readFileSync");
+    expect(edge).not.toContain("readdirSync");
+    expect(edge).not.toContain('from "yaml"');
+    expect((edge.match(/new Date\(\)/g) ?? []).length).toBe(1);
+    expect(edge).toContain("scanMemoryTree");
+    expect(edge).toContain("import.meta.main");
+  });
+
+  test("the boundary configuration guards core against adapter imports", () => {
+    const config = readFileSync(join(REPO, ".dependency-cruiser.cjs"), "utf8");
+    expect(config).toContain("matrix-core-importer");
+    expect(readFileSync(join(REPO, "packages/core/src/domain/memory-lint.ts"), "utf8")).toContain(
+      'from "#contracts"',
+    );
+  });
+});
+
+describe("TC-MEMNFR-001 byte-identical output and exactly one date read", () => {
+  test("the live tree produces byte-identical output on two runs", () => {
+    const first = runMemoryLint({ root: REPO });
+    const second = runMemoryLint({ root: REPO });
+    expect(first.lines).toEqual(second.lines);
+    expect(first.exitCode).toBe(second.exitCode);
+  });
+
+  test("the edge performs exactly one injected date read per run", () => {
+    const root = mkdtempSync(join(tmpdir(), "gh301-date-"));
+    try {
+      mkdirSync(join(root, ".ai/memory/lessons"), { recursive: true });
+      writeFileSync(
+        join(root, ".ai/memory/README.md"),
+        indexReadme([indexRow("lessons/lesson-2026-001-baseline.md", "read it")]),
+      );
+      writeFileSync(
+        join(root, ".ai/memory/lessons/lesson-2026-001-baseline.md"),
+        recordText(validLessonFields({ created: "2021-01-01" })),
+      );
+      let reads = 0;
+      const result = runMemoryLint({
+        root,
+        readToday: () => {
+          reads += 1;
+          return "2020-01-01";
+        },
+      });
+      expect(reads).toBe(1);
+      expect(
+        result.findings.some((finding) => finding.ruleId === "memory.dating.created-future"),
+      ).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("a later injected date changes only date-derived findings", () => {
+    const root = mkdtempSync(join(tmpdir(), "gh301-date-later-"));
+    try {
+      mkdirSync(join(root, ".ai/memory/lessons"), { recursive: true });
+      writeFileSync(
+        join(root, ".ai/memory/README.md"),
+        indexReadme([indexRow("lessons/lesson-2026-001-baseline.md", "read it")]),
+      );
+      writeFileSync(
+        join(root, ".ai/memory/lessons/lesson-2026-001-baseline.md"),
+        recordText(validLessonFields({ created: "2026-11-16" })),
+      );
+      const early = runMemoryLint({ root, readToday: () => "2026-11-15" });
+      const later = runMemoryLint({ root, readToday: () => "2026-11-17" });
+      expect(
+        early.findings.some((finding) => finding.ruleId === "memory.dating.created-future"),
+      ).toBe(true);
+      expect(
+        later.findings.some((finding) => finding.ruleId === "memory.dating.created-future"),
+      ).toBe(false);
+      const nonDate = (result: typeof early) =>
+        result.findings.filter((finding) => finding.area !== "dating" && finding.area !== "budget");
+      expect(nonDate(early)).toEqual(nonDate(later));
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
