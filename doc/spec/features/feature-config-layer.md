@@ -266,7 +266,7 @@ The production catalog declares a typed `verify` branch with one key:
 
 | Key | Shape | Default | Semantics |
 |---|---|---|---|
-| `verify.suite-map` | `{ schemaVersion, jobs[], local }` | absent | The declared suite-to-job map (schema `delivery.verify.suite-map.v1`). `jobs[]` entries carry exactly `job` (a single-line printable expected-check-run name, 1..120 characters, no control character, no leading or trailing whitespace, exact match) and `suites` (1..32 suite identifiers); `local` is 1..32 suite identifiers. A suite identifier matches `^[a-z][a-z0-9-]*$` at 1..64 characters and is unique within one list; at most 64 `jobs[]` entries are allowed. Absent means undeclared and no default map is invented. Every defect is refused `config.value.invalid` before any read. |
+| `verify.suite-map` | `{ schemaVersion, jobs[], local }` | absent | The declared suite-to-job map (schema `delivery.verify.suite-map.v1`). `jobs[]` entries carry exactly `job` (a single-line printable expected-check-run name, 1..120 characters: no C0 control, no DEL or C1 control, no U+2028 or U+2029 line or paragraph separator, no Unicode `Cf` format control, and no leading or trailing whitespace, matched exactly; each `job` value is unique) and `suites` (1..32 suite identifiers); `local` is 1..32 suite identifiers. A suite identifier matches `^[a-z][a-z0-9-]*$` at 1..64 characters and is unique within one list; at most 64 `jobs[]` entries are allowed. Absent means undeclared and no default map is invented. Every defect is refused `config.value.invalid` before any read. |
 
 The branch constrains whole-document validity only for consumers that resolve the
 merged tree; it is not a validator for this node, because it cannot express the

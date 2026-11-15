@@ -10,7 +10,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-15T15:24:51.343Z }
   dor_check: { started: null, completed: 2026-11-15T13:41:36.071Z }
   delivery: { started: null, completed: null }
-  system_spec_update: { started: null, completed: 2026-11-15T14:52:03.018Z }
+  system_spec_update: { started: null, completed: 2026-11-15T15:51:17.762Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -378,5 +378,38 @@ notes:
       F-4; then `@coder` executes phase 8; then re-run `@doc-syncer` (the
       job-class fix changes documented behaviour) and `@reviewer` for iteration
       2."
+    type: info
+    date: "2026-11-15"
+  - text: "REVIEW-ITERATION-1 REMEDIATION: plan revision 1.5 added phase 8; @coder
+      delivered it as commit 380c5b1a (`fix(GH-300): remediate review iteration
+      one findings`, 13 files). F-1..F-9 closed: duplicate `clone` removed (lint
+      exit 0); job class rejects C0/DEL/C1/U+2028/U+2029/Cf in core and CLI with
+      structural and rendered regressions; the three suites are hermetic and
+      pass alone on a clean tree (33/9/5); the eight drift files are declared in
+      phase 8 scope; per-phase evidence recorded below;
+      `createProductionComposer` is driven behaviourally with the P-9 residual
+      declared; parity/corpus/ determinism tests de-vacuumed; valid
+      selected-config path covered; `explicitDetail` restores the delivered
+      `holder` predicate. Phase-8 gates: lint 0, format:check 0, typecheck 0,
+      targeted 416 pass / 0 fail over 15 files, error-table sync 136/136,
+      exports parity 5 publishables, plan validate green, range lint PASS (30
+      commits)."
+    type: info
+    date: "2026-11-15"
+  - text: "PLAN PHASE EVIDENCE (per plan phase; re-run at the phase-8 tip by @coder;
+      suites later extended by phase 8 include those additions): phase 1 commit
+      1ebd1684 = 23 pass / 4 files (fixture-sanitization, no-live-calls,
+      delivered verify-gates golden, corpus); phase 2 commit 21db3202 = 391 pass
+      / 15 files + error-table sync 136/136 + ambient-globals OK + typecheck
+      green; phase 3 commit 36d09e34 = 113 pass / 4 files + ambient-globals OK +
+      dependency-cruiser clean; phase 4 commit a2b7a1c3 = 202 pass / 14 files +
+      depcruise clean + ambient-globals OK + typecheck green; phase 5 commit
+      2b585e5a = 92 pass / 9 files + reference document tracked + exports parity
+      + ambient-globals OK; phase 6 commit f7a27fe3 = 188 pass / 11 files +
+      error-table sync OK + ambient-globals OK; phase 7 commit 7fd7f97d =
+      doc-distribution guard OK (93 docs, no drift) + changesets-group OK +
+      help-guide-coverage OK + plan validate valid; phase 8 commit 380c5b1a =
+      416 pass / 0 fail over 15 files, each affected suite also green alone.
+      Full `pnpm check` is phase 9 and is not claimed here."
     type: info
     date: "2026-11-15"
