@@ -12,7 +12,7 @@ phases:
   delivery: { started: null, completed: 2026-11-15T15:51:39.054Z }
   system_spec_update: { started: null, completed: 2026-11-15T15:51:17.762Z }
   review_fix: { started: null, completed: 2026-11-15T16:13:16.810Z }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: null, completed: 2026-11-15T16:50:45.993Z }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
@@ -431,4 +431,26 @@ notes:
       predicate is triplicated; (F-15) `.git/info/exclude` still lists
       `.delivery-os/`."
     type: resolved
+    date: "2026-11-15"
+  - text: "QUALITY GATE (lifecycle phase 9) verdicts. Full battery: `pnpm check`
+      exit 0 with `TMPDIR` set to a measured temp root OUTSIDE every git work
+      tree (`/home/juliusz/.cache/ados-runner-tmp`): 8753 pass / 4 skip / 0 fail
+      across 1097 files (1024s); lint 2564 files 0 errors (83 warnings);
+      format:check 2422 files no drift; typecheck 6 packages + tests/types;
+      boundaries 406 modules / 1237 deps no violations; ambient-globals 192
+      files clean; workspace-entrypoints match; secret-read-boundary 374 files
+      clean; prompt-conformance 5 prompts clean; help-guide-coverage all
+      covered; exports-parity 5 publishables pass. The repo-local
+      `TMPDIR=$PWD/tmp/tmpdir` form is NOT usable on this host:
+      `tests/fixtures/projects/state-scope.ts` rejects every candidate because
+      the parent `/home/juliusz/git/jaiship` is itself a git repo, producing 15
+      guard failures plus one 250.21 ms latency boundary (TC-DAEMON-121).
+      Re-running the same battery with the outside temp root is green, so the
+      failures are environmental, not regressions. Commit-range gate
+      `./scripts/lint-commit-range.sh --base main-tools`: verdict PASS, base
+      main-tools, merge-base 8a1f77ad, head 2d9f93a5, 33 commits in range, 0
+      offending commits, mode none, commitlint resolved repository-local from
+      node_modules/.bin/commitlint. Raw logs under
+      tmp/run-logs-runner/2026-11-15/."
+    type: info
     date: "2026-11-15"
