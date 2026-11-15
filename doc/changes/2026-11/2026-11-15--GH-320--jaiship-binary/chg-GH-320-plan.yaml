@@ -1,9 +1,9 @@
-# GH-320 delivery plan — machine-readable document (delivery.plan.v1), revision 1.3
-# (2026-11-15; DoR iteration-3 remediation). Revision 1.0 was authored in
+# GH-320 delivery plan — machine-readable document (delivery.plan.v1), revision 1.4
+# (2026-11-15; code-review iteration-1 remediation — added Phase 6). Revision 1.0 was authored in
 # lifecycle phase 4 (`delivery_planning`) against spec v1.1 / test plan v1.1.
 # Revision 1.1 remediated readiness iter-1 findings 3, 4, 6, 9, 19, 20, 21, 22,
 # 23 against the then-current spec v1.2, test plan v1.2, and PM decisions
-# D5..D11 (historical baseline; superseded by the current v1.5 / v1.4 sources):
+# D5..D11 (historical baseline; superseded by the current v1.6 / v1.5 sources):
 #   - F3  phase 1 is now green at its own boundary: the two delivered suites
 #         that relied on the removed neutral identity are phase-1 scope, and the
 #         selector input design is pinned with every affected call site named.
@@ -90,23 +90,62 @@
 #          states that exemption explicitly and asserts no seed outside those
 #          allowlisted lines (with the body-line splice control).
 #
+# Revision 1.4 adds PHASE 6 (code-review iteration-1 remediation) against spec
+# v1.6 and test plan v1.5 (55 cases). Phases 1-5 are unchanged; their scope
+# declarations and commits stay as they are. Phase 6 carries:
+#   - F-1  the prior-identity notice now survives a failed composition: the
+#          composition-scoped queued notices are flushed through the delivered
+#          warnings channel before the `fallback.internal` containment, once per
+#          source kind, with no payload and no exit-code change (AC-F5-6);
+#   - F-2  the generated launcher quotes the recorded target safely
+#          (`printf '%q'`), so a source path containing a quote/space cannot
+#          break `bash -n` or inject content;
+#   - F-3  the four tautological "injected fixture" controls become live
+#          guards driven by the production scanners (installer arrays in both
+#          suites, the daemon allowlist derivation, the registration control,
+#          the seed-splice control);
+#   - F-4  `DRY_RUN` is declared as a plan-only preview that evaluates no
+#          precondition (spec v1.6 F-6/DEC-15/NFR-5/AC-F6-8), with its
+#          TC-BIN-056 cell;
+#   - F-5  documentation-scope truth: `doc/00-index.md` and the five phase-7
+#          current-truth pages are DECLARED CHANGED (spec v1.6 §16), and no
+#          sentence in this plan claims the landing page is untouched;
+#   - F-6  the dead optional prior-directory branch in
+#          `packages/adapters/src/file/projects-config.ts` is reverted;
+#   - F-7  `identity-docs` asserts TC-BIN-072 step 9 (identifier
+#          discoverability) instead of only claiming it;
+#   - F-8  the identity-literal scan reaches node level with an
+#          expression-position control;
+#   - F-9  `bin-launcher.ts` imports `workingNameEnvironmentVariable()` instead
+#          of re-declaring the override variable name;
+#   - F-10/F-11 the installer header/usage documents the launcher step and the
+#          install-time Bun requirement, and its precondition failures use the
+#          declared exit taxonomy;
+#   - F-12 the hermeticity preload arms `node:fs` writes and `Bun.spawn`;
+#   - F-13/F-14 the plan mirrors the corrected evidence/control wording without
+#          editing the test plan.
+#
 # REVISION LOG: 1.0 initial plan (spec v1.1 / test plan v1.1);
 #   1.1 DoR iter-1 remediation (spec v1.2 / test plan v1.2 / D5..D11);
 #   1.2 DoR iter-2 remediation (spec v1.4 / test plan v1.3);
-#   1.3 DoR iter-3 remediation (spec v1.5 / test plan v1.4 / D12..D13) as
-#   itemised above. Delivery phases, their ordering, the TC ownership rule
-#   (55 cases, unchanged homes), the declared scope (44 files + 2 folders), and
-#   the product scope are unchanged by all revisions.
+#   1.3 DoR iter-3 remediation (spec v1.5 / test plan v1.4 / D12..D13);
+#   1.4 code-review iter-1 remediation (spec v1.6 / test plan v1.5), adding
+#   Phase 6. Delivery phase order, the TC ownership rule (55 cases, unchanged
+#   homes), and the product scope are unchanged by all revisions; the declared
+#   scope grows by the six documentation reconciliations and the revert path
+#   recorded in Phase 6.
 #
-# One ticket, one pull request against main-tools, five delivery phases. Every
-# phase is an independently committable slice that is green at its own boundary
-# and is ONE commit through the commit primitive (conventional subject carried
-# in `summary`, every body/footer line <= 100 characters). The final phase runs
-# the single executable gate, the branch-range commit-message gate, and
-# `plan validate GH-320`.
+# One ticket, one pull request against main-tools, SIX delivery phases: the five
+# original delivery phases plus PHASE 6, added by this revision for the
+# code-review iteration-1 remediation. Every phase is an independently
+# committable slice that is green at its own boundary and is ONE commit through
+# the commit primitive (conventional subject carried in `summary`, every
+# body/footer line <= 100 characters). The final gate (Phase 5's obligations,
+# re-run at Phase 6's boundary and before the PR) covers the single executable
+# gate, the branch-range commit-message gate, and `plan validate GH-320`.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec: ./chg-GH-320-spec.md (v1.5) — F-1..F-8, DM-1..DM-6, NFR-1..NFR-9,
+#   - Spec: ./chg-GH-320-spec.md (v1.6) — F-1..F-8, DM-1..DM-6, NFR-1..NFR-9,
 #     DEC-1..DEC-15 (DEC-14 the composition-time acquisition on `status --json`,
 #     DEC-15 the installer's declared-identity query and classified
 #     preconditions), §15.1 (DEC-5/DEC-9 precedent status, no new decision
@@ -114,11 +153,18 @@
 #     AC-F1-1, AC-F1-2, AC-F2-3, AC-F3-4, AC-F4-5, AC-F5-6, AC-F2-7, AC-F6-8,
 #     AC-F7-9, AC-F7-10, AC-F8-11, §5.1, §6 flows 1-5, §7 scope, §8.3/§8.5,
 #     §16 file impact map, §17, §19, §22, Appendix A (five literal sites).
-#     v1.5 states the fourth installer divergence in the guide BY ROLE (no
-#     pre-freeze seed tokens) and makes "behaviourally unchanged" include the
+#     v1.5 (carried into v1.6) states the fourth installer divergence in the
+#     guide BY ROLE (no pre-freeze seed tokens) and makes "behaviourally
+#     unchanged" include the
 #     delivered PRE-COMPOSITION touch of an invalid override (config probe/read
 #     and any state-root work), with the projection split in AC-F2-7 (D13).
-#   - Test plan: ./chg-GH-320-test-plan.md (v1.4) — 55 cases
+#     v1.6 is the review-iter-1 remediation: `DRY_RUN` as a plan-only preview
+#     that evaluates no precondition (F-6/DEC-15/NFR-5/AC-F6-8); §16 scope truth
+#     (`doc/00-index.md` CHANGED as a descriptor row plus the five phase-7
+#     current-truth reconciliations); node-level DM-6/AC-F7-10/NFR-6 scan with
+#     an expression-position control; launcher safe-quoting property and the
+#     narrowed preload claim.
+#   - Test plan: ./chg-GH-320-test-plan.md (v1.5) — 55 cases
 #     TC-BIN-001..TC-BIN-084 in nine blocks; 11/11 ACs, 0 orphans; §3.5
 #     substitute assertions BYTE-TP-1 (now including the invalid-override
 #     projection), LIVE-TP-1, SURF-TP-1, PAR-TP-1, DOC-TP-1, plus the DIRECT
@@ -126,6 +172,10 @@
 #     the single gate; §7 per-case suite homes; zero name-filter flags in its
 #     harness entries (per-case selection is `-t "<pattern>"`). Phase ownership
 #     of every id is declared in the TC -> PHASE MAP below; no home moved.
+#   - Code review: ./code-review/review-iter-1.yaml (iteration 1, status FAIL,
+#     3 high / 5 medium / 6 low / 2 info). Findings F-1..F-14 are the ones
+#     Phase 6 remediates; F-15/F-16 are info-only and need no scope (F-16's
+#     optional wording nit is recorded, not declared).
 #   - PM record: ./chg-GH-320-pm-notes.yaml — delivery_mode autonomous,
 #     decisions D1..D11 (D5/DEC-14, D6/DEC-11, D7, D8, D9, D10, D11),
 #     documentation impact map, the GH-310 sequencing constraint.
@@ -216,12 +266,14 @@
 #        control (it calls `install_local_files` directly and never enters the
 #        launcher step).
 #   R-D  The guide is discoverable through links from ALL FOUR affected spec
-#        pages (test plan v1.4 TC-BIN-071 step 5 requires all four; a page
-#        missing a link fails by name); spec §16 keeps `doc/00-index.md`
-#        UNCHANGED, so the landing page is not touched. The reason is
-#        deliberately narrow: adding a guide row is deferred to the M4-S1
-#        remainder (the same slice that retires the fallback), because this
-#        change's documentation obligation is the four pages plus the guide.
+#        pages (test plan v1.5 TC-BIN-071 step 5 requires all four; a page
+#        missing a link fails by name). The documentation landing page IS
+#        reconciled by this change, but only as a descriptor row: spec v1.6 §16
+#        lists `doc/00-index.md` as CHANGED (the CLI-entrypoint descriptor
+#        refreshed to two executables over one shared launcher plus
+#        `--help`/`--version`/`--print-install-path`), with no rebranding and NO
+#        guide link — the identity-docs guard pins both halves. A guide row on
+#        the landing page remains deferred to the M4-S1 remainder.
 #   R-E  TC-BIN-073 is "Existing - No Change": only the forbidden-literal
 #        registry changes; tests/checks/forbidden-literals.test.ts is a control.
 #   R-F  One file, one phase. `tests/behaviour/entrypoint-version.test.ts` and
@@ -239,7 +291,7 @@
 #   R-H  `tests/checks/support/arm-counters.preload.ts` is the TC-BIN-084
 #        half-(b) support module (D11). Revision 1.1 declared it while the then
 #        current spec v1.2 §16 did not list it; spec v1.3 reconciled §16 to it
-#        (row 44) and v1.5 keeps it, so the spec map and this plan's declared
+#        (row 44) and v1.6 keeps it, so the spec map and this plan's declared
 #        file set are now IDENTICAL. R-H is kept only as the record of that
 #        reconciliation — it is not a deviation.
 #
@@ -308,8 +360,22 @@
 #   AC-F8-11 -> Phase 4 (070, 071, 072, 073)
 #   AC-F1-1..AC-F8-11 (guard half) -> Phase 5 (084 — the cross-cutting
 #              hermeticity guard, which the test plan assigns to the whole AC set)
+##
+# PHASE 6 RE-PROOF MAP (no new TC ownership; the 55-id map above is unchanged).
+#   Phase 6 re-proves this named subset through the remediation's new cells and
+#   runs the rest as controls:
+#     TC-BIN-012  F-1 notice-on-containment cell + corrected rationale
+#     TC-BIN-050, TC-BIN-051, TC-BIN-053   F-2 safe quoting
+#     TC-BIN-054, TC-BIN-066               F-3a live installer-array guard
+#     TC-BIN-056                           F-4 DRY_RUN preview cell
+#     TC-BIN-062                           F-8 node-level scan + expression control
+#     TC-BIN-070, TC-BIN-071, TC-BIN-072   F-3c/F-3d/F-5/F-7 documentation guards
+#     TC-BIN-083                           F-3b allowlist derivation control
+#     TC-BIN-084                           F-12 armed classes
+#   Control re-runs in the Phase 6 gate: prior-identity-notice,
+#   prior-identity-hermetic, content-inventory.
 #
-# BINDING SPEC-v1.5 CONTRACTS THE PHASES MUST NOT CONTRADICT:
+# BINDING SPEC-v1.6 CONTRACTS THE PHASES MUST NOT CONTRADICT:
 #   * Identity literals: exactly FIVE declared sites under the declared
 #     `packages/**` string-literal scan rule — `bin/delivery-os.ts` default,
 #     `bin/jaiship.ts` default, `bin/jaiship.ts` prior, the unchanged MCP default
@@ -319,8 +385,8 @@
 #     a sixth site fails by name. The resolver is code-UNCHANGED and is NOT in
 #     any phase scope (DM-6, D7).
 #   * Invalid working-name override: the DELIVERED behaviour stays exactly as
-#     delivered, per invocation shape (spec v1.5 §8.5 / AC-F2-7 / D13; test plan
-#     v1.4 TC-BIN-012). A positional-free `status --json` yields the containment
+#     delivered, per invocation shape (spec v1.6 §8.5 / AC-F2-7 / D13; test plan
+#     v1.5 TC-BIN-012). A positional-free `status --json` yields the containment
 #     identity `fallback.internal` at exit `2` for BOTH bins (resolver-level
 #     input error wrapped inside; the alias's summary byte-identical to its
 #     baseline); a subcommand-bearing form fails earlier, at argument parsing,
@@ -345,7 +411,7 @@
 #     URLs, and the installer's own pre-freeze home / environment-variable
 #     surface. The guide states the fourth BY ROLE (no pre-freeze seed tokens)
 #     and delegates the exact identifiers to `scripts/install.sh --help` and this
-#     change record (spec v1.5 F-8/NFR-8/AC-F8-11); package scope and public docs
+#     change record (spec v1.6 F-8/NFR-8/AC-F8-11); package scope and public docs
 #     stay pre-freeze by non-goal (NG-1/NG-2).
 #   * Installer: the declared-identity query scrubs `DELIVERY_OS_WORKING_NAME`
 #     from the child environment; the install-time Bun requirement, a source
@@ -358,14 +424,34 @@
 #     (§7.2).
 #
 # SCOPE CONVENTION: concrete files are exact repository-relative paths; folders
-#   are declared by the phase that writes new files inside them. Every file is
-#   declared in EXACTLY ONE phase. Declared: 44 file paths + 2 folders (the
-#   prior-identity fixture folder in Phase 2 and the change-folder staging prefix
-#   in Phase 5). Spec v1.5 §16 lists the SAME 44 CHANGED/NEW file paths plus the
-#   fixture folder; the file sets are identical (0 plan-only, 0 spec-only) and
-#   R-H is only the reconciliation record. The change folder is a staging prefix,
-#   not a spec-map entry. An untouched declared file is a `plan diff`
+#   are declared by the phase that writes new files inside them. Declared after
+#   r1.4: 51 distinct file paths + 2 folders (the prior-identity fixture folder
+#   and the change-folder staging prefix). Spec v1.6 §16 lists 50 CHANGED/NEW
+#   file paths plus that fixture folder. The sets differ by exactly ONE path:
+#   `packages/adapters/src/file/projects-config.ts`, declared in Phase 6 only
+#   because it is REVERTED there (F-6) — after the revert the file is absent
+#   from the delivered diff, so §16 correctly does not list it. R-H is only the
+#   preload reconciliation record.
+#
+# ONE-PHASE RULE AND PHASE 6 (resolution recorded): the plan schema does NOT
+#   prohibit one path from appearing in more than one phase (`plan diff` reports
+#   the first covering phase; GH-294 declares shared files across phases), and
+#   `plan validate` has no duplicate-path error. Phases 1-5 are already
+#   delivered, so moving their scope into Phase 6 would falsify their commits.
+#   The resolution taken is therefore: phases 1-5 KEEP their declarations
+#   unchanged, and Phase 6 RE-DECLARES the files it re-edits so the commit
+#   primitive can stage the remediation. Phase 6 introduces exactly 7 new paths
+#   (the six documentation reconciliations plus the revert path) and re-declares
+#   15 already-declared files. An untouched declared file is a `plan diff`
 #   observation, never a gate failure.
+
+# PHASE 6 (review-iter-1 remediation) DECLARATION NOTE: Phase 6 is a delivery
+#   phase whose findings cross earlier phase boundaries (F-1 production/entrypoint,
+#   F-2/F-10/F-11 installer, F-3/F-7/F-8 suites, F-5 docs, F-6 adapters revert,
+#   F-9 launcher, F-12 preload). Its gate is targeted at the affected suites and
+#   the two doc guards; the full aggregate gate remains Phase 5's declared
+#   command (`mkdir -p "$HOME/.cache"` + `TMPDIR=$(mktemp -d "$HOME/.cache/ados-check-XXXXXX") pnpm check`),
+#   re-run before the PR.
 #
 # DECLARED CONTROLS, NOT EDITS: re-run in phase gates, never edited, so not in
 #   any phase scope: tests/structure/branding-seam.test.ts,
@@ -380,17 +466,27 @@
 #   and packages/core/src/branding/index.ts are UNCHANGED (spec §16) and are
 #   asserted unchanged, not edited.
 #
-# DOC BOUNDARY: the four affected current-truth pages plus the
-#   install-set/distribution-marker page are part of this change's file impact
-#   map (spec §16) and are reconciled in Phase 4. Lifecycle phase 7
-#   (`system_spec_update`, @doc-syncer) verifies and reconciles any delivery
-#   drift; it does not re-author them in a later plan phase.
+# DOC BOUNDARY: the documentation blast radius has TWO declared halves.
+#   (1) Phase 4 reconciles the four affected feature pages plus the
+#   install-set/distribution-marker page (five paths, all in spec v1.6 §16).
+#   (2) Phase 6 declares the SIX phase-7 current-truth reconciliations that spec
+#   v1.6 §16 now lists as CHANGED: the `doc/00-index.md` CLI-entrypoint
+#   DESCRIPTOR row (two executables over one shared launcher plus
+#   `--help`/`--version`/`--print-install-path`; no rebranding and no guide
+#   link), `doc/spec/nonfunctional.md`, `doc/spec/features/feature-state-layer.md`,
+#   `doc/overview/architecture-overview.md`, `doc/overview/glossary.md`, and
+#   `doc/quality/test-specs/test-spec-state-layer.md`.
+#   NO sentence in this plan claims `doc/00-index.md` is untouched.
+#   README.md stays UNCHANGED (public rebranding is the non-goal NG-1/NG-2), and
+#   doc/documentation-handbook.md stays UNCHANGED (it carries no per-guide row
+#   for the new local-install guide).
 #   doc/guides/local-install.md is redistributable: it declares
 #   `ados_distribution`, receives its licence header only via
 #   `scripts/add-header-location.sh doc/guides/local-install.md` (single path,
 #   never the directory, never hand-written), and is registered in
 #   scripts/checks/forbidden-literals.registry.json in the same phase (spec §22).
-#   README.md, doc/00-index.md, and doc/documentation-handbook.md are unchanged.
+#   Lifecycle phase 7 (`system_spec_update`, @doc-syncer) then verifies the
+#   reconciled set; it does not re-author pages in a later plan phase.
 #
 # RELEASE: one lockstep minor changeset over the five publishables matching the
 #   GH-294 precedent (version_impact minor). No dependency addition, no data
@@ -407,7 +503,7 @@ schemaVersion: delivery.plan.v1
 workItemRef: GH-320
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5]
+  phases: [1, 2, 3, 4, 5, 6]
   escalationTriggers:
     - "A second composition body, a second identity derivation, or an exported module-level identity literal appears beside the two declared selectors (DEC-5, F-1, NFR-1)"
     - "The working-name literal inventory is not exactly the five declared sites (three CLI selectors, the unchanged MCP default, SCOPE_ORG as a derivation input), a declared site disappears, a sixth site appears, or packages/core/src/branding/index.ts is edited (DM-6, AC-F7-10, D7)"
@@ -425,6 +521,10 @@ tier:
     - "A new prompt-required command family or error-table row appears, or --print-install-path becomes a family or a global flag (NG-8, §8.1)"
     - "A delivered suite assertion is relaxed to make this change pass, or a new suite needs live network, the real $HOME as mutable state, or real sleeps (NFR-5, NFR-7, R-TP-9)"
     - "The delivery merges before GH-310 lands, or an operator's real ~/.delivery-os-state is mutated by a test (§7.2, §18, LIVE-TP-1)"
+    - "A review-remediation edit lands outside Phase 6's declared scope, a tautological/self-referential control survives, or a guard is made to pass by weakening an assertion (F-3, AC-F7-10)"
+    - "The prior-identity notice is dropped again on a failed composition, or the containment flush adds it to the machine payload or changes the exit code (F-1, AC-F5-6)"
+    - "The launcher interpolates the target without safe quoting, or its precondition failures leave the installer's declared exit taxonomy (F-2, F-11)"
+    - "A sentence in any artefact claims doc/00-index.md is untouched, or a current-truth page changed outside the declared set (F-5)"
 defaultLeases:
   - repo:main-tools
 defaultWeightClass: standard
@@ -616,7 +716,7 @@ phases:
   #      re-entry environment.
   #  2.6 Tests: identity-override (010-014) must assert the delivered
   #      invalid-override behaviour PER INVOCATION SHAPE, exactly as test plan
-  #      v1.4 (TC-BIN-012) and spec v1.5 §8.5 / AC-F2-7 / D13 pin it:
+  #      v1.5 (TC-BIN-012) and spec v1.6 §8.5 / AC-F2-7 / D13 pin it:
   #      - positional-free `status --json`: exit `2`, the delivered containment
   #        identity `fallback.internal`, the delivered summary, for BOTH bins,
   #        with the alias projection byte-compared to its baseline;
@@ -788,15 +888,17 @@ phases:
   # declared divergences (MCP default and override read, the delivery-script
   # shell fallback host root, the scope-derived repository/docs URLs, and the
   # installer's own pre-freeze home and environment-variable surface — the
-  # fourth BY ROLE, per spec v1.5 F-8/NFR-8/AC-F8-11).
+  # fourth BY ROLE, per spec v1.6 F-8/NFR-8/AC-F8-11).
   #
   # DISCOVERABILITY (iter-1 finding 21, iter-2 finding 8, iter-3 finding 4,
-  # R-D): the guide is linked from ALL FOUR affected spec pages — each of
-  # `feature-cli-entrypoint.md`, `feature-branding-seam.md`,
+  # review F-5, R-D): the guide is linked from ALL FOUR affected spec pages —
+  # each of `feature-cli-entrypoint.md`, `feature-branding-seam.md`,
   # `feature-config-layer.md`, `feature-projects.md` carries a link and a page
-  # missing one fails by name (test plan v1.4 TC-BIN-071 step 5).
-  # `doc/00-index.md` stays UNTOUCHED because spec §16 marks it UNCHANGED and
-  # adding the guide row is deferred to the M4-S1 remainder.
+  # missing one fails by name (test plan v1.5 TC-BIN-071 step 5).
+  # `doc/00-index.md` is NOT untouched: spec v1.6 §16 declares it CHANGED as a
+  # descriptor-only CLI-entrypoint refresh (no rebranding, no guide link), and
+  # Phase 6 owns that reconciliation. Adding a guide row to the landing page
+  # remains deferred to the M4-S1 remainder.
   #
   # Obligations:
   #  4.1 Four spec pages reconciled; the stale sentence "The bin is not part of
@@ -827,9 +929,9 @@ phases:
   #          any pre-freeze seed token, because the guide is a registered
   #          document inside the seeded `doc/**` scan; the guide points the
   #          reader at `scripts/install.sh --help` and this change record for the
-  #          exact identifiers (spec v1.5 F-8, NFR-8, AC-F8-11; iter-2 finding 2);
+  #          exact identifiers (spec v1.6 F-8, NFR-8, AC-F8-11; iter-2 finding 2);
   #      (d) the guide is SEED-CLEAN UNDER THE DELIVERED SCAN, not under a bare
-  #          whole-text matcher (test plan v1.4 TC-BIN-072 step 7; DoR iter-3
+  #          whole-text matcher (test plan v1.5 TC-BIN-072 step 7; DoR iter-3
   #          finding 1). A whole-text assertion is impossible on a compliant
   #          guide: the mandatory `ados_distribution:` marker contains the seed
   #          `ados`, and the delivered `scanFile` line-allowlists that marker
@@ -981,3 +1083,216 @@ phases:
       mergeRequestUrl: "pull request for feat/GH-320/jaiship-binary targeting main-tools, left open until GH-310 lands"
       pipelineId: "CI pipeline for the GH-320 delivery branch"
       trackerTransition: "in-review"
+
+  # ---------------------------------------------------------------------------
+  # Phase 6 — Code-review iteration-1 remediation (added in r1.4).
+  #
+  # Goal: close review-iter-1 findings F-1..F-14 without changing product scope,
+  # phase order, or the 55-case ownership. The three HIGH findings are the
+  # acceptance-critical ones: (F-1) the queued prior-identity notice is dropped
+  # when composition fails, so AC-F5-6's unconditional "given a fallback read …
+  # exactly one notice … is written to stderr" is unmet on the containment path;
+  # (F-2) the launcher embeds its target in unescaped single quotes, so a path
+  # containing `'` breaks the launcher and is injection-shaped; (F-3) four
+  # "injected fixture" negative controls never invoke a guard, so AC-F7-10's
+  # injected-violation clause is only partly true.
+  #
+  # ONE-PHASE RULE: phases 1-5 are already delivered and keep their declarations
+  # (their commits must not be rewritten). The plan schema permits a path in more
+  # than one phase and `plan diff` reports the first covering phase, so this
+  # phase RE-DECLARES the files it re-edits:
+  #   re-declared (15): production.ts, entrypoint.ts, bin-launcher.ts, edge.ts,
+  #     core/contracts/config.ts, scripts/install.sh, entrypoint-bin.test.ts,
+  #     entrypoint-installer-absence.test.ts, install-launcher.test.ts,
+  #     identity-docs.test.ts, daemon-start-detached.test.ts,
+  #     install-launcher-installer.test.ts, identity-override.test.ts,
+  #     prior-identity-notice.test.ts, arm-counters.preload.ts;
+  #   new (7): the six documentation reconciliations plus the revert path.
+  # `edge.ts` and `packages/core/src/contracts/config.ts` are declared
+  # DEFENSIVELY for F-1: if the chosen notice-flush design adds a notice-sink
+  # accessor/type there, the commit is not blocked; if the design needs neither,
+  # obligation 6.1 says so and both stay byte-identical (no silent scope use).
+  #
+  # Obligations:
+  #  6.1 F-1 — the notice survives a failed composition. The composition-scoped
+  #      queued notices (the composition-owned once-state's pending lines) are
+  #      flushed through the delivered warnings channel before the
+  #      `fallback.internal` containment is emitted, so the containment run
+  #      writes the same `prior-identity-fallback: <reason> …` line it would have
+  #      written on success: at most one per source kind per composed program, on
+  #      stderr, never in the machine payload, never changing the exit code
+  #      (AC-F5-6, DM-4, NFR-3). Design: an injected notice sink (or a
+  #      `readNotices()` accessor on the composer result) consumed by
+  #      `runEntrypoint`'s containment branch — `edge.ts` and
+  #      `core/contracts/config.ts` are declared for that design and are
+  #      untouched if it is not needed (record which in the phase evidence). Add
+  #      the cell to `identity-override` and `prior-identity-notice`: invalid
+  #      override (`bad/name`) + fixture `.delivery-os/config.yaml` +
+  #      `jaiship status --json` → exit 2, containment, exactly ONE
+  #      `config-read` line on stderr, payload clean, no fallback identity
+  #      substituted. TC-BIN-012's step-5 rationale ("the run never reaches the
+  #      prior-identity fallback in this state") is factually wrong and is
+  #      replaced: the run DOES read and DOES notify; the alias/jaiship
+  #      projection and the pre-composition touch stay unchanged (step 6's
+  #      equality assertion is unaffected). The test plan's step-5 notice clause
+  #      is superseded by AC-F5-6 + spec v1.6 and by this cell.
+  #  6.2 F-9 — `bin-launcher.ts` imports `workingNameEnvironmentVariable()` from
+  #      `./entrypoint.js` and drops its local override-name literal, so the
+  #      override name stays a single site (the accessor keeps its reason) and
+  #      the bin still reads it once on behalf of both bins.
+  #  6.3 F-2 — the installer renders the recorded target with safe quoting
+  #      (`printf '%q'`, or `'\''` splicing of every `'`), so the launcher stays
+  #      `bash -n`-valid and non-injectable for any path. New
+  #      `install-launcher-installer` case: a source directory whose name
+  #      contains a single quote AND a space; assert `bash -n` passes, the
+  #      launcher runs `--version`, one absolute target, and content idempotence
+  #      is unchanged.
+  #  6.4 F-10 — the installer header and `--help` usage document the launcher
+  #      step and the install-time Bun requirement (mode text, dependencies,
+  #      exit codes), so an operator who reads only `--help` learns the step
+  #      exists. Keep the `scripts/.tests/test-install.sh` cells that are kept
+  #      unchanged green.
+  #  6.5 F-11 — the launcher precondition failures leave the bare `return 1` and
+  #      use the script's declared exit taxonomy (a `log_fatal` runtime code or a
+  #      documented code added to the header's list), keeping the "no launcher
+  #      written" ordering.
+  #  6.6 F-4 — `DRY_RUN` is declared as a PLAN-ONLY PREVIEW that evaluates NO
+  #      install-time precondition (spec v1.6 F-6/DEC-15/NFR-5/AC-F6-8): under
+  #      `DRY_RUN` the step reports the planned registration and writes nothing
+  #      even when the runtime is unresolvable or the source tree carries no CLI
+  #      entry, and the plan line is intentionally pre-precondition — it is not a
+  #      silent skip and must say that it is a preview. Add the TC-BIN-056
+  #      dry-run cell: docs-only source + `--dry-run` → exit 0, no launcher
+  #      anywhere, the plan line printed, and the "preview, preconditions not
+  #      evaluated" wording asserted. The real-run classified failures
+  #      (no Bun, no CLI entry) keep their existing cells.
+  #  6.7 F-8 — widen the identity-literal scan to node level: walk every
+  #      `ts.StringLiteral` / `ts.NoSubstitutionTemplateLiteral` under
+  #      `packages/**` (comments/JSDoc excluded), keep the declared five-site
+  #      two-way inventory, and add an EXPRESSION-POSITION control
+  #      (`resolveBrandIdentity({ workingName: "<name>" })`, an object property,
+  #      and an argument default) that fails by name. The rule wording mirrors
+  #      spec v1.6 DM-6/AC-F7-10/NFR-6.
+  #  6.8 F-3 — replace the four tautologies with live guards driven by the
+  #      production scanners:
+  #      (a) installer arrays — add `installerArrayViolations` (or extend
+  #          `launcherStepViolations`) rejecting `packages/cli`, `bin/*`,
+  #          `bin-launcher`, `createProductionComposer`; drive it from BOTH
+  #          `entrypoint-installer-absence.test.ts` and `install-launcher.test.ts`
+  #          with a temp copy and assert it fails by name;
+  #      (b) daemon allowlist — replace the self-read with an assertion over the
+  #          production re-entry derivation: a hostile key outside the allowlist
+  #          is dropped while the override and the brand-derived state-directory
+  #          key survive, for both identities;
+  #      (c) registration — run the delivered `scan()` over a temp root whose
+  #          registry omits the guide and assert it fails closed naming the path;
+  #          delete the no-op temp write and the in-memory filter that proved
+  #          nothing;
+  #      (d) seed splice — run the delivered scan (or the `scanFile` equivalent)
+  #          over the spliced temp copy and assert it names the token and the
+  #          line. Remove any cell that cannot fail.
+  #  6.9 F-7 — `identity-docs.test.ts` implements TC-BIN-072 step 9 instead of
+  #      only claiming it: the `scripts/install.sh` header names all five
+  #      identifier tokens, the rendered `--help` Environment section documents
+  #      four and the install one-liner URL equals the raw-URL default, the
+  #      change record names all five, and a search over the guide finds none.
+  #      Step 8 stays live per 6.8(c). Plan obligation 4.6 is the phase-4
+  #      counterpart and is not weakened.
+  #  6.10 F-6 — revert `packages/adapters/src/file/projects-config.ts` to its
+  #      pre-change content (delete the dead optional prior-directory branch; no
+  #      caller supplies it and the covered fallback lives in `config-source.ts`).
+  #      After the revert the file is absent from the delivered diff, which is
+  #      why spec v1.6 §16 does not list it; it is declared here only so the
+  #      revert can be committed.
+  #  6.11 F-12 — `arm-counters.preload.ts` additionally arms the `node:fs` write
+  #      entry points (`writeFileSync`, `mkdirSync`, `appendFileSync`) and
+  #      `Bun.spawn`, each with a canary cell proving the counter trips. If any
+  #      class cannot be armed reliably, narrow the guard's stated claim in the
+  #      suite and the change record instead of overstating it (spec v1.6 §16
+  #      already narrowed the preload row).
+  #  6.12 F-5 — documentation-scope truth. `doc/00-index.md` is reconciled as a
+  #      DESCRIPTOR-ONLY CLI-entrypoint row (two executables over one shared
+  #      launcher plus `--help`/`--version`/`--print-install-path`; NO
+  #      rebranding and NO guide link), and the five phase-7 current-truth pages
+  #      (`doc/spec/nonfunctional.md`, `doc/spec/features/feature-state-layer.md`,
+  #      `doc/overview/architecture-overview.md`, `doc/overview/glossary.md`,
+  #      `doc/quality/test-specs/test-spec-state-layer.md`) are reconciled and
+  #      declared CHANGED exactly as spec v1.6 §16 lists them. `identity-docs`
+  #      pins both landing-page facts (descriptor-only, no guide link) and the
+  #      five pages' statements.
+  #  6.13 Plan scope sentences (F-5, this revision's own text): the DOC BOUNDARY
+  #      and R-D blocks now state the landing-page descriptor reconciliation and
+  #      the six declared phase-7 pages; no sentence in this plan claims
+  #      `doc/00-index.md` is untouched. `README.md` and
+  #      `doc/documentation-handbook.md` remain UNCHANGED.
+  #  6.14 Scope-record honesty: the review's two other undeclared code/fixture
+  #      paths (`packages/core/src/index.ts`,
+  #      `tests/fixtures/ports/v1-contract-inventory.json`) are NOT in this
+  #      phase's declared scope by PM instruction. They must either be reverted
+  #      to HEAD in this phase's working tree (then they need no declaration
+  #      because they leave the diff) or escalated to the PM for an explicit
+  #      §16 extension; a coder must not absorb them silently. The disposition is
+  #      recorded in the phase evidence.
+  #  6.15 The change folder `doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary`
+  #      is declared so this phase stages its artefacts at their current
+  #      revisions (the test plan's remediation rows and the pm-notes evidence)
+  #      plus any residue. The coder stages them; it does not edit the spec, the
+  #      test plan, the pm-notes, or the review records itself.
+  #  6.16 Verification: the full aggregate gate remains Phase 5's declared
+  #      command (`mkdir -p "$HOME/.cache"` then
+  #      `TMPDIR=$(mktemp -d "$HOME/.cache/ados-check-XXXXXX") pnpm check`), and
+  #      is re-run before the PR; this phase's gate below is deliberately
+  #      targeted at the affected suites and guards.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/structure/entrypoint-bin.test.ts tests/structure/entrypoint-installer-absence.test.ts tests/structure/install-launcher.test.ts
+  #   bun test tests/checks/install-launcher-installer.test.ts
+  #   bun test tests/checks/identity-docs.test.ts
+  #   bun test tests/behaviour/daemon-start-detached.test.ts
+  #   bun test tests/behaviour/identity-override.test.ts tests/behaviour/prior-identity-notice.test.ts
+  #   bun test tests/checks/prior-identity-hermetic.test.ts
+  #   bun test tests/structure/content-inventory.test.ts
+  #   shellcheck --severity=error scripts/install.sh
+  #   bash scripts/.tests/test-install.sh
+  #   bun run scripts/checks/forbidden-literals.ts
+  #   bash scripts/.tests/test-doc-distribution.sh
+  #   ./scripts/lint-commit-range.sh --base main-tools
+  #   PATH="$PWD/node_modules/.bin:$PATH" delivery-os plan validate GH-320
+  #   git diff --check
+  # ---------------------------------------------------------------------------
+  - id: 6
+    title: "Code-review iteration-1 remediation: notice on the containment path, launcher safe quoting, live non-vacuity controls, node-level literal scan, DRY_RUN preview truth, and documentation-scope truth"
+    kind: delivery
+    summary: "fix(cli): flush containment notices and harden the installer launcher"
+    scope:
+      files:
+        - packages/cli/src/production.ts
+        - packages/cli/src/entrypoint.ts
+        - packages/cli/src/bin-launcher.ts
+        - packages/cli/src/edge.ts
+        - packages/core/src/contracts/config.ts
+        - packages/adapters/src/file/projects-config.ts
+        - scripts/install.sh
+        - tests/structure/entrypoint-bin.test.ts
+        - tests/structure/entrypoint-installer-absence.test.ts
+        - tests/structure/install-launcher.test.ts
+        - tests/checks/identity-docs.test.ts
+        - tests/behaviour/daemon-start-detached.test.ts
+        - tests/checks/install-launcher-installer.test.ts
+        - tests/behaviour/identity-override.test.ts
+        - tests/behaviour/prior-identity-notice.test.ts
+        - tests/checks/support/arm-counters.preload.ts
+        - doc/00-index.md
+        - doc/spec/nonfunctional.md
+        - doc/spec/features/feature-state-layer.md
+        - doc/overview/architecture-overview.md
+        - doc/overview/glossary.md
+        - doc/quality/test-specs/test-spec-state-layer.md
+      folders:
+        - tests/fixtures/entrypoint/prior-identity
+        - doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/production.ts
+        role: producer
