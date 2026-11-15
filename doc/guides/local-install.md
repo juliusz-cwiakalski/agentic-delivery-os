@@ -35,7 +35,7 @@ The launcher lands at `~/.jaiship/bin/jaiship`. The directory and the file name 
 
 That command prints the path for the identity in effect. The installer deliberately removes the `DELIVERY_OS_WORKING_NAME` override from the child environment it uses for the query, so an override in your shell cannot redirect the registration; the installed launcher then forwards your environment unchanged, so the override still governs the identity at run time.
 
-The launcher records exactly one absolute target — the CLI entry of the source tree it was installed from — and hands the process to the runtime on that target with your arguments passed through, the standard streams inherited, and the environment unmodified. It performs no version probe, no network access, and no search of `PATH` for the product.
+The launcher records exactly one absolute target — the CLI entry of the source tree it was installed from — and hands the process to the runtime on that target with your arguments passed through, the standard streams inherited, and the environment unmodified. The target is written as one safely quoted shell word, so a source path containing a single quote, a backslash, or a space is supported and the launcher still execs exactly that path. It performs no version probe, no network access, and no search of `PATH` for the product.
 
 Re-running the same install rewrites nothing while the launcher's content is unchanged. Installing from a different source repoints the launcher. Removing a registered launcher is an operator action: reinstall to update it, and delete the file yourself to remove it.
 
@@ -48,7 +48,7 @@ The launcher step needs the Bun runtime at install time, because it asks the exe
 - **No runtime:** if Bun is not resolvable, the install fails naming the runtime and writes no launcher. Install the runtime and re-run.
 - **No CLI entry:** if the resolved source tree has no CLI entry, the install fails naming the expected entry path and writes no launcher. Point the install at a complete checkout (the installer's own `--help` lists the supported source override).
 
-`DRY_RUN=true` reports the planned registration and writes nothing. The step is independent of `--tool`: the launcher is the product's, not the selected AI tool's.
+`DRY_RUN=true` (or `--dry-run`) is a plan-only preview of the launcher step: it evaluates no install-time precondition, prints one line naming the CLI entry it would record, writes nothing, and exits successfully — including from a source tree without the CLI entry. The two classified failures above apply to a real run only. The step is independent of `--tool`: the launcher is the product's, not the selected AI tool's.
 
 ## What the fallback notices mean
 
@@ -61,7 +61,7 @@ On the first invocation under the new identity, the product reads the artifacts 
 | `state-read` | The prior host state root is in effect because the current-identity root is absent. |
 | `state-skipped` | Both roots exist; the current one is in effect and the prior one was not used. |
 
-Every line names both locations and states that nothing was moved, copied, or deleted. The notice is informational: it changes no exit code and never appears in a machine payload. It is distinct from the configuration warnings and from the pre-freeze compatibility notices the product already emits.
+Every line names both locations and states that nothing was moved, copied, or deleted. The notice is informational: it changes no exit code and never appears in a machine payload. It is delivered even when the invocation then fails: if an invalid working-name override still reads the prior project configuration, the `config-read` line appears before the contained failure. It is distinct from the configuration warnings and from the pre-freeze compatibility notices the product already emits.
 
 ## What the fallback covers, and what it does not
 
