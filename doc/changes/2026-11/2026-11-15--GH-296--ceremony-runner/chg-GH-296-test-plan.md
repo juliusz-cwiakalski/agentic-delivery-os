@@ -1,16 +1,16 @@
 ---
 id: chg-GH-296-test-plan
-status: Proposed
+status: Updated
 created: 2026-11-15T23:40:00Z
-last_updated: 2026-11-15T23:40:00Z
+last_updated: 2026-11-15T23:59:00Z
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 labels: [milestone-m2, cli, ceremony, retro, tiering, measurement, state]
 version_impact: minor
-summary: "Traceable verification of M2-S3 ceremony runner: the declaration contract and its closed vocabularies/bounds, the six built-in declarations proven parity-testable through one runner path, deterministic artifact-verified execution with per-step durability, compaction and resume, bounded catch-up of a missed window, project-declared ceremonies through the same runner with no tooling change, the single plan-tier/pm-notes-variant mapping with escalation and findings, durable run/step records and one honest ceremony-share comparison, the four retro ceremony levels with a follow-through-first agenda and idempotent scope keys, and the two additive error identities with a two-way-synced table."
+summary: "Traceable verification of M2-S3 ceremony runner: the declaration contract and its closed vocabularies/bounds including the declaration-held `scopeKey` derivation and the single schedule-trigger bound, the six built-in declarations proven parity-testable through one runner path, deterministic artifact-verified execution with per-step durability, compaction and resume, window and run-identity resolution for note-consuming, note-less scheduled and note-less event-triggered declarations, recorded trigger kind and resolution for explicit runs, bounded catch-up of a missed window, project-declared ceremonies through the same runner with no tooling change, the single plan-tier/pm-notes-variant mapping with escalation and findings, durable run/step records and one honest ceremony-share comparison, the four retro ceremony levels with a follow-through-first agenda and idempotent scope keys, and the two additive error identities with a two-way-synced table."
 links:
   change_spec: ./chg-GH-296-spec.md
-  implementation_plan: ./chg-GH-296-plan.yaml   # authored in phase 4; not yet present (GAP-1)
+  implementation_plan: ./chg-GH-296-plan.yaml   # delivery.plan.v1, 11 phases; owns TC-001..060 (GAP-1, GAP-7)
   testing_strategy: ../../../../.ai/rules/testing-strategy.md
 ---
 
@@ -24,9 +24,9 @@ This change turns six recurring rituals from prose-and-judgement into declared, 
 
 **Second, parity must be a property, not a claim.** All six built-ins execute through the same entry point, dispatcher, artifact reader, verifier, and record writer. One parametric suite iterates the six declarations; a per-built-in negative case makes a green parity run non-vacuous; a mutation that adds a per-ceremony branch must fail (AC-F3-1, Appendix E).
 
-**Third, completion must be evidenced by an artifact, never by an outcome.** A step is `verified` only after its slot is read back and validated against the declared verification mode. A failed read-back stops the agenda and leaves the run `unverified` at exit 1 with its records and produced artifact durable; resume starts at the first unverified index and never re-executes a verified step; a contradicted record sequence refuses `state.store.torn` at exit 2 and guesses no repair; carried state compacts at declared boundaries within 4 096 bytes and 40 lines with an explicit omission count (AC-F4-1..6, NFR-3, NFR-4, NFR-7).
+**Third, completion must be evidenced by an artifact, never by an outcome.** A step is `verified` only after its slot is read back and validated against the declared verification mode. A failed read-back stops the agenda and leaves the run `unverified` at exit 1 with its records and produced artifact durable; resume starts at the first unverified index and never re-executes a verified step; a contradicted record sequence refuses `state.store.torn` at exit 2 and guesses no repair; carried state compacts at declared boundaries within 4 096 bytes and 40 lines with an explicit omission count (AC-F4-1..5, NFR-3, NFR-4, NFR-7).
 
-**Fourth, the arithmetic of "what happened" must stay honest.** Catch-up replays at most one missed window, distinguishes `nothing-missed` from a declared gap, and never fabricates a window; the run identity `(ceremony, scopeKey, window)` makes re-runs return `data.reused: true` with zero appends while a new window appends an addendum and never rewrites a note body; the tier engine consumes exactly the delivered plan `tier` and the delivered pm-notes `variant`, reports disagreement and unevaluated triggers as findings instead of resolving them silently, and records escalations with their evidence; the ceremony-share comparison is produced from committed data with the committed definition, and below five post-boundary changes it states `insufficient-sample` with no trend claim anywhere (AC-F4-6, AC-F5-1..3, AC-F7-1..5, AC-F8-1..3, RSK-4, DEC-13, DEC-14).
+**Fourth, the arithmetic of "what happened" must stay honest, and it must be arithmetic over two resolved values.** The run identity `(ceremony, scopeKey, window)` is only meaningful when *both* halves are declaration-resolved before any read: the scope key from the declaration's closed derivation (`literal`, `repository`, or `note` — never implied, never left to the ceremony), and the window from the note, from `--window`, or from the single declared cadence of a note-less declaration. That is what makes a note-less ceremony idempotent (the second brief in one UTC day is the recorded verdict) and what refuses a note-less event-triggered run whose window does not exist rather than inventing one (AC-F2-4, AC-F4-6..8, DEC-16, DEC-18). On top of that, every run records exactly one trigger kind and one resolution, so a manual invocation is recorded as `explicit` and can never be read as a scheduled or event obligation (AC-F3-8, DEC-17); catch-up replays at most one missed window, distinguishes `nothing-missed` from a declared gap, and never fabricates a window; a re-run returns `data.reused: true` with zero appends while a new window appends an addendum and never rewrites a note body; the tier engine consumes exactly the delivered plan `tier` and the delivered pm-notes `variant`, reports disagreement and unevaluated triggers as findings instead of resolving them silently, and records escalations with their evidence; the ceremony-share comparison is produced from committed data with the committed definition, and below five post-boundary changes it states `insufficient-sample` with no trend claim anywhere (AC-F4-6..8, AC-F5-1..3, AC-F7-1..5, AC-F8-1..3, RSK-4, DEC-13, DEC-14).
 
 **Fifth, the delivered contracts must stay byte-intact.** Five-key `delivery.result.v1` envelope, exits in `{0, 1, 2}`, `data` XOR `error`, new fields under `data` only; the two new error rows synced in both directions with the reserved two-segment allowlist and the 136 → 138 count; the retro pipeline and closeout unchanged and read-only; no metrics surface, no action registry, no event topic, no MCP tool, no model call in any ceremony path (AC-F1-3, AC-NFR2-1, AC-NFR8-1, §8.5, NG-1..NG-8).
 
@@ -37,16 +37,17 @@ This plan is a design and verification map, not an execution claim: no suite was
 - `ceremony` family mount: prompt-required entry, production composition, root and family/verb help, M2 reference page, coverage-inventory row, prompt-set count 20 → 21, and the mounted-grammar discipline of exactly `list`, `run`, `resume`, `catch-up` (AC-F1-1, DEC-10, C-6, DoD-1).
 - Family outcome continuity: one envelope per invocation, exit projection `{0,1,2}`, grammar refusals through `fallback.invocation`, undeclared ceremony name through `input.value.rejected`, and `--apply` accepted-and-inert where the declaration has no `sync` step (AC-F1-2..4, NFR-1, C-1, C-2).
 - `ceremony list` content and cost: id, origin, tier applicability, declared trigger, declared catch-up mode, last-run summary; ≤2 verified state reads and 1 bounded declaration read; bounded deterministic human render (F-1, NFR-11, §10).
-- Declaration contract `delivery.ceremony.declarations.v1`: member set, closed vocabularies, non-executable property, and every bound (16 ceremonies/document, 12 phases, 32 steps, 16 inputs, 8 targets, 1 MiB, id grammar ≤64, uniqueness) validated by one validator (F-2, DM-1, AC-F2-1..3).
-- Six built-in declarations (`morning-brief`, `retro-evidence-pass`, `sprint-rollover`, `night-watch`, `testing-session-assessment`, `decision-record-mirror-sync`) shipped as data and proven parity-testable with one negative case each (F-3, AC-F3-1..7, DoD-3).
+- Declaration contract `delivery.ceremony.declarations.v1`: member set, closed vocabularies, non-executable property, every bound (16 ceremonies/document, 12 phases, 32 steps, 16 inputs, 8 targets, 1 MiB, id grammar ≤64, uniqueness, 1..8 triggers with at most one `schedule` trigger per declaration), and the required `scopeKey` with its closed derivation set (`literal`, `repository`, `note`) — a `note` derivation legal only where the declaration requires a note — validated by one validator (F-2, DM-1, DM-2, AC-F2-1..4, E-19).
+- Six built-in declarations (`morning-brief`, `retro-evidence-pass`, `sprint-rollover`, `night-watch`, `testing-session-assessment`, `decision-record-mirror-sync`) shipped as data, each carrying its declared `scopeKey` (four `repository`, two `note`), and proven parity-testable with one negative case each (F-3, AC-F3-1..8, DoD-3).
 - Deterministic execution: declared-order agenda, per-step slot write/read-back/verify, per-step durable record through the fenced append, run status as a fold, run verdict `verified` | `dry-run` | `unverified` (F-4, DM-3..DM-6, AC-F4-1..5, AC-F8-1).
 - Compaction at declared boundaries (4 096 bytes / 40 lines, explicit omitted count) and resume from the first unverified index with the torn-record refusal (AC-F4-2..4, NFR-4, NFR-7).
-- Idempotency on `(ceremony, scopeKey, window)`: `data.reused: true`, zero appends, no duplicate note body; new window → one new run plus an addendum (AC-F4-6, AC-F9-4, NFR-5, E-4).
+- Idempotency on `(ceremony, scopeKey, window)` for *every* declaration: the scope key from the declaration's derivation and the window from the note, `--window`, or the single declared cadence; `data.reused: true`, zero appends, no duplicate note body; new window → one new run plus an addendum; note-less scheduled double invocation in one UTC day → one run; note-less event-triggered run without `--window` → refused before any write (AC-F4-6..8, AC-F2-4, AC-F9-4, NFR-5, E-4, E-18, DEC-16, DEC-18).
+- Recorded triggers: exactly one recorded kind (`schedule`, `event`, `catch-up`, `explicit`) plus one resolution (`note`, `declaration`, `unspecified`) per run; explicit runs record `explicit` and are never counted as the fulfilment of a scheduled or event obligation; a note naming an undeclared trigger is refused; the retro declaration declares exactly its four sub-R1 triggers and no `change-merged`, and produces no R1 output (F-2 declared-versus-recorded rule, F-9, DM-3, AC-F3-8, E-20, DEC-17).
 - Catch-up: pure schedule evaluation over declaration + injected clock + recorded runs; ≤1 missed window per ceremony per invocation; `trigger.kind: "catch-up"` with bounds; `nothing-missed`; `mode: none` declared gap; event-triggered no invented window; removed declaration → declared gap with history readable (F-5, AC-F5-1..3, NFR-6, E-14, E-15).
 - Project declarations: one committed `<configDirectoryName>/ceremonies.yaml`, bounded read, same contract and runner with zero tooling change, unparseable document refused as `config.file.malformed`, empty document ≡ absent, built-in collision refused with the built-in still effective (F-6, AC-F6-1..3, E-10, E-11, DEC-6, DEC-15).
 - Tier engine: the single mapping from plan `tier` + pm-notes `variant` to the pinned per-variant phase sets, `tier.phases` canonical-subset restriction with `unresolved-phase` findings, the closed five-trigger escalation vocabulary with evidence, `tier-mismatch` / `unevaluated-trigger` findings, and tiered intake obligation (F-7, DM-7, AC-F7-1..5, AC-NFR9-1, DEC-2, DEC-13, Appendix D).
 - Measurement: run record, step record, derived status/durations, no mutable run document, and one committed `comparisons[]` record with the committed `MET-CEREMONY-SHARE` identity, before value, after sample, `sampleMinimum: 5`, closed verdict set, native basis, and disclosure; `insufficient-sample` below the minimum (F-8, DM-8, AC-F8-1..3, NFR-10, DEC-1, DEC-8, DEC-14).
-- Retro ceremonies at `session`, `incident`, `window`, `project`: declared triggers, follow-through-first agenda position, fixed note schema on write and read-back, idempotent scope key, per-level outputs, addendum-not-rewrite, null-retro success, and read-only consumption of the delivered retro pipeline; `change`/R1 stays closeout's (F-9, DM-2, AC-F9-1..6, AC-F3-3, DEC-3, DEC-4, DEC-7).
+- Retro ceremonies at `session`, `incident`, `window`, `project`: declared triggers (exactly the four sub-R1 level triggers, no `change-merged`), explicit-run trigger resolution from the note, follow-through-first agenda position, fixed note schema on write and read-back, idempotent scope key, per-level outputs, addendum-not-rewrite, null-retro success, and read-only consumption of the delivered retro pipeline; `change`/R1 stays closeout's (F-9, DM-2, AC-F9-1..6, AC-F3-3, AC-F3-8, DEC-3, DEC-4, DEC-7, DEC-17).
 - Error identities and binding: `ceremony.note-invalid`, `ceremony.declaration.invalid`, the `ceremony` domain kind, one reserved two-segment allowlist entry (52 → 53), documented count 136 → 138, and two-way machine/documented sync with zero reworded delivered rows (DM-9, AC-NFR8-1, NFR-8, C-7).
 - Structural and NFR properties: no inference client / model identifier / network module / ambient clock-random-environment read in fold, render, verification or tier paths with a failing mutation; exactly two phase-set sources and no hardcoded default; mirror-sync target bound and no force path; determinism, bounds, read/run cost, duration budgets, and hermetic posture (AC-NFR2-1, AC-NFR9-1, AC-NFR12-1, NFR-2, NFR-7, NFR-11, NFR-13, Appendix E).
 - Backward compatibility: delivered families, retro pipeline, closeout, plan/pm-notes contracts, and measurement values unchanged; no metrics surface, action registry, pack, scheduler, event topic, or MCP tool delivered (AC-NFR14-1 regression half, §8.5, DoD-13).
@@ -64,7 +65,8 @@ This plan is a design and verification map, not an execution claim: no suite was
 - [OUT] Memory-schema or memory-lint changes; the retro note writes through the delivered archive convention and index regeneration (NG-8 partial, §7.2).
 - [OUT] Cross-repository ceremony coordination; ceremonies are per-repository in this change (§7.2).
 - [OUT] Any LLM/model/agent invocation inside a step; no step kind exists for one (NG-8). Asserted structurally, not behaviourally.
-- [GAP-1 — implementation-plan mapping — PENDING] `chg-GH-296-plan.yaml` is authored in `delivery_planning` (phase 4) and does not exist yet. It must map `TC-CEREMONY-001..060` onto delivery phases without reshaping any TC's oracle, identity, exit, bound, or AC/NFR mapping, and it must resolve the three non-blocking OQs (OQ-T1..OQ-T3 below). Any later plan that changes a pinned contract reopens this test plan.
+- [GAP-1 — implementation-plan mapping — SATISFIED for TC-001..060, plan-side entry PENDING for 061..064] `chg-GH-296-plan.yaml` (delivery.plan.v1, 11 phases) carries a TC → PHASE map that owns `TC-CEREMONY-001..060` exactly once each without reshaping any TC's oracle, identity, exit, bound, or AC/NFR mapping, and the three non-blocking OQs are resolved in its header. The four TCs added in v1.1 (`TC-CEREMONY-061..064`) are owned per §7.1 of this plan using the plan's existing phase boundaries; recording them in the plan's map is a `delivery_planning` correction (GAP-7). Any later plan that changes a pinned contract reopens this test plan.
+- [GAP-7 — plan-side TC → PHASE entry for TC-061..064 — PENDING] The plan's map states "60 ids = TC-CEREMONY-001..060". This plan's §7.1 states the ownership of all 64 TCs on the plan's existing phase boundaries (061 → Phase 1; 062, 063, 064 → Phase 3). The plan must add those four ids to its map and update its phase summaries' count/summary lines in the same `delivery_planning` correction; until it does, the plan under-declares four ids it already gates.
 - [GAP-2 — delivery-bound, non-blocking: exact closed-vocabulary member strings not spec-pinned] The spec fixes the vocabulary *sets* but not every literal (e.g. the closed carry-over reason set, the assess-item reason strings, the escalation finding sub-codes beyond the three named). Tests assert obligations through declared contract constants asserted once in `tests/structure/ceremony-contract.test.ts`; exact literals are pinned with the contract suite and goldens at delivery (mirrors the GH-291 GAP-4/5/6 discipline).
 - [GAP-3 — delivery-bound, non-blocking: NFR-13 budgets are runner-dependent] The `≤30 s` / `≤60 s` / `≤10 s` / `≤60 s` thresholds depend on runner capacity. CI asserts **bounded work** (one declaration read, one verified read per append, one fold, no retries/pagination/child process/network) plus a soft local budget; a generated-fixture reference measurement is recorded in §10 and never reported as a passing threshold.
 - [GAP-4 — delivery-bound, non-blocking: mirror sync needs temp-git fixtures] `artifact-equals-source` and the clean/declared-base preconditions are proven over isolated temp git repositories (the `tests/fixtures/closeout/temp-git.ts` precedent), never the live tree. The commit-primitive landing path is composed, not re-tested.
@@ -73,9 +75,9 @@ This plan is a design and verification map, not an execution claim: no suite was
 
 ## 2. References
 
-- **Change specification**: [chg-GH-296-spec.md](./chg-GH-296-spec.md) — 9 capabilities (F-1..F-9), 9 data-model elements (DM-1..DM-9), 14 NFRs, 45 Given/When/Then acceptance criteria (§17), Appendix A ticket mapping, Appendix B constraint register C-1..C-10, Appendix C documentation deltas, Appendix D single-source tier mapping, Appendix E testability notes, DEC-1..DEC-15, RSK-1..RSK-12, OQ-1..OQ-3.
+- **Change specification**: [chg-GH-296-spec.md](./chg-GH-296-spec.md) — v1.1: 9 capabilities (F-1..F-9), 9 data-model elements (DM-1..DM-9), 14 NFRs, 49 Given/When/Then acceptance criteria (§17: AC-F1-1..4, AC-F2-1..4, AC-F3-1..8, AC-F4-1..8, AC-F5-1..3, AC-F6-1..3, AC-F7-1..5, AC-F8-1..3, AC-F9-1..6, AC-NFR2-1, AC-NFR8-1, AC-NFR9-1, AC-NFR12-1, AC-NFR14-1), edge cases E-1..E-20, Appendix A ticket mapping, Appendix B constraint register C-1..C-10, Appendix C documentation deltas, Appendix D single-source tier mapping, Appendix E testability notes, DEC-1..DEC-18, RSK-1..RSK-12, OQ-1..OQ-3.
 - **PM record**: [chg-GH-296-pm-notes.yaml](./chg-GH-296-pm-notes.yaml) — milestone `M2: Ceremonies, measurement, and memory`, `variant: full`, story `M2-S3`, and the two recorded scope decisions (ceremony-share measurement scoped to run records + one committed comparison with `ados metrics` out of scope; tier engine consumes the delivered plan `tier` and pm-notes `variant` with one mapping). Clarify phase confirmed the three ticket dependencies are delivered.
-- **Implementation plan**: `./chg-GH-296-plan.yaml` — authored in phase 4; not yet present (GAP-1).
+- **Implementation plan**: [chg-GH-296-plan.yaml](./chg-GH-296-plan.yaml) — delivery.plan.v1, 11 phases, tier `{name: full}`, and the TC → PHASE map that owns `TC-CEREMONY-001..060` exactly once each; the four v1.1 TCs (061..064) are owned per §7.1 pending the plan's map update (GAP-1, GAP-7).
 - **Inherited scenario seeds (adopted by ID, not restated)**: [M2 test-scenarios.md](../../../planning/oss-tooling/milestones/m2/test-scenarios.md) §M2-S3 — `SC-M2-S3-01` (conforming note produces each agenda step's declared output and an artifact-verified follow-through section; exit 0) is adopted as TC-CEREMONY-048; `SC-M2-S3-02` (note missing its scope key is refused naming `scopeKey`; exit 1; `error.code == "ceremony.note-invalid"`) is adopted as TC-CEREMONY-047. Both carry their verbatim assertions.
 - **Testing strategy**: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — layers, module→test mapping, `bun:test`, permanent-suite invariant rules, the fixture-coverage meta-check discipline, the aggregate `pnpm check` gate.
 - **TypeScript rules**: [.ai/rules/typescript.md](../../../../.ai/rules/typescript.md) — strict typing, purity, ports and adapters, the error contract, `bun:test` authoring.
@@ -97,7 +99,7 @@ This plan is a design and verification map, not an execution claim: no suite was
 
 ### 3.1 Functional Coverage (F-#, AC-#)
 
-All 45 acceptance criteria from spec §17 are listed; every row has at least one automated case and none carries a TODO.
+All 49 acceptance criteria from spec §17 (spec v1.1) are listed; every row has at least one automated case and none carries a TODO. The four criteria added in v1.1 (AC-F2-4, AC-F3-8, AC-F4-7, AC-F4-8) are covered by TC-CEREMONY-061..064 and, where noted, co-covered by a pre-existing TC whose assertions the spec change extended.
 
 | AC ID | Criterion (abbreviated) | TC ID(s) | Status |
 |-------|--------------------------|----------|--------|
@@ -107,7 +109,8 @@ All 45 acceptance criteria from spec §17 are listed; every row has at least one
 | AC-F1-4 | A ceremony with no `sync` step yields the same verdict and artifacts with and without `--apply` | TC-CEREMONY-005 | Covered |
 | AC-F2-1 | The six built-ins validate: 100% of steps carry a verification mode, 100% of outputs a schema identifier, no executable content or undeclared vocabulary name | TC-CEREMONY-007, TC-CEREMONY-010 | Covered |
 | AC-F2-2 | Unknown step kind, step without verification, duplicate id, built-in collision, unknown tier, unparseable schedule → `ceremony.declaration.invalid` naming id and field at exit 1, nothing registered | TC-CEREMONY-008 | Covered |
-| AC-F2-3 | A declaration exceeding any declared bound (phases, steps, inputs, targets, document size) is refused naming the exceeded bound | TC-CEREMONY-009 | Covered |
+| AC-F2-3 | A declaration exceeding any declared bound (phases, steps, inputs, targets, document size) is refused naming the exceeded bound | TC-CEREMONY-009 | Covered (the same case exercises the F-2 `triggers[]` 1..8 count as a declared bound; the criterion's parenthetical enumerates the others and is not restated) |
+| AC-F2-4 | Every built-in and project declaration carries exactly one `scopeKey` from the closed derivation set (`literal`, `repository`, `note`), a `note` derivation only where a note is required, and at most one `schedule` trigger; a missing derivation, a `note` derivation without a note requirement, a malformed literal token, or two `schedule` triggers is refused as `ceremony.declaration.invalid` naming `scopeKey` or `triggers[]` | TC-CEREMONY-061, TC-CEREMONY-007 | Covered (the six-built-in acceptance half also runs inside the TC-007 validator sweep) |
 | AC-F3-1 | The parametric parity suite executes all six built-ins through the same runner over synthetic inputs; declared agenda, output set, verification mode, and verdict hold; zero built-ins need a path the others do not use | TC-CEREMONY-011, TC-CEREMONY-012, TC-CEREMONY-019 | Covered |
 | AC-F3-2 | The morning brief artifact validates against `delivery.brief.v1` with ten surfaces, three anchor groups, and the closed placeholder catalog; run exits 0 | TC-CEREMONY-013 | Covered |
 | AC-F3-3 | The retro evidence pass at each of the four levels produces its declared per-level note with that level's declared trigger recorded | TC-CEREMONY-014 | Covered |
@@ -115,12 +118,15 @@ All 45 acceptance criteria from spec §17 are listed; every row has at least one
 | AC-F3-5 | Mirror sync over two affected repositories with `--apply` makes each mirrored set equal the register set for that repository, verdict `verified`; later drift is `unverified` at exit 1 naming the target | TC-CEREMONY-016, TC-CEREMONY-052 | Covered |
 | AC-F3-6 | A quiet night-watch shows every declared check exactly once with each clean area an explicit verified-empty | TC-CEREMONY-017 | Covered |
 | AC-F3-7 | A sprint rollover with carry-over work makes every entry name its ref, a reason from the closed set, and its next milestone | TC-CEREMONY-018 | Covered |
+| AC-F3-8 | An explicit `ceremony run` records `trigger.kind: "explicit"` with resolution `note` (note names a declared trigger), `declaration` (exactly one declared trigger), or `unspecified` (several declared, none named, set recorded); never counted as a scheduled/event obligation; a note naming an undeclared trigger is refused as `input.value.rejected`; the retro declaration declares no `change-merged` trigger and produces no R1 output | TC-CEREMONY-062, TC-CEREMONY-014 | Covered |
 | AC-F4-1 | A step whose artifact fails read-back is `unverified`, no later step executes, run verdict `unverified` at exit 1, and run/step records plus produced artifact stay durable | TC-CEREMONY-020 | Covered |
 | AC-F4-2 | After interruption at step *k*, `resume` starts at *k+1* and no verified step is re-executed or re-rendered | TC-CEREMONY-021 | Covered |
 | AC-F4-3 | A run whose persisted step records contradict its declaration refuses `state.store.torn` at exit 2 with zero writes | TC-CEREMONY-022 | Covered |
 | AC-F4-4 | At each of two phase boundaries the next phase receives a carried summary ≤4 096 bytes and ≤40 lines, and an over-bound summary carries an explicit omitted count | TC-CEREMONY-023 | Covered |
 | AC-F4-5 | A `sync` step without `--apply` yields `dry-run` at exit 0 with the write set computed and precondition-checked, and nothing landed | TC-CEREMONY-024 | Covered |
-| AC-F4-6 | An already-recorded `(ceremony, scopeKey, window)` returns the recorded verdict with `data.reused: true` and appends zero records and zero note bodies | TC-CEREMONY-025 | Covered |
+| AC-F4-6 | An already-recorded `(ceremony, scopeKey, window)` returns the recorded verdict with `data.reused: true` and appends zero records and zero note bodies | TC-CEREMONY-025, TC-CEREMONY-063 | Covered |
+| AC-F4-7 | The note-less scheduled `morning-brief` run twice in one UTC day without `--window`: the window is the cadence's derived day, the scope key is the declaration's `repository` derivation, the second invocation returns the recorded verdict with `data.reused: true`, and zero run records, step records, and artifacts are appended | TC-CEREMONY-063 | Covered |
+| AC-F4-8 | The note-less event-triggered `decision-record-mirror-sync` run without `--window`: refused as `input.value.rejected` naming `--window` at exit 1 before any write with zero records and zero artifacts; with `--window`, the run identity is `(ceremony, repository scope key, that window)` | TC-CEREMONY-064 | Covered |
 | AC-F5-1 | One missed daily window → exactly one run with `trigger.kind: "catch-up"` and the missed bounds; a second `catch-up` appends nothing and reports the window caught up | TC-CEREMONY-026 | Covered |
 | AC-F5-2 | Every eligible ceremony current → `nothing-missed`, zero records, exit 0 | TC-CEREMONY-027 | Covered |
 | AC-F5-3 | `catchUp.mode: "none"` with one missed window → declared gap with bounds and no run | TC-CEREMONY-028 | Covered |
@@ -154,11 +160,13 @@ All 45 acceptance criteria from spec §17 are listed; every row has at least one
 | AC1 — ceremony share measured before and after; trend toward 40 %; recorded from committed data | TC-CEREMONY-041, TC-CEREMONY-042 | The comparison record's members are asserted against the committed baseline log; the below-minimum case proves no trend is claimed with `n < 5` |
 | AC2 — every built-in ceremony is parity-testable | TC-CEREMONY-011, TC-CEREMONY-012, TC-CEREMONY-007 | One parametric suite over six declarations plus one negative case each; the validator runs over the same six |
 | AC3 — a project-declared ceremony runs through the same runner without tooling changes | TC-CEREMONY-030 | A declaration-document-only fixture produces the same record shape and verification discipline as a built-in |
-| AC4 — retro ceremonies follow the retrospective concept (declared trigger, follow-through first, fixed schema, scope keys, per-level outputs) | TC-CEREMONY-014, TC-CEREMONY-039, TC-CEREMONY-043, TC-CEREMONY-044, TC-CEREMONY-045, TC-CEREMONY-047, TC-CEREMONY-048 | Level-by-level triggers and outputs, note-contract intake, first-phase position, scope-key idempotency, addendum, null retro |
+| AC4 — retro ceremonies follow the retrospective concept (declared trigger, follow-through first, fixed schema, scope keys, per-level outputs) | TC-CEREMONY-014, TC-CEREMONY-062, TC-CEREMONY-039, TC-CEREMONY-043, TC-CEREMONY-044, TC-CEREMONY-045, TC-CEREMONY-047, TC-CEREMONY-048 | Level-by-level triggers and outputs, the four-trigger declaration set with explicit-run resolution, note-contract intake, first-phase position, scope-key idempotency, addendum, null retro |
 | SC-M2-S3-01 (inherited seed) | TC-CEREMONY-048 | Verbatim assertion: exit 0 and `follow-through` section with ≥1 verified action |
 | SC-M2-S3-02 (inherited seed) | TC-CEREMONY-047 | Verbatim assertion: exit 1 and `error.code == "ceremony.note-invalid"` naming `scopeKey` |
 
-**Capability coverage (no capability unlinked).** F-1 → TC-001..006; F-2 → TC-007..010; F-3 → TC-011..019; F-4 → TC-020..025, TC-040; F-5 → TC-026..029; F-6 → TC-030..032; F-7 → TC-033..038, TC-051; F-8 → TC-040..042; F-9 → TC-014..015, TC-039, TC-043..048.
+**Capability coverage (no capability unlinked).** F-1 → TC-001..006, TC-064; F-2 → TC-007..010, TC-061; F-3 → TC-011..019, TC-062; F-4 → TC-020..025, TC-040, TC-063, TC-064; F-5 → TC-026..029; F-6 → TC-030..032; F-7 → TC-033..038, TC-051; F-8 → TC-040..042; F-9 → TC-014..015, TC-039, TC-043..048.
+
+**v1.1 traceability delta (spec DEC-16/DEC-17/DEC-18 and E-18/E-19/E-20).** Four criteria were added to §17 by the readiness remediation: the declaration-held scope key with its closed derivation and the single-schedule bound (AC-F2-4 → TC-061), the recorded trigger kind/resolution for explicit runs plus the retro declaration's four-trigger set and absent R1 output (AC-F3-8 → TC-062, co-covered by TC-014), the note-less scheduled idempotency case AC-F4-6 could not see (AC-F4-7 → TC-063), and the note-less event-triggered `--window` requirement (AC-F4-8 → TC-064). No pre-existing AC lost a TC and no AC text was stretched: AC-F4-6 gained the note-less half (TC-063), AC-F2-3's generic "declared bound" clause now also exercises the `triggers[]` count (TC-009, parenthetical unchanged), DM-1's bound statement was restated to the spec's single schedule-trigger bound, and TC-014's trigger assertion moved from kind-equality to the recorded-trigger rule (see §9).
 
 ### 3.2 Interface Coverage (API-#, EVT-#, DM-#)
 
@@ -167,9 +175,9 @@ The specification adds no HTTP endpoint (§8.1: N/A) and no event topic or kind 
 | Interface / data model | Description | TC ID(s) | Status |
 |------------------------|-------------|----------|--------|
 | CLI grammar (§8.1) | One positional (`run`: ceremony name; `resume`: run id), `--note <path>`, `--window <start>..<end>`, `--apply`, plus the three global flags; unknown/missing tokens refuse before any read/write | TC-CEREMONY-002, TC-CEREMONY-004, TC-CEREMONY-006 | Covered |
-| DM-1 — ceremony declaration contract `delivery.ceremony.declarations.v1` | Member set, closed vocabularies, bounds, uniqueness, data-only property | TC-CEREMONY-007..011 | Covered |
-| DM-2 — ceremony note contract `delivery.ceremony.note.v1` | Required members, `scopeKey` anchor, `window.start ≤ end`, retro fixed members, addenda append-only | TC-CEREMONY-039, TC-CEREMONY-043..045, TC-CEREMONY-047, TC-CEREMONY-048 | Covered |
-| DM-3 — `ceremony.run` record `delivery.ceremony.run.v1` | One record per run identity: ceremony/run id, origin, declaration digest, trigger incl. catch-up marker, scope key, tier facts, injected start, phase count | TC-CEREMONY-003, TC-CEREMONY-026, TC-CEREMONY-035, TC-CEREMONY-040 | Covered |
+| DM-1 — ceremony declaration contract `delivery.ceremony.declarations.v1` | Member set, closed vocabularies, uniqueness, data-only property; the `triggers[]` count bound 1..8 (an F-2 bound) and the single schedule-trigger bound restated once in DM-1; the required `scopeKey` member with its closed derivation set; bounds ≤16 ceremonies/document, ≤12 phases, ≤32 steps, ≤16 inputs, ≤8 targets, 1 MiB document, id `^[a-z][a-z0-9-]*$` ≤64 characters | TC-CEREMONY-007..011, TC-CEREMONY-009, TC-CEREMONY-061 | Covered |
+| DM-2 — ceremony note contract `delivery.ceremony.note.v1` | Required members, `scopeKey` anchor and its precedence against the declaration's `literal`/`repository` key, `window.start ≤ end`, `trigger` naming a declared trigger, retro fixed members, addenda append-only | TC-CEREMONY-039, TC-CEREMONY-043..045, TC-CEREMONY-047, TC-CEREMONY-048, TC-CEREMONY-061, TC-CEREMONY-062 | Covered |
+| DM-3 — `ceremony.run` record `delivery.ceremony.run.v1` | One record per run identity: ceremony/run id, origin, declaration digest, trigger kind + resolution (+ declared trigger or declared set), declared and actual window, catch-up marker, scope key with its derivation, tier facts, injected start, phase count | TC-CEREMONY-003, TC-CEREMONY-026, TC-CEREMONY-035, TC-CEREMONY-040, TC-CEREMONY-062, TC-CEREMONY-063, TC-CEREMONY-064 | Covered |
 | DM-4 — `ceremony.step` record `delivery.ceremony.step.v1` | One record per attempted step: index, phase index, kind, outcome, start/end/duration, slot, artifact reference, verification verdict, classified reason | TC-CEREMONY-020, TC-CEREMONY-022, TC-CEREMONY-040 | Covered |
 | DM-5 — ceremony record boundary | Two kinds under `ceremony.` prefix, boundary validation, `state.store.unknown` on nonconforming write, fenced append + exactly-one re-read, four read verdicts, folds only | TC-CEREMONY-022, TC-CEREMONY-040 | Covered |
 | DM-6 — ceremony artifact family | Per-repository file family in the state directory, one artifact per run named by run id, `0600`, outside the ledger and derived-document set; unreadable render fails its step | TC-CEREMONY-020, TC-CEREMONY-023, TC-CEREMONY-053 | Covered |
@@ -187,7 +195,7 @@ The specification adds no HTTP endpoint (§8.1: N/A) and no event topic or kind 
 | NFR-2 | Deterministic render/verification with 0 model calls: byte-identical artifacts and human text for identical inputs/clock/declaration; 0 inference imports, model ids, network modules, ambient reads in fold/render/verify/tier paths | TC-CEREMONY-050, TC-CEREMONY-053 | Covered |
 | NFR-3 | Artifact-verified completion: 100 % of steps carry a verification mode; 100 % of `verified` steps passed read-back; 0 outcome-only assertions; 0 over-bound declarations accepted | TC-CEREMONY-007, TC-CEREMONY-011, TC-CEREMONY-012, TC-CEREMONY-020, TC-CEREMONY-009 | Covered |
 | NFR-4 | Resume correctness: re-executed verified steps = 0; step records ≤ *n* + re-attempts of the failed step; contradicted sequences refuse `state.store.torn` with 0 writes | TC-CEREMONY-021, TC-CEREMONY-022 | Covered |
-| NFR-5 | Idempotency: 0 duplicate run records per `(ceremony, scopeKey, window)`; 0 duplicate note bodies; a repeat catch-up appends 0 | TC-CEREMONY-025, TC-CEREMONY-044, TC-CEREMONY-026 | Covered |
+| NFR-5 | Idempotency: 0 duplicate run records per `(ceremony, scopeKey, window)`; 0 duplicate note bodies; a repeat catch-up appends 0; a note-less repeat in one derived window appends 0 records and 0 artifacts | TC-CEREMONY-025, TC-CEREMONY-063, TC-CEREMONY-064, TC-CEREMONY-044, TC-CEREMONY-026 | Covered |
 | NFR-6 | Catch-up boundedness: ≤1 missed window per ceremony per invocation; 0 fabricated windows; no-miss appends 0 and exits 0 | TC-CEREMONY-026..029 | Covered |
 | NFR-7 | Bounded carried state and output: summary ≤4 096 bytes/≤40 lines with explicit omitted count; run ≤16 KiB; step ≤2 KiB; brief artifact ≤65 536 bytes; declaration ≤1 MiB | TC-CEREMONY-023, TC-CEREMONY-053, TC-CEREMONY-009 | Covered |
 | NFR-8 | Error-table binding: exactly 2 rows, 1 kind, 1 reserved entry added; 100 % two-way sync; 0 delivered rows changed | TC-CEREMONY-049 | Covered |
@@ -200,13 +208,13 @@ The specification adds no HTTP endpoint (§8.1: N/A) and no event topic or kind 
 
 ### 3.4 Gap Check (coverage-matrix integrity)
 
-- **Uncovered ACs**: none. All 45 are mapped to at least one automated case; none carries a TODO.
+- **Uncovered ACs**: none. All 49 are mapped to at least one automated case; none carries a TODO.
 - **ACs not mechanically assertable in the permanent suite**: **AC-NFR14-1** only, and only its process halves — "green before the PR opens", "PR targets `main-tools`", "PR stays open". A permanent test cannot assert PR state without asserting against a moving external fact or a diff against a base branch (forbidden by `testing-strategy.md` §Invariant-test authoring). It is evidenced instead by (a) the phase-9 gate log recording the exact command and exit code, (b) the commit-message range gate output, and (c) PR metadata recorded as a pm-notes `notes:` entry. Its *mechanical* half — the change introduces no gate regression — is additionally covered by TC-CEREMONY-059 running the full battery in CI.
 - **Orphan TCs**: none. Every TC names at least one AC, DM, or NFR in §5.1 and §5.2.
 - **Uncovered NFRs**: none. NFR-13's wall-clock half is reference-only (GAP-3); its CI-verifiable bounded-work half is asserted in TC-CEREMONY-055.
 - **Uncovered DMs**: none (DM-1..DM-9 all mapped).
 - **Inherited scenario seeds**: both adopted by ID with their verbatim assertions; neither is restated. `SC-M2-S3-01` → TC-CEREMONY-048; `SC-M2-S3-02` → TC-CEREMONY-047.
-- **Spec cross-reference resolved (no criterion added)**: Appendix B constraint C-1 cites `NFR-1, AC-F1-3`; both are declared (NFR-1 in §9, AC-F1-3 in §17). NFR-1 is evidenced by AC-F1-3 through TC-CEREMONY-004 (with the grammar half in TC-CEREMONY-002). This plan maps the 45 criteria §17 declares, and the AC count is unchanged (see OQ-T5).
+- **Spec cross-reference resolved (no criterion added by that correction)**: Appendix B constraint C-1 cites `NFR-1, AC-F1-3`; both are declared (NFR-1 in §9, AC-F1-3 in §17). NFR-1 is evidenced by AC-F1-3 through TC-CEREMONY-004 (with the grammar half in TC-CEREMONY-002). That correction added no criterion; the criteria the v1.1 readiness remediation *did* add are listed next (see also OQ-T5, OQ-T6).
 - **Spec-named behaviour bound to an existing AC/NFR** (no dedicated AC by design):
 
 | Behavior | Spec source | Bound AC/NFR | Where |
@@ -224,20 +232,23 @@ The specification adds no HTTP endpoint (§8.1: N/A) and no event topic or kind 
 | Human output bounded (≤32 lines / 6 144 bytes) and deterministic | §10 | NFR-7, NFR-2 | TC-CEREMONY-053 |
 | Retired/excluded surfaces not delivered | §7.2, NG-1..NG-8, DoD-13 | AC-NFR14-1 | TC-CEREMONY-058 |
 | Documentation deltas and `ados_distribution: redistributable` | Appendix C, DoD-12 | AC-F1-1 | TC-CEREMONY-060 |
+| Declaration-held scope key and its closed derivation (incl. the `note`-derivation legality rule) | F-2 scope-key precedence, DM-1, DM-2, E-19, DEC-16 | AC-F2-4 | TC-CEREMONY-061 |
+| Window resolution order (note → `--window` → single declared cadence; event-only requires `--window`) | F-1 window resolution, E-18, DEC-18 | AC-F4-7, AC-F4-8 | TC-CEREMONY-063, TC-CEREMONY-064 |
+| Recorded trigger kind + resolution for explicit runs; obligation non-counting | F-2 declared-versus-recorded triggers, DM-3, E-20, DEC-17 | AC-F3-8 | TC-CEREMONY-062 |
 
-**Traceability summary.** AC covered: **45 / 45** (44 fully automated, 1 mixed: AC-NFR14-1 mechanical half automated, process half evidence-only — GAP-5). DM covered: **9 / 9**. NFR covered: **14 / 14** (NFR-13 reference-only wall clock). Inherited seeds adopted: **2 / 2**.
+**Traceability summary.** AC covered: **49 / 49** (48 fully automated, 1 mixed: AC-NFR14-1 mechanical half automated, process half evidence-only — GAP-5). DM covered: **9 / 9**. NFR covered: **14 / 14** (NFR-13 reference-only wall clock). Inherited seeds adopted: **2 / 2**. Test cases: **64** (`TC-CEREMONY-001..064`), each owning exactly one delivery phase per §7.1.
 **Deferred items with reason** (no TCs by design, per §7.3): a ceremony run-history read verb (OQ-1, deferred until M2-S6 needs it); a native `MET-` ID for runner-measured time (requires a definition change and a new allocation); ceremony packs (NG-3); ceremony-driven scheduling admission / blocking `pre-dispatch` (OQ-3, advisory only in this change); ceremony state on the board (§7.2); per-ceremony cost attribution (telemetry v2 attribution does not yet cover non-delivery work).
 
 ## 4. Test Types and Layers
 
 | Layer | Runner / invocation | Location | Covers |
 |-------|--------------------|----------|--------|
-| Contract, vocabulary and bounds | `bun test tests/structure` | `tests/structure/ceremony-contract.test.ts` (new); `tests/structure/{state-contract,plan-contract,content-inventory}.test.ts` (update) | TC-CEREMONY-007, 009, 010, 051 |
+| Contract, vocabulary and bounds | `bun test tests/structure` | `tests/structure/ceremony-contract.test.ts` (new); `tests/structure/{state-contract,plan-contract,content-inventory}.test.ts` (update) | TC-CEREMONY-007, 009, 010, 051, 061 |
 | Boundary, purity and confinement | `bun test tests/structure tests/boundaries`; `bun run scripts/checks/ambient-globals.ts` | `tests/structure/ceremony-imports.test.ts` (new) | TC-CEREMONY-050 (static half), 057 (static half) |
 | Error identity and two-way sync | `bun test tests/checks` (the suite invokes `runSyncCheck`); `bun run scripts/checks/error-table-sync.ts` | `tests/checks/error-table-sync.test.ts` (update), `tests/structure/error-table.test.ts` (update) | TC-CEREMONY-049 |
-| Pure domain — declaration, tier, schedule, note | `bun test tests/unit` (or the behaviour suite where no `tests/unit` exists) | `tests/behaviour/ceremony-declaration.test.ts`, `ceremony-tier.test.ts`, `ceremony-schedule.test.ts` (new) | TC-CEREMONY-008, 033..038 |
+| Pure domain — declaration, tier, schedule, note | `bun test tests/unit` (or the behaviour suite where no `tests/unit` exists) | `tests/behaviour/ceremony-declaration.test.ts`, `ceremony-tier.test.ts`, `ceremony-schedule.test.ts` (new) | TC-CEREMONY-008, 033..038, 061 |
 | State layer with injected store | `bun test tests/behaviour` | `tests/behaviour/ceremony-state-boundary.test.ts`, `ceremony-resume.test.ts` (new) | TC-CEREMONY-022, 040 |
-| Runner with injected runners/readers | `bun test tests/behaviour` | `tests/behaviour/ceremony-run.test.ts`, `ceremony-parity.test.ts` (new) | TC-CEREMONY-011..020, 023..025 |
+| Runner with injected runners/readers | `bun test tests/behaviour` | `tests/behaviour/ceremony-run.test.ts`, `ceremony-parity.test.ts`, `ceremony-run-triggers.test.ts` (new) | TC-CEREMONY-011..020, 023..025, 062..064 |
 | Adapter — declaration document read | `bun test tests/behaviour` | `tests/behaviour/ceremony-project-declarations.test.ts` (new) | TC-CEREMONY-030..032 |
 | CLI edge — grammar, envelope, exit projection | `bun test tests/behaviour tests/golden` | `tests/behaviour/ceremony-cli.test.ts` (new), `tests/golden/ceremony-envelope.test.ts` (new) | TC-CEREMONY-001..006 |
 | Behaviour — end-to-end multi-step flows | `bun test tests/behaviour` | `tests/behaviour/ceremony-flow-{brief,retro,rollover,night-watch,assessment,mirror}.test.ts` (new) | TC-CEREMONY-013..018, 047, 048 |
@@ -255,8 +266,8 @@ The specification adds no HTTP endpoint (§8.1: N/A) and no event topic or kind 
 3. **Id factories and fence tokens.** Run ids, step ids and artifact names come from injected deterministic id factories with fixed sequences. Fence tokens come from the injected fence port with literal fixture values; two concurrent-append fixtures use distinct literal tokens so a shared-token assumption fails.
 4. **Injected input readers.** Every GET-only input is a recording fake returning fixture facts. The recording asserts *which* source was read, how many times, and with which window — this is how NFR-11 read cost is proven without a live store. A collector-unavailable fixture returns a classified unavailable result rather than throwing.
 5. **Byte-level artifact I/O.** The artifact slot is a real temp-directory file family read and written as bytes, so `artifact-conforms` and `artifact-equals-source` are proven on serialized bytes (measured in UTF-8), and `0600` permissions are asserted from the filesystem mode. No golden is satisfied by an in-memory object.
-6. **Committed declaration fixtures.** The six built-ins are read from the production contract data (the parity suite iterates *production* declarations, not copies). Project declarations live in `tests/fixtures/ceremony/declarations/` as committed documents — one valid, one per defect (GAP-2), one unparseable, one empty, one colliding — with a committed expectation table naming code and field.
-7. **Committed note fixtures.** `tests/fixtures/ceremony/notes/` holds a conforming note per retro level, a missing-`scopeKey` note, a missing-member note, a wrong-ceremony note, and a window-disagreeing note. All synthetic, privacy-scanned (`tests/checks/fixture-privacy.test.ts`), no real participant identities.
+6. **Committed declaration fixtures.** The six built-ins are read from the production contract data (the parity suite iterates *production* declarations, not copies). Project declarations live in `tests/fixtures/ceremony/declarations/` as committed documents — one valid, one per defect (GAP-2), one unparseable, one empty, one colliding, one per `scopeKey`/trigger derivation defect (D-15..D-18), one per legal derivation, one note-less scheduled and one note-less event-only (for TC-061/063/064) — with a committed expectation table naming code and field.
+7. **Committed note fixtures.** `tests/fixtures/ceremony/notes/` holds a conforming note per retro level, a missing-`scopeKey` note, a missing-member note, a wrong-ceremony note, a window-disagreeing note, and a note naming an undeclared trigger (`change-merged` on the retro declaration). All synthetic, privacy-scanned (`tests/checks/fixture-privacy.test.ts`), no real participant identities.
 8. **One temp store per case, seeded through production writers.** `tests/fixtures/state/harness.ts` supplies the temp root, store, identity and fence primitives; ceremony records are seeded by composing the production append path (or a fixture builder that emits only payloads the production writer could emit), never by hand-written JSONL.
 9. **Independent oracles.** Expected verdicts, durations, byte lengths, line counts, phase sets, and comparison arithmetic are computed from hand-written fixture constants — never by calling the production fold, and never by re-summing the same array the production code sums. The pinned phase sets are compared element-for-element against `PM_NOTES_REQUIRED_PHASES_BY_VARIANT`, imported rather than re-typed.
 10. **Skip never counts as a pass.** Any suite with a conditional (platform, capability, environment) must fail when its precondition is absent unless the condition is one of the two declared and documented platform exceptions (Windows ACL). A `test.skip` without a paired `test.fail`-style guard is a plan violation; the hermetic suite (TC-CEREMONY-057) asserts that no ceremony suite silently skips.
@@ -266,7 +277,7 @@ The specification adds no HTTP endpoint (§8.1: N/A) and no event topic or kind 
 
 1. **A planted positive is asserted before the negative.** Before asserting `ceremony.declaration.invalid`, a paired valid declaration validates clean; before asserting zero appends, a first run is asserted to append exactly one run and *n* step records; before asserting `insufficient-sample`, an `n ≥ 5` fixture computes a verdict; before asserting an over-bound compaction, an under-bound summary is asserted untruncated.
 2. **A paired live control runs in the same test.** Every refusal beside the accepted invocation; every torn run beside a healthy run; every `mode: none` gap beside a `once` catch-up; every missing-note case beside a conforming note; every `unverified` run beside a `verified` run of the same declaration.
-3. **A disabling mutant must fail the suite.** `tests/checks/ceremony-mutants.test.ts` builds temp copies of production modules (the `tests/golden/redaction.test.ts` import pattern) and disables one rule each — at minimum: skip read-back verification; treat step outcome as verification; resume from step 0; allow a duplicate run identity to append; allow a second missed window; hardcode the `lite` phase set; drop an `unevaluated` trigger; treat `declaredTier` as authoritative; write a note body instead of an addendum; fabricate a finding for a null retro; substitute the native basis for the committed proxy; zero-fill `insufficient-sample` into `flat`. Each mutant must produce the prohibited observable with the fixture unchanged; if the real module also produced nothing, the suite fails.
+3. **A disabling mutant must fail the suite.** `tests/checks/ceremony-mutants.test.ts` builds temp copies of production modules (the `tests/golden/redaction.test.ts` import pattern) and disables one rule each — at minimum: skip read-back verification; treat step outcome as verification; resume from step 0; allow a duplicate run identity to append; allow a second missed window; hardcode the `lite` phase set; drop an `unevaluated` trigger; treat `declaredTier` as authoritative; write a note body instead of an addendum; fabricate a finding for a null retro; substitute the native basis for the committed proxy; zero-fill `insufficient-sample` into `flat`; record an explicit run as a `schedule` kind; derive a window for an event-only declaration; accept a declaration whose `scopeKey` is absent or whose `note` derivation requires no note. Each mutant must produce the prohibited observable with the fixture unchanged; if the real module also produced nothing, the suite fails.
 4. **Permutation invariance is asserted, not assumed.** The same step set appended in shuffled order must produce byte-identical derived summaries and human output; a fixture whose expected result depends on append order fails.
 5. **Bounds are measured, never assumed.** Byte bounds are measured on serialized UTF-8 bytes after asserting a positive measured length; line bounds by counting rendered lines; permission bits from `stat`.
 6. **Every finding is asserted as data, not as text.** `tier-mismatch`, `unresolved-phase`, `unevaluated-trigger`, and `undeclared-trigger` are asserted as structured finding entries naming their subject.
@@ -284,11 +295,15 @@ The specification adds no HTTP endpoint (§8.1: N/A) and no event topic or kind 
 | Catch-up whose replayed run is `unverified` | `unverified` naming the ceremony/step/window | data-bearing negative | 1 | A success exit because other ceremonies were current | 029 |
 | Missing verb / unknown verb / unexpected positional / unknown flag / missing flag value | `fallback.invocation` | user-validation | 1, before any read or write | Any read, record, or artifact | 002 |
 | Undeclared ceremony name | `input.value.rejected` naming requested name + declared set | user-validation | 1 | A run/step record or artifact | 003 |
+| Explicit `ceremony run` whose trigger resolves | `trigger.kind: "explicit"` with `resolution` of `note`, `declaration`, or `unspecified` (declared set named when `unspecified`) | success | 0 | A `schedule` or `event` kind on an operator invocation; an obligation marked fulfilled by it | 062 |
 | Note required and absent (E-1) | `input.value.rejected` naming the missing note | user-validation | 1, before any read/write | A run record or artifact | 039 |
 | Note missing `scopeKey` (SC-M2-S3-02) | `ceremony.note-invalid` naming `scopeKey` | user-validation | 1 | Any partial ceremony output; any record | 047 |
 | Note missing another required member / wrong ceremony / window disagreement | `ceremony.note-invalid` (or `input.value.rejected` for the `--window` disagreement) naming the field(s) | user-validation | 1 | A written note; a silently chosen window | 039 |
+| Note names a trigger the declaration does not declare | `input.value.rejected` naming the note's trigger + the declared set | user-validation | 1 | A recorded trigger the declaration never declared | 062 |
+| Note-less event-only declaration invoked without `--window` (E-18) | `input.value.rejected` naming `--window` | user-validation | 1, before any write | A derived window; a partially resolved identity; a run/step record or artifact | 064 |
 | Invalid declaration (vocabulary, uniqueness, collision, schedule, missing verify/schema) | `ceremony.declaration.invalid` naming ceremony id + field | user-validation | 1, nothing registered | A partial registration; a built-in overridden | 008 |
 | Declaration over a bound | `ceremony.declaration.invalid` naming the exceeded bound | user-validation | 1 | Silent truncation of a declaration | 009 |
+| Declaration with no `scopeKey`, a `note` derivation without a note requirement, a malformed literal token, or two `schedule` triggers (E-19) | `ceremony.declaration.invalid` naming `scopeKey` or `triggers[]` | user-validation | 1, nothing registered | An undefined or ambiguous run identity; an ambiguous derived window | 061 |
 | Declaration document present but unparseable (E-11) | `config.file.malformed` | user-validation | 1, before any run | Silently dropping project ceremonies | 031 |
 | Torn/contradicted run record sequence (E-6) | `state.store.torn` | platform-provider | 2, zero writes | A guessed repair; a reorder | 022 |
 | Nonconforming ceremony state write | `state.store.unknown` with `not_landed` | platform-provider | 2 | A default-filling write | 040 |
@@ -329,7 +344,7 @@ The specification adds no HTTP endpoint (§8.1: N/A) and no event topic or kind 
 | T-10 | each of the five closed triggers | matching | present / absent | each is evaluable; `matched` only with present evidence | A sixth trigger silently accepted |
 | T-11 | `lite` (effective) | `lite` | none | intake obligates only ceremonies whose `tiers` include `lite`; an explicit `ceremony run` of a non-obligated one still executes | Refusing an operator-initiated run |
 
-### 4.6 Declaration Defect Corpus (binding for AC-F2-2, AC-F2-3, AC-F6-1, DM-1, DM-9)
+### 4.6 Declaration Defect Corpus (binding for AC-F2-2, AC-F2-3, AC-F2-4, AC-F6-1, DM-1, DM-9)
 
 | ID | Defect | Expected refusal | Field named | Registered |
 |---|---|---|---|---|
@@ -344,9 +359,15 @@ The specification adds no HTTP endpoint (§8.1: N/A) and no event topic or kind 
 | D-09 | Unparseable schedule (e.g. `at: "25:00"`, cadence `hourly`) | same | `triggers[..].at` / `.cadence` | nothing |
 | D-10 | Duplicate `id` within the document | same | `id` | nothing |
 | D-11 | Project `id` collides with a built-in | same | `id`; the built-in stays effective | nothing |
-| D-12 | Over bounds: 13 phases / 33 steps / 17 inputs / 9 targets / 17 ceremonies / id 65 chars / >1 MiB | same, naming the bound | the bound field | nothing |
+| D-12 | Over bounds: 13 phases / 33 steps / 17 inputs / 9 targets / 17 ceremonies / 9 triggers / id 65 chars / >1 MiB | same, naming the bound | the bound field | nothing |
 | D-13 | Executable content smuggled (a `command`, `path`, `model`, `script`, or free-form `instruction` member) | rejected by the validator / absent from the type | the offending member | nothing |
 | D-14 | A fully valid declaration (control) | accepted | — | registered exactly once |
+| D-15 | No `scopeKey` member at all | `ceremony.declaration.invalid` | `scopeKey` | nothing |
+| D-16 | `scopeKey: { kind: "note" }` on a declaration whose `note.required` is `false` | same | `scopeKey` | nothing |
+| D-17 | `scopeKey: { kind: "literal", value: "Repo Key" }` (not a kebab-case token) | same | `scopeKey` | nothing |
+| D-18 | Two `schedule` triggers (`daily` + `weekly`) in one declaration | same | `triggers[]` | nothing |
+
+D-15..D-18 are the `scopeKey`/trigger half of the corpus (E-19, AC-F2-4); D-14 is their paired accepting control, and D-12 carries the 9-trigger count case. The at-limit trigger fixture is discussed in TC-CEREMONY-009 (OQ-T7).
 
 ### 4.7 Resume and Verification Matrix (binding for AC-F4-1..4, NFR-4)
 
@@ -399,12 +420,12 @@ Narrow iterations use the layer command from §4 (`bun test tests/<layer>/...`);
 | TC-CEREMONY-006 | `ceremony list` content, bounded render, and read cost | Happy Path | Behaviour | High | NFR-11, AC-F1-1 |
 | TC-CEREMONY-007 | All six built-ins validate: total, closed, fully verified | Happy Path | Structure/Contract | Critical | AC-F2-1, NFR-3 |
 | TC-CEREMONY-008 | Declaration defect corpus refusals (D-01..D-11) | Negative | Unit/Behaviour | Critical | AC-F2-2, DM-9 |
-| TC-CEREMONY-009 | Declaration bound overruns refused naming the bound | Negative | Unit/Contract | High | AC-F2-3, NFR-7 |
+| TC-CEREMONY-009 | Declaration bound overruns refused naming the bound (incl. the 8/9-trigger rung) | Negative | Unit/Contract | High | AC-F2-3, NFR-7 |
 | TC-CEREMONY-010 | No executable content: declarations are data only | Regression | Structure | Critical | AC-F2-1, AC-F2-2 |
 | TC-CEREMONY-011 | Parametric parity suite over the six built-ins, one runner path | Happy Path | Behaviour/Structure | Critical | AC-F3-1 |
 | TC-CEREMONY-012 | Per-built-in negative case: verification is not cosmetic | Negative | Behaviour | Critical | AC-F3-1, AC-F4-1 |
 | TC-CEREMONY-013 | Morning brief artifact conforms to `delivery.brief.v1` | Happy Path | Behaviour/Golden | Critical | AC-F3-2 |
-| TC-CEREMONY-014 | Retro evidence pass at four levels: per-level note + declared trigger | Happy Path | Behaviour | Critical | AC-F3-3 |
+| TC-CEREMONY-014 | Retro evidence pass at four levels: per-level note + declared trigger + explicit-run resolution | Happy Path | Behaviour | Critical | AC-F3-3, AC-F3-8 |
 | TC-CEREMONY-015 | Testing-session assessment: one verdict per item, zero unassessed | Happy Path | Behaviour | High | AC-F3-4 |
 | TC-CEREMONY-016 | Mirror sync equality, then drift → `unverified` naming the target | Happy Path + Negative | Integration | Critical | AC-F3-5, AC-NFR12-1 |
 | TC-CEREMONY-017 | Night-watch on a quiet window: exact checks, verified-empty | Corner Case | Behaviour | High | AC-F3-6 |
@@ -451,6 +472,10 @@ Narrow iterations use the layer command from §4 (`bun test tests/<layer>/...`);
 | TC-CEREMONY-058 | Aggregate gate regression on the delivering change | Regression | Aggregate | Critical | AC-NFR14-1 |
 | TC-CEREMONY-059 | Commit and PR hygiene for the delivering change | Manual/Evidence | Process | High | AC-NFR14-1, NFR-14 |
 | TC-CEREMONY-060 | Documentation deltas, distribution marker, content inventory | Regression | Checks/Content | High | AC-F1-1 |
+| TC-CEREMONY-061 | `scopeKey` derivation set, `note`-legality and single-schedule bound: refusals naming `scopeKey`/`triggers[]` | Negative | Unit/Contract | Critical | AC-F2-4, AC-F2-1, DM-1, DM-2 |
+| TC-CEREMONY-062 | Explicit-run trigger recording: `kind: explicit` with resolution `note`/`declaration`/`unspecified`, never an obligation | Happy Path + Negative | Behaviour | Critical | AC-F3-8, DM-3 |
+| TC-CEREMONY-063 | Note-less scheduled `morning-brief` twice in one UTC day: derived day window, `repository` key, `data.reused: true`, zero appends | Corner Case | Behaviour | Critical | AC-F4-7, AC-F4-6, NFR-5 |
+| TC-CEREMONY-064 | Note-less event-triggered run without `--window`: refused naming `--window`, zero records/artifacts; with `--window` the identity is complete | Negative | Behaviour | Critical | AC-F4-8, NFR-5 |
 
 ### 5.2 Scenario Details
 
@@ -683,17 +708,19 @@ Narrow iterations use the layer command from §4 (`bun test tests/<layer>/...`);
 
 **Preconditions**:
 
-- Generated fixtures at and one over each bound: 16/17 ceremonies, 12/13 phases, 32/33 steps, 16/17 inputs, 8/9 targets, 1 MiB/1 MiB+1 byte, id 64/65 characters.
+- Generated fixtures at and one over each bound: 16/17 ceremonies, 12/13 phases, 32/33 steps, 16/17 inputs, 8/9 targets, 8/9 triggers, 1 MiB/1 MiB+1 byte, id 64/65 characters.
+- The 8-trigger at-limit fixture repeats one declared event name to reach eight, because the closed event set has six members and only one `schedule` trigger is legal, so seven unique triggers is the vocabulary maximum (OQ-T7). The case exercises the count guard; whether a repeated trigger name is itself a vocabulary defect is a delivery-time contract-constant decision (GAP-2) and does not weaken the over-limit rung.
 
 **Steps**:
 
 1. Assert each at-limit fixture validates.
-2. Assert each over-limit fixture refuses `ceremony.declaration.invalid` naming the exceeded bound.
+2. Assert each over-limit fixture refuses `ceremony.declaration.invalid` naming the exceeded bound — including 9 triggers refused naming `triggers[]`.
 3. Assert the measured byte length of the at-limit document and a positive measured length before the over-limit assertion.
+4. Assert a declaration that is at-limit on every count validates once (a single combined at-limit fixture), so the ladder cannot pass by each rung being independently impossible.
 
 **Expected Outcome**:
 
-- Bounds are exactly enforced at their declared values; nothing is silently truncated; at-limit acceptance proves the bound is not off by one in the safe direction.
+- Bounds are exactly enforced at their declared values, including the `triggers[]` 1..8 count, and nothing is silently truncated; at-limit acceptance proves the bound is not off by one in the safe direction.
 
 #### TC-CEREMONY-010 - Declarations are data only
 
@@ -806,7 +833,7 @@ Narrow iterations use the layer command from §4 (`bun test tests/<layer>/...`);
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-3, F-9, AC-F3-3
+**Related IDs**: F-3, F-9, AC-F3-3, AC-F3-8, DEC-17, E-20
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/ceremony-flow-retro-levels.test.ts`
@@ -815,18 +842,24 @@ Narrow iterations use the layer command from §4 (`bun test tests/<layer>/...`);
 **Preconditions**:
 
 - Seeded verified retro evidence and `retro.run` records for each level's scope; one conforming note per level; injected clock.
+- The production retro declaration's `triggers[]` under assertion, and a note whose `trigger` member names `change-merged`.
 
 **Steps**:
 
 1. For each of `session`, `incident`, `window`, `project`, run the retro evidence pass with that level's note.
 2. Assert the produced note is the level's declared per-level output (session: evidence refs, self-error audit, near-miss captures, candidate lessons; incident: blameless system findings with the three attribution axes; window: cross-change patterns, follow-through verification, candidate promotions; project: consolidation candidates, graduation, recurrence report).
-3. Assert the run record's trigger equals the level's declared trigger (`session-end`, `incident-severity`, `daily`, `milestone-end`).
+3. Assert the declaration declares exactly the four sub-R1 level triggers (`session-end`, `incident-severity`, `daily`, `milestone-end`) and no fifth trigger — in particular no `change-merged` — with exactly one `schedule` trigger in the set, and that each manual level run records `trigger.kind: "explicit"` with `resolution: "note"`, the recorded declared trigger being the note's `trigger` member and equal to that level's declared trigger (DEC-17).
 4. Assert `change`/R1 is not produced by this declaration (closeout owns it).
 5. Assert a level with no pre-declared trigger yields `undeclared-trigger`, not an invented trigger.
+6. Assert the note naming `change-merged` is refused as `input.value.rejected` naming the note's trigger and the declared set, at exit `1`, with zero run records, zero step records, and nothing written to the memory slot.
 
 **Expected Outcome**:
 
-- Four of four levels carry a declared trigger and a per-level output; an undeclared trigger is a recorded finding, never fabricated.
+- Four of four levels carry a declared trigger and a per-level output; the declaration's trigger set is exactly the four it serves, so no firing of it can lack a level; a manual level run is recorded as `explicit`/`note` and never as a scheduled or event firing; an undeclared trigger is a recorded finding, never fabricated, and a note naming an undeclared trigger is refused before anything is written.
+
+**Notes / Clarifications**:
+
+- **v1.1 change** — only step 3 changed. v1.0 asserted that "the run record's trigger equals the level's declared trigger", which the recorded-trigger rule (DEC-17, AC-F3-8) made ambiguous for an operator invocation: an operator run has no firing, so its recorded kind is `explicit` and its resolution names the level's trigger through the note. The new step 6 (the `change-merged` note refusal) closes the other half of the same spec change. Steps 4 and 5 are unchanged from v1.0 — the R1-absence assertion stays step 4 verbatim.
 
 #### TC-CEREMONY-015 - Testing-session assessment verdict completeness
 
@@ -2049,6 +2082,137 @@ Narrow iterations use the layer command from §4 (`bun test tests/<layer>/...`);
 
 - Documentation is part of the deliverable and mechanically checked where the repo already checks it; drift is a gate failure, not a review note.
 
+#### TC-CEREMONY-061 - Declaration `scopeKey` derivation, `note`-legality, and the single-schedule bound
+
+**Scenario Type**: Negative (with an accepting control)
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-1, F-2, AC-F2-4, AC-F2-1, DM-1, DM-2, E-19, DEC-16, DEC-18
+**Test Type(s)**: Unit, Contract
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/ceremony-declaration.test.ts`, `tests/structure/ceremony-contract.test.ts`
+**Tags**: @offline, @ceremony, @declaration, @identity
+
+**Preconditions**:
+
+- The six production built-in declarations and the valid project declaration (D-14 control).
+- Defect fixtures D-15 (no `scopeKey`), D-16 (`note` derivation without a note requirement), D-17 (malformed literal token), D-18 (two `schedule` triggers).
+- Project declarations exercising each legal derivation (`literal`, `repository`, `note`), the delivered repository identity resolver fixture (`host/owner/name`), and a literal-token fixture.
+
+**Steps**:
+
+1. For each of the six built-ins and the valid project declaration, assert exactly one `scopeKey` is present and its `kind` is a member of the closed set `literal` | `repository` | `note`; assert no declaration carries a second derivation, an implied source, or a default.
+2. Assert the observed derivation per built-in: `morning-brief`, `sprint-rollover`, `night-watch`, `decision-record-mirror-sync` → `repository`; `retro-evidence-pass`, `testing-session-assessment` → `note`.
+3. Assert every `note` derivation appears only where `note.required` is `true`, and that each of the two `note`-deriving built-ins declares a note requirement (paired control asserting a note-less declaration never derives from a note).
+4. Assert each declaration declares at most one `schedule` trigger and that its `triggers[]` count is within 1..8.
+5. Assert the `repository` derivation resolves to the delivered normalized identity fixture on two independent resolutions (same value twice), and the `literal` derivation returns the declared token verbatim.
+6. Refuse D-15 → `ceremony.declaration.invalid` naming `scopeKey`, exit 1, nothing registered.
+7. Refuse D-16 → same code naming `scopeKey`; refuse D-17 → same code naming `scopeKey`.
+8. Refuse D-18 → same code naming `triggers[]`.
+9. Assert the D-14 control validates clean and registers exactly once in the same test (non-vacuity), and that every refusal produced no run record, step record, or artifact.
+
+**Expected Outcome**:
+
+- The run identity's scope key is declaration data with exactly one legal source per declaration, so no built-in, and no project declaration, can present an unresolved or ambiguous identity — and the note-less majority derive a stable repository key. Refusals name `scopeKey` or `triggers[]` and register nothing, proven against a paired accepting control.
+
+#### TC-CEREMONY-062 - Explicit-run trigger recording and resolution
+
+**Scenario Type**: Happy Path + Negative
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-2, F-3, F-9, AC-F3-8, DM-3, E-20, DEC-17
+**Test Type(s)**: Behaviour
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/ceremony-run-triggers.test.ts`
+**Tags**: @offline, @ceremony, @triggers
+
+**Preconditions**:
+
+- Three fixture declarations: a single-trigger declaration, a multi-trigger declaration (two distinct events, no `schedule`), and a note-consuming multi-trigger declaration.
+- A note-less `schedule: daily` fixture declaration for the obligation half (it has a scheduled window that an explicit run must not satisfy), and a second missed window for the `catch-up` control.
+- A note whose `trigger` names a declared trigger; a note whose `trigger` names a trigger the declaration does not declare.
+- The production retro declaration's trigger set is asserted by TC-CEREMONY-014 (Phase 5); this TC asserts the recording rule that declaration relies on.
+
+**Steps**:
+
+1. Run an explicit `ceremony run` of the single-trigger declaration; assert the run record carries `trigger.kind == "explicit"`, `trigger.resolution == "declaration"`, and that the recorded declared-trigger reference is that single trigger.
+2. Run an explicit run of the multi-trigger declaration with no note; assert `kind == "explicit"`, `resolution == "unspecified"`, and that the record names the declaration's full declared trigger set (set equality, order-insensitive).
+3. Run an explicit run of the note-consuming declaration with the note that names a declared trigger; assert `kind == "explicit"`, `resolution == "note"`, and the recorded trigger equals the note's named trigger.
+4. Run an explicit run of the note-less `schedule: daily` fixture; assert no `kind: "schedule"` or `kind: "event"` record is produced, and that the obligation evaluation for that window still reports it **due** — the explicit run did not satisfy it. Then invoke `catch-up`, which replays a *different* missed window with `kind: "catch-up"`: assert that window's obligation clears while the explicitly-run window stays due, proving the predicate is about the recorded kind and catch-up marker, not about the mere existence of a record.
+5. Refuse the note naming an undeclared trigger as `input.value.rejected` naming the note's trigger and the declared set, exit 1, with zero run records, zero step records, and zero artifacts.
+6. Assert the recorded-kind vocabulary is exactly `schedule`, `event`, `catch-up`, `explicit` and the resolution vocabulary exactly `note`, `declaration`, `unspecified`, and that every recorded pair is legal (e.g. `explicit` never paired with a catch-up marker).
+7. Assert the DM-3 members `declared window`, `actual window`, and the catch-up marker are present and mutually consistent for each recorded case.
+
+**Expected Outcome**:
+
+- A manual invocation is recorded as what it is — `explicit` — with a resolution that never guesses, so a reader can tell an operator run from a firing; the obligation arithmetic cannot be satisfied by typing the verb, and a note cannot smuggle a trigger the declaration never declared.
+
+**Notes / Clarifications**:
+
+- The interaction between an explicit run that already occupies a window's identity and a later `catch-up` for that same window is **not** asserted here; it is open as OQ-T8 because the spec states the non-counting rule but not the identity-collision outcome. Until it is pinned, this TC asserts the obligation predicate and the recorded kinds only.
+
+#### TC-CEREMONY-063 - Note-less scheduled idempotency: `morning-brief` twice in one UTC day
+
+**Scenario Type**: Corner Case
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-1, F-4, AC-F4-7, AC-F4-6, DM-1, DM-2, DM-3, NFR-5, E-4, DEC-16, DEC-18
+**Test Type(s)**: Behaviour
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/ceremony-run.test.ts`
+**Tags**: @offline, @ceremony, @idempotency, @window
+
+**Preconditions**:
+
+- A note-less scheduled declaration with `scopeKey: { kind: "repository" }` and exactly one `schedule: daily` trigger — the declared `morning-brief` shape; the production declaration once the built-ins land, and a fixture mirroring its declared shape in the Phase 3 gate.
+- A fixed, injected clock inside one UTC day; the delivered repository identity resolver fixture; a recording store, a recording artifact writer, and a byte-level artifact directory listing primitive.
+- Paired controls: the same declaration with an explicit `--window`, and a clock fixture straddling UTC midnight.
+
+**Steps**:
+
+1. Run the declaration with no `--window`; assert the resolved window equals the cadence's derived UTC day containing `NOW_MS` (hand-computed literal bounds, not recomputed by the production derivation), the scope key equals the `repository` derivation's identity fixture, and the run record carries the scope key with `derivation: "repository"`.
+2. Capture the record set and artifact directory after the first run; assert exactly one run record, one step record per declared step, and one artifact.
+3. Invoke the identical invocation again (same clock, same day, still no `--window`); assert the recorded verdict is returned with `data.reused: true` and exit 0.
+4. Assert zero new run records, zero new step records, and zero new artifacts (byte-level listing and record count before/after), and that the first artifact is byte-identical.
+5. Advance the injected clock to the next UTC day and invoke again with no `--window`; assert this is a new identity: exactly one new run record and one new artifact, with the earlier artifact untouched.
+6. Assert the derivation is single-valued and overridable by precedence: a `--window` equal to the derived day yields the same identity and returns `data.reused: true`, while a `--window` naming a different window supplies the window (F-1 rule 2) and yields a different identity; and the UTC-midnight-straddling fixture derives the day containing `NOW_MS` rather than a local-time day.
+7. Assert the paired explicit-window control and the derived-window case agree on the run-record shape (same DM-3 members), so the only difference is the window's source.
+
+**Expected Outcome**:
+
+- The note-less scheduled majority is idempotent on the declaration-derived key and the cadence-derived day: the second brief in one UTC day is the recorded verdict with no appended record and no second artifact. This is the case a note-only scope key made impossible to prove, and the reason AC-F4-6 alone was insufficient evidence.
+
+#### TC-CEREMONY-064 - Note-less event-triggered run requires `--window`
+
+**Scenario Type**: Negative (with paired accepting controls)
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-1, F-4, AC-F4-8, DM-3, NFR-5, E-18, DEC-18
+**Test Type(s)**: Behaviour
+**Automation Level**: Automated
+**Target Layer / Location**: `tests/behaviour/ceremony-run.test.ts`
+**Tags**: @offline, @ceremony, @window, @refusal
+
+**Preconditions**:
+
+- A note-less event-only declaration with one `event: pre-dispatch` trigger and `scopeKey: { kind: "repository" }` — the declared `decision-record-mirror-sync` shape.
+- Recording declaration reader, recording input readers, recording state reads, and a recording artifact writer; a valid `--window W1..W2` fixture and a second, different window.
+- A paired note-consuming declaration whose window comes from its note (no `--window` supplied).
+
+**Steps**:
+
+1. Invoke with no `--window`; assert `input.value.rejected` naming `--window` at exit `1`, with the failure under `error` in the five-key `delivery.result.v1` envelope and no `data`.
+2. Assert the refusal precedes every effect: zero declared-input reads, zero verified state reads, zero memory or artifact writes, zero run records, zero step records (the declaration read that establishes the event-only trigger set is the only read permitted before the refusal — see OQ-T9).
+3. Assert the run identity is never partially resolved: no run record exists for any window of that ceremony.
+4. Invoke with `--window W1..W2`; assert the run identity is `(ceremony, repository-derived scope key, W1..W2)` — the run record's declared window equals the supplied window and its scope key carries `derivation: "repository"`.
+5. Re-invoke with the same window; assert `data.reused: true` and zero appends. Invoke with the second, different window; assert a new run identity (exactly one new run record).
+6. Paired controls in the same test: the note-consuming declaration invoked with no `--window` proceeds on its note's window, and the event-only declaration invoked *with* `--window` proceeds — proving the refusal is specific to the note-less event-only case and not to `--window`-less invocations generally.
+7. Assert the forbidden outcome: at no point is a window derived for the event-only declaration (no derived `window` value appears in any refusal payload or record).
+
+**Expected Outcome**:
+
+- The highest-blast-radius built-in can never resolve an identity from a window that does not exist: the refusal is empty (no records, no artifacts, no input reads), and with a window the identity is complete and idempotent. A derived window would make the mirror sync's dedupe a guess, which is exactly what the spec refuses.
+
 ## 6. Environments and Test Data
 
 - **Environment**: local developer machine or CI runner; Bun pinned via `.bun-version`; pnpm workspace. Fully offline and hermetic — no network, no credentials, no live harness/provider stores, no child processes, and no real user state directory or live-tree write (NFR-11, §24 Appendix E).
@@ -2058,8 +2222,9 @@ Narrow iterations use the layer command from §4 (`bun test tests/<layer>/...`);
 - **Injected input readers**: recording fakes per declared input source; an unavailable-collector variant returning a classified result; the recordings are the read-cost oracle.
 - **Byte-level artifact I/O**: a per-test temp directory holding the `ceremony-artifact` family, read and written as UTF-8 bytes with measured lengths and `0600` mode assertions.
 - **State test data**: per-test temp store roots via `tests/fixtures/state/harness.ts`; ceremony records seeded through the production append path (or a builder emitting only production-shaped payloads); damaged stores produced at the ledger level for the torn/contradiction cases.
-- **Declaration test data**: `tests/fixtures/ceremony/declarations/` — the valid project declaration, one fixture per defect corpus row D-01..D-13, an unparseable document, an empty document, and a built-in-colliding document, with a committed expectation table naming code and field.
-- **Note test data**: `tests/fixtures/ceremony/notes/` — one conforming note per retro level, plus missing-`scopeKey`, missing-member, wrong-ceremony, invalid-window, and window-disagreeing variants.
+- **Declaration test data**: `tests/fixtures/ceremony/declarations/` — the valid project declaration, one fixture per defect corpus row D-01..D-18, an unparseable document, an empty document, a built-in-colliding document, one declaration per legal `scopeKey` derivation, one note-less scheduled declaration (single `schedule: daily`) and one note-less event-only declaration (single `event: pre-dispatch`), with a committed expectation table naming code and field.
+- **Note test data**: `tests/fixtures/ceremony/notes/` — one conforming note per retro level, plus missing-`scopeKey`, missing-member, wrong-ceremony, invalid-window, window-disagreeing, and undeclared-trigger (`change-merged`) variants.
+- **Trigger and window test data**: a single-trigger declaration, a multi-trigger declaration (no `schedule`), a note-consuming multi-trigger declaration, and notes naming a declared / an undeclared trigger; window fixtures with two distinct literal bounds, a UTC-midnight-straddling clock, and a fixed `NOW_MS` per suite.
 - **Repository test data**: isolated temp git repositories from `tests/fixtures/closeout/temp-git.ts` for the mirror sync; clean, dirty, wrong-base, absent, extra-record, and missing-record variants.
 - **Tier test data**: plan fixtures declaring `full`/`lite`/explicit `phases`/each escalation trigger; pm-notes fixtures declaring `full`/`lite`/absent; recorded-evidence fixtures per trigger.
 - **Measurement test data**: the committed `doc/planning/oss-tooling/measurement-baseline.yaml` read as the before value; generated after-samples for `n = 0, 1, 4, 5, 6`.
@@ -2090,16 +2255,46 @@ Narrow iterations use the layer command from §4 (`bun test tests/<layer>/...`);
 | TC-CEREMONY-039, TC-CEREMONY-044, TC-CEREMONY-047, TC-CEREMONY-048 | `tests/behaviour/ceremony-notes.test.ts` (new); `tests/behaviour/ceremony-flow-retro.test.ts` (new) | `bun test tests/behaviour/ceremony-notes.test.ts tests/behaviour/ceremony-flow-retro.test.ts` | Note fixture matrix; byte-level note reader; W1/W2 scope-key fixtures | To Implement |
 | TC-CEREMONY-041, TC-CEREMONY-042 | `tests/behaviour/ceremony-comparison.test.ts` (new); `tests/golden/ceremony-comparison.test.ts` (new); `tests/checks/ceremony-comparison-honesty.test.ts` (new) | `bun test tests/behaviour/ceremony-comparison.test.ts tests/checks/ceremony-comparison-honesty.test.ts` | Committed baseline log; `n = 0,1,4,5,6` samples; artifact trend scan | To Implement |
 | TC-CEREMONY-049 | `tests/structure/error-table.test.ts` (update); `tests/checks/error-table-sync.test.ts` (update) | `bun test tests/structure/error-table.test.ts tests/checks/error-table-sync.test.ts` + `bun run scripts/checks/error-table-sync.ts` | Both tables updated; mutation copies | To Implement (updates) |
-| TC-CEREMONY-050, TC-CEREMONY-051 | `tests/structure/ceremony-{imports,tier-single-source}.test.ts` (new); `tests/checks/ceremony-mutants.test.ts` (new) | `bun test tests/structure/ceremony-imports.test.ts tests/structure/ceremony-tier-single-source.test.ts tests/checks/ceremony-mutants.test.ts` | Planted-violation controls; twelve disabling mutants (§4.2.3) | To Implement |
+| TC-CEREMONY-050, TC-CEREMONY-051 | `tests/structure/ceremony-{imports,tier-single-source}.test.ts` (new); `tests/checks/ceremony-mutants.test.ts` (new) | `bun test tests/structure/ceremony-imports.test.ts tests/structure/ceremony-tier-single-source.test.ts tests/checks/ceremony-mutants.test.ts` | Planted-violation controls; fifteen disabling mutants (§4.2.3) | To Implement |
 | TC-CEREMONY-053, TC-CEREMONY-054 | `tests/behaviour/ceremony-determinism.test.ts`, `tests/behaviour/ceremony-bounds.test.ts` (new) | `bun test tests/behaviour/ceremony-determinism.test.ts tests/behaviour/ceremony-bounds.test.ts` | Injected clock/ids; permutation fixture; generated bound ladder | To Implement |
 | TC-CEREMONY-055 | `tests/behaviour/ceremony-performance.test.ts` (new) | `bun test tests/behaviour/ceremony-performance.test.ts` | 10k-record sidecar; recording read ports; process-open probe | To Implement (GAP-3) |
 | TC-CEREMONY-056 | `tests/checks/ceremony-hermetic.test.ts` (new) | `bun test tests/checks/ceremony-hermetic.test.ts` | Probe harness; live-tree hash guard; skip scan | To Implement |
 | TC-CEREMONY-057 | `tests/behaviour/ceremony-nonregression.test.ts` (new) | `bun test tests/behaviour/ceremony-nonregression.test.ts` | Delivered suites unchanged; inventory fixtures | To Implement |
 | TC-CEREMONY-058 | aggregate | `TMPDIR=$PWD/tmp/tmpdir pnpm check` | none | Existing – No Change (gate unchanged) |
 | TC-CEREMONY-059 | phase-9 log + commit range + PR metadata | `./scripts/lint-commit-range.sh --base main-tools`; manual PR check | none | Manual Only (GAP-5) |
+| TC-CEREMONY-061 | `tests/behaviour/ceremony-declaration.test.ts` (new); `tests/structure/ceremony-contract.test.ts` (new) | `bun test tests/behaviour/ceremony-declaration.test.ts tests/structure/ceremony-contract.test.ts` | D-14..D-18 fixtures, one declaration per legal derivation, the identity-resolver fixture | To Implement |
+| TC-CEREMONY-062 | `tests/behaviour/ceremony-run-triggers.test.ts` (new) | `bun test tests/behaviour/ceremony-run-triggers.test.ts` | Single-trigger, multi-trigger and note-consuming multi-trigger declarations; notes naming a declared and an undeclared trigger; recording store; a genuine catch-up run as control | To Implement |
+| TC-CEREMONY-063, TC-CEREMONY-064 | `tests/behaviour/ceremony-run.test.ts` (new) | `bun test tests/behaviour/ceremony-run.test.ts` | Note-less scheduled and note-less event-only declarations; fixed clock + two literal windows + a UTC-midnight fixture; byte-level artifact listing; recording declaration/input/state readers and writer | To Implement |
 | Fixture set | `tests/fixtures/ceremony/**` (new); `tests/fixtures/help-guide/coverage.json` (update) | `bun test tests/checks/fixture-privacy.test.ts` | Declarations, notes, tier pairs, comparison samples, temp-git harness reuse | To Implement |
 
 **Existing suites asserted unchanged (regression half only)**: the `retro-*` family (grammar, payloads, level registry, truth checks, chain), `closeout-*` (including R1 coverage and compaction), `brief-*`, `plan-*` (tier echo and `plan.tier.unknown`), `pm-notes-*`, `state-*`, the delivered `envelope-*`/`result-contract` suites, `tests/structure/{error-table,content-inventory,retro-contract,plan-contract}.test.ts` (updates only where additive), and the delivered `tests/checks/{error-table-sync,exit-code-literals,doc-conformance}.test.ts`.
+
+### 7.1 Delivery-phase ownership (TC → PHASE, all 64 ids, exactly once)
+
+The implementation plan owns the TC → PHASE map; its current map covers `TC-CEREMONY-001..060`. This subsection states the ownership of the complete 64-id set **on the plan's existing phase boundaries**, so the `delivery_planning` correction only has to copy four ids in (GAP-7) — no phase is re-cut and no TC moves.
+
+| Plan phase (existing boundary) | TCs owned | Count |
+|---|---|---|
+| Phase 1 — declaration contracts, vocabularies, single validator | 007 (vocabulary/bounds half; its six-built-in validation half completes in Phase 5), 008, 009, 010, 049, **061** | 6 |
+| Phase 2 — ceremony record boundary and artifact family | 040 (plus the state-read half of 022) | 1 |
+| Phase 3 — runner engine (intake, agenda, verification, compaction, resume) | 020, 021, 022, 023, 025, 039, 047, **062, 063, 064** | 10 |
+| Phase 4 — catch-up | 026, 027, 028, 029 | 4 |
+| Phase 5 — built-ins and retro levels | 011, 012, 013, 014, 015, 016, 017, 018, 019, 024, 043, 044, 045, 046, 048, 052 (plus the 007 completion) | 16 |
+| Phase 6 — project declarations | 030, 031, 032 | 3 |
+| Phase 7 — tier engine | 033, 034, 035, 036, 037, 038, 051 | 7 |
+| Phase 8 — measurement record | 041, 042 | 2 |
+| Phase 9 — family mount | 001, 002, 003, 004, 005, 006 | 6 |
+| Phase 10 — honesty battery (purity, determinism, bounds, cost, hermeticity, non-regression) | 050, 053, 054, 055, 056, 057 | 6 |
+| Phase 11 — docs and release | 058, 059 (evidence-only, GAP-5), 060 | 3 |
+| **Total** | `TC-CEREMONY-001..064` | **64** |
+
+Ownership rationale for the four added ids — placement follows the plan's own rule ("the phase which first makes its complete suite set green") plus the shape of the case:
+
+- **TC-CEREMONY-061 → Phase 1.** It is a declaration-contract case: `scopeKey` derivation legality and the single-schedule bound are validated by the same validator the phase delivers, over the fixtures the phase commits (D-15..D-18).
+- **TC-CEREMONY-062, TC-CEREMONY-063, TC-CEREMONY-064 → Phase 3.** All three are intake cases: window resolution, run-identity resolution, and recorded-trigger resolution are decided in intake step 1, before any step executes. Phase 3 already owns the intake/idempotency cases (025, 039, 047), and each of the three runs on fixture declarations in that phase's gate.
+- **Cross-phase assertion halves are named, not duplicated.** TC-CEREMONY-062's retro-specific assertions (the declaration's four-trigger set, the absent `change-merged` trigger, the absent R1 output) are carried by TC-CEREMONY-014 in the Phase 5 gate; TC-CEREMONY-063/064's production declarations (`morning-brief`, `decision-record-mirror-sync`) land in Phase 5 and are re-exercised there by TC-011/TC-013/TC-016's suites. Neither creates a second TC row, so the map still owns every id exactly once.
+
+**Phase-count reconciliation for the plan correction**: Phase 1 5 → 6, Phase 3 7 → 10, total 60 → 64; every other phase count is unchanged. The plan's phase-summary lines for Phases 1 and 3 and its map header ("60 ids") are the only statements that need editing.
 
 ## 8. Risks, Assumptions, and Open Questions
 
@@ -2116,6 +2311,7 @@ Narrow iterations use the layer command from §4 (`bun test tests/<layer>/...`);
 | RSK-7 — the retro levels appear implemented in the pipeline | Two surfaces name the same levels | TC-CEREMONY-046/057 assert the pipeline's grammar and registry status are unchanged and the ceremony layer selects levels |
 | RSK-8 — the measurement-log schema bump breaks a v1 consumer | Consumers may pin `schema_version: 1` | TC-CEREMONY-041 asserts the bump is additive, existing rows byte-unchanged, and no `MET-` ID reallocated |
 | RSK-10 — a stale artifact reads as verified | Files persist forever | Artifacts are named by run id; a step verifies the artifact it just wrote; resume reads only verified records of the same run (TC-020/021) |
+| Residual risk — a run identity resolved from an undefined scope key or a non-existent window | The identity is what makes re-runs and dedupe meaningful, and four of six built-ins take no note | TC-CEREMONY-061 asserts the declaration-held derivation and refuses an undefined/ambiguous key; TC-CEREMONY-063 asserts note-less idempotency on the derived day; TC-CEREMONY-064 refuses a note-less event-triggered run with no window before any write |
 | GAP-2 — some closed-vocabulary literals are not spec-pinned | The spec fixes sets, not every string | Assertions go through declared contract constants in `tests/structure/ceremony-contract.test.ts`; goldens pin prose at delivery |
 | GAP-3 — NFR-13 wall-clock budgets are runner-dependent | Thresholds depend on hardware | CI asserts bounded work; wall clock is a recorded reference measurement in §10, never a gate |
 | GAP-4 — mirror sync requires temp-git fixtures | Real writes cannot be tested in the live tree | Isolated temp repositories; the commit primitive is composed, not re-implemented |
@@ -2141,13 +2337,18 @@ Narrow iterations use the layer command from §4 (`bun test tests/<layer>/...`);
 | OQ-T2 | Where exactly does the delivering change's `after` sample come from (which post-boundary changes, which window), given the runner ships in this change? | Non-blocking for the plan's structure — TC-CEREMONY-041 asserts the record's declared sourcing and AC-F8-3 makes `< 5` honest; the concrete sample is a delivery-time fact. | @plan-writer → @coder |
 | OQ-T3 | Exact declared contract-constant names and closed-vocabulary literals (carry-over reasons, assess reason strings, finding sub-codes) beyond the spec-pinned sets (GAP-2). | Non-blocking; pinned with the contract suite and goldens at delivery. | @coder (delivery, contract task) |
 | OQ-T4 | Does `ceremony list` last-run summary include a duration, and if so from which fold? | Non-blocking; asserted through the declared contract constant either way (TC-CEREMONY-006). | @coder |
-| OQ-T5 | **Resolved** — Spec Appendix B (C-1) cited an NFR-tier criterion id that §17 never declared. Was the reference stale, or was a sixth NFR acceptance criterion intended? | Resolved in the spec: C-1 now cites `NFR-1, AC-F1-3`, both declared. No criterion was added, so the 45-criterion set and this plan's mapping are unchanged (NFR-1 evidenced by AC-F1-3, TC-004/002). | @spec-writer / @pm (closed) |
+| OQ-T5 | **Resolved** — Spec Appendix B (C-1) cited an NFR-tier criterion id that §17 never declared. Was the reference stale, or was a sixth NFR acceptance criterion intended? | Resolved in the spec: C-1 now cites `NFR-1, AC-F1-3`, both declared. That correction added no criterion; the four criteria added later by the v1.1 remediation are tracked in OQ-T6. | @spec-writer / @pm (closed) |
+| OQ-T6 | Spec v1.1 added four criteria (AC-F2-4, AC-F3-8, AC-F4-7, AC-F4-8) with DEC-16..DEC-18 and edge cases E-18..E-20. Does anything else in the spec's v1.1 delta change an existing oracle? | Closed in this revision: the delta's only stale pre-existing assertions were TC-014 step 3 (trigger kind for an operator run) and TC-009's bound ladder (missing trigger rung), both updated in §5.2; AC-F2-3's generic "declared bound" clause now also exercises the `triggers[]` count, with the criterion's parenthetical left exactly as §17 states it. No other AC's oracle moved. | @test-plan-writer (closed) |
+| OQ-T7 | Is the `triggers[]` at-limit of 8 reachable with unique trigger names? The closed event set has six members and only one `schedule` trigger is legal, so at most seven unique triggers exist. | Non-blocking for coverage: the over-limit rung (9 triggers → `triggers[]`) is unaffected, and the at-limit rung is built by repeating a declared event name (TC-009). Whether a repeated trigger name is itself a vocabulary defect is a contract-constant decision at delivery (GAP-2); if repeats are refused, the at-limit proof moves to the unique maximum and the assertion set shrinks by one rung. | @coder (delivery, contract task) → @spec-writer if the bound should be restated |
+| OQ-T8 | After an explicit `ceremony run` records an identity for a window, does a later `catch-up` for that same window replay it (`catch-up` kind) or return the explicit run as `data.reused: true`? | Non-blocking: the spec pins "an explicit run is never counted as the fulfilment of a scheduled or event obligation" but not the identity-collision outcome. TC-CEREMONY-062 asserts the obligation predicate and the recorded kinds only; the collision case is deliberately unasserted until the spec pins it. If the spec answers "replay", TC-062 gains a step; if "reused", the obligation rule needs a wording note. | @spec-writer → @pm |
+| OQ-T9 | Does "refused before any read" in F-1/E-18 exclude the declaration read that establishes a declaration is event-only? | Non-blocking, wording-level: the declaration must be read to know its trigger set, so TC-CEREMONY-064 asserts the mechanically real form — zero declared-input reads, zero verified state reads, zero writes, zero records, zero artifacts — and treats the declaration read as permitted. If the spec intends a stricter reading, the wording needs to say what "read" excludes. | @spec-writer |
 
 ## 9. Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-15 | @test-plan-writer | Initial test plan for GH-296 (M2-S3 ceremony runner): 60 scenarios (TC-CEREMONY-001..060) covering all 45 ACs, DM-1..DM-9, and NFR-1..NFR-14 with no unanswered ACs; inherited seeds SC-M2-S3-01/02 adopted by ID as TC-048/047; catch-up matrix CU-01..CU-09, tier verdict matrix T-01..T-11, declaration defect corpus D-01..D-14, resume/verification matrix R-01..R-08, and the exit/outcome oracle; binding fixture, non-vacuity and mutant contracts mirroring the GH-240/GH-291 precedents; gaps GAP-1..GAP-6 declared with owners and AC-NFR14-1 flagged as evidence-only |
+| 1.1 | 2026-11-16 | @test-plan-writer | Readiness remediation (spec v1.1, `readiness-review/readiness-iter-1.md` findings 1 and 4). Added four scenarios for the four new criteria: TC-061 (AC-F2-4: declaration `scopeKey` derivation set, `note`-derivation legality, single-schedule bound, refusals naming `scopeKey`/`triggers[]`), TC-062 (AC-F3-8: `explicit` trigger kind with `note`/`declaration`/`unspecified` resolution, never an obligation, undeclared note trigger refused), TC-063 (AC-F4-7: note-less scheduled `morning-brief` twice in one UTC day → derived day window, `repository` key, `data.reused: true`, zero appends), TC-064 (AC-F4-8: note-less event-triggered `mirror-sync` without `--window` → `input.value.rejected` naming `--window`, zero records/artifacts). Modified two existing scenarios where the spec's change made an assertion stale: TC-009 gained the 8/9-trigger rung (the `triggers[]` 1..8 bound was untested) and TC-014's trigger assertion moved from kind-equality to `explicit`/`note` with the four-trigger declaration set and the `change-merged` refusal added (DEC-17), preserving its R1-absence assertion. Extended the declaration defect corpus with D-15..D-18 and D-12's trigger case, the exit/outcome oracle with four rows (explicit-run recording, the undeclared note trigger, E-18, E-19), the non-vacuity mutants from twelve to fifteen, and the fixture/test-data contracts. Traceability restated at 49/49 ACs, 9/9 DMs, 14/14 NFRs over 64 TCs; §7.1 added to state the TC → PHASE ownership of all 64 ids on the plan's existing boundaries (061 → Phase 1; 062..064 → Phase 3) for the separate `delivery_planning` correction; GAP-1 corrected (the plan now exists and owns 001..060) and GAP-7 added; OQ-T6..OQ-T9 added |
 
 ## 10. Test Execution Log
 
