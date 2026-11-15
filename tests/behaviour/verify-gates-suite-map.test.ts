@@ -18,18 +18,26 @@ import {
 } from "../../packages/core/src/contracts/index";
 import {
   extractVerifySuiteMapNode,
+  renderSuiteMapCauseLine,
+  resolveVerifySuiteBreadth,
   resolveVerifySuiteMap,
   resolveVerifySuiteMapFromConfig,
+  suiteBreadthCitationOf,
 } from "../../packages/core/src/domain/index";
 import { createNoNetworkGuard } from "../fixtures/verify-gates/cases/network-guard";
 import {
   atBoundMap,
   DEFECTS,
+  disjointMap,
+  mirrorAbsentMap,
+  narrowedMap,
   REFERENCE_JOB,
   REFERENCE_SUITES,
   referenceDeclaration,
+  reorderedLocalMap,
   twoEqualJobsMap,
   validEqualityMap,
+  widerMap,
 } from "../fixtures/verify-gates/suite-map/cases";
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
@@ -180,5 +188,108 @@ describe("TC-SMAP-003 caps, grammar, duplicates, and at-bound acceptance", () =>
     for (const name of classes) {
       expect(resolveVerifySuiteMap(DEFECTS[name]).ok, name).toBe(false);
     }
+  });
+});
+
+const workflow = (names: readonly string[], outcome: "read" | "failed" | "absent" = "read") => ({
+  outcome,
+  names,
+});
+
+describe("TC-SMAP-005 corroboration is exact string match", () => {
+  const map = validEqualityMap();
+  test("the exact declared job corroborates", () => {
+    const outcome = resolveVerifySuiteBreadth({ map, workflow: workflow(["job-01"]) });
+    expect(outcome.kind).toBe("equal");
+  });
+
+  for (const variant of ["Job-01", " job-01", "job-01 ", "job-01.", "job--01", "job 01"]) {
+    test(`the near-match "${variant}" is uncorroborated`, () => {
+      const outcome = resolveVerifySuiteBreadth({ map, workflow: workflow([variant]) });
+      expect(outcome).toEqual({ kind: "uncorroborated", mirrorsJob: "job-01" });
+    });
+  }
+
+  test("the cause line prints the declared job verbatim", () => {
+    const outcome = resolveVerifySuiteBreadth({ map, workflow: workflow(["Job-01"]) });
+    expect(renderSuiteMapCauseLine(outcome, map.local)).toBe("mirror=job-01");
+  });
+});
+
+describe("TC-SRES-004 the first equality in declared order is the mirror", () => {
+  test("first order wins both times and set comparison is order-insensitive", () => {
+    const first = resolveVerifySuiteBreadth({
+      map: twoEqualJobsMap(["job-01", "job-02"]),
+      workflow: workflow(["job-01", "job-02"]),
+    });
+    const swapped = resolveVerifySuiteBreadth({
+      map: twoEqualJobsMap(["job-02", "job-01"]),
+      workflow: workflow(["job-01", "job-02"]),
+    });
+    expect(first.kind === "equal" ? first.mirrorsJob : undefined).toBe("job-01");
+    expect(swapped.kind === "equal" ? swapped.mirrorsJob : undefined).toBe("job-02");
+    expect(
+      resolveVerifySuiteBreadth({ map: twoEqualJobsMap(), workflow: workflow(["job-01"]) }),
+    ).toEqual(
+      resolveVerifySuiteBreadth({ map: twoEqualJobsMap(), workflow: workflow(["job-01"]) }),
+    );
+  });
+
+  test("the citation follows the mirror's declared order, never the local order", () => {
+    const map = reorderedLocalMap();
+    const outcome = resolveVerifySuiteBreadth({ map, workflow: workflow(["job-01"]) });
+    if (outcome.kind !== "equal") throw new Error("expected equality");
+    expect(outcome.suiteBreadth).toEqual([...REFERENCE_SUITES]);
+    expect(outcome.suiteBreadth).not.toEqual(map.local);
+  });
+});
+
+describe("TC-SRES-005 the four-outcome totality matrix", () => {
+  const cases: readonly (readonly [string, unknown, string])[] = [
+    ["equality", validEqualityMap(), "equal"],
+    ["two-equal", twoEqualJobsMap(), "equal"],
+    ["narrowing", narrowedMap(), "narrower"],
+    ["wider", widerMap(), "unmirrored"],
+    ["disjoint", disjointMap(), "unmirrored"],
+    ["mirror-absent", mirrorAbsentMap(), "uncorroborated"],
+  ];
+  for (const [name, raw, expected] of cases) {
+    test(`${name} resolves to exactly ${expected}`, () => {
+      const resolved = resolveVerifySuiteMap(raw);
+      if (!resolved.ok || !resolved.declared) throw new Error("expected a declared map");
+      const outcome = resolveVerifySuiteBreadth({
+        map: resolved.value,
+        workflow: workflow(["job-01", "job-02", REFERENCE_JOB]),
+      });
+      expect(outcome.kind).toBe(expected);
+    });
+  }
+
+  test("an invalid workflow produces no breadth outcome", () => {
+    for (const facts of [
+      workflow([], "read"),
+      workflow(["job-01", "job-01"], "read"),
+      workflow(["job-01"], "failed"),
+      workflow(["job-01"], "absent"),
+      workflow(
+        Array.from({ length: 201 }, (_, index) => `job-${index}`),
+        "read",
+      ),
+    ]) {
+      expect(resolveVerifySuiteBreadth({ map: validEqualityMap(), workflow: facts })).toEqual({
+        kind: "not-evaluated",
+      });
+    }
+  });
+
+  test("a wider local set is never reported as a pass", () => {
+    const resolved = resolveVerifySuiteMap(widerMap());
+    if (!resolved.ok || !resolved.declared) throw new Error("expected a declared map");
+    const outcome = resolveVerifySuiteBreadth({
+      map: resolved.value,
+      workflow: workflow(["TS aggregate check"]),
+    });
+    expect(outcome.kind).toBe("unmirrored");
+    expect(suiteBreadthCitationOf(outcome)).toBeUndefined();
   });
 });
