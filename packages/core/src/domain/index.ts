@@ -879,3 +879,22 @@ export {
   selectProjectGroups,
   validateProjectGroupsDocument,
 } from "./project-groups.js";
+/**
+ * The ceremony declaration validator (GH-296 F-2): one pure validator over the
+ * closed vocabulary, bounds, and scope-key derivation, shared by built-ins and
+ * project declarations.
+ */
+export {
+  CEREMONY_DECLARATION_INVALID,
+  ceremonyDeclarationDigest,
+  ceremonyExecutableField,
+  ceremonyScheduleTrigger,
+  ceremonySingleTriggerLabel,
+  ceremonyTriggerLabels,
+  ceremonyUtf8Bytes,
+  type CeremonyDeclarationFailure,
+  type CeremonyDeclarationValidation,
+  type CeremonyDeclarationValidationOptions,
+  validateCeremonyDeclaration,
+  validateCeremonyDocument,
+} from "./ceremony-declaration.js";

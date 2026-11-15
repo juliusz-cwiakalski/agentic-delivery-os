@@ -1,0 +1,78 @@
+{
+  "id": "project-note-pass",
+  "title": "Project note pass",
+  "tiers": [
+    "full",
+    "lite"
+  ],
+  "triggers": [
+    {
+      "kind": "event",
+      "event": "owner-note"
+    }
+  ],
+  "inputs": [
+    {
+      "source": "audit-ledger"
+    },
+    {
+      "source": "queue-state",
+      "window": true
+    }
+  ],
+  "agenda": [
+    {
+      "id": "collect",
+      "steps": [
+        {
+          "kind": "collect",
+          "inputs": [
+            "audit-ledger",
+            "queue-state"
+          ],
+          "outputs": [
+            {
+              "slot": "ceremony-artifact",
+              "schema": "delivery.ceremony.sweep.v1"
+            }
+          ],
+          "verify": "artifact-conforms"
+        }
+      ]
+    },
+    {
+      "id": "record",
+      "steps": [
+        {
+          "kind": "record",
+          "outputs": [
+            {
+              "slot": "state-record",
+              "schema": "delivery.ceremony.sweep-record.v1"
+            }
+          ],
+          "verify": "artifact-conforms"
+        }
+      ]
+    }
+  ],
+  "scopeKey": {
+    "kind": "note"
+  },
+  "catchUp": {
+    "mode": "once",
+    "maxMissedWindows": 1
+  },
+  "compaction": {
+    "atPhases": [
+      0
+    ],
+    "maxBytes": 4096,
+    "maxLines": 40
+  },
+  "note": {
+    "required": true,
+    "schema": "delivery.ceremony.note.v1",
+    "scopeKey": "required"
+  }
+}

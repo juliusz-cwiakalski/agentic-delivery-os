@@ -222,6 +222,9 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "events.topic-unknown",
   "events.verb-unknown",
   "events.taxonomy-unavailable",
+  // GH-296 pins the ceremony note identity exactly; it is a kind-first
+  // two-segment code, and the declaration identity is three-segment.
+  "ceremony.note-invalid",
 ]);
 const CODE_PATTERN = /\b[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*){2,}\b/g;
 const TWO_SEGMENT_PATTERN = /\b[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*\b/g;

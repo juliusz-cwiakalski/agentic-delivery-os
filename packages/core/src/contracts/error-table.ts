@@ -29,6 +29,7 @@ export const DOMAIN_KINDS = [
   "harness",
   "retro",
   "spend",
+  "ceremony",
   "queue",
   "dispatch",
   "daemon",
@@ -1594,5 +1595,27 @@ export const ERROR_TABLE = [
       "The compiled taxonomy declaration failed its own integrity check; repair the declaration and rebuild before serving any page.",
     projectionClass: "platform-provider",
     summary: "The taxonomy declaration failed its integrity check.",
+  },
+  {
+    code: "ceremony.note-invalid",
+    domainKind: "ceremony",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Supply the note required by the declaration with its idempotent scopeKey and every required member, then retry; no partial ceremony output is written.",
+    projectionClass: "user-validation",
+    summary: "A ceremony note is absent or violates the note contract.",
+  },
+  {
+    code: "ceremony.declaration.invalid",
+    domainKind: "ceremony",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Correct the named declaration field to a declared vocabulary value or within the declared bound, then retry; nothing is registered.",
+    projectionClass: "user-validation",
+    summary: "A ceremony declaration violates the declaration contract.",
   },
 ] as const satisfies readonly ErrorTableEntry[];

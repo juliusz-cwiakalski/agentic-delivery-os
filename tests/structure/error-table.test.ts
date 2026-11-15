@@ -128,6 +128,9 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "events.topic-unknown",
   "events.verb-unknown",
   "events.taxonomy-unavailable",
+  // GH-296 pins the ceremony note identity exactly; it is kind-first and
+  // two-segment, while the declaration identity keeps three segments.
+  "ceremony.note-invalid",
 ]);
 
 const isValidCode = (code: string): boolean =>
@@ -798,7 +801,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     const row = `| verify.ledger.incomplete | verify | user | false | not_landed | ${VERIFY_HINT} | user-validation | ${VERIFY_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
     const declaredKinds =
-      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, `commit`, `status`, `blockers`, `doctor`, `merge`, `harness`, `retro`, `spend`, `dispatch`, `queue`, and `daemon`";
+      "`provider`, `input`, `config`, `state`, `lint`, `verify`, `db`, `closeout`, `plan`, `watchdog`, `commit`, `status`, `blockers`, `doctor`, `merge`, `harness`, `retro`, `spend`, `ceremony`, `dispatch`, `queue`, and `daemon`";
     expect(doc).toContain(declaredKinds);
     expect(doc).toContain("`verify.ledger.incomplete`");
     expect(doc).toContain("`db.opencode.unavailable`");
@@ -819,7 +822,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "daemon")).toHaveLength(8);
     expect(entries.filter((entry) => entry.domainKind === "coordinator")).toHaveLength(6);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(4);
-    expect(entries).toHaveLength(136);
+    expect(entries).toHaveLength(138);
   });
 });
 
@@ -895,7 +898,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(136);
+    expect(entries).toHaveLength(138);
     expect(db).toHaveLength(4);
   });
 
@@ -1129,7 +1132,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly four rows and round-trip
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(136);
+    expect(entries).toHaveLength(138);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1403,7 +1406,7 @@ describe("TC-BLK-007 blockers family is closed, synced, and exit-1 projected", (
       code.startsWith("blockers."),
     );
     expect(blockersReserved.sort()).toEqual([...BLOCKERS_ROWS].sort());
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(53);
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(54);
   });
 });
 
@@ -1732,7 +1735,7 @@ describe("TC-ECON-003 the dispatch kind carries the two economics rows plus the 
   });
 
   test("the three economics additions land and the delivered rows stay byte-identical", () => {
-    expect(entries).toHaveLength(136);
+    expect(entries).toHaveLength(138);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
     // The delivered watchdog rows retain their exact declared columns.
@@ -1825,7 +1828,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
 
   test("no delivered row is re-projected by the spend addition", () => {
     const delivered = entries.filter((entry) => entry.domainKind !== "spend");
-    expect(delivered).toHaveLength(135);
+    expect(delivered).toHaveLength(137);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(resolveAppErrorCode("state.store.torn")).toEqual({
@@ -1844,7 +1847,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     const row = `| spend.telemetry-absent | spend | user | false | not_landed | ${SPEND_HINT} | user-validation | ${SPEND_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
-    expect(doc).toContain("136 identities");
+    expect(doc).toContain("138 identities");
   });
 
   test("the documented table is complete in both directions", () => {
@@ -2212,7 +2215,7 @@ describe("TC-EVT-072 the events kind and its three identities", () => {
 
   test("the delivered rows are byte-identical to the captured baseline", () => {
     const delivered = entries
-      .filter((entry) => entry.domainKind !== "events")
+      .filter((entry) => entry.domainKind !== "events" && entry.domainKind !== "ceremony")
       .sort((left, right) => (left.code < right.code ? -1 : 1));
     const captured = baseline.rows
       .map((row) => JSON.parse(row) as Record<string, unknown>)
@@ -2235,5 +2238,64 @@ describe("TC-EVT-072 the events kind and its three identities", () => {
   test("the documented table lists each events row exactly once", () => {
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     for (const entry of events) expect(doc.split(`| ${entry.code} |`).length - 1).toBe(1);
+  });
+});
+
+/**
+ * TC-CEREMONY-049 (GH-296) — two additive `ceremony` identities, one new domain
+ * kind, one reserved two-segment allowlist entry, and the documented table
+ * moving 136 -> 138 with zero delivered rows changed.
+ */
+describe("TC-CEREMONY-049 the ceremony kind and its two identities", () => {
+  const ceremony = entries.filter((entry) => entry.domainKind === "ceremony");
+  const rowOf = (code: string): ErrorTableEntry => {
+    const entry = ceremony.find((candidate) => candidate.code === code);
+    if (entry === undefined) throw new Error(`missing ceremony row ${code}`);
+    return entry;
+  };
+
+  test("the kind is declared and carries exactly the two additive rows", () => {
+    expect(DOMAIN_KINDS).toContain("ceremony");
+    expect(ceremony.map((entry) => entry.code).sort()).toEqual([
+      "ceremony.declaration.invalid",
+      "ceremony.note-invalid",
+    ]);
+    expect(entries).toHaveLength(138);
+  });
+
+  test("both rows carry the declared class and project to exit 1", () => {
+    for (const code of ["ceremony.note-invalid", "ceremony.declaration.invalid"]) {
+      expect(rowOf(code)).toMatchObject({
+        category: "user",
+        retryable: false,
+        consequence: "not_landed",
+        projectionClass: "user-validation",
+      });
+      const resolution = resolveAppErrorCode(code);
+      expect(resolution.ok).toBe(true);
+      if (resolution.ok) expect(resolution.entry.projectionClass).toBe("user-validation");
+    }
+  });
+
+  test("the two-segment note identity is on the exact allowlist", () => {
+    expect(RESERVED_TWO_SEGMENT_CODES.has("ceremony.note-invalid")).toBe(true);
+    expect(RESERVED_TWO_SEGMENT_CODES.has("ceremony.declaration.invalid")).toBe(false);
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(54);
+  });
+
+  test("a kind-only ceremony lookup is contained by fallback.internal", () => {
+    expect(classifyThrown({ kind: "ceremony" }).code).toBe(FALLBACK_INTERNAL_CODE);
+  });
+
+  test("the documented table carries each ceremony row exactly once", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    for (const entry of ceremony) {
+      const row = `| ${entry.code} | ceremony | ${entry.category} | ${String(entry.retryable)} | ${entry.consequence} | ${entry.remediationHint} | ${entry.projectionClass} | ${entry.summary ?? ""} |`;
+      expect(doc.split(row).length - 1, entry.code).toBe(1);
+    }
+    expect(doc).toContain(
+      "The `ceremony` kind carries exactly the two additive ceremony-runner identities",
+    );
+    expect(doc).toContain("138 machine identities");
   });
 });

@@ -1,0 +1,73 @@
+{
+  "id": "project-pre-dispatch",
+  "title": "Pre-dispatch check",
+  "tiers": [
+    "full",
+    "lite"
+  ],
+  "triggers": [
+    {
+      "kind": "event",
+      "event": "pre-dispatch"
+    }
+  ],
+  "inputs": [
+    {
+      "source": "audit-ledger"
+    },
+    {
+      "source": "queue-state",
+      "window": true
+    }
+  ],
+  "agenda": [
+    {
+      "id": "collect",
+      "steps": [
+        {
+          "kind": "collect",
+          "inputs": [
+            "audit-ledger",
+            "queue-state"
+          ],
+          "outputs": [
+            {
+              "slot": "ceremony-artifact",
+              "schema": "delivery.ceremony.sweep.v1"
+            }
+          ],
+          "verify": "artifact-conforms"
+        }
+      ]
+    },
+    {
+      "id": "record",
+      "steps": [
+        {
+          "kind": "record",
+          "outputs": [
+            {
+              "slot": "state-record",
+              "schema": "delivery.ceremony.sweep-record.v1"
+            }
+          ],
+          "verify": "artifact-conforms"
+        }
+      ]
+    }
+  ],
+  "scopeKey": {
+    "kind": "repository"
+  },
+  "catchUp": {
+    "mode": "once",
+    "maxMissedWindows": 1
+  },
+  "compaction": {
+    "atPhases": [
+      0
+    ],
+    "maxBytes": 4096,
+    "maxLines": 40
+  }
+}

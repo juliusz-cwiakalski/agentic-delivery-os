@@ -1078,8 +1078,8 @@ const baselineViolations = (live: readonly ErrorTableEntry[]): string[] => {
       failures.push(`${expected[0]}: pre-existing row changed`);
     }
   }
-  if (live.length !== BASELINE_ROWS.length + 102) {
-    failures.push(`table length ${live.length} != baseline + 102 (${BASELINE_ROWS.length + 102})`);
+  if (live.length !== BASELINE_ROWS.length + 104) {
+    failures.push(`table length ${live.length} != baseline + 104 (${BASELINE_ROWS.length + 104})`);
   }
   return failures;
 };
@@ -1159,7 +1159,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
     expect((await runSyncCheck({ root: ROOT })).counts.sourceEntries).toBe(
-      BASELINE_ROWS.length + 102,
+      BASELINE_ROWS.length + 104,
     );
   });
 
@@ -1182,7 +1182,7 @@ describe("TC-DB-004 db rows synchronize in both directions", () => {
   test("the delivered state is green with the four db rows and non-zero counts", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 102);
+    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 104);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     const doc = readFile(ROOT, DOC);
@@ -1784,11 +1784,11 @@ describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
     "coordinator.wake.delivery-failed",
   ] as const;
 
-  test("the live tree is green at 136 entries and 136 documented rows", async () => {
+  test("the live tree is green at 138 entries and 138 documented rows", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(136);
-    expect(result.counts.documentedRows).toBe(136);
+    expect(result.counts.sourceEntries).toBe(138);
+    expect(result.counts.documentedRows).toBe(138);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     expect(result.counts.recognizedS3).toBeGreaterThan(0);
     expect(result.counts.corpusRows).toBeGreaterThan(0);
@@ -1799,7 +1799,7 @@ describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
     for (const code of COORDINATOR_CODES) {
       expect(doc.split(`| ${code} |`).length - 1, code).toBe(1);
     }
-    expect(doc).toContain("136 identities");
+    expect(doc).toContain("138 identities");
   });
 
   test("removing a documented coordinator row fails naming the code", async () => {
