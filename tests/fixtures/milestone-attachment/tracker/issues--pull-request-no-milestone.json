@@ -1,0 +1,12 @@
+[
+  {
+    "number": 4242,
+    "state": "open",
+    "title": "A pull request returned by the issues endpoint",
+    "labels": [{ "name": "change" }],
+    "milestone": null,
+    "pull_request": {
+      "url": "https://api.github.com/repos/example/example/pulls/4242"
+    }
+  }
+]

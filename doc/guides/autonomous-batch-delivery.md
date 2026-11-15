@@ -8,7 +8,7 @@ status: Draft
 created: 2026-07-03
 owners: ["engineering"]
 links:
-  related_changes: ["GH-146", "GH-148", "GH-185", "GH-242", "GH-268"]
+  related_changes: ["GH-146", "GH-148", "GH-185", "GH-242", "GH-268", "GH-313"]
 summary: "Deliver multiple tickets unattended with liveness monitoring, session resilience, and push-to-completion PR feedback. Covers deliver-ticket.sh, batch-deliver.sh, and clean-merged-branches."
 ---
 
@@ -21,6 +21,12 @@ summary: "Deliver multiple tickets unattended with liveness monitoring, session 
 > `clean-merged-branches`, approval workflow, labels). The two are kept
 > consistent: where they describe the same machinery (liveness, rebase-before-
 > merge, merge authority), they agree.
+
+> **Before an unattended run.** Start only after the milestone record and every
+> ticket attached to it exist in the tracker, and intake has verified the
+> attachment. See the [milestone-management guide](milestone-management.md) for
+> the operating rule. The delivery scripts assume the planned scope is complete;
+> they carry no milestone logic and refuse nothing.
 
 Autonomous batch delivery lets you deliver multiple tickets **unattended** — overnight, over the weekend, or while you focus on other work. Three scripts work together to wrap the standard ADOS 11-phase lifecycle with a liveness watchdog, session resilience, and a push-to-completion PM prompt.
 

@@ -66,6 +66,7 @@ change:
   title: "<Human readable title>"
   owners: [<at least one>]
   service: <primary impacted service or domain>
+  milestone: <tracker milestone title verbatim>  # M<n>: <outcome phrase>; equal to the pm-notes milestone
   labels: [<zero or more>]
   version_impact: <none|patch|minor|major>
   audience: <internal|external|mixed>
@@ -81,6 +82,10 @@ Validation:
 - `change.ref` == provided `workItemRef`
 - `owners` ≥ 1 entry
 - `status` must be "Proposed" on creation
+- `change.milestone` is required: the tracker milestone title verbatim
+  (`M<n>: <outcome phrase>`), equal to the pm-notes `milestone` value
+- the literal `none` is permitted only where the project's tracker instructions
+  declare no milestone construct; it is never a per-change choice
   </front_matter_rules>
 
 <id_conventions>

@@ -218,6 +218,50 @@ export const removedLineViolations = (
   return violations;
 };
 
+export type WorkflowWiring = {
+  readonly files: readonly string[];
+  readonly text: string;
+  readonly failures: readonly string[];
+};
+
+/**
+ * The wiring set spans every workflow file, not only ci.yml: a check may be
+ * invoked by a dedicated workflow (for example the issue-event milestone
+ * check) instead of the aggregate chain. Names are read in sorted order so the
+ * concatenated text is deterministic; an unreadable directory or file fails
+ * closed rather than silently dropping the coverage.
+ */
+export const collectWorkflowWiring = (root: string): WorkflowWiring => {
+  const directory = join(root, ".github/workflows");
+  const failures: string[] = [];
+  let entries: string[];
+  try {
+    entries = readdirSync(directory)
+      .filter((entry) => entry.endsWith(".yml"))
+      .sort();
+  } catch {
+    return {
+      files: [],
+      text: "",
+      failures: [".github/workflows is unreadable; cannot verify scripts/checks wiring"],
+    };
+  }
+
+  const files: string[] = [];
+  const texts: string[] = [];
+  for (const entry of entries) {
+    try {
+      texts.push(readFileSync(join(directory, entry), "utf8"));
+      files.push(entry);
+    } catch {
+      failures.push(
+        `.github/workflows/${entry} is unreadable; cannot verify scripts/checks wiring`,
+      );
+    }
+  }
+  return { files, text: texts.join("\n"), failures };
+};
+
 const includesDeliveryBranch = (patterns: string[]): boolean =>
   patterns.some(
     (pattern) =>
@@ -278,7 +322,11 @@ export const validate = (root: string): string[] => {
   }
 
   const checkDirectory = join(root, "scripts/checks");
-  const wiring = text + readFileSync(join(root, "package.json"), "utf8");
+  const workflows = collectWorkflowWiring(root);
+  failures.push(...workflows.failures);
+  const wiring = [text, readFileSync(join(root, "package.json"), "utf8"), workflows.text].join(
+    "\n",
+  );
   for (const entry of readdirSync(checkDirectory)) {
     if (!entry.endsWith(".ts")) continue;
     const name = entry.slice(0, -3);

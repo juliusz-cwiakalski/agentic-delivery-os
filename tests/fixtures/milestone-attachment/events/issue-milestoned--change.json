@@ -1,0 +1,18 @@
+{
+  "action": "milestoned",
+  "issue": {
+    "number": 116,
+    "state": "open",
+    "labels": [
+      {
+        "name": "change"
+      },
+      {
+        "name": "needs-milestone"
+      }
+    ],
+    "milestone": {
+      "title": "M2: Ceremonies, measurement, and memory"
+    }
+  }
+}

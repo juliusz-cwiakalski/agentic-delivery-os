@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-DELIVERY-LIFECYCLE
 status: Current
 created: 2026-06-28
-last_updated: 2026-11-08
+last_updated: 2026-11-14
 owners: ["engineering"]
 service: delivery-os
 summary: "The deterministic 11-phase spec→plan→deliver→review→PR change delivery workflow with PM-led orchestration, Definition of Ready / Definition of Done gating, phase reopening, the per-change artifact set, variant-aware read-only ledger verification at finalization, and phase-7 documentation reconciliation that closes documentation gaps in-change across current-truth docs (including feature-spec first-authoring when needed)."
 links:
-  related_changes: ["GH-79", "GH-108", "GH-151", "GH-177", "GH-178", "GH-226", "GH-225", "GH-242"]
+  related_changes: ["GH-79", "GH-108", "GH-151", "GH-177", "GH-178", "GH-226", "GH-225", "GH-242", "GH-313"]
   guides:
     - "doc/guides/change-lifecycle.md"
     - "doc/guides/definition-of-ready.md"
@@ -45,6 +45,7 @@ ADOS turns a single tracker ticket (`workItemRef`) into a reviewed, tested PR/MR
 
 - **11-phase gated workflow (F-1):** `clarify_scope` → `specification` → `test_planning` → `delivery_planning` → `dor_check` → `delivery` → `system_spec_update` → `review_fix` → `quality_gates` → `dod_check` → `pr_creation`. See the canonical table in [AGENTS.md](../../../AGENTS.md) and the per-phase sections in [change-lifecycle.md](../../guides/change-lifecycle.md).
 - **PM orchestration (F-2):** `@pm` owns the lifecycle; it delegates each phase to the matching agent (e.g. `specification` → `@spec-writer`, `delivery` → `@coder`, `dor_check` → `@readiness-reviewer`) and manages the ticket via MCP. `@pm` never implements code. (Authoritative: `.opencode/agent/pm.md`.)
+- **Milestone intake precondition (F-2.1):** Within `clarify_scope` (phase 1), and before any artifact phase, `@pm` verifies that the ticket is attached to a milestone and records that milestone title in `chg-<workItemRef>-pm-notes.yaml` under `milestone`. An unattached ticket produces a question naming the milestone the PM proposes, and artifact phases do not begin until the attachment exists; a ticket carrying the capture exemption is still treated as unattached for delivery. The prompt is authoritative and the operating rule is specified in [Milestone Governance](feature-milestone-governance.md).
 - **Definition of Ready gate (F-3):** `dor_check` (phase 5) is a **hard pre-delivery gate**: `@readiness-reviewer` adversarially critiques the **spec + test-plan + plan together against the ticket** and emits `READY` / `NOT_READY`. See [definition-of-ready.md](../../guides/definition-of-ready.md) (a human-readable mirror; the `@readiness-reviewer` prompt is authoritative).
 - **Definition of Done check (F-4):** `dod_check` (phase 10) verifies all phases complete, all plan phases done with evidence, and all acceptance criteria satisfied before PR creation. The read-only `verify change <ref>` surface reports whether the declared variant's phase ledger is complete; an incomplete or unverifiable ledger is a non-zero failure, not a success. See [definition-of-done.md](../../guides/definition-of-done.md) and [Verify Change and Exit Taxonomy](feature-verify-change-and-exit-taxonomy.md).
 - **Phase reopening (F-5):** Phases are **not strictly linear**. When a gap is discovered in a later phase, `@pm` reopens the relevant earlier phase and re-delegates. Critically, a DoR `NOT_READY` reopens an **artifact-creation phase** (`specification`, `test_planning`, or `delivery_planning`) — **never `delivery`**. Review remediation, quality-gate fixes, and DoD gaps reopen `delivery` (or the relevant phase). Every reopening triggers a `retro` note in `chg-<ref>-pm-notes.yaml`.
@@ -145,6 +146,7 @@ Manual:      /plan-change → /write-spec → /write-test-plan → /write-plan
 ## Related Documentation
 
 - **Lifecycle guide (canonical detail):** [doc/guides/change-lifecycle.md](../../guides/change-lifecycle.md) — full 11-phase sections, mermaid diagram, PM notes structure, reopening table.
+- **Milestone governance:** [feature-milestone-governance.md](feature-milestone-governance.md) — the phase-1 attachment precondition and the operating rule.
 - **PM agent prompt:** `.opencode/agent/pm.md` — phase definitions, delegation inventory, workflow steps.
 - **Change convention:** [doc/guides/unified-change-convention-tracker-agnostic-specification.md](../../guides/unified-change-convention-tracker-agnostic-specification.md) — `workItemRef`, folder/branch naming.
 - **Definition of Ready:** [definition-of-ready.md](../../guides/definition-of-ready.md) — phase 5 gate (mirror; `@readiness-reviewer` prompt authoritative).

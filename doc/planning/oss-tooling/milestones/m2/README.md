@@ -29,7 +29,7 @@ deliberate and the generic table is left unchanged until milestone exit.
 | `README.md` | Pack index: how to read, story-to-artifact map, deviation note |
 | [architecture.md](architecture.md) | C4 context, containers, and components for the M2 end state, the three-level domain model, the eight key flows, including the S17 park/resume flow and the cross-repository change flow, persistence and concurrency deltas, boundary invariants |
 | [contracts.md](contracts.md) | Shared contract continuity plus `repos.v1`, the group contract `project-groups.v1`, the delivered `projects.v1` payload, the project configuration document, the cross-repository change plan shape, `attempts.v1`, event taxonomy v1, `telemetry.v1`, queue lifecycle mutations, `spend` v2, and the provider-profile and peak-window additions |
-| [test-scenarios.md](test-scenarios.md) | `SC-M2-*` scenario seeds for stories S2 through S19, the inherited starting point for each story's test plan |
+| [test-scenarios.md](test-scenarios.md) | `SC-M2-*` scenario seeds for stories S2 through S20, the inherited starting point for each story's test plan |
 | [journeys.md](journeys.md) | Operator journeys: multi-repository morning overview, evidence before handover, retro on telemetry, steering a running delivery, the S17 cost-control journey |
 | [entrypoint-delta.md](entrypoint-delta.md) | Root entry listing delta, the M2-planned additions, and the closed daemon registration gap |
 | [commands/repos.md](commands/repos.md) | Flat record set owned by M2-S18: the five reported fields, `repos.v1`, and the `repos list` surface |
@@ -62,6 +62,7 @@ deliberate and the generic table is left unchanged until milestone exit.
 | M2-S17 Provider-aware peak pausing | S17 park and resume under a provider peak | provider profile fields, peak-window rule schema, park reasons, resume events | SC-M2-S17-01, SC-M2-S17-02, SC-M2-S17-03, SC-M2-S17-04, SC-M2-S17-05 |
 | M2-S18 Project groups | multi-repository overview (group-scoped) | `project-groups.v1`, the project configuration document, the `status --project <groupKey>` delta, and the superseding decision record | SC-M2-S18-01, SC-M2-S18-02, SC-M2-S18-03, SC-M2-S18-04, SC-M2-S18-05, SC-M2-S18-06, SC-M2-S18-07, SC-M2-S18-08 (the AC-F8-5 alias-shape assertion) |
 | M2-S19 Cross-repository changes | cross-repository change | the cross-repository change plan shape (`plan.data.members[]`, `closeout.data.members[]`, `verify gates`) | SC-M2-S19-01, SC-M2-S19-02, SC-M2-S19-03, SC-M2-S19-04, SC-M2-S19-05 |
+| M2-S20 Milestone-first planning and delivery | none in this pack | none in this pack | SC-M2-S20-01, SC-M2-S20-02, SC-M2-S20-03, SC-M2-S20-04, SC-M2-S20-05 |
 
 ## How to read
 

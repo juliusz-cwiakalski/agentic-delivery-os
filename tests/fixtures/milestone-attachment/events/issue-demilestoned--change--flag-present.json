@@ -1,0 +1,16 @@
+{
+  "action": "demilestoned",
+  "issue": {
+    "number": 119,
+    "state": "open",
+    "labels": [
+      {
+        "name": "change"
+      },
+      {
+        "name": "needs-milestone"
+      }
+    ],
+    "milestone": null
+  }
+}

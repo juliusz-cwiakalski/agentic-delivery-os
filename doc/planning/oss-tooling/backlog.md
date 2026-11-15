@@ -1067,6 +1067,7 @@ consequence of the split, so the root listing meets the repository family and
 the project family separately.
 
 ### M2-S2 Supervise
+- Ticket: GH-295 (milestone M2)
 - Goal: A supervisor battery with artifact-evidence liveness so stuck or lying deliveries are detected and acted on, not just observed, running over the M1 daemon's lanes.
 - Tasks: supervisor battery: tri-state status, progress watchdogs,
   duplicate-supervisor detection, lying-liveness signals by artifact
@@ -1076,6 +1077,7 @@ the project family separately.
 - Depends on: M1-S1, M1-S18.
 
 ### M2-S3 Ceremony runner
+- Ticket: GH-296 (milestone M2)
 - Goal: Ceremonies become declared, deterministic units, cutting ceremony share of active agent time toward 40 percent and making catch-up automatic.
 - Tasks: reduce ceremony share; compact at boundaries; tiered intake. A
   ceremony is a declared unit (schedule, inputs from collectors, render,
@@ -1096,6 +1098,7 @@ the project family separately.
 - Depends on: M0-S6, M0-S13, M1-S8.
 
 ### M2-S10 Retro action registry and follow-through
+- Ticket: GH-287 (milestone M2)
 - Goal: The retro action registry with the five-field contract and artifact closure, so retrospectives produce verified follow-through, not lists.
 - Tasks: the action registry behind every retro level: five-field
   contract (owner, verifiable verb, measurable outcome, tracker entry,
@@ -1115,6 +1118,7 @@ the project family separately.
 - Depends on: M1-S8.
 
 ### M2-S4 Board
+- Ticket: GH-297 (milestone M2)
 - Goal: The fleet on one screen sharing one state source with brief and status, so coordination stops re-deriving the world.
 - Tasks: full board of lanes, gates, owner asks, parked work; one screen
   sharing the brief and status state source.
@@ -1122,6 +1126,7 @@ the project family separately.
 - Depends on: M1-S5, M1-S17, M2-S11, M2-S18.
 
 ### M2-S5 Steer
+- Ticket: GH-298 (milestone M2)
 - Goal: The owner can change the course of a running delivery without killing the session: steering notes queue up, land at the next phase boundary, and carry receipts, so course corrections are safe and auditable.
 - Tasks: owner briefs, escalation, resequencing heuristics with measured
   aging; queued steering notes delivered at phase boundaries. Steer is
@@ -1135,6 +1140,7 @@ the project family separately.
 - Depends on: M0-S10, M1-S11.
 
 ### M2-S6 Metrics and spend
+- Ticket: GH-299 (milestone M2)
 - Goal: Delivery metrics and spend from the event log with alarms, so success claims and cost drift are measurable, not anecdotal.
 - Tasks: ceremony share, per-dispatch tokens/cost/restarts, cycle time, CI
   failure rate, escaped defects; burn-rate alarms. Builds on the `ados
@@ -1145,12 +1151,14 @@ the project family separately.
 - Depends on: M1-S19, M2-S3, M2-S14.
 
 ### M2-S7 Suite-to-job mapping in gates
+- Ticket: GH-300 (milestone M2)
 - Goal: Local gates must cite the same suite breadth as CI, so a narrow local suite cannot masquerade as full green.
 - Tasks: local gates must cite the same suite breadth as CI.
 - AC: a narrower local suite cannot masquerade as full green.
 - Depends on: M0-S9.
 
 ### M2-S8 Memory records, layout, and lint
+- Ticket: GH-301 (milestone M2)
 - Goal: The committed memory tree with typed records and lint, so project memory is one canonical, budgeted, reference-checked store.
 - Tasks: the committed memory tree (.ai/memory: index README, lessons,
   tacit fragments, preferences, per-agent entry points, guild trees,
@@ -1268,6 +1276,7 @@ the project family separately.
 - Depends on: M1-S18.
 
 ### M2-S14 Harness telemetry v2
+- Ticket: GH-291 (milestone M2)
 - Progress: delivered by GH-291 — per-step ingest of the opencode v2.x.y stream
   with per-step model cost and five token classes, five-dimension attribution
   joined from session economics and command-audit identity, phase/stall/restart
@@ -1326,6 +1335,7 @@ the project family separately.
 - Depends on: M1-S9, M1-S17, M1-S18, M2-S13.
 
 ### M2-S16 Engine-first delivery operations
+- Ticket: GH-293 (milestone M2)
 - Goal: Day-to-day delivery of this repository runs primarily through the
   typed engine with the shell stack as documented fallback, accumulating the
   evidence the handover gate requires.
@@ -1342,6 +1352,7 @@ the project family separately.
 - Depends on: M1-S9, M1-S18, M1-S21, M2-S12, M2-S13, and the owner-hold hook change (#280).
 
 ### M2-S17 Provider-aware peak pausing
+- Ticket: GH-294 (milestone M2)
 - Progress: delivered by GH-294 — every delivery nominates its provider profile
   at dispatch admission (recorded on the lane and attempt records with the
   classified no-nomination refusal reusing the resolve identities); peak-window
@@ -1434,6 +1445,7 @@ the project family separately.
 - Depends on: M2-S11.
 
 ### M2-S19 Cross-repository changes
+- Ticket: GH-310 (milestone M2)
 - Goal: One change may span multiple repositories of one project: one
   lifecycle, one spec and plan, one definition of done, with a branch and
   pull request per member repository.
@@ -1450,6 +1462,40 @@ the project family separately.
   3. A member failing its gates blocks the shared DoD with the failing member named.
   4. Member dependency order holds: a member step with a dependency edge does not start before the prerequisite member's pull request lands, and the evidence lists the pull requests in landing order.
 - Depends on: M2-S11, M2-S18, M1-S17.
+
+### M2-S20 Milestone-first planning and delivery
+- Ticket: GH-313 (milestone M2)
+- Goal: A milestone and every ticket attached to it exist in the tracker
+  before work starts, every new change ticket is attached at creation or
+  explicitly captured as backlog, and the committed planning corpus mirrors
+  that attachment.
+- Tasks: author the milestone-management guide and record the operating rule
+  as PDR-0005; require a milestone in the ticket-creation path and verify it
+  at intake; add the required `change.milestone` field to the change-spec
+  template and the `@spec-writer` rules; carry the rule into bootstrapped
+  project tracker instructions; deliver the event-driven milestone-attachment
+  check with its capture exemption and zero-write advisory sweep; repair the
+  M2 planning corpus so the backlog, ranking, pack, and status mirror the
+  tracker.
+- AC:
+  1. `doc/guides/milestone-management.md` exists with a redistributable marker,
+     one script-generated header, the nine lifecycle topics, and a link from
+     the documentation index; the pack conventions point at it without
+     restating the procedure.
+  2. Ticket creation requires a milestone resolved from the project's existing
+     set in both the tracker instructions and the `@pm` prompt; intake verifies
+     attachment, records it in pm-notes, and stops on an unattached ticket;
+     the `@bootstrapper` guidance carries the same rule.
+  3. The change-spec template requires `change.milestone` with its resolution
+     rule, and no other template gains a milestone field.
+  4. The milestone-attachment check evaluates the ordered contract offline,
+     flags a new unattached `change` issue once, respects the capture exemption
+     and manual flag removal, reverses on attach/detach, writes only its closed
+     vocabulary, and sweeps the existing debt with zero tracker writes.
+  5. The M2 backlog carries 19/19 ticket lines including M2-S20, the ranking is
+     contiguous and backlog-ordered, the M2 pack carries the M2-S20 row and its
+     five seeds, and the status snapshot carries the delivery addendum.
+- Depends on: none.
 
 ---
 

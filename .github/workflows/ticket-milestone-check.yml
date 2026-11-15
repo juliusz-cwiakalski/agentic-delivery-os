@@ -1,0 +1,60 @@
+name: Ticket milestone check
+
+on:
+  issues:
+    types:
+      - opened
+      - edited
+      - labeled
+      - unlabeled
+      - milestoned
+      - demilestoned
+      - reopened
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Run the read-only advisory sweep
+        required: true
+        default: sweep
+        type: choice
+        options:
+          - sweep
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  milestone-check:
+    name: Evaluate milestone attachment
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: "1.4.4"
+
+      # The adapter below imports the orchestration runner
+      # scripts/checks/milestone-attachment-runner.ts and the pure evaluation
+      # core scripts/checks/milestone-attachment.ts.
+      - name: Evaluate the issue event
+        if: github.event_name == 'issues'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >
+          bun run scripts/checks/milestone-attachment-github.ts evaluate
+          --event "$GITHUB_EVENT_PATH" --summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Run the advisory sweep
+        if: github.event_name == 'workflow_dispatch'
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: >
+          bun run scripts/checks/milestone-attachment-github.ts sweep
+          --summary "$GITHUB_STEP_SUMMARY" --output tmp/milestone-attachment-sweep.json

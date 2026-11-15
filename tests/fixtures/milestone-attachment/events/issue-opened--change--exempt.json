@@ -1,0 +1,16 @@
+{
+  "action": "opened",
+  "issue": {
+    "number": 105,
+    "state": "open",
+    "labels": [
+      {
+        "name": "change"
+      },
+      {
+        "name": "backlog-capture"
+      }
+    ],
+    "milestone": null
+  }
+}

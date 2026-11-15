@@ -42,6 +42,11 @@ authored during milestone planning and refined as stories deliver.
 - **No private content.** Packs are committed public documents: no private
   fleet, repository, or product names; production evidence is described by
   class, not by name.
+- **Milestone-first planning.** The milestone record and every ticket attached
+  to it exist before work starts; planned scope is the attached-ticket set. The
+  operating rule and its lifecycle live in the
+  [milestone-management guide](../../../guides/milestone-management.md); this
+  section points at that guide and does not restate the procedure.
 
 ## Index
 
