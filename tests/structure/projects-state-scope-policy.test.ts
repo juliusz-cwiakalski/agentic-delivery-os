@@ -12,7 +12,11 @@ import { describe, expect, it } from "bun:test";
 import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import ts from "typescript";
-import { resolveHostStateRoot } from "../../packages/core/src/app/state-scope";
+import {
+  hostRootCandidates,
+  resolveHostStateRoot,
+  selectHostStateRoot,
+} from "../../packages/core/src/app/state-scope";
 
 const ROOT = process.cwd();
 const PACKAGES = ["core", "adapters", "cli", "mcp", "opencode", "testkit"] as const;
@@ -334,5 +338,76 @@ describe("TC-PROJ-023 the settings resolution has one call site, taking the proj
     } finally {
       rmSync(probe, { recursive: true, force: true });
     }
+  });
+});
+
+/**
+ * GH-320 TC-BIN-065 — the policy still proves one composition and one override
+ * read after prior-root selection is added: the prior default root comes through
+ * the same helper, the policy stays pure over injected existence facts, and the
+ * prior identity's environment names are never read.
+ */
+describe("TC-BIN-065 prior-root selection stays inside the one policy", () => {
+  const input = {
+    environment: { HOME: "/home/operator" },
+    environmentPrefix: "JAISHIP_",
+    stateDirectoryName: ".jaiship-state",
+    homeDirectory: "/home/operator",
+  } as const;
+
+  it("the policy derives both default roots and selects the prior root over facts", () => {
+    expect(
+      hostRootCandidates({
+        environment: input.environment,
+        stateDirectoryName: input.stateDirectoryName,
+        homeDirectory: input.homeDirectory,
+        priorStateDirectoryName: ".delivery-os-state",
+      }),
+    ).toEqual({
+      currentDefaultRoot: "/home/operator/.jaiship-state",
+      priorDefaultRoot: "/home/operator/.delivery-os-state",
+    });
+    const selected = selectHostStateRoot({
+      ...input,
+      priorStateDirectoryName: ".delivery-os-state",
+      defaultRootExists: { current: false, prior: true },
+    });
+    expect(selected.ok).toBe(true);
+    if (selected.ok) {
+      expect(selected.value.kind).toBe("prior");
+      expect(selected.value.root).toBe("/home/operator/.delivery-os-state");
+    }
+    const firstUse = selectHostStateRoot({
+      ...input,
+      defaultRootExists: { current: false, prior: false },
+    });
+    expect(firstUse.ok).toBe(true);
+    if (firstUse.ok) {
+      expect(firstUse.value.kind).toBe("first-use");
+      expect(firstUse.value.root).toBe("/home/operator/.jaiship-state");
+    }
+  });
+
+  it("the prior selection adds no second composition and no second override read", () => {
+    // Still exactly one home-plus-brand composition site, in the policy file.
+    expect(homeBrandSites(listSources()).map((site) => site.file)).toEqual([POLICY]);
+    // Still exactly one `<PREFIX>_STATE_DIR` read site, in the policy file.
+    expect(overrideSites(listSources()).map((site) => site.file)).toEqual([POLICY]);
+    const policy = readFileSync(join(ROOT, POLICY), "utf8");
+    expect(policy).toContain("priorStateDirectoryName");
+    expect(policy).not.toMatch(/priorEnvironmentPrefix|DELIVERY_OS_STATE_DIR.*prior/u);
+  });
+
+  it("the pure policy reads no filesystem and takes existence as data", () => {
+    const policy = readFileSync(join(ROOT, POLICY), "utf8");
+    expect(policy).not.toContain("node:fs");
+    expect(policy).not.toContain("readFileSync");
+    expect(policy).not.toContain("existsSync");
+    const refusal = selectHostStateRoot({
+      ...input,
+      environment: { HOME: "/home/operator", JAISHIP_STATE_DIR: "relative/path" },
+      defaultRootExists: { current: false, prior: true },
+    });
+    expect(refusal.ok).toBe(false);
   });
 });

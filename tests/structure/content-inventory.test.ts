@@ -2160,7 +2160,12 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "validateProfileConfiguration",
     "validateProviderConfiguration",
   ],
-  "core/src/contracts/config.ts": ["CONFIG_LAYERS"],
+  "core/src/contracts/config.ts": [
+    "CONFIG_LAYERS",
+    "PRIOR_IDENTITY_NOTICE_REASONS",
+    "PRIOR_IDENTITY_NOTICE_TOKEN",
+    "renderPriorIdentityNotice",
+  ],
   "core/src/contracts/watchdog.ts": [
     "WATCHDOG_ERROR_CODES",
     "WATCHDOG_MEMORY_STATUSES",
@@ -2878,7 +2883,7 @@ test("TC-BIN-061 an undeclared executable export in the new bin fails by name", 
   const root = makeTempFile(
     "cli",
     "bin/jaiship.ts",
-    '#!/usr/bin/env bun\nexport const completion = Promise.resolve();\nexport const extra = 1;\n',
+    "#!/usr/bin/env bun\nexport const completion = Promise.resolve();\nexport const extra = 1;\n",
   );
   try {
     const violations = executableViolations(root, "cli", "bin/jaiship.ts");
@@ -2897,7 +2902,9 @@ test("TC-BIN-061 a re-added neutralWorkingName export fails naming the symbol", 
   );
   try {
     const violations = executableViolations(root, "cli", "src/entrypoint.ts");
-    expect(violations).toContain("cli/src/entrypoint.ts: undeclared executable export neutralWorkingName");
+    expect(violations).toContain(
+      "cli/src/entrypoint.ts: undeclared executable export neutralWorkingName",
+    );
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

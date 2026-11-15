@@ -272,3 +272,17 @@ notes:
       TC-BIN-070; (f) duplicated assertions between TC-BIN-072 steps 7 and 8."
     type: risk
     date: "2026-11-15"
+  - text: "Plan phase 1 (two executable identity selectors over one shared
+      launcher) delivered by commit e4c5643b0ac482ca6701341fca2dc59329183027
+      (subject `chore(GH-320): update packages/cli/bin/delivery-os.ts`, the
+      commit primitive's deterministic template). Gates green: pnpm install
+      --frozen-lockfile; pnpm typecheck; entrypoint-two-bins (18 pass);
+      entrypoint-version + entrypoint-help-isolation (11 pass);
+      pilot-isolation (9 pass); entrypoint-bin + content-inventory (34 pass);
+      branding-seam + branding-contract (13 pass);
+      entrypoint-help + entrypoint-help-coverage + entrypoint-composition
+      (14 pass); daemon-start-detached (22 pass); exports-parity OK (5
+      publishables). BYTE-TP-1 baseline captured pre-change from 1d4431eb into
+      tests/fixtures/entrypoint/alias-baseline.json."
+    type: info
+    date: "2026-11-15"

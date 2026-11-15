@@ -19,6 +19,7 @@ import {
   createHostIndexAccess,
   ensureDispatchIdentityMarkerText,
   ensureProjectIdentityMarkerText,
+  type FileSystemFacts,
   type HostIndexAccess,
   hostIndexDocumentPath,
   nodeFileSystemFacts,
@@ -88,6 +89,7 @@ import {
   type HandoverEvidence,
   type HarnessSettings,
   type HostIndexRootProbe,
+  hostRootCandidates,
   type LaneSettings,
   legacyStoreWarning,
   maintainHostIndex,
@@ -136,10 +138,12 @@ import {
   validateProjectGroupsDocument,
   type WorkspaceLocatedMember,
 } from "@delivery-os/core";
+import { resolveBrandIdentity } from "@delivery-os/core/branding";
 import {
   type BrandIdentity,
   CLOSEOUT_INTEGRATION_BASE,
   type ConfigNodeOrigins,
+  type ConfigPriorOutcome,
   type ConfigValue,
   type CoordinatorProgressState,
   type CredentialPort,
@@ -170,6 +174,7 @@ import {
   type OwnerHoldFact,
   type PipelineRun,
   PROJECTS_COMMAND_FAMILY,
+  type PriorIdentityNotice,
   type ProjectConfigInvalidReason,
   type ProjectGroupEntry,
   type ProjectGroupMemberEntry,
@@ -183,6 +188,7 @@ import {
   type QueueEntryProjection,
   type QueueTrackerRead,
   REPOS_COMMAND_FAMILY,
+  renderPriorIdentityNotice,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
   type StateStorePort,
@@ -457,6 +463,16 @@ export type ProductionCompositionFacts = {
    * a composition that mounts the daemon probes honestly.
    */
   readonly daemon?: DaemonComposition;
+  /**
+   * The prior-identity notice channel (GH-320 DM-4). Production writes stderr;
+   * a test may inject a recording sink so the notice is observable in-process.
+   */
+  readonly noticeSink?: { readonly write: (chunk: string) => void };
+  /**
+   * The configuration filesystem facts (GH-320 F-3). Production uses the node
+   * facts; a test may inject counting facts so per-layer reads are observable.
+   */
+  readonly configurationFs?: FileSystemFacts;
 };
 
 /** The one bounded warning an invocation outside any checkout emits (DEC-10). */
@@ -676,6 +692,54 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     const ownProcessId = facts.processId ?? 0;
     const signalHost = facts.signalHost;
     const homeDirectory = trimTrailingSeparators(facts.homeDirectory);
+    // The configuration filesystem facts: production uses the node facts; a
+    // test may inject counting facts so per-layer reads are observable.
+    const localFs = facts.configurationFs ?? nodeFileSystemFacts();
+    // The declared prior identity (GH-320 F-2): its two directory names come
+    // from the one resolver, so no prior path is a second literal. An unusable
+    // prior name simply declares no fallback.
+    const priorNames = (() => {
+      const priorWorkingName = invocation?.priorWorkingName;
+      if (priorWorkingName === undefined || priorWorkingName.length === 0) return undefined;
+      const prior = resolveBrandIdentity({ workingName: priorWorkingName });
+      return prior.ok
+        ? {
+            configDirectoryName: prior.value.configDirectoryName,
+            stateDirectoryName: prior.value.stateDirectoryName,
+          }
+        : undefined;
+    })();
+    // The notice's once-state belongs to this composed program (DEC-10): one
+    // emission per source kind, never a process global.
+    const emittedNotices = new Set<string>();
+    const noticeSink = facts.noticeSink ?? {
+      write: (chunk: string) => process.stderr.write(chunk),
+    };
+    const emitNotice = (notice: PriorIdentityNotice): void => {
+      if (emittedNotices.has(notice.reason)) return;
+      emittedNotices.add(notice.reason);
+      noticeSink.write(`${renderPriorIdentityNotice(notice)}\n`);
+    };
+    const emitConfigNotice = (prior: readonly ConfigPriorOutcome[] | undefined): void => {
+      if (prior === undefined || prior.length === 0) return;
+      const read = prior.find((entry) => entry.state === "read");
+      if (read !== undefined) {
+        emitNotice({
+          reason: "config-read",
+          priorLocation: read.file,
+          currentLocation: read.currentFile,
+        });
+        return;
+      }
+      const shadowed = prior[0];
+      if (shadowed !== undefined) {
+        emitNotice({
+          reason: "config-skipped",
+          priorLocation: shadowed.file,
+          currentLocation: shadowed.currentFile,
+        });
+      }
+    };
     // The two layers (GH-288 F-1, DEC-12): the delivered host root holds
     // host-wide controls only, and the derived project root holds every
     // delivery artifact of this checkout. One policy resolves both — the host
@@ -684,11 +748,38 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     // state-directory resolution (GH-286 F-3, DM-5): no inline home-plus-brand
     // composition survives here, and an unresolvable host root is the
     // classified scope refusal (GH-286 AC-F3-5, GH-288 DEC-17).
+    const defaultRoots = hostRootCandidates({
+      environment,
+      stateDirectoryName: brand.stateDirectoryName,
+      homeDirectory,
+      ...(priorNames === undefined
+        ? {}
+        : { priorStateDirectoryName: priorNames.stateDirectoryName }),
+    });
+    const existsSafe = (path: string | undefined): boolean => {
+      if (path === undefined) return false;
+      try {
+        return localFs.exists(path);
+      } catch {
+        return false;
+      }
+    };
     const scope = resolveProjectScope({
       environment,
       environmentPrefix: brand.environmentPrefix,
       stateDirectoryName: brand.stateDirectoryName,
       homeDirectory,
+      ...(priorNames === undefined
+        ? {}
+        : { priorStateDirectoryName: priorNames.stateDirectoryName }),
+      ...(priorNames === undefined
+        ? {}
+        : {
+            defaultRootExists: {
+              current: existsSafe(defaultRoots.currentDefaultRoot),
+              prior: existsSafe(defaultRoots.priorDefaultRoot),
+            },
+          }),
       checkout: readCheckoutIdentity({ cwd, io: nodeRepositoryIo() }),
       ports: {
         readMarker: (commonDir) => readProjectIdentityMarker(commonDir),
@@ -698,6 +789,24 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     });
     if (!scope.ok) return scopeRefusalProgram(scope.error);
     const roots = stateScopeRoots(scope.value);
+    const selection = scope.value.hostRootSelection;
+    if (selection.kind === "prior" && selection.priorDefaultRoot !== undefined) {
+      emitNotice({
+        reason: "state-read",
+        priorLocation: selection.priorDefaultRoot,
+        currentLocation: selection.currentDefaultRoot,
+      });
+    } else if (
+      selection.kind === "current" &&
+      selection.priorDefaultRoot !== undefined &&
+      existsSafe(selection.priorDefaultRoot)
+    ) {
+      emitNotice({
+        reason: "state-skipped",
+        priorLocation: selection.priorDefaultRoot,
+        currentLocation: selection.currentDefaultRoot,
+      });
+    }
     const hostRoot = roots.hostRoot;
     const stateDirectory = roots.projectRoot;
     const checkoutRoot =
@@ -721,7 +830,31 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     // One git-root resolution for every configuration branch composition.
     const gitRootForConfig = (): string | undefined => findGitRoot(cwd, nodeRepositoryIo());
     const notesFs = nodePmNotesFileSystemFacts();
-    const localFs = nodeFileSystemFacts();
+    /**
+     * The one read-only project-configuration acquisition with the prior
+     * identity (GH-320 F-3, DEC-14). Every composition-time and per-invocation
+     * acquisition goes through here, so the fallback is exercised by the
+     * delivered composition and no command gains a read. The notice is emitted
+     * once per composed program by the owner above.
+     */
+    const acquireProjectConfiguration = (gitRoot: string | undefined) => {
+      const acquired = acquireFileConfig({
+        platform: runtimePlatform(),
+        homeDirectory,
+        environment,
+        ...(gitRoot === undefined ? {} : { gitRoot }),
+        enableSystemConfig: true,
+        enableUserConfig: true,
+        enableProjectLocalConfig: true,
+        configurationDirectoryName: brand.configDirectoryName,
+        ...(priorNames === undefined
+          ? {}
+          : { priorConfigurationDirectoryName: priorNames.configDirectoryName }),
+        fs: localFs,
+      });
+      if (acquired.ok) emitConfigNotice(acquired.prior);
+      return acquired;
+    };
     const nowIso = (): string => new Date().toISOString();
     const nowMs = (): number => Date.now();
     const newFenceToken = (): string => globalThis.crypto.randomUUID();
@@ -845,17 +978,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         };
       };
       const gitRoot = gitRootForConfig();
-      const acquired = acquireFileConfig({
-        platform: runtimePlatform(),
-        homeDirectory,
-        environment,
-        ...(gitRoot === undefined ? {} : { gitRoot }),
-        enableSystemConfig: true,
-        enableUserConfig: true,
-        enableProjectLocalConfig: true,
-        configurationDirectoryName: brand.configDirectoryName,
-        fs: localFs,
-      });
+      const acquired = acquireProjectConfiguration(gitRoot);
       if (!acquired.ok) return resolveOver({}, {});
       const resolved = resolveConfig({ sources: acquired.sources });
       if (!resolved.ok) return resolveOver({}, {});
@@ -1808,17 +1931,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         "provider.profile.unavailable",
       ];
       const gitRoot = gitRootForConfig();
-      const acquired = acquireFileConfig({
-        platform: runtimePlatform(),
-        homeDirectory,
-        environment,
-        ...(gitRoot === undefined ? {} : { gitRoot }),
-        enableSystemConfig: true,
-        enableUserConfig: true,
-        enableProjectLocalConfig: true,
-        configurationDirectoryName: brand.configDirectoryName,
-        fs: localFs,
-      });
+      const acquired = acquireProjectConfiguration(gitRoot);
       if (!acquired.ok) {
         return {
           ok: false,
@@ -1978,17 +2091,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       | { readonly ok: true; readonly settings: HarnessSettings; readonly lane: LaneSettings }
       | { readonly ok: false; readonly code: string } => {
       const gitRoot = gitRootForConfig();
-      const acquired = acquireFileConfig({
-        platform: runtimePlatform(),
-        homeDirectory,
-        environment,
-        ...(gitRoot === undefined ? {} : { gitRoot }),
-        enableSystemConfig: true,
-        enableUserConfig: true,
-        enableProjectLocalConfig: true,
-        configurationDirectoryName: brand.configDirectoryName,
-        fs: localFs,
-      });
+      const acquired = acquireProjectConfiguration(gitRoot);
       if (!acquired.ok) return { ok: false, code: acquired.error.code };
       const resolved = resolveConfig({ sources: acquired.sources });
       if (!resolved.ok) return { ok: false, code: resolved.error.code };
@@ -2078,17 +2181,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
 
     const resolveProductionCoordinatorSettings = (): CoordinatorSettings => {
       const gitRoot = gitRootForConfig();
-      const acquired = acquireFileConfig({
-        platform: runtimePlatform(),
-        homeDirectory,
-        environment,
-        ...(gitRoot === undefined ? {} : { gitRoot }),
-        enableSystemConfig: true,
-        enableUserConfig: true,
-        enableProjectLocalConfig: true,
-        configurationDirectoryName: brand.configDirectoryName,
-        fs: localFs,
-      });
+      const acquired = acquireProjectConfiguration(gitRoot);
       if (!acquired.ok) return defaultCoordinatorSettings();
       const resolved = resolveConfig({ sources: acquired.sources });
       if (!resolved.ok) return defaultCoordinatorSettings();
@@ -2699,6 +2792,9 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       const read = readProjectGroupsConfig({
         gitRoot,
         configurationDirectoryName: brand.configDirectoryName,
+        ...(priorNames === undefined
+          ? {}
+          : { priorConfigurationDirectoryName: priorNames.configDirectoryName }),
       });
       if (read.state === "unreadable") {
         return {
@@ -2969,6 +3065,9 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       environment,
       cwd,
       homeDirectory,
+      ...(priorNames === undefined
+        ? {}
+        : { priorConfigurationDirectoryName: priorNames.configDirectoryName }),
       lint: lintRuntime,
       plan: { changesDirectory, fs: notesFs, readDiff: plan.readDiff },
       phase: committedPhaseRuntime,

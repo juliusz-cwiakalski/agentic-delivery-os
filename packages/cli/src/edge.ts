@@ -3191,6 +3191,12 @@ export type ConfigProgramOptions = {
   readonly environment: Readonly<Record<string, string | undefined>>;
   readonly cwd: string;
   readonly homeDirectory: string;
+  /**
+   * The prior identity's configuration-directory name (GH-320 F-3). The config
+   * program resolves through the fallback-aware acquisition; the test-only
+   * composition helper never receives it.
+   */
+  readonly priorConfigurationDirectoryName?: string;
   readonly platform?: RuntimePlatform;
   readonly catalog?: ConfigCatalog;
   readonly defaultPositions?: DefaultPositionManifest;
@@ -3371,6 +3377,9 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
       enableUserConfig: flags["--enable-user-config"] === true,
       enableProjectLocalConfig: flags["--enable-project-local-config"] === true,
       configurationDirectoryName: brand.configDirectoryName,
+      ...(options.priorConfigurationDirectoryName === undefined
+        ? {}
+        : { priorConfigurationDirectoryName: options.priorConfigurationDirectoryName }),
       fs,
     });
     if (!acquired.ok) return acquired;

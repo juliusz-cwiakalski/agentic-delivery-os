@@ -17,6 +17,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ts from "typescript";
 
+import { selectHostStateRoot } from "../../packages/core/src/app/state-scope";
 import { exercise, repairTerminalTail } from "../fixtures/state/consumer";
 import {
   ledgerPath,
@@ -271,5 +272,66 @@ describe("TC-STATE-023 foundation scope", () => {
     } finally {
       removeRoot(stateRoot);
     }
+  });
+});
+
+/**
+ * GH-320 TC-BIN-034 — the prior identity's environment names are never read:
+ * the one `<PREFIX>_STATE_DIR` read is the invoking identity's, and a prior-prefix
+ * override cannot silently cross identities.
+ */
+describe("TC-BIN-034 prior-prefix overrides are never read", () => {
+  const countingEnvironment = (
+    record: Record<string, string | undefined>,
+  ): { readonly environment: Record<string, string | undefined>; readonly reads: string[] } => {
+    const reads: string[] = [];
+    const environment = new Proxy(record, {
+      get(target, property) {
+        if (typeof property === "string") reads.push(property);
+        return target[property];
+      },
+      has(target, property) {
+        if (typeof property === "string") reads.push(property);
+        return property in target;
+      },
+    });
+    return { environment, reads };
+  };
+
+  test("only the invoking identity's override name is consulted", () => {
+    const { environment, reads } = countingEnvironment({
+      HOME: "/home/operator",
+      JAISHIP_STATE_DIR: "/srv/current",
+      DELIVERY_OS_STATE_DIR: "/srv/prior",
+    });
+    const selected = selectHostStateRoot({
+      environment,
+      environmentPrefix: "JAISHIP_",
+      stateDirectoryName: ".jaiship-state",
+      priorStateDirectoryName: ".delivery-os-state",
+      homeDirectory: "/home/operator",
+      defaultRootExists: { current: false, prior: true },
+    });
+    expect(selected.ok).toBe(true);
+    if (selected.ok) expect(selected.value.root).toBe("/srv/current");
+    expect(reads).toContain("JAISHIP_STATE_DIR");
+    expect(reads).not.toContain("DELIVERY_OS_STATE_DIR");
+  });
+
+  test("the alias reads its own prefix and never the new identity's", () => {
+    const { environment, reads } = countingEnvironment({
+      HOME: "/home/operator",
+      JAISHIP_STATE_DIR: "/srv/next",
+      DELIVERY_OS_STATE_DIR: "/srv/alias",
+    });
+    const selected = selectHostStateRoot({
+      environment,
+      environmentPrefix: "DELIVERY_OS_",
+      stateDirectoryName: ".delivery-os-state",
+      homeDirectory: "/home/operator",
+    });
+    expect(selected.ok).toBe(true);
+    if (selected.ok) expect(selected.value.root).toBe("/srv/alias");
+    expect(reads).not.toContain("JAISHIP_STATE_DIR");
   });
 });
