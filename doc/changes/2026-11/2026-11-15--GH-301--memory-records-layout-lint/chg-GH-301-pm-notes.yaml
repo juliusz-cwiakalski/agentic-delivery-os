@@ -50,6 +50,30 @@ open_questions: []
 blockers: []
 notes:
   - text: >-
+      Delivery plan phase 7 (plan id 7) complete. Commit: e4bb8541. Backlog
+      M2-S8 now carries its Ticket and Progress lines; the final alignment pass
+      verified the phase-6 concept Record model is schema-legal while the
+      memory-practices bootstrapping checklist is untouched; ADR-0011 is
+      tracked with its index row resolving and remains Proposed with
+      decision_date null for the owner gate. Full battery at the delivered HEAD:
+      TMPDIR=/home/juliusz/git/ados-tmp pnpm check = 8653 pass, 4 skip, 0 fail
+      (EXIT 0), including build/lint/format/typecheck/tests/boundaries/
+      check:memory/prompt/help/exports; bun run scripts/checks/memory-lint.ts =
+      records=3 areas=8 errors=0 advisories=0; doc-distribution,
+      forbidden-literals, privacy-literals and git diff --check clean. The
+      repository-local TMPDIR command cannot be used in this nested-git
+      workspace because four existing non-checkout fixtures require a TMPDIR
+      outside every work tree; an outside-repo same-filesystem TMPDIR keeps both
+      those suites and ci-baseline-parity green. SCOPE DEVIATIONS (reported):
+      .changeset/gh-301-memory-records-layout-lint.md is added for the
+      five-package minor changeset TC-RELEASE-001 requires, and
+      tests/checks/milestone-gate.test.ts is updated for the new
+      pnpm check:memory step; neither path was declared by the plan. The
+      changeset was staged with git add because the commit primitive stages
+      only tracked or in-scope untracked files.
+    type: info
+    date: "2026-11-15"
+  - text: >-
       Delivery plan phase 6 (plan id 6) complete. Commit: ccf14fb5. Added the
       single memory gate/schema clause to the AGENTS.md memory section inside
       its band, aligned the consolidate-memory curator rules with the schema,
