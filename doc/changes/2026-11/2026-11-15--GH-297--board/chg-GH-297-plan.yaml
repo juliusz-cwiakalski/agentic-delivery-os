@@ -1,8 +1,37 @@
-# GH-297 delivery plan — machine-readable document (delivery.plan.v1), revision 1.0
-# (2026-11-15). Authored against spec v1.1 (28 ACs, DEC-1..DEC-19, DM-1..DM-11,
-# NFR-1..NFR-10, RSK-1..RSK-9, DoD-1..DoD-18, OQ-1..OQ-7 all closed, Appendix C
-# constraints C-1..C-15) and test plan v1.1 (48 TCs = 47 automated + 1 gate-only
+# GH-297 delivery plan — machine-readable document (delivery.plan.v1), revision 1.1
+# (2026-11-16). Authored against spec v1.2 (29 ACs, DEC-1..DEC-20, DM-1..DM-11,
+# NFR-1..NFR-10, RSK-1..RSK-9, DoD-1..DoD-18, OQ-1..OQ-8 all closed, Appendix C
+# constraints C-1..C-16) and test plan v1.2 (48 TCs = 47 automated + 1 gate-only
 # record) on branch feat/GH-297/board from main-tools tip eca76523.
+#
+# REVISION NOTE (revision 1.1, DoR iteration-1 remediation, spec v1.2 / test
+# plan v1.2 reconciliation): the iteration-1 DoR review found two plan gaps.
+# F1 (critical): phase 3 introduces `board.repository-unknown` and
+# `board.state-unavailable` as two-segment codes, but the delivered error-table
+# sync gate requires the exact allowlist widening in BOTH
+# scripts/checks/error-table-sync.ts (`RESERVED_TWO_SEGMENT_CODES`, 53 -> 55)
+# and its structural mirror tests/structure/error-table.test.ts (the mirrored
+# set plus the exact-length assertion), plus the identity-table count bumps
+# (ERROR_TABLE entries 136 -> 138 at all four structural assertions, the
+# delivered/spend-exclusion count 135 -> 137, exactly 2 `board` domain-kind
+# rows, and the feature-result-contract documented identities 136 -> 138 with
+# the allowlist paragraph reconciled 52 -> 55) — none of which was in any phase
+# scope, making phase 3's done-when unsatisfiable. Spec v1.2 pins the remedy
+# as DEC-20/C-16/AC-F8-3 (OQ-8 closed) and test plan v1.2 extends TC-BOARD-053
+# (same id) to own the whole unit. This revision adds
+# scripts/checks/error-table-sync.ts to the phase-3 scope (the mirror and the
+# sync-side suite were already declared), writes the exact count-update
+# obligations into phase 3.5 and its done-when, and adds AC-F8-3 to the
+# phase-3 ownership (AC set 28 -> 29). F4 (minor): the four-section flip
+# touches six delivered board suites absent from every phase scope —
+# tests/behaviour/{board-escalation,board-aging,board-records,
+# board-waiver-recording,board-privacy,board-corpus}.test.ts — which are now
+# in the phase-2 scope with an explicit stay-green obligation. No phase id,
+# title, or ordering changed; the TC set stays 48 and every AC and TC is still
+# owned exactly once; commit subjects are unchanged.
+#
+# REVISION 1.0 (2026-11-15): initial five-phase plan against spec v1.1 / test
+# plan v1.1.
 #
 # One ticket, one PR against main-tools, five delivery phases. Every phase is an
 # independently committable slice that is green at its own boundary (targeted
@@ -20,22 +49,27 @@
 # no progress log.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:      ./chg-GH-297-spec.md v1.1 — F-1..F-9; DM-1..DM-11;
-#                NFR-1..NFR-10; NG-1..NG-9; DEC-1..DEC-19; RSK-1..RSK-9;
-#                28 ACs AC-F1-1..AC-NFR9-1 (section 17); DoD-1..DoD-18
-#                (section 17.1) with per-condition plan-phase ownership;
-#                section 14 OQ-1..OQ-7 all closed; section 18 sequencing
-#                (shared source before consumer; leaseHolder before the lane
-#                row; error-table registration with the classification; the
-#                prompt-set entry after the surface is complete); Appendix B
-#                ticket-AC mapping and the binding test-plan mapping note;
-#                Appendix C constraints C-1..C-15.
-#   - Test plan: ./chg-GH-297-test-plan.md v1.1 — 48 TCs in nine blocks
-#                (TC-BOARD-001..TC-BOARD-085); coverage matrix 28/28 ACs;
-#                section 4 layers (the real-production-composition case list
-#                010/011/012/014/015/016/061/064 and the seeded-index cases);
-#                section 6 fixture/golden environment; section 7 suite homes;
-#                section 8.3 no open question; AMB-TP-1 (human allocation
+#   - Spec:      ./chg-GH-297-spec.md v1.2 — F-1..F-9; DM-1..DM-11;
+#                NFR-1..NFR-10; NG-1..NG-9; DEC-1..DEC-20; RSK-1..RSK-9;
+#                29 ACs AC-F1-1..AC-NFR9-1 incl. AC-F8-3 (section 17);
+#                DoD-1..DoD-18 (section 17.1) with per-condition plan-phase
+#                ownership; section 14 OQ-1..OQ-8 all closed (OQ-8 = the DoR
+#                iteration-1 allowlist finding, closed by DEC-20); section 18
+#                sequencing (shared source before consumer; leaseHolder
+#                before the lane row; error-table registration with the
+#                classification; the prompt-set entry after the surface is
+#                complete); Appendix B ticket-AC mapping and the binding
+#                test-plan mapping note; Appendix C constraints C-1..C-16.
+#   - Test plan: ./chg-GH-297-test-plan.md v1.2 — 48 TCs in nine blocks
+#                (TC-BOARD-001..TC-BOARD-085); coverage matrix 29/29 ACs
+#                (AC-F8-3 owned by TC-BOARD-053, extended in place at v1.2
+#                with the exact allowlist set, the count bumps, the carrier
+#                paragraph, near-miss probes, and five temp-copy mutation
+#                arms — same id, no new id, no orphan); section 4 layers
+#                (the real-production-composition case list
+#                010/011/012/014/015/016/061/064 and the seeded-index
+#                cases); section 6 fixture/golden environment; section 7
+#                suite homes; section 8.3 no open question (R-TP-10); AMB-TP-1 (human allocation
 #                asserted as maxima + marker arithmetic) and AMB-TP-2 (edge
 #                runtime seam shapes are delivery-bound; a case that cannot
 #                resolve its seam fails naming the missing contract).
@@ -70,6 +104,20 @@
 #                tests/golden/board-grid.test.ts, tests/structure/
 #                board-nonregression.test.ts, tests/fixtures/board/{harness,
 #                matrix}.ts + corpus/** + golden/{envelope.json,grid.txt};
+#                the closed two-segment allowlist
+#                `RESERVED_TWO_SEGMENT_CODES` holds exactly 53 members in
+#                BOTH scripts/checks/error-table-sync.ts (line ~147) and its
+#                structural mirror tests/structure/error-table.test.ts
+#                (line ~57, with the exact-length assertion at ~1406);
+#                the identity-table counts today are ERROR_TABLE length 136
+#                (four `toHaveLength(136)` assertions in the structural
+#                suite), delivered/spend-exclusion rows 135, and the carrier
+#                doc/spec/features/feature-result-contract.md documents "136
+#                identities" with an allowlist paragraph stating 52 (the
+#                delivered 52-entry enumeration omits
+#                `verify.narrowed-scope`; 53 delivered + 2 board = 55 per
+#                DEC-20); tests/checks/error-table-sync.test.ts asserts the
+#                same 136 source/documented counts;
 #                tests/fixtures/projects/{production,state-scope,host-index,
 #                temp-repos,host-root}.ts; .changeset/config.json fixed group
 #                of five publishables (GH-309/GH-310 changeset precedent).
@@ -114,16 +162,19 @@
 #     minor changeset, and the full gate battery at the delivered HEAD
 #     (DoD-10/DoD-15/DoD-16/DoD-17).
 #
-# AC OWNERSHIP (28/28; exactly one owning phase each; an earlier phase may
+# AC OWNERSHIP (29/29; exactly one owning phase each; an earlier phase may
 # produce a partial verdict, which is additive and never transfers ownership):
 #   phase 1  AC-F2-1
 #   phase 2  AC-F1-1, AC-F2-2, AC-F2-3, AC-F4-1, AC-F4-2, AC-F4-3,
 #            AC-F5-1, AC-F5-2, AC-F5-3, AC-F6-1, AC-F6-2
 #   phase 3  AC-F3-1, AC-F3-2, AC-F3-3, AC-F3-4, AC-F3-5, AC-F3-6,
-#            AC-F8-1, AC-F8-2, AC-F9-4
+#            AC-F8-1, AC-F8-2, AC-F8-3, AC-F9-4
 #   phase 4  AC-F7-1, AC-F7-2, AC-F9-2
 #   phase 5  AC-F9-1, AC-F9-3, AC-NFR5-1, AC-NFR9-1
-#   Count: 1 + 11 + 9 + 3 + 4 = 28.
+#   Count: 1 + 11 + 10 + 3 + 4 = 29.
+#   REVISION 1.1: AC-F8-3 (spec v1.2, DEC-20/C-16) joins phase 3 — the phase
+#   that registers the two identities — so the allowlist widening, the count
+#   bumps, and the carrier paragraph are owned where the rows land.
 #   PARTIAL-VERDICT NOTES: phase 1 additionally produces the status/brief
 #   halves of AC-F2-1's evidence (the additive key, the goldens, the
 #   single-home scan) and the board payload's own `stateSource` emission on
@@ -161,7 +212,16 @@
 #   golden/{envelope.json,grid.txt}) are regenerated twice, each time by an
 #   explicit script with a review-visible diff — phase 1 adds exactly the
 #   additive `stateSource` key, phase 2 replaces the gate-only grid with the
-#   four-section screen (GAP-T4).
+#   four-section screen (GAP-T4). REVISION 1.1: TC-BOARD-053 stays with
+#   phase 3 and, per test plan v1.2, now owns the whole gate-critical unit —
+#   the exact 55-member allowlist in both files, the four 138 table-length
+#   assertions with no leftover 136 anywhere, the 137 delivered rows, the 2
+#   board rows, the carrier's 138 documented identities and 55-paragraph
+#   enumeration, the near-miss probes, and the five temp-copy mutation arms;
+#   the six delivered suites added to the phase-2 scope by F4
+#   (board-escalation, board-aging, board-records, board-waiver-recording,
+#   board-privacy, board-corpus) assert already-owned AC-F4-1/AC-F4-2
+#   content — they are stay-green obligations, not new TC owners.
 #
 # DoD MAPPING (spec section 17.1 "Proven in plan" -> this plan's phases):
 #   DoD-1 -> 2; DoD-2 -> 1; DoD-3 -> 3; DoD-4 -> 3; DoD-5 -> 2; DoD-6 -> 2;
@@ -169,7 +229,9 @@
 #   (the 128-repository cap) with the consolidated bound proof in 5;
 #   DoD-10 -> 5; DoD-11 -> 4; DoD-12 -> every phase's gate with the
 #   consolidated purity proof in 5; DoD-13 -> 4; DoD-14 -> 3 (the error-table
-#   carrier lands with the classification rows); DoD-15 -> 5; DoD-16 ->
+#   carrier, the exact allowlist widening 53 -> 55, and the identity-count
+#   expectations land with the classification rows per AC-F8-3/C-16/DEC-20);
+#   DoD-15 -> 5; DoD-16 ->
 #   per-phase, roll-up in 5; DoD-17 -> 5; DoD-18 -> lifecycle phase 11
 #   (quality gates / PR creation), not a plan phase.
 #
@@ -229,14 +291,27 @@
 #     `repositories[]` or `collectors[]`; every drop sets `truncated` and
 #     increments `omitted` plus its section counter; field caps 160/120/120/
 #     60/40 (id,kind,ref,question / owner,waivedBy / reason / phase / until).
-#   - Error identities (DM-8/DEC-8/DEC-17/C-7/C-10): exactly two new rows
-#     under one new `board` domain kind — `board.repository-unknown` (user,
-#     exit 1) and `board.state-unavailable` (platform, exit 2, naming the
-#     repository key or index path) — registered in
+#   - Error identities and the closed allowlist (DM-8/DEC-8/DEC-17/DEC-20/
+#     C-7/C-10/C-16/AC-F8-3): exactly two new rows under one new `board`
+#     domain kind — `board.repository-unknown` (user, exit 1) and
+#     `board.state-unavailable` (platform, exit 2, naming the repository key
+#     or index path) — registered in
 #     packages/core/src/contracts/error-table.ts, projected through
 #     packages/cli/src/classify.ts, and documented in
 #     doc/spec/features/feature-result-contract.md INSIDE the delivering
-#     boundary (the error-table sync gate is bidirectional); grammar refusals
+#     boundary (the error-table sync gate is bidirectional). The two codes
+#     are an EXACT, reviewed widening of the closed two-segment allowlist:
+#     `RESERVED_TWO_SEGMENT_CODES` gains exactly these two members
+#     (53 -> 55) in BOTH scripts/checks/error-table-sync.ts and its
+#     structural mirror tests/structure/error-table.test.ts (whose
+#     exact-length assertion moves with it), with no `board.*` family, no
+#     pattern widening, and no near-miss acceptance; the identity-table
+#     counts move with the rows — `ERROR_TABLE` entries 136 -> 138 (all four
+#     structural count assertions), delivered/spend-exclusion rows
+#     135 -> 137, exactly 2 `board` domain-kind rows, and the carrier's
+#     documented identities 136 -> 138 with the allowlist paragraph
+#     reconciled 52 -> 55 and an enumeration that sums to it (53 delivered
+#     + 2 board = 55; DEC-20). Grammar refusals
 #     (unknown flag, positional, `--all` with `--project`, valueless
 #     `--project`) keep the delivered `fallback.invocation` at exit 1 with NO
 #     `board.*` grammar identity; the delivered
@@ -542,6 +617,19 @@
 #      once more (grid.txt becomes the four-section screen;
 #      envelope.json the full payload) with a review-visible delta limited to
 #      the declared additive fields (GAP-T4).
+#  2.9 STAY-GREEN OBLIGATION (DoR iteration-1 F4, DoD-5 "delivered board
+#      suites still green after the composition change"): the six remaining
+#      delivered board suites that the four-section flip necessarily touches
+#      are in this phase's scope and must be green at this boundary —
+#      tests/behaviour/board-escalation.test.ts, board-aging.test.ts,
+#      board-records.test.ts, board-waiver-recording.test.ts,
+#      board-privacy.test.ts, and board-corpus.test.ts — updating ONLY what
+#      the additive payload (new `data` keys, extended gate rows, the
+#      four-section human screen) and the corpus `expect` tables legitimately
+#      change, with every SLA/aging/records/waiver/privacy assertion itself
+#      unchanged in meaning. They assert AC-F4-1/AC-F4-2 content already
+#      owned here via TC-BOARD-020/021; they are stay-green scope, not new
+#      TC owners.
 #
 # Bound: AC-F1-1, AC-F2-2, AC-F2-3, AC-F4-1, AC-F4-2, AC-F4-3, AC-F5-1,
 # AC-F5-2, AC-F5-3, AC-F6-1, AC-F6-2; DoD-1, DoD-5, DoD-6, DoD-7, DoD-8,
@@ -564,7 +652,10 @@
 # caps, the byte-guard order, and the omission arithmetic hold with the
 # repository list and collector evidence never dropped; the delivered payload
 # identities and key sets survive additively and the lane human golden is
-# byte-identical; TMPDIR=$PWD/tmp/tmpdir pnpm check is green.
+# byte-identical; the six delivered suites of 2.9 (board-escalation,
+# board-aging, board-records, board-waiver-recording, board-privacy,
+# board-corpus) are green after the composition change with only the
+# legitimate additive deltas; TMPDIR=$PWD/tmp/tmpdir pnpm check is green.
 # ---------------------------------------------------------------------------
 # Phase 3 — Repository selection, per-repository composition, error identities,
 # and the production board composition
@@ -632,18 +723,54 @@
 #      different repositories sharing a ref stay distinct (identity includes
 #      the repository key); `--all` section counts equal the sum of the
 #      included per-repository boards before any byte-guard drop.
-#  3.5 Error identities and the in-boundary carrier (DM-8, DEC-8, C-7, C-10):
-#      packages/core/src/contracts/error-table.ts gains the `board` domain
-#      kind exactly once and exactly two rows — `board.repository-unknown`
-#      (user category, exit 1, not retryable) and `board.state-unavailable`
-#      (platform category, exit 2) — each with retryability, consequence, and
-#      projection class; packages/cli/src/classify.ts projects them; the two
-#      codes and the kind are documented in
-#      doc/spec/features/feature-result-contract.md IN THIS PHASE'S COMMIT
-#      (the bidirectional sync gate requires it); the delivered
-#      `status.collector.<id>.unavailable` rows keep codes, category, and
-#      exit with only explanatory wording generalized from "gates" to
-#      "board"; `fallback.invocation` is untouched.
+#  3.5 Error identities, the closed two-segment allowlist, and the
+#      in-boundary carrier (DM-8, DEC-8, DEC-20, C-7, C-10, C-16, AC-F8-3,
+#      DoR iteration-1 F1):
+#      a. packages/core/src/contracts/error-table.ts gains the `board`
+#         domain kind exactly once and exactly two rows —
+#         `board.repository-unknown` (user category, exit 1, not retryable)
+#         and `board.state-unavailable` (platform category, exit 2) — each
+#         with retryability, consequence, and projection class;
+#         packages/cli/src/classify.ts projects them; the delivered
+#         `status.collector.<id>.unavailable` rows keep codes, category, and
+#         exit with only explanatory wording generalized from "gates" to
+#         "board"; `fallback.invocation` is untouched.
+#      b. EXACT ALLOWLIST WIDENING: `RESERVED_TWO_SEGMENT_CODES` gains
+#         exactly `board.repository-unknown` and `board.state-unavailable`
+#         (53 -> 55) in BOTH scripts/checks/error-table-sync.ts AND its
+#         structural mirror tests/structure/error-table.test.ts — the
+#         mirrored set plus its exact-length assertion (`toHaveLength(53)`
+#         -> `toHaveLength(55)`) — in the SAME commit; no `board.*` family,
+#         no prefix/pattern widening, and a two-segment near-miss
+#         (`board.repository-unknowns`, `board.state`) is rejected by the
+#         check and by `scanReferences` rather than family-matched, while a
+#         three-segment lookalike (`board.state-unavailable.extra`,
+#         `board.other.thing`) resolves to no table row.
+#      c. IDENTITY-COUNT UPDATES that move with the rows, all in the same
+#         commit: the four `expect(entries).toHaveLength(136)` structural
+#         assertions in tests/structure/error-table.test.ts become 138 (and
+#         the suite scans that no 136 count remains); the
+#         delivered/spend-exclusion assertion
+#         (`entries.filter(domainKind !== "spend")`) moves 135 -> 137;
+#         exactly 2 `board` domain-kind rows are asserted;
+#         tests/checks/error-table-sync.test.ts's live-tree assertions move
+#         with the table (`sourceEntries`/`documentedRows` 136 -> 138 and
+#         the "136 identities" doc-content expectation -> "138 identities");
+#         and the carrier doc/spec/features/feature-result-contract.md
+#         documents 138 identities (136 -> 138) with its allowlist
+#         paragraph reconciled 52 -> 55 and an enumerated sum that equals 55
+#         (53 delivered + 2 board; the delivered 52-entry enumeration omits
+#         `verify.narrowed-scope`, DEC-20). A half-updated widening (one
+#         file, one count, or the paragraph left behind) is a red gate, not
+#         a warning.
+#      d. TC-BOARD-053 (test plan v1.2) owns the whole unit — rows, kind,
+#         the 55-member allowlist in both files, the four 138 count
+#         assertions with no leftover 136, the 137 delivered rows, the 2
+#         board rows, the carrier's 138 identities and 55-paragraph
+#         enumeration, the near-miss probes, and the five temp-copy mutation
+#         arms (planted near miss in a scanned corpus, deleted documentation
+#         row, check-side omission of the widening, family widening to a
+#         `board.` prefix, count drift).
 #  3.6 Production board composition (F-7 composition half, DEC-6):
 #      packages/cli/src/production.ts composes the board runtime
 #      unconditionally over the delivered adapters (tracker factory, state
@@ -678,15 +805,21 @@
 #      matrix). Extended: board-command (TC-BOARD-051 grammar before any
 #      read), board-never-silence (TC-BOARD-080 closed seven-source matrix
 #      with readable twins), board-bounds (TC-BOARD-082 omission arithmetic
-#      incl. the 129-repository counter cell), tests/structure/error-table.test.ts
-#      and tests/checks/error-table-sync.test.ts (TC-BOARD-053 rows, carrier,
-#      collector wording, no grammar row, doc-row deletion mutant),
+#      incl. the 129-repository counter cell), tests/structure/error-table.test.ts,
+#      tests/checks/error-table-sync.test.ts, and
+#      scripts/checks/error-table-sync.ts (TC-BOARD-053 per 3.5b..d: rows,
+#      kind, the 55-member allowlist in both the check and the mirror, the
+#      138/137/2 count updates with no leftover 136, the carrier's 138
+#      identities and 55 paragraph, the collector wording, no grammar row,
+#      the near-miss probes, and the five mutation arms),
 #      tests/structure/board-contract.test.ts (the BOARD_MAX_REPOSITORIES
 #      constant half).
 #
-# Bound: AC-F3-1..AC-F3-6, AC-F8-1, AC-F8-2, AC-F9-4; DoD-3, DoD-4, DoD-9
-# (repository-cap half), DoD-14; F-3, F-8, F-7 (composition half); DM-7,
-# DM-8, DM-11; DEC-5, DEC-6, DEC-8, DEC-13, DEC-14, DEC-17; RSK-3, RSK-9.
+# Bound: AC-F3-1..AC-F3-6, AC-F8-1, AC-F8-2, AC-F8-3, AC-F9-4; DoD-3, DoD-4,
+# DoD-9 (repository-cap half), DoD-14 (incl. the exact allowlist widening and
+# the identity-count expectations); F-3, F-8, F-7 (composition half); DM-7,
+# DM-8, DM-11; DEC-5, DEC-6, DEC-8, DEC-13, DEC-14, DEC-17, DEC-20; C-16;
+# RSK-3, RSK-9.
 # Test obligations: TC-BOARD-010, 011, 012, 013, 014, 015, 016, 050, 051,
 # 052, 053, 064, 080, 082, 083, 084.
 #
@@ -701,7 +834,15 @@
 # exit 0; every grammar violation refuses before any read with
 # `fallback.invocation`; the five-row exit projection holds with no partial
 # board; the two new rows and the kind are registered, classified, and
-# documented in-boundary with the delivered families untouched; production
+# documented in-boundary with the delivered families untouched; the closed
+# two-segment allowlist holds exactly 55 members in BOTH the sync check and
+# its structural mirror with exactly the two declared `board.*` codes and
+# the 53 delivered members unchanged, the identity-table counts read 138
+# entries / 137 delivered rows / 2 board rows with no leftover 136 anywhere,
+# the carrier declares 138 identities with its allowlist paragraph at 55
+# summing to it, and a near-miss two-segment `board.*` code is rejected —
+# the error-table sync check, the structural mirror, and the sync-side
+# suite are all green inside `pnpm check`; production
 # composes board unconditionally with zero index maintenance; TMPDIR=$PWD/
 # tmp/tmpdir pnpm check is green.
 # ---------------------------------------------------------------------------
@@ -994,6 +1135,14 @@ phases:
         - tests/behaviour/board-parked.test.ts
         - tests/behaviour/board-byte-guard.test.ts
         - tests/behaviour/board-provenance.test.ts
+        # DoR iteration-1 F4: delivered gate suites the four-section flip
+        # touches; stay-green scope per obligation 2.9 (not new TC owners).
+        - tests/behaviour/board-escalation.test.ts
+        - tests/behaviour/board-aging.test.ts
+        - tests/behaviour/board-records.test.ts
+        - tests/behaviour/board-waiver-recording.test.ts
+        - tests/behaviour/board-privacy.test.ts
+        - tests/behaviour/board-corpus.test.ts
         - tests/structure/board-contract.test.ts
         - tests/structure/board-nonregression.test.ts
         - tests/structure/inventory.json
@@ -1017,10 +1166,13 @@ phases:
       BOARD_MAX_REPOSITORIES = 128 with the deterministic retained set and
       counted overflow, the declared unbound scope at exit 0, and fail-closed
       per-repository reads — register board.repository-unknown and
-      board.state-unavailable with their error-table rows and the in-boundary
-      result-contract carrier, refuse grammar through the delivered
-      fallback.invocation before any read, and compose the board runtime
-      unconditionally in the production root.
+      board.state-unavailable with their error-table rows, the exact closed
+      two-segment allowlist widening (53 to 55 in the sync check and its
+      structural mirror), the identity-count updates (138 entries, 137
+      delivered rows, 2 board rows, 138 documented identities, allowlist
+      paragraph 55), and the in-boundary result-contract carrier, refuse
+      grammar through the delivered fallback.invocation before any read, and
+      compose the board runtime unconditionally in the production root.
     scope:
       files:
         - packages/core/src/contracts/owner-gate-sla.ts
@@ -1031,6 +1183,10 @@ phases:
         - packages/cli/src/edge.ts
         - packages/cli/src/production.ts
         - doc/spec/features/feature-result-contract.md
+        # DoR iteration-1 F1: the closed two-segment allowlist and the
+        # identity-count assertions live here and in the structural mirror;
+        # obligation 3.5b..c (AC-F8-3, DEC-20, C-16).
+        - scripts/checks/error-table-sync.ts
         - tests/fixtures/board/harness.ts
         - tests/fixtures/board/selection.ts
         - tests/fixtures/board/repository-cap.ts
