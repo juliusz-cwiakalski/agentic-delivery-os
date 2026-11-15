@@ -10,7 +10,7 @@ phases:
     completed: 2026-11-15T22:09:02.033Z
   specification:
     started: null
-    completed: null
+    completed: 2026-11-15T22:18:33.483Z
   test_planning:
     started: null
     completed: null
@@ -62,4 +62,16 @@ notes:
   - text: "No blocking gap found; scope boundaries recorded as decisions above.
       Proceeding without a human stop."
     type: info
+    date: "2026-11-15"
+  - text: "Lifecycle commands must run with the workspace bin on PATH:
+      `PATH=\"$PWD/node_modules/.bin:$PATH\" bun packages/cli/bin/delivery-os.ts
+      ...`. Without it the commitlint probe cannot execute and every atomic
+      phase completion fails as commit.commitlint-failed, which reads like a
+      message problem but is an environment problem."
+    type: retro
+    date: "2026-11-15"
+  - text: "Ran `pnpm build` before any lifecycle command; the CLI resolves workspace
+      packages from dist, so an unbuilt tree fails at module load (missing
+      @delivery-os/adapters/credentials)."
+    type: retro
     date: "2026-11-15"
