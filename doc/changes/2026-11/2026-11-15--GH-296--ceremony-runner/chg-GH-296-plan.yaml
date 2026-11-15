@@ -4,26 +4,29 @@
 # directly.
 #
 # SOURCES (single source of truth):
-#   - Spec:     ./chg-GH-296-spec.md (v1.1; 9 capabilities F-1..F-9; data model
-#               DM-1..DM-9; NFR-1..NFR-14; 49 ACs in §17 — AC-F1-1..4,
-#               AC-F2-1..4, AC-F3-1..8, AC-F4-1..8, AC-F5-1..3, AC-F6-1..3,
+#   - Spec:     ./chg-GH-296-spec.md (v1.2; 9 capabilities F-1..F-9; data model
+#               DM-1..DM-9; NFR-1..NFR-14; 50 ACs in §17 — AC-F1-1..4,
+#               AC-F2-1..4, AC-F3-1..8, AC-F4-1..8, AC-F5-1..4, AC-F6-1..3,
 #               AC-F7-1..5, AC-F8-1..3, AC-F9-1..6, AC-NFR2-1, AC-NFR8-1,
 #               AC-NFR9-1, AC-NFR12-1, AC-NFR14-1; edge cases E-1..E-20; §18
 #               rollout order binds the phase order below; Appendix B
 #               constraints C-1..C-10; Appendix C documentation deltas;
 #               Appendix D single-source tier mapping; Appendix E testability
-#               notes; DEC-1..DEC-18; RSK-1..RSK-12; OQ-1..OQ-3).
-#   - Tests:    ./chg-GH-296-test-plan.md (v1.1, 64 TCs TC-CEREMONY-001..064;
+#               notes; DEC-1..DEC-19 — DEC-19 pins obligation satisfaction by
+#               run identity, not by recorded trigger kind; RSK-1..RSK-12;
+#               OQ-1..OQ-3).
+#   - Tests:    ./chg-GH-296-test-plan.md (v1.2, 65 TCs TC-CEREMONY-001..065;
 #               §4 layer table; §4.3 exit/outcome oracle; §4.4 catch-up matrix
-#               CU-01..CU-09; §4.5 tier verdict matrix T-01..T-11; §4.6 defect
+#               CU-01..CU-10; §4.5 tier verdict matrix T-01..T-11; §4.6 defect
 #               corpus D-01..D-18; §4.7 resume matrix R-01..R-08; §4.8 gate
 #               mapping; binding fixture contract §4.1 and non-vacuity contract
-#               §4.2; §7 automation map; §7.1 phase ownership of all 64 ids;
-#               GAP-1..GAP-7; OQ-T1..OQ-T9, OQ-T5 resolved). GAP-1 and GAP-7
-#               (this plan's TC mapping, including the v1.1 ids
-#               TC-CEREMONY-061..064) are satisfied by the TC -> PHASE MAP
-#               below WITHOUT reshaping any TC's oracle, identity, exit,
-#               bound, or AC/NFR mapping; no TC id changes.
+#               §4.2; §7 automation map; §7.1 phase ownership of all 65 ids;
+#               GAP-1..GAP-8; OQ-T1..OQ-T9, OQ-T5/OQ-T8/OQ-T9 resolved).
+#               GAP-1, GAP-7, and GAP-8 (this plan's TC mapping, including
+#               the v1.1 ids TC-CEREMONY-061..064 and the v1.2 id
+#               TC-CEREMONY-065) are satisfied by the TC -> PHASE MAP below
+#               WITHOUT reshaping any TC's oracle, identity, exit, bound, or
+#               AC/NFR mapping; no TC id changes.
 #   - PM record: ./chg-GH-296-pm-notes.yaml (milestone M2, story M2-S3,
 #               variant full; the two recorded scope decisions carried into the
 #               spec as DEC-1 and DEC-2).
@@ -114,7 +117,7 @@
 #   phase scope. A semantic assertion change in any delivered suite is the
 #   escalation trigger this plan reserves.
 #
-# TC -> PHASE MAP (64 ids = TC-CEREMONY-001..064; every id is owned by exactly
+# TC -> PHASE MAP (65 ids = TC-CEREMONY-001..065; every id is owned by exactly
 #   one phase — the phase which first makes its complete suite set green.
 #   Suite halves proven earlier are named in that phase's gate without a second
 #   TC row):
@@ -127,13 +130,15 @@
 #            TC-CEREMONY-022)
 #   Phase 3 runner engine (10): TC-CEREMONY-020, 021, 022, 023, 025, 039, 047,
 #            062, 063, 064 (062's retro-declaration assertions are carried by
-#            TC-CEREMONY-014 in the Phase 5 gate; 063/064 run fixture
+#            TC-CEREMONY-014 in the Phase 5 gate and its step-4 catch-up half
+#            rides TC-CEREMONY-065 in the Phase 4 gate; 022's resume half
+#            completes here over the Phase 2 state half; 063/064 run fixture
 #            declarations mirroring the `morning-brief` and mirror-sync shapes
 #            and are re-exercised on the production declarations in Phase 5)
-#   Phase 4 catch-up (4): TC-CEREMONY-026, 027, 028, 029
+#   Phase 4 catch-up (5): TC-CEREMONY-026, 027, 028, 029, 065
 #   Phase 5 built-ins and retro levels (16): TC-CEREMONY-011, 012, 013, 014,
 #            015, 016, 017, 018, 019, 024, 043, 044, 045, 046, 048, 052 (plus
-#            the TC-CEREMONY-007 completion)
+#            the TC-CEREMONY-007 and TC-CEREMONY-061 six-built-in completions)
 #   Phase 6 project declarations (3): TC-CEREMONY-030, 031, 032
 #   Phase 7 tier engine (7): TC-CEREMONY-033, 034, 035, 036, 037, 038, 051
 #   Phase 8 measurement record (2): TC-CEREMONY-041, 042
@@ -209,7 +214,7 @@ phases:
   - id: 1
     title: "Ceremony declaration contracts, closed vocabularies, and the single validator"
     kind: delivery
-    summary: "feat(ceremony): declare the ceremony vocabulary, scope-key derivation, and single validator; delivers AC-F2-1..AC-F2-4 and AC-NFR8-1; TC-CEREMONY-007 (vocabulary half), TC-CEREMONY-008..010, TC-CEREMONY-049, TC-CEREMONY-061 (fixture half; its six-built-in sweep rides the Phase 5 completion of TC-CEREMONY-007)"
+    summary: "feat(ceremony): declare the ceremony vocabulary, scope-key derivation, and single validator; delivers AC-F2-2..AC-F2-4 and the declaration half of AC-F2-1 (completed in Phase 5), and AC-NFR8-1; TC-CEREMONY-007 (vocabulary half), TC-CEREMONY-008..010, TC-CEREMONY-049, TC-CEREMONY-061 (fixture half; its six-built-in sweep rides the Phase 5 completion of TC-CEREMONY-007)"
     leases:
       - repo:main-tools
     scope:
@@ -298,15 +303,19 @@ phases:
   # cadence's window derived from the injected clock at its UTC unit — a
   # note-less event-triggered declaration declares none, so an invocation
   # without `--window` is refused as `input.value.rejected` naming
-  # `--window` before any read or write — DEC-18, E-18); validates the note
+  # `--window` after the declaration read and before any declared-input
+  # read, state read, or write — DEC-18, E-18); validates the note
   # when one is required (absent note -> `input.value.rejected`; missing
   # member, wrong ceremony, invalid window -> `ceremony.note-invalid` naming
   # the field; a `--window` disagreement names both; a note without
   # `scopeKey` or naming a trigger the declaration does not declare refuses
   # before any output — SC-M2-S3-02, DEC-17); records an explicit run's
   # trigger as `kind: "explicit"` with resolution `note`, `declaration`, or
-  # `unspecified` naming the declared set, never counted as a scheduled or
-  # event obligation (DEC-17, E-20); computes the run identity
+  # `unspecified` naming the declared set — provenance only, never
+  # impersonating a `schedule`, `event`, or `catch-up` firing and never
+  # rewriting an obligation's own trigger provenance, while satisfying the
+  # window's run identity like any other run so no obligation for it remains
+  # (DEC-17, DEC-19, E-20); computes the run identity
   # `(ceremony, scopeKey, window)` — note-less declarations included, keyed
   # by their declared derivation and resolved window; and returns the
   # recorded verdict with `data.reused: true` on an identical identity with
@@ -333,7 +342,7 @@ phases:
   - id: 3
     title: "Runner engine: note intake, run identity, artifact-verified agenda, compaction, and resume"
     kind: delivery
-    summary: "feat(ceremony): run artifact-verified agendas with intake, window resolution, explicit-run trigger recording, compaction, and resume; delivers AC-F3-8, AC-F4-1..AC-F4-4, AC-F4-6..AC-F4-8, and AC-F9-1; TC-CEREMONY-020..023, TC-CEREMONY-025, TC-CEREMONY-039, TC-CEREMONY-047, TC-CEREMONY-062..064"
+    summary: "feat(ceremony): run artifact-verified agendas with intake, window resolution, explicit-run trigger recording, compaction, and resume; delivers AC-F3-8's explicit-kind recording rule (the retro-declaration half is delivered in Phase 5 by TC-CEREMONY-014; the occupied-identity catch-up half rides the Phase 4 gate with TC-CEREMONY-065), AC-F4-1..AC-F4-4, AC-F4-6..AC-F4-8, and AC-F9-1; TC-CEREMONY-020..023, TC-CEREMONY-025, TC-CEREMONY-039, TC-CEREMONY-047, TC-CEREMONY-062..064"
     leases:
       - repo:main-tools
     scope:
@@ -343,6 +352,7 @@ phases:
         - packages/core/src/domain/ceremony-resume.ts
         - packages/core/src/domain/index.ts
         - packages/core/src/state/ceremony.ts
+        - tests/behaviour/ceremony-state-boundary.test.ts
         - tests/behaviour/ceremony-run.test.ts
         - tests/behaviour/ceremony-run-triggers.test.ts
         - tests/behaviour/ceremony-resume.test.ts
@@ -359,14 +369,20 @@ phases:
         role: producer
 
   # ---------------------------------------------------------------------------
-  # Phase 4 — Catch-up of a missed scheduled run (F-5; NFR-6; CU-01..CU-09;
-  # E-14, E-15).
+  # Phase 4 — Catch-up of a missed scheduled run (F-5; NFR-6; CU-01..CU-10;
+  # E-14, E-15; DEC-19).
   #
   # Goal: schedule evaluation as a pure function of the declaration, the
   # injected clock, and the recorded runs — for a cadence, the windows due
-  # before now minus the recorded windows are the missed windows; an
-  # event-triggered ceremony has none and its missed obligation is a declared
-  # gap. `catch-up` replays at most one missed window per ceremony per
+  # before now minus the windows whose run identity
+  # `(ceremony, scopeKey, window)` is already recorded for that ceremony are
+  # the missed windows; the arithmetic is existence-based over the identity
+  # and never scoped to the recorded trigger kind that produced the recorded
+  # run (DEC-19), so a window whose identity an explicit run already occupies
+  # is not missed: it is reported satisfied with zero new records, no replay
+  # for that identity, no outstanding obligation, and it never jams the
+  # single replay slot (AC-F5-4, TC-CEREMONY-065); an event-triggered
+  # ceremony has none and its missed obligation is a declared gap. `catch-up` replays at most one missed window per ceremony per
   # invocation (`maxMissedWindows: 1`), labelled `trigger.kind: "catch-up"`
   # with the missed bounds and the execution window; a second catch-up
   # appends nothing and reports the window caught up; a no-miss catch-up is
@@ -386,7 +402,7 @@ phases:
   - id: 4
     title: "Catch-up: pure schedule evaluation and bounded single-window replay"
     kind: delivery
-    summary: "feat(ceremony): evaluate schedules and catch up one missed window; delivers AC-F5-1..AC-F5-3; TC-CEREMONY-026..029"
+    summary: "feat(ceremony): evaluate schedules and catch up one missed window with identity-based satisfaction; delivers AC-F5-1..AC-F5-4; TC-CEREMONY-026..029, TC-CEREMONY-065 (occupied-identity catch-up; TC-CEREMONY-062 step 4's catch-up half rides this gate)"
     leases:
       - repo:main-tools
     scope:
@@ -437,13 +453,17 @@ phases:
   # case each; the structure suite fails a per-ceremony branch and a
   # follow-through position edit. Degradation renders as data (state plus
   # reason, E-7). The `retro` pipeline and closeout are re-run as unchanged
-  # controls. TC-CEREMONY-007 completes here (six of six validate).
+  # controls. TC-CEREMONY-007 completes here (six of six validate), and
+  # TC-CEREMONY-061's six-built-in `scopeKey` sweep completes with it in the
+  # same gate, editing `tests/structure/ceremony-contract.test.ts` and
+  # `tests/behaviour/ceremony-declaration.test.ts` inside this phase's
+  # declared scope.
   #
   # Gate:
   #   pnpm typecheck
   #   bun test tests/behaviour/ceremony-parity.test.ts
   #   bun test tests/behaviour/ceremony-flow-{brief,retro,retro-levels,assessment,mirror,night-watch,rollover}.test.ts
-  #   bun test tests/behaviour/{ceremony-run,ceremony-notes}.test.ts
+  #   bun test tests/behaviour/{ceremony-run,ceremony-notes,ceremony-declaration}.test.ts
   #   bun test tests/golden/ceremony-brief.test.ts
   #   bun test tests/structure/{ceremony-parity-invariants,ceremony-contract}.test.ts
   #   bun test tests/behaviour/{retro-malformed,closeout-telemetry-production}.test.ts
@@ -452,7 +472,7 @@ phases:
   - id: 5
     title: "Six built-in declarations with one parity suite and the four retro ceremony levels"
     kind: delivery
-    summary: "feat(ceremony): ship the six built-ins with parity and the retro levels; delivers AC-F3-1..AC-F3-7, the retro-declaration half of AC-F3-8 (TC-CEREMONY-014; the explicit-run recording rule is delivered in Phase 3), AC-F4-5, AC-F9-2..AC-F9-6, AC-NFR12-1, and the AC-F2-1 completion; TC-CEREMONY-011..019, TC-CEREMONY-024, TC-CEREMONY-043..046, TC-CEREMONY-048, TC-CEREMONY-052 (plus the TC-CEREMONY-007 completion)"
+    summary: "feat(ceremony): ship the six built-ins with parity and the retro levels; delivers AC-F3-1..AC-F3-7, the retro-declaration half of AC-F3-8 (TC-CEREMONY-014; the explicit-run recording rule is delivered in Phase 3), AC-F4-5, AC-F9-2..AC-F9-6, AC-NFR12-1, and the AC-F2-1 completion; TC-CEREMONY-011..019, TC-CEREMONY-024, TC-CEREMONY-043..046, TC-CEREMONY-048, TC-CEREMONY-052 (plus the TC-CEREMONY-007 and TC-CEREMONY-061 six-built-in completions)"
     leases:
       - repo:main-tools
     scope:
@@ -464,6 +484,7 @@ phases:
         - packages/core/src/domain/ceremony-mirror.ts
         - packages/core/src/domain/index.ts
         - tests/behaviour/ceremony-parity.test.ts
+        - tests/behaviour/ceremony-declaration.test.ts
         - tests/behaviour/ceremony-run.test.ts
         - tests/behaviour/ceremony-notes.test.ts
         - tests/behaviour/ceremony-flow-brief.test.ts
@@ -473,6 +494,7 @@ phases:
         - tests/behaviour/ceremony-flow-mirror.test.ts
         - tests/behaviour/ceremony-flow-night-watch.test.ts
         - tests/behaviour/ceremony-flow-rollover.test.ts
+        - tests/structure/ceremony-contract.test.ts
         - tests/structure/ceremony-parity-invariants.test.ts
         - tests/golden/ceremony-brief.test.ts
       folders:
