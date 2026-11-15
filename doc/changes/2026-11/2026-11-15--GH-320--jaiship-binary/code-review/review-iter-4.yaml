@@ -1,0 +1,330 @@
+version: 1
+iteration: 4
+mode: local
+work_item_ref: GH-320
+branch: feat/GH-320/jaiship-binary
+status: PASS
+summary: >-
+  Focused iteration-4 delta re-review. Iteration 3 passed at 488f562e; this
+  review covers the PR-CI delta 488f562e...1fd6a845 and its effect on that
+  verdict, not the whole change again. The delta is CI/packaging- and
+  test-only: (1) `.github/workflows/ci.yml` adds four ordered provisioning
+  steps (pinned setup-bun + `${{ env.BUN_VERSION }}`, pinned pnpm action,
+  `pnpm install --frozen-lockfile`, `pnpm build`) to exactly the two
+  install-set-oracle jobs (`doc-distribution-guard`, `bash-tests`), additions
+  only, action SHAs identical to the other sixteen job usages; (2)
+  `scripts/.tests/test-lint-commit-range.sh` case `worker pool: killed worker
+  is ERROR (F-2)` now discovers the victim from a marker pid written by the
+  slow shim before `exec`, walks ancestors with exact `${GATE}` path matching,
+  stops at the launching subshell, excludes the gate, and kills the worker bash
+  — verified deterministically (5/5 repeats), bounded (200 x 0.05 s plus a
+  `kill -0` early break), and non-vacuously (an independent mutant that treats
+  a missing record as a pass fails the case by name with `VERDICT: PASS`);
+  all existing assertions are preserved; (3) the two notice/launcher bounds
+  became path-independent (fixed prose <= 400 with the variable absolute
+  strings removed) and still name both locations / the target, with a
+  two-length scratch-root equality proof; (4) the two revert paths remain
+  net-absent. No production code changed: `packages/**` and `scripts/install.sh`
+  are untouched since 488f562e, so the five-site identity-literal inventory,
+  the notice semantics and the installer behaviour remain exactly as
+  iteration 3 verified. The previously passing ACs remain PASS. Scope truth
+  holds for the full range: 55 declared files + 2 folders, 66 changed paths,
+  0 undeclared, the 2 declared-but-absent being the documented reverts;
+  `plan validate` valid/full. Remaining items are non-blocking artifact/citation
+  nits and a one-round-stale aggregate-gate datum, recorded honestly.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 1
+  info: 4
+spec_compliance: PASS
+plan_compliance: PASS
+delta_scope:
+  base: 488f562e4659a4e3644fc237b190443422defc27
+  head: 1fd6a845da11b85b55f0d5f0027069aea00af1df
+  changed_paths: 10
+  changed_files:
+    - .github/workflows/ci.yml
+    - doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary/chg-GH-320-plan.yaml
+    - doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary/chg-GH-320-pm-notes.yaml
+    - doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary/chg-GH-320-spec.md
+    - doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary/chg-GH-320-test-plan.md
+    - doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary/code-review/review-iter-3.yaml
+    - scripts/.tests/test-lint-commit-range.sh
+    - tests/behaviour/daemon-start-detached.test.ts
+    - tests/behaviour/prior-identity-notice.test.ts
+    - tests/checks/install-launcher-installer.test.ts
+  all_delta_paths_declared: true
+  production_code_changed: false
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: artifact-consistency
+    location: doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary/chg-GH-320-test-plan.md:14
+    message: >-
+      [L | owner: @test-plan-writer/@spec-writer/@pm citation sweep] The delta
+      bumps the notice/launcher citations to spec v1.10, but the operative
+      artefacts at HEAD are spec v1.11 / plan r1.9 / test plan v1.8, so several
+      citations are one revision stale: the test plan frontmatter and intro cite
+      "plan revision 1.5" and "spec v1.10" (test plan v1.8, spec v1.11); spec
+      §16/§17/§22 still cite "plan (r1.5)", "test plan v1.6" and the recorded
+      gate "8624/4/0 at 8a1f77ad", which predates the round-3/round-4 fixes.
+      These are citation nits of the same class as iteration-3 F-4; no rule,
+      AC, NFR, or coverage claim is contradicted and the §10 evidence is
+      unchanged.
+    suggestion: >-
+      In one sweep, move operative citations to spec v1.11 / plan r1.9 /
+      test plan v1.8 and refresh the gate-evidence paragraph to the newest
+      recorded aggregate run; leave the historical revision-log rows intact.
+      Non-blocking.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary/chg-GH-320-pm-notes.yaml
+    message: >-
+      [I | owner: @runner/@pm phase-9 evidence] AC-F7-9 ("`pnpm check` green") is
+      evidenced by the last aggregate gate at ce69101f (8631 pass / 4 skip / 0
+      fail), which includes every product/test change through ce69101f but
+      predates the round-4 suite fix (9e5042fe, 2026-11-15T17:53). The round-4
+      fix is test-only and was verified by its own runs (suite 50/50 across
+      default, `TMPDIR=$PWD/tmp/tmpdir` and `PATH=$PWD/node_modules/.bin:$PATH`;
+      `run-bash-suites.sh` 27/27; shellcheck; `git diff --check`), and this
+      review re-ran the full suite 50/50 plus the affected TS suites. PR CI
+      remains the authority. Not a defect; recorded so the evidence home stays
+      honest about what the aggregate run covered.
+    suggestion: >-
+      Optionally re-run the aggregate `pnpm check` at the merge head (or rely on
+      PR CI) and append the new numbers to test plan §10. Non-blocking.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary/chg-GH-320-spec.md:341
+    message: >-
+      [I | owner: @pm accepted scope change] NFR-3 and AC-F5-6 are redefined so
+      the notice bound is the fixed prose (rendered line with both absolute
+      location strings removed) <= 400, the two locations being the only
+      variable content; the launcher diagnostic in TC-BIN-052 is bounded the
+      same way. This is a deliberate, documented response to the runner's longer
+      checkout path (the same correct line measured 425 against the old absolute
+      bound) in spec v1.10 / test plan v1.8, not a test-side weakening: the
+      delivered tests still assert one line, both locations / the target, the
+      no-move statement and the remedy, and add a two-length scratch-root proof
+      that the fixed prose is identical while the rendered line grows with the
+      path. Consequence recorded for traceability — the absolute rendered line
+      is no longer bounded by the AC (its locations are filesystem paths,
+      bounded in practice).
+    suggestion: >-
+      Optionally state the practical upper bound (fixed prose + two filesystem
+      paths) in NFR-3 so a reader is not left to infer it. No action required.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: info
+    confidence: high
+    category: correctness
+    location: scripts/.tests/test-lint-commit-range.sh:397
+    message: >-
+      [I | owner: plan Phase 6 gate suite] In `_resolve_worker_from_shim_pid`,
+      the `count == 1` branch ("when only the gate remains, the worker exec'd
+      into the shim, so the marked pid is itself the worker") is unreachable
+      under the delivered process shape (worker bash -> command-substitution
+      subshell -> shim all name `${GATE}`, so count is 2 or 3 and the victim is
+      the worker bash), and if it ever were reached its own defence-in-depth
+      check requires the victim's argv to contain `${GATE}` — the shim's argv
+      never does — so it would return non-zero and fail the case rather than
+      kill anything. This is fail-safe, not a defect; the walk is also
+      depth-bounded at 64, stops at the launching subshell (`gate_pid`), and
+      never returns the gate (`victim != gate_ancestor` plus the argv re-check).
+    suggestion: >-
+      No action. If this suite is next touched, drop the dead `count == 1`
+      branch or annotate it as an unreachable fail-safe arm.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: info
+    confidence: high
+    category: code-quality
+    location: tests/behaviour/prior-identity-notice.test.ts:13
+    message: >-
+      [I | owner: plan Phase 2/5 test files] Biome reports three
+      `lint/correctness/noUnusedImports` warnings across the touched test files
+      and exits 0 (no errors): `runEntrypoint` (line 13) and `bufferSink`
+      (line 23) in prior-identity-notice.test.ts, and `dirname` (line 25) in
+      install-launcher-installer.test.ts (the last is carried from iteration-3
+      F-5). The import lines are unchanged by this delta, so none is introduced
+      here; they are pruning nits only.
+    suggestion: >-
+      Drop the unused imports the next time each file is touched. Non-blocking.
+    suppressed: false
+    published_url: null
+    published_at: null
+ac_verdicts:
+  AC-F1-1: "PASS (unchanged by delta; see iteration 3)"
+  AC-F1-2: "PASS (unchanged by delta; see iteration 3)"
+  AC-F2-3: "PASS (alias projection and pre-composition touch unchanged; production code untouched by delta)"
+  AC-F2-7: "PASS (unchanged by delta; see iteration 3)"
+  AC-F3-4: "PASS (unchanged by delta; see iteration 3)"
+  AC-F4-5: "PASS (unchanged by delta; see iteration 3)"
+  AC-F5-6: "PASS (notice semantics unchanged: exactly one notice per source kind, both locations, no-move, payload/exit unchanged; the bound clause is now the fixed-prose <= 400 in spec v1.11, implemented non-vacuously by TC-BIN-043 and re-verified 14/14)"
+  AC-F6-8: "PASS (installer behaviour unchanged — scripts/install.sh untouched; the removed-target bound now measures fixed prose with the target removed, still asserting one line, the target, the remedy, empty stdout and non-zero exit; suite 9/9)"
+  AC-F7-9: "PASS with caveat (full suite re-run here 50/50 and affected TS suites green; last aggregate `pnpm check` was at ce69101f, one test-only commit before the round-4 suite fix — see F-2; PR CI is the authority)"
+  AC-F7-10: "PASS (five-site identity-literal inventory untouched: the only working-name literals are branding SCOPE_ORG, mcp default, and the three CLI bin sites; no packages/** change in the delta)"
+  AC-F8-11: "PASS (unchanged by delta; see iteration 3)"
+prior_iteration_findings:
+  note: >-
+    Iteration-3 findings F-1..F-8 are unaffected by this delta: their subjects
+    are the preload docstring (F-1), the phase-6 pm-notes evidence entry (F-2,
+    now recorded), the delivery_planning timestamp (F-3), stale citations (F-4,
+    extended by this iteration's F-1), the unused `dirname` import (F-5, still
+    present), the `feature-cli-entrypoint.md` wording (F-6), the testimonial
+    `isAllowed` shape (F-7), and the containment-notice ordering (F-8). None is
+    re-opened; none is blocked by the delta.
+verification:
+  delta_base: 488f562e4659a4e3644fc237b190443422defc27
+  head: 1fd6a845da11b85b55f0d5f0027069aea00af1df
+  merge_base: 488f562e4659a4e3644fc237b190443422defc27
+  delta_changed_paths: 10
+  full_range_changed_paths: 66
+  plan_revision: r1.9
+  spec_revision: v1.11
+  test_plan_revision: v1.8
+  plan_validate: >-
+    `bun packages/cli/bin/delivery-os.ts plan validate GH-320` -> verdict=valid,
+    artifact=yaml:chg-GH-320-plan.yaml, tier=full, readyForDevelopment=true.
+  scope_reconciliation: >-
+    Script parses every phase `scope.files`/`scope.folders` from plan r1.9 (55
+    files + 2 folders) and compares against `git diff --name-only
+    origin/main-tools...HEAD` (66 paths): 0 undeclared. The 2 declared-but-absent
+    paths are the documented reverts (`packages/adapters/src/file/projects-config.ts`,
+    `packages/core/src/index.ts`), net-absent from the diff. Every one of the 10
+    delta paths is a declared file or inside the declared change folder
+    (`code-review/review-iter-3.yaml`).
+  worker_discovery_fix:
+    deterministic: >-
+      Filtered copy of the suite (killed-worker case only) ran 5/5 green; the
+      delivered full suite ran 50/50 including `worker pool: killed worker is
+      ERROR (F-2)`.
+    bounded: >-
+      Resolution loop is 200 iterations x 0.05 s (10 s max) plus a `kill -0
+      "${gate_pid}"` early break once the gate exits; the ancestor walk is
+      depth-bounded at 64; timeout prints gate stdout/stderr plus a `ps -e`
+      snapshot and kills/wait the gate before returning non-zero.
+    exact_path_matched: >-
+      Matching is `case "${chain_args[index]}" in *"${GATE}"*)` against the
+      absolute `${REPO_ROOT}/scripts/lint-commit-range.sh`; the walk starts at
+      the shim and stops at the launching subshell (`gate_pid`), so an unrelated
+      ancestor is never scanned, and the suite path
+      (`scripts/.tests/test-lint-commit-range.sh`) does not contain the gate
+      substring.
+    gate_excluded: >-
+      `victim = gate_chain[count-2]` is strictly below the highest matched
+      ancestor (the gate); defence in depth re-checks `victim != gate_ancestor`
+      and that the victim's argv contains `${GATE}`.
+    victim_identity_probe: >-
+      Instrumented (isolated copy) run: victim pid 2715523 had ppid 2715482 ==
+      gate_pid and argv `bash <abs gate> --base main` — i.e. the worker bash
+      directly under the gate, never the gate and not the `$()` subshell (the
+      status record is written by the worker function body, so killing it leaves
+      no record -> ERROR).
+    non_vacuity_mutant: >-
+      In an isolated copy, the missing-record fail-closed branch was disabled and
+      the unknown/empty status token was treated as clean; the case then failed
+      by name (`[FAIL] worker pool: killed worker is ERROR (F-2)`; gate rendered
+      `VERDICT: PASS`, actual exit 0 vs expected 2). A fresh unmutated copy
+      passed 1/1. The coder's recorded non-vacuity claim is independently
+      reproduced.
+  path_independent_bounds:
+    prior_identity_notice: >-
+      `fixedProse(line, prior, current)` removes exactly the two absolute
+      location strings and asserts the remainder <= 400; `assertContract` still
+      requires both locations and the no-move statement; the added second
+      scratch root (`x`/`y` x120) asserts the longer rendered line
+      (`secondRead.length > read.length`) has identical fixed prose — a real,
+      non-tautological bound that still names both locations.
+    install_launcher: >-
+      `line.split(target).join("").length <= 400` with `line.toContain(target)`;
+      the test still asserts exactly one stderr line, empty stdout, non-zero
+      exit, the named target and the "re-run the local install" remedy.
+  suites_re_run:
+    - "bash scripts/.tests/test-lint-commit-range.sh -> 50/50 passed (EXIT=0), including the killed-worker case"
+    - "filtered killed-worker copy -> 1/1, five consecutive runs (5/5 deterministic)"
+    - "bun test tests/behaviour/prior-identity-notice.test.ts -> 14 pass / 0 fail (87 expect calls)"
+    - "bun test tests/checks/install-launcher-installer.test.ts -> 9 pass / 0 fail (82 expect calls)"
+    - "bun test tests/behaviour/daemon-start-detached.test.ts -> 22 pass / 0 fail (157 expect calls)"
+    - "bash -n scripts/.tests/test-lint-commit-range.sh -> clean; shellcheck --severity=error -> clean; git diff --check 488f562e...HEAD -> clean"
+    - "bunx biome check (three touched test files) -> 3 warnings (noUnusedImports), 0 errors, exit 0"
+  ci_workflow_change:
+    minimal: >-
+      Diff is additions only (34 insertions, 0 deletions): four ordered steps
+      (`Setup Bun`, `Set up pnpm (reads packageManager)`, `Install workspace
+      dependencies` = `pnpm install --frozen-lockfile`, `Build workspace
+      packages` = `pnpm build`) in `doc-distribution-guard` and `bash-tests`
+      only; no job, trigger, permission, exclusion, or existing step changed.
+    pinned_and_consistent: >-
+      `oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6` and
+      `pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320` are the exact
+      SHAs used by all other jobs (18 occurrences each); `bun-version:
+      ${{ env.BUN_VERSION }}` uses the existing `env.BUN_VERSION: "1.4.4"` equal
+      to `.bun-version`; pnpm reads `packageManager` (`pnpm@10.18.3`).
+    correct_ordering: >-
+      checkout -> Bun -> pnpm -> install -> build -> existing guard/test steps;
+      matches the `ts-build` job's proven order. `.github/workflows/ci.yml` was
+      last modified at 16:24:46, before the last aggregate gate at ce69101f
+      (16:27:59), which was green — so `ci-topology` additions-only and required
+      job presence were exercised with this edit.
+  reverts_net_absent: >-
+    `git diff 488f562e...HEAD` and `git diff origin/main-tools...HEAD` are both
+    empty for `packages/cli/src/index.ts`,
+    `packages/adapters/src/file/projects-config.ts` and
+    `packages/core/src/index.ts`.
+  untouched_surfaces: >-
+    No `packages/**` production file and no `scripts/install.sh` change since
+    488f562e (the only non-test-named delta path is the `scripts/.tests`
+    suite). Identity literals remain exactly the five declared sites
+    (`packages/core/src/branding/index.ts` SCOPE_ORG, `packages/mcp/src/serve.ts`
+    default, `packages/cli/bin/delivery-os.ts` default, `packages/cli/bin/jaiship.ts`
+    default and prior). Notice production code (`production.ts`,
+    `entrypoint.ts`) and installer behaviour are untouched, so AC-F5-6,
+    AC-F6-8, AC-F7-10 and AC-F8-11 stand on iteration-3's live verification plus
+    this delta's green suites.
+  daemon_start_detached_change: >-
+    One behaviour-neutral fixture literal, `/home/fixture` -> `/fixture/home`
+    (f7243d7f), documented in pm-notes as fixing the CI-only
+    `private.absolute-user-path` flagging of a `/home/<name>` path; the test does
+    not assert the value and passes 22/22. In a declared phase-1 file; no scope
+    effect.
+  real_home_safety: >-
+    Every probe used copies and scratch trees under /tmp/opencode; the operator's
+    real home was not read or written, and no source or artifact file in the
+    repository was modified by this review (only this review-iter-4.yaml is
+    written).
+reviewed_at: 2026-11-15T17:10:00Z
+next_step: PROCEED
+plan_gaps: >-
+  No SCOPE_DEVIATION: 0 undeclared of 66 changed paths against plan r1.9's 55
+  files + 2 folders (the 2 declared-but-absent are the documented reverts);
+  `plan validate` valid/full. Obligations 6.19 (four-step CI provisioning) and
+  6.21 (commit-range suite nesting-independent discovery with a required
+  non-vacuity check) are implemented and evidenced. Residual plan-side items are
+  artefact/citation bookkeeping (F-1) and the one-round-stale aggregate-gate
+  datum (F-2), neither a scope or delivery gap.
+test_coverage_gaps: >-
+  No coverage gap introduced. The killed-worker case is non-vacuous (verified by
+  an independent mutant), deterministic (5/5), and preserves every prior
+  assertion (exit 2, `VERDICT: ERROR` stdout, `could not render a verdict`, no
+  PASS/FAIL verdict, `VERDICT: ERROR` stderr). The notice/launcher bounds remain
+  real and still name both locations / the target, adding a path-independence
+  proof rather than relaxing coverage. Residual non-blocking: AC-F7-9's
+  aggregate gate predates the round-4 test-only fix (F-2).
