@@ -5,7 +5,7 @@ change:
   status: Proposed
   slug: jaiship-binary
   title: "M4-S1a: jaiship executable binary and local install"
-  version: "1.8"
+  version: "1.9"
   owners: ["engineering"]
   service: delivery-os
   milestone: "M4: Public release readiness"
@@ -258,7 +258,7 @@ Flow 5: Local install from the change branch
 - [OUT] Changing the rename drill document or its battery.
 - [OUT] Threading the prior-identity fallback through the test-only composition helper that resolves its own directory: it is not on any production path today, and joining it without the existence facts would break the one-root-per-invocation guarantee.
 - [OUT] Making the configuration inspection command prompt-required or otherwise reachable through the executable: no CLI configuration surface is added, and the configuration half of the fallback is proven on the delivered acquisition rather than through a `… config --json` token.
-- [OUT] Changing the CI workflow: the installer integration cases run inside the Bun-bearing test job, so no `.github/workflows/ci.yml` change is required.
+- [OUT] Changing CI beyond one declared runtime installation: the only workflow change in scope is installing the Bun runtime in the two jobs that execute the install-set oracle (`doc-distribution-guard` and `bash-tests`), using the repository's pinned setup action with `${{ env.BUN_VERSION }}` (`.github/workflows/ci.yml`). No job, trigger, permission, exclusion, or command is otherwise changed, and the installer integration cases themselves stay in the Bun-bearing test job (D9).
 - [OUT] Merging the change before the active cross-repository lane (GH-310) lands: the delivery stops at an open pull request.
 
 ### 7.3 Deferred / Maybe-Later
@@ -473,6 +473,7 @@ The readiness gate asked whether DEC-5 and DEC-9 are precedent-setting and requi
 | `scripts/lib/dispatch-authority.sh` | UNCHANGED | Keeps the pre-freeze host root; second declared divergence |
 | `scripts/checks/forbidden-literals.registry.json` | CHANGED | The new user-facing guide is registered in the doc scan; the seed set stays unchanged (NG-9) |
 | `scripts/checks/manifest-privacy.ts`, `scripts/checks/publish-guard.ts` | UNCHANGED | Six private package names and the neutral scope are unchanged |
+| `.github/workflows/ci.yml` | CHANGED | Installs the Bun runtime in the two jobs that execute the install-set oracle (`doc-distribution-guard` and `bash-tests`), using the repository's pinned setup action with `${{ env.BUN_VERSION }}`; no job, trigger, permission, exclusion, or command is otherwise changed |
 | `tests/structure/entrypoint-bin.test.ts` | CHANGED | Two-bin manifest assertions with non-vacuity; shared-composition and declared-literal-inventory assertions |
 | `tests/structure/entrypoint-installer-absence.test.ts` | CHANGED | Arrays still name no binary; the declared launcher step and its layout reference are asserted |
 | `tests/structure/content-inventory.test.ts`, `tests/structure/inventory.json` | CHANGED | Exact file-set equality gains the new entries; per-file executable allowances updated, including removal of the retired neutral accessor from the entrypoint module's allowance |
@@ -512,7 +513,7 @@ The readiness gate asked whether DEC-5 and DEC-9 are precedent-setting and requi
 | `doc/overview/glossary.md` | CHANGED | Phase-7 reconciliation: the identity and install-path entries follow the two-executable truth |
 | `doc/quality/test-specs/test-spec-state-layer.md` | CHANGED | Phase-7 reconciliation: the state-scope test specification follows the prior-root selection |
 
-The map and the plan (r1.5) describe one blast radius: the product and suite files listed above, the four declared specification pages plus the install-set page and the six phase-7 current-truth reconciliations (the five pages above and the `doc/00-index.md` descriptor row), the guide, the two planning markers, the changeset, and the fixture entries. `README.md` stays untouched while `doc/00-index.md` is reconciled, because a descriptor row is documentation truth and a rebrand would be product scope (NG-1). The installer integration cases live in the Bun test job (`tests/checks/install-launcher-installer.test.ts`) rather than in a `scripts/.tests` shell suite, which is why no CI-workflow file appears here (D9); any residual scope drift on code and fixture files is disclosed in the plan's own scope record rather than absorbed silently here.
+The map and the plan (r1.5) describe one blast radius: the product and suite files listed above, the four declared specification pages plus the install-set page and the six phase-7 current-truth reconciliations (the five pages above and the `doc/00-index.md` descriptor row), the guide, the two planning markers, the changeset, and the fixture entries. `README.md` stays untouched while `doc/00-index.md` is reconciled, because a descriptor row is documentation truth and a rebrand would be product scope (NG-1). The installer integration cases live in the Bun test job (`tests/checks/install-launcher-installer.test.ts`) rather than in a `scripts/.tests` shell suite (D9); the one workflow file in the map exists because the delivered install-set oracle runs the installer from the `doc-distribution-guard` and `bash-tests` jobs, which must therefore carry the runtime. Any residual scope drift on code and fixture files is disclosed in the plan's own scope record rather than absorbed silently here.
 
 ## 17. ACCEPTANCE CRITERIA
 
@@ -650,6 +651,7 @@ No new personal data is collected, stored, or transmitted. The fallback reads lo
 | 1.6 | 2026-11-15 | @spec-writer | Review iter-1 remediation (spec-routed): `DRY_RUN` declared as a plan-only preview that evaluates no precondition (F-4, in F-6/DEC-15/NFR-5/AC-F6-8, with the `TC-BIN-056` cell); §16 scope truth — `doc/00-index.md` moved to CHANGED as a descriptor row and the six phase-7 reconciliations declared (F-5); DM-6/AC-F7-10/NFR-6 widened to the node-level scan with an expression-position control (F-8); gate evidence and artefact revisions refreshed to 8624/4/0 on `8a1f77ad`, test plan v1.5 and plan r1.4 (F-13); launcher safe-quoting property and the narrowed preload claim stated (F-2/F-12 precision) |
 | 1.7 | 2026-11-15 | @pm | Close-out: declared the delivered `tests/fixtures/ports/v1-contract-inventory.json` change in §16 (the ports contract inventory carries the new contract entries the port-contract test requires); operative citations refreshed to test plan v1.6 and plan r1.4; `packages/core/src/index.ts` stays out of the map because its re-export change is reverted |
 | 1.8 | 2026-11-15 | @pm | Review iter-2 citation refresh: operative plan references moved to plan r1.5 (test plan v1.6 unchanged); F-6 states the absolute-target requirement — the recorded target is absolute even when the installer is invoked with a relative source directory, and a relative target is never recorded |
+| 1.9 | 2026-11-15 | @pm | PR #324 CI discovery: the `doc-distribution-guard` and `bash-tests` jobs run the installer install-set oracle and had no Bun, so both failed. This supersedes the earlier "no CI-workflow change required" assumption: `.github/workflows/ci.yml` is now declared CHANGED for the one in-scope edit (install the runtime in those two jobs via the pinned setup action and `${{ env.BUN_VERSION }}`; nothing else in the workflow changes). No rule, AC, NFR, or contract text changed |
 
 ---
 
