@@ -1589,6 +1589,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "resolveVerifySuiteMap",
     "resolveVerifySuiteMapFromConfig",
     "suiteBreadthCitationOf",
+    "suiteMapReadOfDocument",
     "VERIFY_SUITE_MAP_BRANCH_KEY",
   ],
   "core/src/domain/verify-gates-members.ts": [
@@ -2264,6 +2265,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "VERIFY_GATES_SOURCE_OUTCOMES",
     "VERIFY_GATES_VERDICTS",
     "VERIFY_GATES_WORKFLOW_MAX_BYTES",
+    "VERIFY_COMMITTED_CONFIG_STATES",
     "VERIFY_SUITE_BREADTH_OUTCOMES",
     "VERIFY_SUITE_ID_PATTERN",
     "VERIFY_SUITE_MAP_CONFIG_KEY",
@@ -2521,6 +2523,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "acquireFileConfig",
     "neutralEnvironmentFacts",
     "nodeFileSystemFacts",
+    "readCommittedConfigDocument",
     "runtimePlatform",
   ],
   "adapters/src/file/yaml-parser.ts": ["parseConfigYaml", "parserHostSwitchBlocked"],
