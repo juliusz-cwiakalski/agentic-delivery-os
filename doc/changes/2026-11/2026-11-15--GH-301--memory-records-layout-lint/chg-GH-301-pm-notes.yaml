@@ -50,6 +50,45 @@ open_questions: []
 blockers: []
 notes:
   - text: >-
+      Delivery plan phase 8 (plan id 8) complete — review-iteration-1
+      remediation. Commit: 73048dce. F-1: supersedeRecord writes
+      superseded_by from write.recordId on the superseded target, idempotent,
+      proven by a writer -> invariant round trip with zero findings in
+      memory-promotion-schema and closeout-capsule-supersession. F-2: deriveHint
+      never slices; a source over the bound renders a class/scope read-when
+      phrase. F-3: validateCandidate refuses a statement over
+      STATEMENT_MAX_CHARS through closeout.capsule-invalid with zero writes; at
+      the bound it promotes and lints clean. F-4: suppression markers are
+      evaluated against the guard's own injected suppressionValueFor segment;
+      a key-half marker no longer suppresses. F-5: links resolving outside
+      .ai/memory or absolute repo paths are out of scope. F-6: measureLines does
+      not count a trailing newline as a line; budget fixtures are
+      newline-terminated. F-7: entry-line-date fires only on date-like tokens.
+      F-8: absent-as-empty or non-string statement is exactly one
+      memory.schema.keys-missing. F-9: one globally area-ordered printed stream
+      with the two severity ceilings as separate budgets. F-10: the missing
+      cells land under their owning TCs. F-12 free part: the evaluator imports
+      MEMORY_RECORD_AREAS. Evidence: targeted memory-scope run 18 files / 194
+      pass / 0 fail; capsule-mutants 2 pass (44 mutants, MUT-CAP-41 preserved);
+      bun run scripts/checks/memory-lint.ts = records=3 areas=8 errors=0
+      advisories=0; TMPDIR=<outside-worktree sibling dir> pnpm check = 8668
+      pass / 4 skip / 0 fail (exit 0; phase-7 baseline 8653, so +15 new
+      assertions); doc-distribution 93 docs no drift; forbidden-literals,
+      privacy-literals and git diff --check clean. Test plan v1.5 carries the
+      added cells, the AC-matrix strengthening note, §9 v1.5 and the populated
+      §10 execution record. Deviations: AC-NFR8-1's literal repository-local
+      TMPDIR precondition is not demonstrable in this nested-git workspace ($PWD
+      is inside the jaiship work tree, so fifteen pre-existing project/group
+      suites need a directory outside every work tree), so a sibling directory
+      on the same filesystem outside every work tree was used (D-5/F-11); the
+      commit subject is the primitive's template (no inference transport
+      configured) rather than the plan-declared fix subject (review D-4); no
+      phase complete was run (PM owns the lifecycle boundary); F-11 evidence
+      caveats and F-12's kind-to-home-area enforcement remain documented
+      residuals.
+    type: info
+    date: "2026-11-15"
+  - text: >-
       Delivery plan phase 7 (plan id 7) complete. Commit: e4bb8541. Backlog
       M2-S8 now carries its Ticket and Progress lines; the final alignment pass
       verified the phase-6 concept Record model is schema-legal while the
