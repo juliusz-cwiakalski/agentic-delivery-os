@@ -12,7 +12,7 @@ phases:
   delivery: { started: null, completed: 2026-11-15T12:43:19.993Z }
   system_spec_update: { started: null, completed: 2026-11-15T12:11:25.019Z }
   review_fix: { started: null, completed: 2026-11-15T12:48:17.746Z }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: null, completed: 2026-11-15T14:06:20.889Z }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
@@ -505,4 +505,27 @@ notes:
       because phase timestamps are written only by the phase family. Recorded
       for the closeout/reviewer rather than repaired by hand."
     type: risk
+    date: "2026-11-15"
+  - text: "Quality-gate iterations (phase 9). Run 1: FAIL 8630-8635-test run with 5
+      failures — a branch-introduced absolute user path literal (`HOME:
+      \"/home/fixture\"`) at tests/behaviour/daemon-start-detached.test.ts:710
+      tripping private.absolute-user-path, which reddened TC-PRIVACY-020 and two
+      TC-WIRE-002 cells, plus load-dependent timeouts in
+      telemetry-storage-growth and state-fence (both green in isolation). Fixed
+      the literal to `/fixture/home` in f7243d7f (semantics and F-3b assertions
+      unchanged; scan now 0 violations). Run 2: FAIL with one pre-existing
+      timing flake, TC-DAEMON-121 (worst sample 251.96 ms against a 250 ms
+      ceiling; the test and packages/cli/src/commands/daemon.ts are untouched by
+      this branch; three isolated runs gave 232.9-238.3 ms). Run 3: PASS —
+      GATE_EXIT=0, 8631 pass, 4 skip, 0 fail, 8635 tests across 1091 files
+      (1249.5 s), with lint, format:check, typecheck, check:boundaries,
+      prompt-conformance, help-guide-coverage and exports-parity all green."
+    type: info
+    date: "2026-11-15"
+  - text: "Commit-range gate: PASS. base=origin/main-tools, merge-base 8a1f77ad,
+      head f7243d7f, 45 commits in range, 0 offending commits, 0 distinct rules
+      hit, commitlint resolved repository-local (node_modules/.bin/commitlint,
+      origin=repository-local), mode none. Recorded as the phase-9 range
+      verdict."
+    type: info
     date: "2026-11-15"
