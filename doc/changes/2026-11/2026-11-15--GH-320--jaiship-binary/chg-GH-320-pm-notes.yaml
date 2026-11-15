@@ -10,7 +10,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-15T07:57:44.580Z }
   dor_check: { started: null, completed: 2026-11-15T08:06:12.535Z }
   delivery: { started: null, completed: 2026-11-15T10:22:01.462Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-15T11:17:14.977Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -377,4 +377,36 @@ notes:
       `scripts/.tests/test-install.sh` dry-run control must stay green; the
       classified missing-runtime and no-CLI-entry failures apply to a real run."
     type: risk
+    date: "2026-11-15"
+  - text: "Resume sync after GH-310 landed: merged origin/main-tools twice —
+      d3c61bac (picked up GH-310, c1f0d6fa, 99 files, clean auto-merge on 8 hot
+      files) and cfc2786a (picked up GH-322, 8a1f77ad, which sanitizes an
+      absolute user path in GH-310's pm-notes). The first post-merge gate run
+      failed 3 checks (privacy-literals TC-PRIVACY-020 and two TC-WIRE-002
+      cells) solely because of that upstream GH-310 artifact; after the second
+      sync the privacy scan is clean and the full gate is green: 8624 pass, 4
+      skip, 0 fail (8628 tests, 1091 files). No GH-320 code or test failure
+      occurred at any point."
+    type: info
+    date: "2026-11-15"
+  - text: "Phase 7 (doc-sync) reconciliation: the declared four pages plus
+      feature-doc-distribution-marker.md were verified current; ten further
+      current-truth documents were corrected because they still described the
+      single non-installed bin — feature-state-layer.md,
+      doc/spec/nonfunctional.md, doc/overview/architecture-overview.md,
+      doc/overview/glossary.md, doc/quality/test-specs/test-spec-state-layer.md,
+      the branding-seam secrecy/boundedness statements, the config-layer
+      fallback table wording, the projects host-root rule, the entrypoint
+      interface table and launcher subject, and the distribution-marker
+      change-relative phrasing. Commits 6591503c and 06a9158b; the commit
+      primitive disclosed the out-of-plan paths as scopeDrift rather than hiding
+      them. Residual gap R1 (doc/00-index.md still calling the bin
+      'non-installed') closed by 3ab205b2 (descriptor only, no rebranding, no
+      guide link). Verification: 110 pass / 0 fail across identity-docs,
+      doc-conformance, milestone-guide, forbidden-literals, content-inventory,
+      entrypoint-bin, install-launcher and entrypoint-installer-absence;
+      forbidden-literals 5/5 classes, 0 violations; doc-distribution 94 in-scope
+      docs, no drift. No residual documentation gap; no contradiction with
+      GH-310 or GH-322 current truth."
+    type: info
     date: "2026-11-15"
