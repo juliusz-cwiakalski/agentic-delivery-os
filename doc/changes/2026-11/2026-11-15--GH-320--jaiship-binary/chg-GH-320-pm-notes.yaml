@@ -5,9 +5,9 @@ milestone: "M4: Public release readiness"
 story_code: M4-S1a
 phases:
   clarify_scope: { started: "2026-11-15T06:02:06Z", completed: 2026-11-15T06:10:17.425Z }
-  specification: { started: null, completed: 2026-11-15T06:32:58.783Z }
-  test_planning: { started: null, completed: 2026-11-15T06:34:10.413Z }
-  delivery_planning: { started: null, completed: 2026-11-15T06:40:42.298Z }
+  specification: { started: null, completed: 2026-11-15T07:06:33.924Z }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -41,6 +41,67 @@ decisions:
       bins (ticket requirement). The `delivery-os` bin keeps its current
       configured default so its behaviour, including `.delivery-os` paths, is
       unchanged; only the new `jaiship` bin defaults to the `jaiship` identity."
+    date: "2026-11-15"
+  - text: "D5 (WITHDRAWN - superseded by verified evidence; DoR finding 1 was based
+      on `statusComposition`'s empty provider chain, which is a different fact
+      from project-configuration acquisition). Fixture proof: in a git worktree
+      whose `.delivery-os/config.yaml` exists, `status --json` opens and reads
+      that file four times (`O_RDONLY`, bytes verified via strace), as do
+      `daemon status`, `coordinator status`, and `dispatch attempts`. In this
+      checkout the file does not exist, so only the existence probe runs and no
+      `openat` appears. The ticket's literal surface (`jaiship status --json`)
+      therefore proves the configuration half and no deviation is needed;
+      `config --json` is unreachable (`fallback.internal`, not in the composed
+      prompt-required set) and must not be used. Recorded as DEC-14 in the
+      spec."
+    date: "2026-11-15"
+  - text: "D6 (DoR finding 2, PM-decided): the compatibility alias keeps its
+      delivered invalid-override projection. Verified:
+      `DELIVERY_OS_WORKING_NAME='bad/name' ... status --json` exits 2 with
+      `fallback.internal`, i.e. the resolver error is wrapped by the
+      entrypoint's containment identity, for both bins. The spec's claim of a
+      CLI-visible 'classified resolver error' is corrected to the delivered
+      containment identity, AC-F2-7 is reworded accordingly, and the alias keeps
+      0 observable behaviour change."
+    date: "2026-11-15"
+  - text: "D7 (DoR finding 5, PM-decided): the bounded literal inventory is five
+      declared sites, not four: the three CLI selector sites, the unchanged MCP
+      default, and `SCOPE_ORG = 'delivery-os'` in the branding resolver. The
+      resolver's scope-org constant is declared as a derivation input (a scope
+      literal, not a selector), and the guard asserts the declared rule and
+      inventory rather than a bare count."
+    date: "2026-11-15"
+  - text: "D8 (DoR finding 7, PM-decided): no new decision record for DEC-5/DEC-9.
+      DEC-5 corrects delivered truth rather than introducing a rule - declared
+      `delivery-os` literals already exist in both bins, the MCP default, and
+      the resolver, so the seam's real invariant is bounded, non-exported,
+      single-derivation, and the feature spec sentence is inaccurate. DEC-9
+      extends TDR-0022 without contradicting it: still exactly one effective
+      host root per invocation, one home-plus-brand composition, and one
+      `_PREFIX_STATE_DIR_` read; the fallback only changes which root is
+      selected. The reasoning is recorded in the spec and the phase-7
+      feature-spec update."
+    date: "2026-11-15"
+  - text: "D9 (DoR finding 4, PM-decided): the installer integration cases live in a
+      Bun test at `tests/checks/install-launcher-installer.test.ts` that shells
+      out to `scripts/install.sh` in a scratch HOME and scratch project root.
+      This keeps them in the Bun-bearing test job and avoids adding a
+      `scripts/.tests` shell suite that the CI bash job (jq only, no Bun) would
+      auto-discover and fail. No `.github/workflows/ci.yml` change is required.
+      The structural launcher case stays in
+      `tests/structure/install-launcher.test.ts`."
+    date: "2026-11-15"
+  - text: "D10 (DoR finding 9, PM-decided): the only quality-gate command is the
+      executable same-device invocation `TMPDIR=$(mktemp -d
+      \"$HOME/.cache/ados-check-XXXXXX\") pnpm check`. The repo-local
+      `TMPDIR=$PWD/tmp/tmpdir` invocation is recorded as evidence with the
+      GH-313 mechanism, never as a gate."
+    date: "2026-11-15"
+  - text: "D11 (DoR finding 10, PM-decided): TC-BIN-084 uses a static import/surface
+      scan plus a spawned `bun --preload <arm-counters> test <named suites>`
+      subprocess whose exit code and captured violations are asserted.
+      In-process counter arming around other suites is not implementable and is
+      dropped."
     date: "2026-11-15"
 open_questions: []
 blockers: []
@@ -89,4 +150,51 @@ notes:
       docs for the local install path, and the doc-distribution marker for any
       changed guide."
     type: info
+    date: "2026-11-15"
+  - text: "Artifact chain: spec v1.1 (5e5aef2b), test plan v1.1 (376be41e), plan
+      revision 1.0 (1cb0b39a, 5 phases, 41 declared files). The plan declares
+      `.changeset/gh-320-jaiship-binary-minor.md` following the per-feature
+      changeset convention visible across GH-280..GH-310, although the spec's
+      §16 impact map did not list it; treated as release bookkeeping, not new
+      product scope."
+    type: info
+    date: "2026-11-15"
+  - text: "Retro (specification quality): the first spec under-counted the committed
+      identity-literal inventory (three sites), omitting the unchanged MCP
+      default in packages/mcp/src/serve.ts and the delivered entrypoint neutral
+      default. Test planning caught it as blocking B-1; specification was
+      reopened and re-authored to a four-site inventory with the neutral
+      constant and its accessor removed. Cost: one reopen cycle. Improvement:
+      derive such inventories from an actual repository scan during spec
+      authoring instead of from the narrative."
+    type: retro
+    date: "2026-11-15"
+  - text: "DoR iteration 1: NOT_READY (9 facets FAIL, 1 PASS). Blocking: (1) ticket
+      AC4 config half cannot be proven on `status --json` because status
+      acquires no project configuration; (2) spec both requires and forbids an
+      alias invalid-override behaviour change, and misstates delivered behaviour
+      (`fallback.internal`, exit 2); (3) phase 1 cannot be green - the neutral
+      removal breaks `entrypoint-help-isolation.test.ts` (phase 2 scope but a
+      phase 1 gate control) and the undeclared
+      `tests/conformance/pilot/pilot-isolation.test.ts`; (4) the new
+      `scripts/.tests` installer suite is auto-discovered by the CI bash-tests
+      job, which has no Bun; (5) the declared four-site literal inventory is
+      actually five (`SCOPE_ORG` in the resolver). Majors: spec-§16 vs plan
+      blast radius (8 files), missing decision-record routing for DEC-5/DEC-9,
+      undeclared installer `ADOS_HOME`/`~/.ados` surfaces plus the new
+      install-time Bun dependency and no-CLI-source/DRY_RUN semantics,
+      non-executable same-device gate placeholder, unimplementable TC-BIN-084
+      cross-suite counters, false `~/.jaiship` absence assertion in TC-BIN-055,
+      stale test-plan homes (handbook phrase table, nested `.git` fixtures,
+      'plan absent'), and the `completion` export difference. Remediation routed
+      to specification (1, 2, 5, 6, 7, 8), test_planning (1, 2, 10-13, 22), and
+      delivery_planning (3, 4, 9, 19-21, 23)."
+    type: retro
+    date: "2026-11-15"
+  - text: "Retro (review hygiene): the DoR reviewer started and stopped a real
+      daemon in this checkout against the operator's `~/.delivery-os-state` to
+      observe configuration acquisition, so `host-index.json` may carry that
+      transient registration. The change must not rely on or mutate that state
+      further; flag at review if the host index shows residue."
+    type: risk
     date: "2026-11-15"
