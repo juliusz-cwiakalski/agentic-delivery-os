@@ -19,7 +19,7 @@ import {
   SHAPES,
   scratchCheckout,
   scratchHome,
-} from "../fixtures/entrypoint/prior-identity";
+} from "../fixtures/entrypoint/prior-identity/harness";
 import { bufferSink } from "../golden/helpers";
 
 const PRIOR_ROOT = ".delivery-os-state";

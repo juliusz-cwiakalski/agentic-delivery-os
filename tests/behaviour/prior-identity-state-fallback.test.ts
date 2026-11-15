@@ -17,7 +17,7 @@ import {
   SHAPES,
   scratchCheckout,
   scratchHome,
-} from "../fixtures/entrypoint/prior-identity";
+} from "../fixtures/entrypoint/prior-identity/harness";
 
 const PRIOR_ROOT = ".delivery-os-state";
 const CURRENT_ROOT = ".jaiship-state";

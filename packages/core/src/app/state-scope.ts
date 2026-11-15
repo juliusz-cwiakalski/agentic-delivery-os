@@ -76,6 +76,10 @@ export type HostRootSelection = {
   readonly currentDefaultRoot: string;
   /** The prior-identity default root, when the identity declares a prior. */
   readonly priorDefaultRoot?: string;
+  /** Whether the current default root existed when the root was selected. */
+  readonly currentDefaultRootExists: boolean;
+  /** Whether the prior default root existed when the root was selected. */
+  readonly priorDefaultRootExists: boolean;
 };
 
 /**
@@ -146,6 +150,7 @@ export const selectHostStateRoot = (
   const candidates = hostRootCandidates(input);
   const currentDefaultRoot = candidates.currentDefaultRoot ?? "";
   const priorDefaultRoot = candidates.priorDefaultRoot;
+  const facts = input.defaultRootExists;
   const explicit = input.environment[name];
   if (explicit !== undefined && explicit.length > 0) {
     if (!isAbsolutePath(explicit)) {
@@ -161,6 +166,8 @@ export const selectHostStateRoot = (
         kind: "override",
         currentDefaultRoot,
         ...(priorDefaultRoot === undefined ? {} : { priorDefaultRoot }),
+        currentDefaultRootExists: facts?.current === true,
+        priorDefaultRootExists: facts?.prior === true,
       },
     };
   }
@@ -170,7 +177,6 @@ export const selectHostStateRoot = (
       error: { kind: "config", code: "config.value.invalid", key: name },
     };
   }
-  const facts = input.defaultRootExists;
   if (facts?.current === true) {
     return {
       ok: true,
@@ -179,13 +185,22 @@ export const selectHostStateRoot = (
         kind: "current",
         currentDefaultRoot,
         ...(priorDefaultRoot === undefined ? {} : { priorDefaultRoot }),
+        currentDefaultRootExists: true,
+        priorDefaultRootExists: facts.prior === true,
       },
     };
   }
   if (facts?.current === false && facts.prior && priorDefaultRoot !== undefined) {
     return {
       ok: true,
-      value: { root: priorDefaultRoot, kind: "prior", currentDefaultRoot, priorDefaultRoot },
+      value: {
+        root: priorDefaultRoot,
+        kind: "prior",
+        currentDefaultRoot,
+        priorDefaultRoot,
+        currentDefaultRootExists: false,
+        priorDefaultRootExists: true,
+      },
     };
   }
   return {
@@ -195,6 +210,8 @@ export const selectHostStateRoot = (
       kind: "first-use",
       currentDefaultRoot,
       ...(priorDefaultRoot === undefined ? {} : { priorDefaultRoot }),
+      currentDefaultRootExists: false,
+      priorDefaultRootExists: facts?.prior === true,
     },
   };
 };
@@ -449,6 +466,12 @@ export type ProjectIdentityPorts = {
 export type ProjectScopeInput = HostStateRootInput & {
   readonly checkout: CheckoutIdentityFacts;
   readonly ports: ProjectIdentityPorts;
+  /**
+   * The composition tier's existence probe for the two default roots (GH-320
+   * F-4). The policy performs no I/O itself: the port is injected exactly like
+   * the marker seam, and `defaultRootExists` wins when supplied directly.
+   */
+  readonly probeDefaultRoot?: (path: string) => boolean;
 };
 
 const identityFailure = (summary: string): ProjectsScopeFailure => ({
@@ -494,7 +517,25 @@ const projectScopeOf = (
 export const resolveProjectScope = (
   input: ProjectScopeInput,
 ): Result<ProjectScopeOutcome, ProjectsScopeFailure> => {
-  const selection = selectHostStateRoot(input);
+  const rootFacts =
+    input.defaultRootExists === undefined && input.probeDefaultRoot !== undefined
+      ? (() => {
+          const candidates = hostRootCandidates(input);
+          const probe = (path: string | undefined): boolean => {
+            if (path === undefined) return false;
+            try {
+              return input.probeDefaultRoot?.(path) === true;
+            } catch {
+              return false;
+            }
+          };
+          return { current: probe(candidates.currentDefaultRoot), prior: probe(candidates.priorDefaultRoot) };
+        })()
+      : input.defaultRootExists;
+  const selection = selectHostStateRoot({
+    ...input,
+    ...(rootFacts === undefined ? {} : { defaultRootExists: rootFacts }),
+  });
   if (!selection.ok) {
     return {
       ok: false,

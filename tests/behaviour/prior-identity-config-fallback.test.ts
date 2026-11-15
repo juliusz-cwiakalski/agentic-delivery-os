@@ -20,7 +20,7 @@ import {
   SHAPES,
   scratchCheckout,
   scratchHome,
-} from "../fixtures/entrypoint/prior-identity";
+} from "../fixtures/entrypoint/prior-identity/harness";
 
 const PRIOR_DIR = ".delivery-os";
 const CURRENT_DIR = ".jaiship";

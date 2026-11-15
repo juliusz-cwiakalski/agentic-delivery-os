@@ -89,7 +89,6 @@ import {
   type HandoverEvidence,
   type HarnessSettings,
   type HostIndexRootProbe,
-  hostRootCandidates,
   type LaneSettings,
   legacyStoreWarning,
   maintainHostIndex,
@@ -748,16 +747,9 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     // state-directory resolution (GH-286 F-3, DM-5): no inline home-plus-brand
     // composition survives here, and an unresolvable host root is the
     // classified scope refusal (GH-286 AC-F3-5, GH-288 DEC-17).
-    const defaultRoots = hostRootCandidates({
-      environment,
-      stateDirectoryName: brand.stateDirectoryName,
-      homeDirectory,
-      ...(priorNames === undefined
-        ? {}
-        : { priorStateDirectoryName: priorNames.stateDirectoryName }),
-    });
-    const existsSafe = (path: string | undefined): boolean => {
-      if (path === undefined) return false;
+    // The prior identity's default root is probed through the injected filesystem
+    // facts; the policy itself stays pure and takes the facts as data.
+    const existsSafe = (path: string): boolean => {
       try {
         return localFs.exists(path);
       } catch {
@@ -772,14 +764,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       ...(priorNames === undefined
         ? {}
         : { priorStateDirectoryName: priorNames.stateDirectoryName }),
-      ...(priorNames === undefined
-        ? {}
-        : {
-            defaultRootExists: {
-              current: existsSafe(defaultRoots.currentDefaultRoot),
-              prior: existsSafe(defaultRoots.priorDefaultRoot),
-            },
-          }),
+      probeDefaultRoot: existsSafe,
       checkout: readCheckoutIdentity({ cwd, io: nodeRepositoryIo() }),
       ports: {
         readMarker: (commonDir) => readProjectIdentityMarker(commonDir),
@@ -799,7 +784,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     } else if (
       selection.kind === "current" &&
       selection.priorDefaultRoot !== undefined &&
-      existsSafe(selection.priorDefaultRoot)
+      selection.priorDefaultRootExists
     ) {
       emitNotice({
         reason: "state-skipped",
@@ -2792,9 +2777,6 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       const read = readProjectGroupsConfig({
         gitRoot,
         configurationDirectoryName: brand.configDirectoryName,
-        ...(priorNames === undefined
-          ? {}
-          : { priorConfigurationDirectoryName: priorNames.configDirectoryName }),
       });
       if (read.state === "unreadable") {
         return {
