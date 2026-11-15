@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The host overview and the flat record set: the two-layer state scope (host root plus a per-repository project root), the checkout identity marker and its minted project key, the derived host index with bounded maintenance and the DEC-18 key guard, the read-only `repos list [--json]` surface with its `repos.v1` payload, deterministic table, exit projection, three `repos.*` contract error identities, handover and daemon projections, the four state-location outcomes, and the delivered `projects list --flat` alias that serves the byte-compatible `projects.v1` payload."
 links:
-  related_changes: ["GH-288", "GH-289", "GH-309"]
+  related_changes: ["GH-288", "GH-289", "GH-309", "GH-320"]
   related_decisions: ["TDR-0022", "ODR-0004"]
 ---
 
@@ -42,7 +42,7 @@ the flat record set is recorded in
 
 | Layer | Path | Holds |
 |---|---|---|
-| Host root | `<PREFIX>_STATE_DIR` (absolute) else the current default root, else the prior-identity default root, else the current default root (first use) | `host-index.json`, `owner-hold`, `projects/`, `unbound/` |
+| Host root | an absolute `<PREFIX>_STATE_DIR` override, else the current default root when it exists, else the prior-identity default root when it exists, else the current default root (first use) | `host-index.json`, `owner-hold`, `projects/`, `unbound/` |
 | Project root | `<host root>/projects/<project key>` | The delivered store layout under workspace `default`: ledger, header, index, fence, `documents.<ws>/`, `quarantine.<ws>/`, the audit chain key, the retro sidecar and its lock, and the retro chain key |
 
 The state-scope policy lives once, in the app tier

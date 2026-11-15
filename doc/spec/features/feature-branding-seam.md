@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-BRANDING-SEAM
 status: Current
 created: 2026-10-29
-last_updated: 2026-11-08
+last_updated: 2026-11-15
 owners: ["engineering"]
 service: delivery-os
-summary: "The single branding seam: a pure, fail-closed resolver deriving the twelve brand values from one config-driven working name, the BrandIdentity contract in core ./contracts, reserved brand-neutral telemetry schema names, a CI-binding forbidden-literal scan anchored to a fixed corpus baseline, the distinct hashed-literal privacy registry that follows the same registry-as-authority precedent, a one-warning legacy compatibility adapter, and the documented rename drill."
+summary: "The single branding seam: a pure, fail-closed resolver deriving the twelve brand values from one config-driven working name, the BrandIdentity contract in core ./contracts, the bounded and declared five-site identity-literal inventory with its per-bin declared defaults and prior identity, reserved brand-neutral telemetry schema names, a CI-binding forbidden-literal scan anchored to a fixed corpus baseline, the distinct hashed-literal privacy registry that follows the same registry-as-authority precedent, a one-warning legacy compatibility adapter, the consumed install path, and the documented rename drill."
 links:
-  related_changes: ["GH-171", "GH-173", "GH-174", "GH-179", "GH-184", "GH-223", "GH-251", "GH-242", "GH-288"]
+  related_changes: ["GH-171", "GH-173", "GH-174", "GH-179", "GH-184", "GH-223", "GH-251", "GH-242", "GH-288", "GH-320"]
   related_decisions: ["ADR-0003", "TDR-0005"]
 ---
 
@@ -20,7 +20,7 @@ The branding seam is the single place where the product's working name enters th
 
 The seam is kept honest by a CI-binding forbidden-literal scan over the complete ADR-0003 DEC-8 scope. A legacy compatibility adapter in `@delivery-os/adapters/legacy` maps pre-freeze environment and config-directory names to current names with exactly one warning per process. A documented rename drill proves that a branding change is one seam swap.
 
-No public product name is selected, proposed, or revealed anywhere in the repository. The working name is data supplied at a runtime-aware edge, and the committed working-name literals are **bounded and declared**: exactly five sites, each non-exported and each with a declared role — the three CLI selector sites (`bin/delivery-os.ts` default, `bin/jaiship.ts` default, `bin/jaiship.ts` prior identity), the unchanged MCP default in `packages/mcp/src/serve.ts`, and the resolver's `SCOPE_ORG` scope-org derivation input in `packages/core/src/branding/index.ts`. The invariant the seam keeps is boundedness, non-export, and single derivation: no other site names a working name, the resolver is the only derivation point, no `BrandIdentity` field is assigned a literal outside `branding`/`contracts`, and the structure guard asserts the declared inventory in both directions (every declared site found, every found literal declared) rather than a bare count. The neutral workspace scope `@delivery-os` and the telemetry namespace `delivery` are fixed neutral constants that survive any rename.
+The working name is data supplied at a runtime-aware edge, and the committed working-name literals are **bounded and declared**: exactly five sites, each non-exported and each with a declared role — the three CLI selector sites (`bin/delivery-os.ts` default, `bin/jaiship.ts` default, `bin/jaiship.ts` prior identity), the unchanged MCP default in `packages/mcp/src/serve.ts`, and the resolver's `SCOPE_ORG` scope-org derivation input in `packages/core/src/branding/index.ts`. No identity literal lives anywhere else: every user-facing name, path, and URL is derived from the resolved identity at run time rather than committed as a literal. The invariant the seam keeps is boundedness, non-export, and single derivation: no other site names a working name, the resolver is the only derivation point, no `BrandIdentity` field is assigned a literal outside `branding`/`contracts`, and the structure guard asserts the declared inventory in both directions (every declared site found, every found literal declared) rather than a bare count. The neutral workspace scope `@delivery-os` and the telemetry namespace `delivery` are fixed neutral constants that survive any rename.
 
 The authoritative design decision is [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md) (C-3 naming firewall, DEC-4, DEC-8 naming firewall placement).
 
@@ -38,7 +38,7 @@ The authoritative design decision is [ADR-0003](../../decisions/ADR-0003-oss-mon
 - **KPIs:**
   - 12/12 DEC-8 values produced by the resolver from the single working-name input.
   - 0 name-derived values computed outside the resolver in new code.
-  - 0 committed working-name or product literals outside the DEC-8 allowlist.
+  - 0 committed working-name literals outside the declared five-site inventory, and 0 seed literals outside the DEC-8 allowlist.
   - 5/5 DEC-8 scope classes scanned on every pull request.
   - 0 ambient environment reads inside the branding tier.
   - Exactly 1 warning per process when a legacy source is read; 0 when none is read.
@@ -50,7 +50,7 @@ The authoritative design decision is [ADR-0003](../../decisions/ADR-0003-oss-mon
 - **Single resolver seam:** `resolveBrandIdentity(input: ResolverInput)` returns `Result<BrandIdentity, BrandingInputError>`. `ResolverInput` carries the config-driven `workingName` and an optional `override`. A present `override` wins over `workingName`; the resolver applies precedence internally.
 - **Complete brand contract:** `BrandIdentity` is defined once in `core ./contracts` with the twelve DEC-8 values. The branding subpath imports `./contracts` for the type only and is the only construction site for the values.
 - **Neutral override channel:** The designated override variable is `DELIVERY_OS_WORKING_NAME`, a product-free token. A runtime-aware edge reads it and maps it to `ResolverInput.override`. The branding subpath never mentions or reads the variable; the ambient-environment guard forbids `process.env` and `Bun.env` in the tier.
-- **Per-bin identity default at the edges:** The resolver applies no default. Each CLI bin declares its own default working name at the process edge — `delivery-os` for the compatibility alias, `jaiship` for the new bin, whose prior identity is the pre-freeze working name — and passes it to the entrypoint as a required input; the MCP serve composition keeps its own declared default. The CLI uses the declared default for self-description (`--help`/`--version`/`--print-install-path`) and, for a configuration-bearing command under an invalid override, keeps the delivered `fallback.internal` containment at exit `2` with no fallback identity substituted. The entrypoint module keeps no identity literal. Every other consumer supplies a name.
+- **Per-bin identity default at the edges:** The resolver applies no default. Each CLI bin declares its own default working name at the process edge — `delivery-os` for the compatibility alias, and `jaiship` for the primary bin, which also declares the pre-freeze working name as its prior identity — and passes it to the entrypoint as a required input; the MCP serve composition keeps its own declared default. The CLI uses the declared default for self-description (`--help`/`--version`/`--print-install-path`) and, for a configuration-bearing command under an invalid override, keeps the delivered `fallback.internal` containment at exit `2` with no fallback identity substituted. The entrypoint module keeps no identity literal. Every other consumer supplies a name.
 - **Fail-closed validation:** An invalid or unusable name returns a deterministic `BrandingInputError` that names the field (`workingName` or `override`) and the reason code, never the value. There is no silent default and no fallback from an invalid override.
 - **Deterministic derivation:** The same input always yields the same output; no clock, randomness, environment, or runtime API is consulted. The returned identity is frozen.
 - **Prior-identity derivation:** The prior identity is declared as a prior working name at the process edge, so the prior configuration directory and state-directory names derive from the same resolver as the current ones. No prior path is a second literal, and the prior identity's environment names are never read.
@@ -227,7 +227,7 @@ The privacy guard applies the same registry-as-authority, reason-bearing allowli
 | NFR-6 | New legacy-prefixed variables | 0 |
 | NFR-7 | Boundary integrity | 0 violations; every forbidden rule has a registered failing fixture |
 | NFR-8 | Regression safety | No regression in the bash stack, `ts-*` jobs, or the aggregate check |
-| NFR-9 | Name secrecy | 0 name reveals or candidate names in any artifact |
+| NFR-9 | Identity-literal boundedness | 0 committed working-name literals outside the declared five-site inventory; 0 candidate (undecided) product names in any artifact |
 
 ## Quality Assurance Strategy
 

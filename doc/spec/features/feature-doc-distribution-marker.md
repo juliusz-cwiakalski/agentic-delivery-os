@@ -37,7 +37,7 @@ ADOS is a template/framework repo: `scripts/install.sh` redistributes selected d
 
 ## The launcher registration in the install set
 
-The local install set is the marker-derived document set plus the delivery scripts, the delivery tools, the template files, and the plugin projection. Since GH-320 it also registers one executable launcher outside the project tree, at the brand install path the executable itself declares (`~/.jaiship/bin/jaiship` for the new identity). That launcher is not a redistributable document and is not a template, so it is not part of the marker-derived set and the guard's document rules are unchanged; it is a declared installer step:
+The local install set is the marker-derived document set plus the delivery scripts, the delivery tools, the template files, and the plugin projection. It also registers one executable launcher outside the project tree, at the brand install path the executable itself declares (`~/.jaiship/bin/jaiship` for the `jaiship` identity). That launcher is not a redistributable document and is not a template, so it is not part of the marker-derived set and the guard's document rules are unchanged; it is a declared installer step:
 
 - **Target:** exactly one absolute path, the installed source tree's CLI entry, recorded at install time.
 - **Path authority:** the installer reads the path from the executable's state-free `--print-install-path` self-description with the working-name override removed from that child's environment, and expands only the leading home marker. It composes no name-derived path in bash.

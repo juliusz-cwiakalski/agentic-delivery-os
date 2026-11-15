@@ -2,13 +2,13 @@
 id: SPEC-CONFIG-LAYER
 status: Current
 created: 2026-10-30
-last_updated: 2026-11-11
+last_updated: 2026-11-15
 owners: ["engineering"]
 service: delivery-os
 ados_distribution: internal
-summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed harness branch (selected kind, execution kind, store locations, deny-by-default environment allowlist with a variable-only optional marker), the typed lane branch (liveness interval and restart budget), the typed queue branch (lease TTL and per-condition-type park recheck), the typed daemon branch (eleven cadence, transport, and socket keys), the typed coordinator branch (six supervision policy keys), and the typed poll branch (per-platform base, maximum, and minimum spacing), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
+summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed harness branch (selected kind, execution kind, store locations, deny-by-default environment allowlist with a variable-only optional marker), the typed lane branch (liveness interval and restart budget), the typed queue branch (lease TTL and per-condition-type park recheck), the typed daemon branch (eleven cadence, transport, and socket keys), the typed coordinator branch (six supervision policy keys), and the typed poll branch (per-platform base, maximum, and minimum spacing), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, the per-layer prior-identity read fallback for the two repository-owned layers, and nine classified config errors."
 links:
-  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237", "GH-238", "GH-241", "GH-277", "GH-280", "GH-286", "GH-288"]
+  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237", "GH-238", "GH-241", "GH-277", "GH-280", "GH-286", "GH-288", "GH-320"]
   related_decisions: ["ADR-0003", "ADR-0008", "TDR-0003", "TDR-0021"]
 ---
 
@@ -57,12 +57,12 @@ The authoritative selection is [ADR-0003](../../decisions/ADR-0003-oss-monorepo-
 
 ### Prior-identity fallback
 
-When the invoking identity declares a prior identity (the new executable name declares the pre-freeze working name; the compatibility alias declares none), the two repository-owned layers consider the prior identity's file as a second candidate:
+When the invoking identity declares a prior identity (the `jaiship` bin declares the pre-freeze working name; the compatibility alias declares none), the two repository-owned layers consider the prior identity's file as a second candidate:
 
 | Layer | Candidate order | Both present | Explicit selection |
 |---|---|---|---|
 | Project-committed | current `<repo>/<configDirectoryName>/config.yaml` → prior `<repo>/<priorConfigDirectoryName>/config.yaml` → delivered `missing` skip | current file read; prior reported `config-skipped` | the selected file occupies the slot; no layer falls back |
-| Project-local | current `<repo>/<configDirectoryName>/config.local.yaml` → prior prior-identity local file → delivered `missing` skip | current file read; prior reported `config-skipped` | `selected-config` skip, no fallback |
+| Project-local | current `<repo>/<configDirectoryName>/config.local.yaml` → prior `<repo>/<priorConfigDirectoryName>/config.local.yaml` → delivered `missing` skip | current file read; prior reported `config-skipped` | `selected-config` skip, no fallback |
 
 The current file wins whenever it exists and the prior file is then reported **not used**; the prior file is read (as that same layer, with its real path recorded as the loaded file **and as the origin of every value it supplies**) only when the current file is absent. Machine-global layers never fall back, because the transitional claim is about artifacts the product created in a workspace. The fallback is strictly read-only — no write, copy, move, or deletion ever targets the prior directory — and is **not** a configuration warning, so `--strict` is unchanged and a prior read cannot become `config.warning.strict`. Skips, error codes, and warning kinds are unchanged.
 
