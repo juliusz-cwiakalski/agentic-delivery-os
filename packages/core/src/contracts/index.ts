@@ -23,12 +23,18 @@ export {
   type ConfigNodeOrigins,
   type ConfigOrigin,
   type ConfigPosition,
+  type ConfigPriorOutcome,
   type ConfigSkippedLayer,
   type ConfigSkipReason,
   type ConfigSource,
   type ConfigSourceFacts,
   type ConfigValue,
   type ConfigWarning,
+  PRIOR_IDENTITY_NOTICE_REASONS,
+  priorIdentityNoticeToken,
+  type PriorIdentityNotice,
+  type PriorIdentityNoticeReason,
+  renderPriorIdentityNotice,
 } from "./config.js";
 
 /**

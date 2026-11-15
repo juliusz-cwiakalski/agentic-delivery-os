@@ -1,0 +1,21 @@
+{
+  "capturedFrom": "1d4431eb94d1b225ea45a6c1ee892224c8a0e7ce",
+  "capturedCommand": "pre-change worktree run of packages/cli/bin/delivery-os.ts status --json with DELIVERY_OS_WORKING_NAME='bad/name'",
+  "fixture": {
+    ".delivery-os/config.yaml": "lane:\n  liveness-interval: 500\n  restart-budget: 4\n"
+  },
+  "invalidOverride": {
+    "exitCode": 2,
+    "errorCode": "fallback.internal",
+    "summary": "command \"status\" is not part of the composed prompt-required set",
+    "stderr": "delivery-os: fallback.internal\nsummary: command \"status\" is not part of the composed prompt-required set\n"
+  },
+  "configurationTouch": {
+    "capturedMethod": "strace -f -e trace=openat on the pre-change bin with the same fixture and invalid override: two openat calls on the fixture's .delivery-os/config.yaml",
+    "openatOfConfigFile": 2,
+    "textReads": 2,
+    "note": "readText is the only acquisition call that opens the configuration file, so the injected text-read count is the openat count; the existence probe uses a stat-class check and is asserted non-empty rather than counted"
+  },
+  "homeEntriesAfter": [".delivery-os-state/", ".delivery-os-state/host-index.json"],
+  "repoEntriesAfter": [".delivery-os/", ".delivery-os/config.yaml"]
+}

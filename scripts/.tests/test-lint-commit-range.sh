@@ -342,6 +342,76 @@ _detect_jobs_for() {
   )
 }
 
+# Resolve the per-commit worker bash that owns a marked slow-shim pid, without
+# assuming the gate is the $! of its launching subshell or that workers are the
+# gate's direct children. The shim keeps its pid through the pre-exec sleep and
+# the exec, and every bash level between it and the gate inherits the gate's
+# argv. Starting at the shim, walk ancestors and collect the contiguous run
+# whose argv contains the exact absolute gate path: the highest is the gate and
+# the next one below it is the worker bash. When only the gate remains (the
+# worker exec'd into the shim), the marked pid is itself the worker. Walking
+# stops at the launching subshell (gate_pid) so an unrelated ancestor with the
+# gate path in its arguments can never be mistaken for the gate. Returns the
+# victim on stdout; returns non-zero when no safe victim exists.
+_resolve_worker_from_shim_pid() {
+  local -r shim_pid="$1" gate_pid="$2"
+  local -a chain_pids=() chain_args=()
+  local pid="${shim_pid}" line got_pid ppid args
+  local -i depth=0
+
+  while [[ "${pid}" =~ ^[1-9][0-9]*$ ]] && ((depth < 64)); do
+    line="$(ps -ww -o pid=,ppid=,args= -p "${pid}" 2>/dev/null || true)"
+    [[ -n "${line}" ]] || break
+    got_pid="" ppid="" args=""
+    IFS=' ' read -r got_pid ppid args <<<"${line}"
+    got_pid="${got_pid//[[:space:]]/}"
+    ppid="${ppid//[[:space:]]/}"
+    [[ "${got_pid}" == "${pid}" ]] || break
+    chain_pids+=("${pid}")
+    chain_args+=("${args}")
+    [[ "${pid}" != "${gate_pid}" ]] || break
+    [[ "${ppid}" =~ ^[1-9][0-9]*$ ]] || break
+    pid="${ppid}"
+    depth=$((depth + 1))
+  done
+
+  # The chain starts at the shim, so the gate's descendant run is contiguous:
+  # stop at the first process above it whose argv no longer names the gate.
+  local -a gate_chain=()
+  local -i index count
+  for ((index = 0; index < ${#chain_pids[@]}; index++)); do
+    case "${chain_args[index]}" in
+      *"${GATE}"*) gate_chain+=("${chain_pids[index]}") ;;
+      *)
+        if ((${#gate_chain[@]} > 0)); then
+          break
+        fi
+        ;;
+    esac
+  done
+
+  count="${#gate_chain[@]}"
+  ((count > 0)) || return 1
+
+  local gate_ancestor="${gate_chain[count - 1]}" victim
+  if ((count == 1)); then
+    victim="${shim_pid}"
+  else
+    victim="${gate_chain[count - 2]}"
+  fi
+
+  # Defence in depth: the victim must itself name the exact gate path and must
+  # never be the gate, so a resolver regression cannot kill the gate.
+  [[ "${victim}" != "${gate_ancestor}" ]] || return 1
+  local victim_args
+  victim_args="$(ps -ww -o args= -p "${victim}" 2>/dev/null || true)"
+  case "${victim_args}" in
+    *"${GATE}"*) ;;
+    *) return 1 ;;
+  esac
+  printf '%s' "${victim}"
+}
+
 # Header field accessor (single-line header pinned by the gate's contract).
 _header_field() {
   local -r field="$1"
@@ -1822,8 +1892,11 @@ test_missing_worker_record_is_error() {
 }
 
 # F-2 (iteration 2): an externally killed worker leaves no record, so the run is
-# ERROR/exit 2 and never a zero-offender PASS. A slow shim guarantees the worker
-# cannot have written its status before the harness kills it.
+# ERROR/exit 2 and never a zero-offender PASS. A slow shim records its own pid
+# before the sleep/exec, so the victim is resolved from that stable pid by
+# walking ancestors, independent of how deeply bash nests the gate. The victim is
+# the worker bash below the gate (never the gate, never a $() subshell), so the
+# assertion still proves the missing-record path rather than a rendered error.
 test_killed_worker_is_error() {
   local repo
   repo="$(_configured_repo fx-killed-worker)"
@@ -1837,10 +1910,16 @@ test_killed_worker_is_error() {
     printf '  Precondition failed: a local binary would hide the slow shim\n' >&2
     return 1
   }
-  local slow_dir
+  local slow_dir marker
   slow_dir="${_test_tmpdir}/slow-bin"
+  marker="${_test_tmpdir}/slow-shim.pids"
   mkdir -p "${slow_dir}"
-  printf '#!/bin/sh\nsleep 3\nexec "%s" "$@"\n' "${HOST_COMMITLINT}" >"${slow_dir}/commitlint"
+  : >"${marker}"
+  # `exec` preserves the pid, so the marked pid stays valid through the delay
+  # and the replacement commitlint process; the marker is the only discovery
+  # input the harness trusts.
+  printf '#!/bin/sh\nprintf "%%s\\n" "$$" >> "%s"\nsleep 3\nexec "%s" "$@"\n' \
+    "${marker}" "${HOST_COMMITLINT}" >"${slow_dir}/commitlint"
   chmod +x "${slow_dir}/commitlint"
 
   local out err gate_pid
@@ -1850,31 +1929,38 @@ test_killed_worker_is_error() {
     >"${out}" 2>"${err}" &
   gate_pid=$!
 
-  # The workers are the gate's direct children and keep the gate's argv, so the
-  # victim is the first child whose command line names this script. `ps` truncates
+  # Bounded wait for the marker, then for a resolvable victim. `ps` truncates
   # args to COLUMNS even when piped, and the absolute gate path is long enough to
-  # fall past a narrow width, so ask for the unlimited form explicitly.
-  local victim="" attempt pid cmd
+  # fall past a narrow width, so the unlimited form is requested explicitly.
+  local victim="" marked attempt
   for ((attempt = 0; attempt < 200; attempt++)); do
+    if [[ -s "${marker}" ]]; then
+      marked="$(tail -n 1 "${marker}")"
+      marked="${marked//[[:space:]]/}"
+      if [[ -n "${marked}" ]]; then
+        victim="$(_resolve_worker_from_shim_pid "${marked}" "${gate_pid}" || true)"
+      fi
+    fi
     [[ -z "${victim}" ]] || break
-    while IFS= read -r pid; do
-      [[ -n "${pid}" ]] || continue
-      cmd="$(ps -ww -o args= -p "${pid}" 2>/dev/null || true)"
-      case "${cmd}" in
-        *lint-commit-range.sh*)
-          victim="${pid}"
-          break
-          ;;
-      esac
-    done < <(ps -o pid= --ppid "${gate_pid}" 2>/dev/null || true)
-    [[ -n "${victim}" ]] || sleep 0.1
+    # No worker can appear after the gate exits; report immediately instead of
+    # burning the remaining budget on a process tree that no longer exists.
+    kill -0 "${gate_pid}" 2>/dev/null || break
+    sleep 0.05
   done
 
-  [[ -n "${victim}" ]] || {
-    printf '  No worker was found to kill\n' >&2
-    kill "${gate_pid}" 2>/dev/null || true
+  if [[ -z "${victim}" ]]; then
+    printf '  Could not resolve the worker bash from slow-shim marker %s (gate pid %s)\n' \
+      "${marker}" "${gate_pid}" >&2
+    printf '  Gate stdout:\n' >&2
+    sed 's/^/    /' "${out}" >&2 || true
+    printf '  Gate stderr:\n' >&2
+    sed 's/^/    /' "${err}" >&2 || true
+    printf '  ps snapshot:\n' >&2
+    ps -ww -o pid=,ppid=,args= -e >&2 || true
+    kill -9 "${gate_pid}" 2>/dev/null || true
+    wait "${gate_pid}" 2>/dev/null || true
     return 1
-  }
+  fi
   kill -9 "${victim}" 2>/dev/null || true
 
   local gate_exit=0

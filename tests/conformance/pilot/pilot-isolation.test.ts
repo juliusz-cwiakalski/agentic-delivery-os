@@ -109,6 +109,7 @@ describe("TC-PILOT-003 stub/real matrix", () => {
     const exitCode = await runEntrypoint(["--version"], {
       streams: { stdout, stderr },
       environment: {},
+      declaredWorkingName: "delivery-os",
       composeProgram: () => {
         throw new Error("help/version must not compose a command runtime");
       },

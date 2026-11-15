@@ -9,10 +9,15 @@
 import { describe, expect, test } from "bun:test";
 import { createDaemonCommandDefinition } from "../../packages/cli/src/commands/daemon";
 import { createDaemonCommandRuntime } from "../../packages/cli/src/daemon-compose";
+import { daemonReentryEnvironment } from "../../packages/cli/src/production";
 import { projectExitCode } from "../../packages/cli/src/projection";
 import { readDaemonHeartbeat, readDaemonInstance } from "../../packages/core/src/app/index";
+import {
+  resolveHostStateRoot,
+  stateScopeEnvironmentName,
+} from "../../packages/core/src/app/state-scope";
+import { resolveBrandIdentity } from "../../packages/core/src/branding";
 import { ERROR_TABLE } from "../../packages/core/src/contracts/index";
-import { resolveHostStateRoot } from "../../packages/core/src/app/state-scope";
 import {
   createMountHarness,
   mountComposition,
@@ -680,3 +685,101 @@ const bindingFirst = (
   const rest = Object.fromEntries(Object.entries(forwarded).filter(([key]) => key !== binding));
   return { [binding]: value, ...rest };
 };
+
+/**
+ * GH-320 TC-BIN-083 — the detached-child environment allowlist is unchanged and
+ * still admits both identities: the working-name override keeps its delivered
+ * name and the state-directory binding keeps its brand-derived name, so the
+ * `jaiship` identity re-enters a detached child exactly as the delivered
+ * identity does, with no allowlist widening.
+ */
+describe("TC-BIN-083 child-environment allowlist admits both identities", () => {
+  const ALLOWLIST = /^(PATH|HOME|USERPROFILE|DELIVERY_OS_WORKING_NAME|[A-Z0-9_]*_STATE_DIR)$/u;
+
+  const identity = (workingName: string) => {
+    const resolved = resolveBrandIdentity({ workingName });
+    if (!resolved.ok) throw new Error(`the resolver rejected ${workingName}`);
+    return resolved.value;
+  };
+
+  test("child-environment: the production re-entry derivation drops a hostile key", () => {
+    // The production derivation, not this test's own regex, is the authority: a
+    // key outside the allowlist must not reach a detached child.
+    const derived = daemonReentryEnvironment({
+      PATH: "/usr/bin",
+      HOME: "/fixture/home",
+      DELIVERY_OS_WORKING_NAME: "jaiship",
+      JAISHIP_STATE_DIR: "/forwarded/look-alike",
+      NOT_ALLOWLISTED_KEY_FOR_PROBE: "hostile",
+      GITHUB_TOKEN: "credential",
+    });
+    expect(Object.keys(derived).sort()).toEqual(["DELIVERY_OS_WORKING_NAME", "HOME", "PATH"]);
+    expect(derived.DELIVERY_OS_WORKING_NAME).toBe("jaiship");
+    for (const hostile of ["JAISHIP_STATE_DIR", "NOT_ALLOWLISTED_KEY_FOR_PROBE", "GITHUB_TOKEN"]) {
+      expect({ hostile, present: Object.hasOwn(derived, hostile) }).toEqual({
+        hostile,
+        present: false,
+      });
+    }
+    // The brand-derived state-directory binding is added by the composition and
+    // written last, so a forwarded look-alike never survives for either identity.
+    for (const workingName of ["delivery-os", "jaiship"]) {
+      const brand = identity(workingName);
+      const binding = stateScopeEnvironmentName(brand.environmentPrefix);
+      const spawnEnvironment = { ...derived, [binding]: "/daemon/state" };
+      expect(spawnEnvironment[binding]).toBe("/daemon/state");
+      expect(spawnEnvironment.DELIVERY_OS_WORKING_NAME).toBe("jaiship");
+      expect(Object.keys(spawnEnvironment).every((key) => ALLOWLIST.test(key))).toBe(true);
+    }
+  });
+
+  test("child-environment: both identities' override and state-directory names match", () => {
+    for (const workingName of ["delivery-os", "jaiship"]) {
+      const brand = identity(workingName);
+      const binding = stateScopeEnvironmentName(brand.environmentPrefix);
+      expect(binding).toBe(stateDirectoryName(brand));
+      expect(binding).toMatch(ALLOWLIST);
+      expect("DELIVERY_OS_WORKING_NAME").toMatch(ALLOWLIST);
+      expect("NOT_ALLOWLISTED_KEY_FOR_PROBE").not.toMatch(
+        /^(PATH|HOME|USERPROFILE|DELIVERY_OS_WORKING_NAME)$/u,
+      );
+    }
+    expect(stateScopeEnvironmentName(identity("jaiship").environmentPrefix)).toBe(
+      "JAISHIP_STATE_DIR",
+    );
+    expect(stateScopeEnvironmentName(identity("delivery-os").environmentPrefix)).toBe(
+      "DELIVERY_OS_STATE_DIR",
+    );
+  });
+
+  test("child-environment: the re-entry keeps the override once and binds the state name last", async () => {
+    const brand = identity("jaiship");
+    const harness = createMountHarness({ label: "gh320-env-083" });
+    try {
+      const binding = stateScopeEnvironmentName(brand.environmentPrefix);
+      const runtime = createDaemonCommandRuntime(
+        mountComposition(harness, {
+          daemonEntry: `${harness.root}/bin/${brand.binaryName}`,
+          environmentName: binding,
+          unit: `${brand.binaryName}-daemon.service`,
+          binary: `${harness.root}/bin/${brand.binaryName}`,
+          reentryEnvironment: {
+            PATH: "/usr/bin",
+            DELIVERY_OS_WORKING_NAME: "jaiship",
+            HOME: harness.home,
+          },
+        }),
+      );
+      await invoke(runtime, ["start"]);
+      const spawn = harness.processPort.spawns[0];
+      expect(spawn).toBeDefined();
+      const keys = Object.keys(spawn?.environment ?? {});
+      expect(keys.filter((key) => key === "DELIVERY_OS_WORKING_NAME")).toHaveLength(1);
+      expect(keys.filter((key) => key === binding)).toHaveLength(1);
+      for (const key of keys) expect(key).toMatch(ALLOWLIST);
+      expect(spawn?.environment?.[binding]).toBe(harness.stateDirectory);
+    } finally {
+      harness.dispose();
+    }
+  });
+});

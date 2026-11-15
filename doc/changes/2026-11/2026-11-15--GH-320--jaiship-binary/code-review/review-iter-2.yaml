@@ -1,0 +1,490 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-320
+branch: feat/GH-320/jaiship-binary
+status: FAIL
+summary: >-
+  Iteration-2 re-review of the phase-6 remediation (9464de36, 217b5b38, 9059598e,
+  719f6e53, c370f8b4) against spec v1.7, test plan v1.6, plan r1.5 and the
+  iteration-1 findings. All three iteration-1 blockers are genuinely fixed and
+  independently re-verified, not just asserted: (F-1) an invalid override on a
+  `jaiship` run with a fixture `.delivery-os/config.yaml` now exits 2 with the
+  unchanged containment on stderr, exactly one `prior-identity-fallback:
+  config-read` line beside it (and one `state-read` when the prior host root is
+  also in play), a clean payload with no `warnings` member, and a byte-identical
+  silent alias — reproduced through the delivered bin in a scratch checkout;
+  (F-2) the launcher's target is now rendered with `printf %q`, so quote,
+  backslash, space and newline all yield a `bash -n`-clean word that expands to
+  the exact target, and the delivered installer case installs from a
+  `source o'brien` directory and runs `--version`; (F-3) every previously
+  vacuous "injected fixture" cell now drives a real guard —
+  `installerArrayViolations` is a production rule exercised from both suites, the
+  daemon cell drives the exported `daemonReentryEnvironment` derivation, and the
+  registration/splice controls run the delivered `scan()` over a scratch
+  repository — with no self-read, no in-memory filter assertion and no
+  splice-contains-itself assertion left. The five medium and six low findings are
+  addressed or honestly re-classified (F-6 revert, F-8 widened node-level scan
+  with an expression-position control, F-9 accessor reuse, F-10/F-11 installer
+  header/usage and exit taxonomy, F-14 read-count capture and digest-around-run).
+  Two defects remain, one blocking: a documented input —
+  `ADOS_SOURCE_DIR=<relative path>` — makes the installer record a **relative**
+  launcher target and report success, so the installed launcher is broken from any
+  other directory, contradicting spec F-6's "recorded as an absolute path at
+  install time", DEC-13, the guide's "exactly one absolute target", §21's "never a
+  silent success" and test plan TC-BIN-050's declared property (reproduced end to
+  end; no case covers it). Non-blocking: the new `node:fs` write arming in the
+  hermeticity preload does not trip for the ESM import form every guarded suite
+  uses, so the §10 "Phase 6 remediation" canary row does not generalise (F-12 is
+  only half closed), plus three low artifact-integrity drifts (phase-6 pm-notes
+  evidence missing, an impossible `delivery_planning` completion timestamp, and
+  one-revision-stale spec/plan citations). The tree itself is clean: 62 changed
+  paths, 0 undeclared against plan r1.5's 53 files + 2 folders (the two declared
+  revert paths are net-absent and explained), `plan validate` valid/full, every
+  targeted suite green, packages and test types typecheck, the branch-range
+  commit gate PASS at HEAD, and no probe touched the operator's real home.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 1
+  low: 3
+  info: 3
+spec_compliance: FAIL
+plan_compliance: FAIL
+dispositions:
+  - id: "iter1-F-1"
+    severity_was: high
+    status: FIXED
+    evidence: >-
+      Reproduced through the delivered bin (scratch HOME/TMPDIR, fixture checkout
+      with `.delivery-os/config.yaml`): `HOME=<scratch> DELIVERY_OS_WORKING_NAME=
+      'bad/name' jaiship status --json` exits 2, stderr is
+      `jaiship: fallback.internal` / `summary: command "status" is not part of the
+      composed prompt-required set` / one
+      `prior-identity-fallback: config-read read the prior identity configuration
+      at <repo>/.delivery-os/config.yaml because <repo>/.jaiship/config.yaml is
+      absent (nothing was moved, copied, or deleted)`; the JSON payload carries no
+      `warnings` member; the alias with the same fixture emits the two containment
+      lines only. With a prior host root present too, the containment path emits
+      exactly one `state-read` and one `config-read`. The mechanism is the declared
+      one: `entrypoint.ts` owns a `compositionNotices` sink passed as
+      `onCompositionNotice`, `production.ts` calls it from the single `emitNotice`
+      chokepoint (so the composition-scoped once-state still holds), and
+      `uncomposedDefinition(command, notices)` attaches the lines to the containment
+      outcome, which the delivered serializer writes to stderr and never into the
+      payload. Asserted by `identity-override.test.ts` (new
+      "fallback read is reported once beside the containment" cell) and
+      `prior-identity-notice.test.ts` (new invariance cell); no double emission on
+      the success path (one `state-read` + one `config-read` only).
+  - id: "iter1-F-2"
+    severity_was: high
+    status: FIXED
+    evidence: >-
+      `install_local_launcher` now renders `readonly TARGET=$(printf '%q' "${entry}")`.
+      Cross-checked at shell level for a path containing a single quote, a
+      backslash and a newline (all `bash -n` clean and expanding back to the exact
+      path), and end to end by the delivered `quote-and-space source path` case
+      (real `scripts/install.sh` run from `source o'brien`, `bash -n` exit 0, a
+      single `readonly TARGET=` assignment evaluating to
+      `<source>/packages/cli/bin/jaiship.ts`, `--version` → `jaiship 0.0.0 (build
+      dev)`, content digest unchanged on the second run). Suite: 8 pass. Residual
+      gap in the same block is new finding F-1 (non-absolute `source_dir`).
+  - id: "iter1-F-3"
+    severity_was: high
+    status: FIXED
+    evidence: >-
+      (a) `installerArrayViolations` is exported from `install-launcher.test.ts`
+      and driven by both suites; the injected `packages/cli/bin/jaiship.ts` and
+      `bin-launcher.ts` members fail naming the array and the path, and a
+      member-less array fails naming the array. (b) `daemonReentryEnvironment` is
+      the production derivation and the cell asserts a hostile key,
+      `JAISHIP_STATE_DIR` look-alike and a credential-shaped key are dropped and
+      the brand binding is written last. (c)+(d) `scratchScanRoot`+`scan(root)`
+      run the delivered scanner over a scratch git repository: the unregistered
+      guide fails `unregistered user-facing doc absent at corpusBaseline: <guide>`
+      and the same tree registered passes; the splice control asserts the returned
+      violation names the guide, the token and the exact line. No control asserts
+      its own seed text any more. Suites: 33 + 12 pass.
+  - id: "iter1-F-4"
+    severity_was: medium
+    status: ADDRESSED
+    evidence: >-
+      `DRY_RUN` is declared a plan-only preview in F-6, DEC-15, NFR-5, AC-F6-8,
+      §6 Flow 5 and §22, and the delivered step returns before any precondition
+      with one preview-marked line. `TC-BIN-056` step 3 is implemented (docs-only
+      source: exit 0, no `.jaiship`, exactly one `[DRY-RUN]` launcher line carrying
+      the "preview only; install-time preconditions are not evaluated" wording),
+      and the unchanged delivered `scripts/.tests/test-install.sh` control is still
+      56/56.
+  - id: "iter1-F-5"
+    severity_was: medium
+    status: ADDRESSED
+    evidence: >-
+      Spec §16 now declares `doc/00-index.md` CHANGED (descriptor-only row), the
+      six phase-7 reconciliations and the ports contract-inventory fixture; the
+      plan r1.5 declares 53 files + 2 folders and explains the two revert-only
+      paths; pm-notes carries the correction entry (superseded, not rewritten).
+      Independent reconciliation over `git diff --name-status
+      origin/main-tools...HEAD`: 62 changed paths, 0 undeclared, and spec §16's map
+      covers exactly the 53 product paths plus the declared fixture folder. No
+      artifact sentence claims the landing page is untouched.
+  - id: "iter1-F-6"
+    severity_was: medium
+    status: FIXED
+    evidence: >-
+      `readProjectGroupsConfig` is back to its base signature (the dead
+      `priorConfigurationDirectoryName` branch is gone) and
+      `packages/core/src/index.ts` is reverted; both are net-absent from the diff
+      (the plan documents them as phase-6 reverts).
+  - id: "iter1-F-7"
+    severity_was: medium
+    status: FIXED
+    evidence: >-
+      `TC-BIN-072` step 9 is implemented (installer header names all five
+      identifiers, `--help` Environment names four and not `ADOS_RAW_URL`, the
+      one-liner expectation is the raw-URL default plus `/scripts/install.sh`, the
+      change record names five, the guide names none) and step 8 runs the delivered
+      scan for the registration control. `identity-docs` suite: 12 pass.
+  - id: "iter1-F-8"
+    severity_was: medium
+    status: FIXED
+    evidence: >-
+      `literalSites` now walks every `StringLiteral`/`NoSubstitutionTemplateLiteral`
+      node and records expression-position literals as `expression@line:col`; the
+      tree still matches the five declared sites in both directions and the new
+      control seeds an argument property, an argument default and a template in a
+      property assignment and asserts each fails by name. DM-6/AC-F7-10/NFR-6 were
+      restated to the node-level rule, so rule and code now agree.
+  - id: "iter1-F-9"
+    severity_was: low
+    status: FIXED
+    evidence: >-
+      `bin-launcher.ts` imports `workingNameEnvironmentVariable()` and the local
+      `WORKING_NAME_OVERRIDE` literal is gone; the remaining literal sites are the
+      pre-existing delivered ones (entrypoint accessor, MCP default/override,
+      `edge.ts` neutral override name), unchanged by this remediation.
+  - id: "iter1-F-10"
+    severity_was: low
+    status: FIXED
+    evidence: >-
+      `scripts/install.sh`'s header and `--help` now state the launcher step, the
+      install-time Bun requirement, the classified failures and the `DRY_RUN`
+      preview; the discoverability cell pins header-five / help-four.
+  - id: "iter1-F-11"
+    severity_was: low
+    status: FIXED
+    evidence: >-
+      The two precondition failures now use `log_fatal` (exit 4) and the header's
+      exit taxonomy names exit 4 for "a launcher precondition the host does not
+      meet"; `bash -n` and `shellcheck --severity=error` are clean.
+  - id: "iter1-F-12"
+    severity_was: low
+    status: PARTIAL
+    evidence: >-
+      `Bun.spawn` is now armed and verified live (a `Bun.spawn(["curl", …])` in a
+      preload run is recorded and exits 1). The `node:fs` write arming is not
+      effective for the form the guarded suites use — see new finding F-2.
+  - id: "iter1-F-13"
+    severity_was: low
+    status: PARTIAL
+    evidence: >-
+      The §10 gate row now records the post-sync 8624/4/0 run and the scenario
+      citations were bumped; two stale statements and one-revision-stale plan
+      citations remain — see new finding F-5.
+  - id: "iter1-F-14"
+    severity_was: low
+    status: FIXED
+    evidence: >-
+      `pre-change-touch.json` now carries `configurationTouch` (openat-verified
+      `textReads: 2`) and the cell compares the injected read count for both bins
+      (plus non-empty probes); the digest is captured before the second run and
+      compared after it; the tautological parity mutant is deleted.
+  - id: "iter1-F-15"
+    severity_was: info
+    status: DEFERRED
+    evidence: >-
+      Info-only; the added per-default-root probe remains unstated in F-4. No
+      action required for acceptance, and nothing in the remediation changed it.
+  - id: "iter1-F-16"
+    severity_was: info
+    status: ACCEPTED
+    evidence: >-
+      All four recorded deviations were re-checked and remain acceptable as
+      records (warnings channel, bins' `process.env` reads, behaviour-only notice
+      token, phase-7 doc corrections). The optional wording nit is still present —
+      new finding F-6.
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: scripts/install.sh:1026
+    message: >-
+      [B | owner: plan Phase 6 obligation 6.2 / spec F-6, DEC-13] The launcher
+      records whatever `source_dir` string it is given, so the documented
+      `ADOS_SOURCE_DIR` override accepts a relative path and the rendered
+      `readonly TARGET=` word is then relative. Reproduced end to end: from a
+      scratch project root with `src -> <repo>`, `ADOS_SOURCE_DIR=src HOME=<scratch>
+      bash scripts/install.sh --local --no-fetch` exits 0 and prints `Launcher
+      registered: <home>/.jaiship/bin/jaiship -> src/packages/cli/bin/jaiship.ts`;
+      the launcher content is `readonly TARGET=src/packages/cli/bin/jaiship.ts`,
+      and running it from any other directory (e.g. `/tmp`) fails with `the
+      installed target src/packages/cli/bin/jaiship.ts no longer exists`. Spec F-6
+      states the target is "recorded as an absolute path at install time", DEC-13
+      says "one absolute target", the guide says "records exactly one absolute
+      target", §21 promises the launcher's failure mode is "never a silent
+      success", and `TC-BIN-050` step 1/2 assert "one absolute target" — so the
+      installer reports success for a shim the specification says cannot exist in
+      that shape. `resolve_source_dir` returns `${ADOS_SOURCE_DIR}` verbatim
+      (line 610), the entry is composed by string concatenation (line 999) and the
+      word is rendered unnormalised (line 1026). No case exercises a relative
+      source (every delivered scratch source is absolute), so the suite cannot see
+      it; the F-2 remediation touched exactly this rendering step.
+    suggestion: >-
+      Absolutize the source root once before the launcher step (e.g.
+      `source_dir="$(cd -- "${source_dir}" && pwd)"` in `do_local_install` —
+      logical `pwd`, not `pwd -P`, so the declared symlinked-source case keeps its
+      recorded path — or reject a non-absolute `${entry}` in
+      `install_local_launcher` with `log_fatal`), and add one installer case:
+      `ADOS_SOURCE_DIR=<relative>` records an absolute `readonly TARGET=` word,
+      `bash -n` passes and `--version` works from outside the checkout. Keep the
+      quote/space case unchanged.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: testing
+    location: tests/checks/support/arm-counters.preload.ts:130
+    message: >-
+      [M | owner: plan Phase 5 obligation / D11, F-12 residual] The new `node:fs`
+      write arming patches the module object returned by `require("node:fs")`, and
+      that patch is not seen by ESM importers — which is how every guarded suite
+      and fixture harness acquires `writeFileSync`/`mkdirSync` (e.g.
+      `prior-identity/harness.ts:11`). Reproduced under the delivered preload: a
+      canary writing outside the allowed roots with a static named import
+      (`import { writeFileSync, mkdirSync } from "node:fs"`), with a namespace
+      import (`import * as fs from "node:fs"`) and with `await import("node:fs")`
+      is **not** recorded and the run exits 0; only `require("node:fs").…` inside
+      the same module is recorded. The preload docstring ("every write outside the
+      allowed scratch roots (`Bun.write` and the `node:fs` write entry points)"),
+      test plan v1.6 `TC-BIN-084` (precondition and step 3) and the §10 "Phase 6
+      remediation" row ("a one-off `bun --preload … -e …` performing a `node:fs`
+      `writeFileSync`, an `fs.mkdirSync` … recorded … so the newly armed entry
+      points trip") therefore claim a coverage the guard does not have for the
+      suites it guards. Spec §16's `arm-counters` row still describes the narrower
+      claim and stays accurate. Related (pre-existing, smaller): only `Bun.spawn`/
+      `Bun.spawnSync` are armed, while the guarded installer and docs suites spawn
+      through `node:child_process.spawnSync`, so a network `git clone` through that
+      path would be invisible too.
+    suggestion: >-
+      Either narrow the claim back and delete the §10 probe row / the docstring's
+      `node:fs` sentence (spec §16 already states the limited claim), or make the
+      arming real for module imports (a counted write helper the harnesses must
+      use, a static scan for `node:fs` write imports in the guarded suites, or a
+      `node:child_process` arm alongside the Bun ones) and prove it with a canary
+      written in the same static-import form as the suites. Do not record an
+      `-e`-only probe as evidence for a preload the suites load as modules.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary/chg-GH-320-pm-notes.yaml:275
+    message: >-
+      [L | owner: plan Phase 6 evidence / @pm] Phases 1-5 each have a pm-notes
+      `notes:` entry naming the plan phase id, the commit hash(es) and the gate
+      results. Phase 6 (the review-iter-1 remediation, declared in plan r1.4/r1.5
+      and closed by `9059598e`) has none — `grep "Plan phase"` finds phases 1-5
+      only. The remediation's gate evidence exists in test plan §10 and in this
+      review, but the plan's declared completion-evidence rule ("the pm-notes
+      `notes:` entry naming the plan phase id, commit hash, and test result") is
+      not met, so the DoD check cannot confirm phase 6 from pm-notes.
+    suggestion: >-
+      Add one `notes:` entry for plan phase 6 through the normal lifecycle (plan
+      phase id, the remediation commits 9464de36/217b5b38/9059598e, and the gate
+      results already recorded in test plan §10), or state in the plan that phase
+      6's evidence home is test plan §10 and point DoD there.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: low
+    confidence: medium
+    category: artifact-consistency
+    location: doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary/chg-GH-320-pm-notes.yaml:11
+    message: >-
+      [L | owner: @pm phase record] The phase timeline in pm-notes is not
+      internally consistent. `delivery_planning.completed` is
+      `2026-11-15T06:40:42.298Z`, i.e. before `specification` completed
+      (11:59:11.751Z) and before plan r1.4/r1.5 — the revisions that carry the
+      phase-6 scope — were authored (~12:00Z and later). It also regressed between
+      commits: 9464de36's context has 11:37:59.528Z, 217b5b38 carried 12:01:49.579Z
+      and wrote 06:40:42.298Z in the same commit that reset `delivery` to null,
+      which a `phase complete` (which stamps the current time) cannot produce.
+      Recorded as an observation on an artifact, not as an inference about who
+      edited it.
+    suggestion: >-
+      Re-record `delivery_planning` at close-out through the `phase` primitive so
+      the completion is at or after the revisions it covers, and reconcile the
+      timeline before the DoD check; if 06:40 is the authoritative first completion,
+      say so in a note so the ordering is explained rather than contradictory.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: low
+    confidence: high
+    category: artifact-consistency
+    location: doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary/chg-GH-320-test-plan.md:177
+    message: >-
+      [L | owner: test plan v1.6 / spec v1.7 citations] Two statements still
+      describe superseded artefacts. (a) The §3.5 table row `LIT-TP-1` (test plan
+      line 177) still says "DM-6 declares the guard's rule — a `packages/**`
+      string-literal scan" and cites "spec v1.2 DM-6", while DM-6, AC-F7-10 and
+      NFR-6 now declare the node-level walk; the case below it was updated, this
+      traceability row was not. (b) The intro paragraph (line 30) and the v1.6
+      revision row (line 1934) still name "plan revision 1.4" as the plan these
+      revisions reconcile, while the plan at HEAD is r1.5, and spec §17/§22
+      ("test plan v1.6 §10 against plan r1.4") repeat it; spec v1.7's own revision
+      log says the operative citations were refreshed to "plan r1.4". The
+      delivered test-plan v1.6 header's first sentence likewise still says the
+      document reconciles "with spec v1.5".
+    suggestion: >-
+      Update the `LIT-TP-1` row to the node-level rule and bump the operative
+      citations to spec v1.7 / plan r1.5 in one sweep (test plan intro, v1.6 row,
+      spec §17 verification intent, §22 gate evidence), leaving the historical
+      revision entries intact.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: info
+    confidence: high
+    category: documents
+    location: doc/spec/features/feature-cli-entrypoint.md:34
+    message: >-
+      [I | owner: spec wording] `feature-cli-entrypoint.md` still states "Help and
+      version are the one surface callable before trust is established" one
+      sentence after introducing `--print-install-path`, which is a third member of
+      that pre-composition surface (as the same paragraph already says two
+      sentences earlier). No behaviour depends on the wording.
+    suggestion: >-
+      Optionally include the install-path read in that sentence ("help, version and
+      the install-path read"). Carried forward from iteration-1 F-16; not blocking.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/cli/src/entrypoint.ts:420
+    message: >-
+      [I | accepted observation] On the containment path the notice lines follow
+      the two containment diagnostics on stderr (`jaiship: fallback.internal`,
+      `summary: …`, then the notice). AC-F5-6 constrains only the notice line's own
+      beginning, its count and the payload, so the ordering is compliant; recorded
+      here so nobody "fixes" the order without a requirement. The delivered
+      assertions (identity-override and prior-identity-notice) assert presence and
+      count, not order, which matches the AC.
+    suggestion: >-
+      No action. If a stable order is ever wanted, pin it in the AC and in one
+      assertion rather than by accident.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-8
+    severity: info
+    confidence: high
+    category: testing
+    location: tests/checks/support/arm-counters.preload.ts:121
+    message: >-
+      [I | owner: plan Phase 5] `isAllowed` matches with a bare
+      `path.startsWith(root)`, so `<root>-evil/…` and `<repo>/tmpfoo/…` count as
+      inside the allowed roots (the repo-scratch allowance was added in this
+      remediation, `REPO_SCRATCH = <cwd>/tmp`). Test-only, pre-existing shape, no
+      product effect and no violated claim.
+    suggestion: >-
+      Optionally compare with a trailing separator (`path === root ||
+      path.startsWith(`${root}/`)`) when the preload is next touched.
+    suppressed: false
+    published_url: null
+    published_at: null
+ac_verdicts:
+  AC-F1-1: PASS
+  AC-F1-2: PASS
+  AC-F2-3: PASS
+  AC-F2-7: "PASS (alias projection and pre-composition touch unchanged, summary included; the new jaiship containment notice is required by AC-F5-6 and changes no exit, payload or touch)"
+  AC-F3-4: PASS
+  AC-F4-5: PASS
+  AC-F5-6: "PASS (was FAIL at iter-1: exactly one notice per source kind now reaches stderr on the containment path and on the normal path, alias silent, payload clean; verified live for config-read, state-read and both together)"
+  AC-F6-8: "PASS (real-run classified failures inside the declared exit taxonomy; DRY_RUN preview cell; quote/space source cell. The non-absolute target of a relative ADOS_SOURCE_DIR is a spec F-6/DEC-13 violation outside this AC's given — F-1)"
+  AC-F7-9: "PASS (provisional: all targeted suites, package and test typechecks, forbidden-literals and the branch-range commit gate re-run green at c370f8b4; the aggregate `pnpm check` has not run since phase 6 — phase 9 owes it, as plan r1.5 and test plan §10 already state)"
+  AC-F7-10: "PASS (was FAIL at iter-1: every guard now fails by name when seeded — installer arrays, launcher step, node-level literal inventory with an expression-position control, content inventory, installer absence, daemon re-entry derivation)"
+  AC-F8-11: PASS
+verification:
+  mode: local
+  diff_base: origin/main-tools
+  merge_base: 8a1f77ad
+  head: c370f8b4
+  changed_paths: 62
+  plan_revision: r1.5
+  spec_revision: v1.7
+  test_plan_revision: v1.6
+  plan_validate: "bun packages/cli/bin/delivery-os.ts plan validate GH-320 -> verdict=valid, artifact=yaml:chg-GH-320-plan.yaml, tier=full, readyForDevelopment=true (run from this branch's source; the installed delivery-os on PATH points at another checkout and cannot run here)"
+  scope_reconciliation: >-
+    Script over `git diff --name-status origin/main-tools...HEAD` against plan
+    r1.5's declared set (53 file paths + 2 folders): 62 changed paths, 0
+    undeclared. Every declared file is in spec §16's map or the declared
+    prior-identity fixture folder; spec §16 lists exactly the 53 product paths
+    plus that folder. Two declared paths are net-reverted to base
+    (`packages/adapters/src/file/projects-config.ts`, `packages/core/src/index.ts`)
+    and are documented by the plan as phase-6-only revert declarations, so no
+    SCOPE_DEVIATION remains.
+  suites_re_run:
+    - "bun test tests/structure/entrypoint-bin.test.ts tests/structure/entrypoint-installer-absence.test.ts tests/structure/install-launcher.test.ts -> 33 pass / 0 fail"
+    - "bun test tests/checks/install-launcher-installer.test.ts -> 8 pass / 0 fail (incl. quote-and-space launcher case, DRY_RUN preview, idempotence digest)"
+    - "bun test tests/behaviour/identity-override.test.ts tests/behaviour/prior-identity-notice.test.ts -> 23 pass / 0 fail"
+    - "bun test tests/checks/identity-docs.test.ts -> 12 pass / 0 fail"
+    - "bun test tests/checks/prior-identity-hermetic.test.ts -> 5 pass / 0 fail"
+    - "bun test tests/behaviour/daemon-start-detached.test.ts -> 22 pass / 0 fail"
+    - "bun test tests/structure/content-inventory.test.ts tests/checks/doc-conformance.test.ts tests/behaviour/entrypoint-two-bins.test.ts tests/behaviour/prior-identity-config-fallback.test.ts tests/behaviour/prior-identity-state-fallback.test.ts tests/structure/state-scope.test.ts tests/structure/projects-state-scope-policy.test.ts -> 99 pass / 0 fail"
+    - "bash scripts/.tests/test-install.sh -> 56/56 passed (unchanged delivered control)"
+    - "bun run scripts/checks/forbidden-literals.ts -> 5/5 scope classes, 0 violations (guide registered, 158 user-facing docs scanned)"
+    - "pnpm -r typecheck -> core, adapters, cli, mcp, opencode, testkit all Done; pnpm exec tsc -p tests/types/tsconfig.json -> exit 0"
+    - "bash scripts/lint-commit-range.sh --base main-tools -> VERDICT: PASS, 39 commits, 0 offending"
+    - "bash -n scripts/install.sh -> clean; shellcheck --severity=error scripts/install.sh -> clean"
+    - "bunx biome check <13 changed TS files> -> exit 0 (12 warnings, no errors, no format drift)"
+  live_probes:
+    - "F-1 containment (jaiship, invalid override, fixture .delivery-os/config.yaml): exit 2; stderr = containment diagnostic + exactly one `prior-identity-fallback: config-read …`; JSON payload has no `warnings`; alias with the same fixture emits the two containment lines only"
+    - "F-1 both kinds (jaiship, invalid override, fixture config + prior host root): exit 2; stderr = containment diagnostic + one `state-read` + one `config-read`"
+    - "normal path (jaiship, no override, fixture config + prior host root): exit 0; one `state-read` + one `config-read`, payload clean, no ~/.jaiship-state created"
+    - "launcher target rendering: `printf %q` words for a path containing a single quote, a backslash and a newline are `bash -n` clean and expand to the exact path"
+    - "F-1 (new): `ADOS_SOURCE_DIR=src` relative install -> exit 0, `readonly TARGET=src/packages/cli/bin/jaiship.ts`, launcher from /tmp exits 1 'no longer exists'"
+    - "F-2 (new): preload canary — ESM named/namespace/dynamic `node:fs` writes outside the allowed roots are NOT recorded (exit 0); `require('node:fs').writeFileSync` and `Bun.spawn(['curl', …])` are recorded (exit 1)"
+  not_re_run:
+    - "aggregate `pnpm check` (by instruction; last green run 8624/4/0 predates phase 6 — phase 9 obligation)"
+  real_home_safety: >-
+    Every probe used HOME/TMPDIR under /tmp/opencode; the install probes wrote
+    only into a scratch HOME and a scratch project root, and the operator's real
+    ~/.jaiship*, ~/.delivery-os-state and ~/.ados were never read or written. The
+    working tree is clean after the run.
+reviewed_at: 2026-11-15T13:05:00Z
+next_step: EXECUTE_REMEDIATION_PHASE
+plan_gaps: >-
+  Scope and phase conformance are now clean: 0 undeclared paths, all 53 declared
+  files present in spec §16's map or the declared fixture folder, `plan validate`
+  valid/full, phases 1-5 complete with pm-notes commit+test evidence, and the two
+  revert-only declarations explained. OPEN_PHASES does not fire; EVIDENCE_MISSING
+  fires once for phase 6 (no pm-notes `notes:` entry; evidence lives in test plan
+  §10) — F-3. No SCOPE_DEVIATION remains.
+test_coverage_gaps: >-
+  (1) No case installs from a relative `ADOS_SOURCE_DIR`, so the non-absolute
+  recorded target is invisible (F-1). (2) The hermeticity canary does not exercise
+  a `node:fs` write in the static-import form the guarded suites use, so the
+  newly armed class cannot be shown to trip (F-2). (3) The preload arms no
+  `node:child_process` spawn although two guarded suites spawn through it (F-2).

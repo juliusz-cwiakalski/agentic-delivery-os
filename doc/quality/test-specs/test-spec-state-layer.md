@@ -3,11 +3,11 @@ ados_distribution: internal
 id: TEST-SPEC-STATE-LAYER
 status: Current
 created: 2026-11-05
-last_updated: 2026-11-13
+last_updated: 2026-11-15
 owners: ["engineering"]
 service: delivery-os
 links:
-  related_changes: ["GH-174", "GH-222", "GH-227", "GH-223", "GH-232", "GH-241", "GH-291"]
+  related_changes: ["GH-174", "GH-222", "GH-227", "GH-223", "GH-232", "GH-241", "GH-291", "GH-320"]
   feature_spec: doc/spec/features/feature-state-layer.md
 ---
 
@@ -53,12 +53,13 @@ Every integration store lives under a per-test temporary root and is driven thro
 - `audit-read.test.ts`, `audit-read-refusal.test.ts`, `audit-read-time-window.test.ts`, `audit-read-command-filter.test.ts`, `audit-rebuild-orphan.test.ts` — exact filters, inclusive time windows, mandatory bounds and in-band truncation, refusal identity, torn/unknown classification, and raw-token command matching.
 - `retro-registry.test.ts`, `retro-sidecar-append.test.ts`, `retro-chain.test.ts`, `retro-chain-mutations.test.ts`, `retro-chain-salvage.test.ts`, `retro-chain-cross-process.test.ts`, `retro-key-artifact.test.ts`, `retro-malformed.test.ts` — the retro registry's three-kind boundary validation and additive seed, collector-fenced sidecar appends and permissions, clean and mutated chain verification, key creation/reuse/open failures, cross-process continuity, salvage continuity, and entry-level malformation preservation.
 - `telemetry-storage-migration.test.ts`, `telemetry-storage-damage.test.ts`, `telemetry-storage-growth.test.ts`, `telemetry-storage-coexistence.test.ts` — version-declared re-read equality with no in-place mutation or dropped record, the torn/unsupported-version damage identities, linear per-step and per-session-close growth, and the v2 and closeout planes coexisting. The record contract is in [Harness Telemetry v2](../../spec/features/feature-telemetry-v2.md).
+- `prior-identity-state-fallback.test.ts` — the host-root selection of an identity that declares a prior identity: an absolute `<PREFIX>_STATE_DIR` override disables the fallback, the current default root wins when both exist, the prior default root is selected when only it exists, no second root is created, a prior-prefix state-directory override is never read, and one effective root serves the reads and store operations that follow. The policy contract is in [Repositories and the Host Overview](../../spec/features/feature-projects.md).
 
 ### Contract, Structure, and Boundary Tests
 
 - `tests/checks/error-table-sync.test.ts`, `tests/structure/error-table.test.ts` — machine ↔ documented table parity in both directions, row shape, and non-vacuity mutations.
 - `tests/structure/state-contract.test.ts`, `tests/structure/audit-contract.test.ts` — data-only contract shape and the exact audit kind/schema/key/field declarations.
-- `tests/structure/state-imports.test.ts`, `state-scope.test.ts`, `audit-imports.test.ts`, `audit-surface.test.ts` — import confinement, runtime-API placement, the documented consumer set, the absence of an audit command, and the absence of an unbounded dump export.
+- `tests/structure/state-imports.test.ts`, `state-scope.test.ts`, `projects-state-scope-policy.test.ts`, `audit-imports.test.ts`, `audit-surface.test.ts` — import confinement, runtime-API placement, the documented consumer set, the absence of an audit command, the absence of an unbounded dump export, and the one host-root rule with its prior-identity selection over injected existence facts.
 - `tests/checks/packed-state.test.ts` — the packed `core/state` subpath imports and runs.
 
 ### End-to-End Tests

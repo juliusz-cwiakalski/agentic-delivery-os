@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-DOC-DISTRIBUTION-MARKER
 status: Current
 created: 2026-06-28
-last_updated: 2026-06-28
+last_updated: 2026-11-15
 owners: ["engineering"]
 service: delivery-os
 summary: "The ados_distribution marker system: three values, a two-path parser, a marker-derived install set, a five-mode CI drift guard, and the closed DM-2 scan scope (which excludes doc/spec/**)."
 links:
-  related_changes: ["GH-79", "GH-67"]
+  related_changes: ["GH-79", "GH-67", "GH-320"]
 ---
 
 # Feature: Doc Distribution Marker
@@ -20,7 +20,7 @@ links:
 
 ADOS is a template/framework repo: `scripts/install.sh` redistributes selected docs to adopting projects. The `ados_distribution` frontmatter marker (`redistributable | internal | project-generated`) is the **single source of truth** for classification, from which the install set and a CI drift guard are both derived — replacing a hand-maintained allowlist. This spec covers the marker values, the two-path parser, the derived install set, the five-mode guard, and the closed scan scope.
 
-> **Marker system delivered by GH-67; record semantics anchored by ODR-0001.** This spec documents the system as built; the delivering change is **GH-67**, and the ambiguous-classification case (YAML register templates) is resolved by [ODR-0001](../../decisions/ODR-0001-classify-yaml-register-templates-redistributable.md). The installer spec **GH-77** is the natural cross-link for installer behavior but is **TBD / out of scope** here (not yet delivered).
+> **Marker system delivered by GH-67; record semantics anchored by ODR-0001.** This spec documents the system as built; the delivering change is **GH-67**, and the ambiguous-classification case (YAML register templates) is resolved by [ODR-0001](../../decisions/ODR-0001-classify-yaml-register-templates-redistributable.md). Installer behavior beyond the launcher registration documented below remains out of scope here.
 
 ## Business Context
 
@@ -34,6 +34,19 @@ ADOS is a template/framework repo: `scripts/install.sh` redistributes selected d
 
 - **Primary Goal:** Eliminate the drift class by deriving the install set + guard from one marker source of truth.
 - **KPIs:** The CI guard (`scripts/.tests/test-doc-distribution.sh`) passes on the green baseline and fails on each of the five drift modes.
+
+## The launcher registration in the install set
+
+The local install set is the marker-derived document set plus the delivery scripts, the delivery tools, the template files, and the plugin projection. It also registers one executable launcher outside the project tree, at the brand install path the executable itself declares (`~/.jaiship/bin/jaiship` for the `jaiship` identity). That launcher is not a redistributable document and is not a template, so it is not part of the marker-derived set and the guard's document rules are unchanged; it is a declared installer step:
+
+- **Target:** exactly one absolute path, the installed source tree's CLI entry, recorded at install time and rendered as a single safely quoted shell word, so a source path containing a single quote, a backslash, or a space still yields a syntactically valid launcher that execs exactly that target.
+- **Path authority:** the installer reads the path from the executable's state-free `--print-install-path` self-description with the working-name override removed from that child's environment, and expands only the leading home marker. It composes no name-derived path in bash.
+- **Idempotence:** re-running an unchanged install rewrites nothing; a different source repoints the launcher.
+- **Missing target:** one bounded stderr line naming the expected target and the remedy, with a non-zero exit.
+- **Install-time runtime requirement:** the Bun runtime must be resolvable at install time. A missing runtime, or a resolved source tree without the CLI entry, is a classified failure naming what is missing, with a non-zero exit and no launcher written — never a silent skip. `DRY_RUN` (or `--dry-run`) is a plan-only preview: it evaluates no install-time precondition, writes nothing, prints one plan line naming the CLI entry it would record, and exits `0`, including from a source tree without the CLI entry; the classified failures apply to a real run only. The step is independent of `--tool`.
+- **Unchanged:** the delivery script array, the delivery tool array, the template set, the hook examples, the plugin projection, and the `delivery-os` bin mapping. No `delivery-os` launcher is registered and no uninstall path exists.
+
+The operator-facing description is the [Local Install and Prior-Identity Transition](../../guides/local-install.md) guide.
 
 ## User Experience & Functionality
 
@@ -107,6 +120,7 @@ The `get_marker()` parser is **shared** between `install.sh` and the guard (the 
 |-------|-------|-------|
 | CI | Guard green | `bash scripts/.tests/test-doc-distribution.sh` |
 | CI | Modes harness | `bash scripts/.tests/test-doc-distribution-modes.sh` exercises each of the 5 failure modes on a synthetic tree |
+| Bun test job | Launcher step | `bun test tests/structure/install-launcher.test.ts tests/checks/install-launcher-installer.test.ts` — registration structure, path authority, content idempotence, repointing, the classified failures, and `--version` from outside the repository |
 | Manual | Install set | `install.sh --local` in a sandbox; compare against marker-derived set |
 
 ## Dependencies & Risks

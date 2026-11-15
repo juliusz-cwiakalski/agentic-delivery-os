@@ -1630,6 +1630,7 @@ the project family separately.
   package scope, and registry names.
 - AC: one constant swap plus migration renames everything; legacy paths
   warn.
+- Progress: delivered by GH-320 - the executable name and local install posture; the naming freeze and the wider rename remain.
 - Depends on: M0-S2.
 
 ### M4-S2 Publication and release automation

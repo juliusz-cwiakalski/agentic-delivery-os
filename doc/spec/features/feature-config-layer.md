@@ -2,13 +2,13 @@
 id: SPEC-CONFIG-LAYER
 status: Current
 created: 2026-10-30
-last_updated: 2026-11-11
+last_updated: 2026-11-15
 owners: ["engineering"]
 service: delivery-os
 ados_distribution: internal
-summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed harness branch (selected kind, execution kind, store locations, deny-by-default environment allowlist with a variable-only optional marker), the typed lane branch (liveness interval and restart budget), the typed queue branch (lease TTL and per-condition-type park recheck), the typed daemon branch (eleven cadence, transport, and socket keys), the typed coordinator branch (six supervision policy keys), and the typed poll branch (per-platform base, maximum, and minimum spacing), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, and nine classified config errors."
+summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed harness branch (selected kind, execution kind, store locations, deny-by-default environment allowlist with a variable-only optional marker), the typed lane branch (liveness interval and restart budget), the typed queue branch (lease TTL and per-condition-type park recheck), the typed daemon branch (eleven cadence, transport, and socket keys), the typed coordinator branch (six supervision policy keys), and the typed poll branch (per-platform base, maximum, and minimum spacing), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, the per-layer prior-identity read fallback for the two repository-owned layers, and nine classified config errors."
 links:
-  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237", "GH-238", "GH-241", "GH-277", "GH-280", "GH-286", "GH-288"]
+  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237", "GH-238", "GH-241", "GH-277", "GH-280", "GH-286", "GH-288", "GH-320"]
   related_decisions: ["ADR-0003", "ADR-0008", "TDR-0003", "TDR-0021"]
 ---
 
@@ -54,6 +54,19 @@ The authoritative selection is [ADR-0003](../../decisions/ADR-0003-oss-monorepo-
 | 7 | CLI | Catalog-declared flag mappings |
 
 `<configDirectoryName>` and `<environmentPrefix>` are brand-derived parameters supplied by the frozen `BrandIdentity`; no product name is committed in this document. A selected file (`--config <path>`, then `<environmentPrefix>CONFIG`, then a recognized legacy selector) occupies the project-committed slot. It is not an eighth layer. The selected file's actual path and positions are reported.
+
+### Prior-identity fallback
+
+When the invoking identity declares a prior identity (the `jaiship` bin declares the pre-freeze working name; the compatibility alias declares none), the two repository-owned layers consider the prior identity's file as a second candidate:
+
+| Layer | Candidate order | Both present | Explicit selection |
+|---|---|---|---|
+| Project-committed | current `<repo>/<configDirectoryName>/config.yaml` → prior `<repo>/<priorConfigDirectoryName>/config.yaml` → delivered `missing` skip | current file read; prior reported `config-skipped` | the selected file occupies the slot; no layer falls back |
+| Project-local | current `<repo>/<configDirectoryName>/config.local.yaml` → prior `<repo>/<priorConfigDirectoryName>/config.local.yaml` → delivered `missing` skip | current file read; prior reported `config-skipped` | `selected-config` skip, no fallback |
+
+The current file wins whenever it exists and the prior file is then reported **not used**; the prior file is read (as that same layer, with its real path recorded as the loaded file **and as the origin of every value it supplies**) only when the current file is absent. Machine-global layers never fall back, because the transitional claim is about artifacts the product created in a workspace. The fallback is strictly read-only — no write, copy, move, or deletion ever targets the prior directory — and is **not** a configuration warning, so `--strict` is unchanged and a prior read cannot become `config.warning.strict`. Skips, error codes, and warning kinds are unchanged.
+
+The fallback is exercised by the delivered **composition-time acquisition**: the production composition resolves the daemon and lane settings over one read-only project-configuration acquisition before any handler runs, so every composed invocation performs it and `status --json` exercises the prior read without the change adding an acquisition to any command. The read reports itself once per source kind per composed program through the prior-identity fallback notice (`prior-identity-fallback`, reasons `config-read` and `config-skipped`) on stderr in every mode including `--json`, never in a payload and with no exit-code change. The notice survives a composition that then fails: the composition hands each notice line it already produced to the entrypoint's containment outcome, so an invalid working-name override that still reads the prior file emits its `config-read` line before `fallback.internal` answers at exit `2`, with the delivered summary and a clean payload. The operator-facing description is the [Local Install and Prior-Identity Transition](../../../guides/local-install.md) guide.
 
 ### Discovery and CI controls
 
@@ -150,7 +163,7 @@ The machine table in [Result Contract and Error Table](feature-result-contract.m
 | `packages/core/src/config/resolver.ts` | Pure seven-layer validation, merge, reset, restrictions, warnings and origins |
 | `packages/core/src/config/provenance.ts` | Origin replacement, descendant removal and display grammar |
 | `packages/adapters/src/file/yaml-parser.ts` | YAML 1.2 one-document parsing, bounds, positions and safe diagnostics |
-| `packages/adapters/src/file/config-source.ts` | Platform paths, DM-2 eligibility, selected/root handling and loaded/skipped facts |
+| `packages/adapters/src/file/config-source.ts` | Platform paths, DM-2 eligibility, per-layer prior-identity candidate ordering, selected/root handling and loaded/skipped/prior facts |
 | `packages/adapters/src/repo/index.ts` | Bounded git/worktree root discovery |
 | `packages/adapters/src/legacy/index.ts` | Pre-freeze environment/selector mapping with current names winning |
 | `packages/cli/src/edge.ts` | Frozen bootstrap, source/legacy composition, secret registration and manifest injection |
@@ -193,10 +206,10 @@ Configuration adds the proposed Ajv and YAML runtime dependencies recorded in th
 
 | Level | Scope | Evidence |
 |---|---|---|
-| Behaviour | Seven winners, merge/reset, schema, restrictions, provenance, parser, sources, legacy, lane defaults and validation | `tests/behaviour/config-*.test.ts`, `tests/behaviour/legacy-adapter.test.ts`, `tests/behaviour/economics-budget-config.test.ts` |
+| Behaviour | Seven winners, merge/reset, schema, restrictions, provenance, parser, sources, legacy, lane defaults and validation, the per-layer prior-identity fallback, and the classified fallback notice | `tests/behaviour/config-*.test.ts`, `tests/behaviour/legacy-adapter.test.ts`, `tests/behaviour/economics-budget-config.test.ts`, `tests/behaviour/prior-identity-config-fallback.test.ts`, `tests/behaviour/prior-identity-notice.test.ts` |
 | CLI/golden | Basic/debug/get, human and machine payloads, redaction and canaries | `tests/behaviour/config-cli.test.ts`, `tests/golden/config-output.test.ts` |
 | Structure | Inventory, root API, no public config subpath, import confinement | `tests/structure/config-contract.test.ts`, `tests/structure/content-inventory.test.ts`, `tests/boundaries/**` |
-| Checks | Default/schema artifact parity, error rows, license closure | `tests/checks/config-default-positions.test.ts`, `tests/checks/error-table-sync.test.ts`, `tests/checks/license-audit.test.ts` |
+| Checks | Default/schema artifact parity, error rows, license closure, and the fallback's hermeticity (no read or write of the operator's real home or state root) | `tests/checks/config-default-positions.test.ts`, `tests/checks/error-table-sync.test.ts`, `tests/checks/license-audit.test.ts`, `tests/checks/prior-identity-hermetic.test.ts` |
 | Packed | Node/Bun packed consumers and artifact presence | `tests/checks/packed-config.test.ts` |
 
 ## Dependencies & Risks
@@ -231,7 +244,7 @@ Configuration adds the proposed Ajv and YAML runtime dependencies recorded in th
 | Queue branch | The typed `queue.lease-ttl` and `queue.park-recheck.<condition-type>` policy data with shipped defaults and existing configuration identities. |
 | Coordinator branch | The typed `coordinator.stuck-window`, `coordinator.kill-grace`, `coordinator.restart-budget`, `coordinator.resume-context-limit`, `coordinator.collection-interval`, and `coordinator.progress-bound` policy data with shipped defaults and existing configuration identities. |
 
-See also: [Provider Engine](feature-provider-engine.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Branding Seam and Working Name](feature-branding-seam.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Session Lifecycle Economics](feature-session-lifecycle-economics.md), [Scheduling Engine](feature-scheduling-engine.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0003](../../decisions/TDR-0003-config-parser-schema-and-acquisition.md), and the [repository glossary](../../overview/glossary.md).
+See also: [Local Install and Prior-Identity Transition](../../../guides/local-install.md), [Provider Engine](feature-provider-engine.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Branding Seam and Working Name](feature-branding-seam.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Session Lifecycle Economics](feature-session-lifecycle-economics.md), [Scheduling Engine](feature-scheduling-engine.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0003](../../decisions/TDR-0003-config-parser-schema-and-acquisition.md), and the [repository glossary](../../overview/glossary.md).
 
 ## The merge configuration branch
 

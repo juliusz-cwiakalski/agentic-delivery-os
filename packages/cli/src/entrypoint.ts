@@ -2,11 +2,12 @@
  * The executable entrypoint (GH-242 F-1, DEC-13, DEC-14).
  *
  * Resolves the working name once (typed configuration → non-empty
- * `DELIVERY_OS_WORKING_NAME` override → neutral `delivery-os` default), renders
- * root/command help and version with no state, network, git, or configuration
- * read, composes exactly the prompt-required command set, and fails closed
- * through the existing `fallback.internal` containment identity for an
- * invocation outside that set. It never invokes `process.exit`.
+ * `DELIVERY_OS_WORKING_NAME` override → the invoking bin's declared default),
+ * renders root/command help, version, and the install path with no state,
+ * network, git, or configuration read, composes exactly the prompt-required
+ * command set, and fails closed through the existing `fallback.internal`
+ * containment identity for an invocation outside that set. It never invokes
+ * `process.exit`.
  */
 
 import { resolveCredentialSourceKey } from "@delivery-os/adapters/credentials";
@@ -31,14 +32,8 @@ import {
   runCli,
 } from "./index.js";
 
-/** The neutral default working name; never the forbidden seed literal. */
-const NEUTRAL_WORKING_NAME = "delivery-os";
-
 /** The non-empty working-name override read from the injected environment. */
 const WORKING_NAME_ENVIRONMENT = "DELIVERY_OS_WORKING_NAME";
-
-/** The neutral default working name, exposed as behavior (no exported literal). */
-export const neutralWorkingName = (): string => NEUTRAL_WORKING_NAME;
 
 /** The working-name environment variable name, exposed as behavior. */
 export const workingNameEnvironmentVariable = (): string => WORKING_NAME_ENVIRONMENT;
@@ -64,6 +59,15 @@ export type EntrypointInvocationFact = {
   readonly runId?: string;
   /** True when the invocation selects a group (`queue`/`status --project`). */
   readonly groupScoped: boolean;
+  /** The invoking bin's declared prior identity, when it declares one. */
+  readonly priorWorkingName?: string;
+  /**
+   * The composition-scoped notice sink: every queued warning line the
+   * composition would attach to a handler's outcome is also reported here, so a
+   * composition that fails before returning a program still lets the entrypoint
+   * deliver the lines it already produced (GH-320 F-1, AC-F5-6).
+   */
+  readonly onCompositionNotice?: (notice: string) => void;
 };
 
 /** Composes the prompt-required program; help/version never calls it. */
@@ -76,6 +80,14 @@ export type EntrypointComposer = (
 export type EntrypointOptions = {
   readonly streams: CliStreams;
   readonly environment: Readonly<Record<string, string | undefined>>;
+  /**
+   * The invoking bin's declared default working name: the required identity
+   * floor. It is never optional-with-a-default, so no neutral identity can be
+   * reintroduced here.
+   */
+  readonly declaredWorkingName: string;
+  /** The invoking bin's declared prior identity, when it declares one. */
+  readonly priorWorkingName?: string;
   /** The working name already resolved from typed configuration, when present. */
   readonly configuredWorkingName?: string;
   /** The composition root for prompt-required commands. */
@@ -103,36 +115,57 @@ const DEFAULT_VERSION = "0.0.0";
 const DEFAULT_BUILD = "dev";
 
 /**
- * Resolve the working name in declared order. A present, non-empty override is
- * passed to the branding resolver, which gives it precedence; otherwise the
- * configured name is used; the neutral default closes the no-config case.
+ * Resolve the working name in declared order. A present, non-empty configured
+ * name wins; otherwise the invoking bin's declared default is the floor. The
+ * override is applied by the resolver, which gives it precedence.
  */
 export const resolveWorkingName = (options: {
   readonly configuredWorkingName?: string;
-  readonly environment: Readonly<Record<string, string | undefined>>;
-}): string => {
+  readonly declaredWorkingName?: string;
+}): string | undefined => {
   const configured = options.configuredWorkingName;
   if (configured !== undefined && configured.length > 0) return configured;
-  return neutralWorkingName();
+  const declared = options.declaredWorkingName;
+  if (declared !== undefined && declared.length > 0) return declared;
+  return undefined;
 };
 
-/** Resolve the brand for the entrypoint (pure; reads only the injected facts). */
-export const resolveEntrypointBrand = (options: {
+/**
+ * Resolve the brand outcome for the entrypoint (pure; reads only the injected
+ * facts). An unusable name or override falls back for self-description to the
+ * invoking bin's declared default, then to the configured name; when no usable
+ * identity exists at all the outcome carries no brand, so the caller fails
+ * closed through the containment identity instead of inventing a name.
+ */
+const entrypointBrandOutcome = (options: {
   readonly configuredWorkingName?: string;
+  readonly declaredWorkingName?: string;
   readonly environment: Readonly<Record<string, string | undefined>>;
-}): BrandIdentity => {
+}): { readonly ok: true; readonly brand: BrandIdentity } | { readonly ok: false } => {
   const workingName = resolveWorkingName(options);
+  if (workingName === undefined) return { ok: false };
   const override = options.environment[workingNameEnvironmentVariable()];
   const branded = resolveBrandIdentity(
     override === undefined || override.length === 0 ? { workingName } : { workingName, override },
   );
-  if (branded.ok) return branded.value;
-  // An invalid override/name is a resolver-input error. Help and version must
-  // still be usable, so fall back to the neutral default rather than reading
-  // configuration or crashing; no seed literal is introduced.
-  const neutral = resolveBrandIdentity({ workingName: neutralWorkingName() });
-  if (!neutral.ok) throw new Error("the neutral working name is unusable");
-  return neutral.value;
+  if (branded.ok) return { ok: true, brand: branded.value };
+  for (const candidate of [options.declaredWorkingName, options.configuredWorkingName]) {
+    if (candidate === undefined || candidate.length === 0) continue;
+    const resolvedCandidate = resolveBrandIdentity({ workingName: candidate });
+    if (resolvedCandidate.ok) return { ok: true, brand: resolvedCandidate.value };
+  }
+  return { ok: false };
+};
+
+/** Resolve the brand for the entrypoint; throws only when no identity exists. */
+export const resolveEntrypointBrand = (options: {
+  readonly configuredWorkingName?: string;
+  readonly declaredWorkingName?: string;
+  readonly environment: Readonly<Record<string, string | undefined>>;
+}): BrandIdentity => {
+  const outcome = entrypointBrandOutcome(options);
+  if (!outcome.ok) throw new Error("no declared working identity is available");
+  return outcome.brand;
 };
 
 const isGlobalFlag = (token: string): boolean =>
@@ -180,14 +213,26 @@ export const selectPromptRequiredProgram = (program: CommandProgram): CommandPro
   return extra.length === 0 ? program : { commands };
 };
 
-/** A classified containment failure naming the missing composition. */
-export const uncomposedDefinition = (command: string): CommandDefinition => ({
+/**
+ * A classified containment failure naming the missing composition.
+ *
+ * `notices` carries the composition-scoped warning lines already produced before
+ * the failure: a prior-identity fallback read is reported even when composition
+ * then fails and the containment identity answers instead (GH-320 F-1,
+ * AC-F5-6). The delivered warnings channel writes them to stderr, never into the
+ * payload, and the exit projection is untouched.
+ */
+export const uncomposedDefinition = (
+  command: string,
+  notices: readonly string[] = [],
+): CommandDefinition => ({
   handler: () => ({
     error: {
       kind: "fallback" as const,
       code: FALLBACK_INTERNAL_CODE,
       summary: `command "${command}" is not part of the composed prompt-required set`,
     },
+    ...(notices.length === 0 ? {} : { warnings: notices }),
   }),
 });
 
@@ -264,16 +309,67 @@ const emitSelfDescription = (
  * invoked for a real command, so the self-description surface performs no
  * ambient read.
  */
+/**
+ * A containment-only brand for the no-identity path.
+ *
+ * The absence of the required declared default is reported through the
+ * delivered containment identity; this label exists only so the delivered
+ * diagnostic and serialization path can run. It is not an invented working
+ * name and it is never selected as an identity.
+ */
+const containmentBrand = (): BrandIdentity => {
+  const branded = resolveBrandIdentity({ workingName: FALLBACK_INTERNAL_CODE });
+  if (!branded.ok) throw new Error("the containment identity is unusable");
+  return branded.value;
+};
+
+/** Emit the containment identity for an invocation that declares no identity. */
+const emitNoIdentityContainment = (
+  requested: string | undefined,
+  options: EntrypointOptions,
+  emitEnvelope: boolean,
+): Promise<number> =>
+  runCli(emitEnvelope ? ["self", "--json"] : ["self"], options.streams, {
+    brand: containmentBrand(),
+    clock: options.clock ?? { now: () => Date.now() },
+    newRunId: options.newRunId ?? (() => globalThis.crypto.randomUUID()),
+    secrets: options.secrets ?? [],
+    program: {
+      commands: {
+        self: {
+          handler: () => ({
+            error: {
+              kind: "fallback" as const,
+              code: FALLBACK_INTERNAL_CODE,
+              summary:
+                requested === undefined
+                  ? "no declared working identity is available for this invocation"
+                  : `command "${requested}" is not part of the composed prompt-required set: ` +
+                    "no declared working identity is available for this invocation",
+            },
+          }),
+        },
+      },
+    },
+  });
+
 export const runEntrypoint = async (
   argv: readonly string[],
   options: EntrypointOptions,
 ): Promise<number> => {
-  const entrypoint = createEntrypoint(options);
   const tokens = nonGlobalTokens(argv);
   const first = tokens[0];
+  if (!entrypointBrandOutcome(options).ok) {
+    return emitNoIdentityContainment(first, options, argv.includes("--json"));
+  }
+  const entrypoint = createEntrypoint(options);
 
   if (first === "--version") {
     return emitSelfDescription(versionText(entrypoint), options, entrypoint);
+  }
+
+  if (first === "--print-install-path") {
+    return emitSelfDescription(`${entrypoint.brand.installPath}\n`, options, entrypoint);
   }
 
   if (first === undefined || first === "--help") {
@@ -294,6 +390,10 @@ export const runEntrypoint = async (
   // One run identity per invocation, generated before composition so capture
   // paths composed for this command can join the audit ledger's record.
   const runId = (options.newRunId ?? (() => globalThis.crypto.randomUUID()))();
+  // The composition-scoped notices already produced travel this sink, so a
+  // composition that fails (or is discarded for an uncomposed command) still
+  // reports its fallback read through the delivered warnings channel (F-1).
+  const compositionNotices: string[] = [];
   const composed = (() => {
     try {
       return selectPromptRequiredProgram(
@@ -301,6 +401,12 @@ export const runEntrypoint = async (
           command,
           runId,
           groupScoped: isGroupScopedInvocation(command, argv),
+          ...(options.priorWorkingName === undefined
+            ? {}
+            : { priorWorkingName: options.priorWorkingName }),
+          onCompositionNotice: (notice) => {
+            compositionNotices.push(notice);
+          },
         }),
       );
     } catch {
@@ -311,7 +417,7 @@ export const runEntrypoint = async (
   })();
 
   const program = isUnusableCommand(composed, command)
-    ? { commands: { [command]: uncomposedDefinition(command) } }
+    ? { commands: { [command]: uncomposedDefinition(command, compositionNotices) } }
     : composed;
 
   return runCli(argv, options.streams, dependenciesFor(options, entrypoint, program, runId));

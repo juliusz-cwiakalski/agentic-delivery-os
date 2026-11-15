@@ -27,10 +27,10 @@ import {
   PROJECT_UNBOUND_SEGMENT,
   PROJECTS_CONTAINER_SEGMENT,
   PROJECTS_ERROR_CODES,
-  STATE_MIGRATION_NOTE_PATH,
   type ProjectIdentityMarker,
   type ProjectIdentityMarkerRead,
   type ProjectScope,
+  STATE_MIGRATION_NOTE_PATH,
 } from "../contracts/projects.js";
 
 const PROJECT_IDENTIFIER_PATTERN = new RegExp(
@@ -38,7 +38,10 @@ const PROJECT_IDENTIFIER_PATTERN = new RegExp(
   "u",
 );
 
-/** The host-root rule's injected inputs (the delivered override contract). */
+/**
+ * The host-root rule's injected inputs (the delivered override contract, plus
+ * the GH-320 prior-identity inputs).
+ */
 export type HostStateRootInput = {
   readonly environment: Readonly<Record<string, string | undefined>>;
   /** The brand-derived uppercase prefix (the product name is never hardcoded). */
@@ -46,6 +49,63 @@ export type HostStateRootInput = {
   /** The brand-derived default directory name. */
   readonly stateDirectoryName: string;
   readonly homeDirectory?: string;
+  /**
+   * The prior identity's default directory name (GH-320 F-4, DM-3). The prior
+   * identity's *environment* names are never read: only its default root can be
+   * selected, and only when the current default root is absent.
+   */
+  readonly priorStateDirectoryName?: string;
+  /**
+   * The injected existence facts for the two default roots. The policy stays
+   * pure: the composition tier probes the filesystem and passes the facts.
+   */
+  readonly defaultRootExists?: {
+    readonly current: boolean;
+    readonly prior: boolean;
+  };
+};
+
+/** How the effective host root was selected (GH-320 F-4, DM-3). */
+export type HostRootSelectionKind = "override" | "current" | "prior" | "first-use";
+
+/** One host-root selection: the effective root plus the facts supporting it. */
+export type HostRootSelection = {
+  readonly root: string;
+  readonly kind: HostRootSelectionKind;
+  /** The current-identity default root (`<home>/<stateDirectoryName>`). */
+  readonly currentDefaultRoot: string;
+  /** The prior-identity default root, when the identity declares a prior. */
+  readonly priorDefaultRoot?: string;
+  /** Whether the current default root existed when the root was selected. */
+  readonly currentDefaultRootExists: boolean;
+  /** Whether the prior default root existed when the root was selected. */
+  readonly priorDefaultRootExists: boolean;
+};
+
+/**
+ * The one home-plus-directory composition (GH-320 keeps exactly one site). Both
+ * the current and the prior default root come through this helper.
+ */
+const homeDefaultRoot = (home: string, stateDirectoryName: string): string =>
+  `${home}/${stateDirectoryName}`;
+
+/** The two default-root candidates the composition tier probes for existence. */
+export const hostRootCandidates = (input: {
+  readonly environment: Readonly<Record<string, string | undefined>>;
+  readonly stateDirectoryName: string;
+  readonly homeDirectory?: string;
+  readonly priorStateDirectoryName?: string;
+}): { readonly currentDefaultRoot?: string; readonly priorDefaultRoot?: string } => {
+  const home = input.homeDirectory ?? input.environment.HOME ?? input.environment.USERPROFILE;
+  if (home === undefined || home.length === 0 || home.trim().length === 0) return {};
+  const trimmed = trimTrailingSeparators(home.trim());
+  if (trimmed.length === 0) return {};
+  return {
+    currentDefaultRoot: homeDefaultRoot(trimmed, input.stateDirectoryName),
+    ...(input.priorStateDirectoryName === undefined
+      ? {}
+      : { priorDefaultRoot: homeDefaultRoot(trimmed, input.priorStateDirectoryName) }),
+  };
 };
 
 const trimTrailingSeparators = (value: string): string => value.replace(/\/+$/u, "");
@@ -72,7 +132,25 @@ export const stateScopeEnvironmentName = (environmentPrefix: string): string =>
  * `config.value.invalid`. No ambient working directory participates.
  */
 export const resolveHostStateRoot = (input: HostStateRootInput): Result<string, ConfigFailure> => {
+  const selected = selectHostStateRoot(input);
+  return selected.ok ? { ok: true, value: selected.value.root } : selected;
+};
+
+/**
+ * Select the effective host root with the prior-identity rule (GH-320 F-4,
+ * DEC-9): an absolute current override wins outright and disables the fallback;
+ * otherwise the current default root when it exists; otherwise the prior
+ * default root when it exists; otherwise the current default root as the
+ * ordinary first-use path. The prior override name is never read.
+ */
+export const selectHostStateRoot = (
+  input: HostStateRootInput,
+): Result<HostRootSelection, ConfigFailure> => {
   const name = environmentVariableName(input.environmentPrefix);
+  const candidates = hostRootCandidates(input);
+  const currentDefaultRoot = candidates.currentDefaultRoot ?? "";
+  const priorDefaultRoot = candidates.priorDefaultRoot;
+  const facts = input.defaultRootExists;
   const explicit = input.environment[name];
   if (explicit !== undefined && explicit.length > 0) {
     if (!isAbsolutePath(explicit)) {
@@ -81,16 +159,61 @@ export const resolveHostStateRoot = (input: HostStateRootInput): Result<string, 
         error: { kind: "config", code: "config.value.invalid", key: name },
       };
     }
-    return { ok: true, value: trimTrailingSeparators(explicit) };
+    return {
+      ok: true,
+      value: {
+        root: trimTrailingSeparators(explicit),
+        kind: "override",
+        currentDefaultRoot,
+        ...(priorDefaultRoot === undefined ? {} : { priorDefaultRoot }),
+        currentDefaultRootExists: facts?.current === true,
+        priorDefaultRootExists: facts?.prior === true,
+      },
+    };
   }
-  const home = input.homeDirectory ?? input.environment.HOME ?? input.environment.USERPROFILE;
-  if (home === undefined || home.length === 0 || home.trim().length === 0) {
-    return { ok: false, error: { kind: "config", code: "config.value.invalid", key: name } };
+  if (currentDefaultRoot.length === 0) {
+    return {
+      ok: false,
+      error: { kind: "config", code: "config.value.invalid", key: name },
+    };
   }
-  const trimmed = trimTrailingSeparators(home.trim());
-  return trimmed.length === 0
-    ? { ok: false, error: { kind: "config", code: "config.value.invalid", key: name } }
-    : { ok: true, value: `${trimmed}/${input.stateDirectoryName}` };
+  if (facts?.current === true) {
+    return {
+      ok: true,
+      value: {
+        root: currentDefaultRoot,
+        kind: "current",
+        currentDefaultRoot,
+        ...(priorDefaultRoot === undefined ? {} : { priorDefaultRoot }),
+        currentDefaultRootExists: true,
+        priorDefaultRootExists: facts.prior === true,
+      },
+    };
+  }
+  if (facts?.current === false && facts.prior && priorDefaultRoot !== undefined) {
+    return {
+      ok: true,
+      value: {
+        root: priorDefaultRoot,
+        kind: "prior",
+        currentDefaultRoot,
+        priorDefaultRoot,
+        currentDefaultRootExists: false,
+        priorDefaultRootExists: true,
+      },
+    };
+  }
+  return {
+    ok: true,
+    value: {
+      root: currentDefaultRoot,
+      kind: "first-use",
+      currentDefaultRoot,
+      ...(priorDefaultRoot === undefined ? {} : { priorDefaultRoot }),
+      currentDefaultRootExists: false,
+      priorDefaultRootExists: facts?.prior === true,
+    },
+  };
 };
 
 /** The legacy-detection facts: what the host root holds and whether a project root exists. */
@@ -295,9 +418,21 @@ export type CheckoutIdentityFacts =
 
 /** The narrowed identity outcome carried in a success result (DEC-17). */
 export type ProjectScopeOutcome =
-  | { readonly outcome: "existing"; readonly scope: ProjectScope }
-  | { readonly outcome: "mint"; readonly scope: ProjectScope }
-  | { readonly outcome: "unbound"; readonly scope: ProjectScope };
+  | {
+      readonly outcome: "existing";
+      readonly scope: ProjectScope;
+      readonly hostRootSelection: HostRootSelection;
+    }
+  | {
+      readonly outcome: "mint";
+      readonly scope: ProjectScope;
+      readonly hostRootSelection: HostRootSelection;
+    }
+  | {
+      readonly outcome: "unbound";
+      readonly scope: ProjectScope;
+      readonly hostRootSelection: HostRootSelection;
+    };
 
 /** One classified scope failure: configuration, identity, or state location. */
 export type ProjectsScopeFailure =
@@ -331,6 +466,12 @@ export type ProjectIdentityPorts = {
 export type ProjectScopeInput = HostStateRootInput & {
   readonly checkout: CheckoutIdentityFacts;
   readonly ports: ProjectIdentityPorts;
+  /**
+   * The composition tier's existence probe for the two default roots (GH-320
+   * F-4). The policy performs no I/O itself: the port is injected exactly like
+   * the marker seam, and `defaultRootExists` wins when supplied directly.
+   */
+  readonly probeDefaultRoot?: (path: string) => boolean;
 };
 
 const identityFailure = (summary: string): ProjectsScopeFailure => ({
@@ -350,8 +491,10 @@ const projectScopeOf = (
   checkoutRoot: string,
   marker: ProjectIdentityMarker,
   outcome: "existing" | "mint",
+  hostRootSelection: HostRootSelection,
 ): ProjectScopeOutcome => ({
   outcome,
+  hostRootSelection,
   scope: {
     kind: "project",
     hostRoot,
@@ -374,23 +517,45 @@ const projectScopeOf = (
 export const resolveProjectScope = (
   input: ProjectScopeInput,
 ): Result<ProjectScopeOutcome, ProjectsScopeFailure> => {
-  const hostRoot = resolveHostStateRoot(input);
-  if (!hostRoot.ok) {
+  const rootFacts =
+    input.defaultRootExists === undefined && input.probeDefaultRoot !== undefined
+      ? (() => {
+          const candidates = hostRootCandidates(input);
+          const probe = (path: string | undefined): boolean => {
+            if (path === undefined) return false;
+            try {
+              return input.probeDefaultRoot?.(path) === true;
+            } catch {
+              return false;
+            }
+          };
+          return {
+            current: probe(candidates.currentDefaultRoot),
+            prior: probe(candidates.priorDefaultRoot),
+          };
+        })()
+      : input.defaultRootExists;
+  const selection = selectHostStateRoot({
+    ...input,
+    ...(rootFacts === undefined ? {} : { defaultRootExists: rootFacts }),
+  });
+  if (!selection.ok) {
     return {
       ok: false,
       error: {
         kind: "config",
         code: "config.value.invalid",
-        key: hostRoot.error.key ?? environmentVariableName(input.environmentPrefix),
+        key: selection.error.key ?? environmentVariableName(input.environmentPrefix),
       },
     };
   }
-  const root = hostRoot.value;
+  const root = selection.value.root;
   if (input.checkout.kind === "unbound") {
     return {
       ok: true,
       value: {
         outcome: "unbound",
+        hostRootSelection: selection.value,
         scope: { kind: "unbound", hostRoot: root, stateLocation: unboundStateRoot(root) },
       },
     };
@@ -427,7 +592,10 @@ export const resolveProjectScope = (
         ),
       };
     }
-    return { ok: true, value: projectScopeOf(root, checkout.checkoutRoot, marker, "existing") };
+    return {
+      ok: true,
+      value: projectScopeOf(root, checkout.checkoutRoot, marker, "existing", selection.value),
+    };
   }
   const projectIdentifier = input.ports.newProjectIdentifier();
   if (!PROJECT_IDENTIFIER_PATTERN.test(projectIdentifier)) {
@@ -468,5 +636,8 @@ export const resolveProjectScope = (
       ),
     };
   }
-  return { ok: true, value: projectScopeOf(root, checkout.checkoutRoot, winner, "mint") };
+  return {
+    ok: true,
+    value: projectScopeOf(root, checkout.checkoutRoot, winner, "mint", selection.value),
+  };
 };

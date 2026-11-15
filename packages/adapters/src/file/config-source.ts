@@ -3,6 +3,7 @@ import type {
   ConfigAcquisition,
   ConfigFailure,
   ConfigFileLayer,
+  ConfigPriorOutcome,
   ConfigSkippedLayer,
   ConfigSourceFacts,
 } from "@delivery-os/core/contracts";
@@ -27,6 +28,12 @@ export type FileAcquisitionInput = {
   readonly enableUserConfig: boolean;
   readonly enableProjectLocalConfig: boolean;
   readonly configurationDirectoryName: string;
+  /**
+   * The prior identity's configuration-directory name (GH-320 F-3, DM-2). When
+   * present, the two repository-owned layers consider the prior file second;
+   * machine-global layers and an explicitly selected file never fall back.
+   */
+  readonly priorConfigurationDirectoryName?: string;
   readonly fs: FileSystemFacts;
 };
 
@@ -98,6 +105,7 @@ const skipped = (
 export const acquireFileConfig = (input: FileAcquisitionInput): ConfigAcquisition => {
   const sources: ConfigSourceFacts[] = [];
   const skips: ConfigSkippedLayer[] = [];
+  const prior: ConfigPriorOutcome[] = [];
   const ci = input.environment.CI === "true";
   const root = input.explicitProjectRoot || input.gitRoot || undefined;
   const selected = input.selectedConfig;
@@ -153,18 +161,48 @@ export const acquireFileConfig = (input: FileAcquisitionInput): ConfigAcquisitio
     }
   }
 
+  // The two repository-owned layers consider the prior identity's file second
+  // (GH-320 F-3, DEC-7/DEC-8): the current file wins whenever it exists and the
+  // prior file is then reported not used; the prior file is read only when the
+  // current file is absent. Existence-only probing: a shadowed prior file is
+  // never opened.
+  const priorFileFor = (name: string): string | undefined =>
+    root === undefined || input.priorConfigurationDirectoryName === undefined
+      ? undefined
+      : under(root, input.priorConfigurationDirectoryName, name);
+
+  const readEligibleLayer = (
+    layer: "project-committed" | "project-local",
+    name: string,
+  ): ConfigFailure | undefined => {
+    if (root === undefined) return undefined;
+    const currentFile = under(root, input.configurationDirectoryName, name);
+    const priorFile = priorFileFor(name);
+    if (input.fs.exists(currentFile)) {
+      if (priorFile !== undefined && input.fs.exists(priorFile)) {
+        prior.push({ state: "not used", layer, file: priorFile, currentFile });
+      }
+      return readLayer(layer, currentFile, sources);
+    }
+    if (priorFile !== undefined && input.fs.exists(priorFile)) {
+      const failure = readLayer(layer, priorFile, sources);
+      if (failure === undefined) {
+        prior.push({ state: "read", layer, file: priorFile, currentFile });
+      }
+      return failure;
+    }
+    skips.push(optionalMissing(layer));
+    return undefined;
+  };
+
   // Project-committed: selection occupies this slot; otherwise root-only file.
   if (selected !== undefined) {
     sources.push(...selectedFacts);
   } else if (root === undefined) {
     skips.push(skipped("project-committed", "no-git-root"));
   } else {
-    const file = under(root, input.configurationDirectoryName, "config.yaml");
-    if (!input.fs.exists(file)) skips.push(optionalMissing("project-committed"));
-    else {
-      const failure = readLayer("project-committed", file, sources);
-      if (failure) return { ok: false, error: failure };
-    }
+    const failure = readEligibleLayer("project-committed", "config.yaml");
+    if (failure) return { ok: false, error: failure };
   }
 
   // Project-local: selection > ci-disabled > no-git-root > missing.
@@ -175,15 +213,11 @@ export const acquireFileConfig = (input: FileAcquisitionInput): ConfigAcquisitio
   } else if (root === undefined) {
     skips.push(skipped("project-local", "no-git-root"));
   } else {
-    const file = under(root, input.configurationDirectoryName, "config.local.yaml");
-    if (!input.fs.exists(file)) skips.push(optionalMissing("project-local"));
-    else {
-      const failure = readLayer("project-local", file, sources);
-      if (failure) return { ok: false, error: failure };
-    }
+    const failure = readEligibleLayer("project-local", "config.local.yaml");
+    if (failure) return { ok: false, error: failure };
   }
 
-  return { ok: true, sources, skipped: skips };
+  return { ok: true, sources, skipped: skips, ...(prior.length === 0 ? {} : { prior }) };
 };
 
 /**

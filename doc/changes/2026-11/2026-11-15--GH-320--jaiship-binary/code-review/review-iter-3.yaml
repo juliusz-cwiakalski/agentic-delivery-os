@@ -1,0 +1,452 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-320
+branch: feat/GH-320/jaiship-binary
+status: PASS
+summary: >-
+  Iteration-3 (final) re-review of the iteration-2 remediation against spec v1.8,
+  test plan v1.7, plan r1.5 and the iteration-1/iteration-2 findings. The single
+  iteration-2 blocker is genuinely fixed and independently re-verified, not merely
+  asserted. `do_local_install` now absolutizes the resolved source with a logical
+  `cd -- "${source_dir}" && pwd` before the launcher step (scripts/install.sh:1069),
+  so a relative `ADOS_SOURCE_DIR` still records an absolute `readonly TARGET=`
+  word. The new delivered case (`TC-BIN-050` relative-source) is non-vacuous: a
+  controlled experiment shows a relative entry renders the bare word
+  `readonly TARGET=../rel-source/packages/cli/bin/jaiship.ts`, which expands
+  relative and fails the case's `startsWith("/")`/`toBe(expectedTarget)` assertions
+  and its `--version` from `/`, while an absolute entry renders absolute; the
+  delivered suite is green (9/9). The quote/space case still passes (`printf %q`
+  unchanged), and bash logical `pwd` keeps a symlinked source's logical path (no
+  `pwd -P`), so the symlinked-source declaration is unchanged. New-edge checks
+  found no defect: leading/trailing slash is normalised, a path with spaces is
+  quoted, `ADOS_SOURCE_DIR` unset resolves to the repo root and is unchanged, and
+  `--tool` runs the same launcher step (dry-run test covers both). The
+  previously-blocking ACs are re-judged: AC-F5-6 and AC-F7-10 remain PASS (their
+  production code is byte-identical to the iteration-2-verified tree — the only
+  code change since c370f8b4 is the 4-line installer absolutize plus the test),
+  and AC-F6-8 is now fully PASS including the relative-source scenario (test plan
+  v1.7 TC-BIN-050 step 10 and AC-F6-8 both state and exercise it). Scope truth
+  holds: 53 declared files + 2 folders, 63 changed paths, 0 undeclared, the 2
+  declared-but-unchanged being the documented revert paths; `plan validate`
+  valid/full. Remaining items are non-blocking and honestly recorded: the preload
+  docstring/implementation comment still overstates `node:fs` write coverage for
+  the ESM import form the guarded suites use (test plan and spec §16 are already
+  bounded, so this is a single cosmetic overstatement in test-support code — a
+  recorded nit, not a blocker); the phase-6 granular pm-notes evidence entry is
+  still absent (its gate evidence lives in test plan §10 and this record — a
+  @pm DoD housekeeping item); the `delivery_planning` completion timestamp still
+  precedes `specification`/`test_planning`; the spec still cites "test plan v1.6"
+  while the operative plan is v1.7; one unused `dirname` import and one carried
+  entrypoint wording nit. None affects behaviour, acceptance, or scope.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 4
+  info: 4
+spec_compliance: PASS
+plan_compliance: PASS
+dispositions:
+  - id: "iter2-F-1"
+    severity_was: high
+    status: FIXED
+    evidence: >-
+      `do_local_install` absolutizes `source_dir` once with
+      `source_dir="$(cd -- "${source_dir}" && pwd)" || exit $?`
+      (scripts/install.sh:1069) after `resolve_source_dir` and before
+      `auto_fetch_source`/`install_local_files`/`install_local_launcher`. Verified
+      non-vacuously: a relative entry renders the bare word
+      `readonly TARGET=../rel-source/packages/cli/bin/jaiship.ts` (bash -n clean,
+      expands relative, not `/`-prefixed) so the new case's absolute assertions
+      and `--version`-from-`/` would fail without the line; with the line the
+      recorded word is the absolute `<source>/packages/cli/bin/jaiship.ts` and the
+      launcher runs `jaiship 0.0.0 (build dev)` from `/`. The delivered
+      `TC-BIN-050 relative-source` case (tests/checks/install-launcher-installer.test.ts:234)
+      passes; the installer suite is 9/9. Spec v1.8 F-6 and DEC-13 now state the
+      absolute-target contract; test plan v1.7 TC-BIN-050 step 10 and AC-F6-8
+      mirror it.
+  - id: "iter2-F-2"
+    severity_was: medium
+    status: PARTIAL
+    evidence: >-
+      The binding claim is now bounded: test plan v1.7 TC-BIN-084 states the
+      preload patches `require("node:fs")` only and a static-ESM `node:fs` write is
+      not recorded (residual covered by scratch `HOME`/`TMPDIR` isolation), and
+      spec §16's arm-counters row limits the stated claim to the armed classes.
+      Reproduced: an ESM `import { writeFileSync } from "node:fs"` write outside the
+      allowed roots is not recorded (exit 0, empty write tally) while
+      `require("node:fs").writeFileSync` is (exit 1). The residual is the preload's
+      own docstring and one implementation comment, which still claim "every write …
+      (the `node:fs` write entry points)" — a cosmetic overstatement in test-support
+      code, recorded as new finding F-1 (low). Not blocking: behaviour, the guard's
+      actual enforced property, and both binding artefacts are honest.
+  - id: "iter2-F-3"
+    severity_was: low
+    status: NOT_FIXED
+    evidence: >-
+      pm-notes still has "Plan phase" evidence entries for phases 1–5 only; there is
+      no granular phase-6 entry. `delivery` is now recorded complete at
+      2026-11-15T12:43:19.993Z (consistent with the last code commit 265c4e11 at
+      12:43:14Z and the pm-notes commit at 12:43:26Z), so the lifecycle phase is
+      recorded, but the plan's per-plan-phase evidence rule is still unmet for phase
+      6 in pm-notes. Recorded as new finding F-2 (low); gate evidence exists in test
+      plan §10 and this review.
+  - id: "iter2-F-4"
+    severity_was: low
+    status: NOT_FIXED
+    evidence: >-
+      `delivery_planning.completed` remains 2026-11-15T06:40:42.298Z, i.e. before
+      `specification` (12:38:36.766Z) and `test_planning` (12:38:50.738Z) — an
+      impossible lifecycle ordering. Recorded as new finding F-3 (low).
+  - id: "iter2-F-5"
+    severity_was: low
+    status: PARTIAL
+    evidence: >-
+      Operative plan citations moved to r1.5 (test plan intro, §1, §2, §7, §8.2) and
+      `LIT-TP-1` is restated to the node-level rule with an expression-position
+      control — both verified. Residual: spec §17/§22 and F-6 still cite "test plan
+      v1.6" (six occurrences) while the operative test plan at HEAD is v1.7 (spec
+      v1.8's own note says "test plan v1.6 unchanged"). Recorded as new finding F-4
+      (low); historical revision-log rows are correctly left intact.
+  - id: "iter2-F-6"
+    severity_was: info
+    status: ACCEPTED
+    evidence: >-
+      `feature-cli-entrypoint.md` still says "Help and version are the one surface
+      callable before trust is established" one sentence after introducing
+      `--print-install-path`. No behaviour depends on it; carried as new finding F-6
+      (info).
+  - id: "iter2-F-7"
+    severity_was: info
+    status: ACCEPTED
+    evidence: >-
+      The containment-path notice ordering (notice after the two containment
+      diagnostics) is compliant with AC-F5-6's constrained surface; production code
+      around it is unchanged since iteration 2. Recorded as finding F-8 (info).
+  - id: "iter2-F-8"
+    severity_was: info
+    status: ACCEPTED
+    evidence: >-
+      `isAllowed` still matches with a bare `path.startsWith(root)` (test-only
+      preload; pre-existing shape; no product effect). Recorded as finding F-7
+      (info).
+  - id: "iter1-F-1"
+    status: FIXED_CARRIED
+    evidence: >-
+      Verified fixed in iteration 2; the production code that carries it
+      (packages/cli/src/production.ts, entrypoint.ts) is byte-identical from c370f8b4
+      to HEAD (the only code delta is scripts/install.sh +4 and the installer test),
+      so the iteration-2 live verification stands. AC-F5-6 PASS.
+  - id: "iter1-F-2"
+    status: FIXED_CARRIED
+    evidence: >-
+      `printf '%q'` quoting of the recorded target is unchanged; the quote/space
+      case still passes (9/9) and the new relative-source case confirms the same
+      render path. `bash -n` clean.
+  - id: "iter1-F-3"
+    status: FIXED_CARRIED
+    evidence: >-
+      Live non-vacuity controls (installer arrays, daemon re-entry derivation,
+      delivered scan over a scratch repo, node-level literal scan with
+      expression-position control) unchanged since iteration 2. AC-F7-10 PASS.
+  - id: "iter1-F-4"
+    status: FIXED_CARRIED
+    evidence: "DRY_RUN plan-only preview declared and exercised (TC-BIN-056); unchanged."
+  - id: "iter1-F-5"
+    status: FIXED_CARRIED
+    evidence: "Scope truth declared; 0 undeclared against plan r1.5 in this re-review."
+  - id: "iter1-F-6"
+    status: FIXED_CARRIED
+    evidence: "projects-config.ts / core index.ts reverted; net-absent; declared as revert paths (the 2 declared-but-unchanged)."
+  - id: "iter1-F-7"
+    status: FIXED_CARRIED
+    evidence: "TC-BIN-072 step 9 discoverability assertions delivered; unchanged."
+  - id: "iter1-F-8"
+    status: FIXED_CARRIED
+    evidence: "Node-level literal scan with expression-position control; unchanged; matches test plan v1.7 LIT-TP-1."
+  - id: "iter1-F-9"
+    status: FIXED_CARRIED
+    evidence: "bin-launcher.ts imports workingNameEnvironmentVariable(); unchanged."
+  - id: "iter1-F-10"
+    status: FIXED_CARRIED
+    evidence: "install.sh header/--help document the launcher step, install-time Bun, classified failures, exit 4; unchanged."
+  - id: "iter1-F-11"
+    status: FIXED_CARRIED
+    evidence: "Precondition failures use log_fatal (exit 4) within the declared taxonomy; unchanged."
+  - id: "iter1-F-12"
+    status: PARTIAL_CARRIED
+    evidence: "Bun.spawn armed; node:fs arming effective only for require-obtained handles (see iter2-F-2 / F-1). Claim now bounded in test plan/spec."
+  - id: "iter1-F-13"
+    status: FIXED_CARRIED
+    evidence: "Gate row and operative citations refreshed; residual spec 'test plan v1.6' citations are iter2-F-5 / F-4."
+  - id: "iter1-F-14"
+    status: FIXED_CARRIED
+    evidence: "Read-count capture and digest-around-run delivered; unchanged."
+  - id: "iter1-F-15"
+    status: DEFERRED
+    evidence: "Info-only; per-default-root probe note not added. No acceptance impact."
+  - id: "iter1-F-16"
+    status: ACCEPTED
+    evidence: "Four declared deviations remain acceptable; optional wording nit is F-6 (info)."
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: documents
+    location: tests/checks/support/arm-counters.preload.ts:5
+    message: >-
+      [L | owner: plan Phase 5 / D11, iter2-F-2 residual] The preload docstring
+      (lines 5–9) says it counts "every write outside the allowed scratch roots
+      (`Bun.write` and the `node:fs` write entry points)", and the implementation
+      comment at line 119–120 says "every `node:fs` write entry point a fixture
+      harness actually uses". Neither is true for the ESM import form the guarded
+      suites use: the patch mutates the object returned by `require("node:fs")`,
+      and a `import { writeFileSync } from "node:fs"` write outside the roots is not
+      recorded. Reproduced under the delivered preload: an ESM named-import write
+      to `/tmp/.../OUTSIDE-esm.txt` yields exit 0 with an empty `write` tally, while
+      `require("node:fs").writeFileSync` to the same area yields exit 1 with the
+      write recorded. The binding artefacts are already honest (test plan v1.7
+      TC-BIN-084 states the ESM gap and relies on scratch `HOME`/`TMPDIR`
+      isolation; spec §16's row limits the claim to the armed classes), so this is a
+      single cosmetic overstatement in test-support code, not a coverage claim any
+      reader is told to rely on.
+    suggestion: >-
+      Narrow the docstring (lines 5–9) and the comment at 119–120 to
+      "`Bun.write`, `Bun.spawn`, and the **`require`-obtained** `node:fs` write entry
+      points; a static-ESM `node:fs` import is not recorded and is covered only by
+      scratch `HOME`/`TMPDIR` isolation", matching test plan v1.7 TC-BIN-084 and
+      spec §16. Non-blocking.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary/chg-GH-320-pm-notes.yaml:275
+    message: >-
+      [L | owner: plan Phase 6 evidence / @pm DoD] The plan declares six delivery
+      phases and its completion-evidence rule asks for a pm-notes `notes:` entry
+      naming the plan phase id, commit hash(es) and test result. Phases 1–5 each
+      have one ("Plan phase N …"). Phase 6 (the code-review iteration-1 remediation,
+      plan r1.4/r1.5, closed by 9059598e, extended by 265c4e11) has none —
+      `grep "Plan phase"` finds phases 1–5 only. The `delivery` lifecycle phase is
+      now recorded complete (12:43:19.993Z), and the phase-6 gate evidence exists in
+      test plan §10 and this review record, so this is a bookkeeping gap in the
+      declared evidence home, not a scope deviation, and it does not block the code
+      review.
+    suggestion: >-
+      Add one pm-notes `notes:` entry for plan phase 6 (phase id, the remediation
+      commit hash(es), and the gate results already recorded in test plan §10)
+      before the Definition-of-Done check, or point the plan's phase-6 evidence home
+      at test plan §10 in one sentence.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: low
+    confidence: high
+    category: artifact-consistency
+    location: doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary/chg-GH-320-pm-notes.yaml:10
+    message: >-
+      [L | owner: @pm phase record] The pm-notes phase timeline is internally
+      impossible: `delivery_planning.completed` is 2026-11-15T06:40:42.298Z, after
+      `clarify_scope` (06:10:17Z) but before `specification` (12:38:36.766Z) and
+      `test_planning` (12:38:50.738Z), which the lifecycle orders before
+      delivery_planning. `delivery` was corrected to 12:43:19.993Z in this
+      remediation, but delivery_planning was not. Recorded as an observation on the
+      artefact, not an inference about who edited it; no code or acceptance impact.
+    suggestion: >-
+      Re-record `delivery_planning` through the `phase` primitive so its completion
+      is at or after the revisions it covers, or add a one-line note stating that
+      06:40Z is the authoritative first completion so the ordering is explained
+      rather than contradictory.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: low
+    confidence: high
+    category: artifact-consistency
+    location: doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary/chg-GH-320-spec.md:537
+    message: >-
+      [L | owner: spec v1.8 citations, iter2-F-5 residual] The operative test plan
+      at HEAD is v1.7, but spec §17 (line 537), §22 (line 582) and F-6 (line 168)
+      still cite "test plan v1.6" (six occurrences), and spec v1.8's own revision
+      note says "test plan v1.6 unchanged". The v1.6→v1.7 delta is citation/coverage
+      only (LIT-TP-1 restatement, the bounded preload claim, and the new
+      relative-source cell), so the §10 gate numbers it cites are unchanged; this is
+      a one-revision-stale artefact citation, not a substantive contradiction.
+    suggestion: >-
+      In one sweep, bump the operative "test plan v1.6" citations in spec
+      §17/§22/F-6 to "test plan v1.7" (leave the historical revision-log rows as
+      history). Non-blocking.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: info
+    confidence: high
+    category: code-quality
+    location: tests/checks/install-launcher-installer.test.ts:25
+    message: >-
+      [I | owner: plan Phase 6 test file] The new installer test imports `dirname`
+      from `node:path` but never uses the function (line 438's `"dirname"` is a
+      string element of the `noBunPath` tool list, not the import). Biome reports one
+      warning and exits 0 (`pnpm lint` does not fail on warnings), so this is a
+      pruning nit only.
+    suggestion: >-
+      Drop `dirname` from the import on line 25.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: info
+    confidence: high
+    category: documents
+    location: doc/spec/features/feature-cli-entrypoint.md:34
+    message: >-
+      [I | owner: spec wording, carried from iter1-F-16/iter2-F-6]
+      `feature-cli-entrypoint.md` still says "Help and version are the one surface
+      callable before trust is established" one sentence after introducing
+      `--print-install-path`, which is a third member of that pre-composition
+      surface. No behaviour depends on the wording.
+    suggestion: >-
+      Optionally include the install-path read in the sentence ("help, version and
+      the install-path read").
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: info
+    confidence: high
+    category: testing
+    location: tests/checks/support/arm-counters.preload.ts:121
+    message: >-
+      [I | owner: plan Phase 5, carried from iter2-F-8] `isAllowed` matches with a
+      bare `path.startsWith(root)`, so `<root>-evil/…` and `<repo>/tmpfoo/…` count
+      as inside the allowed roots. Test-only, pre-existing shape, no product effect
+      and no violated claim.
+    suggestion: >-
+      Optionally compare with a trailing separator (`path === root ||
+      path.startsWith(`${root}/`)`) when the preload is next touched.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-8
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/cli/src/entrypoint.ts:420
+    message: >-
+      [I | accepted observation, carried from iter2-F-7] On the containment path the
+      notice lines follow the two containment diagnostics on stderr; AC-F5-6
+      constrains only the notice line's own beginning, its count and the payload, so
+      the ordering is compliant. Production code around it is unchanged since
+      iteration 2.
+    suggestion: >-
+      No action. If a stable order is ever wanted, pin it in the AC and one
+      assertion.
+    suppressed: false
+    published_url: null
+    published_at: null
+ac_verdicts:
+  AC-F1-1: PASS
+  AC-F1-2: PASS
+  AC-F2-3: PASS
+  AC-F2-7: "PASS (alias projection and pre-composition touch unchanged; production code byte-identical to the iteration-2-verified tree)"
+  AC-F3-4: PASS
+  AC-F4-5: PASS
+  AC-F5-6: "PASS (was FAIL at iter-1, PASS at iter-2: exactly one notice per source kind on the containment path and the normal path, alias silent, payload clean; production.ts/entrypoint.ts unchanged since c370f8b4, so the iteration-2 live verification stands)"
+  AC-F6-8: "PASS (was PASS-with-caveat at iter-2: the relative ADOS_SOURCE_DIR scenario now records an absolute target and runs from outside — the delivered TC-BIN-050 relative-source case is green and non-vacuous; quote/space, idempotence, removed-target, classified-failure and DRY_RUN cells unchanged and green)"
+  AC-F7-9: "PASS (provisional: installer 9/9, hermetic 5/5, bash -n, shellcheck, biome (0 errors) green at HEAD; the aggregate `pnpm check` has not been re-run since phase 6 — phase 9 owes it, as plan r1.5 and test plan §10 state)"
+  AC-F7-10: "PASS (every guard fails by name when seeded — installer arrays, launcher step, node-level literal inventory with an expression-position control, content inventory, installer absence, daemon re-entry derivation; unchanged since the iteration-2 verification)"
+  AC-F8-11: PASS
+verification:
+  mode: local
+  diff_base: origin/main-tools
+  merge_base: 8a1f77ad
+  head: 488f562e
+  changed_paths: 63
+  plan_revision: r1.5
+  spec_revision: v1.8
+  test_plan_revision: v1.7
+  prior_iterations_reviewed:
+    - doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary/code-review/review-iter-1.yaml
+    - doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary/code-review/review-iter-2.yaml
+  plan_validate: >-
+    `bun packages/cli/bin/delivery-os.ts plan validate GH-320` ->
+    verdict=valid, artifact=yaml:chg-GH-320-plan.yaml, tier=full,
+    readyForDevelopment=true (run from this branch's source).
+  scope_reconciliation: >-
+    Script parses every phase `scope.files`/`scope.folders` from plan r1.5 (53 files
+    + 2 folders: `tests/fixtures/entrypoint/prior-identity`, the change folder) and
+    compares against `git diff --name-only origin/main-tools...HEAD` (63 paths):
+    0 undeclared. The 2 declared-but-unchanged paths are the documented revert-only
+    declarations (`packages/adapters/src/file/projects-config.ts`,
+    `packages/core/src/index.ts`) which are net-absent from the diff. Every changed
+    path is either a declared file, inside the declared fixture/change folder, or
+    the new `code-review/review-iter-*.yaml` inside the declared change folder.
+  non_vacuity_experiment: >-
+    Controlled probe of the discriminating power of the new relative-source
+    assertion (no source edit): a relative entry rendered exactly as
+    `install_local_launcher` does — `printf '%q' '../rel-source/packages/cli/bin/jaiship.ts'`
+    — yields the bare word `readonly TARGET=../rel-source/packages/cli/bin/jaiship.ts`
+    (bash -n OK) that expands to a **relative** path, so the case's
+    `expanded.stdout.startsWith("/")`, `toBe(expectedTarget)` and `--version`-from-`/`
+    assertions fail without the absolutize line; an absolute entry yields an
+    absolute word. Removing the `cd … && pwd` line therefore turns the new case red.
+  edge_cases: >-
+    Verified at shell level: leading/trailing slash normalised by `pwd` (no double
+    slash in the composed entry); a source path with spaces is quoted through `cd --`
+    and `printf %q` (quote/space suite case green); `ADOS_SOURCE_DIR` unset resolves
+    via the repo/global branches to an absolute path and is unchanged by the `cd … &&
+    pwd` step; the `--tool` mode runs the same `do_local_install` path (the dry-run
+    suite runs `--tool opencode`/`claude` after a real install and asserts the
+    launcher content is unchanged — green). Logical `pwd` (not `pwd -P`) keeps a
+    symlinked source's logical path, so the symlinked-source declaration is
+    unchanged.
+  suites_re_run:
+    - "bun test tests/checks/install-launcher-installer.test.ts -> 9 pass / 0 fail (includes the new relative-source case and the unchanged quote/space, idempotence, removed-target, hermeticity, preconditions and DRY_RUN cells)"
+    - "bun test tests/checks/prior-identity-hermetic.test.ts -> 5 pass / 0 fail (static half, spawned preload run over the nine guarded suites, five-class canary; the bounded preload claim still holds)"
+    - "bash -n scripts/install.sh -> clean; shellcheck --severity=error scripts/install.sh -> clean"
+    - "bunx biome check tests/checks/install-launcher-installer.test.ts -> exit 0 (1 warning: unused `dirname` import, F-5; no errors, no format drift)"
+  live_probes:
+    - "Relative-source launcher rendering (controlled experiment): relative word renders bare and expands relative; absolute word renders absolute — the new assertion is non-vacuous."
+    - "Preload ESM-vs-require canary: `import { writeFileSync } from \"node:fs\"` write outside the roots -> exit 0, empty `write` tally; `require(\"node:fs\").writeFileSync` -> exit 1, write recorded (F-1 evidence; binding artefacts already bounded)."
+    - "bash logical pwd: `cd <symlink> && pwd` -> symlink path; `pwd -P` -> target; trailing slash -> normalised; spaces -> preserved."
+  not_re_run:
+    - "aggregate `pnpm check` (by instruction; last green run 8624/4/0 predates phase 6 — phase 9 obligation)."
+    - "installer suite and hermetic suite were re-run (above); structural/behavioural suites whose production code is byte-identical to the iteration-2-verified tree were not re-run."
+  commit_graph_note: >-
+    bfb8d9b8 momentarily removes `chg-GH-320-test-plan.md` and 65934746 re-adds it;
+    the net diff c370f8b4..HEAD for the test plan is 30 insertions / 28 deletions
+    (the intended v1.7 citation/coverage edits), so no content was lost. The only
+    non-artifact code change since the iteration-2 head is scripts/install.sh (+4)
+    and its test (+48/-2).
+  real_home_safety: >-
+    Every probe used HOME/TMPDIR under /tmp/opencode (scratch projects and a scratch
+    preload report); the operator's real `~/.jaiship*`, `~/.delivery-os-state` and
+    `~/.ados` were not written (the pre-existing real `~/.delivery-os-state` was not
+    touched). The working tree is clean at HEAD 488f562e after the review.
+reviewed_at: 2026-11-15T14:10:00Z
+next_step: PROCEED
+plan_gaps: >-
+  No SCOPE_DEVIATION: 0 undeclared of 63 changed paths against plan r1.5's 53 files
+  + 2 folders (the 2 declared-but-unchanged are the documented revert paths).
+  `plan validate` valid/full. Phases 1–5 each carry a pm-notes evidence entry
+  (phase id, commit hash, gate results); the `delivery` lifecycle phase is now
+  recorded complete (12:43:19.993Z) through the primitive. The only residual plan
+  gap is the granular phase-6 pm-notes evidence entry (F-2, low) — its gate
+  evidence exists in test plan §10 and this record, so this is a @pm DoD
+  bookkeeping item, not a plan-scope deviation and not a blocker. The
+  `delivery_planning` timestamp inconsistency (F-3, low) is an artefact-ordering
+  record issue, not a delivery gap.
+test_coverage_gaps: >-
+  No blocking coverage gap. The iteration-2 gap (no relative-source case) is closed
+  by the delivered TC-BIN-050 relative-source case (green, non-vacuous). Residual
+  non-blocking: the hermeticity runtime half counts only `require`-obtained
+  `node:fs` writes, not the static-ESM form the guarded suites use (F-1) — covered
+  by scratch `HOME`/`TMPDIR` isolation and bounded in test plan v1.7 and spec §16,
+  with only the preload docstring still overstating.

@@ -1,0 +1,657 @@
+change_id: GH-320
+title: "M4-S1a: jaiship executable binary and local install"
+delivery_mode: autonomous
+milestone: "M4: Public release readiness"
+story_code: M4-S1a
+phases:
+  clarify_scope: { started: "2026-11-15T06:02:06Z", completed: 2026-11-15T06:10:17.425Z }
+  specification: { started: null, completed: 2026-11-15T15:27:33.058Z }
+  test_planning: { started: null, completed: 2026-11-15T15:19:07.371Z }
+  delivery_planning: { started: null, completed: 2026-11-15T16:30:23.901Z }
+  dor_check: { started: null, completed: 2026-11-15T08:06:12.535Z }
+  delivery: { started: null, completed: 2026-11-15T16:54:10.019Z }
+  system_spec_update: { started: null, completed: 2026-11-15T12:11:25.019Z }
+  review_fix: { started: null, completed: 2026-11-15T17:03:54.294Z }
+  quality_gates: { started: null, completed: 2026-11-15T17:53:53.780Z }
+  dod_check: { started: null, completed: 2026-11-15T17:54:15.543Z }
+  pr_creation: { started: null, completed: 2026-11-15T17:54:33.874Z }
+decisions:
+  - text: "Legacy identity fallback is the chosen mechanism (not a migration
+      command): AC4 requires `jaiship status --json` to read the existing
+      `.delivery-os/config.yaml` and `~/.delivery-os-state` when the `.jaiship`
+      equivalents are absent, with a classified one-time warning. The ticket
+      offers fallback OR documented migration command; AC4 selects fallback."
+    date: "2026-11-15"
+  - text: "Scope boundary kept deliberately narrow: this slice adds the `jaiship`
+      executable and its identity paths plus the legacy read fallback. Package
+      scope (@delivery-os/*), repositoryUrl, docsBaseUrl, README and public docs
+      stay unchanged per the ticket. The branding resolver keeps its neutral
+      `@delivery-os` scope org, so a `jaiship` working name still derives
+      `https://github.com/delivery-os/jaiship`; that is accepted and must be
+      stated as out of scope in the spec, not silently 'fixed'."
+    date: "2026-11-15"
+  - text: "AC6 (`a local install from the change branch yields
+      ~/.jaiship/bin/jaiship`) supersedes the current spec sentence that the bin
+      is not part of the install surface. The spec must state the new install
+      posture explicitly: a user-level local install registers a `jaiship`
+      launcher at `~/.jaiship/bin/jaiship`, while the `delivery-os` bin mapping
+      and the existing installer arrays for scripts/tools stay unchanged."
+    date: "2026-11-15"
+  - text: "`DELIVERY_OS_WORKING_NAME` remains the working-name override for both
+      bins (ticket requirement). The `delivery-os` bin keeps its current
+      configured default so its behaviour, including `.delivery-os` paths, is
+      unchanged; only the new `jaiship` bin defaults to the `jaiship` identity."
+    date: "2026-11-15"
+  - text: "D5 (WITHDRAWN - superseded by verified evidence; DoR finding 1 was based
+      on `statusComposition`'s empty provider chain, which is a different fact
+      from project-configuration acquisition). Fixture proof: in a git worktree
+      whose `.delivery-os/config.yaml` exists, `status --json` opens and reads
+      that file four times (`O_RDONLY`, bytes verified via strace), as do
+      `daemon status`, `coordinator status`, and `dispatch attempts`. In this
+      checkout the file does not exist, so only the existence probe runs and no
+      `openat` appears. The ticket's literal surface (`jaiship status --json`)
+      therefore proves the configuration half and no deviation is needed;
+      `config --json` is unreachable (`fallback.internal`, not in the composed
+      prompt-required set) and must not be used. Recorded as DEC-14 in the
+      spec."
+    date: "2026-11-15"
+  - text: "D6 (DoR finding 2, PM-decided): the compatibility alias keeps its
+      delivered invalid-override projection. Verified:
+      `DELIVERY_OS_WORKING_NAME='bad/name' ... status --json` exits 2 with
+      `fallback.internal`, i.e. the resolver error is wrapped by the
+      entrypoint's containment identity, for both bins. The spec's claim of a
+      CLI-visible 'classified resolver error' is corrected to the delivered
+      containment identity, AC-F2-7 is reworded accordingly, and the alias keeps
+      0 observable behaviour change."
+    date: "2026-11-15"
+  - text: "D7 (DoR finding 5, PM-decided): the bounded literal inventory is five
+      declared sites, not four: the three CLI selector sites, the unchanged MCP
+      default, and `SCOPE_ORG = 'delivery-os'` in the branding resolver. The
+      resolver's scope-org constant is declared as a derivation input (a scope
+      literal, not a selector), and the guard asserts the declared rule and
+      inventory rather than a bare count."
+    date: "2026-11-15"
+  - text: "D8 (DoR finding 7, PM-decided): no new decision record for DEC-5/DEC-9.
+      DEC-5 corrects delivered truth rather than introducing a rule - declared
+      `delivery-os` literals already exist in both bins, the MCP default, and
+      the resolver, so the seam's real invariant is bounded, non-exported,
+      single-derivation, and the feature spec sentence is inaccurate. DEC-9
+      extends TDR-0022 without contradicting it: still exactly one effective
+      host root per invocation, one home-plus-brand composition, and one
+      `_PREFIX_STATE_DIR_` read; the fallback only changes which root is
+      selected. The reasoning is recorded in the spec and the phase-7
+      feature-spec update."
+    date: "2026-11-15"
+  - text: "D9 (DoR finding 4, PM-decided): the installer integration cases live in a
+      Bun test at `tests/checks/install-launcher-installer.test.ts` that shells
+      out to `scripts/install.sh` in a scratch HOME and scratch project root.
+      This keeps them in the Bun-bearing test job and avoids adding a
+      `scripts/.tests` shell suite that the CI bash job (jq only, no Bun) would
+      auto-discover and fail. No `.github/workflows/ci.yml` change is required.
+      The structural launcher case stays in
+      `tests/structure/install-launcher.test.ts`."
+    date: "2026-11-15"
+  - text: "D10 (DoR finding 9, PM-decided): the only quality-gate command is the
+      executable same-device invocation `TMPDIR=$(mktemp -d
+      \"$HOME/.cache/ados-check-XXXXXX\") pnpm check`. The repo-local
+      `TMPDIR=$PWD/tmp/tmpdir` invocation is recorded as evidence with the
+      GH-313 mechanism, never as a gate."
+    date: "2026-11-15"
+  - text: "D11 (DoR finding 10, PM-decided): TC-BIN-084 uses a static import/surface
+      scan plus a spawned `bun --preload <arm-counters> test <named suites>`
+      subprocess whose exit code and captured violations are asserted.
+      In-process counter arming around other suites is not implementable and is
+      dropped."
+    date: "2026-11-15"
+  - text: "D12 (PM-decided): the DoR iteration cap is extended by one (iteration 4)
+      for GH-320. Rationale: the trend is convergent (iteration 1: 5 blocking;
+      iteration 2: 1 blocking; iteration 3: 1 blocking), and iteration 3's
+      blocking finding is an assertion-form defect introduced by the iteration-2
+      remediation, not a disagreement about product scope or design. No
+      product/scope question is open. This extension and its reason are
+      disclosed at the PR gate."
+    date: "2026-11-15"
+  - text: "D13 (PM-decided, DoR iter-3 finding 2): `behaviourally unchanged` for the
+      alias includes the delivered pre-composition work an invalid override
+      still performs before containment (the configuration probe/read and any
+      state-root touch). This change neither adds nor removes it, and no
+      artifact may assert or require zero reads / zero state access on that
+      path. The positional-free command yields exit 2 `fallback.internal`; a
+      subcommand-bearing command fails earlier at argument parsing with exit 1
+      `fallback.invocation` — both delivered, both recorded, neither changed."
+    date: "2026-11-15"
+open_questions: []
+blockers: []
+notes:
+  - text: "State detection: issue GH-320 OPEN, label `change`, milestone M4 (#4,
+      'M4: Public release readiness'), no assignees. No PR in any state for head
+      feat/GH-320/jaiship-binary. Branch exists locally at origin/main-tools
+      HEAD 573be730 with 0 unique commits, clean tree. No GH-320 change folder.
+      Fresh delivery."
+    type: info
+    date: "2026-11-15"
+  - text: "Clarify-scope cross-check vs current truth (doc/spec/features):
+      feature-cli-entrypoint.md declares one non-installed bin
+      (packages/cli/bin/delivery-os.ts) and an explicit install posture that
+      excludes the bin; feature-branding-seam.md defines the 12-value derivation
+      (working name `jaiship` yields binaryName `jaiship`, configDirectoryName
+      `.jaiship`, stateDirectoryName `.jaiship-state`, installPath
+      `~/.jaiship/bin/jaiship`); feature-config-layer.md and feature-projects.md
+      define `<repo>/<configDirectoryName>/config.yaml` and the host root
+      `<PREFIX>_STATE_DIR` else `<home>/<stateDirectoryName>`. The existing
+      legacy adapter covers ADOS_/.ados with a one-time warning and does not
+      read a legacy config file, so a delivery-os -> jaiship read fallback is a
+      new capability rather than an extension of the existing adapter."
+    type: info
+    date: "2026-11-15"
+  - text: "Ticket dependency note: GH-310 (M2-S19 cross-repository changes) is still
+      OPEN with no PR. The ticket's out-of-scope line forbids merging before
+      GH-310 lands because the change shares entrypoint hot files. This delivery
+      therefore stops at an open PR; it does not merge."
+    type: risk
+    date: "2026-11-15"
+  - text: "Known design tension to resolve in the spec, not to invent around:
+      packages/mcp/src/serve.ts has its own `delivery-os` default and its own
+      DELIVERY_OS_WORKING_NAME read. If the CLI defaults to the jaiship identity
+      while MCP keeps the delivery-os identity, host state and project config
+      can diverge between the two surfaces. MCP identity is out of this ticket's
+      scope; the spec must record the divergence as a documented transitional
+      limitation with the explicit override seam, not as an unstated behaviour."
+    type: risk
+    date: "2026-11-15"
+  - text: "Documentation impact map for phase 7: feature-cli-entrypoint.md (install
+      posture, bin list, identity resolution), feature-branding-seam.md
+      (neutral-default wording, installPath consumption, prior-identity read
+      fallback), feature-config-layer.md (config directory fallback and state
+      root fallback), feature-projects.md (host root fallback), README/install
+      docs for the local install path, and the doc-distribution marker for any
+      changed guide."
+    type: info
+    date: "2026-11-15"
+  - text: "Artifact chain: spec v1.1 (5e5aef2b), test plan v1.1 (376be41e), plan
+      revision 1.0 (1cb0b39a, 5 phases, 41 declared files). The plan declares
+      `.changeset/gh-320-jaiship-binary-minor.md` following the per-feature
+      changeset convention visible across GH-280..GH-310, although the spec's
+      §16 impact map did not list it; treated as release bookkeeping, not new
+      product scope."
+    type: info
+    date: "2026-11-15"
+  - text: "Retro (specification quality): the first spec under-counted the committed
+      identity-literal inventory (three sites), omitting the unchanged MCP
+      default in packages/mcp/src/serve.ts and the delivered entrypoint neutral
+      default. Test planning caught it as blocking B-1; specification was
+      reopened and re-authored to a four-site inventory with the neutral
+      constant and its accessor removed. Cost: one reopen cycle. Improvement:
+      derive such inventories from an actual repository scan during spec
+      authoring instead of from the narrative."
+    type: retro
+    date: "2026-11-15"
+  - text: "DoR iteration 1: NOT_READY (9 facets FAIL, 1 PASS). Blocking: (1) ticket
+      AC4 config half cannot be proven on `status --json` because status
+      acquires no project configuration; (2) spec both requires and forbids an
+      alias invalid-override behaviour change, and misstates delivered behaviour
+      (`fallback.internal`, exit 2); (3) phase 1 cannot be green - the neutral
+      removal breaks `entrypoint-help-isolation.test.ts` (phase 2 scope but a
+      phase 1 gate control) and the undeclared
+      `tests/conformance/pilot/pilot-isolation.test.ts`; (4) the new
+      `scripts/.tests` installer suite is auto-discovered by the CI bash-tests
+      job, which has no Bun; (5) the declared four-site literal inventory is
+      actually five (`SCOPE_ORG` in the resolver). Majors: spec-§16 vs plan
+      blast radius (8 files), missing decision-record routing for DEC-5/DEC-9,
+      undeclared installer `ADOS_HOME`/`~/.ados` surfaces plus the new
+      install-time Bun dependency and no-CLI-source/DRY_RUN semantics,
+      non-executable same-device gate placeholder, unimplementable TC-BIN-084
+      cross-suite counters, false `~/.jaiship` absence assertion in TC-BIN-055,
+      stale test-plan homes (handbook phrase table, nested `.git` fixtures,
+      'plan absent'), and the `completion` export difference. Remediation routed
+      to specification (1, 2, 5, 6, 7, 8), test_planning (1, 2, 10-13, 22), and
+      delivery_planning (3, 4, 9, 19-21, 23)."
+    type: retro
+    date: "2026-11-15"
+  - text: "Retro (review hygiene): the DoR reviewer started and stopped a real
+      daemon in this checkout against the operator's `~/.delivery-os-state` to
+      observe configuration acquisition, so `host-index.json` may carry that
+      transient registration. The change must not rely on or mutate that state
+      further; flag at review if the host index shows residue."
+    type: risk
+    date: "2026-11-15"
+  - text: "DoR iteration 1 disposition correction: finding 1's premise was wrong. A
+      hermetic fixture probe (git worktree with `.delivery-os/config.yaml`,
+      scratch HOME, strace) shows `status --json` opens and reads that file four
+      times, as do `daemon status`, `coordinator status`, and `dispatch
+      attempts`. `statusComposition`'s empty provider chain is a different fact.
+      Spec v1.4 keeps the ticket's literal `status --json` surface (DEC-14);
+      `config --json` is unreachable (`fallback.internal`). Lesson: verify a
+      reviewer's negative probe with a positive fixture before re-scoping a
+      ticket AC."
+    type: retro
+    date: "2026-11-15"
+  - text: "DoR iteration 2: NOT_READY, 1 blocking + 1 major + minors. Blocking:
+      TC-BIN-012 (added during iter-1 remediation) asserted `daemon status`
+      gives exit 2 `fallback.internal` under an invalid override, but a
+      subcommand-bearing invocation fails argument parsing first at exit 1
+      `fallback.invocation`; fixed by asserting the projection per invocation
+      shape. Major: the guide cannot spell the installer's `ADOS_*` surface
+      because registered user-facing docs are seed-scanned over `doc/**`; fixed
+      by a spec v1.4 by-role rule plus plan/test-plan obligations and a
+      seed-free negative control. Minors fixed in plan r1.2: stale citations, 44
+      files + 2 folders arithmetic, `--filter` is not a Bun flag, missing
+      case-to-AC trace for TC-BIN-083/084, vacuous phrase row. Iter-2 verified
+      independently that iter-1's other findings are genuinely fixed."
+    type: retro
+    date: "2026-11-15"
+  - text: "DoR iteration 3: NOT_READY, 1 blocking + 1 major. Blocking: TC-BIN-072
+      step 7's bare whole-text matcher assertion was unattainable because the
+      mandatory `ados_distribution:` marker contains seed `ados`; replaced with
+      the delivered scan form (line allowlist plus body-line splice control).
+      Major: TC-BIN-012 step 5 asserted zero config reads / no state root, false
+      for the delivered invalid-override path; replaced with a delivered-touch
+      equality and no absence claim (D13). Both were assertion-form defects
+      introduced by the previous remediation; trend 5 -> 1 -> 1 blocking."
+    type: retro
+    date: "2026-11-15"
+  - text: "DoR iteration 4: READY. Facets pass, 0 blocking. Verified live and
+      hermetically: the delivered scan form has a live body-line negative
+      control and the bare matcher is correctly not used; the invalid-override
+      projection and the delivered pre-composition touch agree across spec v1.5,
+      AC-F2-7, D13, plan r1.3 and test plan v1.4; the 44-file + 2-folder set
+      equals spec §16; 55/55 cases trace; plan validate valid/full."
+    type: info
+    date: "2026-11-15"
+  - text: "Residual DoR-4 obligations carried into delivery (non-blocking precision
+      fixes to apply in-phase): (a) TC-BIN-012 step 5's 'no prior-identity
+      notice' clause should be scoped to the alias and its rationale replaced,
+      because a `jaiship` run with a fixture `.delivery-os/config.yaml` reaches
+      the prior read during pre-composition and AC-F5-6 has no containment
+      carve-out; (b) TC-BIN-012 step 6's 'recorded pre-change control' needs a
+      declared capture artifact and is alias-only as written; (c) TC-BIN-072
+      step 9's one-liner expectation is the raw-URL default plus
+      `/scripts/install.sh`; (d) plan 4.3(b)'s two guide items
+      (`--print-install-path`, one-step move) need a case or must be dropped;
+      (e) stale v1.4/revision-1.1 citations and one phantom stale phrase in
+      TC-BIN-070; (f) duplicated assertions between TC-BIN-072 steps 7 and 8."
+    type: risk
+    date: "2026-11-15"
+  - text: "Plan phase 1 (two executable identity selectors over one shared launcher)
+      delivered by commit e4c5643b0ac482ca6701341fca2dc59329183027 (subject
+      `chore(GH-320): update packages/cli/bin/delivery-os.ts`, the commit
+      primitive's deterministic template). Gates green: pnpm install
+      --frozen-lockfile; pnpm typecheck; entrypoint-two-bins (18 pass);
+      entrypoint-version + entrypoint-help-isolation (11 pass); pilot-isolation
+      (9 pass); entrypoint-bin + content-inventory (34 pass); branding-seam +
+      branding-contract (13 pass); entrypoint-help + entrypoint-help-coverage +
+      entrypoint-composition (14 pass); daemon-start-detached (22 pass);
+      exports-parity OK (5 publishables). BYTE-TP-1 baseline captured pre-change
+      from 1d4431eb into tests/fixtures/entrypoint/alias-baseline.json."
+    type: info
+    date: "2026-11-15"
+  - text: "Plan phase 2 (prior-identity configuration and host-state fallback with
+      one bounded notice) delivered by commits
+      79fb59c9fb928735eb8ceaf7d6707d83fc8c0fa9 and
+      38183b55cc1cf8d5fc6f3df8bbbe9f5a19793477 (the second is the corrective
+      commit that lands the fixture harness inside the declared folder and the
+      probe-port refactor). Gates green: pnpm typecheck;
+      prior-identity-config-fallback (18 pass); prior-identity-state-fallback
+      (11 pass); prior-identity-notice (13 pass); identity-override (8 pass);
+      state-scope + projects-state-scope-policy (24 pass); entrypoint-two-bins
+      (18 pass); config-sources + projects-config + daemon-state-scope +
+      legacy-adapter (59 pass). DoR-4 residuals (a) notice assertion scoped to
+      the alias and rationale replaced, (b) the pre-change touch control
+      captured into
+      tests/fixtures/entrypoint/prior-identity/pre-change-touch.json and applied
+      to both bins. Discovered scope gap, disclosed and landed:
+      packages/core/src/index.ts and
+      packages/adapters/src/file/projects-config.ts are not declared in any
+      phase while the delivered structure guard and the plan's site list need
+      them; the commit primitive reported them under scopeDrift and committed
+      them. The production composition reaches prior-root existence through the
+      injected probeDefaultRoot port, and the four acquireFileConfig sites plus
+      createConfigProgram carry the prior configuration directory."
+    type: risk
+    date: "2026-11-15"
+  - text: "Plan phase 3 (local install launcher at the brand install path) delivered
+      by commit ddffaa0121d8c4032bf391a91c013ee560dca4ea. Gates green:
+      shellcheck --severity=error (clean); install-launcher-installer (7 pass);
+      install-launcher + entrypoint-installer-absence (11 pass); bash
+      scripts/.tests/test-install.sh 56/56 passed as the unchanged control;
+      entrypoint-two-bins (18 pass); entrypoint-bin + content-inventory (34
+      pass). Deviation recorded: the delivered dry-run control installs from a
+      mock source without the CLI entry, so the launcher step reports the
+      planned registration and exits 0 under DRY_RUN; the classified
+      missing-runtime and no-CLI-entry failures apply to a real run."
+    type: info
+    date: "2026-11-15"
+  - text: "Plan phase 4 (documentation truth) delivered by commit
+      2046d21a5846aa41ebb3f6fdc5a34d28710c2624. Gates green: doc-conformance (16
+      pass); identity-docs (9 pass); forbidden-literals 5/5 scope classes, 0
+      violations; forbidden-literals.test (27 pass); test-doc-distribution.sh no
+      drift (94 in-scope docs), guide registered and seed-clean; pnpm
+      check:help; pnpm check:prompt; git diff --check. The guide declares
+      ados_distribution: redistributable, received its licence header only via
+      scripts/add-header-location.sh on the single path, and is linked from all
+      four affected spec pages (the landing page stays untouched)."
+    type: info
+    date: "2026-11-15"
+  - text: "Plan phase 5 (hermeticity guard, changeset, gates, reconciliation) state
+      at the final phase boundary. Gates green: prior-identity-hermetic (5 pass:
+      static surface scan, spawned preload run over the nine named suites,
+      five-class canary); changesets-group OK (exactly one fixed group of five,
+      testkit excluded); the single same-device gate `mkdir -p $HOME/.cache &&
+      TMPDIR=$(mktemp -d $HOME/.cache/ados-check-XXXXXX) pnpm check` exited 0
+      with 8434 pass / 4 skip / 0 fail (8438 tests, 1074 files);
+      `./scripts/lint-commit-range.sh --base main-tools` PASS (20 commits,
+      repository-local commitlint); `delivery-os plan validate GH-320`
+      valid/full; `git diff --check` clean. Recorded evidence, not a gate: the
+      repo-local `TMPDIR=$PWD/tmp/tmpdir pnpm check` run is red with 14
+      projects/queue/state cells (the GH-313 mechanism: fixtures need a temp
+      directory outside every work tree). DoR-4 residuals (c)-(f) applied to
+      test plan v1.5; (a)/(b) were applied in phase 2."
+    type: info
+    date: "2026-11-15"
+
+  - text: "Delivery deviations and discovered gaps, recorded rather than silently
+      widened. (1) Discovered plan-scope gaps, landed and disclosed:
+      `packages/core/src/index.ts`,
+      `packages/adapters/src/file/projects-config.ts` and
+      `tests/fixtures/ports/v1-contract-inventory.json` are not declared in any
+      phase, but the delivered guards require them to change alongside the
+      declared files (the root-entry policy export, the project-groups document
+      read, and the v1 contract-surface fixture). The commit primitive reported
+      them under `scopeDrift` at the time and still committed them, so the tree
+      is consistent and this record discloses the widening. (2) The notice
+      travels the delivered `warnings` channel (stderr through the serializer in
+      every mode, never in the payload) instead of a new sink, because the
+      delivered CLI guards forbid ambient reads and stream writes outside the
+      serialization chokepoint; the vocabulary stays in `contracts/config.ts`
+      with the token exposed as behaviour, not as an exported string literal,
+      which the branding-seam guard requires. (3) Formatting of files declared
+      in earlier phases was corrected in the final commit so `pnpm format:check`
+      is green; no behaviour changed. (4) Each phase landed through the commit
+      primitive in standalone mode, whose deterministic template subject is used
+      because any lifecycle id maps multiple delivery-kind plan phases to the
+      union scope and therefore no single plan `summary`; phase 2 needed a
+      second corrective commit after a fixture helper sat beside, not inside,
+      the declared fixture folder. (5) The installer launcher step reports the
+      planned registration and exits 0 under `DRY_RUN` even from a source tree
+      without the CLI entry, because the delivered
+      `scripts/.tests/test-install.sh` dry-run control must stay green; the
+      classified missing-runtime and no-CLI-entry failures apply to a real run."
+    type: risk
+    date: "2026-11-15"
+  - text: "Resume sync after GH-310 landed: merged origin/main-tools twice —
+      d3c61bac (picked up GH-310, c1f0d6fa, 99 files, clean auto-merge on 8 hot
+      files) and cfc2786a (picked up GH-322, 8a1f77ad, which sanitizes an
+      absolute user path in GH-310's pm-notes). The first post-merge gate run
+      failed 3 checks (privacy-literals TC-PRIVACY-020 and two TC-WIRE-002
+      cells) solely because of that upstream GH-310 artifact; after the second
+      sync the privacy scan is clean and the full gate is green: 8624 pass, 4
+      skip, 0 fail (8628 tests, 1091 files). No GH-320 code or test failure
+      occurred at any point."
+    type: info
+    date: "2026-11-15"
+  - text: "Phase 7 (doc-sync) reconciliation: the declared four pages plus
+      feature-doc-distribution-marker.md were verified current; ten further
+      current-truth documents were corrected because they still described the
+      single non-installed bin — feature-state-layer.md,
+      doc/spec/nonfunctional.md, doc/overview/architecture-overview.md,
+      doc/overview/glossary.md, doc/quality/test-specs/test-spec-state-layer.md,
+      the branding-seam secrecy/boundedness statements, the config-layer
+      fallback table wording, the projects host-root rule, the entrypoint
+      interface table and launcher subject, and the distribution-marker
+      change-relative phrasing. Commits 6591503c and 06a9158b; the commit
+      primitive disclosed the out-of-plan paths as scopeDrift rather than hiding
+      them. Residual gap R1 (doc/00-index.md still calling the bin
+      'non-installed') closed by 3ab205b2 (descriptor only, no rebranding, no
+      guide link). Verification: 110 pass / 0 fail across identity-docs,
+      doc-conformance, milestone-guide, forbidden-literals, content-inventory,
+      entrypoint-bin, install-launcher and entrypoint-installer-absence;
+      forbidden-literals 5/5 classes, 0 violations; doc-distribution 94 in-scope
+      docs, no drift. No residual documentation gap; no contradiction with
+      GH-310 or GH-322 current truth."
+    type: info
+    date: "2026-11-15"
+  - text: "Review iteration 1: FAIL (spec_compliance FAIL, plan_compliance FAIL); 16
+      findings — 3 high, 5 medium, 6 low, 2 info. Blocking: F-1 a prior-identity
+      read during composition emits no notice when composition then fails
+      (invalid override), so AC-F5-6 is unmet on the containment path; F-2 the
+      generated launcher interpolates the target unescaped, so a path containing
+      a single quote produces a broken/injectable launcher; F-3 several
+      'injected fixture' non-vacuity controls never invoke a guard
+      (installer-array splice is a tautology, the daemon cell reads its own test
+      file, the identity-docs registration/splice controls assert nothing).
+      Medium: F-4 DRY_RUN reports a registration for a non-existent entry and
+      the carve-out is unreconciled in spec/AC/test plan; F-5 six current-truth
+      pages and doc/00-index.md changed outside spec §16 and the plan's scope
+      invariants (pm-notes count also wrong); F-6 dead optional prior-directory
+      branch in the undeclared projects-config.ts; F-7 TC-BIN-072 step 9 has no
+      delivered assertion and step 8 is the vacuous cell; F-8 the
+      identity-literal scan collects only top-level module string declarations,
+      narrower than DM-6's declared rule. Low/info: duplicate override-name
+      literal in bin-launcher.ts, install.sh header/usage silent on the launcher
+      and Bun requirement, exit 1 outside the declared exit taxonomy, the
+      preload arms no fs writes/Bun.spawn, the §10 gate row and two citations
+      are pre-sync, the pre-change touch control captures no read counts, a
+      digest self-compare, and a tautological parity mutant. Routing:
+      specification (F-4, F-5, F-8, citations/gate row), delivery_planning (F-5
+      scope, remediation phase), coder (F-1, F-2, F-3, F-6, F-7, lows)."
+    type: retro
+    date: "2026-11-15"
+  - text: "Retro (test quality): three of five 'injected fixture' controls could not
+      fail, so AC-F7-10's non-vacuity clause was satisfied only on paper. The
+      plan and test plan demanded failing negative controls; the implementation
+      asserted spliced text instead of invoking the guard. Improvement: when a
+      negative control is written, run the production scanner/guard over the
+      seeded source and assert the failure message, never assert the seed text
+      itself."
+    type: retro
+    date: "2026-11-15"
+  - text: "Correction to the phase-4/phase-7 doc-sync notes above (superseded, not
+      rewritten): the 'ten further current-truth documents' count and the clause
+      'the landing page stays untouched' are both wrong as delivered. The
+      reconciled set beyond the five declared pages is six:
+      feature-state-layer.md, doc/spec/nonfunctional.md,
+      doc/overview/architecture-overview.md, doc/overview/glossary.md,
+      doc/quality/test-specs/test-spec-state-layer.md, and the doc/00-index.md
+      descriptor row. Spec v1.6 moved that descriptor row to CHANGED and §16
+      v1.7 declares the ports contract-inventory fixture; operative statements
+      in spec/plan/test plan are corrected, and the earlier entries are
+      annotated as superseded."
+    type: info
+    date: "2026-11-15"
+  - text: "Plan phase 6 (review-iteration-1 remediation) evidence at plan r1.5.
+      Commits: 9464de36 (F-1 notice flush, F-2 safe quoting, F-3 live guards,
+      F-4 DRY_RUN preview, F-6 revert, F-7 step-9 assertions, F-8 node-level
+      scan, F-9..F-14), 217b5b38 (revert packages/core/src/index.ts), 9059598e
+      (delivery complete), 719f6e53 (docs re-verified), c370f8b4 (phase close).
+      Gates at that boundary: pnpm typecheck; structure trio 33 pass;
+      port-contract-inventory 11 pass; install-launcher-installer 8 pass;
+      identity-docs 12 pass; daemon-start-detached 22 pass; identity-override +
+      prior-identity-notice 23 pass; prior-identity-hermetic 5 pass;
+      content-inventory 12 pass; exports-parity OK; shellcheck clean;
+      test-install.sh 56/56; forbidden-literals 5/5 classes 0 violations;
+      doc-distribution no drift; commit-range PASS; plan validate valid/full; 0
+      undeclared paths in the 62-entry diff."
+    type: info
+    date: "2026-11-15"
+  - text: "Review iteration 2: FAIL, one blocking. New defect introduced by the
+      delivered launcher: a relative ADOS_SOURCE_DIR was recorded verbatim, so
+      the launcher stored a relative target and failed from any other directory.
+      Fixed by absolutizing source_dir with logical pwd in do_local_install and
+      adding the relative-source installer case (verified non-vacuous: removing
+      the absolutize line fails the case). Commit 265c4e11; delivery
+      re-completed at 488f562e. Non-blocking at iter 2: preload write-arming
+      overstatement, missing phase-6 pm-notes evidence entry (this note), a
+      pm-notes delivery_planning timestamp regression, and stale plan
+      citations."
+    type: retro
+    date: "2026-11-15"
+  - text: "Review iteration 3: PASS. All 11 ACs pass (AC-F5-6, AC-F7-10 and AC-F6-8
+      were the previously failing ones); 63 changed paths with 0 undeclared;
+      plan validate valid/full. Four low findings accepted as recorded nits
+      rather than re-opened: the preload docstring still says 'every write'
+      without the require qualifier (test plan and spec already bound the
+      claim), the phase-6 evidence entry (now recorded above), the pm-notes
+      delivery_planning timestamp (see next note), and a spec citation of test
+      plan v1.6. None affects behaviour, an AC, or a gate."
+    type: info
+    date: "2026-11-15"
+  - text: "Phase-timestamp integrity note: chg-GH-320-pm-notes.yaml records
+      delivery_planning.completed as 2026-11-15T06:40:42.298Z, while the phase
+      registry (delivery-os phase list GH-320) records 2026-11-15T12:01:49.579Z.
+      The divergence came from concurrent phase writes on this host during the
+      review remediation (a completion landed out-of-session as a no-op and the
+      reopen then rewrote the affected entry). The registry is the authoritative
+      state layer; the file value is stale and is deliberately not hand-edited,
+      because phase timestamps are written only by the phase family. Recorded
+      for the closeout/reviewer rather than repaired by hand."
+    type: risk
+    date: "2026-11-15"
+  - text: "Quality-gate iterations (phase 9). Run 1: FAIL 8630-8635-test run with 5
+      failures — a branch-introduced absolute user path literal (a `HOME` value
+      pointing at an absolute scratch home path under the system temp dir) at
+      tests/behaviour/daemon-start-detached.test.ts:710 tripping
+      private.absolute-user-path, which reddened TC-PRIVACY-020 and two
+      TC-WIRE-002 cells, plus load-dependent timeouts in
+      telemetry-storage-growth and state-fence (both green in isolation). Fixed
+      the literal to `/fixture/home` in f7243d7f (semantics and F-3b assertions
+      unchanged; scan now 0 violations). Run 2: FAIL with one pre-existing
+      timing flake, TC-DAEMON-121 (worst sample 251.96 ms against a 250 ms
+      ceiling; the test and packages/cli/src/commands/daemon.ts are untouched by
+      this branch; three isolated runs gave 232.9-238.3 ms). Run 3: PASS —
+      GATE_EXIT=0, 8631 pass, 4 skip, 0 fail, 8635 tests across 1091 files
+      (1249.5 s), with lint, format:check, typecheck, check:boundaries,
+      prompt-conformance, help-guide-coverage and exports-parity all green."
+    type: info
+    date: "2026-11-15"
+  - text: "Commit-range gate: PASS. base=origin/main-tools, merge-base 8a1f77ad,
+      head f7243d7f, 45 commits in range, 0 offending commits, 0 distinct rules
+      hit, commitlint resolved repository-local (node_modules/.bin/commitlint,
+      origin=repository-local), mode none. Recorded as the phase-9 range
+      verdict."
+    type: info
+    date: "2026-11-15"
+  - text: "DoD check: all ten prior phases completed in the registry; plan phases
+      1-6 each carry a pm-notes evidence entry naming the phase id, commit(s)
+      and the gate result; review iteration 3 = PASS with all 11 ACs PASS
+      (AC-F7-9 no longer provisional: the aggregate gate is green); the
+      documentation set reports no residual gap after the phase-7
+      re-verification; 0 undeclared paths against plan r1.5; plan validate
+      valid/full. Accepted, recorded non-blocking nits: the preload docstring
+      'every write' overstatement, the pm-notes delivery_planning timestamp
+      divergence from the authoritative registry, spec citations of test plan
+      v1.6, and one info wording nit; none affects an AC, a gate or the PR
+      contract."
+    type: info
+    date: "2026-11-15"
+  - text: "PR #324 CI round 2/3 and final gate at head ce69101. Round 2 root causes:
+      (a) the two install-set-oracle jobs need the workspace installed and built
+      (the launcher resolves `@delivery-os/*` to the git-ignored `dist`, so
+      `pnpm install` alone still failed — proven in a dependency-free worktree),
+      fixed by adding the pinned pnpm setup, `pnpm install --frozen-lockfile`
+      and `pnpm build` to `doc-distribution-guard` and `bash-tests`; (b) the
+      notice bound measured the raw line, which embeds two absolute paths, so
+      the longer CI checkout made 425 chars against 400 — the bound is now
+      path-independent (fixed prose with both locations removed ≤ 400), spec
+      v1.11 and test plan v1.8, applied to TC-BIN-043 and TC-BIN-052. Final
+      checks at ce69101: pnpm check 8631 pass / 4 skip / 0 fail (8635 tests,
+      1091 files, 1327 s); commit-range PASS, 61 commits, 0 offending;
+      privacy-literals 0 violations; doc-distribution no drift (94 docs);
+      prior-identity-notice + install-launcher-installer 23 pass. Spec v1.11
+      declares the full provisioning edit in §7.2/§16; plan r1.8 carries
+      obligation 6.19 (a)-(d)."
+    type: info
+    date: "2026-11-15"
+  - text: "PR #324 CI remediation and final gate. Root causes: (1) the phase-9
+      evidence entry quoted an absolute scratch-home path, tripping the CI-only
+      `privacy-literals` invariant (local `pnpm check` does not run it); (2) the
+      `doc-distribution-guard` and `bash-tests` CI jobs run the install-set
+      oracle (`install.sh --local`), which now needs Bun at install time, and
+      neither job installed it. Fixed in f69b66b6: the pm-notes path is
+      sanitized, and `.github/workflows/ci.yml` adds the pinned Bun setup
+      (`oven-sh/setup-bun@0c5077e5…`, `${{ env.BUN_VERSION }}`) to those two
+      jobs only. Local verification: privacy-literals 0 violations;
+      doc-distribution no drift (94 docs); doc-distribution modes 5/5;
+      test-install 56/56; run-bash-suites 27/27; privacy suites 53 pass;
+      shellcheck clean; ci-topology / ci-bindingness / ci-supply-chain green;
+      workflow YAML parses. Spec v1.9 and plan r1.6 declare the workflow file;
+      spec §7.2 no longer claims no CI change is required."
+    type: info
+    date: "2026-11-15"
+  - text: "Final phase-9 gate at head ceb88482: GATE_EXIT=0, 8631 pass / 4 skip / 0
+      fail (8635 tests, 1091 files, 1265 s), with lint, format:check, typecheck,
+      check:boundaries, prompt-conformance, help-guide-coverage and
+      exports-parity green. Commit-range gate: base origin/main-tools,
+      merge-base 8a1f77ad, head ceb88482, 51 commits, 0 offending, 0 rule hits,
+      commitlint repository-local, mode none. Privacy invariant separately 0
+      violations. This supersedes the earlier phase-9 note recorded before the
+      PR-CI fix."
+    type: info
+    date: "2026-11-15"
+  - text: "Pull request:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/324 — base
+      main-tools, head feat/GH-320/jaiship-binary, created by @pr-manager at
+      head 8c77e014 and later advanced by the PR-CI fix and close-out commits
+      (f69b66b6, ceb88482, 2633d9ba, f49d7be7, 478e5401, a3c5ded0). Left OPEN
+      for review; merge authority is the CEO (Mode A) or the human via
+      batch-deliver.sh (Mode B). The ticket is assigned to juliusz-cwiakalski
+      for review."
+    type: info
+    date: "2026-11-15"
+  - text: "PR #324 CI remediation round 3. Two remaining causes fixed. (1) The
+      `doc-distribution-guard` and `bash-tests` jobs need the workspace
+      installed: both now set up pnpm with the pinned action and run `pnpm
+      install --frozen-lockfile` immediately after Bun. A dependency-free
+      worktree reproduction proved install alone is NOT sufficient: with
+      dependencies present the install-set oracle still fails because the
+      launcher executes `packages/cli/bin/jaiship.ts`, whose `@delivery-os/*`
+      imports resolve through each package's `exports` to the ignored `dist`
+      targets, so both jobs also run `pnpm build`. The same dependency-free
+      worktree then ran the oracle green. (2) The notice bound is now
+      path-independent: `TC-BIN-043` measures the fixed prose after removing the
+      exact prior and current location strings, asserts a materially longer
+      scratch root renders identical prose, and `TC-BIN-052` measures the
+      launcher diagnostic after removing the expected absolute target.
+      Verification: prior-identity notice 14/14; install-launcher-installer 9/9;
+      install-launcher structure 5/5; doc-distribution no drift (94 docs);
+      privacy-literals 0 violations; ci-topology / ci-bindingness /
+      ci-supply-chain green; workflow YAML parses; git diff --check clean.
+      Recorded deviation: the build step is beyond the install-only wording of
+      plan 6.19 and spec §7.2/§16; the dependency-free proof shows it is
+      required for the declared oracle edit to work."
+    type: info
+    date: "2026-11-15"
+  - text: "PR #324 CI remediation round 4 (Bash test suites). Fixed
+      `scripts/.tests/test-lint-commit-range.sh` case `worker pool: killed
+      worker is ERROR (F-2)`: the slow shim now appends its own `$$` to a marker
+      before the sleep/exec, and the harness resolves the victim from that
+      stable pid by walking ancestors, selecting the worker bash immediately
+      below the highest ancestor whose argv contains the exact absolute gate
+      path, with the gate explicitly excluded. This removes both the
+      `$!`/direct-child assumption and the `*lint-commit-range.sh*` substring
+      matcher. Non-vacuity proof: with the gate's missing-record fail-closed
+      branch temporarily replaced by `continue` (not committed), the case failed
+      by name (`[FAIL] worker pool: killed worker is ERROR (F-2)`; the gate
+      rendered `VERDICT: PASS`); after restoring the gate the suite was 50/50.
+      Verification: default, `TMPDIR=$PWD/tmp/tmpdir`, and
+      `PATH=$PWD/node_modules/.bin:$PATH` runs were each 50/50 with
+      `HOST_COMMITLINT_AVAILABLE=true`; `run-bash-suites.sh` 27/27 suites;
+      `shellcheck --severity=error` clean; `git diff --check` clean."
+    type: info
+    date: "2026-11-15"
+  - text: "Review iteration 4 (focused delta review of 488f562e..1fd6a845): PASS, 5
+      non-blocking findings (one low citation-sweep nit, four info), all 11 ACs
+      PASS; product code (production.ts, entrypoint.ts, scripts/install.sh)
+      byte-unchanged, so the iteration-3 live verification stands."
+    type: info
+    date: "2026-11-15"
+  - text: "Final gates at head 30f71158 after sanitizing the review artifact: the
+      aggregate gate failed once on `private.absolute-user-path` because
+      `code-review/review-iter-4.yaml` quoted the corrected fixture path in
+      plain text; the artifact is now described by role with no absolute user
+      path. Re-run: GATE_EXIT=0, 8631 pass / 4 skip / 0 fail (8635 tests, 1091
+      files, 992 s) with lint, format, typecheck, boundaries,
+      prompt-conformance, help-guide-coverage and exports-parity green;
+      commit-range PASS, 68 commits, 0 offending; run-bash-suites 27/27;
+      privacy-literals 0 violations."
+    type: info
+    date: "2026-11-15"

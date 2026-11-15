@@ -1,40 +1,26 @@
 #!/usr/bin/env bun
 /**
- * The non-installed executable entry (GH-242 F-1, DEC-14).
+ * The `delivery-os` executable identity selector (GH-320 F-1, DEC-5).
  *
- * The bin is a thin process adapter: it reads the environment once, composes
- * the prompt-required program through the production composer, and delegates
- * every decision to `runEntrypoint`. It is not added to the installer.
+ * The bin is the declared process edge: it reads the environment, the working
+ * directory, and the streams once, declares its own default working name and no
+ * prior identity, and delegates to the one shared launcher composition. It never
+ * composes the program itself and never calls the command runtime.
  */
-import { runEntrypoint } from "../src/entrypoint.ts";
-import { createProductionComposer, DECLARED_CREDENTIAL_REFERENCES } from "../src/production.ts";
+import { runBinLauncher } from "../src/bin-launcher.ts";
 
-const invoke = async (): Promise<number> => {
-  const environment: Readonly<Record<string, string | undefined>> = { ...process.env };
-  const cwd = process.cwd();
-  const homeDirectory = environment.HOME ?? environment.USERPROFILE ?? "";
-  const configured =
-    environment.DELIVERY_OS_WORKING_NAME === undefined ||
-    environment.DELIVERY_OS_WORKING_NAME === ""
-      ? "delivery-os"
-      : environment.DELIVERY_OS_WORKING_NAME;
-  return runEntrypoint(process.argv.slice(2), {
-    streams: { stdout: process.stdout, stderr: process.stderr },
-    environment,
-    configuredWorkingName: configured,
-    credentialReferences: DECLARED_CREDENTIAL_REFERENCES,
-    composeProgram: createProductionComposer({
-      environment,
-      cwd,
-      homeDirectory,
-      workingName: configured,
-      processId: process.pid,
-      signalHost: process,
-      daemonEntry: process.argv[1],
-    }),
-  });
-};
+/** The compatibility alias's declared identity; the one identity literal here. */
+const DEFAULT_WORKING_NAME = "delivery-os";
 
-export const completion: Promise<void> = invoke().then((exitCode) => {
+export const completion: Promise<void> = runBinLauncher({
+  declaredWorkingName: DEFAULT_WORKING_NAME,
+  argv: process.argv.slice(2),
+  environment: process.env,
+  cwd: process.cwd(),
+  streams: { stdout: process.stdout, stderr: process.stderr },
+  processId: process.pid,
+  signalHost: process,
+  daemonEntry: process.argv[1],
+}).then((exitCode) => {
   if (exitCode !== 0) process.exitCode = exitCode;
 });
