@@ -235,8 +235,8 @@ The privacy guard applies the same registry-as-authority, reason-bearing allowli
 |-------|-------|-----------|
 | Unit/behaviour | Resolver completeness, determinism, validation, derivation conformance, override swap | `bun test tests/behaviour/branding-resolver.test.ts` |
 | Unit/behaviour | Legacy mapping and one-warning discipline | `bun test tests/behaviour/legacy-adapter.test.ts` |
-| Structure | Contract placement, no external construction, override confinement, literal inventory | `bun test tests/structure/branding-*.test.ts tests/structure/legacy-confinement.test.ts` |
-| Document | Drill completeness, name-freedom, registration | `bun test tests/structure/rename-drill-doc.test.ts` |
+| Structure | Contract placement, no external construction, override confinement, the declared five-site literal inventory, pre-freeze compatibility confinement | `bun test tests/structure/branding-*.test.ts tests/structure/entrypoint-bin.test.ts tests/structure/legacy-confinement.test.ts` |
+| Document | Drill completeness, name-freedom, registration, the identity statements of the affected specification pages, and the registered install guide's marker and divergences | `bun test tests/structure/rename-drill-doc.test.ts tests/checks/identity-docs.test.ts` |
 | Invariants | Scan mechanics, per-class mutations, allowlist exactness, docs-scope lifetime | `bun test tests/checks/forbidden-literals.test.ts` and `bun run scripts/checks/forbidden-literals.ts` |
 | CI topology | Scan job presence, baseline fetch, bindingness | `bun run scripts/checks/ci-topology.ts` and `bun run scripts/checks/ci-bindingness.ts` |
 | Aggregate | The whole workspace | `pnpm check` |

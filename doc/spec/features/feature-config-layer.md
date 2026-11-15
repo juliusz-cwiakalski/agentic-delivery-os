@@ -206,10 +206,10 @@ Configuration adds the proposed Ajv and YAML runtime dependencies recorded in th
 
 | Level | Scope | Evidence |
 |---|---|---|
-| Behaviour | Seven winners, merge/reset, schema, restrictions, provenance, parser, sources, legacy, lane defaults and validation | `tests/behaviour/config-*.test.ts`, `tests/behaviour/legacy-adapter.test.ts`, `tests/behaviour/economics-budget-config.test.ts` |
+| Behaviour | Seven winners, merge/reset, schema, restrictions, provenance, parser, sources, legacy, lane defaults and validation, the per-layer prior-identity fallback, and the classified fallback notice | `tests/behaviour/config-*.test.ts`, `tests/behaviour/legacy-adapter.test.ts`, `tests/behaviour/economics-budget-config.test.ts`, `tests/behaviour/prior-identity-config-fallback.test.ts`, `tests/behaviour/prior-identity-notice.test.ts` |
 | CLI/golden | Basic/debug/get, human and machine payloads, redaction and canaries | `tests/behaviour/config-cli.test.ts`, `tests/golden/config-output.test.ts` |
 | Structure | Inventory, root API, no public config subpath, import confinement | `tests/structure/config-contract.test.ts`, `tests/structure/content-inventory.test.ts`, `tests/boundaries/**` |
-| Checks | Default/schema artifact parity, error rows, license closure | `tests/checks/config-default-positions.test.ts`, `tests/checks/error-table-sync.test.ts`, `tests/checks/license-audit.test.ts` |
+| Checks | Default/schema artifact parity, error rows, license closure, and the fallback's hermeticity (no read or write of the operator's real home or state root) | `tests/checks/config-default-positions.test.ts`, `tests/checks/error-table-sync.test.ts`, `tests/checks/license-audit.test.ts`, `tests/checks/prior-identity-hermetic.test.ts` |
 | Packed | Node/Bun packed consumers and artifact presence | `tests/checks/packed-config.test.ts` |
 
 ## Dependencies & Risks

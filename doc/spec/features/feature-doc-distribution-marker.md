@@ -120,6 +120,7 @@ The `get_marker()` parser is **shared** between `install.sh` and the guard (the 
 |-------|-------|-------|
 | CI | Guard green | `bash scripts/.tests/test-doc-distribution.sh` |
 | CI | Modes harness | `bash scripts/.tests/test-doc-distribution-modes.sh` exercises each of the 5 failure modes on a synthetic tree |
+| Bun test job | Launcher step | `bun test tests/structure/install-launcher.test.ts tests/checks/install-launcher-installer.test.ts` — registration structure, path authority, content idempotence, repointing, the classified failures, and `--version` from outside the repository |
 | Manual | Install set | `install.sh --local` in a sandbox; compare against marker-derived set |
 
 ## Dependencies & Risks
