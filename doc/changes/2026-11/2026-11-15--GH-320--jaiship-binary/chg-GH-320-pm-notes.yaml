@@ -5,7 +5,7 @@ milestone: "M4: Public release readiness"
 story_code: M4-S1a
 phases:
   clarify_scope: { started: "2026-11-15T06:02:06Z", completed: 2026-11-15T06:10:17.425Z }
-  specification: { started: null, completed: 2026-11-15T07:06:33.924Z }
+  specification: { started: null, completed: 2026-11-15T07:29:22.967Z }
   test_planning: { started: null, completed: 2026-11-15T07:18:40.771Z }
   delivery_planning: { started: null, completed: 2026-11-15T07:18:56.811Z }
   dor_check: { started: null, completed: null }
