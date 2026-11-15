@@ -10,7 +10,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-14T20:13:53.199Z }
   delivery: { started: null, completed: 2026-11-15T06:39:21.422Z }
   system_spec_update: { started: null, completed: 2026-11-15T07:53:20.797Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-15T08:04:10.303Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -259,6 +259,21 @@ notes:
       delivered durable record, one test must exercise the real writer/reader,
       not the port stub."
     type: retro
+    date: "2026-11-15"
+  - text: "Review iteration 2 verdict: PASS — spec_compliance PASS, plan_compliance
+      PASS; 0 critical / 0 high / 4 medium / 9 low / 2 info. Record:
+      code-review/review-iter-2.yaml. Iteration-1 highs F-1 and F-2 verified
+      closed against the code (real appender/reader round trip is non-torn and
+      member-free; member ticket transitions target observation.issue only and
+      absent issue yields skipped-noop with zero operations, strict fake proves
+      no synthesized id). F-3/F-4/F-5 closed via DEC-23 fold and the
+      change-level ticket fold; F-15/F-16/F-17/F-20 closed. Accepted residuals
+      (to disclose in the PR body): AC-F5-3 apply-mode observability, AC-F5-2
+      partial-landing reachability precondition, DEC-23 failed tier yielding
+      closeout.write.failed, F-6 fail-open member CI reading on a truncated
+      page, F-7 no member read-bundle identity check, and commit hygiene
+      (phase-6 source under a template-generated docs subject)."
+    type: resolved
     date: "2026-11-15"
   - text: "Delivery conventions for this change: full 11-phase lifecycle; plan
       phases declared in chg-GH-310-plan.yaml; one delivery commit per plan
