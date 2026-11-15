@@ -4,7 +4,8 @@
 # Latest version: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/scripts/install.sh
 # install.sh — Install or update Agentic Delivery OS (ADOS) globally or into a local project
 #
-# Dependencies: bash>=4, git, diff, cp, mkdir
+# Dependencies: bash>=4, git, diff, cp, mkdir; the Bun runtime at install time for
+#               the local launcher registration step
 # Usage: ./install.sh [--global|--local] [options]
 #
 # Three modes:
@@ -17,6 +18,14 @@
 #                  guides/templates/handbook to the latest upstream version while
 #                  preserving project-specific files (pm-instructions.md). Copy a
 #                  template to a working file rather than editing it in place.
+#                  A local install also registers the product's executable
+#                  launcher at the brand install path (the path the executable
+#                  itself answers for --print-install-path). That step requires
+#                  the Bun runtime at install time; a missing runtime or a
+#                  resolved source tree without the CLI entry is a classified
+#                  failure that names what is missing and writes no launcher,
+#                  never a silent skip. DRY_RUN reports the planned registration
+#                  and writes nothing.
 #
 # Interactive mode:
 #   --interactive (-i)  When a file differs from upstream, show a colored unified
@@ -47,7 +56,8 @@
 #   0 - Success
 #   2 - Usage error
 #   3 - Configuration error
-#   4 - Runtime error
+#   4 - Runtime error (including a launcher precondition the host does not meet:
+#       no Bun at install time or a source tree without the CLI entry)
 #   5 - External command failure
 
 set -Eeuo pipefail
@@ -988,40 +998,38 @@ install_local_launcher() {
   local -r source_dir="$1"
   local -r entry="${source_dir}/${CLI_ENTRY_RELATIVE}"
 
-  # A dry run reports the planned registration and writes nothing (DEC-15).
+  # A dry run is a PLAN-ONLY PREVIEW (DEC-15, NFR-5): it evaluates no install-time
+  # precondition — no runtime probe, no CLI-entry existence check, no launcher
+  # write — and prints one line marked as a plan naming the target it would
+  # record. It never claims a launcher exists, and it is not a silent skip.
   if [[ "${DRY_RUN}" == "true" ]]; then
-    local planned=""
-    if [[ -f "${entry}" ]] && command -v bun >/dev/null 2>&1; then
-      planned="$(resolve_launcher_path "${source_dir}" || true)"
-    fi
-    if [[ -n "${planned}" ]]; then
-      log_info "[DRY-RUN] Would register the launcher at ${planned} -> ${entry}"
-    else
-      log_info "[DRY-RUN] Would register the launcher for the CLI entry ${entry}"
-    fi
+    log_info "[DRY-RUN] Would register the launcher for the CLI entry ${entry} (preview only; install-time preconditions are not evaluated)"
     return 0
   fi
 
   if [[ ! -f "${entry}" ]]; then
-    log_err "the resolved source tree has no CLI entry: expected ${entry}"
-    return 1
+    log_fatal "the resolved source tree has no CLI entry: expected ${entry}"
   fi
   if ! command -v bun >/dev/null 2>&1; then
-    log_err "the Bun runtime is required at install time for the launcher step but is not on PATH"
-    return 1
+    log_fatal "the Bun runtime is required at install time for the launcher step but is not on PATH"
   fi
 
   local install_path
   if ! install_path="$(resolve_launcher_path "${source_dir}")"; then
-    return 1
+    log_fatal "the executable did not answer a usable install path for the launcher"
   fi
 
+  # The recorded target is rendered as one safely quoted shell word: `printf %q`
+  # escapes every byte bash needs escaped, so a source path containing a single
+  # quote, a backslash, or a space still yields a valid, non-injectable launcher.
+  local quoted_entry
+  quoted_entry="$(printf '%q' "${entry}")"
   local content
   content="$(
     cat <<LAUNCHER
 #!/usr/bin/env bash
 # Installed by the local install; re-run the local install to update or repoint.
-readonly TARGET='${entry}'
+readonly TARGET=${quoted_entry}
 if [[ ! -f "\${TARGET}" ]]; then
   printf 'the installed target %s no longer exists; re-run the local install to repoint it\n' "\${TARGET}" >&2
   exit 1
@@ -1118,6 +1126,17 @@ Modes:
                      NOTE: copy a template to a working file rather than editing
                      it in place — re-running will overwrite in-place edits to
                      redistributable docs.
+                     A local install ALSO registers the product's executable
+                     launcher at the brand install path (the path the executable
+                     answers for --print-install-path). That step requires the
+                     Bun runtime at install time; a missing runtime or a source
+                     tree without the CLI entry is a classified failure naming
+                     what is missing, and no launcher is written. DRY_RUN reports
+                     the planned registration and writes nothing.
+
+Dependencies:
+  bash>=4, git, diff, cp, mkdir, and Bun at install time (the local launcher
+  registration asks the executable for its install path).
 
 Tool Selection:
       --tool <name>  Which AI coding tool to install for (default: opencode)

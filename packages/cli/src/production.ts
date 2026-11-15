@@ -674,6 +674,38 @@ export const createProductionTelemetrySink = (
 };
 
 /**
+ * The daemon re-entry environment, derived from the injected environment alone
+ * (GH-320 F-3b, GH-288 F-1).
+ *
+ * Only the declared allowlist survives: `PATH`, the home variable the composer
+ * read (`HOME`, else `USERPROFILE`), and a non-empty working-name override. Any
+ * other key — a forwarded state-directory look-alike, a credential, an unrelated
+ * variable — is dropped here rather than passed to a detached child; the
+ * brand-derived state-directory binding is added by the daemon composition and
+ * written last, so it stays authoritative.
+ */
+export const daemonReentryEnvironment = (
+  environment: Readonly<Record<string, string | undefined>>,
+): Record<string, string> => {
+  const path = environment.PATH;
+  const homeVariable =
+    environment.HOME !== undefined && environment.HOME.length > 0
+      ? "HOME"
+      : environment.USERPROFILE !== undefined && environment.USERPROFILE.length > 0
+        ? "USERPROFILE"
+        : undefined;
+  const workingNameVariable = workingNameEnvironmentVariable();
+  const workingName = environment[workingNameVariable];
+  return {
+    ...(path === undefined ? {} : { PATH: path }),
+    ...(homeVariable === undefined ? {} : { [homeVariable]: environment[homeVariable] as string }),
+    ...(workingName === undefined || workingName.length === 0
+      ? {}
+      : { [workingNameVariable]: workingName }),
+  };
+};
+
+/**
  * Compose the prompt-required program over the delivered adapters.
  *
  * The composed brand is supplied by the entrypoint, so the name seam has one
@@ -713,7 +745,11 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     const emitNotice = (notice: PriorIdentityNotice): void => {
       if (emittedNotices.has(notice.reason)) return;
       emittedNotices.add(notice.reason);
-      compositionNotices.push(renderPriorIdentityNotice(notice));
+      const line = renderPriorIdentityNotice(notice);
+      compositionNotices.push(line);
+      // The entrypoint's containment branch delivers these lines when the
+      // composition fails before returning a program (GH-320 F-1, AC-F5-6).
+      invocation?.onCompositionNotice?.(line);
     };
     const emitConfigNotice = (prior: readonly ConfigPriorOutcome[] | undefined): void => {
       if (prior === undefined || prior.length === 0) return;
@@ -990,26 +1026,10 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       });
       // The re-entry environment is derived from facts the composer already
       // holds: the injected environment record and the composed home. No value
-      // is invented, so a stripped `PATH` or home stays stripped, and the home
-      // variable keeps the name it was read from (`HOME`, else `USERPROFILE`).
-      const path = environment.PATH;
-      const homeVariable =
-        environment.HOME !== undefined && environment.HOME.length > 0
-          ? "HOME"
-          : environment.USERPROFILE !== undefined && environment.USERPROFILE.length > 0
-            ? "USERPROFILE"
-            : undefined;
-      const workingNameVariable = workingNameEnvironmentVariable();
-      const workingName = environment[workingNameVariable];
-      const reentryEnvironment: Record<string, string> = {
-        ...(path === undefined ? {} : { PATH: path }),
-        ...(homeVariable === undefined
-          ? {}
-          : { [homeVariable]: environment[homeVariable] as string }),
-        ...(workingName === undefined || workingName.length === 0
-          ? {}
-          : { [workingNameVariable]: workingName }),
-      };
+      // is invented, so a stripped `PATH` or home stays stripped, the home
+      // variable keeps the name it was read from (`HOME`, else `USERPROFILE`),
+      // and every key outside that declared set is dropped (GH-320 F-3b).
+      const reentryEnvironment = daemonReentryEnvironment(environment);
       const supervisorConfigDirectory = supervisorConfigDirectoryFor({
         environment,
         homeDirectory,

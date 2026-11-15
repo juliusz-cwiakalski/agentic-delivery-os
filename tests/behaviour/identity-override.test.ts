@@ -33,6 +33,11 @@ const TOUCH = JSON.parse(FIXTURE) as {
     readonly summary: string;
     readonly stderr: string;
   };
+  readonly configurationTouch: {
+    readonly capturedMethod: string;
+    readonly openatOfConfigFile: number;
+    readonly textReads: number;
+  };
   readonly homeEntriesAfter: readonly string[];
   readonly repoEntriesAfter: readonly string[];
 };
@@ -259,6 +264,55 @@ describe("TC-BIN-012 an invalid override keeps self-description and the delivere
     }
   });
 
+  test("invalid-override: the fallback read is reported once beside the containment", async () => {
+    const checkout = scratchCheckout("invalid-notice-read", {
+      ".delivery-os/config.yaml": TOUCH.fixture[".delivery-os/config.yaml"] ?? laneYaml(4),
+    });
+    const home = scratchHome("invalid-notice-read-home");
+    try {
+      const run = await runThroughComposition({
+        bin: "jaiship",
+        argv: ["status", "--json"],
+        checkout: checkout.root,
+        home: home.root,
+        extra: { DELIVERY_OS_WORKING_NAME: "bad/name" },
+      });
+      // The containment projection is the delivered one, unchanged.
+      expect(run.exitCode).toBe(2);
+      const payload = JSON.parse(run.stdout) as {
+        readonly error?: { readonly code?: string; readonly summary?: string };
+        readonly warnings?: unknown;
+      };
+      expect(payload.error?.code).toBe("fallback.internal");
+      expect(payload.error?.summary).toBe(
+        'command "status" is not part of the composed prompt-required set',
+      );
+      // The prior configuration read really happens on this path, so AC-F5-6
+      // requires exactly one notice per source kind and the run delivers it.
+      expect(run.notices).toHaveLength(1);
+      expect(run.notices[0]).toContain("prior-identity-fallback: config-read");
+      expect(run.notices[0]).toContain(join(checkout.root, ".delivery-os", "config.yaml"));
+      // The notice is on stderr only: the payload stays clean and the exit code
+      // is unchanged (AC-F5-6, NFR-3).
+      expect(run.stdout).not.toContain("prior-identity-fallback");
+      expect(payload.warnings).toBeUndefined();
+
+      // The alias declares no prior identity, so the same fixture emits none.
+      const alias = await runThroughComposition({
+        bin: "delivery-os",
+        argv: ["status", "--json"],
+        checkout: checkout.root,
+        home: home.root,
+        extra: { DELIVERY_OS_WORKING_NAME: "bad/name" },
+      });
+      expect(alias.exitCode).toBe(2);
+      expect(alias.notices).toEqual([]);
+    } finally {
+      checkout.dispose();
+      home.dispose();
+    }
+  });
+
   test("invalid-override: the delivered pre-composition touch is unchanged for both bins", async () => {
     const runTouch = async (bin: "delivery-os" | "jaiship") => {
       const checkout = scratchCheckout(`touch-${bin}`, {
@@ -276,11 +330,18 @@ describe("TC-BIN-012 an invalid override keeps self-description and the delivere
         const payload = JSON.parse(run.stdout) as {
           readonly error?: { readonly summary?: string };
         };
+        const priorConfig = join(checkout.root, ".delivery-os", "config.yaml");
+        const occurrences = (paths: readonly string[], path: string): number =>
+          paths.filter((candidate) => candidate === path).length;
         return {
           exitCode: run.exitCode,
           summary: payload.error?.summary,
           homeEntries: listing(home.root),
           repoEntries: listing(checkout.root),
+          // The read itself is observed, not inferred from a directory entry: a
+          // read leaves no trace in the listing.
+          configReads: occurrences(run.fs.readCalls, priorConfig),
+          configProbes: occurrences(run.fs.existsCalls, priorConfig),
         };
       } finally {
         checkout.dispose();
@@ -288,17 +349,22 @@ describe("TC-BIN-012 an invalid override keeps self-description and the delivere
       }
     };
 
-    // The alias matches the recorded pre-change control exactly (DoR-4 (b)).
+    // The alias matches the recorded pre-change control exactly (DoR-4 (b)),
+    // including the configuration read count the control captured.
     const alias = await runTouch("delivery-os");
     expect(alias.exitCode).toBe(TOUCH.invalidOverride.exitCode);
     expect(alias.summary).toBe(TOUCH.invalidOverride.summary);
     expect(alias.homeEntries).toEqual([...TOUCH.homeEntriesAfter]);
     expect(alias.repoEntries).toEqual([...TOUCH.repoEntriesAfter]);
+    expect(alias.configReads).toBe(TOUCH.configurationTouch.textReads);
+    expect(alias.configProbes).toBeGreaterThan(0);
 
     // The new bin performs the same touch under its own identity names.
     const next = await runTouch("jaiship");
     expect(next.exitCode).toBe(TOUCH.invalidOverride.exitCode);
     expect(next.summary).toBe(TOUCH.invalidOverride.summary);
+    expect(next.configReads).toBe(TOUCH.configurationTouch.textReads);
+    expect(next.configProbes).toBeGreaterThan(0);
     const rename = (entry: string): string =>
       entry.split(".delivery-os-state").join(".jaiship-state").split("delivery-os").join("jaiship");
     expect(next.homeEntries).toEqual([...TOUCH.homeEntriesAfter].map(rename));

@@ -89,6 +89,42 @@ export const launcherStepViolations = (source: string): string[] => {
   return failures;
 };
 
+/** Structural violations for the installer's delivery arrays (the guard's rule). */
+export const installerArrayViolations = (source: string): string[] => {
+  const failures: string[] = [];
+  for (const name of ["ADOS_DELIVERY_SCRIPTS", "ADOS_DELIVERY_TOOLS"]) {
+    const start = source.indexOf(`${name}=(`);
+    if (start < 0) {
+      failures.push(`installer array ${name} is missing`);
+      continue;
+    }
+    const end = source.indexOf(")", start);
+    if (end < 0) {
+      failures.push(`installer array ${name} is unterminated`);
+      continue;
+    }
+    const body = source.slice(start, end);
+    if (!/"[^"]+"/u.test(body)) {
+      failures.push(`installer array ${name} names no delivered member`);
+    }
+    for (const forbidden of [
+      "packages/cli",
+      "bin/jaiship",
+      "bin/delivery-os",
+      "bin-launcher",
+      "jaiship.ts",
+      "delivery-os.ts",
+      "src/entrypoint",
+      "createProductionComposer",
+    ]) {
+      if (body.includes(forbidden)) {
+        failures.push(`installer array ${name} names the CLI surface ${forbidden}`);
+      }
+    }
+  }
+  return failures;
+};
+
 describe("TC-BIN-066 the launcher step is its own declaration", () => {
   test("the installer's launcher step satisfies the declared structure", () => {
     expect(launcherStepViolations(installScript)).toEqual([]);
@@ -143,25 +179,9 @@ describe("TC-BIN-054 the installer arrays still name no binary", () => {
   };
 
   test("neither array names a binary, entrypoint, or composer", () => {
-    for (const name of ["ADOS_DELIVERY_SCRIPTS", "ADOS_DELIVERY_TOOLS"]) {
-      for (const forbidden of [
-        "packages/cli",
-        "bin/jaiship",
-        "bin/delivery-os",
-        "bin-launcher",
-        "jaiship.ts",
-        "src/entrypoint",
-        "createProductionComposer",
-      ]) {
-        expect({ name, forbidden, present: arrayBody(name).includes(forbidden) }).toEqual({
-          name,
-          forbidden,
-          present: false,
-        });
-      }
-    }
-    expect(arrayBody("ADOS_DELIVERY_SCRIPTS")).toContain("scripts/deliver-ticket.sh");
-    expect(arrayBody("ADOS_DELIVERY_TOOLS")).toContain("tools/clean-merged-branches");
+    expect(installerArrayViolations(installScript)).toEqual([]);
+    expect(arrayBody("ADOS_DELIVERY_SCRIPTS")).toContain('"scripts/deliver-ticket.sh"');
+    expect(arrayBody("ADOS_DELIVERY_TOOLS")).toContain('"tools/clean-merged-branches"');
   });
 
   test("an injected array entry fails by name", () => {
@@ -169,12 +189,9 @@ describe("TC-BIN-054 the installer arrays still name no binary", () => {
       "ADOS_DELIVERY_SCRIPTS=(",
       `ADOS_DELIVERY_SCRIPTS=(\n  "${CLI_ENTRY}"`,
     );
-    const body = ((): string => {
-      const start = injected.indexOf("ADOS_DELIVERY_SCRIPTS=(");
-      const end = injected.indexOf(")", start);
-      return injected.slice(start, end);
-    })();
-    expect(body).toContain(CLI_ENTRY);
-    expect(body.includes("packages/cli")).toBe(true);
+    expect(injected).not.toBe(installScript);
+    const failures = installerArrayViolations(injected).join("\n");
+    expect(failures).toContain("installer array ADOS_DELIVERY_SCRIPTS names the CLI surface");
+    expect(failures).toContain("packages/cli");
   });
 });

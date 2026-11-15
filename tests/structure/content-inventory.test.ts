@@ -2006,6 +2006,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "createProductionComposer",
     "createProductionTelemetrySink",
     "daemonReachable",
+    "daemonReentryEnvironment",
     "DECLARED_CREDENTIAL_REFERENCES",
   ],
   "cli/src/output/commit-text.ts": ["renderCommitHuman"],

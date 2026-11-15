@@ -8,9 +8,10 @@
  * scan's per-line, line-allowlisted semantics — never a whole-text equality.
  */
 import { describe, expect, test } from "bun:test";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import {
   EXPECTED_SEED_LITERALS,
   matchSeedLiteral,
@@ -38,11 +39,6 @@ const frontmatter = (text: string): string => {
   return end < 0 ? "" : text.slice(0, end + 5);
 };
 
-const body = (text: string): string => {
-  const end = text.indexOf("\n---\n", 4);
-  return end < 0 ? text : text.slice(end + 5);
-};
-
 /** The delivered scan's line allowlist: the identity header and the marker. */
 const HEADER_PATTERNS = ["ados_distribution:", "source:", "Copyright", "Apache-2.0"];
 
@@ -60,6 +56,97 @@ export const bodySeedViolations = (text: string, seeds: readonly string[]): stri
     if (hit !== undefined) violations.push(`${GUIDE}:${String(index + 1)}: ${hit}`);
   });
   return violations;
+};
+
+/** The five pre-freeze installer identifiers the guide delegates by role. */
+const INSTALLER_IDENTIFIERS = [
+  "ADOS_HOME",
+  "ADOS_REPO_DIR",
+  "ADOS_SOURCE_DIR",
+  "ADOS_RAW_URL",
+  "ADOS_REPO_URL",
+] as const;
+const RAW_URL_DEFAULT =
+  "https://raw.githubusercontent.com/juliusz-cwiakalski/agentic-delivery-os/main";
+
+/** The scope files the delivered registry declares, so a scratch scan validates. */
+const SCAN_SCOPE_FILES = [
+  "package.json",
+  "pnpm-lock.yaml",
+  "pnpm-workspace.yaml",
+  "tsconfig.json",
+  "tsconfig.base.json",
+  "biome.json",
+  "commitlint.config.js",
+  ".dependency-cruiser.cjs",
+  ".bun-version",
+  ".changeset/config.json",
+  "bunfig.toml",
+  ".gitignore",
+] as const;
+
+const writeAt = (root: string, relative: string, content: string): void => {
+  const path = join(root, relative);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, content);
+};
+
+const gitAt = (root: string, args: readonly string[]): string => {
+  const result = spawnSync("git", args, { cwd: root, encoding: "utf8" });
+  if (result.status !== 0) {
+    throw new Error(`git ${args.join(" ")} failed: ${result.stderr}`);
+  }
+  return (result.stdout ?? "").trim();
+};
+
+/**
+ * Materialise a scratch repository the DELIVERED scan can run over: the declared
+ * scope files, an empty `packages/` tree, a registry whose only registered doc is
+ * the guide (or none), a baseline commit without the guide, and the guide itself
+ * as an untracked file. Nothing is written outside the scratch root.
+ */
+const scratchScanRoot = (options: {
+  readonly label: string;
+  readonly guideText: string;
+  readonly register: boolean;
+}): string => {
+  const root = mkdtempSync(join(tmpdir(), `gh320-scan-${options.label}-`));
+  for (const file of SCAN_SCOPE_FILES) writeAt(root, file, "{}\n");
+  mkdirSync(join(root, "packages"), { recursive: true });
+  const registryCopy = JSON.parse(read("scripts/checks/forbidden-literals.registry.json")) as {
+    corpusBaseline: string;
+    registered: string[];
+  };
+  registryCopy.registered = options.register ? [GUIDE] : [];
+  const registryPath = "scripts/checks/forbidden-literals.registry.json";
+  writeAt(root, registryPath, JSON.stringify(registryCopy, null, 2));
+  gitAt(root, ["init", "-q", "."]);
+  gitAt(root, ["add", "-A"]);
+  gitAt(root, [
+    "-c",
+    "user.email=fixture@example.test",
+    "-c",
+    "user.name=fixture",
+    "commit",
+    "-qm",
+    "baseline",
+  ]);
+  registryCopy.corpusBaseline = gitAt(root, ["rev-parse", "HEAD"]);
+  writeAt(root, registryPath, JSON.stringify(registryCopy, null, 2));
+  writeAt(root, GUIDE, options.guideText);
+  return root;
+};
+
+const withScanRoot = <T>(
+  options: Parameters<typeof scratchScanRoot>[0],
+  body: (root: string) => T,
+): T => {
+  const root = scratchScanRoot(options);
+  try {
+    return body(root);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 };
 
 describe("TC-BIN-071 the local-install guide ships with its marker, registration, and content", () => {
@@ -106,8 +193,40 @@ describe("TC-BIN-071 the local-install guide ships with its marker, registration
         linked: true,
       });
     }
-    // The landing page stays untouched: discoverability is via the four pages.
+    // The landing page carries no guide row by design: discoverability is via the
+    // four pages, while the landing page's own CLI-entrypoint DESCRIPTOR row is
+    // reconciled by this change (F-5, spec v1.6 §16).
     expect(read("doc/00-index.md")).not.toContain("local-install.md");
+  });
+
+  test("the landing page descriptor states the two-executable reality", () => {
+    const landing = read("doc/00-index.md");
+    const descriptor =
+      landing.split("\n").find((line) => line.includes("feature-cli-entrypoint.md")) ?? "";
+    expect(descriptor).toContain("two executables");
+    expect(descriptor).toContain("--print-install-path");
+    // No rebranding and no guide link on the descriptor row.
+    expect(descriptor).not.toContain("local-install.md");
+  });
+
+  test("the five reconciled current-truth pages state the changed reality", () => {
+    const pages: readonly (readonly [string, string])[] = [
+      ["doc/spec/nonfunctional.md", "two CLI executables"],
+      [
+        "doc/spec/features/feature-state-layer.md",
+        "declares a prior identity selects the host root",
+      ],
+      ["doc/overview/architecture-overview.md", "two declared Bun bins"],
+      ["doc/overview/glossary.md", "Prior-identity fallback"],
+      ["doc/quality/test-specs/test-spec-state-layer.md", "prior-identity-state-fallback.test.ts"],
+    ];
+    for (const [page, phrase] of pages) {
+      expect({ page, phrase, present: read(page).includes(phrase) }).toEqual({
+        page,
+        phrase,
+        present: true,
+      });
+    }
   });
 
   test("the drift guard is green for the marker-derived install set", () => {
@@ -190,36 +309,77 @@ describe("TC-BIN-072 the four divergences are stated, the guide stays seed-free,
     for (const token of EXPECTED_SEED_LITERALS) {
       const spliced = `${original}\nA body line mentioning ${token} must fail.\n`;
       expect(bodySeedViolations(spliced, registry.seedLiterals).join("\n")).toContain(token);
-      // The delivered scan reports the same splice through its own semantics.
-      const temp = mkdtempSync(join(tmpdir(), "gh320-guide-"));
-      try {
-        writeFileSync(join(temp, "guide.md"), spliced);
-        const violation = matchSeedLiteral(
-          spliced.split(/\r?\n/u).at(-2) ?? "",
-          registry.seedLiterals,
+      const expectedLine =
+        spliced.split(/\r?\n/u).findIndex((line) => line.startsWith("A body line mentioning")) + 1;
+      // The delivered scan itself must name the token and the line over the
+      // spliced copy, not a single re-checked line.
+      withScanRoot({ label: "splice", guideText: spliced, register: true }, (root) => {
+        const outcome = scan(root);
+        const hit = outcome.violations.find(
+          (violation) => violation.file === GUIDE && violation.token === token,
         );
-        expect(violation).toBeDefined();
-      } finally {
-        rmSync(temp, { recursive: true, force: true });
-      }
+        expect({ token, found: hit !== undefined }).toEqual({ token, found: true });
+        expect({ token, line: hit?.line }).toEqual({ token, line: expectedLine });
+      });
     }
   });
 
-  test("seed-cleanliness: an unregistered guide fails the scan closed", () => {
-    const temp = mkdtempSync(join(tmpdir(), "gh320-registry-"));
-    try {
-      writeFileSync(join(temp, "guide.md"), read(GUIDE).replace("\nA body line", "\nA body line"));
-      const bodyWithoutMarker = body(read(GUIDE));
-      expect(bodyWithoutMarker.length).toBeGreaterThan(0);
-      // The registry is the single authority: dropping the entry from a copy is
-      // what makes an unregistered user-facing doc fail closed.
-      const registryCopy = JSON.parse(read("scripts/checks/forbidden-literals.registry.json")) as {
-        registered: string[];
-      };
-      registryCopy.registered = registryCopy.registered.filter((entry) => entry !== GUIDE);
-      expect(registryCopy.registered).not.toContain(GUIDE);
-    } finally {
-      rmSync(temp, { recursive: true, force: true });
+  test("seed-cleanliness: an unregistered guide fails the delivered scan closed", () => {
+    const guideText = read(GUIDE);
+    withScanRoot({ label: "unregistered", guideText, register: false }, (root) => {
+      const outcome = scan(root);
+      expect(outcome.failures.join("\n")).toContain(
+        `unregistered user-facing doc absent at corpusBaseline: ${GUIDE}`,
+      );
+    });
+    // The same tree with the guide registered proves the failure is the
+    // registration, not the fixture: no unregistered-doc failure and the guide
+    // is one of the scanned docs.
+    withScanRoot({ label: "registered", guideText, register: true }, (root) => {
+      const outcome = scan(root);
+      expect(outcome.failures.join("\n")).not.toContain("unregistered user-facing doc");
+      expect(outcome.registeredDocs).toContain(GUIDE);
+      expect(outcome.violations).toEqual([]);
+    });
+  });
+
+  test("discoverability: the installer surfaces carry the identifiers the guide delegates", () => {
+    const installer = read("scripts/install.sh");
+    const header = installer.slice(0, installer.indexOf("set -Eeuo pipefail"));
+    for (const identifier of INSTALLER_IDENTIFIERS) {
+      expect({ identifier, inHeader: header.includes(identifier) }).toEqual({
+        identifier,
+        inHeader: true,
+      });
+    }
+    const help = spawnSync("bash", ["scripts/install.sh", "--help"], {
+      cwd: ROOT,
+      encoding: "utf8",
+    });
+    expect(help.status).toBe(0);
+    const environmentSection = help.stdout.slice(help.stdout.indexOf("Environment:"));
+    // Four of the five names are documented; the fifth appears only as its
+    // expanded value in the install one-liner.
+    for (const identifier of ["ADOS_HOME", "ADOS_REPO_DIR", "ADOS_SOURCE_DIR", "ADOS_REPO_URL"]) {
+      expect({ identifier, inHelp: environmentSection.includes(identifier) }).toEqual({
+        identifier,
+        inHelp: true,
+      });
+    }
+    expect(environmentSection).not.toContain("ADOS_RAW_URL");
+    expect(help.stdout).toContain(`${RAW_URL_DEFAULT}/scripts/install.sh`);
+    // The change record names all five; the guide names none (stated by role).
+    const spec = read(SPEC_PAGE);
+    const guide = read(GUIDE);
+    for (const identifier of INSTALLER_IDENTIFIERS) {
+      expect({ identifier, inSpec: spec.includes(identifier) }).toEqual({
+        identifier,
+        inSpec: true,
+      });
+      expect({ identifier, inGuide: guide.includes(identifier) }).toEqual({
+        identifier,
+        inGuide: false,
+      });
     }
   });
 });

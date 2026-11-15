@@ -61,6 +61,13 @@ export type EntrypointInvocationFact = {
   readonly groupScoped: boolean;
   /** The invoking bin's declared prior identity, when it declares one. */
   readonly priorWorkingName?: string;
+  /**
+   * The composition-scoped notice sink: every queued warning line the
+   * composition would attach to a handler's outcome is also reported here, so a
+   * composition that fails before returning a program still lets the entrypoint
+   * deliver the lines it already produced (GH-320 F-1, AC-F5-6).
+   */
+  readonly onCompositionNotice?: (notice: string) => void;
 };
 
 /** Composes the prompt-required program; help/version never calls it. */
@@ -206,14 +213,26 @@ export const selectPromptRequiredProgram = (program: CommandProgram): CommandPro
   return extra.length === 0 ? program : { commands };
 };
 
-/** A classified containment failure naming the missing composition. */
-export const uncomposedDefinition = (command: string): CommandDefinition => ({
+/**
+ * A classified containment failure naming the missing composition.
+ *
+ * `notices` carries the composition-scoped warning lines already produced before
+ * the failure: a prior-identity fallback read is reported even when composition
+ * then fails and the containment identity answers instead (GH-320 F-1,
+ * AC-F5-6). The delivered warnings channel writes them to stderr, never into the
+ * payload, and the exit projection is untouched.
+ */
+export const uncomposedDefinition = (
+  command: string,
+  notices: readonly string[] = [],
+): CommandDefinition => ({
   handler: () => ({
     error: {
       kind: "fallback" as const,
       code: FALLBACK_INTERNAL_CODE,
       summary: `command "${command}" is not part of the composed prompt-required set`,
     },
+    ...(notices.length === 0 ? {} : { warnings: notices }),
   }),
 });
 
@@ -371,6 +390,10 @@ export const runEntrypoint = async (
   // One run identity per invocation, generated before composition so capture
   // paths composed for this command can join the audit ledger's record.
   const runId = (options.newRunId ?? (() => globalThis.crypto.randomUUID()))();
+  // The composition-scoped notices already produced travel this sink, so a
+  // composition that fails (or is discarded for an uncomposed command) still
+  // reports its fallback read through the delivered warnings channel (F-1).
+  const compositionNotices: string[] = [];
   const composed = (() => {
     try {
       return selectPromptRequiredProgram(
@@ -381,6 +404,9 @@ export const runEntrypoint = async (
           ...(options.priorWorkingName === undefined
             ? {}
             : { priorWorkingName: options.priorWorkingName }),
+          onCompositionNotice: (notice) => {
+            compositionNotices.push(notice);
+          },
         }),
       );
     } catch {
@@ -391,7 +417,7 @@ export const runEntrypoint = async (
   })();
 
   const program = isUnusableCommand(composed, command)
-    ? { commands: { [command]: uncomposedDefinition(command) } }
+    ? { commands: { [command]: uncomposedDefinition(command, compositionNotices) } }
     : composed;
 
   return runCli(argv, options.streams, dependenciesFor(options, entrypoint, program, runId));

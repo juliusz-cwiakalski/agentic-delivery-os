@@ -8,8 +8,8 @@
  * bins are the declared process edges and pass the facts in.
  */
 
+import { runEntrypoint, workingNameEnvironmentVariable } from "./entrypoint.js";
 import { createProductionComposer, DECLARED_CREDENTIAL_REFERENCES } from "./production.js";
-import { runEntrypoint } from "./entrypoint.js";
 
 /** The one sink shape the launcher forwards to the entrypoint. */
 export type LauncherStreams = {
@@ -35,19 +35,17 @@ export type BinLauncherOptions = {
   readonly daemonEntry?: string;
 };
 
-/** The working-name override variable shared by both bins (DEC-4). */
-const WORKING_NAME_OVERRIDE = "DELIVERY_OS_WORKING_NAME";
-
 /**
  * Run one executable invocation through the one shared composition.
  *
  * The override keeps its delivered precedence: a non-empty override supplies
  * the working name for both bins, and the invoking bin's declared default is
- * the floor when it is absent.
+ * the floor when it is absent. The variable name is the entrypoint's one
+ * accessor, never a second literal here (GH-320 F-9).
  */
 export const runBinLauncher = async (options: BinLauncherOptions): Promise<number> => {
   const environment = options.environment;
-  const override = environment[WORKING_NAME_OVERRIDE];
+  const override = environment[workingNameEnvironmentVariable()];
   const workingName =
     override !== undefined && override.length > 0 ? override : options.declaredWorkingName;
   return runEntrypoint(options.argv, {

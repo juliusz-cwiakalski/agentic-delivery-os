@@ -10,6 +10,12 @@
     "summary": "command \"status\" is not part of the composed prompt-required set",
     "stderr": "delivery-os: fallback.internal\nsummary: command \"status\" is not part of the composed prompt-required set\n"
   },
+  "configurationTouch": {
+    "capturedMethod": "strace -f -e trace=openat on the pre-change bin with the same fixture and invalid override: two openat calls on the fixture's .delivery-os/config.yaml",
+    "openatOfConfigFile": 2,
+    "textReads": 2,
+    "note": "readText is the only acquisition call that opens the configuration file, so the injected text-read count is the openat count; the existence probe uses a stat-class check and is asserted non-empty rather than counted"
+  },
   "homeEntriesAfter": [".delivery-os-state/", ".delivery-os-state/host-index.json"],
   "repoEntriesAfter": [".delivery-os/", ".delivery-os/config.yaml"]
 }

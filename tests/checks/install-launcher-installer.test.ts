@@ -188,15 +188,59 @@ describe("TC-BIN-050 a hermetic local install registers the brand-path launcher"
   }, 120_000);
 });
 
+describe("TC-BIN-050 the recorded target is one safely quoted word", () => {
+  test("quote-and-space source path: bash -n passes and the launcher execs that target", () => {
+    const s = scratch("quoted-source");
+    try {
+      // A source directory whose name carries both a single quote and a space:
+      // unescaped single-quoted interpolation cannot represent it.
+      const source = join(s.root, "source o'brien");
+      mkdirSync(source, { recursive: true });
+      for (const entry of readdirSync(REPO)) {
+        if (["node_modules", "tmp", ".git"].includes(entry)) continue;
+        spawnSync("ln", ["-s", join(REPO, entry), join(source, entry)]);
+      }
+      const expectedTarget = join(source, "packages/cli/bin/jaiship.ts");
+      installOnce(s, source);
+      const launcher = launcherPath(s);
+      const syntax = spawnSync("bash", ["-n", launcher], { encoding: "utf8" });
+      expect({ status: syntax.status, stderr: syntax.stderr }).toEqual({ status: 0, stderr: "" });
+
+      const content = readFileSync(launcher, "utf8");
+      const assignments = content.split("\n").filter((line) => line.startsWith("readonly TARGET="));
+      expect(assignments).toHaveLength(1);
+      // The recorded word evaluates to exactly the recorded target.
+      const expanded = spawnSync("bash", ["-c", `${assignments[0] ?? ""}\nprintf '%s' "$TARGET"`], {
+        encoding: "utf8",
+      });
+      expect(expanded.stdout).toBe(expectedTarget);
+      expect(content.split("packages/cli/bin/jaiship.ts").length - 1).toBe(1);
+
+      const version = runLauncher(s, ["--version"]);
+      expect(version.status).toBe(0);
+      expect(version.stdout).toBe("jaiship 0.0.0 (build dev)\n");
+
+      // Content idempotence is unchanged for the quoted target.
+      const beforeDigest = digest(launcher);
+      installOnce(s, source);
+      expect(digest(launcher)).toBe(beforeDigest);
+    } finally {
+      s.dispose();
+    }
+  }, 120_000);
+});
+
 describe("TC-BIN-051 an unchanged re-run rewrites nothing; another source repoints", () => {
   test("idempotence: the second run leaves the launcher untouched; a new source repoints it", () => {
     const s = scratch("idempotence");
     try {
       installOnce(s);
       const before = statSync(launcherPath(s));
+      const beforeDigest = digest(launcherPath(s));
       installOnce(s);
       const after = statSync(launcherPath(s));
-      expect(digest(launcherPath(s))).toBe(digest(launcherPath(s)));
+      // The digest is captured around the second run, never compared to itself.
+      expect(digest(launcherPath(s))).toBe(beforeDigest);
       expect(after.mtimeMs).toBe(before.mtimeMs);
       expect(after.size).toBe(before.size);
       expect(after.mode).toBe(before.mode);
@@ -403,13 +447,33 @@ describe("TC-BIN-056 the installer's preconditions are classified, not skipped",
     }
   }, 120_000);
 
-  test("preconditions: DRY_RUN writes nothing and --tool does not alter the launcher", () => {
+  test("preconditions: DRY_RUN is a plan-only preview with no precondition evaluated", () => {
     const s = scratch("preconditions-dry");
     try {
+      // A source tree without the CLI entry: a real run fails classified, while
+      // the preview evaluates no precondition (spec v1.6 F-6/DEC-15/NFR-5).
+      const docsOnly = join(s.root, "docs-only-dry");
+      mkdirSync(join(docsOnly, "doc/guides"), { recursive: true });
+      mkdirSync(join(docsOnly, "scripts"), { recursive: true });
+      writeFileSync(join(docsOnly, "AGENTS.md"), "docs only\n");
+      const preview = runInstaller(s, { source: docsOnly, args: ["--dry-run"] });
+      expect(preview.status).toBe(0);
+      expect(existsSync(launcherPath(s))).toBe(false);
+      expect(existsSync(join(s.home, ".jaiship"))).toBe(false);
+      const planLines = `${preview.stdout}${preview.stderr}`
+        .split("\n")
+        .filter((line) => line.includes("[DRY-RUN]") && line.includes("launcher"));
+      expect(planLines).toHaveLength(1);
+      expect(planLines[0]).toContain("Would register the launcher for the CLI entry");
+      expect(planLines[0]).toContain("preview only; install-time preconditions are not evaluated");
+
       const dry = runInstaller(s, { environment: { DRY_RUN: "true" } });
       expect(dry.status).toBe(0);
       expect(existsSync(launcherPath(s))).toBe(false);
       expect(`${dry.stdout}${dry.stderr}`).toContain("launcher");
+      expect(`${dry.stdout}${dry.stderr}`).toContain(
+        "preview only; install-time preconditions are not evaluated",
+      );
 
       installOnce(s);
       const content = readFileSync(launcherPath(s), "utf8");

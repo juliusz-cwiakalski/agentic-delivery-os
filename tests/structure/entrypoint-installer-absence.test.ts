@@ -5,6 +5,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { installerArrayViolations } from "./install-launcher.test";
 
 const ROOT = process.cwd();
 const installScript = readFileSync(join(ROOT, "scripts/install.sh"), "utf8");
@@ -19,21 +20,7 @@ const arrayBody = (name: string): string => {
 
 describe("TC-ENTRY-008 installer absence", () => {
   test("neither installer array names the entrypoint", () => {
-    for (const name of ["ADOS_DELIVERY_SCRIPTS", "ADOS_DELIVERY_TOOLS"]) {
-      const body = arrayBody(name);
-      for (const forbidden of [
-        "packages/cli",
-        "bin/delivery-os",
-        "src/entrypoint",
-        "delivery-os.ts",
-        "jaiship.ts",
-        "bin/jaiship",
-        "bin-launcher",
-        "createProductionComposer",
-      ]) {
-        expect(body).not.toContain(forbidden);
-      }
-    }
+    expect(installerArrayViolations(installScript)).toEqual([]);
   });
 
   test("the installer still declares both delivery arrays", () => {
@@ -83,13 +70,21 @@ describe("GH-320 launcher step and array membership", () => {
     expect(arrayBody("ADOS_DELIVERY_TOOLS")).toContain('"tools/clean-merged-branches"');
   });
 
-  test("an injected array member naming the CLI entry is visible to the guard", () => {
-    const injected = installScript.replace(
+  test("an injected array member naming the CLI entry fails the guard by name", () => {
+    const injectedScripts = installScript.replace(
       "ADOS_DELIVERY_SCRIPTS=(",
       'ADOS_DELIVERY_SCRIPTS=(\n  "packages/cli/bin/jaiship.ts"',
     );
-    const start = injected.indexOf("ADOS_DELIVERY_SCRIPTS=(");
-    const end = injected.indexOf(")", start);
-    expect(injected.slice(start, end)).toContain("packages/cli/bin/jaiship.ts");
+    expect(injectedScripts).not.toBe(installScript);
+    const scriptsFailures = installerArrayViolations(injectedScripts).join("\n");
+    expect(scriptsFailures).toContain("ADOS_DELIVERY_SCRIPTS");
+    expect(scriptsFailures).toContain("packages/cli");
+
+    const injectedTools = installScript.replace(
+      "ADOS_DELIVERY_TOOLS=(",
+      'ADOS_DELIVERY_TOOLS=(\n  "packages/cli/src/bin-launcher.ts"',
+    );
+    expect(injectedTools).not.toBe(installScript);
+    expect(installerArrayViolations(injectedTools).join("\n")).toContain("ADOS_DELIVERY_TOOLS");
   });
 });

@@ -14,12 +14,12 @@ import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import ts from "typescript";
-import { ERROR_TABLE } from "../../packages/core/src/contracts/index";
 import { PROMPT_REQUIRED_COMMANDS, runEntrypoint } from "../../packages/cli/src/entrypoint";
 import { renderRootHelp } from "../../packages/cli/src/help";
 import { resolveBrandIdentity } from "../../packages/core/src/branding";
-import { validateSeam } from "./branding-seam.test";
+import { ERROR_TABLE } from "../../packages/core/src/contracts/index";
 import { bufferSink } from "../golden/helpers";
+import { validateSeam } from "./branding-seam.test";
 
 const ROOT = process.cwd();
 const CLI_DIR = join(ROOT, "packages/cli");
@@ -34,6 +34,11 @@ const WORKING_NAMES = ["delivery-os", "jaiship"] as const;
 
 type LiteralSite = {
   readonly file: string;
+  /**
+   * The declaring variable's name, or `expression@<line>:<column>` for a literal
+   * in expression position (an argument, an object property, a default value, a
+   * template head). The latter can never be a declared site.
+   */
   readonly constant: string;
   readonly value: string;
   readonly exported: boolean;
@@ -71,36 +76,59 @@ const isExported = (node: ts.Node): boolean =>
   );
 
 /**
- * The declared scan rule (DM-6): a `packages/**` **string-literal** walk
- * collecting every literal byte-equal to a declared working name. Comments,
- * JSDoc text, and prose are not literals and are not collected.
+ * The declared scan rule (DM-6, spec v1.6 / AC-F7-10 / NFR-6): a **node-level**
+ * `packages/**` walk collecting every `StringLiteral` and
+ * `NoSubstitutionTemplateLiteral` whose bytes equal a declared working name.
+ * Comments and JSDoc are trivia and are never collected; a literal in
+ * expression position is collected and can only fail as undeclared, so a sixth
+ * site cannot hide outside a variable declaration.
  */
 export const literalSites = (root: string): readonly LiteralSite[] => {
   const sites: LiteralSite[] = [];
   for (const file of listTypeScriptFiles(root)) {
     const source = parse(root, file);
-    for (const statement of source.statements) {
-      if (!ts.isVariableStatement(statement)) continue;
-      const exported = isExported(statement);
-      for (const declaration of statement.declarationList.declarations) {
-        if (!ts.isIdentifier(declaration.name)) continue;
-        const initializer = declaration.initializer;
-        if (initializer === undefined) continue;
-        if (
-          (ts.isStringLiteral(initializer) || ts.isNoSubstitutionTemplateLiteral(initializer)) &&
-          (WORKING_NAMES as readonly string[]).includes(initializer.text)
-        ) {
-          sites.push({
-            file,
-            constant: declaration.name.text,
-            value: initializer.text,
-            exported,
-          });
-        }
+    const visit = (node: ts.Node): void => {
+      if (
+        (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) &&
+        (WORKING_NAMES as readonly string[]).includes(node.text)
+      ) {
+        sites.push(literalSite(file, source, node));
       }
-    }
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
   }
   return sites;
+};
+
+/** Describe one working-name literal node: its declaration or its position. */
+const literalSite = (
+  file: string,
+  source: ts.SourceFile,
+  literal: ts.StringLiteral | ts.NoSubstitutionTemplateLiteral,
+): LiteralSite => {
+  const parent = literal.parent;
+  if (
+    ts.isVariableDeclaration(parent) &&
+    ts.isIdentifier(parent.name) &&
+    parent.initializer === literal
+  ) {
+    // StringLiteral → VariableDeclaration → VariableDeclarationList → VariableStatement.
+    const statement = parent.parent.parent;
+    return {
+      file,
+      constant: parent.name.text,
+      value: literal.text,
+      exported: ts.isVariableStatement(statement) ? isExported(statement) : false,
+    };
+  }
+  const { line, character } = source.getLineAndCharacterOfPosition(literal.getStart(source));
+  return {
+    file,
+    constant: `expression@${String(line + 1)}:${String(character + 1)}`,
+    value: literal.text,
+    exported: false,
+  };
 };
 
 /** The declared inventory, held here so the inventory is the assertion's input. */
@@ -327,6 +355,44 @@ describe("TC-BIN-062 identity literals are exactly the declared five sites", () 
     }
   });
 
+  test("literals: an expression-position literal is collected and fails by name", () => {
+    withRoot("literals-expression", (root) => {
+      const seed = (relative: string, content: string) => write(root, relative, content);
+      seed("packages/cli/bin/delivery-os.ts", 'const DEFAULT_WORKING_NAME = "delivery-os";\n');
+      seed(
+        "packages/cli/bin/jaiship.ts",
+        'const DEFAULT_WORKING_NAME = "jaiship";\nconst PRIOR_WORKING_NAME = "delivery-os";\n',
+      );
+      seed("packages/mcp/src/serve.ts", 'const DEFAULT_WORKING_NAME = "delivery-os";\n');
+      seed("packages/core/src/branding/index.ts", 'const SCOPE_ORG = "delivery-os";\n');
+      expect(inventoryViolations(literalSites(root))).toEqual([]);
+
+      // The same bytes in expression position: an argument object property, an
+      // argument default, and a template literal in an object property. The
+      // declaration-only scan this rule replaced could not see any of them.
+      seed(
+        "packages/cli/src/expression.ts",
+        [
+          'import { resolveBrandIdentity } from "@delivery-os/core/branding";',
+          'export const resolved = resolveBrandIdentity({ workingName: "jaiship" });',
+          'export const withDefault = (name = "delivery-os") => name;',
+          "export const config = { name: `jaiship` };",
+          "",
+        ].join("\n"),
+      );
+      const found = literalSites(root).filter(
+        (site) => site.file === "packages/cli/src/expression.ts",
+      );
+      expect(found).toHaveLength(3);
+      for (const site of found) expect(site.constant.startsWith("expression@")).toBe(true);
+      expect(found.map((site) => site.value).sort()).toEqual(["delivery-os", "jaiship", "jaiship"]);
+      const failures = inventoryViolations(literalSites(root)).join("\n");
+      for (const site of found) {
+        expect(failures).toContain(`packages/cli/src/expression.ts:${site.constant}`);
+      }
+    });
+  });
+
   test("literals: a sixth site, a missing site, a re-declared accessor fail by name", () => {
     withRoot("literals", (root) => {
       const seed = (relative: string, content: string) => write(root, relative, content);
@@ -530,13 +596,6 @@ describe("TC-BIN-067 no new family row and no new error row", () => {
     expect(payload.error?.summary).toBe(
       'command "invented" is not part of the composed prompt-required set',
     );
-  });
-
-  test("family-and-error-table: an added family fails the parity comparison by name", () => {
-    const declared = [...PROMPT_REQUIRED_COMMANDS] as string[];
-    const mutant = [...declared, "invented-family"];
-    const violations = mutant.filter((command) => !declared.includes(command));
-    expect(violations).toEqual(["invented-family"]);
   });
 });
 

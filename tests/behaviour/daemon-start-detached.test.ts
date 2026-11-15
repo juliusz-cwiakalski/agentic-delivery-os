@@ -7,18 +7,17 @@
  * recording process port, so no real child is created.
  */
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import { resolveBrandIdentity } from "../../packages/core/src/branding";
 import { createDaemonCommandDefinition } from "../../packages/cli/src/commands/daemon";
 import { createDaemonCommandRuntime } from "../../packages/cli/src/daemon-compose";
+import { daemonReentryEnvironment } from "../../packages/cli/src/production";
 import { projectExitCode } from "../../packages/cli/src/projection";
 import { readDaemonHeartbeat, readDaemonInstance } from "../../packages/core/src/app/index";
-import { ERROR_TABLE } from "../../packages/core/src/contracts/index";
 import {
   resolveHostStateRoot,
   stateScopeEnvironmentName,
 } from "../../packages/core/src/app/state-scope";
+import { resolveBrandIdentity } from "../../packages/core/src/branding";
+import { ERROR_TABLE } from "../../packages/core/src/contracts/index";
 import {
   createMountHarness,
   mountComposition,
@@ -703,14 +702,35 @@ describe("TC-BIN-083 child-environment allowlist admits both identities", () => 
     return resolved.value;
   };
 
-  test("child-environment: the delivered allowlist literal is unchanged", () => {
-    const source = readFileSync(
-      join(process.cwd(), "tests/behaviour/daemon-start-detached.test.ts"),
-      "utf8",
-    );
-    expect(source).toContain(
-      "/^(PATH|HOME|USERPROFILE|DELIVERY_OS_WORKING_NAME|[A-Z0-9_]*_STATE_DIR)$/u",
-    );
+  test("child-environment: the production re-entry derivation drops a hostile key", () => {
+    // The production derivation, not this test's own regex, is the authority: a
+    // key outside the allowlist must not reach a detached child.
+    const derived = daemonReentryEnvironment({
+      PATH: "/usr/bin",
+      HOME: "/home/fixture",
+      DELIVERY_OS_WORKING_NAME: "jaiship",
+      JAISHIP_STATE_DIR: "/forwarded/look-alike",
+      NOT_ALLOWLISTED_KEY_FOR_PROBE: "hostile",
+      GITHUB_TOKEN: "credential",
+    });
+    expect(Object.keys(derived).sort()).toEqual(["DELIVERY_OS_WORKING_NAME", "HOME", "PATH"]);
+    expect(derived.DELIVERY_OS_WORKING_NAME).toBe("jaiship");
+    for (const hostile of ["JAISHIP_STATE_DIR", "NOT_ALLOWLISTED_KEY_FOR_PROBE", "GITHUB_TOKEN"]) {
+      expect({ hostile, present: Object.hasOwn(derived, hostile) }).toEqual({
+        hostile,
+        present: false,
+      });
+    }
+    // The brand-derived state-directory binding is added by the composition and
+    // written last, so a forwarded look-alike never survives for either identity.
+    for (const workingName of ["delivery-os", "jaiship"]) {
+      const brand = identity(workingName);
+      const binding = stateScopeEnvironmentName(brand.environmentPrefix);
+      const spawnEnvironment = { ...derived, [binding]: "/daemon/state" };
+      expect(spawnEnvironment[binding]).toBe("/daemon/state");
+      expect(spawnEnvironment.DELIVERY_OS_WORKING_NAME).toBe("jaiship");
+      expect(Object.keys(spawnEnvironment).every((key) => ALLOWLIST.test(key))).toBe(true);
+    }
   });
 
   test("child-environment: both identities' override and state-directory names match", () => {

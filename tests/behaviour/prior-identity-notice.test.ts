@@ -429,6 +429,26 @@ describe("TC-BIN-045 the notice changes no payload and no exit projection", () =
     expect(runs[1]?.notices).toEqual([]);
   });
 
+  test("invariance: the containment path still delivers its one config-read notice", async () => {
+    await withTrees(async ({ checkout, home }) => {
+      // The composition fails before it returns a program, but the fallback read
+      // already happened, so AC-F5-6's unconditional notice still holds.
+      const run = await runThroughComposition({
+        bin: "jaiship",
+        argv: ["status", "--json"],
+        checkout: checkout.root,
+        home: home.root,
+        extra: { DELIVERY_OS_WORKING_NAME: "bad/name" },
+      });
+      expect(run.exitCode).toBe(2);
+      expect(run.notices).toHaveLength(1);
+      expect(run.notices[0]).toContain("prior-identity-fallback: config-read");
+      const payload = JSON.parse(run.stdout) as { readonly error?: { readonly code?: string } };
+      expect(payload.error?.code).toBe("fallback.internal");
+      expect(run.stdout).not.toContain("prior-identity-fallback");
+    });
+  });
+
   test("invariance: failing commands keep their delivered exit projections", async () => {
     await withTrees(async ({ checkout, home }) => {
       const uncomposed = await runThroughComposition({

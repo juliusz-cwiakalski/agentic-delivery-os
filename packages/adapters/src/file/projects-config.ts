@@ -64,30 +64,10 @@ export type ProjectGroupsConfigRead =
 export const readProjectGroupsConfig = (input: {
   readonly gitRoot: string;
   readonly configurationDirectoryName: string;
-  /**
-   * The prior identity's configuration-directory name (GH-320 F-3). The prior
-   * document is read only when the current-identity document is absent.
-   */
-  readonly priorConfigurationDirectoryName?: string;
   readonly fs?: ProjectConfigFileSystem;
 }): ProjectGroupsConfigRead => {
   const fs = input.fs ?? nodeProjectConfigFileSystem();
-  const currentPath = projectGroupsConfigPath(input.gitRoot, input.configurationDirectoryName);
-  const path =
-    input.priorConfigurationDirectoryName === undefined
-      ? currentPath
-      : (() => {
-          try {
-            if (fs.pathExists(currentPath)) return currentPath;
-            const priorPath = projectGroupsConfigPath(
-              input.gitRoot,
-              input.priorConfigurationDirectoryName,
-            );
-            return fs.pathExists(priorPath) ? priorPath : currentPath;
-          } catch {
-            return currentPath;
-          }
-        })();
+  const path = projectGroupsConfigPath(input.gitRoot, input.configurationDirectoryName);
   const parent = dirname(path);
   // A naturally absent configuration directory is the common adopt-as-empty
   // case; a parent that exists but is not a directory (or cannot be probed at
