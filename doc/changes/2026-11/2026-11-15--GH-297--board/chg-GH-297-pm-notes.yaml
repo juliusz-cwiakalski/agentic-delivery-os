@@ -1,0 +1,75 @@
+change_id: GH-297
+title: "M2-S4: Board (M2)"
+milestone: "M2: Ceremonies, measurement, and memory"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: null, completed: 2026-11-15T22:09:29.041Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions:
+  - text: "DEC-1 scope: deliver M2-S4 exactly as the backlog task line and the M2
+      planning pack define it - the full board of lanes, gates, owner asks, and
+      parked work on one screen, sharing the brief/status state source, spanning
+      managed repositories through the delivered M2-S11 host index and
+      per-repository state scope. Explicit non-goals: M2-S5 steer (GH-298),
+      M2-S6 metrics/alarms (GH-299), and any group-scoped board surface (board
+      stays on repository keys)."
+    date: "2026-11-15"
+  - text: "DEC-2 state source: the board reuses the injected status/brief facts
+      (StatusFacts) and the shipped scheduling-engine lane fold as its one state
+      source; it declares no parallel state vocabulary, no second tracker read
+      model, and no LLM. The payload names that source so the backlog AC 'board,
+      brief, and status share one state source' is machine-checkable."
+    date: "2026-11-15"
+  - text: "DEC-3 repository scope: --project <repoKey> narrows to one checkout and
+      --all spans every managed repository on the host; the default is the
+      current checkout. Resolution uses the delivered host index plus
+      per-repository state scopes (M2-S11/GH-288) and never enumerates project
+      groups (M2-S18/GH-309)."
+    date: "2026-11-15"
+  - text: "DEC-4 mounting: the board command definition already exists in the edge
+      composition but is not composed by the production entrypoint. This change
+      mounts it (prompt-required set, edge composition, help entries, reference
+      page, coverage inventory) and renames its repository list field to
+      repositories[] per the M2 rename rule."
+    date: "2026-11-15"
+  - text: "DEC-5 owner asks: the planning pack leaves the exact provenance of the
+      asks[] section open between the delivered owner-gate SLA facts and the
+      typed blocker questions. The spec resolves it from the pack plus shipped
+      surfaces (no new ticket, no invented source) and records the chosen
+      projection and its evidence. This is an implementation interpretation, not
+      a scope change."
+    date: "2026-11-15"
+open_questions:
+  - text: "Owner-ask provenance: should asks[] project the owner-review subset of
+      the delivered owner-gate SLA facts (age + drawn default), the open
+      owner-audience typed questions, or both joined? Resolve in the spec from
+      the M2 pack contract (asks[] carries age and drawn default) and shipped
+      sources; record the decision in the spec."
+    date: "2026-11-15"
+blockers: []
+notes:
+  - text: "Intake state: GH-297 open, label change, milestone 'M2: Ceremonies,
+      measurement, and memory' attached; branch feat/GH-297/board exists at
+      origin/main-tools with zero own commits; no open or historical PR."
+    type: info
+    date: "2026-11-15"
+  - text: "Dependency check: M1-S5 board SLA (GH-229), M1-S17 scheduling engine
+      (GH-237), M2-S11 multi-repository state scope (GH-288), and M2-S18 project
+      groups (GH-309) are all delivered on main-tools. No unmet dependency."
+    type: info
+    date: "2026-11-15"
+  - text: "Doc impact to reconcile in phase 7: new feature spec for the full board;
+      current-truth updates to feature-owner-gate-sla, feature-status-digest and
+      feature-brief shared-source wording, CLI command registry, M2 board page
+      status, entrypoint delta, and the M2-S4 backlog progress marker."
+    type: risk
+    date: "2026-11-15"
