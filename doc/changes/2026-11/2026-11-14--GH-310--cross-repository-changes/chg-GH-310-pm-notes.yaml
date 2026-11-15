@@ -8,7 +8,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-14T20:11:47.462Z }
   delivery_planning: { started: null, completed: 2026-11-14T20:03:06.629Z }
   dor_check: { started: null, completed: 2026-11-14T20:13:53.199Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-15T06:39:21.422Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -75,15 +75,15 @@ notes:
     date: "2026-11-14"
   - text: "Gate environment (measured, binding on every phase boundary): run gates
       with TMPDIR=$GATE_TMPDIR, where `$GATE_TMPDIR` denotes the operator's
-      measured gate temp root (same ext4 device as the checkout, outside
-      every git work tree — the repo's parent <workspace-parent> is
-      itself an umbrella git work tree); the literal machine path is not
-      committed, per the privacy-literal rule, and the gate command reads the
-      placeholder. Run with GIT_CONFIG_COUNT=1
-      GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false because the host
-      sets commit.gpgsign=true globally and gate-spawned commits would block on
-      pinentry. Do not use /tmp or /tmp/opencode (tmpfs, different device) and
-      do not use the repo-local tmp/tmpdir (inside a work tree)."
+      measured gate temp root (same ext4 device as the checkout, outside every
+      git work tree — the repo's parent <workspace-parent> is itself an umbrella
+      git work tree); the literal machine path is not committed, per the
+      privacy-literal rule, and the gate command reads the placeholder. Run with
+      GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
+      GIT_CONFIG_VALUE_0=false because the host sets commit.gpgsign=true
+      globally and gate-spawned commits would block on pinentry. Do not use /tmp
+      or /tmp/opencode (tmpfs, different device) and do not use the repo-local
+      tmp/tmpdir (inside a work tree)."
     type: risk
     date: "2026-11-14"
   - text: "RETRO (tooling, phase 1): `phase complete` failed closed twice with
@@ -211,22 +211,23 @@ notes:
       assigned at commit time; `git log` on feat/GH-310/cross-repository-changes
       is the record). Delivered: additive `members[]` contract types and bounds
       in `contracts/plan.ts` (PLAN_MEMBER_FIELDS, PLAN_MEMBER_REQUIRED_FIELDS,
-      PLAN_MAX_MEMBERS=8, PLAN_MAX_MEMBER_DEPENDS_ON=8, PLAN_MAX_MEMBER_GATES=16,
-      PLAN_MAX_MEMBER_GATE_CHARS=64), pure `domain/plan-members.ts`
-      (parsePlanMembers, parseMemberRef, canonicalChangeRef, memberRefFor,
-      isMemberRef, MEMBER_REF_SEPARATOR), `validatePlanValue` wiring that echoes
-      only a valid plan's members and carries NO `members` key on an invalid
-      verdict, plus the additive exports in `contracts/index.ts`,
-      `domain/index.ts`, and `core/src/index.ts` (verified additions-only; no
-      corrupted exports). Pre-change parity golden captured from the
-      pre-member baseline before any production edit:
+      PLAN_MAX_MEMBERS=8, PLAN_MAX_MEMBER_DEPENDS_ON=8,
+      PLAN_MAX_MEMBER_GATES=16, PLAN_MAX_MEMBER_GATE_CHARS=64), pure
+      `domain/plan-members.ts` (parsePlanMembers, parseMemberRef,
+      canonicalChangeRef, memberRefFor, isMemberRef, MEMBER_REF_SEPARATOR),
+      `validatePlanValue` wiring that echoes only a valid plan's members and
+      carries NO `members` key on an invalid verdict, plus the additive exports
+      in `contracts/index.ts`, `domain/index.ts`, and `core/src/index.ts`
+      (verified additions-only; no corrupted exports). Pre-change parity golden
+      captured from the pre-member baseline before any production edit:
       `tests/fixtures/queue/golden/queue-add-memberless.json` (no `members` key,
-      no `data.members[]`). Test result: 97 pass / 0 fail / 381 expect across the
-      nine phase-1 suites (plan-validate, plan-validate-rejections, plan-lint,
-      plan-determinism, plan-readonly, plan-members, plan-members-bounds,
-      structure/cross-repository-contract, golden/cross-repository-members);
-      `tsc -p tests/types/tsconfig.json` clean. Scope drift reconciled: the
-      additivity/inventory pins (`tests/fixtures/ports/v1-contract-inventory.json`,
+      no `data.members[]`). Test result: 97 pass / 0 fail / 381 expect across
+      the nine phase-1 suites (plan-validate, plan-validate-rejections,
+      plan-lint, plan-determinism, plan-readonly, plan-members,
+      plan-members-bounds, structure/cross-repository-contract,
+      golden/cross-repository-members); `tsc -p tests/types/tsconfig.json`
+      clean. Scope drift reconciled: the additivity/inventory pins
+      (`tests/fixtures/ports/v1-contract-inventory.json`,
       `tests/structure/{inventory.json,content-inventory.test.ts}`) are the
       mechanical inventory seam for the new domain module."
     type: info
@@ -237,12 +238,12 @@ notes:
       PR targets main-tools and stays open (merge authority: CEO/human)."
     type: info
     date: "2026-11-14"
-  - text: "Plan phase 2 'Per-member queue representation: member refs, one entry
-      and lane per member, dependency edges, release and removal' complete
-      (commit hash assigned at commit time; `git log` on
+  - text: "Plan phase 2 'Per-member queue representation: member refs, one entry and
+      lane per member, dependency edges, release and removal' complete (commit
+      hash assigned at commit time; `git log` on
       feat/GH-310/cross-repository-changes is the record). Delivered:
-      `QUEUE_MEMBER_REF_SEPARATOR` and the additive `QueueMemberEntry`
-      `{ref, repoKey, lane}` payload type in `contracts/queue.ts`/index
+      `QUEUE_MEMBER_REF_SEPARATOR` and the additive `QueueMemberEntry` `{ref,
+      repoKey, lane}` payload type in `contracts/queue.ts`/index
       (`QueueMutationData.members?`, no new record kind, no new error row);
       `canonicalQueueRef` now canonicalizes `<canonicalChangeRef>@<repoKey>`
       through the phase-1 `parseMemberRef`/`memberRefFor` while the delivered
@@ -250,8 +251,8 @@ notes:
       PDEV-7); a member entry binds the plan's member repoKey without a
       declaring-checkout root in `app/queue.ts` (pair-or-absent unchanged for
       every delivered ref); `reconcileQueueEntries` reads the change ref before
-      the `@`; the queue composition gains one bounded optional local plan-member
-      read wired from `plan.readPlan` + the injected YAML parse +
+      the `@`; the queue composition gains one bounded optional local
+      plan-member read wired from `plan.readPlan` + the injected YAML parse +
       `parsePlanMembers` in `production.ts`, and `queue add` on a member plan
       writes one entry and lane per member ref with its per-member `dependsOn[]`
       edges and returns the delivered payload plus ordered `data.members[]`; a
@@ -267,65 +268,67 @@ notes:
       tests/types/tsconfig.json` clean. Mechanical inventory seam updated:
       `tests/fixtures/ports/v1-contract-inventory.json` (queue.ts and index.ts
       additive names) and the content-inventory executable allowance for
-      `QUEUE_MEMBER_REF_SEPARATOR`. New fixture `tests/fixtures/cross-repository/queue.ts`
-      composes the declared two-member plan over the shared constants."
+      `QUEUE_MEMBER_REF_SEPARATOR`. New fixture
+      `tests/fixtures/cross-repository/queue.ts` composes the declared
+      two-member plan over the shared constants."
     type: info
     date: "2026-11-15"
   - text: "Plan phase 3 'Cross-repository definition of done and one review flow'
       complete (commit hash assigned at commit time; `git log` on
       feat/GH-310/cross-repository-changes is the record). Delivered:
-      `CrossRepositoryVerifyGatesReport`/`CrossRepositoryVerifyGateRecord` (member
-      REQUIRED) as distinct additive types while the delivered `VerifyGatesReport`
-      keeps literal `overall: \"pass\"`, member-less records, its envelope and its
-      exits; `VERIFY_GATES_MAX_MEMBERS = 8`; closed `VERIFY_GATES_CI_READINGS`,
-      `VERIFY_GATES_MEMBER_VERDICTS`, `VERIFY_GATES_DEFINITION_OF_DONE_STATUSES`,
-      `VERIFY_GATES_REVIEW_VERDICTS`, `VERIFY_GATES_REVIEW_OBSERVATION_VERDICTS`;
-      `MemberLandingObservation` and `ReviewObservation` carriers; new pure
-      `domain/verify-gates-members.ts` (one record per declared (member, gate) in
-      member then gate order, pinned synthetic `read-failed` record for an
-      unresolvable identifier, mechanical member verdict over records AND
-      `gates.ci`, `blocked`/`incomplete`/`green` aggregation with `blocked`
-      winning, never-truncated `blockingMembers[]`, landing-ordered `evidence[]`
-      with PR-less omission) and `domain/review-flow.ts` (sorted-declared-set
-      `sha256Hex` runId with the empty pull-request marker, one verdict per
-      declared member, duplication -> fail/incomplete); the handler emits the
-      union discriminated by `definitionOfDone`, is always data-bearing for the
-      cross-repository type with `overall: \"fail\"` the sole carrier of
-      `verify.gates.failed`, appends exactly one gate-verification record per
-      battery evaluation, and `commands/verify.ts` projects exit 1 through
-      `exitProjection`; the member seam (declared-member read, one bounded read
-      bundle per member, injected landing/review observations) is an additive
-      OPTIONAL composition seam in `edge.ts` (absent = delivered path unchanged).
-      Tests: 137 pass / 1 skip / 0 fail across the 18-file gate battery
-      (`verify-gates-members`, `-members-evidence`, `-members-bounds`,
-      `verify-gates-review-flow`, the extended `verify-gates-read-budget`,
-      `verify-gates-target`, `cross-repository-determinism` TC-XBOUND-001,
-      `entrypoint-help` TC-XREV-005, `golden/cross-repository-members` plus every
-      delivered `verify-gates-*` suite), 887 expect calls; `tests/structure` 1233
-      pass / 0 fail; `pnpm -r typecheck` clean; `tsc -p
-      tests/types/tsconfig.json` clean; `pnpm check:boundaries` clean;
-      `pnpm format:check` clean. Two documented readings: (1) the TC-XBOUND-004
-      byte bound is asserted on the serialized machine report
-      (`JSON.stringify(data)`), which is the documented definition of
-      `VERIFY_GATES_MAX_MACHINE_BYTES`, because the envelope stdout is the
-      pretty-printed projection of that same data and cannot fit 65 536 bytes at
-      128 records; (2) unresolved-gate resolution lives in the new pure members
-      module (called from the handler) rather than in `domain/verify-gates.ts`,
-      keeping the delivered evaluator untouched. Fixtures:
-      `tests/fixtures/cross-repository/facts.ts` and `review.ts`, goldens
-      `gates-members-green.json`/`gates-review-flow.json` (reviewFlow.runId
-      pinned). Mechanical inventory seam updated:
+      `CrossRepositoryVerifyGatesReport`/`CrossRepositoryVerifyGateRecord`
+      (member REQUIRED) as distinct additive types while the delivered
+      `VerifyGatesReport` keeps literal `overall: \"pass\"`, member-less
+      records, its envelope and its exits; `VERIFY_GATES_MAX_MEMBERS = 8`;
+      closed `VERIFY_GATES_CI_READINGS`, `VERIFY_GATES_MEMBER_VERDICTS`,
+      `VERIFY_GATES_DEFINITION_OF_DONE_STATUSES`,
+      `VERIFY_GATES_REVIEW_VERDICTS`,
+      `VERIFY_GATES_REVIEW_OBSERVATION_VERDICTS`; `MemberLandingObservation` and
+      `ReviewObservation` carriers; new pure `domain/verify-gates-members.ts`
+      (one record per declared (member, gate) in member then gate order, pinned
+      synthetic `read-failed` record for an unresolvable identifier, mechanical
+      member verdict over records AND `gates.ci`, `blocked`/`incomplete`/`green`
+      aggregation with `blocked` winning, never-truncated `blockingMembers[]`,
+      landing-ordered `evidence[]` with PR-less omission) and
+      `domain/review-flow.ts` (sorted-declared-set `sha256Hex` runId with the
+      empty pull-request marker, one verdict per declared member, duplication ->
+      fail/incomplete); the handler emits the union discriminated by
+      `definitionOfDone`, is always data-bearing for the cross-repository type
+      with `overall: \"fail\"` the sole carrier of `verify.gates.failed`,
+      appends exactly one gate-verification record per battery evaluation, and
+      `commands/verify.ts` projects exit 1 through `exitProjection`; the member
+      seam (declared-member read, one bounded read bundle per member, injected
+      landing/review observations) is an additive OPTIONAL composition seam in
+      `edge.ts` (absent = delivered path unchanged). Tests: 137 pass / 1 skip /
+      0 fail across the 18-file gate battery (`verify-gates-members`,
+      `-members-evidence`, `-members-bounds`, `verify-gates-review-flow`, the
+      extended `verify-gates-read-budget`, `verify-gates-target`,
+      `cross-repository-determinism` TC-XBOUND-001, `entrypoint-help`
+      TC-XREV-005, `golden/cross-repository-members` plus every delivered
+      `verify-gates-*` suite), 887 expect calls; `tests/structure` 1233 pass / 0
+      fail; `pnpm -r typecheck` clean; `tsc -p tests/types/tsconfig.json` clean;
+      `pnpm check:boundaries` clean; `pnpm format:check` clean. Two documented
+      readings: (1) the TC-XBOUND-004 byte bound is asserted on the serialized
+      machine report (`JSON.stringify(data)`), which is the documented
+      definition of `VERIFY_GATES_MAX_MACHINE_BYTES`, because the envelope
+      stdout is the pretty-printed projection of that same data and cannot fit
+      65 536 bytes at 128 records; (2) unresolved-gate resolution lives in the
+      new pure members module (called from the handler) rather than in
+      `domain/verify-gates.ts`, keeping the delivered evaluator untouched.
+      Fixtures: `tests/fixtures/cross-repository/facts.ts` and `review.ts`,
+      goldens `gates-members-green.json`/`gates-review-flow.json`
+      (reviewFlow.runId pinned). Mechanical inventory seam updated:
       `tests/fixtures/ports/v1-contract-inventory.json` (verify-gates.ts and
       index.ts additive names), `tests/structure/inventory.json` and the
       content-inventory executable allowances for the two new domain modules and
-      six new contract constants. Pre-existing branch conditions unchanged by this
-      phase: `check:privacy-literals` flags the recorded
-      `$GATE_TMPDIR` gate-TMPDIR strings in the change artifacts, and
-      TC-RELEASE-001 expects the phase-5 changeset."
+      six new contract constants. Pre-existing branch conditions unchanged by
+      this phase: `check:privacy-literals` flags the recorded `$GATE_TMPDIR`
+      gate-TMPDIR strings in the change artifacts, and TC-RELEASE-001 expects
+      the phase-5 changeset."
     type: info
     date: "2026-11-15"
-  - text: "Plan phase 4 'Per-member closeout report and landing removal'
-      complete (commit hash assigned at commit time; `git log` on
+  - text: "Plan phase 4 'Per-member closeout report and landing removal' complete
+      (commit hash assigned at commit time; `git log` on
       feat/GH-310/cross-repository-changes is the record). Delivered: DM-8
       `CrossRepositoryCloseoutObservation` `{repoKey, pullRequest, merged,
       headSha?, branch, issueClosure?}` supplied through the closeout
@@ -333,8 +336,8 @@ notes:
       provider operation, or store; durable production carrier deferred OQ-6);
       additive `closeout.data.members[]` with exactly `repoKey`, `branch`,
       `cleanup`, `pullRequest`, `issueClosure`, `landed` in declared order and
-      `CLOSEOUT_MAX_MEMBERS = 8`; closed mode-scoped columns
-      (`cleanup` plan would-apply|satisfied|would-refuse|skipped-gap, apply
+      `CLOSEOUT_MAX_MEMBERS = 8`; closed mode-scoped columns (`cleanup` plan
+      would-apply|satisfied|would-refuse|skipped-gap, apply
       applied|satisfied|refused|skipped-gap; `issueClosure` plan
       would-apply|satisfied|skipped-noop|skipped-gap, apply
       applied|satisfied|skipped-noop|skipped-gap) plus the closed observed
@@ -347,18 +350,18 @@ notes:
       only; per-member landing removal inside the held fence with additive
       `data.queueRemovals[]` (one entry per member, reason `landed`, delivered
       skip reasons such as `lease-held`/`no-merge-truth` leave other members
-      untouched). Tests: 291 pass / 0 fail / 1488 expect across 58 files
-      (new `tests/behaviour/closeout-members.test.ts` TC-XCLOSE-001..004, the
+      untouched). Tests: 291 pass / 0 fail / 1488 expect across 58 files (new
+      `tests/behaviour/closeout-members.test.ts` TC-XCLOSE-001..004, the
       extended `closeout-plan` TC-XCLOSE-004, `closeout-queue-removal` and
       `closeout-queue-removal-skips` per-member landing/skip paths, the
       `cross-repository-determinism` TC-XBOUND-002 case, the
       `cross-repository-parity` TC-XPAR-002 member-less plan/apply parity, the
       `golden/cross-repository-members` TC-XCLOSE-001 committed golden, plus
-      every delivered `closeout-*` suite); `tests/structure` inventory and
-      ports fixtures updated (content-inventory, inventory.json,
-      v1-contract-inventory.json); `pnpm -r typecheck` clean;
-      `tsc -p tests/types/tsconfig.json` clean; `pnpm check:boundaries` clean.
-      Fixtures: `tests/fixtures/cross-repository/closeout.ts`, extended
+      every delivered `closeout-*` suite); `tests/structure` inventory and ports
+      fixtures updated (content-inventory, inventory.json,
+      v1-contract-inventory.json); `pnpm -r typecheck` clean; `tsc -p
+      tests/types/tsconfig.json` clean; `pnpm check:boundaries` clean. Fixtures:
+      `tests/fixtures/cross-repository/closeout.ts`, extended
       `tests/fixtures/closeout/{cli,harness,queue-removal}.ts`, golden
       `tests/fixtures/cross-repository/goldens/closeout-members-applied.json`.
       Documented reading: `ticket-to-done` member transitions use the durable
@@ -375,24 +378,25 @@ notes:
       feat/GH-310/cross-repository-changes is the record). Delivered: parity
       proofs (TC-XPAR-003) — the member-less `verify gates` pass report is the
       delivered `VerifyGatesReport` with literal `overall: \"pass\"`, the
-      `success-data.json` payload, `human-success.txt` bytes, `VerifyGateRecord[]`
-      with no `member`, and exit 0; the member-less failure keeps the delivered
-      error envelope, the `failure-summary.txt` summary and exit 1; the
-      classified-unknown case keeps `verify.gates.unavailable` and exit 2; the
-      member-less `queue add` payload equals the phase-1 404e9bf8 golden
-      `tests/fixtures/queue/golden/queue-add-memberless.json` with only envelope
-      `runId`/`timing` normalized, no `members` array, no extra `edges[]`; queue
-      list/plan/lanes list carry one bare-ref entry and no member ref — plus the
-      phase-1/phase-4 plan and closeout parity cases re-read unchanged. Contract
-      and identity continuity (TC-XCTR-001, 003, 004, 005, 007): every touched
-      member surface keeps the five-field `delivery.result.v1` envelope with zero
-      top-level `ok`/`command` and every new key under `data`; the exercised
-      refusals are exactly `plan.schema.invalid`, `queue.precondition.unmet`, and
+      `success-data.json` payload, `human-success.txt` bytes,
+      `VerifyGateRecord[]` with no `member`, and exit 0; the member-less failure
+      keeps the delivered error envelope, the `failure-summary.txt` summary and
+      exit 1; the classified-unknown case keeps `verify.gates.unavailable` and
+      exit 2; the member-less `queue add` payload equals the phase-1 404e9bf8
+      golden `tests/fixtures/queue/golden/queue-add-memberless.json` with only
+      envelope `runId`/`timing` normalized, no `members` array, no extra
+      `edges[]`; queue list/plan/lanes list carry one bare-ref entry and no
+      member ref — plus the phase-1/phase-4 plan and closeout parity cases
+      re-read unchanged. Contract and identity continuity (TC-XCTR-001, 003,
+      004, 005, 007): every touched member surface keeps the five-field
+      `delivery.result.v1` envelope with zero top-level `ok`/`command` and every
+      new key under `data`; the exercised refusals are exactly
+      `plan.schema.invalid`, `queue.precondition.unmet`, and
       `queue.dependency-cycle`, each resolving in the delivered table; the error
       table equals the committed pre-change snapshot (baseline rows plus the
-      three delivered `events` rows) in count and membership, the domain-kind set
-      is unchanged, and no member-shaped identity string is invented; the closed
-      vocabularies and the five member bounds are asserted once with
+      three delivered `events` rows) in count and membership, the domain-kind
+      set is unchanged, and no member-shaped identity string is invented; the
+      closed vocabularies and the five member bounds are asserted once with
       `PLAN_MAX_MEMBERS = VERIFY_GATES_MAX_MEMBERS = CLOSEOUT_MAX_MEMBERS = 8`;
       the closeout and shared-verdict consumers resolve by `repoKey`/`stepId`,
       tolerate additive fields, and report a reordered or missing-field array as
@@ -405,44 +409,46 @@ notes:
       exactly ONE gate-verification record at two and at eight members, and
       closeout plan mode over three members performs zero ledger appends, zero
       fences, and no branch/tracker write; the phase-2/3/4 determinism cases
-      (gate report incl. `reviewFlow.runId`, closeout plan/apply, queue/lanes) are
-      re-read unchanged, and an eight-member partly-evidenced report stays under
-      `VERIFY_GATES_MAX_MACHINE_BYTES` with all seven blockers named in declared
-      order. Hermeticity (TC-XHERM-001/002): two real local member repositories
-      (own branch, head, no remote, own toplevel), injected facts changing the
-      verdict with zero network calls and zero spawns, no environment/credential
-      read, no `mock.module`, a case base outside every work tree with a
-      non-ambient home and an unchanged real-state fingerprint, an explicit
-      fixture project root, and byte-identical repeats; the fixture-sanitization
-      audit now also scans `tests/fixtures/cross-repository/**` for secret/PII/
-      live-host shapes. M2 bookkeeping: backlog M2-S19 `Progress:` line, a dated
-      status delivery addendum, and the M2 pack ownership/consumption wording in
-      `milestones/m2/README.md` and `milestones/m2/contracts.md`; the CLI command
-      registry is UNCHANGED because no command surface moved. Release artifact:
-      `.changeset/gh-310-cross-repository-changes-minor.md` (the five-package
-      minor changeset per the repo lockstep convention). Gate battery at the
-      delivered HEAD: `PATH=\"$PWD/node_modules/.bin:$PATH\" TMPDIR=$GATE_TMPDIR
-      GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
+      (gate report incl. `reviewFlow.runId`, closeout plan/apply, queue/lanes)
+      are re-read unchanged, and an eight-member partly-evidenced report stays
+      under `VERIFY_GATES_MAX_MACHINE_BYTES` with all seven blockers named in
+      declared order. Hermeticity (TC-XHERM-001/002): two real local member
+      repositories (own branch, head, no remote, own toplevel), injected facts
+      changing the verdict with zero network calls and zero spawns, no
+      environment/credential read, no `mock.module`, a case base outside every
+      work tree with a non-ambient home and an unchanged real-state fingerprint,
+      an explicit fixture project root, and byte-identical repeats; the
+      fixture-sanitization audit now also scans
+      `tests/fixtures/cross-repository/**` for secret/PII/ live-host shapes. M2
+      bookkeeping: backlog M2-S19 `Progress:` line, a dated status delivery
+      addendum, and the M2 pack ownership/consumption wording in
+      `milestones/m2/README.md` and `milestones/m2/contracts.md`; the CLI
+      command registry is UNCHANGED because no command surface moved. Release
+      artifact: `.changeset/gh-310-cross-repository-changes-minor.md` (the
+      five-package minor changeset per the repo lockstep convention). Gate
+      battery at the delivered HEAD: `PATH=\"$PWD/node_modules/.bin:$PATH\"
+      TMPDIR=$GATE_TMPDIR GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
       GIT_CONFIG_VALUE_0=false pnpm check` exit 0 — 8486 pass / 4 skip / 0 fail,
       74958 expect calls across 8490 tests in 1082 files, plus lint, format,
       typecheck, boundaries, ambient-globals, workspace-entrypoints,
       secret-read-boundary, prompt-conformance, help-guide-coverage, and
       exports-parity clean; `./scripts/lint-commit-range.sh --base main-tools`
       VERDICT: PASS (20 commits, 0 offending). Recorded deviations: (1) the
-      phase-4 golden `tests/fixtures/cross-repository/goldens/closeout-members-applied.json`
+      phase-4 golden
+      `tests/fixtures/cross-repository/goldens/closeout-members-applied.json`
       was reformatted by Biome (whitespace only; the suite compares parsed
-      values) to make `format:check` green; (2) `tests/checks/planning-truth.test.ts`
-      pinned the previous delivery's status addendum as the file tail, which
-      fails on the next addendum, so the invariant now asserts dated, uniquely
-      named, chronologically appended addenda plus the M2-S18/S19/S20 bodies
-      without pinning a tail; (3) the change artifacts
-      (spec/plan/test-plan/pm-notes) carried the operator's machine paths, which
-      `check:privacy-literals` refuses, so the literals were replaced with the
-      `$GATE_TMPDIR` and `<workspace-parent>` placeholders — a literal-only
-      substitution with no semantic change; (4) the caller-directed M2
-      bookkeeping also updated `milestones/m2/README.md`, which the plan scoped
-      only as `milestones/m2/contracts.md` (the folder row states the same
-      ownership/consumption truth). No `doc/spec/**`, `.ai/local/**`,
-      `.opencode/**`, `.ados-claude/**`, or `AGENTS.md` edits."
+      values) to make `format:check` green; (2)
+      `tests/checks/planning-truth.test.ts` pinned the previous delivery's
+      status addendum as the file tail, which fails on the next addendum, so the
+      invariant now asserts dated, uniquely named, chronologically appended
+      addenda plus the M2-S18/S19/S20 bodies without pinning a tail; (3) the
+      change artifacts (spec/plan/test-plan/pm-notes) carried the operator's
+      machine paths, which `check:privacy-literals` refuses, so the literals
+      were replaced with the `$GATE_TMPDIR` and `<workspace-parent>`
+      placeholders — a literal-only substitution with no semantic change; (4)
+      the caller-directed M2 bookkeeping also updated `milestones/m2/README.md`,
+      which the plan scoped only as `milestones/m2/contracts.md` (the folder row
+      states the same ownership/consumption truth). No `doc/spec/**`,
+      `.ai/local/**`, `.opencode/**`, `.ados-claude/**`, or `AGENTS.md` edits."
     type: info
     date: "2026-11-15"
