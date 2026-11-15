@@ -15,10 +15,8 @@ import {
   CAPSULE_CAPTURE_BAR_BASES,
   CAPSULE_EVIDENCE_PREFIXES,
   CAPSULE_MAX_INDEX_LINES,
+  CAPSULE_REJECTION_REASONS,
   CAPSULE_SLUG_PATTERN,
-  HINT_MAX_CHARS,
-  MEMORY_RECORD_HOME_BY_KIND,
-  MEMORY_RECORD_SOURCES,
   type CapsuleCandidate,
   type CapsuleCandidateClass,
   type CapsuleCandidateDecision,
@@ -27,7 +25,10 @@ import {
   type CapsuleMemoryFacts,
   type CapsuleMemoryRecord,
   type CapsulePromotionWrite,
-  CAPSULE_REJECTION_REASONS,
+  HINT_MAX_CHARS,
+  MEMORY_RECORD_HOME_BY_KIND,
+  MEMORY_RECORD_SOURCES,
+  STATEMENT_MAX_CHARS,
 } from "#contracts";
 
 const SLUG = new RegExp(CAPSULE_SLUG_PATTERN);
@@ -114,6 +115,9 @@ export const validateCandidate = (
   const statement = stringOf(value.statement);
   if (statement === undefined || statement.trim().length === 0) {
     return { ok: false, detail: "statement is empty" };
+  }
+  if (statement.length > STATEMENT_MAX_CHARS) {
+    return { ok: false, detail: "statement exceeds the published bound" };
   }
   const source = stringOf(value.source);
   if (source === undefined || source.trim().length === 0) {
@@ -236,8 +240,20 @@ const deriveHint = (candidate: CapsuleCandidate): string => {
   const collapse = (value: string): string => value.trim().replace(/\s+/g, " ");
   const applicability =
     candidate.applies_when === undefined ? "" : collapse(candidate.applies_when);
-  const source = applicability.length > 0 ? applicability : collapse(candidate.statement);
-  return source.length <= HINT_MAX_CHARS ? source : source.slice(0, HINT_MAX_CHARS).trimEnd();
+  if (applicability.length > 0 && applicability.length <= HINT_MAX_CHARS) return applicability;
+  if (applicability.length === 0) {
+    const statement = collapse(candidate.statement);
+    if (statement.length <= HINT_MAX_CHARS) return statement;
+  }
+  // The chosen source exceeds the bound: render a read-when phrase from the
+  // structured candidate fields instead of truncating a statement (F-2).
+  const kind =
+    candidate.class === "tacit"
+      ? "tacit fragment"
+      : candidate.class === "preference" || candidate.class === "fleet"
+        ? candidate.class
+        : "lesson";
+  return `read when a ${candidate.scope}-scoped ${kind} applies`;
 };
 
 const indexRowOf = (relative: string, hint: string): string => `| \`${relative}\` | ${hint} |`;

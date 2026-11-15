@@ -6,17 +6,19 @@
  * and the printing. It writes nothing, opens no network connection, and keeps
  * no state.
  */
+
+import { scanMemoryTree } from "../../packages/adapters/src/file/memory-scan.js";
 import {
   PRIVACY_RULES,
   PRIVACY_SUPPRESSION_CLASSES,
+  suppressionValueFor,
 } from "../../packages/adapters/src/io/privacy-rules.js";
-import { scanMemoryTree } from "../../packages/adapters/src/file/memory-scan.js";
-import { evaluateMemory } from "../../packages/core/src/domain/memory-lint.js";
 import type {
   MemoryEvaluationResult,
   MemoryPrivacyVocabulary,
   MemoryScannedFile,
 } from "../../packages/core/src/contracts/index.js";
+import { evaluateMemory } from "../../packages/core/src/domain/memory-lint.js";
 
 /** The injected execution seam; production defaults read the clock once. */
 export type MemoryLintOptions = {
@@ -38,6 +40,7 @@ export const memoryPrivacyVocabulary = (): MemoryPrivacyVocabulary => ({
     id: entry.id,
     markers: entry.markers,
   })),
+  suppressionValueFor,
 });
 
 const defaultReadToday = (): string => new Date().toISOString().slice(0, 10);

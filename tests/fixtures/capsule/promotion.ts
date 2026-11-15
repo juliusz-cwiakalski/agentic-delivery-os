@@ -4,15 +4,15 @@
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import type {
-  CapsuleFileRuntime,
-  CloseoutPromotionRuntime,
-} from "../../../packages/core/src/contracts/index";
 import {
   applyPromotionWrite,
   checkPromotionConfinement,
   readMemoryFacts,
 } from "../../../packages/adapters/src/file/memory-promotion";
+import type {
+  CapsuleFileRuntime,
+  CloseoutPromotionRuntime,
+} from "../../../packages/core/src/contracts/index";
 
 export type TempMemory = {
   readonly root: string;
@@ -25,6 +25,7 @@ export type TempMemory = {
 export const makeTempMemory = (
   options: {
     readonly readmeLines?: number;
+    readonly indexRows?: readonly string[];
     readonly records?: Readonly<Record<string, string>>;
   } = {},
 ): TempMemory => {
@@ -32,6 +33,7 @@ export const makeTempMemory = (
   mkdirSync(join(root, "lessons"), { recursive: true });
   mkdirSync(join(root, "tacit"), { recursive: true });
   const readme = ["# Memory", "", "## Index", "", "| Path | Read when |", "|---|---|"];
+  readme.push(...(options.indexRows ?? []));
   while (readme.length < (options.readmeLines ?? 6)) readme.push("| filler | never |");
   writeFileSync(join(root, "README.md"), `${readme.join("\n")}\n`);
   for (const [relative, content] of Object.entries(options.records ?? {})) {

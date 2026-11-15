@@ -1,6 +1,11 @@
 /** TC-CAP-020 — explicit contradiction pairing and target-existence first. */
 import { describe, expect, test } from "bun:test";
+import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
 import { candidateYaml, runPromotionCloseout } from "../fixtures/capsule/promotion";
+import { recordText, scanMemoryFolder, validLessonFields } from "../fixtures/memory/tree";
+
+const TODAY = "2026-11-15";
+const EMPTY_VOCABULARY = { rules: [], suppressionClasses: [] } as const;
 
 const existing = {
   "lessons/lesson-2026-001-old.md":
@@ -63,6 +68,37 @@ describe("TC-CAP-020 supersession", () => {
       expect(decisionOf(run)?.decision).toBe("promoted");
       const old = run.memory.read("lessons/lesson-2026-001-old.md");
       expect(old).toContain('status: "superseded"');
+      expect(old).toContain('superseded_by: "lesson-2026-002"');
+    } finally {
+      run.cleanup();
+    }
+  });
+
+  test("a supersession over a schema-valid target leaves the tree lint-clean (F-1 round trip)", async () => {
+    const targetRelative = "lessons/lesson-2026-001-old.md";
+    const run = await runPromotionCloseout({
+      candidates: {
+        "a.yaml": candidateYaml({
+          supersedes: ["lesson-2026-001"],
+          statement: "The replacement statement for the superseded lesson.",
+        }),
+      },
+      memory: {
+        indexRows: [`| \`${targetRelative}\` | read the superseded lesson |`],
+        records: { [targetRelative]: recordText(validLessonFields()) },
+      },
+    });
+    try {
+      expect(run.exitCode).toBe(0);
+      const old = run.memory.read(targetRelative);
+      expect(old).toContain('status: "superseded"');
+      const result = evaluateMemory({
+        files: scanMemoryFolder(run.memory.root),
+        today: TODAY,
+        privacy: EMPTY_VOCABULARY,
+      });
+      expect(result.findings.map((finding) => finding.ruleId)).toEqual([]);
+      expect(result.exitCode).toBe(0);
     } finally {
       run.cleanup();
     }

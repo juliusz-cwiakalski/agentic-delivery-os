@@ -10,8 +10,8 @@
 import {
   existsSync,
   mkdirSync,
-  readFileSync,
   readdirSync,
+  readFileSync,
   realpathSync,
   renameSync,
   writeFileSync,
@@ -125,7 +125,11 @@ const underRoot = (root: string, target: string): boolean => {
   return parent === base || parent.startsWith(`${base}${sep}`);
 };
 
-const supersedeRecord = (memoryRoot: string, recordId: string): PromotionWriteResult => {
+const supersedeRecord = (
+  memoryRoot: string,
+  recordId: string,
+  replacementId: string,
+): PromotionWriteResult => {
   const areas = ["lessons", "tacit"] as const;
   for (const area of areas) {
     const directory = join(memoryRoot, area);
@@ -134,7 +138,15 @@ const supersedeRecord = (memoryRoot: string, recordId: string): PromotionWriteRe
       const path = join(directory, name);
       if (!name.startsWith(`${recordId}-`) && name !== `${recordId}.md`) continue;
       const text = readFileSync(path, "utf8");
-      const next = text.replace(/^(status:\s*)["']?candidate["']?\s*$/m, '$1"superseded"');
+      const withStatus = text.replace(/^(status:\s*)["']?candidate["']?\s*$/m, '$1"superseded"');
+      const block = FRONTMATTER.exec(withStatus);
+      const next =
+        block?.[1] === undefined || /^superseded_by:/m.test(block[1])
+          ? withStatus
+          : withStatus.replace(
+              /^(status:\s*["']?superseded["']?\s*)$/m,
+              `$1\nsuperseded_by: "${replacementId}"`,
+            );
       if (next !== text) writeFileSync(path, next);
       return { ok: true, wrote: next !== text };
     }
@@ -200,7 +212,7 @@ export const applyPromotionWrite = (
     writeFileSync(readme, `${text}${separator}${write.indexRow}\n`);
   }
   for (const record of write.supersedes ?? []) {
-    const superseded = supersedeRecord(memoryRoot, record);
+    const superseded = supersedeRecord(memoryRoot, record, write.recordId);
     if (!superseded.ok) return superseded;
   }
   return { ok: true, wrote: true };

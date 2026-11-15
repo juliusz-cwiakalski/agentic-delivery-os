@@ -9,13 +9,15 @@ import {
   matchGenericRules,
   PRIVACY_RULES,
   PRIVACY_SUPPRESSION_CLASSES,
+  suppressionValueFor,
 } from "../../packages/adapters/src/io/privacy-rules";
-import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
 import type {
   MemoryEvaluationResult,
   MemoryPrivacyVocabulary,
   MemoryScannedFile,
 } from "../../packages/core/src/contracts/index";
+import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
+import { secretTokenFor } from "../fixtures/memory/secrets";
 import {
   archiveIndexReadme,
   indexReadme,
@@ -25,7 +27,6 @@ import {
   treeWith,
   validLessonFields,
 } from "../fixtures/memory/tree";
-import { secretTokenFor } from "../fixtures/memory/secrets";
 
 const ROOT = process.cwd();
 const TODAY = "2026-11-15";
@@ -41,6 +42,7 @@ const VOCABULARY: MemoryPrivacyVocabulary = {
     id: entry.id,
     markers: entry.markers,
   })),
+  suppressionValueFor,
 };
 const CLASSES = PRIVACY_RULES.map((rule) => rule.recognizerClass);
 
@@ -157,6 +159,33 @@ describe("TC-MEMSECRET-002 suppression classes and the markerless control", () =
     const token = secretTokenFor("provider-token-prefix");
     const result = evaluate(recordWith(`${token} // placeholder\n`));
     expect(secretFindings(result)).toHaveLength(1);
+  });
+
+  test("a marker in the key half does not suppress a value the guard reports (F-4)", () => {
+    const value = `${"a1".repeat(6)}${"z".repeat(10)}`;
+    const line = `fake_token: ${value}`;
+    // The whole-tree guard reports the span unsuppressed: the marker is in the
+    // key, not in the protected value segment.
+    const guard = matchGenericRules(line).filter(
+      (match) => match.id === "secret.credential-assignment",
+    );
+    expect(guard).toHaveLength(1);
+    expect(guard[0]?.suppressionClass).toBeNull();
+    const result = evaluate(recordWith(line));
+    expect(secretFindings(result).map((finding) => finding.ruleId)).toEqual([
+      "memory.secret.credential-assignment",
+    ]);
+  });
+
+  test("a marker inside the protected value segment still suppresses (F-4)", () => {
+    const value = `fake_${"a1".repeat(6)}${"z".repeat(10)}`;
+    const line = `token: ${value}`;
+    const guard = matchGenericRules(line).filter(
+      (match) => match.id === "secret.credential-assignment",
+    );
+    expect(guard).toHaveLength(1);
+    expect(guard[0]?.suppressionClass).toBe("fabricated-sample");
+    expect(secretFindings(evaluate(recordWith(line)))).toEqual([]);
   });
 
   test("a markerless value fires in a record, an entry, and a convention file", () => {

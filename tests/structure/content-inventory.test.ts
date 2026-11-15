@@ -2589,6 +2589,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "privacyDigestInput",
     "privacyFingerprint",
     "suppressionClassFor",
+    "suppressionValueFor",
   ],
   "adapters/src/io/provider-transport.ts": ["providerNotFoundFailure", "providerPayloadFailure"],
   "adapters/src/provider-quota/index.ts": [

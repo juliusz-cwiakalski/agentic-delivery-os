@@ -5,8 +5,8 @@
  * vocabulary is restated as a literal.
  */
 import {
-  STATEMENT_MAX_CHARS,
   type MemoryScannedFile,
+  STATEMENT_MAX_CHARS,
 } from "../../../packages/core/src/contracts/index";
 import { memoryFile, recordText, validLessonFields } from "./tree";
 
@@ -79,6 +79,21 @@ export const schemaMutants = (): readonly MutantCase[] => [
     name: "statement over the bound",
     expected: "memory.schema.statement-too-long",
     records: [lesson({ statement: "x".repeat(STATEMENT_MAX_CHARS + 1) })],
+  },
+  {
+    name: "empty statement",
+    expected: "memory.schema.keys-missing",
+    records: [lesson({ statement: "" })],
+  },
+  {
+    name: "whitespace-only statement",
+    expected: "memory.schema.keys-missing",
+    records: [lesson({ statement: "   " })],
+  },
+  {
+    name: "non-string statement",
+    expected: "memory.schema.keys-missing",
+    records: [lesson({ statement: 42 })],
   },
   {
     name: "preference source is not a human correction",
@@ -208,6 +223,23 @@ export const revalidationMutants = (today: string): readonly MutantCase[] => [
     expected: "none",
     records: [lesson()],
     extras: [memoryFile("agents/coder/README.md", "# coder\n\n- 2026-11-10: note\n")],
+  },
+  {
+    name: "capture line with a date-time token",
+    expected: "memory.dating.entry-line-date",
+    records: [lesson()],
+    extras: [memoryFile("agents/coder/README.md", "# coder\n\n- 2026-11-10T09:00:00Z: note\n")],
+  },
+  {
+    name: "an entry bullet with a non-date token is silent",
+    expected: "none",
+    records: [lesson()],
+    extras: [
+      memoryFile(
+        "agents/coder/README.md",
+        "# coder\n\n- GH-301: delivered the memory lint\n- T0-T5: trust scale\n",
+      ),
+    ],
   },
   {
     name: "expired at the injected date boundary stays silent",

@@ -2,8 +2,8 @@
  * GH-301 reference integrity (TC-MEMREF-001, TC-MEMREF-002).
  */
 import { describe, expect, test } from "bun:test";
-import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
 import type { MemoryEvaluationResult } from "../../packages/core/src/contracts/index";
+import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
 import { referenceMutants } from "../fixtures/memory/mutants";
 import { recordText, treeWith, validLessonFields } from "../fixtures/memory/tree";
 
@@ -56,5 +56,28 @@ describe("TC-MEMREF-002 resolvable references are silent", () => {
     expect(
       result.findings.some((finding) => finding.ruleId === "memory.reference.supersedes-dangling"),
     ).toBe(true);
+  });
+
+  test("an out-of-tree citation is silent while an in-tree missing link fires (F-5)", () => {
+    const outOfTree = [
+      {
+        relative: "lessons/lesson-2026-001-baseline.md",
+        text: recordText(
+          validLessonFields(),
+          "[agents](../../../AGENTS.md)\n[spec](/doc/spec/features/feature-memory-lint.md)\n",
+        ),
+      },
+    ];
+    expect(evaluate(outOfTree).findings).toEqual([]);
+
+    const inTreeMissing = [
+      {
+        relative: "lessons/lesson-2026-001-baseline.md",
+        text: recordText(validLessonFields(), "[missing](./lesson-2026-999-baseline.md)\n"),
+      },
+    ];
+    expect(evaluate(inTreeMissing).findings.map((finding) => finding.ruleId)).toEqual([
+      "memory.reference.link-dangling",
+    ]);
   });
 });

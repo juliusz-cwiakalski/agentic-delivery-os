@@ -13,10 +13,11 @@ import {
   MEMORY_RECORD_REQUIRED_KEYS,
   type MemoryEvaluationResult,
   type MemoryPrivacyVocabulary,
+  STATEMENT_MAX_CHARS,
 } from "../../packages/core/src/contracts/index";
 import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
-import { scanMemoryFolder } from "../fixtures/memory/tree";
 import { candidateYaml, runPromotionCloseout } from "../fixtures/capsule/promotion";
+import { recordText, scanMemoryFolder, validLessonFields } from "../fixtures/memory/tree";
 
 const TODAY = "2026-11-15";
 const EMPTY_VOCABULARY: MemoryPrivacyVocabulary = { rules: [], suppressionClasses: [] };
@@ -103,6 +104,35 @@ describe("TC-MEMWRITE-001 promotion renders the full schema and hint", () => {
       run.cleanup();
     }
   });
+
+  test("a supersession promotion leaves the whole tree lint-clean (F-1 round trip)", async () => {
+    const targetRelative = "lessons/lesson-2026-001-old.md";
+    const run = await runPromotionCloseout({
+      candidates: {
+        "a.yaml": candidateYaml({
+          statement: "The newer statement that supersedes the old one.",
+          supersedes: ["lesson-2026-001"],
+        }),
+      },
+      memory: {
+        indexRows: [`| \`${targetRelative}\` | read the superseded lesson |`],
+        records: {
+          [targetRelative]: recordText(validLessonFields()),
+        },
+      },
+    });
+    try {
+      expect(run.exitCode).toBe(0);
+      const home = homeOf(run);
+      const target = frontmatterOf(run.memory.read(targetRelative));
+      expect(target.status).toBe("superseded");
+      expect(target.superseded_by).toBe(frontmatterOf(run.memory.read(home)).id);
+      const result = evaluateRoot(run.memory.root);
+      expect(result.findings.map((finding) => finding.ruleId)).toEqual([]);
+    } finally {
+      run.cleanup();
+    }
+  });
 });
 
 describe("TC-MEMWRITE-002 read-when hint derivation and bound", () => {
@@ -136,12 +166,13 @@ describe("TC-MEMWRITE-002 read-when hint derivation and bound", () => {
     }
   });
 
-  test("an over-long applicability path stays non-empty and inside the bound", async () => {
+  test("an over-long applicability path renders a read-when phrase, not a truncation", async () => {
+    const applicability = `when ${"x".repeat(HINT_MAX_CHARS + 50)}`;
     const run = await runPromotionCloseout({
       candidates: {
         "a.yaml": candidateYaml({
-          applies_when: `when ${"x".repeat(HINT_MAX_CHARS + 50)}`,
-          statement: "y".repeat(270),
+          applies_when: applicability,
+          statement: "y".repeat(STATEMENT_MAX_CHARS),
         }),
       },
     });
@@ -149,7 +180,27 @@ describe("TC-MEMWRITE-002 read-when hint derivation and bound", () => {
       const hint = hintOf(rowOf(run, homeOf(run)));
       expect(hint.length).toBeGreaterThan(0);
       expect(hint.length).toBeLessThanOrEqual(HINT_MAX_CHARS);
-      expect(hint.startsWith("when ")).toBe(true);
+      expect(hint).not.toBe(applicability.slice(0, HINT_MAX_CHARS));
+      expect(applicability.startsWith(hint)).toBe(false);
+      expect(evaluateRoot(run.memory.root).findings).toEqual([]);
+    } finally {
+      run.cleanup();
+    }
+  });
+
+  test("a statement over the hint bound yields a derived hint, not a statement prefix", async () => {
+    const statement = "z".repeat(STATEMENT_MAX_CHARS);
+    const run = await runPromotionCloseout({
+      candidates: { "a.yaml": candidateYaml({ statement }) },
+    });
+    try {
+      const hint = hintOf(rowOf(run, homeOf(run)));
+      expect(hint.length).toBeGreaterThan(0);
+      expect(hint.length).toBeLessThanOrEqual(HINT_MAX_CHARS);
+      expect(hint).not.toBe(statement.slice(0, HINT_MAX_CHARS));
+      expect(statement.startsWith(hint)).toBe(false);
+      expect(statement.includes(hint)).toBe(false);
+      expect(evaluateRoot(run.memory.root).findings).toEqual([]);
     } finally {
       run.cleanup();
     }
@@ -237,5 +288,37 @@ describe("TC-MEMWRITE-004 capsule reconciliation and refusals", () => {
       "created",
     ]);
     expect(CAPSULE_CANDIDATE_SCOPES).toContain("fleet");
+  });
+
+  test("a candidate one character over the statement bound is refused with zero writes", async () => {
+    const run = await runPromotionCloseout({
+      candidates: {
+        "a.yaml": candidateYaml({ statement: "x".repeat(STATEMENT_MAX_CHARS + 1) }),
+      },
+    });
+    try {
+      expect(run.exitCode).toBe(1);
+      expect(run.error?.code).toBe("closeout.capsule-invalid");
+      expect(recordFiles(run.memory.root)).toEqual([]);
+      expect(run.memory.read("README.md")).not.toContain("review-catch-fixture");
+    } finally {
+      run.cleanup();
+    }
+  });
+
+  test("a candidate exactly at the statement bound promotes and lints clean", async () => {
+    const run = await runPromotionCloseout({
+      candidates: {
+        "a.yaml": candidateYaml({ statement: "x".repeat(STATEMENT_MAX_CHARS) }),
+      },
+    });
+    try {
+      expect(run.exitCode).toBe(0);
+      const home = homeOf(run);
+      expect(frontmatterOf(run.memory.read(home)).statement).toBe("x".repeat(STATEMENT_MAX_CHARS));
+      expect(evaluateRoot(run.memory.root).findings).toEqual([]);
+    } finally {
+      run.cleanup();
+    }
   });
 });

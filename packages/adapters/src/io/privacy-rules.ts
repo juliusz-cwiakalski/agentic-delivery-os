@@ -207,8 +207,11 @@ const WINDOWS_USER_PREFIX = /^[A-Za-z]:[\\/]+Users[\\/]+/;
  * `user` from suppressing every `/Users/…` or `C:\Users\…` path (the
  * separator itself contains "user") while preserving the intended
  * synthetic-user placeholder suppressions.
+ *
+ * Exported so the memory lint injects this exact segment function instead of
+ * defining a second suppression rule.
  */
-const suppressionValueFor = (ruleId: string, matchedText: string): string => {
+export const suppressionValueFor = (ruleId: string, matchedText: string): string => {
   switch (ruleId) {
     case "private.absolute-user-path": {
       const prefix = matchedText.startsWith("/home/")

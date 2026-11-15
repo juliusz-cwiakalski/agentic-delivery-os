@@ -7,18 +7,18 @@ import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
 import type {
   MemoryEvaluationResult,
   MemoryScannedFile,
 } from "../../packages/core/src/contracts/index";
+import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
+import { memoryPrivacyVocabulary, runMemoryLint } from "../../scripts/checks/memory-lint";
 import { fileListingBody } from "../fixtures/memory/bodies";
-import { runMemoryLint } from "../../scripts/checks/memory-lint";
+import { secretTokenFor } from "../fixtures/memory/secrets";
 import {
   emptyTree,
   indexReadme,
   indexRow,
-  memoryFile,
   populatedTree,
   recordText,
   treeWith,
@@ -107,6 +107,37 @@ describe("TC-MEMGATE-002 determinism and declared ordering", () => {
     const second = evaluate(errorFilesTree());
     expect(first.lines).toEqual(second.lines);
     expect(first.exitCode).toBe(second.exitCode);
+  });
+
+  test("the printed stream is area-ordered across severities (F-9)", () => {
+    const token = secretTokenFor("provider-token-prefix");
+    const files = treeWith([
+      {
+        relative: "lessons/lesson-2026-001-derivable.md",
+        text: recordText(validLessonFields(), fileListingBody),
+      },
+      {
+        relative: "lessons/lesson-2026-002-secret.md",
+        text: recordText(validLessonFields({ id: "lesson-2026-002" }), `# note\n${token}\n`),
+      },
+    ]);
+    const result = evaluateMemory({
+      files,
+      today: TODAY,
+      privacy: memoryPrivacyVocabulary(),
+    });
+    const warningIndex = result.lines.findIndex((line) =>
+      line.startsWith("WARN memory-lint: memory.derivable.file-listing"),
+    );
+    const failureIndex = result.lines.findIndex((line) =>
+      line.startsWith("FAIL memory-lint: memory.secret.provider-token-prefix"),
+    );
+    expect(warningIndex).toBeGreaterThanOrEqual(0);
+    expect(failureIndex).toBeGreaterThan(warningIndex);
+    expect(result.exitCode).toBe(1);
+    expect(result.summary).toMatchObject({ errors: 1, advisories: 1 });
+    const again = evaluateMemory({ files, today: TODAY, privacy: memoryPrivacyVocabulary() });
+    expect(again.lines).toEqual(result.lines);
   });
 
   test("findings are ordered by area, path, line, and rule id", () => {

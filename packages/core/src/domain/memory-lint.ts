@@ -15,15 +15,16 @@ import {
   MEMORY_DERIVABLE_COMMANDS,
   MEMORY_ENTRY_MAX_LINES,
   MEMORY_FINDING_AREA_ORDER,
+  MEMORY_FINDING_REGISTER,
   MEMORY_INDEX_MAX_BYTES,
   MEMORY_INDEX_MAX_LINES,
   MEMORY_INDEX_PATH,
   MEMORY_KERNEL_BAND_SEVERITY,
   MEMORY_KERNEL_ERROR_LINES,
   MEMORY_KERNEL_WARN_LINES,
-  MEMORY_FINDING_REGISTER,
   MEMORY_MAX_PRINTED_ADVISORIES,
   MEMORY_MAX_PRINTED_ERRORS,
+  MEMORY_RECORD_AREAS,
   MEMORY_RECORD_BASIS_VALUES,
   MEMORY_RECORD_EVIDENCE_PREFIXES,
   MEMORY_RECORD_FILE_NAME_PATTERN,
@@ -39,7 +40,6 @@ import {
   MEMORY_ROOT,
   MEMORY_SECRET_RULE_PREFIX,
   MEMORY_WARN_RULE_IDS,
-  STATEMENT_MAX_CHARS,
   type MemoryEvaluationInput,
   type MemoryEvaluationResult,
   type MemoryFinding,
@@ -47,6 +47,7 @@ import {
   type MemoryFindingSeverity,
   type MemoryScannedFile,
   type MemorySummary,
+  STATEMENT_MAX_CHARS,
 } from "#contracts";
 
 type IndexRow = {
@@ -79,7 +80,10 @@ const parseIndexRows = (text: string, heading: string | undefined): readonly Ind
 
 const ID_PATTERN = new RegExp(MEMORY_RECORD_ID_PATTERN);
 const FILE_NAME_PATTERN = new RegExp(MEMORY_RECORD_FILE_NAME_PATTERN);
-const RECORD_AREAS = ["lessons", "tacit", "preferences"] as const;
+
+/** A flat record area: a record file directly inside it, never the guild tree. */
+const isFlatRecordArea = (area: string): boolean =>
+  (MEMORY_RECORD_AREAS as readonly string[]).includes(area) && area !== "guilds";
 
 type ParsedRecord = {
   readonly file: MemoryScannedFile;
@@ -96,7 +100,7 @@ const isRecordRelative = (relative: string): boolean => {
   const parts = partsOf(relative);
   const [area, name, third] = parts;
   if (area === undefined || name === undefined) return false;
-  if ((RECORD_AREAS as readonly string[]).includes(area)) {
+  if (isFlatRecordArea(area)) {
     return parts.length === 2 && name.endsWith(".md");
   }
   if (area === "guilds") {
@@ -261,8 +265,13 @@ export const evaluateMemory = (input: MemoryEvaluationInput): MemoryEvaluationRe
     ) {
       add("memory.schema.value-unknown", path, "evaluation is not a mapping");
     }
-    const statement = stringOf(fields.statement);
-    if (statement !== undefined && statement.length > STATEMENT_MAX_CHARS) {
+    const rawStatement = fields.statement;
+    const statement = stringOf(rawStatement);
+    if (statement === undefined || rawStatement === null || statement.trim().length === 0) {
+      if (hasOwn(fields, "statement")) {
+        add("memory.schema.keys-missing", path, "required key statement is empty");
+      }
+    } else if (statement.length > STATEMENT_MAX_CHARS) {
       add(
         "memory.schema.statement-too-long",
         path,
@@ -346,9 +355,15 @@ export const evaluateMemory = (input: MemoryEvaluationInput): MemoryEvaluationRe
     if (!isEntryPoint(relative)) continue;
     const lines = file.text.split("\n");
     for (const [index, line] of lines.entries()) {
-      const capture = /^\s*-\s+(\S+)\s*:/.exec(line);
+      // A capture line carries a calendar-shaped leading token, optionally with
+      // a time; a bullet whose leading token is not date-like is not a capture
+      // line and produces no dating finding (F-7).
+      const capture =
+        /^\s*-\s+(\d{4}[-/]\d{1,2}[-/]\d{1,2}(?:[T ]\d{1,2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:?\d{2})?)?)\s*:/.exec(
+          line,
+        );
       const token = capture?.[1];
-      if (token === undefined || !/\d/.test(token)) continue;
+      if (token === undefined) continue;
       if (!/^\d{4}-\d{2}-\d{2}$/.test(token)) {
         add(
           "memory.dating.entry-line-date",
@@ -368,14 +383,17 @@ export const evaluateMemory = (input: MemoryEvaluationInput): MemoryEvaluationRe
     if (id !== undefined && ID_PATTERN.test(id) && !ids.has(id)) ids.set(id, record);
   }
   const allPaths = new Set(input.files.map((file) => file.path));
-  const resolveLink = (directory: string, target: string): string => {
+  const resolveLink = (directory: string, target: string): { path: string; escaped: boolean } => {
     const stack = directory.length === 0 ? [] : directory.split("/");
+    let escaped = false;
     for (const segment of target.split("/")) {
       if (segment === "" || segment === ".") continue;
-      if (segment === "..") stack.pop();
-      else stack.push(segment);
+      if (segment === "..") {
+        if (stack.length === 0) escaped = true;
+        else stack.pop();
+      } else stack.push(segment);
     }
-    return stack.join("/");
+    return { path: stack.join("/"), escaped };
   };
   for (const record of records) {
     const { file, relative, fields } = record;
@@ -433,8 +451,20 @@ export const evaluateMemory = (input: MemoryEvaluationInput): MemoryEvaluationRe
       const rawTarget = match[1];
       if (rawTarget === undefined) continue;
       const target = rawTarget.split("#")[0] ?? "";
-      if (target.length === 0 || /^[a-z]+:/i.test(target) || target.startsWith("#")) continue;
-      const repoPath = `${MEMORY_ROOT}/${resolveLink(directory, target)}`;
+      if (
+        target.length === 0 ||
+        /^[a-z]+:/i.test(target) ||
+        target.startsWith("#") ||
+        target.startsWith("/")
+      ) {
+        continue;
+      }
+      const resolved = resolveLink(directory, target);
+      // Only an in-tree relative link is in scope; a link whose resolution
+      // leaves `.ai/memory/` (or an absolute repository path) is a citation,
+      // not a dangling memory reference (F-5).
+      if (resolved.escaped) continue;
+      const repoPath = `${MEMORY_ROOT}/${resolved.path}`;
       if (!allPaths.has(repoPath)) {
         add(
           "memory.reference.link-dangling",
@@ -531,7 +561,12 @@ export const evaluateMemory = (input: MemoryEvaluationInput): MemoryEvaluationRe
   evaluateUniverse("archive-index", archiveFile, coveredByArchive, undefined);
 
   // --- budgets at their published caps (DM-5, AC-F10-1) ---
-  const measureLines = (file: MemoryScannedFile): number => file.text.split("\n").length;
+  // A trailing newline terminates the last line; it is not an empty line, so a
+  // newline-terminated surface exactly at its cap measures at the cap (F-6).
+  const measureLines = (file: MemoryScannedFile): number => {
+    const lines = file.text.split("\n");
+    return file.text.endsWith("\n") ? lines.length - 1 : lines.length;
+  };
   if (indexFile !== undefined) {
     const lines = measureLines(indexFile);
     if (lines > MEMORY_INDEX_MAX_LINES) {
@@ -658,7 +693,11 @@ export const evaluateMemory = (input: MemoryEvaluationInput): MemoryEvaluationRe
       for (let match = pattern.exec(file.text); match !== null; match = pattern.exec(file.text)) {
         const matched = match[0];
         if (matched.length < rule.minimumMatchLength) continue;
-        const lowered = matched.toLowerCase();
+        // Suppression is evaluated against the value the rule protects, exactly
+        // as the delivered whole-tree guard does; a marker in the key half must
+        // not silence a real value (F-4).
+        const segment = input.privacy.suppressionValueFor?.(rule.id, matched) ?? matched;
+        const lowered = segment.toLowerCase();
         const suppressed = input.privacy.suppressionClasses.some((entry) =>
           entry.markers.some((marker) => lowered.includes(marker.toLowerCase())),
         );
@@ -689,9 +728,23 @@ export const evaluateMemory = (input: MemoryEvaluationInput): MemoryEvaluationRe
     `${finding.severity === "error" ? "FAIL" : "WARN"} memory-lint: ${finding.ruleId} ${finding.path}${
       finding.line === undefined ? "" : `:${finding.line}`
     } ${finding.detail}`;
+  // One stream in the findings' declared order, with the two severity ceilings
+  // applied as separate print budgets while selecting from it (F-9).
+  const printed: string[] = [];
+  let printedErrors = 0;
+  let printedAdvisories = 0;
+  for (const finding of sorted) {
+    if (finding.severity === "error") {
+      if (printedErrors >= MEMORY_MAX_PRINTED_ERRORS) continue;
+      printedErrors += 1;
+    } else {
+      if (printedAdvisories >= MEMORY_MAX_PRINTED_ADVISORIES) continue;
+      printedAdvisories += 1;
+    }
+    printed.push(format(finding));
+  }
   const lines: string[] = [
-    ...errors.slice(0, MEMORY_MAX_PRINTED_ERRORS).map(format),
-    ...advisories.slice(0, MEMORY_MAX_PRINTED_ADVISORIES).map(format),
+    ...printed,
     `memory-lint: records=${records.length} areas=${MEMORY_FINDING_AREA_ORDER.length} errors=${errors.length} advisories=${advisories.length}`,
   ];
   if (

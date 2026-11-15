@@ -3,7 +3,6 @@
  * (TC-MEMSCHEMA-002, TC-MEMSCHEMA-004).
  */
 import { describe, expect, test } from "bun:test";
-import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
 import {
   MEMORY_FINDING_AREA_ORDER,
   MEMORY_FINDING_REGISTER,
@@ -12,7 +11,8 @@ import {
   type MemoryEvaluationResult,
   type MemoryScannedFile,
 } from "../../packages/core/src/contracts/index";
-import { schemaControls, schemaMutants, type MutantCase } from "../fixtures/memory/mutants";
+import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
+import { type MutantCase, schemaControls, schemaMutants } from "../fixtures/memory/mutants";
 import { treeWith } from "../fixtures/memory/tree";
 
 const TODAY = "2026-11-15";

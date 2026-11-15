@@ -3,12 +3,12 @@
  * (TC-MEMDATE-001, TC-MEMDATE-002).
  */
 import { describe, expect, test } from "bun:test";
-import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
 import type {
   MemoryEvaluationResult,
   MemoryScannedFile,
 } from "../../packages/core/src/contracts/index";
-import { datingMutants, revalidationMutants, type MutantCase } from "../fixtures/memory/mutants";
+import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
+import { datingMutants, type MutantCase, revalidationMutants } from "../fixtures/memory/mutants";
 import { treeWith } from "../fixtures/memory/tree";
 
 const TODAY = "2026-11-15";

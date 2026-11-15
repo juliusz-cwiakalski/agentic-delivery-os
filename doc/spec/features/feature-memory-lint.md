@@ -104,7 +104,7 @@ Conditional requirements:
 
 #### Promotion write path
 
-Closeout promotion renders the full required spine plus the conditional requirements it triggers: `trust`, `basis`, a `kind` mapped from the capsule class (`tacit` → `tacit_fragment`), the home area derived from the kind, and an index row whose second column is a read-when hint derived from `applies_when` with the statement as fallback and bounded at 120 characters. A candidate whose `source` is outside the four channels is refused at candidate-schema time. A `lesson` or `tacit` candidate carrying `scope: fleet` is refused at candidate-schema time through the existing `closeout.capsule-invalid` identity, before any record file or index row is written. The promotion read scope stays `lessons/` and `tacit/`. See [Change Capsule](feature-capsule.md) and [Closeout Transaction](feature-closeout.md).
+Closeout promotion renders the full required spine plus the conditional requirements it triggers: `trust`, `basis`, a `kind` mapped from the capsule class (`tacit` → `tacit_fragment`), the home area derived from the kind, and an index row whose second column is a read-when hint. The hint is the collapsed `applies_when` when it fits the bound, or the collapsed statement when there is no applicability and the statement fits. When the chosen source exceeds the bound the writer renders a deterministic read-when phrase derived from the candidate's class and scope; it never truncates a statement into the hint. A candidate whose `source` is outside the four channels is refused at candidate-schema time, as is a candidate whose `statement` exceeds the published bound. A `lesson` or `tacit` candidate carrying `scope: fleet` is refused at candidate-schema time through the existing `closeout.capsule-invalid` identity, before any record file or index row is written. The promotion read scope stays `lessons/` and `tacit/`. See [Change Capsule](feature-capsule.md) and [Closeout Transaction](feature-closeout.md).
 
 #### Index rows and coverage
 
@@ -145,11 +145,11 @@ Presence partitions by key and the partition is exhaustive and disjoint. The sch
 
 #### Dating
 
-`created` is the single validity start. An absent `created` is classified by the schema area as a missing required key, never also as a dating finding. When `created` is present, a non-`YYYY-MM-DD` value is `memory.dating.created-malformed`, and a value after the injected date is `memory.dating.created-future`. The date is never inferred. A malformed `revalidate_after` is an error; an expired window is an advisory. A per-agent capture line carries a `YYYY-MM-DD` date; a different shape is `memory.dating.entry-line-date`.
+`created` is the single validity start. An absent `created` is classified by the schema area as a missing required key, never also as a dating finding. When `created` is present, a non-`YYYY-MM-DD` value is `memory.dating.created-malformed`, and a value after the injected date is `memory.dating.created-future`. The date is never inferred. A malformed `revalidate_after` is an error; an expired window is an advisory. A per-agent capture line is a bullet whose leading token is calendar-shaped (for example `YYYY-MM-DD`, `YYYY/MM/DD`, or a date-time); its date must be exactly `YYYY-MM-DD` or it is `memory.dating.entry-line-date`. A bullet whose leading token is not date-like (`- GH-301: ...`, `- T0-T5: ...`) is not a capture line and produces no finding.
 
 #### References
 
-A `supersedes`, `superseded_by`, or `contradicts` value must name an existing record id. A supersession must be symmetric across the pair: the superseded record names its replacement in `superseded_by`, and the replacement names the old record in `supersedes`. An in-tree relative Markdown link in a record body must resolve to a scanned file.
+A `supersedes`, `superseded_by`, or `contradicts` value must name an existing record id. A supersession must be symmetric across the pair: the superseded record names its replacement in `superseded_by`, and the replacement names the old record in `supersedes`. An in-tree relative Markdown link in a record body must resolve to a scanned file. A link that resolves outside `.ai/memory/` (for example `../../../AGENTS.md`) or an absolute repository path (for example `/doc/spec/...`) is a citation outside the memory tree and produces no finding; only an in-tree relative link that resolves to no scanned path is dangling.
 
 #### Budgets
 
@@ -174,7 +174,7 @@ Two deterministic heuristics over record bodies produce advisories only:
 
 #### Secret patterns
 
-Every scanned file is evaluated with the delivered privacy-rule definition set and its suppression classes. The lint declares no pattern of its own. A finding names the file, the line, and the recognizer class — never the matched value. A match inside a declared suppression marker (documentation placeholder, redaction marker, or fabricated sample) is not a finding. The possible secret rule suffixes are the privacy vocabulary's recognizer classes exactly.
+Every scanned file is evaluated with the delivered privacy-rule definition set and its suppression classes. The lint declares no pattern of its own. A finding names the file, the line, and the recognizer class — never the matched value. Suppression markers are evaluated only against the value segment a rule protects, exactly as the whole-tree privacy guard does, so a marker in the key half (for example `fake_token: <value>`) does not silence a real value while a marker inside the value does. A match whose protected value carries a declared suppression marker (documentation placeholder, redaction marker, or fabricated sample) is not a finding. The possible secret rule suffixes are the privacy vocabulary's recognizer classes exactly.
 
 #### Output and exit
 

@@ -5,7 +5,7 @@
  * produce the same structural shape for pure-evaluation tests. No builder
  * writes the live tree.
  */
-import { readFileSync, readdirSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse } from "yaml";
 import {
@@ -14,9 +14,9 @@ import {
   MEMORY_INDEX_PATH,
   MEMORY_RECORD_FILE_NAME_PATTERN,
   MEMORY_ROOT,
-  STATEMENT_MAX_CHARS,
   type MemoryFrontmatter,
   type MemoryScannedFile,
+  STATEMENT_MAX_CHARS,
 } from "../../../packages/core/src/contracts/index";
 
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---/;
@@ -219,9 +219,9 @@ export const indexTree = (input: {
   ...(input.extras ?? []),
 ];
 
-/** Filler text of exactly `count` newline-joined lines. */
+/** Filler text of exactly `count` newline-terminated lines (a real file shape). */
 export const lineFiller = (count: number): string =>
-  Array.from({ length: Math.max(count, 1) }, (_, index) => `line ${index + 1}`).join("\n");
+  `${Array.from({ length: Math.max(count, 1) }, (_, index) => `line ${index + 1}`).join("\n")}\n`;
 
 /** A single-line filler of exactly `bytes` UTF-8 bytes (ASCII). */
 export const byteFiller = (bytes: number): string => "a".repeat(Math.max(bytes, 1));

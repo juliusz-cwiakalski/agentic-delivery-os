@@ -5,7 +5,6 @@
 import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
 import {
   MEMORY_ARCHIVE_INDEX_MAX_LINES,
   MEMORY_ENTRY_MAX_LINES,
@@ -16,6 +15,7 @@ import {
   type MemoryEvaluationResult,
   type MemoryScannedFile,
 } from "../../packages/core/src/contracts/index";
+import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
 import {
   byteFiller,
   indexReadme,
@@ -62,6 +62,12 @@ const measuredKernelLines = (text: string): number => {
 const ruleIds = (result: MemoryEvaluationResult): readonly string[] =>
   result.findings.map((finding) => finding.ruleId);
 
+/** The delivered measure: a trailing newline terminates the last line. */
+const measuredLines = (text: string): number => {
+  const lines = text.split("\n");
+  return text.endsWith("\n") ? lines.length - 1 : lines.length;
+};
+
 describe("TC-MEMBUDGET-001 caps and kernel bands", () => {
   const lineCases = [
     {
@@ -101,6 +107,17 @@ describe("TC-MEMBUDGET-001 caps and kernel bands", () => {
     });
   }
 
+  test("a newline-terminated surface exactly at the cap is silent (F-6)", () => {
+    const atCap = lineFiller(MEMORY_INDEX_MAX_LINES);
+    expect(atCap.endsWith("\n")).toBe(true);
+    // The old split-length measure would have counted the terminator as a line.
+    expect(atCap.split("\n").length).toBe(MEMORY_INDEX_MAX_LINES + 1);
+    expect(evaluate(indexTree(atCap)).findings).toEqual([]);
+    const over = evaluate(indexTree(lineFiller(MEMORY_INDEX_MAX_LINES + 1)));
+    expect(ruleIds(over)).toEqual(["memory.budget.index-lines"]);
+    expect(over.findings[0]?.detail).toContain(String(MEMORY_INDEX_MAX_LINES + 1));
+  });
+
   test("index bytes at cap are silent and one over is index-bytes", () => {
     expect(evaluate(indexTree(byteFiller(MEMORY_INDEX_MAX_BYTES - 1))).findings).toEqual([]);
     expect(evaluate(indexTree(byteFiller(MEMORY_INDEX_MAX_BYTES))).findings).toEqual([]);
@@ -127,19 +144,19 @@ describe("TC-MEMBUDGET-001 caps and kernel bands", () => {
 describe("TC-MEMBUDGET-002 the delivered tree measures within every cap", () => {
   test("index, entries, archive index, and kernel section are within budget", () => {
     const readme = readFileSync(join(ROOT, ".ai/memory/README.md"), "utf8");
-    expect(readme.split("\n").length).toBeLessThanOrEqual(MEMORY_INDEX_MAX_LINES);
+    expect(measuredLines(readme)).toBeLessThanOrEqual(MEMORY_INDEX_MAX_LINES);
     expect(Buffer.byteLength(readme, "utf8")).toBeLessThanOrEqual(MEMORY_INDEX_MAX_BYTES);
     for (const agent of readdirSync(join(ROOT, ".ai/memory/agents"))) {
       const text = readFileSync(join(ROOT, ".ai/memory/agents", agent, "README.md"), "utf8");
-      expect(text.split("\n").length).toBeLessThanOrEqual(MEMORY_ENTRY_MAX_LINES);
+      expect(measuredLines(text)).toBeLessThanOrEqual(MEMORY_ENTRY_MAX_LINES);
     }
     for (const guild of readdirSync(join(ROOT, ".ai/memory/guilds"), { withFileTypes: true })) {
       if (!guild.isDirectory()) continue;
       const text = readFileSync(join(ROOT, ".ai/memory/guilds", guild.name, "README.md"), "utf8");
-      expect(text.split("\n").length).toBeLessThanOrEqual(MEMORY_ENTRY_MAX_LINES);
+      expect(measuredLines(text)).toBeLessThanOrEqual(MEMORY_ENTRY_MAX_LINES);
     }
     const archive = readFileSync(join(ROOT, ".ai/memory/retro/INDEX.md"), "utf8");
-    expect(archive.split("\n").length).toBeLessThanOrEqual(MEMORY_ARCHIVE_INDEX_MAX_LINES);
+    expect(measuredLines(archive)).toBeLessThanOrEqual(MEMORY_ARCHIVE_INDEX_MAX_LINES);
     const kernel = readFileSync(join(ROOT, "AGENTS.md"), "utf8");
     expect(measuredKernelLines(kernel)).toBeLessThanOrEqual(MEMORY_KERNEL_ERROR_LINES);
   });
