@@ -28,7 +28,7 @@ change:
 ### 2.1 Current State Snapshot
 - Reproduced: `bun run scripts/checks/privacy-literals.ts` exits 1 with exactly one violation, rule `private.absolute-user-path` at `doc/changes/2026-11/2026-11-14--GH-310--cross-repository-changes/chg-GH-310-pm-notes.yaml:279` (fingerprint `c796b58bf3a81320`); 4070 files scanned, no other violation.
 - Line 279 holds an absolute temp root rooted at the operator's home directory as the `TMPDIR` value of a recorded phase-9 gate command. That file's other gate temp-root mentions (lines 77, 409, 514, 531) already use the `$GATE_TMPDIR` placeholder and do not trip the rule.
-- Accepted local-gate convention is the repository-relative temp root `TMPDIR=$PWD/tmp/tmpdir` (`AGENTS.md`; `.ai/memory/lessons/lesson-2026-001-ci-baseline-parity-tmpdir.md`).
+- Accepted local-gate convention is the repository-relative temp root `TMPDIR=$PWD/tmp/tmpdir`, recorded in `.ai/memory/lessons/lesson-2026-001-ci-baseline-parity-tmpdir.md`; the ticket uses the same shorthand for that convention.
 
 ### 2.2 Pain Points / Gaps
 - A red `main-tools` blocks the invariant job for every unrelated change.
@@ -52,7 +52,7 @@ Because one committed change artifact embeds an operator-local absolute path, `m
 
 ### 4.2 Non-Goals
 - **NG-1**: Rewriting or re-litigating GH-310 history, verdicts, or evidence.
-- **NG-2**: Editing any other change artifact, phase state, or pm-notes record.
+- **NG-2**: Editing any change artifact, phase state, or pm-notes record other than the GH-310 pm-notes line named in §7.1.
 - **NG-3**: Changing the privacy-literals rule, its registry, or adding allowlist entries.
 - **NG-4**: Changing the gate command convention itself.
 
@@ -114,7 +114,7 @@ N/A — evidence is the CI job verdict and the local check exit code.
 ## 11. RISKS & MITIGATIONS
 | ID | Risk | Impact | Probability | Mitigation | Residual Risk |
 |----|------|--------|-------------|------------|---------------|
-| RSK-1 | The repository-relative temp root `tmp/tmpdir` may sit inside a working tree, unlike a host temp root | L | M | Convention already accepted by the ticket and `AGENTS.md`; the check under test is static and inspects content, not the gate runner's actual temp location | L |
+| RSK-1 | The repository-relative temp root `tmp/tmpdir` may sit inside a working tree, unlike a host temp root | L | M | Convention already accepted by the ticket and recorded in `.ai/memory/lessons/lesson-2026-001-ci-baseline-parity-tmpdir.md`; the check under test is static and inspects content, not the gate runner's actual temp location | L |
 | RSK-2 | Editing committed evidence may read as rewriting history | M | L | Literal-only substitution; every verdict, count, hash, and timestamp stays byte-identical and is visible in the diff | L |
 | RSK-3 | Sanitizing one literal could conceal other absolute paths | M | L | Baseline scan covered 4070 files with no other violation; the check stays unmodified and authoritative | L |
 
@@ -151,7 +151,21 @@ None.
 | AC-F1-2 | **Given** the sanitized branch, **when** the GH-310 change folder is searched for the operator home-directory prefix, **then** no match is returned | F-1, NFR-5 |
 | AC-F1-3 | **Given** the diff of the affected artifact, **when** it is reviewed, **then** it contains only the substitution of that one value on one line, and every recorded verdict string, count, commit hash, and phase timestamp is byte-identical | F-1, NFR-2 |
 | AC-F1-4 | **Given** a feasible gate run, **when** the aggregate battery runs with the repository-relative temp root, **then** it exits 0 with no new failures (best-effort; AC-F1-1 stays binding) | NFR-3 |
-| AC-F1-5 | **Given** the delivered pull request, **when** it is opened, **then** it targets `main-tools`, stays open for merge authority, and touches no other ticket's artifacts | NFR-4 |
+| AC-F1-5 | **Given** the delivered pull request, **when** it is opened, **then** it targets `main-tools`, stays open for merge authority, and touches no ticket artifact other than the GH-310 pm-notes line named in §7.1 and this change's own folder | NFR-4 |
+
+### 17.1 Definition of Done (change-specific)
+
+This change is done when every condition below holds. Each condition binds §17 criteria to a checkable outcome, names its verification method, and is proven in the single phase of `chg-GH-322-plan.yaml` (or, for the PR posture, at lifecycle phase 11). This specification claims no passing evidence and no acceptance.
+
+| # | Done condition | Binds | Verification (test / evidence) | Proven in plan |
+|---|---|---|---|---|
+| DoD-1 | All five §17 acceptance criteria are satisfied, each with its command output excerpt and exit code recorded | AC-F1-1, AC-F1-2, AC-F1-3, AC-F1-4, AC-F1-5, NFR-1..NFR-5 | TC-PRIV-001..TC-PRIV-006 execution log and the pm-notes `notes:` evidence entries | Phase 1 (obligation 1.7) |
+| DoD-2 | Exactly one substituted token on one line of the GH-310 pm-notes, with every recorded verdict, count, commit hash, and phase timestamp byte-identical | AC-F1-3, F-1, DM-1, NFR-2 | TC-PRIV-003: masked diff is a single substitution, changed-line count `1`/`1` in one pre-existing file, `git diff --check` clean, document still parses | Phase 1 (obligations 1.1, 1.2, 1.5) |
+| DoD-3 | Neither this change's artifacts nor its plan contain an absolute user path | AC-F1-2, NFR-5 | TC-PRIV-002-style home-rooted absolute-path scan of this change folder returns no match; review-time inspection of every artifact and the plan | Phase 1 (obligation 1.7) |
+| DoD-4 | Exactly one delivery commit, created through the `commit` primitive, bearing the ticket's subject `fix(GH-322): sanitize absolute user path in GH-310 pm-notes` | §18, NFR-4 | Commit log for the branch plus the capsule's recorded commit event show exactly one commit with that subject; no second delivery commit | Phase 1 (obligation 1.8) |
+| DoD-5 | A pull request is open against `main-tools` with merge authority left to the CEO, and no other ticket is touched | AC-F1-5, NFR-4 | TC-PRIV-005 (PR target and open state) and TC-PRIV-006 (changed-file set limited to the §7.1 paths) | Lifecycle phase 11 (not a plan phase) |
+
+A condition without passing evidence is not done; `dod_check` reopens the owning plan phase rather than waiving a row.
 
 ## 18. ROLLOUT & CHANGE MANAGEMENT (HIGH-LEVEL)
 One commit through the commit primitive with a conventional `fix` subject; PR to `main-tools`, left open. No rollout, migration, or communication step.
@@ -182,11 +196,12 @@ N/A.
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-15 | @spec-writer (delegated by @pm) | Initial specification |
+| 1.1 | 2026-11-15 | @spec-writer (delegated by @pm) | DoR iteration 1 remediation: F-1 — AC-F1-5 and NG-2 qualified with the §7.1 carve-out for the GH-310 pm-notes line; F-2 — §17.1 change-specific Definition of Done (DoD-1..DoD-5); N-3 — gate-convention attribution corrected from `AGENTS.md` to `lesson-2026-001`, noting the ticket's shorthand |
 
 ---
 
 ## AUTHORING GUIDELINES
-Sources: GitHub issue 322 (authoritative), GH-322 pm-notes intake/reproduction notes, `AGENTS.md` gate convention, and the recorded repository-relative temp-root lesson. Violation facts were established in `clarify_scope` and are cited, not re-derived. Sections without substance are marked N/A rather than expanded — this is a docs-only, one-literal fix-forward with no product-facing capability.
+Sources: GitHub issue 322 (authoritative), GH-322 pm-notes intake/reproduction notes, and the recorded repository-relative temp-root lesson (`.ai/memory/lessons/lesson-2026-001-ci-baseline-parity-tmpdir.md`; the ticket uses the same shorthand for that convention). Violation facts were established in `clarify_scope` and are cited, not re-derived. Sections without substance are marked N/A rather than expanded — this is a docs-only, one-literal fix-forward with no product-facing capability.
 
 ## VALIDATION CHECKLIST
 - [x] `change.ref` matches `workItemRef` (GH-322); `status` is "Proposed"; `owners` populated

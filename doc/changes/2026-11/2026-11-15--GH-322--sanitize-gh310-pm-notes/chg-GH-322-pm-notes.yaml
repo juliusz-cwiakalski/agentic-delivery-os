@@ -6,8 +6,8 @@ delivery_mode: autonomous
 variant: full
 phases:
   clarify_scope: { started: null, completed: 2026-11-15T08:57:27.390Z }
-  specification: { started: null, completed: 2026-11-15T09:00:23.050Z }
-  test_planning: { started: null, completed: 2026-11-15T09:02:12.786Z }
+  specification: { started: null, completed: 2026-11-15T09:12:44.523Z }
+  test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: 2026-11-15T09:04:09.636Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
@@ -45,4 +45,36 @@ notes:
   - text: "Scope discipline: docs-only, one literal in one committed change
       artifact. No source, spec, prompt, or workflow change; no other ticket."
     type: info
+    date: "2026-11-15"
+  - text: "DoR gate ITERATION 1 verdict: NOT_READY (2 blocking, both spec text). F-1
+      ac_quality + cross_artifact_consistency: AC-F1-5 ('touches no other
+      ticket's artifacts') and NG-2 ('editing any other change artifact or
+      pm-notes record') literally forbid the in-scope GH-310 pm-notes edit and
+      contradict test plan TC-PRIV-006; the carve-out exists in spec §7.1 only.
+      F-2 dod_defined: no change-specific Definition of Done section (hard DoR
+      facet; uniform repo precedent, including docs-only GH-85/GH-302/GH-313).
+      Non-blocking: test plan front matter claims no implementation plan
+      authored while the plan exists; TC-PRIV-003 settles for YAML parsing where
+      `lint GH-310` is the authoritative conformance surface; the 'AGENTS.md
+      gate convention' citation is inherited from the ticket and unsupported by
+      that file. Reviewer record: readiness-review/readiness-iter-1.md. The gate
+      also proved the red state is the sole blocker in the `TS repository
+      invariants` job (17 of 18 checks green) and that the one-token
+      substitution removes the violation without re-firing any rule."
+    type: risk
+    date: "2026-11-15"
+  - text: "DoR iteration-1 remediation: reopening specification (F-1 carve-out in
+      AC-F1-5 and NG-2, F-2 change-specific DoD, N-3 citation) and test_planning
+      (N-1 plan link, N-2 lint as the conformance step), then re-running the
+      gate. No AC intent, test target, or plan scope changes."
+    type: info
+    date: "2026-11-15"
+  - text: "RETRO: the spec writer's non-goals were written before the in-scope edit
+      was pinned, so a blanket 'no other change artifact' clause contradicted
+      the single intended change, and the DoD section was dropped while
+      compressing a feature template to a one-line fix. Cost: one extra gate
+      iteration (~10 min). Improvement: when compressing a spec template, never
+      drop the DoD section, and scope-limit every 'out of scope' clause against
+      the named in-scope edit rather than against the change class."
+    type: retro
     date: "2026-11-15"
