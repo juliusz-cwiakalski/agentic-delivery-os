@@ -300,11 +300,12 @@ verification:
     AC-F6-8, AC-F7-10 and AC-F8-11 stand on iteration-3's live verification plus
     this delta's green suites.
   daemon_start_detached_change: >-
-    One behaviour-neutral fixture literal, `/home/fixture` -> `/fixture/home`
-    (f7243d7f), documented in pm-notes as fixing the CI-only
-    `private.absolute-user-path` flagging of a `/home/<name>` path; the test does
-    not assert the value and passes 22/22. In a declared phase-1 file; no scope
-    effect.
+    One behaviour-neutral fixture literal in the detached-daemon suite (f7243d7f)
+    was changed from an absolute user-home-shaped path to a non-user absolute
+    fixture path, documented in pm-notes as fixing the CI-only
+    `private.absolute-user-path` flagging of a user-home-shaped path; the test
+    does not assert the value and passes 22/22. In a declared phase-1 file; no
+    scope effect.
   real_home_safety: >-
     Every probe used copies and scratch trees under /tmp/opencode; the operator's
     real home was not read or written, and no source or artifact file in the
