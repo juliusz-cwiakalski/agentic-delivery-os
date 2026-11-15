@@ -27,7 +27,8 @@ current code and spec truth.
 
 1. **Inventory.** List every file under `.ai/memory/`: agent READMEs and topic
    files, records under `lessons/` and `tacit/`, and the index. Record line
-   counts against caps (agent README 150, index 200).
+   counts against caps (agent and guild entry points 150, memory index 200
+   lines and 25 KB, archive index 200).
 2. **Validate.** Check each entry against the capture bar and the evidence
    rule. Qualifying triggers: the same mistake twice; a review or CI catch that
    changed an outcome; a repeated human correction; a verified outcome that
@@ -51,9 +52,10 @@ current code and spec truth.
    folder, move content without rewording, and leave one-line pointers. The
    README stays the always-read entry point.
 7. **Rebuild the index.** Regenerate the Index table in `.ai/memory/README.md`:
-   exactly one row per agent folder and one row per promoted record file, each
-   with a read-when hint, no row pointing at a missing path, and no directory
-   rows for `lessons/` or `tacit/`.
+   exactly one row per covered path (record files, agent and guild entry
+   points, and the archive index), each with a read-when hint of at most 120
+   characters, no row pointing at a missing path, and no directory rows. The
+   archive index carries one row per dated retro note under `retro/<year>/`.
 8. **Commit and report.** Commit on the current branch for a change closeout,
    or on a small dedicated branch for the retro cadence:
    `docs(memory): consolidate (promoted N, superseded M, pruned K)`.
@@ -101,18 +103,43 @@ Allocate the monotonic next free id per prefix and year. Ids are unique across
 pruning. Scan both `id` and `supersedes`. Reject a duplicate or reused id;
 never reallocate it silently.
 
-## Record frontmatter
+## Record schema
 
-Use the record format in `.ai/memory/README.md` under YAML 1.2 core semantics.
-Quote `statement`, `applies_when`, and `created` as strings, or use block
-scalars. `created` stays a string, not a date scalar.
+Use the schema published in `.ai/memory/README.md`; the machine authority is
+`packages/core/src/contracts/memory-record.ts`. Every record carries the
+required spine `id`, `kind`, `scope`, `statement`, `evidence`, `source`,
+`trust`, `created_by`, `created`, `status`. The optional key set is closed:
+`supersedes`, `superseded_by`, `contradicts`, `applies_when`, `basis`,
+`revalidate_after`, `invalid_from`, `confidence`, `evaluation`, `guild`.
 
-## Index and first capture
+- `kind` is `lesson`, `tacit_fragment`, or `preference`; the home area follows
+  the kind (`lessons/`, `tacit/`, `preferences/`). A guild record lives under
+  `guilds/<guild>/` and carries `guild` equal to that folder name.
+- `statement` is non-empty and at most 280 characters. `evidence` is exactly one
+  shaped link (`review-verdict:`, `ci-verdict:`, `human-correction:`,
+  `merged-pr:`, or `test:`); further evidence goes in the body.
+- `source` is one of `review_verdict`, `ci_verdict`, `human_correction`,
+  `merged_pr`. `trust` is `T0`-`T5`. `created` is `YYYY-MM-DD` and is the single
+  validity start; no other key introduces a start date.
+- `basis` is one of the five capture-bar bases and is required on a
+  promotion-written record. `revalidate_after` is required for an authoritative
+  behaviour-changing lesson (a lesson carrying `evaluation`); an expired window
+  is an advisory.
+- Status transitions run `candidate` -> `validated` -> `authoritative` ->
+  `superseded`/`archived`; the promotion writer emits `candidate` on creation
+  and `superseded` on a declared supersession.
 
-The index has one row per agent folder and one row per promoted record file,
-each with a read-when hint. The first-capture self-index-row exception for a
-new agent is defined in `.ai/memory/README.md`; it is not a general curator
-permission and must not be widened.
+## Caps and index rows
+
+Agent and guild entry points stay at or under 150 lines. The memory index stays
+at or under 200 lines and 25 KB; the archive index at or under 200 lines. The
+index row's second column is a read-when hint of at most 120 characters.
+
+One row per covered path, no directory rows, and no row for `.gitkeep`. The
+memory index covers every record file, every agent entry point, every guild
+entry point, and the archive index. The archive index covers the dated retro
+notes under `retro/<year>/`; a retro note has exactly one archive row and no
+memory-index row.
 
 ## Reviewer independence
 

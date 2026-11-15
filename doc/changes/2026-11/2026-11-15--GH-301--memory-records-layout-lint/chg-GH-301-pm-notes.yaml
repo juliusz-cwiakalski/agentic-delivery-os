@@ -50,6 +50,20 @@ open_questions: []
 blockers: []
 notes:
   - text: >-
+      Delivery plan phase 5 (plan id 5) complete. Commit: edf44fc6. The
+      promotion writer now renders the full required spine plus trust and the
+      always-present basis, maps the kind (tacit -> tacit_fragment), derives the
+      declared home area (tacit/), derives the read-when hint from applies_when
+      with the statement fallback, validates source against the four channels,
+      and refuses a lesson/tacit candidate carrying scope fleet at
+      candidate-schema time through the existing capsule-invalid identity; the
+      reader mirrors the lessons/tacit mapping. Tests: memory-promotion-schema,
+      memory-concurrency-merge, memory-record-schema, closeout-capsule-idempotency,
+      closeout-capsule-validation, capsule-mutants = 39 pass; build green;
+      MUT-CAP-31..41 text pins unmoved.
+    type: info
+    date: "2026-11-15"
+  - text: >-
       Delivery plan phase 4 (plan id 4) complete. Commit: 8d39e4f8. Delivered
       the scanner (packages/adapters/src/file/memory-scan.ts, one read per file
       plus the YAML frontmatter parse), the check edge

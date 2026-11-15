@@ -87,35 +87,38 @@ Minimal frontmatter for lessons and tacit fragments:
 ```yaml
 id: lesson-2026-017
 kind: lesson            # lesson | tacit_fragment | preference
-scope: repo             # repo | component | change | fleet
+scope: repo             # repo | component | change
 statement: >-
   Online schema migrations must separate expand, backfill, and contract
   phases.
-rationale: >-
-  Deploy raced the backfill and corrupted incident replay (see evidence).
-source:
-  type: review_verdict  # review_verdict | ci_verdict | human_correction | merged_pr
-  ref: PR #1934
-created_by: reviewer-agent
-trust: agent_verified   # see trust levels below
+source: review_verdict  # review_verdict | ci_verdict | human_correction | merged_pr
+evidence: "review-verdict: PR #1934"
+trust: T3               # T0 | T1 | T2 | T3 | T4 | T5
 confidence: 0.9
-valid_from: 2026-10-22
+created: "2026-10-22"   # the single validity start
+created_by: reviewer-agent
 supersedes: []          # record ids this one replaces
-status: candidate       # candidate -> validated -> authoritative -> superseded/archived
-applies_when:           # applicability predicate (SWE-skill mismatch regresses)
-  - "change touches schema migrations"
-evidence:
-  - test: migration_backfill_order
-evaluation:             # required before authoritative for behavior-changing lessons
+status: candidate       # candidate | validated | authoritative | superseded | archived
+applies_when: "change touches schema migrations"
+evaluation:             # marks a behaviour-changing lesson
   control_pass_rate: 0.72
   treatment_pass_rate: 0.96
   safety_regression: 0.0
-revalidate_after: 2027-01-22   # mandatory expiry; unrevalidated lessons demote to hypothesis
+revalidate_after: "2027-01-22"
 ```
 
-Free-text markdown files (preferences, per-agent memory) carry lighter
-headers: date, author, scope. Dated, append-friendly, supersede by
-adding a newer entry - never silently rewrite.
+The schema is published in `.ai/memory/README.md`. `valid_from` is renamed to
+`created`, the single validity start. The concept's `source: {type, ref}` is
+narrowed to the scalar channel, and its `ref` half is carried by the one shaped
+`evidence` link; an evidence list is rejected by design, with further evidence
+cited in the body. `rationale` is not a frontmatter key because the body owns
+it. Trust is written as a `T0`-`T5` token, not prose. `applies_when` is an
+optional scalar predicate. `fleet` is not a record scope: it is candidate-only
+and has no implemented home. `confidence` and `evaluation` stay accepted
+optional keys.
+
+Per-agent memory stays free text with dated capture lines. Preference records
+are typed records with `source: human_correction`.
 
 ### Record lifecycle
 

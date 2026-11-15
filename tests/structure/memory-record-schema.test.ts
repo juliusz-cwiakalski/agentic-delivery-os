@@ -11,6 +11,11 @@ import {
   CAPSULE_CANDIDATE_STATUSES,
   CAPSULE_CANDIDATE_TRUST,
   CAPSULE_EVIDENCE_PREFIXES,
+  HINT_MAX_CHARS,
+  MEMORY_ARCHIVE_INDEX_MAX_LINES,
+  MEMORY_ENTRY_MAX_LINES,
+  MEMORY_INDEX_MAX_BYTES,
+  MEMORY_INDEX_MAX_LINES,
   MEMORY_RECORD_BASIS_VALUES,
   MEMORY_RECORD_CAPSULE_STATUSES,
   MEMORY_RECORD_EVIDENCE_PREFIXES,
@@ -21,6 +26,7 @@ import {
   MEMORY_RECORD_SOURCES,
   MEMORY_RECORD_STATUSES,
   MEMORY_RECORD_TRUST,
+  STATEMENT_MAX_CHARS,
 } from "../../packages/core/src/contracts/index";
 import { MEMORY_RECORD_HOME_BY_KIND } from "../../packages/core/src/contracts/index";
 import { frontmatterOf, relativeToMemory } from "../fixtures/memory/tree";
@@ -223,5 +229,34 @@ describe("TC-MEMSCHEMA-003 whole-tree conformance at the delivered HEAD", () => 
     }
     const drift = MEMORY_RECORD_REQUIRED_KEYS.filter((key) => !rendered.has(key));
     expect(drift).toEqual([]);
+  });
+});
+
+describe("TC-MEMWRITE-003 curator rules agree with the schema", () => {
+  test("the skill names the schema, id rule, transitions, budgets, and row shape", () => {
+    const skill = read(".opencode/skills/consolidate-memory/SKILL.md");
+    for (const key of MEMORY_RECORD_REQUIRED_KEYS) expect(skill).toContain(key);
+    for (const status of MEMORY_RECORD_STATUSES) expect(skill).toContain(status);
+    expect(skill).toContain(String(STATEMENT_MAX_CHARS));
+    expect(skill).toContain(String(HINT_MAX_CHARS));
+    expect(skill).toContain(String(MEMORY_INDEX_MAX_LINES));
+    expect(skill).toContain(String(MEMORY_INDEX_MAX_BYTES / 1024));
+    expect(skill).toContain(String(MEMORY_ENTRY_MAX_LINES));
+    expect(skill).toContain(String(MEMORY_ARCHIVE_INDEX_MAX_LINES));
+    expect(skill).toContain("read-when hint");
+    expect(skill).toContain("One row per covered path");
+    expect(skill).toContain("no directory rows");
+    expect(skill).toContain("archive index");
+    for (const operation of [
+      "duplicate merge",
+      "demote or drop",
+      "mark supersession",
+      "prune stale",
+      "topic files",
+      "rebuild the index",
+    ]) {
+      expect(skill).toContain(operation);
+    }
+    expect(/\bvalid_from\b/.test(skill)).toBe(false);
   });
 });
