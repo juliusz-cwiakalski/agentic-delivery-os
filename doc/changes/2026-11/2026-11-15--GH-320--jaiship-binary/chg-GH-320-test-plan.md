@@ -1,7 +1,7 @@
 ---
 id: chg-GH-320-test-plan
 status: Updated
-version: 1.3
+version: 1.4
 created: 2026-11-15
 last_updated: 2026-11-15
 owners: [engineering]
@@ -27,7 +27,7 @@ This change adds a second executable identity and a read fallback across two del
 
 The plan is deliberately adversarial about the failure modes the spec names. **A parity test that cannot fail**: both bins render help through one table, so parity alone is tautological — `TC-BIN-003` pairs the diff with a family-set equality against the declared twenty and a comparator mutant that removes a row and must fail by name (PAR-TP-1). **A fallback that only checks "config loaded"**: such a test passes with a laundered path, so `TC-BIN-020` and `TC-BIN-021` assert the recorded origin path identity, not just the value. **A no-second-root claim proven by a read-only command**: a command that never opens state cannot create a root, so `TC-BIN-031` drives a state-opening command and snapshots the home listing, both roots, and the parent directory. **A notice asserted in a silent mode**: `TC-BIN-040` runs `--json` and asserts the notice is present on stderr while stdout stays one parseable payload with an unchanged exit code. **An installer test that passes with a no-op installer**: `TC-BIN-050` requires the file to be absent before the run, and `TC-BIN-051` requires the first run to change the digest and the second to leave it untouched, plus a repoint from a second source. **A structure guard with an empty corpus**: every guard ships a failing negative control, including the new literal scan, which must reject an injected sixth site and report a missing declared site by name (`TC-BIN-062`).
 
-This document is a verification map, not an execution claim: no command was run against a new implementation at authoring time, and phase ownership is declared in `chg-GH-320-plan.yaml` (plan revision 1.x, authored in phase 4 `delivery_planning`, with the test-plan reconciliations R-A..R-G), not asserted here. All eleven acceptance criteria are covered; there are no TODO rows and no orphan cases. Five properties are observed through a named substitute assertion (§3.5) because one half of the wording is a byte baseline, an operator's real host root, a surface the spec does not pin, or a permanent-suite rule, and one further property is a declared-inventory assertion (§3.5, `LIT-TP-1`) rather than a substitution; each is recorded, not smoothed over. **This revision reconciles the plan with spec v1.4, the DoR iter-1 decisions D5–D11, and the DoR iter-2 findings:** the configuration half runs on the ticket's literal `status --json` surface via the delivered composition-time acquisition (D5/DEC-14); the invalid-override projection is the delivered containment family — `fallback.internal` at exit `2` for a positional-free command (`status --json`) and `fallback.invocation` at exit `1` when a subcommand token is present (`daemon status`), the latter recorded as a delivered secondary fact and not asserted by AC-F2-7 (D6/DEC-11, iter-2 finding 1); the literal inventory is five declared sites under its scan rule (D7/DM-6); the installer integration cases live in a Bun test (D9); the single executable gate is the same-device `mktemp` invocation with the repo-local run kept as evidence (D10); the hermeticity guard uses a static scan plus a spawned `--preload` subprocess (D11); and the guide states the fourth divergence **by role**, keeping the registered, seed-scanned document free of the pre-freeze tokens (spec v1.4 F-8/NFR-8, iter-2 finding 2). No blocking finding remains.
+This document is a verification map, not an execution claim: no command was run against a new implementation at authoring time, and phase ownership is declared in `chg-GH-320-plan.yaml` (plan revision 1.x, authored in phase 4 `delivery_planning`, with the test-plan reconciliations R-A..R-G), not asserted here. All eleven acceptance criteria are covered; there are no TODO rows and no orphan cases. Five properties are observed through a named substitute assertion (§3.5) because one half of the wording is a byte baseline, an operator's real host root, a surface the spec does not pin, or a permanent-suite rule, and one further property is a declared-inventory assertion (§3.5, `LIT-TP-1`) rather than a substitution; each is recorded, not smoothed over. **This revision reconciles the plan with spec v1.5, the DoR iter-1 decisions D5–D11, and the DoR iter-2/iter-3 findings:** the configuration half runs on the ticket's literal `status --json` surface via the delivered composition-time acquisition (D5/DEC-14); the invalid-override projection is the delivered containment family — `fallback.internal` at exit `2` for a positional-free command (`status --json`) and `fallback.invocation` at exit `1` when a subcommand token is present (`daemon status`), the latter recorded as a delivered secondary fact and not asserted by AC-F2-7 (D6/DEC-11, iter-2 finding 1); the literal inventory is five declared sites under its scan rule (D7/DM-6); the installer integration cases live in a Bun test (D9); the single executable gate is the same-device `mktemp` invocation with the repo-local run kept as evidence (D10); the hermeticity guard uses a static scan plus a spawned `--preload` subprocess (D11); the guide states the fourth divergence **by role**, and its cleanliness is asserted through the **delivered scan's** per-line, line-allowlisted semantics rather than the bare matcher, because the mandatory `ados_distribution:` marker matches a seed (spec v1.5 F-8/NFR-8; iter-2 finding 2, corrected in iter-3); and the invalid-override case records the delivered **pre-composition touch** as unchanged rather than claiming zero reads or zero state (spec v1.5 §8.5/AC-F2-7; iter-3 finding 2). No blocking finding remains.
 
 ### 1.1 In Scope
 
@@ -66,7 +66,7 @@ This document is a verification map, not an execution claim: no command was run 
 
 | Reference | Role in this plan |
 |---|---|
-| [`chg-GH-320-spec.md`](./chg-GH-320-spec.md) **v1.4** | Binding source: F-1..F-8, **11 ACs** (`AC-F1-1`, `AC-F1-2`, `AC-F2-3`, `AC-F3-4`, `AC-F4-5`, `AC-F5-6`, `AC-F2-7`, `AC-F6-8`, `AC-F7-9`, `AC-F7-10`, `AC-F8-11`), NFR-1..NFR-9, DM-1..DM-6 (DM-6 = the declared **five-site** identity-literal inventory under its `packages/**` string-literal scan rule: three CLI selector sites, the unchanged MCP default, and the resolver's `SCOPE_ORG` scope-org derivation input; the entrypoint neutral default and its `neutralWorkingName` accessor removed), DEC-1..DEC-15 (DEC-14: the configuration half runs on the delivered composition-time acquisition and the ticket's literal `status --json` surface; DEC-15: the installer queries the declared identity with the override scrubbed and classifies its preconditions), OQ-1..OQ-2, §2.1 (the acquisition and containment facts), §5.1 capability details, §6 flows 1–5, §7 scope boundaries, §8.3/§8.5, §16 impact map, §17 traceability and verification intent, Appendix B (notice inventory). v1.2 was the DoR iter-1 remediation (superseding v1.1's four-site count, its CLI-visible classified-error wording, and its assumed `status` acquisition gap); v1.3 added the hermeticity preload harness path to §16; **v1.4** states the fourth divergence in the guide **by role**, delegating the exact installer identifiers to `scripts/install.sh --help` and the change record because the registered guide is seed-scanned (F-8, NFR-8, AC-F8-11). |
+| [`chg-GH-320-spec.md`](./chg-GH-320-spec.md) **v1.5** | Binding source: F-1..F-8, **11 ACs** (`AC-F1-1`, `AC-F1-2`, `AC-F2-3`, `AC-F3-4`, `AC-F4-5`, `AC-F5-6`, `AC-F2-7`, `AC-F6-8`, `AC-F7-9`, `AC-F7-10`, `AC-F8-11`), NFR-1..NFR-9, DM-1..DM-6 (DM-6 = the declared **five-site** identity-literal inventory under its `packages/**` string-literal scan rule: three CLI selector sites, the unchanged MCP default, and the resolver's `SCOPE_ORG` scope-org derivation input; the entrypoint neutral default and its `neutralWorkingName` accessor removed), DEC-1..DEC-15 (DEC-14: the configuration half runs on the delivered composition-time acquisition and the ticket's literal `status --json` surface; DEC-15: the installer queries the declared identity with the override scrubbed and classifies its preconditions), OQ-1..OQ-2, §2.1 (the acquisition and containment facts), §5.1 capability details, §6 flows 1–5, §7 scope boundaries, §8.3/§8.5, §16 impact map, §17 traceability and verification intent, Appendix B (notice inventory). v1.2 was the DoR iter-1 remediation (superseding v1.1's four-site count, its CLI-visible classified-error wording, and its assumed `status` acquisition gap); v1.3 added the hermeticity preload harness path to §16; **v1.4** states the fourth divergence in the guide **by role**, delegating the exact installer identifiers to `scripts/install.sh --help` and the change record because the registered guide is seed-scanned (F-8, NFR-8, AC-F8-11); **v1.5** makes "behaviourally unchanged" include the delivered **pre-composition touch** an invalid override still performs before containment, and states the positional-free vs subcommand-bearing projection split in AC-F2-7 (no zero-read claim). |
 | [`chg-GH-320-pm-notes.yaml`](./chg-GH-320-pm-notes.yaml) | Context only: clarify-scope findings; binding decisions **D1–D11** (D5 withdrew the "status acquires nothing" premise on verified fixture evidence and records the ticket's literal surface; D6 pins the delivered `fallback.internal` projection; D7 the five-site inventory; D8 no new decision record; D9 the installer integration cases in a Bun test; D10 the single executable gate; D11 the hermeticity mechanism); the documentation impact map; the GH-310 sequencing constraint. The specification is the source of truth. |
 | `./chg-GH-320-plan.yaml` **revision 1.x** (1.1 at this writing) | Phase ownership, per-phase test obligations, and task ordering are declared there; this plan declares what must be proven, not who proves it. Its header carries the test-plan reconciliations R-A..R-G this revision absorbs: R-A the self-contained doc-conformance table, R-B the three prior-identity suites, R-C the installer suite home, R-D guide discoverability via the spec pages, R-E registry-only literal controls, R-F one phase per test file, R-G shape-only committed fixtures with scratch checkouts. |
 | [`.ai/rules/testing-strategy.md`](../../../../.ai/rules/testing-strategy.md) | `bun:test` under `tests/**/*.test.ts`; fixtures never named `*.test.ts`; suites under `tests/{structure,behaviour,golden,checks,boundaries}`; permanent suites assert the current tree, never a moving base branch; goldens regenerate only by an explicit command; `pnpm check` is the aggregate gate; a boundary-rule change without a failing fixture is a gap. |
@@ -80,12 +80,13 @@ This document is a verification map, not an execution claim: no command was run 
 | **Ticket** | GitHub issue `juliusz-cwiakalski/agentic-delivery-os#320` (milestone "M4: Public release readiness", story M4-S1a; six verbatim ACs, five tasks). |
 | **Gate-environment findings** | `.ai/memory/lessons/lesson-2026-001-ci-baseline-parity-tmpdir.md` and `chg-GH-313-pm-notes.yaml` (2026-11-14 entries): the repo-local `TMPDIR` breaks `queue-production-binding` and `projects-config` (fixtures need a temp dir outside every worktree) and a foreign-filesystem `TMPDIR` breaks `ci-baseline-parity`; a same-device temp dir outside every worktree satisfies all three. Per D10 the **only gate** is `TMPDIR=$(mktemp -d "$HOME/.cache/ados-check-XXXXXX") pnpm check`; the repo-local invocation is recorded evidence, never a gate (`TC-BIN-080`). |
 | **Notices inventory** | Spec Appendix B: the new prior-identity notice beside the `ADOS_`/`.ados` legacy notice, the pre-GH-288 store warning, the configuration warning kinds, the **delivered, unchanged** invalid-override `fallback.internal` failure, the new launcher missing-target failure, and the new installer launcher preconditions. |
+| [`readiness-iter-3.md`](./readiness-review/readiness-iter-3.md) | The DoR iter-3 verdict: one blocking finding (the bare-matcher seed-free assertion in `TC-BIN-072` cannot hold for a compliant guide, whose mandatory `ados_distribution:` marker matches the `ados` seed) and one major finding (the invalid-override case's zero-read/no-state clause contradicts the delivered pre-composition touch). Both are remediated here; findings 3, 4, 5 and 7 (test-plan minors) are fixed too. |
 | [`readiness-iter-2.md`](./readiness-review/readiness-iter-2.md) | The DoR iter-2 verdict: one blocking finding (the `daemon status` clause in `TC-BIN-012` cannot pass at the delivered projection) and one major finding (the registered guide's mandated installer content collides with the seed-literal scan). Both are remediated in this revision; the remaining iter-2 minors are listed as open in §8.3. |
 | [`readiness-iter-1.md`](./readiness-review/readiness-iter-1.md) | The DoR iter-1 verdict this revision remediates (findings 1, 2, 5, 8, 10–13, 20–23). Its finding 1 and 2 premises were corrected by verified fixture evidence and PM decisions D5/D6; finding 5 by D7; finding 8 by the fourth declared divergence and DEC-15; findings 10–13 and 22 by D9/D11 and the pinned `completion` difference set. |
 
 ## 3. Coverage Overview
 
-All 11 acceptance criteria map to at least one named case, and no case is an orphan. The plan carries **55 cases** in nine blocks. The mapping is intentionally uneven in one direction: a criterion whose wording spans several independent observables is covered by more than one case (`AC-F3-4` by seven, `AC-F4-5` by seven, `AC-F6-8` by eight, `AC-F7-10` by nine across manifest, inventory, literals, composition, and the delivered guards), while every case names at least one AC. Five properties carry a declared substitute assertion (§3.5) and one carries a declared-inventory assertion (`LIT-TP-1`); all are counted as covered, with the basis stated. `B-1` was resolved in spec v1.1 and **extended in v1.2 (D7)**: DM-6 and `AC-F7-10` now declare **five** sites under a stated `packages/**` string-literal scan rule — the three CLI selector sites, the unchanged MCP default, and the resolver's `SCOPE_ORG` derivation input — with every declared site found and every found literal declared, so `TC-BIN-062` asserts that inventory and its scan rule rather than a bare count. Spec v1.2–v1.4 additionally pin the ticket's literal `status --json` surface for the configuration half (D5/DEC-14), the delivered invalid-override containment projections (D6/DEC-11), and the guide's **by-role** statement of the fourth divergence (v1.4); `TC-BIN-020`, `TC-BIN-012`, and `TC-BIN-072` follow those pins.
+All 11 acceptance criteria map to at least one named case, and no case is an orphan. The plan carries **55 cases** in nine blocks. The mapping is intentionally uneven in one direction: a criterion whose wording spans several independent observables is covered by more than one case (`AC-F3-4` by seven, `AC-F4-5` by seven, `AC-F6-8` by eight, `AC-F7-10` by nine across manifest, inventory, literals, composition, and the delivered guards), while every case names at least one AC. Five properties carry a declared substitute assertion (§3.5) and one carries a declared-inventory assertion (`LIT-TP-1`); all are counted as covered, with the basis stated. `B-1` was resolved in spec v1.1 and **extended in v1.2 (D7)**: DM-6 and `AC-F7-10` now declare **five** sites under a stated `packages/**` string-literal scan rule — the three CLI selector sites, the unchanged MCP default, and the resolver's `SCOPE_ORG` derivation input — with every declared site found and every found literal declared, so `TC-BIN-062` asserts that inventory and its scan rule rather than a bare count. Spec v1.2–v1.5 additionally pin the ticket's literal `status --json` surface for the configuration half (D5/DEC-14), the delivered invalid-override containment projections **with the delivered pre-composition touch left unchanged** (D6/DEC-11, v1.5), and the guide's **by-role** statement of the fourth divergence (v1.4); `TC-BIN-020`, `TC-BIN-012`, and `TC-BIN-072` follow those pins.
 
 ### 3.1 Functional Coverage (F-#, AC-#)
 
@@ -97,7 +98,7 @@ All 11 acceptance criteria map to at least one named case, and no case is an orp
 | AC-F3-4 | With no `.jaiship` configuration and a `.delivery-os/config.yaml`, **`jaiship status --json`** reads the prior file as the project-committed layer through the delivered composition-time acquisition (which every composed invocation already performs, so no command gains a read), reports its real path as the loaded file and as the origin of its values, and performs no write, move, copy, or deletion in the prior directory; when both files exist the current wins and the prior is reported not used; an explicitly selected file disables every layer's fallback (DEC-14) | TC-BIN-020, TC-BIN-021, TC-BIN-022, TC-BIN-023, TC-BIN-024, TC-BIN-025, TC-BIN-026 | Covered |
 | AC-F4-5 | With no override, no `~/.jaiship-state`, and a populated `~/.delivery-os-state`, the prior host root is effective and the reported state matches that root while no `~/.jaiship-state` is created; an absolute `JAISHIP_STATE_DIR` wins with no fallback; when both default roots exist the current wins and the prior is reported not used | TC-BIN-030, TC-BIN-031, TC-BIN-032, TC-BIN-033, TC-BIN-034, TC-BIN-035, TC-BIN-036 | Covered (LIVE-TP-1, SURF-TP-1) |
 | AC-F5-6 | A fallback read emits exactly one notice per source kind **per composed program** (once per process in production) on stderr in any mode including `--json`, beginning with the classification token and reason, naming both locations and stating nothing was moved, copied, or deleted; further resolutions inside the same composed program add none; no fallback means no notice; the delivered store warning and `ADOS_`/`.ados` notice still appear as their own distinct lines; payload and exit code unchanged | TC-BIN-040, TC-BIN-041, TC-BIN-042, TC-BIN-043, TC-BIN-044, TC-BIN-045 | Covered |
-| AC-F2-7 | `DELIVERY_OS_WORKING_NAME` supplies the identity for both bins; an invalid override leaves `--version`/`--help` answering the invoking bin's default without failing, while a **positional-free** configuration-bearing command (`status --json`) fails closed through the **delivered** containment identity `fallback.internal` at exit `2` (the resolver-level input error wrapped inside it, never CLI-visible) with no fallback identity substituted; the alias's projection is exactly the delivered one, summary included. A subcommand-bearing invocation's delivered parse-level containment (`fallback.invocation`, exit `1`) is recorded as a secondary fact, not an acceptance obligation (DEC-11, D6; DoR iter-2 finding 1) | TC-BIN-010, TC-BIN-011, TC-BIN-012, TC-BIN-014 | Covered |
+| AC-F2-7 | `DELIVERY_OS_WORKING_NAME` supplies the identity for both bins; an invalid override leaves `--version`/`--help` answering the invoking bin's default without failing, while a **positional-free** configuration-bearing command (`status --json`) fails closed through the **delivered** containment identity `fallback.internal` at exit `2` (the resolver-level input error wrapped inside it, never CLI-visible) with no fallback identity substituted and **the delivered pre-composition touch left exactly as delivered** (the configuration probe/read and the state-root/host-index touch are unchanged, not absent); the alias's projection and pre-composition touch are exactly the delivered ones, summary included. A subcommand-bearing invocation's delivered parse-level containment (`fallback.invocation`, exit `1`) is recorded as a secondary fact, not an acceptance obligation (DEC-11, D6, v1.5; DoR iter-2 finding 1, iter-3 finding 2) | TC-BIN-010, TC-BIN-011, TC-BIN-012, TC-BIN-014 | Covered |
 | AC-F6-8 | A hermetic local install with an ambient working-name override in the installing environment produces an executable `~/.jaiship/bin/jaiship` — the brand path, not an override-derived path — whose single target is the checkout's CLI entry, `jaiship --version` works from outside the checkout, an unchanged re-run does not rewrite the launcher, a removed target exits non-zero with one bounded line naming the target and the remedy, and a missing install-time runtime or a source tree without the CLI entry fails classified naming what is missing and writes no launcher (DEC-15) | TC-BIN-006, TC-BIN-050, TC-BIN-051, TC-BIN-052, TC-BIN-053, TC-BIN-054, TC-BIN-055, TC-BIN-056 | Covered |
 | AC-F7-9 | `pnpm check` is green including the branch-range commit-message gate and the delivered entrypoint, configuration, state-scope, daemon-mount, events-mount, installer, and content-inventory suites | TC-BIN-080, TC-BIN-081, TC-BIN-082, TC-BIN-083 | Covered |
 | AC-F7-10 | The manifest declares exactly two identities mapping to two distinct existing entry files; the inventory equals the actual file set with a per-file executable allowance; the committed identity literals match the declared five-site inventory under the declared `packages/**` scan rule — the three CLI selector sites, the unchanged MCP default, and the resolver's scope-org derivation input — with every declared site found and every found literal declared, and no residual neutral default in the entrypoint module; neither installer array names a binary, entrypoint, or composer while the launcher step is declared; an injected fixture makes each guard fail by name | TC-BIN-054, TC-BIN-060, TC-BIN-061, TC-BIN-062, TC-BIN-063, TC-BIN-064, TC-BIN-065, TC-BIN-066, TC-BIN-067 | Covered |
@@ -162,8 +163,9 @@ The specification declares no REST/HTTP endpoint (§8.1: N/A) and no event, topi
 | Cases appearing in the Automation Plan (§7) | 55 of 55 | Pass |
 | Blocking findings | 0 (`B-1` resolved in spec v1.1; v1.2 extends the inventory to five sites) | Pass |
 | DoR iter-1 findings remediated by this revision | 11 (1, 2, 5, 8, 10, 11, 12, 13, 20, 21, 22 — see §8.3) | Pass |
-| DoR iter-2 findings remediated by this revision | 2 (finding 1 blocking — `TC-BIN-012`; finding 2 major — `TC-BIN-072`/`TC-BIN-071`) | Pass |
-| DoR iter-2 test-plan minors still open in this artefact | 3 (4 harness selection, 6 verbatim stale phrase, 8 landing-page wording — see §8.3) | Declared |
+| DoR iter-2 findings remediated (v1.3) | 2 (finding 1 blocking — `TC-BIN-012`; finding 2 major — `TC-BIN-072`/`TC-BIN-071`) | Pass |
+| DoR iter-3 findings remediated by this revision | 6 (finding 1 blocking — `TC-BIN-072` steps 7–9; finding 2 major — `TC-BIN-012` step 5 + note; minors 3, 4, 5, 7) | Pass |
+| DoR iter-3 test-plan findings still open in this artefact | 0 (iter-3 finding 6 is plan-side, finding 8 spec-side, finding 9 a PM-record nit; iter-2 minors 4, 6 and 8 are now fixed) | Pass |
 
 ### 3.5 Declared gaps, boundaries, and assertion bases
 
@@ -174,7 +176,7 @@ The specification declares no REST/HTTP endpoint (§8.1: N/A) and no event, topi
 | **SURF-TP-1 — the effective-host-root reporting surface is delivery-bound** | The spec does not pin a payload field naming the effective root. **Substitute:** the effective root is asserted at the composition seam (the resolved value handed to the store/scope composition) **and** by where follow-on store operations land (`TC-BIN-035`), with `status --json` used for the seeded delivery facts. A case that cannot resolve either seam fails naming the missing contract. | 030, 033, 035 | AC-F4-5, NFR-3 |
 | **LIT-TP-1 — the declared five-site identity-literal inventory under its scan rule (spec v1.2 DM-6, D7)** | DM-6 declares the guard's rule — a `packages/**` **string-literal** scan (comments are not literals) collecting every literal byte-equal to a declared working name — and an inventory of five sites, then requires the inventory to be the assertion: every declared site found and every found literal declared. **Asserted directly, not substituted:** the case compares the scan result against the declared inventory in two scopes — the **CLI scope** (exactly three selector sites: `bin/delivery-os.ts` default `delivery-os`, `bin/jaiship.ts` default `jaiship`, `bin/jaiship.ts` prior `delivery-os`; all non-exported) and the **unchanged/inventory scope** (`packages/mcp/src/serve.ts` default `delivery-os`, byte-identical to the delivered value; and `packages/core/src/branding/index.ts` `SCOPE_ORG = "delivery-os"`, declared as a **scope-org derivation input** consumed by `docsBaseUrl`/`repositoryUrl`, byte-equal to a working name but not an identity selector, with the resolver code unchanged) — and additionally asserts that `packages/cli/src/entrypoint.ts` holds no identity literal and declares no `neutralWorkingName`, and that a call with no declared default produces the delivered `fallback.internal` containment rather than a substituted name. A sixth site, or a declared site that disappears, fails by name. Recorded here because §3.4 counts substitutions separately; this row is a direct assertion. | 062 | AC-F7-10, NFR-1, NFR-6 |
 | **PAR-TP-1 — help parity non-vacuity** | Both bins render help through one table, so a pure A/B diff passes even when a family is missing from both. **Substitute:** the case pairs the diff (binary name normalised) with a **family-set equality** against the declared `PROMPT_REQUIRED_COMMANDS` twenty in both directions, plus a comparator mutant that removes one row and one that adds an extra row; each mutant must fail by name. | 003, 067 | AC-F1-2, NFR-9 |
-| **DOC-TP-1 — "README, URLs, scope unchanged"** | A permanent suite must not diff against a moving base branch. **Substitute:** property assertions on the current tree — `packageScope`/scope org unchanged in the resolver and package manifests, `repositoryUrl`/`docsBaseUrl` still the pre-freeze values for both identities, README contains no installed-`jaiship` claim, the docs profile is absent, the MCP default, the shell fallback host root, and the installer's `ADOS_HOME`/`ADOS_REPO_DIR`/`ADOS_SOURCE_DIR`/`ADOS_RAW_URL`/`ADOS_REPO_URL` values are byte-identical — while the guide states the fourth divergence by role and is asserted seed-free, because those identifiers are code/help facts, not documentable tokens in a scanned guide — plus the review-attested byte diff at phase 8. | 072 | AC-F8-11, NFR-8 |
+| **DOC-TP-1 — "README, URLs, scope unchanged"** | A permanent suite must not diff against a moving base branch. **Substitute:** property assertions on the current tree — `packageScope`/scope org unchanged in the resolver and package manifests, `repositoryUrl`/`docsBaseUrl` still the pre-freeze values for both identities, README contains no installed-`jaiship` claim, the docs profile is absent, the MCP default, the shell fallback host root, and the installer's `ADOS_HOME`/`ADOS_REPO_DIR`/`ADOS_SOURCE_DIR`/`ADOS_RAW_URL`/`ADOS_REPO_URL` values are byte-identical — while the guide states the fourth divergence by role and is asserted clean under the delivered scan (only its allowlisted identity-header lines may match a seed), because those identifiers are code/help facts, not documentable tokens in a scanned guide — plus the review-attested byte diff at phase 8. | 072 | AC-F8-11, NFR-8 |
 
 ## 4. Test Types and Layers
 
@@ -263,7 +265,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Integration, E2E
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/entrypoint-two-bins.test.ts` (new); subprocess cells against `packages/cli/bin/jaiship.ts`
-**Harness entry**: `bun test tests/behaviour/entrypoint-two-bins.test.ts --filter process-edge`
+**Harness entry**: `bun test tests/behaviour/entrypoint-two-bins.test.ts -t "process-edge"`
 **Tags**: @backend, @behaviour, @process-edge
 
 **Preconditions**:
@@ -291,7 +293,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Regression, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/entrypoint-two-bins.test.ts` (new); baseline fixture `tests/fixtures/entrypoint/alias-baseline.json` (new, captured pre-change)
-**Harness entry**: `bun test tests/behaviour/entrypoint-two-bins.test.ts --filter alias-baseline`
+**Harness entry**: `bun test tests/behaviour/entrypoint-two-bins.test.ts -t "alias-baseline"`
 **Tags**: @backend, @behaviour, @regression, @golden
 
 **Preconditions**:
@@ -318,7 +320,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Contract, Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/entrypoint-two-bins.test.ts` (new); extends the delivered `entrypoint-help.test.ts` family list
-**Harness entry**: `bun test tests/behaviour/entrypoint-two-bins.test.ts --filter family-parity`
+**Harness entry**: `bun test tests/behaviour/entrypoint-two-bins.test.ts -t "family-parity"`
 **Tags**: @backend, @behaviour, @contract
 
 **Preconditions**:
@@ -346,7 +348,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/entrypoint-two-bins.test.ts` (new); uses the delivered `allHelpEntries()` inventory
-**Harness entry**: `bun test tests/behaviour/entrypoint-two-bins.test.ts --filter per-command-help`
+**Harness entry**: `bun test tests/behaviour/entrypoint-two-bins.test.ts -t "per-command-help"`
 **Tags**: @backend, @behaviour, @contract
 
 **Preconditions**:
@@ -371,7 +373,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Negative, Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/entrypoint-two-bins.test.ts` (new); delivered isolation harness in `entrypoint-help-isolation.test.ts` (extended)
-**Harness entry**: `bun test tests/behaviour/entrypoint-two-bins.test.ts --filter isolation`
+**Harness entry**: `bun test tests/behaviour/entrypoint-two-bins.test.ts -t "isolation"`
 **Tags**: @backend, @behaviour, @isolation, @negative
 
 **Preconditions**:
@@ -398,7 +400,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Contract, Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/entrypoint-two-bins.test.ts` (new)
-**Harness entry**: `bun test tests/behaviour/entrypoint-two-bins.test.ts --filter install-path`
+**Harness entry**: `bun test tests/behaviour/entrypoint-two-bins.test.ts -t "install-path"`
 **Tags**: @backend, @behaviour, @contract
 
 **Preconditions**:
@@ -451,7 +453,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Edge Case
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/identity-override.test.ts` (new); extends `entrypoint-version.test.ts` (which already pins the empty-override case)
-**Harness entry**: `bun test tests/behaviour/identity-override.test.ts --filter empty-override`
+**Harness entry**: `bun test tests/behaviour/identity-override.test.ts -t "empty-override"`
 **Tags**: @backend, @behaviour, @edge
 
 **Preconditions**:
@@ -468,7 +470,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 
 #### TC-BIN-012 - An invalid override keeps self-description usable and yields the delivered containment projection
 
-**Objective**: Prove DEC-11 and AC-F2-7 as spec v1.4 pins them, with the projection stated per **invocation shape**: an invalid override leaves `--version`/`--help` answering the **invoking bin's** declared default identity without failing; a **positional-free** configuration-bearing command (`status --json`) fails closed through the delivered containment identity `fallback.internal` at exit `2`, with the resolver-level input error wrapped inside it and never surfaced as a CLI-visible classified error; and the alias's projection is byte-identical to its baseline, summary included (D6). A command carrying a subcommand token is covered as a recorded delivered fact only (see the note after the steps) and is **not** part of AC-F2-7.
+**Objective**: Prove DEC-11 and AC-F2-7 as spec v1.4 pins them, with the projection stated per **invocation shape**: an invalid override leaves `--version`/`--help` answering the **invoking bin's** declared default identity without failing; a **positional-free** configuration-bearing command (`status --json`) fails closed through the delivered containment identity `fallback.internal` at exit `2`, with the resolver-level input error wrapped inside it and never surfaced as a CLI-visible classified error; and the alias's projection is byte-identical to its baseline, summary included (D6). The delivered **pre-composition touch** an invalid override still performs — the configuration probe/read and the state-root/host-index work before containment — is asserted **unchanged**, never absent (spec v1.5 §8.5/AC-F2-7). A command carrying a subcommand token is covered as a recorded delivered fact only (see the note after the steps) and is **not** part of AC-F2-7.
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
@@ -476,7 +478,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Negative, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/identity-override.test.ts` (new); extends `entrypoint-help-isolation.test.ts`; alias baseline `tests/fixtures/entrypoint/alias-baseline.json`
-**Harness entry**: `bun test tests/behaviour/identity-override.test.ts --filter invalid-override`
+**Harness entry**: `bun test tests/behaviour/identity-override.test.ts -t "invalid-override"`
 **Tags**: @backend, @behaviour, @negative
 
 **Preconditions**:
@@ -489,13 +491,14 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 2. For each bin and each invalid override, run the **positional-free** configuration-bearing command `status --json`; assert exit `2`, the delivered containment identity `fallback.internal`, and the summary naming the missing composition (`command "status" is not part of the composed prompt-required set`).
 3. Assert the projection is **not** a CLI-visible classified resolver error: no `override` field and no `BrandingInputErrorCode` value appears on either stream, and the envelope's code is exactly `fallback.internal`.
 4. For the alias, compare the whole projection (exit, envelope code, summary text) byte-for-byte with its baseline record; assert it is unchanged, so the alias keeps 0 observable behaviour change on this path (D6).
-5. Assert no fallback identity was substituted and no prior-identity read occurred: the injected filesystem facts show zero reads of `.delivery-os`/`.jaiship` configuration, no notice is emitted, and no state root is opened.
-6. Assert the self-description output with the invalid override equals the self-description output with no override for the same bin.
+5. Assert **no fallback identity is substituted** and **no `prior-identity-fallback` notice is emitted** (the run never reaches the prior-identity fallback in this state): the output identity is the invoking bin's declared default, stderr carries no `prior-identity-fallback` token, and the payload warning list is empty. Do **not** assert zero configuration reads or zero state access here: the delivered path performs its pre-composition work before returning containment, and that touch is asserted unchanged in the next step.
+6. Assert the delivered **pre-composition touch is unchanged**: with the same fixture, compare the invalid-override run against the recorded pre-change control and assert the same configuration probe/read outcome and the same state-root/host-index behaviour — neither added nor removed by this change (spec v1.5 §8.5/AC-F2-7). This is an equality assertion against the delivered behaviour, not an absence assertion and not a requirement to change it.
+7. Assert the self-description output with the invalid override equals the self-description output with no override for the same bin.
 
-**Note — delivered secondary fact (recorded, not asserted by AC-F2-7).** Under an invalid override, brand resolution fails before any composition exists, so no command can be "state-opening": `runEntrypoint` substitutes the empty command set and the synthetic uncomposed definition declares no positionals. A command that carries a subcommand token therefore fails **before** the containment handler, at argument parsing: `daemon status` yields exit `1`, `fallback.invocation`, `unexpected argument "status"` (delivered, verified for both bins). That is still containment and still not a CLI-visible resolver error. This plan records it as a delivered fact in §8.2/§8.3; no case asserts it as acceptance behaviour and **no case requires it to change**, because doing so would alter the alias's delivered projection, which AC-F2-3/AC-F2-7/DEC-11 forbid.
+**Note — delivered secondary fact (recorded, not asserted by AC-F2-7).** Under an invalid override, brand resolution fails before the **command set** is composed: `runEntrypoint` substitutes the empty command set and the synthetic uncomposed definition declares no positionals, while the delivered **pre-composition** configuration/state work still occurs (step 6). A command that carries a subcommand token therefore fails **before** the containment handler, at argument parsing: `daemon status` yields exit `1`, `fallback.invocation`, `unexpected argument "status"` (delivered; a harness must pass two argv tokens — the single-token form yields `fallback.internal`). That is still containment and still not a CLI-visible resolver error. This plan records it as a delivered fact in §8.2/§8.3; no case asserts it as acceptance behaviour and **no case requires it to change**, because doing so would alter the alias's delivered projection and touch, which AC-F2-3/AC-F2-7/DEC-11 and spec v1.5 §8.5 forbid.
 
 **Expected Outcome**:
-- Self-description always answers the invoking bin's declared default; the positional-free `status --json` of both bins exits `2` with the delivered `fallback.internal` containment and its delivered summary; the alias projection matches its baseline exactly; no classified resolver error is exposed; no fallback, notice, read, or state. A subcommand-bearing invocation's `fallback.invocation` parse failure is documented, not asserted.
+- Self-description always answers the invoking bin's declared default; the positional-free `status --json` of both bins exits `2` with the delivered `fallback.internal` containment and its delivered summary; the alias projection matches its baseline exactly; no classified resolver error is exposed; no fallback identity is substituted and no notice is emitted; the delivered pre-composition touch is unchanged against the control. A subcommand-bearing invocation's `fallback.invocation` parse failure is documented, not asserted.
 
 #### TC-BIN-013 - The alias declares no prior identity and never reads forward
 
@@ -507,7 +510,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Regression
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/prior-identity-config-fallback.test.ts` (new) and `prior-identity-state-fallback.test.ts` (new); alias half
-**Harness entry**: `bun test tests/behaviour/prior-identity-config-fallback.test.ts --filter alias`
+**Harness entry**: `bun test tests/behaviour/prior-identity-config-fallback.test.ts -t "alias"`
 **Tags**: @backend, @behaviour, @regression
 
 **Preconditions**:
@@ -534,7 +537,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Corner Case, Unit
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/identity-override.test.ts` (new)
-**Harness entry**: `bun test tests/behaviour/identity-override.test.ts --filter determinism`
+**Harness entry**: `bun test tests/behaviour/identity-override.test.ts -t "determinism"`
 **Tags**: @backend, @behaviour, @determinism
 
 **Preconditions**:
@@ -559,7 +562,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/prior-identity-config-fallback.test.ts` (new); scratch checkout materialised from `tests/fixtures/entrypoint/prior-identity/config-only/` (shape only, `git init` + marker per case)
-**Harness entry**: `bun test tests/behaviour/prior-identity-config-fallback.test.ts --filter prior-read`
+**Harness entry**: `bun test tests/behaviour/prior-identity-config-fallback.test.ts -t "prior-read"`
 **Tags**: @backend, @behaviour, @config, @fallback
 
 **Preconditions**:
@@ -590,7 +593,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/prior-identity-config-fallback.test.ts` (new); fixture `tests/fixtures/entrypoint/prior-identity/both-layers/`
-**Harness entry**: `bun test tests/behaviour/prior-identity-config-fallback.test.ts --filter current-wins`
+**Harness entry**: `bun test tests/behaviour/prior-identity-config-fallback.test.ts -t "current-wins"`
 **Tags**: @backend, @behaviour, @config, @precedence
 
 **Preconditions**:
@@ -616,7 +619,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Edge Case, Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/prior-identity-config-fallback.test.ts` (new); fixtures `tests/fixtures/entrypoint/prior-identity/mixed-layers/`, `.../local-only/`
-**Harness entry**: `bun test tests/behaviour/prior-identity-config-fallback.test.ts --filter per-layer`
+**Harness entry**: `bun test tests/behaviour/prior-identity-config-fallback.test.ts -t "per-layer"`
 **Tags**: @backend, @behaviour, @config
 
 **Preconditions**:
@@ -641,7 +644,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Negative
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/prior-identity-config-fallback.test.ts` (new)
-**Harness entry**: `bun test tests/behaviour/prior-identity-config-fallback.test.ts --filter selected-config`
+**Harness entry**: `bun test tests/behaviour/prior-identity-config-fallback.test.ts -t "selected-config"`
 **Tags**: @backend, @behaviour, @config, @negative
 
 **Preconditions**:
@@ -666,7 +669,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Negative
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/prior-identity-config-fallback.test.ts` (new); scratch home + injected platform facts
-**Harness entry**: `bun test tests/behaviour/prior-identity-config-fallback.test.ts --filter global-layers`
+**Harness entry**: `bun test tests/behaviour/prior-identity-config-fallback.test.ts -t "global-layers"`
 **Tags**: @backend, @behaviour, @config, @negative
 
 **Preconditions**:
@@ -692,7 +695,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Negative, Measured
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/prior-identity-config-fallback.test.ts` (new)
-**Harness entry**: `bun test tests/behaviour/prior-identity-config-fallback.test.ts --filter read-only`
+**Harness entry**: `bun test tests/behaviour/prior-identity-config-fallback.test.ts -t "read-only"`
 **Tags**: @backend, @behaviour, @negative, @filesystem
 
 **Preconditions**:
@@ -719,7 +722,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Regression
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/prior-identity-config-fallback.test.ts` (new); delivered strict fixtures extended
-**Harness entry**: `bun test tests/behaviour/prior-identity-config-fallback.test.ts --filter strict`
+**Harness entry**: `bun test tests/behaviour/prior-identity-config-fallback.test.ts -t "strict"`
 **Tags**: @backend, @behaviour, @regression
 
 **Preconditions**:
@@ -745,7 +748,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/prior-identity-state-fallback.test.ts` (new); scratch home populated from `tests/fixtures/entrypoint/prior-identity/host-root/`
-**Harness entry**: `bun test tests/behaviour/prior-identity-state-fallback.test.ts --filter prior-root`
+**Harness entry**: `bun test tests/behaviour/prior-identity-state-fallback.test.ts -t "prior-root"`
 **Tags**: @backend, @behaviour, @state, @fallback
 
 **Preconditions**:
@@ -772,7 +775,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Negative, Measured
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/prior-identity-state-fallback.test.ts` (new)
-**Harness entry**: `bun test tests/behaviour/prior-identity-state-fallback.test.ts --filter no-second-root`
+**Harness entry**: `bun test tests/behaviour/prior-identity-state-fallback.test.ts -t "no-second-root"`
 **Tags**: @backend, @behaviour, @state, @negative
 
 **Preconditions**:
@@ -799,7 +802,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Negative
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/prior-identity-state-fallback.test.ts` (new)
-**Harness entry**: `bun test tests/behaviour/prior-identity-state-fallback.test.ts --filter override-wins`
+**Harness entry**: `bun test tests/behaviour/prior-identity-state-fallback.test.ts -t "override-wins"`
 **Tags**: @backend, @behaviour, @state, @precedence
 
 **Preconditions**:
@@ -824,7 +827,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/prior-identity-state-fallback.test.ts` (new)
-**Harness entry**: `bun test tests/behaviour/prior-identity-state-fallback.test.ts --filter both-roots`
+**Harness entry**: `bun test tests/behaviour/prior-identity-state-fallback.test.ts -t "both-roots"`
 **Tags**: @backend, @behaviour, @state, @precedence
 
 **Preconditions**:
@@ -849,7 +852,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Negative, Unit
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/prior-identity-state-fallback.test.ts` (new); pure-policy case in `tests/structure/state-scope.test.ts` (extended)
-**Harness entry**: `bun test tests/behaviour/prior-identity-state-fallback.test.ts --filter prior-prefix`
+**Harness entry**: `bun test tests/behaviour/prior-identity-state-fallback.test.ts -t "prior-prefix"`
 **Tags**: @backend, @behaviour, @state, @negative, @security
 
 **Preconditions**:
@@ -875,7 +878,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Integration, Corner Case
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/prior-identity-state-fallback.test.ts` (new)
-**Harness entry**: `bun test tests/behaviour/prior-identity-state-fallback.test.ts --filter single-root`
+**Harness entry**: `bun test tests/behaviour/prior-identity-state-fallback.test.ts -t "single-root"`
 **Tags**: @backend, @behaviour, @state, @corner
 
 **Preconditions**:
@@ -901,7 +904,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Regression
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/prior-identity-state-fallback.test.ts` (new)
-**Harness entry**: `bun test tests/behaviour/prior-identity-state-fallback.test.ts --filter first-use`
+**Harness entry**: `bun test tests/behaviour/prior-identity-state-fallback.test.ts -t "first-use"`
 **Tags**: @backend, @behaviour, @state, @regression
 
 **Preconditions**:
@@ -926,7 +929,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Integration, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/prior-identity-notice.test.ts` (new)
-**Harness entry**: `bun test tests/behaviour/prior-identity-notice.test.ts --filter once-per-source`
+**Harness entry**: `bun test tests/behaviour/prior-identity-notice.test.ts -t "once-per-source"`
 **Tags**: @backend, @behaviour, @notice
 
 **Preconditions**:
@@ -954,7 +957,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Corner Case, Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/prior-identity-notice.test.ts` (new); the composition-owned notice state owner
-**Harness entry**: `bun test tests/behaviour/prior-identity-notice.test.ts --filter repeat-resolution`
+**Harness entry**: `bun test tests/behaviour/prior-identity-notice.test.ts -t "repeat-resolution"`
 **Tags**: @backend, @behaviour, @notice
 
 **Preconditions**:
@@ -981,7 +984,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Negative
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/prior-identity-notice.test.ts` (new)
-**Harness entry**: `bun test tests/behaviour/prior-identity-notice.test.ts --filter no-fallback`
+**Harness entry**: `bun test tests/behaviour/prior-identity-notice.test.ts -t "no-fallback"`
 **Tags**: @backend, @behaviour, @notice, @negative
 
 **Preconditions**:
@@ -1007,7 +1010,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/prior-identity-notice.test.ts` (new)
-**Harness entry**: `bun test tests/behaviour/prior-identity-notice.test.ts --filter text-contract`
+**Harness entry**: `bun test tests/behaviour/prior-identity-notice.test.ts -t "text-contract"`
 **Tags**: @backend, @behaviour, @contract, @security
 
 **Preconditions**:
@@ -1034,7 +1037,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Regression
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/prior-identity-notice.test.ts` (new); delivered `legacy-adapter.test.ts` as control
-**Harness entry**: `bun test tests/behaviour/prior-identity-notice.test.ts --filter distinctness`
+**Harness entry**: `bun test tests/behaviour/prior-identity-notice.test.ts -t "distinctness"`
 **Tags**: @backend, @behaviour, @notice, @regression
 
 **Preconditions**:
@@ -1063,7 +1066,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Regression
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/prior-identity-notice.test.ts` (new)
-**Harness entry**: `bun test tests/behaviour/prior-identity-notice.test.ts --filter invariance`
+**Harness entry**: `bun test tests/behaviour/prior-identity-notice.test.ts -t "invariance"`
 **Tags**: @backend, @behaviour, @regression
 
 **Preconditions**:
@@ -1090,7 +1093,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Integration, E2E
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/checks/install-launcher-installer.test.ts` (new, Bun test that spawns `scripts/install.sh`); structural half in `tests/structure/install-launcher.test.ts` (new)
-**Harness entry**: `bun test tests/checks/install-launcher-installer.test.ts --filter register`
+**Harness entry**: `bun test tests/checks/install-launcher-installer.test.ts -t "register"`
 **Tags**: @backend, @checks, @installer, @e2e
 
 **Preconditions**:
@@ -1122,7 +1125,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Corner Case, Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/checks/install-launcher-installer.test.ts` (new)
-**Harness entry**: `bun test tests/checks/install-launcher-installer.test.ts --filter idempotence`
+**Harness entry**: `bun test tests/checks/install-launcher-installer.test.ts -t "idempotence"`
 **Tags**: @backend, @checks, @installer, @idempotence
 
 **Preconditions**:
@@ -1149,7 +1152,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Negative, E2E
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/checks/install-launcher-installer.test.ts` (new)
-**Harness entry**: `bun test tests/checks/install-launcher-installer.test.ts --filter missing-target`
+**Harness entry**: `bun test tests/checks/install-launcher-installer.test.ts -t "missing-target"`
 **Tags**: @backend, @checks, @installer, @negative
 
 **Preconditions**:
@@ -1175,7 +1178,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Contract, Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/checks/install-launcher-installer.test.ts` (new)
-**Harness entry**: `bun test tests/checks/install-launcher-installer.test.ts --filter passthrough`
+**Harness entry**: `bun test tests/checks/install-launcher-installer.test.ts -t "passthrough"`
 **Tags**: @backend, @checks, @installer, @contract
 
 **Preconditions**:
@@ -1228,7 +1231,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Negative, Measured
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/checks/install-launcher-installer.test.ts` (new)
-**Harness entry**: `bun test tests/checks/install-launcher-installer.test.ts --filter hermeticity`
+**Harness entry**: `bun test tests/checks/install-launcher-installer.test.ts -t "hermeticity"`
 **Tags**: @backend, @checks, @installer, @hermeticity
 
 **Preconditions**:
@@ -1256,7 +1259,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Negative, Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/checks/install-launcher-installer.test.ts` (new)
-**Harness entry**: `bun test tests/checks/install-launcher-installer.test.ts --filter preconditions`
+**Harness entry**: `bun test tests/checks/install-launcher-installer.test.ts -t "preconditions"`
 **Tags**: @backend, @checks, @installer, @negative
 
 **Preconditions**:
@@ -1339,7 +1342,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Structure, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/structure/entrypoint-bin.test.ts` (extended with a working-name literal scan and one in-process entrypoint call); precedent: the AST scans in `branding-seam.test.ts` and `content-inventory.test.ts`
-**Harness entry**: `bun test tests/structure/entrypoint-bin.test.ts --filter literals`
+**Harness entry**: `bun test tests/structure/entrypoint-bin.test.ts -t "literals"`
 **Tags**: @structure, @contract, @security
 
 **Preconditions**:
@@ -1378,7 +1381,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Structure, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/structure/entrypoint-bin.test.ts` (extended)
-**Harness entry**: `bun test tests/structure/entrypoint-bin.test.ts --filter shared-composition`
+**Harness entry**: `bun test tests/structure/entrypoint-bin.test.ts -t "shared-composition"`
 **Tags**: @structure, @contract
 
 **Preconditions**:
@@ -1483,7 +1486,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Structure, Regression
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/structure/entrypoint-bin.test.ts` (extended); delivered error-table sync check as control
-**Harness entry**: `bun test tests/structure/entrypoint-bin.test.ts --filter family-and-error-table`
+**Harness entry**: `bun test tests/structure/entrypoint-bin.test.ts -t "family-and-error-table"`
 **Tags**: @structure, @regression
 
 **Preconditions**:
@@ -1518,7 +1521,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 
 **Steps**:
 1. Assert the new table's page set equals exactly the five declared pages (a missing or extra page fails by name), and that each page carries at least one stale and one required phrase (an empty list would pass vacuously — fail it).
-2. Run the stale check: every stale phrase is absent, notably the delivered "the bin is not part of the install surface" sentence, and any statement that `status` acquires no project configuration.
+2. Run the stale check as a **full-sentence** assertion: every stale phrase is absent — quoted verbatim and in full, including `The bin is not part of the install or release surface.` and any statement that `status` acquires no project configuration. A substring check on a truncated quote would pass on today's file, so the table carries the complete delivered sentence and the check requires the whole sentence to be absent.
 3. Run the required check: every required phrase is present — two executables and per-bin identity selectors, the prior-identity fallback and its notice, the **composition-time acquisition** fact on the configuration page, the install-path read, the install posture **including the install-time runtime requirement and the classified failure modes**, the host-root prior selection and the no-second-root guarantee, and on the distribution-marker page the launcher in the install set with its runtime requirement.
 4. Assert the notice vocabulary and the four reasons appear on the configuration and projects pages, so the pages and the code share one vocabulary.
 5. Negative control: a synthetic page text containing a stale phrase fails naming the page and the phrase; a required phrase removed fails naming the page and the phrase; a page missing from the table fails naming the page.
@@ -1547,7 +1550,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 2. Assert the guide path is registered in `scripts/checks/forbidden-literals.registry.json`'s registered user-facing docs — the delivered lesson: a new guide left unregistered fails the scan closed and breaks `ci-baseline-parity` at HEAD.
 3. Run `bash scripts/.tests/test-doc-distribution.sh`; assert exit `0` (marker-driven install set includes the guide; no drift).
 4. Assert the guide's content covers: the install command shape with fetching disabled, where the launcher lands, what it executes, the install-time runtime requirement and its classified failures, what the notice means, what the fallback covers, what it deliberately does not cover (machine-global layers, prior-prefix environment names), and the explicit "what is not renamed in this slice" list of four divergences — the fourth stated **by role** with the exact installer identifiers delegated to `scripts/install.sh --help` and the change record, so the registered guide stays seed-free (`TC-BIN-072` step 7).
-5. Assert the guide is discoverable from the **four affected spec pages** (at least one links to it). The documentation landing page `doc/00-index.md` is deliberately untouched, because spec §16 marks it UNCHANGED and every existing redistributable guide is already listed there; discoverability via the spec pages is the declared resolution (plan reconciliation R-D; DoR iter-1 finding 21).
+5. Assert the guide is discoverable from **all four** affected spec pages — each of `feature-cli-entrypoint.md`, `feature-branding-seam.md`, `feature-config-layer.md` and `feature-projects.md` carries a link, and a page missing one fails by name. `doc/00-index.md` remains **untouched** (spec §16 marks it UNCHANGED); discoverability via the four pages is the declared resolution, and the landing-page row is deferred to the M4-S1 remainder rather than argued from the current index (plan reconciliation R-D; DoR iter-1 finding 21, iter-3 finding 4).
 6. Negative control: removing the marker from a temp copy fails the drift guard naming the file; removing the registry entry fails the literal scan naming the path.
 
 **Expected Outcome**:
@@ -1555,7 +1558,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 
 #### TC-BIN-072 - The four declared divergences are stated, the guide stays seed-free, and the public surfaces are unchanged
 
-**Objective**: Prove NFR-8 and AC-F8-11 as spec v1.4 pins them: **all four** remaining pre-freeze consumers are stated in the spec and the guide — MCP's default and override read, the delivery-script shell fallback host root, the scope-derived repository/docs URLs, and the installer's own pre-freeze home and environment-variable surface — with the fourth stated in the guide **by role**, because the guide is a registered, seed-scanned user-facing document and the seeded-literal scan covers `doc/**` (excluding change and decision records). The guide must therefore contain **zero** seed literals, be registered, and keep the scan green, while the exact installer identifiers are discoverable from `scripts/install.sh --help` and the change record rather than from the guide. The unchanged public surfaces are asserted alongside (DoR iter-2 finding 2).
+**Objective**: Prove NFR-8 and AC-F8-11 as spec v1.4 pins them: **all four** remaining pre-freeze consumers are stated in the spec and the guide — MCP's default and override read, the delivery-script shell fallback host root, the scope-derived repository/docs URLs, and the installer's own pre-freeze home and environment-variable surface — with the fourth stated in the guide **by role**, because the guide is a registered, seed-scanned user-facing document and the seeded-literal scan covers `doc/**` (excluding change and decision records). The guide must therefore be **clean under the delivered scan** — zero seed literals outside the allowlisted identity-header lines, registered, and scan-green — while the exact installer identifiers are discoverable from the installer script header and `--help` (between them they name all five) and the change record rather than from the guide. The unchanged public surfaces are asserted alongside (DoR iter-2 finding 2).
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: Critical
@@ -1568,7 +1571,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 
 **Preconditions**:
 - The spec §8.5 four-divergence list, the guide's divergence section, the delivered value sources, and the installer's declared variable defaults.
-- The delivered scan semantics are used as-is, not re-implemented: `matchSeedLiteral(text, seeds)` is case-insensitive, an occurrence counts only when it is delimited from lowercase ASCII letters on **both** sides, and the longest matching seed is reported (`~/.ados` is reported rather than the nested `ados`). `registry.seedLiterals` supplies the seed set; `registry.registered` supplies the scanned user-facing docs.
+- The delivered scan semantics are used as-is, not re-implemented, and **per line with the scan's line allowlist**: `matchSeedLiteral(text, seeds)` is case-insensitive, an occurrence counts only when it is delimited from lowercase ASCII letters on **both** sides, and the longest matching seed is reported (`~/.ados` is reported rather than the nested `ados`). `registry.seedLiterals` supplies the seed set; `registry.registered` supplies the scanned user-facing docs. The delivered `scanFile` line-allowlists the guide's identity-header lines (the `source:`/`Copyright`/`Apache-2.0` header and the `ados_distribution:` marker), which is why a whole-text equality is never used here.
 
 **Steps**:
 1. Assert `packageScope`/`PACKAGE_SCOPE` is still `@delivery-os` and the scope org is `delivery-os` in the resolver; assert every package manifest name is unchanged (`manifest-privacy`/publish-guard controls pass).
@@ -1577,13 +1580,13 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 4. Assert `packages/mcp/src/serve.ts`'s default working name and override read are byte-identical to the delivered values (divergence 1), and `scripts/lib/dispatch-authority.sh`'s host root is unchanged (divergence 2).
 5. Assert the installer's own pre-freeze surface is unchanged **in code** (divergence 4): `ADOS_HOME` still defaults to the pre-freeze home, `ADOS_REPO_DIR` to its pre-freeze repo path, and `ADOS_SOURCE_DIR`, `ADOS_RAW_URL`, `ADOS_REPO_URL` still carry their delivered values; assert none is rebranded. (This is a source assertion, not a documentation one, so seed tokens may appear here.)
 6. Assert the **guide** states all four divergences and states the fourth **by role** — the installer's pre-freeze home directory and environment-variable surface — without reproducing any exact identifier; assert it points the reader at `scripts/install.sh --help` and the change record for the identifiers; assert it also states the install-time Bun requirement, the classified missing-runtime and no-CLI-source failures, `DRY_RUN` writing nothing, and `--tool` independence (DEC-15).
-7. Assert the guide is **seed-free** under the delivered matcher: read `doc/guides/local-install.md` and assert `matchSeedLiteral(text, registry.seedLiterals) === undefined`. Print the matcher's verdict in the failure message so a violation names the offending seed. Negative control: splice each of the three seed tokens into a temp copy of the guide (one at a time) and assert `matchSeedLiteral` reports that token — proving the assertion is live and not vacuous.
+7. Assert the guide is **clean under the delivered scan**, not under a bare matcher. A bare `matchSeedLiteral(wholeText) === undefined` assertion is deliberately **not** used and must not be reintroduced: the guide is required to declare `ados_distribution: redistributable`, the seed `ados` occurs inside that mandatory marker, and the delivered `scanFile` line-allowlists that marker together with the `source:`/`Copyright`/`Apache-2.0` header lines — so a whole-text equality would fail on a compliant guide and the splice control would not be live for `ados`. Assert instead: (a) the repo-wide scan is green (`bun run scripts/checks/forbidden-literals.ts` exits `0`, five scope classes, zero violations) and the guide is present in `registry.registered`; (b) **no seed literal appears outside the allowlisted header lines** — evaluate the guide line by line, skip only the frontmatter `ados_distribution:`/`source:`/`Copyright`/`Apache-2.0` lines, and assert `matchSeedLiteral(line, registry.seedLiterals) === undefined` for every remaining line, printing file, line number, and seed on failure. Negative control: splice each of the three seed tokens into a **body** line (never the frontmatter) of a temp copy, one at a time, and assert the delivered scan fails naming the token and the line (the per-line check must report it too).
 8. Assert registration and scan green: the guide path appears in `registry.registered`; `bun run scripts/checks/forbidden-literals.ts` exits `0` with all five scope classes scanned and zero violations. Negative control: remove the guide from a temp registry copy and assert the scan fails closed naming the path.
-9. Assert the exact installer identifiers are discoverable **outside the guide**: its `--help` output documents the pre-freeze home, repo, and source overrides and references `ADOS_RAW_URL` in its install one-liners (so the help plus the change record together name all five and the default home); the change record (spec §8.5 and this test plan) names them; and a search over the guide finds none of them. If the guide and the help disagree on the divergence's existence, fail naming the guide.
+9. Assert the exact installer identifiers are discoverable **outside the guide**, stating precisely which surface carries which fact: the `scripts/install.sh` **script header** names all five identifiers; the rendered `--help` **Environment** section documents four of them (the pre-freeze home, repo, and source overrides, plus the repo-URL override) and does **not** print the literal fifth identifier — its install one-liners print that variable's *expanded value*, so assert the one-liner URL equals the raw-URL default value rather than asserting the literal token in `--help`; the change record (spec §8.5 and this test plan) names all five; and a search over the guide finds none of them. If the guide and the help disagree on the divergence's existence, fail naming the guide.
 10. Assert each of the four consumers is named in the spec §8.5 list **and** stated in the guide's divergence section (the fourth by role). A consumer found in code but absent from either document fails by name.
 
 **Expected Outcome**:
-- Public surfaces unchanged and the installer's surface declared in code; the guide states all four divergences with the fourth by role; the guide is seed-free under the delivered matcher with a live negative control; the guide is registered and the full scan is green; the exact identifiers are discoverable from the installer help and the change record, not from the guide; zero undocumented consumers.
+- Public surfaces unchanged and the installer's surface declared in code; the guide states all four divergences with the fourth by role; the guide carries no seed literal outside its allowlisted identity-header lines, proven with the delivered scan plus a per-line check and a live body-line negative control; the guide is registered and the full scan is green; the exact identifiers are discoverable from the installer header/help and the change record, not from the guide; zero undocumented consumers.
 
 #### TC-BIN-073 - The forbidden-literal scan stays green with an unchanged seed set
 
@@ -1698,7 +1701,7 @@ TC IDs use the `BIN` feature prefix and follow the capability blocks of the spec
 **Test Type(s)**: Regression, Corner Case
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/daemon-start-detached.test.ts` (delivered pin at line 618, extended with an identity matrix)
-**Harness entry**: `bun test tests/behaviour/daemon-start-detached.test.ts --filter child-environment`
+**Harness entry**: `bun test tests/behaviour/daemon-start-detached.test.ts -t "child-environment"`
 **Tags**: @backend, @regression, @daemon
 
 **Preconditions**:
@@ -1762,60 +1765,60 @@ Every case is automated in `bun test` — the installer integration cases spawn 
 
 | TC ID | Suite / file | Command | Injection / fixture requirements | Status |
 |---|---|---|---|---|
-| TC-BIN-001 | `tests/behaviour/entrypoint-two-bins.test.ts` | `bun test … --filter process-edge` | Subprocess with scrubbed env; temp cwd outside checkout; manifest read | New |
-| TC-BIN-002 | `tests/behaviour/entrypoint-two-bins.test.ts` | `bun test … --filter alias-baseline` | `tests/fixtures/entrypoint/alias-baseline.json` captured pre-change | New (baseline new) |
-| TC-BIN-003 | `tests/behaviour/entrypoint-two-bins.test.ts` | `bun test … --filter family-parity` | `PROMPT_REQUIRED_COMMANDS` import; comparator mutants | New |
-| TC-BIN-004 | `tests/behaviour/entrypoint-two-bins.test.ts` | `bun test … --filter per-command-help` | `allHelpEntries()` inventory; two identities | New |
-| TC-BIN-005 | `tests/behaviour/entrypoint-two-bins.test.ts`; extends `entrypoint-help-isolation.test.ts` | `bun test … --filter isolation` | Poisoned env, invalid YAML in both config dirs, throwing composer, counting ports | New + Existing – Update |
-| TC-BIN-006 | `tests/behaviour/entrypoint-two-bins.test.ts` | `bun test … --filter install-path` | Throwing composer; override matrix; asserts the member (not the installer's scrubbed query) | New |
+| TC-BIN-001 | `tests/behaviour/entrypoint-two-bins.test.ts` | `bun test … -t "process-edge"` | Subprocess with scrubbed env; temp cwd outside checkout; manifest read | New |
+| TC-BIN-002 | `tests/behaviour/entrypoint-two-bins.test.ts` | `bun test … -t "alias-baseline"` | `tests/fixtures/entrypoint/alias-baseline.json` captured pre-change | New (baseline new) |
+| TC-BIN-003 | `tests/behaviour/entrypoint-two-bins.test.ts` | `bun test … -t "family-parity"` | `PROMPT_REQUIRED_COMMANDS` import; comparator mutants | New |
+| TC-BIN-004 | `tests/behaviour/entrypoint-two-bins.test.ts` | `bun test … -t "per-command-help"` | `allHelpEntries()` inventory; two identities | New |
+| TC-BIN-005 | `tests/behaviour/entrypoint-two-bins.test.ts`; extends `entrypoint-help-isolation.test.ts` | `bun test … -t "isolation"` | Poisoned env, invalid YAML in both config dirs, throwing composer, counting ports | New + Existing – Update |
+| TC-BIN-006 | `tests/behaviour/entrypoint-two-bins.test.ts` | `bun test … -t "install-path"` | Throwing composer; override matrix; asserts the member (not the installer's scrubbed query) | New |
 | TC-BIN-010 | `tests/behaviour/identity-override.test.ts`; extends `entrypoint-version.test.ts` | `bun test tests/behaviour/identity-override.test.ts` | `.acme` fixture checkout; scratch `~/.acme-state` | New + Existing – Update |
-| TC-BIN-011 | `tests/behaviour/identity-override.test.ts` | `bun test … --filter empty-override` | Empty and whitespace-only override variants | New |
-| TC-BIN-012 | `tests/behaviour/identity-override.test.ts`; extends `entrypoint-help-isolation.test.ts` | `bun test … --filter invalid-override` | Invalid override matrix; positional-free `status --json` cell; prior file present; alias baseline (exit, envelope, summary) | New + Existing – Update |
-| TC-BIN-013 | `tests/behaviour/prior-identity-config-fallback.test.ts`, `prior-identity-state-fallback.test.ts` | `bun test … --filter alias` | Alias fixtures with current/prior artifacts in both directions | New |
-| TC-BIN-014 | `tests/behaviour/identity-override.test.ts` | `bun test … --filter determinism` | Input matrix; two cwd/home variants | New |
-| TC-BIN-020 | `tests/behaviour/prior-identity-config-fallback.test.ts` | `bun test … --filter prior-read` | Scratch checkout from `config-only/` shape; counting acquisition facts; zero-added-acquisition control; `config --json` unreachable probe | New |
-| TC-BIN-021 | `tests/behaviour/prior-identity-config-fallback.test.ts` | `bun test … --filter current-wins` | `both-layers/` fixture with shared + unique keys | New |
-| TC-BIN-022 | `tests/behaviour/prior-identity-config-fallback.test.ts` | `bun test … --filter per-layer` | `mixed-layers/`, `local-only/` fixtures | New |
-| TC-BIN-023 | `tests/behaviour/prior-identity-config-fallback.test.ts` | `bun test … --filter selected-config` | `selected-config/` fixture; external selected file; delivered skips | New |
-| TC-BIN-024 | `tests/behaviour/prior-identity-config-fallback.test.ts` | `bun test … --filter global-layers` | `global-layers/` + scratch `~/.config`; platform facts | New |
-| TC-BIN-025 | `tests/behaviour/prior-identity-config-fallback.test.ts` | `bun test … --filter read-only` | Recursive snapshot (path/size/mode/digest/mtime); sentinel file | New |
-| TC-BIN-026 | `tests/behaviour/prior-identity-config-fallback.test.ts` | `bun test … --filter strict` | Prior-read, `deprecated`, and `missing` fixtures; delivered strict control | New |
-| TC-BIN-030 | `tests/behaviour/prior-identity-state-fallback.test.ts` | `bun test … --filter prior-root` | `host-root/` fixture copied to scratch home; matching marker checkout | New |
-| TC-BIN-031 | `tests/behaviour/prior-identity-state-fallback.test.ts` | `bun test … --filter no-second-root` | Home listing snapshots; armed create guard; three invocation kinds | New |
-| TC-BIN-032 | `tests/behaviour/prior-identity-state-fallback.test.ts` | `bun test … --filter override-wins` | Absolute and relative override cases; two distinct seeded stores | New |
-| TC-BIN-033 | `tests/behaviour/prior-identity-state-fallback.test.ts` | `bun test … --filter both-roots` | Both roots populated with distinct records | New |
-| TC-BIN-034 | `tests/behaviour/prior-identity-state-fallback.test.ts`; extends `tests/structure/state-scope.test.ts` | `bun test … --filter prior-prefix` | Counting environment record; both identities | New + Existing – Update |
-| TC-BIN-035 | `tests/behaviour/prior-identity-state-fallback.test.ts` | `bun test … --filter single-root` | Mutating command fixture; append path assertion; one-resolution counter | New |
-| TC-BIN-036 | `tests/behaviour/prior-identity-state-fallback.test.ts` | `bun test … --filter first-use` | Empty scratch home; marker checkout; alias twin | New |
-| TC-BIN-040 | `tests/behaviour/prior-identity-notice.test.ts` | `bun test … --filter once-per-source` | Both-halves fallback fixture (scratch checkout with `.delivery-os/config.yaml` + seeded prior root); separate stdout/stderr capture; one real subprocess cell | New |
-| TC-BIN-041 | `tests/behaviour/prior-identity-notice.test.ts` | `bun test … --filter repeat-resolution` | Two composed programs over one fixture; sequence-numbered sink; emission guard; one fresh subprocess cell | New |
-| TC-BIN-042 | `tests/behaviour/prior-identity-notice.test.ts` | `bun test … --filter no-fallback` | Silence fixtures with their config shape; self-description silence cell; positive control in the same suite | New |
-| TC-BIN-043 | `tests/behaviour/prior-identity-notice.test.ts` | `bun test … --filter text-contract` | Canary values and canary path segment; all four reasons | New |
-| TC-BIN-044 | `tests/behaviour/prior-identity-notice.test.ts`; `legacy-adapter.test.ts` as control | `bun test … --filter distinctness` | Pre-GH-288 layout fixture; `.ados` + `ADOS_` fixture; delivered controls | New + Existing – No Change |
-| TC-BIN-045 | `tests/behaviour/prior-identity-notice.test.ts` | `bun test … --filter invariance` | Paired equivalent scratch checkouts with config files; path normalisation; exit-1 and exit-2 fixtures | New |
-| TC-BIN-050 | `tests/checks/install-launcher-installer.test.ts`; `tests/structure/install-launcher.test.ts` | `bun test … --filter register` | `mkdtemp` scratch HOME + scratch project root; ambient override; network/git shim; absence precondition; scrubbed-query evidence | New |
-| TC-BIN-051 | `tests/checks/install-launcher-installer.test.ts` | `bun test … --filter idempotence` | Second source copy; digest/mode/mtime comparison | New |
-| TC-BIN-052 | `tests/checks/install-launcher-installer.test.ts` | `bun test … --filter missing-target` | Copied source tree removed; fake `jaiship` earlier on `PATH` | New |
-| TC-BIN-053 | `tests/checks/install-launcher-installer.test.ts` | `bun test … --filter passthrough` | Override + state override; separated stdout/stderr capture; exit 1/2 fixtures; no stdin cell | New |
+| TC-BIN-011 | `tests/behaviour/identity-override.test.ts` | `bun test … -t "empty-override"` | Empty and whitespace-only override variants | New |
+| TC-BIN-012 | `tests/behaviour/identity-override.test.ts`; extends `entrypoint-help-isolation.test.ts` | `bun test … -t "invalid-override"` | Invalid override matrix; positional-free `status --json` cell; prior file present; alias baseline (exit, envelope, summary) | New + Existing – Update |
+| TC-BIN-013 | `tests/behaviour/prior-identity-config-fallback.test.ts`, `prior-identity-state-fallback.test.ts` | `bun test … -t "alias"` | Alias fixtures with current/prior artifacts in both directions | New |
+| TC-BIN-014 | `tests/behaviour/identity-override.test.ts` | `bun test … -t "determinism"` | Input matrix; two cwd/home variants | New |
+| TC-BIN-020 | `tests/behaviour/prior-identity-config-fallback.test.ts` | `bun test … -t "prior-read"` | Scratch checkout from `config-only/` shape; counting acquisition facts; zero-added-acquisition control; `config --json` unreachable probe | New |
+| TC-BIN-021 | `tests/behaviour/prior-identity-config-fallback.test.ts` | `bun test … -t "current-wins"` | `both-layers/` fixture with shared + unique keys | New |
+| TC-BIN-022 | `tests/behaviour/prior-identity-config-fallback.test.ts` | `bun test … -t "per-layer"` | `mixed-layers/`, `local-only/` fixtures | New |
+| TC-BIN-023 | `tests/behaviour/prior-identity-config-fallback.test.ts` | `bun test … -t "selected-config"` | `selected-config/` fixture; external selected file; delivered skips | New |
+| TC-BIN-024 | `tests/behaviour/prior-identity-config-fallback.test.ts` | `bun test … -t "global-layers"` | `global-layers/` + scratch `~/.config`; platform facts | New |
+| TC-BIN-025 | `tests/behaviour/prior-identity-config-fallback.test.ts` | `bun test … -t "read-only"` | Recursive snapshot (path/size/mode/digest/mtime); sentinel file | New |
+| TC-BIN-026 | `tests/behaviour/prior-identity-config-fallback.test.ts` | `bun test … -t "strict"` | Prior-read, `deprecated`, and `missing` fixtures; delivered strict control | New |
+| TC-BIN-030 | `tests/behaviour/prior-identity-state-fallback.test.ts` | `bun test … -t "prior-root"` | `host-root/` fixture copied to scratch home; matching marker checkout | New |
+| TC-BIN-031 | `tests/behaviour/prior-identity-state-fallback.test.ts` | `bun test … -t "no-second-root"` | Home listing snapshots; armed create guard; three invocation kinds | New |
+| TC-BIN-032 | `tests/behaviour/prior-identity-state-fallback.test.ts` | `bun test … -t "override-wins"` | Absolute and relative override cases; two distinct seeded stores | New |
+| TC-BIN-033 | `tests/behaviour/prior-identity-state-fallback.test.ts` | `bun test … -t "both-roots"` | Both roots populated with distinct records | New |
+| TC-BIN-034 | `tests/behaviour/prior-identity-state-fallback.test.ts`; extends `tests/structure/state-scope.test.ts` | `bun test … -t "prior-prefix"` | Counting environment record; both identities | New + Existing – Update |
+| TC-BIN-035 | `tests/behaviour/prior-identity-state-fallback.test.ts` | `bun test … -t "single-root"` | Mutating command fixture; append path assertion; one-resolution counter | New |
+| TC-BIN-036 | `tests/behaviour/prior-identity-state-fallback.test.ts` | `bun test … -t "first-use"` | Empty scratch home; marker checkout; alias twin | New |
+| TC-BIN-040 | `tests/behaviour/prior-identity-notice.test.ts` | `bun test … -t "once-per-source"` | Both-halves fallback fixture (scratch checkout with `.delivery-os/config.yaml` + seeded prior root); separate stdout/stderr capture; one real subprocess cell | New |
+| TC-BIN-041 | `tests/behaviour/prior-identity-notice.test.ts` | `bun test … -t "repeat-resolution"` | Two composed programs over one fixture; sequence-numbered sink; emission guard; one fresh subprocess cell | New |
+| TC-BIN-042 | `tests/behaviour/prior-identity-notice.test.ts` | `bun test … -t "no-fallback"` | Silence fixtures with their config shape; self-description silence cell; positive control in the same suite | New |
+| TC-BIN-043 | `tests/behaviour/prior-identity-notice.test.ts` | `bun test … -t "text-contract"` | Canary values and canary path segment; all four reasons | New |
+| TC-BIN-044 | `tests/behaviour/prior-identity-notice.test.ts`; `legacy-adapter.test.ts` as control | `bun test … -t "distinctness"` | Pre-GH-288 layout fixture; `.ados` + `ADOS_` fixture; delivered controls | New + Existing – No Change |
+| TC-BIN-045 | `tests/behaviour/prior-identity-notice.test.ts` | `bun test … -t "invariance"` | Paired equivalent scratch checkouts with config files; path normalisation; exit-1 and exit-2 fixtures | New |
+| TC-BIN-050 | `tests/checks/install-launcher-installer.test.ts`; `tests/structure/install-launcher.test.ts` | `bun test … -t "register"` | `mkdtemp` scratch HOME + scratch project root; ambient override; network/git shim; absence precondition; scrubbed-query evidence | New |
+| TC-BIN-051 | `tests/checks/install-launcher-installer.test.ts` | `bun test … -t "idempotence"` | Second source copy; digest/mode/mtime comparison | New |
+| TC-BIN-052 | `tests/checks/install-launcher-installer.test.ts` | `bun test … -t "missing-target"` | Copied source tree removed; fake `jaiship` earlier on `PATH` | New |
+| TC-BIN-053 | `tests/checks/install-launcher-installer.test.ts` | `bun test … -t "passthrough"` | Override + state override; separated stdout/stderr capture; exit 1/2 fixtures; no stdin cell | New |
 | TC-BIN-054 | `tests/structure/entrypoint-installer-absence.test.ts`; `tests/structure/install-launcher.test.ts` | `bun test tests/structure/entrypoint-installer-absence.test.ts tests/structure/install-launcher.test.ts` | Installer source parse; temp-copy negative control | Existing – Update + New |
-| TC-BIN-055 | `tests/checks/install-launcher-installer.test.ts` | `bun test … --filter hermeticity` | Real-home existence/size/mtime snapshot (no absence claim); write-prefix allowlist; network/git shim | New |
-| TC-BIN-056 | `tests/checks/install-launcher-installer.test.ts` | `bun test … --filter preconditions` | No-Bun symlink-farm `PATH`; docs-only source tree; `--dry-run`; `--tool` matrix; override-scrub evidence | New |
+| TC-BIN-055 | `tests/checks/install-launcher-installer.test.ts` | `bun test … -t "hermeticity"` | Real-home existence/size/mtime snapshot (no absence claim); write-prefix allowlist; network/git shim | New |
+| TC-BIN-056 | `tests/checks/install-launcher-installer.test.ts` | `bun test … -t "preconditions"` | No-Bun symlink-farm `PATH`; docs-only source tree; `--dry-run`; `--tool` matrix; override-scrub evidence | New |
 | TC-BIN-060 | `tests/structure/entrypoint-bin.test.ts` | `bun test tests/structure/entrypoint-bin.test.ts` | Manifest parse; temp-root manifest mutants | Existing – Update |
 | TC-BIN-061 | `tests/structure/content-inventory.test.ts` + `inventory.json` | `bun test tests/structure/content-inventory.test.ts` | Inventory entries for new files; allowance entries; entrypoint allowance loses `neutralWorkingName` and keeps `workingNameEnvironmentVariable`; temp-root mutants | Existing – Update |
-| TC-BIN-062 | `tests/structure/entrypoint-bin.test.ts` | `bun test … --filter literals` | Declared `packages/**` string-literal scan; five-site inventory in two scopes; entrypoint no-literal/no-accessor assertions; one in-process call with no declared default; temp-root sixth site, missing-site, re-declared accessor, and field-literal controls | Existing – Update |
-| TC-BIN-063 | `tests/structure/entrypoint-bin.test.ts` | `bun test … --filter shared-composition` | Pinned allowed difference set (`completion` on both bins + selector facts); body-site search; entrypoint exports only the protocol accessor; temp-root duplicate body, launcher-side default, missing `completion` | Existing – Update |
+| TC-BIN-062 | `tests/structure/entrypoint-bin.test.ts` | `bun test … -t "literals"` | Declared `packages/**` string-literal scan; five-site inventory in two scopes; entrypoint no-literal/no-accessor assertions; one in-process call with no declared default; temp-root sixth site, missing-site, re-declared accessor, and field-literal controls | Existing – Update |
+| TC-BIN-063 | `tests/structure/entrypoint-bin.test.ts` | `bun test … -t "shared-composition"` | Pinned allowed difference set (`completion` on both bins + selector facts); body-site search; entrypoint exports only the protocol accessor; temp-root duplicate body, launcher-side default, missing `completion` | Existing – Update |
 | TC-BIN-064 | `tests/structure/branding-seam.test.ts` (unchanged) + probe in `tests/structure/entrypoint-bin.test.ts` | `bun test tests/structure/branding-seam.test.ts tests/structure/entrypoint-bin.test.ts` | Delivered scanner + three delivered negative controls; `bin/**` and `src/entrypoint.ts` corpus probes through the exported `validateSeam` | Existing – No Change (seam file) / probe New |
 | TC-BIN-065 | `tests/structure/projects-state-scope-policy.test.ts`; `tests/structure/state-scope.test.ts` | `bun test tests/structure/projects-state-scope-policy.test.ts tests/structure/state-scope.test.ts` | Delivered AST scan; helper call-count assertion; injected re-derived path | Existing – Update |
 | TC-BIN-066 | `tests/structure/entrypoint-installer-absence.test.ts` | `bun test …` | Array parse; step declaration search; temp-copy array mutation | Existing – Update |
-| TC-BIN-067 | `tests/structure/entrypoint-bin.test.ts`; delivered error-table sync check | `bun test … --filter family-and-error-table` | Family declaration; error-table source; extra-family mutant | Existing – Update |
+| TC-BIN-067 | `tests/structure/entrypoint-bin.test.ts`; delivered error-table sync check | `bun test … -t "family-and-error-table"` | Family declaration; error-table source; extra-family mutant | Existing – Update |
 | TC-BIN-070 | `tests/checks/doc-conformance.test.ts` (self-contained table) | `bun test tests/checks/doc-conformance.test.ts` | Five-page exact set (incl. the distribution-marker page); stale/required phrases both directions; synthetic texts and a missing-page control | Existing – Update |
 | TC-BIN-071 | `tests/checks/identity-docs.test.ts`; `scripts/.tests/test-doc-distribution.sh` | `bun test tests/checks/identity-docs.test.ts && bash scripts/.tests/test-doc-distribution.sh` | New guide; registry JSON; spec-page link (R-D); temp-copy marker/registry mutations | New |
-| TC-BIN-072 | `tests/checks/identity-docs.test.ts`; delivered branding-contract and manifest-privacy checks | `bun test tests/checks/identity-docs.test.ts --filter divergences`; `bun run scripts/checks/forbidden-literals.ts` | Spec §8.5 four-divergence list; guide by-role section; `matchSeedLiteral` over the guide; registry registration; installer `--help` and change-record identifier evidence; installer defaults | New |
+| TC-BIN-072 | `tests/checks/identity-docs.test.ts`; delivered branding-contract and manifest-privacy checks | `bun test tests/checks/identity-docs.test.ts -t "divergences"`; `bun run scripts/checks/forbidden-literals.ts` | Spec §8.5 four-divergence list; guide by-role section; delivered scan plus per-line body check (header allowlist); registry registration; installer header/`--help` and change-record identifier evidence; installer defaults | New |
 | TC-BIN-073 | `scripts/checks/forbidden-literals.ts`; `tests/checks/forbidden-literals.test.ts` | `bun run scripts/checks/forbidden-literals.ts && bun test tests/checks/forbidden-literals.test.ts` | Registry seed set/baseline; unregistered-doc and seeded-literal mutants | Existing – No Change (controls extended by the new guide) |
 | TC-BIN-080 | repository root | `TMPDIR=$(mktemp -d "$HOME/.cache/ados-check-XXXXXX") pnpm check` (repo-local run recorded as evidence only) | Installed workspace; same-device `$HOME/.cache` temp dir; recorded logs and the three named suite verdicts | Gate |
 | TC-BIN-081 | repository root | `./scripts/lint-commit-range.sh --base main-tools` | Change branch with commits; local commitlint | Gate |
 | TC-BIN-082 | delivered suites (named in the case) incl. `tests/conformance/pilot/pilot-isolation.test.ts` | `bun test …` per file + `bash scripts/.tests/test-install.sh` | Built artefacts; per-file verdicts; the conformance cell updated, not deleted | Existing – Update (conformance) / No Change (others) |
-| TC-BIN-083 | `tests/behaviour/daemon-start-detached.test.ts` | `bun test … --filter child-environment` | Delivered allowlist pin; identity matrix; installed-unit renderer | Existing – Update |
+| TC-BIN-083 | `tests/behaviour/daemon-start-detached.test.ts` | `bun test … -t "child-environment"` | Delivered allowlist pin; identity matrix; installed-unit renderer | Existing – Update |
 | TC-BIN-084 | `tests/checks/prior-identity-hermetic.test.ts` + preload module | `bun test tests/checks/prior-identity-hermetic.test.ts` | Static import/surface scan; spawned `bun --preload … test <named suites>`; violation report; canary cell per counter class | New |
 
 ## 8. Risks, Assumptions, and Open Questions
@@ -1838,7 +1841,7 @@ Every case is automated in `bun test` — the installer integration cases spawn 
 | **R-TP-12 — Documentation truth is asserted by prose reading**, which no gate enforces. | `TC-BIN-070` adds a **self-contained** page/phrase table to `tests/checks/doc-conformance.test.ts` (both directions, exact five-page set, negative controls) without editing the historical table; `TC-BIN-071`/`TC-BIN-073` ride machine guards (marker, registry, scan), and `TC-BIN-072` asserts the unchanged values and the four divergences mechanically; prose quality remains review-attested (DOC-TP-1, GAP-T5). |
 | **R-TP-13 — The configuration half silently depends on a delivered acquisition that a later change could remove.** | `TC-BIN-020` asserts the acquisition actually ran (non-zero counter), that it ran before the handler, and that the count equals the control's — so a lost acquisition fails naming the missing read rather than passing on a vacuous "no fallback" outcome. Spec §22 records the dependency (DEC-14). |
 | **R-TP-14 — The installer cases are moved out of shell-suite discovery and could lose CI coverage.** | The cases live in `tests/checks/install-launcher-installer.test.ts`, which `bun test` discovers in the Bun-bearing job; `TC-BIN-050` fails (never skips) if the spawn cannot find `bun` or the installer, and no CI-workflow edit is required (D9). |
-| **R-TP-15 — The guide's mandated installer divergence collides with the seeded-literal scan.** | `TC-BIN-072` step 6 requires the fourth divergence **by role**, step 7 asserts the guide is seed-free with the delivered `matchSeedLiteral` (plus a per-token negative control), step 8 asserts registration and a green scan, and step 9 proves the exact identifiers live in `scripts/install.sh --help` and the change record. `TC-BIN-071` step 4 is aligned to the same rule, so no case can demand seed tokens in a scanned document (spec v1.4 F-8/NFR-8, iter-2 finding 2). |
+| **R-TP-15 — The guide's forced `ados_distribution:` marker matches a seed, so a naive "seed-free" assertion would be unattainable.** | `TC-BIN-072` step 6 requires the fourth divergence **by role**; step 7 asserts cleanliness through the **delivered scan's per-line, line-allowlisted** semantics (only the `ados_distribution:`/`source:`/`Copyright`/`Apache-2.0` header lines may match), with a body-line splice negative control; step 8 asserts registration and a green repo-wide scan; step 9 proves the exact identifiers live outside the guide. The case states why the bare whole-text matcher is not used, so the contradiction cannot be reintroduced (spec v1.5 F-8/NFR-8; iter-2 finding 2, corrected in iter-3). |
 
 ### 8.2 Assumptions
 
@@ -1846,10 +1849,10 @@ Every case is automated in `bun test` — the installer integration cases spawn 
 - The delivered structure suites (`branding-seam`, `projects-state-scope-policy`, `content-inventory`) expose scanners that accept an injected root, which is how every negative control is built over the production scanner instead of a re-implementation. Where a scanner does not, the case extends it in the same change rather than duplicating the logic in the test.
 - The delivered notice channel is stderr through the composition's warning/write path; the prior-identity notice uses that channel as a notice, not as a configuration warning, so the payload warning list stays empty (`TC-BIN-026`, `TC-BIN-045`).
 - A project store is single-rooted (spec §12), so a fallback invocation writes into the prior root; the cases assert single-rootedness and the absence of migration-shaped writes, not read-only store access (`TC-BIN-035`).
-- The invalid-override projection is the **delivered containment family**, split by invocation shape (spec v1.4 DEC-11, D6; DoR iter-2 finding 1): a positional-free command (`status --json`) yields `fallback.internal` at exit `2` with the resolver-level input error wrapped inside; a command carrying a subcommand token (`daemon status`) fails earlier, at argument parsing, as `fallback.invocation` at exit `1` with `unexpected argument "<token>"`, because brand resolution fails before any composition exists and the synthetic uncomposed definition declares no positionals. Both are containment and neither is CLI-visible; no command can be state-opening in this state. `TC-BIN-002` pins `--version`/`--help` **and** the alias's `fallback.internal` projection against the baseline; `TC-BIN-012` asserts the positional-free cell and rejects a classified projection on either stream, and it records — but does not assert or require a change to — the parse-level cell. No case expects a CLI-visible resolver error.
+- The invalid-override projection is the **delivered containment family**, split by invocation shape (spec v1.5 DEC-11, D6; DoR iter-2 finding 1, iter-3 finding 2): a positional-free command (`status --json`) yields `fallback.internal` at exit `2` with the resolver-level input error wrapped inside; a command carrying a subcommand token (`daemon status`) fails earlier, at argument parsing, as `fallback.invocation` at exit `1` with `unexpected argument "<token>"`, because brand resolution fails before the **command set** is composed and the synthetic uncomposed definition declares no positionals. The delivered **pre-composition touch** — the configuration probe/read and the state-root/host-index work — still occurs before containment, is part of "behaviourally unchanged", and is asserted **unchanged**, never absent (spec v1.5 §8.5). Both projections are containment and neither is CLI-visible. `TC-BIN-002` pins `--version`/`--help` **and** the alias's `fallback.internal` projection against the baseline; `TC-BIN-012` asserts the positional-free cell, rejects a classified projection on either stream, and records — but does not assert or require a change to — the parse-level cell. No case expects a CLI-visible resolver error and no case asserts zero reads or zero state on this path.
 - `status --json` performs the delivered composition-time project-configuration acquisition on every composed invocation, so the configuration half is proven on the ticket's literal surface with zero acquisitions added (spec v1.2 §2.1, DEC-14, D5). The alternative `config --json` surface is unreachable (`fallback.internal`, exit `2`) and is asserted as such rather than used.
 - The installer integration cases run inside the Bun test job and need no workflow change (D9); the installer's install-time Bun requirement is a declared precondition whose absence is a classified failure, not a skip (DEC-15).
-- The guide is a **registered, seed-scanned** document, so it cannot spell the installer's pre-freeze identifiers: the fourth divergence is stated **by role**, and the exact identifiers are discoverable from `scripts/install.sh --help` and the change record (spec v1.4 F-8/NFR-8/AC-F8-11; iter-2 finding 2). `TC-BIN-072` guards both halves — the by-role statement and the seed-free property — so the constraint cannot be satisfied by silence or by editing the seed set (NG-9).
+- The guide is a **registered, seed-scanned** document, so it cannot spell the installer's pre-freeze identifiers: the fourth divergence is stated **by role**, and the exact identifiers are discoverable from `scripts/install.sh --help`/the script header and the change record (spec v1.5 F-8/NFR-8/AC-F8-11; iter-2 finding 2). The mandatory `ados_distribution:` marker itself matches the `ados` seed, and the delivered scan line-allowlists that marker and the identity header; `TC-BIN-072` therefore guards cleanliness with the **scan's** per-line semantics plus a body-line splice control, never a whole-text equality, so the constraint cannot be satisfied by silence, by editing the seed set, or by an unattainable assertion (NG-9; iter-3 finding 1).
 - Suite file names and module seams are delivery-bound (GAP-T6); behaviours, identities, exits, closed vocabularies, precedence, the delivered containment projection, and AC traceability are not. Phase ownership is declared in `chg-GH-320-plan.yaml` revision 1.x, whose R-A..R-G reconciliations this plan absorbs.
 - The operator-workstation facts in §6 describe the delivery environment; no case depends on them (in particular, no case asserts that `~/.jaiship` or any real-home path is absent), so the suite is green on a clean CI runner and on a workstation where `~/.jaiship/bin` already exists.
 - Privacy posture (spec §20/§21: paths only, no values, no new data flow) carries no NFR row; it is covered by `TC-BIN-043`'s no-value/no-secret assertion and by review attestation. No dedicated privacy case is invented beyond the declared requirements.
@@ -1861,7 +1864,7 @@ Every case is automated in `bun test` — the installer integration cases spawn 
 | **B-1** (resolved in spec v1.1, extended in v1.2) | Historical, kept short: DM-6's original "exactly three declared committed literal sites under `packages/**`" conflicted with delivered literals. **Resolution:** spec v1.1 declared four sites and removed the entrypoint's neutral default plus its `neutralWorkingName` accessor; spec v1.2 / D7 replaced the count with a stated scan rule and a **five-site** inventory (three CLI selector sites, the unchanged MCP default, and the resolver's `SCOPE_ORG` derivation input), requiring every declared site found and every found literal declared. No blocking finding remains; `TC-BIN-062` and `TC-BIN-061` assert the reconciled text. | Resolved — spec v1.1/v1.2 | No |
 | **B-2** | **Non-blocking environment finding.** `AC-F1-1` names `pnpm exec jaiship --version`, which requires the workspace bin link created by `pnpm install`. The link is absent on a clean checkout until install, so a cell that only spawns `pnpm exec` is environment-dependent. | Resolved in-plan: `TC-BIN-001` asserts the semantics through the entry file and treats the linked cell as an additional assertion that fails with a named setup instruction (`pnpm install`), never skips. | No |
 | **OQ-TP-1** | Which surface reports the effective host root? The spec does not pin a payload field, and `status --json`'s shape is delivered. | Open — `@coder` selects; `TC-BIN-030`/`033`/`035` assert the root at the composition seam and by write location, and fail naming the missing surface (SURF-TP-1). | No |
-| **OQ-TP-2** (resolved by D6 / spec v1.4; shape split by DoR iter-2 finding 1) | Projection of the resolver's `BrandingInputError` on a configuration-bearing command. **Resolved per invocation shape:** positional-free (`status --json`) → `fallback.internal`, exit `2`, delivered summary; subcommand-bearing (`daemon status`) → `fallback.invocation`, exit `1`, `unexpected argument "<token>"`. Both wrap the resolver-level error and neither is CLI-visible; AC-F2-7 and DEC-11 record the first, and this plan records the second as a delivered secondary fact. | Resolved — `TC-BIN-012` asserts the `fallback.internal` cell and the alias baseline; the parse-level cell is documented only | No |
+| **OQ-TP-2** (resolved by D6 / spec v1.5; shape split by iter-2 finding 1, touch clarified by iter-3 finding 2) | Projection of the resolver's `BrandingInputError` on a configuration-bearing command. **Resolved per invocation shape:** positional-free (`status --json`) → `fallback.internal`, exit `2`, delivered summary; subcommand-bearing (`daemon status`) → `fallback.invocation`, exit `1`, `unexpected argument "<token>"`. Both wrap the resolver-level error, neither is CLI-visible, and the delivered pre-composition touch (config probe/read, state-root/host-index) occurs before containment and is unchanged. | Resolved — `TC-BIN-012` asserts the `fallback.internal` cell, the unchanged touch, and the alias baseline; the parse-level cell is documented only | No |
 | **OQ-TP-3** | Exact wording of the "nothing was moved, copied, or deleted" clause and the location-naming form. The spec pins the requirement, not the sentence. | Open — `@coder`; `TC-BIN-043` asserts the semantic components (token, reason, both locations, no-move statement, ≤ 400 characters), not one exact sentence. | No |
 | **OQ-TP-4** | Whether the launcher's missing-target failure is a shell `exec` guard or a Bun-side check, and therefore its exact exit code beyond "non-zero". | Open — `@coder`; `TC-BIN-052` asserts non-zero, one bounded line, the named target and remedy, and no `PATH` fallback — not a specific code. | No |
 | **OQ-TP-5** | Whether the install-path self-description is exposed only to the installer or also documented as a user command. §8.1 pins the invocation, so the test treats it as public. | Open — `@doc-syncer`; `TC-BIN-006` and `TC-BIN-071` assert the invocation and the guide's mention respectively. | No |
@@ -1890,16 +1893,31 @@ Every case is automated in `bun test` — the installer integration cases spawn 
 
 | Iter-2 finding | Disposition |
 |---|---|
-| 1 (blocking — `daemon status` clause) | **Fixed.** `TC-BIN-012` asserts the `fallback.internal` / exit `2` projection on the positional-free `status --json` only, keeps the alias baseline byte-compare, and records the subcommand-bearing `fallback.invocation` / exit `1` parse failure as a delivered secondary fact in an explicit note (plus §3.2, §8.2, §8.3); the "state-opening configuration-bearing command" requirement is deleted, and no wording implies a command can be state-opening while composition is unavailable. |
+| 1 (blocking — `daemon status` clause) | **Fixed.** `TC-BIN-012` asserts the `fallback.internal` / exit `2` projection on the positional-free `status --json` only, keeps the alias baseline byte-compare, and records the subcommand-bearing `fallback.invocation` / exit `1` parse failure as a delivered secondary fact in an explicit note (plus §3.2, §8.2, §8.3); the "state-opening configuration-bearing command" requirement is deleted, and the delivered pre-composition touch is asserted **unchanged** rather than absent (iter-3 finding 2). |
 | 2 (major — guide vs seed-literal scan) | **Fixed.** `TC-BIN-072` requires the fourth divergence **by role**, asserts the guide is seed-free with the delivered `matchSeedLiteral` (with a per-token negative control), asserts registry registration and a green scan, and proves the exact identifiers are discoverable from `scripts/install.sh --help` and the change record; `TC-BIN-071` step 4 is aligned; §3.1/§3.3/§3.5/§7/§8.1/§8.2 mirror the constraint. |
 | 3 (spec/plan citations and arithmetic) | **Plan-side**, plus the two citations in this artefact: spec reference is now **v1.4** and the plan reference is **revision 1.1** (was v1.2 / 1.0). |
-| 4 (harness `--filter` is not a `bun test` flag) | **Open.** This revision keeps the plan's existing `--filter` convention for uniformity and does not migrate ~40 harness entries; a single mechanical pass should switch them to `-t/--test-name-pattern` (which fails on zero matches) or state that each entry runs its whole suite file. Recorded, not fixed here. |
+| 4 (harness selection flag) | **Fixed in v1.4.** Every harness entry now uses Bun's `-t/--test-name-pattern` selector (which fails on zero matches) or runs its whole file; the §5 bodies and the §7 automation cells agree. |
 | 5 (plan AC matrix omits 083/084) | **Plan-side.** |
-| 6 (stale phrase not verbatim) | **Open.** `TC-BIN-070` step 2 still quotes "the bin is not part of the install surface" rather than the delivered "The bin is not part of the install or release surface."; the assertion is a substring check, so it would pass on today's file. Fixing it belongs to the same documentation-guard pass as minor 4. |
+| 6 (stale phrase not verbatim) | **Fixed in v1.4.** `TC-BIN-070` step 2 quotes the delivered sentence in full — `The bin is not part of the install or release surface.` — and requires a full-sentence absence check, matching the plan's documentation obligation. |
 | 7 (TDR-0022 record drift) | **Spec-side.** |
-| 8 (landing-page rationale / "at least one" vs "the four") | **Open.** `TC-BIN-071` step 5 still carries the self-undermining rationale and the "at least one" wording; the case body was otherwise aligned to the by-role rule. |
+| 8 (landing-page rationale / "at least one" vs "the four") | **Fixed in v1.4.** `TC-BIN-071` step 5 requires **all four** spec pages to link the guide, keeps `doc/00-index.md` untouched, and states the M4-S1 deferral instead of the self-undermining index argument. |
 | 9 (runEntrypoint count) | **Plan-side.** |
 | 10–13 (nits) | 10/11/13 are plan/spec-side; **12** (revision-log order) is fixed incidentally by this revision (rows now run 1.0, 1.1, 1.2, 1.3). |
+
+
+**DoR iter-3 findings disposition (this artefact).** Both findings assigned to `test_planning` are remediated, together with the three test-plan minors the iteration listed; no test-plan finding remains open.
+
+| Iter-3 finding | Disposition |
+|---|---|
+| 1 (blocking — `TC-BIN-072` step 7 bare-matcher assertion) | **Fixed.** Step 7 no longer asserts `matchSeedLiteral(wholeText) === undefined`. It asserts cleanliness through the **delivered scan's** per-line, line-allowlisted semantics: the repo-wide scan is green and the guide is registered, and no seed literal appears outside the `ados_distribution:`/`source:`/`Copyright`/`Apache-2.0` header lines, with a **body-line** splice negative control. The case states explicitly why the bare matcher is unattainable (the mandatory marker matches the `ados` seed) so it cannot be reintroduced; the Expected Outcome, R-TP-15, §3.5 and §8.2 are aligned. |
+| 2 (major — `TC-BIN-012` step 5 / note) | **Fixed.** Step 5 now asserts only **no fallback identity substituted** and **no `prior-identity-fallback` notice**; a new step 6 asserts the delivered **pre-composition touch unchanged** against the pre-change control (an equality assertion, not an absence one); the note says brand resolution fails before the **command set** is composed while the pre-composition acquisition/touch still occurs; every "zero reads / zero state / composition never runs" phrase is removed from the case, the note, §8.2 and §8.3. |
+| 3 (minor — `TC-BIN-070` step 2) | **Fixed.** The stale phrase is quoted verbatim and in full (`The bin is not part of the install or release surface.`) and checked as a full sentence. |
+| 4 (minor — `TC-BIN-071` step 5) | **Fixed.** All four spec pages must link the guide (a missing page fails by name); `doc/00-index.md` stays untouched and the index row is deferred to the M4-S1 remainder. |
+| 5 (minor — harness selection flag) | **Fixed.** Every harness entry now uses Bun's `-t/--test-name-pattern` selector or runs its whole file; §5 bodies and §7 cells agree. |
+| 6 (minor — plan census classification) | **Plan-side.** |
+| 7 (minor — `TC-BIN-072` step 9 installer-help wording) | **Fixed.** Step 9 states which surface carries which fact: the script header names all five, the rendered `--help` Environment section names four and prints the fifth variable's expanded one-liner value, so the assertion compares the one-liner URL to the raw-URL default rather than looking for the literal token in `--help`; the change record names all five. |
+| 8 (nit — spec AC/DEC universal quantifier) | **Spec-side** (addressed by the v1.5 AC-F2-7 shape split). |
+| 9 (nit — PM record overstates closure) | **PM-record side.** |
 
 ## 9. Plan Revision Log
 
@@ -1909,6 +1927,7 @@ Every case is automated in `bun test` — the installer integration cases spawn 
 | 1.1 | 2026-11-15 | @test-plan-writer | Reconciled with spec **v1.1** (`B-1` resolved): `TC-BIN-062` now asserts the declared **four-site** inventory in two scopes — CLI (three selector sites) and unchanged MCP (one delivered default) — with no residual neutral default and a no-declared-default call proving the removal is not a shim; `TC-BIN-061` asserts the entrypoint module's executable allowance loses exactly `neutralWorkingName`, keeps `workingNameEnvironmentVariable`, and leaves file-set equality unchanged; `TC-BIN-063`/`TC-BIN-064` assert the entrypoint exposes no identity value, no retired accessor, and cannot be passed a neutral fallback, with the seam file still byte-identical; `LIT-TP-1` reclassified from substitute to direct assertion (five substitutions remain); `B-1` moved to resolved, blocking findings now 0; AC traceability, coverage intent, the gate invocation, and the execution-order recommendation unchanged. |
 | 1.2 | 2026-11-15 | @test-plan-writer | Reconciled with spec **v1.2** and DoR iter-1 (findings 1, 2, 5, 8, 10–13, 20–23): the configuration half, and the notice cases `TC-BIN-040`/`041`/`042`/`045`, run on the ticket's literal `status --json` surface through the delivered composition-time acquisition (D5/DEC-14), with `TC-BIN-020` asserting zero added acquisitions and `config --json` unreachable; `TC-BIN-012` asserts the delivered `fallback.internal` containment at exit `2` for both bins with the alias projection byte-compared to its baseline (D6/DEC-11, BYTE-TP-1 extended); `TC-BIN-062`/`LIT-TP-1` assert the declared **five-site** inventory under its `packages/**` string-literal scan rule (D7); `TC-BIN-084` uses a static surface scan plus a spawned `--preload` subprocess (D11); `TC-BIN-055` drops the real-home absence claim; `TC-BIN-070` uses a self-contained five-page table and §6 materialises scratch checkouts; `TC-BIN-063` pins the `completion` export set; the installer integration cases move to the Bun test `tests/checks/install-launcher-installer.test.ts` with `TC-BIN-056` added for the declared preconditions and failures (D9/DEC-15); `TC-BIN-072` declares the installer as the fourth divergence; `TC-BIN-080` runs the single executable same-device gate with the repo-local run as evidence (D10); `TC-BIN-082` adds the conformance isolation cell; 55 cases, 11/11 ACs, 15/15 decisions, 0 orphans, 0 blocking findings. |
 | 1.3 | 2026-11-15 | @test-plan-writer | Reconciled with spec **v1.4** and DoR iter-2: finding 1 (blocking) — `TC-BIN-012` now asserts the delivered containment projection **per invocation shape**, `fallback.internal` at exit `2` on the positional-free `status --json` for both bins plus the alias baseline byte-compare, with the subcommand-bearing `daemon status` parse failure (`fallback.invocation`, exit `1`, `unexpected argument "status"`) recorded as a delivered secondary fact instead of an acceptance clause, and the "state-opening while composition is unavailable" wording removed; finding 2 (major) — `TC-BIN-072` requires the fourth divergence **by role**, asserts the registered guide is seed-free under the delivered `matchSeedLiteral` (case-insensitive, lowercase-ASCII delimited, longest seed reported) with a per-token negative control, asserts registration plus a green `forbidden-literals` scan, and proves the exact installer identifiers live in `scripts/install.sh --help` and the change record, with `TC-BIN-071` step 4 and the §3.1/§3.3/§3.5/§7/§8 rows aligned; spec citation bumped to v1.4 and the plan reference to revision 1.1; iter-2 test-plan minors 4, 6 and 8 recorded open in §8.3 and the revision-log order corrected; 55 cases, 11/11 ACs, 0 orphans, 0 blocking findings. |
+| 1.4 | 2026-11-15 | @test-plan-writer | Reconciled with spec **v1.5** and DoR iter-3: finding 1 (blocking) — `TC-BIN-072` step 7 replaces the unattainable bare `matchSeedLiteral` whole-text assertion with the **delivered scan's** per-line, line-allowlisted form (green scan + registration, no seed outside the `ados_distribution:`/`source:`/`Copyright`/`Apache-2.0` header lines, body-line splice control, and an explicit statement of why the bare matcher is not used); finding 2 (major) — `TC-BIN-012` step 5 asserts only no substituted identity and no `prior-identity-fallback` notice, a new step 6 asserts the delivered **pre-composition touch unchanged** against the control, and every "zero reads / zero state / composition never runs" phrase is removed from the case, the note, §8.2 and §8.3; minors 3/4/5/7 — the stale sentence quoted verbatim and checked in full, all four spec pages required to link the guide with the index row deferred to M4-S1, every harness entry moved to Bun's `-t/--test-name-pattern` selector, and the installer-help wording made exact (header names five, `--help` names four and prints the fifth's expanded value); spec citation bumped to v1.5; 55 cases, 11/11 ACs, 0 orphans, 0 blocking findings. |
 
 ## 10. Test Execution Log
 
