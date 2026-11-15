@@ -10,7 +10,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-15T09:13:03.028Z }
   delivery_planning: { started: null, completed: 2026-11-15T09:27:08.625Z }
   dor_check: { started: null, completed: 2026-11-15T09:31:33.835Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-15T09:33:48.374Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -181,4 +181,31 @@ notes:
       drop the DoD section, and scope-limit every 'out of scope' clause against
       the named in-scope edit rather than against the change class."
     type: retro
+    date: "2026-11-15"
+  - text: "PLAN PHASE 1 (delivery) COMPLETE: sanitized the recorded absolute gate
+      temp root in the GH-310 pm-notes. Edit: exactly one literal on line 279 —
+      the recorded phase-9 aggregate-gate command's TMPDIR value moved from the
+      operator-local absolute temp root to the repository-relative convention
+      TMPDIR=$PWD/tmp/tmpdir. Nothing else in the file moved: no reflow,
+      re-indent, or key reorder; every recorded verdict string, pass/skip/fail
+      count, commit hash, and phase timestamp is byte-identical. Verification,
+      all green: (1) `bun run scripts/checks/privacy-literals.ts` -> exit 0, OK
+      privacy-literals: 4077 file(s) scanned, 7 rule(s), 0 violation(s)
+      (baseline before the edit: exit 1, one private.absolute-user-path at that
+      same file:279). (2) `delivery-os lint GH-310` on the pm-notes target ->
+      exit 0, evidence class conforms. (3) home-rooted absolute-path scan of the
+      GH-310 change folder -> no match (grep exit 1). (4) `git diff --numstat`
+      for the affected file -> 1 1; `git diff -U0 | grep '^[-+]' | wc -l` -> 2
+      (one removed plus one added line = a single value substitution); `git diff
+      --check` -> exit 0, clean; the document still parses (30 notes). (5) `bun
+      test tests/checks/doc-conformance.test.ts` -> exit 0, 11 pass / 0 fail, 25
+      expect() calls. The aggregate `pnpm check` was not run in this phase:
+      lifecycle phase 9 owns the full battery (obligation 1.6 is best-effort and
+      AC-F1-1 stays binding). Commit: the single delivery commit produced by the
+      `commit` primitive with --phase delivery, derived subject `feat(GH-322):
+      sanitize the recorded absolute gate temp root`, landing this note, the
+      sanitized line, and the delivery phase state atomically; its sha is quoted
+      in the delivery run report, because a commit sha cannot be embedded in the
+      tree it hashes and the one-commit rule forbids a follow-up note commit."
+    type: info
     date: "2026-11-15"
