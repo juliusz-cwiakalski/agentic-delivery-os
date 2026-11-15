@@ -92,6 +92,16 @@ export {
   summarizeCloseout,
 } from "./closeout.js";
 export { evaluateDiffSweep } from "./closeout-diff-sweep.js";
+export {
+  type CloseoutMemberOperationOutcome,
+  type CloseoutMemberOutcomeIndex,
+  type CloseoutMemberReportMode,
+  closeoutMemberRef,
+  projectCloseoutMember,
+  projectCloseoutMemberCleanup,
+  projectCloseoutMemberIssueClosure,
+  projectCloseoutMembers,
+} from "./closeout-members.js";
 export { evaluateWorktreeSafety } from "./closeout-worktree.js";
 export {
   type CommitActFailure,

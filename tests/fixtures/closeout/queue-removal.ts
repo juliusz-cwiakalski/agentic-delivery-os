@@ -12,7 +12,11 @@ import {
   declareQueueEntry,
   queueRemovalForCloseout,
 } from "../../../packages/core/src/app/index";
-import type { CloseoutData, StateStorePort } from "../../../packages/core/src/contracts/index";
+import type {
+  CloseoutData,
+  CrossRepositoryCloseoutObservation,
+  StateStorePort,
+} from "../../../packages/core/src/contracts/index";
 import { CLOSEOUT_QUEUE_REMOVAL_SKIP_REASONS } from "../../../packages/core/src/contracts/index";
 import { buildCloseoutPlan, runCloseout } from "../../../packages/core/src/domain/closeout";
 import { type AuditStoreFixture, makeAuditStore, removeRoot } from "../state/harness";
@@ -33,6 +37,8 @@ export type QueueRemovalHarnessOptions = {
   readonly apply: boolean;
   /** `false` composes the delivered closeout without the queue hook. */
   readonly hookEnabled?: boolean;
+  /** The injected per-member closeout observations (GH-310 DM-8). */
+  readonly members?: readonly CrossRepositoryCloseoutObservation[];
 };
 
 export type QueueRemovalHarness = {
@@ -48,11 +54,14 @@ export const createQueueRemovalHarness = (
   options: QueueRemovalHarnessOptions,
 ): QueueRemovalHarness => {
   const fixture: AuditStoreFixture = makeAuditStore(`closeout-queue-${options.label}`);
-  const facts = makeFacts(
-    options.mergeObserved === false
+  const facts = makeFacts({
+    ...(options.mergeObserved === false
       ? ({ mergedRequest: { observation: "unobserved" } } as never)
-      : {},
-  );
+      : {}),
+    ...(options.members === undefined
+      ? {}
+      : { members: options.members, checkout: { state: "base" as const } }),
+  });
   const plan = buildCloseoutPlan(facts);
   const provider = makeProvider();
   const git = makeGit();
@@ -113,10 +122,14 @@ export const hookFor = (
   });
 
 /** Seed one observed queue entry for the closeout's work item. */
-export const seedQueueEntry = (harness: QueueRemovalHarness, ref = "GH-292"): void => {
+export const seedQueueEntry = (
+  harness: QueueRemovalHarness,
+  ref = "GH-292",
+  repository = REPO,
+): void => {
   const declared = declareQueueEntry(harness.store, {
     ref,
-    repository: REPO,
+    repository,
     repositoryRoot: "/work/repo-alpha",
     priority: 1,
     recordedAt: NOW_ISO,

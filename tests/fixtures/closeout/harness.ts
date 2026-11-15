@@ -207,6 +207,8 @@ export type FakeGitOptions = {
   readonly checkedOutElsewhere?: readonly string[];
   readonly restore?: CloseoutWriteOutcome;
   readonly deleteBranch?: CloseoutWriteOutcome;
+  /** A per-branch delete outcome override (GH-310 member gap fixtures). */
+  readonly deleteBranchFor?: (branch: string) => CloseoutWriteOutcome;
 };
 
 export type FakeGit = {
@@ -248,7 +250,7 @@ export const makeGit = (options: FakeGitOptions = {}): FakeGit => {
     },
     deleteBranch: async (input) => {
       calls.push({ kind: "deleteBranch", target: input.branch, args: input });
-      return options.deleteBranch ?? { ok: true };
+      return options.deleteBranchFor?.(input.branch) ?? options.deleteBranch ?? { ok: true };
     },
   };
   return { runtime, calls };
@@ -288,7 +290,7 @@ export const makeState = (options: FakeStateOptions = {}): FakeState => {
       fence.acquired += 1;
       return { ok: true, value: { handle: handleFor(token), token } };
     },
-    append: (handle, record) => {
+    append: (_handle, record) => {
       fence.appends += 1;
       records.push(record);
       return {

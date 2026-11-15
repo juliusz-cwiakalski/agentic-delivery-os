@@ -164,6 +164,50 @@ export const CLOSEOUT_MAX_HUMAN_LINES = 200 as const;
 /** The human-output byte bound (F-13, PIN-9). */
 export const CLOSEOUT_MAX_HUMAN_BYTES = 16_384 as const;
 
+/** The bound on declared members reported in one closeout run (GH-310 DEC-10). */
+export const CLOSEOUT_MAX_MEMBERS = 8 as const;
+
+/** The per-member cleanup column in plan mode (GH-310 DM-5, DEC-12). */
+export const CLOSEOUT_MEMBER_CLEANUP_PLAN_OUTCOMES = [
+  "would-apply",
+  "satisfied",
+  "would-refuse",
+  "skipped-gap",
+] as const;
+
+/** The per-member cleanup column in apply mode (GH-310 DM-5, DEC-12). */
+export const CLOSEOUT_MEMBER_CLEANUP_APPLY_OUTCOMES = [
+  "applied",
+  "satisfied",
+  "refused",
+  "skipped-gap",
+] as const;
+
+/** The per-member issue-closure column in plan mode (GH-310 DM-5, DEC-12). */
+export const CLOSEOUT_MEMBER_ISSUE_PLAN_OUTCOMES = [
+  "would-apply",
+  "satisfied",
+  "skipped-noop",
+  "skipped-gap",
+] as const;
+
+/** The per-member issue-closure column in apply mode (GH-310 DM-5, DEC-12). */
+export const CLOSEOUT_MEMBER_ISSUE_APPLY_OUTCOMES = [
+  "applied",
+  "satisfied",
+  "skipped-noop",
+  "skipped-gap",
+] as const;
+
+/**
+ * The closed observed tracked-issue fact vocabulary (GH-310 DM-8).
+ *
+ * `open` and `closed` are observed tracker states; `none` means the member
+ * declares no tracked issue; `unavailable` is a tracker read gap. The fact is
+ * an input to the DM-5 mapping, never a report value.
+ */
+export const CLOSEOUT_MEMBER_ISSUE_FACTS = ["open", "closed", "none", "unavailable"] as const;
+
 /** One of the seven ordered step ids. */
 export type CloseoutStepId = (typeof CLOSEOUT_STEP_IDS)[number];
 
@@ -181,6 +225,79 @@ export type CloseoutOutcome = CloseoutPlanOutcome | CloseoutApplyOutcome;
 
 /** A declared gap reason. */
 export type CloseoutGapReason = (typeof CLOSEOUT_GAP_REASONS)[number];
+
+/** The per-member cleanup value in plan mode (GH-310 DM-5). */
+export type CloseoutMemberCleanupPlanOutcome =
+  (typeof CLOSEOUT_MEMBER_CLEANUP_PLAN_OUTCOMES)[number];
+
+/** The per-member cleanup value in apply mode (GH-310 DM-5). */
+export type CloseoutMemberCleanupApplyOutcome =
+  (typeof CLOSEOUT_MEMBER_CLEANUP_APPLY_OUTCOMES)[number];
+
+/** The per-member issue-closure value in plan mode (GH-310 DM-5). */
+export type CloseoutMemberIssuePlanOutcome = (typeof CLOSEOUT_MEMBER_ISSUE_PLAN_OUTCOMES)[number];
+
+/** The per-member issue-closure value in apply mode (GH-310 DM-5). */
+export type CloseoutMemberIssueApplyOutcome = (typeof CLOSEOUT_MEMBER_ISSUE_APPLY_OUTCOMES)[number];
+
+/** The union of one member's mode-scoped cleanup values. */
+export type CloseoutMemberCleanup =
+  | CloseoutMemberCleanupPlanOutcome
+  | CloseoutMemberCleanupApplyOutcome;
+
+/** The union of one member's mode-scoped issue-closure values. */
+export type CloseoutMemberIssueClosure =
+  | CloseoutMemberIssuePlanOutcome
+  | CloseoutMemberIssueApplyOutcome;
+
+/** One observed tracked-issue fact (GH-310 DM-8). */
+export type CloseoutMemberIssueFact = (typeof CLOSEOUT_MEMBER_ISSUE_FACTS)[number];
+
+/**
+ * One declared member's injected closeout facts (GH-310 DM-8, DEC-20).
+ *
+ * The entries are supplied through the closeout composition, one per declared
+ * member in declared order. They carry per-member merge truth, the member
+ * branch, and the observed tracked-issue fact only: no port, provider
+ * operation, or durable store is added, and the durable production carrier
+ * beyond the injection is deferred (OQ-6).
+ */
+export type CrossRepositoryCloseoutObservation = {
+  readonly repoKey: string;
+  readonly pullRequest: string;
+  readonly merged: boolean;
+  readonly headSha?: string;
+  readonly branch: string;
+  /** The observed tracked-issue fact input to the DM-5 mapping. */
+  readonly issueClosure?: CloseoutMemberIssueFact;
+};
+
+/** One additive per-member closeout report entry (GH-310 DM-5). */
+export type CloseoutMemberReport = {
+  readonly repoKey: string;
+  readonly branch: string;
+  readonly cleanup: CloseoutMemberCleanup;
+  readonly pullRequest: string;
+  readonly issueClosure: CloseoutMemberIssueClosure;
+  /** Boolean merge truth: true only when the member's merge is observed. */
+  readonly landed: boolean;
+};
+
+/**
+ * One member's planned closeout projection (GH-310 DM-5, DEC-12).
+ *
+ * The projection is derived at plan time from that member's injected
+ * observation plus the member's own planned operations — never from step
+ * `detail` — and the operation ids attribute the executed outcomes in apply
+ * mode.
+ */
+export type CloseoutMemberPlan = {
+  readonly observation: CrossRepositoryCloseoutObservation;
+  readonly cleanup: CloseoutMemberCleanupPlanOutcome;
+  readonly cleanupOperationId?: string;
+  readonly issueClosure: CloseoutMemberIssuePlanOutcome;
+  readonly issueOperationId?: string;
+};
 
 /** A read-observation discriminant. */
 export type CloseoutReadObservationKind = (typeof CLOSEOUT_READ_OBSERVATIONS)[number];
@@ -401,6 +518,8 @@ export type CloseoutPlan = {
   readonly deliveryRequest?: CloseoutDeliverySummary;
   readonly steps: readonly CloseoutStep[];
   readonly summary: CloseoutSummary;
+  /** Additive per-member planned projections, in declared order (GH-310 DM-5). */
+  readonly members?: readonly CloseoutMemberPlan[];
   /** Additive planned residue (thread policy and diff ambiguous hits). */
   readonly residue?: readonly CloseoutResidueItem[];
 };
@@ -431,8 +550,15 @@ export type CloseoutData = {
   readonly residue?: readonly CloseoutResidueItem[];
   /** Additive applied capsule outcome; absent in plan mode (F-3, DM-5). */
   readonly capsule?: CloseoutCapsuleData;
+  /** Additive per-member report in declared order (GH-310 DM-5). */
+  readonly members?: readonly CloseoutMemberReport[];
   /** Additive non-step queue-removal disclosure (GH-292 F-2, DM-6). */
   readonly queueRemoval?: CloseoutQueueRemovalData;
+  /**
+   * Additive member-mode removal disclosures, one per declared member in
+   * declared order (GH-310 DM-8). Present only when members are declared.
+   */
+  readonly queueRemovals?: readonly CloseoutQueueRemovalData[];
 };
 
 /** The closed closeout queue-removal outcome set (GH-292 DM-6). */

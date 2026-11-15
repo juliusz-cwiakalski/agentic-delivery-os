@@ -6,6 +6,9 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { CLOSEOUT_STEP_IDS } from "../../packages/core/src/contracts/index";
+import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
+import { WORK_ITEM_REF } from "../fixtures/closeout/harness";
 import {
   diffFixture,
   parseEnvelope,
@@ -89,5 +92,34 @@ describe("TC-XPAR-001 member-less plan surfaces are byte-identical", () => {
     expect(run.exitCode).toBe(1);
     expect(await dataOf(run)).toBe(golden("diff-outside.json"));
     expect(run.stdout).not.toContain('"members"');
+  });
+});
+
+describe("TC-XPAR-002 member-less closeout stays byte-identical", () => {
+  const closeoutGolden: unknown = JSON.parse(
+    readFileSync(
+      join(import.meta.dir, "..", "fixtures", "closeout", "golden", "envelope-data.json"),
+      "utf8",
+    ),
+  );
+
+  test("plan mode carries no member key and equals the pre-change golden", async () => {
+    const run = await runCloseoutCli(["closeout", WORK_ITEM_REF, "--json"]);
+    expect(run.exitCode).toBe(0);
+    const data = closeoutData(run.envelope);
+    expect(data).toEqual(closeoutGolden);
+    expect(data.members).toBeUndefined();
+    expect(data.queueRemovals).toBeUndefined();
+    expect(run.stdout).not.toContain('"members"');
+    expect(data.steps.map((step) => step.stepId)).toEqual([...CLOSEOUT_STEP_IDS]);
+  });
+
+  test("apply mode carries no member key and keeps the delivered step outcomes", async () => {
+    const run = await runCloseoutCli(["closeout", WORK_ITEM_REF, "--apply", "--json"]);
+    expect(run.exitCode).toBe(0);
+    const data = closeoutData(run.envelope);
+    expect(data.members).toBeUndefined();
+    expect(data.queueRemovals).toBeUndefined();
+    expect(data.steps.map((step) => step.stepId)).toEqual([...CLOSEOUT_STEP_IDS]);
   });
 });

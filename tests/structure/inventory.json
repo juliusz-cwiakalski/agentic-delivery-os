@@ -81,6 +81,7 @@
     "src/domain/capsule.ts",
     "src/domain/ci-result.ts",
     "src/domain/closeout-diff-sweep.ts",
+    "src/domain/closeout-members.ts",
     "src/domain/closeout-thread-policy.ts",
     "src/domain/closeout-worktree.ts",
     "src/domain/closeout.ts",

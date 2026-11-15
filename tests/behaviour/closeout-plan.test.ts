@@ -44,6 +44,11 @@ import {
 } from "../fixtures/closeout/harness";
 import { EXPECTED_STEP_IDS } from "../fixtures/closeout/plan";
 import { fakeInvalidPayload, fakeNotFound } from "../fixtures/closeout/read-observation";
+import {
+  memberCloseoutFacts,
+  memberCloseoutObservation,
+} from "../fixtures/cross-repository/closeout";
+import { API_MEMBER, WEB_MEMBER } from "../fixtures/cross-repository/constants";
 
 const stepById = (steps: readonly CloseoutStep[], stepId: string): CloseoutStep => {
   const step = steps.find((entry) => entry.stepId === stepId);
@@ -463,6 +468,35 @@ describe("TC-CLOSE-067 plan-mode branch ambiguity renders would-refuse", () => {
     expect(run.exitCode).toBe(1);
     expect(errorOf(run.envelope).code).toBe("closeout.target.ambiguous");
     expect(run.git.calls).toEqual([]);
+  });
+});
+
+describe("TC-XCLOSE-004 member plan shape rides the delivered step ids", () => {
+  const observations = [
+    memberCloseoutObservation(API_MEMBER),
+    memberCloseoutObservation(WEB_MEMBER),
+  ];
+
+  test("member facts produce the same twelve steps plus ordered member projections", () => {
+    const plan = buildCloseoutPlan(memberCloseoutFacts(observations));
+    expect(plan.steps.map((step) => step.stepId)).toEqual(EXPECTED_STEP_IDS);
+    expect(plan.members?.map((entry) => entry.observation.repoKey)).toEqual([
+      API_MEMBER.repoKey,
+      WEB_MEMBER.repoKey,
+    ]);
+    expect(plan.members?.every((entry) => entry.cleanup === "would-apply")).toBe(true);
+    expect(plan.members?.every((entry) => entry.issueClosure === "would-apply")).toBe(true);
+    const branch = stepById(plan.steps, "branch-cleanup");
+    expect(branch.operations.map((operation) => operation.target.entityId)).toEqual([
+      API_MEMBER.branch,
+      WEB_MEMBER.branch,
+    ]);
+    const ticket = stepById(plan.steps, "ticket-to-done");
+    expect(ticket.operations).toHaveLength(2);
+  });
+
+  test("a member-less plan carries no members projection", () => {
+    expect(buildCloseoutPlan(makeFacts()).members).toBeUndefined();
   });
 });
 

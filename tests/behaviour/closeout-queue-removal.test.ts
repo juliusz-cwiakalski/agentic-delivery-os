@@ -19,6 +19,8 @@ import {
   seedQueueEntry,
   seedQueueLease,
 } from "../fixtures/closeout/queue-removal";
+import { memberCloseoutObservation } from "../fixtures/cross-repository/closeout";
+import { API_MEMBER, memberRef, WEB_MEMBER } from "../fixtures/cross-repository/constants";
 
 const WORK_ITEM_REF = CLOSEOUT_WORK_ITEM_REF;
 
@@ -190,6 +192,39 @@ describe("GH-310 a member-ref landing removes only that member ref", () => {
       expect(removals.ok).toBe(true);
       if (!removals.ok) return;
       expect(removals.records.map((record) => record.ref)).toEqual([ref]);
+    } finally {
+      harness.dispose();
+    }
+  });
+});
+
+describe("GH-310 per-member landing removal inside the closeout fence", () => {
+  test("one member's landing removes only its own member-ref entry", async () => {
+    const observations = [
+      memberCloseoutObservation(API_MEMBER),
+      memberCloseoutObservation(WEB_MEMBER, { merged: false }),
+    ];
+    const harness = createQueueRemovalHarness({
+      label: "member-landing-partial",
+      apply: true,
+      members: observations,
+    });
+    try {
+      const apiRef = memberRef(API_MEMBER.repoKey, CLOSEOUT_WORK_ITEM_REF);
+      const webRef = memberRef(WEB_MEMBER.repoKey, CLOSEOUT_WORK_ITEM_REF);
+      seedQueueEntry(harness, apiRef, "host/owner/api");
+      seedQueueEntry(harness, webRef, "host/owner/web");
+      const result = await harness.run();
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.data.queueRemovals).toEqual([
+        { outcome: "removed", ref: apiRef, reason: "landed" },
+        { outcome: "skipped", skipReason: "no-merge-truth", ref: webRef },
+      ]);
+      const fold = readQueueFold(harness.store);
+      expect(fold.ok).toBe(true);
+      if (!fold.ok) return;
+      expect(fold.value.entries.map((entry) => entry.ref)).toEqual([webRef]);
     } finally {
       harness.dispose();
     }

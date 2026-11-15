@@ -321,3 +321,48 @@ notes:
       TC-RELEASE-001 expects the phase-5 changeset."
     type: info
     date: "2026-11-15"
+  - text: "Plan phase 4 'Per-member closeout report and landing removal'
+      complete (commit hash assigned at commit time; `git log` on
+      feat/GH-310/cross-repository-changes is the record). Delivered: DM-8
+      `CrossRepositoryCloseoutObservation` `{repoKey, pullRequest, merged,
+      headSha?, branch, issueClosure?}` supplied through the closeout
+      composition as an additive optional `readMembers` seam (no new port,
+      provider operation, or store; durable production carrier deferred OQ-6);
+      additive `closeout.data.members[]` with exactly `repoKey`, `branch`,
+      `cleanup`, `pullRequest`, `issueClosure`, `landed` in declared order and
+      `CLOSEOUT_MAX_MEMBERS = 8`; closed mode-scoped columns
+      (`cleanup` plan would-apply|satisfied|would-refuse|skipped-gap, apply
+      applied|satisfied|refused|skipped-gap; `issueClosure` plan
+      would-apply|satisfied|skipped-noop|skipped-gap, apply
+      applied|satisfied|skipped-noop|skipped-gap) plus the closed observed
+      issue-fact vocabulary; new pure `domain/closeout-members.ts` projection
+      derived from each member's observation and its OWN planned/executed
+      operations (operation-id attribution), never from step `detail`;
+      member-mode `ticket-to-done`/`branch-cleanup` expansion with the twelve
+      delivered step ids unchanged and per-member refusals/gaps disclosed
+      without rewriting the aggregate outcome; `landed` is observed merge truth
+      only; per-member landing removal inside the held fence with additive
+      `data.queueRemovals[]` (one entry per member, reason `landed`, delivered
+      skip reasons such as `lease-held`/`no-merge-truth` leave other members
+      untouched). Tests: 291 pass / 0 fail / 1488 expect across 58 files
+      (new `tests/behaviour/closeout-members.test.ts` TC-XCLOSE-001..004, the
+      extended `closeout-plan` TC-XCLOSE-004, `closeout-queue-removal` and
+      `closeout-queue-removal-skips` per-member landing/skip paths, the
+      `cross-repository-determinism` TC-XBOUND-002 case, the
+      `cross-repository-parity` TC-XPAR-002 member-less plan/apply parity, the
+      `golden/cross-repository-members` TC-XCLOSE-001 committed golden, plus
+      every delivered `closeout-*` suite); `tests/structure` inventory and
+      ports fixtures updated (content-inventory, inventory.json,
+      v1-contract-inventory.json); `pnpm -r typecheck` clean;
+      `tsc -p tests/types/tsconfig.json` clean; `pnpm check:boundaries` clean.
+      Fixtures: `tests/fixtures/cross-repository/closeout.ts`, extended
+      `tests/fixtures/closeout/{cli,harness,queue-removal}.ts`, golden
+      `tests/fixtures/cross-repository/goldens/closeout-members-applied.json`.
+      Documented reading: `ticket-to-done` member transitions use the durable
+      member-ref identity (`<changeRef>@<repoKey>`) as the tracked-item entity
+      because DM-8 pins no issue id; no AC asserts the entity id. No
+      `doc/spec/**`, `.ai/local/**`, `.opencode/**`, `.ados-claude/**`, or
+      `AGENTS.md` edits; member-less closeout data/steps/ledger/human bytes and
+      exits stay byte-identical (TC-XPAR-002)."
+    type: info
+    date: "2026-11-15"

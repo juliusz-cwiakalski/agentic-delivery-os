@@ -7,7 +7,12 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { API_MEMBER, WEB_MEMBER } from "../fixtures/cross-repository/constants";
+import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
+import {
+  memberCloseoutFacts,
+  memberCloseoutObservation,
+} from "../fixtures/cross-repository/closeout";
+import { API_MEMBER, CHANGE_REF, WEB_MEMBER } from "../fixtures/cross-repository/constants";
 import {
   declaredMember,
   greenMemberReads,
@@ -78,5 +83,20 @@ describe("TC-XREV-001 review-flow golden", () => {
       runId: "76f83b608bc31cad65d8207f15bb3a50779e01405f5d31408919aa545589bd36",
       complete: true,
     });
+  });
+});
+
+describe("TC-XCLOSE-001 member-form closeout report golden", () => {
+  test("the applied member report equals the committed golden", async () => {
+    const observations = [
+      memberCloseoutObservation(API_MEMBER),
+      memberCloseoutObservation(WEB_MEMBER),
+    ];
+    const run = await runCloseoutCli(["closeout", CHANGE_REF, "--apply", "--json"], {
+      facts: memberCloseoutFacts(observations, { injectMembers: false }),
+      members: observations,
+    });
+    expect(run.exitCode).toBe(0);
+    expect(closeoutData(run.envelope)).toEqual(golden("closeout-members-applied.json"));
   });
 });

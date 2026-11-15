@@ -6,6 +6,10 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
+  memberCloseoutObservation,
+  runMemberCloseout,
+} from "../fixtures/cross-repository/closeout";
+import {
   API_MEMBER,
   CHANGE_REF,
   DOCS_MEMBER,
@@ -115,5 +119,21 @@ describe("TC-XBOUND-003 queue and lanes repeated-run determinism", () => {
       readonly entries: Array<{ readonly ref: string }>;
     };
     expect(data.entries.map((entry) => entry.ref)).toEqual([MEMBER_REFS.api, MEMBER_REFS.web]);
+  });
+});
+
+describe("TC-XBOUND-002 closeout member report repeated-run determinism", () => {
+  const observations = () => [
+    memberCloseoutObservation(API_MEMBER),
+    memberCloseoutObservation(WEB_MEMBER, { merged: false }),
+  ];
+
+  test("plan and apply data are byte-identical over unchanged facts", async () => {
+    for (const apply of [false, true]) {
+      const first = await runMemberCloseout({ observations: observations(), apply });
+      const second = await runMemberCloseout({ observations: observations(), apply });
+      if (!first.result.ok || !second.result.ok) throw new Error("closeout failed");
+      expect(JSON.stringify(second.result.data)).toBe(JSON.stringify(first.result.data));
+    }
   });
 });

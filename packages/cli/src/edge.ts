@@ -241,6 +241,7 @@ import {
   type ConfigFailure,
   type ControlTransport,
   type CredentialPort,
+  type CrossRepositoryCloseoutObservation,
   type DaemonClockPort,
   type DeliveryRequest,
   DISPATCH_DEFAULT_EVIDENCE_CLASS,
@@ -1605,6 +1606,15 @@ export type CloseoutComposition = {
   readonly diffReadFor?: (workItemRef: string) => CloseoutDiffRead | undefined;
   /** The non-gating harness telemetry capture capability (GH-240 F-10). */
   readonly telemetry?: CloseoutTelemetryRuntime;
+  /**
+   * The injected per-member closeout observations (GH-310 DM-8, DEC-20). One
+   * entry per declared member in declared order; absent leaves the delivered
+   * single-request closeout unchanged. No port, provider operation, or durable
+   * store is added, and the durable production carrier is deferred (OQ-6).
+   */
+  readonly readMembers?: (
+    workItemRef: string,
+  ) => readonly CrossRepositoryCloseoutObservation[] | undefined;
 };
 
 /** The raw provider source the closeout composition bridges to a runtime. */
@@ -2355,7 +2365,12 @@ export const createCloseoutCommandRuntime = (
   composition: CloseoutComposition,
 ): CloseoutCommandRuntime => {
   const run = async (workItemRef: string, apply: boolean) => {
-    const facts = await composition.planFacts(workItemRef);
+    const baseFacts = await composition.planFacts(workItemRef);
+    const injectedMembers = composition.readMembers?.(workItemRef);
+    const facts =
+      injectedMembers === undefined || injectedMembers.length === 0
+        ? baseFacts
+        : { ...baseFacts, members: injectedMembers };
     const plan = buildCloseoutPlan(facts);
     return runCloseout({
       plan,

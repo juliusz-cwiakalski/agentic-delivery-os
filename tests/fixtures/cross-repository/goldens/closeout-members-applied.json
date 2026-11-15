@@ -1,0 +1,465 @@
+{
+  "schemaId": "delivery.closeout.v1",
+  "command": "closeout",
+  "workItemRef": "GH-310",
+  "mode": "applied",
+  "baseRef": "main-tools",
+  "deliveryRequest": {
+    "systemName": "github",
+    "entityId": "504",
+    "sourceRef": "feat/GH-183/closeout-v1-branch-cleanup",
+    "targetRef": "main-tools",
+    "headSha": "2222222222222222222222222222222222222222"
+  },
+  "steps": [
+    {
+      "stepId": "ticket-to-done",
+      "label": "ticket to done",
+      "outcome": "applied",
+      "operations": [
+        {
+          "operationId": "ddbc56abfe91c96f9cb13715551a1c59911c6f930e16088086c8c3502ed84e80",
+          "name": "transition-work-item",
+          "engine": "github",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "github",
+            "entityId": "GH-310@api-service-1a2b3c4d"
+          },
+          "arguments": {
+            "deliveryState": "done"
+          }
+        },
+        {
+          "operationId": "d9e5e9d57bb85ba9539d9ffb368d52699b5e2498610a372501bb70d05999bcf5",
+          "name": "transition-work-item",
+          "engine": "github",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "github",
+            "entityId": "GH-310@web-ui-5e6f7a8b"
+          },
+          "arguments": {
+            "deliveryState": "done"
+          }
+        }
+      ],
+      "evidence": [
+        {
+          "name": "operation",
+          "value": "transition-work-item"
+        },
+        {
+          "name": "members",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "stepId": "lifecycle-label-sweep",
+      "label": "lifecycle label sweep",
+      "outcome": "applied",
+      "operations": [
+        {
+          "operationId": "8cc7c200bb7265370de203220cf499b7e7eb1427e5fc4b8c8753caeec9fc9ab4",
+          "name": "write-work-item",
+          "engine": "github",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "github",
+            "entityId": "183"
+          },
+          "arguments": {
+            "remove": [
+              "planning"
+            ]
+          }
+        },
+        {
+          "operationId": "559a35e4470074f76b5b28a8cdd9cdc60cb16fd98744f9379031cf8c4bd4525b",
+          "name": "write-work-item",
+          "engine": "github",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "github",
+            "entityId": "183"
+          },
+          "arguments": {
+            "remove": [
+              "spec-ready"
+            ]
+          }
+        },
+        {
+          "operationId": "d52be34951ff01fa516c56b5a5b7656166bc9c8e561b6374e2c5cbb50c01ae53",
+          "name": "write-work-item",
+          "engine": "github",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "github",
+            "entityId": "183"
+          },
+          "arguments": {
+            "remove": [
+              "readiness-passed"
+            ]
+          }
+        },
+        {
+          "operationId": "53cd7d599f78ce495d7806db57ccd4dcad536412b316e39b6fd317f676a8c995",
+          "name": "write-work-item",
+          "engine": "github",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "github",
+            "entityId": "183"
+          },
+          "arguments": {
+            "remove": [
+              "in-progress"
+            ]
+          }
+        },
+        {
+          "operationId": "cf9b58b2aefb28f4103301ae93b4ce406914411ed5780765e7203dbc81a74250",
+          "name": "write-work-item",
+          "engine": "github",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "github",
+            "entityId": "183"
+          },
+          "arguments": {
+            "remove": [
+              "review"
+            ]
+          }
+        },
+        {
+          "operationId": "78124d4aa2b82ea099931ff99faf8487d66d24cac48a26f92cb435e8cb9b634f",
+          "name": "write-work-item",
+          "engine": "github",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "github",
+            "entityId": "183"
+          },
+          "arguments": {
+            "remove": [
+              "blocked"
+            ]
+          }
+        },
+        {
+          "operationId": "8e3b7e457a389bf929ef523a6e8e736ca8578aa6c2b00c5fb98f2debf0b666cf",
+          "name": "write-work-item",
+          "engine": "github",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "github",
+            "entityId": "183"
+          },
+          "arguments": {
+            "add": [
+              "delivered"
+            ]
+          }
+        }
+      ],
+      "evidence": [
+        {
+          "name": "present",
+          "value": 8
+        },
+        {
+          "name": "kept",
+          "value": 2
+        },
+        {
+          "name": "removed",
+          "value": 6
+        }
+      ]
+    },
+    {
+      "stepId": "unassign",
+      "label": "unassign",
+      "outcome": "applied",
+      "operations": [
+        {
+          "operationId": "ff031482dd850f69b5581a6b2ff1e928b2e0748acfb44261c80bd8cb734e5cc7",
+          "name": "write-work-item",
+          "engine": "github",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "github",
+            "entityId": "183"
+          },
+          "arguments": {
+            "assignee": "none"
+          }
+        }
+      ],
+      "evidence": [
+        {
+          "name": "operation",
+          "value": "write-work-item"
+        }
+      ]
+    },
+    {
+      "stepId": "owed-flip-sweep",
+      "label": "owed-flip sweep",
+      "outcome": "satisfied",
+      "operations": [],
+      "evidence": [
+        {
+          "name": "evaluated",
+          "value": 0
+        },
+        {
+          "name": "flipped",
+          "value": 0
+        },
+        {
+          "name": "skipped",
+          "value": 0
+        },
+        {
+          "name": "openBlockers",
+          "value": 0
+        },
+        {
+          "name": "maxOpenBlockers",
+          "value": 0
+        },
+        {
+          "name": "unavailableSignals",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "stepId": "comment-resolution",
+      "label": "comment resolution",
+      "outcome": "applied",
+      "operations": [
+        {
+          "operationId": "fcb9377bc33418eeea0cf8cb54ec80bc282a4c7b51939fc59cf7a33fda34d833",
+          "name": "resolve-delivery-thread",
+          "engine": "github",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "github",
+            "entityId": "504"
+          },
+          "arguments": {
+            "deliveryRequest": {
+              "systemName": "github",
+              "entityId": "504"
+            },
+            "threadId": "PRRT_2"
+          }
+        }
+      ],
+      "evidence": [
+        {
+          "name": "unresolved",
+          "value": 1
+        },
+        {
+          "name": "resolved",
+          "value": 1
+        },
+        {
+          "name": "human",
+          "value": 0
+        }
+      ]
+    },
+    {
+      "stepId": "checkout-restore",
+      "label": "checkout restore",
+      "outcome": "satisfied",
+      "operations": [],
+      "evidence": [
+        {
+          "name": "checkout",
+          "value": "base"
+        },
+        {
+          "name": "baseRef",
+          "value": "main-tools"
+        }
+      ]
+    },
+    {
+      "stepId": "worktree-cleanup",
+      "label": "local worktree cleanup",
+      "outcome": "satisfied",
+      "reason": "no-worktree",
+      "operations": [],
+      "evidence": [
+        {
+          "name": "worktree",
+          "value": "absent"
+        }
+      ]
+    },
+    {
+      "stepId": "branch-cleanup",
+      "label": "squash-safe local branch cleanup",
+      "outcome": "applied",
+      "operations": [
+        {
+          "operationId": "a143e4d6d9e23c7c7bd4d343edadf229b810fa5d031626d4e4f94c7731271a65",
+          "name": "delete-branch",
+          "engine": "git",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "git",
+            "entityId": "feat/GH-310/api-slice"
+          },
+          "arguments": {
+            "branch": "feat/GH-310/api-slice"
+          }
+        },
+        {
+          "operationId": "b39e9f4124590231d0dce4e67f17384730a0bfc337d8d98a1bd7fd3babf1ef51",
+          "name": "delete-branch",
+          "engine": "git",
+          "capabilityContext": "supported",
+          "target": {
+            "systemName": "git",
+            "entityId": "feat/GH-310/web-slice"
+          },
+          "arguments": {
+            "branch": "feat/GH-310/web-slice"
+          }
+        }
+      ],
+      "evidence": [
+        {
+          "name": "branches",
+          "value": 2
+        },
+        {
+          "name": "members",
+          "value": 2
+        }
+      ]
+    },
+    {
+      "stepId": "merged-diff-sweep",
+      "label": "merged-diff owed-flip sweep",
+      "outcome": "skipped-gap",
+      "reason": "merged-diff-unavailable",
+      "operations": [],
+      "evidence": [
+        {
+          "name": "mergedDiff",
+          "value": "unavailable"
+        }
+      ]
+    },
+    {
+      "stepId": "retro-coverage-move",
+      "label": "retro coverage move",
+      "outcome": "satisfied",
+      "operations": [],
+      "evidence": [
+        {
+          "name": "state",
+          "value": "pending"
+        }
+      ],
+      "detail": {
+        "state": "pending"
+      }
+    },
+    {
+      "stepId": "session-compaction",
+      "label": "session compaction checkpoint",
+      "outcome": "skipped-noop",
+      "reason": "no-sessions",
+      "operations": [],
+      "evidence": [
+        {
+          "name": "sessions",
+          "value": 0
+        }
+      ],
+      "detail": {
+        "state": "no-sessions"
+      }
+    },
+    {
+      "stepId": "capsule",
+      "label": "close the change capsule",
+      "outcome": "skipped-noop",
+      "operations": [],
+      "evidence": [
+        {
+          "name": "present",
+          "value": false
+        },
+        {
+          "name": "events",
+          "value": 0
+        },
+        {
+          "name": "candidates",
+          "value": 0
+        }
+      ],
+      "detail": {
+        "present": false,
+        "events": 0,
+        "candidates": 0
+      },
+      "reason": "capsule-runtime-absent"
+    }
+  ],
+  "summary": {
+    "totalOperations": 13,
+    "counts": {
+      "would-apply": 0,
+      "satisfied": 4,
+      "skipped-gap": 1,
+      "skipped-noop": 2,
+      "would-refuse": 0,
+      "applied": 5,
+      "failed": 0,
+      "refused": 0
+    },
+    "gaps": 1,
+    "noops": 2,
+    "failures": 0,
+    "refusals": 0
+  },
+  "ledgerKey": "closeout.operations:GH-310",
+  "capsule": {
+    "closed": false,
+    "events": 0,
+    "candidates": []
+  },
+  "members": [
+    {
+      "repoKey": "api-service-1a2b3c4d",
+      "branch": "feat/GH-310/api-slice",
+      "cleanup": "applied",
+      "pullRequest": "311",
+      "issueClosure": "applied",
+      "landed": true
+    },
+    {
+      "repoKey": "web-ui-5e6f7a8b",
+      "branch": "feat/GH-310/web-slice",
+      "cleanup": "applied",
+      "pullRequest": "312",
+      "issueClosure": "applied",
+      "landed": true
+    }
+  ],
+  "queueRemovals": []
+}
