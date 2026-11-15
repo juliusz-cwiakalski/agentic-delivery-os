@@ -1,5 +1,5 @@
-# GH-320 delivery plan — machine-readable document (delivery.plan.v1), revision 1.8
-# (2026-11-15; PR-CI round-3 close-out of the code-review iteration-1 remediation). Revision 1.0 was authored in
+# GH-320 delivery plan — machine-readable document (delivery.plan.v1), revision 1.9
+# (2026-11-15; PR-CI round-4 close-out of the code-review iteration-1 remediation). Revision 1.0 was authored in
 # lifecycle phase 4 (`delivery_planning`) against spec v1.1 / test plan v1.1.
 # Revision 1.1 remediated readiness iter-1 findings 3, 4, 6, 9, 19, 20, 21, 22,
 # 23 against the then-current spec v1.2, test plan v1.2, and PM decisions
@@ -192,6 +192,22 @@
 #   product behaviour changes. The notice-bound correction stays spec v1.11 /
 #   test plan v1.8 and still needs no plan scope.
 #
+# Revision 1.9 closes PR CI round 4. Required check `Bash test suites` went red on
+#   `scripts/.tests/test-lint-commit-range.sh`, case `worker pool: killed worker
+#   is ERROR (F-2)`. CI-ONLY CONDITION: the workflow now installs and builds the
+#   workspace in that job, so `HOST_COMMITLINT_AVAILABLE=true` and the host-gated
+#   case runs in CI for the first time (it SKIPs on `main-tools`, where
+#   `node_modules` is absent); the extra gate nesting invalidated its assumption
+#   that the workers are direct children of `$!`. Phase 6 adds the suite to scope
+#   (obligation 6.21) with a nesting-independent worker discovery (marker pid
+#   written before `exec`, exact `${GATE}` path match, gate excluded, worker bash
+#   as victim), a bounded wait, diagnostic failure output, and the existing
+#   assertions preserved exactly. NON-VACUITY is required: temporarily break the
+#   gate's fail-closed behaviour, confirm the case fails by name, then restore.
+#   The phase-6 gate now runs that suite (expect 50/50) and
+#   `scripts/run-bash-suites.sh`. No product behaviour, scope path other than the
+#   suite, or TC changes.
+#
 # REVISION LOG: 1.0 initial plan (spec v1.1 / test plan v1.1);
 #   1.1 DoR iter-1 remediation (spec v1.2 / test plan v1.2 / D5..D11);
 #   1.2 DoR iter-2 remediation (spec v1.4 / test plan v1.3);
@@ -224,10 +240,17 @@
 #   ROOT-CAUSE REFINEMENT, recorded: the CI-only condition is a dependency-free
 #   AND unbuilt checkout (a local `pnpm check` always has both `node_modules` and
 #   a built `dist`). No scope path, TC, or product behaviour changes.
+#   1.9 PR-CI round-4 completion (plan r1.9): `scripts/.tests/test-lint-commit-range.sh`
+#   is declared in phase 6 and its killed-worker case is made nesting-independent
+#   (marker-based worker discovery, exact `${GATE}` match, bounded wait,
+#   diagnostic timeout output, assertions preserved), with the required
+#   non-vacuity check. CI-only condition: the job now installs/builds, so the
+#   host-gated case executes there for the first time.
 #   Delivery phase order, the TC ownership rule (55 cases, unchanged homes), and
 #   the product scope are unchanged by all revisions; the declared scope grows
-#   by the six documentation reconciliations and the two revert paths recorded
-#   in Phase 6.
+#   by the six documentation reconciliations, the two revert paths, the ports
+#   contract-inventory fixture, the CI workflow, and the commit-range gate suite
+#   recorded in Phase 6.
 #
 # One ticket, one pull request against main-tools, SIX delivery phases: the five
 # original delivery phases plus PHASE 6, added by this revision for the
@@ -528,15 +551,16 @@
 #
 # SCOPE CONVENTION: concrete files are exact repository-relative paths; folders
 #   are declared by the phase that writes new files inside them. Declared after
-#   r1.7: 54 distinct file paths + 2 folders (the prior-identity fixture folder
+#   r1.9: 55 distinct file paths + 2 folders (the prior-identity fixture folder
 #   and the change-folder staging prefix). Spec v1.11 §16 lists 52 CHANGED/NEW
-#   file paths plus that fixture folder. The sets differ by exactly TWO paths,
-#   both in Phase 6 and both REVERTED there:
-#   `packages/adapters/src/file/projects-config.ts` (F-6) and
-#   `packages/core/src/index.ts` (close-out). After the reverts both are absent
-#   from the delivered diff, so §16 correctly does not list them. Every other
-#   declared path is in §16, including the ports contract-inventory fixture that
-#   v1.7 added and `.github/workflows/ci.yml` that v1.9 declared.
+#   file paths plus that fixture folder. The sets differ by exactly THREE paths,
+#   all in Phase 6: `packages/adapters/src/file/projects-config.ts` (F-6 revert)
+#   and `packages/core/src/index.ts` (close-out revert) — both absent from the
+#   delivered diff after the revert, so §16 correctly does not list them — and
+#   `scripts/.tests/test-lint-commit-range.sh`, the round-4 gate-suite fix, which
+#   §16 does not yet list because this plan revision does not edit the spec.
+#   Every other declared path is in §16, including the ports contract-inventory
+#   fixture that v1.7 added and `.github/workflows/ci.yml` that v1.9 declared.
 #   R-H is only the preload reconciliation record.
 #
 # ONE-PHASE RULE AND PHASE 6 (resolution recorded): the plan schema does NOT
@@ -546,11 +570,11 @@
 #   delivered, so moving their scope into Phase 6 would falsify their commits.
 #   The resolution taken is therefore: phases 1-5 KEEP their declarations
 #   unchanged, and Phase 6 RE-DECLARES the files it re-edits so the commit
-#   primitive can stage the remediation. Phase 6 introduces exactly 10 new paths
+#   primitive can stage the remediation. Phase 6 introduces exactly 11 new paths
 #   (the six documentation reconciliations, the two revert paths, the ports
-#   contract-inventory fixture, and the CI workflow) and re-declares 15
-#   already-declared files. The r1.7 amendment adds no path: it completes that
-#   already-declared CI edit. An untouched declared file is a `plan diff`
+#   contract-inventory fixture, the CI workflow, and the commit-range gate
+#   suite) and re-declares 15 already-declared files. The r1.7 and r1.8
+#   amendments add no path: they complete that already-declared CI edit. An untouched declared file is a `plan diff`
 #   observation, never a gate failure.
 
 # PHASE 6 (review-iter-1 remediation) DECLARATION NOTE: Phase 6 is a delivery
@@ -1169,6 +1193,8 @@ phases:
   #   bun run scripts/checks/changesets-group.ts
   #   mkdir -p "$HOME/.cache"
   #   TMPDIR=$(mktemp -d "$HOME/.cache/ados-check-XXXXXX") pnpm check
+  #   bash scripts/.tests/test-lint-commit-range.sh   # expect 50/50
+  #   bash scripts/run-bash-suites.sh
   #   ./scripts/lint-commit-range.sh --base main-tools
   #   PATH="$PWD/node_modules/.bin:$PATH" delivery-os plan validate GH-320
   #   git diff --check
@@ -1433,13 +1459,41 @@ phases:
   #      through `privacy-ci-wiring`, so a local green cannot stand in for it.
   #      Do not edit the spec, the test plan, or the review records to make the
   #      scan pass.
-  #  6.21 Verification: the full aggregate gate remains Phase 5's declared
+  #  6.21 PR-CI ROUND-4 (r1.9) — `scripts/.tests/test-lint-commit-range.sh`, case
+  #      `worker pool: killed worker is ERROR (F-2)`. The workflow now installs
+  #      and builds the workspace in the `bash-tests` job, so
+  #      `HOST_COMMITLINT_AVAILABLE=true` and the host-gated case executes in CI
+  #      for the first time (it SKIPs on `main-tools`, where `node_modules` is
+  #      absent). It exposed a latent assumption: the case assumes the gate's
+  #      workers are DIRECT CHILDREN of `$!` of a subshell, which breaks now that
+  #      the gate starts its pool under an extra nesting level. Make worker
+  #      discovery independent of gate nesting depth:
+  #        - the test's slow commitlint shim writes a deterministic WORKER MARKER
+  #          containing its own pid (`$$`) immediately BEFORE it `exec`s, so the
+  #          marker names the process that becomes the worker;
+  #        - every candidate is matched against the EXACT ABSOLUTE `${GATE}` path
+  #          (never the `*lint-commit-range.sh*` substring, which also matches
+  #          this suite's own filename);
+  #        - the gate process itself is excluded as a candidate;
+  #        - the VICTIM is the worker's bash process, never the `$()` subshell
+  #          that launched it.
+  #      Robustness requirements: a BOUNDED wait for the victim (no unbounded
+  #      `wait` loop); on timeout or on early gate exit, fail with the captured
+  #      gate stdout/stderr PLUS a `ps` snapshot so the cause is diagnosable.
+  #      Preserve every existing assertion EXACTLY: exit `2`, `VERDICT: ERROR` on
+  #      stdout, `could not render a verdict`, no `PASS`/`FAIL` verdict, and
+  #      `VERDICT: ERROR` on stderr.
+  #      NON-VACUITY (required, not optional): temporarily break the gate's
+  #      fail-closed behaviour (the killed-worker path that must render
+  #      `VERDICT: ERROR`), confirm this case FAILS BY NAME, then restore the
+  #      gate — a control that cannot fail is not a control.
+  #  6.22 Verification: the full aggregate gate remains Phase 5's declared
   #      command (`mkdir -p "$HOME/.cache"` then
   #      `TMPDIR=$(mktemp -d "$HOME/.cache/ados-check-XXXXXX") pnpm check`), and
   #      is re-run before the PR; this phase's gate below is deliberately
-  #      targeted at the affected suites and guards, and now also runs the two
-  #      CI-only invariants the PR exposed (privacy literals and the
-  #      doc-distribution modes).
+  #      targeted at the affected suites and guards, and now also runs the
+  #      CI-only invariants and suites the PR exposed (privacy literals, the
+  #      doc-distribution modes, and the commit-range gate suite).
   #
   # Gate:
   #   pnpm typecheck
@@ -1458,6 +1512,8 @@ phases:
   #   bun run scripts/checks/privacy-literals.ts
   #   bash scripts/.tests/test-doc-distribution.sh
   #   bash scripts/.tests/test-doc-distribution-modes.sh
+  #   bash scripts/.tests/test-lint-commit-range.sh   # expect 50/50
+  #   bash scripts/run-bash-suites.sh
   #   ./scripts/lint-commit-range.sh --base main-tools
   #   PATH="$PWD/node_modules/.bin:$PATH" delivery-os plan validate GH-320
   #   git diff --check
@@ -1477,6 +1533,7 @@ phases:
         - packages/adapters/src/file/projects-config.ts
         - packages/core/src/index.ts
         - scripts/install.sh
+        - scripts/.tests/test-lint-commit-range.sh
         - tests/structure/entrypoint-bin.test.ts
         - tests/structure/entrypoint-installer-absence.test.ts
         - tests/structure/install-launcher.test.ts
