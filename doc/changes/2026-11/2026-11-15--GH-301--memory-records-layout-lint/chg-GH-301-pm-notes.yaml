@@ -8,7 +8,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-15T12:11:35.809Z }
   delivery_planning: { started: null, completed: 2026-11-15T12:12:02.178Z }
   dor_check: { started: null, completed: 2026-11-15T12:46:42.772Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-15T15:00:12.962Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -53,9 +53,9 @@ notes:
       Delivery plan phase 7 (plan id 7) complete. Commit: e4bb8541. Backlog
       M2-S8 now carries its Ticket and Progress lines; the final alignment pass
       verified the phase-6 concept Record model is schema-legal while the
-      memory-practices bootstrapping checklist is untouched; ADR-0011 is
-      tracked with its index row resolving and remains Proposed with
-      decision_date null for the owner gate. Full battery at the delivered HEAD:
+      memory-practices bootstrapping checklist is untouched; ADR-0011 is tracked
+      with its index row resolving and remains Proposed with decision_date null
+      for the owner gate. Full battery at the delivered HEAD:
       TMPDIR=/home/juliusz/git/ados-tmp pnpm check = 8653 pass, 4 skip, 0 fail
       (EXIT 0), including build/lint/format/typecheck/tests/boundaries/
       check:memory/prompt/help/exports; bun run scripts/checks/memory-lint.ts =
@@ -67,24 +67,24 @@ notes:
       those suites and ci-baseline-parity green. SCOPE DEVIATIONS (reported):
       .changeset/gh-301-memory-records-layout-lint.md is added for the
       five-package minor changeset TC-RELEASE-001 requires, and
-      tests/checks/milestone-gate.test.ts is updated for the new
-      pnpm check:memory step; neither path was declared by the plan. The
-      changeset was staged with git add because the commit primitive stages
-      only tracked or in-scope untracked files.
+      tests/checks/milestone-gate.test.ts is updated for the new pnpm
+      check:memory step; neither path was declared by the plan. The changeset
+      was staged with git add because the commit primitive stages only tracked
+      or in-scope untracked files.
     type: info
     date: "2026-11-15"
   - text: >-
       Delivery plan phase 6 (plan id 6) complete. Commit: ccf14fb5. Added the
       single memory gate/schema clause to the AGENTS.md memory section inside
-      its band, aligned the consolidate-memory curator rules with the schema,
-      id rule, status transitions, budgets, and read-when row shape, rewrote the
-      architecture concept's Record model example to the ADR-0011 D2/D3
-      contract (renamed created, scalar source with one shaped evidence link,
-      no frontmatter rationale or evidence list, T0-T5 trust token, scalar
+      its band, aligned the consolidate-memory curator rules with the schema, id
+      rule, status transitions, budgets, and read-when row shape, rewrote the
+      architecture concept's Record model example to the ADR-0011 D2/D3 contract
+      (renamed created, scalar source with one shaped evidence link, no
+      frontmatter rationale or evidence list, T0-T5 trust token, scalar
       applies_when, no fleet record scope, rejected keys shown with their
       retained home), and added the documentation-conformance suite plus the
-      curator block. Tests: memory-lint-docs and memory-record-schema = 15
-      pass; prompt-conformance and doc-distribution green; the memory-practices
+      curator block. Tests: memory-lint-docs and memory-record-schema = 15 pass;
+      prompt-conformance and doc-distribution green; the memory-practices
       bootstrapping checklist untouched.
     type: info
     date: "2026-11-15"
@@ -97,9 +97,9 @@ notes:
       and refuses a lesson/tacit candidate carrying scope fleet at
       candidate-schema time through the existing capsule-invalid identity; the
       reader mirrors the lessons/tacit mapping. Tests: memory-promotion-schema,
-      memory-concurrency-merge, memory-record-schema, closeout-capsule-idempotency,
-      closeout-capsule-validation, capsule-mutants = 39 pass; build green;
-      MUT-CAP-31..41 text pins unmoved.
+      memory-concurrency-merge, memory-record-schema,
+      closeout-capsule-idempotency, closeout-capsule-validation, capsule-mutants
+      = 39 pass; build green; MUT-CAP-31..41 text pins unmoved.
     type: info
     date: "2026-11-15"
   - text: >-
@@ -145,8 +145,8 @@ notes:
   - text: >-
       Delivery plan phase 1 (plan id 1) complete. Commit: d7fbc56b. Tests:
       targeted structure suites (memory-layout, memory-record-schema,
-      content-inventory, port-contract-inventory, exit-projection, boundaries)
-      = 177 pass; full pnpm check = 8501 pass, 4 skip, 4 load-sensitive 5 s
+      content-inventory, port-contract-inventory, exit-projection, boundaries) =
+      177 pass; full pnpm check = 8501 pass, 4 skip, 4 load-sensitive 5 s
       timeouts (daemon-watch-state-changes, closeout-checkout,
       projects-performance p95 518 ms, dispatch-attempts-ref) that pass
       individually; lint and format:check green. Delivered: canonical layout
@@ -157,12 +157,11 @@ notes:
       trust/evidence backfill, and ADR-0011 verified tracked with its index row
       resolving (no edit). SCOPE DEVIATION (reported):
       tests/fixtures/ports/v1-contract-inventory.json is updated because the
-      existing fail-closed contract-surface inventory enumerates every
-      contracts module and export; the plan declared only
-      tests/structure/inventory.json. The commit primitive rejects plan-phase
-      ids ("1 is not one of the canonical lifecycle phases"), so commits go
-      through the primitive without --phase and carry a conventional template
-      subject.
+      existing fail-closed contract-surface inventory enumerates every contracts
+      module and export; the plan declared only tests/structure/inventory.json.
+      The commit primitive rejects plan-phase ids ("1 is not one of the
+      canonical lifecycle phases"), so commits go through the primitive without
+      --phase and carry a conventional template subject.
     type: info
     date: "2026-11-15"
   - text: "Intake: GH-301 open, labels [change], milestone attached (M2: Ceremonies,
@@ -464,6 +463,46 @@ notes:
       phase 6 though the guard lands in phase 4; (6) carried: concept
       lighter-headers prose, >120-char statement fallback, and ADR-0011
       remaining Proposed pending owner ratification at the PR."
+    type: info
+    date: "2026-11-15"
+  - text: "DELIVERY (phase 6) COMPLETE: all 7 declared plan phases implemented,
+      committed and green. Phase-to-commit evidence: (1) canonical tree + schema
+      + backfill d7fbc56b — 177 pass incl. memory-layout, memory-record-schema,
+      content-inventory, port-contract-inventory, exit-projection, boundaries;
+      (2) pure evaluator schema/dating/provenance/reference + narrowed GH-302
+      guard 2ea319dd — 74 + 18 pass; (3) index/budget/derivable/secret/output
+      8dc40fc3 — 61 pass; (4) scanner + edge + gate wiring + guard replacement
+      8d39e4f8 — 53 + 59 pass, live lint records=3 errors=0; (5) write path +
+      concurrency edf44fc6 — 39 pass, MUT-CAP-31..41 pins unmoved; (6)
+      kernel/curator/concept/docs ccf14fb5 — 15 pass, prompt-conformance +
+      doc-distribution green; (7) backlog + alignment + full battery e4bb8541 —
+      full pnpm check 8653 pass / 4 skip / 0 fail (exit 0); evidence note
+      02e7afa3. Final memory-lint run: records=3 areas=8 errors=0 advisories=0."
+    type: info
+    date: "2026-11-15"
+  - text: "DELIVERY DEVIATIONS (disclosed by @coder, none silent): (a)
+      tests/fixtures/ports/v1-contract-inventory.json was required in phase 1 by
+      the existing fail-closed contract-surface inventory (the plan named only
+      tests/structure/inventory.json); (b) tests/checks/milestone-gate.test.ts
+      needed its aggregate-chain length pin updated for the new `pnpm
+      check:memory` step; (c) one five-package minor changeset
+      (.changeset/gh-301-memory-records-layout-lint.md) is required by the
+      release TC and was staged manually because the primitive only stages
+      in-scope untracked files; (d) the primitive rejects `commit --phase
+      <plan-id>` (plan ids are not canonical lifecycle phases), so plan-phase
+      commits carry the primitive's template subject `chore(GH-301): …` rather
+      than a hand-written `feat(GH-301): …`. The phase-9 range gate is the
+      authority on message conformance."
+    type: risk
+    date: "2026-11-15"
+  - text: "ENVIRONMENT: `TMPDIR=$PWD/tmp/tmpdir pnpm check` cannot be used in this
+      checkout — the worktree sits inside the `jaiship` git repository, and four
+      pre-existing suites (projects-*, repos-list-*, dispatch-attempts-scope)
+      require a TMPDIR outside every git work tree. Gates were run with an
+      outside-repo, same-filesystem TMPDIR (/home/juliusz/git/ados-tmp) and the
+      full suite was green. Load-only 5 s timeouts were observed on six suites
+      in some full runs; each passed individually on re-run. Recorded so
+      dod_check and the PR body state the gate invocation honestly."
     type: info
     date: "2026-11-15"
   - text: "Open questions carried by the spec (all non-blocking, deferred): OQ-1
