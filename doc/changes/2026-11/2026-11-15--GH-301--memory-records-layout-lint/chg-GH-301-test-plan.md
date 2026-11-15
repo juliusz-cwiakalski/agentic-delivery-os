@@ -1,13 +1,14 @@
 ---
 id: chg-GH-301-test-plan
-status: Proposed
+status: Updated
+version: 1.1
 created: 2026-11-15
 last_updated: 2026-11-15
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 labels: [milestone-m2, memory, quality-gates, repository-invariants, schema]
 version_impact: minor
-summary: "Verification strategy for M2-S8 memory records, layout, and lint: one canonical tree, one typed record schema reconciled across README/writer/capsule/lint, eight lint areas with failing-fixture mutation tests, both-direction index coverage, enforced budgets, deterministic and bounded output, conflict-free parallel record creation, and the sanctioned replacement of the GH-302 negative guard."
+summary: "Verification strategy for M2-S8 memory records, layout, and lint: one canonical tree, one typed record schema reconciled across README/writer/capsule/lint with ADR-0011 as the authority and the 280/120 bounds imported rather than restated, eight lint areas with failing-fixture mutation tests, both-direction index coverage over two declared universes, enforced budgets, deterministic and bounded output at a fixed injected date, conflict-free parallel record creation across record files and own entry points with union-resolved index rows, and the sanctioned replacement of the GH-302 negative guard."
 links:
   change_spec: ./chg-GH-301-spec.md
   implementation_plan: ./chg-GH-301-plan.yaml
@@ -33,7 +34,7 @@ Verification is layered: a pure domain evaluation with injected file maps (unit)
 - Canonical tree layout over the committed tree, placeholder semantics, and the absence of the fleet quarantine area.
 - One-schema parity between the machine contract, the memory README, the capsule contract, the promotion writer, and the lint, including the capsule reconciliation dispositions.
 - Promotion-writer alignment (full required spine + read-when hint) and curator-rule alignment.
-- Concurrency: parallel-branch record creation with zero merge conflicts, plus union-resolved index rows for two promotion writes.
+- Concurrency: parallel-branch record creation with zero merge conflicts across record files and each creator's own entry-point namespace, plus the shared index row resolved by the documented union rule for both the agent case and two promotion writes.
 - The sanctioned replacement of the GH-302 negative guard (positive presence plus preserved boundary absences) and inventory equality.
 - Gate wiring: aggregate `pnpm check` membership, CI `ts-invariants` step, parity assertions, read-only/deterministic behaviour.
 - Documentation conformance: forbidden-literal registration and `ados_distribution` markers under marker-required roots.
@@ -46,13 +47,15 @@ Verification is layered: a pure domain evaluation with injected file maps (unit)
 - **No generator for the memory index or archive index** (increment step 3). The append-maintained shape is tested; generation is not.
 - **Fleet-layer routing and `external/` quarantine** are absent by decision and are not exercised.
 - **Timing bounds are environment-sensitive.** TC-MEMNFR-002 records the measured cost and asserts the declared ceiling on the CI runner; local figures are evidence, not a second contract.
+- **The index row is not conflict-free by construction.** Two branches appending different rows at end-of-file of the one two-column table conflict, so the plan never asserts a zero-conflict merge of the index. TC-MEMCONC-001 bounds its zero-conflict claim to record files and each creator's own entry-point namespace and resolves the single index-file conflict by the documented union rule; TC-MEMCONC-002 applies the same union state for two promotion writes (F-13, AC-F13-1/AC-F13-2).
 - **Same-role parallel worktrees remain merge-conflict capable** and resolve by the documented union rule. That path is a documented manual+scripted procedure (TC-MEMCONC-001 notes), not automated; the change does not claim it away (F-13).
 - **Known gap by testing-strategy rule:** permanent suites must not assert a branch diff, so "this change adds no forbidden surface" is an inventory/boundary invariant (TC-MEMGUARD-002) plus review-time changed-file inspection, not a diff assertion against a moving base.
 
 ## 2. References
 
-- Change specification: `./chg-GH-301-spec.md` — 30 acceptance criteria (AC-F1-1…AC-NFR10-1), functional capabilities F-1…F-14, data-model contracts DM-1…DM-6, NFR-1…NFR-11, decision log DEC-1…DEC-13, §17.1 Definition of Done (19 rows), Appendix A closed finding-identity register, Appendix B scenario seeds SC-M2-S8-01/02, Appendix C constraint register C-1…C-8.
-- Implementation plan: `./chg-GH-301-plan.yaml` — **pending** (phase 4). This test plan constrains it: the plan must declare phases that own layout, schema, write-path, each lint area, output/truncation, concurrency, guard replacement, gate wiring, and documentation conformance, and it must confirm the concrete file names used below.
+- Change specification: `./chg-GH-301-spec.md` (v1.1) — 30 acceptance criteria (AC-F1-1…AC-NFR10-1), functional capabilities F-1…F-14, data-model contracts DM-1…DM-6, NFR-1…NFR-11, decision log DEC-1…DEC-13, §17.1 Definition of Done (19 rows), Appendix A closed finding-identity register, Appendix B scenario seeds SC-M2-S8-01/02, Appendix C constraint register C-1…C-11.
+- Implementation plan: `./chg-GH-301-plan.yaml` (delivered, 7 phases) — owns layout/schema (phase 1), the evaluator core (phase 2), coverage/budgets/derivables/secrets/output (phase 3), the check edge and gate wiring (phase 4), write-path alignment and the concurrency proofs (phase 5), kernel/curator and doc conformance (phase 6), and finalization (phase 7). Its declarations this plan depends on: the write-path `source` tightening and kind/home-area mapping land in `packages/core/src/domain/capsule-candidates.ts` (phase 5), the curator skill is reconciled in **phase 6**, and every file this plan names as a test home is inside its owning phase's scope.
+- Decision record: `doc/decisions/ADR-0011-canonical-memory-record-schema.md` (Proposed) — the system-level schema authority this change consumes: required spine, closed optional set, concept-key dispositions, the `kind` → home-area mapping (`tacit_fragment` → `tacit/`, removing the `tacits/` defect), conditional requirements, and the single-sourced 280/120 bounds. Tests import the schema's declarations from the machine contract module; they never restate a bound or a vocabulary.
 - Testing strategy: `.ai/rules/testing-strategy.md` — module→test mapping (`scripts/checks/<check>.ts` → `bun run` plus `tests/checks/**` mutation tests; `packages/**` → `bun test tests/structure tests/behaviour` plus boundaries/typecheck; `doc/**` → static/content checks), bun:test authoring rules, invariant-test authoring (tree invariants, not branch diffs), and the gate battery.
 - TypeScript rules: `.ai/rules/typescript.md` — strict TS, tier/purity, contracts-vs-domain-vs-adapter separation, error contract, bun:test conventions.
 - Test runner configuration: `bunfig.toml` (root discovery over `tests/**`, `tmp/**` and `dist/**` ignored, fixtures never named `*.test.ts`).
@@ -60,7 +63,7 @@ Verification is layered: a pure domain evaluation with injected file maps (unit)
 - Ticket truth: `doc/planning/oss-tooling/backlog.md` §"M2-S8 Memory records, layout, and lint" — the four ticket AC artifacts (lint fails on a record missing id/date/evidence; an index line without a backing record and vice versa; budget violations; zero merge conflicts under concurrent creation).
 - Predecessor artifacts: `doc/changes/2026-11/2026-11-14--GH-302--memory-conventions-bootstrap-templates/chg-GH-302-spec.md` and `chg-GH-302-test-plan.md` — the tree scaffold, index contract, entry-point template, manual doctor checklist, and the negative guard replaced here; the negative guard lives at `tests/structure/memory-bootstrap-templates.test.ts:258-287`.
 - Current committed tree: `.ai/memory/README.md` (172 lines), `.ai/memory/agents/{pm,coder,ceo,fixer}/README.md`, `.ai/memory/lessons/lesson-2026-{001,002,003}-*.md`, `.ai/memory/tacit/`.
-- Contracts and code under test: `packages/core/src/contracts/capsule.ts` (candidate model, `CAPSULE_CANDIDATE_TRUST` T0–T5, five evidence prefixes), `packages/adapters/src/file/memory-promotion.ts` (reader, writer, index-row append), `packages/adapters/src/io/privacy-rules.ts` (seven recognizer classes: six secret + one private-literal; three suppression classes), `scripts/checks/*.ts` (invariant convention), `package.json` scripts, `.github/workflows/ci.yml` (`ts-invariants` job).
+- Contracts and code under test: `packages/core/src/contracts/memory-record.ts` (the schema authority delivered in phase 1: required/optional keys, closed vocabularies, id and file-name grammars, `STATEMENT_MAX_CHARS` = 280, `HINT_MAX_CHARS` = 120, budget constants, finding register), `packages/core/src/contracts/capsule.ts` (candidate model, `CAPSULE_CANDIDATE_TRUST` T0–T5, five evidence prefixes), `packages/core/src/domain/capsule-candidates.ts` (`recordContent`, `validateCandidate`, the `kind` mapping and home-area derivation), `packages/adapters/src/file/memory-promotion.ts` (reader, writer, index-row append), `packages/adapters/src/io/privacy-rules.ts` (seven recognizer classes: six secret + one private-literal; three suppression classes), `scripts/checks/*.ts` (invariant convention), `package.json` scripts, `.github/workflows/ci.yml` (`ts-invariants` job).
 - Test precedents: `tests/checks/retro-key-containment.test.ts` (live scan + planted-failure mutations), `tests/checks/forbidden-literals.test.ts` (per-class failing mutations, read-only scan), `tests/checks/error-table-sync.test.ts` (temp-copy mutations), `tests/structure/content-inventory.test.ts` (source inventory equality), `tests/checks/ci-wiring.test.ts` (aggregate/CI citation pins), `tests/fixtures/capsule/promotion.ts` (temp memory tree + real promotion writer), `tests/behaviour/closeout-capsule-*.test.ts`.
 - Milestone scenario seeds (inherited, content not restated): SC-M2-S8-01 (missing id/evidence fails per field, non-zero exit) and SC-M2-S8-02 (two agents appending records to different files merge with zero conflicts, both records listed). Mapped in the scenario details below; the seed's `index.data.records` surface is reconciled to the lint's coverage result because this story ships no index command.
 
@@ -75,26 +78,26 @@ Verification is layered: a pure domain evaluation with injected file maps (unit)
 | AC-F2-1 | Required spine, closed optional set, and closed vocabularies identical across human format, machine contract, and capsule overlap; reconciliation table names each capsule element's disposition | TC-MEMSCHEMA-001 | Covered |
 | AC-F2-2 | Each isolated schema violation yields exactly one matching `memory.schema.*` error naming file, field, and value name; no double-reporting under another area | TC-MEMSCHEMA-002, TC-MEMSCHEMA-004 | Covered |
 | AC-F2-3 | Whole migrated tree renders every required key, zero schema findings, zero required-field drift | TC-MEMSCHEMA-003 | Covered |
-| AC-F3-1 | Promotion home write renders full required spine (trust, basis) and a non-empty ≤120-char read-when hint derived from applicability with statement fallback; zero findings for record and row | TC-MEMWRITE-001, TC-MEMWRITE-002, TC-MEMWRITE-004 | Covered |
+| AC-F3-1 | Promotion home write renders full required spine (trust, basis — `basis` required on promotion-written records, optional on hand-authored ones) and a non-empty read-when hint of at most the published bound (120) derived from applicability with statement fallback; zero findings for record and row | TC-MEMWRITE-001, TC-MEMWRITE-002, TC-MEMWRITE-004 | Covered |
 | AC-F3-2 | Curator rules agree with schema, id rule, status transitions, budgets, and row shape; consolidation pass yields a clean tree | TC-MEMWRITE-003 | Covered |
 | AC-F4-1 | One line per error finding in declared order under own namespace; summary with record/area/error/advisory counts; non-zero on error, zero on advisories only; byte-identical repeated runs | TC-MEMGATE-001, TC-MEMGATE-002 | Covered |
 | AC-F4-2 | Aggregate gate and CI invariants job invoke the same invariant, parity-tested; command inventory, error rows, domain kinds, doctor checks unchanged | TC-MEMGATE-004 | Covered |
-| AC-F6-1 | Missing/malformed/future creation date each one `memory.dating.*` error; date never inferred from file name, commit, or clock | TC-MEMDATE-001 | Covered |
+| AC-F6-1 | Absent `created` is exactly one `memory.schema.keys-missing` with no dating finding; present-but-malformed and future `created` are each one `memory.dating.*` error; date never inferred from a file name, a commit, or anything else | TC-MEMDATE-001 | Covered |
 | AC-F6-2 | Revalidation required for authoritative behaviour-changing lesson; malformed is error; expired is non-gating advisory; entry-point capture-line dates match the declared shape | TC-MEMDATE-002 | Covered |
 | AC-F7-1 | Evidence presence and shape, writer presence, source channel each classified; findings never echo a full evidence value | TC-MEMPROV-001 | Covered |
 | AC-F7-2 | Three migrated records carry a trust level consistent with their recorded channel and a shaped evidence link, statements and statuses unchanged | TC-MEMPROV-002 | Covered |
 | AC-F8-1 | Dangling supersedes/superseded_by/contradicts/link and asymmetric supersession each one `memory.reference.*` error; resolvable references produce none | TC-MEMREF-001, TC-MEMREF-002 | Covered |
 | AC-F9-1 | Record without row → `memory.index.record-uncovered`; row without covered path → `memory.index.row-unbacked`; independent, one of each yields exactly two findings | TC-MEMINDEX-001 | Covered |
-| AC-F9-2 | Empty/over-long hint, duplicate row, and rows targeting topic file/retro note/area directory each a `memory.index.*` error; archive index covers every note exactly | TC-MEMINDEX-002, TC-MEMINDEX-003 | Covered |
+| AC-F9-2 | Empty/over-long hint, duplicate row, and rows targeting topic file/retro note/area directory each a `memory.index.*` error; the archive index covers every note exactly, evaluated over its own universe (U-2) with the universe named in the detail | TC-MEMINDEX-002, TC-MEMINDEX-003 | Covered |
 | AC-F10-1 | Over-cap index lines/bytes, agent/guild entry lines, archive index lines are errors naming file, measured value, cap; kernel 200–220 warn, >220 error; exactly at cap passes | TC-MEMBUDGET-001 | Covered |
 | AC-F10-2 | Delivered tree measures within every cap: index ≤200 lines and ≤25 KB, entry points ≤150, archive index ≤200, kernel inside advisory band | TC-MEMBUDGET-002 | Covered |
 | AC-F11-1 | File-listing and command-echo fenced blocks each one `memory.derivable.*` advisory, exit stays zero, advisory count reported; neither pattern → no finding | TC-MEMHEUR-001, TC-MEMHEUR-002 | Covered |
 | AC-F12-1 | One `memory.secret.<class>` error per recognizer class naming path, line, and class, never the value; rule-id set equals the privacy vocabulary's classes exactly | TC-MEMSECRET-001 | Covered |
 | AC-F12-2 | Documented placeholder or suppression marker inside a matched span produces no finding; markerless value of the same shape produces the finding | TC-MEMSECRET-002 | Covered |
-| AC-F13-1 | Two agents on parallel branches create records in their own namespace; merge has zero conflicts, neither touches the other's files, both records covered after merge | TC-MEMCONC-001 | Covered |
+| AC-F13-1 | Two agents on parallel branches create records in their own namespace; zero merge conflicts across the record files and each creator's own entry-point namespace; the index-row pair is outside that claim and resolves by union (AC-F13-2); both records covered by exactly one row each after resolution | TC-MEMCONC-001 | Covered |
 | AC-F13-2 | Two promotion writes land two record files plus two index rows; no file conflict, both rows survive union resolution, no duplicate/orphan row, re-run adds nothing | TC-MEMCONC-002 | Covered |
 | AC-F14-1 | Replacement guard asserts the invariant exists and is cited by both gate surfaces, and still asserts no memory subcommand, five doctor checks, unchanged error-table rows; old absence-only assertion gone | TC-MEMGUARD-001 | Covered |
-| AC-NFR1-1 | Byte-identical output including order and truncation; zero writes, no network, no clock | TC-MEMGATE-002, TC-MEMGATE-003, TC-MEMNFR-001 | Covered |
+| AC-NFR1-1 | Byte-identical output including order and truncation for a fixed tree and a fixed injected date; exactly one date read at the edge and no ambient clock in the pure evaluation; zero writes, no network; at a later injected date only date-derived findings differ | TC-MEMGATE-002, TC-MEMGATE-003, TC-MEMNFR-001 | Covered |
 | AC-NFR2-1 | Declared size bound completes inside the wall-clock bound, one read per file, no shell-out | TC-MEMNFR-002 | Covered |
 | AC-NFR5-1 | At most 100 error findings and 100 advisories printed in deterministic order, followed by one truncation line with true totals | TC-MEMNFR-003 | Covered |
 | AC-NFR7-1 | New user-facing docs registered where required; every new doc under a marker root carries `ados_distribution`; distribution guard zero drift | TC-MEMNFR-004 | Covered |
@@ -109,9 +112,9 @@ No HTTP or event surface is added or changed (spec §8.1/§8.2). The data-model 
 
 | ID | Element | TC ID(s) | Status |
 |----|---------|----------|--------|
-| DM-1 | Canonical typed-record schema: required spine, closed optional set, closed vocabularies, id and file-name grammar, validity start, precedence rule | TC-MEMSCHEMA-001, TC-MEMSCHEMA-002, TC-MEMSCHEMA-003, TC-MEMSCHEMA-004 | Covered |
+| DM-1 | Canonical typed-record schema: required spine, closed optional set, closed vocabularies, id and file-name grammar, validity start, conditional requirements (`basis`, `revalidate_after`, `guild`, `superseded_by`, preference `source`), the published 280/120 bounds, precedence rule | TC-MEMSCHEMA-001, TC-MEMSCHEMA-002, TC-MEMSCHEMA-003, TC-MEMSCHEMA-004 | Covered |
 | DM-2 | Canonical tree layout and per-area budgets; placeholder semantics; absent fleet quarantine | TC-MEMLAY-001, TC-MEMLAY-002, TC-MEMLAY-003, TC-MEMLAY-004 | Covered |
-| DM-3 | Index row and coverage contract: row shape, hint bound, coverage universe, explicitly-not-covered set, both-direction findings | TC-MEMINDEX-001, TC-MEMINDEX-002, TC-MEMINDEX-003, TC-MEMLAY-002 | Covered |
+| DM-3 | Index row and coverage contract: row shape, hint bound, the two coverage universes (U-1 memory index, U-2 archive index), explicitly-not-covered set, both-direction findings | TC-MEMINDEX-001, TC-MEMINDEX-002, TC-MEMINDEX-003, TC-MEMLAY-002 | Covered |
 | DM-4 | Finding model: identity shape/register, area order, fields, severity, emission, exit, ceiling | TC-MEMSCHEMA-004, TC-MEMGATE-001, TC-MEMGATE-002, TC-MEMNFR-003 | Covered |
 | DM-5 | Budget declaration single source (index lines/bytes, agent/guild/archive caps, kernel warn/error band) | TC-MEMBUDGET-001, TC-MEMBUDGET-002 | Covered |
 | DM-6 | Capsule reconciliation: candidate key set (source tightened), trust/evidence vocabularies, read projection stability, additive promotion content, unchanged events/naming/close | TC-MEMSCHEMA-001, TC-MEMWRITE-004 | Covered |
@@ -120,7 +123,7 @@ No HTTP or event surface is added or changed (spec §8.1/§8.2). The data-model 
 
 | NFR ID | Requirement | TC ID(s) | Status |
 |--------|-------------|----------|--------|
-| NFR-1 | Determinism and read-only evaluation: byte-identical ordered output; zero writes, clock, randomness, network | TC-MEMGATE-002, TC-MEMGATE-003, TC-MEMNFR-001 | Covered |
+| NFR-1 | Determinism and read-only evaluation measured at a fixed injected date: byte-identical ordered output; exactly one date read at the edge, zero writes, randomness, network | TC-MEMGATE-002, TC-MEMGATE-003, TC-MEMNFR-001 | Covered |
 | NFR-2 | Scan cost ≤1 s wall for ≤2,000 files or ≤8 MB, one read per file, linear | TC-MEMNFR-002 | Covered |
 | NFR-3 | Gate overhead ≤1 s added to the aggregate local gate, measured and recorded | TC-MEMNFR-002 (measurement recorded in TC-MEMNFR-005 evidence) | Covered |
 | NFR-4 | Tier and purity: pure domain evaluation, contracts data-only, file reading at adapter/edge, boundaries green | TC-MEMGATE-003, TC-MEMNFR-005 (boundary job) | Covered |
@@ -139,7 +142,7 @@ Per `.ai/rules/testing-strategy.md`, this is a mixed TypeScript + docs change an
 - **Unit (pure domain evaluation).** `packages/core/src/domain/memory-lint.ts` and `packages/core/src/contracts/memory-record.ts` — pure functions over an injected file list and text map, with the privacy vocabulary and a fixed date injected. Tests import the module directly from `tests/checks/**` and feed fixture trees in memory; no filesystem writes inside the evaluation. Runner: `bun test`.
 - **Check (repository invariant).** `scripts/checks/memory-lint.ts` — the bun-run edge that enumerates `.ai/memory/**`, parses YAML frontmatter, calls the pure evaluation, prints findings and the summary, and projects the exit. Mutation tests build a temporary tree, invoke the exported pure scan, and assert the exact finding identities. Execution of the live check: `bun run scripts/checks/memory-lint.ts`.
 - **Behaviour.** `tests/behaviour/memory-promotion-schema.test.ts` uses `tests/fixtures/capsule/promotion.ts` (`makeTempMemory`, `makePromotionRuntime`, `candidateYaml`) to run the real promotion writer over a temporary memory root, then evaluate the written tree with the lint.
-- **Integration (git).** `tests/behaviour/memory-concurrency-merge.test.ts` builds a temporary git repository, creates two branches that each add a distinct record file plus its own index row and own entry-point line, merges both, asserts zero conflicts and a clean post-merge lint.
+- **Integration (git).** `tests/behaviour/memory-concurrency-merge.test.ts` builds a temporary git repository, creates two branches that each add a distinct record file plus a line in that creator's own entry point, merges both, asserts zero conflicts across the record files and the entry-point namespaces, resolves the single index-file conflict by the documented union rule, and asserts a clean post-merge lint with both records covered.
 - **Structure.** `tests/structure/**` asserts the committed tree shape, the three-way schema parity, the curator-rule parity, the gate/CI citation parity, and inventory equality.
 - **Manual / semi-automated evidence.** Same-role parallel-worktree union resolution, the consolidation-pass spot review, and doc-diff review are manual and labelled as such. Timing evidence is recorded from an automated run but is environment-sensitive.
 - **Static/diff (always).** `git diff --check`; changed-file review for naming/path conventions and for the boundary rule (no memory subcommand, no doctor area, no error identity).
@@ -203,7 +206,7 @@ git diff --check
 | TC-MEMGATE-002 | Determinism and declared ordering | Check | Automated | Critical | AC-F4-1, AC-NFR1-1 |
 | TC-MEMGATE-003 | Read-only, clock-free, offline evaluation | Check + Structure | Automated | Critical | AC-NFR1-1, NFR-4 |
 | TC-MEMGATE-004 | Aggregate gate and CI invariants wiring parity | Structure | Automated | Critical | AC-F4-2, AC-NFR10-1, NFR-6 |
-| TC-MEMDATE-001 | Creation date presence, shape, future | Check | Automated | Critical | AC-F6-1 (seed SC-M2-S8-01) |
+| TC-MEMDATE-001 | Creation-date classification: absent, malformed, future | Check | Automated | Critical | AC-F6-1 (seed SC-M2-S8-01) |
 | TC-MEMDATE-002 | Revalidation windows and capture-line dates | Check | Automated | High | AC-F6-2 |
 | TC-MEMPROV-001 | Evidence presence/shape, writer, source channel | Check | Automated | Critical | AC-F7-1 (seed SC-M2-S8-01), NFR-9 |
 | TC-MEMPROV-002 | Migrated-records backfill fidelity | Structure + Manual | Semi-automated | High | AC-F7-2 |
@@ -211,14 +214,14 @@ git diff --check
 | TC-MEMREF-002 | Resolvable references and asymmetry control | Check | Automated | High | AC-F8-1 |
 | TC-MEMINDEX-001 | Both-direction coverage independence | Check | Automated | Critical | AC-F9-1 |
 | TC-MEMINDEX-002 | Row shape, duplicate rows, wrong-target rows | Check | Automated | High | AC-F9-2 |
-| TC-MEMINDEX-003 | Archive index covers notes exactly | Check | Automated | High | AC-F9-2 |
+| TC-MEMINDEX-003 | Archive index covers notes exactly, over its own universe | Check | Automated | High | AC-F9-2 |
 | TC-MEMBUDGET-001 | Cap boundaries and kernel bands | Check | Automated | Critical | AC-F10-1 |
 | TC-MEMBUDGET-002 | Delivered tree within every cap (measured) | Check + Structure | Automated | Critical | AC-F10-2 |
 | TC-MEMHEUR-001 | Derivable advisory classes (positive) | Check | Automated | High | AC-F11-1 |
 | TC-MEMHEUR-002 | Derivable negative control and non-gating exit | Check | Automated | High | AC-F11-1 |
 | TC-MEMSECRET-001 | One finding per recognizer class; no value echo; rule-id set | Check | Automated | Critical | AC-F12-1, NFR-9 |
 | TC-MEMSECRET-002 | Suppression classes and markerless control | Check | Automated | Critical | AC-F12-2 |
-| TC-MEMCONC-001 | Parallel-branch record creation, zero conflicts, coverage after merge | Integration | Automated | Critical | AC-F13-1 (seed SC-M2-S8-02) |
+| TC-MEMCONC-001 | Parallel-branch record creation: zero conflicts on records and own entry points, union-resolved index pair, coverage after merge | Integration | Automated | Critical | AC-F13-1 (seed SC-M2-S8-02) |
 | TC-MEMCONC-002 | Two promotion writes and union-resolved index rows | Behaviour | Automated | Critical | AC-F13-2 (seed SC-M2-S8-02) |
 | TC-MEMGUARD-001 | Negative guard replaced by presence + preserved absences | Structure | Automated | Critical | AC-F14-1 |
 | TC-MEMGUARD-002 | Inventory equality (no new surface) | Structure | Automated | Critical | AC-NFR10-1 |
@@ -287,7 +290,7 @@ git diff --check
 1. Feed a fixture tree containing `.gitkeep`, a topic file beside an entry point, a retro note under `retro/<year>/`, and a directory row attempt for `lessons/` to the pure coverage evaluation.
 2. Assert `.gitkeep` produces no finding and is not required to be indexed.
 3. Assert the topic file and the retro note produce no `record-uncovered` finding.
-4. Assert the directory row produces a `memory.index.row-malformed` (or the register's wrong-target identity) — a directory is not a covered path.
+4. Assert the directory row produces exactly one `memory.index.row-unbacked` naming `lessons/` and the universe `memory-index`: a directory is not a covered path, and a row whose path is not a covered path is the register's `row-unbacked` identity (DM-3's both-directions clause). `memory.index.row-malformed` is reserved for hint-shape defects (empty → `hint-missing`, over-long → `row-malformed`); the closed register has no separate wrong-target identity, so the assertion pins `row-unbacked` and fails if a second index finding is emitted for the same row.
 
 **Expected Outcome**:
 
@@ -375,7 +378,7 @@ git diff --check
 
 **Preconditions**:
 
-- The schema phase has landed `packages/core/src/contracts/memory-record.ts` and the README rewrite.
+- Plan phase 1 has landed `packages/core/src/contracts/memory-record.ts` and the README rewrite.
 - The README's record-format block is parseable as a fenced YAML example with key comments.
 
 **Steps**:
@@ -412,6 +415,7 @@ git diff --check
 
 - The pure evaluation is importable and the tree builder can seed one record plus a valid index row.
 - The valid baseline record renders every required key.
+- The statement bound is imported as `STATEMENT_MAX_CHARS` from `packages/core/src/contracts/memory-record.ts` (ADR-0011 D6); the number never appears as a code literal in the suite (the parenthesised readings in this plan are documentation, not fixture inputs).
 
 **Steps**:
 
@@ -419,6 +423,7 @@ git diff --check
 2. Assert exactly one finding in the `schema` area with the expected rule id.
 3. Assert no finding from `dating`, `provenance`, `reference`, `index`, `budget`, `derivable`, or `secret` for the same defect (no double-reporting).
 4. Assert the detail contains the record path and the offending key's name; assert it does not contain an echoed secret or a full evidence value.
+5. Run the boundary/conditional controls below and assert the stated silence or classification.
 
 **Mutation table (one defect per case, per AC-F2-2 and Appendix A):**
 
@@ -432,20 +437,29 @@ git diff --check
 | 6 | second record reusing an existing id | `memory.schema.id-duplicate` |
 | 7 | file name not beginning with its id | `memory.schema.file-name-mismatch` |
 | 8 | non-empty value outside a closed vocabulary (`kind: memory`) | `memory.schema.value-unknown` |
-| 9 | statement above the declared bound | `memory.schema.statement-too-long` |
+| 9 | statement of `STATEMENT_MAX_CHARS + 1` characters (281 today) | `memory.schema.statement-too-long` |
 | 10 | preference record whose source is not `human_correction` | `memory.schema.preference-source` |
 | 11 | guild tag disagreeing with the guild directory | `memory.schema.guild-mismatch` |
 | 12 | guild tag present outside a guild folder | `memory.schema.guild-mismatch` |
 | 13 | superseded record without `superseded_by` | `memory.schema.superseded-by-missing` |
 
+**Boundary and conditional controls (asserted silence or classification, no new rule id):**
+
+| Control | Expected outcome |
+|---|---|
+| statement of `STATEMENT_MAX_CHARS - 1` characters (279 today) | no finding |
+| statement of exactly `STATEMENT_MAX_CHARS` characters (280 today) | no finding (bound is inclusive) |
+| hand-authored record omitting `basis` | no finding — `basis` is optional on a hand-authored record and omitted when absent (ADR-0011 D5); the promotion path's guarantee that `basis` is always rendered is asserted in TC-MEMWRITE-001, so the conditional needs no lint-side discriminator |
+| record with `basis: "gut-feel"` (outside the five capture-bar bases) | one `memory.schema.value-unknown` naming `basis` |
+
 **Expected Outcome**:
 
-- Thirteen isolated cases, thirteen matching findings, zero cross-area noise.
+- Thirteen isolated defect cases, thirteen matching findings, zero cross-area noise; the statement bound is enforced at the imported constant with a correct inclusive boundary; the `basis` conditional resolves to "optional on a record, always rendered by promotion" rather than to an invented finding.
 
 **Notes / Clarifications**:
 
 - This is the ticket's "lint fails on a record missing id" artifact in its isolated form; the combined missing-id/date/evidence case is TC-MEMGATE-001 + TC-MEMDATE-001 + TC-MEMPROV-001 and seed SC-M2-S8-01.
-- **Fixture / mutant**: `tests/fixtures/memory/mutants.ts` exports one record text per row; the baseline record is the single source reused by every area suite.
+- **Fixture / mutant**: `tests/fixtures/memory/mutants.ts` exports one record text per row, each built from the imported schema constants (`STATEMENT_MAX_CHARS` for the statement rows, the closed vocabularies for the value rows); the baseline record is the single source reused by every area suite.
 
 #### TC-MEMSCHEMA-003 - Whole-tree conformance and zero drift surface
 
@@ -524,19 +538,21 @@ git diff --check
 **Target Layer / Location**: `tests/behaviour/memory-promotion-schema.test.ts` using `tests/fixtures/capsule/promotion.ts`
 **Tags**: @bun, @behaviour, @memory
 
-**Given / When / Then**: Given a capsule candidate that passes the capture bar and evidence rules, when the promotion home write is applied, then the written record carries every required schema key including `trust` and `basis`, the appended index row's second column is a non-empty read-when hint of at most 120 characters, and the invariant reports zero findings for that record and that row.
+**Given / When / Then**: Given a capsule candidate that passes the capture bar and evidence rules, when the promotion home write is applied, then the written record carries every required schema key including `trust` and `basis`, the appended index row's second column is a non-empty read-when hint of at most the published `HINT_MAX_CHARS` (120), and the invariant reports zero findings for that record and that row.
 
 **Preconditions**:
 
-- The promotion writer is extended to render the schema and the hint (write-path phase).
+- The promotion writer is extended to render the schema and the hint (plan phase 5).
 - `makeTempMemory` seeds an index with a table header; `candidateYaml` produces a valid candidate.
+- `STATEMENT_MAX_CHARS` and `HINT_MAX_CHARS` are imported from `packages/core/src/contracts/memory-record.ts`; no bound is restated in the suite.
 
 **Steps**:
 
 1. Run `runPromotionCloseout` with one valid lesson candidate over a temp memory root.
 2. Parse the written record's frontmatter and assert the required spine is complete, including `trust` in T0–T5 and a `basis` from the five capture-bar bases.
-3. Parse the appended index row; assert path in backticks, non-empty second column, `length <= 120`, and that it answers "when do I read this" (derived from `applies_when`).
-4. Run the pure memory evaluation over the temp root's text map; assert zero findings for the record and the row.
+3. **`basis` conditional, its own assertion:** assert every promotion-written record in the fixture corpus renders `basis` and that its value is a member of the imported five-base vocabulary — the writer guarantee that discharges ADR-0011 D5's "required on a promotion-written record" without a lint-side discriminator (the hand-authored omission case is the control in TC-MEMSCHEMA-002).
+4. Parse the appended index row; assert path in backticks, non-empty second column, `length <= HINT_MAX_CHARS`, and that it answers "when do I read this" (derived from `applies_when`).
+5. Run the pure memory evaluation over the temp root's text map; assert zero findings for the record and the row.
 
 **Expected Outcome**:
 
@@ -544,7 +560,7 @@ git diff --check
 
 **Notes / Clarifications**:
 
-- This is the DoD-4 evidence and the "promoted record plus its row yields zero findings" clause of ACC-F3-1.
+- This is the DoD-4 evidence and the "promoted record plus its row yields zero findings" clause of AC-F3-1.
 - **Fixture / mutant**: real writer via `makePromotionRuntime`; a mutant candidate with `trust` removed from the rendered write (test hook) must fail TC-MEMSCHEMA-002's missing-key case at the record level.
 
 #### TC-MEMWRITE-002 - Read-when hint derivation and bound
@@ -558,17 +574,18 @@ git diff --check
 **Target Layer / Location**: `tests/behaviour/memory-promotion-schema.test.ts` (hint block)
 **Tags**: @bun, @behaviour, @memory
 
-**Given / When / Then**: Given a candidate with an applicability statement, when the row is rendered, then the hint is the applicability statement; given none, then the hint falls back to the truncated statement; in both cases the hint is non-empty and at most 120 characters.
+**Given / When / Then**: Given a candidate with an applicability statement, when the row is rendered, then the hint is the applicability statement — proving the column reads as a read-when hint rather than an echo of the record's statement; given none, then the hint falls back to the statement; in both cases the hint is non-empty, whitespace-collapsed, and at most the published `HINT_MAX_CHARS` (120).
 
 **Preconditions**:
 
 - The hint derivation is a pure function in the promotion writer or its domain helper.
+- `HINT_MAX_CHARS` is imported from `packages/core/src/contracts/memory-record.ts`; the literal 120 never appears in the suite.
 
 **Steps**:
 
-1. Render with `applies_when` present; assert the second column equals the applicability statement (normalized) when within the bound.
+1. Render with `applies_when` present; assert the second column equals the applicability statement (whitespace-normalized) when within the bound, and that it differs from the record's own statement — the discrimination DEC-7 requires.
 2. Render with `applies_when` absent; assert the second column falls back to the statement.
-3. Render with a long statement; assert truncation to 120 characters and no empty column.
+3. Render with an `applies_when` and a statement that both exceed the bound; assert the column is non-empty, at most `HINT_MAX_CHARS`, and comes from the applicability path (not a statement prefix). The test asserts the bounded, non-empty outcome and the source of the hint; it does not prescribe a clipping algorithm, because DEC-7/ADR-0011 D6 constrain the hint's meaning ("a read-when hint, not a truncated statement"), not a truncation rule.
 4. Feed each rendered row to the index-shape evaluation; assert no `hint-missing` or `row-malformed`.
 
 **Expected Outcome**:
@@ -594,14 +611,15 @@ git diff --check
 
 **Preconditions**:
 
-- `.opencode/skills/consolidate-memory/SKILL.md` is reconciled in the write-path phase.
+- `.opencode/skills/consolidate-memory/SKILL.md` is reconciled in plan **phase 6** ("Kernel and curator alignment with the memory lint, and doc conformance"); phase 6's scope declares the skill file and `tests/structure/memory-record-schema.test.ts`, and its commit subject is `docs(GH-301): align the kernel and curator rules with the memory lint`.
+- AC-F3-2 is owned by phase 6 in the plan's AC-ownership table.
 
 **Steps**:
 
 1. Automated: read the skill and assert it names the required key set, the monotonic id rule and non-reuse-after-prune, the five statuses with writer-emitted subset, the budget caps, and the read-when row shape; assert no contradicting instruction (for example a different required field list) is present.
 2. Automated: assert the skill's permissible operations still include duplicate merge, demote/drop, supersession, prune-with-reason, split-into-topic-files, and index rebuild.
 3. Manual: perform a consolidation pass in a temporary copy of the tree (merge a duplicate pair, mark a supersession, split an over-cap entry point), then run the invariant; record the clean verdict in Section 10.
-4. Manual: record the skill-content comparison verdict in the plan phase notes.
+4. Manual: record the skill-content comparison verdict in the **phase 6** plan notes.
 
 **Expected Outcome**:
 
@@ -689,18 +707,20 @@ git diff --check
 **Target Layer / Location**: `tests/checks/memory-lint-output.test.ts` (determinism/order block)
 **Tags**: @bun, @check, @memory, @determinism
 
-**Given / When / Then**: Given an unchanged tree, when two consecutive runs execute, then the finding output is byte-identical; and the findings are ordered by area order, then repository-relative path, then line, then rule id.
+**Given / When / Then**: Given an unchanged tree and one fixed injected date, when two consecutive runs execute, then the finding output is byte-identical; and the findings are ordered by area order, then repository-relative path, then line, then rule id.
 
 **Preconditions**:
 
 - The evaluation is deterministic and file enumeration is sorted.
+- The injected date is a fixed constant for the whole test module (`2026-11-15`); no step relies on the wall clock.
 
 **Steps**:
 
-1. Run the check twice over the same temp tree with findings in several areas; assert byte equality of stdout and identical exit codes.
+1. Run the check twice over the same temp tree **with the same injected date** and findings in several areas (including a future-date finding, which is the only date-derived class here); assert byte equality of stdout and identical exit codes.
 2. Construct a tree with two findings in one file, one line-scoped and one record-scoped, and findings across areas; assert the output order matches `(area index, path, line, rule id)`.
-3. Assert the pure evaluation does not consult `Date.now()`: inject a clock that throws if called; assert the run succeeds.
-4. Assert repeated runs over the live tree also produce identical output.
+3. Assert the pure evaluation does not consult `Date.now()`: inject a clock that throws if called; assert the run succeeds, so the date cannot arrive from an ambient read inside the evaluation.
+4. Assert the edge supplies that one date: inject a counting date reader into the check edge and assert exactly one read per run, with the same value reaching the pure evaluation (the precondition that makes "fixed injected date" meaningful; the later-date comparison is TC-MEMNFR-001).
+5. Assert repeated runs over the live tree also produce identical output.
 
 **Expected Outcome**:
 
@@ -721,22 +741,22 @@ git diff --check
 **Target Layer / Location**: `tests/checks/memory-lint-output.test.ts` (read-only block) + boundary suite
 **Tags**: @bun, @check, @boundaries, @memory
 
-**Given / When / Then**: Given the live repository, when the invariant runs, then the working tree is byte-identical before and after; the pure evaluation receives an injected file map (no filesystem access, no network, no clock); and the domain/contract modules declare no runtime I/O import.
+**Given / When / Then**: Given the live repository, when the invariant runs, then the working tree is byte-identical before and after; the pure evaluation receives an injected file map and an injected date value (no filesystem access, no network, no ambient clock); and the domain/contract modules declare no runtime I/O import.
 
 **Preconditions**:
 
-- The scanner adapter is the only fs-reading module; the pure evaluation is in the domain tier.
+- The scanner adapter is the only fs-reading module; the pure evaluation is in the domain tier; the only ambient date read sits in the check edge and is injected once (NFR-1, NFR-4).
 
 **Steps**:
 
 1. Record `git status --porcelain` before and after `bun run scripts/checks/memory-lint.ts`; assert equality (mirrors `forbidden-literals.test.ts`).
-2. Static assertion: the domain module's imports contain no `node:fs`, `node:child_process`, `node:net`, or `fetch`; the contract module exports data/types only.
-3. Static assertion: the edge module owns the only `readFileSync`/`readdirSync` usage and the only YAML parse.
+2. Static assertion: the domain module's imports contain no `node:fs`, `node:child_process`, `node:net`, or `fetch`; the contract module exports data/types only; neither module reads a clock (no `Date.now`, no `new Date()` without an argument).
+3. Static assertion: the edge module owns the only `readFileSync`/`readdirSync` usage, the only YAML parse, and the only ambient date read (exactly one call site, whose value is passed to the evaluation).
 4. Run `pnpm check:boundaries` (or `bun test tests/boundaries`) and assert green, including the new modules in the inventory.
 
 **Expected Outcome**:
 
-- The invariant mutates nothing, calls no network, reads no clock; purity and boundary rules hold.
+- The invariant mutates nothing, calls no network, and reads no clock outside its single injected date read; purity and boundary rules hold.
 
 **Notes / Clarifications**:
 
@@ -750,7 +770,7 @@ git diff --check
 **Related IDs**: F-4, F-14, AC-F4-2, AC-NFR10-1, NFR-6, DM-4
 **Test Type(s)**: Structure
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/structure/memory-lint-wiring.test.ts` extending `tests/checks/ci-wiring.test.ts` and `tests/structure/content-inventory.test.ts` patterns
+**Target Layer / Location**: `tests/structure/memory-lint-wiring.test.ts`, using the aggregate-string pin technique of `tests/checks/ci-wiring.test.ts` and the inventory pattern of `tests/structure/content-inventory.test.ts`
 **Tags**: @bun, @structure, @ci, @memory
 
 **Given / When / Then**: Given the delivered gate surfaces, when the aggregate local gate and the CI invariants job are inspected, then both execute the same `scripts/checks/memory-lint.ts` invocation, a parity test asserts both citations, and the command inventory, error-table rows, domain kinds, and doctor check set are unchanged.
@@ -765,7 +785,7 @@ git diff --check
 2. Read `.github/workflows/ci.yml`; assert the `ts-invariants` job's static-check step runs the same path.
 3. Assert both citations use the identical command string (parity helper shared with the check).
 4. Assert `tests/structure/inventory.json` lists the new `packages/**` modules and the check's exported entry, so the inventory equality test stays green.
-5. Assert `tests/checks/ci-wiring.test.ts`-style pins are extended (aggregate string and dedicated script) and that mutating either surface in a temp copy makes the parity assertion fail naming the surface.
+5. Assert the aggregate-string pins are updated in the three suites the plan declares for phase 4 (`tests/checks/ci-checks.test.ts`, `tests/checks/privacy-ci-wiring.test.ts`, `tests/checks/license-ci-binding.test.ts`), and that mutating either surface in a temp copy makes the parity assertion fail naming the surface. `tests/checks/ci-wiring.test.ts` is **not** edited: it passes unchanged, and this suite does not require its modification.
 6. Assert no new doctor check, CLI command, error-table row, or domain kind appears (delegated to TC-MEMGUARD-002 for the full inventory).
 
 **Expected Outcome**:
@@ -776,37 +796,49 @@ git diff --check
 
 - **Fixture / mutant**: temp-copy mutation of `package.json`/`ci.yml` (the `boundary-ci-parity.test.ts` technique) proves the parity test is non-vacuous.
 
-#### TC-MEMDATE-001 - Creation date presence, shape, future
+#### TC-MEMDATE-001 - Creation-date classification: absent, malformed, future
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-6, AC-F6-1, DM-1, DM-4 (seed SC-M2-S8-01)
+**Related IDs**: F-6, F-5, AC-F6-1, DM-1, DM-4 (seed SC-M2-S8-01)
 **Test Type(s)**: Check
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/checks/memory-lint-dating.test.ts`
 **Tags**: @bun, @check, @memory, @dating
 
-**Given / When / Then**: Given a record with no creation date, a malformed creation date, or a future creation date, when the invariant runs, then each is one `memory.dating.*` error naming the file and the value's name; the date is never inferred from a file name, a commit, or the current clock.
+**Given / When / Then**: Given a record with no `created` key, then it is exactly one `memory.schema.keys-missing` error naming the file and the key and **no** `memory.dating.*` finding, because an absent key is the schema area's classification (AC-F6-1, spec v1.1); given a record whose `created` is present but not `YYYY-MM-DD`, and a record whose `created` lies after the run's single injected date, then each is exactly one `memory.dating.*` error naming the file and the value's name — the dating area owns only the present value; the date is never inferred from a file name, a commit, or anything else.
 
 **Preconditions**:
 
-- A fixed "today" is injected into the evaluation (for example `2026-11-15`) so the future test is deterministic.
+- One fixed "today" is injected into the evaluation (`2026-11-15`) so the future case is deterministic and no ambient clock is read.
+- The dating suite imports the record baseline from the shared fixture; every case differs from the baseline in exactly one field.
 
 **Steps**:
 
-1. Mutant table: `created` absent → `memory.dating.created-malformed`; `created: "15/11/2026"` → `created-malformed`; `created: "2027-01-01"` (after injected today) → `created-future`.
-2. Assert exactly one finding per case, naming the path and `created`; assert no `schema.keys-missing` finding for the absent-date case if `created` is required at the schema layer — the expectation is defined once in the plan phase (see Section 8.3 OQ-TP-2) and whatever classification is chosen must be single-area.
-3. Assert a record with a valid created date produces no dating finding.
-4. Assert a file named `lesson-2026-001` with no `created` key does not infer `2026` from the file name and still reports the dating finding.
+1. Mutant table — one unambiguous row per classification, matching AC-F6-1 as amended in spec v1.1:
+
+   | # | Mutant | Expected finding(s) | Expected silence |
+   |---|--------|---------------------|------------------|
+   | 1 | `created` key absent | exactly one `memory.schema.keys-missing` naming the file and `created` | zero `memory.dating.*` findings for that record |
+   | 2 | `created: "15/11/2026"` (present, wrong shape) | exactly one `memory.dating.created-malformed` naming the file and `created` | zero `memory.schema.keys-missing` — the key is present |
+   | 3 | `created` = injected date + 1 day (`2026-11-16` at the pinned `2026-11-15`) | exactly one `memory.dating.created-future` naming the file and `created` | zero `created-malformed` (the shape is valid) |
+   | 4 | `created: "2026-11-15"` (valid, equal to the injected date) | no finding | no dating and no schema finding for `created` |
+
+2. Assert each row yields exactly one finding in its stated area and that no row produces findings in both `schema` and `dating` — the single-area rule is asserted, not left to whichever branch runs first.
+3. Assert an empty `created: ""` is `memory.dating.created-malformed` (present but not a date), not `keys-missing` — the boundary between "absent" and "present but empty".
+4. Assert a file named `lesson-2026-001-…md` with no `created` key does not infer `2026` from the file name: the finding remains `memory.schema.keys-missing` and no date is synthesized.
+5. Run the same four rows twice with the same injected date and assert byte-identical output (determinism follows from the fixed input, TC-MEMNFR-001).
 
 **Expected Outcome**:
 
-- Dating is enforced from the record only; no inference path exists.
+- Absent → schema area, once; malformed and future → dating area, once each; valid and at-boundary dates silent; no inference path and no double classification.
 
 **Notes / Clarifications**:
 
-- **Fixture / mutant**: `mutants.ts` dating rows. The absent-`created` case is also the ticket's "missing date" artifact, asserted here and at the verdict level in TC-MEMGATE-001.
+- **Superseded expectation, recorded deliberately:** v1.0 of this plan asserted `memory.dating.created-malformed` for the absent case and then hedged about `schema.keys-missing`. Spec v1.1 AC-F6-1 fixes the classification to `memory.schema.keys-missing`, and the ticket intent ("lint fails on a record missing a date") holds because the schema error still fails the check. The id is kept; the content is rewritten.
+- The absent-`created` row is also the ticket's "missing date" artifact, asserted here and at the verdict level in TC-MEMGATE-001.
+- **Fixture / mutant**: `mutants.ts` dating rows; the future row derives its value from the injected date (injected + 1 day) rather than a hardcoded year, so the case cannot age.
 
 #### TC-MEMDATE-002 - Revalidation windows and capture-line dates
 
@@ -1024,61 +1056,67 @@ git diff --check
 **Target Layer / Location**: `tests/checks/memory-lint-index.test.ts` (row shape block)
 **Tags**: @bun, @check, @memory, @index
 
-**Given / When / Then**: Given an index row with an empty or over-long read-when hint, a duplicated row for one covered path, and a row resolving to a topic file, a retro note, or an area directory, then each is one `memory.index.*` error of the matching rule id.
+**Given / When / Then**: Given a memory-index row with an empty or over-long read-when hint, a duplicated row for one covered path, and a row whose path is not a covered path of the memory index (a topic file, a retro note, or an area directory), then each is exactly one `memory.index.*` error of the register's matching rule id; the target-row cases are `row-unbacked` because the path resolves to no covered path in the memory-index universe (U-1), while hint-shape defects are `hint-missing`/`row-malformed` (DM-3).
 
 **Preconditions**:
 
 - TC-MEMINDEX-001 passes.
 - The row parser tolerates the delivered two-column table format.
+- `HINT_MAX_CHARS` is imported from `packages/core/src/contracts/memory-record.ts`; the literal 120 never appears in the suite.
 
 **Steps**:
 
 1. Row with empty second column → `memory.index.hint-missing`.
-2. Row with a 121-character hint → `memory.index.row-malformed`.
-3. Two rows for one record → `memory.index.row-duplicate` for the second.
-4. Row pointing at a topic file, a retro note, or `lessons/` → `memory.index.row-malformed` (wrong target).
-5. Boundary: hint of exactly 120 characters and a single row produce no finding.
+2. Row with a hint of `HINT_MAX_CHARS + 1` characters (121 today) → `memory.index.row-malformed`, naming the measured value and the cap.
+3. Two rows for one record → `memory.index.row-duplicate` for the second occurrence.
+4. Row pointing at a topic file, a retro note, or `lessons/` → `memory.index.row-unbacked`, each naming the row's path and the universe `memory-index`. A retro note is a covered path of the **archive** index only (U-2), so a memory-index row for one is unbacked in U-1 rather than covered; the closed register has no separate wrong-target identity and this suite does not invent one.
+5. Boundary: a hint of exactly `HINT_MAX_CHARS` characters (120 today) and a single row for a covered path produce no finding; a hint of `HINT_MAX_CHARS - 1` is silent as well.
 
 **Expected Outcome**:
 
-- Row-shape and target rules enforced, with a boundary at 120 characters.
+- Row-shape and target rules enforced with the imported bound and a boundary at 120; the hint-shape and target classifications stay separate and universe-scoped.
 
 **Notes / Clarifications**:
 
-- **Fixture / mutant**: row-builder helpers; boundary at 119/120/121 mirrors the budget convention.
+- **Fixture / mutant**: row-builder helpers; the boundary matrix is generated from `HINT_MAX_CHARS` (imported minus one / at / plus one) so a bound change moves the fixtures with it.
 
-#### TC-MEMINDEX-003 - Archive index covers notes exactly
+#### TC-MEMINDEX-003 - Archive index covers notes exactly, over its own universe
 
 **Scenario Type**: Happy Path
 **Impact Level**: High
 **Priority**: High
-**Related IDs**: F-9, F-1, AC-F9-2, DEC-10
+**Related IDs**: F-9, F-1, AC-F9-2, DM-3, DEC-10, C-10
 **Test Type(s)**: Check
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/checks/memory-lint-index.test.ts` (archive block)
 **Tags**: @bun, @check, @memory, @retro
 
-**Given / When / Then**: Given the archive index and the notes it represents, when the invariant runs, then every note has exactly one archive-index row and every archive-index row is backed by a note; the memory index carries one row for the archive index and no rows for individual notes.
+**Given / When / Then**: Given the archive index and the notes it represents, when the invariant runs, then every dated retro note has exactly one archive-index row and every archive-index row is backed by a note, reported under the same closed rule ids (`memory.index.record-uncovered`, `memory.index.row-unbacked`) with the universe `archive-index` in the detail; the memory index carries one row for `retro/INDEX.md` and no rows for individual notes, and the two universes are evaluated independently so neither evaluation blurs into the other.
 
 **Preconditions**:
 
-- The retro archive area and `retro/INDEX.md` exist.
+- The retro archive area and `retro/INDEX.md` exist (plan phase 1).
 - Notes live under a year folder (`retro/<year>/…`).
+- The evaluation exposes the universe (U-1 memory index, U-2 archive index) in every coverage finding's detail.
 
 **Steps**:
 
-1. Build a tree with two notes and two archive rows; assert zero findings.
-2. Remove one archive row; assert one uncovered-note finding naming the note.
-3. Add an archive row for a missing note; assert one unbacked-row finding naming the row.
-4. Assert the memory index has exactly one row for `retro/INDEX.md` and none for the notes.
+1. Build a tree with two notes and two archive rows plus a memory-index row for `retro/INDEX.md`; assert zero findings.
+2. Remove one archive row; assert exactly one `memory.index.record-uncovered` naming the note, with the universe **`archive-index`** in the detail — and assert no `memory.index.record-uncovered` is raised for that note under the memory-index universe (a note is not a U-1 covered path).
+3. Add an archive row for a note that does not exist; assert exactly one `memory.index.row-unbacked` naming the row's path, with the universe **`archive-index`** in the detail.
+4. Assert the memory index carries exactly one row for `retro/INDEX.md` and **no** row for either note; assert the notes therefore produce no U-1 finding of any kind.
+5. Assert universe independence in the other direction: remove a record's memory-index row while the archive universe is clean; assert exactly one U-1 `record-uncovered` naming the record and zero `archive-index` findings.
+6. Add a memory-index row pointing at a retro note; assert exactly one `row-unbacked` with the universe `memory-index` (the note is covered by U-2 only; TC-MEMINDEX-002 owns the row-shape half).
+7. Assert the set of index rule ids emitted across the whole suite equals the register's five `memory.index.*` ids — no universe-scoped identity is invented (DM-4, C-10).
 
 **Expected Outcome**:
 
-- Archive coverage is exact in both directions; notes stay represented by the archive index.
+- Archive coverage is exact in both directions and reported over its own universe with the same closed identity set; the two evaluations never blur, and the memory index keeps one row for the archive index rather than one per note.
 
 **Notes / Clarifications**:
 
-- **Fixture / mutant**: `archiveTree()` with the three shapes.
+- **Superseded expectation, recorded deliberately:** v1.0 left the archive findings' rule ids unnamed and asserted a single coverage universe. Spec v1.1 DM-3/AC-F9-2 declare two universes evaluated independently with the universe in the detail; this rewrite names the identities and asserts the separation. The id is kept; the content is rewritten.
+- **Fixture / mutant**: `archiveTree()` with the shapes above; the U-1/U-2 separation cases reuse `indexTree({ records, rows })`.
 
 #### TC-MEMBUDGET-001 - Cap boundaries and kernel bands
 
@@ -1232,16 +1270,20 @@ git diff --check
 
 **Preconditions**:
 
-- The privacy vocabulary is imported, not duplicated.
-- Synthetic fabricated values are used, and the fixture files satisfy `tests/checks/fixture-privacy.test.ts` (no live credential shape escapes into committed fixtures without a suppression marker).
+- The privacy vocabulary is imported, not duplicated: `PRIVACY_RULES` for the recognizer classes and `PRIVACY_SUPPRESSION_CLASSES` for the suppression markers.
+- Every positive-case token is **assembled at runtime** by `tests/fixtures/memory/secrets.ts` from non-matching fragments (§6), so the committed source carries no contiguous secret-shaped value and the repository guard has nothing to match; no suppression marker is used in a positive case, because the memory lint would suppress it (DEC-4).
+- No `scripts/checks/privacy-literals.registry.json` entry is needed for this route.
 
 **Steps**:
 
 1. Derive the expected class list from the privacy rules module (six secret classes plus the private-literal class = seven).
-2. For each class, plant a fabricated matching value in a record and run the evaluation; assert exactly one `memory.secret.<class>` error naming path, line, and class.
-3. Assert no finding's detail contains the planted value (substring check against the fabricated token).
+2. For each class, call the fixture builder to obtain the token, plant it in a record's text, and run the pure evaluation; assert exactly one `memory.secret.<class>` error naming path, line, and class.
+3. Assert no finding's detail contains the assembled value (substring check against the token returned by the builder).
 4. Assert the memory check module contains no local regex/pattern table for secrets: the set of emitted secret ids is derived from the vocabulary export.
-5. Plant the same class in an entry point, an archive note, and a convention file; assert one finding each (the scan covers the whole tree, not only records).
+5. Plant the same assembled class value in an entry point, an archive note, and a convention file; assert one finding each (the scan covers the whole tree, not only records).
+6. **Guard-silence proof (non-vacuity of the technique):** read the fixture module's own source text and run the shared matcher (`matchGenericRules` from `packages/adapters/src/io/privacy-rules.ts`, the same matcher the repository guard uses) over it; assert zero matches. Then assert the *assembled* token does match, with exactly the expected rule id — so the silence comes from the fragment boundary and not from a broken recognizer.
+7. **Suppression-boundary proof:** assert the assembled tokens contain none of the imported suppression markers (a data check over `PRIVACY_SUPPRESSION_CLASSES`), so a future marker-bearing fixture fails this assertion instead of silently becoming a negative case.
+8. **Repository-level corroboration:** the full `scripts/checks/privacy-literals.ts` run in TC-MEMNFR-005 step 4 must stay at zero violations with **no** registry entry for `tests/fixtures/memory/**` (§6); a violation there means the assembly technique regressed, not that the registry needs widening.
 
 **Expected Outcome**:
 
@@ -1250,7 +1292,7 @@ git diff --check
 **Notes / Clarifications**:
 
 - Ticket security intent; DEC-4. The private-literal class is included because Appendix A names it.
-- **Fixture / mutant**: `tests/fixtures/memory/secrets.ts` generated with a safe synthetic token per class; the suppression-marker case is TC-MEMSECRET-002.
+- **Fixture / mutant**: `tests/fixtures/memory/secrets.ts` exports one runtime builder per class (see §6); the suppression-marker case is TC-MEMSECRET-002 and is a separate fixture shape, never the positive corpus.
 
 #### TC-MEMSECRET-002 - Suppression classes and markerless control
 
@@ -1263,27 +1305,29 @@ git diff --check
 **Target Layer / Location**: `tests/checks/memory-lint-secret.test.ts` (suppression block)
 **Tags**: @bun, @check, @memory, @privacy
 
-**Given / When / Then**: Given a committed documentation placeholder or a declared suppression marker inside a matched span, then no finding is produced; and given a markerless value of the same shape, then the finding is produced.
+**Given / When / Then**: Given a committed documentation placeholder or a declared suppression marker inside a matched span, then no finding is produced; and given a markerless value of the same shape, then the finding is produced — the markerless value being a runtime-assembled token of that shape, so the case is observable rather than suppressed by the fixture's own text.
 
 **Preconditions**:
 
 - The three suppression classes are imported from the privacy vocabulary.
+- The suppressed half is a **contiguous literal carrying a marker** (both guards suppress it, which is the point); the markerless half is a runtime-assembled token of the same shape (§6).
 
 **Steps**:
 
-1. For each suppression class (`documentation-placeholder`, `redaction-marker`, `fabricated-sample`), plant a suppressed span in a record; assert zero findings.
-2. Remove the marker while keeping the same shape; assert one finding of the matching secret class.
-3. Assert the suppression decision is data-driven (marker inside the span), not path-based.
+1. For each suppression class (`documentation-placeholder`, `redaction-marker`, `fabricated-sample`), plant a marker-carrying contiguous span in a record's text; assert zero findings from the memory area, and assert the same span is suppressed by the shared vocabulary helper so the two guards agree by construction (DEC-4).
+2. Remove the marker while keeping the same shape — using the runtime-assembled token builder for that class, so the fixture source still cannot match the repository guard — and assert exactly one finding of the matching secret class.
+3. Assert the suppression decision is data-driven (a marker inside the matched span's value, via `suppressionClassFor`), not path-based: the same markerless value planted in a record, an entry point, and a convention file fires in all three.
+4. Assert at least one case where the marker sits outside the matched span (a marker elsewhere in the same line) still produces the finding — suppression is span-scoped, not line- or file-scoped.
 
 **Expected Outcome**:
 
-- Documented examples do not fail the gate; the same shape without a marker does.
+- Documented examples do not fail the gate; the same shape without a marker does, and the two guards cannot disagree about which is which.
 
 **Notes / Clarifications**:
 
 - **Fixture / mutant**: paired suppressed/markerless fixtures per class.
 
-#### TC-MEMCONC-001 - Parallel-branch record creation, zero conflicts, coverage after merge
+#### TC-MEMCONC-001 - Parallel-branch record creation: zero conflicts on records and own entry points, union-resolved index pair, coverage after merge
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
@@ -1294,32 +1338,37 @@ git diff --check
 **Target Layer / Location**: `tests/behaviour/memory-concurrency-merge.test.ts` — temp git repository
 **Tags**: @bun, @integration, @git, @memory
 
-**Given / When / Then**: Given two distinct agents on parallel branches each creating a record in its own namespace, when both branches merge, then the merge reports zero conflicts, neither branch modified a file owned by the other writer, no new index row was needed for an already-indexed entry point, and after the merge the invariant reports each new record with zero findings and both represented.
+**Given / When / Then**: Given two distinct agents on parallel branches, each creating a record file in its own namespace, appending its own dated capture line to **its own** entry point, and appending its own row to the shared index table, when both branches merge, then the merge reports zero conflicts across the record files and across each creator's own entry-point namespace — no conflicted path exists outside `.ai/memory/README.md` — and the index-row pair, which conflicts by construction, resolves by the documented union rule so both rows are present exactly once; after that resolution the invariant reports each new record with zero findings and both records covered by exactly one row each.
 
 **Preconditions**:
 
 - `git` is available (already required by the lifecycle and by existing tests such as `boundary-ci-parity.test.ts`).
-- A baseline temp repo is initialised from a minimal fixture tree with a committed index.
+- A baseline temp repo is initialised from a minimal fixture tree with a committed index that already indexes both agents' entry points.
+- The union resolution is a **scripted step inside this test** (keep both appended rows, order them deterministically, drop the conflict markers), mirroring TC-MEMCONC-002's applied-union state. This is the documented rule the tree publishes, not an ad-hoc test convenience.
 
 **Steps** (concrete technique — fully automated):
 
-1. Create a temp directory, `git init`, configure a local identity, and commit a base memory tree: `.ai/memory/README.md` with the index table, `lessons/.gitkeep`, `agents/pm/README.md`.
-2. Create branch `feat/agent-a`; agent A adds `lessons/lesson-2026-101-a.md` and appends its own index row; commit.
-3. From the base commit, create branch `feat/agent-b`; agent B adds `lessons/lesson-2026-102-b.md` and appends its own index row; commit.
-4. Check out the base, merge `feat/agent-a`, then merge `feat/agent-b`; assert both merges exit 0.
-5. Assert `git diff --name-only --diff-filter=U` is empty, `git status --porcelain` has no `UU`/`AA` entries, and neither branch's commit touched the other's record file.
-6. Run the pure evaluation over the merged tree; assert zero error findings for both new records and both rows, and assert the count of new index rows is 2 (one per record), not 1 or 3.
-7. Assert no new index row was added for the already-indexed `agents/pm/README.md`.
+1. Create a temp directory, `git init`, configure a local identity, and commit a base memory tree: `.ai/memory/README.md` with the two-column index table carrying one row each for `agents/agent-a/README.md` and `agents/agent-b/README.md`, those two entry points, and `lessons/.gitkeep` (an empty-but-proved record area with no index row).
+2. Create branch `feat/agent-a`; agent A adds `lessons/lesson-2026-101-a.md`, appends one dated capture line (`- 2026-11-10: …`) to `agents/agent-a/README.md`, and appends its own index row to `.ai/memory/README.md`; commit.
+3. From the base commit, create branch `feat/agent-b`; agent B adds `lessons/lesson-2026-102-b.md`, appends one dated capture line to `agents/agent-b/README.md`, and appends its own index row to `.ai/memory/README.md`; commit.
+4. Check out the base, merge `feat/agent-a`; assert it exits 0 with no conflicted path.
+5. Merge `feat/agent-b`; assert the **complete conflicted path set is exactly `[".ai/memory/README.md"]`** — that single assertion is AC-F13-1's scoped zero-conflict claim: no record file and no entry point of either creator is conflicted, because no branch edited a path the other owns. Assert the merge itself reports these paths rather than silently auto-merging a corrupted table.
+6. Apply the scripted union resolution to `.ai/memory/README.md`: keep both appended rows (deterministic order by row path), remove the conflict markers, leave every pre-existing row untouched. Assert `git diff --name-only --diff-filter=U` is empty and `git status --porcelain` has no `UU`/`AA` entry afterwards.
+7. Assert each branch's commit touched only its own record file, its own entry point, and the shared index — never the other creator's record file or entry point (`git show --name-only <commit>` per branch).
+8. Run the pure evaluation over the merged, resolved tree; assert zero error findings, both new records covered by exactly one row each, exactly **two** new index rows (one per record), and no new row for either already-indexed entry point.
+9. **Non-vacuity control:** replay the merge taking only one side's index (a "take ours" resolution) and assert the lint then reports exactly one `memory.index.record-uncovered` for the dropped branch's record — proving the union step, not luck, produces the covered state.
+10. Assert the two appended capture lines produce no `memory.dating.entry-line-date` finding (the entry-point date shape holds across the merge).
 
 **Expected Outcome**:
 
-- Record creation is conflict-free because each creator writes only new files; post-merge coverage proves both records are represented (AC-F13-1).
+- Zero merge conflicts across record files and each creator's own entry-point namespace; the single shared-index conflict is the declared, expected surface and resolves by union to two present rows; post-merge coverage proves both records are represented (AC-F13-1, with the row half of AC-F13-2).
 
 **Notes / Clarifications**:
 
-- **Automated vs manual, stated honestly:** the two-distinct-agent case above is automated. The **same-role parallel worktree** case is *not* automated: two worktrees of the same role may both edit one agent folder's entry point, and the documented union resolution is a human/scripted procedure. That path is covered by a manual+scripted procedure recorded in Section 10 (create two worktrees, append one capture line each to the same entry point, merge, resolve by union, run the invariant), not by a permanent suite.
+- **Why the claim is scoped this way:** two branches appending different rows at end-of-file of the one two-column table conflict by construction — verified empirically in readiness iteration 1 — so a test that appended rows and asserted a zero-conflict merge would be unachievable. AC-F13-1 (spec v1.1) scopes the zero-conflict claim to record files and own entry-point namespaces and routes the row pair to AC-F13-2's union resolution; this scenario asserts exactly that boundary and nothing wider. The v1.0 justification ("record creation is conflict-free because each creator writes only new files") contradicted the steps and is deleted. The id is kept; the content is rewritten.
+- **Automated vs manual, stated honestly:** the two-distinct-agent case above is automated, including the scripted union resolution. The **same-role parallel worktree** case is *not* automated: two worktrees of the same role may both edit one agent folder's entry point, and that union resolution is a human/scripted procedure. It is covered by a manual+scripted procedure recorded in Section 10 (create two worktrees, append one capture line each to the same entry point, merge, resolve by union, run the invariant), not by a permanent suite.
 - The seed's `index.data.records` surface is reconciled to the lint's coverage result because this story ships no index command (Appendix B, DEC-10).
-- **Fixture / mutant**: temp repo seeded with the baseline tree; helper `commitRecord(branch, path, row)`.
+- **Fixture / mutant**: temp repo seeded with the baseline tree; helpers `commitRecord(branch, path, row)` and `unionResolveIndex(file)`. The test never reads the worktree's `.git` and never asserts a diff against a moving base (testing-strategy invariant rule).
 
 #### TC-MEMCONC-002 - Two promotion writes and union-resolved index rows
 
@@ -1353,7 +1402,7 @@ git diff --check
 
 **Notes / Clarifications**:
 
-- The merge aspect (two branches) is TC-MEMCONC-001; here the union state is applied directly because the row is append-only text. This split is deliberate and stated.
+- The merge aspect (two branches) is TC-MEMCONC-001, whose step 6 performs the same union resolution on a real conflicted file; here the union state is applied directly because the row is append-only text. This split is deliberate and stated.
 - **Fixture / mutant**: two `candidateYaml` documents with distinct ids; a third run for idempotency.
 
 #### TC-MEMGUARD-001 - Negative guard replaced by presence + preserved absences
@@ -1438,22 +1487,28 @@ git diff --check
 **Target Layer / Location**: `tests/checks/memory-lint-output.test.ts` (state-free block)
 **Tags**: @bun, @check, @memory, @determinism
 
-**Given / When / Then**: Given a fixed tree and two executions, when the finding output is compared, then it is byte-identical including order and truncation, and the run performed zero writes, opened no network connection, and read no clock.
+**Given / When / Then**: Given a fixed tree and one fixed injected date, when the finding output of two executions is compared, then it is byte-identical including order and truncation; the edge performed exactly one date read and injected it, the pure evaluation read no clock of its own, the run performed zero writes and opened no network connection; and given the same unchanged tree at a later injected date, then only findings derived from the injected date differ.
 
 **Preconditions**:
 
 - TC-MEMGATE-002/003 pass.
+- The edge accepts the date reader as an injected port, so the read is countable; the pure evaluation accepts the resolved date value.
 
 **Steps**:
 
-1. Run the check twice over a temp tree that includes a truncation case; assert byte equality of the full stdout including the truncation line.
+1. Run the check twice over a temp tree that includes a truncation case **at the same injected date**; assert byte equality of the full stdout including the truncation line and the summary counts.
 2. Diff the temp tree's file hashes before and after; assert no change.
-3. Assert the evaluation accepts an injected clock and date and never calls an ambient clock (static import check for `Date` usage in the domain module).
-4. Assert no network module import and no shell-out (`child_process`) in the evaluation or edge.
+3. **Exactly one injected date read:** pass a counting date reader to the edge and assert it is called exactly once per run, and that the value it returned is the value the pure evaluation used (a clock stub inside the evaluation throws if read, so a second read cannot hide).
+4. **Later injected date:** re-run the same tree with an injected date one day later; assert the diff between the two outputs contains only findings derived from the date — `memory.dating.created-future` may appear or disappear, `memory.dating.revalidate-expired` may appear — and that every non-date finding keeps its path, line, rule id, and relative order.
+5. Assert no network module import and no shell-out (`child_process`) in the evaluation or edge.
 
 **Expected Outcome**:
 
-- Byte-identical, state-free, offline, clock-independent.
+- Byte-identical, state-free, offline, and deterministic at a fixed injected date; the injected date is the only input that can change output between two runs over an unchanged tree, and it enters through exactly one read at the edge.
+
+**Notes / Clarifications**:
+
+- **Superseded expectation, recorded deliberately:** v1.0 asserted "read no clock" unconditionally, which spec v1.1 NFR-1/AC-NFR1-1 correct the date-bearing boundary for: the edge performs exactly one date read and injects it, and determinism is claimed at a fixed injected date. The id is kept; the content is rewritten.
 
 **Notes / Clarifications**:
 
@@ -1603,8 +1658,14 @@ git diff --check
 
 - **Environment:** local dev and the CI runner (`ubuntu-latest`, Bun and pnpm from committed pins). No service, network, database, or staging dependency: the invariant is offline and read-only by contract.
 - **Temporary roots:** every mutation runs in `mkdtemp` directories under the repository-local TMPDIR when the gate runs (`TMPDIR=$PWD/tmp/tmpdir`) and the OS temp dir otherwise. No mutation writes the live `.ai/memory/**`; the read-only assertions in TC-MEMGATE-003 and TC-MEMNFR-001 prove it.
-- **Committed fixtures:** `tests/fixtures/memory/tree.ts` (tree builders), `tests/fixtures/memory/mutants.ts` (one-defect records), `tests/fixtures/memory/bodies.ts` (derivable bodies), `tests/fixtures/memory/secrets.ts` (fabricated per-class values; must satisfy `tests/checks/fixture-privacy.test.ts`), and `tests/fixtures/memory/agents/` (entry-point fixtures). Fixtures are never named `*.test.ts` (bunfig discovery).
-- **Secret-fixture discipline:** committed secret-shaped fixtures use clearly fabricated values with the consented suppression markers, so the repository privacy guard does not fail on the test corpus. The lint's own suppression test (TC-MEMSECRET-002) proves the markerless control still fires.
+- **Committed fixtures:** `tests/fixtures/memory/tree.ts` (tree builders), `tests/fixtures/memory/mutants.ts` (one-defect records), `tests/fixtures/memory/bodies.ts` (derivable bodies), `tests/fixtures/memory/secrets.ts` (per-class token **builders**, assembled at call time — see the discipline below), and `tests/fixtures/memory/agents/` (entry-point fixtures). Fixtures are never named `*.test.ts` (bunfig discovery).
+- **Secret-fixture discipline (why the positive cases are actually observable).** The memory lint reuses the delivered suppression classes (DEC-4), so any fixture that carries a suppression marker is suppressed by the memory area exactly as it is by the repository guard — a marker-carrying fixture can only ever prove the *negative* case. A markerless contiguous literal, in turn, is caught by `scripts/checks/privacy-literals.ts`, whose scan set is every tracked and untracked-not-ignored file (`git ls-files --cached --others --exclude-standard`): the only allowlisted directory is `tests/fixtures/privacy-literals`, and `tests/checks/fixture-privacy.test.ts` covers a different, fixed directory list. Neither route yields a positive case, so this plan assembles the tokens at runtime instead:
+  1. `tests/fixtures/memory/secrets.ts` exports one builder per recognizer class that concatenates the value from fragments at call time — for example `["gh", "p", "_"].join("") + "a".repeat(20)` for the provider-token prefix, `"-----BEGIN " + "PRIVATE KEY" + "-----"` for the private-key block, or `"/ho" + "me/" + "quillbert"` for the absolute-user-path class.
+  2. **Why the repository privacy guard stays silent:** it scans committed file *text*, and every recognizer's value character class (`[A-Za-z0-9_-]{16,}`, `[A-Za-z0-9._~+/=-]{16,}`, `[^\s:/@\"'<>}]+`, …) excludes the quote and newline characters a fragment boundary leaves behind, so no contiguous match exists in the source. The guard never evaluates the assembled value.
+  3. **Why the memory lint still fires:** the tests pass the assembled string to the pure evaluation inside the injected text map, where it is contiguous, so the recognizer matches and the class is reported with path, line, and class.
+  4. **Why no suppression class applies:** the assembled value segments contain no marker (`fake-`, `test_`, `sample-`, `example-`, `placeholder`, `apikey`, `redacted`, `your-`, …), so no suppression class silences the span. A fixture whose value needs a marker-shaped word would be redesigned as a negative case, never suppressed into silence.
+  5. **AC-F12-2's counter-case uses the complementary technique:** its suppressed half is a *contiguous literal carrying a marker* (for example a `ghp_your…` placeholder), which both guards suppress by the same rule; its markerless control is a runtime-assembled token of the same shape. That is precisely the contrast AC-F12-2 requires.
+  6. **Registry allowlist contingency, stated so it is not discovered at delivery:** if a future fixture must carry a contiguous markerless literal, the change must add `tests/fixtures/memory/secrets.ts` as a `file` allowlist entry scoped to the matched rule ids with a reason in `scripts/checks/privacy-literals.registry.json`, and that registry file must be declared in the owning plan phase's `scope.files`. No plan phase declares the registry today (phase 3 declares `tests/fixtures/memory/secrets.ts`), so this plan takes the runtime-assembly route, which needs neither a registry change nor extra phase scope.
 - **Isolation:** each test module owns its temp roots and cleans up in `finally`/`afterEach`, following `tests/checks/error-table-sync.test.ts` and `tests/fixtures/capsule/promotion.ts`. The git merge test creates its own repo and never touches the worktree's `.git`.
 
 **Boundary and test-data discipline (explicit obligations):**
@@ -1614,17 +1675,19 @@ git diff --check
 | Index lines / agent entry / guild entry / archive index | cap−1 | cap | cap+1 | cap−1 and cap silent; cap+1 one error |
 | Index bytes | just under 25 KB | 25 KB | over 25 KB | under/at silent; over one error |
 | Kernel memory section | ≤200 | 200 | 201–220 / 221 | ≤200 silent; 201–220 one advisory; 221 one error |
-| Index hint length | 119 | 120 | 121 | 119/120 silent; 121 row-malformed |
-| Statement length | bound−1 | bound | bound+1 | bound−1/bound silent; bound+1 schema error |
+| Index hint length | `HINT_MAX_CHARS`−1 (119) | `HINT_MAX_CHARS` (120) | `HINT_MAX_CHARS`+1 (121) | 119/120 silent; 121 row-malformed |
+| Statement length | `STATEMENT_MAX_CHARS`−1 (279) | `STATEMENT_MAX_CHARS` (280) | `STATEMENT_MAX_CHARS`+1 (281) | 279/280 silent; 281 schema error |
 | Print ceiling | 100 errors / 100 advisories | exactly 100 | 101 | exactly 100 no truncation line; 101 truncation with true totals |
 | Tree population | empty-but-proved (`.gitkeep`) | one record per area | growing | both empty and populated green; no fixed-count assertion |
 | Evidence shapes | 4 invalid/empty forms | 5 valid prefixes | — | invalid forms error; all 5 valid forms silent |
 | Trust vocabulary | — | T0, T5 edges | — | both endpoint values accepted; T6 rejected |
 | Status | — | candidate, archived | — | all five accepted; a sixth value rejected |
 
+**Published-bound discipline.** `STATEMENT_MAX_CHARS` (280) and `HINT_MAX_CHARS` (120) are imported from `packages/core/src/contracts/memory-record.ts` by every suite that touches them (TC-MEMSCHEMA-002, TC-MEMINDEX-002, TC-MEMWRITE-001, TC-MEMWRITE-002); no test file restates either number. The parenthesised values above are the current readings, shown for the reader, not literals in code — a deliberate bound change moves the fixtures with it (ADR-0011 D6, DM-5). The workspace budget caps (index lines/bytes, entry-point lines, archive-index lines, kernel band) are likewise imported, never restated (DM-5, TC-MEMBUDGET-001).
+
 ## 7. Automation Plan and Implementation Mapping
 
-Test files are the intended homes; the implementation plan confirms final names in phase 4. `Status` is relative to this change: all are **To Implement** unless marked otherwise. Shared fixtures are **To Implement** once and reused.
+Test files are the intended homes and match `chg-GH-301-plan.yaml`'s phase scopes; each row names the phase that lands it where the ownership is not obvious. `Status` is relative to this change: all are **To Implement** unless marked otherwise. Shared fixtures are **To Implement** once and reused.
 
 | TC ID(s) | Test file | Execution command | Status |
 |---|---|---|---|
@@ -1635,7 +1698,8 @@ Test files are the intended homes; the implementation plan confirms final names 
 | TC-MEMWRITE-001, TC-MEMWRITE-002, TC-MEMWRITE-004 | `tests/behaviour/memory-promotion-schema.test.ts` | `bun test tests/behaviour/memory-promotion-schema.test.ts` | To Implement |
 | TC-MEMWRITE-003 | `tests/structure/memory-record-schema.test.ts` (automated half) | `bun test tests/structure/memory-record-schema.test.ts` | To Implement (manual half recorded in §10) |
 | TC-MEMGATE-001, TC-MEMGATE-002, TC-MEMGATE-003, TC-MEMNFR-001, TC-MEMNFR-003 | `tests/checks/memory-lint-output.test.ts` | `bun test tests/checks/memory-lint-output.test.ts` | To Implement |
-| TC-MEMGATE-004 | `tests/structure/memory-lint-wiring.test.ts` (plus existing `tests/checks/ci-wiring.test.ts` pins) | `bun test tests/structure/memory-lint-wiring.test.ts tests/checks/ci-wiring.test.ts` | To Implement + Existing–Update |
+| TC-MEMGATE-004 | `tests/structure/memory-lint-wiring.test.ts` | `bun test tests/structure/memory-lint-wiring.test.ts` | To Implement |
+| Aggregate-string pins (supporting TC-MEMGATE-004) | `tests/checks/ci-checks.test.ts`, `tests/checks/privacy-ci-wiring.test.ts`, `tests/checks/license-ci-binding.test.ts` | `bun test tests/checks/ci-checks.test.ts tests/checks/privacy-ci-wiring.test.ts tests/checks/license-ci-binding.test.ts` | Existing–Update (declared in plan phase 4) |
 | TC-MEMDATE-001, TC-MEMDATE-002 | `tests/checks/memory-lint-dating.test.ts` | `bun test tests/checks/memory-lint-dating.test.ts` | To Implement |
 | TC-MEMPROV-001 | `tests/checks/memory-lint-provenance.test.ts` | `bun test tests/checks/memory-lint-provenance.test.ts` | To Implement |
 | TC-MEMPROV-002 | `tests/structure/memory-record-schema.test.ts` (migration block) | `bun test tests/structure/memory-record-schema.test.ts` | To Implement (manual diff review recorded in §10) |
@@ -1653,14 +1717,16 @@ Test files are the intended homes; the implementation plan confirms final names 
 
 **Shared implementation homes** (created by the delivery phases; not test files):
 
-- `packages/core/src/contracts/memory-record.ts` — the schema authority: required/optional keys, closed vocabularies, id and file-name grammar, budget constants, finding register. Data and types only.
-- `packages/core/src/domain/memory-lint.ts` — the pure evaluation (no I/O, no clock, no fs).
-- `packages/adapters/src/file/memory-scan.ts` — the tree scanner: repository-relative enumeration, text reads, YAML-frontmatter parse.
-- `scripts/checks/memory-lint.ts` — the bun-run edge: enumerate → parse → evaluate → print → exit; registers the check namespace.
-- `packages/adapters/src/file/memory-promotion.ts` — extended writer (required spine + read-when hint).
-- `packages/core/src/contracts/capsule.ts` — additive `source` validation only.
-- `package.json`, `.github/workflows/ci.yml`, `tests/structure/inventory.json` — wiring and inventory.
-- `.ai/memory/**`, `.ai/memory/README.md`, `AGENTS.md`, `.opencode/skills/consolidate-memory/SKILL.md`, `doc/templates/memory-doctor-checklist-template.md`, `doc/spec/features/feature-memory-lint.md` — documentation reconciliation.
+- `packages/core/src/contracts/memory-record.ts` — the schema authority: required/optional keys, closed vocabularies, id and file-name grammar, `STATEMENT_MAX_CHARS`, `HINT_MAX_CHARS`, budget constants, finding register. Data and types only (plan phase 1).
+- `packages/core/src/domain/memory-lint.ts` — the pure evaluation (no I/O, no clock, no fs) (plan phases 2–3).
+- `packages/adapters/src/file/memory-scan.ts` — the tree scanner: repository-relative enumeration, text reads, YAML-frontmatter parse (plan phase 4).
+- `scripts/checks/memory-lint.ts` — the bun-run edge: enumerate → parse → evaluate → print → exit; owns the single ambient date read; registers the check namespace (plan phase 4).
+- `packages/core/src/domain/capsule-candidates.ts` — the promotion writer: `recordContent` renders the full spine (trust, basis), the `kind` mapping and the declared home area (`tacit_fragment` → `tacit/`), the read-when hint; `validateCandidate` tightens `source` to the four channels (plan phase 5).
+- `packages/adapters/src/file/memory-promotion.ts` — the writer/reader home-area mapping mirrored on the read path; index-row append unchanged (plan phase 5).
+- `package.json`, `.github/workflows/ci.yml`, `tests/structure/inventory.json` — wiring and inventory (plan phase 4).
+- `.ai/memory/**`, `.ai/memory/README.md`, `AGENTS.md`, `.opencode/skills/consolidate-memory/SKILL.md`, `doc/templates/memory-doctor-checklist-template.md`, `doc/templates/README.md` — documentation reconciliation (phases 1, 4, 6); the new `doc/spec/features/feature-memory-lint.md` is a lifecycle-phase-7 `@doc-syncer` handoff, not a delivery-phase file.
+
+**Not a changed home (stated to prevent scope drift):** `packages/core/src/contracts/capsule.ts` is **read for parity only** (TC-MEMSCHEMA-001 imports `CAPSULE_CANDIDATE_TRUST` and the five evidence prefixes). The candidate `source` tightening is implemented in `packages/core/src/domain/capsule-candidates.ts` per the plan's phase 5 scope, and `tests/checks/ci-wiring.test.ts` passes unchanged — no TC requires editing it.
 
 **Mocking requirements:** none beyond injection. The evaluation takes a file list, a text map, the privacy vocabulary, and a fixed date; the scanner takes a file-system port so TC-MEMNFR-002 can count reads. No network, no test doubles for external services.
 
@@ -1671,7 +1737,7 @@ Test files are the intended homes; the implementation plan confirms final names 
 | ID | Risk | Mitigation |
 |----|------|------------|
 | TR-1 | Mutation helpers drift from the real writer, so the gate passes a tree the writer cannot produce | One schema module is imported by both the evaluator and the writer; TC-MEMWRITE-001 runs the real writer end-to-end; parity mutation in TC-MEMSCHEMA-001 fails loudly on drift |
-| TR-2 | Secret fixtures trip the live privacy or forbidden-literal guard | Fabricated values with consented suppression markers; `tests/checks/fixture-privacy.test.ts` gates the fixture corpus; TC-MEMSECRET-002 keeps the markerless control live |
+| TR-2 | Secret fixtures trip the live privacy guard — or are silently suppressed by it, making the positive cases vacuous | Tokens are assembled at runtime from non-matching fragments (§6) so the committed source is unmatchable while the injected text map matches; TC-MEMSECRET-001 step 6 proves the guard reports no violation for the fixture file and step 7 proves the assembled value carries no suppression marker, so a suppressed case fails the suite instead of passing quietly |
 | TR-3 | The negative guard is deleted instead of replaced, losing the boundary assertions | TC-MEMGUARD-001 asserts both the presence and all three preserved absences; the old block's replacement is explicit in the diff review |
 | TR-4 | Timing assertions flake on a shared CI runner | Assert the declared ceiling once on the runner; record measurements as evidence; do not encode a tight local number as a second contract |
 | TR-5 | Budget boundary off-by-one (a file exactly at cap failing) | Explicit cap−1/cap/cap+1 matrix per surface, including bytes measured with `Buffer.byteLength` |
@@ -1681,10 +1747,10 @@ Test files are the intended homes; the implementation plan confirms final names 
 
 ### 8.2 Assumptions
 
-- The implementation plan (phase 4) will confirm the file names in Section 7 and declare phases that own each area; this test plan constrains but does not author the plan.
+- The implementation plan (`chg-GH-301-plan.yaml`, 7 phases) has confirmed the file names in Section 7 and declares the phase that owns each area; this test plan constrains but does not author the plan.
 - `bun test` discovery over `tests/**` covers every new suite; fixtures stay outside `*.test.ts` naming (`bunfig.toml`).
-- The privacy vocabulary export exposes recognizer classes and suppression classes in a stable, importable shape; if it does not, the plan phase adds a read-only accessor rather than a second table (DEC-4).
-- A fixed "today" can be injected into the evaluation; the production edge passes the real date. The clock is read only at the edge, never in the pure domain.
+- The privacy vocabulary is consumed as an injected structural type declared in `packages/core/src/contracts/memory-record.ts` (recognizer classes plus suppression markers), with `packages/adapters/src/io/privacy-rules.ts` supplying the data at the edge: `matrix-core-importer` forbids `packages/core/**` importing `packages/adapters/**`, so the suites assert the injected classes equal the adapter's recognizer classes at the edge rather than importing an adapter type into the domain (DEC-4, no second table).
+- A fixed "today" can be injected into the evaluation and the edge performs exactly one ambient date read; the pure domain never reads a clock (NFR-1, AC-NFR1-1).
 - The three delivered records' current statements/statuses can be pinned as constants for TC-MEMPROV-002; any future change that alters them is a supersession, not a test edit.
 - `pnpm build` precedes lifecycle commands in this repository (pm-notes environment note); test runs do not require the CLI bin.
 - The doctor's five-check set is a stable, discoverable constant by the time TC-MEMGUARD-001 runs.
@@ -1695,7 +1761,7 @@ Test files are the intended homes; the implementation plan confirms final names 
 | ID | Question | Blocking? | Owner | Proposed resolution |
 |----|----------|-----------|-------|---------------------|
 | OQ-TP-1 | Is the dedicated script named `check:memory` or `check:memory-lint`? | No | plan-writer | Either name is acceptable if `scripts.check` and CI cite the same path; TC-MEMGATE-004 asserts the path, not the script name |
-| OQ-TP-2 | When `created` is absent, is the finding `memory.schema.keys-missing` or `memory.dating.created-malformed`? | No | plan-writer + spec owner | Pick exactly one classification in the plan and assert it once; AC-F6-1 permits only one dating finding and AC-F2-2 forbids double-reporting. The test asserts the chosen single identity, not both |
+| OQ-TP-2 | When `created` is absent, which area classifies it? | Resolved — no longer blocking | spec-writer (spec v1.1) | Closed by AC-F6-1: an absent `created` is exactly one `memory.schema.keys-missing` with no dating finding, because the closed dating register has no absent-date identity; dating owns present-but-malformed and future values. TC-MEMDATE-001 asserts the single classification without a conditional branch |
 | OQ-TP-3 | Does the promotion writer's index-row dedup use exact-row equality or path equality? | No | plan-writer | The existing writer checks exact-row inclusion; TC-MEMCONC-002 asserts idempotency under the delivered rule and `row-duplicate` under an injected duplicate |
 | OQ-TP-4 | Should the same-role parallel-worktree union resolution gain automation? | No | PM / future story | Not in this change: it is a human/scripted workflow, explicitly manual here. A future story may automate the merge exercise |
 | OQ-TP-5 | Is the kernel memory section delimited by a stable heading anchor for budget measurement? | No | plan-writer | Measure between the memory section heading and the next top-level heading; pin the anchor in the plan phase; a missing anchor is a test failure, not a silent zero |
@@ -1707,6 +1773,7 @@ No open question blocks safe delivery; each has a proposed resolution and a sing
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-15 | test-plan-writer (DeepSeek V4.1 Flash 1017) | Initial test plan from `chg-GH-301-spec.md`: 40 TCs across 14 families, full coverage of 30 ACs, the eight lint areas with failing-fixture mutation tests, both-direction index coverage, budget boundary matrix, output determinism/exit/order/truncation, conflict-free concurrency (automated git two-branch + honest manual same-role note), schema reconciliation, guard replacement, gate wiring, and documentation conformance |
+| 1.1 | 2026-11-15 | test-plan-writer (DeepSeek V4.1 Flash 1017) | Readiness iteration-1 revision (findings 3, 5, 7, 15, 19) aligned to `chg-GH-301-spec.md` v1.1 and ADR-0011. 3 — TC-MEMCONC-001 rewritten: zero-conflict claim scoped to record files and each creator's own entry-point namespace, with the one conflicted path pinned to the shared index and a scripted union resolution (mirroring TC-MEMCONC-002) plus a take-ours non-vacuity control; the contradictory "each creator writes only new files" justification deleted. 5 — TC-MEMDATE-001 rewritten as one unambiguous row per classification: absent `created` → `memory.schema.keys-missing` only, malformed/future → dating ids; conditional text removed. 7 — §6 secret-fixture discipline rewritten around runtime-assembled tokens from non-matching fragments, with the guard-silence and no-marker proofs added to TC-MEMSECRET-001, span-scoped suppression and a markerless control in TC-MEMSECRET-002, TR-2 realigned, and the registry-allowlist contingency named with its phase-scope requirement. 15 — §7 drops `packages/core/src/contracts/capsule.ts` as a changed home (the tightening is `packages/core/src/domain/capsule-candidates.ts`), drops the `tests/checks/ci-wiring.test.ts` update row, and names the three aggregate-string pin suites the plan actually scopes; TC-MEMGATE-004 step 5 aligned. 19 — TC-MEMWRITE-003 names plan phase 6, and TC-MEMLAY-002/TC-MEMINDEX-002 pin the register identity (`row-unbacked` for a row resolving to no covered path; `row-malformed` reserved for hint shape). Spec-v1.1 propagation: 280/120 imported as `STATEMENT_MAX_CHARS`/`HINT_MAX_CHARS` in every bound-bearing suite, the `basis` conditional asserted (promotion always renders it; a hand-authored omission is silent), TC-MEMINDEX-003 asserts the two coverage universes with the universe in each detail, and TC-MEMGATE-002/TC-MEMGATE-003/TC-MEMNFR-001 fix the injected date, assert exactly one edge date read, and assert that a later injected date changes only date-derived findings. 40 TCs unchanged (no ids added, removed, or renamed); 30/30 ACs still covered; zero orphan TCs |
 
 ## 10. Test Execution Log
 
