@@ -9,7 +9,7 @@ phases:
   specification: { started: null, completed: 2026-11-15T09:26:50.741Z }
   test_planning: { started: null, completed: 2026-11-15T09:13:03.028Z }
   delivery_planning: { started: null, completed: 2026-11-15T09:27:08.625Z }
-  dor_check: { started: null, completed: 2026-11-15T09:17:07.301Z }
+  dor_check: { started: null, completed: 2026-11-15T09:31:33.835Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -119,7 +119,25 @@ notes:
       phase-scoped template subject passes commitlint and the invented-tracker
       rule, and reopen specification to make DoD-4 state the achievable subject
       (the ticket's literal subject embeds a foreign tracker ref and cannot be
-      landed through the primitive). DoR gate re-run required afterwards."
+      landed through the primitive). DoR gate re-run required afterwards.
+      CORRECTION: both phases were reopened, re-authored, and re-completed
+      (specification 09:26:50.741Z, delivery_planning 09:27:08.625Z), and
+      dor_check was then reopened for the re-confirmation pass."
+    type: resolved
+    date: "2026-11-15"
+  - text: "DoR gate ITERATION 3 verdict: READY. DoD-4 verified satisfiable by a
+      measured non-destructive dry run (`commit GH-322 --phase delivery
+      --dry-run` exit 0, messageSource template, subject `feat(GH-322): sanitize
+      the recorded absolute gate temp root`, 59 chars), and spec, plan and test
+      plan agree on that subject byte-for-byte. Iteration-2 PASS reaffirmed; no
+      new inconsistency. Residual non-blocking nits accepted (not remediated, to
+      avoid further artifact churn): test plan §2 still says 'obligations
+      1.1-1.8' while revision 1.1 added 1.9; no DEC record for the forced
+      fix->feat type change; TC-PRIV-005 reads the subject but not `git show
+      --stat` for the atomic two-file landing; DoD-4 still names a capsule
+      commit event that no production writer appends (contractually non-gating);
+      obligation 1.5 and DoD-2 still settle at YAML parse rather than `lint
+      GH-310`. Record: readiness-review/readiness-iter-3.md."
     type: resolved
     date: "2026-11-15"
   - text: "RETRO: the ticket's mandated commit subject was impossible to satisfy and
