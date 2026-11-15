@@ -1,0 +1,148 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-322
+branch: fix/GH-322/sanitize-gh310-pm-notes
+status: PASS
+summary: >-
+  The delivery is exactly the declared one-value fix-forward. The GH-310
+  pm-notes change is a single removed plus single added line on line 279 whose
+  only difference is the TMPDIR token (operator home-rooted temp root ->
+  repository-relative $PWD/tmp/tmpdir); after masking that token the removed and
+  added lines are byte-identical, and numstat is 1/1 with 2 changed lines, so no
+  recorded verdict, count, hash, date or phase timestamp moved. The red state is
+  genuine and was reproduced independently from the parent commit (c1f0d6fa:
+  privacy-literals exit 1, one private.absolute-user-path at that file:279,
+  fingerprint c796b58bf3a81320); the sanitized tree is green (exit 0, 0
+  violations, 4077 files scanned). The range changes no product, prompt,
+  workflow, spec or registry file -- only the GH-310 pm-notes line plus this
+  change's own folder. Plan phase 1 obligations 1.1-1.9 are discharged (1.6
+  best-effort, recorded skip) and the delivery commit is the primitive-derived
+  feat(GH-322): sanitize the recorded absolute gate temp root with no foreign
+  tracker reference. All reportable issues are documentation-hygiene items in
+  the change's own test plan/spec; none is blocking. AC-F1-4 (aggregate battery,
+  best-effort) and the PR-open clause of AC-F1-5/DoD-5 remain owed by lifecycle
+  phases 9 and 11 and are not review defects.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 4
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-15--GH-322--sanitize-gh310-pm-notes/chg-GH-322-test-plan.md:174
+    message: >-
+      The test plan's own execution log (section 10) still reads "Not yet
+      executed / Populate during delivery", and the coverage Status columns
+      (3.1-3.4) still say "Planned", while section 7 and section 3.4 state the
+      evidence is recorded in section 10. The actual delivery evidence lives
+      only in the pm-notes notes entry. This matches the immediate same-class
+      sibling (GH-310's test plan also left section 10 unpopulated and cited the
+      pm-notes) and plan obligation 1.7 directs evidence to pm-notes, so it is
+      non-blocking, but section 7's wording overpromises.
+    suggestion: >-
+      Populate section 10 with the recorded command excerpts and exit codes
+      (privacy-literals exit 0, home-path grep exit 1, numstat 1/1, diff --check
+      exit 0, lint GH-310 conforms, doc-conformance 11 pass), or adjust section
+      7/3.4 to name chg-GH-322-pm-notes.yaml as the evidence home.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: low
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-15--GH-322--sanitize-gh310-pm-notes/chg-GH-322-test-plan.md:28
+    message: >-
+      Test plan section 2 cites the plan as "obligations 1.1-1.8" while plan
+      revision 1.1 added obligation 1.9 (the anti-hand-edit / no-rewrite
+      caution). The citation range is short by one; no test case binds 1.9 and
+      the plan's own obligations are complete.
+    suggestion: >-
+      Change "obligations 1.1-1.8" to "obligations 1.1-1.9" at the next test
+      plan touch.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: low
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-15--GH-322--sanitize-gh310-pm-notes/chg-GH-322-spec.md:135
+    message: >-
+      The forced commit-type/subject deviation (ticket mandated fix(GH-322): ...
+      but the primitive emits feat(GH-322): <summary>) is recorded only in the
+      pm-notes decisions list, DoD-4 and section 18; the spec's formal Decision
+      Log (section 15) still holds only DEC-1. Recording it in pm-notes is a
+      sanctioned change-scoped home and no doc/decisions record is warranted,
+      but the two decision surfaces are asymmetric.
+    suggestion: >-
+      Add DEC-2 to spec section 15 covering the fix->feat type and derived
+      subject, pointing DoD-4/section 18 at it, or add an explicit cross-reference
+      to the pm-notes decision.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: low
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-15--GH-322--sanitize-gh310-pm-notes/chg-GH-322-spec.md:165
+    message: >-
+      DoD-4 (and test plan section 3.4) cite "the capsule's recorded commit
+      event agrees" as corroboration, but no production writer appends commit
+      events: createCapsuleProducerPort has no production call site and there
+      are zero events.jsonl files under doc/changes/**. The clause is
+      non-gating/disclosure-only by contract and DoD-4's real condition (one
+      delivery commit with the derived subject) is fully provable from git log,
+      so this neither blocks nor misstates the outcome.
+    suggestion: >-
+      Delete or mark-as-optional the capsule-event clause in DoD-4 (and mirror
+      in test plan section 3.4) whenever the spec is next touched.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-15--GH-322--sanitize-gh310-pm-notes/chg-GH-322-spec.md:153
+    message: >-
+      At this phase-8 review, AC-F1-4 (aggregate battery, best-effort) has no
+      aggregate `pnpm check` evidence yet -- it is recorded as a skip because
+      lifecycle phase 9 owns the full battery -- and the PR-open clause of
+      AC-F1-5 / DoD-5 belongs to lifecycle phase 11. These are future-phase
+      obligations, not implementation defects; AC-F1-1..AC-F1-3 and the scope
+      clause of AC-F1-5 are evidenced now.
+    suggestion: >-
+      Close AC-F1-4 at phase 9 (run `TMPDIR=$PWD/tmp/tmpdir ... pnpm check`, or
+      record a reasoned skip) and DoD-5 at phase 11 (PR open against
+      main-tools); do not treat the phase-8 absence as a failure.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: info
+    confidence: high
+    category: clarity
+    location: doc/changes/2026-11/2026-11-15--GH-322--sanitize-gh310-pm-notes/chg-GH-322-plan.yaml:111
+    message: >-
+      The delivery commit is typed `feat` although the change type and ticket are
+      `fix`; the type is mechanically forced by COMMIT_PHASE_TYPES.delivery and
+      documented in DoD-4/section 18/pm-notes. The subject matches DoD-4 exactly
+      (59 chars), carries no foreign tracker reference, and the commit body is
+      empty, so no line-limit or tracker rule is violated.
+    suggestion: >-
+      None required; if release tooling later keys off commit type, note that a
+      docs-only fix lands as `feat` here.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-15T10:46:00Z
+next_step: PROCEED

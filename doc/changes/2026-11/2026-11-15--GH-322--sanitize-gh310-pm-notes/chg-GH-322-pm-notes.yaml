@@ -12,7 +12,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-15T09:31:33.835Z }
   delivery: { started: null, completed: 2026-11-15T09:33:48.374Z }
   system_spec_update: { started: null, completed: 2026-11-15T09:36:31.089Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-15T09:41:09.756Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -187,6 +187,24 @@ notes:
       doc/spec or doc/guides home; route it through its own change, not this
       one-literal fix."
     type: info
+    date: "2026-11-15"
+  - text: "Review iteration 1 verdict: PASS — spec_compliance PASS, plan_compliance
+      PASS; 0 critical / 0 high / 0 medium / 4 low / 2 info. Independently
+      re-derived: red-before reproduced at parent c1f0d6fa in a throwaway
+      worktree (exit 1, one private.absolute-user-path at the GH-310 line 279,
+      fingerprint c796b58bf3a81320, 4070 files) and green at HEAD (exit 0, 0
+      violations, 4077 files); the delivery diff is one removed / one added line
+      that are byte-identical after masking the TMPDIR token; the range touches
+      only the GH-310 pm-notes plus 7 GH-322 folder files; plan validates; both
+      documents lint; phase stamps equal the registry; all 12 commit subjects
+      are conventional and the delivery subject is the derived one with no
+      foreign tracker ref. Low residuals (accepted, no remediation phase): test
+      plan §10 execution log unpopulated while evidence lives in pm-notes; test
+      plan §2 still says obligations 1.1-1.8; no DEC-2 for the forced fix->feat
+      subject type; DoD-4 cites a capsule event no production writer appends.
+      Info: AC-F1-4 is owed by lifecycle phase 9 and the PR-open clause of
+      AC-F1-5 by phase 11. Record: code-review/review-iter-1.yaml."
+    type: resolved
     date: "2026-11-15"
   - text: "RETRO: the spec writer's non-goals were written before the in-scope edit
       was pinned, so a blanket 'no other change artifact' clause contradicted
