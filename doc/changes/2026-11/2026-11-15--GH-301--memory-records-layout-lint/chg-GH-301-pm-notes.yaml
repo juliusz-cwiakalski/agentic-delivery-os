@@ -792,3 +792,81 @@ notes:
       gate PASS (56 commits in range, 0 offending)."
     type: retro
     date: "2026-11-15"
+  - text: "FINAL PRE-PR SYNC (retro; no lifecycle phase reopened, no scope change):
+      rebased 58 GH-301 commits from 40dc45a4 onto the current origin/main-tools
+      tip fc68080e (GH-300 suite-to-job mapping, merged after the GH-320 merge);
+      all 58 commit subjects preserved verbatim, no reword, no squash. ONE
+      conflict, in doc/spec/features/feature-capsule.md links.related_changes
+      (upstream added GH-300, we added GH-301): resolved by keeping BOTH, so the
+      list is [GH-240, GH-300, GH-301]. Every other overlap auto-merged and was
+      audited for union: tests/structure/inventory.json,
+      tests/structure/content-inventory.test.ts,
+      tests/fixtures/ports/v1-contract-inventory.json,
+      packages/core/src/contracts/index.ts, packages/core/src/domain/index.ts,
+      packages/adapters/src/file/index.ts and doc/00-index.md carry zero
+      upstream deletions; the three apparent deletions in
+      doc/overview/architecture-overview.md, doc/overview/glossary.md and
+      doc/planning/oss-tooling/backlog.md are our own amended lines and each
+      keeps the upstream intent (the glossary Aggregate check row now chains
+      check:memory). GH-300 EFFECT ON US, RE-EVALUATED (no registration change
+      was required): (a) the earlier CI blocker is GONE; GH-300 already
+      repinned tests/fixtures/entrypoint/alias-baseline.json, capturedFrom
+      1d4431eb -> 8a1f77ad (an in-history pre-change commit) with
+      capturedFromOriginal and captureProvenanceNote and byte-identical cells,
+      so tests/behaviour/entrypoint-two-bins.test.ts is 18/18 pass on the new
+      tip and no fixture edit was needed. (b) GH-300 breadth resolution is
+      DECLARED-vs-DECLARED: resolveVerifySuiteBreadth compares the document own
+      local set with its own jobs[].suites, and no check compares that
+      declaration with package.json, so adding pnpm check:memory to the
+      aggregate chain and memory-lint.ts to the ts-invariants step needs no
+      suite-to-job mapping registration; the mapping suites pass unchanged
+      (verify-gates-suite-map-reference, -contract, ci-checks, milestone-gate,
+      license-ci-binding, privacy-ci-wiring, capsule-ci-parity,
+      harness-ci-parity, ci-wiring: 108 tests, 0 fail). (c) KNOWN AND
+      DELIBERATELY NOT CHANGED: the reference declaration names the eight
+      delivered suites while the local aggregate now runs nine (memory); GH-300
+      pins that literal in its structural test and in its glossary row and no
+      gate compares it with the aggregate, so declaring the ninth suite is a
+      GH-300-surface accuracy follow-up, not a GH-301 gate defect. FAILURES
+      REPRODUCED, WITH DISPOSITION (zero code fixes were needed; every failure
+      is pre-existing or environmental, proven by TMPDIR isolation and by an A/B
+      worktree at origin/main-tools): (1) fifteen cells throwing 'no directory
+      outside every git work tree is available' (TC-PROJ-038 twice,
+      TC-XHERM-002, TC-ATTEMPT-013, TC-BIND-002, TC-BIND-008, TC-GRPDOC-003,
+      TC-GRPREN-001, TC-GRPRO-001, TC-PROJ-005/006/007/008/013/041) are
+      ENVIRONMENT: tests/fixtures/projects/state-scope.ts
+      nonCheckoutDirectory() tries tmpdir(), dirname(cwd) and APPROVED_BASE
+      (=$PWD/tmp/tmpdir), and this checkout is a linked worktree whose parent
+      directory is the repository main worktree, so all three candidates sit
+      inside a work tree; the owning files are byte-identical to
+      origin/main-tools and all fifteen pass under an outside-worktree TMPDIR.
+      (2) TC-BIN-041/043 in prior-identity-notice.test.ts are MARGINAL TIMING
+      and pre-existing: file and harness unchanged by GH-301, and the same file
+      at baseline fc68080e fails FIVE cells plus one error (TC-BIN-041 twice,
+      042, 043 twice, 045) at the 5s per-cell cap, worse than our branch, while
+      on our tree all 14 pass with --timeout 30000. (3) TC-ATTEMPT-003 and
+      TC-ATTEMPT-009/010/037 are LOAD FLAKES: 5s timeouts at 5701ms and 6122ms
+      under the full battery, while dispatch-attempts-ref.test.ts is 26/26 pass
+      in 5.28s standalone on our tree, and at baseline it fails TC-ATTEMPT-003
+      at 11.03s. (4) test-pm-liveness.sh 'at threshold (600s) stalled' reported
+      601s: CLOCK-BOUNDARY FLAKE, 18/18 pass on three consecutive re-runs, script
+      untouched by GH-301. GATE VERDICTS: pnpm check with
+      TMPDIR=$PWD/tmp/tmpdir => exit 1, 9043 pass / 4 skip / 18 fail / 1 error
+      (the fifteen environment cells plus the three timing cells). pnpm check
+      with TMPDIR=/home/juliusz/git/ados-tmp-pm/gh301-full (outside every work
+      tree) => exit 1, 9058 pass / 4 skip / 3 fail, and the three are
+      TC-ATTEMPT-003, TC-ATTEMPT-009/010/037 and TC-BIN-043, i.e. exactly the
+      pre-existing/load cells above; nothing else fails and the fifteen
+      environment cells all clear. The aggregate steps after pnpm test were then
+      run individually and all pass: check:boundaries 0, check:memory 0
+      (records=3 areas=8 errors=0 advisories=0), prompt-conformance 0,
+      help-guide-coverage 0, exports-parity 0, with lint, format:check and
+      typecheck already green before test in both runs.
+      scripts/checks/ci-topology.ts, ci-bindingness.ts and
+      boundary-ci-parity.ts each exit 0; memory-lint 0; privacy-literals 0;
+      forbidden-literals 0; git diff --check clean. Commit-range gate:
+      scripts/lint-commit-range.sh --base origin/main-tools = PASS, 58 commits in
+      range, 0 offending, merge-base fc68080e, commitlint binary
+      node_modules/.bin/commitlint (repository-local)."
+    type: retro
+    date: "2026-11-15"
