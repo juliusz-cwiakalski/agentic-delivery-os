@@ -707,7 +707,7 @@ describe("TC-BIN-083 child-environment allowlist admits both identities", () => 
     // key outside the allowlist must not reach a detached child.
     const derived = daemonReentryEnvironment({
       PATH: "/usr/bin",
-      HOME: "/home/fixture",
+      HOME: "/fixture/home",
       DELIVERY_OS_WORKING_NAME: "jaiship",
       JAISHIP_STATE_DIR: "/forwarded/look-alike",
       NOT_ALLOWLISTED_KEY_FOR_PROBE: "hostile",
