@@ -81,7 +81,7 @@ Closed optional key set: `supersedes`, `superseded_by`, `contradicts`, `applies_
 |---|---|
 | `kind` | `lesson`, `tacit_fragment`, `preference`. The capsule class token `tacit` projects to `tacit_fragment`. |
 | `scope` | `repo`, `component`, `change`. `fleet` is candidate-only and has no record home. |
-| `status` | `candidate`, `validated`, `authoritative`, `superseded`, `archived`. Promotion writes `candidate` on creation and `superseded` on a declared supersession. |
+| `status` | `candidate`, `validated`, `authoritative`, `superseded`, `archived`. Promotion writes `candidate` on creation and marks each named `candidate` target `superseded` on a declared supersession. |
 | `trust` | `T0`–`T5`, the vocabulary shared with the capsule candidate contract. |
 | `source` | `review_verdict`, `ci_verdict`, `human_correction`, `merged_pr`. |
 | `evidence` | Exactly one shaped link: `review-verdict:`, `ci-verdict:`, `human-correction:`, `merged-pr:`, or `test:`. Further evidence is cited in the body. |
@@ -104,7 +104,7 @@ Conditional requirements:
 
 #### Promotion write path
 
-Closeout promotion renders the full required spine plus the conditional requirements it triggers: `trust`, `basis`, a `kind` mapped from the capsule class (`tacit` → `tacit_fragment`), the home area derived from the kind, and an index row whose second column is a read-when hint. The hint is the collapsed `applies_when` when it fits the bound, or the collapsed statement when there is no applicability and the statement fits. When the chosen source exceeds the bound the writer renders a deterministic read-when phrase derived from the candidate's class and scope; it never truncates a statement into the hint. A candidate whose `source` is outside the four channels is refused at candidate-schema time, as is a candidate whose `statement` exceeds the published bound. A `lesson` or `tacit` candidate carrying `scope: fleet` is refused at candidate-schema time through the existing `closeout.capsule-invalid` identity, before any record file or index row is written. The promotion read scope stays `lessons/` and `tacit/`. See [Change Capsule](feature-capsule.md) and [Closeout Transaction](feature-closeout.md).
+Closeout promotion renders the full required spine plus the conditional requirements it triggers: `trust`, `basis`, a `kind` mapped from the capsule class (`tacit` → `tacit_fragment`), the home area derived from the kind, and an index row whose second column is a read-when hint. The hint is the collapsed `applies_when` when it fits the bound, or the collapsed statement when there is no applicability and the statement fits. When the chosen source exceeds the bound the writer renders a deterministic read-when phrase derived from the candidate's class and scope; it never truncates a statement into the hint. A candidate whose `source` is outside the four channels is refused at candidate-schema time, as is a candidate whose `statement` exceeds the published bound. A `lesson` or `tacit` candidate carrying `scope: fleet` is refused at candidate-schema time through the existing `closeout.capsule-invalid` identity, before any record file or index row is written. A declared `supersedes` list marks each named `candidate` lesson or tacit target `superseded` and, when the target does not already name a replacement, writes `superseded_by: "<new-record-id>"`, so the `supersedes`/`superseded_by` pair is symmetric; an already-linked target is a no-op and a target whose status is not `candidate` is left untouched. The promotion read scope stays `lessons/` and `tacit/`. See [Change Capsule](feature-capsule.md) and [Closeout Transaction](feature-closeout.md).
 
 #### Index rows and coverage
 
@@ -141,7 +141,7 @@ Findings use the closed lowercase dotted identity `memory.<area>.<condition>`, r
 | `derivable` | `file-listing`, `command-echo` | warn |
 | `secret` | `memory.secret.<recognizer-class>` for each injected privacy recognizer class | error |
 
-Presence partitions by key and the partition is exhaustive and disjoint. The schema area owns `source`: an absent `source` is `memory.schema.keys-missing`, and an out-of-channel `source` is `memory.schema.value-unknown`. The provenance area owns `evidence` and `created_by`. One defect yields one finding.
+Presence partitions by key and the partition is exhaustive and disjoint. The schema area owns `source`: an absent `source` is `memory.schema.keys-missing`, and an out-of-channel `source` is `memory.schema.value-unknown`. The provenance area owns `evidence` and `created_by`. A `statement` that is absent-as-empty (missing, null, an empty or whitespace-only string) or non-string is exactly one `memory.schema.keys-missing`; a non-empty statement over the bound is one `memory.schema.statement-too-long`. One defect yields one finding.
 
 #### Dating
 
@@ -163,7 +163,7 @@ A `supersedes`, `superseded_by`, or `contradicts` value must name an existing re
 | Archive index | 200 lines |
 | `AGENTS.md` `## Agent memory` section | 200 lines advisory, 220 lines error |
 
-Each numeric bound is declared once in the contract module; the lint and its fixtures import that value rather than restating it. A surface exactly at its cap produces no finding.
+Each numeric bound is declared once in the contract module; the lint and its fixtures import that value rather than restating it. Lines are counted as the file contains them: a trailing newline terminates the final line rather than adding one, so a newline-terminated surface exactly at its cap is silent and one line over reports the true measured count. A surface exactly at its cap produces no finding.
 
 #### Derivable content
 
@@ -174,7 +174,7 @@ Two deterministic heuristics over record bodies produce advisories only:
 
 #### Secret patterns
 
-Every scanned file is evaluated with the delivered privacy-rule definition set and its suppression classes. The lint declares no pattern of its own. A finding names the file, the line, and the recognizer class — never the matched value. Suppression markers are evaluated only against the value segment a rule protects, exactly as the whole-tree privacy guard does, so a marker in the key half (for example `fake_token: <value>`) does not silence a real value while a marker inside the value does. A match whose protected value carries a declared suppression marker (documentation placeholder, redaction marker, or fabricated sample) is not a finding. The possible secret rule suffixes are the privacy vocabulary's recognizer classes exactly.
+Every scanned file is evaluated with the delivered privacy-rule definition set and its suppression classes. The lint declares no pattern of its own. A finding names the file, the line, and the recognizer class — never the matched value. Suppression markers are evaluated only against the value segment a rule protects, exactly as the whole-tree privacy guard does, so a marker in the key half (for example `fake_token: <value>`) does not silence a real value while a marker inside the value does. The check edge injects the guard's own per-rule value-segment function, so the lint and the guard share one suppression implementation and cannot drift. A match whose protected value carries a declared suppression marker (documentation placeholder, redaction marker, or fabricated sample) is not a finding. The possible secret rule suffixes are the privacy vocabulary's recognizer classes exactly.
 
 #### Output and exit
 
@@ -191,7 +191,7 @@ The summary line always follows:
 memory-lint: records=<n> areas=8 errors=<n> advisories=<n>
 ```
 
-At most 100 error lines and 100 advisory lines print. When either true count exceeds its ceiling, one truncation line follows with the true totals and the printed counts. Ordering is area order, then path, then line, then rule id, so a truncated run is deterministic. The exit is `1` when at least one error finding exists and `0` otherwise; advisories never change the exit.
+The lines form one stream in the declared order across both severities; at most 100 error lines and 100 advisory lines print, and the two ceilings are separate budgets applied while selecting from that one stream. When either true count exceeds its ceiling, one truncation line follows with the true totals and the printed counts. Ordering is area order, then path, then line, then rule id, so a truncated run is deterministic. The exit is `1` when at least one error finding exists and `0` otherwise; advisories never change the exit.
 
 ### 3.2 User Flows
 
@@ -232,7 +232,7 @@ The contract tier declares the schema, closed vocabularies, bounds, finding regi
 | `packages/core/src/contracts/memory-record.ts` | The schema authority: required and optional key sets, kind/scope/status/trust/source/basis/evidence vocabularies, id and file-name grammars, statement and hint bounds, budget and output constants, the finding area order and closed register, and the evaluation input/result types. Data only. |
 | `packages/core/src/domain/memory-lint.ts` | The pure evaluator: schema, dating, provenance, references, both-direction coverage, budgets, derivable heuristics, secret matching, deterministic ordering, bounded output, summary, and exit projection. |
 | `packages/adapters/src/file/memory-scan.ts` | The tree scanner: repository-relative enumeration of `.ai/memory/**` plus `AGENTS.md`, one read per file, YAML frontmatter parse, and an injectable filesystem seam. |
-| `scripts/checks/memory-lint.ts` | The check edge: injects the privacy vocabulary, performs the single ambient date read, prints the deterministic lines, and exits. |
+| `scripts/checks/memory-lint.ts` | The check edge: injects the privacy vocabulary including the guard's per-rule value-segment function, performs the single ambient date read, prints the deterministic lines, and exits. |
 | `package.json` | Declares `check:memory` and chains it into `check`. |
 | `.github/workflows/ci.yml` | Runs the identical invocation in the `ts-invariants` job. |
 | `.ai/memory/README.md` | The human rendering of the schema, layout, budgets, index rows, capsule reconciliation, and lint contract. |
@@ -284,7 +284,7 @@ No localization or accessibility surface is added. Findings are deterministic AS
 |---|---|---|
 | Structure | `tests/structure/memory-layout.test.ts`, `memory-record-schema.test.ts`, `memory-lint-wiring.test.ts`, `memory-lint-docs.test.ts`, `tests/checks/milestone-gate.test.ts` | Layout, schema parity and whole-tree legality, gate/CI parity, documentation conformance, and the aggregate-chain pin. |
 | Checks | `tests/checks/memory-lint-{schema,dating,provenance,reference,index,budget,derivable,secret,output,performance}.test.ts` | One fixture family per area, boundary values, deterministic output, truncation, and scan cost. |
-| Behaviour | `tests/behaviour/memory-promotion-schema.test.ts`, `memory-concurrency-merge.test.ts` | Promotion rendering, schema-valid promotion, concurrent record creation, and union resolution of index rows. |
+| Behaviour | `tests/behaviour/memory-promotion-schema.test.ts`, `closeout-capsule-supersession.test.ts`, `memory-concurrency-merge.test.ts` | Promotion rendering and the supersession writer → invariant round trip, schema-valid promotion, concurrent record creation, and union resolution of index rows. |
 | Boundary | `tests/boundaries/**`, `pnpm check:boundaries` | Contracts/domain purity and package edges. |
 
 ### 6.2 Test Data & Scenarios
