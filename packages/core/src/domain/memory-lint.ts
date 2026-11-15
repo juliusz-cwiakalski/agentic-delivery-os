@@ -48,7 +48,7 @@ import {
   type MemoryScannedFile,
   type MemorySummary,
   STATEMENT_MAX_CHARS,
-} from "#contracts";
+} from "../contracts/memory-record.js";
 
 type IndexRow = {
   readonly path: string;

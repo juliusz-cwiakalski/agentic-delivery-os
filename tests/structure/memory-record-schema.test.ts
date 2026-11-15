@@ -26,6 +26,7 @@ import {
   MEMORY_RECORD_SOURCES,
   MEMORY_RECORD_STATUSES,
   MEMORY_RECORD_TRUST,
+  MEMORY_ROOT,
   STATEMENT_MAX_CHARS,
 } from "../../packages/core/src/contracts/index";
 import { MEMORY_RECORD_HOME_BY_KIND } from "../../packages/core/src/contracts/index";
@@ -193,7 +194,7 @@ describe("TC-MEMSCHEMA-003 whole-tree conformance at the delivered HEAD", () => 
   });
 
   test("every record renders the required spine and its kind matches its area", () => {
-    const files = scanMemoryTree(ROOT).files;
+    const files = scanMemoryTree(ROOT, MEMORY_ROOT).files;
     const records = files.filter((file) => {
       const relative = relativeToMemory(file.path);
       return (

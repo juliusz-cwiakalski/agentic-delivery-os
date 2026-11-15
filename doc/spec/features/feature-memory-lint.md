@@ -240,7 +240,7 @@ The contract tier declares the schema, closed vocabularies, bounds, finding regi
 ### 4.3 Key Classes & Functions
 
 ```ts
-scanMemoryTree(root, fs?): MemoryScanResult
+scanMemoryTree(repoRoot, memoryRoot, fs?): MemoryScanResult
 evaluateMemory({ files, today, privacy }): MemoryEvaluationResult
 runMemoryLint({ root?, readToday?, files? }): MemoryEvaluationResult
 ```
@@ -256,7 +256,7 @@ The tree is committed Markdown. Record frontmatter is YAML 1.2 parsed by the sca
 - **`bun run scripts/checks/memory-lint.ts`** — the invariant invocation; exit `0` or `1`.
 - **`runMemoryLint(options)`** — the injectable entry the check and tests consume.
 - **`evaluateMemory(input)`** — the pure evaluation over the scanned files, one injected date, and the privacy vocabulary.
-- **`scanMemoryTree(root, fs?)`** — the read-only scanner with an injectable filesystem seam.
+- **`scanMemoryTree(repoRoot, memoryRoot, fs?)`** — the read-only scanner over the injected memory root with an injectable filesystem seam.
 - No HTTP endpoint, event, state record, CLI command, doctor area, or error-table identity is added.
 
 ## 5. Non-Functional Requirements

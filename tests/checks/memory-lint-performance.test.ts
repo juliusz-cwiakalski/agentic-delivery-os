@@ -10,6 +10,7 @@ import {
   scanMemoryTree,
   type MemoryScanFileSystem,
 } from "../../packages/adapters/src/file/memory-scan";
+import { MEMORY_ROOT } from "../../packages/core/src/contracts/index";
 import type { MemoryPrivacyVocabulary } from "../../packages/core/src/contracts/index";
 
 const ROOT = process.cwd();
@@ -52,7 +53,7 @@ describe("TC-MEMNFR-002 scan cost and one read per file", () => {
       }
       const counter = countingFileSystem();
       const started = performance.now();
-      const scanned = scanMemoryTree(root, counter.fs);
+      const scanned = scanMemoryTree(root, MEMORY_ROOT, counter.fs);
       const result = evaluateMemory({
         files: scanned.files,
         today: "2026-11-15",

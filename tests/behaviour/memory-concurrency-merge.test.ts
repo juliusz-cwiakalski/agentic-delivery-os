@@ -14,6 +14,7 @@ import {
   readMemoryFacts,
 } from "../../packages/adapters/src/file/memory-promotion";
 import { scanMemoryTree } from "../../packages/adapters/src/file/memory-scan";
+import { MEMORY_ROOT } from "../../packages/core/src/contracts/index";
 import { scanMemoryFolder } from "../fixtures/memory/tree";
 import type {
   MemoryEvaluationResult,
@@ -26,7 +27,11 @@ const TODAY = "2026-11-15";
 const EMPTY_VOCABULARY: MemoryPrivacyVocabulary = { rules: [], suppressionClasses: [] };
 
 const evaluateRoot = (root: string): MemoryEvaluationResult =>
-  evaluateMemory({ files: scanMemoryTree(root).files, today: TODAY, privacy: EMPTY_VOCABULARY });
+  evaluateMemory({
+    files: scanMemoryTree(root, MEMORY_ROOT).files,
+    today: TODAY,
+    privacy: EMPTY_VOCABULARY,
+  });
 
 const evaluateFolder = (root: string): MemoryEvaluationResult =>
   evaluateMemory({ files: scanMemoryFolder(root), today: TODAY, privacy: EMPTY_VOCABULARY });

@@ -13,6 +13,7 @@ import {
   PRIVACY_SUPPRESSION_CLASSES,
   suppressionValueFor,
 } from "../../packages/adapters/src/io/privacy-rules.js";
+import { MEMORY_ROOT } from "../../packages/core/src/contracts/memory-record.js";
 import type {
   MemoryEvaluationResult,
   MemoryPrivacyVocabulary,
@@ -47,7 +48,7 @@ const defaultReadToday = (): string => new Date().toISOString().slice(0, 10);
 
 /** Run the invariant over the tree and return its deterministic result. */
 export const runMemoryLint = (options: MemoryLintOptions = {}): MemoryEvaluationResult => {
-  const files = options.files ?? scanMemoryTree(options.root ?? process.cwd()).files;
+  const files = options.files ?? scanMemoryTree(options.root ?? process.cwd(), MEMORY_ROOT).files;
   const today = (options.readToday ?? defaultReadToday)();
   return evaluateMemory({ files, today, privacy: memoryPrivacyVocabulary() });
 };

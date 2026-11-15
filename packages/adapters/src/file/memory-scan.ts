@@ -8,11 +8,7 @@
 import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { parse } from "yaml";
-import {
-  MEMORY_ROOT,
-  type MemoryFrontmatter,
-  type MemoryScannedFile,
-} from "@delivery-os/core/contracts";
+import type { MemoryFrontmatter, MemoryScannedFile } from "@delivery-os/core/contracts";
 
 /** One directory entry the scanner walk consumes. */
 export type MemoryScanDirectoryEntry = {
@@ -60,21 +56,22 @@ export const nodeMemoryScanFileSystem: MemoryScanFileSystem = {
 
 const skip = new Set(["node_modules", "dist", ".git"]);
 
-/** Scan one repository root without writing anything. */
+/** Scan the memory tree of one repository root without writing anything. */
 export const scanMemoryTree = (
-  root: string,
+  repoRoot: string,
+  memoryRoot: string,
   fs: MemoryScanFileSystem = nodeMemoryScanFileSystem,
 ): MemoryScanResult => {
   const files: MemoryScannedFile[] = [];
   const walk = (relativeDirectory: string): void => {
-    for (const entry of fs.listDirectory(join(root, relativeDirectory))) {
+    for (const entry of fs.listDirectory(join(repoRoot, relativeDirectory))) {
       if (entry.directory && skip.has(entry.name)) continue;
       const relative = `${relativeDirectory}/${entry.name}`;
       if (entry.directory) {
         walk(relative);
         continue;
       }
-      const text = fs.readText(join(root, relative));
+      const text = fs.readText(join(repoRoot, relative));
       files.push({
         path: relative,
         text,
@@ -83,9 +80,9 @@ export const scanMemoryTree = (
       });
     }
   };
-  walk(MEMORY_ROOT);
+  walk(memoryRoot);
   try {
-    const text = fs.readText(join(root, "AGENTS.md"));
+    const text = fs.readText(join(repoRoot, "AGENTS.md"));
     files.push({
       path: "AGENTS.md",
       text,

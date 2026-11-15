@@ -281,8 +281,23 @@ describe("TC-MEMGATE-003 read-only, clock-free, offline evaluation", () => {
     const config = readFileSync(join(REPO, ".dependency-cruiser.cjs"), "utf8");
     expect(config).toContain("matrix-core-importer");
     expect(readFileSync(join(REPO, "packages/core/src/domain/memory-lint.ts"), "utf8")).toContain(
-      'from "#contracts"',
+      'from "../contracts/memory-record.js"',
     );
+  });
+
+  test("the invariant closure resolves without a built dist", () => {
+    // The `ts-invariants` job installs and runs this check with no build step,
+    // so no module of the read -> evaluate -> print closure may depend on a
+    // package-manifest or `#` specifier that resolves to `packages/*/dist`.
+    const domain = readFileSync(join(REPO, "packages/core/src/domain/memory-lint.ts"), "utf8");
+    const scanner = readFileSync(join(REPO, "packages/adapters/src/file/memory-scan.ts"), "utf8");
+    const edge = readFileSync(join(REPO, "scripts/checks/memory-lint.ts"), "utf8");
+    expect(domain).not.toContain('from "#contracts"');
+    expect(scanner).toContain(
+      'import type { MemoryFrontmatter, MemoryScannedFile } from "@delivery-os/core/contracts";',
+    );
+    expect(edge).toContain("MEMORY_ROOT");
+    expect(edge).not.toContain('from "#contracts"');
   });
 });
 
