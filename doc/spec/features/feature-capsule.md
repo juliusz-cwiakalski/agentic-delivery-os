@@ -8,9 +8,10 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The change capsule: the existing change folder as a self-contained memory episode, an append-only delivery.capsule.event.v1 events.jsonl stream with a closed eleven-kind/four-writer vocabulary, deterministic per-capsule sequences and event keys, per-capsule append locking, torn-tail refusal, the first-event `capsule.opened` rule, and a terminal capsule.closed; the phase, commit, and verify producers with non-gating disclosure; the one-file-per-candidate `<id>.yaml` candidates/ layout, the candidate schema, capture bar, five evidence-link shapes, deterministic dedup and contradiction predicate; the closed promotion routing table with exactly one decision per candidate, confined lessons/tacit home writes, and sanctioned handoffs; and closeout's read-only validation, pre-contract backfill, review-verdict ingestion, per-candidate promotion decisions, and terminal close."
 links:
-  related_changes: ["GH-240", "GH-300"]
+  related_changes: ["GH-240", "GH-300", "GH-301"]
   contracts:
     - "packages/core/src/contracts/capsule.ts"
+    - "packages/core/src/contracts/memory-record.ts"
     - "packages/core/src/domain/capsule.ts"
     - "packages/core/src/domain/capsule-candidates.ts"
     - "packages/adapters/src/file/capsule.ts"
@@ -138,11 +139,11 @@ Each candidate is one YAML file under `candidates/`, named `<id>.yaml`, where th
 |---|---|
 | `id` | Required; unique; stable slug; no path separator or `..`. |
 | `class` | Required; one of `fact`, `decision`, `lesson`, `tacit`, `preference`, `workflow`, `norm`, `fleet`. |
-| `scope` | Required; one of `change`, `component`, `repo`, `fleet`. |
+| `scope` | Required; one of `change`, `component`, `repo`, `fleet`. A `lesson` or `tacit` candidate carrying `fleet` is refused at candidate-schema time. |
 | `statement` | Required; non-empty. |
 | `evidence` | Required in the model; one of the five evidence-link shapes below, or empty to be rejected `evidence-missing`. |
 | `basis` | Required in the model; one of the five capture-bar bases below, or empty to be rejected `capture-bar-unmet`. |
-| `source` | Required; non-empty. |
+| `source` | Required; one of the four record channels `review_verdict`, `ci_verdict`, `human_correction`, `merged_pr`. |
 | `trust` | Required; one of `T0`–`T5`. |
 | `status` | Required; one of `candidate`, `authoritative`, `superseded`. |
 | `created_by` | Required; non-empty. |
@@ -153,7 +154,9 @@ Each candidate is one YAML file under `candidates/`, named `<id>.yaml`, where th
 | `contradicts` | Optional record-id list. |
 | `hint` | Optional promotion hint; not acted on by the evaluator. |
 
-A required-field or closed-vocabulary violation — including a malformed id, an out-of-set `class`, `scope`, `status`, or `trust`, a non-list `supersedes`/`contradicts`, an undeclared key, or an evidence value that is non-empty but outside the five shapes — is a candidate schema failure and therefore `closeout.capsule-invalid`, not a candidate-level rejection. A missing or empty `basis` is rejected `capture-bar-unmet`; a missing or empty `evidence` is rejected `evidence-missing`.
+A required-field or closed-vocabulary violation — including a malformed id, an out-of-set `class`, `scope`, `status`, `trust`, or `source`, a non-list `supersedes`/`contradicts`, an undeclared key, or an evidence value that is non-empty but outside the five shapes — is a candidate schema failure and therefore `closeout.capsule-invalid`, not a candidate-level rejection. A missing or empty `basis` is rejected `capture-bar-unmet`; a missing or empty `evidence` is rejected `evidence-missing`.
+
+The candidate contract is a strict projection of the canonical memory-record schema ([Memory Records, Layout, and Lint](feature-memory-lint.md), [ADR-0011](../../decisions/ADR-0011-canonical-memory-record-schema.md)). `source` is validated against the four record channels at candidate-schema time. A `lesson` or `tacit` candidate carrying `scope: fleet` is refused through the same `closeout.capsule-invalid` identity, before any record file or index row is written: `fleet` has no implemented record home and is deliberately not projectable.
 
 **Capture-bar bases (5):** `repeat-occurrence`, `review-catch`, `human-correction`, `verified-outcome`, `repeated-workflow`.
 
@@ -163,7 +166,7 @@ A required-field or closed-vocabulary violation — including a malformed id, an
 
 The evaluator processes candidate files in sorted file order and records exactly one decision per candidate: `promoted` or `rejected` with a reason from the closed set. It performs no similarity scoring, embedding, or model judgment. Before the capsule closes, every candidate must carry exactly one durable `capsule.promotion` event; a candidate with zero decisions or with more than one decision is `closeout.capsule-invalid` in apply mode (`would-refuse` in plan mode) and no promotion write lands for that run. Steps run in this order:
 
-1. Validate the candidate schema. A failure makes the capsule invalid.
+1. Validate the candidate schema, including the four-channel `source` and the non-projectable `fleet` scope on a promotable class. A failure makes the capsule invalid.
 2. Skip a candidate that already has exactly one durable promotion decision, so a re-run appends nothing; a candidate with more than one decision is rejected before evaluation as `closeout.capsule-invalid`.
 3. Reject an empty `basis` as `capture-bar-unmet`.
 4. Reject an empty `evidence` as `evidence-missing`.
@@ -192,7 +195,7 @@ Statement normalization for dedup is trim, lower-case under the `en-US` locale, 
 | `preference` | rejected | `home-not-implemented` |
 | `fleet` | rejected | `owner-approval-required` |
 
-A home write is one record file plus one memory-index row. The record id is the candidate id when it is already a record id, otherwise the monotonic next free `lesson-YYYY-NNN` or `tacit-YYYY-NNN` for the candidate's year. The file path is `<class>s/<record-id>-<slug>.md`; the content carries the documented frontmatter with `status: "candidate"`, the statement, evidence, source, created_by, created, supersedes, and optional applies_when, plus the rationale body. The index row is `| \`<relative-path>\` | <statement, whitespace-collapsed and truncated to 120 characters> |`; it is appended to the injected memory root's `README.md` only when that exact row is absent. A declared `supersedes` list marks each named existing lesson/tacit record's status as `superseded`.
+A home write is one canonical record file plus one memory-index row. The record id is the candidate id when it is already a record id, otherwise the monotonic next free `lesson-YYYY-NNN` or `tacit-YYYY-NNN` for the candidate's year. The home area follows the record kind (`lesson` → `lessons/`, `tacit` → `tacit/`; the class token is never pluralized at run time), and the file path is `<area>/<record-id>-<slug>.md`. The content renders the schema's required spine — id, kind (mapped `tacit` → `tacit_fragment`), scope, statement, evidence, source, trust, created_by, created, status — plus the promotion-triggered conditionals `basis` and `applies_when` when present, `supersedes`, `status: "candidate"`, and the rationale body. The index row is the path plus a read-when hint derived from `applies_when` with the statement as fallback, bounded at the published 120-character hint cap; it is appended to the injected memory root's `README.md` only when that exact row is absent. A declared `supersedes` list marks each named existing lesson/tacit record's status as `superseded`.
 
 Home writes stay under the injected memory root. The candidate id/record name is validated against the slug shape before any write, and the resolved target is checked against the realpath of the memory root. A resolved escape is `closeout.step.capsule.failed` with zero writes; plan mode renders the capsule step `would-refuse`. A pre-existing target file with byte-identical content is a no-op; differing content is a conflict that refuses the capsule step with `closeout.capsule-invalid` and zero overwrite. No closeout run pushes, writes a remote, or rewrites history.
 
@@ -268,6 +271,8 @@ createCapsuleProducerPort({ changesDirectory, fs?, nowIso, runId? }): CapsulePro
 
 `events.jsonl` is the append-only episode ledger inside the change folder. Each line is one schema-versioned event. The close digest is lowercase SHA-256 hex over the canonical JSON (sorted keys, no insignificant whitespace) of the pre-close event payloads; the close event itself is excluded. `candidates/` holds one `<id>.yaml` candidate per file. The capsule introduces no state-store record kind, no state schema-version change, no migration, and no derived document. The capsule is never compacted, relocated, or purged by this feature.
 
+The memory-record read projection stays exactly `{id, class, statement, status, path}`. It is a projection of the canonical memory-record schema and gains no field; the canonical record itself is specified in [Memory Records, Layout, and Lint](feature-memory-lint.md).
+
 The applied closeout payload carries `capsule: {closed, events, candidates[]}`. Each candidate projection is exactly `{id, decision, home?, reason?}`. The durable `capsule.promotion` payload carries `{id, class, decision, mode?, home?, reason?, supersedes?}` with `mode`/`home` present only for a promotion and `reason` only for a rejection.
 
 ### 4.5 API & Interface Contracts
@@ -284,7 +289,7 @@ The applied closeout payload carries `capsule: {closed, events, candidates[]}`. 
 
 - **Append-only integrity.** One writer at a time per capsule, LF framing, whole-file validation before append, event-key dedup, terminal close, cap refusal, and torn-tail refusal prevent silent corruption and history rewriting. No truncation or repair path exists.
 - **Writer ownership.** Only the command that owns an event kind appends it. No agent free-text write exists, and no command writes another change's capsule during phases 1–10.
-- **Promotion boundary.** Home writes are limited to `lessons/` and `tacit/` under the injected memory root. `fact`, `decision`, `norm`, and `workflow` are handoffs; `preference` and `fleet` are rejected. Paths are slug-validated and realpath-confined. Closeout never pushes or rewrites history.
+- **Promotion boundary.** Home writes are limited to `lessons/` and `tacit/` under the injected memory root. `fact`, `decision`, `norm`, and `workflow` are handoffs; `preference` and `fleet` are rejected. A promoted record renders the canonical schema, and a `lesson`/`tacit` candidate carrying `scope: fleet` is refused before any write because the scope has no record home. Paths are slug-validated and realpath-confined. Closeout never pushes or rewrites history.
 - **Privacy.** Events, candidates, decisions, and the digest carry refs, SHAs, ids, counts, paths, verdicts, and bounded statements only. No comment body, title, transcript, diff, prompt, tool output, credential, or environment value enters a capsule.
 - **Telemetry separation.** The capsule carries no harness statistics, and no capsule event is written to `harness.telemetry`.
 
@@ -335,6 +340,7 @@ The capsule adds no runtime dependency, daemon, scheduled job, or network call. 
 - **Depends on** the state layer ([State Layer](feature-state-layer.md)) for the durable phase, commit, and gate-verification records used by the closeout cross-check; the capsule itself is not a state record.
 - **Depends on** the phase and commit primitives ([pm-notes lint and phase transitions](feature-pm-notes-lint-and-phase-transitions.md), [Commit Primitive](feature-commit-primitive.md)) and verify gates ([Verify Gates](feature-verify-gates.md)) for the producer append points.
 - **Depends on** the closeout transaction ([Closeout Transaction](feature-closeout.md)) for validation, ingestion, promotion, and terminal close.
+- **Depends on** the canonical memory-record schema ([Memory Records, Layout, and Lint](feature-memory-lint.md), [ADR-0011](../../decisions/ADR-0011-canonical-memory-record-schema.md)) for the record the projection renders, the four-channel `source`, and the non-projectable `fleet` scope.
 - **Consumed by** the memory lifecycle and `consolidate-memory` for the decisions and promoted records; later retro, ceremony, and retrieval surfaces read the capsule instead of re-querying transient sources.
 - **Risk — concurrent appends corrupt the stream:** mitigated by the per-capsule lock, whole-file validation, LF framing, and torn-tail refusal.
 - **Risk — promotion pollutes memory:** mitigated by the capture bar, mandatory evidence link, exact-statement dedup, explicit supersession, confined home writes, and idempotent decisions.
@@ -352,7 +358,7 @@ The capsule adds no runtime dependency, daemon, scheduled job, or network call. 
 | Capture bar | The promotion gate: repeated occurrence, review catch, human correction, verified outcome, or repeated successful workflow. |
 | Evidence link | The mandatory reference in one of the five declared shapes. |
 | Promotion decision | Exactly one `promoted` or `rejected` verdict per candidate. |
-| Home write | A promotion applied by writing one canonical record file and one index row. |
+| Home write | A promotion applied by writing one canonical schema-rendered record file and one read-when index row. |
 | Sanctioned handoff | A promotion recorded as a proposal to a single home without editing that home. |
 | Terminal close | The one `capsule.closed` event; no writer appends after it. |
 | Two streams | The capsule event stream and the state-layer telemetry stream; two owners, no duplication. |

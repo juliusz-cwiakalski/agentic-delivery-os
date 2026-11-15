@@ -5,8 +5,11 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tool
 ---
 # Concept: agent memory - architecture
 
-Status: Draft (2026-10-26). Structure of the ADOS memory model: layers,
-layout, records, trust, retrieval, tooling. Start with
+Status: Draft (2026-10-26); partially implemented (2026-11-15). Structure of the
+ADOS memory model: layers, layout, records, trust, retrieval, tooling. The
+canonical layout, the published record schema, and lint-in-gates are implemented
+as a repository invariant; the `ados memory` command family, index generation,
+and the compiler remain unimplemented. Start with
 [memory-overview.md](memory-overview.md) for the human summary.
 
 ## Layer model
@@ -213,6 +216,10 @@ outranks yesterday's speculation.
 
 ## Tooling and story mapping
 
+The implemented memory lint is the quality-gate repository invariant
+`bun run scripts/checks/memory-lint.ts`, not an `ados memory` subcommand. The
+command family below is the design target and is not implemented.
+
 Command family (`ados memory`, mirroring the report's memoryctl):
 
 | Command | Job |
@@ -234,8 +241,9 @@ Increment plan (mirrors the research recommendation: start with
 governance, not infrastructure):
 
 1. Conventions + capsule completion + promotion in closeout (no new
-   infra).
-2. Lint in quality gates + layout enforcement.
+   infra) — delivered.
+2. Lint in quality gates + layout enforcement — delivered as one repository
+   invariant over the canonical layout and record schema.
 3. Index generation + lexical retrieval cache.
 4. `ados memory` command family.
 5. Compiler to harness surfaces.
@@ -243,8 +251,9 @@ governance, not infrastructure):
    evaluation of candidates; temporal/graph projections.
 
 Backlog stories: M1-S12 (capsule completion + closeout promotion),
-M2-S8 (records + lint in gates), M2-S9 (memory conventions in bootstrap
-templates), M3-S8 (`ados memory` family), M3-S9 (memory compiler).
+M2-S8 (records + lint in gates, delivered), M2-S9 (memory conventions in
+bootstrap templates, delivered), M3-S8 (`ados memory` family), M3-S9 (memory
+compiler).
 Trace and eval remain post-M4 candidates until telemetry justifies them.
 
 ## Multi-agent rules

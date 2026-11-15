@@ -6,11 +6,11 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 id: SPEC-DOCUMENT-TEMPLATES
 status: Current
 created: 2026-03-10
-last_updated: 2026-11-14
+last_updated: 2026-11-15
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 links:
-  related_changes: ["GH-32", "GH-52", "GH-133", "GH-226", "GH-302", "GH-313"]
+  related_changes: ["GH-32", "GH-52", "GH-133", "GH-226", "GH-301", "GH-302", "GH-313"]
   guides:
     - "doc/documentation-handbook.md"
     - "doc/guides/onboarding-existing-project.md"
@@ -81,10 +81,10 @@ Repositories may use this template to make the documentation profile explicit wh
 | `memory-coordinator-wiring-template.md` | Coordinator memory wiring rendered into `.ai/agent/pm-instructions.md`: capture bar, promotion path, curation mandate | `@bootstrapper` |
 | `memory-instruction-expectations-template.md` | Companion per-role memory expectations rendered into the PR/MR, decision, and code-review instruction files | `@bootstrapper` |
 | `memory-retro-notes-template.md` | Retro-note conventions: append-only notes with a generated index; documentation only, no ceremony | `@bootstrapper` |
-| `memory-doctor-checklist-template.md` | Manual memory-health doctor checklist: six audit areas, manual until memory lint lands, prescribes a cadence and performs nothing | Project owner / coordinator |
+| `memory-doctor-checklist-template.md` | Manual memory-health audit path: six audit areas, a prescribed cadence, and an automation boundary; performs nothing. The memory invariant is a repository check and is not installed by bootstrap | Project owner / coordinator |
 | `memory-adoption-checklist-template.md` | Manual adoption checklist for previously bootstrapped projects: adopt kernel section, instruction wiring, and tree scaffold by hand | Project owner |
 
-The bootstrap renders the scaffold, kernel-section, and wiring templates at Phase 5 ([Bootstrapper](feature-bootstrapper.md)); the memory tree is seeded empty — structure and conventions, not records — mirroring the memory conventions in `AGENTS.md`. The doctor and adoption checklists are consumed by humans on a manual cadence.
+The bootstrap renders the scaffold, kernel-section, and wiring templates at Phase 5 ([Bootstrapper](feature-bootstrapper.md)); the memory tree is seeded empty — structure and conventions, not records — mirroring the memory conventions in `AGENTS.md`. The doctor and adoption checklists are consumed by humans on a manual cadence. The memory invariant that enforces the canonical record schema and lint areas is a check of the delivery repository itself; it is not part of the installed bootstrap output.
 
 ### Optional Business/Product Strategy Templates (enabled business docs only)
 

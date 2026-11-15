@@ -185,6 +185,7 @@
     "doc/spec/features/feature-harness-adapters.md",
     "doc/spec/features/feature-mcp-surface.md",
     "doc/spec/features/feature-measurement-baseline.md",
+    "doc/spec/features/feature-memory-lint.md",
     "doc/spec/features/feature-merge-verify-deploy.md",
     "doc/spec/features/feature-milestone-governance.md",
     "doc/spec/features/feature-owner-gate-sla.md",

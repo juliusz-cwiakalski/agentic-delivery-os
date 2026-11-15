@@ -1196,7 +1196,8 @@ the project family separately.
   record-schema fields, the coordinator capture/promotion wiring and the
   companion per-role expectations in the installed instruction files, the
   retro-note conventions (append-only notes with a generated index), the
-  manual doctor checklist (documentation only until memory lint lands), the
+  manual doctor checklist (documentation only; the memory invariant is a
+  repository check, not an installed artifact), the
   manual adoption checklist for previously bootstrapped projects, the
   `.ai/memory/**` write-allowlist extension stated identically across the
   bootstrapper prompt, the inception guide, and SPEC-BOOTSTRAPPER, Phase 6

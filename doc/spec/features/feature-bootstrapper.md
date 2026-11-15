@@ -6,11 +6,11 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main/doc/
 id: SPEC-BOOTSTRAPPER
 status: Current
 created: 2026-03-10
-last_updated: 2026-11-14
+last_updated: 2026-11-15
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 links:
-  related_changes: ["GH-32", "GH-69", "GH-71", "GH-72", "GH-302", "GH-313"]
+  related_changes: ["GH-32", "GH-69", "GH-71", "GH-72", "GH-301", "GH-302", "GH-313"]
   guides:
     - "doc/guides/project-inception.md"
     - "doc/guides/onboarding-existing-project.md"
@@ -142,7 +142,7 @@ Phase 5 wires the project into ADOS. It produces:
 | `.ai/agent/decision-instructions.md` | Decision-tracking conventions; carries per-role memory expectations from `doc/templates/memory-instruction-expectations-template.md` |
 | `.ai/agent/code-review-instructions.md` | Code-review configuration; carries per-role memory expectations from `doc/templates/memory-instruction-expectations-template.md` |
 | `.ai/memory/README.md`, `.ai/memory/agents/<agent>/README.md`, `.ai/memory/lessons/`, `.ai/memory/tacit/` | Memory tree scaffold — seeded empty (structure and conventions, not records), exactly this set: the memory index, one entry-point README per resident agent role, the lessons area, the tacit area |
-| Retro-note conventions, manual doctor checklist | Installed from `doc/templates/memory-retro-notes-template.md` and `doc/templates/memory-doctor-checklist-template.md` — documentation only; the doctor stays manual until memory lint lands in the gates |
+| Retro-note conventions, manual doctor checklist | Installed from `doc/templates/memory-retro-notes-template.md` and `doc/templates/memory-doctor-checklist-template.md` — documentation only; the manual checklist is a bootstrapped project's audit path, and bootstrap installs no memory invariant |
 | `doc/documentation-profile.md` | engineering / business / mixed |
 | `doc/documentation-handbook.md`, `doc/templates/`, `doc/decisions/` (README + index), `doc/guides/`, `doc/00-index.md` | Installed/verified from ADOS source |
 
