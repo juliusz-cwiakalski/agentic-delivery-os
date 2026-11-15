@@ -13,7 +13,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-15T12:11:25.019Z }
   review_fix: { started: null, completed: 2026-11-15T17:03:54.294Z }
   quality_gates: { started: null, completed: 2026-11-15T17:53:53.780Z }
-  dod_check: { started: null, completed: 2026-11-15T15:52:48.372Z }
+  dod_check: { started: null, completed: 2026-11-15T17:54:15.543Z }
   pr_creation: { started: null, completed: 2026-11-15T15:53:06.428Z }
 decisions:
   - text: "Legacy identity fallback is the chosen mechanism (not a migration
