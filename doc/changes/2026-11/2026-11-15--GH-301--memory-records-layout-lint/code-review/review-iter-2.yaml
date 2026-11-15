@@ -1,0 +1,392 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-301
+branch: feat/GH-301/memory-records-layout-lint
+status: PASS
+summary: >-
+  Second review iteration after remediation of review-iteration-1. The branch now
+  closes every in-scope finding: F-1 (supersession writes superseded_by so a
+  writer -> scan -> evaluate round trip is lint-clean), F-2 (hint is never a
+  truncated statement), F-3 (candidate statement bounded and refused through
+  closeout.capsule-invalid), F-4 (suppression scoped to the guard's own
+  value-segment seam), F-5 (out-of-tree links are citations), F-6 (trailing
+  newline no longer counts as a line), F-7 (capture-line date heuristic restricted
+  to date-like tokens), F-8 (empty/non-string statement is one keys-missing), F-9
+  (one globally area-ordered printed stream with two separate ceilings), and F-10
+  (populated execution log plus the missing cells). I re-ran the memory-scope
+  battery (18 files / 194 pass / 0 fail), the secret/budget/output/reference/
+  dating/schema suites (94 pass), the promotion + supersession suites (20 pass),
+  the guard/replacement suite, content-inventory, privacy-literals (39 pass),
+  capsule-mutants (2 pass / 44 mutants), the live check (records=3 areas=8
+  errors=0 advisories=0), and core+adapters typecheck and biome check (clean).
+  I independently re-broke each key fix and confirmed the new tests fail without
+  it (F-1, F-2, F-3, F-4, F-5, F-6, F-9), so the coverage is non-vacuous. The
+  only remaining items are the two owner-accepted info residuals F-11 (perf cell
+  uses an empty privacy vocabulary; NFR-8 TMPDIR precondition demonstrated with a
+  sibling dir) and F-12 (kind-to-home-area mapping not gated by the lint), plus
+  the environment-bound AC-NFR8-1 partial, all disclosed in pm-notes. Plan
+  revision 1.5 validates and all eight declared plan phases carry per-phase
+  commit+test evidence. Verdict: PASS; proceed to quality gates.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 2
+verification:
+  remediation_scope:
+    verdict: PASS
+    evidence: >-
+      Remediation range 1959528e..HEAD touches 6 source files, 10 test files, 3
+      spec docs, the plan, the test plan and pm-notes. Every in-scope source or
+      test path is inside plan phase 8's declared scope; the two doc files
+      changed by the post-phase doc re-sync (47918467) are the standing
+      lifecycle doc-sync deviation iter-1 accepted, and feature-memory-lint.md is
+      phase-8-scoped. No undisclosed product code path.
+  f1_supersession_link:
+    verdict: CLOSED
+    evidence: >-
+      supersedeRecord now takes replacementId and, after rewriting status
+      candidate -> superseded, inserts superseded_by: "<new-id>" when absent and
+      is idempotent. repository#memory-promotion.ts:128-155,
+      applyPromotionWrite passes write.recordId. Round trip green in
+      memory-promotion-schema.test.ts and closeout-capsule-supersession.test.ts
+      (zero findings over the resulting tree). Non-vacuity: I removed the
+      insertion and both round-trip assertions failed (target.superseded_by
+      undefined; 3 failures).
+  f2_hint_not_truncated:
+    verdict: CLOSED
+    evidence: >-
+      deriveHint no longer slices a statement. It returns collapsed applies_when
+      when it fits, the collapsed statement when there is no applicability and it
+      fits, else a deterministic "read when a <scope>-scoped <kind> applies"
+      phrase (<=120, deterministic). capsule-candidates.ts:239-257. Non-vacuity: I
+      reverted dist deriveHint to the old slice and both TC-MEMWRITE-002 cells
+      failed (hint equal to a statement/applicability prefix).
+  f3_candidate_statement_bound:
+    verdict: CLOSED
+    evidence: >-
+      validateCandidate refuses statement.length > STATEMENT_MAX_CHARS with
+      detail "statement exceeds the published bound" through the existing
+      closeout.capsule-invalid identity; a 280-char candidate promotes and lints
+      clean. capsule-candidates.ts:119-121. Non-vacuity: I removed the bound from
+      the built dist and the 281-char refusal test failed (exit 0 instead of 1).
+  f4_value_segment_suppression:
+    verdict: CLOSED
+    evidence: >-
+      The memory secret scan evaluates suppression markers only against
+      rule.suppressionValueFor(matched), injected per rule by the check edge from
+      the delivered guard's own suppressionValueFor(rule.id, matched). A
+      key-half marker (fake_token: <value>) now fires in both the guard and the
+      lint; a value-segment marker still suppresses. privacy-rules.ts only gains
+      an `export` (no logic change), so the whole-tree guard is not weakened;
+      privacy-literals (39 pass) and the guard suite stay green. Non-vacuity: I
+      reverted to whole-match suppression and the key-half-marker test failed
+      (finding dropped to []).
+  f5_link_scope:
+    verdict: CLOSED
+    evidence: >-
+      resolveLink reports an escaped flag when `..` would pop past the memory
+      root; absolute repository paths are skipped. An out-of-tree link
+      (../../../AGENTS.md, /doc/...) is silent while an in-tree missing link
+      still fires memory.reference.link-dangling. memory-lint.ts:383-475.
+      Non-vacuity: I removed the escaped skip and the out-of-tree control failed
+      (link-dangling emitted for ../../../AGENTS.md).
+  f6_line_measure:
+    verdict: CLOSED
+    evidence: >-
+      measureLines subtracts the trailing-newline terminator; budget fixtures are
+      newline-terminated (lineFiller appends \n). A newline-terminated surface at
+      exactly the cap is silent; cap+1 reports the true measured value. Non-
+      vacuity: I reverted measureLines to raw split().length and the at-cap test
+      (and the boundary matrix) failed with index-lines 201.
+  f7_entry_line_date:
+    verdict: CLOSED
+    evidence: >-
+      entry-line-date now fires only on a calendar-shaped leading token
+      (YYYY-MM-DD / YYYY/MM/DD / date-time); a non-date bullet such as
+      "- GH-301: ..." or "- T0-T5: ..." is silent. Negative controls added in
+      mutants.ts; dating suite green (18 pass).
+  f8_statement_presence:
+    verdict: CLOSED
+    evidence: >-
+      An absent-as-empty (empty/whitespace) or non-string statement yields exactly
+      one memory.schema.keys-missing; absent statement remains the required-key
+      keys-missing. Schema mutants for empty, whitespace-only and non-string
+      statement added; schema suite green (22 pass).
+  f9_printed_order:
+    verdict: CLOSED
+    evidence: >-
+      The report prints one stream selected from the area-ordered `sorted` array
+      with separate 100/100 error/advisory print budgets, and the truncation line
+      still carries true totals. A derivable WARN (area 7) now prints before a
+      secret FAIL (area 8); repeated runs are byte-identical. memory-lint.ts:731-
+      757. Non-vacuity: I restored errors-first printing and the mixed-tree order
+      test failed.
+  f10_execution_evidence:
+    verdict: CLOSED
+    evidence: >-
+      Test plan v1.5 section 10 is populated with per-TC verdicts and evidence;
+      the new cells (supersession round trip, derived hint, over-bound refusal,
+      newline-terminated at-cap, out-of-tree citation, key-half suppression,
+      empty/whitespace/non-string statement, mixed-tree order) exist under their
+      owning TCs. I spot-measured the live tree (README 176 lines / 8831 bytes,
+      agents 12-39 lines, archive 8 lines) and it matches the recorded values.
+  no_new_defect:
+    verdict: PASS
+    evidence: >-
+      Bound enforcement only refuses statements the schema already forbids (>280);
+      a 280-char statement promotes and lints clean. Hint derivation is
+      deterministic and <120. The link-scope change does not hide an in-tree
+      dangling link (explicit control). The seam injection exports the guard
+      function without changing it (guard suite + privacy-literals green).
+      Constant imports moved source (STATEMENT_MAX_CHARS, MEMORY_RECORD_AREAS)
+      with no behaviour change; core+adapters typecheck clean.
+  acceptance_criteria_recheck:
+    verdict: PASS
+    evidence: >-
+      AC-F3-1 (F-1 round trip zero findings), AC-F4-1 (deterministic ordered
+      emission + exit semantics), AC-F10-1 (caps + kernel band), AC-F12-1/2
+      (secret classes + value-segment suppression), AC-F13-1/2 (concurrency),
+      AC-F14-1 (guard replacement), and the DoD rows all hold with the re-run
+      suites.
+  plan_compliance:
+    verdict: PASS
+    evidence: >-
+      plan validate GH-301 = valid, tier=full, readyForDevelopment=true,
+      revision 1.5 with 8 phases. pm-notes carries a completion entry per plan
+      phase (1..8) naming the plan phase id, commit hash and test results; phase
+      8 evidence is 73048dce + 04c6d4da. No open phases, no evidence-missing.
+  documentation:
+    verdict: PASS
+    evidence: >-
+      feature-memory-lint.md, feature-capsule.md and feature-closeout.md describe
+      the delivered behaviour: the value-segment suppression seam, the symmetric
+      supersession write (status + superseded_by), the trailing-newline line
+      count, the derived (never truncated) hint, the candidate 280 bound, the
+      date-shape capture rule, and the single area-ordered printed stream. Only
+      the change spec's AC-F3-1 wording keeps the generic "applicability with
+      statement fallback" phrasing; the edge phrase path is documented in the
+      reconciled system spec (see D-6).
+  repository_rules:
+    verdict: PASS
+    evidence: >-
+      No license header added by agents; no plan progress recorded in the plan
+      file; phase state only in command-owned pm-notes; no forbidden literal; no
+      new CLI command/flag/doctor area/error row/domain kind (AC-NFR10-1). biome
+      check on the 18 changed TS files reports only 2 pre-existing style infos.
+acceptance_criteria:
+  AC-F1-1: PASS
+  AC-F1-2: PASS
+  AC-F2-1: PASS
+  AC-F2-2: PASS
+  AC-F2-3: PASS
+  AC-F3-1: PASS   # F-1 round trip zero findings; F-3 bound; F-2 non-truncation
+  AC-F3-2: PASS
+  AC-F4-1: PASS   # F-9 single area-ordered stream; exit semantics unchanged
+  AC-F4-2: PASS
+  AC-F6-1: PASS
+  AC-F6-2: PASS
+  AC-F7-1: PASS
+  AC-F7-2: PASS
+  AC-F8-1: PASS
+  AC-F9-1: PASS
+  AC-F9-2: PASS
+  AC-F10-1: PASS  # F-6 trailing-newline count; kernel band unchanged
+  AC-F10-2: PASS
+  AC-F11-1: PASS
+  AC-F12-1: PASS
+  AC-F12-2: PASS  # F-4 value-segment suppression; key-half marker fires
+  AC-F13-1: PASS
+  AC-F13-2: PASS
+  AC-F14-1: PASS
+  AC-NFR1-1: PASS
+  AC-NFR2-1: PASS
+  AC-NFR5-1: PASS
+  AC-NFR7-1: PASS
+  AC-NFR8-1: PARTIAL # owner-accepted D-5/F-11: sibling-dir TMPDIR, not repo-local
+  AC-NFR10-1: PASS
+plan_task_status:
+  artifact: chg-GH-301-plan.yaml (revision 1.5)
+  plan_validate: "valid, tier=full, readyForDevelopment=true"
+  open_phases: []
+  evidence_missing: []
+  phases:
+    - id: 1
+      title: Canonical memory tree, published schema, backfill, ADR-0011
+      status: COMPLETE
+      commit: d7fbc56b
+      evidence: memory-layout/schema suites + ADR-0011 index row; pm-notes plan id 1.
+    - id: 2
+      title: Pure evaluation core (schema/dating/provenance/reference) + guard narrowing
+      status: COMPLETE
+      commit: 2ea319dd
+      evidence: memory-lint-schema/dating/provenance/reference + narrowed guard; pm-notes plan id 2.
+    - id: 3
+      title: Index coverage, budgets, derivable, secrets, output model
+      status: COMPLETE
+      commit: 8dc40fc3
+      evidence: index/budget/derivable/secret/output suites; pm-notes plan id 3.
+    - id: 4
+      title: Check edge, scanner, gate wiring, three-part guard replacement, doctor reword
+      status: COMPLETE
+      commit: 8d39e4f8
+      evidence: wiring/output + ci/privacy/license pins; live check exits 0; pm-notes plan id 4.
+    - id: 5
+      title: Promotion renders full schema, hint, closed source, fleet refusal, tacit fix, concurrency
+      status: COMPLETE
+      commit: edf44fc6
+      evidence: promotion-schema/concurrency/record-schema/closeout suites; pm-notes plan id 5.
+    - id: 6
+      title: Kernel clause, curator alignment, concept Record-model rewrite, doc conformance
+      status: COMPLETE
+      commit: ccf14fb5
+      evidence: memory-lint-docs + memory-record-schema; prompt/doc conformance green; pm-notes plan id 6.
+    - id: 7
+      title: Backlog markers, alignment pass, full gate battery
+      status: COMPLETE
+      commit: e4bb8541
+      evidence: full check 8653 pass at phase 7; memory-lint records=3 errors=0; pm-notes plan id 7.
+    - id: 8
+      title: Review-iteration-1 remediation (F-1..F-10) and missing coverage
+      status: COMPLETE
+      commit: 73048dce
+      evidence: >-
+        F-1..F-10 additive fixes; targeted memory-scope 18 files / 194 pass;
+        capsule-mutants 44 mutants (MUT-CAP-41 preserved); live check green; full
+        gate 8668 pass / 4 skip / 0 fail; follow-up 04c6d4da places the F-4 seam
+        on MemoryPrivacyRule. pm-notes plan id 8.
+  scope_deviations:
+    - path: doc/spec/features/feature-capsule.md
+      disclosed: true
+      decision: COMPLIANT
+      note: post-phase-8 doc-sync (47918467) of the delivered supersession and hint behaviour; standing lifecycle doc-sync deviation accepted in iter-1.
+    - path: doc/spec/features/feature-closeout.md
+      disclosed: true
+      decision: COMPLIANT
+      note: post-phase-8 doc-sync (47918467) of the supersession mark wording; same standing deviation.
+    - path: tests/fixtures/capsule/mutants.ts
+      disclosed: true
+      decision: COMPLIANT
+      note: declared in phase-8 scope but unchanged; MUT-CAP-41 still anchors the status rewrite and stays green (over-declaration, not a gap).
+findings:
+  - id: F-11
+    severity: info
+    confidence: high
+    category: testing
+    location: tests/checks/memory-lint-performance.test.ts:16
+    message: >-
+      Owner-accepted residual (unchanged from iter-1). The NFR-2 performance cell
+      still measures with EMPTY_VOCABULARY, so the real per-file secret scan is
+      outside the timed bound; the full gate was recorded green at 8668 pass but
+      AC-NFR8-1's literal repository-local TMPDIR precondition was demonstrated
+      with a sibling directory outside every work tree (D-5/F-11). Neither is a
+      live defect; both are disclosed in pm-notes and the test plan section 10.
+    suggestion: >-
+      Accepted as documented residual. Optional: re-run the performance cell with
+      memoryPrivacyVocabulary() and state the TMPDIR constraint in the PR body.
+    suppressed: true
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-12
+    severity: info
+    confidence: high
+    category: design
+    location: packages/core/src/domain/memory-lint.ts:82
+    message: >-
+      Owner-accepted residual. The free part is closed (the evaluator now imports
+      MEMORY_RECORD_AREAS via isFlatRecordArea instead of the local RECORD_AREAS
+      list), but the lint still does not enforce the kind-to-home-area mapping
+      (MEMORY_RECORD_HOME_BY_KIND); a kind/area mismatch is caught only by the
+      whole-tree structure test. No AC requires a lint rule here, so it remains
+      a documented single-source/coverage note, not a defect.
+    suggestion: >-
+      Accepted as documented residual. If kind/area mismatch should gate, add a
+      schema-area finding under an existing id via a spec amendment.
+    suppressed: true
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+decisions:
+  - id: D-1
+    subject: F-1 supersession writes the replacement link, tested end to end
+    verdict: COMPLIANT
+    rationale: >-
+      The write path now produces a symmetric pair and a lint-clean tree; the
+      behaviour test is the round trip the review asked for, and it fails without
+      the fix.
+  - id: D-2
+    subject: F-2 derivation chosen from the iter-1 options
+    verdict: COMPLIANT
+    rationale: >-
+      iter-1 permitted "synthesise a 'when ...' hint from structured candidate
+      fields"; the class/scope phrase is that option, deterministic and bounded,
+      and the capsule + memory-lint system specs were reconciled to it.
+  - id: D-3
+    subject: F-4 seam placed per rule on MemoryPrivacyRule
+    verdict: COMPLIANT
+    rationale: >-
+      Binding the guard's suppressionValueFor per rule (follow-up 04c6d4da)
+      removes the vocabulary-level duplicate and keeps one suppression
+      implementation; the guard is unchanged apart from an export.
+  - id: D-4
+    subject: Commit subjects use the primitive template (a docs(GH-301) prefix)
+    verdict: COMPLIANT
+    rationale: >-
+      The remediation commits (73048dce, 04c6d4da, 47918467) carry the commit
+      primitive's template subject, including a docs-prefixed commit that edits
+      source. Consistent with iter-1 D-4 (no inference transport configured); the
+      branch-range commit-message gate remains the authority. Traceability is
+      weaker than ideal but not a code defect.
+  - id: D-5
+    subject: AC-NFR8-1 repository-local TMPDIR demonstrated with a sibling dir
+    verdict: ACCEPTED_WITH_CAVEAT
+    rationale: >-
+      The nested-git workspace prevents a repository-local TMPDIR for fifteen
+      pre-existing suites; the battery is green with a sibling directory on the
+      same filesystem and the deviation is disclosed. Literal precondition not
+      demonstrated (F-11).
+  - id: D-6
+    subject: AC-F3-1 wording vs the derived-phrase edge path
+    verdict: COMPLIANT_WITH_NOTE
+    rationale: >-
+      AC-F3-1 still reads "derived from applicability with statement as fallback";
+      the delivered third path (class/scope phrase when both exceed the bound) is
+      documented in feature-capsule.md and feature-memory-lint.md and satisfies
+      the AC's explicit requirements (non-empty, <=120, read-when, zero
+      findings) plus ADR-0011 D6. The change spec AC text was not reworded; a
+      future spec touch-up could name the phrase path, but this is not a blocking
+      gap.
+  - id: D-7
+    subject: Doc re-sync touches feature-capsule.md and feature-closeout.md
+    verdict: COMPLIANT
+    rationale: >-
+      The two spec docs changed in 47918467 are the doc-syncer reconciliation of
+      the delivered supersession/hint behaviour; this is the standing
+      lifecycle-phase doc-sync outside the delivery plan, accepted in iter-1. The
+      docs match the code.
+reviewed_at: 2026-11-15T18:45:00Z
+next_step: PROCEED
+remediation_hint: >-
+  None required. Proceed to quality_gates. Carry F-11 (perf vocabulary + TMPDIR
+  caveat) and F-12 (kind/area mapping not gated) as documented residuals into the
+  PR description; treat AC-NFR8-1 as the owner-accepted environment partial.
+plan_gaps: >-
+  NONE for phase completion: plan validate is valid and readyForDevelopment=true;
+  all eight declared phases carry a pm-notes completion entry naming the plan
+  phase id, commit hash and test results; OPEN_PHASES and EVIDENCE_MISSING do not
+  fire. Scope hygiene: the phase-8 work sits inside its declared scope; two spec
+  docs (feature-capsule.md, feature-closeout.md) are post-phase doc-sync under
+  the standing disclosed deviation; tests/fixtures/capsule/mutants.ts is declared
+  but unchanged. No undisclosed product code path.
+test_coverage_gaps: >-
+  None blocking. The previously invisible gaps are now covered by non-vacuous
+  cells (supersession round trip, over-bound refusal, newline-terminated at-cap,
+  key-half suppression, out-of-tree citation, mixed-tree printed order,
+  empty/whitespace/non-string statement). The only residual coverage caveat is
+  F-11: the performance cell still uses an empty privacy vocabulary, so the timed
+  NFR-2 measurement excludes the real secret scan.
