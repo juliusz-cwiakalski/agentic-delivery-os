@@ -50,6 +50,18 @@ open_questions: []
 blockers: []
 notes:
   - text: >-
+      Plan phase 8 follow-up (plan id 8): commit 04c6d4da places the F-4
+      value-segment seam on MemoryPrivacyRule exactly as obligation 8.4
+      declares (the check edge binds the guard's suppressionValueFor per rule;
+      the vocabulary carries no second seam), with no behaviour change. Final
+      full battery on HEAD: TMPDIR=<outside-worktree sibling dir> pnpm check =
+      8668 pass / 4 skip / 0 fail (exit 0); bun run
+      scripts/checks/memory-lint.ts = records=3 areas=8 errors=0 advisories=0;
+      doc-distribution, forbidden-literals, privacy-literals and git diff
+      --check clean. Phase 8 evidence is commits 73048dce and 04c6d4da.
+    type: info
+    date: "2026-11-15"
+  - text: >-
       Delivery plan phase 8 (plan id 8) complete — review-iteration-1
       remediation. Commit: 73048dce. F-1: supersedeRecord writes
       superseded_by from write.recordId on the superseded target, idempotent,
