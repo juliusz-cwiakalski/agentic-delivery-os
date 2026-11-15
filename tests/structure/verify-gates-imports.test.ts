@@ -10,6 +10,7 @@ import ts from "typescript";
 const ROOT = process.cwd();
 const CONTRACT = "packages/core/src/contracts/verify-gates.ts";
 const DOMAIN = "packages/core/src/domain/verify-gates.ts";
+const SUITE_MAP_DOMAIN = "packages/core/src/domain/verify-gates-suite-map.ts";
 
 const parse = (file: string): ts.SourceFile =>
   ts.createSourceFile(
@@ -106,6 +107,25 @@ describe("TC-VGATES-002 contracts data-only and domain purity", () => {
     expect(source).toContain("VERIFY_GATES_GATE_ORDER.map");
     expect(source).not.toContain("classifyVerifyChange(");
     expect(source).not.toContain("formatVerifySummary(");
+  });
+
+  test("the suite-map module adds no import edge beyond contracts and its domain sibling", () => {
+    const source = parse(SUITE_MAP_DOMAIN);
+    for (const specifier of specifiers(source)) {
+      expect(["#contracts", "./verify-gates.js"]).toContain(specifier);
+    }
+    const text = readFileSync(join(ROOT, SUITE_MAP_DOMAIN), "utf8");
+    for (const token of [
+      "process.",
+      "Bun.",
+      "Date.now",
+      "Math.random",
+      'from "node:',
+      'from "bun:',
+      "fetch(",
+    ]) {
+      expect(text).not.toContain(token);
+    }
   });
 
   test("negative control: a temp snippet with ambient reads is detected", () => {

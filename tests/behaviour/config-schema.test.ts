@@ -26,6 +26,7 @@ describe("TC-CONFIG-008/009/011 canonical schema, partial and final", () => {
       "commit",
       "merge",
       "harness",
+      "verify",
       "lane",
       "queue",
       "daemon",

@@ -7,15 +7,7 @@
  * fact bundle from the same pure fixture helpers. No I/O, no clock, no network.
  */
 import type { VerifyGatesFacts } from "../../../../packages/core/src/domain/index";
-import {
-  baseFacts,
-  clone,
-  EXPECTED_JOBS,
-  lifecycle,
-  request,
-  run,
-  workItem,
-} from "../cases/facts";
+import { baseFacts, clone, EXPECTED_JOBS, lifecycle, request, run, workItem } from "../cases/facts";
 
 export type CorpusCase = {
   readonly id: string;

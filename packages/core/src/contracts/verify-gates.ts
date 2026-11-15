@@ -155,6 +155,72 @@ export const VERIFY_GATES_MAX_SUMMARY_LINES = 6 as const;
 export const VERIFY_GATES_MAX_SUMMARY_BYTES = 4096 as const;
 export const VERIFY_GATES_MAX_MACHINE_BYTES = 65536 as const;
 
+/**
+ * The declared suite-to-job map vocabulary (GH-300 DM-3).
+ *
+ * Six constants, each declared exactly once. The job-name bound reuses
+ * `VERIFY_GATES_MAX_EXPECTED_JOB_NAME_CHARS` and the narrowed header reuses the
+ * citation-name, summary-line, and summary-byte bounds; no node-byte bound is
+ * added, because the node lives inside the already-bounded document read.
+ */
+export const VERIFY_SUITE_MAP_SCHEMA_VERSION = "delivery.verify.suite-map.v1" as const;
+export const VERIFY_SUITE_MAP_CONFIG_KEY = "verify.suite-map" as const;
+export const VERIFY_SUITE_MAP_MAX_JOBS = 64 as const;
+export const VERIFY_SUITE_MAP_MAX_SUITES_PER_JOB = 32 as const;
+export const VERIFY_SUITE_MAX_BREADTH = 32 as const;
+export const VERIFY_SUITE_MAX_ID_CHARS = 64 as const;
+
+/** The single suite-id grammar literal (DM-1, DM-3). */
+export const VERIFY_SUITE_ID_PATTERN = "^[a-z][a-z0-9-]*$" as const;
+
+/** One declared suite-to-job mapping entry (`job` -> `suites`). */
+export type VerifySuiteMapJob = {
+  readonly job: string;
+  readonly suites: readonly string[];
+};
+
+/** The closed `verify.suite-map` declaration (DM-1). */
+export type VerifySuiteMap = {
+  readonly schemaVersion: typeof VERIFY_SUITE_MAP_SCHEMA_VERSION;
+  readonly jobs: readonly VerifySuiteMapJob[];
+  readonly local: readonly string[];
+};
+
+/**
+ * The closed breadth-resolution outcome vocabulary (DM-4). `not-evaluated` is
+ * the workflow precondition, not a fifth breadth outcome.
+ */
+export const VERIFY_SUITE_BREADTH_OUTCOMES = [
+  "equal",
+  "narrower",
+  "unmirrored",
+  "uncorroborated",
+] as const;
+export type VerifySuiteBreadthOutcome = (typeof VERIFY_SUITE_BREADTH_OUTCOMES)[number];
+
+/** The closed configuration-document classification vocabulary (DM-9, DEC-18). */
+export const VERIFY_SUITE_MAP_DOCUMENT_STATES = [
+  "absent",
+  "selected-but-missing-or-unreadable",
+  "parsed-no-node",
+  "parsed-valid",
+  "defective-node",
+  "unreadable",
+  "unparseable",
+  "defect-elsewhere",
+] as const;
+export type VerifySuiteMapDocumentState = (typeof VERIFY_SUITE_MAP_DOCUMENT_STATES)[number];
+
+/** The closed injected map-read result (OQ-T4 resolution, DM-9). */
+export type VerifySuiteMapRead =
+  | { readonly ok: true; readonly declared: false }
+  | { readonly ok: true; readonly declared: true; readonly value: VerifySuiteMap }
+  | {
+      readonly ok: false;
+      readonly code: "config.value.invalid";
+      readonly detail?: string;
+    };
+
 /** Per-gate source declarations, in report order (Section 8.3). */
 export const VERIFY_GATES_GATE_SOURCES = {
   "lifecycle-finalization": ["pm-notes", "delivery-registry"],
@@ -332,6 +398,10 @@ export type VerifyGatesReport = {
   readonly overall: "pass";
   readonly summary: VerifyGatesSummary;
   readonly gates: readonly VerifyGateRecord[];
+  /** The mirrored CI breadth, present together with `mirrorsJob` (GH-300 DM-2). */
+  readonly suiteBreadth?: readonly string[];
+  /** The mirrored CI job's declared name (GH-300 DM-2). */
+  readonly mirrorsJob?: string;
 };
 
 /** Closed per-member CI reading vocabulary (GH-310 DM-3, DEC-4). */
@@ -440,6 +510,10 @@ export type CrossRepositoryVerifyGatesReport = {
   readonly definitionOfDone: CrossRepositoryDefinitionOfDone;
   readonly blockingMembers: readonly string[];
   readonly reviewFlow: CrossRepositoryReviewFlow;
+  /** The mirrored CI breadth, member-independent (GH-300 DM-2). */
+  readonly suiteBreadth?: readonly string[];
+  /** The mirrored CI job's declared name, member-independent (GH-300 DM-2). */
+  readonly mirrorsJob?: string;
 };
 
 /** The emitted report union, discriminated by the presence of `definitionOfDone`. */

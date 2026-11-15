@@ -52,12 +52,16 @@ export const COMMAND_FAILURE_DETAIL_MAX_CHARS = 128 as const;
 /**
  * The closed failure-envelope `detail` contract (TDR-0027 ALT-3): one
  * command-declared, optional member at the failure-envelope root. `holder`
- * names the live lease's holder identity on a `queue.single-flight` refusal.
- * A future member is a declared addition with its own bound and test; this
- * never becomes an open key-value map.
+ * names the live lease's holder identity on a `queue.single-flight` refusal;
+ * `suiteBreadth` names the complete declared local suite breadth on a
+ * `verify.narrowed-scope` refusal (GH-300 DM-6), bounded by its own declaration
+ * (`VERIFY_SUITE_MAX_BREADTH` entries of at most `VERIFY_SUITE_MAX_ID_CHARS`
+ * characters) and never truncated. A future member is a declared addition with
+ * its own bound and test; this never becomes an open key-value map.
  */
 export type CommandResultDetail = {
   readonly holder?: string;
+  readonly suiteBreadth?: readonly string[];
 };
 
 /** An explicit empty success payload for void successes (D7). */

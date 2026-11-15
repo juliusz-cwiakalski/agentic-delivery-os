@@ -1241,19 +1241,39 @@ const namesSegment = (citationValue: VerifyGateCitation, valueBudget?: number): 
   return rendered.length === 0 ? "-" : rendered.join(" ");
 };
 
-const gateSummaryLine = (entry: VerifyGateRecord, valueBudget?: number): string => {
+/** One gate's bounded summary line (internal, shared with the narrowed renderer). */
+export const verifyGateSummaryLine = (entry: VerifyGateRecord, valueBudget?: number): string => {
   const sources = entry.citation.sources
     .map((source) => `${source.name}:${source.outcome}`)
     .join("+");
   return `${entry.id} ${entry.verdict} reason=${entry.reason} source=${sources} ref=${referenceFor(entry.id, entry.citation)} counts=${countsSegment(entry.citation)} names=${namesSegment(entry.citation, valueBudget)}`;
 };
 
-/** Render the bounded deterministic failure summary (Appendix D). */
-export const renderVerifyGatesFailureSummary = (evaluation: VerifyGatesEvaluation): string => {
+/**
+ * The one delivered failure-summary header formula (DEC-15): the delivered
+ * tokens, with the pinned narrowed segment appended when one is supplied.
+ */
+export const verifyGatesSummaryHeader = (
+  evaluation: Pick<VerifyGatesEvaluation, "overall" | "summary">,
+  narrowed?: { readonly mirrorsJob: string; readonly mirrorBreadth: readonly string[] },
+): string => {
   const result = evaluation.overall === "fail" ? "fail" : "unknown";
   const header = `result=${result}; gates=${evaluation.summary.passed}/${evaluation.summary.gates} passed, ${evaluation.summary.failed} failed, ${evaluation.summary.unknown} unknown`;
+  if (narrowed === undefined) return header;
+  const identifiers =
+    narrowed.mirrorBreadth.length <= VERIFY_GATES_MAX_CITATION_NAMES
+      ? narrowed.mirrorBreadth.join(",")
+      : `${narrowed.mirrorBreadth.slice(0, VERIFY_GATES_MAX_CITATION_NAMES).join(",")} omitted=${narrowed.mirrorBreadth.length - VERIFY_GATES_MAX_CITATION_NAMES}`;
+  return `${header}; scope=narrowed mirror=${narrowed.mirrorsJob} breadth=${identifiers}`;
+};
+
+/** Render the bounded deterministic failure summary (Appendix D). */
+export const renderVerifyGatesFailureSummary = (evaluation: VerifyGatesEvaluation): string => {
+  const header = verifyGatesSummaryHeader(evaluation);
   const render = (valueBudget?: number): string =>
-    [header, ...evaluation.gates.map((entry) => gateSummaryLine(entry, valueBudget))].join("\n");
+    [header, ...evaluation.gates.map((entry) => verifyGateSummaryLine(entry, valueBudget))].join(
+      "\n",
+    );
   const full = render();
   if (full.length <= VERIFY_GATES_MAX_SUMMARY_BYTES) return full;
   // The full block exceeds the byte bound. Shrink the name lists (never drop a

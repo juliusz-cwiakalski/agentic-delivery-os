@@ -106,6 +106,8 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   // four coordinator identities are three-segment.
   "coordinator.already-running",
   "coordinator.restart-budget-exhausted",
+  // GH-300 pins the narrowed-scope identity exactly; it is a two-segment code.
+  "verify.narrowed-scope",
   // GH-288 pins the three projects host-overview identities exactly; the
   // kind-first codes are two-segment, so they join the exact allowlist.
   "projects.identity-unreadable",
@@ -736,7 +738,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
   test("verify is a declared single-row kind with the exact C-8 fields", () => {
     expect(DOMAIN_KINDS).toContain("verify");
     const verify = entries.filter((entry) => entry.domainKind === "verify");
-    expect(verify).toHaveLength(6);
+    expect(verify).toHaveLength(7);
     expect(verify[0]).toMatchObject({
       code: "verify.ledger.incomplete",
       domainKind: "verify",
@@ -817,7 +819,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "daemon")).toHaveLength(8);
     expect(entries.filter((entry) => entry.domainKind === "coordinator")).toHaveLength(6);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(4);
-    expect(entries).toHaveLength(135);
+    expect(entries).toHaveLength(136);
   });
 });
 
@@ -893,7 +895,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(135);
+    expect(entries).toHaveLength(136);
     expect(db).toHaveLength(4);
   });
 
@@ -1127,7 +1129,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly four rows and round-trip
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(135);
+    expect(entries).toHaveLength(136);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1186,7 +1188,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly four rows and round-trip
     expect(entries.filter((entry) => entry.domainKind === "config")).toHaveLength(10);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "lint")).toHaveLength(6);
-    expect(entries.filter((entry) => entry.domainKind === "verify")).toHaveLength(6);
+    expect(entries.filter((entry) => entry.domainKind === "verify")).toHaveLength(7);
     expect(entries.filter((entry) => entry.domainKind === "merge")).toHaveLength(7);
     expect(entries.filter((entry) => entry.domainKind === "db")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "closeout")).toHaveLength(5);
@@ -1401,7 +1403,7 @@ describe("TC-BLK-007 blockers family is closed, synced, and exit-1 projected", (
       code.startsWith("blockers."),
     );
     expect(blockersReserved.sort()).toEqual([...BLOCKERS_ROWS].sort());
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(52);
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(53);
   });
 });
 
@@ -1730,7 +1732,7 @@ describe("TC-ECON-003 the dispatch kind carries the two economics rows plus the 
   });
 
   test("the three economics additions land and the delivered rows stay byte-identical", () => {
-    expect(entries).toHaveLength(135);
+    expect(entries).toHaveLength(136);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
     // The delivered watchdog rows retain their exact declared columns.
@@ -1823,7 +1825,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
 
   test("no delivered row is re-projected by the spend addition", () => {
     const delivered = entries.filter((entry) => entry.domainKind !== "spend");
-    expect(delivered).toHaveLength(134);
+    expect(delivered).toHaveLength(135);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(resolveAppErrorCode("state.store.torn")).toEqual({
@@ -1842,7 +1844,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     const row = `| spend.telemetry-absent | spend | user | false | not_landed | ${SPEND_HINT} | user-validation | ${SPEND_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
-    expect(doc).toContain("135 identities");
+    expect(doc).toContain("136 identities");
   });
 
   test("the documented table is complete in both directions", () => {
