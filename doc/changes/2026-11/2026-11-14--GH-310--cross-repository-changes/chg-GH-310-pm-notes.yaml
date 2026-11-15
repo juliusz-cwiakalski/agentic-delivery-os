@@ -13,7 +13,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-15T08:04:10.303Z }
   quality_gates: { started: null, completed: 2026-11-15T08:22:20.870Z }
   dod_check: { started: null, completed: 2026-11-15T08:23:53.313Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-15T08:27:32.376Z }
 decisions:
   - text: "Scope is the M2 blueprint contract, not an open-ended multi-repo engine:
       `plan.data.members[]` (repoKey, slice, branch, pullRequest, dependsOn[],
@@ -301,6 +301,19 @@ notes:
       cdee503e (first pass) then fddf059a (post-phase-6 re-sync), review_fix
       25215e26, quality_gates 09aac39e. The earlier phase entries point at `git
       log` for hashes; this entry is the authoritative hash map."
+    type: info
+    date: "2026-11-15"
+  - text: "PR created and left OPEN for CEO/human merge:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/321 — base
+      main-tools, head feat/GH-310/cross-repository-changes. Title
+      'feat(GH-310): cross-repository changes — per-member plans, one shared
+      definition of done, one review flow'. The PR body carries all seven
+      residuals disclosed by review iteration 2 (AC-F5-3 apply observability,
+      AC-F5-2 partial-landing reachability, DEC-23 failed tier, F-6 fail-open
+      member CI reading, F-7 no member read-bundle identity check, commit
+      hygiene, and the injected/unwired member seams) plus the gate evidence.
+      Commit-range gate re-run at the delivered head: PASS, 31 commits, 0
+      offending. Delivery stops here — no merge, no other ticket."
     type: info
     date: "2026-11-15"
   - text: "Delivery conventions for this change: full 11-phase lifecycle; plan
