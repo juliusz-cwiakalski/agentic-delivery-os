@@ -1,9 +1,9 @@
-# GH-320 delivery plan — machine-readable document (delivery.plan.v1), revision 1.4
-# (2026-11-15; code-review iteration-1 remediation — added Phase 6). Revision 1.0 was authored in
+# GH-320 delivery plan — machine-readable document (delivery.plan.v1), revision 1.5
+# (2026-11-15; close-out amendment to the code-review iteration-1 remediation). Revision 1.0 was authored in
 # lifecycle phase 4 (`delivery_planning`) against spec v1.1 / test plan v1.1.
 # Revision 1.1 remediated readiness iter-1 findings 3, 4, 6, 9, 19, 20, 21, 22,
 # 23 against the then-current spec v1.2, test plan v1.2, and PM decisions
-# D5..D11 (historical baseline; superseded by the current v1.6 / v1.5 sources):
+# D5..D11 (historical baseline; superseded by the current v1.7 / v1.6 sources):
 #   - F3  phase 1 is now green at its own boundary: the two delivered suites
 #         that relied on the removed neutral identity are phase-1 scope, and the
 #         selector input design is pinned with every affected call site named.
@@ -21,7 +21,8 @@
 #   - F20 the acquisition under test is the production composition's own; its
 #         sites are enumerated in phase 2.
 #   - F21 discoverability is through the four spec pages; `doc/00-index.md` is
-#         untouched.
+#         untouched.  [superseded by r1.4/r1.5 and spec v1.6 — the landing page
+#         descriptor is reconciled; see DOC BOUNDARY and R-D]
 #   - F22 no stdin proof obligation is declared.
 #   - F23 shellcheck (`severity: error`) is attached to the edited installer.
 #
@@ -43,6 +44,8 @@
 #   - I2/8  R-D's landing-page rationale is restated honestly (discoverability
 #          via the four spec pages; the landing page is deferred to the M4-S1
 #          remainder); both artifacts now require all FOUR pages to link it.
+#          [superseded by r1.4/r1.5 and spec v1.6: the landing page descriptor
+#          row IS reconciled; only a full guide row remains deferred]
 #   - I2/9  the selector-input call-site census states the verified numbers (21
 #          call sites in 17 delivered test files; 3 edited for the identity
 #          floor, 1 more edited for structure).
@@ -125,15 +128,39 @@
 #   - F-13/F-14 the plan mirrors the corrected evidence/control wording without
 #          editing the test plan.
 #
+# Revision 1.5 is the CLOSE-OUT AMENDMENT to that Phase 6 (spec v1.7, test plan
+# v1.6). It closes the last scope-record gaps the phase-6 delivery report
+# escalated, and it changes nothing about phases 1-5, the phase order, or the
+# product scope:
+#   - phase 6 scope gains the two remaining delivered paths, so the delivered
+#     diff is fully declared: `packages/core/src/index.ts` (REVERTED — the new
+#     re-exports have no consumer, and reverting removes the last undeclared
+#     path) and `tests/fixtures/ports/v1-contract-inventory.json` (KEPT — the
+#     delivered contract-inventory entries the port-contract test requires, now
+#     declared in spec v1.7 §16);
+#   - the phase-1 `tests/structure/content-inventory.test.ts` second edit is
+#     explained in phase 6 as the declared one-line allowance for the newly
+#     exported `daemonReentryEnvironment` (no scope change: the file stays in
+#     phase 1);
+#   - the historical revision-log claims that the landing page is untouched are
+#     annotated as SUPERSEDED rather than rewritten, so the history stays
+#     auditable;
+#   - the phase-6 gate gains `tests/structure/port-contract-inventory.test.ts`
+#     and `scripts/checks/exports-parity.ts`.
+#
 # REVISION LOG: 1.0 initial plan (spec v1.1 / test plan v1.1);
 #   1.1 DoR iter-1 remediation (spec v1.2 / test plan v1.2 / D5..D11);
 #   1.2 DoR iter-2 remediation (spec v1.4 / test plan v1.3);
 #   1.3 DoR iter-3 remediation (spec v1.5 / test plan v1.4 / D12..D13);
 #   1.4 code-review iter-1 remediation (spec v1.6 / test plan v1.5), adding
-#   Phase 6. Delivery phase order, the TC ownership rule (55 cases, unchanged
-#   homes), and the product scope are unchanged by all revisions; the declared
-#   scope grows by the six documentation reconciliations and the revert path
-#   recorded in Phase 6.
+#   Phase 6;
+#   1.5 close-out amendment (spec v1.7 / test plan v1.6): two phase-6 scope
+#   entries, the content-inventory obligation note, superseded-history markers,
+#   and two gate additions.
+#   Delivery phase order, the TC ownership rule (55 cases, unchanged homes), and
+#   the product scope are unchanged by all revisions; the declared scope grows
+#   by the six documentation reconciliations and the two revert paths recorded
+#   in Phase 6.
 #
 # One ticket, one pull request against main-tools, SIX delivery phases: the five
 # original delivery phases plus PHASE 6, added by this revision for the
@@ -145,7 +172,7 @@
 # gate, the branch-range commit-message gate, and `plan validate GH-320`.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec: ./chg-GH-320-spec.md (v1.6) — F-1..F-8, DM-1..DM-6, NFR-1..NFR-9,
+#   - Spec: ./chg-GH-320-spec.md (v1.7) — F-1..F-8, DM-1..DM-6, NFR-1..NFR-9,
 #     DEC-1..DEC-15 (DEC-14 the composition-time acquisition on `status --json`,
 #     DEC-15 the installer's declared-identity query and classified
 #     preconditions), §15.1 (DEC-5/DEC-9 precedent status, no new decision
@@ -163,8 +190,12 @@
 #     (`doc/00-index.md` CHANGED as a descriptor row plus the five phase-7
 #     current-truth reconciliations); node-level DM-6/AC-F7-10/NFR-6 scan with
 #     an expression-position control; launcher safe-quoting property and the
-#     narrowed preload claim.
-#   - Test plan: ./chg-GH-320-test-plan.md (v1.5) — 55 cases
+#     narrowed preload claim. v1.7 is the close-out: §16 declares the delivered
+#     `tests/fixtures/ports/v1-contract-inventory.json` change (required by
+#     `tests/structure/port-contract-inventory.test.ts`) and keeps
+#     `packages/core/src/index.ts` OUT of the map because its re-export change is
+#     reverted.
+#   - Test plan: ./chg-GH-320-test-plan.md (v1.6) — 55 cases
 #     TC-BIN-001..TC-BIN-084 in nine blocks; 11/11 ACs, 0 orphans; §3.5
 #     substitute assertions BYTE-TP-1 (now including the invalid-override
 #     projection), LIVE-TP-1, SURF-TP-1, PAR-TP-1, DOC-TP-1, plus the DIRECT
@@ -266,9 +297,9 @@
 #        control (it calls `install_local_files` directly and never enters the
 #        launcher step).
 #   R-D  The guide is discoverable through links from ALL FOUR affected spec
-#        pages (test plan v1.5 TC-BIN-071 step 5 requires all four; a page
+#        pages (test plan v1.6 TC-BIN-071 step 5 requires all four; a page
 #        missing a link fails by name). The documentation landing page IS
-#        reconciled by this change, but only as a descriptor row: spec v1.6 §16
+#        reconciled by this change, but only as a descriptor row: spec v1.7 §16
 #        lists `doc/00-index.md` as CHANGED (the CLI-entrypoint descriptor
 #        refreshed to two executables over one shared launcher plus
 #        `--help`/`--version`/`--print-install-path`), with no rebranding and NO
@@ -291,7 +322,7 @@
 #   R-H  `tests/checks/support/arm-counters.preload.ts` is the TC-BIN-084
 #        half-(b) support module (D11). Revision 1.1 declared it while the then
 #        current spec v1.2 §16 did not list it; spec v1.3 reconciled §16 to it
-#        (row 44) and v1.6 keeps it, so the spec map and this plan's declared
+#        (row 44) and v1.7 keeps it, so the spec map and this plan's declared
 #        file set are now IDENTICAL. R-H is kept only as the record of that
 #        reconciliation — it is not a deviation.
 #
@@ -375,7 +406,7 @@
 #   Control re-runs in the Phase 6 gate: prior-identity-notice,
 #   prior-identity-hermetic, content-inventory.
 #
-# BINDING SPEC-v1.6 CONTRACTS THE PHASES MUST NOT CONTRADICT:
+# BINDING SPEC-v1.7 CONTRACTS THE PHASES MUST NOT CONTRADICT:
 #   * Identity literals: exactly FIVE declared sites under the declared
 #     `packages/**` string-literal scan rule — `bin/delivery-os.ts` default,
 #     `bin/jaiship.ts` default, `bin/jaiship.ts` prior, the unchanged MCP default
@@ -385,8 +416,8 @@
 #     a sixth site fails by name. The resolver is code-UNCHANGED and is NOT in
 #     any phase scope (DM-6, D7).
 #   * Invalid working-name override: the DELIVERED behaviour stays exactly as
-#     delivered, per invocation shape (spec v1.6 §8.5 / AC-F2-7 / D13; test plan
-#     v1.5 TC-BIN-012). A positional-free `status --json` yields the containment
+#     delivered, per invocation shape (spec v1.7 §8.5 / AC-F2-7 / D13; test plan
+#     v1.6 TC-BIN-012). A positional-free `status --json` yields the containment
 #     identity `fallback.internal` at exit `2` for BOTH bins (resolver-level
 #     input error wrapped inside; the alias's summary byte-identical to its
 #     baseline); a subcommand-bearing form fails earlier, at argument parsing,
@@ -411,7 +442,7 @@
 #     URLs, and the installer's own pre-freeze home / environment-variable
 #     surface. The guide states the fourth BY ROLE (no pre-freeze seed tokens)
 #     and delegates the exact identifiers to `scripts/install.sh --help` and this
-#     change record (spec v1.6 F-8/NFR-8/AC-F8-11); package scope and public docs
+#     change record (spec v1.7 F-8/NFR-8/AC-F8-11); package scope and public docs
 #     stay pre-freeze by non-goal (NG-1/NG-2).
 #   * Installer: the declared-identity query scrubs `DELIVERY_OS_WORKING_NAME`
 #     from the child environment; the install-time Bun requirement, a source
@@ -425,13 +456,15 @@
 #
 # SCOPE CONVENTION: concrete files are exact repository-relative paths; folders
 #   are declared by the phase that writes new files inside them. Declared after
-#   r1.4: 51 distinct file paths + 2 folders (the prior-identity fixture folder
-#   and the change-folder staging prefix). Spec v1.6 §16 lists 50 CHANGED/NEW
-#   file paths plus that fixture folder. The sets differ by exactly ONE path:
-#   `packages/adapters/src/file/projects-config.ts`, declared in Phase 6 only
-#   because it is REVERTED there (F-6) — after the revert the file is absent
-#   from the delivered diff, so §16 correctly does not list it. R-H is only the
-#   preload reconciliation record.
+#   r1.5: 53 distinct file paths + 2 folders (the prior-identity fixture folder
+#   and the change-folder staging prefix). Spec v1.7 §16 lists 51 CHANGED/NEW
+#   file paths plus that fixture folder. The sets differ by exactly TWO paths,
+#   both declared in Phase 6 only because they are REVERTED there:
+#   `packages/adapters/src/file/projects-config.ts` (F-6) and
+#   `packages/core/src/index.ts` (close-out). After the reverts both files are
+#   absent from the delivered diff, so §16 correctly does not list them. Every
+#   other declared path is in §16, including the ports contract-inventory
+#   fixture that v1.7 added. R-H is only the preload reconciliation record.
 #
 # ONE-PHASE RULE AND PHASE 6 (resolution recorded): the plan schema does NOT
 #   prohibit one path from appearing in more than one phase (`plan diff` reports
@@ -440,9 +473,9 @@
 #   delivered, so moving their scope into Phase 6 would falsify their commits.
 #   The resolution taken is therefore: phases 1-5 KEEP their declarations
 #   unchanged, and Phase 6 RE-DECLARES the files it re-edits so the commit
-#   primitive can stage the remediation. Phase 6 introduces exactly 7 new paths
-#   (the six documentation reconciliations plus the revert path) and re-declares
-#   15 already-declared files. An untouched declared file is a `plan diff`
+#   primitive can stage the remediation. Phase 6 introduces exactly 9 new paths
+#   (the six documentation reconciliations, the two revert paths, and the ports
+#   contract-inventory fixture) and re-declares 15 already-declared files. An untouched declared file is a `plan diff`
 #   observation, never a gate failure.
 
 # PHASE 6 (review-iter-1 remediation) DECLARATION NOTE: Phase 6 is a delivery
@@ -468,9 +501,9 @@
 #
 # DOC BOUNDARY: the documentation blast radius has TWO declared halves.
 #   (1) Phase 4 reconciles the four affected feature pages plus the
-#   install-set/distribution-marker page (five paths, all in spec v1.6 §16).
+#   install-set/distribution-marker page (five paths, all in spec v1.7 §16).
 #   (2) Phase 6 declares the SIX phase-7 current-truth reconciliations that spec
-#   v1.6 §16 now lists as CHANGED: the `doc/00-index.md` CLI-entrypoint
+#   v1.7 §16 lists as CHANGED: the `doc/00-index.md` CLI-entrypoint
 #   DESCRIPTOR row (two executables over one shared launcher plus
 #   `--help`/`--version`/`--print-install-path`; no rebranding and no guide
 #   link), `doc/spec/nonfunctional.md`, `doc/spec/features/feature-state-layer.md`,
@@ -716,7 +749,7 @@ phases:
   #      re-entry environment.
   #  2.6 Tests: identity-override (010-014) must assert the delivered
   #      invalid-override behaviour PER INVOCATION SHAPE, exactly as test plan
-  #      v1.5 (TC-BIN-012) and spec v1.6 §8.5 / AC-F2-7 / D13 pin it:
+  #      v1.6 (TC-BIN-012) and spec v1.7 §8.5 / AC-F2-7 / D13 pin it:
   #      - positional-free `status --json`: exit `2`, the delivered containment
   #        identity `fallback.internal`, the delivered summary, for BOTH bins,
   #        with the alias projection byte-compared to its baseline;
@@ -888,14 +921,14 @@ phases:
   # declared divergences (MCP default and override read, the delivery-script
   # shell fallback host root, the scope-derived repository/docs URLs, and the
   # installer's own pre-freeze home and environment-variable surface — the
-  # fourth BY ROLE, per spec v1.6 F-8/NFR-8/AC-F8-11).
+  # fourth BY ROLE, per spec v1.7 F-8/NFR-8/AC-F8-11).
   #
   # DISCOVERABILITY (iter-1 finding 21, iter-2 finding 8, iter-3 finding 4,
   # review F-5, R-D): the guide is linked from ALL FOUR affected spec pages —
   # each of `feature-cli-entrypoint.md`, `feature-branding-seam.md`,
   # `feature-config-layer.md`, `feature-projects.md` carries a link and a page
-  # missing one fails by name (test plan v1.5 TC-BIN-071 step 5).
-  # `doc/00-index.md` is NOT untouched: spec v1.6 §16 declares it CHANGED as a
+  # missing one fails by name (test plan v1.6 TC-BIN-071 step 5).
+  # `doc/00-index.md` is NOT untouched: spec v1.7 §16 declares it CHANGED as a
   # descriptor-only CLI-entrypoint refresh (no rebranding, no guide link), and
   # Phase 6 owns that reconciliation. Adding a guide row to the landing page
   # remains deferred to the M4-S1 remainder.
@@ -929,9 +962,9 @@ phases:
   #          any pre-freeze seed token, because the guide is a registered
   #          document inside the seeded `doc/**` scan; the guide points the
   #          reader at `scripts/install.sh --help` and this change record for the
-  #          exact identifiers (spec v1.6 F-8, NFR-8, AC-F8-11; iter-2 finding 2);
+  #          exact identifiers (spec v1.7 F-8, NFR-8, AC-F8-11; iter-2 finding 2);
   #      (d) the guide is SEED-CLEAN UNDER THE DELIVERED SCAN, not under a bare
-  #          whole-text matcher (test plan v1.5 TC-BIN-072 step 7; DoR iter-3
+  #          whole-text matcher (test plan v1.6 TC-BIN-072 step 7; DoR iter-3
   #          finding 1). A whole-text assertion is impossible on a compliant
   #          guide: the mandatory `ados_distribution:` marker contains the seed
   #          `ados`, and the delivered `scanFile` line-allowlists that marker
@@ -1135,7 +1168,7 @@ phases:
   #      replaced: the run DOES read and DOES notify; the alias/jaiship
   #      projection and the pre-composition touch stay unchanged (step 6's
   #      equality assertion is unaffected). The test plan's step-5 notice clause
-  #      is superseded by AC-F5-6 + spec v1.6 and by this cell.
+  #      is superseded by AC-F5-6 + spec v1.7 and by this cell.
   #  6.2 F-9 — `bin-launcher.ts` imports `workingNameEnvironmentVariable()` from
   #      `./entrypoint.js` and drops its local override-name literal, so the
   #      override name stays a single site (the accessor keeps its reason) and
@@ -1157,7 +1190,7 @@ phases:
   #      documented code added to the header's list), keeping the "no launcher
   #      written" ordering.
   #  6.6 F-4 — `DRY_RUN` is declared as a PLAN-ONLY PREVIEW that evaluates NO
-  #      install-time precondition (spec v1.6 F-6/DEC-15/NFR-5/AC-F6-8): under
+  #      install-time precondition (spec v1.7 F-6/DEC-15/NFR-5/AC-F6-8): under
   #      `DRY_RUN` the step reports the planned registration and writes nothing
   #      even when the runtime is unresolvable or the source tree carries no CLI
   #      entry, and the plan line is intentionally pre-precondition — it is not a
@@ -1172,7 +1205,7 @@ phases:
   #      two-way inventory, and add an EXPRESSION-POSITION control
   #      (`resolveBrandIdentity({ workingName: "<name>" })`, an object property,
   #      and an argument default) that fails by name. The rule wording mirrors
-  #      spec v1.6 DM-6/AC-F7-10/NFR-6.
+  #      spec v1.7 DM-6/AC-F7-10/NFR-6.
   #  6.8 F-3 — replace the four tautologies with live guards driven by the
   #      production scanners:
   #      (a) installer arrays — add `installerArrayViolations` (or extend
@@ -1202,13 +1235,13 @@ phases:
   #      pre-change content (delete the dead optional prior-directory branch; no
   #      caller supplies it and the covered fallback lives in `config-source.ts`).
   #      After the revert the file is absent from the delivered diff, which is
-  #      why spec v1.6 §16 does not list it; it is declared here only so the
+  #      why spec v1.7 §16 does not list it; it is declared here only so the
   #      revert can be committed.
   #  6.11 F-12 — `arm-counters.preload.ts` additionally arms the `node:fs` write
   #      entry points (`writeFileSync`, `mkdirSync`, `appendFileSync`) and
   #      `Bun.spawn`, each with a canary cell proving the counter trips. If any
   #      class cannot be armed reliably, narrow the guard's stated claim in the
-  #      suite and the change record instead of overstating it (spec v1.6 §16
+  #      suite and the change record instead of overstating it (spec v1.7 §16
   #      already narrowed the preload row).
   #  6.12 F-5 — documentation-scope truth. `doc/00-index.md` is reconciled as a
   #      DESCRIPTOR-ONLY CLI-entrypoint row (two executables over one shared
@@ -1217,7 +1250,7 @@ phases:
   #      (`doc/spec/nonfunctional.md`, `doc/spec/features/feature-state-layer.md`,
   #      `doc/overview/architecture-overview.md`, `doc/overview/glossary.md`,
   #      `doc/quality/test-specs/test-spec-state-layer.md`) are reconciled and
-  #      declared CHANGED exactly as spec v1.6 §16 lists them. `identity-docs`
+  #      declared CHANGED exactly as spec v1.7 §16 lists them. `identity-docs`
   #      pins both landing-page facts (descriptor-only, no guide link) and the
   #      five pages' statements.
   #  6.13 Plan scope sentences (F-5, this revision's own text): the DOC BOUNDARY
@@ -1238,7 +1271,34 @@ phases:
   #      revisions (the test plan's remediation rows and the pm-notes evidence)
   #      plus any residue. The coder stages them; it does not edit the spec, the
   #      test plan, the pm-notes, or the review records itself.
-  #  6.16 Verification: the full aggregate gate remains Phase 5's declared
+  #  6.16 CLOSE-OUT (r1.5) — revert `packages/core/src/index.ts` to its
+  #      `origin/main-tools` content. The re-export additions made by this change
+  #      are consumed by no caller (the contracts are imported from their own
+  #      subpath), so the revert removes the last undeclared path from the
+  #      delivered diff without changing behaviour. Proof obligations: the file
+  #      is byte-identical to `origin/main-tools`; `pnpm typecheck` is green;
+  #      `bun run scripts/checks/exports-parity.ts` is green; the affected
+  #      suites (contract imports, content inventory, port-contract inventory)
+  #      stay green. Spec v1.7 §16 deliberately keeps this file OUT of the map
+  #      because the revert removes it from the delivered diff.
+  #  6.17 CLOSE-OUT (r1.5) — KEEP the delivered
+  #      `tests/fixtures/ports/v1-contract-inventory.json` entries. The fixture
+  #      carries the contract entries this change introduces
+  #      (`ConfigPriorOutcome`, `PRIOR_IDENTITY_NOTICE_REASONS`,
+  #      `PriorIdentityNotice`, `PriorIdentityNoticeReason`,
+  #      `priorIdentityNoticeToken`, `renderPriorIdentityNotice`) because
+  #      `tests/structure/port-contract-inventory.test.ts` requires every
+  #      exported contract surface to be listed; the entries are the delivered
+  #      state, are now declared in spec v1.7 §16, and the suite must stay green.
+  #      Do not trim the inventory to make another check pass.
+  #  6.18 CLOSE-OUT (r1.5) — `tests/structure/content-inventory.test.ts` is
+  #      declared in Phase 1 and is NOT re-declared here. Its second edit in this
+  #      phase is the ONE-LINE per-file executable allowance for the newly
+  #      exported `daemonReentryEnvironment` (the accessor the daemon re-entry
+  #      environment needs); that allowance is the declared reason for the
+  #      file's phase-6 touch, and the exact file-set equality plus the
+  #      retired-`neutralWorkingName` allowance stay unchanged.
+  #  6.19 Verification: the full aggregate gate remains Phase 5's declared
   #      command (`mkdir -p "$HOME/.cache"` then
   #      `TMPDIR=$(mktemp -d "$HOME/.cache/ados-check-XXXXXX") pnpm check`), and
   #      is re-run before the PR; this phase's gate below is deliberately
@@ -1247,12 +1307,14 @@ phases:
   # Gate:
   #   pnpm typecheck
   #   bun test tests/structure/entrypoint-bin.test.ts tests/structure/entrypoint-installer-absence.test.ts tests/structure/install-launcher.test.ts
+  #   bun test tests/structure/port-contract-inventory.test.ts
   #   bun test tests/checks/install-launcher-installer.test.ts
   #   bun test tests/checks/identity-docs.test.ts
   #   bun test tests/behaviour/daemon-start-detached.test.ts
   #   bun test tests/behaviour/identity-override.test.ts tests/behaviour/prior-identity-notice.test.ts
   #   bun test tests/checks/prior-identity-hermetic.test.ts
   #   bun test tests/structure/content-inventory.test.ts
+  #   bun run scripts/checks/exports-parity.ts
   #   shellcheck --severity=error scripts/install.sh
   #   bash scripts/.tests/test-install.sh
   #   bun run scripts/checks/forbidden-literals.ts
@@ -1273,6 +1335,7 @@ phases:
         - packages/cli/src/edge.ts
         - packages/core/src/contracts/config.ts
         - packages/adapters/src/file/projects-config.ts
+        - packages/core/src/index.ts
         - scripts/install.sh
         - tests/structure/entrypoint-bin.test.ts
         - tests/structure/entrypoint-installer-absence.test.ts
@@ -1289,6 +1352,7 @@ phases:
         - doc/overview/architecture-overview.md
         - doc/overview/glossary.md
         - doc/quality/test-specs/test-spec-state-layer.md
+        - tests/fixtures/ports/v1-contract-inventory.json
       folders:
         - tests/fixtures/entrypoint/prior-identity
         - doc/changes/2026-11/2026-11-15--GH-320--jaiship-binary
