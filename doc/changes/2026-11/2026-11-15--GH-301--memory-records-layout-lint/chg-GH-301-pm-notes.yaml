@@ -50,6 +50,21 @@ open_questions: []
 blockers: []
 notes:
   - text: >-
+      Delivery plan phase 6 (plan id 6) complete. Commit: ccf14fb5. Added the
+      single memory gate/schema clause to the AGENTS.md memory section inside
+      its band, aligned the consolidate-memory curator rules with the schema,
+      id rule, status transitions, budgets, and read-when row shape, rewrote the
+      architecture concept's Record model example to the ADR-0011 D2/D3
+      contract (renamed created, scalar source with one shaped evidence link,
+      no frontmatter rationale or evidence list, T0-T5 trust token, scalar
+      applies_when, no fleet record scope, rejected keys shown with their
+      retained home), and added the documentation-conformance suite plus the
+      curator block. Tests: memory-lint-docs and memory-record-schema = 15
+      pass; prompt-conformance and doc-distribution green; the memory-practices
+      bootstrapping checklist untouched.
+    type: info
+    date: "2026-11-15"
+  - text: >-
       Delivery plan phase 5 (plan id 5) complete. Commit: edf44fc6. The
       promotion writer now renders the full required spine plus trust and the
       always-present basis, maps the kind (tacit -> tacit_fragment), derives the

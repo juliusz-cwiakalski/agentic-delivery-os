@@ -41,7 +41,9 @@ describe("TC-GATE-001 aggregate chain unchanged and ordered", () => {
     ]) {
       expect(parts.some((part) => part.includes(scan))).toBe(true);
     }
-    expect(parts.length).toBe(NAMED_CHECKS.length + 3);
+    const memoryIndex = parts.indexOf("pnpm check:memory");
+    expect(memoryIndex).toBe(NAMED_CHECKS.length);
+    expect(parts.length).toBe(NAMED_CHECKS.length + 1 + 3);
   });
 
   test("the chain contains no milestone token and no network command", () => {

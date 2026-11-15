@@ -1166,6 +1166,14 @@ the project family separately.
 
 ### M2-S8 Memory records, layout, and lint
 - Ticket: GH-301 (milestone M2)
+- Progress: delivered by GH-301 — the canonical memory tree (index, lessons,
+  tacit fragments, preferences, guild trees, and the retro archive with its
+  index), one published record schema shared by the index, the promotion
+  writer, and the capsule projection, eight lint areas wired into the aggregate
+  gate and CI (schema, dating, provenance, references, both-direction index
+  coverage over two universes, budgets, advisory derivable heuristics, and
+  privacy-vocabulary secret findings), with the sanctioned negative-guard
+  replacement.
 - Goal: The committed memory tree with typed records and lint, so project memory is one canonical, budgeted, reference-checked store.
 - Tasks: the committed memory tree (.ai/memory: index README, lessons,
   tacit fragments, preferences, per-agent entry points, guild trees,
