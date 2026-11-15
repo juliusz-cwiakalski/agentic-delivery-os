@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-DELIVERY-LIFECYCLE
 status: Current
 created: 2026-06-28
-last_updated: 2026-11-14
+last_updated: 2026-11-15
 owners: ["engineering"]
 service: delivery-os
-summary: "The deterministic 11-phase spec→plan→deliver→review→PR change delivery workflow with PM-led orchestration, Definition of Ready / Definition of Done gating, phase reopening, the per-change artifact set, variant-aware read-only ledger verification at finalization, and phase-7 documentation reconciliation that closes documentation gaps in-change across current-truth docs (including feature-spec first-authoring when needed)."
+summary: "The deterministic 11-phase spec→plan→deliver→review→PR change delivery workflow with PM-led orchestration, Definition of Ready / Definition of Done gating, phase reopening, the per-change artifact set, variant-aware read-only ledger verification at finalization, phase-7 documentation reconciliation that closes documentation gaps in-change across current-truth docs (including feature-spec first-authoring when needed), and the one-lifecycle cross-repository change: one spec, plan, test plan, and shared definition of done over a declared member set with a branch and pull request per member and one review flow."
 links:
-  related_changes: ["GH-79", "GH-108", "GH-151", "GH-177", "GH-178", "GH-226", "GH-225", "GH-242", "GH-313"]
+  related_changes: ["GH-79", "GH-108", "GH-151", "GH-177", "GH-178", "GH-226", "GH-225", "GH-242", "GH-313", "GH-310"]
   guides:
     - "doc/guides/change-lifecycle.md"
     - "doc/guides/definition-of-ready.md"
@@ -58,6 +58,46 @@ ADOS turns a single tracker ticket (`workItemRef`) into a reviewed, tested PR/MR
   - A repo-internal visibility aid (`scripts/spec-coverage-snapshot.sh`) makes the feature-specs-present vs changes-touching-feature-areas ratio computable to detect silent coverage erosion without manual audits.
   (Authoritative behavior: `.opencode/agent/doc-syncer.md`; mirrored in [doc/guides/change-lifecycle.md](../../guides/change-lifecycle.md) phase 7.)
 - **Git-operations responsibility model (F-8):** A single source of truth governs git operations across the agent/command team: the **orchestrator of a phase owns the commit trigger** for that phase's output, and **lifecycle commits route through the `commit` primitive (standalone or the atomic phase completion)** (`/commit` invokes the same primitive). The PM ensures the change branch before its first delegation and invokes `commit` after each delegated lifecycle phase returns (autonomous mode); manual commands keep their branch-ensure step and invoke `/commit` after the agent returns; `@coder` commits per delivery plan phase through the primitive (the delivery exception). The delegated artifact agents (`@spec-writer`, `@test-plan-writer`, `@plan-writer`, `@doc-syncer`, `@reviewer` local mode, `@decision-advisor`, `@readiness-reviewer`) are **pure writers** — zero git operations. `@committer` is a thin executor that invokes `commit`; it performs no staging, no direct `git commit`, no re-stage/amend loop, and no independent message composition. Phase state is written only through the `phase` family. The full responsibility model (branch owner per mode, commit-trigger owner per phase, primitive routing) is documented in [doc/guides/change-lifecycle.md](../../guides/change-lifecycle.md) ("Branch and Commit Responsibility Model").
+
+### Cross-repository change
+
+One change may span several member repositories of one project group. It remains
+one change: one ticket, one lifecycle over the same eleven phases, one change
+folder holding one spec, one plan, one test plan, and one pm-notes document, and
+no per-member change folder.
+
+- **Declared member set.** The member repositories, the slice each delivers, each
+  member branch, and each member's gate identifiers are declared once in the
+  plan's additive `members[]` (see [Machine-Readable Plan Schema](feature-plan-schema.md)).
+  A change that declares no members is the single-repository change described on
+  this page.
+- **One delivery with per-member branches and pull requests.** The delivery phase
+  still executes the plan's phases; each member carries its own branch and its own
+  pull request, and the queue represents each member as its own entry and lane
+  (see [Scheduling Engine](feature-scheduling-engine.md)). A member whose declared
+  prerequisite has not landed is held and its start is refused until that
+  prerequisite lands, so the declared dependency order holds across repositories.
+- **One shared definition of done.** The gate verdict is one verdict over the
+  whole member set rather than one member's evidence: `verify gates` reports
+  `definitionOfDone` with a per-member CI reading and verdict, the ordered landing
+  evidence, and the blocking members (see [Verify Gates](feature-verify-gates.md)).
+  The change is green only when every declared member is `pass`; an unavailable CI
+  reading or an unresolvable declared gate identifier blocks the change instead of
+  passing it, and a partly landed change is never reported as done. `dod_check`
+  still verifies the acceptance criteria and the completed plan phases as it does
+  for any change.
+- **One review flow.** Review covers the declared member pull-request set in one
+  run with one verdict per member and no member reviewed twice; the run identity
+  is stable over the declared set, so a second run over an unchanged set adds no
+  verdict (see [Verify Gates](feature-verify-gates.md)).
+- **Per-member closeout.** The post-merge transaction reports every member with
+  its branch, merge-truth landing, and its own cleanup and issue-closure outcome,
+  and retires each landed member's queue entry independently (see
+  [Closeout Transaction](feature-closeout.md)).
+- **Unchanged gates and artifacts.** DoR, DoD, artifact authoring, phase
+  reopening, and the git-operations responsibility model apply to a
+  cross-repository change exactly as to any other change; the member set is plan
+  data, not a second lifecycle.
 
 ### The Mandatory Per-Change Artifact Set
 
@@ -153,6 +193,7 @@ Manual:      /plan-change → /write-spec → /write-test-plan → /write-plan
 - **Definition of Done:** [definition-of-done.md](../../guides/definition-of-done.md) — phase 10 gate.
 - **System bootstrap:** [AGENTS.md](../../../AGENTS.md) — the 11-phase owner/agent table ("Delivery process").
 - **Sibling spec:** [feature-quality-gates-and-pr.md](feature-quality-gates-and-pr.md) — phases 8–11 (review_fix, quality_gates, dod_check, pr_creation) are that spec's scope.
+- **Cross-repository surfaces:** [feature-plan-schema.md](feature-plan-schema.md) (the member declaration), [feature-scheduling-engine.md](feature-scheduling-engine.md) (per-member entries and ordering), [feature-verify-gates.md](feature-verify-gates.md) (the shared definition of done and review flow), and [feature-closeout.md](feature-closeout.md) (the per-member report).
 - **Finalization verification:** [feature-verify-change-and-exit-taxonomy.md](feature-verify-change-and-exit-taxonomy.md) — the read-only ledger verdict and delivery-result exit taxonomy used at `dod_check`.
 
 ## Merge-gate stage

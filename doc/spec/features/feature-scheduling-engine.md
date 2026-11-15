@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-SCHEDULING-ENGINE
 status: Current
 created: 2026-11-07
-last_updated: 2026-11-14
+last_updated: 2026-11-15
 owners: ["engineering"]
 service: delivery-os
-summary: "The daemon-free scheduling engine: one fenced, replay-idempotent queue graph; readiness re-derived on the delivered six-condition model with scheduler sources; a global owner-hold gate that outranks parks and provider windows; repo-exclusive leases with a fence-token claim, release, and evidenced stale takeover; build weight as a per-runner resource class; producer-before-consumer batching with a producer-bound deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, a durable clear-observed marker, recovery incidents, and the classified stuck finding, over the closed five-cause park vocabulary (`peak-window` and `owner-hold` riding the delivered condition types); the complete queue lifecycle — reason-bearing append-only removal whose append position decides presence, the `dep add`/`dep remove` edge grammar, the per-ref single-flight admission refusal that names the holder at the envelope root, and bounded tracker-truth reconciliation; the queue and lanes command surfaces with bounded payloads, closed vocabularies, truthful daemon-down degradation, the `peakEnforcement` machine read, and truthful read-surface exits; and the additive record kinds, error rows, collector ids, and typed configuration branch, all synchronized in-change; the typed dispatch engine claims and releases the same repository lease for one-shot execution."
+summary: "The daemon-free scheduling engine: one fenced, replay-idempotent queue graph; per-member entries for a cross-repository change keyed by the derived `<canonicalChangeRef>@<repoKey>` ref with one lane per member, per-member dependency edges, release, and landing removal, and the additive `data.members[]` on `queue add`; readiness re-derived on the delivered six-condition model with scheduler sources; a global owner-hold gate that outranks parks and provider windows; repo-exclusive leases with a fence-token claim, release, and evidenced stale takeover; build weight as a per-runner resource class; producer-before-consumer batching with a producer-bound deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, a durable clear-observed marker, recovery incidents, and the classified stuck finding, over the closed five-cause park vocabulary (`peak-window` and `owner-hold` riding the delivered condition types); the complete queue lifecycle — reason-bearing append-only removal whose append position decides presence, the `dep add`/`dep remove` edge grammar, the per-ref single-flight admission refusal that names the holder at the envelope root, and bounded tracker-truth reconciliation; the queue and lanes command surfaces with bounded payloads, closed vocabularies, truthful daemon-down degradation, the `peakEnforcement` machine read, and truthful read-surface exits; and the additive record kinds, error rows, collector ids, and typed configuration branch, all synchronized in-change; the typed dispatch engine claims and releases the same repository lease for one-shot execution."
 links:
-  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240", "GH-238", "GH-242", "GH-239", "GH-273", "GH-280", "GH-286", "GH-288", "GH-292", "GH-294", "GH-309"]
+  related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240", "GH-238", "GH-242", "GH-239", "GH-273", "GH-280", "GH-286", "GH-288", "GH-292", "GH-294", "GH-309", "GH-310"]
   related_decisions: ["ADR-0003", "TDR-0005", "ODR-0003", "TDR-0026", "TDR-0027", "TDR-0030"]
   contracts:
     - "packages/core/src/contracts/queue.ts"
@@ -201,8 +201,15 @@ than discovering work by hand.
   `daemon.watch-poll-interval`, names `daemon-unreachable`, prints only changed
   snapshots, and exits 0 on interruption. Unreadable state exits 2 with the
   delivered `state.*` identity instead of polling a lie.
+- **Member entries for a cross-repository change.** A change whose plan declares
+  `members[]` holds one queue entry and one lane per declared member, keyed by
+  that member's derived ref `<canonicalChangeRef>@<repoKey>`; `dependsOn[]`
+  declarations become per-member dependency edges, release and landing removal
+  address one member at a time, and there is never a cross-repository lane. A
+  plan declaring no members keeps the delivered single canonical ref.
 - **One lane fold.** `lanes list|show` projects the same schedule: identity is
-  the canonical work-item ref, and no lane record kind or stored lane state
+  the canonical queue ref — the change ref, or the derived member ref for an
+  entry of a declared member set — and no lane record kind or stored lane state
   exists. The closed state set is `delivering`, `idle-with-reason`, `parked`,
   `merge-ready`, `in-review`, `failed`; an idle lane always carries a declared
   reason token, and a parked lane carries `parked:<cause>` over the closed
@@ -377,6 +384,66 @@ by an edit or a deletion.
   `checked` counts only entries that still exist, and an already-removed ref
   appears in none of `removed[]`, `retained[]`, or `unobserved[]`.
 
+### Member entries
+
+A change whose plan declares `members[]` is represented as one entry per
+declared member rather than one entry for the change.
+
+- **Identity.** Each entry is keyed by the member ref
+  `<canonicalChangeRef>@<repoKey>`. Canonicalization extended, never narrowed: the
+  change-ref part normalizes exactly as the delivered form does (uppercase ASCII
+  prefix, digits without leading zeros) and the repo key is preserved verbatim
+  under the delivered repo-key grammar, so `gh-010@api-service-1a2b3c4d` and
+  `GH-10@api-service-1a2b3c4d` are one identity and `ref-not-canonical` never
+  applies to a declared member ref. The member form is bounded by the same
+  64-character ref bound, and a member whose derived ref would exceed it is
+  rejected earlier at plan validation.
+- **One entry, one lease, one lane per member.** `queue add <changeRef>` on a
+  member-declaring plan creates one entry per declared member in declared order,
+  each bound to its member `repoKey` and projecting its own lane; the member ref
+  is also the lease identity when that member is claimed. No entry is keyed by
+  the bare change ref and no lane spans two members. `queue add
+  <changeRef>@<repoKey>` adds or updates only that member. Because a plan declares
+  repository keys rather than checkout roots, a member entry binds the member
+  repository key without a recorded root; the delivered
+  root-travels-with-repository rule is unchanged for every delivered ref.
+- **Reported payload.** The `queue add` payload keeps every delivered field and
+  gains an additive ordered `data.members[]` of `{ ref, repoKey, lane }` in
+  declared order; the auto-declared edges are reported through the delivered
+  `edges[]`, and an extra `--dep` argument attaches to the first declared member.
+  A change whose plan declares no members returns the delivered payload
+  byte-identically, with no `members` array and no extra edge. These member
+  entries name one change's declared members and are unrelated to the
+  `queue list --project` group projection, whose `members[]` enumerates the
+  configured repositories of a project group.
+- **Edges.** Every `dependsOn[]` declaration materializes as one dependency edge
+  onto the prerequisite member's member ref, and an unsatisfied edge makes the
+  member entry `not-ready` with the delivered `dependency-open` blocking reason
+  while its prerequisite is unlanded. A start attempt on that member ref —
+  claim, dispatch, or any start path — is refused with the delivered
+  `queue.precondition.unmet`, and the bounded refusal summary names the member
+  and its unlanded prerequisites; once the prerequisite's delivery request lands,
+  the same attempt is admitted. A queue edge mutation among member refs that would
+  close a cycle is refused with the delivered `queue.dependency-cycle`, and a
+  cycle inside the plan declaration is refused earlier at plan validation.
+- **Release.** A release addresses exactly one member ref: it drops that member's
+  lease while that member's entry stays, and a lease held on one member never
+  blocks another member's release.
+- **Removal.** Removal is per member with the change's reason (`landed`,
+  `abandoned`, `superseded`, or `reconciled`). One member landing removes only its
+  own entry and re-evaluates the remaining members' readiness; an observed merged
+  member delivery request retires that member ref with reason `landed` through
+  closeout's automatic path, and a skipped removal leaves the entry in place and
+  is disclosed.
+- **Reconcile.** A member entry reconciles against its change ref — the tracker
+  identity is the change, never the repository suffix — so every member of one
+  change reads the same work item and retains or retires on the same observed
+  tracker state.
+- **Source of the declaration.** The member set comes from one bounded local plan
+  read at the composing edge. An absent, unreadable, unparseable, invalid, or
+  member-less plan leaves the delivered single-ref path untouched, and the read
+  adds no configuration read and no network call.
+
 ## Per-ref single-flight admission
 
 Three distinct controls apply to one ref, and each keeps its own name:
@@ -433,7 +500,7 @@ placement (TDR-0027). The exit stays the row's projection class
 | `queue list` | `schemaVersion: delivery.queue.v1`, `entries[]`, `leases[]`, `weights[]`, `parks[]`, `findings[]`, `degraded[]`, `truncated`, `counts` | — |
 | `queue list --project <groupKey>` | The group-scoped work projection: `groupKey`, `members[]` (`repoKey`, `root`, `trackerKind`, `outcome`, `health`, `running[]`, `waiting[]`, `parked[]`), optional `partial` and `degradedMembers[]` | — |
 | `queue plan [--next <n>]` | The `queue list` collections plus `nextActions[]` | — |
-| `queue add <ref> [--priority <n>] [--dep <ref>]` | `ref`, `entry`, `edges[]`, `result`, `degraded[]` | `added`, `updated`, `noop` |
+| `queue add <ref> [--priority <n>] [--dep <ref>]` | `ref`, `entry`, `edges[]`, `result`, `degraded[]`, plus an additive ordered `members[]` (`ref`, `repoKey`, `lane`) on a member-declaring plan | `added`, `updated`, `noop` |
 | `queue prioritize <ref> <n>` | `ref`, `entry`, `edges[]`, `result`, `degraded[]` | `added`, `updated`, `noop` |
 | `queue dep <ref> <on-ref>` / `queue dep add <ref> <on-ref>` | `ref`, `entry`, `edges[]`, `result`, `degraded[]` | `added`, `updated`, `noop` |
 | `queue dep remove <ref> <on-ref>` | `ref`, `entry`, `edges[]`, `result`, `readySet[]`, `event`, `degraded[]` | `removed`, `noop` |
@@ -500,6 +567,7 @@ the provider identity's class.
 | Serialized machine `data` | 65536 UTF-8 bytes | `queue list`, `queue plan` |
 | Human output | 40 lines, 8192 bytes | Every queue and lanes surface |
 | Canonical ref length | 64 characters | Every ref position (`GH-010` and `GH-10` are one identity) |
+| Members per declaring plan | 8 | `queue add`, the member fold, and the shared definition of done at `verify gates` and closeout |
 
 A bound reached sets `truncated` and never silently drops the last row; a cut
 caused by the serialized byte cap also sets `truncationReason:
@@ -666,7 +734,11 @@ reuses `status.collector.lanes.unavailable` at exit 2; an unknown park cause or 
 extra positional reuses `fallback.invocation` at exit 1; an out-of-vocabulary
 removal reason or a non-canonical ref reuses `input.value.rejected` at exit 1; and
 a reconcile whose tracker read fails surfaces the provider's own identity at that
-row's exit. `queue ready` gains no row.
+row's exit. `queue ready` gains no row. Member entries add no identity: the
+member-form refusal of a start whose prerequisite is unlanded reuses
+`queue.precondition.unmet` with the member and prerequisite named in its bounded
+summary, a cycle-creating member edge reuses `queue.dependency-cycle`, and a
+member-declaration defect is the plan's own `plan.schema.invalid`.
 
 ## Honest boundaries
 
@@ -704,11 +776,16 @@ pointers remain a declared gap of the digest, not of this engine.
   derived graph document join `delivery.state.v1` with no schema bump.
 - [Closeout Transaction](feature-closeout.md) — the post-merge transaction that
   appends the `landed` removal inside its own fence and discloses the outcome in
-  its additive `queueRemoval` block.
+  its additive `queueRemoval` block, one removal per declared member on a
+  member-declaring change.
+- [Verify Gates](feature-verify-gates.md) — the shared definition of done over the
+  same declared member set, with per-member CI corroboration and landing-ordered
+  evidence.
 - [Configuration Layer and Inspection](feature-config-layer.md) — the typed
   `queue` branch and its defaults.
 - [Plan Schema](feature-plan-schema.md) — tier, weight class, and declared
-  interactions are consumed as intent evidence.
+  interactions are consumed as intent evidence; the additive `members[]`
+  declaration supplies the member set, its bounds, and the derived member ref.
 - [Merge and Verify Deploy](feature-merge-verify-deploy.md) — the deploy verdict
   and `merge.deploy-expectations` are read producer-bound.
 - [Session Lifecycle Economics](feature-session-lifecycle-economics.md) — the
