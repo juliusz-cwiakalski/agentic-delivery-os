@@ -11,7 +11,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-15T09:27:08.625Z }
   dor_check: { started: null, completed: 2026-11-15T09:31:33.835Z }
   delivery: { started: null, completed: 2026-11-15T09:33:48.374Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-15T09:36:31.089Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -172,6 +172,21 @@ notes:
       fall back to the declared plan summary or refuse with a scope-drift error
       instead of deriving a subject from a foreign change folder."
     type: retro
+    date: "2026-11-15"
+  - text: "Lifecycle phase 7 (system_spec_update) verdict: no current-truth change
+      required, verified rather than assumed. The gate temp-root convention is
+      not documented in any current-truth root (it lives only in agent prompts
+      and a candidate memory lesson), so nothing became inaccurate; no
+      current-truth page describes pm-notes or landed artifacts as immutable
+      (append-only claims are scoped to the state ledger and events.jsonl, and
+      the GH-310 folder has neither); feature-privacy-guard.md already states
+      the whole-working-tree scan boundary and that a pre-guard literal stays in
+      history until a separate owner action — which is exactly this change; no
+      index or registry lists 2026-11 change folders. Residual (out of scope by
+      NFR-4/§7.2/NG-4): the repository-relative gate temp-root convention has no
+      doc/spec or doc/guides home; route it through its own change, not this
+      one-literal fix."
+    type: info
     date: "2026-11-15"
   - text: "RETRO: the spec writer's non-goals were written before the in-scope edit
       was pinned, so a blanket 'no other change artifact' clause contradicted
