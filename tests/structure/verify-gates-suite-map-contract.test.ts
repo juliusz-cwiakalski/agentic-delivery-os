@@ -311,6 +311,10 @@ describe("TC-SCTR-001/TC-SCTR-002 the envelope and the detail projection", () =>
       { suiteBreadth: ["a".repeat(65)] },
       { suiteBreadth: Array.from({ length: 33 }, (_, index) => `s-${index}`) },
       { suiteBreadth: ["te\nsts"] },
+      { suiteBreadth: ["tests\u2028"] },
+      { suiteBreadth: ["tests\u2029"] },
+      { suiteBreadth: ["tests\u202e"] },
+      { suiteBreadth: ["tests\t"] },
       { suiteBreadth: ["tests", "tests"] },
       { open: { value: "x" } },
       "detail-as-string",
@@ -337,6 +341,82 @@ describe("TC-SCTR-001/TC-SCTR-002 the envelope and the detail projection", () =>
       const envelope = JSON.parse(stdout.value) as Record<string, unknown>;
       expect(envelope.detail, JSON.stringify(detail)).toBeUndefined();
     }
+  });
+
+  test("holder keeps the delivered CR/LF/C1 predicate while a TAB or DEL still projects", async () => {
+    const projected = async (holder: string): Promise<unknown> => {
+      const stdout = bufferSink();
+      const stderr = bufferSink();
+      await runCli(
+        ["--json", "probe"],
+        { stdout, stderr },
+        {
+          brand: SYNTHETIC_BRAND,
+          clock: { now: () => 1 },
+          newRunId: () => "run-holder-projection",
+          secrets: [],
+          program: {
+            commands: {
+              probe: {
+                handler: () => ({
+                  error: {
+                    kind: "verify",
+                    code: "verify.narrowed-scope",
+                    summary: "x",
+                    detail: { holder },
+                  },
+                }),
+              },
+            },
+          },
+        },
+      );
+      return (JSON.parse(stdout.value) as Record<string, unknown>).detail;
+    };
+    for (const holder of ["a\tb", "a\u0007b", "a\u007fb"]) {
+      expect(await projected(holder), JSON.stringify(holder)).toEqual({ holder });
+    }
+    for (const holder of ["a\nb", "a\rb", "a\u0085b", "a\u009fb"]) {
+      expect(await projected(holder), JSON.stringify(holder)).toBeUndefined();
+    }
+  });
+
+  test("a cause payload carrying a control, U+2028, U+2029, or a format control is never projected", async () => {
+    const rendered = async (cause: string): Promise<string> => {
+      const stdout = bufferSink();
+      const stderr = bufferSink();
+      await runCli(
+        ["probe"],
+        { stdout, stderr },
+        {
+          brand: SYNTHETIC_BRAND,
+          clock: { now: () => 1 },
+          newRunId: () => "run-cause-projection",
+          secrets: [],
+          program: {
+            commands: {
+              probe: {
+                handler: () => ({
+                  error: { kind: "config", code: "config.value.invalid", cause },
+                }),
+              },
+            },
+          },
+        },
+      );
+      return stderr.value;
+    };
+    for (const cause of [
+      "mirror=TS\u2028aggregate check",
+      "mirror=TS\u2029aggregate check",
+      "mirror=TS\u202eaggregate check",
+      "mirror=TS\taggregate check",
+    ]) {
+      expect(await rendered(cause), JSON.stringify(cause)).not.toContain("cause:");
+    }
+    expect(await rendered("mirror=TS aggregate check")).toContain(
+      "cause: mirror=TS aggregate check",
+    );
   });
 
   test("no other command projects the suiteBreadth member", () => {

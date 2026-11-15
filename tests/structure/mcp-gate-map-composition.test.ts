@@ -50,6 +50,7 @@ type Checkout = {
 };
 
 const checkout = (label: string, map: string | undefined): Checkout => {
+  mkdirSync(TMP, { recursive: true });
   const root = mkdtempSync(join(TMP, `gh300-mcp-${label}-`));
   const cwd = join(root, "checkout");
   const home = join(root, "home");

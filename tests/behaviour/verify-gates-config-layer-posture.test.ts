@@ -55,6 +55,7 @@ type Layered = {
 };
 
 const layered = (label: string): Layered => {
+  mkdirSync(TMP_ROOT, { recursive: true });
   const root = mkdtempSync(join(TMP_ROOT, `gh300-layer-${label}-`));
   const home = join(root, "home");
   const system = join(root, "system");
@@ -146,6 +147,40 @@ describe("TC-SMAP-007 an overlay declaration has no effect", () => {
       world.write(`system/${CONFIG_DIR}/config.yaml`, NARROWED_OVERLAY);
       expect(readWith(world)).toEqual({ ok: true, state: "absent" });
       expect(world.reads.some((path) => path.startsWith(world.system))).toBe(false);
+    } finally {
+      world.cleanup();
+    }
+  });
+});
+
+describe("TC-SMAP-007 a valid selected file supplies the map", () => {
+  test("an equality selection is honoured and no committed or overlay path is read", () => {
+    const world = layered("selected-equality");
+    try {
+      const selected = world.write("selected-equality.yaml", EQUALITY_COMMITTED);
+      world.write(`${CONFIG_DIR}/config.yaml`, NARROWED_OVERLAY);
+      world.write(`home/.config/${CONFIG_DIR}/config.yaml`, NARROWED_OVERLAY);
+      const read = readWith(world, selected);
+      expect(read.ok).toBe(true);
+      const breadth = breadthFrom(suiteMapReadOfDocument(read));
+      expect(breadth.kind).toBe("equal");
+      expect(world.reads).toEqual([selected]);
+    } finally {
+      world.cleanup();
+    }
+  });
+
+  test("a narrowed selection is honoured and the committed slot is never consulted", () => {
+    const world = layered("selected-narrowed");
+    try {
+      const selected = world.write("selected-narrowed.yaml", NARROWED_OVERLAY);
+      world.write(`${CONFIG_DIR}/config.yaml`, EQUALITY_COMMITTED);
+      world.write(`${CONFIG_DIR}/config.local.yaml`, EQUALITY_COMMITTED);
+      const read = readWith(world, selected);
+      expect(read.ok).toBe(true);
+      const breadth = breadthFrom(suiteMapReadOfDocument(read));
+      expect(breadth.kind).toBe("narrower");
+      expect(world.reads).toEqual([selected]);
     } finally {
       world.cleanup();
     }

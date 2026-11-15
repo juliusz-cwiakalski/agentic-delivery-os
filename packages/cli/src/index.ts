@@ -192,14 +192,31 @@ const explicitRemediationHint = (value: unknown): string | undefined => {
  */
 const SUITE_ID = new RegExp(VERIFY_SUITE_ID_PATTERN);
 
-/** True when the value carries a control character or a line break. */
-const hasControlCharacter = (value: string): boolean => {
+/** The Unicode format-control class (bidi and zero-width controls, Appendix A row 26). */
+const FORMAT_CONTROL = /\p{Cf}/u;
+
+/**
+ * The single-line printable class shared with the suite-map resolver: C0,
+ * DEL/C1, U+2028, U+2029, and Unicode format controls (Appendix A row 26).
+ * `suiteBreadth` and the `cause:` payload are governed by this class.
+ */
+const hasSingleLineControlCharacter = (value: string): boolean => {
   for (const character of value) {
     const point = character.codePointAt(0) ?? 0;
     if (point <= 0x1f || (point >= 0x7f && point <= 0x9f)) return true;
+    if (point === 0x2028 || point === 0x2029) return true;
+    if (FORMAT_CONTROL.test(character)) return true;
   }
   return false;
 };
+
+/**
+ * The delivered `holder` predicate (DM-6): CR, LF, and C1 controls only. The
+ * detail projection is unchanged, so a holder value the delivered surface
+ * accepted still projects.
+ */
+const HOLDER_CONTROL = /[\r\n\u0080-\u009f]/;
+const hasHolderControlCharacter = (value: string): boolean => HOLDER_CONTROL.test(value);
 
 /** Read the explicitly declared bounded `detail.suiteBreadth` member. */
 const explicitSuiteBreadth = (value: unknown): readonly string[] | undefined => {
@@ -210,7 +227,9 @@ const explicitSuiteBreadth = (value: unknown): readonly string[] | undefined => 
   for (const entry of value) {
     if (typeof entry !== "string") return undefined;
     if (entry.length === 0 || entry.length > VERIFY_SUITE_MAX_ID_CHARS) return undefined;
-    if (!SUITE_ID.test(entry) || hasControlCharacter(entry) || seen.has(entry)) return undefined;
+    if (!SUITE_ID.test(entry) || hasSingleLineControlCharacter(entry) || seen.has(entry)) {
+      return undefined;
+    }
     seen.add(entry);
     result.push(entry);
   }
@@ -223,7 +242,7 @@ const explicitDetail = (value: unknown): CommandResultDetail | undefined => {
   const detail: { holder?: string; suiteBreadth?: readonly string[] } = {};
   const holder = raw.holder;
   if (typeof holder === "string" && holder.length > 0) {
-    if (holder.length <= COMMAND_FAILURE_DETAIL_MAX_CHARS && !hasControlCharacter(holder)) {
+    if (holder.length <= COMMAND_FAILURE_DETAIL_MAX_CHARS && !hasHolderControlCharacter(holder)) {
       detail.holder = holder;
     }
   }
@@ -239,7 +258,7 @@ const CAUSE_BREADTH_MAX_CHARS = 15 + 8 * VERIFY_SUITE_MAX_ID_CHARS + 7 + 9 + 2;
 const explicitCausePayload = (value: unknown): string | undefined => {
   if (!isRecord(value)) return undefined;
   const cause = value.cause;
-  if (typeof cause !== "string" || cause.length === 0 || hasControlCharacter(cause)) {
+  if (typeof cause !== "string" || cause.length === 0 || hasSingleLineControlCharacter(cause)) {
     return undefined;
   }
   const line = `cause: ${cause}`;

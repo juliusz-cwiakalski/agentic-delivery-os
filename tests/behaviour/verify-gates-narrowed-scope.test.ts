@@ -6,6 +6,7 @@
  * unknown taxonomy, and the bounded naming at maximum breadth.
  */
 import { describe, expect, test } from "bun:test";
+import { resolveVerifySuiteMap } from "../../packages/core/src/domain/index";
 import { baseFacts, clone, EXPECTED_JOBS, run } from "../fixtures/verify-gates/cases/facts";
 import {
   combinedRuntime,
@@ -111,6 +112,31 @@ describe("TC-SNARR-001 the refusal identity, detail, and pinned header", () => {
     expect(result.stderr).toContain(`summary: ${NARROWED_HEADER}`);
     expect(result.stderr).not.toContain("cause:");
     expect(result.stdout).not.toContain(" pass ");
+  });
+
+  test("a job carrying U+2028 or U+2029 is refused before any narrowed header renders", async () => {
+    for (const separator of ["\u2028", "\u2029"]) {
+      const raw = {
+        schemaVersion: "delivery.verify.suite-map.v1",
+        jobs: [{ job: `TS${separator}aggregate check`, suites: [...REFERENCE_SUITES] }],
+        local: ["tests"],
+      };
+      const result = await runVerify(
+        combinedRuntime({ facts: narrowFacts(), suiteMap: () => resolveVerifySuiteMap(raw) }),
+        ["gates", REF],
+        { json: false },
+      );
+      expect(result.exitCode).toBe(1);
+      expect(result.stderr).toContain("config.value.invalid");
+      expect(
+        result.stderr.startsWith(`${SYNTHETIC_BRAND.binaryName}: config.value.invalid\n`),
+      ).toBe(true);
+      expect(result.stdout).not.toContain("scope=narrowed");
+      expect(result.stderr).not.toContain("scope=narrowed");
+      expect(result.stderr).not.toContain("cause:");
+      expect(result.stdout).not.toMatch(/[\u2028\u2029]/u);
+      expect(result.stderr).not.toMatch(/[\u2028\u2029]/u);
+    }
   });
 
   test("the invoked envelope is deterministic across two runs", async () => {

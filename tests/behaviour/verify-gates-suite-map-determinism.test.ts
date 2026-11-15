@@ -134,7 +134,7 @@ describe("TC-SDET-002 the narrowed header is bounded and stable at maximum bread
     expect(detail.suiteBreadth).not.toEqual(map.local);
   });
 
-  test("the one-line member-mode header stays within the same grammar", async () => {
+  test("the member-less six-line narrowed header stays within the same grammar", async () => {
     const result = await runVerify(
       combinedRuntime({ facts: facts(), suiteMap: declaredRead(narrowedJob01Map()) }),
       ["gates", REF],

@@ -26,8 +26,22 @@ import {
   ninePlusUnmirroredMap,
   REFERENCE_JOB,
   REFERENCE_SUITES,
+  validEqualityMap,
   widerMap,
 } from "../fixtures/verify-gates/suite-map/cases";
+
+const FORMAT_CONTROL = /\p{Cf}/u;
+
+/** True when the value carries a control character, U+2028, U+2029, or a format control. */
+const hasControlOrFormat = (value: string): boolean => {
+  for (const character of value) {
+    const point = character.codePointAt(0) ?? 0;
+    if (point <= 0x1f || (point >= 0x7f && point <= 0x9f)) return true;
+    if (point === 0x2028 || point === 0x2029) return true;
+    if (FORMAT_CONTROL.test(character)) return true;
+  }
+  return false;
+};
 
 const evaluation = () => evaluateVerifyGates(baseFacts());
 
@@ -180,19 +194,80 @@ describe("TC-SRES-002/003 the one bounded cause line", () => {
     );
   });
 
-  test("equality, narrowing, and not-evaluated write no cause line", () => {
-    const declared = resolveVerifySuiteMap(narrowedMap());
-    if (!declared.ok || !declared.declared) throw new Error("expected a declared map");
-    for (const names of [["TS aggregate check"], ["TS aggregate check"]]) {
+  test("equality, narrowing, and not-evaluated each write no cause line", () => {
+    const equality = resolveVerifySuiteMap(validEqualityMap());
+    if (!equality.ok || !equality.declared) throw new Error("expected an equality map");
+    const narrowing = resolveVerifySuiteMap(narrowedMap());
+    if (!narrowing.ok || !narrowing.declared) throw new Error("expected a narrowed map");
+    const cases = [
+      {
+        name: "equality",
+        map: equality.value,
+        workflow: { outcome: "read" as const, names: ["job-01"] },
+        expected: "equal" as const,
+      },
+      {
+        name: "narrowing",
+        map: narrowing.value,
+        workflow: { outcome: "read" as const, names: [REFERENCE_JOB] },
+        expected: "narrower" as const,
+      },
+      {
+        name: "not-evaluated",
+        map: narrowing.value,
+        workflow: { outcome: "failed" as const, names: [] },
+        expected: "not-evaluated" as const,
+      },
+    ];
+    for (const entry of cases) {
       const outcome = resolveVerifySuiteBreadth({
-        map: declared.value,
-        workflow: { outcome: "read", names },
+        map: entry.map,
+        workflow: entry.workflow,
       });
-      expect(renderSuiteMapCauseLine(outcome, declared.value.local)).toBeUndefined();
+      expect(outcome.kind, entry.name).toBe(entry.expected);
+      expect(renderSuiteMapCauseLine(outcome, entry.map.local), entry.name).toBeUndefined();
     }
-    expect(
-      renderSuiteMapCauseLine({ kind: "not-evaluated" }, declared.value.local),
-    ).toBeUndefined();
+  });
+
+  test("a job carrying U+2028 or U+2029 never reaches a renderer", () => {
+    for (const separator of ["\u2028", "\u2029"]) {
+      const raw = {
+        schemaVersion: "delivery.verify.suite-map.v1",
+        jobs: [{ job: `TS${separator}aggregate check`, suites: [...REFERENCE_SUITES] }],
+        local: [...REFERENCE_SUITES],
+      };
+      expect(resolveVerifySuiteMap(raw).ok, JSON.stringify(separator)).toBe(false);
+    }
+  });
+
+  test("every accepted job renders exactly one physical line with no control or format character", () => {
+    const accepted = [
+      REFERENCE_JOB,
+      "job-01",
+      "j".repeat(120),
+      "TS – aggregate check",
+      "TS\u00a0aggregate check",
+    ];
+    for (const job of accepted) {
+      const resolved = resolveVerifySuiteMap({
+        schemaVersion: "delivery.verify.suite-map.v1",
+        jobs: [{ job, suites: ["tests"] }],
+        local: ["tests"],
+      });
+      expect(resolved.ok, job).toBe(true);
+      const line = renderSuiteMapCauseLine({ kind: "uncorroborated", mirrorsJob: job }, ["tests"]);
+      expect(line, job).toBe(`mirror=${job}`);
+      expect(hasControlOrFormat(line ?? ""), job).toBe(false);
+      expect((line ?? "").split(/\r\n|\r|\n/u), job).toHaveLength(1);
+      const header =
+        renderVerifyGatesNarrowedFailureSummary(evaluation(), {
+          mirrorsJob: job,
+          mirrorBreadth: [...REFERENCE_SUITES],
+        }).split("\n")[0] ?? "";
+      expect(header, job).toContain(`mirror=${job} breadth=`);
+      expect(hasControlOrFormat(header), job).toBe(false);
+      expect(header.split(/\r\n|\r|\n/u), job).toHaveLength(1);
+    }
   });
 
   test("every rendering is deterministic across runs", () => {

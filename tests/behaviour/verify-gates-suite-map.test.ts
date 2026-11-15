@@ -42,8 +42,6 @@ import {
   widerMap,
 } from "../fixtures/verify-gates/suite-map/cases";
 
-const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
-
 describe("TC-SMAP-001 the valid declaration resolves mechanically with no refusal", () => {
   test("the declared data is preserved in declared order", () => {
     const resolved = resolveVerifySuiteMap(validEqualityMap());

@@ -13,7 +13,11 @@ import {
   VERIFY_SUITE_MAP_DOCUMENT_STATES,
   type VerifySuiteMapDocumentState,
 } from "../../packages/core/src/contracts/index";
-import { resolveVerifySuiteMap } from "../../packages/core/src/domain/index";
+import {
+  resolveVerifySuiteMap,
+  resolveVerifySuiteMapFromConfig,
+  suiteMapReadOfDocument,
+} from "../../packages/core/src/domain/index";
 import { combinedRuntime, runVerify } from "../fixtures/verify-gates/cases/harness";
 import {
   DEFECTS,
@@ -21,7 +25,6 @@ import {
   invalidRead,
   REFERENCE_JOB,
   REFERENCE_SUITES,
-  undeclaredRead,
   validEqualityMap,
 } from "../fixtures/verify-gates/suite-map/cases";
 import { type CorpusCase, caseFacts } from "../fixtures/verify-gates/suite-map/parity-corpus";
@@ -167,17 +170,28 @@ describe("TC-SPAR-006 parity is scoped and the two sets are disjoint", () => {
   });
 
   test("the two no-selection states are the parity path and declare nothing", async () => {
-    for (const read of [undeclaredRead, undeclaredRead]) {
-      const withNoNode = await runVerify(combinedRuntime({ facts: suiteFacts(), suiteMap: read }), [
-        "gates",
-        "GH-178",
-      ]);
+    const states = [
+      {
+        id: "absent-document",
+        read: () => suiteMapReadOfDocument({ ok: true, state: "absent" }),
+      },
+      {
+        id: "parsed-without-node",
+        read: () => resolveVerifySuiteMapFromConfig({ provider: { defaultChain: "zai" } }),
+      },
+    ];
+    for (const state of states) {
+      expect(state.read(), state.id).toEqual({ ok: true, declared: false });
+      const withNoNode = await runVerify(
+        combinedRuntime({ facts: suiteFacts(), suiteMap: state.read }),
+        ["gates", "GH-178"],
+      );
       const control = await runVerify(combinedRuntime({ facts: suiteFacts() }), [
         "gates",
         "GH-178",
       ]);
-      expect(withNoNode.stdout).toBe(control.stdout);
-      expect(withNoNode.exitCode).toBe(control.exitCode);
+      expect(withNoNode.stdout, state.id).toBe(control.stdout);
+      expect(withNoNode.exitCode, state.id).toBe(control.exitCode);
     }
   });
 

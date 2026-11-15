@@ -34,6 +34,15 @@ ${suites}
 ${REFERENCE_SUITES.map((id) => `      - ${id}`).join("\n")}
 `;
 
+const NARROWED = `    schemaVersion: "delivery.verify.suite-map.v1"
+    jobs:
+      - job: "${REFERENCE_JOB}"
+        suites:
+${suites}
+    local:
+      - tests
+`;
+
 type World = {
   readonly root: string;
   readonly log: { exists: string[]; readText: string[] };
@@ -49,6 +58,7 @@ const world = (
     readonly readFailure?: "EACCES" | "ENOENT";
   } = {},
 ): World => {
+  mkdirSync(TMP, { recursive: true });
   const root = mkdtempSync(join(TMP, `gh300-adapter-${label}-`));
   const log = { exists: [] as string[], readText: [] as string[] };
   const path = () => join(root, CONFIG_DIR, "config.yaml");
@@ -145,6 +155,44 @@ describe("TC-SMAP-008 absent and selection states", () => {
   });
 });
 
+describe("TC-SMAP-008 a valid selected file supplies the map", () => {
+  test("an equality declaration in a selected file is honoured and the committed slot is not read", () => {
+    const target = world("selected-equality");
+    try {
+      const selected = join(target.root, "selected-equality.yaml");
+      writeFileSync(selected, configYaml(VALID));
+      const outcome = mapped(target, { selectedConfig: selected });
+      expect(outcome.ok).toBe(true);
+      if (!outcome.ok || !outcome.declared) throw new Error("expected the selected declaration");
+      expect(outcome.value.jobs[0]?.job).toBe(REFERENCE_JOB);
+      expect(outcome.value.local).toEqual([...REFERENCE_SUITES]);
+      expect(target.log.exists).toEqual([selected]);
+      expect(target.log.readText).toEqual([selected]);
+    } finally {
+      target.cleanup();
+    }
+  });
+
+  test("a narrowed declaration in a selected file is honoured and no committed or overlay file is read", () => {
+    const target = world("selected-narrowed");
+    try {
+      const selected = join(target.root, "selected-narrowed.yaml");
+      writeFileSync(selected, configYaml(NARROWED));
+      mkdirSync(join(target.root, CONFIG_DIR), { recursive: true });
+      writeFileSync(target.path(), configYaml(VALID));
+      writeFileSync(join(target.root, CONFIG_DIR, "config.local.yaml"), configYaml(NARROWED));
+      const outcome = mapped(target, { selectedConfig: selected });
+      expect(outcome.ok).toBe(true);
+      if (!outcome.ok || !outcome.declared) throw new Error("expected the selected declaration");
+      expect(outcome.value.local).toEqual(["tests"]);
+      expect(target.log.exists).toEqual([selected]);
+      expect(target.log.readText).toEqual([selected]);
+    } finally {
+      target.cleanup();
+    }
+  });
+});
+
 describe("TC-SMAP-008 present but unreadable", () => {
   for (const failure of ["EACCES", "ENOENT"] as const) {
     test(`a ${failure} read is unreadable with one probe and one read attempt`, () => {
@@ -206,6 +254,12 @@ describe("TC-SMAP-008 a defective map node is refused by the map's own resolver"
     ["leading-space", VALID.replace(`job: "${REFERENCE_JOB}"`, 'job: " TS aggregate check"')],
     ["trailing-space", VALID.replace(`job: "${REFERENCE_JOB}"`, 'job: "TS aggregate check "')],
     ["line-break", VALID.replace(`job: "${REFERENCE_JOB}"`, 'job: "TS\\naggregate check"')],
+    ["line-separator", VALID.replace(`job: "${REFERENCE_JOB}"`, 'job: "TS\u2028aggregate check"')],
+    [
+      "paragraph-separator",
+      VALID.replace(`job: "${REFERENCE_JOB}"`, 'job: "TS\u2029aggregate check"'),
+    ],
+    ["bidi-control", VALID.replace(`job: "${REFERENCE_JOB}"`, 'job: "TS\u202eaggregate check"')],
     ["tab", VALID.replace(`job: "${REFERENCE_JOB}"`, 'job: "TS\\taggregate check"')],
     ["bad-id", VALID.replace("      - tests", "      - Tests")],
     ["duplicate-local", VALID.replace("      - tests", "      - tests\n      - tests")],

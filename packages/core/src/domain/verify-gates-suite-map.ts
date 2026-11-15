@@ -29,11 +29,22 @@ import { verifyGateSummaryLine, verifyGatesSummaryHeader } from "./verify-gates.
 
 const SUITE_ID = new RegExp(VERIFY_SUITE_ID_PATTERN);
 
-/** True when the value carries a control character or a line break (rows 4, 26). */
-const hasControlCharacter = (value: string): boolean => {
+/** The Unicode format-control class (bidi and zero-width controls, Appendix A row 26). */
+const FORMAT_CONTROL = /\p{Cf}/u;
+
+/**
+ * True when the value carries a control character, a line break, U+2028, U+2029,
+ * or a Unicode format control (C0, DEL/C1, Zl, Zp, Cf; Appendix A rows 4 and 26).
+ *
+ * This is the single-line printable class: a `job` that satisfies it can never
+ * break the pinned one-physical-line header or the one-line `cause:` grammar.
+ */
+const hasSingleLineControlCharacter = (value: string): boolean => {
   for (const character of value) {
     const point = character.codePointAt(0) ?? 0;
     if (point <= 0x1f || (point >= 0x7f && point <= 0x9f)) return true;
+    if (point === 0x2028 || point === 0x2029) return true;
+    if (FORMAT_CONTROL.test(character)) return true;
   }
   return false;
 };
@@ -66,7 +77,7 @@ const validJobName = (value: unknown): value is string =>
   typeof value === "string" &&
   value.length >= 1 &&
   value.length <= VERIFY_GATES_MAX_EXPECTED_JOB_NAME_CHARS &&
-  !hasControlCharacter(value) &&
+  !hasSingleLineControlCharacter(value) &&
   value.trim() === value;
 
 const identifiersOf = (value: unknown, cap: number): readonly string[] | undefined => {
