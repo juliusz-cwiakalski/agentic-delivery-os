@@ -9,7 +9,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-15T15:19:07.371Z }
   delivery_planning: { started: null, completed: 2026-11-15T15:19:25.770Z }
   dor_check: { started: null, completed: 2026-11-15T08:06:12.535Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-15T15:25:22.181Z }
   system_spec_update: { started: null, completed: 2026-11-15T12:11:25.019Z }
   review_fix: { started: null, completed: 2026-11-15T12:48:17.746Z }
   quality_gates: { started: null, completed: 2026-11-15T14:54:17.918Z }
@@ -581,8 +581,8 @@ notes:
     date: "2026-11-15"
   - text: "PR #324 CI remediation round 3. Two remaining causes fixed. (1) The
       `doc-distribution-guard` and `bash-tests` jobs need the workspace
-      installed: both now set up pnpm with the pinned action and run
-      `pnpm install --frozen-lockfile` immediately after Bun. A dependency-free
+      installed: both now set up pnpm with the pinned action and run `pnpm
+      install --frozen-lockfile` immediately after Bun. A dependency-free
       worktree reproduction proved install alone is NOT sufficient: with
       dependencies present the install-set oracle still fails because the
       launcher executes `packages/cli/bin/jaiship.ts`, whose `@delivery-os/*`
@@ -593,8 +593,8 @@ notes:
       exact prior and current location strings, asserts a materially longer
       scratch root renders identical prose, and `TC-BIN-052` measures the
       launcher diagnostic after removing the expected absolute target.
-      Verification: prior-identity notice 14/14; install-launcher-installer
-      9/9; install-launcher structure 5/5; doc-distribution no drift (94 docs);
+      Verification: prior-identity notice 14/14; install-launcher-installer 9/9;
+      install-launcher structure 5/5; doc-distribution no drift (94 docs);
       privacy-literals 0 violations; ci-topology / ci-bindingness /
       ci-supply-chain green; workflow YAML parses; git diff --check clean.
       Recorded deviation: the build step is beyond the install-only wording of
