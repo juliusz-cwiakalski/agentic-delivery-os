@@ -13,7 +13,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-15T15:51:17.762Z }
   review_fix: { started: null, completed: 2026-11-15T16:13:16.810Z }
   quality_gates: { started: null, completed: 2026-11-15T16:50:45.993Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-15T16:53:06.393Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "Scope is the M2-S7 contract in the milestone pack, not a general CI
@@ -453,4 +453,22 @@ notes:
       node_modules/.bin/commitlint. Raw logs under
       tmp/run-logs-runner/2026-11-15/."
     type: info
+    date: "2026-11-15"
+  - text: "QUALITY-GATE HEAD REFRESH (DoD check): the gate entry above was recorded
+      at head 2d9f93a5 (33 commits); the phase-complete commit moved the tip to
+      2fb5797c. The commit-range gate was re-run at the delivered head and
+      returned `VERDICT: PASS — 34 commits in range; all satisfy the
+      configuration` (merge-base 8a1f77ad, 0 offending commits). The `pnpm
+      check` battery result is unaffected (its scope is the working tree, which
+      was clean at the same code state)."
+    type: info
+    date: "2026-11-15"
+  - text: "DoD CHECK (lifecycle phase 10): all nine prior phases completed in the
+      registry; plan revision 1.5 validates (8 delivery phases, 30/30 ACs, 38/38
+      TCs) and pm-notes carries per-phase commit and test evidence for phases
+      1-8; review iteration 2 is PASS with the residuals disclosed; system docs
+      reconciled with no gap; `pnpm check` green with the outside-worktree
+      TMPDIR; commit-range gate PASS at the delivered head (34 commits).
+      Remaining work is phase 11 (PR creation)."
+    type: resolved
     date: "2026-11-15"
