@@ -5,7 +5,7 @@ change:
   status: Proposed
   slug: jaiship-binary
   title: "M4-S1a: jaiship executable binary and local install"
-  version: "1.10"
+  version: "1.11"
   owners: ["engineering"]
   service: delivery-os
   milestone: "M4: Public release readiness"
@@ -258,7 +258,7 @@ Flow 5: Local install from the change branch
 - [OUT] Changing the rename drill document or its battery.
 - [OUT] Threading the prior-identity fallback through the test-only composition helper that resolves its own directory: it is not on any production path today, and joining it without the existence facts would break the one-root-per-invocation guarantee.
 - [OUT] Making the configuration inspection command prompt-required or otherwise reachable through the executable: no CLI configuration surface is added, and the configuration half of the fallback is proven on the delivered acquisition rather than through a `… config --json` token.
-- [OUT] Changing CI beyond one declared runtime installation: the only workflow change in scope is installing the Bun runtime in the two jobs that execute the install-set oracle (`doc-distribution-guard` and `bash-tests`), using the repository's pinned setup action with `${{ env.BUN_VERSION }}` (`.github/workflows/ci.yml`). No job, trigger, permission, exclusion, or command is otherwise changed, and the installer integration cases themselves stay in the Bun-bearing test job (D9).
+- [OUT] Changing CI beyond one declared CI provisioning edit: in the two jobs that execute the install-set oracle (`doc-distribution-guard` and `bash-tests`) only, the workflow installs the Bun runtime (the repository's pinned setup action with `${{ env.BUN_VERSION }}`), sets up pnpm (the pinned action the other jobs use), runs `pnpm install --frozen-lockfile`, and runs `pnpm build` — because the launcher executes `packages/cli/bin/jaiship.ts`, whose `@delivery-os/*` exports resolve to the git-ignored `dist` (`.github/workflows/ci.yml`). No job, trigger, permission, exclusion, or command is otherwise changed, and the installer integration cases themselves stay in the Bun-bearing test job (D9).
 - [OUT] Merging the change before the active cross-repository lane (GH-310) lands: the delivery stops at an open pull request.
 
 ### 7.3 Deferred / Maybe-Later
@@ -473,7 +473,7 @@ The readiness gate asked whether DEC-5 and DEC-9 are precedent-setting and requi
 | `scripts/lib/dispatch-authority.sh` | UNCHANGED | Keeps the pre-freeze host root; second declared divergence |
 | `scripts/checks/forbidden-literals.registry.json` | CHANGED | The new user-facing guide is registered in the doc scan; the seed set stays unchanged (NG-9) |
 | `scripts/checks/manifest-privacy.ts`, `scripts/checks/publish-guard.ts` | UNCHANGED | Six private package names and the neutral scope are unchanged |
-| `.github/workflows/ci.yml` | CHANGED | Installs the Bun runtime in the two jobs that execute the install-set oracle (`doc-distribution-guard` and `bash-tests`), using the repository's pinned setup action with `${{ env.BUN_VERSION }}`; no job, trigger, permission, exclusion, or command is otherwise changed |
+| `.github/workflows/ci.yml` | CHANGED | In the two jobs that execute the install-set oracle (`doc-distribution-guard` and `bash-tests`) only: install the Bun runtime (pinned setup action with `${{ env.BUN_VERSION }}`), set up pnpm (the pinned action the other jobs use), run `pnpm install --frozen-lockfile`, and run `pnpm build` — the launcher executes `packages/cli/bin/jaiship.ts`, whose `@delivery-os/*` exports resolve to the git-ignored `dist`; no job, trigger, permission, exclusion, or command is otherwise changed |
 | `tests/structure/entrypoint-bin.test.ts` | CHANGED | Two-bin manifest assertions with non-vacuity; shared-composition and declared-literal-inventory assertions |
 | `tests/structure/entrypoint-installer-absence.test.ts` | CHANGED | Arrays still name no binary; the declared launcher step and its layout reference are asserted |
 | `tests/structure/content-inventory.test.ts`, `tests/structure/inventory.json` | CHANGED | Exact file-set equality gains the new entries; per-file executable allowances updated, including removal of the retired neutral accessor from the entrypoint module's allowance |
@@ -653,6 +653,7 @@ No new personal data is collected, stored, or transmitted. The fallback reads lo
 | 1.8 | 2026-11-15 | @pm | Review iter-2 citation refresh: operative plan references moved to plan r1.5 (test plan v1.6 unchanged); F-6 states the absolute-target requirement — the recorded target is absolute even when the installer is invoked with a relative source directory, and a relative target is never recorded |
 | 1.9 | 2026-11-15 | @pm | PR #324 CI discovery: the `doc-distribution-guard` and `bash-tests` jobs run the installer install-set oracle and had no Bun, so both failed. This supersedes the earlier "no CI-workflow change required" assumption: `.github/workflows/ci.yml` is now declared CHANGED for the one in-scope edit (install the runtime in those two jobs via the pinned setup action and `${{ env.BUN_VERSION }}`; nothing else in the workflow changes). No rule, AC, NFR, or contract text changed |
 | 1.10 | 2026-11-15 | @pm | PR CI discovery: the notice bound was absolute-character based, so the same correct line measured 425 on the runner (longer checkout path) against the ≤ 400 assertion. NFR-3 and AC-F5-6 now state a path-independent bound — one line, fixed prose with both absolute location strings removed ≤ 400 characters, those two locations the only variable content. Supersedes the absolute bound; the four reasons, once-per-source semantics, containment-path delivery and the no-payload/no-exit contract are unchanged |
+| 1.11 | 2026-11-15 | @pm | PR CI round 3: installing Bun alone was not enough for the two install-set-oracle jobs. The launcher executes `packages/cli/bin/jaiship.ts`, whose `@delivery-os/*` exports resolve to the git-ignored `dist`, so those jobs also need the workspace dependencies and a built workspace. The declared CI edit is now one provisioning edit in `doc-distribution-guard` and `bash-tests` only: Bun (pinned action + `${{ env.BUN_VERSION }}`), pnpm (the pinned action), `pnpm install --frozen-lockfile`, `pnpm build`. No rule, AC, NFR, or contract text changed |
 
 ---
 
