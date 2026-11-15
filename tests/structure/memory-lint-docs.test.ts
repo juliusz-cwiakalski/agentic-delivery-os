@@ -1,6 +1,9 @@
 /**
- * GH-301 delivery-time documentation conformance
- * (TC-MEMNFR-004; AC-NFR7-1, NFR-7).
+ * GH-301 documentation conformance and distribution drift (TC-MEMNFR-004;
+ * AC-NFR7-1, NFR-7). No delivery phase adds a user-facing `doc/**` doc: the
+ * lifecycle-phase-7 `@doc-syncer` handoff creates
+ * `doc/spec/features/feature-memory-lint.md`, so this suite asserts the
+ * delivery-time docs plus the landed spec's registration, marker, and index row.
  */
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
@@ -22,6 +25,8 @@ const TEMPLATE_INDEX = "doc/templates/README.md";
 const ARCHITECTURE = "doc/planning/concepts/memory-architecture.md";
 const PRACTICES = "doc/planning/concepts/memory-practices.md";
 const REGISTRY = "scripts/checks/forbidden-literals.registry.json";
+const FEATURE_SPEC = "doc/spec/features/feature-memory-lint.md";
+const DOC_INDEX = "doc/00-index.md";
 
 const AUTOMATION_BOUNDARY =
   "A project whose gates run the memory invariant gets these areas checked mechanically";
@@ -37,7 +42,7 @@ const conceptExample = (): Record<string, unknown> => {
   return parsed as Record<string, unknown>;
 };
 
-describe("TC-MEMNFR-004 delivery-time doc conformance", () => {
+describe("TC-MEMNFR-004 documentation conformance and distribution drift", () => {
   test("the doctor checklist and its template row state the automation boundary", () => {
     const doctor = read(DOCTOR);
     expect(doctor).toContain(AUTOMATION_BOUNDARY);
@@ -52,7 +57,10 @@ describe("TC-MEMNFR-004 delivery-time doc conformance", () => {
     expect(index).toContain(AUTOMATION_BOUNDARY);
   });
 
-  test("the registry is unchanged by delivery and no new user-facing doc exists", () => {
+  test("the landed feature spec is registered, marked, and indexed", () => {
+    // Delivery adds no user-facing doc/** file; the lifecycle-phase-7 @doc-syncer
+    // handoff creates the feature spec after delivery, so this case asserts the
+    // post-landing state the release guards must find rather than an absence.
     const registry = JSON.parse(read(REGISTRY)) as {
       allowlist?: readonly { path?: string }[];
       registered?: readonly string[];
@@ -60,10 +68,12 @@ describe("TC-MEMNFR-004 delivery-time doc conformance", () => {
     expect((registry.allowlist ?? []).some((entry) => /memory/i.test(entry.path ?? ""))).toBe(
       false,
     );
-    expect((registry.registered ?? []).includes("doc/spec/features/feature-memory-lint.md")).toBe(
-      false,
+    expect((registry.registered ?? []).includes(FEATURE_SPEC)).toBe(true);
+    expect(existsSync(join(ROOT, FEATURE_SPEC))).toBe(true);
+    expect(read(FEATURE_SPEC)).toMatch(
+      /^ados_distribution: (redistributable|internal|project-generated)$/m,
     );
-    expect(existsSync(join(ROOT, "doc/spec/features/feature-memory-lint.md"))).toBe(false);
+    expect(read(DOC_INDEX)).toContain("spec/features/feature-memory-lint.md");
   });
 
   test("every delivery-touched doc keeps one valid marker block", () => {
