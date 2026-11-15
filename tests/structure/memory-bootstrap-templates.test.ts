@@ -255,7 +255,7 @@ describe("TC-MEMDOCT manual doctor", () => {
     expect(doctor).toContain("performs nothing");
   });
 
-  test("TC-MEMDOCT-002 no executable memory-doctor or memory-lint component exists", () => {
+  test("TC-MEMDOCT-002 only the sanctioned memory module exists under the scanned trees", () => {
     // GH-301 owns the deliberate update of this negative guard: when memory
     // lint lands legitimately in the gates, replace this scan consciously.
     const self = readFileSync(import.meta.path, "utf8");
@@ -276,7 +276,8 @@ describe("TC-MEMDOCT manual doctor", () => {
     };
     const scanned = [...walk("scripts"), ...walk("tools"), ...walk("packages")];
     expect(scanned.length).toBeGreaterThan(0);
-    const offenders = scanned.filter((file) => pattern.test(file));
+    const sanctioned = new Set(["packages/core/src/domain/memory-lint.ts"]);
+    const offenders = scanned.filter((file) => pattern.test(file) && !sanctioned.has(file));
     expect(offenders).toEqual([]);
     const manifest = JSON.parse(read("package.json")) as { scripts?: Record<string, string> };
     const scriptValues = Object.values(manifest.scripts ?? {}).join("\n");

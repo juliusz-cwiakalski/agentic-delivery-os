@@ -49,6 +49,29 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: >-
+      Delivery plan phase 1 (plan id 1) complete. Commit: d7fbc56b. Tests:
+      targeted structure suites (memory-layout, memory-record-schema,
+      content-inventory, port-contract-inventory, exit-projection, boundaries)
+      = 177 pass; full pnpm check = 8501 pass, 4 skip, 4 load-sensitive 5 s
+      timeouts (daemon-watch-state-changes, closeout-checkout,
+      projects-performance p95 518 ms, dispatch-attempts-ref) that pass
+      individually; lint and format:check green. Delivered: canonical layout
+      (preferences, guilds, retro archive with a header-only index), the
+      published record schema and budgets in .ai/memory/README.md inside 200
+      lines and 25 KB, the machine contract memory-record.ts with the closed
+      finding register and executable-allowance row, the three-lesson
+      trust/evidence backfill, and ADR-0011 verified tracked with its index row
+      resolving (no edit). SCOPE DEVIATION (reported):
+      tests/fixtures/ports/v1-contract-inventory.json is updated because the
+      existing fail-closed contract-surface inventory enumerates every
+      contracts module and export; the plan declared only
+      tests/structure/inventory.json. The commit primitive rejects plan-phase
+      ids ("1 is not one of the canonical lifecycle phases"), so commits go
+      through the primitive without --phase and carry a conventional template
+      subject.
+    type: info
+    date: "2026-11-15"
   - text: "Intake: GH-301 open, labels [change], milestone attached (M2: Ceremonies,
       measurement, and memory). Branch feat/GH-301/memory-records-layout-lint
       exists at origin/main-tools tip with zero own commits, worktree clean, no

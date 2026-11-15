@@ -57,6 +57,7 @@ export const relativeToMemory = (path: string): string =>
 /** Render one record's frontmatter and body. */
 export const recordText = (fields: Readonly<Record<string, unknown>>, body = ""): string =>
   `---\n${Object.entries(fields)
+    .filter(([, value]) => value !== undefined)
     .map(([key, value]) => `${key}: ${JSON.stringify(value)}`)
     .join("\n")}\n---\n${body}`;
 

@@ -193,6 +193,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "evaluateDispatchLiveness",
   ],
   "core/src/domain/daemon-lane.ts": ["classifyLaneProgress", "nextSpawnOrdinal", "shapeDaemonLane"],
+  "core/src/domain/memory-lint.ts": ["evaluateMemory"],
   "adapters/src/daemon/clock.ts": ["createNodeClock"],
   "adapters/src/daemon/process.ts": ["createNodeProcessPort", "killCoordinatorProcess"],
   "adapters/src/harness/liveness.ts": ["mapCoordinatorNewTurn"],

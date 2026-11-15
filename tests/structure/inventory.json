@@ -141,6 +141,7 @@
     "src/domain/merge-probe.ts",
     "src/domain/merge-transaction.ts",
     "src/domain/merge-waiver.ts",
+    "src/domain/memory-lint.ts",
     "src/domain/owner-gate-sla.ts",
     "src/domain/owner-hold.ts",
     "src/domain/plan-diff.ts",
