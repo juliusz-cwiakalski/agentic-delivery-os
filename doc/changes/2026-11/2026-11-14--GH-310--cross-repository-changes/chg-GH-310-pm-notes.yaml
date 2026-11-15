@@ -11,7 +11,7 @@ phases:
   delivery: { started: null, completed: 2026-11-15T06:39:21.422Z }
   system_spec_update: { started: null, completed: 2026-11-15T07:53:20.797Z }
   review_fix: { started: null, completed: 2026-11-15T08:04:10.303Z }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: null, completed: 2026-11-15T08:22:20.870Z }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
@@ -274,6 +274,25 @@ notes:
       page, F-7 no member read-bundle identity check, and commit hygiene
       (phase-6 source under a template-generated docs subject)."
     type: resolved
+    date: "2026-11-15"
+  - text: "QUALITY GATE (lifecycle phase 9) verdicts. Aggregate battery:
+      `PATH=$PWD/node_modules/.bin:$PATH TMPDIR=/home/juliusz/tmp
+      GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
+      GIT_CONFIG_VALUE_0=false pnpm check` -> exit 0: 8496 pass / 4 skip / 0
+      fail across 1082 files (949s); lint 2532 files 0 errors; format:check 2391
+      files no drift; typecheck six packages + tests/types; boundaries 405
+      modules/1234 deps no violations; ambient-globals 191 files clean;
+      workspace-entrypoints match DEC-2 matrices; secret-read-boundary 373 files
+      clean; prompt-conformance 5 prompts clean; help-guide-coverage all
+      covered; exports-parity 5 publishables pass. Doc-distribution
+      supplementary: no drift, 93 in-scope docs. Commit-range gate
+      `./scripts/lint-commit-range.sh --base main-tools`: verdict PASS, base
+      main-tools, merge-base 573be730, head 25215e26, 29 commits in range, 0
+      offending commits, mode none, 0 distinct rules hit, commitlint resolved
+      repository-local from node_modules/.bin/commitlint (non-vacuous). No
+      isolated re-runs were needed. Raw logs under
+      tmp/run-logs-runner/2026-11-15/."
+    type: info
     date: "2026-11-15"
   - text: "Delivery conventions for this change: full 11-phase lifecycle; plan
       phases declared in chg-GH-310-plan.yaml; one delivery commit per plan
