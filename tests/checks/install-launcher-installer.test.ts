@@ -22,7 +22,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join } from "node:path";
+import { dirname, join, relative } from "node:path";
 
 const REPO = process.cwd();
 const INSTALLER = join(REPO, "scripts/install.sh");
@@ -132,12 +132,13 @@ const runLauncher = (
   s: Scratch,
   argv: readonly string[],
   env: Readonly<Record<string, string>> = {},
+  cwd: string = s.home,
 ) => {
   const result = spawnSync(
     launcherPath(s),
     [...argv],
     {
-      cwd: s.home,
+      cwd,
       encoding: "utf8",
       env: { PATH: process.env.PATH ?? "", HOME: s.home, ...env },
     },
@@ -224,6 +225,49 @@ describe("TC-BIN-050 the recorded target is one safely quoted word", () => {
       const beforeDigest = digest(launcher);
       installOnce(s, source);
       expect(digest(launcher)).toBe(beforeDigest);
+    } finally {
+      s.dispose();
+    }
+  }, 120_000);
+});
+
+describe("TC-BIN-050 a relative source records an absolute target", () => {
+  test("relative-source: the recorded target is absolute and runs from outside", () => {
+    const s = scratch("relative-source");
+    try {
+      // The operator names the source relatively from the scratch project root;
+      // a verbatim record would render `readonly TARGET=../rel-source/...`.
+      const source = join(s.root, "rel-source");
+      mkdirSync(source, { recursive: true });
+      for (const entry of readdirSync(REPO)) {
+        if (["node_modules", "tmp", ".git"].includes(entry)) continue;
+        spawnSync("ln", ["-s", join(REPO, entry), join(source, entry)]);
+      }
+      const named = relative(s.project, source);
+      expect(named.startsWith("/")).toBe(false);
+      const expectedTarget = join(source, "packages/cli/bin/jaiship.ts");
+
+      installOnce(s, named);
+      const launcher = launcherPath(s);
+      const syntax = spawnSync("bash", ["-n", launcher], { encoding: "utf8" });
+      expect({ status: syntax.status, stderr: syntax.stderr }).toEqual({ status: 0, stderr: "" });
+
+      const content = readFileSync(launcher, "utf8");
+      const assignments = content.split("\n").filter((line) => line.startsWith("readonly TARGET="));
+      expect(assignments).toHaveLength(1);
+      const expanded = spawnSync("bash", ["-c", `${assignments[0] ?? ""}\nprintf '%s' "$TARGET"`], {
+        encoding: "utf8",
+      });
+      // An unresolved relative word fails by name: the recorded word is absolute.
+      expect(expanded.stdout.startsWith("/")).toBe(true);
+      expect(expanded.stdout).toBe(expectedTarget);
+      expect(content.split("packages/cli/bin/jaiship.ts").length - 1).toBe(1);
+
+      // From the filesystem root — outside both the checkout (the source being
+      // installed) and the scratch project root the relative path was named from.
+      const version = runLauncher(s, ["--version"], {}, "/");
+      expect(version.status).toBe(0);
+      expect(version.stdout).toBe("jaiship 0.0.0 (build dev)\n");
     } finally {
       s.dispose();
     }

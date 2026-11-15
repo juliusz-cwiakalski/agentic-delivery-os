@@ -1063,6 +1063,10 @@ do_local_install() {
 
   local source_dir
   source_dir="$(resolve_source_dir)" || exit $?
+  # The recorded launcher target must be absolute even when the operator names a
+  # relative source (F-6/DEC-13); resolve once here, with logical `pwd`, so a
+  # symlinked source keeps the path the operator gave.
+  source_dir="$(cd -- "${source_dir}" && pwd)" || exit $?
 
   # Auto-fetch latest source before installing
   auto_fetch_source "${source_dir}"
