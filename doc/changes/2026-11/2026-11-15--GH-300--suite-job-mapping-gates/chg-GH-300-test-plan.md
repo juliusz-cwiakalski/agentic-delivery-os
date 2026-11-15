@@ -2,7 +2,7 @@
 id: chg-GH-300-test-plan
 status: Updated
 created: 2026-11-15T12:00:00Z
-last_updated: 2026-11-15T16:00:00Z
+last_updated: 2026-11-15T17:30:00Z
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 labels: [milestone-m2, verify-gates, config, policy-as-code, gates]
@@ -77,9 +77,9 @@ Every one of the 25 §17 acceptance criteria is covered by at least one automate
 | AC-F2-1 | Equality plus a passing battery: exit `0`, `overall: pass`, `suiteBreadth` equals the mirror's declared `suites` in declared order, `mirrorsJob` is non-empty, gate records and summary are unchanged, and human output is the delivered six lines (SC-M2-S7-01) | TC-SCITE-001, TC-SMAP-004 | Covered |
 | AC-F2-2 | A cross-repository equality report carries the same two member-independent fields; `definitionOfDone`, `blockingMembers[]`, `reviewFlow`, and every `member`-bearing record are unchanged | TC-SCITE-002 | Covered |
 | AC-F2-3 | On any emitted report the two fields are both present or both absent; `suiteBreadth` is non-empty, unique, ≤32 identifiers of ≤64 characters; `mirrorsJob` is 1..120 characters and never a union or a differing local declaration | TC-SCITE-003, TC-SCITE-004 | Covered |
-| AC-F3-1 | A strict-subset `local` exits `1` with no `data`, `error.kind: verify`, `error.code: verify.narrowed-scope`, category `user`, non-retryable, `not_landed`, `detail.suiteBreadth` complete, and a summary header byte-equal to the delivered header plus `; scope=narrowed mirror=<job> breadth=<mirror ids>[ omitted=<n>]`, naming the mirror's CI breadth and never the local set (SC-M2-S7-02) | TC-SNARR-001, TC-SCTR-002 | Covered |
+| AC-F3-1 | A strict-subset `local` exits `1` with no `data`, `error.kind: verify`, `error.code: verify.narrowed-scope`, category `user`, non-retryable, `not_landed`, `detail.suiteBreadth` complete, `error.remediationHint` equal to the DM-5 row's hint, and `error.summary` the rendered six-line block whose header is byte-equal to the delivered header plus `; scope=narrowed mirror=<job> breadth=<mirror ids>[ omitted=<n>]`, naming the mirror's CI breadth and never the local set — never the DM-5 row's one-sentence summary, which stays the row default (SC-M2-S7-02) | TC-SNARR-001, TC-SCTR-002 | Covered |
 | AC-F3-2 | A narrowed refusal appends no record, the prior record remains newest, the read is not `torn`, and no capsule `gate.outcome` event is appended | TC-SNARR-002, TC-SWRITE-001 | Covered |
-| AC-F3-3 | A narrowed declaration with one failing gate still refuses `verify.narrowed-scope`, and the summary keeps the delivered header plus exactly one line per gate with the verdict and reason visible | TC-SNARR-003 | Covered |
+| AC-F3-3 | A narrowed declaration with one failing gate still refuses `verify.narrowed-scope`, and `error.summary` (the rendered block) keeps the delivered header plus exactly one line per gate with the verdict and reason visible | TC-SNARR-003 | Covered |
 | AC-F3-4 | A narrowed declaration with a would-be `unknown` gate still refuses `verify.narrowed-scope` rather than the classified-unknown reuse or `verify.gates.unavailable`, with every gate's evidence retained | TC-SNARR-004 | Covered |
 | AC-F3-5 | With more than eight identifiers, `detail.suiteBreadth` is complete and untruncated while the summary header prints at most the mirror breadth's first eight in declared order followed by ` omitted=<n>` counting only unprinted identifiers — never the local set — and stays within six lines and 4096 bytes | TC-SNARR-005, TC-SCTR-002, TC-SDET-002 | Covered |
 | AC-F4-1 | An absent, unreadable, empty, duplicate, or over-cap workflow is the delivered `ci-expected-jobs-invalid` CI failure and the delivered `verify.gates.failed` envelope at exit `1`, with no `data`, no breadth anywhere, and no pass on any path | TC-SRES-001, TC-SRES-005 | Covered |
@@ -107,7 +107,7 @@ No HTTP endpoint is added or changed (spec §8.1: N/A) and no new event kind or 
 | DM-2 | Report breadth fields `suiteBreadth?` and `mirrorsJob?` on both report types, present together or absent together, mirror breadth in declared order, member-independent on the cross-repository report | TC-SCITE-001, TC-SCITE-002, TC-SCITE-003, TC-SCITE-004, TC-SPAR-001 | Covered |
 | DM-3 | Constants and bounds (`VERIFY_SUITE_MAP_SCHEMA_VERSION`, `VERIFY_SUITE_MAP_CONFIG_KEY`, the four caps, the suite-id pattern), reuse of the delivered job-name/citation/summary bounds for the header's `breadth=` token and the gate lines, and the two derived cause-line bounds (134 mirror characters, 545 breadth characters) | TC-SMAP-003, TC-SNARR-005, TC-SCITE-003, TC-SDET-001, TC-SDET-002, TC-SRES-002, TC-SRES-003 | Covered |
 | DM-4 | Closed breadth outcome: `equal`, `narrower`, `unmirrored`, `uncorroborated`; workflow-invalid produces no breadth outcome and keeps the delivered `verify.gates.failed` path; no fifth outcome | TC-SMAP-005, TC-SRES-001, TC-SRES-002, TC-SRES-003, TC-SRES-004, TC-SRES-005 | Covered |
-| DM-5 | `verify.narrowed-scope` row: kind `verify`, category `user`, non-retryable, `not_landed`, `user-validation`, exit `1`, exact summary and remediation hint; the `verify` kind 6→7 and `verify gates` 2→3 | TC-SNARR-001, TC-SNARR-003, TC-SNARR-004, TC-SCTR-003 | Covered |
+| DM-5 | `verify.narrowed-scope` row: kind `verify`, category `user`, non-retryable, `not_landed`, `user-validation`, exit `1`, plus the row's own summary sentence and remediation hint as row defaults; the `verify` kind 6→7 and `verify gates` 2→3. On a narrowed envelope `error.summary` is the rendered six-line block (header plus one line per gate) and `error.remediationHint` is the row's hint; the row's one-sentence summary is asserted only on the table and its documented mirror (TC-SCTR-003), never on the envelope | TC-SNARR-001, TC-SNARR-003, TC-SNARR-004, TC-SCTR-003 | Covered |
 | DM-6 | `CommandResultDetail.suiteBreadth?`: identifiers only, never truncated, complete `local` in declared order, ≤32 entries of ≤64 characters, beside the unchanged `holder` | TC-SNARR-001, TC-SNARR-005, TC-SCTR-001, TC-SCTR-002 | Covered |
 | DM-7 | Durable `merge.gate-verification` record and capsule `gate.outcome` payload unchanged; exactly one append per non-refused full evaluation; zero on a narrowed refusal | TC-SNARR-002, TC-SPAR-002, TC-SWRITE-001 | Covered |
 | DM-8 | Reference `verify.suite-map` declaration in `<repo>/.delivery-os/config.yaml`: pinned schema, job `TS aggregate check`, the eight declared suites in order, and an equal `local`; must resolve to equality end-to-end against the real workflow | TC-SMAP-004 | Covered |
@@ -520,15 +520,15 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 **Steps**:
 
 1. Run `verify gates GH-300 --json`; assert exit `1` and `data` absent.
-2. Assert `error.kind: "verify"`, `error.code: "verify.narrowed-scope"`, `error.category: "user"`, `error.retryable: false`, `error.consequence: "not_landed"`, `error.summary` and `error.remediationHint` equal the DM-5 row text verbatim.
-3. Assert the summary's first line is **byte-equal** to the pinned DEC-15 header for these facts:
+2. Assert `error.kind: "verify"`, `error.code: "verify.narrowed-scope"`, `error.category: "user"`, `error.retryable: false`, `error.consequence: "not_landed"`. Assert `error.remediationHint` equals the DM-5 row's remediation hint verbatim. Assert `error.summary` is **not** the DM-5 row's one-sentence summary but the rendered failure summary block the command supplies and the `user-validation` projection honours: the header line pinned in step 3 plus exactly one line per evaluated gate (step 6). The row's one-sentence summary remains the row default and is asserted in TC-SCTR-003, never on this envelope.
+3. Assert `error.summary`'s first line — the block's single header line — is **byte-equal** to the pinned DEC-15 header for these facts:
    `result=unknown; gates=5/5 passed, 0 failed, 0 unknown; scope=narrowed mirror=TS aggregate check breadth=tests,lint,format,typecheck,boundaries,prompt-conformance,help-guide-coverage,exports-parity`
    — the delivered header kept byte-identical, one `; ` between segments, one ASCII space between tokens, `<job>` verbatim and terminated by the final ` breadth=`, the `breadth=` identifiers `,`-delimited with no spaces in the mirror's declared order, no ` omitted` token at ≤8, and `result=unknown` because every gate passes under a narrowing.
 4. Assert the `breadth=` list is the **mirror's** breadth and not the local set: it deep-equals the job's declared `suites`, it differs from `detail.suiteBreadth` (`["tests"]`), and the header carries no second or duplicated list (C-12).
 5. Assert `detail.suiteBreadth` deep-equals the complete `local` declaration in declared order (`["tests"]`), with no truncation and no reordering; assert `detail` carries no other key.
-6. Assert the summary has exactly six lines: one header plus exactly one line per evaluated gate; every gate line retains its verdict, reason, source, counts, and names segments, and no gate line was shrunk or dropped for the header's sake.
+6. Assert `error.summary` has exactly six lines: one header plus exactly one line per evaluated gate; every gate line retains its verdict, reason, source, counts, and names segments, and no gate line was shrunk or dropped for the header's sake.
 7. Assert the delivered success header (`<binary> verify gates <ref>  pass  <p>/<t>`) never appears on the refusal, and no breadth appears on the human success channel.
-8. Assert the human-visible failure rendering carries the same header (byte-equal) and the delivered table summary; the mirror and the breadth are named there and nowhere in the envelope beyond the pinned header. Assert no `cause:` line is written for a narrowing (DEC-16).
+8. Assert the human-visible failure rendering is `<binary>: verify.narrowed-scope` followed by the same `summary:` block: the header line byte-equal to step 3, then one line per gate (the `user-validation` projection honours the command-supplied block, so the DM-5 row's one-sentence summary appears on neither channel). The mirror and the breadth are named in that rendering and in the envelope's `error.summary` block, and nowhere else in the envelope. Assert no `cause:` line is written for a narrowing (DEC-16).
 9. Assert the MCP `gate-report` surface returns the same code and no data (cross-checked in TC-SCITE-004).
 10. Run the invocation twice; assert byte-identical stdout, stderr, and exit; assert the golden `suite-map-narrowed-envelope.json` matches byte-for-byte.
 
@@ -536,9 +536,11 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 
 - SC-M2-S7-02 is satisfied: exit `1`, `error.code == "verify.narrowed-scope"`, and the narrowed breadth named twice — the complete local set in `detail.suiteBreadth` and the mirror's CI breadth in the byte-pinned header.
 - The header names the mirrored CI breadth in the mirror's declared order, never the local set, so `breadth=` means the same thing here as `data.suiteBreadth` does on a report.
+- `error.summary` is the rendered six-line block (header plus one line per gate) supplied by the command and honoured by the `user-validation` projection, while `error.remediationHint` is the DM-5 row's hint; the row's own summary sentence reaches no narrowed envelope.
 
 **Notes / Clarifications**:
 
+- `error.summary` is the narrowed run's rendered failure summary block, not the DM-5 row's one-sentence summary: the command supplies the block and the `user-validation` projection honours it (F-3, Flow 2, DEC-6). The row's sentence stays the row default and is asserted in TC-SCTR-003 only; `error.remediationHint` is asserted here separately, against the DM-5 row's hint.
 - The header's `breadth=` token names the mirror (CI) breadth in the mirror's declared order — never the narrowed local set, which is carried by `detail.suiteBreadth` alone (F-3, AC-F3-1, DEC-15, C-12; the earlier prose ambiguity is closed in spec v1.1).
 - The token grammar, delimiters, order, `result=` formula, and `omitted` rendering are pinned (Appendix A rows 9 and 19); this TC asserts them byte-exactly and the first-capture golden records the same bytes, so the golden cannot mask a grammar drift.
 - No `cause:` line belongs to a narrowing; the cause line exists only for the two map-side `config.value.invalid` refusals (DEC-16; TC-SRES-002/003).
@@ -593,14 +595,18 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 
 1. Run `verify gates GH-300 --json`; assert exit `1` and no `data`.
 2. Assert `error.code: "verify.narrowed-scope"`, not `verify.gates.failed`.
-3. Assert the summary has exactly six lines; the `ci-green` line carries `fail` and `reason=ci-failed` (or the fixture's pinned failing reason), and every other gate line is present with its verdict and reason.
-4. Assert the header line is byte-equal to the pinned grammar with `result=fail` (the battery overall is `fail` because `ci-green` failed) and the same `mirror=`/`breadth=` segment as TC-SNARR-001; assert no ` omitted` token at ≤8 identifiers, and that the `breadth=` list is the mirror's, never the local set.
+3. Assert `error.summary` (the rendered block, not the DM-5 row's one-sentence summary) has exactly six lines; the `ci-green` line carries `fail` and `reason=ci-failed` (or the fixture's pinned failing reason), and every other gate line is present with its verdict and reason.
+4. Assert `error.summary`'s header line is byte-equal to the pinned grammar with `result=fail` (the battery overall is `fail` because `ci-green` failed) and the same `mirror=`/`breadth=` segment as TC-SNARR-001; assert no ` omitted` token at ≤8 identifiers, and that the `breadth=` list is the mirror's, never the local set.
 5. Assert `detail.suiteBreadth` is present and complete.
 6. Run a no-map control with the same failing facts; assert the delivered `verify.gates.failed` path still applies there, proving the precedence is specific to the narrowing.
 
 **Expected Outcome**:
 
 - The narrowed refusal wins over the gate failure without hiding any gate evidence; the delivered failure identity is unchanged for a non-narrowed run.
+
+**Notes / Clarifications**:
+
+- The asserted failure summary is `error.summary`, the rendered six-line block the `user-validation` projection honours. The DM-5 row's one-sentence summary is the row default and is asserted in TC-SCTR-003, not on this envelope; `result=` follows the delivered formula, so a failing gate renders `result=fail`.
 
 #### TC-SNARR-004 - The narrowed refusal precedes the classified-unknown reuse and `verify.gates.unavailable`
 
@@ -622,13 +628,17 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 
 1. Run the classified-unknown bundle; assert exit `1`, `error.code: "verify.narrowed-scope"`, and not the classified identity.
 2. Run the unclassified-unknown bundle; assert exit `1`, `error.code: "verify.narrowed-scope"`, and not `verify.gates.unavailable` (never exit `2`).
-3. In both, assert the summary carries every gate's verdict, reason, source, counts, and names, including the unknown gate.
+3. In both, assert `error.summary` (the rendered block, not the DM-5 row's one-sentence summary) carries every gate's verdict, reason, source, counts, and names, including the unknown gate.
 4. Assert no `data` and a complete `detail.suiteBreadth`.
 5. Run the same facts without a map; assert the delivered classified-unknown/`unavailable` identity is unchanged, proving the precedence is specific to the narrowing.
 
 **Expected Outcome**:
 
 - The narrowed refusal is the primary identity over both unknown paths; no gate evidence is lost and the delivered unknown taxonomy is untouched for non-narrowed runs.
+
+**Notes / Clarifications**:
+
+- The summary asserted here is `error.summary`, the rendered six-line block; the DM-5 row's one-sentence summary is the row default and is asserted only in TC-SCTR-003. `result=` renders `unknown` for an all-pass-under-narrowing battery and `fail` when a gate failed, per the delivered formula.
 
 #### TC-SNARR-005 - Narrowed naming stays bounded: full local detail, the mirror's first eight plus ` omitted=<n>`, six lines, 4096 bytes
 
@@ -649,10 +659,10 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 **Steps**:
 
 1. Run the nine-identifier case; assert `detail.suiteBreadth` contains all nine in declared order, never truncated.
-2. Assert the header's `breadth=` segment prints exactly the mirror breadth's first eight identifiers in the mirror's declared order, `,`-delimited with no spaces, followed by ` omitted=<n>` where n is exactly the number of mirror breadth identifiers not printed (identifiers only — never bytes, gates, or tokens).
+2. Assert `error.summary`'s header (its first line) prints exactly the mirror breadth's first eight identifiers in the mirror's declared order, `,`-delimited with no spaces, followed by ` omitted=<n>` where n is exactly the number of mirror breadth identifiers not printed (identifiers only — never bytes, gates, or tokens).
 3. Assert the local set is never rendered in the header: no local identifier that is absent from the mirror's first eight appears anywhere on the header line, and the header carries exactly one `breadth=` list (C-12).
-4. Assert the summary has six lines and is at most 4096 bytes.
-5. Run the maximum narrowing case (31 local identifiers, a 32-suite mirror, 120-character job name); assert the detail contains all 31 local identifiers, the header prints the mirror's first eight followed by ` omitted=24`, and the summary remains within six lines and 4096 bytes. Assert the header is byte-equal to the pinned rendering and is never truncated (the delivered name-budget shrink applies to the gate lines only).
+4. Assert `error.summary` has six lines and is at most 4096 bytes.
+5. Run the maximum narrowing case (31 local identifiers, a 32-suite mirror, 120-character job name); assert the detail contains all 31 local identifiers, the header prints the mirror's first eight followed by ` omitted=24`, and `error.summary` remains within six lines and 4096 bytes. Assert the header is byte-equal to the pinned rendering and is never truncated (the delivered name-budget shrink applies to the gate lines only).
 6. Assert the 0-identifier rendering is unreachable: a strict superset of a non-empty `local` has at least two identifiers, and no empty `breadth=`, trailing `,`, or ` omitted=0` form exists — asserted directly on the pure header helper so no branch can regress into it.
 7. Assert every gate line is unchanged in shape and no gate line is dropped to satisfy the bound.
 8. Run each case twice; assert the identifier list, `omitted` count, full header bytes, and summary bytes are identical.
@@ -664,6 +674,7 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 **Notes / Clarifications**:
 
 - `omitted=<n>` counts mirror breadth identifiers not printed and nothing else: it is absent for 1..8 (TC-SNARR-001) and present for 9..32 with n = total − 8 (DEC-15, Appendix A row 19). The 0 case is unreachable by construction.
+- Every `error.summary` assertion here is on the rendered six-line block (header plus one line per gate) that the `user-validation` projection honours, so the six-line and 4096-byte bounds apply to the block, not to the DM-5 row's one-sentence summary (asserted in TC-SCTR-003).
 
 #### TC-SRES-001 - An invalid workflow read yields the delivered CI failure and no breadth anywhere
 
@@ -1032,10 +1043,17 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 4. Assert `holder` still projects unchanged when present, and `suiteBreadth` coexists only with the declared set.
 5. Assert the projection reads only the declared members: an undeclared key inside `detail` is never copied to the envelope.
 6. Assert no other command projects `suiteBreadth` (source scan of the projection call sites).
+7. Assert the summary projection follows the same projection-class rule on the same captured envelopes: on the narrowed envelope (`user-validation`) `error.summary` is the command-supplied six-line block (header plus one line per gate) and `error.remediationHint` is the DM-5 row's hint; on a `config`-shaped refusal (unmirrored, uncorroborated, structurally invalid) the command-supplied prose is suppressed and `error.summary`/`error.remediationHint` are the table's own. The DM-5 row's one-sentence summary appears on no envelope; it is asserted on the table in TC-SCTR-003.
 
 **Expected Outcome**:
 
 - The detail member is explicit and bounded: complete or absent, never truncated and never an open map.
+- The summary projection is class-consistent: the narrowed rendered block is honoured, and config-shaped prose stays suppressed and table-own.
+- `error.summary` never carries the DM-5 row's one-sentence summary on a narrowed envelope; `error.remediationHint` is asserted separately from `error.summary`.
+
+**Notes / Clarifications**:
+
+- `error.summary` (the rendered block) and the DM-5 row's `summary` field are two different values with two different owners: the block is the command-supplied value the `user-validation` projection honours (TC-SNARR-001), and the row sentence is the row default asserted on the table and its documented mirror (TC-SCTR-003).
 
 #### TC-SCTR-003 - The error table and its documented mirror are two-way synced; the `verify` kind carries seven identities
 
@@ -1055,7 +1073,7 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 
 **Steps**:
 
-1. Assert exactly one row has code `verify.narrowed-scope`, with `domainKind: "verify"`, `category: "user"`, `retryable: false`, `consequence: "not_landed"`, `projectionClass: "user-validation"`, and the exact summary and remediation hint from DM-5.
+1. Assert exactly one row has code `verify.narrowed-scope`, with `domainKind: "verify"`, `category: "user"`, `retryable: false`, `consequence: "not_landed"`, `projectionClass: "user-validation"`, and the row's exact `summary` sentence and `remediationHint` from DM-5 (row fields, not the rendered envelope block of TC-SNARR-001).
 2. Assert the documented table has exactly one matching row with identical fields; run `runSyncCheck` on the live tree and assert zero failures in both directions.
 3. Assert the `verify` kind has exactly seven identities and `verify gates` has exactly three; assert no new domain kind and no delivered row reworded (deep-equal the pre-change rows).
 4. Add one true-positive corpus entry for `verify.narrowed-scope`; assert it is recognized and resolves to the row.
@@ -1069,6 +1087,7 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 **Notes / Clarifications**:
 
 - The doc row must land no later than phase 7 and before phase 9 `pnpm check`; otherwise the delivered sync gate fails. This is a delivery-sequencing dependency, not an AC gap.
+- The row's `summary` sentence and `remediationHint` asserted here are the row's own defaults and must match the documented mirror exactly. This is the only place the one-sentence summary is asserted: on a narrowed envelope `error.summary` is the rendered six-line block (TC-SNARR-001) while `error.remediationHint` is this row's hint.
 
 #### TC-SDET-001 - Two runs over every declared-map case are byte-identical on stdout, stderr, and exit
 
@@ -1310,6 +1329,7 @@ Proposed homes; the implementation plan pins exact names (the assertion contract
 - The map is resolved from the same resolved configuration values that supply the declared gate set, through one injected seam; absent means undeclared and no default map is invented (DEC-11).
 - The handler can resolve the map before any source read and can evaluate the narrowed refusal before the battery verdict projection and before the append; the delivered append-before-verdict order is adjusted only for the refusal (F-3, DEC-6).
 - The command writes exactly one bounded identifier-only `cause:` line on the error stream for the two map-side refusals (`cause: mirror=<job>` or `cause: breadth=<id[,id]*>[ omitted=<n>]`), leaving the envelope's table-own summary and hint and the absent `detail` untouched (DEC-16).
+- On a narrowed refusal the command supplies `error.summary` as the rendered six-line failure summary block (the delivered header plus one line per gate), which the `user-validation` projection honours, while `error.remediationHint` is the `verify.narrowed-scope` row's hint; the row's own one-sentence summary stays the row default and reaches no narrowed envelope (F-3, DM-5, DEC-6).
 - The existing `tests/fixtures/verify-gates/corpus/cases.json` (48 cases) and the committed goldens are the pre-change reference for parity; the new baseline is captured at `8a1f77ad` before any suite-map code.
 - The reference declaration is authored content at `<repo>/.delivery-os/config.yaml` with the pinned schema, job `TS aggregate check`, the eight identifiers, and the equal `local` order (DM-8, DEC-17); the test asserts those literals and the end-to-end equality against the real workflow.
 - The narrowed header is produced by one pure rendering helper over the mirror's declared `suites` and the delivered constants, so the pinned grammar, the 1..8/9..32 renderings, and the unreachable 0 case are unit-assertable without a CLI run.
@@ -1354,6 +1374,7 @@ These items are excluded from the 31 automated TCs and from the 25-AC automated 
 |---------|------|--------|---------|
 | 1.0 | 2026-11-15 | test-plan-writer (deepseek-flash) | Initial test plan from `chg-GH-300-spec.md` (25 ACs, DoD-1..DoD-10, DEC-1..DEC-14, DM-1..DM-7, Appendix A/C), `chg-GH-300-pm-notes.yaml` (gate environment and delivery conventions), the M2 scenario seeds SC-M2-S7-01/SC-M2-S7-02 (inherited by name), the delivered verify-gates §Quality evidence suite conventions, and the delivered configuration/result/merge/MCP contracts. 31 TCs in nine families; 25/25 ACs covered; 0 TODO; 0 orphan TCs; five non-blocking residual gaps recorded (OQ-T1..OQ-T5). |
 | 1.1 | 2026-11-15 | test-plan-writer (deepseek-flash) | Re-synced in place to `chg-GH-300-spec.md` v1.1 (§25). No TC, AC, or family renumbered; 31 TCs and 25/25 AC coverage unchanged. **(1)** Pinned the narrowed header byte-for-byte in TC-SNARR-001/003/005 and TC-SDET-002 (delivered header + `; scope=narrowed mirror=<job> breadth=<mirror ids>[ omitted=<n>]`, delimiters, token order, verbatim `<job>`, unreachable 0, 1..8 with no marker, 9..32 = first eight + ` omitted=<n>`, `result=fail|unknown`), and made the golden capture assert it independently; OQ-T1 closed. **(2)** Fixed breadth ownership: the header names the mirror (CI) breadth and never the local set, which stays in `detail.suiteBreadth`; AC-F3-1/AC-F3-5 rows, the SC-M2-S7-02 note, TC-SNARR-001/005, and TC-SDET-002 amended; OQ-T5 closed. **(3)** Pinned the map-side diagnostic to exactly one bounded `cause: mirror=<job>` (≤134) or `cause: breadth=<id[,id]*>[ omitted=<n>]` (≤545) error-stream line with table-own envelope prose and absent `detail`; TC-SRES-002/003/005, AC-F4-2/AC-F4-3, DM-3, and two new stderr goldens amended; OQ-T2 closed. **(4)** Pinned the reference declaration (`<repo>/.delivery-os/config.yaml`, schema `delivery.verify.suite-map.v1`, job `TS aggregate check`, the eight identifiers in order, equal `local`) and made TC-SMAP-004 assert the concrete document plus equality end-to-end through the production composition; added a DM-8 coverage row (8/8 DM rows); OQ-T3 closed. **(5)** §1.2, §2, §8.1 (TR-3, TR-5, TR-15), and §8.2 now cite spec v1.1 (`DM-1..DM-8`, `DEC-1..DEC-17`, Appendix A rows 1–21, C-1..C-14); §8.3 retains only OQ-T4 (seam shape, a plan concern) and records OQ-T1/T2/T3/T5 as closed. |
+| 1.2 | 2026-11-15 | test-plan-writer (deepseek-flash) | Contradiction fix raised by the plan author; no TC, AC, or family renumbered — 31 TCs and 25/25 AC coverage unchanged. **(1)** Resolved the false claim that the narrowed `error.summary` equals the DM-5 row's one-sentence text, which contradicted the step that asserts its first line is the pinned six-line-block header. Restated to the spec reading (`chg-GH-300-spec.md` Flow 2, F-3, AC-F3-1, DM-5): `error.summary` is the rendered failure summary block — delivered header plus exactly one line per gate, with `scope=narrowed mirror=<job> breadth=<mirror ids>[ omitted=<n>]` — supplied by the command and honoured by the `user-validation` projection; the DM-5 row's own summary sentence remains the row default and is asserted only in TC-SCTR-003; `error.remediationHint` is the row's hint and is asserted separately from `error.summary`. **(2)** Amended TC-SNARR-001 steps 2/3/6/8, its Expected Outcome, and its Notes; made TC-SNARR-003/004/005 and TC-SCTR-002 name `error.summary` explicitly (added TC-SCTR-002 step 7 for the class-consistent summary projection and its Notes), and added a TC-SCTR-003 note that the one-sentence summary is asserted on the table only. **(3)** Corrected the repeating statements in §3.1 (AC-F3-1, AC-F3-3) and §3.2 (DM-5) and added the §8.2 assumption that separates the narrowed block from the row default; the map-side `config.value.invalid` table-own summary/hint posture (DEC-16) is unchanged. |
 
 ## 10. Test Execution Log
 
