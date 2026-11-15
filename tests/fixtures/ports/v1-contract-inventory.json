@@ -2650,6 +2650,7 @@
       "QUEUE_MAX_NEXT_ACTIONS",
       "QUEUE_MAX_REASONS",
       "QUEUE_MAX_REF_CHARS",
+      "QUEUE_MEMBER_REF_SEPARATOR",
       "QUEUE_MIN_RENEWAL_MS",
       "QUEUE_MUTATION_RESULTS",
       "QUEUE_PARK_CAUSES",
@@ -2751,6 +2752,7 @@
       "QueueLeaseScope",
       "QueueLeaseStatus",
       "QueueListData",
+      "QueueMemberEntry",
       "QueueMutationData",
       "QueueMutationEvent",
       "QueueMutationEventKind",
@@ -3906,6 +3908,7 @@
       "QUEUE_MAX_NEXT_ACTIONS",
       "QUEUE_MAX_REASONS",
       "QUEUE_MAX_REF_CHARS",
+      "QUEUE_MEMBER_REF_SEPARATOR",
       "QUEUE_MIN_RENEWAL_MS",
       "QUEUE_MUTATION_RESULTS",
       "QUEUE_PARK_CAUSES",
@@ -3970,6 +3973,7 @@
       "QueueLeaseScope",
       "QueueLeaseStatus",
       "QueueListData",
+      "QueueMemberEntry",
       "QueueMutationData",
       "QueueMutationEvent",
       "QueueMutationEventKind",
@@ -4608,7 +4612,9 @@
     "WorkItemRelation",
     "WorkflowMap"
   ],
-  "credentialPort": ["CredentialPort"],
+  "credentialPort": [
+    "CredentialPort"
+  ],
   "envelope": [
     "DEGRADATION_REASONS",
     "DegradationReason",

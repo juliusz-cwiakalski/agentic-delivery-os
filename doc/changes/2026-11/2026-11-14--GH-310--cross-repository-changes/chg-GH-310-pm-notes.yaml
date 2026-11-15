@@ -234,3 +234,37 @@ notes:
       PR targets main-tools and stays open (merge authority: CEO/human)."
     type: info
     date: "2026-11-14"
+  - text: "Plan phase 2 'Per-member queue representation: member refs, one entry
+      and lane per member, dependency edges, release and removal' complete
+      (commit hash assigned at commit time; `git log` on
+      feat/GH-310/cross-repository-changes is the record). Delivered:
+      `QUEUE_MEMBER_REF_SEPARATOR` and the additive `QueueMemberEntry`
+      `{ref, repoKey, lane}` payload type in `contracts/queue.ts`/index
+      (`QueueMutationData.members?`, no new record kind, no new error row);
+      `canonicalQueueRef` now canonicalizes `<canonicalChangeRef>@<repoKey>`
+      through the phase-1 `parseMemberRef`/`memberRefFor` while the delivered
+      `<PREFIX>-<digits>` form is byte-identical (GH-010 -> GH-10, pdev-7 ->
+      PDEV-7); a member entry binds the plan's member repoKey without a
+      declaring-checkout root in `app/queue.ts` (pair-or-absent unchanged for
+      every delivered ref); `reconcileQueueEntries` reads the change ref before
+      the `@`; the queue composition gains one bounded optional local plan-member
+      read wired from `plan.readPlan` + the injected YAML parse +
+      `parsePlanMembers` in `production.ts`, and `queue add` on a member plan
+      writes one entry and lane per member ref with its per-member `dependsOn[]`
+      edges and returns the delivered payload plus ordered `data.members[]`; a
+      member-ref claim refusal names the member and its unlanded prerequisite;
+      member-less payloads/bytes/exits are unchanged. Test result: 84 pass / 0
+      fail / 479 expect across the eleven touched suites (queue-member-ref,
+      queue-members, queue-members-dependency, queue-members-removal,
+      cross-repository-determinism, queue-cli, queue-graph,
+      closeout-queue-removal, closeout-queue-removal-skips,
+      structure/content-inventory, structure/port-contract-inventory) plus 177
+      pass / 0 fail across the broader 20-file queue/lane/closeout regression
+      battery; core and cli `tsc --noEmit` clean; `tsc -p
+      tests/types/tsconfig.json` clean. Mechanical inventory seam updated:
+      `tests/fixtures/ports/v1-contract-inventory.json` (queue.ts and index.ts
+      additive names) and the content-inventory executable allowance for
+      `QUEUE_MEMBER_REF_SEPARATOR`. New fixture `tests/fixtures/cross-repository/queue.ts`
+      composes the declared two-member plan over the shared constants."
+    type: info
+    date: "2026-11-15"

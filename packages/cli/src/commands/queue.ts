@@ -43,6 +43,7 @@ import {
   type QueueDependencyRemovalData,
   type QueueEntryState,
   type QueueGraphEntry,
+  type QueueMemberEntry,
   type QueueMutationData,
   type QueueNextAction,
   type QueueParkCause,
@@ -159,6 +160,8 @@ export type QueueRuntimeMutation =
       readonly edges: readonly string[];
       readonly result: "added" | "updated" | "noop";
       readonly degraded: readonly QueueDegradationReason[];
+      /** The additive ordered member entries on a member-declaring plan. */
+      readonly members?: readonly QueueMemberEntry[];
     }
   | QueueRuntimeFailure;
 
@@ -406,6 +409,7 @@ const mutationData = (mutation: QueueRuntimeMutation): QueueMutationData => {
     edges: mutation.edges,
     result: mutation.result,
     degraded: mutation.degraded,
+    ...(mutation.members === undefined ? {} : { members: mutation.members }),
   };
 };
 

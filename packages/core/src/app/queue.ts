@@ -97,6 +97,7 @@ const ownerHoldDetail = (hold: Extract<OwnerHoldFact, { readonly active: true }>
     ? `owner hold active (${hold.source})`
     : `owner hold active (${hold.source}): ${hold.reason}`;
 
+import { isMemberRef, parseMemberRef } from "../domain/plan-members.js";
 import {
   claimScope,
   earliestTakeoverAtIso,
@@ -286,7 +287,15 @@ const isEntryRecord = (value: unknown): value is QueueEntryRecord => {
   if (value.repository !== undefined && !isNonEmptyString(value.repository)) return false;
   if (value.repositoryRoot !== undefined && !isNonEmptyString(value.repositoryRoot)) return false;
   // The key and the recorded root travel together: both present or both absent.
-  if ((value.repository === undefined) !== (value.repositoryRoot === undefined)) return false;
+  // A declared member entry binds the plan's member repository key only
+  // (GH-310 DEC-2, DM-6); the pair-or-absent rule is unchanged for every
+  // delivered ref.
+  if (
+    !isMemberRef(value.ref) &&
+    (value.repository === undefined) !== (value.repositoryRoot === undefined)
+  ) {
+    return false;
+  }
   if (!isInteger(value.priority) || value.priority < 0) return false;
   return isNonEmptyString(value.recordedAt);
 };
@@ -832,7 +841,11 @@ const desiredEntry = (
   const current = entryOf(fold, ref);
   const repository = request.repository ?? current?.repository;
   const repositoryRoot = request.repositoryRoot ?? current?.repositoryRoot;
-  if ((repository === undefined) !== (repositoryRoot === undefined)) {
+  // A declared member entry binds the member repository key only (GH-310
+  // DEC-2, DM-6): the plan carries the member `repoKey`, never that member's
+  // checkout root, and the delivered root is the declaring checkout's own. The
+  // pair-or-absent rule is unchanged for every delivered ref.
+  if (!isMemberRef(ref) && (repository === undefined) !== (repositoryRoot === undefined)) {
     return {
       ok: false,
       kind: "input",
@@ -1747,7 +1760,10 @@ const reconcileSweep = async (
   // as-is with nothing appended (AC-F5-4, NFR-4).
   const observed = new Map<string, Extract<QueueTrackerRead, { ok: true }>>();
   for (const ref of input.refs) {
-    const read = await input.readTracker(ref);
+    // A member entry reconciles against its change ref (GH-310 DEC-2): the
+    // tracker identity is the change, never the member repository suffix.
+    const trackerRef = parseMemberRef(ref)?.changeRef ?? ref;
+    const read = await input.readTracker(trackerRef);
     if (!read.ok) {
       return { ok: false, kind: "provider", code: read.failureCode };
     }

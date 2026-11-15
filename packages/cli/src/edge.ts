@@ -88,6 +88,7 @@ import {
   type CommitActRequest,
   type CommitTransportPorts,
   callerAudienceVariableName,
+  canonicalChangeRef,
   capsuleGateEventKey,
   capsulePhaseEventKey,
   catalogPaths,
@@ -122,13 +123,16 @@ import {
   handoverDispatchEvidence,
   isHeldByWeight,
   isLiveDbSession,
+  isMemberRef,
   joinAttributionSubstrates,
   type MergeTransactionPorts,
+  memberRefFor,
   newestWaiverByGate,
   normalizeStagedPaths,
   PRODUCTION_CATALOG,
   parkConditionForCause,
   parseCapsuleEvents,
+  parseMemberRef,
   payloadFieldViolations,
   planDispatchResume,
   prioritizeQueueEntry,
@@ -266,6 +270,7 @@ import {
   PHASE_STATE_DOCUMENT_SUFFIX,
   type PhaseTransitionRecord,
   type PlanDiffPort,
+  type PlanMemberDeclaration,
   type ProviderAnnouncementRecord,
   type ProviderClock,
   type ProviderConfiguration,
@@ -4286,6 +4291,13 @@ export type QueueComposition = {
     readonly repository?: string;
     readonly repositoryRoot?: string;
   };
+  /**
+   * The bounded local plan-member read (GH-310 F-2, DEC-21, DM-6): one plan
+   * read that supplies the declared `members[]` for a change ref. Absent, a
+   * member-less plan, or an unreadable plan keeps the delivered single-ref
+   * queue path byte-identical. No configuration and no network are read.
+   */
+  readonly readPlanMembers?: (ref: string) => readonly PlanMemberDeclaration[] | undefined;
   /** The producer-root config resolution seam; absent means use injected facts. */
   readonly deployExpectations?: QueueDeployExpectationPort;
   readonly runner?: string;
@@ -4742,6 +4754,54 @@ const watchStreamFor = (
     });
 };
 
+/** One resolved add target for a declared member (GH-310 DEC-21, DM-6). */
+type QueueMemberTarget = {
+  readonly ref: string;
+  readonly repoKey: string;
+  readonly edges: readonly string[];
+};
+
+/**
+ * Resolve the declared member targets for one `queue add` (GH-310 F-2,
+ * DEC-21, DM-6). Returns `undefined` for the delivered single-ref path: no
+ * composed plan read, a member-less plan, an unreadable plan, or a member ref
+ * naming no declared member. A member ref adds only that member; the bare
+ * change ref adds every declared member in declared order.
+ */
+const declaredMemberTargets = (
+  composition: QueueComposition,
+  ref: string,
+  cliDeps: readonly string[] | undefined,
+): readonly QueueMemberTarget[] | undefined => {
+  if (composition.readPlanMembers === undefined) return undefined;
+  const parsed = parseMemberRef(ref);
+  const changeRef = parsed?.changeRef ?? canonicalChangeRef(ref);
+  if (changeRef === undefined) return undefined;
+  const declared = composition.readPlanMembers(changeRef);
+  if (declared === undefined || declared.length === 0) return undefined;
+  const selected =
+    parsed === undefined
+      ? declared
+      : declared.filter((member) => member.repoKey === parsed.repoKey);
+  if (selected.length === 0) return undefined;
+  return selected.map((member, index) => ({
+    ref: memberRefFor(changeRef, member.repoKey),
+    repoKey: member.repoKey,
+    edges: [
+      ...(member.dependsOn ?? []).map((dependency) => memberRefFor(changeRef, dependency)),
+      ...(index === 0 ? (cliDeps ?? []) : []),
+    ],
+  }));
+};
+
+/** Aggregate the per-member add outcomes into the delivered result vocabulary. */
+const memberAddResult = (outcomes: readonly QueueIntentOutcome[]): "added" | "updated" | "noop" =>
+  outcomes.some((outcome) => outcome.result === "added")
+    ? "added"
+    : outcomes.some((outcome) => outcome.result === "updated")
+      ? "updated"
+      : "noop";
+
 /** Resolve the degradation marker set; absence keeps the delivered fallback. */
 const resolveDegraded = (value: QueueComposition["degraded"]): readonly QueueDegradationReason[] =>
   value === undefined
@@ -4782,22 +4842,68 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
         ? { ok: true as const, data: toQueueReadData(read.schedule, []) }
         : { ok: false as const, code: read.code };
     }),
-    add: (input) =>
-      mutate(() =>
-        declareQueueEntry(composition.store, {
-          ref: input.ref,
-          ...(composition.repositoryBinding?.repository === undefined
-            ? {}
-            : { repository: composition.repositoryBinding.repository }),
-          ...(composition.repositoryBinding?.repositoryRoot === undefined
-            ? {}
-            : { repositoryRoot: composition.repositoryBinding.repositoryRoot }),
+    add: (input) => {
+      const targets = declaredMemberTargets(composition, input.ref, input.deps);
+      if (targets === undefined) {
+        return mutate(() =>
+          declareQueueEntry(composition.store, {
+            ref: input.ref,
+            ...(composition.repositoryBinding?.repository === undefined
+              ? {}
+              : { repository: composition.repositoryBinding.repository }),
+            ...(composition.repositoryBinding?.repositoryRoot === undefined
+              ? {}
+              : { repositoryRoot: composition.repositoryBinding.repositoryRoot }),
+            ...(input.priority === undefined ? {} : { priority: input.priority }),
+            ...(input.deps === undefined ? {} : { edges: input.deps }),
+            recordedAt: composition.nowIso(),
+            fenceToken: composition.newFenceToken(),
+          }),
+        );
+      }
+      const recovered = recoverParksForMutation(composition);
+      if (recovered !== undefined) return recovered;
+      const outcomes: QueueIntentOutcome[] = [];
+      for (const target of targets) {
+        const declared = declareQueueEntry(composition.store, {
+          ref: target.ref,
+          repository: target.repoKey,
           ...(input.priority === undefined ? {} : { priority: input.priority }),
-          ...(input.deps === undefined ? {} : { edges: input.deps }),
+          ...(target.edges.length === 0 ? {} : { edges: target.edges }),
           recordedAt: composition.nowIso(),
           fenceToken: composition.newFenceToken(),
-        }),
-      ),
+        });
+        if (!declared.ok) return mapQueueFailure(declared);
+        outcomes.push(declared.value);
+      }
+      const first = outcomes[0];
+      if (first === undefined) {
+        return {
+          ok: false,
+          kind: "input",
+          code: "input.value.rejected",
+          summary: "no declared member entry was added",
+        };
+      }
+      const projected = mutationOutcome(first, resolveDegraded(composition.degraded), composition);
+      if (!projected.ok) return projected;
+      const edges: string[] = [];
+      for (const target of targets) {
+        for (const edge of target.edges) {
+          if (!edges.includes(edge)) edges.push(edge);
+        }
+      }
+      return {
+        ...projected,
+        edges,
+        result: memberAddResult(outcomes),
+        members: targets.map((target) => ({
+          ref: target.ref,
+          repoKey: target.repoKey,
+          lane: target.ref,
+        })),
+      };
+    },
     prioritize: (input) =>
       mutate(() =>
         prioritizeQueueEntry(composition.store, {
@@ -4864,6 +4970,24 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
         ...(outranking === undefined ? {} : { outrankedBy: outranking.ref }),
         ...(heavyLease === undefined ? {} : { weightHeldBy: heavyLease.ref }),
       });
+      // GH-310 AC-F4-1: a member start whose declared prerequisite is unlanded
+      // names the member and the prerequisite it waits on. The delivered
+      // refusal identity and exit are unchanged; only the bounded summary of a
+      // member-ref refusal is enriched.
+      if (!precheck.ok && precheck.reason === "dependency-open" && isMemberRef(selected)) {
+        const prerequisites = entry.deps.filter((dependency) => dependency !== selected);
+        return {
+          ok: false,
+          kind: "queue",
+          code: precheck.code,
+          summary: [
+            "reason=dependency-open",
+            `member=${selected}`,
+            ...(prerequisites.length === 0 ? [] : [`prerequisite=${prerequisites.join(",")}`]),
+            ...(precheck.detail === undefined ? [] : [precheck.detail]),
+          ].join("; "),
+        };
+      }
       // GH-292 F-4 (TDR-0026 DC-2/DC-3): the claim path's holder-aware
       // admission refuses another holder's live same-ref lease before the
       // fence; the own-holder renewal, the other-ref conflict, and the stale

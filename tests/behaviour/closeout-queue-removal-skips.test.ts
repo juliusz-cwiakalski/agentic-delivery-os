@@ -8,6 +8,7 @@ import { claimQueueLease, readQueueRemovals } from "../../packages/core/src/app/
 import {
   CLOSEOUT_WORK_ITEM_REF,
   createQueueRemovalHarness,
+  hookFor,
   seedQueueEntry,
 } from "../fixtures/closeout/queue-removal";
 
@@ -68,6 +69,25 @@ describe("TC-QLC-020 a stale lease is not live", () => {
       expect(removals.records).toEqual([
         expect.objectContaining({ ref: WORK_ITEM_REF, reason: "landed" }),
       ]);
+    } finally {
+      harness.dispose();
+    }
+  });
+});
+
+describe("GH-310 a member-ref skip keeps the delivered reason vocabulary", () => {
+  test("no merge truth names the member ref, never ref-not-canonical", () => {
+    const harness = createQueueRemovalHarness({ label: "member-skip", apply: true });
+    try {
+      const ref = "GH-183@web-ui-5e6f7a8b";
+      const data = hookFor(harness, {
+        mode: "apply",
+        mergedObserved: false,
+        workItemRef: ref,
+      });
+      expect(data.outcome).toBe("skipped");
+      expect("skipReason" in data ? data.skipReason : undefined).toBe("no-merge-truth");
+      expect("ref" in data ? data.ref : undefined).toBe(ref);
     } finally {
       harness.dispose();
     }
