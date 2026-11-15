@@ -10,7 +10,7 @@ phases:
     completed: 2026-11-15T22:09:02.033Z
   specification:
     started: null
-    completed: 2026-11-15T22:55:59.106Z
+    completed: 2026-11-15T23:26:20.306Z
   test_planning:
     started: null
     completed: 2026-11-15T23:04:15.316Z
@@ -109,3 +109,29 @@ notes:
       coverage is not the same as semantic completeness."
     type: retro
     date: "2026-11-15"
+  - text: "dor_check iteration 2: NOT_READY, all six iteration-1 findings verified
+      resolved on merit. One new blocking finding introduced by the remediation:
+      the explicit-run non-counting rule collides with the catch-up
+      missed-window arithmetic (kind-based vs existence-based reading), and both
+      readings jam catch-up or leave a window outstanding forever. Minor: two
+      plan scope/claim residues, one spec wording nit, one stale test-plan gap
+      marker."
+    type: info
+    date: "2026-11-16"
+  - text: "Decided (PM, iteration-2 finding 1): obligation satisfaction is by run
+      identity, not by trigger kind. A window is satisfied when a run with that
+      (ceremony, scopeKey, window) identity exists, whichever kind produced it;
+      the explicit kind is provenance honesty in the record and never
+      impersonates a scheduled or event firing. Rationale: idempotency already
+      forbids a second execution of one identity, so a kind-based obligation
+      could never be cleared and the one-replay-per-invocation slot would jam
+      permanently. Recorded in the spec as DEC-19."
+    type: decision
+    date: "2026-11-16"
+  - text: "Two DoR iterations were spent on contract-detail holes that the spec's
+      own matrices could not see, and the second one was created by the first
+      fix. Lesson: when a new rule interacts with an existing arithmetic
+      (obligations vs missed windows), pin the composition in the same pass as
+      the rule."
+    type: retro
+    date: "2026-11-16"
