@@ -14,7 +14,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-15T16:13:16.810Z }
   quality_gates: { started: null, completed: 2026-11-15T16:50:45.993Z }
   dod_check: { started: null, completed: 2026-11-15T16:53:06.393Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-15T16:56:45.019Z }
 decisions:
   - text: "Scope is the M2-S7 contract in the milestone pack, not a general CI
       matrix engine: `verify gates` must cite the suite breadth it evaluated and
@@ -471,4 +471,18 @@ notes:
       TMPDIR; commit-range gate PASS at the delivered head (34 commits).
       Remaining work is phase 11 (PR creation)."
     type: resolved
+    date: "2026-11-15"
+  - text: "PR created and left OPEN for CEO/human merge:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/325 — base
+      main-tools, head feat/GH-300/suite-job-mapping-gates. Title 'feat(GH-300):
+      suite-to-job mapping in gates — cite breadth and refuse a narrowed local
+      suite'. The branch was pushed with an explicit refspec
+      (HEAD:refs/heads/feat/GH-300/suite-job-mapping-gates) because this
+      worktree's upstream was misconfigured to origin/main-tools; a bare push
+      would have written to main-tools. The PR body carries the acceptance
+      evidence, the gate evidence, and all disclosed residuals (F-11..F-15 plus
+      the temporary `.delivery-os/` exclude removal). Commit-range gate re-run
+      at the actual PR head d05c01d0: PASS, 35 commits, 0 offending. Delivery
+      stops here — no merge, no other ticket."
+    type: info
     date: "2026-11-15"
