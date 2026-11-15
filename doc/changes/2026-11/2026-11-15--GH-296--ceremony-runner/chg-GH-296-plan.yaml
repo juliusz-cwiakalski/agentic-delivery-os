@@ -1,0 +1,768 @@
+# GH-296 implementation plan — machine-readable projection (delivery.plan.v1).
+# Canonical plan artifact: this YAML document is the only plan file for the
+# change. `plan validate`, `plan diff`, `plan overlap`, and `lint plan` read it
+# directly.
+#
+# SOURCES (single source of truth):
+#   - Spec:     ./chg-GH-296-spec.md (v1.0; 9 capabilities F-1..F-9; data model
+#               DM-1..DM-9; NFR-1..NFR-14; 45 ACs in §17 — AC-F1-1..4,
+#               AC-F2-1..3, AC-F3-1..7, AC-F4-1..6, AC-F5-1..3, AC-F6-1..3,
+#               AC-F7-1..5, AC-F8-1..3, AC-F9-1..6, AC-NFR2-1, AC-NFR8-1,
+#               AC-NFR9-1, AC-NFR12-1, AC-NFR14-1; §18 rollout order binds the
+#               phase order below; Appendix B constraints C-1..C-10; Appendix C
+#               documentation deltas; Appendix D single-source tier mapping;
+#               Appendix E testability notes; DEC-1..DEC-15; RSK-1..RSK-12;
+#               OQ-1..OQ-3).
+#   - Tests:    ./chg-GH-296-test-plan.md (v1.0, 60 TCs TC-CEREMONY-001..060;
+#               §4 layer table; §4.3 exit/outcome oracle; §4.4 catch-up matrix
+#               CU-01..CU-09; §4.5 tier verdict matrix T-01..T-11; §4.6 defect
+#               corpus D-01..D-14; §4.7 resume matrix R-01..R-08; §4.8 gate
+#               mapping; binding fixture contract §4.1 and non-vacuity contract
+#               §4.2; §7 automation map; GAP-1..GAP-6; OQ-T1..OQ-T5, OQ-T5
+#               resolved). GAP-1 (this plan's TC mapping) is satisfied by the
+#               TC -> PHASE MAP below WITHOUT reshaping any TC's oracle,
+#               identity, exit, bound, or AC/NFR mapping; no TC id changes.
+#   - PM record: ./chg-GH-296-pm-notes.yaml (milestone M2, story M2-S3,
+#               variant full; the two recorded scope decisions carried into the
+#               spec as DEC-1 and DEC-2).
+#   - Schema:   doc/spec/features/feature-plan-schema.md and
+#               packages/core/src/contracts/plan.ts (scope keys
+#               files/packages/folders with boundary-aware matching, typed
+#               doneArtifacts, leases, weightClass, interactions whose target
+#               must sit inside the phase's own scope; no tasks key, no
+#               progress log).
+#   - Repo rules: .ai/rules/typescript.md (purity, ports, `#` aliases, the
+#               error contract), .ai/rules/testing-strategy.md (layers, module
+#               -> test mapping, invariant-test authoring), AGENTS.md,
+#               .dependency-cruiser.cjs (package matrix and subpath tiers).
+#
+# TIER DECLARATION: `{name: full}` only — no `phases`, no
+#   `escalationTriggers`. This change's own contract (spec DEC-2, Appendix D)
+#   consumes exactly two delivered phase-set sources and forbids a third
+#   vocabulary; a plan-level hardcoded phase-set list would be exactly the
+#   default-set data the ceremony tier engine must never consult, and
+#   AC-NFR9-1/TC-CEREMONY-051 fail a hardcoded default phase set. The recorded
+#   pm-notes variant (`full`) supplies the effective phase set.
+#
+# PHASE ORDER (spec §18, binding): contracts and vocabularies -> record
+#   boundary -> engine (intake, agenda, verification, compaction, resume) ->
+#   catch-up -> built-in declarations -> project declarations -> tier engine ->
+#   measurement record -> mount and documentation. Every phase below is one
+#   `commit`-able delivery slice whose declared narrow gate is green at the
+#   boundary; every phase is `delivery` kind and takes the `repo:main-tools`
+#   lease (mirrored per phase; identical to `defaultLeases`). The family is
+#   composed only in Phase 9, once its engine, declarations, tier engine, and
+#   measurement record exist, so an uncomposed surface can never answer
+#   partially (§18).
+#
+# SHARED CONTRACT FILES (run-in-sequence pairs, named per the overlap
+#   convention; phases sharing one of these files execute in id order, and
+#   independent pairs answer `parallel`):
+#   - packages/core/src/contracts/ceremony.ts        produced 1; consumed 2, 7
+#   - packages/core/src/state/ceremony.ts            produced 2; consumed 3, 4, 8
+#   - packages/core/src/domain/ceremony-run.ts       produced 3; consumed 4
+#   - packages/core/src/contracts/ceremony-builtins.ts produced 5; consumed 6, 9
+#   A consuming phase declares the contract file in its own scope only to make
+#   the consumer edge valid; an untouched declared file is a `plan diff`
+#   observation, never a gate failure.
+#
+# OQ RESOLUTIONS (test plan §8.3 OQ-T1; the spec's proposed resolutions for
+#   OQ-1..OQ-3 are ADOPTED by plan authoring as the spec authorises):
+#   1. OQ-1 — no ceremony run-history read verb ships. `ceremony list`'s
+#      last-run summary plus the durable run/step records carry history; M2-S6
+#      may add the read if it needs one. The mounted grammar stays exactly
+#      `list`, `run`, `resume`, `catch-up` (AC-F1-1).
+#   2. OQ-2 — the comparison record's `nativeBasis` carries per-ceremony
+#      counts, means, and p90 over the observed runs beside the per-run
+#      durations, with the non-interchangeability statement and no
+#      cross-metric aggregation. GAP-6 applies: TC-CEREMONY-041's
+#      `nativeBasis` assertions extend to those aggregates; the mandatory
+#      DM-8 members are unchanged.
+#   3. OQ-3 — the `pre-dispatch` mirror obligation is advisory in this change:
+#      drift is reported as a finding naming the target; blocking dispatch
+#      admission stays deferred (§7.3).
+#   4. OQ-T2 — the after sample is the set of changes whose ceremony phases
+#      were recorded after this change's delivery boundary (its merge into
+#      `main-tools`). At delivery time n = 0 < 5, so the delivered record's
+#      verdict is `insufficient-sample` with the observed n and per-change
+#      values recorded and no trend claim anywhere in the change artifacts
+#      (AC-F8-3, DEC-14, RSK-4). The record is recomputed per delivery; M2-S6
+#      makes the first meaningful trend read.
+#
+# DOCUMENTATION SCOPE (Appendix C): the plan carries ONLY the rows Appendix C
+#   marks "delivering" — #2 result-contract error rows (Phase 1), #7/#8
+#   measurement-baseline spec + log comparison entry (Phase 8), #11-#14 command
+#   registry row, M2 command page, M2 pack README, entrypoint delta (Phase 9),
+#   #15 backlog progress line (Phase 11). The rows Appendix C phases to 7
+#   (#1, #3, #4, #5, #6, #9, #10, #16, #17, #18) are lifecycle
+#   `system_spec_update` work owned by @doc-syncer and are deliberately NOT
+#   plan scope; TC-CEREMONY-060's assertions over those rows bind at the
+#   quality-gates gate after doc sync, not at a delivery-phase boundary.
+#
+# SCOPE CONVENTION: concrete files are exact paths; folders are declared by
+#   every phase that writes a new file inside them (the commit primitive stages
+#   only the declared phase scope). A file edited in two phases is declared in
+#   both phases; `plan diff` reports the first covering phase.
+#
+# DECLARED CONTROLS, NOT EDITS: the delivered regression suites named in the
+#   test plan §7 ("existing suites asserted unchanged" — the retro-*, closeout-*,
+#   brief-*, plan-*, pm-notes-*, state-* families, the delivered envelope and
+#   result-contract suites, and tests/fixtures/closeout/temp-git.ts) are re-run
+#   in phase gates as controls and are NOT edited, so none is declared in a
+#   phase scope. A semantic assertion change in any delivered suite is the
+#   escalation trigger this plan reserves.
+#
+# TC -> PHASE MAP (60 ids = TC-CEREMONY-001..060; every id is owned by exactly
+#   one phase — the phase which first makes its complete suite set green.
+#   Suite halves proven earlier are named in that phase's gate without a second
+#   TC row):
+#   Phase 1 declaration and validator (5): TC-CEREMONY-007 (vocabulary/bounds
+#            half; its six-built-in validation half completes in Phase 5),
+#            TC-CEREMONY-008, 009, 010, 049
+#   Phase 2 record boundary (1): TC-CEREMONY-040 (plus the state-read half of
+#            TC-CEREMONY-022)
+#   Phase 3 runner engine (7): TC-CEREMONY-020, 021, 022, 023, 025, 039, 047
+#   Phase 4 catch-up (4): TC-CEREMONY-026, 027, 028, 029
+#   Phase 5 built-ins and retro levels (16): TC-CEREMONY-011, 012, 013, 014,
+#            015, 016, 017, 018, 019, 024, 043, 044, 045, 046, 048, 052 (plus
+#            the TC-CEREMONY-007 completion)
+#   Phase 6 project declarations (3): TC-CEREMONY-030, 031, 032
+#   Phase 7 tier engine (7): TC-CEREMONY-033, 034, 035, 036, 037, 038, 051
+#   Phase 8 measurement record (2): TC-CEREMONY-041, 042
+#   Phase 9 family mount (6): TC-CEREMONY-001, 002, 003, 004, 005, 006
+#   Phase 10 honesty battery (6): TC-CEREMONY-050, 053, 054, 055, 056, 057
+#   Phase 11 docs and release (3): TC-CEREMONY-058, 059 (evidence-only, GAP-5),
+#            060
+#
+# RELEASE: one lockstep minor changeset (the workspace releases as one group
+#   per .changeset config), version impact `minor` per the spec front matter.
+#   No new package, no new subpath (C-4), no data migration (state is additive;
+#   the measurement log's `comparisons[]` bump is declared in its own document),
+#   no backfill.
+#
+# COMMIT DISCIPLINE (NFR-14, C-9): conventional subjects scoped `GH-296`;
+#   body and footer lines <= 100 characters; commits through the commit
+#   primitive against this plan's phase scope; PR targets `main-tools` and
+#   stays open.
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-296
+tier:
+  name: full
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  # ---------------------------------------------------------------------------
+  # Phase 1 — Ceremony declaration contracts, vocabularies, and the single
+  # validator (F-2; DM-1, DM-2, DM-9; C-1, C-2, C-7).
+  #
+  # Goal: land the authored vocabulary every later phase asserts through, as
+  # contracts data plus one pure validator used by built-ins and projects
+  # alike: the `delivery.ceremony.declarations.v1` member set and bounds
+  # (16 ceremonies/document, 12 phases, 32 steps, 16 inputs, 8 targets,
+  # 1 MiB, id grammar <= 64, unique); the closed vocabularies (step kinds,
+  # output slots, verification modes, trigger events, cadences, catch-up
+  # modes, assess verdicts, run verdicts, carry-over reasons — GAP-2 literals
+  # pinned here as contract constants); the note contract
+  # `delivery.ceremony.note.v1` with `scopeKey` as the idempotency anchor and
+  # the retro fixed members; the run/step payload schema shapes
+  # (`delivery.ceremony.run.v1`, `delivery.ceremony.step.v1`), tier verdict
+  # types (DM-7), and comparison record types (DM-8); and the two additive
+  # error identities (`ceremony.note-invalid`, `ceremony.declaration.invalid`)
+  # under the new `ceremony` domain kind, with the reserved two-segment
+  # allowlist 52 -> 53 and the documented table 136 -> 138 — code rows and
+  # the documented rows land in ONE commit because the error-table sync gate
+  # lives in `pnpm check` (Appendix C #2, delivering). No behaviour change
+  # runs yet: no engine, no state, no surface. The defect corpus
+  # (D-01..D-14) and the bound ladder are committed fixtures.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/structure/{ceremony-contract,ceremony-imports,error-table}.test.ts
+  #   bun test tests/behaviour/ceremony-{declaration,declaration-bounds}.test.ts
+  #   bun test tests/checks/{error-table-sync,fixture-privacy}.test.ts
+  #   bun run scripts/checks/error-table-sync.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  # ---------------------------------------------------------------------------
+  - id: 1
+    title: "Ceremony declaration contracts, closed vocabularies, and the single validator"
+    kind: delivery
+    summary: "feat(ceremony): declare the ceremony vocabulary and single validator; delivers AC-F2-1..AC-F2-3 and AC-NFR8-1; TC-CEREMONY-007 (vocabulary half), TC-CEREMONY-008..010, TC-CEREMONY-049"
+    leases:
+      - repo:main-tools
+    scope:
+      files:
+        - packages/core/src/contracts/ceremony.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/domain/ceremony-declaration.ts
+        - packages/core/src/domain/index.ts
+        - doc/spec/features/feature-result-contract.md
+        - tests/structure/ceremony-contract.test.ts
+        - tests/structure/ceremony-imports.test.ts
+        - tests/structure/error-table.test.ts
+        - tests/checks/error-table-sync.test.ts
+        - tests/behaviour/ceremony-declaration.test.ts
+        - tests/behaviour/ceremony-declaration-bounds.test.ts
+      folders:
+        - tests/fixtures/ceremony/declarations
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/ceremony.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 2 — The ceremony record boundary and artifact family (DM-3..DM-6;
+  # C-3).
+  #
+  # Goal: land the durable substrate. Two additive state kinds under the
+  # `ceremony.` key prefix (`ceremony.runs:<runId>`, `ceremony.steps:<runId>:<index>`)
+  # declared in one artifact boundary with identity fields, required fields,
+  # and closed vocabularies; boundary validation refusing `state.store.unknown`
+  # with `not_landed` and filling no default; fenced single-writer appends
+  # with a post-append verified re-read requiring exactly one new record; the
+  # four read verdicts (valid, verified-empty, torn, unknown) with
+  # entry-level malformation classified in band; run status, run duration,
+  # and per-phase durations as pure folds with no derived run document; and
+  # the `ceremony-artifact` file family in the state directory (one artifact
+  # per run named by run id, `0600`, forever retention, outside the ledger
+  # and derived-document set) with its byte-level write/read/verify adapter
+  # path. Records seeded through the production append path prove TC-040;
+  # the torn read classification proves the state half of TC-022.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/ceremony-state-boundary.test.ts
+  #   bun test tests/structure/state-contract.test.ts
+  #   bun test tests/checks/fixture-privacy.test.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  #   bun run scripts/checks/workspace-entrypoints.ts
+  # ---------------------------------------------------------------------------
+  - id: 2
+    title: "Ceremony record boundary: run/step kinds, fenced appends, folds, and the artifact family"
+    kind: delivery
+    summary: "feat(ceremony): land the ceremony record boundary and artifact family; delivers the DM-3..DM-6 substrate for AC-F4-3 and AC-F8-1; TC-CEREMONY-040 (plus the state half of TC-CEREMONY-022)"
+    leases:
+      - repo:main-tools
+    scope:
+      files:
+        - packages/core/src/contracts/ceremony.ts
+        - packages/core/src/state/ceremony.ts
+        - packages/core/src/state/index.ts
+        - packages/adapters/src/file/ceremony-artifacts.ts
+        - packages/adapters/src/file/index.ts
+        - tests/behaviour/ceremony-state-boundary.test.ts
+        - tests/structure/state-contract.test.ts
+      folders:
+        - tests/fixtures/ceremony
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/ceremony.ts
+        role: consumer
+      - kind: contract-file
+        target: packages/core/src/state/ceremony.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 — The runner engine: intake, artifact-verified agenda execution,
+  # compaction, resume (F-4; DM-2 intake; C-1, C-3, C-5).
+  #
+  # Goal: execute a validated declaration deterministically over injected
+  # ports. Intake resolves the declaration, validates the note when one is
+  # required (absent note -> `input.value.rejected`; missing member, wrong
+  # ceremony, invalid window -> `ceremony.note-invalid` naming the field; a
+  # `--window` disagreement names both; a note without `scopeKey` refuses
+  # before any output — SC-M2-S3-02), computes the run identity
+  # `(ceremony, scopeKey, window)`, and returns the recorded verdict with
+  # `data.reused: true` on an identical identity with zero appends. The
+  # agenda executes in declared order; each step writes its declared slot,
+  # reads it back, and is `verified` only when the read-back passes the
+  # declared mode; a failed verification stops the agenda, makes the run
+  # `unverified` at exit 1, and keeps records plus artifact durable; every
+  # attempted step appends one durable step record; the verdict is the step
+  # fold. Compaction folds each completed phase into a carried summary
+  # <= 4 096 bytes / <= 40 lines with an explicit omitted count. Resume
+  # starts at the first unverified index, never re-executes a verified step,
+  # and refuses a contradicted record sequence as `state.store.torn` at
+  # exit 2 with zero writes. A `sync` step without `--apply` computes and
+  # precondition-checks the write set and lands nothing (dry-run verdict).
+  # Zero model calls, zero ambient reads (C-5).
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/{ceremony-run,ceremony-resume,ceremony-notes}.test.ts
+  #   bun test tests/behaviour/ceremony-state-boundary.test.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  # ---------------------------------------------------------------------------
+  - id: 3
+    title: "Runner engine: note intake, run identity, artifact-verified agenda, compaction, and resume"
+    kind: delivery
+    summary: "feat(ceremony): run artifact-verified agendas with intake, compaction, and resume; delivers AC-F4-1..AC-F4-4, AC-F4-6, AC-F9-1; TC-CEREMONY-020..023, TC-CEREMONY-025, TC-CEREMONY-039, TC-CEREMONY-047"
+    leases:
+      - repo:main-tools
+    scope:
+      files:
+        - packages/core/src/domain/ceremony-intake.ts
+        - packages/core/src/domain/ceremony-run.ts
+        - packages/core/src/domain/ceremony-resume.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/state/ceremony.ts
+        - tests/behaviour/ceremony-run.test.ts
+        - tests/behaviour/ceremony-resume.test.ts
+        - tests/behaviour/ceremony-notes.test.ts
+      folders:
+        - tests/fixtures/ceremony/notes
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/state/ceremony.ts
+        role: consumer
+      - kind: contract-file
+        target: packages/core/src/domain/ceremony-run.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 4 — Catch-up of a missed scheduled run (F-5; NFR-6; CU-01..CU-09;
+  # E-14, E-15).
+  #
+  # Goal: schedule evaluation as a pure function of the declaration, the
+  # injected clock, and the recorded runs — for a cadence, the windows due
+  # before now minus the recorded windows are the missed windows; an
+  # event-triggered ceremony has none and its missed obligation is a declared
+  # gap. `catch-up` replays at most one missed window per ceremony per
+  # invocation (`maxMissedWindows: 1`), labelled `trigger.kind: "catch-up"`
+  # with the missed bounds and the execution window; a second catch-up
+  # appends nothing and reports the window caught up; a no-miss catch-up is
+  # `data.outcome: "nothing-missed"` with zero records at exit 0;
+  # `catchUp.mode: "none"` reports a declared gap with bounds and no run; a
+  # removed declaration keeps its history readable and reports the gap; the
+  # replayed run reads current inputs and fabricates nothing. The structure
+  # suite pins purity: the only time input is the injected clock port, and a
+  # `Date.now` mutation fails.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/ceremony-catch-up.test.ts
+  #   bun test tests/structure/ceremony-catch-up-purity.test.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  # ---------------------------------------------------------------------------
+  - id: 4
+    title: "Catch-up: pure schedule evaluation and bounded single-window replay"
+    kind: delivery
+    summary: "feat(ceremony): evaluate schedules and catch up one missed window; delivers AC-F5-1..AC-F5-3; TC-CEREMONY-026..029"
+    leases:
+      - repo:main-tools
+    scope:
+      files:
+        - packages/core/src/domain/ceremony-schedule.ts
+        - packages/core/src/domain/ceremony-run.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/state/ceremony.ts
+        - tests/behaviour/ceremony-catch-up.test.ts
+        - tests/structure/ceremony-catch-up-purity.test.ts
+      folders:
+        - tests/fixtures/ceremony
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/state/ceremony.ts
+        role: consumer
+      - kind: contract-file
+        target: packages/core/src/domain/ceremony-run.ts
+        role: consumer
+
+  # ---------------------------------------------------------------------------
+  # Phase 5 — The six built-in declarations, parity, and the retro ceremony
+  # levels (F-3, F-9; DM-2 retro members; DEC-3, DEC-4, DEC-7, DEC-12;
+  # Appendix E).
+  #
+  # Goal: ship the six built-ins as contract data — `morning-brief`,
+  # `retro-evidence-pass`, `sprint-rollover`, `night-watch`,
+  # `testing-session-assessment`, `decision-record-mirror-sync` — plus the
+  # pure per-ceremony folds/renders their declarations name (the carry-over
+  # fold over the closed reason set, the night-watch check set with explicit
+  # verified-empty, the assess verdict mapping, the brief render reusing the
+  # delivered `delivery.brief.v1` projection), the retro ceremony module
+  # (per-level note assembly for `session`/`incident`/`window`/`project`,
+  # follow-through verification declared and asserted FIRST, fixed-schema
+  # validation on write and read-back, addendum-not-rewrite, null-retro
+  # success, read-only fold over the delivered evidence sidecar and
+  # `retro.run` records, actions as a handoff section only), and the
+  # mirror-sync planning (declared write set, clean/declared-base
+  # preconditions with no force path, `artifact-equals-source` both
+  # directions, dry-run default, the delivered commit primitive composed and
+  # never re-implemented). One parametric parity suite iterates the six
+  # production declarations through the single runner path with one negative
+  # case each; the structure suite fails a per-ceremony branch and a
+  # follow-through position edit. Degradation renders as data (state plus
+  # reason, E-7). The `retro` pipeline and closeout are re-run as unchanged
+  # controls. TC-CEREMONY-007 completes here (six of six validate).
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/ceremony-parity.test.ts
+  #   bun test tests/behaviour/ceremony-flow-{brief,retro,retro-levels,assessment,mirror,night-watch,rollover}.test.ts
+  #   bun test tests/behaviour/{ceremony-run,ceremony-notes}.test.ts
+  #   bun test tests/golden/ceremony-brief.test.ts
+  #   bun test tests/structure/{ceremony-parity-invariants,ceremony-contract}.test.ts
+  #   bun test tests/behaviour/{retro-malformed,closeout-telemetry-production}.test.ts
+  #   bun test tests/checks/fixture-privacy.test.ts
+  # ---------------------------------------------------------------------------
+  - id: 5
+    title: "Six built-in declarations with one parity suite and the four retro ceremony levels"
+    kind: delivery
+    summary: "feat(ceremony): ship the six built-ins with parity and the retro levels; delivers AC-F3-1..AC-F3-7, AC-F4-5, AC-F9-2..AC-F9-6, and the AC-F2-1 completion; TC-CEREMONY-011..019, TC-CEREMONY-024, TC-CEREMONY-043..046, TC-CEREMONY-048, TC-CEREMONY-052 (plus the TC-CEREMONY-007 completion)"
+    leases:
+      - repo:main-tools
+    scope:
+      files:
+        - packages/core/src/contracts/ceremony-builtins.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/domain/ceremony-builtins.ts
+        - packages/core/src/domain/ceremony-retro.ts
+        - packages/core/src/domain/ceremony-mirror.ts
+        - packages/core/src/domain/index.ts
+        - tests/behaviour/ceremony-parity.test.ts
+        - tests/behaviour/ceremony-run.test.ts
+        - tests/behaviour/ceremony-notes.test.ts
+        - tests/behaviour/ceremony-flow-brief.test.ts
+        - tests/behaviour/ceremony-flow-retro.test.ts
+        - tests/behaviour/ceremony-flow-retro-levels.test.ts
+        - tests/behaviour/ceremony-flow-assessment.test.ts
+        - tests/behaviour/ceremony-flow-mirror.test.ts
+        - tests/behaviour/ceremony-flow-night-watch.test.ts
+        - tests/behaviour/ceremony-flow-rollover.test.ts
+        - tests/structure/ceremony-parity-invariants.test.ts
+        - tests/golden/ceremony-brief.test.ts
+      folders:
+        - tests/fixtures/ceremony
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/ceremony-builtins.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 6 — Project-declared ceremonies through the same runner (F-6;
+  # DEC-6, DEC-15; E-10, E-11).
+  #
+  # Goal: one bounded read of the committed declaration document
+  # `<configDirectoryName>/ceremonies.yaml` (schema, size, permission,
+  # classification rules inherited from the configuration parser class).
+  # Absent -> built-ins only (the parity path). Present but unparseable or
+  # over-bound -> the delivered `config.file.malformed` refusal at exit 1
+  # before any run, never a silent drop. Present with a defective entry or a
+  # built-in id collision -> `ceremony.declaration.invalid` naming id and
+  # field with zero partial registration and the built-in still effective.
+  # An empty `ceremonies: []` behaves identically to an absent document. A
+  # valid project declaration registers with origin `project` and executes
+  # through the same dispatcher, verifiers, and records with zero tooling
+  # change. No overlay, user-global, or environment source supplies or
+  # completes a declaration.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/ceremony-project-declarations.test.ts
+  #   bun test tests/behaviour/ceremony-declaration.test.ts
+  #   bun test tests/checks/fixture-privacy.test.ts
+  #   bun run scripts/checks/workspace-entrypoints.ts
+  # ---------------------------------------------------------------------------
+  - id: 6
+    title: "Project-declared ceremonies: the committed declaration document and the declared-set registry"
+    kind: delivery
+    summary: "feat(ceremony): read project declarations from the committed document; delivers AC-F6-1..AC-F6-3; TC-CEREMONY-030..032"
+    leases:
+      - repo:main-tools
+    scope:
+      files:
+        - packages/adapters/src/file/ceremony-declarations.ts
+        - packages/adapters/src/file/index.ts
+        - packages/core/src/domain/ceremony-registry.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/contracts/ceremony-builtins.ts
+        - tests/behaviour/ceremony-project-declarations.test.ts
+      folders:
+        - tests/fixtures/ceremony/declarations
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/ceremony-builtins.ts
+        role: consumer
+
+  # ---------------------------------------------------------------------------
+  # Phase 7 — The ceremony tier engine over delivered tier data (F-7; DM-7;
+  # DEC-2, DEC-13; Appendix D; T-01..T-11).
+  #
+  # Goal: one pure mapping that consumes exactly two delivered sources —
+  # `PLAN_KNOWN_TIERS`/the plan `tier` declaration and
+  # `PM_NOTES_REQUIRED_PHASES_BY_VARIANT` — imported, never restated. The
+  # pm-notes variant supplies the effective phase set; disagreement is a
+  # `tier-mismatch` finding naming both and never blocks; plan
+  # `tier.phases` narrows within the canonical eleven with
+  # `unresolved-phase` findings for non-canonical ids; the closed
+  # five-trigger escalation vocabulary (`phase-reopen`, `dor-rework`,
+  # `review-rework`, `gate-failure`, `owner-escalation`) is evidence-gated —
+  # a matched trigger escalates the effective set to `full` for the
+  # remainder and is recorded with its evidence; a declared string outside
+  # the vocabulary is reported verbatim as `unevaluated`. Tiered intake
+  # obligates only ceremonies whose declared `tiers` include the effective
+  # tier; an explicit run is never gated. The structure suite pins the
+  # single-source property: no phase-set literal, no third tier name, no
+  # hardcoded default set, each with a failing mutant.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/{ceremony-tier,ceremony-tier-intake}.test.ts
+  #   bun test tests/structure/ceremony-tier-single-source.test.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  # ---------------------------------------------------------------------------
+  - id: 7
+    title: "Ceremony tier engine: the single plan-tier/pm-notes-variant mapping with escalation and findings"
+    kind: delivery
+    summary: "feat(ceremony): land the single-source tier engine; delivers AC-F7-1..AC-F7-5 and AC-NFR9-1; TC-CEREMONY-033..038, TC-CEREMONY-051"
+    leases:
+      - repo:main-tools
+    scope:
+      files:
+        - packages/core/src/contracts/ceremony.ts
+        - packages/core/src/domain/ceremony-tier.ts
+        - packages/core/src/domain/index.ts
+        - tests/behaviour/ceremony-tier.test.ts
+        - tests/behaviour/ceremony-tier-intake.test.ts
+        - tests/structure/ceremony-tier-single-source.test.ts
+      folders:
+        - tests/fixtures/ceremony/tier
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/ceremony.ts
+        role: consumer
+      - kind: contract-file
+        target: packages/core/src/domain/ceremony-tier.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 8 — Durable measurement and the ceremony-share comparison record
+  # (F-8; DM-8; DEC-1, DEC-8, DEC-14; RSK-4, RSK-8).
+  #
+  # Goal: make ceremony time computable and record this change's own honest
+  # comparison. The measurement fold derives run duration, per-phase
+  # durations, and per-ceremony aggregates from the verified run/step
+  # records — no self-reported input, no second stored figure. The
+  # comparison record (DM-8) carries the committed `MET-CEREMONY-SHARE`
+  # identity, `definitionRef` with the log row's `source_commit`, the
+  # committed before value with its window/sample/status/basis, the after
+  # sample over post-boundary changes with per-change values,
+  # `sampleMinimum: 5`, a verdict from the closed set, the nativeBasis
+  # aggregates with the non-interchangeability statement (OQ-2 adopted), and
+  # the disclosure. The committed log gains the additive `comparisons[]`
+  # entry under its declared schema-version bump with no existing row edited
+  # and no `MET-` ID reallocated (Appendix C #7 and #8, both delivering:
+  # the log is data this change writes). The honesty suite scans this
+  # change's own artifacts for a trend claim below the minimum and asserts
+  # none; at delivery time n = 0, the verdict is `insufficient-sample`
+  # (OQ-T2 resolution above).
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/ceremony-comparison.test.ts
+  #   bun test tests/golden/ceremony-comparison.test.ts
+  #   bun test tests/checks/ceremony-comparison-honesty.test.ts
+  #   bun test tests/behaviour/ceremony-state-boundary.test.ts
+  #   git diff --check
+  # ---------------------------------------------------------------------------
+  - id: 8
+    title: "Measurement records: duration folds and the committed ceremony-share comparison"
+    kind: delivery
+    summary: "feat(ceremony): record run durations and the ceremony-share comparison; delivers AC-F8-1..AC-F8-3; TC-CEREMONY-041..042"
+    leases:
+      - repo:main-tools
+    scope:
+      files:
+        - packages/core/src/domain/ceremony-comparison.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/state/ceremony.ts
+        - doc/planning/oss-tooling/measurement-baseline.yaml
+        - doc/spec/features/feature-measurement-baseline.md
+        - tests/behaviour/ceremony-comparison.test.ts
+        - tests/golden/ceremony-comparison.test.ts
+        - tests/checks/ceremony-comparison-honesty.test.ts
+      folders:
+        - tests/fixtures/ceremony/comparison
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/state/ceremony.ts
+        role: consumer
+      - kind: contract-file
+        target: packages/core/src/domain/ceremony-comparison.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 9 — The `ceremony` family mount (F-1; DEC-10; C-1, C-2, C-6; DoD-1).
+  #
+  # Goal: compose the family only now that its engine, declarations, tier
+  # engine, and measurement record exist. Exactly four verbs — `list`, `run`,
+  # `resume`, `catch-up` — with `--note <path>`, `--window <start>..<end>`,
+  # `--apply`, the three global flags, the five-field `delivery.result.v1`
+  # envelope with all new fields under `data`, exits in `{0, 1, 2}`, grammar
+  # refusals through `fallback.invocation` before any read or write, an
+  # undeclared name through `input.value.rejected` naming the requested name
+  # and the declared set, `--apply` accepted-and-inert without a `sync` step,
+  # and the bounded deterministic human render (one line per ceremony for
+  # `list`, one line per step plus a verdict line for `run`/`resume`, one
+  # line per ceremony plus a total for `catch-up`, <= 32 lines / <= 6 144
+  # bytes). Mounting per C-6: the prompt-required set entry (count 20 -> 21
+  # asserted in the same commit), the unconditional production composition,
+  # family and verb help entries, the M2 reference page, the coverage-
+  # inventory row, and the registry/pack/entrypoint-delta documentation rows
+  # Appendix C marks delivering (#11..#14). The edge composes the production
+  # input readers, the declaration document read, the state port, the
+  # injected clock and id factories, the artifact writer, and the mirror-sync
+  # target reads.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/{ceremony-cli,ceremony-list}.test.ts
+  #   bun test tests/golden/ceremony-envelope.test.ts
+  #   bun test tests/structure/{envelope-contract,content-inventory,entrypoint-bin}.test.ts
+  #   bun test tests/checks/{help-guide-coverage,prompt-conformance}.test.ts
+  #   bun run scripts/checks/help-guide-coverage.ts
+  #   bun run scripts/checks/prompt-conformance.ts
+  # ---------------------------------------------------------------------------
+  - id: 9
+    title: "Family mount: the four `ceremony` verbs, composition, help, reference page, and coverage"
+    kind: delivery
+    summary: "feat(cli): mount the ceremony family and its documentation rows; delivers AC-F1-1..AC-F1-4; TC-CEREMONY-001..006"
+    leases:
+      - repo:main-tools
+    scope:
+      files:
+        - packages/cli/src/commands/ceremony.ts
+        - packages/cli/src/commands/index.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - packages/cli/src/help.ts
+        - packages/cli/src/help/prompt-required-commands.ts
+        - packages/cli/src/output/ceremony-text.ts
+        - packages/core/src/contracts/ceremony-builtins.ts
+        - doc/planning/oss-tooling/cli-command-registry.md
+        - doc/planning/oss-tooling/milestones/m2/commands/ceremony.md
+        - doc/planning/oss-tooling/milestones/m2/README.md
+        - doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md
+        - tests/behaviour/ceremony-cli.test.ts
+        - tests/behaviour/ceremony-list.test.ts
+        - tests/golden/ceremony-envelope.test.ts
+        - tests/structure/envelope-contract.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/entrypoint-bin.test.ts
+        - tests/fixtures/help-guide/coverage.json
+        - tests/checks/help-guide-coverage.test.ts
+        - tests/checks/prompt-conformance.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/commands/ceremony.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/ceremony-builtins.ts
+        role: consumer
+
+  # ---------------------------------------------------------------------------
+  # Phase 10 — The cross-cutting honesty battery (AC-NFR2-1; NFR-2, NFR-7,
+  # NFR-11, NFR-13; §4.2 non-vacuity; Appendix E; DoD-13).
+  #
+  # Goal: pin the rules that span paths and modules, over the complete
+  # production set. The mutant meta-suite disables one rule at a time in
+  # temp copies (skip read-back verification, treat outcome as verification,
+  # resume from step 0, allow a duplicate run identity, allow a second
+  # missed window, hardcode the `lite` set, drop an `unevaluated` trigger,
+  # treat `declaredTier` as authoritative, write a note body instead of an
+  # addendum, fabricate a null-retro finding, substitute the native basis,
+  # zero-fill `insufficient-sample` into `flat`) and each must fail while
+  # the real modules pass. The imports suite completes its full-path scan
+  # (zero inference clients, model identifiers, network modules, ambient
+  # clock/random/environment reads across fold, render, verification, and
+  # tier paths, with planted-violation controls). Determinism: byte-identical
+  # repeat renders, permutation-invariant folds, bounded human output with
+  # the verdict line never truncated. Bounds: measured bytes at and above
+  # every limit. Performance: the bounded-work oracle (read counts, zero
+  # retries/pagination/child processes/network) with the wall clock recorded
+  # as a reference measurement only (GAP-3). Hermeticity: the probe fails on
+  # network open, spawn, real-`$HOME` read, live-tree write, and an
+  # unguarded skip. Non-regression: the delivered retro, closeout, brief,
+  # plan, pm-notes, and pm-notes surfaces unchanged, and the excluded
+  # surfaces (metrics, action registry, pack, scheduler, event topic, MCP
+  # tool) absent. Tests and fixtures only.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/{ceremony-determinism,ceremony-bounds,ceremony-performance,ceremony-nonregression}.test.ts
+  #   bun test tests/checks/{ceremony-mutants,ceremony-hermetic}.test.ts
+  #   bun test tests/structure/ceremony-imports.test.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  # ---------------------------------------------------------------------------
+  - id: 10
+    title: "Cross-cutting honesty battery: purity mutants, determinism, bounds, cost, hermeticity, and non-regression"
+    kind: delivery
+    summary: "test(ceremony): pin purity, determinism, bounds, cost, hermeticity, and non-regression; delivers AC-NFR2-1; TC-CEREMONY-050, TC-CEREMONY-053..057"
+    leases:
+      - repo:main-tools
+    scope:
+      files:
+        - tests/behaviour/ceremony-determinism.test.ts
+        - tests/behaviour/ceremony-bounds.test.ts
+        - tests/behaviour/ceremony-performance.test.ts
+        - tests/behaviour/ceremony-nonregression.test.ts
+        - tests/checks/ceremony-mutants.test.ts
+        - tests/checks/ceremony-hermetic.test.ts
+        - tests/structure/ceremony-imports.test.ts
+      folders:
+        - tests/fixtures/ceremony
+
+  # ---------------------------------------------------------------------------
+  # Phase 11 — Documentation completion, planning corpus, the changeset, and
+  # the release obligations (NFR-14; C-8, C-9; DoD-12, DoD-14; Appendix C
+  # #15).
+  #
+  # Goal: make every plan-owned page true and record the delivered story.
+  # The backlog M2-S3 progress line names the delivered scope (runner, six
+  # built-ins, project declarations, tier engine, records, comparison, retro
+  # levels); the doc-conformance rows for this change's documents land; one
+  # lockstep minor changeset is staged. The Appendix C phase-7 rows (the new
+  # feature spec, the new operator guide with `ados_distribution:
+  # redistributable`, the state-layer/plan-schema/pm-notes/retro-pipeline/
+  # entrypoint spec updates, the documentation index, the nonfunctional row,
+  # and the retrospectives concept note) are lifecycle `system_spec_update`
+  # work owned by @doc-syncer after delivery and are deliberately NOT
+  # declared here; TC-CEREMONY-060's assertions over them bind at the
+  # quality-gates gate. The final gate runs the aggregate battery, the
+  # commit-range lint, the distribution guard, and `plan validate GH-296`;
+  # the gate log, the range verdict, and the PR URL are recorded as pm-notes
+  # `notes:` evidence (TC-CEREMONY-058/059, GAP-5).
+  #
+  # Gate:
+  #   PATH="$PWD/node_modules/.bin:$PATH" bun packages/cli/bin/delivery-os.ts plan validate GH-296
+  #   TMPDIR="$PWD/tmp/tmpdir" pnpm check
+  #   ./scripts/lint-commit-range.sh --base main-tools
+  #   bash scripts/.tests/test-doc-distribution.sh
+  #   git diff --check
+  #
+  # Exit: every AC is met and every declared phase complete (AC-F1-1..
+  #   AC-NFR14-1 mapped per the TC -> PHASE MAP); the envelope, error table,
+  #   state layer, retro pipeline, closeout, plan, and pm-notes contracts are
+  #   additive-only with zero delivered rows reworded; the excluded surfaces
+  #   are absent; the changeset validates; the release obligations are
+  #   declared.
+  # ---------------------------------------------------------------------------
+  - id: 11
+    title: "Documentation completion, planning corpus, changeset, and release obligations"
+    kind: delivery
+    summary: "docs(ceremony): reconcile the planning corpus and declare release; delivers AC-NFR14-1; TC-CEREMONY-058..060"
+    leases:
+      - repo:main-tools
+    scope:
+      files:
+        - .changeset/gh-296-ceremony-runner-minor.md
+        - doc/planning/oss-tooling/backlog.md
+        - tests/checks/doc-conformance.test.ts
+      folders:
+        - doc/changes/2026-11/2026-11-15--GH-296--ceremony-runner
+    doneArtifacts:
+      mergeRequestUrl: "pull request for feat/GH-296/ceremony-runner targeting main-tools, left open"
+      pipelineId: "CI pipeline for the GH-296 delivery branch"
+      trackerTransition: "in-review"
