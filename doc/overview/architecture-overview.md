@@ -176,7 +176,8 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
 - `verify change <ref>` classifies ledger/document completeness, not merge readiness.
   `verify gates <ref>` evaluates the config-declared battery (CI, push parity,
   squash surface, address completion, lifecycle, and any declared battery gate)
-  and appends one gate-verification record. `verify deploy <ref>` reads the deploy
+  and, for a full battery evaluation that is not refused for narrowed suite
+  breadth, appends one gate-verification record. `verify deploy <ref>` reads the deploy
   job trace once and renders a verified/unknown/failed verdict. See the
   [handler](../../packages/cli/src/commands/verify.ts),
   [gate contract](../spec/features/feature-verify-gates.md), and

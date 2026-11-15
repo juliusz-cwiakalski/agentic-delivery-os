@@ -61,9 +61,7 @@
             "omitted": 0
           }
         ],
-        "reasons": [
-          "lifecycle-complete"
-        ]
+        "reasons": ["lifecycle-complete"]
       }
     },
     {
@@ -141,9 +139,7 @@
             "omitted": 0
           }
         ],
-        "reasons": [
-          "ci-green"
-        ]
+        "reasons": ["ci-green"]
       }
     },
     {
@@ -184,9 +180,7 @@
           }
         ],
         "names": [],
-        "reasons": [
-          "parity-matched"
-        ]
+        "reasons": ["parity-matched"]
       }
     },
     {
@@ -221,9 +215,7 @@
             "omitted": 0
           }
         ],
-        "reasons": [
-          "owner-gate-absent"
-        ]
+        "reasons": ["owner-gate-absent"]
       }
     },
     {
@@ -261,16 +253,11 @@
         "names": [
           {
             "kind": "squash-signals",
-            "values": [
-              "draft=false",
-              "mergeable=mergeable"
-            ],
+            "values": ["draft=false", "mergeable=mergeable"],
             "omitted": 0
           }
         ],
-        "reasons": [
-          "squash-ready"
-        ]
+        "reasons": ["squash-ready"]
       }
     }
   ],

@@ -79,6 +79,7 @@ becomes policy-engine scope by gaining a check.
 | Secrets live in the environment only, never in repository-scoped config | Config layer hard error (DEC-4, M0-S4) |
 | Briefs and ceremonies render from source, never carry stale text | Render-from-source verification (M1-S6, M2-S3) |
 | Owner-only decision classes (pricing, legal, destructive operations, new cost patterns) are never delegated | Decision-class scan in the policy engine |
+| Local gate breadth must equal CI breadth | Suite-breadth citation and narrowed-scope refusal in the gate battery (`verify.suite-map`, `data.suiteBreadth`/`data.mirrorsJob`, `verify.narrowed-scope`) |
 
 ## C. Future policy ideas (not used yet)
 
@@ -88,7 +89,6 @@ becomes policy-engine scope by gaining a check.
 | Dependency license policy: registry with allow and deny lists, unknown fails closed | Planned with the license registry (M0-S18) |
 | No hosted-product content in committed files | Planned guard (M0-S15) |
 | Merge freeze windows | FreezeFlag primitive (M1) |
-| Local gate breadth must equal CI breadth | Suite-to-job mapping (M2-S7) |
 | Build-weight class constraints (no two heavy builds per runner) | Lane plan (M1-S17) |
 | Agents use only models from their assigned profile class | Model profiles (concepts/model-profiles.md) |
 | Exceptions expire quarterly unless renewed | Exception lifecycle in the policy engine |
@@ -103,7 +103,7 @@ becomes policy-engine scope by gaining a check.
 - M0-S4, M0-S15, M0-S18: config-layer enforcement, privacy guard, license
   gate (early policy checks).
 - M1-S5: owner-gate SLA (a prose rule gaining its check).
-- M1-S17, M2-S7: build-weight and suite-breadth policies.
+- M1-S17: build-weight policy. M2-S7 delivered the suite-breadth policy as the gate battery's declared map, cited breadth, and narrowed-scope refusal.
 - Blueprint grounding: the bash-era merge-policy, settings-snapshot, and
   pre-push-gate scripts (see the private blueprint inventory, section 6).
 

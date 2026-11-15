@@ -74,10 +74,15 @@ declared comparator is `>=`: at-bound is stale.
 
 ## Gate-verification record and freshness envelope
 
-Every full evaluation appends exactly one fenced, post-append-verified record
+Every full evaluation that is not refused for narrowed suite breadth appends
+exactly one fenced, post-append-verified record
 (`delivery.merge.gate-verification.v1`, record kind
 `merge.gate-verification`): `verify gates` records the battery entries and
-`merge --dry-run` records the merge-applicable entries. The record carries the
+`merge --dry-run` records the merge-applicable entries. A `verify gates` run
+refused with `verify.narrowed-scope` appends no record and no capsule event, so
+`merge`'s freshness read sees only the previous record. The record shape,
+schema, derivation, and the one-append counting for every non-refused evaluation
+are unchanged. The record carries the
 change ref, head SHA, verification time, gate-set identity, per-gate verdicts
 with bounded citations, and the observed tracker posture. An append failure is
 a classified state failure and is never consumable evidence. `verify gates`

@@ -40,13 +40,13 @@ The surface consumes the [pm-notes lint and phase-transition](feature-pm-notes-l
 ### Goals & Success Metrics
 
 - **Primary goal:** Verify a delivered change against its declared variant's phase ledger and classify the delivery result tuple in one read-only call.
-- **KPIs:** Incomplete, malformed, missing-target, and unverifiable fixtures produce exit `0` zero times; incomplete verdicts name every missing required phase in required-set order; the token set and order equal the bash usage enum (11/11, 0 drift); every token has exactly one taxonomy row; `verify change` performs zero writes, fences, network calls, and process spawns, `verify gates` adds exactly one gate-verification record, and `verify deploy` performs one bounded trace read and writes nothing; replay over identical inputs is byte-identical.
+- **KPIs:** Incomplete, malformed, missing-target, and unverifiable fixtures produce exit `0` zero times; incomplete verdicts name every missing required phase in required-set order; the token set and order equal the bash usage enum (11/11, 0 drift); every token has exactly one taxonomy row; `verify change` performs zero writes, fences, network calls, and process spawns, `verify gates` adds exactly one gate-verification record per full battery evaluation that is not refused for narrowed suite breadth (none on a narrowed refusal), and `verify deploy` performs one bounded trace read and writes nothing; replay over identical inputs is byte-identical.
 
 ## User Experience & Functionality
 
 ### Command surface
 
-`verify` is a top-level command with three subcommands, `change`, `gates`, and `deploy`, each followed by exactly one change ref. There are no command-specific flags; `--json` is the existing global machine-output flag and gains no new behavior. `verify change` is ledger-only and network-free; `verify gates` consumes the structured `VerifyLedgerEvaluation`, performs bounded provider reads, and appends one gate-verification record ([Verify Gates](feature-verify-gates.md)); `verify deploy` reads the deploy job trace once ([Merge and Verify Deploy](feature-merge-verify-deploy.md)).
+`verify` is a top-level command with three subcommands, `change`, `gates`, and `deploy`, each followed by exactly one change ref. There are no command-specific flags; `--json` is the existing global machine-output flag and gains no new behavior. `verify change` is ledger-only and network-free; `verify gates` consumes the structured `VerifyLedgerEvaluation`, performs bounded provider reads, and appends one gate-verification record for a full battery evaluation that is not refused for narrowed suite breadth ([Verify Gates](feature-verify-gates.md)); `verify deploy` reads the deploy job trace once ([Merge and Verify Deploy](feature-merge-verify-deploy.md)).
 
 | Invocation | Outcome |
 |---|---|

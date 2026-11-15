@@ -14,8 +14,6 @@
     "summary": "result=unknown; gates=0/0 passed, 0 failed, 0 unknown; scope=narrowed mirror=job-01 breadth=tests,lint,format,typecheck,boundaries,prompt-conformance,help-guide-coverage,exports-parity"
   },
   "detail": {
-    "suiteBreadth": [
-      "tests"
-    ]
+    "suiteBreadth": ["tests"]
   }
 }

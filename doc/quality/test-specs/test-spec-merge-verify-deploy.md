@@ -28,7 +28,7 @@ links:
 | Coordinator-only | No daemon/dispatch merge composition (the daemon has no merge code path and never fires a merge); the merge command is the only landing producer | `tests/behaviour/merge-coordinator-boundary.test.ts` |
 | Privacy | No secret, title, body, comment, raw payload, or log body in any output or record; allowlist unchanged | `tests/behaviour/merge-privacy.test.ts`, `tests/checks/secret-read-boundary.test.ts` |
 | No live calls | Static scan plus a throwing fetch guard with zero calls and a deliberate-call control | `tests/checks/merge-deploy-no-live-calls.test.ts` |
-| verify-gates non-regression | Pre-change verdict/citation/order/human bytes remain golden-identical; exactly one appended record per full battery evaluation | `tests/golden/verify-gates.test.ts`, `tests/behaviour/merge-verification-record.test.ts` |
+| verify-gates non-regression | Pre-change verdict/citation/order/human bytes remain golden-identical; exactly one appended record per full battery evaluation that is not refused for narrowed suite breadth, and none on a narrowed refusal | `tests/golden/verify-gates.test.ts`, `tests/behaviour/merge-verification-record.test.ts` |
 
 ## Notes
 

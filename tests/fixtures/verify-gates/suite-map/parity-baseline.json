@@ -2,10 +2,7 @@
   "provenance": {
     "baseSha": "8a1f77ad",
     "corpusCaseCount": 48,
-    "modes": [
-      "json",
-      "human"
-    ],
+    "modes": ["json", "human"],
     "captureCommand": "bun run tmp/tmpdir/capture-suite-map-baseline.ts (48 corpus cases, no suite map)",
     "capturedAt": "2026-11-15T12:00:00Z",
     "noMapDialect": "verify.suite-map absent; the harness default is undeclared"

@@ -228,6 +228,7 @@ Configuration adds the proposed Ajv and YAML runtime dependencies recorded in th
 - **Consumed by** the commit primitive ([Commit Primitive](feature-commit-primitive.md)) for the resolved `commit.phaseCommit` key that decides whether a phase completion lands its commit atomically.
 - **Consumed by** the doctor diagnostic ([Doctor](feature-doctor.md)) for the resolved provider branch only, read tolerantly so a resolution failure becomes provider-check evidence; doctor adds no keys and no doctor configuration branch.
 - **Consumed by** coordinator supervision ([Coordinator Supervision](feature-coordinator-supervision.md)) for the resolved `coordinator` branch; the six values are policy data and the branch reuses the existing configuration identities.
+- **Consumed by** verify gates ([Verify Gates](feature-verify-gates.md)) for the one `verify.suite-map` node, read from the project-committed document alone rather than from a resolved merged tree.
 - **Separate capability:** credential resolution is the port documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md); keyring sources and sidecar transport remain later capabilities, and state storage is the separate [State Layer](feature-state-layer.md).
 
 ## Glossary & References
@@ -258,6 +259,29 @@ The production catalog declares a typed `merge` branch:
 
 Every merge key reports its own per-value origin evidence, and a declared list replaces the earlier list. See
 [Merge and Verify Deploy](feature-merge-verify-deploy.md).
+
+## The verify configuration branch
+
+The production catalog declares a typed `verify` branch with one key:
+
+| Key | Shape | Default | Semantics |
+|---|---|---|---|
+| `verify.suite-map` | `{ schemaVersion, jobs[], local }` | absent | The declared suite-to-job map (schema `delivery.verify.suite-map.v1`). `jobs[]` entries carry exactly `job` (a single-line printable expected-check-run name, 1..120 characters, no control character, no leading or trailing whitespace, exact match) and `suites` (1..32 suite identifiers); `local` is 1..32 suite identifiers. A suite identifier matches `^[a-z][a-z0-9-]*$` at 1..64 characters and is unique within one list; at most 64 `jobs[]` entries are allowed. Absent means undeclared and no default map is invented. Every defect is refused `config.value.invalid` before any read. |
+
+The branch constrains whole-document validity for consumers that resolve the
+merged tree; it is not a validator for this node, because it cannot express the
+identifier grammar, the length and cap bounds, or list uniqueness, and the gates
+surface never consumes its whole-document outcome for the map. The gates surface
+reads exactly that node from the project-committed document alone — never from
+the merged layer tree and never from a system, user-global, project-local,
+environment, or CLI source — by one bounded resolution attempt: at most one
+stat-class existence probe plus at most one bounded content read, and zero
+content reads when neither a selected nor a committed path exists. A selection
+naming a missing or unreadable path is the unusable-selector `config.value.invalid`
+refusal, never the undeclared parity path; an unreadable, unparseable, or
+defective-node document refuses before any gates source read; a parsed document
+without the node is undeclared; and a schema or semantic defect outside the node
+is not interpreted. The declaration is consumed by [Verify Gates](feature-verify-gates.md).
 
 ## The harness configuration branch
 

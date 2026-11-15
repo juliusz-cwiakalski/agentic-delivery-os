@@ -85,9 +85,7 @@
             "omitted": 0
           }
         ],
-        "reasons": [
-          "ci-green"
-        ]
+        "reasons": ["ci-green"]
       },
       "member": "api-service-1a2b3c4d"
     },
@@ -129,9 +127,7 @@
           }
         ],
         "names": [],
-        "reasons": [
-          "parity-matched"
-        ]
+        "reasons": ["parity-matched"]
       },
       "member": "api-service-1a2b3c4d"
     },
@@ -210,9 +206,7 @@
             "omitted": 0
           }
         ],
-        "reasons": [
-          "ci-green"
-        ]
+        "reasons": ["ci-green"]
       },
       "member": "web-ui-5e6f7a8b"
     },
@@ -254,9 +248,7 @@
           }
         ],
         "names": [],
-        "reasons": [
-          "parity-matched"
-        ]
+        "reasons": ["parity-matched"]
       },
       "member": "web-ui-5e6f7a8b"
     }
