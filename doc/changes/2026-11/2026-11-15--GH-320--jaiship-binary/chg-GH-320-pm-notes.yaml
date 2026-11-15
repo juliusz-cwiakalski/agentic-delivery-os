@@ -309,3 +309,15 @@ notes:
       sites and createConfigProgram, not for readProjectGroupsConfig."
     type: risk
     date: "2026-11-15"
+  - text: "Plan phase 3 (local install launcher at the brand install path)
+      delivered by commit ddffaa0121d8c4032bf391a91c013ee560dca4ea. Gates
+      green: shellcheck --severity=error (clean); install-launcher-installer
+      (7 pass); install-launcher + entrypoint-installer-absence (11 pass);
+      bash scripts/.tests/test-install.sh 56/56 passed as the unchanged
+      control; entrypoint-two-bins (18 pass); entrypoint-bin + content-inventory
+      (34 pass). Deviation recorded: the delivered dry-run control installs from
+      a mock source without the CLI entry, so the launcher step reports the
+      planned registration and exits 0 under DRY_RUN; the classified
+      missing-runtime and no-CLI-entry failures apply to a real run."
+    type: info
+    date: "2026-11-15"

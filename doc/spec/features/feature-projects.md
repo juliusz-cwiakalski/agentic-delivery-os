@@ -3,7 +3,7 @@ ados_distribution: internal
 id: SPEC-FEATURE-PROJECTS
 status: Current
 created: 2026-11-11
-last_updated: 2026-11-14
+last_updated: 2026-11-15
 owners: ["engineering"]
 service: delivery-os
 summary: "The host overview and the flat record set: the two-layer state scope (host root plus a per-repository project root), the checkout identity marker and its minted project key, the derived host index with bounded maintenance and the DEC-18 key guard, the read-only `repos list [--json]` surface with its `repos.v1` payload, deterministic table, exit projection, three `repos.*` contract error identities, handover and daemon projections, the four state-location outcomes, and the delivered `projects list --flat` alias that serves the byte-compatible `projects.v1` payload."
@@ -42,7 +42,7 @@ the flat record set is recorded in
 
 | Layer | Path | Holds |
 |---|---|---|
-| Host root | `<PREFIX>_STATE_DIR` (absolute) else `<home>/<brand.stateDirectoryName>` | `host-index.json`, `owner-hold`, `projects/`, `unbound/` |
+| Host root | `<PREFIX>_STATE_DIR` (absolute) else the current default root, else the prior-identity default root, else the current default root (first use) | `host-index.json`, `owner-hold`, `projects/`, `unbound/` |
 | Project root | `<host root>/projects/<project key>` | The delivered store layout under workspace `default`: ledger, header, index, fence, `documents.<ws>/`, `quarantine.<ws>/`, the audit chain key, the retro sidecar and its lock, and the retro chain key |
 
 The state-scope policy lives once, in the app tier
@@ -56,6 +56,35 @@ fallback. No surface composes a state directory from a home and a brand value.
 The workspace identifier stays `default` inside every project root, and the store
 layout inside a root is the delivered layout unchanged: isolation comes from the
 root, not from re-keying the workspace.
+
+### Prior-identity host root
+
+When the invoking identity declares a prior identity, the one pure policy selects
+the host root in this order: an absolute current `<PREFIX>_STATE_DIR` override
+wins outright and disables the fallback; otherwise the current default root when
+it exists; otherwise the prior default root when it exists; otherwise the current
+default root, which is the ordinary first-use creation path. The two existence
+facts are injected by the composition tier (which already owns the filesystem
+facts); the policy performs no filesystem access. The prior identity's
+environment names are never read, so an override cannot silently cross
+identities.
+
+While the fallback holds, no current default root is created — the
+anti-orphaning guarantee — and because a project store is single-rooted the prior
+root serves reads **and** the ordinary store operations that follow, so nothing is
+moved, copied, or rewritten. When both default roots exist the current root wins
+and the prior root is reported once as not used by the prior-identity fallback
+notice (`prior-identity-fallback`, reasons `state-read` and `state-skipped`) on
+stderr in every mode. The fallback invocation therefore resolves exactly one host
+root, keeps the one home-plus-directory composition helper and the one
+`<PREFIX>_STATE_DIR` read, and leaves the delivered first-use path untouched.
+
+This **extends** [TDR-0022](../../decisions/TDR-0022-multi-repository-workstation-state-scope.md)
+without contradicting it: one effective host root per invocation, one
+home-plus-brand composition, and one `<PREFIX>_STATE_DIR` read remain; only which
+root that same rule selects changes. The operator-facing description is the
+[Local Install and Prior-Identity Transition](../../../guides/local-install.md)
+guide.
 
 ## Checkout identity and the project key
 
@@ -229,6 +258,8 @@ choice, and the override caveat are documented in
 No automatic migration, migration command, or re-attribution exists.
 
 ## Related
+
+- [Local Install and Prior-Identity Transition](../../../guides/local-install.md) — the operator-facing host-root transition and the declared divergences.
 
 - [Project Groups](feature-project-groups.md) — the `projects` family: the
   configuration document, the group surface, and the group-scoped reads.

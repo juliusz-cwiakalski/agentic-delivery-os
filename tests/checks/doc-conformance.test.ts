@@ -375,3 +375,190 @@ describe("TC-DOCREC-003 scope: full phrase-table rows", () => {
     expect(detected).toBe(true);
   });
 });
+
+/**
+ * GH-320 TC-BIN-070 — the self-contained identity requirement table.
+ *
+ * This change's own five-page set and its stale/required phrases live here, so
+ * the historical GH-242 phrase table and `doc/documentation-handbook.md` §16.1.1
+ * are untouched. Every row names a real page and carries at least one stale and
+ * one required phrase, so no row can pass with an empty list.
+ */
+type IdentityRow = {
+  readonly page: string;
+  readonly stale: readonly string[];
+  readonly required: readonly string[];
+};
+
+const IDENTITY_ROWS: readonly IdentityRow[] = [
+  {
+    page: "doc/spec/features/feature-cli-entrypoint.md",
+    stale: [
+      "The bin is not part of the install or release surface.",
+      "names neither the bin nor the composition in either of its delivery arrays",
+      "then the neutral `delivery-os` default used only for self-description when neither source yields a name",
+    ],
+    required: [
+      "two executables",
+      "one shared launcher composition",
+      "The invoking bin's declared default working name",
+      "`--print-install-path`",
+      "executable launcher at the brand install path",
+      "the prior-identity file second",
+      "`prior-identity-fallback`",
+      "fallback.internal",
+    ],
+  },
+  {
+    page: "doc/spec/features/feature-branding-seam.md",
+    stale: [
+      "no working-name literal is committed",
+      "The CLI entrypoint and the MCP serve composition apply the neutral working name",
+    ],
+    required: [
+      "exactly five sites",
+      "`SCOPE_ORG`",
+      "the three CLI selector sites",
+      "the unchanged MCP default",
+      "state-free `--print-install-path` self-description",
+      "Prior-identity derivation",
+    ],
+  },
+  {
+    page: "doc/spec/features/feature-config-layer.md",
+    stale: ["selected/root handling and loaded/skipped facts"],
+    required: [
+      "Prior-identity fallback",
+      "current file wins whenever it exists",
+      "reported **not used**",
+      "not** a configuration warning",
+      "composition-time acquisition",
+      "`config-skipped`",
+      "Machine-global layers never fall back",
+      "read-only",
+    ],
+  },
+  {
+    page: "doc/spec/features/feature-projects.md",
+    stale: ["| Host root | `<PREFIX>_STATE_DIR` (absolute) else `<home>/<brand.stateDirectoryName>` |"],
+    required: [
+      "Prior-identity host root",
+      "prior default root",
+      "no current default root is created",
+      "single-rooted",
+      "`state-skipped`",
+      "extends** [TDR-0022]",
+    ],
+  },
+  {
+    page: "doc/spec/features/feature-doc-distribution-marker.md",
+    stale: ["**TBD / out of scope** here (not yet delivered)"],
+    required: [
+      "launcher",
+      "brand install path",
+      "state-free `--print-install-path`",
+      "Install-time runtime requirement",
+      "classified failure",
+      "`DRY_RUN`",
+      "`--tool`",
+      "`delivery-os` bin mapping",
+    ],
+  },
+];
+
+const IDENTITY_PAGES = [
+  "doc/spec/features/feature-cli-entrypoint.md",
+  "doc/spec/features/feature-branding-seam.md",
+  "doc/spec/features/feature-config-layer.md",
+  "doc/spec/features/feature-projects.md",
+  "doc/spec/features/feature-doc-distribution-marker.md",
+] as const;
+
+/** The identity table's own rule, driven over injected page texts. */
+export const identityRowViolations = (
+  rows: readonly IdentityRow[],
+  pageText: (page: string) => string | undefined,
+): string[] => {
+  const failures: string[] = [];
+  const declared = rows.map((row) => row.page).sort();
+  const expected = [...IDENTITY_PAGES].sort();
+  if (JSON.stringify(declared) !== JSON.stringify(expected)) {
+    failures.push(`identity table pages ${JSON.stringify(declared)} are not the declared five`);
+  }
+  for (const row of rows) {
+    if (row.stale.length === 0) failures.push(`${row.page}: no stale phrase declared`);
+    if (row.required.length === 0) failures.push(`${row.page}: no required phrase declared`);
+    const text = pageText(row.page);
+    if (text === undefined) {
+      failures.push(`${row.page}: page does not exist`);
+      continue;
+    }
+    for (const phrase of row.stale) {
+      if (text.includes(phrase)) failures.push(`${row.page}: stale phrase present: ${phrase}`);
+    }
+    for (const phrase of row.required) {
+      if (!text.includes(phrase)) failures.push(`${row.page}: missing required phrase: ${phrase}`);
+    }
+  }
+  return failures;
+};
+
+describe("GH-320 TC-BIN-070 identity documentation table", () => {
+  const pageText = (page: string): string | undefined => {
+    try {
+      return read(page);
+    } catch {
+      return undefined;
+    }
+  };
+
+  test("the five declared pages are reconciled in both directions", () => {
+    expect(identityRowViolations(IDENTITY_ROWS, pageText)).toEqual([]);
+  });
+
+  test("every row names a real page with a non-empty stale and required list", () => {
+    for (const row of IDENTITY_ROWS) {
+      expect(IDENTITY_PAGES as readonly string[]).toContain(row.page);
+      expect(row.stale.length).toBeGreaterThan(0);
+      expect(row.required.length).toBeGreaterThan(0);
+    }
+  });
+
+  test("the page set is exact: a missing or extra page fails by name", () => {
+    const missing = IDENTITY_ROWS.filter((row) => row.page !== IDENTITY_PAGES[0]);
+    expect(identityRowViolations(missing, pageText).join("\n")).toContain(
+      "are not the declared five",
+    );
+    const extra: readonly IdentityRow[] = [
+      ...IDENTITY_ROWS,
+      { page: "doc/spec/features/feature-invented.md", stale: ["x"], required: ["y"] },
+    ];
+    expect(identityRowViolations(extra, pageText).join("\n")).toContain(
+      "are not the declared five",
+    );
+  });
+
+  test("a stale phrase in a synthetic copy fails naming the page and the phrase", () => {
+    const entrypoint = read("doc/spec/features/feature-cli-entrypoint.md");
+    const mutated = `${entrypoint}\nThe bin is not part of the install or release surface.\n`;
+    const detected = identityRowViolations(IDENTITY_ROWS, (page) =>
+      page === "doc/spec/features/feature-cli-entrypoint.md" ? mutated : pageText(page),
+    );
+    expect(detected.join("\n")).toContain(
+      "feature-cli-entrypoint.md: stale phrase present: The bin is not part of the install or release surface.",
+    );
+  });
+
+  test("a removed required phrase fails naming the page and the phrase", () => {
+    const projects = read("doc/spec/features/feature-projects.md").replaceAll(
+      "single-rooted",
+      "single",
+    );
+    const detected = identityRowViolations(IDENTITY_ROWS, (page) =>
+      page === "doc/spec/features/feature-projects.md" ? projects : pageText(page),
+    );
+    expect(detected.join("\n")).toContain(
+      "feature-projects.md: missing required phrase: single-rooted",
+    );
+  });
+});

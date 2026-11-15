@@ -226,7 +226,7 @@ unless noted.
 | M0-S16 | Interim mitigations (docs and config only) |
 | M0-S17 | Decision records and the measurement baseline; command-name lock |
 | M0-S18 | License registry under doc/legal/ plus the CI license gate |
-| M4-S1 | Naming freeze and rename drill |
+| M4-S1 | Naming freeze and rename drill; the first slice (the executable name and local install posture) is delivered by GH-320 |
 | M4-S4 | Merge the tooling branch to the default branch |
 | M4-S5 | Bash stack retirement (compatibility wrappers during the window, then removal) |
 

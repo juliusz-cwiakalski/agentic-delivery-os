@@ -55,6 +55,19 @@ The authoritative selection is [ADR-0003](../../decisions/ADR-0003-oss-monorepo-
 
 `<configDirectoryName>` and `<environmentPrefix>` are brand-derived parameters supplied by the frozen `BrandIdentity`; no product name is committed in this document. A selected file (`--config <path>`, then `<environmentPrefix>CONFIG`, then a recognized legacy selector) occupies the project-committed slot. It is not an eighth layer. The selected file's actual path and positions are reported.
 
+### Prior-identity fallback
+
+When the invoking identity declares a prior identity (the new executable name declares the pre-freeze working name; the compatibility alias declares none), the two repository-owned layers consider the prior identity's file as a second candidate:
+
+| Layer | Candidate order | Both present | Explicit selection |
+|---|---|---|---|
+| Project-committed | current `<repo>/<configDirectoryName>/config.yaml` → prior `<repo>/<priorConfigDirectoryName>/config.yaml` → delivered `missing` skip | current file read; prior reported `config-skipped` | the selected file occupies the slot; no layer falls back |
+| Project-local | current `<repo>/<configDirectoryName>/config.local.yaml` → prior prior-identity local file → delivered `missing` skip | current file read; prior reported `config-skipped` | `selected-config` skip, no fallback |
+
+The current file wins whenever it exists and the prior file is then reported **not used**; the prior file is read (as that same layer, with its real path recorded as the loaded file **and as the origin of every value it supplies**) only when the current file is absent. Machine-global layers never fall back, because the transitional claim is about artifacts the product created in a workspace. The fallback is strictly read-only — no write, copy, move, or deletion ever targets the prior directory — and is **not** a configuration warning, so `--strict` is unchanged and a prior read cannot become `config.warning.strict`. Skips, error codes, and warning kinds are unchanged.
+
+The fallback is exercised by the delivered **composition-time acquisition**: the production composition resolves the daemon and lane settings over one read-only project-configuration acquisition before any handler runs, so every composed invocation performs it and `status --json` exercises the prior read without the change adding an acquisition to any command. The read reports itself once per source kind per composed program through the prior-identity fallback notice (`prior-identity-fallback`, reasons `config-read` and `config-skipped`) on stderr in every mode including `--json`, never in a payload and with no exit-code change. The operator-facing description is the [Local Install and Prior-Identity Transition](../../../guides/local-install.md) guide.
+
 ### Discovery and CI controls
 
 - Discovery starts at the current directory and stops at the first git root; linked-worktree `.git` files are supported. It never searches above that root.
@@ -150,7 +163,7 @@ The machine table in [Result Contract and Error Table](feature-result-contract.m
 | `packages/core/src/config/resolver.ts` | Pure seven-layer validation, merge, reset, restrictions, warnings and origins |
 | `packages/core/src/config/provenance.ts` | Origin replacement, descendant removal and display grammar |
 | `packages/adapters/src/file/yaml-parser.ts` | YAML 1.2 one-document parsing, bounds, positions and safe diagnostics |
-| `packages/adapters/src/file/config-source.ts` | Platform paths, DM-2 eligibility, selected/root handling and loaded/skipped facts |
+| `packages/adapters/src/file/config-source.ts` | Platform paths, DM-2 eligibility, per-layer prior-identity candidate ordering, selected/root handling and loaded/skipped/prior facts |
 | `packages/adapters/src/repo/index.ts` | Bounded git/worktree root discovery |
 | `packages/adapters/src/legacy/index.ts` | Pre-freeze environment/selector mapping with current names winning |
 | `packages/cli/src/edge.ts` | Frozen bootstrap, source/legacy composition, secret registration and manifest injection |
@@ -231,7 +244,7 @@ Configuration adds the proposed Ajv and YAML runtime dependencies recorded in th
 | Queue branch | The typed `queue.lease-ttl` and `queue.park-recheck.<condition-type>` policy data with shipped defaults and existing configuration identities. |
 | Coordinator branch | The typed `coordinator.stuck-window`, `coordinator.kill-grace`, `coordinator.restart-budget`, `coordinator.resume-context-limit`, `coordinator.collection-interval`, and `coordinator.progress-bound` policy data with shipped defaults and existing configuration identities. |
 
-See also: [Provider Engine](feature-provider-engine.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Branding Seam and Working Name](feature-branding-seam.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Session Lifecycle Economics](feature-session-lifecycle-economics.md), [Scheduling Engine](feature-scheduling-engine.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0003](../../decisions/TDR-0003-config-parser-schema-and-acquisition.md), and the [repository glossary](../../overview/glossary.md).
+See also: [Local Install and Prior-Identity Transition](../../../guides/local-install.md), [Provider Engine](feature-provider-engine.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Branding Seam and Working Name](feature-branding-seam.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Session Lifecycle Economics](feature-session-lifecycle-economics.md), [Scheduling Engine](feature-scheduling-engine.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0003](../../decisions/TDR-0003-config-parser-schema-and-acquisition.md), and the [repository glossary](../../overview/glossary.md).
 
 ## The merge configuration branch
 

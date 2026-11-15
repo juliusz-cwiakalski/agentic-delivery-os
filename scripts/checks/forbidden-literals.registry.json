@@ -62,6 +62,7 @@
     }
   ],
   "registered": [
+    "doc/guides/local-install.md",
     "doc/guides/migrating-to-per-repository-state.md",
     "doc/guides/milestone-management.md",
     "doc/guides/provider-conditions-and-parks.md",
