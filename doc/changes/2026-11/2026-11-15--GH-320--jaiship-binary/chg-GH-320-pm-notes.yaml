@@ -579,3 +579,26 @@ notes:
       for review."
     type: info
     date: "2026-11-15"
+  - text: "PR #324 CI remediation round 3. Two remaining causes fixed. (1) The
+      `doc-distribution-guard` and `bash-tests` jobs need the workspace
+      installed: both now set up pnpm with the pinned action and run
+      `pnpm install --frozen-lockfile` immediately after Bun. A dependency-free
+      worktree reproduction proved install alone is NOT sufficient: with
+      dependencies present the install-set oracle still fails because the
+      launcher executes `packages/cli/bin/jaiship.ts`, whose `@delivery-os/*`
+      imports resolve through each package's `exports` to the ignored `dist`
+      targets, so both jobs also run `pnpm build`. The same dependency-free
+      worktree then ran the oracle green. (2) The notice bound is now
+      path-independent: `TC-BIN-043` measures the fixed prose after removing the
+      exact prior and current location strings, asserts a materially longer
+      scratch root renders identical prose, and `TC-BIN-052` measures the
+      launcher diagnostic after removing the expected absolute target.
+      Verification: prior-identity notice 14/14; install-launcher-installer
+      9/9; install-launcher structure 5/5; doc-distribution no drift (94 docs);
+      privacy-literals 0 violations; ci-topology / ci-bindingness /
+      ci-supply-chain green; workflow YAML parses; git diff --check clean.
+      Recorded deviation: the build step is beyond the install-only wording of
+      plan 6.19 and spec §7.2/§16; the dependency-free proof shows it is
+      required for the declared oracle edit to work."
+    type: info
+    date: "2026-11-15"

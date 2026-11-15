@@ -260,6 +260,18 @@ describe("TC-BIN-043 the notice text is bounded, classified, and redaction-safe"
   const PATTERN =
     /^prior-identity-fallback: (config-read|config-skipped|state-read|state-skipped) /u;
 
+  /**
+   * The 400-character bound applies to the fixed prose: the rendered line with
+   * the two variable absolute location strings removed. Those locations are the
+   * only content that grows with the checkout or home path, so measuring the
+   * remainder is path-independent by construction — a longer CI checkout cannot
+   * change the verdict.
+   */
+  const fixedProse = (line: string, prior: string, current: string): string => {
+    const body = line.endsWith("\n") ? line.slice(0, -1) : line;
+    return body.split(prior).join("").split(current).join("");
+  };
+
   const assertContract = (line: string, prior: string, current: string): void => {
     const body = line.endsWith("\n") ? line.slice(0, -1) : line;
     expect(body).toMatch(PATTERN);
@@ -267,7 +279,7 @@ describe("TC-BIN-043 the notice text is bounded, classified, and redaction-safe"
     expect(body).toContain(current);
     expect(body.toLowerCase()).toContain("nothing was moved, copied, or deleted");
     expect(body).not.toContain("\n");
-    expect(body.length).toBeLessThanOrEqual(400);
+    expect(fixedProse(body, prior, current).length).toBeLessThanOrEqual(400);
   };
 
   test("text-contract: all four reasons carry the token, both locations, and the no-move statement", async () => {
@@ -291,6 +303,45 @@ describe("TC-BIN-043 the notice text is bounded, classified, and redaction-safe"
         );
         assertContract(state ?? "", join(home.root, PRIOR_ROOT), join(home.root, CURRENT_ROOT));
         expect(read).not.toContain("canary-secret-value");
+
+        // Path independence: a second scratch root with a materially longer
+        // path renders the same fixed prose, so the two location strings are
+        // the only variable content and either path length passes the bound.
+        const longer = scratchCheckout(`notice-${"x".repeat(120)}`, CONFIG_ONLY);
+        const longerHome = scratchHome(`notice-home-${"y".repeat(120)}`, {
+          ...priorRootFiles,
+        });
+        try {
+          const second = await runThroughComposition({
+            bin: "jaiship",
+            argv: ["status", "--json"],
+            checkout: longer.root,
+            home: longerHome.root,
+          });
+          const secondRead = second.notices.find((line) => line.includes("config-read")) ?? "";
+          expect(secondRead.length).toBeGreaterThan((read ?? "").length);
+          assertContract(
+            secondRead,
+            join(longer.root, ".delivery-os", "config.yaml"),
+            join(longer.root, ".jaiship", "config.yaml"),
+          );
+          expect(
+            fixedProse(
+              secondRead,
+              join(longer.root, ".delivery-os", "config.yaml"),
+              join(longer.root, ".jaiship", "config.yaml"),
+            ),
+          ).toBe(
+            fixedProse(
+              read ?? "",
+              join(checkout.root, ".delivery-os", "config.yaml"),
+              join(checkout.root, ".jaiship", "config.yaml"),
+            ),
+          );
+        } finally {
+          longer.dispose();
+          longerHome.dispose();
+        }
       },
       {
         ...priorRootFiles,

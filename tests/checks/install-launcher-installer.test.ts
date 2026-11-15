@@ -339,9 +339,13 @@ describe("TC-BIN-052 a removed target fails classified", () => {
       expect(result.stdout).toBe("");
       const lines = result.stderr.trim().split("\n");
       expect(lines).toHaveLength(1);
-      expect(lines[0]).toContain(target);
-      expect(lines[0]).toContain("re-run the local install");
-      expect(lines[0].length).toBeLessThanOrEqual(400);
+      const line = lines[0] ?? "";
+      expect(line).toContain(target);
+      expect(line).toContain("re-run the local install");
+      // The bound measures the fixed prose: the rendered line with the variable
+      // absolute target removed. The target is the only content that grows with
+      // the source path, so the bound is path-independent by construction.
+      expect(line.split(target).join("").length).toBeLessThanOrEqual(400);
     } finally {
       s.dispose();
     }
