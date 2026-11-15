@@ -245,9 +245,10 @@ phases:
   #  1.6 Machine contract `packages/core/src/contracts/memory-record.ts`: data
   #      and types only — required/optional key sets, kind/scope/status/trust/
   #      source/basis/evidence vocabularies, id and file-name grammar sources,
-  #      budget constants, the closed finding register with area order and
-  #      severity. Re-exported from `packages/core/src/contracts/index.ts`.
-  #      No executable export (inventory rule), no `node:` import.
+  #      budget constants, the statement bound, the 120-character hint bound,
+  #      the closed finding register with area order and severity. Re-exported
+  #      from `packages/core/src/contracts/index.ts`. No executable export
+  #      (inventory rule), no `node:` import.
   #
   # Test obligations: `tests/structure/memory-layout.test.ts` (TC-MEMLAY-001,
   # -002, -003 with the temp-copy negative mutant), `tests/structure/
@@ -305,6 +306,7 @@ phases:
         - tests/structure/content-inventory.test.ts
       folders:
         - doc/changes/2026-11/2026-11-15--GH-301--memory-records-layout-lint
+        - tests/fixtures/memory
     interactions:
       - kind: contract-file
         target: packages/core/src/contracts/memory-record.ts
@@ -330,6 +332,13 @@ phases:
   #      `human_correction`, guild tag vs folder (and guild outside a guild
   #      folder), superseded record without `superseded_by`. One defect => ONE
   #      finding in the schema area only (no double reporting).
+  #      Cross-area ownership of the presence checks: `evidence`, `created_by`
+  #      and `source` presence/shape belong to the PROVENANCE area (AC-F7-1);
+  #      `created` presence belongs to `memory.schema.keys-missing`; the schema
+  #      required-key pass covers the remaining spine keys (id, kind, scope,
+  #      statement, trust, status). The statement bound is ONE published
+  #      constant in the schema contract and stated in the README; every test
+  #      imports it instead of repeating a literal.
   #  2.3 Dating area: created malformed/future, revalidation required for an
   #      authoritative behaviour-changing lesson, revalidation malformed,
   #      revalidation expired as `warn`, entry-point capture-line date shape.
@@ -382,6 +391,8 @@ phases:
         - tests/fixtures/memory/mutants.ts
         - tests/structure/inventory.json
         - tests/structure/content-inventory.test.ts
+      folders:
+        - tests/fixtures/memory
     interactions:
       - kind: contract-file
         target: packages/core/src/domain/memory-lint.ts
@@ -398,11 +409,12 @@ phases:
   # Content obligations:
   #  3.1 Index area: both directions over the DM-3 coverage universe —
   #      `record-uncovered` for a record with no row and `row-unbacked` for a row
-  #      naming no covered path, reported independently; `row-duplicate`,
-  #      `row-malformed` (wrong target: topic file, retro note, area directory)
-  #      and `hint-missing` (empty or > 120 characters). Topic files, retro
-  #      notes, `.gitkeep`, the index itself and area directories are explicitly
-  #      NOT covered. The archive index covers its notes exactly, both ways.
+  #      naming no covered path, reported independently; `row-duplicate`;
+  #      `row-malformed` for a hint longer than 120 characters and for a row
+  #      targeting a topic file, a retro note or an area directory;
+  #      `hint-missing` for an empty second column. Topic files, retro notes,
+  #      `.gitkeep`, the index itself and area directories are explicitly NOT
+  #      covered. The archive index covers its notes exactly, both ways.
   #  3.2 Budget area: index lines (200) and bytes (25 KB, `Buffer.byteLength`
   #      at the edge / injected byte counts in the pure pass), agent and guild
   #      entry points (150), archive index (200), kernel section (warn >200 and
@@ -461,6 +473,8 @@ phases:
         - tests/fixtures/memory/tree.ts
         - tests/fixtures/memory/bodies.ts
         - tests/fixtures/memory/secrets.ts
+      folders:
+        - tests/fixtures/memory
 
   # ---------------------------------------------------------------------------
   # Phase 4 — Check edge, scanner, gate wiring, sanctioned guard replacement
@@ -481,8 +495,9 @@ phases:
   #      print -> exit. Prints `FAIL memory-lint: <rule-id> <path>[:<line>]
   #      <detail>` per finding and one summary line
   #      `memory-lint: records=<n> areas=8 errors=<n> advisories=<n>`, then the
-  #      truncation line when the ceiling binds. No writes, no network, no clock
-  #      beyond the injected "today" at this edge.
+  #      truncation line when the ceiling binds. No writes, no network, no state
+  #      append; the edge supplies today's date as the injected "today" and the
+  #      pure pass never reads a clock (test-plan §8.2 assumption).
   #  4.3 `package.json`: add `"check:memory": "bun run scripts/checks/memory-lint.ts"`
   #      and insert `pnpm check:memory` after `pnpm check:boundaries` in the
   #      aggregate `check` chain (order pin: lint -> format:check -> typecheck ->
@@ -512,7 +527,9 @@ phases:
   #      the six area headings, the 150/200 numbers, "per retro", "periodic
   #      cadence" and "performs nothing"; do NOT introduce the strings
   #      `preferences`, `retro archive` or `retro-archive` (TC-MEMSCAF-002 pins
-  #      their absence in every memory template).
+  #      their absence in every memory template). Update the matching row in
+  #      `doc/templates/README.md` so the template index states the same
+  #      automation boundary (its row currently repeats the manual wording).
   #
   # Test obligations: `tests/structure/memory-lint-wiring.test.ts`
   # (TC-MEMGATE-004 aggregate/CI parity, TC-MEMGUARD-002 inventory equality),
@@ -566,8 +583,11 @@ phases:
         - tests/checks/memory-lint-performance.test.ts
         - tests/structure/memory-bootstrap-templates.test.ts
         - doc/templates/memory-doctor-checklist-template.md
+        - doc/templates/README.md
         - tests/structure/inventory.json
         - tests/structure/content-inventory.test.ts
+      folders:
+        - tests/fixtures/memory
     weightClass: heavy
 
   # ---------------------------------------------------------------------------
@@ -658,6 +678,9 @@ phases:
         - tests/structure/memory-record-schema.test.ts
         - tests/fixtures/capsule/promotion.ts
         - tests/fixtures/capsule/mutants.ts
+      folders:
+        - tests/fixtures/memory
+        - tests/fixtures/capsule
     interactions:
       - kind: contract-file
         target: packages/core/src/domain/capsule-candidates.ts
@@ -691,11 +714,12 @@ phases:
   #      the id rule, the status transitions, the budgets and the row shape with
   #      zero contradictions.
   #  6.4 `tests/structure/memory-lint-docs.test.ts`: assert the documentation
-  #      conformance facts — the doctor checklist carries a current-state
-  #      automation-boundary sentence and its distribution marker, no new
-  #      user-facing doc under `doc/**` is unregistered (registry unchanged in
-  #      delivery), and the distribution guard's marker set holds for every
-  #      touched doc. No new doc under `doc/**` is created by this change.
+  #      conformance facts — the doctor checklist and its `doc/templates/
+  #      README.md` row carry a current-state automation-boundary statement and
+  #      the checklist keeps its distribution marker, no new user-facing doc
+  #      under `doc/**` is unregistered (registry unchanged in delivery), and the
+  #      distribution guard's marker set holds for every touched doc. No new doc
+  #      under `doc/**` is created by this change.
   #
   # Done when: AGENTS.md carries the gate clause and schema pointer inside its
   # band; the curator skill agrees with the schema, the id rule, the transitions,
