@@ -81,21 +81,31 @@ Reading notes:
 | 50 | M2-S7 Suite-to-job mapping in gates | M0-S9 | Independent of the orchestration line; ranked here to close the merge-integrity gap before the memory line starts; slot earlier if gates drift in practice |
 | 51 | M2-S8 Memory records, layout, and lint | M1-S12 | Consumes the capsules M1-S12 produces; the memory line is self-contained from here |
 | 52 | M2-S9 Memory conventions in bootstrap templates | M2-S8 | Templates describe the layout the previous story defines |
-| 53 | M3-S3 Adapter completion | M0-S19, M0-S20 | First M3 story: full GitHub adapter unblocks self-hosted dogfooding for everything after it |
-| 54 | M3-S1 Harness surfaces | M1-S11 | Generated plugin surfaces over the adapter port |
-| 55 | M3-S2 Full MCP | M1-S7 | Batch semantics over the proven minimal surface |
-| 56 | M3-S4 Validators and deploy checklist | M0-S10 | Extends the lint family; independent of surfaces |
-| 57 | M3-S5 Policy engine | M0-S19 | Fleet check and apply through the write path; typed policy documents keep the autonomy kind open |
-| 58 | M3-S6 Workspace utilities | M0-S4, M0-S5 | Safety-rail utilities; independent filler in the M3 line |
-| 59 | M3-S8 Memory command family | M2-S8 | Commands over the canonical records |
-| 60 | M3-S9 Memory compiler to harness surfaces | M2-S8, M3-S1 | Last generator: compiles memory into the surfaces M3-S1 established |
-| 61 | M3-S7 v1.0 internal readiness and bash deprecation | M1-S18, M2-S2, M2-S3, M2-S6 | Deliberately last in M3: parity evidence requires every replaced engine delivered and measured |
-| 62 | M4-S1 Naming freeze and rename | M0-S2 | At M4 start so every name-derived surface exists before the freeze |
-| 63 | M4-S3 Docs, license registry, and public materials | M0-S18 | Finalized before first publication; written continuously from M0, closed out here |
-| 64 | M4-S2 Publication and release automation | M0-S17, M3-S7, M4-S1 | The release job follows the frozen name and the readiness verdict |
-| 65 | M4-S4 Merge the tooling branch to the default branch | M4-S2 | Installs move to the default branch only after a real release |
-| 66 | M4-S5 Bash stack retirement | M3-S7, M4-S4 | Wrappers outlived their purpose once installs come from the default branch |
-| 67 | M4-S6 Extension hooks | M0-S5 | Release-neutral opt-in sink; last because nothing local depends on it |
+| 53 | M2-S11 Multi-repository workstations | M0-S5, M1-S17 | State scoping exists; the overview unblocks board, groups, and cross-repository work |
+| 54 | M2-S12 Evidence inspection and divergence resolution | M1-S9 | Dispatch evidence exists from M1-S9; inspection precedes engine-first operations and cross-repository changes |
+| 55 | M2-S13 Public event taxonomy | M1-S18 | Daemon events exist; the public taxonomy unblocks queue lifecycle and engine-first operations |
+| 56 | M2-S14 Harness telemetry v2 | M1-S11, M1-S15, M1-S19, M1-S22 | Every telemetry source is delivered; metrics and spend v2 read these facts next |
+| 57 | M2-S15 Queue lifecycle completion | M1-S9, M1-S17, M1-S18, M2-S13 | Queue engine and event taxonomy exist; completion hardens the lifecycle before engine-first operations |
+| 58 | M2-S16 Engine-first delivery operations | M1-S9, M1-S18, M1-S21, M2-S12, M2-S13, and the owner-hold hook change (#280) | Evidence inspection and taxonomy exist; the engine line is hardened before provider pausing |
+| 59 | M2-S17 Provider-aware peak pausing | M1-S15, M1-S18, M1-S21, M1-S22, M2-S14, and the owner-hold semantics (#280) | Needs telemetry v2 and provider profiles; the cost-control story closes the M2 engine line |
+| 60 | M2-S18 Project groups | M2-S11 | Depends on multi-repository workstations; groups extend the flat record set after the rename boundary |
+| 61 | M2-S19 Cross-repository changes | M2-S11, M2-S18, M1-S17 | Depends on workstations and groups; the cross-repository lifecycle is the last planned M2 delivery |
+| 62 | M2-S20 Milestone-first planning and delivery | none | Depends on nothing; the planning rule lands after the engine line so the corpus repair describes delivered scope |
+| 63 | M3-S3 Adapter completion | M0-S19, M0-S20 | First M3 story: full GitHub adapter unblocks self-hosted dogfooding for everything after it |
+| 64 | M3-S1 Harness surfaces | M1-S11 | Generated plugin surfaces over the adapter port |
+| 65 | M3-S2 Full MCP | M1-S7 | Batch semantics over the proven minimal surface |
+| 66 | M3-S4 Validators and deploy checklist | M0-S10 | Extends the lint family; independent of surfaces |
+| 67 | M3-S5 Policy engine | M0-S19 | Fleet check and apply through the write path; typed policy documents keep the autonomy kind open |
+| 68 | M3-S6 Workspace utilities | M0-S4, M0-S5 | Safety-rail utilities; independent filler in the M3 line |
+| 69 | M3-S8 Memory command family | M2-S8 | Commands over the canonical records |
+| 70 | M3-S9 Memory compiler to harness surfaces | M2-S8, M3-S1 | Last generator: compiles memory into the surfaces M3-S1 established |
+| 71 | M3-S7 v1.0 internal readiness and bash deprecation | M1-S18, M2-S2, M2-S3, M2-S6 | Deliberately last in M3: parity evidence requires every replaced engine delivered and measured |
+| 72 | M4-S1 Naming freeze and rename | M0-S2 | At M4 start so every name-derived surface exists before the freeze |
+| 73 | M4-S3 Docs, license registry, and public materials | M0-S18 | Finalized before first publication; written continuously from M0, closed out here |
+| 74 | M4-S2 Publication and release automation | M0-S17, M3-S7, M4-S1 | The release job follows the frozen name and the readiness verdict |
+| 75 | M4-S4 Merge the tooling branch to the default branch | M4-S2 | Installs move to the default branch only after a real release |
+| 76 | M4-S5 Bash stack retirement | M3-S7, M4-S4 | Wrappers outlived their purpose once installs come from the default branch |
+| 77 | M4-S6 Extension hooks | M0-S5 | Release-neutral opt-in sink; last because nothing local depends on it |
 
 ## Maintenance
 

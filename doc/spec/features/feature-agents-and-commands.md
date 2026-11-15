@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-AGENTS-AND-COMMANDS
 status: Current
 created: 2026-06-28
-last_updated: 2026-11-12
+last_updated: 2026-11-14
 owners: ["engineering"]
 service: delivery-os
 summary: "The .opencode/ agent and command system is the product: a single source of truth for tool definitions, a precise two-layer model-configuration mechanism, a no-hand-edit discipline for generated multi-tool plugins, the delivery-integration invariants the lifecycle prompts follow, and the deterministic prompt, help/guide, and document conformance scans that enforce them."
 links:
-  related_changes: ["GH-79", "GH-242", "GH-239", "GH-241", "GH-286", "GH-288", "GH-290"]
+  related_changes: ["GH-79", "GH-242", "GH-239", "GH-241", "GH-286", "GH-288", "GH-290", "GH-313"]
   guides:
     - "doc/guides/opencode-model-configuration.md"
 ---
@@ -46,6 +46,7 @@ The agents and their prompt definitions (`.opencode/agent/*.md`, `.opencode/comm
 - **Frontmatter (F-3):** Each `.md` carries frontmatter (`description`, `mode`, and an optional `claude:` block). See the model-configuration mechanism below.
 - **Authoring/tuning discipline (F-4):** Creating or modifying agents/commands is delegated to `@toolsmith` (by reference — see `.opencode/agent/toolsmith.md`), which specializes in prompt engineering and model-format-aware design. Hand-editing is discouraged; related tools are tuned together because agents hand off to each other.
 - **Delivery-integration invariants (F-9):** Lifecycle commits route through the `commit` primitive or the thin `@committer`; phase state is written only through the `phase` family; the PR URL is a pm-notes `notes:` entry.
+- **Milestone rules in the prompts (F-10):** The `@pm` prompt requires a milestone, resolved from the project's existing milestone set, on every created ticket and verifies the attachment at intake before artifact phases; agents never create a milestone autonomously. The `@spec-writer` prompt requires `change.milestone` in change-spec front matter. The `@bootstrapper` prompt's tracker-instruction guidance generates a Milestone Attachment section (convention, attachment at creation from the existing set, no autonomous creation, intake verification, capture exemption) so a bootstrapped project inherits the rule. The project-specific milestone set, resolution rule, label vocabulary, and intake verification live in `.ai/agent/pm-instructions.md`. The operating rule is documented in [Milestone Governance](feature-milestone-governance.md).
 
 ### The Two-Layer Model-Configuration Mechanism (F-5) — must be understood precisely
 
@@ -101,6 +102,16 @@ The prompt rules reject plan progress (`plan.no-progress`), hand-edited phase st
 
 Both scans run as standalone `bun run` steps before the aggregate `pnpm check` stage in the TypeScript CI job, and the doc conformance suite runs with the workspace tests. A new prompt or command must satisfy the scan, and a new prompt-required command must add its reference page and coverage row before merge.
 
+### Milestone-attachment check (F-10)
+
+The milestone rules the prompts carry are observed by a repository-local issue-event check. It is not one of the offline conformance scans and does not enter `pnpm check`.
+
+| Check | Scope | Failure |
+|---|---|---|
+| `.github/workflows/ticket-milestone-check.yml` + `scripts/checks/milestone-attachment{,-runner,-github}.ts` | The seven issue events (`opened`, `edited`, `labeled`, `unlabeled`, `milestoned`, `demilestoned`, `reopened`) on a `change` issue, evaluated by a pure core to one of five verdicts; the manual advisory sweep on `workflow_dispatch` | A tracker write outside the closed set, a second comment, a flag on a milestone-present or exempt issue, or any tracker call reachable from the aggregate gate; the workflow is audited by `tests/checks/milestone-workflow.test.ts` and `tests/checks/milestone-gate.test.ts` |
+
+The workflow is non-blocking: it is not a required status, and a failed run blocks nothing. Job permissions are limited to `issues: write` and `contents: read`, every action is SHA-pinned, and no secret is referenced. The rule and its decision table are specified in [Milestone Governance](feature-milestone-governance.md).
+
 ### Edge Cases & Error Handling
 
 - **Changing one agent's output format may break a downstream consumer.** Mitigated by tuning related tools together and testing through a real delivery.
@@ -123,6 +134,8 @@ Both scans run as standalone `bun run` steps before the aggregate `pnpm check` s
 | `tests/fixtures/prompt-inventory/` | Scan fixtures | `lifecycle.json`, `allowed-commands.json`, `retained-retired.json`, mutation controls |
 | `tests/fixtures/help-guide/coverage.json` | Coverage fixture | The command and reference-page inventory |
 | `tests/checks/doc-conformance.test.ts` | Current-truth scan | The §16.1.1 phrase table over specs, guides, man page, and reference pages |
+| `scripts/checks/milestone-attachment.ts`, `scripts/checks/milestone-attachment-runner.ts`, `scripts/checks/milestone-attachment-github.ts` | Milestone-attachment evaluation | Pure ordered evaluation core, port-injected runner, and the sole network-capable GitHub adapter; repository-local, not in the install set or the aggregate chain |
+| `.github/workflows/ticket-milestone-check.yml` | Issue-event enforcement | Seven issue events plus a manual advisory sweep; least privilege; SHA pins; never blocks delivery |
 
 ## Non-Functional Requirements
 
@@ -157,5 +170,6 @@ Both scans run as standalone `bun run` steps before the aggregate `pnpm check` s
 - **Model configuration (mechanism):** [doc/guides/opencode-model-configuration.md](../../guides/opencode-model-configuration.md) — config precedence, agent override behavior, tier recommendations.
 - **Repo config:** `.opencode/opencode.jsonc` (tool access; delegates models to user-global config — see line 25).
 - **Toolsmith agent:** `.opencode/agent/toolsmith.md` (authoring/tuning tools).
+- **Milestone governance:** [feature-milestone-governance.md](feature-milestone-governance.md) — the creation, intake, and issue-event rules the prompts carry.
 - **Sibling spec:** [feature-claude-plugin-generation.md](feature-claude-plugin-generation.md) — the `.opencode/`→`.ados-claude/` build contract, idempotency, and CI freshness gate.
 - **Entrypoint and help surface:** [feature-cli-entrypoint.md](feature-cli-entrypoint.md) — the executable bin, the composed prompt-required set, and the `--help`/`--version` contract.

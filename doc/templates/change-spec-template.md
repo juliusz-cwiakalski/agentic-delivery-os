@@ -11,6 +11,7 @@ change:
   title: "<Human readable title>"
   owners: [<at-least-one>]
   service: <primary-impacted-service>
+  milestone: <tracker-milestone-title>    # required; tracker milestone title verbatim (M<n>: <outcome phrase>); equal to the pm-notes `milestone`; literal `none` only where the project's tracker instructions declare no milestone construct
   labels: [<zero-or-more>]
   version_impact: <none|patch|minor|major>
   audience: <internal|external|mixed>
@@ -27,6 +28,11 @@ change:
 3. Remove these instructions before finalizing
 4. See doc/documentation-handbook.md for conventions
 5. Business/product strategy changes still use this same `chg-*` lifecycle and naming convention
+6. The `change.milestone` field is required. Use the tracker milestone title
+   verbatim (`M<n>: <outcome phrase>`), equal to the pm-notes `milestone` value.
+   The literal `none` is permitted only where the project's tracker instructions
+   declare that the tracker has no milestone construct; it is never a per-change
+   convenience.
 -->
 
 # CHANGE SPECIFICATION

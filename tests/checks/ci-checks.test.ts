@@ -21,6 +21,7 @@ import {
 } from "../../scripts/checks/ci-supply-chain";
 import {
   BASH_JOBS,
+  collectWorkflowWiring,
   removedLineViolations,
   TS_JOBS,
   validate as validateTopology,
@@ -178,9 +179,80 @@ describe("vulnerability gate", () => {
   });
 });
 
+const makeWiringTree = (workflows: Record<string, string>): string => {
+  const directory = mkdtempSync(join(tmpdir(), "ci-wiring-"));
+  mkdirSync(join(directory, ".github/workflows"), { recursive: true });
+  mkdirSync(join(directory, "scripts/checks"), { recursive: true });
+  writeFileSync(join(directory, ".github/workflows/ci.yml"), "name: CI\n");
+  for (const [name, text] of Object.entries(workflows)) {
+    writeFileSync(join(directory, ".github/workflows", name), text);
+  }
+  writeFileSync(join(directory, "scripts/checks/wired-in-workflow.ts"), "export {};\n");
+  writeFileSync(join(directory, "scripts/checks/wired-in-package.ts"), "export {};\n");
+  writeFileSync(join(directory, "scripts/checks/wired-nowhere.ts"), "export {};\n");
+  writeFileSync(
+    join(directory, "package.json"),
+    JSON.stringify({ scripts: { check: "bun run scripts/checks/wired-in-package.ts" } }),
+  );
+  return directory;
+};
+
 describe("CI topology", () => {
   test("bash jobs intact, TS jobs complete, triggers and wiring correct", () => {
     expect(validateTopology(ROOT)).toEqual([]);
+  });
+
+  test("a module named only inside a workflow file counts as wired", () => {
+    const directory = makeWiringTree({
+      "extra-check.yml":
+        "name: Extra\njobs:\n  check:\n    steps:\n      - run: bun run scripts/checks/wired-in-workflow.ts\n",
+    });
+    try {
+      const failures = validateTopology(directory);
+      expect(failures.some((message) => message.includes("wired-in-workflow.ts"))).toBe(false);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("a module named nowhere still fails the wiring rule", () => {
+    const directory = makeWiringTree({});
+    try {
+      expect(
+        validateTopology(directory).some((message) =>
+          message.includes("wired-nowhere.ts is not invoked"),
+        ),
+      ).toBe(true);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("the workflows directory is read in sorted, deterministic order", () => {
+    const directory = makeWiringTree({
+      "zeta.yml": "name: Zeta\n",
+      "alpha.yml": "name: Alpha\n",
+      "middle.yml": "name: Middle\n",
+    });
+    try {
+      const wiring = collectWorkflowWiring(directory);
+      expect(wiring.files).toEqual(["alpha.yml", "ci.yml", "middle.yml", "zeta.yml"]);
+      expect(wiring.text.indexOf("name: Alpha")).toBeLessThan(wiring.text.indexOf("name: Middle"));
+      expect(wiring.text.indexOf("name: Middle")).toBeLessThan(wiring.text.indexOf("name: Zeta"));
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test("an unreadable workflows directory fails closed", () => {
+    const directory = mkdtempSync(join(tmpdir(), "ci-wiring-missing-"));
+    try {
+      const wiring = collectWorkflowWiring(directory);
+      expect(wiring.files).toEqual([]);
+      expect(wiring.failures.some((message) => message.includes("unreadable"))).toBe(true);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 });
 

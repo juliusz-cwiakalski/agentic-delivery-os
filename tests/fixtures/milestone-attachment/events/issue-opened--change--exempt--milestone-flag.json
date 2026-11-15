@@ -1,0 +1,21 @@
+{
+  "action": "opened",
+  "issue": {
+    "number": 106,
+    "state": "open",
+    "labels": [
+      {
+        "name": "change"
+      },
+      {
+        "name": "backlog-capture"
+      },
+      {
+        "name": "needs-milestone"
+      }
+    ],
+    "milestone": {
+      "title": "M2: Ceremonies, measurement, and memory"
+    }
+  }
+}

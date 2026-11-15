@@ -212,6 +212,11 @@ Planning sessions structure (for multi-change planning):
 
 - Resolve or create `workItemRef` via tracker MCP
 - Confirm title and slug
+- Verify the ticket's milestone attachment (the tracker's native milestone field; its name is declared in the project's tracker instructions)
+  - If attached, record the milestone title in `chg-<workItemRef>-pm-notes.yaml` under `milestone` before any artifact phase
+  - If unattached, ask the human a question naming the milestone you propose and STOP; artifact phases do not begin until the attachment exists
+  - A `backlog-capture` ticket is still unattached for delivery purposes: ask the same question and stop
+- Agents never create a milestone autonomously; a missing milestone is proposed to the human exactly as a proposed ticket
 - Record in `.ai/local/pm-context.yaml` as active_change
 </step>
 
@@ -506,8 +511,23 @@ Use MCP tools for external tracker operations:
 
 **Creating tickets:**
 
-- Jira: `jira_create_issue(project, summary, description, issueType)`
-- GitHub: `gh_create_issue(owner, repo, title, body, labels)`
+Both tracker families take the project's milestone-equivalent field; the exact
+field name and the project's existing milestone set come from the project's
+tracker instructions.
+
+- Jira: `jira_create_issue(project, summary, description, issueType, milestone)`
+- GitHub: `gh_create_issue(owner, repo, title, body, labels, milestone)`
+
+Milestone rules for creation:
+
+- Attach the ticket to an existing milestone from the project's declared
+  milestone set; never create the milestone.
+- If no existing milestone fits, propose the missing `M<n>: <outcome phrase>`
+  milestone to the human exactly as you would propose a ticket, and wait.
+- A pure backlog capture may carry the project's capture-exemption label
+  (for this repository, `backlog-capture`) instead of a milestone; the
+  exemption is a capture marker, not a delivery licence.
+- The flag label is `needs-milestone`; it never blocks delivery.
 
 **Updating status:**
 

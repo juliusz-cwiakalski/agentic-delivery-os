@@ -186,7 +186,18 @@ Mandatory sections:
 2. Workflow States Mapping — map ADOS phases to tracker statuses or labels; see `<tracker_workflow_discovery>`
 3. Label Taxonomy — at minimum `change`; add issue type labels from interview
 4. Backlog Source of Truth — explicit statement of where backlog lives
-5. Conventions — workItemRef format, branch naming
+5. Milestone Attachment — the project's milestone convention and existing set,
+   attachment at creation from that set, no autonomous milestone creation,
+   intake verification, and the capture exemption
+6. Conventions — workItemRef format, branch naming
+
+The Milestone Attachment section must state: titles follow `M<n>: <outcome
+phrase>`; every change ticket is created with an existing milestone; an agent
+proposes a missing milestone to the human and never creates one; intake verifies
+the attachment and records the milestone before artifact phases; and a pure
+backlog capture may carry the project's capture-exemption label, which is
+removable when the ticket is scheduled. Derive the milestone set from the
+project's tracker, never by copying another repository's titles.
 
 Recommended sections when discovered: Issue Validation Checklist, Priority & Selection Rules, Quality Gate References, Blocking Question Workflow, Multi-Repo Coordination (`todo-<repo>`/`done-<repo>`), Definition of Ready, Estimation Methodology, PR/MR Workflow Customizations.
 

@@ -1,0 +1,287 @@
+change_id: GH-313
+title: "M2-S20: Milestone-first planning and delivery (M2)"
+delivery_mode: autonomous
+milestone: "M2: Ceremonies, measurement, and memory"
+story_code: M2-S20
+phases:
+  clarify_scope: { started: "2026-11-14T19:15:00Z", completed: 2026-11-14T18:31:12.842Z }
+  specification: { started: null, completed: 2026-11-14T19:39:58.029Z }
+  test_planning: { started: null, completed: 2026-11-14T19:40:14.868Z }
+  delivery_planning: { started: null, completed: 2026-11-14T19:41:10.511Z }
+  dor_check: { started: null, completed: 2026-11-14T19:49:08.822Z }
+  delivery: { started: null, completed: 2026-11-14T22:18:34.740Z }
+  system_spec_update: { started: null, completed: 2026-11-14T22:24:41.075Z }
+  review_fix: { started: null, completed: 2026-11-14T23:44:41.425Z }
+  quality_gates: { started: null, completed: 2026-11-14T23:45:01.248Z }
+  dod_check: { started: null, completed: 2026-11-14T23:46:03.613Z }
+  pr_creation: { started: null, completed: 2026-11-14T23:49:59.710Z }
+decisions:
+  - text: "Milestone-first enforcement is event-driven: the check evaluates newly
+      created/edited `change` issues without a milestone and flags them; a
+      manual sweep reports existing debt without failing, because 94 historical
+      `change` issues (53 open) carry no milestone and mass-labelling them would
+      be false enforcement."
+    date: "2026-11-14"
+  - text: "Scope overlap with GH-139 (roadmap MS-<NNNN> IDs + allocation matrix +
+      milestone-management guide): GH-313 authors
+      doc/guides/milestone-management.md for the milestone-first operating rule
+      (naming, creation, attachment, exit review, closure/extension,
+      planned-scope definition, enforcement). GH-139 remains the owner of MS-
+      numeric IDs and the roadmap allocation matrix and extends the same guide
+      later. No new ticket created."
+    date: "2026-11-14"
+  - text: "'milestone blueprint conventions' is interpreted as the Conventions
+      section of doc/planning/oss-tooling/milestones/README.md (the milestone
+      pack is the committed blueprint). 'Ticket generator templates' is
+      interpreted as the @pm ticket-creation path plus the @bootstrapper
+      guidance that generates .ai/agent/pm-instructions.md for new projects; no
+      standalone ticket template exists to change."
+    date: "2026-11-14"
+  - text: "The new check must stay out of pnpm check: the aggregate gate is
+      deterministic and offline, while milestone attachment is tracker data.
+      Enforcement lives in a GitHub Actions issue-event workflow over a pure,
+      unit-testable evaluation function."
+    date: "2026-11-14"
+  - text: "The operating rule is precedent-setting for every future ticket, so it is
+      recorded as a PDR (next free id PDR-0005) in addition to the change spec
+      decision log."
+    date: "2026-11-14"
+open_questions: []
+blockers: []
+notes:
+  - text: "State detection: issue OPEN with labels change + agent-improvement,
+      attached to milestone M2 (#3). No PR, no change folder, branch
+      feat/GH-313/milestone-first-planning at origin/main-tools HEAD (404e9bf8),
+      0 commits ahead, clean tree. Fresh delivery; main-tools sync was already
+      up to date."
+    type: info
+    date: "2026-11-14"
+  - text: "Tracker facts: milestones M0 (#1, 20 tickets), M1 (#2, 24 tickets), M2
+      (#3, 23 tickets). 94 `change` issues have no milestone (53 open), which is
+      why the escape path for pure backlog capture is required and existing debt
+      is handled by an advisory sweep, not a hard fail."
+    type: info
+    date: "2026-11-14"
+  - text: "Backlog consistency debt found: doc/planning/oss-tooling/backlog.md
+      records `- Ticket:` lines for only 6 of the M2 stories (S9, S11, S12, S13,
+      S15, S18) although milestone M2 carries 23 tickets. The M2-S20 story block
+      is missing entirely. Both are in scope for the consistency AC."
+    type: risk
+    date: "2026-11-14"
+  - text: "Prompt-file edits (.opencode/agent/pm.md,
+      .opencode/agent/bootstrapper.md) require regenerating .ados-claude/ via
+      scripts/build-claude-plugin.sh, and pnpm check:prompt / check:help plus
+      the CI plugin-freshness job will fail otherwise."
+    type: risk
+    date: "2026-11-14"
+  - text: "Environment quirk: the commit primitive's commitlint probe resolves
+      `commitlint` from PATH; without PATH=\"$PWD/node_modules/.bin:$PATH\"
+      every phase commit fails as commit.commitlint-failed. Prefix the PATH on
+      all lifecycle CLI invocations."
+    type: retro
+    date: "2026-11-14"
+  - text: "Test planning reopened `specification`: AC-F1-1/NFR-4 said the new guide
+      'carries no hand-written license header' although doc/guides headers are
+      script-added; AC-NFR1-1's 'zero duplicate label applications' is only
+      falsifiable at the action layer; and Appendix B row 29 declared scripts/**
+      UNCHANGED while rows 11-12 create the evaluation core in the repository
+      check surface. Fixed in the spec and re-completed before test_planning."
+    type: retro
+    date: "2026-11-14"
+  - text: "PDR-0005 authored by @decision-advisor (status Proposed) and its register
+      row committed at 302c692. The record file itself is intentionally
+      untracked until a plan phase declares doc/decisions/** in scope; DoD-4 is
+      satisfied by that phase, mirroring GH-302."
+    type: decision
+    date: "2026-11-14"
+  - text: "DoR iteration 1: NOT_READY. Critical: test plan still carried five open
+      TP-Q items after the plan pinned them and the spec clarified them (its own
+      revision rule requires 1.1 before the gate); phase 1 asserted the
+      pack-conventions edit that phase 5 owned; phase 2 asserted the spec-writer
+      prompt edit that phase 3 owned; and `scripts/add-header-location.sh
+      doc/guides` also rewrites the existing headerless provider-conditions
+      guide, outside every declared scope. Major: no production GitHub adapter
+      module was scoped, so the workflow could not perform its live reads; the
+      live-sweep evidence was not producible pre-PR; TC-EVID-001 mis-modelled
+      attached-but-undeclared tickets (M1 #219, M2 #268/#284/#286/#303);
+      TC-GUIDE-001 weakened the header rule to 'where present' and miscounted
+      lines; two stale paths in the test plan; and the public label names were
+      still TO-CONFIRM. Reopened specification, test_planning, and
+      delivery_planning."
+    type: retro
+    date: "2026-11-14"
+  - text: "PM decision (autonomous mode) on the DoR label question: adopt
+      `needs-milestone` and `backlog-capture` as the public label names.
+      Rationale: descriptive, kebab-case like the existing label vocabulary,
+      scoped to this check, and reversible through a guide plus workflow edit.
+      Recorded as OQ-2 resolved and carried into PDR-0005; the owner can rename
+      at the PR gate."
+    type: decision
+    date: "2026-11-14"
+  - text: "DoR remediation split: specification (OQ-2 resolved, live-sweep evidence
+      wording), test_planning (revision 1.1: TP-Q closure, TC-EVID-001
+      declared-only model plus attached-but-undeclared report, TC-GUIDE-001
+      byte-for-byte header, link/filename fixes, row references, TC-SCOPE-001
+      allowed set, TC-TPL-002 moved to the prompts suite), delivery_planning
+      (phase 1 gains the pack conventions, phase 5 loses it; phase 4 gains the
+      GitHub adapter module, a pinned sweep artifact path, and the local
+      read-only sweep obligation; phase 5 pack-contents line; header script on
+      the single file; Appendix B row references)."
+    type: info
+    date: "2026-11-14"
+  - text: "DoR iteration 2: NOT_READY. Residual design gaps: the event set let an
+      edited/labeled pre-existing unattached issue be flagged; the decision
+      table lacked flag-label and marker dimensions plus precedence; 'applied
+      once' conflicted with restore-after-detach; plan 4.7 wrote phase 6's
+      evidence file; pm-instructions' 'Backlog Source of Truth' contradicted the
+      committed planning mirror; and five test-plan assertions were
+      under-specified. Verdicts persisted under readiness-review/. Reopened
+      specification, test_planning, delivery_planning for iteration 3 with a
+      canonical ordered decision table (exemption > milestone >
+      marker/flag/event; writes only on opened and on demilestoned with the
+      marker)."
+    type: retro
+    date: "2026-11-14"
+  - text: "Live tracker drift note: the planning-time '53 open unattached change
+      issues' figure is a snapshot; at iteration 2 the count was 42 open out of
+      94. Evidence records label the figure as planning-time and do not treat it
+      as current."
+    type: info
+    date: "2026-11-14"
+  - text: "DoR iteration 3: READY, all ten facets PASS, zero blocking findings.
+      Verdict persisted at readiness-review/readiness-iter-3.md with twelve
+      non-blocking findings carried into delivery (label creation, one 404
+      endpoint example, prose staleness, two representative table rows, DEC-10
+      seed wording, plugin-freshness sequencing, phase-3 binding annotation,
+      version bookkeeping, a PDR citation, and a template-list nit). Delivery
+      starts with plan phase 1."
+    type: info
+    date: "2026-11-14"
+  - text: "Plan phase 1 (docs-guide) delivered in 288b2673: milestone-management
+      guide, documentation-index row, PDR-0005 record, milestone-pack
+      conventions pointer, and the guide suite. The header was produced only by
+      scripts/add-header-location.sh on the single new file; the unrelated
+      headerless guide is byte-identical. Guide suite green."
+    type: info
+    date: "2026-11-14"
+  - text: "Plan phase 2 (template-field) delivered in b955aa68: the required
+      change.milestone front-matter field and its resolution rule in the
+      change-specification template only, with the template suite green."
+    type: info
+    date: "2026-11-14"
+  - text: "Plan phase 3 (prompts-and-plugin) delivered in eda4aef5: pm, spec-writer,
+      and bootstrapper prompts, the tracker instructions including the
+      reconciled Backlog Source of Truth section, and the regenerated Claude
+      plugin committed together. Prompt suite green; prompt-conformance reports
+      5 prompts clean; help-guide-coverage reports all prompt-required commands
+      covered."
+    type: info
+    date: "2026-11-14"
+  - text: "Plan phase 4 (attachment-check) delivered in 7f5df63a: pure evaluation
+      core, port-injected runner, sole network-capable GitHub adapter, the
+      issue-event workflow, and five offline suites plus fixtures. 48 tests
+      pass, 0 fail. The aggregate gate chain is unchanged and the three CI
+      invariant scanners are untouched; the phase also added a five-line
+      explanatory comment to the ci.yml ts-test job, which plan phase 4 did not
+      declare (flagged for review)."
+    type: info
+    date: "2026-11-14"
+  - text: "Plan phase 5 (planning-truth) delivered in aca08238: M2-S20 backlog
+      block, twelve backfilled Ticket lines, M2-S11..S20 ranking rows with
+      contiguous renumbering, M2 pack row plus SC-M2-S20-01..05 seeds,
+      pack-contents range, and the status delivery addendum. Planning-truth
+      suite green."
+    type: info
+    date: "2026-11-14"
+  - text: "Plan phase 6 (tracker-evidence, PM lane) recorded in
+      chg-GH-313-milestone-evidence.md: 62/62 declared tickets attached across
+      M0/M1/M2 (gap list empty), five attached-but-undeclared planning issues
+      disclosed with disposition, 94 unattached change issues (42 open) reported
+      as a planning-time snapshot, GH-313 confirmed attached to M2. Zero tracker
+      writes."
+    type: info
+    date: "2026-11-14"
+  - text: "Gate-environment defect found while verifying: the ticket's declared gate
+      command TMPDIR=$PWD/tmp/tmpdir pnpm test makes
+      tests/behaviour/queue-production-binding.test.ts and
+      tests/behaviour/projects-config.test.ts fail, because their fixtures
+      require a temp directory outside every git worktree; and a temp directory
+      on another filesystem makes tests/checks/ci-baseline-parity.test.ts fail
+      on a git-clone --local hardlink. The working invocation uses a same-device
+      temp directory outside the worktree. Recorded for a follow-up; not changed
+      here because the test harness is out of scope."
+    type: risk
+    date: "2026-11-14"
+  - text: "Delivery gate finding: the new user-facing guide was missing from
+      scripts/checks/forbidden-literals.registry.json, so the forbidden-literal
+      scan failed closed as an unregistered doc absent at the corpus baseline
+      and the ci-baseline-parity regression test failed on the committed HEAD.
+      Fixed by registering the guide (commit cd775745); the plan's phase 1 scope
+      and obligation 1.7 were amended to declare the registry path. Scan now
+      reports 5/5 scope classes, 0 violations, and the parity test passes."
+    type: info
+    date: "2026-11-14"
+  - text: "Commit-range gate: PASS. 19 commits between merge-base 404e9bf8 and HEAD
+      cd775745, 0 offending commits, 0 rule hits, commitlint resolved from the
+      repository-local node_modules/.bin. Recorded for quality_gates."
+    type: info
+    date: "2026-11-14"
+  - text: "Review iteration 1: FAIL on process grounds, with no functional,
+      security, or acceptance-criterion defect. F1 HIGH: a five-line comment
+      added to .github/workflows/ci.yml was outside phase 4's declared scope and
+      partly inaccurate. F2 MEDIUM: the phase-boundary commits carry the
+      primitive's template subjects (path-truncated), not the plan's declared
+      subjects, so the history is not self-describing. F3 LOW: the plan stayed
+      at revision 1.1 after the post-DoR phase-1 amendment and still called
+      PDR-0005 untracked. F4 LOW: the test plan execution log was stale. F5 LOW:
+      <M<n>> notation in five docs. F1 and F3-F5 remediated; F2 accepted as a
+      recorded deviation because rewriting history would invalidate the commit
+      SHAs the phase-transition registry records as durable evidence, while the
+      commit-message authority (range gate) passes."
+    type: retro
+    date: "2026-11-14"
+  - text: "Review iteration 2: FAIL, one blocking finding. Reverting the ci.yml
+      comment exposed a real repository invariant: scripts/checks/ci-topology.ts
+      requires every scripts/checks/*.ts basename to be wired in ci.yml or
+      package.json, and it also governs a workflow-invoked module. The earlier
+      TP-Q2 premise was therefore wrong. Fixed by extending the wiring set to
+      every .github/workflows/*.yml, naming the imported modules truthfully in
+      the milestone workflow, adding non-vacuity tests, and declaring the
+      scanner change in plan revision 1.3 and the spec file impact. Also fixed:
+      the sweep counted pull requests returned by /issues (now skipped with a
+      fixture and test), the PDR notation, and the spec notation. Coder commit
+      454e0238 plus scope amendment 6dbbb92f. F2 disposition accepted by the
+      reviewer."
+    type: retro
+    date: "2026-11-14"
+  - text: "Review iteration 3: PASS. Zero blocking findings. The reviewer verified
+      the ci-topology wiring extension and its non-vacuity tests, the workflow
+      comment accuracy, the PR-entry filtering, the notation fixes, the commit
+      range gate (27 commits, PASS), the touched suites, doc-distribution,
+      forbidden-literals, plugin freshness, and the plan/spec declarations.
+      Three INFO items remain non-blocking: phase-4 evidence is split across two
+      notes, the ci-topology wiring match is substring-based (pre-existing), and
+      the live-tree snapshot tests are sensitive to concurrent writes."
+    type: info
+    date: "2026-11-15"
+  - text: "Quality gate evidence at HEAD 2d355feb: lint, format:check, typecheck,
+      and check:boundaries green; prompt-conformance, help-guide-coverage,
+      forbidden-literals (5/5 classes, 0 violations), doc-distribution, and
+      exports-parity green; commit-range gate PASS over 27 commits with a
+      repository-local commitlint. The clean aggregate run finished 8305 pass /
+      4 skip / 1 fail. The single failure is TC-EXIT-002 (live-tree clean) in
+      exit-code-literals: another suite in the same parallel run checks out
+      branches and regenerates .ados-claude, so the tree is transiently dirty.
+      It passes in isolation (15/15) as does the privacy-literals live-tree test
+      (39/39). This is a pre-existing suite-wide race between live-tree snapshot
+      tests and tests that mutate the worktree, not a defect introduced by
+      GH-313; recorded rather than waived."
+    type: risk
+    date: "2026-11-15"
+  - text: "Pull request:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/319 — base
+      main-tools, head feat/GH-313/milestone-first-planning, created by
+      @pr-manager at reviewed head c406fbce. Left open for review; merge
+      authority is the CEO (Mode A) or the human via batch-deliver.sh (Mode B)."
+    type: info
+    date: "2026-11-15"

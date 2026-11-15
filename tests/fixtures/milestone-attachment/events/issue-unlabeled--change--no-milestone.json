@@ -1,0 +1,13 @@
+{
+  "action": "unlabeled",
+  "issue": {
+    "number": 112,
+    "state": "open",
+    "labels": [
+      {
+        "name": "change"
+      }
+    ],
+    "milestone": null
+  }
+}

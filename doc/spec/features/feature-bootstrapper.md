@@ -10,7 +10,7 @@ last_updated: 2026-11-14
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 links:
-  related_changes: ["GH-32", "GH-69", "GH-71", "GH-72", "GH-302"]
+  related_changes: ["GH-32", "GH-69", "GH-71", "GH-72", "GH-302", "GH-313"]
   guides:
     - "doc/guides/project-inception.md"
     - "doc/guides/onboarding-existing-project.md"
@@ -79,7 +79,7 @@ Every phase follows the same loop: fresh conversation → read state + prior art
 | 2 — Scope & roadmap | Current Milestone scope (MVP / next-milestone); roadmap; assumption + risk registers; legacy: tribal-knowledge graduation; conditional user journeys + screen inventory | Approve scope, roadmap, assumptions, risks, graduations | pre-mortem + four-risk check |
 | 3 — Tech stack & architecture | Tech stack; architecture overview; FSE audit; seed ADRs; conditional NFRs; legacy: reconstruct + flag uncertainty | Approve tech, architecture, ADRs, NFRs, uncertainty flags | alternative comparison + pre-mortem |
 | 4 — Domain, conventions & quality baseline | Glossary; conditional ubiquitous-language / UX guidance; code projects: testing-strategy, convention rules, CI baseline, dev setup, `.env.example`, security baseline; legacy: audit ACTUAL conventions | Approve glossary, conventions, quality baseline, gaps | unknown-unknowns |
-| 5 — ADOS framework integration | Generate `AGENTS.md` + all four `.ai/agent/*-instructions.md`; set documentation-profile; install handbook/templates/decisions-index/00-index; wire the memory learning loop (memory tree scaffold seeded empty — index, per-agent entry points, `lessons/`, `tacit/`; `AGENTS.md` memory section; coordinator memory wiring and per-role expectations in the instruction files; retro-note conventions; manual doctor checklist) | Approve all framework files (single approval covers the memory artifacts) | none |
+| 5 — ADOS framework integration | Generate `AGENTS.md` + all four `.ai/agent/*-instructions.md` (including the milestone attachment section in the tracker instructions); set documentation-profile; install handbook/templates/decisions-index/00-index; wire the memory learning loop (memory tree scaffold seeded empty — index, per-agent entry points, `lessons/`, `tacit/`; `AGENTS.md` memory section; coordinator memory wiring and per-role expectations in the instruction files; retro-note conventions; manual doctor checklist) | Approve all framework files (single approval covers the memory artifacts) | none |
 | 6 — Inception readiness check | Catalog completeness, memory-artifact presence, cross-doc consistency, FSE verification, four-risk coverage, assumption review, ghost-reference check. **FAIL → reopen phase 1–5** (an incomplete memory scaffold reopens Phase 5). | Approve readiness report or send back | none |
 | 7 — Inception summary & handoff | Inception summary; initial feature specs (new: from current-milestone scope; legacy: from code analysis reconciled with behavior) | Final sign-off — project incepted | none |
 
@@ -137,7 +137,7 @@ Phase 5 wires the project into ADOS. It produces:
 | Output | Notes |
 |---|---|
 | `AGENTS.md` | Project-specific version; carries the memory section rendered from `doc/templates/memory-kernel-section-template.md` |
-| `.ai/agent/pm-instructions.md` | Tracker config only — references `doc/guides/change-lifecycle.md` instead of repeating it; applies tracker-workflow discovery (Jira transitions via MCP, GitHub labels, local-backlog states); carries the coordinator memory wiring (capture bar, promotion path, curation mandate) from `doc/templates/memory-coordinator-wiring-template.md` |
+| `.ai/agent/pm-instructions.md` | Tracker config only — references `doc/guides/change-lifecycle.md` instead of repeating it; applies tracker-workflow discovery (Jira transitions via MCP, GitHub labels, local-backlog states); carries a Milestone Attachment section (the project's milestone convention and existing set, attachment at creation from that set, no autonomous milestone creation, intake verification, and the capture exemption); carries the coordinator memory wiring (capture bar, promotion path, curation mandate) from `doc/templates/memory-coordinator-wiring-template.md` |
 | `.ai/agent/pr-instructions.md` | PR/MR platform config — auto-detected from `git remote`, confirmed at interview; CLI preferred over MCP when both available; carries per-role memory expectations from `doc/templates/memory-instruction-expectations-template.md` |
 | `.ai/agent/decision-instructions.md` | Decision-tracking conventions; carries per-role memory expectations from `doc/templates/memory-instruction-expectations-template.md` |
 | `.ai/agent/code-review-instructions.md` | Code-review configuration; carries per-role memory expectations from `doc/templates/memory-instruction-expectations-template.md` |
@@ -147,6 +147,8 @@ Phase 5 wires the project into ADOS. It produces:
 | `doc/documentation-handbook.md`, `doc/templates/`, `doc/decisions/` (README + index), `doc/guides/`, `doc/00-index.md` | Installed/verified from ADOS source |
 
 Resume semantics for the memory scaffold: create-if-absent — a resumed Phase 5 completes a partial memory scaffold without duplicating entry points and never silently overwrites human-approved files.
+
+The generated tracker instructions carry the project's milestone rule: titles follow `M<n>: <outcome phrase>`; every `change` ticket is created with an existing milestone from the project's set; an agent proposes a missing milestone to the human and never creates one; intake verifies the attachment and records the milestone before artifact phases; and a pure backlog capture may carry the project's capture-exemption label, removable when the ticket is scheduled. The operating rule is specified in [Milestone Governance](feature-milestone-governance.md).
 
 ## Write allowlist
 
@@ -218,5 +220,6 @@ Safety rules: never store secrets; never modify existing source code; never over
 - **Tribal-knowledge template (PRODUCE output shape):** [doc/templates/tribal-knowledge-template.md](../../templates/tribal-knowledge-template.md)
 - **Design authority (tribal-knowledge taxonomy & graduation mapping):** [doc/decisions/PDR-0001-tribal-knowledge-extraction-taxonomy.md](../../decisions/PDR-0001-tribal-knowledge-extraction-taxonomy.md)
 - **Agent prompt:** `.opencode/agent/bootstrapper.md`
+- **Milestone governance:** [feature-milestone-governance.md](feature-milestone-governance.md) — the tracker-instruction milestone section Phase 5 generates
 - **Command prompt:** `.opencode/command/bootstrap.md`
 - **Agent inventory:** [.opencode/README.md](../../../.opencode/README.md)

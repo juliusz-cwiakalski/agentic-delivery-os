@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-AUTONOMOUS-DELIVERY
 status: Current
 created: 2026-07-07
-last_updated: 2026-11-11
+last_updated: 2026-11-14
 owners: ["engineering"]
 service: delivery-os
 summary: "The unattended delivery neighborhood of the lifecycle: the two autonomous modes (Mode A — autonomous CEO loop; Mode B — manual batch), the delivery-script set declared by scripts/install.sh (opencode-session.sh, deliver-ticket.sh, lib/dispatch-authority.sh, batch-deliver.sh, ceo-loop.sh, pm-liveness.sh, lint-commit-range.sh), the AI-vs-script split, and the behavioral invariants (INV-DM-1..6) that keep unattended delivery converging instead of burning tokens. Liveness is multi-signal: recursive session-tree message traffic (parent_id traversal of the current message store; opencode 1.19.3 keeps messages in message and parts in part, while session_message is a legacy table that is empty on the reference store) PLUS git/worktree activity; a race-free delivering marker tells ceo-loop.sh the CEO is blocked on a delivery. deliver-ticket.sh does not merge. Since GH-148, deliver-ticket.sh and batch-deliver.sh are platform-aware: they auto-detect GitHub vs GitLab (env override > git remote > glab auth > default github) and route tracker/MR operations through a dispatch seam with JSON normalization, so GitLab deliveries report accurate results and populated PR URLs; ceo-loop.sh is unchanged (it delegates delivery and merges, so needs no platform detection)."
 links:
-  related_changes: ["GH-142", "GH-108", "GH-146", "GH-148", "GH-150", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-242", "GH-239", "GH-280", "GH-286", "GH-288", "GH-268"]
+  related_changes: ["GH-142", "GH-108", "GH-146", "GH-148", "GH-150", "GH-185", "PDEV-514", "PDEV-516", "GH-180", "GH-242", "GH-239", "GH-280", "GH-286", "GH-288", "GH-268", "GH-313"]
   decisions: ["TDR-0002"]
   guides:
     - "doc/guides/delivery-modes.md"
@@ -26,6 +26,8 @@ links:
 Autonomous Delivery is the unattended neighborhood of the delivery lifecycle: it runs the same 11-phase ADOS lifecycle ([feature-delivery-lifecycle.md](feature-delivery-lifecycle.md)) **without a human at the keyboard**, overnight or across a batch of tickets. It is delivered as the deterministic bash scripts and tool that `scripts/install.sh` declares — the `ADOS_DELIVERY_SCRIPTS` set (`opencode-session.sh`, `deliver-ticket.sh`, `lib/dispatch-authority.sh`, `batch-deliver.sh`, `ceo-loop.sh`, `pm-liveness.sh`, `lint-commit-range.sh`) plus `tools/clean-merged-branches` — which wrap the AI agents (the `@ceo` and the PM opencode session) with liveness monitoring, session resilience, single-flight coordination, and branch hygiene, carry the pre-PR commit-range lint the lifecycle runs before PR creation, and — in Mode B — gate the merge on human approval.
 
 > **Canonical detail lives in the guide.** The full modes table, component-responsibility matrix, mermaid diagrams, recovery semantics, configuration, and troubleshooting are in [doc/guides/delivery-modes.md](../../guides/delivery-modes.md) (the canonical modes guide) and [doc/guides/autonomous-batch-delivery.md](../../guides/autonomous-batch-delivery.md) (canonical for Mode B operations). This spec names the capabilities, invariants, and the merge/liveness contracts; it does not restate the guide tables. Where the two describe the same machinery, they are kept consistent.
+
+> **Planned-scope precondition.** An unattended run assumes the milestone and every ticket attached to it already exist in the tracker, and that intake verified the attachment before delivery. The precondition is owned by the milestone-first operating rule in [milestone-management.md](../../guides/milestone-management.md); this spec does not enforce it and adds no milestone logic to the delivery scripts.
 
 ## Business Context
 
@@ -290,6 +292,7 @@ All settings are environment variables (CLI flag overrides where noted). Full ta
 ## Related Documentation
 
 - **Canonical modes guide:** [doc/guides/delivery-modes.md](../../guides/delivery-modes.md) — modes table, component responsibilities, the AI-vs-script split, INV-DM-1..6, recovery semantics, configuration, troubleshooting.
+- **Planned-scope precondition:** [doc/guides/milestone-management.md](../../guides/milestone-management.md) — the milestone-first operating rule an unattended run assumes.
 - **Mode B operations guide:** [doc/guides/autonomous-batch-delivery.md](../../guides/autonomous-batch-delivery.md) — `batch-deliver.sh` / `deliver-ticket.sh` usage, approval workflow, labels.
 - **CEO agent prompt:** `.opencode/agent/ceo.md` — autonomous delivery model (merge-not-yield, wait-for-delivery).
 - **System bootstrap:** [AGENTS.md](../../../AGENTS.md) — the delivery scripts are referenced under "Using the system".

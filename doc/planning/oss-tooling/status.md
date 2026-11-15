@@ -400,3 +400,28 @@ rule. The permanent repository vocabulary — the identity marker, the
 delivery runs on `feat/GH-309/project-groups`; M2 has not exited, and the
 remaining M2 stories (S2–S10, S16, S19) are unaffected by this delivery and stay
 planned.
+
+## M2 delivery snapshot addendum (2026-11-14): M2-S20 delivered by GH-313
+
+M2-S20 (milestone-first planning and delivery) was delivered by GH-313 on
+`feat/GH-313/milestone-first-planning`. The milestone is now the documented
+unit of planning and delivery: `doc/guides/milestone-management.md` states the
+operating rule once (naming, creation, attachment, entry review, planned scope,
+exit review, closure, extension and reopening, and enforcement), the milestone
+pack conventions point at it, and PDR-0005 records the decision. Ticket creation
+requires a milestone resolved from the existing set in the tracker instructions
+and the `@pm` prompt, intake verifies attachment and records it in pm-notes
+before artifact phases, and the `@bootstrapper` guidance carries the rule into
+new projects. The change-spec template requires `change.milestone` with its
+resolution rule. The issue-event workflow evaluates the ordered contract and
+writes only its closed vocabulary: a first flag on `opened` (with one marked
+comment only when no marker exists), a restore on `demilestoned` with the
+marker, and a removal on attachment; the `backlog-capture` exemption outranks a
+milestone and a stale flag, a manual flag removal is respected, and the advisory
+sweep reports the unattached population with zero tracker writes and one local
+artifact. The M2 planning corpus now mirrors the tracker: M2-S20 has its block,
+all 19 M2 story blocks carry their `Ticket:` line, the suggested-order file is
+contiguous with the M2 rows in backlog order, and the M2 pack carries the
+M2-S20 row and its five scenario seeds. The delivery runs on
+`feat/GH-313/milestone-first-planning`; M2 has not exited, and the remaining M2
+stories (S2–S10, S16, S19) are unaffected by this delivery and stay planned.

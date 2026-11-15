@@ -10,7 +10,7 @@ last_updated: 2026-11-14
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 links:
-  related_changes: ["GH-32", "GH-52", "GH-133", "GH-226", "GH-302"]
+  related_changes: ["GH-32", "GH-52", "GH-133", "GH-226", "GH-302", "GH-313"]
   guides:
     - "doc/documentation-handbook.md"
     - "doc/guides/onboarding-existing-project.md"
@@ -42,13 +42,19 @@ ADOS maintains templates in `doc/templates/` that serve as the structural source
 
 | Template | Purpose | Agent Consumer |
 |----------|---------|---------------|
-| `change-spec-template.md` | Change specification structure | `@spec-writer` |
+| `change-spec-template.md` | Change specification structure, including the required `change.milestone` front-matter field | `@spec-writer` |
 | `implementation-plan-template.md` | Implementation plan structure | `@plan-writer` |
 | `test-plan-template.md` | Test plan structure | `@test-plan-writer` |
 | `feature-spec-template.md` | Feature specification for `doc/spec/features/` | `@doc-syncer` |
 | `decision-record-template.md` | Decision record (all types: ADR/PDR/TDR/BDR/ODR) — type-selection helper, clean front matter, tiered-default section applicability, recommendation/decision split, evidence pack, worked R1/R2/R3 examples | `@decision-advisor` |
 | `test-spec-template.md` | Test specification for `doc/quality/test-specs/` | `@doc-syncer` |
 | `north-star-template.md` | Product north star document for `doc/overview/01-north-star.md` | `@bootstrapper` |
+
+### Required change.milestone field
+
+The change-specification template carries `change.milestone` as a required front-matter field. Its value is the tracker milestone title verbatim (`M<n>: <outcome phrase>`), equal to the `milestone` value in `chg-<workItemRef>-pm-notes.yaml`, so the spec, the pm-notes record, and the tracker can be compared without translation. The literal `none` is permitted only where the project's tracker instructions declare that the project's tracker has no milestone construct; it is never a per-change convenience.
+
+Only the change-specification template carries the field. Plan and test-plan templates inherit the change's identity through `links.change_spec`; a feature specification spans milestones; the engineering roadmap is itself the milestone register, so a milestone field on it would be circular; and a decision record is not milestone-scoped. The operating rule behind the field is documented in [Milestone Governance](feature-milestone-governance.md).
 
 ### Meeting Notes Template
 
@@ -159,7 +165,7 @@ Business Markdown templates intentionally stay concise (front matter + headings 
 |------|-----------|----------------|
 | `doc/templates/` | Templates directory | Contains core templates plus optional business/profile/register templates |
 | `doc/templates/README.md` | Directory overview | Purpose, template inventory, usage instructions |
-| `doc/templates/change-spec-template.md` | Change spec template | 25-section structure matching the change spec standard |
+| `doc/templates/change-spec-template.md` | Change spec template | 25-section structure matching the change spec standard; required `change.milestone` front-matter field with its resolution and `none` rules |
 | `doc/templates/implementation-plan-template.md` | Plan template | `delivery.plan.v1` YAML plan shape: phases, declared scope, done-artifacts, leases, weight, interactions, and tier |
 | `doc/templates/test-plan-template.md` | Test plan template | Test plan structure with scope, strategy, and traceability matrix |
 | `doc/templates/feature-spec-template.md` | Feature spec template | 9-section feature specification structure |
@@ -171,7 +177,7 @@ Business Markdown templates intentionally stay concise (front matter + headings 
 
 Agents that produce documents are configured to read templates at runtime:
 
-- **`@spec-writer`** reads `change-spec-template.md` when creating change specifications
+- **`@spec-writer`** reads `change-spec-template.md` when creating change specifications and requires the `change.milestone` front-matter field (milestone title verbatim, or `none` only where the project's tracker instructions declare no milestone construct)
 - **`@plan-writer`** reads `implementation-plan-template.md` when creating implementation plans (`chg-<workItemRef>-plan.yaml`)
 - **`@test-plan-writer`** reads `test-plan-template.md` when creating test plans
 - **`@doc-syncer`** reads `feature-spec-template.md` when creating/updating feature specifications
@@ -214,4 +220,5 @@ When agent prompt structure changes, the corresponding template should be update
 
 - **Documentation Handbook:** [doc/documentation-handbook.md](../../documentation-handbook.md) — section 17 defines core and optional template inventories
 - **Templates directory:** [doc/templates/](../../templates/)
+- **Milestone governance:** [feature-milestone-governance.md](feature-milestone-governance.md) — the required `change.milestone` field and the operating rule it records
 - **Onboarding guide:** [doc/guides/onboarding-existing-project.md](../../guides/onboarding-existing-project.md) — recommends copying templates during adoption

@@ -1,0 +1,13 @@
+{
+  "action": "edited",
+  "issue": {
+    "number": 109,
+    "state": "open",
+    "labels": [
+      {
+        "name": "change"
+      }
+    ],
+    "milestone": null
+  }
+}

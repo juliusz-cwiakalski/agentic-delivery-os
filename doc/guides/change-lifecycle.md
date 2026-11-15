@@ -9,7 +9,7 @@ created: 2026-02-03
 owners: ["engineering"]
 summary: "End-to-end change delivery workflow (planning to PR) with PM-led gates and artifacts." 
 links:
-  related_changes: ["GH-177", "GH-185", "GH-226", "GH-242", "GH-268"]
+  related_changes: ["GH-177", "GH-185", "GH-226", "GH-242", "GH-268", "GH-313"]
 ---
 
 # Change Lifecycle
@@ -188,6 +188,10 @@ flowchart TD
   - Identify dependencies on existing features or contracts.
   - Identify edge cases that may not be addressed in the ticket.
 - Analyze requirements for completeness: acceptance criteria, constraints, dependencies, edge cases.
+- **Verify milestone attachment before any artifact work** (prompt-authoritative; the `@pm` prompt governs):
+  - The ticket must belong to an existing milestone. When it does, record the milestone title in `chg-<workItemRef>-pm-notes.yaml` under `milestone`.
+  - When it does not, ask the human a question naming the milestone you propose and **STOP**. Artifact phases do not begin until the attachment exists; a capture-exempt ticket is still unattached for delivery.
+  - Never create a milestone autonomously; propose it exactly as you would propose a ticket. The full operating rule is in the [milestone-management guide](milestone-management.md).
 - Identify any gaps, contradictions, or missing key information.
 - If issues are found:
   1. Add a comment to the ticket with specific questions (referencing system spec where relevant).
@@ -202,6 +206,7 @@ flowchart TD
 
 - No blocking open questions remain (all answered by human).
 - Requirements are consistent with current system specification.
+- Ticket is attached to a milestone, and the milestone title is recorded in PM notes under `milestone`.
 - PM notes updated with assumptions, clarifications, and relevant system spec references.
 - Ticket is assigned to PM (not waiting on human).
 

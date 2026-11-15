@@ -15,6 +15,7 @@ ados_distribution: redistributable
 | [ADOS Processes Map](guides/ados-processes.md) | Canonical map of ADOS's six processes — start here for the big picture |
 | [Overview](overview/) | North star, roadmap, architecture, glossary |
 | [System Spec](spec/) | Current truth — feature specs, API descriptions, NFRs |
+| [Milestone Governance](spec/features/feature-milestone-governance.md) | The milestone-first operating rule: attachment at creation, intake verification, the ordered issue-event check and write-free sweep, and the planning-corpus mirror |
 | [Adapter Conformance Suite](spec/features/feature-adapter-conformance.md) | The three provider-agnostic flows, capability-gated skips, coverage gates, `delivery.conformance.v1` artifact, and the scheduled read-only live tier |
 | [Status Digest](spec/features/feature-status-digest.md) | The read-only nine-section attention-state delivery digest: closed finding-code registry, grouped ranked findings, evidence states, bounds, and declared gaps |
 | [Resident Dispatch Daemon](spec/features/feature-resident-daemon.md) | The mounted daemon lifecycle (prompt-required, composed unconditionally, signal-owned foreground lifetime, real instance pid, brand-derived install identity, durable-state degradation), lock/heartbeat, control protocol v1, reconciliation, the composed lane-supervision seam, external effects and commit crash safety, preemption, watch, polling, and supervisor install |
@@ -69,6 +70,7 @@ ados_distribution: redistributable
 | [Decision Records Management](guides/decision-records-management.md) | Decision record types, lifecycle, governance |
 | [Meeting Preparation and Summarization](guides/meeting-preparation-and-summarization.md) | How to prepare, run, document, and follow up on meetings |
 | [Delivery Modes](guides/delivery-modes.md) | The two unattended delivery modes (Mode A CEO loop, Mode B manual batch) + behavioral invariants |
+| [Milestone Management](guides/milestone-management.md) | The milestone-first operating rule: naming, creation, attachment, entry and exit review, closure, extension, and enforcement |
 | [Autonomous Batch Delivery](guides/autonomous-batch-delivery.md) | Unattended multi-ticket delivery: `batch-deliver.sh`, `deliver-ticket.sh`, liveness, approvals |
 | [Provider Conditions and Parks](guides/provider-conditions-and-parks.md) | Provider pauses: condition kinds, park causes and expiry, fail-loud announcements, configuration pointer |
 | [Migrating to Per-Repository Delivery State](guides/migrating-to-per-repository-state.md) | One-step, reversible move of an existing single delivery store into a per-repository project state root |
