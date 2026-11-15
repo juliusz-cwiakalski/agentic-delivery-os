@@ -50,6 +50,17 @@ open_questions: []
 blockers: []
 notes:
   - text: >-
+      Delivery plan phase 2 (plan id 2) complete. Commit: 2ea319dd. Delivered
+      the pure evaluator packages/core/src/domain/memory-lint.ts with the
+      schema, dating, provenance and reference areas (exhaustive disjoint
+      presence partition; one defect one finding), the narrowed GH-302 guard
+      permitting only the evaluator module, and the inventory/allowance rows.
+      Tests: memory-lint-schema/dating/provenance/reference plus the narrowed
+      structure guard and content inventory = 74 pass; port-contract-inventory
+      and exit-projection = 18 pass; build green.
+    type: info
+    date: "2026-11-15"
+  - text: >-
       Delivery plan phase 1 (plan id 1) complete. Commit: d7fbc56b. Tests:
       targeted structure suites (memory-layout, memory-record-schema,
       content-inventory, port-contract-inventory, exit-projection, boundaries)

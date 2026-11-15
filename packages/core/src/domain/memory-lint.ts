@@ -9,7 +9,18 @@
  * deterministic lines the edge writes.
  */
 import {
+  HINT_MAX_CHARS,
+  MEMORY_ARCHIVE_INDEX_MAX_LINES,
+  MEMORY_ARCHIVE_INDEX_PATH,
+  MEMORY_DERIVABLE_COMMANDS,
+  MEMORY_ENTRY_MAX_LINES,
   MEMORY_FINDING_AREA_ORDER,
+  MEMORY_INDEX_MAX_BYTES,
+  MEMORY_INDEX_MAX_LINES,
+  MEMORY_INDEX_PATH,
+  MEMORY_KERNEL_BAND_SEVERITY,
+  MEMORY_KERNEL_ERROR_LINES,
+  MEMORY_KERNEL_WARN_LINES,
   MEMORY_FINDING_REGISTER,
   MEMORY_MAX_PRINTED_ADVISORIES,
   MEMORY_MAX_PRINTED_ERRORS,
@@ -26,6 +37,7 @@ import {
   MEMORY_RECORD_TRUST,
   MEMORY_REVALIDATION_MARKER_KEY,
   MEMORY_ROOT,
+  MEMORY_SECRET_RULE_PREFIX,
   MEMORY_WARN_RULE_IDS,
   STATEMENT_MAX_CHARS,
   type MemoryEvaluationInput,
@@ -36,6 +48,34 @@ import {
   type MemoryScannedFile,
   type MemorySummary,
 } from "#contracts";
+
+type IndexRow = {
+  readonly path: string;
+  readonly hint: string;
+  readonly line: number;
+};
+
+const parseIndexRows = (text: string, heading: string | undefined): readonly IndexRow[] => {
+  const lines = text.split("\n");
+  const start = heading === undefined ? 0 : lines.findIndex((line) => line.trim() === heading);
+  if (start === -1) return [];
+  const rows: IndexRow[] = [];
+  for (let index = start; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
+    if (heading !== undefined && index > start && /^##\s/.test(line)) break;
+    if (!line.trim().startsWith("|")) continue;
+    if (/^\|[\s:|-]+\|$/.test(line.trim())) continue;
+    const cells = line
+      .split("|")
+      .slice(1, -1)
+      .map((cell) => cell.trim());
+    if (cells.length < 2) continue;
+    const path = (cells[0] ?? "").replace(/^`|`$/g, "");
+    if (path.length === 0 || path === "Path") continue;
+    rows.push({ path, hint: cells[1] ?? "", line: index + 1 });
+  }
+  return rows;
+};
 
 const ID_PATTERN = new RegExp(MEMORY_RECORD_ID_PATTERN);
 const FILE_NAME_PATTERN = new RegExp(MEMORY_RECORD_FILE_NAME_PATTERN);
@@ -61,7 +101,7 @@ const isRecordRelative = (relative: string): boolean => {
   }
   if (area === "guilds") {
     return (
-      parts.length === 3 && name !== "README.md" && third !== undefined && third.endsWith(".md")
+      parts.length === 3 && third !== undefined && third !== "README.md" && third.endsWith(".md")
     );
   }
   return false;
@@ -400,6 +440,235 @@ export const evaluateMemory = (input: MemoryEvaluationInput): MemoryEvaluationRe
           "memory.reference.link-dangling",
           file.path,
           `link target ${target} resolves to no file`,
+        );
+      }
+    }
+  }
+
+  // --- index coverage over the two declared universes (DM-3, AC-F9-2) ---
+  const indexFile = input.files.find((file) => file.path === MEMORY_INDEX_PATH);
+  const archiveFile = input.files.find((file) => file.path === MEMORY_ARCHIVE_INDEX_PATH);
+  const coveredByMemory = new Set<string>();
+  for (const file of input.files) {
+    const relative = relativeOf(file.path);
+    if (relative === "README.md" || relative === "retro/INDEX.md") {
+      if (relative === "retro/INDEX.md") coveredByMemory.add(relative);
+      continue;
+    }
+    if (
+      isRecordRelative(relative) ||
+      /^agents\/[^/]+\/README\.md$/.test(relative) ||
+      /^guilds\/[^/]+\/README\.md$/.test(relative)
+    ) {
+      coveredByMemory.add(relative);
+    }
+  }
+  const coveredByArchive = new Set(
+    input.files
+      .map((file) => relativeOf(file.path))
+      .filter((relative) => /^retro\/\d{4}\/.+\.md$/.test(relative)),
+  );
+  const normalizeRowPath = (value: string): string =>
+    value.startsWith(`${MEMORY_ROOT}/`) ? value.slice(MEMORY_ROOT.length + 1) : value;
+  const evaluateUniverse = (
+    universe: "memory-index" | "archive-index",
+    index: MemoryScannedFile | undefined,
+    covered: ReadonlySet<string>,
+    heading: string | undefined,
+  ): void => {
+    const rows = index === undefined ? [] : parseIndexRows(index.text, heading);
+    const seen = new Map<string, number>();
+    for (const row of rows) {
+      const rowPath = normalizeRowPath(row.path);
+      const path = `${MEMORY_ROOT}/${rowPath}`;
+      if (row.hint.length === 0) {
+        add(
+          "memory.index.hint-missing",
+          index?.path ?? MEMORY_INDEX_PATH,
+          `empty read-when hint for ${rowPath} (universe ${universe})`,
+          { line: row.line },
+        );
+      } else if (row.hint.length > HINT_MAX_CHARS) {
+        add(
+          "memory.index.row-malformed",
+          index?.path ?? MEMORY_INDEX_PATH,
+          `hint ${row.hint.length} exceeds cap ${HINT_MAX_CHARS} for ${rowPath} (universe ${universe})`,
+          { line: row.line },
+        );
+      }
+      const first = seen.get(rowPath);
+      if (first !== undefined) {
+        add(
+          "memory.index.row-duplicate",
+          path,
+          `duplicate row (first at line ${first}, universe ${universe})`,
+          { line: row.line },
+        );
+      } else {
+        seen.set(rowPath, row.line);
+      }
+    }
+    for (const relative of covered) {
+      if (!seen.has(relative)) {
+        add(
+          "memory.index.record-uncovered",
+          `${MEMORY_ROOT}/${relative}`,
+          `no index row covers ${relative} (universe ${universe})`,
+        );
+      }
+    }
+    for (const rowPath of seen.keys()) {
+      if (!covered.has(rowPath)) {
+        add(
+          "memory.index.row-unbacked",
+          `${MEMORY_ROOT}/${rowPath}`,
+          `row path ${rowPath} is not covered (universe ${universe})`,
+        );
+      }
+    }
+  };
+  evaluateUniverse("memory-index", indexFile, coveredByMemory, "## Index");
+  evaluateUniverse("archive-index", archiveFile, coveredByArchive, undefined);
+
+  // --- budgets at their published caps (DM-5, AC-F10-1) ---
+  const measureLines = (file: MemoryScannedFile): number => file.text.split("\n").length;
+  if (indexFile !== undefined) {
+    const lines = measureLines(indexFile);
+    if (lines > MEMORY_INDEX_MAX_LINES) {
+      add(
+        "memory.budget.index-lines",
+        indexFile.path,
+        `${lines} lines exceed cap ${MEMORY_INDEX_MAX_LINES}`,
+      );
+    }
+    if (indexFile.bytes > MEMORY_INDEX_MAX_BYTES) {
+      add(
+        "memory.budget.index-bytes",
+        indexFile.path,
+        `${indexFile.bytes} bytes exceed cap ${MEMORY_INDEX_MAX_BYTES}`,
+      );
+    }
+  }
+  for (const file of input.files) {
+    const relative = relativeOf(file.path);
+    if (/^agents\/[^/]+\/README\.md$/.test(relative)) {
+      const lines = measureLines(file);
+      if (lines > MEMORY_ENTRY_MAX_LINES) {
+        add(
+          "memory.budget.agent-entry-lines",
+          file.path,
+          `${lines} lines exceed cap ${MEMORY_ENTRY_MAX_LINES}`,
+        );
+      }
+    }
+    if (/^guilds\/[^/]+\/README\.md$/.test(relative)) {
+      const lines = measureLines(file);
+      if (lines > MEMORY_ENTRY_MAX_LINES) {
+        add(
+          "memory.budget.guild-entry-lines",
+          file.path,
+          `${lines} lines exceed cap ${MEMORY_ENTRY_MAX_LINES}`,
+        );
+      }
+    }
+    if (file.path === MEMORY_ARCHIVE_INDEX_PATH) {
+      const lines = measureLines(file);
+      if (lines > MEMORY_ARCHIVE_INDEX_MAX_LINES) {
+        add(
+          "memory.budget.archive-index-lines",
+          file.path,
+          `${lines} lines exceed cap ${MEMORY_ARCHIVE_INDEX_MAX_LINES}`,
+        );
+      }
+    }
+    if (file.path === "AGENTS.md") {
+      const lines = file.text.split("\n");
+      const start = lines.findIndex((line) => line === "## Agent memory");
+      if (start !== -1) {
+        const end = lines.findIndex((line, position) => position > start && /^## /.test(line));
+        const measured = (end === -1 ? lines.length : end) - start;
+        if (measured > MEMORY_KERNEL_ERROR_LINES) {
+          add(
+            "memory.budget.kernel-lines",
+            file.path,
+            `${measured} lines exceed cap ${MEMORY_KERNEL_ERROR_LINES}`,
+          );
+        } else if (measured > MEMORY_KERNEL_WARN_LINES) {
+          add(
+            "memory.budget.kernel-lines",
+            file.path,
+            `${measured} lines are in the advisory band above ${MEMORY_KERNEL_WARN_LINES}`,
+            { severity: MEMORY_KERNEL_BAND_SEVERITY },
+          );
+        }
+      }
+    }
+  }
+
+  // --- derivable content: two closed advisories (F-11) ---
+  const fencedBlocks = (text: string): readonly string[] => {
+    const blocks: string[] = [];
+    for (const match of text.matchAll(/```[^\n]*\n([\s\S]*?)```/g)) {
+      if (match[1] !== undefined) blocks.push(match[1]);
+    }
+    return blocks;
+  };
+  for (const record of records) {
+    const blocks = fencedBlocks(record.file.text);
+    const listing = blocks.some((block) => {
+      const lines = block
+        .split("\n")
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+      return (
+        lines.length >= 2 &&
+        lines.every((line) =>
+          /^(?:packages|scripts|tests|tools|doc|\.opencode|\.ai|\.github)\/[\w./-]+$/.test(line),
+        )
+      );
+    });
+    if (listing) {
+      add(
+        "memory.derivable.file-listing",
+        record.file.path,
+        "fenced block is a repository file listing",
+      );
+    }
+    const command = blocks.some((block) =>
+      block
+        .split("\n")
+        .map((line) => line.trim())
+        .some((line) =>
+          MEMORY_DERIVABLE_COMMANDS.some((entry) => line === entry || line.startsWith(`${entry} `)),
+        ),
+    );
+    if (command) {
+      add(
+        "memory.derivable.command-echo",
+        record.file.path,
+        "fenced block restates a declared workspace command",
+      );
+    }
+  }
+
+  // --- secret findings from the injected privacy vocabulary (F-12) ---
+  for (const file of input.files) {
+    for (const rule of input.privacy.rules) {
+      const pattern = new RegExp(rule.patternSource, rule.flags);
+      for (let match = pattern.exec(file.text); match !== null; match = pattern.exec(file.text)) {
+        const matched = match[0];
+        if (matched.length < rule.minimumMatchLength) continue;
+        const lowered = matched.toLowerCase();
+        const suppressed = input.privacy.suppressionClasses.some((entry) =>
+          entry.markers.some((marker) => lowered.includes(marker.toLowerCase())),
+        );
+        if (suppressed) continue;
+        const line = file.text.slice(0, match.index).split("\n").length;
+        add(
+          `${MEMORY_SECRET_RULE_PREFIX}${rule.recognizerClass}`,
+          file.path,
+          `recognizer class ${rule.recognizerClass}`,
+          { line },
         );
       }
     }
