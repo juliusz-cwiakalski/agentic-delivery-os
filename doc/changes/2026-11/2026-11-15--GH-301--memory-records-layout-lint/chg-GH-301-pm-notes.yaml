@@ -56,7 +56,7 @@ notes:
       memory-practices bootstrapping checklist is untouched; ADR-0011 is tracked
       with its index row resolving and remains Proposed with decision_date null
       for the owner gate. Full battery at the delivered HEAD:
-      TMPDIR=/home/juliusz/git/ados-tmp pnpm check = 8653 pass, 4 skip, 0 fail
+      TMPDIR=<outside-repo same-filesystem dir> pnpm check = 8653 pass, 4 skip, 0 fail
       (EXIT 0), including build/lint/format/typecheck/tests/boundaries/
       check:memory/prompt/help/exports; bun run scripts/checks/memory-lint.ts =
       records=3 areas=8 errors=0 advisories=0; doc-distribution,
@@ -499,7 +499,7 @@ notes:
       checkout — the worktree sits inside the `jaiship` git repository, and four
       pre-existing suites (projects-*, repos-list-*, dispatch-attempts-scope)
       require a TMPDIR outside every git work tree. Gates were run with an
-      outside-repo, same-filesystem TMPDIR (/home/juliusz/git/ados-tmp) and the
+      outside-repo, same-filesystem TMPDIR (outside the repository tree) and the
       full suite was green. Load-only 5 s timeouts were observed on six suites
       in some full runs; each passed individually on re-run. Recorded so
       dod_check and the PR body state the gate invocation honestly."
