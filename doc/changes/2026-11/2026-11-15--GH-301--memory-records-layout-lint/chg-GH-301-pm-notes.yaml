@@ -4,9 +4,9 @@ milestone: "M2: Ceremonies, measurement, and memory"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: null, completed: 2026-11-15T10:43:33.032Z }
-  specification: { started: null, completed: 2026-11-15T11:42:26.712Z }
-  test_planning: { started: null, completed: 2026-11-15T11:42:37.525Z }
-  delivery_planning: { started: null, completed: 2026-11-15T11:42:48.964Z }
+  specification: { started: null, completed: 2026-11-15T12:10:30.219Z }
+  test_planning: { started: null, completed: 2026-11-15T10:56:14.874Z }
+  delivery_planning: { started: null, completed: 2026-11-15T11:08:05.638Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -255,6 +255,62 @@ notes:
       phase-1 scope now declares both paths, the record is tracked and the row
       resolves. No dangling link remains at HEAD."
     type: info
+    date: "2026-11-15"
+  - text: "DOR CHECK iteration 2 = NOT_READY (record:
+      readiness-review/readiness-iter-2.md, commit 1b23c0ac). 4 facets PASS
+      (decision_capture, plan_doc_update_coverage, plan_code_area_coverage,
+      dod_defined) / 6 FAIL. Iteration-1 findings 1-8, 10, 12-20 verified closed
+      against source. New blocking set: (1) critical — the plan assigns `source`
+      presence/shape to provenance but the closed register has no source
+      identity, so absent/out-of-channel `source` was unimplementable and
+      AC-F2-2 overlapped AC-F7-1; (2) critical — DM-1/ADR D7 require a `scope:
+      fleet` candidate to be refused via capsule-invalid, but no phase
+      implemented it, so the writer would emit a record the schema rejects and
+      break AC-F3-1; (3) major — DoD-15 omitted the narrowed sanction scan that
+      AC-F14-1 makes the core of the replacement; (4) major — TC-MEMGUARD-001
+      never tested that scan; (5) major — TC-MEMGATE-003 claimed the edge owns
+      every read while the plan puts reads and the YAML parse in the scanner
+      adapter; (6) major — TC-MEMGATE-004 demanded identical raw strings across
+      surfaces that legitimately differ by script indirection; (7) major — the
+      spec claimed 'a record copied from the concept validates' while no phase
+      reconciled the concept's Record model. Minors: capsule source parity had
+      nothing to compare, TC-MEMSCHEMA-003 mapped to the wrong suite,
+      TC-MEMNFR-004 asserted a phase-7 doc at phase 6, plan header still called
+      ADR-0011 untracked, and F-9/DM-4 summaries contradicted the detailed
+      register."
+    type: risk
+    date: "2026-11-15"
+  - text: "DOR REMEDIATION (iteration 2 -> 3, final allowed iteration): spec v1.2
+      (commit 10073eaa) — adopted the presence partition (absent `source` ->
+      memory.schema.keys-missing; out-of-channel `source` ->
+      memory.schema.value-unknown; evidence/created_by stay provenance-owned)
+      with no new register identity; DoD-15 now declares the three-part guard
+      replacement; F-9 hint classification and DM-4 kernel warn band aligned to
+      DM-5. Test plan v1.2 (commit f8e79f38) — TC-MEMGUARD-001 asserts
+      sanctioned set equality plus two planted mutants; scanner-adapter
+      read/parse boundary; resolved-invocation parity; capsule behaviour parity;
+      correct suite for TC-MEMSCHEMA-003; delivery-time scope for TC-MEMNFR-004;
+      TC-MEMPROV-001 partition rows; TC-MEMWRITE-004 fleet refusal. Plan 1.2
+      (commit b2457a14) — phase 5 gains the fleet projection refusal through the
+      existing capsule-invalid identity; phase 6 gains the concept Record-model
+      rewrite (memory-architecture.md declared in scope; the TC-MEMALIGN-001 pin
+      is the Bootstrapping section in memory-practices.md, not this file);
+      header current-state corrected to 'already tracked, verify and edit
+      nothing'."
+    type: info
+    date: "2026-11-15"
+  - text: "RETRO: iteration 2's residue was almost entirely cross-artifact
+      ownership, not missing content — a key assigned to two areas in one
+      artifact and to one area in another, a guard test that tested presence but
+      not the scan that carries the AC, and two test steps that asserted an
+      architecture the plan did not build. The revision cycle is converging (20
+      -> 7+5 -> this), but the cost was three author round-trips. Process tweak
+      for future changes: when a spec introduces a closed identity register, the
+      register row and the AC/TC that cite it must be written in the same
+      sitting, and a guard replacement must be decomposed into presence /
+      negative-scan / preserved- absences parts before the test plan is
+      authored."
+    type: retro
     date: "2026-11-15"
   - text: "Open questions carried by the spec (all non-blocking, deferred): OQ-1
       distribute the invariant to bootstrapped projects (NG-7, would retire the
