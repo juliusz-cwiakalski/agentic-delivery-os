@@ -19,7 +19,7 @@ phases:
     completed: 2026-11-15T23:40:03.758Z
   dor_check:
     started: null
-    completed: null
+    completed: 2026-11-15T23:47:56.787Z
   delivery:
     started: null
     completed: null
@@ -134,4 +134,20 @@ notes:
       (obligations vs missed windows), pin the composition in the same pass as
       the rule."
     type: retro
+    date: "2026-11-16"
+  - text: "dor_check iteration 3: READY, all 10 facets PASS, no pause required.
+      Verdict record: readiness-review/readiness-iter-3.md. Iteration-2 findings
+      1-5 verified resolved on merit; DEC-19 is the only surviving obligation
+      rule across all 13 locations; plan map matches the test plan id for id (65
+      TCs); 50/50 ACs, 9/9 DMs, 14/14 NFRs claimed. Accepted non-blocking
+      residue for review: a stale GAP-8 PENDING marker in the test plan (plan
+      now owns 001..065) and two test-plan lines retaining the old 'before any
+      read' shorthand."
+    type: info
+    date: "2026-11-16"
+  - text: "Delivery gate cleared at iteration 3 of 3. Reopening an artifact phase
+      after READY would restart the gate, so the two non-blocking wording
+      defects are carried as declared residue and surfaced to the reviewer
+      instead."
+    type: decision
     date: "2026-11-16"
