@@ -434,7 +434,8 @@ notes:
     date: "2026-11-15"
   - text: "QUALITY GATE (lifecycle phase 9) verdicts. Full battery: `pnpm check`
       exit 0 with `TMPDIR` set to a measured temp root OUTSIDE every git work
-      tree (`/home/juliusz/.cache/ados-runner-tmp`): 8753 pass / 4 skip / 0 fail
+      tree (`$GATE_TMPDIR`, the operator's measured gate temp root; the literal
+      machine path is not committed): 8753 pass / 4 skip / 0 fail
       across 1097 files (1024s); lint 2564 files 0 errors (83 warnings);
       format:check 2422 files no drift; typecheck 6 packages + tests/types;
       boundaries 406 modules / 1237 deps no violations; ambient-globals 192
@@ -443,7 +444,7 @@ notes:
       covered; exports-parity 5 publishables pass. The repo-local
       `TMPDIR=$PWD/tmp/tmpdir` form is NOT usable on this host:
       `tests/fixtures/projects/state-scope.ts` rejects every candidate because
-      the parent `/home/juliusz/git/jaiship` is itself a git repo, producing 15
+      the parent of the checkout directory is itself a git repo, producing 15
       guard failures plus one 250.21 ms latency boundary (TC-DAEMON-121).
       Re-running the same battery with the outside temp root is green, so the
       failures are environmental, not regressions. Commit-range gate
@@ -485,4 +486,25 @@ notes:
       at the actual PR head d05c01d0: PASS, 35 commits, 0 offending. Delivery
       stops here — no merge, no other ticket."
     type: info
+    date: "2026-11-15"
+  - text: "CI REMEDIATION (post-pr_creation): the privacy-literal scan failed on this
+      pm-notes because the quality-gate evidence recorded two absolute machine
+      paths — the measured gate temp root and the checkout's parent directory.
+      Both were replaced with the declared placeholder form (`$GATE_TMPDIR`, the
+      operator's measured gate temp root, and 'the parent of the checkout
+      directory'), matching the GH-322 sanitization applied to GH-310. No
+      behaviour, gate result, or acceptance claim changes; TC-PRIVACY-020 and
+      TC-WIRE-002 failed only as consequences of the scan and pass after the
+      sanitize. Committed on the same branch and pushed; no new PR and no phase
+      reopened."
+    type: resolved
+    date: "2026-11-15"
+  - text: "RETRO: a gate-evidence note leaked machine paths that the privacy scan
+      rejects — the same defect class GH-322 fixed in GH-310. Root cause: I copied
+      the operator's temp-root semantics into prose instead of using the
+      placeholder convention the change-lifecycle note already defines. Improvement:
+      write every gate command and path in pm-notes with placeholders only
+      (`$PWD/...`, `$GATE_TMPDIR`) and run `scripts/checks/privacy-literals.ts`
+      before completing quality_gates."
+    type: retro
     date: "2026-11-15"
