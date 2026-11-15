@@ -12,7 +12,7 @@ phases:
   delivery: { started: null, completed: 2026-11-15T15:25:22.181Z }
   system_spec_update: { started: null, completed: 2026-11-15T12:11:25.019Z }
   review_fix: { started: null, completed: 2026-11-15T12:48:17.746Z }
-  quality_gates: { started: null, completed: 2026-11-15T14:54:17.918Z }
+  quality_gates: { started: null, completed: 2026-11-15T15:52:28.894Z }
   dod_check: { started: null, completed: 2026-11-15T14:54:46.111Z }
   pr_creation: { started: null, completed: 2026-11-15T14:55:44.056Z }
 decisions:
@@ -541,6 +541,24 @@ notes:
       divergence from the authoritative registry, spec citations of test plan
       v1.6, and one info wording nit; none affects an AC, a gate or the PR
       contract."
+    type: info
+    date: "2026-11-15"
+  - text: "PR #324 CI round 2/3 and final gate at head ce69101. Round 2 root causes:
+      (a) the two install-set-oracle jobs need the workspace installed and built
+      (the launcher resolves `@delivery-os/*` to the git-ignored `dist`, so
+      `pnpm install` alone still failed — proven in a dependency-free worktree),
+      fixed by adding the pinned pnpm setup, `pnpm install --frozen-lockfile`
+      and `pnpm build` to `doc-distribution-guard` and `bash-tests`; (b) the
+      notice bound measured the raw line, which embeds two absolute paths, so
+      the longer CI checkout made 425 chars against 400 — the bound is now
+      path-independent (fixed prose with both locations removed ≤ 400), spec
+      v1.11 and test plan v1.8, applied to TC-BIN-043 and TC-BIN-052. Final
+      checks at ce69101: pnpm check 8631 pass / 4 skip / 0 fail (8635 tests,
+      1091 files, 1327 s); commit-range PASS, 61 commits, 0 offending;
+      privacy-literals 0 violations; doc-distribution no drift (94 docs);
+      prior-identity-notice + install-launcher-installer 23 pass. Spec v1.11
+      declares the full provisioning edit in §7.2/§16; plan r1.8 carries
+      obligation 6.19 (a)-(d)."
     type: info
     date: "2026-11-15"
   - text: "PR #324 CI remediation and final gate. Root causes: (1) the phase-9
