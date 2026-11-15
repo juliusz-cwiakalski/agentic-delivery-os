@@ -134,3 +134,8 @@ export {
   parseConfigYaml,
   parserHostSwitchBlocked,
 } from "./yaml-parser.js";
+export {
+  ceremonyArtifactsDirectory,
+  ceremonyArtifactsDirectoryName,
+  createCeremonyArtifactStore,
+} from "./ceremony-artifacts.js";

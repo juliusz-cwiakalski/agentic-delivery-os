@@ -2734,6 +2734,25 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "validateCeremonyDeclaration",
     "validateCeremonyDocument",
   ],
+  "core/src/state/ceremony.ts": [
+    "appendCeremonyRun",
+    "appendCeremonyStep",
+    "ceremonyRunDurationMs",
+    "ceremonyRunIdentityKey",
+    "ceremonyRunRecordKey",
+    "ceremonyStepRecordKey",
+    "createCeremonyRecordPort",
+    "findCeremonyRunByIdentity",
+    "foldCeremonyPhaseDurations",
+    "foldCeremonyRunVerdict",
+    "readCeremonyRuns",
+    "readCeremonySteps",
+  ],
+  "adapters/src/file/ceremony-artifacts.ts": [
+    "ceremonyArtifactsDirectory",
+    "ceremonyArtifactsDirectoryName",
+    "createCeremonyArtifactStore",
+  ],
 };
 
 const listTypeScriptFiles = (packageDir: string): string[] => {

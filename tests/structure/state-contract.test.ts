@@ -10,6 +10,11 @@ import { join } from "node:path";
 import {
   ERROR_TABLE,
   type ErrorTableEntry,
+  CEREMONY_RECORD_BOUNDARY_DECLARATION,
+  CEREMONY_RUN_RECORD_KEY_PREFIX,
+  CEREMONY_RUN_RECORD_KIND,
+  CEREMONY_STEP_RECORD_KEY_PREFIX,
+  CEREMONY_STEP_RECORD_KIND,
   STATE_ARTIFACT_FIELD_TYPES,
   STATE_BOUNDARY_VERDICTS,
   STATE_LEVELS,
@@ -344,6 +349,54 @@ describe("TC-COORD-083 coordinator records are additive inside the delivered sch
       "coordinator.fence",
     ]) {
       expect(coordinatorContracts.split(`"${kind}"`).length - 1, kind).toBe(1);
+    }
+  });
+});
+
+/**
+ * TC-CEREMONY-040 (contract half) — the ceremony record kinds are declared in one
+ * additive boundary under the `ceremony.` prefix, with identity and required
+ * payload fields, and the boundary admits no third kind.
+ */
+describe("TC-CEREMONY-040 the ceremony boundary is additive and declared once", () => {
+  test("the declaration carries exactly the run and step kinds", () => {
+    expect(CEREMONY_RECORD_BOUNDARY_DECLARATION.recordKeyPrefix).toBe("ceremony.");
+    expect(CEREMONY_RECORD_BOUNDARY_DECLARATION.kinds.map((kind) => kind.kind).sort()).toEqual([
+      CEREMONY_RUN_RECORD_KIND,
+      CEREMONY_STEP_RECORD_KIND,
+    ]);
+    expect(CEREMONY_RUN_RECORD_KEY_PREFIX).toBe("ceremony.runs:");
+    expect(CEREMONY_STEP_RECORD_KEY_PREFIX).toBe("ceremony.steps:");
+  });
+
+  test("every kind declares its schema, identity, and required fields", () => {
+    for (const kind of CEREMONY_RECORD_BOUNDARY_DECLARATION.kinds) {
+      expect(kind.payloadSchema).toBeDefined();
+      expect(kind.identityField).toBe("runId");
+      expect(kind.fields).toContainEqual({ name: "runId", type: "string", required: true });
+      expect(kind.fields).toContainEqual({ name: "schemaId", type: "string", required: true });
+    }
+  });
+
+  test("a third ceremony kind is refused by the declared boundary", () => {
+    const root = makeTempRoot("ceremony-boundary");
+    try {
+      const { store } = openStore(makeIdentity(root));
+      const boundary = createArtifactBoundary(store, CEREMONY_RECORD_BOUNDARY_DECLARATION);
+      withinFence(store, "ceremony-writer", (handle) => {
+        const refused = boundary.append(handle, {
+          kind: "ceremony.unknown",
+          recordKey: "ceremony.other:1",
+          payload: { schemaId: "delivery.ceremony.run.v1", runId: "r" },
+        });
+        expect(refused.ok).toBe(false);
+        if (!refused.ok) {
+          expect(refused.error.code).toBe("state.store.unknown");
+          expect(refused.error.consequence).toBe("not_landed");
+        }
+      });
+    } finally {
+      removeRoot(root);
     }
   });
 });

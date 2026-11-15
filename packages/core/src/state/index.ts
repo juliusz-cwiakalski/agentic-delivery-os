@@ -900,3 +900,17 @@ export const createStateStore = (
 
 /** The daemon-owned lock artifact (GH-238 F-2), distinct from the state fence. */
 export { createDaemonLockPort } from "./daemon-lock.js";
+export {
+  appendCeremonyRun,
+  appendCeremonyStep,
+  ceremonyRunDurationMs,
+  ceremonyRunIdentityKey,
+  ceremonyRunRecordKey,
+  ceremonyStepRecordKey,
+  createCeremonyRecordPort,
+  findCeremonyRunByIdentity,
+  foldCeremonyPhaseDurations,
+  foldCeremonyRunVerdict,
+  readCeremonyRuns,
+  readCeremonySteps,
+} from "./ceremony.js";

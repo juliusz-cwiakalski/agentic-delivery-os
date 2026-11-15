@@ -151,3 +151,17 @@ notes:
       instead."
     type: decision
     date: "2026-11-16"
+  - text: "plan phase 1 (ceremony declaration contracts, closed vocabularies,
+      and the single validator): commit be940b1; pnpm typecheck green; bun test
+      tests/structure/{ceremony-contract,ceremony-imports,error-table}.test.ts
+      green (113 pass); bun test
+      tests/behaviour/ceremony-{declaration,declaration-bounds}.test.ts green
+      (33 pass); bun test tests/checks/{error-table-sync,fixture-privacy}.test.ts
+      green (99 pass); bun run scripts/checks/error-table-sync.ts and
+      ambient-globals.ts green. Two tracked support files outside the declared
+      scope were updated of necessity and disclosed as scope drift by the
+      commit primitive: scripts/checks/error-table-sync.ts (the reserved
+      two-segment allowlist) and tests/structure/inventory.json (the source
+      inventory)."
+    type: info
+    date: "2026-11-16"
