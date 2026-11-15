@@ -31,7 +31,7 @@ export {
   type ConfigValue,
   type ConfigWarning,
   PRIOR_IDENTITY_NOTICE_REASONS,
-  PRIOR_IDENTITY_NOTICE_TOKEN,
+  priorIdentityNoticeToken,
   type PriorIdentityNotice,
   type PriorIdentityNoticeReason,
   renderPriorIdentityNotice,

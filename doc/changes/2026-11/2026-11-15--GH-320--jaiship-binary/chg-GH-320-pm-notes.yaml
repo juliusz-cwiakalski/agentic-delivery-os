@@ -286,3 +286,26 @@ notes:
       tests/fixtures/entrypoint/alias-baseline.json."
     type: info
     date: "2026-11-15"
+  - text: "Plan phase 2 (prior-identity configuration and host-state fallback
+      with one bounded notice) delivered by commits
+      79fb59c9fb928735eb8ceaf7d6707d83fc8c0fa9 and
+      38183b55cc1cf8d5fc6f3df8bbbe9f5a19793477 (the second is the corrective
+      commit that lands the fixture harness inside the declared folder and the
+      probe-port refactor). Gates green: pnpm typecheck;
+      prior-identity-config-fallback (18 pass); prior-identity-state-fallback
+      (11 pass); prior-identity-notice (13 pass); identity-override (8 pass);
+      state-scope + projects-state-scope-policy (24 pass); entrypoint-two-bins
+      (18 pass); config-sources + projects-config + daemon-state-scope +
+      legacy-adapter (59 pass). DoR-4 residuals (a) notice assertion scoped to
+      the alias and rationale replaced, (b) the pre-change touch control captured
+      into tests/fixtures/entrypoint/prior-identity/pre-change-touch.json and
+      applied to both bins. Discovered scope gap (reported, not silently
+      widened): packages/core/src/index.ts and
+      packages/adapters/src/file/projects-config.ts are not declared in any
+      phase; the root re-export was removed by using an injected
+      probeDefaultRoot port, and the project-groups document fallback was
+      dropped, so the delivered file set stays exactly as declared. Obligation
+      2.5's site list is therefore threaded for the four acquireFileConfig
+      sites and createConfigProgram, not for readProjectGroupsConfig."
+    type: risk
+    date: "2026-11-15"

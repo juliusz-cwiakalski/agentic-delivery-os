@@ -107,7 +107,10 @@ export type ConfigPriorOutcome =
     };
 
 /** The prior-identity fallback notice classification (GH-320 DM-4, DEC-10). */
-export const PRIOR_IDENTITY_NOTICE_TOKEN = "prior-identity-fallback";
+const PRIOR_IDENTITY_NOTICE_TOKEN = "prior-identity-fallback";
+
+/** The classification token, exposed as behaviour (no exported literal). */
+export const priorIdentityNoticeToken = (): string => PRIOR_IDENTITY_NOTICE_TOKEN;
 export const PRIOR_IDENTITY_NOTICE_REASONS = [
   "config-read",
   "config-skipped",

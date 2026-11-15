@@ -2163,7 +2163,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "core/src/contracts/config.ts": [
     "CONFIG_LAYERS",
     "PRIOR_IDENTITY_NOTICE_REASONS",
-    "PRIOR_IDENTITY_NOTICE_TOKEN",
+    "priorIdentityNoticeToken",
     "renderPriorIdentityNotice",
   ],
   "core/src/contracts/watchdog.ts": [
@@ -2355,6 +2355,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/app/state-scope.ts": [
     "checkoutDirectoryName",
+    "hostRootCandidates",
     "legacyStoreWarning",
     "hostIndexPath",
     "parseProjectIdentityMarker",
@@ -2364,6 +2365,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "projectsContainerPath",
     "resolveHostStateRoot",
     "resolveProjectScope",
+    "selectHostStateRoot",
     "sanitizeProjectBasename",
     "serializeProjectIdentityMarker",
     "stateScopeEnvironmentName",

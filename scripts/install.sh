@@ -948,6 +948,107 @@ install_local_files() {
   fi
 }
 
+# ============================================================================
+# LAUNCHER REGISTRATION (GH-320 F-6, DEC-12, DEC-15)
+# ============================================================================
+
+# The one declared layout reference to the CLI entry the launcher executes.
+readonly CLI_ENTRY_RELATIVE="packages/cli/bin/jaiship.ts"
+
+# Ask the executable's own state-free self-description for the brand install
+# path, with the working-name override scrubbed from that child's environment,
+# and expand only the leading home marker. The path is never composed here.
+resolve_launcher_path() {
+  local -r source_dir="$1"
+  local -r entry="${source_dir}/${CLI_ENTRY_RELATIVE}"
+  local declared
+  if ! declared="$(env -u DELIVERY_OS_WORKING_NAME bun "${entry}" --print-install-path 2>/dev/null)"; then
+    log_err "the executable did not answer --print-install-path: ${entry}"
+    return 1
+  fi
+  case "${declared}" in
+    "~/"*) printf '%s' "${HOME}/${declared#\~/}" ;;
+    /*)    printf '%s' "${declared}" ;;
+    *)
+      log_err "the executable answered an unusable install path: ${declared}"
+      return 1
+      ;;
+  esac
+}
+
+# Register the executable launcher at the brand install path.
+#
+# Exactly one absolute target is recorded at install time; the launcher execs it
+# with the invocation arguments passed through and the environment unmodified.
+# Re-running an unchanged install rewrites nothing, a different source repoints
+# the launcher, and a missing target answers one bounded diagnostic. A missing
+# runtime or a source tree without the CLI entry is a classified failure, never
+# a silent skip.
+install_local_launcher() {
+  local -r source_dir="$1"
+  local -r entry="${source_dir}/${CLI_ENTRY_RELATIVE}"
+
+  # A dry run reports the planned registration and writes nothing (DEC-15).
+  if [[ "${DRY_RUN}" == "true" ]]; then
+    local planned=""
+    if [[ -f "${entry}" ]] && command -v bun >/dev/null 2>&1; then
+      planned="$(resolve_launcher_path "${source_dir}" || true)"
+    fi
+    if [[ -n "${planned}" ]]; then
+      log_info "[DRY-RUN] Would register the launcher at ${planned} -> ${entry}"
+    else
+      log_info "[DRY-RUN] Would register the launcher for the CLI entry ${entry}"
+    fi
+    return 0
+  fi
+
+  if [[ ! -f "${entry}" ]]; then
+    log_err "the resolved source tree has no CLI entry: expected ${entry}"
+    return 1
+  fi
+  if ! command -v bun >/dev/null 2>&1; then
+    log_err "the Bun runtime is required at install time for the launcher step but is not on PATH"
+    return 1
+  fi
+
+  local install_path
+  if ! install_path="$(resolve_launcher_path "${source_dir}")"; then
+    return 1
+  fi
+
+  local content
+  content="$(
+    cat <<LAUNCHER
+#!/usr/bin/env bash
+# Installed by the local install; re-run the local install to update or repoint.
+readonly TARGET='${entry}'
+if [[ ! -f "\${TARGET}" ]]; then
+  printf 'the installed target %s no longer exists; re-run the local install to repoint it\n' "\${TARGET}" >&2
+  exit 1
+fi
+exec bun "\${TARGET}" "\$@"
+LAUNCHER
+  )"
+
+  local existing=""
+  if [[ -f "${install_path}" ]]; then
+    existing="$(cat "${install_path}")" || existing=""
+  fi
+  if [[ "${existing}" == "${content}" ]]; then
+    log_debug "Launcher unchanged: ${install_path}"
+    return 0
+  fi
+
+  local launcher_dir
+  launcher_dir="$(dirname "${install_path}")"
+  run_cmd _mkdir -p "${launcher_dir}"
+  local -r staging="${install_path}.tmp.$$"
+  printf '%s\n' "${content}" >"${staging}"
+  chmod 755 "${staging}"
+  mv -f "${staging}" "${install_path}"
+  log_info "Launcher registered: ${install_path} -> ${entry}"
+}
+
 do_local_install() {
   require_project_root
   validate_paths
@@ -968,6 +1069,8 @@ do_local_install() {
 
   reset_counters
   install_local_files "${source_dir}"
+
+  install_local_launcher "${source_dir}"
 
   printf '\n'
   log_info "Done — ${_added} added, ${_updated} updated, ${_unchanged} unchanged"
