@@ -74,9 +74,12 @@ notes:
     type: risk
     date: "2026-11-14"
   - text: "Gate environment (measured, binding on every phase boundary): run gates
-      with TMPDIR=/home/juliusz/tmp (same ext4 device as the checkout, outside
-      every git work tree — the repo's parent /home/juliusz/git/jaiship is
-      itself an umbrella git work tree) and with GIT_CONFIG_COUNT=1
+      with TMPDIR=$GATE_TMPDIR, where `$GATE_TMPDIR` denotes the operator's
+      measured gate temp root (same ext4 device as the checkout, outside
+      every git work tree — the repo's parent <workspace-parent> is
+      itself an umbrella git work tree); the literal machine path is not
+      committed, per the privacy-literal rule, and the gate command reads the
+      placeholder. Run with GIT_CONFIG_COUNT=1
       GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false because the host
       sets commit.gpgsign=true globally and gate-spawned commits would block on
       pinentry. Do not use /tmp or /tmp/opencode (tmpfs, different device) and
@@ -317,7 +320,7 @@ notes:
       content-inventory executable allowances for the two new domain modules and
       six new contract constants. Pre-existing branch conditions unchanged by this
       phase: `check:privacy-literals` flags the recorded
-      `/home/juliusz/tmp` gate-TMPDIR strings in the change artifacts, and
+      `$GATE_TMPDIR` gate-TMPDIR strings in the change artifacts, and
       TC-RELEASE-001 expects the phase-5 changeset."
     type: info
     date: "2026-11-15"
@@ -364,5 +367,82 @@ notes:
       `doc/spec/**`, `.ai/local/**`, `.opencode/**`, `.ados-claude/**`, or
       `AGENTS.md` edits; member-less closeout data/steps/ledger/human bytes and
       exits stay byte-identical (TC-XPAR-002)."
+    type: info
+    date: "2026-11-15"
+  - text: "Plan phase 5 'Parity goldens, contract and identity continuity, read-only
+      and determinism proofs, M2 bookkeeping, and the full gate battery'
+      complete (commit hash assigned at commit time; `git log` on
+      feat/GH-310/cross-repository-changes is the record). Delivered: parity
+      proofs (TC-XPAR-003) — the member-less `verify gates` pass report is the
+      delivered `VerifyGatesReport` with literal `overall: \"pass\"`, the
+      `success-data.json` payload, `human-success.txt` bytes, `VerifyGateRecord[]`
+      with no `member`, and exit 0; the member-less failure keeps the delivered
+      error envelope, the `failure-summary.txt` summary and exit 1; the
+      classified-unknown case keeps `verify.gates.unavailable` and exit 2; the
+      member-less `queue add` payload equals the phase-1 404e9bf8 golden
+      `tests/fixtures/queue/golden/queue-add-memberless.json` with only envelope
+      `runId`/`timing` normalized, no `members` array, no extra `edges[]`; queue
+      list/plan/lanes list carry one bare-ref entry and no member ref — plus the
+      phase-1/phase-4 plan and closeout parity cases re-read unchanged. Contract
+      and identity continuity (TC-XCTR-001, 003, 004, 005, 007): every touched
+      member surface keeps the five-field `delivery.result.v1` envelope with zero
+      top-level `ok`/`command` and every new key under `data`; the exercised
+      refusals are exactly `plan.schema.invalid`, `queue.precondition.unmet`, and
+      `queue.dependency-cycle`, each resolving in the delivered table; the error
+      table equals the committed pre-change snapshot (baseline rows plus the
+      three delivered `events` rows) in count and membership, the domain-kind set
+      is unchanged, and no member-shaped identity string is invented; the closed
+      vocabularies and the five member bounds are asserted once with
+      `PLAN_MAX_MEMBERS = VERIFY_GATES_MAX_MEMBERS = CLOSEOUT_MAX_MEMBERS = 8`;
+      the closeout and shared-verdict consumers resolve by `repoKey`/`stepId`,
+      tolerate additive fields, and report a reordered or missing-field array as
+      a violation; the `tests/types/cross-repository-report.type-test.ts` probe
+      proves the delivered vs cross-repository report types, the required
+      `member`, and the closed status/CI/verdict vocabularies. Read-only,
+      determinism, and bounds (TC-XCTR-002, TC-XBOUND-004): plan validation over
+      a valid and an invalid member plan performs exactly one plan read and zero
+      writes/fences/mutations/config reads, one battery evaluation appends
+      exactly ONE gate-verification record at two and at eight members, and
+      closeout plan mode over three members performs zero ledger appends, zero
+      fences, and no branch/tracker write; the phase-2/3/4 determinism cases
+      (gate report incl. `reviewFlow.runId`, closeout plan/apply, queue/lanes) are
+      re-read unchanged, and an eight-member partly-evidenced report stays under
+      `VERIFY_GATES_MAX_MACHINE_BYTES` with all seven blockers named in declared
+      order. Hermeticity (TC-XHERM-001/002): two real local member repositories
+      (own branch, head, no remote, own toplevel), injected facts changing the
+      verdict with zero network calls and zero spawns, no environment/credential
+      read, no `mock.module`, a case base outside every work tree with a
+      non-ambient home and an unchanged real-state fingerprint, an explicit
+      fixture project root, and byte-identical repeats; the fixture-sanitization
+      audit now also scans `tests/fixtures/cross-repository/**` for secret/PII/
+      live-host shapes. M2 bookkeeping: backlog M2-S19 `Progress:` line, a dated
+      status delivery addendum, and the M2 pack ownership/consumption wording in
+      `milestones/m2/README.md` and `milestones/m2/contracts.md`; the CLI command
+      registry is UNCHANGED because no command surface moved. Release artifact:
+      `.changeset/gh-310-cross-repository-changes-minor.md` (the five-package
+      minor changeset per the repo lockstep convention). Gate battery at the
+      delivered HEAD: `PATH=\"$PWD/node_modules/.bin:$PATH\" TMPDIR=$GATE_TMPDIR
+      GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
+      GIT_CONFIG_VALUE_0=false pnpm check` exit 0 — 8486 pass / 4 skip / 0 fail,
+      74958 expect calls across 8490 tests in 1082 files, plus lint, format,
+      typecheck, boundaries, ambient-globals, workspace-entrypoints,
+      secret-read-boundary, prompt-conformance, help-guide-coverage, and
+      exports-parity clean; `./scripts/lint-commit-range.sh --base main-tools`
+      VERDICT: PASS (20 commits, 0 offending). Recorded deviations: (1) the
+      phase-4 golden `tests/fixtures/cross-repository/goldens/closeout-members-applied.json`
+      was reformatted by Biome (whitespace only; the suite compares parsed
+      values) to make `format:check` green; (2) `tests/checks/planning-truth.test.ts`
+      pinned the previous delivery's status addendum as the file tail, which
+      fails on the next addendum, so the invariant now asserts dated, uniquely
+      named, chronologically appended addenda plus the M2-S18/S19/S20 bodies
+      without pinning a tail; (3) the change artifacts
+      (spec/plan/test-plan/pm-notes) carried the operator's machine paths, which
+      `check:privacy-literals` refuses, so the literals were replaced with the
+      `$GATE_TMPDIR` and `<workspace-parent>` placeholders — a literal-only
+      substitution with no semantic change; (4) the caller-directed M2
+      bookkeeping also updated `milestones/m2/README.md`, which the plan scoped
+      only as `milestones/m2/contracts.md` (the folder row states the same
+      ownership/consumption truth). No `doc/spec/**`, `.ai/local/**`,
+      `.opencode/**`, `.ados-claude/**`, or `AGENTS.md` edits."
     type: info
     date: "2026-11-15"

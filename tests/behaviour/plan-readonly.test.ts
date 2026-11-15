@@ -3,7 +3,8 @@
  * zero writes, fences, mutations, spawns, credential reads, or network calls.
  */
 import { describe, expect, test } from "bun:test";
-import { twoMemberPlanYaml } from "../fixtures/cross-repository/plan";
+import { API_MEMBER } from "../fixtures/cross-repository/constants";
+import { memberSpec, planYaml, twoMemberPlanYaml } from "../fixtures/cross-repository/plan";
 import {
   createRecorder,
   expectReadOnly,
@@ -42,6 +43,22 @@ const memberWorld: PlanWorld = {
     ],
   },
 };
+const invalidMemberWorld: PlanWorld = {
+  artifacts: {
+    "GH-310": [
+      {
+        kind: "yaml",
+        path: "chg-GH-310-plan.yaml",
+        text: planYaml({
+          members: [
+            memberSpec(API_MEMBER),
+            memberSpec(API_MEMBER, { branch: "feat/GH-310/duplicate-member" }),
+          ],
+        }),
+      },
+    ],
+  },
+};
 const parallelWorld = planWorld({
   "GH-306": "overlap/parallel/gh-306.yaml",
   "GH-307": "overlap/parallel/gh-307.yaml",
@@ -70,6 +87,12 @@ const paths: readonly Path[] = [
     id: "validate-member-plan",
     argv: ["plan", "validate", "GH-310"],
     world: memberWorld,
+    reads: ["plan:GH-310"],
+  },
+  {
+    id: "validate-invalid-member-plan",
+    argv: ["plan", "validate", "GH-310"],
+    world: invalidMemberWorld,
     reads: ["plan:GH-310"],
   },
   {

@@ -7,9 +7,15 @@
  * are not interchangeable in either direction.
  */
 import type {
+  CrossRepositoryDefinitionOfDone,
   CrossRepositoryVerifyGateRecord,
+  CrossRepositoryVerifyGatesMember,
   CrossRepositoryVerifyGatesReport,
+  VerifyGatesCiReading,
+  VerifyGatesDefinitionOfDoneStatus,
+  VerifyGatesMemberVerdict,
   VerifyGatesReport,
+  VerifyGatesReviewVerdict,
 } from "../../packages/core/src/contracts/verify-gates";
 
 type Equal<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
@@ -38,6 +44,22 @@ type CrossIsNotDelivered = Expect<
 type CrossKeepsRequiredDeliveredFields = Expect<
   Equal<"summary" extends keyof CrossRepositoryVerifyGatesReport ? true : false, true>
 >;
+type StatusVocabularyIsClosed = Expect<
+  Equal<VerifyGatesDefinitionOfDoneStatus, "green" | "blocked" | "incomplete">
+>;
+type CiVocabularyIsClosed = Expect<
+  Equal<VerifyGatesCiReading, "pass" | "fail" | "unavailable" | "absent">
+>;
+type MemberVerdictIsClosed = Expect<Equal<VerifyGatesMemberVerdict, "pass" | "fail" | "unknown">>;
+type ReviewVerdictIsClosed = Expect<
+  Equal<VerifyGatesReviewVerdict, "pass" | "fail" | "unreviewed">
+>;
+type MemberCiFieldIsClosed = Expect<
+  Equal<CrossRepositoryVerifyGatesMember["gates"]["ci"], VerifyGatesCiReading>
+>;
+type StatusFieldIsClosed = Expect<
+  Equal<CrossRepositoryDefinitionOfDone["status"], VerifyGatesDefinitionOfDoneStatus>
+>;
 
 export type Probes = [
   DeliveredOverallIsPass,
@@ -49,4 +71,10 @@ export type Probes = [
   DeliveredIsNotCross,
   CrossIsNotDelivered,
   CrossKeepsRequiredDeliveredFields,
+  StatusVocabularyIsClosed,
+  CiVocabularyIsClosed,
+  MemberVerdictIsClosed,
+  ReviewVerdictIsClosed,
+  MemberCiFieldIsClosed,
+  StatusFieldIsClosed,
 ];

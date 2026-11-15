@@ -53,7 +53,7 @@ The motivating regressions are concrete: a two-repository change that reads `gre
 - Implementation plan: `./chg-GH-310-plan.yaml` — **revision 1.3 exists and is reconciled** with this test plan and spec v1.4 (five delivery phases). It declares all **39/39 suite/type-test homes** — 38 unique `.test.ts` paths in §7 plus `tests/types/cross-repository-report.type-test.ts` — inside an owning phase scope, names the `queue-add-memberless.json` golden in phase 1 scope/obligation 1.0, and carries the DM-8/DM-9/DM-10/DM-11 and DEC-18 scopes. The plan-side residuals N2 (owning-phase scope, including the phase-3 determinism suite), N7 (phase-5 commit type `test(GH-310): …`), and N8 (suite-home count corrected to 39/39) are **closed by plan revision 1.3** and are not deferred to delivery_planning.
 - Repository testing strategy: `.ai/rules/testing-strategy.md` (bun:test under `tests/**/*.test.ts`; fixtures never named `*.test.ts`; invariant suites assert the current tree, never a moving-base diff; goldens regenerated only by explicit command with review-visible diffs; aggregate `pnpm check`).
 - TypeScript test authoring rules: `.ai/rules/typescript.md` §9 (injected fakes over `mock.module`, deterministic tests, committed normalized goldens, assert the current tree).
-- PM notes: `./chg-GH-310-pm-notes.yaml` — fixture decision (two local temporary repositories, injected observations, no live network), gate environment (measured `TMPDIR=/home/juliusz/tmp` and `commit.gpgsign=false`), delivery conventions (DEC-14), and the `PATH=$PWD/node_modules/.bin` lifecycle workaround.
+- PM notes: `./chg-GH-310-pm-notes.yaml` — fixture decision (two local temporary repositories, injected observations, no live network), gate environment (measured `TMPDIR=$GATE_TMPDIR` and `commit.gpgsign=false`), delivery conventions (DEC-14), and the `PATH=$PWD/node_modules/.bin` lifecycle workaround.
 - Milestone scenario seeds: `doc/planning/oss-tooling/milestones/m2/test-scenarios.md` §"M2-S19 Cross-repository changes" — SC-M2-S19-01…05, inherited **by name** (spec Appendix B); seed wording precision notes live in the owning TCs.
 - Milestone contracts: `doc/planning/oss-tooling/milestones/m2/contracts.md` ("Cross-repository change plan shape", "Queue and lane representation") and `architecture.md` ("Cross-repository change", "Boundary invariants at M2 exit").
 - Delivered baseline contracts: `doc/spec/features/feature-plan-schema.md`, `feature-verify-gates.md`, `feature-closeout.md`, `feature-scheduling-engine.md`, `feature-project-groups.md`, `feature-result-contract.md`.
@@ -103,7 +103,7 @@ Every one of the 37 §17 acceptance criteria is covered; no AC is left TODO and 
 | AC-NFR2-1 | Repeated runs byte-identical (verdict/closeout/queue); eight-member report within the machine byte bound; blockers never truncated | TC-XBOUND-001, TC-XBOUND-002, TC-XBOUND-003, TC-XBOUND-004 | Covered |
 | AC-NFR3-1 | Default suite: two real local temporary repositories, injected provider facts, zero live network/second remote/credentials | TC-XHERM-001, TC-XHERM-002 | Covered |
 | AC-NFR4-1 | Plan validation writes nothing; full battery appends exactly one gate-verification record; closeout plan mode zero writes | TC-XCTR-002, TC-XCLOSE-004 | Covered |
-| AC-NFR5-1 | `TMPDIR=/home/juliusz/tmp pnpm check` green; conventional subjects; body/footer ≤100 characters | TC-XGATE-001 (verification-only) | Covered (gate evidence) |
+| AC-NFR5-1 | `TMPDIR=$GATE_TMPDIR pnpm check` green; conventional subjects; body/footer ≤100 characters | TC-XGATE-001 (verification-only) | Covered (gate evidence) |
 | AC-NFR6-1 | Counting transport: ≤1 open-PR page, ≤1 detail read, ≤1 check-run page per declared member; 0 retries, 0 pagination, no call outside the declared member set; `landed`/`landingPosition`/merge truth arrive as `MemberLandingObservation` entries and add no read (DEC-19, DM-10) | TC-XCTR-006, TC-XDOD-005, TC-XDOD-007 | Covered |
 | AC-NFR7-1 | Error-table row count and domain-kind membership identical to pre-change; no new identity string; every exercised refusal resolves to a delivered identity | TC-XCTR-007, TC-XCTR-003 | Covered |
 
@@ -164,7 +164,7 @@ Per `.ai/rules/testing-strategy.md`, this is a TypeScript workspace behaviour ch
 - **Structure / contract (bun:test):** envelope shape, closed vocabularies, error-table and domain-kind identity reuse, consumer tolerance. Files: `tests/structure/cross-repository-contract.test.ts` plus extensions to `envelope-contract.test.ts`, `error-table.test.ts`, `event-state-additivity.test.ts`.
 - **Golden / parity (bun:test):** committed normalized payloads for both the member form (new) and the member-less form (pre-change reference), compared byte-for-byte (Section 6.4). Files: `tests/golden/cross-repository-members.test.ts` plus the existing `tests/golden/{plan-text,verify-gates,closeout-envelope,closeout-human,queue-list,queue-plan,lanes-list}.test.ts` read unchanged for parity.
 - **Checks / invariants (bun:test, `scripts/checks` adjacency):** hermeticity (network/no-spawn guards, sanitized git env, fixture `--show-toplevel` self-containment), fixture sanitization/privacy, error-table sync, exit-code literals. Files: `tests/checks/cross-repository-hermetic.test.ts`, extensions to `tests/checks/fixture-sanitization.test.ts`, `tests/checks/error-table-sync.test.ts`.
-- **Gate-level (verification-only):** `TMPDIR=/home/juliusz/tmp GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false pnpm check` and `./scripts/lint-commit-range.sh --base <base>` recorded in pm-notes; no new test code.
+- **Gate-level (verification-only):** `TMPDIR=$GATE_TMPDIR GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false pnpm check` and `./scripts/lint-commit-range.sh --base <base>` recorded in pm-notes; no new test code.
 
 Golden normalization convention: envelope `runId` and `timing` are the only keys normalized out (they are injected constants or clocks); a normalizer must be asserted to replace only those keys. Member-form `reviewFlow.runId` is a deterministic digest and **is pinned in the golden**, never normalized. Human output is compared as raw bytes. Exits are compared exactly.
 
@@ -1555,11 +1555,11 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 
 **Preconditions**:
 
-- A case root created under the gate's `TMPDIR` (`os.tmpdir()` → `/home/juliusz/tmp`), outside every git work tree.
+- A case root created under the gate's `TMPDIR` (`os.tmpdir()` → `$GATE_TMPDIR`), outside every git work tree.
 
 **Steps**:
 
-1. Assert the case root and its member repositories are outside the ADOS checkout and outside every git work tree: for each member repo, `git rev-parse --show-toplevel` equals that repo's own root (never `/home/juliusz/git/jaiship` or the ADOS worktree).
+1. Assert the case root and its member repositories are outside the ADOS checkout and outside every git work tree: for each member repo, `git rev-parse --show-toplevel` equals that repo's own root (never `<workspace-parent>` or the ADOS worktree).
 2. Assert `GIT_CEILING_DIRECTORIES` includes the case base (or the base is outside every work tree), so no fixture git command can discover a repository above it.
 3. Assert `HOME` points at a per-case directory and the real home-derived state directory is never touched (`realStateFingerprint` unchanged).
 4. Assert no live daemon is contacted: no socket is opened, no daemon state file is required; state reads are in-process.
@@ -1692,7 +1692,7 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 
 **Steps**:
 
-1. Run `TMPDIR=/home/juliusz/tmp GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false pnpm check`; assert exit `0`, recording the command and result in pm-notes.
+1. Run `TMPDIR=$GATE_TMPDIR GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false pnpm check`; assert exit `0`, recording the command and result in pm-notes.
 2. Run `./scripts/lint-commit-range.sh --base <base>`; assert `PASS` (or `SKIP` only when no commitlint configuration exists to mirror); a `FAIL` is remediated and re-run, and an `ERROR` is never recorded as a pass.
 3. Inspect the change's commit subjects: conventional, scoped `GH-310`; every body/footer line ≤100 characters.
 4. Assert the PR targets `main-tools` and stays open (phase-11 record; no merge).
@@ -1707,11 +1707,11 @@ Golden normalization convention: envelope `runId` and `timing` are the only keys
 
 The following constraints were measured in this checkout and are recorded in `chg-GH-310-pm-notes.yaml`; every phase boundary and every new fixture must honor them.
 
-- **Gate command:** `TMPDIR=/home/juliusz/tmp GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false pnpm check`.
-- **`TMPDIR=/home/juliusz/tmp`** — same ext4 device as the checkout and outside every git work tree (the checkout's parent `/home/juliusz/git/jaiship` is itself an umbrella git work tree). Same-device placement keeps fixture copy/rename and repository creation on one filesystem.
+- **Gate command:** `TMPDIR=$GATE_TMPDIR GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false pnpm check`.
+- **`TMPDIR=$GATE_TMPDIR`** — same ext4 device as the checkout and outside every git work tree (the checkout's parent `<workspace-parent>` is itself an umbrella git work tree). Same-device placement keeps fixture copy/rename and repository creation on one filesystem.
 - **`GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false`** — the host sets `commit.gpgsign=true` globally; gate-spawned commits would block on pinentry without this override.
 - **Invalid bases:** `/tmp` and `/tmp/opencode` (tmpfs, a different device — cross-device rename/atomicity assumptions do not hold), and the repo-local `tmp/tmpdir` (inside a work tree; discovery and work-tree pollution risk). New cross-repository suites must not add fixtures under either.
-- **New fixture base:** each case creates its root with `mkdtempSync(join(os.tmpdir(), "gh310-<label>-"))`, which resolves to the gate's `TMPDIR` (`/home/juliusz/tmp`). `guardStateFixtureRoot` admits it through its OS-temp-root branch. Once that base is approved, the existing state helpers may be given an explicit base (fixture-only extension if their hardcoded `APPROVED_BASE` blocks it).
+- **New fixture base:** each case creates its root with `mkdtempSync(join(os.tmpdir(), "gh310-<label>-"))`, which resolves to the gate's `TMPDIR` (`$GATE_TMPDIR`). `guardStateFixtureRoot` admits it through its OS-temp-root branch. Once that base is approved, the existing state helpers may be given an explicit base (fixture-only extension if their hardcoded `APPROVED_BASE` blocks it).
 - **Lifecycle commands:** prefix `PATH` with `$PWD/node_modules/.bin` (or invoke through `pnpm exec delivery-os`) per the pm-notes RETRO, so the commitlint probe resolves; this is execution guidance, not a test assertion.
 
 ### 6.2 Member repositories (hermetic, per case)
@@ -1803,7 +1803,7 @@ Proposed homes; the implementation plan pins exact names (the assertion contract
 | TC-XBOUND-002 | `tests/behaviour/cross-repository-determinism.test.ts` | `bun test tests/behaviour/cross-repository-determinism.test.ts` | Fixed clock; fresh identical fixtures per apply run | To Implement |
 | TC-XBOUND-003 | `tests/behaviour/cross-repository-determinism.test.ts` | `bun test tests/behaviour/cross-repository-determinism.test.ts` | Fixed clock; fixed queue state | To Implement |
 | TC-XBOUND-004 | `tests/behaviour/verify-gates-members-bounds.test.ts` | `bun test tests/behaviour/verify-gates-members-bounds.test.ts` | Eight-member fact bundle; seven blockers | To Implement |
-| TC-XGATE-001 | Aggregate gate + commit-message range gate | `TMPDIR=/home/juliusz/tmp GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false pnpm check` then `./scripts/lint-commit-range.sh --base <base>` | None | Verification-only — run, no new code |
+| TC-XGATE-001 | Aggregate gate + commit-message range gate | `TMPDIR=$GATE_TMPDIR GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false pnpm check` then `./scripts/lint-commit-range.sh --base <base>` | None | Verification-only — run, no new code |
 
 ## 8. Risks, Assumptions, and Open Questions
 

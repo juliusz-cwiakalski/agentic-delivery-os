@@ -85,7 +85,7 @@ Because the tooling models one change as exactly one repository — the plan can
 | New error-table rows introduced | 0 (only delivered identities are reused) |
 | Envelope conformance | 0 new top-level envelope keys; every new key under `data` |
 | Live network calls in default tests | 0 (both members are real local temporary repositories with injected provider observations) |
-| Quality gates | `TMPDIR=/home/juliusz/tmp pnpm check` green before the PR opens |
+| Quality gates | `TMPDIR=$GATE_TMPDIR pnpm check` green before the PR opens |
 
 ### 4.2 Non-Goals
 
@@ -253,7 +253,7 @@ N/A — no external vendor or API integration is added. Per-member CI, pull-requ
 | NFR-6 | Bounded provider reads: per-member resolution extends the delivered per-source budget without retries or pagination | ≤1 open-PR page, ≤1 detail read, ≤1 check-run page per member; ≤8 members; 0 retries; 0 pagination; landing position and per-member merge truth arrive as injected `MemberLandingObservation` entries and never add a read (DEC-19, DM-10) |
 | NFR-7 | Identity reuse: no new error-table row and no new domain kind | 0 new rows; 0 new kinds; every refusal resolves to a delivered identity |
 | NFR-8 | Single-repository parity: member-less behaviour is unchanged | Byte-identical outputs and identical exits across the parity fixture set (100%) |
-| NFR-9 | Quality gates and commit hygiene for the delivering change | `TMPDIR=/home/juliusz/tmp pnpm check` green before the PR opens; conventional commit subjects; every body/footer line ≤100 characters |
+| NFR-9 | Quality gates and commit hygiene for the delivering change | `TMPDIR=$GATE_TMPDIR pnpm check` green before the PR opens; conventional commit subjects; every body/footer line ≤100 characters |
 
 ## 10. TELEMETRY & OBSERVABILITY REQUIREMENTS
 
@@ -422,7 +422,7 @@ Test-plan impact of DEC-18..DEC-21: assert inside existing test cases — DEC-18
 | AC-NFR2-1 | **Given** two runs over unchanged fixtures, **when** the shared verdict, closeout report, and queue projections are compared, **then** the output is byte-identical; and **given** a report with eight members, **then** the gate report stays within the delivered machine byte bound and `blockingMembers[]` is never truncated | NFR-2, DM-2, DM-4 |
 | AC-NFR3-1 | **Given** the default test suite, **when** it runs, **then** both members are real local temporary repositories from the delivered checkout fixture seam, all provider facts are injected observations, and zero live network calls, real second remotes, or credentials are used | NFR-3, NFR-6 |
 | AC-NFR4-1 | **Given** the touched read and write surfaces, **when** their writes are audited, **then** plan validation writes nothing, the full battery evaluation appends exactly one gate-verification record, and closeout plan mode performs zero writes | NFR-4 |
-| AC-NFR5-1 | **Given** the delivering change, **when** quality gates run before the PR opens, **then** `TMPDIR=/home/juliusz/tmp pnpm check` is green and every commit subject is conventional with body/footer lines at or below 100 characters | NFR-9, DEC-14 |
+| AC-NFR5-1 | **Given** the delivering change, **when** quality gates run before the PR opens, **then** `TMPDIR=$GATE_TMPDIR pnpm check` is green and every commit subject is conventional with body/footer lines at or below 100 characters | NFR-9, DEC-14 |
 | AC-NFR6-1 | **Given** a two-member change evaluated with the injected transport counting every provider call, **when** the shared verdict is produced, **then** the counts are at most one open-PR page, one detail read, and one check-run page per declared member, zero retries and zero pagination are issued, and no call is issued for a repository outside the declared member set; `landed`, `landingPosition`, and per-member merge truth arrive as injected `MemberLandingObservation` entries and add no provider read (DEC-19, DM-10) | NFR-6, F-3, DM-10, DEC-10, DEC-19 |
 | AC-NFR7-1 | **Given** the delivered error table and domain-kind set, **when** the change's contracts are inspected, **then** the error-table row count and the domain-kind membership are identical to the pre-change values, no new identity string is introduced, and every refusal exercised by this change resolves to a delivered identity | NFR-7, DEC-13 |
 
@@ -560,7 +560,7 @@ Every ticket criterion maps to at least one AC; the remaining criteria (AC-F1-2.
 - C-6: Review verdicts come from injected `ReviewObservation` values `{ repoKey, pullRequest, verdicts[] }` through the verification composition; no store, no command, no live model call (F-6, DEC-17, OQ-3).
 - C-7: Default tests stay offline and hermetic over the delivered two-repository temporary-checkout seam (NFR-3, AC-NFR3-1).
 - C-8: Current-truth feature specs flip in phase 7, not in delivery phases (NG-9, DoD-13).
-- C-9: Gate battery and commit hygiene per pm-notes: `TMPDIR=/home/juliusz/tmp pnpm check` before the PR, conventional subjects, body/footer lines ≤100 characters, PR to `main-tools` staying open (DEC-14, NFR-9).
+- C-9: Gate battery and commit hygiene per pm-notes: `TMPDIR=$GATE_TMPDIR pnpm check` before the PR, conventional subjects, body/footer lines ≤100 characters, PR to `main-tools` staying open (DEC-14, NFR-9).
 
 ## 25. DOCUMENT HISTORY
 

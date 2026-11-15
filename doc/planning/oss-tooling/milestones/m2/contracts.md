@@ -144,8 +144,8 @@ Defined once for every group-scoped read, owned by M2-S18.
 
 ## Queue and lane representation
 
-Owned by M2-S19 for cross-repository changes, and read beside the delivered
-queue lifecycle mutations below.
+Owned by M2-S19 for cross-repository changes, delivered by GH-310, and read
+beside the delivered queue lifecycle mutations below.
 
 - **One entry per member.** A cross-repository change holds one queue entry per member
   keyed by that member's ref; per-member dependency edges are declared for
@@ -157,8 +157,9 @@ queue lifecycle mutations below.
 
 ## Cross-repository change plan shape
 
-The planned plan declaration for one change over member repositories of one
-group, owned by M2-S19.
+The plan declaration for one change over member repositories of one group, owned
+by M2-S19 and delivered by GH-310 as `plan.data.members[]`; the shared verdict,
+review flow, and per-member closeout report below consume it.
 
 - **Members and slices.** `plan.data.members[]` declares one entry per member
   with `repoKey`, `slice`, `branch`, `pullRequest`, `dependsOn[]`, and

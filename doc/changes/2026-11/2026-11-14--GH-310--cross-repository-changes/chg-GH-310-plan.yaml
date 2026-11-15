@@ -81,7 +81,7 @@
 #                section 8.3 SG-1..SG-7 plus DoR-1/DoR-2 closure and the
 #                reconciliation rule.
 #   - PM notes:  ./chg-GH-310-pm-notes.yaml — gate environment
-#                (TMPDIR=/home/juliusz/tmp; commit.gpgsign=false), fixture
+#                (TMPDIR=$GATE_TMPDIR; commit.gpgsign=false), fixture
 #                decision (two local temporary repositories, injected facts,
 #                no live network), delivery conventions (DEC-14), and the
 #                PATH="$PWD/node_modules/.bin:$PATH" lifecycle workaround.
@@ -325,7 +325,7 @@
 #
 # GATE ENVIRONMENT (pm-notes; binding on every phase boundary and the final
 # battery):
-#   TMPDIR=/home/juliusz/tmp \
+#   TMPDIR=$GATE_TMPDIR \
 #   GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign \
 #   GIT_CONFIG_VALUE_0=false pnpm check
 #   Lifecycle commands (phase complete, commit) run with
@@ -454,7 +454,7 @@
 # edges, 16 gates, 64-char member ref, 64-char gate id) validate; gate
 # identifiers are shape-only (non-empty, <=64 chars) and no configuration read
 # occurs; a member-less plan validate/lint/diff/overlap stays byte-identical
-# with no `members` key; TMPDIR=/home/juliusz/tmp GIT_CONFIG_COUNT=1
+# with no `members` key; TMPDIR=$GATE_TMPDIR GIT_CONFIG_COUNT=1
 # GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false pnpm check is green.
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
@@ -533,7 +533,7 @@
 # the rest; `queue release <changeRef>@<repoKeyB>` releases exactly B while A's
 # held lease and entry are untouched and both entries remain; the delivered
 # `<PREFIX>-<digits>` canonicalization and all member-less queue bytes/exits are
-# unchanged; TMPDIR=/home/juliusz/tmp GIT_CONFIG_COUNT=1
+# unchanged; TMPDIR=$GATE_TMPDIR GIT_CONFIG_COUNT=1
 # GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false pnpm check is green.
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
@@ -724,7 +724,7 @@
 # landing/merge reader; the member-less report is the delivered
 # `VerifyGatesReport` with literal `overall: "pass"`, no `member`, the
 # delivered failure envelope and exits, byte-identical and statically proven;
-# TMPDIR=/home/juliusz/tmp GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
+# TMPDIR=$GATE_TMPDIR GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
 # GIT_CONFIG_VALUE_0=false pnpm check is green.
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
@@ -827,7 +827,7 @@
 # members with zero writes; the report needs no new port, provider operation, or
 # store; member-less closeout plan/apply data, steps, ledger, human bytes and
 # exits are byte-identical;
-# TMPDIR=/home/juliusz/tmp GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
+# TMPDIR=$GATE_TMPDIR GIT_CONFIG_COUNT=1 GIT_CONFIG_KEY_0=commit.gpgsign
 # GIT_CONFIG_VALUE_0=false pnpm check is green.
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
@@ -916,7 +916,7 @@
 #      two M2-S19 sections delivered by GH-310 (ownership line). No
 #      cli-command-registry row moves because no command surface is added.
 #  5.6 Final battery — run
-#      TMPDIR=/home/juliusz/tmp GIT_CONFIG_COUNT=1
+#      TMPDIR=$GATE_TMPDIR GIT_CONFIG_COUNT=1
 #      GIT_CONFIG_KEY_0=commit.gpgsign GIT_CONFIG_VALUE_0=false pnpm check at
 #      the delivered HEAD, record the command/result in pm-notes, and run
 #      ./scripts/lint-commit-range.sh --base main-tools as the supplementary

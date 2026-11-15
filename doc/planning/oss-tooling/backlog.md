@@ -1446,6 +1446,21 @@ the project family separately.
 
 ### M2-S19 Cross-repository changes
 - Ticket: GH-310 (milestone M2)
+- Progress: delivered by GH-310 — one change declares its member set in
+  `plan.data.members[]` (closed per-member validation with the plan validate
+  echo); one queue entry and one lane per member ref
+  (`<canonicalChangeRef>@<repoKey>`, per-member dependency edges, per-member
+  release and landing removal) and the delivered `queue add` payload plus an
+  additive ordered `data.members[]`; one shared definition of done at
+  `verify gates` (`data.definitionOfDone` with per-member `gates.ci` and
+  `verdict`, landing-ordered `evidence[]`, `data.blockingMembers[]`, and one
+  `data.reviewFlow` run over the declared pull-request set) as the distinct
+  `CrossRepositoryVerifyGatesReport`, while the delivered `VerifyGatesReport`
+  keeps its literal `overall: "pass"`, member-less records, envelope, and exits;
+  and `closeout.data.members[]` with merge-truth `landed`, mode-scoped cleanup
+  and issue-closure columns, plus per-member landing removal. Zero new
+  error-table rows and zero new domain kinds; every member-less plan, gates,
+  closeout, and queue payload and exit is byte-identical.
 - Goal: One change may span multiple repositories of one project: one
   lifecycle, one spec and plan, one definition of done, with a branch and
   pull request per member repository.
