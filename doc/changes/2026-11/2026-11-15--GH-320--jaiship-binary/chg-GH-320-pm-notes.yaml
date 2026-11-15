@@ -620,3 +620,21 @@ notes:
       required for the declared oracle edit to work."
     type: info
     date: "2026-11-15"
+  - text: "PR #324 CI remediation round 4 (Bash test suites). Fixed
+      `scripts/.tests/test-lint-commit-range.sh` case `worker pool: killed
+      worker is ERROR (F-2)`: the slow shim now appends its own `$$` to a marker
+      before the sleep/exec, and the harness resolves the victim from that
+      stable pid by walking ancestors, selecting the worker bash immediately
+      below the highest ancestor whose argv contains the exact absolute gate
+      path, with the gate explicitly excluded. This removes both the
+      `$!`/direct-child assumption and the `*lint-commit-range.sh*` substring
+      matcher. Non-vacuity proof: with the gate's missing-record fail-closed
+      branch temporarily replaced by `continue` (not committed), the case
+      failed by name (`[FAIL] worker pool: killed worker is ERROR (F-2)`; the
+      gate rendered `VERDICT: PASS`); after restoring the gate the suite was
+      50/50. Verification: default, `TMPDIR=$PWD/tmp/tmpdir`, and
+      `PATH=$PWD/node_modules/.bin:$PATH` runs were each 50/50 with
+      `HOST_COMMITLINT_AVAILABLE=true`; `run-bash-suites.sh` 27/27 suites;
+      `shellcheck --severity=error` clean; `git diff --check` clean."
+    type: info
+    date: "2026-11-15"
