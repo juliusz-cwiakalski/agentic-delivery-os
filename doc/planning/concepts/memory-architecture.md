@@ -8,8 +8,9 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tool
 Status: Draft (2026-10-26); partially implemented (2026-11-15). Structure of the
 ADOS memory model: layers, layout, records, trust, retrieval, tooling. The
 canonical layout, the published record schema, and lint-in-gates are implemented
-as a repository invariant; the `ados memory` command family, index generation,
-and the compiler remain unimplemented. Start with
+as a repository invariant; the `ados memory` command family, memory and
+archive index generation, the retrieval cache, and the compiler remain
+unimplemented. Start with
 [memory-overview.md](memory-overview.md) for the human summary.
 
 ## Layer model
@@ -21,8 +22,9 @@ of truth.
 | Layer | Contents | Persistence | Loaded |
 |---|---|---|---|
 | Kernel | AGENTS.md: hard facts, routing, invariants | Committed | Always |
-| Index | `.ai/memory/README.md`: one line per entry, read-when hints | Committed | Always (capped) |
-| Records | Lessons, tacit fragments, preferences, per-agent memory | Committed | Just-in-time |
+| Index | `.ai/memory/README.md`: one two-column row per covered path, with a read-when hint | Committed | Always (capped) |
+| Records | Lessons, tacit fragments, preferences, guilds: one typed record per file | Committed | Just-in-time |
+| Per-agent memory | `agents/<agent>/README.md` plus optional topic files: free text, no record findings | Committed | Own entry point always; topics on demand |
 | High-authority homes | Spec, decisions, change capsules, instructions | Committed | On demand |
 | Session state | Working state, in-flight queues, scratch | Local (gitignored) | Session only |
 | Archive | Archived capsules, superseded records, raw trajectories | Committed (history) | Never by default |
@@ -34,6 +36,11 @@ authoritative ever lives only there.
 
 ## Project layout
 
+Status: the tree, the record schema, and the lint are delivered; memory and
+archive index generation, the derived retrieval cache, and a fleet quarantine
+area are staged in the increment plan and are not implemented, so a `staged`
+mark in the sketch is a planned projection, never shipped behaviour.
+
 What an ADOS-driven project looks like when the memory model is adopted.
 Existing homes are kept; the memory tree is the addition.
 
@@ -41,22 +48,26 @@ Existing homes are kept; the memory tree is the addition.
 AGENTS.md                      # kernel: hard facts + routing + invariants
 .ai/
   agent/                       # committed agent instructions (existing)
-  memory/                      # committed durable memory (new)
-    README.md                  # index: one line per entry + read-when
-    lessons/                   # one record per file (typed frontmatter)
-    external/                  # imported fleet lessons; candidates only, never authoritative without local validation
-    tacit/                     # advisory heuristics, low authority
-    preferences/               # project-level owner/team preferences
-    agents/<agent>.md          # per-agent memory entry point (capped)
-    retro/                     # append-only episodic notes + generated INDEX
+  memory/                      # committed durable memory
+    README.md                  # index: two-column row per covered path + read-when
+    lessons/                   # one typed record per file
+    tacit/                     # one typed record per file; advisory, low authority
+    preferences/               # one typed record per file; owner/team preferences
+    guilds/<guild>/README.md   # guild entry point; typed guild records beside it
+    agents/<agent>/README.md   # per-agent free-text entry point; topic files beside it
+    retro/INDEX.md             # append-maintained archive index; notes under retro/<year>/
   local/                       # gitignored ephemeral state (existing)
-    <agent>/...                # session scratch, candidate inbox
-  cache/                       # gitignored regenerable retrieval index
+    <agent>/...                # session scratch only
+  cache/                       # STAGED: gitignored regenerable retrieval cache; not implemented
 doc/
   spec/**                      # facts (existing)
   decisions/**                 # decision records (existing)
   changes/<ref>/**             # change capsules (existing, completed below)
 ```
+
+External content has no area in this tree: `scope: fleet` is candidate-only
+with no record home, and the quarantine area is deferred rather than placed at
+another path.
 
 ### Change capsule completion
 
@@ -160,14 +171,15 @@ promotion rules consume the trust field.
 | T4 | CI, tests, merged canonical artifact | Yes |
 | T3 | Agent conclusion linked to an external verdict | Yes, after review |
 | T2 | User conversation, internal observation | Candidate only |
-| T1 | External content: web, ticket bodies, emails | No - quarantine first |
+| T1 | External content: web, ticket bodies, emails | No - candidate only, never authoritative |
 | T0 | Unvalidated tool output | No |
 
-External content (T0-T1) never enters durable memory directly. It lands
-in a quarantine (local candidate inbox), gets sanitized, and requires a
-human or high-trust verification step before promotion. This is the
-defense against memory poisoning: a one-shot prompt injection must not
-become persistent agent behavior.
+External content (T0-T1) never enters durable memory directly. It stays a
+candidate in the owning change capsule's `candidates/` directory at T1, never
+becomes a record, and requires a human or high-trust verification step before
+promotion; a dedicated quarantine area is not implemented. This is the
+defense against memory poisoning: a one-shot prompt injection must not become
+persistent agent behavior.
 
 ## Write gate
 
@@ -176,7 +188,7 @@ possible (lint, ceremony) and by convention everywhere else:
 
 1. Schema: id, kind, scope, date, author present.
 2. Source and evidence linked (verdict, PR, test, correction).
-3. Trust level assigned; quarantine rules respected.
+3. Trust level assigned; external content stays candidate-only.
 4. Duplicate check against existing records.
 5. Contradiction check; if it contradicts, it must supersede explicitly.
 6. Default-deny: not derivable from the repo in one command.
@@ -225,7 +237,7 @@ Command family (`ados memory`, mirroring the report's memoryctl):
 | Command | Job |
 |---|---|
 | `ados memory lint` | Schema, dating, provenance, dangling references, budget violations, derivable-content heuristics |
-| `ados memory candidates` | List the candidate inbox with trust and evidence |
+| `ados memory candidates` | List change-capsule candidates with trust and evidence |
 | `ados memory promote <id>` | Apply the promotion authority step, route to home |
 | `ados memory supersede <old> <new>` | Link and close validity windows |
 | `ados memory conflicts` | Contradiction candidates needing scope or supersession |
@@ -244,7 +256,8 @@ governance, not infrastructure):
    infra) — delivered.
 2. Lint in quality gates + layout enforcement — delivered as one repository
    invariant over the canonical layout and record schema.
-3. Index generation + lexical retrieval cache.
+3. Index generation for the memory index and the retro archive index +
+   lexical retrieval cache.
 4. `ados memory` command family.
 5. Compiler to harness surfaces.
 6. Later, evidence-gated: influence tracing and counterfactual
@@ -269,8 +282,9 @@ specified in
   self-justification. Independence is a memory policy, not a
   personality.
 - Write your own memory; read everyone's. Cross-agent proposals go
-  through the candidate inbox and the curator (coordinator/CEO role),
-  never directly into another agent's memory.
+  through the owning change capsule's `candidates/` directory and the
+  curator (coordinator/CEO role), never directly into another agent's
+  memory.
 - One record per file plus append-only event streams eliminate the
   concurrent-write class: agents create new files rather than edit
   shared long markdown.
@@ -279,7 +293,8 @@ specified in
 
 - Memory is data, never instructions: retrieved memory is delimited and
   cannot override system rules or policy.
-- Trust levels per write channel; quarantine for external content.
+- Trust levels per write channel; external content stays candidate-only
+  and never becomes authoritative.
 - No secrets in any tier; the lint checks for credential patterns.
 - Provenance is mandatory; a record whose evidence link dies is flagged
   stale by the doctor.
