@@ -1,4 +1,4 @@
-# GH-301 delivery plan — machine-readable document (delivery.plan.v1), revision 1.3
+# GH-301 delivery plan — machine-readable document (delivery.plan.v1), revision 1.4
 # (2026-11-15). Authored against chg-GH-301-spec.md v1.3 (30 ACs, §17.1 DoD,
 # Appendix A closed finding register with the schema/provenance presence
 # partition, DM-6's non-projectable-scope projection rule, DEC-5..DEC-13,
@@ -112,6 +112,18 @@
 #         nothing it authors: the phase-6 concept example is schema-legal and the
 #         `memory-practices.md` bootstrapping checklist is byte-identical, so the
 #         finalize phase carries no concept authoring.
+#   revision 1.4 (2026-11-15) — one cross-artifact alignment with test plan v1.3,
+#     which splits TC-MEMLAY-002 by phase home WITHOUT changing its id: step 1
+#     (the evaluator-free structural half — `.gitkeep` is neither a record nor an
+#     index target, no row resolves to a directory, non-vacuity on the row count)
+#     stays in the phase-1 `tests/structure/memory-layout.test.ts`, and steps 2-4
+#     (the pure coverage evaluation) are homed in the phase-3
+#     `tests/checks/memory-lint-index.test.ts`. Phase 3's test obligations now
+#     name those steps and the two coverage universes, phase 1's obligation says
+#     step 1 only, and the TC ownership table attributes the same id to both
+#     phases by step while the table still totals 40 distinct TCs (the id is
+#     counted once) and 30 ACs. No phase, scope, AC ownership or closed
+#     obligation changes; nothing here is a new requirement.
 #
 # One ticket, one PR against main-tools, seven delivery phases. Every phase is an
 # independently committable slice that is green at its own boundary, and every
@@ -403,13 +415,18 @@
 #   phase 7  AC-NFR8-1
 #
 # TC OWNERSHIP (40/40 accounted for; ownership = the phase that lands the
-# asserted content or the surface that produces its verdict):
-#   phase 1  TC-MEMLAY-001/002/003, TC-MEMSCHEMA-001, TC-MEMPROV-002
+# asserted content or the surface that produces its verdict). TC-MEMLAY-002 is
+# ONE id with TWO phase homes: step 1 (the evaluator-free structural half) lands
+# in phase 1, steps 2-4 (the pure coverage evaluation) in phase 3. It is counted
+# ONCE in the 40, and the per-phase lines below therefore sum to 41 mentions for
+# 40 distinct TCs:
+#   phase 1  TC-MEMLAY-001/003, TC-MEMLAY-002 (step 1 only), TC-MEMSCHEMA-001,
+#            TC-MEMPROV-002
 #   phase 2  TC-MEMSCHEMA-002/004, TC-MEMDATE-001/002, TC-MEMPROV-001,
 #            TC-MEMREF-001/002
-#   phase 3  TC-MEMLAY-004, TC-MEMGATE-001/002, TC-MEMINDEX-001/002/003,
-#            TC-MEMBUDGET-001/002, TC-MEMHEUR-001/002, TC-MEMSECRET-001/002,
-#            TC-MEMNFR-003
+#   phase 3  TC-MEMLAY-002 (steps 2-4), TC-MEMLAY-004, TC-MEMGATE-001/002,
+#            TC-MEMINDEX-001/002/003, TC-MEMBUDGET-001/002, TC-MEMHEUR-001/002,
+#            TC-MEMSECRET-001/002, TC-MEMNFR-003
 #   phase 4  TC-MEMSCHEMA-003, TC-MEMGATE-003/004, TC-MEMGUARD-001/002,
 #            TC-MEMNFR-001/002
 #   phase 5  TC-MEMWRITE-001/002/004, TC-MEMCONC-001/002
@@ -562,8 +579,13 @@ phases:
   #      authority it consumes.
   #
   # Test obligations: `tests/structure/memory-layout.test.ts` (TC-MEMLAY-001,
-  # -002, -003 with the temp-copy negative mutant), `tests/structure/
-  # memory-record-schema.test.ts` (TC-MEMSCHEMA-001 PARITY ONLY — the
+  # TC-MEMLAY-002 STEP 1 ONLY — the evaluator-free structural half: the index's
+  # path column matches no `.gitkeep`, no row resolves to a directory, and the
+  # parse saw at least one row so the directory check is non-vacuous; it needs
+  # the record file-name grammar and the path column, never the evaluator, and
+  # its coverage half (steps 2-4) is homed in phase 3; TC-MEMLAY-003 with the
+  # temp-copy negative mutant),
+  # `tests/structure/memory-record-schema.test.ts` (TC-MEMSCHEMA-001 PARITY ONLY — the
   # human/machine required and optional sets, every closed vocabulary, the
   # capsule overlap asserted over exactly the vocabulary the capsule exposes
   # (`trust` = `CAPSULE_CANDIDATE_TRUST`, the five evidence-link prefixes, the
@@ -871,7 +893,18 @@ phases:
   # (TC-MEMINDEX-001 the two directions independently; TC-MEMINDEX-002 row shape,
   # duplicates and target rows with `HINT_MAX_CHARS` IMPORTED and the boundary
   # generated from it; TC-MEMINDEX-003 the archive universe U-2 with the universe
-  # named in each detail), `tests/checks/memory-lint-budget.test.ts`
+  # named in each detail; TC-MEMLAY-002 STEPS 2-4 — the pure coverage half of
+  # that split id, in the same suite: a fixture tree carrying `.gitkeep`, a topic
+  # file beside an entry point, a retro note under `retro/<year>/` and a
+  # `lessons/` directory-row attempt is evaluated over the two declared coverage
+  # universes (U-1 `memory-index`, U-2 `archive-index`), asserting that
+  # `.gitkeep` is never a covered path and produces no finding and needs no row,
+  # that the topic file and the retro note are not `record-uncovered`, and that
+  # the directory row is exactly ONE `memory.index.row-unbacked` naming the
+  # `memory-index` universe — a directory is not a covered path, and
+  # `row-malformed` stays reserved for hint-shape defects; step 1 of the same id
+  # is the evaluator-free structural half owned by phase 1),
+  # `tests/checks/memory-lint-budget.test.ts`
   # (TC-MEMBUDGET-001 boundary matrix generated from the imported caps, including
   # `cap-1`/`cap`/`cap+1`, TC-MEMBUDGET-002 measured delivered tree),
   # `tests/checks/memory-lint-derivable.test.ts` (TC-MEMHEUR-001/002),
