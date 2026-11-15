@@ -7,7 +7,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-15T10:40:44.109Z }
   specification: { started: null, completed: 2026-11-15T13:15:19.678Z }
   test_planning: { started: null, completed: 2026-11-15T13:23:08.446Z }
-  delivery_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: 2026-11-15T13:30:45.687Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -263,6 +263,15 @@ notes:
       TC-SMAP-006/008, nits), and `delivery_planning` (root-input pin in 5.3,
       citations). AC/TC sets stay 30/38; no new criterion. Then one confirmation
       run of the gate before `dor_check` completes."
+    type: info
+    date: "2026-11-15"
+  - text: "ARTIFACT VERSIONS after the iteration-3 surgical pass: spec v1.4 (30 ACs,
+      D-1..D-28, selector carve-out, precise one-resolution-attempt read count);
+      test plan v1.5 (38 TCs, 30/30 ACs, plan-rev 1.3/1.4 references corrected,
+      TC-SCTR-003 phase-2 framing, absent sub-case c, nits closed); plan
+      revision 1.4 (7 phases, 30/30 ACs, 38/38 TCs, 67/67 homes, D-1..D-28,
+      root-input pin, `plan validate` green). No AC or TC added, removed, or
+      renumbered."
     type: info
     date: "2026-11-15"
   - text: "OPERATIONAL: `phase` writes transiently failed with `state.lock.busy`.
