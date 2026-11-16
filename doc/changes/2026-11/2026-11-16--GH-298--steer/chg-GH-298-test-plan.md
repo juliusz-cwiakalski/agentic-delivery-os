@@ -1886,8 +1886,8 @@ No case has been executed against a new implementation at authoring time; this p
 
 | TC ID | Run Date | Result | Notes |
 |-------|----------|--------|-------|
-| — | — | — | No executions yet. |
-| TC-STEER-090 | — | Pending | `TMPDIR=$PWD/tmp/tmpdir pnpm check`, `git diff --check`, and the phase-9 range lint verdict are recorded here and in pm-notes `notes:` at the final delivery phase. |
-| TC-STEER-076 | — | Pending | The four-way tuple (143 / 142 / 59 / 2 / 3 / 143) is recorded here with the sync check's exit code when the classification phase closes. |
-| TC-STEER-060 | — | Pending | The base constant (22) and the mounted count (23) are recorded here with the family-count scan result when the mounting phase closes. |
-| TC-STEER-083 | — | Pending | The 21- and 25-due cells are recorded here with the outcome-record counts and the payload `omitted`/`truncated` values when the bounds phase closes. |
+| — | — | — | Execution evidence is recorded per phase below. |
+| TC-STEER-090 | 2026-11-16 | PASS | `TMPDIR=$PWD/tmp/tmpdir pnpm check` exit 0 at HEAD bdb4bc7a: 9643 pass / 4 skip / 0 fail across 9647 tests in 1212 files; lint, format, typecheck, boundaries, memory, prompt, help and exports green; `git diff --check` clean. The phase-9 range lint verdict is PM-owned. |
+| TC-STEER-076 | 2026-11-16 | PASS | Four-way tuple at one tree: 143 entries / 142 delivered / 59 allowlist / 2 board / 3 steer / 143 documented; the sync check exits 0 with zero failures; the no-leftover scan for 140/139/56/+106 is clean. |
+| TC-STEER-060 | 2026-11-16 | PASS | BASE_FAMILIES = 22; mounted = 23 (`steer` last); every pinning suite reads 23; the stale-22 scan is clean except the declared queue-ready control-matrix residual. |
+| TC-STEER-083 | 2026-11-16 | PASS | 1/20/21/25-due cells: 20/20 listed with omitted 0 at the two small sizes; 21 due -> 21 receipts with 20 listed and omitted 1; 25 due -> 25 receipts with 20 listed and omitted 5, truncated true, nothing queued after, second read appends 0. |
