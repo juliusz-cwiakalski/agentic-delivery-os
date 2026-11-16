@@ -73,7 +73,7 @@ const listData = (count = 2) => ({
 describe("TC-CEREMONY-001 the family is mounted and advertised", () => {
   test("the prompt-required set carries ceremony once and root help names it", () => {
     expect(PROMPT_REQUIRED_COMMANDS.filter((command) => command === "ceremony")).toHaveLength(1);
-    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(22);
+    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(23);
     expect(helpEntryFor(["ceremony"])).toBeDefined();
     for (const verb of ["list", "run", "resume", "catch-up"]) {
       expect(helpEntryFor(["ceremony", verb]), verb).toBeDefined();

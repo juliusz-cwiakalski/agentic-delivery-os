@@ -196,14 +196,14 @@ describe("TC-BIN-003 help family parity is exact and non-vacuous", () => {
   const alias = identityOf("delivery-os");
   const next = identityOf("jaiship");
 
-  test("family-parity: both help renders carry exactly the declared twenty-two families", () => {
+  test("family-parity: both help renders carry exactly the declared twenty-three families", () => {
     const declared = [...PROMPT_REQUIRED_COMMANDS].sort();
     for (const brand of [alias, next]) {
       expect([...familyRows(renderRootHelp(brand))].sort()).toEqual(declared);
     }
     // The rendered order is identical across the two bins (PAR-TP-1).
     expect(familyRows(renderRootHelp(alias))).toEqual(familyRows(renderRootHelp(next)));
-    expect(PROMPT_REQUIRED_COMMANDS.length).toBe(22);
+    expect(PROMPT_REQUIRED_COMMANDS.length).toBe(23);
   });
 
   test("family-parity: the normalised texts are identical and only the binary name differs", () => {
@@ -359,7 +359,7 @@ describe("TC-BIN-006 the install-path read answers per identity without adding a
       expect((await readInstallPath(name)).stdout).toBe(`${brand.installPath}\n`);
     }
     expect(PROMPT_REQUIRED_COMMANDS as readonly string[]).not.toContain("--print-install-path");
-    expect(familyRows(renderRootHelp(identityOf("jaiship"))).length).toBe(22);
+    expect(familyRows(renderRootHelp(identityOf("jaiship"))).length).toBe(23);
     expect(renderRootHelp(identityOf("jaiship"))).not.toContain("--print-install-path");
   });
 });

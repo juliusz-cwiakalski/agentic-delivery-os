@@ -337,6 +337,7 @@ import {
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
   type StateFenceHandle,
+  type StateResult,
   type StateStorePort,
   type StatusBlockersRead,
   type StatusLanePark,
@@ -346,6 +347,9 @@ import {
   type StatusReadFailure,
   type StatusRepositoryFacts,
   type StatusRepositoryTarget,
+  type SteerAskSource,
+  type SteerOrigin,
+  type SteerPhaseFoldView,
   TELEMETRY_CAPTURE_SCHEMA_ID,
   TELEMETRY_STORAGE_SCHEMA_VERSION,
   type TelemetryIngestCaptureRecord,
@@ -384,6 +388,9 @@ import {
   appendMergeWaiver,
   appendOwnerGateSlaDecision,
   appendPhaseTransition,
+  appendSteeringCompletion,
+  appendSteeringMessage,
+  appendSteeringOutcomes,
   appendTelemetryCaptureOutcome,
   appendTelemetryStep,
   type CeremonyLifecycleTransition,
@@ -412,6 +419,7 @@ import {
   readRetroRegistry,
   readRetroRuns,
   readSpendLedger,
+  readSteeringQueue,
   readTelemetrySteps,
   recordRetroRun,
   replacePhaseProjection,
@@ -503,6 +511,7 @@ import { createReposCommandDefinition, type ReposCommandRuntime } from "./comman
 import { createRetroCommandDefinition } from "./commands/retro.js";
 import { createSpendCommandDefinition, type SpendCommandRuntime } from "./commands/spend.js";
 import { createStatusCommandDefinition, type StatusCommandRuntime } from "./commands/status.js";
+import { createSteerCommandDefinition, type SteerCommandRuntime } from "./commands/steer.js";
 import { createVerifyCommandDefinition, type VerifyCommandRuntime } from "./commands/verify.js";
 
 export type { DispatchAttemptsRuntime, DispatchCommandRuntime } from "./commands/dispatch.js";
@@ -3676,6 +3685,58 @@ export const createCoordinatorCommandRuntime = (
     coordinatorId: composition.coordinatorId ?? "coordinator-main",
   });
 
+/**
+ * The steer composition seams (GH-298 F-1..F-8): the shared state store,
+ * injected time/id/fence factories, the derived invoking-checkout origin, the
+ * delivered phase fold, and the delivered open-question view with its
+ * PDR-0003 join facts. Everything variable arrives injected; the runtime reads
+ * no ambient clock, git, tracker, or network source.
+ */
+export type SteerComposition = {
+  readonly store: StateStorePort;
+  readonly clock: { readonly nowMs: () => number; readonly nowIso: () => string };
+  readonly newMessageSuffix?: () => string;
+  readonly newFenceToken: () => string;
+  readonly origin: () => SteerOrigin;
+  readonly readPhaseFold: (changeRef: string | null) => StateResult<SteerPhaseFoldView>;
+  readonly readAsks: () => StateResult<SteerAskSource>;
+};
+
+/** Compose the steer runtime over the real state ledger and delivered reads. */
+export const createSteerCommandRuntime = (
+  composition: SteerComposition,
+  brand: BrandIdentity,
+  secrets: readonly string[],
+): SteerCommandRuntime => ({
+  brand,
+  clock: composition.clock,
+  newMessageSuffix: composition.newMessageSuffix ?? (() => randomUUID()),
+  newFenceToken: composition.newFenceToken,
+  origin: composition.origin,
+  readQueue: () => readSteeringQueue(composition.store),
+  appendMessage: (record, current) =>
+    appendSteeringMessage(composition.store, {
+      record,
+      fenceToken: composition.newFenceToken(),
+      ...(current === undefined ? {} : { current }),
+    }),
+  appendOutcomes: (records, current) =>
+    appendSteeringOutcomes(composition.store, {
+      records,
+      fenceToken: composition.newFenceToken(),
+      ...(current === undefined ? {} : { current }),
+    }),
+  appendCompletion: (record, current) =>
+    appendSteeringCompletion(composition.store, {
+      record,
+      fenceToken: composition.newFenceToken(),
+      ...(current === undefined ? {} : { current }),
+    }),
+  readPhaseFold: composition.readPhaseFold,
+  readAsks: composition.readAsks,
+  secrets,
+});
+
 export type ConfigProgramOptions = {
   readonly workingName: string;
   readonly environment: Readonly<Record<string, string | undefined>>;
@@ -3717,6 +3778,7 @@ export type ConfigProgramOptions = {
   readonly coordinator?: CoordinatorComposition;
   readonly retro?: RetroCompositionOptions;
   readonly ceremony?: CeremonyCompositionOptions;
+  readonly steer?: SteerComposition;
   readonly spend?: SpendCompositionOptions;
   readonly projects?: ProjectsCommandRuntime;
   readonly repos?: ReposCommandRuntime;
@@ -4786,6 +4848,11 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   if (options.ceremony !== undefined) {
     commands.ceremony = createCeremonyCommandDefinition(
       createCeremonyCommandRuntime(options.ceremony),
+    );
+  }
+  if (options.steer !== undefined) {
+    commands.steer = createSteerCommandDefinition(
+      createSteerCommandRuntime(options.steer, brand, secrets),
     );
   }
   if (options.spend !== undefined) {

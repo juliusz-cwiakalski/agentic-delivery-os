@@ -1,0 +1,6 @@
+example-product steer read  notes=1  asks=1  applied=true
+  boundary=open phase=- (phase-unrecorded)
+notes
+  1. msg-golden  request  priority=normal  age=0ms  receipt=2026-11-16T12:00:00.000Z/phase-unrecorded ttl=86400000ms  "prefer smaller diffs; split the refactor"
+asks
+  ask 1. q-golden  decision-needed  lane=L5  age=3h  drawnDefault=allow-after-window  defaultState=pending

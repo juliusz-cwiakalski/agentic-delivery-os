@@ -917,3 +917,22 @@ export {
 } from "./ceremony.js";
 /** The daemon-owned lock artifact (GH-238 F-2), distinct from the state fence. */
 export { createDaemonLockPort } from "./daemon-lock.js";
+/** The three additive steering record kinds (GH-298 DM-2, NFR-5). */
+export {
+  appendSteeringCompletion,
+  appendSteeringMessage,
+  appendSteeringOutcome,
+  appendSteeringOutcomes,
+  readSteeringQueue,
+  STEERING_ARTIFACT_BOUNDARY,
+  STEERING_COMPLETION_RECORD_KEY_PREFIX,
+  STEERING_MESSAGE_RECORD_KEY_PREFIX,
+  STEERING_OUTCOME_RECORD_KEY_PREFIX,
+  STEERING_RECORD_KEY_PREFIX,
+  type SteeringAppendOutcome,
+  type SteeringBatchAppendOutcome,
+  type SteeringQueueRead,
+  steeringCompletionRecordKey,
+  steeringMessageRecordKey,
+  steeringOutcomeRecordKey,
+} from "./steering.js";

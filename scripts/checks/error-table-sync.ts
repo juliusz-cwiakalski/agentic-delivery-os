@@ -229,6 +229,11 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   // family stays closed to these two members.
   "board.repository-unknown",
   "board.state-unavailable",
+  // GH-298 pins the three steer identities exactly (DEC-8, C-16); the steer
+  // family stays closed to these three members with no pattern widening.
+  "steer.unknown-id",
+  "steer.credential-value-rejected",
+  "steer.queue-unavailable",
 ]);
 const CODE_PATTERN = /\b[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*){2,}\b/g;
 const TWO_SEGMENT_PATTERN = /\b[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*\b/g;

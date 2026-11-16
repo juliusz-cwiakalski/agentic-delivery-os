@@ -89,9 +89,9 @@ describe("TC-EVT-074 additivity inventory", () => {
     const kinds = [...new Set(ERROR_TABLE.map((entry) => entry.domainKind))].sort();
     expect(kinds.filter((kind) => kind === "events")).toHaveLength(1);
     expect(ERROR_TABLE.filter((entry) => entry.domainKind === "events")).toHaveLength(3);
-    // GH-309 adds the `repos` kind, GH-297 the `board` kind, and GH-296 the
-    // `ceremony` kind.
-    expect(kinds).toHaveLength(28);
+    // GH-309 adds the `repos` kind, GH-297 the `board` kind, GH-296 the
+    // `ceremony` kind, and GH-298 the `steer` kind.
+    expect(kinds).toHaveLength(29);
   });
 
   test("the declared writable-root set is unchanged", () => {

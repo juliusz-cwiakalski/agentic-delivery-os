@@ -62,6 +62,7 @@
     "artifact-boundary.ts",
     "audit.ts",
     "blockers.ts",
+    "ceremony.ts",
     "closeout.ts",
     "commit-telemetry.ts",
     "coordinator.ts",
@@ -77,8 +78,8 @@
     "retro-registry.ts",
     "retro-sidecar.ts",
     "spend-reads.ts",
-    "storage-error.ts",
-    "ceremony.ts"
+    "steering.ts",
+    "storage-error.ts"
   ],
   "writableRoots": ["<project state directory>", "<host root>"]
 }

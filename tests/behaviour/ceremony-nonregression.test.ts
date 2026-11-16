@@ -12,8 +12,8 @@ import {
   CLOSEOUT_STEP_IDS,
   ERROR_TABLE,
   PLAN_KNOWN_TIERS,
-  RETRO_LEVELS,
   RETRO_IMPLEMENTED_LEVELS,
+  RETRO_LEVELS,
 } from "../../packages/core/src/contracts/index";
 import { readCommittedLog } from "../fixtures/ceremony/comparison/baseline";
 
@@ -53,7 +53,7 @@ describe("TC-CEREMONY-057 delivered surfaces are unchanged", () => {
 
   test("the error table grew by exactly the two ceremony rows", () => {
     expect(ERROR_TABLE.filter((entry) => entry.domainKind === "ceremony")).toHaveLength(2);
-    expect(ERROR_TABLE).toHaveLength(140);
+    expect(ERROR_TABLE).toHaveLength(143);
   });
 
   test("the brief command and its render contract are untouched by ceremony", () => {

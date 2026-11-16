@@ -1,0 +1,127 @@
+{
+  "schemaVersion": "delivery.steer.v1",
+  "queued": [
+    {
+      "id": "msg-queued",
+      "from": "owner",
+      "to": "delivery",
+      "scope": "repo",
+      "kind": "request",
+      "subject": "prefer smaller diffs; split the refactor",
+      "ref": null,
+      "origin": {
+        "change": "GH-298",
+        "repo": "example/product",
+        "agent": "owner"
+      },
+      "priority": "normal",
+      "created": "2026-11-16T09:00:00.000Z",
+      "ttl": 86400000,
+      "expiresAt": "2026-11-17T09:00:00.000Z",
+      "age": 10800000,
+      "rank": 1,
+      "lifecycle": "queued"
+    }
+  ],
+  "landed": [
+    {
+      "id": "msg-landed",
+      "from": "owner",
+      "to": "delivery",
+      "scope": "repo",
+      "kind": "request",
+      "subject": "prefer smaller diffs; split the refactor",
+      "ref": null,
+      "origin": {
+        "change": "GH-298",
+        "repo": "example/product",
+        "agent": "owner"
+      },
+      "priority": "normal",
+      "created": "2026-11-16T09:10:00.000Z",
+      "ttl": 86400000,
+      "expiresAt": "2026-11-17T09:10:00.000Z",
+      "age": 10200000,
+      "rank": 2,
+      "lifecycle": "landed",
+      "receipt": {
+        "origin": {
+          "change": "GH-298",
+          "repo": "example/product",
+          "agent": "owner"
+        },
+        "readReceipt": {
+          "at": "2026-11-16T12:00:00.000Z",
+          "boundary": "delivery"
+        },
+        "ttl": 86400000,
+        "expiresAt": "2026-11-17T09:10:00.000Z"
+      },
+      "completedWith": null
+    },
+    {
+      "id": "msg-completed",
+      "from": "owner",
+      "to": "delivery",
+      "scope": "repo",
+      "kind": "request",
+      "subject": "prefer smaller diffs; split the refactor",
+      "ref": null,
+      "origin": {
+        "change": "GH-298",
+        "repo": "example/product",
+        "agent": "owner"
+      },
+      "priority": "normal",
+      "created": "2026-11-16T09:20:00.000Z",
+      "ttl": 86400000,
+      "expiresAt": "2026-11-17T09:20:00.000Z",
+      "age": 9600000,
+      "rank": 3,
+      "lifecycle": "completed",
+      "receipt": {
+        "origin": {
+          "change": "GH-298",
+          "repo": "example/product",
+          "agent": "owner"
+        },
+        "readReceipt": {
+          "at": "2026-11-16T12:00:00.000Z",
+          "boundary": "delivery"
+        },
+        "ttl": 86400000,
+        "expiresAt": "2026-11-17T09:20:00.000Z"
+      },
+      "completedWith": "doc/changes/2026-11/2026-11-16--GH-298--steer/chg-GH-298-plan.yaml"
+    }
+  ],
+  "expired": [
+    {
+      "id": "msg-expired",
+      "from": "owner",
+      "to": "delivery",
+      "scope": "repo",
+      "kind": "request",
+      "subject": "prefer smaller diffs; split the refactor",
+      "ref": null,
+      "origin": {
+        "change": "GH-298",
+        "repo": "example/product",
+        "agent": "owner"
+      },
+      "priority": "normal",
+      "created": "2026-11-16T09:30:00.000Z",
+      "ttl": 86400000,
+      "expiresAt": "2026-11-17T09:30:00.000Z",
+      "age": 9000000,
+      "rank": 4,
+      "lifecycle": "expired",
+      "expiry": {
+        "reason": "ttl-elapsed",
+        "recordedAt": "2026-11-16T12:00:00.000Z"
+      }
+    }
+  ],
+  "omitted": 0,
+  "truncated": false
+}

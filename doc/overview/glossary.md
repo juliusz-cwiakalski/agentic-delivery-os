@@ -8,9 +8,9 @@ owners: ["engineering"]
 area: domain
 document_classification: current-truth
 links:
-  related_changes: ["GH-290", "GH-291", "GH-292", "GH-294", "GH-300", "GH-309", "GH-310", "GH-320", "GH-296"]
+  related_changes: ["GH-290", "GH-291", "GH-292", "GH-294", "GH-300", "GH-309", "GH-310", "GH-320", "GH-296", "GH-298"]
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0007", "TDR-0008", "TDR-0009", "TDR-0011", "TDR-0012", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0023", "TDR-0024", "TDR-0025"]
-summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer validation and salvage, audit-ledger, retro-evidence-pipeline, adapter-port, provider-client-seed, provider-profile, session-lifecycle-economics, status-digest and attention-state, typed blocker channel, spend-read-side, harness-telemetry-v2, closeout, change-capsule, judgment-residue, queue-readiness, owner-hold, queue-scheduling, owner-gate SLA, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, closeout, commit-primitive, watchdog/lane, brief-render, doctor, MCP-surface, merge/verify-deploy, entrypoint, prompt-conformance, resident-daemon, event-taxonomy, coordinator-supervision, cross-repository change, and harness-adapter terms used across the repository."
+summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer validation and salvage, audit-ledger, retro-evidence-pipeline, adapter-port, provider-client-seed, provider-profile, session-lifecycle-economics, status-digest and attention-state, typed blocker channel, spend-read-side, harness-telemetry-v2, closeout, change-capsule, judgment-residue, queue-readiness, owner-hold, queue-scheduling, owner-gate SLA, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, closeout, commit-primitive, watchdog/lane, brief-render, doctor, MCP-surface, merge/verify-deploy, entrypoint, prompt-conformance, resident-daemon, event-taxonomy, coordinator-supervision, cross-repository change, harness-adapter, and steer terms used across the repository."
 ---
 
 # Glossary
@@ -487,6 +487,16 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Narrowed summary header | The delivered failure-summary header line plus the appended `; scope=narrowed mirror=<job> breadth=<id[,id]*>[ omitted=<n>]`; it names the mirrored CI breadth, never the narrowed local set, which `detail.suiteBreadth` carries. | Verify gates | [Verify Gates](../spec/features/feature-verify-gates.md) |
 | Cause line | The one bounded identifier-only error-stream line naming a map-side refusal's cause (`cause: mirror=<job>` or `cause: breadth=<id[,id]*>[ omitted=<n>]`); the envelope keeps the table's own summary and hint. | Verify gates | [Verify Gates](../spec/features/feature-verify-gates.md) |
 | Reference declaration | This repository's own `verify.suite-map` in `.delivery-os/config.yaml`, pinned to the `TS aggregate check` job and the eight declared suites with an equal `local` set. | Verify gates | [Verify Gates](../spec/features/feature-verify-gates.md) |
+| Steering note | The owner's bounded course-correction message, persisted as one immutable record on the shared typed message record with an origin block, a ttl, and a later receipt or expiry. | Steer | [feature-steer.md](../spec/features/feature-steer.md) |
+| Shared message record | The eleven-field typed record schema (`id`, `from`, `to`, `scope`, `kind`, `subject`, `ref`, `origin`, `priority`, `created`, `ttl`) declared once as contract data with four closed vocabularies; no field or vocabulary member is owner-specific. | Steer | [feature-steer.md](../spec/features/feature-steer.md) |
+| Filing subset | The declared restriction over the shared vocabularies the steer filing path admits: kinds `request`/`escalate`, scope `repo`, `from` `owner`, `to` `delivery`. | Steer | [feature-steer.md](../spec/features/feature-steer.md) |
+| Origin block | The provenance triple `{change, repo, agent}` every message carries; derived at filing, with a bare `null` change when the invoking checkout binds no work item. | Steer | [feature-steer.md](../spec/features/feature-steer.md) |
+| Read point | The declared pull point where queued steering notes are delivered — `steer read` at a phase boundary, so running work is never interrupted by a message. | Steer | [feature-steer.md](../spec/features/feature-steer.md) |
+| Boundary-open | The phase-state condition under which steering notes may land: no phase record, or every recorded lifecycle entry completed; an entry in progress keeps the boundary closed. | Steer | [feature-steer.md](../spec/features/feature-steer.md) |
+| Steering receipt | The non-null quadruple on a landed note — `origin`, `readReceipt {at, boundary}`, `ttl`, and `expiresAt` — that makes delivery auditable. | Steer | [feature-steer.md](../spec/features/feature-steer.md) |
+| TTL expiry | The classified non-applied steering outcome when `now >= created + ttl` at a boundary-open read, recorded append-only with reason `ttl-elapsed` while the delivery continues its previous course. | Steer | [feature-steer.md](../spec/features/feature-steer.md) |
+| Artifact-ref completion | The `steering.completion` record attaching the proving artifact to a landed note; completion without an artifact is never recorded. | Steer | [feature-steer.md](../spec/features/feature-steer.md) |
+| Derived lifecycle | The read-time steering state `queued`, `landed`, `expired`, or `completed`, folded from appended message, outcome, and completion records rather than a stored flag. | Steer | [feature-steer.md](../spec/features/feature-steer.md) |
 
 ## Acronyms
 
@@ -538,3 +548,4 @@ _Expand every acronym at first use; keep the expanded list here._
 - [ADR-0003 — OSS Tooling Monorepo Structure](../decisions/ADR-0003-oss-monorepo-structure.md)
 - [TDR-0005 — Delivery Result Enum and CLI Exit Taxonomy](../decisions/TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md)
 - [Resident Dispatch Daemon](../spec/features/feature-resident-daemon.md)
+- [Steer](../spec/features/feature-steer.md)

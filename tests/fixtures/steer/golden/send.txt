@@ -1,0 +1,1 @@
+example-product steer queued msg-fixture-1  kind=request  priority=normal  ttl=86400000ms  origin=GH-298@example/product  age=0ms

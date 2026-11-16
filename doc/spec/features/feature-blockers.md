@@ -6,9 +6,9 @@ created: 2026-11-06
 last_updated: 2026-11-16
 owners: ["engineering"]
 service: delivery-os
-summary: "The typed blocker and question channel: the closed four-type question vocabulary with one answer channel per type, the `owner` | `coordinator` audience and the delegation policy-as-data confused-deputy guard, the layered credential guard (registered-secret-value refusal on every content path including lane/ref identifiers, the variable-name shape on credential-missing question text, no pattern layer per TDR-0012), the append-only question and answer intent records with derived open/answered closure, the recorded `laneResume` projection (boundary-note, attach-continue, or the resume-prompt-reentry fallback with its prefill cost) conditioned on the adapter resume-injection capability, the deliberate `applied: false` v0 posture, the single shared ranking consumed by the blockers list, the digest `typed-questions` section, the brief blocker-questions anchor, and the board `ASKS` section, the bounded deterministic `blockers list`/`answer`/`publish` surface and its exit matrix, and the four-row `blockers` error family."
+summary: "The typed blocker and question channel: the closed four-type question vocabulary with one answer channel per type, the `owner` | `coordinator` audience and the delegation policy-as-data confused-deputy guard, the layered credential guard (registered-secret-value refusal on every content path including lane/ref identifiers, the variable-name shape on credential-missing question text, no pattern layer per TDR-0012), the append-only question and answer intent records with derived open/answered closure, the recorded `laneResume` projection (boundary-note, attach-continue, or the resume-prompt-reentry fallback with its prefill cost) conditioned on the adapter resume-injection capability, the deliberate `applied: false` v0 posture, the single shared ranking consumed by the blockers list, the digest `typed-questions` section, the brief blocker-questions anchor, the board `ASKS` section, the bounded deterministic `blockers list`/`answer`/`publish` surface and its exit matrix, and the four-row `blockers` error family."
 links:
-  related_changes: ["GH-230", "GH-238", "GH-242", "GH-239", "GH-241", "GH-297"]
+  related_changes: ["GH-230", "GH-238", "GH-242", "GH-239", "GH-241", "GH-297", "GH-298"]
   related_decisions: ["ADR-0003", "TDR-0012"]
   contracts:
     - "packages/core/src/contracts/blockers.ts"
@@ -22,7 +22,7 @@ links:
 
 The `blockers` command is the typed question channel for blocked delivery lanes. A lane that cannot proceed publishes a question with a closed type, an audience, a lane identifier, and bounded text; the question persists as an append-only record in the local state ledger. Answers are routed by the question's audience through a delegation policy held as contract data, so a coordinator identity cannot answer an owner-audience question unless policy explicitly delegates. Credential values are refused on every content path before any byte lands; a `credential-missing` question carries a variable name and never a value. An accepted answer is itself data: one intent record per question carrying the answering audience, the answer substance, the time, and a recorded `laneResume` projection that names the lane's resume path. Nothing is applied by this channel: the payload declares `applied: false`, no session is spawned, attached, resumed, or steered, and later consumers read the recorded intent.
 
-Open questions rank through one shared pure ordering — priority class, then oldest asked time, then question id — consumed identically by `blockers list`, the status digest's `typed-questions` section, and the brief's `blocker-questions` anchored-action group. Every surface renders the audience and rank per question, caps its output, and declares every omission.
+Open questions rank through one shared pure ordering — priority class, then oldest asked time, then question id — consumed identically by `blockers list`, the status digest's `typed-questions` section, the brief's `blocker-questions` anchored-action group, the board's `ASKS` section, and the steer read point's asks batch. Every surface renders the audience and rank per question, caps its output, and declares every omission.
 
 The channel is local-state-only: no tracker read or write, no provider call, no credential resolution, no network, and no child process. The binary name in human output comes from the injected branding configuration.
 
@@ -204,6 +204,10 @@ questions  <state>  <n|?> open[ (<reason>)]
 ### Board integration
 
 The board's `ASKS` section projects the open `owner`-audience questions through the delivered open-question view: `id`, type, lane, ref (the delivered string or bare `null`), bounded question text, `askedAt`, and the computed `age`, under the delivered ranking and bounded to eight per repository. Each ask additionally carries the drawn default joined from the delivered owner-gate policy for its ref and a `defaultState` (`none`, `pending`, or `applied`); coordinator-audience questions are not asks. The board reads the same verified question view and reuses the ranking; it adds no question type, no ranking rule, and no ledger write ([Board](feature-board.md)).
+
+### Steer read integration
+
+The `steer read` boundary read point batches the open `owner`-audience questions beside the steering notes, projected through the same verified open-question view under the same ranking: `id`, type, lane, ref (the delivered string or bare `null`), bounded question text, `askedAt`, measured `age`, the delivered drawn-default join (`drawnDefault`, `defaultState`), and `rank`, capped at eight. Coordinator-audience questions are not asks. The read point performs one ledger read and no write: it adds no question type, no ranking rule, and no default mechanism, and the join values arrive as injected composition facts. No delivered blockers behaviour changes. The consumer contract is in [Steer](feature-steer.md).
 
 ### Brief integration
 
