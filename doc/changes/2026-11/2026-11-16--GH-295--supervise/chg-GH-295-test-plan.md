@@ -1,14 +1,14 @@
 ---
 id: chg-GH-295-test-plan
 status: Proposed
-version: 1.0
+version: 1.1
 created: 2026-11-16T23:50:00Z
-last_updated: 2026-11-16T23:50:00Z
+last_updated: 2026-11-16T23:59:00Z
 owners: [engineering]
 service: delivery-os supervision plane (operator-facing supervise battery over the resident dispatch daemon's lanes)
 labels: [change, m2, supervise, daemon, lanes, watchdog, queue, state]
 version_impact: minor
-summary: "Pin the M2-S2 supervise battery as comparisons over durable-record folds: one operator-invoked run over the invoking checkout's managed repository projects a schema-versioned `delivery.supervision.v1` report carrying the scope key, one tri-state entry per lane (ref, heartbeat, live holder) and per supervision claim, the actions applied, counts, degradation, and named truncation; classification is a pure artifact-evidence fold over delivered daemon/queue/dispatch/phase/commit records where only the full corroboration combination (heartbeat age at or beyond the delivered 300,000 ms bound AND zero artifact progress) reads `stalled`, any advancing evidence reads `progressing` (prefill-safe), and absent evidence reads `unknown` and is never guessed — with no process-derived field in the classification input shape at all; lying liveness (advancing heartbeats over a flat artifact trail) classifies stalled by artifact evidence (the ticket AC), a corroborated lane stall is parked through the delivered park machinery with the new `liveness-stall` cause mapped onto the delivered expiry-carrying condition type and a non-null `until`, so `lanes show <ref>` reads `state: parked`, `reason: parked:liveness-stall`, and the additive active-park `until` exactly when an expiry-carrying park is active; duplicate supervision is read-time only (per-ref double-claims refuse through the delivered `queue.single-flight` identity naming the holder, scope-level double-acts through one appended identity), restart admission rides the delivered budget and resume economics with terminal exhaustion plus a typed question, nothing is silently requeued, no process is ever signalled, the error table gains exactly two retryable identities bound in both directions, determinism replays byte-identically under an injected clock, one whole-store read fold per run holds, and a 200-lane run completes under 5,000 ms offline; the inherited milestone seeds SC-M2-S2-01 and SC-M2-S2-02 are reconciled per DEC-2 (`parkReason` to the delivered `reason` template, the seed `until` to DM-3) and mapped to concrete cases; one specification gap (F-6/AC-F6-1 refusal granularity, projection, and its composition with the AC-F5-1 safe-boundary park) is reported as requiring a targeted specification amendment."
+summary: "Pin the M2-S2 supervise battery as comparisons over durable-record folds: one operator-invoked run over the invoking checkout's managed repository projects a schema-versioned `delivery.supervision.v1` report carrying the scope key, one tri-state entry per lane (ref, heartbeat, live holder) and per supervision claim, the actions applied, counts, degradation, and named truncation; classification is a pure artifact-evidence fold over delivered daemon/queue/dispatch/phase/commit records where only the full corroboration combination (heartbeat age at or beyond the delivered 300,000 ms bound AND zero artifact progress) reads `stalled`, any advancing evidence reads `progressing` (prefill-safe), and absent evidence reads `unknown` and is never guessed — with no process-derived field in the classification input shape at all; lying liveness (advancing heartbeats over a flat artifact trail) classifies stalled by artifact evidence (the ticket AC), a corroborated lane stall is parked through the delivered park machinery with the new `liveness-stall` cause mapped onto the delivered expiry-carrying condition type and a non-null `until`, so `lanes show <ref>` reads `state: parked`, `reason: parked:liveness-stall`, and the additive active-park `until` exactly when an expiry-carrying park is active; duplicate supervision is read-time only (per-ref double-claims refuse through the delivered `queue.single-flight` identity naming the holder, and the one appended duplicate-supervision identity fires as a per-action refusal against a supervision authority actively acting over the targeted object — its run projects the failure envelope at exit 1, while claim tri-states and holders always ride report data at exit 0, daemon presence alone refuses nothing, and a park intent is a non-claiming action refused by neither identity, DEC-8), restart admission rides the delivered budget and resume economics with terminal exhaustion plus a typed question, nothing is silently requeued, no process is ever signalled, the error table gains exactly two retryable identities bound in both directions, determinism replays byte-identically under an injected clock, one whole-store read fold per run holds, and a 200-lane run completes under 5,000 ms offline; the inherited milestone seeds SC-M2-S2-01 and SC-M2-S2-02 are reconciled per DEC-2 (`parkReason` to the delivered `reason` template, the seed `until` to DM-3) and mapped to concrete cases; the refusal gap this plan reported as GAP-T1 is closed by spec v1.1 DEC-8, so all 51 cases are fully specified and executable."
 links:
   change_spec: ./chg-GH-295-spec.md
   implementation_plan: ./chg-GH-295-plan.yaml
@@ -56,7 +56,7 @@ This document is a verification map, not an execution claim. No case has been ru
 
 Known gaps carried by this plan (detail and status in §8.3):
 
-- **[GAP-T1 — blocking for one cell]** The duplicate-supervision refusal's *object granularity*, *run-level versus per-action projection*, and its composition with the AC-F5-1 safe-boundary park are not determined by the spec; a targeted specification amendment (recommended as a DEC-8) is required before TC-SUP-051 and the refusal half of TC-SUP-092 can pin their expected outcomes. The rest of AC-F6-1 (claim inventory, holders, per-ref single-flight refusal, delivered mechanisms unchanged) is fully specified and covered here.
+- **[GAP-T1 — resolved]** The duplicate-supervision refusal's *object granularity*, *projection*, and its composition with the AC-F5-1 safe-boundary park were reported as a blocking gap at plan v1.0 and are now **closed by spec v1.1 DEC-8** (targeted edits to F-6, F-8, G-5, AC-F6-1, DEC-6, §6 Flow 4, §18, §23). TC-SUP-051 and TC-SUP-092 are accordingly fully specified; no cell in this plan awaits a decision.
 - **[GAP-T2 — naming, non-blocking]** DM-1 fixes the *semantics* of the report members but not their key spellings beyond the seed-fixed names. This plan pins `repo`, `lanes[].ref`, `lanes[].heartbeat`, `lanes[].holder` (seed) and `reason` / `until` (DEC-2, DM-3) as non-negotiable, and pins the remaining member names provisionally (AMB-2) so the golden is byte-exact; a divergence is a delivery finding, not a silent rename.
 - **[GAP-T3 — no pre-change byte baseline]** No `supervise` surface or payload exists, so determinism cannot be asserted against a previous golden. It is asserted by paired runs plus replay from a captured record set, and the goldens are **created** (not regenerated) in this change.
 - **[GAP-T4 — delivered evidence shapes are not restated]** The daemon instance/heartbeat/lane, queue lease/park, dispatch attempt, phase, and commit receipt/effect record shapes are consumed from the delivered contracts. Fixtures build them through the delivered app/state seams; a fixture that cannot resolve a seam **fails naming the missing contract** rather than falling back to a hand-built literal.
@@ -95,7 +95,7 @@ Evidence classes used below: **Suite** (a committed assertion that runs under `p
 | AC-F3-1 | A lane or supervision claim whose recorded liveness continues while the artifact trail shows no phase completion, no recorded commit, no attempt progress, and no ledger-position movement across the span classifies `stalled` by artifact evidence alone; conversely advancing artifact evidence keeps `progressing` regardless of any process-shaped reading. (Ticket AC.) | TC-SUP-020, TC-SUP-021, TC-SUP-022, TC-SUP-054 | Suite; Suite + mutation | Covered |
 | AC-F4-1 | The battery consumes the delivered watchdog probes, classification, corroboration bound, and prefill-safe rule instead of reimplementing them; an absent signal source contributes `unknown` rather than a coerced zero; no CPU-shaped or other process-shaped fact enters any evaluation. | TC-SUP-030, TC-SUP-031, TC-SUP-032, TC-SUP-014 | Suite; Suite + mutation | Covered |
 | AC-F5-1 | A lane with a heartbeat beyond the stall threshold and a corroborating flat artifact trail is recorded as parked through the delivered park machinery with the classified supervised-stall cause and a non-null re-entry instant; `lanes show` reports state `parked`, the classified reason, and the active park's re-entry instant. (Seed `SC-M2-S2-02`.) | TC-SUP-040, TC-SUP-041, TC-SUP-042, TC-SUP-045, TC-SUP-046, TC-SUP-047, TC-SUP-091, TC-SUP-093 | Suite; Golden; Suite + mutation | Covered |
-| AC-F6-1 | Live supervision claims intersecting the scope (daemon instance claim live under the delivered heartbeat-staleness fold, coordinator ledger-lease claim, live per-ref lease naming its holder) are carried with tri-state and holder; an action that would double-claim a ref with a live holder is refused with the holder named through the delivered single-flight identity; an action that would double-act against a live supervising claim is refused with the new identity naming the live claim; no delivered lock/lease/single-flight mechanism changes; no lane composition is required. | TC-SUP-050, TC-SUP-052, TC-SUP-053, TC-SUP-054, **TC-SUP-051 (blocked — GAP-T1)**, TC-SUP-092 (refusal envelope half, blocked) | Suite; **TODO / blocked** | **Partially covered** — claim inventory, holder naming, per-ref single-flight refusal, and mechanism non-regression are covered; the new-identity projection and its granularity are blocked on GAP-T1 |
+| AC-F6-1 | Live supervision claims intersecting the scope (daemon instance claim live under the delivered heartbeat-staleness fold, coordinator ledger-lease claim, live per-ref lease naming its holder) are carried with tri-state and holder **whether or not any action is refused**; an action that would double-claim a ref with a live holder is refused with the holder named through the delivered single-flight identity; an action whose object another supervision authority is **actively acting on** is refused with the duplicate-supervision identity naming the live claim and holder, and that run projects the failure envelope at exit `1` while a run whose actions all succeed (or need none) reports data at exit `0` even with live claims present; a live resident daemon's existence alone refuses nothing; a park intent, including its safe-boundary intent path, is refused by neither identity and lands through the delivered fenced append; no delivered lock/lease/single-flight mechanism changes; no lane composition is required. (DEC-8.) | TC-SUP-050, TC-SUP-051, TC-SUP-052, TC-SUP-053, TC-SUP-054, TC-SUP-092 | Suite; Golden | Covered |
 | AC-F7-1 | A stalled lane with budget remaining admits a restart through the delivered budget and resume economics and appends the delivered restart record; on exhaustion the delivered terminal exhaustion record lands and the typed question is raised; exhaustion never silently requeues, an unevaluable admission is reported as the declared unavailable outcome, and no process is ever signalled. | TC-SUP-060, TC-SUP-061, TC-SUP-062, TC-SUP-063, TC-SUP-044 | Suite | Covered |
 | AC-F8-1 | Exactly two identities are appended to the closed union (duplicate-supervision refusal at exit `1`, retryable; evidence-absent unknown answer at exit `2`, retryable); every other outcome reuses a delivered identity; no delivered row changes; machine rows, documented rows, and the corpus are bound in both directions by the delivered binding check. | TC-SUP-070, TC-SUP-071, TC-SUP-072, TC-SUP-092 | Suite; Suite + mutation; Golden | Covered |
 
@@ -216,8 +216,8 @@ Reconciliation note: the seeds are the *minimum*. They do not cover supervision-
 | TC-SUP-046 | No new record kind, no schema bump, and pre-change records replay unchanged | Regression | Structure + Behaviour | High | AC-F5-1, DM-4 |
 | TC-SUP-047 | The park carries its corroborating evidence so a wrong park is auditable | Edge Case | Behaviour | High | AC-F5-1, RSK-3 |
 | TC-SUP-050 | Live supervision claims are inventoried with tri-state, holder, and scope evidence | Happy Path | Behaviour | Critical | AC-F6-1 |
-| TC-SUP-051 | A scope-level double-act is refused by the new identity naming the live claim — **blocked (GAP-T1)** | Negative | Behaviour | Critical | AC-F6-1, AC-F8-1 |
-| TC-SUP-052 | A per-ref double-claim is refused through the delivered single-flight identity with the holder named | Negative | Behaviour | Critical | AC-F6-1 |
+| TC-SUP-051 | A per-action double-act against an actively acting authority is refused naming the live claim and holder; presence alone refuses nothing | Negative | Behaviour | Critical | AC-F6-1, AC-F8-1, DEC-8 |
+| TC-SUP-052 | A per-ref double-claim is refused through the delivered single-flight identity with the holder named | Negative | Behaviour | Critical | AC-F6-1, DEC-8 |
 | TC-SUP-053 | The delivered lock, lease, single-flight, and supervise-only composition are unchanged | Regression | Structure + Behaviour | Critical | AC-F6-1, NG-6, DEC-3 |
 | TC-SUP-054 | Duplicate detection reads records only: zero process-port, pid, or CPU reads | Regression | Structure + Behaviour | Critical | AC-F3-1, AC-F6-1, NFR-2 |
 | TC-SUP-060 | Restart admission rides the delivered budget and appends the delivered restart record | Happy Path | Behaviour | Critical | AC-F7-1 |
@@ -235,7 +235,7 @@ Reconciliation note: the seeds are the *minimum*. They do not cover supervision-
 | TC-SUP-085 | Offline isolation: the fixture guard rejects the live workspace and no network surface is reached | Regression | Behaviour | High | NFR-7 |
 | TC-SUP-090 | Healthy report golden: machine and human are byte-identical after normalization | Happy Path | Golden | High | AC-F1-1, DM-1, NFR-3 |
 | TC-SUP-091 | Stalled-and-parked report golden: entries, action, evidence, and counts | Happy Path | Golden | High | AC-F5-1, DM-1, DM-2 |
-| TC-SUP-092 | Failure-envelope goldens: evidence-absent (exit 2) and refusal (exit 1, blocked half) | Negative | Golden | High | AC-F2-1, AC-F6-1, AC-F8-1, DEC-6 |
+| TC-SUP-092 | Failure-envelope and live-claims data goldens: per-action refusal (exit 1) and the report with claims present (exit 0) | Negative | Golden | High | AC-F2-1, AC-F6-1, AC-F8-1, DEC-6, DEC-8 |
 | TC-SUP-093 | `lanes show` parked golden carries `parked:liveness-stall` and the additive `until` | Happy Path | Golden | High | AC-F5-1, DM-2, DM-3 |
 | TC-SUP-094 | Contract module is data-only and the report/state/taxonomy vocabularies have one home | Regression | Structure | Critical | DM-1, DM-4, EVT-1 |
 | TC-SUP-095 | New modules are inventory-registered, boundary-clean, and ambient-pure | Regression | Structure | High | NFR-2, NFR-7 |
@@ -591,7 +591,7 @@ Reconciliation note: the seeds are the *minimum*. They do not cover supervision-
 
 - Both claim entries classify `stalled` by artifact evidence; the evidence names the flat supervision artifacts and the span.
 - Identity and holder are named; no lock token, session id, or process identifier appears in the payload.
-- The lane/claim distinction holds: the run does not park anything on account of a stalled claim (that is a report truth, and GAP-T1 governs whether any claim-directed action exists at all).
+- The lane/claim distinction holds: the run does not park anything on account of a stalled claim. Claims are report evidence — they classify and name holders, and only an authority actively acting over a targeted action's object triggers the refusal (DEC-8).
 
 ---
 
@@ -999,12 +999,12 @@ Reconciliation note: the seeds are the *minimum*. They do not cover supervision-
 
 ---
 
-#### TC-SUP-051 - A scope-level double-act is refused by the new identity naming the live claim — blocked (GAP-T1)
+#### TC-SUP-051 - A per-action double-act against an actively acting authority is refused, naming the live claim and holder
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-6, AC-F6-1, AC-F8-1, DEC-3, DEC-6
+**Related IDs**: F-6, F-8, AC-F6-1, AC-F8-1, DEC-3, DEC-6, DEC-7, DEC-8
 **Test Type(s)**: Integration, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/supervision-duplicate-refusal.test.ts`
@@ -1012,22 +1012,30 @@ Reconciliation note: the seeds are the *minimum*. They do not cover supervision-
 
 **Preconditions**:
 
-- A stalled lane plus a live supervision claim over the object the battery's action would target.
+- **Acting-authority cell**: lane `GH-295` already carries an active `liveness-stall` park (from a prior run, so no park intent is pending) and a restart admission is due within the delivered budget; a durable record of another supervision authority — a second battery identity's in-flight/landed acting record, or a coordinator claim's acting record — names the same object `GH-295` inside the acting window.
+- **Presence cell**: the same corroborated stall with **no** prior park and **no** acting record, plus a live resident daemon instance claim (instance record and heartbeats inside the delivered heartbeat-staleness bound).
+- **Held-session cell**: the corroborated stall over a lane whose session is actively held (live per-ref lease naming its own session holder), with the delivered safe-boundary machinery available.
 
 **Steps**:
 
-1. **TODO (blocked by GAP-T1)**: the spec does not fix (a) whether "the same object" means the scope, the lane, or the claim; (b) whether a refusal is run-level (failure envelope, exit `1`, no report) or per-action (report with a refused action and some exit); (c) whether a refusal outranks the AC-F5-1 safe-boundary park when the lane's own live lease is also a "supervision claim" per the glossary. Pinning steps before the amendment would encode a guess.
-2. Once amended: seed the live claim over the declared object, run the battery, and assert the failure envelope's identity names the live claim exactly as recorded.
-3. Assert no action record appends and the delivered mechanisms are untouched.
+1. Run the battery for the acting-authority cell; assert the envelope, exit, identity, and evidence.
+2. Assert no acting record for `GH-295` appended by this run and no second park appended; assert the other authority's record is untouched.
+3. Re-run after the other authority's record leaves the acting window (injected clock advanced past it); assert the retry succeeds.
+4. Run the battery for the presence cell; assert exit `0`, the park applied, and the daemon claim carried in `data.supervisors` with its tri-state and holder.
+5. Run the battery for the held-session cell; assert the park intent is refused by neither identity and records durable intent (landing per TC-SUP-043).
 
 **Expected Outcome**:
 
-- **[Blocked]** Until the amendment lands: the new identity exists in the table, is retryable, projects at exit `1`, and no delivered row changes (asserted by TC-SUP-070 and TC-SUP-072). The refusal's trigger and envelope shape are **not asserted**.
-- After the amendment: exactly one refusal, the live claim named verbatim from its record, no action applied, and no second supervisor acted.
+- Acting-authority cell: the failure envelope (no `data`) with the duplicate-supervision identity at exit `1`, retryable, `not_landed`; evidence names the live claim and its holder verbatim from the durable record; no action lands; the delivered lock/lease/single-flight mechanisms are untouched.
+- Retry: once the other authority is no longer acting, the same run applies the restart and reports data at exit `0` — retryability is demonstrated, not asserted as prose.
+- Presence cell: exit `0` with report data; the daemon claim's tri-state and holder ride `data.supervisors`; the park lands — a live daemon's existence refuses nothing and never gates a park (DEC-8a/DEC-8b).
+- Held-session cell: neither identity refuses the park intent; it is a non-claiming action whose safety is the delivered fenced append and write serialization (a landed park refuses a second identical park), never the duplicate-supervision refusal (DEC-8c).
+- Claim classification is never a refusal: in every cell that produces a report, all claims carry tri-state and holder in `data`.
 
 **Notes / Clarifications**:
 
-- This is the only AC-F6-1 cell this plan cannot pin. Everything else in the AC is covered by TC-SUP-050, TC-SUP-052, TC-SUP-053, TC-SUP-054.
+- The guarded object is a supervision authority **actively acting** over the object the battery's action targets (DEC-8a) — the action's target object, not the scope at large. Detection reads durable records only, never a process scan (TC-SUP-054).
+- The refused action is an acting action (here, restart admission). A park intent — including its safe-boundary preemption intent path — is declared non-claiming (DEC-8c), which is what keeps AC-F5-1's park reachable in exactly the session-held case the park exists for.
 
 ---
 
@@ -1036,7 +1044,7 @@ Reconciliation note: the seeds are the *minimum*. They do not cover supervision-
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-6, AC-F6-1, DEC-3
+**Related IDs**: F-6, AC-F6-1, DEC-3, DEC-8
 **Test Type(s)**: Integration, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/supervision-single-flight.test.ts`
@@ -1044,7 +1052,7 @@ Reconciliation note: the seeds are the *minimum*. They do not cover supervision-
 
 **Preconditions**:
 
-- A corroborated stall on a lane whose ref carries a live lease held by a foreign holder, in a cell where the battery's action would claim the ref (restart admission, or a park that must claim per the delivery's declaration).
+- A lane already parked by `liveness-stall` (so no park intent is pending) whose restart admission would acquire the ref claim through the delivered claim path, while a live lease on that ref names a foreign holder `holder-a`.
 
 **Steps**:
 
@@ -1060,7 +1068,7 @@ Reconciliation note: the seeds are the *minimum*. They do not cover supervision-
 
 **Notes / Clarifications**:
 
-- Which battery action is a claiming action is part of GAP-T1; if the amendment declares no claiming action, this case converts to the documented negative control that no claiming action exists, and the refusal is unreachable by construction — a finding to report rather than a test to delete.
+- DEC-8(c) settles which action is a claiming action: a park intent is **non-claiming** and is refused by neither identity, so the claiming action in this case is the restart admission. No case asserts a park refused as a per-ref double-claim.
 
 ---
 
@@ -1163,7 +1171,7 @@ Reconciliation note: the seeds are the *minimum*. They do not cover supervision-
 
 **Preconditions**:
 
-- A stalled lane at the delivered budget bound (exhausted) and a blocked ledger with one open question slot.
+- A stalled lane at the delivered budget bound (exhausted) and an occupied ledger with one open question slot.
 
 **Steps**:
 
@@ -1451,7 +1459,7 @@ Reconciliation note: the seeds are the *minimum*. They do not cover supervision-
 
 **Preconditions**:
 
-- A mixed scope producing at least one `progressing`, one `stalled` with an action, one `unknown`, and one refusal (the per-ref single-flight refusal is the pinning cell; the new-identity refusal is asserted only for presence of evidence once GAP-T1 settles).
+- A mixed scope producing at least one `progressing`, one `stalled` with an action, one `unknown`, and one refusal (both refusal cells are asserted: the per-ref single-flight refusal and the per-action duplicate-supervision refusal of TC-SUP-051).
 
 **Steps**:
 
@@ -1552,31 +1560,34 @@ Reconciliation note: the seeds are the *minimum*. They do not cover supervision-
 
 ---
 
-#### TC-SUP-092 - Failure-envelope goldens: evidence-absent (exit 2) and refusal (exit 1, blocked half)
+#### TC-SUP-092 - Failure-envelope and live-claims data goldens: per-action refusal (exit 1) and the report with claims present (exit 0)
 
 **Scenario Type**: Negative
 **Impact Level**: Important
 **Priority**: High
-**Related IDs**: AC-F2-1, AC-F6-1, AC-F8-1, DEC-6
+**Related IDs**: AC-F2-1, AC-F6-1, AC-F8-1, DEC-6, DEC-8
 **Test Type(s)**: Golden
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/golden/supervision-failure.test.ts`
+**Target Layer / Location**: `tests/golden/supervision-failure.test.ts`, `tests/golden/supervision-report.test.ts` + `tests/fixtures/supervision/golden/`
 **Tags**: @golden, @backend
 
 **Preconditions**:
 
-- An all-unknown scope (committed golden) and a refusal scope (**blocked**).
+- Three committed normalized goldens: the evidence-absent failure envelope (exit `2`), the per-action duplicate-supervision refusal envelope (exit `1`), and the paired live-claims data golden (exit `0`, a live daemon and coordinator claim present, every action succeeding or none needed).
 
 **Steps**:
 
 1. Run the evidence-absent cell; normalize and compare to its golden: five-field failure envelope, no `data`, the declared identity, exit `2`, evidence naming the missing sources.
-2. **[TODO — blocked by GAP-T1]** The refusal cell's golden is authored only after the amendment fixes run-level vs per-action projection and the object granularity; until then the case asserts only the identity, its retryability, its exit mapping, and that a refusal never carries a `data` member alongside the error.
-3. Assert both goldens carry no stack trace, no path outside the temp root, and no free text.
+2. Run the refusal cell (the TC-SUP-051 acting-authority fixture, whose only pending action is refused); compare to its golden: failure envelope, no `data`, the duplicate-supervision identity, exit `1`, `not_landed`, evidence naming the live claim and holder.
+3. Run the paired live-claims cell (the same claim records, no acting authority); compare to its golden: `data` present at exit `0`, `supervisors[]` carrying both claims with tri-states and holders, `lanes[]` carrying the parked state and the applied action, counts consistent with the entries.
+4. Assert all three goldens carry no stack trace, no path outside the temp root, and no free text; assert the refusal golden carries no `data` member and the data golden carries no error identity.
 
 **Expected Outcome**:
 
-- The evidence-absent golden is exact and stable.
-- The refusal golden is present only for the parts the spec fixes; the case is marked blocked in the index and in §10 rather than being written to a guess.
+- The evidence-absent golden is exact and stable at exit `2`.
+- The refusal golden is exact at exit `1`: the per-action refusal projects the failure envelope, names the live claim and holder in evidence, and carries no `data` (DEC-8b).
+- The paired data golden proves the other half of the same rule on the same records: claims merely present never refuse anything, and a run whose actions all succeed reports data at exit `0` with live claims visible.
+- Goldens are stable across a second run; regeneration requires the explicit command recorded in §10.
 
 ---
 
@@ -1736,11 +1747,13 @@ Reconciliation note: the seeds are the *minimum*. They do not cover supervision-
   - `daemonClaim({live})` — instance plus heartbeat ordinals inside/outside the staleness bound.
   - `coordinatorClaim({live})` — ledger lease plus flat or moving ledger position.
   - `liveLease({ref, holder})` — the delivered single-flight seeding helper.
+  - `actingAuthority({object, authority})` — a durable acting record from another supervision authority (second battery identity or coordinator claim) naming the targeted object, with an acting-window instant the injected clock can move past.
+  - `claimsOnly({daemonLive, coordinatorLive})` — claim records with no acting record, for the paired exit-`0` control.
   - `stalledAndParked()` — the seed-02 fixture (park record + lane read state).
   - `mixedScope()` — progressing + stalled + unknown + claims, for evidence totality and goldens.
   - `cappedScope(n)` — `n` lanes for the 200/201 bound and latency cells.
 - **Injected inputs**: clock (`nowMs`/`nowIso`), brand, run id, and the probe seam (present/absent/zero facts). No case reads the wall clock, the environment, or the process table.
-- **Golden data**: `tests/fixtures/supervision/golden/{supervision-report.json, supervision-report.txt, supervision-stalled.json, supervision-evidence-absent.json, lanes-show-parked.json, lanes-show-parked.txt}` plus a captured delivered-table snapshot fixture (`tests/fixtures/supervision/error-table-baseline.json`) and a captured base family-count constant. Normalization is limited to the temp repo root, the run id, and timing; the normalizer's replacement list is itself asserted to be exactly those three entries.
+- **Golden data**: `tests/fixtures/supervision/golden/{supervision-report.json, supervision-report.txt, supervision-stalled.json, supervision-evidence-absent.json, supervision-refusal.json, supervision-live-claims.json, lanes-show-parked.json, lanes-show-parked.txt}` plus a captured delivered-table snapshot fixture (`tests/fixtures/supervision/error-table-baseline.json`) and a captured base family-count constant. Normalization is limited to the temp repo root, the run id, and timing; the normalizer's replacement list is itself asserted to be exactly those three entries.
 - **Cleanup**: every temp repository and store is removed in a `finally`; a leaked temp root in the suite's own scratch directory fails the isolation case.
 
 ## 7. Automation Plan and Implementation Mapping
@@ -1765,7 +1778,7 @@ Reconciliation note: the seeds are the *minimum*. They do not cover supervision-
 | TC-SUP-045 | `tests/structure/supervision-park-vocabulary.test.ts` + extend `tests/behaviour/queue-park-causes-s17.test.ts` equality | Structure/Behaviour | Existing – Update | The delivered exact-equality assertion gains one appended member and one pair. |
 | TC-SUP-046 | `tests/structure/supervision-additivity.test.ts`, `tests/behaviour/supervision-additivity.test.ts` | Structure/Behaviour | To Implement | New; record-kind equality, schema strings, pre-change replay. |
 | TC-SUP-050, TC-SUP-054 | `tests/behaviour/supervision-claims.test.ts` | Behaviour | To Implement | New; daemon/coordinator/ref claims. |
-| TC-SUP-051 | `tests/behaviour/supervision-duplicate-refusal.test.ts` | Behaviour | **Blocked (GAP-T1)** | Skeleton + assertions limited to the table-level facts until the amendment lands. |
+| TC-SUP-051 | `tests/behaviour/supervision-duplicate-refusal.test.ts` | Behaviour | To Implement | New; three cells (acting authority, presence, held session) plus the retry-after-window control. |
 | TC-SUP-052 | `tests/behaviour/supervision-single-flight.test.ts` | Behaviour | To Implement | New; consumes the delivered helper. |
 | TC-SUP-053 | `tests/structure/supervision-nonregression.test.ts` (+ delivered suites unchanged) | Structure | To Implement | New; includes a "delivered files untouched" diff-free tree assertion (path allowlist, not a moving-base diff). |
 | TC-SUP-060, TC-SUP-061, TC-SUP-062 | `tests/behaviour/supervision-restart.test.ts` | Behaviour | To Implement | New; budget, exhaustion, unevaluable. |
@@ -1778,7 +1791,7 @@ Reconciliation note: the seeds are the *minimum*. They do not cover supervision-
 | TC-SUP-083 | `tests/behaviour/supervision-performance.test.ts` | Behaviour | To Implement | New; single measured bound. |
 | TC-SUP-084 | `tests/behaviour/supervision-evidence-totality.test.ts` | Behaviour | To Implement | New; structural walk. |
 | TC-SUP-085 | `tests/behaviour/supervision-isolation.test.ts` + `tests/fixtures/supervision/temp-git.ts` | Behaviour | To Implement | New; guard and no-network. |
-| TC-SUP-090, TC-SUP-091, TC-SUP-092 | `tests/golden/supervision-report.test.ts`, `tests/golden/supervision-failure.test.ts` + goldens | Golden | To Implement | Goldens **created** in this change; refusal golden blocked. |
+| TC-SUP-090, TC-SUP-091, TC-SUP-092 | `tests/golden/supervision-report.test.ts`, `tests/golden/supervision-failure.test.ts` + goldens | Golden | To Implement | Goldens **created** in this change: healthy report, stalled/parked report, evidence-absent envelope, per-action refusal envelope, and the paired live-claims data golden. |
 | TC-SUP-093 | `tests/golden/lanes-show.test.ts` (update) + new parked goldens | Golden | Existing – Update | The delivered golden family gains the parked cell; existing cells unchanged. |
 | TC-SUP-094 | `tests/structure/supervision-contract.test.ts` | Structure | To Implement | Reuses `dataOnlyViolations`. |
 | TC-SUP-095 | `tests/structure/supervision-imports.test.ts` + update `tests/structure/inventory.json`, `tests/structure/content-inventory.test.ts`, `tests/fixtures/ports/v1-contract-inventory.json` | Structure | Existing – Update | Inventory/export registration is a mandatory same-change edit. |
@@ -1804,7 +1817,7 @@ Exactly these, each additive: the park-cause/pair equality in `tests/behaviour/q
 |---|---|
 | Static/diff | `git diff --check` clean; no conflict markers; every new path follows the repository conventions (`tests/<layer>/supervision-*.test.ts`, `tests/fixtures/supervision/**`). |
 | Structure | `bun test tests/structure` green, including exact closed-set equality both directions, one-home constants, data-only contract AST, no process markers, inventory/export registration, record-kind and taxonomy equality, and mounting counts. Any mutant named in §4.2 makes its case fail. |
-| Behaviour | `bun test tests/behaviour` green, including every matrix cell executed (totality guard), the seed cases, the refusal cells that are unblocked, determinism pairs, read-count == 1, the 200/201 bound, the `< 5_000 ms` bound, evidence totality walk, and the isolation guard. |
+| Behaviour | `bun test tests/behaviour` green, including every matrix cell executed (totality guard), the seed cases, both refusal cells (per-action duplicate-supervision and per-ref single-flight) with their presence and held-session controls, determinism pairs, read-count == 1, the 200/201 bound, the `< 5_000 ms` bound, evidence totality walk, and the isolation guard. |
 | Golden | `bun test tests/golden` green against committed normalized goldens; the normalizer's replacement list asserted to be exactly three entries; delivered non-parked lanes goldens unchanged. |
 | Checks | `bun test tests/checks` green, including the sync check on the live tree and every mutation failing with the offending row/code; help-guide coverage green. |
 | Boundaries | `check:boundaries` (depcruise + ambient guard + workspace entrypoints + secret-read boundary) green with no new rule or exemption. |
@@ -1817,12 +1830,12 @@ Exactly these, each additive: the park-cause/pair equality in `tests/behaviour/q
 | Fold and classification (pure domain, delivered probes consumed) | Behaviour green for TC-SUP-010, TC-SUP-011, TC-SUP-012, TC-SUP-013, TC-SUP-014, TC-SUP-020, TC-SUP-021, TC-SUP-022, TC-SUP-023, TC-SUP-030, TC-SUP-031, TC-SUP-032; the matrix totality guard in place; the no-process-input structure case green. |
 | Report projection and mounting | Behaviour/golden green for TC-SUP-001, TC-SUP-002, TC-SUP-003, TC-SUP-004, TC-SUP-005, TC-SUP-090, TC-SUP-096; mounting delta asserted; human render from the same evidence. |
 | Actions (park, safe boundary, restart composition) | Behaviour green for TC-SUP-040, TC-SUP-041, TC-SUP-042, TC-SUP-043, TC-SUP-044, TC-SUP-047, TC-SUP-060, TC-SUP-061, TC-SUP-062, TC-SUP-063; park vocabulary/additivity structure green; `lanes show` parked behaviour + golden green. |
-| Claims and refusals | Behaviour green for TC-SUP-050, TC-SUP-052, TC-SUP-053, TC-SUP-054 and the unblocked part of TC-SUP-051; non-regression assertions on the delivered suites and composition. |
+| Claims and refusals | Behaviour green for TC-SUP-050, TC-SUP-051, TC-SUP-052, TC-SUP-053, TC-SUP-054 (all three TC-SUP-051 cells and the retry control); non-regression assertions on the delivered suites and composition. |
 | Bounds, determinism, latency, isolation | Behaviour green for TC-SUP-080, TC-SUP-081, TC-SUP-082, TC-SUP-083, TC-SUP-084, TC-SUP-085; determinism replay recorded; the 200-lane timing recorded with its measured value. |
-| Failure envelopes and error socialisation | Golden green for TC-SUP-092 (unblocked half); checks green for TC-SUP-071, TC-SUP-072. |
+| Failure envelopes and error socialisation | Golden green for TC-SUP-092 (evidence-absent envelope, per-action refusal envelope, paired live-claims data golden); checks green for TC-SUP-071, TC-SUP-072. |
 | Documentation reconciliation | Content checks complete; TC-SUP-097 evidence recorded; doc-conformance green. |
 
-A stage is **not** PASS-able on a partially green level: the aggregate gate is the final arbiter, and a level with a skipped or `.todo` case is reported as `PARTIAL` in §10 with the blocking reference (GAP-T1 for the refusal cells).
+A stage is **not** PASS-able on a partially green level: the aggregate gate is the final arbiter, and a level with a skipped or `.todo` case is reported as `PARTIAL` in §10 with the named reason. No case in this plan is expected to start as `PARTIAL` — the last blocking gap was closed by spec v1.1 DEC-8.
 
 ## 8. Risks, Assumptions, and Open Questions
 
@@ -1830,7 +1843,7 @@ A stage is **not** PASS-able on a partially green level: the aggregate gate is t
 
 | ID | Risk | Mitigation in this plan |
 |---|---|---|
-| TR-1 | A specification gap makes the refusal cells unwritable, and a delivery agent encodes a guess as a test. | TC-SUP-051 and the refusal half of TC-SUP-092 are explicitly blocked and marked `PARTIAL`; §8.3 names the amendment. Nothing else depends on the open question. |
+| TR-1 | A delivery agent re-derives the pre-amendment refusal rule (a scope-level blanket refusal that lets a live daemon gate parks) and the refusal cases drift into encoding it. | TC-SUP-051's three cells pin DEC-8's three clauses against each other: the acting-authority cell must refuse, the presence cell must park at exit `0`, and the held-session cell must park without refusal. Any one inverted fails. |
 | TR-2 | Goldens created in this change could bake a wrong key name into a permanent assertion. | Goldens are authored after the contract structure case (TC-SUP-094) pins the member set; the review compares the golden's members against DM-1 semantics; seed/DEC-fixed names are listed as non-negotiable in §3.4. |
 | TR-3 | The classification matrix could pass vacuously (empty matrix, unmapped cell). | The matrix file declares an expected value per cell and the case fails when executed cells ≠ declared cells (non-vacuity guard per the testing strategy). |
 | TR-4 | A "one read fold" assertion could pass because the seam is not wired. | The read counter is asserted `> 0` and exactly `1`; a mutant that reads per lane proves scale sensitivity. |
@@ -1844,26 +1857,26 @@ A stage is **not** PASS-able on a partially green level: the aggregate gate is t
 - **AMB-1 (empty scope)**: a readable store with zero records yields an empty, evidence-complete report at exit `0`; exit `2` is reserved for an absent or unreadable source. Basis: DEC-6 ("evidence-absent or state is unreadable") and F-1's report-as-truth. TC-SUP-005 asserts this; a one-line spec clarification is recommended but not blocking.
 - **AMB-2 (member names)**: the report's member names for the tri-state, supervisor entries, and actions are bound by the delivery contract; this plan pins the seed names `repo` / `lanes[].ref` / `lanes[].heartbeat` / `lanes[].holder` and the DEC-2/DM-3 names `reason` / `until` as non-negotiable, and treats a divergence in the remaining names as a delivery finding to be reconciled in review rather than a test-plan rewrite.
 - **AMB-3 (observation span)**: the declared observation span for corroboration is the delivered 300,000 ms stall bound window (NFR-1's "across that span"). Cells are seeded at that span.
-- **AMB-4 (no claiming action)**: the battery performs no lane claim (NG-2); any refusal that depends on a claiming action is therefore either reached through the delivered claim path the delivery declares, or documented as unreachable (TC-SUP-052 note). Which of the two is decided with GAP-T1.
+- **AMB-4 (claiming versus acting actions)**: settled by DEC-8 — a park intent, including its safe-boundary path, is **non-claiming** and is refused by neither identity; the per-ref single-flight refusal attaches to an action that would acquire the ref claim (the restart admission, TC-SUP-052), and the duplicate-supervision refusal attaches to an acting action whose object an authority is actively acting on (TC-SUP-051). The battery still launches no lane session (NG-2).
 - **AMB-5 (tools)**: the delivered helper seam shapes (store, process port, probe) are consumed as injected ports; a missing port is a delivery finding, not a reason to hand-build a record.
 
 ### 8.3 Open questions and specification gaps
 
 | ID | Question / gap | Status | Consequence for this plan |
 |---|---|---|---|
-| **GAP-T1** | **The duplicate-supervision refusal is under-determined in three coupled respects.** (a) *Granularity*: "an action that would double-act against a live supervising claim over the same object" (F-6, AC-F6-1) does not say whether "the same object" is the scope, the lane, or the claim itself — and §18 states a resident daemon "enriches the report with live claim evidence rather than gating it", which a scope-level blanket refusal would contradict. (b) *Projection*: F-8/DEC-6 project the identity at exit `1`, while AC-F6-1 requires the same run's report to carry claim tri-states and holders; the exclusive data/error envelope cannot do both, and no rule says whether the refusal is run-level (failure envelope, no report) or per-action (report present). (c) *Composition*: §23's glossary counts "a live per-ref lease" as a supervision claim, so a session-held stalled lane would satisfy both "refuse the double-act" (AC-F6-1) and "park through the safe-boundary discipline" (AC-F5-1, DEC-7) — the spec does not say which wins, and AC-F5-1's park would become unreachable whenever a live lease exists. | **Blocking — requires a targeted specification amendment** (recommended: one new DEC-8 in §15 plus a one-sentence change to F-6 and AC-F6-1 declaring the object, the projection, and that a park intent is a non-claiming action that rides the safe-boundary path). | TC-SUP-051 and the refusal half of TC-SUP-092 are `TODO (blocked)`. AC-F6-1 is marked **partially covered**. Everything else in the change is unaffected and fully specified. |
 | OQ-TP-1 | No bound is declared for `supervisors[]` or `actions[]` entry counts (NFR-4 bounds the report at the 200-lane cap only), and the report's truncation-reason vocabulary is not enumerated. | Non-blocking — deferred to phase 4 (`@plan-writer`) with the delivery. | TC-SUP-082 asserts only the lane cap plus `truncated`/`truncationReason` semantics; no supervisors-count cap is asserted. |
 | OQ-TP-2 | For a coordinator-lease claim, F-3's "supervision artifacts" are named only as "no lane record progress, no reconciliation or action evidence" — there are no lane records for a coordinator. | Non-blocking — interpreted as reconciliation records plus ledger-position movement. | TC-SUP-021 asserts those two classes; a coordinator-specific artifact class added later extends the case rather than contradicts it. |
 | OQ-TP-3 | The exact reason vocabulary for a truncated supervision report (the delivered precedent uses `lane-cap` / `status-lanes-bound`). | Non-blocking — a delivery naming decision, invisible to requirements. | TC-SUP-082 asserts "a non-empty named reason from a declared set", not a literal. |
-| OQ-TP-4 | Whether a repeated battery run over an already-parked lane appends a second park record or is a no-op. | Non-blocking — DEC-7 and F-5 imply the park is already active; the delivered park record set tolerates repeats. | TC-SUP-044 asserts "no second park while the active park stands", with a review note if the delivery declares a superseding park instead. |
+| OQ-TP-4 | ~~Whether a repeated battery run over an already-parked lane appends a second park record or is a no-op.~~ | **Settled by DEC-8(c)** — the park intent's safety is the delivered fenced append and write serialization, so a landed park refuses a second identical park. No longer an open question. | TC-SUP-044 and TC-SUP-051's held-session cell assert "no second identical park while the active park stands". |
 
-**Explicit statement required by the authoring contract:** the only specification gap that needs the specification phase reopened is **GAP-T1** (F-6 / AC-F6-1 / DEC-6 composition and projection of the duplicate-supervision refusal). It is a targeted amendment, not a re-write: one decision row and two sentences. The remaining observations (OQ-TP-1..4) are delivery/plan-level naming and granularity choices that do not change any requirement and are resolved in phase 4.
+**Gap status:** GAP-T1 was the only gap requiring the specification phase to be reopened, and it is **closed by spec v1.1 DEC-8** (Decision Log DEC-8; revised F-6, F-8, G-5, AC-F6-1, DEC-6, §6 Flow 4, §18, §23). Its resolution is recorded in §9. **No open gap remains in this plan.** OQ-TP-1, OQ-TP-2 and OQ-TP-3 are unchanged phase-4 items (report bounds beyond the lane cap, coordinator-claim artifact enumeration, truncation-reason vocabulary); OQ-TP-4 is settled by DEC-8(c) and is retained only as a closed record.
 
 ## 9. Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-16 | @test-plan-writer | Initial test plan from GH-295 spec v1.0: 51 cases across structure, behaviour, golden, checks, and docs levels; all eight ACs mapped; milestone seeds SC-M2-S2-01/02 reconciled per DEC-2 (parkReason → `reason` = `parked:liveness-stall`, seed `until` → DM-3 additive lane field) and mapped to concrete steps and assertions; delivered families mirrored for structure/behaviour/golden conventions; GAP-T1 reported as requiring a targeted specification amendment. |
+| 1.1 | 2026-11-16 | @test-plan-writer | GAP-T1 resolution against **spec v1.1 DEC-8**: TC-SUP-051 rewritten as three cells (acting authority refuses per-action at exit `1` with the claim and holder named; live daemon presence parks at exit `0`; held-session park intent refused by neither identity) plus a retry-after-window control; TC-SUP-092 extended to the per-action refusal golden plus the paired live-claims data golden at exit `0`; AC-F6-1 flipped to **Covered**; index, §3.1, §5 details, §6 goldens/fixtures, §7.1/§7.4 mappings, TR-1, AMB-4 and §10 updated; OQ-TP-4 recorded as settled by DEC-8(c), OQ-TP-1..3 unchanged phase-4 items. IDs unchanged; 51 cases, none awaiting a decision. |
 
 ## 10. Test Execution Log
 
@@ -1871,6 +1884,6 @@ No cases have been executed at authoring time (verification map only). Phase own
 
 | TC ID / group | Run date | Result | Notes |
 |---|---|---|---|
-| — | — | — | Populated during delivery. Record for each stage: the exact command, the exit, and either "PASS" or "PARTIAL (blocking reference)". |
+| — | — | — | Populated during delivery. Record for each stage: the exact command, the exit, and either "PASS" or "PARTIAL (reason)". |
 
-Append-only gate evidence to record here when it exists: `TMPDIR=$PWD/tmp/tmpdir pnpm check` output summary; the determinism replay record; the measured 200-lane latency; the golden-regeneration command used (if any); the doc-reconciliation review record for TC-SUP-097; and the explicit `PARTIAL` note for TC-SUP-051 / TC-SUP-092 until GAP-T1 is amended.
+Append-only gate evidence to record here when it exists: `TMPDIR=$PWD/tmp/tmpdir pnpm check` output summary; the determinism replay record; the measured 200-lane latency; the golden-regeneration command used (if any); the doc-reconciliation review record for TC-SUP-097; and a `PARTIAL` note with its reason if any case is ever skipped. No case awaits a decision: TC-SUP-051 and TC-SUP-092 are fully specified against DEC-8.
