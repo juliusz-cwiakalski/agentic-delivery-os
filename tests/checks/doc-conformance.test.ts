@@ -564,3 +564,38 @@ describe("GH-320 TC-BIN-070 identity documentation table", () => {
     );
   });
 });
+
+/**
+ * TC-CEREMONY-060 (GH-296) — the plan-owned documentation pages are current
+ * truth: the M2 command page is delivered, the measurement spec describes the
+ * additive comparisons record, and the entrypoint delta records the mount.
+ */
+describe("TC-CEREMONY-060 ceremony documentation current truth", () => {
+  const ceremonyPage = "doc/planning/oss-tooling/milestones/m2/commands/ceremony.md";
+  const measurementSpec = "doc/spec/features/feature-measurement-baseline.md";
+  const entrypointDelta = "doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md";
+
+  test("the command page is Delivered and documents the four verbs", () => {
+    const text = read(ceremonyPage);
+    expect(text).toContain("Status: Delivered (M2-S3)");
+    expect(text).not.toContain("Status: Proposed");
+    for (const verb of ["list", "run", "resume", "catch-up"]) expect(text).toContain(verb);
+    expect(text).toContain("--help");
+    expect(text).toContain("--version");
+  });
+
+  test("the measurement spec documents the additive comparisons record", () => {
+    const text = read(measurementSpec);
+    expect(text).toContain("comparisons[]");
+    expect(text).toContain("schema_version: 2");
+    expect(text).not.toContain("`schema_version: 1`");
+    expect(text).toContain("insufficient-sample");
+  });
+
+  test("the entrypoint delta records the twenty-two-family mount", () => {
+    const text = read(entrypointDelta);
+    expect(text).toContain("Twenty-two families");
+    expect(text).toContain("`ceremony`");
+    expect(text).toContain("`board`");
+  });
+});

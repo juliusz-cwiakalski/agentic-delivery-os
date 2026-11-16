@@ -75,13 +75,13 @@ describe("TC-BOARD-041 board help", () => {
     expect(stdout.value).not.toContain("example-product 0.0.0");
   });
 
-  test("root help lists board among exactly twenty-one families", async () => {
+  test("root help lists board among exactly twenty-two families", async () => {
     const result = await run(["--help"]);
     expect(result.exitCode).toBe(0);
     const families = result.stdout
       .split("\n")
       .filter((line) => /^ {2}[a-z][a-z0-9-]* {2}/u.test(line));
-    expect(families).toHaveLength(21);
+    expect(families).toHaveLength(22);
     expect(families.some((line) => line.trimStart().startsWith("board  "))).toBe(true);
   });
 });

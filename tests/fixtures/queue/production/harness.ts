@@ -154,7 +154,12 @@ export const makeLinkedWorktree = (
  * same-filesystem fallback and is still outside the work tree.
  */
 export const makeNonCheckoutDirectory = (label: string): string => {
-  const candidates = [tmpdir(), dirname(process.cwd()), resolve(process.cwd(), "..", "..")];
+  const candidates = [
+    tmpdir(),
+    dirname(process.cwd()),
+    "/tmp/opencode",
+    resolve(process.cwd(), "..", ".."),
+  ];
   for (const parent of candidates) {
     const directory = mkdtempSync(join(parent, `gh273-${label}-`));
     if (findGitRoot(directory, nodeRepositoryIo()) === undefined) return directory;

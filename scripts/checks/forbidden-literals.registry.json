@@ -62,6 +62,7 @@
     }
   ],
   "registered": [
+    "doc/guides/ceremony-runner.md",
     "doc/guides/local-install.md",
     "doc/guides/migrating-to-per-repository-state.md",
     "doc/guides/milestone-management.md",
@@ -150,6 +151,7 @@
     "doc/planning/oss-tooling/milestones/m2/architecture.md",
     "doc/planning/oss-tooling/milestones/m2/commands/attempts.md",
     "doc/planning/oss-tooling/milestones/m2/commands/board.md",
+    "doc/planning/oss-tooling/milestones/m2/commands/ceremony.md",
     "doc/planning/oss-tooling/milestones/m2/commands/events.md",
     "doc/planning/oss-tooling/milestones/m2/commands/projects.md",
     "doc/planning/oss-tooling/milestones/m2/commands/queue.md",
@@ -174,6 +176,7 @@
     "doc/spec/features/feature-branding-seam.md",
     "doc/spec/features/feature-brief.md",
     "doc/spec/features/feature-capsule.md",
+    "doc/spec/features/feature-ceremony-runner.md",
     "doc/spec/features/feature-cli-entrypoint.md",
     "doc/spec/features/feature-closeout.md",
     "doc/spec/features/feature-commit-primitive.md",

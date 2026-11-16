@@ -2,12 +2,12 @@
 id: SPEC-PM-NOTES-LINT-AND-PHASE-TRANSITIONS
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-08
+last_updated: 2026-11-16
 owners: ["engineering"]
 service: delivery-os
 summary: "The implemented M0-S10 surface: pm-notes schema and variant conformance through a read-only lint command with named targets, the phase command family as the only schema-validated write path for phase state with a nine-row idempotency matrix, default-on atomic record-plus-commit on completion with per-call and per-project opt-outs, total four-state re-run convergence over durable commit intent, delivery-registry transition records and a derived phase-state projection over the state layer, the non-gating capsule `phase.transition` append with a bounded disclosure, the pinned evidence vocabulary, the five pm-notes lint error rows, and the variant-era corpus boundary with an explicit exclusion manifest."
 links:
-  related_changes: ["GH-177", "GH-178", "GH-179", "GH-222", "GH-226", "GH-227", "GH-240", "GH-242"]
+  related_changes: ["GH-177", "GH-178", "GH-179", "GH-222", "GH-226", "GH-227", "GH-240", "GH-242", "GH-296"]
   related_decisions: ["ADR-0003", "TDR-0005"]
 ---
 
@@ -107,6 +107,10 @@ A completion additionally surfaces the five `commit.*` identities of the atomic 
 Verify change consumes this surface without changing it. It reuses the fixed lint rule order and the five `lint.*` identities for document-conformance findings, and it reads the verified registry history through the state layer to apply per-phase registry-over-declaration precedence. The only additive identity is `verify.ledger.incomplete` under the `verify` domain kind: a conformant document whose declared variant still has declared-but-incomplete required phases is a delivery verdict, not a lint finding. A required phase absent from the declaration remains `lint.phases.incomplete` after the overlay.
 
 Verification is variant-aware: it evaluates the effective variant's required set from the pinned per-variant data, naming missing phases in that set's order. It never writes pm-notes, never appends or repairs the ledger, never acquires a fence, and never substitutes the derived phase-state projection for the ledger. The full contract is in [verify change and exit taxonomy](feature-verify-change-and-exit-taxonomy.md).
+
+### Ceremony tier consumer
+
+`PM_NOTES_REQUIRED_PHASES_BY_VARIANT` is the phase-set source the ceremony tier engine consumes. The engine reads the change's recorded `variant` (absent means `full`) and takes that variant's pinned phase set as the effective ceremony obligation set, element for element, naming the source as `PM_NOTES_REQUIRED_PHASES_BY_VARIANT.<variant>`. The recorded variant governs when a plan's declared `tier.name` disagrees, and the disagreement is reported as a `tier-mismatch` finding. This consumer changes no pm-notes contract: the schema, the lint rule order, the five `lint.*` identities, the registry transition path, and the per-variant required sets are the delivered ones, and the engine never writes pm-notes. The mapping and the escalation rules are in [Ceremony Runner](feature-ceremony-runner.md#38-tier-engine).
 
 ### Corpus boundary
 

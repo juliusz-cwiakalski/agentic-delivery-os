@@ -1,0 +1,664 @@
+change_id: GH-296
+title: "M2-S3: Ceremony runner (M2)"
+delivery_mode: autonomous
+milestone: "M2: Ceremonies, measurement, and memory"
+story_code: M2-S3
+variant: full
+phases:
+  clarify_scope:
+    started: null
+    completed: 2026-11-15T22:09:02.033Z
+  specification:
+    started: null
+    completed: 2026-11-15T23:26:20.306Z
+  test_planning:
+    started: null
+    completed: 2026-11-15T23:32:15.593Z
+  delivery_planning:
+    started: null
+    completed: 2026-11-15T23:40:03.758Z
+  dor_check:
+    started: null
+    completed: 2026-11-15T23:47:56.787Z
+  delivery:
+    started: null
+    completed: 2026-11-16T08:09:08.408Z
+  system_spec_update:
+    started: null
+    completed: 2026-11-16T11:04:30.110Z
+  review_fix:
+    started: null
+    completed: 2026-11-16T12:20:17.212Z
+  quality_gates:
+    started: null
+    completed: 2026-11-16T12:44:14.191Z
+  dod_check:
+    started: null
+    completed: 2026-11-16T12:45:54.855Z
+  pr_creation:
+    started: null
+    completed: null
+decisions:
+  - text: "Ceremony-share measurement is scoped to durable ceremony run records plus
+      a recorded before/after comparison in this change's artifacts, using the
+      committed MET-CEREMONY-SHARE definition. The `ados metrics` surface itself
+      belongs to M2-S6 and is out of scope."
+    date: "2026-11-15"
+  - text: "The ceremony tier engine consumes the delivered plan `tier` declaration
+      and the delivered pm-notes `variant` phase sets instead of introducing a
+      second phase-set vocabulary; the mapping is specified once."
+    date: "2026-11-15"
+open_questions: []
+blockers: []
+notes:
+  - text: "clarify_scope: ticket cross-checked against doc/spec. Dependencies
+      delivered: M0-S6 (feature-status-digest), M0-S13
+      (feature-provider-engine), M1-S8 (feature-retro-pipeline). Plan ceremony
+      tier is delivered as inert data (PLAN_KNOWN_TIERS full|lite,
+      PlanTierDeclaration). Retro levels session/incident/window/project are
+      declared-only and owned by M2-S3."
+    type: info
+    date: "2026-11-15"
+  - text: "No blocking gap found; scope boundaries recorded as decisions above.
+      Proceeding without a human stop."
+    type: info
+    date: "2026-11-15"
+  - text: "Lifecycle commands must run with the workspace bin on PATH:
+      `PATH=\"$PWD/node_modules/.bin:$PATH\" bun packages/cli/bin/delivery-os.ts
+      ...`. Without it the commitlint probe cannot execute and every atomic
+      phase completion fails as commit.commitlint-failed, which reads like a
+      message problem but is an environment problem."
+    type: retro
+    date: "2026-11-15"
+  - text: "Ran `pnpm build` before any lifecycle command; the CLI resolves workspace
+      packages from dist, so an unbuilt tree fails at module load (missing
+      @delivery-os/adapters/credentials)."
+    type: retro
+    date: "2026-11-15"
+  - text: "Specification was reopened once: Appendix B cited AC-NFR1-1, which
+      section 17 never declared. The test-plan author caught it, not the spec
+      author. A mechanical defined-vs-referenced id diff over the whole spec is
+      cheap and should run immediately after every spec authoring, before the
+      downstream artifacts are written."
+    type: retro
+    date: "2026-11-15"
+  - text: "test_planning: 60 test cases, 45/45 spec ACs traced, SC-M2-S3-01/02
+      adopted by id, DM-1..DM-9 and NFR-1..NFR-14 all mapped. AC-NFR14-1 is
+      process-evidenced (gate log + PR metadata), not suite-asserted."
+    type: info
+    date: "2026-11-15"
+  - text: "dor_check iteration 1: NOT_READY. Verdict record:
+      readiness-review/readiness-iter-1.md. Facets FAIL: spec_completeness,
+      cross_artifact_consistency. Blocking findings: (1) scope-key source
+      undefined for note-less declarations, so run identity and idempotency are
+      undefined for four of six built-ins; (2) retro-evidence-pass declares
+      event `change-merged`, which maps to no sub-R1 level and contradicts
+      F-9/DEC-4, and explicit runs record no declared trigger; (3) window
+      fallback undefined for note-less event-triggered runs
+      (decision-record-mirror-sync). Minor: trigger bound stated twice and
+      untested; plan phase 8 over-claims AC-F8-1; spec overstates the M2-S10
+      dependency edge. No human input required; remediation = reopen
+      specification, then test_planning, then delivery_planning, then re-run the
+      gate."
+    type: info
+    date: "2026-11-15"
+  - text: "The DoR gate was worth its cost here: three contract-detail holes that
+      every traceability matrix said were fine would each have forced the coder
+      to invent product behaviour (run identity for four built-ins, a trigger
+      that fires no level, and a window that does not exist). Traceability
+      coverage is not the same as semantic completeness."
+    type: retro
+    date: "2026-11-15"
+  - text: "dor_check iteration 2: NOT_READY, all six iteration-1 findings verified
+      resolved on merit. One new blocking finding introduced by the remediation:
+      the explicit-run non-counting rule collides with the catch-up
+      missed-window arithmetic (kind-based vs existence-based reading), and both
+      readings jam catch-up or leave a window outstanding forever. Minor: two
+      plan scope/claim residues, one spec wording nit, one stale test-plan gap
+      marker."
+    type: info
+    date: "2026-11-16"
+  - text: "Decided (PM, iteration-2 finding 1): obligation satisfaction is by run
+      identity, not by trigger kind. A window is satisfied when a run with that
+      (ceremony, scopeKey, window) identity exists, whichever kind produced it;
+      the explicit kind is provenance honesty in the record and never
+      impersonates a scheduled or event firing. Rationale: idempotency already
+      forbids a second execution of one identity, so a kind-based obligation
+      could never be cleared and the one-replay-per-invocation slot would jam
+      permanently. Recorded in the spec as DEC-19."
+    type: decision
+    date: "2026-11-16"
+  - text: "Two DoR iterations were spent on contract-detail holes that the spec's
+      own matrices could not see, and the second one was created by the first
+      fix. Lesson: when a new rule interacts with an existing arithmetic
+      (obligations vs missed windows), pin the composition in the same pass as
+      the rule."
+    type: retro
+    date: "2026-11-16"
+  - text: "dor_check iteration 3: READY, all 10 facets PASS, no pause required.
+      Verdict record: readiness-review/readiness-iter-3.md. Iteration-2 findings
+      1-5 verified resolved on merit; DEC-19 is the only surviving obligation
+      rule across all 13 locations; plan map matches the test plan id for id (65
+      TCs); 50/50 ACs, 9/9 DMs, 14/14 NFRs claimed. Accepted non-blocking
+      residue for review: a stale GAP-8 PENDING marker in the test plan (plan
+      now owns 001..065) and two test-plan lines retaining the old 'before any
+      read' shorthand."
+    type: info
+    date: "2026-11-16"
+  - text: "Delivery gate cleared at iteration 3 of 3. Reopening an artifact phase
+      after READY would restart the gate, so the two non-blocking wording
+      defects are carried as declared residue and surfaced to the reviewer
+      instead."
+    type: decision
+    date: "2026-11-16"
+  - text: "plan phase 1 (ceremony declaration contracts, closed vocabularies, and
+      the single validator): commit be940b1; pnpm typecheck green; bun test
+      tests/structure/{ceremony-contract,ceremony-imports,error-table}.test.ts
+      green (113 pass); bun test
+      tests/behaviour/ceremony-{declaration,declaration-bounds}.test.ts green
+      (33 pass); bun test
+      tests/checks/{error-table-sync,fixture-privacy}.test.ts green (99 pass);
+      bun run scripts/checks/error-table-sync.ts and ambient-globals.ts green.
+      Two tracked support files outside the declared scope were updated of
+      necessity and disclosed as scope drift by the commit primitive:
+      scripts/checks/error-table-sync.ts (the reserved two-segment allowlist)
+      and tests/structure/inventory.json (the source inventory)."
+    type: info
+    date: "2026-11-16"
+  - text: "plan phase 2 (ceremony record boundary and artifact family): commit
+      8867a44; pnpm typecheck green; bun test
+      tests/behaviour/ceremony-state-boundary.test.ts green (12 pass); bun test
+      tests/structure/state-contract.test.ts green (18 pass); bun test
+      tests/checks/fixture-privacy.test.ts green (3 pass); bun run
+      scripts/checks/ambient-globals.ts and workspace-entrypoints.ts green. The
+      tracked tests/structure/inventory.json update was disclosed as scope drift
+      by the commit primitive."
+    type: info
+    date: "2026-11-16"
+  - text: "plan phase 3 (runner engine: intake, artifact-verified agenda,
+      compaction, resume): commit 978f96d; pnpm typecheck green; bun test
+      tests/behaviour/ceremony-{run,run-triggers,resume,notes,state-boundary}
+      .test.ts green (41 pass); bun run scripts/checks/ambient-globals.ts green.
+      TC-063 derives the daily UTC window from the injected clock with the
+      repository scope key; TC-064 refuses the event-only declaration without
+      --window before any input read or append; TC-062 records explicit with
+      note/declaration/unspecified resolution. The tracked
+      tests/structure/inventory.json update was disclosed as scope drift."
+    type: info
+    date: "2026-11-16"
+  - text: "plan phase 4 (catch-up: pure schedule evaluation and bounded
+      single-window replay): commit 1b3edac; pnpm typecheck green; bun test
+      tests/behaviour/ceremony-catch-up.test.ts and
+      tests/structure/ceremony-catch-up-purity.test.ts green (12 pass); bun run
+      scripts/checks/ambient-globals.ts green. DEC-19 is realised by
+      existence-based satisfied/missed arithmetic: an explicitly-run window is
+      reported satisfied, replayed zero times, and the single replay slot
+      executes a genuinely different missed window. The catch-up run records the
+      missed window as the identity and the execution window separately. The
+      tracked tests/structure/inventory.json update was disclosed as scope
+      drift."
+    type: info
+    date: "2026-11-16"
+  - text: "plan phase 5 (six built-ins, parity, retro levels, mirror planning):
+      commit 1b764f2; pnpm typecheck green; bun test the parity suite, the seven
+      flow suites, the runner/notes/declaration suites, the brief golden, the
+      two structure suites, and the retro-malformed, closeout-telemetry and
+      fixture-privacy controls green (118 pass); bun run
+      scripts/checks/ambient-globals.ts green. The shared runner files
+      ceremony-run.ts and engine.ts were extended inside their phase-3/phase-2
+      declarations to dispatch the schema-keyed built-in renderers and to split
+      the sync step from the observing render step; the tracked
+      tests/structure/inventory.json update was disclosed as scope drift."
+    type: info
+    date: "2026-11-16"
+  - text: "plan phase 6 (project declarations: committed document and declared- set
+      registry): commit f267928; pnpm typecheck green; bun test
+      tests/behaviour/ceremony-project-declarations.test.ts and
+      tests/behaviour/ceremony-declaration.test.ts plus the fixture-privacy
+      control green (35 pass); bun run scripts/checks/workspace-entrypoints.ts
+      green. Absent and empty documents are the built-ins-only path;
+      config.file.malformed and ceremony.declaration.invalid refuse before any
+      run with zero partial registration and the built-in still effective. The
+      tracked tests/structure/inventory.json update was disclosed as scope
+      drift."
+    type: info
+    date: "2026-11-16"
+  - text: "plan phase 7 (single-source tier engine): commit be5a629; pnpm typecheck
+      green; bun test tests/behaviour/ceremony-tier.test.ts,
+      tests/behaviour/ceremony-tier-intake.test.ts, and
+      tests/structure/ceremony-tier-single-source.test.ts green (19 pass); bun
+      run scripts/checks/ambient-globals.ts green. The mapping consumes
+      PLAN_KNOWN_TIERS and PM_NOTES_REQUIRED_PHASES_BY_VARIANT only; plan
+      tier.phases are integer phase numbers resolved against the canonical
+      eleven; all five escalation triggers are evidence-gated and an unknown
+      string is reported verbatim as unevaluated. The tracked
+      tests/structure/inventory.json update was disclosed as scope drift."
+    type: info
+    date: "2026-11-16"
+  - text: "plan phase 8 (measurement records and the committed ceremony-share
+      comparison): commit b64cf4b; pnpm typecheck green; bun test
+      tests/behaviour/ceremony-comparison.test.ts,
+      tests/golden/ceremony-comparison.test.ts,
+      tests/checks/ceremony-comparison-honesty.test.ts, and
+      tests/behaviour/ceremony-state-boundary.test.ts green (21 pass); git diff
+      --check clean. The committed baseline log is schema_version 2 with one
+      additive comparisons[] entry; the golden suite deep-equals the builder
+      output; at delivery time n = 0, the verdict is insufficient-sample and no
+      trend token exists in the record. The tracked
+      tests/structure/inventory.json update was disclosed as scope drift."
+    type: info
+    date: "2026-11-16"
+  - text: "plan phase 9 (family mount: four verbs, composition, help, reference
+      page, coverage): commit 58e40c8; pnpm typecheck green; bun test the CLI,
+      list, golden envelope, envelope-contract, content-inventory,
+      entrypoint-bin, help-guide-coverage, and prompt-conformance suites green
+      (89 pass); bun run scripts/checks/{help-guide-coverage,prompt-conformance}
+      green; the composed binary answers root --help with ceremony listed and
+      ceremony list --json returns the six built-ins at exit 0. Declared-scope
+      support edits disclosed as commit scope drift: packages/cli/package.json
+      and pnpm-lock.yaml add the yaml parser for note documents;
+      packages/core/src/index.ts re-exports the ceremony engine for the edge;
+      scripts/checks/help-guide-coverage.ts maps ceremony to its M2 page;
+      tests/structure/inventory.json lists the two new CLI files."
+    type: info
+    date: "2026-11-16"
+  - text: "plan phase 10 (cross-cutting honesty battery): commit 87340fa; pnpm
+      typecheck green; bun test determinism, bounds, performance,
+      non-regression, mutants, hermetic, and the full-path imports suite green
+      (44 pass); bun run scripts/checks/ambient-globals.ts green. The mutant
+      meta-suite disables sixteen rules one at a time in temp source copies; the
+      hermetic scan fails on a planted skip, network import, and HOME read. One
+      output-render correction (the verdict line is reserved under the 32-line
+      bound) rode the same commit."
+    type: info
+    date: "2026-11-16"
+  - text: "plan phase 11 (documentation completion, planning corpus, changeset,
+      release obligations): commits ff6e1e3 (delivered M2 command page, registry
+      and entrypoint-delta rows, M2 README and backlog progress, one lockstep
+      minor changeset, the doc-conformance current-truth scan, the forbidden-
+      literal registry row, and the delivered-suite count/baseline updates) and
+      956c667 (environment-portable fixture roots plus the prior-identity test
+      budget; 4b429e1 raised the first of the two timeouts). Gates: plan
+      validate GH-296 -> valid; TMPDIR=$PWD/tmp/tmpdir
+      PATH=$PWD/node_modules/.bin:$PATH pnpm check -> exit 0 (lint, format,
+      typecheck, 9334 tests with 0 failures, boundaries, memory lint,
+      prompt-conformance, help-guide-coverage, exports-parity);
+      ./scripts/lint-commit-range.sh --base main-tools -> VERDICT PASS (25
+      commits, 0 offending); bash scripts/.tests/test-doc-distribution.sh -> OK
+      (94 in-scope docs); git diff --check clean. No PR created, per the
+      delivery instruction to leave the branch unpushed."
+    type: info
+    date: "2026-11-16"
+  - text: "system_spec_update (doc-syncer) closed all documentation gaps: created
+      feature-ceremony-runner.md and the redistributable guide, and updated the
+      result contract, state layer, plan schema, pm-notes, retro pipeline,
+      measurement baseline, CLI entrypoint, agents-and-commands, nonfunctional,
+      00-index, glossary, architecture overview, state-layer test spec, and the
+      retrospectives story mapping. Doc distribution OK (95 docs), pnpm check
+      exit 0. But the sync also proved ten delivered-vs-spec departures; three
+      are integrity defects, not documentation gaps: follow-through actions
+      default to applied with a synthetic note:action:<i> evidence ref, and
+      assessment items get a synthetic evidence ref so they default to covered.
+      That is a false green in the two capabilities whose entire purpose is
+      artifact verification."
+    type: info
+    date: "2026-11-16"
+  - text: "Reopened delivery rather than shipping a mostly-wired surface.
+      Remediation list, in priority order: (1) follow-through and assessment
+      must never accept a note-supplied status claim - no synthetic evidence
+      refs, unverified when the declared artifact is absent, uncovered when no
+      evidence exists (AC-F9-2, AC-F9-3, AC-F3-4); (2) compose the tier engine
+      into ceremony list and ceremony run so tiered intake is reachable, with
+      data.tier populated and the run record carrying effectiveTier,
+      phaseSetSize and escalations (AC-F7-1..F7-5, DM-7); (3) compose the
+      mirror-sync target set and landing path so decision-record-mirror-sync
+      returns verified on a clean mirror, unverified on drift, with a real
+      dry-run/--apply split (AC-F3-5, AC-F4-5, NFR-12); (4) state-record and
+      mirror-target output slots must write what DM-1 declares, and per-step
+      artifacts must not overwrite one another (DM-1, DM-6); (5) bound the note
+      read in bytes and re-validate the note schema on read-back (DM-2); (6)
+      meet the NFR-11 read budget (<=1 verified read per append, <=2 for list)."
+    type: decision
+    date: "2026-11-16"
+  - text: "Two integrity defaults survived 9334 green tests, three DoR passes, and
+      every traceability matrix: the tests asserted that a verdict is produced,
+      not that the verdict is earned. A suite that plants a note with no
+      verification artifact and asserts unverified would have caught it in phase
+      5. Treat 'the default verdict when evidence is absent' as its own required
+      negative case for any verification-shaped feature."
+    type: retro
+    date: "2026-11-16"
+  - text: "Factual note for review: the reserved two-segment allowlist was 53 before
+      this change, not 52 as the spec states (the pre-change count missed the
+      already-present verify.narrowed-scope code). The delivered check and the
+      documented result contract agree at 54. The spec's 52->53 line is a
+      planning-detail inaccuracy, not an acceptance criterion; current truth is
+      correct."
+    type: info
+    date: "2026-11-16"
+  - text: "Remediation slice A (P1 integrity + doc-sync + pm-notes): commit
+      01261a89. The working tree carried the completed P1 slice of the prior
+      interrupted run: follow-through verdicts now earned from delivered
+      evidence (unverified with reason when the artifact is absent, undelivered,
+      or unadjudicated), the verifyContent follow-through guard, intake without
+      synthetic note:action refs (uncited assessment items are uncovered), the
+      retro evidence fold reading the retro registry ledger, TC-066, and the
+      doc-sync artifacts. This run verified the flagged ceremony-run.ts
+      night-watch path and removed its last synthesized citation: a check now
+      cites only an evidence reference an anomaly itself carries, and an uncited
+      anomaly reports the missing citation (positive + negative cases in the
+      night-watch suite). Suites: pnpm typecheck green; parity + seven flow
+      suites 40 pass; run/notes/resume/state/declaration/TC-066/brief-golden/
+      structure/retro-malformed/closeout-telemetry/fixture-privacy 110 pass;
+      catch-up + tier suites 34 pass; cli/list/envelope/determinism/bounds/
+      mutants/hermetic 62 pass; ambient-globals OK. New files outside the
+      declared phase scope (the two doc-sync documents and TC-066) were git
+      added to the index so the commit primitive stages them as tracked work;
+      the primitive disclosed the drift."
+    type: info
+    date: "2026-11-16"
+  - text: "Remediation slice B (tier engine composition, AC-F7-1..F7-5, DM-7):
+      commit 4b275dbb. The runtime now evaluates the tier verdict per
+      invocation: it selects the checkout's delivery change from the recorded
+      phase.transition ledger truth (newest transition timestamp, greatest ref
+      on ties), reads the selected change's committed pm-notes (variant,
+      blockers) and plan (tier) documents through a new bounded adapter, and
+      maps recorded reopens to the closed escalation-trigger facts (reopen =
+      phase-reopen; review_fix = review-rework; quality_gates = gate-failure;
+      dor_check = dor-rework; open blocker = owner-escalation). ceremony list
+      populates data.tier with a per-ceremony obligated flag and reads the
+      ledger in one verified partitioned scan (runs+steps+transitions via the
+      new readCeremonyState); ceremony run threads the verdict into runCeremony
+      so the run record carries effectiveTier, phaseSetSize and escalations;
+      catch-up filters non-obligated declarations and records the verdict on
+      replayed runs; an explicit run is never gated. A checkout with no recorded
+      lifecycle history resolves no verdict and keeps the delivered default.
+      Suites: pnpm typecheck green; new
+      tests/behaviour/ceremony-tier-composition.test.ts 10 pass (TC-067);
+      cli/list/envelope/catch-up/state-boundary/performance/determinism/bounds/
+      hermetic/mutants/non-regression 95 pass; parity/run/notes/resume/TC-066/
+      project-declarations/tier suites 112 pass; doc-conformance green; biome
+      clean. The tier known-gap bullet in the feature spec and the guide's
+      shipped-composition note were replaced with the composed truth."
+    type: info
+    date: "2026-11-16"
+  - text: "Remediation slice C (mirror-sync composition, AC-F3-5, AC-F4-5, NFR-12):
+      commit 86739473. The shipped decision-record-mirror-sync now resolves a
+      real affected-repository target set and landing path: targets come from
+      the committed projects.yaml members (repoKey minus the invoking
+      repository; root names the local checkout) through a new decision-register
+      adapter; the source set is the invoking repository's committed
+      doc/decisions register; mirror.inspect reads the target checkout's
+      decision-record set; --apply lands the declared write set as a byte copy
+      into the target checkout's decisions directory (idempotent, no force path,
+      no child process, no commit in the ceremony path). The dry run now
+      verifies the computed write set and preconditions without requiring
+      equality (E-8/AC-F4-5), so a fresh target set is dry-run at exit 0; the
+      applied run still requires two-way equality (NFR-12), and a drifted or
+      absent target is unverified naming the target. Absent projects
+      configuration or register degrades declaredly. Suites: pnpm typecheck
+      green; new tests/behaviour/ceremony-mirror-composition.test.ts 5 pass
+      (TC-068: dry-run lands nothing, apply lands equal byte for byte,
+      extra-record drift unverified naming the target, absent target
+      precondition named, no-config degradation); flow-mirror/parity/run/
+      resume/mutants/hermetic/non-regression/determinism/bounds/performance 77
+      pass; flow + tier + runtime + cli/list/envelope/catch-up suites 71 pass;
+      doc-conformance green; biome clean. The mirror known-gap bullets in the
+      feature spec and the guide were replaced with the composed truth."
+    type: info
+    date: "2026-11-16"
+  - text: "Remediation slice D (slot fidelity, note bounds, read budget — items 4-6
+      of the reopened-delivery list; DM-1, DM-2, DM-6, NFR-11): commit f8419a7b.
+      The state-record output slot now lands the ledger record its slot
+      declares: the step's rendered record document is validated against its
+      declared schema and the caller's fenced append is the landing, the step
+      record's artifactRef names the ledger record
+      (ledger:ceremony.steps:<runId>:<index>), and no artifact file is written
+      for the slot. Per-step artifacts in the ceremony-artifact slot are named
+      <runId>.s<index>.json so two steps never overwrite one another and a
+      re-attempt replaces its own step's file. The note read is bounded in bytes
+      before any parse at CEREMONY_NOTE_MAX_BYTES (1 048 576, the configuration
+      parser class's bound) with an over-bound note refused as
+      ceremony.note-invalid naming the bound, and a stored note read back for a
+      resume is re-validated against the note contract — a body that merely
+      parses but no longer conforms refuses the resume with the field named.
+      Each fenced append now costs exactly one verified state read: the expected
+      post-append record total arrives from the caller's own verified read, so
+      the append's pre-append list read is gone, and ceremony list keeps at most
+      two verified reads through the one partitioned readCeremonyState scan
+      (NFR-11 delivered at its original target). New
+      tests/behaviour/ceremony-slot-bounds.test.ts pins all three properties
+      (TC-CEREMONY-069, 5 tests). The interrupted run's lost failure report
+      (9324 pass / 4 skip / 32 fail) was re-enumerated on the completed tree:
+      targeted ceremony suites (slot-bounds, run, resume, state-boundary,
+      performance, structure and golden ceremony) reported 0 fail, the broad
+      ceremony flow/checks/list/bounds/non-regression sweep reported 0 fail, and
+      no failure on the current tree reproduces any of the 32 — the failures
+      predate the session's final fixture and test edits. Final verification,
+      full foreground run kept at tmp/tmpdir/slice-d-final.log:
+      TMPDIR=$PWD/tmp/tmpdir PATH=\"$PWD/node_modules/.bin:$PATH\" bun test
+      reports 9356 pass / 4 skip / 0 fail across 9360 tests in 1163 files
+      (806.05s), confirmed green twice consecutively (907.18s first). No
+      assertion weakened and no skip counts as a pass. pnpm typecheck green;
+      biome clean on the 16 changed TypeScript files. The commit primitive
+      staged all 22 files including the git-added new test and disclosed the
+      expected scope drift (doc-sync documents, the new test, the two
+      inventories). The spec's slot table, state-layer artifact row, and the
+      guide's slot and note sections now state the delivered truth; the
+      read-cost and state-record known-gap bullets were replaced with the
+      composed truth."
+    type: info
+    date: "2026-11-16"
+  - text: "Sync with main-tools: `git merge --no-ff origin/main-tools -m
+      \"chore(GH-296): sync with main-tools\"` brought in GH-297's full-board
+      mount (2475ecd8), which added a 21st prompt-required command family to the
+      same closed surfaces GH-296 had just extended with `ceremony`.
+      Twenty-three files conflicted; every conflict was resolved by keeping both
+      sides' substance, so the merged truth is twenty-two prompt-required
+      families (`board` at index 20, `ceremony` at 21). Conflicted files and
+      resolutions: packages/cli/src/edge.ts (import order — both imports kept);
+      packages/cli/src/help/prompt-required-commands.ts,
+      tests/behaviour/entrypoint-composition.test.ts,
+      tests/behaviour/entrypoint-help-coverage.test.ts,
+      tests/structure/entrypoint-bin.test.ts,
+      tests/structure/events-production-composition.test.ts,
+      tests/fixtures/help-guide/coverage.json (family lists — board and ceremony
+      both appended after events); packages/cli/src/commands/index.ts (ceremony
+      exports kept, board type surface taken from GH-297's evolved board.ts
+      which no longer exports BoardCollector);
+      packages/core/src/contracts/index.ts (ceremony export block kept at its
+      position; GH-297's fuller board block survives at its own position);
+      packages/core/src/contracts/error-table.ts and
+      tests/fixtures/events/error-table-baseline.json (all four error rows: two
+      ceremony plus two board, ceremony rows first);
+      scripts/checks/error-table-sync.ts and
+      tests/structure/error-table.test.ts's exact-code allowlist (all three
+      additions, allowlist 53→56); scripts/checks/help-guide-coverage.ts and
+      tests/checks/reference-page-parity.test.ts (both M2 page mappings);
+      tests/fixtures/projects/state-scope.ts and
+      tests/fixtures/queue/production/harness.ts (non-checkout candidate lists
+      unioned: /tmp/opencode from GH-296 plus cwd two-up from GH-297);
+      tests/fixtures/cross-repository/two-members.ts (GH-297's
+      nonCheckoutDirectory taken, which subsumes GH-296's /tmp/opencode fallback
+      now that the candidate list is unioned);
+      tests/checks/event-mount-guards.test.ts (delivered-inline mutant fixture
+      gains board, expectation back to naming only events, GH-297's uncounted
+      title kept); doc/spec/features/feature-cli-entrypoint.md and
+      doc/spec/features/feature-result-contract.md (both families named in
+      summaries, enumerations, kind sentences, doc rows, and related_changes;
+      composed set stated as twenty-two families); the two error-table describe
+      blocks (TC-CEREMONY-049 and TC-BOARD-053 both kept, all pins reconciled to
+      140 entries / 139 delivered / 56 allowlist, GH-297's no-leftover scan
+      extended with the newly stale 137/138/54/55 tokens). Beyond the conflicts,
+      silent auto-merges that had pinned one change's 21/138/56-class counts
+      were reconciled to the merged truth: family counts 21→22
+      (entrypoint-two-bins, board-mounting, dispatch-attempts-composition,
+      events-mount-help, board-help, repos-help, ceremony-cli,
+      daemon-production-composition ×2, and the omit-daemon mutant 20→21),
+      error-table totals 138→140 and delivered 137→139 (error-table.test.ts ×4,
+      ceremony-contract, ceremony-nonregression, error-table-sync.test +104→+106
+      ×3, verify-gates-suite-map, dispatch-attempts-taxonomy header 137→139),
+      doc pins (result-contract DOMAIN_KINDS sentence gains `ceremony`,
+      allowlist row 55→56 with board 2 + ceremony 1, table paragraph 140
+      identities), the entrypoint-delta observations (board section marked
+      historical at twenty-one, ceremony section states twenty-two) with
+      doc-conformance asserting the twenty-two-family mount, and the
+      alias-baseline help cell regenerated from the merged tree's real
+      `delivery-os --help` output (22 family rows, board and ceremony present).
+      biome organized the two new import/export orders; pnpm build, pnpm
+      typecheck, biome, help-guide-coverage, prompt-conformance, exports-parity,
+      and forbidden-literals all green. Final verification, full foreground run
+      kept at tmp/tmpdir/gh296-sync-full-suite-final.log: TMPDIR=$PWD/tmp/tmpdir
+      PATH=\"$PWD/node_modules/.bin:$PATH\" bun test reports 9444 pass / 4 skip
+      / 0 fail across 9448 tests in 1187 files (1001.11s). The ceremony suites
+      (run, resume, slot-bounds, cli, non-regression, performance, contract,
+      golden) report 74 pass / 0 fail across 10 files, and the board suites
+      (selection default/project/ unbound, shared-source, waiver-recording,
+      write-discipline, help, performance, contract, mounting, golden full)
+      report 38 pass / 0 fail across 11 files. The first full run on the
+      unresolved-count tree reported 9433 pass / 4 skip / 11 fail; every failure
+      was a stale count pin named above, fixed and re-verified."
+    type: info
+    date: "2026-11-16"
+  - text: "Documentation reconciliation after the GH-297 sync (doc-syncer pass): the
+      current-truth surfaces the merge left stale are reconciled to the merged
+      tree. The entrypoint-delta ceremony observation lists `board` before
+      `ceremony` in the observed root listing. The agents-and-commands
+      help/guide row names `board` in the M2 reference-page root set and its
+      related_changes gains GH-297. The board structure row pins 22-family
+      counts. The ceremony feature spec states the delivered note read bound (1
+      048 576 bytes, measured before the read, refused as
+      `ceremony.note-invalid` naming the bound, with a stored note re-validated
+      on resume), the delivered read budget (one verified state read per fenced
+      append, `reads <= steps + 2`, and one partitioned verified scan for `list`
+      at most two verified reads per invocation), and the merged error-table
+      truth (140 identities, 56-entry reserved two-segment allowlist); the
+      nonfunctional ceremony row carries the same read budget. The blockers
+      error-identity row no longer pins a stale total and defers to the Result
+      Contract count the two-way sync check enforces. Verified on the delivered
+      tree: `PROMPT_REQUIRED_COMMANDS` holds 22 entries (board index 20,
+      ceremony index 21), `ERROR_TABLE` holds 140 rows over 139 non-spend
+      identities with the 56-entry allowlist, and the committed measurement
+      comparison deep-equals `buildCeremonyComparison` in the golden suite. The
+      distribution guard reports no drift across 95 in-scope docs. Pre-commit
+      doc checks, all as TMPDIR=$PWD/tmp/tmpdir
+      PATH=\"$PWD/node_modules/.bin:$PATH\": doc-conformance 19 pass, the
+      error-table suites 203 pass, prompt-conformance, help-guide-coverage, and
+      forbidden-literals clean. The status snapshot carries no GH-296 addendum;
+      that file records selected deliveries only, so no addendum is owed here.
+      No residual documentation gap is known."
+    type: info
+    date: "2026-11-16"
+  - text: "review_fix iteration 1: FAIL. Verdict record:
+      code-review/review-iter-1.yaml. 5 findings (1 high, 3 medium, 1 low), plan
+      phase 12 remediation tasks T-1..T-5 appended (plan validate valid). F-1
+      high: confirmed livelock in compactCeremonyCarried (ceremony-run.ts:926) —
+      the byte-bounding loop pops the omitted marker it just pushed, so any
+      compaction needing more than one line dropped never returns; reproduced
+      50x120 entries hang; reachable through a legal project declaration on
+      run/resume/catch-up; violates NFR-7/13 and AC-F4-4. F-2 medium:
+      renderBrief hardcodes zero counts for present sources. F-3 medium:
+      assessment `covered` unreachable in production (note facts are strings; a
+      fixture-only shape carries the citation channel) and citation presence
+      grants covered without resolution. F-4 medium: catch-up replays of project
+      ceremonies record origin built-in (false DM-3 provenance). F-5 low: stale
+      look-back comment. Remediation delegated to @coder as plan phase 12."
+    type: info
+    date: "2026-11-16"
+  - text: "The livelock survived the honesty battery because its bounds suite
+      asserted the compaction output shape at and above the limit but never ran
+      a pathological input to completion — a 50-entry oversized payload was
+      exactly the input the suite avoided for runtime reasons. A bound loop
+      needs a progress assertion (each iteration must strictly shrink the
+      payload), not only a shape assertion."
+    type: retro
+    date: "2026-11-16"
+  - text: "review_fix iteration 2: PASS. Verdict record:
+      code-review/review-iter-2.yaml. All five findings verified fixed on merit
+      (F-1 livelock termination proven from the loop plus the pathological
+      50x120 regression test with strict per-round progress; F-2 brief projects
+      delivered facts through projectBrief; F-3 composed-path citations with
+      resolve-to-verify covered; F-4 catch-up records true origin; F-5 comment).
+      One info-only residue: phase 12 scope.files omits 7 tightly-coupled
+      support files the slice touched; disclosed in pm-notes, no action.
+      Spot-verified 33 pass / 0 fail on the six key suites; full suite recorded
+      9452 pass / 4 skip / 0 fail across 9456 tests."
+    type: info
+    date: "2026-11-16"
+  - text: "delivery plan phase 12 (Code Review Remediation, T-1..T-5) complete on
+      commit 01add81b. F-1: compactCeremonyCarried now drops one content line
+      per byte-bound round and re-derives the omitted marker, so the payload
+      strictly shrinks and the loop terminates; ceremony-bounds.test.ts adds a
+      50x120 strict-progress regression asserting per-round line/byte decrease,
+      the 4096-byte/40-line bounds, and exact omitted accounting. F-2:
+      renderBrief reuses a delivered delivery.brief.v1 projection else projects
+      the delivered status facts through projectBrief, and renders unknown with
+      a reason (never an observed zero) when no projection is delivered; the
+      brief flow, parity, and golden tests assert injected facts surface. F-3:
+      CeremonyNote.facts accepts an evidence-carrying entry (contract in
+      contracts/ceremony.ts, validated in ceremony-intake.ts), the edge composes
+      the citation, and covered now requires the cited reference to resolve in
+      the delivered evidence; cite-but-unresolvable is uncovered with a reason.
+      A composed runtime test proves covered/unresolvable/uncited in production.
+      F-4: catch-up targets carry the registry origin, so a project-declared
+      replay records origin project (composed edge test). F-5: the catch-up
+      look-back comment names the delivered 7/4/2/2 windows. Support-file scope
+      drift disclosed by the commit primitive: it reported only
+      tests/behaviour/ceremony-runtime-composition.test.ts; the slice also
+      needed the contract, note-validator, fixture, parity, notes, and golden
+      support edits. Verification, run as TMPDIR=$PWD/tmp/tmpdir
+      PATH=\"$PWD/node_modules/.bin:$PATH\": pnpm build clean; pnpm typecheck
+      clean; the phase 12 gate suites 42 pass / 0 fail across 6 files; all 41
+      ceremony suites 290 pass / 0 fail; full suite 9452 pass, 4 skip, 0 fail,
+      9456 tests across 1187 files."
+    type: info
+    date: "2026-11-16"
+  - text: "quality_gates iteration: pnpm format:check failed on the 4 phase-12
+      remediation files whose hand-written line breaks differ from biome's
+      canonical style (packages/core/src/contracts/ceremony.ts multi-line
+      CeremonyNoteFact union, packages/core/src/domain/ceremony-schedule.ts
+      ternary env, tests/behaviour/ceremony-catch-up.test.ts find callback,
+      tests/fixtures/ceremony/builtins.ts ownerNoteItems and flatMap spots).
+      Fixed by the formatter itself, biome format --write on exactly those 4
+      files; the diff is line-break-only, no semantic change. Verification, run
+      as TMPDIR=$PWD/tmp/tmpdir PATH=\"$PWD/node_modules/.bin:$PATH\": pnpm
+      format:check green (Checked 2564 files, no fixes applied); pnpm lint green
+      (exit 0; none of the 4 files in the diagnostics); pnpm typecheck green
+      (pretypecheck build 6/6 packages, tests/types project clean). Committed
+      through the commit primitive as 023eee77 (fix(GH-296): update
+      packages/core/src/contracts/ceremony.ts), 4 files staged, no scope drift."
+    type: info
+    date: "2026-11-16"
+  - text: "Quality gates final verdicts, all on HEAD 976e5366:
+      TMPDIR=$PWD/tmp/tmpdir PATH=\"$PWD/node_modules/.bin:$PATH\" pnpm check
+      exit 0 (lint 0 errors; format clean; typecheck green; 9452 pass / 4 skip /
+      0 fail across 9456 tests in 1187 files; boundaries 431 modules no
+      violations; ambient-globals, workspace-entrypoints, secret-read-boundary
+      OK; memory-lint 0 errors; prompt-conformance 5 clean; help-guide-coverage
+      covered; exports-parity 5 pass). Range lint VERDICT PASS: base main-tools,
+      merge-base 2475ecd8, head 976e5366, 42 commits in range, 0 offending,
+      binary commitlint (repository-local). Doc distribution guard OK, no drift,
+      95 in-scope docs."
+    type: info
+    date: "2026-11-16"
+  - text: "dod_check evidence: registry shows clarify_scope through quality_gates
+      completed (recordCount 6512, verified); plan phases 1-12 each carry a
+      pm-notes notes entry naming the phase id, commit hash(es), and test result
+      (delivery phases 1-11, remediation slices A-D, phase 12, sync, doc
+      reconciliation); all 50 spec ACs mapped and verified by the passing suites
+      and the two review iterations; documentation complete with no residual gap
+      reported by the doc-syncer; both scenario seeds SC-M2-S3-01/02 delivered
+      (TC-CEREMONY-047/048). DoD-1..DoD-14 of the spec checked against delivered
+      evidence: four verbs mounted in a 22-family prompt set, one validator for
+      built-ins and projects, parity suite with negative cases,
+      artifact-verified resumable compaction, bounded idempotent catch-up,
+      declaration-only project ceremony case, single-source tier engine,
+      ledger-landing records with fold status, comparison record with
+      insufficient-sample at n=0, retro levels with null-retro success, two
+      error identities with the sync check green at 140 identities,
+      documentation deltas applied with a redistributable guide, no excluded
+      surface delivered (no metrics, no action registry, no packs, no scheduler,
+      no MCP tool, no LLM in a ceremony path), and the gates green with the
+      declared tmpdir before the PR."
+    type: info
+    date: "2026-11-16"

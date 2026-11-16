@@ -1006,3 +1006,75 @@ export {
   type WatchLine,
   type WatchProjection,
 } from "./domain/watch-stream.js";
+
+// The ceremony family's pure engine (GH-296): the declaration validator, the
+// intake/run/resume/catch-up engine, the built-in renderers, the registry, the
+// tier engine, and the measurement comparison. The CLI edge composes these.
+export {
+  ceremonyDeclarationDigest,
+  ceremonyExecutableField,
+  ceremonyScheduleTrigger,
+  ceremonySingleTriggerLabel,
+  ceremonyTriggerLabels,
+  ceremonyUtf8Bytes,
+  validateCeremonyDeclaration,
+  validateCeremonyDocument,
+} from "./domain/ceremony-declaration.js";
+export {
+  ceremonyNoteLevel,
+  deriveCeremonyCadenceWindow,
+  resolveCeremonyIntake,
+  validateCeremonyNoteForDeclaration,
+} from "./domain/ceremony-intake.js";
+export {
+  CEREMONY_NIGHT_WATCH_CHECKS,
+  compactCeremonyCarried,
+  declarationHasSyncStep,
+  executeCeremonyAgenda,
+  flattenCeremonyAgenda,
+  runCeremony,
+  type CeremonyEngineFailure,
+  type CeremonyRunData,
+  type CeremonyRunEnvironment,
+  type CeremonyRunOutcome,
+  type CeremonyRunRequest,
+} from "./domain/ceremony-run.js";
+export {
+  resumeCeremony,
+  validateCeremonyStepSequence,
+} from "./domain/ceremony-resume.js";
+export {
+  catchUpCeremonies,
+  catchUpScopeKey,
+  evaluateCeremonySchedule,
+} from "./domain/ceremony-schedule.js";
+export {
+  buildCeremonyRegistry,
+  ceremonyProjectEntries,
+  ceremonyRegistryEntry,
+  ceremonyRegistryIds,
+} from "./domain/ceremony-registry.js";
+export {
+  ceremonyTierIntake,
+  evaluateCeremonyTier,
+  type CeremonyTierEvidence,
+  type CeremonyTierInput,
+} from "./domain/ceremony-tier.js";
+export {
+  buildCeremonyComparison,
+  ceremonyComparisonHonestyViolations,
+  ceremonyP90Ms,
+  foldCeremonyMeasurement,
+} from "./domain/ceremony-comparison.js";
+export {
+  ceremonyBuiltinConforms,
+  renderCeremonyFollowThrough,
+  renderCeremonyRetroActions,
+  renderCeremonyRetroEvidence,
+  renderCeremonyRetroInsights,
+} from "./domain/ceremony-builtins.js";
+export {
+  ceremonyFollowThroughFirst,
+  retroDeclarationShape,
+} from "./domain/ceremony-retro.js";
+export { planCeremonyMirror } from "./domain/ceremony-mirror.js";

@@ -533,14 +533,14 @@ describe("TC-BIN-064 the branding seam still passes and still rejects injected v
   });
 });
 
-describe("TC-BIN-067 no new family row and no new error row", () => {
+describe("TC-BIN-067 the family list and the delivered error rows", () => {
   const brand = (() => {
     const resolved = resolveBrandIdentity({ workingName: "jaiship" });
     if (!resolved.ok) throw new Error("the resolver rejected jaiship");
     return resolved.value;
   })();
 
-  test("family-and-error-table: the family list is unchanged and advertises no new token", () => {
+  test("family-and-error-table: the prompt-required list carries the mounted families", () => {
     expect([...PROMPT_REQUIRED_COMMANDS]).toEqual([
       "status",
       "brief",
@@ -563,11 +563,12 @@ describe("TC-BIN-067 no new family row and no new error row", () => {
       "repos",
       "events",
       "board",
+      "ceremony",
     ]);
     const help = renderRootHelp(brand);
     expect(help).not.toContain("--print-install-path");
     expect(help.split("\n").filter((line) => /^ {2}[a-z][a-z0-9-]* {2}/u.test(line)).length).toBe(
-      21,
+      22,
     );
   });
 

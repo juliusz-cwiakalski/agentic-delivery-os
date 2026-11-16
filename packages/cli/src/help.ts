@@ -571,6 +571,75 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
   ),
   {
     ...entry(
+      ["ceremony"],
+      "Run declared ceremonies: list, run, resume, catch-up",
+      ["<binary> ceremony <list|run <name>|resume <runId>|catch-up> [options]"],
+      [
+        ["--note <path>", "Ceremony note document (required by note-consuming ceremonies)"],
+        ["--window <start>..<end>", "Run window"],
+        ["--apply", "Land declared sync effects; dry-run is the default"],
+        ["--name <name>", "Limit catch-up to one ceremony"],
+      ],
+      [
+        "<binary> ceremony list",
+        "<binary> ceremony run morning-brief",
+        "<binary> ceremony resume run-123",
+        "<binary> ceremony catch-up --name morning-brief",
+      ],
+      "ceremony",
+    ),
+    seeAlso: [pageIn(M2_REFERENCE_ROOT, "ceremony"), MAN_PAGE],
+  },
+  {
+    ...entry(
+      ["ceremony", "list"],
+      "List every declared ceremony",
+      ["<binary> ceremony list"],
+      [],
+      ["<binary> ceremony list", "<binary> ceremony list --json"],
+      "ceremony",
+    ),
+    seeAlso: [pageIn(M2_REFERENCE_ROOT, "ceremony")],
+  },
+  {
+    ...entry(
+      ["ceremony", "run"],
+      "Run one declared ceremony",
+      ["<binary> ceremony run <name> [--note <path>] [--window <start>..<end>] [--apply]"],
+      [
+        ["--note <path>", "Ceremony note document"],
+        ["--window <start>..<end>", "Run window"],
+        ["--apply", "Land declared sync effects"],
+      ],
+      ["<binary> ceremony run morning-brief", "<binary> ceremony run night-watch --json"],
+      "ceremony",
+    ),
+    seeAlso: [pageIn(M2_REFERENCE_ROOT, "ceremony")],
+  },
+  {
+    ...entry(
+      ["ceremony", "resume"],
+      "Continue an interrupted ceremony run",
+      ["<binary> ceremony resume <runId> [--apply]"],
+      [["--apply", "Land declared sync effects"]],
+      ["<binary> ceremony resume run-123"],
+      "ceremony",
+    ),
+    seeAlso: [pageIn(M2_REFERENCE_ROOT, "ceremony")],
+  },
+  {
+    ...entry(
+      ["ceremony", "catch-up"],
+      "Replay at most one missed window per ceremony",
+      ["<binary> ceremony catch-up [--name <name>]"],
+      [["--name <name>", "Limit catch-up to one ceremony"]],
+      ["<binary> ceremony catch-up", "<binary> ceremony catch-up --name morning-brief"],
+      "ceremony",
+    ),
+    seeAlso: [pageIn(M2_REFERENCE_ROOT, "ceremony")],
+  },
+  {
+    ...entry(
       ["daemon"],
       "Run and manage the resident daemon: start, stop, status, install, uninstall",
       [

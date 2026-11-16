@@ -25,6 +25,9 @@ import {
   ENVELOPE_SCHEMA_ID,
 } from "../../packages/core/src/contracts/index";
 import { matchSeedLiteral } from "../../scripts/checks/forbidden-literals";
+import { createCeremonyCommandDefinition } from "../../packages/cli/src/commands/ceremony";
+import { runCli } from "../../packages/cli/src/index";
+import { bufferSink, SYNTHETIC_BRAND } from "../golden/helpers";
 
 const ROOT = process.cwd();
 const CONTRACTS_DIR = "packages/core/src/contracts";
@@ -392,4 +395,63 @@ test("TC-GH223-034 audit vocabulary does not leak into the content envelope", ()
   expect(text).not.toContain("audit.");
   expect(text).not.toContain("agentIdentity");
   expect(text).not.toContain("chainValue");
+});
+
+/**
+ * TC-CEREMONY-004 (structure half) — every ceremony-specific field lives under
+ * `data`; no new top-level envelope key, `ok`, or `command` appears.
+ */
+describe("TC-CEREMONY-004 ceremony fields stay under data", () => {
+  test("a verified run envelope keeps the five delivered keys", async () => {
+    const stdout = bufferSink();
+    const stderr = bufferSink();
+    const exitCode = await runCli(
+      ["ceremony", "run", "morning-brief", "--json"],
+      { stdout, stderr },
+      {
+        brand: SYNTHETIC_BRAND,
+        clock: { now: () => 1 },
+        newRunId: () => "run-envelope",
+        secrets: [],
+        program: {
+          commands: {
+            ceremony: createCeremonyCommandDefinition({
+              list: () => ({ ok: true, data: { ceremonies: [] } }),
+              run: () => ({
+                ok: true,
+                data: {
+                  ceremony: "morning-brief",
+                  runId: "run-1",
+                  verdict: "verified",
+                  trigger: { kind: "explicit", resolution: "declaration" },
+                  scopeKey: { value: "repo", derivation: "repository" },
+                  window: { start: "a", end: "b" },
+                  steps: [],
+                  applied: false,
+                  carried: [],
+                },
+              }),
+              resume: () => ({ ok: true, data: {} }),
+              catchUp: () => ({ ok: true, data: {} }),
+            }),
+          },
+        },
+      },
+    );
+    expect(exitCode).toBe(0);
+    const envelope = JSON.parse(stdout.value) as Record<string, unknown>;
+    expect(Object.keys(envelope).sort()).toEqual([
+      "data",
+      "exitCode",
+      "runId",
+      "schemaVersion",
+      "timing",
+    ]);
+    expect(Object.hasOwn(envelope, "ok")).toBe(false);
+    expect(Object.hasOwn(envelope, "command")).toBe(false);
+    const data = envelope.data as Record<string, unknown>;
+    expect(data.verdict).toBe("verified");
+    expect(data.trigger).toBeDefined();
+    expect(data.scopeKey).toBeDefined();
+  });
 });

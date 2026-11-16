@@ -13,6 +13,12 @@ export type {
 export { createBoardCommandDefinition } from "./board.js";
 export type { BriefCommandRuntime } from "./brief.js";
 export { createBriefCommandDefinition } from "./brief.js";
+export type {
+  CeremonyCommandFailure,
+  CeremonyCommandResult,
+  CeremonyCommandRuntime,
+} from "./ceremony.js";
+export { ceremonyErrorKind, createCeremonyCommandDefinition } from "./ceremony.js";
 export type { CloseoutCommandRuntime } from "./closeout.js";
 export { createCloseoutCommandDefinition } from "./closeout.js";
 export type { CommitCommandRuntime, CommitContext } from "./commit.js";

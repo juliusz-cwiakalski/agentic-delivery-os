@@ -1,7 +1,7 @@
 /**
  * TC-BOARD-040 and TC-BOARD-043 — `board` is the twenty-first prompt-required
- * family, composed by production, listed in root help, and the mount changes no
- * other family (AC-F7-1, F-7, DEC-10, RSK-5).
+ * family (ceremony the twenty-second), composed by production, listed in root
+ * help, and the mount changes no other family (AC-F7-1, F-7, DEC-10, RSK-5).
  */
 import { describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
@@ -62,10 +62,11 @@ const composeProduction = () => {
 };
 
 describe("TC-BOARD-040/043 mounting", () => {
-  test("board is the twenty-first member and the delivered twenty keep their order", () => {
-    expect([...PROMPT_REQUIRED_COMMANDS]).toHaveLength(21);
+  test("board is the twenty-first member, ceremony the twenty-second, and the delivered twenty keep their order", () => {
+    expect([...PROMPT_REQUIRED_COMMANDS]).toHaveLength(22);
     expect([...PROMPT_REQUIRED_COMMANDS].slice(0, 20)).toEqual([...DELIVERED]);
     expect(PROMPT_REQUIRED_COMMANDS[20]).toBe("board");
+    expect(PROMPT_REQUIRED_COMMANDS[21]).toBe("ceremony");
   });
 
   test("production composes board and the prompt-required selection keeps it", () => {
@@ -73,7 +74,7 @@ describe("TC-BOARD-040/043 mounting", () => {
     try {
       expect(program.commands.board).toBeDefined();
       const selected = selectPromptRequiredProgram(program);
-      expect(Object.keys(selected.commands)).toHaveLength(21);
+      expect(Object.keys(selected.commands)).toHaveLength(22);
       expect(selected.commands.board).toBeDefined();
       for (const name of DELIVERED) expect(selected.commands[name]).toBeDefined();
     } finally {

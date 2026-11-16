@@ -1,0 +1,138 @@
+[
+  {
+    "id": "D-01",
+    "field": "agenda[0].steps[0].kind",
+    "set": {
+      "path": "agenda.0.steps.0.kind",
+      "value": "deploy"
+    }
+  },
+  {
+    "id": "D-02",
+    "field": "agenda[0].steps[0].verify",
+    "unset": "agenda.0.steps.0.verify"
+  },
+  {
+    "id": "D-03",
+    "field": "agenda[0].steps[0].outputs[0].schema",
+    "unset": "agenda.0.steps.0.outputs.0.schema"
+  },
+  {
+    "id": "D-04",
+    "field": "inputs[0].source",
+    "set": {
+      "path": "inputs.0.source",
+      "value": "filesystem"
+    }
+  },
+  {
+    "id": "D-05",
+    "field": "agenda[0].steps[0].outputs[0].slot",
+    "set": {
+      "path": "agenda.0.steps.0.outputs.0.slot",
+      "value": "filesystem"
+    }
+  },
+  {
+    "id": "D-06",
+    "field": "agenda[0].steps[0].verify",
+    "set": {
+      "path": "agenda.0.steps.0.verify",
+      "value": "artifact-maybe"
+    }
+  },
+  {
+    "id": "D-07",
+    "field": "triggers[0].event",
+    "set": {
+      "path": "triggers.0",
+      "value": {
+        "kind": "event",
+        "event": "deploy-finished"
+      }
+    }
+  },
+  {
+    "id": "D-08",
+    "field": "tiers[]",
+    "set": {
+      "path": "tiers",
+      "value": ["full", "turbo"]
+    }
+  },
+  {
+    "id": "D-09",
+    "field": "triggers[0].at",
+    "set": {
+      "path": "triggers.0.at",
+      "value": "25:00"
+    }
+  },
+  {
+    "id": "D-10",
+    "field": "id",
+    "set": {
+      "path": "id",
+      "value": "Project_Weekly_Sweep"
+    }
+  },
+  {
+    "id": "D-11",
+    "field": "id",
+    "set": {
+      "path": "id",
+      "value": "morning-brief"
+    }
+  },
+  {
+    "id": "D-13",
+    "field": "command",
+    "set": {
+      "path": "command",
+      "value": "git status"
+    }
+  },
+  {
+    "id": "D-15",
+    "field": "scopeKey",
+    "unset": "scopeKey"
+  },
+  {
+    "id": "D-16",
+    "field": "scopeKey",
+    "set": {
+      "path": "scopeKey",
+      "value": {
+        "kind": "note"
+      }
+    }
+  },
+  {
+    "id": "D-17",
+    "field": "scopeKey",
+    "set": {
+      "path": "scopeKey",
+      "value": {
+        "kind": "literal",
+        "value": "Repo Key"
+      }
+    }
+  },
+  {
+    "id": "D-18",
+    "field": "triggers[]",
+    "set": {
+      "path": "triggers",
+      "value": [
+        {
+          "kind": "schedule",
+          "cadence": "daily"
+        },
+        {
+          "kind": "schedule",
+          "cadence": "weekly"
+        }
+      ]
+    }
+  }
+]

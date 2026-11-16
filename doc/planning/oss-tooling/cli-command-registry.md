@@ -183,7 +183,7 @@ GitHub, Azure on demand).
 | Command | Purpose | Primary user | Delivery | Extended |
 |---|---|---|---|---|
 | `ados supervise` | Supervision battery over the daemon's lanes: tri-state status, progress watchdogs, duplicate-supervisor detection, lying-liveness signals by artifact evidence, restart policies | coordinator | M2-S2 | - |
-| `ados ceremony` | Ceremony runner: artifact-verified, resumable, compact at boundaries, tiered intake; the ceremony tier engine (per-tier phase sets and escalation triggers as data, consuming M1-S13 plan tiers); the built-in set: morning brief, retro evidence pass, sprint rollover, night-watch, testing-session assessment, decision-record mirror sync; ceremonies are declared units, so projects can add their own; retro ceremonies follow concepts/retrospectives.md (levels, triggers, follow-through-first) | coordinator | M2-S3 | - |
+| `ados ceremony` | Delivered (GH-296): ceremony runner: artifact-verified, resumable, compact at boundaries, tiered intake; the ceremony tier engine (per-tier phase sets and escalation triggers as data, consuming M1-S13 plan tiers); the built-in set: morning brief, retro evidence pass, sprint rollover, night-watch, testing-session assessment, decision-record mirror sync; ceremonies are declared units, so projects can add their own; retro ceremonies follow concepts/retrospectives.md (levels, triggers, follow-through-first) | coordinator | M2-S3 (shipped in GH-296) | - |
 | `ados steer` | Queued steering notes delivered at phase boundaries; owner asks batched with measured aging; the first message type of the typed message contract (origin, receipt, TTL), extensible to agent-to-agent messaging (concepts/inter-agent-communication.md) | operator, coordinator | M2-S5 | - |
 | `ados metrics` | Delivery metrics: ceremony share, cycle time, CI failure rate, escaped defects | coordinator, operator | M2-S6 | - |
 | `ados repos` | Delivered (GH-309): the flat record set of managed checkouts under `repos.v1` — `data.repos[]` with `repoKey`, root, state location, daemon reachability, and handover state, from the checkout identity; per-repository state scoping with a host-level index; the `projects list --flat` deprecation alias returns the delivered `projects.v1` payload unchanged until the M3 boundary | operator, coordinator | M2-S18 (shipped in GH-309) | M3-S6 (clone, branch, and worktree hygiene verbs) |
@@ -311,7 +311,7 @@ M3-S7 or M4-S5 without a replacement.
 | CI and runner health checks | `ados doctor` | Fix hints per failing check (M1-S3) |
 | batch-deliver.sh | `ados queue` + `ados daemon` | Scheduling engine one-shot mode (M1-S17); continuous operation under the daemon (M1-S18) |
 | ceo-loop.sh | `ados coordinator` (delivered, GH-241) + `ados daemon` (loop driving) | The delivered `coordinator` family is the typed replacement for the loop's actual function (context resume decision, stuck detection, kill with grace, restart budget, wake-on-question); daemon loop-driving hands over at M1-S18. Together they clear the M4-S5 bash retirement |
-| ceremony scripts | `ados ceremony` | Ceremony set enumerated (M2-S3) |
+| ceremony scripts | `ados ceremony` | Delivered (M2-S3, GH-296): six built-ins and project declarations run through one artifact-verified runner; the six built-ins are parity-tested through one path |
 | repo sync and branch utilities | `ados repos` | Safety rails on live-delivery repos (M3-S6) |
 | metrics collector | `ados metrics` | Thresholds and windows (M2-S6) |
 | memory audit | `ados retro` | Folded into the retro pass (M1-S8) |

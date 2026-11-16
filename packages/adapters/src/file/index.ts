@@ -9,6 +9,29 @@ export {
   nodeCapsuleFileSystemFacts,
 } from "./capsule.js";
 export {
+  ceremonyArtifactsDirectory,
+  ceremonyArtifactsDirectoryName,
+  createCeremonyArtifactStore,
+} from "./ceremony-artifacts.js";
+export {
+  CEREMONY_DECLARATIONS_FILE_NAME,
+  type CeremonyDeclarationDocumentRead,
+  type CeremonyDeclarationFileSystem,
+  ceremonyDeclarationDocumentPath,
+  nodeCeremonyDeclarationFileSystem,
+  parseCeremonyNoteText,
+  readCeremonyDeclarationDocument,
+} from "./ceremony-declarations.js";
+export {
+  type CeremonyLifecycleTransitionFact,
+  type CeremonyTierContextFileSystem,
+  type CeremonyTierContextFiles,
+  ceremonyTierEvidenceFromLifecycle,
+  nodeCeremonyTierContextFileSystem,
+  planTierOf,
+  readCeremonyTierContextFiles,
+} from "./ceremony-tier-context.js";
+export {
   type ChangeFolderFileSystem,
   type ChangeFolderLookup,
   type ChangeFolderRequest,
@@ -35,6 +58,19 @@ export {
   readCommittedConfigDocument,
   runtimePlatform,
 } from "./config-source.js";
+export {
+  type AffectedRepositoryTarget,
+  affectedRepositoryTargets,
+  copyDecisionRecords,
+  DECISION_RECORD_ID_PATTERN,
+  type DecisionMirrorApplyResult,
+  type DecisionRecordFileSystem,
+  type DecisionRegisterRead,
+  decisionRecordIdOf,
+  decisionRecordIds,
+  nodeDecisionRecordFileSystem,
+  readDecisionRegister,
+} from "./decision-register.js";
 export {
   type DispatchAuthorityFact,
   dispatchAuthorityDocumentName,

@@ -8,28 +8,47 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import {
   acquireFileConfig,
+  affectedRepositoryTargets,
   applyPromotionWrite,
+  ceremonyTierEvidenceFromLifecycle,
   checkPromotionConfinement,
+  copyDecisionRecords,
   createCapsuleFileRuntime,
+  createCeremonyArtifactStore,
   createCommitlintProbe,
   createSecretScanner,
+  decisionRecordIds,
   ensureProjectIdentityMarkerText,
   type FileSystemFacts,
   neutralEnvironmentFacts,
   nodeCapsuleFileSystemFacts,
+  nodeCeremonyTierContextFileSystem,
+  nodeDecisionRecordFileSystem,
   nodeFileSystemFacts,
   type PmNotesFileSystemFacts,
+  parseCeremonyNoteText,
   parseConfigYaml,
   type RuntimePlatform,
+  readCeremonyDeclarationDocument,
+  readCeremonyTierContextFiles,
   readCiWorkflowJobNames,
+  readDecisionRegister,
   readDispatchAuthority,
   readLocalPmContext,
   readMemoryFacts,
   readPlanArtifact,
   readPmNotesText,
+  readProjectGroupsConfig,
   readProjectIdentityMarker,
   runtimePlatform,
   stagePmNotesPhaseEntry,
@@ -81,7 +100,10 @@ import {
   appendOutboxEffect,
   beginCommitEffect,
   boardNeedsDecisionHistory,
+  buildCeremonyRegistry,
   buildCloseoutPlan,
+  type CeremonyEngineFailure,
+  type CeremonyTierInput,
   type CloseoutDependentFact,
   type CloseoutPlanFacts,
   type CloseoutTelemetryRuntime,
@@ -93,6 +115,11 @@ import {
   capsuleGateEventKey,
   capsulePhaseEventKey,
   catalogPaths,
+  catchUpCeremonies,
+  catchUpScopeKey,
+  ceremonyRegistryEntry,
+  ceremonyRegistryIds,
+  ceremonyTierIntake,
   claimQueueLease,
   claimSingleFlightRefusal,
   classifyPruneCandidate,
@@ -115,6 +142,7 @@ import {
   defaultParkRecheckMs,
   deriveCapsuleEventKey,
   emptyIngestTally,
+  evaluateCeremonyTier,
   evaluateClaimPreconditions,
   evaluateDiffSweep,
   evaluateDispatchResumeEconomics,
@@ -177,7 +205,9 @@ import {
   resolveProjectScope,
   resolveQueueSettings,
   resolveQueueWeight,
+  resumeCeremony,
   revertDispatchHandoverEvidence,
+  runCeremony,
   runCloseout,
   runCommitAct,
   runDispatch,
@@ -200,6 +230,7 @@ import {
   type VerifyGatesRepositoryFacts,
   type VerifyGatesWorkflowFacts,
   type VerifyGatesWorkItem,
+  validateCeremonyNoteForDeclaration,
   type WatchRead,
   watchLines,
   windowSpendEvidence,
@@ -225,6 +256,15 @@ import {
   type CapsuleFileRuntime,
   type CapsuleFileSystemFacts,
   type CapsuleProducerPort,
+  CEREMONY_NOTE_MAX_BYTES,
+  type CeremonyDeclaration,
+  type CeremonyInputRead,
+  type CeremonyInputSource,
+  type CeremonyMemoryPort,
+  type CeremonyMirrorPort,
+  type CeremonyNote,
+  type CeremonyStepRecord,
+  type CeremonyTierVerdict,
   CLOSEOUT_MAX_DEPENDENTS,
   type CloseoutDiffRead,
   type CloseoutExpectedCapsuleEvent,
@@ -346,16 +386,22 @@ import {
   appendPhaseTransition,
   appendTelemetryCaptureOutcome,
   appendTelemetryStep,
+  type CeremonyLifecycleTransition,
+  type CeremonyStatePartition,
   captureTelemetryBaseline,
+  createCeremonyRecordPort,
   createNodeRetroSidecarIo,
   createNodeStateEdge,
   createRetroSidecar,
   createStateStore,
+  foldCeremonyRunVerdict,
   foldCloseoutHistory,
   foldPhaseState,
   readAllMergeWaivers,
   readAuditLedger,
   readBlockerLedger,
+  readCeremonyRuns,
+  readCeremonyState,
   readChangeTransitionsTolerant,
   readCloseoutHistory,
   readCommitTelemetry,
@@ -383,6 +429,11 @@ import {
   createBoardCommandDefinition,
 } from "./commands/board.js";
 import { createBriefCommandDefinition } from "./commands/brief.js";
+import {
+  type CeremonyCommandResult,
+  type CeremonyCommandRuntime,
+  createCeremonyCommandDefinition,
+} from "./commands/ceremony.js";
 import {
   type CloseoutCommandRuntime,
   createCloseoutCommandDefinition,
@@ -3665,6 +3716,7 @@ export type ConfigProgramOptions = {
   readonly daemon?: DaemonCommandRuntime;
   readonly coordinator?: CoordinatorComposition;
   readonly retro?: RetroCompositionOptions;
+  readonly ceremony?: CeremonyCompositionOptions;
   readonly spend?: SpendCompositionOptions;
   readonly projects?: ProjectsCommandRuntime;
   readonly repos?: ReposCommandRuntime;
@@ -3739,8 +3791,537 @@ const ordinaryFlags = (flags: CommandFlags, catalog: ConfigCatalog): Record<stri
   return values;
 };
 
-/**
- * Compose a frozen brand, acquired sources, legacy facts and the packed defaults
+/** The ceremony family composition seam (GH-296 F-1, F-6, F-7). */
+export type CeremonyCompositionOptions = {
+  readonly store: StateStorePort;
+  readonly stateDirectory: string;
+  readonly changesDirectory: string;
+  readonly workspaceId: string;
+  readonly clock: { readonly nowMs: () => number };
+  readonly newRunId: () => string;
+  readonly newFenceToken: () => string;
+  readonly gitRoot: string;
+  readonly configurationDirectoryName: string;
+  readonly repositoryId: string;
+  /**
+   * An injected tier context; when absent, the runtime resolves the invoking
+   * checkout's delivery context from the recorded lifecycle transitions and
+   * the change's committed pm-notes and plan documents (F-7, DM-7).
+   */
+  readonly tierContext?: CeremonyTierInput;
+};
+
+const ceremonyFailure = (error: CeremonyEngineFailure): CeremonyCommandResult => ({
+  ok: false,
+  error: {
+    code: error.code,
+    summary: error.summary,
+    ...(error.field === undefined ? {} : { field: error.field }),
+  },
+});
+
+const parseCeremonyNote = (
+  path: string,
+): { readonly note: CeremonyNote } | { readonly error: CeremonyEngineFailure } => {
+  try {
+    // The note read is bounded in bytes before any parse (DM-2, §21): the
+    // bound is the configuration parser class's declared size limit.
+    const size = statSync(path).size;
+    if (size > CEREMONY_NOTE_MAX_BYTES) {
+      return {
+        error: {
+          code: "ceremony.note-invalid",
+          summary: `the ceremony note at "${path}" is ${String(size)} bytes; the declared bound is ${String(CEREMONY_NOTE_MAX_BYTES)}`,
+          field: "document",
+        },
+      };
+    }
+    return { note: parseCeremonyNoteText(readFileSync(path, "utf8")) as CeremonyNote };
+  } catch {
+    return {
+      error: {
+        code: "ceremony.note-invalid",
+        summary: `the ceremony note at "${path}" cannot be read or parsed`,
+        field: "document",
+      },
+    };
+  }
+};
+
+/** Compose the ceremony runtime over the delivered state, artifact and file seams. */
+export const createCeremonyCommandRuntime = (
+  options: CeremonyCompositionOptions,
+): CeremonyCommandRuntime => {
+  const registryRead = () =>
+    buildCeremonyRegistry({
+      document: readCeremonyDeclarationDocument({
+        gitRoot: options.gitRoot,
+        configurationDirectoryName: options.configurationDirectoryName,
+      }),
+    });
+  const memoryDirectory = `${options.gitRoot}/.ai/memory/ceremony`;
+  const memory: CeremonyMemoryPort = {
+    readNote(scopeKey) {
+      const path = `${memoryDirectory}/${encodeURIComponent(scopeKey)}.md`;
+      if (!existsSync(path)) return { state: "absent" };
+      try {
+        return { state: "present", body: readFileSync(path, "utf8") };
+      } catch {
+        return { state: "absent" };
+      }
+    },
+    writeNote(input) {
+      try {
+        mkdirSync(memoryDirectory, { recursive: true });
+        const path = `${memoryDirectory}/${encodeURIComponent(input.scopeKey)}.md`;
+        if (input.append) appendFileSync(path, `\n${input.body}`, "utf8");
+        else writeFileSync(path, input.body, "utf8");
+        return { ok: true };
+      } catch {
+        return { ok: false, detail: "the memory slot is not writable" };
+      }
+    },
+  };
+  const decisionFs = nodeDecisionRecordFileSystem();
+  type MirrorTargetEntry = ReturnType<typeof affectedRepositoryTargets>[number];
+  let mirrorContext:
+    | {
+        readonly register: ReturnType<typeof readDecisionRegister>;
+        readonly targets: readonly MirrorTargetEntry[];
+        readonly roots: ReadonlyMap<string, string>;
+      }
+    | undefined;
+  const mirrorTargetsOf = () => {
+    if (mirrorContext !== undefined) return mirrorContext;
+    const config = readProjectGroupsConfig({
+      gitRoot: options.gitRoot,
+      configurationDirectoryName: options.configurationDirectoryName,
+    });
+    const targets =
+      config.state === "document"
+        ? affectedRepositoryTargets(config.value, options.repositoryId)
+        : [];
+    const roots = new Map<string, string>();
+    for (const target of targets) {
+      if (target.root !== undefined) roots.set(target.target, target.root);
+    }
+    mirrorContext = {
+      register: readDecisionRegister({ gitRoot: options.gitRoot, fs: decisionFs }),
+      targets,
+      roots,
+    };
+    return mirrorContext;
+  };
+  const mirror: CeremonyMirrorPort = {
+    inspect(target) {
+      const context = mirrorTargetsOf();
+      const root = context.roots.get(target);
+      if (root === undefined || !decisionFs.pathExists(root) || !decisionFs.isDirectory(root)) {
+        return { state: "absent", mirrorSet: [], sourceSet: [] };
+      }
+      // A declared checkout is clean when it is present; its mirrored record
+      // set is what the equality check compares in both directions (NFR-12).
+      return {
+        state: "clean",
+        mirrorSet: decisionRecordIds(`${root.replace(/[\\/]+$/, "")}/doc/decisions`, decisionFs),
+        sourceSet: [],
+      };
+    },
+    apply(target, records) {
+      const context = mirrorTargetsOf();
+      const root = context.roots.get(target);
+      if (root === undefined) {
+        return { ok: false, detail: `target "${target}" declares no local checkout root` };
+      }
+      return copyDecisionRecords({
+        targetRoot: root,
+        ids: records,
+        sourceDirectory: context.register.directory,
+        fs: decisionFs,
+      });
+    },
+  };
+  const envFor = (origin: "built-in" | "project", note: CeremonyNote | undefined) => {
+    let retrospectiveEvidence: readonly string[] | undefined;
+    const retroEvidenceRefs = (): readonly string[] => {
+      if (retrospectiveEvidence !== undefined) return retrospectiveEvidence;
+      const read = readRetroRegistry(options.store);
+      const refs = new Set<string>();
+      if (read.ok) {
+        for (const run of readRetroRuns(read.value)) {
+          refs.add(`retro.run:${run.runId}`);
+          for (const check of run.truth.checks) {
+            for (const ref of check.evidenceRefs) refs.add(ref);
+          }
+        }
+      }
+      retrospectiveEvidence = [...refs].sort();
+      return retrospectiveEvidence;
+    };
+    const input = (source: CeremonyInputSource): CeremonyInputRead => {
+      if (source === "owner-note" && note !== undefined) {
+        // The note's declared items are the assessment's item source. A fact
+        // may carry its own evidence reference; the citation is never
+        // synthesised, and the assessment grants `covered` only when it
+        // resolves in the delivered evidence (AC-F3-4).
+        return {
+          state: "present",
+          facts: {
+            items: (note.facts ?? []).map((fact) =>
+              typeof fact === "string"
+                ? { text: fact }
+                : {
+                    text: fact.text,
+                    ...(fact.evidenceRef === undefined ? {} : { evidenceRef: fact.evidenceRef }),
+                  },
+            ),
+          },
+        };
+      }
+      if (source === "retro-evidence" || source === "retro-runs") {
+        // The delivered evidence is the ledger's recorded retro runs: their
+        // truth-check evidence references are what a follow-through verdict may
+        // cite. The supplied note's own citations are never echoed back as
+        // evidence (AC-F9-3).
+        return {
+          state: "present",
+          facts: { evidenceRefs: [...retroEvidenceRefs()] },
+        };
+      }
+      if (source === "affected-repositories") {
+        // The declared affected-repository set is the committed projects
+        // configuration's member identities, minus the invoking repository
+        // (F-3, NFR-12). Absent configuration is a declared degradation, never
+        // an invented target set.
+        const context = mirrorTargetsOf();
+        if (context.targets.length === 0) {
+          return {
+            state: "unavailable",
+            reason: "no affected repository is declared in the committed projects configuration",
+          };
+        }
+        return {
+          state: "present",
+          facts: { targets: context.targets.map((target) => target.target) },
+        };
+      }
+      if (source === "decision-register") {
+        // The register set is the invoking repository's committed decision
+        // records; every declared target mirrors the same register set (F-3).
+        const context = mirrorTargetsOf();
+        if (context.register.state !== "present") {
+          return {
+            state: "unavailable",
+            reason: "the decision register directory doc/decisions is absent",
+          };
+        }
+        const repositories: Record<string, readonly string[]> = {};
+        for (const target of context.targets) repositories[target.target] = context.register.ids;
+        return { state: "present", facts: { repositories } };
+      }
+      return {
+        state: "unavailable",
+        reason: `collector "${source}" is not composed for this invocation`,
+      };
+    };
+    return {
+      clock: options.clock,
+      ids: { nextRunId: options.newRunId },
+      input,
+      artifacts: createCeremonyArtifactStore({
+        stateDirectory: options.stateDirectory,
+        workspaceId: options.workspaceId,
+      }),
+      records: createCeremonyRecordPort(options.store, options.newFenceToken()),
+      memory,
+      mirror,
+      repositoryId: options.repositoryId,
+      origin,
+    } as const;
+  };
+  /**
+   * Read the stored note back for a resume and re-validate it against the
+   * note contract (DM-2): a stored body that merely parses but no longer
+   * satisfies the schema refuses the resume with the field named, rather than
+   * entering the agenda as an unvalidated document.
+   */
+  const noteFor = (
+    declaration: CeremonyDeclaration,
+    scopeKey: string,
+  ): { readonly note: CeremonyNote } | { readonly error: CeremonyEngineFailure } | undefined => {
+    const body = memory.readNote(scopeKey);
+    if (body.state === "absent") return undefined;
+    let note: CeremonyNote;
+    try {
+      note = JSON.parse(body.body) as CeremonyNote;
+    } catch {
+      return {
+        error: {
+          code: "ceremony.note-invalid",
+          summary: "the stored ceremony note cannot be parsed",
+          field: "document",
+        },
+      };
+    }
+    const failure = validateCeremonyNoteForDeclaration(declaration, note);
+    if (failure !== undefined) {
+      return {
+        error: {
+          code: failure.code,
+          summary: `the stored ceremony note fails read-back validation: ${failure.summary}`,
+          ...(failure.field === undefined ? {} : { field: failure.field }),
+        },
+      };
+    }
+    return { note };
+  };
+  /**
+   * Select the checkout's delivery change from the recorded lifecycle
+   * transitions: the change whose latest recorded transition timestamp is the
+   * newest wins; ties break on the lexicographically greatest ref. Deterministic
+   * over the recorded truth, with no file crawling.
+   */
+  const selectDeliveryChangeRef = (
+    transitions: readonly CeremonyLifecycleTransition[],
+  ): string | undefined => {
+    let best: { ref: string; timestamp: string } | undefined;
+    for (const entry of transitions) {
+      if (
+        best === undefined ||
+        entry.timestamp > best.timestamp ||
+        (entry.timestamp === best.timestamp && entry.changeRef > best.ref)
+      ) {
+        best = { ref: entry.changeRef, timestamp: entry.timestamp };
+      }
+    }
+    return best?.ref;
+  };
+
+  /** Evaluate the tier verdict over one verified state partition (F-7, DM-7). */
+  const tierFromState = (
+    state: CeremonyStatePartition | undefined,
+  ): CeremonyTierVerdict | undefined => {
+    if (options.tierContext !== undefined) return evaluateCeremonyTier(options.tierContext);
+    if (state === undefined) return undefined;
+    const changeRef = selectDeliveryChangeRef(state.transitions);
+    if (changeRef === undefined) return undefined;
+    const files = readCeremonyTierContextFiles({
+      changeRef,
+      changesDirectory: options.changesDirectory,
+      fs: nodeCeremonyTierContextFileSystem(),
+    });
+    const evidence = ceremonyTierEvidenceFromLifecycle({
+      transitions: state.transitions
+        .filter((entry) => entry.changeRef === changeRef)
+        .map((entry) => ({
+          phaseId: entry.phaseId,
+          operation: entry.operation,
+          ...(entry.reason === undefined ? {} : { reason: entry.reason }),
+        })),
+      ownerEscalation: files.ownerEscalation,
+    });
+    return evaluateCeremonyTier({
+      plan: { tier: files.planTier },
+      variant: files.variant,
+      evidence,
+    });
+  };
+
+  /** The invocation's tier verdict; one verified state read when self-resolved. */
+  const tierVerdict = (): CeremonyTierVerdict | undefined => {
+    if (options.tierContext !== undefined) return tierFromState(undefined);
+    const ledger = readCeremonyState(options.store);
+    return tierFromState(ledger.ok ? ledger.value : undefined);
+  };
+  return {
+    list: async () => {
+      const built = registryRead();
+      if (!built.ok) return { ok: false, error: built.error };
+      // One verified state read partitions runs, steps, and the recorded
+      // lifecycle transitions the tier evidence maps (NFR-11: list reads at
+      // most two verified state reads). The local is named `ledger` so no
+      // property chain carries the reserved `state.` code namespace.
+      const ledger = readCeremonyState(options.store);
+      const usable =
+        ledger.ok && ledger.value.verdict !== "torn" && ledger.value.verdict !== "unknown";
+      const runs = usable ? ledger.value.runs : [];
+      const stepsByRun = new Map<string, CeremonyStepRecord[]>();
+      if (usable) {
+        for (const step of ledger.value.steps) {
+          const bucket = stepsByRun.get(step.runId) ?? [];
+          bucket.push(step);
+          stepsByRun.set(step.runId, bucket);
+        }
+      }
+      const verdict = tierFromState(ledger.ok ? ledger.value : undefined);
+      const ceremonies = built.registry.entries.map((entry) => {
+        const own = runs
+          .filter((run) => run.ceremonyId === entry.declaration.id)
+          .sort((left, right) => left.startedAtMs - right.startedAtMs);
+        const last = own[own.length - 1];
+        let lastRun: { runId: string; verdict: string; startedAtMs: number } | undefined;
+        if (last !== undefined) {
+          const steps = stepsByRun.get(last.runId) ?? [];
+          lastRun = {
+            runId: last.runId,
+            verdict: foldCeremonyRunVerdict(steps),
+            startedAtMs: last.startedAtMs,
+          };
+        }
+        return {
+          id: entry.declaration.id,
+          origin: entry.origin,
+          tiers: entry.declaration.tiers,
+          triggers: entry.declaration.triggers.map((trigger) =>
+            trigger.kind === "schedule" ? `schedule:${trigger.cadence}` : `event:${trigger.event}`,
+          ),
+          catchUp: entry.declaration.catchUp.mode,
+          ...(verdict === undefined
+            ? {}
+            : { obligated: entry.declaration.tiers.includes(verdict.effectiveTier) }),
+          ...(lastRun === undefined ? {} : { lastRun }),
+        };
+      });
+      return {
+        ok: true,
+        data: {
+          ceremonies,
+          ...(verdict === undefined ? {} : { tier: verdict }),
+        },
+      };
+    },
+    run: async (request) => {
+      const built = registryRead();
+      if (!built.ok) return { ok: false, error: built.error };
+      const entry = ceremonyRegistryEntry(built.registry, request.name);
+      if (entry === undefined) {
+        return {
+          ok: false,
+          error: {
+            code: "input.value.rejected",
+            summary: `ceremony "${request.name}" is not declared; declared: ${ceremonyRegistryIds(built.registry).join(", ")}`,
+            field: "name",
+          },
+        };
+      }
+      const parsed =
+        request.notePath === undefined ? undefined : parseCeremonyNote(request.notePath);
+      if (parsed !== undefined && "error" in parsed) return { ok: false, error: parsed.error };
+      const note = parsed?.note;
+      // An explicit run is never tier-gated (AC-F7-5); the verdict only rides
+      // the record so the run carries the tier facts it consumed (DM-3, DM-7).
+      const verdict = tierVerdict();
+      const run = runCeremony({
+        declaration: entry.declaration,
+        env: envFor(entry.origin, note),
+        noteSupplied: note !== undefined,
+        ...(note === undefined ? {} : { note }),
+        ...(request.window === undefined ? {} : { window: request.window }),
+        ...(verdict === undefined ? {} : { tier: verdict }),
+        apply: request.apply,
+      });
+      return run.ok ? { ok: true, data: run.data } : { ok: false, error: run.error };
+    },
+    resume: async (request) => {
+      const built = registryRead();
+      if (!built.ok) return { ok: false, error: built.error };
+      const runs = readCeremonyRuns(options.store);
+      if (!runs.ok) {
+        return ceremonyFailure({
+          code: runs.error.code,
+          summary: "ceremony records are unreadable",
+        });
+      }
+      const run = runs.value.records.find((candidate) => candidate.runId === request.runId);
+      if (run === undefined) {
+        return {
+          ok: false,
+          error: {
+            code: "input.value.rejected",
+            summary: `no ceremony run "${request.runId}" is recorded`,
+            field: "runId",
+          },
+        };
+      }
+      const entry = ceremonyRegistryEntry(built.registry, run.ceremonyId);
+      if (entry === undefined) {
+        return {
+          ok: false,
+          error: {
+            code: "input.value.rejected",
+            summary: `ceremony "${run.ceremonyId}" is no longer declared; history stays readable`,
+            field: "runId",
+          },
+        };
+      }
+      const noteResult = noteFor(entry.declaration, run.scopeKey.value);
+      if (noteResult !== undefined && "error" in noteResult) {
+        return { ok: false, error: noteResult.error };
+      }
+      const note = noteResult?.note;
+      const resumed = resumeCeremony({
+        runId: request.runId,
+        declaration: entry.declaration,
+        env: envFor(entry.origin, note),
+        apply: request.apply,
+        ...(note === undefined ? {} : { note }),
+      });
+      return resumed.ok ? { ok: true, data: resumed.data } : { ok: false, error: resumed.error };
+    },
+    catchUp: async (request) => {
+      const built = registryRead();
+      if (!built.ok) return { ok: false, error: built.error };
+      if (
+        request.name !== undefined &&
+        ceremonyRegistryEntry(built.registry, request.name) === undefined
+      ) {
+        return {
+          ok: false,
+          error: {
+            code: "input.value.rejected",
+            summary: `ceremony "${request.name}" is not declared; declared: ${ceremonyRegistryIds(built.registry).join(", ")}`,
+            field: "name",
+          },
+        };
+      }
+      const entries =
+        request.name === undefined
+          ? built.registry.entries
+          : built.registry.entries.filter((entry) => entry.declaration.id === request.name);
+      // Tiered intake governs automated and catch-up intake (F-7, AC-F7-5):
+      // only declarations whose declared tiers include the effective tier carry
+      // an obligation. An explicit `ceremony run` is never gated.
+      const verdict = tierVerdict();
+      const eligible =
+        verdict === undefined
+          ? entries
+          : entries.filter(
+              (entry) =>
+                ceremonyTierIntake(
+                  [{ id: entry.declaration.id, tiers: entry.declaration.tiers }],
+                  verdict,
+                )[0]?.obligated === true,
+            );
+      const targets = eligible.map((entry) => ({
+        declaration: entry.declaration,
+        scopeKey:
+          catchUpScopeKey({ declaration: entry.declaration, repositoryId: options.repositoryId }) ??
+          "",
+        origin: entry.origin,
+      }));
+      const report = catchUpCeremonies({
+        targets,
+        env: envFor("built-in", undefined),
+        nowMs: options.clock.nowMs(),
+        apply: false,
+        ...(verdict === undefined ? {} : { tier: verdict }),
+      });
+      return report.ok ? { ok: true, data: report.data } : { ok: false, error: report.error };
+    },
+  };
+};
+
+/** Compose a frozen brand, acquired sources, legacy facts and the packed defaults
  * manifest into one config command program. Brand resolution happens before any
  * filesystem or root discovery.
  */
@@ -4201,6 +4782,11 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   }
   if (options.retro !== undefined) {
     commands.retro = createRetroCommandDefinition(createRetroCommandRuntime(options.retro));
+  }
+  if (options.ceremony !== undefined) {
+    commands.ceremony = createCeremonyCommandDefinition(
+      createCeremonyCommandRuntime(options.ceremony),
+    );
   }
   if (options.spend !== undefined) {
     commands.spend = createSpendCommandDefinition(createSpendCommandRuntime(options.spend));

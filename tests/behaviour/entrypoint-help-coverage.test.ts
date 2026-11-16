@@ -170,6 +170,7 @@ describe("TC-ENTRY-004 help coverage", () => {
         "repos",
         "events",
         "board",
+        "ceremony",
       ].sort(),
     );
   });

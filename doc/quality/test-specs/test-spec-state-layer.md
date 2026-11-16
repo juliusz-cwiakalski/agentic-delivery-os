@@ -3,11 +3,11 @@ ados_distribution: internal
 id: TEST-SPEC-STATE-LAYER
 status: Current
 created: 2026-11-05
-last_updated: 2026-11-15
+last_updated: 2026-11-16
 owners: ["engineering"]
 service: delivery-os
 links:
-  related_changes: ["GH-174", "GH-222", "GH-227", "GH-223", "GH-232", "GH-241", "GH-291", "GH-320"]
+  related_changes: ["GH-174", "GH-222", "GH-227", "GH-223", "GH-232", "GH-241", "GH-291", "GH-320", "GH-296"]
   feature_spec: doc/spec/features/feature-state-layer.md
 ---
 
@@ -19,10 +19,10 @@ The state-layer suite protects one property: a store either yields verified trut
 
 ## Test Scope
 
-- Components under test: the state facade (`packages/core/src/state/index.ts`), the ledger verification and tear-topology helpers (`state/ledger.ts`), the runtime-neutral storage-error classification (`state/storage-error.ts`), the reusable artifact boundary (`state/artifact-boundary.ts`), the delivery registry consumer (`state/registry.ts`), the closeout ledger (`state/closeout.ts`), the commit telemetry ledger (`state/commit-telemetry.ts`), the audit consumer (`state/audit.ts`), the retro registry consumer (`state/retro-registry.ts`), the evidence sidecar consumer (`state/retro-sidecar.ts`), the coordinator record consumer (`state/coordinator.ts`), the harness telemetry ledger (`state/harness-telemetry.ts`), the telemetry v2 step and baseline families with re-read migration (`state/telemetry.ts`), the runtime edge (`state/driver/runtime-edge.ts`), and the two read strategies (`state/driver/strategy.ts`).
+- Components under test: the state facade (`packages/core/src/state/index.ts`), the ledger verification and tear-topology helpers (`state/ledger.ts`), the runtime-neutral storage-error classification (`state/storage-error.ts`), the reusable artifact boundary (`state/artifact-boundary.ts`), the delivery registry consumer (`state/registry.ts`), the closeout ledger (`state/closeout.ts`), the commit telemetry ledger (`state/commit-telemetry.ts`), the audit consumer (`state/audit.ts`), the retro registry consumer (`state/retro-registry.ts`), the evidence sidecar consumer (`state/retro-sidecar.ts`), the coordinator record consumer (`state/coordinator.ts`), the ceremony record consumer (`state/ceremony.ts`), the harness telemetry ledger (`state/harness-telemetry.ts`), the telemetry v2 step and baseline families with re-read migration (`state/telemetry.ts`), the runtime edge (`state/driver/runtime-edge.ts`), and the two read strategies (`state/driver/strategy.ts`).
 - Contracts under test: the driver-neutral state vocabulary in `packages/core/src/contracts/state.ts`, the audit vocabulary in `packages/core/src/contracts/audit.ts`, the retro vocabulary in `packages/core/src/contracts/retro.ts`, the coordinator record vocabulary in `packages/core/src/contracts/coordinator.ts`, the telemetry v2 vocabulary in `packages/core/src/contracts/telemetry.ts`, and the nine `state` rows in `packages/core/src/contracts/error-table.ts`, synchronized with the documented table in [the result contract](../../spec/features/feature-result-contract.md).
 - Integration points: the registry projection and presence-tolerant read, the provider park fold, closeout history, the owner-gate decision ledger, the commit telemetry history and its convergence use, the audit reservation/invocation ledger with its keyed chain and store-managed key artifact, the retro registry's three kinds, the independent evidence sidecar with its own key and fence, the coordinator's six record kinds with their ledger-sequence folds and per-epoch ordinals, the closeout-captured harness telemetry families, the v2 step/baseline families behind the spend fold, and the error-table sync check that binds machine and documented rows.
-- Exclusions: there is no command surface, so no end-to-end tier applies. Real disk exhaustion, backup/restore, prune/compaction, retro report/export behavior, and ceremony-runner behavior are out of scope; the telemetry v2 storage-version migration is exercised by re-reading versioned records in a temp store, not by migrating a real historical store on disk. Retro-domain suites are indexed by [the retro feature spec](../../spec/features/feature-retro-pipeline.md#quality-assurance-strategy). Windows ACL execution is platform-conditional and is not claimed by a Linux run. Salvage, rebuild, and classification performance is not measured.
+- Exclusions: there is no command surface, so no end-to-end tier applies. Real disk exhaustion, backup/restore, prune/compaction, retro report/export behavior, and the ceremony runner’s command behaviour are out of scope; the telemetry v2 storage-version migration is exercised by re-reading versioned records in a temp store, not by migrating a real historical store on disk. Retro-domain suites are indexed by [the retro feature spec](../../spec/features/feature-retro-pipeline.md#quality-assurance-strategy) and ceremony-runtime suites by [the ceremony feature spec](../../spec/features/feature-ceremony-runner.md#6-quality-assurance-strategy). Windows ACL execution is platform-conditional and is not claimed by a Linux run. Salvage, rebuild, and classification performance is not measured.
 
 ## Test Levels
 
@@ -88,7 +88,7 @@ None apply: the state tier is a local library surface with no command, and all a
 ### Scenario: Boundary validation
 
 - **Given** a declared artifact boundary, **when** records are read or written, **then** the verdict is one of valid, verified-empty, torn, or unknown, and a nonconforming write is refused `not_landed` with the ledger byte-identical and no default filled in.
-- **And** the same declaration applied to a second kind needs no code change; the retro registry declares three kinds under its own prefix, while ceremony-runtime behavior remains absent.
+- **And** the same declaration applied to a second kind needs no code change: the retro registry declares three kinds under its own prefix, and the ceremony runner declares two kinds under the `ceremony.` prefix with one fenced append and a post-append verified re-read per record.
 
 ### Scenario: Guided salvage
 

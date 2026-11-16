@@ -30,6 +30,7 @@ export const PROMPT_REQUIRED_COMMANDS = [
   "repos",
   "events",
   "board",
+  "ceremony",
 ] as const;
 
 export type PromptRequiredCommand = (typeof PROMPT_REQUIRED_COMMANDS)[number];

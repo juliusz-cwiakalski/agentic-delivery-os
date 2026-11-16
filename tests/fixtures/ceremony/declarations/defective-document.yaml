@@ -1,0 +1,26 @@
+schemaVersion: delivery.ceremony.declarations.v1
+ceremonies:
+  - id: project-defective
+    title: A defective project declaration
+    tiers: [full]
+    triggers:
+      - kind: event
+        event: owner-note
+    inputs: []
+    agenda:
+      - id: deploy
+        steps:
+          - kind: deploy
+            outputs:
+              - slot: ceremony-artifact
+                schema: delivery.ceremony.defect.v1
+            verify: artifact-conforms
+    scopeKey:
+      kind: repository
+    catchUp:
+      mode: none
+      maxMissedWindows: 1
+    compaction:
+      atPhases: []
+      maxBytes: 4096
+      maxLines: 40

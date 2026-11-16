@@ -881,3 +881,152 @@ export {
   selectProjectGroups,
   validateProjectGroupsDocument,
 } from "./project-groups.js";
+/**
+ * The ceremony declaration validator (GH-296 F-2): one pure validator over the
+ * closed vocabulary, bounds, and scope-key derivation, shared by built-ins and
+ * project declarations.
+ */
+export {
+  CEREMONY_DECLARATION_INVALID,
+  ceremonyDeclarationDigest,
+  ceremonyExecutableField,
+  ceremonyScheduleTrigger,
+  ceremonySingleTriggerLabel,
+  ceremonyTriggerLabels,
+  ceremonyUtf8Bytes,
+  type CeremonyDeclarationFailure,
+  type CeremonyDeclarationValidation,
+  type CeremonyDeclarationValidationOptions,
+  validateCeremonyDeclaration,
+  validateCeremonyDocument,
+} from "./ceremony-declaration.js";
+/** The ceremony intake resolution (GH-296 F-1, F-2, F-4, F-9). */
+export {
+  ceremonyNoteLevel,
+  deriveCeremonyCadenceWindow,
+  explicitTriggerResolution,
+  isCeremonyScopeKeyDerivation,
+  matchDeclaredTrigger,
+  resolveCeremonyIntake,
+  validateCeremonyNoteForDeclaration,
+  type CeremonyIntake,
+  type CeremonyIntakeFailure,
+  type CeremonyIntakeFailureCode,
+  type CeremonyIntakeOutcome,
+  type CeremonyIntakeRequest,
+  type CeremonyRunIdentity,
+} from "./ceremony-intake.js";
+/** The ceremony runner engine (GH-296 F-4, F-8). */
+export {
+  CEREMONY_NIGHT_WATCH_CHECKS,
+  compactCeremonyCarried,
+  declarationHasSyncStep,
+  executeCeremonyAgenda,
+  flattenCeremonyAgenda,
+  runCeremony,
+  type CeremonyCarriedSummary,
+  type CeremonyEngineFailure,
+  type CeremonyRunData,
+  type CeremonyRunEnvironment,
+  type CeremonyRunOutcome,
+  type CeremonyRunRequest,
+  type CeremonyStepOutcome,
+} from "./ceremony-run.js";
+/** Ceremony resume (GH-296 F-4): torn refusal and first-unverified restart. */
+export {
+  resumeCeremony,
+  validateCeremonyStepSequence,
+  type CeremonyResumeRequest,
+} from "./ceremony-resume.js";
+/** Ceremony schedule evaluation and catch-up (GH-296 F-5). */
+export {
+  CEREMONY_CATCH_UP_LOOKBACK,
+  catchUpCeremonies,
+  catchUpScopeKey,
+  ceremonyCadencePeriodMs,
+  ceremonyWindowRecorded,
+  dueCeremonyWindows,
+  evaluateCeremonySchedule,
+  type CeremonyCatchUpCeremony,
+  type CeremonyCatchUpDisposition,
+  type CeremonyCatchUpOutcome,
+  type CeremonyCatchUpReport,
+  type CeremonyCatchUpRequest,
+  type CeremonyCatchUpRunData,
+  type CeremonyCatchUpTarget,
+  type CeremonyRemovedTarget,
+} from "./ceremony-schedule.js";
+/** The built-in ceremony folds and renderers (GH-296 F-3). */
+export {
+  CEREMONY_ASSESSMENT_VERDICTS,
+  CEREMONY_BUILTIN_SCHEMAS,
+  CEREMONY_CHECK_STATE_VALUES,
+  CEREMONY_DECLARED_CHECKS,
+  CEREMONY_FOLLOW_THROUGH_SCHEMA,
+  CEREMONY_RETRO_ACTIONS_SCHEMA,
+  CEREMONY_RETRO_EVIDENCE_SCHEMA,
+  CEREMONY_RETRO_INSIGHTS_SCHEMA,
+  CEREMONY_ROLLOVER_REASONS,
+  ceremonyBuiltinConforms,
+  ceremonyFollowThroughItems,
+  renderCeremonyFollowThrough,
+  renderCeremonyRetroActions,
+  renderCeremonyRetroEvidence,
+  renderCeremonyRetroInsights,
+} from "./ceremony-builtins.js";
+/** The retro ceremony module (GH-296 F-9). */
+export {
+  ceremonyFollowThroughFirst,
+  isCeremonyLevelName,
+  missingRetroNoteMembers,
+  RETRO_FIXED_MEMBERS,
+  RETRO_LEVEL_TRIGGER_LABELS,
+  retroDeclarationShape,
+  retroLevelForTrigger,
+  retroLevelOf,
+  retroLevelTriggerLabel,
+} from "./ceremony-retro.js";
+/** The mirror-sync planning module (GH-296 F-3, NFR-12). */
+export {
+  CEREMONY_MIRROR_REPORT_SCHEMA,
+  CEREMONY_MIRROR_TARGET_SCHEMA,
+  planCeremonyMirror,
+  type CeremonyMirrorPlan,
+  type CeremonyMirrorPlanInput,
+  type CeremonyMirrorTargetPlan,
+} from "./ceremony-mirror.js";
+/** The project ceremony registry (GH-296 F-6). */
+export {
+  buildCeremonyRegistry,
+  ceremonyProjectEntries,
+  ceremonyRegistryEntry,
+  ceremonyRegistryIds,
+  type CeremonyDeclarationDocumentFacts,
+  type CeremonyOrigin,
+  type CeremonyRegistry,
+  type CeremonyRegistryEntry,
+  type CeremonyRegistryFailure,
+  type CeremonyRegistryRead,
+} from "./ceremony-registry.js";
+/** The single-source ceremony tier engine (GH-296 F-7). */
+export {
+  ceremonyPhaseSetForVariant,
+  ceremonyTierIntake,
+  evaluateCeremonyTier,
+  NO_CEREMONY_TIER_EVIDENCE,
+  type CeremonyTierEvidence,
+  type CeremonyTierInput,
+  type CeremonyTierObligation,
+} from "./ceremony-tier.js";
+/** Ceremony measurement and the committed comparison record (GH-296 F-8). */
+export {
+  buildCeremonyComparison,
+  ceremonyComparisonHonestyViolations,
+  ceremonyP90Ms,
+  CEREMONY_TREND_TOKENS,
+  foldCeremonyMeasurement,
+  type CeremonyComparisonBefore,
+  type CeremonyComparisonInput,
+  type CeremonyMeasurementFold,
+  type CeremonyMeasurementRun,
+} from "./ceremony-comparison.js";

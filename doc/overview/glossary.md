@@ -3,12 +3,12 @@ ados_distribution: internal
 id: GLOSSARY
 status: Current
 created: 2026-10-29
-last_updated: 2026-11-15
+last_updated: 2026-11-16
 owners: ["engineering"]
 area: domain
 document_classification: current-truth
 links:
-  related_changes: ["GH-290", "GH-291", "GH-292", "GH-294", "GH-300", "GH-309", "GH-310", "GH-320"]
+  related_changes: ["GH-290", "GH-291", "GH-292", "GH-294", "GH-300", "GH-309", "GH-310", "GH-320", "GH-296"]
   related_decisions: ["ADR-0003", "ADR-0005", "TDR-0005", "TDR-0007", "TDR-0008", "TDR-0009", "TDR-0011", "TDR-0012", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0023", "TDR-0024", "TDR-0025"]
 summary: "Reader-friendly glossary of the monorepo scaffold, toolchain, boundary-enforcement, quality-gate, publish-path, branding-seam, result-contract, configuration-layer, state-layer validation and salvage, audit-ledger, retro-evidence-pipeline, adapter-port, provider-client-seed, provider-profile, session-lifecycle-economics, status-digest and attention-state, typed blocker channel, spend-read-side, harness-telemetry-v2, closeout, change-capsule, judgment-residue, queue-readiness, owner-hold, queue-scheduling, owner-gate SLA, pm-notes, phase-transition, delivery-registry, verify-change, verify-gates, session-database-admin, closeout, commit-primitive, watchdog/lane, brief-render, doctor, MCP-surface, merge/verify-deploy, entrypoint, prompt-conformance, resident-daemon, event-taxonomy, coordinator-supervision, cross-repository change, and harness-adapter terms used across the repository."
 ---
@@ -273,6 +273,14 @@ _A broad, reader-friendly list of terms and acronyms. If a term names a domain m
 | Verification summary | The deterministic failure prose `result=<token>; variant=<full|lite|unknown>; missing=<ids|->[; detail=<one-line>]`, with missing ids in required-set order. It is prose, never identity; `error.code` remains the identity. | Verification | [feature-verify-change-and-exit-taxonomy.md](../spec/features/feature-verify-change-and-exit-taxonomy.md) |
 | Baseline window | The fixed interval `2026-02-01T00:00:00Z` through `2026-10-31T23:59:59Z` used for the bash-era measurement baseline. | Measurement | [feature-measurement-baseline.md](../spec/features/feature-measurement-baseline.md) |
 | Ceremony share | The share of recorded lifecycle phase time spent in planning/governance phases rather than delivery, review, and documentation work; a bash-era proxy for scheduled-ceremony share. | Measurement | [feature-measurement-baseline.md](../spec/features/feature-measurement-baseline.md) |
+| Ceremony | A declared, deterministic, artifact-verified unit of recurring work: trigger, GET-only inputs, an ordered agenda, renders, verifications, catch-up semantics, and compaction, held as data. | Ceremony | [feature-ceremony-runner.md](../spec/features/feature-ceremony-runner.md) |
+| Ceremony declaration | The data defining one ceremony (`delivery.ceremony.declarations.v1`) using only closed vocabularies, with no executable content. | Ceremony | [feature-ceremony-runner.md](../spec/features/feature-ceremony-runner.md) |
+| Artifact verification | Reading a step's declared artifact back from its declared slot and validating it against the declared verification mode; the only evidence that a step completed. | Ceremony | [feature-ceremony-runner.md](../spec/features/feature-ceremony-runner.md) |
+| Scope key | The declaration-derived identity component (`literal`, `repository`, or `note`) that makes a ceremony rerun idempotent. | Ceremony | [feature-ceremony-runner.md](../spec/features/feature-ceremony-runner.md) |
+| Run identity | `(ceremony, scopeKey, window)`; decides whether a ceremony run executes or returns the recorded verdict, and satisfies a window's obligation by existence. | Ceremony | [feature-ceremony-runner.md](../spec/features/feature-ceremony-runner.md) |
+| Catch-up | Replaying at most one missed scheduled ceremony window, labelled as such, exactly once per ceremony per invocation. | Ceremony | [feature-ceremony-runner.md](../spec/features/feature-ceremony-runner.md) |
+| Tiered intake | Deriving which ceremonies a change is obligated to run from its effective tier, mapped from the plan `tier` declaration and the pm-notes `variant` phase sets. | Ceremony | [feature-ceremony-runner.md](../spec/features/feature-ceremony-runner.md) |
+| Native ceremony basis | Runner-measured ceremony durations folded from run and step records; a different basis from the committed proxy and never substituted for it. | Measurement | [feature-ceremony-runner.md](../spec/features/feature-ceremony-runner.md) |
 | CI failure session proxy | The share of change deliveries with a recorded CI failure among deliveries with a recorded CI observation; not a per-run or per-check rate. | Measurement | [feature-measurement-baseline.md](../spec/features/feature-measurement-baseline.md) |
 | Command-name lock | The prospective freeze of the v1 command and family names recorded by ODR-0003; no rename is performed by the lock. | Decision governance | [ODR-0003](../decisions/ODR-0003-cli-command-naming-v1-lock.md) |
 | Corpus ingestion | The normative parse → normalize → classify rule applied to every committed pm-notes file before any measurement; it names and counts every exclusion. | Measurement | [feature-measurement-baseline.md](../spec/features/feature-measurement-baseline.md) |

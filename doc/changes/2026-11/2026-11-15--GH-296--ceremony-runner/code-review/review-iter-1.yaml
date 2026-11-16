@@ -1,0 +1,162 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-296
+branch: feat/GH-296/ceremony-runner
+status: FAIL
+summary: >-
+  The delivery is substantially faithful: all four ticket ACs are met with real
+  evidence (identity-based DEC-19 catch-up with a genuine occupied-identity test,
+  six parity-testable built-ins through one runner, project declarations with zero
+  tooling change, retro ceremonies with earned follow-through verdicts and real
+  negative cases), the tier engine and mirror sync are genuinely composed into
+  list/run with real targets and two-way equality, state discipline (fenced
+  appends, one verified read per append, folds) holds, the comparison record is
+  honestly insufficient-sample with no trend token, and mounting/error-table/doc
+  counts are reconciled to the post-merge 22-family truth. However, one confirmed
+  high-severity defect requires remediation: the compaction byte-bounding loop
+  livelocks whenever more than one line must be dropped for the 4096-byte bound
+  (reproduced empirically; reachable through a legal project declaration), and
+  three medium findings (brief render fabricates zero counts from present
+  sources, the assessment `covered` verdict is unreachable in the composed
+  runtime while tests exercise a fixture-only input shape, and catch-up records
+  the wrong origin for project ceremonies) fall under the delivery's own
+  earned-verdict/evidence bar.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 3
+  low: 1
+  info: 0
+spec_compliance: FAIL
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/ceremony-run.ts:926
+    message: >-
+      `compactCeremonyCarried`'s final byte-bounding `while` loop pops the
+      `omitted:` marker it just pushed, so the summary bytes never decrease; any
+      compaction that needs to drop more than one line for the 4096-byte bound —
+      including every case where the 40-line bound already truncated, because the
+      marker is then the last line — loops forever. Reproduced empirically: 50
+      entries x 120-char content hangs (killed by timeout; 30 entries x 120
+      terminates only because a single pop suffices). A legal project declaration
+      (<=32 steps, ~140-byte lines, compaction at a phase boundary) reaches this
+      through `ceremony run`/`resume`/`catch-up`, violating NFR-7, NFR-13, and
+      AC-F4-4 (an over-bound summary must return with an explicit omitted count).
+    suggestion: >-
+      Rebuild the summary inside the loop instead of mutating the marked list:
+      drop content lines from the front (or recompute the marker after each
+      truncation), e.g. keep the marker out of the array and append
+      `omitted: N` only when computing `summary`, so each iteration removes one
+      content line and bytes strictly decrease. Add a bounds test at the
+      composition of both limits (line-overflow + byte-overflow) asserting
+      termination and the omitted count; the current ceremony-bounds.test.ts:29-42
+      covers only the single-pop byte case.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/ceremony-run.ts:236
+    message: >-
+      `renderBrief` hardcodes `counts: {total: 0, ...}` and empty anchor entries
+      for every surface even when the declared source is `present`, embedding the
+      raw facts under `facts` instead of projecting them — turning a present read
+      into a zero/empty claim, the exact anti-pattern F-3's parity obligations
+      forbid for degraded reads. Plan Phase 5 declared "the brief render reusing
+      the delivered `delivery.brief.v1` projection"; the shipped code builds a
+      parallel skeleton renderer. Production impact is currently masked because
+      `status-facts` is never composed (the disclosed section-9 known gap), but
+      any composed present source renders fabricated zeros and the artifact
+      still "verifies".
+    suggestion: >-
+      Either reuse the delivered brief projection (packages/core/src/domain/brief.ts)
+      over the injected facts, or derive surface counts/entries from the present
+      facts and refuse to emit zero counts a present source did not declare; add
+      a test injecting non-empty present facts and asserting they surface.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: testing
+    location: packages/cli/src/edge.ts:3961
+    message: >-
+      The assessment `covered` verdict is unreachable in the composed runtime.
+      The note contract carries `facts: readonly string[]` (contracts/ceremony.ts:373)
+      — there is no per-item citation channel — and the edge composes `owner-note`
+      items as `{text}` only, so every production assessment item is `uncovered`.
+      The `covered` path exists only in the test harness's fabricated
+      `{text, evidenceRef}` shape (tests/fixtures/ceremony/builtins.ts:79), a
+      fixture-versus-production divergence of exactly the GH-170 class the review
+      instructions call out: the parity green over `covered` is not evidence of a
+      production capability. Additionally, the verdict mapping grants `covered`
+      on citation presence alone without checking the citation resolves to
+      delivered evidence, unlike the follow-through discipline in the same change.
+    suggestion: >-
+      Compose a real citation channel (e.g. resolve an item's citation against the
+      note's `evidenceRefs` or the delivered gate-report source, granting `covered`
+      only when it resolves), or state in the feature spec section-9 gap list and
+      the guide that production assessments are all-`uncovered` today; add a test
+      asserting a cited-but-unresolvable item is `uncovered`.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/cli/src/edge.ts:4305
+    message: >-
+      `catchUp` passes one shared `envFor("built-in", undefined)` for every
+      target, and `runRecordFor` takes the run record's `origin` from
+      `env.origin` (ceremony-run.ts:1159), so a catch-up replay of a
+      project-declared ceremony records `origin: "built-in"` — a false
+      provenance field on a DM-3 record whose origin is load-bearing for
+      `ceremony list`'s origin column and idempotency audits.
+    suggestion: >-
+      Build a per-target environment from the registry entry's origin (the same
+      `envFor(entry.origin, undefined)` the `run` verb uses), or thread the entry
+      origin into `catchUpCeremonies` targets so the replayed run record carries
+      the declaration's true origin. Add a catch-up test with a project
+      declaration asserting the recorded origin.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-5
+    severity: low
+    confidence: high
+    category: documentation
+    location: packages/core/src/domain/ceremony-schedule.ts:82
+    message: >-
+      The `CEREMONY_CATCH_UP_LOOKBACK` doc comment says "the declared default is
+      one cadence period" but the table holds 7 daily / 4 weekly / 2 iteration /
+      2 milestone windows — several periods for the shorter cadences. A reader
+      sizing catch-up expectations from the comment will mis-predict the
+      look-back span.
+    suggestion: >-
+      Reword the comment to name the actual per-cadence look-back windows (or
+      derive the constant's comment from the table) so the stated default matches
+      the declared data.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-16T00:00:00Z
+next_step: EXECUTE_REMEDIATION_PHASE

@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-MEASUREMENT-BASELINE
 status: Current
 created: 2026-10-31
-last_updated: 2026-10-31
+last_updated: 2026-11-16
 owners: ["engineering"]
 service: delivery-os measurement substrate
 summary: "The committed, schema-versioned bash-era measurement baseline log: its path, schema, four MET- metric definitions, MEASURED/PARTIAL/UNAVAILABLE status semantics, source-traceability rule, fixed window, and comparison protocol. The log is canonical data; this spec describes the contract and does not restate values."
 links:
-  related_changes: ["GH-186"]
+  related_changes: ["GH-186", "GH-296"]
   decisions: ["ODR-0002"]
   contracts:
     - "doc/planning/oss-tooling/measurement-baseline.yaml"
@@ -25,7 +25,7 @@ links:
 
 The measurement baseline is a committed, repository-local data artifact at `doc/planning/oss-tooling/measurement-baseline.yaml`. It records the bash-era delivery baseline — ceremony share, cycle time, CI failure session proxy, and false-signal incidents — so later milestones can compare against recorded numbers rather than memory.
 
-The log is schema-versioned (`schema_version: 1`) and its values are immutable once committed. This feature spec describes the log's contract: path, schema, metric IDs, status semantics, source traceability, window, and comparison protocol. Metric values are read from the log; they are never restated here. M2-S6 owns native metrics and consumes the log by metric ID and definition.
+The log is schema-versioned (`schema_version: 2`, the additive `comparisons[]` bump) and its existing metric values are immutable once committed. This feature spec describes the log's contract: path, schema, metric IDs, status semantics, source traceability, window, and comparison protocol. Metric values are read from the log; they are never restated here. M2-S6 owns native metrics and consumes the log by metric ID and definition.
 
 The log is a user-facing document registered with the forbidden-literal check. It refers to the command surface generically as "the CLI" and carries no working-name literal on a non-allowlisted line.
 
@@ -78,7 +78,7 @@ N/A — the log has no user interface. It is a data artifact consumed by tooling
 
 ### 4.1 High-Level Design
 
-The log is a single YAML document with `schema_version: 1`. It is static data, not a runtime service. The path, schema, and metric IDs are the contract; the values are the record. A consumer reads the log, selects metrics by ID, and compares using the stored definition and window.
+The log is a single YAML document with `schema_version: 2`; version 2 adds one additive `comparisons[]` list and edits no existing metric row. It is static data, not a runtime service. The path, schema, and metric IDs are the contract; the values are the record. A consumer reads the log, selects metrics by ID, and compares using the stored definition and window.
 
 ### 4.2 Core Components & Directory Structure
 
@@ -109,6 +109,7 @@ The log has these top-level keys:
 | `changes` | list of change rows | The corpus spine; one row per committed pm-notes file. |
 | `metrics` | list of metric rows | The four `MET-` definitions and their samples. |
 | `comparison_protocol` | string | The comparison rules. |
+| `comparisons` | list of comparison records | Additive from `schema_version: 2`; one record per delivery, each carrying the committed metric identity and definition, a before and after sample, the sample minimum, a closed verdict, the native basis, and a disclosure. Absent from a version-1 log. |
 
 A **change row** carries `ref`, `pm_notes`, `included`, `excluded_reason`, `phase_pairs_included`, `phase_pairs_excluded`, `date_only_pairs_excluded`, `ceremony_duration_h`, `total_phase_duration_h`, `cycle_time_h`, `cycle_time_censored`, `ci_observed`, `ci_outcome`, `ci_observations[]`, and `false_signal_incidents[]`. Every `ci_observations` and `false_signal_incidents` row cites `artifact` and `anchor`.
 
@@ -150,3 +151,27 @@ A time metric whose corpus contains an `unparseable_yaml` or `placeholder_zero_t
 - [ODR-0002 — ID Prefix Scheme and Project Catalog](../../decisions/ODR-0002-id-prefix-scheme-and-project-catalog.md) — `MET-` adoption and the allocator.
 - [Feature: Decision Records Management](feature-decision-records.md) — the register and the decision-records standard.
 - [Glossary](../../overview/glossary.md) — term definitions.
+
+## Additive comparisons record (`schema_version: 2`)
+
+The ceremony layer contributes exactly one committed comparison per delivery to
+the top-level `comparisons[]` list, authored from the delivered builder
+`buildCeremonyComparison` and committed with the change's artifacts. No command
+computes or prints it. The list is additive: every existing metric row, value,
+sample counter, window, and `MET-` allocation is unchanged.
+
+Each entry carries `schemaId` (`delivery.ceremony.comparison.v1`), the committed
+`metricId` (`MET-CEREMONY-SHARE`), `definitionRef` with this log's path and the
+metric row's `source_commit`, the `before` value with its window, sample size,
+status, and basis, the `after` sample with its window, per-change values, sample
+size, and basis, `sampleMinimum: 5`, a closed `verdict` (`improved`,
+`regressed`, `flat`, `not-established`, `insufficient-sample`), `nativeBasis`
+with runner-derived run/step/phase counts and per-ceremony aggregates plus the
+non-interchangeability statement, and `disclosure`.
+
+`improved` requires the sample minimum to be met and `after < before`. Below the
+minimum the verdict is `insufficient-sample` and neither the record nor any
+change artifact carries a trend claim; the record committed with this delivery
+observes an empty after sample (`sampleSize: 0`), so it records
+`insufficient-sample` and no direction. The record is recomputed per delivery
+rather than carried forward.

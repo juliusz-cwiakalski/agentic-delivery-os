@@ -222,6 +222,9 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "events.topic-unknown",
   "events.verb-unknown",
   "events.taxonomy-unavailable",
+  // GH-296 pins the ceremony note identity exactly; it is a kind-first
+  // two-segment code, and the declaration identity is three-segment.
+  "ceremony.note-invalid",
   // GH-297 pins the two board identities exactly (DEC-20, C-16); the board
   // family stays closed to these two members.
   "board.repository-unknown",

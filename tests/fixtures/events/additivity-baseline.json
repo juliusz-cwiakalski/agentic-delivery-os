@@ -77,7 +77,8 @@
     "retro-registry.ts",
     "retro-sidecar.ts",
     "spend-reads.ts",
-    "storage-error.ts"
+    "storage-error.ts",
+    "ceremony.ts"
   ],
   "writableRoots": ["<project state directory>", "<host root>"]
 }

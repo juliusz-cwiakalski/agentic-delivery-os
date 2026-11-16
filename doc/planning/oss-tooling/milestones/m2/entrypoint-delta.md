@@ -75,10 +75,10 @@ Commands: status brief queue lanes blockers phase commit lint plan
           projects repos events board
 ```
 
-Twenty-one families are registered: the twenty observed on 2026-11-14 plus
-`board`. `board` is in the prompt-required set, composed unconditionally by the
-production entrypoint, advertised in root `--help`, and served by the M2
-`board` page as its reference page.
+Twenty-one families were registered at this mount: the twenty observed on
+2026-11-14 plus `board`. `board` is in the prompt-required set, composed
+unconditionally by the production entrypoint, advertised in root `--help`, and
+served by the M2 `board` page as its reference page.
 
 ## M2-planned additions
 
@@ -108,7 +108,7 @@ production entrypoint, advertised in root `--help`, and served by the M2
   removal on merge and closeout.
 - `board` becomes the full cross-repository board, owned by M2-S4.
   **Mounted by GH-297 (M2-S4):** the family is in the prompt-required set
-  (twenty-one families), composed unconditionally by the production entrypoint,
+  (twenty-two families), composed unconditionally by the production entrypoint,
   advertised in root `--help`, and served by the M2 `board` page as its
   reference page.
 
@@ -149,7 +149,7 @@ help entry of its own, and its reference page, which is how `dispatch attempts`
 mounts without a root-listing change; GH-289 did exactly that. GH-297 mounted
 `board` the same way: prompt-set entry, unconditional edge composition, root
 and family help entries, the M2 reference page, the coverage-inventory row, and
-the 21-family count assertions. The remaining M2 addition (`spend` v2) stays
+the family-count assertions. The remaining M2 addition (`spend` v2) stays
 planned until its own story mounts it.
 
 ## Where this note is read
@@ -171,3 +171,22 @@ Read it with the M2 command contracts it introduces:
 [commands/spend.md](commands/spend.md),
 [commands/queue.md](commands/queue.md), and
 [commands/board.md](commands/board.md).
+
+## Observation (2026-11-16): `ceremony` mounted
+
+Observed from the built workspace after the GH-296 mount.
+
+```
+$ <binary> --help
+Commands: status brief queue lanes blockers phase commit lint plan
+          verify merge closeout spend retro dispatch coordinator daemon
+          projects repos events board ceremony
+```
+
+Twenty-two families are registered after the GH-296 mount and its sync with
+the GH-297 board mount: the twenty observed on 2026-11-14 plus `board` and
+`ceremony`. `ceremony` is in the prompt-required set, composed unconditionally by
+the production entrypoint, advertised in root `--help` with family and verb
+pages, served by the M2 `ceremony` reference page, and named by the coverage
+inventory. The four verbs are exactly `list`, `run`, `resume`, and `catch-up`;
+no `metrics`, `pack`, `action`, or scheduler verb is registered.
