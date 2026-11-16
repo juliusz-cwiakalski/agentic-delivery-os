@@ -4,7 +4,7 @@ delivery_mode: autonomous
 milestone: "M2: Ceremonies, measurement, and memory"
 phases:
   clarify_scope: { started: null, completed: 2026-11-16T13:10:34.741Z }
-  specification: { started: null, completed: 2026-11-16T13:32:19.905Z }
+  specification: { started: null, completed: 2026-11-16T13:49:32.137Z }
   test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
@@ -32,6 +32,28 @@ decisions:
       doctor gains an action-registry store verdict. Plan-writer ripples: exact
       verb grammar, payload schema ids, error-row metadata, doctor verdict name,
       help-guide coverage + m2 reference page updates."
+    date: "2026-11-16"
+  - text: "Specification reopened once (reopen-on-gap): test-plan-writer traced five
+      spec ambiguities (OQ-T3 contract-rule refusal identity vs DEC-5
+      exactly-three rule; OQ-T6 aging basis unpinned; OQ-T5 stray NFR-8 links;
+      OQ-T7 retro-report data-key question; OQ-T8 closure edge cases).
+      Re-delegated to @decision-advisor; pinned as DEC-8..DEC-11: DEC-8 =
+      retro.action-incomplete covers missing OR contract-non-conforming fields
+      (no fourth identity); DEC-9 = aging basis is time-open-since-filing,
+      second miss = second missed due date; DEC-10 = registry feeds delivered
+      followThrough[] fold, no new top-level retro report key; DEC-11 =
+      deprioritize/supersede close both planes by one explicit decision, repeat
+      closure on a closed plane refused under retro.closure-incomplete naming
+      plane+existing closure, supersede records superseding reference. AC set
+      now 15 (AC-F4-4/F4-5 added). Exactly- three identity rule intact."
+    date: "2026-11-16"
+  - text: "Retro: the reopen-on-gap loop worked as designed but cost one phase
+      round-trip; the contract-rule-refusal ambiguity (OQ-T3) was latent in
+      DEC-5 from the first adjudication — decision prompts should ask the
+      adjudicator to sweep ALL refusal-triggering spec wording (not just the
+      named scenarios) against the declared identity set to catch classification
+      gaps in one pass."
+    type: retro
     date: "2026-11-16"
 open_questions: []
 blockers: []
