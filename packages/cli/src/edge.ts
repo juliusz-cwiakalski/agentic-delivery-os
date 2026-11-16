@@ -3234,27 +3234,32 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
   const phaseFor = (
     store: StateStorePort,
     ref: string,
-  ): {
-    readonly phase: string | null;
-    readonly phaseUnknownReason?: "phase-unrecorded" | "phases-complete";
-  } => {
+  ):
+    | {
+        readonly ok: true;
+        readonly phase: string | null;
+        readonly phaseUnknownReason?: "phase-unrecorded" | "phases-complete";
+      }
+    | { readonly ok: false; readonly code: string } => {
     const read = readChangeTransitionsTolerant(store, ref);
-    if (!read.ok) return { phase: null, phaseUnknownReason: "phase-unrecorded" };
+    if (!read.ok) return { ok: false, code: read.error.code };
     if (!read.value.present || read.value.transitions.length === 0) {
-      return { phase: null, phaseUnknownReason: "phase-unrecorded" };
+      return { ok: true, phase: null, phaseUnknownReason: "phase-unrecorded" };
     }
     const state = foldPhaseState(ref, read.value.transitions);
     const open = Object.entries(state.phases).filter(
       ([, entry]) => (entry as { readonly completed: string | null }).completed === null,
     );
-    if (open.length === 0) return { phase: null, phaseUnknownReason: "phases-complete" };
+    if (open.length === 0) return { ok: true, phase: null, phaseUnknownReason: "phases-complete" };
     const latest = open.reduce((current, candidate) => {
       const currentIndex = (CANONICAL_PHASE_IDS as readonly string[]).indexOf(current[0]);
       const candidateIndex = (CANONICAL_PHASE_IDS as readonly string[]).indexOf(candidate[0]);
       return candidateIndex > currentIndex ? candidate : current;
     });
-    return { phase: latest[0] };
+    return { ok: true, phase: latest[0] };
   };
+
+  const repositoryStores = new Map<string, StateStorePort>();
 
   let resolvedSelection:
     | {
@@ -3298,6 +3303,7 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
         summary: `repository ${repository} state location is unavailable`,
       };
     }
+    repositoryStores.set(repository, store);
 
     const nowMs = composition.nowMs();
     const blockerRead = readBlockerLedger(store);
@@ -3371,34 +3377,70 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
     }
     const failedRefs = new Set<string>();
     const daemonRead = readDaemonLanes(store);
-    if (daemonRead.ok) {
-      for (const lane of daemonRead.records) {
-        if (lane.state === "failed") failedRefs.add(lane.ref);
-      }
+    if (!daemonRead.ok) {
+      return {
+        ok: false,
+        kind: "board",
+        code: "board.state-unavailable",
+        summary: `repository ${repository} daemon lane ledger is unavailable`,
+      };
+    }
+    for (const lane of daemonRead.records) {
+      if (lane.state === "failed") failedRefs.add(lane.ref);
     }
     const lanes: BoardLaneFact[] = [];
     const laneRefs = new Set<string>();
     for (const lease of leaseRead.active) {
       laneRefs.add(lease.ref);
       const phase = phaseFor(store, lease.ref);
+      if (!phase.ok) {
+        return {
+          ok: false,
+          kind: "board",
+          code: "board.state-unavailable",
+          summary: `repository ${repository} phase history for ${lease.ref} is unavailable`,
+        };
+      }
       lanes.push({
         ref: lease.ref,
         laneId: lease.ref,
         state: failedRefs.has(lease.ref) ? "failed" : "delivering",
         holder: lease.holder,
         leaseId: lease.leaseId,
-        ...phase,
+        ...(phase.phase === null
+          ? {
+              phase: null,
+              ...(phase.phaseUnknownReason === undefined
+                ? {}
+                : { phaseUnknownReason: phase.phaseUnknownReason }),
+            }
+          : { phase: phase.phase }),
       });
     }
     for (const ref of failedRefs) {
       if (laneRefs.has(ref)) continue;
       const phase = phaseFor(store, ref);
+      if (!phase.ok) {
+        return {
+          ok: false,
+          kind: "board",
+          code: "board.state-unavailable",
+          summary: `repository ${repository} phase history for ${ref} is unavailable`,
+        };
+      }
       lanes.push({
         ref,
         laneId: ref,
         state: "failed",
         holder: null,
-        ...phase,
+        ...(phase.phase === null
+          ? {
+              phase: null,
+              ...(phase.phaseUnknownReason === undefined
+                ? {}
+                : { phaseUnknownReason: phase.phaseUnknownReason }),
+            }
+          : { phase: phase.phase }),
       });
     }
 
@@ -3500,8 +3542,8 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
       };
     },
     loadRepository: loadRepositoryFacts,
-    appendDecision: (_repository, decision) =>
-      appendOwnerGateSlaDecision(composition.store, {
+    appendDecision: (repository, decision) =>
+      appendOwnerGateSlaDecision(repositoryStores.get(repository) ?? composition.store, {
         decision,
         fenceToken: composition.newFenceToken(),
       }),
