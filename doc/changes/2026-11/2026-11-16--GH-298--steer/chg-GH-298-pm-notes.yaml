@@ -204,3 +204,20 @@ notes:
       (secret-suspected); renamed rather than blind-retried."
     type: info
     date: "2026-11-16"
+  - text: "Plan phase 7 COMPLETE: d5d58915 — steer mounted as the 23rd
+      prompt-required family: prompt-set entry after ceremony, the M2-rooted
+      root and family help with all five sections and per-subcommand help, the
+      reference page (four subcommands, grammar, drawn defaults, exit codes,
+      no-session posture, --help/--version), the coverage-inventory row, and
+      the atomic 22 -> 23 family-count move across every pinning suite
+      (entrypoint-bin array + rendered count, board/events/dispatch/daemon
+      composition, repos/board/events help, ceremony-cli, the events/daemon
+      positional pins, the daemon mutant derived count) with the stale-22 scan
+      green (queue-ready control-matrix 22 declared residual). Tests: mounting
+      (6), help (5), mutants mounting arms (6), plus 258 tests across 32
+      mounting/help/steer suites pass / 0 fail; forbidden-literals registry
+      gained the page row. Delivery findings: two derived positional pins moved
+      (events index, daemon mutant count) and the daemon mutant count became
+      derived from the live set."
+    type: info
+    date: "2026-11-16"

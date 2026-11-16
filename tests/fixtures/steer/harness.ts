@@ -214,10 +214,20 @@ export type SteerRun = {
   readonly data?: Record<string, unknown>;
 };
 
+export type SteerSteerCalls = {
+  readQueue: number;
+  readPhaseFold: number;
+  readAsks: number;
+  appendMessage: number;
+  appendOutcomes: number;
+  appendCompletion: number;
+};
+
 export type SteerHarness = {
   readonly state: SteerHarnessState;
   readonly runtime: SteerCommandRuntime;
   readonly recorder: { readonly calls: string[] };
+  readonly steerCalls: SteerSteerCalls;
   readonly session: SessionSpy;
   readonly now: { iso: string; ms: number };
   run(argv: readonly string[], options?: { readonly json?: boolean }): Promise<SteerRun>;
@@ -237,6 +247,14 @@ export const createSteerHarness = (options: SteerHarnessOptions = {}): SteerHarn
   const state = options.existingState ?? createSteerState(options.workspaceId);
   const ownsState = options.existingState === undefined;
   const recorder = { calls: [] as string[] };
+  const steerCalls: SteerSteerCalls = {
+    readQueue: 0,
+    readPhaseFold: 0,
+    readAsks: 0,
+    appendMessage: 0,
+    appendOutcomes: 0,
+    appendCompletion: 0,
+  };
   const mode = options.storeMode ?? "healthy";
   const failing = failureStore(state.store, mode);
   const guarded = guardStore(failing.store, recorder, {
@@ -261,27 +279,42 @@ export const createSteerHarness = (options: SteerHarnessOptions = {}): SteerHarn
       }),
     newFenceToken: nextFence,
     origin: () => options.origin ?? BOUND_ORIGIN,
-    readQueue: () => readSteeringQueue(guarded.store),
-    appendMessage: (record, current) =>
-      appendSteeringMessage(guarded.store, {
+    readQueue: () => {
+      steerCalls.readQueue += 1;
+      return readSteeringQueue(guarded.store);
+    },
+    appendMessage: (record, current) => {
+      steerCalls.appendMessage += 1;
+      return appendSteeringMessage(guarded.store, {
         record,
         fenceToken: nextFence(),
         ...(current === undefined ? {} : { current }),
-      }),
-    appendOutcomes: (records, current) =>
-      appendSteeringOutcomes(guarded.store, {
+      });
+    },
+    appendOutcomes: (records, current) => {
+      steerCalls.appendOutcomes += 1;
+      return appendSteeringOutcomes(guarded.store, {
         records,
         fenceToken: nextFence(),
         ...(current === undefined ? {} : { current }),
-      }),
-    appendCompletion: (record, current) =>
-      appendSteeringCompletion(guarded.store, {
+      });
+    },
+    appendCompletion: (record, current) => {
+      steerCalls.appendCompletion += 1;
+      return appendSteeringCompletion(guarded.store, {
         record,
         fenceToken: nextFence(),
         ...(current === undefined ? {} : { current }),
-      }),
-    readPhaseFold: () => ({ ok: true, value: options.phase ?? NO_PHASE }),
-    readAsks: () => ({ ok: true, value: options.asks ?? EMPTY_ASKS }),
+      });
+    },
+    readPhaseFold: () => {
+      steerCalls.readPhaseFold += 1;
+      return { ok: true, value: options.phase ?? NO_PHASE };
+    },
+    readAsks: () => {
+      steerCalls.readAsks += 1;
+      return { ok: true, value: options.asks ?? EMPTY_ASKS };
+    },
     secrets: options.secrets ?? [],
     session,
   };
@@ -336,6 +369,7 @@ export const createSteerHarness = (options: SteerHarnessOptions = {}): SteerHarn
     state,
     runtime,
     recorder,
+    steerCalls,
     session,
     now,
     run,

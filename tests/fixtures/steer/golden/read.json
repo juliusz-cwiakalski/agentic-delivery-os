@@ -1,0 +1,59 @@
+{
+  "schemaVersion": "delivery.steer.v1",
+  "boundary": {
+    "open": true,
+    "phase": null,
+    "phaseUnknownReason": "phase-unrecorded"
+  },
+  "applied": true,
+  "notes": [
+    {
+      "id": "msg-golden",
+      "kind": "request",
+      "priority": "normal",
+      "subject": "prefer smaller diffs; split the refactor",
+      "ref": null,
+      "origin": {
+        "change": "GH-298",
+        "repo": "example/product",
+        "agent": "owner"
+      },
+      "created": "2026-11-16T12:00:00.000Z",
+      "ttl": 86400000,
+      "expiresAt": "2026-11-17T12:00:00.000Z",
+      "age": 0,
+      "rank": 1,
+      "lifecycle": "landed",
+      "applied": true,
+      "receipt": {
+        "origin": {
+          "change": "GH-298",
+          "repo": "example/product",
+          "agent": "owner"
+        },
+        "readReceipt": {
+          "at": "2026-11-16T12:00:00.000Z",
+          "boundary": "phase-unrecorded"
+        },
+        "ttl": 86400000,
+        "expiresAt": "2026-11-17T12:00:00.000Z"
+      }
+    }
+  ],
+  "asks": [
+    {
+      "id": "q-golden",
+      "type": "decision-needed",
+      "ref": "GH-298",
+      "lane": "L5",
+      "question": "which gate applies?",
+      "askedAt": "2026-11-16T09:00:00.000Z",
+      "age": 10800000,
+      "drawnDefault": "allow-after-window",
+      "defaultState": "pending",
+      "rank": 1
+    }
+  ],
+  "omitted": 0,
+  "truncated": false
+}

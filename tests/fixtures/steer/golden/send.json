@@ -1,0 +1,23 @@
+{
+  "schemaVersion": "delivery.steer.v1",
+  "record": {
+    "id": "msg-fixture-1",
+    "from": "owner",
+    "to": "delivery",
+    "scope": "repo",
+    "kind": "request",
+    "subject": "golden note",
+    "ref": null,
+    "origin": {
+      "change": "GH-298",
+      "repo": "example/product",
+      "agent": "owner"
+    },
+    "priority": "normal",
+    "created": "2026-11-16T12:00:00.000Z",
+    "ttl": 86400000,
+    "expiresAt": "2026-11-17T12:00:00.000Z",
+    "age": 0
+  },
+  "lifecycle": "queued"
+}

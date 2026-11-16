@@ -72,3 +72,7 @@ operation. Landed notes are adopted by the delivery itself at the read point.
 See also: the change specification
 `doc/changes/2026-11/2026-11-16--GH-298--steer/chg-GH-298-spec.md` and the
 result-contract error table.
+
+## Status
+
+Delivered by GH-298 (M2-S5) on `feat/GH-298/steer`.

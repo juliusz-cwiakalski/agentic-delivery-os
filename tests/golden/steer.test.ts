@@ -5,8 +5,10 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { lifecycleMatrix } from "../fixtures/steer/cases";
+import { asksWith, ownerAsk } from "../fixtures/steer/ask-matrix";
+import { CREATED, lifecycleMatrix, makeAppliedOutcome, makeMessage } from "../fixtures/steer/cases";
 import { createSteerHarness } from "../fixtures/steer/harness";
+import { NO_PHASE_RECORD } from "../fixtures/steer/phase-boundary";
 
 const ROOT = process.cwd();
 const GOLDEN = join(ROOT, "tests/fixtures/steer/golden");
@@ -40,4 +42,51 @@ describe("TC-STEER-023 the steer list golden pair", () => {
       harness.cleanup();
     }
   });
+});
+
+type Form = "send" | "read" | "complete";
+
+const fixtureFor = (form: Form): ReturnType<typeof createSteerHarness> => {
+  if (form === "send") return createSteerHarness({ phase: NO_PHASE_RECORD });
+  if (form === "read") {
+    const harness = createSteerHarness({
+      phase: NO_PHASE_RECORD,
+      asks: asksWith({
+        facts: [ownerAsk({ id: "q-golden" })],
+        defaultableRefs: { "GH-298": "allow-after-window" },
+      }),
+    });
+    harness.seedMessage(makeMessage({ id: "msg-golden", created: CREATED }));
+    return harness;
+  }
+  const harness = createSteerHarness({ phase: NO_PHASE_RECORD });
+  const landed = makeMessage({ id: "msg-golden", created: CREATED });
+  harness.seedMessage(landed);
+  harness.seedOutcome(makeAppliedOutcome(landed));
+  return harness;
+};
+
+const ARGV = {
+  send: ["send", "golden note"],
+  read: ["read"],
+  complete: ["complete", "msg-golden", "--ref", "doc/proof.md"],
+} as const;
+
+describe("TC-STEER-081 the send, read, and complete golden forms", () => {
+  for (const form of ["send", "read", "complete"] as const) {
+    test(`${form} matches its committed golden pair`, async () => {
+      expect(existsSync(join(GOLDEN, `${form}.txt`))).toBe(true);
+      expect(existsSync(join(GOLDEN, `${form}.json`))).toBe(true);
+      const humanHarness = fixtureFor(form);
+      const human = await humanHarness.run(ARGV[form], { json: false });
+      humanHarness.cleanup();
+      expect(human.stdout).toBe(readFileSync(join(GOLDEN, `${form}.txt`), "utf8"));
+      const machineHarness = fixtureFor(form);
+      const machine = await machineHarness.run(ARGV[form]);
+      machineHarness.cleanup();
+      expect(`${JSON.stringify(machine.data, null, 2)}\n`).toBe(
+        readFileSync(join(GOLDEN, `${form}.json`), "utf8"),
+      );
+    });
+  }
 });

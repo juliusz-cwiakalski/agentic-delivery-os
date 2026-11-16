@@ -190,3 +190,23 @@ the production entrypoint, advertised in root `--help` with family and verb
 pages, served by the M2 `ceremony` reference page, and named by the coverage
 inventory. The four verbs are exactly `list`, `run`, `resume`, and `catch-up`;
 no `metrics`, `pack`, `action`, or scheduler verb is registered.
+
+
+## Observation (2026-11-16): `steer` mounted
+
+Observed from the built workspace after the GH-298 mount.
+
+```
+$ <binary> --help
+Commands: status brief queue lanes blockers phase commit lint plan
+          verify merge closeout spend retro dispatch coordinator daemon
+          projects repos events board ceremony steer
+```
+
+Twenty-three families are registered after the GH-298 mount: the twenty-two
+observed on 2026-11-16 plus `steer`. `steer` is in the prompt-required set,
+composed unconditionally by the production entrypoint, advertised in root
+`--help` with family and verb pages, served by the M2 `steer` reference page, and
+named by the coverage inventory. The four verbs are exactly `send`, `list`,
+`read`, and `complete`; no `collect`, `poll`, `deliver`, or `ack` verb is
+registered.

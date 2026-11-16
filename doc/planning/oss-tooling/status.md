@@ -498,3 +498,22 @@ the M2 reference page, and the coverage-inventory row; it joins the read-only
 `maintainsIndex` exception set, and its only write is the per-repository decision
 append. The run carries `feat/GH-297/board`; M2 has not exited, and the remaining
 M2 stories are unaffected by this delivery.
+
+
+## M2 delivery snapshot addendum (2026-11-16): M2-S5 delivered by GH-298
+
+M2-S5 (steer) was delivered by GH-298 on `feat/GH-298/steer`. The `steer` family
+files bounded notes on the shared typed message record (eleven declared keys,
+four shared closed vocabularies declared once, the S5 filing subset as a
+declared restriction), lands every due note at the boundary read point in one
+rank-ordered batch with a complete receipt, records `ttl-elapsed` as a
+classified non-applied outcome with the delivery's course unchanged, declines
+mid-phase without applying or recording, batches the open owner asks with the
+delivered drawn-default join and measured age, completes a landed note against
+its proving artifact, and refuses registered credential values on text, ref, and
+derived origin paths. Three exact error identities join the `steer` kind with
+the closed allowlist widened 56 -> 59 and every count pin moved in one commit.
+The family is mounted as the 23rd prompt-required command with root/family help,
+the M2 reference page, and the coverage-inventory row. The run carries
+`feat/GH-298/steer`; M2 has not exited, and the remaining M2 stories are
+unaffected by this delivery.

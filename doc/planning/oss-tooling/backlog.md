@@ -1150,6 +1150,11 @@ the project family separately.
   steering note carries origin, a read receipt, and TTL; the message
   record schema is shared, not owner-specific.
 - Depends on: M0-S10, M1-S11.
+- Progress: delivered by GH-298 on `feat/GH-298/steer` (M2-S5 complete; the
+  shared typed message record, the boundary read point with receipts and TTL
+  expiry, the drawn-default asks join, artifact-ref completion, the
+  registered-value guard, three exact error identities, and the 23rd
+  prompt-required family).
 
 ### M2-S6 Metrics and spend
 - Ticket: GH-299 (milestone M2)
