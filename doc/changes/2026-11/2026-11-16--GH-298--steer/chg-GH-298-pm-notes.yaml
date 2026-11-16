@@ -155,3 +155,22 @@ notes:
       suites carried extra 140 pins; all moved in this same commit."
     type: info
     date: "2026-11-16"
+  - text: "Plan phase 4 COMPLETE: 759b224a — `steer send` and `steer list`
+      delivered over the edge composition and the unconditional production
+      composition: drawn defaults (kind request, priority normal, ttl 24h, ref
+      null), the derived origin block over real checkouts (bound ref, checkout
+      key, owner; bare null when unbound), value/grammar refusals before any
+      state read with zero persisted bytes, one immutable record per filing with
+      unique ids, measured aging and the shared rank, and the three lifecycle
+      groups with counted 8-row caps against the committed list golden.
+      Tests: steer-send (10), steer-refusals (40), steer-records (5),
+      steer-aging-rank (7), steer-list (3), steer-bounds (2), golden list (1),
+      plus the affected structure suites (cli-edge-seam, content-inventory,
+      entrypoint-bin, port inventory) — 142 pass / 0 fail; typecheck and lint
+      green. Deviations recorded: the complete projection carries no `age`
+      member (the declared contract shape has none) so aging is asserted on
+      send/list/read; the read-payload pre-resolved-row rule follows AC-F3-5
+      (a repeat read returns the empty batch) with pre-resolved notes visible on
+      `steer list`."
+    type: info
+    date: "2026-11-16"

@@ -576,43 +576,6 @@ const receiptFor = (
   expiresAt: steerExpiresAt(record.created, record.ttl),
 });
 
-const readRow = (note: SteerDerivedNote): SteerReadNote => {
-  const base = {
-    id: note.record.id,
-    kind: note.record.kind,
-    priority: note.record.priority,
-    subject: note.record.subject,
-    ref: note.record.ref,
-    origin: note.record.origin,
-    created: note.record.created,
-    ttl: note.record.ttl,
-    expiresAt: note.expiresAt,
-    age: note.age,
-    rank: note.rank,
-  } as const;
-  if (note.outcome === undefined) {
-    return {
-      ...base,
-      lifecycle: "queued",
-      applied: false,
-    };
-  }
-  if (note.outcome.outcome === "expired") {
-    return {
-      ...base,
-      lifecycle: "expired",
-      applied: false,
-      expiry: { reason: STEER_EXPIRY_REASON, recordedAt: note.outcome.recordedAt },
-    };
-  }
-  return {
-    ...base,
-    lifecycle: "landed",
-    applied: true,
-    receipt: note.outcome.receipt,
-  };
-};
-
 export type SteerReadPlanInput = {
   readonly records: SteerRecordSet;
   readonly phase: SteerPhaseFoldView;
@@ -634,10 +597,10 @@ export const planSteerRead = (input: SteerReadPlanInput): SteerReadPlan => {
   const transitions: SteerOutcome[] = [];
   const rows: SteerReadNote[] = [];
   for (const note of notes) {
-    if (note.outcome !== undefined) {
-      rows.push(readRow(note));
-      continue;
-    }
+    // AC-F3-5: the read returns the notes it considered — the transitions it
+    // performed — not a replay of already-resolved history. Pre-resolved notes
+    // stay visible on the list view.
+    if (note.outcome !== undefined) continue;
     if (!boundary.open) {
       rows.push({
         id: note.record.id,
@@ -735,7 +698,9 @@ export const buildSteerReadData = (
   const listed = plan.rows.slice(0, STEER_MAX_READ_PAYLOAD_NOTES);
   let notes = listed;
   let renderedAsks = asks;
-  let omitted = plan.rows.length - listed.length + Math.max(0, asks.length - renderedAsks.length);
+  const ownerAskCount = askSource.facts.filter((fact) => fact.audience === "owner").length;
+  let omitted =
+    plan.rows.length - listed.length + Math.max(0, ownerAskCount - asks.length);
   let expired = plan.transitions.some((transition) => transition.outcome === "expired");
   let data: SteerReadData = {
     schemaVersion: STEER_SCHEMA_VERSION,
