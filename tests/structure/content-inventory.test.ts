@@ -2770,9 +2770,15 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "flattenCeremonyAgenda",
     "runCeremony",
   ],
-  "core/src/domain/ceremony-resume.ts": [
-    "resumeCeremony",
-    "validateCeremonyStepSequence",
+  "core/src/domain/ceremony-resume.ts": ["resumeCeremony", "validateCeremonyStepSequence"],
+  "core/src/domain/ceremony-schedule.ts": [
+    "CEREMONY_CATCH_UP_LOOKBACK",
+    "catchUpCeremonies",
+    "catchUpScopeKey",
+    "ceremonyCadencePeriodMs",
+    "ceremonyWindowRecorded",
+    "dueCeremonyWindows",
+    "evaluateCeremonySchedule",
   ],
 };
 

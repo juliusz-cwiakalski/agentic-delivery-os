@@ -85,6 +85,7 @@
     "src/domain/ceremony-intake.ts",
     "src/domain/ceremony-resume.ts",
     "src/domain/ceremony-run.ts",
+    "src/domain/ceremony-schedule.ts",
     "src/domain/ci-result.ts",
     "src/domain/closeout-diff-sweep.ts",
     "src/domain/closeout-members.ts",
@@ -377,11 +378,7 @@
     "src/output/protocol.ts",
     "src/serve.ts"
   ],
-  "opencode": [
-    "src/commands/index.ts",
-    "src/index.ts",
-    "src/output/index.ts"
-  ],
+  "opencode": ["src/commands/index.ts", "src/index.ts", "src/output/index.ts"],
   "testkit": [
     "src/commit/git-repo.ts",
     "src/commit/index.ts",

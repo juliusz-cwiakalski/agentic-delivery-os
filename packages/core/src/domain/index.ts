@@ -936,3 +936,21 @@ export {
   validateCeremonyStepSequence,
   type CeremonyResumeRequest,
 } from "./ceremony-resume.js";
+/** Ceremony schedule evaluation and catch-up (GH-296 F-5). */
+export {
+  CEREMONY_CATCH_UP_LOOKBACK,
+  catchUpCeremonies,
+  catchUpScopeKey,
+  ceremonyCadencePeriodMs,
+  ceremonyWindowRecorded,
+  dueCeremonyWindows,
+  evaluateCeremonySchedule,
+  type CeremonyCatchUpCeremony,
+  type CeremonyCatchUpDisposition,
+  type CeremonyCatchUpOutcome,
+  type CeremonyCatchUpReport,
+  type CeremonyCatchUpRequest,
+  type CeremonyCatchUpRunData,
+  type CeremonyCatchUpTarget,
+  type CeremonyRemovedTarget,
+} from "./ceremony-schedule.js";

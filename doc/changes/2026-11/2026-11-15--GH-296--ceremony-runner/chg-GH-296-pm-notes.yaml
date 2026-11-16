@@ -165,3 +165,24 @@ notes:
       inventory)."
     type: info
     date: "2026-11-16"
+  - text: "plan phase 2 (ceremony record boundary and artifact family):
+      commit 8867a44; pnpm typecheck green; bun test
+      tests/behaviour/ceremony-state-boundary.test.ts green (12 pass); bun test
+      tests/structure/state-contract.test.ts green (18 pass); bun test
+      tests/checks/fixture-privacy.test.ts green (3 pass); bun run
+      scripts/checks/ambient-globals.ts and workspace-entrypoints.ts green. The
+      tracked tests/structure/inventory.json update was disclosed as scope
+      drift by the commit primitive."
+    type: info
+    date: "2026-11-16"
+  - text: "plan phase 3 (runner engine: intake, artifact-verified agenda,
+      compaction, resume): commit 978f96d; pnpm typecheck green; bun test
+      tests/behaviour/ceremony-{run,run-triggers,resume,notes,state-boundary}
+      .test.ts green (41 pass); bun run scripts/checks/ambient-globals.ts green.
+      TC-063 derives the daily UTC window from the injected clock with the
+      repository scope key; TC-064 refuses the event-only declaration without
+      --window before any input read or append; TC-062 records explicit with
+      note/declaration/unspecified resolution. The tracked
+      tests/structure/inventory.json update was disclosed as scope drift."
+    type: info
+    date: "2026-11-16"

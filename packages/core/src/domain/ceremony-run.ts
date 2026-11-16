@@ -918,7 +918,8 @@ export const runCeremony = (request: CeremonyRunRequest): CeremonyRunOutcome => 
               ? { declaredSet: intake.value.trigger.declaredSet ?? [] }
               : { declared: intake.value.trigger.declared }),
             declaredWindow: request.catchUp.missedWindow,
-            actualWindow: request.catchUp.executionWindow,
+            actualWindow: request.catchUp.missedWindow,
+            executionWindow: request.catchUp.executionWindow,
             catchUp: true,
           },
         };

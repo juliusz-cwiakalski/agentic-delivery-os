@@ -380,6 +380,7 @@ export type CeremonyRecordedTrigger = {
   readonly declaredSet?: readonly string[];
   readonly declaredWindow: CeremonyWindow;
   readonly actualWindow: CeremonyWindow;
+  readonly executionWindow?: CeremonyWindow;
   readonly catchUp?: boolean;
 };
 
