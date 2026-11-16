@@ -8,12 +8,12 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
+  builtinCeremonyDeclaration,
   CEREMONY_FOLLOW_THROUGH_VERDICTS,
   type CeremonyNote,
 } from "../../packages/core/src/contracts/index";
 import { runCeremony } from "../../packages/core/src/domain/index";
 import { readCeremonyRuns } from "../../packages/core/src/state/index";
-import { builtinCeremonyDeclaration } from "../../packages/core/src/contracts/index";
 import {
   FOLLOW_THROUGH_ARTIFACT,
   prepareBuiltin,
@@ -273,5 +273,31 @@ describe("TC-CEREMONY-048 a conforming note produces every declared output", () 
     } finally {
       prepared.harness.dispose();
     }
+  });
+});
+
+describe("TC-ACTION-022 the registry feeds the asserted follow-through-first phase", () => {
+  test("the declaration's first phase stays follow-through and registry facts resolve through it", async () => {
+    const { ceremonyFollowThroughFirst } = await import(
+      "../../packages/core/src/domain/ceremony-retro"
+    );
+    const { retroActionCeremonyFacts } = await import(
+      "../../packages/core/src/domain/ceremony-retro"
+    );
+    expect(ceremonyFollowThroughFirst(retro)).toBe(true);
+    const facts = retroActionCeremonyFacts(
+      [{ actionId: "action-window-1", verificationArtifact: FOLLOW_THROUGH_ARTIFACT }],
+      (ref) => (ref === FOLLOW_THROUGH_ARTIFACT ? "applied" : "unresolvable"),
+    );
+    const items = await import("../../packages/core/src/domain/ceremony-builtins").then(
+      ({ ceremonyFollowThroughItems }) =>
+        ceremonyFollowThroughItems(facts as unknown as Readonly<Record<string, unknown>>),
+    );
+    expect(items).toHaveLength(1);
+    expect(items[0]).toMatchObject({
+      item: "action-window-1",
+      verdict: "applied",
+      evidenceRef: FOLLOW_THROUGH_ARTIFACT,
+    });
   });
 });

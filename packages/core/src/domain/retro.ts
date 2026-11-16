@@ -39,6 +39,7 @@ import {
   type RetroFailure,
   type RetroFinding,
   type RetroFollowThroughEntry,
+  type RetroFollowThroughRegistryEntry,
   type RetroLevelName,
   type RetroRegistryPort,
   type RetroReportData,
@@ -83,6 +84,15 @@ export type RetroReportDeps = {
   readonly level: RetroLevelName;
   readonly verifyArtifact?: (artifactRef: string) => boolean;
   readonly extraReferencedTraceIds?: readonly string[];
+  /**
+   * The production fold reader (GH-287 DEC-10): recorded registry actions the
+   * report folds as `verified`/`unverified`/`unknown` entries with provenance.
+   * The delivered injected-reader contract is preserved: absence reads as no
+   * registry entry, never an invented one.
+   */
+  readonly readFollowThrough?: (
+    level: RetroLevelName,
+  ) => readonly RetroFollowThroughRegistryEntry[];
 };
 
 /** The injected seams for the export engine surface. */
@@ -1138,6 +1148,46 @@ const emptyReport = (level: RetroLevelName): RetroReportData => ({
   evidenceRefs: [],
 });
 
+/**
+ * Fold the recorded registry actions into the delivered `followThrough[]`
+ * entries (DEC-10): the verdict is the artifact oracle's, an action without an
+ * artifact is `unknown`, and every entry carries registry provenance.
+ */
+const registryFollowThroughOf = (
+  level: RetroLevelName,
+  readFollowThrough: RetroReportDeps["readFollowThrough"],
+  verifyArtifact: ((ref: string) => boolean) | undefined,
+): readonly RetroFollowThroughEntry[] => {
+  if (readFollowThrough === undefined) return [];
+  return readFollowThrough(level).map((entry) => {
+    if (entry.artifactRef === undefined) {
+      return { action: entry.action, verdict: "unknown" as const, provenance: "registry" as const };
+    }
+    return {
+      action: entry.action,
+      verdict:
+        verifyArtifact?.(entry.artifactRef) === true
+          ? ("verified" as const)
+          : ("unverified" as const),
+      artifactRef: entry.artifactRef,
+      provenance: "registry" as const,
+    };
+  });
+};
+
+/** Merge the evidence-derived and registry-derived entries, one per action. */
+const mergeFollowThrough = (
+  evidence: readonly RetroFollowThroughEntry[],
+  registry: readonly RetroFollowThroughEntry[],
+): readonly RetroFollowThroughEntry[] => {
+  const byAction = new Map<string, RetroFollowThroughEntry>();
+  for (const entry of evidence) if (!byAction.has(entry.action)) byAction.set(entry.action, entry);
+  for (const entry of registry) byAction.set(entry.action, entry);
+  return [...byAction.values()].sort((left, right) =>
+    left.action < right.action ? -1 : left.action > right.action ? 1 : 0,
+  );
+};
+
 /** Fold verified evidence and registry runs into the four-key report data. */
 export const reportRetro = (deps: RetroReportDeps): RetroCommandOutcome => {
   const levelValidation = validateLevel(deps.level);
@@ -1200,7 +1250,23 @@ export const reportRetro = (deps: RetroReportDeps): RetroCommandOutcome => {
   }
   const runs = deps.registry.runs(registry.value).filter((run) => run.level === deps.level);
   const run = runs[runs.length - 1];
-  if (run === undefined) return { ok: true, data: emptyReport(deps.level) };
+  const registryEntries = registryFollowThroughOf(
+    deps.level,
+    deps.readFollowThrough,
+    deps.verifyArtifact,
+  );
+  if (run === undefined) {
+    if (registryEntries.length === 0) return { ok: true, data: emptyReport(deps.level) };
+    return {
+      ok: true,
+      data: {
+        level: deps.level,
+        findings: [],
+        followThrough: mergeFollowThrough([], registryEntries),
+        evidenceRefs: [],
+      },
+    };
+  }
 
   const selected = recordsForRun(sidecar.value.records, run.runId);
   const findings = findingsOf(selected);
@@ -1233,8 +1299,9 @@ export const reportRetro = (deps: RetroReportDeps): RetroCommandOutcome => {
         ? -1
         : 1,
   );
-  const followThrough = [...followThroughOf(selected, deps.verifyArtifact)].sort((left, right) =>
-    left.action < right.action ? -1 : left.action > right.action ? 1 : 0,
+  const followThrough = mergeFollowThrough(
+    followThroughOf(selected, deps.verifyArtifact),
+    registryEntries,
   );
   const evidenceRefs = selected.map((record) => record.traceId);
   const spend = spendCitationOf(selected);

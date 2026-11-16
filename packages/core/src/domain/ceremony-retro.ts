@@ -88,3 +88,57 @@ export const retroDeclarationShape = (declaration: CeremonyDeclaration) => ({
     ),
   ),
 });
+
+/* ------------------- registry follow-through producer (GH-287 F-7) -------- */
+
+/**
+ * The artifact oracle's verdict for one verification artifact (DEC-10, RSK-1):
+ * a resolvable artifact earns the ceremony verdict, a partial resolution earns
+ * `partial`, a failed artifact earns `violated-with-consequence`, and an
+ * unreadable or absent artifact degrades to `unresolvable` — never fabricated.
+ */
+export const ACTION_ARTIFACT_VERDICTS = [
+  "applied",
+  "partial",
+  "violated-with-consequence",
+  "unresolvable",
+] as const;
+
+export type ActionArtifactVerdict = (typeof ACTION_ARTIFACT_VERDICTS)[number];
+
+/** One recorded action the ceremony follow-through inspects (F-7). */
+export type CeremonyRegistryAction = {
+  readonly actionId: string;
+  readonly verificationArtifact: string;
+};
+
+/**
+ * Build the ceremony's retro-evidence facts from recorded registry actions.
+ *
+ * The verdict is assigned from the artifact oracle only: an owner status claim
+ * is never an input, so a claim that contradicts a failed artifact cannot yield
+ * `applied`. Every artifact reference joins the delivered evidence set so the
+ * delivered follow-through oracle resolves it; an unresolvable artifact leaves
+ * the action `unverified` (artifact rot degrades, never fabricates).
+ */
+export const retroActionCeremonyFacts = (
+  actions: readonly CeremonyRegistryAction[],
+  verifyArtifact: (artifactRef: string) => ActionArtifactVerdict,
+): { readonly retroRegistry: unknown } => {
+  const sorted = [...actions].sort((left, right) =>
+    left.actionId < right.actionId ? -1 : left.actionId > right.actionId ? 1 : 0,
+  );
+  return {
+    retroRegistry: {
+      evidenceRefs: sorted.map((action) => action.verificationArtifact),
+      openActions: sorted.map((action) => {
+        const verdict = verifyArtifact(action.verificationArtifact);
+        return {
+          item: action.actionId,
+          verificationArtifact: action.verificationArtifact,
+          ...(verdict === "unresolvable" ? {} : { verdict }),
+        };
+      }),
+    },
+  };
+};

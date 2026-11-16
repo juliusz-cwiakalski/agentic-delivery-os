@@ -266,3 +266,25 @@ notes:
       24 / 0; board-full + board-grid goldens 10 / 0."
     type: info
     date: "2026-11-16"
+  - text: "Plan phase 7 complete — follow-through producers: ceremony pass, report
+      fold, cross-level unity, handoff flow. Commit to be recorded after the phase
+      commit. Files: contracts/retro.ts (RetroFollowThroughEntry provenance plus
+      the registry-entry reader type), contracts/index.ts, domain/retro.ts (the
+      production fold reader merged inside the four delivered keys), domain/
+      ceremony-retro.ts (retroActionCeremonyFacts: verdicts only from the artifact
+      oracle), domain/index.ts + core/src/index.ts, cli/edge.ts (report/collect
+      follow-through readers plus the ceremony registry facts over one registry
+      read), action-follow-through/action-ceremony-handoff/action-cross-level
+      suites (new), ceremony-flow-retro-levels (additive), retro-report (D-12
+      additive), retro-output (D-13 edge-composed fold case). Disclosed
+      shared-file edit: packages/core/src/state/retro-registry.ts now skips the
+      sibling action kinds (both begin with the shared `retro.` key prefix), or
+      every action record classifies as a retro-registry malformation and the
+      delivered report/doctor paths refuse; its exactly-three declaration is
+      unchanged and a control asserts that. Gate results: pnpm typecheck clean;
+      action-follow-through + action-ceremony-handoff + action-cross-level 13 / 0;
+      ceremony-flow-retro-levels + retro-report + retro-output 21 / 0;
+      ceremony-flow-retro control 5 / 0; retro-registry + retro-levels control
+      12 / 0."
+    type: info
+    date: "2026-11-16"

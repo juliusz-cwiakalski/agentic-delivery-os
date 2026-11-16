@@ -389,7 +389,11 @@ export {
   validateCeremonyStepSequence,
 } from "./domain/ceremony-resume.js";
 export {
+  ACTION_ARTIFACT_VERDICTS,
+  type ActionArtifactVerdict,
+  type CeremonyRegistryAction,
   ceremonyFollowThroughFirst,
+  retroActionCeremonyFacts,
   retroDeclarationShape,
 } from "./domain/ceremony-retro.js";
 export {

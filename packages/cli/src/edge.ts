@@ -94,6 +94,8 @@ import {
 } from "@delivery-os/adapters/session";
 import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
 import {
+  type ActionArtifactVerdict,
+  actionArtifactPlaneOpen,
   actionListEntry,
   actionWindowEntries,
   addQueueDependency,
@@ -211,6 +213,7 @@ import {
   resolveQueueSettings,
   resolveQueueWeight,
   resumeCeremony,
+  retroActionCeremonyFacts,
   revertDispatchHandoverEvidence,
   runCeremony,
   runCloseout,
@@ -3932,6 +3935,36 @@ const ordinaryFlags = (flags: CommandFlags, catalog: ConfigCatalog): Record<stri
 };
 
 /** The ceremony family composition seam (GH-296 F-1, F-6, F-7). */
+/** The open recorded actions one registry read exposes (GH-287 F-7). */
+const openRegistryActions = (store: StateStorePort) => {
+  const read = readActionRegistry(store);
+  if (!read.ok || read.value.malformed.length > 0) return [];
+  const snapshot = { actions: read.value.actions, closures: read.value.closures };
+  return snapshot.actions.filter((action) => actionArtifactPlaneOpen(action.actionId, snapshot));
+};
+
+/** The registry follow-through reader the retro report/collect folds consume. */
+const registryFollowThroughFor = (
+  store: StateStorePort,
+  level: import("@delivery-os/core/contracts").RetroLevelName,
+): readonly import("@delivery-os/core/contracts").RetroFollowThroughRegistryEntry[] =>
+  openRegistryActions(store)
+    .filter((action) => action.level === level)
+    .map((action) => ({ action: action.actionId, artifactRef: action.verificationArtifact }));
+
+/** The ceremony retro-evidence facts the registry produces (GH-287 F-7). */
+const ceremonyRegistryFacts = (
+  store: StateStorePort,
+  verify: (artifactRef: string) => ActionArtifactVerdict,
+): { readonly retroRegistry?: unknown } => {
+  const actions = openRegistryActions(store).map((action) => ({
+    actionId: action.actionId,
+    verificationArtifact: action.verificationArtifact,
+  }));
+  if (actions.length === 0) return {};
+  return retroActionCeremonyFacts(actions, verify);
+};
+
 export type CeremonyCompositionOptions = {
   readonly store: StateStorePort;
   readonly stateDirectory: string;
@@ -3949,6 +3982,12 @@ export type CeremonyCompositionOptions = {
    * the change's committed pm-notes and plan documents (F-7, DM-7).
    */
   readonly tierContext?: CeremonyTierInput;
+  /**
+   * The artifact oracle the registry follow-through reads (GH-287 F-7). Absent
+   * means every artifact is unresolvable, so verdicts degrade rather than
+   * fabricate.
+   */
+  readonly verifyActionArtifact?: (artifactRef: string) => ActionArtifactVerdict;
 };
 
 const ceremonyFailure = (error: CeremonyEngineFailure): CeremonyCommandResult => ({
@@ -4123,9 +4162,13 @@ export const createCeremonyCommandRuntime = (
         // truth-check evidence references are what a follow-through verdict may
         // cite. The supplied note's own citations are never echoed back as
         // evidence (AC-F9-3).
+        const registryFacts = ceremonyRegistryFacts(
+          options.store,
+          options.verifyActionArtifact ?? (() => "unresolvable"),
+        );
         return {
           state: "present",
-          facts: { evidenceRefs: [...retroEvidenceRefs()] },
+          facts: { evidenceRefs: [...retroEvidenceRefs()], ...registryFacts },
         };
       }
       if (source === "affected-repositories") {
@@ -5182,6 +5225,7 @@ export const createRetroCommandRuntime = (
         },
         collectors,
         readChanges: options.readChanges ?? (() => retroChangeFactsFrom(options.store)),
+        readFollowThrough: () => registryFollowThroughFor(options.store, input.level),
         clock: { nowMs: options.clock.nowMs },
         newTraceId: options.newTraceId,
         newRunId: options.newRunId,
@@ -5203,6 +5247,7 @@ export const createRetroCommandRuntime = (
         },
         level: input.level,
         ...(options.verifyArtifact === undefined ? {} : { verifyArtifact: options.verifyArtifact }),
+        readFollowThrough: (level) => registryFollowThroughFor(options.store, level),
       }),
   };
 };

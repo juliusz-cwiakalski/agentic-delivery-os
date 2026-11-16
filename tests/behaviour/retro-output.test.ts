@@ -284,3 +284,35 @@ describe("TC-ACTION-010/014 the additive action golden cases", () => {
     }
   });
 });
+
+describe("TC-ACTION-023 the report fold reads the registry through the edge composition", () => {
+  test("a seeded action folds with registry provenance and the four delivered keys", async () => {
+    const fixture = makeRetroDir("action-report-edge");
+    try {
+      const seeded = fileAction(
+        fixture.store,
+        conformingDraft({ verificationArtifact: "artifact:edge-fold" }),
+        { actionId: "action-edge", filedAt: NOW_MS },
+      );
+      expect(seeded.ok).toBe(true);
+      const result = await runActionRetro(["retro", "report", "--json"], fixture);
+      expect(result.exitCode).toBe(0);
+      const data = JSON.parse(result.stdout.trim()).data as Record<string, unknown>;
+      expect(Object.keys(data).sort()).toEqual([
+        "evidenceRefs",
+        "findings",
+        "followThrough",
+        "level",
+      ]);
+      const fold = data.followThrough as readonly Record<string, unknown>[];
+      expect(fold).toHaveLength(1);
+      expect(fold[0]).toMatchObject({
+        action: "action-edge",
+        verdict: "unverified",
+        provenance: "registry",
+      });
+    } finally {
+      fixture.cleanup?.();
+    }
+  });
+});

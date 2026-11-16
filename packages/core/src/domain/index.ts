@@ -933,13 +933,17 @@ export {
   resumeCeremony,
   validateCeremonyStepSequence,
 } from "./ceremony-resume.js";
-/** The retro ceremony module (GH-296 F-9). */
+/** The retro ceremony module (GH-296 F-9; GH-287 F-7 producer). */
 export {
+  ACTION_ARTIFACT_VERDICTS,
+  type ActionArtifactVerdict,
+  type CeremonyRegistryAction,
   ceremonyFollowThroughFirst,
   isCeremonyLevelName,
   missingRetroNoteMembers,
   RETRO_FIXED_MEMBERS,
   RETRO_LEVEL_TRIGGER_LABELS,
+  retroActionCeremonyFacts,
   retroDeclarationShape,
   retroLevelForTrigger,
   retroLevelOf,
