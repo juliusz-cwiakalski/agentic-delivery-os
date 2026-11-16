@@ -240,3 +240,37 @@ notes:
       tests/fixtures/queue/production/harness.ts).
     type: info
     date: "2026-11-16"
+  - text: >-
+      Plan phase 6 complete (code-review remediation, iteration 1): this
+      remediation commit. Findings closed: F-1 high - the fleet tracker read now
+      opens each target repository's store before the tracker read and joins
+      merge waivers from that store (per-ref newest match), so a non-invoking
+      repository's waivers surface and a shared ref never imports the invoking
+      repository's waiver; regression cell added over --all with refs 244/245/246
+      (divergent waivers, 72h default on the owning repository only, decision
+      appended to that repository's store). F-2 medium - the command-scoped
+      --version intercept answers only for a known command with --version as its
+      immediate next token; an unknown leading command keeps fallback.internal
+      exit 2 by dropping the self-description flag, and a positional keeps
+      fallback.invocation exit 1; both refusal cells plus the per-family
+      version-no-compose cell added. F-3 medium - TC-BOARD-061 completed over a
+      two-repository --all host with a real seeded index: host-root snapshot
+      (index file and projects/) across a no-default run (byte-identical, one
+      index read, zero writes, revision unchanged) and a default-applying run
+      (exactly the owning repository's ledger changes; index untouched), plus
+      the index-maintenance mutant whose snapshot diff names host-index.json.
+      F-4 low - the gate-kind truncation detector now checks the delivered
+      160-character clamp (121-160 keeps untruncated; over-160 clamps and marks
+      truncation). F-5 low - lane facts are sorted and capped at 20 at the edge
+      before phase resolution, with the omitted count carried into
+      omittedBySection.lanes (new optional BoardRepositoryFacts.omittedLanes), so
+      NFR-5's phase-read bound matches the code. F-6 info - deferred: retiring
+      toBoardData requires touching board-performance and the contract/inventory
+      fixtures outside this phase's declared scope; it remains an accepted
+      info-level residual (one projection path is already used in production).
+      Gates: affected board selection/identity/gates-sla/write-discipline and
+      entrypoint/help suites green (465 tests across 45 files, 0 fail), Appendix
+      D four-way 138/137/55/2/138 still green, full TMPDIR=$PWD/tmp/tmpdir pnpm
+      check recorded separately in the delivery report.
+    type: info
+    date: "2026-11-16"

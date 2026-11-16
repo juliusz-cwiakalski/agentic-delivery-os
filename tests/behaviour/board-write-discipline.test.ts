@@ -96,3 +96,97 @@ describe("TC-BOARD-061 write discipline", () => {
     }
   });
 });
+
+/**
+ * TC-BOARD-061 (completed, review iteration 1 F-3): a two-repository `--all`
+ * host with a real seeded index — host-root snapshot, index-write counters, and
+ * revision assertions across a no-default and a default-applying run, plus the
+ * index-maintenance mutant proving the snapshot check is live (DoD-11).
+ */
+import { writeFileSync } from "node:fs";
+import { createSelectionHarness } from "../fixtures/board/selection";
+
+const NOW_INSTANT = "2026-11-06T12:00:00Z";
+const OLD_INSTANT = "2026-11-03T09:00:00Z";
+
+describe("TC-BOARD-061 host-root write discipline (fleet)", () => {
+  test("a no-default --all run leaves the host root and the index untouched", async () => {
+    const harness = createSelectionHarness({
+      repositories: [{ projectKey: "repository-a" }, { projectKey: "repository-b" }],
+      invokingKey: "repository-a",
+      issues: {
+        "repository-a": [{ number: 244, labels: ["hand-back"], updatedAt: NOW_INSTANT }],
+        "repository-b": [{ number: 245, labels: ["hand-back"], updatedAt: NOW_INSTANT }],
+      },
+    });
+    try {
+      const revision = harness.indexRevision();
+      const before = snapshot(harness.hostRoot);
+      const run = await harness.run(["board", "--all"]);
+      expect(run.exitCode).toBe(0);
+      expect(harness.indexReads()).toBe(1);
+      expect(harness.indexWrites()).toBe(0);
+      expect(harness.indexRevision()).toBe(revision);
+      expect(changed(before, snapshot(harness.hostRoot))).toEqual([]);
+      expect(harness.readDecisions("repository-a")).toHaveLength(0);
+      expect(harness.readDecisions("repository-b")).toHaveLength(0);
+    } finally {
+      harness.dispose();
+    }
+  });
+
+  test("a default-applying --all run writes only that repository's ledger", async () => {
+    const harness = createSelectionHarness({
+      repositories: [{ projectKey: "repository-a" }, { projectKey: "repository-b" }],
+      invokingKey: "repository-a",
+      issues: {
+        "repository-a": [{ number: 246, labels: ["hand-back"], updatedAt: NOW_INSTANT }],
+        "repository-b": [{ number: 246, labels: ["hand-back"], updatedAt: OLD_INSTANT }],
+      },
+    });
+    try {
+      harness.seedWaiver("repository-b", { changeRef: "GH-246", authorizer: "principal-b" });
+      const revision = harness.indexRevision();
+      const before = snapshot(harness.hostRoot);
+      const run = await harness.run(["board", "--all"]);
+      expect(run.exitCode).toBe(0);
+      const written = changed(before, snapshot(harness.hostRoot));
+      // Exactly the owning repository's decision ledger (its store header was
+      // created when the waiver was seeded, before the snapshot).
+      expect(written).toHaveLength(1);
+      expect(written[0]?.startsWith("projects/repository-b/")).toBe(true);
+      expect(written[0]?.endsWith(".jsonl")).toBe(true);
+      expect(harness.indexWrites()).toBe(0);
+      expect(harness.indexRevision()).toBe(revision);
+      expect(before["host-index.json"]).toBe(snapshot(harness.hostRoot)["host-index.json"]);
+      expect(harness.readDecisions("repository-b")).toHaveLength(1);
+      expect(harness.readDecisions("repository-a")).toHaveLength(0);
+    } finally {
+      harness.dispose();
+    }
+  });
+
+  test("the index-maintenance mutant fails the snapshot check naming the index file", async () => {
+    const harness = createSelectionHarness({
+      repositories: [{ projectKey: "repository-a" }],
+      invokingKey: "repository-a",
+    });
+    try {
+      const before = snapshot(harness.hostRoot);
+      // Simulate the regression the suite guards: a maintenance write advances
+      // the index revision and rewrites the file.
+      const document = JSON.parse(readFileSync(harness.indexPath, "utf8")) as {
+        revision: number;
+      };
+      writeFileSync(
+        harness.indexPath,
+        `${JSON.stringify({ ...document, revision: document.revision + 1 }, null, 2)}\n`,
+        "utf8",
+      );
+      const after = snapshot(harness.hostRoot);
+      expect(changed(before, after)).toEqual(["host-index.json"]);
+    } finally {
+      harness.dispose();
+    }
+  });
+});

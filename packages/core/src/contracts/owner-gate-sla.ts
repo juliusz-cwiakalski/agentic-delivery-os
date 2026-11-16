@@ -361,6 +361,8 @@ export type BoardParkedFact = {
 export type BoardRepositoryFacts = {
   readonly key: string;
   readonly lanes: readonly BoardLaneFact[];
+  /** Lanes dropped by the edge-side per-repository cap before the projection. */
+  readonly omittedLanes?: number;
   readonly gates: readonly OwnerGateFact[];
   readonly asks: readonly BoardAskFact[];
   readonly parks: readonly BoardParkedFact[];

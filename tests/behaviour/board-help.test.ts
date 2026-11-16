@@ -4,6 +4,7 @@
  */
 import { describe, expect, test } from "bun:test";
 import { runEntrypoint } from "../../packages/cli/src/entrypoint";
+import { syntheticPromptProgram } from "../fixtures/entrypoint/programs";
 import { bufferSink } from "../golden/helpers";
 
 const M2_PAGE = "doc/planning/oss-tooling/milestones/m2/commands/board.md";
@@ -48,6 +49,30 @@ describe("TC-BOARD-041 board help", () => {
     expect(result.composerCalls).toBe(0);
     expect(result.stdout).toContain("example-product");
     expect(result.stdout.toLowerCase()).not.toContain("usage:");
+  });
+
+  test("an unknown leading command keeps its classified containment failure", async () => {
+    const result = await run(["notacommand", "--version", "--json"]);
+    expect(result.exitCode).toBe(2);
+    expect(result.stdout).toContain("fallback.internal");
+    expect(result.stdout).toContain("is not part of the composed prompt-required set");
+    expect(result.stdout).not.toContain("example-product 0.0.0");
+  });
+
+  test("a positional alongside --version keeps fallback.invocation at exit 1", async () => {
+    const stdout = bufferSink();
+    const stderr = bufferSink();
+    const exitCode = await runEntrypoint(["board", "positional", "--version", "--json"], {
+      streams: { stdout, stderr },
+      environment: {},
+      configuredWorkingName: "example-product",
+      composeProgram: () => syntheticPromptProgram(),
+      clock: { now: () => 1 },
+      newRunId: () => "run-board-version-positional",
+    });
+    expect(exitCode).toBe(1);
+    expect(stdout.value).toContain("fallback.invocation");
+    expect(stdout.value).not.toContain("example-product 0.0.0");
   });
 
   test("root help lists board among exactly twenty-one families", async () => {

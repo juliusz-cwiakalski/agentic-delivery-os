@@ -546,7 +546,7 @@ const repositoryFieldsClamped = (repository: BoardRepositoryFacts): boolean =>
   repository.gates.some(
     (gate) =>
       overCap(gate.id, BOARD_MAX_ID_CHARS) ||
-      overCap(gate.kind, BOARD_MAX_KIND_CHARS) ||
+      overCap(gate.kind, BOARD_MAX_ID_CHARS) ||
       overCap(gate.ref, BOARD_MAX_REF_CHARS) ||
       overCap(gate.waivedBy, BOARD_MAX_WAIVED_BY_CHARS),
   ) ||
@@ -606,7 +606,8 @@ export const projectBoard = (input: BoardProjectionInput): BoardProjection => {
     const laneFacts = [...repository.lanes].sort(compareTextBy((fact) => fact.ref));
     for (const fact of laneFacts.slice(0, BOARD_MAX_LANES))
       lanes.push(laneRow(repository.key, fact));
-    omittedBySection.lanes += Math.max(0, laneFacts.length - BOARD_MAX_LANES);
+    omittedBySection.lanes +=
+      (repository.omittedLanes ?? 0) + Math.max(0, laneFacts.length - BOARD_MAX_LANES);
 
     const ownerAsks = repository.asks.filter(
       (ask) => ask.audience === undefined || ask.audience === "owner",

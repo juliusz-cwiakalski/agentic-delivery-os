@@ -3,8 +3,16 @@
  * gate row is extended rather than re-semanted (AC-F4-1, DM-3, §8.5).
  */
 import { describe, expect, test } from "bun:test";
+import { projectBoard } from "../../packages/core/src/domain/owner-gate-sla";
 import { boardGates, createBoardHarness } from "../fixtures/board/harness";
-import { HOUR_MS, ownerReviewGate, waiverGate } from "../fixtures/board/matrix";
+import {
+  BOARD_NOW_ISO,
+  BOARD_NOW_MS,
+  HOUR_MS,
+  ownerReviewGate,
+  shippedPolicy,
+  waiverGate,
+} from "../fixtures/board/matrix";
 import { BOARD_REPOSITORY } from "../fixtures/board/sections";
 
 const gatesFor = (gates: ReturnType<typeof ownerReviewGate>[]) =>
@@ -78,5 +86,89 @@ describe("TC-BOARD-022 gate row extension", () => {
     } finally {
       board.cleanup();
     }
+  });
+});
+
+/**
+ * TC-BOARD-024 (remediation, review iter-1 F-5): the edge caps active lanes
+ * before phase resolution and carries the omitted count, so the payload's lane
+ * omission stays exact and the phase-read cost stays inside NFR-5.
+ */
+describe("TC-BOARD-024 edge lane-cap omission", () => {
+  test("an edge-side lane omission is counted, with no lane row fabricated", async () => {
+    const projection = projectBoard({
+      audience: "owner",
+      scope: "repository",
+      selection: "all",
+      repositories: [
+        {
+          key: BOARD_REPOSITORY,
+          gates: [],
+          lanes: [],
+          omittedLanes: 5,
+          asks: [],
+          parks: [],
+          decisions: [],
+        },
+      ],
+      omittedRepositories: 0,
+      ownerHold: { active: false },
+      policy: shippedPolicy(),
+      nowMs: BOARD_NOW_MS,
+      nowIso: BOARD_NOW_ISO,
+    });
+    expect(projection.data.lanes).toEqual([]);
+    expect(projection.data.omittedBySection.lanes).toBe(5);
+    expect(projection.data.omitted).toBe(5);
+    expect(projection.data.truncated).toBe(true);
+  });
+});
+
+/**
+ * TC-BOARD-024 (remediation, review iter-1 F-4): the truncation detector matches
+ * the delivered 160-character gate-kind clamp, so a 121–160 character kind is
+ * preserved and reported as untruncated.
+ */
+describe("TC-BOARD-024 gate-kind cap alignment", () => {
+  const project = (kind: string) =>
+    projectBoard({
+      audience: "owner",
+      scope: "repository",
+      selection: "current",
+      repositories: [
+        {
+          key: BOARD_REPOSITORY,
+          gates: [
+            {
+              id: "GH-9999:custom",
+              kind,
+              ref: "GH-9999",
+              activityAt: new Date(BOARD_NOW_MS - HOUR_MS).toISOString(),
+            },
+          ],
+          lanes: [],
+          asks: [],
+          parks: [],
+          decisions: [],
+        },
+      ],
+      omittedRepositories: 0,
+      ownerHold: { active: false },
+      policy: shippedPolicy(),
+      nowMs: BOARD_NOW_MS,
+      nowIso: BOARD_NOW_ISO,
+    });
+
+  test("a 130-character kind is preserved and not reported as truncated", () => {
+    const kind = "k".repeat(130);
+    const projection = project(kind);
+    expect(projection.data.gates[0]?.kind).toBe(kind);
+    expect(projection.data.truncated).toBe(false);
+  });
+
+  test("an over-160 kind is clamped and the clamp marks truncation", () => {
+    const projection = project("k".repeat(170));
+    expect(Array.from(String(projection.data.gates[0]?.kind))).toHaveLength(160);
+    expect(projection.data.truncated).toBe(true);
   });
 });

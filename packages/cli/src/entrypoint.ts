@@ -387,10 +387,20 @@ export const runEntrypoint = async (
   }
 
   // A command-scoped `--version` is the same identity-only answer as the root
-  // form: it reads the static inventory and composes no program.
-  if (tokens.slice(1).includes("--version")) {
+  // form, but only for a KNOWN command with `--version` as its immediate next
+  // token (F-2). An unknown leading command falls through to the classified
+  // composition failure, and a positional keeps `fallback.invocation` at exit 1.
+  const versionIndex = tokens.indexOf("--version");
+  if (versionIndex === 1 && helpEntryFor([first]) !== undefined) {
     return emitSelfDescription(versionText(entrypoint), options, entrypoint);
   }
+  // An unknown leading command keeps its classified composition failure: the
+  // self-description flag is dropped so the command's own containment answers
+  // instead of a grammar refusal for the flag.
+  const cliArgv =
+    versionIndex === 1 && helpEntryFor([first]) === undefined
+      ? argv.filter((token) => token !== "--version")
+      : argv;
 
   const command = first;
   // One run identity per invocation, generated before composition so capture
@@ -426,7 +436,7 @@ export const runEntrypoint = async (
     ? { commands: { [command]: uncomposedDefinition(command, compositionNotices) } }
     : composed;
 
-  return runCli(argv, options.streams, dependenciesFor(options, entrypoint, program, runId));
+  return runCli(cliArgv, options.streams, dependenciesFor(options, entrypoint, program, runId));
 };
 
 /** The help inventory rendered for the current brand (used by coverage checks). */

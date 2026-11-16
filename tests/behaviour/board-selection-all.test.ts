@@ -75,3 +75,86 @@ describe("TC-BOARD-011/012/016 --all selection", () => {
     }
   });
 });
+
+/**
+ * TC-BOARD-011/012 remediation (F-1, review iteration 1): the fleet tracker read
+ * joins merge waivers from each TARGET repository's own store, so a non-invoking
+ * repository's waiver surfaces and a shared ref never imports another
+ * repository's waiver (AC-F4-1, AC-F4-2, AC-F3-2, NFR-3, DM-10).
+ */
+describe("TC-BOARD-011/012 per-repository waiver join", () => {
+  test("shared refs keep divergent waivers distinct and a non-invoking waiver surfaces", async () => {
+    const old = "2026-11-03T09:00:00Z";
+    const fresh = "2026-11-06T10:00:00Z";
+    const harness = createSelectionHarness({
+      repositories: [{ projectKey: "repository-a" }, { projectKey: "repository-b" }],
+      invokingKey: "repository-a",
+      issues: {
+        "repository-a": [
+          { number: 244, labels: ["hand-back"], updatedAt: fresh },
+          { number: 245, labels: ["hand-back"], updatedAt: fresh },
+          { number: 246, labels: ["hand-back"], updatedAt: fresh },
+        ],
+        "repository-b": [
+          { number: 244, labels: ["hand-back"], updatedAt: fresh },
+          { number: 245, labels: ["hand-back"], updatedAt: fresh },
+          { number: 246, labels: ["hand-back"], updatedAt: old },
+        ],
+      },
+    });
+    try {
+      // 244 is waived only in the INVOKING repository; 245 only in the other;
+      // 246 is waived and past 72 h only in the other.
+      harness.seedWaiver("repository-a", { changeRef: "GH-244", authorizer: "principal-a" });
+      harness.seedWaiver("repository-b", { changeRef: "GH-245", authorizer: "principal-b" });
+      harness.seedWaiver("repository-b", { changeRef: "GH-246", authorizer: "principal-b" });
+
+      const run = await harness.run(["board", "--all"]);
+      expect(run.exitCode).toBe(0);
+      const gates = (run.data?.gates ?? []) as readonly Record<string, unknown>[];
+      const row = (repository: string, ref: string) =>
+        gates.find((gate) => gate.repository === repository && gate.ref === ref);
+
+      expect(row("repository-a", "244")).toMatchObject({
+        kind: "waiver",
+        waivedBy: "principal-a",
+        ownerSource: "gate-waiver-authorizer",
+      });
+      // The shared ref must NOT import repository-a's waiver.
+      expect(row("repository-b", "244")).toMatchObject({
+        kind: "owner-review",
+        waivedBy: null,
+        ownerSource: "gate-audience",
+      });
+      expect(row("repository-a", "245")).toMatchObject({ kind: "owner-review", waivedBy: null });
+      expect(row("repository-b", "245")).toMatchObject({
+        kind: "waiver",
+        waivedBy: "principal-b",
+        ownerSource: "gate-waiver-authorizer",
+      });
+      expect(row("repository-a", "246")).toMatchObject({ kind: "owner-review", waivedBy: null });
+      expect(row("repository-b", "246")).toMatchObject({
+        kind: "waiver",
+        waivedBy: "principal-b",
+        slaState: "default-applied",
+        default: "owner-review-first",
+      });
+
+      // The 72 h default appends to the owning repository only.
+      expect(harness.readDecisions("repository-b")).toHaveLength(1);
+      expect(harness.readDecisions("repository-a")).toHaveLength(0);
+      // Each store keeps its own waiver ledger.
+      expect(harness.readWaivers("repository-a").map((waiver) => waiver.changeRef)).toEqual([
+        "GH-244",
+      ]);
+      expect(
+        harness
+          .readWaivers("repository-b")
+          .map((waiver) => waiver.changeRef)
+          .sort(),
+      ).toEqual(["GH-245", "GH-246"]);
+    } finally {
+      harness.dispose();
+    }
+  });
+});

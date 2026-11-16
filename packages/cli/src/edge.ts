@@ -128,7 +128,6 @@ import {
   joinAttributionSubstrates,
   type MergeTransactionPorts,
   memberRefFor,
-  newestWaiverByGate,
   normalizeStagedPaths,
   PRODUCTION_CATALOG,
   parkConditionForCause,
@@ -215,6 +214,7 @@ import {
   BLOCKER_DELEGATION_POLICY,
   type BlockerCapabilityFact,
   type BlockerDelegationPolicy,
+  BOARD_MAX_LANES,
   BOARD_MAX_REPOSITORIES,
   type BoardAskFact,
   type BoardLaneFact,
@@ -3123,7 +3123,10 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
     return parseProjectIdentityMarker(markerRead.text)?.projectKey;
   };
 
-  const readTrackerFor = async (root: string): Promise<OwnerGateCollectorRead> => {
+  const readTrackerFor = async (
+    root: string,
+    store: StateStorePort,
+  ): Promise<OwnerGateCollectorRead> => {
     if (!admitted) {
       return {
         ok: false,
@@ -3147,20 +3150,28 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
     if (!result.ok) {
       return { ok: false, collector: "tracker", reason: "failed", code: collectorCode };
     }
-    const store = composition.store;
+    // The waiver join reads the TARGET repository's own ledger (F-1): a
+    // non-invoking repository's recorded waivers must surface there, and a
+    // numeric ref collision must never import the invoking repository's waiver.
     const waiverRead = readAllMergeWaivers(store);
-    const waiversByGate = waiverRead.ok ? newestWaiverByGate(waiverRead.records) : new Map();
+    const waiverRecords = waiverRead.ok ? waiverRead.records : [];
+    // Resolve per REF (not per gate id): several refs may each carry their own
+    // recorded waiver, and the newest matching record wins for one ref.
     const waiverFor = (entityId: string) => {
       const numeric =
         /^[A-Za-z]+-([0-9]+)$/.exec(entityId)?.[1] ??
         (/^[0-9]+$/.test(entityId) ? entityId : undefined);
-      for (const waiver of waiversByGate.values()) {
+      let chosen: (typeof waiverRecords)[number] | undefined;
+      for (const waiver of waiverRecords) {
         if (waiver.gateId !== "owner-gate") continue;
         const changeNumeric = /^[A-Za-z]+-([0-9]+)$/.exec(waiver.changeRef)?.[1];
-        if (changeNumeric !== undefined && changeNumeric === numeric) return waiver;
-        if (waiver.changeRef === entityId) return waiver;
+        const matches =
+          waiver.changeRef === entityId ||
+          (changeNumeric !== undefined && numeric !== undefined && changeNumeric === numeric);
+        if (!matches) continue;
+        if (chosen === undefined || waiver.authorizedAt >= chosen.authorizedAt) chosen = waiver;
       }
-      return undefined;
+      return chosen;
     };
     const gates = result.value.items
       .filter((item) => openItem(item) && ownerAttention(item))
@@ -3286,8 +3297,6 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
         summary: `repository ${repository} root is unavailable`,
       };
     }
-    const tracker = await readTrackerFor(root);
-    if (!tracker.ok) return { ok: false, kind: "status", code: tracker.code };
     const stateLocation =
       entry?.stateLocation ??
       composition.stateLocationFor?.(repository) ??
@@ -3304,6 +3313,8 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
       };
     }
     repositoryStores.set(repository, store);
+    const tracker = await readTrackerFor(root, store);
+    if (!tracker.ok) return { ok: false, kind: "status", code: tracker.code };
 
     const nowMs = composition.nowMs();
     const blockerRead = readBlockerLedger(store);
@@ -3388,51 +3399,37 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
     for (const lane of daemonRead.records) {
       if (lane.state === "failed") failedRefs.add(lane.ref);
     }
+    // Cap BEFORE phase resolution so NFR-5's "<= 1 phase read per active lane
+    // (<= 20)" matches the code; the omitted count is carried to the payload.
+    const laneCandidates: {
+      readonly ref: string;
+      readonly lease?: (typeof leaseRead.active)[number];
+    }[] = [
+      ...leaseRead.active.map((lease) => ({ ref: lease.ref, lease })),
+      ...[...failedRefs]
+        .filter((ref) => !leaseRead.active.some((lease) => lease.ref === ref))
+        .map((ref) => ({ ref })),
+    ].sort((left, right) => (left.ref < right.ref ? -1 : left.ref > right.ref ? 1 : 0));
+    const keptLanes = laneCandidates.slice(0, BOARD_MAX_LANES);
+    const omittedLanes = laneCandidates.length - keptLanes.length;
     const lanes: BoardLaneFact[] = [];
-    const laneRefs = new Set<string>();
-    for (const lease of leaseRead.active) {
-      laneRefs.add(lease.ref);
-      const phase = phaseFor(store, lease.ref);
+    for (const candidate of keptLanes) {
+      const phase = phaseFor(store, candidate.ref);
       if (!phase.ok) {
         return {
           ok: false,
           kind: "board",
           code: "board.state-unavailable",
-          summary: `repository ${repository} phase history for ${lease.ref} is unavailable`,
+          summary: `repository ${repository} phase history for ${candidate.ref} is unavailable`,
         };
       }
+      const lease = candidate.lease;
       lanes.push({
-        ref: lease.ref,
-        laneId: lease.ref,
-        state: failedRefs.has(lease.ref) ? "failed" : "delivering",
-        holder: lease.holder,
-        leaseId: lease.leaseId,
-        ...(phase.phase === null
-          ? {
-              phase: null,
-              ...(phase.phaseUnknownReason === undefined
-                ? {}
-                : { phaseUnknownReason: phase.phaseUnknownReason }),
-            }
-          : { phase: phase.phase }),
-      });
-    }
-    for (const ref of failedRefs) {
-      if (laneRefs.has(ref)) continue;
-      const phase = phaseFor(store, ref);
-      if (!phase.ok) {
-        return {
-          ok: false,
-          kind: "board",
-          code: "board.state-unavailable",
-          summary: `repository ${repository} phase history for ${ref} is unavailable`,
-        };
-      }
-      lanes.push({
-        ref,
-        laneId: ref,
-        state: "failed",
-        holder: null,
+        ref: candidate.ref,
+        laneId: candidate.ref,
+        state: lease === undefined || failedRefs.has(candidate.ref) ? "failed" : "delivering",
+        holder: lease === undefined ? null : lease.holder,
+        ...(lease === undefined ? {} : { leaseId: lease.leaseId }),
         ...(phase.phase === null
           ? {
               phase: null,
@@ -3461,7 +3458,15 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
     }
     return {
       ok: true,
-      facts: { key: repository, gates: tracker.gates, lanes, asks, parks, decisions: records },
+      facts: {
+        key: repository,
+        gates: tracker.gates,
+        lanes,
+        ...(omittedLanes > 0 ? { omittedLanes } : {}),
+        asks,
+        parks,
+        decisions: records,
+      },
     };
   };
 

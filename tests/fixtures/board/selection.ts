@@ -1,13 +1,14 @@
 /**
  * Repository-selection fixtures for the board (GH-297 TC-BOARD-010..016, 064).
  *
- * Composes the real board edge runtime over real temporary checkouts, a seeded
- * host-index document, and per-repository state roots. Only the transport, the
- * index bytes, and the counters are injected; the selection logic under test is
- * the production one.
+ * Composes the real board edge runtime over real temporary checkouts, a real
+ * host-index file, and per-repository state roots. Only the transport, the
+ * indexed issue facts, and the counters are injected; the selection and the
+ * per-repository reads under test are the production ones.
  */
-import { mkdirSync, mkdtempSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { readHostIndexFile } from "../../../packages/adapters/src/file/host-index-store";
 import { nodeRepositoryIo } from "../../../packages/adapters/src/repo/index";
 import { createBoardCommandDefinition } from "../../../packages/cli/src/commands/board";
 import {
@@ -16,15 +17,31 @@ import {
   type StatusTransport,
 } from "../../../packages/cli/src/edge";
 import { type CliDependencies, type CliStreams, runCli } from "../../../packages/cli/src/index";
-import type { ExternalSystemInstance } from "../../../packages/core/src/contracts/index";
 import {
+  type ExternalSystemInstance,
+  HOST_INDEX_SCHEMA,
+  MERGE_WAIVER_SCHEMA,
+  type StateStorePort,
+} from "../../../packages/core/src/contracts/index";
+import {
+  appendMergeWaiver,
   createNodeStateEdge,
   createStateStore,
+  readAllMergeWaivers,
+  readOwnerGateSlaDecisions,
   STATE_SCHEMA_VERSION,
 } from "../../../packages/core/src/state/index";
 import { SYNTHETIC_BRAND } from "../../golden/helpers";
 import { APPROVED_BASE, nonCheckoutDirectory } from "../projects/state-scope";
 import { createRepository, git, removeDirectory } from "../projects/temp-repos";
+
+/** One indexed issue the injected transport answers for a repository. */
+export type SelectionIssue = {
+  readonly number: number;
+  readonly title?: string;
+  readonly labels: readonly string[];
+  readonly updatedAt: string;
+};
 
 export type SelectionRepository = {
   readonly projectKey: string;
@@ -34,7 +51,9 @@ export type SelectionRepository = {
 export type SelectionHarnessOptions = {
   readonly repositories: readonly SelectionRepository[];
   readonly invokingKey: string | undefined;
-  /** Overrides the index read result; the default is a present document. */
+  /** Per-repository issue facts; absent answers an empty tracker page. */
+  readonly issues?: Readonly<Record<string, readonly SelectionIssue[]>>;
+  /** Overrides the real index-file state; the default writes a present file. */
   readonly index?: "absent" | "unreadable" | "unparseable" | "present";
   readonly label?: string;
 };
@@ -49,8 +68,19 @@ export type SelectionRun = {
 
 export type SelectionHarness = {
   readonly hostRoot: string;
+  readonly indexPath: string;
   readonly indexReads: () => number;
+  readonly indexWrites: () => number;
+  readonly indexRevision: () => number;
   readonly storesOpened: readonly string[];
+  /** The per-repository store (the same instance the board reads and writes). */
+  readonly storeFor: (projectKey: string) => StateStorePort;
+  readonly seedWaiver: (
+    projectKey: string,
+    waiver: { readonly changeRef: string; readonly authorizer: string },
+  ) => void;
+  readonly readWaivers: (projectKey: string) => readonly { readonly changeRef: string }[];
+  readonly readDecisions: (projectKey: string) => readonly { readonly gateId: string }[];
   readonly run: (argv: readonly string[]) => Promise<SelectionRun>;
   readonly dispose: () => void;
 };
@@ -65,9 +95,29 @@ const github = (): ExternalSystemInstance => ({
   },
 });
 
-const emptyTransport = (): StatusTransport => ({
+const INDEX_REVISION = 7;
+
+const repositoryNameOf = (url: string): string | undefined =>
+  /\/repos\/[^/]+\/([^/?]+)/u.exec(url)?.[1];
+
+const issuesTransport = (
+  issues: Readonly<Record<string, readonly SelectionIssue[]>>,
+): StatusTransport => ({
   send: async (request) => {
-    if (request.url.includes("/issues?")) return { status: 200, body: [] };
+    if (request.url.includes("/issues?")) {
+      const name = repositoryNameOf(request.url);
+      const rows = name === undefined ? [] : (issues[name] ?? []);
+      return {
+        status: 200,
+        body: rows.map((issue) => ({
+          number: issue.number,
+          title: issue.title ?? `Issue ${String(issue.number)}`,
+          state: "open",
+          labels: issue.labels.map((label) => ({ name: label })),
+          updated_at: issue.updatedAt,
+        })),
+      };
+    }
     if (request.url.includes("/pulls?")) return { status: 200, body: [] };
     return { status: 404, body: {} };
   },
@@ -85,16 +135,31 @@ export const createSelectionHarness = (options: SelectionHarnessOptions): Select
       : undefined;
   const hostRoot = join(base, "host");
   mkdirSync(hostRoot, { recursive: true });
+  const indexPath = join(hostRoot, "host-index.json");
   const roots = new Map<string, string>();
   const stateLocations = new Map<string, string>();
+  const storesByKey = new Map<string, StateStorePort>();
   const storesOpened: string[] = [];
   for (const repository of options.repositories) {
     const root = createRepository(base, `checkout-${repository.projectKey}`);
     git(root, ["remote", "add", "origin", `https://github.com/acme/${repository.projectKey}.git`]);
     roots.set(repository.projectKey, root);
-    stateLocations.set(repository.projectKey, join(hostRoot, "projects", repository.projectKey));
+    const stateLocation = join(hostRoot, "projects", repository.projectKey);
+    stateLocations.set(repository.projectKey, stateLocation);
+    storesByKey.set(
+      repository.projectKey,
+      createStateStore(
+        {
+          level: "local",
+          workspaceId: "default",
+          fenceNamespace: "cli",
+          schemaVersion: STATE_SCHEMA_VERSION,
+          stateDirectory: stateLocation,
+        },
+        { driver: "jsonl", edge: createNodeStateEdge() },
+      ),
+    );
   }
-  let indexReads = 0;
   const document: BoardHostIndexDocument = {
     projects: options.repositories
       .filter((repository) => repository.rootExists !== false)
@@ -104,6 +169,24 @@ export const createSelectionHarness = (options: SelectionHarnessOptions): Select
         stateLocation: stateLocations.get(repository.projectKey) ?? "",
       })),
   };
+  if (options.index !== "absent") {
+    const text =
+      options.index === "unparseable"
+        ? "{not-json"
+        : JSON.stringify({
+            schema: HOST_INDEX_SCHEMA,
+            revision: INDEX_REVISION,
+            projects: document.projects,
+          });
+    if (options.index === "unreadable") {
+      // A directory at the file path makes the real reader report `unreadable`.
+      mkdirSync(indexPath, { recursive: true });
+    } else {
+      writeFileSync(indexPath, text, "utf8");
+    }
+  }
+  let indexReads = 0;
+  const indexWrites = 0;
   const composition = {
     store: createStateStore(
       {
@@ -127,7 +210,7 @@ export const createSelectionHarness = (options: SelectionHarnessOptions): Select
       credentials: {
         resolve: () => ({ ok: true as const, material: { value: "fixture-token" } }),
       },
-      transport: emptyTransport(),
+      transport: issuesTransport(options.issues ?? {}),
     },
     nowIso: () => "2026-11-06T12:00:00Z",
     nowMs: () => Date.parse("2026-11-06T12:00:00Z"),
@@ -136,29 +219,33 @@ export const createSelectionHarness = (options: SelectionHarnessOptions): Select
     hostRoot,
     readHostIndex: () => {
       indexReads += 1;
-      if (options.index === "absent") return { state: "absent" as const };
       if (options.index === "unreadable") return { state: "unreadable" as const };
-      if (options.index === "unparseable") {
-        return { state: "present" as const, text: "{not-json" };
-      }
-      return { state: "present" as const, text: "seeded" };
+      return readHostIndexFile(hostRoot);
     },
+    hostIndexPath: () => indexPath,
+    // The indexed facts are injected (the fixture keys are not minted); the
+    // real file at `indexPath` is the snapshot target the write audit measures.
     parseHostIndex: (text: string) =>
-      text === "seeded" && options.index !== "unparseable" ? document : undefined,
+      text.trim().length === 0 || options.index === "unparseable" ? undefined : document,
     rootExists: (root: string) => root.length > 0,
     stateLocationFor: (projectKey: string) =>
       stateLocations.get(projectKey) ?? join(hostRoot, "projects", projectKey),
     openStore: (stateLocation: string) => {
       storesOpened.push(stateLocation);
-      return createStateStore(
-        {
-          level: "local" as const,
-          workspaceId: "default",
-          fenceNamespace: "cli",
-          schemaVersion: STATE_SCHEMA_VERSION,
-          stateDirectory: stateLocation,
-        },
-        { driver: "jsonl" as const, edge: createNodeStateEdge() },
+      const key = [...stateLocations.entries()].find(([, value]) => value === stateLocation)?.[0];
+      const found = key === undefined ? undefined : storesByKey.get(key);
+      return (
+        found ??
+        createStateStore(
+          {
+            level: "local" as const,
+            workspaceId: "default",
+            fenceNamespace: "cli",
+            schemaVersion: STATE_SCHEMA_VERSION,
+            stateDirectory: stateLocation,
+          },
+          { driver: "jsonl" as const, edge: createNodeStateEdge() },
+        )
       );
     },
   };
@@ -200,10 +287,47 @@ export const createSelectionHarness = (options: SelectionHarnessOptions): Select
       ...(error?.code === undefined ? {} : { errorCode: error.code }),
     };
   };
+  const storeFor = (projectKey: string): StateStorePort => {
+    const store = storesByKey.get(projectKey);
+    if (store === undefined) throw new Error(`no store for ${projectKey}`);
+    return store;
+  };
+  const indexRevision = (): number => {
+    const parsed = JSON.parse(readFileSync(indexPath, "utf8")) as { revision?: number };
+    return parsed.revision ?? 0;
+  };
   return {
     hostRoot,
+    indexPath,
     indexReads: () => indexReads,
+    indexWrites: () => indexWrites,
+    indexRevision,
     storesOpened,
+    storeFor,
+    seedWaiver: (projectKey, waiver) => {
+      const appended = appendMergeWaiver(storeFor(projectKey), {
+        fenceToken: `fixture-board-waiver-${projectKey}`,
+        record: {
+          schema: MERGE_WAIVER_SCHEMA,
+          changeRef: waiver.changeRef,
+          gateId: "owner-gate",
+          gateClass: "owner-review",
+          authorizer: waiver.authorizer,
+          authorizedAt: "2026-11-06T10:00:00Z",
+        },
+      });
+      if (!appended.ok) throw new Error(appended.error.code);
+    },
+    readWaivers: (projectKey) => {
+      const read = readAllMergeWaivers(storeFor(projectKey));
+      if (!read.ok) throw new Error(read.error.code);
+      return read.records;
+    },
+    readDecisions: (projectKey) => {
+      const read = readOwnerGateSlaDecisions(storeFor(projectKey));
+      if (!read.ok) throw new Error(read.error.code);
+      return read.value.records;
+    },
     run,
     dispose: () => {
       removeDirectory(base);

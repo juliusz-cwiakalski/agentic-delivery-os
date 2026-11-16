@@ -521,6 +521,7 @@ TC IDs use the `BOARD` feature prefix and follow the specification's capability 
 
 **Notes / Clarifications**:
 - This case is `SC-M2-S4-02`'s listing-and-count half; `TC-BOARD-012` supplies the collision half the seed's count assertion cannot detect, and `TC-BOARD-084` proves the seed would fail if the cap mis-retained the invoking key.
+- **Remediation 2026-11-16 (review iter-1 F-1):** the same suite adds the per-repository waiver-join cell. Two repositories share refs 244/245/246: 244 is waived only in the invoking repository, 245 only in the other, and 246 is waived and past 72 h only in the other. The fleet run must render 244 `owner-review` under the other key (no imported waiver), surface 245's recorded authorizer, apply the 72 h default to the other repository's 246 only, and append the decision record to that repository's own store. The cell fails both the pre-fix contamination (invoking-store waivers leaking across a shared ref) and the pre-fix loss (a non-invoking repository's waivers never surfacing).
 
 #### TC-BOARD-012 - Two repositories holding one ref produce two distinct rows with their own phase, holder, and state
 
@@ -764,6 +765,8 @@ TC IDs use the `BOARD` feature prefix and follow the specification's capability 
 
 #### TC-BOARD-024 - Machine bounds and field caps hold, and every drop is counted
 
+**Remediation 2026-11-16 (review iter-1 F-4/F-5):** two further cells. A gate `kind` of 121–160 characters is preserved and reported untruncated (the detector now matches the delivered 160-character kind clamp), while an over-160 kind is clamped to 160 and marks truncation. An edge-side active-lane omission (the edge caps lane facts at 20 before phase resolution) is carried into `omittedBySection.lanes`/`omitted` with `truncated: true` and no fabricated lane row, keeping the phase-read cost inside NFR-5.
+
 **Objective**: Prove the bounded screen is truthful: caps do not silently widen, and every dropped row is counted.
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
@@ -1001,10 +1004,11 @@ TC IDs use the `BOARD` feature prefix and follow the specification's capability 
 2. Assert the options list contains `--all`, `--project` (with a value placeholder), and `--json`; assert the exit-code section lists `0`, `1`, and `2` with their meanings.
 3. Assert `seeAlso` includes the M2 board reference page.
 4. Assert zero state, git, network, configuration, and spawn activity.
-5. Run `--version`; assert exit `0` and the brand-derived version output.
+5. Run `board --version`; assert exit `0` and the brand-derived version output.
+6. **Remediation 2026-11-16 (review iter-1 F-2):** assert the command-scoped version intercept never bypasses containment — `notacommand --version --json` keeps the classified composition failure (`fallback.internal`, exit `2`) and never prints version text, and `board positional --version --json` keeps `fallback.invocation` at exit `1`. Every known family answers `<family> --version` without composing a program.
 
 **Expected Outcome**:
-- Complete, side-effect-free help for the new family.
+- Complete, side-effect-free help for the new family, and a command-scoped version that answers only for a known command with no positional.
 
 #### TC-BOARD-042 - The reference page and the coverage-inventory row satisfy the help coverage check
 
@@ -1209,12 +1213,13 @@ TC IDs use the `BOARD` feature prefix and follow the specification's capability 
 **Related IDs**: AC-F9-2, F-9, NFR-6, DEC-6
 **Test Type(s)**: Integration, Measured
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/board-write-discipline.test.ts` (new); uses `tests/fixtures/projects/host-root.ts` snapshots, `tests/behaviour/verify-support.ts` `guardStore`, and the host-index counters
+**Target Layer / Location**: `tests/behaviour/board-write-discipline.test.ts`; uses the selection fixture's real seeded `host-index.json` host root and per-repository stores, `tests/behaviour/verify-support.ts` `guardStore`, and the host-index read/write counters
 **Tags**: @backend, @behaviour
 
 **Preconditions**:
-- Two-repository host with an existing host index and pre-existing store artifacts.
-- `snapshotTree` before and after each run; index-access counters.
+- Two-repository host with a real seeded host index file (fixed revision) and pre-existing store artifacts.
+- `snapshot` of the host root (the index file and every artifact under `projects/`) before and after each run; index read/write counters and the revision read from the file.
+- **Remediation 2026-11-16 (review iter-1 F-3):** the no-default cell asserts a byte-identical host root, one index read, zero index writes, and an unchanged revision; the default-applying cell asserts exactly the owning repository's decision ledger changes (no other repository's ledger, no index change); the mutant rewrites the index revision in place and the snapshot diff must name `host-index.json`, proving the assertion is live.
 
 **Steps**:
 1. Run a no-default board; assert the host root (index file and every artifact under `projects/`) is byte-and-mtime identical apart from the two permitted side effects (create-once marker outside the host root; removal of a leftover store `*.tmp` sibling), and the index counters show zero writes.
