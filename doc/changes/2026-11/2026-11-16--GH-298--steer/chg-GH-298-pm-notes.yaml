@@ -12,7 +12,7 @@ phases:
   delivery: { started: null, completed: 2026-11-16T16:42:49.170Z }
   system_spec_update: { started: null, completed: 2026-11-16T17:36:24.341Z }
   review_fix: { started: null, completed: 2026-11-16T18:30:53.537Z }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: null, completed: 2026-11-16T19:29:38.537Z }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions: []
@@ -299,4 +299,24 @@ notes:
       defaultState pending/applied can light (no ticket created without owner
       approval)."
     type: info
+    date: "2026-11-16"
+  - text: "Quality gates PASSED. Range lint gate (mandatory): VERDICT PASS — base
+      cfb0ce8d (merge-base), head 0fc66d89, commits 19, offending 0, mode none
+      (PASS path emits no remediation mode), commitlint binary
+      node_modules/.bin/commitlint origin repository-local. Aggregate gate:
+      first run FAILED exit 1 with 2 wall-clock timeout failures
+      (forbidden-literals 5s git-fixture, daemon-bounds 20s) under a loaded host
+      (sibling repo battery concurrent, load 10-14); both passed in isolation
+      (27/27, 3/3); clean quiet-host re-run at HEAD 0fc66d89 PASSED exit 0 —
+      9643 pass / 4 skip / 0 fail, 9647 tests / 1212 files, lint/
+      format/build/typecheck/boundaries/memory/prompt/help/exports all green. No
+      timeout or assertion weakened."
+    type: info
+    date: "2026-11-16"
+  - text: "RETRO: two full-battery attempts were SIGTERM-killed at exactly 24576
+      bytes of captured output (harness output cap, mid pretest build); the
+      authoritative run needed setsid nohup detachment with file redirection.
+      Lesson for runners: long gates must run detached — the harness output cap
+      kills foreground capture mid-run and wastes ~20 min per attempt."
+    type: retro
     date: "2026-11-16"
