@@ -2753,6 +2753,27 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "ceremonyArtifactsDirectoryName",
     "createCeremonyArtifactStore",
   ],
+  "core/src/domain/ceremony-intake.ts": [
+    "ceremonyNoteLevel",
+    "deriveCeremonyCadenceWindow",
+    "explicitTriggerResolution",
+    "isCeremonyScopeKeyDerivation",
+    "matchDeclaredTrigger",
+    "resolveCeremonyIntake",
+    "validateCeremonyNoteForDeclaration",
+  ],
+  "core/src/domain/ceremony-run.ts": [
+    "CEREMONY_NIGHT_WATCH_CHECKS",
+    "compactCeremonyCarried",
+    "declarationHasSyncStep",
+    "executeCeremonyAgenda",
+    "flattenCeremonyAgenda",
+    "runCeremony",
+  ],
+  "core/src/domain/ceremony-resume.ts": [
+    "resumeCeremony",
+    "validateCeremonyStepSequence",
+  ],
 };
 
 const listTypeScriptFiles = (packageDir: string): string[] => {

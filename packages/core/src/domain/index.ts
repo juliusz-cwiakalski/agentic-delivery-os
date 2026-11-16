@@ -898,3 +898,41 @@ export {
   validateCeremonyDeclaration,
   validateCeremonyDocument,
 } from "./ceremony-declaration.js";
+/** The ceremony intake resolution (GH-296 F-1, F-2, F-4, F-9). */
+export {
+  ceremonyNoteLevel,
+  deriveCeremonyCadenceWindow,
+  explicitTriggerResolution,
+  isCeremonyScopeKeyDerivation,
+  matchDeclaredTrigger,
+  resolveCeremonyIntake,
+  validateCeremonyNoteForDeclaration,
+  type CeremonyIntake,
+  type CeremonyIntakeFailure,
+  type CeremonyIntakeFailureCode,
+  type CeremonyIntakeOutcome,
+  type CeremonyIntakeRequest,
+  type CeremonyRunIdentity,
+} from "./ceremony-intake.js";
+/** The ceremony runner engine (GH-296 F-4, F-8). */
+export {
+  CEREMONY_NIGHT_WATCH_CHECKS,
+  compactCeremonyCarried,
+  declarationHasSyncStep,
+  executeCeremonyAgenda,
+  flattenCeremonyAgenda,
+  runCeremony,
+  type CeremonyCarriedSummary,
+  type CeremonyEngineFailure,
+  type CeremonyRunData,
+  type CeremonyRunEnvironment,
+  type CeremonyRunOutcome,
+  type CeremonyRunRequest,
+  type CeremonyStepOutcome,
+} from "./ceremony-run.js";
+/** Ceremony resume (GH-296 F-4): torn refusal and first-unverified restart. */
+export {
+  resumeCeremony,
+  validateCeremonyStepSequence,
+  type CeremonyResumeRequest,
+} from "./ceremony-resume.js";

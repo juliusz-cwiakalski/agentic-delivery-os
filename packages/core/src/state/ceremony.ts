@@ -130,7 +130,7 @@ const validStep = (value: unknown): value is CeremonyStepRecord => {
   if (!isFiniteNumber(value.startedAtMs) || !isFiniteNumber(value.endedAtMs)) return false;
   if (!isFiniteNumber(value.durationMs) || value.durationMs < 0) return false;
   if (!isNonEmptyString(value.kind) || !isNonEmptyString(value.slot)) return false;
-  if (!isNonEmptyString(value.artifactRef)) return false;
+  if (typeof value.artifactRef !== "string") return false;
   if (
     value.outcome !== "verified" &&
     value.outcome !== "unverified" &&
