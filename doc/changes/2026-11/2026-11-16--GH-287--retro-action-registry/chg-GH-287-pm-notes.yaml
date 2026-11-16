@@ -11,7 +11,7 @@ phases:
   delivery: { started: null, completed: 2026-11-16T16:13:11.559Z }
   system_spec_update: { started: null, completed: 2026-11-16T16:30:05.049Z }
   review_fix: { started: null, completed: 2026-11-16T18:41:44.838Z }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: null, completed: 2026-11-16T20:38:05.069Z }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
@@ -468,8 +468,8 @@ notes:
     type: info
     date: "2026-11-16"
   - text: "Quality gates iteration 2: state-fence fix VERIFIED (fix 09a86957,
-      setDefaultTimeout(120_000) per closeout precedent — zero fence failures
-      in battery 2). Full battery 2 (clean, uncontended; log
+      setDefaultTimeout(120_000) per closeout precedent — zero fence failures in
+      battery 2). Full battery 2 (clean, uncontended; log
       tmp/tmpdir/gh287-quality-gates-pnpm-check-2.log) FAILED exit 1 with the
       same single-flake signature but a DIFFERENT test: tests/behaviour/
       projects-scope-isolation.test.ts TC-PROJ-002 timed out at the 5s default
@@ -480,7 +480,32 @@ notes:
       flakes under full-battery load; one-at-a-time fixing burns a 30-min
       battery per discovery. Remediation iteration 3 via @fixer: evidence-
       driven pass — measure per-test durations across one full test-suite run
-      (junit reporter), apply the same one-line budget convention to every
-      file with a measured >4s test, commit, then battery re-run."
+      (junit reporter), apply the same one-line budget convention to every file
+      with a measured >4s test, commit, then battery re-run."
+    type: info
+    date: "2026-11-16"
+  - text: "Fixer iteration 3 (c1fe34b7): projects-scope-isolation.test.ts budgeted
+      (same one-line convention). Evidence pass (junit per-test durations over
+      one full suite run, tmp/tmpdir/junit-durations.xml): 20 tests >4s across
+      17 files — every one already carries an explicit budget (per-test third-
+      arg convention predating setDefaultTimeout); zero further edits required.
+      The fixer's full suite run: 9623 pass / 0 fail / 4 skip. Retro: two 30-min
+      batteries were spent discovering two members of a class whose membership
+      was enumerable in one 16-min measured run — future deliveries with heavy
+      integration suites should run the duration scan BEFORE the first full
+      battery and budget the near-edge class up front."
+    type: retro
+    date: "2026-11-16"
+  - text: "Quality gates: PASS at final HEAD c1fe34b7. Full battery 3
+      (TMPDIR=$PWD/tmp/tmpdir pnpm check, log
+      tmp/tmpdir/gh287-quality-gates-pnpm-check-3.log) exit 0 — 9623 pass / 4
+      skip / 0 fail across 9627 tests (1209 files, 1137.8s); check:boundaries no
+      violations (437 modules); ambient-globals 212 files clean;
+      workspace-entrypoints OK; secret-read-boundary 404 files clean;
+      memory-lint errors=0; prompt-conformance 5 clean; help-guide-coverage
+      covered; exports-parity 5 publishables pass. Range lint gate VERDICT PASS
+      — base main-tools resolved to merge-base cfb0ce8d (refs/remotes/
+      origin/main-tools), 23 commits in range, 0 offending, mode none;
+      commitlint binary node_modules/.bin/commitlint, origin repository-local."
     type: info
     date: "2026-11-16"
