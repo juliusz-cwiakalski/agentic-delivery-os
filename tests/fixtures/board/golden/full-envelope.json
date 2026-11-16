@@ -1,0 +1,281 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "run-board-full-fixture",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 0
+  },
+  "data": {
+    "schemaVersion": "delivery.board.v1",
+    "audience": "owner",
+    "scope": "repository",
+    "selection": "all",
+    "repositories": [
+      "delivery-a-1a2b3c4d",
+      "delivery-b-5e6f7a8b"
+    ],
+    "lanes": [
+      {
+        "repository": "delivery-a-1a2b3c4d",
+        "ref": "GH-7010",
+        "laneId": "GH-7010",
+        "state": "delivering",
+        "phase": "delivery",
+        "holder": "principal-a",
+        "leaseId": "lease-7010",
+        "owner": "principal-a",
+        "ownerSource": "lane-lease-holder"
+      },
+      {
+        "repository": "delivery-a-1a2b3c4d",
+        "ref": "GH-7011",
+        "laneId": "GH-7011",
+        "state": "failed",
+        "phase": null,
+        "phaseUnknownReason": "phase-unrecorded",
+        "holder": null,
+        "owner": null,
+        "ownerSource": "lane-lease-holder"
+      },
+      {
+        "repository": "delivery-b-5e6f7a8b",
+        "ref": "GH-7110",
+        "laneId": "GH-7110",
+        "state": "delivering",
+        "phase": "delivery",
+        "holder": "principal-a",
+        "leaseId": "lease-7110",
+        "owner": "principal-a",
+        "ownerSource": "lane-lease-holder"
+      },
+      {
+        "repository": "delivery-b-5e6f7a8b",
+        "ref": "GH-7111",
+        "laneId": "GH-7111",
+        "state": "failed",
+        "phase": null,
+        "phaseUnknownReason": "phase-unrecorded",
+        "holder": null,
+        "owner": null,
+        "ownerSource": "lane-lease-holder"
+      }
+    ],
+    "gates": [
+      {
+        "id": "GH-7002:waiver",
+        "kind": "waiver",
+        "ref": "GH-7002",
+        "age": 108000000,
+        "slaState": "escalated",
+        "default": null,
+        "waivedBy": "principal-w",
+        "repository": "delivery-a-1a2b3c4d",
+        "condition": "waiver:escalated",
+        "owner": "principal-w",
+        "ownerSource": "gate-waiver-authorizer"
+      },
+      {
+        "id": "GH-7001:owner-review",
+        "kind": "owner-review",
+        "ref": "GH-7001",
+        "age": 93600000,
+        "slaState": "escalated",
+        "default": null,
+        "waivedBy": null,
+        "repository": "delivery-a-1a2b3c4d",
+        "condition": "owner-review:escalated",
+        "owner": "owner",
+        "ownerSource": "gate-audience"
+      },
+      {
+        "id": "GH-7003:owner-review",
+        "kind": "owner-review",
+        "ref": "GH-7003",
+        "age": 7200000,
+        "slaState": "fresh",
+        "default": null,
+        "waivedBy": null,
+        "repository": "delivery-a-1a2b3c4d",
+        "condition": "owner-review:fresh",
+        "owner": "owner",
+        "ownerSource": "gate-audience"
+      },
+      {
+        "id": "GH-7102:waiver",
+        "kind": "waiver",
+        "ref": "GH-7102",
+        "age": 108000000,
+        "slaState": "escalated",
+        "default": null,
+        "waivedBy": "principal-w",
+        "repository": "delivery-b-5e6f7a8b",
+        "condition": "waiver:escalated",
+        "owner": "principal-w",
+        "ownerSource": "gate-waiver-authorizer"
+      },
+      {
+        "id": "GH-7101:owner-review",
+        "kind": "owner-review",
+        "ref": "GH-7101",
+        "age": 93600000,
+        "slaState": "escalated",
+        "default": null,
+        "waivedBy": null,
+        "repository": "delivery-b-5e6f7a8b",
+        "condition": "owner-review:escalated",
+        "owner": "owner",
+        "ownerSource": "gate-audience"
+      },
+      {
+        "id": "GH-7103:owner-review",
+        "kind": "owner-review",
+        "ref": "GH-7103",
+        "age": 7200000,
+        "slaState": "fresh",
+        "default": null,
+        "waivedBy": null,
+        "repository": "delivery-b-5e6f7a8b",
+        "condition": "owner-review:fresh",
+        "owner": "owner",
+        "ownerSource": "gate-audience"
+      }
+    ],
+    "asks": [
+      {
+        "repository": "delivery-a-1a2b3c4d",
+        "id": "ask-7020",
+        "type": "approval",
+        "ref": "GH-7002",
+        "lane": "GH-7002",
+        "question": "Approve the merge?",
+        "askedAt": "2026-11-06T09:00:00Z",
+        "age": 10800000,
+        "status": "open",
+        "owner": "owner",
+        "ownerSource": "ask-audience",
+        "drawnDefault": "owner-review-first",
+        "defaultState": "pending"
+      },
+      {
+        "repository": "delivery-a-1a2b3c4d",
+        "id": "ask-ref-less-delivery-a-1a2b3c4d",
+        "type": "clarification",
+        "ref": null,
+        "lane": "none",
+        "question": "Which ref should this attach to?",
+        "askedAt": "2026-11-06T10:00:00Z",
+        "age": 7200000,
+        "status": "open",
+        "owner": "owner",
+        "ownerSource": "ask-audience",
+        "drawnDefault": null,
+        "defaultState": "none"
+      },
+      {
+        "repository": "delivery-b-5e6f7a8b",
+        "id": "ask-7120",
+        "type": "approval",
+        "ref": "GH-7102",
+        "lane": "GH-7102",
+        "question": "Approve the merge?",
+        "askedAt": "2026-11-06T09:00:00Z",
+        "age": 10800000,
+        "status": "open",
+        "owner": "owner",
+        "ownerSource": "ask-audience",
+        "drawnDefault": "owner-review-first",
+        "defaultState": "pending"
+      },
+      {
+        "repository": "delivery-b-5e6f7a8b",
+        "id": "ask-ref-less-delivery-b-5e6f7a8b",
+        "type": "clarification",
+        "ref": null,
+        "lane": "none",
+        "question": "Which ref should this attach to?",
+        "askedAt": "2026-11-06T10:00:00Z",
+        "age": 7200000,
+        "status": "open",
+        "owner": "owner",
+        "ownerSource": "ask-audience",
+        "drawnDefault": null,
+        "defaultState": "none"
+      }
+    ],
+    "parked": [
+      {
+        "repository": "delivery-a-1a2b3c4d",
+        "ref": "GH-7030",
+        "reason": "peak-window",
+        "until": "2026-11-06T18:00:00Z",
+        "preservation": "preserved",
+        "providerProfile": "primary",
+        "owner": null,
+        "ownerSource": "park-control"
+      },
+      {
+        "repository": "delivery-a-1a2b3c4d",
+        "ref": "GH-7031",
+        "reason": "owner-hold",
+        "until": null,
+        "untilReason": "owner-hold-no-expiry",
+        "owner": null,
+        "ownerSource": "park-control"
+      },
+      {
+        "repository": "delivery-b-5e6f7a8b",
+        "ref": "GH-7130",
+        "reason": "peak-window",
+        "until": "2026-11-06T18:00:00Z",
+        "preservation": "preserved",
+        "providerProfile": "primary",
+        "owner": null,
+        "ownerSource": "park-control"
+      },
+      {
+        "repository": "delivery-b-5e6f7a8b",
+        "ref": "GH-7131",
+        "reason": "owner-hold",
+        "until": null,
+        "untilReason": "owner-hold-no-expiry",
+        "owner": null,
+        "ownerSource": "park-control"
+      }
+    ],
+    "collectors": [
+      {
+        "collector": "tracker",
+        "outcome": "available",
+        "repository": "delivery-a-1a2b3c4d"
+      },
+      {
+        "collector": "lanes",
+        "outcome": "available",
+        "repository": "delivery-a-1a2b3c4d"
+      },
+      {
+        "collector": "tracker",
+        "outcome": "available",
+        "repository": "delivery-b-5e6f7a8b"
+      },
+      {
+        "collector": "lanes",
+        "outcome": "available",
+        "repository": "delivery-b-5e6f7a8b"
+      }
+    ],
+    "ownerHold": {
+      "active": false
+    },
+    "stateSource": "delivery.status-facts.v1",
+    "truncated": false,
+    "omitted": 0,
+    "omittedBySection": {
+      "repositories": 0,
+      "lanes": 0,
+      "gates": 0,
+      "asks": 0,
+      "parked": 0
+    }
+  }
+}

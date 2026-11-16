@@ -1,6 +1,6 @@
 # board(1)
 
-Status: Proposed (M2)
+Status: Delivered (M2, GH-297)
 
 ## NAME
 
@@ -27,12 +27,12 @@ checkout. `--all` spans managed repositories. The default is the current
 checkout. The board is a host view over repository keys; it is not
 group-scoped, and no board surface enumerates groups.
 
-The `board` command is defined in the edge composition but not composed by
-the production entrypoint, so it does not answer from the root listing today;
-M2-S4 has to mount it. The remainder beyond the M1 view is planned for M2-S4
-and builds on the per-repository state scope and host index delivered by
-M2-S11. See [../entrypoint-delta.md](../entrypoint-delta.md) for the root
-delta and [../contracts.md](../contracts.md) for the contract.
+The production entrypoint composes `board` unconditionally and advertises it
+as the 21st prompt-required family. The four sections project from the shared
+`delivery.status-facts.v1` bundle and the delivered lane/phase fold, and the
+repository set resolves through the delivered multi-repository state scope and
+host index (M2-S11). See [../entrypoint-delta.md](../entrypoint-delta.md) for
+the root delta and [../contracts.md](../contracts.md) for the contract.
 
 ## OPTIONS
 

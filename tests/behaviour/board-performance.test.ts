@@ -107,3 +107,54 @@ describe("TC-SLA-027 performance", () => {
     expect(busyRuns[2] ?? 0).toBeGreaterThan(noopRuns[2] ?? 0);
   });
 });
+
+import type { BoardRepositoryFacts } from "../../packages/core/src/contracts/index";
+/**
+ * TC-BOARD-071 — the pure four-section projection and render of a cap-sized
+ * two-repository board fits the 50 ms median, with every sample printed
+ * (AC-NFR5-1, NFR-8, GAP-T2).
+ */
+import { projectBoard } from "../../packages/core/src/domain/owner-gate-sla";
+import { fullBoardRepositories } from "../fixtures/board/golden/full";
+import { BOARD_NOW_ISO, BOARD_NOW_MS } from "../fixtures/board/matrix";
+
+const fullFacts = (): BoardRepositoryFacts[] =>
+  fullBoardRepositories().map((repository) => ({
+    key: repository.key,
+    gates: repository.gates ?? [],
+    lanes: repository.lanes ?? [],
+    asks: repository.asks ?? [],
+    parks: repository.parks ?? [],
+    decisions: [],
+  }));
+
+describe("TC-BOARD-071 four-section projection budget", () => {
+  test("warm median of five <= 50 ms with the samples printed", () => {
+    const input = {
+      audience: "owner" as const,
+      scope: "repository" as const,
+      selection: "all" as const,
+      repositories: fullFacts(),
+      omittedRepositories: 0,
+      ownerHold: { active: false as const },
+      policy: shippedPolicy(),
+      nowMs: BOARD_NOW_MS,
+      nowIso: BOARD_NOW_ISO,
+    };
+    const runOnce = (): number => {
+      const started = performance.now();
+      const projection = projectBoard(input);
+      renderBoardHuman(projection.data, SYNTHETIC_BRAND);
+      return performance.now() - started;
+    };
+    runOnce();
+    const samples = Array.from({ length: 5 }, () => runOnce());
+    const sorted = [...samples].sort((left, right) => left - right);
+    const median = sorted[2] ?? 0;
+    console.log(
+      `board-four-section projection+render samples=${samples.map((sample) => sample.toFixed(3)).join(",")} median=${median.toFixed(3)}ms repositories=${String(input.repositories.length)}`,
+    );
+    expect(median).toBeLessThanOrEqual(BUDGET_MS);
+    expect(input.repositories).toHaveLength(2);
+  });
+});

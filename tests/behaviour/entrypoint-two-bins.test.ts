@@ -9,13 +9,13 @@
  */
 import { describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { resolveBrandIdentity } from "../../packages/core/src/branding";
 import { runEntrypoint } from "../../packages/cli/src/entrypoint";
-import { PROMPT_REQUIRED_COMMANDS } from "../../packages/cli/src/help/prompt-required-commands";
 import { allHelpEntries, renderHelp, renderRootHelp } from "../../packages/cli/src/help";
+import { PROMPT_REQUIRED_COMMANDS } from "../../packages/cli/src/help/prompt-required-commands";
+import { resolveBrandIdentity } from "../../packages/core/src/branding";
 import { bufferSink } from "../golden/helpers";
 
 const ROOT = process.cwd();
@@ -196,14 +196,14 @@ describe("TC-BIN-003 help family parity is exact and non-vacuous", () => {
   const alias = identityOf("delivery-os");
   const next = identityOf("jaiship");
 
-  test("family-parity: both help renders carry exactly the declared twenty families", () => {
+  test("family-parity: both help renders carry exactly the declared twenty-one families", () => {
     const declared = [...PROMPT_REQUIRED_COMMANDS].sort();
     for (const brand of [alias, next]) {
       expect([...familyRows(renderRootHelp(brand))].sort()).toEqual(declared);
     }
     // The rendered order is identical across the two bins (PAR-TP-1).
     expect(familyRows(renderRootHelp(alias))).toEqual(familyRows(renderRootHelp(next)));
-    expect(PROMPT_REQUIRED_COMMANDS.length).toBe(20);
+    expect(PROMPT_REQUIRED_COMMANDS.length).toBe(21);
   });
 
   test("family-parity: the normalised texts are identical and only the binary name differs", () => {
@@ -359,7 +359,7 @@ describe("TC-BIN-006 the install-path read answers per identity without adding a
       expect((await readInstallPath(name)).stdout).toBe(`${brand.installPath}\n`);
     }
     expect(PROMPT_REQUIRED_COMMANDS as readonly string[]).not.toContain("--print-install-path");
-    expect(familyRows(renderRootHelp(identityOf("jaiship"))).length).toBe(20);
+    expect(familyRows(renderRootHelp(identityOf("jaiship"))).length).toBe(21);
     expect(renderRootHelp(identityOf("jaiship"))).not.toContain("--print-install-path");
   });
 });
