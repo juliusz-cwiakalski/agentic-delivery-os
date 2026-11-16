@@ -84,6 +84,12 @@ const NON_TAXONOMY_GROUPS: Readonly<Record<string, KindGroupAllowance>> = {
     reason: "queue.graph event producers",
     kindValues: ["dependency-edge", "remove"],
   },
+  // The steer phase-fold projection in the production composition: pm-notes
+  // phase entry timestamps, not event kinds.
+  "packages/cli/src/production.ts": {
+    reason: "steer phase-fold entry shape",
+    objects: [["completed", "started"]],
+  },
   // The provider chain fold's condition-status discriminant: a park evaluation
   // verdict, not an event kind (GH-294: "parked" joined the declared kind set).
   "packages/core/src/provider/chain.ts": {

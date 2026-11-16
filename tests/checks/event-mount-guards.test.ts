@@ -104,7 +104,7 @@ describe("TC-EVT-064 mount negative controls", () => {
     const missing = coverageCommands.filter(
       (command) => !(DELIVERED_INLINE_NAMES as readonly string[]).includes(command),
     );
-    expect(missing).toEqual(["events"]);
+    expect(missing).toEqual(["events", "steer"]);
     expect([...coverageCommands].sort()).toEqual([...PROMPT_REQUIRED_COMMANDS].sort());
   });
 });

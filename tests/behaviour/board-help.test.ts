@@ -75,7 +75,7 @@ describe("TC-BOARD-041 board help", () => {
     expect(stdout.value).not.toContain("example-product 0.0.0");
   });
 
-  test("root help lists board among exactly twenty-two families", async () => {
+  test("root help lists board among exactly twenty-three families", async () => {
     const result = await run(["--help"]);
     expect(result.exitCode).toBe(0);
     const families = result.stdout

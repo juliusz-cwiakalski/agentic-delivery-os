@@ -86,7 +86,7 @@ describe("TC-ATTEMPT-030 the attempts help page is reachable and pure", () => {
     expect(text).toContain("Exit codes:");
   });
 
-  test("the root listing still names twenty-two families and no attempts row", async () => {
+  test("the root listing still names twenty-three families and no attempts row", async () => {
     const { ROOT_HELP, renderRootHelp } = await import("../../packages/cli/src/help");
     const { resolveBrandIdentity } = await import("../../packages/core/src/branding/index");
     const resolved = resolveBrandIdentity({ workingName: "delivery-os" });

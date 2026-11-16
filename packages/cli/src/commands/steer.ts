@@ -226,17 +226,17 @@ const readHandler = (
   if (!phase.ok) return queueUnavailable(phase.error.code);
   const asks = runtime.readAsks();
   if (!asks.ok) return queueUnavailable(asks.error.code);
-  const plan = planSteerRead({
+  const readPlan = planSteerRead({
     records: { messages: read.messages, outcomes: read.outcomes, completions: read.completions },
     phase: phase.value,
     nowMs: runtime.clock.nowMs(),
     nowIso: runtime.clock.nowIso(),
   });
-  if (plan.transitions.length > 0) {
-    const appended = runtime.appendOutcomes(plan.transitions, read);
+  if (readPlan.transitions.length > 0) {
+    const appended = runtime.appendOutcomes(readPlan.transitions, read);
     if (!appended.ok) return queueUnavailable(appended.error.code);
   }
-  return { data: buildSteerReadData(plan, asks.value) };
+  return { data: buildSteerReadData(readPlan, asks.value) };
 };
 
 const completeHandler = (

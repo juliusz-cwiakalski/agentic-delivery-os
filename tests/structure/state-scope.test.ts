@@ -105,6 +105,7 @@ export const STATE_CONSUMERS = [
   "packages/cli/src/commands/board.ts",
   "packages/cli/src/commands/coordinator-loop.ts",
   "packages/cli/src/commands/phase.ts",
+  "packages/cli/src/commands/steer.ts",
   "packages/cli/src/daemon-compose.ts",
   "packages/cli/src/edge.ts",
   "packages/cli/src/production.ts",

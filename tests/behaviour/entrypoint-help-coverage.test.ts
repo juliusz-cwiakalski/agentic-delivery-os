@@ -171,6 +171,7 @@ describe("TC-ENTRY-004 help coverage", () => {
         "events",
         "board",
         "ceremony",
+        "steer",
       ].sort(),
     );
   });
