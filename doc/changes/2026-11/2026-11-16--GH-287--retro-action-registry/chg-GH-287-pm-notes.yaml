@@ -211,7 +211,7 @@ notes:
     type: info
     date: "2026-11-16"
   - text: "Plan phase 4 complete — registry damage classification and the doctor
-      action-registry store verdict. Files: packages/cli/src/edge.ts (additive
+      action-registry store verdict. Commit b4ffd7b. Files: packages/cli/src/edge.ts (additive
       readActionRegistryState plus the readActionState composition seam merged
       with the retro store fact), action-store-boundary suite (new),
       doctor-state, doctor-report, doctor-contract, content-inventory.
@@ -228,7 +228,7 @@ notes:
     date: "2026-11-16"
   - text: "Plan phase 5 complete — the additive `retro action file|close|list` verb
       group, the help surface, the action goldens, and the M2 reference page.
-      Commit to be recorded after the phase commit. Files: commands/retro.ts
+      Commit eea8054. Files: commands/retro.ts
       (grammar + human renders), edge.ts (createRetroCommandRuntime now composes
       the registry port and three action methods; newActionId/newClosureId
       seams), doc/planning/oss-tooling/milestones/m2/commands/retro.md (new),
@@ -247,8 +247,8 @@ notes:
     type: info
     date: "2026-11-16"
   - text: "Plan phase 6 complete — the board's additive ACTIONS section beside the
-      owner asks under the kept delivery.board.v1 identity. Commit to be
-      recorded after the phase commit. Files: contracts/owner-gate-sla.ts
+      owner asks under the kept delivery.board.v1 identity. Commit 16aee76. Files:
+      contracts/owner-gate-sla.ts
       (BoardActionFact/ BoardActionRow, the sixth omission counter, the human
       actions cap), contracts/index.ts (type exports), domain/owner-gate-sla.ts
       (per-repository action projection, ACTIONS render after ASKS, declared
@@ -273,8 +273,8 @@ notes:
     type: info
     date: "2026-11-16"
   - text: "Plan phase 7 complete — follow-through producers: ceremony pass, report
-      fold, cross-level unity, handoff flow. Commit to be recorded after the
-      phase commit. Files: contracts/retro.ts (RetroFollowThroughEntry
+      fold, cross-level unity, handoff flow. Commit 6c827c3. Files:
+      contracts/retro.ts (RetroFollowThroughEntry
       provenance plus the registry-entry reader type), contracts/index.ts,
       domain/retro.ts (the production fold reader merged inside the four
       delivered keys), domain/ ceremony-retro.ts (retroActionCeremonyFacts:
@@ -295,7 +295,8 @@ notes:
       12 / 0."
     type: info
     date: "2026-11-16"
-  - text: "Plan phase 8 complete — the cross-cutting honesty battery. New suites:
+  - text: "Plan phase 8 complete — the cross-cutting honesty battery. Commit
+      a806603. New suites:
       action-determinism, action-bounds, action-write-discipline,
       action-read-cost, action-performance, action-privacy, action-disclosure,
       action-audit, action-hermetic, action-mutants (the 23 declared mutants
@@ -327,8 +328,9 @@ notes:
     type: info
     date: "2026-11-16"
   - text: "Plan phase 9 complete — documentation reconciliation, planning
-      maintenance, changeset, and release obligations. Commit to be recorded
-      after the phase commit. Files: the new feature-retro-action-registry page;
+      maintenance, changeset, and release obligations. Commit 225bded; the
+      delivery-boundary transition landed atomically in 19fe62c. Files: the new
+      feature-retro-action-registry page;
       additive reconciliation of feature-retro-pipeline (the action verb group,
       the registry producer inside the four report keys, the sibling boundary,
       the retired 'enforcement is later work' wording, the action doctor fact),
