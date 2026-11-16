@@ -13,7 +13,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-16T04:10:35.685Z }
   quality_gates: { started: null, completed: 2026-11-16T04:28:32.027Z }
   dod_check: { started: null, completed: 2026-11-16T04:30:54.720Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-16T04:38:18.193Z }
 decisions:
   - text: "DEC-1 scope: deliver M2-S4 exactly as the backlog task line and the M2
       planning pack define it - the full board of lanes, gates, owner asks, and
@@ -315,5 +315,15 @@ notes:
       registered in the forbidden-literals corpus; the single backlog AC is
       machine-checkable via the stateSource equality across board, status, and
       brief payloads. No gaps found; no phase reopen required.
+    type: info
+    date: "2026-11-16"
+  - text: >-
+      PR created:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/327
+      (feat/GH-297/board -> main-tools, head
+      f21c7d593e4370387c189540d73f3c6990a070c6). Issue 297 labels set to
+      change,review and assigned to juliusz-cwiakalski; one comment with the PR
+      link posted. PR left open for review; merge authority is the CEO (Mode A)
+      or the human via batch-deliver.sh (Mode B).
     type: info
     date: "2026-11-16"
