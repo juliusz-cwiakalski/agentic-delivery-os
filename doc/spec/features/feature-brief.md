@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-BRIEF
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-13
+last_updated: 2026-11-16
 owners: ["engineering"]
 service: delivery-os
-summary: "The read-only brief command and its delivery.brief.v1 payload: one deterministic, decision-first, one-screen render projected from the same injected collector facts as the status digest; ten closed render surfaces (eight digest surfaces plus two named placeholders) as its own literal contract; three decision-first anchor groups (ready-to-merge, blocker-questions, owner-gate-ages) with a real ranked blocker group mirroring the digest items; the closed two-entry placeholder catalog; the spend citation surface with its reconciliation disclosure or classified absence; the providers surface's open lane park fields projected with zero added reads; exit 0 on collector unavailability with no status.collector identity; digest vocabulary and bounds reused by reference; no LLM in the render path."
+summary: "The read-only brief command and its delivery.brief.v1 payload: one deterministic, decision-first, one-screen render projected from the same injected collector facts as the status digest; the additive stateSource identity shared with status and the board; ten closed render surfaces (eight digest surfaces plus two named placeholders) as its own literal contract; three decision-first anchor groups (ready-to-merge, blocker-questions, owner-gate-ages) with a real ranked blocker group mirroring the digest items; the closed two-entry placeholder catalog; the spend citation surface with its reconciliation disclosure or classified absence; the providers surface's open lane park fields projected with zero added reads; exit 0 on collector unavailability with no status.collector identity; digest vocabulary and bounds reused by reference; no LLM in the render path."
 links:
-  related_changes: ["GH-228", "GH-243", "GH-230", "GH-242", "GH-241", "GH-277", "GH-291", "GH-294"]
+  related_changes: ["GH-228", "GH-243", "GH-230", "GH-242", "GH-241", "GH-277", "GH-291", "GH-294", "GH-297"]
   contracts:
     - "packages/core/src/contracts/brief.ts"
 ---
@@ -17,9 +17,9 @@ links:
 
 ## Overview
 
-The brief command is the owner's read-only, one-screen starting point for daily attention. It returns `delivery.brief.v1`: a schema version, an injected `generatedAt`, the repository binding, ten render surfaces, three ranked anchored-action groups, the closed two-entry placeholder catalog, the spend citation, and explicit truncation markers. The brief is decision-first: anchored actions render before context, and every unbuilt capability renders as a named placeholder rather than an empty list or a zero. The ranked `blocker-questions` group is a real projection of the digest's open questions, not a placeholder.
+The brief command is the owner's read-only, one-screen starting point for daily attention. It returns `delivery.brief.v1`: a schema version, an injected `generatedAt`, the shared `stateSource` identity, the repository binding, ten render surfaces, three ranked anchored-action groups, the closed two-entry placeholder catalog, the spend citation, and explicit truncation markers. The brief is decision-first: anchored actions render before context, and every unbuilt capability renders as a named placeholder rather than an empty list or a zero. The ranked `blocker-questions` group is a real projection of the digest's open questions, not a placeholder.
 
-The brief is a projection over the same collector state as the status digest. The command composes the status runtime, collects facts once through `collectStatusFacts`, and the pure projection calls `aggregateStatus` over those facts. It performs no read of its own: the read set, the five-value state vocabulary, the counts, the truncation flags, the evidence reasons, and the declared bounds are consumed by reference from the status contracts.
+The brief is a projection over the same collector state as the status digest and the board's owner-facing sections. The command composes the status runtime, collects facts once through `collectStatusFacts`, and the pure projection calls `aggregateStatus` over those facts. It performs no read of its own: the read set, the five-value state vocabulary, the counts, the truncation flags, the evidence reasons, and the declared bounds are consumed by reference from the status contracts. The payload names that source as `stateSource: "delivery.status-facts.v1"` — the same additive member, with the same value, that `status` and `board` carry — so the shared-source claim is a runtime equality across the three payloads, not a code-reading claim.
 
 Collector unavailability is digest data, not a command failure. Every successful run returns all ten surfaces in the payload, and a failed, absent, unattempted, or unresolved read appears as the corresponding digest section state with the digest's reason. Only a rejected invocation (`fallback.invocation`, exit `1`) and containment (`fallback.internal`, exit `2`) can fail the command. The command adds no error-table row, no domain kind, no configuration key, no adapter read, and no new package or runtime-API location.
 
@@ -98,8 +98,8 @@ The payload's `placeholders` array is the closed v0 catalog:
 
 | Capability id | Owning story | Collector evidence state | Why it is a placeholder |
 |---|---|---|---|
-| `gate-sla-states` | M1-S5 | `not-delivered` | Ages render on the brief; SLA state classification is not a brief surface |
-| `lane-queue-engine` | M1-S17 | `not-delivered` | No queue or lane engine exists; the digest's `lanes-or-queue` section is always `not-delivered` |
+| `gate-sla-states` | M1-S5 | `not-delivered` | Ages render on the brief; SLA state classification is delivered as the board's gates section, not as a brief surface |
+| `lane-queue-engine` | M1-S17 | `not-delivered` | The queue/lane engine is shipped and read by `lanes list` and the board, but the brief does not project it; the digest's `lanes-or-queue` section stays `not-delivered` |
 
 The catalog is exactly two entries and grows only through a reviewed change that updates the contract, tests, and documentation together. `spend` is a real render surface, not a catalog entry. Each placeholder renders as a named line with its owning story and state; none may render as observed, empty, zero, or as an action. `gate-sla-states` renders immediately after the anchored-action block.
 
@@ -111,6 +111,7 @@ The catalog is exactly two entries and grows only through a reviewed change that
 |---|---|
 | `schemaVersion` | `delivery.brief.v1` |
 | `generatedAt` | The injected generation time, equal to the digest's `generatedAt` |
+| `stateSource` | The additive `delivery.status-facts.v1` identity, equal to `status.data.stateSource` and `board.data.stateSource` |
 | `repository` | The status digest's repository binding, unchanged; an unavailable binding stays unavailable |
 | `surfaces` | The ten ordered surfaces |
 | `anchors` | The three ordered anchored-action groups |
@@ -199,7 +200,7 @@ The brief adds no error-table row and no domain kind. Section and placeholder fa
 |---|---|
 | Surface totality | Exactly ten surfaces in fixed order in every successful payload: eight digest surfaces plus two placeholders; zero missing or extra surfaces. |
 | Non-verdict guarantee | A failed, absent, unattempted, or unresolved read never renders as observed, clear, green, available, or zero; an unknown age is never `0`; no SLA state is fabricated; ready-to-merge is never a verdict. |
-| Shared truth | Every digest-derived state, count, truncation flag, and reason equals the digest's value for the same injected facts; the only derived claims are owner-gate ages under the declared parse-and-floor rule and the closed catalog entries. |
+| Shared truth | Every digest-derived state, count, truncation flag, and reason equals the digest's value for the same injected facts; `stateSource` equals `status.data.stateSource` and `board.data.stateSource`; the only derived claims are owner-gate ages under the declared parse-and-floor rule and the closed catalog entries. |
 | Bounds | Human output at most 32 lines and 6144 bytes; serialized `data` at most 65 536 bytes; every drop or limit-truncated case marked. |
 | Read-only, determinism | Zero writes, fence acquisitions, state mutations, network writes, or child processes; identical injected inputs produce identical payload and human bytes. |
 | Output contract | `--json` produces exactly one valid envelope with an exit in `{0,1,2}`; human mode produces one bounded screen; rendering performs zero extra reads. |
@@ -249,7 +250,8 @@ One invocation performs the same work as one status invocation: at most three ou
 
 ## Dependencies & Risks
 
-- **Depends on** the status digest ([feature-status-digest.md](feature-status-digest.md)) for the collector facts, the six projected sections plus `typed-questions`, the five-value states, the evidence reasons, the counts, the truncation model, and the declared bounds.
+- **Depends on** the status digest ([feature-status-digest.md](feature-status-digest.md)) for the collector facts, the six projected sections plus `typed-questions`, the five-value states, the evidence reasons, the counts, the truncation model, the declared bounds, and the `stateSource` identity.
+- **Shares the state source with** the board ([feature-board.md](feature-board.md)), whose gates, asks, and parked sections project the same facts and whose payload carries the same `stateSource`.
 - **Depends on** the typed blocker channel ([feature-blockers.md](feature-blockers.md)) for the ranked open-question items and the shared ordering the mirrored `typed-questions` surface and `blocker-questions` group consume.
 - **Depends on** the result contract ([feature-result-contract.md](feature-result-contract.md)) for the envelope, the `{0,1,2}` exit projection, existing failure identities, and the sole redaction path.
 - **Depends on** queue ready ([feature-queue-ready.md](feature-queue-ready.md)) for the observed-approval merge-ready convention the ready-to-merge anchor must not contradict.
@@ -262,7 +264,7 @@ One invocation performs the same work as one status invocation: at most three ou
 - **Risk — an unknown age or signal fabricated:** mitigated by the parse-and-floor rule, the unknown state for absent or unparseable timestamps, and a mutant that defaults an unknown age to zero.
 - **Risk — an unbuilt capability rendered as an empty surface:** mitigated by the closed two-entry catalog and the named-line rendering.
 - **Risk — the blocker group disagrees with the digest:** mitigated by mirroring the digest section's state, truncation, omitted count, and ranked items, with a shared-ranking equality test.
-- **Risk — brief and status contracts drift:** mitigated by one source of truth (`StatusFacts`), vocabulary reuse by reference, shared-truth tests, and cross-linked current-truth specs.
+- **Risk — brief and status contracts drift:** mitigated by one source of truth (`StatusFacts`), one shared `stateSource` identity across brief, status, and board, vocabulary reuse by reference, shared-truth tests, and cross-linked current-truth specs.
 - **Risk — output overflow on dense worlds:** mitigated by the status bounds, explicit dropped-line and omitted-count markers, and at/above-cap tests.
 - **Risk — an LLM or network capability entering the render path:** mitigated by import and boundary scans with failing controls, plus review on every render-surface change.
 
@@ -296,6 +298,6 @@ The brief's current rules are fixed by these decisions; each row states the rule
 | Same collector state | The identical injected `StatusFacts` the status digest consumes; the brief adds zero reads of its own. |
 | Five-value section state | The digest's closed state set (`observed`, `degraded`, `unknown`, `unavailable`, `not-delivered`), reused by reference for every brief surface. |
 
-See also: [Status Digest](feature-status-digest.md), [Typed Blocker and Question Channel](feature-blockers.md), [Result Contract and Error Table](feature-result-contract.md), [Queue Ready](feature-queue-ready.md), [Verify Gates](feature-verify-gates.md), [Configuration Layer and Inspection](feature-config-layer.md), [Provider Engine](feature-provider-engine.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), the [command registry](../../planning/oss-tooling/cli-command-registry.md), the [brief man-page pack](../../planning/oss-tooling/milestones/m1/commands/brief.md), the [repository glossary](../../overview/glossary.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), and [ODR-0003](../../decisions/ODR-0003-cli-command-naming-v1-lock.md).
+See also: [Status Digest](feature-status-digest.md), [Board](feature-board.md), [Typed Blocker and Question Channel](feature-blockers.md), [Result Contract and Error Table](feature-result-contract.md), [Queue Ready](feature-queue-ready.md), [Verify Gates](feature-verify-gates.md), [Configuration Layer and Inspection](feature-config-layer.md), [Provider Engine](feature-provider-engine.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), the [command registry](../../planning/oss-tooling/cli-command-registry.md), the [brief man-page pack](../../planning/oss-tooling/milestones/m1/commands/brief.md), the [repository glossary](../../overview/glossary.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), and [ODR-0003](../../decisions/ODR-0003-cli-command-naming-v1-lock.md).
 
-**Change records:** `doc/changes/2026-11/2026-11-05--GH-228--brief-render-only/` (the delivered brief and its projectors), `doc/changes/2026-11/2026-11-06--GH-230--typed-blockers/` (the mirrored typed-questions surface, the ranked blocker group, and the two-entry catalog), `doc/changes/2026-11/2026-11-12--GH-291--telemetry-v2/` (the spend citation surface), and `doc/changes/2026-11/2026-11-13--GH-294--provider-peak-pausing/` (the providers surface's lane park fields).
+**Change records:** `doc/changes/2026-11/2026-11-05--GH-228--brief-render-only/` (the delivered brief and its projectors), `doc/changes/2026-11/2026-11-06--GH-230--typed-blockers/` (the mirrored typed-questions surface, the ranked blocker group, and the two-entry catalog), `doc/changes/2026-11/2026-11-12--GH-291--telemetry-v2/` (the spend citation surface), `doc/changes/2026-11/2026-11-13--GH-294--provider-peak-pausing/` (the providers surface's lane park fields), and `doc/changes/2026-11/2026-11-15--GH-297--board/` (the additive `stateSource` member the brief shares with status and the board).

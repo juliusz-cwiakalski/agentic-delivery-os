@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-OWNER-GATE-SLA
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-09
+last_updated: 2026-11-16
 owners: ["engineering"]
 service: delivery-os
-summary: "The owner-gate SLA: the shared owner-gate population and its provider-native age clock, the pinned 24 h escalation and 72 h default-on-expiry thresholds with `>=` boundary semantics, the three-value `slaState` with declared unknown age, the PDR-0003 two-row policy-as-data default map (owner-review never-merge and non-defaultable, waiver defaulting to owner-review-first), the per-class waiver-authorization policy consumed by the merge transaction, the append-only idempotent EVT-1 decision record, recorded merge waivers folded into gate kind and `waivedBy`, structural never-merge protection, never-silence declared collector unavailability, the render-once board command with its deterministic rank key, bounds, and truncation marks, and the owner/coordinator audience seam."
+summary: "The owner-gate SLA: the shared owner-gate population and its provider-native age clock, the pinned 24 h escalation and 72 h default-on-expiry thresholds with `>=` boundary semantics, the three-value `slaState` with declared unknown age, the PDR-0003 two-row policy-as-data default map (owner-review never-merge and non-defaultable, waiver defaulting to owner-review-first), the per-class waiver-authorization policy consumed by the merge transaction, the append-only idempotent EVT-1 decision record, recorded merge waivers folded into gate kind and `waivedBy`, structural never-merge protection, never-silence declared collector unavailability, the GATES section of the four-section `board` command with its deterministic rank key, per-repository cap, bounds, and truncation marks, and the owner/coordinator audience seam."
 links:
-  related_changes: ["GH-229", "GH-225", "GH-230", "GH-237", "GH-240", "GH-277", "GH-288"]
+  related_changes: ["GH-229", "GH-225", "GH-230", "GH-237", "GH-240", "GH-277", "GH-288", "GH-297"]
   related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006", "PDR-0003"]
   contracts:
     - "packages/core/src/contracts/owner-gate-sla.ts"
@@ -20,13 +20,13 @@ links:
 
 An owner gate is an open work item carrying a declared owner-attention label (`hand-back` or `human-input-needed`, case-insensitive). The owner-gate SLA gives that gate a deterministic lifecycle: its age is computed from the provider-native activity timestamp, escalation becomes visible at 24 hours, and a gate that crosses 72 hours receives exactly one pre-agreed default when its kind declares one and is allowed to proceed — otherwise it stays escalated and visible. Silence is not a state. A gate is rendered as `fresh`, `escalated`, or `default-applied`, and every default application is persisted as an append-only decision record.
 
-The mechanism is `delivery.board.v1` plus the owner-gate policy contract data. Thresholds, the two-kind/two-class vocabulary, the default map, the per-class waiver-authorization policy, the SLA states, the unknown-age markers, the audience dimension, the collector-id set, and the render bounds are contract data, not configuration keys. The pure evaluator consumes injected facts (clock, gate facts, policy, decision history) and produces the bounded gate projection and the decisions the edge must persist. The `board` command is the SLA surface: it reads the tracker collector once, evaluates, renders the aging grid or one `CommandResult` envelope, and appends at most one decision record per newly defaulted gate. The command is render-once; it declares no command-specific flags (`--json` is the global machine-output switch) and never starts a timer, loop, or daemon.
+The mechanism is `delivery.board.v1` plus the owner-gate policy contract data. Thresholds, the two-kind/two-class vocabulary, the default map, the per-class waiver-authorization policy, the SLA states, the unknown-age markers, the audience dimension, the collector-id set, and the render bounds are contract data, not configuration keys. The pure evaluator consumes injected facts (clock, gate facts, policy, decision history) and produces the bounded gate projection and the decisions the edge must persist. The `board` command carries the SLA as its `GATES` section: it projects the gate rows for every included repository, renders them inside the four-section screen, and appends at most one decision record per newly defaulted gate. The command is render-once; it never starts a timer, loop, or daemon. The full board surface — the lanes, asks, and parked sections, repository selection, shared state source, bounds, exit projection, and mounting — is specified in [Board](feature-board.md); this document owns the gate mechanism the gates section renders.
 
 The escalation mechanism carries an explicit audience dimension, `owner` or `coordinator`. The owner audience is the one the board renders. The typed blocker channel consumes the same audience dimension and the deterministic ranking and bounds discipline for its coordinator-audience questions; SLA aging, thresholds, default application, and decision records remain the board's mechanism and are not blocker-channel behavior.
 
 The tracker collector maps an observed owner-attention item to kind `owner-review` and `waivedBy: null` unless a recorded authorized `owner-gate` waiver exists for the item's change ref; that waiver is collected as kind `waiver` with its recorded authorizer. The `owner-review` row is never-merge and non-defaultable, so an unwaived real gate stays fresh under 24 h, escalates from 24 h, and remains escalated past 72 h with no default application. A `waiver`-kind gate is defaultable and follows the 72 h default-on-expiry path with one persisted decision record. The classification map also carries the per-class waiver-authorization policy that the merge transaction consumes as its override authority; the owner-review↔never-merge mapping remains the PDR-0003 assumption.
 
-The surrounding contracts are described in [Status Digest](feature-status-digest.md), [Queue Ready](feature-queue-ready.md), [Verify Gates](feature-verify-gates.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), and [Configuration Layer and Inspection](feature-config-layer.md). Package placement follows [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md); activity-timestamp absence semantics follow [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md) and [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md); the default map is recorded in [PDR-0003](../../decisions/PDR-0003-owner-gate-sla-default-map.md).
+The surrounding contracts are described in [Board](feature-board.md), [Status Digest](feature-status-digest.md), [Queue Ready](feature-queue-ready.md), [Verify Gates](feature-verify-gates.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), and [Configuration Layer and Inspection](feature-config-layer.md). Package placement follows [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md); activity-timestamp absence semantics follow [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md) and [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md); the default map is recorded in [PDR-0003](../../decisions/PDR-0003-owner-gate-sla-default-map.md).
 
 ## Business Context
 
@@ -94,23 +94,25 @@ A default application is a recorded decision, never a merge. It names the gate's
 
 ### Never-silence: declared unavailability, unknown age, truncation
 
-A collector read that fails, is unconfigured, or has no credential surfaces the declared identity `status.collector.<id>.unavailable`. The board withholds the entire gate set rather than rendering a partial picture, returns the error envelope, and exits `2`. Zero fabricated gates are produced, and a failed read is never an observed-empty board.
+A collector read that fails, is unconfigured, or has no credential surfaces the declared identity `status.collector.<id>.unavailable`. The board withholds the whole board rather than rendering a partial picture, returns the error envelope, and exits `2`. Zero fabricated gates are produced, and a failed read is never an observed-empty board.
 
 Unknown age is a declared fact on the gate: `age` is `null`, `ageUnknownReason` names the absent or unparseable timestamp, and `slaState` is `escalated` unless a prior decision record exists. Such a gate is listed on every board render, ranks with the escalated class, and is never default-applied because a default requires observed clock evidence. Truncation is declared with `truncated: true` and an `omitted` count, and a clamped field carries a `+` marker; a dropped or clamped gate is never silent.
 
-### Board command surface
+### Board command surface: the gates section
 
-The command is exactly `board`, composed where the other top-level commands are composed. It accepts zero positionals and declares no command-specific flags; `--json` is the existing global machine-output switch. A positional argument or an unknown flag such as `--watch` is rejected by the parser as `fallback.invocation` with exit `1` before any collector read. The handler owns no stream writes and chooses no exit code.
+The SLA renders as the `GATES` section of the `board` command, the second of four sections. The command grammar is `<binary> board [--all] [--project <key>] [--json]`: zero positionals, `--all` and `--project` select repository scope, `--json` is the global machine-output switch, and `--all` together with `--project` is refused. A positional argument or an unknown flag is rejected by the parser as `fallback.invocation` with exit `1` before any collector read. The handler owns no stream writes and chooses no exit code. Repository selection, the other sections, and mounting are specified in [Board](feature-board.md).
 
 | Outcome | Envelope | Exit |
 |---|---|---|
-| Gates collected and evaluated | Success envelope with one `delivery.board.v1` `data` payload | `0` |
-| Any required collector unavailable | Error envelope with `kind: "status"` and code `status.collector.<id>.unavailable` | `2` |
+| Board produced, gate rows included | Success envelope with one `delivery.board.v1` `data` payload | `0` |
+| `--project` key outside the managed set | Error envelope with `board.repository-unknown` | `1` |
 | Rejected invocation | Error envelope with `fallback.invocation` | `1` |
+| Any required collector unavailable | Error envelope with `kind: "status"` and code `status.collector.<id>.unavailable` | `2` |
+| Host index, repository state location, or a required source unreadable | Error envelope with `board.state-unavailable` | `2` |
 
-Every required collector is read exactly once, sequentially. On the first classified failure the run returns that collector's identity; successful reads from earlier collectors are not rendered as a partial board. A fully available run carries one `available` evidence entry per collector.
+Every required collector is read exactly once per included repository. On the first classified failure the run returns that collector's identity and withholds the whole board; successful reads from earlier repositories or collectors are not rendered as a partial board. A fully available run carries one `available` evidence entry per collector per repository.
 
-The machine `data` payload is `{ schemaVersion: "delivery.board.v1", audience, gates, truncated, omitted, collectors }`. Each gate record is:
+The machine `data` payload is `{ schemaVersion: "delivery.board.v1", audience, scope, selection, repositories, lanes, gates, asks, parked, collectors, ownerHold, stateSource, truncated, omitted, omittedBySection }`. The gates array carries the SLA rows; the other arrays are specified in [Board](feature-board.md). Each gate row is:
 
 | Field | Type | Meaning |
 |---|---|---|
@@ -122,29 +124,33 @@ The machine `data` payload is `{ schemaVersion: "delivery.board.v1", audience, g
 | `slaState` | `fresh` \| `escalated` \| `default-applied` | SLA posture |
 | `default` | `owner-review-first` \| null | The applied or recorded default, else `null` |
 | `waivedBy` | string \| null | The recorded waiver's authorizer, folded by the collector; never a default artifact |
+| `repository` | string | The repository key the row belongs to |
+| `condition` | string | The composed condition token `<kind>:<slaState>` |
+| `owner` | string \| null | The recorded waiver authorizer, the owner audience, or `null` |
+| `ownerSource` | `gate-waiver-authorizer` \| `gate-audience` | Where `owner` came from |
 
-The human grid is deterministic and TTY-independent:
+The human gates section is deterministic and TTY-independent. It renders inside the four-section screen after the `GATES` label:
 
 ```
-<binary> board  audience=owner  collectors=tracker:available
-<id>  <kind>  <ref>  age=<age>  sla=<state>  default=<default|null>  waivedBy=<principal|null>
+<repository>  <id>  <kind>  <ref>  age=<age>  sla=<state>  default=<default|null>  waivedBy=<principal|null>  owner=<owner|null>  cond=<kind>:<slaState>
 ```
 
-`age` renders as `<n>m` under one hour, `<n>h` under two days, `<n>d` thereafter, `unknown:<reason>` for unknown age, and a signed millisecond value for a negative age. An available board with no gates renders `<binary> board  observed-empty  collectors=tracker:available`. The grid contains no titles, bodies, comments, secrets, or ANSI escapes.
+`age` renders as `<n>m` under one hour, `<n>h` under two days, `<n>d` thereafter, `unknown:<reason>` for unknown age, and a signed millisecond value for a negative age. A board with no rows in any section renders `observed-empty`; the gates label counts its own omissions. The screen contains no titles, bodies, comments, secrets, or ANSI escapes.
 
 ### Ranking, bounds, and truncation
 
-Ranking is normative. Gates order by severity class first — `escalated`, then `default-applied`, then `fresh` — so a non-fresh gate is never hidden behind a fresh one. Within a class, oldest age first; unknown age orders before every known age in the same class; ties break on gate id ascending. Collector order and provider return order never decide.
+Ranking is normative within each repository. Gates order by severity class first — `escalated`, then `default-applied`, then `fresh` — so a non-fresh gate is never hidden behind a fresh one. Within a class, oldest age first; unknown age orders before every known age in the same class; ties break on gate id ascending. The rendered `gates[]` array orders by repository key ascending, then by that per-repository rank key. Collector order and provider return order never decide.
 
 | Bound | Value |
 |---|---|
-| Rendered gates | 8 (`BOARD_MAX_GATES`) |
+| Rendered gates per repository | 8 (`BOARD_MAX_GATES`) |
 | Serialized `data` | 65 536 UTF-8 bytes (`BOARD_MAX_MACHINE_BYTES`) |
-| Human grid | 24 lines / 4 096 UTF-8 bytes (`BOARD_MAX_HUMAN_LINES`, `BOARD_MAX_HUMAN_BYTES`) |
-| Per-field display caps | id and kind 160, ref 160, waivedBy 120 characters |
-| Human gate line | 400 UTF-8 bytes |
+| Human screen | 24 lines / 4 096 UTF-8 bytes (`BOARD_MAX_HUMAN_LINES`, `BOARD_MAX_HUMAN_BYTES`) |
+| Human gate rows per section | 6 (`BOARD_HUMAN_SECTION_CAPS.gates`) |
+| Per-field display caps | id and kind 160, ref 160, waivedBy 120, owner 120 characters |
+| Human row line | 400 UTF-8 bytes |
 
-Every drop is marked: the payload sets `truncated` and counts `omitted`, the human grid appends `+N more gates omitted`, and an over-cap field is clamped with a trailing `+` (which also sets `truncated`). The serialization guard drops the trailing gate and marks the drop if the assembled `data` would exceed its byte cap. Truncation never removes an escalated gate ahead of a fresh one because ranking precedes the cap.
+Every drop is marked: the payload sets `truncated` and counts `omitted` and `omittedBySection`, the human `GATES` label appends `+N more gates omitted`, and an over-cap field is clamped with a trailing `+` (which also sets `truncated`). The serialization guard drops sections tail-first in the declared order `parked` → `asks` → `lanes` → `gates`, counting each drop; it never drops the repository list or collector evidence. Truncation never removes an escalated gate ahead of a fresh one because ranking precedes the cap. The full board bounds, including the 128-repository cap, are specified in [Board](feature-board.md).
 
 ### Audience seam
 
@@ -164,28 +170,29 @@ The per-class policy map carries its waiver-authorization datum: `owner-review` 
 
 | Path | Responsibility |
 |---|---|
-| `packages/core/src/contracts/owner-gate-sla.ts` | The complete vocabulary: thresholds, comparator, gate kinds and classes, defaults, `slaState`, unknown-age reasons, audiences, rank order, decision record kind and payload schema, board schema, bounds, collector ids, the family prefix/suffix, the PDR-0003 policy rows, and the injected input/output types. Types and `as const` data only. |
-| `packages/core/src/domain/owner-gate-sla.ts` | The pure evaluator and renderer: age parsing, threshold crossing, default eligibility, decision projection, policy validation, deterministic ranking and capping, field clamping, the human grid, the family-code formatter, and the family-code recognizer. No I/O, clock, randomness, or ambient environment. |
+| `packages/core/src/contracts/owner-gate-sla.ts` | The complete vocabulary: thresholds, comparator, gate kinds and classes, defaults, `slaState`, unknown-age reasons, audiences, rank order, decision record kind and payload schema, board schema, the gate record and extended gate row types, the four-section row types and closed vocabularies, bounds, collector ids, the family prefix/suffix, the PDR-0003 policy rows, and the injected input/output types. Types and `as const` data only. |
+| `packages/core/src/domain/owner-gate-sla.ts` | The pure evaluator and renderer: age parsing, threshold crossing, default eligibility, decision projection, policy validation, deterministic ranking and capping, field clamping, the four-section `projectBoard` projection, the human screen, the family-code formatter, and the family-code recognizer. No I/O, clock, randomness, or ambient environment. |
 | `packages/core/src/state/owner-gate-sla.ts` | The `owner-gate.decision` ledger over the injected state port: validated record payloads, presence-tolerant verified history read, idempotent fenced append, and coverage verification. |
-| `packages/cli/src/commands/board.ts` | The `board` command definition over injected collectors, policy, decision read/append, and clock; all-or-nothing collection, conditional history read, decision append, and no stream writes or exit-code choice. |
-| `packages/cli/src/edge.ts` | The board composition: `createBoardCommandRuntime` wires the GitHub tracker read, the open/owner-attention filters, the recorded-waiver fold (kind and `waivedBy`), the state ledger, and injected clock/fence factories; registration occurs only when a board composition is supplied. |
-| `packages/cli/src/classify.ts` | The runtime family recognizer that resolves any declared `status.collector.<id>.unavailable` shape to the documented status entry while the sync check enforces the closed collector-id set. |
-| `packages/core/src/contracts/error-table.ts` | The two documented family anchors, `status.collector.tracker.unavailable` and `status.collector.lanes.unavailable`, that carry the family's identity and remediation. |
-| `packages/cli/src/index.ts` | The optional pure `humanText` hook the board uses to render the aging grid; it receives an optional `HumanTextContext` third argument carrying the parsed `--verbose` fact, and an omitted context means non-verbose. |
+| `packages/cli/src/commands/board.ts` | The `board` command definition over injected repository resolution, per-repository loads, policy, decision read/append, owner hold, and clock; all-or-nothing per-repository collection, conditional history read, decision append, and no stream writes or exit-code choice. |
+| `packages/cli/src/edge.ts` | The board composition: `createBoardCommandRuntime` wires the GitHub tracker read, the open/owner-attention filters, the recorded-waiver fold (kind and `waivedBy`), the delivered lane/phase and park reads, the managed-set resolution, per-repository state stores, the decision ledger, and injected clock/fence factories; registration occurs for the prompt-required family. |
+| `packages/cli/src/classify.ts` | The runtime family recognizer that resolves any declared `status.collector.<id>.unavailable` shape to the documented status entry while the sync check enforces the closed collector-id set, and resolves the two `board` identities under the new `board` domain kind. |
+| `packages/core/src/contracts/error-table.ts` | The two documented family anchors, `status.collector.tracker.unavailable` and `status.collector.lanes.unavailable`, that carry the family's identity and remediation, plus the two `board` domain-kind rows. |
+| `packages/cli/src/index.ts` | The optional pure `humanText` hook the board uses to render the four-section screen; it receives an optional `HumanTextContext` third argument carrying the parsed `--verbose` fact, and an omitted context means non-verbose. |
 
 ### Data flow
 
-1. The edge composes the board runtime with one required collector (`tracker`), the shipped policy, the state ledger's decision read/append and recorded-waiver read, and injected time and fence factories.
-2. The handler reads every collector once. A failure returns the declared family error; nothing is evaluated and no partial board is rendered.
-3. The handler evaluates the collected gates against an empty decision history. Only when some gate is eligible for a default does it read the verified decision history.
-4. It re-evaluates with the history, appends each newly projected decision through the fenced, idempotent ledger append, and returns the bounded `data` payload.
-5. The CLI edge renders the human grid when `--json` is absent, or the standard envelope when it is present, and projects the exit code from the classified outcome.
+1. The edge composes the board runtime with the prompt-required family: the shared status-facts read, the shipped lane/phase and park reads, the tracker collector, the shipped policy, the state ledger's decision read/append and recorded-waiver read, and injected time and fence factories.
+2. The handler resolves the repository selection and reads the required collectors once per included repository. A failure returns the declared identity; nothing is evaluated and no partial board is rendered.
+3. It evaluates each repository's gates against an empty decision history. Only when some gate is eligible for a default does it read that repository's verified decision history.
+4. It re-evaluates with the history, appends each newly projected decision through the fenced, idempotent ledger append, and returns the bounded four-section `data` payload.
+5. The CLI edge renders the human screen when `--json` is absent, or the standard envelope when it is present, and projects the exit code from the classified outcome.
 
 ### API and interface contracts
 
 - **`evaluateOwnerGateSla(input: OwnerGateSlaInput): OwnerGateSlaEvaluation`** — the pure evaluation. The input carries `audience`, `nowMs`, `nowIso`, `policy`, `gates`, and the existing `decisions`; the output carries `audience`, the bounded `gates`, `truncated`, `omitted`, and `decisionsToApply`.
-- **`toBoardData(evaluation, collectors): BoardData`** — projects the evaluation into the `delivery.board.v1` payload and applies the defensive machine-byte guard.
-- **`renderBoardHuman(data, brand): string`** — the only human renderer; it reads no source and uses the injected brand binary name.
+- **`toBoardData(evaluation, collectors): BoardData`** — the delivered gate payload projection over `delivery.board.v1`.
+- **`projectBoard(input: BoardProjectionInput): BoardProjection`** — the four-section projection that composes `evaluateOwnerGateSla` per repository and returns the bounded payload plus the per-repository decisions to append; specified in [Board](feature-board.md).
+- **`renderBoardHuman(data, brand): string`** — the only human renderer; it reads no source, renders the four sections, and uses the injected brand binary name.
 - **`validateOwnerGateSlaPolicy(policy): readonly OwnerGateSlaPolicyViolation[]`** — the pure policy-map validator; an empty array means the map satisfies the uniqueness, never-merge, default, threshold, and comparator constraints.
 - **`collectorUnavailableCode(collectorId)` / `isCollectorUnavailableFamilyCode(code)`** — the declared family code formatter and recognizer.
 - **`readOwnerGateSlaDecisions(store)` / `appendOwnerGateSlaDecision(store, request)`** — the verified history read and the idempotent fenced append.
@@ -196,7 +203,7 @@ The contracts and domain import only the shared contracts; the state module impo
 
 | Element | Shape and persistence |
 |---|---|
-| Gate record (board payload) | `id`, `kind`, `ref`, `age`/`ageUnknownReason`, `slaState`, `default`, `waivedBy`; rendered in the bounded projection, never persisted |
+| Gate record (board payload) | `id`, `kind`, `ref`, `age`/`ageUnknownReason`, `slaState`, `default`, `waivedBy`, plus `repository`, `condition`, `owner`, `ownerSource`; rendered in the bounded projection, never persisted |
 | Policy snapshot | comparator, escalation threshold, expiry threshold, and the two policy rows; contract data, injected whole |
 | Decision record (EVT-1) | `schemaId: "delivery.owner-gate.decision.v1"`, `gateId`, `gateKind`, `workItemRef`, `appliedDefault`, `appliedAt`, `thresholdCrossedMs`, `clockSource`; append-only ledger payload |
 | Decision key | `owner-gate.decisions:<gateId>`; one authoritative record per gate id |
@@ -209,7 +216,7 @@ The decision record kind is additive inside `delivery.state.v1`. No existing rec
 - **Recorded decisions:** every automatic proceed is persisted with gate, kind, ref, default, time, threshold, and clock-source evidence, so later audit can reconstruct what the tool decided and when.
 - **State integrity:** the decision ledger rides the append-only ledger, fence, permission, and torn-state discipline. A torn, wrong-kind, malformed, or duplicated history fails closed and is never served as truth.
 - **Conditional decision-history read:** the decision history is consulted only when a gate is currently default-eligible, so a gate with an existing applied default whose current observed age falls below the expiry threshold (for example after a clock regression or label churn) renders from current eligibility rather than the recorded decision and a torn decision ledger is not detected on a run with no eligible gate. An unwaived real gate is `owner-review` and non-defaultable, so a real-data run is eligible only when a recorded waiver is folded in as a `waiver`-kind gate.
-- **Read-mostly posture:** collectors are read-only. The only mutation is the recorded, idempotent decision append; a board run with no eligible gate performs no history read, fence, or append.
+- **Read-mostly posture:** collectors are read-only. The only mutation is the recorded, idempotent decision append; a repository with no eligible gate performs no history read, fence, or append.
 - **Privacy:** gate ids, kinds, refs, ages, SLA states, policy values, and waiver authorizers only — no credentials, raw provider payloads, titles, bodies, comments, or free-form content enter the payload, record, or grid.
 - **Brand neutrality:** no product or binary literal is committed. The human grid uses the injected brand binary name.
 - **No daemon:** the command performs no polling, timer, signal handling, child process, or background work.
@@ -219,11 +226,11 @@ The decision record kind is additive inside `delivery.state.v1`. No existing rec
 | Concern | Current guarantee |
 |---|---|
 | Determinism | Identical injected collector facts, clock, policy, and decision history produce byte-identical machine and human output; no run-to-run drift. |
-| Read cost | One tracker collector read per invocation at the existing budget (`STATUS_SOURCE_ITEM_LIMIT`, 100), no pagination, no retries, no new request kinds; one merge-waiver ledger read per tracker read; at most one verified decision-history read and, per newly defaulted gate, one fence and one append. |
-| Latency | Pure evaluation, ranking, and rendering complete within 50 ms on the reference environment over the capped gate set. |
-| Bounds | At most 8 rendered gates; machine `data` at most 65 536 UTF-8 bytes; human grid at most 24 lines / 4 096 UTF-8 bytes; per-field caps enforced; every drop or clamp marked. |
+| Read cost | One tracker collector read per included repository at the existing budget (`STATUS_SOURCE_ITEM_LIMIT`, 100), no pagination, no retries, no new request kinds; one merge-waiver ledger read per tracker read; at most one verified decision-history read and, per newly defaulted gate, one fence and one append, per repository. |
+| Latency | Pure evaluation, ranking, projection, and rendering complete within 50 ms on the reference environment over the capped gate set. |
+| Bounds | At most 8 rendered gates per repository; machine `data` at most 65 536 UTF-8 bytes; human screen at most 24 lines / 4 096 UTF-8 bytes with 6 gate rows; per-field caps enforced; every drop or clamp marked. |
 | Precision | Thresholds are evaluated against the injected clock on every invocation with the declared `>=` comparator; escalation at exactly 24 h, expiry at exactly 72 h; no background timer. |
-| Error identity | The only new identity shape is the `status.collector.<id>.unavailable` family, anchored by two documented family rows (`tracker`, `lanes`); the documented table, machine table, and fixtures agree; no other failure identity changes. |
+| Error identity | The collector-unavailable family `status.collector.<id>.unavailable` is anchored by two documented family rows (`tracker`, `lanes`); the board adds the `board` domain kind with exactly `board.repository-unknown` (exit `1`) and `board.state-unavailable` (exit `2`), and the documented table, machine table, and fixtures agree; no other failure identity changes. |
 | Auditability and idempotency | Exactly one persisted decision record per default application; re-evaluation honors the existing record and appends nothing; a duplicated gate history is torn, never truth. |
 | Never-silence | A collector failure, unknown age, or truncation is always declared; a partial board is never rendered as an all-clear. |
 
@@ -231,8 +238,8 @@ The decision record kind is additive inside `delivery.state.v1`. No existing rec
 
 | Level | Scope | Evidence |
 |---|---|---|
-| Structure | Contract data pinned exactly (thresholds, comparator, kinds, classes, defaults, states, markers, audiences, rank order, bounds, collector ids, record vocabulary); pure-domain import confinement and absence of clock/randomness/environment/network/child-process access; audience seam with no owner-specific assumption; additive non-regression of the shared label set, config schema, schema versions, and existing command modules; inventory registration | `tests/structure/owner-gate-sla-contract.test.ts`, `owner-gate-sla-imports.test.ts`, `owner-gate-sla-audience.test.ts`, `board-nonregression.test.ts` |
-| Behaviour | Aging and unknown age, 24 h escalation and stickiness, exact threshold boundaries, 72 h default application, permanent owner-review escalation, structural never-merge protection, decision content and durability, exactly-one-record idempotency, torn/malformed history, policy-as-data, declared collector unavailability and partial-failure withholding, the never-silence matrix, command grammar, machine and text output, determinism, bounds and truncation, privacy, read cost, performance | `tests/behaviour/board-aging.test.ts`, `board-escalation.test.ts`, `board-defaults.test.ts`, `board-records.test.ts`, `board-collectors.test.ts`, `board-never-silence.test.ts`, `board-command.test.ts`, `board-output.test.ts`, `board-determinism.test.ts`, `board-bounds.test.ts`, `board-privacy.test.ts`, `board-read-cost.test.ts`, `board-performance.test.ts` |
+| Structure | Contract data pinned exactly (thresholds, comparator, kinds, classes, defaults, states, markers, audiences, rank order, bounds, collector ids, record vocabulary); pure-domain import confinement and absence of clock/randomness/environment/network/child-process access; audience seam with no owner-specific assumption; additive non-regression of the shared label set, config schema, schema versions, and existing command modules; inventory registration; four-section payload and production composition | `tests/structure/owner-gate-sla-contract.test.ts`, `owner-gate-sla-imports.test.ts`, `owner-gate-sla-audience.test.ts`, `board-nonregression.test.ts`, `board-contract.test.ts`, `board-mounting.test.ts` |
+| Behaviour | Aging and unknown age, 24 h escalation and stickiness, exact threshold boundaries, 72 h default application, permanent owner-review escalation, structural never-merge protection, decision content and durability, exactly-one-record idempotency, torn/malformed history, policy-as-data, declared collector unavailability and partial-failure withholding, the never-silence matrix, command grammar, machine and text output, determinism, bounds and truncation, privacy, read cost, performance; four-section projection, shared source, repository selection, and write discipline | `tests/behaviour/board-aging.test.ts`, `board-escalation.test.ts`, `board-defaults.test.ts`, `board-defaults-idempotency.test.ts`, `board-records.test.ts`, `board-waiver-recording.test.ts`, `board-collectors.test.ts`, `board-never-silence.test.ts`, `board-command.test.ts`, `board-output.test.ts`, `board-determinism.test.ts`, `board-bounds.test.ts`, `board-privacy.test.ts`, `board-read-cost.test.ts`, `board-performance.test.ts`, `board-sections.test.ts`, `board-gates-sla.test.ts`, `board-shared-source.test.ts`, `board-selection-*.test.ts`, `board-write-discipline.test.ts` |
 | Corpus and golden | A committed 10-case corpus with a completeness meta-check, and byte-identical machine-envelope plus human-grid goldens | `tests/behaviour/board-corpus.test.ts` with `tests/fixtures/board/matrix.ts`; `tests/golden/board-grid.test.ts` with `tests/fixtures/board/golden/**` |
 | Contract | Machine table, documented table, source references, and fixtures agree in both directions; the family recognizes only the declared prefix/suffix shape over the closed collector-id set | `tests/checks/error-table-sync.test.ts`; `bun run scripts/checks/error-table-sync.ts` |
 | Aggregate | The whole workspace | `pnpm check` |
@@ -255,7 +262,7 @@ Engine](feature-scheduling-engine.md); the state root it is read at is in
 
 ### Configuration
 
-The SLA adds no configuration key. Thresholds, comparator, gate kinds and classes, defaults, `slaState`, unknown-age reasons, audiences, caps, collector ids, and the family prefix/suffix are contract data. The `board` command accepts no command-specific flag beyond the global `--json` switch.
+The SLA adds no configuration key. Thresholds, comparator, gate kinds and classes, defaults, `slaState`, unknown-age reasons, audiences, caps, collector ids, and the family prefix/suffix are contract data. The `board` command's flags select repository scope; they add no SLA configuration.
 
 ### Observability
 
@@ -263,14 +270,14 @@ The board payload is the observability surface: the standard envelope's `runId` 
 
 ### Cost and read cost
 
-One invocation performs one bounded tracker list read and, only when a default is eligible, one verified decision-history read; each applied default adds one fenced append. The evaluator is linear over the capped gate set. There is no retry loop, pagination crawl, daemon, or new runtime dependency.
+One invocation performs one bounded tracker list read per included repository and, only when a default is eligible, one verified decision-history read per repository; each applied default adds one fenced append. The evaluator is linear over the capped gate set. There is no retry loop, pagination crawl, daemon, or new runtime dependency.
 
 ### Maintenance
 
 - Changing a threshold, comparator, or cap is a contract-data edit plus tests and documentation.
 - Adding a gate kind, class, or default is an owner-signed policy-data change; the validator and the exact two-row contract test must be updated together.
 - Adding a collector changes the collector-id set, the family's documented closure, the board evidence, and fixtures.
-- Later surfaces (the brief, the full fleet grid) consume the same SLA state source; they do not fork the evaluator.
+- The full board ([Board](feature-board.md)) composes this SLA as its gates section; it consumes the same state source and never forks the evaluator.
 - Promoting a new failure class to an error-table row requires a named consumer and a reviewed change.
 
 ## Dependencies & Risks
@@ -280,7 +287,8 @@ One invocation performs one bounded tracker list read and, only when a default i
 - **Depends on** the result contract ([feature-result-contract.md](feature-result-contract.md)) for the `CommandResult` envelope, the `status` domain kind, the declared family identity, the `{0, 1, 2}` projection, and the redaction path.
 - **Depends on** the configuration layer ([feature-config-layer.md](feature-config-layer.md)) for the resolved GitHub instance and credential reference; the SLA adds no key.
 - **Shares the owner-gate definition with** [Queue Ready](feature-queue-ready.md) (`no-owner-gate`) and [Verify Gates](feature-verify-gates.md) (`owner-gate`); both keep their current behavior.
-- **Feeds** the typed blocker channel, which reuses the audience seam for its coordinator audience; **feeds** the owner brief and the full fleet board, which read the same SLA state source.
+- **Feeds** the typed blocker channel, which reuses the audience seam for its coordinator audience; **is rendered as** the gates section of [Board](feature-board.md), which shares the state source with the brief and status.
+- **Is consumed by** the owner brief and the full fleet board, which read the same SLA state source.
 - **Risk — a wrong default overrides owner intent:** mitigated by pre-agreed policy-as-data, one default per kind, the never-merge structural exclusion, and a persisted decision record for every application.
 - **Risk — the activity clock misstates staleness:** mitigated by a pinned clock source, visibility-only escalation, and expiry requiring a pre-agreed default; a finer signal remains an ADR-0004 revisit candidate.
 - **Risk — collector unavailability read as no gates:** mitigated by the declared family identity, exit `2`, all-or-nothing withholding, and negative-control tests.
@@ -304,8 +312,8 @@ One invocation performs one bounded tracker list read and, only when a default i
 | Declared unavailability | The named `status.collector.<id>.unavailable` statement that a collector read did not succeed, projected as exit `2`. |
 | Unknown age | A gate whose activity timestamp is absent or unparseable: age declared unknown, gate visible, never defaulted. |
 | Audience seam | The explicit `owner` \| `coordinator` dimension shared by the board's aging mechanism and the typed blocker channel's answer routing. |
-| Aging grid | The board's deterministic per-gate rendering: id, kind, ref, age, SLA state, default, waiver authorizer. |
+| Aging grid | The board's `GATES` section: one deterministic per-gate line carrying repository, id, kind, ref, age, SLA state, default, waiver authorizer, owner, and condition. |
 
-See also: [Status Digest](feature-status-digest.md), [Queue Ready](feature-queue-ready.md), [Verify Gates](feature-verify-gates.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Configuration Layer and Inspection](feature-config-layer.md), [Typed Blocker and Question Channel](feature-blockers.md), [PDR-0003](../../decisions/PDR-0003-owner-gate-sla-default-map.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md), [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md), the [command registry](../../planning/oss-tooling/cli-command-registry.md), and the [repository glossary](../../overview/glossary.md).
+See also: [Board](feature-board.md), [Status Digest](feature-status-digest.md), [Queue Ready](feature-queue-ready.md), [Verify Gates](feature-verify-gates.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Configuration Layer and Inspection](feature-config-layer.md), [Typed Blocker and Question Channel](feature-blockers.md), [PDR-0003](../../decisions/PDR-0003-owner-gate-sla-default-map.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md), [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md), the [command registry](../../planning/oss-tooling/cli-command-registry.md), and the [repository glossary](../../overview/glossary.md).
 
-**Change records:** `doc/changes/2026-11/2026-11-06--GH-229--owner-gate-sla/` (the SLA and board), `doc/changes/2026-11/2026-11-06--GH-225--merge-verify-deploy/` (the merge transaction's waiver and override consumers), and `doc/changes/2026-11/2026-11-06--GH-230--typed-blockers/` (the shared audience dimension and ranking discipline consumed by the typed blocker channel).
+**Change records:** `doc/changes/2026-11/2026-11-06--GH-229--owner-gate-sla/` (the SLA and its gate surface), `doc/changes/2026-11/2026-11-15--GH-297--board/` (the four-section board and the gates section), `doc/changes/2026-11/2026-11-06--GH-225--merge-verify-deploy/` (the merge transaction's waiver and override consumers), and `doc/changes/2026-11/2026-11-06--GH-230--typed-blockers/` (the shared audience dimension and ranking discipline consumed by the typed blocker channel).

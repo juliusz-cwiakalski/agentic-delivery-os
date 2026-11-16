@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-BLOCKERS
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-09
+last_updated: 2026-11-16
 owners: ["engineering"]
 service: delivery-os
-summary: "The typed blocker and question channel: the closed four-type question vocabulary with one answer channel per type, the `owner` | `coordinator` audience and the delegation policy-as-data confused-deputy guard, the layered credential guard (registered-secret-value refusal on every content path including lane/ref identifiers, the variable-name shape on credential-missing question text, no pattern layer per TDR-0012), the append-only question and answer intent records with derived open/answered closure, the recorded `laneResume` projection (boundary-note, attach-continue, or the resume-prompt-reentry fallback with its prefill cost) conditioned on the adapter resume-injection capability, the deliberate `applied: false` v0 posture, the single shared ranking consumed by the blockers list, the digest `typed-questions` section, and the brief blocker-questions anchor, the bounded deterministic `blockers list`/`answer`/`publish` surface and its exit matrix, and the four-row `blockers` error family."
+summary: "The typed blocker and question channel: the closed four-type question vocabulary with one answer channel per type, the `owner` | `coordinator` audience and the delegation policy-as-data confused-deputy guard, the layered credential guard (registered-secret-value refusal on every content path including lane/ref identifiers, the variable-name shape on credential-missing question text, no pattern layer per TDR-0012), the append-only question and answer intent records with derived open/answered closure, the recorded `laneResume` projection (boundary-note, attach-continue, or the resume-prompt-reentry fallback with its prefill cost) conditioned on the adapter resume-injection capability, the deliberate `applied: false` v0 posture, the single shared ranking consumed by the blockers list, the digest `typed-questions` section, the brief blocker-questions anchor, and the board `ASKS` section, the bounded deterministic `blockers list`/`answer`/`publish` surface and its exit matrix, and the four-row `blockers` error family."
 links:
-  related_changes: ["GH-230", "GH-238", "GH-242", "GH-239", "GH-241"]
+  related_changes: ["GH-230", "GH-238", "GH-242", "GH-239", "GH-241", "GH-297"]
   related_decisions: ["ADR-0003", "TDR-0012"]
   contracts:
     - "packages/core/src/contracts/blockers.ts"
@@ -26,7 +26,7 @@ Open questions rank through one shared pure ordering — priority class, then ol
 
 The channel is local-state-only: no tracker read or write, no provider call, no credential resolution, no network, and no child process. The binary name in human output comes from the injected branding configuration.
 
-The surrounding contracts are described in [Status Digest](feature-status-digest.md), [Brief](feature-brief.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Owner-Gate SLA](feature-owner-gate-sla.md), [Watchdog and Lane Contracts](feature-watchdog-lane-contracts.md), and [Branding Seam and Working Name](feature-branding-seam.md). Package placement follows [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md); the credential-guard boundary is recorded in [TDR-0012](../../decisions/TDR-0012-blockers-credential-guard-pattern-deferral.md).
+The surrounding contracts are described in [Status Digest](feature-status-digest.md), [Brief](feature-brief.md), [Board](feature-board.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Owner-Gate SLA](feature-owner-gate-sla.md), [Watchdog and Lane Contracts](feature-watchdog-lane-contracts.md), and [Branding Seam and Working Name](feature-branding-seam.md). Package placement follows [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md); the credential-guard boundary is recorded in [TDR-0012](../../decisions/TDR-0012-blockers-credential-guard-pattern-deferral.md).
 
 ## Business Context
 
@@ -200,6 +200,10 @@ questions  <state>  <n|?> open[ (<reason>)]
 ```
 
 `n` is the rendered open-question count and `?` appears whenever the section is not `observed`; a dropped row appends `+N`.
+
+### Board integration
+
+The board's `ASKS` section projects the open `owner`-audience questions through the delivered open-question view: `id`, type, lane, ref (the delivered string or bare `null`), bounded question text, `askedAt`, and the computed `age`, under the delivered ranking and bounded to eight per repository. Each ask additionally carries the drawn default joined from the delivered owner-gate policy for its ref and a `defaultState` (`none`, `pending`, or `applied`); coordinator-audience questions are not asks. The board reads the same verified question view and reuses the ranking; it adds no question type, no ranking rule, and no ledger write ([Board](feature-board.md)).
 
 ### Brief integration
 
@@ -405,7 +409,7 @@ One `blockers list`, `status`, or `brief` invocation performs one verified block
 | Collection cycle | The interval between ranked-surface reads: per invocation in v0, later a daemon interval that preserves the same surfacing bound. |
 | Resolved group | The answered questions rendered after all open questions on the list, in age then id order. |
 
-See also: [Status Digest](feature-status-digest.md), [Brief](feature-brief.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Owner-Gate SLA](feature-owner-gate-sla.md), [Watchdog and Lane Contracts](feature-watchdog-lane-contracts.md), [Branding Seam and Working Name](feature-branding-seam.md), [TDR-0012](../../decisions/TDR-0012-blockers-credential-guard-pattern-deferral.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), the [command registry](../../planning/oss-tooling/cli-command-registry.md), and the [repository glossary](../../overview/glossary.md).
+See also: [Status Digest](feature-status-digest.md), [Brief](feature-brief.md), [Board](feature-board.md), [State Layer](feature-state-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Owner-Gate SLA](feature-owner-gate-sla.md), [Watchdog and Lane Contracts](feature-watchdog-lane-contracts.md), [Branding Seam and Working Name](feature-branding-seam.md), [TDR-0012](../../decisions/TDR-0012-blockers-credential-guard-pattern-deferral.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), the [command registry](../../planning/oss-tooling/cli-command-registry.md), and the [repository glossary](../../overview/glossary.md).
 
 **Change record:** `doc/changes/2026-11/2026-11-06--GH-230--typed-blockers/`.
 
