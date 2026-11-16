@@ -1,0 +1,850 @@
+# GH-287 implementation plan — machine-readable projection (delivery.plan.v1).
+# Canonical plan artifact: this YAML document is the only plan file for the
+# change. `plan validate`, `plan diff`, `plan overlap`, and `lint plan` read it
+# directly.
+#
+# SOURCES (single source of truth):
+#   - Spec:     ./chg-GH-287-spec.md (v1.2, 15 ACs — AC-F1-1, AC-F1-2, AC-F2-1,
+#               AC-F3-1, AC-F4-1..5, AC-F5-1, AC-F6-1..2, AC-F7-1..2, AC-N8-1;
+#               F-1..F-7; DM-1..DM-5; NFR-1..NFR-8; DEC-1..DEC-11 (all
+#               resolved); RSK-1..RSK-7; §7.1 in-scope incl. planning-page
+#               maintenance; §8.5 additive compatibility; §16 affected
+#               components; §17 AC table; Appendix B pinned scenarios
+#               SC-M2-S10-01/02; Appendix C concept constraints). Key
+#               adjudications this plan consumes as pinned: DEC-3 derived
+#               aging, no scheduler; DEC-4 outcome closure explicit only;
+#               DEC-5 exactly three additive error rows under the `retro`
+#               domain kind; DEC-6 WIP limit = 3, fixed contract data, filing
+#               at the limit refused; DEC-7 own validated boundary with
+#               `retro.action`/`retro.action-closure` kinds under
+#               `retro.actions:`/`retro.action-closures:` prefixes, filing
+#               surface = additive `action` verb group inside the `retro`
+#               family, doctor action-registry store verdict; DEC-8
+#               action-incomplete covers missing OR non-conforming fields;
+#               DEC-9 aging basis = time open since the recorded filing
+#               timestamp, second miss = second missed due date; DEC-10 no new
+#               top-level retro report key, registry feeds the delivered
+#               followThrough[] fold; DEC-11 deprioritize/supersede close both
+#               planes, repeat closure refused, supersede records the
+#               superseding reference.
+#   - Tests:    ./chg-GH-287-test-plan.md (v1.1, 39 TCs TC-ACTION-001..039;
+#               15/15 AC coverage; filing refusal matrix R-01..R-12; aging
+#               boundary matrix A-01..A-11; closure matrix C-01..C-14; exit
+#               and identity oracle §4.3; binding fixture contract §4.1;
+#               non-vacuity contract §4.2; §4 layer table; §7 automation map;
+#               §4.4 declared delivered-suite drift register D-1..D-28; gaps
+#               GAP-1..GAP-6; open questions OQ-T1..T8 all resolved). GAP-1
+#               (this plan's TC mapping) is satisfied below WITHOUT reshaping
+#               any TC's behavior, oracle, identity, exit, bound, or AC/NFR
+#               mapping; no TC id changes.
+#   - PM record: ./chg-GH-287-pm-notes.yaml (DEC-5/6/7 adjudications with the
+#               plan-writer ripples resolved in the PLAN-LEVEL REFINEMENTS
+#               block below; DEC-1/DEC-2 scope exclusions stated in the PR
+#               description; delivery conventions — `TMPDIR=$PWD/tmp/tmpdir
+#               pnpm check`, PR targets `main-tools`, conventional subjects,
+#               body/footer lines <= 100 chars).
+#   - Schema:   doc/spec/features/feature-plan-schema.md (scope keys
+#               files/packages/folders, doneArtifacts slots, leases,
+#               weightClass, interactions, tier; no tasks key, no progress
+#               log).
+#   - Precedent: ./2026-11-12--GH-291--telemetry-v2/chg-GH-291-plan.yaml (the
+#               canonical sibling: phase ceremony, early error-table doc edit,
+#               drift declaration, honesty battery, phase-8 release pattern)
+#               and ./2026-11-15--GH-297--board/chg-GH-297-plan.yaml (board
+#               shared-source patterns this change extends).
+#
+# PLAN-LEVEL REFINEMENTS (GAP-4 and GAP-6 / OQ-T2 and OQ-T4, owner
+# @plan-writer — recorded here as this plan's design decisions; the spec pins
+# only `data.artifactClosure`, `data.outcomeClosure`, the three `error.code`
+# literals, and `actions[]` emptiness, and TC-ACTION-036 pins everything below
+# through the declared contract constants, never ad-hoc literals):
+#   1. VERB GRAMMAR (DEC-7): the filing surface is the additive `action` verb
+#      group inside the delivered `retro` command family, pinned as exactly
+#      three verbs: `retro action file`, `retro action close`, `retro action
+#      list`. `retro collect` and `retro report` keep their grammar and
+#      semantics byte-for-byte; no new command family joins the
+#      prompt-required set. Flag-level argument shapes (owner, owner-kind,
+#      verb, measurable outcome, tracker entry, due date, verification
+#      artifact, outcome-verifier window, rollback condition, level, window,
+#      closure route, decision reference, justification) are single-home
+#      contract constants in packages/core/src/contracts/action.ts, asserted
+#      once by TC-ACTION-036's structural scan — never re-derived per suite.
+#   2. LIST-SURFACE DATA KEY (GAP-4): `retro action list` exposes the recorded
+#      actions under `data.actions` — the `actions[]` the pinned scenario
+#      SC-M2-S10-01 asserts empty after a refused filing. Each entry carries
+#      identity, owner, verb, level, improvement window, age, aging state, the
+#      two closure planes, and the window count/limit disclosure (DM-5).
+#   3. PAYLOAD SCHEMA IDS (pinned naming, brand-neutral per §21): the action
+#      record carries `delivery.retro.action.v1`; the closure record carries
+#      `delivery.retro.action-closure.v1`. Record kinds `retro.action` and
+#      `retro.action-closure` live under the store-scoped key prefixes
+#      `retro.actions:` and `retro.action-closures:` in the change's own
+#      validated boundary (DEC-7); the delivered retro-registry boundary and
+#      its "exactly three" declaration are unchanged.
+#   4. CLOSURE-PLANE TOKENS: the two planes are `artifactClosure` and
+#      `outcomeClosure` with the state vocabulary `open` | `closed` (the two
+#      pinned literals of SC-M2-S10-02); the verification-window state
+#      vocabulary is `open` | `elapsed` | `mooted`, where `mooted` is the
+#      recorded consequence of the one both-plane decision on the
+#      deprioritized/superseded routes (DEC-11, TC-ACTION-038).
+#   5. ERROR-ROW METADATA for the three additive exact rows (DEC-5, TC-ACTION-
+#      026 asserts the complete set): all three carry domainKind `retro`,
+#      category `user`, retryable `false`, consequence `not_landed`,
+#      projectionClass `user-validation` — refusal semantics, exit 1, nothing
+#      landed — each with a remediation hint naming the missing/offending
+#      member (or, for the already-closed-plane conflict detail, the plane and
+#      its existing closure decision) and a one-line summary; the delivered
+#      four `retro` rows keep their codes, category, consequence, and
+#      projection byte-unchanged.
+#   6. DOCTOR VERDICT NAME (DEC-7): the doctor state check gains one additive
+#      per-store fact `{ name: "action-registry", verdict }` in its evidence,
+#      composed at the CLI edge exactly like the delivered `retro-registry`
+#      store fact; the closed area list is unchanged (D-15/D-16 declare only
+#      the store-count/detail and evidence-source-id moves).
+#   7. BOARD SURFACE SHAPE (GAP-6/OQ-T4): the actions surface is a fifth
+#      declared section labeled `ACTIONS`, rendered immediately after `ASKS`
+#      and before `PARKED`, additive under the kept `delivery.board.v1`
+#      payload identity; the four delivered labels keep their order and
+#      semantics. Rows carry identity, repository, action reference, owner,
+#      level, age (milliseconds, the delivered ask-age pattern), and aging
+#      state, under a per-repository cap with counted omissions and a declared
+#      byte-guard drop-order step; the surface reads the registry through one
+#      named source composed at the edge.
+#   8. HELP-GUIDE COVERAGE + M2 REFERENCE PAGE (pm-notes ripple):
+#      tests/fixtures/help-guide/coverage.json gains the row
+#      `doc/planning/oss-tooling/milestones/m2/commands/retro.md` (new page)
+#      beside the byte-unchanged M1 snapshot row; the page documents the
+#      extended retro family (`collect`, `report`, `action file|close|list`)
+#      and lands in the same commit as the grammar so the coverage and parity
+#      guards stay green.
+#
+# PHASE ORDERING AND TESTABILITY:
+#   Each phase is one commit on `feat/GH-287/retro-action-registry` whose
+#   declared narrow gate is green at the boundary. Phase 1 lands the authored
+#   contract declaration every later phase asserts through, plus the three
+#   error rows with the machine/documented/classifier sync in ONE commit (the
+#   GH-291 early-doc-edit discipline: error-table code rows + the documented
+#   table in feature-result-contract.md + the structure counts move together
+#   or the sync gate is red). Phase 2 lands the validated boundary with the
+#   filing gate and the WIP limit — TC-ACTION-001..005/014..016 observe stored
+#   records through the composed runtime, so validation, records, and the
+#   window projection land together. Phase 3 lands the derived aging ladder
+#   and the explicit two-plane closure. Phase 4 lands boundary-damage
+#   classification and the doctor store verdict. Phase 5 mounts the CLI verb
+#   group with the help surface and the M2 reference page (grammar and page
+#   land together so help-guide coverage stays green). Phase 6 renders the
+#   board actions surface with every declared board drift row. Phase 7 makes
+#   the registry the follow-through producer for the ceremony retro-evidence
+#   pass and the retro report fold. Phase 8 is the cross-cutting honesty
+#   battery — the mutant meta-suite, the hermetic scan, and the disclosure
+#   suite need every production module and all render paths to exist, and
+#   TC-ACTION-037's additive proof needs every consumer landed. Phase 9
+#   reconciles docs and the planning corpus, stages the changeset, and
+#   declares the release obligations; the final gate runs `plan validate
+#   GH-287` and the full battery.
+#
+# DELIVERED-SUITE DRIFT (test plan §4.4 D-1..D-28, declared not discovered):
+#   Every D-row's file is declared in a phase scope so the commit primitive's
+#   plan-union scope accepts the deliberate move; goldens regenerate by
+#   explicit command, never blanket rewrite; D-row commits name the rows in
+#   the body. Mapping: D-1..D-4 Phase 1; D-21..D-23 Phase 2 (D-21 continues
+#   in every phase adding files); D-13(closure-half) Phase 3; D-14..D-16
+#   Phase 4; D-17..D-20 Phase 5; D-5..D-10, D-27, D-28 Phase 6; D-11(stands
+#   unchanged)/D-12/D-13(fold-half) Phase 7; D-24(literal halves), D-26
+#   Phase 8; D-24(doc-conformance phrase table), D-25 Phase 9. D-11 is a
+#   declared NO-MOVE: the exact-four-keys assertion on `retro report` data
+#   stands (DEC-10); a registry-derived top-level key would be a spec
+#   violation, not a drift row.
+#
+# DECLARED CONTROLS, NOT EDITS: the delivered regression suites below are
+#   re-run in phase gates as controls and are NOT edited, so none is declared
+#   in a phase scope: tests/behaviour/{retro-levels,retro-registry,retro-
+#   privacy,retro-hermetic,retro-performance,retro-report-determinism,retro-
+#   telemetry-evidence}.test.ts, tests/behaviour/ceremony-flow-retro.test.ts,
+#   the delivered board suites not named in §4.4, tests/checks/fixture-
+#   privacy.test.ts, and tests/checks/retro-{key-containment,render-purity,
+#   truth-check-mutants}.test.ts. A semantic assertion change in any delivered
+#   suite outside the D-rows above is the escalation trigger the tier
+#   reserves. An untouched declared file is only a `plan diff` observation,
+#   never a gate failure (GH-291 scope convention).
+#
+# TC -> PHASE MAP (39 ids = TC-ACTION-001..039; every id is owned by exactly
+#   one phase — the phase which first makes its complete suite set green.
+#   Suite halves proven earlier are named in that phase's gate and `Suites
+#   left green` line without a second TC row):
+#   Phase 1 contracts/error rows (1): TC-ACTION-026
+#   Phase 2 boundary/filing/WIP (8): TC-ACTION-001, 002, 003, 004, 005,
+#            014, 015, 016
+#   Phase 3 aging/closure (10): TC-ACTION-006, 007, 008, 009, 010, 011,
+#            012, 013, 038, 039
+#   Phase 4 boundary damage/doctor (1): TC-ACTION-034
+#   Phase 5 CLI verb group (0): none (the grammar/help/reference-page halves
+#            of TC-ACTION-036 are proven green here; TC-ACTION-036 is owned
+#            by Phase 9 once its doc-conformance and planning-pages halves
+#            complete; TC-ACTION-010's golden echo lands here because the
+#            action argv becomes executable — the pinned assertions are owned
+#            green by Phase 3's closure suite)
+#   Phase 6 board actions surface (5): TC-ACTION-017, 018, 019, 020, 021
+#   Phase 7 follow-through producers (4): TC-ACTION-022, 023, 024, 025
+#   Phase 8 honesty battery (9): TC-ACTION-027, 028, 029, 030, 031, 032,
+#            033, 035, 037
+#   Phase 9 docs/release (1): TC-ACTION-036
+#
+# RELEASE: one lockstep minor changeset over the five publishables
+#   (`@delivery-os/core`, `adapters`, `cli`, `mcp`, `opencode`), matching the
+#   GH-291/GH-296/GH-297 precedent. No new package dependency, no data
+#   migration (the registry starts empty; no backfill — NG-9), no
+#   schema-version bump (DEC-7), no scheduler or background process (DEC-3).
+#
+# COMMIT DISCIPLINE (pm-notes delivery conventions): conventional subjects
+#   <= 72 chars; body and footer lines <= 100 chars; commits through the
+#   commit primitive against this plan's phase scope; PR targets `main-tools`
+#   and states the two scope exclusions (DEC-1, DEC-2) in the description.
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-287
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  escalationTriggers:
+    - "A fourth `retro` error identity, a family/pattern widening, or a new domain kind would be required; the delivered four `retro` rows would change code, category, consequence, or projection (DEC-5, DEC-8)"
+    - "The WIP limit would become per-window declared data or a recorded warning instead of the fixed contract-data value 3 enforced as a classified refusal (DEC-6)"
+    - "The delivered retro-registry boundary's exactly-three record kinds, the `delivery.retro.report.v1` identity, or the report's four top-level data keys would change (DEC-7, DEC-10)"
+    - "The aging basis would fork from time open since the recorded filing timestamp, a second basis constant would appear, or due dates would feed the day thresholds (DEC-9, NFR-3)"
+    - "Outcome closure would result from elapsed time on any route, a closure route's plane effects would diverge from DEC-11, or a repeat closure on a closed plane would append a second record"
+    - "Aging, nudging, or escalation would need a scheduler, daemon, timer, or any background write (DEC-3, NG-6)"
+    - "The board payload identity would change, a delivered section/cap/label would move beyond the declared D-5..D-10 drift, or the actions surface would need a second state vocabulary (F-6, RSK-4)"
+    - "Ceremony declarations, agendas, the note schema, or the asserted follow-through-first position would need changes instead of additive reader composition (NG-4)"
+    - "The `action` surface would require a new command family instead of the additive verb group inside the delivered `retro` family (DEC-7)"
+    - "A delivered suite would need a semantic assertion change outside the §4.4 D-rows this plan declares, or a golden would need regeneration outside the explicit commands"
+    - "Backfill, import, or migration of historical retro actions would be required (NG-9)"
+    - "Tracker corroboration would need live network access on any test or render path instead of the injected read seam (NFR-4, §8.4)"
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  # ---------------------------------------------------------------------------
+  # Phase 1 — The action-registry contract declaration and the three additive
+  # error rows (F-1/F-2/F-3/F-4/F-5 vocabulary half; DEC-5, DEC-8, NFR-8).
+  #
+  # Goal: land the single contract home every later phase asserts through —
+  # packages/core/src/contracts/action.ts — declaring: the closed
+  # verifiable-verb vocabulary (add/remove/change/test/deploy; "review" and
+  # "improve" refused), the owner kinds (agent role or human; team-owned
+  # refused), the five-field contract plus verification artifact, outcome
+  # verifier (non-null delayed metric window) and rollback condition members,
+  # the record kinds `retro.action`/`retro.action-closure` under the
+  # `retro.actions:`/`retro.action-closures:` prefixes, the payload schema ids
+  # `delivery.retro.action.v1`/`delivery.retro.action-closure.v1`, the aging
+  # constants (14-day nudge, 30-day escalation, the ONE aging-basis constant —
+  # time open since the recorded filing timestamp — and the two-lapse
+  # second-miss rule, DEC-9), the aging-state vocabulary
+  # (current/nudged/escalated), the WIP-limit constant 3 (DEC-6), the closure
+  # routes (done/deprioritized/superseded), the closure planes and their
+  # open/closed states plus the open/elapsed/mooted window vocabulary
+  # (DEC-11), the three refusal identities, the free-text bounds, and the
+  # board actions-row member set (DM-4). No behaviour changes: no boundary
+  # exists, no verb is mounted, no board key moves.
+  #
+  # The error table grows 4 -> 7 additive exact two-segment rows under the
+  # delivered `retro` domain kind (DEC-5) with the declared metadata (category
+  # `user`, retryable `false`, consequence `not_landed`, projection
+  # `user-validation`), and — the GH-291 early-doc-edit discipline — the
+  # machine rows, the documented rows in feature-result-contract.md, the
+  # structure counts, the corpora, and the two-way sync check all move in this
+  # ONE commit or the gate is red.
+  #
+  # AC/TC coverage: AC-N8-1 (TC-ACTION-026); declares the vocabulary for
+  # F-1..F-7; proves the constants half of TC-ACTION-036 (owned by Phase 9).
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/structure/action-contract.test.ts tests/structure/action-imports.test.ts
+  #   bun test tests/structure/{error-table,retro-contract,content-inventory}.test.ts
+  #   bun test tests/checks/error-table-sync.test.ts
+  #   bun run scripts/checks/error-table-sync.ts
+  #
+  # Suites left green: action-contract (constants half), action-imports
+  #   (static half), error-table (7 rows, delivered four byte-unchanged),
+  #   retro-contract (delivered control), content-inventory, error-table-sync
+  #   (both directions, corpora carrying the three new codes).
+  # ---------------------------------------------------------------------------
+  - id: 1
+    title: "Action-registry contract declaration and the three additive error rows (4 -> 7)"
+    kind: delivery
+    summary: "feat(retro): declare action-registry contracts and the three additive error rows"
+    scope:
+      files:
+        - packages/core/src/contracts/action.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/contracts/error-table.ts
+        - doc/spec/features/feature-result-contract.md
+        - tests/structure/action-contract.test.ts
+        - tests/structure/action-imports.test.ts
+        - tests/structure/error-table.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+        - tests/checks/error-table-sync.test.ts
+        - tests/fixtures/result/code-corpora/true-positives.json
+        - tests/fixtures/result/code-corpora/false-positives.json
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/action.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 2 — The validated boundary, the filing gate, and the WIP limit
+  # (F-1, F-2, F-5; DEC-6, DEC-7, DEC-8; SC-M2-S10-01).
+  #
+  # Goal: make an action record exist only through validated filing. The new
+  # boundary packages/core/src/state/action-registry.ts composes the reusable
+  # artifact-boundary factory over the public state port with exactly the two
+  # record kinds under the two declared prefixes — the delivered
+  # retro-registry boundary and its exactly-three declaration are untouched.
+  # The filing domain validates the five-field contract plus verification
+  # artifact, outcome-verifier window, and rollback condition as
+  # all-or-nothing: a missing member OR a present-but-non-conforming field
+  # (team-owned owner, verb outside the closed vocabulary, placeholder tracker
+  # entry — DEC-8) is refused with exit 1 under `retro.action-incomplete`
+  # naming the missing or offending field, and zero rows land (`actions[]`
+  # stays empty — the pinned SC-M2-S10-01, matrix R-01..R-12). Tracker
+  # corroboration reads through the injected delivered seam: an unreachable
+  # tracker keeps the entry recorded with its corroboration state disclosed.
+  # The window projection enforces the fixed contract-data WIP limit 3: a
+  # filing into a window at its limit is refused with exit 1 under
+  # `retro.wip-limit-exceeded` naming window, open count, and limit, no row
+  # lands (DEC-6), and the count/limit disclosure renders wherever the window
+  # is reported. Filing dates come from the injected clock; free text is
+  # bounded at the boundary (never silently clipped). The new
+  # tests/fixtures/action/ folder holds the action row builders, window/limit
+  # fixtures, the aging clock plan, and the registry store seeder composing
+  # the boundary declaration (GAP-2).
+  #
+  # AC/TC coverage: AC-F1-1 (TC-ACTION-001, TC-ACTION-002), AC-F1-2
+  # (TC-ACTION-003, TC-ACTION-005), AC-F2-1 (TC-ACTION-004), AC-F5-1
+  # (TC-ACTION-014, TC-ACTION-015, TC-ACTION-016).
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/action-filing.test.ts tests/behaviour/action-wip-limit.test.ts
+  #   bun test tests/structure/{state-scope,packed-state,retro-contract,retro-imports,content-inventory}.test.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  #   bun run scripts/checks/exports-parity.ts
+  #
+  # Suites left green: action-filing (R-01..R-12 with paired controls and
+  #   zero-row store assertions), action-wip-limit (refusal, slot-freeing
+  #   disclosure), state-scope + packed-state (new prefixes declared),
+  #   retro-contract + retro-imports (additive sibling assertions, delivered
+  #   exactly-three unchanged), content-inventory, ambient-globals,
+  #   exports-parity.
+  # ---------------------------------------------------------------------------
+  - id: 2
+    title: "Validated action-registry boundary with the all-or-nothing filing gate and the WIP limit"
+    kind: delivery
+    summary: "feat(retro): file validated actions in their own boundary with the WIP limit"
+    scope:
+      files:
+        - packages/core/src/domain/action-filing.ts
+        - packages/core/src/domain/action-window.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/state/action-registry.ts
+        - packages/core/src/state/index.ts
+        - packages/core/src/index.ts
+        - tests/behaviour/action-filing.test.ts
+        - tests/behaviour/action-wip-limit.test.ts
+        - tests/structure/state-scope.test.ts
+        - tests/structure/packed-state.test.ts
+        - tests/structure/retro-contract.test.ts
+        - tests/structure/retro-imports.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/action
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/state/action-registry.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 — Derived aging and explicit two-plane closure (F-3, F-4; DEC-3,
+  # DEC-4, DEC-9, DEC-11; SC-M2-S10-02).
+  #
+  # Goal: make drift visible and closure explicit. The aging projection is a
+  # pure function of the recorded filing timestamp (the ONE declared basis —
+  # time open since filing, DEC-9), the due-date lapse counter (due dates feed
+  # ONLY the miss counter), the injected clock, and the contract constants:
+  # `current` at day 0 and 13, `nudged` at 14/15/29, `escalated` at 30/31 or
+  # on the second lapse event at any age — exact at both boundaries, evaluated
+  # at read/render time, never stored, zero ambient clock reads (matrix
+  # A-01..A-11). Closure is explicit-only with three routes (done + artifact,
+  # deprioritized + reason, superseded + successor): every attempt without the
+  # decision or the route's justification is refused under
+  # `retro.closure-incomplete` naming what is missing and transitions nothing
+  # (C-01..C-06). The pinned SC-M2-S10-02 holds: done closes the artifact
+  # plane only — `artifactClosure == "closed"`, `outcomeClosure == "open"`
+  # with the non-null verification window — and outcome closure happens ONLY
+  # through an explicit decision citing in-window verifier evidence, never
+  # from elapsed time or artifact closure (C-07, C-10, C-11). The
+  # deprioritized and superseded routes close BOTH planes in the one decision
+  # — the reason or the superseding action reference (recorded on the closure
+  # record) is each plane's justification, the window mooted by the decision
+  # and not by time (C-08, C-09, TC-ACTION-038). A closure decision targeting
+  # an already-closed plane is refused as a state conflict under the same
+  # identity naming the plane and its existing closure, with no second
+  # closure record (C-13, C-14, TC-ACTION-039).
+  #
+  # AC/TC coverage: AC-F3-1 (TC-ACTION-006, TC-ACTION-007, TC-ACTION-008),
+  # AC-F4-1 (TC-ACTION-009, TC-ACTION-012), AC-F4-2 (TC-ACTION-010,
+  # TC-ACTION-012), AC-F4-3 (TC-ACTION-011, TC-ACTION-013), AC-F4-4
+  # (TC-ACTION-012, TC-ACTION-038), AC-F4-5 (TC-ACTION-039).
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/action-aging.test.ts tests/behaviour/action-closure.test.ts
+  #   bun test tests/structure/action-imports.test.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  #
+  # Suites left green: action-aging (A-01..A-11, basis purity, straddling
+  #   fixture, rewind invariance), action-closure (C-01..C-14 with paired
+  #   controls, plane effects per route, state-conflict refusals), 
+  #   action-imports (basis constant single-home scan added),
+  #   ambient-globals.
+  # ---------------------------------------------------------------------------
+  - id: 3
+    title: "Derived single-basis aging ladder and explicit closure with the two planes"
+    kind: delivery
+    summary: "feat(retro): derive exact aging and land explicit two-plane closure"
+    scope:
+      files:
+        - packages/core/src/domain/action-aging.ts
+        - packages/core/src/domain/action-closure.ts
+        - packages/core/src/domain/index.ts
+        - tests/behaviour/action-aging.test.ts
+        - tests/behaviour/action-closure.test.ts
+        - tests/structure/action-imports.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/action
+
+  # ---------------------------------------------------------------------------
+  # Phase 4 — Boundary damage classification and the doctor store verdict
+  # (DEC-7, §10; NFR-5).
+  #
+  # Goal: make the registry a first-class validated boundary with classified
+  # damage and doctor visibility. The boundary declares exactly the two record
+  # kinds under the two prefixes and validates payloads on read and write; a
+  # malformed record is `state.store.unknown`, never served; torn, wrong-kind,
+  # and permission-denied stores classify with the delivered `state.*`
+  # identities and their declared exits (2/1) and leave the store consistent.
+  # The delivered retro-registry boundary still declares exactly its three
+  # kinds (re-proven). Doctor gains the additive `{ name: "action-registry",
+  # verdict }` store fact in the state check's evidence, composed at the edge
+  # exactly like the delivered `retro-registry` fact — the closed area list
+  # and its count semantics are unchanged, the store facts and the state
+  # detail name the action-registry store too, and the doctor golden
+  # regenerates by explicit command.
+  #
+  # AC/TC coverage: NFR-5 store-boundary half (TC-ACTION-034); the
+  # §10-spec-bound doctor-verdict behaviour (bound to NFR-5, DM-1/DM-3).
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/action-store-boundary.test.ts
+  #   bun test tests/behaviour/doctor-state.test.ts tests/behaviour/doctor-report.test.ts
+  #   bun test tests/golden/doctor-output.test.ts
+  #   bun test tests/structure/{doctor-contract,content-inventory}.test.ts
+  #
+  # Suites left green: action-store-boundary (kinds, prefixes, validation,
+  #   damage matrix, delivered-boundary control), doctor-state (D-14
+  #   pin-change), doctor-report (D-15), golden doctor-output (D-15,
+  #   regenerated deliberately), doctor-contract (D-16),
+  #   content-inventory.
+  # ---------------------------------------------------------------------------
+  - id: 4
+    title: "Registry damage classification and the doctor action-registry store verdict"
+    kind: delivery
+    summary: "feat(retro): classify registry damage and add the doctor action-registry store verdict"
+    scope:
+      files:
+        - packages/cli/src/edge.ts
+        - packages/core/src/contracts/doctor.ts
+        - tests/behaviour/action-store-boundary.test.ts
+        - tests/behaviour/doctor-state.test.ts
+        - tests/behaviour/doctor-report.test.ts
+        - tests/golden/doctor-output.test.ts
+        - tests/structure/doctor-contract.test.ts
+        - tests/fixtures/doctor/harness.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+
+  # ---------------------------------------------------------------------------
+  # Phase 5 — The `retro action` CLI verb group, the help surface, and the M2
+  # reference page (DEC-7; GAP-4).
+  #
+  # Goal: mount the pinned verb grammar as one unit with every guard that
+  # reads it. `retro action file|close|list` joins the delivered family:
+  # `retro collect` and `retro report` keep their grammar and semantics, the
+  # unknown-subcommand guard widens to the group with a new refusal control
+  # proving it stays closed, and the exported CLI symbol set and the "no new
+  # command family" property stay asserted (D-17, D-18). `retro action list`
+  # exposes `data.actions` (the pinned `actions[]` key) with the aging states
+  # and the window count/limit disclosure; refusal envelopes surface the
+  # Phase-1 identities verbatim through the CLI path. The human render and
+  # `--help` document the extended family; the new M2 reference page
+  # doc/planning/oss-tooling/milestones/m2/commands/retro.md and its
+  # coverage.json row land in the SAME commit so help-guide-coverage and
+  # reference-page-parity stay green (the M1 snapshot page stays
+  # byte-unchanged — D-19, D-20). The action golden cases join
+  # tests/golden/retro/cases.json here, where the action argv first becomes
+  # executable (D-13 first half; the SC-M2-S10-02 closure case echoes the
+  # Phase-3-owned assertions).
+  #
+  # AC/TC coverage: AC-F7-2 command-surface half and the GAP-4 grammar pin
+  # (TC-ACTION-036 steps 2-4 proven green here; the TC is owned by Phase 9).
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/retro-output.test.ts tests/behaviour/retro-collect.test.ts
+  #   bun test tests/structure/{cli-edge-seam,action-contract,content-inventory}.test.ts
+  #   bun test tests/checks/{help-guide-coverage,help-guide-coverage-mutants,reference-page-parity}.test.ts
+  #   bun run scripts/checks/help-guide-coverage.ts
+  #
+  # Suites left green: retro-output (D-18 guard widening + action golden
+  #   cases), retro-collect (delivered control), cli-edge-seam (D-17 grammar
+  #   and positional-bound pin-change), action-contract (grammar constants),
+  #   content-inventory, help-guide-coverage, help-guide-coverage-mutants,
+  #   reference-page-parity.
+  # ---------------------------------------------------------------------------
+  - id: 5
+    title: "CLI surface: the retro action verb group, help, goldens, and the M2 reference page"
+    kind: delivery
+    summary: "feat(cli): mount the retro action verb group with help and the M2 reference page"
+    scope:
+      files:
+        - packages/cli/src/commands/retro.ts
+        - packages/cli/src/edge.ts
+        - doc/planning/oss-tooling/milestones/m2/commands/retro.md
+        - tests/fixtures/help-guide/coverage.json
+        - tests/structure/cli-edge-seam.test.ts
+        - tests/behaviour/retro-output.test.ts
+        - tests/behaviour/retro-collect.test.ts
+        - tests/checks/help-guide-coverage.test.ts
+        - tests/checks/help-guide-coverage-mutants.test.ts
+        - tests/checks/reference-page-parity.test.ts
+        - tests/golden/retro/cases.json
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/commands/retro.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 6 — The board actions surface beside the owner asks (F-6, F-3 board
+  # half; DM-4; NFR-1/2/6/7; RSK-4).
+  #
+  # Goal: render the improvement obligations beside the coordination ones.
+  # The board gains the fifth declared `ACTIONS` section immediately after
+  # `ASKS`: open actions with identity, repository, action reference, owner,
+  # level, age (the delivered ask-age milliseconds pattern), and aging state,
+  # read through ONE named registry source composed at the edge — no second
+  # state vocabulary, no per-row re-read, no write on render. The surface
+  # follows every delivered pattern: deterministic
+  # repository-then-section-then-row ordering (shuffled seeding proves the
+  # sort), a per-repository cap with counted omissions (`truncated` plus
+  # per-section counters), participation in the byte guard's declared drop
+  # order (never a silent drop), the payload identity kept with the actions
+  # member added beside the delivered keys (D-5: 15 -> 16), and the four
+  # delivered sections, caps, and semantics unchanged (D-6, D-8, D-10).
+  # Byte-identical repeat renders hold across machine and human (D-7 goldens,
+  # D-9 invariants, D-27 help/legend). An empty registry renders the label
+  # with explicit zero counters; a failed registry read discloses the
+  # classified source state with exit 0 and no fabricated rows. The WIP
+  # count/limit disclosure rides the rows wherever a window renders.
+  #
+  # AC/TC coverage: AC-F6-1 (TC-ACTION-017, TC-ACTION-019, TC-ACTION-020,
+  # TC-ACTION-021, and the board half of TC-ACTION-033's mutant set), AC-F6-2
+  # (TC-ACTION-018), the AC-F3-1 board-visibility half (TC-ACTION-017).
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/board-actions.test.ts
+  #   bun test tests/behaviour/board-{sections,asks,aging,bounds,byte-guard,repository-cap,never-silence,determinism,purity,performance,read-cost,privacy,shared-source,write-discipline,command,help}.test.ts
+  #   bun test tests/structure/{board-contract,board-nonregression,board-mounting,content-inventory}.test.ts
+  #   bun test tests/golden/{board-full,board-grid}.test.ts
+  #
+  # Suites left green: board-actions (new), the sixteen delivered board
+  #   behaviour suites with their declared D-8/D-9/D-27 additive moves,
+  #   board-contract (D-5), board-nonregression (D-10) + board-mounting,
+  #   golden board-full + board-grid (D-7, regenerated deliberately),
+  #   content-inventory.
+  # ---------------------------------------------------------------------------
+  - id: 6
+    title: "Board actions surface: additive ACTIONS section beside the asks under the delivered bounds"
+    kind: delivery
+    summary: "feat(board): render the actions surface beside the owner asks"
+    scope:
+      files:
+        - packages/core/src/contracts/owner-gate-sla.ts
+        - packages/core/src/contracts/status.ts
+        - packages/core/src/domain/owner-gate-sla.ts
+        - packages/core/src/domain/status.ts
+        - packages/cli/src/commands/board.ts
+        - packages/cli/src/edge.ts
+        - tests/behaviour/board-actions.test.ts
+        - tests/behaviour/board-sections.test.ts
+        - tests/behaviour/board-asks.test.ts
+        - tests/behaviour/board-aging.test.ts
+        - tests/behaviour/board-bounds.test.ts
+        - tests/behaviour/board-byte-guard.test.ts
+        - tests/behaviour/board-repository-cap.test.ts
+        - tests/behaviour/board-never-silence.test.ts
+        - tests/behaviour/board-determinism.test.ts
+        - tests/behaviour/board-purity.test.ts
+        - tests/behaviour/board-performance.test.ts
+        - tests/behaviour/board-read-cost.test.ts
+        - tests/behaviour/board-privacy.test.ts
+        - tests/behaviour/board-shared-source.test.ts
+        - tests/behaviour/board-write-discipline.test.ts
+        - tests/behaviour/board-command.test.ts
+        - tests/behaviour/board-help.test.ts
+        - tests/structure/board-contract.test.ts
+        - tests/structure/board-nonregression.test.ts
+        - tests/structure/board-mounting.test.ts
+        - tests/golden/board-full.test.ts
+        - tests/golden/board-grid.test.ts
+        - tests/fixtures/board/sections.ts
+        - tests/fixtures/board/matrix.ts
+        - tests/fixtures/board/harness.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/action
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/owner-gate-sla.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 7 — Follow-through producers: ceremony pass, report fold, cross-level
+  # unity, and the handoff flow (F-7; DEC-10; RSK-1, RSK-3).
+  #
+  # Goal: make the registry the producer the delivered surfaces were waiting
+  # for. The ceremony retro-evidence-pass composes the registry follow-through
+  # reader as its verification source: the asserted follow-through-first
+  # position, declarations, agendas, and note schema are UNCHANGED (NG-4); the
+  # R4+ verdicts `applied`/`partial`/`violated-with-consequence` are assigned
+  # from artifact evidence through the artifact oracle — an owner claim that
+  # contradicts a failed artifact cannot yield `applied`, and artifact rot
+  # degrades to declared verdicts, never fabricates. The retro report's
+  # delivered `followThrough[]` fold gains its production reader: the
+  # injected-reader contract is preserved, entries fold from recorded registry
+  # actions with `verified`/`unverified`/`unknown` plus registry provenance
+  # INSIDE the entries, `data` keeps exactly its four shipped top-level keys
+  # (DEC-10 — D-11 stands unchanged and TC-ACTION-023 asserts it), and the
+  # verified-empty registry is an explicit success. One registry serves every
+  # level: filings from change, session, incident, window, and project land in
+  # the same boundary under the same contract with identical aging and closure
+  # semantics and identical refusal identities — no per-level fork, R6 stays
+  # declared-but-unscheduled. The ceremony declared-actions handoff reaches
+  # filing: the ceremony writes nothing (delivered posture), an unfiled
+  # declared action never passes as `applied`, and the filed one does.
+  #
+  # AC/TC coverage: AC-F7-1 (TC-ACTION-022, TC-ACTION-023, TC-ACTION-025),
+  # AC-F7-2 (TC-ACTION-023, TC-ACTION-024).
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/action-follow-through.test.ts tests/behaviour/action-ceremony-handoff.test.ts tests/behaviour/action-cross-level.test.ts
+  #   bun test tests/behaviour/{ceremony-flow-retro-levels,retro-report,retro-output}.test.ts
+  #   bun test tests/behaviour/ceremony-flow-retro.test.ts
+  #
+  # Suites left green: action-follow-through, action-ceremony-handoff,
+  #   action-cross-level, ceremony-flow-retro-levels (update),
+  #   ceremony-flow-retro (delivered control), retro-report (D-12 additive
+  #   registry-sourced case; D-11 four-keys assertion stands), retro-output
+  #   (D-13 fold golden cases), content-inventory.
+  # ---------------------------------------------------------------------------
+  - id: 7
+    title: "Follow-through producers: ceremony retro-evidence pass, report fold, cross-level unity, handoff flow"
+    kind: delivery
+    summary: "feat(retro,ceremony): make the registry the follow-through producer"
+    scope:
+      files:
+        - packages/core/src/contracts/retro.ts
+        - packages/core/src/domain/ceremony-retro.ts
+        - packages/core/src/domain/retro.ts
+        - packages/cli/src/edge.ts
+        - tests/behaviour/action-follow-through.test.ts
+        - tests/behaviour/action-ceremony-handoff.test.ts
+        - tests/behaviour/action-cross-level.test.ts
+        - tests/behaviour/ceremony-flow-retro-levels.test.ts
+        - tests/behaviour/retro-report.test.ts
+        - tests/behaviour/retro-output.test.ts
+        - tests/golden/retro/cases.json
+        - tests/fixtures/ceremony/builtins.ts
+        - tests/fixtures/retro/harness.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/action
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/retro.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 8 — The cross-cutting honesty battery (NFR-1..NFR-8; TC-ACTION-033
+  # mutants; TC-ACTION-037 additive proof).
+  #
+  # Goal: pin the rules that span paths and modules. Determinism and purity:
+  # byte-identical repeat renders for list, board, and report over identical
+  # stored actions, injected clock, and injected run id; zero model calls;
+  # refusal envelopes deterministic; shuffled-append permutation invariance;
+  # zero ambient clock/random reads (TC-ACTION-027). Bounds: measured UTF-8
+  # bytes <= 65,536 with marked truncation and counted omissions; over-long
+  # free text refused naming the bound, in-bounds text stored unnormalized
+  # (TC-ACTION-028). Write discipline: exactly one fenced append per file,
+  # close, and supersede invocation with the injected fence token; zero
+  # appends on list/board/report; no update-in-place, no delete; a torn
+  # append classifies `state.*` and leaves the store consistent
+  # (TC-ACTION-029). Read cost: one bounded registry read per board
+  # invocation, pure projection, no per-row re-reads, the bounded-work oracle
+  # as the CI gate and the wall-clock median recorded in the test plan §10 log
+  # as a reference measurement only (TC-ACTION-030, GAP-3). Privacy: canary
+  # secrets placed in adjacent fields appear nowhere in records, envelopes, or
+  # rendered rows; the redaction chokepoint composes on every new path; the
+  # clean control renders unchanged (TC-ACTION-031). Hermeticity: the new
+  # suites contain no skip, socket, spawn, `$HOME` read, live store, or
+  # credential access, and a planted violation fails the scan (TC-ACTION-032,
+  # D-26). Disclosure and audit: every refusal names the specific member (or
+  # the plane and its existing closure for the state conflict), aging state
+  # and window count/limit render in-band on every surface, one command-audit
+  # record per invocation, and an audit-write failure never changes the
+  # outcome (TC-ACTION-035). The mutant meta-suite disables every honesty
+  # rule — the 23 declared mutants (a)..(w) including the aging-basis mix, the
+  # done-route outcome side effect, the elapsed-window closure, the WIP warn,
+  # the owner inference, the verdict-from-owner-claim, the artifact-plane-only
+  # both-plane routes, and the repeat-closure acceptance — and each must fail
+  # while the real modules pass (TC-ACTION-033). The delivered retro,
+  # ceremony, board, and error-table suites re-run green with only the
+  # declared D-row moves: the change is strictly additive (TC-ACTION-037).
+  # This phase adds tests and fixtures only.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/action-{determinism,bounds,write-discipline,read-cost,performance,privacy,disclosure,audit}.test.ts
+  #   bun test tests/checks/{action-mutants,action-hermetic,privacy-literals,ceremony-hermetic,exit-code-literals,forbidden-literals}.test.ts
+  #   bun test tests/behaviour tests/structure
+  #   bun run scripts/checks/{ambient-globals,error-table-sync}.ts
+  #
+  # Suites left green: the eight action honesty suites, action-mutants (all
+  #   declared mutants failing), action-hermetic, privacy-literals (D-24),
+  #   ceremony-hermetic (D-26), exit-code-literals + forbidden-literals
+  #   (D-24), the broad behaviour + structure run (TC-ACTION-037),
+  #   ambient-globals, error-table-sync.
+  # ---------------------------------------------------------------------------
+  - id: 8
+    title: "Cross-cutting honesty battery: determinism, bounds, write discipline, read cost, privacy, hermeticity, disclosure, audit, mutants, additive proof"
+    kind: delivery
+    summary: "test(retro): pin the action-registry honesty battery and mutants"
+    scope:
+      files:
+        - tests/behaviour/action-determinism.test.ts
+        - tests/behaviour/action-bounds.test.ts
+        - tests/behaviour/action-write-discipline.test.ts
+        - tests/behaviour/action-read-cost.test.ts
+        - tests/behaviour/action-performance.test.ts
+        - tests/behaviour/action-privacy.test.ts
+        - tests/behaviour/action-disclosure.test.ts
+        - tests/behaviour/action-audit.test.ts
+        - tests/checks/action-mutants.test.ts
+        - tests/checks/action-hermetic.test.ts
+        - tests/checks/privacy-literals.test.ts
+        - tests/checks/ceremony-hermetic.test.ts
+        - tests/checks/exit-code-literals.test.ts
+        - tests/checks/forbidden-literals.test.ts
+        - tests/structure/action-imports.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/action
+
+  # ---------------------------------------------------------------------------
+  # Phase 9 — Documentation reconciliation, planning maintenance, changeset,
+  # and the release obligations.
+  #
+  # Goal: make every page that states the retro contract true again and
+  # record the delivered story in the planning corpus. The system spec pages
+  # this change owns: the new action-registry feature page (records, filing
+  # contract, aging, closure planes, WIP limit, CLI surface, doctor verdict),
+  # feature-retro-pipeline.md (follow-through enforcement delivered — the
+  # "enforcement is later work" wording retires with the doc-conformance
+  # phrase-table row; the additive `action` verb group; the sibling boundary;
+  # the fold producer), feature-ceremony-runner.md (the handoff boundary
+  # landed — the registry is the receiving producer), feature-board.md (the
+  # ACTIONS section), and feature-doctor.md (the action-registry store fact)
+  # — lifecycle phase 7 (`system_spec_update`) VERIFIES these; it does not
+  # add them. The landing page and glossary register the new terms.
+  # Planning maintenance per convention: the backlog M2-S10 row gains its
+  # delivered marker, status.md records the snapshot, and the m2 README and
+  # contracts pages carry the ownership lines (telemetry.v1 advisory
+  # consumption at the story's declared edge). The new spec page registers in
+  # the forbidden-literals user-facing-doc corpus. TC-ACTION-036 completes
+  # here: one home per contract constant, brand neutrality, the additive
+  # command surface, the help/reference inventory, and the manual planning
+  # pages check. One lockstep minor changeset over the five publishables. The
+  # final gate runs the full battery, the doc-distribution guard, the
+  # changeset group check, the branch-range commit lint, whitespace check,
+  # and `plan validate GH-287`.
+  #
+  # Gate:
+  #   PATH="$PWD/node_modules/.bin:$HOME/.bun/bin:$PATH" bun packages/cli/bin/jaiship.ts plan validate GH-287
+  #   TMPDIR="$PWD/tmp/tmpdir" pnpm check
+  #   ./scripts/lint-commit-range.sh --base main-tools
+  #   bash scripts/.tests/test-doc-distribution.sh
+  #   bun run scripts/checks/changesets-group.ts
+  #   git diff --check
+  #
+  # Exit: every AC is met and every declared phase complete (AC-F1-1..
+  # AC-N8-1 mapped per the TC -> PHASE MAP); the delivered retro report keeps
+  # exactly its four top-level keys and its injected-reader contract; the
+  # delivered four `retro` error rows are byte-unchanged beside the three
+  # additive rows; the delivered retro-registry boundary keeps exactly three
+  # kinds; the ceremony declarations and the board payload identity are
+  # unchanged; the changeset validates against the fixed group; the release
+  # obligations are declared and the PR description states the two scope
+  # exclusions (DEC-1, DEC-2).
+  # ---------------------------------------------------------------------------
+  - id: 9
+    title: "Documentation, planning maintenance, changeset, and release obligations"
+    kind: delivery
+    summary: "docs(retro): reconcile spec and planning pages and declare release"
+    scope:
+      files:
+        - .changeset/gh-287-retro-action-registry-minor.md
+        - doc/00-index.md
+        - doc/overview/glossary.md
+        - doc/spec/features/feature-retro-action-registry.md
+        - doc/spec/features/feature-retro-pipeline.md
+        - doc/spec/features/feature-ceremony-runner.md
+        - doc/spec/features/feature-board.md
+        - doc/spec/features/feature-doctor.md
+        - doc/planning/oss-tooling/backlog.md
+        - doc/planning/oss-tooling/status.md
+        - doc/planning/oss-tooling/milestones/m2/README.md
+        - doc/planning/oss-tooling/milestones/m2/contracts.md
+        - tests/checks/planning-truth.test.ts
+        - tests/checks/milestone-artifacts.test.ts
+        - tests/checks/milestone-sweep.test.ts
+        - tests/checks/doc-conformance.test.ts
+        - scripts/checks/forbidden-literals.registry.json
+      folders:
+        - doc/changes/2026-11/2026-11-16--GH-287--retro-action-registry
+        - doc/planning/oss-tooling
+        - doc/spec/features
+    doneArtifacts:
+      mergeRequestUrl: "pull request for feat/GH-287/retro-action-registry targeting main-tools"
+      pipelineId: "CI pipeline for the GH-287 delivery branch"
+      trackerTransition: "in-review"
