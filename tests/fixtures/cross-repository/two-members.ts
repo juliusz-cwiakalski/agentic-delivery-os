@@ -7,7 +7,6 @@
  * network or the operator's home.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
   projectKeyFor,
@@ -19,7 +18,11 @@ import {
   PROJECT_IDENTITY_MARKER_NAME,
   PROJECT_IDENTITY_SCHEMA,
 } from "../../../packages/core/src/contracts/projects";
-import { guardStateFixtureRoot, projectScopeFor } from "../projects/state-scope";
+import {
+  guardStateFixtureRoot,
+  nonCheckoutDirectory,
+  projectScopeFor,
+} from "../projects/state-scope";
 import { createRepository, git, removeDirectory } from "../projects/temp-repos";
 import { API_MEMBER, DOCS_MEMBER, type MemberFixture, WEB_MEMBER } from "./constants";
 
@@ -105,8 +108,7 @@ export const createMemberWorld = (
   label: string,
   fixtures: readonly MemberFixture[],
 ): TwoMemberWorld => {
-  mkdirSync(tmpdir(), { recursive: true });
-  const base = mkdtempSync(join(tmpdir(), `gh310-${label}-`));
+  const base = mkdtempSync(join(nonCheckoutDirectory(`world-${label}`), "world-"));
   const hostRoot = join(base, "host");
   const home = join(base, "home");
   mkdirSync(hostRoot, { recursive: true });

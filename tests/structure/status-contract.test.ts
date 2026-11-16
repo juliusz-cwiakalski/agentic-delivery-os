@@ -14,6 +14,7 @@ import {
   STATUS_EVIDENCE_OUTCOMES,
   STATUS_EVIDENCE_REASONS,
   STATUS_EVIDENCE_SOURCES,
+  STATUS_FACTS_SCHEMA_VERSION,
   STATUS_FINDING_CODES,
   STATUS_FINDING_SEVERITIES,
   STATUS_HUMAN_CLAMP_MARKER,
@@ -328,6 +329,12 @@ describe("TC-STATUS-008 declared constants bind Appendix C", () => {
     expect(STATUS_SECTION_ORDER).toHaveLength(9);
     expect(STATUS_EVIDENCE_REASONS).toHaveLength(20);
     expect(STATUS_EVIDENCE_SOURCES).toHaveLength(10);
+  });
+
+  test("the shared state-source identity is declared once and matches its literal", () => {
+    expect(STATUS_FACTS_SCHEMA_VERSION).toBe("delivery.status-facts.v1");
+    const contract = readFileSync(join(ROOT, "packages/core/src/contracts/status.ts"), "utf8");
+    expect(contract.match(/"delivery\.status-facts\.v1"/gu)).toHaveLength(1);
   });
 
   test("StatusProviderEntry binds the emitted quota and peak declarations", () => {

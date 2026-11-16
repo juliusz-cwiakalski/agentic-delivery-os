@@ -26,6 +26,7 @@ import {
   type BriefSurfaceId,
   type BriefSurfaceState,
   type BriefTruncation,
+  STATUS_FACTS_SCHEMA_VERSION,
   STATUS_MAX_HUMAN_BYTES,
   STATUS_MAX_HUMAN_LINES,
   type StatusDigest,
@@ -316,6 +317,7 @@ export const projectBrief = (facts: StatusFacts): BriefPayload => {
     placeholders: BRIEF_PLACEHOLDER_CATALOG,
     truncation: buildTruncation(surfaces, anchors),
     spend: spendCitationOf(facts.spend),
+    stateSource: STATUS_FACTS_SCHEMA_VERSION,
   };
 };
 

@@ -8,14 +8,35 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 import {
+  BOARD_ASK_DEFAULT_STATES,
   BOARD_COLLECTOR_ERROR_PREFIX,
   BOARD_COLLECTOR_ERROR_SUFFIX,
   BOARD_COLLECTOR_IDS,
+  BOARD_HUMAN_SECTION_CAPS,
+  BOARD_LANE_PHASE_UNKNOWN_REASONS,
+  BOARD_LANE_STATES,
+  BOARD_MAX_ASKS,
   BOARD_MAX_GATES,
   BOARD_MAX_HUMAN_BYTES,
+  BOARD_MAX_HUMAN_LINE_BYTES,
   BOARD_MAX_HUMAN_LINES,
+  BOARD_MAX_KIND_CHARS,
+  BOARD_MAX_LANES,
   BOARD_MAX_MACHINE_BYTES,
+  BOARD_MAX_OWNER_CHARS,
+  BOARD_MAX_PARKED,
+  BOARD_MAX_PHASE_CHARS,
+  BOARD_MAX_QUESTION_CHARS,
+  BOARD_MAX_REASON_CHARS,
+  BOARD_MAX_REPOSITORIES,
+  BOARD_MAX_UNTIL_CHARS,
+  BOARD_OWNER_HOLD_NO_EXPIRY,
+  BOARD_OWNER_SOURCES,
+  BOARD_PARKED_REASONS,
   BOARD_SCHEMA_VERSION,
+  BOARD_SCOPES,
+  BOARD_SELECTIONS,
+  HOST_INDEX_MAX_ENTRIES,
   OWNER_GATE_CLASSES,
   OWNER_GATE_KINDS,
   OWNER_GATE_SLA_AUDIENCES,
@@ -190,6 +211,38 @@ describe("TC-SLA-001 policy contract data pinned", () => {
     ) as Record<string, string[]>;
     expect(inventory.core).toContain("src/contracts/owner-gate-sla.ts");
     expect(text).not.toContain("STATUS_OWNER_ATTENTION_LABELS =");
+  });
+
+  test("the full-board vocabulary is the closed declared sets and bounds", () => {
+    expect([...BOARD_SCOPES]).toEqual(["repository", "unbound"]);
+    expect([...BOARD_SELECTIONS]).toEqual(["current", "project", "all"]);
+    expect([...BOARD_LANE_STATES]).toEqual(["delivering", "failed"]);
+    expect([...BOARD_LANE_PHASE_UNKNOWN_REASONS]).toEqual(["phase-unrecorded", "phases-complete"]);
+    expect([...BOARD_OWNER_SOURCES]).toEqual([
+      "lane-lease-holder",
+      "gate-waiver-authorizer",
+      "gate-audience",
+      "ask-audience",
+      "park-control",
+    ]);
+    expect([...BOARD_ASK_DEFAULT_STATES]).toEqual(["none", "pending", "applied"]);
+    expect([...BOARD_PARKED_REASONS]).toEqual(["peak-window", "owner-hold"]);
+    expect(BOARD_OWNER_HOLD_NO_EXPIRY).toBe("owner-hold-no-expiry");
+    expect(BOARD_MAX_REPOSITORIES).toBe(128);
+    expect(BOARD_MAX_LANES).toBe(20);
+    expect(BOARD_MAX_ASKS).toBe(8);
+    expect(BOARD_MAX_PARKED).toBe(8);
+    expect(BOARD_MAX_OWNER_CHARS).toBe(120);
+    expect(BOARD_MAX_KIND_CHARS).toBe(120);
+    expect(BOARD_MAX_QUESTION_CHARS).toBe(160);
+    expect(BOARD_MAX_REASON_CHARS).toBe(120);
+    expect(BOARD_MAX_PHASE_CHARS).toBe(60);
+    expect(BOARD_MAX_UNTIL_CHARS).toBe(40);
+    expect(BOARD_MAX_HUMAN_LINE_BYTES).toBe(400);
+    expect({ ...BOARD_HUMAN_SECTION_CAPS }).toEqual({ lanes: 6, gates: 6, asks: 4, parked: 3 });
+    // The repository cap is distinct from the host index's record bound.
+    expect(BOARD_MAX_REPOSITORIES).not.toBe(HOST_INDEX_MAX_ENTRIES);
+    expect(HOST_INDEX_MAX_ENTRIES).toBe(2_000);
   });
 
   test("a rogue executable declaration fails the data-only detector", () => {

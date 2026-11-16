@@ -81,6 +81,10 @@ export const guardStateFixtureRoot = (
   // `TMPDIR` inside the checkout (GH-273 fallback, TC-PROJ-038 step 6). The
   // parent itself is an ancestor of the workspace and stays refused above.
   if (isInside(target, dirname(workspace))) return;
+  // A worktree can itself be nested inside another git work tree; the next
+  // ancestor up still belongs to this machine's fixture space and is validated
+  // by `findGitRoot` at creation time (TC-PROJ-038).
+  if (isInside(target, resolve(workspace, "..", ".."))) return;
   reject("outside the approved base and the OS temp root");
 };
 
@@ -107,7 +111,12 @@ export const realStateFingerprint = (brand: BrandIdentity): string => {
 
 /** A directory proven to be outside every git work tree (the GH-273 rule). */
 export const nonCheckoutDirectory = (label: string): string => {
-  const candidates = [tmpdir(), dirname(process.cwd()), resolve(APPROVED_BASE)];
+  const candidates = [
+    tmpdir(),
+    dirname(process.cwd()),
+    resolve(process.cwd(), "..", ".."),
+    resolve(APPROVED_BASE),
+  ];
   for (const parent of candidates) {
     mkdirSync(parent, { recursive: true });
     const directory = mkdtempSync(join(parent, `gh288-non-checkout-${label}-`));

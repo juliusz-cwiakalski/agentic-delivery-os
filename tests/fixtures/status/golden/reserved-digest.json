@@ -1134,6 +1134,7 @@
           }
         ]
       }
-    ]
+    ],
+    "stateSource": "delivery.status-facts.v1"
   }
 }

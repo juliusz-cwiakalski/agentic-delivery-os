@@ -15,6 +15,7 @@ import {
   type OwnerGateUnknownAgeReason,
   type PipelineRun,
   type SpendDigestSection,
+  STATUS_FACTS_SCHEMA_VERSION,
   STATUS_FINDING_REGISTRY,
   STATUS_FINDING_SEVERITIES,
   STATUS_HUMAN_CLAMP_MARKER,
@@ -28,11 +29,11 @@ import {
   STATUS_MAX_HUMAN_BYTES,
   STATUS_MAX_HUMAN_LINES,
   STATUS_MAX_ITEMS_PER_SECTION,
+  STATUS_MAX_LANE_PARKS,
   STATUS_MAX_OPEN_PULL_REQUESTS,
   STATUS_MAX_PARKED_CHANGES,
   STATUS_MAX_PIPELINE_RUNS,
   STATUS_MAX_PROVIDER_ENTRIES,
-  STATUS_MAX_LANE_PARKS,
   STATUS_MAX_PROVIDER_PARKS,
   STATUS_MAX_READY_ITEMS,
   STATUS_MAX_REASONS,
@@ -1876,6 +1877,7 @@ export const aggregateStatus = (facts: StatusFacts): StatusDigest => {
     repository: facts.repository.binding,
     summary: summaryOf(sections),
     sections,
+    stateSource: STATUS_FACTS_SCHEMA_VERSION,
   };
 };
 

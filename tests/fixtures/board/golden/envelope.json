@@ -91,6 +91,7 @@
         "collector": "tracker",
         "outcome": "available"
       }
-    ]
+    ],
+    "stateSource": "delivery.status-facts.v1"
   }
 }

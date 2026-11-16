@@ -34,6 +34,7 @@ import {
   type OwnerGateSlaPolicyRow,
   type OwnerGateSlaState,
   type OwnerGateUnknownAgeReason,
+  STATUS_FACTS_SCHEMA_VERSION,
 } from "#contracts";
 
 const HOUR_MS = 3_600_000;
@@ -304,6 +305,7 @@ export const toBoardData = (
     truncated: evaluation.truncated,
     omitted: evaluation.omitted,
     collectors,
+    stateSource: STATUS_FACTS_SCHEMA_VERSION,
   };
   // The evaluator already bounds the gate count and field widths. This final
   // guard is deterministic and marks a defensive clamp rather than throwing.

@@ -440,6 +440,7 @@
       "truncated": false
     }
   ],
+  "stateSource": "delivery.status-facts.v1",
   "summary": {
     "actionable": 6,
     "degraded": 0,
