@@ -259,3 +259,17 @@ describe("branding seam integrity", () => {
     }
   });
 });
+
+describe("board brand seam", () => {
+  test("the board modules construct no BrandIdentity literal and name no binary", () => {
+    for (const file of [
+      "packages/cli/src/commands/board.ts",
+      "packages/core/src/domain/owner-gate-sla.ts",
+    ]) {
+      const text = readFileSync(join(ROOT, file), "utf8");
+      expect(text).not.toMatch(/binaryName:\s*["']/u);
+      expect(text).not.toMatch(/productName:\s*["']/u);
+      expect(text.toLowerCase()).not.toContain("jaiship");
+    }
+  });
+});

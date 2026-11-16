@@ -4,6 +4,7 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
+  BOARD_HUMAN_SECTION_CAPS,
   BOARD_MAX_GATES,
   BOARD_MAX_HUMAN_BYTES,
   BOARD_MAX_HUMAN_LINES,
@@ -113,7 +114,7 @@ describe("TC-SLA-020 bounds and truncation", () => {
   });
 
   test("every drop is marked in both modes and under-cap controls carry no mark", async () => {
-    const under = createBoardHarness({ gates: gateSet(8) });
+    const under = createBoardHarness({ gates: gateSet(BOARD_HUMAN_SECTION_CAPS.gates) });
     const over = createBoardHarness({ gates: gateSet(9) });
     try {
       const underJson = await under.run([], { json: true });
@@ -124,7 +125,7 @@ describe("TC-SLA-020 bounds and truncation", () => {
       const overJson = await over.run([], { json: true });
       const overText = await over.run([], { json: false });
       expect(boardData(overJson)?.omitted).toBe(1);
-      expect(overText.stdout).toContain("+1 more gates omitted");
+      expect(overText.stdout).toContain("+3 more gates omitted");
     } finally {
       under.cleanup();
       over.cleanup();
@@ -144,6 +145,59 @@ describe("TC-SLA-020 bounds and truncation", () => {
     } finally {
       first.cleanup();
       second.cleanup();
+    }
+  });
+});
+
+describe("TC-BOARD-082 omission arithmetic", () => {
+  test("per-section caps drop the tail and count every drop", async () => {
+    const lanes = Array.from({ length: 21 }, (_, index) => ({
+      ref: `GH-90${String(index).padStart(2, "0")}`,
+      laneId: `GH-90${String(index).padStart(2, "0")}`,
+      state: "delivering" as const,
+      holder: "principal",
+      phase: "delivery",
+    }));
+    const asks = Array.from({ length: 9 }, (_, index) => ({
+      id: `ask-${String(index)}`,
+      type: "approval",
+      ref: `GH-91${String(index).padStart(2, "0")}`,
+      lane: `GH-91${String(index).padStart(2, "0")}`,
+      question: "Approve?",
+      askedAt: "2026-11-06T09:00:00Z",
+      age: HOUR_MS,
+      owner: "owner",
+    }));
+    const parks = Array.from({ length: 9 }, (_, index) => ({
+      ref: `GH-92${String(index).padStart(2, "0")}`,
+      reason: "owner-hold" as const,
+      until: null,
+      untilReason: "owner-hold-no-expiry" as const,
+      owner: null,
+    }));
+    const board = createBoardHarness({
+      repositories: [{ key: "repository-a", gates: [], lanes, asks, parks }],
+    });
+    try {
+      const run = await board.run([], { json: true });
+      const data = boardData(run);
+      expect(data?.truncated).toBe(true);
+      expect(data?.omittedBySection).toEqual({
+        repositories: 0,
+        lanes: 1,
+        gates: 0,
+        asks: 1,
+        parked: 1,
+      });
+      expect(data?.omitted).toBe(3);
+      const lanesRows = (data?.lanes ?? []) as readonly unknown[];
+      const askRows = (data?.asks ?? []) as readonly unknown[];
+      const parkRows = (data?.parked ?? []) as readonly unknown[];
+      expect(lanesRows).toHaveLength(20);
+      expect(askRows).toHaveLength(8);
+      expect(parkRows).toHaveLength(8);
+    } finally {
+      board.cleanup();
     }
   });
 });

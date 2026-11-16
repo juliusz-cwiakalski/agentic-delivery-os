@@ -562,11 +562,12 @@ describe("TC-BIN-067 no new family row and no new error row", () => {
       "projects",
       "repos",
       "events",
+      "board",
     ]);
     const help = renderRootHelp(brand);
     expect(help).not.toContain("--print-install-path");
     expect(help.split("\n").filter((line) => /^ {2}[a-z][a-z0-9-]* {2}/u.test(line)).length).toBe(
-      20,
+      21,
     );
   });
 

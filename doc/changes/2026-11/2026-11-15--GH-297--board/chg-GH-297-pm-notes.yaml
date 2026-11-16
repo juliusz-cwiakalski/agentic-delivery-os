@@ -1,0 +1,329 @@
+change_id: GH-297
+title: "M2-S4: Board (M2)"
+milestone: "M2: Ceremonies, measurement, and memory"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: null, completed: 2026-11-15T22:09:29.041Z }
+  specification: { started: null, completed: 2026-11-15T23:30:46.255Z }
+  test_planning: { started: null, completed: 2026-11-15T23:30:48.112Z }
+  delivery_planning: { started: null, completed: 2026-11-15T23:30:51.030Z }
+  dor_check: { started: null, completed: 2026-11-15T23:36:02.038Z }
+  delivery: { started: null, completed: 2026-11-16T02:41:23.019Z }
+  system_spec_update: { started: null, completed: 2026-11-16T02:55:13.752Z }
+  review_fix: { started: null, completed: 2026-11-16T04:10:35.685Z }
+  quality_gates: { started: null, completed: 2026-11-16T04:28:32.027Z }
+  dod_check: { started: null, completed: 2026-11-16T04:30:54.720Z }
+  pr_creation: { started: null, completed: 2026-11-16T04:38:18.193Z }
+decisions:
+  - text: "DEC-1 scope: deliver M2-S4 exactly as the backlog task line and the M2
+      planning pack define it - the full board of lanes, gates, owner asks, and
+      parked work on one screen, sharing the brief/status state source, spanning
+      managed repositories through the delivered M2-S11 host index and
+      per-repository state scope. Explicit non-goals: M2-S5 steer (GH-298),
+      M2-S6 metrics/alarms (GH-299), and any group-scoped board surface (board
+      stays on repository keys)."
+    date: "2026-11-15"
+  - text: "DEC-2 state source: the board reuses the injected status/brief facts
+      (StatusFacts) and the shipped scheduling-engine lane fold as its one state
+      source; it declares no parallel state vocabulary, no second tracker read
+      model, and no LLM. The payload names that source so the backlog AC 'board,
+      brief, and status share one state source' is machine-checkable."
+    date: "2026-11-15"
+  - text: "DEC-3 repository scope: --project <repoKey> narrows to one checkout and
+      --all spans every managed repository on the host; the default is the
+      current checkout. Resolution uses the delivered host index plus
+      per-repository state scopes (M2-S11/GH-288) and never enumerates project
+      groups (M2-S18/GH-309)."
+    date: "2026-11-15"
+  - text: "DEC-4 mounting: the board command definition already exists in the edge
+      composition but is not composed by the production entrypoint. This change
+      mounts it (prompt-required set, edge composition, help entries, reference
+      page, coverage inventory) and renames its repository list field to
+      repositories[] per the M2 rename rule."
+    date: "2026-11-15"
+  - text: "DEC-5 owner asks: the planning pack leaves the exact provenance of the
+      asks[] section open between the delivered owner-gate SLA facts and the
+      typed blocker questions. The spec resolves it from the pack plus shipped
+      surfaces (no new ticket, no invented source) and records the chosen
+      projection and its evidence. This is an implementation interpretation, not
+      a scope change."
+    date: "2026-11-15"
+open_questions:
+  - text: "Owner-ask provenance: should asks[] project the owner-review subset of
+      the delivered owner-gate SLA facts (age + drawn default), the open
+      owner-audience typed questions, or both joined? Resolve in the spec from
+      the M2 pack contract (asks[] carries age and drawn default) and shipped
+      sources; record the decision in the spec."
+    date: "2026-11-15"
+blockers: []
+notes:
+  - text: "Intake state: GH-297 open, label change, milestone 'M2: Ceremonies,
+      measurement, and memory' attached; branch feat/GH-297/board exists at
+      origin/main-tools with zero own commits; no open or historical PR."
+    type: info
+    date: "2026-11-15"
+  - text: "Dependency check: M1-S5 board SLA (GH-229), M1-S17 scheduling engine
+      (GH-237), M2-S11 multi-repository state scope (GH-288), and M2-S18 project
+      groups (GH-309) are all delivered on main-tools. No unmet dependency."
+    type: info
+    date: "2026-11-15"
+  - text: "Doc impact to reconcile in phase 7: new feature spec for the full board;
+      current-truth updates to feature-owner-gate-sla, feature-status-digest and
+      feature-brief shared-source wording, CLI command registry, M2 board page
+      status, entrypoint delta, and the M2-S4 backlog progress marker."
+    type: risk
+    date: "2026-11-15"
+  - text: >-
+      Readiness gate iteration 1 verdict: NOT_READY (record:
+      readiness-review/readiness-iter-1.md). Findings: (F1, critical, plan) the
+      two new two-segment error codes board.repository-unknown and
+      board.state-unavailable require an exact allowlist widening in both
+      scripts/checks/error-table-sync.ts and tests/structure/error-table.test.ts
+      (53 -> 55) plus the identity-table counts, and neither file is in any plan
+      phase scope; (F2, major, spec) DM-8/DEC-8/C-7 silently widen the closed
+      two-segment set contrary to feature-result-contract; (F3, minor, test
+      plan) no case owns the allowlist addition/count bumps or near-miss
+      rejection; (F4, minor, plan) six delivered board suites (board-escalation,
+      board-aging, board-records, board-waiver-recording, board-privacy,
+      board-corpus) are absent from phase scopes. Reopened: specification (F2),
+      test_planning (F3), delivery_planning (F1, F4). No human decision needed.
+    type: blocker
+    date: "2026-11-15"
+  - text: >-
+      Retro: the spec introduced two-segment error identities without checking
+      the delivered error-table sync allowlist and its mirrored 53-entry set, so
+      the DoR gate caught an unsatisfiable phase-3 done-when. The plan also
+      missed delivered board suites that the four-section flip will break.
+      Improvement: spec and plan authoring must explicitly enumerate the
+      error-table carrier files and the delivered test suites touched by a
+      contract flip; the readiness gate did its job before code was written.
+    type: retro
+    date: "2026-11-15"
+  - text: >-
+      Readiness gate iteration 2 verdict: NOT_READY (record:
+      readiness-review/readiness-iter-2.md). Iter-1 F2/F3/F4 closed; F1 closed
+      as named but its count-site enumeration was incomplete. New critical
+      finding: tests/structure/dispatch-attempts-taxonomy.test.ts:50
+      (toHaveLength(136)) and
+      tests/structure/verify-gates-suite-map-contract.test.ts:149-150
+      (sourceEntries/documentedRows = 136) also pin the identity total and are
+      in no phase scope, so phase 3 done-when is still unsatisfiable. Minor:
+      error-table.test.ts:1847 toContain("136 identities") and
+      tests/checks/error-table-sync.test.ts BASELINE_ROWS.length + 102 -> +104
+      are unnamed. Nit: authoring guidelines still claim an envelope-shape
+      decision was recorded with no DEC row. Reopened: specification,
+      test_planning, delivery_planning. No human decision needed.
+    type: blocker
+    date: "2026-11-16"
+  - text: >-
+      Retro: iteration 1 fixed the count story at the two files named by the
+      gate but did not grep the whole tree for every count-pinning site. The
+      remediation pattern must be a repo-wide scan for the literal counts
+      (136/135/53/52 and the +102 baseline oracle), not a fix at the reported
+      line. Iteration 3 will carry the exhaustive site list from the grep and
+      require a no-leftover scan across all of them.
+    type: retro
+    date: "2026-11-16"
+  - text: >-
+      Readiness gate iteration 3 verdict: READY (record:
+      readiness-review/readiness-iter-3.md). All 10 facets PASS; iteration-2
+      findings closed. Independent repo-wide grep confirms Appendix D's 23 sites
+      are exhaustive across the five named files (7/3/2/9/2 per file), with no
+      sixth file or undeclared residual; test plan TC-BOARD-053 owns the
+      site-by-site movement, no-leftover scan, four-way agreement, and six
+      mutation arms; plan phase 3 owns both previously-missing suites and its
+      done-when gates on every site. No human input required.
+    type: info
+    date: "2026-11-16"
+  - text: >-
+      Review iteration 1 verdict: FAIL (record: code-review/review-iter-1.yaml).
+      6 findings: F-1 high (per-repository tracker read joins merge waivers from
+      the invoking store, so non-invoking repos lose waivers and shared refs can
+      import them; violates AC-F4-1/2 fleet mode, AC-F3-2, NFR-3); F-2 medium
+      (command-scoped --version intercept answers exit 0 for an unknown command
+      and for positional-carrying invocations, bypassing fallback.invocation);
+      F-3 medium (TC-BOARD-061 landed reduced: no host-root/index snapshot,
+      counters, or index-maintenance mutant; DoD-11 unproven); F-4 low (kind
+      truncation detector 120 vs clamp 160); F-5 low (phase reads before the
+      20-lane cap exceed NFR-5); F-6 info (toBoardData unused). Remediation
+      phase 6 added to the plan; delivery remediation state: open. Re-run
+      affected suites and pnpm check, then re-review.
+    type: blocker
+    date: "2026-11-16"
+  - text: >-
+      Retro: the selection harness used an empty transport and the behaviour
+      fixtures injected gate facts past the per-repository store seam, so the
+      fleet waiver join was never exercised even though the fleet mode is the
+      change's flagship capability. TC-BOARD-061 was declared Critical in the
+      test plan but implemented as a single-repo, state-root-only snapshot.
+      Improvement: a cross-repository capability needs at least one end-to-end
+      test through the real per-repository store seam, and a Critical
+      write-discipline case must snapshot the host root and index counters, not
+      just one state root. The reviewer caught both before the PR.
+    type: retro
+    date: "2026-11-16"
+  - text: >-
+      Plan phase 1 complete (shared state source, board vocabulary, lane lease
+      holder): commit ec63cd34. Evidence: delivery.status-facts.v1 declared once
+      in packages/core/src/contracts/status.ts and carried as stateSource on the
+      board, status, and brief payloads; leaseHolder additive on
+      delivery.lanes.v1 with the lane human golden byte-identical;
+      board/status/brief/lane goldens regenerated deliberately (exactly the
+      additive keys); TC-BOARD-003 green
+      (tests/behaviour/board-shared-source.test.ts) plus the extended
+      status/brief/owner-gate-sla contract suites; typecheck, lint, format,
+      biome and git diff --check green.
+    type: info
+    date: "2026-11-16"
+  - text: >-
+      Plan phase 2 complete (four-section projection, caps, omission accounting,
+      byte guard, deterministic renderer): commit fd39aced. Evidence: lanes,
+      gates, asks, and parked project from the shared facts bundle with the
+      delivered SLA reused verbatim; per-section caps 20/8/8/8, the declared
+      parked -> asks -> lanes -> gates byte-guard order, and the 24-line human
+      allocation; new board-sections/rows/lanes/gates-sla/defaults-idempotency/
+      asks/parked/byte-guard/provenance suites plus the extended delivered board
+      suites green (207 tests across 30 files); board goldens regenerated with
+      an additive-only diff; typecheck, lint, format, biome and git diff --check
+      green. Deviation: board-waiver-recording's exact data-key assertion was
+      updated in phase 1 for the single additive stateSource key.
+    type: info
+    date: "2026-11-16"
+  - text: >-
+      Plan phase 3 complete (repository selection, per-repository composition,
+      board error identities, production composition): commit 147144eb.
+      Evidence: default form zero host-index reads, --project narrowing with
+      board.repository-unknown, --all union under BOARD_MAX_REPOSITORIES=128
+      with the deterministic retained set and counted overflow, the unbound
+      scope, and the delivered fallback.invocation grammar refusals;
+      board.errors rows and the exact 53->55 allowlist widening with every
+      Appendix D site moved (138 entries / 137 delivered / 55 allowlist / 2
+      board / 138 documented; repo-wide 136/135/53/52 scan clean, no +102
+      arithmetic); classifier, sync check, structural mirror, and carrier agree;
+      error-table-sync, mirror, dispatch-taxonomy, verify-suite-map, and the
+      board selection/errors/ envelope/command/identity/cap suites green;
+      production composes board unconditionally and joins the read-only
+      maintainsIndex set. Deviation: selection cases run the real board edge
+      runtime over seeded host-index bytes rather than createProductionComposer.
+    type: info
+    date: "2026-11-16"
+  - text: >-
+      Plan phase 4 complete (mounting advertisement and write discipline):
+      commit 0c291de7. Evidence: board is the 21st prompt-required family
+      (twenty delivered names keep their order), production composes it, root
+      and family help answer from the static inventory at exit 0, the M2
+      reference page mentions --help/--version and serves the coverage check,
+      the coverage inventory carries the row, family-count assertions moved
+      20->21, the unmounted mutant is detected, and board-write-discipline
+      proves a read-only run is byte-identical while a default application
+      creates exactly the decision ledger plus the store header and the replay
+      writes nothing; help/entrypoint/coverage/parity suites green.
+    type: info
+    date: "2026-11-16"
+  - text: >-
+      Plan phase 5 complete (determinism, purity, read cost, bookkeeping,
+      changeset, full battery): this delivery commit. Evidence: the committed
+      four-section golden pair (full-envelope.json/full-grid.txt) with an
+      explicit regeneration path, byte-identical repeats and permutation
+      independence; purity/brand scans over the board modules; the declared
+      per-repository read set and the 128 bound; the 50 ms projection+render
+      median with printed samples; M2-S4 backlog marker, status snapshot,
+      registry row, board page delivered status, and the 21-family entrypoint
+      delta; the five-package minor changeset. TMPDIR=$PWD/tmp/tmpdir pnpm
+      check: lint/format/typecheck/boundaries/memory/prompt/help/exports green
+      and the full bun suite green serially; under the parallel aggregate two
+      pre-existing 5-second-timeout suites flake on this host (prior-identity
+      notice and an events overflow case) and pass alone. Environment note:
+      several project fixtures require a non-checkout directory; a worktree
+      nested inside another git tree needed the grandparent fallback
+      (tests/fixtures/projects/ state-scope.ts and
+      tests/fixtures/queue/production/harness.ts).
+    type: info
+    date: "2026-11-16"
+  - text: >-
+      Plan phase 6 complete (code-review remediation, iteration 1): this
+      remediation commit. Findings closed: F-1 high - the fleet tracker read now
+      opens each target repository's store before the tracker read and joins
+      merge waivers from that store (per-ref newest match), so a non-invoking
+      repository's waivers surface and a shared ref never imports the invoking
+      repository's waiver; regression cell added over --all with refs
+      244/245/246 (divergent waivers, 72h default on the owning repository only,
+      decision appended to that repository's store). F-2 medium - the
+      command-scoped --version intercept answers only for a known command with
+      --version as its immediate next token; an unknown leading command keeps
+      fallback.internal exit 2 by dropping the self-description flag, and a
+      positional keeps fallback.invocation exit 1; both refusal cells plus the
+      per-family version-no-compose cell added. F-3 medium - TC-BOARD-061
+      completed over a two-repository --all host with a real seeded index:
+      host-root snapshot (index file and projects/) across a no-default run
+      (byte-identical, one index read, zero writes, revision unchanged) and a
+      default-applying run (exactly the owning repository's ledger changes;
+      index untouched), plus the index-maintenance mutant whose snapshot diff
+      names host-index.json. F-4 low - the gate-kind truncation detector now
+      checks the delivered 160-character clamp (121-160 keeps untruncated;
+      over-160 clamps and marks truncation). F-5 low - lane facts are sorted and
+      capped at 20 at the edge before phase resolution, with the omitted count
+      carried into omittedBySection.lanes (new optional
+      BoardRepositoryFacts.omittedLanes), so NFR-5's phase-read bound matches
+      the code. F-6 info - deferred: retiring toBoardData requires touching
+      board-performance and the contract/inventory fixtures outside this phase's
+      declared scope; it remains an accepted info-level residual (one projection
+      path is already used in production). Gates: affected board
+      selection/identity/gates-sla/write-discipline and entrypoint/help suites
+      green (465 tests across 45 files, 0 fail), Appendix D four-way
+      138/137/55/2/138 still green, full TMPDIR=$PWD/tmp/tmpdir pnpm check
+      recorded separately in the delivery report.
+    type: info
+    date: "2026-11-16"
+  - text: >-
+      Review iteration 2 verdict: PASS (record: code-review/review-iter-2.yaml).
+      F-1 fixed (per-repository waiver join; non-invoking-repo and shared-ref
+      divergent-waiver regressions green), F-2 fixed (known-command-guarded
+      --version; both breaches closed), F-3 fixed (TC-BOARD-061 over a real
+      two-repo host index with snapshot, counters, and mutant), F-4/F-5 fixed,
+      F-6 deferred as a declared info residual. Two new low findings accepted as
+      residuals for a later change: F-7 (--version tokens after the flag are
+      ignored; identity-only) and F-8 (indexWrites counter constant zero; the
+      invariant is held by the snapshot/revision assertions). Delivery
+      remediation state: closed. Correction to the phase-6 evidence above: the
+      first full aggregate run at commit 1ac6e255 FAILED (8 tests; root cause an
+      uncommitted forbidden-literals registry entry, fixed in 21f122c7); the
+      authoritative full-gate verdict on the final HEAD is recorded under the
+      quality_gates phase below.
+    type: info
+    date: "2026-11-16"
+  - text: >-
+      Quality gates verdict: green on final HEAD 5f1df170.
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exited 0 - 9149 pass / 4 skip / 0 fail
+      across 9153 tests in 1146 files, with lint, format:check, typecheck,
+      boundaries, memory-lint, prompt-conformance, help-guide-coverage, and
+      exports-parity all green. Range commit-message gate PASS: 27 commits in
+      range origin/main-tools..HEAD, 0 offending commits, mode none, commitlint
+      resolved repository-local (node_modules/.bin/commitlint). The 4 skips and
+      96 lint warnings are pre-existing noise, not failures.
+    type: info
+    date: "2026-11-16"
+  - text: >-
+      DoD verification: pm-notes exists and lints; all nine prior lifecycle
+      phases completed in the verified registry; every declared plan phase (1-6)
+      carries a pm-notes evidence entry naming the plan phase id, its commit
+      (ec63cd34, fd39aced, 147144eb, 0c291de7, e998ef43, 1ac6e255 plus the
+      759597d3 post-gate fix and 21f122c7 registry), and its test result; all 29
+      spec ACs are covered by the 48-case test plan and green under the
+      aggregate gate (review iterations 1 FAIL / 2 PASS); current-truth docs are
+      complete with no residual doc-syncer gaps and the new feature-board.md is
+      registered in the forbidden-literals corpus; the single backlog AC is
+      machine-checkable via the stateSource equality across board, status, and
+      brief payloads. No gaps found; no phase reopen required.
+    type: info
+    date: "2026-11-16"
+  - text: >-
+      PR created:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/327
+      (feat/GH-297/board -> main-tools, head
+      f21c7d593e4370387c189540d73f3c6990a070c6). Issue 297 labels set to
+      change,review and assigned to juliusz-cwiakalski; one comment with the PR
+      link posted. PR left open for review; merge authority is the CEO (Mode A)
+      or the human via batch-deliver.sh (Mode B).
+    type: info
+    date: "2026-11-16"

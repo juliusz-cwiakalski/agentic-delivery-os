@@ -10,30 +10,56 @@
 import {
   BOARD_COLLECTOR_ERROR_PREFIX,
   BOARD_COLLECTOR_ERROR_SUFFIX,
+  BOARD_HUMAN_SECTION_CAPS,
+  BOARD_MAX_ASKS,
   BOARD_MAX_GATES,
   BOARD_MAX_HUMAN_BYTES,
+  BOARD_MAX_HUMAN_LINE_BYTES,
   BOARD_MAX_HUMAN_LINES,
   BOARD_MAX_ID_CHARS,
+  BOARD_MAX_KIND_CHARS,
+  BOARD_MAX_LANES,
   BOARD_MAX_MACHINE_BYTES,
+  BOARD_MAX_OWNER_CHARS,
+  BOARD_MAX_PARKED,
+  BOARD_MAX_PHASE_CHARS,
+  BOARD_MAX_QUESTION_CHARS,
+  BOARD_MAX_REASON_CHARS,
   BOARD_MAX_REF_CHARS,
+  BOARD_MAX_UNTIL_CHARS,
   BOARD_MAX_WAIVED_BY_CHARS,
   BOARD_SCHEMA_VERSION,
+  type BoardAskDefaultState,
+  type BoardAskFact,
+  type BoardAskRow,
   type BoardData,
   type BoardGateRecord,
+  type BoardGateRow,
+  type BoardLaneFact,
+  type BoardLaneRow,
+  type BoardParkedFact,
+  type BoardParkedRow,
+  type BoardProjection,
+  type BoardProjectionInput,
+  type BoardRepositoryEvidence,
+  type BoardRepositoryFacts,
   type BrandIdentity,
   OWNER_GATE_SLA_CLOCK_SOURCE,
   OWNER_GATE_SLA_DECISION_PAYLOAD_SCHEMA,
   OWNER_GATE_SLA_DEFAULTS,
   OWNER_GATE_SLA_RANK_STATE_ORDER,
   type OwnerGateFact,
+  type OwnerGateSlaAudience,
   type OwnerGateSlaComparator,
   type OwnerGateSlaDecisionRecord,
+  type OwnerGateSlaDefault,
   type OwnerGateSlaEvaluation,
   type OwnerGateSlaInput,
   type OwnerGateSlaPolicy,
   type OwnerGateSlaPolicyRow,
   type OwnerGateSlaState,
   type OwnerGateUnknownAgeReason,
+  STATUS_FACTS_SCHEMA_VERSION,
 } from "#contracts";
 
 const HOUR_MS = 3_600_000;
@@ -300,10 +326,31 @@ export const toBoardData = (
   const data: BoardData = {
     schemaVersion: BOARD_SCHEMA_VERSION,
     audience: evaluation.audience,
-    gates: evaluation.gates,
+    scope: "repository",
+    selection: "current",
+    repositories: [],
+    lanes: [],
+    gates: evaluation.gates.map((record) => ({
+      ...record,
+      repository: "",
+      condition: `${record.kind}:${record.slaState}`,
+      owner: null,
+      ownerSource: "gate-audience",
+    })),
+    asks: [],
+    parked: [],
+    collectors,
+    ownerHold: { active: false },
+    stateSource: STATUS_FACTS_SCHEMA_VERSION,
     truncated: evaluation.truncated,
     omitted: evaluation.omitted,
-    collectors,
+    omittedBySection: {
+      repositories: 0,
+      lanes: 0,
+      gates: evaluation.omitted,
+      asks: 0,
+      parked: 0,
+    },
   };
   // The evaluator already bounds the gate count and field widths. This final
   // guard is deterministic and marks a defensive clamp rather than throwing.
@@ -327,44 +374,424 @@ const ageLabel = (record: BoardGateRecord): string => {
   return `${Math.floor(record.age / DAY_MS)}d`;
 };
 
-const gateLine = (record: BoardGateRecord): string =>
-  `${record.id}  ${record.kind}  ${record.ref}  age=${ageLabel(record)}  sla=${record.slaState}  default=${record.default ?? "null"}  waivedBy=${record.waivedBy ?? "null"}`;
+const ageMsLabel = (age: number): string => {
+  if (age < 0) return `${age}ms`;
+  if (age < HOUR_MS) return `${Math.floor(age / 60_000)}m`;
+  if (age < 2 * DAY_MS) return `${Math.floor(age / HOUR_MS)}h`;
+  return `${Math.floor(age / DAY_MS)}d`;
+};
 
 const collectorEvidence = (data: BoardData): string =>
   data.collectors.map((entry) => `${entry.collector}:${entry.outcome}`).join(",");
 
+/** Strip control characters and line breaks so hostile content cannot forge lines. */
+const neutralize = (value: string): string =>
+  Array.from(value)
+    .filter((character) => {
+      const point = character.codePointAt(0) ?? 0;
+      return point >= 0x20 && point !== 0x7f;
+    })
+    .join("");
+
+const boundedText = (value: string, maximum: number): string =>
+  clampChars(neutralize(value), maximum, { clamped: false });
+
+const gateRow = (
+  repository: string,
+  record: BoardGateRecord,
+  audience: OwnerGateSlaAudience,
+): BoardGateRow => {
+  const owner =
+    record.kind === "waiver"
+      ? record.waivedBy === null
+        ? null
+        : boundedText(record.waivedBy, BOARD_MAX_OWNER_CHARS)
+      : audience;
+  return {
+    ...record,
+    repository,
+    condition: `${record.kind}:${record.slaState}`,
+    owner,
+    ownerSource: record.kind === "waiver" ? "gate-waiver-authorizer" : "gate-audience",
+  };
+};
+
+const defaultableByRef = (
+  facts: readonly OwnerGateFact[],
+  policy: OwnerGateSlaPolicy,
+): Map<string, OwnerGateSlaDefault> => {
+  const byRef = new Map<string, OwnerGateSlaDefault>();
+  for (const fact of facts) {
+    const row = rowFor(policy, fact.kind);
+    if (row === undefined || !row.defaultable || row.default === null) continue;
+    if (!byRef.has(fact.ref)) byRef.set(fact.ref, row.default);
+  }
+  return byRef;
+};
+
+const askRow = (
+  repository: string,
+  fact: BoardAskFact,
+  drawn: Map<string, OwnerGateSlaDefault>,
+  appliedRefs: ReadonlySet<string>,
+): BoardAskRow => {
+  const drawnDefault = fact.ref === null ? undefined : drawn.get(fact.ref);
+  const state: BoardAskDefaultState =
+    drawnDefault === undefined
+      ? "none"
+      : fact.ref !== null && appliedRefs.has(fact.ref)
+        ? "applied"
+        : "pending";
+  return {
+    repository,
+    id: boundedText(fact.id, BOARD_MAX_ID_CHARS),
+    type: boundedText(fact.type, BOARD_MAX_KIND_CHARS),
+    ref: fact.ref === null ? null : boundedText(fact.ref, BOARD_MAX_REF_CHARS),
+    lane: boundedText(fact.lane, BOARD_MAX_REF_CHARS),
+    question: boundedText(fact.question, BOARD_MAX_QUESTION_CHARS),
+    askedAt: fact.askedAt,
+    age: fact.age,
+    status: "open",
+    owner: fact.owner === null ? null : boundedText(fact.owner, BOARD_MAX_OWNER_CHARS),
+    ownerSource: "ask-audience",
+    drawnDefault: drawnDefault ?? null,
+    defaultState: state,
+  };
+};
+
+const parkedRow = (repository: string, fact: BoardParkedFact): BoardParkedRow => ({
+  repository,
+  ref: boundedText(fact.ref, BOARD_MAX_REF_CHARS),
+  reason: fact.reason,
+  until: fact.until === null ? null : boundedText(fact.until, BOARD_MAX_UNTIL_CHARS),
+  ...(fact.untilReason === undefined ? {} : { untilReason: fact.untilReason }),
+  ...(fact.preservation === undefined ? {} : { preservation: fact.preservation }),
+  ...(fact.providerProfile === undefined
+    ? {}
+    : { providerProfile: boundedText(fact.providerProfile, BOARD_MAX_KIND_CHARS) }),
+  owner: fact.owner === null ? null : boundedText(fact.owner, BOARD_MAX_OWNER_CHARS),
+  ownerSource: "park-control",
+});
+
+const laneRow = (repository: string, fact: BoardLaneFact): BoardLaneRow => ({
+  repository,
+  ref: boundedText(fact.ref, BOARD_MAX_REF_CHARS),
+  laneId: boundedText(fact.laneId, BOARD_MAX_ID_CHARS),
+  state: fact.state,
+  phase: fact.phase === null ? null : boundedText(fact.phase, BOARD_MAX_PHASE_CHARS),
+  ...(fact.phase === null && fact.phaseUnknownReason !== undefined
+    ? { phaseUnknownReason: fact.phaseUnknownReason }
+    : {}),
+  holder: fact.holder === null ? null : boundedText(fact.holder, BOARD_MAX_OWNER_CHARS),
+  ...(fact.leaseId === undefined ? {} : { leaseId: boundedText(fact.leaseId, BOARD_MAX_ID_CHARS) }),
+  ...(fact.reason === undefined
+    ? {}
+    : { reason: boundedText(fact.reason, BOARD_MAX_REASON_CHARS) }),
+  owner: fact.holder === null ? null : boundedText(fact.holder, BOARD_MAX_OWNER_CHARS),
+  ownerSource: "lane-lease-holder",
+});
+
+const compareTextBy =
+  <T>(key: (row: T) => string) =>
+  (left: T, right: T): number =>
+    compareText(key(left), key(right));
+
 /**
- * Render the deterministic, TTY-independent, ANSI-free aging grid.
+ * Whether the run needs its one decision-history read (NFR-5): a defaultable
+ * gate can cross expiry, or an ask joins a defaultable gate on its ref.
+ */
+export const boardNeedsDecisionHistory = (input: {
+  readonly gates: readonly OwnerGateFact[];
+  readonly asks: readonly BoardAskFact[];
+  readonly policy: OwnerGateSlaPolicy;
+  readonly nowMs: number;
+}): boolean => {
+  const drawn = defaultableByRef(input.gates, input.policy);
+  if (
+    input.asks.some(
+      (ask) =>
+        (ask.audience === undefined || ask.audience === "owner") &&
+        ask.ref !== null &&
+        drawn.has(ask.ref),
+    )
+  ) {
+    return true;
+  }
+  return input.gates.some((gate) => {
+    const row = rowFor(input.policy, gate.kind);
+    if (row === undefined || !row.defaultable || row.default === null) return false;
+    const activity = parseActivity(gate.activityAt);
+    if (activity.state === "unknown") return false;
+    return crossed(
+      input.nowMs - activity.atMs,
+      input.policy.expiryThresholdMs,
+      input.policy.comparator,
+    );
+  });
+};
+
+const overCap = (value: string | undefined, maximum: number): boolean =>
+  value !== undefined && Array.from(value).length > maximum;
+
+const repositoryFieldsClamped = (repository: BoardRepositoryFacts): boolean =>
+  repository.lanes.some(
+    (lane) =>
+      overCap(lane.ref, BOARD_MAX_REF_CHARS) ||
+      overCap(lane.laneId, BOARD_MAX_ID_CHARS) ||
+      overCap(lane.phase ?? undefined, BOARD_MAX_PHASE_CHARS) ||
+      overCap(lane.holder ?? undefined, BOARD_MAX_OWNER_CHARS) ||
+      overCap(lane.reason, BOARD_MAX_REASON_CHARS) ||
+      overCap(lane.leaseId, BOARD_MAX_ID_CHARS),
+  ) ||
+  repository.gates.some(
+    (gate) =>
+      overCap(gate.id, BOARD_MAX_ID_CHARS) ||
+      overCap(gate.kind, BOARD_MAX_ID_CHARS) ||
+      overCap(gate.ref, BOARD_MAX_REF_CHARS) ||
+      overCap(gate.waivedBy, BOARD_MAX_WAIVED_BY_CHARS),
+  ) ||
+  repository.asks.some(
+    (ask) =>
+      overCap(ask.id, BOARD_MAX_ID_CHARS) ||
+      overCap(ask.type, BOARD_MAX_KIND_CHARS) ||
+      overCap(ask.ref ?? undefined, BOARD_MAX_REF_CHARS) ||
+      overCap(ask.lane, BOARD_MAX_REF_CHARS) ||
+      overCap(ask.question, BOARD_MAX_QUESTION_CHARS) ||
+      overCap(ask.owner ?? undefined, BOARD_MAX_OWNER_CHARS),
+  ) ||
+  repository.parks.some(
+    (park) =>
+      overCap(park.ref, BOARD_MAX_REF_CHARS) ||
+      overCap(park.until ?? undefined, BOARD_MAX_UNTIL_CHARS) ||
+      overCap(park.providerProfile, BOARD_MAX_KIND_CHARS) ||
+      overCap(park.owner ?? undefined, BOARD_MAX_OWNER_CHARS),
+  );
+
+/**
+ * Project the four sections from one repository's facts plus the delivered
+ * gate evaluator (F-1, DM-2..DM-6, DM-10, DEC-15..DEC-19).
+ */
+export const projectBoard = (input: BoardProjectionInput): BoardProjection => {
+  const repositories = [...input.repositories]
+    .map((repository) => repository)
+    .sort((left, right) => compareText(left.key, right.key));
+  const lanes: BoardLaneRow[] = [];
+  const gates: BoardGateRow[] = [];
+  const asks: BoardAskRow[] = [];
+  const parked: BoardParkedRow[] = [];
+  const collectors: BoardRepositoryEvidence[] = [];
+  const decisionsToApply: Record<string, readonly OwnerGateSlaDecisionRecord[]> = {};
+  const omittedBySection = {
+    repositories: input.omittedRepositories,
+    lanes: 0,
+    gates: 0,
+    asks: 0,
+    parked: 0,
+  };
+
+  for (const repository of repositories) {
+    const evaluation = evaluateOwnerGateSla({
+      audience: input.audience,
+      nowMs: input.nowMs,
+      nowIso: input.nowIso,
+      policy: input.policy,
+      gates: repository.gates,
+      decisions: repository.decisions,
+    });
+    decisionsToApply[repository.key] = evaluation.decisionsToApply;
+    for (const record of evaluation.gates)
+      gates.push(gateRow(repository.key, record, input.audience));
+    omittedBySection.gates += evaluation.omitted;
+
+    const laneFacts = [...repository.lanes].sort(compareTextBy((fact) => fact.ref));
+    for (const fact of laneFacts.slice(0, BOARD_MAX_LANES))
+      lanes.push(laneRow(repository.key, fact));
+    omittedBySection.lanes +=
+      (repository.omittedLanes ?? 0) + Math.max(0, laneFacts.length - BOARD_MAX_LANES);
+
+    const ownerAsks = repository.asks.filter(
+      (ask) => ask.audience === undefined || ask.audience === "owner",
+    );
+    const askFacts = ownerAsks.slice(0, BOARD_MAX_ASKS);
+    const drawn = defaultableByRef(repository.gates, input.policy);
+    const appliedRefs = new Set(repository.decisions.map((decision) => decision.workItemRef));
+    for (const fact of askFacts) asks.push(askRow(repository.key, fact, drawn, appliedRefs));
+    omittedBySection.asks += Math.max(0, ownerAsks.length - BOARD_MAX_ASKS);
+
+    const laneParks = repository.parks.filter(
+      (park) => park.reason === "peak-window" || park.reason === "owner-hold",
+    );
+    const parkFacts = [...laneParks].sort(compareTextBy((fact) => fact.ref));
+    for (const fact of parkFacts.slice(0, BOARD_MAX_PARKED))
+      parked.push(parkedRow(repository.key, fact));
+    omittedBySection.parked += Math.max(0, laneParks.length - BOARD_MAX_PARKED);
+
+    collectors.push({ collector: "tracker", outcome: "available", repository: repository.key });
+    collectors.push({ collector: "lanes", outcome: "available", repository: repository.key });
+  }
+
+  const omitted =
+    omittedBySection.repositories +
+    omittedBySection.lanes +
+    omittedBySection.gates +
+    omittedBySection.asks +
+    omittedBySection.parked;
+  const base: BoardData = {
+    schemaVersion: BOARD_SCHEMA_VERSION,
+    audience: input.audience,
+    scope: input.scope,
+    selection: input.selection,
+    repositories: repositories.map((repository) => repository.key),
+    lanes,
+    gates,
+    asks,
+    parked,
+    collectors,
+    ownerHold: input.ownerHold,
+    stateSource: STATUS_FACTS_SCHEMA_VERSION,
+    truncated: omitted > 0 || repositories.some(repositoryFieldsClamped),
+    omitted,
+    omittedBySection,
+  };
+  return { data: boundMachine(base), decisionsToApply };
+};
+
+type BoardSectionKey = "parked" | "asks" | "lanes" | "gates";
+
+/** Drop rows tail-first in the declared order until the payload fits (DM-11). */
+const boundMachine = (data: BoardData): BoardData => {
+  let current = data;
+  const counters = { ...data.omittedBySection };
+  let omitted = data.omitted;
+  const order: readonly BoardSectionKey[] = ["parked", "asks", "lanes", "gates"];
+  for (const section of order) {
+    while (
+      utf8ByteLength(JSON.stringify(current)) > BOARD_MAX_MACHINE_BYTES &&
+      current[section].length > 0
+    ) {
+      counters[section] += 1;
+      omitted += 1;
+      if (section === "parked") current = { ...current, parked: current.parked.slice(0, -1) };
+      if (section === "asks") current = { ...current, asks: current.asks.slice(0, -1) };
+      if (section === "lanes") current = { ...current, lanes: current.lanes.slice(0, -1) };
+      if (section === "gates") current = { ...current, gates: current.gates.slice(0, -1) };
+      current = {
+        ...current,
+        truncated: true,
+        omitted,
+        omittedBySection: { ...counters },
+      };
+    }
+  }
+  return current;
+};
+
+const sectionLine = (
+  label: string,
+  rows: readonly string[],
+  cap: number,
+  machineOmitted: number,
+  humanDropped: number,
+): string[] => {
+  const kept = rows.slice(0, cap);
+  const dropped = humanDropped + Math.max(0, rows.length - cap);
+  const marker =
+    dropped + machineOmitted > 0
+      ? ` +${dropped + machineOmitted} more ${label.toLowerCase()} omitted`
+      : "";
+  return [truncateToBytes(`${label}${marker}`, BOARD_MAX_HUMAN_LINE_BYTES), ...kept];
+};
+
+/**
+ * Render the deterministic, TTY-independent, ANSI-free four-section screen.
  *
- * The renderer never mutates the payload. It clamps each line to 400 UTF-8 bytes
- * and drops trailing lines only when the declared line/byte bound would be
- * exceeded, marking the drop with `+N`.
+ * The renderer never mutates the payload. It clamps each line to 400 UTF-8
+ * bytes and drops trailing lines (last section first) only when the declared
+ * line/byte bound would be exceeded, marking every drop with `+N more`.
  */
 export const renderBoardHuman = (data: BoardData, brand: BrandIdentity): string => {
   const evidence = collectorEvidence(data);
+  const empty =
+    data.lanes.length === 0 &&
+    data.gates.length === 0 &&
+    data.asks.length === 0 &&
+    data.parked.length === 0;
   const header =
-    data.gates.length === 0
-      ? `${truncateToBytes(brand.binaryName, 128)} board  observed-empty  collectors=${evidence}`
-      : `${truncateToBytes(brand.binaryName, 128)} board  audience=${data.audience}  collectors=${evidence}`;
-  const lines = data.gates.map((record) => truncateToBytes(gateLine(record), 400));
-  const markerFor = (dropped: number): string | undefined => {
-    if (dropped > 0) return `+${dropped} more gates omitted`;
-    if (data.omitted > 0) return `+${data.omitted} more gates omitted`;
-    return data.truncated ? "output clamped" : undefined;
-  };
-  const compose = (kept: readonly string[], dropped: number): string[] => {
-    const marker = markerFor(dropped);
-    return marker === undefined ? [header, ...kept] : [header, ...kept, marker];
-  };
-  let kept = lines.slice();
-  let text = `${compose(kept, 0).join("\n")}\n`;
-  while (
-    kept.length > 0 &&
-    (compose(kept, 0).length > BOARD_MAX_HUMAN_LINES ||
-      utf8ByteLength(text) > BOARD_MAX_HUMAN_BYTES)
-  ) {
-    kept = kept.slice(0, kept.length - 1);
-    text = `${compose(kept, data.omitted + (lines.length - kept.length)).join("\n")}\n`;
+    empty || data.scope === "unbound"
+      ? `${truncateToBytes(brand.binaryName, 128)} board  observed-empty  scope=${data.scope}  selection=${data.selection}  repositories=${String(data.repositories.length)}  collectors=${evidence}`
+      : `${truncateToBytes(brand.binaryName, 128)} board  audience=${data.audience}  scope=${data.scope}  selection=${data.selection}  repositories=${String(data.repositories.length)}  collectors=${evidence}`;
+
+  const laneLines = data.lanes.map(
+    (row) =>
+      `${row.repository}  ${row.ref}  state=${row.state}  phase=${row.phase ?? row.phaseUnknownReason ?? "null"}  holder=${row.holder ?? "null"}`,
+  );
+  const gateLines = data.gates.map(
+    (row) =>
+      `${row.repository}  ${row.id}  ${row.kind}  ${row.ref}  age=${ageLabel(row)}  sla=${row.slaState}  default=${row.default ?? "null"}  waivedBy=${row.waivedBy ?? "null"}  owner=${row.owner ?? "null"}  cond=${row.condition}`,
+  );
+  const askLines = data.asks.map(
+    (row) =>
+      `${row.repository}  ${row.id}  ref=${row.ref ?? "null"}  age=${ageMsLabel(row.age)}  default=${row.drawnDefault ?? "none"}:${row.defaultState}  owner=${row.owner ?? "null"}`,
+  );
+  const parkedLines = data.parked.map(
+    (row) =>
+      `${row.repository}  ${row.ref}  reason=${row.reason}  until=${row.until ?? row.untilReason ?? "null"}  owner=${row.owner ?? "null"}`,
+  );
+
+  const humanDropped: Record<BoardSectionKey, number> = { lanes: 0, gates: 0, asks: 0, parked: 0 };
+  const compose = (): string[] => [
+    header,
+    ...sectionLine(
+      "LANES",
+      laneLines.slice(0, laneLines.length - humanDropped.lanes),
+      BOARD_HUMAN_SECTION_CAPS.lanes,
+      data.omittedBySection.lanes,
+      humanDropped.lanes,
+    ),
+    ...sectionLine(
+      "GATES",
+      gateLines.slice(0, gateLines.length - humanDropped.gates),
+      BOARD_HUMAN_SECTION_CAPS.gates,
+      data.omittedBySection.gates,
+      humanDropped.gates,
+    ),
+    ...sectionLine(
+      "ASKS",
+      askLines.slice(0, askLines.length - humanDropped.asks),
+      BOARD_HUMAN_SECTION_CAPS.asks,
+      data.omittedBySection.asks,
+      humanDropped.asks,
+    ),
+    ...sectionLine(
+      "PARKED",
+      parkedLines.slice(0, parkedLines.length - humanDropped.parked),
+      BOARD_HUMAN_SECTION_CAPS.parked,
+      data.omittedBySection.parked,
+      humanDropped.parked,
+    ),
+  ];
+  let lines = compose().map((line) =>
+    truncateToBytes(neutralize(line), BOARD_MAX_HUMAN_LINE_BYTES),
+  );
+  let text = `${lines.join("\n")}\n`;
+  const dropOrder: readonly BoardSectionKey[] = ["parked", "asks", "lanes", "gates"];
+  for (const section of dropOrder) {
+    const total = {
+      lanes: laneLines.length,
+      gates: gateLines.length,
+      asks: askLines.length,
+      parked: parkedLines.length,
+    }[section];
+    while (
+      humanDropped[section] < total &&
+      (lines.length > BOARD_MAX_HUMAN_LINES || utf8ByteLength(text) > BOARD_MAX_HUMAN_BYTES)
+    ) {
+      humanDropped[section] += 1;
+      lines = compose().map((line) =>
+        truncateToBytes(neutralize(line), BOARD_MAX_HUMAN_LINE_BYTES),
+      );
+      text = `${lines.join("\n")}\n`;
+    }
   }
   return text;
 };

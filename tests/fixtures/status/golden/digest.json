@@ -1019,6 +1019,7 @@
         "truncated": false,
         "questions": []
       }
-    ]
+    ],
+    "stateSource": "delivery.status-facts.v1"
   }
 }

@@ -152,13 +152,20 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   [queue-ready](../spec/features/feature-queue-ready.md),
   [scheduling engine](../spec/features/feature-scheduling-engine.md), and
   [dispatch engine](../spec/features/feature-dispatch-engine.md).
-- `board` is a bounded, render-once owner-gate aging grid: 24 h escalation,
-  72 h default-on-expiry, declared collector unavailability, and at most eight
-  ranked gates. An unwaived tracker-observed gate maps to `owner-review` and
-  escalates without auto-defaulting; a gate with a recorded authorized
-  `owner-gate` waiver is collected as `waiver`-kind with its recorded authorizer
-  and follows the defaultable path. A rendered board exits zero while an
-  unavailable collector exits two. See the
+- `board` is the bounded, render-once four-section fleet view: active lanes,
+  open gates, owner asks, and parked work on one screen, projected from the
+  shared `delivery.status-facts.v1` bundle plus the lane/phase fold. Repository
+  selection is the invoking checkout by default, `--project <repoKey>` for one
+  managed repository, and `--all` for the managed set under the
+  128-included-repository cap with counted overflow. The gates section preserves
+  the delivered SLA: 24 h escalation, 72 h default-on-expiry, declared collector
+  unavailability, and at most eight ranked gates per repository. An unwaived
+  tracker-observed gate maps to `owner-review` and escalates without
+  auto-defaulting; a gate with a recorded authorized `owner-gate` waiver is
+  collected as `waiver`-kind with its recorded authorizer and follows the
+  defaultable path. A produced board exits zero, a refused key or invocation
+  exits one, and an unavailable collector or unreadable state location exits two.
+  See the [board](../spec/features/feature-board.md) and the
   [owner-gate SLA](../spec/features/feature-owner-gate-sla.md).
 - `blockers` is the typed question channel: `list`, `answer`, and `publish` over
   append-only local state, with audience routing through a policy-as-data map,

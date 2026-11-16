@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-PEAK-PAUSING
 status: Current
 created: 2026-11-13
-last_updated: 2026-11-14
+last_updated: 2026-11-16
 owners: ["engineering"]
 service: delivery-os
-summary: "Provider-aware peak pausing (M2-S17): the provider profile nominated at dispatch admission and recorded on lane and attempt records with the classified no-nomination pre-session refusal, peak-window rules as versioned per-profile data (windows, multipliers, buffers, grace bounded by the buffer, fail-closed validation, UTC-only), the resident daemon's window watch with bounded-grace in-flight parking and the preserved|session-state-not-preserved classification, classification-routed window-end resume from preserved session state or the delivered interrupted-lane recovery with per-profile isolation and owner-hold precedence, taxonomy v2 stop/parked/resumed/park-edge episode events, the window-scoped zero-spend evidence over telemetry v2 with classified absence, the status/brief/lanes park surfaces, and the composition-fact peak-enforcement read with the declared degradation to iteration-start gating when no composition supplies the watch."
+summary: "Provider-aware peak pausing (M2-S17): the provider profile nominated at dispatch admission and recorded on lane and attempt records with the classified no-nomination pre-session refusal, peak-window rules as versioned per-profile data (windows, multipliers, buffers, grace bounded by the buffer, fail-closed validation, UTC-only), the resident daemon's window watch with bounded-grace in-flight parking and the preserved|session-state-not-preserved classification, classification-routed window-end resume from preserved session state or the delivered interrupted-lane recovery with per-profile isolation and owner-hold precedence, taxonomy v2 stop/parked/resumed/park-edge episode events, the window-scoped zero-spend evidence over telemetry v2 with classified absence, the status/brief/lanes/board park surfaces, and the composition-fact peak-enforcement read with the declared degradation to iteration-start gating when no composition supplies the watch."
 links:
-  related_changes: ["GH-294"]
+  related_changes: ["GH-294", "GH-297"]
   related_decisions: ["TDR-0025", "TDR-0028", "TDR-0029", "TDR-0030"]
   contracts:
     - "packages/core/src/contracts/provider-profile.ts"
@@ -93,6 +93,7 @@ Zero is a positive reading backed by present telemetry; telemetry absence is a c
 - **`lanes`** — the `parked:<cause>` projection gains `parked:peak-window` and `parked:owner-hold` beside the delivered three, which render unchanged. The `lanes --json` machine read carries `peakEnforcement: { mode, parkClaimed }`. The mode reflects the composition fact: it is `window-watch` iff the running composition actually supplies the profile-window watcher ports, otherwise `iteration-start-gating` — never an inference from daemon reachability, which says nothing about whether a watcher exists. `parkClaimed` is read from durable park records — the fold never claims a park that did not happen.
 - **`status`** — the providers section gains the bounded `laneParks[]` park fields (`ref`, `reason`, `until`, `preservation`, `providerProfile`) for open episodes, read in the same collector pass and carried verbatim from the park records; fields clear after the episode closes and an owner-hold `until` renders absent.
 - **`brief`** — the providers surface projects the identical park fields with zero added reads, rendering one `lane-park <ref> <reason> until=<instant|absent> <preservation>` line per open episode.
+- **`board`** — the `PARKED` section is the open lane park-episode population (`peak-window` and `owner-hold` only) with `ref`, `reason`, `until`, optional `preservation`, and optional `providerProfile`; an owner-hold row carries the classified `owner-hold-no-expiry` absence, and a `provider-quota` park never appears. The host-wide owner hold is carried once on the board payload as `ownerHold` ([Board](feature-board.md)).
 
 ## 9. Daemon-absent degradation
 
@@ -121,4 +122,5 @@ Without a resident daemon there is no window watcher and no mid-flight park. The
 - [Spend Read Side](feature-spend.md) — the window-evidence form and its `telemetryState` disclosure.
 - [Harness Telemetry v2](feature-telemetry-v2.md) — the storage identity and attribution join the evidence counts over.
 - [Status Digest](feature-status-digest.md) and [Brief](feature-brief.md) — the park-field surfaces.
+- [Board](feature-board.md) — the four-section fleet read whose `PARKED` section is the lane park-episode population.
 - [TDR-0028](../../decisions/TDR-0028-no-nomination-classified-admission-refusal.md), [TDR-0029](../../decisions/TDR-0029-event-taxonomy-v2-peak-pause-kinds.md), [TDR-0030](../../decisions/TDR-0030-park-preservation-failure-classification.md) — the binding decisions for the refusal, the taxonomy version, and the preservation classification.

@@ -100,11 +100,11 @@ describe("TC-EVT-064 mount negative controls", () => {
     ]);
   });
 
-  test("the delivered 19-name inline list fails the coverage equality naming events", () => {
+  test("the delivered inline list fails the coverage equality naming events", () => {
     const missing = coverageCommands.filter(
       (command) => !(DELIVERED_INLINE_NAMES as readonly string[]).includes(command),
     );
-    expect(missing).toEqual(["events"]);
+    expect(missing).toEqual(["events", "board"]);
     expect([...coverageCommands].sort()).toEqual([...PROMPT_REQUIRED_COMMANDS].sort());
   });
 });

@@ -62,7 +62,7 @@ describe("TC-BRIEF-001 contract surface and closed catalog", () => {
     expect(BRIEF_SCHEMA_VERSION).toBe("delivery.brief.v1");
   });
 
-  test("the payload declares the seven DM-1 members plus the declared spend citation", () => {
+  test("the payload declares the DM-1 members, the declared spend citation, and stateSource", () => {
     expect(payloadMembers()).toEqual([
       "schemaVersion",
       "generatedAt",
@@ -72,6 +72,7 @@ describe("TC-BRIEF-001 contract surface and closed catalog", () => {
       "placeholders",
       "truncation",
       "spend",
+      "stateSource",
     ]);
   });
 

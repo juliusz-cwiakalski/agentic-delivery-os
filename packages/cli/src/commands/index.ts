@@ -5,7 +5,11 @@
 
 export type { BlockerSessionPort, BlockersCommandRuntime } from "./blockers.js";
 export { createBlockersCommandDefinition } from "./blockers.js";
-export type { BoardCollector, BoardCommandRuntime } from "./board.js";
+export type {
+  BoardCommandRuntime,
+  BoardRepositoryLoad,
+  BoardSelectionResolution,
+} from "./board.js";
 export { createBoardCommandDefinition } from "./board.js";
 export type { BriefCommandRuntime } from "./brief.js";
 export { createBriefCommandDefinition } from "./brief.js";

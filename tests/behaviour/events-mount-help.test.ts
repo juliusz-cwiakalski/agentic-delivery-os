@@ -52,7 +52,7 @@ const run = async (
 };
 
 describe("TC-EVT-061 events self-description", () => {
-  test("root help lists twenty families, including events, in content and order", async () => {
+  test("root help lists twenty-one families, including events, in content and order", async () => {
     const help = await run(["--help"]);
     expect(help.exitCode).toBe(0);
     const commandsBlock = help.stdout.slice(help.stdout.indexOf("\nCommands:\n"));
@@ -60,7 +60,7 @@ describe("TC-EVT-061 events self-description", () => {
       .split("\n")
       .filter((line) => /^ {2}\S+ {2}\S/u.test(line))
       .map((line) => (line.trim().split(/\s+/u)[0] ?? "").trim());
-    expect(families).toHaveLength(20);
+    expect(families).toHaveLength(21);
     expect(families).toContain("events");
     // The delivered nineteen remain, in their delivered relative order.
     const positions = DELIVERED_FAMILIES.map((family) => families.indexOf(family));

@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-FEATURE-PROJECTS
 status: Current
 created: 2026-11-11
-last_updated: 2026-11-15
+last_updated: 2026-11-16
 owners: ["engineering"]
 service: delivery-os
-summary: "The host overview and the flat record set: the two-layer state scope (host root plus a per-repository project root), the checkout identity marker and its minted project key, the derived host index with bounded maintenance and the DEC-18 key guard, the read-only `repos list [--json]` surface with its `repos.v1` payload, deterministic table, exit projection, three `repos.*` contract error identities, handover and daemon projections, the four state-location outcomes, and the delivered `projects list --flat` alias that serves the byte-compatible `projects.v1` payload."
+summary: "The host overview and the flat record set: the two-layer state scope (host root plus a per-repository project root), the checkout identity marker and its minted project key, the derived host index with bounded maintenance and the DEC-18 key guard, the read-only `repos list [--json]` surface with its `repos.v1` payload, deterministic table, exit projection, three `repos.*` contract error identities, handover and daemon projections, the four state-location outcomes, and the delivered `projects list --flat` alias that serves the byte-compatible `projects.v1` payload; the board reads the host index once per `--all`/`--project` run, unions it with the invoking checkout, and never maintains it."
 links:
-  related_changes: ["GH-288", "GH-289", "GH-309", "GH-320"]
+  related_changes: ["GH-288", "GH-289", "GH-309", "GH-320", "GH-297"]
   related_decisions: ["TDR-0022", "ODR-0004"]
 ---
 
@@ -130,6 +130,13 @@ derived `stateLocation`, and `lastWrittenAt`. The index holds at most 2 000
 entries and keeps them in project-key order; entries beyond the bound are dropped
 from the document, never merged into another entry. The index is discovered from
 use, never by a filesystem crawl.
+
+The board consumes this index as one input to its managed set: `--all` and
+`--project` read it once, union its live recorded checkouts with the bound
+invoking checkout, and bound the included set to 128 repositories with the
+overflow counted. The board belongs to the read-only `maintainsIndex` exception
+set, so a board run never maintains, prunes, or re-registers the index
+([Board](feature-board.md)).
 
 Maintenance runs at most once per store-opening invocation whose scope resolves
 inside a checkout: exactly one index read and at most one write. The fold upserts
@@ -273,3 +280,5 @@ No automatic migration, migration command, or re-attribution exists.
 - [Resident Dispatch Daemon](feature-resident-daemon.md) — the socket path derived
   from the project state root by the composing site.
 - [Owner-Gate SLA](feature-owner-gate-sla.md) — the host-wide owner hold.
+- [Board](feature-board.md) — the fleet read that consumes this host index,
+  per-repository state scope, and the `unbound` scope.

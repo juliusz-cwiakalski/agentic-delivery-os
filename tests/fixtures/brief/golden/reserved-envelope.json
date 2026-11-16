@@ -323,6 +323,7 @@
     "spend": {
       "state": "absent",
       "code": "spend.telemetry-absent"
-    }
+    },
+    "stateSource": "delivery.status-facts.v1"
   }
 }

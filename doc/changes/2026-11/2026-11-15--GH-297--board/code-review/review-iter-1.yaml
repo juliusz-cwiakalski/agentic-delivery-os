@@ -1,0 +1,146 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-297
+branch: feat/GH-297/board
+status: FAIL
+summary: >-
+  The change is broad and unusually disciplined: the four-section board, the
+  shared `stateSource` identity (the backlog AC, verified byte-equal across
+  board/status/brief by TC-BOARD-003), repository selection with the 128 cap
+  and deterministic retained set, the preserved owner-gate SLA with the
+  per-repository idempotent append and the DEC-16 post-append ask join, the
+  Appendix D error-table unit (23 sites moved, four-way agreement 138/137/55/2
+  verified green, no-leftover scan clean), and the 21st-family mount are all
+  delivered and the targeted suites pass. Two defects block the PR: the
+  per-repository tracker read joins merge waivers from the INVOKING
+  repository's store, so non-invoking repositories lose their recorded waivers
+  (and can import the invoking repository's waiver on a shared ref number) in
+  `--all`/`--project` runs, and the new command-scoped `--version` intercept
+  answers exit 0 for unknown commands and positional-carrying invocations,
+  bypassing the delivered fail-closed containment. The declared Critical
+  TC-BOARD-061 also landed in reduced form (no host-root/index snapshot, no
+  index-maintenance mutant), leaving DoD-11's zero-index-write evidence unproven.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 2
+  low: 2
+  info: 1
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: correctness
+    location: packages/cli/src/edge.ts:3151
+    message: >-
+      `readTrackerFor(root)` reads merge waivers from `composition.store` — the
+      INVOKING repository's store — regardless of the target `root`. In
+      `--all`/`--project` runs a non-invoking repository's recorded authorized
+      waivers never surface (its waiver gates render `owner-review` with
+      `waivedBy: null`), its expired waiver gates never receive the 72 h default
+      in fleet mode, and a numeric ref collision can import the invoking
+      repository's waiver into the other repository's gate row (kind, owner,
+      ownerSource contaminated). This violates the delivered-SLA preservation
+      (F-4/AC-F4-1/AC-F4-2 for non-invoking repositories), the no-state-mixing
+      guarantee (AC-F3-2, NFR-3), and DM-3/DM-10 row provenance. No test covers
+      waivers on a non-invoking repository (the selection harness uses an empty
+      transport; the behaviour fixtures inject gate facts past this seam).
+    suggestion: >-
+      Open the per-repository store before the tracker read and join waivers
+      from that store (pass the store into `readTrackerFor`, or move the
+      waiver join into `loadRepositoryFacts` after `openStore`). Add a
+      regression test seeding a waiver in a non-invoking repository's store
+      under `--all`, including a shared-ref pair with divergent waivers
+      asserting two distinct, uncontaminated rows.
+  - id: F-2
+    severity: medium
+    confidence: high
+    category: correctness
+    location: packages/cli/src/entrypoint.ts:391
+    message: >-
+      The new command-scoped `--version` intercept fires for ANY first token
+      before command validation: probed `notacommand --version` answers the
+      version text at exit 0 (previously the fail-closed composition failure)
+      and `board positional --version` answers exit 0 instead of the declared
+      `fallback.invocation` at exit 1 for a positional (DEC-17/C-10, §8.3
+      grammar). The intercept also silently changes `--version` handling for
+      all 21 delivered families, beyond the board-only mounting the spec
+      declares.
+    suggestion: >-
+      Guard the intercept on the leading tokens resolving to a known command
+      (mirror the `--help` fall-through that validates via `helpEntryFor`
+      before answering), or restrict it to the composed program's families.
+      Add tests: `notacommand --version` keeps the classified containment
+      failure, and `<family> positional --version` keeps `fallback.invocation`
+      at exit 1.
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: tests/behaviour/board-write-discipline.test.ts:39
+    message: >-
+      TC-BOARD-061 (test-plan Impact Level: Critical) and plan obligation 4.5
+      are delivered in reduced form: the suite runs a single repository, snaps
+      only the per-repository state root, asserts no host-index counters, and
+      omits the declared index-maintenance mutant. No test anywhere asserts
+      the board performs zero host-index writes (grep confirms), so a
+      regression flipping the `maintainsIndex` exception in production.ts
+      would pass the suite. DoD-11's "index-access counters assert zero
+      maintenance writes" evidence is missing.
+    suggestion: >-
+      Extend the suite over the selection/host-root fixtures: two-repository
+      `--all` host with a seeded index, snapshot the host root (index file and
+      `projects/`) before/after, assert the index revision never advances and
+      the index-write counter stays zero across a no-default and a
+      default-applying run, and plant the index-maintenance mutant in a
+      temporary copy asserting the snapshot check fails naming the index file.
+  - id: F-4
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/owner-gate-sla.ts:549
+    message: >-
+      `repositoryFieldsClamped` checks gate `kind` against
+      `BOARD_MAX_KIND_CHARS` (120) while `evaluateGate` clamps kind at
+      `BOARD_MAX_ID_CHARS` (160) and DM-11 declares kind in the 160 group. A
+      gate kind of 121–160 characters sets `truncated: true` with no row
+      dropped or field clamped — an over-reported truncation.
+    suggestion: >-
+      Align the truncation-detection check with the actual clamp (check gate
+      kind against `BOARD_MAX_ID_CHARS`), or unify the kind-cap constant so
+      the detector and the clamp cannot diverge.
+  - id: F-5
+    severity: low
+    confidence: high
+    category: performance
+    location: packages/cli/src/edge.ts:3393
+    message: >-
+      `loadRepositoryFacts` resolves the phase for every active lease and
+      failed lane before the projection's 20-lane per-repository cap is
+      applied, so a repository with more than 20 active lanes performs more
+      phase reads than NFR-5's declared "≤ 1 phase read per active lane
+      (≤ 20)". The deviation is bounded by the real lane count and only
+      bites above the render cap.
+    suggestion: >-
+      Either sort and cap the lane facts at the edge before phase resolution
+      (carrying the omitted count so `omittedBySection.lanes` stays exact), or
+      record the deviation against NFR-5 in the plan/test plan so the bound
+      and the code agree.
+  - id: F-6
+    severity: info
+    confidence: high
+    category: documentation
+    location: packages/core/src/domain/owner-gate-sla.ts:322
+    message: >-
+      `toBoardData` (the delivered gate-only projection) is no longer used by
+      any production path — the command composes `projectBoard` — and it
+      fabricates `repository: ""` gate rows. It survives only for inventory
+      and performance-test references.
+    suggestion: >-
+      Optional cleanup in a later change: retire `toBoardData` or repoint its
+      consumers at `projectBoard` so one projection code path remains.
+reviewed_at: 2026-11-16T00:00:00Z
+next_step: EXECUTE_REMEDIATION_PHASE

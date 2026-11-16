@@ -36,6 +36,7 @@ export const DOMAIN_KINDS = [
   "projects",
   "repos",
   "events",
+  "board",
 ] as const;
 
 /**
@@ -1594,5 +1595,32 @@ export const ERROR_TABLE = [
       "The compiled taxonomy declaration failed its own integrity check; repair the declaration and rebuild before serving any page.",
     projectionClass: "platform-provider",
     summary: "The taxonomy declaration failed its integrity check.",
+  },
+  /**
+   * GH-297: the board's two exact two-segment identities (DEC-20, C-16). They
+   * join the closed allowlist by exact declaration; there is no `board.*`
+   * family and no pattern widening.
+   */
+  {
+    code: "board.repository-unknown",
+    domainKind: "board",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      'Run the board from a managed checkout or pass a key recorded in the host index ("projects list" or "repos list").',
+    projectionClass: "user-validation",
+    summary: "The requested repository key is not in the managed set.",
+  },
+  {
+    code: "board.state-unavailable",
+    domainKind: "board",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Repair the named host index, repository state location, or required source and retry; the board answers honestly or withholds itself, never with a partial fleet.",
+    projectionClass: "platform-provider",
+    summary: "A host index, repository state location, or required source cannot be read.",
   },
 ] as const satisfies readonly ErrorTableEntry[];

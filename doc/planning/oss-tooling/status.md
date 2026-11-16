@@ -476,3 +476,25 @@ gates, the record and capsule shapes, the invocation grammar, and the
 enumerable source read counts are unchanged. The delivery runs on
 `feat/GH-300/suite-job-mapping-gates`; M2 has not exited, and the remaining M2
 stories are unaffected by this delivery.
+
+## M2 delivery snapshot addendum (2026-11-16): M2-S4 delivered by GH-297
+
+M2-S4 (board) was delivered by GH-297 on `feat/GH-297/board`. `board` now
+renders exactly four sections — lanes, gates, owner asks, and parked work — in
+declared order, from the one fact bundle `collectStatusFacts` composes (named
+`delivery.status-facts.v1` on the board, status, and brief payloads) plus the
+delivered lane/phase fold. Repository selection is repository-keyed: the default
+form is the invoking checkout with zero host-index reads, `--project <repoKey>`
+narrows to one managed repository, and `--all` unions the host index with the
+invoking checkout under the 128-included-repository cap with counted overflow
+(`--project` still reaches a key beyond the cap). The delivered 24 h / 72 h
+owner-gate SLA, ranking, waiver recording, gate cap, and append-only idempotent
+decision record are preserved as the gates section, now scoped per repository;
+asks carry computed age and the drawn default over the invocation's post-append
+decision set, and parked work carries reason and `until` with the classified
+`owner-hold-no-expiry` absence while `provider-quota` stays off the board. The
+command is mounted as the 21st prompt-required family with root and family help,
+the M2 reference page, and the coverage-inventory row; it joins the read-only
+`maintainsIndex` exception set, and its only write is the per-repository decision
+append. The run carries `feat/GH-297/board`; M2 has not exited, and the remaining
+M2 stories are unaffected by this delivery.

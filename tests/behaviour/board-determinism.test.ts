@@ -85,3 +85,23 @@ describe("TC-SLA-019 determinism", () => {
     expect(ids(forward)).toEqual(ids(reversed));
   });
 });
+
+describe("TC-BOARD-060 four-section determinism", () => {
+  test("repeated runs are byte-identical and a reordered repository input is stable", async () => {
+    const { createBoardHarness } = await import("../fixtures/board/harness");
+    const { allFourRepository } = await import("../fixtures/board/sections");
+    const run = async (repositories: readonly ReturnType<typeof allFourRepository>[]) => {
+      const board = createBoardHarness({ repositories, selection: "all" });
+      try {
+        return (await board.run([], { json: true })).stdout;
+      } finally {
+        board.cleanup();
+      }
+    };
+    const forward = [allFourRepository(), allFourRepository({ key: "second-repository" })];
+    const first = await run(forward);
+    const second = await run(forward);
+    expect(first).toBe(second);
+    expect(await run([...forward].reverse())).toBe(first);
+  });
+});

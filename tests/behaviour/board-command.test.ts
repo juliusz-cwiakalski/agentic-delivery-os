@@ -9,6 +9,7 @@ import { join } from "node:path";
 import { assertEnvelopeContract } from "../../packages/testkit/src/result-conformance";
 import { availableCollector, boardGates, createBoardHarness } from "../fixtures/board/harness";
 import { HOUR_MS, ownerReviewGate } from "../fixtures/board/matrix";
+import { createSelectionHarness } from "../fixtures/board/selection";
 
 const ROOT = process.cwd();
 const GATES = [ownerReviewGate("GH-601", 2 * HOUR_MS), ownerReviewGate("GH-602", 26 * HOUR_MS)];
@@ -134,7 +135,7 @@ describe("TC-SLA-016 board command grammar and surface", () => {
 
   test("the definition declares no command flags and no positionals", () => {
     const source = readFileSync(join(ROOT, "packages/cli/src/commands/board.ts"), "utf8");
-    expect(source).toContain("flags: [],");
+    expect(source).toContain('flags: ["--all", "--project"],');
     expect(source).toContain("positionals: { max: 0 },");
     expect(source).not.toContain("--watch");
   });
@@ -188,6 +189,33 @@ describe("TC-SLA-023 brand neutrality", () => {
       expect(source).not.toContain("ados");
     } finally {
       board.cleanup();
+    }
+  });
+});
+
+describe("TC-BOARD-051 grammar before any read", () => {
+  test("every violation answers fallback.invocation at exit 1 with no read", async () => {
+    const harness = createSelectionHarness({
+      repositories: [{ projectKey: "delivery-a" }],
+      invokingKey: "delivery-a",
+    });
+    try {
+      const invocations: readonly (readonly string[])[] = [
+        ["board", "--all", "--project", "delivery-a"],
+        ["board", "--project"],
+        ["board", "--bogus"],
+        ["board", "extra"],
+      ];
+      for (const invocation of invocations) {
+        const run = await harness.run(invocation);
+        expect(run.exitCode, invocation.join(" ")).toBe(1);
+        expect(run.errorCode, invocation.join(" ")).toBe("fallback.invocation");
+        expect(run.stdout, invocation.join(" ")).not.toContain("LANES");
+      }
+      expect(harness.indexReads()).toBe(0);
+      expect(harness.storesOpened).toHaveLength(0);
+    } finally {
+      harness.dispose();
     }
   });
 });
