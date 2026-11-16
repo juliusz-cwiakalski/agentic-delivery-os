@@ -1,9 +1,24 @@
-# GH-297 delivery plan — machine-readable document (delivery.plan.v1), revision 1.3
+# GH-297 delivery plan — machine-readable document (delivery.plan.v1), revision 1.4
 # (2026-11-16). Authored against spec v1.3 (29 ACs, DEC-1..DEC-20, DM-1..DM-11,
 # NFR-1..NFR-10, RSK-1..RSK-9, DoD-1..DoD-18, OQ-1..OQ-10 all closed, Appendix C
 # constraints C-1..C-16, Appendix D count-pinning sites D-1..D-23) and test plan
 # v1.3 (48 TCs = 47 automated + 1 gate-only record) on branch feat/GH-297/board
 # from main-tools tip eca76523.
+#
+# REVISION NOTE (revision 1.4, review iteration 1 remediation): the phase-8
+# review (code-review/review-iter-1.yaml) found the delivery substantively
+# complete but returned FAIL with 6 findings (1 high, 2 medium, 2 low, 1 info).
+# F1 (high): the per-repository tracker read joins merge waivers from the
+# INVOKING store (packages/cli/src/edge.ts readTrackerFor), so non-invoking
+# repositories lose recorded waivers in --all/--project and a shared ref
+# number can import the invoking repository's waiver. F2 (medium): the
+# command-scoped --version intercept answers exit 0 for unknown commands and
+# positional-carrying invocations, bypassing fallback.invocation containment.
+# F3 (medium): TC-BOARD-061 landed without the host-root/index snapshot, the
+# index-write counters, and the index-maintenance mutant. F4/F5/F6 (low/info):
+# kind-cap detector divergence, phase reads above the declared 20-lane bound,
+# and the retired toBoardData projection. Phase 6 below owns the remediation;
+# no earlier phase, AC ownership, or commit subject changes.
 #
 # REVISION NOTE (revision 1.3, phase-7 commit staging): the new current-truth
 # spec doc/spec/features/feature-board.md is authored by lifecycle phase 7, not
@@ -1151,7 +1166,7 @@ schemaVersion: delivery.plan.v1
 workItemRef: GH-297
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5]
+  phases: [1, 2, 3, 4, 5, 6]
   escalationTriggers:
     - board-schema-version-bumped-or-delivered-key-renamed
     - new-error-table-row-beyond-board-repository-unknown-and-board-state-unavailable
@@ -1425,5 +1440,83 @@ phases:
       - kind: contract-file
         target: doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md
         role: producer
+      - kind: contract-file
+        target: doc/spec/features/feature-board.md
+        role: consumer
     doneArtifacts:
       trackerTransition: "GH-297 delivery complete: all five plan phases done, the four-section board shares the named state source with brief and status, repository scope and the 128 cap hold, the board is mounted as the 21st family, determinism/purity/read-cost proofs and the full gate battery are recorded; PR-ready against main-tools (PR creation is lifecycle phase 11)"
+
+  # -------------------------------------------------------------------------
+  # Phase 6 — Code Review Remediation (Iteration 1)
+  # Commit: fix(GH-297): per-repository waiver join, version containment and write-discipline proof
+  #
+  # Source: code-review/review-iter-1.yaml (F-1..F-6). No AC ownership or
+  # commit-subject change in phases 1-5; this phase remediates the review
+  # findings and re-runs the affected gates.
+  #
+  # Obligations:
+  #  6.1 (F-1, high) The per-repository tracker read must join merge waivers
+  #      from the TARGET repository's store: open the per-repository store
+  #      before the tracker read and pass it into the waiver join (or move the
+  #      waiver join into loadRepositoryFacts after openStore), so a
+  #      non-invoking repository's recorded waivers surface with their
+  #      authorizer and its expired waiver gates receive the 72 h default in
+  #      --all/--project runs. Add a regression test seeding a waiver in a
+  #      non-invoking repository's store over --all, including a shared-ref
+  #      pair with divergent waivers asserting two distinct, uncontaminated
+  #      rows (AC-F4-1/AC-F4-2 in fleet mode, AC-F3-2, NFR-3).
+  #  6.2 (F-2, medium) The command-scoped --version intercept must not bypass
+  #      containment: an unknown leading command keeps its classified
+  #      composition failure, and a positional alongside --version keeps
+  #      fallback.invocation at exit 1 (DEC-17/C-10). Guard the intercept on
+  #      the leading tokens resolving to a known command (mirror the --help
+  #      fall-through) and add both refusal tests.
+  #  6.3 (F-3, medium) Complete TC-BOARD-061 as declared: a two-repository
+  #      --all host with a seeded index, a host-root snapshot (index file and
+  #      projects/) before/after each run, index-write counters and revision
+  #      assertions across a no-default and a default-applying run, and the
+  #      index-maintenance mutant in a temporary copy failing with the index
+  #      file named (DoD-11).
+  #  6.4 (F-4, F-5, F-6 as triaged) Align the gate-kind truncation detector
+  #      with the 160-char clamp; either cap lane facts at the edge before
+  #      phase resolution (carrying the omitted count) or record the NFR-5
+  #      phase-read deviation; retire or repoint toBoardData if cheap.
+  #  6.5 Re-run the affected suites (board selection/identity/gates-sla,
+  #      entrypoint and help suites, write-discipline) and the aggregate
+  #      TMPDIR=$PWD/tmp/tmpdir pnpm check at the remediation commit; record
+  #      the phase-6 evidence in pm-notes notes:.
+  # -------------------------------------------------------------------------
+  - id: 6
+    title: "Code Review Remediation (Iteration 1): per-repository waiver join, version containment, and the complete write-discipline proof"
+    kind: delivery
+    summary: >-
+      Fix the review-iteration-1 findings: join merge waivers from each
+      repository's own store in the fleet tracker read, contain the
+      command-scoped --version intercept to known commands so positional and
+      unknown-command invocations keep their classified refusals, complete
+      TC-BOARD-061 with the host-root snapshot, index counters, and
+      index-maintenance mutant, and align the kind-cap detector, phase-read
+      bound, and retired projection per the triage.
+    scope:
+      files:
+        - packages/cli/src/edge.ts
+        - packages/cli/src/entrypoint.ts
+        - packages/core/src/domain/owner-gate-sla.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - tests/behaviour/board-write-discipline.test.ts
+        - tests/behaviour/board-selection-all.test.ts
+        - tests/behaviour/board-identity.test.ts
+        - tests/behaviour/board-gates-sla.test.ts
+        - tests/behaviour/board-help.test.ts
+        - tests/behaviour/entrypoint-help.test.ts
+        - tests/fixtures/board/selection.ts
+        - tests/fixtures/board/harness.ts
+        - doc/changes/2026-11/2026-11-15--GH-297--board/chg-GH-297-test-plan.md
+        # Review evidence for this remediation iteration (staged in the
+        # remediation commit so the finding set and its fixes travel together).
+        - doc/changes/2026-11/2026-11-15--GH-297--board/code-review/review-iter-1.yaml
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/edge.ts
+        role: producer
