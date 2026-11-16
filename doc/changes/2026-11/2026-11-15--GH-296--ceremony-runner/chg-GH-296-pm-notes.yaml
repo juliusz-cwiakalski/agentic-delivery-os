@@ -248,3 +248,17 @@ notes:
       tests/structure/inventory.json update was disclosed as scope drift."
     type: info
     date: "2026-11-16"
+  - text: "plan phase 9 (family mount: four verbs, composition, help, reference
+      page, coverage): commit 58e40c8; pnpm typecheck green; bun test the CLI,
+      list, golden envelope, envelope-contract, content-inventory,
+      entrypoint-bin, help-guide-coverage, and prompt-conformance suites green
+      (89 pass); bun run scripts/checks/{help-guide-coverage,prompt-conformance}
+      green; the composed binary answers root --help with ceremony listed and
+      ceremony list --json returns the six built-ins at exit 0. Declared-scope
+      support edits disclosed as commit scope drift: packages/cli/package.json
+      and pnpm-lock.yaml add the yaml parser for note documents;
+      packages/core/src/index.ts re-exports the ceremony engine for the edge;
+      scripts/checks/help-guide-coverage.ts maps ceremony to its M2 page;
+      tests/structure/inventory.json lists the two new CLI files."
+    type: info
+    date: "2026-11-16"

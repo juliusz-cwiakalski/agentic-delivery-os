@@ -53,17 +53,17 @@ const listLines = (data: Record<string, unknown>): readonly string[] => {
 
 const runLines = (data: Record<string, unknown>): readonly string[] => {
   const steps = Array.isArray(data.steps) ? data.steps : [];
-  const lines = [
-    `ceremony ${String(data.ceremony)} run ${String(data.runId)} window ${isRecord(data.window) ? `${String(data.window.start)}..${String(data.window.end)}` : "unknown"}`,
-  ];
-  for (const entry of steps) {
+  const header = `ceremony ${String(data.ceremony)} run ${String(data.runId)} window ${isRecord(data.window) ? `${String(data.window.start)}..${String(data.window.end)}` : "unknown"}`;
+  const stepLines = steps.map((entry) => {
     const step = isRecord(entry) ? entry : {};
-    lines.push(
-      `  ${String(step.index)} ${String(step.kind)} ${String(step.outcome)} verify=${String(step.verification)}${step.reason === undefined ? "" : ` reason=${String(step.reason)}`}`,
-    );
-  }
-  lines.push(`verdict: ${String(data.verdict)}${data.reused === true ? " (reused)" : ""}`);
-  return lines;
+    const line = `  ${String(step.index)} ${String(step.kind)} ${String(step.outcome)} verify=${String(step.verification)}${step.reason === undefined ? "" : ` reason=${String(step.reason)}`}`;
+    return line.length <= 80 ? line : `${line.slice(0, 79)}…`;
+  });
+  const verdict = `verdict: ${String(data.verdict)}${data.reused === true ? " (reused)" : ""}`;
+  const budget = MAX_LINES - 3;
+  if (stepLines.length <= budget) return [header, ...stepLines, verdict];
+  const kept = stepLines.slice(0, budget);
+  return [header, ...kept, `omitted: ${String(stepLines.length - kept.length)} step(s)`, verdict];
 };
 
 const catchUpLines = (data: Record<string, unknown>): readonly string[] => {

@@ -12,9 +12,41 @@ import ts from "typescript";
 
 const ROOT = process.cwd();
 
-const PHASE_ONE_FILES = [
+const NEUTRAL_FILES = [
   "packages/core/src/contracts/ceremony.ts",
+  "packages/core/src/contracts/ceremony-builtins.ts",
   "packages/core/src/domain/ceremony-declaration.ts",
+  "packages/core/src/domain/ceremony-intake.ts",
+  "packages/core/src/domain/ceremony-run.ts",
+  "packages/core/src/domain/ceremony-resume.ts",
+  "packages/core/src/domain/ceremony-schedule.ts",
+  "packages/core/src/domain/ceremony-builtins.ts",
+  "packages/core/src/domain/ceremony-retro.ts",
+  "packages/core/src/domain/ceremony-mirror.ts",
+  "packages/core/src/domain/ceremony-registry.ts",
+  "packages/core/src/domain/ceremony-tier.ts",
+  "packages/core/src/domain/ceremony-comparison.ts",
+] as const;
+
+const CEREMONY_FILES = [
+  "packages/core/src/contracts/ceremony.ts",
+  "packages/core/src/contracts/ceremony-builtins.ts",
+  "packages/core/src/domain/ceremony-declaration.ts",
+  "packages/core/src/domain/ceremony-intake.ts",
+  "packages/core/src/domain/ceremony-run.ts",
+  "packages/core/src/domain/ceremony-resume.ts",
+  "packages/core/src/domain/ceremony-schedule.ts",
+  "packages/core/src/domain/ceremony-builtins.ts",
+  "packages/core/src/domain/ceremony-retro.ts",
+  "packages/core/src/domain/ceremony-mirror.ts",
+  "packages/core/src/domain/ceremony-registry.ts",
+  "packages/core/src/domain/ceremony-tier.ts",
+  "packages/core/src/domain/ceremony-comparison.ts",
+  "packages/core/src/state/ceremony.ts",
+  "packages/adapters/src/file/ceremony-artifacts.ts",
+  "packages/adapters/src/file/ceremony-declarations.ts",
+  "packages/cli/src/commands/ceremony.ts",
+  "packages/cli/src/output/ceremony-text.ts",
 ] as const;
 
 const specifiersOf = (relative: string): string[] => {
@@ -42,7 +74,7 @@ const textOf = (relative: string): string => readFileSync(join(ROOT, relative), 
 
 describe("TC-CEREMONY-050 contracts and domain stay runtime-neutral", () => {
   test("no file imports a runtime API or a higher package tier", () => {
-    for (const file of PHASE_ONE_FILES) {
+    for (const file of NEUTRAL_FILES) {
       for (const specifier of specifiersOf(file)) {
         expect(specifier.startsWith("node:"), `${file}: ${specifier}`).toBe(false);
         expect(specifier.startsWith("bun:"), `${file}: ${specifier}`).toBe(false);
@@ -50,13 +82,18 @@ describe("TC-CEREMONY-050 contracts and domain stay runtime-neutral", () => {
         expect(specifier.startsWith("@delivery-os/cli"), `${file}: ${specifier}`).toBe(false);
         expect(specifier.startsWith("@delivery-os/mcp"), `${file}: ${specifier}`).toBe(false);
         expect(specifier.startsWith("@delivery-os/opencode"), `${file}: ${specifier}`).toBe(false);
-        expect(specifier.includes("../state/"), `${file}: ${specifier}`).toBe(false);
+        if (
+          file.startsWith("packages/core/src/contracts/") ||
+          file.startsWith("packages/core/src/domain/")
+        ) {
+          expect(specifier.includes("../state/"), `${file}: ${specifier}`).toBe(false);
+        }
       }
     }
   });
 
   test("no ambient clock, random, environment, network, or process token appears", () => {
-    for (const file of PHASE_ONE_FILES) {
+    for (const file of NEUTRAL_FILES) {
       const text = textOf(file);
       for (const marker of [
         "Date.now",
@@ -67,6 +104,24 @@ describe("TC-CEREMONY-050 contracts and domain stay runtime-neutral", () => {
         "fetch(",
         "setTimeout(",
         "setInterval(",
+      ]) {
+        expect(text.includes(marker), `${file}: ${marker}`).toBe(false);
+      }
+    }
+  });
+
+  test("no ceremony path names an inference client, model, or network module", () => {
+    for (const file of CEREMONY_FILES) {
+      const text = textOf(file).toLowerCase();
+      for (const marker of [
+        "openai",
+        "anthropic",
+        "gpt-",
+        "claude-",
+        "node:http",
+        "node:https",
+        "node:net",
+        "node:child_process",
       ]) {
         expect(text.includes(marker), `${file}: ${marker}`).toBe(false);
       }
