@@ -1516,6 +1516,10 @@ phases:
         # Review evidence for this remediation iteration (staged in the
         # remediation commit so the finding set and its fixes travel together).
         - doc/changes/2026-11/2026-11-15--GH-297--board/code-review/review-iter-1.yaml
+        # The new current-truth board spec must be registered in the
+        # forbidden-literals user-facing-doc corpus; the registry entry is
+        # required for `pnpm check` to run the docs scope green.
+        - scripts/checks/forbidden-literals.registry.json
     interactions:
       - kind: contract-file
         target: packages/cli/src/edge.ts
