@@ -8,6 +8,8 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  BUILTIN_CEREMONY_DECLARATIONS,
+  BUILTIN_CEREMONY_IDS,
   CEREMONY_COMPARISON_SCHEMA,
   CEREMONY_DECLARATIONS_SCHEMA,
   CEREMONY_DECLARATION_LIMITS,
@@ -23,6 +25,10 @@ import {
   DOMAIN_KINDS,
   ERROR_TABLE,
 } from "../../packages/core/src/contracts/index";
+import {
+  ceremonyExecutableField,
+  validateCeremonyDeclaration,
+} from "../../packages/core/src/domain/index";
 
 const ROOT = process.cwd();
 
@@ -111,5 +117,50 @@ describe("TC-CEREMONY-049 the two error identities are additive and exact", () =
       expect(doc.split(row).length - 1, entry.code).toBe(1);
     }
     expect(doc).toContain("138 machine identities");
+  });
+});
+
+/**
+ * TC-CEREMONY-007 (completion) and TC-CEREMONY-061 (six-built-in sweep) — the
+ * six built-ins validate through the same validator, carry a verification mode
+ * on every step, a schema identifier on every output, and no executable content
+ * or undeclared vocabulary name.
+ */
+describe("TC-CEREMONY-007 the six built-ins are total, closed, and fully verified", () => {
+  test("all six validate through the one validator", () => {
+    expect(BUILTIN_CEREMONY_DECLARATIONS).toHaveLength(6);
+    for (const declaration of BUILTIN_CEREMONY_DECLARATIONS) {
+      const validated = validateCeremonyDeclaration(declaration);
+      expect(validated.ok, declaration.id).toBe(true);
+    }
+  });
+
+  test("100% of steps carry verification and 100% of outputs a schema", () => {
+    for (const declaration of BUILTIN_CEREMONY_DECLARATIONS) {
+      for (const phase of declaration.agenda) {
+        for (const step of phase.steps) {
+          expect(step.verify.length).toBeGreaterThan(0);
+          expect(step.outputs.length).toBeGreaterThan(0);
+          for (const output of step.outputs) expect(output.schema.length).toBeGreaterThan(0);
+        }
+      }
+    }
+  });
+
+  test("no built-in carries executable content", () => {
+    for (const declaration of BUILTIN_CEREMONY_DECLARATIONS) {
+      expect(ceremonyExecutableField(declaration), declaration.id).toBeUndefined();
+    }
+  });
+
+  test("the six ids are exactly the declared built-in set", () => {
+    expect(BUILTIN_CEREMONY_IDS).toEqual([
+      "morning-brief",
+      "retro-evidence-pass",
+      "sprint-rollover",
+      "night-watch",
+      "testing-session-assessment",
+      "decision-record-mirror-sync",
+    ]);
   });
 });

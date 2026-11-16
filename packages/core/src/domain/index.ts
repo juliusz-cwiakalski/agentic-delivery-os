@@ -954,3 +954,42 @@ export {
   type CeremonyCatchUpTarget,
   type CeremonyRemovedTarget,
 } from "./ceremony-schedule.js";
+/** The built-in ceremony folds and renderers (GH-296 F-3). */
+export {
+  CEREMONY_ASSESSMENT_VERDICTS,
+  CEREMONY_BUILTIN_SCHEMAS,
+  CEREMONY_CHECK_STATE_VALUES,
+  CEREMONY_DECLARED_CHECKS,
+  CEREMONY_FOLLOW_THROUGH_SCHEMA,
+  CEREMONY_RETRO_ACTIONS_SCHEMA,
+  CEREMONY_RETRO_EVIDENCE_SCHEMA,
+  CEREMONY_RETRO_INSIGHTS_SCHEMA,
+  CEREMONY_ROLLOVER_REASONS,
+  ceremonyBuiltinConforms,
+  ceremonyFollowThroughItems,
+  renderCeremonyFollowThrough,
+  renderCeremonyRetroActions,
+  renderCeremonyRetroEvidence,
+  renderCeremonyRetroInsights,
+} from "./ceremony-builtins.js";
+/** The retro ceremony module (GH-296 F-9). */
+export {
+  ceremonyFollowThroughFirst,
+  isCeremonyLevelName,
+  missingRetroNoteMembers,
+  RETRO_FIXED_MEMBERS,
+  RETRO_LEVEL_TRIGGER_LABELS,
+  retroDeclarationShape,
+  retroLevelForTrigger,
+  retroLevelOf,
+  retroLevelTriggerLabel,
+} from "./ceremony-retro.js";
+/** The mirror-sync planning module (GH-296 F-3, NFR-12). */
+export {
+  CEREMONY_MIRROR_REPORT_SCHEMA,
+  CEREMONY_MIRROR_TARGET_SCHEMA,
+  planCeremonyMirror,
+  type CeremonyMirrorPlan,
+  type CeremonyMirrorPlanInput,
+  type CeremonyMirrorTargetPlan,
+} from "./ceremony-mirror.js";

@@ -45,6 +45,7 @@ export type EngineHarnessOptions = {
   readonly runIds?: readonly string[];
   readonly origin?: "built-in" | "project";
   readonly mirror?: boolean;
+  readonly mirrorApply?: "write" | "noop";
 };
 
 const defaultInput = (): CeremonyInputRead => ({ state: "present", facts: {} });
@@ -112,7 +113,7 @@ export const makeEngineHarness = (options: EngineHarnessOptions = {}): EngineHar
     },
     apply(target, records) {
       mirrorApplies.push({ target, records: [...records] });
-      mirrorTargets.set(target, [...records]);
+      if (options.mirrorApply !== "noop") mirrorTargets.set(target, [...records]);
       return { ok: true };
     },
   };

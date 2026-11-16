@@ -15,6 +15,7 @@ import {
   CEREMONY_ASSESS_VERDICTS,
   CEREMONY_CARRY_OVER_REASONS,
   CEREMONY_CHECK_STATES,
+  CEREMONY_FOLLOW_THROUGH_VERDICTS,
   CEREMONY_COMPACTION_MAX_BYTES,
   CEREMONY_COMPACTION_MAX_LINES,
   CEREMONY_NOTE_SCHEMA,
@@ -26,7 +27,6 @@ import {
   type CeremonyInputReader,
   type CeremonyInputSource,
   type CeremonyMemoryPort,
-  type CeremonyMirrorInspection,
   type CeremonyMirrorPort,
   type CeremonyNote,
   type CeremonyOutputSlot,
@@ -44,7 +44,20 @@ import {
   type CeremonyWindow,
   PM_NOTES_REQUIRED_PHASES_BY_VARIANT,
 } from "#contracts";
+import {
+  CEREMONY_BUILTIN_SCHEMAS,
+  CEREMONY_FOLLOW_THROUGH_SCHEMA,
+  CEREMONY_RETRO_ACTIONS_SCHEMA,
+  CEREMONY_RETRO_EVIDENCE_SCHEMA,
+  CEREMONY_RETRO_INSIGHTS_SCHEMA,
+  ceremonyBuiltinConforms,
+  renderCeremonyFollowThrough,
+  renderCeremonyRetroActions,
+  renderCeremonyRetroEvidence,
+  renderCeremonyRetroInsights,
+} from "./ceremony-builtins.js";
 import { ceremonyDeclarationDigest } from "./ceremony-declaration.js";
+import { planCeremonyMirror } from "./ceremony-mirror.js";
 import {
   resolveCeremonyIntake,
   type CeremonyIntake,
@@ -160,7 +173,11 @@ const utf8Bytes = (value: string): number => {
 /** Flatten the declared agenda in declared order. */
 export const flattenCeremonyAgenda = (
   declaration: CeremonyDeclaration,
-): readonly { readonly phaseIndex: number; readonly step: CeremonyStepDeclaration; readonly index: number }[] => {
+): readonly {
+  readonly phaseIndex: number;
+  readonly step: CeremonyStepDeclaration;
+  readonly index: number;
+}[] => {
   const flattened: { phaseIndex: number; step: CeremonyStepDeclaration; index: number }[] = [];
   let index = 0;
   for (let phaseIndex = 0; phaseIndex < declaration.agenda.length; phaseIndex += 1) {
@@ -175,13 +192,19 @@ export const flattenCeremonyAgenda = (
 };
 
 const primaryOutput = (step: CeremonyStepDeclaration) =>
-  step.outputs[0] ?? { slot: "ceremony-artifact" as CeremonyOutputSlot, schema: "delivery.ceremony.artifact.v1" };
+  step.outputs[0] ?? {
+    slot: "ceremony-artifact" as CeremonyOutputSlot,
+    schema: "delivery.ceremony.artifact.v1",
+  };
 
 const readDeclaredInputs = (
   sources: readonly CeremonyInputSource[],
   window: CeremonyWindow,
   env: CeremonyRunEnvironment,
-): { readonly facts: Readonly<Record<string, unknown>>; readonly degraded: readonly { source: string; reason: string }[] } => {
+): {
+  readonly facts: Readonly<Record<string, unknown>>;
+  readonly degraded: readonly { source: string; reason: string }[];
+} => {
   const facts: Record<string, unknown> = {};
   const degraded: { source: string; reason: string }[] = [];
   for (const source of sources) {
@@ -192,8 +215,23 @@ const readDeclaredInputs = (
   return { facts, degraded };
 };
 
-const stepSources = (step: CeremonyStepDeclaration, declaration: CeremonyDeclaration): readonly CeremonyInputSource[] =>
-  step.inputs ?? declaration.inputs.map((input) => input.source);
+const stepSources = (
+  step: CeremonyStepDeclaration,
+  declaration: CeremonyDeclaration,
+): readonly CeremonyInputSource[] => step.inputs ?? declaration.inputs.map((input) => input.source);
+
+const BRIEF_SURFACE_SOURCES: Readonly<Record<string, readonly string[]>> = {
+  tracker: ["status-facts"],
+  "changes-and-prs": ["status-facts"],
+  ci: ["status-facts"],
+  "lanes-or-queue": ["status-facts"],
+  providers: ["status-facts", "provider-parks"],
+  "parked-work": ["status-facts"],
+  "typed-questions": ["status-facts", "open-questions"],
+  spend: ["status-facts", "spend-citation"],
+  "gate-sla-states": [],
+  "lane-queue-engine": [],
+};
 
 const renderBrief = (
   facts: Readonly<Record<string, unknown>>,
@@ -201,7 +239,8 @@ const renderBrief = (
 ): unknown => ({
   schemaId: "delivery.brief.v1",
   surfaces: BRIEF_SURFACE_ORDER.map((id) => {
-    const degradedEntry = degraded.find((entry) => entry.source.includes(id));
+    const sources = BRIEF_SURFACE_SOURCES[id] ?? [];
+    const degradedEntry = degraded.find((entry) => sources.includes(entry.source));
     return {
       id,
       title: id,
@@ -228,9 +267,11 @@ const renderRollover = (facts: Readonly<Record<string, unknown>>): unknown => ({
   schemaId: "delivery.ceremony.rollover.v1",
   entries: carryOverEntries(facts).map((entry) => {
     const record = isRecord(entry) ? entry : {};
-    const reason = typeof record.reason === "string" && (CEREMONY_CARRY_OVER_REASONS as readonly string[]).includes(record.reason)
-      ? record.reason
-      : "carried-by-owner";
+    const reason =
+      typeof record.reason === "string" &&
+      (CEREMONY_CARRY_OVER_REASONS as readonly string[]).includes(record.reason)
+        ? record.reason
+        : "carried-by-owner";
     return {
       ref: typeof record.ref === "string" ? record.ref : "unknown",
       reason,
@@ -245,8 +286,7 @@ const renderNightWatch = (
 ): unknown => ({
   schemaId: "delivery.ceremony.night-watch.v1",
   checks: CEREMONY_NIGHT_WATCH_CHECKS.map((id) => {
-    const source =
-      id === "lanes" ? "lane-queue-facts" : id === "gates" ? "gate-verification" : id;
+    const source = id === "lanes" ? "lane-queue-facts" : id === "gates" ? "gate-verification" : id;
     const degradedEntry = degraded.find(
       (entry) => entry.source === source || entry.source.includes(source),
     );
@@ -279,18 +319,23 @@ const assessmentItems = (
 ): readonly AssessmentItem[] => {
   const source = facts["owner-note"];
   const rawItems = isRecord(source) && Array.isArray(source.items) ? source.items : [];
-  return rawItems.map((entry) => {
-    const record = isRecord(entry) ? entry : {};
-    const item = typeof record.text === "string" ? record.text : typeof record.item === "string" ? record.item : "unnamed item";
-    const evidenceRef = typeof record.evidenceRef === "string" ? record.evidenceRef : undefined;
-    return {
-      item,
-      verdict: evidenceRef === undefined ? "uncovered" : "covered",
-      ...(evidenceRef === undefined ? {} : { evidenceRef }),
-    };
-  }).concat(
-    (note?.actions ?? []).map((item) => ({ item, verdict: "not-applicable" })),
-  );
+  return rawItems
+    .map((entry) => {
+      const record = isRecord(entry) ? entry : {};
+      const item =
+        typeof record.text === "string"
+          ? record.text
+          : typeof record.item === "string"
+            ? record.item
+            : "unnamed item";
+      const evidenceRef = typeof record.evidenceRef === "string" ? record.evidenceRef : undefined;
+      return {
+        item,
+        verdict: evidenceRef === undefined ? "uncovered" : "covered",
+        ...(evidenceRef === undefined ? {} : { evidenceRef }),
+      };
+    })
+    .concat((note?.actions ?? []).map((item) => ({ item, verdict: "not-applicable" })));
 };
 
 const renderAssessment = (
@@ -305,14 +350,9 @@ const renderAssessment = (
   };
 };
 
-const setsEqual = (left: readonly string[], right: readonly string[]): boolean => {
-  if (left.length !== right.length) return false;
-  const leftSorted = [...left].sort();
-  const rightSorted = [...right].sort();
-  return leftSorted.every((entry, index) => entry === rightSorted[index]);
-};
-
-const sourceSets = (facts: Readonly<Record<string, unknown>>): Readonly<Record<string, readonly string[]>> => {
+const sourceSets = (
+  facts: Readonly<Record<string, unknown>>,
+): Readonly<Record<string, readonly string[]>> => {
   const source = facts["decision-register"];
   if (!isRecord(source)) return {};
   const repos = source.repositories ?? source.records;
@@ -330,17 +370,9 @@ const targetList = (facts: Readonly<Record<string, unknown>>): readonly string[]
   const source = facts["affected-repositories"];
   if (!isRecord(source)) return [];
   const targets = source.targets;
-  return Array.isArray(targets) && targets.every((entry) => typeof entry === "string") ? targets : [];
-};
-
-type MirrorTargetReport = {
-  readonly target: string;
-  readonly state: CeremonyMirrorInspection["state"];
-  readonly equal: boolean;
-  readonly extra: readonly string[];
-  readonly missing: readonly string[];
-  readonly applied: boolean;
-  readonly reason?: string;
+  return Array.isArray(targets) && targets.every((entry) => typeof entry === "string")
+    ? targets
+    : [];
 };
 
 const mirrorReport = (
@@ -350,53 +382,25 @@ const mirrorReport = (
 ): { readonly content: unknown; readonly failure?: string } => {
   const sources = sourceSets(facts);
   const targets = targetList(facts);
-  const reports: MirrorTargetReport[] = [];
-  if (targets.length === 0) {
-    return { content: { schemaId: "delivery.ceremony.mirror-report.v1", targets: [], applied: false }, failure: "no affected repository targets were declared" };
-  }
-  for (const target of targets) {
-    if (env.mirror === undefined) {
-      reports.push({ target, state: "absent", equal: false, extra: [], missing: sources[target] ?? [], applied: false, reason: "mirror port absent" });
-      continue;
-    }
-    const inspection = env.mirror.inspect(target);
-    const source = sources[target] ?? [];
-    const extra = inspection.mirrorSet.filter((entry) => !source.includes(entry));
-    const missing = source.filter((entry) => !inspection.mirrorSet.includes(entry));
-    if (inspection.state !== "clean") {
-      reports.push({
-        target,
-        state: inspection.state,
-        equal: false,
-        extra,
-        missing,
-        applied: false,
-        reason: `precondition "${inspection.state}" on target "${target}"`,
-      });
-      continue;
-    }
-    if (!apply) {
-      reports.push({ target, state: "clean", equal: setsEqual(inspection.mirrorSet, source), extra, missing, applied: false });
-      continue;
-    }
-    const applied = env.mirror.apply(target, source);
-    const after = env.mirror.inspect(target);
-    reports.push({
-      target,
-      state: after.state,
-      equal: applied.ok && setsEqual(after.mirrorSet, source),
-      extra: after.mirrorSet.filter((entry) => !source.includes(entry)),
-      missing: source.filter((entry) => !after.mirrorSet.includes(entry)),
-      applied: applied.ok,
-      ...(applied.ok ? {} : { reason: applied.detail ?? "apply failed" }),
-    });
-  }
-  const failure = reports.find((report) => !report.equal || report.reason !== undefined);
-  return {
-    content: { schemaId: "delivery.ceremony.mirror-report.v1", targets: reports, applied: apply },
-    ...(failure === undefined
+  const planned = planCeremonyMirror({
+    targets,
+    sources,
+    inspect: (target) =>
+      env.mirror === undefined
+        ? { state: "absent", mirrorSet: [], sourceSet: sources[target] ?? [] }
+        : env.mirror.inspect(target),
+    ...(env.mirror === undefined
       ? {}
-      : { failure: failure.reason ?? `target "${failure.target}" does not equal its source set` }),
+      : { applyTarget: (target, records) => env.mirror?.apply(target, records) ?? { ok: false } }),
+    apply,
+  });
+  return {
+    content: {
+      schemaId: "delivery.ceremony.mirror-report.v1",
+      targets: planned.targets,
+      applied: apply,
+    },
+    ...(planned.failure === undefined ? {} : { failure: planned.failure }),
   };
 };
 
@@ -415,18 +419,16 @@ const defaultContent = (
   degraded,
 });
 
-const renderForSchema = (
-  input: {
-    readonly step: CeremonyStepDeclaration;
-    readonly declaration: CeremonyDeclaration;
-    readonly facts: Readonly<Record<string, unknown>>;
-    readonly degraded: readonly { source: string; reason: string }[];
-    readonly note: CeremonyNote | undefined;
-    readonly apply: boolean;
-    readonly env: CeremonyRunEnvironment;
-    readonly window: CeremonyWindow;
-  },
-): { readonly content: unknown; readonly failure?: string; readonly applied: boolean } => {
+const renderForSchema = (input: {
+  readonly step: CeremonyStepDeclaration;
+  readonly declaration: CeremonyDeclaration;
+  readonly facts: Readonly<Record<string, unknown>>;
+  readonly degraded: readonly { source: string; reason: string }[];
+  readonly note: CeremonyNote | undefined;
+  readonly apply: boolean;
+  readonly env: CeremonyRunEnvironment;
+  readonly window: CeremonyWindow;
+}): { readonly content: unknown; readonly failure?: string; readonly applied: boolean } => {
   const schema = primaryOutput(input.step).schema;
   if (schema === "delivery.brief.v1") {
     return { content: renderBrief(input.facts, input.degraded), applied: false };
@@ -440,9 +442,33 @@ const renderForSchema = (
   if (schema === "delivery.ceremony.assessment.v1") {
     return { content: renderAssessment(input.facts, input.note), applied: false };
   }
-  if (schema === "delivery.ceremony.mirror-report.v1" || input.step.kind === "sync") {
+  if (schema === CEREMONY_FOLLOW_THROUGH_SCHEMA) {
+    return { content: renderCeremonyFollowThrough(input.note), applied: false };
+  }
+  if (schema === CEREMONY_RETRO_EVIDENCE_SCHEMA) {
+    return { content: renderCeremonyRetroEvidence(input.facts, input.note), applied: false };
+  }
+  if (schema === CEREMONY_RETRO_INSIGHTS_SCHEMA) {
+    return { content: renderCeremonyRetroInsights(input.note), applied: false };
+  }
+  if (schema === CEREMONY_RETRO_ACTIONS_SCHEMA) {
+    return { content: renderCeremonyRetroActions(input.note), applied: false };
+  }
+  if (schema === "delivery.ceremony.mirror-report.v1") {
+    const report = mirrorReport(input.facts, input.env, false);
+    return {
+      content: report.content,
+      applied: false,
+      ...(report.failure === undefined ? {} : { failure: report.failure }),
+    };
+  }
+  if (input.step.kind === "sync") {
     const report = mirrorReport(input.facts, input.env, input.apply);
-    return { content: report.content, applied: input.apply, ...(report.failure === undefined ? {} : { failure: report.failure }) };
+    return {
+      content: report.content,
+      applied: input.apply,
+      ...(report.failure === undefined ? {} : { failure: report.failure }),
+    };
   }
   if (schema === CEREMONY_NOTE_SCHEMA && input.note !== undefined) {
     return { content: noteContent(input.note, input.note.level), applied: false };
@@ -455,13 +481,17 @@ const artifactContent = (value: unknown): string => JSON.stringify(value);
 const writeOutput = (
   step: CeremonyStepDeclaration,
   runId: string,
+  scopeKey: string,
   content: string,
   env: CeremonyRunEnvironment,
-): { readonly ref: string; readonly slot: CeremonyOutputSlot } | { readonly failure: string; readonly slot: CeremonyOutputSlot } => {
+):
+  | { readonly ref: string; readonly slot: CeremonyOutputSlot }
+  | { readonly failure: string; readonly slot: CeremonyOutputSlot } => {
   const output = primaryOutput(step);
   if (output.slot === "memory") {
-    if (env.memory === undefined) return { failure: "memory slot port is absent", slot: output.slot };
-    return { ref: `memory:${runId}`, slot: output.slot };
+    if (env.memory === undefined)
+      return { failure: "memory slot port is absent", slot: output.slot };
+    return { ref: `memory:${scopeKey}`, slot: output.slot };
   }
   const written = env.artifacts.write({
     runId,
@@ -469,7 +499,9 @@ const writeOutput = (
     schema: output.schema,
     content,
   });
-  return written.ok ? { ref: written.ref, slot: output.slot } : { failure: written.detail, slot: output.slot };
+  return written.ok
+    ? { ref: written.ref, slot: output.slot }
+    : { failure: written.detail, slot: output.slot };
 };
 
 const readBack = (
@@ -482,7 +514,9 @@ const readBack = (
   if (output.slot === "memory") {
     if (env.memory === undefined) return { ok: false, detail: "memory slot port is absent" };
     const read = env.memory.readNote(ref.replace(/^memory:/, ""));
-    return read.state === "present" ? { ok: true, content: read.body } : { ok: false, detail: "note absent" };
+    return read.state === "present"
+      ? { ok: true, content: read.body }
+      : { ok: false, detail: "note absent" };
   }
   return env.artifacts.read({ runId, slot: output.slot, ref });
 };
@@ -493,8 +527,15 @@ const hasVerdict = (value: unknown): boolean =>
 const hasCheckState = (value: unknown): boolean =>
   typeof value === "string" && (CEREMONY_CHECK_STATES as readonly string[]).includes(value);
 
+const hasFollowThroughVerdict = (value: unknown): boolean =>
+  typeof value === "string" &&
+  (CEREMONY_FOLLOW_THROUGH_VERDICTS as readonly string[]).includes(value);
+
 const conformsForSchema = (schema: string, document: Record<string, unknown>): boolean => {
   if (document.schemaId !== schema) return false;
+  if ((CEREMONY_BUILTIN_SCHEMAS as readonly string[]).includes(schema)) {
+    return ceremonyBuiltinConforms(schema, document);
+  }
   if (schema === "delivery.brief.v1") {
     const surfaces = document.surfaces;
     const anchors = document.anchorGroups;
@@ -523,7 +564,8 @@ const conformsForSchema = (schema: string, document: Record<string, unknown>): b
   }
   if (schema === "delivery.ceremony.night-watch.v1") {
     const checks = document.checks;
-    if (!Array.isArray(checks) || checks.length !== CEREMONY_NIGHT_WATCH_CHECKS.length) return false;
+    if (!Array.isArray(checks) || checks.length !== CEREMONY_NIGHT_WATCH_CHECKS.length)
+      return false;
     const ids = checks.map((entry) => (isRecord(entry) ? entry.id : undefined));
     return (
       CEREMONY_NIGHT_WATCH_CHECKS.every((id) => ids.filter((entry) => entry === id).length === 1) &&
@@ -534,7 +576,9 @@ const conformsForSchema = (schema: string, document: Record<string, unknown>): b
     const items = document.items;
     return (
       Array.isArray(items) &&
-      items.every((entry) => isRecord(entry) && isNonEmptyString(entry.item) && hasVerdict(entry.verdict)) &&
+      items.every(
+        (entry) => isRecord(entry) && isNonEmptyString(entry.item) && hasVerdict(entry.verdict),
+      ) &&
       document.unassessedCount === 0
     );
   }
@@ -577,14 +621,32 @@ const verifyContent = (
       : { ok: false, reason: `artifact does not conform to ${schema}` };
   }
   if (mode === "artifact-covers-items") {
-    const items = Array.isArray(parsed.items) ? parsed.items : Array.isArray(parsed.checks) ? parsed.checks : undefined;
-    if (items === undefined || items.length === 0) {
+    const items = Array.isArray(parsed.items)
+      ? parsed.items
+      : Array.isArray(parsed.checks)
+        ? parsed.checks
+        : undefined;
+    if (items === undefined) {
       return { ok: false, reason: "artifact carries no covered items" };
+    }
+    if (items.length === 0) {
+      return parsed.verifiedEmpty === true
+        ? { ok: true }
+        : { ok: false, reason: "an empty item set is not declared verified-empty" };
+    }
+    if (schema === "delivery.ceremony.night-watch.v1") {
+      const ids = items.map((entry) => (isRecord(entry) ? entry.id : undefined));
+      const exact = CEREMONY_NIGHT_WATCH_CHECKS.every(
+        (id) => ids.filter((entry) => entry === id).length === 1,
+      );
+      if (!exact) return { ok: false, reason: "a declared check is missing or duplicated" };
     }
     const covered = items.every(
       (entry) =>
         isRecord(entry) &&
-        (hasVerdict(entry.verdict) || hasCheckState(entry.state)) &&
+        (hasVerdict(entry.verdict) ||
+          hasCheckState(entry.state) ||
+          hasFollowThroughVerdict(entry.verdict)) &&
         (entry.verdict !== undefined || entry.state !== undefined),
     );
     return covered ? { ok: true } : { ok: false, reason: "an item carries no closed-set verdict" };
@@ -607,18 +669,16 @@ const verifyContent = (
 
 const nowFor = (env: CeremonyRunEnvironment): number => env.clock.nowMs();
 
-const executeStep = (
-  input: {
-    readonly step: CeremonyStepDeclaration;
-    readonly phaseIndex: number;
-    readonly index: number;
-    readonly declaration: CeremonyDeclaration;
-    readonly intake: CeremonyIntake;
-    readonly runId: string;
-    readonly env: CeremonyRunEnvironment;
-    readonly apply: boolean;
-  },
-): { readonly record: CeremonyStepRecord; readonly content?: string } => {
+const executeStep = (input: {
+  readonly step: CeremonyStepDeclaration;
+  readonly phaseIndex: number;
+  readonly index: number;
+  readonly declaration: CeremonyDeclaration;
+  readonly intake: CeremonyIntake;
+  readonly runId: string;
+  readonly env: CeremonyRunEnvironment;
+  readonly apply: boolean;
+}): { readonly record: CeremonyStepRecord; readonly content?: string } => {
   const startedAtMs = nowFor(input.env);
   const sources = stepSources(input.step, input.declaration);
   const { facts, degraded } = readDeclaredInputs(sources, input.intake.window, input.env);
@@ -653,7 +713,13 @@ const executeStep = (
     };
   }
   const content = artifactContent(rendered.content);
-  const written = writeOutput(input.step, input.runId, content, input.env);
+  const written = writeOutput(
+    input.step,
+    input.runId,
+    input.intake.scopeKey.value,
+    content,
+    input.env,
+  );
   if ("failure" in written) {
     const endedAtMs = nowFor(input.env);
     return {
@@ -674,7 +740,11 @@ const executeStep = (
       },
     };
   }
-  if (primaryOutput(input.step).slot === "memory" && input.env.memory !== undefined && input.intake.note !== undefined) {
+  if (
+    primaryOutput(input.step).slot === "memory" &&
+    input.env.memory !== undefined &&
+    input.intake.note !== undefined
+  ) {
     const existing = input.env.memory.readNote(input.intake.scopeKey.value);
     const wrote = input.env.memory.writeNote({
       scopeKey: input.intake.scopeKey.value,
@@ -738,8 +808,16 @@ export const compactCeremonyCarried = (
   entries: readonly { readonly index: number; readonly kind: string; readonly content: string }[],
   maxBytes: number = CEREMONY_COMPACTION_MAX_BYTES,
   maxLines: number = CEREMONY_COMPACTION_MAX_LINES,
-): { readonly summary: string; readonly bytes: number; readonly lines: number; readonly omitted: number } => {
-  const lines = entries.map((entry) => `- step ${String(entry.index)} ${entry.kind}: ${entry.content.replaceAll("\n", " ").slice(0, 120)}`);
+): {
+  readonly summary: string;
+  readonly bytes: number;
+  readonly lines: number;
+  readonly omitted: number;
+} => {
+  const lines = entries.map(
+    (entry) =>
+      `- step ${String(entry.index)} ${entry.kind}: ${entry.content.replaceAll("\n", " ").slice(0, 120)}`,
+  );
   let omitted = 0;
   while (lines.length > maxLines) {
     lines.pop();
@@ -763,11 +841,7 @@ export const compactCeremonyCarried = (
   return { summary, bytes: utf8Bytes(summary), lines: summary.split("\n").length, omitted };
 };
 
-const failureFrom = (
-  code: string,
-  summary: string,
-  field?: string,
-): CeremonyEngineFailure => ({
+const failureFrom = (code: string, summary: string, field?: string): CeremonyEngineFailure => ({
   code,
   summary,
   ...(field === undefined ? {} : { field }),
@@ -782,16 +856,14 @@ const recordedVerdict = (steps: readonly CeremonyStepRecord[]): CeremonyRunVerdi
 const reasonForRead = (verdict: string): string =>
   verdict === "torn" ? "state.store.torn" : "state.store.unknown";
 
-const runRecordFor = (
-  input: {
-    readonly intake: CeremonyIntake;
-    readonly runId: string;
-    readonly origin: CeremonyRunOrigin;
-    readonly startedAtMs: number;
-    readonly tier: CeremonyTierVerdict | undefined;
-    readonly declaration: CeremonyDeclaration;
-  },
-): CeremonyRunRecord => ({
+const runRecordFor = (input: {
+  readonly intake: CeremonyIntake;
+  readonly runId: string;
+  readonly origin: CeremonyRunOrigin;
+  readonly startedAtMs: number;
+  readonly tier: CeremonyTierVerdict | undefined;
+  readonly declaration: CeremonyDeclaration;
+}): CeremonyRunRecord => ({
   schemaId: CEREMONY_RUN_PAYLOAD_SCHEMA,
   ceremonyId: input.declaration.id,
   runId: input.runId,
@@ -827,16 +899,20 @@ const stepOutcomeOf = (record: CeremonyStepRecord): CeremonyStepOutcome => ({
 });
 
 /** Execute the declared agenda from one flattened index, appending every record. */
-export const executeCeremonyAgenda = (
-  input: {
-    readonly declaration: CeremonyDeclaration;
-    readonly intake: CeremonyIntake;
-    readonly runId: string;
-    readonly env: CeremonyRunEnvironment;
-    readonly apply: boolean;
-    readonly startIndex?: number;
-  },
-): { readonly ok: true; readonly records: readonly CeremonyStepRecord[]; readonly carried: readonly CeremonyCarriedSummary[] } | { readonly ok: false; readonly error: CeremonyEngineFailure } => {
+export const executeCeremonyAgenda = (input: {
+  readonly declaration: CeremonyDeclaration;
+  readonly intake: CeremonyIntake;
+  readonly runId: string;
+  readonly env: CeremonyRunEnvironment;
+  readonly apply: boolean;
+  readonly startIndex?: number;
+}):
+  | {
+      readonly ok: true;
+      readonly records: readonly CeremonyStepRecord[];
+      readonly carried: readonly CeremonyCarriedSummary[];
+    }
+  | { readonly ok: false; readonly error: CeremonyEngineFailure } => {
   const flattened = flattenCeremonyAgenda(input.declaration);
   const startIndex = input.startIndex ?? 1;
   const records: CeremonyStepRecord[] = [];
@@ -869,7 +945,10 @@ export const executeCeremonyAgenda = (
     });
     const appended = input.env.records.appendStep(executed.record);
     if (!appended.ok) {
-      return { ok: false, error: failureFrom(appended.code, appended.detail ?? "step append failed") };
+      return {
+        ok: false,
+        error: failureFrom(appended.code, appended.detail ?? "step append failed"),
+      };
     }
     records.push(executed.record);
     if (executed.content !== undefined) {
@@ -903,7 +982,10 @@ export const runCeremony = (request: CeremonyRunRequest): CeremonyRunOutcome => 
     ...(request.tier === undefined ? {} : { tier: request.tier }),
   });
   if (!intake.ok) {
-    return { ok: false, error: failureFrom(intake.error.code, intake.error.summary, intake.error.field) };
+    return {
+      ok: false,
+      error: failureFrom(intake.error.code, intake.error.summary, intake.error.field),
+    };
   }
   const resolved: CeremonyIntake =
     request.catchUp === undefined
@@ -912,8 +994,7 @@ export const runCeremony = (request: CeremonyRunRequest): CeremonyRunOutcome => 
           ...intake.value,
           trigger: {
             kind: "catch-up",
-            resolution:
-              intake.value.trigger.declared === undefined ? "unspecified" : "declaration",
+            resolution: intake.value.trigger.declared === undefined ? "unspecified" : "declaration",
             ...(intake.value.trigger.declared === undefined
               ? { declaredSet: intake.value.trigger.declaredSet ?? [] }
               : { declared: intake.value.trigger.declared }),
@@ -928,7 +1009,11 @@ export const runCeremony = (request: CeremonyRunRequest): CeremonyRunOutcome => 
   if (runsRead.verdict === "torn" || runsRead.verdict === "unknown") {
     return {
       ok: false,
-      error: failureFrom(reasonForRead(runsRead.verdict), runsRead.detail ?? "ceremony records are unreadable", "runId"),
+      error: failureFrom(
+        reasonForRead(runsRead.verdict),
+        runsRead.detail ?? "ceremony records are unreadable",
+        "runId",
+      ),
     };
   }
   const identity: CeremonyRunIdentity = resolved.identity;
@@ -944,7 +1029,11 @@ export const runCeremony = (request: CeremonyRunRequest): CeremonyRunOutcome => 
     if (stepsRead.verdict === "torn" || stepsRead.verdict === "unknown") {
       return {
         ok: false,
-        error: failureFrom(reasonForRead(stepsRead.verdict), stepsRead.detail ?? "step records are unreadable", "runId"),
+        error: failureFrom(
+          reasonForRead(stepsRead.verdict),
+          stepsRead.detail ?? "step records are unreadable",
+          "runId",
+        ),
       };
     }
     return {
@@ -959,7 +1048,9 @@ export const runCeremony = (request: CeremonyRunRequest): CeremonyRunOutcome => 
         scopeKey: existing.scopeKey,
         window: existing.trigger.actualWindow,
         steps: stepsRead.records.map(stepOutcomeOf),
-        applied: request.apply && stepsRead.records.some((step) => step.kind === "sync" && step.outcome === "verified"),
+        applied:
+          request.apply &&
+          stepsRead.records.some((step) => step.kind === "sync" && step.outcome === "verified"),
         carried: [],
         ...(request.tier === undefined ? {} : { tier: request.tier }),
         ...(request.catchUp === undefined ? {} : { catchUp: request.catchUp }),
@@ -980,7 +1071,10 @@ export const runCeremony = (request: CeremonyRunRequest): CeremonyRunOutcome => 
   });
   const appendedRun = request.env.records.appendRun(runRecord);
   if (!appendedRun.ok) {
-    return { ok: false, error: failureFrom(appendedRun.code, appendedRun.detail ?? "run append failed", "runId") };
+    return {
+      ok: false,
+      error: failureFrom(appendedRun.code, appendedRun.detail ?? "run append failed", "runId"),
+    };
   }
   const agenda = executeCeremonyAgenda({
     declaration: request.declaration,
@@ -1003,7 +1097,9 @@ export const runCeremony = (request: CeremonyRunRequest): CeremonyRunOutcome => 
       scopeKey: resolved.scopeKey,
       window: resolved.window,
       steps: agenda.records.map(stepOutcomeOf),
-      applied: request.apply && agenda.records.some((step) => step.kind === "sync" && step.outcome === "verified"),
+      applied:
+        request.apply &&
+        agenda.records.some((step) => step.kind === "sync" && step.outcome === "verified"),
       carried: agenda.carried,
       ...(request.tier === undefined ? {} : { tier: request.tier }),
       ...(request.catchUp === undefined ? {} : { catchUp: request.catchUp }),

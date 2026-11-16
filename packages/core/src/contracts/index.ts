@@ -2721,3 +2721,11 @@ export {
   type CeremonyWin,
   type CeremonyWindow,
 } from "./ceremony.js";
+// The six built-in ceremony declarations (GH-296 F-3): declarations on exactly
+// the closed vocabularies; four derive their scope key from the repository and
+// two require a note. Data only.
+export {
+  BUILTIN_CEREMONY_DECLARATIONS,
+  BUILTIN_CEREMONY_IDS,
+  builtinCeremonyDeclaration,
+} from "./ceremony-builtins.js";

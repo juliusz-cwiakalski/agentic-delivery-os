@@ -6,6 +6,7 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
+  BUILTIN_CEREMONY_DECLARATIONS,
   CEREMONY_CADENCES,
   CEREMONY_CATCH_UP_MODES,
   CEREMONY_DECLARATION_LIMITS,
@@ -240,5 +241,34 @@ describe("TC-CEREMONY-061 the scope-key derivation and single-schedule bound", (
     const validated = validateCeremonyDeclaration(fixture, EMPTY_OPTIONS);
     expect(validated.ok).toBe(false);
     if (!validated.ok) expect(validated.error.field).toBe("triggers[]");
+  });
+});
+
+/**
+ * TC-CEREMONY-007 (completion) and TC-CEREMONY-061 (six-built-in sweep): the six
+ * production declarations validate through the same validator, each carries
+ * exactly one declared scope key, a note derivation only where a note is
+ * required, and at most one schedule trigger.
+ */
+describe("TC-CEREMONY-007/061 the six built-ins through the one validator", () => {
+  test("all six validate and every step is verified", () => {
+    for (const declaration of BUILTIN_CEREMONY_DECLARATIONS) {
+      const validated = validateCeremonyDeclaration(declaration);
+      expect(validated.ok, declaration.id).toBe(true);
+      for (const phase of declaration.agenda) {
+        for (const step of phase.steps) expect(step.verify.length).toBeGreaterThan(0);
+      }
+    }
+  });
+
+  test("each declares one scope key, a legal note derivation, and one schedule at most", () => {
+    for (const declaration of BUILTIN_CEREMONY_DECLARATIONS) {
+      expect(CEREMONY_SCOPE_KEY_KINDS).toContain(declaration.scopeKey.kind as never);
+      if (declaration.scopeKey.kind === "note") {
+        expect(declaration.note?.required).toBe(true);
+      }
+      const schedules = declaration.triggers.filter((trigger) => trigger.kind === "schedule");
+      expect(schedules.length).toBeLessThanOrEqual(1);
+    }
   });
 });
