@@ -28,7 +28,7 @@ phases:
     completed: 2026-11-16T11:04:30.110Z
   review_fix:
     started: null
-    completed: null
+    completed: 2026-11-16T12:20:17.212Z
   quality_gates:
     started: null
     completed: null
@@ -586,16 +586,16 @@ notes:
     type: info
     date: "2026-11-16"
   - text: "delivery plan phase 12 (Code Review Remediation, T-1..T-5) complete on
-      commit 01add81b. F-1: compactCeremonyCarried now drops one content line per
-      byte-bound round and re-derives the omitted marker, so the payload
+      commit 01add81b. F-1: compactCeremonyCarried now drops one content line
+      per byte-bound round and re-derives the omitted marker, so the payload
       strictly shrinks and the loop terminates; ceremony-bounds.test.ts adds a
       50x120 strict-progress regression asserting per-round line/byte decrease,
       the 4096-byte/40-line bounds, and exact omitted accounting. F-2:
       renderBrief reuses a delivered delivery.brief.v1 projection else projects
       the delivered status facts through projectBrief, and renders unknown with
       a reason (never an observed zero) when no projection is delivered; the
-      brief flow, parity, and golden tests assert injected facts surface.
-      F-3: CeremonyNote.facts accepts an evidence-carrying entry (contract in
+      brief flow, parity, and golden tests assert injected facts surface. F-3:
+      CeremonyNote.facts accepts an evidence-carrying entry (contract in
       contracts/ceremony.ts, validated in ceremony-intake.ts), the edge composes
       the citation, and covered now requires the cited reference to resolve in
       the delivered evidence; cite-but-unresolvable is uncovered with a reason.
@@ -606,10 +606,10 @@ notes:
       drift disclosed by the commit primitive: it reported only
       tests/behaviour/ceremony-runtime-composition.test.ts; the slice also
       needed the contract, note-validator, fixture, parity, notes, and golden
-      support edits. Verification, run as
-      TMPDIR=$PWD/tmp/tmpdir PATH=\"$PWD/node_modules/.bin:$PATH\": pnpm build
-      clean; pnpm typecheck clean; the phase 12 gate suites 42 pass / 0 fail
-      across 6 files; all 41 ceremony suites 290 pass / 0 fail; full suite 9452
-      pass, 4 skip, 0 fail, 9456 tests across 1187 files."
+      support edits. Verification, run as TMPDIR=$PWD/tmp/tmpdir
+      PATH=\"$PWD/node_modules/.bin:$PATH\": pnpm build clean; pnpm typecheck
+      clean; the phase 12 gate suites 42 pass / 0 fail across 6 files; all 41
+      ceremony suites 290 pass / 0 fail; full suite 9452 pass, 4 skip, 0 fail,
+      9456 tests across 1187 files."
     type: info
     date: "2026-11-16"
