@@ -1,14 +1,14 @@
 ---
 id: chg-GH-298-test-plan
 status: Proposed
-version: 1.0
+version: 1.1
 created: 2026-11-16
-last_updated: 2026-11-16T14:45:00Z
+last_updated: 2026-11-16T16:20:00Z
 owners: [Juliusz Ćwiąkalski]
 service: delivery-os
 labels: [milestone-m2, cli, steering, typed-message-contract]
 version_impact: minor
-summary: "Pin steer as comparisons a suite runs: four subcommands (send, list, read, complete) over one shared typed message record declared once as contract data, with drawn filing defaults (kind request, priority normal, ttl 24 h, ref null) and a derived origin block (bound ref, repository key, owner; bare null when unbound); value and grammar refusals before any state read or write; the boundary read derived from the delivered phase-state records (open with no record or with every entry completed, closed with an entry in progress) landing due notes in one batch in the shared rank order with a non-null receipt each (SC-M2-S5-01), recording ttl-elapsed as a classified non-applied outcome (SC-M2-S5-02), declining without a write at a closed boundary, and landing nothing on a repeat read; the asks batch composing the delivered open-question view and PDR-0003 drawn-default join read-only with measured age, coordinator questions excluded; artifact-ref completion where the first completion is authoritative and artifact-less completion is never recorded; a registered-secret-value guard on every content and identifier path with no pattern layer; mounting as the next prompt-required family with root and family help, reference page, coverage-inventory row and moved family-count assertions; the three steer identities registered by exact two-segment declaration (allowlist 56 → 59) with every Appendix D count pin moved in the same commit and four-way agreement; purity with no session operation, determinism with injected-clock aging, and bounds with every drop counted; and the aggregate gate TMPDIR=$PWD/tmp/tmpdir pnpm check."
+summary: "Pin steer as comparisons a suite runs: four subcommands (send, list, read, complete) over one shared typed message record declared once as contract data, with drawn filing defaults (kind request, priority normal, ttl 24 h, ref null) and a derived origin block (bound ref, repository key, owner; bare null when unbound); value and grammar refusals before any state read or write, including the declared `--ttl` grammar (`<positive-integer><unit>`, unit `s|m|h|d`, max `30d`) and its zero/negative/oversized/malformed cells; the boundary read derived from the delivered phase-state records (open with no record or with every entry completed, closed with an entry in progress) landing **every** due note — the landing write is uncapped by the payload's 20-note display bound — in one batch in the shared rank order with a non-null receipt each (SC-M2-S5-01), recording ttl-elapsed as a classified non-applied outcome (SC-M2-S5-02), declining without a write at a closed boundary, and landing nothing on a repeat read; the asks batch composing the delivered open-question view and PDR-0003 drawn-default join read-only with measured age, coordinator questions excluded; artifact-ref completion where the first completion is authoritative, artifact-less completion is never recorded, and `steer.unknown-id` is scoped to `complete` alone while `steer read <id>` is a declared grammar refusal; a registered-secret-value guard on every content and identifier path with no pattern layer; mounting as the twenty-third prompt-required family (delivered base 22, `ceremony` the 22nd, delta 22 → 23) with root and family help, reference page, coverage-inventory row and every family-count pin moved in the same change; the three steer identities registered by exact two-segment declaration (allowlist 56 → 59) with every Appendix D count pin moved in the same commit and four-way agreement; purity with no session operation, determinism with injected-clock aging, and bounds with every display drop counted; and the aggregate gate TMPDIR=$PWD/tmp/tmpdir pnpm check."
 links:
   change_spec: ./chg-GH-298-spec.md
   implementation_plan: ./chg-GH-298-plan.yaml
@@ -25,7 +25,7 @@ Every one of those is therefore asserted as a comparison over payload bytes, app
 
 The plan composes delivered seams rather than inventing new ones: the delivered phase-state fold for the boundary condition, the delivered open-question view and PDR-0003 join for `asks[]`, the delivered blockers ranking shape for the shared rank, the delivered credential-guard registered-secrets record, the delivered result envelope and error table, and the delivered mounting unit (prompt set, composition, help inventory, reference page, coverage row). A new in-process steer harness supplies the only new seams: the injected clock, the id factory, the steering state port, and the invoking-checkout origin source.
 
-Two specification defects are recorded here rather than papered over, because each makes one criterion untestable as written: the family-count arithmetic in `AC-F8-1` is stale against the delivery base (§8.3 `OQ-TP-1`), and `AC-F9-1`'s "read targeting an id" branch contradicts the command grammar (§8.3 `OQ-TP-2`). `TC-STEER-060` and `TC-STEER-071` assert the *tree-invariant* form of each so a correct implementation is still gated, and the affected spec sections are named for reopening. Two further ambiguities (the `--ttl` duration grammar, and the >20-due-note batch) are declared in §3.5 as measurement substitutions, not contract questions.
+Spec v1.1 closed the four findings this plan reported at v1.0, and this revision asserts each as a declared rule rather than a substitution. **Mounting:** the spec now declares the delivered base as 22 prompt-required families (`ceremony` the 22nd) and steer as the **twenty-third**, delta 22 → 23, so `TC-STEER-060` asserts that exact delta and every family-count pin in the same change. **Classification:** `steer.unknown-id` is scoped to `complete` alone and `steer read <id>` is a declared `fallback.invocation` grammar refusal, so `TC-STEER-070`/`TC-STEER-071` assert the two directions of one boundary rather than working around a contradiction. **Landing versus display:** the landing write is now declared uncapped — every due note lands and is receipted, nothing dropped, deferred, or rolled — while the read payload lists at most 20 in rank order with counted overflow, so `TC-STEER-083` asserts the strong form (fully applied, partially listed) and fails a display cap that binds the write. **TTL grammar:** §8.3 declares `<positive-integer><unit>` with unit `s|m|h|d`, maximum `30d`, default `24h`, so `TC-STEER-004` enumerates zero, negative, oversized, and malformed refusals alongside the `30d` accepting twin. No case is unmapped, no branch is left to interpretation, and no criterion is carried as ambiguous.
 
 This document is a verification map, not an execution claim. No case has been run against a new implementation at authoring time. Phase ownership belongs to `chg-GH-298-plan.yaml` (phase 4). Every case is authored **failing-first** against the phase that owns it: committed red — missing command, missing `data` key, or a declared count mismatch — before the implementation that makes it green, so no case can be satisfied by an implementation that never existed.
 
@@ -61,15 +61,15 @@ This document is a verification map, not an execution claim. No case has been ru
 - [GAP-T1 — the bound/unbound filing cells need a real checkout] `AC-F1-1`'s origin block is derived from the invoking checkout's local PM context, so the bound and unbound cells are executed over real temporary git checkouts plus a real PM-context file, never over an injected fake key (`TC-STEER-001`, `TC-STEER-002`). A synthetic scope would prove nothing about derivation.
 - [GAP-T2 — no pre-change byte baseline exists for a steering screen] Determinism is asserted by paired runs plus a committed golden for all four human forms, and the goldens are created (not regenerated) in this change (`TC-STEER-081`).
 - [GAP-T3 — harness seam shapes are delivery-bound] The state port, id factory, clock, and origin source are consumed through injected seams the specification does not name. Cases assert payload, exit, and evidence; a case that cannot resolve its seam **fails naming the missing contract** rather than skipping (`AMB-TP-2`).
-- [GAP-T4 — the >20-due-note batch has two declared readings] `AC-F3-4` ("all due notes land in one batch") and `DM-8` ("read batch ≤ 20 notes per read with counted overflow") do not compose above 20 due notes. `TC-STEER-083` asserts the no-loss invariant plus the exhaustive ≤ 20 population and names the >20 cell as `OQ-TP-3`; no case asserts a resolution the specification has not made.
-- [GAP-T5 — the `--ttl` duration grammar is undeclared] `DM-1` declares "positive duration ≤ 30 days" and a 24 h drawn default but no textual form, so the "non-positive ttl" cell of `AC-F1-2` cannot be written without inventing syntax (`AMB-TP-3`). Cases assert the declared outcomes (over-cap refused, drawn default applied) and the delivery-bound grammar's zero/negative refusal; the accepted spellings are delivery-bound, not AC-bound.
-- [GAP-T6 — the family-count pin is stale in the spec] See `OQ-TP-1`. `TC-STEER-060` asserts the tree-invariant form ("the delivered set plus exactly `steer`, root help family line count equal to the registered set") so the gate is sound in either arithmetic; the spec's literal "22 families" is unsatisfiable and is reported for reopening.
+- [GAP-T4 — the display cap and the landing write are different bounds] `DM-8`/`AC-F3-4` (spec v1.1) declare the landing write **uncapped** and the read payload capped at 20 listed notes with counted overflow. `TC-STEER-083` asserts both halves together: 25 due notes produce 25 outcome records and 25 receipts while the payload lists 20 with `omitted: 5` and `truncated: true`; any implementation that drops, defers, or rolls the five unlisted notes fails. The payload-shape reading is no longer open.
+- [GAP-T5 — the `--ttl` grammar is declared, not delivery-invented] §8.3 declares `<duration>` = `<positive-integer><unit>` with unit ∈ `s | m | h | d`, maximum `30d` (2 592 000 s), drawn default `24h`; zero, negative, malformed, and oversized values are value violations on the same `input.value.rejected` path. `TC-STEER-004` enumerates all four refusal classes plus unit-coverage and a `30d` accepting twin, so the grammar is a contract the case pins rather than a parser detail the case tolerates.
+- [GAP-T6 — the family-count pins are a scan, not a list of five] The spec names the entrypoint, board-mounting, events/dispatch/daemon composition, and ceremony suites as the base-list pins. The delivery tree additionally pins the same count in the family-help suites (`repos-help`, `board-help`, `events-mount-help`, `ceremony-cli`) and derives it in `cli-edge-seam`. `TC-STEER-060` therefore asserts the delta against one captured base constant **and** a repo-wide scan for a stale family-count pin, so the five named suites and every additional site move together; a site beyond the named five is a delivery finding, not a silent exemption.
 
 ## 2. References
 
 | Reference | Role in this plan |
 |---|---|
-| [`chg-GH-298-spec.md`](./chg-GH-298-spec.md) v1.0 | Binding source: F-1..F-10, **24 ACs** (`AC-F1-1`, `AC-F1-2`, `AC-F2-1`, `AC-F3-1..5`, `AC-F4-1`, `AC-F5-1..2`, `AC-F6-1..2`, `AC-F7-1`, `AC-F8-1..2`, `AC-F9-1..4`, `AC-F10-1..3`, `AC-NFR9-1`), DM-1..DM-8, NFR-1..NFR-10, DEC-1..DEC-12, NG-1..NG-8, §6 flows 1–7, §8.3 grammar / contract shape / ordering invariants / boundary resolution / exit projection, §14 (all planning questions closed), §17.1 DoD-1..DoD-18, Appendix B (ticket AC decomposition), Appendix C (seed paths), **Appendix D (D-1..D-13 count-pinning sites, the binding locator list)**. |
+| [`chg-GH-298-spec.md`](./chg-GH-298-spec.md) v1.1 | Binding source: F-1..F-10, **24 ACs** (`AC-F1-1`, `AC-F1-2`, `AC-F2-1`, `AC-F3-1..5`, `AC-F4-1`, `AC-F5-1..2`, `AC-F6-1..2`, `AC-F7-1`, `AC-F8-1..2`, `AC-F9-1..4`, `AC-F10-1..3`, `AC-NFR9-1`), DM-1..DM-8, NFR-1..NFR-10, DEC-1..DEC-12, NG-1..NG-8, §6 flows 1–7, §8.3 grammar (including the declared `--ttl` duration grammar) / contract shape / ordering invariants / boundary resolution / exit projection, §14 (all planning questions closed), §17.1 DoD-1..DoD-18, Appendix B (ticket AC decomposition), Appendix C (seed paths), **Appendix D (D-1..D-13 count-pinning sites, the binding locator list)**. v1.1 corrections bound here: 23rd family / delta 22 → 23 (AC-F8-1, DEC-9, §4.1, §8.5, DoD-12); `steer.unknown-id` scoped to `complete` with `steer read <id>` a declared grammar refusal (AC-F9-1, §8.3); uncapped landing versus ≤ 20 listed payload (AC-F3-4, DM-8, NFR-4, AC-F10-3); the `<positive-integer><unit>` ttl grammar (DM-1, DM-8, AC-F1-2, §8.3). |
 | [`chg-GH-298-pm-notes.yaml`](./chg-GH-298-pm-notes.yaml) | Delivery state, the ticket AC restatement, the three canonical ticket ACs (Appendix B maps them), the delivered-dependency verification (GH-296 ceremony and GH-297 board both in the base), and the delivery conventions (gate command, PR target, commit body width). |
 | [`chg-GH-298-plan.yaml`](./chg-GH-298-plan.yaml) | To be authored in phase 4. Phase ownership of these cases is declared there, not here. |
 | [`.ai/rules/testing-strategy.md`](../../../../.ai/rules/testing-strategy.md) | Test layers, module-to-test mapping, invariant-test authoring (no moving-base diffs; goldens regenerate only by explicit command; assert the value's meaning), and the aggregate gate. |
@@ -104,31 +104,31 @@ Evidence classes used below: **Suite** (a committed assertion in `pnpm check`), 
 | AC ID | Criterion (abridged) | TC ID(s) | Evidence class | Status |
 |-------|----------------------|----------|----------------|--------|
 | AC-F1-1 | Bare `steer send "<text>"` in a bound checkout appends exactly one record with `from: owner`, `to: delivery`, `scope: repo`, `kind: request`, the bounded text, the derived origin block (`change` = bound ref, `repo` = repository key, `agent: owner`), `priority: normal`, injected-clock `created`, the 24 h `ttl` with derived `expiresAt`, the record projection and `lifecycle: queued` at exit `0`; an unbound checkout records the bare `null` origin change and still succeeds. | TC-STEER-001, TC-STEER-002, TC-STEER-003 | Suite | Covered |
-| AC-F1-2 | Empty/over-cap text, non-positive or over-cap ttl, out-of-set priority or kind, or over-cap `--ref` is refused as `input.value.rejected` at exit `1`, `not_landed`, before any state read or write, with zero persisted bytes. | TC-STEER-004, TC-STEER-005 | Suite | Covered |
+| AC-F1-2 | Empty or over-cap text, a ttl that is zero, negative, oversized (> the declared `30d`), or malformed (not `<positive-integer><unit>` with unit `s|m|h|d`), out-of-set priority or kind, or over-cap `--ref` is refused as `input.value.rejected` at exit `1`, `not_landed`, before any state read or write, with zero persisted bytes. | TC-STEER-004, TC-STEER-005 | Suite | Covered |
 | AC-F2-1 | Every appended record conforms to the one shared message schema: no owner-specific field, every vocabulary member from the shared closed sets declared once, the filing subset a declared restriction rather than a separate schema, so a non-owner-issued message validates without an owner branch. | TC-STEER-007, TC-STEER-008, TC-STEER-095 | Suite + mutation | Covered |
 | AC-F5-1 | Every row carries `age` in ms from the injected clock; rows order by the shared rank (priority class, oldest `created`, `id` ascending); ranks are contiguous `1..N` assigned before any render cap; a repeat run reproduces identical order and ages. | TC-STEER-020, TC-STEER-021, TC-STEER-022 | Suite | Covered |
 | AC-F5-2 | Queued, landed, and expired groups render side by side in declared order, landed rows carrying receipts (`origin`, `readReceipt`, `ttl`) and `completedWith` where completed, expired rows carrying the `ttl-elapsed` reason and timestamp, ≤ 8 rows per group with every omission counted. (Journey step 4 outcome; DEC-1.) | TC-STEER-023, TC-STEER-024, TC-STEER-025 | Suite | Covered |
 | AC-F3-1 | A due note at a boundary-open read (no phase record, or every recorded entry completed) lands: exit `0`, `applied: true`, `lifecycle: landed`, a receipt with non-null `origin`, `readReceipt`, `ttl`, exactly one outcome record, session/branch/evidence untouched. (`SC-M2-S5-01`.) | TC-STEER-010, TC-STEER-011, TC-STEER-091 | Suite | Covered |
 | AC-F3-2 | A note whose ttl elapsed (`now >= created + ttl` on the injected clock) at a boundary-open read is not applied: exit `0`, `data.applied == false`, `data.expiry.reason == "ttl-elapsed"`, the note's own `applied: false` and `expiry {reason, recordedAt}`, exactly one expiry outcome, nothing else mutates. (`SC-M2-S5-02`.) | TC-STEER-012, TC-STEER-017, TC-STEER-018 | Suite | Covered |
 | AC-F3-3 | With a lifecycle entry in progress the read declines: exit `0`, `boundary.open` false, every note `applied: false` with `pendingReason: "phase-in-progress"`, no receipt or expiry record appends, nothing lands mid-phase. | TC-STEER-013, TC-STEER-093 | Suite + mutation | Covered |
-| AC-F3-4 | Multiple due notes land in one batch ordered by the shared rank, each with its own receipt, payload `data.applied` true — one batched landing per boundary, never one-at-a-time. | TC-STEER-014, TC-STEER-083 | Suite | Covered |
+| AC-F3-4 | Multiple due notes at a boundary-open read: **every** due note lands — the landing is a record write and is not capped by the payload's display bound, so all outcome records and receipts are written and nothing is dropped, deferred, or rolled — while the payload lists at most 20 notes in shared-rank order with overflow counted in `omitted` and `truncated` set, and `data.applied` is `true` (fully applied, partially listed). | TC-STEER-014, TC-STEER-083 | Suite + mutation | Covered |
 | AC-F3-5 | An immediate repeat read lands nothing new, appends no record, returns the empty batch with `data.applied == false`, exit `0`. | TC-STEER-015, TC-STEER-016 | Suite | Covered |
 | AC-F4-1 | `asks[]` carries the open owner-audience questions through the delivered open-question view (id, delivered type, `ref` or bare `null`, lane, bounded text, `askedAt`, measured `age`) each with the delivered PDR-0003 join (`drawnDefault` or bare `null`, `defaultState` `none`/`pending`/`applied`) under the delivered ranking and bounds; coordinator-audience questions are never asks; no ledger write, no second ranking or default mechanism. (Ticket AC-1.) | TC-STEER-030, TC-STEER-031, TC-STEER-032 | Suite | Covered |
 | AC-F6-1 | A landed note completes with `--ref`: exactly one completion record with the artifact and timestamp, `lifecycle: "completed"` at exit `0`, the list row under landed with `completedWith` set; a repeat completion is refused at exit `1` — the first completion is never replaced. | TC-STEER-040, TC-STEER-041, TC-STEER-025, TC-STEER-094 | Suite + mutation | Covered |
 | AC-F6-2 | A never-landed note, an expired note, or `complete` without `--ref` is refused as `input.value.rejected` at exit `1` before any write — completion without a receipt or without a proving artifact is never recorded. | TC-STEER-042, TC-STEER-094 | Suite + mutation | Covered |
 | AC-F7-1 | A registered secret value in the note text, `--ref`, or a derived origin value is refused as `steer.credential-value-rejected` at exit `1`, `not_landed`, zero persisted bytes; an unregistered value produces no pattern-scan refusal (the TDR-0012 boundary holds). | TC-STEER-050, TC-STEER-051, TC-STEER-052, TC-STEER-053 | Suite | Covered |
-| AC-F8-1 | Root `--help` lists `steer` as a registered family and the family count equals the registered prompt-required set; `steer --help` answers at exit `0` with summary, usage, options, examples, exit codes, and a see-also pointer. (`OQ-TP-1`: the spec's literal "among 22 families" is stale against the delivery base; the case asserts the tree-invariant form.) | TC-STEER-060, TC-STEER-061, TC-STEER-063, TC-STEER-096 | Suite + mutation | Covered (arithmetic reopened: `OQ-TP-1`) |
+| AC-F8-1 | Root `--help` lists `steer` as a registered family among **23** families (delivered base 22, `ceremony` the 22nd; delta 22 → 23). The delivered base list is pinned by the entrypoint, board-mounting, events/dispatch/daemon composition, and ceremony suites; `TC-STEER-060` asserts the delta against one captured base constant and a scan for any further family-count pin, so no site is left stale. `steer --help` answers at exit `0` with summary, usage, options, examples, exit codes, and a see-also pointer. | TC-STEER-060, TC-STEER-061, TC-STEER-063, TC-STEER-096 | Suite + mutation | Covered |
 | AC-F8-2 | The steer reference page exists, mentions `--help` and `--version`, the coverage inventory carries the steer row, and the coverage check reports zero failures. | TC-STEER-062, TC-STEER-096 | Suite + mutation | Covered |
-| AC-F9-1 | A `complete` target that is not a steering record of the repository is refused as `steer.unknown-id` at exit `1`, `not_landed`. (`OQ-TP-2`: the criterion's second branch — "or a read targeting an id" — has no grammar to execute; `TC-STEER-071` asserts the grammar refusal and the branch is reported for reopening.) | TC-STEER-070, TC-STEER-071 | Suite | Covered (read-target branch reopened: `OQ-TP-2`) |
+| AC-F9-1 | A `complete` target that is not a steering record of the repository is refused as `steer.unknown-id` at exit `1`, `not_landed`. The identity is scoped to `complete` alone: a positional passed to `read` is the `fallback.invocation` grammar refusal (asserted by `TC-STEER-071`), never `steer.unknown-id`, because `read` accepts zero arguments. | TC-STEER-070, TC-STEER-071 | Suite | Covered |
 | AC-F9-2 | An unreadable store, an unwritable store, or an unverifiable post-append verification withholds the command as `steer.queue-unavailable` at exit `2`, nothing reported landed or completed, no partial result. | TC-STEER-072, TC-STEER-084 | Suite + mutation | Covered |
 | AC-F9-3 | Every invocation uses the five-field `delivery.result.v1` envelope with all new keys under `data`, an exit of exactly `0`, `1`, or `2` per §8.3, and every refusal names its classified identity. | TC-STEER-073 | Suite | Covered |
 | AC-F9-4 | (a) The closed two-segment allowlist contains exactly the three steer codes and no other `steer.*` code (56 → 59, exact declaration, no pattern or family widening); (b) every Appendix D site (D-1..D-13) moves to its declared post-change value in the same commit as the rows (140 → 143 entries, 139 → 142 delivered, 56 → 59 allowlist, 140 → 143 documented, `+106` → `+109`, 3 steer rows); (c) the repo-wide no-leftover scan over the named files, with the legacy-token list extended by 140, 139, 56, and `+106`, finds none; (d) classifier, sync check, structural mirror, and carrier agree on the same post-change numbers and a near-miss `steer.*` code is rejected rather than accepted by family matching. | TC-STEER-074, TC-STEER-075, TC-STEER-076 | Suite + mutation | Covered |
 | AC-F10-1 | No LLM call, no network request, no tracker or provider read or write, no timer/daemon/listener, no control socket, no session spawn/attach/resume/steer operation, and no hardcoded product or binary name. | TC-STEER-080, TC-STEER-093 | Suite | Covered |
 | AC-F10-2 | Two runs over unchanged facts produce byte-identical human text and machine `data` (timing and run id aside), every array follows its declared order, and record ids are unique per store. | TC-STEER-081, TC-STEER-006, TC-STEER-022 | Suite + Golden | Covered |
-| AC-F10-3 | The 65 536-byte `data` cap, 32-line/6 144-byte human cap, 160-char text and ref caps, 30-day ttl cap, 8-row group caps, and 20-note read-batch cap hold; every drop sets `truncated` and increments `omitted` in the declared order (`asks` → `notes`, tail-first by rank) with the boundary block never dropped. | TC-STEER-082, TC-STEER-083, TC-STEER-024 | Suite + mutation | Covered |
+| AC-F10-3 | The 65 536-byte `data` cap, 32-line/6 144-byte human cap, 160-char text and ref caps, the `30d` ttl cap and its declared `<positive-integer><unit>` grammar (`s|m|h|d`), the 8-row group caps, and the 20-note read-**payload** list cap hold — the payload cap being a display bound only, with every landing receipted regardless of it (AC-F3-4); every display drop sets `truncated` and increments `omitted` in the declared order (`asks` → `notes`, tail-first by rank) with the boundary block never dropped. | TC-STEER-082, TC-STEER-083, TC-STEER-024 | Suite + mutation | Covered |
 | AC-NFR9-1 | `TMPDIR=$PWD/tmp/tmpdir pnpm check` is green before the PR opens. | TC-STEER-090 | Quality gate | Covered |
 
-All 24 acceptance criteria are mapped; none is unmapped, `TODO`, or AC-less. Two carry a declared reopening note (`AC-F8-1` → `OQ-TP-1`, `AC-F9-1` → `OQ-TP-2`) where the spec text is unsatisfiable as written but the underlying property is still gated by a tree-invariant case. Capability coverage is transitive and complete: F-1 → 001–005, 042; F-2 → 007, 008, 095; F-3 → 010–018, 083, 091; F-4 → 030–032; F-5 → 020–025; F-6 → 040–042, 094; F-7 → 050–053; F-8 → 060–063, 096; F-9 → 004, 005, 070–076, 084; F-10 → 022, 080–085.
+All 24 acceptance criteria are mapped; none is unmapped, `TODO`, or AC-less, and none carries a reopening caveat at v1.1. Capability coverage is transitive and complete: F-1 → 001–005, 042; F-2 → 007, 008, 095; F-3 → 010–018, 083, 091; F-4 → 030–032; F-5 → 020–025; F-6 → 040–042, 094; F-7 → 050–053; F-8 → 060–063, 096; F-9 → 004, 005, 070–076, 084; F-10 → 022, 080–085.
 
 ### 3.2 Interface Coverage (DM-#, command surface, registries)
 
@@ -136,19 +136,19 @@ The spec declares no `API-` or `EVT-` identifiers (§8.1: no HTTP surface; §8.2
 
 | Interface element | Observable contract | TC ID(s) |
 |-------------------|---------------------|----------|
-| DM-1 shared message record | Exactly 11 declared keys (`id`, `from`, `to`, `scope`, `kind`, `subject`, `ref`, `origin`, `priority`, `created`, `ttl`); no owner-specific field; shared closed vocabularies declared once; filing subset a restriction; `id` = `msg-` + per-store-unique opaque suffix; `subject` ≤ 160; `ref` string or bare `null` ≤ 160; `ttl` positive ≤ 30 days. | TC-STEER-001, TC-STEER-003, TC-STEER-006, TC-STEER-007, TC-STEER-008, TC-STEER-095 |
+| DM-1 shared message record | Exactly 11 declared keys (`id`, `from`, `to`, `scope`, `kind`, `subject`, `ref`, `origin`, `priority`, `created`, `ttl`); no owner-specific field; shared closed vocabularies declared once; filing subset a restriction; `id` = `msg-` + per-store-unique opaque suffix; `subject` ≤ 160; `ref` string or bare `null` ≤ 160; `ttl` in the declared grammar `<positive-integer><unit>` with unit `s\|m\|h\|d`, positive ≤ `30d`, drawn default `24h`. | TC-STEER-001, TC-STEER-003, TC-STEER-004, TC-STEER-006, TC-STEER-007, TC-STEER-008, TC-STEER-095 |
 | DM-2 lifecycle records and derived state | Three additive append-only kinds (`steering.message`, `steering.outcome`, `steering.completion`); lifecycle derived at read time as `queued`/`landed`/`expired`/`completed`; exactly one outcome per note; first completion authoritative; no stored lifecycle flag. | TC-STEER-006, TC-STEER-016, TC-STEER-040, TC-STEER-084 |
 | DM-3 read-point outcome | Per note `applied`, `receipt` (`{origin, readReceipt: {at, boundary}, ttl, expiresAt}` — all non-null when landed), `expiry` (`{reason: "ttl-elapsed", recordedAt}`, present exactly on expiry), `pendingReason` (`"phase-in-progress"`, present exactly on a closed decline); payload `data.applied` true iff ≥ 1 landed; `data.expiry.reason` present exactly when ≥ 1 expired. | TC-STEER-010, TC-STEER-012, TC-STEER-013, TC-STEER-014, TC-STEER-018, TC-STEER-091 |
 | DM-4 queue view | `queued[]`, `landed[]`, `expired[]` in declared order; shared note fields plus `age`, `rank`; landed rows carry the receipt and `completedWith`; expired rows carry reason and timestamp; ≤ 8 rows per group with counted omissions. | TC-STEER-023, TC-STEER-024, TC-STEER-025 |
 | DM-5 shared rank and aging | Priority class map `urgent=1 … low=4`; rank key `(class asc, created asc, id asc)`; contiguous `1..N` before caps; `age` = clock now − `created` in ms on every surface; order derived, never stored. | TC-STEER-020, TC-STEER-021, TC-STEER-022 |
 | DM-6 boundary asks batch | `asks[]` carries the delivered open-question fields plus `age`, `drawnDefault`, `defaultState`, `rank`; bounds and ordering exactly as delivered; coordinator questions excluded; no ledger write; single shared ledger read. | TC-STEER-030, TC-STEER-031, TC-STEER-032, TC-STEER-085 |
 | DM-7 error identities | One `steer` domain kind with exactly three rows: `steer.unknown-id` (user, exit 1), `steer.credential-value-rejected` (user, exit 1), `steer.queue-unavailable` (platform, exit 2), all `not_landed`; value violations reuse `input.value.rejected`; grammar refusals reuse `fallback.invocation`. | TC-STEER-070, TC-STEER-072, TC-STEER-074, TC-STEER-075 |
-| DM-8 bounds and caps | Text ≤ 160; ref ≤ 160; list ≤ 8 per group; read batch ≤ 20 with counted overflow; `data` ≤ 65 536 UTF-8 bytes; human ≤ 32 lines / 6 144 bytes; byte-guard order `asks` → `notes`, tail-first by rank; boundary block never dropped. | TC-STEER-004, TC-STEER-024, TC-STEER-042, TC-STEER-082, TC-STEER-083 |
-| Command grammar | `send "<text>" [--kind request\|escalate] [--priority …] [--ttl <duration>] [--ref <artifact>]`; `list`; `read`; `complete <id> --ref <artifact>`; exactly one positional for `send`/`complete`, none for `list`/`read`; `--json` is the delivered machine switch; violations are `fallback.invocation` at exit `1` before any state read. | TC-STEER-005, TC-STEER-071, TC-STEER-073 |
-| Exit projection (§8.3) | Six declared rows: produced → success envelope exit `0`; value violation → `input.value.rejected` exit `1`; unknown target id → `steer.unknown-id` exit `1`; registered secret → `steer.credential-value-rejected` exit `1`; grammar → `fallback.invocation` exit `1`; store unreadable/unwritable/unverified append → `steer.queue-unavailable` exit `2`. | TC-STEER-073, TC-STEER-072, TC-STEER-070 |
+| DM-8 bounds and caps | Text ≤ 160; ref ≤ 160; ttl grammar `<positive-integer><unit>` (`s\|m\|h\|d`) ≤ `30d`; list ≤ 8 per group; the read **payload** lists ≤ 20 notes with counted overflow while the **landing write is uncapped** — every due note lands and is receipted, nothing lost, deferred, or rolled; `data` ≤ 65 536 UTF-8 bytes; human ≤ 32 lines / 6 144 bytes; byte-guard order `asks` → `notes`, tail-first by rank; boundary block never dropped. | TC-STEER-004, TC-STEER-024, TC-STEER-042, TC-STEER-082, TC-STEER-083 |
+| Command grammar | `send "<text>" [--kind request\|escalate] [--priority …] [--ttl <duration>] [--ref <artifact>]`; `list`; `read`; `complete <id> --ref <artifact>`; exactly one positional for `send`/`complete`, none for `list`/`read` — so `steer read <id>` is the `fallback.invocation` grammar refusal, never `steer.unknown-id`; `--ttl` is `<positive-integer><unit>` with unit `s\|m\|h\|d`, maximum `30d`, default `24h`, and zero/negative/oversized/malformed values are `input.value.rejected` value violations; `--json` is the delivered machine switch; grammar violations are `fallback.invocation` at exit `1` before any state read. | TC-STEER-003, TC-STEER-004, TC-STEER-005, TC-STEER-071, TC-STEER-073 |
+| Exit projection (§8.3) | Six declared rows: produced → success envelope exit `0`; value violation (including zero/negative/oversized/malformed ttl) → `input.value.rejected` exit `1`; `complete` target id not a steering record → `steer.unknown-id` exit `1`; registered secret → `steer.credential-value-rejected` exit `1`; grammar violation (including any positional on `read`) → `fallback.invocation` exit `1`; store unreadable/unwritable/unverified append → `steer.queue-unavailable` exit `2`. | TC-STEER-004, TC-STEER-005, TC-STEER-070, TC-STEER-071, TC-STEER-072, TC-STEER-073 |
 | Payload identity | One identity `delivery.steer.v1` across all four subcommands with per-form `data` shapes (DEC-3); no second schemaVersion; envelope untouched. | TC-STEER-073, TC-STEER-081 |
 | Boundary resolution | No phase record → open, `phase: null` + `phaseUnknownReason: "phase-unrecorded"`; every recorded entry completed → open with `phase` = the latest completed entry; an entry in progress → closed; TTL judged `now >= created + ttl` only at a read. | TC-STEER-010, TC-STEER-011, TC-STEER-013, TC-STEER-017 |
-| Prompt-required composition | `steer` is a member of the exact set the entrypoint composes, unconditionally, with the registered count moved and every other family's composition unchanged. | TC-STEER-060, TC-STEER-063, TC-STEER-096 |
+| Prompt-required composition | `steer` is the twenty-third member of the exact set the entrypoint composes (delivered base 22, `ceremony` the 22nd), unconditionally, with every family-count pin moved 22 → 23 and every other family's composition unchanged. | TC-STEER-060, TC-STEER-063, TC-STEER-096 |
 | `steer --help`, `--version` | Served from the static help inventory at exit `0` with the five declared sections and no state, store, git, network, or configuration read. | TC-STEER-061 |
 | Coverage inventory and reference page | `tests/fixtures/help-guide/coverage.json` carries the steer command row and page path; the page exists and mentions `--help` and `--version`. | TC-STEER-062, TC-STEER-096 |
 | Error-table registration and the closed allowlist | `ERROR_TABLE` gains the three rows (140 → 143 entries; 139 → 142 delivered rows; exactly 3 steer rows and still exactly 2 board rows); `RESERVED_TWO_SEGMENT_CODES` holds exactly 59 members in the sync check **and** its structural mirror, of which exactly 3 are `steer.*`; **all D-1..D-13 sites move in the same commit**; no-leftover scan and four-way agreement 143 / 142 / 59 / 2 / 3 / 143. | TC-STEER-074, TC-STEER-075, TC-STEER-076 |
@@ -161,7 +161,7 @@ The spec declares no `API-` or `EVT-` identifiers (§8.1: no HTTP surface; §8.2
 | NFR-1 | 0 new top-level envelope keys; 0 `ok`/`command` fields anywhere. | TC-STEER-073 | Envelope contract validator plus an explicit key-set diff per subcommand. |
 | NFR-2 | 2 of 2 runs byte-identical in human text and JSON `data` (timing/run id excluded); 0 undeclared order sources. | TC-STEER-022, TC-STEER-081 | Permutation cells: store return order, readdir order, ledger row order, ask order. |
 | NFR-3 | 0 duplicate ids; ranks exactly `1..N` over the fully ranked set before caps. | TC-STEER-006, TC-STEER-021, TC-STEER-081 | 100-filing uniqueness cell; rank matrix with an id-ascending tie. |
-| NFR-4 | `data` ≤ 65 536 bytes; human ≤ 32 lines / 6 144 bytes; text/ref ≤ 160; ttl ≤ 30 days; list ≤ 8 per group; read batch ≤ 20; every drop counted with `truncated`. | TC-STEER-024, TC-STEER-082, TC-STEER-083 | Byte measurement on the serialized `data`, not the envelope; at-cap twin for every over-cap cell. |
+| NFR-4 | `data` ≤ 65 536 bytes; human ≤ 32 lines / 6 144 bytes; text/ref ≤ 160; ttl grammar `<positive-integer><unit>` (`s\|m\|h\|d`) ≤ `30d`; list ≤ 8 per group; read payload lists ≤ 20 notes while every landing is receipted regardless of that display bound; every drop counted with `truncated`. | TC-STEER-004, TC-STEER-024, TC-STEER-082, TC-STEER-083 | Byte measurement on the serialized `data`, not the envelope; at-cap twin for every over-cap cell; the landing-vs-display split asserted in both directions. |
 | NFR-5 | `send` appends exactly 1 message record; `read` appends ≤ 1 outcome per note and only for transitioning notes; `complete` appends exactly 1, a second 0; 0 edits/deletes/prunes; an unverified append leaves no reported landing. | TC-STEER-006, TC-STEER-016, TC-STEER-040, TC-STEER-041, TC-STEER-084 | Tree snapshot plus appended-record counts plus the fence recorder. |
 | NFR-6 | 0 LLM calls; 0 network requests; 0 provider/tracker reads or writes; 0 timers/loops/sockets; 0 session operations; 0 hardcoded product or binary names. | TC-STEER-080 | Recording ports, transport assertion, module scan, brand-seam swap. |
 | NFR-7 | 0 ambient wall-clock reads in the pure domain; every `age`/expiry/boundary value reproducible from a fixed clock. | TC-STEER-017, TC-STEER-020 | Fixed clock advanced by stated deltas; a bogus stored age/timestamp cannot influence a derived value. |
@@ -181,26 +181,22 @@ The spec declares no `API-` or `EVT-` identifiers (§8.1: no HTTP surface; §8.2
 
 ### 3.5 Declared test-methodology substitutions
 
-No contract question is open in the specification: §14 records OQ-1..OQ-4 closed, and every AC names its verification path. The substitutions below are about **how a property is measured**, plus two spec-text defects reported for reopening; none blocks delivery of the properties themselves.
+No contract question is open in the specification: §14 records OQ-1..OQ-4 closed, and every AC names its verification path. The two substitutions below are about **how a property is measured**, not about what the contract says. The four items this plan raised at v1.0 are closed by spec v1.1 and are now asserted as contract rules rather than substituted: family arithmetic (`OQ-TP-1` → `TC-STEER-060`, delta 22 → 23), the `complete`-scoped unknown-id boundary (`OQ-TP-2` → `TC-STEER-070`/`071`), uncapped landing versus the ≤ 20 listed payload (`OQ-TP-3` → `TC-STEER-083`), and the `<positive-integer><unit>` ttl grammar (`AMB-TP-3` → `TC-STEER-004`).
 
 | ID | Substitution | Where handled |
 |----|--------------|---------------|
 | `AMB-TP-1` | **The human render is asserted as a maximum plus marker arithmetic, not as a fixed line layout.** `DM-8` declares ≤ 32 lines / 6 144 bytes; the case asserts the cap, the marker arithmetic for counted omissions, and a golden for the four forms. It does not pin a line-by-line layout, so a future layout change that keeps the budget and the counts passes. | `TC-STEER-082`, `TC-STEER-081` |
-| `AMB-TP-2` | **Harness seam shapes are delivery-bound.** The state port, id factory, injected clock, and origin source are consumed through injected seams the specification does not name. Cases assert payload, exit, exit code, and evidence; a case that cannot resolve its seam **fails naming the missing contract** rather than skipping. Behaviours, identities, closed vocabularies, bounds, and AC traceability are not delivery-bound. | all behaviour cases |
-| `AMB-TP-3` | **The `--ttl` duration grammar is delivery-bound** (`GAP-T5`). `DM-1` declares a positive duration ≤ 30 days and a 24 h default but no textual form, so `AC-F1-2`'s "non-positive ttl" cell is written against the delivery-bound parser: the case asserts the refusal *outcome* (`input.value.rejected`, exit `1`, zero bytes) for the zero/negative form the parser accepts, plus the over-cap refusal, and never asserts an accepted spelling the spec does not declare. | `TC-STEER-004` |
-| `OQ-TP-1` | **The family-count arithmetic in `AC-F8-1` is stale against the delivery base.** Base `cfb0ce8d` already carries **22** prompt-required families — `PROMPT_REQUIRED_COMMANDS` has 22 members (`board` at index 20, `ceremony` at index 21, merged as GH-296 in the base) and `tests/structure/entrypoint-bin.test.ts:544` asserts that exact list; `board-mounting`, `events-production-composition`, `dispatch-attempts-composition`, and `daemon-production-composition` all assert 22. A correct steer mount therefore yields **23**, so "among 22 families" and §8.5's "21 → 22" cannot both be satisfied. `TC-STEER-060` asserts the tree-invariant form (registered set = delivered set plus exactly `steer`; root help family-line count equals the registered set; every existing family still present) so the gate is sound under either arithmetic. **Reported for spec reopening:** §4.1 "Mounting completeness" ("22 registered root families"), §8.5 "Family count" ("21 → 22"), DEC-9 ("twenty-second prompt-required family"), §16.1 planning row ("CLI command registry row (22 families)"), AC-F8-1, DoD-12. | `TC-STEER-060`, §8.3 |
-| `OQ-TP-2` | **`AC-F9-1`'s read-target branch has no executable grammar.** The criterion and the §8.3 exit-projection row both say "`complete` or `read` target id", but the §8.3 grammar gives `read` no positional ("`list` and `read` accept none") and F-3 defines `read` as the all-notes batch read point. Inventing an id positional on `read` would contradict F-3. `TC-STEER-070` covers the `complete` branch exhaustively; `TC-STEER-071` asserts the declared grammar (`steer read <id>` → `fallback.invocation`, exit `1`, zero reads) so the contradiction cannot be silently implemented as a second read form. **Reported for spec reopening:** §17 AC-F9-1, §8.3 exit-projection row 3. | `TC-STEER-070`, `TC-STEER-071`, §8.3 |
-| `OQ-TP-3` | **`AC-F3-4` and `DM-8` do not compose above 20 due notes.** "All due notes land in one batch" versus "read batch ≤ 20 notes per read with counted overflow" read as a landing cap, a render cap, or a deferred second batch. `TC-STEER-083` asserts the properties that hold under every reading (no note is lost; every landed note has a receipt; every omit is counted; `truncated` set consistently) and exhausts the ≤ 20 population, where all three readings agree. **Reported as a spec tension** (not blocking): §17 AC-F3-4 / DM-8 / §8.3 contract shape. | `TC-STEER-083`, §8.3 |
+| `AMB-TP-2` | **Harness seam shapes are delivery-bound.** The state port, id factory, injected clock, and origin source are consumed through injected seams the specification does not name. Cases assert payload, exit, exit code, and evidence; a case that cannot resolve its seam **fails naming the missing contract** rather than skipping. Behaviours, identities, closed vocabularies, bounds, AC traceability, the family-count delta, the ttl grammar, and the landing-versus-display split are not delivery-bound. | all behaviour cases |
 
 ## 4. Test Types and Layers
 
-- **Structure / boundary (contract-level), `bun:test` under `tests/structure/`** — the exact DM-1 key set and no owner-specific field, the four closed vocabularies declared once, the filing subset as a strict restriction, payload key sets per subcommand against the §8.3 shape, `delivery.steer.v1` as the single identity, the `steer` domain kind and its exactly-three rows, the closed two-segment allowlist as an exact 59-member set with exactly three `steer.*` members, all D-1..D-13 pins moved (including the dispatch-taxonomy and verify-suite-map suites and the sync suite's `+106 → +109` arithmetic), the no-leftover scan, four-way agreement, `PROMPT_REQUIRED_COMMANDS` membership and count, help-inventory entry, and module inventory registration. No I/O beyond the committed tree and exported predicates. Cases: `TC-STEER-007` (structure half), `008`, `060`, `063`, `074`, `075`, `076`, `082` (constants half), `084` (state-kind half).
+- **Structure / boundary (contract-level), `bun:test` under `tests/structure/`** — the exact DM-1 key set and no owner-specific field, the four closed vocabularies declared once, the filing subset as a strict restriction, payload key sets per subcommand against the §8.3 shape, `delivery.steer.v1` as the single identity, the `steer` domain kind and its exactly-three rows, the closed two-segment allowlist as an exact 59-member set with exactly three `steer.*` members, all D-1..D-13 pins moved (including the dispatch-taxonomy and verify-suite-map suites and the sync suite's `+106 → +109` arithmetic), the no-leftover scan, four-way agreement, `PROMPT_REQUIRED_COMMANDS` membership with the 22 → 23 delta and the family-count scan, help-inventory entry, and module inventory registration. No I/O beyond the committed tree and exported predicates. Cases: `TC-STEER-007` (structure half), `004` (grammar half), `008`, `060`, `063`, `074`, `075`, `076`, `082` (constants half), `084` (state-kind half).
 - **Behaviour (in-process CLI composition), `bun:test` under `tests/behaviour/`** — the majority of the plan over `runCli` with the injected steer harness: filing, defaults, refusals, grammar, landing, expiry, decline, idempotence, aging/rank, the list view, asks composition, completion, the credential guard, the error matrix, determinism, bounds, write audit, purity, and read cost. Cases: `001`–`006`, `010`–`018`, `020`–`025`, `030`–`032`, `040`–`042`, `050`–`053`, `061`, `070`–`073`, `080`–`085`.
 - **Behaviour over the real production composition, `bun:test` under `tests/behaviour/`** — creates real temporary git checkouts plus a real local PM-context file and the real production composer; the only injected facts are the clock, the id factory, the registered-secrets record, and the recording seams. Mandatory wherever the assertion depends on the invoking checkout (`AC-F1-1`'s origin derivation, bound and unbound), because a synthetic scope would prove nothing. Cases: `001`, `002`, `052`, `060`, `084`.
 - **Golden, `bun:test` under `tests/golden/` with artifacts in `tests/fixtures/steer/golden/**`** — the four human forms (`send`, `list` with all three groups populated, `read` with a landed and an expired note, `complete`) and their machine envelopes + `data`. New artifacts in this change; each has a `regenerate.ts` beside it and the regeneration diff must show only the declared delta. Cases: `TC-STEER-081`, `023` (list golden half).
 - **Checks (guards), `bun:test` under `tests/checks/`** — help/guide coverage, reference-page parity, error-table doc sync, prompt conformance, privacy/forbidden literals, and the content inventory, all run inside `pnpm check`. Cases: `062`, `074`–`076` (sync half), `080` (literal-registry half), `096`.
 - **Measured bounds and read cost, `bun:test` with counters and printed context** — byte sizes, line counts, row counts, note counts, and per-seam read counters. Every measurement prints the fixture size and the samples so an over-budget run is diagnosable rather than merely red. Cases: `024`, `082`, `083`, `085`.
-- **Mutation / non-vacuity controls** — in-place mutations executed in a temporary copy of the tree (the delivered `error-table-sync` and boundary-fixture pattern): omit `ttl` from a receipt, land without appending an outcome, land while a phase is in progress, record a completion without `--ref`, add an owner-specific field to the schema, widen the filing subset to a shared-vocabulary member, drop the prompt-set entry, drop the coverage-inventory row, plant a two-segment `steer.*` near miss in a scanned corpus, omit the widening from the checker copy, widen the checker to a `steer.` prefix, leave a non-mirror count site stale (dispatch-taxonomy header/name/length; verify-map reads; sync `+109` arithmetic), and report a landing on an unverified append. Cases: `008`, `063`, `076`, `084`, `091`–`096`, `093`.
+- **Mutation / non-vacuity controls** — in-place mutations executed in a temporary copy of the tree (the delivered `error-table-sync` and boundary-fixture pattern): omit `ttl` from a receipt, land without appending an outcome, land while a phase is in progress, cap the landing write at the display bound (drop or defer the notes past 20), record a completion without `--ref`, add an owner-specific field to the schema, widen the filing subset to a shared-vocabulary member, accept an oversized ttl (`31d`) or a malformed one (`24`), drop the prompt-set entry, move the family count in one suite only, drop the coverage-inventory row, plant a two-segment `steer.*` near miss in a scanned corpus, omit the widening from the checker copy, widen the checker to a `steer.` prefix, leave a non-mirror count site stale (dispatch-taxonomy header/name/length; verify-map reads; sync `+109` arithmetic), and report a landing on an unverified append. Cases: `004`, `008`, `063`, `076`, `083`, `084`, `091`–`096`.
 - **Not used:** `mock.module` substitution of the modules under test; live network; live credentials; real sleeps or timers; the live tree or `$HOME` as state; child-process CLI invocations where an in-process `runCli` composition proves the same property. Fakes are injected ports (clock, id factory, state store, phase read, ledger view, secrets record, spawn recorder) — never a mock of the validation, rank, expiry, or lifecycle derivation.
 - **Boundaries:** no new cross-package edge is expected beyond the existing `cli` command family and the existing `core` contract/domain/state tiers (ADR-0003). `check:boundaries` runs inside the aggregate gate; if delivery declares a new `workspaceImports` edge, the fixture-coverage meta-check requires its negative fixture in the same change.
 
@@ -214,8 +210,8 @@ TC IDs use the `STEER` feature prefix and follow the specification's capability 
 |---|---|---|---|---|---|
 | TC-STEER-001 | Bare filing draws every default and derives the origin block in a bound checkout | Happy Path | Critical | High | AC-F1-1; F-1, F-2; DM-1; DEC-6 |
 | TC-STEER-002 | An unbound checkout records the bare `null` origin change and still files | Corner Case | Critical | High | AC-F1-1; F-1; DM-1 |
-| TC-STEER-003 | Explicit flags override every drawn default and derive `expiresAt` from `created` + `ttl` | Happy Path | Important | High | AC-F1-1; F-1; DM-1; DEC-6 |
-| TC-STEER-004 | Value violations are refused before any state read or write with zero persisted bytes | Negative | Critical | High | AC-F1-2; F-1, F-9; DM-8; NFR-5; `AMB-TP-3` |
+| TC-STEER-003 | Explicit flags override every drawn default and derive `expiresAt` from `created` + `ttl` (declared `<integer><unit>` grammar) | Happy Path | Important | High | AC-F1-1; F-1; DM-1; DEC-6 |
+| TC-STEER-004 | Value violations are refused before any state read or write with zero persisted bytes, including all four `--ttl` grammar/range classes | Negative | Critical | High | AC-F1-2; F-1, F-9; DM-1, DM-8; NFR-5 |
 | TC-STEER-005 | Grammar violations refuse before any state read as `fallback.invocation` | Negative | Critical | High | AC-F1-2, AC-F9-3; F-9; §8.3 grammar |
 | TC-STEER-006 | Filing appends exactly one immutable record and ids are unique per store | Contract | Critical | High | NFR-3, NFR-5; DM-2; AC-F10-2 |
 | TC-STEER-007 | Every record conforms to the one shared message schema with no owner-specific field | Contract | Critical | High | AC-F2-1; F-2; DM-1; DEC-2 |
@@ -224,7 +220,7 @@ TC IDs use the `STEER` feature prefix and follow the specification's capability 
 | TC-STEER-011 | The second boundary-open route: every recorded entry completed, `phase` = latest completed | Corner Case | Critical | High | AC-F3-1; F-3; DM-3; DEC-5 |
 | TC-STEER-012 | TTL elapsed before a boundary records a classified non-applied outcome (`SC-M2-S5-02`) | Happy Path | Critical | High | AC-F3-2; F-3; DM-3; DEC-7; `SC-M2-S5-02` |
 | TC-STEER-013 | A boundary-closed read declines without applying or appending anything | Negative | Critical | High | AC-F3-3; F-3; DM-3; DEC-5 |
-| TC-STEER-014 | Due notes land in one batch in the shared rank order, one receipt each | Happy Path | Critical | High | AC-F3-4; F-3, F-5; DM-3, DM-5 |
+| TC-STEER-014 | Due notes land in one batch in the shared rank order, one receipt each, the landing uncapped by the display bound | Happy Path | Critical | High | AC-F3-4; F-3, F-5; DM-3, DM-5, DM-8 |
 | TC-STEER-015 | An immediate repeat read lands nothing, appends nothing, and reports `applied: false` | Corner Case | Critical | High | AC-F3-5; F-3; NFR-5 |
 | TC-STEER-016 | A resolved note is never re-resolved; at most one outcome record per note | Contract | Critical | High | AC-F3-5; NFR-5; DM-2 |
 | TC-STEER-017 | TTL judgement is exactly `now >= created + ttl` on the injected clock | Corner Case | Critical | High | AC-F3-2; NFR-7; DM-5 |
@@ -245,12 +241,12 @@ TC IDs use the `STEER` feature prefix and follow the specification's capability 
 | TC-STEER-051 | A registered secret value in `--ref` is refused with zero persisted bytes | Negative | Critical | High | AC-F7-1; F-7; DM-7 |
 | TC-STEER-052 | A registered secret value in a derived origin value is refused on the identifier path | Negative | Critical | High | AC-F7-1; F-7; DM-7 |
 | TC-STEER-053 | An unregistered token-shaped value is accepted, and no refusal payload leaks a secret | Negative | Critical | High | AC-F7-1; F-7; TDR-0012 |
-| TC-STEER-060 | `steer` joins the prompt-required set, is composed unconditionally, and appears in root help | Happy Path | Critical | High | AC-F8-1; F-8; DEC-9; `OQ-TP-1` |
+| TC-STEER-060 | `steer` is the 23rd prompt-required family (delta 22 → 23), composed unconditionally, and listed in root help | Happy Path | Critical | High | AC-F8-1; F-8; DEC-9; §8.5; DoD-12 |
 | TC-STEER-061 | `steer --help` and `--version` answer at exit 0 with the five declared sections and no side effect | Happy Path | Important | High | AC-F8-1; F-8 |
 | TC-STEER-062 | The reference page and the coverage-inventory row satisfy the help coverage check | Contract | Critical | High | AC-F8-2; F-8 |
-| TC-STEER-063 | Mounting changes no other family, and the unmounted mutant is detected | Regression | Critical | High | AC-F8-1; F-8; RSK-8; `OQ-TP-1` |
+| TC-STEER-063 | Mounting changes no other family, the family count moves in every pinning suite, and the unmounted mutant is detected | Regression | Critical | High | AC-F8-1; F-8; RSK-8 |
 | TC-STEER-070 | An unknown completion id is `steer.unknown-id` at exit 1 with no write | Negative | Critical | High | AC-F9-1; F-9; DM-7 |
-| TC-STEER-071 | `steer read <id>` is a grammar refusal, not a second read form (`OQ-TP-2`) | Negative | Critical | High | AC-F9-1, AC-F9-3; F-9; §8.3 grammar; `OQ-TP-2` |
+| TC-STEER-071 | `steer read <id>` is the declared `fallback.invocation` grammar refusal, never `steer.unknown-id` | Negative | Critical | High | AC-F9-1, AC-F9-3; F-9; DM-7; §8.3 grammar |
 | TC-STEER-072 | Store failures withhold every subcommand as `steer.queue-unavailable` at exit 2 | Negative | Critical | High | AC-F9-2; F-9; DM-7; NFR-5; RSK-3 |
 | TC-STEER-073 | Every outcome projects the five-field envelope and the exact 0/1/2 exit row | Contract | Critical | High | AC-F9-3; NFR-1; DM-7, DM-3 |
 | TC-STEER-074 | The `steer` kind and its three rows land with the entries and delivered-row counts moved | Contract | Critical | High | AC-F9-4(a); DM-7; DEC-8; C-7 |
@@ -258,8 +254,8 @@ TC IDs use the `STEER` feature prefix and follow the specification's capability 
 | TC-STEER-076 | All 13 Appendix D count pins move, the no-leftover scan is clean, and four surfaces agree | Contract | Critical | High | AC-F9-4(b),(c),(d); DM-7; C-7, C-16; Appendix D |
 | TC-STEER-080 | No LLM, network, tracker, provider, timer, socket, session operation, or product literal | Negative | Critical | High | AC-F10-1; NFR-6; DEC-12; NG-4 |
 | TC-STEER-081 | Two runs are byte-identical on all four forms; order and identity are permutation-proof | Corner Case | Critical | High | AC-F10-2; NFR-2, NFR-3; DM-3 |
-| TC-STEER-082 | The machine and human bounds hold, and every drop is counted in the declared order | Corner Case | Critical | High | AC-F10-3; DM-8; NFR-4; `AMB-TP-1` |
-| TC-STEER-083 | The 20-note read batch never loses a note and counts every overflow | Corner Case | Critical | High | AC-F10-3, AC-F3-4; DM-8; NFR-4; `OQ-TP-3` |
+| TC-STEER-082 | The machine and human bounds hold, the display cap never binds a landing, and every drop is counted in the declared order | Corner Case | Critical | High | AC-F10-3, AC-F3-4; DM-8; NFR-4; `AMB-TP-1` |
+| TC-STEER-083 | A batch above the display cap is fully applied while partially listed: 25 due notes → 25 receipts, 20 listed, overflow counted | Corner Case | Critical | High | AC-F3-4, AC-F10-3; DM-3, DM-8; NFR-4, NFR-5 |
 | TC-STEER-084 | Write discipline: exactly the declared appends, no edits, and no landing on an unverified append | Contract | Critical | High | AC-F9-2; NFR-5; DM-2; RSK-3 |
 | TC-STEER-085 | The declared read set holds per subcommand, with the asks join reusing one ledger read | Corner Case | Critical | High | NFR-8; DM-6; AC-F4-1 |
 | TC-STEER-090 | The aggregate quality gate is green before the PR opens | Quality gate | Critical | High | AC-NFR9-1; NFR-9, NFR-10 |
@@ -335,24 +331,25 @@ TC IDs use the `STEER` feature prefix and follow the specification's capability 
 **Scenario Type**: Happy Path
 **Impact Level**: Important
 **Priority**: High
-**Related IDs**: AC-F1-1, F-1, DM-1, DEC-6
-**Test Type(s)**: Integration
+**Related IDs**: AC-F1-1, F-1, DM-1, DM-8, DEC-6, §8.3 ttl grammar
+**Test Type(s)**: Integration, Unit
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/steer-send.test.ts` (override cells)
+**Target Layer / Location**: `tests/behaviour/steer-send.test.ts` (override cells); `tests/structure/steer-contract.test.ts` for the grammar parser
 **Tags**: @backend, @behaviour
 
 **Preconditions**:
 - A bound checkout; injected clock fixed at `T0`.
-- Cells: `--kind escalate`; `--priority urgent`; a non-default `--ttl` within the 30-day cap; `--ref` a 160-char artifact reference; and all four flags together.
+- Cells: `--kind escalate`; `--priority urgent`; `--ttl` in each declared unit (`90s`, `90m`, `24h`, `14d`) and at the `30d` maximum; `--ref` a 160-char artifact reference; and all four flags together.
 
 **Steps**:
 1. Run each cell and assert the stored record carries the supplied value verbatim and the omitted fields still draw their defaults.
-2. In the `--ttl` cell assert `expiresAt == created + ttl` and that `expiresAt` does not move when the harness clock is advanced after filing (it is derived, not re-read).
-3. In the `--ref` cell assert `ref` is the string (not wrapped, not truncated) at exactly 160 chars.
-4. In the all-flags cell assert `kind: "escalate"`, `priority: "urgent"`, the supplied `ttl`/`ref`, `from`/`to`/`scope`/`origin` unchanged.
+2. Parse the four unit cells through the pure grammar and assert each yields the declared millisecond duration (`90s` = 90 000, `90m` = 5 400 000, `24h` = 86 400 000, `14d` = 1 209 600 000), and that `30d` parses to 2 592 000 s exactly.
+3. In every `--ttl` cell assert `expiresAt == created + ttl` and that `expiresAt` does not move when the harness clock is advanced after filing (it is derived, not re-read).
+4. In the `--ref` cell assert `ref` is the string (not wrapped, not truncated) at exactly 160 chars.
+5. In the all-flags cell assert `kind: "escalate"`, `priority: "urgent"`, the supplied `ttl`/`ref`, `from`/`to`/`scope`/`origin` unchanged, and that the omitted-`--ttl` twin still draws `24h`.
 
 **Expected Outcome**:
-- Every explicit value lands verbatim; every omitted value draws; `expiresAt` is a pure function of the stored record.
+- Every explicit value lands verbatim; every unit parses per the declared grammar; the drawn default applies only when the flag is absent; `expiresAt` is a pure function of the stored record.
 
 #### TC-STEER-004 - Value violations are refused before any state read or write with zero persisted bytes
 
@@ -368,21 +365,25 @@ TC IDs use the `STEER` feature prefix and follow the specification's capability 
 
 **Preconditions**:
 - A bound checkout with one pre-existing queued note (so a write would be visible as a second record); a read counter armed on the store seam; a tree snapshot of the state scope.
-- Case table: empty text `""`; 161-char text; whitespace-only text; over-cap ttl (> 30 days); the parser's zero/negative ttl form; `--priority critical` (not a member); `--kind notify` (a shared member *outside* the filing subset); `--kind ask` (outside the subset); `--ref` of 161 chars.
+- Text cells: empty `""`; 161-char text; whitespace-only text.
+- `--ttl` cells, one per declared refusal class (§8.3 grammar): **zero** (`0s`, `0m`, `0h`, `0d`); **negative** (`-1h`, `-30m`); **oversized** (`31d`, `8761h`, `2592001s`); **malformed** (`24`, `h`, `1.5h`, `24 h`, `24H`, `24y`, `+1h`, and an empty flag value).
+- Flag cells: `--priority critical` (not a member); `--kind notify` (a shared member *outside* the filing subset); `--kind ask` (outside the subset); `--ref` of 161 chars.
+- Accepting twins: `30d`, `2592000s`, `720h`, `43200m` (all exactly the maximum); text exactly 160; `--ref` exactly 160.
 
 **Steps**:
 1. Run each case independently against a fresh snapshot.
 2. Assert exit `1`, `data.error.code == "input.value.rejected"`, `data.error.category == "user"`, and consequence `not_landed`.
 3. Assert the store record count is unchanged, the tree snapshot is byte-identical, and the store **read counter is 0** (the refusal precedes any read).
-4. Assert each cell reports exactly one identity (no aggregate or partial identity) and that the failure summary names the offending field without echoing an unbounded value.
-5. Assert a valid at-cap twin for each bound (text exactly 160, `--ref` exactly 160, `ttl` exactly 30 days) is **accepted**, so each refusal is attributable to the cap and not to the parser.
+4. Assert each cell reports exactly one identity (no aggregate or partial identity) and that the failure summary names the offending flag without echoing an unbounded value; assert a malformed ttl is never silently coerced to a neighbour (`24` is not read as `24h`, `1.5h` is not read as `1h`).
+5. Assert a valid twin for each bound is **accepted** — the four `30d`-maximum spellings, 160-char text, 160-char `--ref` — so each refusal is attributable to the bound and not to the parser.
+6. Assert the grammar parser is pure and shared: the CLI's `send` path and the completion `--ref` path both consume one exported validator, and no second duration parser exists in the family.
 
 **Expected Outcome**:
-- Every out-of-range value is refused pre-read, pre-write, with zero persisted bytes; every at-cap twin is accepted.
+- Every value violation — text, ttl in all four classes, priority, kind, ref — is refused pre-read, pre-write, with zero persisted bytes; every at-cap twin is accepted; malformed input is never coerced.
 
 **Notes / Clarifications**:
-- `--ttl` grammar is undeclared (`AMB-TP-3`, `GAP-T5`): the zero/negative cell uses the parser's accepted spelling and asserts the outcome, not the syntax.
-- `--kind notify` is the sharpest cell: it is vocabulary-legal and filing-illegal, so it also proves the subset is enforced rather than the vocabulary alone.
+- The `--ttl` grammar is a declared contract at spec v1.1 (§8.3): `<positive-integer><unit>`, unit `s|m|h|d`, maximum `30d`, default `24h`. The case pins the four refusal classes and the maximum twin, so a parser that accepts an undeclared unit or a fractional value is red.
+- `--kind notify` is the sharpest vocabulary cell: it is vocabulary-legal and filing-illegal, so it also proves the subset is enforced rather than the vocabulary alone.
 
 #### TC-STEER-005 - Grammar violations refuse before any state read as `fallback.invocation`
 
@@ -600,7 +601,7 @@ TC IDs use the `STEER` feature prefix and follow the specification's capability 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F3-4, F-3, F-5, DM-3, DM-5
+**Related IDs**: AC-F3-4, F-3, F-5, DM-3, DM-5, DM-8
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/steer-read-landing.test.ts` (batch cells)
@@ -612,12 +613,13 @@ TC IDs use the `STEER` feature prefix and follow the specification's capability 
 **Steps**:
 1. Run `steer read` **once** and assert all five notes appear in a single `data.notes` array with `applied: true` and `data.applied == true`.
 2. Assert the array order equals the expected rank permutation (priority class, then `created` ascending, then `id` ascending), not the store's returned order.
-3. Assert each row carries its own `receipt` with non-null `origin`, `readReceipt`, `ttl`; assert receipts are distinct (different `at`/boundary rows are allowed to share a timestamp but not a note identity).
+3. Assert each row carries its own `receipt` with non-null `origin`, `readReceipt`, `ttl`; assert receipts are distinct (rows may share a read timestamp but never a note identity).
 4. Assert exactly five outcome records append, one per note, and the batch is not split across invocations (no second `read` is needed to complete the batch).
-5. Assert the payload reports no `omitted`/`truncated` for a five-note population (well inside the 20-note cap).
+5. Assert the payload reports `omitted: 0` and `truncated: false` for a five-note population (well inside the 20-note display bound), and that the store — not the payload — is the authority: five messages each hold one applied outcome.
+6. Assert a second `read` immediately after lands nothing (`TC-STEER-015`), so "one batch per boundary" and "no deferred remainder" hold together.
 
 **Expected Outcome**:
-- One batched landing, rank-ordered, receipted per note, with one outcome record each.
+- One batched landing, rank-ordered, receipted per note, with one outcome record each and no display-bound interaction at this size.
 
 #### TC-STEER-015 - An immediate repeat read lands nothing, appends nothing, and reports `applied: false`
 
@@ -1125,33 +1127,35 @@ TC IDs use the `STEER` feature prefix and follow the specification's capability 
 **Expected Outcome**:
 - Value-based guard only; a pattern-scan implementation fails this case; the payload never leaks the registered value.
 
-#### TC-STEER-060 - `steer` joins the prompt-required set, is composed unconditionally, and appears in root help
+#### TC-STEER-060 - `steer` is the 23rd prompt-required family (delta 22 → 23), composed unconditionally, and listed in root help
 
-**Objective**: Prove the family is reachable: registered, composed without a test-supplied runtime, and advertised — asserted as a tree invariant so the assertion is correct regardless of the family-count arithmetic.
+**Objective**: Prove the family is reachable and that the mount is the declared 23rd: registered, composed without a test-supplied runtime, advertised, and every family-count pin moved 22 → 23 by one declared expectation.
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F8-1, F-8, DEC-9, `OQ-TP-1`
+**Related IDs**: AC-F8-1, F-8, DEC-9, §8.5, DoD-12
 **Test Type(s)**: Integration, Contract
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/structure/steer-mounting.test.ts` (new); `tests/behaviour/steer-help.test.ts` (new); extends `tests/structure/board-mounting.test.ts`, `tests/structure/events-production-composition.test.ts`, `tests/structure/dispatch-attempts-composition.test.ts`, `tests/structure/daemon-production-composition.test.ts`, `tests/structure/entrypoint-bin.test.ts`
+**Target Layer / Location**: `tests/structure/steer-mounting.test.ts` (new); `tests/behaviour/steer-help.test.ts` (new); extends `tests/structure/entrypoint-bin.test.ts`, `tests/structure/board-mounting.test.ts`, `tests/structure/events-production-composition.test.ts`, `tests/structure/dispatch-attempts-composition.test.ts`, `tests/structure/daemon-production-composition.test.ts`, and the ceremony/base-list help suites
 **Tags**: @backend, @contract
 
 **Preconditions**:
 - The production composer over a temp host root, with **no** test-supplied steer runtime.
+- The delivered base list captured as a fixture constant: the 22 pre-change families in order (`status` … `events`, `board` at index 20, `ceremony` at index 21).
 
 **Steps**:
-1. Assert `PROMPT_REQUIRED_COMMANDS` contains exactly one `steer` entry and that the set equals `[...deliveredSet, "steer"]` where `deliveredSet` is captured as the pre-change list constant in the fixture (so the assertion states *the delta*, not a hardcoded total).
-2. Assert the registered count equals `PROMPT_REQUIRED_COMMANDS.length` (self-consistent) and that the count assertions in the five composition suites are moved to that same value — a single declared expectation, not five independent literals.
-3. Assert `createProductionComposer` produces a `steer` handler with no runtime injected, and that the handler answers (a `steer list` over an empty store returns exit `0` with empty groups).
-4. Assert root `--help` lists `steer` and that the rendered family-line count equals `PROMPT_REQUIRED_COMMANDS.length`.
-5. Assert every previously delivered family is still present, in order, with `steer` appended (no reordering of the delivered list).
+1. Assert `PROMPT_REQUIRED_COMMANDS` contains exactly one `steer` entry and equals `[...BASE_FAMILIES, "steer"]` where `BASE_FAMILIES` is the captured 22-entry pre-change list — the assertion states the delta, and `BASE_FAMILIES.length` is 22, so the mounted count is exactly 23.
+2. Assert the registered count is `23` **and** `BASE_FAMILIES.length + 1`, and that every family-count pin in the tree reads `23`: the entrypoint's family list and its rendered family-line count, `board-mounting`, `events-production-composition`, `dispatch-attempts-composition`, `daemon-production-composition`, and the family-help suites (`repos-help`, `board-help`, `events-mount-help`, `ceremony-cli`).
+3. Assert a repo-wide scan finds no family-count pin left at `22` outside the declared base constant, so a suite beyond those named above cannot stay stale.
+4. Assert `createProductionComposer` produces a `steer` handler with no runtime injected, and that the handler answers (a `steer list` over an empty store returns exit `0` with empty groups).
+5. Assert root `--help` lists `steer` as the last family line with a one-line summary, and that the rendered family-line count equals the registered count (`23`).
+6. Assert every previously delivered family is still present, in order, with `steer` appended (no reordering, no removal, no duplicate).
 
 **Expected Outcome**:
-- `steer` is registered, composed, and advertised; the count is asserted as the delivered set plus one.
+- `steer` is the 23rd registered, composed, and advertised family; every count pin reads 23; the base 22 is represented once, as the captured constant.
 
 **Notes / Clarifications**:
-- `OQ-TP-1`: base `cfb0ce8d` already has 22 families (GH-296 ceremony), so a literal "22 families" assertion would fail on a correct mount. This case asserts the tree-invariant delta; the spec's arithmetic (§4.1, §8.5, DEC-9, §16.1, AC-F8-1, DoD-12) is reported for reopening.
+- Spec v1.1 declares the base as 22 (`ceremony` the 22nd) and steer as the twenty-third, delta 22 → 23 (AC-F8-1, DEC-9, §4.1, §8.5, DoD-12). A literal `22` assertion is therefore red, and a `23` assertion that leaves one help suite at `22` is also red — step 3 is what makes the move atomic.
 
 #### TC-STEER-061 - `steer --help` and `--version` answer at exit 0 with the five declared sections and no side effect
 
@@ -1209,24 +1213,25 @@ TC IDs use the `STEER` feature prefix and follow the specification's capability 
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F8-1, F-8, RSK-8, `OQ-TP-1`
+**Related IDs**: AC-F8-1, F-8, RSK-8, DEC-9
 **Test Type(s)**: Contract, Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/structure/steer-mounting.test.ts` (isolation cells); `tests/structure/entrypoint-bin.test.ts`; `tests/checks/steer-mutants.test.ts`
 **Tags**: @backend, @contract
 
 **Preconditions**:
-- Committed help goldens for the other 22 families; the delivered pre-change prompt-required list captured as a fixture constant.
+- Committed help goldens for the 22 delivered families; the delivered pre-change prompt-required list captured as a fixture constant.
 
 **Steps**:
-1. Assert the composed command set equals the delivered set plus `steer` with no other member added, removed, or reordered.
+1. Assert the composed command set equals the captured 22-entry delivered set plus `steer` with no other member added, removed, or reordered.
 2. Assert every other family's rendered help block is byte-identical to its committed golden (a per-family loop, so a shared-help regression is localised).
 3. Assert the entrypoint's dispatch for a delivered family is unchanged (spot-check three families' handler identity and behaviour on one call each).
-4. Mutation arm (temporary tree copy): remove `steer` from `PROMPT_REQUIRED_COMMANDS` → the mounting test fails naming the missing family; the coverage check also fails (the inventory row names an unmounted command).
-5. Mutation arm: add `steer` to the prompt set but not to the production composer → the composition assertion fails naming the uncomposed command.
+4. Assert the delivered families' help text carries no `steer` row, no steering line, and no changed count wording — the mount is additive to output, not a rewrite.
+5. Mutation arm (temporary tree copy): remove `steer` from `PROMPT_REQUIRED_COMMANDS` → the mounting test fails naming the missing family; the coverage check also fails (the inventory row names an unmounted command).
+6. Mutation arms: add `steer` to the prompt set but not the production composer → the composition assertion fails naming the uncomposed command; move the family count to `23` in the structure suites but leave a family-help suite at `22` → the scan in `TC-STEER-060` fails naming the stale site.
 
 **Expected Outcome**:
-- Additive mount, zero delivered drift, and two mutants prove the mount is enforced in both directions.
+- Additive mount, zero delivered drift, one atomic count move, and four mutants prove the mount is enforced in both directions.
 
 #### TC-STEER-070 - An unknown completion id is `steer.unknown-id` at exit 1 with no write
 
@@ -1254,32 +1259,32 @@ TC IDs use the `STEER` feature prefix and follow the specification's capability 
 - Unknown, foreign, and empty ids are all classified refusals with zero writes, and the store still works.
 
 **Notes / Clarifications**:
-- `AC-F9-1`'s read-target branch is not executable (`OQ-TP-2`); it is covered by `TC-STEER-071` as a grammar assertion.
+- Spec v1.1 scopes `steer.unknown-id` to `complete` alone (AC-F9-1). The `read`-with-a-positional case is a grammar refusal and is asserted by `TC-STEER-071`; the two cases are the two sides of one boundary, so neither can drift into the other's identity.
 
-#### TC-STEER-071 - `steer read <id>` is a grammar refusal, not a second read form (`OQ-TP-2`)
+#### TC-STEER-071 - `steer read <id>` is the declared `fallback.invocation` grammar refusal, never `steer.unknown-id`
 
-**Objective**: Pin the declared grammar so `AC-F9-1`'s "read targeting an id" cannot be implemented as an undeclared second read form, and record the spec contradiction executably.
+**Objective**: Pin the declared grammar as a contract: `read` takes zero arguments, so any positional on it is a containment refusal — never the id-targeting identity, which belongs to `complete` alone.
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F9-1, AC-F9-3, F-9, §8.3 grammar, `OQ-TP-2`
-**Test Type(s)**: Integration
+**Related IDs**: AC-F9-1, AC-F9-3, F-9, DM-7, §8.3 grammar and exit projection
+**Test Type(s)**: Integration, Contract
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/steer-errors.test.ts` (grammar cells)
+**Target Layer / Location**: `tests/behaviour/steer-errors.test.ts` (grammar cells); `tests/behaviour/steer-help.test.ts` for the documented arity
 **Tags**: @backend, @behaviour
 
 **Preconditions**:
-- A store with one landed and one queued note; store read counter armed.
+- A store with one landed and one queued note; store read counter and append counter armed; the delivered `steer.unknown-id` row available for an identity comparison.
 
 **Steps**:
-1. Run `steer read <landed-id>` → assert exit `1`, `data.error.code == "fallback.invocation"`, store read counter `0`.
-2. Run `steer read <unknown-id>` → the same grammar refusal, **not** `steer.unknown-id` (there is no id argument on this verb).
-3. Run a plain `steer read` in the same fixture → exit `0` with the full batch, proving the refusal is attributable to the extra positional.
-4. Assert the help text documents `read` with zero positionals (consistent with the grammar) and does not advertise an id form.
-5. Record in the case's assertion message the spec sections that disagree (§17 AC-F9-1, §8.3 exit-projection row 3) so the reopening is visible in a red test rather than a review comment.
+1. Run `steer read <landed-id>` → assert exit `1`, `data.error.code == "fallback.invocation"`, category per the delivered containment row, store read counter `0`, append counter `0`.
+2. Run `steer read <unknown-id>` → the **same** grammar refusal and explicitly **not** `steer.unknown-id`; assert the emitted code is not a member of the three `steer.*` identities at all.
+3. Run `steer read` with two positionals and with a `--kind` flag → the same grammar refusal, so the rule is "zero arguments", not "no ids".
+4. Run a plain `steer read` in the same fixture → exit `0` with the full batch (all notes listed), proving the refusal is attributable to the extra positional.
+5. Assert the help text documents `read` as taking no positionals, and that no `read <id>` example exists anywhere in the page or the summary.
 
 **Expected Outcome**:
-- One read form only; the contradiction is executable and named, not silently resolved.
+- One read form only; the positional is a containment refusal; `steer.unknown-id` is unreachable from `read`.
 
 #### TC-STEER-072 - Store failures withhold every subcommand as `steer.queue-unavailable` at exit 2
 
@@ -1471,53 +1476,58 @@ TC IDs use the `STEER` feature prefix and follow the specification's capability 
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F10-3, DM-8, NFR-4, `AMB-TP-1`
+**Related IDs**: AC-F10-3, AC-F3-4, DM-8, NFR-4, `AMB-TP-1`
 **Test Type(s)**: Integration, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/steer-bounds.test.ts` (new); `tests/fixtures/steer/bounds.ts` (new); `tests/structure/steer-contract.test.ts` (constants)
 **Tags**: @backend, @behaviour
 
 **Preconditions**:
-- Sized fixtures: at-cap and over-cap for text (160/161), ref (160/161), ttl (30 d / 30 d + 1 ms), list group (8/9), read batch (20/21 — see `TC-STEER-083`), a `data` payload driven to 65 536 bytes and past it by long subjects at 160 chars and many notes, and a human render driven past 32 lines / 6 144 bytes.
+- Sized fixtures: at-cap and over-cap for text (160/161), ref (160/161), ttl (`30d` accepted / `31d` refused per the declared grammar), list group (8/9), read payload list (20/21 with 21 due — the landing side is `TC-STEER-083`), a `data` payload driven to 65 536 bytes and past it by long subjects at 160 chars and many notes, and a human render driven past 32 lines / 6 144 bytes.
 
 **Steps**:
-1. Assert the declared constants are exactly the spec's values (text 160, ref 160, ttl 30 days, list 8, batch 20, `data` 65 536, human 32 lines / 6 144 bytes) — one declaration each, no second literal.
+1. Assert the declared constants are exactly the spec's values (text 160, ref 160, ttl `30d` = 2 592 000 s, list 8, read-payload list 20, `data` 65 536, human 32 lines / 6 144 bytes) — one declaration each, no second literal.
 2. At-cap twin: every bound value accepted/rendered with `omitted: 0`, `truncated: false`.
 3. Over-cap machine cell: `data` serialized size ≤ 65 536 bytes; `omitted` equals the number of rows actually dropped; `truncated: true`.
 4. Over-cap human cell: the render is ≤ 32 lines and ≤ 6 144 bytes; the `+N more` marker count equals the machine omission count (the `AMB-TP-1` arithmetic).
 5. Byte-guard order: with a payload over the cap, assert `asks` rows drop before any `notes` row, notes drop tail-first by rank, the lowest-ranked notes survive, the `boundary` block is **never** dropped, and the drop counts sum to `omitted`.
-6. Mutation arms: drop a `notes` row before an `asks` row → fails; drop head-first by rank → fails; drop the `boundary` block → fails; drop without counting → fails.
+6. Display-versus-landing separation: in the 21-due fixture assert 21 outcome records exist while `data.notes` lists 20 with `omitted: 1` — the display bound never reduces the write.
+7. Mutation arms: drop a `notes` row before an `asks` row → fails; drop head-first by rank → fails; drop the `boundary` block → fails; drop without counting → fails; let the display cap also suppress an outcome record → fails (the `TC-STEER-083` invariant, asserted here at size 21).
 
 **Expected Outcome**:
-- Every cap holds, every drop is counted, the declared order is enforced, and four mutants are detected.
+- Every cap holds, every display drop is counted, the declared order is enforced, the display bound never binds a write, and five mutants are detected.
 
-#### TC-STEER-083 - The 20-note read batch never loses a note and counts every overflow
+#### TC-STEER-083 - A batch above the display cap is fully applied while partially listed: 25 due notes → 25 receipts, 20 listed, overflow counted
 
-**Objective**: Prove the batch cap is bounded without silent loss, and exhaust the population where every reading of `AC-F3-4`/`DM-8` agrees.
+**Objective**: Prove the declared split between the landing write and the payload listing: every due note lands and is receipted regardless of the display cap, the payload lists at most 20 in rank order with counted overflow, and nothing is dropped, deferred, or rolled to a later boundary.
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F10-3, AC-F3-4, DM-8, NFR-4, `OQ-TP-3`
-**Test Type(s)**: Integration
+**Related IDs**: AC-F3-4, AC-F10-3, DM-3, DM-8, NFR-4, NFR-5
+**Test Type(s)**: Integration, Contract
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/steer-bounds.test.ts` (batch cells)
+**Target Layer / Location**: `tests/behaviour/steer-bounds.test.ts` (payload-list cells); `tests/fixtures/steer/bounds.ts`
 **Tags**: @backend, @behaviour
 
 **Preconditions**:
-- Fixtures: 1 due; 20 due; 25 due (all boundary-open, all within ttl); a 25-due fixture whose notes are ranked so the overflow is unambiguous.
+- Boundary-open fixtures with every note due (within ttl): 1 due; 20 due (exactly at the display bound); 21 due; 25 due. Notes ranked by a deliberate priority/`created`/`id` matrix so which 20 are listed is unambiguous. The delivered ledger is empty in these fixtures, so every omitted row is a note and `omitted` has one meaning.
+- A full store snapshot (per-file hashes) and the outcome-record counter armed.
 
 **Steps**:
-1. Exhaustive ≤ 20 population: 1 due → 1 landed, 0 omitted; 20 due → 20 landed, 0 omitted, `truncated: false`, 20 outcome records, `data.applied: true`.
-2. > 20 cell: assert the **no-loss invariant** — no note is ever in a state that is neither queued, landed, nor expired after the read; every count reported (`omitted` and any deferred count implied by the payload) is consistent with the store; every landed note carries a receipt.
-3. Assert the batch is drained by repeated reads: run `read` until it returns an empty batch, then assert every note from the 25-fixture has exactly one outcome and `data.applied` was `true` for at least one read and `false` for the terminating read.
-4. Assert the read cap is never exceeded per invocation (`landed rows per read ≤ 20`) **and** the total landed across reads equals the due population — so neither a render-cap nor a landing-cap implementation can lose a note.
-5. Assert the payload never reports `truncated: false` while it omitted or deferred anything.
+1. **≤ 20 population, exhaustive.** 1 due → 1 outcome record, `notes.length == 1`, `omitted: 0`, `truncated: false`; 20 due → 20 outcome records, `notes.length == 20`, `omitted: 0`, `truncated: false`, `data.applied: true`.
+2. **Landing is uncapped.** At 21 due: assert **21** `steering.outcome` records exist in the store (one per note, each applied, each carrying a receipt) and **21** notes reached `landed` in the derived lifecycle — while `data.notes.length == 20`, `omitted == 1`, `truncated == true`. At 25 due: **25** outcome records, 20 listed, `omitted == 5`, `truncated == true`.
+3. **Nothing is deferred or rolled.** After the 25-due read, assert no note remains `queued` (there is no unapplied remainder), every note has exactly one outcome, every note's own `applied` flag in the store's derived state is `true`, and the payload's listed rows are the top 20 by shared rank (ranks `1..20` present, `21..25` omitted by rank — not by store order).
+4. **`data.applied` and the idempotent second read.** Assert `data.applied: true` on the 21- and 25-due reads; then run `read` again and assert it appends **0** records, lists nothing, reports `data.applied: false`, `omitted: 0`, `truncated: false` — the overflow was applied by the first read, not deferred into the second.
+5. **Receipt completeness under overflow.** Sweep every landed note in the 25-due fixture (listed and unlisted) and assert `receipt.origin`, `receipt.readReceipt.at`, `receipt.readReceipt.boundary`, `receipt.ttl`, `receipt.expiresAt` are all non-null — a note that landed but is not listed still carries its seed-shaped receipt (ties `TC-STEER-091`).
+6. **No-loss cross-check.** Assert the union `listed ∪ omitted` equals the due population exactly (set equality by note id), and that `listed.length + omitted == 25` — with no asks present, the arithmetic is unambiguous.
+7. Mutation arms: cap the landing write at 20 (drop or defer the overflow) → step 2/3 fail; list 20 but count `omitted: 0` → step 2 fails; roll the overflow into a second read → step 4 fails; drop the highest-ranked notes instead of the lowest → step 3 fails; land an unlisted note without a receipt → step 5 fails.
 
 **Expected Outcome**:
-- No note is lost above the cap under either reading; the ≤ 20 population is exhaustively proven; the ambiguity is named for the spec rather than resolved in code.
+- Fully applied, partially listed: 25 receipts and 25 applied outcomes with a 20-row payload, `omitted: 5`, `truncated: true`, ranks ordered, nothing deferred, and five mutants detected.
 
 **Notes / Clarifications**:
-- `OQ-TP-3`: whether the 20-cap applies to landing or to rendering is a spec-level question; this case fails any implementation that loses a note and does not prejudge the mechanism.
+- Spec v1.1 (AC-F3-4, DM-8, NFR-4, AC-F10-3) closes the former tension: the landing is a record write bounded only by the queue's contents, while the ≤ 20 bound applies to the read **payload** with counted overflow. `data.applied` is a landing fact, so a fully applied, partially listed read reports `true`; a second read reports `false` because nothing remains due.
+- The 20-row listing is a display bound, not an evidence cap: the store and the receipts are the authority for "all notes landed".
 
 #### TC-STEER-084 - Write discipline: exactly the declared appends, no edits, and no landing on an unverified append
 
@@ -1745,7 +1755,7 @@ TC IDs use the `STEER` feature prefix and follow the specification's capability 
 - **Environments.** One hermetic local environment: `bun test` over per-test temporary roots. No staging, no external system. Every dependency is an in-process injected port, except the real git checkouts the origin-derivation cases require (`git init` plus a local PM-context file under `mkdtemp` in the repo-local temp base).
 - **State isolation.** Host roots, homes, and repository state scopes are created under the approved temp base, never `$HOME` and never the live tree; the delivered fixture guard rejects the live workspace and the real home-derived state directory before anything is written.
 - **Clock and identifiers.** Injected clock, deterministic id factory, run id, and fence tokens throughout; no wall-clock reads and no real sleeps. Ages, TTL boundaries, `expiresAt`, and boundary conditions are computed from the fixture clock so a case states only its delta.
-- **Fixtures.** Live under `tests/fixtures/**` and are never named `*.test.ts`. New: `tests/fixtures/steer/harness.ts` (in-process composition over an injected clock, id factory, state port, phase read, ledger view, secrets record, and origin source), `tests/fixtures/steer/cases.ts` (record fixtures: bound/unbound origin, ttl deltas, the lifecycle matrix, the value-refusal table), `tests/fixtures/steer/phase-boundary.ts` (the three boundary routes plus the closed form, with the delivered phase vocabulary), `tests/fixtures/steer/bounds.ts` (at-cap/over-cap payloads sized against 65 536 bytes and the human budget), `tests/fixtures/steer/credentials.ts` (the registered sentinel plus the unregistered token-shaped table), `tests/fixtures/steer/ask-matrix.ts` (owner/coordinator/answered populations and the three join states), and `tests/fixtures/steer/golden/**` (the four human forms and their `data`, with `regenerate.ts`).
+- **Fixtures.** Live under `tests/fixtures/**` and are never named `*.test.ts`. New: `tests/fixtures/steer/harness.ts` (in-process composition over an injected clock, id factory, state port, phase read, ledger view, secrets record, and origin source), `tests/fixtures/steer/cases.ts` (record fixtures: bound/unbound origin, ttl cells across the declared `<integer><unit>` grammar and its four refusal classes, the lifecycle matrix, the value-refusal table), `tests/fixtures/steer/phase-boundary.ts` (the three boundary routes plus the closed form, with the delivered phase vocabulary), `tests/fixtures/steer/bounds.ts` (at-cap/over-cap payloads sized against 65 536 bytes and the human budget, plus the 1/20/21/25-due payload-list fixtures whose landing side is uncapped), `tests/fixtures/steer/credentials.ts` (the registered sentinel plus the unregistered token-shaped table), `tests/fixtures/steer/ask-matrix.ts` (owner/coordinator/answered populations and the three join states), `tests/fixtures/steer/mounting.ts` (the captured 22-entry base family list, so the delta is stated once), and `tests/fixtures/steer/golden/**` (the four human forms and their `data`, with `regenerate.ts`).
 - **Reused delivered fixtures.** `tests/fixtures/blockers/{harness,records,ranking}.ts` and `tests/fixtures/blockers/{cases,matrix,policy,bounds}/**` for asks and the ledger; `tests/fixtures/phase/**` and `tests/fixtures/state/harness.ts` for the boundary read; `tests/fixtures/credentials/cases.ts` for the registered-secret table; `tests/fixtures/projects/{production,state-scope,temp-repos,host-root}.ts` for real checkouts; `tests/fixtures/entrypoint/programs.ts`; `tests/fixtures/help-guide/coverage.json`; `tests/golden/helpers.ts`; `tests/behaviour/verify-support.ts` (`guardStore`, `VerifyCallRecorder`).
 - **Real-checkout discipline.** Only the origin-derivation, guard-on-derived-value, mounting-composition, and write-discipline cases use real checkouts; every other case uses the synthetic harness. The invoking checkout in those cases is real so the derived key is not a fixture constant.
 - **Goldens.** Committed artifacts for the four human forms (`tests/fixtures/steer/golden/{send,list,read,complete}.txt`) and their envelopes (`…/{send,list,read,complete}.json`), plus the existing help goldens for the other families used by `TC-STEER-063`. Each has a `regenerate.ts`; regeneration is explicit and its diff must show only the declared delta. These are **new** artifacts — no delivered golden is regenerated by this change.
@@ -1762,7 +1772,7 @@ Every case is automated under `bun test` except `TC-STEER-090`, which is an exec
 | TC-STEER-001 | `tests/behaviour/steer-send.test.ts` | `bun test tests/behaviour/steer-send.test.ts` | Real checkout + PM context; injected clock/id factory; empty store; record key set | To Implement |
 | TC-STEER-002 | `tests/behaviour/steer-send.test.ts` (unbound cells) | `bun test … --filter unbound-origin` | Real checkout without PM context; no-binding twin; bound twin control | To Implement |
 | TC-STEER-003 | `tests/behaviour/steer-send.test.ts` (override cells) | `bun test … --filter drawn-defaults` | Flag matrix; clock advance after filing; 160-char ref | To Implement |
-| TC-STEER-004 | `tests/behaviour/steer-refusals.test.ts` + `tests/fixtures/steer/cases.ts` | `bun test tests/behaviour/steer-refusals.test.ts` | Refusal table with at-cap twins; store read counter `0`; tree snapshot | To Implement |
+| TC-STEER-004 | `tests/behaviour/steer-refusals.test.ts` + `tests/fixtures/steer/cases.ts` + `tests/structure/steer-contract.test.ts` | `bun test tests/behaviour/steer-refusals.test.ts tests/structure/steer-contract.test.ts` | Refusal table: text/ttl (zero, negative, oversized, malformed)/flag/ref cells with `30d`-maximum and 160-char accepting twins; read counter `0`; tree snapshot; single shared ttl validator | To Implement |
 | TC-STEER-005 | `tests/behaviour/steer-refusals.test.ts` (grammar cells) | `bun test … --filter grammar` | 10 grammar cells; zero-read counter; help-path control | To Implement |
 | TC-STEER-006 | `tests/behaviour/steer-records.test.ts` + `tests/structure/steer-contract.test.ts` | `bun test tests/behaviour/steer-records.test.ts tests/structure/steer-contract.test.ts` | Byte-diff store, 100 filings, forced id collision, no derived-field scan | To Implement |
 | TC-STEER-007 | `tests/structure/steer-contract.test.ts` + `tests/behaviour/steer-records.test.ts` | `bun test tests/structure/steer-contract.test.ts` | Exported schema/vocabularies; non-owner record; malformed variants | To Implement |
@@ -1771,7 +1781,7 @@ Every case is automated under `bun test` except `TC-STEER-090`, which is an exec
 | TC-STEER-011 | `tests/behaviour/steer-read-landing.test.ts` (open routes) | `bun test … --filter boundary-open` | `tests/fixtures/steer/phase-boundary.ts`; latest-completed-entry cell; reordered fixture | To Implement |
 | TC-STEER-012 | `tests/behaviour/steer-read-expiry.test.ts` | `bun test tests/behaviour/steer-read-expiry.test.ts` | Elapsed note at `>=` boundary; expiry record count; snapshot; repeat read | To Implement |
 | TC-STEER-013 | `tests/behaviour/steer-read-boundary-closed.test.ts` | `bun test tests/behaviour/steer-read-boundary-closed.test.ts` | In-progress phase record; three notes; append counter `0`; asks presence cell | To Implement |
-| TC-STEER-014 | `tests/behaviour/steer-read-landing.test.ts` (batch cells) | `bun test … --filter batched-landing` | Five-note rank matrix with reversed store order; five outcome records | To Implement |
+| TC-STEER-014 | `tests/behaviour/steer-read-landing.test.ts` (batch cells) | `bun test … --filter batched-landing` | Five-note rank matrix with reversed store order; five outcome records; `omitted: 0`; idempotent second read | To Implement |
 | TC-STEER-015 | `tests/behaviour/steer-read-idempotency.test.ts` | `bun test tests/behaviour/steer-read-idempotency.test.ts` | Land+expire then re-read; byte comparison across two repeats; append counter | To Implement |
 | TC-STEER-016 | `tests/behaviour/steer-read-idempotency.test.ts` (cardinality cells) | `bun test … --filter outcome-cardinality` | Five notes with three pre-resolved; store scan for per-note outcome count; inconsistent-store cell | To Implement |
 | TC-STEER-017 | `tests/behaviour/steer-read-expiry.test.ts` + `tests/structure/steer-contract.test.ts` | `bun test … --filter ttl-boundary` | Pure predicate at −1 ms / +0 / +1 ms; clock-shift pair; no-ambient-clock assertion | To Implement |
@@ -1792,10 +1802,10 @@ Every case is automated under `bun test` except `TC-STEER-090`, which is an exec
 | TC-STEER-051 | `tests/behaviour/steer-credentials.test.ts` (ref cells) | `bun test … --filter ref-path` | Sentinel in `--ref` on `send` and `complete`; landed note; benign-ref continuation | To Implement |
 | TC-STEER-052 | `tests/behaviour/steer-credentials.test.ts` (origin cells) | `bun test … --filter origin-path` | Real checkout with sentinel-bearing key and PM-context ref; benign twin | To Implement |
 | TC-STEER-053 | `tests/behaviour/steer-credentials.test.ts` + `tests/structure/steer-contract.test.ts` | `bun test … --filter no-pattern-layer` | Unregistered token-shaped table; registered control; guard dependency set; single secrets record | To Implement |
-| TC-STEER-060 | `tests/structure/steer-mounting.test.ts` + extends five composition suites | `bun test tests/structure/steer-mounting.test.ts tests/structure/entrypoint-bin.test.ts tests/structure/board-mounting.test.ts tests/structure/events-production-composition.test.ts tests/structure/dispatch-attempts-composition.test.ts tests/structure/daemon-production-composition.test.ts` | Delivered set captured as a fixture constant; production composer without steer runtime; root help capture | To Implement + Existing – Update (five count assertions) |
+| TC-STEER-060 | `tests/structure/steer-mounting.test.ts` + the base-list suites | `bun test tests/structure/steer-mounting.test.ts tests/structure/entrypoint-bin.test.ts tests/structure/board-mounting.test.ts tests/structure/events-production-composition.test.ts tests/structure/dispatch-attempts-composition.test.ts tests/structure/daemon-production-composition.test.ts tests/behaviour/{repos-help,board-help,events-mount-help,ceremony-cli}.test.ts` | 22-entry base captured in `tests/fixtures/steer/mounting.ts`; production composer without steer runtime; root help capture; family-count scan for a stale `22` | To Implement + Existing – Update (count 22 → 23 in every pinning suite) |
 | TC-STEER-061 | `tests/behaviour/steer-help.test.ts` | `bun test tests/behaviour/steer-help.test.ts` | Empty environment; store/git/transport/spawn counters; brand swap | To Implement |
 | TC-STEER-062 | `tests/checks/help-guide-coverage.test.ts`, `tests/checks/reference-page-parity.test.ts`, `tests/checks/steer-mutants.test.ts` | `bun test tests/checks/help-guide-coverage.test.ts tests/checks/reference-page-parity.test.ts` | Inventory row + page; row-count comparison; two mutation arms | Existing – Update + To Implement |
-| TC-STEER-063 | `tests/structure/steer-mounting.test.ts` (isolation) + `tests/structure/entrypoint-bin.test.ts` + `tests/checks/steer-mutants.test.ts` | `bun test tests/structure/steer-mounting.test.ts tests/structure/entrypoint-bin.test.ts` | Per-family help goldens; delivered set constant; two mutation arms | To Implement + Existing – Update |
+| TC-STEER-063 | `tests/structure/steer-mounting.test.ts` (isolation) + `tests/structure/entrypoint-bin.test.ts` + `tests/checks/steer-mutants.test.ts` | `bun test tests/structure/steer-mounting.test.ts tests/structure/entrypoint-bin.test.ts` | Per-family help goldens; base-set constant; four mutation arms (unmounted, uncomposed, partially-moved count, output rewrite) | To Implement + Existing – Update |
 | TC-STEER-070 | `tests/behaviour/steer-errors.test.ts` | `bun test tests/behaviour/steer-errors.test.ts` | Landed note; foreign-store id; empty id; append counter and snapshot | To Implement |
 | TC-STEER-071 | `tests/behaviour/steer-errors.test.ts` (grammar cells) | `bun test … --filter read-positional` | `read <id>` cells; store read counter `0`; plain-read control; help consistency | To Implement |
 | TC-STEER-072 | `tests/behaviour/steer-errors.test.ts` (store matrix) + `steer-read-landing.test.ts` | `bun test … --filter queue-unavailable` | `guardStore` four modes × four subcommands; readable twins; unverified-append mutation | To Implement |
@@ -1806,7 +1816,7 @@ Every case is automated under `bun test` except `TC-STEER-090`, which is an exec
 | TC-STEER-080 | `tests/behaviour/steer-purity.test.ts` + `tests/checks/privacy-literals.test.ts` + `forbidden-literals.test.ts` | `bun test tests/behaviour/steer-purity.test.ts tests/checks/privacy-literals.test.ts tests/checks/forbidden-literals.test.ts` | Transport/tracker/provider/spawn/timer/socket recorders; brand swap; import-set assertion; state-root diff | To Implement + Existing – Update |
 | TC-STEER-081 | `tests/behaviour/steer-determinism.test.ts` + `tests/golden/steer.test.ts` | `bun test tests/behaviour/steer-determinism.test.ts tests/golden/steer.test.ts` | Four forms × two runs; four permutations; new goldens + `regenerate.ts`; identity uniqueness | To Implement |
 | TC-STEER-082 | `tests/behaviour/steer-bounds.test.ts` + `tests/structure/steer-contract.test.ts` | `bun test tests/behaviour/steer-bounds.test.ts` | At-cap/over-cap sized fixtures; byte measurement on serialized `data`; four guard mutants | To Implement |
-| TC-STEER-083 | `tests/behaviour/steer-bounds.test.ts` (batch cells) | `bun test … --filter read-batch` | 1/20/25-due fixtures; drain-to-empty loop; per-read cap + total-landed equality | To Implement |
+| TC-STEER-083 | `tests/behaviour/steer-bounds.test.ts` (payload-list cells) | `bun test … --filter landing-vs-display` | 1/20/21/25-due fixtures; 21 and 25 outcome records against a 20-row payload; rank-cut assertions; zero-append second read; receipt sweep incl. unlisted notes; five mutants | To Implement |
 | TC-STEER-084 | `tests/behaviour/steer-write-discipline.test.ts` | `bun test tests/behaviour/steer-write-discipline.test.ts` | Append/read-back call order; per-file hashes; three mutation arms; real checkout | To Implement |
 | TC-STEER-085 | `tests/behaviour/steer-read-cost.test.ts` | `bun test tests/behaviour/steer-read-cost.test.ts` | Counting wrappers on every seam; 0/12-ask cells; path audit | To Implement |
 | TC-STEER-090 | — (execution record) | `TMPDIR=$PWD/tmp/tmpdir pnpm check`; `git diff --check`; `./scripts/lint-commit-range.sh --base <base>` | `tmp/tmpdir` present; results recorded in §10 and pm-notes | Manual (recorded) |
@@ -1833,7 +1843,8 @@ Every case is automated under `bun test` except `TC-STEER-090`, which is an exec
 | **R-TP-8 — Mounting that advertises a command which cannot answer (RSK-8).** | The mount is one unit: prompt-set membership and the moved count assertion, composition without a test-supplied runtime, root help, family help, page, inventory row, and five mutants (`TC-STEER-060`..`063`, `096`). |
 | **R-TP-9 — The asks join drifts into a second projection (RSK-7).** | `TC-STEER-030` compares against the delivered view's own output in the same process; `TC-STEER-031` proves the PDR-0003 map is the only default source; `TC-STEER-032` proves no ledger write and one ledger read. |
 | **R-TP-10 — Determinism claimed from a single run.** | `TC-STEER-081` compares two runs byte-for-byte on all four forms plus four permutations with new committed goldens; `TC-STEER-022` proves the derived-order property by mutation. |
-| **R-TP-11 — The family-count arithmetic is stale and the mount is pinned to a wrong literal (RSK-8, `OQ-TP-1`).** A literal `22` assertion would make a correct mount red, and an implementer "fixing" it to `23` in one place leaves five suites disagreeing. | `TC-STEER-060` asserts the delivered set plus exactly one, with the count expectation derived from one constant, and asserts all five composition suites moved together. The spec sections are reported for reopening rather than silently corrected here. |
+| **R-TP-11 — The family-count move is partial (RSK-8).** The declared delta is 22 → 23, and the base list is pinned in the entrypoint, board-mounting, events/dispatch/daemon composition, and ceremony suites *and* derived in the family-help suites; moving some and not others leaves the tree disagreeing in whichever direction is not exercised. | `TC-STEER-060` asserts the 22-entry base from one captured constant, that the mounted count is exactly 23, that every named pin reads 23, and that a repo-wide scan finds no stale `22`; `TC-STEER-063` carries the mutant that moves the structure suites and leaves one help suite behind. |
+| **R-TP-12 — The display cap binds the landing write (RSK-3).** A read that lists 20 of 25 due notes could pass a "payload looks right" test while five receipts never exist — the notes are silently lost, not merely unlisted, which is the failure mode `AC-F3-4` now forbids explicitly. | `TC-STEER-083` counts outcome records in the store (25 for 25 due, 21 for 21), asserts the payload lists 20 with `omitted` counted, asserts nothing remains queued after the read, and asserts the second read appends zero — with a mutant that caps the write and one that rolls the overflow forward. `TC-STEER-082` repeats the size-21 separation. |
 
 ### 8.2 Assumptions
 
@@ -1845,23 +1856,29 @@ Every case is automated under `bun test` except `TC-STEER-090`, which is an exec
 - The registered-secrets record is injectable in tests and is the same object the serialization redaction chokepoint consumes (asserted in `TC-STEER-053`).
 - Exact suite file names, seam shapes, and helper names are delivery-bound (`AMB-TP-2`); behaviours, identities, closed vocabularies, bounds, and AC traceability are not.
 - `delivery.steer.v1` is one payload identity across four forms (DEC-3), asserted by a single `schemaVersion` and four per-form key sets (`TC-STEER-073`).
+- The delivery base registers exactly **22** prompt-required families (`ceremony` the 22nd) and that list is stable for the duration of this change, so the mount delta is 22 → 23 and the captured base constant in `tests/fixtures/steer/mounting.ts` is the single statement of 22 (`TC-STEER-060`).
+- The `--ttl` grammar in §8.3 (`<positive-integer><unit>`, unit `s|m|h|d`, max `30d`, default `24h`) is the only accepted form; a delivery that supports additional spellings does so as a deliberate contract change, not as a parser convenience (`TC-STEER-004`).
+- The landing write and the payload listing are separate bounds (AC-F3-4, DM-8): the store's outcome records, not the listed rows, are the authority for "every due note landed" (`TC-STEER-083`).
 
 ### 8.3 Open Questions
 
-**Two spec-text defects and one ambiguity are open and reported to the spec phase; none blocks delivery of the properties, because each has a tree-invariant or exhaustive case behind it.**
+**None.** Every item this plan raised at v1.0 was resolved by spec v1.1 and is now a declared rule with an owning AC and a case that asserts it — nothing is carried into delivery as an interpretation.
 
-| ID | Question | Blocking? | Owner / routing |
-|---|---|---|---|
-| `OQ-TP-1` | **The family-count arithmetic in `AC-F8-1` is stale.** Base `cfb0ce8d` already carries 22 prompt-required families (`PROMPT_REQUIRED_COMMANDS` = 22; `board` at index 20, `ceremony` at index 21 merged as GH-296 in the base; `tests/structure/entrypoint-bin.test.ts:544` pins that list, and `board-mounting`, `events-production-composition`, `dispatch-attempts-composition`, `daemon-production-composition` all assert 22). Steer therefore becomes the **23rd** family, so "among 22 families", §4.1's "22 registered root families", §8.5's "21 → 22", DEC-9's "twenty-second", §16.1's "CLI command registry row (22 families)", and DoD-12 cannot be satisfied by a correct mount. | No — `TC-STEER-060`/`063` assert the tree-invariant delta and every suite's count moves from one constant. | `@pm` → reopen spec phase (§4.1, §8.5, DEC-9, §16.1, §17 AC-F8-1, §17.1 DoD-12) and restate as 22 → 23 / twenty-third. |
-| `OQ-TP-2` | **`AC-F9-1`'s read-target branch has no grammar.** `AC-F9-1` and the §8.3 exit-projection row 3 say "`complete` or `read` target id", but the §8.3 grammar gives `read` no positional ("`list` and `read` accept none") and F-3 defines `read` as the all-notes batch read point. Adding an id positional to `read` would contradict F-3. | No — `TC-STEER-070` covers `complete` exhaustively; `TC-STEER-071` pins the declared grammar and makes the contradiction visible. | `@pm` → reopen spec phase (§17 AC-F9-1, §8.3 exit projection) and either narrow the criterion to `complete` or declare the read-target form explicitly. |
-| `OQ-TP-3` | **`AC-F3-4` and `DM-8` do not compose above 20 due notes.** "All due notes land in one batch" versus "read batch ≤ 20 notes per read with counted overflow" admits three readings (landing cap, render cap, deferred batch). | No — `TC-STEER-083` asserts the no-loss invariant plus the exhaustive ≤ 20 population, where all readings agree. | `@pm` → decide at plan authoring or reopen as a spec clarification (§17 AC-F3-4, DM-8, §8.3 contract shape); no test asserts an unstated resolution. |
-| `AMB-TP-3` | **The `--ttl` duration grammar is undeclared** (`DM-1`). The non-positive cell of `AC-F1-2` cannot be written without inventing syntax. | No — delivery binds the parser; `TC-STEER-004` asserts the refusal *outcome* and the at-cap twin. | Delivery-bound; recorded here so a grammar change is a deliberate decision, not a test workaround. |
+| Closed item | Resolution in spec v1.1 | Asserted by |
+|---|---|---|
+| `OQ-TP-1` — family-count arithmetic | The delivered base is declared as 22 (`ceremony` the 22nd) and steer mounts as the twenty-third, delta 22 → 23 (AC-F8-1, DEC-9, §4.1, §8.5, DoD-12). | `TC-STEER-060` (base constant, count 23, every pin, stale-`22` scan), `TC-STEER-063` (partial-move mutant) |
+| `OQ-TP-2` — the read-target branch | `steer.unknown-id` is scoped to `complete` alone; `steer read <id>` is a declared `fallback.invocation` grammar refusal because `read` accepts zero arguments (AC-F9-1, F-9, §8.3 grammar and exit projection). | `TC-STEER-070` (unknown/foreign/empty id on `complete`), `TC-STEER-071` (contract refusal on `read`, never `steer.unknown-id`) |
+| `OQ-TP-3` — landing versus display cap | The landing write is uncapped — every due note lands and is receipted, nothing dropped, deferred, or rolled — while the read payload lists ≤ 20 in rank order with counted overflow, so a larger batch is fully applied while partially listed (AC-F3-4, DM-8, NFR-4, AC-F10-3). | `TC-STEER-083` (25 due → 25 receipts, 20 listed, `omitted: 5`, zero-append second read, five mutants), `TC-STEER-082` (size-21 separation) |
+| `AMB-TP-3` — the `--ttl` grammar | §8.3 declares `<positive-integer><unit>` with unit `s|m|h|d`, maximum `30d` (2 592 000 s), default `24h`; zero, negative, oversized, and malformed values are `input.value.rejected` value violations refused pre-write (DM-1, DM-8, AC-F1-2). | `TC-STEER-004` (all four refusal classes, unit coverage, `30d`-maximum twins), `TC-STEER-003` (per-unit parsing and `expiresAt` derivation) |
+
+The two remaining §3.5 entries are test-methodology declarations (how a property is measured), not contract questions, and neither blocks delivery.
 
 ## 9. Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-16 | @test-plan-writer | Initial test plan against spec v1.0. All 24 ACs of §17 bound to 57 cases in ten blocks: filing and the shared record 001–008; boundary delivery, receipts, and expiry 010–018; aging, rank, and the queue view 020–025; asks 030–032; completion 040–042; the no-secrets guard 050–053; mounting 060–063; classification and error-table registration 070–076; purity, determinism, bounds, write discipline, and read cost 080–085; quality gate and non-vacuity controls 090–096. Inherited `SC-M2-S5-01` (→ 010, 091) and `SC-M2-S5-02` (→ 012, 018) by name with their mapping stated and their `data.receipt` path reconciled per spec Appendix C. Two spec-text defects reported for reopening — the stale family-count arithmetic (`OQ-TP-1`, affecting §4.1 / §8.5 / DEC-9 / §16.1 / AC-F8-1 / DoD-12) and `AC-F9-1`'s ungrammatical read-target branch (`OQ-TP-2`) — each backed by a tree-invariant case rather than a TODO. One spec tension recorded (`OQ-TP-3`, `AC-F3-4` vs `DM-8` above 20 due notes) and one delivery-bound ambiguity (`AMB-TP-3`, the `--ttl` grammar), plus two methodology declarations (`AMB-TP-1` human allocation, `AMB-TP-2` seam shapes). Every case names a test file under `tests/**`, its injection requirements, its status, and a failing-first observable. No TODO row, no unmapped AC, no orphan case; §5.1, §5.2 and §7 id sets identical. |
+| 1.1 | 2026-11-16 | @test-plan-writer | Reconcile to spec v1.1, which closed the four findings v1.0 reported. **No case id was added, removed, or renumbered**; nine cases were rewritten in place and the total stays at 57. `TC-STEER-060` now asserts the declared mount: the 22-entry delivered base captured as one fixture constant, the mounted count **23**, delta 22 → 23, every family-count pin at 23 across the entrypoint, board-mounting, events/dispatch/daemon composition, ceremony, and the family-help suites, plus a repo-wide scan for a stale `22` and the non-mirror-count mutant. `TC-STEER-063` adds the partial-move and output-rewrite mutants. `TC-STEER-070`/`071` are re-cut on the new scope: `steer.unknown-id` is `complete`-only (unknown, foreign, and empty ids), and `steer read <id>` is the declared `fallback.invocation` refusal that can never emit a `steer.*` identity. `TC-STEER-083` is rewritten to the resolved landing-versus-display contract: 21 and 25 due notes produce 21/25 outcome records and receipts while the payload lists 20 with `omitted` counted and `truncated` set, nothing remains queued, the second read appends zero, unlisted notes still carry seed-shaped receipts, and five mutants prove the separation; `TC-STEER-082` adds the size-21 separation and the fifth mutant, and `TC-STEER-014` states the display bound at five notes. `TC-STEER-004` now enumerates the full `--ttl` matrix (zero, negative, oversized, malformed, with `30d`-maximum and 160-char accepting twins and a no-coercion assertion) and `TC-STEER-003` asserts per-unit parsing and `expiresAt` derivation. Retired the four v1.0 substitutions (`OQ-TP-1`, `OQ-TP-2`, `OQ-TP-3`, `AMB-TP-3`) and replaced `§8.3` with a closure table citing the spec section and the owning cases; `§3.5` now carries only `AMB-TP-1` and `AMB-TP-2`. Updated `§1`, `§1.2` (`GAP-T4..T6` restated as resolved rules), `§2` (spec v1.1 and the four bound corrections), `§3.1` (`AC-F1-2`, `AC-F3-4`, `AC-F8-1`, `AC-F9-1`, `AC-F10-3`), `§3.2` (DM-1, DM-8, command grammar and `--ttl`, exit projection, prompt-required composition), `§3.3` (NFR-4), `§3.4` (no reopening caveat), `§4` (structure, mutation arms), `§5.1`, `§5.2`, `§6` (ttl/landing fixtures, mounting base constant), `§7` (five rows), `§8.1` (R-TP-11 re-cut, new R-TP-12), `§8.2` (three declared assumptions), and the summary. 24 ACs still bound; §5.1, §5.2 and §7 id sets identical at 57. |
 
 ## 10. Test Execution Log
 
@@ -1872,3 +1889,5 @@ No case has been executed against a new implementation at authoring time; this p
 | — | — | — | No executions yet. |
 | TC-STEER-090 | — | Pending | `TMPDIR=$PWD/tmp/tmpdir pnpm check`, `git diff --check`, and the phase-9 range lint verdict are recorded here and in pm-notes `notes:` at the final delivery phase. |
 | TC-STEER-076 | — | Pending | The four-way tuple (143 / 142 / 59 / 2 / 3 / 143) is recorded here with the sync check's exit code when the classification phase closes. |
+| TC-STEER-060 | — | Pending | The base constant (22) and the mounted count (23) are recorded here with the family-count scan result when the mounting phase closes. |
+| TC-STEER-083 | — | Pending | The 21- and 25-due cells are recorded here with the outcome-record counts and the payload `omitted`/`truncated` values when the bounds phase closes. |
