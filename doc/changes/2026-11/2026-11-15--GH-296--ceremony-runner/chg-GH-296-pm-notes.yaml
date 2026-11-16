@@ -34,7 +34,7 @@ phases:
     completed: 2026-11-16T12:44:14.191Z
   dod_check:
     started: null
-    completed: null
+    completed: 2026-11-16T12:45:54.855Z
   pr_creation:
     started: null
     completed: null
@@ -627,5 +627,38 @@ notes:
       (pretypecheck build 6/6 packages, tests/types project clean). Committed
       through the commit primitive as 023eee77 (fix(GH-296): update
       packages/core/src/contracts/ceremony.ts), 4 files staged, no scope drift."
+    type: info
+    date: "2026-11-16"
+  - text: "Quality gates final verdicts, all on HEAD 976e5366:
+      TMPDIR=$PWD/tmp/tmpdir PATH=\"$PWD/node_modules/.bin:$PATH\" pnpm check
+      exit 0 (lint 0 errors; format clean; typecheck green; 9452 pass / 4 skip /
+      0 fail across 9456 tests in 1187 files; boundaries 431 modules no
+      violations; ambient-globals, workspace-entrypoints, secret-read-boundary
+      OK; memory-lint 0 errors; prompt-conformance 5 clean; help-guide-coverage
+      covered; exports-parity 5 pass). Range lint VERDICT PASS: base main-tools,
+      merge-base 2475ecd8, head 976e5366, 42 commits in range, 0 offending,
+      binary commitlint (repository-local). Doc distribution guard OK, no drift,
+      95 in-scope docs."
+    type: info
+    date: "2026-11-16"
+  - text: "dod_check evidence: registry shows clarify_scope through quality_gates
+      completed (recordCount 6512, verified); plan phases 1-12 each carry a
+      pm-notes notes entry naming the phase id, commit hash(es), and test result
+      (delivery phases 1-11, remediation slices A-D, phase 12, sync, doc
+      reconciliation); all 50 spec ACs mapped and verified by the passing suites
+      and the two review iterations; documentation complete with no residual gap
+      reported by the doc-syncer; both scenario seeds SC-M2-S3-01/02 delivered
+      (TC-CEREMONY-047/048). DoD-1..DoD-14 of the spec checked against delivered
+      evidence: four verbs mounted in a 22-family prompt set, one validator for
+      built-ins and projects, parity suite with negative cases,
+      artifact-verified resumable compaction, bounded idempotent catch-up,
+      declaration-only project ceremony case, single-source tier engine,
+      ledger-landing records with fold status, comparison record with
+      insufficient-sample at n=0, retro levels with null-retro success, two
+      error identities with the sync check green at 140 identities,
+      documentation deltas applied with a redistributable guide, no excluded
+      surface delivered (no metrics, no action registry, no packs, no scheduler,
+      no MCP tool, no LLM in a ceremony path), and the gates green with the
+      declared tmpdir before the PR."
     type: info
     date: "2026-11-16"
