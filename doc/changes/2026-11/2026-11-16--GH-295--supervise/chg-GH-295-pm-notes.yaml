@@ -4,7 +4,7 @@ milestone: "M2: Ceremonies, measurement, and memory"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: null, completed: 2026-11-16T22:21:11.981Z }
-  specification: { started: null, completed: null }
+  specification: { started: null, completed: 2026-11-16T22:33:33.776Z }
   test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
@@ -52,4 +52,20 @@ notes:
       need updates; entrypoint-delta (root family listing) is planning truth,
       not current truth."
     type: "info"
+    date: "2026-11-16"
+  - text: "Retro: fresh worktree had no dist/ build outputs, so the CLI phase
+      command failed at import time (Cannot find module
+      '@delivery-os/adapters/credentials'); fixed by running pnpm build first.
+      Improvement: bootstrap in a fresh worktree should build before invoking
+      any lifecycle CLI."
+    type: "retro"
+    date: "2026-11-16"
+  - text: "Retro: the commit primitive reported a misleading
+      commit.commitlint-failed / 'commitlint rejected the message' when the
+      commitlint binary was absent from PATH (installed in node_modules/.bin but
+      not resolvable via execFile PATH lookup). Fix:
+      PATH=\"$PWD/node_modules/.bin:$PATH\" before CLI invocations, or pnpm
+      exec. Improvement: the primitive could classify binary-absent as a
+      distinct, actionable identity instead of a message rejection."
+    type: "retro"
     date: "2026-11-16"
