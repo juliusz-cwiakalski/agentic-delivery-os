@@ -38,8 +38,9 @@ deliberate and the generic table is left unchanged until milestone exit.
 | [commands/events.md](commands/events.md) | Delivered subscribe event-taxonomy v1 reference contract (GH-290, M2-S13) |
 | [commands/spend.md](commands/spend.md) | Spend v2 breakdown contract |
 | [commands/queue.md](commands/queue.md) | Queue lifecycle verb contract |
-| [commands/board.md](commands/board.md) | Full M2 board contract |
+| [commands/board.md](commands/board.md) | Full M2 board contract, including the additive `ACTIONS` section (GH-287, M2-S10) |
 | [commands/ceremony.md](commands/ceremony.md) | Delivered ceremony runner contract: four verbs, declaration vocabularies, six built-ins, project declarations, catch-up, tiered intake, and the measurement record |
+| [commands/retro.md](commands/retro.md) | Delivered retro contract: the M1-S8 evidence pipeline plus the additive `retro action file\|close\|list` group over the action registry (GH-287, M2-S10) |
 | [commands/steer.md](commands/steer.md) | Delivered steer contract: the four verbs, the shared typed message record, drawn defaults, the boundary read point, receipts and TTL expiry, the asks batch, artifact-ref completion, and exit codes |
 
 ## Story-to-artifact map

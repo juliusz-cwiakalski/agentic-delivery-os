@@ -83,8 +83,10 @@ are folds over the records. This change records one honest
 
 No scheduler, no daemon, no cron/systemd unit, no ceremony pack, no action
 registry, no metrics or board surface, no new event topic, and no MCP tool.
-`ceremony` records data; the metric presentation and the retro action registry
-belong to their own stories.
+`ceremony` records data; the metric presentation belongs to its own story, and
+filing, aging, and closure of actions are the `retro action` group in the retro
+command family ([retro.md](retro.md)). The retro ceremony reads the registry's
+recorded actions through the composed follow-through producer.
 
 ## See also
 

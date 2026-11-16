@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The `ceremony` family and the ceremony layer: four verbs (list, run, resume, catch-up) over one declaration contract (`delivery.ceremony.declarations.v1`) with closed step, slot, verification, trigger, cadence, scope-key, recorded-trigger and verdict vocabularies plus fixed bounds; six built-in declarations (morning brief, retro evidence pass, sprint rollover, night-watch, testing-session assessment, decision-record mirror sync) executed through one runner path; deterministic intake (declaration-held scope key, note or cadence-derived window, recorded trigger provenance), artifact-verified per-step execution with read-back verification, durable `ceremony.run` and `ceremony.step` records with derived durations, phase-boundary compaction, resume from the first unverified step, and single-window catch-up with identity-based satisfaction; project declarations in one committed `<configDirectoryName>/ceremonies.yaml` document with no tooling change; the pure tier engine over the delivered plan `tier` and pm-notes `variant` phase sets with a `tier-mismatch`/`unresolved-phase`/`unevaluated-trigger` finding vocabulary; the four sub-R1 retro levels with the concept's fixed note schema and follow-through-first agenda; the ceremony artifact family; and exactly two `ceremony.*` error identities under a new `ceremony` domain kind."
 links:
-  related_changes: ["GH-296", "GH-298"]
+  related_changes: ["GH-296", "GH-287", "GH-298"]
   contracts:
     - "packages/core/src/contracts/ceremony.ts"
     - "packages/core/src/contracts/ceremony-builtins.ts"
@@ -36,7 +36,7 @@ The runner adds no event topic, no MCP tool, no scheduler, no model call, no met
 ### 2.1 Problem Statement
 
 - **Problem:** Recurring factory rituals are prose and judgement unless they are units. A ritual whose inputs, steps, rendered output, verification, and behaviour after a miss live in habit cannot be checked — that a brief was rendered, that a retro note carries a follow-through section, that an owner's testing note received a coverage verdict, or that a decision record reached an affected repository — and a missed window is indistinguishable from a quiet one. A rerun without an idempotency anchor duplicates work instead of appending an addendum, ceremony time stays a self-reported proxy, a declared tier is a label rather than a reduced obligation, and a project ritual needs bespoke code. The ceremony layer removes each of those failure modes by making the ritual a declaration executed by one deterministic runner: artifact-verified steps, a recorded run identity, bounded catch-up, the plan tier and pm-notes variant consumed as one mapping, and durable per-step durations.
-- **Affected Users:** Coordinators and owners running the recurring rituals, agents that invoke a ceremony instead of improvising one, reviewers who need a run's evidence, auditors reading the durable records, and the later metric and action-registry surfaces that consume these records.
+- **Affected Users:** Coordinators and owners running the recurring rituals, agents that invoke a ceremony instead of improvising one, reviewers who need a run's evidence, auditors reading the durable records, and the metric, board, and action-registry surfaces that consume these records.
 - **Business Impact:** A declared, artifact-verified, idempotent, resumable and measurable ceremony unit is the precondition for moving ceremony share at all: `MET-CEREMONY-SHARE` is a `PARTIAL` proxy with no engine able to move it until a ceremony is a declared unit with recorded durations.
 
 ### 2.2 Goals
@@ -226,7 +226,7 @@ Rules:
 - **Idempotent scope keys.** The declaration takes `scopeKey: { kind: "note" }`, so the level's scope is the note's key. A rerun for the same `(scopeKey, window)` returns the recorded verdict; a rerun at a new window appends an addendum and never rewrites a prior note body.
 - **Null retro is a success.** A retro whose evidence supports no finding, action, or lesson is a `verified` run with an explicit empty finding set; nothing is fabricated to fill a quiet window.
 - **The evidence plane is the delivered pipeline.** The evidence step is a read-only fold over the delivered retro evidence records and run records plus the declared citations. The ceremony adds no collector, sidecar, chain, or truth check, and R1 coverage stays the closeout's `retro.run` read.
-- **Actions are handed off.** Declared actions are rendered as a handoff section in the note; filing, the five-field action contract, aging, and closure belong to M2-S10.
+- **Actions are handed off.** Declared actions are rendered as a handoff section in the note; filing, the five-field action contract, aging, and closure are the sibling registry's contract ([Retro Action Registry](feature-retro-action-registry.md)), and the follow-through phase reads the registry's recorded actions through the composed producer.
 - **Levels are ceremony data.** The pipeline's collection grammar stays `change`-only and its registry keeps the four levels `declared`; selecting a level through `retro collect` is still refused there, while the ceremony layer selects the level through the note.
 
 ### 3.10 Measurement and the committed comparison
@@ -415,13 +415,14 @@ One run record, one step record per attempt, and one artifact file per step slot
 |---|---|---|
 | Depends on | Status digest, brief | Morning-brief inputs and the `delivery.brief.v1` render contract, consumed read-only |
 | Depends on | Retro evidence pipeline | Verified evidence, `retro.run` records, and the level trigger model, consumed read-only |
+| Depends on | Retro action registry ([Retro Action Registry](feature-retro-action-registry.md)) | The recorded actions and their verification artifacts behind the follow-through phase, read through the composed producer; filing, aging, closure, and the board actions surface are the registry's contract |
 | Depends on | Machine-readable plan | `PLAN_KNOWN_TIERS` and the required `tier` declaration |
 | Depends on | pm-notes lint and phase transitions | `PM_NOTES_REQUIRED_PHASES_BY_VARIANT`, the pinned per-tier phase sets |
 | Depends on | State layer | Ledger, artifact boundaries, fenced appends, classified damage, retention |
 | Depends on | Entrypoint and self-description | Prompt-required composition, family and verb help, reference-page coverage |
 | Depends on | Measurement baseline | The committed metric definition, formula, status semantics, and comparison protocol |
 | Blocks | the `metrics` surface (M2-S6) | The metric surface consumes runner durations and the committed comparison |
-| Feeds (no recorded board edge) | Retro action registry (M2-S10), board ceremony surface (M2-S4+) | The action handoff and the ceremony state are available; neither surface ships here |
+| Feeds (no recorded board edge) | Board ceremony surface (M2-S4+) | The ceremony state is recorded; no board section projects it |
 | Risk | The declaration vocabulary is too narrow for a real ritual | The six built-ins are the expressiveness proof; a missing vocabulary is a reviewed contract extension, never a silent code path |
 | Risk | A declaration becomes a scripting surface | Closed vocabularies plus the recursive executable-member refusal, asserted structurally |
 | Risk | The mirror sync writes into another repository unintentionally | Declared targets only, dry-run default, preconditions, equality verification, no force path |

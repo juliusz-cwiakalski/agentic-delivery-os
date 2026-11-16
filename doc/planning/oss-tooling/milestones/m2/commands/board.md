@@ -4,8 +4,8 @@ Status: Delivered (M2, GH-297)
 
 ## NAME
 
-`board` - the full M2 board: lanes, gates, owner asks, and parked work across
-managed repository checkouts.
+`board` - the full M2 board: lanes, gates, owner asks, actions, and parked work
+across managed repository checkouts.
 
 ## SYNOPSIS
 
@@ -16,8 +16,10 @@ managed repository checkouts.
 ## DESCRIPTION
 
 The full board, extending the M1 single-screen view. It renders lanes, open
-gates, owner asks, and parked work from the same state source as brief and
-status, so coordination stops re-deriving the world. It reads managed
+gates, owner asks, follow-through actions, and parked work from the same state
+source as brief and status, plus the repository's own action registry, so
+coordination stops re-deriving the world. It
+reads managed
 repository checkouts through the per-repository state scope and host index
 delivered by M2-S11, so one board can span several repositories without mixing
 their state.
@@ -28,8 +30,9 @@ checkout. The board is a host view over repository keys; it is not
 group-scoped, and no board surface enumerates groups.
 
 The production entrypoint composes `board` unconditionally and advertises it
-as the 21st prompt-required family. The four sections project from the shared
-`delivery.status-facts.v1` bundle and the delivered lane/phase fold, and the
+as the 21st prompt-required family. The five sections project from the shared
+`delivery.status-facts.v1` bundle, the delivered lane/phase fold, and the
+repository's own action registry, and the
 repository set resolves through the delivered multi-repository state scope and
 host index (M2-S11). See [../entrypoint-delta.md](../entrypoint-delta.md) for
 the root delta and [../contracts.md](../contracts.md) for the contract.
@@ -46,7 +49,7 @@ the root delta and [../contracts.md](../contracts.md) for the contract.
 
 ## OUTPUT
 
-Text: four sections in fixed order - `LANES`, `GATES`, `ASKS`, `PARKED` - each
+Text: five sections in fixed order - `LANES`, `GATES`, `ASKS`, `ACTIONS`, `PARKED` - each
 row naming its repository key, ref, and owner. A header states the audience,
 scope, selection, repository count, and per-repository collector evidence. An
 empty board or the `unbound` scope renders `observed-empty`. Each section label
@@ -65,6 +68,7 @@ Envelope `data` carries:
 | `lanes[]` | Active lanes with ref, phase, lease holder, and owner |
 | `gates[]` | Open gates with ref, condition, SLA state, drawn default, and owner |
 | `asks[]` | Owner asks with age, drawn default, and default state |
+| `actions[]` | Open retro improvement actions with owner, level, age, aging state, and window count/limit |
 | `parked[]` | Parked work with reason and until timestamp |
 | `collectors[]` | Per-repository `{ collector, outcome, repository }` evidence |
 | `ownerHold` | The host-wide owner-hold fact |
@@ -93,13 +97,15 @@ GATES
 delivery-a-1a2b3c4d  GH-241:owner-review  owner-review  GH-241  age=26h  sla=escalated  default=null  waivedBy=null  owner=owner  cond=owner-review:escalated
 ASKS
 delivery-b-5e6f7a8b  ask-7020  ref=GH-244  age=3h  default=owner-review-first:pending  owner=owner
+ACTIONS
+delivery-a-1a2b3c4d  action-7  owner=agent-role:reviewer  level=window  age=15d  aging=nudged  window=window-2026-11:2/3
 PARKED
 delivery-a-1a2b3c4d  GH-239  reason=peak-window  until=2026-11-06T18:00:00Z  owner=null
 ```
 
 ```
 $ <binary> board --project delivery-a-1a2b3c4d --json
-{"schemaVersion":"delivery.result.v1","runId":"...","exitCode":0,"timing":{...},"data":{"schemaVersion":"delivery.board.v1","scope":"repository","selection":"project","repositories":["delivery-a-1a2b3c4d"],"lanes":[],"gates":[],"asks":[],"parked":[],"stateSource":"delivery.status-facts.v1","omittedBySection":{...},...}}
+{"schemaVersion":"delivery.result.v1","runId":"...","exitCode":0,"timing":{...},"data":{"schemaVersion":"delivery.board.v1","scope":"repository","selection":"project","repositories":["delivery-a-1a2b3c4d"],"lanes":[],"gates":[],"asks":[],"actions":[],"parked":[],"stateSource":"delivery.status-facts.v1","omittedBySection":{...},...}}
 ```
 
 ## ERRORS

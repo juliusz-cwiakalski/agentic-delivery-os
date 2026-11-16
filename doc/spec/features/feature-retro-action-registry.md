@@ -1,6 +1,23 @@
 ---
-ados_distribution: redistributable
+ados_distribution: internal
+id: SPEC-RETRO-ACTION-REGISTRY
+status: Current
+created: 2026-11-16
+last_updated: 2026-11-16
+owners: ["engineering"]
+service: delivery-os
+summary: "The retro follow-through memory behind every retro level: its own validated state boundary with the additive retro.action and retro.action-closure record kinds under the retro.actions and retro.action-closures key prefixes, the five-field filing contract plus verification artifact, outcome verifier, and rollback condition with the all-or-nothing retro.action-incomplete refusal, derived aging on the one pinned basis (time open since the recorded filing timestamp) with the 14-day nudge and 30-day or second-miss escalation, explicit two-plane closure with the both-plane deprioritized/superseded routes and the retro.closure-incomplete refusal, the fixed improvement WIP limit of three with the retro.wip-limit-exceeded refusal, the additive retro action file|close|list verb group, the board ACTIONS section, and the registry follow-through producers behind the ceremony pass and the retro report fold."
+links:
+  related_changes: ["GH-287"]
+  contracts:
+    - "packages/core/src/contracts/action.ts"
+    - "packages/core/src/state/action-registry.ts"
+    - "packages/core/src/domain/action-filing.ts"
+    - "packages/core/src/domain/action-aging.ts"
+    - "packages/core/src/domain/action-closure.ts"
+    - "packages/cli/src/commands/retro.ts"
 ---
+
 # Feature: Retro Action Registry
 
 ## Overview
@@ -9,18 +26,18 @@ The retro action registry is the follow-through memory behind every retro level.
 It validates and records actions through a five-field contract plus a
 verification artifact, derives aging at read time, closes actions only through
 explicit decisions that separate the artifact plane from the outcome plane, and
-bounds each improvement window with a fixed WIP limit. It is delivered by GH-287
-(M2-S10) on top of the delivered retro evidence pipeline and ceremony runner.
+bounds each improvement window with a fixed WIP limit. It sits on top of the
+retro evidence pipeline and the ceremony runner, which hands its declared
+actions to this registry.
 
 ## Business Context
 
 ### Problem Statement
 
-Before this change the retro pipeline folded a read-only follow-through section
-with no producer, and the ceremony runner handed declared actions to a registry
-that did not exist. Actions drifted silently: no owner validation, no verb
-discipline, no measurable outcome or tracker anchor at filing, no aging, no
-escalation, and no explicit-closure rule.
+A follow-through section without a producer is a list, not enforcement: with no
+owner validation, no verb discipline, no measurable outcome or tracker anchor at
+filing, no aging, and no explicit-closure rule, actions drift silently and no
+retro level can tell an applied action from a claimed one.
 
 ### Goals
 
@@ -190,4 +207,8 @@ write discipline, read cost, privacy, hermeticity, disclosure, audit) with a
 - [Ceremony Runner](feature-ceremony-runner.md)
 - [Board](feature-board.md)
 - [Doctor](feature-doctor.md)
+- [State Layer](feature-state-layer.md)
 - [Result Contract](feature-result-contract.md)
+- [CLI Entrypoint and Self-Description](feature-cli-entrypoint.md)
+
+**Change records:** `doc/changes/2026-11/2026-11-16--GH-287--retro-action-registry/`.

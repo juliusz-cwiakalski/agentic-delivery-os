@@ -131,7 +131,7 @@ outside the collector seam.
 
 ## SEE ALSO
 
-- [retro-pipeline.md](retro-pipeline.md) - the evidence pipeline and report fold
-- [retro-action-registry.md](retro-action-registry.md) - records, filing,
-  aging, closure planes, and the WIP limit
-- [../commands.md](../commands.md) - the M2 command inventory and `--help`/`--version`
+- [retro evidence pipeline specification](../../../../../spec/features/feature-retro-pipeline.md) - the evidence pipeline and report fold
+- [retro action registry specification](../../../../../spec/features/feature-retro-action-registry.md) - records, filing, aging, closure planes, and the WIP limit
+- [retro v1](../../m1/commands/retro.md) - the delivered M1-S8 snapshot page
+- [contracts](../contracts.md) - the M2 contract catalogue

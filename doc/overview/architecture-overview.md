@@ -3,13 +3,13 @@ ados_distribution: internal
 id: TOOLING-ARCHITECTURE-OVERVIEW
 status: Draft
 created: 2026-11-01
-last_updated: 2026-11-15
+last_updated: 2026-11-16
 owners: [engineering]
 area: engineering
 document_classification: working-analysis
 links:
   related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, TDR-0012, ADR-0010, TDR-0016, TDR-0023, TDR-0024, TDR-0025]
-  related_changes: ["GH-290", "GH-291", "GH-292", "GH-300", "GH-320"]
+  related_changes: ["GH-290", "GH-291", "GH-292", "GH-300", "GH-320", "GH-287"]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
 
@@ -98,9 +98,9 @@ production composes no lane executor, so a resident daemon runs the declared
 |---|---|
 | `core/src/contracts/` | Data-only ports, normalized primitives, schemas, capability declarations and error vocabulary shared across packages. |
 | `core/src/config/`, `branding/` | Pure layered resolution with provenance; pure brand identity resolution. Exported through core root and `./branding`, respectively. |
-| `core/src/domain/` | PM-notes lint, change verification, declared-battery and merge-transaction evaluation, deploy-verdict evaluation, closeout transaction policy, status aggregation, queue-ready, queue scheduling (graph, leases, ranks, parks), owner-gate SLA evaluation, doctor diagnostics, session-admin policy, harness classification, capability, registry, spawn-environment, liveness, canonicalization, telemetry policy, telemetry frame decode and five-dimension attribution, capsule event rules and candidate promotion, merged-diff marker classification, thread-authorship policy, worktree safety, the spend read-side fold (five-class totals, phase attribution, restarts, resume amplification, cost totals, five-dimension breakdowns, phase timing, and the reconciliation disclosure), the session lifecycle economics budget/resume/view/evidence folds, the coordinator supervision domain (lifecycle decision, artifact-evidence verdict, restart admission, wake evaluation, escalation and reserved-slot projection, instance-lease fold, regime descriptor, and observation projection), the deterministic retro evidence pipeline (collection, truth checks, report/export folds), the ceremony runner (declaration validation, intake and idempotency, artifact-verified agenda execution, compaction, resume, bounded catch-up, mirror planning, the single tier mapping, and the measurement fold), and the pure memory-record lint evaluation. |
+| `core/src/domain/` | PM-notes lint, change verification, declared-battery and merge-transaction evaluation, deploy-verdict evaluation, closeout transaction policy, status aggregation, queue-ready, queue scheduling (graph, leases, ranks, parks), owner-gate SLA evaluation, doctor diagnostics, session-admin policy, harness classification, capability, registry, spawn-environment, liveness, canonicalization, telemetry policy, telemetry frame decode and five-dimension attribution, capsule event rules and candidate promotion, merged-diff marker classification, thread-authorship policy, worktree safety, the spend read-side fold (five-class totals, phase attribution, restarts, resume amplification, cost totals, five-dimension breakdowns, phase timing, and the reconciliation disclosure), the session lifecycle economics budget/resume/view/evidence folds, the coordinator supervision domain (lifecycle decision, artifact-evidence verdict, restart admission, wake evaluation, escalation and reserved-slot projection, instance-lease fold, regime descriptor, and observation projection), the deterministic retro evidence pipeline (collection, truth checks, report/export folds), the ceremony runner (declaration validation, intake and idempotency, artifact-verified agenda execution, compaction, resume, bounded catch-up, mirror planning, the single tier mapping, and the measurement fold), the retro action registry (the all-or-nothing filing gate, the improvement-window projection and fixed WIP limit, the derived aging ladder, the two-plane closure evaluation, and the artifact-oracle ceremony facts), and the pure memory-record lint evaluation. |
 | `core/src/provider/` | Availability chain, quota/peak evaluation, model-profile selection and pacing policy, `data-v1` env-record validation, expiring parks and announcements through injected ports. No session spawn. |
-| `core/src/state/` | Local store, ledger verification, phase transitions and rebuildable projections, the economics restart/exhaustion ledger and view fold, the coordinator record consumer and folds, the telemetry v2 step and baseline families with re-read migration, the spend telemetry read consumer, the retro registry consumer, and the independent evidence sidecar consumer. Runtime APIs confined to `state/driver/`. |
+| `core/src/state/` | Local store, ledger verification, phase transitions and rebuildable projections, the economics restart/exhaustion ledger and view fold, the coordinator record consumer and folds, the telemetry v2 step and baseline families with re-read migration, the spend telemetry read consumer, the retro registry consumer, the sibling action registry consumer, and the independent evidence sidecar consumer. Runtime APIs confined to `state/driver/`. |
 | `core/src/app/`, core `createRuntime` | Application tier: the runtime-neutral state-scope policy (host root, project identity, host index) and the `projects` projections; the dispatch engine, handover ledger, and dispatch gate; the queue, polling, and watch folds; the daemon runtime, control server, dispatch-result, status, supervision, reconcile, and preemption behaviour. `createRuntime` remains an `export declare` composition signature, not a callable implementation. |
 | `cli/bin/`, `cli/src/bin-launcher.ts`, `cli/src/entrypoint.ts`, `production.ts`, `help.ts` | Executable surface: two declared Bun bins (`delivery-os` as the compatibility alias and `jaiship`) over one shared launcher composition, per-bin declared default identities with the working-name override seam, self-description covering root and command help, version, and the install path, the prompt-required composition, and fail-closed containment for an uncomposed invocation. Self-description reads no state, network, git, or configuration. |
 | `cli/src/index.ts`, `edge.ts`, `commands/` | In-process parser/result boundary; config acquisition and optional command registration; thin handlers, the coordinator command family and foreground-loop engine, the mounted daemon lifecycle family, and bounded status collectors. |
@@ -152,12 +152,16 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   [queue-ready](../spec/features/feature-queue-ready.md),
   [scheduling engine](../spec/features/feature-scheduling-engine.md), and
   [dispatch engine](../spec/features/feature-dispatch-engine.md).
-- `board` is the bounded, render-once four-section fleet view: active lanes,
-  open gates, owner asks, and parked work on one screen, projected from the
-  shared `delivery.status-facts.v1` bundle plus the lane/phase fold. Repository
+- `board` is the bounded, render-once fleet view: active lanes,
+  open gates, owner asks, retro improvement actions, and parked work on one
+  screen, projected from the
+  shared `delivery.status-facts.v1` bundle, the repository's own action
+  registry, and the lane/phase fold. Repository
   selection is the invoking checkout by default, `--project <repoKey>` for one
   managed repository, and `--all` for the managed set under the
-  128-included-repository cap with counted overflow. The gates section preserves
+  128-included-repository cap with counted overflow. The actions section carries
+  each open action's owner, level, age, derived aging state, and window
+  count/limit. The gates section preserves
   the delivered SLA: 24 h escalation, 72 h default-on-expiry, declared collector
   unavailability, and at most eight ranked gates per repository. An unwaived
   tracker-observed gate maps to `owner-review` and escalates without
@@ -206,15 +210,20 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   `merge.transaction` record. It is the only landing producer; a re-run replays a
   recorded landing instead of landing twice. See
   [merge and verify deploy](../spec/features/feature-merge-verify-deploy.md).
-- `retro collect|report [--level <name>]` is the learning-plane evidence pipeline.
+- `retro collect|report|action file|close|list [--level <name>]` is the learning-plane evidence pipeline and its follow-through registry.
   Collection folds delivered GET-only sources into an independent append-only,
   HMAC-SHA-256 keyed-chain sidecar outside the delivery state store, records the
   run in the validated retro registry, and evaluates five pipeline-truth checks.
   Reporting folds verified evidence into `{level, findings[], followThrough[],
-  evidenceRefs[]}` with zero model calls. Only `change` (R1) is implemented; the
+  evidenceRefs[]}` with zero model calls; the composed registry reader supplies
+  the recorded actions with provenance inside the fold. The additive `action`
+  verb group files, closes, and lists the retro action registry's records under
+  its own validated boundary, derives aging at read time, and enforces the fixed
+  improvement WIP limit. Only `change` (R1) is implemented; the
   other declared levels refuse with their owning story. A no-eligible-target
   collect is an explicit exit-0 success; export is a bounded library surface with
-  no CLI verb. See the [retro evidence pipeline](../spec/features/feature-retro-pipeline.md).
+  no CLI verb. See the [retro evidence pipeline](../spec/features/feature-retro-pipeline.md)
+  and the [retro action registry](../spec/features/feature-retro-action-registry.md).
 - `spend [--ref <ref>] [--phase <phase>] [--breakdown <field>] [--amplification]` is the read-only
   learning-plane spend fold over the delivered closeout-captured `harness.telemetry`
   records, the v2 per-step and session-baseline telemetry families, and
@@ -386,7 +395,9 @@ Contract homes: [config](../../packages/core/src/config/resolver.ts),
    operation identities and fenced appends. First terminal outcomes are reused;
    failed outcomes may retry. This is a persistent outcome/replay substrate, not
    a separately invented write-ahead-intent protocol. The retro registry is a
-   validated state boundary with three additive kinds; the evidence sidecar is a
+   validated state boundary with three additive kinds, and the sibling action
+   registry is a second validated boundary with two additive kinds in the same
+   `retro.` key family; the evidence sidecar is a
    separate collector-fenced, keyed-chain artifact family outside the store, so
    state salvage cannot mask evidence tampering. The change capsule is a third
    local artifact family inside the change folder: append-only `events.jsonl`

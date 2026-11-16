@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-DOCTOR
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-10
+last_updated: 2026-11-16
 owners: ["engineering"]
 service: delivery-os
 summary: "The read-only doctor command and its bounded delivery.doctor.v1 report: five checks in fixed order (repo, tracker, provider, state, ci), the closed ok/fail/unreachable verdicts, eleven evidence sources, four evidence outcomes, twenty-three reasons, one closed hint template per condition, the structured httpStatus credential-rejection classification, read limits of 50 tracker items and 20 check runs, machine/human bounds, the doctor.check.failed error identity with its deterministic failure summary, per-check containment, quota-free provider diagnosis, the delivery, retro-registry, and action-registry store verdicts in the state check, and zero-write execution."
 links:
-  related_changes: ["GH-224", "GH-229", "GH-232", "GH-236", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288"]
+  related_changes: ["GH-224", "GH-229", "GH-232", "GH-236", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288", "GH-287"]
   related_decisions: ["ADR-0003", "TDR-0005", "TDR-0019"]
   contracts:
     - "packages/core/src/contracts/doctor.ts"
