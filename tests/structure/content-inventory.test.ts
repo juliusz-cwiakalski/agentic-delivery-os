@@ -49,6 +49,16 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "createRetroActionRegistryPort",
     "readActionRegistry",
   ],
+  "core/src/domain/action-aging.ts": ["actionOpenDays", "evaluateActionAging", "secondMissReached"],
+  "core/src/domain/action-closure.ts": [
+    "actionClosures",
+    "actionListEntry",
+    "actionPlanes",
+    "closeRetroAction",
+    "evaluateActionClosure",
+    "listRetroActions",
+    "verificationWindowState",
+  ],
   "core/src/domain/daemon-supervisor.ts": [
     "describeSupervisor",
     "renderOwnershipMarker",

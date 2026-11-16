@@ -167,3 +167,31 @@ describe("TC-ACTION-036 additive command surface and inventory", () => {
     }
   });
 });
+
+describe("TC-ACTION-008 the aging basis has one declaration home", () => {
+  test("the basis constant is declared once and imported everywhere else", () => {
+    const declarations =
+      readFileSync(join(ROOT, "packages/core/src/contracts/action.ts"), "utf8").split(
+        "ACTION_AGING_BASIS =",
+      ).length - 1;
+    expect(declarations).toBe(1);
+    const aging = readFileSync(join(ROOT, "packages/core/src/domain/action-aging.ts"), "utf8");
+    expect(aging).toContain("ACTION_AGING_BASIS");
+    expect(aging).not.toContain("ACTION_AGING_BASIS =");
+    expect(aging).not.toContain('"time-open-since-filing"');
+    expect(aging).not.toContain("Date.now");
+    expect(aging).not.toContain("filedAt?: ");
+  });
+
+  test("no second day-threshold constant exists outside the contract declaration", () => {
+    for (const file of [
+      "packages/core/src/domain/action-aging.ts",
+      "packages/core/src/domain/action-closure.ts",
+      "packages/core/src/domain/action-filing.ts",
+    ]) {
+      const text = textOf(file);
+      expect(text, file).not.toContain("86_400_000");
+      expect(text, file).not.toContain("86_400_000 as const");
+    }
+  });
+});

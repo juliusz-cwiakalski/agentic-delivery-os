@@ -807,6 +807,23 @@ export {
 
 /* ---------------------- coordinator supervision (GH-241) ----------------- */
 
+/** The derived aging ladder (GH-287 F-3; DEC-3, DEC-9). */
+export {
+  actionOpenDays,
+  evaluateActionAging,
+  secondMissReached,
+} from "./action-aging.js";
+/** Explicit two-plane closure and the list projection (GH-287 F-4; DEC-4, DEC-11). */
+export {
+  type ActionClosureEvaluation,
+  actionClosures,
+  actionListEntry,
+  actionPlanes,
+  closeRetroAction,
+  evaluateActionClosure,
+  listRetroActions,
+  verificationWindowState,
+} from "./action-closure.js";
 /** The retro action-registry filing gate and improvement-window projection (GH-287 F-1/F-2/F-5). */
 export {
   ACTION_PLACEHOLDER_TRACKER_TOKENS,

@@ -314,6 +314,21 @@ export {
   resolveQueueSettings,
   serializeProductionSchema,
 } from "./config/index.js";
+export {
+  actionOpenDays,
+  evaluateActionAging,
+  secondMissReached,
+} from "./domain/action-aging.js";
+export {
+  type ActionClosureEvaluation,
+  actionClosures,
+  actionListEntry,
+  actionPlanes,
+  closeRetroAction,
+  evaluateActionClosure,
+  listRetroActions,
+  verificationWindowState,
+} from "./domain/action-closure.js";
 /** The retro action-registry filing gate, windows, aging, and closure (GH-287). */
 export {
   ACTION_PLACEHOLDER_TRACKER_TOKENS,

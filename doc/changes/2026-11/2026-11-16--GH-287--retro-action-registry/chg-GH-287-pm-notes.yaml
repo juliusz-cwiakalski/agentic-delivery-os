@@ -183,8 +183,7 @@ notes:
     type: info
     date: "2026-11-16"
   - text: "Plan phase 2 complete — validated action-registry boundary, all-or-nothing
-      filing gate, and the fixed WIP limit. Commit pending (recorded in the next note
-      entry after commit). Files: domain/action-filing.ts, domain/action-window.ts,
+      filing gate, and the fixed WIP limit. Commit ad72ad68. Files: domain/action-filing.ts, domain/action-window.ts,
       state/action-registry.ts (new); domain/index.ts, state/index.ts, core/src/index.ts;
       tests/fixtures/action/ (store, builders, clock, seed seeder); action-filing +
       action-wip-limit behaviour suites; state-scope, retro-contract, retro-imports,
