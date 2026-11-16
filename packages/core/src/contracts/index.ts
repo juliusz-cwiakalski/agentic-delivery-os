@@ -1565,6 +1565,8 @@ export {
   BOARD_SCHEMA_VERSION,
   BOARD_SCOPES,
   BOARD_SELECTIONS,
+  type BoardActionFact,
+  type BoardActionRow,
   type BoardAskDefaultState,
   type BoardAskFact,
   type BoardAskRow,

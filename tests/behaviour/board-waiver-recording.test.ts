@@ -121,6 +121,7 @@ describe("TC-MERGE-020 board consumes recorded waivers", () => {
       // The payload schema is unchanged: the flip is data population. The one
       // additive key is the shared state-source identity (DEC-3).
       expect(Object.keys(first.envelope.data ?? {}).sort()).toEqual([
+        "actions",
         "asks",
         "audience",
         "collectors",

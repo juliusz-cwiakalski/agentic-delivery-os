@@ -123,6 +123,7 @@
       }
     ],
     "asks": [],
+    "actions": [],
     "parked": [],
     "collectors": [
       {
@@ -147,6 +148,7 @@
       "lanes": 0,
       "gates": 0,
       "asks": 0,
+      "actions": 0,
       "parked": 0
     }
   }

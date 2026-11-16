@@ -94,6 +94,8 @@ import {
 } from "@delivery-os/adapters/session";
 import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
 import {
+  actionListEntry,
+  actionWindowEntries,
   addQueueDependency,
   admitDispatchRestart,
   appendCommandReceipt,
@@ -236,11 +238,13 @@ import {
   validateCeremonyNoteForDeclaration,
   type WatchRead,
   watchLines,
+  windowDisclosures,
   windowSpendEvidence,
 } from "@delivery-os/core";
 import type { BrandingInputError, ResolverInput } from "@delivery-os/core/branding";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
 import {
+  ACTION_WIP_LIMIT,
   type AdapterCapabilityDeclaration,
   AUDIT_IDENTITY_VARIABLE_SUFFIX,
   type AuditAgentIdentity,
@@ -250,6 +254,7 @@ import {
   type BlockerDelegationPolicy,
   BOARD_MAX_LANES,
   BOARD_MAX_REPOSITORIES,
+  type BoardActionFact,
   type BoardAskFact,
   type BoardLaneFact,
   type BoardOwnerHold,
@@ -3201,6 +3206,42 @@ export type BoardHostIndexDocument = {
 };
 
 /** Compose the board runtime over the real tracker read and the state ledger. */
+/**
+ * The board's single named action-registry source (GH-287 F-6): one bounded
+ * read per repository, projected as open actions with their aging state and
+ * the window count/limit disclosure. Damage classifies as unavailable.
+ */
+type BoardActionsReadLocal =
+  | { readonly ok: true; readonly facts: readonly BoardActionFact[] }
+  | { readonly ok: false };
+
+const boardActionsFrom = (store: StateStorePort, nowMs: number): BoardActionsReadLocal => {
+  const read = readActionRegistry(store);
+  if (!read.ok) return { ok: false };
+  if (read.value.malformed.length > 0) return { ok: false };
+  const snapshot = { actions: read.value.actions, closures: read.value.closures };
+  const disclosures = new Map(
+    windowDisclosures(actionWindowEntries(snapshot)).map((entry) => [entry.window, entry]),
+  );
+  const facts: BoardActionFact[] = [];
+  for (const action of snapshot.actions) {
+    const row = actionListEntry(action, snapshot, nowMs);
+    if (row.artifactClosure !== "open") continue;
+    const disclosure = disclosures.get(row.window);
+    facts.push({
+      actionId: row.actionId,
+      owner: row.owner,
+      level: row.level,
+      age: row.age,
+      agingState: row.agingState,
+      window: row.window,
+      windowOpenCount: disclosure?.openCount ?? 0,
+      windowLimit: disclosure?.limit ?? ACTION_WIP_LIMIT,
+    });
+  }
+  return { ok: true, facts };
+};
+
 export const createBoardCommandRuntime = (composition: BoardComposition): BoardCommandRuntime => {
   const instance = composition.github.instance;
   const admitted =
@@ -3405,6 +3446,9 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
       };
     }
     repositoryStores.set(repository, store);
+    // The board's actions surface reads the repository's own action registry
+    // once (GH-287 F-6): a failed read is disclosed and fabricates no row.
+    const actionFacts = boardActionsFrom(store, composition.nowMs());
     const tracker = await readTrackerFor(root, store);
     if (!tracker.ok) return { ok: false, kind: "status", code: tracker.code };
 
@@ -3556,6 +3600,8 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
         lanes,
         ...(omittedLanes > 0 ? { omittedLanes } : {}),
         asks,
+        actions: actionFacts.ok ? actionFacts.facts : [],
+        actionsSource: actionFacts.ok ? "available" : "unavailable",
         parks,
         decisions: records,
       },

@@ -62,6 +62,7 @@ describe("TC-BOARD-033/034 parked work and owner hold", () => {
         lanes: 0,
         gates: 0,
         asks: 0,
+        actions: 0,
         parked: 0,
       });
     } finally {

@@ -11,6 +11,7 @@
  * network access exists in this module.
  */
 
+import type { ActionAgingState } from "./action.js";
 import type { STATUS_FACTS_SCHEMA_VERSION } from "./status.js";
 
 /** The declared escalation threshold: 24 hours in integer milliseconds (DEC-2). */
@@ -148,11 +149,12 @@ export const BOARD_MAX_PHASE_CHARS = 60 as const;
 export const BOARD_MAX_UNTIL_CHARS = 40 as const;
 /** The human per-line byte bound (DEC-9). */
 export const BOARD_MAX_HUMAN_LINE_BYTES = 400 as const;
-/** The human per-section row allocation (DEC-9, AMB-TP-1). */
+/** The human per-section row allocation (DEC-9, AMB-TP-1; GH-287 adds actions). */
 export const BOARD_HUMAN_SECTION_CAPS = {
   lanes: 6,
   gates: 6,
   asks: 4,
+  actions: 6,
   parked: 3,
 } as const;
 
@@ -298,13 +300,35 @@ export type BoardOwnerHold =
       readonly reason?: string;
     };
 
-/** The five-section omission counters (DM-11, NFR-4). */
+/** The six-section omission counters (DM-11, NFR-4; GH-287 adds actions). */
 export type BoardOmittedBySection = {
   readonly repositories: number;
   readonly lanes: number;
   readonly gates: number;
   readonly asks: number;
+  readonly actions: number;
   readonly parked: number;
+};
+
+/**
+ * One open retro action as a board row fact (GH-287 F-6, DM-4). The edge reads
+ * the repository's action registry once and attaches the window count/limit
+ * disclosure; no value is inferred.
+ */
+export type BoardActionFact = {
+  readonly actionId: string;
+  readonly owner: string;
+  readonly level: string;
+  readonly age: number;
+  readonly agingState: ActionAgingState;
+  readonly window: string;
+  readonly windowOpenCount: number;
+  readonly windowLimit: number;
+};
+
+/** One action row on the board payload (DM-4). */
+export type BoardActionRow = BoardActionFact & {
+  readonly repository: string;
 };
 
 /** Per-repository collector evidence on a rendered board (DM-7). */
@@ -367,6 +391,10 @@ export type BoardRepositoryFacts = {
   readonly asks: readonly BoardAskFact[];
   readonly parks: readonly BoardParkedFact[];
   readonly decisions: readonly OwnerGateSlaDecisionRecord[];
+  /** The open actions read from the repository's own registry (GH-287). */
+  readonly actions?: readonly BoardActionFact[];
+  /** The classified action-registry read state, disclosed on render. */
+  readonly actionsSource?: "available" | "unavailable";
 };
 
 /** Everything the pure four-section projection consumes (DM-2). */
@@ -398,6 +426,7 @@ export type BoardData = {
   readonly lanes: readonly BoardLaneRow[];
   readonly gates: readonly BoardGateRow[];
   readonly asks: readonly BoardAskRow[];
+  readonly actions: readonly BoardActionRow[];
   readonly parked: readonly BoardParkedRow[];
   readonly collectors: readonly BoardRepositoryEvidence[];
   readonly ownerHold: BoardOwnerHold;
