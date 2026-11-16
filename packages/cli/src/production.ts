@@ -905,6 +905,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     const maintainsIndex =
       invocation?.command !== PROJECTS_COMMAND_FAMILY &&
       invocation?.command !== REPOS_COMMAND_FAMILY &&
+      invocation?.command !== "board" &&
       invocation?.groupScoped !== true;
     // The legacy detection (GH-288 F-8, AC-F8-2): an unmigrated host root is
     // reported once per state-opening invocation, moves nothing, deletes
@@ -3169,6 +3170,41 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         readProjectGroup,
       },
       repos: { readRepos },
+      // The board is composed unconditionally over the delivered adapters
+      // (GH-297 F-7, DEC-6): the invoking store, the one host-index reader, and
+      // a per-repository store opener. It never maintains the index — it joins
+      // the read-only `maintainsIndex` exception set above.
+      board: {
+        store,
+        repository: { cwd, io: nodeRepositoryIo() },
+        github: { instance, credentials, transport },
+        nowIso,
+        nowMs,
+        newFenceToken,
+        ...(scope.value.scope.kind === "project"
+          ? { repositoryKey: scope.value.scope.projectKey }
+          : {}),
+        hostRoot,
+        readHostIndex: () => {
+          hostIndexAccess.countRead();
+          return readHostIndexFile(hostRoot);
+        },
+        parseHostIndex: parseHostIndexDocument,
+        rootExists: existsSafe,
+        stateLocationFor: (projectKey: string) => projectStateRoot(hostRoot, projectKey),
+        openStore: (stateLocation: string) =>
+          createStateStore(
+            {
+              level: "local",
+              workspaceId,
+              fenceNamespace: "cli",
+              schemaVersion: STATE_SCHEMA_VERSION,
+              stateDirectory: stateLocation,
+            },
+            { driver: "jsonl", edge: createNodeStateEdge() },
+          ),
+        readOwnerHold,
+      },
       // The taxonomy reference surface needs nothing: the runtime is the
       // compiled declaration, so the production composer supplies it
       // unconditionally (GH-290 F-2, DEC-F).

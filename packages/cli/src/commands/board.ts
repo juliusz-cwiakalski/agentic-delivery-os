@@ -73,7 +73,9 @@ const failure = (kind: string, code: string, summary?: string): BoardFailure => 
 
 /** Build the board command definition over the injected selection and reads. */
 export const createBoardCommandDefinition = (runtime: BoardCommandRuntime): CommandDefinition => ({
-  flags: [],
+  flags: ["--all", "--project"],
+  requiresValue: ["--project"],
+  conflicts: [["--all", "--project"]],
   positionals: { max: 0 },
   humanText: (data: unknown, brand: BrandIdentity): string =>
     renderBoardHuman(data as BoardData, brand),
