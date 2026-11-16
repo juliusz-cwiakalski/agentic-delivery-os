@@ -448,3 +448,22 @@ notes:
       phase attribution in the review_fix checkpoint commit, disclosed here."
     type: info
     date: "2026-11-16"
+  - text: "Quality gates iteration 1: full battery TMPDIR=$PWD/tmp/tmpdir pnpm check
+      FAILED exit 1 — 9622 pass / 4 skip / 1 fail across 9627 tests (1209 files,
+      1370.8s, log tmp/tmpdir/gh287-quality-gates-pnpm-check.log). Sole failure:
+      tests/behaviour/state-fence.test.ts TC-STATE-013 'writes are
+      unrepresentable without an acquired fence handle' — Bun default 5000ms
+      timeout hit at 7643ms; no assertion error. Root cause: the test compiles a
+      TS probe in-process (ts.createProgram over workspace graph) with no
+      explicit timeout budget (bunfig sets none; only closeout suites declare
+      setDefaultTimeout); under 1209-file parallel load it needs ~7.6s, in
+      isolation 2.3s (isolated rerun 8 pass / 0 fail). Pre-existing
+      load-amplified flake, not GH-287 behavior (remediation touched production
+      composition + help text only; the delivery-phase battery passed this file
+      at 16:0x). Two concurrent duplicate batteries from interrupted delegations
+      were killed before the clean attributed run (retro risk: interrupted
+      orchestrations can orphan background gate runs — checkpoint PIDs before
+      re-delegating). Remediation via @fixer: explicit setDefaultTimeout on the
+      file per the closeout-suites convention, then full battery re-run."
+    type: info
+    date: "2026-11-16"
