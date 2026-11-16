@@ -3,53 +3,286 @@
     {
       "id": "collect-success",
       "scenario": "collect",
-      "argv": ["retro", "collect", "--json"],
-      "expected": { "exitCode": 0, "outcome": "collected" }
+      "argv": [
+        "retro",
+        "collect",
+        "--json"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "outcome": "collected"
+      }
     },
     {
       "id": "collect-no-target",
       "scenario": "no-target",
-      "argv": ["retro", "collect", "--json"],
-      "expected": { "exitCode": 0, "outcome": "no-target" }
+      "argv": [
+        "retro",
+        "collect",
+        "--json"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "outcome": "no-target"
+      }
     },
     {
       "id": "report-success",
       "scenario": "report",
-      "argv": ["retro", "report", "--json"],
+      "argv": [
+        "retro",
+        "report",
+        "--json"
+      ],
       "expected": {
         "exitCode": 0,
-        "dataKeys": ["evidenceRefs", "findings", "followThrough", "level"]
+        "dataKeys": [
+          "evidenceRefs",
+          "findings",
+          "followThrough",
+          "level"
+        ]
       }
     },
     {
       "id": "invalid-level",
       "scenario": "collect",
-      "argv": ["retro", "collect", "--level", "session", "--json"],
-      "expected": { "exitCode": 1, "errorCode": "input.value.rejected" }
+      "argv": [
+        "retro",
+        "collect",
+        "--level",
+        "session",
+        "--json"
+      ],
+      "expected": {
+        "exitCode": 1,
+        "errorCode": "input.value.rejected"
+      }
     },
     {
       "id": "unknown-flag",
       "scenario": "collect",
-      "argv": ["retro", "collect", "--ref", "GH-232", "--json"],
-      "expected": { "exitCode": 1, "errorCode": "fallback.invocation" }
+      "argv": [
+        "retro",
+        "collect",
+        "--ref",
+        "GH-232",
+        "--json"
+      ],
+      "expected": {
+        "exitCode": 1,
+        "errorCode": "fallback.invocation"
+      }
     },
     {
       "id": "malformed-report",
       "scenario": "malformed",
-      "argv": ["retro", "report", "--json"],
-      "expected": { "exitCode": 1, "errorCode": "retro.evidence.malformed-entry" }
+      "argv": [
+        "retro",
+        "report",
+        "--json"
+      ],
+      "expected": {
+        "exitCode": 1,
+        "errorCode": "retro.evidence.malformed-entry"
+      }
     },
     {
       "id": "tamper-report",
       "scenario": "tamper",
-      "argv": ["retro", "report", "--json"],
-      "expected": { "exitCode": 1, "errorCode": "retro.evidence.tamper-flagged" }
+      "argv": [
+        "retro",
+        "report",
+        "--json"
+      ],
+      "expected": {
+        "exitCode": 1,
+        "errorCode": "retro.evidence.tamper-flagged"
+      }
     },
     {
       "id": "denied-collect",
       "scenario": "denied",
-      "argv": ["retro", "collect", "--json"],
-      "expected": { "exitCode": 2, "errorCode": "retro.evidence.denied" }
+      "argv": [
+        "retro",
+        "collect",
+        "--json"
+      ],
+      "expected": {
+        "exitCode": 2,
+        "errorCode": "retro.evidence.denied"
+      }
+    },
+    {
+      "id": "action-file",
+      "scenario": "action-file",
+      "argv": [
+        "retro",
+        "action",
+        "file",
+        "--owner",
+        "agent-role:reviewer",
+        "--owner-kind",
+        "agent-role",
+        "--verb",
+        "add",
+        "--outcome",
+        "the guard rejects the malformed envelope",
+        "--tracker",
+        "GH-287",
+        "--due",
+        "2026-11-30T00:00:00Z",
+        "--artifact",
+        "artifact:tests/guard.test.ts",
+        "--outcome-evidence",
+        "metric:rejection-rate",
+        "--outcome-window",
+        "2026-12-01T00:00:00Z..2026-12-15T00:00:00Z",
+        "--rollback",
+        "revert the guard",
+        "--window",
+        "window-a",
+        "--json"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "dataKeys": [
+          "action",
+          "actionId"
+        ]
+      }
+    },
+    {
+      "id": "action-file-refused",
+      "scenario": "action-file-refused",
+      "argv": [
+        "retro",
+        "action",
+        "file",
+        "--owner",
+        "agent-role:reviewer",
+        "--owner-kind",
+        "agent-role",
+        "--verb",
+        "add",
+        "--tracker",
+        "GH-287",
+        "--due",
+        "2026-11-30T00:00:00Z",
+        "--artifact",
+        "artifact:tests/guard.test.ts",
+        "--outcome-evidence",
+        "metric:rejection-rate",
+        "--outcome-window",
+        "2026-12-01T00:00:00Z..2026-12-15T00:00:00Z",
+        "--rollback",
+        "revert the guard",
+        "--window",
+        "window-a",
+        "--json"
+      ],
+      "expected": {
+        "exitCode": 1,
+        "errorCode": "retro.action-incomplete"
+      }
+    },
+    {
+      "id": "action-close",
+      "scenario": "action-close",
+      "argv": [
+        "retro",
+        "action",
+        "close",
+        "--action",
+        "action-golden",
+        "--route",
+        "done",
+        "--decision",
+        "decision-1",
+        "--artifact",
+        "artifact:tests/guard.test.ts",
+        "--json"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "dataKeys": [
+          "actionId",
+          "artifactClosure",
+          "decision",
+          "outcomeClosure",
+          "plane",
+          "route",
+          "verificationWindow",
+          "windowState"
+        ]
+      }
+    },
+    {
+      "id": "action-list",
+      "scenario": "action-list",
+      "argv": [
+        "retro",
+        "action",
+        "list",
+        "--json"
+      ],
+      "expected": {
+        "exitCode": 0,
+        "dataKeys": [
+          "actions",
+          "windows"
+        ]
+      }
+    },
+    {
+      "id": "action-wip",
+      "scenario": "action-wip",
+      "argv": [
+        "retro",
+        "action",
+        "file",
+        "--owner",
+        "agent-role:reviewer",
+        "--owner-kind",
+        "agent-role",
+        "--verb",
+        "add",
+        "--outcome",
+        "outcome",
+        "--tracker",
+        "GH-287",
+        "--due",
+        "2026-11-30T00:00:00Z",
+        "--artifact",
+        "artifact:x",
+        "--outcome-evidence",
+        "metric:x",
+        "--outcome-window",
+        "2026-12-01T00:00:00Z..2026-12-15T00:00:00Z",
+        "--rollback",
+        "revert",
+        "--window",
+        "window-full",
+        "--json"
+      ],
+      "expected": {
+        "exitCode": 1,
+        "errorCode": "retro.wip-limit-exceeded"
+      }
+    },
+    {
+      "id": "action-unknown-verb",
+      "scenario": "action-unknown-verb",
+      "argv": [
+        "retro",
+        "action",
+        "frobnicate",
+        "--json"
+      ],
+      "expected": {
+        "exitCode": 1,
+        "errorCode": "input.value.rejected"
+      }
     }
   ]
 }

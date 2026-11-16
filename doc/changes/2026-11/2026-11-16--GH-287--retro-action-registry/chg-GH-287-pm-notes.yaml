@@ -221,3 +221,23 @@ notes:
       doctor-output 8 / 0; doctor-contract + content-inventory 26 / 0."
     type: info
     date: "2026-11-16"
+  - text: "Plan phase 5 complete — the additive `retro action file|close|list` verb
+      group, the help surface, the action goldens, and the M2 reference page.
+      Commit to be recorded after the phase commit. Files: commands/retro.ts
+      (grammar + human renders), edge.ts (createRetroCommandRuntime now composes the
+      registry port and three action methods; newActionId/newClosureId seams),
+      doc/planning/oss-tooling/milestones/m2/commands/retro.md (new),
+      tests/fixtures/help-guide/coverage.json (M2 row added; M1 row byte-unchanged),
+      cli-edge-seam, retro-output, retro-collect, help-guide-coverage,
+      help-guide-coverage-mutants, reference-page-parity, tests/golden/retro/cases.json
+      (six action cases). Disclosed shared-file edits: packages/cli/src/help.ts (the
+      retro entry's usage/options plus one `retro action` entry — no prompt-required
+      family added, no dispatch entry count moved) and
+      scripts/checks/help-guide-coverage.ts (pageFor now maps retro to the M2 page,
+      mirroring reference-page-parity). Gate results: pnpm typecheck clean;
+      retro-output + retro-collect 16 / 0 (all action goldens plus the delivered
+      matrix); cli-edge-seam + action-contract + content-inventory 61 / 0;
+      help-guide-coverage + mutants + reference-page-parity 15 / 0;
+      help-guide-coverage script green."
+    type: info
+    date: "2026-11-16"

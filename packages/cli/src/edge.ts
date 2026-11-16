@@ -123,6 +123,7 @@ import {
   claimQueueLease,
   claimSingleFlightRefusal,
   classifyPruneCandidate,
+  closeRetroAction,
   collectRetro,
   computeDbCutoffMs,
   computeDbLiveBoundaryMs,
@@ -147,6 +148,7 @@ import {
   evaluateDiffSweep,
   evaluateDispatchResumeEconomics,
   evaluateWorktreeSafety,
+  fileRetroAction,
   foldLanes,
   type HarnessSettings,
   handoverDispatchEvidence,
@@ -154,6 +156,7 @@ import {
   isLiveDbSession,
   isMemberRef,
   joinAttributionSubstrates,
+  listRetroActions,
   type MergeTransactionPorts,
   memberRefFor,
   normalizeStagedPaths,
@@ -399,6 +402,7 @@ import {
   createCeremonyRecordPort,
   createNodeRetroSidecarIo,
   createNodeStateEdge,
+  createRetroActionRegistryPort,
   createRetroSidecar,
   createStateStore,
   foldCeremonyRunVerdict,
@@ -509,7 +513,10 @@ import {
   toQueueReadData,
 } from "./commands/queue.js";
 import { createReposCommandDefinition, type ReposCommandRuntime } from "./commands/repos.js";
-import { createRetroCommandDefinition } from "./commands/retro.js";
+import {
+  createRetroCommandDefinition,
+  type RetroCommandRuntimeWithActions,
+} from "./commands/retro.js";
 import { createSpendCommandDefinition, type SpendCommandRuntime } from "./commands/spend.js";
 import { createStatusCommandDefinition, type StatusCommandRuntime } from "./commands/status.js";
 import { createSteerCommandDefinition, type SteerCommandRuntime } from "./commands/steer.js";
@@ -4915,6 +4922,9 @@ export type RetroCompositionOptions = {
   readonly newRunId: () => string;
   readonly newTraceId: () => string;
   readonly newFenceToken: () => string;
+  /** The additive action/closure identity factories (GH-287 DEC-7). */
+  readonly newActionId?: () => string;
+  readonly newClosureId?: () => string;
   readonly identity?: import("@delivery-os/core/contracts").RetroClaimedIdentity;
   readonly context?: "collector" | "delivery-agent";
   readonly collectors?: import("@delivery-os/core/contracts").RetroCollectorRead;
@@ -5071,7 +5081,7 @@ const retroStateFamiliesFrom = (
 /** Compose the retro command runtime from injected seams. */
 export const createRetroCommandRuntime = (
   options: RetroCompositionOptions,
-): import("@delivery-os/core/contracts").RetroCommandRuntime => {
+): RetroCommandRuntimeWithActions => {
   const sidecar = createRetroSidecar(
     createNodeRetroSidecarIo({
       stateDirectory: options.stateDirectory,
@@ -5085,7 +5095,36 @@ export const createRetroCommandRuntime = (
       readNotes: (changeRef) => retroNotesFrom(options, changeRef),
       readSpend: (changeRef) => retroSpendFrom(options.store, changeRef),
     };
+  let actionSeq = 0;
+  let closureSeq = 0;
+  const actionPort = createRetroActionRegistryPort(options.store);
+  const actions: import("@delivery-os/core/contracts").RetroActionCommandRuntime = {
+    file: (draft) => {
+      actionSeq += 1;
+      return fileRetroAction(actionPort, {
+        draft,
+        actionId: options.newActionId?.() ?? `action-${String(actionSeq)}`,
+        filedAt: options.clock.nowMs(),
+        fenceToken: options.newFenceToken(),
+      });
+    },
+    close: (request) => {
+      closureSeq += 1;
+      return closeRetroAction(actionPort, request, {
+        closureId: options.newClosureId?.() ?? `closure-${String(closureSeq)}`,
+        decidedAt: options.clock.nowMs(),
+        nowMs: options.clock.nowMs(),
+        fenceToken: options.newFenceToken(),
+      });
+    },
+    list: (input) =>
+      listRetroActions(actionPort, {
+        nowMs: options.clock.nowMs(),
+        ...(input.window === undefined ? {} : { window: input.window }),
+      }),
+  };
   return {
+    actions,
     collect: (input) =>
       collectRetro({
         sidecar,
