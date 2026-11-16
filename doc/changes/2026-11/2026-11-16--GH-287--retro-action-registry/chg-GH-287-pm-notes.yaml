@@ -1,0 +1,567 @@
+change_id: GH-287
+title: "M2-S10: Retro action registry and follow-through (M2)"
+delivery_mode: autonomous
+milestone: "M2: Ceremonies, measurement, and memory"
+phases:
+  clarify_scope: { started: null, completed: 2026-11-16T13:10:34.741Z }
+  specification: { started: null, completed: 2026-11-16T13:49:32.137Z }
+  test_planning: { started: null, completed: 2026-11-16T13:55:51.143Z }
+  delivery_planning: { started: null, completed: 2026-11-16T14:17:41.019Z }
+  dor_check: { started: null, completed: 2026-11-16T14:23:18.197Z }
+  delivery: { started: null, completed: 2026-11-16T16:13:11.559Z }
+  system_spec_update: { started: null, completed: 2026-11-16T16:30:05.049Z }
+  review_fix: { started: null, completed: 2026-11-16T18:41:44.838Z }
+  quality_gates: { started: null, completed: 2026-11-16T20:38:05.069Z }
+  dod_check: { started: null, completed: 2026-11-16T20:39:27.125Z }
+  pr_creation: { started: null, completed: 2026-11-16T20:41:51.362Z }
+decisions:
+  - text: "Spec OQ-1..OQ-3 adjudicated change-scoped via @decision-advisor, baked
+      into spec as DEC-5..DEC-7 (GH-291 precedent; none system-wide — no
+      doc/decisions records). DEC-5: exactly three additive two-segment rows
+      under the delivered retro domain kind (retro.action-incomplete
+      blueprint-pinned, retro.closure-incomplete, retro.wip-limit-exceeded); no
+      new domain kind; 4->7 rows with two-way sync in-change. DEC-6: improvement
+      WIP limit = 3 as one fixed contract-data constant; filing into a window at
+      its limit refused (exit 1, retro.wip-limit-exceeded naming
+      window/count/limit), never a warning outcome; deprioritize/supersede free
+      slots. DEC-7: own validated state-store boundary — new record kinds
+      retro.action + retro.action-closure under
+      retro.actions:/retro.action-closures: prefixes, delivered retro-registry
+      boundary's 'exactly three' unchanged; filing surface = additive `action`
+      verb group inside the delivered retro family (no new command family);
+      doctor gains an action-registry store verdict. Plan-writer ripples: exact
+      verb grammar, payload schema ids, error-row metadata, doctor verdict name,
+      help-guide coverage + m2 reference page updates."
+    date: "2026-11-16"
+  - text: "Specification reopened once (reopen-on-gap): test-plan-writer traced five
+      spec ambiguities (OQ-T3 contract-rule refusal identity vs DEC-5
+      exactly-three rule; OQ-T6 aging basis unpinned; OQ-T5 stray NFR-8 links;
+      OQ-T7 retro-report data-key question; OQ-T8 closure edge cases).
+      Re-delegated to @decision-advisor; pinned as DEC-8..DEC-11: DEC-8 =
+      retro.action-incomplete covers missing OR contract-non-conforming fields
+      (no fourth identity); DEC-9 = aging basis is time-open-since-filing,
+      second miss = second missed due date; DEC-10 = registry feeds delivered
+      followThrough[] fold, no new top-level retro report key; DEC-11 =
+      deprioritize/supersede close both planes by one explicit decision, repeat
+      closure on a closed plane refused under retro.closure-incomplete naming
+      plane+existing closure, supersede records superseding reference. AC set
+      now 15 (AC-F4-4/F4-5 added). Exactly- three identity rule intact."
+    date: "2026-11-16"
+  - text: "Retro: the reopen-on-gap loop worked as designed but cost one phase
+      round-trip; the contract-rule-refusal ambiguity (OQ-T3) was latent in
+      DEC-5 from the first adjudication — decision prompts should ask the
+      adjudicator to sweep ALL refusal-triggering spec wording (not just the
+      named scenarios) against the declared identity set to catch classification
+      gaps in one pass."
+    type: retro
+    date: "2026-11-16"
+open_questions: []
+blockers: []
+notes:
+  - text: "Scope source: ticket body (planned by #284) + backlog.md M2-S10 +
+      milestone pack m2/ (test-scenarios.md SC-M2-S10-01/02, README.md row:
+      consumes telemetry.v1, journeys.md retro-from-telemetry) +
+      concepts/retrospectives.md (action registry design; tracker anchor #43)."
+    type: info
+    date: "2026-11-16"
+  - text: "Cross-check vs system spec: current truth has feature-retro-pipeline.md
+      (evidence sidecar, retro registry R1-R6 with change implemented, report
+      folds followThrough[] {action, verdict, artifactRef?} — enforcement
+      explicitly 'later work' = this change; M2-S10 named as a consumer),
+      feature-ceremony-runner.md (retro-evidence-pass over four sub-R1 levels;
+      follow-through-first phase with applied/partial/violated-with-consequence
+      verdicts; declared actions handed off — 'filing, the five-field action
+      contract, aging, and closure belong to M2-S10'), feature-board.md
+      (four-section board lanes/gates/asks/parked on delivery.status-facts.v1;
+      asks carry age in ms), feature-telemetry-v2.md + feature-spend.md
+      (attribution + reconciliation consumed as retro evidence). All
+      dependencies delivered: M1-S8 (GH-232), ceremony runner (GH-296), board
+      (GH-297), telemetry v2 (GH-291). No contradictions found."
+    type: info
+    date: "2026-11-16"
+  - text: "Scope resolution — communication analytics OUT: ticket says analytics
+      (unanswered asks, aging, escalation rates) 'join the evidence inputs once
+      the message contract exists (concepts/inter-agent-communication.md)'; that
+      concept is explicitly 'parked... nothing here is scheduled; the message
+      contract does not exist. Condition unmet → excluded from this delivery;
+      recorded so the next change can revisit."
+    type: decision
+    date: "2026-11-16"
+  - text: "Scope resolution — failure-to-regression-test compiler OUT of ticket
+      scope: concepts/retrospectives.md story mapping mentions it folding 'into
+      M2-S10', but the ticket task list and AC do not include it, and the
+      backlog story (canonical with the ticket) omits it. Ticket+backlog are the
+      scope authority; not invented into this change. Noted for the owner in the
+      PR description."
+    type: info
+    date: "2026-11-16"
+  - text: "Pinned test scenarios: SC-M2-S10-01 (filing without measurable outcome
+      refuses: exit 1, error.code == 'retro.action-incomplete' naming the
+      missing field, actions[] stays empty — blueprint pre-declares the error
+      identity), SC-M2-S10-02 (artifact complete + outcome window open:
+      artifactClosure == 'closed', outcomeClosure == 'open' with non-null
+      verification window)."
+    type: info
+    date: "2026-11-16"
+  - text: "Concept constraints from concepts/retrospectives.md: five-field contract
+      = named owner (agent role or human) + verifiable verb
+      (add/remove/change/test/ deploy — never 'review'/'improve') + measurable
+      outcome + real tracker entry + due date, plus verification artifact;
+      team-owned actions invalid. Aging: nudge at 14 days, escalate at 30 or on
+      second miss. Closure only explicit: done with artifact, deprioritized with
+      reason, superseded. WIP limit: at most 1-3 actions per window. Outcome
+      verifier = delayed metric window; rollback condition required; artifact
+      closure distinguished from outcome closure. Actions surface on the board
+      next to owner asks."
+    type: info
+    date: "2026-11-16"
+  - text: "Delivery conventions from ticket: full 11-phase lifecycle; plan phases
+      declared in plan.yaml; commits through commit primitive, conventional
+      subjects, every body/footer line <=100 chars; quality gate
+      'TMPDIR=$PWD/tmp/tmpdir pnpm check' green before PR; PR targets main-tools
+      (STOP with PR open; merge authority CEO); maintain
+      doc/planning/oss-tooling/ (backlog markers, status) per convention."
+    type: info
+    date: "2026-11-16"
+  - text: "Doc impacts anticipated for phase 7: new feature spec page for the action
+      registry (first-spec-only per always-resolve policy); reconcile
+      feature-retro-pipeline.md (follow-through enforcement delivered),
+      feature-ceremony-runner.md ('No retro action registry' goal + 'Actions are
+      handed off' boundary now landed), feature-board.md (actions surface next
+      to asks); doc/00-index.md registration; doc/overview/glossary.md;
+      doc/planning/oss-tooling/backlog.md progress marker + status.md snapshot +
+      m2/ README/contracts ownership lines per convention."
+    type: risk
+    date: "2026-11-16"
+  - text: "Host transport fact (from GH-291 retro): lifecycle commands on this host
+      need PATH=\"$PWD/node_modules/.bin:$HOME/.bun/bin:$PATH\" (commitlint
+      probe); quality gate runs with TMPDIR=$PWD/tmp/tmpdir."
+    type: info
+    date: "2026-11-16"
+  - text: "Retro: fresh-checkout worktree had no built dist/ — the first lifecycle
+      invocation failed (Cannot find module '@delivery-os/adapters/credentials';
+      subpath exports point at ./dist). Fixed by one `pnpm -r build` before the
+      phase primitive; also learned ~/.local/bin/jaiship can dangle to another
+      worktree, so use `bun packages/cli/bin/jaiship.ts` directly. Cost: one
+      extra runner round-trip. Lesson: new-session lifecycle setup = PATH prefix
+      + `pnpm -r build` first."
+    type: retro
+    date: "2026-11-16"
+  - text: "DoR gate iteration 1: NOT_READY (readiness-review/readiness-iter-1.md).
+      9/10 facets PASS; plan_code_area_coverage FAIL. Findings: [major] plan
+      Phase 2 declares tests/structure/packed-state.test.ts which does not exist
+      — delivered suite is tests/checks/packed-state.test.ts; as written the
+      phase gate runs a missing suite and the real edit falls outside plan-union
+      scope (plan.scope.undeclared-paths refusal). [minor] test-plan GAP-1/OQ-T1
+      say plan does not exist yet (stale). [minor] test-plan D-23 carries the
+      same wrong path. [nit] test-plan section 2 omits AC-F4-4 in
+      sixth-ticket-AC decomposition. [nit] test-plan sections 2/6 cite
+      ceremony/notes.ts; substrate is the notes/ directory. Remediation: reopen
+      delivery_planning (plan path fix via @plan-writer) + editorial batch via
+      @test-plan-writer; re-run gate at iteration 2 (of max 3)."
+    type: info
+    date: "2026-11-16"
+  - text: "DoR gate iteration 2: READY (readiness-review/readiness-iter-2.md). All
+      10 facets PASS. All five iter-1 findings verifiably resolved; no new
+      blocking findings. One non-blocking nit: plan SOURCES header cites test
+      plan as v1.1 (now v1.2; no cited content changed) — rides any future plan
+      edit, no reopen warranted. Gate cleared at iteration 2 of 3."
+    type: info
+    date: "2026-11-16"
+  - text: "Plan phase 1 complete — action-registry contract declaration and the
+      three additive error rows (4 -> 7). Commit f22f390. Declared files:
+      contracts/action.ts (new), contracts/index.ts, error-table.ts,
+      feature-result-contract.md, both new structure suites,
+      error-table.test.ts, content-inventory + inventory.json,
+      error-table-sync.test.ts, both code corpora. Disclosed shared-file edit:
+      the sync check's reserved two-segment allowlist lives in
+      scripts/checks/error-table-sync.ts (outside the phase file list) and had
+      to grow by the three exact codes or the two-way sync gate is red; the
+      commit reported it as scope drift under the plan-union rule. Gate results:
+      pnpm typecheck clean; action-contract + action-imports 25 pass / 0 fail;
+      error-table + retro-contract + content-inventory + error-table-sync 224
+      pass / 0 fail; error-table-sync script entries=143 documented=143 S1=443
+      S3=32 corpus=67, OK."
+    type: info
+    date: "2026-11-16"
+  - text: "Plan phase 2 complete — validated action-registry boundary,
+      all-or-nothing filing gate, and the fixed WIP limit. Commit ad72ad68.
+      Files: domain/action-filing.ts, domain/action-window.ts,
+      state/action-registry.ts (new); domain/index.ts, state/index.ts,
+      core/src/index.ts; tests/fixtures/action/ (store, builders, clock, seed
+      seeder); action-filing + action-wip-limit behaviour suites; state-scope,
+      retro-contract, retro-imports, content-inventory, inventory.json,
+      packed-state. Disclosed contract-module additions under the same phase:
+      the data-only registry port and the record-shaped file payload
+      (contracts/action.ts, contracts/index.ts) so the state tier and the domain
+      engine compose without a tier violation. Gate results: pnpm typecheck
+      clean; action-filing 11 / 0; action-wip-limit 5 / 0; state-scope +
+      retro-contract + retro-imports + content-inventory + packed-state 44 / 0;
+      ambient-globals 210 files clean; exports-parity 5 publishables pass."
+    type: info
+    date: "2026-11-16"
+  - text: "Plan phase 3 complete — derived single-basis aging ladder and explicit
+      two-plane closure. Commit 5377b80. Files: domain/action-aging.ts,
+      domain/action-closure.ts (new); domain/index.ts, core/src/index.ts; the
+      aging and closure behaviour suites; action-imports (basis single-home
+      scan); content-inventory + inventory.json. Gate results: pnpm typecheck
+      clean; action-aging 10 / 0 (matrix A-01..A-11); action-closure 9 / 0
+      (matrix C-01..C-14 plus TC-038/TC-039); action-imports 9 / 0;
+      ambient-globals 212 files clean."
+    type: info
+    date: "2026-11-16"
+  - text: "Plan phase 4 complete — registry damage classification and the doctor
+      action-registry store verdict. Commit b4ffd7b. Files:
+      packages/cli/src/edge.ts (additive readActionRegistryState plus the
+      readActionState composition seam merged with the retro store fact),
+      action-store-boundary suite (new), doctor-state, doctor-report,
+      doctor-contract, content-inventory. contracts/doctor.ts is unchanged (D-16
+      no-move: no evidence source id added; the store-fact shape already admits
+      the additive name), tests/golden/doctor-output.test.ts and
+      tests/fixtures/doctor/harness.ts are unchanged (D-15 no-move: the fake
+      harness default state carries no store facts, so no golden moved; the
+      production composition and the three-store detail are proven by the
+      injected doctor-state/report tests instead). Gate results: pnpm typecheck
+      clean; action-store-boundary 7 / 0; doctor-state + doctor-report 29 / 0;
+      golden doctor-output 8 / 0; doctor-contract + content-inventory 26 / 0."
+    type: info
+    date: "2026-11-16"
+  - text: "Plan phase 5 complete — the additive `retro action file|close|list` verb
+      group, the help surface, the action goldens, and the M2 reference page.
+      Commit eea8054. Files: commands/retro.ts (grammar + human renders),
+      edge.ts (createRetroCommandRuntime now composes the registry port and
+      three action methods; newActionId/newClosureId seams),
+      doc/planning/oss-tooling/milestones/m2/commands/retro.md (new),
+      tests/fixtures/help-guide/coverage.json (M2 row added; M1 row
+      byte-unchanged), cli-edge-seam, retro-output, retro-collect,
+      help-guide-coverage, help-guide-coverage-mutants, reference-page-parity,
+      tests/golden/retro/cases.json (six action cases). Disclosed shared-file
+      edits: packages/cli/src/help.ts (the retro entry's usage/options plus one
+      `retro action` entry — no prompt-required family added, no dispatch entry
+      count moved) and scripts/checks/help-guide-coverage.ts (pageFor now maps
+      retro to the M2 page, mirroring reference-page-parity). Gate results: pnpm
+      typecheck clean; retro-output + retro-collect 16 / 0 (all action goldens
+      plus the delivered matrix); cli-edge-seam + action-contract +
+      content-inventory 61 / 0; help-guide-coverage + mutants +
+      reference-page-parity 15 / 0; help-guide-coverage script green."
+    type: info
+    date: "2026-11-16"
+  - text: "Plan phase 6 complete — the board's additive ACTIONS section beside the
+      owner asks under the kept delivery.board.v1 identity. Commit 16aee76.
+      Files: contracts/owner-gate-sla.ts (BoardActionFact/ BoardActionRow, the
+      sixth omission counter, the human actions cap), contracts/index.ts (type
+      exports), domain/owner-gate-sla.ts (per-repository action projection,
+      ACTIONS render after ASKS, declared section/drop orders), cli/edge.ts (one
+      bounded action-registry read per repository with the count/limit
+      disclosure; a failed read is disclosed, exit 0, no rows), board-actions
+      suite (new), board-sections (D-6), board-bounds and board-parked (counter
+      key), board-waiver-recording (D-5 key set), board-contract (D-5 15->16),
+      board-nonregression (D-10 additive proof), fixtures board/sections.ts +
+      harness.ts (D-28 actions inventory; one shape per file). Goldens
+      regenerated by the explicit commands: the committed regenerate.ts for
+      full-envelope/full-grid, and a one-off explicit bun run in tmp/tmpdir (not
+      committed) for envelope/grid under the same fixed gates. No actions rows
+      were added to the golden fixture (golden/full.ts is outside the phase
+      scope), so the goldens gain the empty ACTIONS section and the new payload
+      member only. tests/golden/board-grid.test.ts, board-help.test.ts and
+      fixtures/matrix.ts are unchanged (D-27 no-move: the legend/help text does
+      not enumerate sections, so no help assertion moved). Gate results: pnpm
+      typecheck clean; board-actions 10 / 0; the sixteen delivered board suites
+      93 / 0; board-contract + board-nonregression + board-mounting +
+      content-inventory 24 / 0; board-full + board-grid goldens 10 / 0."
+    type: info
+    date: "2026-11-16"
+  - text: "Plan phase 7 complete — follow-through producers: ceremony pass, report
+      fold, cross-level unity, handoff flow. Commit 6c827c3. Files:
+      contracts/retro.ts (RetroFollowThroughEntry provenance plus the
+      registry-entry reader type), contracts/index.ts, domain/retro.ts (the
+      production fold reader merged inside the four delivered keys), domain/
+      ceremony-retro.ts (retroActionCeremonyFacts: verdicts only from the
+      artifact oracle), domain/index.ts + core/src/index.ts, cli/edge.ts
+      (report/collect follow-through readers plus the ceremony registry facts
+      over one registry read),
+      action-follow-through/action-ceremony-handoff/action-cross-level suites
+      (new), ceremony-flow-retro-levels (additive), retro-report (D-12
+      additive), retro-output (D-13 edge-composed fold case). Disclosed
+      shared-file edit: packages/core/src/state/retro-registry.ts now skips the
+      sibling action kinds (both begin with the shared `retro.` key prefix), or
+      every action record classifies as a retro-registry malformation and the
+      delivered report/doctor paths refuse; its exactly-three declaration is
+      unchanged and a control asserts that. Gate results: pnpm typecheck clean;
+      action-follow-through + action-ceremony-handoff + action-cross-level 13 /
+      0; ceremony-flow-retro-levels + retro-report + retro-output 21 / 0;
+      ceremony-flow-retro control 5 / 0; retro-registry + retro-levels control
+      12 / 0."
+    type: info
+    date: "2026-11-16"
+  - text: "Plan phase 8 complete — the cross-cutting honesty battery. Commit
+      a806603. New suites: action-determinism, action-bounds,
+      action-write-discipline, action-read-cost, action-performance,
+      action-privacy, action-disclosure, action-audit, action-hermetic,
+      action-mutants (the 23 declared mutants (a)..(w), each producing its
+      prohibited observable through a temp mutant copy, plus the unmutated
+      control). Production adjustments the declared oracles required:
+      RetroActionListData gains marked `truncated`/`omitted` with the declared
+      row and byte caps (TC-ACTION-028), the closure reason bound is enforced
+      naming the field, and the action composition applies the redaction
+      transform to every recorded free text/ref (TC-ACTION-031, so a canary
+      never reaches a record). Disclosed shared-file/baseline edits, all
+      additive: content-inventory allowances for the new exports; the
+      counter/baseline fixtures that pinned 140 rows now pin 143
+      (dispatch-attempts-taxonomy, ceremony-nonregression, ceremony-contract,
+      cross-repository-contract with the three additive codes excluded from the
+      pre-change byte comparison); the events state-additivity baselines
+      register action-registry.ts and the seven action constants; the
+      port-contract inventory fixture was regenerated by an explicit command
+      with a removals-detected guard (50 modules); the entrypoint alias help
+      baseline was regenerated by an explicit command and the diff is the single
+      retro summary line; scripts/checks/forbidden-literals.registry.json
+      registers the new M2 retro page (also a Phase 9 declared file); the board
+      human-cap pin gains the actions key. Gate results: pnpm typecheck clean;
+      the eight action honesty suites 21 / 0; action-mutants 24 / 0;
+      action-hermetic + privacy-literals + ceremony-hermetic +
+      exit-code-literals + forbidden-literals 113 / 0; tests/behaviour +
+      tests/structure 7896 pass / 0 fail (after the final ceremony-contract
+      count fix); ambient-globals 212 files clean; error-table-sync entries=143
+      documented=143 S1=447 OK."
+    type: info
+    date: "2026-11-16"
+  - text: "Plan phase 9 complete — documentation reconciliation, planning
+      maintenance, changeset, and release obligations. Commit 225bded; the
+      delivery-boundary transition landed atomically in 19fe62c. Files: the new
+      feature-retro-action-registry page; additive reconciliation of
+      feature-retro-pipeline (the action verb group, the registry producer
+      inside the four report keys, the sibling boundary, the retired
+      'enforcement is later work' wording, the action doctor fact),
+      feature-ceremony-runner (handoff landed, artifact-oracle verdicts),
+      feature-board (the ACTIONS section, its caps, and the declared drop
+      order), feature-doctor (the additive action-registry store fact),
+      doc/00-index and doc/overview/glossary (six registry terms); planning
+      maintenance in backlog (M2-S10 progress marker), status (delivery
+      snapshot), m2 README (S10 contract cell) and m2 contracts (the
+      telemetry.v1 advisory edge plus the registry's own contract pointer); the
+      lockstep minor changeset over the five publishables; doc-conformance
+      requirements for the four reconciled pages and the new page;
+      scripts/checks/forbidden-literals.registry.json registers the new
+      user-facing page. Gate results: plan validate GH-287 verdict=valid
+      readyForDevelopment=true; TMPDIR=$PWD/tmp/tmpdir pnpm check 9622 pass / 0
+      fail (4 pre-existing skips) across 1208 files, with lint/format/typecheck/
+      boundaries/memory/prompt/help/exports-parity green; lint-commit-range
+      --base main-tools VERDICT PASS (15 commits, 0 offending); doc-distribution
+      guard no drift (95 in-scope docs); changesets-group OK (one fixed group of
+      five, testkit excluded); git diff --check clean."
+    type: info
+    date: "2026-11-16"
+  - text: "system_spec_update (@doc-syncer): verification + completion pass over the
+      in-phase reconciliation — 21 doc files edited (feature pages retro-action-
+      registry/state-layer/retro-pipeline/ceremony-runner/board/owner-gate-sla/
+      result-contract/cli-entrypoint/doctor/peak-pausing; cross-cutting
+      nonfunctional/architecture-overview/glossary/00-index/ceremony-runner
+      guide; quality test-spec-state-layer; planning cli-command-registry + m2
+      README/commands trio). Fixed: seven-retro-rows truth mirrors, board
+      ACTIONS inventory/caps/drop order, surviving 'enforcement is later work'
+      in glossary, M2 reference broken links, malformed result-contract front
+      matter. Validation: doc-distribution no drift (95 docs), doc-conformance
+      battery 29/0 + broader set 81/0, error-table-sync 143/143, front-matter
+      parse 0 errors, git diff --check clean. Residual gaps: NONE. The 21 files
+      staged as scope drift under the plan-union rule, attributed to the
+      documentation phase (GH-291 precedent); commit 1dd656bf. Non-blocking
+      observation for reviewer: help.ts retro seeAlso derives from the M1
+      snapshot page while coverage/parity gates map retro to the M2 page."
+    type: info
+    date: "2026-11-16"
+  - text: "Review iteration 1: FAIL (code-review/review-iter-1.yaml). 7 findings — 0
+      critical / 1 high / 1 low / 5 info. F-1 (HIGH, correctness, FAIL driver):
+      production never injects newActionId/newClosureId id factories
+      (cli/edge.ts retro composition + production.ts) — every one-shot CLI
+      process files as action-1; duplicate identities from the second filing
+      onward, empirically reproduced against a real store; unrepairable under
+      append-only; breaks board zero-duplicate invariant; all suites inject ids
+      so nothing catches it. Fix: pass UUID generators in the production retro
+      composition + a two-runtime regression test. F-2 (LOW, docs): help.ts
+      retro seeAlso points at frozen M1 snapshot page; should point at the M2
+      page (one-line fix; confirmed real defect, not the snapshot convention).
+      F-3..F-7 INFO no action (F-5: one-line pm-notes amendment — the
+      verify-gates-suite-map 140->143 pin was an unnamed baseline edit).
+      Everything else PASSED: 15/15 ACs, pinned scenarios, all DEC semantics,
+      error-table sync, redaction, drift honesty, conventions. Remediation: plan
+      amendment via @plan-writer (declared remediation phase: edge.ts +
+      production.ts id-factory injection, help.ts seeAlso M2 pointer,
+      two-runtime regression test, pm-notes F-5 amendment), then @coder
+      executes, doc-syncer re-verification, re-review at iteration 2 (of max
+      3)."
+    type: info
+    date: "2026-11-16"
+  - text: "Retro: F-1 is the second consecutive delivery where a per-phase narrow
+      gate battery passed while the production composition carried the real
+      defect (GH-291 F-1 was attribution-substrate wiring; GH-287 F-1 is id-
+      factory wiring) — injected-id tests structurally cannot catch unwired
+      production seams. Standing lesson reinforced: every plan that adds an
+      injected factory/consumer must carry one declared test that constructs the
+      production composition (or invokes the real CLI twice) and asserts the
+      wiring, not just the injected behavior."
+    type: retro
+    date: "2026-11-16"
+  - text: "F-5 amendment (review iter 1): the verify-gates-suite-map contract test's
+      140 -> 143 row-count pin was a declared baseline edit of plan phase 8 (the
+      three additive retro action error rows) — recorded here since the phase-8
+      evidence note named only the sibling count pins. Remediation phase 10
+      declared in plan (edge.ts + production.ts id-factory wiring F-1; help.ts
+      seeAlso M2 pointer F-2; two-runtime regression test
+      action-production-identity.test.ts; full battery gate); plan re-validated
+      verdict=valid readyForDevelopment=true, phases 1-9 byte-untouched."
+    type: info
+    date: "2026-11-16"
+  - text: "Plan phase 10 complete (resumed across two session interruptions) —
+      review iter 1 remediation. Commit 9cddcdb9. F-1: production.ts retro
+      composition now generates and passes newActionId/newClosureId UUID
+      factories (mirrors newRunId/newTraceId); two-runtime regression test
+      tests/behaviour/action-production-identity.test.ts files two actions
+      through the production composition without injecting ids and asserts
+      distinct stored ids (1 pass / 0 fail). F-2: help.ts retro entries' seeAlso
+      repointed at the M2 reference page. Verification of interrupted work: both
+      fixes + test confirmed intact and correct; .ados-claude plugin tree fully
+      regenerated (45/45 files, byte-identical to HEAD, git status clean).
+      Narrow gates at final tree: typecheck green (6/6 + tests/types);
+      action-production-identity 1/0; action-filing + action-wip-limit 16/0;
+      help-guide-coverage + mutants + reference-page-parity 15/0;
+      help-guide-coverage script OK; plan validate verdict=valid
+      readyForDevelopment=true. Full battery: the interrupted session's 18:05-
+      18:38 pnpm check run is INVALID evidence — its TC-PLUGIN-001 step invokes
+      build-claude-plugin.sh and was killed mid-build by the session
+      interruption, leaving .ados-claude deleted; 9 of its 11 failures were
+      ENOENT fallout and the rest 5s-timeout contention artifacts. Authoritative
+      full battery re-runs at quality_gates with clean attribution (phase 9)."
+    type: info
+    date: "2026-11-16"
+  - text: "Review iteration 2: PASS (code-review/review-iter-2.yaml). 1 finding,
+      info only, no code action. F-1 FIXED and verified at code level +
+      empirically (production.ts:3164-3165 factories mirror newRunId; both
+      edge.ts fallback sites 5153/5171 can no longer fire; two-runtime
+      regression test re-run 1/0, fails by construction on pre-fix composition).
+      F-2 FIXED (seeAlso = pageIn(M2_REFERENCE_ROOT, retro), identical to both
+      gates' mapping; controls re-run 15/0). Remediation diff audited: no new
+      findings (action family 86/0 across 17 suites, doc-conformance 19/0, plan
+      validate valid). Iteration-1 PASS basis re-affirmed (no core/domain
+      changes). F-8 info note: doc-syncer's post-remediation reconciliation of
+      feature-agents-and-commands.md landed uncommitted — committed with docs-
+      phase attribution in the review_fix checkpoint commit, disclosed here."
+    type: info
+    date: "2026-11-16"
+  - text: "Quality gates iteration 1: full battery TMPDIR=$PWD/tmp/tmpdir pnpm check
+      FAILED exit 1 — 9622 pass / 4 skip / 1 fail across 9627 tests (1209 files,
+      1370.8s, log tmp/tmpdir/gh287-quality-gates-pnpm-check.log). Sole failure:
+      tests/behaviour/state-fence.test.ts TC-STATE-013 'writes are
+      unrepresentable without an acquired fence handle' — Bun default 5000ms
+      timeout hit at 7643ms; no assertion error. Root cause: the test compiles a
+      TS probe in-process (ts.createProgram over workspace graph) with no
+      explicit timeout budget (bunfig sets none; only closeout suites declare
+      setDefaultTimeout); under 1209-file parallel load it needs ~7.6s, in
+      isolation 2.3s (isolated rerun 8 pass / 0 fail). Pre-existing
+      load-amplified flake, not GH-287 behavior (remediation touched production
+      composition + help text only; the delivery-phase battery passed this file
+      at 16:0x). Two concurrent duplicate batteries from interrupted delegations
+      were killed before the clean attributed run (retro risk: interrupted
+      orchestrations can orphan background gate runs — checkpoint PIDs before
+      re-delegating). Remediation via @fixer: explicit setDefaultTimeout on the
+      file per the closeout-suites convention, then full battery re-run."
+    type: info
+    date: "2026-11-16"
+  - text: "Quality gates iteration 2: state-fence fix VERIFIED (fix 09a86957,
+      setDefaultTimeout(120_000) per closeout precedent — zero fence failures in
+      battery 2). Full battery 2 (clean, uncontended; log
+      tmp/tmpdir/gh287-quality-gates-pnpm-check-2.log) FAILED exit 1 with the
+      same single-flake signature but a DIFFERENT test: tests/behaviour/
+      projects-scope-isolation.test.ts TC-PROJ-002 timed out at the 5s default
+      (5743.99ms; spawns real git/CLI ops across two worktree checkouts; file
+      declares no budget; last touched by GH-294/GH-288, untouched here). 9622
+      pass / 4 skip / 1 fail, identical totals to battery 1. Diagnosis: a CLASS
+      of delivered heavy integration tests sits near the 5s default edge and
+      flakes under full-battery load; one-at-a-time fixing burns a 30-min
+      battery per discovery. Remediation iteration 3 via @fixer: evidence-
+      driven pass — measure per-test durations across one full test-suite run
+      (junit reporter), apply the same one-line budget convention to every file
+      with a measured >4s test, commit, then battery re-run."
+    type: info
+    date: "2026-11-16"
+  - text: "Fixer iteration 3 (c1fe34b7): projects-scope-isolation.test.ts budgeted
+      (same one-line convention). Evidence pass (junit per-test durations over
+      one full suite run, tmp/tmpdir/junit-durations.xml): 20 tests >4s across
+      17 files — every one already carries an explicit budget (per-test third-
+      arg convention predating setDefaultTimeout); zero further edits required.
+      The fixer's full suite run: 9623 pass / 0 fail / 4 skip. Retro: two 30-min
+      batteries were spent discovering two members of a class whose membership
+      was enumerable in one 16-min measured run — future deliveries with heavy
+      integration suites should run the duration scan BEFORE the first full
+      battery and budget the near-edge class up front."
+    type: retro
+    date: "2026-11-16"
+  - text: "Quality gates: PASS at final HEAD c1fe34b7. Full battery 3
+      (TMPDIR=$PWD/tmp/tmpdir pnpm check, log
+      tmp/tmpdir/gh287-quality-gates-pnpm-check-3.log) exit 0 — 9623 pass / 4
+      skip / 0 fail across 9627 tests (1209 files, 1137.8s); check:boundaries no
+      violations (437 modules); ambient-globals 212 files clean;
+      workspace-entrypoints OK; secret-read-boundary 404 files clean;
+      memory-lint errors=0; prompt-conformance 5 clean; help-guide-coverage
+      covered; exports-parity 5 publishables pass. Range lint gate VERDICT PASS
+      — base main-tools resolved to merge-base cfb0ce8d (refs/remotes/
+      origin/main-tools), 23 commits in range, 0 offending, mode none;
+      commitlint binary node_modules/.bin/commitlint, origin repository-local."
+    type: info
+    date: "2026-11-16"
+  - text: "DoD check (PM): all gates verified green. (1) Registry: 9 lifecycle
+      phases completed per phase list, timestamps verified. (2) Plan completion:
+      all 10 declared plan phases carry pm-notes evidence with id + commit hash
+      + test results (P1 f22f390, P2 ad72ad68, P3 5377b80, P4 b4ffd7b, P5
+      eea8054, P6 16aee76, P7 6c827c3, P8 a806603, P9 225bded, P10 9cddcdb9;
+      quality-gate fix commits 09a86957 + c1fe34b7 documented separately;
+      phase-10 note placeholder '(this commit)' corrected to the real hash
+      9cddcdb9 — correction rides this dod_check commit). (3) ACs: all 15 spec
+      ACs verified by review iteration 2 PASS, pinned scenarios SC-M2-S10-01/02
+      asserted, ticket's six AC lines traced (spec section 17). (4) Current-
+      truth docs: doc-syncer reported residual gaps NONE in both passes (21-file
+      reconciliation + post-remediation light pass); doc-distribution no drift.
+      (5) Gates: full battery exit 0 (9623/4/0), range lint PASS. No reopened
+      phases required."
+    type: info
+    date: "2026-11-16"
+  - text: "Pull request:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/330 (base
+      main-tools, head feat/GH-287/retro-action-registry at 45fe86f4+, 25
+      commits, state OPEN, mergeable). Branch pushed to origin (upstream was
+      misconfigured to origin/main-tools; fixed by push -u origin HEAD). Issue
+      #287 labels synced to change + review (issue left OPEN). PR body states
+      the DEC-1/DEC-2 scope exclusions and the review chain (iter 1 FAIL F-1
+      HIGH -> remediated with two-runtime production-composition regression test
+      -> iter 2 PASS) plus gate evidence. Merge authority: CEO (Mode A) or human
+      via batch-deliver.sh (Mode B) — PR left open, no merge performed.
+      Lifecycle complete: 11 of 11 phases."
+    type: info
+    date: "2026-11-16"
+  - text: "SYNC-ONLY (post-PR, CEO-requested): main-tools advanced by one commit
+      (f9cf477f, GH-298 steer M2-S5). Rebased feat/GH-287/retro-action-registry
+      onto f9cf477f — 26 commits replayed, 6 conflict stops, 20 files resolved
+      strictly by union per convention (planning docs, 00-index, registers keep
+      BOTH sides; nothing dropped from either side; content integrity verified
+      bidirectionally: diff vs pre-rebase tip = exactly GH-298's changeset, diff
+      vs main-tools = exactly ours). Union count literals moved 143 -> 146 error
+      identities (140 base + 3 retro.action + 3 steer), allowlist 59 -> 62, and
+      propagated pins (error-table, corpora, suite-map, taxonomy, ceremony doc
+      pins, inventories, additivity baselines, coverage.json alias lines, doc
+      prose). Verification on the rebased tree: typecheck green; conflict-
+      affected suites + doc-conformance 293/0; steer/action/board suites green;
+      plan validate valid; error-table-sync entries=146 documented=146; full
+      battery TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 — 9814 pass / 4 skip /
+      0 fail across 9818 tests (1234 files, incl. GH-298 steer suites).
+      NOTABLE: the rebase rotated every commit hash — all pre-rebase hashes
+      recorded in this file's earlier notes (f22f390, ad72ad68, 5377b80,
+      b4ffd7b, eea8054, 16aee76, 6c827c3, a806603, 225bded, c3a7a32, 19fe62c,
+      1dd656bf, 9cddcdb9, fba659df, 98f6e6ae, 45fe86f4, 5b22c226, 09a86957,
+      c1fe34b7, 0a0c9b79, dc6fa941, 7d7e6248, 5d830edb, decdb9ec, 5ad6c010)
+      are historical identifiers of the same commits now living at rotated
+      SHAs on top of f9cf477f; the capsule ledger and delivery registry remain
+      the durable evidence (recordCount 368+, registry evidence class
+      verified). Pre-rebase backup ref: backup/GH-287-pre-rebase (5b22c226).
+      Post-rebase tip: 7763d0d8. No scope change, no phase reopen."
+    type: retro
+    date: "2026-11-16"

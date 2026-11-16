@@ -569,10 +569,23 @@ export type RetroFinding = {
   readonly evidenceRefs: readonly string[];
 };
 
+/** The provenance of one folded follow-through entry (GH-287 DEC-10). */
+export const RETRO_FOLLOW_THROUGH_PROVENANCE = ["evidence", "registry"] as const;
+
+export type RetroFollowThroughProvenance = (typeof RETRO_FOLLOW_THROUGH_PROVENANCE)[number];
+
 /** One recorded follow-through entry (DM-6). */
 export type RetroFollowThroughEntry = {
   readonly action: string;
   readonly verdict: RetroFollowThroughVerdict;
+  readonly artifactRef?: string;
+  /** Registry-sourced entries carry their provenance inside the delivered fold. */
+  readonly provenance?: RetroFollowThroughProvenance;
+};
+
+/** One registry action the follow-through reader exposes to the fold (DEC-10). */
+export type RetroFollowThroughRegistryEntry = {
+  readonly action: string;
   readonly artifactRef?: string;
 };
 

@@ -495,13 +495,24 @@ describe("TC-XCTR-007 identity reuse and the distinct report types", () => {
       ...baseline.rows.map((row) => JSON.parse(row) as Record<string, unknown>),
       ...events,
     ];
-    expect(entries).toHaveLength(preChange.length);
-    expect(entries.map((entry) => entry.code).sort()).toEqual(
+    // GH-287 declares three additive action-registry rows; every other table
+    // row stays byte-identical to the pre-change snapshot.
+    const additive = new Set([
+      "retro.action-incomplete",
+      "retro.closure-incomplete",
+      "retro.wip-limit-exceeded",
+    ]);
+    const delivered = entries.filter((entry) => !additive.has(entry.code));
+    expect(delivered).toHaveLength(preChange.length);
+    expect(delivered.map((entry) => entry.code).sort()).toEqual(
       preChange.map((row) => String(row.code)).sort(),
     );
     for (const row of preChange) {
-      expect(entries.find((entry) => entry.code === String(row.code))).toEqual(row);
+      expect(delivered.find((entry) => entry.code === String(row.code))).toEqual(row);
     }
+    expect(
+      entries.filter((entry) => entry.domainKind === "retro" && additive.has(entry.code)),
+    ).toHaveLength(3);
   });
 
   test("the domain-kind set is unchanged", () => {

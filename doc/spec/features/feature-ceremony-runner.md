@@ -8,7 +8,7 @@ owners: ["engineering"]
 service: delivery-os
 summary: "The `ceremony` family and the ceremony layer: four verbs (list, run, resume, catch-up) over one declaration contract (`delivery.ceremony.declarations.v1`) with closed step, slot, verification, trigger, cadence, scope-key, recorded-trigger and verdict vocabularies plus fixed bounds; six built-in declarations (morning brief, retro evidence pass, sprint rollover, night-watch, testing-session assessment, decision-record mirror sync) executed through one runner path; deterministic intake (declaration-held scope key, note or cadence-derived window, recorded trigger provenance), artifact-verified per-step execution with read-back verification, durable `ceremony.run` and `ceremony.step` records with derived durations, phase-boundary compaction, resume from the first unverified step, and single-window catch-up with identity-based satisfaction; project declarations in one committed `<configDirectoryName>/ceremonies.yaml` document with no tooling change; the pure tier engine over the delivered plan `tier` and pm-notes `variant` phase sets with a `tier-mismatch`/`unresolved-phase`/`unevaluated-trigger` finding vocabulary; the four sub-R1 retro levels with the concept's fixed note schema and follow-through-first agenda; the ceremony artifact family; and exactly two `ceremony.*` error identities under a new `ceremony` domain kind."
 links:
-  related_changes: ["GH-296", "GH-298"]
+  related_changes: ["GH-296", "GH-287", "GH-298"]
   contracts:
     - "packages/core/src/contracts/ceremony.ts"
     - "packages/core/src/contracts/ceremony-builtins.ts"
@@ -36,7 +36,7 @@ The runner adds no event topic, no MCP tool, no scheduler, no model call, no met
 ### 2.1 Problem Statement
 
 - **Problem:** Recurring factory rituals are prose and judgement unless they are units. A ritual whose inputs, steps, rendered output, verification, and behaviour after a miss live in habit cannot be checked — that a brief was rendered, that a retro note carries a follow-through section, that an owner's testing note received a coverage verdict, or that a decision record reached an affected repository — and a missed window is indistinguishable from a quiet one. A rerun without an idempotency anchor duplicates work instead of appending an addendum, ceremony time stays a self-reported proxy, a declared tier is a label rather than a reduced obligation, and a project ritual needs bespoke code. The ceremony layer removes each of those failure modes by making the ritual a declaration executed by one deterministic runner: artifact-verified steps, a recorded run identity, bounded catch-up, the plan tier and pm-notes variant consumed as one mapping, and durable per-step durations.
-- **Affected Users:** Coordinators and owners running the recurring rituals, agents that invoke a ceremony instead of improvising one, reviewers who need a run's evidence, auditors reading the durable records, and the later metric and action-registry surfaces that consume these records.
+- **Affected Users:** Coordinators and owners running the recurring rituals, agents that invoke a ceremony instead of improvising one, reviewers who need a run's evidence, auditors reading the durable records, and the metric, board, and action-registry surfaces that consume these records.
 - **Business Impact:** A declared, artifact-verified, idempotent, resumable and measurable ceremony unit is the precondition for moving ceremony share at all: `MET-CEREMONY-SHARE` is a `PARTIAL` proxy with no engine able to move it until a ceremony is a declared unit with recorded durations.
 
 ### 2.2 Goals
@@ -52,7 +52,7 @@ The runner adds no event topic, no MCP tool, no scheduler, no model call, no met
 ### 2.3 Non-Goals
 
 - No metrics presentation, aggregate report, alarm, or threshold (the `metrics` surface is M2-S6); the runner records data and one committed comparison.
-- No retro action registry: filing, artifact/outcome closure, aging, and the action board are M2-S10; the retro ceremony records a declared-actions handoff.
+- No retro action registry surface of its own: filing, artifact/outcome closure, aging, and the action board are owned by the sibling registry ([Retro Action Registry](feature-retro-action-registry.md), GH-287); the retro ceremony records a declared-actions handoff and reads the registry's recorded actions through the composed follow-through producer. Declarations, agendas, the note schema, and the asserted follow-through-first position stay unchanged.
 - No ceremony packs, no pack registry, no signed bundle, no cross-repository ceremony coordination.
 - No scheduler: no daemon integration, cron/systemd unit, timer, unattended cadence, sleep, or child process. The runner evaluates schedules and offers `catch-up`.
 - No new event topic or event kind; no MCP tool; no board/status/brief ceremony surface.
@@ -221,12 +221,12 @@ Rules:
 | `window` | schedule `daily` | the project window | window note: cross-change patterns, follow-through verification, candidate promotions |
 | `project` | event `milestone-end` | the milestone | project note: consolidation candidates, tribal-knowledge graduation, recurrence report |
 
-- **Follow-through first.** The first phase is follow-through verification over the recorded actions, with the verdict vocabulary `applied`, `partial`, `violated-with-consequence`. A status claim is never evidence, and the phase's first position is asserted.
+- **Follow-through first.** The first phase is follow-through verification over the recorded actions, with the verdict vocabulary `applied`, `partial`, `violated-with-consequence`. A status claim is never evidence, and the phase's first position is asserted. The registry producer (GH-287) supplies the open recorded actions and their artifacts; the verdict comes from the artifact oracle, so an artifact that fails cannot yield `applied` even when an owner claims success, and an unresolvable artifact degrades to `unverified`.
 - **Fixed note schema.** The note carries `schemaId`, `ceremony`, `scopeKey`, `window`, `trigger`, the level and the concept's fixed members. The fixed schema is validated at intake before any output; the `record` step writes the note to the memory slot and its verification confirms the memory file is readable and parses as an object rather than re-validating the fixed schema a second time.
 - **Idempotent scope keys.** The declaration takes `scopeKey: { kind: "note" }`, so the level's scope is the note's key. A rerun for the same `(scopeKey, window)` returns the recorded verdict; a rerun at a new window appends an addendum and never rewrites a prior note body.
 - **Null retro is a success.** A retro whose evidence supports no finding, action, or lesson is a `verified` run with an explicit empty finding set; nothing is fabricated to fill a quiet window.
 - **The evidence plane is the delivered pipeline.** The evidence step is a read-only fold over the delivered retro evidence records and run records plus the declared citations. The ceremony adds no collector, sidecar, chain, or truth check, and R1 coverage stays the closeout's `retro.run` read.
-- **Actions are handed off.** Declared actions are rendered as a handoff section in the note; filing, the five-field action contract, aging, and closure belong to M2-S10.
+- **Actions are handed off.** Declared actions are rendered as a handoff section in the note; filing, the five-field action contract, aging, and closure are the sibling registry's contract ([Retro Action Registry](feature-retro-action-registry.md)), and the follow-through phase reads the registry's recorded actions through the composed producer.
 - **Levels are ceremony data.** The pipeline's collection grammar stays `change`-only and its registry keeps the four levels `declared`; selecting a level through `retro collect` is still refused there, while the ceremony layer selects the level through the note.
 
 ### 3.10 Measurement and the committed comparison
@@ -338,7 +338,7 @@ Each artifact names its schema identifier; a render that cannot be read back fai
 | `ceremony.note-invalid` | `ceremony` | `user` | `false` | `not_landed` | `user-validation` | `1` | A note required by the declaration is absent, omits a required member or its idempotent `scopeKey`, names another ceremony, or disagrees with the declaration's scope key; the field is named and no partial ceremony output is written. |
 | `ceremony.declaration.invalid` | `ceremony` | `user` | `false` | `not_landed` | `user-validation` | `1` | A built-in or project declaration violates the contract — unknown step kind, input source, output slot, verification mode, trigger event, cadence, or tier; missing verification or output schema; duplicate id; built-in collision; unparseable schedule; over-bound collection; missing or illegal scope-key derivation; executable content — naming the ceremony id and the field, with nothing registered. |
 
-`ceremony.note-invalid` is a kind-first two-segment code and is in the reserved exact allowlist; `ceremony.declaration.invalid` is three-segment. Grammar refusals use `fallback.invocation`; undeclared names, a missing note, a missing `--window`, and window disagreement use `input.value.rejected`; a malformed declaration document uses `config.file.malformed`; a contradicted record sequence or unreadable records use `state.store.torn`/`state.store.unknown`; a failed verification is a data-bearing `unverified` verdict, not an error row. The machine table and the documented table in [Result Contract](feature-result-contract.md) are in two-way sync at 143 identities and a 59-entry reserved two-segment allowlist.
+`ceremony.note-invalid` is a kind-first two-segment code and is in the reserved exact allowlist; `ceremony.declaration.invalid` is three-segment. Grammar refusals use `fallback.invocation`; undeclared names, a missing note, a missing `--window`, and window disagreement use `input.value.rejected`; a malformed declaration document uses `config.file.malformed`; a contradicted record sequence or unreadable records use `state.store.torn`/`state.store.unknown`; a failed verification is a data-bearing `unverified` verdict, not an error row. The machine table and the documented table in [Result Contract](feature-result-contract.md) are in two-way sync at 146 identities and a 62-entry reserved two-segment allowlist.
 
 ### 4.7 Invariants
 
@@ -361,7 +361,7 @@ Each artifact names its schema identifier; a render that cannot be read back fai
 | Idempotency | Zero duplicate run records per identity; addenda only for notes; zero appends for a caught-up window | Delivered |
 | Catch-up boundedness | ≤1 replayed window per ceremony per invocation; zero fabricated windows; zero replays for an occupied identity | Delivered |
 | Bounded carried state | Summary ≤4 096 bytes / 40 lines with an explicit omission count; run record ≤16 KiB; step record ≤2 KiB; declaration document ≤1 MiB | Delivered |
-| Error-table binding | Two rows, one domain kind, one reserved two-segment entry, two-way sync | Delivered at 143 identities and a 59-entry allowlist |
+| Error-table binding | Two rows, one domain kind, one reserved two-segment entry, two-way sync | Delivered at 146 identities and a 62-entry allowlist |
 | Tier neutrality | Exactly two phase-set sources, no third vocabulary, no hardcoded default set | Delivered; a structure suite fails on a second literal |
 | Measurement completeness | Every executed step carries a duration and a verification verdict | Delivered |
 | Mirror safety | Declared targets only (≤8), equality in both directions, no force path, no landing without `--apply` | Delivered over injected mirror ports |
@@ -389,7 +389,7 @@ All ceremony fixtures are synthetic and committed: injected clocks, id factories
 | `tests/behaviour/ceremony-bounds.test.ts`, `ceremony-determinism.test.ts`, `ceremony-performance.test.ts` (TC-050, TC-053..055) | Output and record bounds, replay determinism, measured read cost and bounded-work posture |
 | `tests/behaviour/ceremony-nonregression.test.ts` (TC-057) | The retro pipeline's payloads, identities, and registry status stay byte-identical |
 | `tests/checks/ceremony-hermetic.test.ts`, `ceremony-mutants.test.ts` (TC-050, TC-056) | No skips, sockets, spawns, `HOME` reads, or live-tree writes; sixteen disabled rules each fail their suite |
-| `tests/checks/error-table-sync.test.ts`, `tests/structure/error-table.test.ts`, `doc-conformance.test.ts` | Two-way error sync, 143 identities, 59-entry allowlist, documentation truth |
+| `tests/checks/error-table-sync.test.ts`, `tests/structure/error-table.test.ts`, `doc-conformance.test.ts` | Two-way error sync, 146 identities, 62-entry allowlist, documentation truth |
 
 Mounting is covered by the help/coverage matrix, the prompt-set count assertion, root and family help, and the M2 reference page; a mapping whose reference page is absent fails `pnpm check:help`.
 
@@ -415,13 +415,14 @@ One run record, one step record per attempt, and one artifact file per step slot
 |---|---|---|
 | Depends on | Status digest, brief | Morning-brief inputs and the `delivery.brief.v1` render contract, consumed read-only |
 | Depends on | Retro evidence pipeline | Verified evidence, `retro.run` records, and the level trigger model, consumed read-only |
+| Depends on | Retro action registry ([Retro Action Registry](feature-retro-action-registry.md)) | The recorded actions and their verification artifacts behind the follow-through phase, read through the composed producer; filing, aging, closure, and the board actions surface are the registry's contract |
 | Depends on | Machine-readable plan | `PLAN_KNOWN_TIERS` and the required `tier` declaration |
 | Depends on | pm-notes lint and phase transitions | `PM_NOTES_REQUIRED_PHASES_BY_VARIANT`, the pinned per-tier phase sets |
 | Depends on | State layer | Ledger, artifact boundaries, fenced appends, classified damage, retention |
 | Depends on | Entrypoint and self-description | Prompt-required composition, family and verb help, reference-page coverage |
 | Depends on | Measurement baseline | The committed metric definition, formula, status semantics, and comparison protocol |
 | Blocks | the `metrics` surface (M2-S6) | The metric surface consumes runner durations and the committed comparison |
-| Feeds (no recorded board edge) | Retro action registry (M2-S10), board ceremony surface (M2-S4+) | The action handoff and the ceremony state are available; neither surface ships here |
+| Feeds (no recorded board edge) | Board ceremony surface (M2-S4+) | The ceremony state is recorded; no board section projects it |
 | Risk | The declaration vocabulary is too narrow for a real ritual | The six built-ins are the expressiveness proof; a missing vocabulary is a reviewed contract extension, never a silent code path |
 | Risk | A declaration becomes a scripting surface | Closed vocabularies plus the recursive executable-member refusal, asserted structurally |
 | Risk | The mirror sync writes into another repository unintentionally | Declared targets only, dry-run default, preconditions, equality verification, no force path |

@@ -7,6 +7,9 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import ts from "typescript";
 import {
+  RETRO_ACTION_CLOSURE_RECORD_KIND,
+  RETRO_ACTION_RECORD_KIND,
+  RETRO_ACTION_REGISTRY_BOUNDARY_DECLARATION,
   RETRO_CHAIN_ANCHOR,
   RETRO_CHAIN_KEY_BYTES,
   RETRO_CHAIN_KEY_PAYLOAD_SCHEMA,
@@ -241,5 +244,26 @@ describe("TC-RETRO-001 contract vocabulary and data-only shapes", () => {
   test("declared bounds and the target ordering are pinned data", () => {
     expect(RETRO_EXPORT_MAX_LIMIT).toBe(1000);
     expect(RETRO_TARGET_ORDER).toBe("completion-desc-ref-asc");
+  });
+});
+
+describe("TC-ACTION-034 the action boundary is an additive sibling", () => {
+  test("the delivered boundary keeps exactly three kinds while the sibling declares two", () => {
+    expect(RETRO_REGISTRY_BOUNDARY_DECLARATION.kinds).toHaveLength(3);
+    expect(RETRO_ACTION_REGISTRY_BOUNDARY_DECLARATION.kinds.map((kind) => kind.kind)).toEqual([
+      RETRO_ACTION_RECORD_KIND,
+      RETRO_ACTION_CLOSURE_RECORD_KIND,
+    ]);
+    expect(RETRO_ACTION_RECORD_KIND).toBe("retro.action");
+    expect(RETRO_ACTION_CLOSURE_RECORD_KIND).toBe("retro.action-closure");
+  });
+
+  test("the sibling's scope is disjoint from the delivered registry's record kinds", () => {
+    const delivered = new Set(RETRO_REGISTRY_BOUNDARY_DECLARATION.kinds.map((kind) => kind.kind));
+    for (const kind of RETRO_ACTION_REGISTRY_BOUNDARY_DECLARATION.kinds) {
+      expect(delivered.has(kind.kind)).toBe(false);
+      expect(kind.payloadSchema?.startsWith("delivery.retro.")).toBe(true);
+    }
+    expect(RETRO_ACTION_REGISTRY_BOUNDARY_DECLARATION.recordKeyPrefix).toBe("retro.action");
   });
 });

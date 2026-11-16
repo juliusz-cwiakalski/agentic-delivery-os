@@ -94,6 +94,10 @@ import {
 } from "@delivery-os/adapters/session";
 import type { ConfigCatalog, DefaultPositionManifest } from "@delivery-os/core";
 import {
+  type ActionArtifactVerdict,
+  actionArtifactPlaneOpen,
+  actionListEntry,
+  actionWindowEntries,
   addQueueDependency,
   admitDispatchRestart,
   appendCommandReceipt,
@@ -123,6 +127,7 @@ import {
   claimQueueLease,
   claimSingleFlightRefusal,
   classifyPruneCandidate,
+  closeRetroAction,
   collectRetro,
   computeDbCutoffMs,
   computeDbLiveBoundaryMs,
@@ -147,6 +152,7 @@ import {
   evaluateDiffSweep,
   evaluateDispatchResumeEconomics,
   evaluateWorktreeSafety,
+  fileRetroAction,
   foldLanes,
   type HarnessSettings,
   handoverDispatchEvidence,
@@ -154,6 +160,7 @@ import {
   isLiveDbSession,
   isMemberRef,
   joinAttributionSubstrates,
+  listRetroActions,
   type MergeTransactionPorts,
   memberRefFor,
   normalizeStagedPaths,
@@ -206,6 +213,7 @@ import {
   resolveQueueSettings,
   resolveQueueWeight,
   resumeCeremony,
+  retroActionCeremonyFacts,
   revertDispatchHandoverEvidence,
   runCeremony,
   runCloseout,
@@ -233,11 +241,13 @@ import {
   validateCeremonyNoteForDeclaration,
   type WatchRead,
   watchLines,
+  windowDisclosures,
   windowSpendEvidence,
 } from "@delivery-os/core";
 import type { BrandingInputError, ResolverInput } from "@delivery-os/core/branding";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
 import {
+  ACTION_WIP_LIMIT,
   type AdapterCapabilityDeclaration,
   AUDIT_IDENTITY_VARIABLE_SUFFIX,
   type AuditAgentIdentity,
@@ -247,6 +257,7 @@ import {
   type BlockerDelegationPolicy,
   BOARD_MAX_LANES,
   BOARD_MAX_REPOSITORIES,
+  type BoardActionFact,
   type BoardAskFact,
   type BoardLaneFact,
   type BoardOwnerHold,
@@ -399,11 +410,13 @@ import {
   createCeremonyRecordPort,
   createNodeRetroSidecarIo,
   createNodeStateEdge,
+  createRetroActionRegistryPort,
   createRetroSidecar,
   createStateStore,
   foldCeremonyRunVerdict,
   foldCloseoutHistory,
   foldPhaseState,
+  readActionRegistry,
   readAllMergeWaivers,
   readAuditLedger,
   readBlockerLedger,
@@ -508,7 +521,10 @@ import {
   toQueueReadData,
 } from "./commands/queue.js";
 import { createReposCommandDefinition, type ReposCommandRuntime } from "./commands/repos.js";
-import { createRetroCommandDefinition } from "./commands/retro.js";
+import {
+  createRetroCommandDefinition,
+  type RetroCommandRuntimeWithActions,
+} from "./commands/retro.js";
 import { createSpendCommandDefinition, type SpendCommandRuntime } from "./commands/spend.js";
 import { createStatusCommandDefinition, type StatusCommandRuntime } from "./commands/status.js";
 import { createSteerCommandDefinition, type SteerCommandRuntime } from "./commands/steer.js";
@@ -2813,6 +2829,8 @@ export type DoctorComposition = {
   readonly readWorkTree: () => { readonly readable: boolean; readonly clean: boolean };
   /** The additive retro registry store fact (GH-232 F-8). */
   readonly readRetroState?: () => DoctorStateStoresRead;
+  /** The additive action-registry store fact (GH-287 DEC-7). */
+  readonly readActionState?: () => DoctorStateStoresRead;
   /** The per-run owner-hold reader supplied by the production composition. */
   readonly readOwnerHold?: () => OwnerHoldFact;
 };
@@ -3029,20 +3047,42 @@ export const createDoctorCommandRuntime = (
         ],
       };
       const retro = options.readRetroState?.();
-      if (retro === undefined) return base;
-      if (!retro.ok) return retro;
+      if (retro !== undefined && !retro.ok) return retro;
+      const action = options.readActionState?.();
+      if (action !== undefined && !action.ok) return action;
+      if (retro === undefined && action === undefined) return base;
       return {
         ok: true,
-        verifiedEmpty: base.verifiedEmpty && retro.verifiedEmpty,
-        // The retro registry shares the delivery ledger (the reviewed PIN-4
-        // single-store decision); `base.recordCount` already includes the retro
-        // artifacts, so adding `retro.recordCount` would double-count them.
+        verifiedEmpty:
+          base.verifiedEmpty &&
+          (retro === undefined || retro.verifiedEmpty) &&
+          (action === undefined || action.verifiedEmpty),
+        // All three stores share the delivery ledger (the reviewed PIN-4
+        // single-store decision); `base.recordCount` already includes their
+        // artifacts, so adding their counts would double-count them.
         recordCount: base.recordCount,
         stores: [
           ...(base.stores ?? []),
-          ...(retro.stores ?? [
-            { name: "retro-registry", verdict: retro.verifiedEmpty ? "verified-empty" : "valid" },
-          ]),
+          ...(retro?.stores ??
+            (retro === undefined
+              ? []
+              : [
+                  {
+                    name: "retro-registry",
+                    verdict: retro.verifiedEmpty ? ("verified-empty" as const) : ("valid" as const),
+                  },
+                ])),
+          ...(action?.stores ??
+            (action === undefined
+              ? []
+              : [
+                  {
+                    name: "action-registry",
+                    verdict: action.verifiedEmpty
+                      ? ("verified-empty" as const)
+                      : ("valid" as const),
+                  },
+                ])),
         ],
       };
     },
@@ -3169,6 +3209,42 @@ export type BoardHostIndexDocument = {
 };
 
 /** Compose the board runtime over the real tracker read and the state ledger. */
+/**
+ * The board's single named action-registry source (GH-287 F-6): one bounded
+ * read per repository, projected as open actions with their aging state and
+ * the window count/limit disclosure. Damage classifies as unavailable.
+ */
+type BoardActionsReadLocal =
+  | { readonly ok: true; readonly facts: readonly BoardActionFact[] }
+  | { readonly ok: false };
+
+const boardActionsFrom = (store: StateStorePort, nowMs: number): BoardActionsReadLocal => {
+  const read = readActionRegistry(store);
+  if (!read.ok) return { ok: false };
+  if (read.value.malformed.length > 0) return { ok: false };
+  const snapshot = { actions: read.value.actions, closures: read.value.closures };
+  const disclosures = new Map(
+    windowDisclosures(actionWindowEntries(snapshot)).map((entry) => [entry.window, entry]),
+  );
+  const facts: BoardActionFact[] = [];
+  for (const action of snapshot.actions) {
+    const row = actionListEntry(action, snapshot, nowMs);
+    if (row.artifactClosure !== "open") continue;
+    const disclosure = disclosures.get(row.window);
+    facts.push({
+      actionId: row.actionId,
+      owner: row.owner,
+      level: row.level,
+      age: row.age,
+      agingState: row.agingState,
+      window: row.window,
+      windowOpenCount: disclosure?.openCount ?? 0,
+      windowLimit: disclosure?.limit ?? ACTION_WIP_LIMIT,
+    });
+  }
+  return { ok: true, facts };
+};
+
 export const createBoardCommandRuntime = (composition: BoardComposition): BoardCommandRuntime => {
   const instance = composition.github.instance;
   const admitted =
@@ -3373,6 +3449,9 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
       };
     }
     repositoryStores.set(repository, store);
+    // The board's actions surface reads the repository's own action registry
+    // once (GH-287 F-6): a failed read is disclosed and fabricates no row.
+    const actionFacts = boardActionsFrom(store, composition.nowMs());
     const tracker = await readTrackerFor(root, store);
     if (!tracker.ok) return { ok: false, kind: "status", code: tracker.code };
 
@@ -3524,6 +3603,8 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
         lanes,
         ...(omittedLanes > 0 ? { omittedLanes } : {}),
         asks,
+        actions: actionFacts.ok ? actionFacts.facts : [],
+        actionsSource: actionFacts.ok ? "available" : "unavailable",
         parks,
         decisions: records,
       },
@@ -3854,6 +3935,36 @@ const ordinaryFlags = (flags: CommandFlags, catalog: ConfigCatalog): Record<stri
 };
 
 /** The ceremony family composition seam (GH-296 F-1, F-6, F-7). */
+/** The open recorded actions one registry read exposes (GH-287 F-7). */
+const openRegistryActions = (store: StateStorePort) => {
+  const read = readActionRegistry(store);
+  if (!read.ok || read.value.malformed.length > 0) return [];
+  const snapshot = { actions: read.value.actions, closures: read.value.closures };
+  return snapshot.actions.filter((action) => actionArtifactPlaneOpen(action.actionId, snapshot));
+};
+
+/** The registry follow-through reader the retro report/collect folds consume. */
+const registryFollowThroughFor = (
+  store: StateStorePort,
+  level: import("@delivery-os/core/contracts").RetroLevelName,
+): readonly import("@delivery-os/core/contracts").RetroFollowThroughRegistryEntry[] =>
+  openRegistryActions(store)
+    .filter((action) => action.level === level)
+    .map((action) => ({ action: action.actionId, artifactRef: action.verificationArtifact }));
+
+/** The ceremony retro-evidence facts the registry produces (GH-287 F-7). */
+const ceremonyRegistryFacts = (
+  store: StateStorePort,
+  verify: (artifactRef: string) => ActionArtifactVerdict,
+): { readonly retroRegistry?: unknown } => {
+  const actions = openRegistryActions(store).map((action) => ({
+    actionId: action.actionId,
+    verificationArtifact: action.verificationArtifact,
+  }));
+  if (actions.length === 0) return {};
+  return retroActionCeremonyFacts(actions, verify);
+};
+
 export type CeremonyCompositionOptions = {
   readonly store: StateStorePort;
   readonly stateDirectory: string;
@@ -3871,6 +3982,12 @@ export type CeremonyCompositionOptions = {
    * the change's committed pm-notes and plan documents (F-7, DM-7).
    */
   readonly tierContext?: CeremonyTierInput;
+  /**
+   * The artifact oracle the registry follow-through reads (GH-287 F-7). Absent
+   * means every artifact is unresolvable, so verdicts degrade rather than
+   * fabricate.
+   */
+  readonly verifyActionArtifact?: (artifactRef: string) => ActionArtifactVerdict;
 };
 
 const ceremonyFailure = (error: CeremonyEngineFailure): CeremonyCommandResult => ({
@@ -4045,9 +4162,13 @@ export const createCeremonyCommandRuntime = (
         // truth-check evidence references are what a follow-through verdict may
         // cite. The supplied note's own citations are never echoed back as
         // evidence (AC-F9-3).
+        const registryFacts = ceremonyRegistryFacts(
+          options.store,
+          options.verifyActionArtifact ?? (() => "unresolvable"),
+        );
         return {
           state: "present",
-          facts: { evidenceRefs: [...retroEvidenceRefs()] },
+          facts: { evidenceRefs: [...retroEvidenceRefs()], ...registryFacts },
         };
       }
       if (source === "affected-repositories") {
@@ -4890,6 +5011,9 @@ export type RetroCompositionOptions = {
   readonly newRunId: () => string;
   readonly newTraceId: () => string;
   readonly newFenceToken: () => string;
+  /** The additive action/closure identity factories (GH-287 DEC-7). */
+  readonly newActionId?: () => string;
+  readonly newClosureId?: () => string;
   readonly identity?: import("@delivery-os/core/contracts").RetroClaimedIdentity;
   readonly context?: "collector" | "delivery-agent";
   readonly collectors?: import("@delivery-os/core/contracts").RetroCollectorRead;
@@ -5046,7 +5170,7 @@ const retroStateFamiliesFrom = (
 /** Compose the retro command runtime from injected seams. */
 export const createRetroCommandRuntime = (
   options: RetroCompositionOptions,
-): import("@delivery-os/core/contracts").RetroCommandRuntime => {
+): RetroCommandRuntimeWithActions => {
   const sidecar = createRetroSidecar(
     createNodeRetroSidecarIo({
       stateDirectory: options.stateDirectory,
@@ -5060,7 +5184,72 @@ export const createRetroCommandRuntime = (
       readNotes: (changeRef) => retroNotesFrom(options, changeRef),
       readSpend: (changeRef) => retroSpendFrom(options.store, changeRef),
     };
+  let actionSeq = 0;
+  let closureSeq = 0;
+  const actionPort = createRetroActionRegistryPort(options.store);
+  const redactText = options.redact ?? ((text: string) => text);
+  const redactDraft = (
+    draft: import("@delivery-os/core/contracts").RetroActionDraft,
+  ): import("@delivery-os/core/contracts").RetroActionDraft => ({
+    ...draft,
+    ...(draft.owner === undefined ? {} : { owner: redactText(draft.owner) }),
+    ...(draft.measurableOutcome === undefined
+      ? {}
+      : { measurableOutcome: redactText(draft.measurableOutcome) }),
+    ...(draft.trackerEntry === undefined ? {} : { trackerEntry: redactText(draft.trackerEntry) }),
+    ...(draft.verificationArtifact === undefined
+      ? {}
+      : { verificationArtifact: redactText(draft.verificationArtifact) }),
+    ...(draft.rollbackCondition === undefined
+      ? {}
+      : { rollbackCondition: redactText(draft.rollbackCondition) }),
+    ...(draft.outcomeVerifier === undefined
+      ? {}
+      : {
+          outcomeVerifier: {
+            ...draft.outcomeVerifier,
+            evidence: redactText(draft.outcomeVerifier.evidence),
+          },
+        }),
+  });
+  const actions: import("@delivery-os/core/contracts").RetroActionCommandRuntime = {
+    file: (draft) => {
+      actionSeq += 1;
+      return fileRetroAction(actionPort, {
+        draft: redactDraft(draft),
+        actionId: options.newActionId?.() ?? `action-${String(actionSeq)}`,
+        filedAt: options.clock.nowMs(),
+        fenceToken: options.newFenceToken(),
+      });
+    },
+    close: (request) => {
+      closureSeq += 1;
+      return closeRetroAction(
+        actionPort,
+        {
+          ...request,
+          ...(request.decision === undefined ? {} : { decision: redactText(request.decision) }),
+          ...(request.reason === undefined ? {} : { reason: redactText(request.reason) }),
+          ...(request.evidence === undefined ? {} : { evidence: redactText(request.evidence) }),
+          ...(request.artifact === undefined ? {} : { artifact: redactText(request.artifact) }),
+          ...(request.successor === undefined ? {} : { successor: redactText(request.successor) }),
+        },
+        {
+          closureId: options.newClosureId?.() ?? `closure-${String(closureSeq)}`,
+          decidedAt: options.clock.nowMs(),
+          nowMs: options.clock.nowMs(),
+          fenceToken: options.newFenceToken(),
+        },
+      );
+    },
+    list: (input) =>
+      listRetroActions(actionPort, {
+        nowMs: options.clock.nowMs(),
+        ...(input.window === undefined ? {} : { window: input.window }),
+      }),
+  };
   return {
+    actions,
     collect: (input) =>
       collectRetro({
         sidecar,
@@ -5072,6 +5261,7 @@ export const createRetroCommandRuntime = (
         },
         collectors,
         readChanges: options.readChanges ?? (() => retroChangeFactsFrom(options.store)),
+        readFollowThrough: () => registryFollowThroughFor(options.store, input.level),
         clock: { nowMs: options.clock.nowMs },
         newTraceId: options.newTraceId,
         newRunId: options.newRunId,
@@ -5093,6 +5283,7 @@ export const createRetroCommandRuntime = (
         },
         level: input.level,
         ...(options.verifyArtifact === undefined ? {} : { verifyArtifact: options.verifyArtifact }),
+        readFollowThrough: (level) => registryFollowThroughFor(options.store, level),
       }),
   };
 };
@@ -5119,6 +5310,34 @@ export const readRetroRegistryState = (store: StateStorePort): DoctorStateStores
     verifiedEmpty: read.value.verdict === "verified-empty",
     recordCount: read.value.artifacts.length,
     stores: [{ name: "retro-registry", verdict: read.value.verdict }],
+  };
+};
+
+/**
+ * Read the action-registry store verdict for the doctor `state check`
+ * (GH-287 DEC-7), composed at the edge exactly like the retro-registry fact.
+ */
+export const readActionRegistryState = (store: StateStorePort): DoctorStateStoresRead => {
+  const read = readActionRegistry(store);
+  if (!read.ok) {
+    return {
+      ok: false,
+      reason: doctorStateReason(read.error.code),
+      failureCode: read.error.code,
+    };
+  }
+  if (read.value.malformed.length > 0) {
+    return {
+      ok: false,
+      reason: "store-unknown",
+      failureCode: "state.store.unknown",
+    };
+  }
+  return {
+    ok: true,
+    verifiedEmpty: read.value.verdict === "verified-empty",
+    recordCount: read.value.actions.length + read.value.closures.length,
+    stores: [{ name: "action-registry", verdict: read.value.verdict }],
   };
 };
 

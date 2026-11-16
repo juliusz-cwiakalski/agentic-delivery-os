@@ -8,9 +8,11 @@
  * renderer, validator, and the family-code formatter; all helpers stay internal.
  */
 import {
+  BOARD_ACTIONS_LABEL,
   BOARD_COLLECTOR_ERROR_PREFIX,
   BOARD_COLLECTOR_ERROR_SUFFIX,
   BOARD_HUMAN_SECTION_CAPS,
+  BOARD_MAX_ACTIONS,
   BOARD_MAX_ASKS,
   BOARD_MAX_GATES,
   BOARD_MAX_HUMAN_BYTES,
@@ -29,6 +31,8 @@ import {
   BOARD_MAX_UNTIL_CHARS,
   BOARD_MAX_WAIVED_BY_CHARS,
   BOARD_SCHEMA_VERSION,
+  BOARD_SECTION_DROP_ORDER,
+  type BoardActionRow,
   type BoardAskDefaultState,
   type BoardAskFact,
   type BoardAskRow,
@@ -338,6 +342,7 @@ export const toBoardData = (
       ownerSource: "gate-audience",
     })),
     asks: [],
+    actions: [],
     parked: [],
     collectors,
     ownerHold: { active: false },
@@ -349,6 +354,7 @@ export const toBoardData = (
       lanes: 0,
       gates: evaluation.omitted,
       asks: 0,
+      actions: 0,
       parked: 0,
     },
   };
@@ -578,6 +584,7 @@ export const projectBoard = (input: BoardProjectionInput): BoardProjection => {
   const lanes: BoardLaneRow[] = [];
   const gates: BoardGateRow[] = [];
   const asks: BoardAskRow[] = [];
+  const actions: BoardActionRow[] = [];
   const parked: BoardParkedRow[] = [];
   const collectors: BoardRepositoryEvidence[] = [];
   const decisionsToApply: Record<string, readonly OwnerGateSlaDecisionRecord[]> = {};
@@ -586,6 +593,7 @@ export const projectBoard = (input: BoardProjectionInput): BoardProjection => {
     lanes: 0,
     gates: 0,
     asks: 0,
+    actions: 0,
     parked: 0,
   };
 
@@ -618,6 +626,21 @@ export const projectBoard = (input: BoardProjectionInput): BoardProjection => {
     for (const fact of askFacts) asks.push(askRow(repository.key, fact, drawn, appliedRefs));
     omittedBySection.asks += Math.max(0, ownerAsks.length - BOARD_MAX_ASKS);
 
+    const actionFacts = [...(repository.actions ?? [])].sort(
+      compareTextBy((fact) => fact.actionId),
+    );
+    for (const fact of actionFacts.slice(0, BOARD_MAX_ACTIONS)) {
+      actions.push({ ...fact, repository: repository.key });
+    }
+    omittedBySection.actions += Math.max(0, actionFacts.length - BOARD_MAX_ACTIONS);
+    if (repository.actions !== undefined || repository.actionsSource !== undefined) {
+      collectors.push({
+        collector: "actions",
+        outcome: repository.actionsSource ?? "available",
+        repository: repository.key,
+      });
+    }
+
     const laneParks = repository.parks.filter(
       (park) => park.reason === "peak-window" || park.reason === "owner-hold",
     );
@@ -635,6 +658,7 @@ export const projectBoard = (input: BoardProjectionInput): BoardProjection => {
     omittedBySection.lanes +
     omittedBySection.gates +
     omittedBySection.asks +
+    omittedBySection.actions +
     omittedBySection.parked;
   const base: BoardData = {
     schemaVersion: BOARD_SCHEMA_VERSION,
@@ -645,6 +669,7 @@ export const projectBoard = (input: BoardProjectionInput): BoardProjection => {
     lanes,
     gates,
     asks,
+    actions,
     parked,
     collectors,
     ownerHold: input.ownerHold,
@@ -656,14 +681,14 @@ export const projectBoard = (input: BoardProjectionInput): BoardProjection => {
   return { data: boundMachine(base), decisionsToApply };
 };
 
-type BoardSectionKey = "parked" | "asks" | "lanes" | "gates";
+type BoardSectionKey = "parked" | "actions" | "asks" | "lanes" | "gates";
 
 /** Drop rows tail-first in the declared order until the payload fits (DM-11). */
 const boundMachine = (data: BoardData): BoardData => {
   let current = data;
   const counters = { ...data.omittedBySection };
   let omitted = data.omitted;
-  const order: readonly BoardSectionKey[] = ["parked", "asks", "lanes", "gates"];
+  const order: readonly BoardSectionKey[] = [...BOARD_SECTION_DROP_ORDER];
   for (const section of order) {
     while (
       utf8ByteLength(JSON.stringify(current)) > BOARD_MAX_MACHINE_BYTES &&
@@ -672,6 +697,7 @@ const boundMachine = (data: BoardData): BoardData => {
       counters[section] += 1;
       omitted += 1;
       if (section === "parked") current = { ...current, parked: current.parked.slice(0, -1) };
+      if (section === "actions") current = { ...current, actions: current.actions.slice(0, -1) };
       if (section === "asks") current = { ...current, asks: current.asks.slice(0, -1) };
       if (section === "lanes") current = { ...current, lanes: current.lanes.slice(0, -1) };
       if (section === "gates") current = { ...current, gates: current.gates.slice(0, -1) };
@@ -715,6 +741,7 @@ export const renderBoardHuman = (data: BoardData, brand: BrandIdentity): string 
     data.lanes.length === 0 &&
     data.gates.length === 0 &&
     data.asks.length === 0 &&
+    data.actions.length === 0 &&
     data.parked.length === 0;
   const header =
     empty || data.scope === "unbound"
@@ -733,12 +760,22 @@ export const renderBoardHuman = (data: BoardData, brand: BrandIdentity): string 
     (row) =>
       `${row.repository}  ${row.id}  ref=${row.ref ?? "null"}  age=${ageMsLabel(row.age)}  default=${row.drawnDefault ?? "none"}:${row.defaultState}  owner=${row.owner ?? "null"}`,
   );
+  const actionLines = data.actions.map(
+    (row) =>
+      `${row.repository}  ${row.actionId}  owner=${row.owner}  level=${row.level}  age=${ageMsLabel(row.age)}  aging=${row.agingState}  window=${row.window}:${String(row.windowOpenCount)}/${String(row.windowLimit)}`,
+  );
   const parkedLines = data.parked.map(
     (row) =>
       `${row.repository}  ${row.ref}  reason=${row.reason}  until=${row.until ?? row.untilReason ?? "null"}  owner=${row.owner ?? "null"}`,
   );
 
-  const humanDropped: Record<BoardSectionKey, number> = { lanes: 0, gates: 0, asks: 0, parked: 0 };
+  const humanDropped: Record<BoardSectionKey, number> = {
+    lanes: 0,
+    gates: 0,
+    asks: 0,
+    actions: 0,
+    parked: 0,
+  };
   const compose = (): string[] => [
     header,
     ...sectionLine(
@@ -763,6 +800,13 @@ export const renderBoardHuman = (data: BoardData, brand: BrandIdentity): string 
       humanDropped.asks,
     ),
     ...sectionLine(
+      BOARD_ACTIONS_LABEL,
+      actionLines.slice(0, actionLines.length - humanDropped.actions),
+      BOARD_HUMAN_SECTION_CAPS.actions,
+      data.omittedBySection.actions,
+      humanDropped.actions,
+    ),
+    ...sectionLine(
       "PARKED",
       parkedLines.slice(0, parkedLines.length - humanDropped.parked),
       BOARD_HUMAN_SECTION_CAPS.parked,
@@ -774,12 +818,13 @@ export const renderBoardHuman = (data: BoardData, brand: BrandIdentity): string 
     truncateToBytes(neutralize(line), BOARD_MAX_HUMAN_LINE_BYTES),
   );
   let text = `${lines.join("\n")}\n`;
-  const dropOrder: readonly BoardSectionKey[] = ["parked", "asks", "lanes", "gates"];
+  const dropOrder: readonly BoardSectionKey[] = [...BOARD_SECTION_DROP_ORDER];
   for (const section of dropOrder) {
     const total = {
       lanes: laneLines.length,
       gates: gateLines.length,
       asks: askLines.length,
+      actions: actionLines.length,
       parked: parkedLines.length,
     }[section];
     while (

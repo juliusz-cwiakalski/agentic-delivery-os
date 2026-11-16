@@ -68,3 +68,30 @@ describe("TC-SLA-030 additive non-regression", () => {
     expect(source).not.toContain('"hand-back"');
   });
 });
+
+describe("TC-ACTION-020 the actions surface is additive under the kept identity", () => {
+  test("the delivered section caps and order are unchanged beside the new section", async () => {
+    const {
+      BOARD_MAX_ASKS,
+      BOARD_MAX_GATES,
+      BOARD_MAX_LANES,
+      BOARD_MAX_PARKED,
+      BOARD_MAX_ACTIONS,
+      BOARD_SECTION_DROP_ORDER,
+      BOARD_SECTION_ORDER,
+      BOARD_SCHEMA_VERSION,
+    } = await import("../../packages/core/src/contracts/index");
+    expect(BOARD_SCHEMA_VERSION).toBe("delivery.board.v1");
+    expect(BOARD_MAX_LANES).toBe(20);
+    expect(BOARD_MAX_GATES).toBe(8);
+    expect(BOARD_MAX_ASKS).toBe(8);
+    expect(BOARD_MAX_PARKED).toBe(8);
+    expect(BOARD_MAX_ACTIONS).toBe(8);
+    expect([...BOARD_SECTION_ORDER]).toEqual(["lanes", "gates", "asks", "actions", "parked"]);
+    expect([...BOARD_SECTION_DROP_ORDER]).toEqual(["parked", "asks", "actions", "lanes", "gates"]);
+    // The four delivered sections keep their relative order and the new
+    // section never displaces them.
+    const delivered = BOARD_SECTION_ORDER.filter((section) => section !== "actions");
+    expect(delivered).toEqual(["lanes", "gates", "asks", "parked"]);
+  });
+});

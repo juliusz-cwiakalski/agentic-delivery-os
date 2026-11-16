@@ -898,6 +898,15 @@ export const createStateStore = (
   };
 };
 
+/** The retro action registry's validated boundary (GH-287 F-1/F-2, DEC-7). */
+export {
+  type ActionRegistryMalformation,
+  type ActionRegistryRead,
+  appendActionClosureRecord,
+  appendActionRecord,
+  createRetroActionRegistryPort,
+  readActionRegistry,
+} from "./action-registry.js";
 export {
   appendCeremonyRun,
   appendCeremonyStep,

@@ -187,6 +187,7 @@ describe("TC-BOARD-082 omission arithmetic", () => {
         lanes: 1,
         gates: 0,
         asks: 1,
+        actions: 0,
         parked: 1,
       });
       expect(data?.omitted).toBe(3);

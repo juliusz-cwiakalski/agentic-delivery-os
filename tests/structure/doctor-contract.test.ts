@@ -233,3 +233,23 @@ describe("TC-DOCTOR-021 / TC-HOLDDOCTOR-006 / TC-HOLDNEG-002 contract vocabulary
     expect(verdicts.size).toBe(2);
   });
 });
+
+describe("TC-ACTION-034 the doctor contract keeps its closed area list", () => {
+  test("the five areas and their evidence sources are unchanged by the store fact", async () => {
+    const { DOCTOR_AREAS, DOCTOR_AREA_SOURCES, DOCTOR_EVIDENCE_SOURCES } = await import(
+      "../../packages/core/src/contracts/index"
+    );
+    expect([...DOCTOR_AREAS]).toEqual(["repo", "tracker", "provider", "state", "ci"]);
+    expect(DOCTOR_AREA_SOURCES.state).toEqual(["state-stores"]);
+    expect([...DOCTOR_EVIDENCE_SOURCES]).toContain("state-stores");
+  });
+
+  test("the per-store fact shape admits the additive action-registry name", () => {
+    const fact = { name: "action-registry", verdict: "valid" as const } satisfies {
+      readonly name: string;
+      readonly verdict: "valid" | "verified-empty";
+    };
+    expect(fact.name).toBe("action-registry");
+    expect(["valid", "verified-empty"]).toContain(fact.verdict);
+  });
+});

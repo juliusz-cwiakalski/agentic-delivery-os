@@ -134,3 +134,50 @@ describe("TC-RETRO-002 tier and runtime confinement", () => {
     expect(textOf("packages/cli/src/commands/retro.ts")).toContain("brand");
   });
 });
+
+const ACTION_CHANGE_FILES = [
+  "packages/core/src/contracts/action.ts",
+  "packages/core/src/domain/action-filing.ts",
+  "packages/core/src/domain/action-window.ts",
+  "packages/core/src/state/action-registry.ts",
+] as const;
+
+describe("TC-ACTION-027 sibling action files stay in their tiers", () => {
+  test("no contract, domain, or state action file imports a runtime or sibling package", () => {
+    for (const file of ACTION_CHANGE_FILES) {
+      for (const specifier of specifiersOf(file)) {
+        expect(specifier.startsWith("node:"), `${file}: ${specifier}`).toBe(false);
+        expect(specifier.startsWith("bun:"), `${file}: ${specifier}`).toBe(false);
+        expect(specifier.startsWith("@delivery-os/"), `${file}: ${specifier}`).toBe(false);
+      }
+    }
+  });
+
+  test("the state boundary imports contracts and the boundary factory only", () => {
+    const specifiers = specifiersOf("packages/core/src/state/action-registry.ts");
+    for (const specifier of specifiers) {
+      expect(specifier === "#contracts" || specifier === "./artifact-boundary.js", specifier).toBe(
+        true,
+      );
+    }
+  });
+
+  test("the action files carry no ambient clock, randomness, environment, or network read", () => {
+    for (const file of ACTION_CHANGE_FILES) {
+      const text = textOf(file);
+      for (const marker of ["Date.now", "Math.random", "process.", "Bun.", "fetch("]) {
+        expect(text.includes(marker), `${file}: ${marker}`).toBe(false);
+      }
+    }
+  });
+
+  test("the content inventory lists every new action source file", () => {
+    const inventory = JSON.parse(
+      readFileSync(join(ROOT, "tests/structure/inventory.json"), "utf8"),
+    ) as Record<string, string[]>;
+    expect(inventory.core).toContain("src/contracts/action.ts");
+    expect(inventory.core).toContain("src/domain/action-filing.ts");
+    expect(inventory.core).toContain("src/domain/action-window.ts");
+    expect(inventory.core).toContain("src/state/action-registry.ts");
+  });
+});

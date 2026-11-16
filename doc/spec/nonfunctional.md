@@ -6,7 +6,7 @@ last_updated: 2026-11-16
 owners: [engineering]
 ados_distribution: internal
 links:
-  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243, GH-230, GH-235, GH-238, GH-242, GH-275, GH-291, GH-320, GH-296]
+  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243, GH-230, GH-235, GH-238, GH-242, GH-275, GH-291, GH-320, GH-296, GH-287]
 summary: "Cross-cutting index of implemented tooling quality contracts and separately proposed validation targets."
 ---
 
@@ -48,8 +48,8 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
 - Quality attribute: reliability and diagnosability. Applies: result envelopes,
   status, brief, queue-ready, verify-change, provider reads, the watchdog probes, the
   owner-gate board, the typed blocker channel, the doctor pre-flight diagnostic, the
-  merge transaction, the verify-deploy verdict, the retro evidence pipeline, and
-  the ceremony runner's declared-degradation artifacts.
+  merge transaction, the verify-deploy verdict, the retro evidence pipeline and
+  action registry, and the ceremony runner's declared-degradation artifacts.
 - Requirement/status: existing. Missing, failed, or unavailable evidence must not
   become a clear/ready/zero claim. Command success is not delivery success.
 - Evidence/test: [result](features/feature-result-contract.md),
@@ -96,7 +96,7 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
 
 - Quality attribute: interoperability and resource boundedness. Applies: CLI
   envelope, status, brief, queue-ready, board, verify gates, merge, verify deploy,
-  doctor, blockers, spend, and ceremony renderers, and retro collect/report renderers. Status:
+  doctor, blockers, spend, and ceremony renderers, and the retro collect/report/action renderers. Status:
   existing.
 - Requirement: one valid `CommandResult` under `--json`, exactly one of data/error,
   classified containment, deterministic ordering, and visible truncation.
@@ -157,7 +157,7 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
 | [Status](features/feature-status-digest.md#non-functional-requirements) | Pure cap-sized aggregation within 50 ms; at most three network reads, one logical park fold, one config resolve; no retry/pagination loop. | `tests/behaviour/status-performance.test.ts` asserts median of five pure samples and request counts. |
 | [Brief](features/feature-brief.md#non-functional-requirements) | Pure cap-sized projection within 50 ms; the same three outbound reads, park fold, and config resolve as one status invocation; no brief-specific read. | `tests/behaviour/brief-performance.test.ts` samples projection latency and injected read counts. |
 | [Queue-ready](features/feature-queue-ready.md#non-functional-requirements) | Pure evaluation/ranking/rendering contract within 50 ms; same three outbound reads, one park fold/config/local-context read. | `tests/behaviour/queue-ready-performance.test.ts` samples evaluator latency and injected read counts; independent renderer timing not established here. |
-| [Board](features/feature-board.md#non-functional-requirements) | Pure four-section projection and rendering within 50 ms; one bounded pass per included repository (shared facts, lane/phase fold, parks, one decision-history read) and zero host-index reads for the default form; at most 128 included repositories. | `tests/behaviour/board-performance.test.ts`, `board-read-cost.test.ts`. |
+| [Board](features/feature-board.md#non-functional-requirements) | Pure board projection and rendering within 50 ms; one bounded pass per included repository (shared facts, lane/phase fold, parks, one bounded action-registry read, one decision-history read) and zero host-index reads for the default form; at most 128 included repositories. | `tests/behaviour/board-performance.test.ts`, `board-read-cost.test.ts`. |
 | [Blockers](features/feature-blockers.md#non-functional-requirements) | Pure validation/guard/ranking/rendering within 50 ms; one verified blocker-ledger read per list, digest, or brief invocation; one business read plus one fence, append, and coverage read per publish or answer; zero outbound requests. | `tests/behaviour/blockers-performance.test.ts`, `blockers-read-cost.test.ts`. |
 | [Harness Adapters](features/feature-harness-adapters.md) | Read-only harness-store extraction: query-only pragma before the first read, bounded indexed queries with no message/part scans, capped sessions, per-session agent/model groups, tools, agents, and models with explicit marks or warnings, machine payload at most 65 536 UTF-8 bytes, human disclosure at most 4 096 bytes / 24 lines; identical injected facts yield byte-identical output. | `tests/behaviour/harness-telemetry-*.test.ts`, `harness-output-bounds.test.ts`, `tests/checks/harness-determinism.test.ts` pin the read budget and byte bounds. |
 | [Change capsule](features/feature-capsule.md#5-non-functional-requirements) | At most 2,000 events and 2 MiB per capsule, 4 KiB per event payload, 100 candidates at 8 KiB each, one writer at a time per capsule with bounded retry, and a terminal close; a non-empty capsule starts with `capsule.opened`, every candidate is `<id>.yaml`, and every candidate has exactly one promotion decision; validation ≤ 2 s on reference fixtures; identical injected facts yield byte-identical event ordering, promotion decisions, and digest. | `tests/checks/capsule-{bounds,determinism,latency,privacy}.test.ts`, `tests/behaviour/capsule-{append,lock,reader,bounds}.test.ts`, `tests/behaviour/closeout-capsule-{validation,naming}.test.ts`. |
@@ -181,7 +181,8 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
 
 - Quality attribute: integrity and recoverability. Applies: ledger, derived indexes,
   phase transitions, provider park persistence, owner-gate decisions, blocker
-  question/answer records, the retro registry, the evidence sidecar, the spend read
+  question/answer records, the retro registry and the sibling action registry, the
+  evidence sidecar, the spend read
   side's telemetry reads, the merge-domain records (gate verification, waiver,
   transaction), and the steering records. Requirement/status: existing.
 - [State](features/feature-state-layer.md) requires verified ledger truth, explicit
@@ -189,10 +190,13 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
   reusable artifact-boundary validation, fenced writes, explicit stale-lock recovery,
   and atomic derived-document replacement. The three merge-domain record kinds are
   additive within `delivery.state.v1`, and an append failure never leaves a
-  consumable half-verification. The retro registry's three record kinds use the
-  same boundary validation and fenced writes; the evidence sidecar is a separate
+  consumable half-verification. The retro registry's three record kinds and the sibling
+  action registry's two record kinds use the
+  same boundary validation and fenced writes; the action boundary's appends share
+  the `retro.` key family while keeping their own two-kind boundary declaration; the
+  evidence sidecar is a separate
   collector-fenced, keyed-chain artifact family outside the store's salvage path
-  ([retro](features/feature-retro-pipeline.md)). The ceremony runner appends its two
+  ([retro](features/feature-retro-pipeline.md), [action registry](features/feature-retro-action-registry.md)). The ceremony runner appends its two
   additive record kinds through one boundary under the `ceremony.` prefix with a
   fenced append and post-append verified re-read, and keeps its per-run artifact
   family outside the ledger ([ceremony](features/feature-ceremony-runner.md)). The

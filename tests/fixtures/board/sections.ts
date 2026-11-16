@@ -7,6 +7,7 @@
  */
 
 import type {
+  BoardActionFact,
   BoardAskFact,
   BoardLaneFact,
   BoardOwnerHold,
@@ -78,6 +79,19 @@ export const ownerHoldPark = (overrides: Partial<BoardParkedFact> = {}): BoardPa
   ...overrides,
 });
 
+/** One open retro action row fact with its aging state and window disclosure. */
+export const boardAction = (overrides: Partial<BoardActionFact> = {}): BoardActionFact => ({
+  actionId: "action-3001",
+  owner: "agent-role:reviewer",
+  level: "change",
+  age: 5 * HOUR_MS,
+  agingState: "current",
+  window: "window-a",
+  windowOpenCount: 1,
+  windowLimit: 3,
+  ...overrides,
+});
+
 export const activeOwnerHold: BoardOwnerHold = {
   active: true,
   source: "env",
@@ -95,5 +109,9 @@ export const allFourRepository = (
   lanes: [deliveringLane(), failedLane()],
   asks: [ownerAsk(), ownerAsk({ id: "ask-3020-1", ref: "GH-3020", lane: "GH-3020" })],
   parks: [peakPark(), ownerHoldPark()],
+  actions: [
+    boardAction(),
+    boardAction({ actionId: "action-3020", window: "window-b", agingState: "nudged" }),
+  ],
   ...overrides,
 });

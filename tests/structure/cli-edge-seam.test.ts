@@ -836,3 +836,58 @@ describe("TC-RETRO-006 composition-only retro registration", () => {
     expect(source.includes("process.")).toBe(false);
   });
 });
+
+describe("TC-ACTION-036 composition-only retro action verb group", () => {
+  test("the retro definition declares the additive action flags and the widened bound", async () => {
+    const { createRetroCommandDefinition } = await import("../../packages/cli/src/commands/retro");
+    const definition = createRetroCommandDefinition({
+      collect: () => ({
+        ok: false,
+        error: { kind: "input", code: "input.value.rejected", consequence: "not_landed" },
+      }),
+      report: () => ({
+        ok: false,
+        error: { kind: "input", code: "input.value.rejected", consequence: "not_landed" },
+      }),
+    });
+    expect(new Set(definition.flags).size).toBe(definition.flags?.length ?? 0);
+    for (const flag of ["--owner", "--owner-kind", "--verb", "--outcome", "--tracker", "--due"]) {
+      expect(definition.flags ?? []).toContain(flag);
+    }
+    expect(definition.positionals).toEqual({ max: 16 });
+  });
+
+  test("the delivered family stays composed and no new command family appears", async () => {
+    const edge = readFileSync(join(ROOT, `${CLI_DIR}/edge.ts`), "utf8");
+    expect(edge).toContain("commands.retro = createRetroCommandDefinition");
+    expect(edge).toContain("createRetroActionRegistryPort");
+    const promptRequired = readFileSync(
+      join(ROOT, "packages/cli/src/help/prompt-required-commands.ts"),
+      "utf8",
+    );
+    expect(promptRequired).not.toContain(`"action"`);
+  });
+
+  test("the action verb group refuses without a composed registry", async () => {
+    const { createRetroCommandDefinition } = await import("../../packages/cli/src/commands/retro");
+    const definition = createRetroCommandDefinition({
+      collect: () => ({
+        ok: false,
+        error: { kind: "input", code: "input.value.rejected", consequence: "not_landed" },
+      }),
+      report: () => ({
+        ok: false,
+        error: { kind: "input", code: "input.value.rejected", consequence: "not_landed" },
+      }),
+    });
+    const result = await definition.handler({
+      command: "retro",
+      flags: {},
+      argv: ["retro", "action", "list"],
+      positionals: [],
+      brand: { binaryName: "example-product", workingName: "example-product" },
+    } as never);
+    const error = (result as { readonly error?: { readonly code?: string } }).error;
+    expect(error?.code).toBe("input.value.rejected");
+  });
+});

@@ -9,7 +9,7 @@ created: 2026-11-16
 owners: ["engineering"]
 summary: "Operator guide to the ceremony runner: the four verbs, the declaration document and its closed vocabularies, a worked project declaration, notes and windows, dry-run and --apply, catch-up, the tier mapping, artifact homes, and the measurement record."
 links:
-  related_changes: ["GH-296"]
+  related_changes: ["GH-296", "GH-287"]
 ---
 
 # Ceremony Runner Guide
@@ -177,6 +177,7 @@ The note contract:
 - `scopeKey` is the idempotency anchor. Where the declaration derives its scope key from the note, this value is the run's scope key; a note without it is refused as `ceremony.note-invalid` naming `scopeKey`, with zero output. Where the declaration derives from `literal` or `repository`, a supplied note must carry the identical key — a disagreement is refused rather than silently overridden.
 - The note's `window` governs the run. A `--window` that disagrees is refused with both windows named.
 - For a retro note (`level` present), the concept's fixed members are required: `participants`, `evidenceRefs`, `facts`, `interpretations`, `wins` (each with `text` and `mechanism`), `gaps`, `candidateLessons`, `actions`, `confidence`, plus `trigger` naming the level's declared trigger. An omission is `ceremony.note-invalid` naming the member.
+- The retro note's declared actions are a handoff: filing, aging, and closure are the [Retro Action Registry](../spec/features/feature-retro-action-registry.md)'s `retro action` group. The retro-evidence pass reads the registry's recorded actions and assigns `applied`, `partial`, or `violated-with-consequence` from each action's verification artifact — never from the owner's status claim — and an unresolvable artifact degrades to `unverified`.
 - A note naming a trigger the declaration does not declare is refused as `input.value.rejected`.
 
 ## Windows and triggers
@@ -297,5 +298,6 @@ The shipped surface has known composition gaps, stated here so you do not plan a
 - [`ceremony` command contract](../planning/oss-tooling/milestones/m2/commands/ceremony.md) — the reference page served by `ceremony --help`.
 - [State Layer](../spec/features/feature-state-layer.md) — the ledger, boundaries, and fenced writes behind the records.
 - [Retro Evidence Pipeline](../spec/features/feature-retro-pipeline.md) — the evidence plane the retro ceremony consumes.
+- [Retro Action Registry](../spec/features/feature-retro-action-registry.md) — the recorded actions the retro-evidence pass verifies against their artifacts.
 - [Machine-Readable Plan Schema](../spec/features/feature-plan-schema.md) — the plan `tier` declaration.
 - [Measurement Baseline](../spec/features/feature-measurement-baseline.md) — `MET-CEREMONY-SHARE` and the `comparisons[]` record.

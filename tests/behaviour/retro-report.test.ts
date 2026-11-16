@@ -164,3 +164,36 @@ describe("TC-RETRO-040 report folds the most recent collected scope", () => {
     expect(texts).not.toContain("older scope note");
   });
 });
+
+describe("TC-ACTION-023 the fold's registry producer adds no top-level key", () => {
+  test("a registry-sourced fold keeps exactly the four delivered data keys", async () => {
+    const { reportDeps } = await import("../fixtures/retro/harness");
+    const { reportRetro } = await import("../../packages/core/src/domain/retro");
+    const fixture = (await import("../fixtures/retro/harness")).makeRetroDir("action-fold");
+    try {
+      const outcome = reportRetro(
+        reportDeps(fixture, {
+          readFollowThrough: () => [{ action: "action-1", artifactRef: "artifact:x" }],
+          verifyArtifact: () => true,
+        }),
+      );
+      expect(outcome.ok).toBe(true);
+      if (!outcome.ok) return;
+      const data = outcome.data as Record<string, unknown>;
+      expect(Object.keys(data).sort()).toEqual([
+        "evidenceRefs",
+        "findings",
+        "followThrough",
+        "level",
+      ]);
+      expect((data.followThrough as readonly unknown[])[0]).toMatchObject({
+        action: "action-1",
+        verdict: "verified",
+        provenance: "registry",
+      });
+    } finally {
+      const { rmSync } = await import("node:fs");
+      rmSync(fixture.root, { recursive: true, force: true });
+    }
+  });
+});

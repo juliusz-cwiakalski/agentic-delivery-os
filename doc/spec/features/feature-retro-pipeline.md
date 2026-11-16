@@ -6,9 +6,9 @@ created: 2026-11-06
 last_updated: 2026-11-16
 owners: ["engineering"]
 service: delivery-os
-summary: "The retro evidence pipeline: the `retro collect` and `retro report` command family over an independent append-only evidence sidecar outside the delivery state store, a distinct HMAC-SHA-256 keyed chain with its own store-managed key artifact, collector-assigned trace ids and claimed collector identity, one collector fence, verified reads that flag tamper, the two-level shape-crash guard, five pipeline-truth checks, the explicit no-target collect success, the validated retro registry with three record kinds and levels R1-R6, the periodic memory-audit trigger home, the seven delivered collector sources including the spend-telemetry citation, the bounded library-only export bundle, doctor state-store visibility, deterministic zero-model-call render paths, the read-only closeout coverage consumer, and four retro error identities."
+summary: "The retro evidence pipeline: the `retro collect` and `retro report` command family over an independent append-only evidence sidecar outside the delivery state store, a distinct HMAC-SHA-256 keyed chain with its own store-managed key artifact, collector-assigned trace ids and claimed collector identity, one collector fence, verified reads that flag tamper, the two-level shape-crash guard, five pipeline-truth checks, the explicit no-target collect success, the validated retro registry with three record kinds and levels R1-R6, the periodic memory-audit trigger home, the seven delivered collector sources including the spend-telemetry citation, the bounded library-only export bundle, doctor state-store visibility, deterministic zero-model-call render paths, the read-only closeout coverage consumer, and the four evidence-plane `retro` error identities (the action-registry rows are owned by Retro Action Registry)."
 links:
-  related_changes: ["GH-232", "GH-240", "GH-291", "GH-296"]
+  related_changes: ["GH-232", "GH-240", "GH-291", "GH-296", "GH-287"]
   related_decisions: ["TDR-0009", "ADR-0003", "TDR-0004", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/retro.ts"
@@ -29,14 +29,14 @@ The chain is a distinct keyed construction from the cryptographic keyed-hash fam
 
 The retro registry is a validated state-store boundary with exactly three additive record kinds: `retro.level` (levels R1-R6 declared, with trigger declarations and implementation status), `retro.run` (one validated record per collection run), and `retro.trigger` (the periodic memory-audit trigger). Levels `session`, `incident`, `window`, `project`, and `fleet` are declared but unimplemented; selecting one refuses classified with a hint naming its owning story. Only `change` (R1) is implemented.
 
-The feature also provides the bounded export engine surface, the doctor state-store visibility of the retro registry, and four `retro` error identities. The result envelope, exit projection, redaction chokepoint, and existing state identities are consumed unchanged. See [Result Contract and Error Table](feature-result-contract.md), [State Layer](feature-state-layer.md), [Command Audit Ledger](feature-audit-ledger.md), and [Doctor](feature-doctor.md).
+The feature also provides the bounded export engine surface, the doctor state-store visibility of the retro registry, and the four evidence-plane `retro` error identities; the three action-registry identities are owned by [Retro Action Registry](feature-retro-action-registry.md). The result envelope, exit projection, redaction chokepoint, and existing state identities are consumed unchanged. See [Result Contract and Error Table](feature-result-contract.md), [State Layer](feature-state-layer.md), [Command Audit Ledger](feature-audit-ledger.md), and [Doctor](feature-doctor.md).
 
 ## Business Context
 
 ### Problem Statement
 
 - **Problem:** Without a mechanical evidence plane, a retrospective reasons over memory and claims. A delivery agent can rewrite its own traces without detection, a malformed evidence entry can crash or be silently trusted, and a pipeline with zero activity reads as clean silence. The command audit ledger's bounded read surface has no consumer until this pipeline folds it into learning.
-- **Affected Users:** Coordinators and agents running a change closeout retro, auditors reading the evidence trail, operators diagnosing the state directory, and the later ceremony, capsule, and action-registry surfaces that consume retro evidence.
+- **Affected Users:** Coordinators and agents running a change closeout retro, auditors reading the evidence trail, operators diagnosing the state directory, and the ceremony, capsule, and action-registry surfaces that consume retro evidence.
 - **Business Impact:** Collector-truth evidence keeps learning honest: alteration is detectable, malformed evidence preserves every valid entry, and vacuous green is refused. The pipeline is the substrate the M1/M2 learning loop and follow-through work build on.
 
 ### Goals
@@ -65,6 +65,7 @@ The command is exactly the locked retro family. The handler owns the subcommand 
 | Missing subcommand, unknown subcommand, unexpected positional, missing `--level` value | Refuses `input.value.rejected` (exit 1). |
 | Undeclared flag such as `--ref` | Refuses through the shared parser as `fallback.invocation` (exit 1). |
 | `--json` | The global machine-output switch; it adds no retro behavior. |
+| `retro action file\|close\|list` | The additive action-registry verb group (GH-287); see [Retro Action Registry](feature-retro-action-registry.md). |
 
 There is no export verb, no `--ref`, and no windowing flag. Registration is composition-only: the command exists in a program only when its retro composition is supplied.
 
@@ -151,7 +152,7 @@ The successful `data` carries the four delivered keys plus the optional `spend` 
 |---|---|
 | `level` | The requested level name. |
 | `findings[]` | Mechanically folded findings, each `{ kind, text, evidenceRefs[] }`; sorted by kind then text. |
-| `followThrough[]` | Recorded follow-through entries, each `{ action, verdict, artifactRef? }`; sorted by action. |
+| `followThrough[]` | Recorded follow-through entries, each `{ action, verdict, artifactRef?, provenance? }`; sorted by action. Registry-sourced entries carry `provenance: "registry"`. |
 | `evidenceRefs[]` | The trace ids of the sidecar records selected for the run, in record order. |
 | `spend?` | The cited spend evidence: `{ state: "present", tokensByClass, roles[], models[], timing[], reconciliation? }` carrying the same collector-truth figures and the tolerance disclosure the fold produced, or `{ state: "absent" }` as the classified absence. Omitted only when the injected spend seam produced no evidence at all; an absent store is never rendered as zeros. |
 
@@ -159,7 +160,7 @@ The report shape's schema identity `delivery.retro.report.v1` is a declared cont
 
 Finding kinds come from the closed vocabulary `retro-note`, `collector-finding`, `truth-check`, `tamper-flag`, `malformed-entry`, and `verified-empty`. The delivered fold emits `retro-note` from pm-notes records and `truth-check` from recorded truth-check findings; a recorded finding whose kind is in the closed vocabulary folds through with its evidence refs. Every folded finding's evidence refs are validated on the production fold against the known sidecar trace-id set, including consumer-supplied refs; a dangling referenced trace id is rendered as a `truth-check` finding and never enters `evidenceRefs`.
 
-Follow-through verdicts are `verified` when the optional artifact verifier accepts the reference, `unverified` when an artifact reference is present but not verified, and `unknown` when no artifact reference exists. Entries fold only when a follow-through reader is injected; they are never invented, and an empty fold is an explicit empty array.
+Follow-through verdicts are `verified` when the optional artifact verifier accepts the reference, `unverified` when an artifact reference is present but not verified, and `unknown` when no artifact reference exists. Entries fold only when a follow-through reader is injected; they are never invented, and an empty fold is an explicit empty array. The production composition injects the registry follow-through reader (GH-287): recorded actions fold as `verified`/`unverified`/`unknown` from the artifact oracle with registry provenance inside the entry, and no new top-level report key is added (`delivery.retro.report.v1` keeps exactly its four delivered keys).
 
 A clean run with an empty evidence fold is a verified-empty success: empty findings and follow-through, populated evidence refs where records exist, and exit 0. Findings are never fabricated to justify a run, and the render path contains zero model calls.
 
@@ -214,6 +215,17 @@ Collection seeds the registry additively and idempotently by identity: the six l
 
 The four sub-R1 levels are selected and scheduled by the ceremony layer, not by this pipeline. The `retro-evidence-pass` ceremony declaration carries exactly the four declared triggers above (`session-end`, `incident-severity`, daily, `milestone-end`), reads this pipeline's verified evidence records and `retro.run` records read-only, and produces each level's note. The pipeline's own collection grammar stays `change`-only, its registry statuses stay `declared` for `R2`–`R5`, and selecting a non-`change` level through `retro collect` keeps its delivered refusal. The ceremony adds no collector, no sidecar, no chain material, and no registry record; the level-ownership boundary is stated once in [Ceremony Runner](feature-ceremony-runner.md#39-retro-ceremonies).
 
+### Sibling action registry
+
+Action records live in their own validated boundary (GH-287), not in this
+boundary: record kinds `retro.action` and `retro.action-closure` under the
+`retro.actions` and `retro.action-closures` key prefixes, with the payload
+schemas `delivery.retro.action.v1` and `delivery.retro.action-closure.v1`. This
+boundary's exactly-three record-kind declaration is unchanged, and its read
+skips the sibling kinds so a recorded action is never classified as a retro
+registry malformation. The filing, aging, closure, WIP-limit, and board
+contracts are owned by [Retro Action Registry](feature-retro-action-registry.md).
+
 ### Closeout coverage read
 
 Closeout's `retro-coverage-move` step is a read-only consumer of the registry. The production closeout composition reads the validated `retro.run` records at level `change`, determines whether a run's scope is the closed work item, and records the result as one idempotent `capsule.retro-coverage` capsule event with `state: "collected"` (a run exists) or `state: "pending"` (none) and the run id when present; an injected coverage fact overrides the read for tests. It appends no registry record, writes no evidence, and adds no mode value; the registry remains the selection authority for `retro collect`. An unreadable registry is a declared gap in the closeout step (`retro-registry-unavailable`) plus a `retro-coverage-unavailable` residue item, and the rest of closeout proceeds; a validated registry with no matching run is `pending`, not a gap. A re-run appends nothing for the same work item and level. The coverage contract is described in [Closeout Transaction](feature-closeout.md) and [Change Capsule](feature-capsule.md).
@@ -241,7 +253,7 @@ The serialized bundle passes the redaction chokepoint. The export never mutates 
 
 ### Doctor visibility
 
-The doctor `state` check reads the retro registry through the same verified boundary (when the retro read is composed) and contributes a `retro-registry` store verdict to the state-stores evidence. A verified-empty registry counts as verified-empty; a valid registry reports `valid`, and because the registry shares the delivery ledger its artifacts are already included in the shared record count rather than summed again; a torn or unknown registry fails the check with its classified reason; a malformed registry entry classifies as `store-unknown`. The check acquires no fence, writes nothing, and never repairs or salvages.
+The doctor `state` check reads the retro registry through the same verified boundary (when the retro read is composed) and contributes a `retro-registry` store verdict to the state-stores evidence. The sibling action registry contributes its own `action-registry` store verdict from the same check (GH-287); the closed area list is unchanged. The retro registry's read skips the sibling action record kinds, which share the `retro.` key family. A verified-empty registry counts as verified-empty; a valid registry reports `valid`, and because the registry shares the delivery ledger its artifacts are already included in the shared record count rather than summed again; a torn or unknown registry fails the check with its classified reason; a malformed registry entry classifies as `store-unknown`. The check acquires no fence, writes nothing, and never repairs or salvages.
 
 ## Technical Architecture & Codebase Map
 
@@ -252,7 +264,7 @@ The doctor `state` check reads the retro registry through the same verified boun
 | `packages/core/src/contracts/retro.ts` | Retro vocabulary | Level declarations, source/finding/truth-check vocabularies, sidecar record shape, chain constants and anchor, artifact names and paths, registry kinds and boundary declaration, report/export schema identities, collect/report/export types, and the data-only ports. Types and `as const` data only. |
 | `packages/core/src/contracts/state.ts` | Store vocabulary | The public state port, artifact-boundary declarations, fences, and verified reads the registry consumer composes. |
 | `packages/core/src/contracts/audit.ts` | Audit vocabulary | The bounded read query/outcome, chain verdict, and orphan findings the collector consumes. |
-| `packages/core/src/contracts/error-table.ts` | Error table | The `retro` domain kind and its four rows. |
+| `packages/core/src/contracts/error-table.ts` | Error table | The seven `retro` domain rows; this pipeline owns the four evidence-plane rows and the sibling registry owns the three action rows. |
 | `packages/core/src/state/retro-sidecar.ts` | Sidecar consumer | Collector-fenced append, key creation/read, canonical content, chain verification, entry-malformation classification, and verified reads over the injected sidecar I/O. |
 | `packages/core/src/state/retro-registry.ts` | Registry consumer | Boundary-validated reads, level/trigger/run parsing, fenced append, and the additive idempotent seed over the public state port. |
 | `packages/core/src/state/driver/runtime-edge.ts` | Runtime edge | The only runtime-API location: the sidecar filesystem/permission primitives, cryptographic `randomHex`, and the HMAC-SHA-256 `keyedHash`. |
@@ -296,14 +308,14 @@ function attemptOutOfSeamEvidenceWrite(): { readonly ok: false; readonly error: 
 - `RetroSidecarPort` exposes `append(draft, { fenceToken? })`, `appendBatch(drafts, { fenceToken? })`, `read({ reportedRemovals? })`, and `verify({ reportedRemovals? })`; it exposes no update, delete, reorder, or compaction member.
 - `RetroRegistryPort` exposes `read()`, `runs(read)`, `recordRun(run, fenceToken)`, and `seed(fenceToken)`.
 - `RetroCollectorRead` is injected: `readAuditLedger(query)`, `readStateFamilies(changeRef)`, and `readNotes(changeRef)`. The composition supplies the delivered implementations; tests inject deterministic fakes.
-- `RetroCommandRuntime` exposes `collect({ level, changeRef? })` and `report({ level })`; the CLI command definition consumes it and returns `data` or a classified `error` with an optional partial string.
+- `RetroCommandRuntime` exposes `collect({ level, changeRef? })` and `report({ level })`, plus the additive `actions` group runtime (filing, closure, and list over the sibling registry) when the action registry is composed ([Retro Action Registry](feature-retro-action-registry.md)); the CLI command definition consumes it and returns `data` or a classified `error` with an optional partial string.
 - `RetroFailure` is a union of a `retro` code, an existing `state` code, or `input.value.rejected`, always with consequence `not_landed`.
 
 ### Invariants and gates
 
 - **Deterministic render paths.** `retro-render-purity.ts` scans `packages/core/src/domain/retro.ts`, `packages/cli/src/commands/retro.ts`, `packages/core/src/state/retro-sidecar.ts`, and `packages/core/src/state/retro-registry.ts`; forbidden imports include inference adapters, provider clients, network modules, and model SDKs; ambient `Date.now`, `Math.random`, and `fetch` are rejected.
 - **Key containment.** `retro-key-containment.ts` scans retro-relevant files under source, committed fixtures, and goldens; the only allowed key-shaped literal is `tests/fixtures/retro/key-artifact.json`.
-- **Error-table binding.** The four `retro` rows round-trip with `ERROR_TABLE` and the documented table; the sync check stays green.
+- **Error-table binding.** The seven `retro` rows (this pipeline's four evidence-plane rows plus the action registry's three) round-trip with `ERROR_TABLE` and the documented table; the sync check stays green.
 - **No new runtime-API location.** Runtime APIs remain in the driver edge; the sidecar consumer and domain engine are pure over injected seams.
 - **No CLI export surface.** The command registry carries no export entry and the command definition exposes no export subcommand.
 
@@ -328,7 +340,7 @@ function attemptOutOfSeamEvidenceWrite(): { readonly ok: false; readonly error: 
 | Boundedness | The audit collector read uses limit `1000`; export requires a limit from `1` to `1000` and reports truncation in band; no unbounded dump path exists. |
 | Determinism | Identical sidecar and registry state, injected clock, and flags produce byte-identical output; no ambient clock, random, environment, or filesystem read outside the declared seams; zero model calls. |
 | Performance | On a 10,000-record sidecar including full chain verification: collect ≤ 30 s, report ≤ 10 s, export ≤ 10 s. CI gates bounded work (one chain walk per read, one batched append per collection run, bounded per-record work); the declared seam timeout constants (`RETRO_READ_TIMEOUT_MS` 10,000 ms, `RETRO_APPEND_TIMEOUT_MS` 30,000 ms) are carried as seam data, not as a substitute for these budgets. |
-| Error-table binding | Four `retro` rows round-trip exactly in both directions; store-level failures reuse existing state identities with their delivered projections. |
+| Error-table binding | The seven `retro` rows round-trip exactly in both directions (four evidence-plane, three action-registry); store-level failures reuse existing state identities with their delivered projections. |
 | Tier conformance | Contracts stay data-only; runtime APIs stay in the driver edge; registration is composition-only; no hardcoded product name. |
 | Secret hygiene | Zero edge-registered secret survivors in any record, finding, report, or exported bundle. |
 
@@ -370,7 +382,7 @@ The pipeline adds no network, provider, or telemetry cost. The recurring cost is
 
 ## Dependencies & Risks
 
-- **Depends on** the result contract and error table ([feature-result-contract.md](feature-result-contract.md)) for the envelope, exit projection, redaction chokepoint, and the four `retro` rows.
+- **Depends on** the result contract and error table ([feature-result-contract.md](feature-result-contract.md)) for the envelope, exit projection, redaction chokepoint, and the four evidence-plane `retro` rows.
 - **Depends on** the state layer ([feature-state-layer.md](feature-state-layer.md)) for the public port, validated boundaries, verified reads, fences, store-managed artifacts, least-privilege permissions, and forever retention.
 - **Depends on** the command audit ledger ([feature-audit-ledger.md](feature-audit-ledger.md)) for the bounded read surface, chain verdict, skipped-ordinal findings, and claimed-identity convention.
 - **Depends on** closeout outcome records and commit telemetry records as collector sources, and on pm-notes typed `retro` notes through the existing read surface.
@@ -402,12 +414,13 @@ The pipeline adds no network, provider, or telemetry cost. The recurring cost is
 | Null retro | A report with no supported findings; a valid success when truth checks pass. |
 | Level registry | The validated registry declaring levels R1-R6 with scope kinds, trigger declarations, and implementation status. |
 | Addendum | A record appended when an already-collected scope is re-collected; reruns append, never rewrite. |
-| Follow-through read-fold | The report section folding recorded follow-through entries with their verification verdicts; enforcement is later work. |
+| Follow-through read-fold | The report section folding recorded follow-through entries with their verification verdicts; the registry follow-through producer (GH-287) supplies recorded actions with provenance inside the entry. |
 | Evidence export | The bounded deterministic bundle of selected records plus the chain verdict, written only to an explicit destination. |
 
 ## Related
 
-- [Result Contract and Error Table](feature-result-contract.md) — the envelope, the `retro` domain kind and four rows, exit projection, and redaction.
+- [Result Contract and Error Table](feature-result-contract.md) — the envelope, the `retro` domain kind and its four evidence-plane rows, exit projection, and redaction.
+- [Retro Action Registry](feature-retro-action-registry.md) — the sibling action boundary, the three action-registry rows, and the follow-through producer behind the report fold.
 - [State Layer](feature-state-layer.md) — the store, validated boundaries, fences, store-managed artifacts, and the retro registry in the store layout.
 - [Command Audit Ledger](feature-audit-ledger.md) — the bounded read surface, chain verdict, skipped-ordinal findings, and claimed identity.
 - [Doctor](feature-doctor.md) — the state check's `retro-registry` store verdict.
@@ -416,4 +429,4 @@ The pipeline adds no network, provider, or telemetry cost. The recurring cost is
 - [Spend Read Side](feature-spend.md) — the verified spend fold the `spend-telemetry` source collects and cites; [Harness Telemetry v2](feature-telemetry-v2.md) — the step and baseline records behind it.
 - [Glossary](../../overview/glossary.md) — repository-wide terms.
 - [TDR-0009](../../decisions/TDR-0009-retro-evidence-sidecar-keyed-chain-construction.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0004](../../decisions/TDR-0004-state-storage-engine.md), [TDR-0005](../../decisions/TDR-0005-delivery-result-enum-and-cli-exit-taxonomy.md).
-- Change records: `doc/changes/2026-11/2026-11-06--GH-232--oss-retro-pipeline/`, `doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/`, `doc/changes/2026-11/2026-11-12--GH-291--telemetry-v2/`.
+- Change records: `doc/changes/2026-11/2026-11-06--GH-232--oss-retro-pipeline/`, `doc/changes/2026-11/2026-11-07--GH-240--capsule-closeout/`, `doc/changes/2026-11/2026-11-12--GH-291--telemetry-v2/`, `doc/changes/2026-11/2026-11-16--GH-287--retro-action-registry/`.

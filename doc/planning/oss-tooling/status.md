@@ -184,6 +184,20 @@ user-journeys.md, and milestones/m1/test-scenarios.md, which still carry
 the superseded calendar phrasing; operator-requirements-2026-11.md is a
 dated historical record and stays as written. A follow-up change refreshes
 them.
+## M2-S10 delivery snapshot (2026-11-16)
+
+M2-S10 (GH-287) is delivered on `feat/GH-287/retro-action-registry`: the retro
+action registry ships its own validated boundary with the additive
+`retro.action` and `retro.action-closure` record kinds, the five-field filing
+gate with the verification artifact, derived aging on the one pinned basis
+(time open since the recorded filing timestamp), explicit two-plane closure with
+the both-plane deprioritize/supersede routes, the fixed improvement WIP limit of
+three, the board's additive `ACTIONS` section beside the owner asks, and the
+registry as the follow-through producer behind the ceremony pass and the retro
+report fold. The delivered retro-registry exactly-three declaration, the report's
+four top-level keys, and the ceremony declarations are unchanged. The
+2026-11-10 snapshot below stays as the dated historical record.
+
 ## M2 planning snapshot (2026-11-10)
 
 M1 story delivery is complete at 23 of 23 through the eleven-phase lifecycle

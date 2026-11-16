@@ -239,6 +239,24 @@
       "text": "verify.narrowed-scope",
       "recognized": true,
       "resolves": true
+    },
+    {
+      "id": "retro-action-incomplete",
+      "text": "retro.action-incomplete",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "retro-closure-incomplete",
+      "text": "retro.closure-incomplete",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "retro-wip-limit-exceeded",
+      "text": "retro.wip-limit-exceeded",
+      "recognized": true,
+      "resolves": true
     }
   ]
 }

@@ -1,7 +1,10 @@
 /**
- * TC-BOARD-001 — four sections in declared order from one repository, with at
+ * TC-BOARD-001 — the declared sections in order from one repository, with at
  * least one row in each array and every label rendered even when a section is
  * legitimately empty (AC-F1-1, F-1, DM-2..DM-6, SC-M2-S4-01).
+ *
+ * GH-287 (D-6): the additive ACTIONS section renders immediately after ASKS;
+ * the four delivered labels keep their relative order and semantics.
  */
 import { describe, expect, test } from "bun:test";
 import {
@@ -15,7 +18,7 @@ import {
 import { allFourRepository, BOARD_REPOSITORY } from "../fixtures/board/sections";
 
 describe("TC-BOARD-001 four-section board", () => {
-  test("renders LANES, GATES, ASKS, PARKED in order with rows in every array", async () => {
+  test("renders LANES, GATES, ASKS, ACTIONS, PARKED in order with rows in every array", async () => {
     const board = createBoardHarness({ repositories: [allFourRepository()] });
     try {
       const json = await board.run([], { json: true });
@@ -34,15 +37,16 @@ describe("TC-BOARD-001 four-section board", () => {
       const text = await board.run([], { json: false });
       const lines = text.stdout.trimEnd().split("\n");
       expect(lines[0]?.startsWith("example-product board")).toBe(true);
-      const labels = lines.filter((line) => /^(LANES|GATES|ASKS|PARKED)/u.test(line));
+      const labels = lines.filter((line) => /^(LANES|GATES|ASKS|ACTIONS|PARKED)/u.test(line));
       expect(labels.map((line) => line.split(" ")[0])).toEqual([
         "LANES",
         "GATES",
         "ASKS",
+        "ACTIONS",
         "PARKED",
       ]);
       for (const line of lines.slice(1)) {
-        if (/^(LANES|GATES|ASKS|PARKED)/u.test(line)) continue;
+        if (/^(LANES|GATES|ASKS|ACTIONS|PARKED)/u.test(line)) continue;
         expect(line).toContain(BOARD_REPOSITORY);
       }
     } finally {
@@ -55,6 +59,7 @@ describe("TC-BOARD-001 four-section board", () => {
       { label: "LANES", repository: allFourRepository({ lanes: [] }) },
       { label: "GATES", repository: allFourRepository({ gates: [] }) },
       { label: "ASKS", repository: allFourRepository({ asks: [] }) },
+      { label: "ACTIONS", repository: allFourRepository({ actions: [] }) },
       { label: "PARKED", repository: allFourRepository({ parks: [] }) },
     ];
     for (const cell of cells) {
@@ -64,9 +69,9 @@ describe("TC-BOARD-001 four-section board", () => {
         expect(run.exitCode).toBe(0);
         const labels = run.stdout
           .split("\n")
-          .filter((line) => /^(LANES|GATES|ASKS|PARKED)/u.test(line))
+          .filter((line) => /^(LANES|GATES|ASKS|ACTIONS|PARKED)/u.test(line))
           .map((line) => line.split(" ")[0]);
-        expect(labels).toEqual(["LANES", "GATES", "ASKS", "PARKED"]);
+        expect(labels).toEqual(["LANES", "GATES", "ASKS", "ACTIONS", "PARKED"]);
       } finally {
         board.cleanup();
       }
@@ -81,8 +86,8 @@ describe("TC-BOARD-001 four-section board", () => {
       const run = await board.run([], { json: false });
       expect(run.stdout).toContain("observed-empty");
       expect(
-        run.stdout.split("\n").filter((line) => /^(LANES|GATES|ASKS|PARKED)/u.test(line)),
-      ).toHaveLength(4);
+        run.stdout.split("\n").filter((line) => /^(LANES|GATES|ASKS|ACTIONS|PARKED)/u.test(line)),
+      ).toHaveLength(5);
     } finally {
       board.cleanup();
     }

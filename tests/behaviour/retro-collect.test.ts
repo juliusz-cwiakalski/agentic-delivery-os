@@ -239,3 +239,77 @@ describe("TC-RETRO-018 additive validated run records", () => {
     }
   });
 });
+
+describe("TC-ACTION-036 the delivered collect/report grammar is unchanged", () => {
+  test("the retro definition declares the additive flags and widens only its bound", async () => {
+    const { createRetroCommandDefinition } = await import("../../packages/cli/src/commands/retro");
+    const definition = createRetroCommandDefinition({
+      collect: () => ({
+        ok: false,
+        error: { kind: "input", code: "input.value.rejected", consequence: "not_landed" },
+      }),
+      report: () => ({
+        ok: false,
+        error: { kind: "input", code: "input.value.rejected", consequence: "not_landed" },
+      }),
+    });
+    expect(definition.flags).toContain("--level");
+    expect(definition.flags).toContain("--owner");
+    expect(definition.flags).toContain("--route");
+    expect(definition.positionals).toEqual({ max: 16 });
+    expect(definition.flags).toHaveLength(new Set(definition.flags).size);
+  });
+
+  test("collect and report still refuse an undeclared flag before any runtime call", async () => {
+    const { createRetroCommandDefinition } = await import("../../packages/cli/src/commands/retro");
+    const definition = createRetroCommandDefinition({
+      collect: () => ({
+        ok: true,
+        data: {
+          level: "change",
+          outcome: "no-target",
+          selection: { state: "empty" },
+          counts: { collected: 0, malformed: 0, skippedSource: 0 },
+        },
+      }),
+      report: () => ({
+        ok: true,
+        data: { level: "change", findings: [], followThrough: [], evidenceRefs: [] },
+      }),
+    });
+    for (const subcommand of ["collect", "report"]) {
+      const result = await definition.handler({
+        command: "retro",
+        flags: {},
+        argv: ["retro", subcommand, "--ref", "GH-287"],
+        positionals: [],
+        brand: { binaryName: "example-product", workingName: "example-product" },
+      } as never);
+      const error = (result as { readonly error?: { readonly code?: string } }).error;
+      expect(error?.code, subcommand).toBe("input.value.rejected");
+    }
+  });
+
+  test("the unknown-subcommand control still refuses an unknown family member", async () => {
+    const { createRetroCommandDefinition } = await import("../../packages/cli/src/commands/retro");
+    const definition = createRetroCommandDefinition({
+      collect: () => ({
+        ok: false,
+        error: { kind: "input", code: "input.value.rejected", consequence: "not_landed" },
+      }),
+      report: () => ({
+        ok: false,
+        error: { kind: "input", code: "input.value.rejected", consequence: "not_landed" },
+      }),
+    });
+    const result = await definition.handler({
+      command: "retro",
+      flags: {},
+      argv: ["retro", "frobnicate"],
+      positionals: [],
+      brand: { binaryName: "example-product", workingName: "example-product" },
+    } as never);
+    const error = (result as { readonly error?: { readonly code?: string } }).error;
+    expect(error?.code).toBe("input.value.rejected");
+  });
+});

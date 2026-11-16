@@ -8,6 +8,8 @@
  * identities. Writes are validated at the boundary and appended under a fence.
  */
 import {
+  RETRO_ACTION_CLOSURE_RECORD_KIND,
+  RETRO_ACTION_RECORD_KIND,
   RETRO_LEVEL_IDS,
   RETRO_LEVEL_NAMES,
   RETRO_LEVEL_PAYLOAD_SCHEMA,
@@ -114,6 +116,15 @@ export const readRetroRegistry = (store: StateStorePort): StateResult<RetroRegis
   const malformed: RetroEntryMalformation[] = [];
   for (const record of verified.value.records) {
     if (!record.key.startsWith(RETRO_REGISTRY_BOUNDARY_DECLARATION.recordKeyPrefix)) continue;
+    // GH-287: the action registry is a sibling boundary inside the shared
+    // `retro.` key family; its two record kinds are never this boundary's
+    // malformation (its exactly-three declaration is unchanged).
+    if (
+      record.kind === RETRO_ACTION_RECORD_KIND ||
+      record.kind === RETRO_ACTION_CLOSURE_RECORD_KIND
+    ) {
+      continue;
+    }
     const declaration = declaredKind(record.kind);
     if (declaration === undefined || !validatePayload(declaration, record.payload)) {
       malformed.push({ position: record.sequence });

@@ -229,6 +229,11 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   // family stays closed to these two members.
   "board.repository-unknown",
   "board.state-unavailable",
+  // GH-287 pins the three additive action-registry identities exactly; they are
+  // kind-first two-segment codes under the delivered retro domain kind.
+  "retro.action-incomplete",
+  "retro.closure-incomplete",
+  "retro.wip-limit-exceeded",
   // GH-298 pins the three steer identities exactly (DEC-8, C-16); the steer
   // family stays closed to these three members with no pattern widening.
   "steer.unknown-id",

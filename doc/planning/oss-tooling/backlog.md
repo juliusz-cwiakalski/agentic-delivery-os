@@ -1124,6 +1124,12 @@ the project family separately.
   windows) and rollback conditions, and closure distinguishes artifact
   closure from outcome closure.
 - Depends on: M1-S8.
+- Progress: delivered by GH-287 on `feat/GH-287/retro-action-registry` (M2-S10
+  complete; the action registry owns its own validated boundary with the two
+  additive record kinds, the five-field filing gate, derived aging, explicit
+  two-plane closure, the fixed WIP limit of three, the board `ACTIONS` surface,
+  and the follow-through producers behind the ceremony pass and the report fold;
+  the delivered retro-registry exactly-three declaration is unchanged).
 
 ### M2-S4 Board
 - Ticket: GH-297 (milestone M2)

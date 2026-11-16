@@ -21,7 +21,10 @@ import { assertEnvelopeContract } from "../../packages/testkit/src/result-confor
 import { boardData, createBoardHarness } from "../fixtures/board/harness";
 import { allFourRepository } from "../fixtures/board/sections";
 
+// GH-287 (D-5): the actions surface adds one payload member; the delivered
+// keys keep their names and semantics, so the set grows 15 -> 16.
 const DATA_KEYS = [
+  "actions",
   "asks",
   "audience",
   "collectors",
@@ -80,6 +83,7 @@ describe("TC-BOARD-002/050/064 board contract", () => {
       expect(data).not.toHaveProperty("ok");
       expect(data).not.toHaveProperty("command");
       expect(Object.keys((data?.omittedBySection ?? {}) as object).sort()).toEqual([
+        "actions",
         "asks",
         "gates",
         "lanes",

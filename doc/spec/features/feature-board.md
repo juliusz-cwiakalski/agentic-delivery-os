@@ -6,9 +6,9 @@ created: 2026-11-16
 last_updated: 2026-11-16
 owners: ["engineering"]
 service: delivery-os
-summary: "The read-only `board` command and its bounded four-section delivery.board.v1 payload: the active-lane, open-gate, owner-ask, and parked-work sections in declared order from the one shared delivery.status-facts.v1 bundle plus the shipped lane/phase fold; the preserved owner-gate SLA as the gates section; repository selection (invoking checkout, `--project <repoKey>`, `--all`) over the managed set with the 128-included-repository cap and counted overflow; the additive `repositories[]`, `stateSource`, `scope`, `selection`, `ownerHold`, and `omittedBySection` members; per-section row identity, ordering, bounds, and the declared byte-guard drop order; the deterministic four-section human screen; exit `0`/`1`/`2` with `board.repository-unknown`, `board.state-unavailable`, the delivered collector family, and `fallback.invocation`; the read-only carve-out for the idempotent owner-gate decision record; and the mount as the 21st prompt-required family."
+summary: "The read-only `board` command and its bounded delivery.board.v1 payload: the delivered four sections (active lanes, open gates, owner asks, parked work) plus the additive actions section, in declared order from the one shared delivery.status-facts.v1 bundle, the repository's own action registry, and the shipped lane/phase fold; the preserved owner-gate SLA as the gates section; repository selection (invoking checkout, `--project <repoKey>`, `--all`) over the managed set with the 128-included-repository cap and counted overflow; the additive `repositories[]`, `stateSource`, `scope`, `selection`, `ownerHold`, and `omittedBySection` members; per-section row identity, ordering, bounds, and the declared byte-guard drop order; the deterministic five-section human screen; exit `0`/`1`/`2` with `board.repository-unknown`, `board.state-unavailable`, the delivered collector family, and `fallback.invocation`; the read-only carve-out for the idempotent owner-gate decision record; and the mount as the 21st prompt-required family."
 links:
-  related_changes: ["GH-229", "GH-237", "GH-230", "GH-288", "GH-294", "GH-309", "GH-297", "GH-296"]
+  related_changes: ["GH-229", "GH-237", "GH-230", "GH-288", "GH-294", "GH-309", "GH-297", "GH-296", "GH-287"]
   related_decisions: ["PDR-0003", "ODR-0004"]
   contracts:
     - "packages/core/src/contracts/owner-gate-sla.ts"
@@ -20,9 +20,9 @@ links:
 
 ## Overview
 
-`board` is the owner's and coordinator's one-screen fleet view. One invocation renders exactly four sections in fixed order — `LANES`, `GATES`, `ASKS`, `PARKED` — covering the active lanes, the open owner gates with their SLA posture, the open owner questions with their drawn defaults, and the parked lanes with their reason and expiry. Every row names its repository key, its ref, and its owner, so several checkouts never blend into one another.
+`board` is the owner's and coordinator's one-screen fleet view. One invocation renders the declared sections in fixed order — `LANES`, `GATES`, `ASKS`, `ACTIONS`, `PARKED` — covering the active lanes, the open owner gates with their SLA posture, the open owner questions with their drawn defaults, the open retro improvement obligations with their aging state (GH-287), and the parked lanes with their reason and expiry. Every row names its repository key, its ref, and its owner, so several checkouts never blend into one another. The delivered four sections keep their order, caps, and semantics; `ACTIONS` is additive under the kept `delivery.board.v1` identity.
 
-The board reads from one named state source. `GATES`, `ASKS`, and `PARKED` read the same per-repository status facts (`delivery.status-facts.v1`) that `collectStatusFacts` composes for `status` and `brief` — tracker work items, the blocker ledger, and the park projection — and the payload names that source as `stateSource: "delivery.status-facts.v1"`. `LANES` reads the shipped lane/phase state, declared as the `lanes` collector in the payload's per-repository collector evidence. The same `stateSource` identity is carried additively on the `status` and `brief` payloads, so "board, brief, and status share one state source" is a runtime equality across three payloads, not a prose claim.
+The board reads from one named shared state source plus the repository's own action registry. `GATES`, `ASKS`, and `PARKED` read the same per-repository status facts (`delivery.status-facts.v1`) that `collectStatusFacts` composes for `status` and `brief` — tracker work items, the blocker ledger, and the park projection — and the payload names that source as `stateSource: "delivery.status-facts.v1"`. `LANES` reads the shipped lane/phase state, declared as the `lanes` collector in the payload's per-repository collector evidence. `ACTIONS` reads the repository's own action registry through one bounded read, declared as the `actions` collector in the same evidence. The same `stateSource` identity is carried additively on the `status` and `brief` payloads, so "board, brief, and status share one state source" is a runtime equality across three payloads, not a prose claim.
 
 Repository scope is repository-keyed and never group-scoped. The default is the invoking checkout; `--project <repoKey>` narrows to one managed repository; `--all` spans every managed repository on the host, bounded to 128 included repositories with the overflow counted. The delivered owner-gate SLA is preserved verbatim as the gates section: the same collector mapping, 24 h escalation and 72 h default-on-expiry with `>=` boundaries, the PDR-0003 two-row policy map, waiver recording, ranking, gate cap, and append-only idempotent decision record ([Owner-Gate SLA](feature-owner-gate-sla.md)).
 
@@ -38,7 +38,7 @@ A board is a bounded summary, not a replacement for `lanes list`, `queue list`, 
 
 ### Goals
 
-- Render the four coordination sections on one deterministic, bounded screen.
+- Render the coordination sections on one deterministic, bounded screen.
 - Project those sections from one named state source shared with `status` and `brief`.
 - Span managed repositories without mixing their state, under a declared cap.
 - Preserve the delivered owner-gate SLA rather than re-implement it.
@@ -60,16 +60,17 @@ A grammar violation — an unknown flag, any positional, `--all` together with `
 | `board --all` | Every managed repository on the host, under the 128 cap |
 | `board --json` | The machine envelope instead of the human screen |
 
-### Four sections
+### Sections
 
-The screen and the payload carry the same four sections in the same declared order.
+The screen and the payload carry the same declared sections in the same declared order.
 
 | Order | Section | Population | Row identity |
 |---:|---|---|---|
 | 1 | `LANES` | Active lanes only: the shipped fold's `delivering` and `failed` lanes | `(repository, ref)` |
 | 2 | `GATES` | The delivered open owner-gate population with its SLA posture | `(repository, id)` |
 | 3 | `ASKS` | Open `owner`-audience typed questions with their drawn default | `(repository, id)` |
-| 4 | `PARKED` | Open lane park episodes with reason and `until` | `(repository, ref)` |
+| 4 | `ACTIONS` | Open retro improvement actions with owner, level, age, aging state, and window count/limit (GH-287) | `(repository, actionId)` |
+| 5 | `PARKED` | Open lane park episodes with reason and `until` | `(repository, ref)` |
 
 Every row names its repository key, its ref (or the source's declared absence), and its owner. Within each array the order is repository key ascending, then the section's declared rank or ref order; no collector, provider, filesystem, or host-index return order influences a rendered order. Every identity is unique within its array, so two repositories holding the same ref produce two distinct rows.
 
@@ -127,13 +128,14 @@ board.data = {
   lanes:   [{ repository, ref, laneId, state, phase, phaseUnknownReason?, holder, leaseId?, reason?, owner, ownerSource }],
   gates:   [{ repository, id, kind, ref, age, ageUnknownReason?, slaState, default, waivedBy, condition, owner, ownerSource }],
   asks:    [{ repository, id, type, ref, lane, question, askedAt, age, status, owner, ownerSource, drawnDefault, defaultState }],
+  actions: [{ repository, actionId, owner, level, age, agingState, window, windowOpenCount, windowLimit }],
   parked:  [{ repository, ref, reason, until, untilReason?, preservation?, providerProfile?, owner, ownerSource }],
   collectors: [{ collector, outcome, repository }],
   ownerHold: { active: false } | { active: true, source: "env" | "marker", reason? },
   stateSource: "delivery.status-facts.v1",
   truncated: boolean,
   omitted: number,
-  omittedBySection: { repositories, lanes, gates, asks, parked }
+  omittedBySection: { repositories, lanes, gates, asks, actions, parked }
 }
 ```
 
@@ -151,6 +153,8 @@ GATES
 <repository>  <id>  <kind>  <ref>  age=<age>  sla=<state>  default=<default|null>  waivedBy=<principal|null>  owner=<owner|null>  cond=<kind>:<slaState>
 ASKS
 <repository>  <id>  ref=<ref|null>  age=<age>  default=<drawnDefault|none>:<defaultState>  owner=<owner|null>
+ACTIONS
+<repository>  <actionId>  owner=<owner>  level=<level>  age=<age>  aging=<state>  window=<window>:<openCount>/<limit>
 PARKED
 <repository>  <ref>  reason=<cause>  until=<instant|untilReason|null>  owner=<owner|null>
 ```
@@ -164,15 +168,16 @@ An empty board or the `unbound` scope renders `<binary> board  observed-empty  s
 | Gates per repository | 8 (delivered `BOARD_MAX_GATES`) |
 | Lanes per repository | 20 (`BOARD_MAX_LANES`) |
 | Asks per repository | 8 (`BOARD_MAX_ASKS`) |
+| Actions per repository | 8 (`BOARD_MAX_ACTIONS`) |
 | Parked rows per repository | 8 (`BOARD_MAX_PARKED`) |
 | Included repositories | 128 (`BOARD_MAX_REPOSITORIES`) |
 | Serialized `data` | 65 536 UTF-8 bytes |
 | Human screen | 24 lines / 4 096 UTF-8 bytes |
 | Human row line | 400 UTF-8 bytes |
-| Human rows per section | lanes 6, gates 6, asks 4, parked 3 |
+| Human rows per section | lanes 6, gates 6, asks 4, actions 6, parked 3 |
 | Field caps | id/kind/ref/question 160, owner/waivedBy/reason 120, phase 60, until 40 characters |
 
-Every cap drop increments `omitted` and its `omittedBySection` counter and sets `truncated`. The payload byte guard drops rows tail-first in the fixed order `parked` → `asks` → `lanes` → `gates`; the repository list and collector evidence are never dropped by it. The human renderer applies the same drop order when it must drop lines to stay inside the line and byte bounds, and records the drops in the section's `+N more` marker. No drop is silent, and the repository cap is counted in `omittedBySection.repositories` rather than hidden.
+Every cap drop increments `omitted` and its `omittedBySection` counter and sets `truncated`. The payload byte guard drops rows tail-first in the fixed order `parked` → `asks` → `actions` → `lanes` → `gates`; the repository list and collector evidence are never dropped by it. The human renderer applies the same drop order when it must drop lines to stay inside the line and byte bounds, and records the drops in the section's `+N more` marker. No drop is silent, and the repository cap is counted in `omittedBySection.repositories` rather than hidden.
 
 ### Exit projection and error identities
 
@@ -196,14 +201,25 @@ The board makes no LLM call, issues no non-GET provider request, starts no timer
 
 The board is the 21st prompt-required command family. The production composition root composes it unconditionally, root `--help` lists it beside the other families, `board --help` answers from the static inventory at exit `0`, the M2 reference page serves the help-coverage check, and the coverage inventory carries the board row. Mounting changes no other command's composition.
 
+### Actions surface (GH-287)
+
+The actions rows project from the repository's own action registry through one
+bounded read per repository; a failed read discloses the `actions` collector
+evidence as `unavailable` and fabricates no row. Each row carries the action
+identity, repository, owner, level, age in milliseconds, derived aging state
+(`current`, `nudged`, `escalated`), and the improvement window's open count and
+declared limit. The section participates in the declared drop order
+(`parked`, `asks`, `actions`, `lanes`, `gates`); a dropped row is always
+counted. See [Retro Action Registry](feature-retro-action-registry.md).
+
 ## Technical Architecture & Codebase Map
 
 ### Core components
 
 | Path | Responsibility |
 |---|---|
-| `packages/core/src/contracts/owner-gate-sla.ts` | The `delivery.board.v1` vocabulary: schema id, the delivered gate SLA vocabulary, the four-section row types, `scope`/`selection`, the closed lane-state, phase-absence, owner-source, ask-default-state, and parked-reason sets, `stateSource`, the caps, the collector ids, and the projection input/output types. Types and `as const` data only. |
-| `packages/core/src/domain/owner-gate-sla.ts` | The pure gate evaluator and the four-section `projectBoard` and `renderBoardHuman`: per-repository gate evaluation, lane/ask/parked projection, drawn-default join, deterministic repository-then-section ordering, omission accounting, the machine byte guard, and the bounded human screen. No I/O, clock, randomness, or ambient environment. |
+| `packages/core/src/contracts/owner-gate-sla.ts` | The `delivery.board.v1` vocabulary: schema id, the delivered gate SLA vocabulary, the section row types including the additive actions row, `scope`/`selection`, the closed lane-state, phase-absence, owner-source, ask-default-state, and parked-reason sets, `stateSource`, the caps, the collector ids, and the projection input/output types. Types and `as const` data only. |
+| `packages/core/src/domain/owner-gate-sla.ts` | The pure gate evaluator and the `projectBoard` and `renderBoardHuman` projection: per-repository gate evaluation, lane/ask/action/parked projection, drawn-default join, deterministic repository-then-section ordering, omission accounting, the machine byte guard, and the bounded human screen. No I/O, clock, randomness, or ambient environment. |
 | `packages/core/src/contracts/status.ts` | Declares `STATUS_FACTS_SCHEMA_VERSION` (`delivery.status-facts.v1`), the one identity carried as `stateSource` on the board, status, and brief payloads. |
 | `packages/cli/src/commands/board.ts` | The `board` command definition over injected repository resolution, per-repository loads, decision append, owner hold, policy, and clock; declares `--all`, `--project`, the conflict pair, and zero positionals; owns no stream writes or exit-code choice. |
 | `packages/cli/src/edge.ts` | The board edge composition: managed-set resolution, per-repository read set (shared status facts, lane/phase fold, parks, decisions), phase resolution, park classification, decision append, and the board runtime seam. |
@@ -215,14 +231,14 @@ The board is the 21st prompt-required command family. The production composition
 ### Data flow
 
 1. The edge resolves the selection: the invoking checkout only, one requested key, or the managed set reduced to the retained 128-key subset. The default form reads no host index.
-2. For each included repository, the edge reads the shared status facts, the lane/phase state, the open park episodes, and — only when a gate is default-eligible — the verified decision history.
-3. The pure projector evaluates the delivered SLA per repository, projects the four sections with the drawn-default join over the post-append decision set, accounts for every cap and clamp, and applies the machine byte guard.
+2. For each included repository, the edge reads the shared status facts, the lane/phase state, the open park episodes, one bounded action-registry read, and — only when a gate is default-eligible — the verified decision history.
+3. The pure projector evaluates the delivered SLA per repository, projects the declared sections with the drawn-default join over the post-append decision set, accounts for every cap and clamp, and applies the machine byte guard.
 4. The edge appends at most one decision per newly defaulted gate per repository, idempotently.
 5. The CLI edge renders the human screen or the standard envelope and projects the exit code from the classified outcome.
 
 ### API and interface contracts
 
-- **`projectBoard(input: BoardProjectionInput): BoardProjection`** — the only four-section projection; returns the bounded payload and the per-repository decisions the edge must append.
+- **`projectBoard(input: BoardProjectionInput): BoardProjection`** — the only board projection; returns the bounded payload and the per-repository decisions the edge must append.
 - **`renderBoardHuman(data, brand): string`** — the only human renderer; reads no source and uses the injected brand binary name.
 - **`evaluateOwnerGateSla(input)` / `toBoardData(...)`** — the delivered gate evaluation and gate payload projection the gates section composes; see [Owner-Gate SLA](feature-owner-gate-sla.md).
 - **`createBoardCommandDefinition(runtime: BoardCommandRuntime): CommandDefinition`** — declares `flags: ["--all", "--project"]`, `requiresValue: ["--project"]`, the `--all`/`--project` conflict, `positionals.max: 0`, the human renderer, and a handler over `resolve`, `loadRepository`, `appendDecision`, `ownerHold`, `policy`, `nowIso`, and `nowMs`.
@@ -257,8 +273,8 @@ The contracts and domain import only the shared contracts; the CLI command compo
 | Determinism | Two runs over unchanged facts produce byte-identical human text and byte-identical machine `data` (envelope timing and run id aside); every array follows the declared repository-then-section order. |
 | Shared source | `board.data.stateSource` equals `status.data.stateSource` and `brief.data.stateSource` on every successful repository-scoped run; 0 sections read an unnamed source. |
 | Row identity and containment | 0 duplicate identities per section; two repositories holding one ref produce 2 rows; row counts equal the sum of the included per-repository boards before byte-guard drops, with every drop counted. |
-| Bounds | Per-repository caps 8 gates / 20 lanes / 8 asks / 8 parked; 128 included repositories with counted overflow; `data` ≤ 65 536 UTF-8 bytes; human ≤ 24 lines / 4 096 bytes; ≤ 400 bytes per line; every drop or clamp marked. |
-| Read cost | One bounded pass per included repository — one tracker page (100 items), one delivery-request page (100), one CI page (20), one blocker read, one queue ledger read, one park read, one local-context read, one spend read, at most one phase read per active lane, and at most one decision-history read (shared by the ask join); no pagination, retry, or duplicate client stack; one host-index read per `--all`/`--project` run and 0 for the default form. |
+| Bounds | Per-repository caps 8 gates / 20 lanes / 8 asks / 8 actions / 8 parked; 128 included repositories with counted overflow; `data` ≤ 65 536 UTF-8 bytes; human ≤ 24 lines / 4 096 bytes; ≤ 400 bytes per line; every drop or clamp marked. |
+| Read cost | One bounded pass per included repository — one tracker page (100 items), one delivery-request page (100), one CI page (20), one blocker read, one queue ledger read, one park read, one action-registry read, one local-context read, one spend read, at most one phase read per active lane, and at most one decision-history read (shared by the ask join); no pagination, retry, or duplicate client stack; one host-index read per `--all`/`--project` run and 0 for the default form. |
 | Write discipline | ≤ 1 appended decision record per newly defaulted gate and 0 when one exists; 0 index maintenance, 0 prune, 0 edit or delete; exactly the 2 delivered store-opening side effects. |
 | Purity | 0 LLM calls, 0 non-GET provider requests, 0 timers or loops, 0 hardcoded product or binary names. |
 | Responsiveness | Pure projection and render of a cap-sized two-repository board completes inside 50 ms (warm median of 5 runs, I/O excluded). |
@@ -269,7 +285,7 @@ The contracts and domain import only the shared contracts; the CLI command compo
 | Level | Scope | Evidence |
 |---|---|---|
 | Structure | Contract data pinned exactly (sections, row fields, closed vocabularies, caps, `stateSource`, collector ids); pure-domain import confinement; inventory registration; production composition and prompt-set membership; 23-family counts | `tests/structure/board-contract.test.ts`, `board-mounting.test.ts`, `board-nonregression.test.ts` |
-| Behaviour | Four-section order and rows, shared-source equality, lane provenance, gates SLA preservation, asks join, parked population and owner hold, repository selection (default, project, all, unbound), the 128 cap and retained set, byte guard, bounds, determinism, privacy, purity, read cost, write discipline, classified errors | `tests/behaviour/board-sections.test.ts`, `board-rows.test.ts`, `board-lanes.test.ts`, `board-gates-sla.test.ts`, `board-asks.test.ts`, `board-parked.test.ts`, `board-shared-source.test.ts`, `board-selection-*.test.ts`, `board-repository-cap.test.ts`, `board-bounds.test.ts`, `board-byte-guard.test.ts`, `board-errors.test.ts`, `board-identity.test.ts`, `board-envelope.test.ts`, `board-command.test.ts`, `board-determinism.test.ts`, `board-read-cost.test.ts`, `board-performance.test.ts`, `board-privacy.test.ts`, `board-purity.test.ts`, `board-write-discipline.test.ts`, and the delivered `board-aging`, `board-escalation`, `board-defaults`, `board-defaults-idempotency`, `board-records`, `board-waiver-recording`, `board-collectors`, `board-never-silence`, `board-output`, and `board-corpus` suites |
+| Behaviour | Section order and rows, shared-source equality, lane provenance, gates SLA preservation, asks join, actions projection and aging disclosure, parked population and owner hold, repository selection (default, project, all, unbound), the 128 cap and retained set, byte guard, bounds, determinism, privacy, purity, read cost, write discipline, classified errors | `tests/behaviour/board-sections.test.ts`, `board-rows.test.ts`, `board-lanes.test.ts`, `board-gates-sla.test.ts`, `board-asks.test.ts`, `board-actions.test.ts`, `board-parked.test.ts`, `board-shared-source.test.ts`, `board-selection-*.test.ts`, `board-repository-cap.test.ts`, `board-bounds.test.ts`, `board-byte-guard.test.ts`, `board-errors.test.ts`, `board-identity.test.ts`, `board-envelope.test.ts`, `board-command.test.ts`, `board-determinism.test.ts`, `board-read-cost.test.ts`, `board-performance.test.ts`, `board-privacy.test.ts`, `board-purity.test.ts`, `board-write-discipline.test.ts`, and the delivered `board-aging`, `board-escalation`, `board-defaults`, `board-defaults-idempotency`, `board-records`, `board-waiver-recording`, `board-collectors`, `board-never-silence`, `board-output`, and `board-corpus` suites |
 | Mounting and help | Root and family help, reference-page coverage, coverage-inventory row, unmounted-mutant detection | `tests/behaviour/board-help.test.ts`, `tests/behaviour/entrypoint-help-coverage.test.ts`, `tests/checks/reference-page-parity.test.ts` |
 | Golden | A committed full-board envelope plus human screen with an explicit regeneration path, byte-identical repeats, and permutation independence | `tests/golden/board-full.test.ts` with `tests/fixtures/board/golden/full-envelope.json`, `full-grid.txt`; `tests/golden/board-grid.test.ts` with the delivered gate goldens |
 | Contract | Error table, structural mirror, sync check, and classifier agree on the board rows and the closed allowlist | `tests/checks/error-table-sync.test.ts`, `tests/structure/error-table.test.ts`, `tests/structure/board-contract.test.ts` |
@@ -289,7 +305,7 @@ The payload is the observability surface: the standard envelope's `runId` and `t
 
 ### Cost and read cost
 
-One invocation performs one bounded pass per included repository, one host-index read for `--all`/`--project`, and at most one decision-history read per repository; each applied default adds one fenced append. There is no retry loop, pagination crawl, daemon, or new runtime dependency. The 128-repository cap bounds the worst-case read set.
+One invocation performs one bounded pass per included repository, one bounded action-registry read per repository, one host-index read for `--all`/`--project`, and at most one decision-history read per repository; each applied default adds one fenced append. There is no retry loop, pagination crawl, daemon, or new runtime dependency. The 128-repository cap bounds the worst-case read set.
 
 ### Maintenance
 
@@ -317,7 +333,7 @@ One invocation performs one bounded pass per included repository, one host-index
 
 | Term | Definition |
 |---|---|
-| Board | The bounded four-section fleet screen and `delivery.board.v1` payload: lanes, gates, asks, and parked work. |
+| Board | The bounded fleet screen and `delivery.board.v1` payload: lanes, gates, asks, actions, and parked work. |
 | Shared state source | The `delivery.status-facts.v1` fact bundle that status, brief, and the board's gates, asks, and parked sections project. |
 | Active lane | A shipped lane-fold lane in `delivering` or `failed`; the only lane population on the board. |
 | Owner ask | An open `owner`-audience typed question with its computed age and its drawn default. |
@@ -328,6 +344,6 @@ One invocation performs one bounded pass per included repository, one host-index
 | `unbound` scope | The declared no-repository scope of a default-form invocation outside a work tree or without a derivable identity; exit `0`, never an error. |
 | Omission counter | `omitted` and `omittedBySection`, stating exactly how many rows or repositories a bounded board did not show. |
 
-See also: [Owner-Gate SLA](feature-owner-gate-sla.md), [Status Digest](feature-status-digest.md), [Brief](feature-brief.md), [Scheduling Engine](feature-scheduling-engine.md), [Typed Blocker and Question Channel](feature-blockers.md), [Repositories and the Host Overview](feature-projects.md), [Provider Peak Pausing](feature-peak-pausing.md), [Result Contract and Error Table](feature-result-contract.md), [CLI Entrypoint and Self-Description](feature-cli-entrypoint.md), [PDR-0003](../../decisions/PDR-0003-owner-gate-sla-default-map.md), the [command registry](../../planning/oss-tooling/cli-command-registry.md), and the [repository glossary](../../overview/glossary.md).
+See also: [Owner-Gate SLA](feature-owner-gate-sla.md), [Status Digest](feature-status-digest.md), [Brief](feature-brief.md), [Scheduling Engine](feature-scheduling-engine.md), [Typed Blocker and Question Channel](feature-blockers.md), [Retro Action Registry](feature-retro-action-registry.md), [Repositories and the Host Overview](feature-projects.md), [Provider Peak Pausing](feature-peak-pausing.md), [Result Contract and Error Table](feature-result-contract.md), [CLI Entrypoint and Self-Description](feature-cli-entrypoint.md), [PDR-0003](../../decisions/PDR-0003-owner-gate-sla-default-map.md), the [command registry](../../planning/oss-tooling/cli-command-registry.md), and the [repository glossary](../../overview/glossary.md).
 
-**Change records:** `doc/changes/2026-11/2026-11-15--GH-297--board/` (the four-section board, shared state source, repository selection, and mounting), and `doc/changes/2026-11/2026-11-06--GH-229--owner-gate-sla/` (the delivered gate SLA the gates section preserves).
+**Change records:** `doc/changes/2026-11/2026-11-15--GH-297--board/` (the four delivered sections, shared state source, repository selection, and mounting), `doc/changes/2026-11/2026-11-16--GH-287--retro-action-registry/` (the additive `ACTIONS` section), and `doc/changes/2026-11/2026-11-06--GH-229--owner-gate-sla/` (the delivered gate SLA the gates section preserves).

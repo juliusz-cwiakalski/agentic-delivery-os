@@ -178,6 +178,30 @@ const DOC_REQUIREMENTS: readonly {
     required: ["commit` command", "phase complete", "plan-phase"],
   },
   {
+    page: "doc/spec/features/feature-retro-pipeline.md",
+    required: ["retro action", "producer", "delivery.retro.report.v1"],
+    stale: ["enforcement is later work"],
+  },
+  {
+    page: "doc/spec/features/feature-retro-action-registry.md",
+    required: [
+      "five-field contract",
+      "retro.action-incomplete",
+      "retro.closure-incomplete",
+      "retro.wip-limit-exceeded",
+      "artifactClosure",
+      "outcomeClosure",
+    ],
+  },
+  {
+    page: "doc/spec/features/feature-board.md",
+    required: ["ACTIONS", "delivery.board.v1"],
+  },
+  {
+    page: "doc/spec/features/feature-doctor.md",
+    required: ["action-registry"],
+  },
+  {
     page: "doc/planning/oss-tooling/milestones/m1/man-page.md",
     required: [
       "--version",

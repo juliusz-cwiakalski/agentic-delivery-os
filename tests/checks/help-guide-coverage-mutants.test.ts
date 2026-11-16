@@ -66,3 +66,37 @@ describe("TC-HELP-002 coverage mutants", () => {
     }
   });
 });
+
+describe("TC-ACTION-036 the M2 retro page participates in the parity guard", () => {
+  test("stripping --help from the M2 retro page fails naming retro", () => {
+    const root = tempRoot();
+    try {
+      const page = join(root, M2_COMMANDS, "retro.md");
+      writeFileSync(page, readFileSync(page, "utf8").replaceAll("--help", "help"));
+      const failures = runHelpGuideCoverage(root);
+      expect(
+        failures.some((failure) => failure.id === "retro" && failure.detail.includes("--help")),
+      ).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("removing the M2 retro row from the inventory fails naming retro", () => {
+    const root = tempRoot();
+    try {
+      const coverage = JSON.parse(readFileSync(join(root, COVERAGE), "utf8")) as {
+        commands: string[];
+        referencePages: string[];
+      };
+      coverage.referencePages = coverage.referencePages.filter(
+        (page) => page !== "doc/planning/oss-tooling/milestones/m2/commands/retro.md",
+      );
+      writeFileSync(join(root, COVERAGE), JSON.stringify(coverage));
+      const failures = runHelpGuideCoverage(root);
+      expect(failures.some((failure) => failure.id === "retro")).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});

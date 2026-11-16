@@ -14,6 +14,7 @@ const ROOT = process.cwd();
 const PROBE = `import {
   createNodeStateEdge,
   createStateStore,
+  readActionRegistry,
   STATE_SCHEMA_VERSION,
 } from "@delivery-os/core/state";
 import {
@@ -21,6 +22,9 @@ import {
   PHASE_TRANSITION_KIND,
   PM_NOTES_VARIANT_VALUES,
   REGISTRY_SCHEMA_VERSION,
+  RETRO_ACTION_CLOSURE_RECORD_KEY_PREFIX,
+  RETRO_ACTION_RECORD_KEY_PREFIX,
+  RETRO_ACTION_REGISTRY_BOUNDARY_DECLARATION,
   STATE_DRIVER_KINDS,
 } from "@delivery-os/core/contracts";
 
@@ -54,9 +58,19 @@ for (const driver of STATE_DRIVER_KINDS) {
   if (!read.ok) throw new Error("read: " + read.error.code);
   results[driver] = read.value.values.k;
 }
+const actionStore = createStateStore(identity, { driver: "jsonl", edge: createNodeStateEdge() });
+const actionRead = readActionRegistry(actionStore);
+if (!actionRead.ok) throw new Error("action read: " + actionRead.error.code);
 process.stdout.write(
   JSON.stringify({
     drivers: results,
+    action: {
+      verdict: actionRead.value.verdict,
+      actions: actionRead.value.actions.length,
+      closures: actionRead.value.closures.length,
+      kinds: RETRO_ACTION_REGISTRY_BOUNDARY_DECLARATION.kinds.map((kind) => kind.kind),
+      prefixes: [RETRO_ACTION_RECORD_KEY_PREFIX, RETRO_ACTION_CLOSURE_RECORD_KEY_PREFIX],
+    },
     kinds: STATE_DRIVER_KINDS,
     variants: PM_NOTES_VARIANT_VALUES,
     lite: LITE_REQUIRED_PHASES,
@@ -170,6 +184,13 @@ describe("TC-STATE-021 packed Node/Bun state surface", () => {
           lite: string[];
           transitionKind: string;
           registrySchemaVersion: string;
+          action: {
+            verdict: string;
+            actions: number;
+            closures: number;
+            kinds: string[];
+            prefixes: string[];
+          };
         };
         expect(parsed.kinds).toEqual(["jsonl", "sqlite"]);
         expect(parsed.drivers.jsonl).toMatchObject({
@@ -193,6 +214,13 @@ describe("TC-STATE-021 packed Node/Bun state surface", () => {
         ]);
         expect(parsed.transitionKind).toBe("phase.transition");
         expect(parsed.registrySchemaVersion).toBe("delivery.registry.v1");
+        expect(parsed.action).toEqual({
+          verdict: "verified-empty",
+          actions: 0,
+          closures: 0,
+          kinds: ["retro.action", "retro.action-closure"],
+          prefixes: ["retro.actions", "retro.action-closures"],
+        });
       }
 
       const manifest = JSON.parse(

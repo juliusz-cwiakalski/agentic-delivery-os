@@ -12,6 +12,7 @@ import {
 } from "../../../packages/cli/src/commands/board";
 import { type CliDependencies, runCli } from "../../../packages/cli/src/index";
 import type {
+  BoardActionFact,
   BoardAskFact,
   BoardLaneFact,
   BoardOwnerHold,
@@ -94,6 +95,9 @@ export type BoardRepositoryFixture = {
   readonly asks?: readonly BoardAskFact[];
   readonly parks?: readonly BoardParkedFact[];
   readonly decisions?: readonly OwnerGateSlaDecisionRecord[];
+  /** The open actions read from the repository's own registry (GH-287). */
+  readonly actions?: readonly BoardActionFact[];
+  readonly actionsSource?: "available" | "unavailable";
 };
 
 export type BoardRun = {
@@ -225,6 +229,8 @@ export const createBoardHarness = (options: BoardHarnessOptions = {}): BoardHarn
         gates,
         lanes: fixture?.lanes ?? [],
         asks,
+        ...(fixture?.actions === undefined ? {} : { actions: fixture.actions }),
+        ...(fixture?.actionsSource === undefined ? {} : { actionsSource: fixture.actionsSource }),
         parks: fixture?.parks ?? [],
         decisions: records,
       },
@@ -272,6 +278,8 @@ export const createBoardHarness = (options: BoardHarnessOptions = {}): BoardHarn
           gates: fixture.gates ?? [],
           lanes: fixture.lanes ?? [],
           asks: fixture.asks ?? [],
+          ...(fixture.actions === undefined ? {} : { actions: fixture.actions }),
+          ...(fixture.actionsSource === undefined ? {} : { actionsSource: fixture.actionsSource }),
           parks: fixture.parks ?? [],
           decisions: records,
         } satisfies BoardRepositoryFacts,
@@ -373,4 +381,14 @@ export const boardAsks = (run: BoardRun): readonly Record<string, unknown>[] => 
 export const boardParked = (run: BoardRun): readonly Record<string, unknown>[] => {
   const parked = boardData(run)?.parked;
   return Array.isArray(parked) ? (parked as Record<string, unknown>[]) : [];
+};
+
+export const boardActions = (run: BoardRun): readonly Record<string, unknown>[] => {
+  const actions = boardData(run)?.actions;
+  return Array.isArray(actions) ? (actions as Record<string, unknown>[]) : [];
+};
+
+export const boardCollectors = (run: BoardRun): readonly Record<string, unknown>[] => {
+  const collectors = boardData(run)?.collectors;
+  return Array.isArray(collectors) ? (collectors as Record<string, unknown>[]) : [];
 };

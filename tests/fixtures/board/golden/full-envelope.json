@@ -202,6 +202,7 @@
         "defaultState": "none"
       }
     ],
+    "actions": [],
     "parked": [
       {
         "repository": "delivery-a-1a2b3c4d",
@@ -275,6 +276,7 @@
       "lanes": 0,
       "gates": 0,
       "asks": 0,
+      "actions": 0,
       "parked": 0
     }
   }
