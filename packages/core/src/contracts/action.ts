@@ -257,6 +257,12 @@ export const ACTION_FLAGS = {
 /** The `data.actions` list key (GAP-4 plan-level refinement). */
 export const ACTION_LIST_DATA_KEY = "actions" as const;
 
+/** The declared list row cap (NFR-2): every dropped row is counted. */
+export const ACTION_LIST_MAX_ROWS = 200 as const;
+
+/** The declared machine `data` UTF-8 byte cap (NFR-2). */
+export const ACTION_MAX_MACHINE_BYTES = 65_536 as const;
+
 /* -------------------------------- board ----------------------------------- */
 
 /** The board's fifth section label, rendered immediately after `ASKS` (F-6). */
@@ -401,10 +407,12 @@ export type RetroActionWindowDisclosure = {
   readonly limit: number;
 };
 
-/** The list surface's bounded `data` payload. */
+/** The list surface's bounded `data` payload (NFR-2 truncation is marked). */
 export type RetroActionListData = {
   readonly actions: readonly RetroActionListEntry[];
   readonly windows: readonly RetroActionWindowDisclosure[];
+  readonly truncated: boolean;
+  readonly omitted: number;
 };
 
 /** The filing surface's bounded `data` payload. */

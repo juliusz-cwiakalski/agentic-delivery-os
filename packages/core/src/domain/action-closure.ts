@@ -16,6 +16,9 @@ import {
   ACTION_CLOSURE_PLANE_FIELDS,
   ACTION_CLOSURE_PLANES,
   ACTION_CLOSURE_ROUTES,
+  ACTION_FREE_TEXT_BOUNDS,
+  ACTION_LIST_MAX_ROWS,
+  ACTION_MAX_MACHINE_BYTES,
   ACTION_OUTCOME_EVIDENCE_FIELD,
   type ActionClosurePlane,
   type ActionClosureRoute,
@@ -35,6 +38,19 @@ import {
 import { evaluateActionAging } from "./action-aging.js";
 import { actionWindowEntries } from "./action-filing.js";
 import { windowDisclosures } from "./action-window.js";
+
+/** The UTF-8 byte length of one serialized value (NFR-2's measured bound). */
+const listUtf8Bytes = (value: string): number => {
+  let bytes = 0;
+  for (const character of value) {
+    const point = character.codePointAt(0) ?? 0;
+    if (point <= 0x7f) bytes += 1;
+    else if (point <= 0x7ff) bytes += 2;
+    else if (point <= 0xffff) bytes += 3;
+    else bytes += 4;
+  }
+  return bytes;
+};
 
 const isFilled = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0;
@@ -189,6 +205,16 @@ export const evaluateActionClosure = (
 
   const justificationField = ACTION_CLOSURE_JUSTIFICATION_FIELDS[route];
   const justification = request[justificationField];
+  if (
+    justificationField === "reason" &&
+    justification !== undefined &&
+    justification.length > ACTION_FREE_TEXT_BOUNDS.closureReason
+  ) {
+    return closureRefusal(
+      "reason",
+      `the closure reason exceeds ${String(ACTION_FREE_TEXT_BOUNDS.closureReason)} characters`,
+    );
+  }
   if (!isFilled(justification)) {
     return closureRefusal(
       justificationField,
@@ -322,13 +348,21 @@ export const listRetroActions = (
       left.actionId < right.actionId ? -1 : left.actionId > right.actionId ? 1 : 0,
     )
     .map((action) => actionListEntry(action, read.value, input.nowMs));
+  const windows = windowDisclosures(
+    input.window === undefined ? entries : entries.filter((entry) => entry.window === input.window),
+  );
+  let kept = rows.slice(0, ACTION_LIST_MAX_ROWS);
+  let omitted = rows.length - kept.length;
+  const bytesOf = (value: unknown): number => listUtf8Bytes(JSON.stringify(value));
+  while (kept.length > 0 && bytesOf({ actions: kept, windows }) > ACTION_MAX_MACHINE_BYTES) {
+    kept = kept.slice(0, -1);
+    omitted += 1;
+  }
   const data: RetroActionListData = {
-    actions: rows,
-    windows: windowDisclosures(
-      input.window === undefined
-        ? entries
-        : entries.filter((entry) => entry.window === input.window),
-    ),
+    actions: kept,
+    windows,
+    truncated: omitted > 0,
+    omitted,
   };
   return { ok: true, data };
 };

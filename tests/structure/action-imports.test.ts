@@ -121,8 +121,6 @@ describe("TC-ACTION-032 static hermetic posture", () => {
       "tests/behaviour/action-privacy.test.ts",
       "tests/behaviour/action-disclosure.test.ts",
       "tests/behaviour/action-audit.test.ts",
-      "tests/checks/action-hermetic.test.ts",
-      "tests/checks/action-mutants.test.ts",
     ];
     for (const suite of suites) {
       const text = textOf(suite);

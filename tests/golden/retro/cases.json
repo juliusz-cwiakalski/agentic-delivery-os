@@ -230,6 +230,8 @@
         "exitCode": 0,
         "dataKeys": [
           "actions",
+          "omitted",
+          "truncated",
           "windows"
         ]
       }

@@ -5187,11 +5187,36 @@ export const createRetroCommandRuntime = (
   let actionSeq = 0;
   let closureSeq = 0;
   const actionPort = createRetroActionRegistryPort(options.store);
+  const redactText = options.redact ?? ((text: string) => text);
+  const redactDraft = (
+    draft: import("@delivery-os/core/contracts").RetroActionDraft,
+  ): import("@delivery-os/core/contracts").RetroActionDraft => ({
+    ...draft,
+    ...(draft.owner === undefined ? {} : { owner: redactText(draft.owner) }),
+    ...(draft.measurableOutcome === undefined
+      ? {}
+      : { measurableOutcome: redactText(draft.measurableOutcome) }),
+    ...(draft.trackerEntry === undefined ? {} : { trackerEntry: redactText(draft.trackerEntry) }),
+    ...(draft.verificationArtifact === undefined
+      ? {}
+      : { verificationArtifact: redactText(draft.verificationArtifact) }),
+    ...(draft.rollbackCondition === undefined
+      ? {}
+      : { rollbackCondition: redactText(draft.rollbackCondition) }),
+    ...(draft.outcomeVerifier === undefined
+      ? {}
+      : {
+          outcomeVerifier: {
+            ...draft.outcomeVerifier,
+            evidence: redactText(draft.outcomeVerifier.evidence),
+          },
+        }),
+  });
   const actions: import("@delivery-os/core/contracts").RetroActionCommandRuntime = {
     file: (draft) => {
       actionSeq += 1;
       return fileRetroAction(actionPort, {
-        draft,
+        draft: redactDraft(draft),
         actionId: options.newActionId?.() ?? `action-${String(actionSeq)}`,
         filedAt: options.clock.nowMs(),
         fenceToken: options.newFenceToken(),
@@ -5199,12 +5224,23 @@ export const createRetroCommandRuntime = (
     },
     close: (request) => {
       closureSeq += 1;
-      return closeRetroAction(actionPort, request, {
-        closureId: options.newClosureId?.() ?? `closure-${String(closureSeq)}`,
-        decidedAt: options.clock.nowMs(),
-        nowMs: options.clock.nowMs(),
-        fenceToken: options.newFenceToken(),
-      });
+      return closeRetroAction(
+        actionPort,
+        {
+          ...request,
+          ...(request.decision === undefined ? {} : { decision: redactText(request.decision) }),
+          ...(request.reason === undefined ? {} : { reason: redactText(request.reason) }),
+          ...(request.evidence === undefined ? {} : { evidence: redactText(request.evidence) }),
+          ...(request.artifact === undefined ? {} : { artifact: redactText(request.artifact) }),
+          ...(request.successor === undefined ? {} : { successor: redactText(request.successor) }),
+        },
+        {
+          closureId: options.newClosureId?.() ?? `closure-${String(closureSeq)}`,
+          decidedAt: options.clock.nowMs(),
+          nowMs: options.clock.nowMs(),
+          fenceToken: options.newFenceToken(),
+        },
+      );
     },
     list: (input) =>
       listRetroActions(actionPort, {

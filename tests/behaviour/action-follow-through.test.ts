@@ -16,11 +16,9 @@ import {
   retroActionCeremonyFacts,
 } from "../../packages/core/src/domain/ceremony-retro";
 import { reportRetro } from "../../packages/core/src/domain/retro";
-import { readActionRegistry } from "../../packages/core/src/state/action-registry";
 import { conformingDraft } from "../fixtures/action/builders";
 import { FILING_MS } from "../fixtures/action/clock";
 import { actionSnapshot, fileAction } from "../fixtures/action/seed";
-import { makeActionStore } from "../fixtures/action/store";
 import {
   auditOutcome,
   makeRetroDir,

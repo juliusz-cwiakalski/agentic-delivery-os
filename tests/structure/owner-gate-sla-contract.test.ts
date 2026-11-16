@@ -239,7 +239,14 @@ describe("TC-SLA-001 policy contract data pinned", () => {
     expect(BOARD_MAX_PHASE_CHARS).toBe(60);
     expect(BOARD_MAX_UNTIL_CHARS).toBe(40);
     expect(BOARD_MAX_HUMAN_LINE_BYTES).toBe(400);
-    expect({ ...BOARD_HUMAN_SECTION_CAPS }).toEqual({ lanes: 6, gates: 6, asks: 4, parked: 3 });
+    // GH-287 adds the fifth section's human cap beside the delivered four.
+    expect({ ...BOARD_HUMAN_SECTION_CAPS }).toEqual({
+      lanes: 6,
+      gates: 6,
+      asks: 4,
+      actions: 6,
+      parked: 3,
+    });
     // The repository cap is distinct from the host index's record bound.
     expect(BOARD_MAX_REPOSITORIES).not.toBe(HOST_INDEX_MAX_ENTRIES);
     expect(HOST_INDEX_MAX_ENTRIES).toBe(2_000);
