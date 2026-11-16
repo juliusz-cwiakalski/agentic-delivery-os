@@ -25,7 +25,7 @@ phases:
     completed: 2026-11-16T08:09:08.408Z
   system_spec_update:
     started: null
-    completed: null
+    completed: 2026-11-16T11:04:30.110Z
   review_fix:
     started: null
     completed: null
@@ -520,28 +520,28 @@ notes:
       was a stale count pin named above, fixed and re-verified."
     type: info
     date: "2026-11-16"
-  - text: "Documentation reconciliation after the GH-297 sync (doc-syncer pass):
-      the current-truth surfaces the merge left stale are reconciled to the
-      merged tree. The entrypoint-delta ceremony observation lists `board`
-      before `ceremony` in the observed root listing. The agents-and-commands
+  - text: "Documentation reconciliation after the GH-297 sync (doc-syncer pass): the
+      current-truth surfaces the merge left stale are reconciled to the merged
+      tree. The entrypoint-delta ceremony observation lists `board` before
+      `ceremony` in the observed root listing. The agents-and-commands
       help/guide row names `board` in the M2 reference-page root set and its
       related_changes gains GH-297. The board structure row pins 22-family
-      counts. The ceremony feature spec states the delivered note read bound
-      (1 048 576 bytes, measured before the read, refused as
+      counts. The ceremony feature spec states the delivered note read bound (1
+      048 576 bytes, measured before the read, refused as
       `ceremony.note-invalid` naming the bound, with a stored note re-validated
       on resume), the delivered read budget (one verified state read per fenced
-      append, `reads <= steps + 2`, and one partitioned verified scan for
-      `list` at most two verified reads per invocation), and the merged
-      error-table truth (140 identities, 56-entry reserved two-segment
-      allowlist); the nonfunctional ceremony row carries the same read budget.
-      The blockers error-identity row no longer pins a stale total and defers to
-      the Result Contract count the two-way sync check enforces. Verified on
-      the delivered tree: `PROMPT_REQUIRED_COMMANDS` holds 22 entries (board
-      index 20, ceremony index 21), `ERROR_TABLE` holds 140 rows over 139
-      non-spend identities with the 56-entry allowlist, and the committed
-      measurement comparison deep-equals `buildCeremonyComparison` in the
-      golden suite. The distribution guard reports no drift across 95 in-scope
-      docs. Pre-commit doc checks, all as TMPDIR=$PWD/tmp/tmpdir
+      append, `reads <= steps + 2`, and one partitioned verified scan for `list`
+      at most two verified reads per invocation), and the merged error-table
+      truth (140 identities, 56-entry reserved two-segment allowlist); the
+      nonfunctional ceremony row carries the same read budget. The blockers
+      error-identity row no longer pins a stale total and defers to the Result
+      Contract count the two-way sync check enforces. Verified on the delivered
+      tree: `PROMPT_REQUIRED_COMMANDS` holds 22 entries (board index 20,
+      ceremony index 21), `ERROR_TABLE` holds 140 rows over 139 non-spend
+      identities with the 56-entry allowlist, and the committed measurement
+      comparison deep-equals `buildCeremonyComparison` in the golden suite. The
+      distribution guard reports no drift across 95 in-scope docs. Pre-commit
+      doc checks, all as TMPDIR=$PWD/tmp/tmpdir
       PATH=\"$PWD/node_modules/.bin:$PATH\": doc-conformance 19 pass, the
       error-table suites 203 pass, prompt-conformance, help-guide-coverage, and
       forbidden-literals clean. The status snapshot carries no GH-296 addendum;
