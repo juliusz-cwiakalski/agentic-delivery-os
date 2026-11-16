@@ -12,14 +12,15 @@ import {
   type CeremonyCadence,
   type CeremonyDeclaration,
   type CeremonyRunRecord,
+  type CeremonyTierVerdict,
   type CeremonyWindow,
 } from "#contracts";
 import { deriveCeremonyCadenceWindow } from "./ceremony-intake.js";
 import {
-  runCeremony,
   type CeremonyEngineFailure,
   type CeremonyRunData,
   type CeremonyRunEnvironment,
+  runCeremony,
 } from "./ceremony-run.js";
 
 /** One ceremony target catch-up evaluates. */
@@ -43,6 +44,8 @@ export type CeremonyCatchUpRequest = {
   readonly removed?: readonly CeremonyRemovedTarget[];
   /** Bounded look-back override; the declared default is one cadence period. */
   readonly lookbackWindows?: number;
+  /** The tier verdict the replayed runs record; absent keeps the delivered default. */
+  readonly tier?: CeremonyTierVerdict;
 };
 
 /** The disposition of one ceremony in a catch-up report. */
@@ -272,6 +275,7 @@ export const catchUpCeremonies = (request: CeremonyCatchUpRequest): CeremonyCatc
       noteSupplied: false,
       window: replay,
       apply: request.apply,
+      ...(request.tier === undefined ? {} : { tier: request.tier }),
       catchUp: { missedWindow: replay, executionWindow },
     });
     if (run.ok && !run.data.reused) appendedRuns += 1;

@@ -12,21 +12,24 @@ import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } fr
 import {
   acquireFileConfig,
   applyPromotionWrite,
+  ceremonyTierEvidenceFromLifecycle,
   checkPromotionConfinement,
   createCapsuleFileRuntime,
+  createCeremonyArtifactStore,
   createCommitlintProbe,
   createSecretScanner,
   ensureProjectIdentityMarkerText,
   type FileSystemFacts,
   neutralEnvironmentFacts,
   nodeCapsuleFileSystemFacts,
+  nodeCeremonyTierContextFileSystem,
   nodeFileSystemFacts,
   type PmNotesFileSystemFacts,
+  parseCeremonyNoteText,
   parseConfigYaml,
   type RuntimePlatform,
-  parseCeremonyNoteText,
   readCeremonyDeclarationDocument,
-  createCeremonyArtifactStore,
+  readCeremonyTierContextFiles,
   readCiWorkflowJobNames,
   readDispatchAuthority,
   readLocalPmContext,
@@ -84,14 +87,9 @@ import {
   appendOutboxEffect,
   beginCommitEffect,
   buildCeremonyRegistry,
-  catchUpCeremonies,
-  type CeremonyEngineFailure,
-  catchUpScopeKey,
-  ceremonyRegistryEntry,
-  ceremonyRegistryIds,
-  resumeCeremony,
-  runCeremony,
   buildCloseoutPlan,
+  type CeremonyEngineFailure,
+  type CeremonyTierInput,
   type CloseoutDependentFact,
   type CloseoutPlanFacts,
   type CloseoutTelemetryRuntime,
@@ -103,6 +101,11 @@ import {
   capsuleGateEventKey,
   capsulePhaseEventKey,
   catalogPaths,
+  catchUpCeremonies,
+  catchUpScopeKey,
+  ceremonyRegistryEntry,
+  ceremonyRegistryIds,
+  ceremonyTierIntake,
   claimQueueLease,
   claimSingleFlightRefusal,
   classifyPruneCandidate,
@@ -125,6 +128,7 @@ import {
   defaultParkRecheckMs,
   deriveCapsuleEventKey,
   emptyIngestTally,
+  evaluateCeremonyTier,
   evaluateClaimPreconditions,
   evaluateDiffSweep,
   evaluateDispatchResumeEconomics,
@@ -186,7 +190,9 @@ import {
   resolveProjectScope,
   resolveQueueSettings,
   resolveQueueWeight,
+  resumeCeremony,
   revertDispatchHandoverEvidence,
+  runCeremony,
   runCloseout,
   runCommitAct,
   runDispatch,
@@ -227,6 +233,13 @@ import {
   type CapsuleFileRuntime,
   type CapsuleFileSystemFacts,
   type CapsuleProducerPort,
+  type CeremonyInputRead,
+  type CeremonyInputSource,
+  type CeremonyMemoryPort,
+  type CeremonyMirrorPort,
+  type CeremonyNote,
+  type CeremonyStepRecord,
+  type CeremonyTierVerdict,
   CLOSEOUT_MAX_DEPENDENTS,
   type CloseoutDiffRead,
   type CloseoutExpectedCapsuleEvent,
@@ -247,11 +260,6 @@ import {
   type CommitPlanPhaseContext,
   type CommitSafetyPort,
   type CommitSessionFacts,
-  type CeremonyInputRead,
-  type CeremonyInputSource,
-  type CeremonyMemoryPort,
-  type CeremonyMirrorPort,
-  type CeremonyNote,
   type CommitTelemetryRecord,
   type CommitTransportAvailability,
   type ConfigFailure,
@@ -352,19 +360,21 @@ import {
   appendPhaseTransition,
   appendTelemetryCaptureOutcome,
   appendTelemetryStep,
+  type CeremonyLifecycleTransition,
+  type CeremonyStatePartition,
   captureTelemetryBaseline,
+  createCeremonyRecordPort,
   createNodeRetroSidecarIo,
   createNodeStateEdge,
   createRetroSidecar,
   createStateStore,
+  foldCeremonyRunVerdict,
   foldCloseoutHistory,
   readAllMergeWaivers,
-  createCeremonyRecordPort,
-  foldCeremonyRunVerdict,
   readAuditLedger,
   readBlockerLedger,
   readCeremonyRuns,
-  readCeremonySteps,
+  readCeremonyState,
   readChangeTransitionsTolerant,
   readCloseoutHistory,
   readCommitTelemetry,
@@ -388,6 +398,11 @@ import {
 } from "./commands/blockers.js";
 import { type BoardCommandRuntime, createBoardCommandDefinition } from "./commands/board.js";
 import { createBriefCommandDefinition } from "./commands/brief.js";
+import {
+  type CeremonyCommandResult,
+  type CeremonyCommandRuntime,
+  createCeremonyCommandDefinition,
+} from "./commands/ceremony.js";
 import {
   type CloseoutCommandRuntime,
   createCloseoutCommandDefinition,
@@ -454,11 +469,6 @@ import {
   toQueueReadData,
 } from "./commands/queue.js";
 import { createReposCommandDefinition, type ReposCommandRuntime } from "./commands/repos.js";
-import {
-  type CeremonyCommandResult,
-  type CeremonyCommandRuntime,
-  createCeremonyCommandDefinition,
-} from "./commands/ceremony.js";
 import { createRetroCommandDefinition } from "./commands/retro.js";
 import { createSpendCommandDefinition, type SpendCommandRuntime } from "./commands/spend.js";
 import { createStatusCommandDefinition, type StatusCommandRuntime } from "./commands/status.js";
@@ -3360,7 +3370,7 @@ const ordinaryFlags = (flags: CommandFlags, catalog: ConfigCatalog): Record<stri
   return values;
 };
 
-/** The ceremony family composition seam (GH-296 F-1, F-6). */
+/** The ceremony family composition seam (GH-296 F-1, F-6, F-7). */
 export type CeremonyCompositionOptions = {
   readonly store: StateStorePort;
   readonly stateDirectory: string;
@@ -3372,6 +3382,12 @@ export type CeremonyCompositionOptions = {
   readonly gitRoot: string;
   readonly configurationDirectoryName: string;
   readonly repositoryId: string;
+  /**
+   * An injected tier context; when absent, the runtime resolves the invoking
+   * checkout's delivery context from the recorded lifecycle transitions and
+   * the change's committed pm-notes and plan documents (F-7, DM-7).
+   */
+  readonly tierContext?: CeremonyTierInput;
 };
 
 const ceremonyFailure = (error: CeremonyEngineFailure): CeremonyCommandResult => ({
@@ -3506,23 +3522,95 @@ export const createCeremonyCommandRuntime = (
       return undefined;
     }
   };
+  /**
+   * Select the checkout's delivery change from the recorded lifecycle
+   * transitions: the change whose latest recorded transition timestamp is the
+   * newest wins; ties break on the lexicographically greatest ref. Deterministic
+   * over the recorded truth, with no file crawling.
+   */
+  const selectDeliveryChangeRef = (
+    transitions: readonly CeremonyLifecycleTransition[],
+  ): string | undefined => {
+    let best: { ref: string; timestamp: string } | undefined;
+    for (const entry of transitions) {
+      if (
+        best === undefined ||
+        entry.timestamp > best.timestamp ||
+        (entry.timestamp === best.timestamp && entry.changeRef > best.ref)
+      ) {
+        best = { ref: entry.changeRef, timestamp: entry.timestamp };
+      }
+    }
+    return best?.ref;
+  };
+
+  /** Evaluate the tier verdict over one verified state partition (F-7, DM-7). */
+  const tierFromState = (
+    state: CeremonyStatePartition | undefined,
+  ): CeremonyTierVerdict | undefined => {
+    if (options.tierContext !== undefined) return evaluateCeremonyTier(options.tierContext);
+    if (state === undefined) return undefined;
+    const changeRef = selectDeliveryChangeRef(state.transitions);
+    if (changeRef === undefined) return undefined;
+    const files = readCeremonyTierContextFiles({
+      changeRef,
+      changesDirectory: options.changesDirectory,
+      fs: nodeCeremonyTierContextFileSystem(),
+    });
+    const evidence = ceremonyTierEvidenceFromLifecycle({
+      transitions: state.transitions
+        .filter((entry) => entry.changeRef === changeRef)
+        .map((entry) => ({
+          phaseId: entry.phaseId,
+          operation: entry.operation,
+          ...(entry.reason === undefined ? {} : { reason: entry.reason }),
+        })),
+      ownerEscalation: files.ownerEscalation,
+    });
+    return evaluateCeremonyTier({
+      plan: { tier: files.planTier },
+      variant: files.variant,
+      evidence,
+    });
+  };
+
+  /** The invocation's tier verdict; one verified state read when self-resolved. */
+  const tierVerdict = (): CeremonyTierVerdict | undefined => {
+    if (options.tierContext !== undefined) return tierFromState(undefined);
+    const state = readCeremonyState(options.store);
+    return tierFromState(state.ok ? state.value : undefined);
+  };
   return {
     list: async () => {
       const built = registryRead();
       if (!built.ok) return { ok: false, error: built.error };
-      const runs = readCeremonyRuns(options.store);
-      const valid = runs.ok ? runs.value.records : [];
+      // One verified state read partitions runs, steps, and the recorded
+      // lifecycle transitions the tier evidence maps (NFR-11: list reads at
+      // most two verified state reads).
+      const state = readCeremonyState(options.store);
+      const usable =
+        state.ok && state.value.verdict !== "torn" && state.value.verdict !== "unknown";
+      const runs = usable ? state.value.runs : [];
+      const stepsByRun = new Map<string, CeremonyStepRecord[]>();
+      if (usable) {
+        for (const step of state.value.steps) {
+          const bucket = stepsByRun.get(step.runId) ?? [];
+          bucket.push(step);
+          stepsByRun.set(step.runId, bucket);
+        }
+      }
+      const verdict = tierFromState(state.ok ? state.value : undefined);
       const ceremonies = built.registry.entries.map((entry) => {
-        const own = valid
+        const own = runs
           .filter((run) => run.ceremonyId === entry.declaration.id)
           .sort((left, right) => left.startedAtMs - right.startedAtMs);
         const last = own[own.length - 1];
         let lastRun: { runId: string; verdict: string; startedAtMs: number } | undefined;
         if (last !== undefined) {
-          const steps = readCeremonySteps(options.store, last.runId);
+          const steps = stepsByRun.get(last.runId) ?? [];
           lastRun = {
             runId: last.runId,
-            verdict: steps.ok ? foldCeremonyRunVerdict(steps.value.records) : "unknown",
+            verdict: foldCeremonyRunVerdict(steps),
             startedAtMs: last.startedAtMs,
           };
         }
@@ -3534,10 +3622,19 @@ export const createCeremonyCommandRuntime = (
             trigger.kind === "schedule" ? `schedule:${trigger.cadence}` : `event:${trigger.event}`,
           ),
           catchUp: entry.declaration.catchUp.mode,
+          ...(verdict === undefined
+            ? {}
+            : { obligated: entry.declaration.tiers.includes(verdict.effectiveTier) }),
           ...(lastRun === undefined ? {} : { lastRun }),
         };
       });
-      return { ok: true, data: { ceremonies } };
+      return {
+        ok: true,
+        data: {
+          ceremonies,
+          ...(verdict === undefined ? {} : { tier: verdict }),
+        },
+      };
     },
     run: async (request) => {
       const built = registryRead();
@@ -3557,12 +3654,16 @@ export const createCeremonyCommandRuntime = (
         request.notePath === undefined ? undefined : parseCeremonyNote(request.notePath);
       if (parsed !== undefined && "error" in parsed) return { ok: false, error: parsed.error };
       const note = parsed?.note;
+      // An explicit run is never tier-gated (AC-F7-5); the verdict only rides
+      // the record so the run carries the tier facts it consumed (DM-3, DM-7).
+      const verdict = tierVerdict();
       const run = runCeremony({
         declaration: entry.declaration,
         env: envFor(entry.origin, note),
         noteSupplied: note !== undefined,
         ...(note === undefined ? {} : { note }),
         ...(request.window === undefined ? {} : { window: request.window }),
+        ...(verdict === undefined ? {} : { tier: verdict }),
         apply: request.apply,
       });
       return run.ok ? { ok: true, data: run.data } : { ok: false, error: run.error };
@@ -3629,7 +3730,21 @@ export const createCeremonyCommandRuntime = (
         request.name === undefined
           ? built.registry.entries
           : built.registry.entries.filter((entry) => entry.declaration.id === request.name);
-      const targets = entries.map((entry) => ({
+      // Tiered intake governs automated and catch-up intake (F-7, AC-F7-5):
+      // only declarations whose declared tiers include the effective tier carry
+      // an obligation. An explicit `ceremony run` is never gated.
+      const verdict = tierVerdict();
+      const eligible =
+        verdict === undefined
+          ? entries
+          : entries.filter(
+              (entry) =>
+                ceremonyTierIntake(
+                  [{ id: entry.declaration.id, tiers: entry.declaration.tiers }],
+                  verdict,
+                )[0]?.obligated === true,
+            );
+      const targets = eligible.map((entry) => ({
         declaration: entry.declaration,
         scopeKey:
           catchUpScopeKey({ declaration: entry.declaration, repositoryId: options.repositoryId }) ??
@@ -3640,6 +3755,7 @@ export const createCeremonyCommandRuntime = (
         env: envFor("built-in", undefined),
         nowMs: options.clock.nowMs(),
         apply: false,
+        ...(verdict === undefined ? {} : { tier: verdict }),
       });
       return report.ok ? { ok: true, data: report.data } : { ok: false, error: report.error };
     },

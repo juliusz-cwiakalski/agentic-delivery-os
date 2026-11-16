@@ -11,11 +11,11 @@
 import {
   CEREMONY_RECORD_BOUNDARY_DECLARATION,
   CEREMONY_RUN_PAYLOAD_SCHEMA,
-  CEREMONY_RUN_RECORD_KIND,
   CEREMONY_RUN_RECORD_KEY_PREFIX,
+  CEREMONY_RUN_RECORD_KIND,
   CEREMONY_STEP_PAYLOAD_SCHEMA,
-  CEREMONY_STEP_RECORD_KIND,
   CEREMONY_STEP_RECORD_KEY_PREFIX,
+  CEREMONY_STEP_RECORD_KIND,
   type CeremonyRecordAppend,
   type CeremonyRecordPort,
   type CeremonyRecordsRead,
@@ -208,6 +208,123 @@ export const readCeremonySteps = (
   return ok({
     ...read.value,
     records: [...read.value.records].sort((left, right) => left.index - right.index),
+  });
+};
+
+/** One recorded `phase.transition` artifact, narrowed leniently for tier reads. */
+export type CeremonyLifecycleTransition = {
+  readonly changeRef: string;
+  readonly phaseId: string;
+  readonly operation: string;
+  readonly timestamp: string;
+  readonly reason?: string;
+};
+
+/** One verified state scan partitioned for the ceremony verbs (NFR-11). */
+export type CeremonyStatePartition = {
+  readonly verdict: CeremonyRecordsRead<CeremonyRunRecord>["verdict"];
+  readonly runs: readonly CeremonyRunRecord[];
+  /** Every verified step record, sortable by `runId` then index. */
+  readonly steps: readonly CeremonyStepRecord[];
+  /** Recorded lifecycle transitions, narrowed leniently for tier evidence. */
+  readonly transitions: readonly CeremonyLifecycleTransition[];
+  readonly malformed: readonly number[];
+  readonly detail?: string;
+};
+
+const narrowTransitions = (payload: unknown): readonly CeremonyLifecycleTransition[] => {
+  if (!isRecord(payload) || !isNonEmptyString(payload.changeRef)) return [];
+  if (!Array.isArray(payload.transitions)) return [];
+  const out: CeremonyLifecycleTransition[] = [];
+  for (const entry of payload.transitions) {
+    if (!isRecord(entry)) continue;
+    if (!isNonEmptyString(entry.phaseId) || !isNonEmptyString(entry.operation)) continue;
+    if (!isNonEmptyString(entry.timestamp)) continue;
+    out.push({
+      changeRef: payload.changeRef,
+      phaseId: entry.phaseId,
+      operation: entry.operation,
+      timestamp: entry.timestamp,
+      ...(isNonEmptyString(entry.reason) ? { reason: entry.reason } : {}),
+    });
+  }
+  return out;
+};
+
+/**
+ * Read the ceremony-relevant ledger slice in ONE verified state scan: the
+ * `ceremony.runs:` records, every `ceremony.steps:` record, and the recorded
+ * lifecycle transitions under `phase.transitions:` for tier evidence. The
+ * ceremony verbs budget at most two verified reads per invocation (NFR-11), so
+ * `ceremony list` partitions one scan instead of reading per run.
+ */
+export const readCeremonyState = (store: StateStorePort): StateResult<CeremonyStatePartition> => {
+  const verified = store.readRecords();
+  if (!verified.ok) {
+    const code = verified.error.code;
+    if (code === "state.store.unknown") {
+      return ok({
+        verdict: "unknown",
+        runs: [],
+        steps: [],
+        transitions: [],
+        malformed: [],
+        detail: code,
+      });
+    }
+    return verified;
+  }
+  const runs: CeremonyRunRecord[] = [];
+  const steps: CeremonyStepRecord[] = [];
+  const transitions: CeremonyLifecycleTransition[] = [];
+  const malformed: number[] = [];
+  for (const record of verified.value.records) {
+    if (record.key.startsWith(CEREMONY_RUN_RECORD_KEY_PREFIX)) {
+      const kind = declaredKind(record.kind);
+      if (record.kind !== CEREMONY_RUN_RECORD_KIND || kind === undefined) {
+        malformed.push(record.sequence);
+        continue;
+      }
+      if (!validatePayload(kind, record.payload) || !validRun(record.payload)) {
+        malformed.push(record.sequence);
+        continue;
+      }
+      runs.push(record.payload as unknown as CeremonyRunRecord);
+      continue;
+    }
+    if (record.key.startsWith(CEREMONY_STEP_RECORD_KEY_PREFIX)) {
+      const kind = declaredKind(record.kind);
+      if (record.kind !== CEREMONY_STEP_RECORD_KIND || kind === undefined) {
+        malformed.push(record.sequence);
+        continue;
+      }
+      if (!validatePayload(kind, record.payload) || !validStep(record.payload)) {
+        malformed.push(record.sequence);
+        continue;
+      }
+      steps.push(record.payload as unknown as CeremonyStepRecord);
+      continue;
+    }
+    if (record.key.startsWith("phase.transitions:")) {
+      transitions.push(...narrowTransitions(record.payload));
+    }
+  }
+  if (malformed.length > 0) {
+    return ok({
+      verdict: "torn",
+      runs,
+      steps: [...steps].sort((left, right) => left.index - right.index),
+      transitions,
+      malformed,
+      detail: `${String(malformed.length)} malformed ceremony record(s)`,
+    });
+  }
+  return ok({
+    verdict: runs.length === 0 ? "verified-empty" : "valid",
+    runs,
+    steps: [...steps].sort((left, right) => left.index - right.index),
+    transitions,
+    malformed,
   });
 };
 

@@ -9,6 +9,29 @@ export {
   nodeCapsuleFileSystemFacts,
 } from "./capsule.js";
 export {
+  ceremonyArtifactsDirectory,
+  ceremonyArtifactsDirectoryName,
+  createCeremonyArtifactStore,
+} from "./ceremony-artifacts.js";
+export {
+  CEREMONY_DECLARATIONS_FILE_NAME,
+  type CeremonyDeclarationDocumentRead,
+  type CeremonyDeclarationFileSystem,
+  ceremonyDeclarationDocumentPath,
+  nodeCeremonyDeclarationFileSystem,
+  parseCeremonyNoteText,
+  readCeremonyDeclarationDocument,
+} from "./ceremony-declarations.js";
+export {
+  type CeremonyLifecycleTransitionFact,
+  type CeremonyTierContextFileSystem,
+  type CeremonyTierContextFiles,
+  ceremonyTierEvidenceFromLifecycle,
+  nodeCeremonyTierContextFileSystem,
+  planTierOf,
+  readCeremonyTierContextFiles,
+} from "./ceremony-tier-context.js";
+export {
   type ChangeFolderFileSystem,
   type ChangeFolderLookup,
   type ChangeFolderRequest,
@@ -134,17 +157,3 @@ export {
   parseConfigYaml,
   parserHostSwitchBlocked,
 } from "./yaml-parser.js";
-export {
-  ceremonyArtifactsDirectory,
-  ceremonyArtifactsDirectoryName,
-  createCeremonyArtifactStore,
-} from "./ceremony-artifacts.js";
-export {
-  CEREMONY_DECLARATIONS_FILE_NAME,
-  ceremonyDeclarationDocumentPath,
-  type CeremonyDeclarationDocumentRead,
-  type CeremonyDeclarationFileSystem,
-  nodeCeremonyDeclarationFileSystem,
-  parseCeremonyNoteText,
-  readCeremonyDeclarationDocument,
-} from "./ceremony-declarations.js";

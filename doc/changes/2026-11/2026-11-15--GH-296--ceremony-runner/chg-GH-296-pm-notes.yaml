@@ -336,3 +336,24 @@ notes:
       correct."
     type: info
     date: "2026-11-16"
+  - text: "Remediation slice A (P1 integrity + doc-sync + pm-notes): commit
+      01261a89. The working tree carried the completed P1 slice of the prior
+      interrupted run: follow-through verdicts now earned from delivered
+      evidence (unverified with reason when the artifact is absent, undelivered,
+      or unadjudicated), the verifyContent follow-through guard, intake without
+      synthetic note:action refs (uncited assessment items are uncovered), the
+      retro evidence fold reading the retro registry ledger, TC-066, and the
+      doc-sync artifacts. This run verified the flagged ceremony-run.ts
+      night-watch path and removed its last synthesized citation: a check now
+      cites only an evidence reference an anomaly itself carries, and an
+      uncited anomaly reports the missing citation (positive + negative cases in
+      the night-watch suite). Suites: pnpm typecheck green; parity + seven flow
+      suites 40 pass; run/notes/resume/state/declaration/TC-066/brief-golden/
+      structure/retro-malformed/closeout-telemetry/fixture-privacy 110 pass;
+      catch-up + tier suites 34 pass; cli/list/envelope/determinism/bounds/
+      mutants/hermetic 62 pass; ambient-globals OK. New files outside the
+      declared phase scope (the two doc-sync documents and TC-066) were git
+      added to the index so the commit primitive stages them as tracked work;
+      the primitive disclosed the drift."
+    type: info
+    date: "2026-11-16"

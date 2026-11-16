@@ -47,7 +47,9 @@ const listLines = (data: Record<string, unknown>): readonly string[] => {
   return ceremonies.map((entry) => {
     const record = isRecord(entry) ? entry : {};
     const last = isRecord(record.lastRun) ? record.lastRun : undefined;
-    return `${String(record.id)} (${String(record.origin)}) tiers=${(Array.isArray(record.tiers) ? record.tiers : []).join(",")} trigger=${(Array.isArray(record.triggers) ? record.triggers : []).join(",")} catchUp=${String(record.catchUp)} last=${last === undefined ? "none" : `${String(last.runId)}:${String(last.verdict)}`}`;
+    const obligated =
+      record.obligated === undefined ? "" : ` obligated=${String(record.obligated)}`;
+    return `${String(record.id)} (${String(record.origin)}) tiers=${(Array.isArray(record.tiers) ? record.tiers : []).join(",")} trigger=${(Array.isArray(record.triggers) ? record.triggers : []).join(",")} catchUp=${String(record.catchUp)}${obligated} last=${last === undefined ? "none" : `${String(last.runId)}:${String(last.verdict)}`}`;
   });
 };
 

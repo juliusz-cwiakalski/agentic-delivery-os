@@ -35,7 +35,7 @@ This guide is for the operator who runs ceremonies, writes a project declaration
 
 | Verb | What it does | Exit |
 |---|---|---|
-| `list` | Every registered ceremony with its id, origin (`built-in`/`project`), tiers, declared triggers, catch-up mode, and the last recorded run's verdict when one exists. | `0` |
+| `list` | Every registered ceremony with its id, origin (`built-in`/`project`), tiers, declared triggers, catch-up mode, a per-ceremony `obligated` flag when the checkout's tier verdict resolves, and the last recorded run's verdict when one exists. | `0` |
 | `run <name>` | One run: intake, the declared agenda in declared order, per-step artifact verification, phase-boundary compaction, durable records, the rendered artifact. | `0` for `verified` or `dry-run`; `1` for a refusal or `unverified`; `2` for a state/platform failure |
 | `resume <runId>` | Continue an interrupted run at its first unverified step. A run that is already complete returns its recorded verdict with `reused: true` and appends nothing. | as `run` |
 | `catch-up [--name <name>]` | Evaluate every scheduled declaration against recorded runs and replay at most one missed window per ceremony. | `0` for `nothing-missed`, `caught-up`, or `declared-gap`; `1` when a replay is `unverified`; `2` for a state/platform failure |
@@ -254,7 +254,7 @@ The mapping:
 
 Each ceremony declaration names the `tiers` it serves, so a change's effective tier decides which ceremonies carry an obligation; an explicit `ceremony run` is always allowed regardless of obligation.
 
-> **Shipped composition.** The tier engine is delivered and tested as a pure engine; no CLI verb computes a change's verdict or threads it into a run yet, so a recorded run carries the default `full` / eleven-phase tier facts and no escalations. Treat the mapping as the delivered contract and the composed intake gate as pending.
+> **Composed intake.** The shipped runtime evaluates the verdict per invocation. It selects the checkout's delivery change from the recorded `phase.transition` ledger truth (the change with the newest recorded transition timestamp; ties break on the greatest ref), reads that change's committed pm-notes (`variant`, `blockers`) and plan (`tier`), and maps recorded reopens to the closed trigger facts: any reopen is `phase-reopen`; a reopen of `review_fix` is `review-rework`; of `quality_gates` is `gate-failure`; of `dor_check` is `dor-rework`; an open pm-notes blocker entry is `owner-escalation`. `ceremony list` carries the verdict as `data.tier` with a per-ceremony `obligated` flag; `ceremony run` and `catch-up` record the tier facts each run consumed, and catch-up replays only obligated ceremonies. A checkout with no recorded lifecycle history resolves no verdict, keeps the delivered default tier facts, and obligates nothing beyond the full set.
 
 ## Measurement
 
@@ -282,7 +282,7 @@ The committed metric `MET-CEREMONY-SHARE` — ceremony-phase time over total lif
 
 ## Current limits
 
-The shipped surface has known composition gaps, stated here so you do not plan around capability that is not wired: most declared collectors are not composed in the binary and arrive as declared `unavailable` degradations; the mirror landing path is not composed; the tier engine is not yet a composed intake gate; and `state-record`/`mirror-target` outputs are artifacts rather than ledger records. The full list, with what is delivered and tested beside each gap, is in [Ceremony Runner §9: Delivered limits and known gaps](../spec/features/feature-ceremony-runner.md#9-delivered-limits-and-known-gaps).
+The shipped surface has known composition gaps, stated here so you do not plan around capability that is not wired: most declared collectors are not composed in the binary and arrive as declared `unavailable` degradations; the mirror landing path is not composed; and `state-record`/`mirror-target` outputs are artifacts rather than ledger records. The full list, with what is delivered and tested beside each gap, is in [Ceremony Runner §9: Delivered limits and known gaps](../spec/features/feature-ceremony-runner.md#9-delivered-limits-and-known-gaps).
 
 ## See also
 
