@@ -1,0 +1,136 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-297
+branch: feat/GH-297/board
+status: PASS
+summary: >-
+  Iteration-1 remediation verified finding-by-finding over commits 1ac6e255
+  (phase 6), 21f122c7 (forbidden-literals registry), and 5fc02ba5 (plan scope
+  for the registry). F-1 is genuinely fixed: the fleet tracker read opens each
+  target repository's store before the waiver join, and the new --all
+  regression cell proves divergent shared-ref waivers stay distinct, a
+  non-invoking repository's waiver surfaces, and the 72 h default appends only
+  to the owning repository's ledger. F-2 is fixed for both probed containment
+  breaches (unknown command keeps fallback.internal exit 2; a positional keeps
+  fallback.invocation exit 1) with per-family no-compose cells. F-3 is
+  completed over a real two-repository host with a materialized index file,
+  host-root snapshot, revision assertion, and a live snapshot mutant. F-4 and
+  F-5 are fixed with targeted cells; F-6 is explicitly deferred in pm-notes
+  with a reason (accepted info residual). All targeted suites pass (board
+  selection/identity/gates-sla/write-discipline/help, entrypoint, bounds,
+  determinism, purity, goldens, error-table four-way 138/137/55/2, branding,
+  content inventory) and scripts/checks/forbidden-literals.ts exits 0 with
+  feature-board.md registered. Two new low findings are recorded (a residual
+  --version tail hole and a vacuous indexWrites counter); neither blocks.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 2
+  info: 0
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-7
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/cli/src/entrypoint.ts:393
+    message: >-
+      Residual containment hole after the F-2 fix (verified by probe): when
+      `--version` is the immediate next token of a known command, everything
+      AFTER it is ignored — `board --version positional` and
+      `board --version --bogus` answer the version text at exit 0, while the
+      spec grammar (§8.3, DEC-17/C-10) refuses any positional and any unknown
+      flag. Impact is minimal (identity-only answer, no state read, no
+      composition) and the reference page documents `--version` as a terminal
+      self-description flag, so this is a defensible reading — but the letter
+      of the grammar contract still deviates.
+    suggestion: >-
+      Answer the command-scoped version only when `--version` is the LAST
+      non-global token (or validate the remaining tail contains no positional
+      and no unknown flag before answering); add the
+      `board --version positional` refusal cell. Non-blocking; fold into a
+      later change if the owner agrees the terminal-flag reading is intended.
+  - id: F-8
+    severity: low
+    confidence: high
+    category: testing
+    location: tests/fixtures/board/selection.ts:189
+    message: >-
+      `indexWrites` is a constant `0` in the selection harness, so the two
+      `expect(harness.indexWrites()).toBe(0)` assertions in
+      board-write-discipline.test.ts can never fail — a decorative counter.
+      The no-index-write invariant itself IS genuinely proven by the host-root
+      snapshot (the mutant shows an index rewrite is detected and named) and
+      by the real revision assertion, so this is test hygiene, not a coverage
+      hole.
+    suggestion: >-
+      Either back the counter with real interception (wrap the index file
+      write path the production composer would use) or delete the counter and
+      keep the snapshot/revision assertions as the declared evidence, so no
+      vacuous assertion masquerades as coverage.
+remediated_from_iteration_1:
+  - id: F-1
+    verdict: FIXED
+    evidence: >-
+      packages/cli/src/edge.ts readTrackerFor(root, store) — the per-repository
+      store is opened from the target's state location BEFORE the tracker read
+      and passed into the waiver join (per-ref newest match by authorizedAt).
+      Regression: tests/behaviour/board-selection-all.test.ts
+      "per-repository waiver join" — refs 244/245/246 across two repositories:
+      no waiver import on the shared ref, the non-invoking waiver surfaces with
+      its authorizer and ownerSource, the 72 h default applies and appends only
+      to the owning repository's store, and each store keeps its own ledger.
+      Suite green.
+  - id: F-2
+    verdict: FIXED
+    evidence: >-
+      packages/cli/src/entrypoint.ts — the intercept answers only when
+      `--version` is the immediate next token of a KNOWN command
+      (helpEntryFor-guarded); an unknown leading command drops the flag and
+      keeps its classified composition failure; anything else falls through to
+      the parser. Tests: board-help.test.ts (notacommand --version → exit 2
+      fallback.internal; board positional --version → exit 1
+      fallback.invocation) and entrypoint-help.test.ts (every known family
+      answers --version at exit 0 composing nothing). Verified by independent
+      probe. Residual tail hole recorded as F-7 (low).
+  - id: F-3
+    verdict: FIXED
+    evidence: >-
+      board-write-discipline.test.ts fleet block over the upgraded selection
+      harness (real host-index file materialized on disk, real
+      readHostIndexFile, per-repo stores shared with the board): two-repo
+      --all no-default run leaves the host root byte-identical with one index
+      read and unchanged revision; the default-applying run changes exactly the
+      owning repository's decision ledger; the mutant rewrites the index and
+      the snapshot diff names host-index.json. The declared index-write
+      COUNTER is vacuous (recorded as F-8, low); the snapshot + revision
+      assertions carry the invariant.
+  - id: F-4
+    verdict: FIXED
+    evidence: >-
+      domain/owner-gate-sla.ts repositoryFieldsClamped now checks gate kind
+      against BOARD_MAX_ID_CHARS (160), matching the clamp; gates-sla cells
+      assert a 130-char kind is preserved untruncated and a 170-char kind
+      clamps to 160 and marks truncation. Green.
+  - id: F-5
+    verdict: FIXED
+    evidence: >-
+      edge.ts sorts lane candidates (active leases + unleased failed refs) by
+      ref and caps at BOARD_MAX_LANES before phase resolution; the dropped
+      count travels as optional BoardRepositoryFacts.omittedLanes and the
+      projection adds it to omittedBySection.lanes/omitted with truncated set
+      (gates-sla edge lane-cap omission cell green). NFR-5's ≤ 20 phase reads
+      now matches the code.
+  - id: F-6
+    verdict: DEFERRED_DECLARED
+    evidence: >-
+      toBoardData remains exported (content-inventory still lists it); the
+      phase-6 pm-notes entry records the deferral with a reason (retiring it
+      requires touching board-performance and contract/inventory fixtures
+      outside phase 6's declared scope) and accepts it as an info-level
+      residual. Acceptable triage of an optional info finding.
+reviewed_at: 2026-11-16T00:00:00Z
+next_step: PROCEED

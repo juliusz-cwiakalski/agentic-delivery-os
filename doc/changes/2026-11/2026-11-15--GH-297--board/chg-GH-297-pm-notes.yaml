@@ -10,7 +10,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-15T23:36:02.038Z }
   delivery: { started: null, completed: 2026-11-16T02:41:23.019Z }
   system_spec_update: { started: null, completed: 2026-11-16T02:55:13.752Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-16T04:10:35.685Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -137,17 +137,17 @@ notes:
     date: "2026-11-16"
   - text: >-
       Review iteration 1 verdict: FAIL (record: code-review/review-iter-1.yaml).
-      6 findings: F-1 high (per-repository tracker read joins merge waivers
-      from the invoking store, so non-invoking repos lose waivers and shared
-      refs can import them; violates AC-F4-1/2 fleet mode, AC-F3-2, NFR-3);
-      F-2 medium (command-scoped --version intercept answers exit 0 for an
-      unknown command and for positional-carrying invocations, bypassing
-      fallback.invocation); F-3 medium (TC-BOARD-061 landed reduced: no
-      host-root/index snapshot, counters, or index-maintenance mutant; DoD-11
-      unproven); F-4 low (kind truncation detector 120 vs clamp 160); F-5 low
-      (phase reads before the 20-lane cap exceed NFR-5); F-6 info (toBoardData
-      unused). Remediation phase 6 added to the plan; delivery remediation
-      state: open. Re-run affected suites and pnpm check, then re-review.
+      6 findings: F-1 high (per-repository tracker read joins merge waivers from
+      the invoking store, so non-invoking repos lose waivers and shared refs can
+      import them; violates AC-F4-1/2 fleet mode, AC-F3-2, NFR-3); F-2 medium
+      (command-scoped --version intercept answers exit 0 for an unknown command
+      and for positional-carrying invocations, bypassing fallback.invocation);
+      F-3 medium (TC-BOARD-061 landed reduced: no host-root/index snapshot,
+      counters, or index-maintenance mutant; DoD-11 unproven); F-4 low (kind
+      truncation detector 120 vs clamp 160); F-5 low (phase reads before the
+      20-lane cap exceed NFR-5); F-6 info (toBoardData unused). Remediation
+      phase 6 added to the plan; delivery remediation state: open. Re-run
+      affected suites and pnpm check, then re-review.
     type: blocker
     date: "2026-11-16"
   - text: >-
@@ -246,31 +246,49 @@ notes:
       opens each target repository's store before the tracker read and joins
       merge waivers from that store (per-ref newest match), so a non-invoking
       repository's waivers surface and a shared ref never imports the invoking
-      repository's waiver; regression cell added over --all with refs 244/245/246
-      (divergent waivers, 72h default on the owning repository only, decision
-      appended to that repository's store). F-2 medium - the command-scoped
-      --version intercept answers only for a known command with --version as its
-      immediate next token; an unknown leading command keeps fallback.internal
-      exit 2 by dropping the self-description flag, and a positional keeps
-      fallback.invocation exit 1; both refusal cells plus the per-family
-      version-no-compose cell added. F-3 medium - TC-BOARD-061 completed over a
-      two-repository --all host with a real seeded index: host-root snapshot
-      (index file and projects/) across a no-default run (byte-identical, one
-      index read, zero writes, revision unchanged) and a default-applying run
-      (exactly the owning repository's ledger changes; index untouched), plus
-      the index-maintenance mutant whose snapshot diff names host-index.json.
-      F-4 low - the gate-kind truncation detector now checks the delivered
-      160-character clamp (121-160 keeps untruncated; over-160 clamps and marks
-      truncation). F-5 low - lane facts are sorted and capped at 20 at the edge
-      before phase resolution, with the omitted count carried into
-      omittedBySection.lanes (new optional BoardRepositoryFacts.omittedLanes), so
-      NFR-5's phase-read bound matches the code. F-6 info - deferred: retiring
-      toBoardData requires touching board-performance and the contract/inventory
-      fixtures outside this phase's declared scope; it remains an accepted
-      info-level residual (one projection path is already used in production).
-      Gates: affected board selection/identity/gates-sla/write-discipline and
-      entrypoint/help suites green (465 tests across 45 files, 0 fail), Appendix
-      D four-way 138/137/55/2/138 still green, full TMPDIR=$PWD/tmp/tmpdir pnpm
-      check recorded separately in the delivery report.
+      repository's waiver; regression cell added over --all with refs
+      244/245/246 (divergent waivers, 72h default on the owning repository only,
+      decision appended to that repository's store). F-2 medium - the
+      command-scoped --version intercept answers only for a known command with
+      --version as its immediate next token; an unknown leading command keeps
+      fallback.internal exit 2 by dropping the self-description flag, and a
+      positional keeps fallback.invocation exit 1; both refusal cells plus the
+      per-family version-no-compose cell added. F-3 medium - TC-BOARD-061
+      completed over a two-repository --all host with a real seeded index:
+      host-root snapshot (index file and projects/) across a no-default run
+      (byte-identical, one index read, zero writes, revision unchanged) and a
+      default-applying run (exactly the owning repository's ledger changes;
+      index untouched), plus the index-maintenance mutant whose snapshot diff
+      names host-index.json. F-4 low - the gate-kind truncation detector now
+      checks the delivered 160-character clamp (121-160 keeps untruncated;
+      over-160 clamps and marks truncation). F-5 low - lane facts are sorted and
+      capped at 20 at the edge before phase resolution, with the omitted count
+      carried into omittedBySection.lanes (new optional
+      BoardRepositoryFacts.omittedLanes), so NFR-5's phase-read bound matches
+      the code. F-6 info - deferred: retiring toBoardData requires touching
+      board-performance and the contract/inventory fixtures outside this phase's
+      declared scope; it remains an accepted info-level residual (one projection
+      path is already used in production). Gates: affected board
+      selection/identity/gates-sla/write-discipline and entrypoint/help suites
+      green (465 tests across 45 files, 0 fail), Appendix D four-way
+      138/137/55/2/138 still green, full TMPDIR=$PWD/tmp/tmpdir pnpm check
+      recorded separately in the delivery report.
+    type: info
+    date: "2026-11-16"
+  - text: >-
+      Review iteration 2 verdict: PASS (record: code-review/review-iter-2.yaml).
+      F-1 fixed (per-repository waiver join; non-invoking-repo and shared-ref
+      divergent-waiver regressions green), F-2 fixed (known-command-guarded
+      --version; both breaches closed), F-3 fixed (TC-BOARD-061 over a real
+      two-repo host index with snapshot, counters, and mutant), F-4/F-5 fixed,
+      F-6 deferred as a declared info residual. Two new low findings accepted as
+      residuals for a later change: F-7 (--version tokens after the flag are
+      ignored; identity-only) and F-8 (indexWrites counter constant zero; the
+      invariant is held by the snapshot/revision assertions). Delivery
+      remediation state: closed. Correction to the phase-6 evidence above: the
+      first full aggregate run at commit 1ac6e255 FAILED (8 tests; root cause an
+      uncommitted forbidden-literals registry entry, fixed in 21f122c7); the
+      authoritative full-gate verdict on the final HEAD is recorded under the
+      quality_gates phase below.
     type: info
     date: "2026-11-16"
