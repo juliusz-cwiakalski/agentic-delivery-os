@@ -22,7 +22,7 @@ phases:
     completed: 2026-11-15T23:47:56.787Z
   delivery:
     started: null
-    completed: null
+    completed: 2026-11-16T08:09:08.408Z
   system_spec_update:
     started: null
     completed: null
@@ -345,9 +345,9 @@ notes:
       retro evidence fold reading the retro registry ledger, TC-066, and the
       doc-sync artifacts. This run verified the flagged ceremony-run.ts
       night-watch path and removed its last synthesized citation: a check now
-      cites only an evidence reference an anomaly itself carries, and an
-      uncited anomaly reports the missing citation (positive + negative cases in
-      the night-watch suite). Suites: pnpm typecheck green; parity + seven flow
+      cites only an evidence reference an anomaly itself carries, and an uncited
+      anomaly reports the missing citation (positive + negative cases in the
+      night-watch suite). Suites: pnpm typecheck green; parity + seven flow
       suites 40 pass; run/notes/resume/state/declaration/TC-066/brief-golden/
       structure/retro-malformed/closeout-telemetry/fixture-privacy 110 pass;
       catch-up + tier suites 34 pass; cli/list/envelope/determinism/bounds/
@@ -371,9 +371,9 @@ notes:
       new readCeremonyState); ceremony run threads the verdict into runCeremony
       so the run record carries effectiveTier, phaseSetSize and escalations;
       catch-up filters non-obligated declarations and records the verdict on
-      replayed runs; an explicit run is never gated. A checkout with no
-      recorded lifecycle history resolves no verdict and keeps the delivered
-      default. Suites: pnpm typecheck green; new
+      replayed runs; an explicit run is never gated. A checkout with no recorded
+      lifecycle history resolves no verdict and keeps the delivered default.
+      Suites: pnpm typecheck green; new
       tests/behaviour/ceremony-tier-composition.test.ts 10 pass (TC-067);
       cli/list/envelope/catch-up/state-boundary/performance/determinism/bounds/
       hermetic/mutants/non-regression 95 pass; parity/run/notes/resume/TC-066/
@@ -386,57 +386,56 @@ notes:
       commit 86739473. The shipped decision-record-mirror-sync now resolves a
       real affected-repository target set and landing path: targets come from
       the committed projects.yaml members (repoKey minus the invoking
-      repository; root names the local checkout) through a new
-      decision-register adapter; the source set is the invoking repository's
-      committed doc/decisions register; mirror.inspect reads the target
-      checkout's decision-record set; --apply lands the declared write set as a
-      byte copy into the target checkout's decisions directory (idempotent, no
-      force path, no child process, no commit in the ceremony path). The dry
-      run now verifies the computed write set and preconditions without
-      requiring equality (E-8/AC-F4-5), so a fresh target set is dry-run at
-      exit 0; the applied run still requires two-way equality (NFR-12), and a
-      drifted or absent target is unverified naming the target. Absent
-      projects configuration or register degrades declaredly. Suites: pnpm
-      typecheck green; new tests/behaviour/ceremony-mirror-composition.test.ts
-      5 pass (TC-068: dry-run lands nothing, apply lands equal byte for byte,
+      repository; root names the local checkout) through a new decision-register
+      adapter; the source set is the invoking repository's committed
+      doc/decisions register; mirror.inspect reads the target checkout's
+      decision-record set; --apply lands the declared write set as a byte copy
+      into the target checkout's decisions directory (idempotent, no force path,
+      no child process, no commit in the ceremony path). The dry run now
+      verifies the computed write set and preconditions without requiring
+      equality (E-8/AC-F4-5), so a fresh target set is dry-run at exit 0; the
+      applied run still requires two-way equality (NFR-12), and a drifted or
+      absent target is unverified naming the target. Absent projects
+      configuration or register degrades declaredly. Suites: pnpm typecheck
+      green; new tests/behaviour/ceremony-mirror-composition.test.ts 5 pass
+      (TC-068: dry-run lands nothing, apply lands equal byte for byte,
       extra-record drift unverified naming the target, absent target
       precondition named, no-config degradation); flow-mirror/parity/run/
-      resume/mutants/hermetic/non-regression/determinism/bounds/performance
-      77 pass; flow + tier + runtime + cli/list/envelope/catch-up suites 71
-      pass; doc-conformance green; biome clean. The mirror known-gap bullets
-      in the feature spec and the guide were replaced with the composed
-      truth."
+      resume/mutants/hermetic/non-regression/determinism/bounds/performance 77
+      pass; flow + tier + runtime + cli/list/envelope/catch-up suites 71 pass;
+      doc-conformance green; biome clean. The mirror known-gap bullets in the
+      feature spec and the guide were replaced with the composed truth."
     type: info
     date: "2026-11-16"
-  - text: "Remediation slice D (slot fidelity, note bounds, read budget — items
-      4-6 of the reopened-delivery list; DM-1, DM-2, DM-6, NFR-11): commit
-      f8419a7b. The state-record output slot now lands the ledger record its
-      slot declares: the step's rendered record document is validated against
-      its declared schema and the caller's fenced append is the landing, the
-      step record's artifactRef names the ledger record
+  - text: "Remediation slice D (slot fidelity, note bounds, read budget — items 4-6
+      of the reopened-delivery list; DM-1, DM-2, DM-6, NFR-11): commit f8419a7b.
+      The state-record output slot now lands the ledger record its slot
+      declares: the step's rendered record document is validated against its
+      declared schema and the caller's fenced append is the landing, the step
+      record's artifactRef names the ledger record
       (ledger:ceremony.steps:<runId>:<index>), and no artifact file is written
       for the slot. Per-step artifacts in the ceremony-artifact slot are named
       <runId>.s<index>.json so two steps never overwrite one another and a
-      re-attempt replaces its own step's file. The note read is bounded in
-      bytes before any parse at CEREMONY_NOTE_MAX_BYTES (1 048 576, the
-      configuration parser class's bound) with an over-bound note refused as
-      ceremony.note-invalid naming the bound, and a stored note read back for
-      a resume is re-validated against the note contract — a body that merely
+      re-attempt replaces its own step's file. The note read is bounded in bytes
+      before any parse at CEREMONY_NOTE_MAX_BYTES (1 048 576, the configuration
+      parser class's bound) with an over-bound note refused as
+      ceremony.note-invalid naming the bound, and a stored note read back for a
+      resume is re-validated against the note contract — a body that merely
       parses but no longer conforms refuses the resume with the field named.
-      Each fenced append now costs exactly one verified state read: the
-      expected post-append record total arrives from the caller's own verified
-      read, so the append's pre-append list read is gone, and ceremony list
-      keeps at most two verified reads through the one partitioned
-      readCeremonyState scan (NFR-11 delivered at its original target). New
+      Each fenced append now costs exactly one verified state read: the expected
+      post-append record total arrives from the caller's own verified read, so
+      the append's pre-append list read is gone, and ceremony list keeps at most
+      two verified reads through the one partitioned readCeremonyState scan
+      (NFR-11 delivered at its original target). New
       tests/behaviour/ceremony-slot-bounds.test.ts pins all three properties
       (TC-CEREMONY-069, 5 tests). The interrupted run's lost failure report
       (9324 pass / 4 skip / 32 fail) was re-enumerated on the completed tree:
       targeted ceremony suites (slot-bounds, run, resume, state-boundary,
       performance, structure and golden ceremony) reported 0 fail, the broad
-      ceremony flow/checks/list/bounds/non-regression sweep reported 0 fail,
-      and no failure on the current tree reproduces any of the 32 — the
-      failures predate the session's final fixture and test edits. Final
-      verification, full foreground run kept at tmp/tmpdir/slice-d-final.log:
+      ceremony flow/checks/list/bounds/non-regression sweep reported 0 fail, and
+      no failure on the current tree reproduces any of the 32 — the failures
+      predate the session's final fixture and test edits. Final verification,
+      full foreground run kept at tmp/tmpdir/slice-d-final.log:
       TMPDIR=$PWD/tmp/tmpdir PATH=\"$PWD/node_modules/.bin:$PATH\" bun test
       reports 9356 pass / 4 skip / 0 fail across 9360 tests in 1163 files
       (806.05s), confirmed green twice consecutively (907.18s first). No
@@ -452,75 +451,72 @@ notes:
     date: "2026-11-16"
   - text: "Sync with main-tools: `git merge --no-ff origin/main-tools -m
       \"chore(GH-296): sync with main-tools\"` brought in GH-297's full-board
-      mount (2475ecd8), which added a 21st prompt-required command family to
-      the same closed surfaces GH-296 had just extended with `ceremony`.
-      Twenty-three files conflicted; every conflict was resolved by keeping
-      both sides' substance, so the merged truth is twenty-two prompt-required
+      mount (2475ecd8), which added a 21st prompt-required command family to the
+      same closed surfaces GH-296 had just extended with `ceremony`.
+      Twenty-three files conflicted; every conflict was resolved by keeping both
+      sides' substance, so the merged truth is twenty-two prompt-required
       families (`board` at index 20, `ceremony` at 21). Conflicted files and
-      resolutions: packages/cli/src/edge.ts (import order — both imports
-      kept); packages/cli/src/help/prompt-required-commands.ts,
+      resolutions: packages/cli/src/edge.ts (import order — both imports kept);
+      packages/cli/src/help/prompt-required-commands.ts,
       tests/behaviour/entrypoint-composition.test.ts,
       tests/behaviour/entrypoint-help-coverage.test.ts,
       tests/structure/entrypoint-bin.test.ts,
       tests/structure/events-production-composition.test.ts,
-      tests/fixtures/help-guide/coverage.json (family lists — board and
-      ceremony both appended after events); packages/cli/src/commands/index.ts
-      (ceremony exports kept, board type surface taken from GH-297's evolved
-      board.ts which no longer exports BoardCollector);
+      tests/fixtures/help-guide/coverage.json (family lists — board and ceremony
+      both appended after events); packages/cli/src/commands/index.ts (ceremony
+      exports kept, board type surface taken from GH-297's evolved board.ts
+      which no longer exports BoardCollector);
       packages/core/src/contracts/index.ts (ceremony export block kept at its
       position; GH-297's fuller board block survives at its own position);
       packages/core/src/contracts/error-table.ts and
-      tests/fixtures/events/error-table-baseline.json (all four error rows:
-      two ceremony plus two board, ceremony rows first);
+      tests/fixtures/events/error-table-baseline.json (all four error rows: two
+      ceremony plus two board, ceremony rows first);
       scripts/checks/error-table-sync.ts and
       tests/structure/error-table.test.ts's exact-code allowlist (all three
       additions, allowlist 53→56); scripts/checks/help-guide-coverage.ts and
       tests/checks/reference-page-parity.test.ts (both M2 page mappings);
       tests/fixtures/projects/state-scope.ts and
-      tests/fixtures/queue/production/harness.ts (non-checkout candidate
-      lists unioned: /tmp/opencode from GH-296 plus cwd two-up from GH-297);
+      tests/fixtures/queue/production/harness.ts (non-checkout candidate lists
+      unioned: /tmp/opencode from GH-296 plus cwd two-up from GH-297);
       tests/fixtures/cross-repository/two-members.ts (GH-297's
-      nonCheckoutDirectory taken, which subsumes GH-296's /tmp/opencode
-      fallback now that the candidate list is unioned);
-      tests/checks/event-mount-guards.test.ts (delivered-inline mutant
-      fixture gains board, expectation back to naming only events, GH-297's
-      uncounted title kept); doc/spec/features/feature-cli-entrypoint.md and
+      nonCheckoutDirectory taken, which subsumes GH-296's /tmp/opencode fallback
+      now that the candidate list is unioned);
+      tests/checks/event-mount-guards.test.ts (delivered-inline mutant fixture
+      gains board, expectation back to naming only events, GH-297's uncounted
+      title kept); doc/spec/features/feature-cli-entrypoint.md and
       doc/spec/features/feature-result-contract.md (both families named in
       summaries, enumerations, kind sentences, doc rows, and related_changes;
-      composed set stated as twenty-two families); the two error-table
-      describe blocks (TC-CEREMONY-049 and TC-BOARD-053 both kept, all pins
-      reconciled to 140 entries / 139 delivered / 56 allowlist, GH-297's
-      no-leftover scan extended with the newly stale 137/138/54/55 tokens).
-      Beyond the conflicts, silent auto-merges that had pinned one change's
-      21/138/56-class counts were reconciled to the merged truth: family
-      counts 21→22 (entrypoint-two-bins, board-mounting,
-      dispatch-attempts-composition, events-mount-help, board-help,
-      repos-help, ceremony-cli, daemon-production-composition ×2, and the
-      omit-daemon mutant 20→21), error-table totals 138→140 and delivered
-      137→139 (error-table.test.ts ×4, ceremony-contract,
-      ceremony-nonregression, error-table-sync.test +104→+106 ×3,
-      verify-gates-suite-map, dispatch-attempts-taxonomy header 137→139),
+      composed set stated as twenty-two families); the two error-table describe
+      blocks (TC-CEREMONY-049 and TC-BOARD-053 both kept, all pins reconciled to
+      140 entries / 139 delivered / 56 allowlist, GH-297's no-leftover scan
+      extended with the newly stale 137/138/54/55 tokens). Beyond the conflicts,
+      silent auto-merges that had pinned one change's 21/138/56-class counts
+      were reconciled to the merged truth: family counts 21→22
+      (entrypoint-two-bins, board-mounting, dispatch-attempts-composition,
+      events-mount-help, board-help, repos-help, ceremony-cli,
+      daemon-production-composition ×2, and the omit-daemon mutant 20→21),
+      error-table totals 138→140 and delivered 137→139 (error-table.test.ts ×4,
+      ceremony-contract, ceremony-nonregression, error-table-sync.test +104→+106
+      ×3, verify-gates-suite-map, dispatch-attempts-taxonomy header 137→139),
       doc pins (result-contract DOMAIN_KINDS sentence gains `ceremony`,
       allowlist row 55→56 with board 2 + ceremony 1, table paragraph 140
       identities), the entrypoint-delta observations (board section marked
       historical at twenty-one, ceremony section states twenty-two) with
       doc-conformance asserting the twenty-two-family mount, and the
       alias-baseline help cell regenerated from the merged tree's real
-      `delivery-os --help` output (22 family rows, board and ceremony
-      present). biome organized the two new import/export orders; pnpm
-      build, pnpm typecheck, biome, help-guide-coverage,
-      prompt-conformance, exports-parity, and forbidden-literals all green.
-      Final verification, full foreground run kept at
-      tmp/tmpdir/gh296-sync-full-suite-final.log:
-      TMPDIR=$PWD/tmp/tmpdir PATH=\"$PWD/node_modules/.bin:$PATH\" bun test
-      reports 9444 pass / 4 skip / 0 fail across 9448 tests in 1187 files
-      (1001.11s). The ceremony suites (run, resume, slot-bounds, cli,
-      non-regression, performance, contract, golden) report 74 pass / 0 fail
-      across 10 files, and the board suites (selection default/project/
-      unbound, shared-source, waiver-recording, write-discipline, help,
-      performance, contract, mounting, golden full) report 38 pass / 0 fail
-      across 11 files. The first full run on the unresolved-count tree
-      reported 9433 pass / 4 skip / 11 fail; every failure was a stale count
-      pin named above, fixed and re-verified."
+      `delivery-os --help` output (22 family rows, board and ceremony present).
+      biome organized the two new import/export orders; pnpm build, pnpm
+      typecheck, biome, help-guide-coverage, prompt-conformance, exports-parity,
+      and forbidden-literals all green. Final verification, full foreground run
+      kept at tmp/tmpdir/gh296-sync-full-suite-final.log: TMPDIR=$PWD/tmp/tmpdir
+      PATH=\"$PWD/node_modules/.bin:$PATH\" bun test reports 9444 pass / 4 skip
+      / 0 fail across 9448 tests in 1187 files (1001.11s). The ceremony suites
+      (run, resume, slot-bounds, cli, non-regression, performance, contract,
+      golden) report 74 pass / 0 fail across 10 files, and the board suites
+      (selection default/project/ unbound, shared-source, waiver-recording,
+      write-discipline, help, performance, contract, mounting, golden full)
+      report 38 pass / 0 fail across 11 files. The first full run on the
+      unresolved-count tree reported 9433 pass / 4 skip / 11 fail; every failure
+      was a stale count pin named above, fixed and re-verified."
     type: info
     date: "2026-11-16"
