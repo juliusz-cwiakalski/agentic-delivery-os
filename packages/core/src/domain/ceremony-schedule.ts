@@ -11,6 +11,7 @@ import {
   CEREMONY_CADENCE_WINDOW_DAYS,
   type CeremonyCadence,
   type CeremonyDeclaration,
+  type CeremonyRunOrigin,
   type CeremonyRunRecord,
   type CeremonyTierVerdict,
   type CeremonyWindow,
@@ -27,6 +28,8 @@ import {
 export type CeremonyCatchUpTarget = {
   readonly declaration: CeremonyDeclaration;
   readonly scopeKey: string;
+  /** The declaration's true origin; the replayed run record carries it (DM-3). */
+  readonly origin?: CeremonyRunOrigin;
 };
 
 /** One ceremony without a live declaration but with readable history. */
@@ -42,7 +45,7 @@ export type CeremonyCatchUpRequest = {
   readonly nowMs: number;
   readonly apply: boolean;
   readonly removed?: readonly CeremonyRemovedTarget[];
-  /** Bounded look-back override; the declared default is one cadence period. */
+  /** Bounded look-back override; the declared default is 7/4/2/2 cadence windows. */
   readonly lookbackWindows?: number;
   /** The tier verdict the replayed runs record; absent keeps the delivered default. */
   readonly tier?: CeremonyTierVerdict;
@@ -79,7 +82,7 @@ export type CeremonyCatchUpOutcome =
   | { readonly ok: true; readonly data: CeremonyCatchUpReport }
   | { readonly ok: false; readonly error: CeremonyEngineFailure };
 
-/** The declared bounded look-back: one period of each cadence. */
+/** The declared bounded look-back: 7 daily, 4 weekly, 2 iteration, 2 milestone windows. */
 export const CEREMONY_CATCH_UP_LOOKBACK: Readonly<Record<CeremonyCadence, number>> = {
   daily: 7,
   weekly: 4,
@@ -271,7 +274,8 @@ export const catchUpCeremonies = (request: CeremonyCatchUpRequest): CeremonyCatc
           );
     const run = runCeremony({
       declaration,
-      env: request.env,
+      env:
+        target.origin === undefined ? request.env : { ...request.env, origin: target.origin },
       noteSupplied: false,
       window: replay,
       apply: request.apply,

@@ -5,12 +5,16 @@
  * window is satisfied and never consumes the single replay slot).
  */
 import { describe, expect, test } from "bun:test";
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import type { CeremonyDeclaration } from "../../packages/core/src/contracts/index";
 import { catchUpCeremonies, runCeremony } from "../../packages/core/src/domain/index";
 import { readCeremonyRuns } from "../../packages/core/src/state/index";
+import { createCeremonyCommandRuntime } from "../../packages/cli/src/edge";
 import { makeEngineHarness } from "../fixtures/ceremony/engine";
-import { readFixture, withPath } from "../fixtures/ceremony/declarations";
-import { NOW_MS } from "../fixtures/ceremony/state";
+import { FIXTURE_DIR, readFixture, withPath } from "../fixtures/ceremony/declarations";
+import { makeCeremonyState, NOW_MS } from "../fixtures/ceremony/state";
 
 const daily = (): CeremonyDeclaration =>
   readFixture("valid-note-less-scheduled.json") as unknown as CeremonyDeclaration;
@@ -280,6 +284,50 @@ describe("TC-CEREMONY-065 an occupied identity is satisfied and frees the replay
       expect(replayed?.trigger.kind).toBe("catch-up");
     } finally {
       harness.dispose();
+    }
+  });
+});
+
+describe("catch-up records the declaration's true origin (F-4, DM-3)", () => {
+  test("a project-declared ceremony's replay records origin project through the composed edge", async () => {
+    const state = makeCeremonyState("catch-up-origin");
+    const root = mkdtempSync(join(tmpdir(), "ceremony-catch-up-origin-"));
+    try {
+      mkdirSync(join(root, ".delivery"), { recursive: true });
+      writeFileSync(
+        join(root, ".delivery", "ceremonies.yaml"),
+        readFileSync(join(process.cwd(), FIXTURE_DIR, "project-document.yaml"), "utf8"),
+        "utf8",
+      );
+      let runIndex = 0;
+      const runtime = createCeremonyCommandRuntime({
+        store: state.store,
+        stateDirectory: state.root,
+        changesDirectory: join(root, "doc/changes"),
+        workspaceId: "workspace-catch-up-origin",
+        clock: { nowMs: () => NOW_MS },
+        newRunId: () => {
+          runIndex += 1;
+          return `run-catch-up-origin-${String(runIndex)}`;
+        },
+        newFenceToken: () => "fence-catch-up-origin",
+        gitRoot: root,
+        configurationDirectoryName: ".delivery",
+        repositoryId: "github.com/example/repo",
+      });
+      const report = await runtime.catchUp({ name: "project-daily-audit" });
+      expect(report.ok).toBe(true);
+      const runs = readCeremonyRuns(state.store);
+      expect(runs.ok).toBe(true);
+      if (!runs.ok) return;
+      const replayed = runs.value.records.find(
+        (run) => run.ceremonyId === "project-daily-audit",
+      );
+      expect(replayed?.origin).toBe("project");
+      expect(replayed?.trigger.kind).toBe("catch-up");
+    } finally {
+      state.dispose();
+      rmSync(root, { recursive: true, force: true });
     }
   });
 });

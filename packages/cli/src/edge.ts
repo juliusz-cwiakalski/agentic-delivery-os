@@ -3960,13 +3960,21 @@ export const createCeremonyCommandRuntime = (
     };
     const input = (source: CeremonyInputSource): CeremonyInputRead => {
       if (source === "owner-note" && note !== undefined) {
-        // The note's declared items are the assessment's item source. No
-        // evidence reference is synthesised: an item the note does not cite is
-        // `uncovered`, never `covered` (AC-F3-4).
+        // The note's declared items are the assessment's item source. A fact
+        // may carry its own evidence reference; the citation is never
+        // synthesised, and the assessment grants `covered` only when it
+        // resolves in the delivered evidence (AC-F3-4).
         return {
           state: "present",
           facts: {
-            items: (note.facts ?? []).map((text) => ({ text })),
+            items: (note.facts ?? []).map((fact) =>
+              typeof fact === "string"
+                ? { text: fact }
+                : {
+                    text: fact.text,
+                    ...(fact.evidenceRef === undefined ? {} : { evidenceRef: fact.evidenceRef }),
+                  },
+            ),
           },
         };
       }
@@ -4299,6 +4307,7 @@ export const createCeremonyCommandRuntime = (
         scopeKey:
           catchUpScopeKey({ declaration: entry.declaration, repositoryId: options.repositoryId }) ??
           "",
+        origin: entry.origin,
       }));
       const report = catchUpCeremonies({
         targets,

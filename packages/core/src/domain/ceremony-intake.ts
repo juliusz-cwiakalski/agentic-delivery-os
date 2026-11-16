@@ -196,6 +196,44 @@ const validateRetroNote = (note: CeremonyNote): CeremonyIntakeFailure | undefine
   return undefined;
 };
 
+const validateNoteFacts = (facts: CeremonyNote["facts"]): CeremonyIntakeFailure | undefined => {
+  if (facts === undefined) return undefined;
+  if (!Array.isArray(facts)) {
+    return {
+      code: "ceremony.note-invalid",
+      summary: 'ceremony note member "facts" must be an array',
+      field: "facts",
+    };
+  }
+  for (const entry of facts) {
+    if (typeof entry === "string") {
+      if (entry.length === 0) {
+        return {
+          code: "ceremony.note-invalid",
+          summary: 'ceremony note "facts" entries must be non-empty',
+          field: "facts",
+        };
+      }
+      continue;
+    }
+    if (!isRecord(entry) || !isNonEmptyString(entry.text)) {
+      return {
+        code: "ceremony.note-invalid",
+        summary: 'ceremony note "facts" entries must carry non-empty text',
+        field: "facts",
+      };
+    }
+    if (entry.evidenceRef !== undefined && !isNonEmptyString(entry.evidenceRef)) {
+      return {
+        code: "ceremony.note-invalid",
+        summary: 'a note fact\'s "evidenceRef" must be a non-empty string',
+        field: "facts",
+      };
+    }
+  }
+  return undefined;
+};
+
 export const validateCeremonyNoteForDeclaration = (
   declaration: CeremonyDeclaration,
   note: CeremonyNote,
@@ -228,6 +266,8 @@ export const validateCeremonyNoteForDeclaration = (
       field: "window",
     };
   }
+  const factsFailure = validateNoteFacts(note.facts);
+  if (factsFailure !== undefined) return factsFailure;
   if (note.level !== undefined) {
     if (!(CEREMONY_LEVELS as readonly string[]).includes(note.level)) {
       return {

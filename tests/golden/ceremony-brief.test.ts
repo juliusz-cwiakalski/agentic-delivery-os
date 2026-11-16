@@ -9,6 +9,8 @@ import {
   BRIEF_PLACEHOLDER_CATALOG,
   BRIEF_SURFACE_ORDER,
 } from "../../packages/core/src/contracts/index";
+import { projectBrief } from "../../packages/core/src/domain/index";
+import { baseFacts } from "../fixtures/brief/harness";
 import { prepareBuiltin, runPrepared } from "../fixtures/ceremony/builtins";
 
 const briefText = (harness: ReturnType<typeof prepareBuiltin>["harness"]): string => {
@@ -37,6 +39,8 @@ describe("golden: the morning brief payload", () => {
   test("carries the declared closed sets in order", () => {
     const prepared = prepareBuiltin("morning-brief");
     try {
+      const facts = baseFacts();
+      prepared.harness.scriptInput("status-facts", { state: "present", facts });
       expect(runPrepared(prepared).ok).toBe(true);
       const brief = JSON.parse(briefText(prepared.harness)) as {
         surfaces: { id: string; state: string }[];
@@ -46,7 +50,7 @@ describe("golden: the morning brief payload", () => {
       expect(brief.surfaces.map((surface) => surface.id)).toEqual([...BRIEF_SURFACE_ORDER]);
       expect(brief.anchorGroups.map((group) => group.id)).toEqual([...BRIEF_ANCHOR_GROUPS]);
       expect(brief.placeholders).toEqual([...BRIEF_PLACEHOLDER_CATALOG]);
-      expect(brief.surfaces.every((surface) => surface.state === "present")).toBe(true);
+      expect(brief.surfaces).toEqual(projectBrief(facts).surfaces as never);
     } finally {
       prepared.harness.dispose();
     }

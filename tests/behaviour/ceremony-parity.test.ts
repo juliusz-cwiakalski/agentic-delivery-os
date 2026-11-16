@@ -5,8 +5,9 @@
  * failure).
  */
 import { describe, expect, test } from "bun:test";
-import { flattenCeremonyAgenda } from "../../packages/core/src/domain/index";
+import { flattenCeremonyAgenda, projectBrief } from "../../packages/core/src/domain/index";
 import { readCeremonySteps } from "../../packages/core/src/state/index";
+import { baseFacts } from "../fixtures/brief/harness";
 import {
   BUILTINS,
   firstArtifactRef,
@@ -99,16 +100,19 @@ describe("TC-CEREMONY-019 degradation is data, not failure", () => {
     }
   });
 
-  test("the paired available control renders present surfaces", () => {
+  test("the paired available control renders the projected surfaces", () => {
     const prepared = prepareBuiltin("morning-brief");
     try {
+      const facts = baseFacts();
+      prepared.harness.scriptInput("status-facts", { state: "present", facts });
       const run = runPrepared(prepared);
       expect(run.ok).toBe(true);
       const brief = [...prepared.harness.artifactContents.values()]
         .map((content) => JSON.parse(content) as Record<string, unknown>)
         .find((document) => document.schemaId === "delivery.brief.v1");
       const surfaces = Array.isArray(brief?.surfaces) ? brief.surfaces : [];
-      expect(surfaces.every((surface) => (surface as { state?: string }).state === "present")).toBe(
+      expect(surfaces).toEqual(projectBrief(facts).surfaces as never);
+      expect(surfaces.every((surface) => (surface as { state?: string }).state !== "present")).toBe(
         true,
       );
       expect(firstArtifactRef()).toContain("run-1");

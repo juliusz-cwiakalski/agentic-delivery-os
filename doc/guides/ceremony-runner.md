@@ -158,6 +158,12 @@ window:
   start: "2026-11-16T00:00:00.000Z"
   end: "2026-11-16T23:59:59.999Z"
 trigger: owner-note
+facts:
+  - text: "The retry path is untested"
+    evidenceRef: "evidence:session-1"
+  - "The credential guard needs a negative case"
+evidenceRefs:
+  - "evidence:session-1"
 actions:
   - "Cover the retry path with a regression test"
   - "Add a negative case for the credential guard"
@@ -167,6 +173,7 @@ body: "Owner note for the 2026-11-16 testing session."
 The note contract:
 
 - `schemaId` must be `delivery.ceremony.note.v1`, `ceremony` must name the ceremony being run, `scopeKey` must be non-empty, and `window` must satisfy `start` ≤ `end`.
+- Each `facts` entry is a non-empty string, or an object with non-empty `text` and an optional non-empty `evidenceRef`. An assessment item is `covered` only when its citation resolves in the delivered evidence (the note's declared `evidenceRefs` or an evidence list a present input delivered); an uncited or unresolvable item is `uncovered` with the reason named.
 - `scopeKey` is the idempotency anchor. Where the declaration derives its scope key from the note, this value is the run's scope key; a note without it is refused as `ceremony.note-invalid` naming `scopeKey`, with zero output. Where the declaration derives from `literal` or `repository`, a supplied note must carry the identical key — a disagreement is refused rather than silently overridden.
 - The note's `window` governs the run. A `--window` that disagrees is refused with both windows named.
 - For a retro note (`level` present), the concept's fixed members are required: `participants`, `evidenceRefs`, `facts`, `interpretations`, `wins` (each with `text` and `mechanism`), `gaps`, `candidateLessons`, `actions`, `confidence`, plus `trigger` naming the level's declared trigger. An omission is `ceremony.note-invalid` naming the member.

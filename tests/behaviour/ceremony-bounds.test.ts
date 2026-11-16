@@ -42,6 +42,38 @@ describe("TC-CEREMONY-054 measured bounds", () => {
     expect(over.omitted).toBeGreaterThan(0);
   });
 
+  test("a pathological line-and-byte over-bound payload terminates with strict progress", () => {
+    // 50 entries x 120 characters composes both bounds: the 40-line bound
+    // truncates first, then the byte bound needs several more drops. The
+    // pre-fix loop popped the marker it had just pushed and never terminated
+    // for this payload (F-1); the rounds below prove each drop strictly shrinks
+    // the payload instead of oscillating in place.
+    const rounds: { kept: number; bytes: number }[] = [];
+    const over = compactCeremonyCarried(
+      entries(50, 120),
+      CEREMONY_COMPACTION_MAX_BYTES,
+      CEREMONY_COMPACTION_MAX_LINES,
+      (round) => rounds.push(round),
+    );
+    expect(rounds.length).toBeGreaterThan(0);
+    expect(rounds.length).toBeLessThanOrEqual(50);
+    for (let index = 1; index < rounds.length; index += 1) {
+      const previous = rounds[index - 1] as { kept: number; bytes: number };
+      const current = rounds[index] as { kept: number; bytes: number };
+      expect(current.kept).toBe(previous.kept - 1);
+      expect(current.bytes).toBeLessThan(previous.bytes);
+    }
+    expect(over.bytes).toBeLessThanOrEqual(CEREMONY_COMPACTION_MAX_BYTES);
+    expect(over.lines).toBeLessThanOrEqual(CEREMONY_COMPACTION_MAX_LINES);
+    expect(over.omitted).toBeGreaterThan(0);
+    expect(over.summary).toContain(`omitted: ${String(over.omitted)}`);
+    const keptLines = over.summary
+      .split("\n")
+      .filter((line) => !line.startsWith("omitted: ")).length;
+    // No input line is dropped twice or kept uncounted.
+    expect(keptLines + over.omitted).toBe(50);
+  });
+
   test("run and step records stay within their serialized bounds", () => {
     expect(bytes(runRecord())).toBeLessThanOrEqual(CEREMONY_RUN_RECORD_MAX_BYTES);
     expect(bytes(stepRecord())).toBeLessThanOrEqual(CEREMONY_STEP_RECORD_MAX_BYTES);

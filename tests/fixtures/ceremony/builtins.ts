@@ -72,10 +72,25 @@ export const prepareBuiltin = (id: string, options: BuiltinOptions = {}): Builti
     options.mirrorApplyNoop === true ? { mirrorApply: "noop" } : {},
   );
 
-  const ownerNoteItems = options.ownerNoteItems ?? [
-    { text: "item covered by cited evidence", evidenceRef: "evidence:item-1" },
-    { text: "item with no citation" },
-  ];
+  // The owner-note input mirrors the production composition: each note fact is
+  // an item and carries the citation the fact declares, never a synthesised
+  // one. A test that supplies note facts therefore drives the real contract
+  // shape rather than a fixture-only one (F-3).
+  const noteFactItems = (options.noteOverrides?.facts ?? []).map((fact) =>
+    typeof fact === "string"
+      ? { text: fact }
+      : {
+          text: fact.text,
+          ...(fact.evidenceRef === undefined ? {} : { evidenceRef: fact.evidenceRef }),
+        },
+  );
+  const ownerNoteItems = options.ownerNoteItems ??
+    (noteFactItems.length > 0
+      ? noteFactItems
+      : [
+          { text: "item covered by cited evidence", evidenceRef: "evidence:item-1" },
+          { text: "item with no citation" },
+        ]);
   harness.scriptInput("owner-note", { state: "present", facts: { items: ownerNoteItems } });
   harness.scriptInput("queue-state", {
     state: "present",
@@ -131,12 +146,25 @@ export const prepareBuiltin = (id: string, options: BuiltinOptions = {}): Builti
     harness.scriptInput(source as never, { state: "unavailable", reason: `${source} unavailable` });
   }
 
+  const citedRefs = [
+    ...new Set(
+      ownerNoteItems.flatMap((item) =>
+        item.evidenceRef === undefined ? [] : [item.evidenceRef],
+      ),
+    ),
+  ];
+  const noteOverrides =
+    id === "testing-session-assessment" &&
+    options.noteOverrides?.evidenceRefs === undefined &&
+    citedRefs.length > 0
+      ? { ...options.noteOverrides, evidenceRefs: citedRefs }
+      : options.noteOverrides;
   const note =
     options.note ??
     (id === "retro-evidence-pass"
-      ? retroNote(id, "window", options.noteOverrides)
+      ? retroNote(id, "window", noteOverrides)
       : declaration.note?.required === true
-        ? conformingNote(id, options.noteOverrides)
+        ? conformingNote(id, noteOverrides)
         : undefined);
   if (options.corruptFirstArtifact === true) {
     harness.corruptArtifact(firstArtifactRef(), "corrupted artifact");

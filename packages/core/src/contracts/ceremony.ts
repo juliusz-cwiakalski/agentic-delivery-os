@@ -360,6 +360,15 @@ export type CeremonyWin = {
   readonly mechanism: string;
 };
 
+/**
+ * One note fact: plain text, or text with the evidence reference the note cites
+ * for it. The citation is the note's own claim; an assessment item is `covered`
+ * only when the cited reference resolves in the delivered inputs (AC-F3-4, E-16).
+ */
+type CeremonyNoteFact =
+  | string
+  | { readonly text: string; readonly evidenceRef?: string };
+
 /** The ceremony note contract (DM-2, F-9). */
 export type CeremonyNote = {
   readonly schemaId: typeof CEREMONY_NOTE_SCHEMA;
@@ -370,7 +379,7 @@ export type CeremonyNote = {
   readonly level?: CeremonyLevel;
   readonly participants?: readonly string[];
   readonly evidenceRefs?: readonly string[];
-  readonly facts?: readonly string[];
+  readonly facts?: readonly CeremonyNoteFact[];
   readonly interpretations?: readonly string[];
   readonly wins?: readonly CeremonyWin[];
   readonly gaps?: readonly string[];

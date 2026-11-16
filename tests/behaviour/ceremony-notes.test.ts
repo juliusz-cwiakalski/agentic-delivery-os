@@ -102,6 +102,47 @@ describe("TC-CEREMONY-039 note intake is validated before any output", () => {
     }
   });
 
+  test("a note fact carrying no text is refused naming facts", () => {
+    const harness = makeEngineHarness();
+    try {
+      const note = conformingNote("project-note-pass", {
+        facts: [{ evidenceRef: "evidence:session-1" } as never],
+      });
+      const run = runCeremony({
+        declaration: noteDeclaration(),
+        env: harness.env,
+        note,
+        noteSupplied: true,
+        apply: false,
+      });
+      expect(refusalOf(run)?.code).toBe("ceremony.note-invalid");
+      expect(refusalOf(run)?.field).toBe("facts");
+      expect(harness.artifactContents.size).toBe(0);
+    } finally {
+      harness.dispose();
+    }
+  });
+
+  test("a note fact with an empty citation is refused naming facts", () => {
+    const harness = makeEngineHarness();
+    try {
+      const note = conformingNote("project-note-pass", {
+        facts: [{ text: "a cited item", evidenceRef: "" }],
+      });
+      const run = runCeremony({
+        declaration: noteDeclaration(),
+        env: harness.env,
+        note,
+        noteSupplied: true,
+        apply: false,
+      });
+      expect(refusalOf(run)?.code).toBe("ceremony.note-invalid");
+      expect(refusalOf(run)?.field).toBe("facts");
+    } finally {
+      harness.dispose();
+    }
+  });
+
   test("a --window disagreement names both windows and is input.value.rejected", () => {
     const harness = makeEngineHarness();
     try {

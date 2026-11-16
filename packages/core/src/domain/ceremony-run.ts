@@ -43,7 +43,9 @@ import {
   type CeremonyVerificationMode,
   type CeremonyWindow,
   PM_NOTES_REQUIRED_PHASES_BY_VARIANT,
+  type StatusFacts,
 } from "#contracts";
+import { projectBrief } from "./brief.js";
 import {
   CEREMONY_BUILTIN_SCHEMAS,
   CEREMONY_FOLLOW_THROUGH_SCHEMA,
@@ -233,28 +235,158 @@ const BRIEF_SURFACE_SOURCES: Readonly<Record<string, readonly string[]>> = {
   "lane-queue-engine": [],
 };
 
+const zeroBriefCounts = { observed: 0, unknown: 0, total: 0, omitted: 0 } as const;
+
+const briefAnchorArtifact = (anchor: unknown): unknown => {
+  if (!isRecord(anchor)) return anchor;
+  const id =
+    typeof anchor.group === "string"
+      ? anchor.group
+      : typeof anchor.id === "string"
+        ? anchor.id
+        : undefined;
+  return {
+    ...anchor,
+    ...(id === undefined ? {} : { id, group: id }),
+    items: Array.isArray(anchor.items) ? anchor.items : [],
+  };
+};
+
+const briefFromProjection = (
+  projection: Readonly<Record<string, unknown>>,
+  degraded: readonly { source: string; reason: string }[],
+): Readonly<Record<string, unknown>> => {
+  const anchors = Array.isArray(projection.anchors)
+    ? projection.anchors
+    : Array.isArray(projection.anchorGroups)
+      ? projection.anchorGroups
+      : [];
+  return {
+    schemaId: "delivery.brief.v1",
+    ...(typeof projection.schemaVersion === "string"
+      ? { schemaVersion: projection.schemaVersion }
+      : {}),
+    ...(typeof projection.generatedAt === "string" ? { generatedAt: projection.generatedAt } : {}),
+    ...(projection.repository === undefined ? {} : { repository: projection.repository }),
+    surfaces: Array.isArray(projection.surfaces) ? projection.surfaces : [],
+    anchorGroups: anchors.map(briefAnchorArtifact),
+    placeholders: Array.isArray(projection.placeholders)
+      ? projection.placeholders
+      : BRIEF_PLACEHOLDER_CATALOG.map((entry) => ({ ...entry })),
+    truncation: Array.isArray(projection.truncation) ? projection.truncation : [],
+    ...(projection.spend === undefined ? {} : { spend: projection.spend }),
+    ...(typeof projection.stateSource === "string" ? { stateSource: projection.stateSource } : {}),
+    degraded,
+  };
+};
+
+/** A delivered `delivery.brief.v1` payload, recognised without re-deriving it. */
+const deliveredBriefProjection = (
+  facts: Readonly<Record<string, unknown>>,
+): Readonly<Record<string, unknown>> | undefined => {
+  const delivered = facts["brief-projection"];
+  if (!isRecord(delivered)) return undefined;
+  const schema = delivered.schemaId ?? delivered.schemaVersion;
+  if (schema !== "delivery.brief.v1") return undefined;
+  const surfaces = delivered.surfaces;
+  const anchors = delivered.anchors ?? delivered.anchorGroups;
+  if (!Array.isArray(surfaces) || surfaces.length !== BRIEF_SURFACE_ORDER.length) return undefined;
+  if (!Array.isArray(anchors) || anchors.length !== BRIEF_ANCHOR_GROUPS.length) return undefined;
+  return delivered;
+};
+
+/** The delivered status facts, recognised by the complete `StatusFacts` shape. */
+const isStatusFacts = (value: unknown): value is StatusFacts =>
+  isRecord(value) &&
+  typeof value.nowMs === "number" &&
+  typeof value.nowIso === "string" &&
+  isRecord(value.repository) &&
+  isRecord(value.tracker) &&
+  isRecord(value.changes) &&
+  isRecord(value.ci) &&
+  isRecord(value.providers) &&
+  isRecord(value.localContext) &&
+  isRecord(value.blockers) &&
+  isRecord(value.spend);
+
+/**
+ * Render `delivery.brief.v1` from the delivered facts (F-3, AC-F3-2). A
+ * delivered projection is reused as is; otherwise the status facts are
+ * projected through the delivered brief fold. A present source that delivers
+ * no projection renders `unknown` with the reason named — never a zero count
+ * the source did not declare (the brief's no-vacuous-zero rule).
+ */
 const renderBrief = (
   facts: Readonly<Record<string, unknown>>,
   degraded: readonly { source: string; reason: string }[],
-): unknown => ({
-  schemaId: "delivery.brief.v1",
-  surfaces: BRIEF_SURFACE_ORDER.map((id) => {
-    const sources = BRIEF_SURFACE_SOURCES[id] ?? [];
-    const degradedEntry = degraded.find((entry) => sources.includes(entry.source));
-    return {
+): unknown => {
+  const delivered = deliveredBriefProjection(facts);
+  if (delivered !== undefined) return briefFromProjection(delivered, degraded);
+  const statusFacts = facts["status-facts"];
+  if (isStatusFacts(statusFacts)) {
+    const payload = projectBrief(statusFacts);
+    return briefFromProjection(
+      {
+        schemaVersion: payload.schemaVersion,
+        generatedAt: payload.generatedAt,
+        repository: payload.repository,
+        surfaces: payload.surfaces,
+        anchors: payload.anchors,
+        placeholders: payload.placeholders,
+        truncation: payload.truncation,
+        spend: payload.spend,
+        stateSource: payload.stateSource,
+      },
+      degraded,
+    );
+  }
+  return {
+    schemaId: "delivery.brief.v1",
+    surfaces: BRIEF_SURFACE_ORDER.map((id) => {
+      const sources = BRIEF_SURFACE_SOURCES[id] ?? [];
+      const degradedEntry = degraded.find((entry) => sources.includes(entry.source));
+      if (degradedEntry !== undefined) {
+        return {
+          id,
+          title: id,
+          state: "unavailable",
+          counts: zeroBriefCounts,
+          truncated: false,
+          reason: degradedEntry.reason,
+        };
+      }
+      if (sources.length === 0) {
+        const placeholder = BRIEF_PLACEHOLDER_CATALOG.find((entry) => entry.capability === id);
+        return {
+          id,
+          title: id,
+          state: placeholder?.state ?? "not-delivered",
+          counts: zeroBriefCounts,
+          truncated: false,
+        };
+      }
+      return {
+        id,
+        title: id,
+        state: "unknown",
+        counts: zeroBriefCounts,
+        truncated: false,
+        reason: `the delivered ${sources.join(" and ")} facts carry no delivery.brief.v1 projection`,
+      };
+    }),
+    anchorGroups: BRIEF_ANCHOR_GROUPS.map((id) => ({
       id,
-      title: id,
-      state: degradedEntry === undefined ? "present" : "unavailable",
-      counts: { total: 0, ready: 0, blocked: 0, parked: 0, attention: 0 },
+      group: id,
+      state: "unknown",
+      items: [],
       truncated: false,
-      ...(degradedEntry === undefined ? {} : { reason: degradedEntry.reason }),
-    };
-  }),
-  anchorGroups: BRIEF_ANCHOR_GROUPS.map((id) => ({ id, entries: [] })),
-  placeholders: BRIEF_PLACEHOLDER_CATALOG.map((entry) => ({ ...entry })),
-  degraded,
-  facts,
-});
+      omitted: 0,
+    })),
+    placeholders: BRIEF_PLACEHOLDER_CATALOG.map((entry) => ({ ...entry })),
+    degraded,
+    facts,
+  };
+};
 
 const carryOverEntries = (facts: Readonly<Record<string, unknown>>): readonly unknown[] => {
   const source = facts["queue-state"] ?? facts["tracker-milestone"] ?? facts["measurement-metrics"];
@@ -323,6 +455,27 @@ type AssessmentItem = {
   readonly item: string;
   readonly verdict: string;
   readonly evidenceRef?: string;
+  readonly reason?: string;
+};
+
+/**
+ * The evidence references the delivered inputs actually carry: the note's own
+ * declared `evidenceRefs` plus every present fact that delivers an
+ * `evidenceRefs` list. A citation outside this set is unresolved (F-3).
+ */
+const deliveredEvidenceRefs = (
+  facts: Readonly<Record<string, unknown>>,
+  note: CeremonyNote | undefined,
+): ReadonlySet<string> => {
+  const refs = new Set<string>();
+  for (const ref of note?.evidenceRefs ?? []) refs.add(ref);
+  for (const value of Object.values(facts)) {
+    if (!isRecord(value)) continue;
+    const delivered = value.evidenceRefs;
+    if (!Array.isArray(delivered)) continue;
+    for (const ref of delivered) if (typeof ref === "string") refs.add(ref);
+  }
+  return refs;
 };
 
 const assessmentItems = (
@@ -331,6 +484,7 @@ const assessmentItems = (
 ): readonly AssessmentItem[] => {
   const source = facts["owner-note"];
   const rawItems = isRecord(source) && Array.isArray(source.items) ? source.items : [];
+  const delivered = deliveredEvidenceRefs(facts, note);
   return rawItems
     .map((entry) => {
       const record = isRecord(entry) ? entry : {};
@@ -341,13 +495,22 @@ const assessmentItems = (
             ? record.item
             : "unnamed item";
       const evidenceRef = typeof record.evidenceRef === "string" ? record.evidenceRef : undefined;
-      return {
-        item,
-        verdict: evidenceRef === undefined ? "uncovered" : "covered",
-        ...(evidenceRef === undefined ? {} : { evidenceRef }),
-      };
+      if (evidenceRef === undefined) {
+        return { item, verdict: "uncovered", reason: "the item cites no evidence" };
+      }
+      if (!delivered.has(evidenceRef)) {
+        return {
+          item,
+          verdict: "uncovered",
+          evidenceRef,
+          reason: `cited evidence "${evidenceRef}" is not delivered`,
+        };
+      }
+      return { item, verdict: "covered", evidenceRef };
     })
-    .concat((note?.actions ?? []).map((item) => ({ item, verdict: "not-applicable" })));
+    .concat(
+      (note?.actions ?? []).map((item): AssessmentItem => ({ item, verdict: "not-applicable" })),
+    );
 };
 
 const renderAssessment = (
@@ -894,40 +1057,46 @@ const executeStep = (input: {
   };
 };
 
-/** Bound one compacted phase summary with an explicit truncation count (F-4). */
+/**
+ * Bound one compacted phase summary with an explicit truncation count (F-4).
+ *
+ * Each byte-bound round drops exactly one content line and re-derives the
+ * omitted marker, so the payload strictly shrinks and the loop terminates for
+ * any input (NFR-7, NFR-13, AC-F4-4). `onRound` is an injected observation
+ * seam: it receives the kept-line count and payload bytes of each round, which
+ * is how a test proves strict progress rather than only the final shape.
+ */
 export const compactCeremonyCarried = (
   entries: readonly { readonly index: number; readonly kind: string; readonly content: string }[],
   maxBytes: number = CEREMONY_COMPACTION_MAX_BYTES,
   maxLines: number = CEREMONY_COMPACTION_MAX_LINES,
+  onRound?: (round: { readonly kept: number; readonly bytes: number }) => void,
 ): {
   readonly summary: string;
   readonly bytes: number;
   readonly lines: number;
   readonly omitted: number;
 } => {
-  const lines = entries.map(
+  const contentLines = entries.map(
     (entry) =>
       `- step ${String(entry.index)} ${entry.kind}: ${entry.content.replaceAll("\n", " ").slice(0, 120)}`,
   );
-  let omitted = 0;
-  while (lines.length > maxLines) {
-    lines.pop();
+  const lineBound = Math.max(0, maxLines);
+  // When truncation happens the marker occupies one line, so content keeps at
+  // most `maxLines - 1` lines and the marker count stays exact.
+  const initialKeep =
+    contentLines.length > lineBound ? Math.max(0, lineBound - 1) : contentLines.length;
+  let kept = contentLines.slice(0, initialKeep);
+  let omitted = contentLines.length - kept.length;
+  const assemble = (): string =>
+    (omitted > 0 ? [...kept, `omitted: ${String(omitted)}`] : kept).join("\n");
+  let summary = assemble();
+  onRound?.({ kept: kept.length, bytes: utf8Bytes(summary) });
+  while (utf8Bytes(summary) > maxBytes && kept.length > 0) {
+    kept = kept.slice(0, -1);
     omitted += 1;
-  }
-  let summary = lines.join("\n");
-  if (omitted > 0) {
-    while (lines.length >= maxLines) {
-      lines.pop();
-      omitted += 1;
-    }
-    lines.push(`omitted: ${String(omitted)}`);
-    summary = lines.join("\n");
-  }
-  while (utf8Bytes(summary) > maxBytes && lines.length > 0) {
-    lines.pop();
-    omitted += 1;
-    lines.push(`omitted: ${String(omitted)}`);
-    summary = lines.join("\n");
+    summary = assemble();
+    onRound?.({ kept: kept.length, bytes: utf8Bytes(summary) });
   }
   return { summary, bytes: utf8Bytes(summary), lines: summary.split("\n").length, omitted };
 };

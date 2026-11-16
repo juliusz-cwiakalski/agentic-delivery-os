@@ -120,4 +120,49 @@ describe("TC-CEREMONY-066 the shipped assessment never invents an item citation"
       composed.dispose();
     }
   });
+
+  test("a note fact's resolvable citation is covered; an unresolvable one is uncovered", async () => {
+    const composed = makeRuntime();
+    try {
+      const note = writeNote(composed.root, {
+        schemaId: CEREMONY_NOTE_SCHEMA,
+        ceremony: "testing-session-assessment",
+        scopeKey: "scope-runtime-citations",
+        window: NOTE_WINDOW,
+        evidenceRefs: ["evidence:session-1"],
+        facts: [
+          { text: "covered item", evidenceRef: "evidence:session-1" },
+          { text: "unresolvable item", evidenceRef: "evidence:absent" },
+          { text: "uncited item" },
+        ],
+      });
+      const run = await composed.runtime.run({
+        name: "testing-session-assessment",
+        notePath: note,
+        apply: false,
+      });
+      expect(run.ok).toBe(true);
+      if (!run.ok) return;
+      const data = run.data as { verdict: string; runId: string };
+      expect(data.verdict).toBe("verified");
+      const assessment = artifactOf(composed.stateRoot, data.runId, composed.state.store);
+      const items = (assessment?.items ?? []) as {
+        item: string;
+        verdict: string;
+        evidenceRef?: string;
+        reason?: string;
+      }[];
+      const byItem = new Map(items.map((item) => [item.item, item]));
+      expect(byItem.get("covered item")?.verdict).toBe("covered");
+      expect(byItem.get("covered item")?.evidenceRef).toBe("evidence:session-1");
+      const unresolvable = byItem.get("unresolvable item");
+      expect(unresolvable?.verdict).toBe("uncovered");
+      expect(unresolvable?.evidenceRef).toBe("evidence:absent");
+      expect(unresolvable?.reason).toContain("is not delivered");
+      expect(byItem.get("uncited item")?.verdict).toBe("uncovered");
+      expect(assessment?.unassessedCount).toBe(0);
+    } finally {
+      composed.dispose();
+    }
+  });
 });
