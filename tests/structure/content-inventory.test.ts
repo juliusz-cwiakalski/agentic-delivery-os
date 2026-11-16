@@ -2836,6 +2836,13 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "ceremonyTierIntake",
     "evaluateCeremonyTier",
   ],
+  "core/src/domain/ceremony-comparison.ts": [
+    "CEREMONY_TREND_TOKENS",
+    "buildCeremonyComparison",
+    "ceremonyComparisonHonestyViolations",
+    "ceremonyP90Ms",
+    "foldCeremonyMeasurement",
+  ],
 };
 
 const listTypeScriptFiles = (packageDir: string): string[] => {

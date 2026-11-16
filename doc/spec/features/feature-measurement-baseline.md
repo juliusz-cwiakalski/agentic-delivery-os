@@ -25,7 +25,7 @@ links:
 
 The measurement baseline is a committed, repository-local data artifact at `doc/planning/oss-tooling/measurement-baseline.yaml`. It records the bash-era delivery baseline — ceremony share, cycle time, CI failure session proxy, and false-signal incidents — so later milestones can compare against recorded numbers rather than memory.
 
-The log is schema-versioned (`schema_version: 1`) and its values are immutable once committed. This feature spec describes the log's contract: path, schema, metric IDs, status semantics, source traceability, window, and comparison protocol. Metric values are read from the log; they are never restated here. M2-S6 owns native metrics and consumes the log by metric ID and definition.
+The log is schema-versioned (`schema_version: 2`, the additive `comparisons[]` bump) and its existing metric values are immutable once committed. This feature spec describes the log's contract: path, schema, metric IDs, status semantics, source traceability, window, and comparison protocol. Metric values are read from the log; they are never restated here. M2-S6 owns native metrics and consumes the log by metric ID and definition.
 
 The log is a user-facing document registered with the forbidden-literal check. It refers to the command surface generically as "the CLI" and carries no working-name literal on a non-allowlisted line.
 
@@ -78,7 +78,7 @@ N/A — the log has no user interface. It is a data artifact consumed by tooling
 
 ### 4.1 High-Level Design
 
-The log is a single YAML document with `schema_version: 1`. It is static data, not a runtime service. The path, schema, and metric IDs are the contract; the values are the record. A consumer reads the log, selects metrics by ID, and compares using the stored definition and window.
+The log is a single YAML document with `schema_version: 2`; version 2 adds one additive `comparisons[]` list and edits no existing metric row. It is static data, not a runtime service. The path, schema, and metric IDs are the contract; the values are the record. A consumer reads the log, selects metrics by ID, and compares using the stored definition and window.
 
 ### 4.2 Core Components & Directory Structure
 
@@ -150,3 +150,24 @@ A time metric whose corpus contains an `unparseable_yaml` or `placeholder_zero_t
 - [ODR-0002 — ID Prefix Scheme and Project Catalog](../../decisions/ODR-0002-id-prefix-scheme-and-project-catalog.md) — `MET-` adoption and the allocator.
 - [Feature: Decision Records Management](feature-decision-records.md) — the register and the decision-records standard.
 - [Glossary](../../overview/glossary.md) — term definitions.
+
+## Additive comparisons record (`schema_version: 2`)
+
+The ceremony runner (M2-S3) records exactly one committed comparison per
+delivery in the top-level `comparisons[]` list. The list is additive: every
+existing metric row, value, sample counter, window, and `MET-` allocation is
+unchanged.
+
+Each entry carries `schemaId` (`delivery.ceremony.comparison.v1`), the committed
+`metricId` (`MET-CEREMONY-SHARE`), `definitionRef` with this log's path and the
+metric row's `source_commit`, the `before` value with its window, sample size,
+status, and basis, the `after` sample with its window, per-change values, sample
+size, and basis, `sampleMinimum: 5`, a closed `verdict` (`improved`,
+`regressed`, `flat`, `not-established`, `insufficient-sample`), `nativeBasis`
+with runner-derived run/step/phase counts and per-ceremony aggregates plus the
+non-interchangeability statement, and `disclosure`.
+
+`improved` requires the sample minimum to be met and `after < before`. Below the
+minimum the verdict is `insufficient-sample` and neither the record nor any
+change artifact carries a trend claim; at delivery time the observed after sample
+is zero, so no direction is recorded. The record is recomputed per delivery.

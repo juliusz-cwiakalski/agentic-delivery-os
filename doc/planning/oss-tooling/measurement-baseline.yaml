@@ -1,4 +1,4 @@
-schema_version: 1
+schema_version: 2
 artifact: bash-era delivery measurement baseline
 change:
   ref: GH-186
@@ -883,3 +883,44 @@ metrics:
   direction: lower is better
   comparison_note: Compare with the same metric ID and definition over an equal-length window; the curated-floor caveat travels with the number.
 comparison_protocol: Later milestones compare against the same metric ID and definition over a window of equal length. A definition change allocates a new MET- ID and records a supersession note rather than mutating the baseline. Committed baseline values are immutable; a new baseline is appended, not edited. Comparisons state the metric ID and definition version so a proxy is never compared to a native measurement without that caveat. Ratio metrics store a 0-1 value and derive any percent form; p90_h uses nearest-rank ceil(0.9*n)-th smallest with no interpolation; the top-level change field is the DM-2 mapping {ref, tracker, excluded_from_samples}.
+
+comparisons:
+- schemaId: delivery.ceremony.comparison.v1
+  metricId: MET-CEREMONY-SHARE
+  definitionRef:
+    logPath: doc/planning/oss-tooling/measurement-baseline.yaml
+    sourceCommit: 75b4e7602ad89bd26f96912ac06ed8bfcb72a5ae
+  before:
+    value: 0.406648
+    window:
+      start: '2026-02-01T00:00:00Z'
+      end: '2026-10-31T23:59:59Z'
+    sampleSize: 23
+    status: PARTIAL
+    basis: pm-notes-self-reported
+  after:
+    value: null
+    window:
+      start: '2026-11-16T00:00:00.000Z'
+      end: '2026-11-16T23:59:59.999Z'
+    samples: []
+    sampleSize: 0
+    basis: ceremony-run-records
+  sampleMinimum: 5
+  verdict: insufficient-sample
+  nativeBasis:
+    runs: 0
+    steps: 0
+    phases: 0
+    perCeremony: []
+    statement: >-
+      Runner-measured step durations are a native second basis; they are not
+      interchangeable with the committed pm-notes proxy and are never
+      substituted for it. No cross-metric aggregation is claimed.
+  disclosure: >-
+    0 post-boundary change(s) observed in the window
+    2026-11-16T00:00:00.000Z..2026-11-16T23:59:59.999Z; the sample minimum is
+    5. The before value is the committed pm-notes proxy
+    (pm-notes-self-reported); the after value is recomputed over the same
+    definition and formula. No post-boundary sample exists at delivery time, so
+    no direction is claimed; the record is recomputed per delivery.

@@ -1016,3 +1016,15 @@ export {
   type CeremonyTierInput,
   type CeremonyTierObligation,
 } from "./ceremony-tier.js";
+/** Ceremony measurement and the committed comparison record (GH-296 F-8). */
+export {
+  buildCeremonyComparison,
+  ceremonyComparisonHonestyViolations,
+  ceremonyP90Ms,
+  CEREMONY_TREND_TOKENS,
+  foldCeremonyMeasurement,
+  type CeremonyComparisonBefore,
+  type CeremonyComparisonInput,
+  type CeremonyMeasurementFold,
+  type CeremonyMeasurementRun,
+} from "./ceremony-comparison.js";

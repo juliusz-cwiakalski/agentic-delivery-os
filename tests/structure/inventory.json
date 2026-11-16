@@ -83,6 +83,7 @@
     "src/domain/capsule-candidates.ts",
     "src/domain/capsule.ts",
     "src/domain/ceremony-builtins.ts",
+    "src/domain/ceremony-comparison.ts",
     "src/domain/ceremony-declaration.ts",
     "src/domain/ceremony-intake.ts",
     "src/domain/ceremony-mirror.ts",

@@ -223,3 +223,15 @@ notes:
       drift."
     type: info
     date: "2026-11-16"
+  - text: "plan phase 7 (single-source tier engine): commit be5a629; pnpm
+      typecheck green; bun test tests/behaviour/ceremony-tier.test.ts,
+      tests/behaviour/ceremony-tier-intake.test.ts, and
+      tests/structure/ceremony-tier-single-source.test.ts green (19 pass); bun
+      run scripts/checks/ambient-globals.ts green. The mapping consumes
+      PLAN_KNOWN_TIERS and PM_NOTES_REQUIRED_PHASES_BY_VARIANT only; plan
+      tier.phases are integer phase numbers resolved against the canonical
+      eleven; all five escalation triggers are evidence-gated and an unknown
+      string is reported verbatim as unevaluated. The tracked
+      tests/structure/inventory.json update was disclosed as scope drift."
+    type: info
+    date: "2026-11-16"
