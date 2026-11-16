@@ -1,0 +1,1387 @@
+# GH-298 delivery plan — machine-readable document (delivery.plan.v1), revision 1.0
+# (2026-11-16). Authored against spec v1.1 (24 ACs, DEC-1..DEC-12, DM-1..DM-8,
+# NFR-1..NFR-10, RSK-1..RSK-8, DoD-1..DoD-18, OQ-1..OQ-4 all closed, Appendix B
+# ticket-AC decomposition, Appendix C seed mapping, Appendix D count-pinning
+# sites D-1..D-13) and test plan v1.1 (57 TCs TC-STEER-001..096 = 56 automated
+# + 1 gate-only record) on branch feat/GH-298/steer from main-tools tip cfb0ce8d
+# (fresh start, zero unique commits; GH-296 ceremony and GH-297 board already
+# in the base).
+#
+# One ticket, one PR against main-tools, eight delivery phases. Every phase is
+# an independently committable slice that is green at its own boundary
+# (targeted suites plus the aggregate gate battery below), and every phase is
+# ONE delivery commit through the commit primitive (conventional subject,
+# scope GH-298 per repo convention, every body/footer line <= 100 characters;
+# lifecycle phase 9 lints the branch range with
+# ./scripts/lint-commit-range.sh --base main-tools). Extra phase data (content
+# obligations, AC/TC ownership, done-when, gate commands) is carried in YAML
+# comments so the parsed document stays schema-strict: the only parsed keys are
+# schemaVersion, workItemRef, tier, defaultLeases, defaultWeightClass and
+# phases (id, title, kind, summary, scope, interactions, doneArtifacts).
+# The plan declares phases and scope only; progress is a pm-notes `notes:`
+# entry naming the plan phase id, commit hash, and test result; there is no
+# `tasks` key and no progress log.
+#
+# SOURCES (single source of truth; this plan invents no requirement):
+#   - Spec:      ./chg-GH-298-spec.md v1.1 — F-1..F-10; DM-1..DM-8;
+#                NFR-1..NFR-10; NG-1..NG-8; DEC-1..DEC-12; RSK-1..RSK-8;
+#                24 ACs AC-F1-1..AC-NFR9-1 (section 17); DoD-1..DoD-18
+#                (section 17.1) with per-condition plan-phase ownership;
+#                section 8.3 command grammar (incl. the declared --ttl
+#                duration grammar), contract shape, ordering invariants,
+#                boundary resolution, and exit projection; section 14
+#                OQ-1..OQ-4 all closed; section 18 sequencing (shared record
+#                schema and state records before the boundary read point; the
+#                error identities register in-boundary; mounting completes
+#                before the gates phase); Appendix B (ticket AC decomposition);
+#                Appendix C (seed paths); **Appendix D — the binding locator
+#                list of 13 error-table count-pinning sites across seven
+#                files, with same-commit movement, the no-leftover scan for
+#                140/139/56/+106, and four-way agreement**. v1.1 corrections
+#                bound here: 23rd family / delta 22 -> 23 (AC-F8-1, DEC-9);
+#                steer.unknown-id scoped to complete with `steer read <id>` a
+#                declared fallback.invocation grammar refusal (AC-F9-1);
+#                uncapped landing versus the <= 20 listed payload (AC-F3-4,
+#                DM-8, NFR-4, AC-F10-3); the <positive-integer><unit> ttl
+#                grammar (DM-1, DM-8, AC-F1-2, section 8.3).
+#   - Test plan: ./chg-GH-298-test-plan.md v1.1 — 57 TCs in ten blocks
+#                (TC-STEER-001..096); coverage matrix 24/24 ACs, no orphan
+#                case; section 4 layers (structure/behaviour/real-production
+#                composition/golden/checks/measured/mutation); section 6
+#                fixture and golden environment (GAP-T1 real checkouts,
+#                GAP-T2 new goldens, GAP-T6 the family-count scan); section 7
+#                suite homes; section 8.3 no open question. AMB-TP-1 (human
+#                render asserted as maxima + marker arithmetic) and AMB-TP-2
+#                (harness seam shapes are delivery-bound; a case that cannot
+#                resolve its seam fails naming the missing contract) bind the
+#                delivery throughout.
+#   - PM notes:  ./chg-GH-298-pm-notes.yaml — the three canonical ticket ACs
+#                (Appendix B maps them), the delivered-dependency
+#                verification, and the delivery conventions (gate command, PR
+#                target main-tools, commit body width, NEVER merge).
+#   - Concept:   doc/planning/concepts/inter-agent-communication.md (the typed
+#                message record, pull-at-read-points, ack->complete with
+#                artifact ref, no-secrets rule); m2 journeys/test-scenarios
+#                (SC-M2-S5-01/02 inherited by name); m2/contracts.md
+#                (phase.state advisory; S5's edge is the boundary derivation);
+#                PDR-0003 (the drawn-default join), ADR-0003 (core/cli
+#                layering), TDR-0012 (the registered-value guard boundary).
+#   - Repo truth verified at plan time: packages/cli/src/help/
+#                prompt-required-commands.ts registers exactly 22 families
+#                (`status` ... `events`, `board` at index 20, `ceremony` at
+#                index 21) — steer mounts as the 23rd, delta 22 -> 23; the
+#                family-count pins live in tests/structure/entrypoint-bin.
+#                test.ts (expected array + rendered family-line count 22),
+#                tests/structure/board-mounting.test.ts (2 sites),
+#                tests/structure/events-production-composition.test.ts (2),
+#                tests/structure/dispatch-attempts-composition.test.ts (1),
+#                tests/structure/daemon-production-composition.test.ts (2),
+#                tests/behaviour/repos-help.test.ts,
+#                tests/behaviour/board-help.test.ts,
+#                tests/behaviour/events-mount-help.test.ts,
+#                tests/behaviour/ceremony-cli.test.ts, and derived in
+#                tests/structure/cli-edge-seam.test.ts — while the literal 22
+#                in tests/behaviour/queue-ready-negative-controls.test.ts is
+#                the queue-ready control-matrix count, NOT a family pin, and
+#                does not move (a declared non-count residual for the
+#                TC-STEER-060 scan); the error-table truth is ERROR_TABLE 140
+#                entries (6 entry pins in tests/structure/error-table.test.ts
+#                at ~829/905/1139/1743/2268/2378), 139 delivered rows (2
+#                sites), RESERVED_TWO_SEGMENT_CODES 56 members (4 length pins
+#                in the mirror; the sync-side copy in
+#                scripts/checks/error-table-sync.ts ~147), the sync oracle
+#                BASELINE_ROWS.length + 106 (tests/checks/
+#                error-table-sync.test.ts ~1081/1082/1162/1185 — three
+#                logical sites, four textual occurrences: length check,
+#                failure message, and the counts assertion twice), the
+#                dispatch-taxonomy pins (tests/structure/
+#                dispatch-attempts-taxonomy.test.ts ~L2/L48/L50) and
+#                verify-suite-map reads (tests/structure/
+#                verify-gates-suite-map-contract.test.ts); the delivered
+#                boundary fold lives in packages/core/src/state/registry.ts
+#                (phase-state projection) and the asks join in
+#                packages/core/src/domain/owner-gate-sla.ts — both consumed
+#                read-only; .changeset/ holds one minor changeset per change
+#                (gh-297-board-minor.md precedent).
+#
+# PHASE ORDER AND WHY (spec section 18 sequencing, made concrete):
+#   1 Contracts first — the shared typed message record (DM-1), the four
+#     closed vocabularies declared once, the S5 filing subset as a declared
+#     restriction, the --ttl grammar, every cap and bound, and the
+#     delivery.steer.v1 identity are contract data every later phase consumes
+#     (F-2; no schema fork can survive past phase 1 because the shape is
+#     declared before any writer exists).
+#   2 Pure domain and state records second — validation order, ttl parse and
+#     judgement, aging, the shared rank, the boundary-open derivation over
+#     the delivered phase fold, derived lifecycle, the read/list projections,
+#     the asks-batch composition over the delivered open-question view and
+#     PDR-0003 join, the bounded renderers, and the three append-only record
+#     kinds with fenced verified appends (spec 18: the record schema and
+#     state records land before the boundary read point). No I/O in the
+#     domain; injected clock and ports only (ADR-0003, NFR-7).
+#   3 Error-table registration third — the `steer` domain kind, its three
+#     rows, the exact allowlist widening (56 -> 59), and EVERY Appendix D
+#     site move in ONE commit, with the repo-wide no-leftover scan and
+#     four-way classifier/sync/mirror/carrier agreement (AC-F9-4, DEC-8,
+#     C-7, C-16). Registering before the CLI paths exist is green and keeps
+#     the count move atomic; the first refusing path that emits a steer.*
+#     identity arrives with the CLI phases inside the same change boundary.
+#   4 Filing and the queue view fourth — `steer send` and `steer list` over
+#     the edge composition and the unconditional production composition:
+#     drawn defaults, the derived origin block (real checkouts), value and
+#     grammar refusals pre-read, aging/rank on every surface, the three
+#     lifecycle groups side by side with counted caps (DEC-1's auditable
+#     view). Between this commit and phase 7 the entrypoint still drops the
+#     un-advertised family exactly as it drops every non-prompt command
+#     today, so root --help and every other surface stay byte-identical.
+#   5 The boundary read point fifth — `steer read`: the three boundary-open
+#     routes and the closed decline, batched landing in rank order with one
+#     receipt per note and the landing write uncapped by the payload's
+#     20-note display bound (AC-F3-4), ttl-elapsed as a classified outcome,
+#     idempotence, and the batched asks with the delivered join (ticket
+#     AC-1); the payload bounds and the byte-guard drop order.
+#   6 Completion, the guard, and the error matrix sixth — `steer complete`
+#     with artifact-ref authority, the registered-secrets guard on every
+#     content and identifier path (no pattern layer, TDR-0012), and the
+#     classified error matrix: unknown-id complete-only, queue-unavailable
+#     fail-closed at exit 2, `steer read <id>` as the grammar refusal, and
+#     the five-field envelope with the exact 0/1/2 projection.
+#   7 Mounting seventh — the 23rd prompt-required family: prompt-set entry,
+#     root and family help, the reference page serving the coverage check,
+#     the coverage-inventory row, and the atomic 22 -> 23 family-count move
+#     across every pinning suite with the stale-22 scan (TC-STEER-060;
+#     mounting completes before the gates phase so the coverage check gates
+#     the final state).
+#   8 Cross-cutting proofs and release eighth — determinism with the four
+#     committed goldens, purity/brand, write discipline, read cost, the
+#     non-vacuity controls, the M2 planning-corpus bookkeeping, the
+#     five-package minor changeset, and the full gate battery at the
+#     delivered HEAD.
+#
+# AC OWNERSHIP (24/24; exactly one owning phase each; an earlier phase may
+# produce a partial verdict, which is additive and never transfers ownership):
+#   phase 1  (declaration halves only; AC-F2-1's data half — no full AC)
+#   phase 2  AC-F2-1
+#   phase 3  AC-F9-4
+#   phase 4  AC-F1-1, AC-F1-2, AC-F5-1, AC-F5-2
+#   phase 5  AC-F3-1, AC-F3-2, AC-F3-3, AC-F3-4, AC-F3-5, AC-F4-1, AC-F10-3
+#   phase 6  AC-F6-1, AC-F6-2, AC-F7-1, AC-F9-1, AC-F9-2, AC-F9-3
+#   phase 7  AC-F8-1, AC-F8-2
+#   phase 8  AC-F10-1, AC-F10-2, AC-NFR9-1
+#   Count: 0 + 1 + 1 + 4 + 7 + 6 + 2 + 3 = 24.
+#   PARTIAL-VERDICT NOTES: phase 1 declares the shared schema, the closed
+#   vocabularies, the filing-subset restriction as data, the ttl grammar, and
+#   every bound (the AC-F2-1 halves phase 2 proves through the shared
+#   validator); phase 2 additionally produces the pure halves of AC-F5-1
+#   (class map, rank key) and AC-F3-2 (the ttl predicate) asserted at
+#   structure level; phase 4 produces the send/list halves of AC-F7-1 (the
+#   guard runs inside filing validation) which phase 6 completes over the
+#   complete path and the no-pattern twin; phase 5 produces the read-side
+#   halves of AC-F9-2 (unverified-append cell) that phase 6 completes across
+#   all four subcommands.
+#
+# TC OWNERSHIP (57/57; ownership = the phase that lands the asserted content
+# and where the TC's verdict is first fully green):
+#   phase 1  (structure halves of 003/006/007/008/017/021/053/082 land red-
+#            first here; no TC completes before the validator exists)
+#   phase 2  TC-STEER-007, 008                                         (2)
+#   phase 3  TC-STEER-074, 075, 076                                    (3)
+#   phase 4  TC-STEER-001, 002, 003, 004, 005, 006,
+#            020, 021, 022, 023, 024, 025                             (12)
+#   phase 5  TC-STEER-010, 011, 012, 013, 014, 015, 016, 017, 018,
+#            030, 031, 032, 082, 083                                  (14)
+#   phase 6  TC-STEER-040, 041, 042, 050, 051, 052, 053,
+#            070, 071, 072, 073                                       (11)
+#   phase 7  TC-STEER-060, 061, 062, 063, 096                          (5)
+#   phase 8  TC-STEER-080, 081, 084, 085, 090, 091, 092, 093, 094, 095 (10)
+#   Count: 2 + 3 + 12 + 14 + 11 + 5 + 10 = 57. TC-STEER-090 is
+#   verification-only (the gate execution record), never automated test code;
+#   it is still owned here. Seed cases TC-STEER-010/091 (SC-M2-S5-01) and
+#   TC-STEER-012/018 (SC-M2-S5-02) inherit by name with their Appendix C
+#   mapping.
+#   SPLIT-SUITE NOTES (a suite extended by two phases stays green at both
+#   boundaries; ownership follows the phase that completes the case):
+#   tests/structure/steer-contract.test.ts starts phase 1 (constants,
+#   vocabularies, schema key set) and gains the parser/predicate/class-map/
+#   no-pattern/state-kind halves in phase 2 (TC-STEER-003 unit half, 017 pure
+#   half, 021 class-map half, 053 structure half, 006 id-shape half, 082
+#   constants half); tests/behaviour/steer-bounds.test.ts starts phase 4
+#   (TC-STEER-024 list-cap cells) and gains the payload/byte-guard cells in
+#   phase 5 (TC-STEER-082/083); tests/golden/steer.test.ts starts phase 4
+#   (the list golden half of TC-STEER-023) and gains the other three forms in
+#   phase 8 (TC-STEER-081); tests/checks/steer-mutants.test.ts starts phase 2
+#   (the TC-STEER-008 schema-fork arms), gains the registration arms in phase
+#   3 (TC-STEER-075/076: near-miss, omitted-widening, prefix-widening,
+#   fourth-code, non-mirror stale site) and the mounting arms in phase 7
+#   (TC-STEER-062/063/096); packages/cli/src/commands/steer.ts and edge.ts
+#   start phase 4 and are extended in phases 5 and 6.
+#
+# DoD MAPPING (spec section 17.1 "Proven in plan" -> this plan's phases):
+#   DoD-1 -> 4; DoD-2 -> 4; DoD-3 -> 2 (declaration in 1); DoD-4 -> 5;
+#   DoD-5 -> 5; DoD-6 -> 5; DoD-7 -> 5; DoD-8 -> 4; DoD-9 -> 4; DoD-10 -> 6;
+#   DoD-11 -> 6; DoD-12 -> 7; DoD-13 -> 3; DoD-14 -> 5; DoD-15 -> every
+#   phase's gate with the consolidated proof in 8; DoD-16 -> per-phase,
+#   roll-up in 8; DoD-17 -> 8; DoD-18 -> lifecycle phase 11 (pr_creation),
+#   not a plan phase.
+#
+# COMMIT CONVENTION (one commit per plan phase; subjects declared here so the
+# commit path and review agree; scope is the workItemRef per repo convention):
+#   phase 1  feat(GH-298): shared message record contracts, vocabularies and steer bounds
+#   phase 2  feat(GH-298): pure steer domain, shared rank and steering state records
+#   phase 3  feat(GH-298): register steer error identities and move every count pin
+#   phase 4  feat(GH-298): steer send and list with drawn defaults, aging and rank
+#   phase 5  feat(GH-298): boundary read point with batched landing, expiry and asks
+#   phase 6  feat(GH-298): artifact-ref completion, credential guard and error matrix
+#   phase 7  feat(GH-298): mount steer as the 23rd prompt-required family
+#   phase 8  test(GH-298): determinism, purity and control proofs with gate battery
+#
+# CONSTRAINTS BINDING ON EVERY PHASE (spec sections 5, 8, 9; do not reshape at
+# delivery):
+#   - Envelope continuity (NFR-1, AC-F9-3): every new key lives under `data`;
+#     the five-field delivery.result.v1 envelope is untouched; zero
+#     `ok`/`command` fields anywhere; one payload identity delivery.steer.v1
+#     across all four subcommands (DEC-3).
+#   - Layering and purity (ADR-0003, NFR-6, NFR-7): contracts and pure domain
+#     in packages/core (no I/O in the domain; injected clock, id factory,
+#     state port, phase read, ledger view, secrets record, origin source);
+#     command definitions and edge composition in packages/cli; the binary
+#     name in human output comes from the brand seam only (zero product or
+#     binary literals); no LLM, network, tracker/provider, timer, daemon,
+#     control socket, or session operation of any kind (NG-3, NG-4, DEC-12).
+#   - The shared record (DM-1, DEC-2, AC-F2-1): exactly the eleven declared
+#     keys; the four vocabularies are the shared closed sets declared once as
+#     contract data (scope session|change|repo|fleet; kind
+#     ask|answer|notify|request|escalate|report|heartbeat; priority
+#     low|normal|high|urgent); the S5 filing subset (kind request|escalate,
+#     scope repo, from owner, to the role delivery) is a declared restriction
+#     over those sets, never a second schema; the record is immutable once
+#     appended; lifecycle derives at read time, never stored.
+#   - The ttl grammar (section 8.3, DM-1, DM-8, AC-F1-2): `<duration>` is
+#     `<positive-integer><unit>` with unit in s|m|h|d; maximum 30d
+#     (2 592 000 s); drawn default 24h; zero, negative, oversized, and
+#     malformed values are input.value.rejected value violations refused
+#     pre-write through the same path as the other value violations; ONE
+#     shared validator, no second duration parser (TC-STEER-004 step 6).
+#   - Write discipline (NFR-5, DM-2): three additive append-only record kinds
+#     (steering.message, steering.outcome, steering.completion) in the
+#     repository's local state scope; send appends exactly 1 message; read
+#     appends <= 1 outcome per note and only for transitioning notes;
+#     complete appends exactly 1 and a second completion 0; zero edits,
+#     deletes, or prunes; fenced appends with post-append verification — a
+#     landing is never reported that did not durably land.
+#   - Bounds and the landing/display split (DM-8, NFR-4, AC-F3-4, AC-F10-3):
+#     text <= 160 chars; ref <= 160; list <= 8 rows per group; the read
+#     PAYLOAD lists <= 20 notes with counted overflow while the LANDING WRITE
+#     is uncapped — every due note lands and is receipted, nothing dropped,
+#     deferred, or rolled; serialized data <= 65 536 UTF-8 bytes; human <= 32
+#     lines / 6 144 bytes; when the byte cap binds, rows drop tail-first in
+#     the fixed order asks -> notes (tail-first by rank within notes), each
+#     drop counted in omitted with truncated: true; the boundary block is
+#     never dropped. data.applied is true iff >= 1 note landed; data.expiry.
+#     reason is present exactly when >= 1 note expired (DEC-7).
+#   - Error identities and the closed allowlist (DM-7, DEC-8, C-7, AC-F9-4):
+#     exactly three rows under one new `steer` domain kind —
+#     steer.unknown-id (user, exit 1, not_landed, scoped to complete ONLY),
+#     steer.credential-value-rejected (user, exit 1, not_landed, zero
+#     persisted bytes), steer.queue-unavailable (platform, exit 2,
+#     not_landed) — registered in packages/core/src/contracts/error-table.ts
+#     and projected through packages/cli/src/classify.ts; value violations
+#     reuse the delivered input.value.rejected; grammar violations (unknown
+#     subcommand/flag, positional count — including ANY positional on `read`,
+#     so `steer read <id>` is fallback.invocation, never steer.unknown-id —
+#     and missing flag values) reuse the delivered fallback.invocation at
+#     exit 1 before any state read; the closed two-segment allowlist widens
+#     by EXACT declaration (56 -> 59, no steer.* family, no pattern
+#     widening); EVERY Appendix D site (D-1..D-13) moves in the SAME commit
+#     as the rows (140 -> 143 entries; 139 -> 142 delivered; 56 -> 59
+#     allowlist; 140 -> 143 documented; BASELINE_ROWS.length + 106 -> +109;
+#     3 steer rows; board stays 2, ceremony stays 2), followed by the
+#     repo-wide no-leftover scan for 140/139/56/+106 with those tokens added
+#     to the legacy list, and four-way classifier/sync-check/structural-
+#     mirror/carrier agreement; a near-miss two-segment steer.* code is
+#     rejected, never family-matched.
+#   - The no-secrets guard (F-7, AC-F7-1, TDR-0012): note text, --ref, and
+#     derived origin values are matched against the registered secret values
+#     (the same registered-secrets record the serialization redaction
+#     chokepoint consumes) and refused before any byte lands; NO token-shape
+#     pattern scan exists — the boundary is exactly the registered-value
+#     match.
+#   - Composition discipline (F-4, DM-6, NG-8): asks[] is the delivered
+#     open-question view with the delivered PDR-0003 drawn-default join
+#     (drawnDefault or bare null, defaultState none|pending|applied) and the
+#     delivered ranking, bounds, and cap of 8, read-only — coordinator
+#     questions excluded, no ledger write, no second ranking or default
+#     mechanism; the boundary derivation reads the delivered phase-state fold
+#     and adds no phase record kind (DEC-5); no board payload key, no fifth
+#     board section, no steering column on any board row (NG-1, DEC-1); no
+#     new event topic (NG-5, DEC-10); no aging-based promotion of stored
+#     records (NG-6, DEC-11) — order is derived at every read, never stored.
+#   - Current-truth boundary (NG-7, C-7): doc/spec/** flips only in lifecycle
+#     phase 7 (@doc-syncer), never in a delivery phase; the ONE same-commit
+#     exception is the error-table carrier
+#     doc/spec/features/feature-result-contract.md in phase 3, whose rows,
+#     counts, and allowlist paragraph TC-STEER-076 asserts.
+#
+# GATE ENVIRONMENT (binding on every phase boundary and the final battery):
+#   - Per-phase minimum gates: (a) workspace typecheck (`pnpm check` runs it;
+#     while iterating use the solution typecheck), (b) the phase's targeted
+#     `bun test` suites as listed in the phase's test obligations (iterate
+#     narrow: `bun test tests/behaviour/steer-*.test.ts
+#     tests/structure/steer-*.test.ts tests/checks/steer-*.test.ts
+#     tests/golden/steer.test.ts`), (c) the structure/checks sync suites the
+#     phase touches (tests/structure/**, tests/checks/error-table-sync.test.
+#     ts, tests/checks/help-guide-coverage.test.ts, tests/checks/
+#     reference-page-parity.test.ts), and (d) `git diff --check` before the
+#     phase commit.
+#   - Aggregate gate at EVERY phase boundary and the delivered HEAD:
+#     TMPDIR=$PWD/tmp/tmpdir pnpm check (with tmp/tmpdir present,
+#     git-ignored, repo-local — the repo-local TMPDIR lesson; never /tmp or
+#     /tmp/opencode as fixture bases). A phase is not complete until the
+#     aggregate is green at its commit.
+#   - Lifecycle commands (phase complete, commit) run with
+#     PATH="$PWD/node_modules/.bin:$PATH" so the commitlint probe resolves.
+#     The phase-9 range gate ./scripts/lint-commit-range.sh --base main-tools
+#     is run by @pm and recorded in pm-notes; it is not re-implemented here.
+#   - Every case is authored failing-first against the phase that owns it
+#     (committed red — missing module, missing data key, or a declared count
+#     mismatch — before the implementation that makes it green); goldens are
+#     CREATED in this change (no delivered golden regenerates), each with a
+#     regenerate.ts and a review-visible diff limited to the declared delta;
+#     real-checkout cells (origin derivation, guard-on-derived-value,
+#     mounting composition, write discipline) use real temporary git
+#     checkouts plus a real local PM-context file (GAP-T1), never $HOME and
+#     never the live tree.
+#
+# LIFECYCLE PHASE 7 HANDOFF OBLIGATIONS (system_spec_update, @doc-syncer;
+# declared here so nothing is dropped after DoD — NOT plan scope, and no
+# delivery phase edits doc/spec/** beyond the C-7 carrier):
+#   - New current-truth feature spec (steer): authored in phase 7 — the
+#     shared record schema and vocabularies, the filing subset and drawn
+#     defaults, the boundary read point and its derivation, receipts and
+#     expiry, artifact-ref completion, the asks batch, bounds, the exit
+#     projection, and the no-session-operation posture. Listed in phase 8
+#     scope ONLY so the commit primitive can stage it (an untracked file
+#     outside every declared plan scope is a stray and is never staged).
+#   - doc/spec/features/feature-result-contract.md: carried in-boundary by
+#     phase 3 (C-7, D-13); phase 7 verifies the wording and confirms the same
+#     numbers.
+#   - doc/spec/features/feature-blockers.md: additive note that the steer
+#     read composes the delivered open-question view and drawn-default join
+#     read-only; no delivered blockers behaviour changes.
+#   - State-layer feature spec: the three additive steering record kinds are
+#     registered in the record-kind inventory per the delivered conventions.
+#   - doc/spec/features/feature-board.md: no change (DEC-1); the board page
+#     stays the extension-point statement for any later steering surfacing.
+#   - Event-taxonomy feature spec: no change confirmed (DEC-10).
+#   - Planning corpus (delivered in phase 8 of this plan per milestone
+#     convention): backlog M2-S5 progress marker; M2 status snapshot;
+#     cli-command-registry row (23 families); m2/entrypoint-delta.md observed
+#     root listing records 23 families; m2/commands/steer.md status flip.
+#
+# ---------------------------------------------------------------------------
+# Phase 1 — Shared message record contracts, vocabularies, and steer bounds
+# Commit: feat(GH-298): shared message record contracts, vocabularies and steer bounds
+#
+# Goal: the shared typed message record exists as contract data before any
+# writer — one schema declared once, the four closed vocabularies, the S5
+# filing subset as a declared restriction, the --ttl grammar and every cap
+# and bound as constants, the delivery.steer.v1 identity with its per-form
+# data shapes, and the priority class map (DM-1, DM-3..DM-5, DM-8; F-2, F-10
+# declaration halves).
+#
+# Obligations:
+#  1.1 packages/core/src/contracts/steer.ts (new): the DM-1 record shape with
+#      exactly the eleven declared keys (id `msg-` + opaque per-store-unique
+#      suffix, from, to, scope, kind, subject, ref, origin {change, repo,
+#      agent}, priority, created, ttl) and NO owner-specific field; the four
+#      shared closed vocabularies declared exactly once (imported by the
+#      validator, the CLI, and the tests from this one module); the S5 filing
+#      subset (kind request|escalate, scope repo, from owner, to the role
+#      delivery) declared as a selection over the shared sets; the ttl
+#      grammar constants (<positive-integer><unit>, unit s|m|h|d, maximum 30d
+#      = 2 592 000 s, drawn default 24h); every DM-8 bound (text 160, ref
+#      160, list 8 per group, read-payload list 20, data 65 536 UTF-8 bytes,
+#      human 32 lines / 6 144 bytes, asks 8 delivered cap); the priority
+#      class map urgent=1..low=4 and the rank-key declaration; the DM-3
+#      read-outcome, DM-4 queue-view row, and DM-6 ask-row payload types; the
+#      delivery.steer.v1 schemaVersion identity and the four per-form data
+#      shapes of section 8.3; the three steer error-code literals as data
+#      (their table rows land in phase 3); the derived-lifecycle vocabulary
+#      queued|landed|expired|completed; the pendingReason and phaseUnknown
+#      reason tokens.
+#  1.2 Exports: packages/core/src/contracts/index.ts and packages/core/src/
+#      index.ts re-export the steer contracts per the delivered conventions.
+#  1.3 tests/structure/steer-contract.test.ts (new, failing-first): the
+#      schema declares exactly the eleven fields with declared types and no
+#      owner-specific shape (TC-STEER-007 steps 1-2 structure half); the four
+#      vocabularies equal the shared closed sets in both directions and are
+#      declared once (single-home scan); the filing subset is exactly
+#      kind in {request, escalate}, scope repo, from owner, to delivery, and
+#      every member is present in its parent vocabulary (TC-STEER-008 steps
+#      1-2 data half); the bounds constants are exactly the spec's values —
+#      text 160, ref 160, ttl 30d = 2 592 000 s with default 24h, list 8,
+#      read-payload 20, data 65 536, human 32/6 144 (TC-STEER-082 constants
+#      half); the class map is exactly urgent=1, high=2, normal=3, low=4
+#      (TC-STEER-021 structure half).
+#
+# Bound: F-2, F-10 (declaration halves); DM-1, DM-3..DM-6, DM-8 (data
+# halves); DEC-2, DEC-3, DEC-6; RSK-1 (the fork is impossible past this
+# phase), RSK-6 (the grammar is a contract, not a parser detail).
+# Test obligations: TC-STEER-007 (steps 1-3), TC-STEER-008 (steps 1-2),
+# TC-STEER-021 (class map), TC-STEER-082 (constants) — structure halves;
+# full ownership passes to phase 2 with the validator.
+#
+# Done when: the steer contracts module declares the shared record, the four
+# closed vocabularies declared exactly once, the filing subset as a
+# restriction over them, the ttl grammar, every DM-8 bound, the class map,
+# the delivery.steer.v1 identity, and the per-form data shapes; the
+# structure suite asserts the key set, both-direction vocabulary equality,
+# the single home, the subset inclusion, and every constant; the module is
+# exported from core; TMPDIR=$PWD/tmp/tmpdir pnpm check is green.
+# ---------------------------------------------------------------------------
+# Phase 2 — Pure steer domain, shared rank, and the steering state records
+# Commit: feat(GH-298): pure steer domain, shared rank and steering state records
+#
+# Goal: every decision the family makes is a pure function over injected
+# inputs, and the three append-only record kinds persist over the injected
+# state port — validation in the fixed order, the shared ttl parser and
+# predicate, measured aging, the shared derived rank, the boundary-open
+# derivation over the delivered phase fold, derived lifecycle, the read and
+# queue-view projections, the asks-batch composition over the delivered
+# open-question view and PDR-0003 join, the bounded renderers with the
+# byte-guard order, and fenced verified appends (F-1..F-6, F-10 domain
+# halves; DM-2..DM-6).
+#
+# Obligations:
+#  2.1 packages/core/src/domain/steer.ts (new, pure): filing validation in
+#      the fixed order (text bounds, kind, priority, ttl, ref) over the
+#      phase-1 constants, with the shared validator accepting ANY
+#      shared-vocabulary message and the filing path applying the subset as
+#      a restriction (a non-owner-issued record — from coordinator, scope
+#      change, kind ask — validates with no owner branch; malformed variants
+#      are rejected naming the field); ONE ttl duration parser
+#      (<positive-integer><unit>, s|m|h|d) consumed by every ttl path, with
+#      expiresAt derived as created + ttl; the ttl predicate exactly
+#      now >= created + ttl on the injected clock; aging as the pure
+#      function (now, created) -> ms with no clock import; the shared rank
+#      (class asc, created asc, id asc) with contiguous 1..N assigned over
+#      the fully ranked set before any render cap; the boundary-open
+#      derivation over the delivered phase-state fold (no record -> open,
+#      phase null + phaseUnknownReason "phase-unrecorded"; every entry
+#      completed -> open with phase = the latest completed entry; an entry
+#      in progress -> closed); lifecycle derivation queued|landed|expired|
+#      completed from appended records, never a stored flag; the read-point
+#      outcome projection (per note applied, receipt {origin, readReceipt
+#      {at, boundary}, ttl, expiresAt}, expiry {reason, recordedAt},
+#      pendingReason "phase-in-progress"; payload data.applied true iff >= 1
+#      landed, data.expiry.reason present exactly when >= 1 expired); the
+#      queue-view projection (queued[], landed[], expired[] in declared
+#      order, landed rows carrying the receipt and completedWith, expired
+#      rows the reason and timestamp, <= 8 per group with counted
+#      omissions); the asks-batch composition over the delivered
+#      open-question view and PDR-0003 join (drawnDefault or bare null,
+#      defaultState none|pending|applied, delivered rank and bounds,
+#      measured age, coordinator questions excluded, no ledger write, no
+#      second ranking); completion validation (landed-only, artifact
+#      required, first-authoritative); the bounded human renderers for the
+#      four forms within 32 lines / 6 144 bytes with the byte-guard drop
+#      order asks -> notes tail-first by rank and the boundary block never
+#      dropped, the binary name from the brand seam.
+#  2.2 packages/core/src/state/steering.ts (new, over the injected state
+#      port): the three additive append-only record kinds
+#      (steering.message, steering.outcome, steering.completion) in the
+#      repository's local state scope per the delivered state-layer
+#      conventions; fenced appends with post-append verification (an
+#      unverified append is a failure, never a silent success); verified
+#      reads with derived closure; per-store-unique id enforcement (a
+#      collision is an error, never an overwrite); no edit, delete, prune,
+#      or store-layout change to any delivered kind.
+#  2.3 Exports: domain and state index re-exports.
+#  2.4 tests/structure/steer-contract.test.ts (extended, failing-first):
+#      the shared validator accepts a non-owner record with the same key set
+#      and rejects malformed variants by name (TC-STEER-007 full); the
+#      subset-inclusion both-direction assertions and the single-validator
+#      import assertion (TC-STEER-008 full); the pure ttl parser cells
+#      (90s = 90 000, 90m = 5 400 000, 24h = 86 400 000, 14d = 1 209 600,
+#      30d = 2 592 000 exactly; 24, h, 1.5h, 24 h, 24H, +1h, empty rejected
+#      with no coercion) — TC-STEER-003 unit half; the pure ttl predicate at
+#      -1 ms / +0 / +1 ms (TC-STEER-017 pure half); the pure aging signature
+#      and class map (TC-STEER-020/021 structure halves); the id shape
+#      msg- + opaque suffix (TC-STEER-006 structure half); the guard
+#      module's dependency set contains the registered-secrets record and NO
+#      token-pattern table (TC-STEER-053 structure half); the three state
+#      record kinds declared (TC-STEER-084 state-kind half).
+#  2.5 tests/checks/steer-mutants.test.ts (new, temp-copy mutation arms):
+#      the schema-fork arms of TC-STEER-008 — an owner-only vocabulary
+#      member added to the subset without the shared vocabulary fails
+#      naming the illegal member; an owner-specific field added to the
+#      record fails validation naming the field; a member added to the
+#      shared kind vocabulary keeps the subset test green while filing the
+#      new kind stays refused (restriction, not conflation).
+#
+# Bound: AC-F2-1; DoD-3; F-1..F-6, F-10 (domain halves); DM-2..DM-6, DM-8
+# (logic halves); DEC-2, DEC-5, DEC-7, DEC-11; NFR-7 (0 ambient clock reads
+# in the domain); RSK-1, RSK-2, RSK-7.
+# Test obligations: TC-STEER-007, TC-STEER-008 (first fully green here).
+#
+# Done when: a non-owner message validates against the one shared schema
+# with no owner branch and every malformed variant is rejected by name; the
+# subset is a declared restriction (all three mutation arms detected); the
+# ttl grammar parses every declared unit and refuses zero/negative/
+# oversized/malformed values with no coercion; the ttl predicate is
+# inclusive at +0 and clock-injected; aging and rank are pure with
+# contiguous full-set ranks; the boundary derivation produces both open
+# routes and the closed decline from the delivered fold; lifecycle derives
+# at read time; the asks composition reproduces the delivered view with
+# measured age and no second default source; the three record kinds append
+# fenced and verified over the injected port; TMPDIR=$PWD/tmp/tmpdir pnpm
+# check is green.
+# ---------------------------------------------------------------------------
+# Phase 3 — Error-table registration: the steer kind, the exact allowlist
+#           widening, and every Appendix D site in one commit
+# Commit: feat(GH-298): register steer error identities and move every count pin
+#
+# Goal: the three steer identities are registered, classified, and
+# documented with the closed two-segment allowlist widened by exact
+# declaration and EVERY Appendix D count-pinning site moved in the SAME
+# commit — the repo-wide no-leftover scan green and the classifier, sync
+# check, structural mirror, and carrier agreeing (AC-F9-4; DM-7; DEC-8;
+# C-7, C-16; DoD-13; RSK-6).
+#
+# Obligations:
+#  3.1 D-1 packages/core/src/contracts/error-table.ts: the three `steer`
+#      rows appended after the board rows under a GH-298 comment declaring
+#      exact allowlist membership — steer.unknown-id (user, exit 1,
+#      not_landed, scoped to complete only), steer.credential-value-rejected
+#      (user, exit 1, not_landed), steer.queue-unavailable (platform, exit
+#      2, not_landed) — each with category, retryability, consequence,
+#      remediation hint, and projection class; the `board` kind keeps
+#      exactly 2 rows and `ceremony` exactly 2; no delivered row changes
+#      identity, category, or exit; fallback.invocation and
+#      input.value.rejected untouched.
+#  3.2 packages/cli/src/classify.ts projects the three identities so the
+#      classifier surface agrees in the same commit; a steer.* code absent
+#      from the table resolves to no row (never synthesized).
+#  3.3 D-2 scripts/checks/error-table-sync.ts: RESERVED_TWO_SEGMENT_CODES
+#      gains exactly the three steer codes (56 -> 59 members) with the
+#      GH-298 comment; no prefix or pattern widening.
+#  3.4 D-3..D-9 tests/structure/error-table.test.ts (the structural
+#      mirror): the mirrored allowlist set gains the same three codes; the
+#      entry-count pins move 140 -> 143 (6 sites); the delivered
+#      (spend-exclusion) pins 139 -> 142 (2 sites); the allowlist-size pins
+#      56 -> 59 (4 sites) and the test-name pin stops saying "56 members";
+#      the four-surfaces agreement test name reads "143 entries / 142
+#      delivered / 59 allowlist / 2 board / 3 steer / 143 documented"; the
+#      carrier/doc text pins read the 143 wording (4 sites); the
+#      legacy-token list and no-leftover scan arms gain 140, 139, 56, and
+#      +106 so the scan stays complete.
+#  3.5 D-10 tests/structure/dispatch-attempts-taxonomy.test.ts: the header
+#      comment 139 -> 142 delivered, the test name and length assertion
+#      140 -> 143. D-11 tests/structure/verify-gates-suite-map-contract.
+#      test.ts: result.counts.sourceEntries and result.counts.documentedRows
+#      140 -> 143 (both reads). D-12 tests/checks/error-table-sync.test.ts:
+#      the frozen-oracle arithmetic BASELINE_ROWS.length + 106 -> +109 at
+#      every site (the length check, the failure message, and the counts
+#      assertion — verified at plan time as four textual occurrences across
+#      those three logical sites; any further occurrence joins the same
+#      commit and the spec's Appendix D is amended, never silently).
+#  3.6 D-13 doc/spec/features/feature-result-contract.md (the ONE
+#      in-boundary carrier write, C-7): both "140 machine identities"
+#      mentions -> 143; the kind inventory gains the three steer rows; the
+#      allowlist paragraph gains exactly the three steer codes (56 -> 59).
+#  3.7 NO-LEFTOVER SCAN AND FOUR-WAY AGREEMENT: after the move, the scan
+#      over the named files reports no identity-count pin left at 140, 139,
+#      56, or +106 (residuals only as declared non-count prose, the accepted
+#      list small and named); the classifier, sync check, structural
+#      mirror, and carrier — read in the same run of the same tree — agree
+#      on 143 entries / 142 delivered / 59 allowlist / 2 board / 3 steer /
+#      143 documented; a near-miss two-segment steer.* code (steer.unknown-
+#      ids, steer.queue, steer.state-unavailable, steer.credential-value-
+#      rejected.extra) is rejected, and a three-segment lookalike resolves
+#      to no row.
+#  3.8 tests/checks/steer-mutants.test.ts (extended): the registration arms
+#      — omit one steer code from the checker copy (sync fails naming the
+#      disagreement); widen the checker to a `steer.` prefix (the near-miss
+#      probe fails); add a fourth steer.* code without an allowlist entry
+#      (the check fails); leave a NON-MIRROR Appendix D site stale
+#      (dispatch-taxonomy header/name/length, verify-map reads, or the sync
+#      +109 arithmetic) — the arm that proves the 13-site list is exercised
+#      beyond the mirror.
+#
+# Bound: AC-F9-4; DoD-13; F-9; DM-7; DEC-8; C-7, C-16; RSK-6.
+# Test obligations: TC-STEER-074, TC-STEER-075, TC-STEER-076.
+#
+# Done when: the table holds exactly three steer rows under the new kind
+# with the declared categories, exits, and consequences and no collateral
+# change to any delivered row; both allowlist copies hold exactly 59 members
+# with exactly the three steer codes; every D-1..D-13 site is moved in this
+# one commit (143 entries, 142 delivered, 59 allowlist, 143 documented,
+# +109 arithmetic, 3 steer rows); the no-leftover scan for 140/139/56/+106
+# is green with only declared non-count residuals; the four surfaces agree
+# read from one tree and the near-miss probes are rejected; the sync check
+# exits 0 reporting zero failures; TMPDIR=$PWD/tmp/tmpdir pnpm check is
+# green.
+# ---------------------------------------------------------------------------
+# Phase 4 — Filing and the queue view: `steer send` and `steer list`
+# Commit: feat(GH-298): steer send and list with drawn defaults, aging and rank
+#
+# Goal: the owner can file and audit — `steer send` with drawn defaults and
+# the derived origin block over real checkouts, value and grammar refusals
+# before any state read with zero persisted bytes, one immutable record per
+# filing with unique ids, measured aging and the shared rank on every
+# surface, and the three lifecycle groups side by side with counted caps —
+# composed at the edge over injected runtimes and unconditionally in the
+# production root (F-1, F-5, F-8 composition half, the guard's send half).
+#
+# Obligations:
+#  4.1 packages/cli/src/commands/steer.ts (new) + packages/cli/src/edge.ts:
+#      the `send` and `list` subcommand definitions with the section-8.3
+#      grammar (send exactly one positional + --kind/--priority/--ttl/--ref;
+#      list zero positionals; --json the global switch); drawn defaults
+#      (kind request, priority normal, ttl 24h, ref null); the origin block
+#      derived from the invoking checkout's local PM context (bound ref or
+#      the bare null when unbound; repository key; agent owner) — never
+#      asked; created from the injected clock; expiresAt derived; the
+#      registered-secrets guard on text, ref, and derived origin values
+#      before any byte lands; value violations as input.value.rejected and
+#      grammar violations as fallback.invocation, both before any state
+#      read; the queued projection and the queue view under
+#      delivery.steer.v1; the exit projection through the result contract.
+#      Edge seam shapes are delivery-bound (AMB-TP-2); behaviours,
+#      identities, vocabularies, and bounds are not.
+#  4.2 packages/cli/src/production.ts: the steer runtime composed
+#      unconditionally over the delivered adapters (state port, injected
+#      clock, id factory, origin source, registered secrets, phase read,
+#      ledger view). Between this commit and phase 7 the entrypoint still
+#      drops the un-advertised family exactly as it drops every non-prompt
+#      command today, so root --help and every other surface stay
+#      byte-identical.
+#  4.3 Fixtures (failing-first): tests/fixtures/steer/harness.ts (in-process
+#      runCli composition over the injected clock, id factory, state port,
+#      phase read, ledger view, secrets record, and origin source) and
+#      tests/fixtures/steer/cases.ts (bound/unbound origin, ttl cells across
+#      the declared grammar and its four refusal classes, the lifecycle
+#      matrix, the value-refusal table) over the delivered
+#      tests/fixtures/projects/production.ts real-checkout helpers.
+#  4.4 Suites: tests/behaviour/steer-send.test.ts (TC-STEER-001 bound
+#      default-everything + derived origin over a REAL checkout and PM
+#      context; TC-STEER-002 unbound cells with the bare null origin.change
+#      and the bound twin; TC-STEER-003 explicit-flag overrides, per-unit
+#      parsing, the 30d maximum cell, expiresAt derivation immune to clock
+#      advances); tests/behaviour/steer-refusals.test.ts (TC-STEER-004 the
+#      value-violation matrix — empty/whitespace/161-char text, ttl
+#      zero/negative/oversized/malformed cells, out-of-set priority and
+#      kind (notify and ask outside the subset), 161-char ref — all refused
+#      pre-read with zero persisted bytes and the 30d/2592000s/720h/43200m
+#      and 160-char accepting twins; TC-STEER-005 the grammar cells —
+#      unknown subcommand/flag, wrong positional counts, valueless flags —
+#      as fallback.invocation with zero reads and the help path still
+#      live); tests/behaviour/steer-records.test.ts (TC-STEER-006 one
+#      append per filing, byte-identical pre-existing records, 100 filings
+#      with 100 unique ids, the forced id-collision refusal, the same-text
+#      second filing, no stored lifecycle/rank/age field); tests/behaviour/
+#      steer-aging-rank.test.ts (TC-STEER-020 age from the injected clock on
+#      send/list with the planted stored age inert; TC-STEER-021 the 12-note
+#      rank matrix with the independently computed expectation, the
+#      id-ascending tie-break, contiguous 1..N before the group cap;
+#      TC-STEER-022 derived order immune to store/directory permutation,
+#      no stored rank, the comparator and rank-stamp mutation arms);
+#      tests/behaviour/steer-list.test.ts (TC-STEER-023 the three groups
+#      side by side with receipts, completedWith, expiry reasons, ages,
+#      ranks; TC-STEER-025 the completed row stays under landed, no fourth
+#      group, the receipt unchanged by completion); tests/behaviour/
+#      steer-bounds.test.ts (TC-STEER-024 the 8/8/8 at-cap twin and the
+#      9/9/9 over-cap cell with per-group omission arithmetic, full-set
+#      ranks not renumbered, the +N marker agreeing with the machine count,
+#      the silent-drop mutation arm).
+#  4.5 Golden: tests/golden/steer.test.ts (new) with tests/fixtures/steer/
+#      golden/list.txt and list.json CREATED in this change plus their
+#      regenerate.ts (the list golden half of TC-STEER-023; the other three
+#      forms land in phase 8 with TC-STEER-081).
+#
+# Bound: AC-F1-1, AC-F1-2, AC-F5-1, AC-F5-2; DoD-1, DoD-2, DoD-8, DoD-9;
+# F-1, F-5, F-7 (send half), F-8 (composition half), F-10; DM-1, DM-4, DM-5,
+# DM-8 (send/list halves); DEC-1, DEC-6, DEC-11; NFR-2, NFR-3, NFR-5, NFR-7;
+# RSK-1, RSK-4, RSK-5 (send half).
+# Test obligations: TC-STEER-001, 002, 003, 004, 005, 006, 020, 021, 022,
+# 023, 024, 025.
+#
+# Done when: a bare send in a bound checkout appends exactly one complete
+# record with every drawn default, the derived origin (and the bare null in
+# an unbound checkout, with the bound twin proving the derivation live), and
+# the queued projection at exit 0; explicit flags override every default and
+# expiresAt is a pure function of the stored record; every value violation
+# refuses pre-read with zero persisted bytes and every at-cap twin accepts;
+# grammar violations are fallback.invocation with zero reads; ids are unique
+# per store and nothing derived is stored; ages come from the injected clock
+# on every surface and the rank matrix holds with contiguous full-set ranks
+# immune to every permutation; the list view renders the three groups side
+# by side with receipts, reasons, and completedWith within the counted caps
+# against the committed golden; TMPDIR=$PWD/tmp/tmpdir pnpm check is green.
+# ---------------------------------------------------------------------------
+# Phase 5 — The boundary read point: batched landing, expiry, decline,
+#           idempotence, asks, and the payload bounds
+# Commit: feat(GH-298): boundary read point with batched landing, expiry and asks
+#
+# Goal: `steer read` is the declared read point — the three boundary-open
+# routes and the closed decline, every due note landing in ONE batch in
+# shared-rank order with a receipt each and the landing write uncapped by
+# the payload's 20-note display bound, ttl-elapsed as a classified
+# non-applied outcome, idempotence in effect, and the batched owner asks
+# with the delivered drawn-default join and measured age (F-3, F-4, F-5;
+# SC-M2-S5-01, SC-M2-S5-02; ticket AC-1 and AC-2's receipt half).
+#
+# Obligations:
+#  5.1 packages/cli/src/commands/steer.ts + edge.ts (extended): the `read`
+#      subcommand (zero positionals — any positional is the phase-6-asserted
+#      fallback.invocation grammar refusal); boundary derived from the
+#      delivered phase-state fold; at a boundary-open read every due note
+#      lands in one batch (the landing write bounded only by the queue's
+#      contents), one receipt per note, outcome records appended only for
+#      transitioning notes; elapsed notes recorded as expired outcomes with
+#      the delivery continuing its previous course; at a boundary-closed
+#      read every note reads pending with pendingReason "phase-in-progress"
+#      and NOTHING appends; asks[] composed through the delivered
+#      open-question view and PDR-0003 join read-only (one ledger read,
+#      zero writes, coordinator questions excluded); the payload lists <= 20
+#      notes in rank order with counted overflow; the session recorder
+#      stays empty and the branch, refs, and evidence files are untouched.
+#  5.2 Fixtures: tests/fixtures/steer/phase-boundary.ts (the three boundary
+#      routes plus the closed form over the delivered phase vocabulary),
+#      tests/fixtures/steer/ask-matrix.ts (owner/coordinator/answered
+#      populations and the three join states), tests/fixtures/steer/bounds.
+#      ts (at-cap/over-cap payloads sized against 65 536 bytes and the
+#      human budget, plus the 1/20/21/25-due payload-list fixtures whose
+#      landing side is uncapped), reusing tests/fixtures/phase/**,
+#      tests/fixtures/blockers/**, and tests/fixtures/state/harness.ts.
+#  5.3 Suites: tests/behaviour/steer-read-landing.test.ts (TC-STEER-010 the
+#      SC-M2-S5-01 seed — boundary-open with no phase record, one due note
+#      lands with the complete receipt and exactly one outcome record, the
+#      session recorder empty, refs and evidence untouched; TC-STEER-011
+#      the every-entry-completed route with phase = the latest completed
+#      entry, file order irrelevant, the no-due-note control; TC-STEER-014
+#      the five-note rank-matrix batch with reversed store order, one
+#      receipt per note, five outcome records, omitted 0/truncated false,
+#      the idempotent second read); tests/behaviour/steer-read-expiry.test.
+#      ts (TC-STEER-012 the SC-M2-S5-02 seed at the exact +0 boundary and
+#      +1 h, one expiry outcome, nothing else mutating, the repeat read
+#      stable; TC-STEER-017 the -1 ms/+0/+1 ms predicate-to-run agreement
+#      and the clock-shift pair, filing never judging ttl; TC-STEER-018 the
+#      totals matrix over empty/all-expired/mixed/pending fixtures with the
+#      data.expiry presence rule as a set); tests/behaviour/
+#      steer-read-boundary-closed.test.ts (TC-STEER-013 the in-progress
+#      decline — every note pending, append counter 0, tree byte-identical,
+#      the closed boundary taking precedence over expiry, asks still
+#      present); tests/behaviour/steer-read-idempotency.test.ts
+#      (TC-STEER-015 the immediate repeat read inert and byte-stable;
+#      TC-STEER-016 the five-note cardinality matrix — exactly the
+#      transitions append, the pre-resolved notes visible without a second
+#      outcome, the hand-seeded inconsistency resolving conservatively);
+#      tests/behaviour/steer-asks.test.ts (TC-STEER-030 the delivered view
+#      reproduced verbatim plus measured age in the same payload as notes,
+#      the closed-boundary asks cell; TC-STEER-031 the three join states
+#      with the declared null and the PDR-0003 map as the only default
+#      source; TC-STEER-032 coordinator questions excluded, the delivered
+#      cap of 8, zero ledger writes, exactly one ledger read at 0 and 12
+#      asks); tests/behaviour/steer-bounds.test.ts (extended — TC-STEER-082
+#      the full bounds matrix and the byte-guard order asks -> notes
+#      tail-first by rank with the boundary block never dropped and the
+#      five guard mutants; TC-STEER-083 the landing-versus-display split at
+#      1/20/21/25 due — 21 and 25 outcome records and receipts against a
+#      20-row payload with omitted counted, nothing queued after, the
+#      second read appending zero, the receipt sweep over unlisted notes,
+#      the listed-union-omitted set equality, and the five cap/defer/roll
+#      mutants).
+#
+# Bound: AC-F3-1, AC-F3-2, AC-F3-3, AC-F3-4, AC-F3-5, AC-F4-1, AC-F10-3;
+# DoD-4, DoD-5, DoD-6, DoD-7, DoD-14 (the unverified-append cell), DoD-15
+# (bounds half); F-3, F-4, F-5, F-10; DM-2, DM-3, DM-5, DM-6, DM-8; DEC-5,
+# DEC-7, DEC-11; NFR-4, NFR-5, NFR-7, NFR-8; RSK-2, RSK-3, RSK-4, RSK-7.
+# Test obligations: TC-STEER-010, 011, 012, 013, 014, 015, 016, 017, 018,
+# 030, 031, 032, 082, 083.
+#
+# Done when: both scenario seeds are green on their fixtures — a due note
+# lands at a boundary-open read with a complete receipt and exactly one
+# outcome record, and an elapsed note is classified non-applied with
+# data.applied false and data.expiry.reason "ttl-elapsed" — with nothing
+# else mutating and the totals unambiguous over all four shapes; the closed
+# boundary declines without applying, recording, or resolving anything
+# off-boundary while asks survive; the batch lands once in rank order with
+# the landing write uncapped (25 due -> 25 receipts, 20 listed, omitted 5,
+# truncated true, nothing deferred, the second read appending zero); the
+# asks batch reproduces the delivered view verbatim with measured age,
+# coordinator questions excluded, one ledger read, and zero writes; every
+# declared bound holds with counted drops in the declared order and the
+# boundary block never dropped; TMPDIR=$PWD/tmp/tmpdir pnpm check is green.
+# ---------------------------------------------------------------------------
+# Phase 6 — Completion, the no-secrets guard, and the classified error matrix
+# Commit: feat(GH-298): artifact-ref completion, credential guard and error matrix
+#
+# Goal: the loop closes safely — `steer complete` appends exactly one
+# artifact-ref completion for a landed note with the first completion
+# authoritative; the registered-secrets guard refuses every content and
+# identifier path with zero persisted bytes and no pattern layer; and the
+# classified error matrix is total: unknown-id complete-only, read-position
+# grammar refusal, queue-unavailable fail-closed at exit 2 across all four
+# subcommands, and the five-field envelope with the exact 0/1/2 projection
+# (F-6, F-7, F-9).
+#
+# Obligations:
+#  6.1 packages/cli/src/commands/steer.ts + edge.ts (extended): the
+#      `complete` subcommand (exactly one positional + --ref required);
+#      completion refused before any write for a never-landed note, an
+#      expired note, a missing/empty/over-cap --ref, and a repeat
+#      completion; exactly one completion record on success with the
+#      artifact and timestamp; the derived completed lifecycle and the list
+#      row's completedWith; the complete-only steer.unknown-id identity.
+#  6.2 Fixtures: tests/fixtures/steer/credentials.ts (the registered
+#      sentinel from the delivered tests/fixtures/credentials/cases.ts plus
+#      the unregistered token-shaped table), reusing
+#      tests/behaviour/verify-support.ts (guardStore) for the store-failure
+#      matrix.
+#  6.3 Suites: tests/behaviour/steer-complete.test.ts (TC-STEER-040 the
+#      append-only completion with message/outcome bytes unchanged and the
+#      list cross-check; TC-STEER-041 the first completion authoritative,
+#      the retry and the identical retry refused, the other-note control;
+#      TC-STEER-042 the refusal matrix — queued, expired, missing, empty,
+#      161-char ref — all pre-write with the byte-identical tree and the
+#      160-char accepting twin); tests/behaviour/steer-credentials.test.ts
+#      (TC-STEER-050 the sentinel in the note text refused with zero bytes
+#      and a leak-free payload; TC-STEER-051 the sentinel in --ref on send
+#      AND complete with the benign continuation; TC-STEER-052 the sentinel
+#      in a derived origin value over a REAL checkout with the benign twin;
+#      TC-STEER-053 the unregistered token-shaped values all accepted — the
+#      no-pattern twin — with the registered control live and the single
+#      secrets-record identity); tests/behaviour/steer-errors.test.ts
+#      (TC-STEER-070 unknown, foreign, and empty completion ids as
+#      steer.unknown-id with zero writes and the valid-id control;
+#      TC-STEER-071 `steer read <id>` — landed, unknown, two positionals,
+#      and a flag — all fallback.invocation, never a steer.* identity, with
+#      the plain-read control and the documented arity; TC-STEER-072 the
+#      guardStore four failure modes x four subcommands all withheld at
+#      exit 2 with no partial payload, the unverified-append cell reporting
+#      failure, the healthy twins, and the swallowed-check mutation);
+#      tests/behaviour/steer-envelope.test.ts (TC-STEER-073 one fixture per
+#      section-8.3 row, the five-field envelope everywhere, the ok/command
+#      scan, the exact exit digits, no partial failure payload, one
+#      schemaVersion, and the human/machine identity agreement).
+#
+# Bound: AC-F6-1, AC-F6-2, AC-F7-1, AC-F9-1, AC-F9-2, AC-F9-3; DoD-10,
+# DoD-11, DoD-14; F-6, F-7, F-9; DM-2, DM-7, DM-8 (ref cap on the complete
+# path); DEC-8, DEC-12; NFR-1, NFR-5; RSK-3, RSK-4, RSK-5.
+# Test obligations: TC-STEER-040, 041, 042, 050, 051, 052, 053, 070, 071,
+# 072, 073.
+#
+# Done when: a landed note completes against its proving artifact exactly
+# once with the evidence unchanged and the duplicate refused; no
+# receipt-less or artifact-less completion is ever recorded (every refusal
+# pre-write with an accepting twin); a registered secret value cannot enter
+# the store through text, ref, or a derived origin value while every
+# unregistered token-shaped value passes and no refusal payload leaks; an
+# unknown/foreign id on complete is steer.unknown-id, any positional on
+# read is fallback.invocation and no steer.* identity is reachable from
+# read; every store failure mode withholds the whole command at exit 2 with
+# no partial result and no landing claimed on an unverified append; every
+# outcome projects the five-field envelope with its exact exit digit;
+# TMPDIR=$PWD/tmp/tmpdir pnpm check is green.
+# ---------------------------------------------------------------------------
+# Phase 7 — Mounting: the 23rd prompt-required family, atomically
+# Commit: feat(GH-298): mount steer as the 23rd prompt-required family
+#
+# Goal: the completed family is reachable and advertised exactly once — the
+# prompt-set entry as the 23rd family (delivered base 22, ceremony the
+# 22nd; delta 22 -> 23), root and family help, the reference page serving
+# the coverage check, the coverage-inventory row — with EVERY family-count
+# pin moved in the SAME commit and the repo-wide stale-22 scan green, and
+# the mount changing no other family (F-8, DEC-9; TC-STEER-060; DoD-12;
+# RSK-8).
+#
+# Obligations:
+#  7.1 packages/cli/src/help/prompt-required-commands.ts: "steer" appended
+#      as the 23rd member after "ceremony"; the 22 delivered members keep
+#      name and order; the entrypoint composes data-driven (packages/cli/
+#      src/entrypoint.ts is in scope only if the composition root needs an
+#      edit).
+#  7.2 packages/cli/src/help.ts: the root family entry (one-line summary)
+#      and the steer command help with the five declared sections —
+#      summary, usage, options (all four subcommands and the five flags),
+#      examples per subcommand, the 0/1/2 exit-code table, and a see-also
+#      pointer to the reference page; `steer --help` and `steer --version`
+#      answer at exit 0 from the static inventory with zero state, git,
+#      network, configuration, or spawn activity; the help names no
+#      subcommand outside send/list/read/complete.
+#  7.3 doc/planning/oss-tooling/milestones/m2/commands/steer.md (new
+#      reference page): states the four subcommands, the grammar and drawn
+#      defaults, the exit codes, and the no-session-operation posture, and
+#      mentions --help and --version (the delivered check's requirements;
+#      the delivered-status flip is phase-8 bookkeeping).
+#      tests/fixtures/help-guide/coverage.json gains the steer command row
+#      and page path; scripts/checks/help-guide-coverage.ts is expected to
+#      need no behavioural change (data-driven) and is in scope only for
+#      an inventory-schema necessity.
+#  7.4 THE ATOMIC FAMILY-COUNT MOVE (TC-STEER-060; GAP-T6): every
+#      family-count pin moves 22 -> 23 in THIS commit —
+#      tests/structure/entrypoint-bin.test.ts (the expected family array
+#      gains steer last and the rendered family-line count 22 -> 23),
+#      tests/structure/board-mounting.test.ts (2 sites),
+#      tests/structure/events-production-composition.test.ts (2),
+#      tests/structure/dispatch-attempts-composition.test.ts (1),
+#      tests/structure/daemon-production-composition.test.ts (2),
+#      tests/behaviour/repos-help.test.ts, tests/behaviour/board-help.
+#      test.ts, tests/behaviour/events-mount-help.test.ts, and
+#      tests/behaviour/ceremony-cli.test.ts; tests/structure/
+#      cli-edge-seam.test.ts derives the count from PROMPT_REQUIRED_
+#      COMMANDS and adapts without a numeric edit (verified at plan time).
+#      The repo-wide scan asserts no family-count pin remains at 22 outside
+#      the one captured base constant in tests/fixtures/steer/mounting.ts
+#      (the 22-entry pre-change list, the single statement of 22); the
+#      literal 22 in tests/behaviour/queue-ready-negative-controls.test.ts
+#      is the queue-ready control-matrix count, NOT a family pin, is a
+#      declared non-count residual, and does not move. A site discovered
+#      beyond the named set is a delivery finding that joins this same
+#      commit — never a silent exemption.
+#  7.5 tests/fixtures/steer/mounting.ts (new): the captured 22-entry base
+#      family list so the delta is stated once (BASE_FAMILIES.length == 22;
+#      mounted == [...BASE_FAMILIES, "steer"] == 23).
+#  7.6 Suites: tests/structure/steer-mounting.test.ts (new — TC-STEER-060
+#      the prompt-set membership and count against the captured constant,
+#      every pin reading 23, the stale-22 scan, the production composer
+#      producing a steer handler with no runtime injected and answering over
+#      an empty store, root --help listing steer as the last family line
+#      with the rendered count equal to 23, every delivered family still
+#      present in order; TC-STEER-063 the isolation cells — the composed
+#      set equals base + steer with nothing else added, removed, or
+#      reordered, per-family help goldens byte-identical, the dispatch
+#      spot-checks, no steering row in any delivered family's help);
+#      tests/behaviour/steer-help.test.ts (new — TC-STEER-061 the five
+#      sections, --version, every counter 0, nothing created on disk, the
+#      subcommand-help form if the inventory serves it, no invented verbs);
+#      extensions to tests/behaviour/entrypoint-help.test.ts,
+#      tests/checks/help-guide-coverage.test.ts and tests/checks/
+#      reference-page-parity.test.ts (TC-STEER-062 the row and page with
+#      the row-count comparison and the deleted-row and missing---version
+#      mutation arms); tests/checks/steer-mutants.test.ts (extended — the
+#      TC-STEER-063/096 mounting arms: prompt-set entry without composition,
+#      composition without the root help entry, the absent page, the absent
+#      inventory row, the missing exit-code section, and the partial
+#      family-count move leaving one help suite at 22).
+#
+# Bound: AC-F8-1, AC-F8-2; DoD-12; F-8; DEC-9; section 8.5 (family count
+# 22 -> 23); RSK-8.
+# Test obligations: TC-STEER-060, 061, 062, 063, 096.
+#
+# Done when: PROMPT_REQUIRED_COMMANDS equals the captured 22-entry base plus
+# steer (exactly 23), composed unconditionally with a handler that answers
+# over an empty store; root --help lists steer among exactly 23 family
+# lines and steer --help answers at exit 0 with the five sections and zero
+# side effects; the reference page exists, mentions --help and --version,
+# carries the four subcommands, the exit codes, the drawn defaults, and the
+# no-session posture, and the coverage check reports zero failures with the
+# inventory row present; every family-count pin in the tree reads 23 and the
+# scan finds no stale 22 (the queue-ready control-matrix 22 excepted as a
+# declared non-count residual); no other family's composition, help text,
+# or count wording changed; TMPDIR=$PWD/tmp/tmpdir pnpm check is green.
+# ---------------------------------------------------------------------------
+# Phase 8 — Cross-cutting proofs, goldens, bookkeeping, changeset, and the
+#           full gate battery (release phase)
+# Commit: test(GH-298): determinism, purity and control proofs with gate battery
+#
+# COMMIT-TYPE RATIONALE: this phase ships the determinism/purity/write-
+# discipline/read-cost suites, the four committed goldens with their
+# regeneration paths, the non-vacuity controls, the planning-corpus
+# bookkeeping, and the five-package minor changeset. A `docs(...)` subject
+# would understate the test and release content, so the subject is
+# `test(...)`.
+#
+# Goal: the cross-cutting whole is proven by bytes — byte-identical
+# determinism over the committed goldens, purity and brand neutrality,
+# write discipline with fenced verified appends, the declared read set, and
+# the non-vacuity controls that prove every guarded property load-bearing —
+# the M2 corpus records delivery truth, the release artifact ships, and the
+# full battery is green at the delivered HEAD (AC-F10-1, AC-F10-2,
+# AC-NFR9-1; DoD-15/16/17).
+#
+# Obligations:
+#  8.1 Determinism and the four goldens (AC-F10-2, NFR-2, NFR-3):
+#      tests/behaviour/steer-determinism.test.ts (each of the four forms
+#      twice consecutively byte-identical in human text and data; the four
+#      permutations — reversed store rows, directory order, ledger order,
+#      ask order — byte-identical to the canonical run; unique identities
+#      across arrays and groups; the store byte-identical after every run;
+#      the wall-clock-stamp mutation failing); tests/golden/steer.test.ts
+#      extended with tests/fixtures/steer/golden/{send,read,complete}.
+#      {txt,json} CREATED in this change beside the phase-4 list pair, each
+#      with a regenerate.ts and a review-visible diff limited to the
+#      declared delta (GAP-T2 — no delivered golden regenerates).
+#  8.2 Purity and brand (AC-F10-1, NFR-6, DEC-12): tests/behaviour/
+#      steer-purity.test.ts (all four subcommands over a populated store —
+#      zero network/tracker/provider/spawn/timer/socket/LLM activity, zero
+#      session operations, no control-socket path, the synthetic brand token
+#      present and no product literal, writes confined to the repository's
+#      local state scope, zero $HOME-derived reads, the module import set
+#      free of network/tracker/credential-resolution/session-port
+#      dependencies while the registered-secrets record is present);
+#      extensions to tests/checks/privacy-literals.test.ts and
+#      tests/checks/forbidden-literals.test.ts over the steer modules and
+#      renders.
+#  8.3 Write discipline (AC-F9-2 store half, NFR-5, RSK-3):
+#      tests/behaviour/steer-write-discipline.test.ts (the per-subcommand
+#      append matrix over a REAL checkout — send 1, read exactly the
+#      transitions, complete 1 then 0; every append followed by the
+#      read-back verification in recorded call order; per-file hashes
+#      byte-identical for every pre-existing record; exactly the three
+#      steering kinds written and no other state store touched; the three
+#      mutation arms — dropped read-back, in-place rewrite, double outcome).
+#  8.4 Read cost (NFR-8, DM-6): tests/behaviour/steer-read-cost.test.ts
+#      (counting wrappers on every seam — read: 1 steering-store + 1
+#      phase-state + 1 ledger; list/complete: 1 store; send: 0 queue reads
+#      before the append; the asks join never adding a second ledger read
+#      at 0 and 12 asks; zero transport/tracker calls; the path audit
+#      confined to the invoking repository's state scope).
+#  8.5 Non-vacuity controls (DoD-16's detection-power half):
+#      tests/behaviour/steer-controls.test.ts (TC-STEER-091 the receipt
+#      completeness sweep over the whole fixture matrix with the
+#      non-vacuity floor and the null-ttl and landed-without-outcome
+#      mutants; TC-STEER-092 the silent-outcome set equality, the orphan
+#      message rendering queued, and the empty-versus-unreadable
+#      distinction; TC-STEER-093 the mid-phase mutants — in-progress
+#      treated as open, and a session resume/steer call on the landing
+#      path — plus the three-read drift cell and the phase-record-absence
+#      cell; TC-STEER-094 the artifact-less completion mutants and the
+#      receipt-first sweep; TC-STEER-095 the schema-fork mutants — the
+#      owner-specific field and the owner-only vocabulary member — with
+#      the duplicate-literal scan).
+#  8.6 Bookkeeping (delivered at this release boundary per milestone
+#      convention): doc/planning/oss-tooling/backlog.md M2-S5 progress
+#      marker; doc/planning/oss-tooling/status.md delivery snapshot;
+#      doc/planning/oss-tooling/cli-command-registry.md steer row (23
+#      families); doc/planning/oss-tooling/milestones/m2/entrypoint-delta.
+#      md observed root listing records 23 families; doc/planning/
+#      oss-tooling/milestones/m2/commands/steer.md status flips to
+#      delivered.
+#  8.7 Release artifact — .changeset/gh-298-steer-minor.md declares the
+#      five-package minor changeset (the fixed group of five publishables
+#      in .changeset/config.json; gh-297-board-minor precedent).
+#      JUSTIFICATION: the repository's lockstep release convention for a
+#      version_impact: minor change — it is NOT a spec or test-plan
+#      requirement and it changes no contract or acceptance surface. It is
+#      declared here, in the release phase, so it never gates an
+#      implementation phase.
+#  8.8 Final battery (AC-NFR9-1, NFR-9, NFR-10, DoD-17): run
+#      TMPDIR=$PWD/tmp/tmpdir pnpm check at the delivered HEAD and record
+#      the command and result in pm-notes `notes:`; run `git diff --check`;
+#      the phase-9 range gate ./scripts/lint-commit-range.sh --base
+#      main-tools is run by @pm and recorded (PASS, or SKIP only when no
+#      commitlint configuration exists; an ERROR is never recorded as a
+#      pass). TC-STEER-090 is verification-only: no new test code. PR
+#      creation against main-tools and staying open is lifecycle phase 11,
+#      not a plan phase; the PR is NEVER merged by the delivery.
+#  8.9 The new current-truth spec doc/spec/features/feature-steer.md is
+#      authored by lifecycle phase 7 (@doc-syncer), not by this phase. It
+#      is listed in this phase's scope ONLY so the commit primitive can
+#      stage it (an untracked file outside every declared plan scope is a
+#      stray and is never staged); scripts/checks/forbidden-literals.
+#      registry.json gains its user-facing-doc corpus row in the same
+#      staging commit (GH-297 precedent) so `pnpm check` runs the docs
+#      scope green.
+#
+# Bound: AC-F10-1, AC-F10-2, AC-NFR9-1; DoD-15 (consolidated), DoD-16
+# (roll-up), DoD-17; F-10; NFR-1..NFR-10; DEC-12; RSK-3, RSK-6.
+# Test obligations: TC-STEER-080, 081, 084, 085, 090, 091, 092, 093, 094,
+# 095.
+#
+# Done when: two runs over unchanged facts are byte-identical on all four
+# forms and every permutation preserves the bytes, with the four goldens
+# committed beside their regeneration paths and no delivered golden
+# touched; purity holds on every axis with the brand seam the only name
+# source and the registered-secrets record the only credential-adjacent
+# input; the write matrix is exactly as declared with verified appends and
+# the three mutants detected; the read set holds per subcommand with the
+# join reusing one ledger read; every control detects its mutant and the
+# sweeps carry their non-vacuity floors; the backlog, status, registry,
+# entrypoint-delta, and steer-page status state delivery truth; the
+# five-package minor changeset is present (repo convention, not a spec
+# requirement); the full gate battery is green and recorded; all eight
+# plan phases are complete with per-phase pm-notes evidence (dod_check
+# reads that evidence, not this file).
+# ---------------------------------------------------------------------------
+schemaVersion: delivery.plan.v1
+workItemRef: GH-298
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8]
+  escalationTriggers:
+    - shared-schema-forked-with-an-owner-specific-field-or-vocabulary-member
+    - error-allowlist-widened-beyond-the-three-declared-steer-codes
+    - appendix-d-count-pin-left-stale-or-four-way-agreement-broken
+    - landing-write-capped-by-the-payload-display-bound
+    - note-landing-while-a-phase-is-in-progress
+    - reported-landing-without-a-verified-outcome-append
+    - receipt-member-null-on-a-landed-note
+    - completion-recorded-without-an-artifact-ref
+    - family-count-moved-in-only-some-pinning-suites
+    - prompt-set-entry-landing-before-the-command-answers
+    - new-top-level-envelope-key-or-ok-command-field
+    - session-operation-network-timer-socket-or-product-literal-in-the-family
+    - asks-join-writing-the-ledger-or-re-deriving-ranking-or-defaults
+    - ttl-grammar-widened-beyond-positive-integer-unit-s-m-h-d
+    - current-truth-doc-edited-beyond-the-c-7-error-table-carrier
+    - pnpm-check-not-green-at-a-phase-boundary
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  - id: 1
+    title: "Steer contracts: the shared typed message record, closed vocabularies, filing subset, ttl grammar and bounds"
+    kind: delivery
+    summary: >-
+      Declare the shared message record schema (DM-1) with the four closed
+      vocabularies declared once as contract data, the S5 filing subset as a
+      declared restriction, the <positive-integer><unit> ttl grammar with the
+      30d maximum and 24h default, every DM-8 cap and bound, the priority
+      class map, and the delivery.steer.v1 identity with its four per-form
+      data shapes — before any writer exists.
+    scope:
+      files:
+        - packages/core/src/contracts/steer.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/index.ts
+        - tests/structure/steer-contract.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/steer.ts
+        role: producer
+
+  - id: 2
+    title: "Pure steer domain and steering state records: validation, ttl, aging, rank, boundary derivation, projections, asks join, renderers, fenced appends"
+    kind: delivery
+    summary: >-
+      Implement the pure domain over injected inputs — filing validation in
+      the fixed order with the one shared ttl parser and predicate, measured
+      aging, the shared derived rank with contiguous 1..N, the boundary-open
+      derivation over the delivered phase fold, derived lifecycle, the read
+      and queue-view projections, the asks-batch composition over the
+      delivered open-question view and PDR-0003 join, and the bounded
+      renderers with the asks-then-notes byte-guard order — plus the three
+      append-only steering record kinds over the injected state port with
+      fenced, verified appends.
+    scope:
+      files:
+        - packages/core/src/domain/steer.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/state/steering.ts
+        - packages/core/src/state/index.ts
+        - packages/core/src/index.ts
+        - tests/structure/steer-contract.test.ts
+        - tests/checks/steer-mutants.test.ts
+    # Consumes packages/core/src/contracts/steer.ts (phase 1 scope) read-only;
+    # no interaction is declared because the target is not in this phase's
+    # own scope — the ordering dependency is the phase sequence itself.
+
+  - id: 3
+    title: "Error-table registration: the steer domain kind, the exact 56-to-59 allowlist widening, and every Appendix D site moved in one commit"
+    kind: delivery
+    summary: >-
+      Register steer.unknown-id (user, exit 1, complete-only),
+      steer.credential-value-rejected (user, exit 1) and
+      steer.queue-unavailable (platform, exit 2) with the classifier
+      projection, widen RESERVED_TWO_SEGMENT_CODES by exact declaration to 59
+      in the sync check and its structural mirror, and move every Appendix D
+      count pin in the same commit — 143 entries, 142 delivered rows, 143
+      documented identities, the +109 sync arithmetic, the extended
+      no-leftover scan for 140/139/56/+106, and four-way
+      classifier/sync/mirror/carrier agreement over the in-boundary
+      feature-result-contract carrier.
+    scope:
+      files:
+        - packages/core/src/contracts/error-table.ts
+        - packages/cli/src/classify.ts
+        - scripts/checks/error-table-sync.ts
+        - tests/structure/error-table.test.ts
+        - tests/structure/dispatch-attempts-taxonomy.test.ts
+        - tests/structure/verify-gates-suite-map-contract.test.ts
+        - tests/checks/error-table-sync.test.ts
+        - tests/checks/steer-mutants.test.ts
+        - doc/spec/features/feature-result-contract.md
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/error-table.ts
+        role: producer
+
+  - id: 4
+    title: "Filing and the queue view: steer send and steer list with drawn defaults, the derived origin, aging, rank and the side-by-side lifecycle groups"
+    kind: delivery
+    summary: >-
+      Deliver the send and list subcommands over the edge composition and the
+      unconditional production composition — drawn defaults with the derived
+      origin block over real checkouts (bare null when unbound), value and
+      grammar refusals before any state read with zero persisted bytes, one
+      immutable uniquely-identified record per filing, measured aging and
+      the shared rank on every surface, and the queued/landed/expired groups
+      side by side with receipts, reasons and counted 8-row caps against the
+      committed list golden.
+    scope:
+      files:
+        - packages/core/src/contracts/steer.ts
+        - packages/cli/src/commands/steer.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - tests/fixtures/steer/harness.ts
+        - tests/fixtures/steer/cases.ts
+        - tests/behaviour/steer-send.test.ts
+        - tests/behaviour/steer-refusals.test.ts
+        - tests/behaviour/steer-records.test.ts
+        - tests/behaviour/steer-aging-rank.test.ts
+        - tests/behaviour/steer-list.test.ts
+        - tests/behaviour/steer-bounds.test.ts
+        - tests/golden/steer.test.ts
+        - tests/fixtures/steer/golden/list.txt
+        - tests/fixtures/steer/golden/list.json
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/steer.ts
+        role: consumer
+
+  - id: 5
+    title: "The boundary read point: batched landing with uncapped writes and complete receipts, ttl-elapsed outcomes, the closed decline, idempotence, the batched asks, and the payload bounds"
+    kind: delivery
+    summary: >-
+      Deliver steer read — both boundary-open routes and the closed decline
+      over the delivered phase fold, every due note landing in one batch in
+      shared-rank order with a receipt each and the landing write uncapped by
+      the 20-note display bound (25 due notes produce 25 receipts with 20
+      listed and the overflow counted), ttl-elapsed recorded as a classified
+      non-applied outcome with the course unchanged, idempotent repeat
+      reads, and asks[] composed verbatim from the delivered open-question
+      view with the PDR-0003 drawn-default join, measured age, coordinator
+      questions excluded and zero ledger writes.
+    scope:
+      files:
+        - packages/cli/src/commands/steer.ts
+        - packages/cli/src/edge.ts
+        - tests/fixtures/steer/phase-boundary.ts
+        - tests/fixtures/steer/ask-matrix.ts
+        - tests/fixtures/steer/bounds.ts
+        - tests/behaviour/steer-read-landing.test.ts
+        - tests/behaviour/steer-read-expiry.test.ts
+        - tests/behaviour/steer-read-boundary-closed.test.ts
+        - tests/behaviour/steer-read-idempotency.test.ts
+        - tests/behaviour/steer-asks.test.ts
+        - tests/behaviour/steer-bounds.test.ts
+
+  - id: 6
+    title: "Completion, the no-secrets guard and the classified error matrix: artifact-ref authority, registered-value refusal, and the exact 0/1/2 projection"
+    kind: delivery
+    summary: >-
+      Deliver steer complete with the first artifact-ref completion
+      authoritative and every receipt-less or artifact-less completion
+      refused before any write, the registered-secrets guard over note text,
+      ref and derived origin values with zero persisted bytes and no pattern
+      layer, and the total error matrix — steer.unknown-id scoped to
+      complete, steer read with a positional as the fallback.invocation
+      grammar refusal, steer.queue-unavailable withholding every subcommand
+      at exit 2 across the four store-failure modes, and the five-field
+      envelope on every outcome.
+    scope:
+      files:
+        - packages/cli/src/commands/steer.ts
+        - packages/cli/src/edge.ts
+        - tests/fixtures/steer/credentials.ts
+        - tests/behaviour/steer-complete.test.ts
+        - tests/behaviour/steer-credentials.test.ts
+        - tests/behaviour/steer-errors.test.ts
+        - tests/behaviour/steer-envelope.test.ts
+
+  - id: 7
+    title: "Mounting: steer as the 23rd prompt-required family with the atomic 22-to-23 count move, help entries, reference page and coverage row"
+    kind: delivery
+    summary: >-
+      Advertise the completed family exactly once — the prompt-set entry
+      after ceremony making 23 families against the captured 22-entry base
+      constant, root and family help with the five sections and no invented
+      verbs, the steer reference page mentioning --help and --version, the
+      coverage-inventory row — moving every family-count pin in the tree to
+      23 in the same commit with the repo-wide stale-22 scan green (the
+      queue-ready control-matrix 22 a declared non-count residual), proving
+      unconditional production composition answers over an empty store, and
+      changing no other family's composition or help.
+    scope:
+      files:
+        - packages/cli/src/help.ts
+        - packages/cli/src/help/prompt-required-commands.ts
+        - packages/cli/src/entrypoint.ts
+        - doc/planning/oss-tooling/milestones/m2/commands/steer.md
+        - scripts/checks/help-guide-coverage.ts
+        - tests/fixtures/help-guide/coverage.json
+        - tests/fixtures/steer/mounting.ts
+        - tests/structure/steer-mounting.test.ts
+        - tests/behaviour/steer-help.test.ts
+        - tests/behaviour/entrypoint-help.test.ts
+        - tests/structure/entrypoint-bin.test.ts
+        - tests/structure/board-mounting.test.ts
+        - tests/structure/events-production-composition.test.ts
+        - tests/structure/dispatch-attempts-composition.test.ts
+        - tests/structure/daemon-production-composition.test.ts
+        - tests/structure/cli-edge-seam.test.ts
+        - tests/behaviour/repos-help.test.ts
+        - tests/behaviour/board-help.test.ts
+        - tests/behaviour/events-mount-help.test.ts
+        - tests/behaviour/ceremony-cli.test.ts
+        - tests/checks/help-guide-coverage.test.ts
+        - tests/checks/reference-page-parity.test.ts
+        - tests/checks/steer-mutants.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/help/prompt-required-commands.ts
+        role: producer
+      - kind: contract-file
+        target: tests/fixtures/help-guide/coverage.json
+        role: consumer
+
+  - id: 8
+    title: "Cross-cutting proofs and release: the four goldens, determinism, purity, write discipline, read cost, non-vacuity controls, M2 bookkeeping, the changeset, and the full gate battery"
+    kind: delivery
+    summary: >-
+      Prove the cross-cutting whole by bytes — byte-identical repeats and
+      permutation independence over the four committed goldens with
+      regeneration paths, purity and brand neutrality with zero session or
+      network activity, the write matrix with fenced verified appends, the
+      declared read set with one ledger read, and the non-vacuity controls
+      for receipts, silence, the boundary, completion and the schema —
+      record M2-S5 delivery truth in the planning corpus, ship the
+      five-package minor changeset, and run TMPDIR=$PWD/tmp/tmpdir pnpm
+      check green at the delivered HEAD.
+    scope:
+      files:
+        - .changeset/gh-298-steer-minor.md
+        - tests/behaviour/steer-determinism.test.ts
+        - tests/golden/steer.test.ts
+        - tests/behaviour/steer-purity.test.ts
+        - tests/checks/privacy-literals.test.ts
+        - tests/checks/forbidden-literals.test.ts
+        - tests/behaviour/steer-write-discipline.test.ts
+        - tests/behaviour/steer-read-cost.test.ts
+        - tests/behaviour/steer-controls.test.ts
+        - doc/planning/oss-tooling/backlog.md
+        - doc/planning/oss-tooling/status.md
+        - doc/planning/oss-tooling/cli-command-registry.md
+        - doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md
+        - doc/planning/oss-tooling/milestones/m2/commands/steer.md
+        # Authored in lifecycle phase 7 (system_spec_update), not by this
+        # phase. Listed in plan scope only so the commit primitive can stage
+        # the new current-truth spec; an untracked file outside every
+        # declared scope is a stray and is never staged (commit-staging
+        # rule).
+        - doc/spec/features/feature-steer.md
+        - scripts/checks/forbidden-literals.registry.json
+      folders:
+        - tests/fixtures/steer/golden
+    interactions:
+      - kind: contract-file
+        target: doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md
+        role: producer
+      - kind: contract-file
+        target: doc/spec/features/feature-steer.md
+        role: consumer
+    doneArtifacts:
+      trackerTransition: "GH-298 delivery complete: all eight plan phases done, the shared message record and pure domain landed, the steer identities registered with every Appendix D site moved, send/list/read/complete delivered with receipts, expiry and artifact-ref completion, steer mounted as the 23rd family, determinism/purity/write-discipline/control proofs and the full gate battery recorded; PR-ready against main-tools and left open for human review (PR creation is lifecycle phase 11; never merged by the delivery)"
