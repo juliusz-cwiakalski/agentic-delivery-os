@@ -8,7 +8,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-16T13:55:51.143Z }
   delivery_planning: { started: null, completed: 2026-11-16T14:17:41.019Z }
   dor_check: { started: null, completed: 2026-11-16T14:23:18.197Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-16T16:13:11.559Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -168,176 +168,186 @@ notes:
       edit, no reopen warranted. Gate cleared at iteration 2 of 3."
     type: info
     date: "2026-11-16"
-  - text: "Plan phase 1 complete — action-registry contract declaration and the three
-      additive error rows (4 -> 7). Commit f22f390. Declared files: contracts/action.ts
-      (new), contracts/index.ts, error-table.ts, feature-result-contract.md, both new
-      structure suites, error-table.test.ts, content-inventory + inventory.json,
-      error-table-sync.test.ts, both code corpora. Disclosed shared-file edit: the
-      sync check's reserved two-segment allowlist lives in scripts/checks/error-table-sync.ts
-      (outside the phase file list) and had to grow by the three exact codes or the
-      two-way sync gate is red; the commit reported it as scope drift under the
-      plan-union rule. Gate results: pnpm typecheck clean; action-contract +
-      action-imports 25 pass / 0 fail; error-table + retro-contract + content-inventory
-      + error-table-sync 224 pass / 0 fail; error-table-sync script entries=143
-      documented=143 S1=443 S3=32 corpus=67, OK."
+  - text: "Plan phase 1 complete — action-registry contract declaration and the
+      three additive error rows (4 -> 7). Commit f22f390. Declared files:
+      contracts/action.ts (new), contracts/index.ts, error-table.ts,
+      feature-result-contract.md, both new structure suites,
+      error-table.test.ts, content-inventory + inventory.json,
+      error-table-sync.test.ts, both code corpora. Disclosed shared-file edit:
+      the sync check's reserved two-segment allowlist lives in
+      scripts/checks/error-table-sync.ts (outside the phase file list) and had
+      to grow by the three exact codes or the two-way sync gate is red; the
+      commit reported it as scope drift under the plan-union rule. Gate results:
+      pnpm typecheck clean; action-contract + action-imports 25 pass / 0 fail;
+      error-table + retro-contract + content-inventory + error-table-sync 224
+      pass / 0 fail; error-table-sync script entries=143 documented=143 S1=443
+      S3=32 corpus=67, OK."
     type: info
     date: "2026-11-16"
-  - text: "Plan phase 2 complete — validated action-registry boundary, all-or-nothing
-      filing gate, and the fixed WIP limit. Commit ad72ad68. Files: domain/action-filing.ts, domain/action-window.ts,
-      state/action-registry.ts (new); domain/index.ts, state/index.ts, core/src/index.ts;
-      tests/fixtures/action/ (store, builders, clock, seed seeder); action-filing +
-      action-wip-limit behaviour suites; state-scope, retro-contract, retro-imports,
-      content-inventory, inventory.json, packed-state. Disclosed contract-module
-      additions under the same phase: the data-only registry port and the record-shaped
-      file payload (contracts/action.ts, contracts/index.ts) so the state tier and the
-      domain engine compose without a tier violation. Gate results: pnpm typecheck
-      clean; action-filing 11 / 0; action-wip-limit 5 / 0; state-scope + retro-contract
-      + retro-imports + content-inventory + packed-state 44 / 0; ambient-globals
-      210 files clean; exports-parity 5 publishables pass."
+  - text: "Plan phase 2 complete — validated action-registry boundary,
+      all-or-nothing filing gate, and the fixed WIP limit. Commit ad72ad68.
+      Files: domain/action-filing.ts, domain/action-window.ts,
+      state/action-registry.ts (new); domain/index.ts, state/index.ts,
+      core/src/index.ts; tests/fixtures/action/ (store, builders, clock, seed
+      seeder); action-filing + action-wip-limit behaviour suites; state-scope,
+      retro-contract, retro-imports, content-inventory, inventory.json,
+      packed-state. Disclosed contract-module additions under the same phase:
+      the data-only registry port and the record-shaped file payload
+      (contracts/action.ts, contracts/index.ts) so the state tier and the domain
+      engine compose without a tier violation. Gate results: pnpm typecheck
+      clean; action-filing 11 / 0; action-wip-limit 5 / 0; state-scope +
+      retro-contract + retro-imports + content-inventory + packed-state 44 / 0;
+      ambient-globals 210 files clean; exports-parity 5 publishables pass."
     type: info
     date: "2026-11-16"
   - text: "Plan phase 3 complete — derived single-basis aging ladder and explicit
       two-plane closure. Commit 5377b80. Files: domain/action-aging.ts,
-      domain/action-closure.ts (new); domain/index.ts, core/src/index.ts; the aging
-      and closure behaviour suites; action-imports (basis single-home scan);
-      content-inventory + inventory.json. Gate results: pnpm typecheck clean;
-      action-aging 10 / 0 (matrix A-01..A-11); action-closure 9 / 0 (matrix
-      C-01..C-14 plus TC-038/TC-039); action-imports 9 / 0; ambient-globals 212
-      files clean."
+      domain/action-closure.ts (new); domain/index.ts, core/src/index.ts; the
+      aging and closure behaviour suites; action-imports (basis single-home
+      scan); content-inventory + inventory.json. Gate results: pnpm typecheck
+      clean; action-aging 10 / 0 (matrix A-01..A-11); action-closure 9 / 0
+      (matrix C-01..C-14 plus TC-038/TC-039); action-imports 9 / 0;
+      ambient-globals 212 files clean."
     type: info
     date: "2026-11-16"
   - text: "Plan phase 4 complete — registry damage classification and the doctor
       action-registry store verdict. Files: packages/cli/src/edge.ts (additive
-      readActionRegistryState plus the readActionState composition seam merged with
-      the retro store fact), action-store-boundary suite (new), doctor-state,
-      doctor-report, doctor-contract, content-inventory. contracts/doctor.ts is
-      unchanged (D-16 no-move: no evidence source id added; the store-fact shape
-      already admits the additive name), tests/golden/doctor-output.test.ts and
-      tests/fixtures/doctor/harness.ts are unchanged (D-15 no-move: the fake
-      harness default state carries no store facts, so no golden moved; the
-      production composition and the three-store detail are proven by the injected
-      doctor-state/report tests instead). Gate results: pnpm typecheck clean;
-      action-store-boundary 7 / 0; doctor-state + doctor-report 29 / 0; golden
-      doctor-output 8 / 0; doctor-contract + content-inventory 26 / 0."
+      readActionRegistryState plus the readActionState composition seam merged
+      with the retro store fact), action-store-boundary suite (new),
+      doctor-state, doctor-report, doctor-contract, content-inventory.
+      contracts/doctor.ts is unchanged (D-16 no-move: no evidence source id
+      added; the store-fact shape already admits the additive name),
+      tests/golden/doctor-output.test.ts and tests/fixtures/doctor/harness.ts
+      are unchanged (D-15 no-move: the fake harness default state carries no
+      store facts, so no golden moved; the production composition and the
+      three-store detail are proven by the injected doctor-state/report tests
+      instead). Gate results: pnpm typecheck clean; action-store-boundary 7 / 0;
+      doctor-state + doctor-report 29 / 0; golden doctor-output 8 / 0;
+      doctor-contract + content-inventory 26 / 0."
     type: info
     date: "2026-11-16"
   - text: "Plan phase 5 complete — the additive `retro action file|close|list` verb
       group, the help surface, the action goldens, and the M2 reference page.
       Commit to be recorded after the phase commit. Files: commands/retro.ts
-      (grammar + human renders), edge.ts (createRetroCommandRuntime now composes the
-      registry port and three action methods; newActionId/newClosureId seams),
-      doc/planning/oss-tooling/milestones/m2/commands/retro.md (new),
-      tests/fixtures/help-guide/coverage.json (M2 row added; M1 row byte-unchanged),
-      cli-edge-seam, retro-output, retro-collect, help-guide-coverage,
-      help-guide-coverage-mutants, reference-page-parity, tests/golden/retro/cases.json
-      (six action cases). Disclosed shared-file edits: packages/cli/src/help.ts (the
-      retro entry's usage/options plus one `retro action` entry — no prompt-required
-      family added, no dispatch entry count moved) and
-      scripts/checks/help-guide-coverage.ts (pageFor now maps retro to the M2 page,
-      mirroring reference-page-parity). Gate results: pnpm typecheck clean;
-      retro-output + retro-collect 16 / 0 (all action goldens plus the delivered
-      matrix); cli-edge-seam + action-contract + content-inventory 61 / 0;
-      help-guide-coverage + mutants + reference-page-parity 15 / 0;
-      help-guide-coverage script green."
+      (grammar + human renders), edge.ts (createRetroCommandRuntime now composes
+      the registry port and three action methods; newActionId/newClosureId
+      seams), doc/planning/oss-tooling/milestones/m2/commands/retro.md (new),
+      tests/fixtures/help-guide/coverage.json (M2 row added; M1 row
+      byte-unchanged), cli-edge-seam, retro-output, retro-collect,
+      help-guide-coverage, help-guide-coverage-mutants, reference-page-parity,
+      tests/golden/retro/cases.json (six action cases). Disclosed shared-file
+      edits: packages/cli/src/help.ts (the retro entry's usage/options plus one
+      `retro action` entry — no prompt-required family added, no dispatch entry
+      count moved) and scripts/checks/help-guide-coverage.ts (pageFor now maps
+      retro to the M2 page, mirroring reference-page-parity). Gate results: pnpm
+      typecheck clean; retro-output + retro-collect 16 / 0 (all action goldens
+      plus the delivered matrix); cli-edge-seam + action-contract +
+      content-inventory 61 / 0; help-guide-coverage + mutants +
+      reference-page-parity 15 / 0; help-guide-coverage script green."
     type: info
     date: "2026-11-16"
   - text: "Plan phase 6 complete — the board's additive ACTIONS section beside the
-      owner asks under the kept delivery.board.v1 identity. Commit to be recorded
-      after the phase commit. Files: contracts/owner-gate-sla.ts (BoardActionFact/
-      BoardActionRow, the sixth omission counter, the human actions cap),
-      contracts/index.ts (type exports), domain/owner-gate-sla.ts (per-repository
-      action projection, ACTIONS render after ASKS, declared section/drop orders),
-      cli/edge.ts (one bounded action-registry read per repository with the
-      count/limit disclosure; a failed read is disclosed, exit 0, no rows),
-      board-actions suite (new), board-sections (D-6), board-bounds and
-      board-parked (counter key), board-waiver-recording (D-5 key set),
-      board-contract (D-5 15->16), board-nonregression (D-10 additive proof),
-      fixtures board/sections.ts + harness.ts (D-28 actions inventory; one shape
-      per file). Goldens regenerated by the explicit commands: the committed
-      regenerate.ts for full-envelope/full-grid, and a one-off explicit bun run in
-      tmp/tmpdir (not committed) for envelope/grid under the same fixed gates. No
-      actions rows were added to the golden fixture (golden/full.ts is outside the
-      phase scope), so the goldens gain the empty ACTIONS section and the new
-      payload member only. tests/golden/board-grid.test.ts, board-help.test.ts and
-      fixtures/matrix.ts are unchanged (D-27 no-move: the legend/help text does not
-      enumerate sections, so no help assertion moved). Gate results: pnpm typecheck
-      clean; board-actions 10 / 0; the sixteen delivered board suites 93 / 0;
+      owner asks under the kept delivery.board.v1 identity. Commit to be
+      recorded after the phase commit. Files: contracts/owner-gate-sla.ts
+      (BoardActionFact/ BoardActionRow, the sixth omission counter, the human
+      actions cap), contracts/index.ts (type exports), domain/owner-gate-sla.ts
+      (per-repository action projection, ACTIONS render after ASKS, declared
+      section/drop orders), cli/edge.ts (one bounded action-registry read per
+      repository with the count/limit disclosure; a failed read is disclosed,
+      exit 0, no rows), board-actions suite (new), board-sections (D-6),
+      board-bounds and board-parked (counter key), board-waiver-recording (D-5
+      key set), board-contract (D-5 15->16), board-nonregression (D-10 additive
+      proof), fixtures board/sections.ts + harness.ts (D-28 actions inventory;
+      one shape per file). Goldens regenerated by the explicit commands: the
+      committed regenerate.ts for full-envelope/full-grid, and a one-off
+      explicit bun run in tmp/tmpdir (not committed) for envelope/grid under the
+      same fixed gates. No actions rows were added to the golden fixture
+      (golden/full.ts is outside the phase scope), so the goldens gain the empty
+      ACTIONS section and the new payload member only.
+      tests/golden/board-grid.test.ts, board-help.test.ts and fixtures/matrix.ts
+      are unchanged (D-27 no-move: the legend/help text does not enumerate
+      sections, so no help assertion moved). Gate results: pnpm typecheck clean;
+      board-actions 10 / 0; the sixteen delivered board suites 93 / 0;
       board-contract + board-nonregression + board-mounting + content-inventory
       24 / 0; board-full + board-grid goldens 10 / 0."
     type: info
     date: "2026-11-16"
   - text: "Plan phase 7 complete — follow-through producers: ceremony pass, report
-      fold, cross-level unity, handoff flow. Commit to be recorded after the phase
-      commit. Files: contracts/retro.ts (RetroFollowThroughEntry provenance plus
-      the registry-entry reader type), contracts/index.ts, domain/retro.ts (the
-      production fold reader merged inside the four delivered keys), domain/
-      ceremony-retro.ts (retroActionCeremonyFacts: verdicts only from the artifact
-      oracle), domain/index.ts + core/src/index.ts, cli/edge.ts (report/collect
-      follow-through readers plus the ceremony registry facts over one registry
-      read), action-follow-through/action-ceremony-handoff/action-cross-level
-      suites (new), ceremony-flow-retro-levels (additive), retro-report (D-12
+      fold, cross-level unity, handoff flow. Commit to be recorded after the
+      phase commit. Files: contracts/retro.ts (RetroFollowThroughEntry
+      provenance plus the registry-entry reader type), contracts/index.ts,
+      domain/retro.ts (the production fold reader merged inside the four
+      delivered keys), domain/ ceremony-retro.ts (retroActionCeremonyFacts:
+      verdicts only from the artifact oracle), domain/index.ts +
+      core/src/index.ts, cli/edge.ts (report/collect follow-through readers plus
+      the ceremony registry facts over one registry read),
+      action-follow-through/action-ceremony-handoff/action-cross-level suites
+      (new), ceremony-flow-retro-levels (additive), retro-report (D-12
       additive), retro-output (D-13 edge-composed fold case). Disclosed
       shared-file edit: packages/core/src/state/retro-registry.ts now skips the
       sibling action kinds (both begin with the shared `retro.` key prefix), or
       every action record classifies as a retro-registry malformation and the
       delivered report/doctor paths refuse; its exactly-three declaration is
       unchanged and a control asserts that. Gate results: pnpm typecheck clean;
-      action-follow-through + action-ceremony-handoff + action-cross-level 13 / 0;
-      ceremony-flow-retro-levels + retro-report + retro-output 21 / 0;
+      action-follow-through + action-ceremony-handoff + action-cross-level 13 /
+      0; ceremony-flow-retro-levels + retro-report + retro-output 21 / 0;
       ceremony-flow-retro control 5 / 0; retro-registry + retro-levels control
       12 / 0."
     type: info
     date: "2026-11-16"
   - text: "Plan phase 8 complete — the cross-cutting honesty battery. New suites:
-      action-determinism, action-bounds, action-write-discipline, action-read-cost,
-      action-performance, action-privacy, action-disclosure, action-audit,
-      action-hermetic, action-mutants (the 23 declared mutants (a)..(w), each
-      producing its prohibited observable through a temp mutant copy, plus the
-      unmutated control). Production adjustments the declared oracles required:
-      RetroActionListData gains marked `truncated`/`omitted` with the declared row
-      and byte caps (TC-ACTION-028), the closure reason bound is enforced naming
-      the field, and the action composition applies the redaction transform to
-      every recorded free text/ref (TC-ACTION-031, so a canary never reaches a
-      record). Disclosed shared-file/baseline edits, all additive: content-inventory
-      allowances for the new exports; the counter/baseline fixtures that pinned
-      140 rows now pin 143 (dispatch-attempts-taxonomy, ceremony-nonregression,
-      ceremony-contract, cross-repository-contract with the three additive codes
-      excluded from the pre-change byte comparison); the events state-additivity
-      baselines register action-registry.ts and the seven action constants; the
-      port-contract inventory fixture was regenerated by an explicit command with a
-      removals-detected guard (50 modules); the entrypoint alias help baseline was
-      regenerated by an explicit command and the diff is the single retro summary
-      line; scripts/checks/forbidden-literals.registry.json registers the new M2
-      retro page (also a Phase 9 declared file); the board human-cap pin gains the
-      actions key. Gate results: pnpm typecheck clean; the eight action honesty
-      suites 21 / 0; action-mutants 24 / 0; action-hermetic + privacy-literals +
-      ceremony-hermetic + exit-code-literals + forbidden-literals 113 / 0;
-      tests/behaviour + tests/structure 7896 pass / 0 fail (after the final
-      ceremony-contract count fix); ambient-globals 212 files clean;
-      error-table-sync entries=143 documented=143 S1=447 OK."
+      action-determinism, action-bounds, action-write-discipline,
+      action-read-cost, action-performance, action-privacy, action-disclosure,
+      action-audit, action-hermetic, action-mutants (the 23 declared mutants
+      (a)..(w), each producing its prohibited observable through a temp mutant
+      copy, plus the unmutated control). Production adjustments the declared
+      oracles required: RetroActionListData gains marked `truncated`/`omitted`
+      with the declared row and byte caps (TC-ACTION-028), the closure reason
+      bound is enforced naming the field, and the action composition applies the
+      redaction transform to every recorded free text/ref (TC-ACTION-031, so a
+      canary never reaches a record). Disclosed shared-file/baseline edits, all
+      additive: content-inventory allowances for the new exports; the
+      counter/baseline fixtures that pinned 140 rows now pin 143
+      (dispatch-attempts-taxonomy, ceremony-nonregression, ceremony-contract,
+      cross-repository-contract with the three additive codes excluded from the
+      pre-change byte comparison); the events state-additivity baselines
+      register action-registry.ts and the seven action constants; the
+      port-contract inventory fixture was regenerated by an explicit command
+      with a removals-detected guard (50 modules); the entrypoint alias help
+      baseline was regenerated by an explicit command and the diff is the single
+      retro summary line; scripts/checks/forbidden-literals.registry.json
+      registers the new M2 retro page (also a Phase 9 declared file); the board
+      human-cap pin gains the actions key. Gate results: pnpm typecheck clean;
+      the eight action honesty suites 21 / 0; action-mutants 24 / 0;
+      action-hermetic + privacy-literals + ceremony-hermetic +
+      exit-code-literals + forbidden-literals 113 / 0; tests/behaviour +
+      tests/structure 7896 pass / 0 fail (after the final ceremony-contract
+      count fix); ambient-globals 212 files clean; error-table-sync entries=143
+      documented=143 S1=447 OK."
     type: info
     date: "2026-11-16"
-  - text: "Plan phase 9 complete — documentation reconciliation, planning maintenance,
-      changeset, and release obligations. Commit to be recorded after the phase
-      commit. Files: the new feature-retro-action-registry page; additive
-      reconciliation of feature-retro-pipeline (the action verb group, the registry
-      producer inside the four report keys, the sibling boundary, the retired
-      'enforcement is later work' wording, the action doctor fact),
+  - text: "Plan phase 9 complete — documentation reconciliation, planning
+      maintenance, changeset, and release obligations. Commit to be recorded
+      after the phase commit. Files: the new feature-retro-action-registry page;
+      additive reconciliation of feature-retro-pipeline (the action verb group,
+      the registry producer inside the four report keys, the sibling boundary,
+      the retired 'enforcement is later work' wording, the action doctor fact),
       feature-ceremony-runner (handoff landed, artifact-oracle verdicts),
-      feature-board (the ACTIONS section, its caps, and the declared drop order),
-      feature-doctor (the additive action-registry store fact), doc/00-index and
-      doc/overview/glossary (six registry terms); planning maintenance in
-      backlog (M2-S10 progress marker), status (delivery snapshot), m2 README (S10
-      contract cell) and m2 contracts (the telemetry.v1 advisory edge plus the
-      registry's own contract pointer); the lockstep minor changeset over the five
-      publishables; doc-conformance requirements for the four reconciled pages and
-      the new page; scripts/checks/forbidden-literals.registry.json registers the
-      new user-facing page. Gate results: plan validate GH-287 verdict=valid
+      feature-board (the ACTIONS section, its caps, and the declared drop
+      order), feature-doctor (the additive action-registry store fact),
+      doc/00-index and doc/overview/glossary (six registry terms); planning
+      maintenance in backlog (M2-S10 progress marker), status (delivery
+      snapshot), m2 README (S10 contract cell) and m2 contracts (the
+      telemetry.v1 advisory edge plus the registry's own contract pointer); the
+      lockstep minor changeset over the five publishables; doc-conformance
+      requirements for the four reconciled pages and the new page;
+      scripts/checks/forbidden-literals.registry.json registers the new
+      user-facing page. Gate results: plan validate GH-287 verdict=valid
       readyForDevelopment=true; TMPDIR=$PWD/tmp/tmpdir pnpm check 9622 pass / 0
       fail (4 pre-existing skips) across 1208 files, with lint/format/typecheck/
-      boundaries/memory/prompt/help/exports-parity green; lint-commit-range --base
-      main-tools VERDICT PASS (15 commits, 0 offending); doc-distribution guard no
-      drift (95 in-scope docs); changesets-group OK (one fixed group of five,
-      testkit excluded); git diff --check clean."
+      boundaries/memory/prompt/help/exports-parity green; lint-commit-range
+      --base main-tools VERDICT PASS (15 commits, 0 offending); doc-distribution
+      guard no drift (95 in-scope docs); changesets-group OK (one fixed group of
+      five, testkit excluded); git diff --check clean."
     type: info
     date: "2026-11-16"
