@@ -207,7 +207,7 @@ schemaVersion: delivery.plan.v1
 workItemRef: GH-287
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
   escalationTriggers:
     - "A fourth `retro` error identity, a family/pattern widening, or a new domain kind would be required; the delivered four `retro` rows would change code, category, consequence, or projection (DEC-5, DEC-8)"
     - "The WIP limit would become per-window declared data or a recorded warning instead of the fixed contract-data value 3 enforced as a classified refusal (DEC-6)"
@@ -850,3 +850,72 @@ phases:
       mergeRequestUrl: "pull request for feat/GH-287/retro-action-registry targeting main-tools"
       pipelineId: "CI pipeline for the GH-287 delivery branch"
       trackerTransition: "in-review"
+
+  # ---------------------------------------------------------------------------
+  # Phase 10 — Review remediation: production action-identity wiring and the
+  # retro seeAlso page (code-review/review-iter-1.yaml, iteration 1 FAIL:
+  # F-1 [high, the FAIL driver], F-2 [low], F-5 [info]; F-3/F-4/F-6/F-7
+  # need no change).
+  #
+  # Goal: close the one blocking defect review found outside the disclosed
+  # set. F-1: the production retro composition (the `retro` runtime in
+  # packages/cli/src/production.ts ~3155) passes newRunId/newTraceId as UUID
+  # factories but never newActionId/newClosureId, so every one-shot CLI
+  # process files its action under the edge's per-process fallback
+  # `action-1` (edge.ts:5153, closure `closure-<n>` at :5171) — duplicate
+  # registry identities from the second filing onward, unrepairable under
+  # the append-only discipline. The fix generates and passes UUID-based
+  # newActionId/newClosureId (`globalThis.crypto.randomUUID()`) in the
+  # production retro composition, mirroring how newRunId/newTraceId are
+  # already passed; edge.ts is in scope only for the composition seam.
+  # Regression proof: a NEW declared test (tests/behaviour/
+  # action-production-identity.test.ts) mapped to review finding F-1 — NOT
+  # a TC-ACTION id; no TC id changes and the test plan's 39 ids stand. The
+  # test constructs the production composition (or invokes the real CLI
+  # composition) twice — two fresh runtimes against one store, filing two
+  # actions, injecting NO id factories — and asserts distinct stored action
+  # ids and no duplicate `retro action list` rows. Every delivered suite
+  # injects ids (tests/fixtures/action/run.ts always passes newActionId),
+  # which is exactly why none catches the gap.
+  #
+  # F-2: the four retro help entries (retro, retro/action, retro/collect,
+  # retro/report in packages/cli/src/help.ts ~551-606) point seeAlso at the
+  # frozen M1 snapshot page; they point at the M2 reference page
+  # doc/planning/oss-tooling/milestones/m2/commands/retro.md per the
+  # help-coverage mapping (GH-288 DEC-13). Output shape is unchanged
+  # beyond the seeAlso text: tests/fixtures/help-guide/coverage.json and
+  # the coverage/parity suites pin no seeAlso value (both retro pages stay
+  # registered) — they are re-run green as controls, NOT edited, so no
+  # suite file joins this scope.
+  #
+  # F-5 (info, bookkeeping): the verify-gates-suite-map error-table pin
+  # move 140 -> 143 is recorded as a declared baseline edit by a one-line
+  # pm-notes amendment the PM owns; this phase notes it, no code change
+  # and no pm-notes file in this scope.
+  #
+  # Gate (post-review code change: the battery is re-proven before the
+  # phase closes):
+  #   pnpm typecheck
+  #   bun test tests/behaviour/action-production-identity.test.ts
+  #   bun test tests/behaviour/action-{filing,wip-limit}.test.ts
+  #   bun test tests/checks/{help-guide-coverage,help-guide-coverage-mutants,reference-page-parity}.test.ts
+  #   bun run scripts/checks/help-guide-coverage.ts
+  #   TMPDIR="$PWD/tmp/tmpdir" pnpm check
+  #   PATH="$PWD/node_modules/.bin:$HOME/.bun/bin:$PATH" bun packages/cli/bin/jaiship.ts plan validate GH-287
+  #
+  # Exit: the two-runtime regression proves distinct production identities
+  #   with zero id-factory injection (F-1 closed); the four retro help
+  #   entries cite the M2 page with the coverage/parity controls green
+  #   (F-2 closed); the full `pnpm check` battery is green on the
+  #   post-review tree; the F-5 baseline-edit record stands in pm-notes.
+  # ---------------------------------------------------------------------------
+  - id: 10
+    title: "Review remediation: production action/closure id factories, M2 retro seeAlso, two-runtime identity regression"
+    kind: delivery
+    summary: "fix(cli): wire production action id factories and repoint the retro seeAlso page"
+    scope:
+      files:
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - packages/cli/src/help.ts
+        - tests/behaviour/action-production-identity.test.ts

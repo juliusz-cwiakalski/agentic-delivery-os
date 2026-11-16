@@ -352,3 +352,84 @@ notes:
       five, testkit excluded); git diff --check clean."
     type: info
     date: "2026-11-16"
+  - text: "system_spec_update (@doc-syncer): verification + completion pass over the
+      in-phase reconciliation — 21 doc files edited (feature pages retro-action-
+      registry/state-layer/retro-pipeline/ceremony-runner/board/owner-gate-sla/
+      result-contract/cli-entrypoint/doctor/peak-pausing; cross-cutting
+      nonfunctional/architecture-overview/glossary/00-index/ceremony-runner
+      guide; quality test-spec-state-layer; planning cli-command-registry + m2
+      README/commands trio). Fixed: seven-retro-rows truth mirrors, board
+      ACTIONS inventory/caps/drop order, surviving 'enforcement is later work'
+      in glossary, M2 reference broken links, malformed result-contract front
+      matter. Validation: doc-distribution no drift (95 docs), doc-conformance
+      battery 29/0 + broader set 81/0, error-table-sync 143/143, front-matter
+      parse 0 errors, git diff --check clean. Residual gaps: NONE. The 21 files
+      staged as scope drift under the plan-union rule, attributed to the
+      documentation phase (GH-291 precedent); commit 1dd656bf. Non-blocking
+      observation for reviewer: help.ts retro seeAlso derives from the M1
+      snapshot page while coverage/parity gates map retro to the M2 page."
+    type: info
+    date: "2026-11-16"
+  - text: "Review iteration 1: FAIL (code-review/review-iter-1.yaml). 7 findings — 0
+      critical / 1 high / 1 low / 5 info. F-1 (HIGH, correctness, FAIL driver):
+      production never injects newActionId/newClosureId id factories (cli/edge.ts
+      retro composition + production.ts) — every one-shot CLI process files as
+      action-1; duplicate identities from the second filing onward, empirically
+      reproduced against a real store; unrepairable under append-only; breaks
+      board zero-duplicate invariant; all suites inject ids so nothing catches
+      it. Fix: pass UUID generators in the production retro composition + a
+      two-runtime regression test. F-2 (LOW, docs): help.ts retro seeAlso points
+      at frozen M1 snapshot page; should point at the M2 page (one-line fix;
+      confirmed real defect, not the snapshot convention). F-3..F-7 INFO no
+      action (F-5: one-line pm-notes amendment — the verify-gates-suite-map
+      140->143 pin was an unnamed baseline edit). Everything else PASSED: 15/15
+      ACs, pinned scenarios, all DEC semantics, error-table sync, redaction,
+      drift honesty, conventions. Remediation: plan amendment via @plan-writer
+      (declared remediation phase: edge.ts + production.ts id-factory injection,
+      help.ts seeAlso M2 pointer, two-runtime regression test, pm-notes F-5
+      amendment), then @coder executes, doc-syncer re-verification, re-review at
+      iteration 2 (of max 3)."
+    type: info
+    date: "2026-11-16"
+  - text: "Retro: F-1 is the second consecutive delivery where a per-phase narrow
+      gate battery passed while the production composition carried the real
+      defect (GH-291 F-1 was attribution-substrate wiring; GH-287 F-1 is id-
+      factory wiring) — injected-id tests structurally cannot catch unwired
+      production seams. Standing lesson reinforced: every plan that adds an
+      injected factory/consumer must carry one declared test that constructs the
+      production composition (or invokes the real CLI twice) and asserts the
+      wiring, not just the injected behavior."
+    type: retro
+    date: "2026-11-16"
+  - text: "F-5 amendment (review iter 1): the verify-gates-suite-map contract test's
+      140 -> 143 row-count pin was a declared baseline edit of plan phase 8 (the
+      three additive retro action error rows) — recorded here since the phase-8
+      evidence note named only the sibling count pins. Remediation phase 10
+      declared in plan (edge.ts + production.ts id-factory wiring F-1; help.ts
+      seeAlso M2 pointer F-2; two-runtime regression test
+      action-production-identity.test.ts; full battery gate); plan re-validated
+      verdict=valid readyForDevelopment=true, phases 1-9 byte-untouched."
+    type: info
+    date: "2026-11-16"
+  - text: "Plan phase 10 complete (resumed across two session interruptions) — review
+      iter 1 remediation. Commit (this commit). F-1: production.ts retro
+      composition now generates and passes newActionId/newClosureId UUID
+      factories (mirrors newRunId/newTraceId); two-runtime regression test
+      tests/behaviour/action-production-identity.test.ts files two actions
+      through the production composition without injecting ids and asserts
+      distinct stored ids (1 pass / 0 fail). F-2: help.ts retro entries' seeAlso
+      repointed at the M2 reference page. Verification of interrupted work: both
+      fixes + test confirmed intact and correct; .ados-claude plugin tree fully
+      regenerated (45/45 files, byte-identical to HEAD, git status clean).
+      Narrow gates at final tree: typecheck green (6/6 + tests/types);
+      action-production-identity 1/0; action-filing + action-wip-limit 16/0;
+      help-guide-coverage + mutants + reference-page-parity 15/0;
+      help-guide-coverage script OK; plan validate verdict=valid
+      readyForDevelopment=true. Full battery: the interrupted session's 18:05-
+      18:38 pnpm check run is INVALID evidence — its TC-PLUGIN-001 step invokes
+      build-claude-plugin.sh and was killed mid-build by the session
+      interruption, leaving .ados-claude deleted; 9 of its 11 failures were
+      ENOENT fallout and the rest 5s-timeout contention artifacts. Authoritative
+      full battery re-runs at quality_gates with clean attribution (phase 9)."
+    type: info
+    date: "2026-11-16"

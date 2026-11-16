@@ -3164,6 +3164,8 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         clock: { nowMs, nowIso },
         newRunId: () => globalThis.crypto.randomUUID(),
         newTraceId: () => globalThis.crypto.randomUUID(),
+        newActionId: () => globalThis.crypto.randomUUID(),
+        newClosureId: () => globalThis.crypto.randomUUID(),
         newFenceToken,
       },
       ceremony: {

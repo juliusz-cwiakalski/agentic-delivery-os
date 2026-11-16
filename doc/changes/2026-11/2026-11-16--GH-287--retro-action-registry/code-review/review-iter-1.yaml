@@ -1,0 +1,224 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-287
+branch: feat/GH-287/retro-action-registry
+status: FAIL
+summary: >-
+  The GH-287 delivery is spec-faithful and disciplined: all 15 ACs are implemented
+  and testable with green suites (pinned scenarios SC-M2-S10-01/02 asserted), the
+  five-field gate, DEC-9 single-basis aging, DEC-11 two-plane closure, WIP limit 3,
+  the additive board ACTIONS section, the DEC-10 follow-through producers, and the
+  three additive error rows (143/143 two-way sync) all verified against the tree;
+  the two scope exclusions (DEC-1/DEC-2) are genuinely absent; every disclosed
+  deviation (error-table allowlist +3, help/coverage surface growth, sibling-kind
+  skip with the exactly-three control, phase-8 additive oracle requirements,
+  140-to-143 pins, four regenerated board goldens, the 21 doc files as
+  documentation-phase scope drift) checks out as claimed. Independent gate
+  verification: ~900 tests green across every new and drift-affected suite,
+  plan validate valid, error-table-sync/help-guide-coverage scripts OK,
+  doc-distribution clean, changesets-group OK, commit-range lint PASS (19/0).
+  One blocking production-composition defect was found outside the disclosed
+  set: the production CLI never injects the newActionId/newClosureId seams, so
+  every `retro action file` invocation files under the per-process fallback id
+  `action-1` — duplicate registry identities from the second filing onward
+  (empirically reproduced; the state ledger appends duplicate record keys
+  without refusal). One minor help-surface defect confirmed (retro seeAlso
+  points at the frozen M1 snapshot page). Remediation is small and localized.
+severity_breakdown:
+  critical: 0
+  high: 1
+  medium: 0
+  low: 1
+  info: 5
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: correctness
+    location: packages/cli/src/edge.ts:5153
+    message: >-
+      The production composition never wires the action identity seams. The edge
+      falls back to a per-process counter (`action-${actionSeq}` at edge.ts:5153,
+      `closure-${closureSeq}` at :5171), and packages/cli/src/production.ts:3155-3165
+      composes the retro runtime without `newActionId`/`newClosureId` while it does
+      pass `newRunId`/`newTraceId` as UUIDs. Every one-shot CLI process therefore
+      files its first (and only) action as `action-1`: from the second `retro action
+      file` invocation onward the registry holds duplicate identities. Empirically
+      reproduced against a real store — both appends land (the state ledger has no
+      duplicate-record-key refusal) and `list` renders two `action-1` rows. Duplicate
+      identities break the board's documented "0 duplicate identities per section"
+      invariant, make `close --action` ambiguous (`find` closes the first record
+      while closures match all records sharing the id), and are unrepairable under
+      the append-only discipline. All delivered tests inject ids (fixtures always
+      pass `newActionId`), so no suite catches the gap.
+    suggestion: >-
+      In production.ts pass `newActionId: () => globalThis.crypto.randomUUID()` and
+      `newClosureId: () => globalThis.crypto.randomUUID()` (mirroring newRunId) in
+      the retro composition; alternatively make the edge fallback collision-safe
+      (run-id-derived). Add a regression test that files through two fresh runtimes
+      (or the unaugmented production composition) against one store and asserts
+      distinct identities and no duplicate list rows.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: low
+    confidence: high
+    category: documentation
+    location: packages/cli/src/help.ts:551
+    message: >-
+      The retro help entries (retro, retro/action, retro/collect, retro/report at
+      help.ts:549-606) pass `"retro"` to `page()`, so the user-facing `--help`
+      "See also:" section renders the frozen M1 snapshot page
+      (doc/planning/oss-tooling/milestones/m1/commands/retro.md), which documents
+      only collect/report and none of the action verbs. Both gates map the retro
+      family to the M2 page (scripts/checks/help-guide-coverage.ts:41 and
+      tests/checks/reference-page-parity.test.ts:30, per GH-288 DEC-13: a family
+      documents itself in its own milestone's page root). This is the doc-syncer's
+      non-blocking observation, confirmed as a real minor defect — stale guidance,
+      not an accepted M1-snapshot convention: the M1 page is a byte-unchanged
+      snapshot, and parity only checks existence+registration, so no gate catches it.
+    suggestion: >-
+      Point the four retro entries at `pageIn(M2_REFERENCE_ROOT, "retro")`, and
+      optionally extend reference-page-parity to assert each family entry's
+      seeAlso equals pageFor(command) so the three encodings cannot diverge again.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/cli/src/commands/retro.ts:264
+    message: >-
+      No production writer exists for due-date lapse events: the CLI grammar exposes
+      no flag and only the programmatic draft can carry `dueDateLapses`, so the
+      second-miss escalation arm of AC-F3-1 (DEC-9) is unreachable through the
+      shipped CLI. Consistent with spec, plan, and test plan, which all treat lapse
+      events as recorded data (TC-ACTION-007 seeds them) and declare no recorder —
+      an operational gap to record, not a deviation.
+    suggestion: >-
+      Record a future seam candidate (a lapse-recording surface or a derived
+      lapse projection at read time) for a follow-up change; no action required
+      in this change.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/edge.ts:5124
+    message: >-
+      Production filing never performs a live tracker corroboration read;
+      `trackerCorroboration` always defaults to the disclosed `"unverified"` state
+      (the seam is injectable only). Spec §8.4/§12 are satisfied by the disclosed
+      state and the hermeticity [OUT] row in the test plan §1.2 — the entry is
+      never silently trusted — but the `"confirmed"` state is currently unreachable
+      in production.
+    suggestion: >-
+      Acceptable as delivered; if live corroboration at filing is wanted later,
+      compose the delivered read-only tracker seam into the file path in a
+      follow-up change.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-5
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: tests/structure/verify-gates-suite-map-contract.test.ts:149
+    message: >-
+      Drift-declaration completeness nit. The phase-8 commit also moved the
+      error-table identity pin 140→143 in verify-gates-suite-map-contract.test.ts,
+      which the pm-notes list of count-pin suites (dispatch-attempts-taxonomy,
+      ceremony-nonregression, ceremony-contract, cross-repository-contract) does
+      not name — same declared class (D-3/D-24 count moves), under-disclosed only.
+      Relatedly, the plan's phase-8 comment says "tests and fixtures only" while
+      the commit carries four production files; that deviation IS disclosed in
+      pm-notes and was verified additive and oracle-required (NFR-2 truncation
+      caps, closure-reason bound, redaction transform).
+    suggestion: >-
+      Add the fifth file to the pm-notes drift disclosure for the record; no code
+      change required.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-6
+    severity: info
+    confidence: medium
+    category: correctness
+    location: packages/core/src/domain/action-filing.ts:259
+    message: >-
+      The WIP-limit check is read-then-append rather than one fenced transaction:
+      `fileRetroAction` reads the registry before acquiring the append fence, so
+      two concurrent CLI invocations into the same window can both pass the check
+      and both append, exceeding the limit. Consistent with the delivered
+      single-writer convention (NFR-5 requires fenced appends, not
+      transactional check-and-append) and unreachable in one-shot single-user use.
+    suggestion: >-
+      Note as a known concurrency bound of the delivered pattern; a future change
+      could re-check inside the fence if multi-writer filing ever becomes a
+      supported mode.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-7
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/cli/src/commands/retro.ts:225
+    message: >-
+      The action verb group shares one declared flag set across file/close/list,
+      so a flag belonging to a sibling verb parses and is silently ignored (e.g.
+      `retro action list --owner X`). The grammar is pinned as a group and the
+      behavior is harmless, but per-verb flag validation would tighten the
+      invocation-grammar discipline.
+    suggestion: >-
+      Optional follow-up: validate flags per verb in a future change; no action
+      required now.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-16T17:55:00Z
+next_step: CALL_CODER
+remediation_note: >-
+  Pure-writer review: no plan edit or commit performed — the PM owns appending the
+  remediation phase and transitions. Suggested remediation scope for the PM:
+  (1) F-1 [blocking]: wire newActionId/newClosureId (crypto.randomUUID) into the
+  production retro composition (packages/cli/src/production.ts:3155) plus a
+  two-runtime regression test asserting distinct identities; (2) F-2 [should]:
+  repoint the four retro help entries' seeAlso at the M2 page and optionally pin
+  seeAlso == pageFor(command) in reference-page-parity; (3) F-5: one-line pm-notes
+  drift-disclosure amendment. F-3/F-4/F-6/F-7 need no code change.
+evidence_note: >-
+  Independently verified green: action-filing/wip-limit/aging/closure (35/0),
+  follow-through/ceremony-handoff/cross-level/retro-report/board-actions (29/0),
+  mutants+error-table-sync+parity+coverage+error-table (237/0), the eight honesty
+  suites + store-boundary + board/doctor goldens (46/0), edge/structure suites
+  (148/0), checks battery incl. doc-conformance/planning-truth/milestone/
+  hermetic/privacy-literals (98/0), the sixteen delivered board suites (92/0);
+  scripts error-table-sync (143/143) and help-guide-coverage OK; plan validate
+  GH-287 verdict=valid; doc-distribution no drift (95 docs); changesets-group OK;
+  lint-commit-range --base main-tools PASS (19 commits, 0 offending). The full
+  tests/behaviour+tests/structure re-run could not complete in-session under load
+  (two 10-min timeouts); coverage was closed instead on the complete per-suite
+  verification above, matching the recorded phase-8/phase-9 gate results
+  (7896/0 and 9622/0).
