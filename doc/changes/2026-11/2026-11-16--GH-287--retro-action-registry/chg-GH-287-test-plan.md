@@ -1,13 +1,13 @@
 ---
 id: chg-GH-287-test-plan
-status: Proposed
+status: Updated
 created: 2026-11-16T18:00:00Z
-last_updated: 2026-11-16T18:00:00Z
+last_updated: 2026-11-16T20:30:00Z
 owners: [engineering]
 service: "delivery-os retro learning plane (retro action registry, follow-through enforcement, and board actions surface)"
 labels: [change, m2, retro, board, learning-plane]
 version_impact: minor
-summary: "Traceable verification of M2-S10 retro action registry and follow-through: five-field filing with the verification artifact refused all-or-nothing with `retro.action-incomplete` naming the missing field (SC-M2-S10-01 pinned, `actions[]` stays empty), the full action record (owner, closed verb vocabulary, measurable outcome, real tracker entry, due date, verification artifact, outcome verifier with a non-null delayed metric window, rollback condition), aging derived deterministically on the injected clock (nudge at 14 days, escalation at 30 days or a second missed due date, threshold-1 and threshold+1 rendering differently), explicit closure only — done with artifact, deprioritized with reason, superseded with successor — with the artifact-versus-outcome distinction (SC-M2-S10-02 pinned: `data.artifactClosure == \"closed\"`, `data.outcomeClosure == \"open\"` with a non-null verification window) and `retro.closure-incomplete` for every incomplete attempt, the fixed contract-data WIP limit of 3 enforced as a `retro.wip-limit-exceeded` filing refusal naming window/count/limit with no row landed, the additive board actions surface beside the owner asks following the delivered shared-source/bounded/counted-omission/byte-guard/deterministic patterns, artifact-verified follow-through as the asserted first phase of every R4+ retro and the retro report's follow-through fold gaining its producer, the three additive exact `retro` error rows in two-way sync (4->7, no family widening), and the NFR battery (byte-identical determinism with zero model calls, bounded output, aging exactness, offline hermeticity with no skip-as-pass, fenced-write discipline, read cost, privacy, error-table binding)."
+summary: "Traceable verification of M2-S10 retro action registry and follow-through: five-field filing with the verification artifact refused all-or-nothing with `retro.action-incomplete` naming the missing or contract-non-conforming field (SC-M2-S10-01 pinned, `actions[]` stays empty), the full action record (owner, closed verb vocabulary, measurable outcome, real tracker entry, due date, verification artifact, outcome verifier with a non-null delayed metric window, rollback condition), aging derived deterministically on the injected clock from the one pinned basis — time open since the recorded filing timestamp — with due dates feeding only the miss counter (nudge at 14 days, escalation at 30 days or a second missed due date, threshold-1 and threshold+1 rendering differently), explicit closure only — done with artifact closing the artifact plane, deprioritized with reason and superseded with successor closing both planes in the one decision — with the artifact-versus-outcome distinction (SC-M2-S10-02 pinned: `data.artifactClosure == \"closed\"`, `data.outcomeClosure == \"open\"` with a non-null verification window), `retro.closure-incomplete` for every incomplete attempt and for the already-closed-plane state conflict naming the plane and its existing closure, the fixed contract-data WIP limit of 3 enforced as a `retro.wip-limit-exceeded` filing refusal naming window/count/limit with no row landed, the additive board actions surface beside the owner asks following the delivered shared-source/bounded/counted-omission/byte-guard/deterministic patterns, artifact-verified follow-through as the asserted first phase of every R4+ retro and the retro report's follow-through fold gaining its producer with no new top-level report key, the three additive exact `retro` error rows in two-way sync (4->7, no family widening), and the NFR battery (byte-identical determinism with zero model calls, bounded output, aging exactness, offline hermeticity with no skip-as-pass, fenced-write discipline, read cost, privacy, error-table binding)."
 links:
   change_spec: ./chg-GH-287-spec.md
   implementation_plan: ./chg-GH-287-plan.yaml   # authored in phase 4; not yet present (GAP-1)
@@ -22,13 +22,13 @@ This change turns retro follow-through from a rendered list into enforced, recor
 
 Five properties are load-bearing and each is tested independently so weakening one cannot pass behind another.
 
-**First, filing is all-or-nothing and the refusal is mechanical.** A filing missing any contract member — including the verification artifact, the measurable outcome, the outcome verifier window, or the rollback condition — lands nothing, exits 1, and names the missing field from `retro.action-incomplete` (AC-F1-1, the pinned SC-M2-S10-01). A filing that carries all five fields but violates a contract *rule* (team-owned owner, unverifiable verb, placeholder tracker entry) is refused the same way with no fourth error identity invented (AC-F1-2, DEC-5). `actions[]` is asserted empty after every refusal, not merely "unchanged by convention".
+**First, filing is all-or-nothing and the refusal is mechanical.** A filing missing any contract member — including the verification artifact, the measurable outcome, the outcome verifier window, or the rollback condition — lands nothing, exits 1, and names the missing field from `retro.action-incomplete` (AC-F1-1, the pinned SC-M2-S10-01). A field that is present but non-conforming to its contract *rule* (team-owned owner, unverifiable verb, placeholder tracker entry) is incomplete for filing purposes: the same refusal identity applies, names the offending field, and invents no fourth identity (AC-F1-2, DEC-8). `actions[]` is asserted empty after every refusal, not merely "unchanged by convention".
 
-**Second, aging is derived and exact.** Nudge at 14 days, escalation at 30 days or on a second missed due date, evaluated on the injected clock at the exact day boundary — 13 days renders `current`, 14 renders `nudged`, 29 renders `nudged`, 30 renders `escalated` — with zero ambient clock reads and no stored aging state (AC-F3-1, NFR-3, DEC-3). The aging basis is asserted from *one* declared constant so a fixture that mixes filing-date and due-date bases fails.
+**Second, aging is derived and exact on one pinned basis.** Nudge at 14 days open since the recorded filing timestamp, escalation at 30 days open or on a second missed due date (two due-date lapse events; due dates feed only the miss counter), evaluated on the injected clock at the exact day boundary — 13 days renders `current`, 14 renders `nudged`, 29 renders `nudged`, 30 renders `escalated` — with zero ambient clock reads and no stored aging state (AC-F3-1, NFR-3, DEC-3, DEC-9). The aging basis is pinned to time open since filing and asserted from *one* declared constant so a fixture that mixes filing-date and due-date bases fails.
 
-**Third, closure is explicit-only on two planes.** Every closure without an explicit decision or the route's justification is refused with `retro.closure-incomplete` and transitions nothing (AC-F4-1); a done-with-artifact closure records `artifactClosure == "closed"` and leaves `outcomeClosure == "open"` with a non-null verification window (AC-F4-2, the pinned SC-M2-S10-02); an elapsed window without an evidence-citing decision never closes the outcome plane (AC-F4-3, DEC-4). The WIP limit is a refusal, never a warning: a fourth filing into a full window exits 1 with `retro.wip-limit-exceeded` naming window, count and limit, and the window's count/limit are disclosed wherever the window is reported (AC-F5-1, DEC-6).
+**Third, closure is explicit-only on two planes.** Every closure without an explicit decision or the route's justification is refused with `retro.closure-incomplete` and transitions nothing (AC-F4-1); a done-with-artifact closure records `artifactClosure == "closed"` and leaves `outcomeClosure == "open"` with a non-null verification window (AC-F4-2, the pinned SC-M2-S10-02); an elapsed window without an evidence-citing decision never closes the outcome plane (AC-F4-3, DEC-4). The deprioritized and superseded routes close both planes in the one explicit decision — the recorded reason or superseding action reference is each plane's justification, and the verification window is mooted by the decision, not by time (AC-F4-4, DEC-11) — while a closure decision targeting an already-closed plane is a state conflict: refused under the same identity, naming the plane and its existing closure, with no second closure record (AC-F4-5, DEC-11). The WIP limit is a refusal, never a warning: a fourth filing into a full window exits 1 with `retro.wip-limit-exceeded` naming window, count and limit, and the window's count/limit are disclosed wherever the window is reported (AC-F5-1, DEC-6).
 
-**Fourth, the surfaces stay honest and additive.** The board's actions surface renders beside the asks with every row's identity, repository, owner, level, age and aging state, in deterministic order, under the delivered per-repository caps, counted omissions, and byte-guard drop order (AC-F6-1, NFR-2) — byte-identically on repeat renders (AC-F6-2). Every R4+ retro's *first* phase is artifact-verified follow-through over registry records, with verdicts assigned from artifact evidence and never from an owner claim (AC-F7-1); the same registry, contract, aging and closure discipline serve every level with no per-level fork (AC-F7-2). Nothing delivered is removed or re-semanted.
+**Fourth, the surfaces stay honest and additive.** The board's actions surface renders beside the asks with every row's identity, repository, owner, level, age and aging state, in deterministic order, under the delivered per-repository caps, counted omissions, and byte-guard drop order (AC-F6-1, NFR-2) — byte-identically on repeat renders (AC-F6-2). Every R4+ retro's *first* phase is artifact-verified follow-through over registry records, with verdicts assigned from artifact evidence and never from an owner claim (AC-F7-1); the same registry, contract, aging and closure discipline serve every level with no per-level fork (AC-F7-2). The registry becomes the producer behind the retro report's delivered `followThrough[]` fold without adding a top-level report key (DEC-10). Nothing delivered is removed or re-semanted.
 
 **Fifth, the battery.** Determinism and purity, bounded output, fenced-write discipline, read cost, privacy, offline hermeticity (skips never count as a pass), error-table two-way sync, and a disabling-mutant meta-suite over every honesty rule above run as one cross-cutting battery, and the delivered suites whose pinned assertions legitimately change are declared up front in §4.4 rather than discovered mid-delivery.
 
@@ -36,15 +36,16 @@ This is a design and verification map, not an execution claim: no suite was run 
 
 ### 1.1 In Scope
 
-- Filing gate over the five-field contract plus the verification artifact: all-or-nothing, refusal names the missing field, no action row created, `actions[]` unchanged (F-1, AC-F1-1, AC-F1-2, DM-1, SC-M2-S10-01).
-- Owner rule (named agent role or human; team-owned and ownerless refused), closed verifiable-verb vocabulary (add, remove, change, test, deploy; "review"/"improve" refused), real tracker entry, due date (F-1, AC-F1-2).
+- Filing gate over the five-field contract plus the verification artifact: all-or-nothing, refusal names the missing or offending field, no action row created, `actions[]` unchanged (F-1, AC-F1-1, AC-F1-2, DM-1, SC-M2-S10-01, DEC-8).
+- Owner rule (named agent role or human; team-owned and ownerless refused), closed verifiable-verb vocabulary (add, remove, change, test, deploy; "review"/"improve" refused), real tracker entry, due date (F-1, AC-F1-2, DEC-8).
 - Full action record: five fields, verification artifact reference, retro level, improvement window, filing date from the injected clock, outcome verifier with a non-null delayed metric window, rollback condition (F-2, AC-F2-1, DM-1).
-- Aging ladder derived at read/render time: 14-day nudge, 30-day escalation, second-missed-due-date escalation, exact boundary behaviour, no stored mutability, no scheduler (F-3, AC-F3-1, DM-2, NFR-3, DEC-3, NG-6).
+- Aging ladder derived at read/render time from the one pinned basis — time open since the recorded filing timestamp: 14-day nudge, 30-day escalation, second-missed-due-date escalation (two due-date lapse events, due dates feeding only the miss counter), exact boundary behaviour, no stored mutability, no scheduler (F-3, AC-F3-1, DM-2, NFR-3, DEC-3, DEC-9, NG-6).
 - Explicit closure: three artifact-closure routes (done + artifact, deprioritized + reason, superseded + successor), `retro.closure-incomplete` refusals naming what is missing, no transition on refusal (F-4, AC-F4-1, DM-3).
-- Artifact-closure versus outcome-closure separation; pinned `artifactClosure`/`outcomeClosure` states with the non-null verification window; outcome closure explicit-only, never from elapsed time or artifact closure (F-4, AC-F4-2, AC-F4-3, DM-3, SC-M2-S10-02, DEC-4).
+- Artifact-closure versus outcome-closure separation; pinned `artifactClosure`/`outcomeClosure` states with the non-null verification window; the done route closing the artifact plane only; the deprioritized and superseded routes closing both planes in the one decision with the window mooted by the decision, not by time (F-4, AC-F4-2, AC-F4-3, AC-F4-4, DM-3, SC-M2-S10-02, DEC-4, DEC-11).
+- Already-closed-plane state conflict: a closure decision targeting a closed plane refused exit 1 under `retro.closure-incomplete` naming the plane and its existing closure, with no second closure record (F-4, AC-F4-5, DM-3, DEC-11).
 - Improvement WIP limit: fixed contract-data value 3, refusal at the limit with `retro.wip-limit-exceeded` naming window/count/limit, no row landed, deprioritize/supersede as the deliberate slot-freeing routes, count/limit disclosure (F-5, AC-F5-1, DM-5, DEC-6).
 - Board actions surface beside the owner asks: per-row identity, repository, owner, level, age, aging state; deterministic order; per-repository caps with counted omissions; byte-guard participation; shared-source discipline; read-only posture (F-6, AC-F6-1, AC-F6-2, DM-4, NFR-2, RSK-4).
-- Follow-through enforcement: registry as the producer behind the delivered ceremony runner's asserted follow-through-first phase (verdicts applied/partial/violated-with-consequence from artifact evidence) and behind `retro report`'s follow-through fold (verified/unverified/unknown), across every retro level (F-7, AC-F7-1, AC-F7-2, §8.5).
+- Follow-through enforcement: registry as the producer behind the delivered ceremony runner's asserted follow-through-first phase (verdicts applied/partial/violated-with-consequence from artifact evidence) and behind `retro report`'s delivered `followThrough[]` fold (verified/unverified/unknown), across every retro level, with no new top-level report key (F-7, AC-F7-1, AC-F7-2, DEC-10, §8.5).
 - Ceremony handoff → filing flow: declared actions hand off to filing; an unfiled handoff never passes as applied; a verified-empty registry is an explicit success (§19, RSK-3).
 - Own validated state-store boundary with additive `retro.action` / `retro.action-closure` record kinds under `retro.actions:` / `retro.action-closures:` prefixes, delivered retro-registry boundary unchanged, doctor store verdict (DEC-7, DM-1, DM-3, §10).
 - Three additive exact two-segment error rows under the delivered `retro` domain kind, machine/documented/classifier two-way sync, no family or pattern widening, delivered four rows unchanged (AC-N8-1, NFR-8, DEC-5).
@@ -62,18 +63,18 @@ This is a design and verification map, not an execution claim: no suite was run 
 - [OUT] Automatic or implied closure on any plane (NG-7), team-owned/ownerless actions (NG-8), backlog or import of historical actions (NG-9), cross-repository action aggregation beyond delivered board selection forms (NG-10), memory-promotion/lesson-lifecycle/decision-retro-loop changes (NG-11).
 - [OUT] New event topics/kinds or MCP tools (§7.2). No test expects one.
 - [OUT] Real tracker access at filing (NFR-4). Tracker corroboration is exercised through the delivered read integration's injected seam only, with the unreachable case asserted as disclosed state.
-- [GAP-1 — implementation-plan mapping — PENDING] `chg-GH-287-plan.yaml` is authored in `delivery_planning` (phase 4) and does not exist yet. It must map `TC-ACTION-001..037` onto phases without reshaping any TC's behavior, oracle, fixture, identity, exit, bound, or AC/NFR mapping, and it must declare the plan-level refinements named in GAP-4..GAP-6 before delivery starts. Any later plan that changes a pinned contract reopens this test plan.
+- [GAP-1 — implementation-plan mapping — PENDING] `chg-GH-287-plan.yaml` is authored in `delivery_planning` (phase 4) and does not exist yet. It must map `TC-ACTION-001..039` onto phases without reshaping any TC's behavior, oracle, fixture, identity, exit, bound, or AC/NFR mapping, and it must declare the plan-level refinements named in GAP-4 and GAP-6 before delivery starts. Any later plan that changes a pinned contract reopens this test plan.
 - [GAP-2 — delivery-bound, non-blocking: registry fixture inventory] The committed fixtures carry retro evidence, board facts, ceremony notes, doctor state, and a state harness (`tests/fixtures/state/harness.ts`), but no action-registry fixture set. Delivery adds `tests/fixtures/action/` (action row builders, closure row builders, window/limit fixtures, aging clock plan, registry store seeder composing the artifact-boundary declaration) with one shape per file and provenance, plus the board fixture's actions inventory in `tests/fixtures/board/sections.ts`.
 - [GAP-3 — delivery-bound, non-blocking: NFR-6 is runner-dependent] The 50 ms warm-median board budget depends on runner capacity. The CI oracle is **bounded work** (one bounded registry read per invocation, pure projection, no per-row re-reads, no network) plus a soft local budget in the `tests/behaviour/board-performance.test.ts` pattern; a reference measurement is recorded in §10 and never reported as a passing threshold.
 - [GAP-4 — delivery-bound, non-blocking: exact command grammar and data keys] DEC-7 leaves the exact verb grammar as a plan-level refinement (`retro action file|close|list` is illustrative) and the spec pins only `data.artifactClosure`, `data.outcomeClosure`, `error.code` values, and the `actions[]` emptiness. Tests therefore assert through declared contract constants plus the pinned literals; the grammar and the list surface's data key for `actions[]` are pinned at delivery with the contract suite (TC-ACTION-036) and never re-derived in each test.
-- [GAP-5 — delivery-bound, non-blocking: contract-rule refusal identity for AC-F1-2] The spec requires "a classified error naming the offending field" for a team owner, an unverifiable verb, or a placeholder tracker entry, while DEC-5 declares exactly three identities and forbids a fourth. This plan binds those refusals to `retro.action-incomplete` (the only filing identity) and adds no new code (see OQ-T3); if the DoR concludes a distinct identity is intended, the spec reopens before delivery and this TC gains a row.
+- [GAP-5 — RESOLVED: contract-rule refusal identity for AC-F1-2 — spec-pinned by DEC-8] The spec (v1.2) now pins that a field present but non-conforming to its contract rule — a team owner, an unverifiable verb, a placeholder tracker entry — is incomplete for filing purposes: the filing is refused with the one filing identity `retro.action-incomplete`, naming the offending field, and no fourth identity is introduced. This plan binds those refusals to that identity in matrix R-09..R-11 and asserts the offending field is named; nothing was invented and no spec change remains open. Closing OQ-T3.
 - [GAP-6 — delivery-bound, non-blocking: render prose and section label] The exact human label and wording of the board actions surface (a fifth label beside `ASKS` or a sub-block under it) and the refusal/detail prose are not spec-pinned. Assertions use the declared contract constants and goldens; the surface's placement beside the asks and its additive nature are asserted regardless (see OQ-T4).
 
 ## 2. References
 
-- **Change specification**: [chg-GH-287-spec.md](./chg-GH-287-spec.md) — 13 ACs (AC-F1-1, AC-F1-2, AC-F2-1, AC-F3-1, AC-F4-1..3, AC-F5-1, AC-F6-1..2, AC-F7-1..2, AC-N8-1), F-1..F-7, DM-1..DM-5, NFR-1..NFR-8, DEC-1..DEC-7, RSK-1..RSK-7, NG-1..NG-11, §14 OQ-1..OQ-3 (resolved), Appendix B (pinned scenarios verbatim), Appendix C (concept constraints).
+- **Change specification**: [chg-GH-287-spec.md](./chg-GH-287-spec.md) — v1.2; 15 ACs (AC-F1-1, AC-F1-2, AC-F2-1, AC-F3-1, AC-F4-1..5, AC-F5-1, AC-F6-1..2, AC-F7-1..2, AC-N8-1), F-1..F-7, DM-1..DM-5, NFR-1..NFR-8, DEC-1..DEC-11, RSK-1..RSK-7, NG-1..NG-11, §14 OQ-1..OQ-3 (resolved), Appendix B (pinned scenarios verbatim), Appendix C (concept constraints).
 - **Ticket**: GH-287 — M2-S10: Retro action registry and follow-through (M2) (https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/287). Its six ACs decompose per spec §17: incomplete filing refused (AC-F1-1, AC-F1-2), R4+ opens artifact-verified (AC-F7-1), aging visible on the board (AC-F3-1, AC-F6-1), no closure without decision + artifact/reason (AC-F4-1), actions carry outcome verifier and rollback condition (AC-F2-1), artifact-versus-outcome closure distinguished (AC-F4-2, AC-F4-3).
-- **PM record**: [chg-GH-287-pm-notes.yaml](./chg-GH-287-pm-notes.yaml) — DEC-5/DEC-6/DEC-7 adjudications and the plan-writer ripples (exact verb grammar, payload schema ids, error-row metadata, doctor verdict name, help-guide coverage + M2 reference page), DEC-1/DEC-2 scope exclusions, delivery conventions (`TMPDIR=$PWD/tmp/tmpdir pnpm check`, PR targets `main-tools`), and the host PATH/`pnpm -r build` transport fact.
+- **PM record**: [chg-GH-287-pm-notes.yaml](./chg-GH-287-pm-notes.yaml) — DEC-5/DEC-6/DEC-7 adjudications and the plan-writer ripples (exact verb grammar, payload schema ids, error-row metadata, doctor verdict name, help-guide coverage + M2 reference page), DEC-1/DEC-2 scope exclusions, delivery conventions (`TMPDIR=$PWD/tmp/tmpdir pnpm check`, PR targets `main-tools`), and the host PATH/`pnpm -r build` transport fact. The reopened-specification pins DEC-8..DEC-11 are recorded in the spec's decision log and document history (v1.2).
 - **Implementation plan**: `./chg-GH-287-plan.yaml` — authored in phase 4; not yet present (GAP-1).
 - **Testing strategy**: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — layers, module→test mapping, `bun:test`, permanent-suite invariant rules, `pnpm check` aggregate gate, invariant-test authoring rules.
 - **TypeScript rules**: [.ai/rules/typescript.md](../../../../.ai/rules/typescript.md) — strict typing, purity, ports and adapters, the error contract, `bun:test` authoring.
@@ -94,12 +95,14 @@ This is a design and verification map, not an execution claim: no suite was run 
 | AC ID | Criterion (abbreviated) | TC ID(s) | Status |
 |-------|--------------------------|----------|--------|
 | AC-F1-1 | **Pinned SC-M2-S10-01** — an action missing its measurable outcome is refused: exit 1, `error.code == "retro.action-incomplete"` naming `measurableOutcome`, `actions[]` stays empty, no row created | TC-ACTION-001, TC-ACTION-002, TC-ACTION-027, TC-ACTION-033 | Covered |
-| AC-F1-2 | All five fields present but a contract rule violated (team owner, unverifiable verb "review"/"improve", placeholder tracker entry) → classified refusal naming the offending field, no row created | TC-ACTION-003, TC-ACTION-005, TC-ACTION-035 | Covered |
+| AC-F1-2 | All five fields present but a contract rule violated (team owner, unverifiable verb "review"/"improve", placeholder tracker entry) → the one filing identity `retro.action-incomplete`, naming the offending field, no row created, no fourth identity (DEC-8) | TC-ACTION-003, TC-ACTION-005, TC-ACTION-035 | Covered |
 | AC-F2-1 | A conforming filing records owner (agent role or human), closed-vocabulary verb, measurable outcome, real tracker entry, due date, verification artifact reference, outcome verifier with a non-null delayed metric window, and rollback condition | TC-ACTION-004 | Covered |
-| AC-F3-1 | An open action past a threshold (14 days past the aging basis, 30 days, or a second missed due date) carries the nudge/escalated state on evaluation and on the board; a day-before-threshold action renders the lower state | TC-ACTION-006, TC-ACTION-007, TC-ACTION-008, TC-ACTION-017, TC-ACTION-033 | Covered |
+| AC-F3-1 | An open action past a threshold (14 days open since the recorded filing timestamp — the pinned basis, 30 days open, or a second missed due date: two due-date lapse events) carries the nudge/escalated state on evaluation and on the board; a day-before-threshold action renders the lower state (DEC-9) | TC-ACTION-006, TC-ACTION-007, TC-ACTION-008, TC-ACTION-017, TC-ACTION-033 | Covered |
 | AC-F4-1 | A closure attempt without an explicit decision, or lacking the route's justification (artifact / reason / successor), is refused: exit 1, `error.code == "retro.closure-incomplete"` naming what is missing, no transition | TC-ACTION-009, TC-ACTION-012, TC-ACTION-033, TC-ACTION-035 | Covered |
 | AC-F4-2 | **Pinned SC-M2-S10-02** — artifact complete + outcome window open → `artifactClosure == "closed"`, `outcomeClosure == "open"` with a non-null verification window | TC-ACTION-010, TC-ACTION-012 | Covered |
 | AC-F4-3 | Artifact closure closed + elapsed verification window + no explicit evidence-citing outcome decision → `outcomeClosure` stays open (never from elapsed time or artifact closure alone) | TC-ACTION-011, TC-ACTION-013 | Covered |
+| AC-F4-4 | Closing on the deprioritized or superseded route closes **both** `artifactClosure` and `outcomeClosure` in the one explicit decision — the recorded reason or the superseding action reference carried on the closure record is that plane's justification, the verification window is mooted by the decision and not by time, and elapsed time closes no plane on any route (DEC-11) | TC-ACTION-038, TC-ACTION-012 | Covered |
+| AC-F4-5 | A closure decision targeting an already-closed plane is refused as a state conflict: exit 1, `error.code == "retro.closure-incomplete"` naming the plane and its existing closure decision — distinct in detail from the missing-justification refusal — and no second closure record is created (DEC-11) | TC-ACTION-039, TC-ACTION-035 | Covered |
 | AC-F5-1 | A filing into a window at its declared WIP limit (3 open) is refused: exit 1, `error.code == "retro.wip-limit-exceeded"` naming window, open count and limit; no row created, excess never recorded | TC-ACTION-014, TC-ACTION-015, TC-ACTION-016, TC-ACTION-033 | Covered |
 | AC-F6-1 | The board renders the actions surface beside the owner asks with each row's identity, repository, owner, level, age and aging state, in deterministic order with counted omissions under the delivered bounds | TC-ACTION-017, TC-ACTION-019, TC-ACTION-020, TC-ACTION-021, TC-ACTION-033 | Covered |
 | AC-F6-2 | Two successive board invocations over unchanged stored actions render byte-identical machine data and human screen | TC-ACTION-018, TC-ACTION-027 | Covered |
@@ -114,13 +117,13 @@ This is a design and verification map, not an execution claim: no suite was run 
 | "an action without all five fields cannot be filed" | TC-ACTION-001, TC-ACTION-002, TC-ACTION-003, TC-ACTION-005 | The filing matrix R-01..R-11: every member absent in turn, every contract rule violated in turn, each with a paired accepted control and a zero-row store assertion |
 | "every R4+ retro opens with artifact-verified follow-through" | TC-ACTION-022, TC-ACTION-023, TC-ACTION-025 | Asserted first-phase position on the delivered declaration; verdict assignment driven by an artifact oracle where the owner claim contradicts the artifact; retro report fold fed by registry records; ceremony handoff → filing flow |
 | "aging is visible on the board" | TC-ACTION-006, TC-ACTION-007, TC-ACTION-017 | Injected-clock boundary ladder plus the board row's age/aging-state assertion in the actions surface |
-| "no action closes without an explicit decision and artifact or reason" | TC-ACTION-009, TC-ACTION-012, TC-ACTION-013 | Closure matrix C-01..C-10 asserting the refusal identity, the missing member, and an unchanged store |
+| "no action closes without an explicit decision and artifact or reason" | TC-ACTION-009, TC-ACTION-012, TC-ACTION-013, TC-ACTION-038, TC-ACTION-039 | Closure matrix C-01..C-14 asserting the refusal identity, the missing member, the both-plane effects of each route, the state-conflict refusal, and an unchanged store |
 | "actions carry outcome verifiers and rollback conditions" | TC-ACTION-004 | Record-shape assertion of the non-null delayed metric window and the rollback condition at filing |
-| "closure distinguishes artifact closure from outcome closure" | TC-ACTION-010, TC-ACTION-011, TC-ACTION-013 | The pinned two-plane states plus the explicit-only outcome rule and the no-implicit-closure mutants |
+| "closure distinguishes artifact closure from outcome closure" | TC-ACTION-010, TC-ACTION-011, TC-ACTION-013, TC-ACTION-038 | The pinned two-plane states, the explicit-only outcome rule on the done route, the both-plane closure of the deprioritized/superseded routes, and the no-implicit-closure mutants |
 
-**Capability coverage** (no capability unlinked): F-1 → TC-ACTION-001..005; F-2 → TC-ACTION-004; F-3 → TC-ACTION-006..008, 017; F-4 → TC-ACTION-009..013; F-5 → TC-ACTION-014..016; F-6 → TC-ACTION-017..021; F-7 → TC-ACTION-022..025, 037.
+**Capability coverage** (no capability unlinked): F-1 → TC-ACTION-001..005; F-2 → TC-ACTION-004; F-3 → TC-ACTION-006..008, 017; F-4 → TC-ACTION-009..013, 038, 039; F-5 → TC-ACTION-014..016; F-6 → TC-ACTION-017..021; F-7 → TC-ACTION-022..025, 037.
 
-All 13 acceptance criteria map to at least one automated case and none carries a TODO. Both pinned milestone scenarios are dedicated cases with their verbatim assertions: SC-M2-S10-01 in TC-ACTION-001 and SC-M2-S10-02 in TC-ACTION-010.
+All 15 acceptance criteria map to at least one automated case and none carries a TODO. Both pinned milestone scenarios are dedicated cases with their verbatim assertions: SC-M2-S10-01 in TC-ACTION-001 and SC-M2-S10-02 in TC-ACTION-010; the two acceptance criteria added by the reopened specification (AC-F4-4, AC-F4-5) are dedicated cases in TC-ACTION-038 and TC-ACTION-039.
 
 ### 3.2 Interface Coverage (API-#, EVT-#, DM-#)
 
@@ -128,18 +131,18 @@ The specification declares no HTTP endpoint (§8.1: N/A) and adds no event topic
 
 | Interface / data model | Description | TC ID(s) | Status |
 |------------------------|-------------|----------|--------|
-| CLI — filing surface (`action` verb group in the `retro` family, DEC-7) | Invocation-gated entry points over the registry; grammar-additive inside the delivered family, no new family | TC-ACTION-001..005, 014, 036 |
-| CLI — closure surface | Explicit closure invocation carrying route, decision reference and justification | TC-ACTION-009..013 |
-| CLI — list/report surface exposing `actions[]` | The recorded actions array the pinned scenario asserts empty; per-row identity, owner, level, window, age, aging state, closure planes | TC-ACTION-001, 002, 016, 017 |
-| DM-1 — Action record (`retro.action`) | Five fields, verification artifact, level, window, filing date, outcome verifier with delayed metric window, rollback condition | TC-ACTION-004, 034 |
-| DM-2 — Aging state (derived) | `current` / `nudged` / `escalated` computed at read/render time from recorded dates, never stored as mutable state | TC-ACTION-006, 007, 008, 017 |
-| DM-3 — Closure record (`retro.action-closure`) | Route, decision reference, required justification, `artifactClosure` and `outcomeClosure` planes with the non-null window while outcome closure is open | TC-ACTION-010, 011, 012, 013, 034 |
-| DM-4 — Actions board rows | Per-row identity, repository, action reference, owner, level, age, aging state under the payload's declared identity with counted omissions | TC-ACTION-017, 019, 021 |
-| DM-5 — Window WIP disclosure | Declared limit (3), open count, disclosure wherever the window is reported | TC-ACTION-014, 015, 016 |
-| Consumed — ceremony declared-actions handoff (§8.5, NG-4 unchanged) | The registry is the receiving counterpart; declarations, agendas and note schema unchanged | TC-ACTION-025, 037 |
-| Produced — retro report `followThrough[]` fold | The registry becomes the production reader; entries carry action, verdict (`verified`/`unverified`/`unknown`), artifact reference | TC-ACTION-023, 037 |
-| Storage — own validated boundary (`retro.actions:`, `retro.action-closures:`) | Fenced appends, verified reads, `state.*` classification for damage, doctor store verdict | TC-ACTION-029, 034 |
-| External — tracker read corroboration (§8.4) | Read-only corroboration of referenced entries; unreachable tracker keeps the entry as recorded data with its corroboration state disclosed | TC-ACTION-003, 034 |
+| CLI — filing surface (`action` verb group in the `retro` family, DEC-7) | Invocation-gated entry points over the registry; grammar-additive inside the delivered family, no new family | TC-ACTION-001..005, 014, 036 | Covered |
+| CLI — closure surface | Explicit closure invocation carrying route, decision reference and justification; a repeat decision on a closed plane is a state-conflict refusal | TC-ACTION-009..013, 038, 039 | Covered |
+| CLI — list/report surface exposing `actions[]` | The recorded actions array the pinned scenario asserts empty; per-row identity, owner, level, window, age, aging state, closure planes | TC-ACTION-001, 002, 016, 017 | Covered |
+| DM-1 — Action record (`retro.action`) | Five fields, verification artifact, level, window, filing date, outcome verifier with delayed metric window, rollback condition | TC-ACTION-004, 034 | Covered |
+| DM-2 — Aging state (derived) | `current` / `nudged` / `escalated` computed at read/render time from the recorded filing timestamp (the pinned basis), never stored as mutable state | TC-ACTION-006, 007, 008, 017 | Covered |
+| DM-3 — Closure record (`retro.action-closure`) | Route, decision reference, required justification (reason or superseding action reference), `artifactClosure` and `outcomeClosure` planes with the non-null window while outcome closure is open; done closes the artifact plane, deprioritized/superseded close both planes in the one decision | TC-ACTION-010, 011, 012, 013, 034, 038, 039 | Covered |
+| DM-4 — Actions board rows | Per-row identity, repository, action reference, owner, level, age, aging state under the payload's declared identity with counted omissions | TC-ACTION-017, 019, 021 | Covered |
+| DM-5 — Window WIP disclosure | Declared limit (3), open count, disclosure wherever the window is reported | TC-ACTION-014, 015, 016 | Covered |
+| Consumed — ceremony declared-actions handoff (§8.5, NG-4 unchanged) | The registry is the receiving counterpart; declarations, agendas and note schema unchanged | TC-ACTION-025, 037 | Covered |
+| Produced — retro report `followThrough[]` fold | The registry becomes the production reader; entries carry action, verdict (`verified`/`unverified`/`unknown`), artifact reference and registry provenance; no new top-level report key (DEC-10) | TC-ACTION-023, 037 | Covered |
+| Storage — own validated boundary (`retro.actions:`, `retro.action-closures:`) | Fenced appends, verified reads, `state.*` classification for damage, doctor store verdict | TC-ACTION-029, 034 | Covered |
+| External — tracker read corroboration (§8.4) | Read-only corroboration of referenced entries; unreachable tracker keeps the entry as recorded data with its corroboration state disclosed | TC-ACTION-003, 034 | Covered |
 
 ### 3.3 Non-Functional Coverage (NFR-#)
 
@@ -147,7 +150,7 @@ The specification declares no HTTP endpoint (§8.1: N/A) and adds no event topic
 |-----|--------------------------|----------|--------|
 | NFR-1 | Byte-identical repeat renders for identical stored actions, injected clock and injected run id; zero model calls on any render or verification path | TC-ACTION-018, TC-ACTION-027 | Covered |
 | NFR-2 | Machine `data` ≤ 65,536 UTF-8 bytes; per-repository row caps with counted omissions (`truncated` + per-section counters); byte-guard drop order participation; free-form text (measurable outcome, closure reason) bounded | TC-ACTION-019, TC-ACTION-028 | Covered |
-| NFR-3 | Nudge at exactly 14 days, escalation at 30 days or the second missed due date, evaluated on the injected clock at the day boundary; threshold−1 and threshold+1 differ; zero ambient clock reads | TC-ACTION-006, TC-ACTION-007, TC-ACTION-008, TC-ACTION-027 | Covered |
+| NFR-3 | Nudge at exactly 14 days open since the recorded filing timestamp, escalation at 30 days open or the second missed due date (two due-date lapse events), evaluated on the injected clock at the day boundary; threshold−1 and threshold+1 differ; zero ambient clock reads | TC-ACTION-006, TC-ACTION-007, TC-ACTION-008, TC-ACTION-027 | Covered |
 | NFR-4 | 100% of new tests offline on committed fixtures and fixture-seeded stores; zero live tracker, network, credential, or harness-store access; no spawned processes; a skip never counts as a pass | TC-ACTION-032, TC-ACTION-025 | Covered |
 | NFR-5 | Every mutation is an explicit invocation-gated fenced append; zero background writes; no update-in-place; no delete; zero writes on read/render paths | TC-ACTION-029, TC-ACTION-034 | Covered |
 | NFR-6 | Board actions projection composes within the delivered board budget (50 ms warm median, I/O excluded), one bounded registry read per invocation, no per-row re-reads | TC-ACTION-030 | Covered by bounded work in CI plus a non-CI reference measurement (GAP-3) |
@@ -156,22 +159,21 @@ The specification declares no HTTP endpoint (§8.1: N/A) and adds no event topic
 
 ### 3.4 Gap Check (coverage-matrix integrity)
 
-- **Uncovered ACs**: none. All 13 are mapped; none carries a TODO.
+- **Uncovered ACs**: none. All 15 are mapped; none carries a TODO.
 - **Orphan TCs**: none. Every TC names at least one AC, DM, or NFR in §5.1 and §5.2.
 - **Uncovered NFRs**: none. NFR-6's wall-clock half is reference-only (GAP-3); its CI-verifiable bounded-work half is asserted.
 - **Uncovered DMs**: none (DM-1..DM-5 all mapped).
-- **Gap status**: GAP-1 (plan mapping) is phase-4-pending; GAP-2 (fixture inventory), GAP-3 (NFR-6 measurement), GAP-4 (grammar/data keys), GAP-5 (AC-F1-2 identity binding), GAP-6 (render prose and section label) are delivery-bound and non-blocking, each with a named oracle and owner. No AC or assertion carries a TODO.
-- **Intentional duplicate coverage**: AC-F1-1 spans four TCs because the pinned single-field refusal, the exhaustive member matrix, the determinism/purity of the refusal path, and the mutant guard fail independently. AC-F3-1 spans five because the boundary arithmetic, the second-miss rule, the single-basis rule, the board rendering, and the mutant guard are separately falsifiable. AC-F6-1 spans five because the surface's presence, its bounds, its shared source, its never-silence behaviour, and the mutant guard fail independently. AC-F7-1 spans four because the first-phase assertion, the fold producer, the handoff flow, and the mutant guard are distinct guarantees.
-- **Spec traceability assertions that cannot be proven as written** (recorded, not silently repaired):
-  - `AC-F1-1` and `AC-F5-1` list `NFR-8` in their Linked column, while §9 defines NFR-8 as error-table binding. The AC behaviors themselves are bound here to F-1/F-2 (and DM-1/DM-5); the error-table obligation is covered by AC-N8-1 and TC-ACTION-026. See OQ-T5 — this looks like a numbering slip, not a missing requirement, and no requirement is added or dropped by not reinterpreting it.
+- **Gap status**: GAP-1 (plan mapping) is phase-4-pending; GAP-5 (AC-F1-2 identity binding) is resolved — the spec pins it in DEC-8 and this plan binds matrix R-09..R-11 to it, so nothing is delivery-bound or open there; GAP-2 (fixture inventory), GAP-3 (NFR-6 measurement), GAP-4 (grammar/data keys) and GAP-6 (render prose and section label) are delivery-bound and non-blocking, each with a named oracle and owner. No AC or assertion carries a TODO.
+- **Intentional duplicate coverage**: AC-F1-1 spans four TCs because the pinned single-field refusal, the exhaustive member matrix, the determinism/purity of the refusal path, and the mutant guard fail independently. AC-F3-1 spans five because the boundary arithmetic, the second-miss rule, the single-basis rule, the board rendering, and the mutant guard are separately falsifiable. AC-F4-4 spans two because the both-plane route effects and their recorded provenance are asserted once on the route matrix and once on a dedicated case with its own mutant. AC-F6-1 spans five because the surface's presence, its bounds, its shared source, its never-silence behaviour, and the mutant guard fail independently. AC-F7-1 spans four because the first-phase assertion, the fold producer, the handoff flow, and the mutant guard are distinct guarantees.
+- **Spec traceability assertions that cannot be proven as written**: none remain. The two previously recorded slips are closed in spec v1.2: the stray `NFR-8` links were removed from AC-F1-1 and AC-F5-1 (their Linked columns now read F-1 and F-1/F-2/DEC-6), so OQ-T5 is closed and no requirement was added or dropped. `AC-F1-1`/`AC-F5-1` behaviors stay bound to F-1/F-2 (and DM-1/DM-5) here, and the error-table obligation to AC-N8-1 and TC-ACTION-026.
 - **Spec-named behavior bound to an existing AC/NFR** (no dedicated AC by design):
 
 | Behavior | Spec source | Bound AC/NFR | Where |
 |---|---|---|---|
-| Every refusal names the missing member; none is generic | §10 | AC-F1-1, AC-F4-1, AC-F5-1 | TC-ACTION-001, 002, 003, 009, 014, 035 |
+| Every refusal names the missing member or the offending field; none is generic | §10 | AC-F1-1, AC-F1-2, AC-F4-1, AC-F4-5, AC-F5-1 | TC-ACTION-001, 002, 003, 009, 014, 035, 039 |
 | Aging states, window counts and WIP disclosures render in-band; a dropped/clamped row is always counted | §10 | AC-F3-1, AC-F5-1, AC-F6-1, NFR-2 | TC-ACTION-016, 019, 035 |
 | Every invocation lands its delivered command-audit record; an audit-write failure is a diagnostic and never changes the outcome | §10 | AC-F6-1, NFR-5 | TC-ACTION-035 |
-| Closure records carry decision reference and justification, so provenance is inspectable from records alone | §10 | AC-F4-1, DM-3 | TC-ACTION-012 |
+| Closure records carry decision reference and justification, so provenance is inspectable from records alone | §10 | AC-F4-1, AC-F4-4, DM-3 | TC-ACTION-012, 038 |
 | Doctor gains an action-registry store verdict | §10, DEC-7 | NFR-5, DM-1/DM-3 | TC-ACTION-034 |
 | An empty registry is a verified-empty success, never an error or fabricated content | §19 | AC-F7-1 | TC-ACTION-023, 025 |
 | Unreachable tracker keeps the referenced entry as recorded data with corroboration state disclosed | §8.4 | AC-F1-2, AC-F7-1 | TC-ACTION-003, 034 |
@@ -188,7 +190,7 @@ The specification declares no HTTP endpoint (§8.1: N/A) and adds no event topic
 | Error identity and sync | `bun test tests/checks tests/structure`; `bun run scripts/checks/error-table-sync.ts` | `tests/checks/error-table-sync.test.ts`, `tests/structure/error-table.test.ts`, `tests/fixtures/result/code-corpora/*.json` (update) | TC-ACTION-026, TC-ACTION-036 |
 | Behaviour — filing | `bun test tests/behaviour` | `tests/behaviour/action-filing.test.ts` (new) | TC-ACTION-001..005 |
 | Behaviour — aging | `bun test tests/behaviour` | `tests/behaviour/action-aging.test.ts` (new) | TC-ACTION-006..008 |
-| Behaviour — closure | `bun test tests/behaviour` | `tests/behaviour/action-closure.test.ts` (new) | TC-ACTION-009..013 |
+| Behaviour — closure | `bun test tests/behaviour` | `tests/behaviour/action-closure.test.ts` (new) | TC-ACTION-009..013, 038, 039 |
 | Behaviour — WIP limit | `bun test tests/behaviour` | `tests/behaviour/action-wip-limit.test.ts` (new) | TC-ACTION-014..016 |
 | Behaviour — board surface | `bun test tests/behaviour` | `tests/behaviour/board-actions.test.ts` (new); `tests/behaviour/board-{sections,asks,aging,bounds,byte-guard,determinism,never-silence,shared-source,repository-cap,write-discipline,read-cost,performance,privacy}.test.ts` (update) | TC-ACTION-017..021 |
 | Behaviour — follow-through | `bun test tests/behaviour` | `tests/behaviour/action-follow-through.test.ts`, `tests/behaviour/action-ceremony-handoff.test.ts` (new); `tests/behaviour/retro-report.test.ts`, `tests/behaviour/ceremony-flow-retro-levels.test.ts` (update) | TC-ACTION-022..025 |
@@ -205,7 +207,7 @@ The specification declares no HTTP endpoint (§8.1: N/A) and adds no event topic
 1. **No real state directory, tracker, network, credential, or spawned process.** Every suite imports the production modules and injects fakes plus a per-test temp root created through `tests/fixtures/state/harness.ts` (`makeTempRoot`, `openStore`, `makeIdentity`, `removeRoot`, `createTestEdge`) or the domain harnesses (`tests/fixtures/board/harness.ts` for board projections, `tests/fixtures/retro/harness.ts` for the retro fold, `tests/fixtures/doctor/harness.ts` for the store verdict). No suite reads `$HOME`, opens a socket, resolves a credential, or spawns a child process (NFR-4).
 2. **A skip never counts as a pass.** No `test.skip`, `describe.skip`, `test.todo`, or conditional early return in a permanent suite; the hermetic scan (`tests/checks/action-hermetic.test.ts`) fails on a planted skip and on any skip in the new suites (TC-ACTION-032), mirroring `tests/checks/ceremony-hermetic.test.ts`.
 3. **One temp registry per case, seeded through the production write seam.** Action and closure rows are appended through the artifact-boundary declaration the production writers use (or fixture builders composing it), so every read validates records the production writer could have produced. The registry store is never the live state directory; no case writes outside its `mkdtemp` root.
-4. **Injected clock is the only time source.** A fixed `NOW_MS` per case; aging cases advance the injected clock by explicit day offsets (13/14/29/30/31 days, first/second miss) and never call `Date.now()`. Filing dates and due dates are literal fixture constants. The ambient-globals guard plus a runtime read-recorder prove zero ambient clock reads on the aging, list, board, and report paths (NFR-3).
+4. **Injected clock is the only time source, and the basis is the filing timestamp.** A fixed `NOW_MS` per case; aging cases advance the injected clock by explicit day offsets *since the recorded filing timestamp* (13/14/29/30/31 days, first/second miss) and never call `Date.now()`. The aging basis is time open since filing — one declared contract constant (DEC-9) — and due dates feed only the miss counter (two recorded due-date lapse events). Filing dates and due dates are literal fixture constants. The ambient-globals guard plus a runtime read-recorder prove zero ambient clock reads on the aging, list, board, and report paths (NFR-3).
 5. **Injected ids, fence tokens, and brand.** Run ids and fence tokens are fixed sequences (`run-action-*`, `fence-action-*`); the brand is the synthetic brand constant from `tests/golden/helpers.ts`. Ordering fixtures use non-time-sortable action ids so a sortability assumption fails.
 6. **Independent oracles.** Expected aging states, WIP counts, row ordering, omission counters, and byte lengths are computed in each test from hand-written fixture constants — never by calling the production classifier and never by re-summing the same array the production code sums. Verdict expectations come from an artifact oracle (`verifyArtifact(ref)`), so an owner claim that contradicts the artifact is a falsifiable fixture.
 7. **Recorded arguments over inference.** Where an AC concerns what a seam receives (which registry source the board read, whether a write was attempted, whether a model call or a socket open was attempted), the test asserts the recorded argument or the recorded absence (the `VerifyCallRecorder`/`guardStore` pattern).
@@ -222,7 +224,7 @@ The specification declares no HTTP endpoint (§8.1: N/A) and adds no event topic
 
 ### 4.3 Oracles
 
-**Filing refusal matrix** (binding for AC-F1-1, AC-F1-2, GAP-5). `code` is asserted equal to the closed identity; `field` is asserted present in the error detail/envelope.
+**Filing refusal matrix** (binding for AC-F1-1, AC-F1-2, DEC-8). `code` is asserted equal to the closed identity; `field` is asserted present in the error detail/envelope. A field that is present but violates its contract rule is refused under the same identity as a missing field (DEC-8).
 
 | ID | Fixture | `error.code` | Named field | Store effect |
 |---|---|---|---|---|
@@ -234,32 +236,32 @@ The specification declares no HTTP endpoint (§8.1: N/A) and adds no event topic
 | R-06 | missing verification artifact | `retro.action-incomplete` | verification-artifact field | exit 1; zero rows |
 | R-07 | missing outcome verifier / its delayed metric window | `retro.action-incomplete` | outcome-verifier field | exit 1; zero rows |
 | R-08 | missing rollback condition | `retro.action-incomplete` | rollback field | exit 1; zero rows |
-| R-09 | team-owned owner | `retro.action-incomplete` (binding per GAP-5/OQ-T3; no fourth identity) | `owner` | exit 1; zero rows |
-| R-10 | unverifiable verb `review` / `improve` | `retro.action-incomplete` | `verb` | exit 1; zero rows |
-| R-11 | placeholder tracker entry | `retro.action-incomplete` | tracker field | exit 1; zero rows |
+| R-09 | team-owned owner | `retro.action-incomplete` (spec-pinned, DEC-8; no fourth identity) | `owner` | exit 1; zero rows |
+| R-10 | unverifiable verb `review` / `improve` | `retro.action-incomplete` (spec-pinned, DEC-8) | `verb` | exit 1; zero rows |
+| R-11 | placeholder tracker entry | `retro.action-incomplete` (spec-pinned, DEC-8) | tracker field | exit 1; zero rows |
 | R-12 | conforming action (control) | — | — | exit 0; exactly one row; `actions[]` length 1 |
 
 Never: a partially-valid row landing, a generic refusal that does not name the field, a fabricated field default, or `actions[]` becoming non-empty after a refusal.
 
-**Aging boundary matrix** (binding for AC-F3-1, NFR-3, DEC-3, OQ-T6). `B` is the aging basis (one declared contract constant; the second-miss rule reads due dates regardless of the basis choice). Injected clock only.
+**Aging boundary matrix** (binding for AC-F3-1, NFR-3, DEC-3, DEC-9). `B` is the aging basis — the action's recorded filing timestamp, one declared contract constant, time open since filing (DEC-9). Days are counted from `B`; due dates feed only the second-miss counter and never the 14/30-day thresholds. Injected clock only.
 
 | ID | Clock / recorded dates | Expected aging state | Never |
 |---|---|---|---|
-| A-01 | day 0 (filing instant) | `current` | Any pre-emptive nudge |
-| A-02 | day 13 (threshold−1) | `current` | Off-by-one nudge |
-| A-03 | day 14 (exact boundary) | `nudged` | `current` at the threshold |
-| A-04 | day 15 (threshold+1) | `nudged` | Silent difference from A-03 |
-| A-05 | day 29 | `nudged` | Premature escalation |
-| A-06 | day 30 (exact boundary) | `escalated` | `nudged` at the threshold |
-| A-07 | day 31 | `escalated` | Any state beyond the declared vocabulary |
-| A-08 | first missed due date, 5 days open | the days-based state only (`current`/`nudged`), never `escalated` | Escalating on a single miss |
-| A-09 | second missed due date, 5 days open | `escalated` regardless of elapsed days | Requiring 30 days as well |
+| A-01 | `B` (day 0 of time open) | `current` | Any pre-emptive nudge |
+| A-02 | `B` + 13 days (threshold−1) | `current` | Off-by-one nudge |
+| A-03 | `B` + 14 days (exact boundary) | `nudged` | `current` at the threshold |
+| A-04 | `B` + 15 days (threshold+1) | `nudged` | Silent difference from A-03 |
+| A-05 | `B` + 29 days | `nudged` | Premature escalation |
+| A-06 | `B` + 30 days (exact boundary) | `escalated` | `nudged` at the threshold |
+| A-07 | `B` + 31 days | `escalated` | Any state beyond the declared vocabulary |
+| A-08 | first due-date lapse event, 5 days open since `B` | the days-based state only (`current`/`nudged`), never `escalated` | Escalating on a single miss |
+| A-09 | second due-date lapse event, 5 days open since `B` | `escalated` regardless of elapsed days | Requiring 30 days as well |
 | A-10 | clock advanced then rewound to an earlier instant | state follows the injected clock | A stored/monotonic aging value that cannot go back |
 | A-11 | same stored action evaluated twice at the same clock | identical state, zero writes | Any write on the read path |
 
-Basis purity: a fixture whose filing date and due date straddle the threshold differently must produce exactly one state, proving one basis is used (`AMB-2` / OQ-T6). A mutant that mixes bases fails (TC-ACTION-033).
+Basis purity: the basis is the recorded filing timestamp, and a fixture whose filing date and due dates would straddle the threshold differently must produce exactly one state, proving one basis is used (DEC-9; RSK-6). Moving a due date without adding a lapse event changes no days-based state, proving due dates feed only the miss counter. A mutant that mixes bases fails (TC-ACTION-033).
 
-**Closure matrix** (binding for AC-F4-1, AC-F4-2, AC-F4-3, DEC-4, DEC-5).
+**Closure matrix** (binding for AC-F4-1, AC-F4-2, AC-F4-3, AC-F4-4, AC-F4-5, DEC-4, DEC-5, DEC-11).
 
 | ID | Attempt | `error.code` / outcome | Named missing member | Store effect |
 |---|---|---|---|---|
@@ -270,27 +272,30 @@ Basis purity: a fixture whose filing date and due date straddle the threshold di
 | C-05 | outcome closure with a decision that cites no verifier evidence | `retro.closure-incomplete` | evidence citation | exit 1; `outcomeClosure` stays `open` |
 | C-06 | outcome closure citing evidence outside the declared window | `retro.closure-incomplete` | in-window evidence | exit 1; `outcomeClosure` stays `open` |
 | C-07 | `done` with artifact (**SC-M2-S10-02 verbatim**) | exit 0 | — | `artifactClosure == "closed"`, `outcomeClosure == "open"`, non-null verification window |
-| C-08 | `deprioritized` with reason | exit 0 | — | closure record carries route + decision + reason; artifact plane closed per the declared route contract; outcome plane unchanged unless C-09 applies |
-| C-09 | `superseded` with successor | exit 0 | — | closure record carries route + decision + successor reference; successor is resolvable |
-| C-10 | artifact closed, window elapsed, no outcome decision | exit 0 read | — | `outcomeClosure` remains `open` (AC-F4-3) |
-| C-11 | explicit outcome decision citing in-window verifier evidence | exit 0 | — | `outcomeClosure == "closed"`; decision reference recorded |
+| C-08 | `deprioritized` with reason | exit 0 | — | closure record carries route + decision + reason; **both** `artifactClosure == "closed"` and `outcomeClosure == "closed"` in the one decision, the reason serving as each plane's justification; the verification window is mooted by the decision, never by elapsed time (AC-F4-4, DEC-11) |
+| C-09 | `superseded` with successor | exit 0 | — | closure record carries route + decision + the **superseding action reference**; both planes close in the one decision (AC-F4-4, DEC-11); the successor reference resolves to a recorded action |
+| C-10 | `done` artifact closed, window elapsed, no outcome decision | exit 0 read | — | `outcomeClosure` remains `open` (AC-F4-3); the decision, not time, is the only closer |
+| C-11 | explicit outcome decision citing in-window verifier evidence (done route) | exit 0 | — | `outcomeClosure == "closed"`; decision reference recorded |
 | C-12 | paired control: a fully conforming action before any closure | read | — | both planes open; no closure record |
+| C-13 | repeat closure targeting an already-closed **artifact** plane | `retro.closure-incomplete` | plane plus its existing closure decision (state conflict) | exit 1; no second closure record; planes unchanged (AC-F4-5, DEC-11) |
+| C-14 | repeat outcome decision targeting an already-closed **outcome** plane | `retro.closure-incomplete` | plane plus its existing closure decision (state conflict) | exit 1; no second closure record; planes unchanged (AC-F4-5, DEC-11) |
 
-Never: an implicit closure from elapsed time, a closure landing on a refused attempt, a closure record without provenance, or `outcomeClosure` following `artifactClosure` as a side effect.
+Never: an implicit closure from elapsed time on any route, a closure landing on a refused attempt, a second closure record on an already-closed plane, a closure record without provenance, or `outcomeClosure` following `artifactClosure` as a side effect on the `done` route.
 
 **Exit and identity oracle** (binding for GAP-4, AC-N8-1).
 
 | Condition | Identity | Projection class | Exit | TC |
 |---|---|---|---|---|
 | Missing contract member at filing | `retro.action-incomplete` | user-validation | 1, zero rows | 001, 002 |
-| Contract-rule violation at filing | `retro.action-incomplete` (no fourth identity) | user-validation | 1, zero rows | 003, 005 |
+| Contract-rule violation at filing | `retro.action-incomplete` (spec-pinned, DEC-8; no fourth identity) | user-validation | 1, zero rows | 003, 005 |
 | Filing into a window at its limit | `retro.wip-limit-exceeded` | user-validation | 1, zero rows | 014 |
 | Closure without decision/justification, or outcome closure without in-window evidence | `retro.closure-incomplete` | user-validation | 1, no transition | 009, 013 |
+| Closure decision on an already-closed plane (state conflict) | `retro.closure-incomplete` naming the plane and its existing closure | user-validation | 1, no second record | 039 |
 | Torn / wrong-kind / malformed registry record | the delivered `state.*` rows | platform-provider | 2 | 034 |
 | Permission violation on the registry store | `state.permission.denied` (delivered) | user-validation | 1 | 034 |
 | Success (filing, closure, list, board, report) | — | success | 0 | all acceptance TCs |
 
-**Invariants.** Exit is a pure function of the projection class. The delivered four `retro` identities keep their codes, category, consequence and projection unchanged; the three additive rows are exact two-segment codes under the same `retro` domain kind. Machine consumers branch on the code, never the exit alone.
+**Invariants.** Exit is a pure function of the projection class. The delivered four `retro` identities keep their codes, category, consequence and projection unchanged; the three additive rows are exact two-segment codes under the same `retro` domain kind. One identity covers both the missing/offending-field discriminant and the already-closed-plane state conflict, distinguished by the detail they name (DEC-8, DEC-11). Machine consumers branch on the code and read the detail, never the exit alone.
 
 ### 4.4 Delivered-Suite Drift Register (declared, not discovered)
 
@@ -308,14 +313,14 @@ Each row is an assertion in a delivered suite that this change legitimately move
 | D-8 | `tests/behaviour/board-{bounds,byte-guard,repository-cap,never-silence}.test.ts` | per-section caps, omission counters, byte-guard drop order | a new bounded section and a new drop-order step (AC-F6-1, NFR-2) | **additive assertions**: delivered section caps unchanged; new section cap and counters asserted |
 | D-9 | `tests/behaviour/board-{determinism,purity,performance,read-cost,privacy,shared-source,write-discipline}.test.ts` | delivered board invariants | the new surface must obey the same invariants | **additive assertions**: no delivered assertion relaxed; one bounded registry read added to the read-count oracle |
 | D-10 | `tests/structure/board-nonregression.test.ts` | additive-surface proof for the delivered board | the surface gained a member | **additive assertions**: prove the four delivered sections' caps/semantics/order unchanged and the payload identity kept |
-| D-11 | `tests/behaviour/retro-report.test.ts` (TC-RETRO-035) | `Object.keys(report.data).sort()` equals exactly the four keys | the fold gains its producer; registry-derived additions are additive under `data` (§8.5) | **conditional pin-change**: if the producer lands without new top-level keys, unchanged; if any additive key lands, declare it and assert both the four shipped keys and the addition (OQ-T7) |
+| D-11 | `tests/behaviour/retro-report.test.ts` (TC-RETRO-035) | `Object.keys(report.data).sort()` equals exactly the four keys | the fold gains its producer | **unchanged — no move**: DEC-10 pins that `retro report`'s `data` gains no new top-level key; the registry feeds the delivered `followThrough[]` fold, so the exact-four-keys assertion stands. Provenance added inside fold entries is asserted additively in TC-ACTION-023; a registry-derived top-level key would be a spec violation, not a drift row (OQ-T7 closed) |
 | D-12 | `tests/behaviour/retro-report.test.ts` (TC-RETRO-036) | injected-reader fold yields `verified`/`unverified` and never invents entries | the production reader becomes registry-backed | **additive assertions**: keep the injected-reader contract; add a registry-sourced case (verified + unverified + unknown + verified-empty) with no invented entry |
 | D-13 | `tests/golden/retro/cases.json` + its suite | retro report golden cases | registry-backed follow-through cases | **golden-add**: new cases; existing cases stay valid |
 | D-14 | `tests/behaviour/doctor-state.test.ts` ("the state detail names the delivery and retro registry stores") | store names in the state check's evidence | doctor gains an action-registry store verdict (DEC-7, §10) | **pin-change**: the detail names the action-registry store too |
 | D-15 | `tests/behaviour/doctor-report.test.ts` (checks length / dropped-area mutation) and `tests/golden/doctor-output.test.ts` | area count, store facts, output golden | new store fact only (the area list is unchanged) | **pin-change if a store count/detail assertion moves; golden-regenerate** |
 | D-16 | `tests/structure/doctor-contract.test.ts` | closed area list, evidence source ids, store fact shape | a store verdict may add an evidence source id | **pin-change only if an id is added**, otherwise unchanged |
 | D-17 | `tests/structure/cli-edge-seam.test.ts` (TC-RETRO-006 and the human-text declaration list) | retro command's exported surface, grammar assertions, `positionals.max`, human renderer declaration | an `action` verb group joins the delivered `retro` family (DEC-7) | **pin-change**: grammar assertions and the positional bound; the exported symbol and the "no new command family" property stay asserted |
-| D-18 | `tests/behaviour/retro-output.test.ts`, `retro-collect.test.ts` | unknown-subcommand refusal fixtures and `collect|report` grammar | subcommand guard widens to the `action` group | **additive assertions**: the `collect`/`report` behaviours are unchanged; a new unknown-subcommand control proves the guard stays closed |
+| D-18 | `tests/behaviour/retro-output.test.ts`, `retro-collect.test.ts` | unknown-subcommand refusal fixtures and `collect`/`report` grammar | subcommand guard widens to the `action` group | **additive assertions**: the `collect`/`report` behaviours are unchanged; a new unknown-subcommand control proves the guard stays closed |
 | D-19 | `tests/fixtures/help-guide/coverage.json` + `tests/checks/help-guide-coverage.test.ts` | reference-page inventory and per-command coverage | the retro family's extended surface needs a reconciled reference page; §16 asks for a new M2 page root while the M1 snapshot stays byte-unchanged | **fixture-add**: add the M2 reference page row; the `retro` command row stays; every coverage assertion passes |
 | D-20 | `tests/checks/help-guide-coverage-mutants.test.ts`, `tests/checks/reference-page-parity.test.ts` | coverage/parity mutation proofs | the new page must match its `--help` surface | **additive assertions**: planted-page mutation still fails; parity covers the new page |
 | D-21 | `tests/structure/content-inventory.test.ts` + `tests/structure/inventory.json` | committed source inventory equals the actual file set | new modules and the new boundary declaration | **fixture-add**: register every new file; no allowlist widening |
@@ -338,13 +343,13 @@ Each row is an assertion in a delivered suite that this change legitimately move
 | TC-ACTION-003 | Contract-rule refusals: team owner, unverifiable verb, placeholder tracker | Negative | Behaviour | Critical | AC-F1-2, AC-F7-1 |
 | TC-ACTION-004 | Conforming action record carries every member plus outcome verifier and rollback condition | Happy Path | Unit/Behaviour | Critical | AC-F2-1, DM-1 |
 | TC-ACTION-005 | Closed verifiable-verb vocabulary is exact and refuses near-misses | Edge Case | Contract/Behaviour | High | AC-F1-2 |
-| TC-ACTION-006 | Aging boundary ladder: 13/14/29/30 days on the injected clock | Corner Case | Behaviour | Critical | AC-F3-1, NFR-3 |
+| TC-ACTION-006 | Aging boundary ladder: 13/14/29/30 days open since the filing timestamp on the injected clock | Corner Case | Behaviour | Critical | AC-F3-1, NFR-3 |
 | TC-ACTION-007 | Second missed due date escalates regardless of elapsed days | Edge Case | Behaviour | Critical | AC-F3-1, NFR-3 |
 | TC-ACTION-008 | One aging basis, recorded dates only, zero ambient clock reads | Regression | Behaviour/Structure | Critical | AC-F3-1, NFR-3, DM-2 |
 | TC-ACTION-009 | Closure refusals: no decision, missing artifact/reason/successor, incomplete outcome evidence | Negative | Behaviour | Critical | AC-F4-1 |
 | TC-ACTION-010 | **SC-M2-S10-02**: artifact closed, outcome open, non-null verification window | Happy Path | Behaviour/Golden | Critical | AC-F4-2, DM-3 |
 | TC-ACTION-011 | Outcome closure never follows elapsed time or artifact closure | Negative | Behaviour | Critical | AC-F4-3 |
-| TC-ACTION-012 | Three explicit routes with recorded provenance; supersede frees a slot | Happy Path | Behaviour | High | AC-F4-1, AC-F4-2, DM-3 |
+| TC-ACTION-012 | Three explicit routes with recorded provenance and their declared plane effects | Happy Path | Behaviour | High | AC-F4-1, AC-F4-2, AC-F4-4, DM-3 |
 | TC-ACTION-013 | Explicit outcome closure citing in-window verifier evidence | Happy Path | Behaviour | High | AC-F4-3, AC-F4-1 |
 | TC-ACTION-014 | **WIP limit refusal**: window at 3 refuses a fourth filing, naming window/count/limit | Negative | Behaviour | Critical | AC-F5-1, DM-5 |
 | TC-ACTION-015 | Deprioritize/supersede free a slot; count and limit disclosed | Edge Case | Behaviour | High | AC-F5-1, DM-5 |
@@ -365,11 +370,13 @@ Each row is an assertion in a delivered suite that this change legitimately move
 | TC-ACTION-030 | Read cost: one bounded registry read, pure projection, within budget | Performance | Behaviour | Medium | NFR-6 |
 | TC-ACTION-031 | Privacy: references and bounded text only; redaction composes on every new path | Regression | Behaviour/Checks | High | NFR-7 |
 | TC-ACTION-032 | Offline hermetic posture; a skip never counts as a pass | Regression | Checks | Critical | NFR-4 |
-| TC-ACTION-033 | Mutant meta-suite over every honesty rule | Regression | Checks (mutation) | Critical | AC-F1-1, AC-F3-1, AC-F4-1, AC-F5-1, AC-F6-1, AC-F7-1 |
+| TC-ACTION-033 | Mutant meta-suite over every honesty rule | Regression | Checks (mutation) | Critical | AC-F1-1, AC-F3-1, AC-F4-1, AC-F4-4, AC-F4-5, AC-F5-1, AC-F6-1, AC-F7-1 |
 | TC-ACTION-034 | Own validated boundary and doctor action-registry store verdict; damage classifies | Happy Path/Negative | Behaviour | High | NFR-5, DM-1, DM-3 |
-| TC-ACTION-035 | Refusals named, disclosures in-band, command audit per invocation (audit failure diagnostic) | Regression | Behaviour | High | AC-F1-2, AC-F3-1, AC-F4-1, AC-F5-1 |
+| TC-ACTION-035 | Refusals named, disclosures in-band, command audit per invocation (audit failure diagnostic) | Regression | Behaviour | High | AC-F1-2, AC-F3-1, AC-F4-1, AC-F4-5, AC-F5-1 |
 | TC-ACTION-036 | Conformance: contract constants, brand neutrality, additive command surface, help/reference inventory | Regression | Structure/Checks | High | AC-F7-2, AC-N8-1, AC-F4-2 |
 | TC-ACTION-037 | Delivered retro, ceremony, board and error-table behavior unchanged (additive proof) | Regression | Behaviour/Structure | Critical | AC-F7-2, AC-F6-1, AC-N8-1 |
+| TC-ACTION-038 | Deprioritized/superseded close both planes in the one decision; the window is mooted by the decision, not time | Happy Path | Behaviour | Critical | AC-F4-4, DM-3 |
+| TC-ACTION-039 | Repeat closure on an already-closed plane refused as a state conflict naming plane and existing closure | Negative | Behaviour | Critical | AC-F4-5, DM-3 |
 
 ### 5.2 Scenario Details
 
@@ -439,7 +446,7 @@ Each row is an assertion in a delivered suite that this change legitimately move
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-1, AC-F1-2, AC-F7-1, §8.4
+**Related IDs**: F-1, AC-F1-2, AC-F7-1, DEC-8, §8.4
 **Test Type(s)**: Behaviour, Integration
 **Automation Level**: Automated
 **Target Layer / Location**: filing validation; `tests/behaviour/action-filing.test.ts` (matrix R-09..R-11)
@@ -451,14 +458,14 @@ Each row is an assertion in a delivered suite that this change legitimately move
 
 **Steps**:
 
-1. File each violating fixture; assert exit 1 with a classified identity (bound to `retro.action-incomplete` per GAP-5/OQ-T3), naming the offending field.
-2. Assert no action row is created in each case.
+1. File each violating fixture; assert exit 1, `error.code == "retro.action-incomplete"` (spec-pinned by DEC-8: a field present but non-conforming to its contract rule is incomplete for filing purposes), and that the error detail names the offending field.
+2. Assert no action row is created in each case, and that no identity other than the declared three is ever produced.
 3. File two conforming controls — one human owner, one agent-role owner — and assert both land.
 4. Configure the injected tracker read to report the entry unreachable; assert the conforming filing still lands and the record discloses the corroboration state rather than trusting or fabricating reachability.
 
 **Expected Outcome**:
 
-- Team-owned actions are invalid, the verb vocabulary is enforced, placeholder tracker entries are refused, and an unreachable tracker is disclosed state, not an invented verdict. No fourth error identity is introduced.
+- Team-owned actions are invalid, the verb vocabulary is enforced, placeholder tracker entries are refused, and each refusal names the offending field under the single filing identity. No fourth error identity is introduced (DEC-8). An unreachable tracker is disclosed state, not an invented verdict.
 
 #### TC-ACTION-004 - Conforming action record carries every member plus outcome verifier and rollback condition
 
@@ -496,7 +503,7 @@ Each row is an assertion in a delivered suite that this change legitimately move
 **Scenario Type**: Edge Case
 **Impact Level**: Important
 **Priority**: High
-**Related IDs**: F-1, AC-F1-2
+**Related IDs**: F-1, AC-F1-2, DEC-8
 **Test Type(s)**: Contract, Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: contract vocabulary + filing validation; `tests/structure/action-contract.test.ts`; `tests/behaviour/action-filing.test.ts`
@@ -510,19 +517,19 @@ Each row is an assertion in a delivered suite that this change legitimately move
 
 1. Assert the declared vocabulary equals exactly the five verbs in declared order (contract suite).
 2. File each of the five; assert exit 0 and the verb round-trips byte-identically (no normalization).
-3. File each near-miss and each forbidden verb; assert refusal naming the verb field, no row.
+3. File each near-miss and each forbidden verb; assert exit 1 with `error.code == "retro.action-incomplete"` naming the verb field (DEC-8), no row.
 4. Assert the vocabulary has a single declaration site (structural scan), so a second copy cannot drift.
 
 **Expected Outcome**:
 
 - Only the five declared verbs are accepted; near-misses and "review"/"improve" are refused; one home for the vocabulary.
 
-#### TC-ACTION-006 - Aging boundary ladder on the injected clock
+#### TC-ACTION-006 - Aging boundary ladder: 13/14/29/30 days open since the filing timestamp on the injected clock
 
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-3, AC-F3-1, DM-2, NFR-3, DEC-3
+**Related IDs**: F-3, AC-F3-1, DM-2, NFR-3, DEC-3, DEC-9
 **Test Type(s)**: Behaviour, Unit
 **Automation Level**: Automated
 **Target Layer / Location**: aging projection; `tests/behaviour/action-aging.test.ts` (matrix A-01..A-07, A-11)
@@ -530,25 +537,25 @@ Each row is an assertion in a delivered suite that this change legitimately move
 
 **Preconditions**:
 
-- One stored open action with literal filing and due dates; the declared nudge and escalation constants read from the contract, not hardcoded.
+- One stored open action with a literal recorded filing timestamp (`B`) and literal due dates; the declared nudge and escalation constants read from the contract, not hardcoded.
 
 **Steps**:
 
-1. Evaluate at day 0, 13, 14, 15, 29, 30, 31 by advancing only the injected clock.
+1. Evaluate at `B` + 0, 13, 14, 15, 29, 30 and 31 days of time open since the filing timestamp by advancing only the injected clock.
 2. Assert `current` at 0 and 13, `nudged` at 14 and 15 and 29, `escalated` at 30 and 31.
-3. Assert threshold−1 and threshold value differ at both thresholds (the spec's exactness obligation).
+3. Assert threshold−1 and threshold value differ at both thresholds (the spec's exactness obligation), and assert a due date moved without a recorded lapse event changes no days-based state.
 4. Evaluate twice at the same clock instant; assert identical output and zero writes.
 
 **Expected Outcome**:
 
-- The ladder is exact at both boundaries, monotone across the offsets, and derived without any write or ambient time read.
+- The ladder is exact at both boundaries on the one pinned basis (time open since the recorded filing timestamp, DEC-9), monotone across the offsets, and derived without any write or ambient time read.
 
 #### TC-ACTION-007 - Second missed due date escalates regardless of elapsed days
 
 **Scenario Type**: Edge Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-3, AC-F3-1, DM-2, NFR-3
+**Related IDs**: F-3, AC-F3-1, DM-2, NFR-3, DEC-9
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: aging projection; `tests/behaviour/action-aging.test.ts` (matrix A-08, A-09)
@@ -556,25 +563,25 @@ Each row is an assertion in a delivered suite that this change legitimately move
 
 **Preconditions**:
 
-- An action whose due date is missed once and rescheduled, then missed a second time, all within 5 elapsed days; a paired single-miss action at the same elapsed days.
+- An action whose record carries two due-date lapse events (a due date missed once, rescheduled, then missed a second time), all within 5 days open since the filing timestamp; a paired single-lapse action at the same elapsed days.
 
 **Steps**:
 
-1. Evaluate the single-miss action at 5 days; assert it is not escalated (state follows elapsed days only).
-2. Evaluate the second-miss action at the same 5 days; assert `escalated`.
-3. Assert the escalation reason names the second miss (closed vocabulary from the declared constant).
-4. Vary the elapsed days (0, 5, 40) on the second-miss action; assert escalation holds in all three.
+1. Evaluate the single-lapse action at 5 days open; assert it is not escalated (state follows days open only).
+2. Evaluate the two-lapse action at the same 5 days open; assert `escalated`.
+3. Assert the escalation reason names the second miss (closed vocabulary from the declared constant) and that only the lapse counter — not the due date value itself — drove it.
+4. Vary the days open (0, 5, 40) on the two-lapse action; assert escalation holds in all three.
 
 **Expected Outcome**:
 
-- The second miss is an independent escalation trigger; one miss is not.
+- The second missed due date is an independent escalation trigger; one lapse is not, and due dates feed only the miss counter (DEC-9).
 
 #### TC-ACTION-008 - One aging basis, recorded dates only, zero ambient clock reads
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-3, AC-F3-1, DM-2, NFR-3, RSK-6, §21
+**Related IDs**: F-3, AC-F3-1, DM-2, NFR-3, DEC-9, RSK-6, §21
 **Test Type(s)**: Behaviour, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: aging projection + purity guard; `tests/behaviour/action-aging.test.ts`; `tests/structure/action-imports.test.ts`
@@ -582,18 +589,19 @@ Each row is an assertion in a delivered suite that this change legitimately move
 
 **Preconditions**:
 
-- The declared aging-basis constant; a fixture whose filing date and due date would produce different states under the two candidate bases; an ambient-clock read recorder.
+- The declared aging-basis constant; a fixture whose recorded filing timestamp and due dates would produce different states under a due-date basis; an ambient-clock read recorder.
 
 **Steps**:
 
-1. Fix the basis constant and construct the straddling fixture; assert exactly one declared state, proving a single basis (OQ-T6 / AMB-2).
+1. Assert the declared aging basis is the action's recorded filing timestamp — the one basis constant pinned by DEC-9 — and construct the straddling fixture; assert exactly one declared state, proving a single basis.
 2. Assert the basis constant has one declaration home (structural scan) and is imported, not duplicated.
-3. Record ambient clock reads across aging, list and board paths; assert the recorded count is zero.
-4. Assert the aging output is a pure function of stored dates + injected clock + constants (same inputs twice → identical output).
+3. Assert due dates feed only the miss counter: vary a due date without adding a lapse event and assert no days-based state change; add a second lapse event and assert escalation (DEC-9).
+4. Record ambient clock reads across aging, list and board paths; assert the recorded count is zero.
+5. Assert the aging output is a pure function of the recorded filing timestamp + lapse counter + injected clock + constants (same inputs twice → identical output).
 
 **Expected Outcome**:
 
-- Aging arithmetic is deterministic, single-basis, and free of ambient time; a mutant mixing bases or reading the wall clock fails (TC-ACTION-033).
+- Aging arithmetic is deterministic, single-basis on time open since filing, and free of ambient time; due dates only move the miss counter. A mutant that mixes bases or reads the wall clock fails (TC-ACTION-033).
 
 #### TC-ACTION-009 - Closure refusals: no decision, missing artifact/reason/successor, incomplete outcome evidence
 
@@ -659,7 +667,7 @@ Each row is an assertion in a delivered suite that this change legitimately move
 
 **Preconditions**:
 
-- An artifact-closed action whose verification window elapses under the injected clock; a paired action with no artifact closure.
+- A `done`-route artifact-closed action whose verification window elapses under the injected clock (the only route where the outcome plane stays open, DEC-11); a paired action with no artifact closure.
 
 **Steps**:
 
@@ -672,12 +680,12 @@ Each row is an assertion in a delivered suite that this change legitimately move
 
 - Elapsed time produces disclosure, never closure; the implicit-closure mutant fails (TC-ACTION-033).
 
-#### TC-ACTION-012 - Three explicit routes with recorded provenance
+#### TC-ACTION-012 - Three explicit routes with recorded provenance and their declared plane effects
 
 **Scenario Type**: Happy Path
 **Impact Level**: Important
 **Priority**: High
-**Related IDs**: F-4, AC-F4-1, AC-F4-2, DM-3, §10
+**Related IDs**: F-4, AC-F4-1, AC-F4-2, AC-F4-4, DM-3, DEC-11, §10
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: closure routes; `tests/behaviour/action-closure.test.ts` (matrix C-07..C-09)
@@ -690,13 +698,13 @@ Each row is an assertion in a delivered suite that this change legitimately move
 **Steps**:
 
 1. Close each; assert exit 0 and one `retro.action-closure` record each.
-2. Assert each record carries route, decision reference and its required justification; the superseded successor reference resolves to a recorded action.
-3. Assert the artifact plane is closed on each artifact route per the declared route contract, and the outcome plane is unchanged unless an explicit outcome decision exists.
+2. Assert each record carries route, decision reference and its required justification; the superseded route records the **superseding action reference** on the closure record and that reference resolves to a recorded action (DEC-11).
+3. Assert the declared plane effects: the `done` route closes the artifact plane only, leaving `outcomeClosure == "open"` with its non-null window; the `deprioritized` and `superseded` routes close **both** planes in that same decision, the reason or the superseding reference serving as each plane's justification, with the window mooted by the decision and not by elapsed time (AC-F4-4, DEC-11).
 4. Assert provenance is inspectable from the records alone (no reliance on the current CLI output).
 
 **Expected Outcome**:
 
-- All three routes are explicit, justified and self-describing; nothing closes without provenance.
+- All three routes are explicit, justified and self-describing; nothing closes without provenance, and each route's plane effects match DEC-11 — `done` closes the artifact plane only, while `deprioritized` and `superseded` close both planes in the one decision.
 
 #### TC-ACTION-013 - Explicit outcome closure citing in-window verifier evidence
 
@@ -711,7 +719,7 @@ Each row is an assertion in a delivered suite that this change legitimately move
 
 **Preconditions**:
 
-- An artifact-closed action with a non-elapsed window; verifier evidence fixtures inside and outside the window.
+- A `done`-route action with its artifact plane closed and a non-elapsed outcome window (the only route that leaves the outcome plane open, DEC-11); verifier evidence fixtures inside and outside the window.
 
 **Steps**:
 
@@ -754,7 +762,7 @@ Each row is an assertion in a delivered suite that this change legitimately move
 **Scenario Type**: Edge Case
 **Impact Level**: Important
 **Priority**: High
-**Related IDs**: F-5, AC-F5-1, DM-5, DEC-6, RSK-2
+**Related IDs**: F-5, AC-F5-1, AC-F4-4, DM-5, DEC-6, DEC-11, RSK-2
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: window projection; `tests/behaviour/action-wip-limit.test.ts`
@@ -766,8 +774,8 @@ Each row is an assertion in a delivered suite that this change legitimately move
 
 **Steps**:
 
-1. Deprioritize one action with a reason; assert the window's open count becomes 2 and a new filing is accepted (exit 0).
-2. Separately, supersede one action with a declared successor; assert the count is recomputed per the declared open-action rule and a filing is accepted.
+1. Deprioritize one action with a reason; assert the action closes on both planes (AC-F4-4, DEC-11), the window's open count becomes 2, and a new filing is accepted (exit 0).
+2. Separately, supersede one action with a declared successor; assert the action closes on both planes with the superseding reference recorded, the count is recomputed per the declared open-action rule, and a filing is accepted.
 3. Assert the disclosure names the count and the limit constant in both states (full and freed).
 
 **Expected Outcome**:
@@ -959,7 +967,7 @@ Each row is an assertion in a delivered suite that this change legitimately move
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: F-7, AC-F7-1, AC-F7-2, §8.5, §19
+**Related IDs**: F-7, AC-F7-1, AC-F7-2, DEC-10, §8.5, §19
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `retro report` fold; `tests/behaviour/retro-report.test.ts` (update)
@@ -972,14 +980,14 @@ Each row is an assertion in a delivered suite that this change legitimately move
 **Steps**:
 
 1. Keep the injected-reader fold assertions green (delivered contract preserved).
-2. Add the registry-sourced case: assert entries carry `{action, verdict, artifactRef}` with `verified`/`unverified`/`unknown` assigned from the artifact oracle.
+2. Add the registry-sourced case: assert entries carry `{action, verdict, artifactRef}` plus their registry provenance (DEC-10), with `verified`/`unverified`/`unknown` assigned from the artifact oracle.
 3. Assert no entry is invented for an action that has no record.
 4. Run the empty-registry case; assert an empty `followThrough` with evidence refs and exit 0 (verified-empty is a success, never an error).
-5. Assert the four shipped report keys remain valid and any additive key is declared (D-11).
+5. Assert `data` carries exactly its four shipped top-level keys — the registry producer adds no new top-level key (DEC-10, D-11 unchanged) — and that registry-derived provenance appears only inside the delivered `followThrough[]` entries.
 
 **Expected Outcome**:
 
-- The fold has a real producer, entries are evidence-derived, and the empty case is an explicit success.
+- The fold has a real producer, entries are evidence-derived and carry registry provenance inside the delivered fold, the report's four top-level keys are unchanged, and the empty case is an explicit success.
 
 #### TC-ACTION-024 - One registry serves every retro level with no per-level fork
 
@@ -1220,7 +1228,7 @@ Each row is an assertion in a delivered suite that this change legitimately move
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F1-1, AC-F3-1, AC-F4-1, AC-F5-1, AC-F6-1, AC-F7-1, RSK-1
+**Related IDs**: AC-F1-1, AC-F3-1, AC-F4-1, AC-F4-4, AC-F4-5, AC-F5-1, AC-F6-1, AC-F7-1, DEC-9, DEC-11, RSK-1
 **Test Type(s)**: Checks (mutation)
 **Automation Level**: Automated
 **Target Layer / Location**: temp mutant copies of the production modules; `tests/checks/action-mutants.test.ts`
@@ -1233,7 +1241,7 @@ Each row is an assertion in a delivered suite that this change legitimately move
 **Steps**:
 
 1. For each mutant, run the owning suite against the mutant copy on the unchanged fixture and assert the prohibited observable appears (the mutation is detected).
-2. Mutants: (a) accept a filing missing a member; (b) default a missing field instead of refusing; (c) invent a verb outside the vocabulary; (d) off-by-one on the nudge threshold; (e) off-by-one on the escalation threshold; (f) drop the second-miss rule; (g) store aging state instead of deriving it; (h) read the wall clock on an aging path; (i) mix aging bases; (j) close without a decision; (k) let artifact closure close the outcome plane; (l) treat an elapsed window as outcome-closed; (m) warn instead of refusing at the WIP limit; (n) record the excess row after refusing; (o) infer a board owner instead of naming it; (p) drop rows without counting the omission; (q) use a second state vocabulary; (r) assign a follow-through verdict from an owner claim; (s) invent a follow-through entry with no record; (t) order the board rows by append order.
+2. Mutants: (a) accept a filing missing a member; (b) default a missing field instead of refusing; (c) invent a verb outside the vocabulary; (d) off-by-one on the nudge threshold; (e) off-by-one on the escalation threshold; (f) drop the second-miss rule; (g) store aging state instead of deriving it; (h) read the wall clock on an aging path; (i) mix aging bases (count days past a due date instead of days open since filing); (j) close without a decision; (k) let artifact closure close the outcome plane on the done route; (l) treat an elapsed window as outcome-closed; (m) warn instead of refusing at the WIP limit; (n) record the excess row after refusing; (o) infer a board owner instead of naming it; (p) drop rows without counting the omission; (q) use a second state vocabulary; (r) assign a follow-through verdict from an owner claim; (s) invent a follow-through entry with no record; (t) order the board rows by append order; (u) close only the artifact plane on the deprioritized/superseded route; (v) moot the outcome plane by elapsed time instead of by the closure decision; (w) accept a repeat closure on an already-closed plane and append a second closure record.
 3. Assert every mutant fails with a named reason; assert the unmutated module passes the same suite (non-vacuity).
 
 **Expected Outcome**:
@@ -1271,7 +1279,7 @@ Each row is an assertion in a delivered suite that this change legitimately move
 **Scenario Type**: Regression
 **Impact Level**: Important
 **Priority**: High
-**Related IDs**: AC-F1-2, AC-F3-1, AC-F4-1, AC-F5-1, §10
+**Related IDs**: AC-F1-2, AC-F3-1, AC-F4-1, AC-F4-5, AC-F5-1, §10, DEC-8, DEC-11
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: envelopes, renders, audit seam; `tests/behaviour/action-disclosure.test.ts`, `tests/behaviour/action-audit.test.ts`
@@ -1279,11 +1287,11 @@ Each row is an assertion in a delivered suite that this change legitimately move
 
 **Preconditions**:
 
-- One fixture per refusal class (filing member, contract rule, WIP, closure) and one per disclosure surface (list, board, report); a failing audit writer.
+- One fixture per refusal class (filing member, filing contract rule, WIP, closure missing justification, closure state conflict) and one per disclosure surface (list, board, report); a failing audit writer.
 
 **Steps**:
 
-1. For each refusal, assert the envelope names the specific missing/invalid member — never a generic message — and carries the exact code.
+1. For each refusal, assert the envelope names the specific missing/invalid member — or, for an already-closed-plane state conflict, the plane and its existing closure decision — never a generic message, and carries the exact code.
 2. Assert aging state, window count/limit and omission counters render in-band on every surface that shows the data.
 3. Assert every invocation (file, close, list, board, report) lands one command-audit record with runId, timing and claimed identity.
 4. Configure the audit writer to fail; assert the command's outcome and exit are unchanged and the failure is a diagnostic.
@@ -1340,19 +1348,91 @@ Each row is an assertion in a delivered suite that this change legitimately move
 2. Run the ceremony suites; assert declarations, agenda order, note schema and the asserted follow-through-first position are unchanged.
 3. Run the board suites; assert the four delivered sections, caps, semantics, payload identity and the one idempotent decision append are unchanged.
 4. Assert the delivered four `retro` error rows keep their codes, category, consequence and projection class.
-5. Assert `delivery.retro.report.v1` keeps its identity and shipped keys readable.
+5. Assert `delivery.retro.report.v1` keeps its identity and exactly its four shipped top-level `data` keys (DEC-10), with the fold's entries readable.
 
 **Expected Outcome**:
 
 - The change is strictly additive: delivered contracts remain valid on upgrade, and the only moved pins are the D-row declarations in §4.4.
+
+#### TC-ACTION-038 - Deprioritized/superseded close both planes in the one decision
+
+**Scenario Type**: Happy Path
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-4, AC-F4-4, DM-3, DEC-4, DEC-11
+**Test Type(s)**: Behaviour
+**Automation Level**: Automated
+**Target Layer / Location**: closure plane effects; `tests/behaviour/action-closure.test.ts` (matrix C-08, C-09)
+**Tags**: @offline, @action-registry, @closure
+
+**Preconditions**:
+
+- Two stored open actions with complete verification artifacts and open (non-elapsed) outcome windows; a deprioritize fixture with a literal reason and a supersede fixture naming a recorded successor action; fixed injected clock, run id and fence tokens.
+- A paired `done` control on a third action — the DEC-11 discriminator, since `done` closes the artifact plane only.
+
+**Steps**:
+
+1. Close the first action on the `deprioritized` route with an explicit decision reference and reason; assert exit 0 and exactly one `retro.action-closure` record.
+2. Assert `data.artifactClosure == "closed"` **and** `data.outcomeClosure == "closed"` after that one decision, with the recorded reason serving as each plane's justification and the verification window mooted by the decision rather than by elapsed time.
+3. Close the second action on the `superseded` route with the successor reference; assert both planes closed, and that the superseding action reference is stored on the closure record and resolves to a recorded action.
+4. Advance the injected clock well past each window; assert no plane changes and no further closure record appears — time is never the closer.
+5. Run the paired `done` control; assert it leaves `outcomeClosure == "open"` with its non-null window (SC-M2-S10-02), proving the both-plane effect is a route property, not a blanket rule.
+6. Re-run the refusal controls: `deprioritized` without a reason and `superseded` without a successor are still refused before any plane closes (C-03, C-04).
+
+**Expected Outcome**:
+
+- The one explicit decision is the closure justification for both planes on the deprioritized and superseded routes; the window is mooted by the decision and never by time; the done route remains artifact-only. A mutant closing only the artifact plane, or mooting the outcome plane by elapsed time, fails (TC-ACTION-033).
+
+**Postconditions**:
+
+- Temp store discarded; both actions and their closure records exist only in the temp root.
+
+**Notes / Clarifications**:
+
+- The "mooted" window state is asserted as a recorded consequence of the decision, deliberately distinct from the open/elapsed states the done route uses; the exact token comes from the declared contract constant (GAP-4), never an ad-hoc literal.
+
+#### TC-ACTION-039 - Repeat closure on an already-closed plane refused as a state conflict
+
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: High
+**Related IDs**: F-4, AC-F4-5, DM-3, DEC-5, DEC-11
+**Test Type(s)**: Behaviour
+**Automation Level**: Automated
+**Target Layer / Location**: closure validation; `tests/behaviour/action-closure.test.ts` (matrix C-13, C-14)
+**Tags**: @offline, @action-registry, @closure
+
+**Preconditions**:
+
+- One action artifact-closed on the `done` route (artifact plane closed, outcome plane open with a non-null window) and one action closed on both planes via `deprioritized`; a paired still-open action as the positive control.
+
+**Steps**:
+
+1. Attempt a second closure targeting the already-closed artifact plane; assert exit 1, `error.code == "retro.closure-incomplete"`, and that the detail names the plane and its existing closure decision.
+2. Attempt a repeat outcome decision on the already-closed outcome plane of the both-plane-closed action; assert the same identity, with the plane and the existing closure decision named.
+3. Assert the detail is a distinct discriminant from the missing-decision/justification cases — it names a plane plus an existing closure, not a missing input — while the code stays the one declared identity.
+4. Assert no second `retro.action-closure` record exists in either case, the store is byte-unchanged, and each plane keeps its prior state.
+5. Run the paired control: the still-open action closes normally (exit 0), proving the refusal is not a blanket closure refusal.
+
+**Expected Outcome**:
+
+- A closure decision on an already-closed plane is refused as a state conflict under the declared closure identity, naming the plane and its existing closure, and appends nothing; no fourth identity appears (DEC-5, DEC-11). A mutant that accepts the repeat and appends a second closure record fails (TC-ACTION-033).
+
+**Postconditions**:
+
+- Temp store discarded; no writes outside the temp root.
+
+**Notes / Clarifications**:
+
+- DEC-11 requires the state conflict to be a discriminant distinct **in detail** from the missing-decision/justification refusal, so the assertion pins the named plane and the existing closure reference, never the code alone.
 
 ## 6. Environments and Test Data
 
 - **Runner**: `bun test` (or `pnpm test`) for `tests/**/*.test.ts`; `bun run scripts/checks/*.ts` for repository invariants; `pnpm check` (`lint → format:check → typecheck → test → check:boundaries`) as the aggregate gate. Delivery runs the aggregate with `TMPDIR=$PWD/tmp/tmpdir` per the pm-notes convention.
 - **Environments**: local dev and CI only. No staging, no real tracker, no provider, no network. The reference measurement for NFR-6 (GAP-3) is a local, non-CI note.
 - **Isolation**: one `mkdtemp` root per case via `tests/fixtures/state/harness.ts`; stores created, seeded and removed per test; the live tree and the user's real state directory are never read or written. Board/retro/doctor domain harnesses create their own temp state.
-- **Test data**: committed fixtures only. `tests/fixtures/action/` (new, GAP-2) holds action row builders, closure row builders, window/limit fixtures, the aging clock plan and the registry store seeder; `tests/fixtures/board/sections.ts` gains an actions inventory; `tests/fixtures/ceremony/{builtins,notes}.ts` supply the declared-actions handoff; `tests/fixtures/retro/harness.ts` supplies the report fold substrate; `tests/fixtures/doctor/harness.ts` supplies store conditions; `tests/fixtures/result/code-corpora/*.json` gains the three codes.
-- **Determinism inputs**: fixed `NOW_MS` per case (aging cases use explicit day offsets), fixed run-id and fence-token sequences, synthetic brand, non-time-sortable action ids for ordering fixtures.
+- **Test data**: committed fixtures only. `tests/fixtures/action/` (new, GAP-2) holds action row builders (with recorded filing timestamps and due-date lapse records), closure row builders carrying route and plane effects (artifact-only for `done`, both planes for `deprioritized`/`superseded`, plus the superseding action reference), window/limit fixtures, the aging clock plan and the registry store seeder; `tests/fixtures/board/sections.ts` gains an actions inventory; `tests/fixtures/ceremony/{builtins,notes}.ts` supply the declared-actions handoff; `tests/fixtures/retro/harness.ts` supplies the report fold substrate; `tests/fixtures/doctor/harness.ts` supplies store conditions; `tests/fixtures/result/code-corpora/*.json` gains the three codes.
+- **Determinism inputs**: fixed `NOW_MS` per case (aging cases use explicit day offsets since the recorded filing timestamp, plus a fixed set of due-date lapse events), fixed run-id and fence-token sequences, synthetic brand, non-time-sortable action ids for ordering fixtures.
 - **Fixture privacy**: synthetic owners, tracker references and artifact references only; the fixture-privacy scan runs over every new fixture.
 - **Gates**: no suite may skip; a conditional environment probe fails with a named reason rather than skipping; no assertion reads a moving base branch.
 
@@ -1397,6 +1477,8 @@ Each row is an assertion in a delivered suite that this change legitimately move
 | TC-ACTION-035 | `tests/behaviour/action-disclosure.test.ts`, `tests/behaviour/action-audit.test.ts` | `bun test tests/behaviour/action-disclosure.test.ts tests/behaviour/action-audit.test.ts` | To Implement |
 | TC-ACTION-036 | `tests/structure/action-contract.test.ts`, `tests/structure/cli-edge-seam.test.ts`, `tests/checks/{help-guide-coverage,reference-page-parity,doc-conformance}.test.ts`, `tests/fixtures/help-guide/coverage.json` | `bun test tests/structure/action-contract.test.ts tests/checks/help-guide-coverage.test.ts tests/checks/reference-page-parity.test.ts`; manual docs check | To Implement + Existing–Update + Manual Only (planning pages) |
 | TC-ACTION-037 | delivered suites per §2; `tests/structure/board-nonregression.test.ts` (update) | `bun test tests/behaviour tests/structure`; `pnpm check` | Existing – Update |
+| TC-ACTION-038 | `tests/behaviour/action-closure.test.ts` | `bun test tests/behaviour/action-closure.test.ts` | To Implement |
+| TC-ACTION-039 | `tests/behaviour/action-closure.test.ts` | same as 038 | To Implement |
 
 **Mocking and injection requirements**: no module is globally mocked; every dependency is injected through the existing runtime seams — state port, tracker read, clock, run-id factory, fence tokens, brand, board repository loader, ceremony note provider, doctor evidence providers. Mutant suites use temp copies, never in-place edits.
 
@@ -1410,43 +1492,46 @@ Each row is an assertion in a delivered suite that this change legitimately move
 |----|------|--------|------------|
 | TR-1 | The plan-level grammar/data-key refinements (GAP-4) drift between the filing surface, the closure surface and the board, so tests pin three different vocabularies | M | One contract module owns every constant; TC-ACTION-036 asserts a single declaration home; tests import constants rather than literals; the pinned literals (`data.artifactClosure`, `data.outcomeClosure`, the three codes) are asserted verbatim |
 | TR-2 | The delivered board/retro/doctor suites' pinned assertions move without declaration, so the change looks like a regression | M | §4.4 is the declared drift register; D-rows are named in the plan and the commit body; goldens regenerate by explicit command only |
-| TR-3 | Aging tests pass on a "days past due" implementation while the spec intended "days open" (or vice versa), hiding a semantic choice | M | TC-ACTION-008 straddling fixture + single-basis constant (OQ-T6) makes the choice explicit and falsifiable; the mutant mixing bases fails |
+| TR-3 | Aging tests drift to a "days past due" implementation even though DEC-9 pins days open since the recorded filing timestamp, so a due-date interpretation passes while the spec says otherwise | M | TC-ACTION-008 asserts the basis constant *is* the recorded filing timestamp, exercises the straddling fixture and proves due dates move only the miss counter; the mutant that counts days past due fails (TC-ACTION-033) |
 | TR-4 | Board determinism tests pass because the fixture happens to be small; ordering/cap interactions go untested | M | TC-ACTION-018 shuffles seeding order; TC-ACTION-019 uses an over-cap, over-budget fixture with a positive under-cap control first |
 | TR-5 | Follow-through tests pass using the owner's claim because the artifact oracle is not discriminating | H | TC-ACTION-022 uses a contradicting owner claim and the mutant "verdict from owner claim" (TC-ACTION-033) must fail; no verdict without an artifact reference |
 | TR-6 | Error-table 4→7 growth breaks the reserved exact-code binding silently | M | TC-ACTION-026 asserts both directions plus the delivered four byte-unchanged; the sync suite's doc-removal/extra-row mutation controls stay non-vacuous |
 | TR-7 | Hermeticity erodes because the tracker corroboration case reaches the real integration | M | All tracker reads injected; TC-ACTION-032 scans for socket/spawn/credential/`$HOME` and fails on a planted violation |
 | TR-8 | NFR-6 is asserted as a wall-clock claim and flakes in CI | M | Bounded-work oracle is the gate; duration is a recorded reference measurement (GAP-3) |
 | TR-9 | A skip or a conditional early return silently removes a pinned scenario from the run | H | TC-ACTION-032 fails on any skip; the pinned scenarios are named cases in dedicated suites (TC-ACTION-001, TC-ACTION-010) |
+| TR-10 | Closure plane effects diverge by route — the outcome plane silently staying open on a deprioritized/superseded action (re-creating the never-closed drift and leaving a dead action counted against WIP) — or a repeat closure appending a second record | H | TC-ACTION-038 asserts both planes close in the one decision and that the done route stays artifact-only; TC-ACTION-039 asserts the state-conflict refusal with an unchanged store and no second record; mutants (u)–(w) in TC-ACTION-033 must fail |
 
 ### 8.2 Assumptions
 
 - The delivered ceremony runner keeps its asserted follow-through-first position, verdict vocabulary and declared-actions handoff unchanged; the registry is the receiving producer (spec §12, NG-4).
 - The delivered board keeps its payload identity, four sections, caps, byte guard and selection forms; the actions surface is additive under the payload (spec §8.5).
-- The delivered retro evidence pipeline's fold is driven by an injected reader that the registry can implement without grammar or schema changes (spec §8.5).
+- The delivered retro evidence pipeline's fold is driven by an injected reader that the registry can implement without grammar or schema changes, and the registry producer adds no new top-level `retro report` data key — additions stay confined to entries inside the delivered `followThrough[]` fold (spec §8.5, DEC-10).
 - The delivered state layer's artifact-boundary factory supports a sibling boundary with two new record kinds under new prefixes without a schema-version bump (DEC-7).
 - The injected clock convention governs all aging computations, and no ambient time read exists in any evaluation path (DEC-3).
 - Tracker corroboration uses the delivered read integration; a reachable tracker is the default for "real tracker entry" and unreachable is disclosed (spec §8.4, §12).
 - Fixture builders can append through the same boundary the production writer uses, so read-back validation is meaningful.
-- The three new error identities are exact two-segment codes under the `retro` domain kind and no new domain kind is introduced (DEC-5).
+- The three new error identities are exact two-segment codes under the `retro` domain kind and no new domain kind is introduced (DEC-5); the already-closed-plane refusal is a detail-level discriminant under the one closure identity, not a fourth code (DEC-11).
+- The deprioritized and superseded routes close both closure planes in the one explicit decision, the done route closes the artifact plane only, and the supersede route records the superseding action reference on the closure record (DEC-11).
 
 ### 8.3 Open Questions
 
 | ID | Question | Blocking? | Owner / Next step |
 |----|----------|-----------|-------------------|
-| OQ-T1 | The implementation plan (`chg-GH-287-plan.yaml`) does not exist yet (GAP-1). It must map TC-ACTION-001..037 onto phases without reshaping any contract, and declare the plan-level refinements before delivery. | Yes for delivery start | `@plan-writer` (phase 4); this test plan reopens if a pinned contract moves |
-| OQ-T2 | Exact command grammar and the list surface's data key for `actions[]` are plan-level refinements (GAP-4). | No — bound via constants | `@plan-writer`; then TC-ACTION-036 pins them with the contract suite |
-| OQ-T3 | AC-F1-2 requires "a classified error naming the offending field" for a team owner, an unverifiable verb and a placeholder tracker entry, while DEC-5 declares exactly three identities and forbids a fourth. This plan binds them to `retro.action-incomplete` and invents nothing. | No — but DoR should confirm | `@pm` / `@readiness-reviewer`: confirm the binding; if a distinct identity is intended, the spec reopens and TC-ACTION-003 gains a row |
-| OQ-T4 | The board actions surface's human label and placement (a fifth label beside `ASKS` or a sub-block inside the asks section) are not spec-pinned; the delivered board test pins the exact label sequence (D-6). | No | `@plan-writer` declares the shape; TC-ACTION-017/036 assert "beside the asks, additive, four delivered sections unchanged" either way |
-| OQ-T5 | Spec AC-F1-1 and AC-F5-1 list `NFR-8` (error-table binding) in their Linked column although their criteria do not concern error-table binding. This looks like a numbering slip in the traceability column, not a missing requirement. | No — recorded, not repaired | `@pm`: confirm no requirement is intended; the plan covers both AC behaviors and the error-table obligation separately (TC-ACTION-026) |
-| OQ-T6 | "Days past the aging basis": the spec records both filing date and due date and states the basis is pinned once as contract data, without naming which date is the basis for the 14/30-day thresholds (RSK-6). | No — delivery-bound | `@plan-writer` declares one basis constant; TC-ACTION-008 asserts a single basis and the boundary ladder follows it. If the owner intends "days past due", only the fixture dates change |
-| OQ-T7 | Whether the retro report gains any additive top-level `data` key from the registry producer, which moves the delivered exact-four-keys assertion (D-11). | No — delivery-bound | `@plan-writer` / coder declare it; the plan asserts the four shipped keys stay readable and any addition is declared with a golden |
-| OQ-T8 | Outcome closure of a deprioritized or superseded action, and repeat closure attempts on an already-closed plane, are not specified. This plan asserts only what the spec declares (route provenance, artifact plane closed per the declared route contract, outcome plane unchanged absent an explicit decision) and adds no row. | No | `@pm`: if the owner wants a rule, the spec reopens; until then no test invents behavior |
+| OQ-T1 | The implementation plan (`chg-GH-287-plan.yaml`) does not exist yet (GAP-1). It must map TC-ACTION-001..039 onto phases without reshaping any contract, and declare the plan-level refinements before delivery. | Yes for delivery start | `@plan-writer` (phase 4); this test plan reopens if a pinned contract moves |
+| OQ-T2 | Exact command grammar and the list surface's data key for `actions[]` are plan-level refinements (GAP-4). | No — bound via constants | `@plan-writer`; then TC-ACTION-036 pins them with the contract suite. The retro report's top-level key question is settled separately by DEC-10 (no new key) |
+| OQ-T3 | AC-F1-2 requires "a classified error naming the offending field" for a team owner, an unverifiable verb and a placeholder tracker entry, while DEC-5 declares exactly three identities and forbids a fourth. | No — resolved | Resolved in spec v1.2 by DEC-8: a present-but-non-conforming field is incomplete for filing purposes and is refused under `retro.action-incomplete` naming the offending field. This plan binds matrix R-09..R-11 to that identity (TC-ACTION-003, TC-ACTION-005); nothing is left to confirm and no fourth identity is added |
+| OQ-T4 | The board actions surface's human label and placement (a fifth label beside `ASKS` or a sub-block inside the asks section) are not spec-pinned; the delivered board test pins the exact label sequence (D-6). | No | `@plan-writer` declares the shape; TC-ACTION-017/036 assert "beside the asks, additive, four delivered sections unchanged" either way (GAP-6) |
+| OQ-T5 | Spec AC-F1-1 and AC-F5-1 list `NFR-8` (error-table binding) in their Linked column although their criteria do not concern error-table binding. | No — resolved | Resolved in spec v1.2: the stray `NFR-8` links were removed (the Linked columns now read F-1 and F-1/F-2/DEC-6). No requirement was added or dropped; the error-table obligation stays with AC-N8-1 and TC-ACTION-026 |
+| OQ-T6 | "Days past the aging basis": the spec records both filing date and due date and pins the basis once as contract data without naming which date drives the 14/30-day thresholds (RSK-6). | No — resolved | Resolved in spec v1.2 by DEC-9: the basis is time open since the recorded filing timestamp, and due dates feed only the second-miss counter. TC-ACTION-006..008 bind that basis; the boundary ladder follows it |
+| OQ-T7 | Whether the retro report gains any additive top-level `data` key from the registry producer, which would move the delivered exact-four-keys assertion (D-11). | No — resolved | Resolved in spec v1.2 by DEC-10: no new top-level key; the registry feeds the delivered `followThrough[]` fold and provenance stays inside its entries. D-11 is declared "unchanged — no move" and TC-ACTION-023 asserts it |
+| OQ-T8 | Outcome closure of a deprioritized or superseded action, and repeat closure attempts on an already-closed plane, are not specified. | No — resolved | Resolved in spec v1.2 by DEC-11, with AC-F4-4 and AC-F4-5 added: the deprioritized/superseded decision closes both planes and the repeat closure is a state-conflict refusal. TC-ACTION-038 and TC-ACTION-039 own the two cases; matrix C-08/C-09 and C-13/C-14 bind them |
 
 ## 9. Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-16 | @test-plan-writer | Initial test plan for GH-287 (M2-S10): 37 TCs covering the 13 binding ACs and 8 NFRs, both pinned scenarios as dedicated cases (TC-ACTION-001, TC-ACTION-010), the filing/aging/closure/WIP oracles, the board actions surface and bounds, follow-through enforcement and the fold producer, the additive error rows (4→7), the honesty battery, and the declared delivered-suite drift register (§4.4) with GAP-1..GAP-6 and OQ-T1..OQ-T8 |
+| 1.1 | 2026-11-16 | @test-plan-writer | Reconciled with spec v1.2 (reopened specification phase). DEC-8 pins the contract-rule refusal under the one filing identity → GAP-5 resolved, OQ-T3 closed, matrix R-09..R-11 restated as spec-pinned; DEC-9 pins the aging basis as time open since the recorded filing timestamp with due dates feeding only the miss counter → OQ-T6 closed, the A-matrix and TC-ACTION-006..008 rebound to the timestamp; OQ-T5 closed (the spec removed the stray `NFR-8` links from AC-F1-1/AC-F5-1); DEC-10 pins no new top-level `retro report` data key → OQ-T7 closed, D-11 declared "unchanged — no move", TC-ACTION-023/037 assert exactly the four keys; DEC-11 pins both-plane closure on the deprioritized/superseded routes, the already-closed-plane state-conflict refusal and the recorded superseding reference → OQ-T8 closed, C-08/C-09 restated, C-13/C-14 added, TC-ACTION-012 step 3 rewritten, mutants (u)–(w) added. Added AC-F4-4 and AC-F4-5 as dedicated cases TC-ACTION-038 and TC-ACTION-039. Now 39 TCs covering 15 ACs |
 
 ## 10. Test Execution Log
 
