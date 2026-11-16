@@ -123,6 +123,16 @@ const stringFlag = (
   return typeof value === "string" ? value : undefined;
 };
 
+const unexpectedFlag = (
+  flags: Readonly<Record<string, string | true>>,
+  allowed: readonly string[],
+): SteerFailure | undefined => {
+  const unexpected = Object.keys(flags).find((name) => !allowed.includes(name));
+  return unexpected === undefined
+    ? undefined
+    : invocationFailure(`the requested steer subcommand does not accept "${unexpected}"`);
+};
+
 const readOnce = (runtime: SteerCommandRuntime): SteerFailure | SteeringQueueRead => {
   const read = runtime.readQueue();
   return read.ok ? read.value : queueUnavailable(read.error.code);
@@ -138,6 +148,8 @@ const sendHandler = (
       'steer send requires exactly one note text: send "<text>" [--kind ...] [--priority ...] [--ttl ...] [--ref ...]',
     );
   }
+  const flagFailure = unexpectedFlag(flags, ["--kind", "--priority", "--ttl", "--ref"]);
+  if (flagFailure !== undefined) return flagFailure;
   const text = positionals[1] as string;
   const kind = stringFlag(flags, "--kind");
   const priority = stringFlag(flags, "--priority");
@@ -179,11 +191,14 @@ const sendHandler = (
 
 const listHandler = (
   runtime: SteerCommandRuntime,
+  flags: Readonly<Record<string, string | true>>,
   positionals: readonly string[],
 ): SteerSuccess | SteerFailure => {
   if (positionals.length !== 1) {
     return invocationFailure("steer list takes no positional arguments");
   }
+  const flagFailure = unexpectedFlag(flags, []);
+  if (flagFailure !== undefined) return flagFailure;
   const read = readOnce(runtime);
   if ("error" in read) return read;
   return {
@@ -196,12 +211,15 @@ const listHandler = (
 
 const readHandler = (
   runtime: SteerCommandRuntime,
+  flags: Readonly<Record<string, string | true>>,
   positionals: readonly string[],
 ): SteerSuccess | SteerFailure => {
   if (positionals.length !== 1) {
     // Any positional on `read` is the grammar refusal, never `steer.unknown-id`.
     return invocationFailure("steer read takes no positional arguments");
   }
+  const flagFailure = unexpectedFlag(flags, []);
+  if (flagFailure !== undefined) return flagFailure;
   const read = readOnce(runtime);
   if ("error" in read) return read;
   const phase = runtime.readPhaseFold(runtime.origin().change);
@@ -229,6 +247,8 @@ const completeHandler = (
   if (positionals.length !== 2) {
     return invocationFailure("steer complete requires exactly one id and --ref <artifact>");
   }
+  const flagFailure = unexpectedFlag(flags, ["--ref"]);
+  if (flagFailure !== undefined) return flagFailure;
   const id = positionals[1] as string;
   if (id.length === 0 || id.trim().length === 0) {
     return valueFailure("id", "completion requires a steering record id");
@@ -291,8 +311,8 @@ export const createSteerCommandDefinition = (runtime: SteerCommandRuntime): Comm
     const positionals = invocation.positionals;
     const subcommand = positionals[0];
     if (subcommand === "send") return sendHandler(runtime, invocation.flags, positionals);
-    if (subcommand === "list") return listHandler(runtime, positionals);
-    if (subcommand === "read") return readHandler(runtime, positionals);
+    if (subcommand === "list") return listHandler(runtime, invocation.flags, positionals);
+    if (subcommand === "read") return readHandler(runtime, invocation.flags, positionals);
     if (subcommand === "complete") return completeHandler(runtime, invocation.flags, positionals);
     return invocationFailure("steer requires one of: send, list, read, complete");
   },

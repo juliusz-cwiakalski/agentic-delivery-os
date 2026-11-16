@@ -174,3 +174,19 @@ notes:
       `steer list`."
     type: info
     date: "2026-11-16"
+  - text: "Plan phase 5 COMPLETE: f561b005 — `steer read` is the declared read
+      point: both boundary-open routes and the closed decline over the delivered
+      phase fold; every due note lands in one batch in shared-rank order with a
+      complete receipt and exactly one outcome; ttl-elapsed is a classified
+      non-applied outcome at the inclusive >= boundary; repeat reads append
+      nothing; asks[] composes the delivered open-question view with the
+      PDR-0003 join facts, measured age, the 8 cap and coordinator exclusion;
+      and the payload lists at most 20 notes while the landing write is uncapped
+      (21/25 due -> 21/25 receipts, 20 listed, overflow counted). Tests: read
+      landing (5), expiry (5), closed boundary (1), idempotency/cardinality (3),
+      asks (4), read bounds (4) + the phase-4 suites — 91 steer tests pass /
+      0 fail; typecheck green. Deviation: a repeat read returns the considered
+      batch only (AC-F3-5), so already-resolved notes are not replayed in the
+      read payload; they remain visible on `steer list`."
+    type: info
+    date: "2026-11-16"
