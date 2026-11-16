@@ -1,0 +1,62 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-296
+branch: feat/GH-296/ceremony-runner
+status: PASS
+summary: >-
+  Re-review of plan phase 12 (T-1..T-5, commit 01add81b, docs 281046b6): all
+  five iteration-1 findings are fixed on merit, not reworded. The compaction
+  loop provably terminates (each byte-bound round drops exactly one content
+  line and re-derives the omitted marker; the loop guard bounds iterations at
+  the initial keep count), with a 50x120 strict-progress regression composing
+  both bounds; the brief render reuses a delivered projection or projects
+  recognized status facts through the delivered projectBrief fold and renders
+  unknown with a named reason, never an observed zero, with tests asserting
+  real projections; the note contract carries a per-item evidenceRef channel
+  validated as ceremony.note-invalid naming facts, the edge composes the
+  citation, and covered requires resolution in delivered evidence with a
+  composed-runtime test exercising the production path; catch-up targets carry
+  the registry origin and a project-declared replay records origin project
+  through the composed edge; the look-back comment names the delivered 7/4/2/2
+  windows. Docs (spec 3.5/3.6/9, guide) state the delivered truth. No new
+  defect: the edge diff is surgical (citation passthrough plus per-target
+  origin), envelope/exits unchanged, no network/LLM/ambient reads added
+  (hermetic suite green), layering intact (core-internal imports only), no
+  absolute user paths, commits conventional with no line over 100 chars.
+  Spot-verified test suites: the six instructed ceremony suites 33 pass /
+  0 fail, plus parity/golden/hermetic 22 pass / 0 fail, consistent with the
+  pm-notes full-suite record (9452 pass / 4 skip / 0 fail across 9456 tests).
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 1
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-15--GH-296--ceremony-runner/chg-GH-296-plan.yaml:855
+    message: >-
+      Phase 12's declared scope.files list names ten files; commit 01add81b
+      additionally touched seven tightly-coupled support files
+      (contracts/ceremony.ts, ceremony-intake.ts, ceremony-parity and
+      ceremony-notes tests, ceremony-runtime-composition.test.ts, the builtins
+      fixture, and the golden brief test). The drift is intrinsic to T-3 (the
+      citation channel cannot be added without the contract and intake
+      validation) and is disclosed with reasons in the phase-12 pm-notes
+      entry. No action required.
+    suggestion: >-
+      None; recorded for the audit trail. Future remediation phases may widen
+      scope.files to the support files the finding text itself names.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-16T00:00:00Z
+next_step: PROCEED

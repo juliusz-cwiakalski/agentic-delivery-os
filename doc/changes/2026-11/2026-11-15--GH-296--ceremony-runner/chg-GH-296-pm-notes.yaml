@@ -573,6 +573,18 @@ notes:
       payload), not only a shape assertion."
     type: retro
     date: "2026-11-16"
+  - text: "review_fix iteration 2: PASS. Verdict record:
+      code-review/review-iter-2.yaml. All five findings verified fixed on merit
+      (F-1 livelock termination proven from the loop plus the pathological
+      50x120 regression test with strict per-round progress; F-2 brief projects
+      delivered facts through projectBrief; F-3 composed-path citations with
+      resolve-to-verify covered; F-4 catch-up records true origin; F-5 comment).
+      One info-only residue: phase 12 scope.files omits 7 tightly-coupled
+      support files the slice touched; disclosed in pm-notes, no action.
+      Spot-verified 33 pass / 0 fail on the six key suites; full suite recorded
+      9452 pass / 4 skip / 0 fail across 9456 tests."
+    type: info
+    date: "2026-11-16"
   - text: "delivery plan phase 12 (Code Review Remediation, T-1..T-5) complete on
       commit 01add81b. F-1: compactCeremonyCarried now drops one content line per
       byte-bound round and re-derives the omitted marker, so the payload
