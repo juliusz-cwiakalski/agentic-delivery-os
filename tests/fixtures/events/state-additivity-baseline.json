@@ -150,6 +150,12 @@
     "ceremony.ts:CEREMONY_RUN_RECORD_KIND": "ceremony.run",
     "ceremony.ts:CEREMONY_STEP_PAYLOAD_SCHEMA": "delivery.ceremony.step.v1",
     "ceremony.ts:CEREMONY_STEP_RECORD_KEY_PREFIX": "ceremony.steps:",
-    "ceremony.ts:CEREMONY_STEP_RECORD_KIND": "ceremony.step"
+    "ceremony.ts:CEREMONY_STEP_RECORD_KIND": "ceremony.step",
+    "steer.ts:STEER_MESSAGE_RECORD_KIND": "steering.message",
+    "steer.ts:STEER_OUTCOME_RECORD_KIND": "steering.outcome",
+    "steer.ts:STEER_COMPLETION_RECORD_KIND": "steering.completion",
+    "steer.ts:STEER_MESSAGE_PAYLOAD_SCHEMA": "delivery.steering.message.v1",
+    "steer.ts:STEER_OUTCOME_PAYLOAD_SCHEMA": "delivery.steering.outcome.v1",
+    "steer.ts:STEER_COMPLETION_PAYLOAD_SCHEMA": "delivery.steering.completion.v1"
   }
 }
