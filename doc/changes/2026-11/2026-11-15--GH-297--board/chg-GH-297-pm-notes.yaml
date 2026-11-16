@@ -12,7 +12,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-16T02:55:13.752Z }
   review_fix: { started: null, completed: 2026-11-16T04:10:35.685Z }
   quality_gates: { started: null, completed: 2026-11-16T04:28:32.027Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-16T04:30:54.720Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "DEC-1 scope: deliver M2-S4 exactly as the backlog task line and the M2
@@ -301,5 +301,19 @@ notes:
       range origin/main-tools..HEAD, 0 offending commits, mode none, commitlint
       resolved repository-local (node_modules/.bin/commitlint). The 4 skips and
       96 lint warnings are pre-existing noise, not failures.
+    type: info
+    date: "2026-11-16"
+  - text: >-
+      DoD verification: pm-notes exists and lints; all nine prior lifecycle
+      phases completed in the verified registry; every declared plan phase (1-6)
+      carries a pm-notes evidence entry naming the plan phase id, its commit
+      (ec63cd34, fd39aced, 147144eb, 0c291de7, e998ef43, 1ac6e255 plus the
+      759597d3 post-gate fix and 21f122c7 registry), and its test result; all 29
+      spec ACs are covered by the 48-case test plan and green under the
+      aggregate gate (review iterations 1 FAIL / 2 PASS); current-truth docs are
+      complete with no residual doc-syncer gaps and the new feature-board.md is
+      registered in the forbidden-literals corpus; the single backlog AC is
+      machine-checkable via the stateSource equality across board, status, and
+      brief payloads. No gaps found; no phase reopen required.
     type: info
     date: "2026-11-16"
