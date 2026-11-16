@@ -538,3 +538,30 @@ notes:
       Lifecycle complete: 11 of 11 phases."
     type: info
     date: "2026-11-16"
+  - text: "SYNC-ONLY (post-PR, CEO-requested): main-tools advanced by one commit
+      (f9cf477f, GH-298 steer M2-S5). Rebased feat/GH-287/retro-action-registry
+      onto f9cf477f — 26 commits replayed, 6 conflict stops, 20 files resolved
+      strictly by union per convention (planning docs, 00-index, registers keep
+      BOTH sides; nothing dropped from either side; content integrity verified
+      bidirectionally: diff vs pre-rebase tip = exactly GH-298's changeset, diff
+      vs main-tools = exactly ours). Union count literals moved 143 -> 146 error
+      identities (140 base + 3 retro.action + 3 steer), allowlist 59 -> 62, and
+      propagated pins (error-table, corpora, suite-map, taxonomy, ceremony doc
+      pins, inventories, additivity baselines, coverage.json alias lines, doc
+      prose). Verification on the rebased tree: typecheck green; conflict-
+      affected suites + doc-conformance 293/0; steer/action/board suites green;
+      plan validate valid; error-table-sync entries=146 documented=146; full
+      battery TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 — 9814 pass / 4 skip /
+      0 fail across 9818 tests (1234 files, incl. GH-298 steer suites).
+      NOTABLE: the rebase rotated every commit hash — all pre-rebase hashes
+      recorded in this file's earlier notes (f22f390, ad72ad68, 5377b80,
+      b4ffd7b, eea8054, 16aee76, 6c827c3, a806603, 225bded, c3a7a32, 19fe62c,
+      1dd656bf, 9cddcdb9, fba659df, 98f6e6ae, 45fe86f4, 5b22c226, 09a86957,
+      c1fe34b7, 0a0c9b79, dc6fa941, 7d7e6248, 5d830edb, decdb9ec, 5ad6c010)
+      are historical identifiers of the same commits now living at rotated
+      SHAs on top of f9cf477f; the capsule ledger and delivery registry remain
+      the durable evidence (recordCount 368+, registry evidence class
+      verified). Pre-rebase backup ref: backup/GH-287-pre-rebase (5b22c226).
+      Post-rebase tip: 7763d0d8. No scope change, no phase reopen."
+    type: retro
+    date: "2026-11-16"
