@@ -12,7 +12,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-16T16:30:05.049Z }
   review_fix: { started: null, completed: 2026-11-16T18:41:44.838Z }
   quality_gates: { started: null, completed: 2026-11-16T20:38:05.069Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-16T20:39:27.125Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "Spec OQ-1..OQ-3 adjudicated change-scoped via @decision-advisor, baked
@@ -413,7 +413,7 @@ notes:
     type: info
     date: "2026-11-16"
   - text: "Plan phase 10 complete (resumed across two session interruptions) —
-      review iter 1 remediation. Commit (this commit). F-1: production.ts retro
+      review iter 1 remediation. Commit 9cddcdb9. F-1: production.ts retro
       composition now generates and passes newActionId/newClosureId UUID
       factories (mirrors newRunId/newTraceId); two-runtime regression test
       tests/behaviour/action-production-identity.test.ts files two actions
@@ -507,5 +507,21 @@ notes:
       — base main-tools resolved to merge-base cfb0ce8d (refs/remotes/
       origin/main-tools), 23 commits in range, 0 offending, mode none;
       commitlint binary node_modules/.bin/commitlint, origin repository-local."
+    type: info
+    date: "2026-11-16"
+  - text: "DoD check (PM): all gates verified green. (1) Registry: 9 lifecycle
+      phases completed per phase list, timestamps verified. (2) Plan completion:
+      all 10 declared plan phases carry pm-notes evidence with id + commit hash
+      + test results (P1 f22f390, P2 ad72ad68, P3 5377b80, P4 b4ffd7b, P5
+      eea8054, P6 16aee76, P7 6c827c3, P8 a806603, P9 225bded, P10 9cddcdb9;
+      quality-gate fix commits 09a86957 + c1fe34b7 documented separately;
+      phase-10 note placeholder '(this commit)' corrected to the real hash
+      9cddcdb9 — correction rides this dod_check commit). (3) ACs: all 15 spec
+      ACs verified by review iteration 2 PASS, pinned scenarios SC-M2-S10-01/02
+      asserted, ticket's six AC lines traced (spec section 17). (4) Current-
+      truth docs: doc-syncer reported residual gaps NONE in both passes (21-file
+      reconciliation + post-remediation light pass); doc-distribution no drift.
+      (5) Gates: full battery exit 0 (9623/4/0), range lint PASS. No reopened
+      phases required."
     type: info
     date: "2026-11-16"
