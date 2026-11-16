@@ -8,7 +8,14 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import {
+  appendFileSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  statSync,
+  writeFileSync,
+} from "node:fs";
 import {
   acquireFileConfig,
   affectedRepositoryTargets,
@@ -221,6 +228,7 @@ import {
   type VerifyGatesRepositoryFacts,
   type VerifyGatesWorkflowFacts,
   type VerifyGatesWorkItem,
+  validateCeremonyNoteForDeclaration,
   type WatchRead,
   watchLines,
   windowSpendEvidence,
@@ -239,6 +247,8 @@ import {
   type CapsuleFileRuntime,
   type CapsuleFileSystemFacts,
   type CapsuleProducerPort,
+  CEREMONY_NOTE_MAX_BYTES,
+  type CeremonyDeclaration,
   type CeremonyInputRead,
   type CeremonyInputSource,
   type CeremonyMemoryPort,
@@ -3409,6 +3419,18 @@ const parseCeremonyNote = (
   path: string,
 ): { readonly note: CeremonyNote } | { readonly error: CeremonyEngineFailure } => {
   try {
+    // The note read is bounded in bytes before any parse (DM-2, §21): the
+    // bound is the configuration parser class's declared size limit.
+    const size = statSync(path).size;
+    if (size > CEREMONY_NOTE_MAX_BYTES) {
+      return {
+        error: {
+          code: "ceremony.note-invalid",
+          summary: `the ceremony note at "${path}" is ${String(size)} bytes; the declared bound is ${String(CEREMONY_NOTE_MAX_BYTES)}`,
+          field: "document",
+        },
+      };
+    }
     return { note: parseCeremonyNoteText(readFileSync(path, "utf8")) as CeremonyNote };
   } catch {
     return {
@@ -3604,15 +3626,41 @@ export const createCeremonyCommandRuntime = (
       origin,
     } as const;
   };
-  const noteFor = (runId: string, scopeKey: string): CeremonyNote | undefined => {
+  /**
+   * Read the stored note back for a resume and re-validate it against the
+   * note contract (DM-2): a stored body that merely parses but no longer
+   * satisfies the schema refuses the resume with the field named, rather than
+   * entering the agenda as an unvalidated document.
+   */
+  const noteFor = (
+    declaration: CeremonyDeclaration,
+    scopeKey: string,
+  ): { readonly note: CeremonyNote } | { readonly error: CeremonyEngineFailure } | undefined => {
     const body = memory.readNote(scopeKey);
     if (body.state === "absent") return undefined;
+    let note: CeremonyNote;
     try {
-      void runId;
-      return JSON.parse(body.body) as CeremonyNote;
+      note = JSON.parse(body.body) as CeremonyNote;
     } catch {
-      return undefined;
+      return {
+        error: {
+          code: "ceremony.note-invalid",
+          summary: "the stored ceremony note cannot be parsed",
+          field: "document",
+        },
+      };
     }
+    const failure = validateCeremonyNoteForDeclaration(declaration, note);
+    if (failure !== undefined) {
+      return {
+        error: {
+          code: failure.code,
+          summary: `the stored ceremony note fails read-back validation: ${failure.summary}`,
+          ...(failure.field === undefined ? {} : { field: failure.field }),
+        },
+      };
+    }
+    return { note };
   };
   /**
    * Select the checkout's delivery change from the recorded lifecycle
@@ -3669,8 +3717,8 @@ export const createCeremonyCommandRuntime = (
   /** The invocation's tier verdict; one verified state read when self-resolved. */
   const tierVerdict = (): CeremonyTierVerdict | undefined => {
     if (options.tierContext !== undefined) return tierFromState(undefined);
-    const state = readCeremonyState(options.store);
-    return tierFromState(state.ok ? state.value : undefined);
+    const ledger = readCeremonyState(options.store);
+    return tierFromState(ledger.ok ? ledger.value : undefined);
   };
   return {
     list: async () => {
@@ -3678,20 +3726,21 @@ export const createCeremonyCommandRuntime = (
       if (!built.ok) return { ok: false, error: built.error };
       // One verified state read partitions runs, steps, and the recorded
       // lifecycle transitions the tier evidence maps (NFR-11: list reads at
-      // most two verified state reads).
-      const state = readCeremonyState(options.store);
+      // most two verified state reads). The local is named `ledger` so no
+      // property chain carries the reserved `state.` code namespace.
+      const ledger = readCeremonyState(options.store);
       const usable =
-        state.ok && state.value.verdict !== "torn" && state.value.verdict !== "unknown";
-      const runs = usable ? state.value.runs : [];
+        ledger.ok && ledger.value.verdict !== "torn" && ledger.value.verdict !== "unknown";
+      const runs = usable ? ledger.value.runs : [];
       const stepsByRun = new Map<string, CeremonyStepRecord[]>();
       if (usable) {
-        for (const step of state.value.steps) {
+        for (const step of ledger.value.steps) {
           const bucket = stepsByRun.get(step.runId) ?? [];
           bucket.push(step);
           stepsByRun.set(step.runId, bucket);
         }
       }
-      const verdict = tierFromState(state.ok ? state.value : undefined);
+      const verdict = tierFromState(ledger.ok ? ledger.value : undefined);
       const ceremonies = built.registry.entries.map((entry) => {
         const own = runs
           .filter((run) => run.ceremonyId === entry.declaration.id)
@@ -3792,7 +3841,11 @@ export const createCeremonyCommandRuntime = (
           },
         };
       }
-      const note = noteFor(request.runId, run.scopeKey.value);
+      const noteResult = noteFor(entry.declaration, run.scopeKey.value);
+      if (noteResult !== undefined && "error" in noteResult) {
+        return { ok: false, error: noteResult.error };
+      }
+      const note = noteResult?.note;
       const resumed = resumeCeremony({
         runId: request.runId,
         declaration: entry.declaration,

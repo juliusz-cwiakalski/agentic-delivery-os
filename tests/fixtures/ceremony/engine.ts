@@ -19,8 +19,8 @@ import type {
   StateStorePort,
 } from "../../../packages/core/src/contracts/index";
 import { createCeremonyRecordPort } from "../../../packages/core/src/state/index";
-import { makeCeremonyState, NOW_MS, type CeremonyStateFixture } from "./state";
-import { readFixture, withPath, type UnknownRecord } from "./declarations";
+import { readFixture, type UnknownRecord, withPath } from "./declarations";
+import { type CeremonyStateFixture, makeCeremonyState, NOW_MS } from "./state";
 
 export type EngineHarness = {
   readonly fixture: CeremonyStateFixture;
@@ -64,13 +64,19 @@ export const makeEngineHarness = (options: EngineHarnessOptions = {}): EngineHar
   const mirrorApplies: { target: string; records: readonly string[] }[] = [];
 
   const artifacts: CeremonyArtifactPort = {
-    write(input: { runId: string; slot: CeremonyOutputSlot; schema: string; content: string }): {
+    write(input: {
+      runId: string;
+      slot: CeremonyOutputSlot;
+      schema: string;
+      content: string;
+      stepIndex: number;
+    }): {
       ok: true;
       ref: string;
     } {
       const name =
         input.slot === "ceremony-artifact"
-          ? `${input.runId}.json`
+          ? `${input.runId}.s${String(input.stepIndex)}.json`
           : `${input.runId}.${input.slot}.${String(artifactContents.size)}.json`;
       const ref = `${input.slot}:${name}`;
       artifactContents.set(ref, input.content);

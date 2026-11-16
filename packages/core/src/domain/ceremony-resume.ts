@@ -7,16 +7,16 @@
  * re-verified destructively, or re-rendered.
  */
 import type { CeremonyDeclaration, CeremonyNote, CeremonyStepRecord } from "#contracts";
+import type { CeremonyIntake } from "./ceremony-intake.js";
 import {
-  executeCeremonyAgenda,
-  flattenCeremonyAgenda,
   type CeremonyEngineFailure,
   type CeremonyRunData,
   type CeremonyRunEnvironment,
   type CeremonyRunOutcome,
   type CeremonyStepOutcome,
+  executeCeremonyAgenda,
+  flattenCeremonyAgenda,
 } from "./ceremony-run.js";
-import type { CeremonyIntake } from "./ceremony-intake.js";
 
 /** One resume request; the note is optional because a resume never needs it. */
 export type CeremonyResumeRequest = {
@@ -165,6 +165,7 @@ export const resumeCeremony = (request: CeremonyResumeRequest): CeremonyRunOutco
     env: request.env,
     apply: request.apply,
     startIndex: sequence.startIndex,
+    priorStepCount: stepsRead.records.length,
   });
   if (!agenda.ok) return { ok: false, error: agenda.error };
   const all = [...stepsRead.records, ...agenda.records];

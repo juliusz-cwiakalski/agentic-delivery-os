@@ -9,8 +9,9 @@
  * engine consumes. No clock, randomness, environment, network, or filesystem
  * access lives here.
  */
-import type { PmNotesVariant } from "./pm-notes.js";
+
 import type { PlanKnownTier } from "./plan.js";
+import type { PmNotesVariant } from "./pm-notes.js";
 import type { StateArtifactBoundaryDeclaration } from "./state.js";
 
 /* ------------------------------- schemas --------------------------------- */
@@ -209,6 +210,13 @@ export const CEREMONY_DECLARATION_LIMITS = {
   compactionBytes: 4_096,
   compactionLines: 40,
 } as const;
+
+/**
+ * The declared note-read bound in bytes (DM-2, §21): the note read inherits the
+ * configuration parser class's size bound, so an over-bound note is refused
+ * before any parse or output.
+ */
+export const CEREMONY_NOTE_MAX_BYTES = 1_048_576 as const;
 
 /** The declared identifier grammar (DM-1). */
 export const CEREMONY_ID_PATTERN = "^[a-z][a-z0-9-]*$" as const;
@@ -540,6 +548,8 @@ export type CeremonyArtifactPort = {
     readonly slot: CeremonyOutputSlot;
     readonly schema: string;
     readonly content: string;
+    /** The writing step's flattened agenda index; per-step names never collide (DM-6). */
+    readonly stepIndex: number;
   }): CeremonyArtifactWrite;
   read(input: {
     readonly runId: string;
@@ -564,12 +574,17 @@ export type CeremonyRecordAppend =
   | { readonly ok: true }
   | { readonly ok: false; readonly code: string; readonly detail?: string };
 
-/** The injected record seam over the state layer's boundary-validated appends. */
+/**
+ * The injected record seam over the state layer's boundary-validated appends.
+ * Each append receives the expected post-append record total from the caller's
+ * own verified read, so one append costs exactly one verified state read: the
+ * post-append re-read (NFR-11).
+ */
 export type CeremonyRecordPort = {
   readRuns(): CeremonyRecordsRead<CeremonyRunRecord>;
   readSteps(runId: string): CeremonyRecordsRead<CeremonyStepRecord>;
-  appendRun(record: CeremonyRunRecord): CeremonyRecordAppend;
-  appendStep(record: CeremonyStepRecord): CeremonyRecordAppend;
+  appendRun(record: CeremonyRunRecord, expectedRunTotal: number): CeremonyRecordAppend;
+  appendStep(record: CeremonyStepRecord, expectedStepTotal: number): CeremonyRecordAppend;
 };
 
 /** One mirror-target inspection (F-3, NFR-12). */

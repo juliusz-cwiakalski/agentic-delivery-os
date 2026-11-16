@@ -382,3 +382,29 @@ notes:
       shipped-composition note were replaced with the composed truth."
     type: info
     date: "2026-11-16"
+  - text: "Remediation slice C (mirror-sync composition, AC-F3-5, AC-F4-5, NFR-12):
+      commit 86739473. The shipped decision-record-mirror-sync now resolves a
+      real affected-repository target set and landing path: targets come from
+      the committed projects.yaml members (repoKey minus the invoking
+      repository; root names the local checkout) through a new
+      decision-register adapter; the source set is the invoking repository's
+      committed doc/decisions register; mirror.inspect reads the target
+      checkout's decision-record set; --apply lands the declared write set as a
+      byte copy into the target checkout's decisions directory (idempotent, no
+      force path, no child process, no commit in the ceremony path). The dry
+      run now verifies the computed write set and preconditions without
+      requiring equality (E-8/AC-F4-5), so a fresh target set is dry-run at
+      exit 0; the applied run still requires two-way equality (NFR-12), and a
+      drifted or absent target is unverified naming the target. Absent
+      projects configuration or register degrades declaredly. Suites: pnpm
+      typecheck green; new tests/behaviour/ceremony-mirror-composition.test.ts
+      5 pass (TC-068: dry-run lands nothing, apply lands equal byte for byte,
+      extra-record drift unverified naming the target, absent target
+      precondition named, no-config degradation); flow-mirror/parity/run/
+      resume/mutants/hermetic/non-regression/determinism/bounds/performance
+      77 pass; flow + tier + runtime + cli/list/envelope/catch-up suites 71
+      pass; doc-conformance green; biome clean. The mirror known-gap bullets
+      in the feature spec and the guide were replaced with the composed
+      truth."
+    type: info
+    date: "2026-11-16"

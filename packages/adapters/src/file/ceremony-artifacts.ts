@@ -1,11 +1,13 @@
 /**
  * The ceremony artifact family adapter (GH-296 F-4, DM-6).
  *
- * One byte-level artifact per run in the state directory, named by run id,
- * `0600`, forever retention, outside the ledger and outside the derived-document
- * set. A write that cannot be read back fails its step's verification; this
- * adapter never repairs, compacts, or indexes an artifact. The runtime filesystem
- * lives here, never in the contracts or domain tiers.
+ * Byte-level artifacts in the state directory, named by run id and writing
+ * step (`<runId>.s<index>.json` in the ceremony-artifact slot, so per-step
+ * artifacts never overwrite one another; digest-named in the other slots),
+ * `0600`, forever retention, outside the ledger and outside the
+ * derived-document set. A write that cannot be read back fails its step's
+ * verification; this adapter never repairs, compacts, or indexes an artifact.
+ * The runtime filesystem lives here, never in the contracts or domain tiers.
  */
 import { chmodSync, existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
@@ -39,9 +41,10 @@ const artifactName = (input: {
   readonly runId: string;
   readonly slot: CeremonyOutputSlot;
   readonly content: string;
+  readonly stepIndex: number;
 }): string =>
   input.slot === "ceremony-artifact"
-    ? `${input.runId}.json`
+    ? `${input.runId}.s${String(input.stepIndex)}.json`
     : `${input.runId}.${input.slot}.${digest(input.content)}.json`;
 
 const safeName = (name: string): boolean =>

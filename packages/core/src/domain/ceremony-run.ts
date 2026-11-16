@@ -493,6 +493,7 @@ const artifactContent = (value: unknown): string => JSON.stringify(value);
 const writeOutput = (
   step: CeremonyStepDeclaration,
   runId: string,
+  stepIndex: number,
   scopeKey: string,
   content: string,
   env: CeremonyRunEnvironment,
@@ -505,11 +506,19 @@ const writeOutput = (
       return { failure: "memory slot port is absent", slot: output.slot };
     return { ref: `memory:${scopeKey}`, slot: output.slot };
   }
+  if (output.slot === "state-record") {
+    // The declared home of a state-record output is the ceremony record kind
+    // in the delivery ledger (DM-1): the step's own appended record is the
+    // landed output, and the caller's fenced append with its post-append
+    // verified re-read is the write. No artifact file is written for the slot.
+    return { ref: `ledger:ceremony.steps:${runId}:${String(stepIndex)}`, slot: output.slot };
+  }
   const written = env.artifacts.write({
     runId,
     slot: output.slot,
     schema: output.schema,
     content,
+    stepIndex,
   });
   return written.ok
     ? { ref: written.ref, slot: output.slot }
@@ -755,6 +764,7 @@ const executeStep = (input: {
   const written = writeOutput(
     input.step,
     input.runId,
+    input.index,
     input.intake.scopeKey.value,
     content,
     input.env,
@@ -777,6 +787,48 @@ const executeStep = (input: {
         verification: "unverified",
         reason: written.failure,
       },
+    };
+  }
+  if (primaryOutput(input.step).slot === "state-record") {
+    // The declared ledger record lands through the caller's fenced append,
+    // whose post-append verified re-read requires exactly one new record; a
+    // failed append fails the run before any verdict could be mistaken for a
+    // landing. The step's verification here earns the document itself: the
+    // record document must parse, be an object, and declare its schema.
+    let recordDocument: unknown;
+    try {
+      recordDocument = JSON.parse(content);
+    } catch {
+      recordDocument = undefined;
+    }
+    const documentEarned =
+      isRecord(recordDocument) &&
+      recordDocument.schemaId === primaryOutput(input.step).schema &&
+      isRecord(recordDocument.facts ?? {});
+    const endedAtMs = nowFor(input.env);
+    return {
+      record: {
+        schemaId: "delivery.ceremony.step.v1",
+        runId: input.runId,
+        index: input.index,
+        phaseIndex: input.phaseIndex,
+        kind: input.step.kind,
+        outcome: documentEarned ? "verified" : "unverified",
+        startedAtMs,
+        endedAtMs,
+        durationMs: Math.max(0, endedAtMs - startedAtMs),
+        slot: written.slot,
+        artifactRef: written.ref,
+        verification: documentEarned ? "verified" : "unverified",
+        ...(documentEarned
+          ? {}
+          : {
+              reason: isRecord(recordDocument)
+                ? "the record document does not declare its schema or facts"
+                : "the record document is not valid JSON",
+            }),
+      },
+      content,
     };
   }
   if (
@@ -945,6 +997,8 @@ export const executeCeremonyAgenda = (input: {
   readonly env: CeremonyRunEnvironment;
   readonly apply: boolean;
   readonly startIndex?: number;
+  /** Step records already recorded for this run, from the caller's verified read. */
+  readonly priorStepCount?: number;
 }):
   | {
       readonly ok: true;
@@ -982,7 +1036,10 @@ export const executeCeremonyAgenda = (input: {
       env: input.env,
       apply: input.apply,
     });
-    const appended = input.env.records.appendStep(executed.record);
+    const appended = input.env.records.appendStep(
+      executed.record,
+      (input.priorStepCount ?? 0) + records.length + 1,
+    );
     if (!appended.ok) {
       return {
         ok: false,
@@ -1108,7 +1165,7 @@ export const runCeremony = (request: CeremonyRunRequest): CeremonyRunOutcome => 
     tier: request.tier,
     declaration: request.declaration,
   });
-  const appendedRun = request.env.records.appendRun(runRecord);
+  const appendedRun = request.env.records.appendRun(runRecord, runsRead.records.length + 1);
   if (!appendedRun.ok) {
     return {
       ok: false,
@@ -1121,6 +1178,7 @@ export const runCeremony = (request: CeremonyRunRequest): CeremonyRunOutcome => 
     runId,
     env: request.env,
     apply: request.apply,
+    priorStepCount: 0,
   });
   if (!agenda.ok) return { ok: false, error: agenda.error };
   const verdict = recordedVerdict(agenda.records);

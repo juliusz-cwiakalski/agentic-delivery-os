@@ -109,7 +109,7 @@ One store per workspace inside the injected state directory:
 | `retro-evidence.<workspace>.lock` | collector fence serializing sidecar appends |
 | `chain-key.retro.<workspace>.json` | distinct store-managed chaining-key artifact for the evidence sidecar; 32 random bytes generated once at the runtime edge, `0600`, separate bytes from the audit chain key |
 | `quarantine.<workspace>/` | post-tear bytes preserved by an explicit salvage, named deterministically per tear, never served as content |
-| `ceremony-artifacts.<workspace>/` | the ceremony runner's per-run artifact family: one JSON file per run (or per output slot with a content digest), `0600`, forever retention, outside the ledger, the derived-document set, and the store's salvage and repair path |
+| `ceremony-artifacts.<workspace>/` | the ceremony runner's per-step artifact family: one JSON file per writing step in the ceremony-artifact slot (`<runId>.s<index>.json`) or per output slot with a content digest, `0600`, forever retention, outside the ledger, the derived-document set, and the store's salvage and repair path |
 
 The retro evidence sidecar, its collector fence, and its key artifact live in the same state directory but outside the delivery store's artifact set; they are not store-managed records and never participate in the store's salvage or repair operations.
 

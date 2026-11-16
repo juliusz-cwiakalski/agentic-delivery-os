@@ -56,7 +56,9 @@ describe("TC-CEREMONY-055 bounded run cost", () => {
       if (!run.ok) return;
       expect(run.data.steps).toHaveLength(3);
       expect(prepared.harness.inputCalls.length).toBeLessThanOrEqual(16);
-      expect(counted.reads()).toBeLessThanOrEqual(2 * (1 + run.data.steps.length) + 2);
+      // NFR-11: one verified state read per fenced append (the post-append
+      // re-read) plus the intake's idempotency read — no pre-read per append.
+      expect(counted.reads()).toBeLessThanOrEqual(run.data.steps.length + 2);
       expect(
         counted
           .methods()

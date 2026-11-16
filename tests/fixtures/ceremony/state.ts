@@ -3,6 +3,8 @@
  * through the production append path, with deterministic literal record
  * builders. No test writes the live tree.
  */
+
+import type { StateStorePort } from "../../../packages/core/src/contracts/index";
 import {
   CEREMONY_RUN_PAYLOAD_SCHEMA,
   CEREMONY_STEP_PAYLOAD_SCHEMA,
@@ -16,10 +18,9 @@ import {
   makeTempRoot,
   openStore,
   removeRoot,
-  withinFence,
   type TestEdge,
+  withinFence,
 } from "../state/harness";
-import type { StateStorePort } from "../../../packages/core/src/contracts/index";
 
 export const NOW_MS = Date.UTC(2026, 10, 16, 9, 0, 0);
 export const WINDOW: CeremonyWindow = {
@@ -89,10 +90,10 @@ export const seedRun = (
   run: CeremonyRunRecord = runRecord(),
 ): void => {
   withinFence(fixture.store, "ceremony-seed", (handle) => {
-    const appended = appendCeremonyRun(fixture.store, handle, run);
+    const appended = appendCeremonyRun(fixture.store, handle, run, 1);
     if (!appended.ok) throw new Error(`run append failed: ${appended.error.code}`);
-    for (const step of steps) {
-      const outcome = appendCeremonyStep(fixture.store, handle, step);
+    for (const [position, step] of steps.entries()) {
+      const outcome = appendCeremonyStep(fixture.store, handle, step, position + 1);
       if (!outcome.ok) throw new Error(`step append failed: ${outcome.error.code}`);
     }
   });

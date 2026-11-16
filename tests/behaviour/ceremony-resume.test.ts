@@ -4,17 +4,20 @@
  * `state.store.torn` with zero writes).
  */
 import { describe, expect, test } from "bun:test";
-import { readCeremonySteps } from "../../packages/core/src/state/index";
-import { appendCeremonyRun, appendCeremonyStep } from "../../packages/core/src/state/index";
+import type { CeremonyStepRecord } from "../../packages/core/src/contracts/index";
 import { resumeCeremony, validateCeremonyStepSequence } from "../../packages/core/src/domain/index";
 import {
+  appendCeremonyRun,
+  appendCeremonyStep,
+  readCeremonySteps,
+} from "../../packages/core/src/state/index";
+import {
+  type EngineHarness,
   makeEngineHarness,
   threeStepDeclaration,
-  type EngineHarness,
 } from "../fixtures/ceremony/engine";
 import { runRecord, stepRecord } from "../fixtures/ceremony/state";
 import { withinFence } from "../fixtures/state/harness";
-import type { CeremonyStepRecord } from "../../packages/core/src/contracts/index";
 
 const seed = (harness: EngineHarness, steps: readonly CeremonyStepRecord[]): void => {
   withinFence(harness.store, "resume-seed", (handle) => {
@@ -22,10 +25,11 @@ const seed = (harness: EngineHarness, steps: readonly CeremonyStepRecord[]): voi
       harness.store,
       handle,
       runRecord({ runId: "run-1", phaseCount: 2 }),
+      1,
     );
     if (!run.ok) throw new Error(run.error.code);
-    for (const step of steps) {
-      const appended = appendCeremonyStep(harness.store, handle, step);
+    for (const [position, step] of steps.entries()) {
+      const appended = appendCeremonyStep(harness.store, handle, step, position + 1);
       if (!appended.ok) throw new Error(appended.error.code);
     }
   });
@@ -83,10 +87,18 @@ describe("TC-CEREMONY-021 resume starts at the first unverified index", () => {
           reason: "artifact does not conform",
         }),
       ]);
-      harness.corruptArtifact("state-record:run-1.state-record.0.json", "not-json");
+      // The re-attempted step writes the ceremony-artifact slot; the corrupted
+      // bytes fail its read-back so the attempt stays unverified.
+      const declaration = JSON.parse(JSON.stringify(threeStepDeclaration())) as unknown as {
+        agenda: { steps: { outputs: { slot: string }[] }[] }[];
+      };
+      declaration.agenda[1]?.steps[0]?.outputs.forEach((output) => {
+        output.slot = "ceremony-artifact";
+      });
+      harness.corruptArtifact("ceremony-artifact:run-1.s2.json", "not-json");
       const resumed = resumeCeremony({
         runId: "run-1",
-        declaration: threeStepDeclaration(),
+        declaration: declaration as unknown as ReturnType<typeof threeStepDeclaration>,
         env: harness.env,
         apply: false,
       });

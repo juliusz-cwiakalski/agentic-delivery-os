@@ -7,9 +7,10 @@
 import { describe, expect, test } from "bun:test";
 import { chmodSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { createCeremonyArtifactStore } from "../../packages/adapters/src/file/index";
 import {
-  CEREMONY_RUN_RECORD_KIND,
   CEREMONY_RUN_RECORD_KEY_PREFIX,
+  CEREMONY_RUN_RECORD_KIND,
   type StateStorePort,
 } from "../../packages/core/src/contracts/index";
 import {
@@ -22,8 +23,6 @@ import {
   readCeremonyRuns,
   readCeremonySteps,
 } from "../../packages/core/src/state/index";
-import { createCeremonyArtifactStore } from "../../packages/adapters/src/file/index";
-import { withinFence } from "../fixtures/state/harness";
 import {
   makeCeremonyState,
   NOW_MS,
@@ -31,6 +30,7 @@ import {
   seedRun,
   stepRecord,
 } from "../fixtures/ceremony/state";
+import { withinFence } from "../fixtures/state/harness";
 
 describe("TC-CEREMONY-040 durable run and step records with folds", () => {
   test("records land through the production append path with exactly-one re-read", () => {
@@ -127,10 +127,15 @@ describe("TC-CEREMONY-022 a nonconforming write is classified and nothing defaul
       const before = fixture.store.readRecords();
       expect(before.ok).toBe(true);
       withinFence(fixture.store, "ceremony-write", (handle) => {
-        const appended = appendCeremonyRun(fixture.store, handle, {
-          ...runRecord(),
-          schemaId: "delivery.ceremony.run.v0" as never,
-        });
+        const appended = appendCeremonyRun(
+          fixture.store,
+          handle,
+          {
+            ...runRecord(),
+            schemaId: "delivery.ceremony.run.v0" as never,
+          },
+          1,
+        );
         expect(appended.ok).toBe(false);
         if (!appended.ok) {
           expect(appended.error.code).toBe("state.store.unknown");
@@ -213,6 +218,7 @@ describe("TC-CEREMONY-040 the ceremony-artifact family is byte-level and 0600", 
         slot: "ceremony-artifact",
         schema: "delivery.ceremony.report.v1",
         content: '{"schemaId":"delivery.ceremony.report.v1"}',
+        stepIndex: 1,
       });
       expect(written.ok).toBe(true);
       if (!written.ok) return;
@@ -224,8 +230,8 @@ describe("TC-CEREMONY-040 the ceremony-artifact family is byte-level and 0600", 
       expect(read.ok).toBe(true);
       if (read.ok) expect(read.content).toBe('{"schemaId":"delivery.ceremony.report.v1"}');
       const directory = join(fixture.root, "ceremony-artifacts.workspace-a");
-      expect(readdirSync(directory)).toEqual(["run-fixture-0001.json"]);
-      const stat = statSync(join(directory, "run-fixture-0001.json"));
+      expect(readdirSync(directory)).toEqual(["run-fixture-0001.s1.json"]);
+      const stat = statSync(join(directory, "run-fixture-0001.s1.json"));
       expect(stat.mode & 0o777).toBe(0o600);
     } finally {
       fixture.dispose();
@@ -250,11 +256,12 @@ describe("TC-CEREMONY-040 the ceremony-artifact family is byte-level and 0600", 
         slot: "ceremony-artifact",
         schema: "delivery.ceremony.report.v1",
         content: "{}",
+        stepIndex: 1,
       });
       expect(written.ok).toBe(true);
       if (!written.ok) return;
       chmodSync(
-        join(fixture.root, "ceremony-artifacts.workspace-a", "run-fixture-0002.json"),
+        join(fixture.root, "ceremony-artifacts.workspace-a", "run-fixture-0002.s1.json"),
         0o644,
       );
       const mismatched = artifacts.read({
@@ -268,7 +275,7 @@ describe("TC-CEREMONY-040 the ceremony-artifact family is byte-level and 0600", 
     }
   });
 
-  test("one artifact per run id: a second write replaces the run's own artifact", () => {
+  test("per-step artifacts never overwrite: same-step rewrites replace, other steps add files", () => {
     const fixture = makeCeremonyState("artifact-one");
     try {
       const artifacts = createCeremonyArtifactStore({
@@ -280,18 +287,31 @@ describe("TC-CEREMONY-040 the ceremony-artifact family is byte-level and 0600", 
         slot: "ceremony-artifact",
         schema: "delivery.ceremony.report.v1",
         content: "first",
+        stepIndex: 1,
       });
-      const second = artifacts.write({
+      const reattempt = artifacts.write({
         runId: "run-one",
         slot: "ceremony-artifact",
         schema: "delivery.ceremony.report.v1",
-        content: "second",
+        content: "re-attempt",
+        stepIndex: 1,
       });
-      expect(first.ok && second.ok).toBe(true);
-      if (!first.ok || !second.ok) return;
-      expect(first.ref).toBe(second.ref);
-      expect(readdirSync(join(fixture.root, "ceremony-artifacts.workspace-a"))).toEqual([
-        "run-one.json",
+      const secondStep = artifacts.write({
+        runId: "run-one",
+        slot: "ceremony-artifact",
+        schema: "delivery.ceremony.report.v1",
+        content: "second step",
+        stepIndex: 2,
+      });
+      expect(first.ok && reattempt.ok && secondStep.ok).toBe(true);
+      if (!first.ok || !reattempt.ok || !secondStep.ok) return;
+      // A re-attempt of the same step replaces that step's artifact.
+      expect(first.ref).toBe(reattempt.ref);
+      // A different step addresses its own file, never its neighbour's.
+      expect(secondStep.ref).not.toBe(first.ref);
+      expect(readdirSync(join(fixture.root, "ceremony-artifacts.workspace-a")).sort()).toEqual([
+        "run-one.s1.json",
+        "run-one.s2.json",
       ]);
     } finally {
       fixture.dispose();

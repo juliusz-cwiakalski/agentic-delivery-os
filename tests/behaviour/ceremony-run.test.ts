@@ -9,13 +9,13 @@ import { describe, expect, test } from "bun:test";
 import type { CeremonyDeclaration } from "../../packages/core/src/contracts/index";
 import { runCeremony } from "../../packages/core/src/domain/index";
 import { readCeremonySteps } from "../../packages/core/src/state/index";
+import { readFixture, withPath } from "../fixtures/ceremony/declarations";
 import {
+  declarationWith,
   makeEngineHarness,
   threeStepDeclaration,
-  declarationWith,
 } from "../fixtures/ceremony/engine";
 import { conformingNote } from "../fixtures/ceremony/notes";
-import { readFixture, withPath } from "../fixtures/ceremony/declarations";
 
 describe("TC-CEREMONY-020 a failed read-back stops the agenda", () => {
   test("the step is unverified, no later step executes, and records plus artifact stay durable", () => {
@@ -35,7 +35,7 @@ describe("TC-CEREMONY-020 a failed read-back stops the agenda", () => {
 
       // Paired control: the same declaration without corruption verifies.
       const failing = makeEngineHarness();
-      failing.corruptArtifact("ceremony-artifact:run-1.json", "not-json");
+      failing.corruptArtifact("ceremony-artifact:run-1.s1.json", "not-json");
       try {
         const failed = runCeremony({
           declaration,

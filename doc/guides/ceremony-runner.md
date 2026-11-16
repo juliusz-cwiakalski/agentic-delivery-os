@@ -146,7 +146,7 @@ A declaration cannot carry executable content. Any member named `command`, `comm
 
 ## Notes: the idempotency anchor
 
-Two built-ins require a note (`retro-evidence-pass` and `testing-session-assessment`), and any declaration with `note.required: true` does too. A required note that is absent is refused as `input.value.rejected` naming the note.
+Two built-ins require a note (`retro-evidence-pass` and `testing-session-assessment`), and any declaration with `note.required: true` does too. A required note that is absent is refused as `input.value.rejected` naming the note. The note read is bounded in bytes (1 048 576, the configuration parser class's bound) and an over-bound note is refused as `ceremony.note-invalid` naming the bound; a stored note read back for a resume is re-validated against the same note contract before the agenda continues.
 
 A note is one document supplied with `--note <path>`:
 
@@ -209,12 +209,12 @@ A `sync` step is dry-run by default: it computes the declared write set, checks 
 
 | Slot | Where it lands |
 |---|---|
-| `ceremony-artifact` | The project's ceremony artifact directory under the state directory: one JSON file per run, named `<runId>.json`, mode `0600`, retained forever, outside the ledger. |
-| `state-record` | A JSON file in the same family, named `<runId>.state-record.<digest>.json`. The ledger itself receives only the runner's `ceremony.run` and `ceremony.step` records. |
-| `mirror-target` | A JSON file in the same family, named `<runId>.mirror-target.<digest>.json`, recording each target's plan and equality. |
+| `ceremony-artifact` | The project's ceremony artifact directory under the state directory: one JSON file per writing step, named `<runId>.s<index>.json`, mode `0600`, retained forever, outside the ledger. Two steps never overwrite one another; a re-attempt replaces its own step's file. |
+| `state-record` | The delivery ledger itself: the step's validated record document lands as the ceremony record its slot declares, and the step record's artifact reference names the ledger record. No artifact file is written for this slot. |
+| `mirror-target` | A JSON file in the same family, named `<runId>.mirror-target.<digest>.json`, recording each target's plan and equality; the landing goes to the declared target checkout's decisions directory. |
 | `memory` | The committed memory tree under `.ai/memory/ceremony/`, one file per scope key; a rerun appends an addendum after a newline. |
 
-Each artifact carries its schema identifier, and an artifact that cannot be read back fails its step's verification. Because the `ceremony-artifact` file name is the run id, successive steps writing that slot address one file per run; `state-record` and `mirror-target` names carry a content digest.
+Each artifact carries its schema identifier, and an artifact that cannot be read back fails its step's verification. Because the `ceremony-artifact` file name carries the writing step's index, per-step artifacts in that slot are retained individually.
 
 The durable ledger records are `ceremony.run` (one per run identity: ceremony, run id, origin, declaration digest, trigger provenance, scope key and derivation, tier facts, start time, phase count) and `ceremony.step` (one per attempt: index, phase, kind, outcome, start, end, duration, slot, artifact reference, verification verdict, optional reason). Run status, run duration, and per-phase durations are folds over those records; there is no separate run document to disagree with them.
 
@@ -282,7 +282,7 @@ The committed metric `MET-CEREMONY-SHARE` — ceremony-phase time over total lif
 
 ## Current limits
 
-The shipped surface has known composition gaps, stated here so you do not plan around capability that is not wired: most declared collectors are not composed in the binary and arrive as declared `unavailable` degradations, and `state-record`/`mirror-target` outputs are artifacts rather than ledger records. The full list, with what is delivered and tested beside each gap, is in [Ceremony Runner §9: Delivered limits and known gaps](../spec/features/feature-ceremony-runner.md#9-delivered-limits-and-known-gaps).
+The shipped surface has known composition gaps, stated here so you do not plan around capability that is not wired: most declared collectors are not composed in the binary and arrive as declared `unavailable` degradations. The full list, with what is delivered and tested beside each gap, is in [Ceremony Runner §9: Delivered limits and known gaps](../spec/features/feature-ceremony-runner.md#9-delivered-limits-and-known-gaps).
 
 ## See also
 

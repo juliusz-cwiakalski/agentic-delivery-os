@@ -357,42 +357,45 @@ const payloadOfRun = (record: CeremonyRunRecord): StateJsonValue =>
 const payloadOfStep = (record: CeremonyStepRecord): StateJsonValue =>
   record as unknown as StateJsonValue;
 
-/** Append one run record with a post-append verified re-read (DM-5). */
+/**
+ * Append one run record with a post-append verified re-read (DM-5, NFR-11).
+ * The caller supplies the expected post-append record total from its own
+ * verified read, so the append performs exactly one verified state read.
+ */
 export const appendCeremonyRun = (
   store: StateStorePort,
   handle: StateFenceHandle,
   record: CeremonyRunRecord,
+  expectedRunTotal: number,
 ): StateResult<StateAppendOutcome> => {
-  const before = readCeremonyRuns(store);
-  if (!before.ok) return before;
   const appended = boundaryFor(store).append(handle, {
     kind: CEREMONY_RUN_RECORD_KIND,
     recordKey: ceremonyRunRecordKey(record.runId),
     payload: payloadOfRun(record),
   });
   if (!appended.ok) return appended;
-  const verified = verifyAppended(() => readCeremonyRuns(store), before.value.records.length + 1);
+  const verified = verifyAppended(() => readCeremonyRuns(store), expectedRunTotal);
   return verified.ok ? appended : verified;
 };
 
-/** Append one step record with a post-append verified re-read (DM-5). */
+/**
+ * Append one step record with a post-append verified re-read (DM-5, NFR-11).
+ * The caller supplies the expected post-append record total from its own
+ * verified read, so the append performs exactly one verified state read.
+ */
 export const appendCeremonyStep = (
   store: StateStorePort,
   handle: StateFenceHandle,
   record: CeremonyStepRecord,
+  expectedStepTotal: number,
 ): StateResult<StateAppendOutcome> => {
-  const before = readCeremonySteps(store, record.runId);
-  if (!before.ok) return before;
   const appended = boundaryFor(store).append(handle, {
     kind: CEREMONY_STEP_RECORD_KIND,
     recordKey: ceremonyStepRecordKey(record.runId, record.index),
     payload: payloadOfStep(record),
   });
   if (!appended.ok) return appended;
-  const verified = verifyAppended(
-    () => readCeremonySteps(store, record.runId),
-    before.value.records.length + 1,
-  );
+  const verified = verifyAppended(() => readCeremonySteps(store, record.runId), expectedStepTotal);
   return verified.ok ? appended : verified;
 };
 
@@ -478,9 +481,11 @@ export const createCeremonyRecordPort = (
   return {
     readRuns: () => mapRead(readCeremonyRuns(store)),
     readSteps: (runId) => mapRead(readCeremonySteps(store, runId)),
-    appendRun: (record) =>
-      mapAppend(withFence((handle) => appendCeremonyRun(store, handle, record))),
-    appendStep: (record) =>
-      mapAppend(withFence((handle) => appendCeremonyStep(store, handle, record))),
+    appendRun: (record, expectedRunTotal) =>
+      mapAppend(withFence((handle) => appendCeremonyRun(store, handle, record, expectedRunTotal))),
+    appendStep: (record, expectedStepTotal) =>
+      mapAppend(
+        withFence((handle) => appendCeremonyStep(store, handle, record, expectedStepTotal)),
+      ),
   };
 };

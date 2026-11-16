@@ -10,8 +10,8 @@ import {
   type CeremonyNote,
   type CeremonyWindow,
 } from "../../../packages/core/src/contracts/index";
-import { runCeremony, type CeremonyRunOutcome } from "../../../packages/core/src/domain/index";
-import { makeEngineHarness, type EngineHarness } from "./engine";
+import { type CeremonyRunOutcome, runCeremony } from "../../../packages/core/src/domain/index";
+import { type EngineHarness, makeEngineHarness } from "./engine";
 import { conformingNote, retroNote } from "./notes";
 
 export const MIRROR_WINDOW: CeremonyWindow = {
@@ -61,8 +61,8 @@ export const runPrepared = (prepared: BuiltinPreparation): CeremonyRunOutcome =>
     ...(prepared.window === undefined ? {} : { window: prepared.window }),
   });
 
-/** The first artifact reference every built-in writes (ceremony-artifact slot). */
-export const firstArtifactRef = (): string => "ceremony-artifact:run-1.json";
+/** The first artifact reference the runner writes (ceremony-artifact slot, step 1). */
+export const firstArtifactRef = (): string => "ceremony-artifact:run-1.s1.json";
 
 /** Prepare one built-in's synthetic environment and inputs. */
 export const prepareBuiltin = (id: string, options: BuiltinOptions = {}): BuiltinPreparation => {
