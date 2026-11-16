@@ -2215,7 +2215,7 @@ describe("TC-EVT-072 the events kind and its three identities", () => {
 
   test("the delivered rows are byte-identical to the captured baseline", () => {
     const delivered = entries
-      .filter((entry) => entry.domainKind !== "events" && entry.domainKind !== "ceremony")
+      .filter((entry) => entry.domainKind !== "events")
       .sort((left, right) => (left.code < right.code ? -1 : 1));
     const captured = baseline.rows
       .map((row) => JSON.parse(row) as Record<string, unknown>)

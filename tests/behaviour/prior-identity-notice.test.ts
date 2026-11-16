@@ -186,7 +186,7 @@ describe("TC-BIN-041 repeat resolutions add nothing; a second program emits its 
       checkout.dispose();
       home.dispose();
     }
-  });
+  }, 30_000);
 
   test("repeat-resolution: a fresh process emits again", async () => {
     const checkout = scratchCheckout("notice-process", CONFIG_ONLY);

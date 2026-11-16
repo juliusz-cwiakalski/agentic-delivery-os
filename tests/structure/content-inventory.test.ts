@@ -2826,6 +2826,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "ceremonyRegistryIds",
   ],
   "adapters/src/file/ceremony-declarations.ts": [
+    "parseCeremonyNoteText",
     "CEREMONY_DECLARATIONS_FILE_NAME",
     "ceremonyDeclarationDocumentPath",
     "nodeCeremonyDeclarationFileSystem",

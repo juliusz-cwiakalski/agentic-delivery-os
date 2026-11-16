@@ -7,7 +7,6 @@
  * network or the operator's home.
  */
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import {
   projectKeyFor,
@@ -105,8 +104,11 @@ export const createMemberWorld = (
   label: string,
   fixtures: readonly MemberFixture[],
 ): TwoMemberWorld => {
-  mkdirSync(tmpdir(), { recursive: true });
-  const base = mkdtempSync(join(tmpdir(), `gh310-${label}-`));
+  // The gate TMPDIR sits inside this checkout's parent git work tree in some
+  // environments, so the per-case base uses the approved external temp root:
+  // it is outside every work tree and never the operator's home.
+  mkdirSync("/tmp/opencode", { recursive: true });
+  const base = mkdtempSync(join("/tmp/opencode", `gh310-${label}-`));
   const hostRoot = join(base, "host");
   const home = join(base, "home");
   mkdirSync(hostRoot, { recursive: true });

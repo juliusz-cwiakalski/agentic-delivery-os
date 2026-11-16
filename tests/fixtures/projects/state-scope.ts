@@ -77,6 +77,9 @@ export const guardStateFixtureRoot = (
   if (isInside(target, workspace)) reject("inside the live workspace");
   const tempRoot = resolve(tmpdir());
   if (isInside(target, tempRoot)) return;
+  // The approved external temp root, used when the gate TMPDIR sits inside a
+  // parent git work tree and no OS temp root is outside it.
+  if (isInside(target, "/tmp/opencode")) return;
   // The repository's parent hosts the non-checkout fixtures when the gate puts
   // `TMPDIR` inside the checkout (GH-273 fallback, TC-PROJ-038 step 6). The
   // parent itself is an ancestor of the workspace and stays refused above.
@@ -107,7 +110,7 @@ export const realStateFingerprint = (brand: BrandIdentity): string => {
 
 /** A directory proven to be outside every git work tree (the GH-273 rule). */
 export const nonCheckoutDirectory = (label: string): string => {
-  const candidates = [tmpdir(), dirname(process.cwd()), homedir(), resolve(APPROVED_BASE)];
+  const candidates = [tmpdir(), dirname(process.cwd()), "/tmp/opencode", resolve(APPROVED_BASE)];
   for (const parent of candidates) {
     mkdirSync(parent, { recursive: true });
     const directory = mkdtempSync(join(parent, `gh288-non-checkout-${label}-`));
