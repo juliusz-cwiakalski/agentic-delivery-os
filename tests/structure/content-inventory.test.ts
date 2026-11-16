@@ -2092,6 +2092,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "cli/src/commands/watchdog.ts": ["createWatchdogCommandDefinition", "renderWatchdogHuman"],
   "cli/src/commands/verify-gates.ts": ["createVerifyGatesHandler"],
   "cli/src/edge.ts": [
+    "readActionRegistryState",
     "createCeremonyCommandRuntime",
     "createSteerCommandRuntime",
     "createCliAudit",

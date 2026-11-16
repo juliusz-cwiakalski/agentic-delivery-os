@@ -404,6 +404,7 @@ import {
   foldCeremonyRunVerdict,
   foldCloseoutHistory,
   foldPhaseState,
+  readActionRegistry,
   readAllMergeWaivers,
   readAuditLedger,
   readBlockerLedger,
@@ -2813,6 +2814,8 @@ export type DoctorComposition = {
   readonly readWorkTree: () => { readonly readable: boolean; readonly clean: boolean };
   /** The additive retro registry store fact (GH-232 F-8). */
   readonly readRetroState?: () => DoctorStateStoresRead;
+  /** The additive action-registry store fact (GH-287 DEC-7). */
+  readonly readActionState?: () => DoctorStateStoresRead;
   /** The per-run owner-hold reader supplied by the production composition. */
   readonly readOwnerHold?: () => OwnerHoldFact;
 };
@@ -3029,20 +3032,42 @@ export const createDoctorCommandRuntime = (
         ],
       };
       const retro = options.readRetroState?.();
-      if (retro === undefined) return base;
-      if (!retro.ok) return retro;
+      if (retro !== undefined && !retro.ok) return retro;
+      const action = options.readActionState?.();
+      if (action !== undefined && !action.ok) return action;
+      if (retro === undefined && action === undefined) return base;
       return {
         ok: true,
-        verifiedEmpty: base.verifiedEmpty && retro.verifiedEmpty,
-        // The retro registry shares the delivery ledger (the reviewed PIN-4
-        // single-store decision); `base.recordCount` already includes the retro
-        // artifacts, so adding `retro.recordCount` would double-count them.
+        verifiedEmpty:
+          base.verifiedEmpty &&
+          (retro === undefined || retro.verifiedEmpty) &&
+          (action === undefined || action.verifiedEmpty),
+        // All three stores share the delivery ledger (the reviewed PIN-4
+        // single-store decision); `base.recordCount` already includes their
+        // artifacts, so adding their counts would double-count them.
         recordCount: base.recordCount,
         stores: [
           ...(base.stores ?? []),
-          ...(retro.stores ?? [
-            { name: "retro-registry", verdict: retro.verifiedEmpty ? "verified-empty" : "valid" },
-          ]),
+          ...(retro?.stores ??
+            (retro === undefined
+              ? []
+              : [
+                  {
+                    name: "retro-registry",
+                    verdict: retro.verifiedEmpty ? ("verified-empty" as const) : ("valid" as const),
+                  },
+                ])),
+          ...(action?.stores ??
+            (action === undefined
+              ? []
+              : [
+                  {
+                    name: "action-registry",
+                    verdict: action.verifiedEmpty
+                      ? ("verified-empty" as const)
+                      : ("valid" as const),
+                  },
+                ])),
         ],
       };
     },
@@ -5119,6 +5144,34 @@ export const readRetroRegistryState = (store: StateStorePort): DoctorStateStores
     verifiedEmpty: read.value.verdict === "verified-empty",
     recordCount: read.value.artifacts.length,
     stores: [{ name: "retro-registry", verdict: read.value.verdict }],
+  };
+};
+
+/**
+ * Read the action-registry store verdict for the doctor `state check`
+ * (GH-287 DEC-7), composed at the edge exactly like the retro-registry fact.
+ */
+export const readActionRegistryState = (store: StateStorePort): DoctorStateStoresRead => {
+  const read = readActionRegistry(store);
+  if (!read.ok) {
+    return {
+      ok: false,
+      reason: doctorStateReason(read.error.code),
+      failureCode: read.error.code,
+    };
+  }
+  if (read.value.malformed.length > 0) {
+    return {
+      ok: false,
+      reason: "store-unknown",
+      failureCode: "state.store.unknown",
+    };
+  }
+  return {
+    ok: true,
+    verifiedEmpty: read.value.verdict === "verified-empty",
+    recordCount: read.value.actions.length + read.value.closures.length,
+    stores: [{ name: "action-registry", verdict: read.value.verdict }],
   };
 };
 

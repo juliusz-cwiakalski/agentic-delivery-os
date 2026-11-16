@@ -169,3 +169,82 @@ describe("TC-RETRO-056 state check names the retro registry store", () => {
     });
   });
 });
+
+describe("TC-ACTION-034 the state check names the action-registry store", () => {
+  test("the state detail names the delivery, retro-registry, and action-registry stores", async () => {
+    const run = await runDoctorCli(["doctor", "--json"], {
+      state: {
+        ok: true,
+        verifiedEmpty: false,
+        recordCount: 9,
+        stores: [
+          { name: "delivery", verdict: "valid" },
+          { name: "retro-registry", verdict: "valid" },
+          { name: "action-registry", verdict: "valid" },
+        ],
+      },
+    });
+    const check = stateOf(run.report);
+    expect(check.verdict).toBe("ok");
+    expect(String(check.detail)).toContain("action-registry");
+  });
+
+  test("the action-registry read composes verified-empty, torn, and unknown verdicts", async () => {
+    const { readActionRegistryState } = await import("../../packages/cli/src/edge");
+    const emptyStore = {
+      readRecords: () => ({
+        ok: true,
+        value: {
+          records: [],
+          evidence: { storePath: "s", verification: [], verifiedEmpty: true, recordCount: 0 },
+        },
+      }),
+    } as never;
+    expect(readActionRegistryState(emptyStore)).toMatchObject({
+      ok: true,
+      verifiedEmpty: true,
+      stores: [{ name: "action-registry", verdict: "verified-empty" }],
+    });
+
+    const tornStore = {
+      readRecords: () => ({
+        ok: false,
+        error: {
+          kind: "state",
+          code: "state.store.torn",
+          consequence: "not_landed",
+          location: { path: "s" },
+        },
+      }),
+    } as never;
+    expect(readActionRegistryState(tornStore)).toMatchObject({
+      ok: false,
+      reason: "store-torn",
+      failureCode: "state.store.torn",
+    });
+
+    const unknownStore = {
+      readRecords: () => ({
+        ok: true,
+        value: {
+          records: [
+            {
+              schemaVersion: "delivery.state.v1",
+              kind: "retro.action",
+              key: "retro.actions:broken",
+              sequence: 1,
+              checksum: "0".repeat(16),
+              payload: { schemaId: "delivery.retro.action.v1", actionId: "broken" },
+            },
+          ],
+          evidence: { storePath: "s", verification: [], verifiedEmpty: false, recordCount: 1 },
+        },
+      }),
+    } as never;
+    expect(readActionRegistryState(unknownStore)).toMatchObject({
+      ok: false,
+      reason: "store-unknown",
+      failureCode: "state.store.unknown",
+    });
+  });
+});

@@ -424,3 +424,26 @@ describe("TC-DOCTOR-030 evidence discipline (pure half)", () => {
     expect(reportShape(report)).toEqual([]);
   });
 });
+
+describe("TC-ACTION-034 the action-registry store fact joins the state check evidence", () => {
+  test("the aggregated report carries the additive store fact and the area list stays closed", async () => {
+    const report = aggregateDoctorReport(
+      doctorWorld({
+        state: {
+          ok: true,
+          verifiedEmpty: false,
+          recordCount: 9,
+          stores: [
+            { name: "delivery", verdict: "valid" },
+            { name: "retro-registry", verdict: "valid" },
+            { name: "action-registry", verdict: "valid" },
+          ],
+        },
+      }),
+    );
+    const state = report.checks.find((entry) => entry.area === "state");
+    expect(state?.verdict).toBe("ok");
+    expect(String(state?.detail)).toContain("action-registry");
+    expect(report.checks.map((entry) => entry.area)).toEqual([...DOCTOR_AREAS]);
+  });
+});

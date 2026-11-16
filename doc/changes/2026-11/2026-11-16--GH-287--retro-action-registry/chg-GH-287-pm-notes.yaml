@@ -196,3 +196,28 @@ notes:
       210 files clean; exports-parity 5 publishables pass."
     type: info
     date: "2026-11-16"
+  - text: "Plan phase 3 complete — derived single-basis aging ladder and explicit
+      two-plane closure. Commit 5377b80. Files: domain/action-aging.ts,
+      domain/action-closure.ts (new); domain/index.ts, core/src/index.ts; the aging
+      and closure behaviour suites; action-imports (basis single-home scan);
+      content-inventory + inventory.json. Gate results: pnpm typecheck clean;
+      action-aging 10 / 0 (matrix A-01..A-11); action-closure 9 / 0 (matrix
+      C-01..C-14 plus TC-038/TC-039); action-imports 9 / 0; ambient-globals 212
+      files clean."
+    type: info
+    date: "2026-11-16"
+  - text: "Plan phase 4 complete — registry damage classification and the doctor
+      action-registry store verdict. Files: packages/cli/src/edge.ts (additive
+      readActionRegistryState plus the readActionState composition seam merged with
+      the retro store fact), action-store-boundary suite (new), doctor-state,
+      doctor-report, doctor-contract, content-inventory. contracts/doctor.ts is
+      unchanged (D-16 no-move: no evidence source id added; the store-fact shape
+      already admits the additive name), tests/golden/doctor-output.test.ts and
+      tests/fixtures/doctor/harness.ts are unchanged (D-15 no-move: the fake
+      harness default state carries no store facts, so no golden moved; the
+      production composition and the three-store detail are proven by the injected
+      doctor-state/report tests instead). Gate results: pnpm typecheck clean;
+      action-store-boundary 7 / 0; doctor-state + doctor-report 29 / 0; golden
+      doctor-output 8 / 0; doctor-contract + content-inventory 26 / 0."
+    type: info
+    date: "2026-11-16"
