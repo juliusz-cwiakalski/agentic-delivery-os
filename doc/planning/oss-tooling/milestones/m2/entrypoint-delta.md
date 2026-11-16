@@ -180,7 +180,7 @@ Observed from the built workspace after the GH-296 mount.
 $ <binary> --help
 Commands: status brief queue lanes blockers phase commit lint plan
           verify merge closeout spend retro dispatch coordinator daemon
-          projects repos events ceremony
+          projects repos events board ceremony
 ```
 
 Twenty-two families are registered after the GH-296 mount and its sync with

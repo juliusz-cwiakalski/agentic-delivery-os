@@ -326,7 +326,7 @@ Each artifact names its schema identifier; a render that cannot be read back fai
 - **Envelope and errors.** Five-field `delivery.result.v1`; two additive `ERROR_TABLE` rows under the new `ceremony` domain kind (see §4.6).
 - **State.** The two record kinds, the boundary, and the fenced-append/verified-read discipline of [State Layer](feature-state-layer.md).
 - **Declaration document.** `<gitRoot>/<configDirectoryName>/ceremonies.yaml`, schema `delivery.ceremony.declarations.v1`, one bounded read, max 1 048 576 bytes.
-- **Note document.** `--note <path>`, schema `delivery.ceremony.note.v1`, read as one YAML file and validated against the note contract before any output. The note read is a plain file read at the composed edge; no byte-size bound is applied to it.
+- **Note document.** `--note <path>`, schema `delivery.ceremony.note.v1`, read as one YAML file and validated against the note contract before any output. The edge measures the note document before reading it and refuses an over-bound note as `ceremony.note-invalid` naming the bound (1 048 576 bytes, the configuration parser class's declared size limit); a stored note read back for a resume is re-validated against the same contract.
 - **Retro pipeline.** Read-only consumption of verified evidence records and `retro.run` records; no write, no new collector, no chain material.
 - **Measurement log.** One additive `comparisons[]` entry under `schema_version: 2`; no metric row edited.
 - **Tier inputs.** `PLAN_KNOWN_TIERS` and `PM_NOTES_REQUIRED_PHASES_BY_VARIANT` imported, not restated.
@@ -338,7 +338,7 @@ Each artifact names its schema identifier; a render that cannot be read back fai
 | `ceremony.note-invalid` | `ceremony` | `user` | `false` | `not_landed` | `user-validation` | `1` | A note required by the declaration is absent, omits a required member or its idempotent `scopeKey`, names another ceremony, or disagrees with the declaration's scope key; the field is named and no partial ceremony output is written. |
 | `ceremony.declaration.invalid` | `ceremony` | `user` | `false` | `not_landed` | `user-validation` | `1` | A built-in or project declaration violates the contract — unknown step kind, input source, output slot, verification mode, trigger event, cadence, or tier; missing verification or output schema; duplicate id; built-in collision; unparseable schedule; over-bound collection; missing or illegal scope-key derivation; executable content — naming the ceremony id and the field, with nothing registered. |
 
-`ceremony.note-invalid` is a kind-first two-segment code and is in the reserved exact allowlist; `ceremony.declaration.invalid` is three-segment. Grammar refusals use `fallback.invocation`; undeclared names, a missing note, a missing `--window`, and window disagreement use `input.value.rejected`; a malformed declaration document uses `config.file.malformed`; a contradicted record sequence or unreadable records use `state.store.torn`/`state.store.unknown`; a failed verification is a data-bearing `unverified` verdict, not an error row. The machine table and the documented table in [Result Contract](feature-result-contract.md) are in two-way sync at 138 identities and a 54-entry reserved two-segment allowlist.
+`ceremony.note-invalid` is a kind-first two-segment code and is in the reserved exact allowlist; `ceremony.declaration.invalid` is three-segment. Grammar refusals use `fallback.invocation`; undeclared names, a missing note, a missing `--window`, and window disagreement use `input.value.rejected`; a malformed declaration document uses `config.file.malformed`; a contradicted record sequence or unreadable records use `state.store.torn`/`state.store.unknown`; a failed verification is a data-bearing `unverified` verdict, not an error row. The machine table and the documented table in [Result Contract](feature-result-contract.md) are in two-way sync at 140 identities and a 56-entry reserved two-segment allowlist.
 
 ### 4.7 Invariants
 
@@ -361,12 +361,12 @@ Each artifact names its schema identifier; a render that cannot be read back fai
 | Idempotency | Zero duplicate run records per identity; addenda only for notes; zero appends for a caught-up window | Delivered |
 | Catch-up boundedness | ≤1 replayed window per ceremony per invocation; zero fabricated windows; zero replays for an occupied identity | Delivered |
 | Bounded carried state | Summary ≤4 096 bytes / 40 lines with an explicit omission count; run record ≤16 KiB; step record ≤2 KiB; declaration document ≤1 MiB | Delivered |
-| Error-table binding | Two rows, one domain kind, one reserved two-segment entry, two-way sync | Delivered at 138 identities and a 54-entry allowlist |
+| Error-table binding | Two rows, one domain kind, one reserved two-segment entry, two-way sync | Delivered at 140 identities and a 56-entry allowlist |
 | Tier neutrality | Exactly two phase-set sources, no third vocabulary, no hardcoded default set | Delivered; a structure suite fails on a second literal |
 | Measurement completeness | Every executed step carries a duration and a verification verdict | Delivered |
 | Mirror safety | Declared targets only (≤8), equality in both directions, no force path, no landing without `--apply` | Delivered over injected mirror ports |
 | Human output bounds | ≤32 lines / 6 144 bytes with an omission marker | Delivered |
-| Read/run cost | Deliverable bound: one declaration read per invocation, ≤16 declared input reads per run, two verified state reads per fenced append (pre-append list read plus post-append verified re-read), and one step-history read per recorded run for `list` | Measured by the performance suite as `reads ≤ 2 × (1 + steps) + 2`; see §9 for the deviation from the change's original budget |
+| Read/run cost | Delivered bound: one declaration read per invocation, ≤16 declared input reads per run, one verified state read per fenced append (the post-append verified re-read, whose expected record total arrives from the caller's own verified read), and one partitioned verified scan for `list` (at most two verified state reads per invocation however many ceremonies have recorded runs) | Measured by the performance suite as `reads ≤ steps + 2`; see §9 for the delivered read budget |
 | Duration reference | `morning-brief` run under one second on the reference fixture; `catch-up` over six declarations in tens of milliseconds | CI asserts bounded work rather than wall-clock deadlines; the reference figure is informational |
 
 ## 6. Quality Assurance Strategy
@@ -389,7 +389,7 @@ All ceremony fixtures are synthetic and committed: injected clocks, id factories
 | `tests/behaviour/ceremony-bounds.test.ts`, `ceremony-determinism.test.ts`, `ceremony-performance.test.ts` (TC-050, TC-053..055) | Output and record bounds, replay determinism, measured read cost and bounded-work posture |
 | `tests/behaviour/ceremony-nonregression.test.ts` (TC-057) | The retro pipeline's payloads, identities, and registry status stay byte-identical |
 | `tests/checks/ceremony-hermetic.test.ts`, `ceremony-mutants.test.ts` (TC-050, TC-056) | No skips, sockets, spawns, `HOME` reads, or live-tree writes; sixteen disabled rules each fail their suite |
-| `tests/checks/error-table-sync.test.ts`, `tests/structure/error-table.test.ts`, `doc-conformance.test.ts` | Two-way error sync, 138 identities, 54-entry allowlist, documentation truth |
+| `tests/checks/error-table-sync.test.ts`, `tests/structure/error-table.test.ts`, `doc-conformance.test.ts` | Two-way error sync, 140 identities, 56-entry allowlist, documentation truth |
 
 Mounting is covered by the help/coverage matrix, the prompt-set count assertion, root and family help, and the M2 reference page; a mapping whose reference page is absent fails `pnpm check:help`.
 
