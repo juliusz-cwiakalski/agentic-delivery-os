@@ -84,7 +84,8 @@ export const prepareBuiltin = (id: string, options: BuiltinOptions = {}): Builti
           ...(fact.evidenceRef === undefined ? {} : { evidenceRef: fact.evidenceRef }),
         },
   );
-  const ownerNoteItems = options.ownerNoteItems ??
+  const ownerNoteItems =
+    options.ownerNoteItems ??
     (noteFactItems.length > 0
       ? noteFactItems
       : [
@@ -148,9 +149,7 @@ export const prepareBuiltin = (id: string, options: BuiltinOptions = {}): Builti
 
   const citedRefs = [
     ...new Set(
-      ownerNoteItems.flatMap((item) =>
-        item.evidenceRef === undefined ? [] : [item.evidenceRef],
-      ),
+      ownerNoteItems.flatMap((item) => (item.evidenceRef === undefined ? [] : [item.evidenceRef])),
     ),
   ];
   const noteOverrides =

@@ -320,9 +320,7 @@ describe("catch-up records the declaration's true origin (F-4, DM-3)", () => {
       const runs = readCeremonyRuns(state.store);
       expect(runs.ok).toBe(true);
       if (!runs.ok) return;
-      const replayed = runs.value.records.find(
-        (run) => run.ceremonyId === "project-daily-audit",
-      );
+      const replayed = runs.value.records.find((run) => run.ceremonyId === "project-daily-audit");
       expect(replayed?.origin).toBe("project");
       expect(replayed?.trigger.kind).toBe("catch-up");
     } finally {

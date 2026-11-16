@@ -274,8 +274,7 @@ export const catchUpCeremonies = (request: CeremonyCatchUpRequest): CeremonyCatc
           );
     const run = runCeremony({
       declaration,
-      env:
-        target.origin === undefined ? request.env : { ...request.env, origin: target.origin },
+      env: target.origin === undefined ? request.env : { ...request.env, origin: target.origin },
       noteSupplied: false,
       window: replay,
       apply: request.apply,

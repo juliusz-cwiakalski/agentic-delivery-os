@@ -365,9 +365,7 @@ export type CeremonyWin = {
  * for it. The citation is the note's own claim; an assessment item is `covered`
  * only when the cited reference resolves in the delivered inputs (AC-F3-4, E-16).
  */
-type CeremonyNoteFact =
-  | string
-  | { readonly text: string; readonly evidenceRef?: string };
+type CeremonyNoteFact = string | { readonly text: string; readonly evidenceRef?: string };
 
 /** The ceremony note contract (DM-2, F-9). */
 export type CeremonyNote = {
