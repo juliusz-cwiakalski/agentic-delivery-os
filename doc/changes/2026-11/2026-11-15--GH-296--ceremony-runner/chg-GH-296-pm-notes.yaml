@@ -31,7 +31,7 @@ phases:
     completed: 2026-11-16T12:20:17.212Z
   quality_gates:
     started: null
-    completed: null
+    completed: 2026-11-16T12:44:14.191Z
   dod_check:
     started: null
     completed: null
@@ -611,5 +611,21 @@ notes:
       clean; the phase 12 gate suites 42 pass / 0 fail across 6 files; all 41
       ceremony suites 290 pass / 0 fail; full suite 9452 pass, 4 skip, 0 fail,
       9456 tests across 1187 files."
+    type: info
+    date: "2026-11-16"
+  - text: "quality_gates iteration: pnpm format:check failed on the 4 phase-12
+      remediation files whose hand-written line breaks differ from biome's
+      canonical style (packages/core/src/contracts/ceremony.ts multi-line
+      CeremonyNoteFact union, packages/core/src/domain/ceremony-schedule.ts
+      ternary env, tests/behaviour/ceremony-catch-up.test.ts find callback,
+      tests/fixtures/ceremony/builtins.ts ownerNoteItems and flatMap spots).
+      Fixed by the formatter itself, biome format --write on exactly those 4
+      files; the diff is line-break-only, no semantic change. Verification, run
+      as TMPDIR=$PWD/tmp/tmpdir PATH=\"$PWD/node_modules/.bin:$PATH\": pnpm
+      format:check green (Checked 2564 files, no fixes applied); pnpm lint green
+      (exit 0; none of the 4 files in the diagnostics); pnpm typecheck green
+      (pretypecheck build 6/6 packages, tests/types project clean). Committed
+      through the commit primitive as 023eee77 (fix(GH-296): update
+      packages/core/src/contracts/ceremony.ts), 4 files staged, no scope drift."
     type: info
     date: "2026-11-16"
