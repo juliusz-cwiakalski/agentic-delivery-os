@@ -38,6 +38,7 @@ export const DOMAIN_KINDS = [
   "repos",
   "events",
   "board",
+  "steer",
 ] as const;
 
 /**
@@ -1645,5 +1646,43 @@ export const ERROR_TABLE = [
       "Repair the named host index, repository state location, or required source and retry; the board answers honestly or withholds itself, never with a partial fleet.",
     projectionClass: "platform-provider",
     summary: "A host index, repository state location, or required source cannot be read.",
+  },
+  /**
+   * GH-298: the steer family's three exact identities (DEC-8, C-7, C-16). They
+   * join the closed allowlist by exact declaration; there is no `steer.*`
+   * family and no pattern widening.
+   */
+  {
+    code: "steer.unknown-id",
+    domainKind: "steer",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Pass the id of a steering record of this repository to `steer complete`, or run `steer list` to read the recorded ids; no record is written.",
+    projectionClass: "user-validation",
+    summary: "The completion target is not a steering record of this repository.",
+  },
+  {
+    code: "steer.credential-value-rejected",
+    domainKind: "steer",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Remove the registered credential value from the note text, ref, or derived origin, then retry; zero bytes are persisted.",
+    projectionClass: "user-validation",
+    summary: "A registered credential value was supplied on a steering content path.",
+  },
+  {
+    code: "steer.queue-unavailable",
+    domainKind: "steer",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Repair the repository's local state store or the unverified append, then retry; nothing is reported landed or completed.",
+    projectionClass: "platform-provider",
+    summary: "The steering store cannot be read, written, or verified.",
   },
 ] as const satisfies readonly ErrorTableEntry[];

@@ -119,3 +119,21 @@ notes:
       doc-syncer attention in phase 7)."
     type: info
     date: "2026-11-16"
+  - text: "Plan phases 1 and 2 COMPLETE (combined recovery commit after a session
+      interruption): 6b946f2b. Phase 1 declared the shared message record, the
+      four closed vocabularies declared once, the S5 filing subset, the ttl
+      grammar and every DM-8 bound; phase 2 added the pure domain (validation
+      order, ttl parser/predicate, aging, shared rank, boundary derivation over
+      the delivered phase fold, derived lifecycle, send/list/read projections,
+      asks composition, bounded renderers, registered-value guard) and the three
+      append-only steering record kinds with fenced verified appends. Tests:
+      tests/structure/steer-contract.test.ts (27 pass), tests/checks/
+      steer-mutants.test.ts (4 pass), full aggregate TMPDIR=$PWD/tmp/tmpdir pnpm
+      check GREEN (exit 0; no failing tests). Delivery finding: five registration
+      inventories outside the declared plan scope moved in the same commit
+      (tests/structure/inventory.json, content-inventory allowances, the events
+      additivity/state-additivity baselines and the v1 contract inventory) —
+      mechanically required by the new modules; scope drift disclosed by the
+      commit primitive."
+    type: info
+    date: "2026-11-16"

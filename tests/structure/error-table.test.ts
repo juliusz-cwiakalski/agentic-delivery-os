@@ -135,6 +135,11 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   // family stays closed to these two members.
   "board.repository-unknown",
   "board.state-unavailable",
+  // GH-298 pins the three steer identities exactly (DEC-8, C-16); the steer
+  // family stays closed to these three members with no pattern widening.
+  "steer.unknown-id",
+  "steer.credential-value-rejected",
+  "steer.queue-unavailable",
 ]);
 
 const isValidCode = (code: string): boolean =>
@@ -826,7 +831,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "daemon")).toHaveLength(8);
     expect(entries.filter((entry) => entry.domainKind === "coordinator")).toHaveLength(6);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(4);
-    expect(entries).toHaveLength(140);
+    expect(entries).toHaveLength(143);
   });
 });
 
@@ -902,7 +907,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(140);
+    expect(entries).toHaveLength(143);
     expect(db).toHaveLength(4);
   });
 
@@ -1136,7 +1141,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly four rows and round-trip
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(140);
+    expect(entries).toHaveLength(143);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1410,7 +1415,7 @@ describe("TC-BLK-007 blockers family is closed, synced, and exit-1 projected", (
       code.startsWith("blockers."),
     );
     expect(blockersReserved.sort()).toEqual([...BLOCKERS_ROWS].sort());
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(56);
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(59);
   });
 });
 
@@ -1639,13 +1644,14 @@ describe("TC-ECON-003 the dispatch kind carries the two economics rows plus the 
     expect(DOMAIN_KINDS).toContain("dispatch");
     // GH-241 appends the coordinator kind after daemon; GH-309 appends the
     // `repos` kind beside `projects`. Dispatch itself is unchanged.
-    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 7]).toBe("dispatch");
-    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 6]).toBe("daemon");
-    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 5]).toBe("coordinator");
-    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 4]).toBe("projects");
-    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 3]).toBe("repos");
-    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 2]).toBe("events");
-    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 1]).toBe("board");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 8]).toBe("dispatch");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 7]).toBe("daemon");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 6]).toBe("coordinator");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 5]).toBe("projects");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 4]).toBe("repos");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 3]).toBe("events");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 2]).toBe("board");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 1]).toBe("steer");
     const dispatch = entries.filter((entry) => entry.domainKind === "dispatch");
     expect(dispatch.map((entry) => entry.code)).toEqual(DISPATCH_ROWS.map(([code]) => code));
     for (const [
@@ -1740,7 +1746,7 @@ describe("TC-ECON-003 the dispatch kind carries the two economics rows plus the 
   });
 
   test("the three economics additions land and the delivered rows stay byte-identical", () => {
-    expect(entries).toHaveLength(140);
+    expect(entries).toHaveLength(143);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
     // The delivered watchdog rows retain their exact declared columns.
@@ -1833,7 +1839,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
 
   test("no delivered row is re-projected by the spend addition", () => {
     const delivered = entries.filter((entry) => entry.domainKind !== "spend");
-    expect(delivered).toHaveLength(139);
+    expect(delivered).toHaveLength(142);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(resolveAppErrorCode("state.store.torn")).toEqual({
@@ -1852,7 +1858,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     const row = `| spend.telemetry-absent | spend | user | false | not_landed | ${SPEND_HINT} | user-validation | ${SPEND_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
-    expect(doc).toContain("140 identities");
+    expect(doc).toContain("143 identities");
   });
 
   test("the documented table is complete in both directions", () => {
@@ -2265,7 +2271,7 @@ describe("TC-CEREMONY-049 the ceremony kind and its two identities", () => {
       "ceremony.declaration.invalid",
       "ceremony.note-invalid",
     ]);
-    expect(entries).toHaveLength(140);
+    expect(entries).toHaveLength(143);
   });
 
   test("both rows carry the declared class and project to exit 1", () => {
@@ -2285,7 +2291,7 @@ describe("TC-CEREMONY-049 the ceremony kind and its two identities", () => {
   test("the two-segment note identity is on the exact allowlist", () => {
     expect(RESERVED_TWO_SEGMENT_CODES.has("ceremony.note-invalid")).toBe(true);
     expect(RESERVED_TWO_SEGMENT_CODES.has("ceremony.declaration.invalid")).toBe(false);
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(56);
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(59);
   });
 
   test("a kind-only ceremony lookup is contained by fallback.internal", () => {
@@ -2301,7 +2307,7 @@ describe("TC-CEREMONY-049 the ceremony kind and its two identities", () => {
     expect(doc).toContain(
       "The `ceremony` kind carries exactly the two additive ceremony-runner identities",
     );
-    expect(doc).toContain("140 machine identities");
+    expect(doc).toContain("143 machine identities");
   });
 });
 
@@ -2323,14 +2329,23 @@ const LEGACY_TOKENS = [
   "5" + "2",
   "5" + "5",
   "5" + "4",
+  "14" + "0",
+  "13" + "9",
+  "5" + "6",
 ] as const;
 const LEGACY_ARITHMETIC = `+ ${"10" + "2"}`;
-const LEGACY_PATTERN = new RegExp(`\\b(${LEGACY_TOKENS.join("|")})\\b|\\${LEGACY_ARITHMETIC}`, "u");
+const LEGACY_ARITHMETIC_PREVIOUS = `+ ${"10" + "6"}`;
+const LEGACY_PATTERN = new RegExp(
+  `\\b(${LEGACY_TOKENS.join("|")})\\b|\\${LEGACY_ARITHMETIC}|\\${LEGACY_ARITHMETIC_PREVIOUS}`,
+  "u",
+);
 
 const APPENDIX_D_FILES = [
   "tests/structure/error-table.test.ts",
   "tests/structure/dispatch-attempts-taxonomy.test.ts",
   "tests/structure/verify-gates-suite-map-contract.test.ts",
+  "tests/structure/ceremony-contract.test.ts",
+  "tests/behaviour/ceremony-nonregression.test.ts",
   "tests/checks/error-table-sync.test.ts",
   "doc/spec/features/feature-result-contract.md",
 ] as const;
@@ -2354,8 +2369,8 @@ describe("TC-BOARD-053 board identities and Appendix D", () => {
     expect([...DOMAIN_KINDS].filter((kind) => kind === "board")).toHaveLength(1);
   });
 
-  test("the closed two-segment allowlist holds exactly 56 members with two board codes", () => {
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(56);
+  test("the closed two-segment allowlist holds exactly 59 members with two board codes and three steer codes", () => {
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(59);
     const board = [...RESERVED_TWO_SEGMENT_CODES].filter((code) => code.startsWith("board."));
     expect(board.sort()).toEqual(["board.repository-unknown", "board.state-unavailable"]);
   });
@@ -2373,20 +2388,20 @@ describe("TC-BOARD-053 board identities and Appendix D", () => {
     expect(resolveAppErrorCode("board.state-unavailable").ok).toBe(true);
   });
 
-  test("the four surfaces agree on 140 entries / 139 delivered / 56 allowlist / 2 board / 140 documented", () => {
+  test("the four surfaces agree on 143 entries / 142 delivered / 59 allowlist / 2 board / 3 steer / 143 documented", () => {
     const tableEntries = ERROR_TABLE as readonly { domainKind: string }[];
-    expect(tableEntries).toHaveLength(140);
+    expect(tableEntries).toHaveLength(143);
     const delivered = tableEntries.filter((entry) => entry.domainKind !== "spend");
-    expect(delivered).toHaveLength(139);
+    expect(delivered).toHaveLength(142);
     expect(tableEntries.filter((entry) => entry.domainKind === "board")).toHaveLength(2);
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(56);
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(59);
     const carrier = readFileSync(
       join(ROOT, "doc/spec/features/feature-result-contract.md"),
       "utf8",
     );
-    expect(carrier).toContain("140 machine identities");
-    expect(carrier).toContain("the same 140 identities");
-    expect(carrier).toContain("exact two-segment allowlist of 56 declared identities");
+    expect(carrier).toContain("143 machine identities");
+    expect(carrier).toContain("the same 143 identities");
+    expect(carrier).toContain("exact two-segment allowlist of 59 declared identities");
   });
 
   test("the repo-wide no-leftover scan reports no legacy count pin across the five files", () => {
@@ -2409,5 +2424,129 @@ describe("TC-BOARD-053 board identities and Appendix D", () => {
     expect(leftoverPins(`toHaveLength(${"5"}4);`)).toEqual(["line 1"]);
     expect(leftoverPins(`toHaveLength(${"5"}5);`)).toEqual(["line 1"]);
     expect(leftoverPins(`toHaveLength(${"13"}6);`)).toEqual(["line 1"]);
+  });
+});
+
+/**
+ * TC-STEER-074/075/076 (GH-298) — the `steer` kind, its three exact identities,
+ * the declared allowlist widening, every Appendix D count pin,
+ * the no-leftover scan, and four-way classifier/sync/mirror/carrier agreement.
+ */
+describe("TC-STEER-074/075/076 the steer kind and its three identities", () => {
+  const steerRows = entries.filter((entry) => entry.domainKind === "steer");
+  const rowOf = (code: string): ErrorTableEntry => {
+    const row = steerRows.find((candidate) => candidate.code === code);
+    if (row === undefined) throw new Error(`missing steer row ${code}`);
+    return row;
+  };
+
+  test("exactly three rows carry the declared category, consequence, and projection", () => {
+    expect(DOMAIN_KINDS).toContain("steer");
+    expect(steerRows.map((entry) => entry.code).sort()).toEqual([
+      "steer.credential-value-rejected",
+      "steer.queue-unavailable",
+      "steer.unknown-id",
+    ]);
+    expect(rowOf("steer.unknown-id")).toMatchObject({
+      category: "user",
+      retryable: false,
+      consequence: "not_landed",
+      projectionClass: "user-validation",
+    });
+    expect(rowOf("steer.credential-value-rejected")).toMatchObject({
+      category: "user",
+      retryable: false,
+      consequence: "not_landed",
+      projectionClass: "user-validation",
+    });
+    expect(rowOf("steer.queue-unavailable")).toMatchObject({
+      category: "platform",
+      retryable: false,
+      consequence: "not_landed",
+      projectionClass: "platform-provider",
+    });
+    for (const code of [
+      "steer.unknown-id",
+      "steer.credential-value-rejected",
+      "steer.queue-unavailable",
+    ]) {
+      expect(resolveAppErrorCode(code)).toEqual({ ok: true, entry: rowOf(code) });
+      expect(classifyThrown({ kind: "steer", code })).toEqual(rowOf(code));
+    }
+  });
+
+  test("the entry and delivered counts moved exactly once and no delivered row changed", () => {
+    expect(entries).toHaveLength(143);
+    expect(entries.filter((entry) => entry.domainKind !== "spend")).toHaveLength(142);
+    expect(entries.filter((entry) => entry.domainKind === "board")).toHaveLength(2);
+    expect(entries.filter((entry) => entry.domainKind === "ceremony")).toHaveLength(2);
+    expect(entries.filter((entry) => entry.domainKind === "steer")).toHaveLength(3);
+    expect(entries.find((entry) => entry.code === "board.repository-unknown")?.category).toBe(
+      "user",
+    );
+    expect(entries.find((entry) => entry.code === "ceremony.note-invalid")?.projectionClass).toBe(
+      "user-validation",
+    );
+  });
+
+  test("the closed allowlist is exactly 59 members including the three steer codes", () => {
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(59);
+    const steer = [...RESERVED_TWO_SEGMENT_CODES].filter((code) => code.startsWith("steer."));
+    expect(steer.sort()).toEqual([
+      "steer.credential-value-rejected",
+      "steer.queue-unavailable",
+      "steer.unknown-id",
+    ]);
+    expect(
+      [...RESERVED_TWO_SEGMENT_CODES].filter((code) => code.startsWith("board.")),
+    ).toHaveLength(2);
+  });
+
+  test("near-miss steer lookalikes are rejected, never family-matched", () => {
+    for (const code of [
+      "steer.unknown-ids",
+      "steer.queue",
+      "steer.state-unavailable",
+      "steer.credential-value-rejected.extra",
+      "steer.a.b",
+    ]) {
+      expect(resolveAppErrorCode(code).ok, code).toBe(false);
+      expect(classifyThrown({ kind: "steer", code }).code, code).toBe(FALLBACK_INTERNAL_CODE);
+    }
+    expect(() => classifyDomainKind("steer")).toThrow();
+  });
+
+  test("the carrier documents the three rows and the moved counts", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    for (const entry of steerRows) {
+      const row = `| ${entry.code} | steer | ${entry.category} | ${String(entry.retryable)} | ${entry.consequence} | ${entry.remediationHint} | ${entry.projectionClass} | ${entry.summary ?? ""} |`;
+      expect(doc.split(row).length - 1, entry.code).toBe(1);
+    }
+    expect(doc).toContain("The `steer` kind carries exactly the three steering identities");
+    expect(doc).toContain("143 machine identities");
+    expect(doc).toContain("the same 143 identities");
+    expect(doc).toContain("exact two-segment allowlist of 59 declared identities");
+  });
+
+  test("four surfaces agree on the same tuple read from one tree", async () => {
+    const { runSyncCheck } = await import("../../scripts/checks/error-table-sync");
+    const result = await runSyncCheck({ root: ROOT });
+    expect(result.failures).toEqual([]);
+    const tuple = {
+      entries: result.counts.sourceEntries,
+      documented: result.counts.documentedRows,
+      deliverd: entries.filter((entry) => entry.domainKind !== "spend").length,
+      allowlist: RESERVED_TWO_SEGMENT_CODES.size,
+      board: entries.filter((entry) => entry.domainKind === "board").length,
+      steer: entries.filter((entry) => entry.domainKind === "steer").length,
+    };
+    expect(tuple).toEqual({
+      entries: 143,
+      documented: 143,
+      deliverd: 142,
+      allowlist: 59,
+      board: 2,
+      steer: 3,
+    });
   });
 });

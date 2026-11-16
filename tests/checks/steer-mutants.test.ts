@@ -7,7 +7,9 @@
  * legitimate shared-vocabulary growth that must not widen the filing path.
  */
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   STEER_FILING_KINDS,
@@ -93,5 +95,104 @@ describe("TC-STEER-008 schema-fork mutation arms", () => {
     expect(source).toContain("STEER_KINDS");
     // No duplicate literal copy of the shared kind vocabulary exists.
     expect(source.match(/"ask",\s*"answer",\s*"notify"/gu)?.length ?? 0).toBe(1);
+  });
+});
+
+describe("TC-STEER-074/075/076 registration arms", () => {
+  const STEER_CODES = [
+    "steer.unknown-id",
+    "steer.credential-value-rejected",
+    "steer.queue-unavailable",
+  ] as const;
+  const DOC = "doc/spec/features/feature-result-contract.md";
+  const TABLE = "packages/core/src/contracts/error-table.ts";
+  const CHECK = "scripts/checks/error-table-sync.ts";
+
+  const makeTree = (): string => {
+    const root = mkdtempSync(join(tmpdir(), "gh298-steer-mutants-"));
+    for (const directory of [
+      "packages/core/src/contracts",
+      "packages/cli/src",
+      "tests/fixtures/result",
+      "scripts/checks",
+    ]) {
+      cpSync(join(ROOT, directory), join(root, directory), { recursive: true });
+    }
+    mkdirSync(join(root, "doc/spec/features"), { recursive: true });
+    cpSync(join(ROOT, DOC), join(root, DOC));
+    return root;
+  };
+
+  test("the checker copy declares exactly the three steer codes and no prefix rule", () => {
+    const source = readFileSync(join(ROOT, CHECK), "utf8");
+    for (const code of STEER_CODES) expect(source).toContain(`"${code}"`);
+    expect(source).not.toContain('startsWith("steer.")');
+    expect(source).not.toMatch(/steer\.\*/u);
+  });
+
+  test("a fourth steer row without an allowlist entry is rejected naming the code", async () => {
+    const { runSyncCheck } = await import("../../scripts/checks/error-table-sync");
+    const root = makeTree();
+    try {
+      const table = join(root, TABLE);
+      const text = readFileSync(table, "utf8");
+      const mutated = text.replace(
+        '    code: "steer.queue-unavailable",',
+        '    code: "steer.state-unavailable",',
+      );
+      writeFileSync(table, mutated);
+      const result = await runSyncCheck({ root });
+      expect(result.failures.join("\n")).toContain("steer.state-unavailable");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("a near-miss two-segment steer code is rejected by the checker", async () => {
+    const { runSyncCheck } = await import("../../scripts/checks/error-table-sync");
+    const root = makeTree();
+    try {
+      const table = join(root, TABLE);
+      writeFileSync(
+        table,
+        readFileSync(table, "utf8").replace(
+          'code: "steer.unknown-id"',
+          'code: "steer.unknown-ids"',
+        ),
+      );
+      const result = await runSyncCheck({ root });
+      expect(result.failures.join("\n")).toContain("steer.unknown-ids");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("omitting one steer code from the checker copy fails naming the disagreement", async () => {
+    const root = makeTree();
+    try {
+      const checker = join(root, CHECK);
+      writeFileSync(
+        checker,
+        readFileSync(checker, "utf8").replace('  "steer.queue-unavailable",\n', ""),
+      );
+      const run = spawnSync("bun", ["run", CHECK], { cwd: root, encoding: "utf8" });
+      expect(run.status).not.toBe(0);
+      expect(`${run.stdout}${run.stderr}`).toContain("steer.queue-unavailable");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("a stale non-mirror count pin is detected by the live scan", () => {
+    const files = [
+      "tests/structure/dispatch-attempts-taxonomy.test.ts",
+      "tests/structure/verify-gates-suite-map-contract.test.ts",
+      "tests/checks/error-table-sync.test.ts",
+    ];
+    for (const file of files) {
+      const text = readFileSync(join(ROOT, file), "utf8");
+      expect(text).not.toContain("BASELINE_ROWS.length + 106");
+      expect(text).not.toMatch(/toHaveLength\(140\)/u);
+    }
   });
 });
