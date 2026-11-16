@@ -8,7 +8,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-15T23:30:48.112Z }
   delivery_planning: { started: null, completed: 2026-11-15T23:30:51.030Z }
   dor_check: { started: null, completed: 2026-11-15T23:36:02.038Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-16T02:41:23.019Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -139,9 +139,10 @@ notes:
       Plan phase 1 complete (shared state source, board vocabulary, lane lease
       holder): commit ec63cd34. Evidence: delivery.status-facts.v1 declared once
       in packages/core/src/contracts/status.ts and carried as stateSource on the
-      board, status, and brief payloads; leaseHolder additive on delivery.lanes.v1
-      with the lane human golden byte-identical; board/status/brief/lane goldens
-      regenerated deliberately (exactly the additive keys); TC-BOARD-003 green
+      board, status, and brief payloads; leaseHolder additive on
+      delivery.lanes.v1 with the lane human golden byte-identical;
+      board/status/brief/lane goldens regenerated deliberately (exactly the
+      additive keys); TC-BOARD-003 green
       (tests/behaviour/board-shared-source.test.ts) plus the extended
       status/brief/owner-gate-sla contract suites; typecheck, lint, format,
       biome and git diff --check green.
@@ -154,42 +155,42 @@ notes:
       delivered SLA reused verbatim; per-section caps 20/8/8/8, the declared
       parked -> asks -> lanes -> gates byte-guard order, and the 24-line human
       allocation; new board-sections/rows/lanes/gates-sla/defaults-idempotency/
-      asks/parked/byte-guard/provenance suites plus the extended delivered
-      board suites green (207 tests across 30 files); board goldens regenerated
-      with an additive-only diff; typecheck, lint, format, biome and git diff
-      --check green. Deviation: board-waiver-recording's exact data-key assertion
-      was updated in phase 1 for the single additive stateSource key.
+      asks/parked/byte-guard/provenance suites plus the extended delivered board
+      suites green (207 tests across 30 files); board goldens regenerated with
+      an additive-only diff; typecheck, lint, format, biome and git diff --check
+      green. Deviation: board-waiver-recording's exact data-key assertion was
+      updated in phase 1 for the single additive stateSource key.
     type: info
     date: "2026-11-16"
   - text: >-
       Plan phase 3 complete (repository selection, per-repository composition,
       board error identities, production composition): commit 147144eb.
       Evidence: default form zero host-index reads, --project narrowing with
-      board.repository-unknown, --all union under BOARD_MAX_REPOSITORIES=128 with
-      the deterministic retained set and counted overflow, the unbound scope, and
-      the delivered fallback.invocation grammar refusals; board.errors rows and
-      the exact 53->55 allowlist widening with every Appendix D site moved
-      (138 entries / 137 delivered / 55 allowlist / 2 board / 138 documented;
-      repo-wide 136/135/53/52 scan clean, no +102 arithmetic); classifier, sync
-      check, structural mirror, and carrier agree; error-table-sync, mirror,
-      dispatch-taxonomy, verify-suite-map, and the board selection/errors/
-      envelope/command/identity/cap suites green; production composes board
-      unconditionally and joins the read-only maintainsIndex set. Deviation:
-      selection cases run the real board edge runtime over seeded host-index
-      bytes rather than createProductionComposer.
+      board.repository-unknown, --all union under BOARD_MAX_REPOSITORIES=128
+      with the deterministic retained set and counted overflow, the unbound
+      scope, and the delivered fallback.invocation grammar refusals;
+      board.errors rows and the exact 53->55 allowlist widening with every
+      Appendix D site moved (138 entries / 137 delivered / 55 allowlist / 2
+      board / 138 documented; repo-wide 136/135/53/52 scan clean, no +102
+      arithmetic); classifier, sync check, structural mirror, and carrier agree;
+      error-table-sync, mirror, dispatch-taxonomy, verify-suite-map, and the
+      board selection/errors/ envelope/command/identity/cap suites green;
+      production composes board unconditionally and joins the read-only
+      maintainsIndex set. Deviation: selection cases run the real board edge
+      runtime over seeded host-index bytes rather than createProductionComposer.
     type: info
     date: "2026-11-16"
   - text: >-
       Plan phase 4 complete (mounting advertisement and write discipline):
       commit 0c291de7. Evidence: board is the 21st prompt-required family
-      (twenty delivered names keep their order), production composes it, root and
-      family help answer from the static inventory at exit 0, the M2 reference
-      page mentions --help/--version and serves the coverage check, the coverage
-      inventory carries the row, family-count assertions moved 20->21, the
-      unmounted mutant is detected, and board-write-discipline proves a read-only
-      run is byte-identical while a default application creates exactly the
-      decision ledger plus the store header and the replay writes nothing;
-      help/entrypoint/coverage/parity suites green.
+      (twenty delivered names keep their order), production composes it, root
+      and family help answer from the static inventory at exit 0, the M2
+      reference page mentions --help/--version and serves the coverage check,
+      the coverage inventory carries the row, family-count assertions moved
+      20->21, the unmounted mutant is detected, and board-write-discipline
+      proves a read-only run is byte-identical while a default application
+      creates exactly the decision ledger plus the store header and the replay
+      writes nothing; help/entrypoint/coverage/parity suites green.
     type: info
     date: "2026-11-16"
   - text: >-
@@ -201,13 +202,14 @@ notes:
       per-repository read set and the 128 bound; the 50 ms projection+render
       median with printed samples; M2-S4 backlog marker, status snapshot,
       registry row, board page delivered status, and the 21-family entrypoint
-      delta; the five-package minor changeset. TMPDIR=$PWD/tmp/tmpdir pnpm check:
-      lint/format/typecheck/boundaries/memory/prompt/help/exports green and the
-      full bun suite green serially; under the parallel aggregate two pre-existing
-      5-second-timeout suites flake on this host (prior-identity notice and an
-      events overflow case) and pass alone. Environment note: several project
-      fixtures require a non-checkout directory; a worktree nested inside another
-      git tree needed the grandparent fallback (tests/fixtures/projects/
-      state-scope.ts and tests/fixtures/queue/production/harness.ts).
+      delta; the five-package minor changeset. TMPDIR=$PWD/tmp/tmpdir pnpm
+      check: lint/format/typecheck/boundaries/memory/prompt/help/exports green
+      and the full bun suite green serially; under the parallel aggregate two
+      pre-existing 5-second-timeout suites flake on this host (prior-identity
+      notice and an events overflow case) and pass alone. Environment note:
+      several project fixtures require a non-checkout directory; a worktree
+      nested inside another git tree needed the grandparent fallback
+      (tests/fixtures/projects/ state-scope.ts and
+      tests/fixtures/queue/production/harness.ts).
     type: info
     date: "2026-11-16"
