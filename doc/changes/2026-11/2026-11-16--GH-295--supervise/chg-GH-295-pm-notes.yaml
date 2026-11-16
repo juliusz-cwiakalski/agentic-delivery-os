@@ -4,7 +4,7 @@ milestone: "M2: Ceremonies, measurement, and memory"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: null, completed: 2026-11-16T22:21:11.981Z }
-  specification: { started: null, completed: 2026-11-16T22:33:33.776Z }
+  specification: { started: null, completed: 2026-11-16T22:45:00.487Z }
   test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
@@ -67,5 +67,20 @@ notes:
       PATH=\"$PWD/node_modules/.bin:$PATH\" before CLI invocations, or pnpm
       exec. Improvement: the primitive could classify binary-absent as a
       distinct, actionable identity instead of a message rejection."
+    type: "retro"
+    date: "2026-11-16"
+  - text: "Test-plan author surfaced blocking spec gap GAP-T1 in F-6/AC-F6-1/DEC-6:
+      duplicate-supervision refusal under-determined on (a) guarded object
+      granularity, (b) exclusive-envelope projection vs exit-1 refusal plus
+      required report, (c) live per-ref lease counted as a supervision claim
+      would refuse the DEC-7 safe-boundary park and make AC-F5-1 unreachable.
+      Specification reopened once to add the missing decision; test-plan cases
+      TC-SUP-051 and the refusal half of TC-SUP-092 are parked TODO(blocked)
+      until the spec is corrected."
+    type: "blocker"
+    date: "2026-11-16"
+  - text: "Retro: the reopen-on-gap loop worked as designed — the gap was caught at
+      artifact time by the downstream author (test planning), before any
+      delivery code; cost is one spec iteration, zero code rework."
     type: "retro"
     date: "2026-11-16"
