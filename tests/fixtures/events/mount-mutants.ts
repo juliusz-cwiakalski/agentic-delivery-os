@@ -154,7 +154,7 @@ export const strippedInventory = (): readonly string[] => {
   }
 };
 
-/** The delivered inline prompt-required list (18 names) for the control case. */
+/** The delivered inline prompt-required list (21 names) for the control case. */
 export const DELIVERED_INLINE_NAMES = [
   "status",
   "brief",
@@ -174,6 +174,7 @@ export const DELIVERED_INLINE_NAMES = [
   "coordinator",
   "daemon",
   "projects",
+  "board",
   "ceremony",
   "repos",
 ] as const;

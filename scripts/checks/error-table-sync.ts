@@ -225,6 +225,10 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   // GH-296 pins the ceremony note identity exactly; it is a kind-first
   // two-segment code, and the declaration identity is three-segment.
   "ceremony.note-invalid",
+  // GH-297 pins the two board identities exactly (DEC-20, C-16); the board
+  // family stays closed to these two members.
+  "board.repository-unknown",
+  "board.state-unavailable",
 ]);
 const CODE_PATTERN = /\b[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*){2,}\b/g;
 const TWO_SEGMENT_PATTERN = /\b[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*\b/g;

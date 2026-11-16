@@ -792,6 +792,22 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
     ],
     seeAlso: [pageIn(M2_REFERENCE_ROOT, "events")],
   },
+  {
+    path: ["board"],
+    summary: "One screen of lanes, gates, owner asks, and parked work across managed repositories",
+    usage: ["<binary> board [--all] [--project <key>] [--json]"],
+    options: [
+      ["--all", "Span every managed repository (bounded to 128, overflow counted)"],
+      ["--project <key>", "Narrow to one managed repository key"],
+      ...GLOBAL_OPTIONS,
+    ],
+    examples: [
+      "<binary> board",
+      "<binary> board --all",
+      "<binary> board --project delivery-a-1a2b3c4d --json",
+    ],
+    seeAlso: [pageIn(M2_REFERENCE_ROOT, "board")],
+  },
 ];
 
 const ALL_HELP: readonly HelpEntry[] = [ROOT_HELP, ...COMMAND_HELP];

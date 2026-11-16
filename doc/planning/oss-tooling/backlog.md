@@ -1132,6 +1132,10 @@ the project family separately.
   sharing the brief and status state source.
 - AC: board, brief, and status share one state source.
 - Depends on: M1-S5, M1-S17, M2-S11, M2-S18.
+- Progress: delivered by GH-297 on `feat/GH-297/board` (M2-S4 complete; the
+  four-section board shares `delivery.status-facts.v1` with brief and status,
+  spans managed repositories under the 128 cap, and is mounted as the 21st
+  prompt-required family).
 
 ### M2-S5 Steer
 - Ticket: GH-298 (milestone M2)

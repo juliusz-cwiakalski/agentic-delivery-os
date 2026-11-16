@@ -138,6 +138,7 @@ export const foldLanes = (input: QueueLaneFoldInput): QueueLanesData => {
       ...(resolved.reason === undefined ? {} : { reason: resolved.reason }),
       ...(lease === undefined ? {} : { lease: lease.leaseId }),
       ...(lease === undefined ? {} : { leaseScope: lease.scope }),
+      ...(lease === undefined ? {} : { leaseHolder: lease.holder }),
       restarts: economics?.restarts ?? null,
       amplification: economics?.amplification ?? null,
       ...(amplificationWarning === undefined ? {} : { amplificationWarning }),

@@ -6,7 +6,11 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { STATUS_SOURCE_ITEM_LIMIT } from "../../packages/core/src/contracts/index";
+import {
+  BOARD_MAX_REPOSITORIES,
+  HOST_INDEX_MAX_ENTRIES,
+  STATUS_SOURCE_ITEM_LIMIT,
+} from "../../packages/core/src/contracts/index";
 import {
   availableCollector,
   createBoardHarness,
@@ -139,5 +143,43 @@ describe("TC-SLA-026 read cost", () => {
     await guarded();
     expect(calls).toBe(1);
     await expect(guarded()).rejects.toThrow("deliberate second read");
+  });
+});
+
+describe("TC-BOARD-070 declared read set and the repository bound", () => {
+  test("one bounded read set per included repository, one decision-history read each", async () => {
+    const board = createBoardHarness({
+      repositories: [
+        {
+          key: "repository-a",
+          gates: [waiverGate("GH-9101", 73 * HOUR_MS)],
+          lanes: [],
+          asks: [],
+          parks: [],
+        },
+        {
+          key: "repository-b",
+          gates: [waiverGate("GH-9102", 73 * HOUR_MS)],
+          lanes: [],
+          asks: [],
+          parks: [],
+        },
+      ],
+      selection: "all",
+    });
+    try {
+      const run = await board.run([], { json: true });
+      expect(run.exitCode).toBe(0);
+      const decisionReads = board.recorder.calls.filter((call) => call === "readDecisions");
+      // At most one decision-history read per included repository (NFR-5).
+      expect(decisionReads).toHaveLength(2);
+      const appends = board.recorder.calls.filter((call) => call.startsWith("appendDecision"));
+      expect(appends).toHaveLength(2);
+      expect(new Set(appends).size).toBe(2);
+      expect(BOARD_MAX_REPOSITORIES).toBe(128);
+      expect(BOARD_MAX_REPOSITORIES).not.toBe(HOST_INDEX_MAX_ENTRIES);
+    } finally {
+      board.cleanup();
+    }
   });
 });

@@ -4,6 +4,7 @@
  * partial board and never a silent all-clear.
  */
 import { describe, expect, test } from "bun:test";
+import { BOARD_COLLECTOR_IDS } from "../../packages/core/src/contracts/index";
 import { assertEnvelopeContract } from "../../packages/testkit/src/result-conformance";
 import {
   availableCollector,
@@ -111,12 +112,14 @@ describe("TC-SLA-013 unavailable collector is declared, never silent", () => {
       expect(observedEmpty.exitCode).toBe(0);
       expect(boardGates(observedEmpty)).toEqual([]);
       expect(boardData(observedEmpty)?.collectors).toEqual([
-        { collector: "tracker", outcome: "available" },
+        { collector: "tracker", outcome: "available", repository: "example-repository" },
+        { collector: "lanes", outcome: "available", repository: "example-repository" },
       ]);
       const human = await empty.run([], { json: false });
       expect(human.exitCode).toBe(0);
       expect(human.stdout).toContain("observed-empty");
       expect(human.stdout).toContain("tracker:available");
+      expect(human.stdout).toContain("lanes:available");
     } finally {
       three.cleanup();
       empty.cleanup();
@@ -170,10 +173,7 @@ describe("TC-SLA-014 per-collector declaration and partial failure withholding",
 
   test("swapping which collector fails proves the id is data-derived", async () => {
     const board = createBoardHarness({
-      collectors: [
-        failingCollector("tracker"),
-        availableCollector("coordination", GATES.slice(0, 2)),
-      ],
+      collectors: [failingCollector("tracker"), availableCollector("lanes", GATES.slice(0, 2))],
     });
     try {
       const run = await board.run([], { json: true });
@@ -189,7 +189,7 @@ describe("TC-SLA-014 per-collector declaration and partial failure withholding",
     const board = createBoardHarness({
       collectors: [
         availableCollector("tracker", [ownerReviewGate("GH-711", 2 * HOUR_MS)]),
-        availableCollector("coordination", [ownerReviewGate("GH-712", 26 * HOUR_MS)]),
+        availableCollector("lanes", [ownerReviewGate("GH-712", 26 * HOUR_MS)]),
       ],
     });
     try {
@@ -197,8 +197,8 @@ describe("TC-SLA-014 per-collector declaration and partial failure withholding",
       expect(run.exitCode).toBe(0);
       expect(boardGates(run)).toHaveLength(2);
       expect(boardData(run)?.collectors).toEqual([
-        { collector: "tracker", outcome: "available" },
-        { collector: "coordination", outcome: "available" },
+        { collector: "tracker", outcome: "available", repository: "example-repository" },
+        { collector: "lanes", outcome: "available", repository: "example-repository" },
       ]);
     } finally {
       board.cleanup();
@@ -208,7 +208,7 @@ describe("TC-SLA-014 per-collector declaration and partial failure withholding",
   test("both unavailable is deterministic and never a partial board", async () => {
     const make = (): ReturnType<typeof createBoardHarness> =>
       createBoardHarness({
-        collectors: [failingCollector("tracker"), failingCollector("coordination")],
+        collectors: [failingCollector("tracker"), failingCollector("lanes")],
       });
     const first = make();
     const second = make();
@@ -244,6 +244,34 @@ describe("TC-SLA-014 per-collector declaration and partial failure withholding",
       // The tracker read happens once; the failure returns before a re-read.
       expect(trackerReads).toBe(1);
       expect(board.recorder.calls).not.toContain("appendDecision");
+    } finally {
+      board.cleanup();
+    }
+  });
+});
+
+describe("TC-BOARD-004 per-repository collector evidence", () => {
+  test("two included repositories carry one tracker and one lanes entry each", async () => {
+    const board = createBoardHarness({
+      repositories: [
+        { key: "repository-a", gates: [], lanes: [], asks: [], parks: [] },
+        { key: "repository-b", gates: [], lanes: [], asks: [], parks: [] },
+      ],
+      selection: "all",
+    });
+    try {
+      const run = await board.run([], { json: true });
+      expect(boardData(run)?.collectors).toEqual([
+        { collector: "tracker", outcome: "available", repository: "repository-a" },
+        { collector: "lanes", outcome: "available", repository: "repository-a" },
+        { collector: "tracker", outcome: "available", repository: "repository-b" },
+        { collector: "lanes", outcome: "available", repository: "repository-b" },
+      ]);
+      expect([...BOARD_COLLECTOR_IDS]).toEqual(["tracker", "lanes"]);
+      const data = boardData(run) as Record<string, unknown>;
+      for (const token of ["source", "readingFrom", "factsFrom"]) {
+        expect(Object.hasOwn(data, token)).toBe(false);
+      }
     } finally {
       board.cleanup();
     }

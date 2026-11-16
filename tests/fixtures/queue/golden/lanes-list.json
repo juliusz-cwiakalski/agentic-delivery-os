@@ -14,6 +14,7 @@
         "state": "delivering",
         "lease": "lease-GH-320",
         "leaseScope": "repo-exclusive",
+        "leaseHolder": "holder-a",
         "restarts": 1,
         "amplification": 2,
         "weightClass": "standard"

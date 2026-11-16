@@ -1,20 +1,33 @@
 /**
  * The in-process board harness (test-plan §4.1): injected brand, clock, run id,
- * collectors, policy, state store, and streams over `runCli`. No child process,
- * no live tree, no wall clock.
+ * repository reads, policy, state store, and streams over `runCli`. No child
+ * process, no live tree, no wall clock.
  */
 
 import {
   type BoardCommandRuntime,
+  type BoardRepositoryLoad,
+  type BoardSelectionResolution,
   createBoardCommandDefinition,
 } from "../../../packages/cli/src/commands/board";
 import { type CliDependencies, runCli } from "../../../packages/cli/src/index";
 import type {
+  BoardAskFact,
+  BoardLaneFact,
+  BoardOwnerHold,
+  BoardParkedFact,
+  BoardRepositoryFacts,
+  BoardScope,
+  BoardSelection,
   OwnerGateCollectorRead,
   OwnerGateFact,
+  OwnerGateSlaDecisionRecord,
   OwnerGateSlaPolicy,
 } from "../../../packages/core/src/contracts/index";
-import { collectorUnavailableCode } from "../../../packages/core/src/domain/owner-gate-sla";
+import {
+  boardNeedsDecisionHistory,
+  collectorUnavailableCode,
+} from "../../../packages/core/src/domain/owner-gate-sla";
 import {
   appendOwnerGateSlaDecision,
   readOwnerGateSlaDecisions,
@@ -73,6 +86,16 @@ export const failingCollector = (
   }),
 });
 
+/** One seedable repository fixture (DM-2, DM-7). */
+export type BoardRepositoryFixture = {
+  readonly key: string;
+  readonly gates?: readonly OwnerGateFact[];
+  readonly lanes?: readonly BoardLaneFact[];
+  readonly asks?: readonly BoardAskFact[];
+  readonly parks?: readonly BoardParkedFact[];
+  readonly decisions?: readonly OwnerGateSlaDecisionRecord[];
+};
+
 export type BoardRun = {
   readonly exitCode: number;
   readonly stdout: string;
@@ -93,6 +116,26 @@ export type BoardHarnessOptions = {
   readonly nowMs?: number;
   readonly appendFails?: boolean;
   readonly secrets?: readonly string[];
+  /** The legacy single-repository key (DM-7). */
+  readonly repositoryKey?: string;
+  /** The full repository fixtures; when present the legacy collectors are unused. */
+  readonly repositories?: readonly BoardRepositoryFixture[];
+  readonly scope?: BoardScope;
+  readonly selection?: BoardSelection;
+  readonly omittedRepositories?: number;
+  readonly ownerHold?: BoardOwnerHold;
+  /** A repository whose read fails with the given classified identity. */
+  readonly failingRepository?: {
+    readonly key: string;
+    readonly code: string;
+    readonly kind?: string;
+  };
+  /** A selection resolution that refuses before any read. */
+  readonly selectionFailure?: {
+    readonly kind: string;
+    readonly code: string;
+    readonly summary?: string;
+  };
 };
 
 export type BoardHarness = {
@@ -112,17 +155,130 @@ export const createBoardHarness = (options: BoardHarnessOptions = {}): BoardHarn
   });
   let fenceCounter = 0;
   const policy = options.policy ?? shippedPolicy();
+  const repositoryKey = options.repositoryKey ?? "example-repository";
+
+  const repositoryFixtures: readonly BoardRepositoryFixture[] = options.repositories ?? [
+    {
+      key: repositoryKey,
+      gates: options.gates ?? [],
+      lanes: [],
+      asks: [],
+      parks: [],
+    },
+  ];
+
+  const selectionOf = (): BoardSelectionResolution => {
+    if (options.selectionFailure !== undefined) {
+      return { ok: false, ...options.selectionFailure };
+    }
+    return {
+      ok: true,
+      scope: options.scope ?? "repository",
+      selection: options.selection ?? "current",
+      repositories: repositoryFixtures.map((repository) => repository.key),
+      omittedRepositories: options.omittedRepositories ?? 0,
+    };
+  };
+
+  const decisions = new Map<string, readonly OwnerGateSlaDecisionRecord[]>();
   const collectors = options.collectors ?? [availableCollector("tracker", options.gates ?? [])];
 
+  const loadFromCollectors = async (): Promise<BoardRepositoryLoad> => {
+    const gates: OwnerGateFact[] = [];
+    for (const collector of collectors) {
+      const read = await collector.read();
+      if (!read.ok) {
+        const id = read.collector.length > 0 ? read.collector : collector.id;
+        return {
+          ok: false,
+          kind: "status",
+          code: collectorUnavailableCode(id),
+        };
+      }
+      gates.push(...read.gates);
+    }
+    const fixture = options.repositories?.find((repository) => repository.key === repositoryKey);
+    const asks = fixture?.asks ?? [];
+    let records: readonly OwnerGateSlaDecisionRecord[] = [];
+    if (
+      boardNeedsDecisionHistory({
+        gates,
+        asks,
+        policy,
+        nowMs: options.nowMs ?? Date.parse("2026-11-06T12:00:00Z"),
+      })
+    ) {
+      if (!decisions.has(repositoryKey)) {
+        recorder.calls.push("readDecisions");
+        const read = readOwnerGateSlaDecisions(guarded.store);
+        if (!read.ok) {
+          return { ok: false, kind: read.error.kind, code: read.error.code };
+        }
+        decisions.set(repositoryKey, read.value.records);
+      }
+      records = decisions.get(repositoryKey) ?? [];
+    }
+    return {
+      ok: true,
+      facts: {
+        key: repositoryKey,
+        gates,
+        lanes: fixture?.lanes ?? [],
+        asks,
+        parks: fixture?.parks ?? [],
+        decisions: records,
+      },
+    };
+  };
+
   const runtime: BoardCommandRuntime = {
-    collectors,
-    policy,
-    readDecisions: () => {
-      recorder.calls.push("readDecisions");
-      return readOwnerGateSlaDecisions(guarded.store);
+    resolve: selectionOf,
+    loadRepository: async (repository) => {
+      if (options.failingRepository !== undefined && options.failingRepository.key === repository) {
+        return {
+          ok: false,
+          kind: options.failingRepository.kind ?? "board",
+          code: options.failingRepository.code,
+          summary: `repository ${repository} state-unavailable`,
+        };
+      }
+      if (options.collectors !== undefined || options.repositories === undefined) {
+        return loadFromCollectors();
+      }
+      const fixture = repositoryFixtures.find((candidate) => candidate.key === repository);
+      if (fixture === undefined) {
+        return { ok: false, kind: "board", code: "board.repository-unknown" };
+      }
+      let records = fixture.decisions;
+      if (
+        records === undefined &&
+        boardNeedsDecisionHistory({
+          gates: fixture.gates ?? [],
+          asks: fixture.asks ?? [],
+          policy,
+          nowMs: options.nowMs ?? Date.parse("2026-11-06T12:00:00Z"),
+        })
+      ) {
+        recorder.calls.push("readDecisions");
+        const read = readOwnerGateSlaDecisions(guarded.store);
+        if (!read.ok) return { ok: false, kind: read.error.kind, code: read.error.code };
+        records = read.value.records;
+      }
+      records ??= [];
+      return {
+        ok: true,
+        facts: {
+          key: fixture.key,
+          gates: fixture.gates ?? [],
+          lanes: fixture.lanes ?? [],
+          asks: fixture.asks ?? [],
+          parks: fixture.parks ?? [],
+          decisions: records,
+        } satisfies BoardRepositoryFacts,
+      };
     },
-    appendDecision: (decision) => {
-      recorder.calls.push("appendDecision");
+    appendDecision: (repository, decision) => {
+      recorder.calls.push(`appendDecision:${repository}`);
       if (options.appendFails === true) {
         return {
           ok: false,
@@ -140,6 +296,8 @@ export const createBoardHarness = (options: BoardHarnessOptions = {}): BoardHarn
         fenceToken: `board-fence-${fenceCounter}`,
       });
     },
+    ownerHold: () => options.ownerHold ?? { active: false },
+    policy,
     nowIso: () => options.nowIso ?? "2026-11-06T12:00:00Z",
     nowMs: () => options.nowMs ?? Date.parse("2026-11-06T12:00:00Z"),
   };
@@ -200,4 +358,19 @@ export const boardGates = (run: BoardRun): readonly Record<string, unknown>[] =>
   const data = boardData(run);
   const gates = data?.gates;
   return Array.isArray(gates) ? (gates as Record<string, unknown>[]) : [];
+};
+
+export const boardLanes = (run: BoardRun): readonly Record<string, unknown>[] => {
+  const lanes = boardData(run)?.lanes;
+  return Array.isArray(lanes) ? (lanes as Record<string, unknown>[]) : [];
+};
+
+export const boardAsks = (run: BoardRun): readonly Record<string, unknown>[] => {
+  const asks = boardData(run)?.asks;
+  return Array.isArray(asks) ? (asks as Record<string, unknown>[]) : [];
+};
+
+export const boardParked = (run: BoardRun): readonly Record<string, unknown>[] => {
+  const parked = boardData(run)?.parked;
+  return Array.isArray(parked) ? (parked as Record<string, unknown>[]) : [];
 };

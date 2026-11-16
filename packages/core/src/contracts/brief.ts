@@ -187,4 +187,6 @@ export type BriefPayload = {
   readonly truncation: readonly BriefTruncation[];
   /** The declared spend citation surface (GH-291 F-8). */
   readonly spend?: BriefSpendCitation;
+  /** The one shared state-source identity (DEC-3, DM-1). */
+  readonly stateSource: typeof statusVocabulary.STATUS_FACTS_SCHEMA_VERSION;
 };

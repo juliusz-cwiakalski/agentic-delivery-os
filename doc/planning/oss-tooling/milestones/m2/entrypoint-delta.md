@@ -1,4 +1,4 @@
-# M2 entrypoint delta: root listing changes (planned)
+# M2 entrypoint delta: root listing changes (observed)
 
 A delta note, not a restated man page. It records the observed root entry at
 the time of writing, the additions M2 plans, and the closed daemon registration
@@ -64,6 +64,22 @@ by the production entrypoint, advertised in root `--help`, and served by the M2
 surface, and the delivered flat enumeration stays reachable through the
 `projects list --flat` alias.
 
+## Observation (2026-11-16): `board` mounted
+
+Observed from the built workspace on 2026-11-16, after the GH-297 mount.
+
+```
+$ <binary> --help
+Commands: status brief queue lanes blockers phase commit lint plan
+          verify merge closeout spend retro dispatch coordinator daemon
+          projects repos events board
+```
+
+Twenty-one families were registered at this mount: the twenty observed on
+2026-11-14 plus `board`. `board` is in the prompt-required set, composed
+unconditionally by the production entrypoint, advertised in root `--help`, and
+served by the M2 `board` page as its reference page.
+
 ## M2-planned additions
 
 - `repos` becomes a root family: the flat record set of managed checkouts,
@@ -90,9 +106,13 @@ surface, and the delivered flat enumeration stays reachable through the
 - `queue` keeps the delivered lease release and gains the reason-bearing entry
   removal, the `dep add` and `dep remove` grammar extension, and automatic
   removal on merge and closeout.
-- `board` becomes the full cross-repository board and is mounted by M2-S4.
+- `board` becomes the full cross-repository board, owned by M2-S4.
+  **Mounted by GH-297 (M2-S4):** the family is in the prompt-required set
+  (twenty-two families), composed unconditionally by the production entrypoint,
+  advertised in root `--help`, and served by the M2 `board` page as its
+  reference page.
 
-The remaining additions stay planned; the root listing changes only when the
+The remaining addition stays planned; the root listing changes only when the
 owning story delivers.
 
 ## The daemon registration gap (closed)
@@ -126,9 +146,11 @@ the same way — prompt-set entry, unconditional edge composition, help entries,
 the M2 reference page, the coverage-inventory row and its per-command page
 root. A subfamily mounts with the family prompt-set entry it already has, a
 help entry of its own, and its reference page, which is how `dispatch attempts`
-mounts without a root-listing change; GH-289 did exactly that. The remaining M2
-additions (`board`, `spend` v2) stay planned until their own stories mount
-them.
+mounts without a root-listing change; GH-289 did exactly that. GH-297 mounted
+`board` the same way: prompt-set entry, unconditional edge composition, root
+and family help entries, the M2 reference page, the coverage-inventory row, and
+the family-count assertions. The remaining M2 addition (`spend` v2) stays
+planned until its own story mounts it.
 
 ## Where this note is read
 
@@ -161,7 +183,8 @@ Commands: status brief queue lanes blockers phase commit lint plan
           projects repos events ceremony
 ```
 
-Twenty-one families are registered: the twenty observed on 2026-11-14 plus
+Twenty-two families are registered after the GH-296 mount and its sync with
+the GH-297 board mount: the twenty observed on 2026-11-14 plus `board` and
 `ceremony`. `ceremony` is in the prompt-required set, composed unconditionally by
 the production entrypoint, advertised in root `--help` with family and verb
 pages, served by the M2 `ceremony` reference page, and named by the coverage

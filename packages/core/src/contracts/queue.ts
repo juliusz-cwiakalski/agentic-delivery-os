@@ -882,6 +882,11 @@ export type QueueLane = {
   readonly reason?: QueueLaneIdleReason | QueueParkedReason;
   readonly lease?: string;
   readonly leaseScope?: QueueLeaseScope;
+  /**
+   * The recorded live-lease holder (DM-9, DEC-7): present exactly when a live
+   * lease exists and equal to the lease's recorded holder. Never inferred.
+   */
+  readonly leaseHolder?: string;
   readonly restarts: number | null;
   readonly amplification: number | null;
   readonly amplificationWarning?: string;

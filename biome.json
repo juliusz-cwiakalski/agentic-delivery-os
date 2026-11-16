@@ -40,6 +40,12 @@
       }
     },
     {
+      "includes": ["tests/fixtures/board/golden/**"],
+      "formatter": {
+        "enabled": false
+      }
+    },
+    {
       "includes": ["tests/fixtures/doctor/golden/**"],
       "formatter": {
         "enabled": false

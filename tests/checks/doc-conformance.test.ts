@@ -592,9 +592,10 @@ describe("TC-CEREMONY-060 ceremony documentation current truth", () => {
     expect(text).toContain("insufficient-sample");
   });
 
-  test("the entrypoint delta records the twenty-one-family mount", () => {
+  test("the entrypoint delta records the twenty-two-family mount", () => {
     const text = read(entrypointDelta);
-    expect(text).toContain("Twenty-one families");
+    expect(text).toContain("Twenty-two families");
     expect(text).toContain("`ceremony`");
+    expect(text).toContain("`board`");
   });
 });

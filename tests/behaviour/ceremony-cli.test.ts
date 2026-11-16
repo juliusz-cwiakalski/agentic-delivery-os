@@ -11,11 +11,11 @@ import {
   type CeremonyCommandRuntime,
   createCeremonyCommandDefinition,
 } from "../../packages/cli/src/commands/ceremony";
-import { type CliDependencies, runCli } from "../../packages/cli/src/index";
 import { allHelpEntries, helpEntryFor } from "../../packages/cli/src/help";
 import { PROMPT_REQUIRED_COMMANDS } from "../../packages/cli/src/help/prompt-required-commands";
-import { runHelpGuideCoverage } from "../../scripts/checks/help-guide-coverage";
+import { type CliDependencies, runCli } from "../../packages/cli/src/index";
 import { assertEnvelopeContract } from "../../packages/testkit/src/result-conformance";
+import { runHelpGuideCoverage } from "../../scripts/checks/help-guide-coverage";
 import { bufferSink, SYNTHETIC_BRAND } from "../golden/helpers";
 
 type Call = { readonly verb: string; readonly input?: unknown };
@@ -73,7 +73,7 @@ const listData = (count = 2) => ({
 describe("TC-CEREMONY-001 the family is mounted and advertised", () => {
   test("the prompt-required set carries ceremony once and root help names it", () => {
     expect(PROMPT_REQUIRED_COMMANDS.filter((command) => command === "ceremony")).toHaveLength(1);
-    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(21);
+    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(22);
     expect(helpEntryFor(["ceremony"])).toBeDefined();
     for (const verb of ["list", "run", "resume", "catch-up"]) {
       expect(helpEntryFor(["ceremony", verb]), verb).toBeDefined();

@@ -38,7 +38,6 @@ export {
   validateBlockerPublish,
 } from "./blockers.js";
 export { projectBrief, renderBriefHuman } from "./brief.js";
-export { evaluateMemory } from "./memory-lint.js";
 export {
   type CapsuleReviewIngestion,
   canonicalCapsuleJson,
@@ -405,6 +404,7 @@ export {
   type LaneLaunchPlanFacts,
   planLaneLaunch,
 } from "./lane-launch-plan.js";
+export { evaluateMemory } from "./memory-lint.js";
 export {
   evaluateMergeFreshness,
   isStaleAge,
@@ -469,10 +469,12 @@ export {
   recordedWaiverAuthorizer,
 } from "./merge-waiver.js";
 export {
+  boardNeedsDecisionHistory,
   collectorUnavailableCode,
   evaluateOwnerGateSla,
   isCollectorUnavailableFamilyCode,
   type OwnerGateSlaPolicyViolation,
+  projectBoard,
   renderBoardHuman,
   toBoardData,
   validateOwnerGateSlaPolicy,

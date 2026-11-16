@@ -99,6 +99,7 @@ import {
   appendCommandReceipt,
   appendOutboxEffect,
   beginCommitEffect,
+  boardNeedsDecisionHistory,
   buildCeremonyRegistry,
   buildCloseoutPlan,
   type CeremonyEngineFailure,
@@ -155,12 +156,12 @@ import {
   joinAttributionSubstrates,
   type MergeTransactionPorts,
   memberRefFor,
-  newestWaiverByGate,
   normalizeStagedPaths,
   PRODUCTION_CATALOG,
   parkConditionForCause,
   parseCapsuleEvents,
   parseMemberRef,
+  parseProjectIdentityMarker,
   payloadFieldViolations,
   planDispatchResume,
   prioritizeQueueEntry,
@@ -181,6 +182,7 @@ import {
   type QueueSchedulerFacts,
   type QueueWorkItemFact,
   queueRemovalForCloseout,
+  rankBlockerQuestions,
   readActiveLeases,
   readCommandReceipts,
   readDaemonLanes,
@@ -243,7 +245,14 @@ import {
   BLOCKER_DELEGATION_POLICY,
   type BlockerCapabilityFact,
   type BlockerDelegationPolicy,
+  BOARD_MAX_LANES,
+  BOARD_MAX_REPOSITORIES,
+  type BoardAskFact,
+  type BoardLaneFact,
+  type BoardOwnerHold,
+  type BoardParkedFact,
   type BrandIdentity,
+  CANONICAL_PHASE_IDS,
   type CapsuleFileRuntime,
   type CapsuleFileSystemFacts,
   type CapsuleProducerPort,
@@ -306,6 +315,7 @@ import {
   type HarnessSessionPort,
   OWNER_GATE_SLA_POLICY,
   type OwnerGateCollectorRead,
+  type OwnerGateSlaDecisionRecord,
   type OwnerHoldFact,
   PHASE_STATE_DOCUMENT_PREFIX,
   PHASE_STATE_DOCUMENT_SUFFIX,
@@ -386,6 +396,7 @@ import {
   createStateStore,
   foldCeremonyRunVerdict,
   foldCloseoutHistory,
+  foldPhaseState,
   readAllMergeWaivers,
   readAuditLedger,
   readBlockerLedger,
@@ -412,7 +423,11 @@ import {
   type BlockersCommandRuntime,
   createBlockersCommandDefinition,
 } from "./commands/blockers.js";
-import { type BoardCommandRuntime, createBoardCommandDefinition } from "./commands/board.js";
+import {
+  type BoardCommandRuntime,
+  type BoardRepositoryLoad,
+  createBoardCommandDefinition,
+} from "./commands/board.js";
 import { createBriefCommandDefinition } from "./commands/brief.js";
 import {
   type CeremonyCommandResult,
@@ -3102,6 +3117,17 @@ export type BoardComposition = {
   readonly nowIso: () => string;
   readonly nowMs: () => number;
   readonly newFenceToken: () => string;
+  /** The invoking checkout's repository key, when already resolved. */
+  readonly repositoryKey?: string;
+  readonly readOwnerHold?: () => BoardOwnerHold;
+  /** The resolved host root for the one index read `--all`/`--project` needs. */
+  readonly hostRoot?: string;
+  readonly readHostIndex?: () => BoardHostIndexRead;
+  readonly hostIndexPath?: () => string;
+  readonly parseHostIndex?: (text: string) => BoardHostIndexDocument | undefined;
+  readonly rootExists?: (root: string) => boolean;
+  readonly stateLocationFor?: (projectKey: string) => string;
+  readonly openStore?: (stateLocation: string) => StateStorePort;
 };
 
 const ownerAttention = (item: WorkItem): boolean =>
@@ -3112,6 +3138,27 @@ const ownerAttention = (item: WorkItem): boolean =>
 const openItem = (item: WorkItem): boolean =>
   item.status.deliveryState !== "done" && item.status.deliveryState !== "canceled";
 
+/**
+ * The host-index read seam supplied by the production composition (DM-7).
+ *
+ * Absent in the in-process composition that resolves one checkout: the default
+ * form reads no index by contract, and `--all`/`--project` then answer with the
+ * invoking checkout alone.
+ */
+export type BoardHostIndexRead =
+  | { readonly state: "absent" }
+  | { readonly state: "present"; readonly text: string }
+  | { readonly state: "unreadable" };
+
+/** The parsed host-index facts the board selection consumes. */
+export type BoardHostIndexDocument = {
+  readonly projects: readonly {
+    readonly projectKey: string;
+    readonly root: string;
+    readonly stateLocation: string;
+  }[];
+};
+
 /** Compose the board runtime over the real tracker read and the state ledger. */
 export const createBoardCommandRuntime = (composition: BoardComposition): BoardCommandRuntime => {
   const instance = composition.github.instance;
@@ -3119,7 +3166,18 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
     instance.systemKind === "vcs" && instance.authMethod.mechanism === "credential-reference";
   const collectorCode = "status.collector.tracker.unavailable";
 
-  const readTracker = async (): Promise<OwnerGateCollectorRead> => {
+  const deriveRepositoryKey = (root: string): string | undefined => {
+    const identity = readCheckoutIdentity({ cwd: root, io: composition.repository.io });
+    if (identity.kind !== "resolved") return undefined;
+    const markerRead = readProjectIdentityMarker(identity.commonDir);
+    if (markerRead.state !== "present") return undefined;
+    return parseProjectIdentityMarker(markerRead.text)?.projectKey;
+  };
+
+  const readTrackerFor = async (
+    root: string,
+    store: StateStorePort,
+  ): Promise<OwnerGateCollectorRead> => {
     if (!admitted) {
       return {
         ok: false,
@@ -3128,10 +3186,7 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
         code: collectorCode,
       };
     }
-    const facts = readRepositoryFacts({
-      cwd: composition.repository.cwd,
-      io: composition.repository.io,
-    });
+    const facts = readRepositoryFacts({ cwd: root, io: composition.repository.io });
     const parsed = parseGitHubRemote(facts.originUrl);
     if (!parsed.ok) {
       return { ok: false, collector: "tracker", reason: "not-configured", code: collectorCode };
@@ -3146,23 +3201,28 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
     if (!result.ok) {
       return { ok: false, collector: "tracker", reason: "failed", code: collectorCode };
     }
-    // The GH-229 GAP-9 flip: a recorded authorized waiver for the item's change
-    // ref is collected as waiver-kind with its recorded authorizer. A gate
-    // without a recorded waiver stays owner-review with `waivedBy: null` (no
-    // synthesis); the board payload schema is unchanged.
-    const waiverRead = readAllMergeWaivers(composition.store);
-    const waiversByGate = waiverRead.ok ? newestWaiverByGate(waiverRead.records) : new Map();
+    // The waiver join reads the TARGET repository's own ledger (F-1): a
+    // non-invoking repository's recorded waivers must surface there, and a
+    // numeric ref collision must never import the invoking repository's waiver.
+    const waiverRead = readAllMergeWaivers(store);
+    const waiverRecords = waiverRead.ok ? waiverRead.records : [];
+    // Resolve per REF (not per gate id): several refs may each carry their own
+    // recorded waiver, and the newest matching record wins for one ref.
     const waiverFor = (entityId: string) => {
       const numeric =
         /^[A-Za-z]+-([0-9]+)$/.exec(entityId)?.[1] ??
         (/^[0-9]+$/.test(entityId) ? entityId : undefined);
-      for (const waiver of waiversByGate.values()) {
+      let chosen: (typeof waiverRecords)[number] | undefined;
+      for (const waiver of waiverRecords) {
         if (waiver.gateId !== "owner-gate") continue;
         const changeNumeric = /^[A-Za-z]+-([0-9]+)$/.exec(waiver.changeRef)?.[1];
-        if (changeNumeric !== undefined && changeNumeric === numeric) return waiver;
-        if (waiver.changeRef === entityId) return waiver;
+        const matches =
+          waiver.changeRef === entityId ||
+          (changeNumeric !== undefined && numeric !== undefined && changeNumeric === numeric);
+        if (!matches) continue;
+        if (chosen === undefined || waiver.authorizedAt >= chosen.authorizedAt) chosen = waiver;
       }
-      return undefined;
+      return chosen;
     };
     const gates = result.value.items
       .filter((item) => openItem(item) && ownerAttention(item))
@@ -3191,15 +3251,360 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
     };
   };
 
+  const managedSet = (
+    invoking: string | undefined,
+  ):
+    | {
+        readonly ok: true;
+        readonly keys: readonly string[];
+        readonly entries: ReadonlyMap<
+          string,
+          { readonly projectKey: string; readonly root: string; readonly stateLocation: string }
+        >;
+      }
+    | { readonly ok: false; readonly summary: string } => {
+    const entries = new Map<
+      string,
+      { readonly projectKey: string; readonly root: string; readonly stateLocation: string }
+    >();
+    const keys = new Set<string>();
+    const read = composition.readHostIndex?.();
+    if (read !== undefined && read.state !== "absent") {
+      const path =
+        composition.hostIndexPath?.() ??
+        `${composition.hostRoot ?? composition.repository.cwd}/host-index.json`;
+      if (read.state === "unreadable") {
+        return { ok: false, summary: `host index ${path} is unreadable` };
+      }
+      const document = composition.parseHostIndex?.(read.text);
+      if (document === undefined) {
+        return { ok: false, summary: `host index ${path} is unparseable` };
+      }
+      for (const entry of document.projects) {
+        if (!(composition.rootExists?.(entry.root) ?? true)) continue;
+        if (keys.has(entry.projectKey)) continue;
+        keys.add(entry.projectKey);
+        entries.set(entry.projectKey, entry);
+      }
+    }
+    if (invoking !== undefined && !keys.has(invoking)) {
+      keys.add(invoking);
+    }
+    return { ok: true, keys: [...keys].sort(), entries };
+  };
+
+  const phaseFor = (
+    store: StateStorePort,
+    ref: string,
+  ):
+    | {
+        readonly ok: true;
+        readonly phase: string | null;
+        readonly phaseUnknownReason?: "phase-unrecorded" | "phases-complete";
+      }
+    | { readonly ok: false; readonly code: string } => {
+    const read = readChangeTransitionsTolerant(store, ref);
+    if (!read.ok) return { ok: false, code: read.error.code };
+    if (!read.value.present || read.value.transitions.length === 0) {
+      return { ok: true, phase: null, phaseUnknownReason: "phase-unrecorded" };
+    }
+    const state = foldPhaseState(ref, read.value.transitions);
+    const open = Object.entries(state.phases).filter(
+      ([, entry]) => (entry as { readonly completed: string | null }).completed === null,
+    );
+    if (open.length === 0) return { ok: true, phase: null, phaseUnknownReason: "phases-complete" };
+    const latest = open.reduce((current, candidate) => {
+      const currentIndex = (CANONICAL_PHASE_IDS as readonly string[]).indexOf(current[0]);
+      const candidateIndex = (CANONICAL_PHASE_IDS as readonly string[]).indexOf(candidate[0]);
+      return candidateIndex > currentIndex ? candidate : current;
+    });
+    return { ok: true, phase: latest[0] };
+  };
+
+  const repositoryStores = new Map<string, StateStorePort>();
+
+  let resolvedSelection:
+    | {
+        readonly selection: string;
+        readonly entries: ReadonlyMap<
+          string,
+          { readonly projectKey: string; readonly root: string; readonly stateLocation: string }
+        >;
+      }
+    | undefined;
+
+  const loadRepositoryFacts = async (repository: string): Promise<BoardRepositoryLoad> => {
+    const invoking = composition.repositoryKey ?? deriveRepositoryKey(composition.repository.cwd);
+    const entry =
+      resolvedSelection !== undefined && resolvedSelection.selection !== "current"
+        ? resolvedSelection.entries.get(repository)
+        : undefined;
+    const root = entry?.root ?? (repository === invoking ? composition.repository.cwd : undefined);
+    if (root === undefined || !(composition.rootExists?.(root) ?? true)) {
+      return {
+        ok: false,
+        kind: "board",
+        code: "board.state-unavailable",
+        summary: `repository ${repository} root is unavailable`,
+      };
+    }
+    const stateLocation =
+      entry?.stateLocation ??
+      composition.stateLocationFor?.(repository) ??
+      `${composition.hostRoot ?? composition.repository.cwd}/projects/${repository}`;
+    let store: StateStorePort;
+    try {
+      store = composition.openStore?.(stateLocation) ?? composition.store;
+    } catch {
+      return {
+        ok: false,
+        kind: "board",
+        code: "board.state-unavailable",
+        summary: `repository ${repository} state location is unavailable`,
+      };
+    }
+    repositoryStores.set(repository, store);
+    const tracker = await readTrackerFor(root, store);
+    if (!tracker.ok) return { ok: false, kind: "status", code: tracker.code };
+
+    const nowMs = composition.nowMs();
+    const blockerRead = readBlockerLedger(store);
+    if (!blockerRead.ok) {
+      return {
+        ok: false,
+        kind: "board",
+        code: "board.state-unavailable",
+        summary: `repository ${repository} blocker ledger is unavailable`,
+      };
+    }
+    const ranking = rankBlockerQuestions(
+      blockerRead.value.questions,
+      blockerRead.value.answers,
+      nowMs,
+    );
+    const asks: BoardAskFact[] = ranking.open
+      .filter((question) => question.audience === "owner")
+      .map((question) => ({
+        id: question.id,
+        type: question.type,
+        audience: "owner",
+        ref: question.ref,
+        lane: question.lane,
+        question: question.question,
+        askedAt: question.askedAt,
+        age: question.age,
+        owner: "owner",
+      }));
+
+    const parkRead = readQueueParks(store);
+    if (!parkRead.ok) {
+      return {
+        ok: false,
+        kind: "board",
+        code: "board.state-unavailable",
+        summary: `repository ${repository} park store is unavailable`,
+      };
+    }
+    const latestPark = new Map<string, (typeof parkRead.records)[number]>();
+    for (const record of parkRead.records) latestPark.set(record.ref, record);
+    const parks: BoardParkedFact[] = [];
+    for (const record of latestPark.values()) {
+      if (record.cause !== "peak-window" && record.cause !== "owner-hold") continue;
+      if (record.recoveryState !== "parked") continue;
+      if (record.cause === "peak-window") {
+        const until = record.until === undefined ? undefined : Date.parse(record.until);
+        if (until === undefined || !Number.isFinite(until) || nowMs >= until) continue;
+      }
+      parks.push({
+        ref: record.ref,
+        reason: record.cause,
+        until: record.until ?? null,
+        ...(record.cause === "owner-hold" ? { untilReason: "owner-hold-no-expiry" as const } : {}),
+        ...(record.preservation === undefined ? {} : { preservation: record.preservation }),
+        ...(record.providerProfile === undefined
+          ? {}
+          : { providerProfile: record.providerProfile }),
+        owner: null,
+      });
+    }
+
+    const leaseRead = readActiveLeases(store, nowMs);
+    if (!leaseRead.ok) {
+      return {
+        ok: false,
+        kind: "board",
+        code: "board.state-unavailable",
+        summary: `repository ${repository} lane ledger is unavailable`,
+      };
+    }
+    const failedRefs = new Set<string>();
+    const daemonRead = readDaemonLanes(store);
+    if (!daemonRead.ok) {
+      return {
+        ok: false,
+        kind: "board",
+        code: "board.state-unavailable",
+        summary: `repository ${repository} daemon lane ledger is unavailable`,
+      };
+    }
+    for (const lane of daemonRead.records) {
+      if (lane.state === "failed") failedRefs.add(lane.ref);
+    }
+    // Cap BEFORE phase resolution so NFR-5's "<= 1 phase read per active lane
+    // (<= 20)" matches the code; the omitted count is carried to the payload.
+    const laneCandidates: {
+      readonly ref: string;
+      readonly lease?: (typeof leaseRead.active)[number];
+    }[] = [
+      ...leaseRead.active.map((lease) => ({ ref: lease.ref, lease })),
+      ...[...failedRefs]
+        .filter((ref) => !leaseRead.active.some((lease) => lease.ref === ref))
+        .map((ref) => ({ ref })),
+    ].sort((left, right) => (left.ref < right.ref ? -1 : left.ref > right.ref ? 1 : 0));
+    const keptLanes = laneCandidates.slice(0, BOARD_MAX_LANES);
+    const omittedLanes = laneCandidates.length - keptLanes.length;
+    const lanes: BoardLaneFact[] = [];
+    for (const candidate of keptLanes) {
+      const phase = phaseFor(store, candidate.ref);
+      if (!phase.ok) {
+        return {
+          ok: false,
+          kind: "board",
+          code: "board.state-unavailable",
+          summary: `repository ${repository} phase history for ${candidate.ref} is unavailable`,
+        };
+      }
+      const lease = candidate.lease;
+      lanes.push({
+        ref: candidate.ref,
+        laneId: candidate.ref,
+        state: lease === undefined || failedRefs.has(candidate.ref) ? "failed" : "delivering",
+        holder: lease === undefined ? null : lease.holder,
+        ...(lease === undefined ? {} : { leaseId: lease.leaseId }),
+        ...(phase.phase === null
+          ? {
+              phase: null,
+              ...(phase.phaseUnknownReason === undefined
+                ? {}
+                : { phaseUnknownReason: phase.phaseUnknownReason }),
+            }
+          : { phase: phase.phase }),
+      });
+    }
+
+    let records: readonly OwnerGateSlaDecisionRecord[] = [];
+    if (
+      boardNeedsDecisionHistory({
+        gates: tracker.gates,
+        asks,
+        policy: OWNER_GATE_SLA_POLICY,
+        nowMs,
+      })
+    ) {
+      const decisions = readOwnerGateSlaDecisions(store);
+      if (!decisions.ok) {
+        return { ok: false, kind: decisions.error.kind, code: decisions.error.code };
+      }
+      records = decisions.value.records;
+    }
+    return {
+      ok: true,
+      facts: {
+        key: repository,
+        gates: tracker.gates,
+        lanes,
+        ...(omittedLanes > 0 ? { omittedLanes } : {}),
+        asks,
+        parks,
+        decisions: records,
+      },
+    };
+  };
+
   return {
-    collectors: [{ id: "tracker", read: readTracker }],
-    policy: OWNER_GATE_SLA_POLICY,
-    readDecisions: () => readOwnerGateSlaDecisions(composition.store),
-    appendDecision: (decision) =>
-      appendOwnerGateSlaDecision(composition.store, {
+    resolve: (invocation) => {
+      const invoking = composition.repositoryKey ?? deriveRepositoryKey(composition.repository.cwd);
+      const projectFlag =
+        typeof invocation.flags["--project"] === "string"
+          ? (invocation.flags["--project"] as string)
+          : undefined;
+      const all = invocation.flags["--all"] === true;
+      if (!all && projectFlag === undefined) {
+        // The default form performs ZERO host-index reads and uses only the
+        // invoking checkout; an underivable identity resolves `unbound` (C-15).
+        if (invoking === undefined) {
+          return {
+            ok: true,
+            scope: "unbound",
+            selection: "current",
+            repositories: [],
+            omittedRepositories: 0,
+          };
+        }
+        return {
+          ok: true,
+          scope: "repository",
+          selection: "current",
+          repositories: [invoking],
+          omittedRepositories: 0,
+        };
+      }
+      const managed = managedSet(invoking);
+      if (!managed.ok) {
+        return {
+          ok: false,
+          kind: "board",
+          code: "board.state-unavailable",
+          summary: managed.summary,
+        };
+      }
+      resolvedSelection = { selection: all ? "all" : "project", entries: managed.entries };
+      if (projectFlag !== undefined) {
+        if (!managed.entries.has(projectFlag) && projectFlag !== invoking) {
+          return {
+            ok: false,
+            kind: "board",
+            code: "board.repository-unknown",
+            summary: `repository ${projectFlag} is not in the managed set`,
+          };
+        }
+        return {
+          ok: true,
+          scope: "repository",
+          selection: "project",
+          repositories: [projectFlag],
+          omittedRepositories: 0,
+        };
+      }
+      const sorted = [...managed.keys];
+      let retained = sorted;
+      if (sorted.length > BOARD_MAX_REPOSITORIES) {
+        const invokingIncluded =
+          invoking !== undefined && sorted.slice(0, BOARD_MAX_REPOSITORIES).includes(invoking);
+        if (invokingIncluded || invoking === undefined) {
+          retained = sorted.slice(0, BOARD_MAX_REPOSITORIES);
+        } else {
+          retained = [...sorted.slice(0, BOARD_MAX_REPOSITORIES - 1), invoking].sort(
+            (left, right) => (left < right ? -1 : left > right ? 1 : 0),
+          );
+        }
+      }
+      return {
+        ok: true,
+        scope: "repository",
+        selection: "all",
+        repositories: retained,
+        omittedRepositories: sorted.length - retained.length,
+      };
+    },
+    loadRepository: loadRepositoryFacts,
+    appendDecision: (repository, decision) =>
+      appendOwnerGateSlaDecision(repositoryStores.get(repository) ?? composition.store, {
         decision,
         fenceToken: composition.newFenceToken(),
       }),
+    ownerHold: () => composition.readOwnerHold?.() ?? { active: false },
+    policy: OWNER_GATE_SLA_POLICY,
     nowIso: composition.nowIso,
     nowMs: composition.nowMs,
   };

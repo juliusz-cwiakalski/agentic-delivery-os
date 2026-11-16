@@ -1,0 +1,1526 @@
+# GH-297 delivery plan — machine-readable document (delivery.plan.v1), revision 1.4
+# (2026-11-16). Authored against spec v1.3 (29 ACs, DEC-1..DEC-20, DM-1..DM-11,
+# NFR-1..NFR-10, RSK-1..RSK-9, DoD-1..DoD-18, OQ-1..OQ-10 all closed, Appendix C
+# constraints C-1..C-16, Appendix D count-pinning sites D-1..D-23) and test plan
+# v1.3 (48 TCs = 47 automated + 1 gate-only record) on branch feat/GH-297/board
+# from main-tools tip eca76523.
+#
+# REVISION NOTE (revision 1.4, review iteration 1 remediation): the phase-8
+# review (code-review/review-iter-1.yaml) found the delivery substantively
+# complete but returned FAIL with 6 findings (1 high, 2 medium, 2 low, 1 info).
+# F1 (high): the per-repository tracker read joins merge waivers from the
+# INVOKING store (packages/cli/src/edge.ts readTrackerFor), so non-invoking
+# repositories lose recorded waivers in --all/--project and a shared ref
+# number can import the invoking repository's waiver. F2 (medium): the
+# command-scoped --version intercept answers exit 0 for unknown commands and
+# positional-carrying invocations, bypassing fallback.invocation containment.
+# F3 (medium): TC-BOARD-061 landed without the host-root/index snapshot, the
+# index-write counters, and the index-maintenance mutant. F4/F5/F6 (low/info):
+# kind-cap detector divergence, phase reads above the declared 20-lane bound,
+# and the retired toBoardData projection. Phase 6 below owns the remediation;
+# no earlier phase, AC ownership, or commit subject changes.
+#
+# REVISION NOTE (revision 1.3, phase-7 commit staging): the new current-truth
+# spec doc/spec/features/feature-board.md is authored by lifecycle phase 7, not
+# by a delivery phase. It is listed in the phase-5 scope only so the commit
+# primitive can stage it: an untracked file outside every declared plan scope is
+# classified as a stray and is never staged. No delivery phase authors it, no AC
+# or TC ownership changes, and the phase-7 authoring obligation above remains
+# the authority for its content.
+#
+# REVISION NOTE (revision 1.2, DoR iteration-2 remediation, spec v1.3 / test
+# plan v1.3 reconciliation): the iteration-2 DoR review found the count story
+# still incomplete. The repo-wide scan the spec now mandates (DEC-20 amended,
+# OQ-9/OQ-10 closed) locates **23 count-pinning sites across five files**, not
+# the mirror-plus-carrier set revision 1.1 declared: two suites were absent
+# from every phase scope — tests/structure/dispatch-attempts-taxonomy.test.ts
+# (header comment "135 identities", test name "136 identities",
+# `toHaveLength(136)`) and tests/structure/verify-gates-suite-map-contract.
+# test.ts (`sourceEntries`/`documentedRows` = 136) — and the sync-side suite
+# carries four `BASELINE_ROWS.length + 102` arithmetic/message sites plus its
+# own header-comment/test-name/doc-content pins. Spec v1.3 replaces the
+# shorthand with the exhaustive, binding **Appendix D (D-1..D-23)**; test plan
+# v1.3 re-points TC-BOARD-053 (same id) to own all 23 sites as per-file
+# assertion groups, the repo-wide no-leftover scan for 136/135/53/52 with a
+# small declared residual list, the four-way classifier/check/mirror/carrier
+# agreement (138 entries / 137 delivered rows / 55 allowlist codes / 2 board
+# rows / 138 documented identities), and six mutation arms A..F (adding the
+# non-mirror stale-site arm E and mirror drift F to v1.2's five). This
+# revision adds both suites to the phase-3 scope, rewrites obligation 3.5c as
+# the Appendix D per-file groups, adds the scan/agreement/non-mirror-mutant
+# obligations, and tightens the phase-3 done-when to require every Appendix D
+# site moved with the scan and agreement green inside `pnpm check`. No phase
+# id, title, or ordering changed; the AC set stays 29 and the TC set 48 with
+# every AC and TC still owned exactly once; commit subjects are unchanged.
+#
+# REVISION NOTE (revision 1.1, DoR iteration-1 remediation, spec v1.2 / test
+# plan v1.2 reconciliation): the iteration-1 DoR review found two plan gaps.
+# F1 (critical): phase 3 introduces `board.repository-unknown` and
+# `board.state-unavailable` as two-segment codes, but the delivered error-table
+# sync gate requires the exact allowlist widening in BOTH
+# scripts/checks/error-table-sync.ts (`RESERVED_TWO_SEGMENT_CODES`, 53 -> 55)
+# and its structural mirror tests/structure/error-table.test.ts (the mirrored
+# set plus the exact-length assertion), plus the identity-table count bumps
+# (ERROR_TABLE entries 136 -> 138 at all four structural assertions, the
+# delivered/spend-exclusion count 135 -> 137, exactly 2 `board` domain-kind
+# rows, and the feature-result-contract documented identities 136 -> 138 with
+# the allowlist paragraph reconciled 52 -> 55) — none of which was in any phase
+# scope, making phase 3's done-when unsatisfiable. Spec v1.2 pins the remedy
+# as DEC-20/C-16/AC-F8-3 (OQ-8 closed) and test plan v1.2 extends TC-BOARD-053
+# (same id) to own the whole unit. This revision adds
+# scripts/checks/error-table-sync.ts to the phase-3 scope (the mirror and the
+# sync-side suite were already declared), writes the exact count-update
+# obligations into phase 3.5 and its done-when, and adds AC-F8-3 to the
+# phase-3 ownership (AC set 28 -> 29). F4 (minor): the four-section flip
+# touches six delivered board suites absent from every phase scope —
+# tests/behaviour/{board-escalation,board-aging,board-records,
+# board-waiver-recording,board-privacy,board-corpus}.test.ts — which are now
+# in the phase-2 scope with an explicit stay-green obligation. No phase id,
+# title, or ordering changed; the TC set stays 48 and every AC and TC is still
+# owned exactly once; commit subjects are unchanged.
+#
+# REVISION 1.0 (2026-11-15): initial five-phase plan against spec v1.1 / test
+# plan v1.1.
+#
+# One ticket, one PR against main-tools, five delivery phases. Every phase is an
+# independently committable slice that is green at its own boundary (targeted
+# suites plus the phase gate battery below), and every phase is ONE delivery
+# commit through the commit primitive (conventional subject, scope GH-297 per
+# repo convention, every body/footer line <= 100 characters; lifecycle phase 9
+# lints the branch range with ./scripts/lint-commit-range.sh --base main-tools).
+# Extra phase data (content obligations, AC/TC ownership, done-when, gate
+# commands) is carried in YAML comments so the parsed document stays
+# schema-strict: the only parsed keys are schemaVersion, workItemRef, tier,
+# defaultLeases, defaultWeightClass and phases (id, title, kind, summary, scope,
+# interactions, doneArtifacts, leases, weightClass, leaseClass). The plan
+# declares phases and scope only; progress is a pm-notes `notes:` entry naming
+# the plan phase id, commit hash, and test result; there is no `tasks` key and
+# no progress log.
+#
+# SOURCES (single source of truth; this plan invents no requirement):
+#   - Spec:      ./chg-GH-297-spec.md v1.3 — F-1..F-9; DM-1..DM-11;
+#                NFR-1..NFR-10; NG-1..NG-9; DEC-1..DEC-20 (DEC-20 amended
+#                at v1.3); RSK-1..RSK-9;
+#                29 ACs AC-F1-1..AC-NFR9-1 incl. AC-F8-3 (section 17);
+#                DoD-1..DoD-18 (section 17.1) with per-condition plan-phase
+#                ownership; section 14 OQ-1..OQ-10 all closed (OQ-9 = the
+#                DoR iteration-2 count-pinning finding, closed by Appendix
+#                D); section 18 sequencing (shared source before consumer;
+#                leaseHolder before the lane row; error-table registration
+#                with the classification; the prompt-set entry after the
+#                surface is complete); Appendix B ticket-AC mapping and the
+#                binding test-plan mapping note; Appendix C constraints
+#                C-1..C-16; **Appendix D — the exhaustive, binding list of
+#                23 count-pinning sites (D-1..D-23) across five files, with
+#                same-commit movement, the repo-wide no-leftover scan for
+#                136/135/53/52, and the four-way agreement requirement**.
+#   - Test plan: ./chg-GH-297-test-plan.md v1.3 — 48 TCs in nine blocks
+#                (TC-BOARD-001..TC-BOARD-085); coverage matrix 29/29 ACs
+#                (AC-F8-3 owned by TC-BOARD-053, extended in place at v1.3
+#                to own Appendix D D-1..D-23 as per-file assertion groups,
+#                the no-leftover scan with a declared residual list, the
+#                four-way agreement read from one tree, the near-miss and
+#                lookalike probes, and six mutation arms A..F — same id, no
+#                new id, no orphan); section 4 layers
+#                (the real-production-composition case list
+#                010/011/012/014/015/016/061/064 and the seeded-index
+#                cases); section 6 fixture/golden environment; section 7
+#                suite homes; section 8.3 no open question (R-TP-10); AMB-TP-1 (human allocation
+#                asserted as maxima + marker arithmetic) and AMB-TP-2 (edge
+#                runtime seam shapes are delivery-bound; a case that cannot
+#                resolve its seam fails naming the missing contract).
+#   - PM notes:  ./chg-GH-297-pm-notes.yaml — binding scope (DEC-1), state
+#                source (DEC-2), repository scope (DEC-3), mounting (DEC-4),
+#                dependency check, doc-impact handoff list.
+#   - Blueprint: doc/planning/oss-tooling/milestones/m2/commands/board.md (the
+#                board surface contract and the reference page the coverage
+#                check resolves), contracts.md (the `repositories[]` naming
+#                rule and the repository-key boundary), test-scenarios.md
+#                (SC-M2-S4-01/02 inherited by name), entrypoint-delta.md (the
+#                mounting pattern and the observed 20-family root listing),
+#                PDR-0003 (the owner-gate policy map), ODR-0003/ODR-0004.
+#   - Repo truth verified at plan time: packages/core/src/contracts/
+#                owner-gate-sla.ts (BOARD_SCHEMA_VERSION, BOARD_MAX_* bounds,
+#                BOARD_COLLECTOR_IDS = ["tracker","lanes"], the gate-only
+#                payload); packages/core/src/domain/owner-gate-sla.ts (the
+#                delivered evaluator/ranking/renderer); packages/cli/src/
+#                commands/board.ts (render-once command over injected
+#                collectors); packages/cli/src/edge.ts (board composition
+#                ~3038, command registration ~3786 gated on options.board);
+#                packages/cli/src/production.ts (no board runtime supplied;
+#                the maintainsIndex read-only exception set lives here);
+#                packages/cli/src/help/prompt-required-commands.ts (exactly 20
+#                families, no "board"); packages/cli/src/entrypoint.ts
+#                (composes PROMPT_REQUIRED_COMMANDS data-driven at ~201);
+#                packages/cli/src/commands/status.ts `collectStatusFacts`
+#                (the one facts bundle status and brief share);
+#                packages/core/src/app/state-scope.ts and packages/adapters/
+#                src/file/host-index-store.ts (consumed unchanged);
+#                delivered suites tests/behaviour/board-*.test.ts (15),
+#                tests/golden/board-grid.test.ts, tests/structure/
+#                board-nonregression.test.ts, tests/fixtures/board/{harness,
+#                matrix}.ts + corpus/** + golden/{envelope.json,grid.txt};
+#                the closed two-segment allowlist
+#                `RESERVED_TWO_SEGMENT_CODES` holds exactly 53 members in
+#                BOTH scripts/checks/error-table-sync.ts (line ~147) and its
+#                structural mirror tests/structure/error-table.test.ts
+#                (line ~57, with the exact-length assertion at ~1406);
+#                the identity-table counts today are ERROR_TABLE length 136
+#                (four `toHaveLength(136)` assertions in the structural
+#                suite), delivered/spend-exclusion rows 135, and the carrier
+#                doc/spec/features/feature-result-contract.md documents "136
+#                identities" with an allowlist paragraph stating 52 (the
+#                delivered 52-entry enumeration omits
+#                `verify.narrowed-scope`; 53 delivered + 2 board = 55 per
+#                DEC-20); tests/checks/error-table-sync.test.ts asserts the
+#                same 136 source/documented counts and carries four
+#                `BASELINE_ROWS.length + 102` arithmetic/message sites
+#                (~1081/1082/1161-1162/1185) plus its own header/test-name/
+#                doc-content 136 pins; the count pins extend beyond the
+#                mirror and the sync suite into
+#                tests/structure/dispatch-attempts-taxonomy.test.ts (header
+#                "135 identities" ~L2, test name "136 identities" ~L48,
+#                `toHaveLength(136)` ~L50) and
+#                tests/structure/verify-gates-suite-map-contract.test.ts
+#                (`sourceEntries`/`documentedRows` = 136 ~L149/150) — the
+#                exhaustive binding list is spec Appendix D (D-1..D-23);
+#                tests/fixtures/projects/{production,state-scope,host-index,
+#                temp-repos,host-root}.ts; .changeset/config.json fixed group
+#                of five publishables (GH-309/GH-310 changeset precedent).
+#
+# PHASE ORDER AND WHY (spec section 18 sequencing, made concrete):
+#   1 Shared source and contracts first — the backlog AC ("board, brief, and
+#     status share one state source") must be observable before the board
+#     surface consumes it (test plan GAP-T5: the equality has no fallback
+#     path), the lane `leaseHolder` extension must land before the lane row,
+#     and every later phase consumes the declared vocabulary (DM-1..DM-11) and
+#     bounds (BOARD_MAX_REPOSITORIES = 128, per-section caps, field caps).
+#   2 Four-section projection second — the pure board (lanes, gates, asks,
+#     parked) over one repository's facts plus the lane fold, with the asks
+#     join, the parked projection, omission accounting, the byte guard, and
+#     the deterministic renderer. The delivered owner-gate SLA is preserved,
+#     not re-implemented (C-3): the gates section IS the delivered evaluator.
+#   3 Repository selection and per-repository composition third — grammar
+#     (--all/--project), managed-set resolution over the delivered host index
+#     and state scope, the 128 cap with its retained set and counted overflow,
+#     the two new error identities with their error-table rows and the C-7
+#     carrier, and the production composition root supplying the board runtime
+#     unconditionally over the delivered adapters. The composition half of
+#     mounting lands HERE, not in phase 4, because the test plan's
+#     real-production-composition cases (TC-BOARD-010/011/012/014/015/016/064)
+#     exercise selection through the real `createProductionComposer`
+#     (tests/fixtures/projects/production.ts) and can be first-green only once
+#     production composes board. This is contract-legal and regression-free:
+#     between the phase-3 and phase-4 commits the entrypoint still drops the
+#     un-advertised family exactly as it drops every non-prompt command today,
+#     so root --help and every other surface stay byte-identical.
+#   4 Mounting advertisement and write discipline fourth — the prompt-set
+#     entry (21st family), root and family help entries, the reference page
+#     serving the coverage check, the coverage-inventory row, the 20 -> 21
+#     family-count assertion updates, and the read-only write-discipline audit
+#     (DoD-11 "Mounting/write-discipline phase"). The prompt-set entry lands
+#     strictly after the surface is complete, so it never advertises a command
+#     that cannot answer (spec section 18, RSK-5).
+#   5 Determinism, purity, read cost, release — the consolidated proofs
+#     (byte-identical repeats and permutation independence over the committed
+#     four-section golden, purity/brand, the multi-repository read set, the
+#     50 ms median), the M2 planning-corpus bookkeeping, the five-package
+#     minor changeset, and the full gate battery at the delivered HEAD
+#     (DoD-10/DoD-15/DoD-16/DoD-17).
+#
+# AC OWNERSHIP (29/29; exactly one owning phase each; an earlier phase may
+# produce a partial verdict, which is additive and never transfers ownership):
+#   phase 1  AC-F2-1
+#   phase 2  AC-F1-1, AC-F2-2, AC-F2-3, AC-F4-1, AC-F4-2, AC-F4-3,
+#            AC-F5-1, AC-F5-2, AC-F5-3, AC-F6-1, AC-F6-2
+#   phase 3  AC-F3-1, AC-F3-2, AC-F3-3, AC-F3-4, AC-F3-5, AC-F3-6,
+#            AC-F8-1, AC-F8-2, AC-F8-3, AC-F9-4
+#   phase 4  AC-F7-1, AC-F7-2, AC-F9-2
+#   phase 5  AC-F9-1, AC-F9-3, AC-NFR5-1, AC-NFR9-1
+#   Count: 1 + 11 + 10 + 3 + 4 = 29.
+#   REVISION 1.1: AC-F8-3 (spec v1.2, DEC-20/C-16) joins phase 3 — the phase
+#   that registers the two identities — so the allowlist widening, the count
+#   bumps, and the carrier paragraph are owned where the rows land.
+#   PARTIAL-VERDICT NOTES: phase 1 additionally produces the status/brief
+#   halves of AC-F2-1's evidence (the additive key, the goldens, the
+#   single-home scan) and the board payload's own `stateSource` emission on
+#   the delivered gate-only projection, so TC-BOARD-003 is first fully green
+#   in phase 1 (GAP-T5: the shared-source phase precedes the board surface).
+#   Phase 2 produces the byte-guard half of AC-F9-4 (TC-BOARD-065/085) and the
+#   single-repository halves of AC-F8-1/AC-F2-3; phase 3 completes them with
+#   the repository cap and the grammar/state identities. Phase 3 produces the
+#   composition half of AC-F7-1 (unconditional production composition,
+#   TC-BOARD-040 step 3); phase 4 owns the advertisement whole.
+#
+# TC OWNERSHIP (48/48; ownership = the phase that lands the asserted content
+# and where the TC's verdict is first fully green):
+#   phase 1  TC-BOARD-003                                                 (1)
+#   phase 2  TC-BOARD-001, 002, 004, 005, 006, 007, 020, 021, 022, 023,
+#            024, 025, 030, 031, 032, 033, 034, 063, 065, 081, 085       (21)
+#   phase 3  TC-BOARD-010, 011, 012, 013, 014, 015, 016, 050, 051, 052,
+#            053, 064, 080, 082, 083, 084                                (16)
+#   phase 4  TC-BOARD-040, 041, 042, 043, 061                             (5)
+#   phase 5  TC-BOARD-060, 062, 070, 071, 072                             (5)
+#   Count: 1 + 21 + 16 + 5 + 5 = 48. TC-BOARD-072 is verification-only (the
+#   gate execution record), never automated test code; it is still owned here.
+#   SPLIT-SUITE NOTES (a suite extended by two phases stays green at both
+#   boundaries; ownership follows the phase that completes the case):
+#   tests/behaviour/board-never-silence.test.ts is extended in phase 2
+#   (TC-BOARD-005 source cells) and phase 3 (TC-BOARD-080 closed matrix incl.
+#   the host-index cell); tests/behaviour/board-bounds.test.ts in phase 2
+#   (TC-BOARD-024/025) and phase 3 (TC-BOARD-082 omission arithmetic incl.
+#   the 129-repository counter cell); tests/structure/board-contract.test.ts
+#   starts phase 2 (closed vocabularies, additivity) and gains the
+#   BOARD_MAX_REPOSITORIES === 128 constant half in phase 3 (TC-BOARD-064);
+#   tests/golden/lanes-list.test.ts is regenerated in phase 1 (machine golden
+#   gains only leaseHolder; the human lane golden is byte-identical) and read
+#   unchanged afterwards; the delivered board goldens (tests/fixtures/board/
+#   golden/{envelope.json,grid.txt}) are regenerated twice, each time by an
+#   explicit script with a review-visible diff — phase 1 adds exactly the
+#   additive `stateSource` key, phase 2 replaces the gate-only grid with the
+#   four-section screen (GAP-T4). REVISION 1.1: TC-BOARD-053 stays with
+#   phase 3 and, per test plan v1.2, now owns the whole gate-critical unit —
+#   the exact 55-member allowlist in both files, the four 138 table-length
+#   assertions with no leftover 136 anywhere, the 137 delivered rows, the 2
+#   board rows, the carrier's 138 documented identities and 55-paragraph
+#   enumeration, the near-miss probes, and the five temp-copy mutation arms;
+#   the six delivered suites added to the phase-2 scope by F4
+#   (board-escalation, board-aging, board-records, board-waiver-recording,
+#   board-privacy, board-corpus) assert already-owned AC-F4-1/AC-F4-2
+#   content — they are stay-green obligations, not new TC owners.
+#   REVISION 1.2: per test plan v1.3, TC-BOARD-053's unit is the full
+#   Appendix D list — all 23 count-pinning sites as per-file assertion
+#   groups (adding dispatch-attempts-taxonomy and verify-gates-suite-map-
+#   contract to its suite set), the no-leftover scan with a declared
+#   residual list, the four-way agreement read from one tree, and six
+#   mutation arms A..F (E = a non-mirror site left stale per file, F =
+#   mirror drift); it stays with phase 3 and owns no new AC beyond
+#   AC-F8-3.
+#
+# DoD MAPPING (spec section 17.1 "Proven in plan" -> this plan's phases):
+#   DoD-1 -> 2; DoD-2 -> 1; DoD-3 -> 3; DoD-4 -> 3; DoD-5 -> 2; DoD-6 -> 2;
+#   DoD-7 -> 2; DoD-8 -> 2; DoD-9 -> 2 (per-section caps, byte guard) + 3
+#   (the 128-repository cap) with the consolidated bound proof in 5;
+#   DoD-10 -> 5; DoD-11 -> 4; DoD-12 -> every phase's gate with the
+#   consolidated purity proof in 5; DoD-13 -> 4; DoD-14 -> 3 (the error-table
+#   carrier, the exact allowlist widening 53 -> 55, and every Appendix D
+#   count-pinning site land with the classification rows per
+#   AC-F8-3/C-16/DEC-20/Appendix D, with the no-leftover scan and the
+#   four-way agreement); DoD-15 -> 5; DoD-16 ->
+#   per-phase, roll-up in 5; DoD-17 -> 5; DoD-18 -> lifecycle phase 11
+#   (quality gates / PR creation), not a plan phase.
+#
+# COMMIT CONVENTION (one commit per plan phase; subjects declared here so the
+# commit path and review agree; scope is the workItemRef per repo convention):
+#   phase 1  feat(GH-297): shared state source, board vocabulary and lane lease holder
+#   phase 2  feat(GH-297): four-section board projection from the shared state source
+#   phase 3  feat(GH-297): repository selection, per-repository composition and board error identities
+#   phase 4  feat(GH-297): mount board with prompt-set entry, help and coverage
+#   phase 5  test(GH-297): determinism, purity and read-cost proofs with the full gate battery
+#
+# CONSTRAINTS BINDING ON EVERY PHASE (spec Appendix C; do not reshape at
+# delivery):
+#   - Envelope continuity (C-1/NFR-1/AC-F8-1): every new key lives under
+#     `data`; the envelope stays the five-field `delivery.result.v1` shape;
+#     zero `ok`/`command` fields anywhere.
+#   - Additive payload identity (C-1/DEC-2/DM-2): `delivery.board.v1` is
+#     extended, never bumped; zero removed, renamed, or re-semanted keys on
+#     the board, status (`delivery.status.v1`), brief (`delivery.brief.v1`),
+#     and lanes (`delivery.lanes.v1`) payloads; `delivery.status.v1` and
+#     `delivery.brief.v1` gain exactly one `data` key (`stateSource`), the
+#     lane payload gains exactly `leaseHolder`, and the lane HUMAN text is
+#     byte-identical.
+#   - Shared source naming (C-2/DEC-3/DM-1): the state-source identity is one
+#     declared contract constant with exactly one home in code, imported by
+#     the board, status, and brief payloads; the lanes read is named as the
+#     `lanes` collector, never claimed as part of the facts bundle; the closed
+#     collector-id set stays exactly {tracker, lanes}.
+#   - SLA preservation (C-3/DEC-2/AC-F4-1/AC-F4-2): the delivered evaluator,
+#     policy map (PDR-0003), `>=` boundaries, waiver recording, ranking, gate
+#     cap of 8, and the append-only idempotent decision record are reused, not
+#     re-implemented; the gate-only rendering path becomes the gates section.
+#   - No partial board (C-4/F-8/NFR-4): an unreadable repository, host index,
+#     or required source withholds the whole board at exit 2 with the failing
+#     repository key (or index path) named; no zero-row section masquerades as
+#     an empty fleet; the `unbound` scope is explicit at exit 0.
+#   - Managed set and write carve-out (C-5/DEC-5/DEC-6/NFR-6/AC-F9-2): the
+#     managed set is the host index's live recorded checkouts (index record
+#     wins) plus the invoking checkout when bound; the board performs no
+#     host-index maintenance, no prune, no directory scan, no edit, no
+#     delete; the ONLY state write is the delivered idempotent
+#     `owner-gate.decision` append per newly defaulted gate per repository,
+#     plus exactly the two delivered store-opening side effects; the board
+#     joins the read-only `maintainsIndex` exception set in
+#     packages/cli/src/production.ts.
+#   - Bounds and the byte guard (C-6/DM-11/DEC-13/NFR-4/AC-F4-3/AC-F9-4):
+#     per repository gates 8, lanes 20, asks 8, parked 8; human allocation
+#     lanes 6 / gates 6 / asks 4 / parked 3 plus one header and four section
+#     lines inside the delivered 24-line / 4 096-byte / 400-byte-per-line
+#     screen (DEC-9, asserted as maxima plus `+N more` marker arithmetic per
+#     AMB-TP-1); `data` <= 65 536 UTF-8 bytes; BOARD_MAX_REPOSITORIES = 128
+#     included repositories, ascending, unique, selected repository always
+#     included, first-128-when-the-invoking-key-fits (first-127-plus-invoking
+#     re-sorted when it does not), overflow counted in
+#     `omittedBySection.repositories`; byte-guard row drops tail-first in the
+#     fixed order parked -> asks -> lanes -> gates and NEVER drop
+#     `repositories[]` or `collectors[]`; every drop sets `truncated` and
+#     increments `omitted` plus its section counter; field caps 160/120/120/
+#     60/40 (id,kind,ref,question / owner,waivedBy / reason / phase / until).
+#   - Error identities and the closed allowlist (DM-8/DEC-8/DEC-17/DEC-20/
+#     C-7/C-10/C-16/AC-F8-3): exactly two new rows under one new `board`
+#     domain kind — `board.repository-unknown` (user, exit 1) and
+#     `board.state-unavailable` (platform, exit 2, naming the repository key
+#     or index path) — registered in
+#     packages/core/src/contracts/error-table.ts, projected through
+#     packages/cli/src/classify.ts, and documented in
+#     doc/spec/features/feature-result-contract.md INSIDE the delivering
+#     boundary (the error-table sync gate is bidirectional). The two codes
+#     are an EXACT, reviewed widening of the closed two-segment allowlist:
+#     `RESERVED_TWO_SEGMENT_CODES` gains exactly these two members
+#     (53 -> 55) in BOTH scripts/checks/error-table-sync.ts and its
+#     structural mirror tests/structure/error-table.test.ts (whose
+#     exact-length assertion moves with it), with no `board.*` family, no
+#     pattern widening, and no near-miss acceptance; EVERY count-pinning
+#     site enumerated in spec **Appendix D (D-1..D-23, 23 sites across
+#     five files)** moves to its declared post-change value in the SAME
+#     commit as the two rows — `ERROR_TABLE` entries 136 -> 138, delivered/
+#     spend-exclusion rows 135 -> 137, the allowlist 53 -> 55 and the
+#     carrier's 52-entry paragraph reconciled to 55 with an enumeration
+#     that sums to it (53 delivered + 2 board = 55), the sync suite's four
+#     `BASELINE_ROWS.length + 102` sites -> + 104, and the
+#     dispatch-taxonomy / verify-suite-map / sync-suite comment, name, and
+#     doc-content pins with them (DEC-20, C-16); a repo-wide scan of the
+#     five named files reports no leftover identity-count pin at 136, 135,
+#     53, or 52 (residuals only as declared non-count prose), and the
+#     classifier, sync check, structural mirror, and carrier agree on
+#     138 entries / 137 delivered rows / 55 allowlist codes / 2 board rows
+#     / 138 documented identities. Grammar refusals
+#     (unknown flag, positional, `--all` with `--project`, valueless
+#     `--project`) keep the delivered `fallback.invocation` at exit 1 with NO
+#     `board.*` grammar identity; the delivered
+#     `status.collector.<id>.unavailable` family keeps identity, category,
+#     and exit 2 with only its explanatory wording generalized.
+#   - Phase classification totality (C-11/DEC-15/DM-4): no phase record ->
+#     `phase: null` + `phase-unrecorded`; record exists with nothing in
+#     progress -> `null` + `phases-complete`; an open entry -> its phase id,
+#     latest in canonical lifecycle order when several are open; the closed
+#     token set has exactly those two members; `holder` is the recorded lease
+#     holder or null, never inferred.
+#   - Post-append ask join (C-12/DEC-16/DM-5/AC-F5-3): the `defaultState`
+#     join observes the invocation's post-append decision set over the single
+#     decision-history read (no second read); `none` is a declared value,
+#     never an omitted field; a ref-less ask carries the delivered bare
+#     `ref: null` with no invented reason field (DEC-19/C-14); coordinator
+#     questions are excluded.
+#   - Parked population (C-13/DEC-18/DEC-11/NG-9): `parked[]` is the open
+#     lane park episode projection (`peak-window`, `owner-hold`) latest per
+#     ref with the classified `owner-hold-no-expiry` absence; a
+#     `provider-quota` park is never a row and stays on the delivered
+#     provider/queue surfaces; the host-wide `ownerHold` fact is carried once.
+#   - Default form (C-15/DEC-14/AC-F3-6): the default form is the invoking
+#     checkout — scope `repository`, selection `current`, exactly the invoking
+#     key, zero host-index reads; an unbound or identity-underivable invoking
+#     checkout follows AC-F3-5 (`unbound`, empty, one bounded warning, exit 0).
+#   - Owner provenance (DM-10): the closed `ownerSource` set is exactly
+#     {lane-lease-holder, gate-waiver-authorizer, gate-audience, ask-audience,
+#     park-control}; `owner` is null only when the source records none and is
+#     never invented.
+#   - Excluded scope is binding (C-9/NG-1..NG-9): no steering surface, no
+#     metrics/alarms, no group vocabulary on any board surface, no new state
+#     family or event topic, no network write, no LLM, no tracker/delivery-
+#     request mutation, no retirement of `projects list --flat`, no rename of
+#     any delivered command, field, or state artifact.
+#   - Current-truth boundary (C-8/NG-6/C-7): doc/spec/** flips only in
+#     lifecycle phase 7 (@doc-syncer), never in a delivery phase; the ONE
+#     same-commit exception is the error-table carrier
+#     doc/spec/features/feature-result-contract.md in phase 3, whose row
+#     presence TC-BOARD-053 asserts.
+#
+# GATE ENVIRONMENT (binding on every phase boundary and the final battery):
+#   - Per-phase minimum gates: (a) workspace typecheck (`pnpm check` runs it;
+#     while iterating use the solution typecheck), (b) the phase's targeted
+#     `bun test` suites as listed in the phase's test obligations (iterate
+#     narrow: `bun test tests/behaviour/board-*.test.ts` and friends), (c)
+#     the structure/checks sync suites the phase touches
+#     (tests/structure/**, tests/checks/error-table-sync.test.ts,
+#     tests/checks/help-guide-coverage.test.ts,
+#     tests/checks/reference-page-parity.test.ts), and (d)
+#     `git diff --check` (no whitespace errors) before the phase commit.
+#   - Aggregate gate at EVERY phase boundary and the delivered HEAD:
+#     TMPDIR=$PWD/tmp/tmpdir pnpm check (with tmp/tmpdir present,
+#     git-ignored, repo-local — the repo-local TMPDIR lesson; never /tmp or
+#     /tmp/opencode as fixture bases). A phase is not complete until the
+#     aggregate is green at its commit.
+#   - Lifecycle commands (phase complete, commit) run with
+#     PATH="$PWD/node_modules/.bin:$PATH" so the commitlint probe resolves.
+#     The phase-9 range gate ./scripts/lint-commit-range.sh --base main-tools
+#     is run by @pm and recorded in pm-notes; it is not re-implemented here.
+#   - Golden regeneration is always explicit (regenerate script or recorded
+#     command), with a review-visible diff limited to the declared additive
+#     delta; the lane HUMAN golden never changes.
+#
+# LIFECYCLE PHASE 7 HANDOFF OBLIGATIONS (system_spec_update, @doc-syncer;
+# declared here so nothing is dropped after DoD — NOT plan scope, and no
+# delivery phase edits doc/spec/** beyond the C-7 carrier):
+#   - doc/spec/features/feature-owner-gate-sla.md: the board section becomes
+#     the four-section board; the "not mounted at the production entrypoint"
+#     wording and the gate-only payload description are updated; the
+#     preserved gate mechanism is restated as the gates section.
+#   - doc/spec/features/feature-status-digest.md: the digest payload gains
+#     `stateSource`; the shared-source statement names the board as a
+#     consumer of the same bundle; the `lanes-or-queue` declared gap remains
+#     a status gap and is not claimed closed.
+#   - doc/spec/features/feature-brief.md: the brief payload gains
+#     `stateSource`; the shared-truth section notes the same identity as
+#     status and board; the brief contract member list matches the key.
+#   - doc/spec/features/feature-scheduling-engine.md: the lane projection
+#     gains the optional `leaseHolder`; the board is named as a consumer of
+#     the lane/park folds.
+#   - doc/spec/features/feature-projects.md: the host index section notes the
+#     board's managed-set rule (index union invoking checkout), the 128
+#     included-repository cap, and that the board does not maintain the index.
+#   - doc/spec/features/feature-result-contract.md: carried in-boundary by
+#     phase 3 (C-7); phase 7 verifies the wording, including the generalized
+#     collector-family text.
+#   - New current-truth feature spec (the full board): authored in phase 7 —
+#     the four sections, the shared source, repository selection and the cap,
+#     the ask/parked provenance, the bounds and byte guard, the exit
+#     projection, and the read-only carve-out.
+#   - Planning corpus: doc/planning/oss-tooling/backlog.md M2-S4 progress
+#     marker and status snapshot (delivered in phase 5 of this plan);
+#     cli-command-registry.md board row moves to Delivery (phase 5);
+#     m2/commands/board.md status flip (phase 5; the page itself serves the
+#     coverage check from phase 4); m2/entrypoint-delta.md observed root
+#     listing records 21 families (phase 5); doc/00-index.md only if the new
+#     feature page is created in phase 7.
+#
+# ---------------------------------------------------------------------------
+# Phase 1 — Shared state source, board contract vocabulary, lane lease holder
+# Commit: feat(GH-297): shared state source, board vocabulary and lane lease holder
+#
+# Goal: the shared-source claim becomes a runtime equality before the board
+# surface exists, the full-board vocabulary and bounds are declared as
+# contracts data, and the lane projection can name its lease holder — all
+# additive, with every delivered human surface byte-identical (F-2, DM-1,
+# DM-9, DM-11 vocabulary halves, AC-F2-1).
+#
+# Obligations:
+#  1.1 The state-source identity (DM-1, DEC-3): one declared contract
+#      constant naming the fact bundle `collectStatusFacts` composes
+#      (`delivery.status-facts.v1`), declared exactly once in
+#      packages/core/src/contracts/status.ts (single home; TC-BOARD-003 step 5
+#      scans for exactly one literal). It is an identity token, not a payload
+#      schema id. The collection itself is unchanged.
+#  1.2 Additive `stateSource` on the status and brief payloads (DM-1, §8.5):
+#      exactly one new `data` key on `delivery.status.v1` and
+#      `delivery.brief.v1` (contracts + domain projection + CLI command
+#      payload), imported from the single constant; no delivered key changes;
+#      the human screens are unaffected; the group-scoped `status --project
+#      <groupKey>` form does NOT carry the key. Status and brief machine
+#      goldens are regenerated deliberately with a reviewed delta of exactly
+#      that key.
+#  1.3 Additive `stateSource` on the delivered board payload: the delivered
+#      gate-only board projection (domain + command) emits the same constant
+#      so the three-payload equality is green at this boundary (GAP-T5); the
+#      board machine golden gains exactly that key; the board human golden is
+#      unchanged. No other board behaviour changes in this phase.
+#  1.4 Board contract vocabulary (DM-2..DM-7, DM-10, DM-11, C-2, C-6):
+#      packages/core/src/contracts/owner-gate-sla.ts gains, additively and as
+#      declaration data only: the full-board payload members (`scope`,
+#      `selection`, `repositories[]`, `lanes[]`, `asks[]`, `parked[]`,
+#      `stateSource`, `ownerHold`, `omittedBySection` with its five counters
+#      incl. `repositories`), the lane row with the total phase
+#      classification vocabulary (DEC-15 closed token set), the ask row with
+#      `drawnDefault`/`defaultState` (closed `none|pending|applied`), the
+#      parked row with the closed cause set and `untilReason`, the extended
+#      gate row fields (`repository`, `condition`, `owner`, `ownerSource`),
+#      the closed `ownerSource` set (five members), the selection/scope
+#      vocabularies, the per-repository `collectors[]` evidence shape
+#      `{collector, outcome, repository}`, the per-section caps (lanes 20,
+#      asks 8, parked 8; gates stay the delivered 8), the human per-section
+#      allocation (6/6/4/3), the field caps, and
+#      `BOARD_MAX_REPOSITORIES = 128` as a constant distinct from the host
+#      index's 2 000-record bound. The extended meaning of
+#      `truncated`/`omitted` (every section plus the repository list) is
+#      declared. The delivered gate-only projection still validates; nothing
+#      is removed, renamed, or re-semanted (C-1).
+#  1.5 Lane lease-holder extension (DM-9, DEC-7):
+#      packages/core/src/contracts/queue.ts gains optional `leaseHolder`
+#      (present exactly when a live lease exists, equal to the recorded
+#      holder); packages/core/src/domain/queue-lanes.ts populates it from the
+#      delivered lease projection; `delivery.lanes.v1` identity, every
+#      delivered field, and the human lane text are unchanged; the lanes
+#      machine golden regenerates with exactly `leaseHolder` added.
+#  1.6 Tests: tests/behaviour/board-shared-source.test.ts (TC-BOARD-003 —
+#      three payloads in one process, the key-set deltas are exactly
+#      {stateSource} on status and brief, the group-form absence, the golden
+#      regeneration assertions, and the single-home source scan); extensions
+#      to tests/structure/status-contract.test.ts,
+#      tests/structure/brief-contract.test.ts, and
+#      tests/structure/owner-gate-sla-contract.test.ts (additive key sets,
+#      closed vocabularies, the 128 constant vs the 2 000 index bound);
+#      deliberate regeneration of tests/fixtures/status/golden/digest.json,
+#      tests/fixtures/brief/golden/envelope.json,
+#      tests/fixtures/queue/golden/lanes-list.json, and
+#      tests/fixtures/board/golden/envelope.json via their regenerate paths;
+#      tests/golden/{status-digest,brief,lanes-list,board-grid}.test.ts read
+#      the updated artifacts; the delivered board corpus
+#      (tests/fixtures/board/corpus/**) `expect` tables gain exactly the
+#      additive key.
+#
+# Bound: AC-F2-1; DoD-2; F-2; DM-1, DM-9, DM-11 (declaration halves); DEC-3,
+# DEC-7, DEC-13 (the constant); RSK-2, RSK-4.
+# Test obligations: TC-BOARD-003 (first fully green here).
+#
+# Done when: `board --json`, `status --json`, and `brief --json` over the
+# same facts carry one identical `stateSource` equal to the declared
+# constant; the identity literal has exactly one home and all three payloads
+# import it; the status and brief `data` key-set deltas are exactly
+# {stateSource} with the group-scoped status form exempt; the lane machine
+# golden gains only `leaseHolder` and the lane human golden is byte-identical;
+# the board machine golden gains only `stateSource`; the board contract
+# declares the full vocabulary with BOARD_MAX_REPOSITORIES === 128 distinct
+# from the 2 000-record index bound; every delivered human surface is
+# byte-identical; TMPDIR=$PWD/tmp/tmpdir pnpm check is green.
+# ---------------------------------------------------------------------------
+# Phase 2 — Four-section board projection over the shared facts bundle
+# Commit: feat(GH-297): four-section board projection from the shared state source
+#
+# Goal: one repository's board renders exactly LANES, GATES, ASKS, PARKED in
+# that order from the named shared bundle plus the delivered lane fold, with
+# the delivered SLA preserved verbatim, the asks join, the parked projection,
+# per-section caps, omission accounting, the byte guard, and the deterministic
+# bounded renderer (F-1, F-4, F-5, F-6, the bounds half of F-9).
+#
+# Obligations:
+#  2.1 Pure four-section projection (F-1, DM-2..DM-6, DM-10, §8.3 ordering
+#      and identity invariants) in packages/core/src/domain/owner-gate-sla.ts
+#      (the projection may split into a sibling pure module under
+#      packages/core/src/domain/ only with the seam asserted through payload
+#      behaviour — AMB-TP-2; the declared scope covers both homes): gates,
+#      asks, and parked project from the one injected facts bundle
+#      (`collectStatusFacts` shape); lanes project from the delivered
+#      lane/queue fold's active subset (`delivering` | `failed`) with the
+#      recorded lease holder (or null), optional `leaseId`/`reason`, and the
+#      total phase classification resolved from the injected phase-state read
+#      (no record or empty projection -> `phase-unrecorded`; all entries
+#      completed -> `phases-complete`; the open entry's id, latest in
+#      canonical lifecycle order when several are open). Every row carries
+#      `repository`, its ref (or the source's declared absence — the ask's
+#      delivered bare `ref: null` with no invented reason), `owner`, and its
+#      closed `ownerSource` token; `owner` is null only when unrecorded.
+#      Arrays order by repository key then the section's declared key;
+#      identities are (repository, ref) for lanes/parked and (repository, id)
+#      for gates/asks; no ordering is influenced by collector, provider,
+#      filesystem, or store return order.
+#  2.2 Gates section is the delivered mechanism (F-4, C-3, DM-3, DEC-2): the
+#      same collector mapping (owner-attention -> `owner-review`; recorded
+#      authorized waivers -> `waiver` with `waivedBy`), the same 24 h / 72 h
+#      thresholds with `>=` boundaries, the same PDR-0003 two-row policy map,
+#      the same ranking (severity, descending age with unknown age first
+#      within a class, id), the same per-repository cap of 8, and the same
+#      append-only idempotent decision record when a default applies — now
+#      scoped per repository. Each gate row adds `repository`, `condition`
+#      (`<kind>:<slaState>` composed from the row's own fields), `owner`,
+#      `ownerSource`. The collector-unavailable identities and their exit 2
+#      projection are preserved verbatim.
+#  2.3 Asks section (F-5, DM-5, DEC-4, DEC-16, DEC-19, C-12, C-14): the open
+#      owner-audience typed-question population through the delivered
+#      open-question view (id, closed type, lane, ref as delivered
+#      `string | null`, bounded question, `askedAt`, computed `age` — computed
+#      from the injected clock, never copied from a stored value), under the
+#      delivered ranking, bounded per repository (8). The drawn-default join
+#      reuses the single decision-history read and observes the invocation's
+#      POST-APPEND decision set: `pending` when a defaultable gate exists on
+#      the ref with no record, `applied` when a record exists (including one
+#      appended earlier in the same run), `null` + `none` when no defaultable
+#      gate exists or the question names no ref — `none` is a declared value,
+#      never an omitted key. Coordinator-audience questions are excluded
+#      (still visible on the delivered blockers surface).
+#  2.4 Parked section and ownerHold (F-6, DM-6, DM-7, DEC-11, DEC-18, C-13):
+#      open lane park episodes latest per ref with cause (`peak-window` |
+#      `owner-hold` only), `until` (the recorded window end, or `null` with
+#      `untilReason: "owner-hold-no-expiry"` — never synthesized from
+#      neighboring timestamps), optional preservation and provider profile,
+#      `owner`/`ownerSource` per DM-10. A `provider-quota` park produces no
+#      row and no lane and is NOT counted as an omission. The host-wide owner
+#      hold is carried once on the payload (`{active:false}` or
+#      `{active:true, source, reason?}` with the reason clamped and sanitized
+#      per the delivered hold contract) so an idle fleet is never an
+#      unexplained all-clear.
+#  2.5 Omission accounting and the byte guard (DM-11, DEC-9, DEC-13, C-6,
+#      NFR-4, AC-F4-3): per-section caps (lanes 20, asks 8, parked 8; gates
+#      delivered 8) applied per repository; `omitted` equals the sum of the
+#      five `omittedBySection` counters; `truncated` is true exactly when any
+#      counter is positive; serialized `data` <= 65 536 UTF-8 bytes enforced
+#      by dropping rows tail-first in the fixed order parked -> asks ->
+#      lanes -> gates, each drop incrementing `omitted` and its section
+#      counter, never dropping `repositories[]` or `collectors[]`; every
+#      capped field clamped on the projected value, not the stored record.
+#  2.6 Deterministic bounded renderer (F-1, F-9, DEC-9, AMB-TP-1, §20/§21):
+#      the human screen renders the header plus exactly four section labels
+#      in the declared order with at most 6/6/4/3 rows per section, each
+#      label line carrying its `+N more` marker equal to the machine section
+#      counter; <= 24 lines / 4 096 bytes / 400 bytes per line; ANSI-free,
+#      TTY-independent, no titles/bodies/comments/secrets, clamped against
+#      hostile content (no forged section labels from row content), binary
+#      name from the brand seam only. An empty section still renders its
+#      label. A section whose source cannot be read withholds the board
+#      (fail-closed, C-4) — the readable/empty distinction is asserted.
+#  2.7 Command and edge seams (packages/cli/src/commands/board.ts,
+#      packages/cli/src/edge.ts): the board command definition renders the
+#      four-section payload over the injected runtime for the invoking
+#      repository; the board runtime seams gain the per-repository read set
+#      (facts bundle, lane fold, park projection, phase resolve, decision
+#      history), the collector evidence `{collector, outcome, repository}`,
+#      and the `ownerHold` fact. The grammar is unchanged in this phase
+#      (`--all`/`--project` land in phase 3); zero positionals still hold.
+#      Edge seam shapes are delivery-bound (AMB-TP-2); behaviour, identities,
+#      vocabularies, and bounds are not.
+#  2.8 Tests and fixtures: tests/fixtures/board/harness.ts extended with the
+#      four-section runtime seams; tests/fixtures/board/sections.ts (new:
+#      lane/ask/park/ownerHold builders incl. the five phase cells and the
+#      same-ref collision facts); tests/fixtures/board/byte-guard/** (new:
+#      at-cap, over-full, fits, worst-case payloads sized against 65 536
+#      bytes). New suites: board-sections (TC-BOARD-001),
+#      board-rows (TC-BOARD-002 with the structure half in
+#      tests/structure/board-contract.test.ts), board-lanes (TC-BOARD-006),
+#      board-gates-sla (TC-BOARD-020), board-defaults-idempotency
+#      (TC-BOARD-021), board-asks (TC-BOARD-030/031/032), board-parked
+#      (TC-BOARD-033/034), board-byte-guard (TC-BOARD-065/085),
+#      board-provenance (TC-BOARD-081). Extended delivered suites:
+#      board-collectors (TC-BOARD-004, TC-BOARD-023), board-never-silence
+#      (TC-BOARD-005), board-output (TC-BOARD-007), board-defaults
+#      (TC-BOARD-021 same-run half), board-bounds (TC-BOARD-024/025).
+#      Structure: tests/structure/board-contract.test.ts (new: closed
+#      vocabularies, gate-row additivity, envelope key sets),
+#      tests/structure/board-nonregression.test.ts extended (TC-BOARD-063 —
+#      board/status/brief/lanes delivered key sets, board corpus updated only
+#      for declared additive fields). The delivered board goldens regenerate
+#      once more (grid.txt becomes the four-section screen;
+#      envelope.json the full payload) with a review-visible delta limited to
+#      the declared additive fields (GAP-T4).
+#  2.9 STAY-GREEN OBLIGATION (DoR iteration-1 F4, DoD-5 "delivered board
+#      suites still green after the composition change"): the six remaining
+#      delivered board suites that the four-section flip necessarily touches
+#      are in this phase's scope and must be green at this boundary —
+#      tests/behaviour/board-escalation.test.ts, board-aging.test.ts,
+#      board-records.test.ts, board-waiver-recording.test.ts,
+#      board-privacy.test.ts, and board-corpus.test.ts — updating ONLY what
+#      the additive payload (new `data` keys, extended gate rows, the
+#      four-section human screen) and the corpus `expect` tables legitimately
+#      change, with every SLA/aging/records/waiver/privacy assertion itself
+#      unchanged in meaning. They assert AC-F4-1/AC-F4-2 content already
+#      owned here via TC-BOARD-020/021; they are stay-green scope, not new
+#      TC owners.
+#
+# Bound: AC-F1-1, AC-F2-2, AC-F2-3, AC-F4-1, AC-F4-2, AC-F4-3, AC-F5-1,
+# AC-F5-2, AC-F5-3, AC-F6-1, AC-F6-2; DoD-1, DoD-5, DoD-6, DoD-7, DoD-8,
+# DoD-9 (per-section and byte-guard halves); F-1, F-4, F-5, F-6; DM-2..DM-6,
+# DM-10, DM-11; DEC-2, DEC-4, DEC-7, DEC-9, DEC-11, DEC-15, DEC-16, DEC-18,
+# DEC-19; RSK-1, RSK-2, RSK-4, RSK-6, RSK-8.
+# Test obligations: TC-BOARD-001, 002, 004, 005, 006, 007, 020, 021, 022,
+# 023, 024, 025, 030, 031, 032, 033, 034, 063, 065, 081, 085.
+#
+# Done when: a repository with an active lane, an open owner ask, an open
+# gate, and a parked lane renders exactly four ordered sections with >= 1 row
+# per array and every row naming repository, ref-or-declared-absence, and
+# owner with a closed ownerSource; the SLA matrix holds on both sides of
+# every inclusive boundary with the delivered ranking, waiver recording, cap,
+# and idempotent per-repository append; the same-run post-append join renders
+# `applied` from one history read; `none` is declared, the bare `ref: null`
+# carries no reason field, and coordinator questions are excluded; parked
+# carries both causes with honest absences, excludes `provider-quota`, and
+# the host-wide hold is one sanitized payload fact; per-section caps, field
+# caps, the byte-guard order, and the omission arithmetic hold with the
+# repository list and collector evidence never dropped; the delivered payload
+# identities and key sets survive additively and the lane human golden is
+# byte-identical; the six delivered suites of 2.9 (board-escalation,
+# board-aging, board-records, board-waiver-recording, board-privacy,
+# board-corpus) are green after the composition change with only the
+# legitimate additive deltas; TMPDIR=$PWD/tmp/tmpdir pnpm check is green.
+# ---------------------------------------------------------------------------
+# Phase 3 — Repository selection, per-repository composition, error identities,
+# and the production board composition
+# Commit: feat(GH-297): repository selection, per-repository composition and board error identities
+#
+# Goal: the board spans managed repositories without state mixing — the
+# default form, `--project <repoKey>`, `--all` bounded to 128 with a
+# deterministic retained set and counted overflow, the `unbound` scope, the
+# two new classified identities with their error-table rows and the C-7
+# carrier, the grammar refusals through the delivered containment identity,
+# and the production composition root supplying the board runtime
+# unconditionally over the delivered adapters (F-3, F-8, the cap half of
+# F-9, the composition half of F-7).
+#
+# Obligations:
+#  3.1 Command grammar and refusal precedence (DM-8/DEC-17, C-10, AC-F3-4):
+#      `<binary> board [--all] [--project <key>] [--json]`; zero positionals;
+#      `--all` takes no value, `--project` requires one; any other flag, any
+#      positional, `--all` + `--project`, and a valueless `--project` are
+#      refused BEFORE any source is read with the delivered
+#      `fallback.invocation` at exit 1 (the delivered constant, not a
+#      `board.*` code); no `board.*` grammar identity is ever added to the
+#      error table.
+#  3.2 Managed-set resolution and scope (F-3, DM-7, DEC-5, DEC-14, C-5,
+#      C-15, §8.3 scope resolution): the managed set is the host index's
+#      recorded checkouts whose root exists plus the invoking checkout when
+#      bound (the index record wins on collision). The default form performs
+#      ZERO host-index reads and uses the invoking checkout only (scope
+#      `repository`, selection `current`); `--project` resolves against the
+#      full managed set (one index read; a key beyond the ascending cap is
+#      still valid and always included; an unmanaged key — including a group
+#      key — is `board.repository-unknown` at exit 1 with nothing rendered);
+#      `--all` reads the index exactly once and reports `selection: all`. An
+#      absent index is not an error (the managed set is the invoking checkout
+#      alone, or empty when unbound); a present-but-unreadable or unparseable
+#      index is `board.state-unavailable` at exit 2 naming the index path. A
+#      default-form invocation outside any work tree, or whose checkout
+#      identity cannot be derived, resolves the declared `unbound` scope:
+#      `scope: "unbound"`, empty `repositories[]`, empty sections, the
+#      delivered bounded warning (never in `data`, never an exit change),
+#      exit 0 — never a host-index fallback, never a fabricated key.
+#      `--all`/`--project` report `scope: "repository"` even when
+#      `repositories[]` is empty. No board form enumerates or infers a group.
+#  3.3 The 128 cap and the retained set (DM-11, DEC-13, C-6, AC-F9-4):
+#      `BOARD_MAX_REPOSITORIES` = 128 included repositories per `--all` run;
+#      `repositories[]` ascends by key, is unique, and always includes the
+#      selected repository; when the managed set exceeds the cap the retained
+#      set is the first 128 keys ascending when the invoking key is among
+#      them (or the invocation is unbound), otherwise the first 127 ascending
+#      plus the invoking key, re-sorted ascending; `truncated` is true and
+#      `omittedBySection.repositories` equals the unretained count; only
+#      retained repositories are read (unretained stores are never opened).
+#      The retained-set rule is a pure projection over the declared
+#      contracts constant and lives with the board domain.
+#  3.4 Per-repository composition (F-3, Appendix A row 3, NFR-5): one
+#      sequential bounded pass per included repository over the delivered
+#      read seams — the shared facts bundle, the lane fold, the park
+#      projection, the phase read (<= 1 per active lane, <= 20), the decision
+#      history (<= 1 per repository, shared with the ask join); one tracker
+#      client per repository from the delivered factory over the shared
+#      transport and credential port; no pagination, no retry, no second
+#      client stack; any unreadable repository state location or required
+#      source withholds the whole board as `board.state-unavailable` at
+#      exit 2 naming the failing repository key (fail-closed, C-4). Rows from
+#      different repositories sharing a ref stay distinct (identity includes
+#      the repository key); `--all` section counts equal the sum of the
+#      included per-repository boards before any byte-guard drop.
+#  3.5 Error identities, the closed two-segment allowlist, every Appendix D
+#      count pin, and the in-boundary carrier (DM-8, DEC-8, DEC-20, C-7,
+#      C-10, C-16, AC-F8-3, Appendix D; DoR iterations 1 and 2, F1/OQ-9):
+#      a. packages/core/src/contracts/error-table.ts gains the `board`
+#         domain kind exactly once and exactly two rows —
+#         `board.repository-unknown` (user category, exit 1, not retryable)
+#         and `board.state-unavailable` (platform category, exit 2) — each
+#         with retryability, consequence, and projection class;
+#         packages/cli/src/classify.ts projects them; the delivered
+#         `status.collector.<id>.unavailable` rows keep codes, category, and
+#         exit with only explanatory wording generalized from "gates" to
+#         "board"; `fallback.invocation` is untouched.
+#      b. EXACT ALLOWLIST WIDENING: `RESERVED_TWO_SEGMENT_CODES` gains
+#         exactly `board.repository-unknown` and `board.state-unavailable`
+#         (53 -> 55) in BOTH scripts/checks/error-table-sync.ts AND its
+#         structural mirror tests/structure/error-table.test.ts — the
+#         mirrored set plus its exact-length assertion (`toHaveLength(53)`
+#         -> `toHaveLength(55)`) — in the SAME commit; no `board.*` family,
+#         no prefix/pattern widening, and a two-segment near-miss
+#         (`board.repository-unknowns`, `board.state`) is rejected by the
+#         check and by `scanReferences` rather than family-matched, while a
+#         three-segment lookalike (`board.state-unavailable.extra`,
+#         `board.other.thing`) resolves to no table row.
+#      c. IDENTITY-COUNT UPDATES: every count-pinning site enumerated in
+#         spec **Appendix D (D-1..D-23, 23 sites across five files)** moves
+#         to its declared post-change value in the SAME commit as the two
+#         rows, grouped per file (the spec's Appendix D is the binding
+#         locator list; its baseline line numbers are search anchors, not
+#         the contract — the file plus the quoted expression identifies each
+#         site):
+#         - tests/structure/error-table.test.ts (D-1..D-7): the four
+#           `expect(entries).toHaveLength(136)` entry pins -> 138; the
+#           `[...RESERVED_TWO_SEGMENT_CODES]` exact-length pin 53 -> 55;
+#           the delivered/spend-exclusion pin
+#           (`entries.filter(domainKind !== "spend")`) 135 -> 137; the
+#           doc-content pin "136 identities" -> "138 identities".
+#         - tests/structure/dispatch-attempts-taxonomy.test.ts (D-8..D-10):
+#           the header comment "the registry stays at 135 identities" ->
+#           137; the test name "the registry holds exactly 136 identities
+#           and four dispatch rows" -> 138; the `toHaveLength(136)`
+#           assertion -> 138.
+#         - tests/structure/verify-gates-suite-map-contract.test.ts
+#           (D-11..D-12): `result.counts.sourceEntries` and
+#           `result.counts.documentedRows` 136 -> 138 (both reads).
+#         - tests/checks/error-table-sync.test.ts (D-13..D-21): all four
+#           `BASELINE_ROWS.length + 102` arithmetic/message sites ->
+#           `+ 104` (the live-length guard ~1081, its failure-message
+#           interpolation ~1082, the `sourceEntries` arithmetic ~1161-1162,
+#           and the second `sourceEntries` arithmetic ~1185); the header
+#           comment "the total is 136" -> 138; the test name "green at 136
+#           entries and 136 documented rows" -> 138/138; the two explicit
+#           `sourceEntries`/`documentedRows` reads 136 -> 138; the
+#           doc-content pin "136 identities" -> "138 identities".
+#         - doc/spec/features/feature-result-contract.md (D-22..D-23): both
+#           documented-identity mentions ("136 machine identities" and "the
+#           same 136 identities") -> 138; the closed two-segment allowlist
+#           paragraph 52 -> 55 with a `board` entry of 2 whose enumeration
+#           sums to 55 (53 delivered + 2 board; the delivered 52-entry
+#           enumeration omits `verify.narrowed-scope`, DEC-20).
+#         A half-updated widening — one file, one count, one comment or
+#         test-name pin, or the paragraph left behind — is a red gate, not
+#         a warning.
+#      d. NO-LEFTOVER SCAN AND FOUR-WAY AGREEMENT: after the move, a
+#         repo-wide scan of the five named files (the four suites above's
+#         files plus the carrier) asserts no remaining identity-count pin
+#         at 136, 135, 53, or 52 — every residual occurrence of those
+#         tokens is either absent or matched by a declared non-count
+#         pattern (a byte/character/line-length number, an array index or
+#         offset, or a cited spec/commit reference), the accepted-residual
+#         list is small and named (never a wildcard), and no `+ 102`
+#         arithmetic survives in the sync suite; and the classifier
+#         resolves both board codes while the sync check, the structural
+#         mirror, and the carrier — read in the same run of the same tree —
+#         agree on 138 entries / 137 delivered (spend-exclusion) rows /
+#         55 allowlist codes / 2 board rows / 138 documented identities.
+#         Any disagreement between those four surfaces is a failed
+#         deliverable, not a deferred doc fix (Appendix D agreement
+#         requirement, AC-F8-3 (c)/(d)).
+#      e. TC-BOARD-053 (test plan v1.3) owns the whole unit — rows, kind,
+#         the 55-member allowlist in both the check and the mirror, the
+#         per-file Appendix D assertion groups, the no-leftover scan with
+#         its declared residual list, the four-way agreement, the near-miss
+#         and three-segment-lookalike probes, and the six temp-copy
+#         mutation arms A..F: (A) a planted two-segment near-miss in a
+#         scanned corpus, (B) a deleted documentation row, (C) a check-side
+#         omission of the widening, (D) family widening to a `board.`
+#         prefix, (E) a NON-MIRROR Appendix D site left stale per file
+#         (dispatch-taxonomy header/name/length, verify-map reads, the
+#         sync suite's `+104` arithmetic, the carrier paragraph 52) — the
+#         arm that proves the 23-site list is exercised beyond the mirror —
+#         and (F) mirror drift (allowlist left at 53 or an entry pin at
+#         136).
+#  3.6 Production board composition (F-7 composition half, DEC-6):
+#      packages/cli/src/production.ts composes the board runtime
+#      unconditionally over the delivered adapters (tracker factory, state
+#      scope, host index read, credential port) and the board joins the
+#      read-only `maintainsIndex` exception set there; no host-index
+#      maintenance and no store-opening write beyond the delivered decision
+#      append and the two delivered side effects. Between this commit and
+#      phase 4 the entrypoint still drops the un-advertised family (composed
+#      but not prompt-required), so root --help and every other family stay
+#      byte-identical. packages/cli/src/edge.ts carries the managed-set
+#      resolver seam, the per-repository composition loop, and the index read
+#      seam (shapes delivery-bound, AMB-TP-2).
+#  3.7 Tests and fixtures: tests/fixtures/board/selection.ts (managed-set
+#      fixtures) and tests/fixtures/board/repository-cap.ts (129- and
+#      200-entry seeded index rows with padded sortable keys plus the
+#      64-entry read-cost world — seeded rows and directory existence only,
+#      never a store-opening command per repository); extensions to
+#      tests/fixtures/projects/{production,state-scope,host-index,temp-repos,
+#      host-root}.ts for the real-checkout, host-index, and cap cells;
+#      tests/fixtures/board/harness.ts gains the selection seams. New suites:
+#      board-selection-default (TC-BOARD-010 — scope/selection/key set/zero
+#      index reads over the real production composition),
+#      board-selection-all (TC-BOARD-011 sum/cap-clean/union cell,
+#      TC-BOARD-012 same-ref collision, TC-BOARD-016 absent/dead-root/
+#      unreadable/unparseable index), board-selection-project (TC-BOARD-013
+#      unknown + group key, TC-BOARD-014 narrowing + grammar refusals),
+#      board-selection-unbound (TC-BOARD-015), board-repository-cap
+#      (TC-BOARD-064 incl. the beyond-cap `--project` cell and the 200-entry
+#      overflow arithmetic, TC-BOARD-084 mutants + seed control),
+#      board-envelope (TC-BOARD-050 one fixture per §8.3 row),
+#      board-errors (TC-BOARD-052), board-identity (TC-BOARD-083 collision
+#      matrix). Extended: board-command (TC-BOARD-051 grammar before any
+#      read), board-never-silence (TC-BOARD-080 closed seven-source matrix
+#      with readable twins), board-bounds (TC-BOARD-082 omission arithmetic
+#      incl. the 129-repository counter cell), tests/structure/error-table.test.ts,
+#      tests/checks/error-table-sync.test.ts, and
+#      scripts/checks/error-table-sync.ts (TC-BOARD-053 per 3.5b..e: rows,
+#      kind, the 55-member allowlist in both the check and the mirror, the
+#      Appendix D per-file groups with all 23 pins moved, the no-leftover
+#      scan and four-way agreement, the carrier's 138 identities and 55
+#      paragraph, the collector wording, no grammar row, the near-miss
+#      probes, and the six mutation arms A..F),
+#      tests/structure/dispatch-attempts-taxonomy.test.ts and
+#      tests/structure/verify-gates-suite-map-contract.test.ts (the
+#      non-mirror Appendix D pin holders D-8..D-12, moved with the rows and
+#      covered by TC-BOARD-053's per-file groups and mutation arm E),
+#      tests/structure/board-contract.test.ts (the BOARD_MAX_REPOSITORIES
+#      constant half).
+#
+# Bound: AC-F3-1..AC-F3-6, AC-F8-1, AC-F8-2, AC-F8-3, AC-F9-4; DoD-3, DoD-4,
+# DoD-9 (repository-cap half), DoD-14 (incl. the exact allowlist widening and
+# the identity-count expectations); F-3, F-8, F-7 (composition half); DM-7,
+# DM-8, DM-11; DEC-5, DEC-6, DEC-8, DEC-13, DEC-14, DEC-17, DEC-20; C-16;
+# RSK-3, RSK-9.
+# Test obligations: TC-BOARD-010, 011, 012, 013, 014, 015, 016, 050, 051,
+# 052, 053, 064, 080, 082, 083, 084.
+#
+# Done when: the default form reads no index and no foreign repository;
+# `--project` narrows to exactly the requested key (beyond the cap included)
+# or refuses `board.repository-unknown`; `--all` lists the ascending union
+# with counts equal to the sum, one index read, both same-ref rows distinct,
+# and the 128 cap with the deterministic retained set, the invoking key
+# retained, the overflow counted, `truncated` set, and unretained stores
+# never opened; the four managed-set edge cells behave as declared; the
+# unbound and underivable cells render an honestly labelled empty board at
+# exit 0; every grammar violation refuses before any read with
+# `fallback.invocation`; the five-row exit projection holds with no partial
+# board; the two new rows and the kind are registered, classified, and
+# documented in-boundary with the delivered families untouched; the closed
+# two-segment allowlist holds exactly 55 members in BOTH the sync check and
+# its structural mirror with exactly the two declared `board.*` codes and
+# the 53 delivered members unchanged; EVERY Appendix D site (D-1..D-23
+# across tests/structure/error-table.test.ts, dispatch-attempts-taxonomy,
+# verify-gates-suite-map-contract, error-table-sync.test.ts, and the
+# carrier) is moved to its post-change value in the same commit — 138
+# entry/test-name/header pins, 137 delivered pins, 55 allowlist pins,
+# + 104 arithmetic, 138 documented identities, paragraph 55 summing to it;
+# the repo-wide no-leftover scan for 136/135/53/52 across the five named
+# files is green with only declared non-count residuals (no `+ 102`
+# survives); the classifier, sync check, structural mirror, and carrier
+# agree on 138 entries / 137 delivered rows / 55 allowlist codes / 2 board
+# rows / 138 documented identities read from one tree; and a near-miss
+# two-segment `board.*` code is rejected — the error-table sync check, the
+# structural mirror, the sync-side suite, and both non-mirror suites are
+# all green inside `pnpm check`; production
+# composes board unconditionally with zero index maintenance; TMPDIR=$PWD/
+# tmp/tmpdir pnpm check is green.
+# ---------------------------------------------------------------------------
+# Phase 4 — Mounting advertisement and write discipline
+# Commit: feat(GH-297): mount board with prompt-set entry, help and coverage
+#
+# Goal: the mounted command is reachable and advertised exactly once — the
+# 21st prompt-required family, unconditional production composition asserted
+# live, root and family help, the reference page serving the coverage check,
+# the coverage-inventory row, updated family-count assertions — and the
+# read-only claim is proven by bytes (F-7, AC-F9-2; DoD-11/DoD-13).
+#
+# Obligations:
+#  4.1 Prompt-set entry (DEC-10, AC-F7-1): packages/cli/src/help/
+#      prompt-required-commands.ts gains "board" as the 21st member; the
+#      declared set keeps all 20 delivered members in order; the entrypoint
+#      composes it data-driven (no entrypoint edit expected — the file is in
+#      scope only if the composition root needs one; packages/cli/src/
+#      entrypoint.ts iterates PROMPT_REQUIRED_COMMANDS at ~201 today).
+#  4.2 Help entries (AC-F7-1): packages/cli/src/help.ts gains the board
+#      family entry (root listing) and the board command help (summary,
+#      Usage, Options — `--all`, `--project <key>`, `--json` —, Examples,
+#      Exit codes 0/1/2 with their meanings, See also pointing at the M2
+#      board reference page). `board --help` and `board --version` answer at
+#      exit 0 from the static inventory with zero state, git, network,
+#      configuration, or spawn activity.
+#  4.3 Reference page and coverage inventory (AC-F7-2, DEC-10):
+#      doc/planning/oss-tooling/milestones/m2/commands/board.md carries the
+#      `--help` and `--version` mentions the coverage check requires (the
+#      status flip to delivered is phase-5 bookkeeping);
+#      tests/fixtures/help-guide/coverage.json gains the board command row
+#      and the page path; `coverage.commands` set-equals the declared
+#      prompt-required set. scripts/checks/help-guide-coverage.ts is expected
+#      to need no behavioural change (data-driven); it is in scope only for
+#      an inventory-schema necessity.
+#  4.4 Family-count assertions and mounting isolation (RSK-5, TC-BOARD-043):
+#      the literal 20 -> 21 family-count assertions in
+#      tests/structure/events-production-composition.test.ts,
+#      tests/structure/daemon-production-composition.test.ts, and the
+#      entrypoint suites are updated in this change; the mount changes no
+#      other family's composition, help text, or dropped-extras behaviour
+#      (`config`, `provider`, `db`, `watchdog` stay dropped); the unmounted
+#      mutant (prompt-set entry removed in a temporary copy) is detected —
+#      root help omits the family and `board` fails closed through the
+#      delivered internal containment identity.
+#  4.5 Write-discipline audit (AC-F9-2, NFR-6, DEC-6, DoD-11): the new
+#      tests/behaviour/board-write-discipline.test.ts snapshots the host root
+#      (index file and every artifact under projects/) before/after board
+#      runs over a two-repository host: a no-default run leaves the tree
+#      byte-and-mtime identical apart from the two permitted side effects
+#      (create-once marker outside the host root; removal of a leftover
+#      store `*.tmp` sibling) with zero index writes; a run with one expired
+#      defaultable gate changes exactly one artifact — that repository's
+#      decision ledger — by exactly one record; the index revision never
+#      advances; no `replaceDocument`, delete, or prune path occurs
+#      (guardStore); the index-maintenance mutant fails naming the index
+#      file.
+#  4.6 Tests: tests/structure/board-mounting.test.ts (new: TC-BOARD-040 set
+#      half + composition assertion, TC-BOARD-043 isolation cells),
+#      tests/behaviour/board-help.test.ts (new: TC-BOARD-041),
+#      tests/behaviour/board-write-discipline.test.ts (new: TC-BOARD-061),
+#      extensions to tests/behaviour/entrypoint-help.test.ts,
+#      tests/structure/entrypoint-bin.test.ts,
+#      tests/structure/events-production-composition.test.ts,
+#      tests/structure/daemon-production-composition.test.ts,
+#      tests/checks/help-guide-coverage.test.ts,
+#      tests/checks/reference-page-parity.test.ts (TC-BOARD-042 incl. the
+#      deleted-row mutant).
+#
+# Bound: AC-F7-1, AC-F7-2, AC-F9-2; DoD-11, DoD-13; F-7, F-9; DEC-6, DEC-10;
+# RSK-5, RSK-7.
+# Test obligations: TC-BOARD-040, 041, 042, 043, 061.
+#
+# Done when: root --help lists board among exactly 21 families and board
+# --help answers at exit 0 with the five sections and zero side effects; the
+# coverage check reports zero failures with the page mentioning --help and
+# --version and the inventory carrying the row; the mount is exactly one
+# family (every other member unchanged in name and order, no other help text
+# moved) and the unmounted mutant is detected; the only state mutation across
+# board runs is the idempotent per-repository decision record with exactly
+# the two delivered side effects, zero index maintenance, and zero
+# prune/edit/delete; TMPDIR=$PWD/tmp/tmpdir pnpm check is green.
+# ---------------------------------------------------------------------------
+# Phase 5 — Determinism, purity, read cost, bookkeeping, changeset, and the
+# full gate battery (release phase)
+# Commit: test(GH-297): determinism, purity and read-cost proofs with the full gate battery
+#
+# COMMIT-TYPE RATIONALE: this phase ships two new test suites, the committed
+# four-section goldens with their regeneration path, the extended purity and
+# measured suites, the planning-corpus bookkeeping, and the five-package
+# minor changeset. A `docs(...)` subject would understate the test and
+# release content, so the subject is `test(...)`.
+#
+# Goal: the consolidated cross-cutting proofs (byte-identical determinism,
+# permutation independence, purity and brand neutrality, the multi-repository
+# read set, the 50 ms median), the M2 corpus records delivery truth, the
+# release artifact ships, and the full battery is green at the delivered HEAD
+# (AC-F9-1, AC-F9-3, AC-NFR5-1, AC-NFR9-1; DoD-10/DoD-15/DoD-16/DoD-17).
+#
+# Obligations:
+#  5.1 Determinism and the four-section golden (AC-F9-1, NFR-2, NFR-3):
+#      tests/behaviour/board-determinism.test.ts extended (paired runs in
+#      both modes, declared array orders, unique identities, the permutation
+#      harness — reordered index entries, reversed collector resolution,
+#      reversed park order, reversed directory-read order — and the
+#      content-sensitivity control); tests/golden/board-full.test.ts (new)
+#      with tests/fixtures/board/golden/full-envelope.json and full-grid.txt
+#      committed beside an explicit regeneration path; the golden is captured
+#      from the delivered two-repository cap-sized fixture at a fixed clock,
+#      run id, and synthetic brand, with only envelope `runId`/`timing`
+#      normalized.
+#  5.2 Purity and brand (AC-F9-3, NFR-7, DoD-12 consolidated):
+#      tests/behaviour/board-purity.test.ts (new: zero spawns/sessions/child
+#      processes across a full --all run, GET-only transport, no
+#      setInterval/setTimeout/setImmediate/daemon composition in the board
+#      modules, injected clock only) and tests/structure/branding-seam.test.ts
+#      extended (the forbidden-literal scan over the board modules with both
+#      fixture sets, and the brand-swap control proving the header name comes
+#      from the seam).
+#  5.3 Read cost and responsiveness (AC-NFR5-1, NFR-5, NFR-8, DoD-15):
+#      tests/behaviour/board-read-cost.test.ts extended over the real
+#      production composition — the declared per-repository read set (1
+#      tracker page <= 100, 1 delivery-request page <= 100, 1 CI page <= 20,
+#      1 blocker read, 1 queue-ledger read, 1 park read, 1 local-context
+#      read, 1 spend read, <= 1 phase read per active lane (<= 20), <= 1
+#      decision-history read shared with the ask join), exactly one
+#      host-index read for --all/--project and zero for the default form, no
+#      pagination, no retry, one tracker-client construction per included
+#      repository, and the 128-repository bound (distinct from the index's
+#      2 000) proven over the 64- and 200-entry seeded indexes from
+#      tests/fixtures/board/repository-cap.ts;
+#      tests/behaviour/board-performance.test.ts extended — warm median of
+#      five <= 50 ms for the pure projection and render of the cap-sized
+#      two-repository board with I/O excluded, every sample and the fixture's
+#      section sizes printed.
+#  5.4 Planning-corpus bookkeeping (spec §16.1, delivered at this release
+#      boundary per milestone convention): doc/planning/oss-tooling/backlog.md
+#      M2-S4 progress marker; doc/planning/oss-tooling/status.md delivery
+#      snapshot addendum; doc/planning/oss-tooling/cli-command-registry.md
+#      board row moves from "not delivered / M1-S5 only" to Delivery with the
+#      full-board scope; doc/planning/oss-tooling/milestones/m2/commands/board.md
+#      status flips to delivered; doc/planning/oss-tooling/milestones/m2/
+#      entrypoint-delta.md observed root listing records 21 families with
+#      board mounted.
+#  5.5 Release artifact — .changeset/gh-297-board-minor.md declares the
+#      five-package minor changeset (the fixed group of five publishables in
+#      .changeset/config.json; GH-309/GH-310 precedent). JUSTIFICATION: the
+#      repository's lockstep release convention for a version_impact: minor
+#      change — it is NOT a spec or test-plan requirement and it changes no
+#      contract or acceptance surface. It is declared here, in the release
+#      phase, so it never gates an implementation phase.
+#  5.6 Final battery (AC-NFR9-1, NFR-9, NFR-10, DoD-17): run
+#      TMPDIR=$PWD/tmp/tmpdir pnpm check at the delivered HEAD and record the
+#      command and result in pm-notes `notes:`; run `git diff --check`; the
+#      phase-9 range gate ./scripts/lint-commit-range.sh --base main-tools is
+#      run by @pm and recorded (PASS, or SKIP only when no commitlint
+#      configuration exists; an ERROR is never recorded as a pass).
+#      TC-BOARD-072 is verification-only: no new test code. PR creation
+#      against main-tools and staying open is lifecycle phase 11, not a plan
+#      phase.
+#
+# Bound: AC-F9-1, AC-F9-3, AC-NFR5-1, AC-NFR9-1; DoD-10, DoD-12
+# (consolidated), DoD-15, DoD-16 (roll-up), DoD-17; F-9; NFR-1..NFR-10;
+# DEC-13 (the read bound); RSK-3, RSK-6.
+# Test obligations: TC-BOARD-060, 062, 070, 071, 072.
+#
+# Done when: two runs over unchanged facts are byte-identical in both modes
+# and every permutation preserves the bytes; the committed four-section
+# golden pair exists with an explicit regeneration path; purity holds on
+# every axis with the brand seam the only name source; the declared read set
+# holds per repository with one index read, no pagination, no retry, and the
+# operative repository bound is the declared 128; the 50 ms median holds with
+# printed samples; the backlog, status snapshot, registry row, board page
+# status, and entrypoint delta state delivery truth; the five-package minor
+#      changeset is present (repo convention, not a spec requirement); the
+# full gate battery is green and recorded; all five plan phases are complete
+# with per-phase pm-notes evidence (dod_check reads that evidence, not this
+# file).
+# ---------------------------------------------------------------------------
+schemaVersion: delivery.plan.v1
+workItemRef: GH-297
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6]
+  escalationTriggers:
+    - board-schema-version-bumped-or-delivered-key-renamed
+    - new-error-table-row-beyond-board-repository-unknown-and-board-state-unavailable
+    - new-top-level-envelope-key-or-ok-command-field
+    - delivered-sla-mapping-threshold-ranking-or-identity-drift
+    - partial-board-rendered-after-a-failed-read
+    - uncounted-drop-or-uncounted-repository-overflow
+    - byte-guard-dropping-repositories-collectors-or-reversing-the-declared-order
+    - host-index-maintained-pruned-or-foreign-state-written-during-a-board-read
+    - prompt-set-entry-landing-before-the-command-answers
+    - group-vocabulary-on-any-board-surface
+    - lane-human-golden-changed
+    - current-truth-doc-edited-beyond-the-c-7-error-table-carrier
+    - pnpm-check-not-green-at-a-phase-boundary
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  - id: 1
+    title: "Shared state source and additive contracts: stateSource on board, status and brief, the board vocabulary, and the lane lease holder"
+    kind: delivery
+    summary: >-
+      Declare the one shared state-source identity and carry it additively as
+      stateSource on the board, status and brief payloads, declare the
+      full-board contract vocabulary with BOARD_MAX_REPOSITORIES = 128 and the
+      per-section caps and closed ownerSource, phase-reason and cause sets,
+      and add the optional lane leaseHolder — with every delivered human
+      surface byte-identical.
+    scope:
+      files:
+        - packages/core/src/contracts/status.ts
+        - packages/core/src/contracts/brief.ts
+        - packages/core/src/contracts/owner-gate-sla.ts
+        - packages/core/src/contracts/queue.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/domain/status.ts
+        - packages/core/src/domain/brief.ts
+        - packages/core/src/domain/owner-gate-sla.ts
+        - packages/core/src/domain/queue-lanes.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - packages/cli/src/commands/status.ts
+        - packages/cli/src/commands/brief.ts
+        - packages/cli/src/commands/board.ts
+        - tests/behaviour/board-shared-source.test.ts
+        - tests/structure/status-contract.test.ts
+        - tests/structure/brief-contract.test.ts
+        - tests/structure/owner-gate-sla-contract.test.ts
+        - tests/golden/status-digest.test.ts
+        - tests/golden/brief.test.ts
+        - tests/golden/lanes-list.test.ts
+        - tests/golden/board-grid.test.ts
+        - tests/fixtures/status/golden/digest.json
+        - tests/fixtures/brief/golden/envelope.json
+        - tests/fixtures/queue/golden/lanes-list.json
+        - tests/fixtures/board/golden/envelope.json
+        - tests/fixtures/board/golden/grid.txt
+      folders:
+        - tests/fixtures/board/corpus
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/owner-gate-sla.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/status.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/queue.ts
+        role: producer
+
+  - id: 2
+    title: "Four-section board projection: lanes, gates, asks and parked from the shared facts bundle, with per-section caps, omission accounting and the byte guard"
+    kind: delivery
+    summary: >-
+      Project the four sections in declared order from the one shared facts
+      bundle plus the delivered lane fold — gates reusing the delivered SLA
+      evaluator and idempotent decision append, asks with computed age and the
+      post-append drawn-default join over one decision-history read, parked
+      work with the classified owner-hold absence and the provider-quota
+      exclusion, the host-wide ownerHold fact, per-repository caps, counted
+      omissions, the tail-first byte-guard order that never drops the
+      repository list or collector evidence, and the deterministic bounded
+      renderer.
+    scope:
+      files:
+        - packages/core/src/contracts/owner-gate-sla.ts
+        - packages/core/src/domain/owner-gate-sla.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - packages/cli/src/commands/board.ts
+        - packages/cli/src/edge.ts
+        - tests/fixtures/board/harness.ts
+        - tests/fixtures/board/matrix.ts
+        - tests/fixtures/board/sections.ts
+        - tests/behaviour/board-sections.test.ts
+        - tests/behaviour/board-rows.test.ts
+        - tests/behaviour/board-lanes.test.ts
+        - tests/behaviour/board-collectors.test.ts
+        - tests/behaviour/board-never-silence.test.ts
+        - tests/behaviour/board-output.test.ts
+        - tests/behaviour/board-gates-sla.test.ts
+        - tests/behaviour/board-defaults.test.ts
+        - tests/behaviour/board-defaults-idempotency.test.ts
+        - tests/behaviour/board-bounds.test.ts
+        - tests/behaviour/board-asks.test.ts
+        - tests/behaviour/board-parked.test.ts
+        - tests/behaviour/board-byte-guard.test.ts
+        - tests/behaviour/board-provenance.test.ts
+        # DoR iteration-1 F4: delivered gate suites the four-section flip
+        # touches; stay-green scope per obligation 2.9 (not new TC owners).
+        - tests/behaviour/board-escalation.test.ts
+        - tests/behaviour/board-aging.test.ts
+        - tests/behaviour/board-records.test.ts
+        - tests/behaviour/board-waiver-recording.test.ts
+        - tests/behaviour/board-privacy.test.ts
+        - tests/behaviour/board-corpus.test.ts
+        - tests/structure/board-contract.test.ts
+        - tests/structure/board-nonregression.test.ts
+        - tests/structure/inventory.json
+        - tests/structure/content-inventory.test.ts
+      folders:
+        - tests/fixtures/board/byte-guard
+        - tests/fixtures/board/corpus
+        - tests/fixtures/board/golden
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/owner-gate-sla.ts
+        role: consumer
+
+  - id: 3
+    title: "Repository selection and per-repository composition: default, --project, --all with the 128 cap, the unbound scope, the board error identities, and the production board composition"
+    kind: delivery
+    summary: >-
+      Resolve repository scope without state mixing — the invoking-checkout
+      default with zero host-index reads, --project narrowing against the
+      managed set, --all as index union invoking checkout bounded to
+      BOARD_MAX_REPOSITORIES = 128 with the deterministic retained set and
+      counted overflow, the declared unbound scope at exit 0, and fail-closed
+      per-repository reads — register board.repository-unknown and
+      board.state-unavailable with their error-table rows, the exact closed
+      two-segment allowlist widening (53 to 55 in the sync check and its
+      structural mirror), every Appendix D count-pinning site moved in the
+      same commit (23 sites across the mirror, dispatch-attempts-taxonomy,
+      verify-gates-suite-map-contract, the sync suite's +104 arithmetic and
+      name pins, and the carrier: 138 entries, 137 delivered rows, 55
+      allowlist codes, 2 board rows, 138 documented identities, paragraph
+      55) with the repo-wide no-leftover scan for 136/135/53/52 and
+      four-way classifier/check/mirror/carrier agreement, refuse grammar
+      through the delivered fallback.invocation before any read, and
+      compose the board runtime unconditionally in the production root.
+    scope:
+      files:
+        - packages/core/src/contracts/owner-gate-sla.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/domain/owner-gate-sla.ts
+        - packages/cli/src/classify.ts
+        - packages/cli/src/commands/board.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - doc/spec/features/feature-result-contract.md
+        # DoR iterations 1 and 2 (F1/OQ-9): the closed two-segment allowlist
+        # and the identity-count pins live here, in the structural mirror,
+        # in the dispatch-taxonomy and verify-suite-map suites, and in the
+        # sync-side suite; obligation 3.5b..e (AC-F8-3, DEC-20, C-16,
+        # Appendix D D-1..D-23).
+        - scripts/checks/error-table-sync.ts
+        - tests/fixtures/board/harness.ts
+        - tests/fixtures/board/selection.ts
+        - tests/fixtures/board/repository-cap.ts
+        - tests/fixtures/projects/production.ts
+        - tests/fixtures/projects/state-scope.ts
+        - tests/fixtures/projects/host-index.ts
+        - tests/fixtures/projects/temp-repos.ts
+        - tests/fixtures/projects/host-root.ts
+        - tests/behaviour/board-selection-default.test.ts
+        - tests/behaviour/board-selection-all.test.ts
+        - tests/behaviour/board-selection-project.test.ts
+        - tests/behaviour/board-selection-unbound.test.ts
+        - tests/behaviour/board-repository-cap.test.ts
+        - tests/behaviour/board-errors.test.ts
+        - tests/behaviour/board-envelope.test.ts
+        - tests/behaviour/board-command.test.ts
+        - tests/behaviour/board-identity.test.ts
+        - tests/behaviour/board-never-silence.test.ts
+        - tests/behaviour/board-bounds.test.ts
+        - tests/structure/error-table.test.ts
+        # DoR iteration-2: the non-mirror Appendix D pin holders (D-8..D-12),
+        # moved with the rows in the same commit (obligation 3.5c).
+        - tests/structure/dispatch-attempts-taxonomy.test.ts
+        - tests/structure/verify-gates-suite-map-contract.test.ts
+        - tests/structure/board-contract.test.ts
+        - tests/checks/error-table-sync.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/error-table.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/owner-gate-sla.ts
+        role: consumer
+
+  - id: 4
+    title: "Mounting advertisement and write discipline: the 21st prompt-required family, help entries, reference page, coverage row, and the read-only audit"
+    kind: delivery
+    summary: >-
+      Advertise the completed board exactly once — the prompt-set entry making
+      21 families, root and family help with --all/--project/--json and the
+      0/1/2 exit meanings, the M2 board reference page serving --help and
+      --version, the coverage-inventory row, updated family-count assertions
+      with mounting isolation and the unmounted mutant — and prove the
+      read-only claim by tree snapshots: only the idempotent per-repository
+      decision append and the two delivered store-opening side effects, zero
+      host-index maintenance.
+    scope:
+      files:
+        - packages/cli/src/help.ts
+        - packages/cli/src/help/prompt-required-commands.ts
+        - packages/cli/src/entrypoint.ts
+        - doc/planning/oss-tooling/milestones/m2/commands/board.md
+        - scripts/checks/help-guide-coverage.ts
+        - tests/fixtures/help-guide/coverage.json
+        - tests/structure/board-mounting.test.ts
+        - tests/behaviour/board-help.test.ts
+        - tests/behaviour/board-write-discipline.test.ts
+        - tests/behaviour/entrypoint-help.test.ts
+        - tests/structure/entrypoint-bin.test.ts
+        - tests/structure/events-production-composition.test.ts
+        - tests/structure/daemon-production-composition.test.ts
+        - tests/checks/help-guide-coverage.test.ts
+        - tests/checks/reference-page-parity.test.ts
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/help/prompt-required-commands.ts
+        role: producer
+      - kind: contract-file
+        target: tests/fixtures/help-guide/coverage.json
+        role: consumer
+
+  - id: 5
+    title: "Determinism, purity, read cost and release: the four-section goldens, permutation and brand proofs, the bounded read set, M2 bookkeeping, the changeset, and the full gate battery"
+    kind: delivery
+    summary: >-
+      Prove the cross-cutting whole — byte-identical repeats and permutation
+      independence over the committed four-section golden, purity and brand
+      neutrality, the declared multi-repository read set with one index read
+      and the 128 bound, and the 50 ms projection median — record M2-S4
+      delivery truth in the planning corpus, ship the five-package minor
+      changeset, and run TMPDIR=$PWD/tmp/tmpdir pnpm check green at the
+      delivered HEAD.
+    scope:
+      files:
+        - .changeset/gh-297-board-minor.md
+        - tests/behaviour/board-determinism.test.ts
+        - tests/golden/board-full.test.ts
+        - tests/behaviour/board-purity.test.ts
+        - tests/structure/branding-seam.test.ts
+        - tests/behaviour/board-read-cost.test.ts
+        - tests/behaviour/board-performance.test.ts
+        - doc/planning/oss-tooling/backlog.md
+        - doc/planning/oss-tooling/status.md
+        - doc/planning/oss-tooling/cli-command-registry.md
+        - doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md
+        - doc/planning/oss-tooling/milestones/m2/commands/board.md
+        # Authored in lifecycle phase 7 (system_spec_update), not by phase 5.
+        # Listed in plan scope only so the commit primitive can stage the new
+        # current-truth spec; an untracked file outside every declared scope is
+        # a stray and is never staged (commit-staging rule).
+        - doc/spec/features/feature-board.md
+      folders:
+        - tests/fixtures/board/golden
+    interactions:
+      - kind: contract-file
+        target: doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md
+        role: producer
+      - kind: contract-file
+        target: doc/spec/features/feature-board.md
+        role: consumer
+    doneArtifacts:
+      trackerTransition: "GH-297 delivery complete: all five plan phases done, the four-section board shares the named state source with brief and status, repository scope and the 128 cap hold, the board is mounted as the 21st family, determinism/purity/read-cost proofs and the full gate battery are recorded; PR-ready against main-tools (PR creation is lifecycle phase 11)"
+
+  # -------------------------------------------------------------------------
+  # Phase 6 — Code Review Remediation (Iteration 1)
+  # Commit: fix(GH-297): per-repository waiver join, version containment and write-discipline proof
+  #
+  # Source: code-review/review-iter-1.yaml (F-1..F-6). No AC ownership or
+  # commit-subject change in phases 1-5; this phase remediates the review
+  # findings and re-runs the affected gates.
+  #
+  # Obligations:
+  #  6.1 (F-1, high) The per-repository tracker read must join merge waivers
+  #      from the TARGET repository's store: open the per-repository store
+  #      before the tracker read and pass it into the waiver join (or move the
+  #      waiver join into loadRepositoryFacts after openStore), so a
+  #      non-invoking repository's recorded waivers surface with their
+  #      authorizer and its expired waiver gates receive the 72 h default in
+  #      --all/--project runs. Add a regression test seeding a waiver in a
+  #      non-invoking repository's store over --all, including a shared-ref
+  #      pair with divergent waivers asserting two distinct, uncontaminated
+  #      rows (AC-F4-1/AC-F4-2 in fleet mode, AC-F3-2, NFR-3).
+  #  6.2 (F-2, medium) The command-scoped --version intercept must not bypass
+  #      containment: an unknown leading command keeps its classified
+  #      composition failure, and a positional alongside --version keeps
+  #      fallback.invocation at exit 1 (DEC-17/C-10). Guard the intercept on
+  #      the leading tokens resolving to a known command (mirror the --help
+  #      fall-through) and add both refusal tests.
+  #  6.3 (F-3, medium) Complete TC-BOARD-061 as declared: a two-repository
+  #      --all host with a seeded index, a host-root snapshot (index file and
+  #      projects/) before/after each run, index-write counters and revision
+  #      assertions across a no-default and a default-applying run, and the
+  #      index-maintenance mutant in a temporary copy failing with the index
+  #      file named (DoD-11).
+  #  6.4 (F-4, F-5, F-6 as triaged) Align the gate-kind truncation detector
+  #      with the 160-char clamp; either cap lane facts at the edge before
+  #      phase resolution (carrying the omitted count) or record the NFR-5
+  #      phase-read deviation; retire or repoint toBoardData if cheap.
+  #  6.5 Re-run the affected suites (board selection/identity/gates-sla,
+  #      entrypoint and help suites, write-discipline) and the aggregate
+  #      TMPDIR=$PWD/tmp/tmpdir pnpm check at the remediation commit; record
+  #      the phase-6 evidence in pm-notes notes:.
+  # -------------------------------------------------------------------------
+  - id: 6
+    title: "Code Review Remediation (Iteration 1): per-repository waiver join, version containment, and the complete write-discipline proof"
+    kind: delivery
+    summary: >-
+      Fix the review-iteration-1 findings: join merge waivers from each
+      repository's own store in the fleet tracker read, contain the
+      command-scoped --version intercept to known commands so positional and
+      unknown-command invocations keep their classified refusals, complete
+      TC-BOARD-061 with the host-root snapshot, index counters, and
+      index-maintenance mutant, and align the kind-cap detector, phase-read
+      bound, and retired projection per the triage.
+    scope:
+      files:
+        - packages/cli/src/edge.ts
+        - packages/cli/src/entrypoint.ts
+        - packages/core/src/domain/owner-gate-sla.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - tests/behaviour/board-write-discipline.test.ts
+        - tests/behaviour/board-selection-all.test.ts
+        - tests/behaviour/board-identity.test.ts
+        - tests/behaviour/board-gates-sla.test.ts
+        - tests/behaviour/board-help.test.ts
+        - tests/behaviour/entrypoint-help.test.ts
+        - tests/fixtures/board/selection.ts
+        - tests/fixtures/board/harness.ts
+        - doc/changes/2026-11/2026-11-15--GH-297--board/chg-GH-297-test-plan.md
+        # Review evidence for this remediation iteration (staged in the
+        # remediation commit so the finding set and its fixes travel together).
+        - doc/changes/2026-11/2026-11-15--GH-297--board/code-review/review-iter-1.yaml
+        # The new current-truth board spec must be registered in the
+        # forbidden-literals user-facing-doc corpus; the registry entry is
+        # required for `pnpm check` to run the docs scope green.
+        - scripts/checks/forbidden-literals.registry.json
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/edge.ts
+        role: producer

@@ -7,6 +7,7 @@ import { describe, expect, test } from "bun:test";
 import { execFileSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { STATUS_FACTS_SCHEMA_VERSION } from "../../packages/core/src/contracts/index";
 import { readOwnerGateSlaDecisions } from "../../packages/core/src/state/index";
 import { assertEnvelopeContract } from "../../packages/testkit/src/result-conformance";
 import {
@@ -135,6 +136,7 @@ const assertCase = async (testCase: CorpusCase): Promise<string> => {
       } else {
         expect(run.envelope).toHaveProperty("data");
         const data = boardData(run);
+        expect(data?.stateSource, testCase.id).toBe(STATUS_FACTS_SCHEMA_VERSION);
         expect(boardGates(run), testCase.id).toHaveLength(testCase.expect.gateCount);
         expect(data?.truncated, testCase.id).toBe(testCase.expect.truncated);
         expect(data?.omitted, testCase.id).toBe(testCase.expect.omitted);

@@ -29,6 +29,7 @@ export const PROMPT_REQUIRED_COMMANDS = [
   "projects",
   "repos",
   "events",
+  "board",
   "ceremony",
 ] as const;
 

@@ -100,7 +100,7 @@ describe("TC-EVT-064 mount negative controls", () => {
     ]);
   });
 
-  test("the delivered 20-name inline list fails the coverage equality naming events", () => {
+  test("the delivered inline list fails the coverage equality naming events", () => {
     const missing = coverageCommands.filter(
       (command) => !(DELIVERED_INLINE_NAMES as readonly string[]).includes(command),
     );

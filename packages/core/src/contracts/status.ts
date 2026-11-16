@@ -415,6 +415,16 @@ export const STATUS_OWNER_ATTENTION_LABELS = ["hand-back", "human-input-needed"]
 /** Status payload schema (DM-15). */
 export const STATUS_SCHEMA_VERSION = "delivery.status.v1" as const;
 
+/**
+ * The one shared state-source identity (DEC-3, DM-1).
+ *
+ * It names the fact bundle `collectStatusFacts` composes — the single bundle the
+ * status digest aggregates, the brief re-projects, and the board's gates, asks,
+ * and parked sections project from. It is an identity token, not a payload
+ * schema id, and it has exactly one home: this declaration.
+ */
+export const STATUS_FACTS_SCHEMA_VERSION = "delivery.status-facts.v1" as const;
+
 /** The uniform per-section counts (DM-2). */
 export type StatusCounts = {
   readonly observed: number;
@@ -831,4 +841,6 @@ export type StatusDigest = {
   readonly repository: StatusRepositoryBinding;
   readonly summary: StatusSummary;
   readonly sections: readonly StatusSection[];
+  /** The one shared state-source identity (DEC-3, DM-1). */
+  readonly stateSource: typeof STATUS_FACTS_SCHEMA_VERSION;
 };

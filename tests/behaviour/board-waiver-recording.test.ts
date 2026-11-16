@@ -118,13 +118,23 @@ describe("TC-MERGE-020 board consumes recorded waivers", () => {
       expect(waived?.waivedBy).toBe("owner-principal");
       expect(unwaived?.kind).toBe("owner-review");
       expect(unwaived?.waivedBy).toBeNull();
-      // The payload schema is unchanged: the flip is data population.
+      // The payload schema is unchanged: the flip is data population. The one
+      // additive key is the shared state-source identity (DEC-3).
       expect(Object.keys(first.envelope.data ?? {}).sort()).toEqual([
+        "asks",
         "audience",
         "collectors",
         "gates",
+        "lanes",
         "omitted",
+        "omittedBySection",
+        "ownerHold",
+        "parked",
+        "repositories",
         "schemaVersion",
+        "scope",
+        "selection",
+        "stateSource",
         "truncated",
       ]);
       // The unwaived never-merge gate keeps its escalation posture.
