@@ -29,6 +29,7 @@
     "src/config/provenance.ts",
     "src/config/resolver.ts",
     "src/config/schema.ts",
+    "src/contracts/action.ts",
     "src/contracts/adapter-capabilities.ts",
     "src/contracts/audit.ts",
     "src/contracts/blockers.ts",

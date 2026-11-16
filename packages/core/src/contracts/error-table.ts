@@ -1137,6 +1137,46 @@ export const ERROR_TABLE = [
     projectionClass: "platform-provider",
     summary: "A write outside the collector seam was refused.",
   },
+  /**
+   * GH-287: the action registry's three additive exact two-segment rows under
+   * the delivered `retro` domain kind (DEC-5, DEC-8, DEC-11). They join the
+   * closed allowlist by exact declaration; there is no `action` domain kind,
+   * no family, and no pattern widening. The delivered four rows above are
+   * byte-unchanged.
+   */
+  {
+    code: "retro.action-incomplete",
+    domainKind: "retro",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Supply the named contract member — a named agent-role or human owner, a verb from add/remove/change/test/deploy, a measurable outcome, a real tracker entry, a due date, a verification artifact, an outcome-verifier window, and a rollback condition — within its declared bound, then re-file; nothing landed.",
+    projectionClass: "user-validation",
+    summary: "An action filing is incomplete or violates its contract rule.",
+  },
+  {
+    code: "retro.closure-incomplete",
+    domainKind: "retro",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Supply the named missing closure member — an explicit decision plus an artifact (done), a reason (deprioritized), a successor (superseded), or in-window verifier evidence (outcome) — or target a plane that is still open; nothing landed.",
+    projectionClass: "user-validation",
+    summary: "A closure decision is incomplete or targets an already-closed plane.",
+  },
+  {
+    code: "retro.wip-limit-exceeded",
+    domainKind: "retro",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Close an open action in the named window on the deprioritized or superseded route, or file into another window, then retry; the window refuses filing at its declared limit and nothing landed.",
+    projectionClass: "user-validation",
+    summary: "An improvement window is at its declared WIP limit.",
+  },
   {
     code: "spend.telemetry-absent",
     domainKind: "spend",

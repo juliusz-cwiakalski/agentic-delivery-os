@@ -125,6 +125,24 @@
       "text": "coordinator.iterations:c-1",
       "recognized": false,
       "resolves": false
+    },
+    {
+      "id": "retro-action-family-widening",
+      "text": "retro.actionincomplete",
+      "recognized": false,
+      "resolves": false
+    },
+    {
+      "id": "retro-closure-family-widening",
+      "text": "retro.closureincomplete",
+      "recognized": false,
+      "resolves": false
+    },
+    {
+      "id": "retro-wip-family-widening",
+      "text": "retro.wip-limit",
+      "recognized": false,
+      "resolves": false
     }
   ]
 }

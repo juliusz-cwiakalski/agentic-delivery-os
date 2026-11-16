@@ -1512,10 +1512,14 @@ const RETRO_ROWS = [
   "| retro.evidence.tamper-flagged | retro | platform | false | not_landed | Inspect the named domain and record positions; do not trust altered evidence. Restore the unaltered artifact or record an explicit salvage before re-running. | user-validation | A keyed evidence chain failed verification. |",
   "| retro.truth.vacuous-run | retro | user | false | not_landed | Verify the declared collector sources and their windows, then re-run retro collect; a collection that executes must produce collector records. | user-validation | A collection run executed and produced no collector records. |",
   "| retro.evidence.denied | retro | platform | false | not_landed | Write evidence only through the collector seam; the sidecar is collector-owned and the attempted write did not land. | platform-provider | A write outside the collector seam was refused. |",
+  // GH-287: the three additive action-registry rows (DEC-5).
+  "| retro.action-incomplete | retro | user | false | not_landed | Supply the named contract member — a named agent-role or human owner, a verb from add/remove/change/test/deploy, a measurable outcome, a real tracker entry, a due date, a verification artifact, an outcome-verifier window, and a rollback condition — within its declared bound, then re-file; nothing landed. | user-validation | An action filing is incomplete or violates its contract rule. |",
+  "| retro.closure-incomplete | retro | user | false | not_landed | Supply the named missing closure member — an explicit decision plus an artifact (done), a reason (deprioritized), a successor (superseded), or in-window verifier evidence (outcome) — or target a plane that is still open; nothing landed. | user-validation | A closure decision is incomplete or targets an already-closed plane. |",
+  "| retro.wip-limit-exceeded | retro | user | false | not_landed | Close an open action in the named window on the deprioritized or superseded route, or file into another window, then retry; the window refuses filing at its declared limit and nothing landed. | user-validation | An improvement window is at its declared WIP limit. |",
 ] as const;
 
 describe("TC-RETRO-005 retro rows synchronize in both directions", () => {
-  test("the four rows round-trip exactly once and the unchanged control is green", async () => {
+  test("the seven rows round-trip exactly once and the unchanged control is green", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
     const doc = readFile(ROOT, DOC);
@@ -1769,9 +1773,10 @@ describe("TC-BLK-007 blockers family mutations fail by name", () => {
 
 /**
  * TC-COORD-082 (GH-241): the six coordinator rows bind two-way against the
- * documented table, the total is 143 (GH-292 added the two queue lifecycle
- * identities, GH-309 the three group-surface identities, and GH-309 the moved
- * three repos flat identities), and the corpora
+ * documented table, the total is 146 (GH-292 added the two queue lifecycle
+ * identities, GH-309 the three group-surface identities, GH-309 the moved
+ * three repos flat identities, GH-287 the three action-registry identities,
+ * and GH-298 the three steer identities), and the corpora
  * are non-vacuous.
  */
 describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
@@ -1784,11 +1789,11 @@ describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
     "coordinator.wake.delivery-failed",
   ] as const;
 
-  test("the live tree is green at 143 entries and 143 documented rows", async () => {
+  test("the live tree is green at 146 entries and 146 documented rows", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(143);
-    expect(result.counts.documentedRows).toBe(143);
+    expect(result.counts.sourceEntries).toBe(146);
+    expect(result.counts.documentedRows).toBe(146);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     expect(result.counts.recognizedS3).toBeGreaterThan(0);
     expect(result.counts.corpusRows).toBeGreaterThan(0);
@@ -1799,7 +1804,7 @@ describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
     for (const code of COORDINATOR_CODES) {
       expect(doc.split(`| ${code} |`).length - 1, code).toBe(1);
     }
-    expect(doc).toContain("143 identities");
+    expect(doc).toContain("146 identities");
   });
 
   test("removing a documented coordinator row fails naming the code", async () => {
