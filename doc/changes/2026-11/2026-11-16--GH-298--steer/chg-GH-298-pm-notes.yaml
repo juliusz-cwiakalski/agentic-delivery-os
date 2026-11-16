@@ -137,3 +137,21 @@ notes:
       commit primitive."
     type: info
     date: "2026-11-16"
+  - text: "Plan phase 3 COMPLETE: 92b473e8 — the `steer` domain kind and its
+      three exact rows (unknown-id user/1/not_landed scoped to complete,
+      credential-value-rejected user/1/not_landed, queue-unavailable
+      platform/2/not_landed), the closed two-segment allowlist widened by exact
+      declaration to 59 members in the sync check and its structural mirror,
+      and every Appendix D site moved atomically (143 entries, 142 delivered,
+      59 allowlist, 143 documented, BASELINE_ROWS.length + 109), plus the
+      no-leftover scan for 140/139/56/+106. Tests: the eight affected suites
+      green (283 pass; error-table, sync, dispatch-taxonomy, verify-suite-map,
+      ceremony, cross-repository); aggregate run identified exactly two
+      follow-on sites, both fixed and re-verified by their suites
+      (event-additivity kind-set 28 -> 29; the five-package minor changeset
+      landed early so the release invariant holds from the first publishable
+      change). Delivery finding beyond Appendix D: the DOMAIN_KINDS positional
+      pins in TC-ECON-003 shifted and the ceremony contract/non-regression
+      suites carried extra 140 pins; all moved in this same commit."
+    type: info
+    date: "2026-11-16"

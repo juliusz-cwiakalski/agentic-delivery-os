@@ -1,0 +1,8 @@
+example-product steer list  queued=1  landed=2  expired=1
+queued
+  1. msg-queued  request  priority=normal  age=3h  "prefer smaller diffs; split the refactor"
+landed
+  2. msg-landed  request  priority=normal  age=2h  receipt=2026-11-16T12:00:00.000Z/delivery ttl=86400000ms  "prefer smaller diffs; split the refactor"
+  3. msg-completed  request  priority=normal  age=2h  receipt=2026-11-16T12:00:00.000Z/delivery ttl=86400000ms  completedWith=doc/changes/2026-11/2026-11-16--GH-298--steer/chg-GH-298-plan.yaml  "prefer smaller diffs; split the refactor"
+expired
+  4. msg-expired  request  priority=normal  age=2h  expired=ttl-elapsed  "prefer smaller diffs; split the refactor"

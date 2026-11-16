@@ -2013,6 +2013,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "cli/src/commands/verify-gates.ts": ["createVerifyGatesHandler"],
   "cli/src/edge.ts": [
     "createCeremonyCommandRuntime",
+    "createSteerCommandRuntime",
     "createCliAudit",
     "createProductionDependencies",
     "registerEdgeSecrets",
@@ -2970,8 +2971,10 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "readSteeringQueue",
     "appendSteeringMessage",
     "appendSteeringOutcome",
+    "appendSteeringOutcomes",
     "appendSteeringCompletion",
   ],
+  "cli/src/commands/steer.ts": ["createSteerCommandDefinition"],
 };
 
 const listTypeScriptFiles = (packageDir: string): string[] => {

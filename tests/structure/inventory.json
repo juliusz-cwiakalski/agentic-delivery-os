@@ -353,6 +353,7 @@
     "src/commands/retro.ts",
     "src/commands/spend.ts",
     "src/commands/status.ts",
+    "src/commands/steer.ts",
     "src/commands/verify-deploy.ts",
     "src/commands/verify-gates.ts",
     "src/commands/verify.ts",

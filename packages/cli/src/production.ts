@@ -8,6 +8,7 @@
  * command is claimed that is not composed.
  */
 import { existsSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { basename } from "node:path";
 import {
   createEnvironmentCredentialPort,
   createProcessCredentialPort,
@@ -111,6 +112,7 @@ import {
   projectMemberHealth,
   projectMemberOutcomeOfHealth,
   projectStateRoot,
+  rankBlockerQuestions,
   readDaemonHeartbeat,
   readDaemonInstance,
   readDaemonLanes,
@@ -211,6 +213,7 @@ import {
   ensureEconomicsExhaustionRecord,
   foldPhaseState,
   readAuditLedger,
+  readBlockerLedger,
   readChangeTransitionsTolerant,
   readEconomicsRecords,
   STATE_SCHEMA_VERSION,
@@ -3175,6 +3178,75 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         configurationDirectoryName: brand.configDirectoryName,
         repositoryId:
           scope.value.scope.kind === "project" ? scope.value.scope.projectKey : "unbound",
+      },
+      // The steer family is composed unconditionally over the delivered
+      // adapters (GH-298 F-8, DEC-9): the invoking store, injected clock and
+      // fence factory, the derived checkout origin, the delivered phase fold,
+      // and the delivered open-question view with the PDR-0003 join facts.
+      steer: {
+        store,
+        clock: { nowMs, nowIso },
+        newFenceToken,
+        origin: () => {
+          const context = readLocalPmContext({ path: pmContextPath, fs: localFs });
+          return {
+            change: context.ok ? (context.context.activeChange?.workItemRef ?? null) : null,
+            repo:
+              (repositoryFacts.originUrl === undefined
+                ? undefined
+                : normalizeRepositoryKey(repositoryFacts.originUrl)) ??
+              (basename(checkoutRoot).toLowerCase() || "repository"),
+            agent: "owner",
+          };
+        },
+        readPhaseFold: (changeRef) => {
+          if (changeRef === null) {
+            return { ok: true, value: { present: false, entries: [] } };
+          }
+          const transitions = readChangeTransitionsTolerant(store, changeRef);
+          if (!transitions.ok) return transitions;
+          const folded = foldPhaseState(changeRef, transitions.value.transitions);
+          return {
+            ok: true,
+            value: {
+              present: transitions.value.present,
+              entries: Object.entries(folded.phases).map(([phaseId, entry]) => ({
+                phaseId,
+                started: entry.started ?? "",
+                completed: entry.completed,
+              })),
+            },
+          };
+        },
+        readAsks: () => {
+          const ledger = readBlockerLedger(store);
+          if (!ledger.ok) return ledger;
+          const ranking = rankBlockerQuestions(
+            ledger.value.questions,
+            ledger.value.answers,
+            nowMs(),
+          );
+          return {
+            ok: true,
+            value: {
+              facts: ranking.open.map((question, index) => ({
+                id: question.id,
+                type: question.type,
+                audience: question.audience,
+                lane: question.lane,
+                ref: question.ref,
+                question: question.question,
+                askedAt: question.askedAt,
+                age: question.age,
+                rank: question.rank ?? index + 1,
+              })),
+              // No local defaultable-gate facts exist at the read point; the
+              // delivered join therefore declares the bare `none` truth rather
+              // than inventing a default.
+              join: { defaultableRefs: {}, appliedRefs: [] },
+            },
+          };
+        },
       },
       coordinator: createProductionCoordinatorComposition(),
       projects: {

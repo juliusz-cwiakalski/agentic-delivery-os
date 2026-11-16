@@ -72,7 +72,6 @@ export const STEERING_ARTIFACT_BOUNDARY: StateArtifactBoundaryDeclaration = {
         { name: "scope", type: "string", required: true },
         { name: "kind", type: "string", required: true },
         { name: "subject", type: "string", required: true },
-        { name: "ref", type: "string", required: false },
         { name: "origin", type: "object", required: true },
         { name: "priority", type: "string", required: true },
         { name: "created", type: "string", required: true },
@@ -613,5 +612,88 @@ export const appendSteeringCompletion = (
     appended: true,
     append: appended.value.append,
     fenceReleased: appended.value.fenceReleased,
+  });
+};
+
+/** One batch append outcome: how many records landed and the fence fact. */
+export type SteeringBatchAppendOutcome = {
+  readonly appended: number;
+  readonly fenceReleased: boolean;
+};
+
+/**
+ * Append one batched read-point outcome set under a single-writer fence.
+ *
+ * The batch is the read point's one landing write: every due note's outcome is
+ * appended in rank order, the whole batch is verified by one post-append
+ * coverage read (+N), and any duplicate, unknown note, or unverified append
+ * fails closed so no partial landing is ever reported (NFR-5, AC-F9-2).
+ */
+export const appendSteeringOutcomes = (
+  store: StateStorePort,
+  request: {
+    readonly records: readonly SteerOutcome[];
+    readonly fenceToken: string;
+    readonly current?: SteeringQueueRead;
+  },
+): StateResult<SteeringBatchAppendOutcome> => {
+  if (request.records.length === 0) {
+    return ok({ appended: 0, fenceReleased: true });
+  }
+  const current = request.current === undefined ? readSteeringQueue(store) : ok(request.current);
+  if (!current.ok) return current;
+  const seen = new Set<string>();
+  for (const record of request.records) {
+    if (seen.has(record.id)) {
+      return fail("state.store.torn", {
+        path: current.value.evidence.storePath,
+        record: current.value.recordCount,
+      });
+    }
+    seen.add(record.id);
+    if (current.value.outcomes.some((outcome) => outcome.id === record.id)) {
+      return fail("state.store.torn", {
+        path: current.value.evidence.storePath,
+        record: current.value.recordCount,
+      });
+    }
+    if (!current.value.messages.some((message) => message.id === record.id)) {
+      return fail("state.store.torn", {
+        path: current.value.evidence.storePath,
+        record: current.value.recordCount,
+      });
+    }
+    const validated = outcomeFrom(outcomePayload(record), {
+      path: store.identity.stateDirectory,
+    });
+    if (!validated.ok) return validated;
+  }
+  const boundary = createArtifactBoundary(store, STEERING_ARTIFACT_BOUNDARY);
+  const acquired = store.acquireFence(request.fenceToken);
+  if (!acquired.ok) return acquired;
+  const handle = acquired.value.handle;
+  for (const record of request.records) {
+    const appended = boundary.append(handle, {
+      kind: STEER_OUTCOME_RECORD_KIND,
+      recordKey: steeringOutcomeRecordKey(record.id),
+      payload: outcomePayload(record),
+    });
+    if (!appended.ok) {
+      store.releaseFence(handle);
+      return appended;
+    }
+  }
+  const coverage = boundary.read();
+  const released = store.releaseFence(handle);
+  if (!coverage.ok) return coverage;
+  if (coverage.value.artifacts.length !== current.value.recordCount + request.records.length) {
+    return fail("state.store.torn", {
+      path: coverage.value.evidence.storePath,
+      record: coverage.value.artifacts.length,
+    });
+  }
+  return ok({
+    appended: request.records.length,
+    fenceReleased: released.ok && released.value.released,
   });
 };
