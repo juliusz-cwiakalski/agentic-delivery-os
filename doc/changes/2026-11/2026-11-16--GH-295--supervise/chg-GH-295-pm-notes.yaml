@@ -6,7 +6,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-16T22:21:11.981Z }
   specification: { started: null, completed: 2026-11-16T22:45:00.487Z }
   test_planning: { started: null, completed: 2026-11-16T22:47:40.120Z }
-  delivery_planning: { started: null, completed: 2026-11-16T22:58:09.485Z }
+  delivery_planning: { started: null, completed: 2026-11-16T23:08:34.920Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -84,3 +84,26 @@ notes:
       delivery code; cost is one spec iteration, zero code rework."
     type: "retro"
     date: "2026-11-16"
+  - text: "DoR iteration 1 verdict: NOT_READY
+      (readiness-review/readiness-iter-1.md). Blocking: plan AC-ownership omits
+      AC-F3-1 (the ticket AC) from every phase while claiming all 8 ACs met —
+      DoD verification undefined. Advisory (plan): phantom doc-reconciliation
+      targets (feature-queue-lifecycle.md / feature-lanes-surface.md do not
+      exist; real homes are scheduling-engine/queue-ready/peak-pausing) and
+      phase-5 scope missing supervision-error-family.test.ts. Advisory
+      (spec-level): re-entry-instant horizon under-declared (300,000 ms
+      corroboration bound vs mapped 60,000 ms recheck default). Base-state pins
+      verified correct (144/62/+112 error table; family count 23). Remediation:
+      reopen delivery_planning; plan-writer declares AC-F3-1 ownership split,
+      fixes doc targets and phase-5 scope, records the horizon constant; spec
+      advisory folded into plan declarations (no spec reopen)."
+    type: "decision"
+    date: "2026-11-17"
+  - text: "Retro: the DoR gate caught a real delivery-blocking gap (missing AC
+      ownership for the ticket's central criterion) that would have surfaced as
+      DoD ambiguity at phase 10 — cheap fix now, expensive later. Also: sibling
+      merges (GH-287) moved the error-table base state after the plan was
+      drafted from older pins; DoR verification against the live tree confirmed
+      the pins current."
+    type: "retro"
+    date: "2026-11-17"

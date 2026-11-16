@@ -1,9 +1,9 @@
 ---
 id: chg-GH-295-test-plan
 status: Proposed
-version: 1.1
+version: 1.3
 created: 2026-11-16T23:50:00Z
-last_updated: 2026-11-16T23:59:00Z
+last_updated: 2026-11-17T00:10:00Z
 owners: [engineering]
 service: delivery-os supervision plane (operator-facing supervise battery over the resident dispatch daemon's lanes)
 labels: [change, m2, supervise, daemon, lanes, watchdog, queue, state]
@@ -65,7 +65,7 @@ Known gaps carried by this plan (detail and status in §8.3):
 
 | Reference | Role in this plan |
 |---|---|
-| [`chg-GH-295-spec.md`](./chg-GH-295-spec.md) | Binding source: F-1..F-8, AC-F1-1..AC-F8-1, DM-1..DM-4, EVT-1, NFR-1..NFR-7, RSK-1..RSK-6, DEC-1..DEC-7, OQ-1, G-1..G-7, §6 flows 1–5, §7 boundaries, §8.5 backward compatibility, §17 AC table and traceability paragraph. |
+| [`chg-GH-295-spec.md`](./chg-GH-295-spec.md) | Binding source: F-1..F-8, AC-F1-1..AC-F8-1, DM-1..DM-4, EVT-1, NFR-1..NFR-7, RSK-1..RSK-6, DEC-1..DEC-8, OQ-1, G-1..G-7, §6 flows 1–5, §7 boundaries, §8.5 backward compatibility, §17 AC table and traceability paragraph. |
 | [`chg-GH-295-pm-notes.yaml`](./chg-GH-295-pm-notes.yaml) | Delivery state, ticket AC restatement, the two inherited seeds as recorded at clarify_scope, delivered-dependency verification (M1-S1, M1-S18), and delivery conventions (gate command, PR target `main-tools`, commit body width). |
 | [`chg-GH-295-plan.yaml`](./chg-GH-295-plan.yaml) | To be authored in phase 4. Phase ownership of these cases is declared there, not here. |
 | [`.ai/rules/testing-strategy.md`](../../../../.ai/rules/testing-strategy.md) | Layers (static/diff, content, shell/tool, TypeScript workspace, invariants, boundaries, aggregate), module-to-test mapping, invariant-test authoring rules (no moving-base diffs; goldens regenerate only on explicit command; assert the value's meaning), and the aggregate gate. |
@@ -74,8 +74,9 @@ Known gaps carried by this plan (detail and status in §8.3):
 | [M2 pack README](../../../planning/oss-tooling/milestones/m2/README.md) | Story-to-artifact map: "none in this pack" for M2-S2 architecture flow and contract surface; seeds are the inherited starting point. |
 | [`feature-watchdog-lane-contracts.md`](../../../spec/features/feature-watchdog-lane-contracts.md) | §2.2 names supervise as the consumer of the probes; the no-CPU rule, the 300,000 ms stall bound, the signals-absent unknown answer, and the "checks never run/never supervise" boundary the battery must not contradict. |
 | [`feature-resident-daemon.md`](../../../spec/features/feature-resident-daemon.md) | Instance/heartbeat/lane/reconciliation records as evidence, heartbeat-age staleness semantics, per-ref single-flight refusal naming the holder, safe-boundary preemption, and the supervise-only production composition. |
-| [`feature-queue-lifecycle.md`](../../../spec/features/feature-queue-lifecycle.md) | The closed park-cause set, condition types, recheck defaults, the `parked:<cause>` template, and the single-flight identity. |
-| [`feature-lanes-surface.md`](../../../spec/features/lanes-surface.md) | The six-value lane-state set, `reason`, the never-inferred `leaseHolder`, counts, and the truncation pattern the additive `until` joins. |
+| [`feature-scheduling-engine.md`](../../../spec/features/feature-scheduling-engine.md) | Lanes, repo-exclusive leases and the fenced claim path; the lane projection (closed state set, `reason` as the `parked:<cause>` template over the closed park-cause set, the never-inferred `leaseHolder`, counts, bounds and truncation); the closed five-cause park vocabulary with per-type recheck and the declared cause→condition pairs; and the per-ref single-flight admission (`queue.single-flight`, holder at the envelope root) the refusal cases compose with. |
+| [`feature-queue-ready.md`](../../../spec/features/feature-queue-ready.md) | The closed tri-state condition discipline with bounded evidence per condition, named blocking conditions, and the `unknown` rule (never coerced to satisfied, never a fabricated zero), plus the verified provider-park fold — the condition vocabulary and evidence shape the supervision tri-states and evidence follow. |
+| [`feature-peak-pausing.md`](../../../spec/features/feature-peak-pausing.md) | The many-to-one cause→condition mapping precedent (`peak-window` riding the delivered `provider-window` condition type) that `liveness-stall` follows, the additive `parked:<cause>` projection entries, and the `until` classification rule (present on an expiry-carrying park, classified absence on a non-expiry park). |
 | [`feature-result-contract.md`](../../../spec/features/feature-result-contract.md) | The exclusive envelope, the `{0,1,2}` exits, the closed union, the documented error table, and the binding check the two new rows must join. |
 | [`feature-delivery-lifecycle.md`](../../../spec/features/feature-delivery-lifecycle.md) | Phase records, commit-artifact records, and attempt records — the artifact trail the fold reads. |
 | [`feature-cli-entrypoint.md`](../../../spec/features/feature-cli-entrypoint.md) | The prompt-required family set, root/family help, `--version`, and the reference-page obligation for a new family. |
@@ -832,7 +833,7 @@ Reconciliation note: the seeds are the *minimum*. They do not cover supervision-
 **Related IDs**: F-5, AC-F5-1, AC-F7-1, DEC-7, RSK-5
 **Test Type(s)**: Integration
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/behaviour/supervision-stall-park.test.ts` over `tests/fixtures/daemon/preemption` seams
+**Target Layer / Location**: `tests/behaviour/supervision-stall-park.test.ts` over the delivered preemption seams (`packages/core/src/app/daemon-preemption.ts`, exercised as in `tests/behaviour/daemon-preemption.test.ts`)
 **Tags**: @backend
 
 **Preconditions**:
@@ -1599,7 +1600,7 @@ Reconciliation note: the seeds are the *minimum*. They do not cover supervision-
 **Related IDs**: AC-F5-1, DM-2, DM-3, DEC-2
 **Test Type(s)**: Golden
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/golden/lanes-show.test.ts` (extending the delivered lanes golden family) + `tests/fixtures/supervision/golden/lanes-show-parked.json|txt`
+**Target Layer / Location**: `tests/golden/lanes-show.test.ts` (extending the delivered lanes golden family) + `tests/fixtures/supervision/golden/lanes-show-parked.json` and `tests/fixtures/supervision/golden/lanes-show-parked.txt`
 **Tags**: @golden, @backend
 
 **Preconditions**:
@@ -1715,7 +1716,7 @@ Reconciliation note: the seeds are the *minimum*. They do not cover supervision-
 **Related IDs**: AC-F1-1, AC-F2-1, AC-F5-1, DEC-1
 **Test Type(s)**: Manual
 **Automation Level**: Manual
-**Target Layer / Location**: `doc/spec/features/feature-supervise.md` (new), `feature-watchdog-lane-contracts.md`, `feature-resident-daemon.md`, `doc/spec/00-index.md`/entrypoint page
+**Target Layer / Location**: `doc/spec/features/feature-supervise.md` (new page, authored in phase 7), `feature-watchdog-lane-contracts.md`, `feature-resident-daemon.md`, `doc/00-index.md`
 **Tags**: @docs
 
 **Preconditions**:
@@ -1815,7 +1816,7 @@ Exactly these, each additive: the park-cause/pair equality in `tests/behaviour/q
 
 | Level | PASS definition |
 |---|---|
-| Static/diff | `git diff --check` clean; no conflict markers; every new path follows the repository conventions (`tests/<layer>/supervision-*.test.ts`, `tests/fixtures/supervision/**`). |
+| Static/diff | `git diff --check` clean; no conflict markers; every new path follows the repository conventions (`tests/**/supervision-*.test.ts`, `tests/fixtures/supervision/**`). |
 | Structure | `bun test tests/structure` green, including exact closed-set equality both directions, one-home constants, data-only contract AST, no process markers, inventory/export registration, record-kind and taxonomy equality, and mounting counts. Any mutant named in §4.2 makes its case fail. |
 | Behaviour | `bun test tests/behaviour` green, including every matrix cell executed (totality guard), the seed cases, both refusal cells (per-action duplicate-supervision and per-ref single-flight) with their presence and held-session controls, determinism pairs, read-count == 1, the 200/201 bound, the `< 5_000 ms` bound, evidence totality walk, and the isolation guard. |
 | Golden | `bun test tests/golden` green against committed normalized goldens; the normalizer's replacement list asserted to be exactly three entries; delivered non-parked lanes goldens unchanged. |
@@ -1877,6 +1878,8 @@ A stage is **not** PASS-able on a partially green level: the aggregate gate is t
 |---------|------|--------|---------|
 | 1.0 | 2026-11-16 | @test-plan-writer | Initial test plan from GH-295 spec v1.0: 51 cases across structure, behaviour, golden, checks, and docs levels; all eight ACs mapped; milestone seeds SC-M2-S2-01/02 reconciled per DEC-2 (parkReason → `reason` = `parked:liveness-stall`, seed `until` → DM-3 additive lane field) and mapped to concrete steps and assertions; delivered families mirrored for structure/behaviour/golden conventions; GAP-T1 reported as requiring a targeted specification amendment. |
 | 1.1 | 2026-11-16 | @test-plan-writer | GAP-T1 resolution against **spec v1.1 DEC-8**: TC-SUP-051 rewritten as three cells (acting authority refuses per-action at exit `1` with the claim and holder named; live daemon presence parks at exit `0`; held-session park intent refused by neither identity) plus a retry-after-window control; TC-SUP-092 extended to the per-action refusal golden plus the paired live-claims data golden at exit `0`; AC-F6-1 flipped to **Covered**; index, §3.1, §5 details, §6 goldens/fixtures, §7.1/§7.4 mappings, TR-1, AMB-4 and §10 updated; OQ-TP-4 recorded as settled by DEC-8(c), OQ-TP-1..3 unchanged phase-4 items. IDs unchanged; 51 cases, none awaiting a decision. |
+| 1.2 | 2026-11-17 | @test-plan-writer | Reference-path correction from DoR iteration 1: the two §2 rows naming retired pages replaced by the real current-truth homes (`feature-scheduling-engine.md`, `feature-queue-ready.md`, `feature-peak-pausing.md`); the landing-page path corrected to `doc/00-index.md`. No case, ID, coverage row, or assertion changed. |
+| 1.3 | 2026-11-17 | @test-plan-writer | DEC range alignment with spec v1.1 DEC-8: §2's spec row now reads `DEC-1..DEC-8`. No case, ID, coverage row, or assertion changed. |
 
 ## 10. Test Execution Log
 

@@ -1,5 +1,12 @@
-# GH-295 delivery plan — machine-readable document (delivery.plan.v1), revision 1.0
-# (2026-11-16). Authored against spec v1.1 (8 ACs AC-F1-1..AC-F8-1; F-1..F-8;
+# GH-295 delivery plan — machine-readable document (delivery.plan.v1), revision 1.1
+# (2026-11-17). Revision 1.1 applies the DoR iteration-1 findings (readiness-
+# iter-1.md): AC-F3-1's phase-split ownership declared (the blocking
+# arithmetic gap), the lifecycle phase-7 handoff re-pointed at the real
+# current-truth homes (feature-scheduling-engine.md, feature-queue-ready.md,
+# feature-peak-pausing.md), the re-entry horizon's constant source recorded
+# as a design decision, and the phase-5 error-family scope gap closed.
+# Iteration 1.0 (2026-11-16) was authored against spec v1.1 (8 ACs
+# AC-F1-1..AC-F8-1; F-1..F-8;
 # DM-1..DM-4; EVT-1; NFR-1..NFR-7; NG-1..NG-7; RSK-1..RSK-6; DEC-1..DEC-8;
 # OQ-1 deferred non-blocking; seeds SC-M2-S2-01/02 reconciled per DEC-2) and
 # test plan v1.1 (51 TCs TC-SUP-001..097, all 8 ACs Covered, no open gap —
@@ -115,6 +122,19 @@
 #     not_landed) — two-segment exact identities joining the closed
 #     allowlist by exact declaration (62 -> 64), no supervise.* family
 #     pattern, no prefix widening.
+#   RE-ENTRY HORIZON (DoR iteration-1 finding 3, folded here per PM — a
+#     DEC-2 contract declaration recorded against the spec, not a spec
+#     edit): the supervised-stall park's `until` is the declared stall
+#     recheck horizon derived from the MAPPED CONDITION TYPE'S recheck
+#     default — until = runInstant + QUEUE_PARK_RECHECK_DEFAULTS[
+#     conditionTypeForCause("liveness-stall")] (the provider-window
+#     default, 60_000 ms) — imported from the delivered constants, never a
+#     literal. The 300,000 ms WATCHDOG_STALL_HEARTBEAT_MS is the
+#     CORROBORATION BOUND (the stall-classification input, NFR-1) and is
+#     NOT the re-entry horizon; `recheckMs` rides the same mapped default
+#     per DM-2, so phase 4 implements exactly one unambiguous constant
+#     source and TC-SUP-040's golden (until later than the run instant,
+#     equal to the horizon) agrees by construction.
 #
 # PHASE ORDER AND WHY:
 #   1 Contracts, vocabularies, and the two error identities first — the
@@ -168,23 +188,41 @@
 #     staging obligations for lifecycle phase 7, and the full gate battery
 #     at the delivered HEAD.
 #
-# AC OWNERSHIP (8/8; exactly one owning phase each; earlier phases may
-# produce partial verdicts, which are additive and never transfer ownership):
+# AC OWNERSHIP (8/8 — every AC is enumerated with its owning phase(s);
+# earlier phases may produce partial verdicts, which are additive and never
+# transfer ownership; where an AC's evidence spans phases, the split names
+# which phase owns which TC and what each phase's evidence contributes to
+# the AC's DoD verification):
 #   phase 1  (declaration halves only — DM-1/DM-2 data, the two identities;
 #             no full AC)
 #   phase 2  AC-F2-1 (fold half), AC-F4-1
 #   phase 3  AC-F1-1
-#   phase 4  AC-F5-1
-#   phase 5  AC-F6-1, AC-F7-1, AC-F8-1 (behaviour half; the row binding
-#            landed in phase 1 and is re-proven here over the live paths)
+#   phase 4  AC-F5-1; AC-F3-1 lane-cell half (TC-SUP-020, TC-SUP-022 — the
+#            lying LANE classifies stalled by artifact evidence alone while
+#            advancing artifacts keep progressing regardless of any
+#            process-shaped reading; phase 4's evidence proves the ticket
+#            AC's lane half and the acted-on park)
+#   phase 5  AC-F6-1, AC-F7-1; AC-F3-1 claim-cell half (TC-SUP-021,
+#            TC-SUP-054 — the lying SUPERVISOR CLAIM classifies stalled from
+#            records alone with zero process-port/pid/CPU reads while no
+#            action targets a claim; phase 5's evidence proves the ticket
+#            AC's supervisor half); AC-F8-1 (projection half; the row
+#            binding landed in phase 1 and is re-proven here over the live
+#            paths)
 #   phase 6  (mounting obligations of AC-F1-1's reachability clause;
 #            AC-F1-1 ownership stays with phase 3)
 #   phase 7  (cross-cutting NFR proofs; no new AC)
 #   phase 8  (release obligations; no new AC)
-#   Count: 0 + 2 + 1 + 1 + 3 + 0 + 0 + 0 = 7 full ACs at phase boundaries
-#   with AC-F8-1's binding half owned by phase 1 (rows, mirror, sync,
-#   carrier, corpora) and its projection half by phase 5 — the union is
-#   AC-F8-1 complete; all 8 ACs are met at the delivered HEAD.
+#   Enumeration of all eight: AC-F1-1 @ phase 3; AC-F2-1 @ phase 2; AC-F3-1
+#   split — lane half (TC-SUP-020/022) @ phase 4, claim half (TC-SUP-021/
+#   054) @ phase 5, the union completing the ticket's acceptance criterion
+#   ("a stuck supervisor is detected by artifact evidence, not process
+#   state"); AC-F4-1 @ phase 2; AC-F5-1 @ phase 4; AC-F6-1 @ phase 5;
+#   AC-F7-1 @ phase 5; AC-F8-1 split — binding half (rows, mirror, sync,
+#   carrier, corpora) @ phase 1, projection half @ phase 5. Both split ACs
+#   are complete unions at the delivered HEAD; all 8 ACs are enumerated
+#   with owning phases and dod_check verifies each against the named
+#   per-phase evidence.
 #
 # TC OWNERSHIP (51/51; ownership = the phase that lands the asserted content
 # and where the TC's verdict is first fully green; every case is authored
@@ -221,7 +259,10 @@
 #   (claims inventory) and gains the process-seam cells in phase 5
 #   (TC-SUP-054); tests/behaviour/supervision-lying-liveness.test.ts starts
 #   phase 4 (lane cells) and gains the claim no-action half in phase 5
-#   (TC-SUP-021); tests/golden/supervision-report.test.ts starts phase 3
+#   (TC-SUP-021); tests/structure/supervision-error-family.test.ts starts
+#   phase 1 (the two-row registration, baseline, and count assertions of
+#   TC-SUP-070) and gains the TC-SUP-072 reuse-cell arms in phase 5
+#   (declared in both phases' scopes); tests/golden/supervision-report.test.ts starts phase 3
 #   (healthy golden) and gains the stalled/parked golden in phase 4
 #   (TC-SUP-091); packages/core/src/app/supervise.ts starts phase 2 (the
 #   fold) and is extended in phases 4 (park actions) and 5 (restart +
@@ -354,9 +395,16 @@
 #   - doc/spec/features/feature-resident-daemon.md: supervise-only
 #     composition notes and declared residuals reconcile to the battery's
 #     read-only consumption of the daemon's records.
-#   - doc/spec/features/feature-queue-lifecycle.md and feature-lanes-
-#     surface.md: the sixth cause, the mapped condition, and the additive
-#     until join their vocabularies.
+#   - The park-cause, condition-mapping, and lanes-projection vocabularies
+#     reconcile in their real current-truth homes (DoR iteration-1 finding
+#     2: the two page names iteration 1.0 carried here do not exist in
+#     doc/spec/features/ and are replaced by the verified homes):
+#     doc/spec/features/feature-scheduling-engine.md (lanes, leases, and
+#     the lane projection gaining the additive until), doc/spec/features/
+#     feature-queue-ready.md (queue readiness and the park vocabulary
+#     gaining the sixth cause and mapped condition), and doc/spec/features/
+#     feature-peak-pausing.md (the peak-window many-to-one mapping
+#     precedent the liveness-stall pair rides).
 #   - doc/spec/features/feature-result-contract.md: carried in-boundary by
 #     phase 1 (the two rows, counts, allowlist); phase 7 verifies wording.
 #   - Planning truth stays distinct from current truth: the entrypoint
@@ -649,8 +697,11 @@
 #  4.1 packages/core/src/app/supervise.ts (extended): the supervised-stall
 #      park action — a fenced append through the delivered queue-park path
 #      carrying cause liveness-stall, conditionType from the delivered
-#      resolver, until non-null at the declared stall recheck horizon
-#      computed from the injected clock (later than the run instant),
+#      resolver, until non-null at the declared stall recheck horizon (the
+#      mapped condition type's recheck default imported from
+#      QUEUE_PARK_RECHECK_DEFAULTS, per the header's RE-ENTRY HORIZON
+#      decision) computed from the injected clock (later than the run
+#      instant),
 #      recheckMs equal to the mapped condition type's declared default
 #      read from QUEUE_PARK_RECHECK_DEFAULTS, and the corroborating
 #      evidence (ref, heartbeat observation, flat artifact classes, span,
@@ -800,7 +851,11 @@
 #      per-ref double-claim (single-flight) — each the delivered code and
 #      exit, no new identity minted, the exit table asserted as one table
 #      over the observed cells, a parked stall inside a successful run
-#      keeping exit 0); tests/behaviour/supervision-claims.test.ts
+#      keeping exit 0); tests/structure/supervision-error-family.test.ts
+#      extended in this phase (TC-SUP-072 structure half — the reuse cells
+#      assert the supervise kind contributes no identity for containment,
+#      state/collector, or single-flight outcomes, beside the phase-1
+#      registration arms of TC-SUP-070); tests/behaviour/supervision-claims.test.ts
 #      extended (TC-SUP-054 — zero process-seam calls over the claims
 #      fixture, zero pid/CPU markers, the dead-pid fixture changing no
 #      classification while removing a heartbeat record flips the claim
@@ -1211,6 +1266,7 @@ phases:
         - tests/behaviour/supervision-lying-liveness.test.ts
         - tests/structure/supervision-nonregression.test.ts
         - tests/structure/supervision-no-signal.test.ts
+        - tests/structure/supervision-error-family.test.ts
 
   - id: 6
     title: "Mounting: supervise as the 24th prompt-required family with the atomic 23-to-24 count move, help entries, reference page, and coverage row"
@@ -1280,13 +1336,18 @@ phases:
         - doc/planning/oss-tooling/cli-command-registry.md
         - doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md
         - doc/planning/oss-tooling/milestones/m2/commands/supervise.md
-        # Authored in lifecycle phase 7 (system_spec_update), not by this
-        # phase. Listed in plan scope only so the commit primitive can stage
-        # the new current-truth spec and its registry row; an untracked file
-        # outside every declared scope is a stray and is never staged.
+        # Authored/reconciled in lifecycle phase 7 (system_spec_update), not
+        # by this phase. Listed in plan scope only so the commit primitive
+        # can stage the new current-truth spec, its registry row, and the
+        # phase-7 boundary-reconciliation targets; an untracked file outside
+        # every declared scope is a stray and is never staged, and an
+        # untouched declared file is only a plan diff observation.
         - doc/spec/features/feature-supervise.md
         - doc/spec/features/feature-watchdog-lane-contracts.md
         - doc/spec/features/feature-resident-daemon.md
+        - doc/spec/features/feature-scheduling-engine.md
+        - doc/spec/features/feature-queue-ready.md
+        - doc/spec/features/feature-peak-pausing.md
         - scripts/checks/forbidden-literals.registry.json
       folders:
         - doc/changes/2026-11/2026-11-16--GH-295--supervise
