@@ -549,3 +549,27 @@ notes:
       No residual documentation gap is known."
     type: info
     date: "2026-11-16"
+  - text: "review_fix iteration 1: FAIL. Verdict record:
+      code-review/review-iter-1.yaml. 5 findings (1 high, 3 medium, 1 low), plan
+      phase 12 remediation tasks T-1..T-5 appended (plan validate valid). F-1
+      high: confirmed livelock in compactCeremonyCarried (ceremony-run.ts:926) —
+      the byte-bounding loop pops the omitted marker it just pushed, so any
+      compaction needing more than one line dropped never returns; reproduced
+      50x120 entries hang; reachable through a legal project declaration on
+      run/resume/catch-up; violates NFR-7/13 and AC-F4-4. F-2 medium:
+      renderBrief hardcodes zero counts for present sources. F-3 medium:
+      assessment `covered` unreachable in production (note facts are strings; a
+      fixture-only shape carries the citation channel) and citation presence
+      grants covered without resolution. F-4 medium: catch-up replays of project
+      ceremonies record origin built-in (false DM-3 provenance). F-5 low: stale
+      look-back comment. Remediation delegated to @coder as plan phase 12."
+    type: info
+    date: "2026-11-16"
+  - text: "The livelock survived the honesty battery because its bounds suite
+      asserted the compaction output shape at and above the limit but never ran
+      a pathological input to completion — a 50-entry oversized payload was
+      exactly the input the suite avoided for runtime reasons. A bound loop
+      needs a progress assertion (each iteration must strictly shrink the
+      payload), not only a shape assertion."
+    type: retro
+    date: "2026-11-16"

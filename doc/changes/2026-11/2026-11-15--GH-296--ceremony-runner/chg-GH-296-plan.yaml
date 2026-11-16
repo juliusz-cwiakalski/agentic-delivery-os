@@ -830,3 +830,81 @@ phases:
       mergeRequestUrl: "pull request for feat/GH-296/ceremony-runner targeting main-tools, left open"
       pipelineId: "CI pipeline for the GH-296 delivery branch"
       trackerTransition: "in-review"
+
+  # ---------------------------------------------------------------------------
+  # Phase 12 — Code Review Remediation (Iteration 1).
+  #
+  # Findings from code-review/review-iter-1.yaml (first post-delivery review).
+  # F-1 is a confirmed livelock; F-2..F-4 fall under the delivery's own
+  # earned-verdict/evidence bar; F-5 is a comment correction.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/ceremony-bounds.test.ts
+  #   bun test tests/behaviour/{ceremony-run,ceremony-catch-up,ceremony-parity}.test.ts
+  #   bun test tests/behaviour/ceremony-flow-brief.test.ts
+  #   bun test tests/behaviour/ceremony-flow-assessment.test.ts
+  #   TMPDIR="$PWD/tmp/tmpdir" PATH="$PWD/node_modules/.bin:$PATH" pnpm check
+  # ---------------------------------------------------------------------------
+  - id: 12
+    title: "Code Review Remediation (Iteration 1)"
+    kind: delivery
+    summary: "fix(ceremony): repair the compaction byte-bound livelock, the brief zero-count render, the unreachable assessment covered verdict, and the catch-up origin provenance; review-iter-1 findings F-1..F-5"
+    leases:
+      - repo:main-tools
+    scope:
+      files:
+        - packages/core/src/domain/ceremony-run.ts
+        - packages/core/src/domain/ceremony-schedule.ts
+        - packages/cli/src/edge.ts
+        - tests/behaviour/ceremony-bounds.test.ts
+        - tests/behaviour/ceremony-flow-brief.test.ts
+        - tests/behaviour/ceremony-flow-assessment.test.ts
+        - tests/behaviour/ceremony-catch-up.test.ts
+        - doc/spec/features/feature-ceremony-runner.md
+        - doc/guides/ceremony-runner.md
+    tasks:
+      - id: T-1
+        title: "Fix the compactCeremonyCarried byte-bounding livelock (F-1)"
+        detail: >-
+          packages/core/src/domain/ceremony-run.ts:926-931 pops the `omitted:`
+          marker it just pushed, so bytes never decrease and any compaction
+          needing more than one line dropped for the 4096-byte bound (including
+          every line-bound-then-byte-bound composition) hangs. Rebuild the
+          summary so each iteration removes one content line with the marker
+          derived after truncation; add a bounds test at the composition of both
+          limits (e.g. 50 entries x 120-char content) asserting termination,
+          bytes <= 4096, lines <= 40, and an explicit omitted count.
+      - id: T-2
+        title: "Stop the brief render fabricating zero counts from present sources (F-2)"
+        detail: >-
+          packages/core/src/domain/ceremony-run.ts:236-257 hardcodes
+          `counts: {total: 0, ...}` and empty anchor entries for present
+          sources. Project present facts into the surfaces (or reuse the
+          delivered brief projection as plan Phase 5 declared) and add a test
+          injecting non-empty present facts asserting they surface in the
+          artifact.
+      - id: T-3
+        title: "Make the assessment covered verdict reachable and earned, or disclose its unreachability (F-3)"
+        detail: >-
+          The note contract has no per-item citation channel
+          (contracts/ceremony.ts:373) and the edge composes owner-note items as
+          `{text}` only (edge.ts:3961-3972), so production assessments are
+          always all-`uncovered` while tests exercise a fixture-only
+          `{text, evidenceRef}` shape. Either compose a resolvable citation
+          channel (covered only when the citation resolves to delivered
+          evidence) or state the all-uncovered posture in feature spec section 9
+          and the guide; add a cited-but-unresolvable test asserting uncovered.
+      - id: T-4
+        title: "Record the declaration's true origin on catch-up replays (F-4)"
+        detail: >-
+          edge.ts:4305 passes envFor(\"built-in\") for every catch-up target, so
+          a project ceremony's replay records origin built-in (DM-3). Build a
+          per-target env from the registry entry's origin; add a catch-up test
+          with a project declaration asserting the recorded origin.
+      - id: T-5
+        title: "Correct the catch-up look-back comment (F-5)"
+        detail: >-
+          ceremony-schedule.ts:82-88 says "one cadence period" but the table
+          holds 7/4/2/2 windows; reword to match the declared data.
+
