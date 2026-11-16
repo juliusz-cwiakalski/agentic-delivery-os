@@ -38,6 +38,8 @@ delta and [../contracts.md](../contracts.md) for the contract.
 
 | Option | Meaning |
 |---|---|
+| `--help` | Print this page's help from the static inventory and exit 0 |
+| `--version` | Print the binary version and exit 0 |
 | `--all` | Span every managed repository on the host. |
 | `--project <key>` | Narrow to one repository key. |
 | `--json` | Emit the machine envelope instead of the human board. |

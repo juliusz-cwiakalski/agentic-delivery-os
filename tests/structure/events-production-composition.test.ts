@@ -43,11 +43,12 @@ const DELIVERED = [
 ] as const;
 
 describe("TC-EVT-060 events production composition", () => {
-  test("events is prompt-required exactly once and the delivered nineteen survive", () => {
-    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(20);
+  test("events is prompt-required exactly once and the delivered families survive", () => {
+    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(21);
     expect(PROMPT_REQUIRED_COMMANDS.filter((name) => name === "events")).toHaveLength(1);
     for (const name of DELIVERED) expect(PROMPT_REQUIRED_COMMANDS).toContain(name);
-    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 1]).toBe("events");
+    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 2]).toBe("events");
+    expect(PROMPT_REQUIRED_COMMANDS[PROMPT_REQUIRED_COMMANDS.length - 1]).toBe("board");
   });
 
   test("the production composer supplies the runtime with every optional input absent", () => {
@@ -64,7 +65,7 @@ describe("TC-EVT-060 events production composition", () => {
       expect(events?.positionals).toEqual({ max: 2 });
       expect(events?.flags).toBeUndefined();
       const selected = selectPromptRequiredProgram(program);
-      expect(Object.keys(selected.commands)).toHaveLength(20);
+      expect(Object.keys(selected.commands)).toHaveLength(21);
       expect(selected.commands.events).toBeDefined();
     } finally {
       rmSync(root, { recursive: true, force: true });

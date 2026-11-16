@@ -386,6 +386,12 @@ export const runEntrypoint = async (
     // An unknown path falls through to the classified composition failure.
   }
 
+  // A command-scoped `--version` is the same identity-only answer as the root
+  // form: it reads the static inventory and composes no program.
+  if (tokens.slice(1).includes("--version")) {
+    return emitSelfDescription(versionText(entrypoint), options, entrypoint);
+  }
+
   const command = first;
   // One run identity per invocation, generated before composition so capture
   // paths composed for this command can join the audit ledger's record.

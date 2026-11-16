@@ -36,6 +36,7 @@ const pageFor = (command: string): string => {
   if (command === "projects") return `${M2_PAGE_ROOT}/projects.md`;
   if (command === "repos") return `${M2_PAGE_ROOT}/repos.md`;
   if (command === "events") return `${M2_PAGE_ROOT}/events.md`;
+  if (command === "board") return `${M2_PAGE_ROOT}/board.md`;
   return `${PAGE_ROOT}/${command}.md`;
 };
 
