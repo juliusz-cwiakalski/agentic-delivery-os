@@ -13,7 +13,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-16T18:41:44.838Z }
   quality_gates: { started: null, completed: 2026-11-16T20:38:05.069Z }
   dod_check: { started: null, completed: 2026-11-16T20:39:27.125Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-16T20:41:51.362Z }
 decisions:
   - text: "Spec OQ-1..OQ-3 adjudicated change-scoped via @decision-advisor, baked
       into spec as DEC-5..DEC-7 (GH-291 precedent; none system-wide — no
@@ -523,5 +523,18 @@ notes:
       reconciliation + post-remediation light pass); doc-distribution no drift.
       (5) Gates: full battery exit 0 (9623/4/0), range lint PASS. No reopened
       phases required."
+    type: info
+    date: "2026-11-16"
+  - text: "Pull request:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/330 (base
+      main-tools, head feat/GH-287/retro-action-registry at 45fe86f4+, 25
+      commits, state OPEN, mergeable). Branch pushed to origin (upstream was
+      misconfigured to origin/main-tools; fixed by push -u origin HEAD). Issue
+      #287 labels synced to change + review (issue left OPEN). PR body states
+      the DEC-1/DEC-2 scope exclusions and the review chain (iter 1 FAIL F-1
+      HIGH -> remediated with two-runtime production-composition regression test
+      -> iter 2 PASS) plus gate evidence. Merge authority: CEO (Mode A) or human
+      via batch-deliver.sh (Mode B) — PR left open, no merge performed.
+      Lifecycle complete: 11 of 11 phases."
     type: info
     date: "2026-11-16"
