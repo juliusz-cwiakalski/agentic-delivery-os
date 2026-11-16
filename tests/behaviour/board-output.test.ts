@@ -5,6 +5,7 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
+  BOARD_HUMAN_SECTION_CAPS,
   BOARD_MAX_HUMAN_BYTES,
   BOARD_MAX_HUMAN_LINES,
   BOARD_SCHEMA_VERSION,
@@ -53,7 +54,10 @@ describe("TC-SLA-017 machine envelope and gates[] record contract", () => {
       expect(Array.isArray(data?.gates)).toBe(true);
       expect(data?.truncated).toBe(false);
       expect(data?.omitted).toBe(0);
-      expect(data?.collectors).toEqual([{ collector: "tracker", outcome: "available" }]);
+      expect(data?.collectors).toEqual([
+        { collector: "tracker", outcome: "available", repository: "example-repository" },
+        { collector: "lanes", outcome: "available", repository: "example-repository" },
+      ]);
     } finally {
       board.cleanup();
     }
@@ -65,7 +69,19 @@ describe("TC-SLA-017 machine envelope and gates[] record contract", () => {
       const run = await board.run([], { json: true });
       for (const gate of boardGates(run)) {
         const keys = Object.keys(gate).sort();
-        const expected = ["age", "default", "id", "kind", "ref", "slaState", "waivedBy"];
+        const expected = [
+          "age",
+          "condition",
+          "default",
+          "id",
+          "kind",
+          "owner",
+          "ownerSource",
+          "ref",
+          "repository",
+          "slaState",
+          "waivedBy",
+        ];
         if (gate.age === null) expected.push("ageUnknownReason");
         expect(keys).toEqual(expected.sort());
         expect(OWNER_GATE_KINDS).toContain(gate.kind as (typeof OWNER_GATE_KINDS)[number]);
@@ -125,7 +141,7 @@ describe("TC-SLA-017 machine envelope and gates[] record contract", () => {
       const text = run.stdout;
       expect(text).not.toContain("owner hand back");
       expect(text).not.toContain("planted-board-");
-      expect(text.split('"gates"').length - 1).toBe(1);
+      expect((text.match(/"gates": \[/g) ?? []).length).toBe(1);
     } finally {
       board.cleanup();
     }
@@ -141,7 +157,7 @@ describe("TC-SLA-018 text aging grid parity and determinism", () => {
       const lines = text.stdout.trimEnd().split("\n");
       expect(lines[0]?.startsWith("example-product board")).toBe(true);
       const gateLines = lines.filter((line) => line.includes("  age="));
-      const machineGates = boardGates(json);
+      const machineGates = boardGates(json).slice(0, BOARD_HUMAN_SECTION_CAPS.gates);
       expect(gateLines).toHaveLength(machineGates.length);
       for (const [index, gate] of machineGates.entries()) {
         const line = gateLines[index] ?? "";
@@ -151,6 +167,8 @@ describe("TC-SLA-018 text aging grid parity and determinism", () => {
         expect(line).toContain(`sla=${String(gate.slaState)}`);
         expect(line).toContain(`default=${String(gate.default ?? "null")}`);
         expect(line).toContain(`waivedBy=${String(gate.waivedBy ?? "null")}`);
+        expect(line).toContain(`owner=${String(gate.owner ?? "null")}`);
+        expect(line).toContain(`cond=${String(gate.condition)}`);
       }
     } finally {
       board.cleanup();

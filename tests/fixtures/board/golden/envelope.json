@@ -8,6 +8,12 @@
   "data": {
     "schemaVersion": "delivery.board.v1",
     "audience": "owner",
+    "scope": "repository",
+    "selection": "current",
+    "repositories": [
+      "example-repository"
+    ],
+    "lanes": [],
     "gates": [
       {
         "id": "GH-1704:owner-review",
@@ -17,7 +23,11 @@
         "ageUnknownReason": "activity-timestamp-absent",
         "slaState": "escalated",
         "default": null,
-        "waivedBy": null
+        "waivedBy": null,
+        "repository": "example-repository",
+        "condition": "owner-review:escalated",
+        "owner": "owner",
+        "ownerSource": "gate-audience"
       },
       {
         "id": "GH-1705:owner-review",
@@ -27,7 +37,11 @@
         "ageUnknownReason": "activity-timestamp-unparseable",
         "slaState": "escalated",
         "default": null,
-        "waivedBy": null
+        "waivedBy": null,
+        "repository": "example-repository",
+        "condition": "owner-review:escalated",
+        "owner": "owner",
+        "ownerSource": "gate-audience"
       },
       {
         "id": "GH-1706:owner-review",
@@ -36,7 +50,11 @@
         "age": 360000000,
         "slaState": "escalated",
         "default": null,
-        "waivedBy": "owner"
+        "waivedBy": "owner",
+        "repository": "example-repository",
+        "condition": "owner-review:escalated",
+        "owner": "owner",
+        "ownerSource": "gate-audience"
       },
       {
         "id": "GH-1707:owner-review",
@@ -45,7 +63,11 @@
         "age": 262800000,
         "slaState": "escalated",
         "default": null,
-        "waivedBy": null
+        "waivedBy": null,
+        "repository": "example-repository",
+        "condition": "owner-review:escalated",
+        "owner": "owner",
+        "ownerSource": "gate-audience"
       },
       {
         "id": "GH-1702:owner-review",
@@ -54,7 +76,11 @@
         "age": 93600000,
         "slaState": "escalated",
         "default": null,
-        "waivedBy": null
+        "waivedBy": null,
+        "repository": "example-repository",
+        "condition": "owner-review:escalated",
+        "owner": "owner",
+        "ownerSource": "gate-audience"
       },
       {
         "id": "GH-1703:waiver",
@@ -63,7 +89,11 @@
         "age": 259200000,
         "slaState": "default-applied",
         "default": "owner-review-first",
-        "waivedBy": null
+        "waivedBy": null,
+        "repository": "example-repository",
+        "condition": "waiver:default-applied",
+        "owner": null,
+        "ownerSource": "gate-waiver-authorizer"
       },
       {
         "id": "GH-1701:owner-review",
@@ -72,7 +102,11 @@
         "age": 36000000,
         "slaState": "fresh",
         "default": null,
-        "waivedBy": null
+        "waivedBy": null,
+        "repository": "example-repository",
+        "condition": "owner-review:fresh",
+        "owner": "owner",
+        "ownerSource": "gate-audience"
       },
       {
         "id": "GH-1708:owner-review",
@@ -81,17 +115,39 @@
         "age": 7200000,
         "slaState": "fresh",
         "default": null,
-        "waivedBy": null
+        "waivedBy": null,
+        "repository": "example-repository",
+        "condition": "owner-review:fresh",
+        "owner": "owner",
+        "ownerSource": "gate-audience"
       }
     ],
-    "truncated": false,
-    "omitted": 0,
+    "asks": [],
+    "parked": [],
     "collectors": [
       {
         "collector": "tracker",
-        "outcome": "available"
+        "outcome": "available",
+        "repository": "example-repository"
+      },
+      {
+        "collector": "lanes",
+        "outcome": "available",
+        "repository": "example-repository"
       }
     ],
-    "stateSource": "delivery.status-facts.v1"
+    "ownerHold": {
+      "active": false
+    },
+    "stateSource": "delivery.status-facts.v1",
+    "truncated": false,
+    "omitted": 0,
+    "omittedBySection": {
+      "repositories": 0,
+      "lanes": 0,
+      "gates": 0,
+      "asks": 0,
+      "parked": 0
+    }
   }
 }

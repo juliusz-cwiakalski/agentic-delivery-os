@@ -255,6 +255,8 @@ export type BoardLaneRow = {
   readonly holder: string | null;
   readonly leaseId?: string;
   readonly reason?: string;
+  readonly owner: string | null;
+  readonly ownerSource: BoardOwnerSource;
 };
 
 /** One owner-ask row with its drawn default (DM-5, DEC-4, DEC-16, DEC-19). */
@@ -318,16 +320,90 @@ export type BoardCollectorEvidence = {
   readonly outcome: "available" | "unavailable";
 };
 
-/** The bounded board `data` payload (DM-1, F-7). */
+/** One lane fact the edge resolves from the delivered lane/phase fold (DM-4). */
+export type BoardLaneFact = {
+  readonly ref: string;
+  readonly laneId: string;
+  readonly state: BoardLaneState;
+  readonly holder: string | null;
+  readonly leaseId?: string;
+  readonly reason?: string;
+  readonly phase: string | null;
+  readonly phaseUnknownReason?: BoardLanePhaseUnknownReason;
+};
+
+/** One owner-ask fact projected through the delivered open-question view (DM-5). */
+export type BoardAskFact = {
+  readonly id: string;
+  readonly type: string;
+  /** The delivered question audience; only `owner` asks reach the board (DEC-4). */
+  readonly audience?: OwnerGateSlaAudience;
+  readonly ref: string | null;
+  readonly lane: string;
+  readonly question: string;
+  readonly askedAt: string;
+  readonly age: number;
+  readonly owner: string | null;
+};
+
+/** One parked fact from the open lane park episodes (DM-6). */
+export type BoardParkedFact = {
+  readonly ref: string;
+  readonly reason: BoardParkedReason;
+  readonly until: string | null;
+  readonly untilReason?: typeof BOARD_OWNER_HOLD_NO_EXPIRY;
+  readonly preservation?: "preserved" | "session-state-not-preserved";
+  readonly providerProfile?: string;
+  readonly owner: string | null;
+};
+
+/** One repository's facts for the pure four-section projection (DM-2, DM-7). */
+export type BoardRepositoryFacts = {
+  readonly key: string;
+  readonly lanes: readonly BoardLaneFact[];
+  readonly gates: readonly OwnerGateFact[];
+  readonly asks: readonly BoardAskFact[];
+  readonly parks: readonly BoardParkedFact[];
+  readonly decisions: readonly OwnerGateSlaDecisionRecord[];
+};
+
+/** Everything the pure four-section projection consumes (DM-2). */
+export type BoardProjectionInput = {
+  readonly audience: OwnerGateSlaAudience;
+  readonly scope: BoardScope;
+  readonly selection: BoardSelection;
+  readonly repositories: readonly BoardRepositoryFacts[];
+  readonly omittedRepositories: number;
+  readonly ownerHold: BoardOwnerHold;
+  readonly policy: OwnerGateSlaPolicy;
+  readonly nowMs: number;
+  readonly nowIso: string;
+};
+
+/** The projection: the bounded payload plus the decisions the edge must append. */
+export type BoardProjection = {
+  readonly data: BoardData;
+  readonly decisionsToApply: Readonly<Record<string, readonly OwnerGateSlaDecisionRecord[]>>;
+};
+
+/** The bounded board `data` payload (DM-1, DM-2, F-7). */
 export type BoardData = {
   readonly schemaVersion: typeof BOARD_SCHEMA_VERSION;
   readonly audience: OwnerGateSlaAudience;
-  readonly gates: readonly BoardGateRecord[];
-  readonly truncated: boolean;
-  readonly omitted: number;
-  readonly collectors: readonly BoardCollectorEvidence[];
+  readonly scope: BoardScope;
+  readonly selection: BoardSelection;
+  readonly repositories: readonly string[];
+  readonly lanes: readonly BoardLaneRow[];
+  readonly gates: readonly BoardGateRow[];
+  readonly asks: readonly BoardAskRow[];
+  readonly parked: readonly BoardParkedRow[];
+  readonly collectors: readonly BoardRepositoryEvidence[];
+  readonly ownerHold: BoardOwnerHold;
   /** The one shared state-source identity (DEC-3, DM-1). */
   readonly stateSource: typeof STATUS_FACTS_SCHEMA_VERSION;
+  readonly truncated: boolean;
+  readonly omitted: number;
+  readonly omittedBySection: BoardOmittedBySection;
 };
 
 /** The append-only EVT-1 default-application decision payload (DM-2). */

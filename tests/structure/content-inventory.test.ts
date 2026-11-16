@@ -1531,9 +1531,11 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "validateBlockerPublish",
   ],
   "core/src/domain/owner-gate-sla.ts": [
+    "boardNeedsDecisionHistory",
     "collectorUnavailableCode",
     "evaluateOwnerGateSla",
     "isCollectorUnavailableFamilyCode",
+    "projectBoard",
     "renderBoardHuman",
     "toBoardData",
     "validateOwnerGateSlaPolicy",

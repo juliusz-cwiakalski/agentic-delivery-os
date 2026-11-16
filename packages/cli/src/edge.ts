@@ -80,6 +80,7 @@ import {
   appendCommandReceipt,
   appendOutboxEffect,
   beginCommitEffect,
+  boardNeedsDecisionHistory,
   buildCloseoutPlan,
   type CloseoutDependentFact,
   type CloseoutPlanFacts,
@@ -133,6 +134,7 @@ import {
   parkConditionForCause,
   parseCapsuleEvents,
   parseMemberRef,
+  parseProjectIdentityMarker,
   payloadFieldViolations,
   planDispatchResume,
   prioritizeQueueEntry,
@@ -212,6 +214,7 @@ import {
   BLOCKER_DELEGATION_POLICY,
   type BlockerCapabilityFact,
   type BlockerDelegationPolicy,
+  type BoardOwnerHold,
   type BrandIdentity,
   type CapsuleFileRuntime,
   type CapsuleFileSystemFacts,
@@ -266,6 +269,7 @@ import {
   type HarnessSessionPort,
   OWNER_GATE_SLA_POLICY,
   type OwnerGateCollectorRead,
+  type OwnerGateSlaDecisionRecord,
   type OwnerHoldFact,
   PHASE_STATE_DOCUMENT_PREFIX,
   PHASE_STATE_DOCUMENT_SUFFIX,
@@ -3051,6 +3055,9 @@ export type BoardComposition = {
   readonly nowIso: () => string;
   readonly nowMs: () => number;
   readonly newFenceToken: () => string;
+  /** The invoking checkout's repository key, when already resolved. */
+  readonly repositoryKey?: string;
+  readonly readOwnerHold?: () => BoardOwnerHold;
 };
 
 const ownerAttention = (item: WorkItem): boolean =>
@@ -3140,15 +3147,73 @@ export const createBoardCommandRuntime = (composition: BoardComposition): BoardC
     };
   };
 
+  const deriveRepositoryKey = (): string | undefined => {
+    const identity = readCheckoutIdentity({
+      cwd: composition.repository.cwd,
+      io: composition.repository.io,
+    });
+    if (identity.kind !== "resolved") return undefined;
+    const markerRead = readProjectIdentityMarker(identity.commonDir);
+    if (markerRead.state !== "present") return undefined;
+    return parseProjectIdentityMarker(markerRead.text)?.projectKey;
+  };
+
   return {
-    collectors: [{ id: "tracker", read: readTracker }],
-    policy: OWNER_GATE_SLA_POLICY,
-    readDecisions: () => readOwnerGateSlaDecisions(composition.store),
-    appendDecision: (decision) =>
+    resolve: () => {
+      const key = composition.repositoryKey ?? deriveRepositoryKey();
+      return key === undefined
+        ? {
+            ok: true,
+            scope: "unbound",
+            selection: "current",
+            repositories: [],
+            omittedRepositories: 0,
+          }
+        : {
+            ok: true,
+            scope: "repository",
+            selection: "current",
+            repositories: [key],
+            omittedRepositories: 0,
+          };
+    },
+    loadRepository: async (repository) => {
+      const read = await readTracker();
+      if (!read.ok) return { ok: false, kind: "status", code: read.code };
+      let records: readonly OwnerGateSlaDecisionRecord[] = [];
+      if (
+        boardNeedsDecisionHistory({
+          gates: read.gates,
+          asks: [],
+          policy: OWNER_GATE_SLA_POLICY,
+          nowMs: composition.nowMs(),
+        })
+      ) {
+        const decisions = readOwnerGateSlaDecisions(composition.store);
+        if (!decisions.ok) {
+          return { ok: false, kind: decisions.error.kind, code: decisions.error.code };
+        }
+        records = decisions.value.records;
+      }
+      return {
+        ok: true,
+        facts: {
+          key: repository,
+          gates: read.gates,
+          lanes: [],
+          asks: [],
+          parks: [],
+          decisions: records,
+        },
+      };
+    },
+    appendDecision: (_repository, decision) =>
       appendOwnerGateSlaDecision(composition.store, {
         decision,
         fenceToken: composition.newFenceToken(),
       }),
+    ownerHold: () => composition.readOwnerHold?.() ?? { active: false },
+    policy: OWNER_GATE_SLA_POLICY,
     nowIso: composition.nowIso,
     nowMs: composition.nowMs,
   };
