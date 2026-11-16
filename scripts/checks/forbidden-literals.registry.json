@@ -7,7 +7,10 @@
     },
     {
       "id": "rootManifests",
-      "files": ["package.json", "pnpm-lock.yaml"]
+      "files": [
+        "package.json",
+        "pnpm-lock.yaml"
+      ]
     },
     {
       "id": "rootWorkspaceFiles",
@@ -25,15 +28,26 @@
     },
     {
       "id": "ignoreRules",
-      "files": [".gitignore"]
+      "files": [
+        ".gitignore"
+      ]
     },
     {
       "id": "userFacingDocs",
-      "roots": ["doc"],
-      "excludedPrefixes": ["doc/changes/", "doc/decisions/"]
+      "roots": [
+        "doc"
+      ],
+      "excludedPrefixes": [
+        "doc/changes/",
+        "doc/decisions/"
+      ]
     }
   ],
-  "seedLiterals": ["ados", "ADOS_", "~/.ados"],
+  "seedLiterals": [
+    "ados",
+    "ADOS_",
+    "~/.ados"
+  ],
   "allowlist": [
     {
       "id": "branding-subpath",
@@ -58,7 +72,12 @@
     {
       "id": "source-headers",
       "kind": "line",
-      "patterns": ["Copyright", "source:", "Apache-2.0", "ados_distribution:"]
+      "patterns": [
+        "Copyright",
+        "source:",
+        "Apache-2.0",
+        "ados_distribution:"
+      ]
     }
   ],
   "registered": [
@@ -157,6 +176,7 @@
     "doc/planning/oss-tooling/milestones/m2/commands/queue.md",
     "doc/planning/oss-tooling/milestones/m2/commands/repos.md",
     "doc/planning/oss-tooling/milestones/m2/commands/spend.md",
+    "doc/planning/oss-tooling/milestones/m2/commands/steer.md",
     "doc/planning/oss-tooling/milestones/m2/contracts.md",
     "doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md",
     "doc/planning/oss-tooling/milestones/m2/journeys.md",

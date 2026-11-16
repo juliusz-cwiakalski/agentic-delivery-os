@@ -27,7 +27,8 @@
     "doc/planning/oss-tooling/milestones/m2/commands/attempts.md",
     "doc/planning/oss-tooling/milestones/m2/commands/events.md",
     "doc/planning/oss-tooling/milestones/m2/commands/board.md",
-    "doc/planning/oss-tooling/milestones/m2/commands/ceremony.md"
+    "doc/planning/oss-tooling/milestones/m2/commands/ceremony.md",
+    "doc/planning/oss-tooling/milestones/m2/commands/steer.md"
   ],
   "commands": [
     "status",
@@ -51,6 +52,7 @@
     "repos",
     "events",
     "board",
-    "ceremony"
+    "ceremony",
+    "steer"
   ]
 }

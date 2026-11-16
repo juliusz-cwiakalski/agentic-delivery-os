@@ -196,3 +196,116 @@ describe("TC-STEER-074/075/076 registration arms", () => {
     }
   });
 });
+
+describe("TC-STEER-060/062/063/096 mounting arms", () => {
+  const PAGE = "doc/planning/oss-tooling/milestones/m2/commands/steer.md";
+  const COVERAGE = "tests/fixtures/help-guide/coverage.json";
+
+  const pageTree = (): string => {
+    const root = mkdtempSync(join(tmpdir(), "gh298-steer-help-"));
+    mkdirSync(join(root, "doc/planning/oss-tooling/milestones/m1/commands"), { recursive: true });
+    mkdirSync(join(root, "doc/planning/oss-tooling/milestones/m2/commands"), { recursive: true });
+    cpSync(
+      join(ROOT, "doc/planning/oss-tooling/milestones/m1/commands"),
+      join(root, "doc/planning/oss-tooling/milestones/m1/commands"),
+      { recursive: true },
+    );
+    cpSync(
+      join(ROOT, "doc/planning/oss-tooling/milestones/m2/commands"),
+      join(root, "doc/planning/oss-tooling/milestones/m2/commands"),
+      { recursive: true },
+    );
+    mkdirSync(join(root, "tests/fixtures/help-guide"), { recursive: true });
+    cpSync(join(ROOT, COVERAGE), join(root, COVERAGE));
+    return root;
+  };
+
+  test("a missing coverage-inventory row fails naming steer", async () => {
+    const { runHelpGuideCoverage } = await import("../../scripts/checks/help-guide-coverage");
+    const root = pageTree();
+    try {
+      const inventory = JSON.parse(readFileSync(join(root, COVERAGE), "utf8")) as {
+        commands: string[];
+      };
+      inventory.commands = inventory.commands.filter((command) => command !== "steer");
+      writeFileSync(join(root, COVERAGE), JSON.stringify(inventory));
+      const failures = runHelpGuideCoverage(root);
+      expect(failures.map((failure) => failure.id)).toContain("steer");
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("a page stripped of --version fails naming the steer page", async () => {
+    const { runHelpGuideCoverage } = await import("../../scripts/checks/help-guide-coverage");
+    const root = pageTree();
+    try {
+      const page = join(root, PAGE);
+      writeFileSync(page, readFileSync(page, "utf8").replaceAll("--version", "version"));
+      const failures = runHelpGuideCoverage(root);
+      expect(
+        failures.some((failure) => failure.id === "steer" && failure.detail.includes("--version")),
+      ).toBe(true);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  test("a prompt-set entry without the composition is refused naming steer", async () => {
+    const { selectPromptRequiredProgram } = await import("../../packages/cli/src/entrypoint");
+    const { PROMPT_REQUIRED_COMMANDS } = await import(
+      "../../packages/cli/src/help/prompt-required-commands"
+    );
+    expect(PROMPT_REQUIRED_COMMANDS).toContain("steer");
+    const withoutSteer = Object.fromEntries(
+      PROMPT_REQUIRED_COMMANDS.filter((name) => name !== "steer").map((name) => [
+        name,
+        { handler: () => ({ data: {} }) },
+      ]),
+    );
+    expect(() => selectPromptRequiredProgram({ commands: withoutSteer })).toThrow(/steer/u);
+  });
+
+  test("the mounted family is advertised in root help and has a family help entry", async () => {
+    const { allHelpEntries, renderRootHelp } = await import("../../packages/cli/src/help");
+    const { SYNTHETIC_BRAND } = await import("../golden/helpers");
+    expect(allHelpEntries().some((entry) => entry.path[0] === "steer")).toBe(true);
+    expect(renderRootHelp(SYNTHETIC_BRAND)).toContain("steer  ");
+  });
+
+  test("a stale family-count pin at 22 is detected outside the declared residual", () => {
+    const pinFiles = [
+      "tests/structure/entrypoint-bin.test.ts",
+      "tests/structure/board-mounting.test.ts",
+      "tests/structure/events-production-composition.test.ts",
+      "tests/structure/dispatch-attempts-composition.test.ts",
+      "tests/structure/daemon-production-composition.test.ts",
+      "tests/behaviour/repos-help.test.ts",
+      "tests/behaviour/board-help.test.ts",
+      "tests/behaviour/events-mount-help.test.ts",
+      "tests/behaviour/ceremony-cli.test.ts",
+    ];
+    const stale = (text: string): boolean => /toHaveLength\(22\)/u.test(text);
+    expect(stale("expect([...PROMPT_REQUIRED_COMMANDS]).toHaveLength(22);")).toBe(true);
+    for (const file of pinFiles) {
+      expect(stale(readFileSync(join(ROOT, file), "utf8")), file).toBe(false);
+    }
+    expect(
+      stale(
+        readFileSync(join(ROOT, "tests/behaviour/queue-ready-negative-controls.test.ts"), "utf8"),
+      ),
+    ).toBe(true);
+  });
+
+  test("the mounted help carries the exit-code section and the four verbs", async () => {
+    const { renderHelp, helpEntryFor } = await import("../../packages/cli/src/help");
+    const { SYNTHETIC_BRAND } = await import("../golden/helpers");
+    const help = helpEntryFor(["steer"]);
+    if (help === undefined) throw new Error("no steer help entry");
+    const text = renderHelp(help, SYNTHETIC_BRAND);
+    expect(text).toContain("Exit codes:");
+    for (const verb of ["steer send", "steer list", "steer read", "steer complete"]) {
+      expect(text).toContain(verb);
+    }
+  });
+});

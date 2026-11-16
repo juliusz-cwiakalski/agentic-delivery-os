@@ -190,3 +190,17 @@ notes:
       read payload; they remain visible on `steer list`."
     type: info
     date: "2026-11-16"
+  - text: "Plan phase 6 COMPLETE: 50974a13 — `steer complete` appends exactly one
+      artifact-ref completion for a landed note with the first completion
+      authoritative and every receipt-less/artifact-less/over-cap completion
+      refused before any write; the registered-value guard refuses note text,
+      --ref, and derived origin values with zero persisted bytes and no pattern
+      layer; the error matrix is total (steer.unknown-id complete-only, any
+      read positional fallback.invocation, store failures withheld at exit 2,
+      exact 0/1/2 envelope projection). Tests: steer-complete (3),
+      steer-credentials (4), steer-errors (8), steer-envelope (2) — 108 steer
+      tests pass / 0 fail; typecheck/lint green. Delivery finding: the commit
+      safety scan flagged a local variable named `secret` in the envelope suite
+      (secret-suspected); renamed rather than blind-retried."
+    type: info
+    date: "2026-11-16"

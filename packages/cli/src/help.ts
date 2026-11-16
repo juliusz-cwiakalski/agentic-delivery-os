@@ -81,6 +81,22 @@ const entry = (
   seeAlso: [page(pageName)],
 });
 
+/** The M2-rooted family pages (GH-298): steer documents itself in its milestone. */
+const m2Entry = (
+  path: readonly string[],
+  summary: string,
+  usage: readonly string[],
+  options: readonly (readonly [string, string])[],
+  examples: readonly string[],
+): HelpEntry => ({
+  path,
+  summary,
+  usage,
+  options: [...options, ...GLOBAL_OPTIONS],
+  examples,
+  seeAlso: [pageIn(M2_REFERENCE_ROOT, "steer")],
+});
+
 /** Every prompt-required command and subcommand help page. */
 export const COMMAND_HELP: readonly HelpEntry[] = [
   entry(
@@ -808,6 +824,74 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
     ],
     seeAlso: [pageIn(M2_REFERENCE_ROOT, "board")],
   },
+  {
+    path: ["steer"],
+    summary: "File steering notes and read them at the phase boundary",
+    usage: [
+      "<binary> steer <send|list|read|complete> [options]",
+      '<binary> steer send "<text>" [--kind request|escalate] [--priority low|normal|high|urgent] [--ttl <duration>] [--ref <artifact>]',
+      "<binary> steer list",
+      "<binary> steer read",
+      "<binary> steer complete <id> --ref <artifact>",
+    ],
+    options: [
+      ["--kind request|escalate", "Filing kind (drawn default: request)"],
+      ["--priority low|normal|high|urgent", "Filing priority (drawn default: normal)"],
+      [
+        "--ttl <duration>",
+        "Time to live as <positive-integer><unit>, unit s|m|h|d, max 30d (drawn default: 24h)",
+      ],
+      ["--ref <artifact>", "Artifact reference (at most 160 characters); required on complete"],
+      ...GLOBAL_OPTIONS,
+    ],
+    examples: [
+      '<binary> steer send "prefer smaller diffs; split the refactor"',
+      '<binary> steer send "escalate the review" --kind escalate --priority urgent --ttl 14d',
+      "<binary> steer list --json",
+      "<binary> steer read",
+      "<binary> steer complete msg-1 --ref doc/changes/proof.yaml",
+    ],
+    seeAlso: [pageIn(M2_REFERENCE_ROOT, "steer")],
+  },
+
+  m2Entry(
+    ["steer", "send"],
+    "File one steering note with drawn defaults",
+    [
+      '<binary> steer send "<text>" [--kind request|escalate] [--priority low|normal|high|urgent] [--ttl <duration>] [--ref <artifact>]',
+    ],
+    [
+      ["--kind request|escalate", "Filing kind (default request)"],
+      ["--priority low|normal|high|urgent", "Filing priority (default normal)"],
+      ["--ttl <duration>", "Duration <positive-integer><unit>, unit s|m|h|d, max 30d, default 24h"],
+      ["--ref <artifact>", "Artifact reference, at most 160 characters"],
+    ],
+    [
+      '<binary> steer send "prefer smaller diffs"',
+      '<binary> steer send "escalate" --kind escalate --priority urgent --ttl 14d',
+    ],
+  ),
+  m2Entry(
+    ["steer", "list"],
+    "Render the queued, landed, and expired steering notes side by side",
+    ["<binary> steer list"],
+    [],
+    ["<binary> steer list", "<binary> steer list --json"],
+  ),
+  m2Entry(
+    ["steer", "read"],
+    "Read the boundary read point: land due notes and batch the owner asks",
+    ["<binary> steer read"],
+    [],
+    ["<binary> steer read", "<binary> steer read --json"],
+  ),
+  m2Entry(
+    ["steer", "complete"],
+    "Complete a landed note against the artifact that proves the course change",
+    ["<binary> steer complete <id> --ref <artifact>"],
+    [["--ref <artifact>", "The proving artifact reference (required, at most 160 characters)"]],
+    ["<binary> steer complete msg-1 --ref doc/changes/proof.yaml"],
+  ),
 ];
 
 const ALL_HELP: readonly HelpEntry[] = [ROOT_HELP, ...COMMAND_HELP];
