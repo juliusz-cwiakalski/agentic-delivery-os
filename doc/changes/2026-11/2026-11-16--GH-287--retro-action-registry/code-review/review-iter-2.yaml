@@ -1,0 +1,102 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-287
+branch: feat/GH-287/retro-action-registry
+status: PASS
+summary: >-
+  Re-review after remediation commit 9cddcdb9 (plan phase 10). Both actionable
+  iteration-1 findings are verified fixed at the code level and empirically.
+  F-1 (FAIL driver): packages/cli/src/production.ts:3164-3165 now passes
+  newActionId/newClosureId as globalThis.crypto.randomUUID() factories inside
+  the retro composition, mirroring newRunId/newTraceId; edge.ts consumes both
+  seams on the file path (options.newActionId?.() ?? action-<seq>, edge.ts:5153)
+  and the close path (options.newClosureId?.() ?? closure-<seq>, edge.ts:5171),
+  so the per-process counter fallbacks can no longer fire in production. The
+  declared regression test (tests/behaviour/action-production-identity.test.ts)
+  composes the production program twice with zero id-factory injection against
+  one shared store and asserts distinct stored identities plus a duplicate-free
+  2-row list — exactly the reproduction shape iteration 1 required; re-run
+  green 1/0. F-2: the four retro help entries now spread-override seeAlso to
+  pageIn(M2_REFERENCE_ROOT, "retro") (help.ts:581,596,607,618), the same
+  pattern as the ceremony family, resolving to the same page both gates map
+  retro to (pageFor in scripts/checks/help-guide-coverage.ts:41 and
+  tests/checks/reference-page-parity.test.ts:30). F-5 amendment recorded in
+  pm-notes; F-3/F-4/F-6/F-7 remain info/no-action and nothing in the
+  remediation changes their basis. No new defects introduced by the remediation
+  diff: production.ts is a two-line mirror of the adjacent pattern, help.ts is
+  a semantically narrow restructure validated by the coverage/mutants/parity
+  suites (15/0) and the coverage script, and the test is deterministic (fixed
+  clock, temp roots with finally cleanup). Iteration-1 PASS basis re-affirmed:
+  the commit touches no packages/core or domain files, edge.ts is unchanged
+  (fallbacks verified still as described), so the 15-AC / pinned-scenario /
+  DEC-semantics verification stands. Independent gates on the current tree:
+  typecheck green (all packages), action family 86/0 across 17 suites,
+  doc-conformance 19/0, help checks 15/0 + script OK, plan validate
+  verdict=valid readyForDevelopment=true. Nothing in the remediation makes a
+  clean full-battery pass at quality_gates unlikely. One bookkeeping note: the
+  spec reconciliation edit (feature-agents-and-commands.md) is accurate and
+  gate-consistent but currently uncommitted — see F-8.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 1
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-8
+    severity: info
+    confidence: high
+    category: plan-compliance
+    location: doc/spec/features/feature-agents-and-commands.md:98
+    message: >-
+      The disclosed doc reconciliation (help-coverage scope enumeration now
+      includes retro; GH-287 added to related_changes; last_updated bumped) is
+      sitting UNCOMMITTED in the working tree at review time — the phase-10
+      completion note records "git status clean", so this edit postdates the
+      remediation commit. Content verified accurate: both gates do map the
+      retro family to the M2 page root, so the enumeration row is now truthful,
+      and doc-conformance passes 19/0 with the edit in place.
+    suggestion: >-
+      Commit the file through the lifecycle commit primitive with docs-phase
+      attribution and a one-line pm-notes disclosure entry before or at the
+      quality_gates boundary, so it does not dangle or ride unattributed into
+      the PR. No content change required.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-16T20:10:00Z
+next_step: PROCEED
+resolution_note: >-
+  Iteration-1 findings disposition at iteration 2: F-1 FIXED (production.ts
+  UUID factories wired into the retro composition; two-runtime zero-injection
+  regression test green — would fail on the pre-fix composition by construction,
+  since both filings would collapse to action-1); F-2 FIXED (four retro entries
+  seeAlso -> M2 reference page; coverage/mutants/parity controls green, script
+  OK — controls re-run, not edited, exactly as the phase declared); F-5 RECORDED
+  (pm-notes names the verify-gates-suite-map 140->143 pin as a declared phase-8
+  baseline edit); F-3/F-4/F-6/F-7 UNCHANGED-INFO (no code change required or
+  made; none of them is affected by id-factory wiring or the seeAlso repoint).
+  New finding F-8 is bookkeeping only and does not gate the verdict.
+evidence_note: >-
+  Independently verified on the current tree (commit 9cddcdb9 + the one
+  disclosed uncommitted spec edit): bun test
+  tests/behaviour/action-production-identity.test.ts 1/0; action family
+  (filing, wip-limit, aging, closure, follow-through, ceremony-handoff,
+  cross-level, audit, bounds, determinism, disclosure, performance, privacy,
+  read-cost, store-boundary, write-discipline, board-actions) 86/0 across 17
+  files; tests/checks help-guide-coverage + help-guide-coverage-mutants +
+  reference-page-parity 15/0; bun run scripts/checks/help-guide-coverage.ts OK;
+  tests/checks/doc-conformance.test.ts 19/0 (with the uncommitted spec edit in
+  place); pnpm typecheck green across all packages; plan validate GH-287
+  verdict=valid readyForDevelopment=true. Remediation diff audited in full
+  (git show 9cddcdb9: production.ts +2, help.ts 4-entry restructure, new
+  regression test +131, plan phase 10 + pm-notes + review-iter-1 artifacts).
+  Full battery deliberately not re-run here per the disclosed lifecycle plan —
+  it is the quality_gates phase's authority; risk assessment: two-line
+  production wiring + mechanical help restructure + additive deterministic
+  test give no indication of a pending battery failure.

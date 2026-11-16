@@ -10,7 +10,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-16T14:23:18.197Z }
   delivery: { started: null, completed: 2026-11-16T16:13:11.559Z }
   system_spec_update: { started: null, completed: 2026-11-16T16:30:05.049Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-16T18:41:44.838Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -372,23 +372,24 @@ notes:
     date: "2026-11-16"
   - text: "Review iteration 1: FAIL (code-review/review-iter-1.yaml). 7 findings — 0
       critical / 1 high / 1 low / 5 info. F-1 (HIGH, correctness, FAIL driver):
-      production never injects newActionId/newClosureId id factories (cli/edge.ts
-      retro composition + production.ts) — every one-shot CLI process files as
-      action-1; duplicate identities from the second filing onward, empirically
-      reproduced against a real store; unrepairable under append-only; breaks
-      board zero-duplicate invariant; all suites inject ids so nothing catches
-      it. Fix: pass UUID generators in the production retro composition + a
-      two-runtime regression test. F-2 (LOW, docs): help.ts retro seeAlso points
-      at frozen M1 snapshot page; should point at the M2 page (one-line fix;
-      confirmed real defect, not the snapshot convention). F-3..F-7 INFO no
-      action (F-5: one-line pm-notes amendment — the verify-gates-suite-map
-      140->143 pin was an unnamed baseline edit). Everything else PASSED: 15/15
-      ACs, pinned scenarios, all DEC semantics, error-table sync, redaction,
-      drift honesty, conventions. Remediation: plan amendment via @plan-writer
-      (declared remediation phase: edge.ts + production.ts id-factory injection,
-      help.ts seeAlso M2 pointer, two-runtime regression test, pm-notes F-5
-      amendment), then @coder executes, doc-syncer re-verification, re-review at
-      iteration 2 (of max 3)."
+      production never injects newActionId/newClosureId id factories
+      (cli/edge.ts retro composition + production.ts) — every one-shot CLI
+      process files as action-1; duplicate identities from the second filing
+      onward, empirically reproduced against a real store; unrepairable under
+      append-only; breaks board zero-duplicate invariant; all suites inject ids
+      so nothing catches it. Fix: pass UUID generators in the production retro
+      composition + a two-runtime regression test. F-2 (LOW, docs): help.ts
+      retro seeAlso points at frozen M1 snapshot page; should point at the M2
+      page (one-line fix; confirmed real defect, not the snapshot convention).
+      F-3..F-7 INFO no action (F-5: one-line pm-notes amendment — the
+      verify-gates-suite-map 140->143 pin was an unnamed baseline edit).
+      Everything else PASSED: 15/15 ACs, pinned scenarios, all DEC semantics,
+      error-table sync, redaction, drift honesty, conventions. Remediation: plan
+      amendment via @plan-writer (declared remediation phase: edge.ts +
+      production.ts id-factory injection, help.ts seeAlso M2 pointer,
+      two-runtime regression test, pm-notes F-5 amendment), then @coder
+      executes, doc-syncer re-verification, re-review at iteration 2 (of max
+      3)."
     type: info
     date: "2026-11-16"
   - text: "Retro: F-1 is the second consecutive delivery where a per-phase narrow
@@ -411,8 +412,8 @@ notes:
       verdict=valid readyForDevelopment=true, phases 1-9 byte-untouched."
     type: info
     date: "2026-11-16"
-  - text: "Plan phase 10 complete (resumed across two session interruptions) — review
-      iter 1 remediation. Commit (this commit). F-1: production.ts retro
+  - text: "Plan phase 10 complete (resumed across two session interruptions) —
+      review iter 1 remediation. Commit (this commit). F-1: production.ts retro
       composition now generates and passes newActionId/newClosureId UUID
       factories (mirrors newRunId/newTraceId); two-runtime regression test
       tests/behaviour/action-production-identity.test.ts files two actions
@@ -431,5 +432,19 @@ notes:
       interruption, leaving .ados-claude deleted; 9 of its 11 failures were
       ENOENT fallout and the rest 5s-timeout contention artifacts. Authoritative
       full battery re-runs at quality_gates with clean attribution (phase 9)."
+    type: info
+    date: "2026-11-16"
+  - text: "Review iteration 2: PASS (code-review/review-iter-2.yaml). 1 finding,
+      info only, no code action. F-1 FIXED and verified at code level +
+      empirically (production.ts:3164-3165 factories mirror newRunId; both
+      edge.ts fallback sites 5153/5171 can no longer fire; two-runtime
+      regression test re-run 1/0, fails by construction on pre-fix composition).
+      F-2 FIXED (seeAlso = pageIn(M2_REFERENCE_ROOT, retro), identical to both
+      gates' mapping; controls re-run 15/0). Remediation diff audited: no new
+      findings (action family 86/0 across 17 suites, doc-conformance 19/0, plan
+      validate valid). Iteration-1 PASS basis re-affirmed (no core/domain
+      changes). F-8 info note: doc-syncer's post-remediation reconciliation of
+      feature-agents-and-commands.md landed uncommitted — committed with docs-
+      phase attribution in the review_fix checkpoint commit, disclosed here."
     type: info
     date: "2026-11-16"
