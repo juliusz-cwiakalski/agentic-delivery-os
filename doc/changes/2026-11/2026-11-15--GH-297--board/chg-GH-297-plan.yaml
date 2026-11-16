@@ -1,9 +1,17 @@
-# GH-297 delivery plan — machine-readable document (delivery.plan.v1), revision 1.2
+# GH-297 delivery plan — machine-readable document (delivery.plan.v1), revision 1.3
 # (2026-11-16). Authored against spec v1.3 (29 ACs, DEC-1..DEC-20, DM-1..DM-11,
 # NFR-1..NFR-10, RSK-1..RSK-9, DoD-1..DoD-18, OQ-1..OQ-10 all closed, Appendix C
 # constraints C-1..C-16, Appendix D count-pinning sites D-1..D-23) and test plan
 # v1.3 (48 TCs = 47 automated + 1 gate-only record) on branch feat/GH-297/board
 # from main-tools tip eca76523.
+#
+# REVISION NOTE (revision 1.3, phase-7 commit staging): the new current-truth
+# spec doc/spec/features/feature-board.md is authored by lifecycle phase 7, not
+# by a delivery phase. It is listed in the phase-5 scope only so the commit
+# primitive can stage it: an untracked file outside every declared plan scope is
+# classified as a stray and is never staged. No delivery phase authors it, no AC
+# or TC ownership changes, and the phase-7 authoring obligation above remains
+# the authority for its content.
 #
 # REVISION NOTE (revision 1.2, DoR iteration-2 remediation, spec v1.3 / test
 # plan v1.3 reconciliation): the iteration-2 DoR review found the count story
@@ -1406,6 +1414,11 @@ phases:
         - doc/planning/oss-tooling/cli-command-registry.md
         - doc/planning/oss-tooling/milestones/m2/entrypoint-delta.md
         - doc/planning/oss-tooling/milestones/m2/commands/board.md
+        # Authored in lifecycle phase 7 (system_spec_update), not by phase 5.
+        # Listed in plan scope only so the commit primitive can stage the new
+        # current-truth spec; an untracked file outside every declared scope is
+        # a stray and is never staged (commit-staging rule).
+        - doc/spec/features/feature-board.md
       folders:
         - tests/fixtures/board/golden
     interactions:
