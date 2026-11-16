@@ -38,7 +38,34 @@ describe("TC-CEREMONY-017 a quiet night-watch is explicit verified-empty", () =>
     }
   });
 
-  test("an anomaly cites its evidence reference and is not reported clean", () => {
+  test("an anomaly cites the evidence reference its collector delivered", () => {
+    const prepared = prepareBuiltin("night-watch");
+    try {
+      prepared.harness.scriptInput("audit-ledger", {
+        state: "present",
+        facts: {
+          anomalies: [{ id: "unexpected-write", evidenceRef: "audit:seq-42" }],
+        },
+      });
+      const run = runPrepared(prepared);
+      expect(run.ok).toBe(true);
+      const report = nightWatchOf(prepared.harness);
+      const checks = report?.checks as {
+        id: string;
+        state: string;
+        evidenceRef?: string;
+        verifiedEmpty: boolean;
+      }[];
+      const audit = checks.find((check) => check.id === "audit-ledger");
+      expect(audit?.state).toBe("anomaly");
+      expect(audit?.evidenceRef).toBe("audit:seq-42");
+      expect(audit?.verifiedEmpty).toBe(false);
+    } finally {
+      prepared.harness.dispose();
+    }
+  });
+
+  test("an anomaly that cites no evidence reference earns no citation", () => {
     const prepared = prepareBuiltin("night-watch");
     try {
       prepared.harness.scriptInput("audit-ledger", {
@@ -52,11 +79,13 @@ describe("TC-CEREMONY-017 a quiet night-watch is explicit verified-empty", () =>
         id: string;
         state: string;
         evidenceRef?: string;
+        reason?: string;
         verifiedEmpty: boolean;
       }[];
       const audit = checks.find((check) => check.id === "audit-ledger");
       expect(audit?.state).toBe("anomaly");
-      expect(audit?.evidenceRef).toBe("input:audit-ledger");
+      expect(audit?.evidenceRef).toBeUndefined();
+      expect(audit?.reason).toContain("no anomaly of this check cites an evidence reference");
       expect(audit?.verifiedEmpty).toBe(false);
     } finally {
       prepared.harness.dispose();

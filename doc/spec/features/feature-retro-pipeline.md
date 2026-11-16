@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-RETRO-PIPELINE
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-13
+last_updated: 2026-11-16
 owners: ["engineering"]
 service: delivery-os
 summary: "The retro evidence pipeline: the `retro collect` and `retro report` command family over an independent append-only evidence sidecar outside the delivery state store, a distinct HMAC-SHA-256 keyed chain with its own store-managed key artifact, collector-assigned trace ids and claimed collector identity, one collector fence, verified reads that flag tamper, the two-level shape-crash guard, five pipeline-truth checks, the explicit no-target collect success, the validated retro registry with three record kinds and levels R1-R6, the periodic memory-audit trigger home, the seven delivered collector sources including the spend-telemetry citation, the bounded library-only export bundle, doctor state-store visibility, deterministic zero-model-call render paths, the read-only closeout coverage consumer, and four retro error identities."
 links:
-  related_changes: ["GH-232", "GH-240", "GH-291"]
+  related_changes: ["GH-232", "GH-240", "GH-291", "GH-296"]
   related_decisions: ["TDR-0009", "ADR-0003", "TDR-0004", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/retro.ts"
@@ -206,11 +206,13 @@ Collection seeds the registry additively and idempotently by identity: the six l
 | Level | Name | Scope kind | Trigger | Status |
 |---|---|---|---|---|
 | `R1` | `change` | `change` | lifecycle: `change-closeout` | `implemented` |
-| `R2` | `session` | `session` | event: `session-end` | `declared` (owning story M2-S3) |
-| `R3` | `incident` | `incident` | event: `incident-severity` | `declared` (M2-S3) |
-| `R4` | `window` | `window` | schedule: `daily` | `declared` (M2-S3) |
-| `R5` | `project` | `project` | lifecycle: `milestone-end` | `declared` (M2-S3) |
+| `R2` | `session` | `session` | event: `session-end` | `declared` (selected by the ceremony layer) |
+| `R3` | `incident` | `incident` | event: `incident-severity` | `declared` (selected by the ceremony layer) |
+| `R4` | `window` | `window` | schedule: `daily` | `declared` (selected by the ceremony layer) |
+| `R5` | `project` | `project` | lifecycle: `milestone-end` | `declared` (selected by the ceremony layer) |
 | `R6` | `fleet` | `fleet` | schedule: `fleet-cadence` | `declared` (post-M4 fleet retro, unscheduled) |
+
+The four sub-R1 levels are selected and scheduled by the ceremony layer, not by this pipeline. The `retro-evidence-pass` ceremony declaration carries exactly the four declared triggers above (`session-end`, `incident-severity`, daily, `milestone-end`), reads this pipeline's verified evidence records and `retro.run` records read-only, and produces each level's note. The pipeline's own collection grammar stays `change`-only, its registry statuses stay `declared` for `R2`–`R5`, and selecting a non-`change` level through `retro collect` keeps its delivered refusal. The ceremony adds no collector, no sidecar, no chain material, and no registry record; the level-ownership boundary is stated once in [Ceremony Runner](feature-ceremony-runner.md#39-retro-ceremonies).
 
 ### Closeout coverage read
 
@@ -218,7 +220,7 @@ Closeout's `retro-coverage-move` step is a read-only consumer of the registry. T
 
 ### Periodic memory audit
 
-The registry hosts the periodic memory-audit trigger as data: `name: "memory-audit"`, `kind: "schedule"`, `cadence: "weekly"`, `owningBinding: "memory consolidation skill"`. Invocation is on demand in the delivered surface; scheduled invocation belongs to the ceremony runner.
+The registry hosts the periodic memory-audit trigger as data: `name: "memory-audit"`, `kind: "schedule"`, `cadence: "weekly"`, `owningBinding: "memory consolidation skill"`. Invocation through `retro collect` stays on demand; a scheduled invocation is a ceremony, and the ceremony runner's `retro-evidence-pass` declaration consumes this trigger's seam rather than introducing a second one.
 
 The memory-audit seam appends one `delivery.retro.memory-audit.v1` evidence record per recorded outcome reference, with `source: "memory-audit"`, the trigger identity, the window bounds, the injected-clock timestamp, an optional run id, and the optional claimed identity. The audit procedure itself stays in the memory consolidation skill; the pipeline records that it ran, over what window, and with which evidence refs. There is no new memory-audit command.
 
@@ -372,7 +374,7 @@ The pipeline adds no network, provider, or telemetry cost. The recurring cost is
 - **Depends on** the state layer ([feature-state-layer.md](feature-state-layer.md)) for the public port, validated boundaries, verified reads, fences, store-managed artifacts, least-privilege permissions, and forever retention.
 - **Depends on** the command audit ledger ([feature-audit-ledger.md](feature-audit-ledger.md)) for the bounded read surface, chain verdict, skipped-ordinal findings, and claimed-identity convention.
 - **Depends on** closeout outcome records and commit telemetry records as collector sources, and on pm-notes typed `retro` notes through the existing read surface.
-- **Consumed by** closeout's read-only coverage move, the ceremony runner (M2-S3), and the action registry (M2-S10). Coverage is recorded as a capsule fact; the pipeline's own collection and truth rules are unchanged.
+- **Consumed by** closeout's read-only coverage move, the ceremony runner's `retro-evidence-pass` declaration, and the action registry (M2-S10). Coverage is recorded as a capsule fact; the pipeline's own collection and truth rules are unchanged.
 - **Risk — key loss:** losing the key artifact prevents verification and continuation. Mitigation: store-managed `0600` artifact under the state directory; rotation and backup/restore are deferred.
 - **Risk — same-user key access:** a same-user process that reads the key artifact can forge links; this is outside the documented lane contract and accepted as residual single-user risk.
 - **Risk — false breaks across processes:** mitigated by durable key material and cross-process suites; reported salvage removals are distinguished from breaks.

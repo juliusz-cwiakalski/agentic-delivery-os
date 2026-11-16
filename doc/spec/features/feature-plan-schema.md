@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-PLAN-SCHEMA
 status: Current
 created: 2026-11-05
-last_updated: 2026-11-15
+last_updated: 2026-11-16
 owners: ["engineering"]
 service: delivery-os
 summary: "The versioned machine-readable delivery plan (`delivery.plan.v1`) and the `plan` command family: the YAML document shape (per-phase optional summary, scope, typed done-artifacts, leases, weight class, interactions, and ceremony tier as data), the additive document-level `members[]` cross-repository member declaration with closed validation, verbatim echo, pinned bounds, and the derived `<canonicalChangeRef>@<repoKey>` member ref, the YAML-before-markdown artifact precedence with the classified legacy transition, the pure validate/diff/overlap verdicts (ready-for-development, per-path scope classification, pairwise sequence versus parallel with named overlapping paths and producer-first ordering), the shared `plan.*` error identities, the additive `lint plan` target, the DEC-1 exit projection, and the deterministic, read-only, bounded-output posture."
 links:
-  related_changes: ["GH-226", "GH-242", "GH-310"]
+  related_changes: ["GH-226", "GH-242", "GH-310", "GH-296"]
   related_decisions: ["ODR-0003"]
   contracts:
     - "packages/core/src/contracts/plan.ts"
@@ -68,7 +68,7 @@ The only accepted schema identifier is `schemaVersion: delivery.plan.v1`.
 |---|---|---|
 | `schemaVersion` | Required | Exactly `delivery.plan.v1`; a missing, non-string, or unsupported version is `plan.schema.invalid` naming `schemaVersion`. |
 | `workItemRef` | Optional | String declaration of the change ref; never used to locate the artifact. |
-| `tier` | Required | Mapping with `name` (required, one of the known tiers `full` or `lite`), optional `phases` (integer phase ids), and optional `escalationTriggers` (non-empty strings). The phase set and triggers are inert declaration data: they round-trip in the verdict and are never evaluated. |
+| `tier` | Required | Mapping with `name` (required, one of the known tiers `full` or `lite`), optional `phases` (integer phase ids), and optional `escalationTriggers` (non-empty strings). The plan command treats the phase set and triggers as inert declaration data: they round-trip in the verdict and are never evaluated by `plan`; the ceremony tier engine is their delivered consumer. |
 | `defaultLeases` | Optional | Up to 16 non-empty lease names applied to phases that declare no `leases`. |
 | `defaultWeightClass` | Optional | Plan-level build-weight default applied once to phases that declare no `weightClass`. |
 | `phases` | Required | Non-empty array of at most 64 phase declarations. |
@@ -131,6 +131,12 @@ Each error carries `code`, `field`, `problem` (`missing`, `invalid`, or `unsuppo
 Per-phase data echoes the declared shape for every parsed phase: `id`, `title`, `kind`, the implied `leaseClass`, the optional `summary`, normalized `scope`, effective `leases`, `interactions`, the declared `tier`, and, when declared, `doneArtifacts` and `weightClass`. Planning phases report no delivery artifacts without failing validation or inventing placeholders. Leases and weight are echoed, never re-derived.
 
 The verdict never consults a built-in phase set. The declared tier is echoed verbatim; a tier outside the known set is rejected with `plan.tier.unknown`. Malformed or oversized documents (over 1,048,576 characters or beyond the parser bound) are classified `plan.schema.invalid`, never a stack trace.
+
+### Delivered consumer of the tier declaration
+
+The plan's `tier` declaration has a delivered consumer: the ceremony tier engine. The engine maps exactly two declarations — this plan `tier` (`name` in `PLAN_KNOWN_TIERS`, optional integer `phases`, optional `escalationTriggers`) and the change's pm-notes `variant` with `PM_NOTES_REQUIRED_PHASES_BY_VARIANT` — into one verdict: the effective tier, the effective phase set in canonical order with its source, the declared tier and variant, each declared escalation trigger's evaluation state, the escalations that fired with their evidence, and findings (`tier-mismatch`, `unresolved-phase`, `unevaluated-trigger`). The recorded pm-notes variant supplies the effective set and governs a disagreement; plan `tier.phases` narrows within the canonical eleven; a declared escalation trigger outside the five-member vocabulary is reported verbatim as `unevaluated`. Findings are verdict data, not error identities.
+
+This consumer changes no plan contract: `plan validate`, `plan diff`, and `plan overlap` still echo the tier and never evaluate it, `plan.tier.unknown` still refuses a tier outside `PLAN_KNOWN_TIERS`, and no tier name outside `full`|`lite` exists. The mapping is stated once in [Ceremony Runner](feature-ceremony-runner.md#38-tier-engine).
 
 ### Diff verdict
 
@@ -281,7 +287,7 @@ The feature adds no dependency, package, service, or CI job. It runs inside the 
 | Repo lease | Exclusive right to deliver to a repository; delivery phases are lease-taking, planning phases are lease-free. |
 | Build-weight class | Resource class of a change's build, echoed for downstream scheduling. |
 | Declared interaction | A contract-file or generated-code write annotated `producer` or `consumer`. |
-| Ceremony tier | The plan-declared ceremony variant (`full`, `lite`, or a rejected unknown identifier) with inert phase-set and escalation-trigger data. |
+| Ceremony tier | The plan-declared ceremony variant (`full`, `lite`, or a rejected unknown identifier) with phase-set and escalation-trigger data the plan command echoes and the ceremony tier engine consumes. |
 | Ready for development | The state in which a plan validates and its scope is declared; computed by `plan validate`. |
 | Overlap verdict | The pairwise answer `parallel` or `run-in-sequence`, with named overlapping paths and producer-first ordering. |
 | Transition verdict | The classified `plan.format.legacy-markdown` answer for a legacy markdown plan. |

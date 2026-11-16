@@ -1055,6 +1055,8 @@ export {
 export {
   ceremonyTierIntake,
   evaluateCeremonyTier,
+  type CeremonyTierEvidence,
+  type CeremonyTierInput,
 } from "./domain/ceremony-tier.js";
 export {
   buildCeremonyComparison,

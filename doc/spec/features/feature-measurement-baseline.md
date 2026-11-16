@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-MEASUREMENT-BASELINE
 status: Current
 created: 2026-10-31
-last_updated: 2026-10-31
+last_updated: 2026-11-16
 owners: ["engineering"]
 service: delivery-os measurement substrate
 summary: "The committed, schema-versioned bash-era measurement baseline log: its path, schema, four MET- metric definitions, MEASURED/PARTIAL/UNAVAILABLE status semantics, source-traceability rule, fixed window, and comparison protocol. The log is canonical data; this spec describes the contract and does not restate values."
 links:
-  related_changes: ["GH-186"]
+  related_changes: ["GH-186", "GH-296"]
   decisions: ["ODR-0002"]
   contracts:
     - "doc/planning/oss-tooling/measurement-baseline.yaml"
@@ -109,6 +109,7 @@ The log has these top-level keys:
 | `changes` | list of change rows | The corpus spine; one row per committed pm-notes file. |
 | `metrics` | list of metric rows | The four `MET-` definitions and their samples. |
 | `comparison_protocol` | string | The comparison rules. |
+| `comparisons` | list of comparison records | Additive from `schema_version: 2`; one record per delivery, each carrying the committed metric identity and definition, a before and after sample, the sample minimum, a closed verdict, the native basis, and a disclosure. Absent from a version-1 log. |
 
 A **change row** carries `ref`, `pm_notes`, `included`, `excluded_reason`, `phase_pairs_included`, `phase_pairs_excluded`, `date_only_pairs_excluded`, `ceremony_duration_h`, `total_phase_duration_h`, `cycle_time_h`, `cycle_time_censored`, `ci_observed`, `ci_outcome`, `ci_observations[]`, and `false_signal_incidents[]`. Every `ci_observations` and `false_signal_incidents` row cites `artifact` and `anchor`.
 
@@ -153,10 +154,11 @@ A time metric whose corpus contains an `unparseable_yaml` or `placeholder_zero_t
 
 ## Additive comparisons record (`schema_version: 2`)
 
-The ceremony runner (M2-S3) records exactly one committed comparison per
-delivery in the top-level `comparisons[]` list. The list is additive: every
-existing metric row, value, sample counter, window, and `MET-` allocation is
-unchanged.
+The ceremony layer contributes exactly one committed comparison per delivery to
+the top-level `comparisons[]` list, authored from the delivered builder
+`buildCeremonyComparison` and committed with the change's artifacts. No command
+computes or prints it. The list is additive: every existing metric row, value,
+sample counter, window, and `MET-` allocation is unchanged.
 
 Each entry carries `schemaId` (`delivery.ceremony.comparison.v1`), the committed
 `metricId` (`MET-CEREMONY-SHARE`), `definitionRef` with this log's path and the
@@ -169,5 +171,7 @@ non-interchangeability statement, and `disclosure`.
 
 `improved` requires the sample minimum to be met and `after < before`. Below the
 minimum the verdict is `insufficient-sample` and neither the record nor any
-change artifact carries a trend claim; at delivery time the observed after sample
-is zero, so no direction is recorded. The record is recomputed per delivery.
+change artifact carries a trend claim; the record committed with this delivery
+observes an empty after sample (`sampleSize: 0`), so it records
+`insufficient-sample` and no direction. The record is recomputed per delivery
+rather than carried forward.

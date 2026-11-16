@@ -3438,26 +3438,43 @@ export const createCeremonyCommandRuntime = (
     apply: () => ({ ok: false, detail: "no mirror landing path is composed" }),
   };
   const envFor = (origin: "built-in" | "project", note: CeremonyNote | undefined) => {
+    let retrospectiveEvidence: readonly string[] | undefined;
+    const retroEvidenceRefs = (): readonly string[] => {
+      if (retrospectiveEvidence !== undefined) return retrospectiveEvidence;
+      const read = readRetroRegistry(options.store);
+      const refs = new Set<string>();
+      if (read.ok) {
+        for (const run of readRetroRuns(read.value)) {
+          refs.add(`retro.run:${run.runId}`);
+          for (const check of run.truth.checks) {
+            for (const ref of check.evidenceRefs) refs.add(ref);
+          }
+        }
+      }
+      retrospectiveEvidence = [...refs].sort();
+      return retrospectiveEvidence;
+    };
     const input = (source: CeremonyInputSource): CeremonyInputRead => {
       if (source === "owner-note" && note !== undefined) {
+        // The note's declared items are the assessment's item source. No
+        // evidence reference is synthesised: an item the note does not cite is
+        // `uncovered`, never `covered` (AC-F3-4).
         return {
           state: "present",
           facts: {
-            items: (note.actions ?? []).map((action) => ({
-              text: action,
-              evidenceRef: "note:action",
-            })),
+            items: (note.facts ?? []).map((text) => ({ text })),
           },
         };
       }
-      if (
-        note !== undefined &&
-        (source === "retro-evidence" ||
-          source === "retro-runs" ||
-          source === "memory-audit" ||
-          source === "pm-notes-retro")
-      ) {
-        return { state: "present", facts: { evidenceRefs: note.evidenceRefs ?? [] } };
+      if (source === "retro-evidence" || source === "retro-runs") {
+        // The delivered evidence is the ledger's recorded retro runs: their
+        // truth-check evidence references are what a follow-through verdict may
+        // cite. The supplied note's own citations are never echoed back as
+        // evidence (AC-F9-3).
+        return {
+          state: "present",
+          facts: { evidenceRefs: [...retroEvidenceRefs()] },
+        };
       }
       return {
         state: "unavailable",

@@ -295,12 +295,24 @@ const renderNightWatch = (
       return { id, state: "unavailable", reason: degradedEntry.reason, verifiedEmpty: false };
     }
     if (isRecord(fact) && Array.isArray(fact.anomalies) && fact.anomalies.length > 0) {
+      // The check cites only an evidence reference an anomaly itself carries.
+      // No citation is synthesised for the declared input read: an anomaly the
+      // collector delivered without one is reported with the missing citation
+      // named, never with a fabricated reference (AC-F3-6, P1 integrity rule).
+      const anomalies = fact.anomalies;
+      const cited = anomalies.find(
+        (entry) => isRecord(entry) && isNonEmptyString(entry.evidenceRef),
+      );
+      const evidenceRef = isRecord(cited) ? cited.evidenceRef : undefined;
       return {
         id,
         state: "anomaly",
-        evidenceRef: `input:${id}`,
-        anomalies: fact.anomalies,
+        anomalies,
         verifiedEmpty: false,
+        ...(isNonEmptyString(evidenceRef) ? { evidenceRef } : {}),
+        ...(evidenceRef === undefined
+          ? { reason: "no anomaly of this check cites an evidence reference" }
+          : {}),
       };
     }
     return { id, state: "clean", verifiedEmpty: true };
@@ -443,7 +455,7 @@ const renderForSchema = (input: {
     return { content: renderAssessment(input.facts, input.note), applied: false };
   }
   if (schema === CEREMONY_FOLLOW_THROUGH_SCHEMA) {
-    return { content: renderCeremonyFollowThrough(input.note), applied: false };
+    return { content: renderCeremonyFollowThrough(input.facts), applied: false };
   }
   if (schema === CEREMONY_RETRO_EVIDENCE_SCHEMA) {
     return { content: renderCeremonyRetroEvidence(input.facts, input.note), applied: false };
@@ -640,6 +652,22 @@ const verifyContent = (
         (id) => ids.filter((entry) => entry === id).length === 1,
       );
       if (!exact) return { ok: false, reason: "a declared check is missing or duplicated" };
+    }
+    if (schema === CEREMONY_FOLLOW_THROUGH_SCHEMA) {
+      const unearned = items.find(
+        (entry) =>
+          !isRecord(entry) ||
+          !isNonEmptyString(entry.evidenceRef) ||
+          !hasFollowThroughVerdict(entry.verdict),
+      );
+      if (unearned !== undefined) {
+        const item =
+          isRecord(unearned) && isNonEmptyString(unearned.item) ? unearned.item : "an action";
+        return {
+          ok: false,
+          reason: `follow-through action "${item}" carries no artifact-verified verdict`,
+        };
+      }
     }
     const covered = items.every(
       (entry) =>

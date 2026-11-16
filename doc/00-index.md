@@ -49,6 +49,7 @@ ados_distribution: redistributable
 | [Merge and Verify Deploy](spec/features/feature-merge-verify-deploy.md) | The merged transaction: freshness envelope, probe, waivers, one rebase-refresh, verified squash landing, idempotent replay, and the deploy-trace verdict taxonomy |
 | [MCP Surface](spec/features/feature-mcp-surface.md) | The minimal read-only MCP server: three branding-projected tools mirroring status, verify-change, and verify-gates, payload parity without envelope or exit-code leakage, and `0`/`1`/`2` lifecycle exits |
 | [Measurement Baseline](spec/features/feature-measurement-baseline.md) | The committed bash-era measurement baseline: schema, `MET-` metrics, status semantics, source traceability, window, and comparison protocol |
+| [Ceremony Runner](spec/features/feature-ceremony-runner.md) | The `ceremony` family and declaration contract: four verbs, six built-ins, artifact-verified execution with resume and compaction, single-window catch-up, project declarations, the tier engine, durable run/step records, the four retro levels, and the two `ceremony.*` identities |
 | [Documentation Handbook](documentation-handbook.md) | How docs work — structure, conventions, workflow |
 
 ## Changing Behavior?
@@ -74,6 +75,7 @@ ados_distribution: redistributable
 | [Milestone Management](guides/milestone-management.md) | The milestone-first operating rule: naming, creation, attachment, entry and exit review, closure, extension, and enforcement |
 | [Autonomous Batch Delivery](guides/autonomous-batch-delivery.md) | Unattended multi-ticket delivery: `batch-deliver.sh`, `deliver-ticket.sh`, liveness, approvals |
 | [Provider Conditions and Parks](guides/provider-conditions-and-parks.md) | Provider pauses: condition kinds, park causes and expiry, fail-loud announcements, configuration pointer |
+| [Ceremony Runner](guides/ceremony-runner.md) | Operator guide: the four verbs, the declaration document and vocabularies, a worked project declaration, notes and windows, dry-run/`--apply`, catch-up, artifacts, and the measurement record |
 | [Migrating to Per-Repository Delivery State](guides/migrating-to-per-repository-state.md) | One-step, reversible move of an existing single delivery store into a per-repository project state root |
 | [Tracker Credential Provisioning](guides/tracker-credential-provisioning.md) | Provision the truth-read key (`GITHUB_TOKEN`), the explicit `gh` bridge, least privilege, rotation, and the 404 scope check |
 | [Tools Convention](guides/tools-convention.md) | Standard for building CLI tools |

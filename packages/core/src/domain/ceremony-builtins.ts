@@ -40,42 +40,109 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.length > 0;
 
-const noteRecord = (note: CeremonyNote): Record<string, unknown> =>
-  note as unknown as Record<string, unknown>;
+/** The verdict an action carries when its artifact does not earn one (F-9). */
+export const CEREMONY_FOLLOW_THROUGH_UNVERIFIED = "unverified" as const;
 
-/** The follow-through entries: a supplied section, else the note's actions. */
-export const ceremonyFollowThroughItems = (
-  note: CeremonyNote | undefined,
-): readonly { readonly item: string; readonly verdict: string; readonly evidenceRef: string }[] => {
-  if (note === undefined) return [];
-  const supplied = noteRecord(note).followThrough;
-  if (Array.isArray(supplied)) {
-    return supplied.filter(isRecord).map((entry, index) => {
-      const verdict =
-        typeof entry.verdict === "string" &&
-        (CEREMONY_FOLLOW_THROUGH_VERDICTS as readonly string[]).includes(entry.verdict)
-          ? entry.verdict
-          : "partial";
-      return {
-        item: typeof entry.item === "string" ? entry.item : `action-${String(index)}`,
-        verdict,
-        evidenceRef:
-          typeof entry.evidenceRef === "string"
-            ? entry.evidenceRef
-            : `note:action:${String(index)}`,
-      };
-    });
+/** One follow-through entry: the action, its earned verdict, its artifact (F-9). */
+export type CeremonyFollowThroughItem = {
+  readonly item: string;
+  readonly verdict: string;
+  readonly evidenceRef: string;
+  readonly reason?: string;
+};
+
+const stringArray = (value: unknown): readonly string[] =>
+  Array.isArray(value) ? value.filter(isNonEmptyString) : [];
+
+/** The evidence references the delivered inputs carry for this step (F-9). */
+export const ceremonyDeliveredEvidence = (
+  facts: Readonly<Record<string, unknown>>,
+): ReadonlySet<string> => {
+  const refs = new Set<string>();
+  for (const source of Object.keys(facts).sort()) {
+    const entry = facts[source];
+    if (!isRecord(entry)) continue;
+    for (const ref of stringArray(entry.evidenceRefs)) refs.add(ref);
   }
-  return (note.actions ?? []).map((action, index) => ({
-    item: action,
-    verdict: "applied",
-    evidenceRef: `note:action:${String(index)}`,
-  }));
+  return refs;
+};
+
+type RecordedOpenAction = {
+  readonly item: string;
+  readonly verdict?: string;
+  readonly verificationArtifact?: string;
+};
+
+/** The open actions the delivered inputs record for the scope, in source order. */
+const recordedOpenActions = (
+  facts: Readonly<Record<string, unknown>>,
+): readonly RecordedOpenAction[] => {
+  const actions: RecordedOpenAction[] = [];
+  for (const source of Object.keys(facts).sort()) {
+    const entry = facts[source];
+    if (!isRecord(entry) || !Array.isArray(entry.openActions)) continue;
+    for (const candidate of entry.openActions) {
+      if (!isRecord(candidate) || !isNonEmptyString(candidate.item)) continue;
+      actions.push({
+        item: candidate.item,
+        ...(isNonEmptyString(candidate.verdict) ? { verdict: candidate.verdict } : {}),
+        ...(isNonEmptyString(candidate.verificationArtifact)
+          ? { verificationArtifact: candidate.verificationArtifact }
+          : {}),
+      });
+    }
+  }
+  return actions;
+};
+
+const isClosedFollowThroughVerdict = (value: string): boolean =>
+  (CEREMONY_FOLLOW_THROUGH_VERDICTS as readonly string[]).includes(value);
+
+/**
+ * The follow-through entries, each earned from the delivered evidence (F-9,
+ * AC-F9-3). An action earns `applied`, `partial`, or
+ * `violated-with-consequence` only when it names its verification artifact and
+ * that artifact is among the evidence the step read; a recorded owner status
+ * claim is never a verdict, and an action with no artifact is `unverified`
+ * rather than `applied`.
+ */
+export const ceremonyFollowThroughItems = (
+  facts: Readonly<Record<string, unknown>>,
+): readonly CeremonyFollowThroughItem[] => {
+  const delivered = ceremonyDeliveredEvidence(facts);
+  return recordedOpenActions(facts).map((action) => {
+    const artifact = action.verificationArtifact;
+    if (artifact === undefined) {
+      return {
+        item: action.item,
+        verdict: CEREMONY_FOLLOW_THROUGH_UNVERIFIED,
+        evidenceRef: "",
+        reason: "the open action declares no verification artifact",
+      };
+    }
+    if (!delivered.has(artifact)) {
+      return {
+        item: action.item,
+        verdict: CEREMONY_FOLLOW_THROUGH_UNVERIFIED,
+        evidenceRef: artifact,
+        reason: `the verification artifact "${artifact}" is not among the delivered evidence`,
+      };
+    }
+    if (action.verdict === undefined || !isClosedFollowThroughVerdict(action.verdict)) {
+      return {
+        item: action.item,
+        verdict: CEREMONY_FOLLOW_THROUGH_UNVERIFIED,
+        evidenceRef: artifact,
+        reason: "the delivered evidence carries no closed-set verdict for the action",
+      };
+    }
+    return { item: action.item, verdict: action.verdict, evidenceRef: artifact };
+  });
 };
 
 /** Render the follow-through section (first retro phase, F-9). */
-export const renderCeremonyFollowThrough = (note: CeremonyNote | undefined): unknown => {
-  const items = ceremonyFollowThroughItems(note);
+export const renderCeremonyFollowThrough = (facts: Readonly<Record<string, unknown>>): unknown => {
+  const items = ceremonyFollowThroughItems(facts);
   return {
     schemaId: CEREMONY_FOLLOW_THROUGH_SCHEMA,
     items,

@@ -22,7 +22,7 @@ phases:
     completed: 2026-11-15T23:47:56.787Z
   delivery:
     started: null
-    completed: 2026-11-16T02:32:57.645Z
+    completed: null
   system_spec_update:
     started: null
     completed: null
@@ -287,5 +287,52 @@ notes:
       commits, 0 offending); bash scripts/.tests/test-doc-distribution.sh -> OK
       (94 in-scope docs); git diff --check clean. No PR created, per the
       delivery instruction to leave the branch unpushed."
+    type: info
+    date: "2026-11-16"
+  - text: "system_spec_update (doc-syncer) closed all documentation gaps: created
+      feature-ceremony-runner.md and the redistributable guide, and updated the
+      result contract, state layer, plan schema, pm-notes, retro pipeline,
+      measurement baseline, CLI entrypoint, agents-and-commands, nonfunctional,
+      00-index, glossary, architecture overview, state-layer test spec, and the
+      retrospectives story mapping. Doc distribution OK (95 docs), pnpm check
+      exit 0. But the sync also proved ten delivered-vs-spec departures; three
+      are integrity defects, not documentation gaps: follow-through actions
+      default to applied with a synthetic note:action:<i> evidence ref, and
+      assessment items get a synthetic evidence ref so they default to covered.
+      That is a false green in the two capabilities whose entire purpose is
+      artifact verification."
+    type: info
+    date: "2026-11-16"
+  - text: "Reopened delivery rather than shipping a mostly-wired surface.
+      Remediation list, in priority order: (1) follow-through and assessment
+      must never accept a note-supplied status claim - no synthetic evidence
+      refs, unverified when the declared artifact is absent, uncovered when no
+      evidence exists (AC-F9-2, AC-F9-3, AC-F3-4); (2) compose the tier engine
+      into ceremony list and ceremony run so tiered intake is reachable, with
+      data.tier populated and the run record carrying effectiveTier,
+      phaseSetSize and escalations (AC-F7-1..F7-5, DM-7); (3) compose the
+      mirror-sync target set and landing path so decision-record-mirror-sync
+      returns verified on a clean mirror, unverified on drift, with a real
+      dry-run/--apply split (AC-F3-5, AC-F4-5, NFR-12); (4) state-record and
+      mirror-target output slots must write what DM-1 declares, and per-step
+      artifacts must not overwrite one another (DM-1, DM-6); (5) bound the note
+      read in bytes and re-validate the note schema on read-back (DM-2); (6)
+      meet the NFR-11 read budget (<=1 verified read per append, <=2 for list)."
+    type: decision
+    date: "2026-11-16"
+  - text: "Two integrity defaults survived 9334 green tests, three DoR passes, and
+      every traceability matrix: the tests asserted that a verdict is produced,
+      not that the verdict is earned. A suite that plants a note with no
+      verification artifact and asserts unverified would have caught it in phase
+      5. Treat 'the default verdict when evidence is absent' as its own required
+      negative case for any verification-shaped feature."
+    type: retro
+    date: "2026-11-16"
+  - text: "Factual note for review: the reserved two-segment allowlist was 53 before
+      this change, not 52 as the spec states (the pre-change count missed the
+      already-present verify.narrowed-scope code). The delivered check and the
+      documented result contract agree at 54. The spec's 52->53 line is a
+      planning-detail inaccuracy, not an acceptance criterion; current truth is
+      correct."
     type: info
     date: "2026-11-16"

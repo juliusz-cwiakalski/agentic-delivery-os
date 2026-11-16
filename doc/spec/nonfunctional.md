@@ -2,11 +2,11 @@
 id: SPEC-TOOLING-NONFUNCTIONAL
 status: Proposed
 created: 2026-11-01
-last_updated: 2026-11-15
+last_updated: 2026-11-16
 owners: [engineering]
 ados_distribution: internal
 links:
-  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243, GH-230, GH-235, GH-238, GH-242, GH-275, GH-291, GH-320]
+  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243, GH-230, GH-235, GH-238, GH-242, GH-275, GH-291, GH-320, GH-296]
 summary: "Cross-cutting index of implemented tooling quality contracts and separately proposed validation targets."
 ---
 
@@ -48,7 +48,8 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
 - Quality attribute: reliability and diagnosability. Applies: result envelopes,
   status, brief, queue-ready, verify-change, provider reads, the watchdog probes, the
   owner-gate board, the typed blocker channel, the doctor pre-flight diagnostic, the
-  merge transaction, the verify-deploy verdict, and the retro evidence pipeline.
+  merge transaction, the verify-deploy verdict, the retro evidence pipeline, and
+  the ceremony runner's declared-degradation artifacts.
 - Requirement/status: existing. Missing, failed, or unavailable evidence must not
   become a clear/ready/zero claim. Command success is not delivery success.
 - Evidence/test: [result](features/feature-result-contract.md),
@@ -95,7 +96,7 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
 
 - Quality attribute: interoperability and resource boundedness. Applies: CLI
   envelope, status, brief, queue-ready, board, verify gates, merge, verify deploy,
-  doctor, blockers, and spend renderers, and retro collect/report renderers. Status:
+  doctor, blockers, spend, and ceremony renderers, and retro collect/report renderers. Status:
   existing.
 - Requirement: one valid `CommandResult` under `--json`, exactly one of data/error,
   classified containment, deterministic ordering, and visible truncation.
@@ -125,7 +126,10 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
   [blockers](features/feature-blockers.md#bounds-and-truncation) caps rendered
   questions at 8 per surface, question text at 120 characters, options at 4×60,
   free-text answers at 160, human output at 24 lines/4096 UTF-8 bytes, and
-  serialized data at 65536 UTF-8 bytes.
+  serialized data at 65536 UTF-8 bytes. [Ceremony](features/feature-ceremony-runner.md#5-non-functional-requirements)
+  caps human output at 32 lines/6144 bytes with an explicit omission marker, the
+  carried phase summary at 4096 bytes/40 lines, a run record at 16 KiB, a step
+  record at 2 KiB, and a declaration document at 1 MiB.
   Brief reuses the status human and machine caps by reference and declares no parallel
   numeric bound.
 - Queue-ready accepts 1..8 candidates of at most 64 canonical characters; its
@@ -143,7 +147,7 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
 - Quality attribute: performance efficiency. Applies: status/queue-ready pure
   policy, the owner-gate board, the typed blocker channel, the doctor diagnostic,
   provider evaluation, privacy scan/policy, session administration, the spend fold,
-  and the retro pipeline folds.
+  the retro pipeline folds, and the ceremony runner.
 - Requirement/status: existing feature budgets only; no universal latency SLO.
   Reference-environment results are not promises for every platform or network.
 
@@ -165,6 +169,7 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
 | [Privacy](features/feature-privacy-guard.md#non-functional-requirements) | Scan within 60 s for up to 50 MiB on CI reference runner; emitter within 10 ms per 2048-byte envelope; at most 32 hashed lengths. | `tests/checks/privacy-performance.test.ts`; production empty classes limit what a clean scan demonstrates. |
 | [Commit](features/feature-commit-primitive.md#non-functional-requirements) | Dry-run p95 under 2 s and template-fallback p95 under 5 s; one constrained model call per attempt; a model-transport commit is bounded by the provider call. | `tests/behaviour/commit-performance.test.ts` samples the dry-run and template paths; the model-transport bound is not a CI deadline. |
 | [Session admin](features/feature-session-database-admin.md#non-functional-requirements) | Reference size/list/selection/recheck/live-check/500-candidate apply: at most 30 s/10 s/30 s/250 ms each/10 s/180 s total. | Fake-I/O suites and separately recorded non-CI reference smoke; no host performance rerun here. |
+| [Ceremony](features/feature-ceremony-runner.md#5-non-functional-requirements) | Pure intake, agenda, verification, compaction, resume, schedule, tier, and measurement folds; one declaration read per invocation and at most sixteen declared input reads per run; each fenced append performs a pre-append list read plus a post-append verified re-read, so a run's bounded read count is `2 × (1 + steps) + 2`; `ceremony list` performs one run read plus one step-history read per ceremony that has a recorded run. Zero retries, pagination crawls, child processes, or network calls. Duration budgets are bounded-work assertions in CI; a `morning-brief` run completes within a second on the reference fixture. | `tests/behaviour/ceremony-performance.test.ts` pins the read bound and the bounded-work posture; `ceremony-determinism.test.ts` and `tests/checks/ceremony-hermetic.test.ts` pin replay identity and the hermetic posture. |
 
 - Session constants separately bound a query/delete to 30000 ms and checkpoint to
   120000 ms. Per-operation timeouts do not establish a complete batch deadline.
@@ -186,7 +191,11 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
   consumable half-verification. The retro registry's three record kinds use the
   same boundary validation and fenced writes; the evidence sidecar is a separate
   collector-fenced, keyed-chain artifact family outside the store's salvage path
-  ([retro](features/feature-retro-pipeline.md)). The [spend read side](features/feature-spend.md)
+  ([retro](features/feature-retro-pipeline.md)). The ceremony runner appends its two
+  additive record kinds through one boundary under the `ceremony.` prefix with a
+  fenced append and post-append verified re-read, and keeps its per-run artifact
+  family outside the ledger ([ceremony](features/feature-ceremony-runner.md)).
+  The [spend read side](features/feature-spend.md)
   is a verified read-only consumer of the telemetry and transition records: it
   acquires no fence, appends nothing, and keeps every store-damage class on its
   delivered `state.*` identity.
@@ -204,7 +213,10 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
   `tests/behaviour/state-torn.test.ts`, `state-unknown.test.ts`, `state-salvage.test.ts`,
   `state-salvage-invariants.test.ts`, `state-storage-exhausted.test.ts`,
   `state-index-post-salvage.test.ts`, `state-artifact-boundary.test.ts`,
-  `state-fence.test.ts`, `state-atomic-replace.test.ts`, `state-permissions.test.ts`.
+  `state-fence.test.ts`, `state-atomic-replace.test.ts`, `state-permissions.test.ts`;
+  the ceremony record kinds and per-run artifact family are covered by
+  `tests/behaviour/ceremony-state-boundary.test.ts` and
+  `tests/structure/state-contract.test.ts`.
 - Owner/trigger: engineering/runner; storage format, driver, platform, or writer changes
   (RSK-003, XC-002). Forever retention has no compaction or global growth budget.
 

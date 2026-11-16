@@ -38,8 +38,17 @@ export type BuiltinOptions = {
   readonly mirrorDrift?: boolean;
   readonly mirrorApplyNoop?: boolean;
   readonly unavailable?: readonly string[];
+  readonly deliveredEvidence?: readonly string[];
+  readonly openActions?: readonly {
+    readonly item: string;
+    readonly verdict?: string;
+    readonly verificationArtifact?: string;
+  }[];
   readonly ownerNoteItems?: readonly { readonly text: string; readonly evidenceRef?: string }[];
 };
+
+/** The delivered follow-through evidence the retro fixture cites (F-9). */
+export const FOLLOW_THROUGH_ARTIFACT = "artifact:follow-through-1";
 
 /** Run one prepared built-in through the production runner. */
 export const runPrepared = (prepared: BuiltinPreparation): CeremonyRunOutcome =>
@@ -87,6 +96,19 @@ export const prepareBuiltin = (id: string, options: BuiltinOptions = {}): Builti
   });
   harness.scriptInput("tracker-milestone", { state: "present", facts: { milestone: "M2" } });
   harness.scriptInput("measurement-metrics", { state: "present", facts: { rows: [] } });
+  harness.scriptInput("retro-runs", {
+    state: "present",
+    facts: {
+      evidenceRefs: options.deliveredEvidence ?? [FOLLOW_THROUGH_ARTIFACT],
+      openActions: options.openActions ?? [
+        {
+          item: "verify the follow-through artifact",
+          verdict: "applied",
+          verificationArtifact: FOLLOW_THROUGH_ARTIFACT,
+        },
+      ],
+    },
+  });
   harness.scriptInput("decision-register", {
     state: "present",
     facts: {

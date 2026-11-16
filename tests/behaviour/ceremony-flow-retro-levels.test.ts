@@ -14,7 +14,11 @@ import {
 import { runCeremony } from "../../packages/core/src/domain/index";
 import { readCeremonyRuns } from "../../packages/core/src/state/index";
 import { builtinCeremonyDeclaration } from "../../packages/core/src/contracts/index";
-import { prepareBuiltin, runPrepared } from "../fixtures/ceremony/builtins";
+import {
+  FOLLOW_THROUGH_ARTIFACT,
+  prepareBuiltin,
+  runPrepared,
+} from "../fixtures/ceremony/builtins";
 import { NOTE_WINDOW, retroNote } from "../fixtures/ceremony/notes";
 
 const parseWrite = (entry: string): Record<string, unknown> => {
@@ -29,14 +33,15 @@ describe("TC-CEREMONY-043 follow-through verification is first and evidence-cite
   test("the first phase is follow-through and every entry cites an artifact reference", () => {
     expect(retro.agenda[0]?.id).toBe("follow-through");
     expect(retro.agenda[0]?.steps[0]?.kind).toBe("fold");
-    const note = retroNote("retro-evidence-pass", "window", {
-      scopeKey: "follow-scope",
-      followThrough: [
-        { item: "action one", verdict: "applied", evidenceRef: "artifact:one" },
-        { item: "action two", verdict: "partial", evidenceRef: "artifact:two" },
+    const note = retroNote("retro-evidence-pass", "window", { scopeKey: "follow-scope" });
+    const prepared = prepareBuiltin("retro-evidence-pass", {
+      note,
+      deliveredEvidence: ["artifact:one", "artifact:two"],
+      openActions: [
+        { item: "action one", verdict: "applied", verificationArtifact: "artifact:one" },
+        { item: "action two", verdict: "partial", verificationArtifact: "artifact:two" },
       ],
-    } as Partial<CeremonyNote>);
-    const prepared = prepareBuiltin("retro-evidence-pass", { note });
+    });
     try {
       const run = runPrepared(prepared);
       expect(run.ok).toBe(true);
@@ -54,6 +59,78 @@ describe("TC-CEREMONY-043 follow-through verification is first and evidence-cite
         expect(CEREMONY_FOLLOW_THROUGH_VERDICTS).toContain(item.verdict as never);
         expect(item.evidenceRef.length).toBeGreaterThan(0);
       }
+    } finally {
+      prepared.harness.dispose();
+    }
+  });
+
+  test("an open action with no verification artifact is unverified, never applied", () => {
+    const prepared = prepareBuiltin("retro-evidence-pass", {
+      note: retroNote("retro-evidence-pass", "window", { scopeKey: "unearned-scope" }),
+      openActions: [{ item: "action with no artifact", verdict: "applied" }],
+    });
+    try {
+      const run = runPrepared(prepared);
+      expect(run.ok).toBe(true);
+      if (!run.ok) return;
+      expect(run.data.verdict).toBe("unverified");
+      const first = parseWrite(prepared.harness.artifactWrites[0] ?? "x:{}");
+      const items = first.items as { item: string; verdict: string; evidenceRef: string }[];
+      expect(items).toHaveLength(1);
+      expect(items[0]?.verdict).toBe("unverified");
+      expect(items[0]?.verdict).not.toBe("applied");
+      expect(items[0]?.evidenceRef).toBe("");
+      expect(items[0]?.reason).toContain("no verification artifact");
+      expect(run.data.steps[0]?.outcome).toBe("unverified");
+      expect(run.data.steps[0]?.reason).toContain("no artifact-verified verdict");
+    } finally {
+      prepared.harness.dispose();
+    }
+  });
+
+  test("an action citing an artifact the step never read is unverified", () => {
+    const prepared = prepareBuiltin("retro-evidence-pass", {
+      note: retroNote("retro-evidence-pass", "window", { scopeKey: "undelivered-scope" }),
+      deliveredEvidence: ["artifact:delivered"],
+      openActions: [
+        {
+          item: "action citing an undelivered artifact",
+          verdict: "applied",
+          verificationArtifact: "artifact:absent",
+        },
+      ],
+    });
+    try {
+      const run = runPrepared(prepared);
+      expect(run.ok).toBe(true);
+      if (!run.ok) return;
+      expect(run.data.verdict).toBe("unverified");
+      const first = parseWrite(prepared.harness.artifactWrites[0] ?? "x:{}");
+      const items = first.items as { verdict: string; reason?: string }[];
+      expect(items[0]?.verdict).toBe("unverified");
+      expect(items[0]?.reason).toContain("not among the delivered evidence");
+    } finally {
+      prepared.harness.dispose();
+    }
+  });
+
+  test("an owner status claim in the note is never a follow-through verdict", () => {
+    const prepared = prepareBuiltin("retro-evidence-pass", {
+      note: retroNote("retro-evidence-pass", "window", {
+        scopeKey: "claim-scope",
+        actions: ["the owner says this was applied"],
+      }),
+      openActions: [],
+      deliveredEvidence: [],
+    });
+    try {
+      const run = runPrepared(prepared);
+      expect(run.ok).toBe(true);
+      if (!run.ok) return;
+      const first = parseWrite(prepared.harness.artifactWrites[0] ?? "x:{}");
+      expect(first.items).toEqual([]);
+      expect(first.verifiedEmpty).toBe(true);
+      expect(first.applied).toBeUndefined();
     } finally {
       prepared.harness.dispose();
     }
@@ -111,7 +188,11 @@ describe("TC-CEREMONY-045 a null retro is an explicit empty success", () => {
       candidateLessons: [],
       actions: [],
     });
-    const prepared = prepareBuiltin("retro-evidence-pass", { note });
+    const prepared = prepareBuiltin("retro-evidence-pass", {
+      note,
+      openActions: [],
+      deliveredEvidence: [],
+    });
     try {
       const run = runPrepared(prepared);
       expect(run.ok).toBe(true);
@@ -184,9 +265,10 @@ describe("TC-CEREMONY-048 a conforming note produces every declared output", () 
         expect(step.artifactRef.length).toBeGreaterThan(0);
       }
       const followThrough = parseWrite(prepared.harness.artifactWrites[0] ?? "x:{}");
-      const items = followThrough.items as { verdict: string }[];
-      expect(items.length).toBeGreaterThanOrEqual(1);
+      const items = followThrough.items as { verdict: string; evidenceRef: string }[];
+      expect(items).toHaveLength(1);
       expect(items[0]?.verdict).toBe("applied");
+      expect(items[0]?.evidenceRef).toBe(FOLLOW_THROUGH_ARTIFACT);
       expect(prepared.harness.memory.get("conforming-scope")).toBeDefined();
     } finally {
       prepared.harness.dispose();

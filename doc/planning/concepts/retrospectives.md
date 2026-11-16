@@ -287,10 +287,14 @@ backward-looking and banned from notes.
 ## Story mapping
 
 - Issue #43 (retrospective agent / automated change retros) is the
-  tracker anchor; the M2-S3 ceremony runner already carries the retro
-  evidence pass, sprint rollover, and testing-session assessment.
-- M2-S3 AC extends with: declared trigger model, follow-through-first,
-  the note schema, and idempotent scope keys.
+  tracker anchor; the ceremony layer carries the retro evidence pass, sprint
+  rollover, and testing-session assessment.
+- The ceremony layer delivers the four sub-R1 retro levels — `session`,
+  `incident`, `window`, and `project` — as declared triggers with per-level
+  outputs and the fixed note schema, and keeps R1 (the change level) with the
+  closeout's own retro. The retro evidence pipeline's collection grammar stays
+  `change`-only; the levels are ceremony declarations, not a second evidence
+  design.
 - New M2-S10: the action registry and follow-through enforcement
   (five-field contract, artifact and outcome verifiers, rollback
   conditions, aging, board surface, closure rules).
