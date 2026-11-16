@@ -145,5 +145,6 @@ export {
   type CeremonyDeclarationDocumentRead,
   type CeremonyDeclarationFileSystem,
   nodeCeremonyDeclarationFileSystem,
+  parseCeremonyNoteText,
   readCeremonyDeclarationDocument,
 } from "./ceremony-declarations.js";

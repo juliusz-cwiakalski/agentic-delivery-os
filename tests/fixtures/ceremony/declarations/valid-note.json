@@ -1,10 +1,7 @@
 {
   "id": "project-note-pass",
   "title": "Project note pass",
-  "tiers": [
-    "full",
-    "lite"
-  ],
+  "tiers": ["full", "lite"],
   "triggers": [
     {
       "kind": "event",
@@ -26,10 +23,7 @@
       "steps": [
         {
           "kind": "collect",
-          "inputs": [
-            "audit-ledger",
-            "queue-state"
-          ],
+          "inputs": ["audit-ledger", "queue-state"],
           "outputs": [
             {
               "slot": "ceremony-artifact",
@@ -64,9 +58,7 @@
     "maxMissedWindows": 1
   },
   "compaction": {
-    "atPhases": [
-      0
-    ],
+    "atPhases": [0],
     "maxBytes": 4096,
     "maxLines": 40
   },

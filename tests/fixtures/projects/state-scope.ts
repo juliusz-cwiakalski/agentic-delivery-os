@@ -107,7 +107,7 @@ export const realStateFingerprint = (brand: BrandIdentity): string => {
 
 /** A directory proven to be outside every git work tree (the GH-273 rule). */
 export const nonCheckoutDirectory = (label: string): string => {
-  const candidates = [tmpdir(), dirname(process.cwd()), resolve(APPROVED_BASE)];
+  const candidates = [tmpdir(), dirname(process.cwd()), homedir(), resolve(APPROVED_BASE)];
   for (const parent of candidates) {
     mkdirSync(parent, { recursive: true });
     const directory = mkdtempSync(join(parent, `gh288-non-checkout-${label}-`));

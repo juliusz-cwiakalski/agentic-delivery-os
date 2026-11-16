@@ -141,6 +141,15 @@
     "telemetry.ts:TELEMETRY_CAPTURE_SCHEMA_ID": "delivery.telemetry.capture.v1",
     "telemetry.ts:TELEMETRY_STEP_KEY_PREFIX": "harness.telemetry.step:",
     "telemetry.ts:TELEMETRY_STEP_RECORD_KIND": "harness.telemetry.step",
-    "telemetry.ts:TELEMETRY_STEP_SCHEMA_ID": "delivery.harness.telemetry.step.v1"
+    "telemetry.ts:TELEMETRY_STEP_SCHEMA_ID": "delivery.harness.telemetry.step.v1",
+    "ceremony.ts:CEREMONY_COMPARISON_SCHEMA": "delivery.ceremony.comparison.v1",
+    "ceremony.ts:CEREMONY_DECLARATIONS_SCHEMA": "delivery.ceremony.declarations.v1",
+    "ceremony.ts:CEREMONY_NOTE_SCHEMA": "delivery.ceremony.note.v1",
+    "ceremony.ts:CEREMONY_RUN_PAYLOAD_SCHEMA": "delivery.ceremony.run.v1",
+    "ceremony.ts:CEREMONY_RUN_RECORD_KEY_PREFIX": "ceremony.runs:",
+    "ceremony.ts:CEREMONY_RUN_RECORD_KIND": "ceremony.run",
+    "ceremony.ts:CEREMONY_STEP_PAYLOAD_SCHEMA": "delivery.ceremony.step.v1",
+    "ceremony.ts:CEREMONY_STEP_RECORD_KEY_PREFIX": "ceremony.steps:",
+    "ceremony.ts:CEREMONY_STEP_RECORD_KIND": "ceremony.step"
   }
 }

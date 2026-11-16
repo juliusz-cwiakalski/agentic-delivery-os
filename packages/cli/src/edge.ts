@@ -9,7 +9,6 @@
 
 import { randomUUID } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { parse } from "yaml";
 import {
   acquireFileConfig,
   applyPromotionWrite,
@@ -25,6 +24,7 @@ import {
   type PmNotesFileSystemFacts,
   parseConfigYaml,
   type RuntimePlatform,
+  parseCeremonyNoteText,
   readCeremonyDeclarationDocument,
   createCeremonyArtifactStore,
   readCiWorkflowJobNames,
@@ -3387,7 +3387,7 @@ const parseCeremonyNote = (
   path: string,
 ): { readonly note: CeremonyNote } | { readonly error: CeremonyEngineFailure } => {
   try {
-    return { note: parse(readFileSync(path, "utf8")) as CeremonyNote };
+    return { note: parseCeremonyNoteText(readFileSync(path, "utf8")) as CeremonyNote };
   } catch {
     return {
       error: {
@@ -3484,7 +3484,7 @@ export const createCeremonyCommandRuntime = (
     if (body.state === "absent") return undefined;
     try {
       void runId;
-      return parse(body.body) as CeremonyNote;
+      return JSON.parse(body.body) as CeremonyNote;
     } catch {
       return undefined;
     }

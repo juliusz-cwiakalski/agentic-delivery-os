@@ -1096,6 +1096,14 @@ the project family separately.
   follow-through-first agenda, the fixed note schema, idempotent scope
   keys, and per-level outputs.
 - Depends on: M0-S6, M0-S13, M1-S8.
+- Progress: delivered by GH-296 — the four-verb ceremony family and the
+  declaration contract; the six built-ins parity-tested through one runner; the
+  runner's intake, artifact-verified agenda, compaction, resume, and bounded
+  catch-up; project declarations in the committed document; the single-source
+  tier engine; the additive run/step records and artifact family; the four
+  sub-R1 retro levels; and the committed ceremony-share comparison with the
+  native basis disclosed. No metrics surface, action registry, ceremony pack,
+  scheduler, event topic, or MCP tool ships here.
 
 ### M2-S10 Retro action registry and follow-through
 - Ticket: GH-287 (milestone M2)

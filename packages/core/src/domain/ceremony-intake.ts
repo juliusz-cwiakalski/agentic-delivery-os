@@ -291,9 +291,7 @@ const resolveTrigger = (
 };
 
 /** Resolve one run's intake: declaration, scope key, window, note, trigger. */
-export const resolveCeremonyIntake = (
-  request: CeremonyIntakeRequest,
-): CeremonyIntakeOutcome => {
+export const resolveCeremonyIntake = (request: CeremonyIntakeRequest): CeremonyIntakeOutcome => {
   const validated = validateCeremonyDeclaration(request.declaration);
   if (!validated.ok) {
     return {

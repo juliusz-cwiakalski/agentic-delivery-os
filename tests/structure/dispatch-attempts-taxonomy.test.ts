@@ -45,9 +45,9 @@ const SCAN_TARGETS = [
 ] as const;
 
 describe("TC-ATTEMPT-017 taxonomy closure", () => {
-  test("the registry holds exactly 136 identities and four dispatch rows", () => {
+  test("the registry holds exactly 138 identities and four dispatch rows", () => {
     const entries = ERROR_TABLE as readonly ErrorTableEntry[];
-    expect(entries).toHaveLength(136);
+    expect(entries).toHaveLength(138);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(4);
     expect(entries.some((entry) => entry.code.startsWith("attempts."))).toBe(false);
     expect(entries.map((entry) => entry.code)).toContain("queue.reason-missing");

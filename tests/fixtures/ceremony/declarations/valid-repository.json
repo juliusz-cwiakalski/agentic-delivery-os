@@ -3,10 +3,7 @@
   "title": "Weekly project sweep",
   "tiers": ["full", "lite"],
   "triggers": [{ "kind": "schedule", "cadence": "weekly", "at": "06:00" }],
-  "inputs": [
-    { "source": "audit-ledger" },
-    { "source": "queue-state", "window": true }
-  ],
+  "inputs": [{ "source": "audit-ledger" }, { "source": "queue-state", "window": true }],
   "agenda": [
     {
       "id": "collect",

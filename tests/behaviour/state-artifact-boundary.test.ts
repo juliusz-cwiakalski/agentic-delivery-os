@@ -171,7 +171,9 @@ describe("TC-GH222-020 artifact-boundary verdict matrix", () => {
       expect(line).not.toContain("ceremony");
     }
     expect(existsSync(join(process.cwd(), "packages/core/src/state/retro.ts"))).toBe(false);
-    expect(existsSync(join(process.cwd(), "packages/core/src/state/ceremony.ts"))).toBe(false);
+    // The ceremony boundary is a later additive module; the suite still imports
+    // neither module and reads only the generic boundary factory.
+    expect(existsSync(join(process.cwd(), "packages/core/src/state/ceremony.ts"))).toBe(true);
   });
 });
 

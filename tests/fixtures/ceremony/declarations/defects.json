@@ -57,10 +57,7 @@
     "field": "tiers[]",
     "set": {
       "path": "tiers",
-      "value": [
-        "full",
-        "turbo"
-      ]
+      "value": ["full", "turbo"]
     }
   },
   {

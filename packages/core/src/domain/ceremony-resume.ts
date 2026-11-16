@@ -6,11 +6,7 @@
  * only from the first unverified index. A verified step is never re-executed,
  * re-verified destructively, or re-rendered.
  */
-import type {
-  CeremonyDeclaration,
-  CeremonyNote,
-  CeremonyStepRecord,
-} from "#contracts";
+import type { CeremonyDeclaration, CeremonyNote, CeremonyStepRecord } from "#contracts";
 import {
   executeCeremonyAgenda,
   flattenCeremonyAgenda,
@@ -33,8 +29,7 @@ export type CeremonyResumeRequest = {
 
 const failure = (code: string, summary: string): CeremonyEngineFailure => ({ code, summary });
 
-const torn = (summary: string): CeremonyEngineFailure =>
-  failure("state.store.torn", summary);
+const torn = (summary: string): CeremonyEngineFailure => failure("state.store.torn", summary);
 
 const stepOutcomeOf = (record: CeremonyStepRecord): CeremonyStepOutcome => ({
   index: record.index,
@@ -57,13 +52,18 @@ const recordedVerdict = (steps: readonly CeremonyStepRecord[]) => {
 export const validateCeremonyStepSequence = (
   declaration: CeremonyDeclaration,
   steps: readonly CeremonyStepRecord[],
-): { readonly ok: true; readonly startIndex: number; readonly maxIndex: number } | { readonly ok: false; readonly reason: string } => {
+):
+  | { readonly ok: true; readonly startIndex: number; readonly maxIndex: number }
+  | { readonly ok: false; readonly reason: string } => {
   const expected = flattenCeremonyAgenda(declaration).length;
   if (steps.length === 0) return { ok: true, startIndex: 1, maxIndex: 0 };
   const byIndex = new Map<number, CeremonyStepRecord[]>();
   for (const step of steps) {
     if (!Number.isInteger(step.index) || step.index < 1 || step.index > expected) {
-      return { ok: false, reason: `step record ${String(step.index)} is outside the declared agenda` };
+      return {
+        ok: false,
+        reason: `step record ${String(step.index)} is outside the declared agenda`,
+      };
     }
     const entries = byIndex.get(step.index) ?? [];
     entries.push(step);
@@ -122,7 +122,10 @@ export const resumeCeremony = (request: CeremonyResumeRequest): CeremonyRunOutco
   const sequence = validateCeremonyStepSequence(request.declaration, stepsRead.records);
   if (!sequence.ok) return { ok: false, error: torn(sequence.reason) };
   const total = flattenCeremonyAgenda(request.declaration).length;
-  if (sequence.maxIndex >= total && stepsRead.records.every((step) => step.outcome !== "unverified")) {
+  if (
+    sequence.maxIndex >= total &&
+    stepsRead.records.every((step) => step.outcome !== "unverified")
+  ) {
     return {
       ok: true,
       data: {
@@ -135,7 +138,9 @@ export const resumeCeremony = (request: CeremonyResumeRequest): CeremonyRunOutco
         scopeKey: run.scopeKey,
         window: run.trigger.actualWindow,
         steps: stepsRead.records.map(stepOutcomeOf),
-        applied: stepsRead.records.some((step) => step.kind === "sync" && step.outcome === "verified"),
+        applied: stepsRead.records.some(
+          (step) => step.kind === "sync" && step.outcome === "verified",
+        ),
         carried: [],
       },
     };

@@ -174,6 +174,7 @@ export const DELIVERED_INLINE_NAMES = [
   "coordinator",
   "daemon",
   "projects",
+  "ceremony",
   "repos",
 ] as const;
 

@@ -67,6 +67,9 @@ const utf8ByteLength = (value: string): number => {
   return bytes;
 };
 
+/** Parse one ceremony note document from readable bytes (the caller bounds size). */
+export const parseCeremonyNoteText = (text: string): unknown => parse(text);
+
 /** One bounded declaration-document read. */
 export type CeremonyDeclarationDocumentRead =
   | { readonly state: "absent"; readonly path: string }

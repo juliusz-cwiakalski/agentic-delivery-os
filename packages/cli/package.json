@@ -63,7 +63,6 @@
   },
   "dependencies": {
     "@delivery-os/core": "workspace:*",
-    "@delivery-os/adapters": "workspace:*",
-    "yaml": "2.9.1"
+    "@delivery-os/adapters": "workspace:*"
   }
 }

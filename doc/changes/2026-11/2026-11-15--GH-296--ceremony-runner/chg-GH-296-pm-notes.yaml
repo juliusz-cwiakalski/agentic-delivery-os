@@ -262,3 +262,13 @@ notes:
       tests/structure/inventory.json lists the two new CLI files."
     type: info
     date: "2026-11-16"
+  - text: "plan phase 10 (cross-cutting honesty battery): commit 87340fa; pnpm
+      typecheck green; bun test determinism, bounds, performance,
+      non-regression, mutants, hermetic, and the full-path imports suite green
+      (44 pass); bun run scripts/checks/ambient-globals.ts green. The mutant
+      meta-suite disables sixteen rules one at a time in temp source copies; the
+      hermetic scan fails on a planted skip, network import, and HOME read. One
+      output-render correction (the verdict line is reserved under the 32-line
+      bound) rode the same commit."
+    type: info
+    date: "2026-11-16"
