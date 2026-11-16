@@ -11,7 +11,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-16T14:09:14.831Z }
   delivery: { started: null, completed: 2026-11-16T16:42:49.170Z }
   system_spec_update: { started: null, completed: 2026-11-16T17:36:24.341Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-16T18:30:53.537Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -262,4 +262,41 @@ notes:
       battery — watch these three suites for load-related flakes when
       interpreting gate results."
     type: risk
+    date: "2026-11-16"
+  - text: "RETRO: phase complete system_spec_update landed 13 files but EXCLUDED the
+      untracked feature-steer.md (outside plan scope union change folder;
+      LIFECYCLE_PLAN_KINDS maps only delivery/delivery_planning so --phase
+      system_spec_update has plan-absent scope). Landed via standalone commit
+      primitive plan-union form feb5e431, which the plan itself sanctioned in
+      its phase-8 scope comment. Lesson: any NEW file outside the change folder
+      must be explicitly plan-scope-listed, or it strands untracked after its
+      phase checkpoint."
+    type: retro
+    date: "2026-11-16"
+  - text: "RETRO / candidate follow-up (owner decision required for ticket
+      creation): commitlint adapter defect —
+      packages/adapters/src/file/commitlint.ts execFile('commitlint') without
+      PATH augmentation fails when commitlint is not global
+      (commit.commitlint-failed with generic message); node_modules/.bin/
+      commitlint exists. Workaround: PATH=\"$PWD/node_modules/.bin:$PATH\"
+      prefix on commit invocations. Risk: primitive commits made without the
+      prefix skip commitlint validation silently (generic probe failure). The
+      phase 9 range lint gate is the authoritative backstop. Candidate memory
+      entry at closeout; fix belongs to a tooling ticket, not this change."
+    type: retro
+    date: "2026-11-16"
+  - text: "Review PASSED iteration 1 (reviewer): 0 blocking / 1 medium / 6 advisory
+      / 1 info; artifact code-review/review-iter-1.yaml. All 24 ACs verified
+      delivered; reviewer's own gate run at HEAD feb5e431: pnpm check exit 0
+      (9643/4/0), 394 steer tests green, error-table exact, 23-family mount
+      clean, range lint PASS. F-1 (medium, architectural): production steer read
+      injects empty PDR-0003 join facts (join.defaultableRefs {}), so
+      drawnDefault lights null/none — steer is declared local-only (NFR-6/8)
+      while defaultable-gate facts are tracker-derived; domain join proven over
+      injected facts; limitation documented in feature-steer.md. PM disposition:
+      accepted for this change (declared posture); OWNER DECISION PROPOSED at PR
+      time — follow-up ticket to wire local waiver/decision facts so
+      defaultState pending/applied can light (no ticket created without owner
+      approval)."
+    type: info
     date: "2026-11-16"
