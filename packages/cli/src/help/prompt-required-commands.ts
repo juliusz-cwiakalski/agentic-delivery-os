@@ -29,6 +29,7 @@ export const PROMPT_REQUIRED_COMMANDS = [
   "projects",
   "repos",
   "events",
+  "ceremony",
 ] as const;
 
 export type PromptRequiredCommand = (typeof PROMPT_REQUIRED_COMMANDS)[number];

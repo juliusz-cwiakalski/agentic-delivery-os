@@ -235,3 +235,16 @@ notes:
       tests/structure/inventory.json update was disclosed as scope drift."
     type: info
     date: "2026-11-16"
+  - text: "plan phase 8 (measurement records and the committed ceremony-share
+      comparison): commit b64cf4b; pnpm typecheck green; bun test
+      tests/behaviour/ceremony-comparison.test.ts,
+      tests/golden/ceremony-comparison.test.ts,
+      tests/checks/ceremony-comparison-honesty.test.ts, and
+      tests/behaviour/ceremony-state-boundary.test.ts green (21 pass); git
+      diff --check clean. The committed baseline log is schema_version 2 with
+      one additive comparisons[] entry; the golden suite deep-equals the
+      builder output; at delivery time n = 0, the verdict is
+      insufficient-sample and no trend token exists in the record. The tracked
+      tests/structure/inventory.json update was disclosed as scope drift."
+    type: info
+    date: "2026-11-16"

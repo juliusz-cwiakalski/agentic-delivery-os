@@ -3,6 +3,7 @@
  * Types only at scaffold.
  */
 
+export { CEREMONY_HUMAN_BOUNDS, renderCeremonyText } from "./ceremony-text.js";
 export { renderCommitHuman } from "./commit-text.js";
 export {
   renderDispatchAttemptsText,

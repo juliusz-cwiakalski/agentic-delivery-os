@@ -149,3 +149,21 @@ Read it with the M2 command contracts it introduces:
 [commands/spend.md](commands/spend.md),
 [commands/queue.md](commands/queue.md), and
 [commands/board.md](commands/board.md).
+
+## Observation (2026-11-16): `ceremony` mounted
+
+Observed from the built workspace after the GH-296 mount.
+
+```
+$ <binary> --help
+Commands: status brief queue lanes blockers phase commit lint plan
+          verify merge closeout spend retro dispatch coordinator daemon
+          projects repos events ceremony
+```
+
+Twenty-one families are registered: the twenty observed on 2026-11-14 plus
+`ceremony`. `ceremony` is in the prompt-required set, composed unconditionally by
+the production entrypoint, advertised in root `--help` with family and verb
+pages, served by the M2 `ceremony` reference page, and named by the coverage
+inventory. The four verbs are exactly `list`, `run`, `resume`, and `catch-up`;
+no `metrics`, `pack`, `action`, or scheduler verb is registered.

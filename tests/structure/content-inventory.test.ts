@@ -1990,6 +1990,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "cli/src/commands/watchdog.ts": ["createWatchdogCommandDefinition", "renderWatchdogHuman"],
   "cli/src/commands/verify-gates.ts": ["createVerifyGatesHandler"],
   "cli/src/edge.ts": [
+    "createCeremonyCommandRuntime",
     "createCliAudit",
     "createProductionDependencies",
     "registerEdgeSecrets",
@@ -2843,6 +2844,8 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "ceremonyP90Ms",
     "foldCeremonyMeasurement",
   ],
+  "cli/src/commands/ceremony.ts": ["ceremonyErrorKind", "createCeremonyCommandDefinition"],
+  "cli/src/output/ceremony-text.ts": ["CEREMONY_HUMAN_BOUNDS", "renderCeremonyText"],
 };
 
 const listTypeScriptFiles = (packageDir: string): string[] => {

@@ -3162,6 +3162,19 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         newTraceId: () => globalThis.crypto.randomUUID(),
         newFenceToken,
       },
+      ceremony: {
+        store,
+        stateDirectory,
+        changesDirectory,
+        workspaceId,
+        clock: { nowMs },
+        newRunId: () => globalThis.crypto.randomUUID(),
+        newFenceToken,
+        gitRoot: checkoutRoot,
+        configurationDirectoryName: brand.configDirectoryName,
+        repositoryId:
+          scope.value.scope.kind === "project" ? scope.value.scope.projectKey : "unbound",
+      },
       coordinator: createProductionCoordinatorComposition(),
       projects: {
         readProjects,

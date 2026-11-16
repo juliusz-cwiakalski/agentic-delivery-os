@@ -39,13 +39,14 @@ deliberate and the generic table is left unchanged until milestone exit.
 | [commands/spend.md](commands/spend.md) | Spend v2 breakdown contract |
 | [commands/queue.md](commands/queue.md) | Queue lifecycle verb contract |
 | [commands/board.md](commands/board.md) | Full M2 board contract |
+| [commands/ceremony.md](commands/ceremony.md) | Delivered ceremony runner contract: four verbs, declaration vocabularies, six built-ins, project declarations, catch-up, tiered intake, and the measurement record |
 
 ## Story-to-artifact map
 
 | Story | Architecture flow | Contract surface | Scenario seeds |
 |---|---|---|---|
 | M2-S2 Supervise | none in this pack | none in this pack | SC-M2-S2-01, SC-M2-S2-02 |
-| M2-S3 Ceremony runner | none in this pack | `phase.state` topic (advisory: consumed at delivery; the owning story declares the edge) | SC-M2-S3-01, SC-M2-S3-02 |
+| M2-S3 Ceremony runner | none in this pack | [commands/ceremony.md](commands/ceremony.md) (delivered: four verbs, the declaration contract, six built-ins, project declarations, catch-up, tiered intake, records, comparison) | SC-M2-S3-01, SC-M2-S3-02 |
 | M2-S4 Board | multi-repository overview | `projects.v1` delivered payload; the board consumes repository keys and the host index | SC-M2-S4-01, SC-M2-S4-02 |
 | M2-S5 Steer | none in this pack | `phase.state` topic (advisory: consumed at delivery; the owning story declares the edge) | SC-M2-S5-01, SC-M2-S5-02 |
 | M2-S6 Metrics and spend | telemetry attribution | `telemetry.v1` (delivered by S14, consumed here), `spend` v2 (delivered by S14; this story owns the alarm and metric layers) | SC-M2-S6-01, SC-M2-S6-02 |

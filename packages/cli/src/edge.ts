@@ -8,7 +8,8 @@
  */
 
 import { randomUUID } from "node:crypto";
-import { readFileSync } from "node:fs";
+import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { parse } from "yaml";
 import {
   acquireFileConfig,
   applyPromotionWrite,
@@ -24,6 +25,8 @@ import {
   type PmNotesFileSystemFacts,
   parseConfigYaml,
   type RuntimePlatform,
+  readCeremonyDeclarationDocument,
+  createCeremonyArtifactStore,
   readCiWorkflowJobNames,
   readDispatchAuthority,
   readLocalPmContext,
@@ -80,6 +83,14 @@ import {
   appendCommandReceipt,
   appendOutboxEffect,
   beginCommitEffect,
+  buildCeremonyRegistry,
+  catchUpCeremonies,
+  type CeremonyEngineFailure,
+  catchUpScopeKey,
+  ceremonyRegistryEntry,
+  ceremonyRegistryIds,
+  resumeCeremony,
+  runCeremony,
   buildCloseoutPlan,
   type CloseoutDependentFact,
   type CloseoutPlanFacts,
@@ -236,6 +247,11 @@ import {
   type CommitPlanPhaseContext,
   type CommitSafetyPort,
   type CommitSessionFacts,
+  type CeremonyInputRead,
+  type CeremonyInputSource,
+  type CeremonyMemoryPort,
+  type CeremonyMirrorPort,
+  type CeremonyNote,
   type CommitTelemetryRecord,
   type CommitTransportAvailability,
   type ConfigFailure,
@@ -343,8 +359,12 @@ import {
   createStateStore,
   foldCloseoutHistory,
   readAllMergeWaivers,
+  createCeremonyRecordPort,
+  foldCeremonyRunVerdict,
   readAuditLedger,
   readBlockerLedger,
+  readCeremonyRuns,
+  readCeremonySteps,
   readChangeTransitionsTolerant,
   readCloseoutHistory,
   readCommitTelemetry,
@@ -434,6 +454,11 @@ import {
   toQueueReadData,
 } from "./commands/queue.js";
 import { createReposCommandDefinition, type ReposCommandRuntime } from "./commands/repos.js";
+import {
+  type CeremonyCommandResult,
+  type CeremonyCommandRuntime,
+  createCeremonyCommandDefinition,
+} from "./commands/ceremony.js";
 import { createRetroCommandDefinition } from "./commands/retro.js";
 import { createSpendCommandDefinition, type SpendCommandRuntime } from "./commands/spend.js";
 import { createStatusCommandDefinition, type StatusCommandRuntime } from "./commands/status.js";
@@ -3260,6 +3285,7 @@ export type ConfigProgramOptions = {
   readonly daemon?: DaemonCommandRuntime;
   readonly coordinator?: CoordinatorComposition;
   readonly retro?: RetroCompositionOptions;
+  readonly ceremony?: CeremonyCompositionOptions;
   readonly spend?: SpendCompositionOptions;
   readonly projects?: ProjectsCommandRuntime;
   readonly repos?: ReposCommandRuntime;
@@ -3334,8 +3360,276 @@ const ordinaryFlags = (flags: CommandFlags, catalog: ConfigCatalog): Record<stri
   return values;
 };
 
-/**
- * Compose a frozen brand, acquired sources, legacy facts and the packed defaults
+/** The ceremony family composition seam (GH-296 F-1, F-6). */
+export type CeremonyCompositionOptions = {
+  readonly store: StateStorePort;
+  readonly stateDirectory: string;
+  readonly changesDirectory: string;
+  readonly workspaceId: string;
+  readonly clock: { readonly nowMs: () => number };
+  readonly newRunId: () => string;
+  readonly newFenceToken: () => string;
+  readonly gitRoot: string;
+  readonly configurationDirectoryName: string;
+  readonly repositoryId: string;
+};
+
+const ceremonyFailure = (error: CeremonyEngineFailure): CeremonyCommandResult => ({
+  ok: false,
+  error: {
+    code: error.code,
+    summary: error.summary,
+    ...(error.field === undefined ? {} : { field: error.field }),
+  },
+});
+
+const parseCeremonyNote = (
+  path: string,
+): { readonly note: CeremonyNote } | { readonly error: CeremonyEngineFailure } => {
+  try {
+    return { note: parse(readFileSync(path, "utf8")) as CeremonyNote };
+  } catch {
+    return {
+      error: {
+        code: "ceremony.note-invalid",
+        summary: `the ceremony note at "${path}" cannot be read or parsed`,
+        field: "document",
+      },
+    };
+  }
+};
+
+/** Compose the ceremony runtime over the delivered state, artifact and file seams. */
+export const createCeremonyCommandRuntime = (
+  options: CeremonyCompositionOptions,
+): CeremonyCommandRuntime => {
+  const registryRead = () =>
+    buildCeremonyRegistry({
+      document: readCeremonyDeclarationDocument({
+        gitRoot: options.gitRoot,
+        configurationDirectoryName: options.configurationDirectoryName,
+      }),
+    });
+  const memoryDirectory = `${options.gitRoot}/.ai/memory/ceremony`;
+  const memory: CeremonyMemoryPort = {
+    readNote(scopeKey) {
+      const path = `${memoryDirectory}/${encodeURIComponent(scopeKey)}.md`;
+      if (!existsSync(path)) return { state: "absent" };
+      try {
+        return { state: "present", body: readFileSync(path, "utf8") };
+      } catch {
+        return { state: "absent" };
+      }
+    },
+    writeNote(input) {
+      try {
+        mkdirSync(memoryDirectory, { recursive: true });
+        const path = `${memoryDirectory}/${encodeURIComponent(input.scopeKey)}.md`;
+        if (input.append) appendFileSync(path, `\n${input.body}`, "utf8");
+        else writeFileSync(path, input.body, "utf8");
+        return { ok: true };
+      } catch {
+        return { ok: false, detail: "the memory slot is not writable" };
+      }
+    },
+  };
+  const mirror: CeremonyMirrorPort = {
+    inspect: () => ({ state: "absent", mirrorSet: [], sourceSet: [] }),
+    apply: () => ({ ok: false, detail: "no mirror landing path is composed" }),
+  };
+  const envFor = (origin: "built-in" | "project", note: CeremonyNote | undefined) => {
+    const input = (source: CeremonyInputSource): CeremonyInputRead => {
+      if (source === "owner-note" && note !== undefined) {
+        return {
+          state: "present",
+          facts: {
+            items: (note.actions ?? []).map((action) => ({
+              text: action,
+              evidenceRef: "note:action",
+            })),
+          },
+        };
+      }
+      if (
+        note !== undefined &&
+        (source === "retro-evidence" ||
+          source === "retro-runs" ||
+          source === "memory-audit" ||
+          source === "pm-notes-retro")
+      ) {
+        return { state: "present", facts: { evidenceRefs: note.evidenceRefs ?? [] } };
+      }
+      return {
+        state: "unavailable",
+        reason: `collector "${source}" is not composed for this invocation`,
+      };
+    };
+    return {
+      clock: options.clock,
+      ids: { nextRunId: options.newRunId },
+      input,
+      artifacts: createCeremonyArtifactStore({
+        stateDirectory: options.stateDirectory,
+        workspaceId: options.workspaceId,
+      }),
+      records: createCeremonyRecordPort(options.store, options.newFenceToken()),
+      memory,
+      mirror,
+      repositoryId: options.repositoryId,
+      origin,
+    } as const;
+  };
+  const noteFor = (runId: string, scopeKey: string): CeremonyNote | undefined => {
+    const body = memory.readNote(scopeKey);
+    if (body.state === "absent") return undefined;
+    try {
+      void runId;
+      return parse(body.body) as CeremonyNote;
+    } catch {
+      return undefined;
+    }
+  };
+  return {
+    list: async () => {
+      const built = registryRead();
+      if (!built.ok) return { ok: false, error: built.error };
+      const runs = readCeremonyRuns(options.store);
+      const valid = runs.ok ? runs.value.records : [];
+      const ceremonies = built.registry.entries.map((entry) => {
+        const own = valid
+          .filter((run) => run.ceremonyId === entry.declaration.id)
+          .sort((left, right) => left.startedAtMs - right.startedAtMs);
+        const last = own[own.length - 1];
+        let lastRun: { runId: string; verdict: string; startedAtMs: number } | undefined;
+        if (last !== undefined) {
+          const steps = readCeremonySteps(options.store, last.runId);
+          lastRun = {
+            runId: last.runId,
+            verdict: steps.ok ? foldCeremonyRunVerdict(steps.value.records) : "unknown",
+            startedAtMs: last.startedAtMs,
+          };
+        }
+        return {
+          id: entry.declaration.id,
+          origin: entry.origin,
+          tiers: entry.declaration.tiers,
+          triggers: entry.declaration.triggers.map((trigger) =>
+            trigger.kind === "schedule" ? `schedule:${trigger.cadence}` : `event:${trigger.event}`,
+          ),
+          catchUp: entry.declaration.catchUp.mode,
+          ...(lastRun === undefined ? {} : { lastRun }),
+        };
+      });
+      return { ok: true, data: { ceremonies } };
+    },
+    run: async (request) => {
+      const built = registryRead();
+      if (!built.ok) return { ok: false, error: built.error };
+      const entry = ceremonyRegistryEntry(built.registry, request.name);
+      if (entry === undefined) {
+        return {
+          ok: false,
+          error: {
+            code: "input.value.rejected",
+            summary: `ceremony "${request.name}" is not declared; declared: ${ceremonyRegistryIds(built.registry).join(", ")}`,
+            field: "name",
+          },
+        };
+      }
+      const parsed =
+        request.notePath === undefined ? undefined : parseCeremonyNote(request.notePath);
+      if (parsed !== undefined && "error" in parsed) return { ok: false, error: parsed.error };
+      const note = parsed?.note;
+      const run = runCeremony({
+        declaration: entry.declaration,
+        env: envFor(entry.origin, note),
+        noteSupplied: note !== undefined,
+        ...(note === undefined ? {} : { note }),
+        ...(request.window === undefined ? {} : { window: request.window }),
+        apply: request.apply,
+      });
+      return run.ok ? { ok: true, data: run.data } : { ok: false, error: run.error };
+    },
+    resume: async (request) => {
+      const built = registryRead();
+      if (!built.ok) return { ok: false, error: built.error };
+      const runs = readCeremonyRuns(options.store);
+      if (!runs.ok) {
+        return ceremonyFailure({
+          code: runs.error.code,
+          summary: "ceremony records are unreadable",
+        });
+      }
+      const run = runs.value.records.find((candidate) => candidate.runId === request.runId);
+      if (run === undefined) {
+        return {
+          ok: false,
+          error: {
+            code: "input.value.rejected",
+            summary: `no ceremony run "${request.runId}" is recorded`,
+            field: "runId",
+          },
+        };
+      }
+      const entry = ceremonyRegistryEntry(built.registry, run.ceremonyId);
+      if (entry === undefined) {
+        return {
+          ok: false,
+          error: {
+            code: "input.value.rejected",
+            summary: `ceremony "${run.ceremonyId}" is no longer declared; history stays readable`,
+            field: "runId",
+          },
+        };
+      }
+      const note = noteFor(request.runId, run.scopeKey.value);
+      const resumed = resumeCeremony({
+        runId: request.runId,
+        declaration: entry.declaration,
+        env: envFor(entry.origin, note),
+        apply: request.apply,
+        ...(note === undefined ? {} : { note }),
+      });
+      return resumed.ok ? { ok: true, data: resumed.data } : { ok: false, error: resumed.error };
+    },
+    catchUp: async (request) => {
+      const built = registryRead();
+      if (!built.ok) return { ok: false, error: built.error };
+      if (
+        request.name !== undefined &&
+        ceremonyRegistryEntry(built.registry, request.name) === undefined
+      ) {
+        return {
+          ok: false,
+          error: {
+            code: "input.value.rejected",
+            summary: `ceremony "${request.name}" is not declared; declared: ${ceremonyRegistryIds(built.registry).join(", ")}`,
+            field: "name",
+          },
+        };
+      }
+      const entries =
+        request.name === undefined
+          ? built.registry.entries
+          : built.registry.entries.filter((entry) => entry.declaration.id === request.name);
+      const targets = entries.map((entry) => ({
+        declaration: entry.declaration,
+        scopeKey:
+          catchUpScopeKey({ declaration: entry.declaration, repositoryId: options.repositoryId }) ??
+          "",
+      }));
+      const report = catchUpCeremonies({
+        targets,
+        env: envFor("built-in", undefined),
+        nowMs: options.clock.nowMs(),
+        apply: false,
+      });
+      return report.ok ? { ok: true, data: report.data } : { ok: false, error: report.error };
+    },
+  };
+};
+
+/** Compose a frozen brand, acquired sources, legacy facts and the packed defaults
  * manifest into one config command program. Brand resolution happens before any
  * filesystem or root discovery.
  */
@@ -3796,6 +4090,11 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   }
   if (options.retro !== undefined) {
     commands.retro = createRetroCommandDefinition(createRetroCommandRuntime(options.retro));
+  }
+  if (options.ceremony !== undefined) {
+    commands.ceremony = createCeremonyCommandDefinition(
+      createCeremonyCommandRuntime(options.ceremony),
+    );
   }
   if (options.spend !== undefined) {
     commands.spend = createSpendCommandDefinition(createSpendCommandRuntime(options.spend));

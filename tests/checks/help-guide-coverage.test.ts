@@ -15,3 +15,18 @@ describe("TC-HELP-001 help and guide coverage", () => {
     expect(failures).toEqual([]);
   });
 });
+
+describe("TC-CEREMONY-001 ceremony coverage row", () => {
+  test("the ceremony family and its M2 page are in the coverage inventory", async () => {
+    const { readFileSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const inventory = JSON.parse(
+      readFileSync(join(process.cwd(), "tests/fixtures/help-guide/coverage.json"), "utf8"),
+    ) as { commands: string[]; referencePages: string[] };
+    expect(inventory.commands).toContain("ceremony");
+    expect(inventory.referencePages).toContain(
+      "doc/planning/oss-tooling/milestones/m2/commands/ceremony.md",
+    );
+    expect(runHelpGuideCoverage()).toEqual([]);
+  });
+});
