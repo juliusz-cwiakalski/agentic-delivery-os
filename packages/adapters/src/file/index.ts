@@ -59,6 +59,19 @@ export {
   runtimePlatform,
 } from "./config-source.js";
 export {
+  type AffectedRepositoryTarget,
+  affectedRepositoryTargets,
+  copyDecisionRecords,
+  DECISION_RECORD_ID_PATTERN,
+  type DecisionMirrorApplyResult,
+  type DecisionRecordFileSystem,
+  type DecisionRegisterRead,
+  decisionRecordIdOf,
+  decisionRecordIds,
+  nodeDecisionRecordFileSystem,
+  readDecisionRegister,
+} from "./decision-register.js";
+export {
   type DispatchAuthorityFact,
   dispatchAuthorityDocumentName,
   dualRunDispatchAuthority,

@@ -357,3 +357,28 @@ notes:
       the primitive disclosed the drift."
     type: info
     date: "2026-11-16"
+  - text: "Remediation slice B (tier engine composition, AC-F7-1..F7-5, DM-7):
+      commit 4b275dbb. The runtime now evaluates the tier verdict per
+      invocation: it selects the checkout's delivery change from the recorded
+      phase.transition ledger truth (newest transition timestamp, greatest ref
+      on ties), reads the selected change's committed pm-notes (variant,
+      blockers) and plan (tier) documents through a new bounded adapter, and
+      maps recorded reopens to the closed escalation-trigger facts (reopen =
+      phase-reopen; review_fix = review-rework; quality_gates = gate-failure;
+      dor_check = dor-rework; open blocker = owner-escalation). ceremony list
+      populates data.tier with a per-ceremony obligated flag and reads the
+      ledger in one verified partitioned scan (runs+steps+transitions via the
+      new readCeremonyState); ceremony run threads the verdict into runCeremony
+      so the run record carries effectiveTier, phaseSetSize and escalations;
+      catch-up filters non-obligated declarations and records the verdict on
+      replayed runs; an explicit run is never gated. A checkout with no
+      recorded lifecycle history resolves no verdict and keeps the delivered
+      default. Suites: pnpm typecheck green; new
+      tests/behaviour/ceremony-tier-composition.test.ts 10 pass (TC-067);
+      cli/list/envelope/catch-up/state-boundary/performance/determinism/bounds/
+      hermetic/mutants/non-regression 95 pass; parity/run/notes/resume/TC-066/
+      project-declarations/tier suites 112 pass; doc-conformance green; biome
+      clean. The tier known-gap bullet in the feature spec and the guide's
+      shipped-composition note were replaced with the composed truth."
+    type: info
+    date: "2026-11-16"

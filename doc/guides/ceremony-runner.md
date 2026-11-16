@@ -203,7 +203,7 @@ A failed read-back makes the step `unverified` with the reason, stops the agenda
 
 A `sync` step is dry-run by default: it computes the declared write set, checks the target preconditions, and lands nothing. `--apply` is the only way a declared effect lands; the verdict is then `verified` rather than `dry-run`. A target that is absent, dirty, off its declared base, or drifted reports its reason and the step is `unverified`; there is no force path and no write to a repository the declaration does not name.
 
-> **Shipped composition.** The mirror-sync landing path and the affected-repository reader are not composed in the shipped binary yet, so a real `decision-record-mirror-sync` run reports `no affected repository targets were declared` and ends `unverified` at exit `1` instead of fabricating a landing. Plan the write-set computation and equality verification as delivered-and-tested; treat the live landing as pending composition. See the feature spec's delivered-limits section.
+> **Composed landing.** The shipped mirror sync resolves its target set from the committed `projects.yaml` members (`repoKey`, minus the invoking repository; `root` names the local checkout) and its source set from the invoking repository's `doc/decisions/` register. A dry run is `dry-run` at exit `0` even against fresh targets — the computed write set is the report. With `--apply`, each declared target checkout receives the register's record files byte for byte; a target that still differs in either direction afterwards leaves the run `unverified` naming the target. The records land as files; the target checkout's own mirror commit is composed by the delivery flow there, never by the ceremony.
 
 ## Artifact homes
 
@@ -282,7 +282,7 @@ The committed metric `MET-CEREMONY-SHARE` — ceremony-phase time over total lif
 
 ## Current limits
 
-The shipped surface has known composition gaps, stated here so you do not plan around capability that is not wired: most declared collectors are not composed in the binary and arrive as declared `unavailable` degradations; the mirror landing path is not composed; and `state-record`/`mirror-target` outputs are artifacts rather than ledger records. The full list, with what is delivered and tested beside each gap, is in [Ceremony Runner §9: Delivered limits and known gaps](../spec/features/feature-ceremony-runner.md#9-delivered-limits-and-known-gaps).
+The shipped surface has known composition gaps, stated here so you do not plan around capability that is not wired: most declared collectors are not composed in the binary and arrive as declared `unavailable` degradations, and `state-record`/`mirror-target` outputs are artifacts rather than ledger records. The full list, with what is delivered and tested beside each gap, is in [Ceremony Runner §9: Delivered limits and known gaps](../spec/features/feature-ceremony-runner.md#9-delivered-limits-and-known-gaps).
 
 ## See also
 

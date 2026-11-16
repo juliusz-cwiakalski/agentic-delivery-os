@@ -15,9 +15,9 @@ import {
   CEREMONY_ASSESS_VERDICTS,
   CEREMONY_CARRY_OVER_REASONS,
   CEREMONY_CHECK_STATES,
-  CEREMONY_FOLLOW_THROUGH_VERDICTS,
   CEREMONY_COMPACTION_MAX_BYTES,
   CEREMONY_COMPACTION_MAX_LINES,
+  CEREMONY_FOLLOW_THROUGH_VERDICTS,
   CEREMONY_NOTE_SCHEMA,
   CEREMONY_RUN_PAYLOAD_SCHEMA,
   type CeremonyArtifactPort,
@@ -30,8 +30,8 @@ import {
   type CeremonyMirrorPort,
   type CeremonyNote,
   type CeremonyOutputSlot,
-  type CeremonyRecordPort,
   type CeremonyRecordedTrigger,
+  type CeremonyRecordPort,
   type CeremonyRunOrigin,
   type CeremonyRunRecord,
   type CeremonyRunVerdict,
@@ -57,12 +57,12 @@ import {
   renderCeremonyRetroInsights,
 } from "./ceremony-builtins.js";
 import { ceremonyDeclarationDigest } from "./ceremony-declaration.js";
-import { planCeremonyMirror } from "./ceremony-mirror.js";
 import {
-  resolveCeremonyIntake,
   type CeremonyIntake,
   type CeremonyRunIdentity,
+  resolveCeremonyIntake,
 } from "./ceremony-intake.js";
+import { planCeremonyMirror } from "./ceremony-mirror.js";
 
 /** The night-watch declared checks (pinned closed set, GAP-2). */
 export const CEREMONY_NIGHT_WATCH_CHECKS = [
@@ -682,6 +682,17 @@ const verifyContent = (
   const targets = parsed.targets;
   if (!Array.isArray(targets) || targets.length === 0) {
     return { ok: false, reason: "artifact carries no targets to compare" };
+  }
+  if (parsed.applied === false) {
+    // A dry run verified the target preconditions and computed the write set;
+    // nothing landed, so per-target equality is the computed report, not a
+    // landing proof (E-8, AC-F4-5).
+    const planned = targets.every(
+      (entry) => isRecord(entry) && entry.state === "clean" && entry.reason === undefined,
+    );
+    return planned
+      ? { ok: true }
+      : { ok: false, reason: "a declared mirror target failed its precondition" };
   }
   const equal = targets.every(
     (entry) =>

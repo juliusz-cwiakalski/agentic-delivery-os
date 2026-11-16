@@ -45,7 +45,15 @@ const setEqual = (left: readonly string[], right: readonly string[]): boolean =>
   return leftSorted.every((entry, index) => entry === rightSorted[index]);
 };
 
-/** Plan (and, only with `apply`, land) the declared mirror write set. */
+/**
+ * Plan (and, only with `apply`, land) the declared mirror write set.
+ *
+ * A dry run verifies the target preconditions and computes the write set; a
+ * target whose mirror set already differs is reported per target without
+ * failing the run, because nothing landed (E-8, AC-F4-5). With `--apply`, the
+ * landing must leave every target equal to its source set in both directions
+ * (NFR-12); a precondition failure or an unequal landing names the target.
+ */
 export const planCeremonyMirror = (input: CeremonyMirrorPlanInput): CeremonyMirrorPlan => {
   if (input.targets.length === 0) {
     return { targets: [], failure: "no affected repository targets were declared" };
@@ -109,7 +117,7 @@ export const planCeremonyMirror = (input: CeremonyMirrorPlanInput): CeremonyMirr
       ...(applied.ok ? {} : { reason: applied.detail ?? "apply failed" }),
     });
   }
-  const failure = plans.find((plan) => !plan.equal || plan.reason !== undefined);
+  const failure = plans.find((plan) => plan.reason !== undefined || (input.apply && !plan.equal));
   return {
     targets: plans,
     ...(failure === undefined

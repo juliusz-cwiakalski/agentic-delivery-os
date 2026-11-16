@@ -11,18 +11,22 @@ import { randomUUID } from "node:crypto";
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import {
   acquireFileConfig,
+  affectedRepositoryTargets,
   applyPromotionWrite,
   ceremonyTierEvidenceFromLifecycle,
   checkPromotionConfinement,
+  copyDecisionRecords,
   createCapsuleFileRuntime,
   createCeremonyArtifactStore,
   createCommitlintProbe,
   createSecretScanner,
+  decisionRecordIds,
   ensureProjectIdentityMarkerText,
   type FileSystemFacts,
   neutralEnvironmentFacts,
   nodeCapsuleFileSystemFacts,
   nodeCeremonyTierContextFileSystem,
+  nodeDecisionRecordFileSystem,
   nodeFileSystemFacts,
   type PmNotesFileSystemFacts,
   parseCeremonyNoteText,
@@ -31,11 +35,13 @@ import {
   readCeremonyDeclarationDocument,
   readCeremonyTierContextFiles,
   readCiWorkflowJobNames,
+  readDecisionRegister,
   readDispatchAuthority,
   readLocalPmContext,
   readMemoryFacts,
   readPlanArtifact,
   readPmNotesText,
+  readProjectGroupsConfig,
   readProjectIdentityMarker,
   runtimePlatform,
   stagePmNotesPhaseEntry,
@@ -3449,9 +3455,64 @@ export const createCeremonyCommandRuntime = (
       }
     },
   };
+  const decisionFs = nodeDecisionRecordFileSystem();
+  type MirrorTargetEntry = ReturnType<typeof affectedRepositoryTargets>[number];
+  let mirrorContext:
+    | {
+        readonly register: ReturnType<typeof readDecisionRegister>;
+        readonly targets: readonly MirrorTargetEntry[];
+        readonly roots: ReadonlyMap<string, string>;
+      }
+    | undefined;
+  const mirrorTargetsOf = () => {
+    if (mirrorContext !== undefined) return mirrorContext;
+    const config = readProjectGroupsConfig({
+      gitRoot: options.gitRoot,
+      configurationDirectoryName: options.configurationDirectoryName,
+    });
+    const targets =
+      config.state === "document"
+        ? affectedRepositoryTargets(config.value, options.repositoryId)
+        : [];
+    const roots = new Map<string, string>();
+    for (const target of targets) {
+      if (target.root !== undefined) roots.set(target.target, target.root);
+    }
+    mirrorContext = {
+      register: readDecisionRegister({ gitRoot: options.gitRoot, fs: decisionFs }),
+      targets,
+      roots,
+    };
+    return mirrorContext;
+  };
   const mirror: CeremonyMirrorPort = {
-    inspect: () => ({ state: "absent", mirrorSet: [], sourceSet: [] }),
-    apply: () => ({ ok: false, detail: "no mirror landing path is composed" }),
+    inspect(target) {
+      const context = mirrorTargetsOf();
+      const root = context.roots.get(target);
+      if (root === undefined || !decisionFs.pathExists(root) || !decisionFs.isDirectory(root)) {
+        return { state: "absent", mirrorSet: [], sourceSet: [] };
+      }
+      // A declared checkout is clean when it is present; its mirrored record
+      // set is what the equality check compares in both directions (NFR-12).
+      return {
+        state: "clean",
+        mirrorSet: decisionRecordIds(`${root.replace(/[\\/]+$/, "")}/doc/decisions`, decisionFs),
+        sourceSet: [],
+      };
+    },
+    apply(target, records) {
+      const context = mirrorTargetsOf();
+      const root = context.roots.get(target);
+      if (root === undefined) {
+        return { ok: false, detail: `target "${target}" declares no local checkout root` };
+      }
+      return copyDecisionRecords({
+        targetRoot: root,
+        ids: records,
+        sourceDirectory: context.register.directory,
+        fs: decisionFs,
+      });
+    },
   };
   const envFor = (origin: "built-in" | "project", note: CeremonyNote | undefined) => {
     let retrospectiveEvidence: readonly string[] | undefined;
@@ -3491,6 +3552,37 @@ export const createCeremonyCommandRuntime = (
           state: "present",
           facts: { evidenceRefs: [...retroEvidenceRefs()] },
         };
+      }
+      if (source === "affected-repositories") {
+        // The declared affected-repository set is the committed projects
+        // configuration's member identities, minus the invoking repository
+        // (F-3, NFR-12). Absent configuration is a declared degradation, never
+        // an invented target set.
+        const context = mirrorTargetsOf();
+        if (context.targets.length === 0) {
+          return {
+            state: "unavailable",
+            reason: "no affected repository is declared in the committed projects configuration",
+          };
+        }
+        return {
+          state: "present",
+          facts: { targets: context.targets.map((target) => target.target) },
+        };
+      }
+      if (source === "decision-register") {
+        // The register set is the invoking repository's committed decision
+        // records; every declared target mirrors the same register set (F-3).
+        const context = mirrorTargetsOf();
+        if (context.register.state !== "present") {
+          return {
+            state: "unavailable",
+            reason: "the decision register directory doc/decisions is absent",
+          };
+        }
+        const repositories: Record<string, readonly string[]> = {};
+        for (const target of context.targets) repositories[target.target] = context.register.ids;
+        return { state: "present", facts: { repositories } };
       }
       return {
         state: "unavailable",
