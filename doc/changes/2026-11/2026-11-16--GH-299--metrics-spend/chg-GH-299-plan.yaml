@@ -1,0 +1,1133 @@
+# GH-299 implementation plan — machine-readable projection (delivery.plan.v1).
+# Canonical plan artifact: this YAML document is the only plan file for the
+# change. `plan validate`, `plan diff`, `plan overlap`, and `lint plan` read it
+# directly. Extra phase data (goal, obligations/tasks, AC/TC acceptance, gate
+# commands) rides in YAML comments so the parsed document stays schema-strict;
+# the plan declares phases and scope only — no `tasks` key, no progress log
+# (progress is a pm-notes `notes:` entry naming the phase id, commit hash, and
+# test result).
+#
+# SOURCES (single source of truth; this plan invents no requirement):
+#   - Spec:     ./chg-GH-299-spec.md (v1.1, 22 ACs — AC-F1-1, AC-F2-1..2,
+#               AC-F3-1..4, AC-F4-1, AC-F5-1, AC-F6-1..5, AC-F7-1..2, AC-F8-1,
+#               AC-F9-1, AC-F10-1, AC-F11-1..2, AC-NFR9-1; F-1..F-11;
+#               DM-1..DM-8; NFR-1..NFR-10; NG-1..NG-9; DEC-1..DEC-14;
+#               RSK-1..RSK-9; §6 flows 1–7; §8.3 grammar / contract shape /
+#               ordering invariants / exit projection; §16.1 doc impact;
+#               §17.1 DoD-1..DoD-17; Appendix B ticket-AC decomposition;
+#               Appendix C seed mapping (SC-M2-S6-01/02); Appendix D — the
+#               binding locator list D-1..D-13 with same-commit movement, the
+#               no-leftover scan for 146/145/62/+112, and four-way agreement).
+#               Key adjudications consumed as pinned: DEC-2 escaped-defects as
+#               the non-MET curated floor; DEC-3 read-only over the log and
+#               the live comparison view; DEC-4 the metrics.burn-rate node;
+#               DEC-5 alarm derivation with crossedAt = read instant = window
+#               end; DEC-6 one identity delivery.metrics.v1 with closed
+#               vocabularies as contract data; DEC-7 pinned measurement kinds
+#               with the cross-kind caveat; DEC-8 the one metrics row with
+#               62 -> 63 / 146 -> 147 / 145 -> 146 / 146 -> 147 / +112 -> +113;
+#               DEC-9 the 24th prompt-required family; DEC-10 bounds and the
+#               tail-ordered truncation; DEC-11 classified absence posture;
+#               DEC-12 no subcommands; DEC-13 basis-scoped values; DEC-14
+#               attributable-scoped perAgent equality.
+#   - Tests:    ./chg-GH-299-test-plan.md (v1.1, 58 TCs TC-METRICS-001..112;
+#               22/22 AC coverage; §1.1 scope; §3 coverage overview; §4 layer
+#               table + §4.1 fixture contract + §4.2 non-vacuity contract +
+#               §4.3 oracles + §4.4 delivered-suite drift register DR-1..DR-12;
+#               §5 scenarios; §6 fixtures/goldens + runner command list; §7
+#               automation map — 28 new suite files + 20 updated; §8.3 all
+#               OQ-TP entries resolved). AMB-TP-1 (seam shapes delivery-bound;
+#               an unresolvable seam fails naming the missing contract) and
+#               AMB-TP-2..5 bind delivery throughout.
+#   - PM record: ./chg-GH-299-pm-notes.yaml (clarify_scope decisions — quota
+#               exclusion DEC-1, escaped-defects definition DEC-2; reopen
+#               iteration folding DEC-13/DEC-14; delivery conventions — gate
+#               command, PR target main-tools, conventional subjects, body and
+#               footer lines <= 100 chars, merge authority stays with the
+#               owner/CEO).
+#   - Schema:   doc/spec/features/feature-plan-schema.md (scope keys
+#               files/folders/packages, per-phase one-line summary, done
+#               artifacts, leases, weightClass, interactions, tier; no tasks
+#               key, no progress log).
+#   - Precedent: ./2026-11-16--GH-298--steer/chg-GH-298-plan.yaml (phase
+#               ceremony, early error-table registration with the one-commit
+#               count move, split-suite ownership notes, honesty battery,
+#               release pattern) and ./2026-11-16--GH-287--retro-action-
+#               registry/chg-GH-287-plan.yaml (comment-carried phase data).
+#   - Repo truth verified at plan time: ERROR_TABLE pins at 146 entries (7
+#               sites in tests/structure/error-table.test.ts), 145 delivered
+#               rows, RESERVED_TWO_SEGMENT_CODES at 62 members in both
+#               scripts/checks/error-table-sync.ts and the structural mirror,
+#               the +112 oracle at four textual sites in tests/checks/
+#               error-table-sync.test.ts — matching Appendix D pre-change
+#               values exactly; the ceremony measurement fold and committed
+#               comparison builder live in packages/core/src/domain/
+#               ceremony-comparison.ts; the delivered spend read path in
+#               packages/core/src/state/spend-reads.ts and the spend fold in
+#               packages/core/src/domain/spend.ts + spend-text.ts; committed
+#               document reads live in the packages/adapters/src/file/ tier
+#               (ceremony-declarations.ts, config-source.ts precedents);
+#               prompt-required registration in packages/cli/src/help/
+#               prompt-required-commands.ts; no tests/fixtures/metrics/
+#               exists yet (all new).
+#
+# PLAN-LEVEL REFINEMENTS (owner @plan-writer — recorded here as this plan's
+# design decisions; the spec pins the contracts, the test plan pins the
+# behaviours, and none of the below reshapes a TC's oracle, identity, exit,
+# bound, or AC/NFR mapping; no TC id changes):
+#   1. MODULE HOMES (AMB-TP-1 makes seam shapes delivery-bound; the homes
+#      below follow the delivered spend/steer layering): contracts in
+#      packages/core/src/contracts/metrics.ts (identity, vocabularies, the
+#      delivery.metrics.burn-rate.v1 node schema constants, bounds, the ten
+#      data key names, ordering data); the pure report fold and the bounded
+#      human renderer in packages/core/src/domain/metrics.ts and
+#      metrics-text.ts; the verified read composition in packages/core/src/
+#      state/metrics-reads.ts; the committed baseline-log document read in
+#      the packages/adapters/src/file/ tier (the ceremony-declarations
+#      precedent); the command grammar-only module packages/cli/src/commands/
+#      metrics.ts with the edge composing the runtime.
+#   2. ENTRY SKELETON VERSUS CURATION: metrics[] is vocabulary-driven from
+#      the first report render — all four ids always present with per-entry
+#      classified absence (row-absent / UNAVAILABLE) — while the
+#      escaped-defects curation capability lands with phase 6. No fixture
+#      asserted by an earlier phase seeds counted escaped-defect evidence,
+#      so no earlier TC observes a misclassified entry; the curation cells
+#      are TC-METRICS-060..063, owned by phase 6.
+#   3. TC-013 OWNERSHIP SPLIT: TC-METRICS-013's step 3 asserts that
+#      escaped-defects, dispatch, and alarmEvaluation are unaffected by a
+#      missing log, so its verdict completes only once those sections
+#      render; tests/behaviour/metrics-baseline-damage.test.ts therefore
+#      starts in phase 4 with the damage cells (TC-METRICS-014) and gains
+#      the row-absent cells in phase 6 (TC-METRICS-013).
+#   4. GOLDEN LANDING: the golden fixtures pinned by their owning TCs land
+#      with those phases (bare / crossing / telemetry-absent /
+#      below-threshold with phase 5; the insufficient-sample and
+#      explicit-window forms with phase 8); tests/golden/metrics.test.ts,
+#      the remaining forms, and regenerate.ts land in phase 8, which owns
+#      TC-METRICS-101. No delivered golden regenerates (DR-12).
+#   5. PRODUCTION COMPOSITION BEFORE THE MOUNT: the unconditional
+#      production composition lands with phase 4 (the GH-298 precedent);
+#      until phase 7 mounts the prompt-set entry, the entrypoint drops the
+#      un-advertised family exactly as it drops every non-prompt command,
+#      so root help and every other surface stay byte-identical.
+#   6. perAgent MEMBER NAMING (OQ-TP-5): the spec's DM-3 names the roll-up
+#      `perAgent` with role/model members while the delivered fold's member
+#      spelling stays delivery-bound; parity is asserted by value equality
+#      against `spend --ref` for the same selection, never by key spelling.
+#
+# PHASE ORDER AND TESTABILITY (spec §18 ordering, made concrete):
+#   Each phase is ONE commit on feat/GH-299/metrics-spend whose declared
+#   narrow gate is green at the boundary and whose cases are authored
+#   failing-first inside the phase (red missing module, missing data key, or
+#   declared count mismatch before the implementation that makes it green).
+#   Phase 1 lands the contract home every later phase asserts through, plus
+#   the one error row with EVERY Appendix D count pin and the in-boundary
+#   carrier moving in ONE commit (the GH-291/GH-298 early-doc-edit
+#   discipline — the sync gate is red otherwise); registering before the
+#   first refusing path exists is green and keeps the count move atomic, and
+#   the first path that emits metrics.baseline-unreadable arrives with the
+#   report command inside the same change boundary (spec §18). Phase 2 lands
+#   the pure fold skeleton over injected inputs (entries, kinds,
+#   comparisons, absence classification, truncation, renderer) with no I/O.
+#   Phase 3 lands the verified read composition and the burn-rate
+#   declaration node with its pre-read validation (GH-300 precedent).
+#   Phase 4 mounts the command runtime and lands the content blocks that
+#   need only entries and comparisons (surface grammar, envelope, baseline,
+#   kinds, caveat, comparisons, write discipline). Phase 5 lands the
+#   dispatch composition and the alarm evaluation with their suites and the
+#   full-report capstone cells (the bare report needs dispatch, alarms, and
+#   the entry skeleton together). Phase 6 lands escaped-defects curation and
+#   the cross-section absence/damage matrix (which asserts dispatch,
+#   alarms, and escaped-defects side by side). Phase 7 mounts the 24th
+#   prompt-required family with the atomic 23 -> 24 count move — mounting
+#   completes before the gates phase so the coverage check gates the final
+#   state (spec §18). Phase 8 is the cross-cutting honesty battery
+#   (determinism, bounds, purity, read cost, goldens, mutants, hermeticity)
+#   which needs every production module and render path to exist. Phase 9
+#   reconciles the planning corpus, stages the changeset and the lifecycle-
+#   phase-7 spec, declares the release obligations, and runs the aggregate
+#   gate battery and `plan validate` at the delivered HEAD.
+#
+# TC -> PHASE MAP (58 ids = TC-METRICS-001..112; every id owned by exactly
+#   one phase — the phase whose commit lands the case together with the
+#   capability that makes it green; suite halves proven earlier or echoing
+#   later are named in split-suite notes without a second owner row):
+#   Phase 1 contracts/error registration (3): TC-METRICS-090, 091, 092
+#   Phase 2 pure domain (0): none (static halves of TC-METRICS-100/105 land
+#            red-first here; no TC completes before the runtime exists)
+#   Phase 3 reads/config node (0): none (the structure node-row half of
+#            TC-METRICS-054 lands here; the behaviour half is phase 5)
+#   Phase 4 runtime/entries/comparisons (20): TC-METRICS-003, 004, 005,
+#            010, 011, 012, 014, 015, 016, 020, 021, 022, 023, 024, 025,
+#            026, 030, 031, 032, 033
+#   Phase 5 dispatch/alarms/capstone (13): TC-METRICS-001, 002, 006, 040,
+#            041, 042, 050, 051, 052, 053, 054, 055, 056
+#   Phase 6 escaped defects/absence/damage (8): TC-METRICS-013, 060, 061,
+#            062, 063, 070, 071, 072
+#   Phase 7 mounting (4): TC-METRICS-080, 081, 082, 083
+#   Phase 8 honesty battery (9): TC-METRICS-100, 101, 102, 103, 104, 105,
+#            106, 111, 112
+#   Phase 9 gate/release (1): TC-METRICS-110 (execution record)
+#   Count: 3 + 0 + 0 + 20 + 13 + 8 + 4 + 9 + 1 = 58.
+#   SPLIT-SUITE NOTES (a suite extended by two phases stays green at both
+#   boundaries; ownership follows the phase that completes the case):
+#   tests/structure/metrics-contract.test.ts starts phase 1 (constants,
+#   vocabularies, identity) and gains the key-set/grammar-predicate halves in
+#   phase 4 and the bounds-constant half in phase 8; tests/structure/
+#   metrics-imports.test.ts starts phase 2 and gains the ambient-clock and
+#   import-set arms in phase 8; tests/behaviour/metrics-baseline-damage.
+#   test.ts starts phase 4 (TC-METRICS-014) and gains the row-absent cells in
+#   phase 6 (TC-METRICS-013); tests/behaviour/metrics-write-discipline.
+#   test.ts starts phase 4 (TC-METRICS-012) and gains the alarm-derivation
+#   cells in phase 5 (TC-METRICS-056); tests/behaviour/metrics-bounds.test.ts
+#   starts phase 6 (the incidents display-cap cells of TC-METRICS-063) and
+#   gains the byte/row-cap and truncation-order cells in phase 8
+#   (TC-METRICS-102/103/104); packages/core/src/domain/metrics.ts and
+#   metrics-text.ts start phase 2 and are extended in phases 4, 5, and 6;
+#   packages/cli/src/commands/metrics.ts and edge.ts start phase 4 and are
+#   extended in phases 5 and 6.
+#
+# AC OWNERSHIP (22/22; exactly one owning phase each; an earlier phase may
+#   produce a partial verdict, which is additive and never transfers
+#   ownership):
+#   phase 1  AC-F10-1
+#   phase 4  AC-F2-1, AC-F2-2, AC-F3-1, AC-F3-2, AC-F3-3, AC-F3-4, AC-F4-1
+#   phase 5  AC-F1-1, AC-F5-1, AC-F6-1, AC-F6-2, AC-F6-3, AC-F6-4, AC-F6-5
+#   phase 6  AC-F7-1, AC-F7-2, AC-F8-1
+#   phase 7  AC-F9-1
+#   phase 8  AC-F11-1, AC-F11-2
+#   phase 9  AC-NFR9-1
+#   Count: 1 + 7 + 7 + 3 + 1 + 2 + 1 = 22.
+#   PARTIAL-VERDICT NOTES: phase 1 declares every vocabulary and bound the
+#   later ACs assert through; phase 4 produces the grammar/window/envelope
+#   refusal halves of AC-F1-1 (TC-METRICS-003/004/005) which phase 5
+#   completes with the bare-report cell once dispatch and alarms render;
+#   phase 5 produces the classified-absence halves of AC-F8-1 (dispatch
+#   telemetry-absent, alarm telemetry-absent/threshold-undeclared cells
+#   inside TC-METRICS-052/053) which phase 6 completes across the full
+#   cross-section matrix; the mutant arms of TC-METRICS-112 prove detection
+#   power in phase 8 without re-owning any AC.
+#
+# DoD MAPPING (spec §17.1 "Proven in plan" -> this plan's phases):
+#   DoD-1 -> 5 (refusal halves in 4); DoD-2 -> 4 (declaration in 1);
+#   DoD-3 -> 4 (TC-METRICS-013 completes in 6); DoD-4 -> 4; DoD-5 -> 4;
+#   DoD-6 -> 4; DoD-7 -> 5; DoD-8 -> 5; DoD-9 -> 5; DoD-10 -> 6;
+#   DoD-11 -> 6 (every phase's gate); DoD-12 -> 7; DoD-13 -> 1;
+#   DoD-14 -> 8 (every phase's gate); DoD-15 -> every phase, roll-up in 9;
+#   DoD-16 -> 9; DoD-17 -> lifecycle phase 11 (pr_creation), not a plan
+#   phase.
+#
+# DEFINITION OF DONE (change-level, binding): every §17 AC met with passing
+#   evidence per the ownership map above (22/22); every declared plan phase
+#   complete with per-phase pm-notes `notes:` evidence (commit hash + gate
+#   result); TMPDIR=$PWD/tmp/tmpdir pnpm check green at the delivered HEAD;
+#   the error row and EVERY Appendix D count pin moved in the same commit
+#   (phase 1) with the no-leftover scan clean and four-way agreement; the
+#   family-count pins moved in one commit with the mount (phase 7); scenario
+#   seeds SC-M2-S6-01/02 green (TC-METRICS-040/042 and TC-METRICS-050/055);
+#   the byte-identical-store proof green (TC-METRICS-012/100); a PR against
+#   main-tools left open for human review (lifecycle phase 11).
+#
+# COMMIT CONVENTION (one commit per plan phase through the commit primitive;
+# subjects declared here so the commit path and review agree; conventional
+# subjects <= 72 chars, every body/footer line <= 100 chars):
+#   phase 1  feat(GH-299): metrics contracts and the baseline-unreadable error row
+#   phase 2  feat(GH-299): pure metrics report domain with bounds and renderers
+#   phase 3  feat(GH-299): verified metrics reads and the burn-rate config node
+#   phase 4  feat(GH-299): metrics report command with baseline entries and kinds
+#   phase 5  feat(GH-299): dispatch parity, burn-rate alarms and the full report
+#   phase 6  feat(GH-299): escaped-defects curation and the absence damage matrix
+#   phase 7  feat(GH-299): mount metrics as the 24th prompt-required family
+#   phase 8  test(GH-299): honesty battery, goldens, mutants and hermeticity
+#   phase 9  docs(GH-299): reconcile planning corpus and declare the release
+#
+# CONSTRAINTS BINDING ON EVERY PHASE (spec §5, §8, §9; do not reshape at
+#   delivery):
+#   - Envelope continuity (NFR-1): every new key lives under `data`; the
+#     five-field delivery.result.v1 envelope is untouched; zero
+#     `ok`/`command` fields; one payload identity delivery.metrics.v1 as a
+#     declared contract constant, never a data key (DEC-6).
+#   - Read-only discipline (NFR-3, DEC-3, G-5): zero writes, zero fences,
+#     zero log edits on every invocation path — the committed baseline log,
+#     the config document, ceremony records, evidence artifacts, and every
+#     state scope stay byte-identical (byte-snapshot proof, TC-METRICS-012/
+#     100); the comparison view never writes and never restates a committed
+#     comparisons[] record as its own output; no baseline authoring (NG-1).
+#   - Purity and brand neutrality (NFR-5, AC-F11-1, NG-4): no LLM, network,
+#     tracker/provider, credential, timer, daemon, listener, control
+#     socket, or session operation anywhere; the binary name comes from the
+#     brand seam only (zero product/binary literals); tests never open live
+#     stores (per-test mkdtemp roots through tests/fixtures/state/harness.ts).
+#   - Clock discipline (NFR-6): window bounds, the trailing-window read
+#     instant, censoring anchors, and crossedAt are pure functions of the
+#     injected clock; crossedAt = read instant = the trailing window's end
+#     (DM-4, DEC-5, AMB-TP-3); zero ambient wall-clock reads in the pure
+#     domain (ambient-globals guard).
+#   - Layering (ADR-0003, .ai/rules/typescript.md): contracts and pure
+#     domain in packages/core with no I/O; verified reads in the state tier
+#     composing the delivered read seams; document reads in the adapters
+#     file tier; command grammar in packages/cli with the edge composing the
+#     runtime from injected seams; strict TypeScript throughout.
+#   - No delivered-surface change (NG-7, §8.5): no spend, telemetry,
+#     ceremony, board, or status payload key changes; the ceremony
+#     comparison builder is consumed as data and never imported by the
+#     metrics domain to author (TC-METRICS-033 structural assertion); no
+#     MET- allocation, no MET-FALSE-SIGNAL-INCIDENTS surfacing, no quota
+#     field, no subcommands, no dashboards (NG-2, NG-5, NG-6, NG-9, DEC-12).
+#   - Absence honesty (DEC-11): no zero for absent evidence on any section;
+#     damage keeps the delivered state.* identities and is never
+#     re-projected as absence; the all-absent report still exits 0.
+#   - Current-truth boundary (NG-8): doc/spec/** flips only in lifecycle
+#     phase 7 (@doc-syncer); the ONE same-commit exception is the
+#     error-table carrier doc/spec/features/feature-result-contract.md in
+#     phase 1 (F-10, D-13).
+#
+# GATE ENVIRONMENT (binding on every phase boundary and the final battery):
+#   - Per-phase minimum gates: (a) workspace typecheck (`pnpm check` runs
+#     it; while iterating use the solution typecheck), (b) the phase's
+#     targeted `bun test` suites as listed in the phase block, (c) the
+#     sync/coverage suites the phase touches, (d) `git diff --check` before
+#     the phase commit.
+#   - Aggregate gate at EVERY phase boundary: TMPDIR=$PWD/tmp/tmpdir pnpm
+#     check (tmp/tmpdir present, git-ignored, repo-local — never /tmp or
+#     $HOME as a fixture base). A phase is not complete until the aggregate
+#     is green at its commit.
+#   - Lifecycle commands (phase complete, commit) run with
+#     PATH="$PWD/node_modules/.bin:$PATH" so the commitlint probe resolves.
+#     The phase-9 range gate ./scripts/lint-commit-range.sh --base main-tools
+#     is run by @pm and recorded in pm-notes; it is not re-implemented here.
+#   - Narrow iteration: bun test tests/structure/metrics-*.test.ts
+#     tests/behaviour/metrics-*.test.ts tests/checks/metrics-*.test.ts
+#     tests/golden/metrics.test.ts.
+#
+# DECLARED CONTROLS, NOT EDITS: the delivered regression suites re-run in
+#   phase gates as controls and are NOT edited unless a §4.4 DR-row names
+#   them, so none is declared in a phase scope outside its DR rows:
+#   tests/behaviour/spend-* suites (dispatch-parity anchors),
+#   tests/structure/cli-edge-seam.test.ts (DR-10, file-set driven),
+#   tests/checks/{exports-parity,prompt-conformance}.test.ts (DR-11,
+#   additive coverage without a pin change), tests/golden/** delivered
+#   goldens (DR-12, no regeneration), and tests/checks/fixture-privacy.test.
+#   ts over every new fixture. An untouched declared file is only a
+#   `plan diff` observation, never a gate failure (GH-291 scope convention).
+#
+# LIFECYCLE PHASE 7 HANDOFF OBLIGATIONS (system_spec_update, @doc-syncer;
+#   declared here so nothing is dropped after DoD — NOT plan scope beyond
+#   staging, and no delivery phase edits doc/spec/** beyond the phase-1
+#   carrier): the new current-truth feature spec (feature-metrics.md —
+#   payload identity, vocabularies, entries and disclosure, dispatch parity,
+#   alarm evaluation and declaration node, comparison view, bounds, exit
+#   projection, read-only posture); feature-result-contract.md surrounding
+#   prose verified against the phase-1 numbers; additive consumer notes in
+#   feature-spend.md (Feeds row resolves), feature-telemetry-v2.md,
+#   feature-measurement-baseline.md (first command-surface consumer; the
+#   immutability rule unchanged), feature-ceremony-runner.md (no-recompute
+#   rule unchanged); feature-config-layer.md node table gains the
+#   metrics.burn-rate row; feature-cli-entrypoint.md and
+#   feature-agents-and-commands.md register the 24th family. The new spec
+#   page is listed in phase 9 scope ONLY so the commit primitive can stage
+#   it (an untracked file outside every declared scope is a stray and is
+#   never staged).
+#
+# INCONSISTENCIES: none blocking between spec v1.1 and test plan v1.1 — the
+#   test plan's v1.1 revision reconciled to the spec's DEC-13/DEC-14
+#   amendments, the crossedAt pin, the comparison window posture, and the
+#   22-AC count, and the Appendix D pre-change values (146/145/62/+112)
+#   match the delivered tree as verified at plan time. The plan-level
+#   adjudications above (entry skeleton vs curation, TC-013 split, golden
+#   landing, production composition before mount) are recorded as PLAN-LEVEL
+#   REFINEMENTS, not artifact inconsistencies.
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-299
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  escalationTriggers:
+    - "A second `metrics.*` error identity, a family/pattern widening, or a new domain kind would be required (DEC-8, DM-7)"
+    - "An Appendix D count pin is left stale, the no-leftover scan finds a leftover, or four-way classifier/sync/mirror/carrier agreement breaks (AC-F10-1, RSK-4)"
+    - "Any write to measurement-baseline.yaml, the config document, ceremony records, evidence artifacts, or any state scope on any invocation path (NFR-3, DEC-3, NG-1)"
+    - "An alarm would be persisted as state, a second alarm per crossing would be possible, or a default threshold would be invented when the node is absent (DEC-4, DEC-5, RSK-5, RSK-8)"
+    - "A baseline entry would restate the log's committed value as a fresh measurement or present a native figure as the committed definition's value (DEC-13, AC-F2-1)"
+    - "perAgent sum equality would be asserted beyond the DEC-14 attributable-selection scope or a row would be invented to force equality (DEC-14)"
+    - "The family count would move in only some pinning suites, the prompt-set entry would land before the command answers, or a partial mount would be tolerated (DEC-9, RSK-7)"
+    - "A delivered spend, telemetry, ceremony, board, or status payload key would change, or the ceremony comparison builder would be invoked to author (NG-7, DEC-3)"
+    - "A new top-level envelope key, an ok/command field, or a second payload identity would appear (NFR-1, DEC-6)"
+    - "An LLM call, network request, tracker/provider read or write, timer, daemon, control socket, session operation, or hardcoded product/binary name would enter the family (NFR-5, AC-F11-1)"
+    - "A zero would be rendered for absent evidence, or store damage would be re-projected as absence (DEC-11, AC-F8-1)"
+    - "Current-truth docs would be edited beyond the phase-1 error-table carrier inside a delivery phase (NG-8, F-10)"
+    - "A delivered suite would need a semantic assertion change outside the §4.4 DR-rows this plan declares, or a delivered golden would need regeneration (DR-12)"
+    - "pnpm check would not be green at a phase boundary (NFR-9)"
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  # ---------------------------------------------------------------------------
+  # Phase 1 — Metrics contracts and the one error row with every count pin
+  # (F-1..F-11 declaration halves; DEC-6, DEC-8, DEC-10; DM-1..DM-8 data;
+  # AC-F10-1; Appendix D D-1..D-13).
+  #
+  # Goal: land the single contract home every later phase asserts through,
+  # and register the error identity atomically. packages/core/src/contracts/
+  # metrics.ts declares: the payload identity constant delivery.metrics.v1
+  # (never a data key); the ten data key names; the closed vocabularies —
+  # metric ids (MET-CEREMONY-SHARE | MET-CYCLE-TIME | MET-CI-FAILURE-RATE |
+  # escaped-defects, the non-MET member per DEC-2), alarm kinds (burn-rate),
+  # measurementKind (native | proxy | curated-count), statuses (MEASURED |
+  # PARTIAL | UNAVAILABLE), verdicts (improved | regressed | flat |
+  # not-established | insufficient-sample), evaluation states (evaluated |
+  # threshold-undeclared | telemetry-absent), escaped-defect classes
+  # (post-gate-review | landed-ci-failure | retro-attributed), basis names
+  # (phase-transition-history, ceremony-runner-fold,
+  # committed-pm-notes-corpus, committed-evidence-corpus), and the log's
+  # closed exclusion-reason set; the delivery.metrics.burn-rate.v1 node
+  # schema constants (threshold positive, basis cost | tokens, window
+  # <positive-integer>d 1..90; absent = undeclared, no default; DEC-4/DM-6);
+  # the bounds and truncation data (data <= 65 536 UTF-8 bytes, human <= 200
+  # lines / 16 384 bytes, incidents <= 8, perAgent/comparisons <= 20, the
+  # tail-first drop order comparisons[] -> incidents[] -> perAgent[], the
+  # never-dropped set, the trailing-30-day drawn default, sampleMinimum 5,
+  # the inclusive ISO window grammar; DEC-10/DM-8); the caveat text constant
+  # (AC-F3-4); and the ordering invariants as data (vocabulary order,
+  # breakdown ordering, at-most-one alarm). No behaviour changes: no
+  # command, no fold, no read exists yet.
+  #
+  # The error table gains the `metrics` domain kind with exactly one row,
+  # metrics.baseline-unreadable (platform, non-retryable, not_landed,
+  # platform-provider -> exit 2), and EVERY Appendix D site moves in this
+  # ONE commit: D-1 the row + DOMAIN_KINDS; D-2 the sync-check
+  # RESERVED_TWO_SEGMENT_CODES gains exactly metrics.baseline-unreadable
+  # (62 -> 63); D-3 the structural mirror; D-4 entry pins 146 -> 147 (7
+  # sites); D-5 delivered-row pins 145 -> 146 (2 sites); D-6 allowlist-size
+  # pins and the two "62 members" test names -> 63; D-7 the four-surfaces
+  # agreement test name gains "1 metrics"; D-8 the carrier text pins -> 147
+  # / 63 wording; D-9 the legacy-token list gains 146, 145, 62, "+ 112" so
+  # the no-leftover scan stays complete; D-10 dispatch-attempts-taxonomy
+  # header/name/length -> 147; D-11 verify-gates-suite-map-contract counts
+  # -> 147; D-12 the sync oracle BASELINE_ROWS.length + 112 -> +113 (4
+  # sites); D-13 the carrier doc/spec/features/feature-result-contract.md
+  # (the one in-boundary doc/spec edit, F-10). Followed by the repo-wide
+  # no-leftover scan and four-way classifier/sync/mirror/carrier agreement.
+  #
+  # Obligations (tasks):
+  #   1.1 Author packages/core/src/contracts/metrics.ts per DM-1..DM-8
+  #       data; export through contracts/index.ts and core index.
+  #   1.2 Append the metrics.baseline-unreadable row under a GH-299 comment
+  #       declaring exact allowlist membership; add `metrics` to
+  #       DOMAIN_KINDS (D-1).
+  #   1.3 Move D-2..D-13 in the same commit, including the carrier.
+  #   1.4 Author tests/structure/metrics-contract.test.ts (constants,
+  #       vocabularies, identity, bounds) failing-first, then green.
+  #   1.5 Register the new files in tests/structure/inventory.json with
+  #       executable allowances (DR-9).
+  #
+  # Acceptance: AC-F10-1 (TC-METRICS-090: kind + one row + counts moved +
+  # carrier agrees; TC-METRICS-091: allowlist exactly 63 by declaration,
+  # six near-miss probes rejected, kind-only contained by fallback.internal;
+  # TC-METRICS-092: every D-1..D-13 site moved, no-leftover scan clean and
+  # its detection power proven, four-way tuple 147/146/63/1/147 from one
+  # tree). Declares the vocabulary for F-1..F-11.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/structure/metrics-contract.test.ts
+  #   bun test tests/structure/error-table.test.ts tests/structure/dispatch-attempts-taxonomy.test.ts tests/structure/verify-gates-suite-map-contract.test.ts
+  #   bun test tests/checks/error-table-sync.test.ts
+  #   bun run scripts/checks/error-table-sync.ts
+  #   git diff --check
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check
+  #
+  # Suites left green: metrics-contract (constants half), error-table (147
+  #   entries / 146 delivered / 63 allowlist / 1 metrics row; every other
+  #   kind byte-unchanged), dispatch-attempts-taxonomy, verify-gates-suite-
+  #   map-contract, error-table-sync (both directions, +113), content-
+  #   inventory.
+  # ---------------------------------------------------------------------------
+  - id: 1
+    title: "Metrics contracts and the one error row with every Appendix D count pin moved in one commit"
+    kind: delivery
+    summary: "feat(GH-299): metrics contracts and the baseline-unreadable error row"
+    scope:
+      files:
+        - packages/core/src/contracts/metrics.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/index.ts
+        - packages/cli/src/classify.ts
+        - scripts/checks/error-table-sync.ts
+        - doc/spec/features/feature-result-contract.md
+        - tests/structure/metrics-contract.test.ts
+        - tests/structure/error-table.test.ts
+        - tests/structure/dispatch-attempts-taxonomy.test.ts
+        - tests/structure/verify-gates-suite-map-contract.test.ts
+        - tests/checks/error-table-sync.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/metrics.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/error-table.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 2 — The pure report domain over injected inputs (F-2/F-3/F-4
+  # halves; DEC-3, DEC-5, DEC-7, DEC-10, DEC-11, DEC-13; NFR-2, NFR-6).
+  #
+  # Goal: implement the fold as pure functions over injected inputs — no
+  # I/O, no clock, no ids (ADR-0003). packages/core/src/domain/metrics.ts:
+  # the window machinery (inclusive bounds, the trailing-30-day draw from
+  # the injected clock, the joint-required rule); the vocabulary-driven
+  # metric-entry assembly with per-entry classified absence (row-absent,
+  # UNAVAILABLE, never zero; DEC-11); baseline consumption by metric ID
+  # with the committed definitionRef (log path + row source_commit) and the
+  # basis-scoped value rule (DEC-13 — the committed-basis CI proxy
+  # recomputes under the committed definition and never restates the log's
+  # value; native-basis cycle time and ceremony share compute from their
+  # declared sources and are never presented as the committed definition's
+  # value); native cycle time from the transition history under the
+  # committed interval (clarify_scope.started -> pr_creation.completed)
+  # with the delivered right-censoring rule (latest completed phase, flag
+  # set, anchor independent of the clock); ceremony share through the
+  # delivered ceremony measurement fold; the CI-failure-rate proxy over
+  # the corpus rows (red-or-mixed over observed only; no_ci_observation
+  # and outside_window exclusions counted; never an assumed green); the
+  # cross-kind caveat applied exactly when before/after kinds differ
+  # (DEC-7); the comparison view under the committed protocol (windows
+  # verbatim, sampleMinimum 5, the closed verdict set, insufficient-sample
+  # with no trend claim, not-established for unmeasurable after,
+  # committed comparisons[] records consumed as data and never restated —
+  # the builder is not imported); the exclusion conservation; the
+  # tail-ordered truncation and bounds application with every drop counted
+  # (DEC-10); the dispatch and alarm fold seams declared (their
+  # implementations land with phases 5's capability — this phase lands the
+  # report skeleton and the entries/comparison machinery). packages/core/
+  # src/domain/metrics-text.ts: the bounded human renderer with the
+  # declared section labels, the omission markers, and the caveat on
+  # exactly the cross-kind rows. Injected ports only: clock, run id, brand,
+  # and the read-result inputs.
+  #
+  # Obligations (tasks):
+  #   2.1 Author the domain modules per DM-2/DM-5/DM-8 semantics.
+  #   2.2 Export through domain/index.ts and core index.
+  #   2.3 Author tests/structure/metrics-imports.test.ts (tier purity,
+  #       import-set, no-adapter/no-spawn arms) — static halves of
+  #       TC-METRICS-100/105 land red-first here.
+  #   2.4 Register the new files in inventory.json (DR-9).
+  #
+  # Acceptance: no TC completes (the runtime does not exist); the structure
+  #   halves of TC-METRICS-100/105 are green; ambient-globals reports no
+  #   wall-clock read in the new modules.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/structure/metrics-imports.test.ts tests/structure/metrics-contract.test.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  #   bun run scripts/checks/exports-parity.ts
+  #   git diff --check
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check
+  # ---------------------------------------------------------------------------
+  - id: 2
+    title: "Pure metrics report domain: entries, kinds, comparisons, absence classification, truncation, and the bounded renderer"
+    kind: delivery
+    summary: "feat(GH-299): pure metrics report domain with bounds and renderers"
+    scope:
+      files:
+        - packages/core/src/domain/metrics.ts
+        - packages/core/src/domain/metrics-text.ts
+        - packages/core/src/domain/index.ts
+        - packages/core/src/index.ts
+        - tests/structure/metrics-imports.test.ts
+        - tests/structure/metrics-contract.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/metrics.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 — Verified reads and the burn-rate declaration node (F-6 read
+  # half; DEC-4; DM-6; GH-300 precedent; NFR-7; AC-F6-4 structure half).
+  #
+  # Goal: compose the delivered read seams into the metrics read set —
+  # packages/core/src/state/metrics-reads.ts: one verified read per
+  # telemetry record family and the transition history composed over the
+  # delivered spend read path (packages/core/src/state/spend-reads.ts), the
+  # ceremony run/step record read, the bounded corpus scan over committed
+  # documents (committed-path discipline; tmp/**, .ai/local/**, uncommitted
+  # and external sources never a measurement), and the baseline-log read
+  # with parse/validate classification (absent = row-absent evidence at
+  # exit 0; present-but-unparsable/invalid = metrics.baseline-unreadable at
+  # exit 2 — the classification seam phase 4's command projects). The
+  # committed baseline-log document read lands in the adapters file tier
+  # (the ceremony-declarations/config-source precedent; exact module name
+  # delivery-bound per AMB-TP-1 — the tier is declared so the commit
+  # primitive accepts it). The metrics.burn-rate node: schema constants in
+  # contracts/metrics.ts (phase 1) composed through the delivered
+  # single-document config read — one bounded node read, absent means
+  # undeclared with no default invented, every defect (non-positive
+  # threshold, unknown basis, out-of-range or non-conforming window,
+  # non-mapping value) refused config.value.invalid before any telemetry or
+  # log read (AC-F6-4); no delivered node or layer behaviour changes (§8.5,
+  # asserted as an unchanged resolved-tree classification for a document
+  # without the node).
+  #
+  # Obligations (tasks):
+  #   3.1 Author the read composition with counting-wrapper readiness (the
+  #       declared read budget: <= 1 verified read per family, <= 1 each of
+  #       transition/ceremony/log/config-node reads, <= 1 corpus scan).
+  #   3.2 Author the adapter document read for the committed baseline log.
+  #   3.3 Wire the node validation against the phase-1 schema constants.
+  #   3.4 Add the metrics.burn-rate node row to tests/structure/
+  #       config-contract.test.ts (DR-11 additive assertion) failing-first.
+  #   3.5 Register the new files in inventory.json (DR-9).
+  #
+  # Acceptance: no TC completes (the runtime does not exist); the
+  #   config-contract node row (the structure half of TC-METRICS-054) is
+  #   green; imports and ambient-globals stay green.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/structure/config-contract.test.ts tests/structure/metrics-imports.test.ts tests/structure/config-imports.test.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  #   bun run scripts/checks/exports-parity.ts
+  #   git diff --check
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check
+  # ---------------------------------------------------------------------------
+  - id: 3
+    title: "Verified metrics reads over the delivered seams and the metrics.burn-rate declaration node"
+    kind: delivery
+    summary: "feat(GH-299): verified metrics reads and the burn-rate config node"
+    scope:
+      files:
+        - packages/core/src/contracts/metrics.ts
+        - packages/core/src/state/metrics-reads.ts
+        - packages/core/src/state/index.ts
+        - packages/core/src/index.ts
+        - tests/structure/config-contract.test.ts
+        - tests/structure/metrics-imports.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - packages/adapters/src/file
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/state/metrics-reads.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 4 — The metrics command runtime with the baseline, kinds, and
+  # comparison blocks (F-1/F-2/F-3/F-4; DEC-12; SC halves; AC-F2-1,
+  # AC-F2-2, AC-F3-1..4, AC-F4-1; DoD-2..DoD-6).
+  #
+  # Goal: the family runtime exists and answers. packages/cli/src/commands/
+  # metrics.ts owns grammar only — the declared invocation with no
+  # subcommands (DEC-12): optional --ref (the delivered ref grammar;
+  # omitted resolves the active ref from the local delivery context),
+  # --from/--through (inclusive ISO bounds, jointly required or jointly
+  # omitted; the drawn trailing-30-day default disclosed in every windowed
+  # entry), and --json; value violations (malformed/unresolvable ref,
+  # malformed or lone bound, missing value) refuse input.value.rejected at
+  # exit 1 before any read, grammar violations (undeclared flag, unexpected
+  # positional, any declared verb) refuse fallback.invocation at exit 1
+  # before any read — one exported grammar predicate, no second parser.
+  # The edge composes the runtime from the injected seams (clock, run id,
+  # brand, the phase-3 reads, the phase-2 fold and renderer) and projects
+  # the exit table: success at 0 (including classified absences),
+  # metrics.baseline-unreadable at 2 with no partial report, config.value.
+  # invalid at 1, delivered state.* rows for store damage. The production
+  # composition lands here (unconditional; until phase 7 the entrypoint
+  # drops the un-advertised family exactly as it drops every non-prompt
+  # command). The fixture set lands here: tests/fixtures/metrics/{harness,
+  # baseline,telemetry,transitions,ceremony,corpus,config}.ts — seeded temp
+  # stores through the production write seams, the fixture log shapes
+  # (full/partial/absent/unparseable/invalid/committed-comparison/two
+  # window lengths), committed-path corpus rows, injected clocks/run-ids/
+  # brand, byte-snapshot and read-counter recorders (§4.1 contract).
+  # No fixture asserted in this phase seeds counted escaped-defect
+  # evidence or asserts dispatch/alarm content (the entry skeleton renders
+  # classified absence; curation and the dispatch/alarm folds are phases
+  # 5-6).
+  #
+  # Obligations (tasks):
+  #   4.1 Author the command module and the edge composition; wire the
+  #       production composition.
+  #   4.2 Author the fixture set per §6 (harness + six source fixtures).
+  #   4.3 Author the suites failing-first, then the implementation:
+  #       metrics-grammar (003, 004), metrics-envelope (005),
+  #       metrics-baseline (010, 011, 015, 016), metrics-baseline-damage
+  #       (014 damage cells), metrics-write-discipline (012),
+  #       metrics-cycle-time (020-022), metrics-ceremony-share (023),
+  #       metrics-ci-proxy (024, 025), metrics-caveat (026),
+  #       metrics-comparisons (030-033); extend metrics-contract with the
+  #       key-set/grammar halves.
+  #   4.4 Register the new files in inventory.json (DR-9).
+  #
+  # Acceptance: AC-F2-1 (TC-METRICS-010, 011, 012, 015, 016 —
+  #   definitionRef/status/exclusions conserved, basis-scoped values with
+  #   the never-presented-as-committed-value scan, byte-identical log),
+  #   AC-F2-2 (TC-METRICS-014 damage cells + 015 partial-log cells; the
+  #   row-absent cell TC-METRICS-013 completes in phase 6),
+  #   AC-F3-1 (020, 021, 022), AC-F3-2 (023), AC-F3-3 (024, 025),
+  #   AC-F3-4 (026), AC-F4-1 (030, 031, 032, 033). The grammar/envelope
+  #   refusal halves of AC-F1-1 (003, 004, 005) are green.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/metrics-grammar.test.ts tests/behaviour/metrics-envelope.test.ts
+  #   bun test tests/behaviour/metrics-baseline.test.ts tests/behaviour/metrics-baseline-damage.test.ts
+  #   bun test tests/behaviour/metrics-cycle-time.test.ts tests/behaviour/metrics-ceremony-share.test.ts tests/behaviour/metrics-ci-proxy.test.ts tests/behaviour/metrics-caveat.test.ts
+  #   bun test tests/behaviour/metrics-comparisons.test.ts tests/behaviour/metrics-write-discipline.test.ts
+  #   bun test tests/structure/metrics-contract.test.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  #   git diff --check
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check
+  # ---------------------------------------------------------------------------
+  - id: 4
+    title: "The metrics report command with the baseline-consumed entries, measurement kinds, caveat, and comparison view"
+    kind: delivery
+    summary: "feat(GH-299): metrics report command with baseline entries and kinds"
+    scope:
+      files:
+        - packages/core/src/domain/metrics.ts
+        - packages/core/src/domain/metrics-text.ts
+        - packages/cli/src/commands/metrics.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - tests/structure/metrics-contract.test.ts
+        - tests/behaviour/metrics-grammar.test.ts
+        - tests/behaviour/metrics-envelope.test.ts
+        - tests/behaviour/metrics-baseline.test.ts
+        - tests/behaviour/metrics-baseline-damage.test.ts
+        - tests/behaviour/metrics-cycle-time.test.ts
+        - tests/behaviour/metrics-ceremony-share.test.ts
+        - tests/behaviour/metrics-ci-proxy.test.ts
+        - tests/behaviour/metrics-caveat.test.ts
+        - tests/behaviour/metrics-comparisons.test.ts
+        - tests/behaviour/metrics-write-discipline.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/metrics
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/commands/metrics.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 5 — Dispatch parity, burn-rate alarms, and the full-report
+  # capstone (F-5/F-6; F-1 completion; DEC-5, DEC-14; SC-M2-S6-01/02;
+  # AC-F1-1, AC-F5-1, AC-F6-1..5; DoD-1, DoD-7..DoD-9).
+  #
+  # Goal: the dispatch block and the alarm evaluation land with their
+  # suites, and the bare report completes. The dispatch fold composes the
+  # delivered spend fold for the evaluated ref — telemetryState, and over
+  # present telemetry the fold's five-class token totals, cost totals with
+  # sparsity, restarts, perAgent roll-ups, and role/model breakdowns with
+  # the delivered ordering (tokens descending, value ascending, null row
+  # last): equal for the same selection to `spend --ref`, never re-derived,
+  # re-priced, or re-reconciled (the reconciliation disclosure cited by
+  # reference — basis and verdict names); the DEC-14 scoping consumed
+  # unchanged (exact perAgent sum equality over the fully attributable
+  # seed fixture; under null attribution the sum equals the total minus
+  # the disclosed unattributable share while the breakdowns keep the null
+  # row and sum to the full total; no row invented). The alarm evaluation
+  # reads the phase-3 node, measures spend over the declared trailing
+  # window from the same telemetry records applying the delivered ingest
+  # rules (null-excluded classes, never re-priced cost), compares on the
+  # declared basis, and raises exactly one burn-rate alarm per crossing
+  # (measured >= threshold) echoing ref, basis, threshold, measured, the
+  # window bounds, crossedAt = the read instant = window.end, and cost
+  # sparsity when present — a derived view with no persisted state;
+  # threshold-undeclared and telemetry-absent classify with no alarm and
+  # no default; below-threshold is evaluated with the threshold echoed and
+  # differs from the crossing case only by the alarm row.
+  #
+  # Obligations (tasks):
+  #   5.1 Extend the domain with the dispatch composition and the alarm
+  #       evaluation; extend the renderer and the edge wiring.
+  #   5.2 Author tests/fixtures/metrics/alarms.ts (threshold/spend
+  #       matrices: crossing, equality, below, both bases, sparse cost).
+  #   5.3 Author the suites failing-first, then the implementation:
+  #       metrics-report (001, 002, 006 — the capstone cells over the
+  #       fully-seeded fixtures), metrics-dispatch (040, 041, 042),
+  #       metrics-alarms (050-056), metrics-burn-rate-config (054);
+  #       metrics-write-discipline gains the TC-METRICS-056 derivation
+  #       cells.
+  #   5.4 Create the four TC-pinned golden fixtures (bare, crossing,
+  #       telemetry-absent, below-threshold) with their first committed
+  #       bytes; regenerate only by explicit command later (phase 8 owns
+  #       the golden battery).
+  #   5.5 Register the new files in inventory.json (DR-9).
+  #
+  # Acceptance: AC-F1-1 (TC-METRICS-001, 002, 006 — the ten keys, the
+  #   drawn window arithmetic, the four entries in vocabulary order, the
+  #   explicit-ref/bounds echo, inclusivity and the injected clock),
+  #   AC-F5-1 (TC-METRICS-040 SC-M2-S6-01, 041, 042 — same-process parity
+  #   with spend, citation-not-recomputation, ordering/null/sparsity
+  #   preservation), AC-F6-1 (050 SC-M2-S6-02, 051, 056), AC-F6-2 (052),
+  #   AC-F6-3 (053), AC-F6-4 (054 — behaviour half over the phase-3 node),
+  #   AC-F6-5 (055, 051).
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/metrics-report.test.ts tests/behaviour/metrics-dispatch.test.ts
+  #   bun test tests/behaviour/metrics-alarms.test.ts tests/behaviour/metrics-burn-rate-config.test.ts
+  #   bun test tests/behaviour/metrics-write-discipline.test.ts
+  #   bun test tests/behaviour/spend-breakdown.test.ts tests/behaviour/spend-v2-breakdown.test.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  #   git diff --check
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check
+  #
+  # Suites left green: the five metrics suites above plus the delivered
+  #   spend-breakdown/spend-v2-breakdown controls (read-only anchors,
+  #   DR-12 — no regeneration, no edit).
+  # ---------------------------------------------------------------------------
+  - id: 5
+    title: "Dispatch parity, the burn-rate alarm evaluation, and the full-report capstone cells"
+    kind: delivery
+    summary: "feat(GH-299): dispatch parity, burn-rate alarms and the full report"
+    scope:
+      files:
+        - packages/core/src/domain/metrics.ts
+        - packages/core/src/domain/metrics-text.ts
+        - packages/cli/src/commands/metrics.ts
+        - packages/cli/src/edge.ts
+        - tests/behaviour/metrics-report.test.ts
+        - tests/behaviour/metrics-dispatch.test.ts
+        - tests/behaviour/metrics-alarms.test.ts
+        - tests/behaviour/metrics-burn-rate-config.test.ts
+        - tests/behaviour/metrics-write-discipline.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/metrics
+
+  # ---------------------------------------------------------------------------
+  # Phase 6 — Escaped defects and the cross-section absence/damage matrix
+  # (F-7/F-8; DEC-2, DEC-11; AC-F7-1, AC-F7-2, AC-F8-1; DoD-3 completion,
+  # DoD-10, DoD-11).
+  #
+  # Goal: the curated floor and the composite absence posture. The
+  # escaped-defects entry counts defects recorded in committed evidence
+  # after the delivering change's own gates reported green — the three
+  # closed classes (post-gate-review, landed-ci-failure,
+  # retro-attributed), each incident cited with a committed artifact path
+  # plus anchor and observedAt; total and per-class counts; incidents[]
+  # within the display cap with counted omissions; the floor caveat stated
+  # verbatim from the contract constant; non-evidence never counted
+  # (tmp/**, .ai/local/**, untracked, uncited, unresolvable anchor,
+  # out-of-window, foreign attribution — excluded and disclosed); no
+  # MET- id and no definitionRef (DEC-2); no window evidence = UNAVAILABLE,
+  # never zero. The absence/damage matrix completes: the all-absent report
+  # (no telemetry, no ceremony, no transitions, no log, no node, empty
+  # corpus) exits 0 with every section classified and no zero anywhere;
+  # the six single-absence fixtures prove per-section independence; store
+  # damage on any read keeps the delivered state.* identities with their
+  # own projections, never re-projected as absence and never softened into
+  # a partial report; the zero-fabrication structural sweep with its
+  # declared counter exceptions; the row-absent cell (TC-METRICS-013)
+  # completes over the now-full report.
+  #
+  # Obligations (tasks):
+  #   6.1 Extend the domain with the curation fold; extend the renderer.
+  #   6.2 Extend tests/fixtures/metrics/corpus.ts with the escaped-defect
+  #       evidence fixtures (three counted classes + the prohibited
+  #       classes) and the absence-matrix fixtures.
+  #   6.3 Author the suites failing-first, then the implementation:
+  #       metrics-escaped-defects (060-063), metrics-absence (070, 072),
+  #       metrics-store-damage (071), metrics-baseline-damage gains the
+  #       TC-METRICS-013 row-absent cells; metrics-bounds starts with the
+  #       TC-METRICS-063 incidents-cap cells.
+  #   6.4 Register the new files in inventory.json (DR-9).
+  #
+  # Acceptance: AC-F7-1 (TC-METRICS-060, 062, 063), AC-F7-2 (061),
+  #   AC-F8-1 (070, 071, 072, and the TC-METRICS-013 completion of
+  #   AC-F2-2's row-absent half — ownership stays with phase 4).
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/metrics-escaped-defects.test.ts tests/behaviour/metrics-absence.test.ts
+  #   bun test tests/behaviour/metrics-store-damage.test.ts tests/behaviour/metrics-baseline-damage.test.ts
+  #   bun test tests/behaviour/metrics-bounds.test.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  #   git diff --check
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check
+  # ---------------------------------------------------------------------------
+  - id: 6
+    title: "Escaped defects as the curated floor and the cross-section absence and store-damage matrix"
+    kind: delivery
+    summary: "feat(GH-299): escaped-defects curation and the absence damage matrix"
+    scope:
+      files:
+        - packages/core/src/domain/metrics.ts
+        - packages/core/src/domain/metrics-text.ts
+        - packages/cli/src/commands/metrics.ts
+        - packages/cli/src/edge.ts
+        - tests/behaviour/metrics-escaped-defects.test.ts
+        - tests/behaviour/metrics-absence.test.ts
+        - tests/behaviour/metrics-store-damage.test.ts
+        - tests/behaviour/metrics-baseline-damage.test.ts
+        - tests/behaviour/metrics-bounds.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/metrics
+
+  # ---------------------------------------------------------------------------
+  # Phase 7 — Mounting: the 24th prompt-required family (F-9; DEC-9;
+  # AC-F9-1; DoD-12; GAP-T5/GAP-T6; DR-1..DR-5).
+  #
+  # Goal: advertise the completed family exactly once, atomically. The
+  # prompt-set entry lands after steer (the captured 23-entry base with
+  # steer as the 23rd member asserted once in tests/fixtures/metrics/
+  # mounting.ts; BASE_FAMILIES stays 22 with its assertion valid), making
+  # 24; root and family help entries (summary, usage naming the binary and
+  # the report grammar, options, at least one example, exit codes 0/1/2, a
+  # see-also pointer); the M2 reference page
+  # doc/planning/oss-tooling/milestones/m2/commands/metrics.md mentioning
+  # --help and --version and documenting the grammar and the absence/alarm
+  # postures (GAP-T6/AMB-TP-5); the coverage-inventory row in
+  # tests/fixtures/help-guide/coverage.json; and EVERY family-count pin
+  # moved 23 -> 24 in the same commit — tests/structure/entrypoint-bin.
+  # test.ts (list + family-line count), steer-mounting (PINNING_FILES
+  # gains the metrics mounting suite and fixture endpoint; the stale-count
+  # scan arm gains the stale-23 arm; steer stays index 22 as the delivered
+  # prefix), board-mounting, events-production-composition,
+  # dispatch-attempts-composition, daemon-production-composition, and
+  # tests/behaviour/{repos-help,board-help,events-mount-help,ceremony-cli}
+  # (DR-1..DR-3). Mounting changes no other family's composition or help
+  # (TC-METRICS-083, RSK-7); the production composer answers `metrics
+  # --json` at exit 0 over an empty store; help and --version answer from
+  # the static inventory with zero reads. If the forbidden-literals
+  # registry's user-facing-doc corpus covers the new page, the row joins
+  # this commit; scripts/checks/help-guide-coverage.ts changes only if the
+  # row requires it (GH-298 precedent).
+  #
+  # Obligations (tasks):
+  #   7.1 Add the prompt-set entry, the help entries, and the reference
+  #       page; add the coverage row.
+  #   7.2 Move every family-count pin in the ten suites + the scan arm;
+  #       author tests/fixtures/metrics/mounting.ts and tests/structure/
+  #       metrics-mounting.test.ts failing-first.
+  #   7.3 Author tests/behaviour/metrics-help.test.ts (081); add the
+  #       additive metrics rows to help-guide-coverage and
+  #       reference-page-parity (082).
+  #   7.4 Re-run the delivered per-family help/payload goldens as controls
+  #       (083 isolation cells; no regeneration — DR-12).
+  #
+  # Acceptance: AC-F9-1 (TC-METRICS-080 — the 24-family list, the line
+  #   count, every pin moved, the stale-23 scan with a planted-stale arm,
+  #   the real-checkout composition cell; 081 — help at exit 0 with the six
+  #   sections and no side effect; 082 — the coverage check green with the
+  #   page and row; 083 — no other family changed, four mounting mutants
+  #   detected).
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/structure/metrics-mounting.test.ts tests/structure/entrypoint-bin.test.ts tests/structure/steer-mounting.test.ts
+  #   bun test tests/structure/board-mounting.test.ts tests/structure/events-production-composition.test.ts tests/structure/dispatch-attempts-composition.test.ts tests/structure/daemon-production-composition.test.ts
+  #   bun test tests/behaviour/repos-help.test.ts tests/behaviour/board-help.test.ts tests/behaviour/events-mount-help.test.ts tests/behaviour/ceremony-cli.test.ts
+  #   bun test tests/behaviour/metrics-help.test.ts tests/behaviour/entrypoint-help.test.ts
+  #   bun test tests/checks/help-guide-coverage.test.ts tests/checks/reference-page-parity.test.ts
+  #   bun run scripts/checks/help-guide-coverage.ts
+  #   git diff --check
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check
+  # ---------------------------------------------------------------------------
+  - id: 7
+    title: "Mounting: metrics as the 24th prompt-required family with the atomic 23-to-24 count move, help, reference page, and coverage row"
+    kind: delivery
+    summary: "feat(GH-299): mount metrics as the 24th prompt-required family"
+    scope:
+      files:
+        - packages/cli/src/help.ts
+        - packages/cli/src/help/prompt-required-commands.ts
+        - packages/cli/src/entrypoint.ts
+        - doc/planning/oss-tooling/milestones/m2/commands/metrics.md
+        - scripts/checks/help-guide-coverage.ts
+        - scripts/checks/forbidden-literals.registry.json
+        - tests/fixtures/help-guide/coverage.json
+        - tests/fixtures/metrics/mounting.ts
+        - tests/structure/metrics-mounting.test.ts
+        - tests/behaviour/metrics-help.test.ts
+        - tests/behaviour/entrypoint-help.test.ts
+        - tests/structure/entrypoint-bin.test.ts
+        - tests/structure/steer-mounting.test.ts
+        - tests/structure/board-mounting.test.ts
+        - tests/structure/events-production-composition.test.ts
+        - tests/structure/dispatch-attempts-composition.test.ts
+        - tests/structure/daemon-production-composition.test.ts
+        - tests/behaviour/repos-help.test.ts
+        - tests/behaviour/board-help.test.ts
+        - tests/behaviour/events-mount-help.test.ts
+        - tests/behaviour/ceremony-cli.test.ts
+        - tests/checks/help-guide-coverage.test.ts
+        - tests/checks/reference-page-parity.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/help/prompt-required-commands.ts
+        role: producer
+      - kind: contract-file
+        target: tests/fixtures/help-guide/coverage.json
+        role: consumer
+
+  # ---------------------------------------------------------------------------
+  # Phase 8 — The cross-cutting honesty battery (F-11; NFR-2..NFR-7;
+  # AC-F11-1, AC-F11-2; DoD-14; TC-METRICS-112 mutants; TC-METRICS-111
+  # hermeticity).
+  #
+  # Goal: pin the rules that span paths and modules, by bytes and
+  # counters. Determinism: byte-identical repeats over the six declared
+  # forms (bare, explicit window, crossing alarm, undeclared threshold,
+  # telemetry-absent, insufficient-sample) with the committed goldens and
+  # their regenerate.ts (created in this change; regeneration diff shows
+  # only the declared delta); permutation independence over four source
+  # orders; every array in its declared order (TC-METRICS-101). Bounds:
+  # the 65 536-byte data cap and the 200-line/16 384-byte human cap
+  # measured at/under/over fixtures; the row caps (incidents 8, perAgent
+  # 20, comparisons 20) counted without double counting; the tail-ordered
+  # drop sequence comparisons[] -> incidents[] -> perAgent[] with the
+  # never-dropped set proven intact under a binding cap beside an alarm
+  # (TC-METRICS-102, 103, 104). Purity: no LLM/network/tracker/provider/
+  # credential/timer/socket/session anywhere, the brand seam as the only
+  # binary-name source, zero writes on every invocation form (TC-METRICS-
+  # 100). Clock: window, censoring anchor, and crossedAt as pure functions
+  # of the injected clock with the crossedAt = read instant = window.end
+  # equality (TC-METRICS-105). Read cost: the counted read budget with the
+  # latency reference printed, never asserted (TC-METRICS-106). Mutants:
+  # the twelve mutant families — baseline restatement, caveat dropped/
+  # over-applied, trend below minimum, duplicate alarm, invented
+  # threshold, unobserved-green, zero-fill x3, uncited incident,
+  # truncation order/alarm drop, registration pins, mounting — each
+  # failing its case on temp-tree copies with an unmutated control
+  # (TC-METRICS-112). Hermeticity: no skip, no live probe, temp-root
+  # discipline, no moving-base reads, planted violations detected
+  # (TC-METRICS-111). This phase adds tests and fixtures only.
+  #
+  # Obligations (tasks):
+  #   8.1 Author metrics-determinism, metrics-bounds (extension),
+  #       metrics-purity, metrics-read-cost, metrics-imports (extension),
+  #       metrics-contract (bounds-constant half).
+  #   8.2 Author tests/golden/metrics.test.ts + the remaining golden forms
+  #       + regenerate.ts; author tests/fixtures/metrics/bounds.ts
+  #       (at/under/over cap seeds, the combined-cap fixture).
+  #   8.3 Author tests/checks/metrics-mutants.test.ts and
+  #       metrics-hermetic.test.ts.
+  #   8.4 Re-run the literal registries and the broad behaviour/structure
+  #       passes as controls.
+  #
+  # Acceptance: AC-F11-1 (TC-METRICS-100, 111), AC-F11-2 (101, 102, 103,
+  #   104, 105, and the TC-METRICS-112 mutant proof of detection power);
+  #   NFR-7 (106).
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/metrics-determinism.test.ts tests/behaviour/metrics-bounds.test.ts
+  #   bun test tests/behaviour/metrics-purity.test.ts tests/behaviour/metrics-read-cost.test.ts
+  #   bun test tests/golden/metrics.test.ts
+  #   bun test tests/checks/metrics-mutants.test.ts tests/checks/metrics-hermetic.test.ts
+  #   bun test tests/structure/metrics-imports.test.ts tests/structure/metrics-contract.test.ts
+  #   bun test tests/checks/privacy-literals.test.ts tests/checks/forbidden-literals.test.ts
+  #   bun run scripts/checks/ambient-globals.ts
+  #   bun test tests/structure tests/behaviour
+  #   git diff --check
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check
+  # ---------------------------------------------------------------------------
+  - id: 8
+    title: "Cross-cutting honesty battery: determinism, bounds and truncation, purity, clock, read cost, goldens, mutants, and hermeticity"
+    kind: delivery
+    summary: "test(GH-299): honesty battery, goldens, mutants and hermeticity"
+    scope:
+      files:
+        - tests/behaviour/metrics-determinism.test.ts
+        - tests/behaviour/metrics-bounds.test.ts
+        - tests/behaviour/metrics-purity.test.ts
+        - tests/behaviour/metrics-read-cost.test.ts
+        - tests/structure/metrics-imports.test.ts
+        - tests/structure/metrics-contract.test.ts
+        - tests/golden/metrics.test.ts
+        - tests/checks/metrics-mutants.test.ts
+        - tests/checks/metrics-hermetic.test.ts
+        - tests/checks/privacy-literals.test.ts
+        - tests/checks/forbidden-literals.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/metrics
+
+  # ---------------------------------------------------------------------------
+  # Phase 9 — Planning-corpus reconciliation, changeset, release
+  # obligations, and the aggregate gate (DoD-15 roll-up, DoD-16;
+  # AC-NFR9-1; TC-METRICS-110; spec §16.1 planning rows).
+  #
+  # Goal: record the delivered story and prove the whole. Planning
+  # maintenance per milestone convention: the backlog M2-S6 row gains its
+  # delivered marker, status.md records the snapshot, cli-command-registry.
+  # md updates the metrics row (24 families, delivered), and the m2 README
+  # story-to-artifact row updates — the quota-snapshot exclusion (DEC-1)
+  # stays restated in the PR description, never in the task list. One
+  # lockstep minor changeset over the five publishables (@delivery-os/core,
+  # adapters, cli, mcp, opencode — the GH-291/GH-296/GH-297/GH-298
+  # precedent). The new current-truth spec doc/spec/features/
+  # feature-metrics.md is listed in scope ONLY so the commit primitive can
+  # stage what lifecycle phase 7 (@doc-syncer) authors — no delivery phase
+  # edits doc/spec/** beyond the phase-1 carrier, and this phase verifies
+  # nothing about its content. The final battery: `plan validate GH-299`,
+  # the aggregate gate with the recorded pass/skip/fail counts (TC-
+  # METRICS-110 evidence in pm-notes `notes:`), the doc-distribution guard
+  # if a redistributable doc changed, the changeset group check,
+  # `git diff --check`, and the branch-range commit lint run by @pm in
+  # lifecycle phase 9 (not re-implemented here). DoD roll-up: every AC met
+  # per the ownership map, every phase complete with pm-notes evidence,
+  # the seeds green, the count pins atomic, the store byte-identical.
+  #
+  # Obligations (tasks):
+  #   9.1 Update the planning corpus rows (backlog, status, registry, m2
+  #       README).
+  #   9.2 Author the minor changeset.
+  #   9.3 Run and record the final battery (gate evidence to pm-notes).
+  #
+  # Acceptance: AC-NFR9-1 (TC-METRICS-110 — TMPDIR=$PWD/tmp/tmpdir pnpm
+  #   check green at the delivered HEAD with the counts recorded);
+  #   DoD-15's consolidated coverage proof (22/22 ACs, 58/58 TCs placed,
+  #   no orphan, no unmapped criterion).
+  #
+  # Gate:
+  #   PATH="$PWD/node_modules/.bin:$HOME/.bun/bin:$PATH" bun packages/cli/bin/jaiship.ts plan validate GH-299
+  #   TMPDIR="$PWD/tmp/tmpdir" pnpm check
+  #   bash scripts/.tests/test-doc-distribution.sh
+  #   bun run scripts/checks/changesets-group.ts
+  #   git diff --check
+  #   (lifecycle phase 9, PM-owned) ./scripts/lint-commit-range.sh --base main-tools
+  #
+  # Exit: the change is DoD-complete per the block above; the PR targets
+  #   main-tools and stays open for human review (lifecycle phase 11;
+  #   merge authority stays with the owner — never merged by the
+  #   delivery).
+  # ---------------------------------------------------------------------------
+  - id: 9
+    title: "Planning corpus, changeset, release obligations, and the aggregate gate battery at the delivered HEAD"
+    kind: delivery
+    summary: "docs(GH-299): reconcile planning corpus and declare the release"
+    scope:
+      files:
+        - .changeset/gh-299-metrics-spend-minor.md
+        - doc/planning/oss-tooling/backlog.md
+        - doc/planning/oss-tooling/status.md
+        - doc/planning/oss-tooling/cli-command-registry.md
+        - doc/planning/oss-tooling/milestones/m2/README.md
+        # Authored in lifecycle phase 7 (system_spec_update), not by this
+        # phase. Listed in plan scope only so the commit primitive can
+        # stage the new current-truth spec; an untracked file outside
+        # every declared scope is a stray and is never staged.
+        - doc/spec/features/feature-metrics.md
+      folders:
+        - doc/changes/2026-11/2026-11-16--GH-299--metrics-spend
+    doneArtifacts:
+      mergeRequestUrl: "pull request for feat/GH-299/metrics-spend targeting main-tools, left open for human review"
+      pipelineId: "CI pipeline for the GH-299 delivery branch (required checks green on the pushed HEAD)"
+      trackerTransition: "in-review"
