@@ -410,7 +410,7 @@ export type RetroActionListData = {
 /** The filing surface's bounded `data` payload. */
 export type RetroActionFileData = {
   readonly actionId: string;
-  readonly action: RetroActionListEntry;
+  readonly action: RetroActionRecord;
 };
 
 /** The closure surface's bounded `data` payload (the pinned plane literals). */
@@ -469,6 +469,26 @@ export type RetroActionFailure =
     };
 
 export type RetroActionResult<T> = Result<T, RetroActionFailure>;
+
+/* --------------------------- registry port -------------------------------- */
+
+/** One verified registry snapshot: the recorded actions and their closures. */
+export type RetroActionRegistrySnapshot = {
+  readonly actions: readonly RetroActionRecord[];
+  readonly closures: readonly RetroActionClosureRecord[];
+};
+
+export type RetroActionRegistryReadResult = RetroActionResult<RetroActionRegistrySnapshot>;
+
+/**
+ * The registry port the filing and closure domains consume; the state tier
+ * implements it over the validated boundary, and the CLI edge composes it.
+ */
+export type RetroActionRegistryPort = {
+  read(): RetroActionRegistryReadResult;
+  appendAction(record: RetroActionRecord, fenceToken: string): RetroActionResult<undefined>;
+  appendClosure(record: RetroActionClosureRecord, fenceToken: string): RetroActionResult<undefined>;
+};
 
 /** The action command outcome the CLI edge consumes. */
 export type RetroActionCommandOutcome =

@@ -30,6 +30,25 @@ const inventory = JSON.parse(
 const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "adapters/src/daemon/supervisor.ts": ["absentSupervisorDescriptor", "createSupervisorAdapter"],
   "core/src/app/daemon-supervisor.ts": ["installSupervisor", "uninstallSupervisor"],
+  "core/src/domain/action-filing.ts": [
+    "ACTION_PLACEHOLDER_TRACKER_TOKENS",
+    "actionArtifactPlaneOpen",
+    "actionWindowEntries",
+    "fileRetroAction",
+    "validateActionFiling",
+  ],
+  "core/src/domain/action-window.ts": [
+    "openActionCount",
+    "windowAtLimit",
+    "windowDisclosure",
+    "windowDisclosures",
+  ],
+  "core/src/state/action-registry.ts": [
+    "appendActionClosureRecord",
+    "appendActionRecord",
+    "createRetroActionRegistryPort",
+    "readActionRegistry",
+  ],
   "core/src/domain/daemon-supervisor.ts": [
     "describeSupervisor",
     "renderOwnershipMarker",

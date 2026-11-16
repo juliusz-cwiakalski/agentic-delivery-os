@@ -336,3 +336,25 @@ describe("TC-BIN-034 prior-prefix overrides are never read", () => {
     expect(reads).not.toContain("JAISHIP_STATE_DIR");
   });
 });
+
+describe("TC-ACTION-034 the action-registry prefixes are a declared sibling scope", () => {
+  test("the two prefixes live under the retro family and stay disjoint from the delivered ones", async () => {
+    const {
+      RETRO_ACTION_CLOSURE_RECORD_KEY_PREFIX,
+      RETRO_ACTION_RECORD_KEY_PREFIX,
+      RETRO_LEVEL_RECORD_KEY_PREFIX,
+      RETRO_RUN_RECORD_KEY_PREFIX,
+      RETRO_TRIGGER_RECORD_KEY_PREFIX,
+      retroActionClosureRecordKey,
+      retroActionRecordKey,
+    } = await import("../../packages/core/src/contracts/index");
+    expect(retroActionRecordKey("action-1")).toBe("retro.actions:action-1");
+    expect(retroActionClosureRecordKey("closure-1")).toBe("retro.action-closures:closure-1");
+    for (const prefix of [RETRO_ACTION_RECORD_KEY_PREFIX, RETRO_ACTION_CLOSURE_RECORD_KEY_PREFIX]) {
+      expect(prefix.startsWith("retro.")).toBe(true);
+      expect(prefix.startsWith(RETRO_LEVEL_RECORD_KEY_PREFIX)).toBe(false);
+      expect(prefix.startsWith(RETRO_RUN_RECORD_KEY_PREFIX)).toBe(false);
+      expect(prefix.startsWith(RETRO_TRIGGER_RECORD_KEY_PREFIX)).toBe(false);
+    }
+  });
+});

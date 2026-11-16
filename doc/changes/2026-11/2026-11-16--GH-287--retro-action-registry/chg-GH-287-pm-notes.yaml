@@ -168,3 +168,32 @@ notes:
       edit, no reopen warranted. Gate cleared at iteration 2 of 3."
     type: info
     date: "2026-11-16"
+  - text: "Plan phase 1 complete — action-registry contract declaration and the three
+      additive error rows (4 -> 7). Commit f22f390. Declared files: contracts/action.ts
+      (new), contracts/index.ts, error-table.ts, feature-result-contract.md, both new
+      structure suites, error-table.test.ts, content-inventory + inventory.json,
+      error-table-sync.test.ts, both code corpora. Disclosed shared-file edit: the
+      sync check's reserved two-segment allowlist lives in scripts/checks/error-table-sync.ts
+      (outside the phase file list) and had to grow by the three exact codes or the
+      two-way sync gate is red; the commit reported it as scope drift under the
+      plan-union rule. Gate results: pnpm typecheck clean; action-contract +
+      action-imports 25 pass / 0 fail; error-table + retro-contract + content-inventory
+      + error-table-sync 224 pass / 0 fail; error-table-sync script entries=143
+      documented=143 S1=443 S3=32 corpus=67, OK."
+    type: info
+    date: "2026-11-16"
+  - text: "Plan phase 2 complete — validated action-registry boundary, all-or-nothing
+      filing gate, and the fixed WIP limit. Commit pending (recorded in the next note
+      entry after commit). Files: domain/action-filing.ts, domain/action-window.ts,
+      state/action-registry.ts (new); domain/index.ts, state/index.ts, core/src/index.ts;
+      tests/fixtures/action/ (store, builders, clock, seed seeder); action-filing +
+      action-wip-limit behaviour suites; state-scope, retro-contract, retro-imports,
+      content-inventory, inventory.json, packed-state. Disclosed contract-module
+      additions under the same phase: the data-only registry port and the record-shaped
+      file payload (contracts/action.ts, contracts/index.ts) so the state tier and the
+      domain engine compose without a tier violation. Gate results: pnpm typecheck
+      clean; action-filing 11 / 0; action-wip-limit 5 / 0; state-scope + retro-contract
+      + retro-imports + content-inventory + packed-state 44 / 0; ambient-globals
+      210 files clean; exports-parity 5 publishables pass."
+    type: info
+    date: "2026-11-16"
