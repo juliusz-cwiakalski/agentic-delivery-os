@@ -699,8 +699,7 @@ export const buildSteerReadData = (
   let notes = listed;
   let renderedAsks = asks;
   const ownerAskCount = askSource.facts.filter((fact) => fact.audience === "owner").length;
-  let omitted =
-    plan.rows.length - listed.length + Math.max(0, ownerAskCount - asks.length);
+  let omitted = plan.rows.length - listed.length + Math.max(0, ownerAskCount - asks.length);
   let expired = plan.transitions.some((transition) => transition.outcome === "expired");
   let data: SteerReadData = {
     schemaVersion: STEER_SCHEMA_VERSION,
