@@ -6,7 +6,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-16T22:21:11.981Z }
   specification: { started: null, completed: 2026-11-16T22:45:00.487Z }
   test_planning: { started: null, completed: 2026-11-16T22:47:40.120Z }
-  delivery_planning: { started: null, completed: 2026-11-16T23:08:34.920Z }
+  delivery_planning: { started: null, completed: 2026-11-16T23:18:06.308Z }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -105,5 +105,27 @@ notes:
       merges (GH-287) moved the error-table base state after the plan was
       drafted from older pins; DoR verification against the live tree confirmed
       the pins current."
+    type: "retro"
+    date: "2026-11-17"
+  - text: "DoR iteration 2 verdict: NOT_READY
+      (readiness-review/readiness-iter-2.md). Iteration-1 findings all verified
+      closed (AC-F3-1 split consistent, phantom paths gone, horizon unambiguous,
+      phase-5 scope complete). New blocking finding: the plan's error-table
+      ABSOLUTE pin is false — table holds 146 rows at branch base (runtime
+      import + mirror toHaveLength(146) + GH-287 143-to-146 move), plan asserts
+      144 and instructs a '144 to 146' mirror move with a stale scan token;
+      delta instructions (+2, 62-to-64, +112-to-+114) are correct so the defect
+      fails closed and cannot ship silently. Remediation: reopen
+      delivery_planning; plan-writer corrects the absolute pin and mirror-move
+      instruction and bumps the test-plan version citation (v1.1 to v1.3)."
+    type: "decision"
+    date: "2026-11-17"
+  - text: "Retro: iteration-1 reviewer affirmed the 144 pin as 'verified against the
+      live tree' — it was wrong (146 is actual); iteration-2 reviewer caught it
+      by re-verifying directly. The prior retro note above (pins confirmed
+      current) repeated the same false claim. Lesson: a reviewer's verification
+      claim is data, not truth; count-sensitive pins must be confirmed by direct
+      read (runtime import or test assertion), never inherited from a prior
+      verdict — including one's own earlier iteration."
     type: "retro"
     date: "2026-11-17"

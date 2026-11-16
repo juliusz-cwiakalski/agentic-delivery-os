@@ -1,5 +1,12 @@
-# GH-295 delivery plan — machine-readable document (delivery.plan.v1), revision 1.1
-# (2026-11-17). Revision 1.1 applies the DoR iteration-1 findings (readiness-
+# GH-295 delivery plan — machine-readable document (delivery.plan.v1), revision 1.2
+# (2026-11-17). Revision 1.2 applies the DoR iteration-2 findings (readiness-
+# iter-2.md): the error-table base-state pin corrected to the delivered truth
+# (146 rows at base; the phase-1 mirror move corrected to 146 -> 148; the
+# no-leftover scan re-keyed to the real pre-change tokens 146/62/+112; count
+# sourcing restricted to the error-table-sync check output and the mirror's
+# exact-length assertions, never a code-literal grep) and the test-plan
+# version pointer bumped to v1.3. Revision 1.1 applied the DoR iteration-1
+# findings (readiness-
 # iter-1.md): AC-F3-1's phase-split ownership declared (the blocking
 # arithmetic gap), the lifecycle phase-7 handoff re-pointed at the real
 # current-truth homes (feature-scheduling-engine.md, feature-queue-ready.md,
@@ -9,8 +16,10 @@
 # AC-F1-1..AC-F8-1; F-1..F-8;
 # DM-1..DM-4; EVT-1; NFR-1..NFR-7; NG-1..NG-7; RSK-1..RSK-6; DEC-1..DEC-8;
 # OQ-1 deferred non-blocking; seeds SC-M2-S2-01/02 reconciled per DEC-2) and
-# test plan v1.1 (51 TCs TC-SUP-001..097, all 8 ACs Covered, no open gap —
-# GAP-T1 closed by spec v1.1 DEC-8) on branch feat/GH-295/supervise from
+# the test plan, now v1.3 (51 TCs TC-SUP-001..097, all 8 ACs Covered, no
+# open gap — GAP-T1 closed by spec v1.1 DEC-8; v1.2 fixed reference paths
+# and v1.3 fixed the DEC range, with no case, ID, coverage row, or
+# assertion changed) on branch feat/GH-295/supervise from
 # main-tools tip 5f25da89 (fresh start, zero unique commits; GH-298 steer,
 # GH-296 ceremony, GH-297 board and GH-287 retro action registry already in
 # the base).
@@ -50,7 +59,7 @@
 #                authority actively acting; per-action projection; park
 #                intent non-claiming); §17 AC table; §7.1 in-scope incl.
 #                documentation reconciliation inputs.
-#   - Test plan: ./chg-GH-295-test-plan.md v1.1 — 51 TCs; §3 coverage
+#   - Test plan: ./chg-GH-295-test-plan.md v1.3 — 51 TCs; §3 coverage
 #                matrices (AC, DM, NFR, seeds); §4.3 permanent structure
 #                obligations; §5.2 case oracles; §6 fixtures and goldens
 #                (GAP-T2 key spellings, GAP-T3 goldens created not
@@ -67,13 +76,21 @@
 #                prompt-required-commands.ts registers exactly 23 families
 #                (`status` ... `board` 22nd, `ceremony` 22nd index, `steer`
 #                23rd last) — supervise mounts as the 24th, delta 23 -> 24;
-#                the error table holds 144 rows with allowlist copies at 62
-#                members (scripts/checks/error-table-sync.ts
-#                RESERVED_TWO_SEGMENT_CODES and the structure mirror's five
-#                toHaveLength(62) pins) and the sync oracle arithmetic
-#                BASELINE_ROWS.length + 112 — supervise appends exactly 2
-#                rows (146), 2 allowlist members (64), +2 sync arithmetic
-#                (+114); QUEUE_PARK_CAUSES holds the delivered five with
+#                the error table holds 146 rows at the branch base with
+#                allowlist copies at 62 members (scripts/checks/
+#                error-table-sync.ts RESERVED_TWO_SEGMENT_CODES and the
+#                structure mirror's five toHaveLength(62) pins), a
+#                documented mirror at 146, and a corpus of 67 rows, with
+#                the sync oracle arithmetic BASELINE_ROWS.length + 112
+#                (= 146 today) — supervise appends exactly 2 rows (148), 2
+#                allowlist members (64), +2 sync arithmetic (+114 = 148
+#                after). COUNT SOURCING RULE: two delivered entries
+#                reference constants (code: FALLBACK_INVOCATION_CODE,
+#                code: FALLBACK_INTERNAL_CODE) instead of literals, so a
+#                naive `code: "` grep undercounts at 144 — row counts are
+#                taken ONLY from the error-table-sync check output
+#                (entries/documented/corpus) or the mirror's exact-length
+#                assertions, never a literal grep; QUEUE_PARK_CAUSES holds the delivered five with
 #                QUEUE_PARK_CAUSE_CONDITION_PAIRS at five rows and
 #                QUEUE_PARK_RECHECK_DEFAULTS at three keys (only
 #                provider-window carries an absolute expiry; resolver
@@ -460,14 +477,18 @@
 #      both; scripts/checks/error-table-sync.ts widens RESERVED_TWO_
 #      SEGMENT_CODES by exactly the two codes (62 -> 64, no pattern); the
 #      count pins move in the SAME commit — tests/structure/error-table.
-#      test.ts (144 -> 146 entries, 62 -> 64 allowlist at every pin),
+#      test.ts (146 -> 148 entries, 62 -> 64 allowlist at every pin),
 #      tests/structure/dispatch-attempts-taxonomy.test.ts and
 #      tests/structure/verify-gates-suite-map-contract.test.ts (their
 #      sourceEntries/documentedRows reads), tests/checks/
 #      error-table-sync.test.ts (BASELINE_ROWS.length + 112 -> +114 at every
 #      occurrence: length check, failure message, counts assertion) —
-#      followed by the repo-wide no-leftover scan for 144/62/+112 with
-#      those tokens added to the legacy list, and four-way
+#      followed by the repo-wide no-leftover scan for the pre-change tokens
+#      146/62/+112 with those tokens added to the legacy list, reading the
+#      moved counts from the exact-length mirror assertions and the sync
+#      check's output only (never a `code: "` literal grep, which
+#      undercounts the two constant-referenced delivered entries at 144),
+#      and four-way
 #      classifier/sync/mirror/carrier agreement; doc/spec/features/
 #      feature-result-contract.md (the ONE in-boundary carrier write) gains
 #      the two rows, the moved counts, and the allowlist additions;
