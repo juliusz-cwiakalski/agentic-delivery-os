@@ -467,3 +467,20 @@ notes:
       file per the closeout-suites convention, then full battery re-run."
     type: info
     date: "2026-11-16"
+  - text: "Quality gates iteration 2: state-fence fix VERIFIED (fix 09a86957,
+      setDefaultTimeout(120_000) per closeout precedent — zero fence failures
+      in battery 2). Full battery 2 (clean, uncontended; log
+      tmp/tmpdir/gh287-quality-gates-pnpm-check-2.log) FAILED exit 1 with the
+      same single-flake signature but a DIFFERENT test: tests/behaviour/
+      projects-scope-isolation.test.ts TC-PROJ-002 timed out at the 5s default
+      (5743.99ms; spawns real git/CLI ops across two worktree checkouts; file
+      declares no budget; last touched by GH-294/GH-288, untouched here). 9622
+      pass / 4 skip / 1 fail, identical totals to battery 1. Diagnosis: a CLASS
+      of delivered heavy integration tests sits near the 5s default edge and
+      flakes under full-battery load; one-at-a-time fixing burns a 30-min
+      battery per discovery. Remediation iteration 3 via @fixer: evidence-
+      driven pass — measure per-test durations across one full test-suite run
+      (junit reporter), apply the same one-line budget convention to every
+      file with a measured >4s test, commit, then battery re-run."
+    type: info
+    date: "2026-11-16"

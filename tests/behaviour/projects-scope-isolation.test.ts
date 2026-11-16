@@ -7,7 +7,9 @@
  * identical under both project roots, so "the paths differ" alone would prove
  * nothing.
  */
-import { describe, expect, test } from "bun:test";
+import { describe, expect, setDefaultTimeout, test } from "bun:test";
+
+setDefaultTimeout(120_000);
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { readDispatchAttempts } from "../../packages/core/src/app/dispatch-ledger";
