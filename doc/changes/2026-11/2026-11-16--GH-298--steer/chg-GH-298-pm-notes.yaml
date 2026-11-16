@@ -5,7 +5,7 @@ milestone: "M2: Ceremonies, measurement, and memory"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: "2026-11-16T14:09:00Z", completed: 2026-11-16T13:12:53.864Z }
-  specification: { started: null, completed: null }
+  specification: { started: null, completed: 2026-11-16T13:31:10.677Z }
   test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
@@ -73,4 +73,20 @@ notes:
       line <= 100 chars; quality gates `TMPDIR=$PWD/tmp/tmpdir pnpm check` green
       before PR; PR targets main-tools; STOP with PR open."
     type: info
+    date: "2026-11-16"
+  - text: "RETRO: fresh worktree lacked gitignored dist/ build outputs — the
+      delivery-os harness failed at module resolution ('Cannot find module
+      @delivery-os/adapters/credentials') until `pnpm build` ran (9.6s).
+      Environment bootstrap for a new worktree = pnpm install --frozen-lockfile
+      + pnpm build before any harness command. Cost: ~2 wasted runner round
+      trips. Candidate memory entry at closeout."
+    type: retro
+    date: "2026-11-16"
+  - text: "RETRO: pm-notes lint requires full ISO-8601 datetime strings
+      (YYYY-MM-DDTHH:MM:SSZ) for phase timestamps; date-only strings and even
+      quoted date-only strings fail lint.notes.malformed. Also: phase-family
+      transitions rewrite the whole notes file formatting (long-line wrapping),
+      so append-then-rerun is the safe edit pattern. Cost: 2 failed phase
+      complete attempts."
+    type: retro
     date: "2026-11-16"
