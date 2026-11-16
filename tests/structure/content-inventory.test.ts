@@ -2818,6 +2818,18 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "CEREMONY_MIRROR_TARGET_SCHEMA",
     "planCeremonyMirror",
   ],
+  "core/src/domain/ceremony-registry.ts": [
+    "buildCeremonyRegistry",
+    "ceremonyProjectEntries",
+    "ceremonyRegistryEntry",
+    "ceremonyRegistryIds",
+  ],
+  "adapters/src/file/ceremony-declarations.ts": [
+    "CEREMONY_DECLARATIONS_FILE_NAME",
+    "ceremonyDeclarationDocumentPath",
+    "nodeCeremonyDeclarationFileSystem",
+    "readCeremonyDeclarationDocument",
+  ],
 };
 
 const listTypeScriptFiles = (packageDir: string): string[] => {

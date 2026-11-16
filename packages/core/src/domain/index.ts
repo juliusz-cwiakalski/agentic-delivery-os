@@ -993,3 +993,16 @@ export {
   type CeremonyMirrorPlanInput,
   type CeremonyMirrorTargetPlan,
 } from "./ceremony-mirror.js";
+/** The project ceremony registry (GH-296 F-6). */
+export {
+  buildCeremonyRegistry,
+  ceremonyProjectEntries,
+  ceremonyRegistryEntry,
+  ceremonyRegistryIds,
+  type CeremonyDeclarationDocumentFacts,
+  type CeremonyOrigin,
+  type CeremonyRegistry,
+  type CeremonyRegistryEntry,
+  type CeremonyRegistryFailure,
+  type CeremonyRegistryRead,
+} from "./ceremony-registry.js";

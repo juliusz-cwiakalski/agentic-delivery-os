@@ -186,3 +186,28 @@ notes:
       tests/structure/inventory.json update was disclosed as scope drift."
     type: info
     date: "2026-11-16"
+  - text: "plan phase 4 (catch-up: pure schedule evaluation and bounded
+      single-window replay): commit 1b3edac; pnpm typecheck green; bun test
+      tests/behaviour/ceremony-catch-up.test.ts and
+      tests/structure/ceremony-catch-up-purity.test.ts green (12 pass); bun run
+      scripts/checks/ambient-globals.ts green. DEC-19 is realised by
+      existence-based satisfied/missed arithmetic: an explicitly-run window is
+      reported satisfied, replayed zero times, and the single replay slot
+      executes a genuinely different missed window. The catch-up run records
+      the missed window as the identity and the execution window separately.
+      The tracked tests/structure/inventory.json update was disclosed as scope
+      drift."
+    type: info
+    date: "2026-11-16"
+  - text: "plan phase 5 (six built-ins, parity, retro levels, mirror planning):
+      commit 1b764f2; pnpm typecheck green; bun test the parity suite, the seven
+      flow suites, the runner/notes/declaration suites, the brief golden, the
+      two structure suites, and the retro-malformed, closeout-telemetry and
+      fixture-privacy controls green (118 pass); bun run
+      scripts/checks/ambient-globals.ts green. The shared runner files
+      ceremony-run.ts and engine.ts were extended inside their phase-3/phase-2
+      declarations to dispatch the schema-keyed built-in renderers and to split
+      the sync step from the observing render step; the tracked
+      tests/structure/inventory.json update was disclosed as scope drift."
+    type: info
+    date: "2026-11-16"

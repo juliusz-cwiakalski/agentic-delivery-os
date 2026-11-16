@@ -1,0 +1,26 @@
+schemaVersion: delivery.ceremony.declarations.v1
+ceremonies:
+  - id: morning-brief
+    title: A project attempt to shadow a built-in
+    tiers: [full]
+    triggers:
+      - kind: event
+        event: owner-note
+    inputs: []
+    agenda:
+      - id: collect
+        steps:
+          - kind: collect
+            outputs:
+              - slot: ceremony-artifact
+                schema: delivery.ceremony.shadow.v1
+            verify: artifact-conforms
+    scopeKey:
+      kind: repository
+    catchUp:
+      mode: none
+      maxMissedWindows: 1
+    compaction:
+      atPhases: []
+      maxBytes: 4096
+      maxLines: 40

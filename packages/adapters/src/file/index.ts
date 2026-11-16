@@ -139,3 +139,11 @@ export {
   ceremonyArtifactsDirectoryName,
   createCeremonyArtifactStore,
 } from "./ceremony-artifacts.js";
+export {
+  CEREMONY_DECLARATIONS_FILE_NAME,
+  ceremonyDeclarationDocumentPath,
+  type CeremonyDeclarationDocumentRead,
+  type CeremonyDeclarationFileSystem,
+  nodeCeremonyDeclarationFileSystem,
+  readCeremonyDeclarationDocument,
+} from "./ceremony-declarations.js";
