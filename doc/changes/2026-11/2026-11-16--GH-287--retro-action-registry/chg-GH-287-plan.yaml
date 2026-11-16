@@ -148,7 +148,9 @@
 #   plan-union scope accepts the deliberate move; goldens regenerate by
 #   explicit command, never blanket rewrite; D-row commits name the rows in
 #   the body. Mapping: D-1..D-4 Phase 1; D-21..D-23 Phase 2 (D-21 continues
-#   in every phase adding files); D-13(closure-half) Phase 3; D-14..D-16
+#   in every phase adding files; D-23's packed-state half is declared at
+#   its delivered location `tests/checks/packed-state.test.ts`);
+#   D-13(closure-half) Phase 3; D-14..D-16
 #   Phase 4; D-17..D-20 Phase 5; D-5..D-10, D-27, D-28 Phase 6; D-11(stands
 #   unchanged)/D-12/D-13(fold-half) Phase 7; D-24(literal halves), D-26
 #   Phase 8; D-24(doc-conformance phrase table), D-25 Phase 9. D-11 is a
@@ -327,7 +329,7 @@ phases:
   # Gate:
   #   pnpm typecheck
   #   bun test tests/behaviour/action-filing.test.ts tests/behaviour/action-wip-limit.test.ts
-  #   bun test tests/structure/{state-scope,packed-state,retro-contract,retro-imports,content-inventory}.test.ts
+  #   bun test tests/structure/{state-scope,retro-contract,retro-imports,content-inventory}.test.ts tests/checks/packed-state.test.ts
   #   bun run scripts/checks/ambient-globals.ts
   #   bun run scripts/checks/exports-parity.ts
   #
@@ -353,7 +355,7 @@ phases:
         - tests/behaviour/action-filing.test.ts
         - tests/behaviour/action-wip-limit.test.ts
         - tests/structure/state-scope.test.ts
-        - tests/structure/packed-state.test.ts
+        - tests/checks/packed-state.test.ts
         - tests/structure/retro-contract.test.ts
         - tests/structure/retro-imports.test.ts
         - tests/structure/content-inventory.test.ts
