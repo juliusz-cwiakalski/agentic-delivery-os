@@ -206,6 +206,7 @@
     "doc/spec/features/feature-queue-ready.md",
     "doc/spec/features/feature-resident-daemon.md",
     "doc/spec/features/feature-result-contract.md",
+    "doc/spec/features/feature-retro-action-registry.md",
     "doc/spec/features/feature-retro-pipeline.md",
     "doc/spec/features/feature-scheduling-engine.md",
     "doc/spec/features/feature-session-database-admin.md",

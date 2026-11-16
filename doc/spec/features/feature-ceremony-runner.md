@@ -52,7 +52,7 @@ The runner adds no event topic, no MCP tool, no scheduler, no model call, no met
 ### 2.3 Non-Goals
 
 - No metrics presentation, aggregate report, alarm, or threshold (the `metrics` surface is M2-S6); the runner records data and one committed comparison.
-- No retro action registry: filing, artifact/outcome closure, aging, and the action board are M2-S10; the retro ceremony records a declared-actions handoff.
+- No retro action registry surface of its own: filing, artifact/outcome closure, aging, and the action board are owned by the sibling registry ([Retro Action Registry](feature-retro-action-registry.md), GH-287); the retro ceremony records a declared-actions handoff and reads the registry's recorded actions through the composed follow-through producer. Declarations, agendas, the note schema, and the asserted follow-through-first position stay unchanged.
 - No ceremony packs, no pack registry, no signed bundle, no cross-repository ceremony coordination.
 - No scheduler: no daemon integration, cron/systemd unit, timer, unattended cadence, sleep, or child process. The runner evaluates schedules and offers `catch-up`.
 - No new event topic or event kind; no MCP tool; no board/status/brief ceremony surface.
@@ -221,7 +221,7 @@ Rules:
 | `window` | schedule `daily` | the project window | window note: cross-change patterns, follow-through verification, candidate promotions |
 | `project` | event `milestone-end` | the milestone | project note: consolidation candidates, tribal-knowledge graduation, recurrence report |
 
-- **Follow-through first.** The first phase is follow-through verification over the recorded actions, with the verdict vocabulary `applied`, `partial`, `violated-with-consequence`. A status claim is never evidence, and the phase's first position is asserted.
+- **Follow-through first.** The first phase is follow-through verification over the recorded actions, with the verdict vocabulary `applied`, `partial`, `violated-with-consequence`. A status claim is never evidence, and the phase's first position is asserted. The registry producer (GH-287) supplies the open recorded actions and their artifacts; the verdict comes from the artifact oracle, so an artifact that fails cannot yield `applied` even when an owner claims success, and an unresolvable artifact degrades to `unverified`.
 - **Fixed note schema.** The note carries `schemaId`, `ceremony`, `scopeKey`, `window`, `trigger`, the level and the concept's fixed members. The fixed schema is validated at intake before any output; the `record` step writes the note to the memory slot and its verification confirms the memory file is readable and parses as an object rather than re-validating the fixed schema a second time.
 - **Idempotent scope keys.** The declaration takes `scopeKey: { kind: "note" }`, so the level's scope is the note's key. A rerun for the same `(scopeKey, window)` returns the recorded verdict; a rerun at a new window appends an addendum and never rewrites a prior note body.
 - **Null retro is a success.** A retro whose evidence supports no finding, action, or lesson is a `verified` run with an explicit empty finding set; nothing is fabricated to fill a quiet window.

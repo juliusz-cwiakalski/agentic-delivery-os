@@ -20,7 +20,8 @@ links:
 
 ## Overview
 
-`board` is the owner's and coordinator's one-screen fleet view. One invocation renders exactly four sections in fixed order — `LANES`, `GATES`, `ASKS`, `PARKED` — covering the active lanes, the open owner gates with their SLA posture, the open owner questions with their drawn defaults, and the parked lanes with their reason and expiry. Every row names its repository key, its ref, and its owner, so several checkouts never blend into one another.
+`board` is the owner's and coordinator's one-screen fleet view. One invocation renders the declared sections in fixed order — `LANES`, `GATES`, `ASKS
+ACTIONS`, `ACTIONS`, `PARKED` — covering the active lanes, the open owner gates with their SLA posture, the open owner questions with their drawn defaults, the open retro improvement obligations with their aging state (GH-287), and the parked lanes with their reason and expiry. Every row names its repository key, its ref, and its owner, so several checkouts never blend into one another. The delivered four sections keep their order, caps, and semantics; `ACTIONS` is additive under the kept `delivery.board.v1` identity.
 
 The board reads from one named state source. `GATES`, `ASKS`, and `PARKED` read the same per-repository status facts (`delivery.status-facts.v1`) that `collectStatusFacts` composes for `status` and `brief` — tracker work items, the blocker ledger, and the park projection — and the payload names that source as `stateSource: "delivery.status-facts.v1"`. `LANES` reads the shipped lane/phase state, declared as the `lanes` collector in the payload's per-repository collector evidence. The same `stateSource` identity is carried additively on the `status` and `brief` payloads, so "board, brief, and status share one state source" is a runtime equality across three payloads, not a prose claim.
 
@@ -69,7 +70,8 @@ The screen and the payload carry the same four sections in the same declared ord
 | 1 | `LANES` | Active lanes only: the shipped fold's `delivering` and `failed` lanes | `(repository, ref)` |
 | 2 | `GATES` | The delivered open owner-gate population with its SLA posture | `(repository, id)` |
 | 3 | `ASKS` | Open `owner`-audience typed questions with their drawn default | `(repository, id)` |
-| 4 | `PARKED` | Open lane park episodes with reason and `until` | `(repository, ref)` |
+| 4 | `ACTIONS` | Open retro improvement actions with owner, level, age, aging state, and window count/limit (GH-287) | `(repository, actionId)` |
+| 5 | `PARKED` | Open lane park episodes with reason and `until` | `(repository, ref)` |
 
 Every row names its repository key, its ref (or the source's declared absence), and its owner. Within each array the order is repository key ascending, then the section's declared rank or ref order; no collector, provider, filesystem, or host-index return order influences a rendered order. Every identity is unique within its array, so two repositories holding the same ref produce two distinct rows.
 
@@ -133,7 +135,7 @@ board.data = {
   stateSource: "delivery.status-facts.v1",
   truncated: boolean,
   omitted: number,
-  omittedBySection: { repositories, lanes, gates, asks, parked }
+  omittedBySection: { repositories, lanes, gates, asks, actions, parked }
 }
 ```
 
@@ -151,6 +153,8 @@ GATES
 <repository>  <id>  <kind>  <ref>  age=<age>  sla=<state>  default=<default|null>  waivedBy=<principal|null>  owner=<owner|null>  cond=<kind>:<slaState>
 ASKS
 <repository>  <id>  ref=<ref|null>  age=<age>  default=<drawnDefault|none>:<defaultState>  owner=<owner|null>
+ACTIONS
+<repository>  <actionId>  owner=<owner>  level=<level>  age=<age>  aging=<state>  window=<window>:<openCount>/<limit>
 PARKED
 <repository>  <ref>  reason=<cause>  until=<instant|untilReason|null>  owner=<owner|null>
 ```
@@ -164,6 +168,7 @@ An empty board or the `unbound` scope renders `<binary> board  observed-empty  s
 | Gates per repository | 8 (delivered `BOARD_MAX_GATES`) |
 | Lanes per repository | 20 (`BOARD_MAX_LANES`) |
 | Asks per repository | 8 (`BOARD_MAX_ASKS`) |
+| Actions per repository | 8 (`BOARD_MAX_ACTIONS`) |
 | Parked rows per repository | 8 (`BOARD_MAX_PARKED`) |
 | Included repositories | 128 (`BOARD_MAX_REPOSITORIES`) |
 | Serialized `data` | 65 536 UTF-8 bytes |
@@ -195,6 +200,17 @@ The board makes no LLM call, issues no non-GET provider request, starts no timer
 ### Mounting
 
 The board is the 21st prompt-required command family. The production composition root composes it unconditionally, root `--help` lists it beside the other families, `board --help` answers from the static inventory at exit `0`, the M2 reference page serves the help-coverage check, and the coverage inventory carries the board row. Mounting changes no other command's composition.
+
+### Actions surface (GH-287)
+
+The actions rows project from the repository's own action registry through one
+bounded read per repository; a failed read discloses the `actions` collector
+evidence as `unavailable` and fabricates no row. Each row carries the action
+identity, repository, owner, level, age in milliseconds, derived aging state
+(`current`, `nudged`, `escalated`), and the improvement window's open count and
+declared limit. The section participates in the declared drop order
+(`parked`, `asks`, `actions`, `lanes`, `gates`); a dropped row is always
+counted. See [Retro Action Registry](feature-retro-action-registry.md).
 
 ## Technical Architecture & Codebase Map
 

@@ -65,6 +65,7 @@ The command is exactly the locked retro family. The handler owns the subcommand 
 | Missing subcommand, unknown subcommand, unexpected positional, missing `--level` value | Refuses `input.value.rejected` (exit 1). |
 | Undeclared flag such as `--ref` | Refuses through the shared parser as `fallback.invocation` (exit 1). |
 | `--json` | The global machine-output switch; it adds no retro behavior. |
+| `retro action file\|close\|list` | The additive action-registry verb group (GH-287); see [Retro Action Registry](feature-retro-action-registry.md). |
 
 There is no export verb, no `--ref`, and no windowing flag. Registration is composition-only: the command exists in a program only when its retro composition is supplied.
 
@@ -151,7 +152,7 @@ The successful `data` carries the four delivered keys plus the optional `spend` 
 |---|---|
 | `level` | The requested level name. |
 | `findings[]` | Mechanically folded findings, each `{ kind, text, evidenceRefs[] }`; sorted by kind then text. |
-| `followThrough[]` | Recorded follow-through entries, each `{ action, verdict, artifactRef? }`; sorted by action. |
+| `followThrough[]` | Recorded follow-through entries, each `{ action, verdict, artifactRef?, provenance? }`; sorted by action. Registry-sourced entries carry `provenance: "registry"`. |
 | `evidenceRefs[]` | The trace ids of the sidecar records selected for the run, in record order. |
 | `spend?` | The cited spend evidence: `{ state: "present", tokensByClass, roles[], models[], timing[], reconciliation? }` carrying the same collector-truth figures and the tolerance disclosure the fold produced, or `{ state: "absent" }` as the classified absence. Omitted only when the injected spend seam produced no evidence at all; an absent store is never rendered as zeros. |
 
@@ -159,7 +160,7 @@ The report shape's schema identity `delivery.retro.report.v1` is a declared cont
 
 Finding kinds come from the closed vocabulary `retro-note`, `collector-finding`, `truth-check`, `tamper-flag`, `malformed-entry`, and `verified-empty`. The delivered fold emits `retro-note` from pm-notes records and `truth-check` from recorded truth-check findings; a recorded finding whose kind is in the closed vocabulary folds through with its evidence refs. Every folded finding's evidence refs are validated on the production fold against the known sidecar trace-id set, including consumer-supplied refs; a dangling referenced trace id is rendered as a `truth-check` finding and never enters `evidenceRefs`.
 
-Follow-through verdicts are `verified` when the optional artifact verifier accepts the reference, `unverified` when an artifact reference is present but not verified, and `unknown` when no artifact reference exists. Entries fold only when a follow-through reader is injected; they are never invented, and an empty fold is an explicit empty array.
+Follow-through verdicts are `verified` when the optional artifact verifier accepts the reference, `unverified` when an artifact reference is present but not verified, and `unknown` when no artifact reference exists. Entries fold only when a follow-through reader is injected; they are never invented, and an empty fold is an explicit empty array. The production composition injects the registry follow-through reader (GH-287): recorded actions fold as `verified`/`unverified`/`unknown` from the artifact oracle with registry provenance inside the entry, and no new top-level report key is added (`delivery.retro.report.v1` keeps exactly its four delivered keys).
 
 A clean run with an empty evidence fold is a verified-empty success: empty findings and follow-through, populated evidence refs where records exist, and exit 0. Findings are never fabricated to justify a run, and the render path contains zero model calls.
 
@@ -214,6 +215,17 @@ Collection seeds the registry additively and idempotently by identity: the six l
 
 The four sub-R1 levels are selected and scheduled by the ceremony layer, not by this pipeline. The `retro-evidence-pass` ceremony declaration carries exactly the four declared triggers above (`session-end`, `incident-severity`, daily, `milestone-end`), reads this pipeline's verified evidence records and `retro.run` records read-only, and produces each level's note. The pipeline's own collection grammar stays `change`-only, its registry statuses stay `declared` for `R2`–`R5`, and selecting a non-`change` level through `retro collect` keeps its delivered refusal. The ceremony adds no collector, no sidecar, no chain material, and no registry record; the level-ownership boundary is stated once in [Ceremony Runner](feature-ceremony-runner.md#39-retro-ceremonies).
 
+### Sibling action registry
+
+Action records live in their own validated boundary (GH-287), not in this
+boundary: record kinds `retro.action` and `retro.action-closure` under the
+`retro.actions` and `retro.action-closures` key prefixes, with the payload
+schemas `delivery.retro.action.v1` and `delivery.retro.action-closure.v1`. This
+boundary's exactly-three record-kind declaration is unchanged, and its read
+skips the sibling kinds so a recorded action is never classified as a retro
+registry malformation. The filing, aging, closure, WIP-limit, and board
+contracts are owned by [Retro Action Registry](feature-retro-action-registry.md).
+
 ### Closeout coverage read
 
 Closeout's `retro-coverage-move` step is a read-only consumer of the registry. The production closeout composition reads the validated `retro.run` records at level `change`, determines whether a run's scope is the closed work item, and records the result as one idempotent `capsule.retro-coverage` capsule event with `state: "collected"` (a run exists) or `state: "pending"` (none) and the run id when present; an injected coverage fact overrides the read for tests. It appends no registry record, writes no evidence, and adds no mode value; the registry remains the selection authority for `retro collect`. An unreadable registry is a declared gap in the closeout step (`retro-registry-unavailable`) plus a `retro-coverage-unavailable` residue item, and the rest of closeout proceeds; a validated registry with no matching run is `pending`, not a gap. A re-run appends nothing for the same work item and level. The coverage contract is described in [Closeout Transaction](feature-closeout.md) and [Change Capsule](feature-capsule.md).
@@ -241,7 +253,7 @@ The serialized bundle passes the redaction chokepoint. The export never mutates 
 
 ### Doctor visibility
 
-The doctor `state` check reads the retro registry through the same verified boundary (when the retro read is composed) and contributes a `retro-registry` store verdict to the state-stores evidence. A verified-empty registry counts as verified-empty; a valid registry reports `valid`, and because the registry shares the delivery ledger its artifacts are already included in the shared record count rather than summed again; a torn or unknown registry fails the check with its classified reason; a malformed registry entry classifies as `store-unknown`. The check acquires no fence, writes nothing, and never repairs or salvages.
+The doctor `state` check reads the retro registry through the same verified boundary (when the retro read is composed) and contributes a `retro-registry` store verdict to the state-stores evidence. The sibling action registry contributes its own `action-registry` store verdict from the same check (GH-287); the closed area list is unchanged. The retro registry's read skips the sibling action record kinds, which share the `retro.` key family. A verified-empty registry counts as verified-empty; a valid registry reports `valid`, and because the registry shares the delivery ledger its artifacts are already included in the shared record count rather than summed again; a torn or unknown registry fails the check with its classified reason; a malformed registry entry classifies as `store-unknown`. The check acquires no fence, writes nothing, and never repairs or salvages.
 
 ## Technical Architecture & Codebase Map
 
@@ -402,7 +414,7 @@ The pipeline adds no network, provider, or telemetry cost. The recurring cost is
 | Null retro | A report with no supported findings; a valid success when truth checks pass. |
 | Level registry | The validated registry declaring levels R1-R6 with scope kinds, trigger declarations, and implementation status. |
 | Addendum | A record appended when an already-collected scope is re-collected; reruns append, never rewrite. |
-| Follow-through read-fold | The report section folding recorded follow-through entries with their verification verdicts; enforcement is later work. |
+| Follow-through read-fold | The report section folding recorded follow-through entries with their verification verdicts; the registry follow-through producer (GH-287) supplies recorded actions with provenance inside the entry. |
 | Evidence export | The bounded deterministic bundle of selected records plus the chain verdict, written only to an explicit destination. |
 
 ## Related

@@ -265,6 +265,13 @@ The subscribe contract, owned by M2-S13 and published by the resident daemon.
 ## telemetry.v1
 
 The attribution contract, delivered by M2-S14 (GH-291) and consumed by M2-S6 and M2-S10.
+M2-S10 (GH-287) consumes it as advisory evidence input at its declared edge: an
+outcome verifier may name the verified spend/telemetry figures as its
+delayed-metric evidence, and where telemetry is absent the classified absence
+applies (never zeros). The action registry itself is declared in
+[commands/retro.md](commands/retro.md) and
+[feature-retro-action-registry.md](../../../spec/features/feature-retro-action-registry.md),
+not in this telemetry contract.
 
 - **Attribution fields.** Each telemetry record carries `ticket`,
   `repository`, `lane`, `agentRole`, `model`, and `phaseTiming` (phase timing:

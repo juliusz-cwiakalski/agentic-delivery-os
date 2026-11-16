@@ -66,10 +66,10 @@ describe("TC-ACTION-017 the actions surface beside the asks", () => {
         "zeta-repository:action-z-2",
       ]);
       const data = boardData(json);
-      expect((data?.lanes as unknown[]).length).toBeGreaterThan(0);
-      expect((data?.gates as unknown[]).length).toBeGreaterThan(0);
-      expect((data?.asks as unknown[]).length).toBeGreaterThan(0);
-      expect((data?.parked as unknown[]).length).toBeGreaterThan(0);
+      expect((data?.lanes ?? []).length).toBeGreaterThan(0);
+      expect((data?.gates ?? []).length).toBeGreaterThan(0);
+      expect((data?.asks ?? []).length).toBeGreaterThan(0);
+      expect((data?.parked ?? []).length).toBeGreaterThan(0);
     } finally {
       board.cleanup();
     }
@@ -133,7 +133,7 @@ describe("TC-ACTION-019 bounds, counted omissions, and the byte guard", () => {
       const run = await board.run([], { json: true });
       const data = boardData(run);
       expect(data?.truncated).toBe(false);
-      expect((data?.omittedBySection as Record<string, number>).actions).toBe(0);
+      expect(((data?.omittedBySection ?? {}) as Record<string, number>).actions).toBe(0);
       expect(boardActions(run)).toHaveLength(1);
     } finally {
       board.cleanup();
@@ -150,7 +150,7 @@ describe("TC-ACTION-019 bounds, counted omissions, and the byte guard", () => {
       const data = boardData(run);
       expect(boardActions(run)).toHaveLength(BOARD_MAX_ACTIONS);
       expect(data?.truncated).toBe(true);
-      expect((data?.omittedBySection as Record<string, number>).actions).toBe(2);
+      expect(((data?.omittedBySection ?? {}) as Record<string, number>).actions).toBe(2);
       expect(data?.omitted).toBeGreaterThanOrEqual(2);
       // The machine omitted 2 and the human cap (6) drops 2 of the 8 published
       // rows, so the marker counts all 4 drops and never drops silently.

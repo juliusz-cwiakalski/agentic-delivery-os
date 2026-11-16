@@ -54,7 +54,7 @@ deliberate and the generic table is left unchanged until milestone exit.
 | M2-S7 Suite-to-job mapping in gates | none in this pack | none in this pack | SC-M2-S7-01, SC-M2-S7-02 |
 | M2-S8 Memory records | none in this pack | none in this pack | SC-M2-S8-01, SC-M2-S8-02 |
 | M2-S9 Memory conventions in bootstrap | none in this pack | none in this pack | SC-M2-S9-01, SC-M2-S9-02 |
-| M2-S10 Retro action registry | telemetry attribution | `telemetry.v1` (advisory: consumed at delivery; the owning story declares the edge) | SC-M2-S10-01, SC-M2-S10-02 |
+| M2-S10 Retro action registry | telemetry attribution | `telemetry.v1` (advisory, consumed at delivery; the edge is declared in the story's contract page) and the delivered action-registry contracts ([commands/retro.md](commands/retro.md), `delivery.retro.action.v1`, `delivery.retro.action-closure.v1`) | SC-M2-S10-01, SC-M2-S10-02 |
 | M2-S11 Multi-repository workstations | multi-repository overview | the delivered `projects.v1` payload (`data.projects[]`, `projectKey`) | SC-M2-S11-01, SC-M2-S11-02 |
 | M2-S12 Evidence inspection and divergence resolution | attempt-history inspection and divergence resolution | `attempts.v1` | SC-M2-S12-01, SC-M2-S12-02 |
 | M2-S13 Public event taxonomy | C4 Level 3 event components | event taxonomy v1 | SC-M2-S13-01, SC-M2-S13-02 |

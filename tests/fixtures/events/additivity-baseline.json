@@ -56,11 +56,7 @@
       "yaml": "2.9.1"
     }
   },
-  "effectKinds": [
-    "tracker-transition",
-    "tracker-comment",
-    "commit"
-  ],
+  "effectKinds": ["tracker-transition", "tracker-comment", "commit"],
   "lockfileSha256": "63871da9d9ad7a21e57844b300e007ffea317f969342cf18fae19e902feaa3e4",
   "stateFiles": [
     "action-registry.ts",
@@ -86,8 +82,5 @@
     "steering.ts",
     "storage-error.ts"
   ],
-  "writableRoots": [
-    "<project state directory>",
-    "<host root>"
-  ]
+  "writableRoots": ["<project state directory>", "<host root>"]
 }

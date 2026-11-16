@@ -317,3 +317,27 @@ notes:
       error-table-sync entries=143 documented=143 S1=447 OK."
     type: info
     date: "2026-11-16"
+  - text: "Plan phase 9 complete — documentation reconciliation, planning maintenance,
+      changeset, and release obligations. Commit to be recorded after the phase
+      commit. Files: the new feature-retro-action-registry page; additive
+      reconciliation of feature-retro-pipeline (the action verb group, the registry
+      producer inside the four report keys, the sibling boundary, the retired
+      'enforcement is later work' wording, the action doctor fact),
+      feature-ceremony-runner (handoff landed, artifact-oracle verdicts),
+      feature-board (the ACTIONS section, its caps, and the declared drop order),
+      feature-doctor (the additive action-registry store fact), doc/00-index and
+      doc/overview/glossary (six registry terms); planning maintenance in
+      backlog (M2-S10 progress marker), status (delivery snapshot), m2 README (S10
+      contract cell) and m2 contracts (the telemetry.v1 advisory edge plus the
+      registry's own contract pointer); the lockstep minor changeset over the five
+      publishables; doc-conformance requirements for the four reconciled pages and
+      the new page; scripts/checks/forbidden-literals.registry.json registers the
+      new user-facing page. Gate results: plan validate GH-287 verdict=valid
+      readyForDevelopment=true; TMPDIR=$PWD/tmp/tmpdir pnpm check 9622 pass / 0
+      fail (4 pre-existing skips) across 1208 files, with lint/format/typecheck/
+      boundaries/memory/prompt/help/exports-parity green; lint-commit-range --base
+      main-tools VERDICT PASS (15 commits, 0 offending); doc-distribution guard no
+      drift (95 in-scope docs); changesets-group OK (one fixed group of five,
+      testkit excluded); git diff --check clean."
+    type: info
+    date: "2026-11-16"
