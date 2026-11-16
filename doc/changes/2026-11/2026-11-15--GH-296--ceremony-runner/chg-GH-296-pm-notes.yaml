@@ -22,7 +22,7 @@ phases:
     completed: 2026-11-15T23:47:56.787Z
   delivery:
     started: null
-    completed: null
+    completed: 2026-11-16T02:32:57.645Z
   system_spec_update:
     started: null
     completed: null
@@ -151,28 +151,28 @@ notes:
       instead."
     type: decision
     date: "2026-11-16"
-  - text: "plan phase 1 (ceremony declaration contracts, closed vocabularies,
-      and the single validator): commit be940b1; pnpm typecheck green; bun test
+  - text: "plan phase 1 (ceremony declaration contracts, closed vocabularies, and
+      the single validator): commit be940b1; pnpm typecheck green; bun test
       tests/structure/{ceremony-contract,ceremony-imports,error-table}.test.ts
       green (113 pass); bun test
       tests/behaviour/ceremony-{declaration,declaration-bounds}.test.ts green
-      (33 pass); bun test tests/checks/{error-table-sync,fixture-privacy}.test.ts
-      green (99 pass); bun run scripts/checks/error-table-sync.ts and
-      ambient-globals.ts green. Two tracked support files outside the declared
-      scope were updated of necessity and disclosed as scope drift by the
-      commit primitive: scripts/checks/error-table-sync.ts (the reserved
-      two-segment allowlist) and tests/structure/inventory.json (the source
-      inventory)."
+      (33 pass); bun test
+      tests/checks/{error-table-sync,fixture-privacy}.test.ts green (99 pass);
+      bun run scripts/checks/error-table-sync.ts and ambient-globals.ts green.
+      Two tracked support files outside the declared scope were updated of
+      necessity and disclosed as scope drift by the commit primitive:
+      scripts/checks/error-table-sync.ts (the reserved two-segment allowlist)
+      and tests/structure/inventory.json (the source inventory)."
     type: info
     date: "2026-11-16"
-  - text: "plan phase 2 (ceremony record boundary and artifact family):
-      commit 8867a44; pnpm typecheck green; bun test
+  - text: "plan phase 2 (ceremony record boundary and artifact family): commit
+      8867a44; pnpm typecheck green; bun test
       tests/behaviour/ceremony-state-boundary.test.ts green (12 pass); bun test
       tests/structure/state-contract.test.ts green (18 pass); bun test
       tests/checks/fixture-privacy.test.ts green (3 pass); bun run
       scripts/checks/ambient-globals.ts and workspace-entrypoints.ts green. The
-      tracked tests/structure/inventory.json update was disclosed as scope
-      drift by the commit primitive."
+      tracked tests/structure/inventory.json update was disclosed as scope drift
+      by the commit primitive."
     type: info
     date: "2026-11-16"
   - text: "plan phase 3 (runner engine: intake, artifact-verified agenda,
@@ -193,9 +193,9 @@ notes:
       scripts/checks/ambient-globals.ts green. DEC-19 is realised by
       existence-based satisfied/missed arithmetic: an explicitly-run window is
       reported satisfied, replayed zero times, and the single replay slot
-      executes a genuinely different missed window. The catch-up run records
-      the missed window as the identity and the execution window separately.
-      The tracked tests/structure/inventory.json update was disclosed as scope
+      executes a genuinely different missed window. The catch-up run records the
+      missed window as the identity and the execution window separately. The
+      tracked tests/structure/inventory.json update was disclosed as scope
       drift."
     type: info
     date: "2026-11-16"
@@ -211,8 +211,8 @@ notes:
       tests/structure/inventory.json update was disclosed as scope drift."
     type: info
     date: "2026-11-16"
-  - text: "plan phase 6 (project declarations: committed document and declared-
-      set registry): commit f267928; pnpm typecheck green; bun test
+  - text: "plan phase 6 (project declarations: committed document and declared- set
+      registry): commit f267928; pnpm typecheck green; bun test
       tests/behaviour/ceremony-project-declarations.test.ts and
       tests/behaviour/ceremony-declaration.test.ts plus the fixture-privacy
       control green (35 pass); bun run scripts/checks/workspace-entrypoints.ts
@@ -223,8 +223,8 @@ notes:
       drift."
     type: info
     date: "2026-11-16"
-  - text: "plan phase 7 (single-source tier engine): commit be5a629; pnpm
-      typecheck green; bun test tests/behaviour/ceremony-tier.test.ts,
+  - text: "plan phase 7 (single-source tier engine): commit be5a629; pnpm typecheck
+      green; bun test tests/behaviour/ceremony-tier.test.ts,
       tests/behaviour/ceremony-tier-intake.test.ts, and
       tests/structure/ceremony-tier-single-source.test.ts green (19 pass); bun
       run scripts/checks/ambient-globals.ts green. The mapping consumes
@@ -240,11 +240,11 @@ notes:
       tests/behaviour/ceremony-comparison.test.ts,
       tests/golden/ceremony-comparison.test.ts,
       tests/checks/ceremony-comparison-honesty.test.ts, and
-      tests/behaviour/ceremony-state-boundary.test.ts green (21 pass); git
-      diff --check clean. The committed baseline log is schema_version 2 with
-      one additive comparisons[] entry; the golden suite deep-equals the
-      builder output; at delivery time n = 0, the verdict is
-      insufficient-sample and no trend token exists in the record. The tracked
+      tests/behaviour/ceremony-state-boundary.test.ts green (21 pass); git diff
+      --check clean. The committed baseline log is schema_version 2 with one
+      additive comparisons[] entry; the golden suite deep-equals the builder
+      output; at delivery time n = 0, the verdict is insufficient-sample and no
+      trend token exists in the record. The tracked
       tests/structure/inventory.json update was disclosed as scope drift."
     type: info
     date: "2026-11-16"
@@ -270,5 +270,22 @@ notes:
       hermetic scan fails on a planted skip, network import, and HOME read. One
       output-render correction (the verdict line is reserved under the 32-line
       bound) rode the same commit."
+    type: info
+    date: "2026-11-16"
+  - text: "plan phase 11 (documentation completion, planning corpus, changeset,
+      release obligations): commits ff6e1e3 (delivered M2 command page, registry
+      and entrypoint-delta rows, M2 README and backlog progress, one lockstep
+      minor changeset, the doc-conformance current-truth scan, the forbidden-
+      literal registry row, and the delivered-suite count/baseline updates) and
+      956c667 (environment-portable fixture roots plus the prior-identity test
+      budget; 4b429e1 raised the first of the two timeouts). Gates: plan
+      validate GH-296 -> valid; TMPDIR=$PWD/tmp/tmpdir
+      PATH=$PWD/node_modules/.bin:$PATH pnpm check -> exit 0 (lint, format,
+      typecheck, 9334 tests with 0 failures, boundaries, memory lint,
+      prompt-conformance, help-guide-coverage, exports-parity);
+      ./scripts/lint-commit-range.sh --base main-tools -> VERDICT PASS (25
+      commits, 0 offending); bash scripts/.tests/test-doc-distribution.sh -> OK
+      (94 in-scope docs); git diff --check clean. No PR created, per the
+      delivery instruction to leave the branch unpushed."
     type: info
     date: "2026-11-16"
