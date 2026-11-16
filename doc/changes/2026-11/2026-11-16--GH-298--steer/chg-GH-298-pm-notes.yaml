@@ -13,7 +13,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-16T17:36:24.341Z }
   review_fix: { started: null, completed: 2026-11-16T18:30:53.537Z }
   quality_gates: { started: null, completed: 2026-11-16T19:29:38.537Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-16T19:30:56.994Z }
   pr_creation: { started: null, completed: null }
 decisions: []
 open_questions: []
@@ -319,4 +319,20 @@ notes:
       Lesson for runners: long gates must run detached — the harness output cap
       kills foreground capture mid-run and wastes ~20 min per attempt."
     type: retro
+    date: "2026-11-16"
+  - text: "DoD check (phase 10) verification, all green: (1) phase list 9/11
+      completed through quality_gates, registry verified, no gaps; (2) plan
+      completion — chg-GH-298-plan.yaml declares 8 phases, pm-notes carries a
+      per-phase evidence entry with commit hash + test result for ALL 8 (1+2
+      combined entry disclosed at 6b946f2b), commits verified reachable; (3)
+      acceptance criteria — review-iter-1 Status PASS with all 24 spec ACs
+      demonstrably delivered (0 blocking); ticket ACs covered (batched asks with
+      drawn defaults + measured aging; origin/readReceipt/ttl receipts; shared
+      schema AC-F2-1); (4) current-truth docs — doc-syncer reported ZERO
+      residual gaps, feature-steer.md authored + committed feb5e431, count
+      reconciliations landed; (5) gates — aggregate 9643/4/0 exit 0 at HEAD,
+      range lint PASS 19/0. F-1 medium accepted with owner decision proposed
+      (documented); advisories F-2..F-8 disclosed, none blocking. No reopen
+      required."
+    type: info
     date: "2026-11-16"
