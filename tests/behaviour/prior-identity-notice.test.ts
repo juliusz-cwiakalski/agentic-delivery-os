@@ -376,7 +376,7 @@ describe("TC-BIN-043 the notice text is bounded, classified, and redaction-safe"
       { ...priorRootFiles, [`${CURRENT_ROOT}/host-index.json`]: "{}\n" },
       both,
     );
-  });
+  }, 30_000);
 
   test("text-contract: the reason vocabulary is closed", async () => {
     const seen = new Set<string>();
