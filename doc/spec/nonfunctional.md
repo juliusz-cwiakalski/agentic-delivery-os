@@ -182,8 +182,8 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
 - Quality attribute: integrity and recoverability. Applies: ledger, derived indexes,
   phase transitions, provider park persistence, owner-gate decisions, blocker
   question/answer records, the retro registry, the evidence sidecar, the spend read
-  side's telemetry reads, and the merge-domain records (gate verification, waiver,
-  transaction). Requirement/status: existing.
+  side's telemetry reads, the merge-domain records (gate verification, waiver,
+  transaction), and the steering records. Requirement/status: existing.
 - [State](features/feature-state-layer.md) requires verified ledger truth, explicit
   verified-empty evidence, key-set assertions, torn and unknown classification,
   reusable artifact-boundary validation, fenced writes, explicit stale-lock recovery,
@@ -195,7 +195,12 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
   ([retro](features/feature-retro-pipeline.md)). The ceremony runner appends its two
   additive record kinds through one boundary under the `ceremony.` prefix with a
   fenced append and post-append verified re-read, and keeps its per-run artifact
-  family outside the ledger ([ceremony](features/feature-ceremony-runner.md)).
+  family outside the ledger ([ceremony](features/feature-ceremony-runner.md)). The
+  steer channel appends three additive record kinds through one boundary under the
+  `steering.` prefix — one message per note, at most one outcome per note, and at
+  most one completion per landed note — with fenced appends whose post-append
+  coverage read proves the expected record count, and it derives the note
+  lifecycle as a fold ([steer](features/feature-steer.md)).
   The [spend read side](features/feature-spend.md)
   is a verified read-only consumer of the telemetry and transition records: it
   acquires no fence, appends nothing, and keeps every store-damage class on its
@@ -217,7 +222,10 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
   `state-fence.test.ts`, `state-atomic-replace.test.ts`, `state-permissions.test.ts`;
   the ceremony record kinds and per-run artifact family are covered by
   `tests/behaviour/ceremony-state-boundary.test.ts` and
-  `tests/structure/state-contract.test.ts`.
+  `tests/structure/state-contract.test.ts`; the steering record kinds and their
+  derived lifecycle are covered by `tests/behaviour/steer-records.test.ts`,
+  `tests/behaviour/steer-write-discipline.test.ts`, and
+  `tests/structure/steer-contract.test.ts`.
 - Owner/trigger: engineering/runner; storage format, driver, platform, or writer changes
   (RSK-003, XC-002). Forever retention has no compaction or global growth budget.
 

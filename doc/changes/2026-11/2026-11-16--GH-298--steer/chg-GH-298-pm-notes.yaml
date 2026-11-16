@@ -10,7 +10,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-16T14:03:04.634Z }
   dor_check: { started: null, completed: 2026-11-16T14:09:14.831Z }
   delivery: { started: null, completed: 2026-11-16T16:42:49.170Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-16T17:36:24.341Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -238,4 +238,28 @@ notes:
       is the execution record; TC-STEER-076 tuple 143/142/59/2/3/143; TC-STEER-
       060 base 22 -> mounted 23 with the stale-22 scan clean."
     type: info
+    date: "2026-11-16"
+  - text: "Phase 7 (system_spec_update) doc-syncer reconciliation COMPLETE, residual
+      gaps NONE. Authored doc/spec/features/feature-steer.md (402 lines,
+      SPEC-STEER, ados_distribution internal, first-spec always-resolve).
+      Reconciled 12 sites: result-contract (143/142/59/143 + steer in
+      DOMAIN_KINDS prose), cli-entrypoint 23 families, agents-and-commands
+      allowed-command set (was stale: missing repos/board/ceremony too),
+      state-layer steer records + consumer section, blockers read integration,
+      ceremony-runner pins 143/59, board count-pin only (DEC-1 held: no board
+      surface change), nonfunctional NFR-TOOL-004, glossary 10 steer terms,
+      00-index row, m2 README, forbidden-literals registry row. Validation:
+      doc/error checks 228 pass, doc-distribution OK (95 docs), forbidden
+      literals 0 violations, help coverage complete, stale-count sweep clean.
+      NOTE: first doc-syncer run was interrupted mid-edit (host abort); resumed
+      session finished verification — edits were preserved in the worktree."
+    type: info
+    date: "2026-11-16"
+  - text: "Doc-syncer full-battery attempt on overloaded host (load ~29): 3
+      timeout/git-fixture flakes (state-fence TS-compile, projects-scope-
+      isolation, prior-identity-notice), each passing on isolated re-run; no
+      document-scope failure. Phase 9 quality_gates owns the authoritative
+      battery — watch these three suites for load-related flakes when
+      interpreting gate results."
+    type: risk
     date: "2026-11-16"

@@ -51,6 +51,7 @@ ados_distribution: redistributable
 | [MCP Surface](spec/features/feature-mcp-surface.md) | The minimal read-only MCP server: three branding-projected tools mirroring status, verify-change, and verify-gates, payload parity without envelope or exit-code leakage, and `0`/`1`/`2` lifecycle exits |
 | [Measurement Baseline](spec/features/feature-measurement-baseline.md) | The committed bash-era measurement baseline: schema, `MET-` metrics, status semantics, source traceability, window, and comparison protocol |
 | [Ceremony Runner](spec/features/feature-ceremony-runner.md) | The `ceremony` family and declaration contract: four verbs, six built-ins, artifact-verified execution with resume and compaction, single-window catch-up, project declarations, the tier engine, durable run/step records, the four retro levels, and the two `ceremony.*` identities |
+| [Steer](spec/features/feature-steer.md) | The `steer` family and the shared typed message record: filing with drawn defaults and the derived origin block, the batched boundary read point with receipts, `ttl-elapsed` expiry as a classified outcome, the asks batch with the delivered drawn-default join, artifact-ref completion, the three `steering.*` record kinds, the registered-value guard, three exact error identities, and the 23rd prompt-required mount |
 | [Documentation Handbook](documentation-handbook.md) | How docs work — structure, conventions, workflow |
 
 ## Changing Behavior?

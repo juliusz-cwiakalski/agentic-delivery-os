@@ -40,6 +40,7 @@ deliberate and the generic table is left unchanged until milestone exit.
 | [commands/queue.md](commands/queue.md) | Queue lifecycle verb contract |
 | [commands/board.md](commands/board.md) | Full M2 board contract |
 | [commands/ceremony.md](commands/ceremony.md) | Delivered ceremony runner contract: four verbs, declaration vocabularies, six built-ins, project declarations, catch-up, tiered intake, and the measurement record |
+| [commands/steer.md](commands/steer.md) | Delivered steer contract: the four verbs, the shared typed message record, drawn defaults, the boundary read point, receipts and TTL expiry, the asks batch, artifact-ref completion, and exit codes |
 
 ## Story-to-artifact map
 
@@ -48,7 +49,7 @@ deliberate and the generic table is left unchanged until milestone exit.
 | M2-S2 Supervise | none in this pack | none in this pack | SC-M2-S2-01, SC-M2-S2-02 |
 | M2-S3 Ceremony runner | none in this pack | [commands/ceremony.md](commands/ceremony.md) (delivered: four verbs, the declaration contract, six built-ins, project declarations, catch-up, tiered intake, records, comparison) | SC-M2-S3-01, SC-M2-S3-02 |
 | M2-S4 Board | multi-repository overview | `projects.v1` delivered payload; the board consumes repository keys and the host index | SC-M2-S4-01, SC-M2-S4-02 |
-| M2-S5 Steer | none in this pack | `phase.state` topic (advisory: consumed at delivery; the owning story declares the edge) | SC-M2-S5-01, SC-M2-S5-02 |
+| M2-S5 Steer | none in this pack | [commands/steer.md](commands/steer.md) (delivered: the shared typed message record, the boundary read point, receipts and TTL expiry, the asks batch, artifact-ref completion, and the 23rd prompt-required mount); `phase.state` topic (advisory: consumed at delivery; the owning story declared the edge) | SC-M2-S5-01, SC-M2-S5-02 |
 | M2-S6 Metrics and spend | telemetry attribution | `telemetry.v1` (delivered by S14, consumed here), `spend` v2 (delivered by S14; this story owns the alarm and metric layers) | SC-M2-S6-01, SC-M2-S6-02 |
 | M2-S7 Suite-to-job mapping in gates | none in this pack | none in this pack | SC-M2-S7-01, SC-M2-S7-02 |
 | M2-S8 Memory records | none in this pack | none in this pack | SC-M2-S8-01, SC-M2-S8-02 |
