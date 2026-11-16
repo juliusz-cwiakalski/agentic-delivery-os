@@ -2830,6 +2830,12 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "nodeCeremonyDeclarationFileSystem",
     "readCeremonyDeclarationDocument",
   ],
+  "core/src/domain/ceremony-tier.ts": [
+    "NO_CEREMONY_TIER_EVIDENCE",
+    "ceremonyPhaseSetForVariant",
+    "ceremonyTierIntake",
+    "evaluateCeremonyTier",
+  ],
 };
 
 const listTypeScriptFiles = (packageDir: string): string[] => {

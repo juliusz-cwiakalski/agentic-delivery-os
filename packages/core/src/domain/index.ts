@@ -1006,3 +1006,13 @@ export {
   type CeremonyRegistryFailure,
   type CeremonyRegistryRead,
 } from "./ceremony-registry.js";
+/** The single-source ceremony tier engine (GH-296 F-7). */
+export {
+  ceremonyPhaseSetForVariant,
+  ceremonyTierIntake,
+  evaluateCeremonyTier,
+  NO_CEREMONY_TIER_EVIDENCE,
+  type CeremonyTierEvidence,
+  type CeremonyTierInput,
+  type CeremonyTierObligation,
+} from "./ceremony-tier.js";

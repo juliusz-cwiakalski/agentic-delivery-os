@@ -91,6 +91,7 @@
     "src/domain/ceremony-retro.ts",
     "src/domain/ceremony-run.ts",
     "src/domain/ceremony-schedule.ts",
+    "src/domain/ceremony-tier.ts",
     "src/domain/ci-result.ts",
     "src/domain/closeout-diff-sweep.ts",
     "src/domain/closeout-members.ts",

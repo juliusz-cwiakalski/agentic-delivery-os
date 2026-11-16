@@ -211,3 +211,15 @@ notes:
       tests/structure/inventory.json update was disclosed as scope drift."
     type: info
     date: "2026-11-16"
+  - text: "plan phase 6 (project declarations: committed document and declared-
+      set registry): commit f267928; pnpm typecheck green; bun test
+      tests/behaviour/ceremony-project-declarations.test.ts and
+      tests/behaviour/ceremony-declaration.test.ts plus the fixture-privacy
+      control green (35 pass); bun run scripts/checks/workspace-entrypoints.ts
+      green. Absent and empty documents are the built-ins-only path;
+      config.file.malformed and ceremony.declaration.invalid refuse before any
+      run with zero partial registration and the built-in still effective. The
+      tracked tests/structure/inventory.json update was disclosed as scope
+      drift."
+    type: info
+    date: "2026-11-16"

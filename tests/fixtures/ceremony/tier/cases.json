@@ -1,0 +1,12 @@
+[
+  { "id": "T-01", "declaredTier": "full", "variant": "full", "evidence": {}, "expectedTier": "full", "expectedSource": "PM_NOTES_REQUIRED_PHASES_BY_VARIANT.full", "expectedFindings": [] },
+  { "id": "T-02", "declaredTier": "lite", "variant": "lite", "evidence": {}, "expectedTier": "lite", "expectedSource": "PM_NOTES_REQUIRED_PHASES_BY_VARIANT.lite", "expectedFindings": [] },
+  { "id": "T-03", "declaredTier": "lite", "variant": "full", "evidence": {}, "expectedTier": "full", "expectedSource": "PM_NOTES_REQUIRED_PHASES_BY_VARIANT.full", "expectedFindings": ["tier-mismatch"] },
+  { "id": "T-04", "declaredTier": "full", "variant": "lite", "evidence": {}, "expectedTier": "lite", "expectedSource": "PM_NOTES_REQUIRED_PHASES_BY_VARIANT.lite", "expectedFindings": ["tier-mismatch"] },
+  { "id": "T-05", "declaredTier": "lite", "variant": "lite", "phases": [1, 5, 7], "evidence": {}, "expectedTier": "lite", "expectedSource": "plan.tier.phases", "expectedFindings": [] },
+  { "id": "T-06", "declaredTier": "lite", "variant": "lite", "phases": [1, 99], "evidence": {}, "expectedTier": "lite", "expectedSource": "plan.tier.phases", "expectedFindings": ["unresolved-phase"] },
+  { "id": "T-07", "declaredTier": "lite", "variant": "lite", "triggers": ["review-rework"], "evidence": { "review-rework": true }, "expectedTier": "full", "expectedSource": "PM_NOTES_REQUIRED_PHASES_BY_VARIANT.full", "expectedFindings": [], "expectedEscalations": 1 },
+  { "id": "T-08", "declaredTier": "lite", "variant": "lite", "triggers": ["review-rework"], "evidence": {}, "expectedTier": "lite", "expectedSource": "PM_NOTES_REQUIRED_PHASES_BY_VARIANT.lite", "expectedFindings": [], "expectedEscalations": 0 },
+  { "id": "T-09", "declaredTier": "lite", "variant": "lite", "triggers": ["owner-mood"], "evidence": {}, "expectedTier": "lite", "expectedSource": "PM_NOTES_REQUIRED_PHASES_BY_VARIANT.lite", "expectedFindings": ["unevaluated-trigger"], "expectedEscalations": 0 },
+  { "id": "T-10", "declaredTier": "lite", "variant": "lite", "triggers": ["phase-reopen", "dor-rework", "review-rework", "gate-failure", "owner-escalation"], "evidence": { "phase-reopen": true, "dor-rework": true, "review-rework": true, "gate-failure": true, "owner-escalation": true }, "expectedTier": "full", "expectedSource": "PM_NOTES_REQUIRED_PHASES_BY_VARIANT.full", "expectedFindings": [], "expectedEscalations": 5 }
+]
