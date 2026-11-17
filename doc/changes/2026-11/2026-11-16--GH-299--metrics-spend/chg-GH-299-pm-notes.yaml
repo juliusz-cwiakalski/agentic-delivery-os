@@ -229,3 +229,20 @@ notes:
       cap/drop-order cells test it directly."
     type: info
     date: "2026-11-17"
+  - text: "Plan phase 8 complete; commit 0cdaec94 (see the phase-8 note above)."
+    type: info
+    date: "2026-11-17"
+  - text: "Plan phase 9 complete (planning-corpus reconciliation, the release
+      changeset already staged at phase 2 and verified here, and the final
+      battery at the delivered HEAD). Commit recorded in the delivery-phase
+      completion. Verification: `plan validate GH-299` verdict=valid;
+      TMPDIR=$PWD/tmp/tmpdir pnpm check EXIT 0 with 10078 pass / 4 pre-existing
+      skip / 0 fail (10082 tests, 1262 files); git diff --check clean;
+      `bash scripts/.tests/test-doc-distribution.sh` no drift (95 in-scope docs);
+      `bun run scripts/checks/changesets-group.ts` exactly one fixed group of
+      five; `./scripts/lint-commit-range.sh --base origin/main-tools` VERDICT
+      PASS (13 commits, 0 offending). The planning corpus records the M2-S6
+      delivery in backlog.md, status.md, cli-command-registry.md, and the M2
+      README story-to-artifact map."
+    type: info
+    date: "2026-11-17"
