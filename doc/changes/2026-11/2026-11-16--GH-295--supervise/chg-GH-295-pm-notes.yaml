@@ -8,7 +8,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-16T22:47:40.120Z }
   delivery_planning: { started: null, completed: 2026-11-16T23:18:06.308Z }
   dor_check: { started: null, completed: 2026-11-16T23:23:38.081Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-17T05:54:34.230Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -142,11 +142,12 @@ notes:
     date: "2026-11-17"
   - text: "Delivery resumed after the first @coder session aborted mid-plan-phase-1
       (headless interruption): worktree dirty with 22 modified + 7 untracked
-      paths matching almost all of phase-1 declared scope (contracts/supervise.ts
-      new; queue/error-table/index/sync-check/delivered-suite fixtures updated;
-      four supervision structure tests new); no phase-1 commit and no pm-notes
-      phase evidence recorded; packages/cli/src/classify.ts (declared in phase
-      1) absent from the dirt — coder to verify whether needed. Upstream
+      paths matching almost all of phase-1 declared scope
+      (contracts/supervise.ts new;
+      queue/error-table/index/sync-check/delivered-suite fixtures updated; four
+      supervision structure tests new); no phase-1 commit and no pm-notes phase
+      evidence recorded; packages/cli/src/classify.ts (declared in phase 1)
+      absent from the dirt — coder to verify whether needed. Upstream
       origin/main-tools unchanged (0 behind). Resume instruction: re-inspect
       against phase-1 scope, complete/test, commit, evidence, then phases 2-8
       and phase complete delivery."
@@ -182,18 +183,19 @@ notes:
       code; (2) the no-leftover scan tokens 146/62/+112 forced two further
       delivered count sites outside the plan's named list —
       tests/structure/ceremony-contract.test.ts and tests/behaviour/
-      ceremony-nonregression.test.ts; (3) tests/types/queue-scheduling.type-test.
-      ts pinned the closed QueueParkCause union and tests/fixtures/queue/
-      vocabulary/closed-sets.json + the queue-scheduling-contract pairing
-      assertion pinned the five-cause/five-pair table, so all three moved
-      additively with the sixth cause; provider-window now carries three causes;
-      (4) tests/fixtures/events/error-table-baseline.json captured the two new
-      rows so its delivered-row oracle stays true; (5) DOMAIN_KINDS tail
-      ordinals and the kind-count 29->30 moved in the delivered suites.
-      (6) The commit primitive's --phase flag accepts only canonical lifecycle
-      phase ids (phase \"1\" is rejected), so each plan-phase commit is made
-      standalone (plan-union scope) and the lifecycle delivery phase is
-      completed only at the end."
+      ceremony-nonregression.test.ts; (3)
+      tests/types/queue-scheduling.type-test. ts pinned the closed
+      QueueParkCause union and tests/fixtures/queue/ vocabulary/closed-sets.json
+      + the queue-scheduling-contract pairing assertion pinned the
+      five-cause/five-pair table, so all three moved additively with the sixth
+      cause; provider-window now carries three causes; (4)
+      tests/fixtures/events/error-table-baseline.json captured the two new rows
+      so its delivered-row oracle stays true; (5) DOMAIN_KINDS tail ordinals and
+      the kind-count 29->30 moved in the delivered suites. (6) The commit
+      primitive's --phase flag accepts only canonical lifecycle phase ids (phase
+      \"1\" is rejected), so each plan-phase commit is made standalone
+      (plan-union scope) and the lifecycle delivery phase is completed only at
+      the end."
     type: "info"
     date: "2026-11-17"
   - text: "Plan phase 2 complete (artifact-evidence fold, tri-state, claims) at
@@ -213,8 +215,8 @@ notes:
     type: "info"
     date: "2026-11-17"
   - text: "Phase-2 delivery findings: (1) the classification maps heartbeat
-      freshness to the delivered traffic input only when the heartbeat trail does
-      not span the observation window; otherwise a lying lane would read
+      freshness to the delivered traffic input only when the heartbeat trail
+      does not span the observation window; otherwise a lying lane would read
       progressing before the corroboration branch, so the delivery passes
       traffic=0 for the lying cell (the corroborated branch answers). (2) A
       corroborated stall now requires a present heartbeat: an absent heartbeat
@@ -222,8 +224,8 @@ notes:
       stalled. (3) Lane heartbeat observations use the scope's latest heartbeat
       instance trail (the claim's instance when a claim exists), so a store with
       no daemon instance still classifies lanes. (4) The release changeset
-      .changeset/gh-295-supervise-minor.md landed in this commit, one phase early
-      versus plan phase 8: the delivered release invariant
+      .changeset/gh-295-supervise-minor.md landed in this commit, one phase
+      early versus plan phase 8: the delivered release invariant
       (tests/checks/privacy-release.test.ts) reads the committed range against
       origin/main-tools and fails any publishable diff without an added
       changeset, so the plan's 'never gates an implementation phase' intent and
@@ -232,21 +234,21 @@ notes:
     type: "info"
     date: "2026-11-17"
   - text: "Plan phase 3 complete (battery surface: grammar, scope, exits, human
-      render) at commit 4094dd53. Delivered: packages/cli/src/commands/supervise.ts
-      (zero positionals, no family flags, one battery call, humanText from the
-      same report), production + edge composition (unconditional, still dropped by
-      the entrypoint until phase 6 so root --help is unchanged),
-      packages/core/src/domain/supervise-text.ts (bounded human render, empty
-      population stated, brand seam only), and TC-SUP-001/002/003/004/005/013/081/
-      085/090 suites plus the healthy report golden pair and the in-process CLI
-      harness. Tests: 44 phase-3 cases green; TMPDIR=$PWD/tmp/tmpdir pnpm check
-      PASS (9907 pass / 0 fail)."
+      render) at commit 4094dd53. Delivered:
+      packages/cli/src/commands/supervise.ts (zero positionals, no family flags,
+      one battery call, humanText from the same report), production + edge
+      composition (unconditional, still dropped by the entrypoint until phase 6
+      so root --help is unchanged), packages/core/src/domain/supervise-text.ts
+      (bounded human render, empty population stated, brand seam only), and
+      TC-SUP-001/002/003/004/005/013/081/ 085/090 suites plus the healthy report
+      golden pair and the in-process CLI harness. Tests: 44 phase-3 cases green;
+      TMPDIR=$PWD/tmp/tmpdir pnpm check PASS (9907 pass / 0 fail)."
     type: "info"
     date: "2026-11-17"
   - text: "Phase-3 findings: (1) packages/core/src/index.ts gained the supervision
       re-exports (the CLI imports the composition root); the file is outside the
-      plan's declared per-phase file list, so it rides as disclosed scope drift —
-      required for the package surface and exports-parity. (2)
+      plan's declared per-phase file list, so it rides as disclosed scope drift
+      — required for the package surface and exports-parity. (2)
       tests/structure/cli-edge-seam.test.ts pins the command modules declaring
       humanText; supervise joined that additive list. (3) The scale/read-cost
       cells use an injected synthetic snapshot because seeding 200 lanes through
@@ -255,16 +257,17 @@ notes:
     type: "info"
     date: "2026-11-17"
   - text: "Plan phase 4 complete (supervised-stall park, safe-boundary intent,
-      additive lane until) at commit a330a531. Delivered: the park action through
-      the delivered park record shape/key/fence (cause liveness-stall, resolver-
-      mapped provider-window condition, until at the imported recheck default,
-      idempotent against an active liveness-stall park, no lease claim/release/
-      creation), safe-boundary park intent over a live holder, the additive
-      QueueLane.until on the delivered lane fold (present exactly for an active
-      expiry-carrying park), TC-SUP-011/020/022/023/040/041/042/043/046/047/091/
-      093 suites, the stalled report golden, and the parked lanes golden pair.
-      Tests: 122 phase-4 cases green; TMPDIR=$PWD/tmp/tmpdir pnpm check PASS
-      (9933 pass / 0 fail)."
+      additive lane until) at commit a330a531. Delivered: the park action
+      through the delivered park record shape/key/fence (cause liveness-stall,
+      resolver- mapped provider-window condition, until at the imported recheck
+      default, idempotent against an active liveness-stall park, no lease
+      claim/release/ creation), safe-boundary park intent over a live holder,
+      the additive QueueLane.until on the delivered lane fold (present exactly
+      for an active expiry-carrying park),
+      TC-SUP-011/020/022/023/040/041/042/043/046/047/091/ 093 suites, the
+      stalled report golden, and the parked lanes golden pair. Tests: 122
+      phase-4 cases green; TMPDIR=$PWD/tmp/tmpdir pnpm check PASS (9933 pass / 0
+      fail)."
     type: "info"
     date: "2026-11-17"
   - text: "Phase-4 deviation (DECLARED, for review): a stall over an actively held
@@ -273,40 +276,40 @@ notes:
       signals); the park does not wait for a boundary write. The plan/TC-SUP-043
       phrase 'delivered preemption pending state' cannot be satisfied without
       lying in the delivered close-item preemption record (fixed
-      parkCause/closeRef) or adding a record kind / changing the daemon contract,
-      both forbidden by DM-4 and NG-6; the chosen carrier is the delivered park
-      record, which is the only honest durable intent in the delivered set. All
-      other TC-SUP-043 assertions hold (intent durable before any session effect,
-      holder named, no kill/signal/stop seam). Also: foldLanes tolerates a
-      schedule fixture without a parks member (delivered fixture passed a partial
-      schedule); production always supplies it."
+      parkCause/closeRef) or adding a record kind / changing the daemon
+      contract, both forbidden by DM-4 and NG-6; the chosen carrier is the
+      delivered park record, which is the only honest durable intent in the
+      delivered set. All other TC-SUP-043 assertions hold (intent durable before
+      any session effect, holder named, no kill/signal/stop seam). Also:
+      foldLanes tolerates a schedule fixture without a parks member (delivered
+      fixture passed a partial schedule); production always supplies it."
     type: "info"
     date: "2026-11-17"
   - text: "Plan phase 5 complete (restart composition, duplicate refusals,
-      non-regression proofs) at commit 9ca4b26a. Delivered: the restart branch for
-      an already-parked stale lane (delivered budget admission consulted once,
-      one delivered restart record with ordinal +1, terminal exhaustion + one
-      idempotent typed question, the declared unavailable outcome consuming no
-      budget), the per-action duplicate-supervision refusal against a durable
+      non-regression proofs) at commit 9ca4b26a. Delivered: the restart branch
+      for an already-parked stale lane (delivered budget admission consulted
+      once, one delivered restart record with ordinal +1, terminal exhaustion +
+      one idempotent typed question, the declared unavailable outcome consuming
+      no budget), the per-action duplicate-supervision refusal against a durable
       acting authority (pending delivered preemption record, observation-window
-      bounded, retry control), per-ref double-claim refusal through the delivered
-      claimSingleFlightRefusal helper, the acting/restart facts in the one-read
-      snapshot, and TC-SUP-021/044/051/052/053/054/060/061/062/063/072 suites.
-      Tests: 136 supervision cases green; TMPDIR=$PWD/tmp/tmpdir pnpm check PASS
-      (9955 pass / 0 fail)."
+      bounded, retry control), per-ref double-claim refusal through the
+      delivered claimSingleFlightRefusal helper, the acting/restart facts in the
+      one-read snapshot, and TC-SUP-021/044/051/052/053/054/060/061/062/063/072
+      suites. Tests: 136 supervision cases green; TMPDIR=$PWD/tmp/tmpdir pnpm
+      check PASS (9955 pass / 0 fail)."
     type: "info"
     date: "2026-11-17"
   - text: "Phase-5 notes: (1) the acting-authority artifact is the delivered
       daemon.preemption pending record (the only durable record naming an object
       another supervision authority is acting on); detection is record-only and
       its acting window is the imported corroboration bound. (2) Restart
-      admission runs only for an already-parked stale lane so one run never parks
-      and restarts the same lane; this keeps TC-SUP-040's single-action park and
-      TC-SUP-052's parked-lane claim action coherent. (3) The delivered
+      admission runs only for an already-parked stale lane so one run never
+      parks and restarts the same lane; this keeps TC-SUP-040's single-action
+      park and TC-SUP-052's parked-lane claim action coherent. (3) The delivered
       exhaustion options are requeue-fresh-budget/park-owner-review; the fixture
       initially used a wrong first member and the state layer failed closed with
-      state.store.torn — the fail-closed behaviour is correct and the fixture was
-      fixed. (4) One aggregate-gate run failed a delivered suite
+      state.store.torn — the fail-closed behaviour is correct and the fixture
+      was fixed. (4) One aggregate-gate run failed a delivered suite
       (prior-identity-notice TC-BIN-045 invariance) at its 5 s bun timeout under
       load; the immediate rerun was green (9955/0) and the suite passes
       standalone — recorded as an environmental flake, not a regression."
@@ -316,17 +319,19 @@ notes:
       commit 70071c71. Delivered: PROMPT_REQUIRED_COMMANDS gains supervise last
       (23 -> 24), the root family entry and the family help page (m2 reference
       page, usage/options/examples plus the shared 0/1/2 exit table), the new
-      reference page doc/planning/oss-tooling/milestones/m2/commands/supervise.md,
-      the coverage inventory row + pageFor branch, the captured BASE_FAMILIES
-      fixture, TC-SUP-096 mounting/help suites, and the atomic count/set move
-      across every pinning suite. Tests: 43 mounting/help cases green;
+      reference page
+      doc/planning/oss-tooling/milestones/m2/commands/supervise.md, the coverage
+      inventory row + pageFor branch, the captured BASE_FAMILIES fixture,
+      TC-SUP-096 mounting/help suites, and the atomic count/set move across
+      every pinning suite. Tests: 43 mounting/help cases green;
       TMPDIR=$PWD/tmp/tmpdir pnpm check PASS (9964 pass / 0 fail)."
     type: "info"
     date: "2026-11-17"
   - text: "Phase-6 findings (sites beyond the plan's named pin list, all additive
-      and in the same commit): (1) tests/behaviour/entrypoint-composition.test.ts
-      and entrypoint-help-coverage.test.ts pin the literal prompt-required set;
-      (2) tests/structure/events-production-composition.test.ts pins the tail
+      and in the same commit): (1)
+      tests/behaviour/entrypoint-composition.test.ts and
+      entrypoint-help-coverage.test.ts pin the literal prompt-required set; (2)
+      tests/structure/events-production-composition.test.ts pins the tail
       ordinals; (3) tests/checks/event-mount-guards.test.ts pins the delivered
       inline-name negative control; (4) tests/structure/steer-mounting.test.ts
       asserted steer was last — now supervise follows it; (5)
@@ -341,16 +346,17 @@ notes:
     type: "info"
     date: "2026-11-17"
   - text: "Plan phase 7 complete (cross-cutting proofs) at commit fbbe3c14.
-      Delivered: determinism paired-run + replay + evidence-shape + clock-advance
-      + ordering cells (TC-SUP-080), the 200/201 bound with the named lane-cap
-      reason and the evidence-cap marker (TC-SUP-082), the measured 200-lane
-      latency cell (TC-SUP-083), the evidence-totality walk over a mixed scope
-      plus a real applied action and the single-flight refusal (TC-SUP-084), the
-      three committed failure/live-claims goldens (TC-SUP-092), and the completed
-      imports/boundary/inventory case (TC-SUP-095). Tests: 166 supervision cases
-      green; TMPDIR=$PWD/tmp/tmpdir pnpm check PASS (9984 pass / 0 fail).
-      Measured 200-lane run: 3.41 ms and 1.47 ms over two warm in-process runs
-      (bound 5,000 ms), one read pass each, 200 entries each."
+      Delivered: determinism paired-run + replay + evidence-shape +
+      clock-advance + ordering cells (TC-SUP-080), the 200/201 bound with the
+      named lane-cap reason and the evidence-cap marker (TC-SUP-082), the
+      measured 200-lane latency cell (TC-SUP-083), the evidence-totality walk
+      over a mixed scope plus a real applied action and the single-flight
+      refusal (TC-SUP-084), the three committed failure/live-claims goldens
+      (TC-SUP-092), and the completed imports/boundary/inventory case
+      (TC-SUP-095). Tests: 166 supervision cases green; TMPDIR=$PWD/tmp/tmpdir
+      pnpm check PASS (9984 pass / 0 fail). Measured 200-lane run: 3.41 ms and
+      1.47 ms over two warm in-process runs (bound 5,000 ms), one read pass
+      each, 200 entries each."
     type: "info"
     date: "2026-11-17"
   - text: "Phase-7 findings: (1) the scale cells inject a synthetic snapshot
@@ -360,8 +366,42 @@ notes:
       aggregate-gate attempts tripped different delivered timing-sensitive suite
       budgets under machine load (status prior-read 5 s default; daemon
       foreground-stop 250 ms cancellation) and the third attempt was fully green
-      with no code change — recorded as environmental flakes on delivered suites,
-      not regressions. (3) All three failure/data goldens are created in this
-      change (GAP-T3) and regenerate only on an explicit command."
+      with no code change — recorded as environmental flakes on delivered
+      suites, not regressions. (3) All three failure/data goldens are created in
+      this change (GAP-T3) and regenerate only on an explicit command."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Plan phase 8 complete (planning bookkeeping, changeset, release
+      obligations) at commit 3f8ece79. Delivered: the M2-S2 Progress marker in
+      doc/planning/oss-tooling/backlog.md, the M2-S2 delivery snapshot in
+      doc/planning/oss-tooling/status.md, the `supervise` row in
+      cli-command-registry.md (delivered, 24th family), the observed 24-family
+      root listing in milestones/m2/entrypoint-delta.md, the reference-page
+      status flip, the test-plan §10 execution log (structure/behaviour/golden/
+      checks/docs/error-socialisation/aggregate rows), and the release artifacts
+      already present (.changeset/gh-295-supervise-minor.md landed in the
+      phase-2 commit so the committed-range release invariant stays green;
+      scripts/checks/forbidden-literals.registry.json carries the planning page
+      row, landed with the page). The lifecycle phase-7 spec staging obligations
+      (doc/spec/features/feature-supervise.md first-spec page, watchdog/daemon/
+      scheduling-engine/queue-ready/peak-pausing boundary reconciliations,
+      result-contract wording check) are declared for @doc-syncer and were NOT
+      edited by delivery. Final battery at the delivered HEAD:
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exits 0 (9984 pass / 0 fail); git diff
+      --check clean."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Plan phases summary: 1 1309166f (contracts/cause/error identities), 2
+      ae4ab741 (artifact-evidence fold), 3 4094dd53 (battery surface), 4
+      a330a531 (stall park + additive lane until), 5 9ca4b26a (restart/refusals/
+      non-regression), 6 70071c71 (24th family mount), 7 fbbe3c14 (determinism/
+      bounds/latency/evidence/failure goldens), 8 3f8ece79
+      (bookkeeping/release). Every phase boundary's aggregate gate was green.
+      Declared deviations: safe-boundary intent carrier (phase 4 note),
+      changeset landed in phase 2 (release invariant reads the committed range),
+      core index re-exports and the planning-page literal-registry row landed
+      with their phase, and the delivered-suite sites beyond the named pin lists
+      moved additively in the phase that required them (all enumerated in the
+      per-phase notes)."
     type: "info"
     date: "2026-11-17"
