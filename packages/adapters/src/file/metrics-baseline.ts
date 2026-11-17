@@ -45,9 +45,10 @@ const invalid = (detail: string): MetricsBaselineLogRead => ({
  * The committed exclusion counters.
  *
  * The committed log records one row per excluded change (`{ref, reason}`); a
- * legacy counter row (`{reason, count}`) is tolerated. Entries are counted per
- * closed reason so the report carries the conserved totals, and a zero count
- * never surfaces.
+ * legacy counter row (`{reason, count}`) is tolerated. Rows are counted per
+ * closed reason and zero counts are dropped, so the parsed document carries the
+ * log's listed totals. The report's entries report their own evaluated basis's
+ * exclusions and never restate these totals.
  */
 const exclusionsOf = (value: unknown): readonly MetricsExclusion[] | undefined => {
   if (value === undefined) return [];

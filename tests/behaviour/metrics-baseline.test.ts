@@ -1,8 +1,10 @@
 /**
  * TC-METRICS-010/011/015/016 — baseline consumption by ID and definition: the
- * committed `definitionRef`, the conserved status/unit/direction/exclusions,
- * basis-scoped values (a committed basis recomputes; a native basis reads its
- * declared source), partial-log row absence, and the untouched fourth row.
+ * committed `definitionRef`, the carried status/unit/direction, the parsed
+ * log's own per-reason exclusion counts versus the entry's evaluated-basis
+ * exclusions, basis-scoped values (a committed basis recomputes; a native basis
+ * reads its declared source), partial-log row absence, and the untouched fourth
+ * row.
  */
 import { afterEach, describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
@@ -17,6 +19,8 @@ import {
   CYCLE_ROW,
   FALSE_SIGNAL_ROW,
   falseSignalOnlyBaseline,
+  fullBaseline,
+  legacyCounterBaseline,
   partialBaseline,
 } from "../fixtures/metrics/baseline";
 import { defaultBaseline, makeMetricsCase } from "../fixtures/metrics/case";
@@ -24,6 +28,7 @@ import {
   BASELINE_RELATIVE,
   documentText,
   entriesById,
+  makeMemoryProjectFs,
   METRICS_REF,
   type MetricsFixture,
   runMetrics,
@@ -48,6 +53,14 @@ const counter = (entry: Record<string, unknown> | undefined, key: string): unkno
   return (sample as Record<string, unknown>)[key];
 };
 
+/** Read one fixture document through the delivered adapter over an in-memory tree. */
+const readDocument = (label: string, text: string) => {
+  const root = `/metrics-baseline-${label}`;
+  const fs = makeMemoryProjectFs(root);
+  fs.set(BASELINE_RELATIVE, text);
+  return readMetricsBaselineLog({ projectRoot: root, fs });
+};
+
 const definitionRef = {
   logPath: "doc/planning/oss-tooling/measurement-baseline.yaml",
   sourceCommit: BASELINE_SOURCE_COMMIT,
@@ -69,28 +82,42 @@ describe("TC-METRICS-010 each baseline entry cites its committed definition", ()
     expect(entries["MET-CI-FAILURE-RATE"]?.status).toBe("PARTIAL");
   });
 
-  test("per-change exclusions are counted per reason, and zero-count reasons are absent", async () => {
-    const data = await report(makeMetricsCase({ label: "baseline-exclusions" }));
-    const entries = entriesById(data);
-    for (const row of [CEREMONY_ROW, CYCLE_ROW, CI_ROW]) {
-      const entry = entries[row.id];
-      const expected = new Map<string, number>();
-      for (const exclusion of row.excluded ?? []) {
-        expected.set(exclusion.reason, (expected.get(exclusion.reason) ?? 0) + 1);
-      }
-      if (expected.size === 0) {
-        expect(entry?.excluded ?? []).toEqual([]);
-        continue;
-      }
-      for (const [reason, count] of expected) {
-        expect(entry?.excluded).toContainEqual({ reason, count });
-      }
-      for (const exclusion of (entry?.excluded ?? []) as readonly {
-        readonly count: number;
-      }[]) {
-        expect(exclusion.count).toBeGreaterThan(0);
-      }
-    }
+  test("the parsed document counts per-change rows per reason and drops zero counts", () => {
+    const read = readDocument("counts", fullBaseline());
+    expect(read.ok).toBe(true);
+    if (!read.ok || read.state !== "present") throw new Error("fixture log not present");
+    // The committed shape is one `{ref, reason}` row per excluded change.
+    const ci = read.document.rows.find((row) => row.id === "MET-CI-FAILURE-RATE");
+    expect(ci?.excluded).toEqual([{ reason: "no_ci_observation", count: 1 }]);
+    const cycle = read.document.rows.find((row) => row.id === "MET-CYCLE-TIME");
+    expect(cycle?.excluded).toEqual([]);
+  });
+
+  test("the entry reports its own basis exclusions, not the log's listed totals", async () => {
+    const listed = Array.from({ length: 19 }, (_, index) => ({
+      ref: `GH-${index + 1}`,
+      reason: "no_ci_observation",
+    }));
+    const data = await report(
+      makeMetricsCase({
+        label: "baseline-entry-exclusions",
+        baseline: baselineDocument({
+          rows: [{ ...CI_ROW, excluded: listed }, CEREMONY_ROW, CYCLE_ROW, FALSE_SIGNAL_ROW],
+        }),
+      }),
+    );
+    const entry = entriesById(data)["MET-CI-FAILURE-RATE"];
+    const excluded = (entry?.excluded ?? []) as readonly {
+      readonly reason: string;
+      readonly count: number;
+    }[];
+    // The evaluated basis: one unobserved in-window row and one out-of-window row.
+    expect(excluded).toEqual([
+      { reason: "outside_window", count: 1 },
+      { reason: "no_ci_observation", count: 1 },
+    ]);
+    expect(excluded.find((row) => row.reason === "no_ci_observation")?.count).not.toBe(19);
+    for (const row of excluded) expect(row.count).toBeGreaterThan(0);
   });
 
   test("the sample block describes the fixture evidence, not the committed sample block", async () => {
@@ -273,5 +300,28 @@ describe("TC-METRICS-010 the real committed log is readable from the tree", () =
     expect(human.exitCode).toBe(0);
     expect(human.human).toContain("metrics — delivery metrics");
     expect(human.human).toContain("MET-CYCLE-TIME");
+  });
+});
+
+describe("the baseline adapter tolerates the legacy exclusion counter shape", () => {
+  test("a `{reason, count}` row validates, keeps its count, and a zero count is dropped", () => {
+    const read = readDocument("legacy-counters", legacyCounterBaseline());
+    expect(read.ok).toBe(true);
+    if (!read.ok || read.state !== "present") throw new Error("legacy log not present");
+    const ci = read.document.rows.find((row) => row.id === "MET-CI-FAILURE-RATE");
+    expect(ci?.excluded).toEqual([{ reason: "no_ci_observation", count: 7 }]);
+  });
+
+  test("a report over the legacy shape renders at exit 0 with basis-scoped exclusions", async () => {
+    const data = await report(
+      makeMetricsCase({ label: "legacy-counters-report", baseline: legacyCounterBaseline() }),
+    );
+    const entry = entriesById(data)["MET-CI-FAILURE-RATE"];
+    expect(entry?.value).toBeCloseTo(2 / 3, 10);
+    // The legacy counter is the log's listing, never the entry's evaluated basis.
+    expect(entry?.excluded).toEqual([
+      { reason: "outside_window", count: 1 },
+      { reason: "no_ci_observation", count: 1 },
+    ]);
   });
 });

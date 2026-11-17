@@ -184,9 +184,11 @@ The `metrics` family is the log's command-surface consumer
 canonical data and reports three of its metric rows by ID and definition —
 `MET-CEREMONY-SHARE`, `MET-CYCLE-TIME`, and `MET-CI-FAILURE-RATE` — each entry
 citing `definitionRef` (this log's path plus the row's committed `source_commit`)
-and reusing the row's status semantics, unit, direction, limitation, and closed
-exclusion reasons. The fourth row, `MET-FALSE-SIGNAL-INCIDENTS`, is not surfaced
-by that report and stays untouched canonical data.
+and reusing the row's status semantics, unit, direction, and limitation. Each
+entry reports its own evaluated-basis exclusions over this log's closed reason
+vocabulary rather than restating the log's listed totals. The fourth row,
+`MET-FALSE-SIGNAL-INCIDENTS`, is not surfaced by that report and stays untouched
+canonical data.
 
 The consumer is read-only: it writes no value, appends no row, allocates no new
 `MET-` ID (escaped defects is a non-`MET-` vocabulary member), and never restates

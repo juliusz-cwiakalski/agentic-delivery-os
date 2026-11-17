@@ -1203,15 +1203,23 @@ phases:
         - packages/adapters/src/file/metrics-baseline.ts
         - packages/core/src/domain/metrics.ts
         - packages/core/src/domain/metrics-text.ts
+        - packages/core/src/domain/spend.ts
+        - packages/core/src/contracts/metrics.ts
         - packages/adapters/src/file/metrics-corpus.ts
+        - packages/cli/src/edge.ts
         - doc/spec/features/feature-ceremony-runner.md
         - doc/spec/features/feature-metrics.md
+        - doc/spec/features/feature-measurement-baseline.md
+        - doc/spec/nonfunctional.md
         - doc/planning/oss-tooling/milestones/m2/commands/metrics.md
         - tests/structure/error-table.test.ts
+        - tests/structure/metrics-imports.test.ts
+        - tests/structure/content-inventory.test.ts
         - tests/behaviour/metrics-baseline.test.ts
         - tests/behaviour/metrics-alarms.test.ts
         - tests/behaviour/metrics-bounds.test.ts
         - tests/behaviour/metrics-read-cost.test.ts
+        - tests/behaviour/metrics-escaped-defects.test.ts
         - tests/checks/metrics-mutants.test.ts
       folders:
         - tests/fixtures/metrics
@@ -1268,6 +1276,7 @@ phases:
     scope:
       files:
         - doc/spec/features/feature-metrics.md
+        - doc/spec/features/feature-measurement-baseline.md
         - packages/adapters/src/file/metrics-baseline.ts
         - tests/behaviour/metrics-baseline.test.ts
         - tests/checks/metrics-mutants.test.ts

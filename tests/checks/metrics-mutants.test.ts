@@ -41,10 +41,6 @@ const withMutant = async (
   }
   const temp = join(dirname(absolute), `.metrics-mutant-${id}.ts`);
   writeFileSync(temp, source);
-  if (id === "uncited") {
-    const i = source.indexOf("row.citation");
-    console.log("MUTANT REGION", JSON.stringify(source.slice(i - 40, i + 120)));
-  }
   try {
     const module = (await import(`${pathToFileURL(temp).href}`)) as Module;
     body(module);

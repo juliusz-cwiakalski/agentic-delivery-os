@@ -17,6 +17,8 @@ export type BaselineRowInput = {
   readonly limitation: string;
   /** The committed per-change exclusion rows: `{ref, reason}` (the real log shape). */
   readonly excluded?: readonly { readonly ref: string; readonly reason: string }[];
+  /** The tolerated legacy exclusion counters: `{reason, count}` rows. */
+  readonly legacyCounters?: readonly { readonly reason: string; readonly count: number }[];
   readonly sample?: Readonly<Record<string, number>>;
 };
 
@@ -61,7 +63,11 @@ const rowText = (row: BaselineRowInput): string => {
     lines.push(`      - ref: ${exclusion.ref}`);
     lines.push(`        reason: ${exclusion.reason}`);
   }
-  if ((row.excluded ?? []).length === 0)
+  for (const counter of row.legacyCounters ?? []) {
+    lines.push(`      - reason: ${counter.reason}`);
+    lines.push(`        count: ${counter.count}`);
+  }
+  if ((row.excluded ?? []).length === 0 && (row.legacyCounters ?? []).length === 0)
     lines[lines.length - 1] = "    metric_excluded_changes: []";
   return lines.join("\n");
 };
@@ -157,6 +163,24 @@ export const partialBaseline = (missingId: string): string =>
 
 /** A log carrying only the excluded fourth row. */
 export const falseSignalOnlyBaseline = (): string => baselineDocument({ rows: [FALSE_SIGNAL_ROW] });
+
+/** A log whose CI row uses the tolerated legacy `{reason, count}` counter shape. */
+export const legacyCounterBaseline = (): string =>
+  baselineDocument({
+    rows: [
+      CEREMONY_ROW,
+      CYCLE_ROW,
+      {
+        ...CI_ROW,
+        excluded: [],
+        legacyCounters: [
+          { reason: "no_ci_observation", count: 7 },
+          { reason: "outside_window", count: 0 },
+        ],
+      },
+      FALSE_SIGNAL_ROW,
+    ],
+  });
 
 /** A committed comparison record with a distinctive disclosure. */
 export const committedComparisonBaseline = (): string =>
