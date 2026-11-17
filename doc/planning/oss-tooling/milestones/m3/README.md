@@ -1,6 +1,3 @@
----
-ados_distribution: internal
----
 # M3 — Jaiship-native delivery (planning draft)
 
 Status: **draft for review** (planning PR; iterate until the shape is approved).
@@ -193,16 +190,26 @@ repository is built and re-installed only at explicit, decided points.
 | Command-hardening scope creep | Bounded regression tests per named defect; no redesign |
 | Multi-project state scoping complexity | Build on per-repository state scoping; project layer additive |
 
+## Decisions recorded (owner directive 2026-11-17)
+
+- **D1.** M2 is finalized first (S16 #293 stays in M2); M3 delivery starts after
+  M2 closes.
+- **D2.** Rename depth: everything moves to the Jaiship identity — package
+  scope, environment prefix, configuration and state directories, docs and
+  prompts (M3-S2). The GitHub repository name is unchanged: product identity is
+  independent of the repository name.
+- **D3.** Shell retirement happens at M3 exit (M3-S8) once the evidence bar is
+  met; the shell orchestrators stay documented fallbacks until then.
+- **D4.** History/statistics are delivered as CLI/JSON output and files with a
+  versioned contract; no embedded server or presentation layer lives in this
+  repository.
+
 ## Open questions (owner input requested)
 
-- Q1. S16 (#293): finish inside M2 before M3, or fold its handover evaluation
-  into M3-S8?
-- Q2. Install channel: local install from a built artifact only, or also a
-  package-manager channel?
-- Q3. Rename depth: package scope, environment prefix, config/state
-  directories, and docs in one story (M3-S2)? Repository name unchanged?
-- Q4. Shell removal: at M3 exit (M3-S8) or deprecate in M3 and remove in M4?
-- Q5. Project model: does a project own planning documents, or only tracker
-  issues plus queue state?
-- Q6. History export: CLI/JSON output and files only (no embedded server) —
-  confirm.
+- **Q1. Install channel.** Proposed default: local install from a built
+  artifact (single self-contained binary, explicit upgrade command); an
+  additional package-manager channel can follow once the local model is
+  proven. Confirm or override.
+- **Q2. Project model.** Proposed default: a project owns tracker issues plus
+  queue and pacing state; per-project planning documents are optional and
+  referenced, not required. Confirm or override.
