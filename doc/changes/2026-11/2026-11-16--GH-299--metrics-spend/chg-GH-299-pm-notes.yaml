@@ -12,7 +12,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-17T05:25:54.084Z }
   review_fix: { started: null, completed: 2026-11-17T12:14:50.209Z }
   quality_gates: { started: null, completed: 2026-11-17T12:40:59.433Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-17T12:42:51.088Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "Quota snapshots are OUT of scope for GH-299. Authority: the canonical
