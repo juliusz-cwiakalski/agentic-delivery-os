@@ -53,7 +53,7 @@ created (after plan approval).
   per-project brief/status.
 - AC: two projects deliver in parallel with no queue interference; every event
   is project-attributable; filters return exact sets.
-- Depends on: M4-S3.
+- Depends on: M4-S3, M3-S6.
 
 ### M4-S6 Delivery history and statistics export
 - Goal: A stable machine-readable contract for delivery history.
