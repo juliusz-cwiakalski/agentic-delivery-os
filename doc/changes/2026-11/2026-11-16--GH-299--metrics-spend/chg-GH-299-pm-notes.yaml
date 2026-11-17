@@ -106,3 +106,18 @@ notes:
       OQ-TP-5. Delivery may start."
     type: info
     date: "2026-11-17"
+  - text: "Plan phase 1 complete (contracts and the one error row with every count
+      pin). Commit c71e33c4. Verification: bun test metrics-contract
+      (14/14), error-table (126/126), dispatch-attempts-taxonomy,
+      verify-gates-suite-map-contract, error-table-sync (134/134 across the
+      four), `bun run scripts/checks/error-table-sync.ts` OK at
+      147/147/63/1, and TMPDIR=$PWD/tmp/tmpdir pnpm check green (9841 pass,
+      4 pre-existing skip, 0 fail). Recorded deviations: the Appendix D
+      appendix-amendment path applied for D-5 (3 delivered-row sites) and for a
+      discovered D-14 site group (event/port/cross-repository pinning fixtures,
+      content-inventory executable allowance, the events error-table baseline,
+      the DOMAIN_KINDS tail position); the commit primitive owns the subject and
+      emitted its conventional template subject (the plan's declared per-phase
+      subject is not a message-passing surface)."
+    type: info
+    date: "2026-11-17"

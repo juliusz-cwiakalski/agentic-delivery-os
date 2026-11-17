@@ -157,6 +157,8 @@
     "src/domain/index.ts",
     "src/domain/lane-launch-plan.ts",
     "src/domain/memory-lint.ts",
+    "src/domain/metrics-text.ts",
+    "src/domain/metrics.ts",
     "src/domain/merge-freshness.ts",
     "src/domain/merge-gate-set.ts",
     "src/domain/merge-probe.ts",

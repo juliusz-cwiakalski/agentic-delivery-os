@@ -469,6 +469,18 @@ export {
   recordedWaiverAuthorizer,
 } from "./merge-waiver.js";
 export {
+  BASELINE_ENTRY_DECLARATIONS,
+  computeMetricsReport,
+  drawMetricsWindow,
+  METRICS_ENTRY_ORDER,
+  METRICS_VERDICTS,
+  type MetricsFoldInput,
+  type MetricsWindowOutcome,
+  mapMeasurementKind,
+  resolveMetricsWindow,
+} from "./metrics.js";
+export { renderMetricsHuman } from "./metrics-text.js";
+export {
   boardNeedsDecisionHistory,
   collectorUnavailableCode,
   evaluateOwnerGateSla,
@@ -689,6 +701,7 @@ export {
   windowSpendEvidence,
 } from "./spend.js";
 export { renderSpendHuman, type SpendHumanOptions } from "./spend-text.js";
+
 export { aggregateStatus, evaluateStatusFindings, renderStatusHuman } from "./status.js";
 export {
   attributedValue,
@@ -1086,9 +1099,6 @@ export {
   renderSteerListHuman,
   renderSteerReadHuman,
   renderSteerSendHuman,
-  steerAgeMs,
-  steerExpiresAt,
-  steerTtlElapsed,
   type SteerCompletionValidated,
   type SteerCompletionValidation,
   type SteerDerivedNote,
@@ -1101,6 +1111,9 @@ export {
   type SteerTtlParse,
   type SteerValidationCode,
   type SteerValidationFailure,
+  steerAgeMs,
+  steerExpiresAt,
+  steerTtlElapsed,
   validateSteerCompletion,
   validateSteerMessage,
   validateSteerSend,

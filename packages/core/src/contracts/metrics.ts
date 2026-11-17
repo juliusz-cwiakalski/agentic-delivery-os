@@ -304,6 +304,8 @@ export type MetricsDispatch = {
   readonly breakdowns?: MetricsBreakdowns;
   /** The delivered reconciliation disclosure cited by reference (DM-3). */
   readonly reconciliation?: { readonly basis: string; readonly verdict: string };
+  /** The disclosed gap between the roll-ups and the totals (DEC-14). */
+  readonly unattributable?: { readonly steps: number; readonly tokens: number };
   readonly absenceReason?: string;
 };
 
@@ -500,7 +502,7 @@ export type MetricsStateRead = {
   /** The delivered telemetry-absence condition, when telemetry is absent. */
   readonly absenceReason?: string;
   /** The delivered spend fold's figures for the same selection (DM-3). */
-  readonly dispatch: {
+  readonly dispatch?: {
     readonly tokensByClass: Readonly<Record<string, number>>;
     readonly costTotals: MetricsCostTotals;
     readonly restarts: number;

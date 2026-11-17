@@ -30,6 +30,16 @@ const inventory = JSON.parse(
 const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "adapters/src/daemon/supervisor.ts": ["absentSupervisorDescriptor", "createSupervisorAdapter"],
   "core/src/app/daemon-supervisor.ts": ["installSupervisor", "uninstallSupervisor"],
+  "core/src/domain/metrics.ts": [
+    "BASELINE_ENTRY_DECLARATIONS",
+    "computeMetricsReport",
+    "drawMetricsWindow",
+    "mapMeasurementKind",
+    "METRICS_ENTRY_ORDER",
+    "METRICS_VERDICTS",
+    "resolveMetricsWindow",
+  ],
+  "core/src/domain/metrics-text.ts": ["renderMetricsHuman"],
   "core/src/contracts/metrics.ts": [
     "ALARM_EVALUATION_STATUSES",
     "ALARM_KINDS",
