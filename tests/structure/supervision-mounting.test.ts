@@ -1,7 +1,10 @@
 /**
- * TC-SUP-096 — supervise is the twenty-fourth prompt-required family, composed
+ * TC-SUP-096 — supervise is the twenty-fifth prompt-required family, composed
  * unconditionally and advertised, with every family-count pin moved in the same
  * commit and no stale pin left (GH-295 AC-F1-1, F-1; test plan §4.3 mounting).
+ *
+ * GH-299 landed `metrics` as the twenty-fourth family first, so the merged
+ * mounted set is the captured 23-entry base plus `metrics` and `supervise`.
  */
 import { describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, rmSync } from "node:fs";
@@ -26,6 +29,7 @@ const PINNING_FILES = [
   "tests/structure/dispatch-attempts-composition.test.ts",
   "tests/structure/daemon-production-composition.test.ts",
   "tests/structure/steer-mounting.test.ts",
+  "tests/structure/metrics-mounting.test.ts",
   "tests/behaviour/repos-help.test.ts",
   "tests/behaviour/board-help.test.ts",
   "tests/behaviour/events-mount-help.test.ts",
@@ -36,39 +40,41 @@ const PINNING_FILES = [
 const familyLines = (help: string): readonly string[] =>
   help.split("\n").filter((line) => /^ {2}[a-z][a-z0-9-]* {2}/u.test(line));
 
-describe("TC-SUP-096 supervise is the twenty-fourth prompt-required family", () => {
-  test("the mounted set is the captured 23-entry base plus supervise, count 24", () => {
+describe("TC-SUP-096 supervise is the twenty-fifth prompt-required family", () => {
+  test("the mounted set is the captured 23-entry base plus metrics and supervise, count 25", () => {
     expect(BASE_FAMILIES).toHaveLength(23);
+    expect(MOUNTED_FAMILIES).toEqual([...BASE_FAMILIES, "metrics", "supervise"]);
     expect([...PROMPT_REQUIRED_COMMANDS]).toEqual([...MOUNTED_FAMILIES]);
-    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(24);
+    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(25);
     expect(PROMPT_REQUIRED_COMMANDS.filter((name) => name === "supervise")).toHaveLength(1);
+    expect(PROMPT_REQUIRED_COMMANDS.at(-2)).toBe("metrics");
     expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("supervise");
   });
 
-  test("root --help lists supervise as the last family line among 24 families", () => {
+  test("root --help lists supervise as the last family line among 25 families", () => {
     const help = renderRootHelp(SYNTHETIC_BRAND);
     const families = familyLines(help);
-    expect(families).toHaveLength(24);
+    expect(families).toHaveLength(25);
     expect(families.at(-1)?.trimStart().startsWith("supervise  ")).toBe(true);
     for (const family of BASE_FAMILIES) {
       expect(families.some((line) => line.trimStart().startsWith(`${family}  `))).toBe(true);
     }
   });
 
-  test("every family-count pin reads 24 and no stale 23 remains", () => {
+  test("every family-count pin reads 25 and no stale 23 or 24 remains", () => {
     const failures: string[] = [];
     for (const file of PINNING_FILES) {
       const text = readFileSync(join(ROOT, file), "utf8");
-      // The captured base constant lives in the mounting fixture, not a pin file.
+      // The captured base constants live in the mounting fixtures, not a pin file.
       const withoutMountingFixture = text
         .split("\n")
         .filter((line) => !line.includes("BASE_FAMILIES") && !line.includes("MOUNTED_FAMILIES"))
         .join("\n");
-      if (/toHaveLength\(23\)/u.test(withoutMountingFixture)) {
-        failures.push(`${file}: stale family-count pin 23`);
+      if (/toHaveLength\(2[34]\)/u.test(withoutMountingFixture)) {
+        failures.push(`${file}: stale family-count pin 23 or 24`);
       }
-      if (!/toHaveLength\(24\)|\.toBe\(\s*24\s*,?\s*\)/su.test(text)) {
-        failures.push(`${file}: no family-count pin 24`);
+      if (!/toHaveLength\(25\)|\.toBe\(\s*25\s*,?\s*\)/su.test(text)) {
+        failures.push(`${file}: no family-count pin 25`);
       }
     }
     expect(failures).toEqual([]);

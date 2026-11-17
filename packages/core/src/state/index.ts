@@ -162,6 +162,11 @@ export {
   readMergeWaivers,
 } from "./merge.js";
 export {
+  type MetricsLedgerComposition,
+  type MetricsLedgerEvidence,
+  readMetricsLedger,
+} from "./metrics-reads.js";
+export {
   appendOwnerGateSlaDecision,
   OWNER_GATE_SLA_DECISION_RECORD_KEY_PREFIX,
   type OwnerGateSlaDecisionAppendOutcome,

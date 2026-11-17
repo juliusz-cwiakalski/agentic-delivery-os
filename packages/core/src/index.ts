@@ -1107,6 +1107,21 @@ export {
   type LaneLaunchPlanFacts,
   planLaneLaunch,
 } from "./domain/lane-launch-plan.js";
+// GH-299: the pure metrics report domain and its bounded human renderer.
+export {
+  BASELINE_ENTRY_DECLARATIONS,
+  boundMetricsReport,
+  computeMetricsReport,
+  drawMetricsWindow,
+  METRICS_ENTRY_ORDER,
+  METRICS_VERDICTS,
+  type MetricsFoldInput,
+  type MetricsWindowOutcome,
+  mapMeasurementKind,
+  resolveMetricsBurnRate,
+  resolveMetricsWindow,
+} from "./domain/metrics.js";
+export { renderMetricsHuman } from "./domain/metrics-text.js";
 // The pure owner-hold resolver (GH-280 F-1, DM-1, D12).
 export {
   ownerHoldEnvironmentVariableName,
@@ -1227,3 +1242,9 @@ export {
   type WatchLine,
   type WatchProjection,
 } from "./domain/watch-stream.js";
+// GH-299: the verified metrics read composition over the delivered seams.
+export {
+  type MetricsLedgerComposition,
+  type MetricsLedgerEvidence,
+  readMetricsLedger,
+} from "./state/metrics-reads.js";

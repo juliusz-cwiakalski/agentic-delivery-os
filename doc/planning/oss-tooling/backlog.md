@@ -1084,7 +1084,7 @@ the project family separately.
   lane read, restart composition over the delivered economics with terminal
   exhaustion plus one typed question, the per-action duplicate-supervision
   refusal and per-ref single-flight reuse, two exact error identities, and the
-  24th prompt-required family).
+  25th prompt-required family).
 
 ### M2-S3 Ceremony runner
 - Ticket: GH-296 (milestone M2)
@@ -1182,6 +1182,15 @@ the project family separately.
   Consumes M2-S14 telemetry for per-agent and per-model facts.
 - AC: exit criteria measurable with committed numbers.
 - Depends on: M1-S19, M2-S3, M2-S14.
+- Progress: delivered by GH-299 — the `metrics` read-side family under
+  `delivery.metrics.v1` (the four metric entries with basis, measurement kind,
+  window, and sample; the per-dispatch spend block composed from the delivered
+  `spend` fold; burn-rate alarms against the project-committed
+  `metrics.burn-rate` node; the live comparison view under the committed
+  protocol), the bounded committed corpus scan for CI-proxy and curated
+  escaped-defect evidence, the one `metrics.baseline-unreadable` identity
+  (147/146/63/+113 with four-way agreement), and the 24th prompt-required
+  mount with its M2 reference page.
 
 ### M2-S7 Suite-to-job mapping in gates
 - Ticket: GH-300 (milestone M2)

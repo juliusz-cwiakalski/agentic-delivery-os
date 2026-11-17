@@ -326,6 +326,28 @@ export const VERIFY_BRANCH = {
 } as const satisfies CatalogField;
 
 /**
+ * The typed `metrics` branch (GH-299 DM-6, DEC-4).
+ *
+ * One key, `metrics.burn-rate`, default absent: no default threshold is
+ * invented. Like the `verify.suite-map` branch, this constrains whole-document
+ * validity for consumers that resolve the merged tree; it is NOT the validator
+ * for the node (it cannot express the positive-threshold rule or the window
+ * grammar), and the metrics surface never consumes its outcome for the node.
+ */
+export const METRICS_BRANCH = {
+  type: "object",
+  fields: {
+    "burn-rate": {
+      type: "object",
+      fields: {
+        threshold: { type: "number" },
+        basis: { type: "string" },
+        window: { type: "string" },
+      },
+    },
+  },
+} as const satisfies CatalogField;
+/**
  * The typed `harness` branch (GH-233 F-6, DM-3, DEC-8).
  *
  * Selection, per-harness store locations, and the declared environment
@@ -496,6 +518,7 @@ export const PRODUCTION_CATALOG = {
   merge: MERGE_BRANCH,
   harness: HARNESS_BRANCH,
   verify: VERIFY_BRANCH,
+  metrics: METRICS_BRANCH,
   lane: LANE_BRANCH,
   queue: QUEUE_BRANCH,
   daemon: DAEMON_BRANCH,

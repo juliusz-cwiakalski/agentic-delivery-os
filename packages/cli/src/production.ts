@@ -3278,6 +3278,18 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         store,
         localContext: { path: pmContextPath, fs: localFs },
       },
+      // The metrics read side is composed unconditionally over the same store
+      // and checkout (GH-299 F-8, DEC-9): one read-only pass over the delivered
+      // seams, the committed baseline log, the declaration node, and the
+      // bounded committed corpus scan.
+      metrics: {
+        store,
+        localContext: { path: pmContextPath, fs: localFs },
+        projectRoot: checkoutRoot,
+        configurationDirectoryName: brand.configDirectoryName,
+        fs: { ...nodeFileSystemFacts(), list: (path) => readdirSync(path) },
+        clock: { nowMs },
+      },
       retro: {
         store,
         stateDirectory,

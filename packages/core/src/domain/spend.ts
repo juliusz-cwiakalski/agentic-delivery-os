@@ -236,22 +236,34 @@ const closeoutRecord = (record: HarnessTelemetryRecord): MeasuredRecord => ({
   warningReasons: record.warnings.map((warning) => warning.reason),
 });
 
-/** The declared combination arithmetic (OQ-T4): one session, one plane's figures. */
-const selectedRecords = (measured: readonly MeasuredRecord[]): readonly MeasuredRecord[] => {
-  const sessions = new Map<string, MeasuredRecord[]>();
+/**
+ * The declared combination arithmetic (OQ-T4): one session, one plane's figures.
+ *
+ * Exported so a derived measurement (the burn-rate window) reuses the exact
+ * fold selection instead of re-implementing a global plane preference (F-6).
+ */
+export const preferStreamBySession = <
+  Record_ extends { readonly sessionId: string; readonly plane: "stream" | "closeout" },
+>(
+  measured: readonly Record_[],
+): readonly Record_[] => {
+  const sessions = new Map<string, Record_[]>();
   for (const record of measured) {
     const key = record.sessionId;
     const current = sessions.get(key);
     if (current === undefined) sessions.set(key, [record]);
     else current.push(record);
   }
-  const selected: MeasuredRecord[] = [];
+  const selected: Record_[] = [];
   for (const records of sessions.values()) {
     const stream = records.filter((record) => record.plane === "stream");
     selected.push(...(stream.length > 0 ? stream : records));
   }
   return selected;
 };
+
+const selectedRecords = (measured: readonly MeasuredRecord[]): readonly MeasuredRecord[] =>
+  preferStreamBySession(measured);
 
 const sessionGroups = (measured: readonly MeasuredRecord[]): Map<string, MeasuredRecord[]> => {
   const groups = new Map<string, MeasuredRecord[]>();

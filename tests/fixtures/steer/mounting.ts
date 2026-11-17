@@ -28,5 +28,5 @@ export const BASE_FAMILIES = [
   "ceremony",
 ] as const;
 
-/** The mounted set: the delivered 22 plus steer as the twenty-third family. */
-export const MOUNTED_FAMILIES = [...BASE_FAMILIES, "steer"] as const;
+/** The mounted set through GH-298: the delivered 22 plus steer at index 22. */
+export const STEER_MOUNTED_FAMILIES = [...BASE_FAMILIES, "steer"] as const;

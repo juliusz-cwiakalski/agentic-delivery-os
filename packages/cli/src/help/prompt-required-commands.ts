@@ -32,6 +32,7 @@ export const PROMPT_REQUIRED_COMMANDS = [
   "board",
   "ceremony",
   "steer",
+  "metrics",
   "supervise",
 ] as const;
 

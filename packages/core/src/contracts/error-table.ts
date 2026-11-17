@@ -40,6 +40,8 @@ export const DOMAIN_KINDS = [
   "board",
   "steer",
   "supervise",
+  // GH-299 registers the metrics read-side kind with exactly one row.
+  "metrics",
 ] as const;
 
 /**
@@ -49,7 +51,7 @@ export const DOMAIN_KINDS = [
  * rather than resolved to the kind's only row, so a malformed failure object
  * can never masquerade as the declared identity.
  */
-export const EXACT_CODE_DOMAIN_KINDS = ["spend"] as const;
+export const EXACT_CODE_DOMAIN_KINDS = ["spend", "metrics"] as const;
 export type ExactCodeDomainKind = (typeof EXACT_CODE_DOMAIN_KINDS)[number];
 
 /** Reserved containment code for broken invocations and unknown commands. */
@@ -1752,5 +1754,21 @@ export const ERROR_TABLE = [
       "Record the named artifact sources (heartbeat, lane, lease, dispatch, or commit records) for this repository and rerun supervise; the answer stays unknown, never guessed.",
     projectionClass: "platform-provider",
     summary: "No artifact-evidence source exists for the supervision scope.",
+  },
+  /**
+   * GH-299: the metrics read side's one exact identity (DEC-8, DM-7). It joins
+   * the closed allowlist by exact declaration; there is no `metrics.*` family
+   * and no pattern widening.
+   */
+  {
+    code: "metrics.baseline-unreadable",
+    domainKind: "metrics",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Restore the committed measurement baseline log to a parseable, schema-valid document or remove it entirely; damaged canonical data is never treated as absence, and no report was produced.",
+    projectionClass: "platform-provider",
+    summary: "The committed measurement baseline log exists but cannot be parsed or validated.",
   },
 ] as const satisfies readonly ErrorTableEntry[];

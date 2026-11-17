@@ -559,10 +559,23 @@ is the declared unavailable outcome. The per-action duplicate-supervision refusa
 fires only against a supervision authority actively acting over the target object
 (a live daemon's presence refuses nothing, and a park intent is non-claiming);
 per-ref double-claims reuse the delivered `queue.single-flight` identity. Two
-exact `supervise` identities join the error-table allowlist (62 -> 64) with every
-count pin moved (146 -> 148). The family is mounted as the 24th prompt-required
+exact `supervise` identities join the error-table allowlist (63 -> 65) with every
+count pin moved (147 -> 149). The family is mounted as the 25th prompt-required
 command with root/family help, the M2 reference page, and the coverage-inventory
 row. No state record kind, event taxonomy member, daemon/coordinator/queue
 mechanism, or production composition changed, and the daemon's composition stays
 supervise-only. The run carries `feat/GH-295/supervise`; M2 has not exited, and
 the remaining M2 stories are unaffected by this delivery.
+
+## Metrics and spend delivered (GH-299, M2-S6)
+
+GH-299 delivered the `metrics` read-side family through the full lifecycle:
+the `delivery.metrics.v1` report (four metric entries with basis, measurement
+kind, window, and sample; the per-dispatch block composed from the `spend`
+fold; burn-rate alarms against the project-committed `metrics.burn-rate` node;
+the comparison view under the committed protocol), the bounded committed
+corpus scan behind the CI proxy and the curated escaped-defect floor, the one
+`metrics.baseline-unreadable` identity with every Appendix D count pin moved
+(147 entries / 146 delivered / 63 allowlist / +113), and the 24th
+prompt-required mount with its M2 reference page. The delivered aggregate gate
+is green at `TMPDIR=$PWD/tmp/tmpdir pnpm check`.

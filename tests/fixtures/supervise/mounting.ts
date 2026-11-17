@@ -1,7 +1,8 @@
 /**
  * The captured pre-change prompt-required family list (GH-295 TC-SUP-096): the
- * single statement of the delivered base of 23, so the mount delta
- * (`+ supervise` = 24) is asserted once and every count pin is checked here.
+ * single statement of the delivered base of 23 (through GH-298's `steer`), so
+ * the two appended families (`metrics` then `supervise` = 25) are asserted once
+ * and every count pin is checked here.
  */
 export const BASE_FAMILIES = [
   "status",
@@ -29,5 +30,8 @@ export const BASE_FAMILIES = [
   "steer",
 ] as const;
 
-/** The mounted set: the delivered 23 plus supervise as the twenty-fourth family. */
-export const MOUNTED_FAMILIES = [...BASE_FAMILIES, "supervise"] as const;
+/**
+ * The mounted set: the delivered 23 plus metrics as the twenty-fourth family
+ * (GH-299) and supervise as the twenty-fifth (GH-295).
+ */
+export const MOUNTED_FAMILIES = [...BASE_FAMILIES, "metrics", "supervise"] as const;

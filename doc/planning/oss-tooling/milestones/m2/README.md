@@ -42,6 +42,7 @@ deliberate and the generic table is left unchanged until milestone exit.
 | [commands/ceremony.md](commands/ceremony.md) | Delivered ceremony runner contract: four verbs, declaration vocabularies, six built-ins, project declarations, catch-up, tiered intake, and the measurement record |
 | [commands/retro.md](commands/retro.md) | Delivered retro contract: the M1-S8 evidence pipeline plus the additive `retro action file\|close\|list` group over the action registry (GH-287, M2-S10) |
 | [commands/steer.md](commands/steer.md) | Delivered steer contract: the four verbs, the shared typed message record, drawn defaults, the boundary read point, receipts and TTL expiry, the asks batch, artifact-ref completion, and exit codes |
+| [commands/metrics.md](commands/metrics.md) | Delivered metrics contract: the one report invocation, the four metric entries, the dispatch parity block, burn-rate alarms and the declaration node, the comparison view, the bounds, the absence postures, and the exit table (GH-299, M2-S6) |
 
 ## Story-to-artifact map
 
@@ -51,7 +52,7 @@ deliberate and the generic table is left unchanged until milestone exit.
 | M2-S3 Ceremony runner | none in this pack | [commands/ceremony.md](commands/ceremony.md) (delivered: four verbs, the declaration contract, six built-ins, project declarations, catch-up, tiered intake, records, comparison) | SC-M2-S3-01, SC-M2-S3-02 |
 | M2-S4 Board | multi-repository overview | `projects.v1` delivered payload; the board consumes repository keys and the host index | SC-M2-S4-01, SC-M2-S4-02 |
 | M2-S5 Steer | none in this pack | [commands/steer.md](commands/steer.md) (delivered: the shared typed message record, the boundary read point, receipts and TTL expiry, the asks batch, artifact-ref completion, and the 23rd prompt-required mount); `phase.state` topic (advisory: consumed at delivery; the owning story declared the edge) | SC-M2-S5-01, SC-M2-S5-02 |
-| M2-S6 Metrics and spend | telemetry attribution | `telemetry.v1` (delivered by S14, consumed here), `spend` v2 (delivered by S14; this story owns the alarm and metric layers) | SC-M2-S6-01, SC-M2-S6-02 |
+| M2-S6 Metrics and spend | telemetry attribution | [commands/metrics.md](commands/metrics.md) (delivered: the `delivery.metrics.v1` report, the dispatch parity block, the burn-rate alarms and declaration node, the comparison view, and the 24th prompt-required mount); `telemetry.v1` (delivered by S14, consumed here), `spend` v2 (delivered by S14; this story owns the alarm and metric layers) | SC-M2-S6-01, SC-M2-S6-02 |
 | M2-S7 Suite-to-job mapping in gates | none in this pack | none in this pack | SC-M2-S7-01, SC-M2-S7-02 |
 | M2-S8 Memory records | none in this pack | none in this pack | SC-M2-S8-01, SC-M2-S8-02 |
 | M2-S9 Memory conventions in bootstrap | none in this pack | none in this pack | SC-M2-S9-01, SC-M2-S9-02 |

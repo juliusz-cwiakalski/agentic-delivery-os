@@ -1,0 +1,219 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-299
+branch: feat/GH-299/metrics-spend
+status: FAIL
+summary: >-
+  Remediation iteration 1 is substantively delivered and independently
+  re-verified. F-1 is closed: the adapter now parses the committed log's
+  per-change `{ref, reason}` rows (counted per closed reason, zero counts
+  filtered, legacy `{reason, count}` tolerated) and an independent probe over
+  the real tree returns `state: present` with sourceCommit 75b4e760 and the
+  conserved exclusions (cycle 3 × missing_metric_input, CI 19 ×
+  no_ci_observation). F-2 is closed: `preferStreamBySession` is the single
+  exported per-session plane selection, `selectedRecords` delegates to it,
+  `measureSpend` now composes steps+records and windows after selection, and
+  the mixed-plane alarm fixture proves equality with the delivered fold
+  (closeout-only 600 + stream 400 = measured 1 000, against 400 pre-fix). F-3,
+  F-4, F-5, F-6, F-7, F-9, and F-10 all verify in code and tests, including a
+  fold-only 1k/10k latency reference that is printed and not asserted, thirteen
+  mutant families with anchor-hardened replacement, and a marker that names the
+  sections actually dropped. One new medium defect keeps this iteration at
+  FAIL: the post-remediation current-truth spec (and the adapter's own doc
+  comment) now claims the entry carries the committed log's per-reason
+  exclusion totals, but the report never reads the parsed counters — on the
+  real log the CI entry renders with no exclusions although the log lists 19.
+  Plan compliance holds (phase 10 evidence is recorded with hash and counts;
+  `plan validate` verdict=valid), with only an observational plan-scope drift.
+  Remediation phase 11 (tasks 11.1-11.4) is appended to the plan. Re-run in
+  this review: 200/200 metrics behaviour, 174/174 metrics structure
+  (error-table, content-inventory, imports, contract, mounting), 43/43 metrics
+  checks (mutants, bounds, read-cost, escaped-defects), 39/39 golden + hermetic
+  + doc-conformance, 190/190 spend behaviour, 305/305 goldens, the
+  sync/help/prompt/exports script checks (entries=147 documented=147), and the
+  full aggregate gate `TMPDIR=$PWD/tmp/tmpdir pnpm check` at exit 0 with
+  10 088 pass / 4 pre-existing skip / 0 fail across 1 262 files. The known
+  `state.store.torn` teardown on this workstation is
+  a pre-existing GH-291-era multi-ref reader defect, reproduced here against
+  the untouched `packages/core/src/state/telemetry.ts` and equally fatal to the
+  untouched `spend` command; GH-299's code is not implicated.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 1
+  low: 3
+  info: 3
+spec_compliance: FAIL
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: doc/spec/features/feature-metrics.md:140
+    message: >-
+      The current-truth spec bullet (and the matching adapter comment at
+      packages/adapters/src/file/metrics-baseline.ts:44-51, "so the report
+      carries the conserved totals") claims the baseline entry aggregates the
+      committed log's per-change rows and conserves the log's listed
+      exclusions. The delivered fold never reads `MetricsBaselineRow.excluded`:
+      buildEntries surfaces only the exclusions of the fresh measurement
+      (packages/core/src/domain/metrics.ts:480-582), so the parsed counters are
+      consumed by tests alone. Probed in this review over the real committed
+      log with an empty corpus: MET-CI-FAILURE-RATE renders with no `excluded`
+      at all although the log lists 19 `no_ci_observation` rows, and
+      MET-CYCLE-TIME renders 1 `missing_metric_input` against the log's 3. The
+      guard test is insensitive for the same reason: the "per-change exclusions
+      are counted per reason" cell (tests/behaviour/metrics-baseline.test.ts:72)
+      compares entries to the fixture *inputs*, never to the parsed document,
+      and passes only because the fixture rows happen to mirror what the
+      measures emit. Design-wise, surfacing log-scope counts on every per-ref
+      invocation mixes scopes (the log aggregates 41 changes; the entry
+      evaluates one ref and window), so the sentence — not the code — is the
+      defect.
+    suggestion: >-
+      Correct the spec sentence and the adapter comment to the delivered
+      semantics: the committed listing is parsed, validated, and left
+      byte-identical in the log, while the entry reports the exclusions of its
+      own evaluated basis (per-ref, per-window) over the log's closed reason
+      vocabulary. If the owner instead wants the log's totals rendered, wire
+      them into the entry behind an explicit scope label and assert them in a
+      test reading the parsed document. Split the conservation cell so one case
+      asserts the parsed document's counts (as the real-tree test does) and the
+      other asserts the entry's basis exclusions. Owning artifacts: the
+      doc-syncer correction to doc/spec/features/feature-metrics.md, the phase
+      10 task 10.1 comment, tests phase 4 exclusion cells.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-16--GH-299--metrics-spend/chg-GH-299-plan.yaml:1201
+    message: >-
+      Phase 10's declared scope lists 13 files, but the remediation commit plus
+      the pending doc-syncer corrections touch eight files outside it:
+      packages/core/src/domain/spend.ts, packages/core/src/contracts/metrics.ts,
+      packages/cli/src/edge.ts, tests/structure/metrics-imports.test.ts,
+      tests/structure/content-inventory.test.ts,
+      tests/behaviour/metrics-escaped-defects.test.ts (the task 10.9 probe
+      cell), doc/spec/features/feature-measurement-baseline.md, and
+      doc/spec/nonfunctional.md. The work itself is required by tasks 10.2,
+      10.9, and the doc-sync of 10.1/10.3; only the declaration is stale. Per
+      the plan schema (`plan diff` findings are observational and non-blocking,
+      doc/spec/features/feature-plan-schema.md:151) this does not gate
+      delivery.
+    suggestion: >-
+      Amend phase 10's `scope` with the six delivered paths (or add
+      `packages: [core, cli, adapters]`) and the two doc-syncer paths before
+      the phase-boundary commit, so the declared scope matches the branch diff.
+      Owning artifact: the plan's phase 10 declaration.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: low
+    confidence: high
+    category: test-quality
+    location: tests/checks/metrics-mutants.test.ts:44
+    message: >-
+      A debug statement survives in the mutant helper: `if (id === "uncited")`
+      computes `source.indexOf("row.citation")` and logs "MUTANT REGION" with
+      the (empty, index -1) slice on every run of the suite. It adds noise to
+      every `pnpm check` and hides nothing useful; it was introduced at
+      0cdaec94, outside the remediation commit.
+    suggestion: >-
+      Delete the four-line debug block (lines 44-47). Owning artifact: plan
+      phase 8 (mutant battery).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: low
+    confidence: high
+    category: test-quality
+    location: packages/adapters/src/file/metrics-baseline.ts:62
+    message: >-
+      The adapter documents and implements a tolerated legacy exclusion shape
+      (`{reason, count}` rows), but no test exercises that branch: the fixture
+      now emits only `{ref, reason}`, the damage fixtures cover only an unknown
+      reason, and the real-tree cell asserts the per-change shape. A regression
+      that drops the legacy path would pass the suite silently.
+    suggestion: >-
+      Add one cell (behaviour or adapter-level) pinning a document with a
+      `{reason, count}` row — including a zero count that must not surface —
+      asserting it validates and the count is preserved. Owning artifact: plan
+      phase 3 adapter cells / phase 4 behaviour cells.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/metrics.ts:263
+    message: >-
+      Carried risk from iteration 1 (F-11), unchanged and re-verified: native
+      ceremony share is total ceremony run time over the window's elapsed
+      time, so values are ~1e-6 on the 30-day default and grow as the window
+      shrinks; the entry limitation names the basis and the
+      non-interchangeability with the committed duration-ratio proxy, and
+      cross-kind comparison rows carry the caveat. Disclosure is present.
+    suggestion: No action; flagged for owner awareness of window sensitivity.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/core/src/contracts/metrics.ts:513
+    message: >-
+      Iteration 1's F-12 residual is unchanged and now smaller: the metrics
+      state contract still types `transitions.operation` as `"start" |
+      "complete" | "reopen"` while the delivered registry vocabulary is
+      `"complete" | "reopen"`, and `foldTransitions`
+      (packages/core/src/domain/metrics.ts:148-162) treats every non-`complete`
+      operation as a reopen (clearing completion), so a hypothetical `start`
+      row would clear the anchor rather than set it. `statusOf` (line 426) still
+      inherits a committed `PARTIAL` on a native MEASURED figure. Both are
+      type/wording residuals with no reachable production path in the delivered
+      vocabulary.
+    suggestion: >-
+      No action required for this change; optionally narrow the contract union
+      to the delivered operation set in a later cleanup.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: info
+    confidence: high
+    category: environment
+    location: packages/core/src/state/telemetry.ts:709
+    message: >-
+      Not a GH-299 finding, recorded so the acceptance picture is honest. On
+      this workstation every state-backed command (including the untouched
+      `spend`) refuses `state.store.torn` at exit 2. The cause is the delivered
+      family reader: `readTelemetryFamilies` and `readTelemetrySteps` treat any
+      key that starts with the step/baseline prefix but differs from the
+      requested ref's exact key as damage (telemetry.ts:709-711 and 421-436;
+      the file is untouched by this change — `git log 5f25da89..HEAD --
+      packages/core/src/state/telemetry.ts` is empty). Reproduced in this
+      review with a two-ref synthetic store: reading GH-299 tears on GH-100's
+      record. GH-299 consumes this reader exactly as the spec requires ("the
+      same telemetry records the spend fold reads"), so `metrics` inherits a
+      pre-existing GH-291-era defect; it is out of scope here and needs its own
+      ticket. A second, non-blocking tooling observation: production composes
+      the plan runtime without a diff reader (packages/cli/src/production.ts:1177),
+      so `plan diff GH-299` always answers `input.value.rejected`; the plan
+      audit in this review was done manually against the branch diff.
+    suggestion: >-
+      No GH-299 action. Track the multi-ref family-read tear (and the unwired
+      `plan diff` production seam) as separate follow-ups.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-17T10:58:09Z
+next_step: EXECUTE_REMEDIATION_PHASE

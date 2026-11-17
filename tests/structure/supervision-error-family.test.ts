@@ -42,7 +42,9 @@ const superviseRows = entries.filter((entry) => entry.domainKind === "supervise"
 describe("TC-SUP-070 the supervise kind declares exactly two rows", () => {
   test("DOMAIN_KINDS gains supervise once", () => {
     expect(DOMAIN_KINDS.filter((kind) => kind === "supervise")).toHaveLength(1);
-    expect(DOMAIN_KINDS.at(-1)).toBe("supervise");
+    // GH-299's `metrics` kind mounts after `supervise`, so supervise is second-to-last.
+    expect(DOMAIN_KINDS.at(-2)).toBe("supervise");
+    expect(DOMAIN_KINDS.at(-1)).toBe("metrics");
   });
 
   test("exactly two rows carry the declared identity, category, consequence, and projection", () => {
@@ -74,10 +76,14 @@ describe("TC-SUP-070 the supervise kind declares exactly two rows", () => {
 
   test("every delivered row is byte-identical to the captured baseline and in place", () => {
     expect(baseline.rows).toHaveLength(146);
-    const live = entries.filter((entry) => entry.domainKind !== "supervise");
+    // The captured baseline predates both GH-299's `metrics` row and the two
+    // supervise rows, so the delivered comparison excludes both kinds.
+    const live = entries.filter(
+      (entry) => entry.domainKind !== "supervise" && entry.domainKind !== "metrics",
+    );
     expect(live).toHaveLength(146);
     expect(live.map(tupleOf)).toEqual(baseline.rows.map((row) => [...row]));
-    // The two new rows are appended after every delivered row: no reordering.
+    // The three new rows are appended after every delivered row: no reordering.
     expect(entries.slice(0, 146).map(tupleOf)).toEqual(baseline.rows.map((row) => [...row]));
   });
 

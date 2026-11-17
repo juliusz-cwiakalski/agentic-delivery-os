@@ -2,11 +2,11 @@
 id: SPEC-TOOLING-NONFUNCTIONAL
 status: Proposed
 created: 2026-11-01
-last_updated: 2026-11-16
+last_updated: 2026-11-17
 owners: [engineering]
 ados_distribution: internal
 links:
-  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243, GH-230, GH-235, GH-238, GH-242, GH-275, GH-291, GH-320, GH-296, GH-287]
+  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243, GH-230, GH-235, GH-238, GH-242, GH-275, GH-291, GH-320, GH-296, GH-287, GH-299]
 summary: "Cross-cutting index of implemented tooling quality contracts and separately proposed validation targets."
 ---
 
@@ -96,7 +96,8 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
 
 - Quality attribute: interoperability and resource boundedness. Applies: CLI
   envelope, status, brief, queue-ready, board, verify gates, merge, verify deploy,
-  doctor, blockers, spend, and ceremony renderers, and the retro collect/report/action renderers. Status:
+  doctor, blockers, spend, metrics, and ceremony renderers, and the retro
+  collect/report/action renderers. Status:
   existing.
 - Requirement: one valid `CommandResult` under `--json`, exactly one of data/error,
   classified containment, deterministic ordering, and visible truncation.
@@ -131,16 +132,24 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
   caps human output at 32 lines/6144 bytes with an explicit omission marker, the
   carried phase summary at 4096 bytes/40 lines, a run record at 16 KiB, a step
   record at 2 KiB, and a declaration document at 1 MiB.
+  [Metrics](features/feature-metrics.md#output-contract-and-bounds) caps serialized
+  data at 65536 UTF-8 bytes and the human digest at 200 lines/16384 UTF-8 bytes,
+  with 8 incident rows, 20 per-agent rows, and 20 comparison rows, dropping
+  `comparisons[]`, then `incidents[]`, then `perAgent[]` tail-first with every machine
+  drop counted in `omitted` and the human fallback naming the sections it dropped,
+  while the ref, the window, the metric entries, the dispatch summary, the alarm rows,
+  and the evaluation are never dropped.
   Brief reuses the status human and machine caps by reference and declares no parallel
   numeric bound.
 - Queue-ready accepts 1..8 candidates of at most 64 canonical characters; its
   per-field caps and renderer-only reverse-rank drops remain feature-specific.
 - Evidence/test: `packages/core/src/contracts/status.ts`,
   `queue-ready.ts`, `brief.ts`, `owner-gate-sla.ts`, `doctor.ts`, `merge.ts`,
-  `verify-deploy.ts`, `blockers.ts`; `tests/behaviour/status-output.test.ts`,
+  `verify-deploy.ts`, `blockers.ts`, `metrics.ts`; `tests/behaviour/status-output.test.ts`,
   `queue-ready-output.test.ts`, `brief-output.test.ts`, `board-output.test.ts`,
   `doctor-output.test.ts`, `merge-bounds.test.ts`, `verify-deploy-bounds.test.ts`,
-  `blockers-bounds.test.ts`, golden suites.
+  `blockers-bounds.test.ts`, `metrics-bounds.test.ts`, `metrics-envelope.test.ts`,
+  golden suites.
 - Owner/trigger: engineering/reviewer; payload or renderer changes (XC-007).
 
 ### NFR-TOOL-003: Scoped performance and read cost
@@ -148,7 +157,7 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
 - Quality attribute: performance efficiency. Applies: status/queue-ready pure
   policy, the owner-gate board, the typed blocker channel, the doctor diagnostic,
   provider evaluation, privacy scan/policy, session administration, the spend fold,
-  the retro pipeline folds, and the ceremony runner.
+  the metrics report, the retro pipeline folds, and the ceremony runner.
 - Requirement/status: existing feature budgets only; no universal latency SLO.
   Reference-environment results are not promises for every platform or network.
 
@@ -166,6 +175,7 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
 | [Merge and verify deploy](features/feature-merge-verify-deploy.md#invariants) | Pure freshness, waiver, and deploy-verdict evaluation; `merge` performs one verification read, one work-item read, one check-run page, one request-detail read, and only the declared git mutations; `verify deploy` performs one bounded trace read; the freshness bound defaults to 1800 s with at-bound stale. | `tests/behaviour/merge-probe.test.ts`, `merge-determinism.test.ts`, `verify-deploy-read-budget.test.ts`, `merge-bounds.test.ts`, `verify-deploy-bounds.test.ts`. |
 | [Retro](features/feature-retro-pipeline.md#non-functional-requirements) | Pure deterministic collect/report/export folds; the audit collector reads at limit 1000; collect ≤ 30 s, report ≤ 10 s, and export ≤ 10 s over a 10,000-record sidecar with full chain verification; CI gates bounded work instead of wall clock (one chain walk per read, one batched append per collection run), and the 10000 ms read / 30000 ms append seam constants are seam data rather than command budgets; export is capped at 1000 records with in-band truncation. | `tests/behaviour/retro-performance.test.ts`, `retro-collect.test.ts`, `retro-export.test.ts`. |
 | [Spend](features/feature-spend.md#non-functional-requirements) | Pure deterministic fold over one ref's telemetry and transition records: p95 ≤ 500 ms at 1,000 captured records and ≤ 2 s at 10,000 in the reference environment; CI gates the bounded work (one multi-family telemetry read, one transition read, one fold, no per-record re-read). | `tests/behaviour/spend-performance.test.ts`, `spend-readonly.test.ts`. |
+| [Metrics](features/feature-metrics.md#non-functional-requirements) | Pure deterministic fold over the resolved window, the declaration node, the verified state read, the committed log, and the bounded corpus scan: one verified state read pass (at most six family reads, none scaling with the record population), at most one baseline-log read, one declaration-node read, and one corpus scan bounded at 512 files and depth 6. CI gates the counted read budget and never asserts wall-clock latency; the suite prints a fold-only latency reference at the declared 1,000- and 10,000-record points. | `tests/behaviour/metrics-read-cost.test.ts`, `metrics-determinism.test.ts`, `tests/checks/metrics-hermetic.test.ts`. |
 | [Provider](features/feature-provider-engine.md#non-functional-requirements) | Pure evaluation of 100 entries within 50 ms, excluding transport; configurable quota timeout defaults to 15000 ms, sleep cap to 24 completed sleeps. | Provider behavior and evidence-bounds suites; these are not end-to-end command deadlines. |
 | [Privacy](features/feature-privacy-guard.md#non-functional-requirements) | Scan within 60 s for up to 50 MiB on CI reference runner; emitter within 10 ms per 2048-byte envelope; at most 32 hashed lengths. | `tests/checks/privacy-performance.test.ts`; production empty classes limit what a clean scan demonstrates. |
 | [Commit](features/feature-commit-primitive.md#non-functional-requirements) | Dry-run p95 under 2 s and template-fallback p95 under 5 s; one constrained model call per attempt; a model-transport commit is bounded by the provider call. | `tests/behaviour/commit-performance.test.ts` samples the dry-run and template paths; the model-transport bound is not a CI deadline. |
@@ -208,7 +218,10 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
   The [spend read side](features/feature-spend.md)
   is a verified read-only consumer of the telemetry and transition records: it
   acquires no fence, appends nothing, and keeps every store-damage class on its
-  delivered `state.*` identity.
+  delivered `state.*` identity. The [metrics report](features/feature-metrics.md)
+  is the same shape of read-only consumer: it composes the verified state read, one
+  bounded baseline-log read, one declaration-node read, and one bounded corpus
+  scan, acquires no fence, and writes no byte to any store, log, or document.
 - Read/index strategy does not change truth; only the two explicit terminal-tail
   operations remove ledger bytes, and guided salvage quarantines the removed bytes
   instead of discarding them. Mid-stream corruption is not silently repaired, and
@@ -271,7 +284,11 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
   aggregate counts, refs, phase ids, agent/model names, run ids, and windows only;
   it renders no prompt text, message bodies, transcripts, diffs, tool output, or
   credential material, and passes both human and machine output through the same
-  redaction chokepoint.
+  redaction chokepoint. The [metrics report](features/feature-metrics.md#security-and-boundaries)
+  emits the same classes of aggregate figure plus cited committed paths with
+  anchors, resolves no credential, and reads committed repository documents only —
+  `tmp/**`, `.ai/local/**`, uncommitted, absolute, and external sources are never a
+  measurement.
 - Evidence/test: config restrictions/parser suites, result goldens, credential and
   `tests/checks/secret-read-boundary.test.ts` negative controls;
   `tests/behaviour/blockers-credential*.test.ts`;

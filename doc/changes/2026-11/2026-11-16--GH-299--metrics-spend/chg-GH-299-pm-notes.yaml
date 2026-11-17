@@ -1,0 +1,450 @@
+change_id: GH-299
+title: "M2-S6: Metrics and spend (M2)"
+delivery_mode: autonomous
+milestone: "M2: Ceremonies, measurement, and memory"
+phases:
+  clarify_scope: { started: null, completed: 2026-11-16T22:20:24.435Z }
+  specification: { started: null, completed: 2026-11-16T22:55:46.847Z }
+  test_planning: { started: null, completed: 2026-11-16T23:02:19.290Z }
+  delivery_planning: { started: null, completed: 2026-11-16T23:13:05.295Z }
+  dor_check: { started: null, completed: 2026-11-16T23:19:21.213Z }
+  delivery: { started: null, completed: 2026-11-17T05:13:36.404Z }
+  system_spec_update: { started: null, completed: 2026-11-17T05:25:54.084Z }
+  review_fix: { started: null, completed: 2026-11-17T12:14:50.209Z }
+  quality_gates: { started: null, completed: 2026-11-17T12:40:59.433Z }
+  dod_check: { started: null, completed: 2026-11-17T12:42:51.088Z }
+  pr_creation: { started: null, completed: 2026-11-17T12:45:42.625Z }
+decisions:
+  - text: "Quota snapshots are OUT of scope for GH-299. Authority: the canonical
+      backlog story row (backlog.md M2-S6 task list and the ticket body) names
+      ceremony share, per-dispatch tokens/cost/restarts, cycle time, CI failure
+      rate, escaped defects, and burn-rate alarms; quota snapshots appear only
+      in summary rows (cli-command-registry.md line 178, M1 contracts/spend
+      deferral notes), not in the canonical task list, the ticket, or the `ados
+      metrics` registry row. Exclusion recorded here and to be restated as a
+      scope-exclusion decision in the spec decision log."
+    date: "2026-11-16"
+  - text: "The operational definition of 'escaped defects' is not pinned by the
+      ticket or the milestone pack (no MET- id exists for it in
+      measurement-baseline.yaml). In scope per the ticket task list; the
+      concrete definition must be authored by @spec-writer from committed
+      evidence sources (retro findings, review verdicts, CI observations) and
+      critiqued at the DoR gate. This is spec-level definition work grounded in
+      the ticket's own task list, not requirement invention."
+    date: "2026-11-16"
+open_questions: []
+blockers: []
+notes:
+  - text: "Reopen-on-gap (specification, iteration 2): test-plan-writer traced two
+      AC-wording gaps — AC-F2-1's recompute-under-committed-definition rule
+      conflicts with AC-F3-2's native runner-fold basis for ceremony share
+      (GH-296 nativeBasis declares the two non-interchangeable), and AC-F5-1's
+      exact perAgent-sums-equal-totals is unsatisfiable when unattributable
+      steps exist (delivered fold skips null-attribution records from perAgent;
+      equality holds only on fully attributable selections). Reopening
+      specification for targeted AC amendment; test plan already drafted the
+      bounding cells (TC-METRICS-011/023/026, 040/042) so reconciliation is a
+      wording delta."
+    type: retro
+    date: "2026-11-16"
+  - text: "clarify_scope cross-check complete. Ticket requirements are complete and
+      consistent with the system spec; no blocking questions. Dependencies
+      verified landed on main-tools: M1-S19 (GH-236 spend read side), M2-S3
+      (GH-296 ceremony runner, PR #328), M2-S14 (GH-291 telemetry v2, PR #315)."
+    type: info
+    date: "2026-11-16"
+  - text: "Planned surface per planning truth: new `ados metrics` command family
+      (cli-command-registry.md row: ceremony share, cycle time, CI failure rate,
+      escaped defects; coordinator/operator audiences). It consumes the
+      delivered `delivery.spend.v1` fold (feature-spend.md explicitly feeds
+      alarm/burn-rate M2-S6) and telemetry v2 for per-agent/per-model facts.
+      Burn-rate alarms land under `metrics.data.alarms` per scenario seed
+      SC-M2-S6-02 (exactly one alarm per crossing, ref + threshold echoed)."
+    type: info
+    date: "2026-11-16"
+  - text: "Measurement-baseline interplay: the log (schema_version 2, comparisons[]
+      additive) is canonical data for MET-CEREMONY-SHARE, MET-CYCLE-TIME,
+      MET-CI-FAILURE-RATE, MET-FALSE-SIGNAL-INCIDENTS. Comparison protocol: same
+      metric ID and definition over an equal-length window; a proxy is never
+      compared to a native measurement without the caveat; sample minimum 5 for
+      trend verdicts (insufficient-sample below it). The metrics layer consumes
+      the log by metric ID; GH-296's committed ceremony comparison
+      (insufficient-sample at n=0) must remain unchanged."
+    type: info
+    date: "2026-11-16"
+  - text: "Doc impacts for phase 7 (@doc-syncer): new feature spec for the metrics
+      surface (first-spec-only, always-resolve); additive updates to
+      feature-spend.md (Feeds/consumer), feature-telemetry-v2.md (consumer),
+      feature-result-contract.md (Appendix D error-table count pins for new
+      metrics rows), feature-cli-entrypoint.md and
+      feature-agents-and-commands.md (new prompt-required family mount, 23rd ->
+      24th count move), feature-measurement-baseline.md (consumer note if
+      needed), help-guide coverage, cli-command-registry.md and backlog status
+      markers per ticket delivery conventions."
+    type: risk
+    date: "2026-11-16"
+  - text: "Mounting cost precedent: steer (GH-298) moved prompt-required families 22
+      -> 23 atomically; board (GH-297) widened the error-table allowlist with
+      exact count-pin moves. The metrics family must follow the same one-commit
+      count-move discipline; error-table two-way sync check
+      (error-table-sync.ts) is a known gate."
+    type: info
+    date: "2026-11-16"
+  - text: "Delivery conventions from ticket: full 11-phase lifecycle; plan phases
+      declared in plan.yaml; commits through the commit primitive with
+      conventional subjects and every body/footer line <= 100 chars;
+      TMPDIR=$PWD/tmp/tmpdir pnpm check green before PR; PR targets main-tools
+      and stays open (merge authority: CEO)."
+    type: info
+    date: "2026-11-16"
+  - text: "DoR gate READY at iteration 1 (readiness-review/readiness-iter-1.md),
+      10/10 facets PASS, no pause flag. Four non-blocking findings: (minor) spec
+      Appendix D D-5 undercounts toLength(145) sites 2 vs 3 in tree —
+      self-correcting at the phase-1 gate, rides the declared appendix-amendment
+      path (owning phase: specification, informational); (info) ticket verified
+      via committed corroborating sources; two nits already bound by DEC-1 and
+      OQ-TP-5. Delivery may start."
+    type: info
+    date: "2026-11-17"
+  - text: "Plan phase 1 complete (contracts and the one error row with every count
+      pin). Commit c71e33c4. Verification: bun test metrics-contract (14/14),
+      error-table (126/126), dispatch-attempts-taxonomy,
+      verify-gates-suite-map-contract, error-table-sync (134/134 across the
+      four), `bun run scripts/checks/error-table-sync.ts` OK at 147/147/63/1,
+      and TMPDIR=$PWD/tmp/tmpdir pnpm check green (9841 pass, 4 pre-existing
+      skip, 0 fail). Recorded deviations: the Appendix D appendix-amendment path
+      applied for D-5 (3 delivered-row sites) and for a discovered D-14 site
+      group (event/port/cross-repository pinning fixtures, content-inventory
+      executable allowance, the events error-table baseline, the DOMAIN_KINDS
+      tail position); the commit primitive owns the subject and emitted its
+      conventional template subject (the plan's declared per-phase subject is
+      not a message-passing surface)."
+    type: info
+    date: "2026-11-17"
+  - text: "Plan phase 2 complete (pure report domain: entries, kinds, comparisons,
+      absence classification, truncation, bounded renderer). Commit e88a74c1.
+      Verification: bun test metrics-contract (20/20), metrics-imports,
+      content-inventory, config-contract green; ambient-globals clean;
+      exports-parity pass; TMPDIR=$PWD/tmp/tmpdir pnpm check green (9849 pass, 4
+      pre-existing skip, 0 fail). Deviation: the lockstep five-package minor
+      changeset was staged with this phase rather than phase 9 because
+      tests/checks/privacy-release.test.ts requires one whenever a publishable
+      path changes; phase 9 verifies it instead of authoring it."
+    type: info
+    date: "2026-11-17"
+  - text: "Plan phase 3 complete (verified metrics reads, the committed baseline-log
+      read, the declaration-node read, the bounded corpus scan, and the pure
+      burn-rate resolver). Commit ffc206fc. Verification: config-contract
+      (catalog metrics branch), metrics-imports (seven modules tier-checked),
+      config-imports, event-additivity and port-inventory pins green;
+      ambient-globals and exports-parity pass; TMPDIR=$PWD/tmp/tmpdir pnpm check
+      green (9855 pass, 4 pre-existing skip, 0 fail). Discovered sites joining
+      the commits: the config catalog `metrics` branch (additive, GH-300
+      precedent), the config key pin in tests/behaviour/config-schema.test.ts,
+      and the state-tier file pin in event-additivity-inventory; recorded under
+      Appendix D D-14."
+    type: info
+    date: "2026-11-17"
+  - text: "Plan phase 4 complete (the metrics report command grammar, the edge
+      composition from injected seams, the production composition, the fixture
+      harness, and the baseline/kind/caveat/comparison suites). Commit recorded
+      in the phase-5 note. Verification: metrics-grammar 12/12, metrics-envelope
+      9/9, metrics-baseline 12/12, metrics-baseline-damage 8/8,
+      metrics-write-discipline 4/4, metrics-cycle-time 6/6,
+      metrics-ceremony-share 4/4, metrics-ci-proxy 5/5, metrics-caveat 5/5,
+      metrics-comparisons 12/12; typecheck, lint, format, exports-parity green;
+      TMPDIR=$PWD/tmp/tmpdir pnpm check 9931 pass / 4 pre-existing skip / 2
+      fail, where the two failures are the known load-sensitive delivered suites
+      (daemon-foreground-stop-latency and prior-identity-notice's 5s per-test
+      timeout); both pass in isolation on this tree (1/1 and 14/14), so the
+      boundary is recorded as green-modulo-environment-flake and re-proven at
+      the phase-9 battery. Discovered delivered pins moved in this commit: the
+      human-text renderer inventory (cli-edge-seam) and the ceremony
+      nonregression excluded-surface pin (metrics now exists); recorded under
+      Appendix D D-14. TC-METRICS-004's help-control step is deferred to the
+      phase-7 mount (the help entry does not exist before the mount; TC-081
+      proves it there)."
+    type: info
+    date: "2026-11-17"
+  - text: "Plan phase 5 complete (dispatch parity, burn-rate alarms, the classified
+      threshold states, the full-report capstone, and the four TC-pinned
+      goldens). Commit 9eb96b7f. Verification: metrics-report 9/9,
+      metrics-dispatch 6/6, metrics-alarms 18/18, metrics-burn-rate-config
+      18/18, metrics-write-discipline 5/5, tests/golden/metrics.test.ts 6/6;
+      typecheck, lint, format green; TMPDIR=$PWD/tmp/tmpdir pnpm check 9989 pass
+      / 4 pre-existing skip / 2 fail, both load-sensitive delivered suites
+      (dispatch-attempts limit grammar and byte budget) that pass in isolation
+      (26/26 in 2.28s) — recorded as green-modulo-environment-flake and
+      re-proven in the phase-9 battery. Scenario seeds: SC-M2-S6-01 proven by
+      metrics-dispatch (deep equality with spend, breakdown sums, perAgent
+      equality on the fully attributable fixture); SC-M2-S6-02 proven by
+      metrics-alarms (exactly one alarm, threshold echoed, byte-identical
+      repeat)."
+    type: info
+    date: "2026-11-17"
+  - text: "Plan phase 6 complete (escaped-defects curation, the cross-section
+      absence/damage matrix, row-absent completion of TC-METRICS-013, and the
+      incidents display cap). Commit recorded in the phase-7 note. Verification:
+      metrics-escaped-defects 9/9, metrics-absence 8/8, metrics-store-damage
+      9/9, metrics-baseline-damage 9/9, metrics-bounds 2/2; typecheck, lint,
+      format green; TMPDIR=$PWD/tmp/tmpdir pnpm check 10018 pass / 4
+      pre-existing skip / 2 fail — the same two load-sensitive
+      dispatch-attempts-ref suites (8-10s under full-suite load, 26/26 in 2.28s
+      in isolation), recorded as green-modulo-environment-flake. Contract
+      refinement inside the phase: a curated evidence row now carries the
+      adapter's citation outcome (`resolved`/`unresolved`) so an unresolvable
+      citation is excluded and disclosed instead of being dropped by the
+      scanner; the fold still enforces anchor, path, window, and attribution."
+    type: info
+    date: "2026-11-17"
+  - text: "Plan phase 7 complete (metrics mounted as the 24th prompt-required
+      family: prompt-set entry, root/family help, M2 reference page, coverage
+      row, and the atomic 23 -> 24 count move). Commit 0cdaec94 — shared with
+      phase 8 because the phase-7 boundary commit was folded into the phase-8
+      commit after the phase-7 gate turned green (recorded process deviation:
+      phases 7 and 8 share one commit; the work and both gates are complete).
+      Verification: metrics-mounting 8/8, metrics-help 4/4, entrypoint-bin,
+      steer-mounting, board/events/dispatch/daemon mounting, the four behaviour
+      help suites, entrypoint-composition/two-bins/help-coverage,
+      help-guide-coverage and reference-page-parity, event-mount guards,
+      forbidden-literals and the doc-distribution guard all green;
+      TMPDIR=$PWD/tmp/tmpdir pnpm check green (10032 pass, 4 pre-existing skip,
+      0 fail). Discovered pins moved in the same commit: the alias baseline
+      help/version cells (deliberate regeneration), the entrypoint
+      composition/help-coverage family lists, the events mount-mutant inline
+      list, and the events-family positional pin; recorded under Appendix D
+      D-14."
+    type: info
+    date: "2026-11-17"
+  - text: "Plan phase 8 complete (the cross-cutting honesty battery:
+      determinism/permutation, machine and human bounds with counted drops, the
+      never-dropped set, purity and brand neutrality, the counted read budget
+      with a printed latency reference, the hermeticity scan, and eleven mutant
+      families over temp copies of the pure domain with an unmutated control).
+      Commit 0cdaec94 (shared with phase 7). Verification: metrics-determinism
+      10/10, metrics-bounds 13/13, metrics-purity 6/6, metrics-read-cost 3/3,
+      metrics-mutants 11/11, metrics-hermetic 5/5, tests/golden/metrics.test.ts
+      6/6; TMPDIR=$PWD/tmp/tmpdir pnpm check green at 10078 pass / 4
+      pre-existing skip / 0 fail. Notes: the read-budget cell records
+      50/250-record references rather than the plan's 1k/10k (the delivered
+      append path verifies each record, making 10k seeding O(n^2) and
+      impractical inside a suite); `boundMetricsReport` is exported as the pure
+      bounding stage so the cap/drop-order cells test it directly."
+    type: info
+    date: "2026-11-17"
+  - text: "Plan phase 8 complete; commit 0cdaec94 (see the phase-8 note above)."
+    type: info
+    date: "2026-11-17"
+  - text: "Plan phase 9 complete (planning-corpus reconciliation, the release
+      changeset already staged at phase 2 and verified here, and the final
+      battery at the delivered HEAD). Commit recorded in the delivery-phase
+      completion. Verification: `plan validate GH-299` verdict=valid;
+      TMPDIR=$PWD/tmp/tmpdir pnpm check EXIT 0 with 10078 pass / 4 pre-existing
+      skip / 0 fail (10082 tests, 1262 files); git diff --check clean; `bash
+      scripts/.tests/test-doc-distribution.sh` no drift (95 in-scope docs); `bun
+      run scripts/checks/changesets-group.ts` exactly one fixed group of five;
+      `./scripts/lint-commit-range.sh --base origin/main-tools` VERDICT PASS (13
+      commits, 0 offending). The planning corpus records the M2-S6 delivery in
+      backlog.md, status.md, cli-command-registry.md, and the M2 README
+      story-to-artifact map."
+    type: info
+    date: "2026-11-17"
+  - text: "Code review iteration 1: FAIL (code-review/review-iter-1.yaml), 12
+      findings (1 critical / 1 high / 4 medium / 4 low / 2 info). Critical F-1:
+      the baseline adapter demands {reason,count} exclusions while the real
+      committed measurement-baseline log carries {ref,reason} per-change rows —
+      empirically verified: every metrics invocation on the delivering tree
+      refuses metrics.baseline-unreadable at exit 2 (fixture synthesized the
+      wrong shape, so all 58 TCs stayed green). High F-2: burn-rate measured
+      spend reimplements the spend ingest with a global steps-preference,
+      diverging from the delivered fold's per-session plane selection —
+      closeout-only sessions dropped when any stream step exists, undercounting
+      spend. Mediums F-3 (metrics_corpus opt-in block authored by no committed
+      document — CI proxy and escaped defects honestly UNAVAILABLE on the real
+      tree), F-4 (stale 146/62 pins in feature-ceremony-runner.md outside the
+      no-leftover scan list), F-5 (phase 4/6/9 pm-notes evidence entries lack
+      commit hashes), F-6 (NFR-7 latency measured at 50/250 not 1k/10k).
+      Remediation plan phase 10 appended (tasks 10.1-10.9, plan validate
+      verdict=valid). Reopening delivery-adjacent remediation via the plan."
+    type: info
+    date: "2026-11-17"
+  - text: "Retro: the fixture-only battery produced a dead-on-delivery feature — the
+      GH-170 lesson class. Root causes worth encoding for future stories: (1)
+      every read-side story whose input is a committed repo artifact (the
+      measurement baseline log, pm-notes corpora) must include at least one test
+      reading the REAL committed file from the tree, not a synthesized fixture;
+      (2) adapters composing derived numbers must reuse the delivered fold's
+      record-selection function rather than re-implementing ingest preferences.
+      Both are now remediation tasks 10.1/10.2 and 10.3."
+    type: retro
+    date: "2026-11-17"
+  - text: "Evidence correction (review iteration 1 finding F-5): the phase 4, 6, and
+      9 notes deferred their commit hashes to later notes. Self-contained
+      records, with the test results already reported for each phase: (phase 4)
+      commit 138b802a — metrics-grammar 12/12, metrics-envelope 9/9,
+      metrics-baseline 12/12, metrics-baseline-damage 8/8,
+      metrics-write-discipline 4/4, metrics-cycle-time 6/6,
+      metrics-ceremony-share 4/4, metrics-ci-proxy 5/5, metrics-caveat 5/5,
+      metrics-comparisons 12/12; TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 except
+      the two known load-sensitive delivered suites (9931 pass / 4 pre-existing
+      skip / 2 fail), both re-proven green in isolation and at the phase-9
+      battery. (phase 6) commit 9903955c — metrics-escaped-defects 9/9,
+      metrics-absence 8/8, metrics-store-damage 9/9, metrics-baseline-damage
+      9/9, metrics-bounds 2/2; TMPDIR=$PWD/tmp/tmpdir pnpm check 10018 pass / 4
+      pre-existing skip / 2 fail, the same two load-sensitive suites, re-proven
+      green in isolation and at the phase-9 battery. (phase 9) commit 3303d399 —
+      plan validate GH-299 verdict=valid; TMPDIR=$PWD/tmp/tmpdir pnpm check EXIT
+      0 with 10078 pass / 4 pre-existing skip / 0 fail; doc-distribution guard
+      no drift; changesets group exactly one fixed group of five;
+      ./scripts/lint-commit-range.sh --base origin/main-tools VERDICT PASS."
+    type: info
+    date: "2026-11-17"
+  - text: "Plan phase 10 complete (code review remediation iteration 1, findings
+      F-1..F-10). Commit 1e5a0af8. F-1: real {ref, reason} baseline parse plus
+      real-tree committed-log tests, with the adapter classification present and
+      the report exiting 0. F-2: shared preferStreamBySession plane selection
+      (union of steps and records, windowed after; sessionId plumbed through
+      contracts and the CLI edge; mixed-plane equality test). F-3: the
+      metrics_corpus authoring convention is documented in the M2 reference page
+      and doc/spec/features/feature-metrics.md per plan task 10.3 (documentation
+      minimum; entries stay honestly UNAVAILABLE, never 0). F-4: ceremony-runner
+      pins move 146/62 to 147/63, APPENDIX_D_FILES extended. F-5: phase 4/6/9
+      commit-hash evidence correction (138b802a/9903955c/3303d399). F-6: latency
+      reference measured at the declared 1k/10k points (fold-only, printed, not
+      asserted). F-7: three new mutants — zero-fill CI, zero-fill absent
+      telemetry, reversed drop order. F-8: process note, no task. F-9: human
+      fallback truncation bounded and actually-dropped sections named. F-10:
+      interior `..` rejection in both committed-path predicates plus a
+      traversal-probe cell. Gate fix: the new shared spend export is declared in
+      the content-inventory executable allowlist
+      (tests/structure/content-inventory.test.ts)."
+    type: info
+    date: "2026-11-17"
+  - text: "Plan phase 10 verification: TMPDIR=$PWD/tmp/tmpdir bun test
+      tests/structure/content-inventory.test.ts — 12 pass / 0 fail.
+      TMPDIR=$PWD/tmp/tmpdir pnpm check — exit 0, 10088 pass / 4 pre-existing
+      skip / 0 fail across 1262 files, all package typechecks clean, and
+      boundaries, ambient-globals, exports-parity, memory-lint,
+      prompt-conformance, and help-guide coverage green. Targeted suites: 33
+      pass (metrics-alarms + metrics-baseline), 29 pass (metrics-bounds +
+      metrics-escaped-defects + metrics-read-cost), 134 pass (error-table +
+      metrics-imports), all 0 fail. error-table sync entries=147 documented=147.
+      git diff --check clean. plan validate GH-299 verdict=valid."
+    type: info
+    date: "2026-11-17"
+  - text: "Code review iteration 2: FAIL (code-review/review-iter-2.yaml) but
+      degraded to 0 critical / 0 high / 1 medium / 3 low / 3 info. All nine
+      remediable iteration-1 findings verified closed (F-1 real baseline shape +
+      real-tree tests, F-2 shared plane selection, F-3 corpus documentation
+      minimum, F-4 pins, F-5 evidence, F-6 latency basis, F-7 mutants, F-9
+      fallback bounds, F-10 traversal). New medium F-1: the doc-syncer
+      post-remediation correction (feature-metrics.md:140) and the adapter
+      comment overstate semantics — they claim the metric entry carries the
+      committed log's per-reason exclusion totals, but the fold renders its own
+      evaluated basis (CI entry renders no excluded block where the log lists
+      19; cycle renders 1 where the log lists 3). Lows: phase-10 declared scope
+      omits 8 changed paths (observational, non-blocking); debug console.log in
+      metrics-mutants.test.ts:44-47; legacy {reason,count} tolerance untested.
+      Remediation plan phase 11 appended (tasks 11.1-11.4), plan validate valid.
+      Environment: state.store.torn confirmed pre-existing and out of scope
+      (telemetry.ts:709-711 treats another ref's step key as damage;
+      telemetry.ts untouched by GH-299; the untouched spend command fails
+      identically)."
+    type: info
+    date: "2026-11-17"
+  - text: "Retro: the doc-syncer's post-remediation pass introduced a current-truth
+      inaccuracy (claiming conservation of the log's exclusion totals the code
+      never implemented) while correcting others — doc reconciliation must
+      re-verify each claim against the executing code path, not against the
+      remediation summary. Cost: one extra review iteration (iteration 2 -> 3,
+      the last before the iteration cap)."
+    type: retro
+    date: "2026-11-17"
+  - text: "Code review iteration 3: PASS (code-review/review-iter-3.yaml;
+      spec_compliance PASS, plan_compliance PASS, next_step PROCEED). All
+      iteration-2 findings closed and independently re-verified (F-1 spec truth
+      vs delivered basis-scoped exclusions, probed on the real log; F-2 phase-10
+      scope 8/8; F-3 debug log removed; F-4 legacy {reason,count} tolerance
+      tested). Full pass: 22/22 ACs evidenced (264 metrics tests green),
+      DEC-1..DEC-14 postures match, SC-M2-S6-01/02 proven, error-table two-way
+      sync 147/147 with 147/146/63/+113 pins, 24th-family mount green,
+      bounds/absence/purity/determinism green. Gates this iteration:
+      TMPDIR=$PWD/tmp/tmpdir pnpm check EXIT 0 (10091 pass / 4 pre-existing skip
+      / 0 fail, 10095 tests / 1262 files); ./scripts/lint-commit-range.sh --base
+      origin/main-tools VERDICT PASS, mode range, merge-base 5f25da89, head
+      80477ce3, 22 commits, 0 offending, 0 rules hit. Three non-blocking lows
+      recorded (data-cap last-resort edge for over-long never-droppable strings;
+      test-plan wording resync — fixed in-place as test plan v1.2 in this same
+      commit; phases 1-9 observational scope drift per plan schema). No further
+      remediation phase required. Review loop closed at iteration 3 of 3."
+    type: info
+    date: "2026-11-17"
+  - text: "Plan phase 11 complete (code review remediation iteration 2, findings
+      F-1..F-4). Commit 80477ce3. F-1: the current-truth correction states the
+      delivered semantics — doc/spec/features/feature-metrics.md:140 and the
+      packages/adapters/src/file/metrics-baseline.ts:44-52 comment now state
+      that the committed log listing is parsed, validated, and left
+      byte-identical while each entry's excluded[] reports its own evaluated
+      basis's exclusions (per ref, per window) over the log's closed reason
+      vocabulary, never the log's aggregate totals; the same wording was aligned
+      in doc/spec/features/feature-measurement-baseline.md (consumer paragraph)
+      and in the metrics-baseline suite header; runtime behaviour is unchanged.
+      The overstating conservation cell was split into a parsed-document cell
+      (the adapter's per-reason counts) and an entry-basis cell (a 19-row listed
+      log still renders the basis's 1 no_ci_observation + 1 outside_window).
+      F-2: phase 10's declared scope gains the eight delivered paths
+      (packages/core/src/domain/spend.ts,
+      packages/core/src/contracts/metrics.ts, packages/cli/src/edge.ts,
+      tests/structure/metrics-imports.test.ts,
+      tests/structure/content-inventory.test.ts,
+      tests/behaviour/metrics-escaped-defects.test.ts,
+      doc/spec/features/feature-measurement-baseline.md,
+      doc/spec/nonfunctional.md), and phase 11's own scope gains
+      doc/spec/features/feature-measurement-baseline.md. F-3: the debug
+      console.log MUTANT REGION block is removed from
+      tests/checks/metrics-mutants.test.ts. F-4: tests/fixtures/metrics/
+      baseline.ts gains a legacyCounters reason/count row shape and the suite
+      pins the tolerance — the adapter preserves count 7 and drops the zero
+      count, and a report over that document stays basis-scoped at exit 0. plan
+      validate GH-299 verdict=valid."
+    type: info
+    date: "2026-11-17"
+  - text: "Plan phase 11 verification: pnpm typecheck — clean across the workspace
+      and the tests type project. TMPDIR=$PWD/tmp/tmpdir bun test
+      tests/behaviour/metrics-baseline.test.ts
+      tests/checks/metrics-mutants.test.ts — 31 pass / 0 fail.
+      TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/error-table.test.ts
+      tests/structure/content-inventory.test.ts — 138 pass / 0 fail. bun run
+      scripts/checks/error-table-sync.ts — entries=147 documented=147,
+      source/documented/fixtures agree. git diff --check — clean.
+      TMPDIR=$PWD/tmp/tmpdir pnpm check — exit 0, 10091 pass / 4 pre-existing
+      skip / 0 fail across 1262 files; boundaries, ambient-globals,
+      workspace-entrypoints, secret-read-boundary, memory-lint, exports-parity,
+      prompt-conformance, and help-guide coverage green. pnpm exec delivery-os
+      plan validate GH-299 — verdict=valid."
+    type: info
+    date: "2026-11-17"
+  - text: "Quality gates PASS. (1) Aggregate: TMPDIR=$PWD/tmp/tmpdir pnpm check EXIT
+      0 at HEAD 38a4942c — 10091 pass / 4 pre-existing skip / 0 fail across
+      10095 tests in 1262 files; lint 0 errors (98 pre-existing advisory
+      warnings, none in metrics files), format clean, typecheck all six
+      workspace projects, boundaries 449 modules / 0 violations,
+      ambient-globals, workspace-entrypoints, secret-read-boundary, memory-lint
+      (3 records, 8 areas, 0 errors), prompt-conformance (5 prompts clean),
+      help-guide coverage, exports-parity (5 publishables) all green. (2)
+      Branch-range commit-message gate: ./scripts/lint-commit-range.sh --base
+      main-tools VERDICT PASS, mode range, merge-base 5f25da89, head 38a4942c,
+      23 commits in range, 0 offending commits, 0 rules hit, commitlint binary
+      node_modules/.bin/commitlint (origin repository-local, ref
+      refs/remotes/origin/main-tools). No remediation mode selected (none
+      needed)."
+    type: info
+    date: "2026-11-17"
+  - text: "PR created:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/331 — base
+      main-tools, head feat/GH-299/metrics-spend @ 4385a35c (branch pushed;
+      explicit refspec used because the local upstream was wrongly set to
+      origin/main-tools). PR left open; merge authority is the CEO (Mode A) or a
+      human via batch-deliver.sh (Mode B)."
+    type: info
+    date: "2026-11-17"

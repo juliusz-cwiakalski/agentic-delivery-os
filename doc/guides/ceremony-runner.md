@@ -9,7 +9,7 @@ created: 2026-11-16
 owners: ["engineering"]
 summary: "Operator guide to the ceremony runner: the four verbs, the declaration document and its closed vocabularies, a worked project declaration, notes and windows, dry-run and --apply, catch-up, the tier mapping, artifact homes, and the measurement record."
 links:
-  related_changes: ["GH-296", "GH-287"]
+  related_changes: ["GH-296", "GH-287", "GH-299"]
 ---
 
 # Ceremony Runner Guide
@@ -272,7 +272,7 @@ Ceremony time is a fold over durable records, not a self-report:
 - run duration is the span from the first step start to the last step end;
 - per-ceremony run count, mean, and nearest-rank p90 are derived from the same records.
 
-The committed metric `MET-CEREMONY-SHARE` — ceremony-phase time over total lifecycle phase time, lower is better — remains the comparable measurement, and the runner's figures are a **native second basis**, disclosed as such and never substituted for the proxy. One `delivery.ceremony.comparison.v1` record is committed per delivery in the measurement log's `comparisons[]` list: the committed metric identity and definition reference, the `before` value with its window, sample size, status, and basis, the `after` value with its samples and sample size, `sampleMinimum: 5`, a closed verdict, the native basis, and a disclosure naming the sample and basis difference. Below five post-boundary changes the verdict is `insufficient-sample` and no trend is claimed. There is no CLI verb in this family that computes or prints a metric; the `metrics` surface is a separate one.
+The committed metric `MET-CEREMONY-SHARE` — ceremony-phase time over total lifecycle phase time, lower is better — remains the comparable measurement, and the runner's figures are a **native second basis**, disclosed as such and never substituted for the proxy. One `delivery.ceremony.comparison.v1` record is committed per delivery in the measurement log's `comparisons[]` list: the committed metric identity and definition reference, the `before` value with its window, sample size, status, and basis, the `after` value with its samples and sample size, `sampleMinimum: 5`, a closed verdict, the native basis, and a disclosure naming the sample and basis difference. Below five post-boundary changes the verdict is `insufficient-sample` and no trend is claimed. The ceremony family has no verb that computes or prints a metric: the `metrics` report is a separate read-only family that reads these records and the committed comparison as data, reports ceremony share on its native runner-fold basis, and applies the caveat on any cross-kind comparison.
 
 ## Troubleshooting
 

@@ -1078,8 +1078,8 @@ const baselineViolations = (live: readonly ErrorTableEntry[]): string[] => {
       failures.push(`${expected[0]}: pre-existing row changed`);
     }
   }
-  if (live.length !== BASELINE_ROWS.length + 114) {
-    failures.push(`table length ${live.length} != baseline + 114 (${BASELINE_ROWS.length + 114})`);
+  if (live.length !== BASELINE_ROWS.length + 115) {
+    failures.push(`table length ${live.length} != baseline + 115 (${BASELINE_ROWS.length + 115})`);
   }
   return failures;
 };
@@ -1159,7 +1159,7 @@ describe("TC-VERIFY-019 verify row syncs in both directions and leaves the basel
     const root = makeTempRoot();
     expect((await runSyncCheck({ root })).failures).toEqual([]);
     expect((await runSyncCheck({ root: ROOT })).counts.sourceEntries).toBe(
-      BASELINE_ROWS.length + 114,
+      BASELINE_ROWS.length + 115,
     );
   });
 
@@ -1182,7 +1182,7 @@ describe("TC-DB-004 db rows synchronize in both directions", () => {
   test("the delivered state is green with the four db rows and non-zero counts", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 114);
+    expect(result.counts.sourceEntries).toBe(BASELINE_ROWS.length + 115);
     expect(result.counts.documentedRows).toBe(result.counts.sourceEntries);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     const doc = readFile(ROOT, DOC);
@@ -1773,10 +1773,11 @@ describe("TC-BLK-007 blockers family mutations fail by name", () => {
 
 /**
  * TC-COORD-082 (GH-241): the six coordinator rows bind two-way against the
- * documented table, the total is 148 (GH-292 added the two queue lifecycle
+ * documented table, the total is 149 (GH-292 added the two queue lifecycle
  * identities, GH-309 the three group-surface identities, GH-309 the moved
  * three repos flat identities, GH-287 the three action-registry identities,
- * and GH-298 the three steer identities), and the corpora
+ * GH-298 the three steer identities, GH-299 the one metrics identity, and
+ * GH-295 the two supervise identities), and the corpora
  * are non-vacuous.
  */
 describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
@@ -1789,11 +1790,11 @@ describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
     "coordinator.wake.delivery-failed",
   ] as const;
 
-  test("the live tree is green at 148 entries and 148 documented rows", async () => {
+  test("the live tree is green at 149 entries and 149 documented rows", async () => {
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(148);
-    expect(result.counts.documentedRows).toBe(148);
+    expect(result.counts.sourceEntries).toBe(149);
+    expect(result.counts.documentedRows).toBe(149);
     expect(result.counts.recognizedS1).toBeGreaterThan(0);
     expect(result.counts.recognizedS3).toBeGreaterThan(0);
     expect(result.counts.corpusRows).toBeGreaterThan(0);
@@ -1804,7 +1805,7 @@ describe("TC-COORD-082 the six coordinator rows bind two-way", () => {
     for (const code of COORDINATOR_CODES) {
       expect(doc.split(`| ${code} |`).length - 1, code).toBe(1);
     }
-    expect(doc).toContain("148 identities");
+    expect(doc).toContain("149 identities");
   });
 
   test("removing a documented coordinator row fails naming the code", async () => {
