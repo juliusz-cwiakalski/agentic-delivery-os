@@ -8,31 +8,40 @@
 # test result).
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:     ./chg-GH-338-spec.md (v1.1: F-1..F-8; 40 ACs AC-F1-1..AC-F8-6;
+#   - Spec:     ./chg-GH-338-spec.md (v1.2: F-1..F-8; 40 ACs AC-F1-1..AC-F8-6;
 #               API-1..API-7; DM-1..DM-10; NFR-1..NFR-11; NG-1..NG-8;
 #               DEC-1..DEC-6; RSK-1..RSK-11; §6 flows 1–7; §7.1 in-scope list;
 #               §8.4.1 normative Tables A–E; §18 sequencing; §21 security
 #               highlights; §24.1 Appendix A doc impacts; §24.3 Appendix C
 #               deliberate non-decisions binding on this plan; §24.4 Appendix D
-#               fixture-decided provider details). v1.1 carries the shapes this
+#               fixture-decided provider details). v1.2 carries the shapes this
 #               plan's phases own: DM-9 (adapter-local delivery-request
-#               create/update input), DM-10 (`GithubTransportSelection`, the one
-#               composition-scoped selection value), the mechanism-scoped label
-#               rule (only a `label-swap` row touches labels; a `field-update`
-#               row writes provider state only), the one-refusal-class /
-#               four-outcome read resolution (exact-case precedence, a
-#               `label-swap`-token case collision refuses, unknown labels and a
-#               labelless issue resolve natively), the non-terminal
-#               `field-update` write refusal, and the writable set (`done` plus
-#               each `label-swap` alias).
-#   - Tests:    ./chg-GH-338-test-plan.md (v1.1: 81 TCs —
+#               create/update input), DM-10 (`GithubTransportSelection` — the
+#               resolver's return value consumed by the launcher, whose only
+#               observable surface is exactly one rendered diagnostic line, with
+#               no new readable surface on the composed program object, and an
+#               OPTIONAL composition fact whose absence means the delivered
+#               native-`fetch` transport with no probe and no DM-10 value), DM-6's
+#               seven-rule validator rejection set with its
+#               construction-time-once-on-the-resolved-map timing (a captured
+#               failure, never a throw), the mechanism-scoped label rule (only a
+#               `label-swap` row touches labels; a `field-update` row writes
+#               provider state only), the one-refusal-class / four-outcome read
+#               resolution (exact-case precedence, a `label-swap`-token case
+#               collision refuses, unknown labels and a labelless issue resolve
+#               natively), the terminal-read `label-swap` write refusal (a
+#               `done`-resolving issue refuses with zero provider requests
+#               regardless of its labels), the non-terminal `field-update` write
+#               refusal, and the writable set (`done` plus each `label-swap`
+#               alias).
+#   - Tests:    ./chg-GH-338-test-plan.md (v1.2: 81 TCs —
 #               TC-POSTURE-001..003, TC-CLI-001..013, TC-LAND-001..008,
 #               TC-CHECK-001..012, TC-THREAD-001..011, TC-BACKLOG-001..011,
 #               TC-REF-001..006, TC-PARITY-001..010, TC-FLOOR-001..007; 40/40
 #               AC coverage; §7.1 suite map; §7.2 fixtures to author; §7.4 gate
 #               commands G1..G10 with G10 binding; GAP-TP-1..7 and OQ-TP-1..5
 #               (TO-CONFIRM details are fixture-decided, never test-decided).
-#               v1.1 binds this plan's oracles: TC-POSTURE-001 is SET equality
+#               v1.2 binds this plan's oracles: TC-POSTURE-001 is SET equality
 #               both directions with declaration order explicitly outside the
 #               contract; TC-PARITY-003 is ONE `write-delivery-request` registry
 #               step plus both tenant routes and a direct client call for the
@@ -43,6 +52,23 @@
 #               sets extend `workflow-map-cases.json` (read-outcome truth table,
 #               writable-set round trips, non-terminal `field-update` refusal)
 #               and `issue-writes.json` (DM-9 variants, label-free `done` write)).
+#               Three further v1.2 bindings. (i) TC-BACKLOG-010
+#               takes its invalid-map set from TDR-0034 §1 — never the reverse —
+#               and asserts the construction-time/zero-request property: the
+#               resolved map is validated once at construction, the failure is
+#               captured rather than thrown, the first operation returns the
+#               named `provider.payload.invalid` refusal with zero provider
+#               requests and no new error-table row, and the seed is held to the
+#               same checks. (ii) TC-BACKLOG-004 and TC-BACKLOG-006 carry the
+#               terminal-read precondition: a `label-swap` write to an issue whose
+#               current read resolves to `done` refuses with zero provider
+#               requests regardless of labels, and the `labelless-issue` fixture
+#               is native `open` so its refusal is unambiguously the
+#               unavailable-signal one. (iii) TC-CLI-005's route table is SPLIT:
+#               phase 2 replays only members that exist there (the delivered
+#               reads, delivered thread resolution, the phase-1 landing member),
+#               and phase 3 extends the SAME table and suite with the comment and
+#               content-write routes.
 #   - PM record: ./chg-GH-338-pm-notes.yaml (the four accepted decision records
 #               DEC-1..DEC-4 = TDR-0031..TDR-0034; the current-state facts; the
 #               delivery conventions — gate commands carry
@@ -73,19 +99,30 @@
 #               documents).
 #
 # COMMIT-BOUNDARY REALITY (binding on phase 1):
-#   Four decision records are UNTRACKED in the worktree at plan time and one is
-#   tracked-and-MODIFIED (the ADR-0005 editorial pointer to TDR-0031, amended in
-#   the same branch state):
+#   Four decision records are UNTRACKED in the worktree at plan time. The
+#   ADR-0005 editorial pointer to TDR-0031 is ALREADY COMMITTED (`f2c2ad27`) and
+#   its file is clean in this branch state, so phase 1 declares nothing for it: a
+#   declared path that needs no edit would only produce an advisory `plan diff`
+#   `undeclared-missing` finding for a file no phase touches.
 #     doc/decisions/TDR-0031-github-adapter-cli-first-provider-transport.md   (untracked)
 #     doc/decisions/TDR-0032-github-adapter-completion-contract-extensions.md (untracked)
 #     doc/decisions/TDR-0033-review-thread-discussion-bodies-bounded-adapter-read.md (untracked)
 #     doc/decisions/TDR-0034-github-issues-transition-mapping-injected-workflow-map.md (untracked)
-#     doc/decisions/ADR-0005-runtime-confinement-provider-client-subpaths.md  (modified)
 #   The commit primitive stages only plan-declared scope plus the change
-#   folder, so phase 1 declares those five exact paths (and the doc/decisions
+#   folder, so phase 1 declares those four exact paths (and the doc/decisions
 #   folder) and they land on `phase complete delivery_planning`. Their
 #   doc/decisions/00-index.md rows already exist in the tracked index; the index
 #   is declared so any status/typo touch stages with them.
+#
+# SCOPE DECLARATION RULE (binding on every phase; resolves the R6/R8 class):
+#   A phase declares every path whose content it AUTHORS or EDITS — that is what
+#   gives the commit primitive staging authority. A case that only RE-RUNS a
+#   delivered file as a regression control (the TC-FLOOR-* suites, the delivered
+#   coverage and surface pins, the live-set check) does not put that file in the
+#   phase's scope, and declaring it would only produce an advisory `plan diff`
+#   `undeclared-missing` finding for a file that needs no edit. Every file the
+#   test plan names as an assertion site to CREATE or EXTEND is declared by the
+#   phase that owns that half of the case.
 #
 # ONE-PHASE COUPLING (the load-bearing plan decision; do not split at delivery):
 #   The ninth closed operation cannot be introduced in a smaller commit than
@@ -154,13 +191,30 @@
 #   TC-POSTURE-001's expected posture moves 7/2 in phase 1 and 9/0 in phase 3
 #   (the case completes there); TC-CLI-001's behaviour half is phase 2 and its
 #   reference-behavior cross-check half is phase 6
-#   (tests/structure/reference-behavior.test.ts);
-#   TC-PARITY-010's operation-union half and timings half both land in phase 1,
-#   the `provider-views` extension follows normalization in phase 4;
+#   (tests/structure/reference-behavior.test.ts, declared in phase 6);
+#   TC-PARITY-010's operation-union, timings and `provider-views` probe halves
+#   all land in phase 1 (tests/types/provider-views.type-test.ts is declared
+#   there; no phase-4 follow-up exists and none is claimed);
+#   TC-CLI-005's route table is split: phase 2 owns the members that exist after
+#   phase 1 (delivered reads, delivered thread resolution, the landing member) in
+#   tests/conformance/github-transport-parity.test.ts over
+#   transport-parity-routes.json, and phase 3 extends the SAME suite and the SAME
+#   fixture with the comment and content-write routes (both paths are declared in
+#   phases 2 and 3);
+#   TC-BACKLOG-009's config-surface scan is created in
+#   tests/structure/reference-behavior.test.ts during phase 3 (declared there),
+#   and phase 6 completes that file with the drift suite (declared there too);
+#   TC-PARITY-001's structural half (registry equals the closed set, the step
+#   pin) lands in phase 1 (tests/structure/conformance-coverage.test.ts) and its
+#   executed/gap coverage half in phase 3
+#   (tests/conformance/mock-conformance.test.ts, declared there);
 #   TC-PARITY-005 (every new behavior has a trap entry and fixture) completes in
-#   phase 7 over catalogs extended in phases 1, 2, 3, 4, and 5; TC-FLOOR-* cases
-#   run green as controls from their owning phase but are owned by phase 7
-#   because only the assembled change satisfies them.
+#   phase 7 over catalogs extended in phases 1, 2, 3, 4, and 5, and its assertion
+#   extension lands in tests/behaviour/providers/github-trap.test.ts over
+#   tests/fixtures/providers/traps/github.traps.json (both declared in phase 7);
+#   TC-FLOOR-* cases run green as controls from their owning phase but are owned
+#   by phase 7 because only the assembled change satisfies them — they re-run
+#   delivered files and therefore declare none (SCOPE DECLARATION RULE).
 #
 # AC OWNERSHIP (40/40; exactly one owning phase each; an earlier phase may
 #   produce a partial verdict, which is additive and never transfers ownership):
@@ -183,7 +237,7 @@
 #   pins the contracts and the test plan pins the behaviours):
 #   These refinements bind file homes, composition seams, and fixture homes.
 #   Refinement 2 is the ONE declared oracle resolution in this plan and it is
-#   the resolution test plan v1.1's TC-PARITY-003 itself now states, so plan and
+#   the resolution test plan v1.2's TC-PARITY-003 itself states, so plan and
 #   test plan agree instead of the plan claiming an unchanged oracle. No AC/NFR
 #   mapping, case identity, exit code, cap, or bound is changed by any item
 #   below.
@@ -195,19 +249,25 @@
 #          with an `execFile` default, the argv and child-environment builders,
 #          the `--include` status/body parser, the probe with its three closed
 #          refusal codes, `GITHUB_TRANSPORT_MATRIX`, the adapter-local DM-10
-#          `GithubTransportSelection` type, and the pure selection resolver;
+#          `GithubTransportSelection` type, and the PURE, synchronous selection
+#          resolver `resolveTransportSelection({ policy, probe })`;
 #        packages/adapters/src/github/workflow-map.ts   — the four-row
-#          precedence-ordered seed, the injected-map acceptance, the internal
-#          validator, the writable-set derivation (`done` plus each `label-swap`
-#          alias), and the one resolver used by read normalization AND the
-#          mechanism-scoped transition write (label rows only);
+#          precedence-ordered seed, the injected-map acceptance, the confined
+#          validator (`validateGithubWorkflowMap`, TDR-0034 §1's seven-rule
+#          rejection set, run once at construction on the resolved map and
+#          captured rather than thrown), the writable-set derivation (`done` plus
+#          each `label-swap` alias), and the one resolver used by read
+#          normalization AND the mechanism-scoped transition write (label rows
+#          only, including the terminal-read refusal);
 #        packages/adapters/src/github/log-excerpt.ts    — the bounded excerpt
 #          read, its closed shape, and the single fixed cap constant;
 #        packages/adapters/src/github/thread-discussion.ts — the bounded
 #          per-thread discussion read and its closed shape.
 #      The native-fetch transport factory becomes an additive export so
-#      composition can choose explicitly (TDR-0031 item 2); `createGitHubClient`
-#      and `GithubClientOptions` keep their delivered shape.
+#      composition can choose explicitly (TDR-0031 item 2). Contract evolution
+#      here is ADDITIVE (spec v1.2 §8.5): `GithubClientOptions` gains exactly one
+#      optional `workflowMap` member, every existing call site and option object
+#      keeps compiling, and no member is removed, retyped, or made required.
 #   2. WRITE-SIDE EXPECTED PROJECTIONS: the conformance write path gains an
 #      OPTIONAL declared-projection comparison — a write step whose tenant
 #      declares an `expected` entry returns a normalized value and is compared
@@ -218,7 +278,7 @@
 #      step): the registry step's dispatch member is the create variant, and the
 #      update path is proven over the same tenant routes by TC-BACKLOG-002 plus a
 #      direct client call in the conformance suite (the TC-CONF-008 pattern).
-#      This is the declared oracle change: TC-PARITY-003 v1.1 states it in those
+#      This is the declared oracle change: TC-PARITY-003 v1.2 states it in those
 #      words, so neither artifact denies it. No second `write-delivery-request`
 #      step is added — a second step would contradict TDR-0032's "append a
 #      `merge-delivery-request` step" and buy no coverage.
@@ -228,7 +288,10 @@
 #      therefore use one stateful scripted transport helper added to
 #      tests/behaviour/providers/support.ts in PHASE 1 — the phase that owns the
 #      first case needing it — and reused by phase 3; the tenant tier is never
-#      asked to become stateful.
+#      asked to become stateful. The same helper supplies the current-read
+#      precondition the terminal-read refusal needs (the issue's native state and
+#      labels before the write), so the refusal is asserted against a real read
+#      result rather than a hand-built view.
 #   4. REFERENCE-BEHAVIOR DELIVERY (mission constraint): the normative
 #      reference-behavior surface is authored in plan phase 6 together with the
 #      doc-to-declaration drift test, because AC-F7-1..5 bind at DoD and the
@@ -251,41 +314,71 @@
 #      at that one chokepoint with its paired positive (N8).
 #
 #   7. PROBE PLACEMENT AND SELECTION DELIVERY (the one bound mechanism; the
-#      synchronous composer never probes). `EntrypointComposer` is synchronous
-#      (packages/cli/src/entrypoint.ts) and is invoked synchronously, so the
-#      Promise-based probe cannot run inside it:
+#      composer never probes, and only the composition path probes at all).
+#      `EntrypointComposer` is synchronous (packages/cli/src/entrypoint.ts), so
+#      the Promise-based probe cannot run inside it; and `runEntrypoint` returns
+#      BEFORE it calls `composeProgram` for every self-description invocation
+#      (root `--version`, `--print-install-path`, root `--help`, and command
+#      `--help`). An await placed in the launcher body would therefore probe once
+#      per launcher invocation, including invocations that never compose — a
+#      violation of Table C's "at composition time only". The binding is:
 #        a. `packages/adapters/src/github/cli-transport.ts` exports
 #           `probeGithubCli(...)` (one bounded `gh --version`, DM-7 result), the
-#           transport factory, and the PURE resolver
-#           `resolveGithubTransportSelection({ policy, probe })` returning the
-#           DM-10 value `{ policy, selected, degradation? }` plus the transport
+#           transport factory, and the PURE, SYNCHRONOUS resolver
+#           `resolveTransportSelection({ policy, probe })` returning the DM-10
+#           value `{ policy, selected, degradation? }` plus the transport
 #           choice. `GithubTransportSelection` is an adapter-local type exported
 #           additively from `./github` — never a core contract type (the only
 #           core additions stay DM-1 and DM-2).
 #        b. `packages/cli/src/production.ts` exports the ASYNC composition
-#           resolver `resolveGithubTransportSelection(facts)`: `api-only`
+#           resolver `resolveCompositionTransportSelection(facts)`: `api-only`
 #           returns `{ policy: "api-only", selected: "api" }` with zero spawns;
 #           `prefer-cli` awaits one probe through the injected runner and
 #           returns `selected: "gh"` on success or `selected: "api"` with
-#           `degradation.code` equal to the refusal code.
-#        c. `packages/cli/src/bin-launcher.ts` — the delivered async launch site
-#           and the only async composition edge — AWAITS that resolver before
-#           calling `createProductionComposer(...)` and passes the resolved value
-#           as `ProductionCompositionFacts.githubTransportSelection`. That fact
-#           is how the value reaches the synchronous composer, which reads it and
-#           never probes.
-#        d. `createProductionComposer` stays synchronous and keeps its delivered
+#           `degradation.code` equal to the refusal code. The two resolvers have
+#           DISTINCT names on purpose: `resolveTransportSelection` is the pure
+#           adapter function, `resolveCompositionTransportSelection` is the async
+#           launcher-edge function, and no import alias is ever needed.
+#        c. `packages/cli/src/entrypoint.ts`'s composition call site accepts and
+#           awaits a promised program, so a program may be composed
+#           asynchronously at the ONE invocation boundary: `EntrypointComposer`'s
+#           return widens additively to `CommandProgram | Promise<CommandProgram>`
+#           (every delivered synchronous injector keeps compiling) and the call
+#           site awaits it after every self-description return. This is the seam
+#           that keeps the probe off the informational paths.
+#        d. `packages/cli/src/bin-launcher.ts` passes ONE async wrapper as
+#           `composeProgram`: it awaits
+#           `resolveCompositionTransportSelection(facts)`, then invokes the
+#           SYNCHRONOUS `createProductionComposer(...)` with the resolved value
+#           forwarded as `ProductionCompositionFacts.githubTransportSelection`.
+#           The wrapper runs only when the composition path invokes it, so the
+#           four self-description paths record ZERO probe spawns and zero provider
+#           requests; the single `createProductionComposer(` call site stays the
+#           launcher's, and the launcher gains no ambient read, no export, and no
+#           string literal. The assertion that pins this budget is TC-CLI-010 in
+#           tests/behaviour/providers/github-cli-transport.test.ts (phase-2
+#           scope): one probe spawn for a composing invocation, zero for each
+#           self-description path.
+#        e. `createProductionComposer` stays synchronous and keeps its delivered
 #           signature. A present selection picks the transport (CLI transport
 #           built with the injected runner, or the exported native-fetch
-#           factory); an ABSENT selection is the delivered offline default (the
-#           native-fetch transport, no probe, no diagnostic line), so every
-#           delivered composition test and every embedder stays probe-free.
-#        e. The degradation renders exactly ONE human diagnostic line pushed into
-#           the composer's existing `compositionNotices` list (the delivered
-#           warnings channel that reaches the serializer), exactly once per
-#           composed program; it is never persisted, never a telemetry/state
-#           record, never an error-table row, and never widened into a
-#           normalized view.
+#           factory); an ABSENT selection is the third, explicitly named state
+#           (spec v1.2 F-2/Table C/DM-10/§8.5): no probe runs, no DM-10 value
+#           exists, and the delivered native-`fetch` transport serves. The
+#           production launcher ALWAYS supplies the fact (pinned by the single
+#           `createProductionComposer(` call site), so the absent state exists for
+#           composition tests and hypothetical embedders only, and every delivered
+#           composition test stays probe-free with zero spawns.
+#        f. DM-10's observable surface is exactly (spec v1.2 F-2, Table C,
+#           AC-F2-2, §10): the value the composition resolver returns and the
+#           launcher consumes, PLUS exactly one rendered human diagnostic line
+#           naming the refusal code, ZERO persisted copies, and NO new readable
+#           surface on the composed program object. The value is never a field on
+#           `GithubClient`, `GithubClientOptions`, the composed program object, a
+#           normalized view, a state/telemetry record, or the conformance
+#           artifact; the line is pushed once into the composer's existing
+#           `compositionNotices` list (the delivered warnings channel that reaches
+#           the serializer), exactly once per composed program.
 #   8. CHILD ENVIRONMENT FROM INJECTED DATA (N9). The child environment is
 #      constructed entirely from injected records: the base record is the
 #      composition's injected `environment` (which supplies `PATH` — the CLI is
@@ -298,6 +391,27 @@
 #      suppressor. No secret enters argv, and no absolute binary path is
 #      injected (the `PATH`-based resolution is the bound option; a future
 #      absolute-path injection would be its own change).
+#   9. WORKFLOW-MAP VALIDATION AND THE TRANSITION REFUSALS (TDR-0034 §1 and
+#      §3.2, restated normatively in spec v1.2 DM-6/§8.4.1/AC-F6-3/AC-F6-4). The
+#      AUTHORITY is TDR-0034 §1 — never a test case's fixture list; the plan and
+#      the cases follow the record. The confined validator runs exactly once per
+#      client construction on the RESOLVED map (the injected map when supplied,
+#      otherwise the seed), before the first operation, never lazily and never per
+#      request; a failure is captured rather than thrown, and every subsequent
+#      operation returns the existing `provider.payload.invalid` refusal whose
+#      detail names the failed check and the offending row, with zero provider
+#      requests, no new error-table row, and no new configuration code. The seed
+#      is held to exactly the same checks as an injected map. Transition writes
+#      resolve against the issue's CURRENT READ and carry three distinct refusals,
+#      each with zero provider requests: (1) an undeclared alias; (2) a declared
+#      non-terminal `field-update` alias; (3) a `label-swap` alias on an issue
+#      whose current read resolves to `done` — terminal precedence would hide the
+#      added token regardless of the issue's labels, so the write is refused
+#      instead of attempted. Refusal (3) is distinct from the
+#      unavailable-label-signal refusal (an unobserved label container); a
+#      labelless fixture therefore exercises the signal refusal only when its
+#      native state is `open`, because a labelless `closed` issue resolves to
+#      `done` and refuses for the terminal reason.
 #
 # DoD MAPPING (spec §17 ACs -> this plan's owning phases) is exactly the AC
 #   ownership block. The change-level Definition of Done is: all 40 ACs met with
@@ -305,10 +419,10 @@
 #   `notes:` evidence (phase id, commit hash, gate result);
 #   `TMPDIR=$PWD/tmp/tmpdir pnpm check` green at the delivered HEAD;
 #   `plan validate GH-338` valid at the delivered HEAD; the four decision
-#   records AND the ADR-0005 editorial pointer file tracked; the pinned
-#   structural surfaces (including the exact child-process site set) exact and
-#   non-vacuous; PR against main-tools left open for human review (lifecycle
-#   phase 11).
+#   records tracked and the ADR-0005 editorial pointer already committed
+#   (`f2c2ad27`) and clean; the pinned structural surfaces (including the exact
+#   child-process site set) exact and non-vacuous; PR against main-tools left open
+#   for human review (lifecycle phase 11).
 #
 # CONSTRAINTS BINDING ON EVERY PHASE (spec §24.3, §21; do not reshape at
 #   delivery):
@@ -435,19 +549,34 @@
 #   - doc/decisions/00-index.md: confirm the TDR-0031..TDR-0034 rows and the
 #     ADR-0005 pointer state (Appendix A).
 #
-# INCONSISTENCIES: none blocking between spec v1.1 and test plan v1.1. The two
-#   v1.0 ambiguities this plan previously reported are now RESOLVED upstream, and
-#   this plan binds the resolved readings rather than a private interpretation:
-#   (a) TC-PARITY-003 v1.1 states the one-step resolution itself (one registry
+# INCONSISTENCIES: none blocking between spec v1.2, TDR-0034 (as amended) and
+#   test plan v1.2. The earlier ambiguities are RESOLVED upstream, and this plan
+#   binds the resolved readings rather than a private interpretation:
+#   (a) TC-PARITY-003 v1.2 states the one-step resolution itself (one registry
 #       step whose dispatch member is the create variant, both tenant routes, the
 #       update proven by TC-BACKLOG-002 plus a direct client call) and declares
 #       that this IS the oracle change. The plan matches it (refinement 2) and no
 #       longer claims an unchanged oracle.
-#   (b) TC-POSTURE-001 v1.1 asserts SET equality both directions (supported
+#   (b) TC-POSTURE-001 v1.2 asserts SET equality both directions (supported
 #       union gaps equals the closed set, the two lists disjoint, no extras, no
 #       omissions) and states that declaration order is NOT part of the contract.
 #       The plan therefore keeps the delivered declaration order and APPENDS in
 #       phases 1 and 3; no reorder and no order assertion exists anywhere.
+#   (c) The probe's "composition time only" bound is literal here (refinement 7,
+#       phase 2): the entrypoint returns before `composeProgram` on every
+#       self-description path, the selection await sits on the composition path,
+#       and TC-CLI-010 pins the launcher's spawn budget (one probe for a composing
+#       invocation, zero for `--version`/`--help`/`--print-install-path`/command
+#       help). No phase claims "one probe per launcher invocation".
+#   (d) The map validator's rejection set and timing are TDR-0034 §1's, restated
+#       by spec v1.2 DM-6/AC-F6-3; the plan and TC-BACKLOG-010 follow the record.
+#       The `done`-row rule and the `done`-row-shape rule are contract, not
+#       fixture taste.
+#   (e) The two selection resolvers have distinct names (adapter
+#       `resolveTransportSelection`, pure and synchronous; launcher edge
+#       `resolveCompositionTransportSelection`, async), and the ADR-0005 pointer
+#       is already committed (`f2c2ad27`) and clean, so phase 1 declares four
+#       decision-record paths only.
 
 schemaVersion: delivery.plan.v1
 workItemRef: GH-338
@@ -459,13 +588,14 @@ tier:
     - "A phase leaves the capability posture between 7/2 and 9/0, or a fourth gap reason appears (AC-F1-1, AC-F1-3)"
     - "A write is re-issued on the second transport, a landing is retried, or already-merged is called success without a provider-asserted read-back (AC-F3-4, AC-F3-5, NFR-5)"
     - "Credential material reaches argv, stdout, stderr, diagnostics, a failure detail, or the secret-read allowlist grows beyond one credential-material entry (AC-F2-3, NFR-3)"
-    - "The CLI probe runs at module load, per request, or in the mock tier, or a fourth probe refusal code appears (AC-F2-2, DM-7)"
-    - "The composed selection value is persisted, emitted more than once, rendered outside the single composition-notice line, or resolved inside the synchronous composer (AC-F2-2, DM-10)"
+    - "The CLI probe runs at module load, per request, in the mock tier, or on a self-description path that never composes (`--version`, `--print-install-path`, root or command `--help`), or a fourth probe refusal code appears (AC-F2-2, DM-7)"
+    - "The composed selection value is persisted, emitted more than once, rendered outside the single composition-notice line, added as a field on the client, the composed program object, or a normalized view, resolved inside the composer, or produced for an absent composition fact (AC-F2-2, DM-10)"
     - "A live network call or a live child process occurs in the mock tier, or the child-process guard is absent or disarmed (AC-F8-3, NFR-2)"
     - "The child environment is built from an ambient read instead of the injected environment record, or the CLI is resolved without `PATH` from injected data (AC-F2-3, NFR-3)"
     - "An excerpt exceeds 8192 bytes, a thread exceeds 50 comments or 4096 bytes per body, evidence is persisted, or evidence enters the conformance artifact (AC-F4-4, AC-F5-6, NFR-6)"
     - "A thread body, a log excerpt, or other provider prose decides a lifecycle or closeout outcome (AC-F5-5, NFR-6)"
     - "The workflow map is split into a read map and a write map, a `label-swap` transition replaces the whole label array, an unavailable label signal is treated as empty, or a `field-update` transition reads or writes labels (AC-F6-3, AC-F6-4, DM-6)"
+    - "The map validator runs lazily or per request, throws instead of capturing its failure, exempts the seed from the injected map's checks, or a refusal issues a provider request; or a `label-swap` write to an issue whose current read resolves to `done` issues a provider request (AC-F6-3, AC-F6-4, DM-6, TDR-0034 §1)"
     - "A declared non-terminal `field-update` alias becomes writable, or a `write-delivery-request` create lands/sets merge state, an update creates, or a write missing required input issues a provider request (AC-F6-1, AC-F6-4, DM-9)"
     - "A configuration key, settings type, catalog branch, or file format is added for the transport policy or the mapping (AC-F6-6, NG-2)"
     - "The lifecycle merge transaction, the CLI merge composition, DeliveryThread, or DeliveryRequest is touched (NG-1, NG-4)"
@@ -500,7 +630,7 @@ phases:
   # Posture: GitHub 7 supported + 2 gaps; GitLab `adapter-not-implemented`;
   # Jira `provider-unsupported`; nothing else moves. The posture contract is SET
   # equality both directions (supported union gaps equals the closed set, the two
-  # lists disjoint, no extras, no omissions) — TC-POSTURE-001 v1.1 says so and
+  # lists disjoint, no extras, no omissions) — TC-POSTURE-001 v1.2 says so and
   # states that declaration order is NOT part of the contract. The plan therefore
   # KEEPS the delivered declaration order and APPENDS: the GitHub declaration
   # keeps its delivered six members and gains `merge-delivery-request` last, so
@@ -516,9 +646,10 @@ phases:
   # per invocation and never retried, and no representable force/bypass/
   # auto-merge/queue/rebase/merge-commit strategy. `write-delivery-request`
   # stays a content write and never lands.
-  # Decision records: the four TDRs (DEC-1..DEC-4) and the ADR-0005 editorial
-  # pointer file land here from the worktree (see COMMIT-BOUNDARY REALITY)
-  # together with the decision index.
+  # Decision records: the four TDRs (DEC-1..DEC-4) land here from the worktree
+  # (see COMMIT-BOUNDARY REALITY) together with the decision index; the
+  # ADR-0005 editorial pointer is already committed (`f2c2ad27`) and clean, so
+  # this phase declares nothing for it.
   #
   # Obligations:
   #   1.1 Declare the ninth operation and the landing argument/outcome types;
@@ -550,12 +681,14 @@ phases:
   #   1.7 Move tests/fixtures/ports/capabilities.ts and
   #       tests/fixtures/ports/v1-contract-inventory.json; keep the nine
   #       catalogue primitives unchanged.
-  #   1.8 Stage the four decision records, the ADR-0005 editorial pointer file
-  #       (tracked and modified in this branch state), and the decision index.
+  #   1.8 Stage the four decision records and the decision index. The ADR-0005
+  #       editorial pointer needs no staging: it is already committed
+  #       (`f2c2ad27`) and clean.
   #   1.9 Add the ONE stateful scripted transport helper to
   #       tests/behaviour/providers/support.ts (refinement 3) because
   #       TC-LAND-004/005 own the first read-after-write cases; phase 3 reuses it
-  #       for TC-BACKLOG-004/010. The mock tenant stays stateless.
+  #       for TC-BACKLOG-004/010 and for the terminal-read precondition. The mock
+  #       tenant stays stateless.
   #
   # Acceptance: AC-F1-2 (TC-POSTURE-002), AC-F1-3 (TC-POSTURE-003), AC-F3-1
   #   (TC-LAND-001), AC-F3-2 (TC-LAND-002), AC-F3-3 (TC-LAND-003), AC-F3-4
@@ -564,7 +697,9 @@ phases:
   #   GitLab/Jira), TC-PARITY-008 (the broken-adapter control still fires and the
   #   coverage gates stay non-vacuous for the ninth operation), TC-PARITY-010
   #   (the union grew and an exhaustive consumer fails to compile; optional
-  #   timings leave existing literals compiling). TC-POSTURE-001's fixture rows
+  #   timings leave existing literals compiling; the read views still resolve to
+  #   primitive views in tests/types/provider-views.type-test.ts). TC-POSTURE-001's
+  #   fixture rows
   #   move here (7/2) but the case completes in phase 3 at 9/0.
   #
   # Gate (expected signal: exit 0 at every line; the pinned surfaces agree in
@@ -617,19 +752,23 @@ phases:
         - tests/structure/trap-catalog.test.ts
         - tests/types/merge-delivery-request.type-test.ts
         - tests/types/pipeline-job-timings.type-test.ts
+        # TC-PARITY-010's third probe half: the read views stay primitive views
+        # once the ninth operation and the optional job timestamps exist. Declared
+        # here because this phase owns the whole case; no later phase extends it.
+        - tests/types/provider-views.type-test.ts
         # The stateful scripted transport helper: TC-LAND-004/005 own the first
         # read-after-write cases in this phase (refinement 3, obligation 1.9);
         # phase 3 reuses it. The mock tenant is never made stateful.
         - tests/behaviour/providers/support.ts
-        # The four decision records are untracked at plan time and land here,
-        # together with the ADR-0005 editorial pointer file, which is tracked and
-        # modified in this branch state (COMMIT-BOUNDARY REALITY). The index
-        # already carries the four TDR rows.
+        # The four decision records are untracked at plan time and land here
+        # (COMMIT-BOUNDARY REALITY). The ADR-0005 editorial pointer is NOT
+        # declared: it is already committed (`f2c2ad27`) and clean, so declaring
+        # it would only produce an advisory `plan diff` finding. The index already
+        # carries the four TDR rows.
         - doc/decisions/TDR-0031-github-adapter-cli-first-provider-transport.md
         - doc/decisions/TDR-0032-github-adapter-completion-contract-extensions.md
         - doc/decisions/TDR-0033-review-thread-discussion-bodies-bounded-adapter-read.md
         - doc/decisions/TDR-0034-github-issues-transition-mapping-injected-workflow-map.md
-        - doc/decisions/ADR-0005-runtime-confinement-provider-client-subpaths.md
         - doc/decisions/00-index.md
       folders:
         - doc/decisions
@@ -664,30 +803,58 @@ phases:
   # header (resolved through the credential port, never a second source), and the
   # builder adds the isolated `GH_CONFIG_DIR`, `GH_PROMPT_DISABLED`, `NO_COLOR`,
   # and the update-notifier suppressor. No secret enters argv or any diagnostic.
-  # WHERE THE PROBE RUNS (refinement 7 — the bound mechanism, because
-  # `EntrypointComposer` is synchronous and only the launcher is async):
+  # WHERE THE PROBE RUNS (refinement 7 — the bound mechanism; the composer is
+  # synchronous and only the composition path probes):
   #   packages/adapters/src/github/cli-transport.ts exports the Promise-based
   #   `probeGithubCli`, the transport factory, the DM-10 `GithubTransportSelection`
-  #   type, and the pure selection resolver;
+  #   type, and the PURE synchronous resolver `resolveTransportSelection`;
   #   packages/cli/src/production.ts exports the async composition resolver
-  #   `resolveGithubTransportSelection(facts)`;
-  #   packages/cli/src/bin-launcher.ts AWAITS that resolver before composing and
-  #   passes the value as `ProductionCompositionFacts.githubTransportSelection`,
-  #   which is how it reaches the synchronous `createProductionComposer`. The
-  #   composer never probes: a present selection picks the transport, an absent
-  #   selection is the delivered offline API default (so every delivered
-  #   composition test and every embedder stays probe-free with zero spawns).
+  #   `resolveCompositionTransportSelection(facts)`;
+  #   packages/cli/src/entrypoint.ts accepts and awaits a promised program at its
+  #   one composition call site (after every self-description return);
+  #   packages/cli/src/bin-launcher.ts passes ONE async wrapper that awaits the
+  #   composition resolver and then invokes the synchronous
+  #   `createProductionComposer` with the value forwarded as
+  #   `ProductionCompositionFacts.githubTransportSelection`.
+  # SPAWN BUDGET: PER COMPOSITION, NOT PER LAUNCHER INVOCATION. The delivered
+  # entrypoint returns BEFORE `composeProgram` for root `--version`,
+  # `--print-install-path`, root `--help`, and command `--help`, so the wrapper —
+  # and therefore the probe — never runs on those paths. TC-CLI-010
+  # (tests/behaviour/providers/github-cli-transport.test.ts) pins the budget:
+  # exactly one probe spawn for a composing invocation, ZERO for each of the four
+  # self-description paths, and zero provider requests in every case. Table C's
+  # "at composition time only; never at module load" is therefore literal.
   # The probe performs one bounded version invocation and returns exactly one of
   # `provider.cli.unavailable`, `provider.cli.version-unsupported`,
-  # `provider.cli.capability-unsupported`; it runs at composition only, never at
-  # module load, never per request, and never in the mock tier. Under `prefer-cli`
-  # a refusal selects the API transport, carries exactly one DM-10 value
-  # (`policy`, `selected: "api"`, `degradation.code` = that refusal code) on the
-  # composed runtime, and renders exactly one human diagnostic line naming the
-  # code through the delivered composition-notice/warnings channel; `api-only`
-  # never probes and carries `degradation` absent. Nothing is persisted. Mid-run
-  # failure is a classified transport failure with no status and nothing is
-  # re-issued on the other transport (a write is never landed twice).
+  # `provider.cli.capability-unsupported`; it runs only on the composition path,
+  # never at module load, never per request, never on a self-description path, and
+  # never in the mock tier. Under `prefer-cli` a refusal selects the API transport
+  # and produces exactly one DM-10 value (`policy: "prefer-cli"`,
+  # `selected: "api"`, `degradation.code` equal to that refusal code): the value
+  # the composition resolver returns and the launcher consumes, with exactly one
+  # human diagnostic line naming the code rendered through the delivered
+  # composition-notice / warnings channel. Its observable surface is exactly that
+  # (spec v1.2 F-2, Table C, AC-F2-2, §10): one resolver value, one rendered line,
+  # ZERO persisted copies (no state file, capsule/event record, schema key, error
+  # table row, or conformance artifact), and NO new readable surface on the
+  # composed program object. `api-only` never probes, selects the API transport,
+  # and carries `degradation` ABSENT.
+  # THE ABSENT-SELECTION STATE IS DECLARED, NOT INFERRED (spec v1.2 F-2, Table C,
+  # DM-10, §8.5): when `ProductionCompositionFacts.githubTransportSelection` is
+  # absent there is NO probe, NO policy claim, and NO DM-10 value, and the
+  # delivered native-`fetch` transport serves. The production launcher ALWAYS
+  # supplies the fact (pinned by the single `createProductionComposer(` call
+  # site), so no delivered production composition changes and the absent state
+  # exists for composition tests and hypothetical embedders only — which is what
+  # keeps every delivered composition test probe-free with zero spawns.
+  # Nothing is persisted on any path. Mid-run failure is a classified transport
+  # failure with no status and nothing is re-issued on the other transport (a
+  # write is never landed twice).
+  # The cross-transport parity route table is RESTRICTED to the members that
+  # exist after phase 1: the delivered reads (work item, delivery request,
+  # pipeline/list page), delivered thread resolution, and the phase-1 landing
+  # member. Comment and content-write parity is phase 3, which extends the SAME
+  # route table and the SAME suite (both paths are declared in both phases).
   # The child-process guard joins the throwing-`fetch` guard in the mock tier,
   # covering spawn/spawnSync/exec/execFile/fork, with a firing canary; the
   # runtime-API confinement allowance keeps its exact-path reason-bearing form
@@ -697,25 +864,34 @@ phases:
   # Obligations:
   #   2.1 Author the transport module, the runner seam with its execFile default,
   #       the argv/environment builders, the status parser, the probe
-  #       (`probeGithubCli`), the DM-10 type, the PURE selection resolver, and
-  #       GITHUB_TRANSPORT_MATRIX; export the native-fetch factory and the
-  #       additive subpath names.
-  #   2.2 Wire the async composition edge: export `resolveGithubTransportSelection`
-  #       from production.ts, await it in bin-launcher.ts before
-  #       `createProductionComposer(...)`, and pass the resolved value as the
-  #       `githubTransportSelection` fact. The launcher gains exactly one await
-  #       and one forwarded fact — no composition logic, and the single
-  #       `createProductionComposer(` call site stays the launcher's. An injected
-  #       `githubTransport` still bypasses selection entirely (probe-free). The
-  #       value the resolver returns IS the composed selection: the composer holds
-  #       it for the invocation to pick the transport and to render the one line,
-  #       and it is never added to `GithubClient`, `GithubClientOptions`, a
-  #       normalized view, a state record, or the conformance artifact.
-  #   2.3 Render the DM-10 degradation exactly once: one line pushed into the
-  #       composer's existing `compositionNotices` (the delivered warnings
-  #       channel), once per composed program, nothing persisted and nothing
-  #       added to an error table or a normalized view; `api-only` and a
-  #       successful CLI selection render nothing.
+  #       (`probeGithubCli`), the DM-10 type, the PURE synchronous selection
+  #       resolver `resolveTransportSelection`, and GITHUB_TRANSPORT_MATRIX;
+  #       export the native-fetch factory and the additive subpath names.
+  #   2.2 Wire the composition edge so that only the composition path probes:
+  #       export the ASYNC `resolveCompositionTransportSelection` from
+  #       production.ts; widen the entrypoint's one composition call site to
+  #       accept and await a promised program (`EntrypointComposer` returns
+  #       `CommandProgram | Promise<CommandProgram>`, so every delivered
+  #       synchronous injector keeps compiling); pass ONE async wrapper from
+  #       bin-launcher.ts that awaits the resolver and then invokes the
+  #       SYNCHRONOUS `createProductionComposer` with the resolved value as the
+  #       `githubTransportSelection` fact. The launcher gains one wrapper and one
+  #       forwarded fact — no ambient read, no new export, no composition logic —
+  #       and the single `createProductionComposer(` call site stays the launcher's.
+  #       An injected `githubTransport` still bypasses selection entirely
+  #       (probe-free). DISTINCT NAMES BY DESIGN: the adapter function
+  #       `resolveTransportSelection` is pure and synchronous, the
+  #       launcher-edge function `resolveCompositionTransportSelection` is async;
+  #       neither is imported under an alias.
+  #   2.3 Render the DM-10 degradation exactly once and keep it unpersisted: one
+  #       line pushed into the composer's existing `compositionNotices` (the
+  #       delivered warnings channel), once per composed program, zero persisted
+  #       copies, no schema/state/capsule/artifact key, no error-table row, no new
+  #       readable surface on the composed program object, and nothing added to a
+  #       normalized view; `api-only`, a successful CLI selection, and the absent
+  #       fact render nothing. The value is never a field on `GithubClient`,
+  #       `GithubClientOptions`, the composed program object, or any normalized
+  #       view.
   #   2.4 Build the child environment from the injected environment record
   #       (PATH plus the declared variable set) and the request's resolved
   #       credential; assert the exact key set in TC-CLI-003, keep the
@@ -724,10 +900,19 @@ phases:
   #   2.5 Move the confinement allowance comment and the boundary fixtures; add
   #       the child-process fixture case(s) and registry rows.
   #   2.6 Install the child-process guard beside the network guard; assert zero
-  #       spawns for the whole mock tier with a firing canary.
+  #       spawns for the whole mock tier with a firing canary. TC-PARITY-006's
+  #       assertion site is tests/conformance/mock-conformance.test.ts (declared
+  #       here) beside the guard primitive in
+  #       tests/conformance/support/fixtures.ts.
   #   2.7 Author the four CLI fixture tables and the two suites (behaviour +
-  #       cross-transport parity over one route table); extend the trap catalog
-  #       (status recovery, credential absence) and its pins.
+  #       cross-transport parity) over the PHASE-2 route table only: work item,
+  #       delivery request, pipeline/list page, landing, and delivered thread
+  #       resolution. The comment and content-write routes are NOT in phase 2 —
+  #       GitHub still declares both as gaps, and the capability suite fails if a
+  #       gapped operation's write method exists — so their parity rows land in
+  #       phase 3 (obligation 3.8) in the same fixture and the same suite.
+  #       Extend the trap catalog (status recovery, credential absence) and its
+  #       pins.
   #   2.8 Update the pinned surfaces exactly, INCLUDING the child-process site
   #       set: tests/structure/harness-imports.test.ts declares
   #       `DECLARED_CHILD_PROCESS_SITES` as an exact-equality list over
@@ -735,20 +920,35 @@ phases:
   #       "packages/adapters/src/github/cli-transport.ts" (the one new site) and
   #       its header comment states the set is a declared site inventory, never a
   #       prefix or wildcard. This test file is part of this phase's own G1 gate.
+  #   2.9 Pin the launcher's spawn budget in TC-CLI-010
+  #       (tests/behaviour/providers/github-cli-transport.test.ts), through the
+  #       seam the launcher supplies rather than an invented test hook: driving
+  #       the delivered entrypoint with a recording composer shows that each of
+  #       the four self-description argvs returns WITHOUT invoking it (so no probe
+  #       can run), and that a composing argv invokes it exactly once with exactly
+  #       one probe spawn on the injected runner and zero provider requests. A
+  #       structural assertion over packages/cli/src/bin-launcher.ts proves the
+  #       resolver await sits inside the async wrapper handed to the entrypoint,
+  #       never in the launcher body before `runEntrypoint`, so a future eager
+  #       await fails by name.
   #
   # Acceptance: AC-F2-1 (TC-CLI-001), AC-F2-2 (TC-CLI-010/011 — the DM-10 value
-  #   `{policy, selected, degradation.code}`, exactly one rendered line, zero
-  #   persisted copies, zero probe spawns under `api-only`; the AC-F7-4
-  #   documentary half of the same facts completes in phase 6 via TC-REF-005),
-  #   AC-F2-3 (TC-CLI-002/003/013), AC-F2-4 (TC-CLI-004/005/009), AC-F2-5
+  #   `{policy, selected, degradation.code}` as the resolver's return value,
+  #   exactly one rendered line, zero persisted copies, no new readable surface on
+  #   the composed program object, zero probe spawns on the self-description paths
+  #   and under `api-only`, and the absent-fact state using native fetch with no
+  #   value; the AC-F7-4 documentary half of the same facts completes in phase 6
+  #   via TC-REF-005), AC-F2-3 (TC-CLI-002/003/013), AC-F2-4
+  #   (TC-CLI-004/005/009 — phase-2 route members only), AC-F2-5
   #   (TC-CLI-006/007/008/012), AC-F8-3 (TC-PARITY-006). TC-FLOOR-004's
   #   confinement assertions are green as a control.
   #
   # Gate (expected signal: exit 0; golden argv deep-equals with zero canary
   #   occurrences, `{cli:1, api:0}` request counts on mid-run failure, zero
-  #   spawns for the API tier and both guard counters zero, the child-process site
-  #   set equal to the declared thirteen and the launcher still the single
-  #   composition call site):
+  #   spawns for the API tier and both guard counters zero, one probe spawn for a
+  #   composing invocation and zero for each self-description path, the
+  #   child-process site set equal to the declared thirteen and the launcher still
+  #   the single composition call site):
   #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck                                   (G6)
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/providers               (G2)
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance                       (G3)
@@ -769,8 +969,12 @@ phases:
         - packages/adapters/src/github/client.ts
         - packages/adapters/src/github/index.ts
         - packages/cli/src/production.ts
-        # The async composition edge: it awaits the resolver and forwards the
-        # resolved DM-10 value into the synchronous composer (refinement 7).
+        # The composition path only: the entrypoint awaits a promised program at
+        # its one composition call site (after every self-description return) and
+        # the launcher passes one async wrapper that awaits the resolver there
+        # (refinement 7, obligations 2.2/2.9). `createProductionComposer` keeps
+        # its synchronous signature.
+        - packages/cli/src/entrypoint.ts
         - packages/cli/src/bin-launcher.ts
         - .dependency-cruiser.cjs
         - tests/boundaries/boundaries.test.ts
@@ -780,6 +984,10 @@ phases:
         - tests/behaviour/providers/github-trap.test.ts
         - tests/behaviour/providers/support.ts
         - tests/conformance/github-transport-parity.test.ts
+        # TC-PARITY-006's assertion site: the child-process guard is asserted over
+        # the mock tier's own suite (declared here, beside the guard primitive in
+        # tests/conformance/support/fixtures.ts).
+        - tests/conformance/mock-conformance.test.ts
         - tests/conformance/support/fixtures.ts
         - tests/checks/secret-read-boundary.test.ts
         - tests/fixtures/providers/github/cli-argv.json
@@ -794,9 +1002,11 @@ phases:
         # NOT declared: tests/structure/entrypoint-bin.test.ts. Its pins (the
         # single `createProductionComposer(` call site, no ambient read, no
         # exported string literal in the launcher) are expected to hold
-        # unchanged, because the launcher gains one await and one forwarded fact
-        # and no new export. A coder who finds a pin that must move re-plans
-        # instead of widening scope silently.
+        # unchanged: the single-await detail of a prior draft is deliberately
+        # REPLACED by the composition-path wrapper (refinement 7d/2.2), and the
+        # pins it asserted are structural, not ordering-of-await assertions. A
+        # coder who finds a pin that must move re-plans instead of widening scope
+        # silently.
         - tests/structure/content-inventory.test.ts
         - tests/structure/inventory.json
         - tests/structure/provider-surface.test.ts
@@ -829,10 +1039,24 @@ phases:
   # Transitions resolve through ONE map used by both directions: the four-row
   # precedence-ordered seed (`closed` -> `done` field-update; `review` ->
   # `in-review` label-swap; `in-progress` -> `in-progress` label-swap; `open` ->
-  # `ready` field-update), optionally injected, validated internally (no duplicate
-  # token, unknown mechanism, empty states — and, per TC-BACKLOG-010's invalid-map
-  # set, a map with no `done` row), with status tokens being native issue states
-  # or lifecycle label names.
+  # `ready` field-update), optionally injected, with status tokens being native
+  # issue states or lifecycle label names.
+  # MAP VALIDATION — AUTHORITY IS TDR-0034 §1, which spec v1.2 DM-6 restates; no
+  # test case defines the contract. The confined validator rejects exactly this
+  # set, naming the offending row: (1) `systemName` not a non-empty string;
+  # (2) `states` not an array, empty, or holding a non-object row; (3) a
+  # `nativeStatus` that is not a non-empty string or repeats an already-declared
+  # token; (4) a `deliveryState` or `transitionMechanism` outside its closed set;
+  # (5) two rows declaring the same delivery alias; (6) no row resolving to
+  # `done`; (7) a `done` row that is not the `field-update` row on the native
+  # issue state `closed`. TIMING: it runs exactly ONCE per client construction on
+  # the RESOLVED map (the injected map when supplied, otherwise the seed), before
+  # the first operation — never lazily, never per request, never at module load.
+  # A failure is CAPTURED, not thrown: the factory keeps its delivered return
+  # type, and the first and every subsequent operation returns the existing
+  # `provider.payload.invalid` refusal whose detail names the failed check and the
+  # offending row, with ZERO provider requests, no new error-table row, and no new
+  # configuration code. The seed is held to exactly the checks an injected map is.
   # THE LABEL RULE IS MECHANISM-SCOPED (never universal): only a `label-swap`
   # transition reads, removes, or adds labels — it removes exactly the declared
   # `label-swap` tokens that are present, adds the row token, never replaces the
@@ -847,6 +1071,18 @@ phases:
   # with zero provider requests; the writable set is exactly `done` plus each
   # declared `label-swap` alias. An undeclared alias is a named adapter-local
   # typed refusal with zero provider writes.
+  # EVERY TRANSITION RESOLVES AGAINST THE ISSUE'S CURRENT READ (TDR-0034 §3.2,
+  # spec v1.2 §8.4.1 "Write resolution against the current read", AC-F6-4):
+  # a `label-swap` write to an issue whose current read resolves to `done`
+  # refuses with a named typed failure and ZERO provider requests REGARDLESS OF
+  # THE ISSUE'S LABELS, because terminal precedence would outrank the token the
+  # write adds and the write could never be observed; reopening is outside this
+  # mechanism. That terminal refusal is distinct from the unavailable-label-signal
+  # refusal (terminal precedence decides the first, an unobserved label container
+  # the second). A labelless fixture therefore exercises the SIGNAL refusal only
+  # when its native state is `open`; `workflow-map-cases.json#labelless-issue` is
+  # pinned `open` for exactly that reason, so its pass criterion cannot be
+  # satisfied by the terminal refusal.
   # Read resolution is one refusal class with FOUR declared outcomes: a `closed`
   # issue resolves to `done` regardless of labels; otherwise the first
   # declared-precedence row whose token equals a present label name EXACTLY wins;
@@ -868,11 +1104,17 @@ phases:
   # Obligations:
   #   3.1 Author the workflow-map module (seed, injection, validator, writable-set
   #       derivation, one resolver) and route read normalization and the
-  #       mechanism-scoped transition write through it. A `field-update` row
-  #       writes provider state only; a `label-swap` row owns label removal and
-  #       the unavailable-signal refusal; a non-terminal `field-update` alias
-  #       refuses on write. Delivered `open`/`closed` READ normalization is
-  #       preserved exactly (TC-BACKLOG-011).
+  #       mechanism-scoped transition write through it. The validator implements
+  #       TDR-0034 §1's seven rules, runs once at construction on the resolved map
+  #       and captures its result (never throws), and the adapter returns the
+  #       named `provider.payload.invalid` refusal with zero provider requests on
+  #       every operation when the construction check failed. A `field-update` row
+  #       writes provider state only; a `label-swap` row owns label removal, the
+  #       unavailable-signal refusal, AND the terminal-read refusal (current read
+  #       resolves to `done` -> named refusal, zero requests, regardless of
+  #       labels); a non-terminal `field-update` alias refuses on write. Delivered
+  #       `open`/`closed` READ normalization is preserved exactly
+  #       (TC-BACKLOG-011).
   #   3.2 Implement the comment write and the DM-9 content write (both variants,
   #       the required-input refusals with zero requests, and the
   #       never-lands/never-sets-merge-state guarantee); keep carriers empty. The
@@ -886,7 +1128,7 @@ phases:
   #       delivered order is KEPT: the exact list in
   #       tests/structure/provider-surface.test.ts appends `write-comment` and
   #       `write-delivery-request` after the seven phase-1 members. No reorder and
-  #       no ordering assertion (TC-POSTURE-001 v1.1).
+  #       no ordering assertion (TC-POSTURE-001 v1.2).
   #   3.4 Extend the conformance dispatch (writeComment, createDeliveryRequest)
   #       and the GitHub tenant with the comment route plus BOTH content-write
   #       routes and their expected projections (create through the single
@@ -895,15 +1137,28 @@ phases:
   #   3.5 Author the fixtures and the workflow-map suite:
   #       `workflow-map-cases.json` gains the read-outcome truth table
   #       (`exact-case-twin`, `case-collision-label-swap`, `case-variant-state-label`
-  #       with `CLOSED`, `unknown-labels`, `labelless-read`,
-  #       `native-state-row-missing`), the writable-set round trips (`done`,
-  #       `in-review`, `in-progress`), and the non-terminal `field-update` write
-  #       refusal (`ready`); `issue-writes.json` gains the DM-9 create/update
+  #       with `CLOSED` on a `closed` issue AND on an `open` issue, `unknown-labels`,
+  #       `labelless-read`, `native-state-row-missing`), the writable-set round
+  #       trips (`done`, `in-review`, `in-progress`), the NON-TERMINAL
+  #       `field-update` write refusal (`ready`), and the TERMINAL-READ refusal
+  #       case (`label-swap-on-done-issue`: an issue whose current read resolves
+  #       to `done` refuses a `label-swap` write with zero provider requests,
+  #       asserted both with and without a lingering `label-swap` label);
+  #       `labelless-issue` is pinned native `open`. The invalid-map fixture set
+  #       covers TDR-0034 §1's seven rules — blank `systemName`, non-array/empty
+  #       `states`, a non-object row, a blank or duplicate `nativeStatus`, an
+  #       unknown `deliveryState`, an unknown `transitionMechanism`, a duplicate
+  #       delivery alias, NO `done` row, and a `done` row that is not the
+  #       `field-update` row on `closed` — and each case asserts the
+  #       construction-time capture, the named refusal on the FIRST operation,
+  #       zero provider requests, and no new error-table row; the seed is checked
+  #       against the same rules. `issue-writes.json` gains the DM-9 create/update
   #       variants, the required-input refusals, and the label-free `done` write
   #       expectation (one `PATCH`, body `{"state":"closed"}`, zero label
   #       requests). Extend the collection/inputs/closeout suites and reuse the
   #       phase-1 stateful scripted transport helper from
-  #       tests/behaviour/providers/support.ts for read-back (refinement 3).
+  #       tests/behaviour/providers/support.ts for read-back and for the
+  #       current-read precondition (refinement 3).
   #   3.6 Prove the no-configuration-surface obligation; extend the trap catalog
   #       and its pins; update the pinned surfaces. Author EXACTLY ONE delivered
   #       trap-outcome amendment here: the `GH-ISSUE-TO-WORKITEM` entry gains
@@ -917,27 +1172,45 @@ phases:
   #       `transitionWorkItem({ deliveryState: "done" })` issues exactly one
   #       state-only `PATCH` with body exactly `{"state":"closed"}`, zero label
   #       requests, and succeeds when the label signal is unavailable. The
-  #       delivered closeout fixtures stay unchanged; the labelless half reads
-  #       `workflow-map-cases.json#labelless-issue` and
+  #       terminal-read refusal is `label-swap`-only, so it does not touch this
+  #       `field-update` path. The delivered closeout fixtures stay unchanged; the
+  #       labelless half reads `workflow-map-cases.json#labelless-issue` and
   #       `issue-writes.json#done-write-labelless`.
+  #   3.8 Extend the cross-transport parity proof with the writes that now exist:
+  #       add the comment and content-write routes to the SAME fixture
+  #       (tests/fixtures/providers/github/transport-parity-routes.json) and the
+  #       SAME suite (tests/conformance/github-transport-parity.test.ts) declared
+  #       by phase 2, and assert the route set explicitly so a phase-2 route that
+  #       names a member absent there fails by name. Phase 2's table stays the
+  #       read / thread-resolution / landing member set; no case in phase 2 names
+  #       a write member that cannot exist before this phase.
   #
   # Acceptance: AC-F1-1 (TC-POSTURE-001), AC-F6-1 (TC-BACKLOG-001/002 — DM-9
   #   create and update asserted separately, refusals with zero requests), AC-F6-2
   #   (TC-BACKLOG-003/008/011 — the four read outcomes), AC-F6-3
-  #   (TC-BACKLOG-004/010 — the writable set and the injected map), AC-F6-4
-  #   (TC-BACKLOG-004/005/006 — label-swap scope, the non-terminal refusal, and the
+  #   (TC-BACKLOG-004/010 — the writable set, read/write symmetry, and the
+  #   construction-time validation: seven-rule rejection set from TDR-0034 §1,
+  #   failure captured not thrown, first operation returns the named refusal with
+  #   zero provider requests, the seed held to the same checks), AC-F6-4
+  #   (TC-BACKLOG-004/005/006 — label-swap scope, the TERMINAL-READ refusal on a
+  #   `done`-resolving issue with zero requests regardless of labels, the
+  #   non-terminal refusal, the labelless fixture pinned native `open`, and the
   #   unchanged `done` write), AC-F6-5 (TC-BACKLOG-007), AC-F6-6
   #   (TC-BACKLOG-009), AC-F8-1 (TC-PARITY-001), AC-F8-2 (TC-PARITY-002),
   #   TC-PARITY-003 (the newly supported writes execute with exact projections;
   #   the one-step resolution and the update-by-direct-call are its declared
-  #   oracle). TC-FLOOR-001's delivered-trap and closeout oracles are green as
-  #   controls from this phase; the case itself is owned by phase 7.
+  #   oracle); TC-CLI-005's phase-3 route-table extension. TC-FLOOR-001's
+  #   delivered-trap and closeout oracles are green as controls from this phase;
+  #   the case itself is owned by phase 7.
   #
   # Gate (expected signal: exit 0; every supported GitHub operation reports
   #   `executed`, zero declared gaps for GitHub, GitLab/Jira gaps encountered
   #   with exact reasons, the carrier step `capability-absent` for GitHub, the
-  #   delivered closeout request count 1 / `PATCH` / `{"state":"closed"}` / zero
-  #   label requests on the labelless fixture,
+  #   phase-3 parity routes deep-equal across both transports, the delivered
+  #   closeout request count 1 / `PATCH` / `{"state":"closed"}` / zero label
+  #   requests on the labelless fixture, the terminal-read refusal row recording
+  #   zero requests on a `done`-resolving issue, every invalid-map row refusing on
+  #   the first operation with zero requests,
   #   `github: failed step counted as passed`-style vacuity controls firing):
   #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck                                   (G6)
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/providers               (G2)
@@ -970,13 +1243,21 @@ phases:
         - tests/behaviour/providers/provider-capabilities.test.ts
         - tests/behaviour/providers/support.ts
         - tests/checks/config-default-positions.test.ts
+        # TC-CLI-005's phase-3 half: the same route table and the same suite
+        # phase 2 declares, extended with the comment and content-write routes
+        # (obligation 3.8).
+        - tests/conformance/github-transport-parity.test.ts
         - tests/conformance/mock-conformance.test.ts
         - tests/fixtures/ports/capabilities.ts
         - tests/fixtures/providers/conformance/github/tenant.json
         - tests/fixtures/providers/github/issue-writes.json
+        - tests/fixtures/providers/github/transport-parity-routes.json
         - tests/fixtures/providers/github/workflow-map-cases.json
         - tests/fixtures/providers/traps/github.traps.json
         - tests/structure/config-contract.test.ts
+        # TC-BACKLOG-009's no-configuration-surface scan; phase 6 completes this
+        # file with the drift suite (both phases declare it).
+        - tests/structure/reference-behavior.test.ts
         - tests/structure/content-inventory.test.ts
         - tests/structure/inventory.json
         - tests/structure/provider-surface.test.ts
@@ -1166,8 +1447,13 @@ phases:
   # four seed rows with their mechanisms, the mechanism-scoped label rule, the
   # four read outcomes (including the `label-swap`-token case collision and the
   # native fallback), the writable set (`done` plus each `label-swap` alias), the
-  # non-terminal `field-update` read-only rule, the deliberately unmapped tokens
-  # and aliases, and the not-yet-operator-configurable limitation. It is
+  # non-terminal `field-update` read-only rule, the terminal-read `label-swap`
+  # refusal (zero provider requests on a `done`-resolving issue, distinct from the
+  # unavailable-signal refusal), the map validator's seven-rule rejection set with
+  # its construction-time-once timing and captured failure, the absent
+  # composition fact (no probe, no DM-10 value, native `fetch`), the deliberately
+  # unmapped tokens and aliases, and the not-yet-operator-configurable limitation.
+  # It is
   # registered in the documentation index.
   # tests/structure/reference-behavior.test.ts parses the document through the
   # one declared locator (tests/fixtures/provider/reference-behavior.ts) and
@@ -1175,6 +1461,9 @@ phases:
   # capability declarations, the exported seed, and the fixed cap constants,
   # with non-vacuity assertions on the parse (nine operation rows, three adapter
   # postures, three caps) so a vacuous pass is impossible (RSK-TP-5, GAP-TP-2).
+  # This phase COMPLETES a file phase 3 created with TC-BACKLOG-009's
+  # config-surface scan; both phases declare it, and neither claims to author the
+  # other's half.
   #
   # Obligations:
   #   6.1 Author the normative document from spec §8.4.1 Tables A–E, agreeing
@@ -1182,9 +1471,10 @@ phases:
   #   6.2 Add the index row and the locator fixture.
   #   6.3 Author the drift suite: operation rows, transports, caps, gaps,
   #       absence table, evidence statements, probe/refusal/no-failover, the
-  #       DM-10 selection value and its single line, and the mapping (seed,
-  #       mechanisms, four read outcomes, writable set) — each with a
-  #       one-digit/one-row mutation control.
+  #       DM-10 selection value and its single line, the absent-fact state, the
+  #       terminal-read refusal, the validator's rejection set and its timing,
+  #       and the mapping (seed, mechanisms, four read outcomes, writable set) —
+  #       each with a one-digit/one-row mutation control.
   #
   # Acceptance: AC-F7-1 (TC-REF-001), AC-F7-2 (TC-REF-002/003), AC-F7-3
   #   (TC-REF-004), AC-F7-4 (TC-REF-005 — the closed refusal codes, the
@@ -1253,7 +1543,10 @@ phases:
   # Obligations:
   #   7.1 Author the changeset.
   #   7.2 Add the trap-completeness and determinism cases; add the scope-boundary
-  #       assertions and probes. TC-FLOOR-001 asserts the delivered trap-name list
+  #       assertions and probes. TC-PARITY-005's assertion extension lands in
+  #       tests/behaviour/providers/github-trap.test.ts over
+  #       tests/fixtures/providers/traps/github.traps.json (both declared here);
+  #       TC-FLOOR-001 asserts the delivered trap-name list
   #       unchanged as a list with EXACTLY ONE declared outcome-text amendment
   #       (`GH-ISSUE-TO-WORKITEM`, authored in phase 3) via an explicit diff, and
   #       carries the unchanged delivered closeout oracle (request count 1,
@@ -1321,6 +1614,11 @@ phases:
         - .changeset/gh-338-github-adapter-completion-minor.md
         - tests/structure/reference-behavior.test.ts
         - tests/structure/closeout-contract.test.ts
+        # TC-PARITY-005's trap-completeness assertion site: the entry is
+        # authored/extended here and its fixture extended here, so both are
+        # declared (earlier phases append entries; this phase completes the case).
+        - tests/behaviour/providers/github-trap.test.ts
+        - tests/fixtures/providers/traps/github.traps.json
         - tests/conformance/mock-conformance.test.ts
         - tests/conformance/artifact.test.ts
         - tests/types/delivery-thread.type-test.ts
