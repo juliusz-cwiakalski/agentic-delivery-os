@@ -69,3 +69,28 @@ describe("TC-METRICS-012 the read sources stay byte-identical", () => {
     }
   });
 });
+
+describe("TC-METRICS-056 the alarm path writes no state", () => {
+  test("a crossing evaluation and its repeat leave the store and documents byte-identical", async () => {
+    const fixture = makeMetricsCase({
+      label: "alarm-write-discipline",
+      config: burnRateConfig({ threshold: 1000, basis: "tokens", window: "14d" }),
+    });
+    fixtures.push(fixture);
+    const before = fixture.snapshot();
+    const first = await runMetrics(fixture, ["metrics", "--json"]);
+    const second = await runMetrics(fixture, ["metrics", "--json"]);
+    expect(first.exitCode).toBe(0);
+    expect(second.exitCode).toBe(0);
+    expect(fixture.snapshot()).toBe(before);
+    for (const member of ["append", "acquireFence", "salvage"]) {
+      expect(fixture.reads.storeReads.filter((entry) => entry === member)).toEqual([]);
+    }
+    expect((JSON.parse(first.stdout) as { data: { alarms: unknown[] } }).data.alarms).toHaveLength(
+      1,
+    );
+    expect((JSON.parse(second.stdout) as { data: { alarms: unknown[] } }).data.alarms).toHaveLength(
+      1,
+    );
+  });
+});

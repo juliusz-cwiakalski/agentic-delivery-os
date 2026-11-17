@@ -166,3 +166,19 @@ notes:
       proves it there)."
     type: info
     date: "2026-11-17"
+  - text: "Plan phase 5 complete (dispatch parity, burn-rate alarms, the classified
+      threshold states, the full-report capstone, and the four TC-pinned
+      goldens). Commit 9541774a (see phase-6 note for the hash check).
+      Verification: metrics-report 9/9, metrics-dispatch 6/6, metrics-alarms
+      18/18, metrics-burn-rate-config 18/18, metrics-write-discipline 5/5,
+      tests/golden/metrics.test.ts 6/6; typecheck, lint, format green;
+      TMPDIR=$PWD/tmp/tmpdir pnpm check 9989 pass / 4 pre-existing skip / 2 fail,
+      both load-sensitive delivered suites (dispatch-attempts limit grammar and
+      byte budget) that pass in isolation (26/26 in 2.28s) — recorded as
+      green-modulo-environment-flake and re-proven in the phase-9 battery.
+      Scenario seeds: SC-M2-S6-01 proven by metrics-dispatch (deep equality
+      with spend, breakdown sums, perAgent equality on the fully attributable
+      fixture); SC-M2-S6-02 proven by metrics-alarms (exactly one alarm,
+      threshold echoed, byte-identical repeat)."
+    type: info
+    date: "2026-11-17"
