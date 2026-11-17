@@ -44,8 +44,9 @@ describe("TC-PAUSE-072 the closed park-cause vocabulary", () => {
       "preempted-for-close-item",
       "peak-window",
       "owner-hold",
+      "liveness-stall",
     ]);
-    expect(QUEUE_PARK_CAUSES).toHaveLength(5);
+    expect(QUEUE_PARK_CAUSES).toHaveLength(6);
     // No fourth vocabulary appeared beside the delivered sets plus the two
     // additions (DEC-2, G-9): the condition-type set is unchanged.
     expect([...QUEUE_PARK_CONDITION_TYPES]).toEqual([
@@ -61,7 +62,9 @@ describe("TC-PAUSE-072 the closed park-cause vocabulary", () => {
       { cause: "preempted-for-close-item", conditionType: "preemption" },
       { cause: "peak-window", conditionType: "provider-window" },
       { cause: "owner-hold", conditionType: "preemption" },
+      { cause: "liveness-stall", conditionType: "provider-window" },
     ]);
+    expect(conditionTypeForCause("liveness-stall")).toBe("provider-window");
     expect(conditionTypeForCause("peak-window")).toBe("provider-window");
     expect(conditionTypeForCause("owner-hold")).toBe("preemption");
     // The delivered mappings are untouched.

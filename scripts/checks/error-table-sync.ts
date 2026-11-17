@@ -239,6 +239,10 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "steer.unknown-id",
   "steer.credential-value-rejected",
   "steer.queue-unavailable",
+  // GH-295 pins the two supervise identities exactly (DEC-6, DEC-8); the
+  // supervise family stays closed to these two members with no widening.
+  "supervise.duplicate-supervision",
+  "supervise.evidence-absent",
 ]);
 const CODE_PATTERN = /\b[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*){2,}\b/g;
 const TWO_SEGMENT_PATTERN = /\b[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*\b/g;

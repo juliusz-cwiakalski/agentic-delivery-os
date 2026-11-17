@@ -118,22 +118,30 @@ export const QUEUE_PARK_CONDITION_TYPES = [
 ] as const;
 export type QueueParkConditionType = (typeof QUEUE_PARK_CONDITION_TYPES)[number];
 
-/** The closed cause set explaining why a lease was released (DM-5). */
+/**
+ * The closed cause set explaining why a lease was released (DM-5).
+ *
+ * GH-295 appends exactly one supervised-stall cause in sixth position; the
+ * delivered five keep their position and spelling unchanged (DM-2, RSK-6).
+ */
 export const QUEUE_PARK_CAUSES = [
   "provider-window",
   "provider-quota",
   "preempted-for-close-item",
   "peak-window",
   "owner-hold",
+  "liveness-stall",
 ] as const;
 export type QueueParkCause = (typeof QUEUE_PARK_CAUSES)[number];
 
 /**
- * The declared cause -> condition-type mapping (DM-5; GH-294 DEC-2) —
- * many-to-one by design: `peak-window` rides the existing `provider-window`
- * condition type (no duplicate cause, no silent rename), and `owner-hold`
- * joins beside the delivered causes on the read-time `preemption` condition
- * type — the hold is a gate with no expiry, never an expiry-carrying window.
+ * The declared cause -> condition-type mapping (DM-5; GH-294 DEC-2; GH-295
+ * DM-2) — many-to-one by design: `peak-window` rides the existing
+ * `provider-window` condition type (no duplicate cause, no silent rename),
+ * `owner-hold` joins beside the delivered causes on the read-time `preemption`
+ * condition type (a gate with no expiry, never an expiry-carrying window), and
+ * the supervised-stall cause rides the same expiry-carrying `provider-window`
+ * type so its non-null re-entry instant has a declared home.
  */
 export const QUEUE_PARK_CAUSE_CONDITION_PAIRS = [
   { cause: "provider-window", conditionType: "provider-window" },
@@ -141,6 +149,7 @@ export const QUEUE_PARK_CAUSE_CONDITION_PAIRS = [
   { cause: "preempted-for-close-item", conditionType: "preemption" },
   { cause: "peak-window", conditionType: "provider-window" },
   { cause: "owner-hold", conditionType: "preemption" },
+  { cause: "liveness-stall", conditionType: "provider-window" },
 ] as const satisfies readonly {
   readonly cause: QueueParkCause;
   readonly conditionType: QueueParkConditionType;
@@ -887,6 +896,12 @@ export type QueueLane = {
    * lease exists and equal to the lease's recorded holder. Never inferred.
    */
   readonly leaseHolder?: string;
+  /**
+   * The active park's re-entry instant (GH-295 DM-3, DEC-2): present exactly
+   * when an active expiry-carrying park exists for the lane, equal to the park
+   * record's `until`; absent otherwise, never inferred and never defaulted.
+   */
+  readonly until?: string;
   readonly restarts: number | null;
   readonly amplification: number | null;
   readonly amplificationWarning?: string;

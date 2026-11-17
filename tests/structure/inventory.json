@@ -75,6 +75,7 @@
     "src/contracts/state.ts",
     "src/contracts/status.ts",
     "src/contracts/steer.ts",
+    "src/contracts/supervise.ts",
     "src/contracts/taxonomy.ts",
     "src/contracts/telemetry.ts",
     "src/contracts/verify-deploy.ts",

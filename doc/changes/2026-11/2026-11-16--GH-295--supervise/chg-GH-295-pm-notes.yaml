@@ -140,3 +140,23 @@ notes:
       proceed."
     type: "info"
     date: "2026-11-17"
+  - text: "Delivery resumed after the first @coder session aborted mid-plan-phase-1
+      (headless interruption): worktree dirty with 22 modified + 7 untracked
+      paths matching almost all of phase-1 declared scope (contracts/supervise.ts
+      new; queue/error-table/index/sync-check/delivered-suite fixtures updated;
+      four supervision structure tests new); no phase-1 commit and no pm-notes
+      phase evidence recorded; packages/cli/src/classify.ts (declared in phase
+      1) absent from the dirt — coder to verify whether needed. Upstream
+      origin/main-tools unchanged (0 behind). Resume instruction: re-inspect
+      against phase-1 scope, complete/test, commit, evidence, then phases 2-8
+      and phase complete delivery."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Retro: a headless subagent abort leaves uncommitted in-flight work and no
+      evidence record; the per-plan-phase commit discipline limits the blast
+      radius to one phase, and the resume path (state probe + scope diff +
+      session continuation) worked. Improvement: consider committing
+      incrementally within very large plan phases, or a pre-abort checkpoint
+      note."
+    type: "retro"
+    date: "2026-11-17"

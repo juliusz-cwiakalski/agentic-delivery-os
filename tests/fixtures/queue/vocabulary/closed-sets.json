@@ -11,7 +11,8 @@
     "provider-quota",
     "preempted-for-close-item",
     "peak-window",
-    "owner-hold"
+    "owner-hold",
+    "liveness-stall"
   ],
   "parkPairing": [
     {
@@ -33,6 +34,10 @@
     {
       "cause": "owner-hold",
       "conditionType": "preemption"
+    },
+    {
+      "cause": "liveness-stall",
+      "conditionType": "provider-window"
     }
   ],
   "recoveryStates": ["parked", "clear-observed", "recovered", "released"],

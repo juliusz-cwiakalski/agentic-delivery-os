@@ -145,6 +145,10 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "steer.unknown-id",
   "steer.credential-value-rejected",
   "steer.queue-unavailable",
+  // GH-295 pins the two supervise identities exactly (DEC-6, DEC-8); the
+  // supervise family stays closed to these two members with no widening.
+  "supervise.duplicate-supervision",
+  "supervise.evidence-absent",
 ]);
 
 const isValidCode = (code: string): boolean =>
@@ -836,7 +840,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "daemon")).toHaveLength(8);
     expect(entries.filter((entry) => entry.domainKind === "coordinator")).toHaveLength(6);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(4);
-    expect(entries).toHaveLength(146);
+    expect(entries).toHaveLength(148);
   });
 });
 
@@ -912,7 +916,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(146);
+    expect(entries).toHaveLength(148);
     expect(db).toHaveLength(4);
   });
 
@@ -1146,7 +1150,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly four rows and round-trip
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(146);
+    expect(entries).toHaveLength(148);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1420,7 +1424,7 @@ describe("TC-BLK-007 blockers family is closed, synced, and exit-1 projected", (
       code.startsWith("blockers."),
     );
     expect(blockersReserved.sort()).toEqual([...BLOCKERS_ROWS].sort());
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(62);
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(64);
   });
 });
 
@@ -1677,14 +1681,15 @@ describe("TC-ECON-003 the dispatch kind carries the two economics rows plus the 
     expect(DOMAIN_KINDS).toContain("dispatch");
     // GH-241 appends the coordinator kind after daemon; GH-309 appends the
     // `repos` kind beside `projects`. Dispatch itself is unchanged.
-    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 8]).toBe("dispatch");
-    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 7]).toBe("daemon");
-    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 6]).toBe("coordinator");
-    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 5]).toBe("projects");
-    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 4]).toBe("repos");
-    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 3]).toBe("events");
-    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 2]).toBe("board");
-    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 1]).toBe("steer");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 9]).toBe("dispatch");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 8]).toBe("daemon");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 7]).toBe("coordinator");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 6]).toBe("projects");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 5]).toBe("repos");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 4]).toBe("events");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 3]).toBe("board");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 2]).toBe("steer");
+    expect(DOMAIN_KINDS[DOMAIN_KINDS.length - 1]).toBe("supervise");
     const dispatch = entries.filter((entry) => entry.domainKind === "dispatch");
     expect(dispatch.map((entry) => entry.code)).toEqual(DISPATCH_ROWS.map(([code]) => code));
     for (const [
@@ -1779,7 +1784,7 @@ describe("TC-ECON-003 the dispatch kind carries the two economics rows plus the 
   });
 
   test("the three economics additions land and the delivered rows stay byte-identical", () => {
-    expect(entries).toHaveLength(146);
+    expect(entries).toHaveLength(148);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
     // The delivered watchdog rows retain their exact declared columns.
@@ -1872,7 +1877,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
 
   test("no delivered row is re-projected by the spend addition", () => {
     const delivered = entries.filter((entry) => entry.domainKind !== "spend");
-    expect(delivered).toHaveLength(145);
+    expect(delivered).toHaveLength(147);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(resolveAppErrorCode("state.store.torn")).toEqual({
@@ -1891,7 +1896,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     const row = `| spend.telemetry-absent | spend | user | false | not_landed | ${SPEND_HINT} | user-validation | ${SPEND_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
-    expect(doc).toContain("146 identities");
+    expect(doc).toContain("148 identities");
   });
 
   test("the documented table is complete in both directions", () => {
@@ -2311,7 +2316,7 @@ describe("TC-CEREMONY-049 the ceremony kind and its two identities", () => {
       "ceremony.declaration.invalid",
       "ceremony.note-invalid",
     ]);
-    expect(entries).toHaveLength(146);
+    expect(entries).toHaveLength(148);
   });
 
   test("both rows carry the declared class and project to exit 1", () => {
@@ -2331,7 +2336,7 @@ describe("TC-CEREMONY-049 the ceremony kind and its two identities", () => {
   test("the two-segment note identity is on the exact allowlist", () => {
     expect(RESERVED_TWO_SEGMENT_CODES.has("ceremony.note-invalid")).toBe(true);
     expect(RESERVED_TWO_SEGMENT_CODES.has("ceremony.declaration.invalid")).toBe(false);
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(62);
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(64);
   });
 
   test("a kind-only ceremony lookup is contained by fallback.internal", () => {
@@ -2347,7 +2352,7 @@ describe("TC-CEREMONY-049 the ceremony kind and its two identities", () => {
     expect(doc).toContain(
       "The `ceremony` kind carries exactly the two additive ceremony-runner identities",
     );
-    expect(doc).toContain("146 machine identities");
+    expect(doc).toContain("148 machine identities");
   });
 });
 
@@ -2372,11 +2377,15 @@ const LEGACY_TOKENS = [
   "14" + "0",
   "13" + "9",
   "5" + "6",
+  // GH-295 folds the pre-change supervise move tokens into the same scan.
+  "14" + "6",
+  "6" + "2",
 ] as const;
 const LEGACY_ARITHMETIC = `+ ${"10" + "2"}`;
 const LEGACY_ARITHMETIC_PREVIOUS = `+ ${"10" + "6"}`;
+const LEGACY_ARITHMETIC_SUPERVISE = `+ ${"11" + "2"}`;
 const LEGACY_PATTERN = new RegExp(
-  `\\b(${LEGACY_TOKENS.join("|")})\\b|\\${LEGACY_ARITHMETIC}|\\${LEGACY_ARITHMETIC_PREVIOUS}`,
+  `\\b(${LEGACY_TOKENS.join("|")})\\b|\\${LEGACY_ARITHMETIC}|\\${LEGACY_ARITHMETIC_PREVIOUS}|\\${LEGACY_ARITHMETIC_SUPERVISE}`,
   "u",
 );
 
@@ -2409,8 +2418,8 @@ describe("TC-BOARD-053 board identities and Appendix D", () => {
     expect([...DOMAIN_KINDS].filter((kind) => kind === "board")).toHaveLength(1);
   });
 
-  test("the closed two-segment allowlist holds exactly 62 members with two board codes, three steer codes, and three retro codes", () => {
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(62);
+  test("the closed two-segment allowlist holds exactly 64 members with two board codes, three steer codes, and three retro codes", () => {
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(64);
     const board = [...RESERVED_TWO_SEGMENT_CODES].filter((code) => code.startsWith("board."));
     expect(board.sort()).toEqual(["board.repository-unknown", "board.state-unavailable"]);
   });
@@ -2428,20 +2437,20 @@ describe("TC-BOARD-053 board identities and Appendix D", () => {
     expect(resolveAppErrorCode("board.state-unavailable").ok).toBe(true);
   });
 
-  test("the four surfaces agree on 146 entries / 145 delivered / 62 allowlist / 2 board / 3 steer / 3 retro / 146 documented", () => {
+  test("the four surfaces agree on 148 entries / 147 delivered / 64 allowlist / 2 board / 3 steer / 3 retro / 148 documented", () => {
     const tableEntries = ERROR_TABLE as readonly { domainKind: string }[];
-    expect(tableEntries).toHaveLength(146);
+    expect(tableEntries).toHaveLength(148);
     const delivered = tableEntries.filter((entry) => entry.domainKind !== "spend");
-    expect(delivered).toHaveLength(145);
+    expect(delivered).toHaveLength(147);
     expect(tableEntries.filter((entry) => entry.domainKind === "board")).toHaveLength(2);
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(62);
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(64);
     const carrier = readFileSync(
       join(ROOT, "doc/spec/features/feature-result-contract.md"),
       "utf8",
     );
-    expect(carrier).toContain("146 machine identities");
-    expect(carrier).toContain("the same 146 identities");
-    expect(carrier).toContain("exact two-segment allowlist of 62 declared identities");
+    expect(carrier).toContain("148 machine identities");
+    expect(carrier).toContain("the same 148 identities");
+    expect(carrier).toContain("exact two-segment allowlist of 64 declared identities");
   });
 
   test("the repo-wide no-leftover scan reports no legacy count pin across the five files", () => {
@@ -2516,8 +2525,8 @@ describe("TC-STEER-074/075/076 the steer kind and its three identities", () => {
   });
 
   test("the entry and delivered counts moved exactly once and no delivered row changed", () => {
-    expect(entries).toHaveLength(146);
-    expect(entries.filter((entry) => entry.domainKind !== "spend")).toHaveLength(145);
+    expect(entries).toHaveLength(148);
+    expect(entries.filter((entry) => entry.domainKind !== "spend")).toHaveLength(147);
     expect(entries.filter((entry) => entry.domainKind === "board")).toHaveLength(2);
     expect(entries.filter((entry) => entry.domainKind === "ceremony")).toHaveLength(2);
     expect(entries.filter((entry) => entry.domainKind === "steer")).toHaveLength(3);
@@ -2529,8 +2538,8 @@ describe("TC-STEER-074/075/076 the steer kind and its three identities", () => {
     );
   });
 
-  test("the closed allowlist is exactly 62 members including the three steer and three retro codes", () => {
-    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(62);
+  test("the closed allowlist is exactly 64 members including the three steer and three retro codes", () => {
+    expect([...RESERVED_TWO_SEGMENT_CODES]).toHaveLength(64);
     const steer = [...RESERVED_TWO_SEGMENT_CODES].filter((code) => code.startsWith("steer."));
     expect(steer.sort()).toEqual([
       "steer.credential-value-rejected",
@@ -2563,9 +2572,9 @@ describe("TC-STEER-074/075/076 the steer kind and its three identities", () => {
       expect(doc.split(row).length - 1, entry.code).toBe(1);
     }
     expect(doc).toContain("The `steer` kind carries exactly the three steering identities");
-    expect(doc).toContain("146 machine identities");
-    expect(doc).toContain("the same 146 identities");
-    expect(doc).toContain("exact two-segment allowlist of 62 declared identities");
+    expect(doc).toContain("148 machine identities");
+    expect(doc).toContain("the same 148 identities");
+    expect(doc).toContain("exact two-segment allowlist of 64 declared identities");
   });
 
   test("four surfaces agree on the same tuple read from one tree", async () => {
@@ -2581,10 +2590,10 @@ describe("TC-STEER-074/075/076 the steer kind and its three identities", () => {
       steer: entries.filter((entry) => entry.domainKind === "steer").length,
     };
     expect(tuple).toEqual({
-      entries: 146,
-      documented: 146,
-      deliverd: 145,
-      allowlist: 62,
+      entries: 148,
+      documented: 148,
+      deliverd: 147,
+      allowlist: 64,
       board: 2,
       steer: 3,
     });
