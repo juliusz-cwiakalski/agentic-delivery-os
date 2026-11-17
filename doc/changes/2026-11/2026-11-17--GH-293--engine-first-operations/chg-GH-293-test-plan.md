@@ -1,14 +1,14 @@
 ---
 id: chg-GH-293-test-plan
-status: Proposed
-version: 1.0
+status: Updated
+version: 1.1
 created: 2026-11-17
 last_updated: 2026-11-17
 owners: [engineering]
 service: delivery-os
 labels: [engine-first, handover-gate, repos, dispatch, dual-run, shell-fallback, merge, classification, documentation, m2]
 version_impact: minor
-summary: "Pin engine-first delivery operations as comparisons a test runs: clean accrual is the corroborated number, never a dispatch count (data.cleanDispatches === data.corroboration.satisfied, with data.consecutiveCleanDispatches the trailing run over counted attempts in append order — a non-clean counted attempt resets it to 0, and an empty window yields 0/0); the four handover conditions are one shape in one declared order (truth, coverage, floor, corroboration) read by three surfaces, with the open set identical to unmetConditions in order and window-level unverifiability carried only by verdict plus the truncation object (verdict == unverifiable ⟺ truncation present, never a third status); reversibility is the folded authority after the operation (true after a recorded flip and an idempotent flip noop, false after a revert and a clean refusal) with the reversal record shape unchanged, replay idempotent, and per-repository isolation; the fleet read hosts the evaluation at read time with the declared degraded-evidence behaviour (unreadable or torn ledger ⇒ repos.state-unavailable exit 2 and no row; truncated read ⇒ verdict unverifiable plus truncation; first-use ⇒ the empty-window evaluation with no store opened; two reads over unchanged state byte-identical) while projects list --flat stays byte-identical and carries neither new field; the shell stack does not move (no pointer in dual-run, exit 0 plus a bounded stderr pointer when authoritative, five summary keys in the pinned order, no new stdout line, fallback alive with the typed CLI absent) and no repository is flipped; provider windows and holds stay documented effect surfaces with no new read and no QueueLane.providerProfile (asserted absent), the over-claiming peak-pausing sentence corrected and the lanes-read blindness declared; and the production merge composition performs real tracker/CI/request-detail reads over injected transports, classifies every emitted (kind, code) by its resolved error-table row (config.credential.missing emits config, never fallback.internal), adds no identity/row/kind/exit, and keeps verify deploy a declared residual."
+summary: "Pin engine-first delivery operations as comparisons a test runs: clean accrual is the corroborated number, never a dispatch count (data.cleanDispatches === data.corroboration.satisfied, with data.consecutiveCleanDispatches the trailing run over counted attempts in append order — a non-clean counted attempt resets it to 0, and an empty window yields 0/0); the four handover conditions are one shape in one declared order (truth, coverage, floor, corroboration) read by three surfaces, present on every outcome that performs the gate evidence read, with the open set identical to unmetConditions in order and window-level unverifiability carried only by verdict plus the truncation object (verdict == unverifiable ⟺ truncation present, never a third status), while the idempotent revert noop on an already-dual-run repository is the single declared exemption — answered before any evidence read, exit 0, recorded false, noop true, operation dual-run, reversible false, and no conditions, no verdict, no truncation, so it still answers under an unreadable or torn ledger, whereas the recorded revert under that ledger refuses dispatch.state-unverified at exit 2 with no record and the prior flip intact; reversibility is the folded authority after the operation (true after a recorded flip and an idempotent flip noop, false after a revert, a clean refusal, and the revert noop) with the reversal record shape unchanged, replay idempotent, and per-repository isolation; the fleet read hosts the evaluation at read time, bound to each row's own normalized host/owner/name repository identity resolved read-only and non-persisting from that checkout's persisted binding or its normalized configured remote (no extra store open, no binding write, foreign-repository records excluded, an unresolvable identity failing repos.state-unavailable at exit 2 with no row), with the declared degraded-evidence behaviour (unreadable or torn ledger ⇒ repos.state-unavailable exit 2 and no row; truncated read ⇒ verdict unverifiable plus truncation; first-use ⇒ the empty-window evaluation with no store opened; two reads over unchanged state byte-identical) while projects list --flat stays byte-identical and carries neither new field; the shell stack does not move (no pointer in dual-run, exit 0 plus a bounded stderr pointer when authoritative, five summary keys in the pinned order, no new stdout line, fallback alive with the typed CLI absent) and no repository is flipped; provider windows and holds stay documented effect surfaces with no new read and no QueueLane.providerProfile (asserted absent), the over-claiming peak-pausing sentence corrected and the lanes-read blindness declared; and the production merge composition performs real tracker/CI/request-detail reads over injected transports, resolves branch and base reference from git facts, configuration from the three declared merge keys, and the owner principal as the provider-resolved repository owner (the owner component of the checkout's normalized host/owner/name identity, with no new configuration key), publishes MERGE_COMPOSITION_EMITTABLE_CODES as its exported emittable-code set (non-empty, duplicate-free, covering config/provider/state/merge so the conformance test cannot pass vacuously), classifies every emitted (kind, code) by its resolved error-table row (config.credential.missing emits config, never fallback.internal), adds no identity/row/kind/exit, keeps verify deploy a declared residual, and hands the two broader test specs to phase 7 for reconciliation rather than claiming them aligned during test planning."
 links:
   change_spec: ./chg-GH-293-spec.md
   implementation_plan: ./chg-GH-293-plan.yaml
@@ -23,26 +23,26 @@ This change projects facts that are already computed, so the risk is not a missi
 
 **First, accrual is honest.** `cleanDispatches` is not merely present; it is *declared identical* to `corroboration.satisfied`, so the case asserts equality on every fixture family and additionally asserts that a dispatch-count interpretation would fail (`TC-ENGINE-001`). The streak is the **trailing** run, not the longest run: a clean-clean-non-clean-clean-ledger reads 1, a ledger ending on a non-clean counted attempt reads 0, and an empty window reads 0/0 (`TC-ENGINE-001`, `TC-ENGINE-003`). The restated `SC-M2-S16-02` is delivered as an accrual walk — `countedDeliveries` +1 per counted dispatch, `cleanDispatches` +1 per corroborated one, `coverage.present` gaining a token only on first appearance — and the case asserts the *absence* of a numeric coverage counter (`TC-ENGINE-002`).
 
-**Second, one shape, one order, three readers.** `conditions` is four `{condition, status}` entries in the declared `truth, coverage, floor, corroboration` order with **no** `detail`; the open set equals `unmetConditions.map(c => c.condition)` in order; and `unverifiable` stays a window-level verdict expressed by `verdict` plus `truncation` (`TC-ENGINE-003`, `TC-ENGINE-004`, `TC-ENGINE-014`). The invariant is asserted as a biconditional so neither half can drift: a data-returning surface with `verdict == "unverifiable"` and no `truncation` fails, and a `truncation` without that verdict fails. `TC-ENGINE-095` makes disagreement between summary, handover, and the fleet row a failing test rather than a review question.
+**Second, one shape, one order, three readers, one declared exemption.** `conditions` is four `{condition, status}` entries in the declared `truth, coverage, floor, corroboration` order with **no** `detail`, present on every outcome that performs the gate evidence read — recorded flip, idempotent flip noop, clean refusal, recorded revert — and the open set equals `unmetConditions.map(c => c.condition)` in order; `unverifiable` stays a window-level verdict expressed by `verdict` plus `truncation` (`TC-ENGINE-003`, `TC-ENGINE-004`, `TC-ENGINE-014`). The single exemption is the idempotent revert noop on an already-`dual-run` repository (or one with no handover record): it is answered **before** any evidence read, so `TC-ENGINE-010` asserts the absence as a declared value (`conditions`, `verdict`, and `truncation` all absent; `recorded: false`, `noop: true`, `operation: "dual-run"`, `reversible: false`) *and* asserts presence on the four evidence-reading outcomes, and the same case answers the noop under a torn ledger at exit `0`. The invariant is asserted as a biconditional so neither half can drift: a data-returning surface with `verdict == "unverifiable"` and no `truncation` fails, and a `truncation` without that verdict fails. `TC-ENGINE-095` makes disagreement between summary, handover, and the fleet row a failing test rather than a review question.
 
-**Third, degraded evidence stays truthful and the fleet read stays read-only.** An unreadable or torn attempts/divergences ledger fails the *whole* fleet read as `repos.state-unavailable` at exit `2` with no fabricated row, and the case proves the no-row half by asserting `data` is absent rather than empty (`TC-ENGINE-023`). A truncated read is not a failure: the row reports `verdict: "unverifiable"` with the `truncation` object over the visible window (`TC-ENGINE-024`). A `first-use` row reports the empty-window evaluation and **no store is opened**, proven by a host-root snapshot that must be identical before and after (`TC-ENGINE-020`, AMB-ENG-1). The flat alias is the counter-witness: a torn attempts ledger that fails the fleet read must leave `projects list --flat` at exit `0` with its rows unchanged (`TC-ENGINE-023`), which is what proves the evaluation is hosted on the `repos` row *only*.
+**Third, degraded evidence stays truthful, the fleet read stays read-only, and each row is bound to its own repository.** An unreadable or torn attempts/divergences ledger fails the *whole* fleet read as `repos.state-unavailable` at exit `2` with no fabricated row, and the case proves the no-row half by asserting `data` is absent rather than empty (`TC-ENGINE-023`); the same case asserts the unresolvable-identity failure, because a row that cannot resolve its own `host/owner/name` identity must fail under the same delivered identity rather than fold some other repository's evidence. A truncated read is not a failure: the row reports `verdict: "unverifiable"` with the `truncation` object over the visible window (`TC-ENGINE-024`). A `first-use` row reports the empty-window evaluation and **no store is opened**, proven by a host-root snapshot that must be identical before and after (`TC-ENGINE-020`, AMB-ENG-1). Because the row key is a minted project key and not a repository identity, `TC-ENGINE-021` seeds two foreign-repository records into the same store and asserts they are excluded from the row's `countedDeliveries`, `conditions`, and `cleanDispatches`, while `TC-ENGINE-093` pins the byte identity of two reads and `TC-ENGINE-094` pins that resolution costs no extra store open or binding write. The flat alias is the counter-witness: a torn attempts ledger that fails the fleet read must leave `projects list --flat` at exit `0` with its rows unchanged (`TC-ENGINE-023`), which is what proves the evaluation is hosted on the `repos` row *only*.
 
 **Fourth, the shell does not move and nothing is flipped.** The four entry points are exercised in both authority states and their `--help` stdout must be **byte-identical** between the states, with the deprecation pointer appearing only on stderr and only when authoritative (`TC-ENGINE-034`); the delivered pinned suites run unmodified (`TC-ENGINE-030`..`033`). No-flip is proven structurally — the only writers of `dispatch.handover` records are the handover and revert use cases, and the summary and fleet reads append zero records (`TC-ENGINE-035`) — with the "zero records attributable to this change" outcome recorded as a review audit (AMB-ENG-3), because a permanent suite cannot assert a fact about an operator's untracked state root.
 
-**Fifth, the merge composition is restored without widening the vocabulary.** Over a real temp git checkout and an injected recording transport, `merge <ref> --dry-run` produces the delivered dry-run report or a classified gate refusal and never `fallback.internal` (`TC-ENGINE-050`, `TC-ENGINE-051`); the defect itself — `config.credential.missing` hard-coded as `provider` and then contained — is pinned by a regression that asserts `kind: "config"` at the declared exit with zero records and zero transport calls (`TC-ENGINE-052`). `TC-ENGINE-054` makes totality a property of the resolved row rather than of an enumerated list, with an anti-vacuity guard so an empty enumeration cannot pass.
+**Fifth, the merge composition is restored without widening the vocabulary.** Over a real temp git checkout and an injected recording transport, `merge <ref> --dry-run` produces the delivered dry-run report or a classified gate refusal and never `fallback.internal` (`TC-ENGINE-050`, `TC-ENGINE-051`); the defect itself — `config.credential.missing` hard-coded as `provider` and then contained — is pinned by a regression that asserts `kind: "config"` at the declared exit with zero records and zero transport calls (`TC-ENGINE-052`). The owner principal is now a named source, not a choice: `TC-ENGINE-050` asserts the effect that defines it (a waiver authored by the provider-resolved repository owner is authorized and records nothing on a dry run; the same waiver from any other principal refuses `merge.waiver-unauthorized` at exit `1`) and asserts that the typed `merge` configuration branch still has exactly its three declared keys, so a second authority for the principal cannot appear. `TC-ENGINE-054` makes totality a property of the composition's exported `MERGE_COMPOSITION_EMITTABLE_CODES` — non-empty, duplicate-free, spanning `config.*`, `provider.*`, `state.*`, and `merge.*`, every member resolving to a declared row whose `domainKind` equals the kind the composition emits — with an anti-vacuity guard and a live mismatch control so an empty or hand-picked enumeration cannot pass.
 
-This document is a verification map, not an execution claim: no command was run against a new implementation at authoring time, and phase ownership is declared in `chg-GH-293-plan.yaml` (authored in phase 4, delivery_planning), not asserted here. Where the specification leaves a mechanism to the plan — the emittable failure-code set, the owner-principal source, the fleet row's repository binding, the noop-revert read posture, the guide's filename — the case asserts the declared property through the public surface and names the seam; a case that cannot resolve its seam fails naming the missing contract rather than skipping. All 14 acceptance criteria are covered; there are no TODO rows and no orphan cases. Seven properties are observed through a named substitute assertion (§3.5) because one half of the wording is a wall-clock/read-count bound, an "opened a store" absence with no counter seam, or an audit over untracked operator state; each substitution is recorded, not smoothed over.
+This document is a verification map, not an execution claim: no command was run against a new implementation at authoring time, and phase ownership is declared in `chg-GH-293-plan.yaml` (authored in phase 4, delivery_planning), not asserted here. Spec v1.1 declares the four seams test planning could not previously assert — the handover exemption (DEC-12), the owner-principal source (DEC-13), the emittable-code constant (DEC-14), and the row's repository binding (DEC-15) — plus the phase-7 test-spec reconciliation (DEC-16), so each case now targets a named declaration rather than a mechanism left to delivery. What remains delivery-bound is naming only: module paths, suite file names, the guide's filename, and the composition's wiring. A case that cannot resolve its seam fails naming the missing contract rather than skipping. All 14 acceptance criteria are covered; there are no TODO rows and no orphan cases. Seven properties are observed through a named substitute assertion (§3.5) because one half of the wording is a wall-clock/read-count bound, an "opened a store" absence with no counter seam, or an audit over untracked operator state; each substitution is recorded, not smoothed over.
 
 ### 1.1 In Scope
 
 - `dispatch dual-run summary`: additive `cleanDispatches` (identity with `corroboration.satisfied`), `consecutiveCleanDispatches` (trailing run, `0` when none or empty), and `conditions[]` (four, declared order, `met | open`, no `detail`) appended after `floor`; the three additive text lines placed after `unmet_conditions=` and before the optional truncation line; `truncation` last (F-1; AC-F1-1, AC-F1-2; DM-1, DM-3; DEC-2, DEC-3).
-- `dispatch handover`: `conditions[]` always present on every data-returning outcome, `reversible` from the folded authority after the operation, `unmetConditions` refusal-only and unchanged, `truncation` iff `verdict == "unverifiable"`, records unchanged, replay idempotent, per-repository isolation (F-2; AC-F2-3, AC-F2-4; DM-2, DM-3; DEC-2, DEC-4; TDR-0031 D2/D4).
-- `repos list`: read-time gate evaluation per `ready` row, the empty-window evaluation for `first-use` rows with no store opened, the declared degraded-evidence behaviour, row fields `reversible` then `handoverGate` after `handoverState`, `REPOS_ENTRY_FIELDS` extended in that order, unchanged text table, unchanged `projects.v1` / `projects list --flat` bytes (F-3; AC-F3-5, AC-F3-6; DM-4; DEC-1; NFR-2, NFR-3, NFR-4).
+- `dispatch handover`: `conditions[]` present on every outcome that performs the gate evidence read (recorded flip, idempotent flip noop, clean refusal, recorded revert), `reversible` from the folded authority after the operation, `verdict` populated on the recorded-revert outcome so the truncation invariant is expressible there, the idempotent revert noop declared evidence-read-free and exempt from `conditions`/`verdict`/`truncation` (exit `0`, `reversible: false`, and it answers under a torn ledger), `unmetConditions` refusal-only and unchanged, `truncation` iff `verdict == "unverifiable"`, records unchanged, replay idempotent, per-repository isolation (F-2; AC-F2-3, AC-F2-4; DM-2, DM-3; NFR-4, NFR-11; DEC-2, DEC-4, DEC-12; TDR-0031 D2/D4).
+- `repos list`: read-time gate evaluation per `ready` row bound to that row's own normalized `host/owner/name` identity — resolved read-only and non-persisting from the checkout's persisted binding or its normalized configured remote, at no additional store open and with no binding write — foreign-repository records excluded, an unresolvable identity failing `repos.state-unavailable` at exit `2` with no row, the empty-window evaluation for `first-use` rows with no store opened, the declared degraded-evidence behaviour, row fields `reversible` then `handoverGate` after `handoverState`, `REPOS_ENTRY_FIELDS` extended in that order, unchanged text table, unchanged `projects.v1` / `projects list --flat` bytes (F-3; AC-F3-5, AC-F3-6; DM-4, DM-7; DEC-1, DEC-15; NFR-2, NFR-3, NFR-4, NFR-13).
 - Engine-first operation with the shell stack byte-stable and documented, and **no repository flipped**: `dual-run` no pointer, `authoritative` exit `0` plus the bounded stderr pointer naming `dispatch <ref>` and `dispatch handover <repo> --revert`, the five summary keys in the pinned order, no new stdout line, the fallback still deciding with the typed CLI absent (F-4; AC-F4-7, AC-F4-8; NFR-6, NFR-7; DEC-6, DEC-9).
 - Windows and holds as documented effect surfaces only: the mapping stated explicitly, the over-claiming peak-pausing sentence corrected to the surfaces that do carry the nomination, the lanes-read profile blindness declared, and both `no new read` and `no QueueLane.providerProfile` asserted as absences (F-5; AC-F5-9; DEC-5; NG-3, NG-4).
-- The production merge composition restored to real tracker/CI/request-detail reads and real configuration, branch, base-reference, and owner-principal resolution, with failure classification derived from the resolved error-table row, a regression through the production composition, and a conformance test over every emittable code; `verify deploy`'s stub asserted as a declared residual (F-6, F-7; AC-F6-10, AC-F7-11; DM-5; DEC-7, DEC-8).
-- Documentation and corpus deliverables as testable content: the redistribution-marked operator guide, the six reconciled feature pages, the planning-corpus updates including both restatements, the restatement traceability to story AC1/AC4, and the TDR-0031 landing with its index row (F-8; AC-F8-12, AC-F8-13; NFR-8; DEC-10).
-- Cross-cutting: additive stability of every touched payload, no new command/verb/flag/error row/`DOMAIN_KINDS` member/exit class, hermeticity (zero live network, credential, model, or sleep), determinism of two fleet reads, bounded fleet evaluation, and fixture-level no-flip discipline (AC-NFR1-14; NFR-1..NFR-10; DEC-9).
+- The production merge composition restored to real tracker/CI/request-detail reads and real configuration, branch, base-reference, and owner-principal resolution — the principal being the provider-resolved repository owner from the checkout's normalized identity, with no new configuration key and the three declared `merge` keys unchanged — with failure classification derived from the resolved error-table row, the exported `MERGE_COMPOSITION_EMITTABLE_CODES` conformance set, a regression through the production composition, and a conformance test over every emittable code; `verify deploy`'s stub asserted as a declared residual (F-6, F-7; AC-F6-10, AC-F7-11; DM-5, DM-6; DEC-7, DEC-8, DEC-13, DEC-14; NFR-5, NFR-12).
+- Documentation and corpus deliverables as testable content: the redistribution-marked operator guide, the six reconciled feature pages, the phase-7 handoff of the two broader test specs (`test-spec-dispatch-engine.md`, `test-spec-merge-verify-deploy.md`) with no new test-spec entry, the planning-corpus updates including both restatements, the restatement traceability to story AC1/AC4, and the TDR-0031 landing with its index row (F-8; AC-F8-12, AC-F8-13; NFR-8; DEC-10, DEC-11, DEC-16).
+- Cross-cutting: additive stability of every touched payload, no new command/verb/flag/error row/`DOMAIN_KINDS` member/exit class, hermeticity (zero live network, credential, model, or sleep), determinism of two fleet reads, bounded fleet evaluation, and fixture-level no-flip discipline (AC-NFR1-14; NFR-1..NFR-13; DEC-9).
 
 ### 1.2 Out of Scope & Known Gaps
 
@@ -57,18 +57,20 @@ This document is a verification map, not an execution claim: no command was run 
 - [OUT] The `verify deploy` production-composition fix (RSK-8, NG-8): `TC-ENGINE-055` asserts the delivered stub is still a *declared* residual and that the pages say so — it never asserts deploy confidence.
 - [OUT] Migration, backfill, or seeding of attempt/divergence/handover/reversal records (§19): `TC-ENGINE-012` asserts the pre-existing records still parse and no extra record appears.
 - [OUT] Rewriting agent/command prompts or consumer shell scripts beyond the documentation statements (§7.2): `TC-ENGINE-091` runs the prompt-conformance check as a control.
-- [GAP-T1 — AC-F2-3's "any outcome" reaches a path that performs no evidence read] The already-`dual-run` revert is answered as a noop **before** any gate read today. "`conditions` always present" therefore implies a read on that path, and a torn ledger then refuses a noop at exit `2` instead of answering noop. That consequence is not stated in the spec. Cases: `TC-ENGINE-010` asserts the AC as written (four conditions on every data-returning outcome) and `TC-ENGINE-014` asserts the unreadable-evidence rule (exit `2`, no data) uniformly; the exact noop-with-torn-ledger outcome is logged as OQ-TP-3 and the case fails naming it if delivery leaves it undeclared.
-- [GAP-T2 — the emittable-code set of AC-F7-11 is not declared] "Every failure code the production composition can emit" is a property of code that does not exist yet. `TC-ENGINE-054` derives the set from the composition's declared failure constructors plus the delivered merge/provider/config/state rows and fails when an emitted code has no declared row; totality over a future code is only as good as that declaration. See AMB-ENG-4, OQ-TP-1.
-- [GAP-T3 — "resolves … the owner principal from real sources" names no source] AC-F6-10 requires a real principal but the spec does not name the declared source (config key, git fact, or tracker identity). `TC-ENGINE-050` observes the effect (a waiver authorized for the resolved principal, refused for another) and does not hardcode the key. See AMB-ENG-5, OQ-TP-2.
+- [GAP-T1 — closed by DEC-12] AC-F2-3's "any outcome" reached a path that performs no evidence read. The already-`dual-run` revert noop is now **declared** evidence-read-free: answered before any gate read, exit `0`, `recorded: false`, `noop: true`, `operation: "dual-run"`, `reversible: false`, and carrying no `conditions`, no `verdict`, and no `truncation`. The plan asserts the exemption as a declared absence *and* the promise on the four evidence-reading outcomes, so neither half can be traded for the other: `TC-ENGINE-010` asserts the absence set and the presence set and answers the noop under a torn attempts ledger; `TC-ENGINE-011` pins `reversible: false` on it; `TC-ENGINE-012` pins that it appends no record; `TC-ENGINE-014` pins that the *recorded* revert under that same torn ledger refuses `dispatch.state-unverified` at exit `2` with no record appended and the prior flip intact; `TC-ENGINE-016` pins key order on the non-exempt outcomes only.
+- [GAP-T2 — closed by DEC-14] The emittable-code set of AC-F7-11 is declared: the production composition exports `MERGE_COMPOSITION_EMITTABLE_CODES`, exhaustive by construction over its refusal branches. `TC-ENGINE-054` ranges over that constant and asserts non-emptiness, duplicate-freedom, at least one `config.*`/`provider.*`/`state.*`/`merge.*` member, a declared row per member, and a kind match per member; it fails naming the missing constant if delivery does not publish it. A refusal branch added later without extending the constant is the declared conformance failure (R-TP-3, RSK-13).
+- [GAP-T3 — closed by DEC-13] The owner-principal source is named: the provider-resolved repository owner — the owner component of the checkout's normalized `host/owner/name` identity, resolved through the delivered identity policy — supplied to the composition's declared owner-principal input, with no new configuration key, branch member, or identity source. `TC-ENGINE-050` asserts the effect (authorized for that principal, refused `merge.waiver-unauthorized` at exit `1` for any other) and asserts the `merge` configuration branch still has exactly its three declared keys, so a second authority cannot appear.
 - [GAP-T4 — delivery-bound names] Module paths, suite file names, the helper names of the single producer, the guide's filename, and the composition's seam wiring are delivery-bound. Behaviours, identities, exits, closed vocabularies, key orders named in the spec, and AC traceability are not. A test that cannot resolve a seam fails naming the missing contract; it never skips (house rule, §4).
 - [GAP-T5 — measured bounds print their context] The 5,005-record truncation fixture (`TC-ENGINE-024`) and the fleet-cost floor (`TC-ENGINE-094`) are bounded measurements: they print record counts, row counts, and elapsed milliseconds so a breach is diagnosable, and they never assert a wall-clock latency as a pass condition.
-- [GAP-T6 — the fleet row's repository binding is unnamed] The delivered fold is repository-scoped (`attempt.repository === repository`), yet the spec does not say how a `repos list` row learns its repository string (checkout origin, the store's own records, or the host index). `TC-ENGINE-021` constrains the fixture to one bound repository plus two foreign records and asserts the scope rule, which fails any whole-store fold; the binding source is logged as OQ-TP-8. If delivery derives it by reading each checkout's origin, the per-row cost grows and `TC-ENGINE-094`'s floor is the tripwire.
+- [GAP-T6 — closed by DEC-15] The fleet row's repository binding is declared: the row's evaluation is bound to that checkout's normalized `host/owner/name` identity, resolved read-only and non-persisting through the delivered identity policy (persisted create-once binding, otherwise the normalized configured remote), at no additional store open and with no binding write. `TC-ENGINE-021` seeds two foreign-repository records into the same store and asserts the scope rule, `TC-ENGINE-023` asserts the unresolvable-identity failure (`repos.state-unavailable`, exit `2`, no row), `TC-ENGINE-020` asserts the no-store-open snapshot half, and `TC-ENGINE-094` watches the cost.
+- [GAP-T7 — the broader test specs are a phase-7 handoff] AC-F8-12 places the reconciliation of `doc/quality/test-specs/test-spec-dispatch-engine.md` and `test-spec-merge-verify-deploy.md` in the documentation phase (phase 7, `@doc-syncer`), not in test planning (DEC-16). No case asserts that content here: `TC-ENGINE-061` asserts the pages state the handoff and that `doc/quality/test-specs/` gained no new entry, and the reconciliation itself is recorded as a phase-7 attestation in §10.
 
 ## 2. References
 
 | Reference | Role in this plan |
 |---|---|
-| [`chg-GH-293-spec.md`](./chg-GH-293-spec.md) v1.0 | Binding source: F-1..F-8, **14 ACs** (AC-F1-1, AC-F1-2, AC-F2-3, AC-F2-4, AC-F3-5, AC-F3-6, AC-F4-7, AC-F4-8, AC-F5-9, AC-F6-10, AC-F7-11, AC-F8-12, AC-F8-13, AC-NFR1-14), NFR-1..NFR-10, DM-1..DM-5, DEC-1..DEC-11, §5.1 capability details, §6 flows 1–5, §7 scope, §8 contracts, Appendix A (exact additive shapes), Appendix B (scenario restatements), Appendix C (window/hold mapping), Appendix D (source anchors). |
+| [`chg-GH-293-spec.md`](./chg-GH-293-spec.md) **v1.1** | Binding source: F-1..F-8, **14 ACs** (AC-F1-1, AC-F1-2, AC-F2-3, AC-F2-4, AC-F3-5, AC-F3-6, AC-F4-7, AC-F4-8, AC-F5-9, AC-F6-10, AC-F7-11, AC-F8-12, AC-F8-13, AC-NFR1-14), NFR-1..NFR-13, DM-1..DM-7, DEC-1..DEC-16, §5.1 capability details, §6 flows 1–5, §7 scope, §8 contracts, Appendix A (exact additive shapes), Appendix B (scenario restatements), Appendix C (window/hold mapping), Appendix D (source anchors), **Appendix E** (the declared handover outcome table, the fleet failure table, and the emittable-code declaration). The v1.1 amendment declares the four seams this plan previously logged as gaps — the idempotent-revert-noop exemption (DEC-12), the owner-principal source (DEC-13), the emittable-code constant (DEC-14), the row repository binding (DEC-15) — and the phase-7 test-spec handoff (DEC-16). |
+| **Declared seams consumed as oracles** | `packages/core/src/domain/dispatch-identity.ts` (normalized `host/owner/name` and its resolution order: persisted binding, scheduler key, normalized remote); `packages/core/src/domain/merge-waiver.ts` (the owner principal declared as "the provider-resolved repository identity"); `packages/core/src/contracts/merge.ts` (`MergeTransactionConfig.ownerPrincipal` and the three `merge` configuration keys); `packages/core/src/contracts/error-table.ts` (`domainKind` per row and `DOMAIN_KINDS`); the composition's exported `MERGE_COMPOSITION_EMITTABLE_CODES`. |
 | [`TDR-0031-engine-first-evaluation-surfaces.md`](../../../decisions/TDR-0031-engine-first-evaluation-surfaces.md) (status `Proposed`, uncommitted working-tree file) | Binding decision record: D1 read-time host on the `repos` row with the declared failure behaviour; D2 one `{condition, status}` shape in the declared order with `unverifiable` kept at verdict level; D3 `cleanDispatches` identity plus the trailing-run streak and the SC-02 restatement; D4 `reversible` from the folded authority with the SC-03 restatement and the shell untouched; D5 no window/hold read and no `QueueLane.providerProfile`; D6 no flip; D7 merge read-failure classification as contract restoration. C-1..C-8 are the constraint set the negative cases invert. |
 | [`.ai/rules/testing-strategy.md`](../../../../.ai/rules/testing-strategy.md) | `bun:test` under `tests/**/*.test.ts`; fixtures never named `*.test.ts`; suites under `tests/{structure,behaviour,golden,checks,boundaries}`; permanent suites assert the current tree, never a diff against a moving base branch; goldens regenerate only by an explicit command; `pnpm check` is the aggregate gate; absences are proven by a failing check that names the offending field. |
 | [`.ai/rules/typescript.md`](../../../../.ai/rules/typescript.md) | Strict typing; injected clock/randomness/environment; data-only contracts; pure domain; adapters own I/O; injected fakes over `mock.module`. |
@@ -81,7 +83,7 @@ This document is a verification map, not an execution claim: no command was run 
 
 ## 3. Coverage Overview
 
-All **14 acceptance criteria** map to at least one named case, and no case is an orphan. The plan carries **44 cases in eight blocks**: accrual `001`–`006`, handover `010`–`016`, fleet `020`–`024`, shell and no-flip `030`–`035`, windows/holds documentation `040`–`042`, merge restoration and classification `050`–`055`, documentation deliverables `060`–`064`, cross-cutting invariants `090`–`095`. The mapping is intentionally uneven: criteria whose wording spans several independent observables get several cases (AC-F3-5 → three, AC-F4-7 → five, AC-F2-3 → four), which is cheaper than a case that would pass while one half of the sentence is false.
+All **14 acceptance criteria** map to at least one named case, and no case is an orphan. The plan carries **44 cases in eight blocks**: accrual `001`–`006`, handover `010`–`016`, fleet `020`–`024`, shell and no-flip `030`–`035`, windows/holds documentation `040`–`042`, merge restoration and classification `050`–`055`, documentation deliverables `060`–`064`, cross-cutting invariants `090`–`095`. The mapping is intentionally uneven: criteria whose wording spans several independent observables get several cases (AC-F3-5 → three, AC-F4-7 → five, AC-F2-3 → four), which is cheaper than a case that would pass while one half of the sentence is false. Spec v1.1's declared seams are asserted **as declarations, in both directions**: the handover exemption cases prove the absence on the one exempt outcome **and** the presence on the four evidence-reading outcomes (NFR-11), the binding cases prove foreign records excluded **and** that resolution opens no extra store and writes no binding (NFR-13), and the conformance case proves `MERGE_COMPOSITION_EMITTABLE_CODES` is exported, non-empty, duplicate-free, and non-vacuous (NFR-12).
 
 **Restated scenarios are oracles, not prose.** `SC-M2-S16-02` is delivered by `TC-ENGINE-002` (accrual walk) and `TC-ENGINE-062`/`063` (corpus text); `SC-M2-S16-03` by `TC-ENGINE-011`/`012` (reversibility before/after `--revert`, per-repository isolation) and `TC-ENGINE-031`/`062`/`063` (shell exit 0 plus pointer, corpus text). The original assertions — per-dispatch coverage growth and a shell `data.reversible` — are asserted **absent** by `TC-ENGINE-062` so a future reader cannot re-introduce the unrepresentable claim.
 
@@ -91,22 +93,22 @@ All **14 acceptance criteria** map to at least one named case, and no case is an
 |---|---|---|---|
 | AC-F1-1 | Summary carries `cleanDispatches` (= `corroboration.satisfied`), `consecutiveCleanDispatches` (trailing run, `0` when none/empty), and four `conditions` in the declared order with `met`/`open`; delivered keys/order unchanged; `truncation` last | TC-ENGINE-001, TC-ENGINE-002, TC-ENGINE-003, TC-ENGINE-005 | Covered |
 | AC-F1-2 | The set and order of `open` conditions equals `unmetConditions[].condition` on every fixture family; `cleanDispatches === corroboration.satisfied` on every fixture; the three text lines sit after `unmet_conditions=` and before the optional truncation line | TC-ENGINE-004, TC-ENGINE-006, TC-ENGINE-095 | Covered |
-| AC-F2-3 | Handover data always carries four `conditions` in the declared order; `unmetConditions` refusal-only; `reversible` equals "latest folded authority is `authoritative`"; `truncation` present exactly when `verdict == "unverifiable"`; no condition status is `unverifiable`; delivered keys keep position | TC-ENGINE-010, TC-ENGINE-011, TC-ENGINE-014, TC-ENGINE-016 | Covered |
-| AC-F2-4 | `reversible` is `true` after a recorded flip and after an idempotent flip noop, `false` after a recorded revert and on a clean refusal; the reversal record shape is unchanged; replay appends no duplicate; an unrelated repository is unaffected | TC-ENGINE-011, TC-ENGINE-012, TC-ENGINE-013 | Covered |
-| AC-F3-5 | Every row carries the five delivered fields then `reversible` and `handoverGate`; the block carries `verdict`, four `conditions`, `countedDeliveries`, `cleanDispatches`, and `truncation` only when truncated; `handoverGate.cleanDispatches` equals the summary's; the flat alias stays byte-identical and carries neither field | TC-ENGINE-020, TC-ENGINE-021, TC-ENGINE-022 | Covered |
-| AC-F3-6 | Unreadable/torn ledger ⇒ `repos.state-unavailable` exit `2` with no row; truncated read ⇒ `verdict: "unverifiable"` plus `truncation` over the visible window; `first-use` ⇒ the empty-window evaluation with no store opened; two reads over unchanged state byte-identical | TC-ENGINE-020, TC-ENGINE-023, TC-ENGINE-024, TC-ENGINE-093 | Covered |
+| AC-F2-3 | Handover data carries four `conditions` in the declared order on every outcome that performs the gate evidence read (recorded flip, idempotent flip noop, clean refusal, recorded revert); the idempotent revert noop is the single declared exemption — answered before any evidence read, exit `0`, `recorded: false`, `noop: true`, `operation: "dual-run"`, `reversible: false`, with no `conditions`, no `verdict`, and no `truncation`, and it is not refused by a torn attempts/divergences ledger; `unmetConditions` refusal-only; `reversible` equals "latest folded authority is `authoritative`"; the recorded revert carries `verdict`, so `truncation` is present exactly when `verdict == "unverifiable"`; no condition status is `unverifiable`; delivered keys keep position | TC-ENGINE-010, TC-ENGINE-011, TC-ENGINE-014, TC-ENGINE-016 | Covered |
+| AC-F2-4 | `reversible` is `true` after a recorded flip and after an idempotent flip noop, `false` after a recorded revert, on a clean refusal, and on the idempotent revert noop; the revert noop returns data at exit `0` with no record appended and no evidence read, so it still answers under an unreadable or torn attempts ledger, while the recorded revert under that ledger refuses `dispatch.state-unverified` at exit `2` with no record appended and the prior flip intact; the reversal record shape is unchanged; replay appends no duplicate; an unrelated repository is unaffected | TC-ENGINE-011, TC-ENGINE-012, TC-ENGINE-013, TC-ENGINE-014 | Covered |
+| AC-F3-5 | Every row carries the five delivered fields then `reversible` and `handoverGate`; the block carries `verdict`, four `conditions`, `countedDeliveries`, `cleanDispatches`, and `truncation` only when truncated; the row's evaluation is bound to its own checkout's normalized `host/owner/name` identity resolved read-only and non-persisting (persisted binding, else the normalized configured remote), so `handoverGate.cleanDispatches` equals the summary's and foreign-repository records are excluded, with no additional store opened and no binding written; the flat alias stays byte-identical and carries neither field | TC-ENGINE-020, TC-ENGINE-021, TC-ENGINE-022 | Covered |
+| AC-F3-6 | Unreadable/torn ledger ⇒ `repos.state-unavailable` exit `2` with no row; **unresolvable row identity ⇒ the same identity, exit `2`, no row**; truncated read ⇒ `verdict: "unverifiable"` plus `truncation` over the visible window; `first-use` ⇒ the empty-window evaluation (`ineligible`, truth met, corroboration met vacuously, coverage/floor open, `countedDeliveries: 0`, `reversible: false`) with no store opened; two reads over unchanged state byte-identical | TC-ENGINE-020, TC-ENGINE-023, TC-ENGINE-024, TC-ENGINE-093 | Covered |
 | AC-F4-7 | `dual-run` prints no pointer; `authoritative` exits `0` and prints the bounded stderr pointer naming `dispatch <ref>` and `dispatch handover <repo> --revert`; both remain executable; the delivery summary keeps exactly five keys in the pinned order with no new stdout key or line | TC-ENGINE-030, TC-ENGINE-031, TC-ENGINE-032, TC-ENGINE-033, TC-ENGINE-034 | Covered |
 | AC-F4-8 | This repository and the fleet stay `dual-run` with no authoritative record attributable to the change; the flip stays an owner act; the guide documents the engine as the regular path with the shell as fallback | TC-ENGINE-035, TC-ENGINE-060, TC-ENGINE-063 | Covered |
 | AC-F5-9 | The hold and window effect-surface mapping is stated explicitly; the lanes-read nomination claim is removed and replaced by the surfaces that do carry the nomination; the lanes-read profile blindness is declared; no window read and no `QueueLane.providerProfile` are introduced | TC-ENGINE-040, TC-ENGINE-041, TC-ENGINE-042 | Covered |
-| AC-F6-10 | The production composition performs real tracker/CI/request-detail reads and resolves configuration, branch, base reference, and owner principal; dry run yields the delivered report at exit `0` or a classified refusal at exit `1`; never `fallback.internal` for a configuration-read failure | TC-ENGINE-050, TC-ENGINE-051, TC-ENGINE-053, TC-ENGINE-055 | Covered |
-| AC-F7-11 | Every emitted `(kind, code)` matches the code's declared `domainKind` (`config.credential.missing` ⇒ `config`); no pair contradicts the table; a missing-credential dry run is classified by its declared identity at its declared exit; row count, `DOMAIN_KINDS`, and exit classes unchanged | TC-ENGINE-052, TC-ENGINE-053, TC-ENGINE-054, TC-ENGINE-091 | Covered |
-| AC-F8-12 | The six feature pages state the declared contracts and residuals; a new guide declares `ados_distribution: redistributable` and covers operation, gate/row reading, flip and reversal, and the shell fallback; the planning corpus carries the backlog `Progress:` line, the status addendum, the README scenario row including SC-M2-S16-03, both restatements; TDR-0031 lands with its index row | TC-ENGINE-060, TC-ENGINE-061, TC-ENGINE-062, TC-ENGINE-064 | Covered |
+| AC-F6-10 | The production composition performs real tracker/CI/request-detail reads and resolves configuration, branch, base reference, and the owner principal as the provider-resolved repository owner from the checkout's normalized identity, with no new configuration key, branch member, or identity source (the `merge` branch keeps its three keys); a waiver authored by that principal is authorized and records no waiver on a dry run, while the same waiver from any other principal refuses `merge.waiver-unauthorized` at exit `1`; dry run yields the delivered report at exit `0` or a classified refusal at exit `1`; never `fallback.internal` for a configuration-read failure | TC-ENGINE-050, TC-ENGINE-051, TC-ENGINE-053, TC-ENGINE-055 | Covered |
+| AC-F7-11 | Every emitted `(kind, code)` matches the code's declared `domainKind` (`config.credential.missing` ⇒ `config`); `MERGE_COMPOSITION_EMITTABLE_CODES` is exported, non-empty, duplicate-free, carries at least one `config.*`, `provider.*`, `state.*`, and `merge.*` code, has every member resolving to a declared row whose `domainKind` matches the emitted kind, and has no member absent from the table; a missing-credential dry run is classified by its declared identity at its declared exit; row count, `DOMAIN_KINDS`, and exit classes unchanged | TC-ENGINE-052, TC-ENGINE-053, TC-ENGINE-054, TC-ENGINE-091 | Covered |
+| AC-F8-12 | The six feature pages state the declared contracts and residuals (including the handover exemption, the row binding, the owner-principal source, and the emittable-code constant); the two broader test specs are handed to phase 7 (`@doc-syncer`) for reconciliation and no new test-spec entry is created; a new guide declares `ados_distribution: redistributable` and covers operation, gate/row reading, flip and reversal, and the shell fallback; the planning corpus carries the backlog `Progress:` line, the status addendum, the README scenario row including SC-M2-S16-03, both restatements; TDR-0031 lands with its index row | TC-ENGINE-060, TC-ENGINE-061, TC-ENGINE-062, TC-ENGINE-064 | Covered |
 | AC-F8-13 | `SC-M2-S16-02` asserts counted growth, first-appearance coverage growth, and clean accrual; `SC-M2-S16-03` asserts shell exit `0` + pointer with reversibility read from the engine surfaces before (`true`) and after (`false`) `--revert` with per-repository isolation; each restatement is traced to story AC1/AC4 with no story AC weakened | TC-ENGINE-002, TC-ENGINE-062, TC-ENGINE-063 | Covered |
 | AC-NFR1-14 | The delivered pinned suites stay valid and are extended by appending only; no new command, verb, flag, error row, `DOMAIN_KINDS` member, or exit class | TC-ENGINE-090, TC-ENGINE-091, TC-ENGINE-092, TC-ENGINE-093, TC-ENGINE-094, TC-ENGINE-095 | Covered |
 
 **Capability coverage** (every F-# has at least one TC): F-1 → 001, 002, 003, 004, 005, 006; F-2 → 010, 011, 012, 013, 014, 015, 016; F-3 → 020, 021, 022, 023, 024; F-4 → 030, 031, 032, 033, 034, 035, 060; F-5 → 040, 041, 042; F-6 → 050, 051, 053, 055; F-7 → 052, 053, 054, 091; F-8 → 060, 061, 062, 063, 064.
 
-**Decision coverage**: DEC-1 → 020, 021, 022, 023, 024; DEC-2 → 003, 004, 010, 095; DEC-3 → 001, 002, 004, 006; DEC-4 → 011, 012, 013, 015, 031, 034; DEC-5 → 040, 041, 042; DEC-6 → 035, 060; DEC-7 → 052, 054; DEC-8 → 050, 051, 053; DEC-9 → 005, 016, 090, 091; DEC-10 → 061, 062, 063, 064; DEC-11 → (no new `doc/quality/test-specs/` entry: asserted by `TC-ENGINE-061`'s absence scan over that directory).
+**Decision coverage**: DEC-1 → 020, 021, 022, 023, 024; DEC-2 → 003, 004, 010, 095; DEC-3 → 001, 002, 004, 006; DEC-4 → 011, 012, 013, 015, 031, 034; DEC-5 → 040, 041, 042; DEC-6 → 035, 060; DEC-7 → 052, 054; DEC-8 → 050, 051, 053; DEC-9 → 005, 016, 090, 091; DEC-10 → 061, 062, 063, 064; DEC-11 (amended) → 061 (no new `doc/quality/test-specs/` entry asserted over that directory); DEC-12 → 010, 011, 012, 013, 014, 016; DEC-13 → 050, 053; DEC-14 → 052, 053, 054, 091; DEC-15 → 020, 021, 023, 024, 093, 094; DEC-16 → 061, 062.
 
 **Ticket-scenario coverage**: SC-M2-S16-01 (per-condition reporting) → 010, 020, 021, 095; SC-M2-S16-02 **restated** (accrual walk) → 001, 002, 062, 063; SC-M2-S16-03 **restated** (shell exit 0 + pointer, reversibility on the engine surfaces) → 011, 012, 031, 062, 063.
 
@@ -117,14 +119,16 @@ The specification declares no REST/HTTP endpoint (§8.1: N/A) and no event topic
 | Element | TC ID(s) | Observable assertion |
 |---|---|---|
 | DM-1 Summary additive fields | 001, 002, 003, 005, 006 | `cleanDispatches`, `consecutiveCleanDispatches`, `conditions` appended after `floor`; the optional `truncation` object remains the last key; the three text lines appear in the declared position. |
-| DM-2 Handover additive fields | 010, 011, 014, 015, 016 | `conditions` always present; `reversible` boolean; `unmetConditions` stays refusal-only with its delivered shape; `truncation` present iff `verdict == "unverifiable"`; text output unchanged. |
+| DM-2 Handover additive fields | 010, 011, 012, 014, 015, 016 | `conditions` present on the four evidence-reading outcomes and absent on the idempotent revert noop (declared exemption, with no `verdict` and no `truncation` there); `reversible` boolean; `verdict` populated on the recorded revert; `unmetConditions` stays refusal-only with its delivered shape; `truncation` present iff `verdict == "unverifiable"`; text output unchanged. |
 | DM-3 Shared condition-status shape | 003, 004, 010, 020, 021, 095 | Exactly four `{condition, status}` entries in the declared order, `status` in `met \| open`, exactly two keys per entry (no `detail`), one producer read by three surfaces, open set equals `unmetConditions`. |
 | DM-4 Fleet row additive fields | 020, 021, 022, 023, 024, 093 | Row order `repoKey, root, stateLocation, daemonReachable, handoverState, reversible, handoverGate`; block order `verdict, conditions, countedDeliveries, cleanDispatches[, truncation]`; `REPOS_ENTRY_FIELDS` extended in that order; the flat alias carries neither. |
 | DM-5 Emitted failure classification | 052, 053, 054 | For every emittable code the emitted `domainKind` equals the resolved row's `domainKind`; `config.credential.missing` emits `config`; no new row/kind/exit. |
+| DM-6 Composition emittable-code set | 052, 053, 054, 091 | The composition exports `MERGE_COMPOSITION_EMITTABLE_CODES`; the set is non-empty, duplicate-free, spans `config.*`/`provider.*`/`state.*`/`merge.*`, every member resolves to a declared row with a matching kind, and no member is absent from the table. |
+| DM-7 Row repository binding | 020, 021, 023, 093, 094 | The row folds only records of its own resolved `host/owner/name` identity; foreign-repository records are excluded; resolution is read-only, non-persisting, and opens no additional store; an unresolvable identity fails `repos.state-unavailable` at exit `2` with no row. |
 | §8.1 `dispatch dual-run summary` surface | 001, 003, 004, 005, 006 | Data keys and order, text lines, exit unchanged by the addition. |
 | §8.1 `dispatch handover` surface | 010, 011, 012, 013, 014, 015, 016 | Data keys and order, exit projection unchanged, records unchanged, text unchanged. |
 | §8.1 `repos list` surface | 020, 021, 022, 023, 024, 093 | Row fields, block, failure behaviour, text table unchanged, flat alias byte-identical. |
-| §8.1 `merge` surface | 050, 051, 052, 053, 054, 055 | Production composition reads, dry-run report, classified refusals, `verify deploy` residual; no contract change. |
+| §8.1 `merge` surface | 050, 051, 052, 053, 054, 055, 091 | Production composition reads, owner-principal resolution from the declared identity, the exported emittable-code constant, dry-run report, classified refusals, `verify deploy` residual; no payload or configuration-key change. |
 | §8.1 Shell entry points | 030, 031, 032, 033, 034 | Five-key tail, exits, pointer behaviour, no new stdout. |
 
 ### 3.3 Non-Functional Coverage (NFR-#)
@@ -134,13 +138,16 @@ The specification declares no REST/HTTP endpoint (§8.1: N/A) and no event topic
 | NFR-1 | 0 delivered keys removed/renamed/reordered/re-typed; appended keys in the declared order; pinned order suites green | TC-ENGINE-005, TC-ENGINE-016, TC-ENGINE-020, TC-ENGINE-090 | Covered |
 | NFR-2 | Per ready row ≤ 1 bounded attempts read (5,000) + ≤ 1 divergences read + a pure fold; 0 writes, 0 network, 0 model, no cache, no scheduler | TC-ENGINE-024, TC-ENGINE-094 (substitute AMB-ENG-2) | Covered |
 | NFR-3 | Two `repos list --json` reads over unchanged state are byte-identical; the row carries no wall-clock or relative-time field | TC-ENGINE-093 | Covered |
-| NFR-4 | `verdict == "unverifiable" ⟺ truncation present` on every data-returning surface; unreadable ledger ⇒ exit 2 with no data; 0 fabricated zeros/defaulted statuses/"unknown" rows | TC-ENGINE-004, TC-ENGINE-014, TC-ENGINE-023, TC-ENGINE-024, TC-ENGINE-095 | Covered |
-| NFR-5 | 0 emitted `(kind, code)` pairs contradicting the declared row; 0 new rows, `DOMAIN_KINDS` members, or exit classes | TC-ENGINE-052, TC-ENGINE-054, TC-ENGINE-091 | Covered |
+| NFR-4 | `verdict == "unverifiable" ⟺ truncation present` on every data-returning surface (an outcome carrying no `verdict` carries no `truncation`); unreadable ledger ⇒ exit 2 with no data; 0 fabricated zeros/defaulted statuses/"unknown" rows | TC-ENGINE-004, TC-ENGINE-010, TC-ENGINE-014, TC-ENGINE-023, TC-ENGINE-024, TC-ENGINE-095 | Covered |
+| NFR-5 | 0 emitted `(kind, code)` pairs contradicting the declared row; every `MERGE_COMPOSITION_EMITTABLE_CODES` member resolves to a declared row with a matching `domainKind` and none is absent; 0 new rows, `DOMAIN_KINDS` members, or exit classes | TC-ENGINE-052, TC-ENGINE-053, TC-ENGINE-054, TC-ENGINE-091 | Covered |
 | NFR-6 | Exactly five summary keys in the pinned order; 0 new stdout keys/lines; `dual-run` no-pointer and `authoritative` pointer-at-exit-0 unchanged; all four entry points executable | TC-ENGINE-030, TC-ENGINE-031, TC-ENGINE-032, TC-ENGINE-033, TC-ENGINE-034 | Covered |
 | NFR-7 | 0 authoritative `dispatch.handover` records attributable to the change; every repository's authority unchanged | TC-ENGINE-013, TC-ENGINE-035 (audit half AMB-ENG-3) | Covered |
 | NFR-8 | The new guide declares `ados_distribution: redistributable`; 0 reconciled pages retain the corrected over-claim; documentation and prompt conformance checks green | TC-ENGINE-040, TC-ENGINE-041, TC-ENGINE-060, TC-ENGINE-061, TC-ENGINE-062 | Covered |
 | NFR-9 | Real state store plus injected harness/tracker/CI/VCS/provider/clock ports; 0 live network calls, 0 live credential reads, 0 live model calls, 0 real sleeps | TC-ENGINE-050, TC-ENGINE-092 | Covered |
 | NFR-10 | 100% agreement of the four condition statuses across summary, handover, and fleet row on every fixture; 0 open-set identity violations | TC-ENGINE-004, TC-ENGINE-021, TC-ENGINE-095 | Covered |
+| NFR-11 | Exactly one handover outcome (the idempotent revert noop) omits `conditions`; 0 revert noops refused by ledger readability; 0 evidence-reading outcomes omitting `conditions`; 0 outcomes carrying a condition status with no evidence read | TC-ENGINE-010, TC-ENGINE-011, TC-ENGINE-012, TC-ENGINE-014, TC-ENGINE-016 | Covered |
+| NFR-12 | `MERGE_COMPOSITION_EMITTABLE_CODES` is exported by the composition, non-empty, duplicate-free, covers the emitted domains (≥1 `config.*`, `provider.*`, `state.*`, `merge.*`), has 0 members without a declared row, and 0 refusal branches outside the constant | TC-ENGINE-053, TC-ENGINE-054, TC-ENGINE-091 | Covered |
+| NFR-13 | 100% of evaluable rows fold only their own resolved repository identity; 0 rows evaluated under an unresolved or foreign identity; 0 store opens and 0 binding writes attributable to identity resolution | TC-ENGINE-020, TC-ENGINE-021, TC-ENGINE-023, TC-ENGINE-093, TC-ENGINE-094 | Covered |
 
 ### 3.4 Coverage-Matrix Integrity
 
@@ -152,11 +159,11 @@ The specification declares no REST/HTTP endpoint (§8.1: N/A) and no event topic
 | Cases in this plan | 44 (`TC-ENGINE-001`..`TC-ENGINE-095`, block-structured) | — |
 | Cases naming at least one AC (no orphans) | 44 | Pass |
 | Cases that are manual-only | 0 (one carries an audit footer: 035) | Pass |
-| Cases with a substitute assertion recorded (§3.5) | 7 properties across 7 case references (020, 022, 024, 035, 050, 054, 094) | Declared |
+| Cases with a substitute assertion recorded (§3.5) | 7 properties across 8 case references (020, 022, 024, 035, 050, 054, 091, 094) | Declared |
 | Capabilities covered | F-1..F-8 (8/8) | Pass |
-| NFRs covered | NFR-1..NFR-10 (10/10) | Pass |
-| Interfaces covered | DM-1..DM-5 (5/5); API/EVT N/A per §8.1/§8.2 | Pass |
-| Decisions covered | DEC-1..DEC-11 (11/11) | Pass |
+| NFRs covered | NFR-1..NFR-13 (13/13) | Pass |
+| Interfaces covered | DM-1..DM-7 (7/7); API/EVT N/A per §8.1/§8.2 | Pass |
+| Decisions covered | DEC-1..DEC-16 (16/16) | Pass |
 | AC → TC direction present | §3.1 | Pass |
 | TC → AC direction present | §5.1 index and every §5.2 header | Pass |
 | Cases appearing in the Automation Plan (§7) | 44 of 44 | Pass |
@@ -168,14 +175,14 @@ The specification declares no REST/HTTP endpoint (§8.1: N/A) and no event topic
 | **AMB-ENG-1 — "without opening a store" has no open counter** | There is no store-open seam on the fleet read. **Substitute:** a full tree snapshot of the host root before and after a `repos list --json` over a host that has one `first-use` row and one `ready` row is identical, the `first-use` row's project state directory still does not exist, and the row nevertheless carries the empty-window evaluation. Opening a store that creates its directory (or a temp sibling) changes the snapshot, so the absence is falsifiable. | 020 | AC-F3-6, NFR-2 |
 | **AMB-ENG-2 — per-row read cardinality is not countable through the production composition** | The composer exposes no per-project store factory, so "≤ 1 attempts read + ≤ 1 divergences read" is not counted directly. **Substitute:** (i) the row's block is the delivered fold's own output — `TC-ENGINE-021` proves it agrees with the summary over the same ledger, so no second derivation can hide in the row — (ii) the 5,005-record row truncates at exactly 5,000 with a declared `omittedRecords`, proving the bound is applied per row, (iii) write/network/model/sleep counters are zero, (iv) a 25-row fleet read completes inside a printed floor so a per-row blow-up surfaces. Read-call cardinality itself is review-attested against the delivered `readDispatchGate` structure. | 024, 094 | NFR-2, AC-F3-6 |
 | **AMB-ENG-3 — "no authoritative record attributable to the change" is an audit over untracked state** | A permanent suite cannot assert a fact about the operator's real state root (and must never read it). **Substitute:** the permanent half proves the *writers* — a source scan shows `appendDispatchHandover` is reachable only from the handover and revert use cases, and behavioural counts prove a summary read, a fleet read, and a replayed noop append zero handover records and leave the authority document byte-identical. The "this change flipped nothing" verdict itself is recorded in §10 from a review audit of the change's state roots. | 035 | AC-F4-8, NFR-7 |
-| **AMB-ENG-4 — AC-F7-11's emittable set is delivery-declared** | "Every failure code the composition can emit" cannot be enumerated from the spec. **Substitute:** the conformance case consumes a declared emittable-code list fixture that delivery must publish, cross-checks it against the delivered merge/provider/config/state rows, asserts each pair resolves to its declared row (never `fallback.internal`), and fails on an empty or single-entry enumeration so the test cannot pass vacuously. A future code added outside the declaration escapes until the declaration is extended — recorded as R-TP-3. | 054 | AC-F7-11, NFR-5 |
-| **AMB-ENG-5 — the owner-principal source is not named** | AC-F6-10 names "real sources" without naming one. **Substitute:** the case observes the *effect* only — a waiver declared by the resolved principal authorizes on a dry run (and records no waiver), while the same waiver declared by a different principal refuses as `merge.waiver-unauthorized` at exit `1`. The case never hardcodes the key; delivery's choice is logged as OQ-TP-2. | 050 | AC-F6-10 |
+| **AMB-ENG-4 — the emittable set is a declaration, so a branch that forgets to extend it escapes** | DEC-14 makes the set a named export, exhaustive **by construction** at delivery, so the test ranges over a real oracle rather than a hand-picked list. **Substitute (residual direction):** `TC-ENGINE-054` asserts the constant is non-empty, duplicate-free, spans four families (so it cannot pass vacuously), and that every member resolves to a declared row whose `domainKind` equals the emitted kind, with a live mismatch control (`classifyThrown({kind:"provider", code:"config.credential.missing"})` must still contain). What the suite cannot prove from outside is that a *future* refusal branch was added to the constant; that gap is declared (RSK-13) and is caught only when such a branch is exercised. | 054 | AC-F7-11, NFR-5, NFR-12 |
+| **AMB-ENG-5 — the owner principal is declared, but its resolution is observed through an effect** | DEC-13 names the source (the owner component of the checkout's normalized `host/owner/name` identity), so the case no longer guesses. **Substitute:** the case still asserts the *effect* rather than reading the resolved value — a waiver authored by the resolved principal authorizes on a dry run (and records no waiver), while the same waiver authored by a different principal refuses `merge.waiver-unauthorized` at exit `1` — and separately asserts the `merge` configuration branch has exactly its three declared keys, so a second authority cannot appear. Reading the principal directly would test the resolver in isolation rather than the composition's use of it. | 050, 091 | AC-F6-10 |
 | **BYTE-ENG-1 — "byte-identical to the delivered `projects.v1`" is a golden, not a diff** | No raw pre-change artifact exists in a permanent suite. **Substitute:** the delivered committed golden `tests/golden/fixtures/projects-flat-alias.json` comparison runs unchanged, plus absence assertions that neither new field appears anywhere in the flat payload, plus a `repos` read over the same host that *does* carry both fields (so the absence is a projection difference, not an empty read). | 022 | AC-F3-5, NFR-1 |
 | **TRUNC-ENG-1 — the fleet truncation fixture needs > 5,000 records** | The bound is a production constant with no test seam on the fleet path. **Substitute:** one project ledger is seeded with 5,005 counted attempts through the delivered append path, the case prints record count and elapsed milliseconds, and asserts `countedDeliveries ≤ 5000` with `truncation: { bound: 5000, omittedRecords: 5 }`. No sleep, no network, temp state root only; the fixture is built once per suite. | 024 | AC-F3-6, NFR-4 |
 
 ## 4. Test Types and Layers
 
-- **Unit / structure (contract-level), `bun:test` under `tests/structure/`** — the shared condition-status shape and the declared order as data-only contracts, the additive field-set constants (`REPOS_ENTRY_FIELDS`), the classification conformance over emittable codes, and the structural no-flip writer scan (`TC-ENGINE-003`, `TC-ENGINE-016`, `TC-ENGINE-020` contract half, `TC-ENGINE-035`, `TC-ENGINE-054`, `TC-ENGINE-090`). No I/O beyond reading the production sources; ambient-globals discipline applies.
+- **Unit / structure (contract-level), `bun:test` under `tests/structure/`** — the shared condition-status shape and the declared order as data-only contracts, the additive field-set constants (`REPOS_ENTRY_FIELDS`), the classification conformance over the composition's exported `MERGE_COMPOSITION_EMITTABLE_CODES`, and the structural no-flip writer scan (`TC-ENGINE-003`, `TC-ENGINE-016`, `TC-ENGINE-020` contract half, `TC-ENGINE-035`, `TC-ENGINE-054`, `TC-ENGINE-090`). No I/O beyond reading the production sources; ambient-globals discipline applies.
 - **Behaviour (integration over the delivered seams), `bun:test` under `tests/behaviour/`** — the majority: the summary and handover command paths over the real state store and the real ledger through `createCommandScenario`; the fleet read through `createProductionProjectsHarness` over real temp checkouts with per-project stores seeded through the delivered ledger APIs; the merge production composition through `createProductionComposer` over a real temp git checkout with injected transport and credential ports; the cross-surface coherence matrix.
 - **Golden, `bun:test` under `tests/golden/`** — the summary text golden (`tests/fixtures/dispatch/golden/summary.txt`) regenerated deliberately once, with the diff showing only the three declared additive lines; the `repos` text table golden unchanged (no sixth column); the flat-alias golden unchanged (`TC-ENGINE-006`, `TC-ENGINE-020`, `TC-ENGINE-022`).
 - **Shell, `bash scripts/.tests/`** — the delivered pinned suites run **unmodified** as the non-change control (`TC-ENGINE-030`..`033`), plus one new parity suite for stdout identity across authority states (`TC-ENGINE-034`). Bash changes follow `.ai/rules/bash.md`; the new suite `set -Eeuo pipefail`, temp roots only, no network.
@@ -198,18 +205,18 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 | TC-ENGINE-004 | The open set equals unmetConditions in order on every fixture family | Corner Case | Critical | Critical | AC-F1-2; F-1; DM-3; NFR-4, NFR-10; DEC-2 |
 | TC-ENGINE-005 | Summary delivered key order preserved; appended keys; truncation stays last | Regression | Critical | Critical | AC-F1-1; F-1; DM-1; NFR-1; DEC-9 |
 | TC-ENGINE-006 | Summary text gains three lines in position; truncation line stays last; golden extended deliberately | Happy Path | Critical | High | AC-F1-2; F-1; DM-1; NFR-1; DEC-3 |
-| TC-ENGINE-010 | Handover conditions are always present on every data-returning outcome | Contract | Critical | Critical | AC-F2-3; F-2; DM-2, DM-3; DEC-2; SC-M2-S16-01 |
-| TC-ENGINE-011 | reversible truth table: flip true, idempotent noop true, refusal false, revert false | Happy Path | Critical | Critical | AC-F2-3, AC-F2-4; F-2; DM-2; DEC-4; SC-M2-S16-03 |
-| TC-ENGINE-012 | Reversal record shape unchanged, replay appends no duplicate, history preserved | Regression | Critical | Critical | AC-F2-4; F-2; DM-2; DEC-4; NG-9 |
+| TC-ENGINE-010 | Handover conditions present on every evidence-reading outcome; the revert noop is a declared absence that answers under a torn ledger | Contract | Critical | Critical | AC-F2-3; F-2; DM-2, DM-3; NFR-4, NFR-11; DEC-2, DEC-12; SC-M2-S16-01 |
+| TC-ENGINE-011 | reversible truth table: flip true, flip noop true, refusal false, revert false, revert noop false; the recorded revert refuses under a torn ledger | Happy Path | Critical | Critical | AC-F2-3, AC-F2-4; F-2; DM-2; NFR-4, NFR-11; DEC-4, DEC-12; SC-M2-S16-03 |
+| TC-ENGINE-012 | Reversal record shape unchanged, replay appends no duplicate, history preserved, the noop appends nothing | Regression | Critical | Critical | AC-F2-4; F-2; DM-2; NFR-11; DEC-4, DEC-12; NG-9 |
 | TC-ENGINE-013 | Per-repository isolation: flipping alpha leaves beta's gate data and authority untouched | Corner Case | Critical | Critical | AC-F2-4; F-2; NFR-7; DEC-4 |
-| TC-ENGINE-014 | Truncation iff verdict unverifiable; no condition status is ever unverifiable | Negative | Critical | Critical | AC-F2-3; F-2; DM-2; NFR-4; DEC-2 |
+| TC-ENGINE-014 | Truncation iff verdict unverifiable; no condition status is ever unverifiable; the recorded revert refuses under a torn ledger while the noop answers | Negative | Critical | Critical | AC-F2-3, AC-F2-4; F-2; DM-2; NFR-4, NFR-11; DEC-2, DEC-12 |
 | TC-ENGINE-015 | Handover text output is unchanged: the addition is data-only | Regression | Important | High | AC-F2-3; F-2; DM-2; NFR-1; DEC-9 |
-| TC-ENGINE-016 | Handover delivered key order preserved; conditions then reversible appended; truncation last | Regression | Critical | Critical | AC-F2-3; F-2; DM-2; NFR-1; DEC-9 |
-| TC-ENGINE-020 | Fleet row carries exactly seven ordered fields; the block is declared; the text table is unchanged | Contract | Critical | Critical | AC-F3-5, AC-F3-6; F-3; DM-3, DM-4; NFR-1; DEC-1; SC-M2-S16-01 |
-| TC-ENGINE-021 | The row's gate block agrees with the summary for the same ledger | Happy Path | Critical | Critical | AC-F3-5; F-3; NFR-10; DEC-1 |
+| TC-ENGINE-016 | Handover delivered key order preserved on the non-exempt outcomes; conditions then reversible appended; truncation last | Regression | Critical | Critical | AC-F2-3; F-2; DM-2; NFR-1, NFR-11; DEC-9, DEC-12 |
+| TC-ENGINE-020 | Fleet row carries exactly seven ordered fields, bound to its own repository identity; the block is declared; the text table is unchanged | Contract | Critical | Critical | AC-F3-5, AC-F3-6; F-3; DM-3, DM-4, DM-7; NFR-1, NFR-13; DEC-1, DEC-15; SC-M2-S16-01 |
+| TC-ENGINE-021 | The row's gate block agrees with the summary for the same ledger and excludes foreign repositories | Happy Path | Critical | Critical | AC-F3-5; F-3; DM-7; NFR-10, NFR-13; DEC-1, DEC-15 |
 | TC-ENGINE-022 | projects list --flat stays byte-identical and carries neither new field | Regression | Critical | Critical | AC-F3-5; F-3; DM-4; NFR-1; DEC-1; ODR-0004 |
-| TC-ENGINE-023 | Unreadable or torn ledger fails the fleet read at exit 2 with no fabricated row | Negative | Critical | Critical | AC-F3-6; F-3; DM-4; NFR-4; DEC-1 |
-| TC-ENGINE-024 | Truncated ledger reports unverifiable plus truncation over the visible window at exit 0 | Corner Case | Critical | Critical | AC-F3-6; F-3; DM-4; NFR-2, NFR-4; DEC-1; TRUNC-ENG-1 |
+| TC-ENGINE-023 | Unreadable, torn, or unresolvable-identity reads fail the fleet read at exit 2 with no fabricated row | Negative | Critical | Critical | AC-F3-6; F-3; DM-4, DM-7; NFR-4, NFR-13; DEC-1, DEC-15 |
+| TC-ENGINE-024 | Truncated ledger reports unverifiable plus truncation over the visible window at exit 0 | Corner Case | Critical | Critical | AC-F3-6; F-3; DM-4, DM-7; NFR-2, NFR-4, NFR-13; DEC-1, DEC-15; TRUNC-ENG-1 |
 | TC-ENGINE-030 | dual-run entry points print no pointer and exit 0 (delivered suite unmodified) | Regression | Critical | Critical | AC-F4-7; F-4; NFR-6; DEC-9 |
 | TC-ENGINE-031 | authoritative entry points exit 0 and print the bounded pointer naming dispatch and --revert | Happy Path | Critical | Critical | AC-F4-7; F-4; NFR-6; DEC-4; SC-M2-S16-03 |
 | TC-ENGINE-032 | The delivery summary keeps exactly five keys in the pinned order | Regression | Critical | Critical | AC-F4-7; F-4; NFR-6; DEC-9 |
@@ -219,21 +226,21 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 | TC-ENGINE-040 | The hold and window effect-surface mapping is stated explicitly | Contract | Critical | High | AC-F5-9; F-5; NFR-8; DEC-5 |
 | TC-ENGINE-041 | The lanes-read over-claim is removed, replaced, and declared as a known limitation | Negative | Critical | Critical | AC-F5-9; F-5; NFR-8; DEC-5; RSK-9 |
 | TC-ENGINE-042 | No new window/hold read and no QueueLane.providerProfile, asserted as absences | Negative | Critical | High | AC-F5-9; F-5; NG-3, NG-4; DEC-5 |
-| TC-ENGINE-050 | Production dry run over a real checkout: real reads, delivered report, no fallback.internal | Happy Path | Critical | Critical | AC-F6-10; F-6; DEC-8; NFR-9; AMB-ENG-5 |
+| TC-ENGINE-050 | Production dry run over a real checkout: real reads, declared owner principal, delivered report, no fallback.internal | Happy Path | Critical | Critical | AC-F6-10; F-6; DM-5; DEC-8, DEC-13; NFR-9; AMB-ENG-5 |
 | TC-ENGINE-051 | A failing gate is a classified refusal at exit 1 through the production composition | Happy Path | Critical | Critical | AC-F6-10; F-6, F-7; DEC-7, DEC-8 |
-| TC-ENGINE-052 | A missing credential is classified config at its declared exit, never fallback.internal | Negative | Critical | Critical | AC-F7-11; F-7; DM-5; NFR-5; DEC-7 |
-| TC-ENGINE-053 | Provider and state read faults stay classified by their declared rows on every merge path | Negative | Critical | High | AC-F6-10, AC-F7-11; F-6, F-7; DM-5; NFR-5 |
-| TC-ENGINE-054 | Classification conformance is total over the declared emittable-code set | Contract | Critical | Critical | AC-F7-11; F-7; DM-5; NFR-5; AMB-ENG-4 |
+| TC-ENGINE-052 | A missing credential is classified config at its declared exit, never fallback.internal | Negative | Critical | Critical | AC-F7-11; F-7; DM-5, DM-6; NFR-5, NFR-12; DEC-7, DEC-14 |
+| TC-ENGINE-053 | Provider and state read faults stay classified by their declared rows on every merge path | Negative | Critical | High | AC-F6-10, AC-F7-11; F-6, F-7; DM-5, DM-6; NFR-5, NFR-12; DEC-13, DEC-14 |
+| TC-ENGINE-054 | Classification conformance is total and non-vacuous over MERGE_COMPOSITION_EMITTABLE_CODES | Contract | Critical | Critical | AC-F7-11; F-7; DM-5, DM-6; NFR-5, NFR-12; DEC-14; AMB-ENG-4 |
 | TC-ENGINE-055 | verify deploy remains a declared residual, not a claimed capability | Regression | Important | High | AC-F6-10; F-6, F-8; RSK-8; NG-8 |
 | TC-ENGINE-060 | The operator guide declares a redistributable marker and covers the four declared topics | Contract | Critical | Critical | AC-F8-12, AC-F4-8; F-8; NFR-8; DEC-10 |
-| TC-ENGINE-061 | The six feature pages state the declared contracts and residuals | Contract | Critical | High | AC-F8-12; F-8; NFR-8; DEC-10, DEC-11 |
+| TC-ENGINE-061 | The six feature pages state the declared contracts and residuals, and the two broader test specs are handed to phase 7 | Contract | Critical | High | AC-F8-12; F-8; NFR-8; DEC-10, DEC-11, DEC-16 |
 | TC-ENGINE-062 | The planning corpus carries the progress line, addendum, scenario row, and both restatements | Contract | Critical | Critical | AC-F8-12, AC-F8-13; F-8; NFR-8; DEC-10 |
 | TC-ENGINE-063 | Each restatement is traced to story AC1/AC4 with no story AC weakened | Contract | Critical | High | AC-F8-13, AC-F4-8; F-8; DEC-10 |
 | TC-ENGINE-064 | TDR-0031 lands with its index row and a resolvable bidirectional reference | Contract | Important | High | AC-F8-12; F-8; DEC-10 |
 | TC-ENGINE-090 | Every touched payload stays additively stable; pinned suites extended by appending only | Regression | Critical | Critical | AC-NFR1-14; NFR-1; DEC-9 |
-| TC-ENGINE-091 | No new command, verb, flag, error row, DOMAIN_KINDS member, or exit class | Regression | Critical | Critical | AC-NFR1-14, AC-F7-11; NFR-5; DEC-9 |
+| TC-ENGINE-091 | No new command, verb, flag, configuration key, error row, DOMAIN_KINDS member, or exit class | Regression | Critical | Critical | AC-NFR1-14, AC-F7-11; NFR-5, NFR-12; DEC-9, DEC-13, DEC-14 |
 | TC-ENGINE-092 | Hermeticity: zero live network, credential, model, or sleep in the delivering suites | Negative | Critical | Critical | AC-NFR1-14; NFR-9 |
-| TC-ENGINE-093 | Two fleet reads over unchanged state are byte-identical; no wall-clock field in the row | Corner Case | Critical | High | AC-F3-6; F-3; NFR-3; DEC-1 |
+| TC-ENGINE-093 | Two fleet reads over unchanged state are byte-identical; the row carries no wall-clock field and no unresolved identity | Corner Case | Critical | High | AC-F3-6; F-3; DM-7; NFR-3, NFR-13; DEC-1, DEC-15 |
 | TC-ENGINE-094 | The fleet read re-evaluates on every read and stays bounded; no cache, no write | Corner Case | Important | High | AC-NFR1-14; F-3; NFR-2; DEC-1; AMB-ENG-2 |
 | TC-ENGINE-095 | Cross-surface coherence matrix: one ledger, three surfaces, identical statuses | Corner Case | Critical | Critical | AC-F1-2, AC-F3-5; F-1, F-2, F-3; NFR-4, NFR-10; DEC-2 |
 
@@ -408,13 +415,13 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 **Expected Outcome**:
 - Three additive lines in the declared position; truncation last; the delivered text lines untouched.
 
-#### TC-ENGINE-010 - Handover conditions are always present on every data-returning outcome
+#### TC-ENGINE-010 - Handover conditions present on every evidence-reading outcome; the revert noop is a declared absence that answers under a torn ledger
 
-**Objective**: Prove "always present" against every outcome the verb can return, including the two that return data without a state change.
+**Objective**: Prove the narrowed promise in both directions — four conditions on every outcome that performs the gate evidence read, and the single declared exemption answered as data with the keys *absent* — while the noop keeps answering when the ledger is torn.
 **Scenario Type**: Contract
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F2-3, F-2, DM-2, DM-3, DEC-2; SC-M2-S16-01
+**Related IDs**: AC-F2-3; F-2; DM-2, DM-3; NFR-4, NFR-11; DEC-2, DEC-12; SC-M2-S16-01
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-handover-conditions.test.ts` (new)
@@ -423,28 +430,32 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 
 **Preconditions**:
 - Controlled composition over the real state store with a met gate (`eligibleSpecs`), a clean refusal (`missingClassSpecs`), a truncated gate (`gate: { max: 5 }`), and a repository with no evidence.
-- Five outcomes produced in one suite: recorded flip, idempotent flip noop, clean refusal, recorded revert, revert noop on an already-`dual-run` repository.
+- Five outcomes produced in one suite: recorded flip, idempotent flip noop, clean refusal, recorded revert, and revert noop on an already-`dual-run` repository (plus a second noop cell on a repository with no handover record).
+- A torn-ledger cell reusing the revert noop over an attempts ledger with a torn final record, and an unreadable divergences ledger (Appendix E.1's last row).
 
 **Steps**:
-1. For each outcome, assert `data.conditions` is present with exactly four entries in `DISPATCH_HANDOVER_CONDITIONS` order, each `{condition, status}` only.
-2. Assert `data.unmetConditions` is present **iff** the outcome is a refusal, and keeps `{condition, detail}`.
-3. Assert `data.reversible` is a boolean on every outcome (value covered by `TC-ENGINE-011`).
-4. Assert no `status` value is `unverifiable` in any outcome.
-5. Revert-noop cell: assert the outcome returns data (`recorded: false`, `noop: true`) **and** four conditions — the AC as written; see OQ-TP-3 for the torn-ledger consequence this implies.
+1. For each of the four **evidence-reading** outcomes (recorded flip, idempotent flip noop, clean refusal, recorded revert), assert `data.conditions` is present with exactly four entries in `DISPATCH_HANDOVER_CONDITIONS` order, each `{condition, status}` only.
+2. Assert `data.reversible` is a boolean on all five outcomes (values are pinned by `TC-ENGINE-011`).
+3. Assert `data.unmetConditions` is present **iff** the outcome is a refusal, and keeps `{condition, detail}`.
+4. Assert `data.verdict` is present on the four evidence-reading outcomes — including the recorded revert, which previously omitted it — and that `data.truncation` is present iff `verdict === "unverifiable"`; assert the truncated cell's `conditions` are four entries computed over the visible window.
+5. Exemption cell (`--revert` on an already-`dual-run` repository, and again on a repository with no handover record): assert exit `0`, `data` returned, `recorded: false`, `noop: true`, `operation: "dual-run"`, `reversible: false`, and assert the **absence set** explicitly — `Object.hasOwn(data, "conditions") === false`, `Object.hasOwn(data, "verdict") === false`, `Object.hasOwn(data, "truncation") === false` — each failing with the offending key named (absent means no key: not `null`, not an empty array, not `Noop`).
+6. Torn-ledger cell: with the torn attempts ledger, and separately with an unreadable divergences ledger, assert the revert noop still exits `0` with the same five declared values and no record appended — the exemption is not refused by ledger readability.
+7. Assert no `status` value is `unverifiable` in any outcome, and assert exactly one of the five outcomes omits `conditions` (the exemption is bounded to one; a second omission fails naming the outcome).
 
 **Expected Outcome**:
-- Conditions and `reversible` present on all five outcomes; `unmetConditions` refusal-only; no third status anywhere.
+- Four conditions on the four evidence-reading outcomes; the exemption carried as three declared absences plus the four declared values; the noop answers under a torn or unreadable ledger; `unmetConditions` refusal-only; no third status.
 
 **Notes / Clarifications**:
-- Which gate read answers the revert-noop cell is mechanism; the assertion is that the AC holds on that outcome.
+- The recorded-revert refusal under that same torn ledger (exit `2`, `dispatch.state-unverified`, no record, flip intact) is asserted from the truncation side in `TC-ENGINE-014`; this case proves the other half of the asymmetry on the noop.
+- The exemption covers exactly one outcome by declaration (NFR-11); it is never a precedent for a second evidence-read-free outcome.
 
-#### TC-ENGINE-011 - reversible truth table: flip true, idempotent noop true, refusal false, revert false
+#### TC-ENGINE-011 - reversible truth table: flip true, flip noop true, refusal false, revert false, revert noop false; the recorded revert refuses under a torn ledger
 
-**Objective**: Pin the single derivation of reversibility by walking the authority through its four states and comparing to the authority document's `reversalAvailable`.
+**Objective**: Pin the single derivation of reversibility by walking the authority through its five states (including the declared noop) and comparing to the authority document's `reversalAvailable`.
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F2-3, AC-F2-4, F-2, DM-2, DEC-4; SC-M2-S16-03 (restated)
+**Related IDs**: AC-F2-3, AC-F2-4; F-2; DM-2; NFR-4, NFR-11; DEC-4, DEC-12; SC-M2-S16-03 (restated)
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-handover-conditions.test.ts` (new)
@@ -454,24 +465,27 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 **Preconditions**:
 - Repository alpha seeded with `eligibleSpecs()`; repository beta seeded with `missingClassSpecs("merged")` for the refusal cell.
 - The authority document is read through the delivered `readDispatchAuthority` so the comparison is against the same derivation consumers read.
+- A second alpha clone stands behind a torn attempts ledger for the recorded-revert refusal cell.
 
 **Steps**:
 1. Before any handover: assert `handover <alpha>` (which flips) returns `recorded: true`, `operation: "authoritative"`, `reversible: true`; assert the authority document for alpha now has `authority: "authoritative"` and `reversalAvailable: true`.
 2. Replay `handover <alpha>`: assert `noop: true`, `recorded: false`, `reversible: true`; assert the document still says `reversalAvailable: true`.
 3. `handover <beta>` (clean refusal): assert `recorded: false`, `noop: false`, `reversible: false`, `unmetConditions` non-empty; assert beta's authority document is still `dual-run` with `reversalAvailable: false`.
 4. `handover <alpha> --revert`: assert `recorded: true`, `operation: "dual-run"`, `reversible: false`; assert the document is `dual-run` with `reversalAvailable: false`.
-5. For every step assert `data.reversible === (folded latest operation === "authoritative")` and `data.reversible === document.reversalAvailable` — one rule, two readers.
+5. Replay the revert on the now-`dual-run` alpha: assert `noop: true`, `recorded: false`, `operation: "dual-run"`, `reversible: false`, and that the response carries no `conditions`, no `verdict`, and no `truncation` (the declared exemption); assert the document is unchanged (`dual-run`, `reversalAvailable: false`).
+6. Torn-ledger pair: over the second alpha flipped and then read behind a torn attempts ledger, assert the *recorded* revert refuses `dispatch.state-unverified` at exit `2` with no `data`, no appended record, and the flip intact (`authority: "authoritative"`, `reversalAvailable: true`); assert the revert *noop* over the same ledger still exits `0` with `reversible: false`.
+7. For every data-returning step assert `data.reversible === (folded latest operation === "authoritative")` and, for the evidence-reading outcomes, `data.reversible === document.reversalAvailable` — one rule, two readers.
 
 **Expected Outcome**:
-- `true, true, false, false` in the declared order; no second reversible rule; no surface disagrees with the document.
+- `true, true, false, false, false` in the declared order; the recorded revert refuses under a torn ledger while the noop answers; no second reversible rule; no evidence-reading surface disagrees with the document.
 
-#### TC-ENGINE-012 - Reversal record shape unchanged, replay appends no duplicate, history preserved
+#### TC-ENGINE-012 - Reversal record shape unchanged, replay appends no duplicate, history preserved, the noop appends nothing
 
 **Objective**: Prove the records did not grow and that replay is idempotent, so the new data keys never leaked into the durable shape.
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F2-4, F-2, DM-2, DEC-4, NG-9
+**Related IDs**: AC-F2-4; F-2; DM-2; NFR-11; DEC-4, DEC-12; NG-9
 **Test Type(s)**: Integration, Regression
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-handover-conditions.test.ts` (new)
@@ -485,11 +499,11 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 1. Flip alpha, then revert it; assert the ledger holds exactly two records in append order with operations `authoritative`, `dual-run`.
 2. For each record assert the key set equals the delivered `DispatchHandoverRecord` shape (schema, repository, operation, conditions, evidenceRefs, principal, recordedAt) — in particular **no** `reversible` and **no** top-level `status`/`met` key.
 3. Assert `record.conditions` is still the delivered `handoverConditionsSnapshot` shape (verdict, windowStart, windowStartReason, countedDeliveries, coveragePresent, coverageMissing, incidents, unresolvedDivergences, floorMet, corroborationSatisfied) — the snapshot did not become the new `DispatchConditionStatus[]`.
-4. Replay the revert; assert `noop: true`, `recorded: false`, and the ledger still holds exactly two records (no third append).
+4. Replay the revert; assert `noop: true`, `recorded: false`, `operation: "dual-run"`, the ledger still holds exactly two records (no third append), and the response carries no `conditions`, no `verdict`, and no `truncation` — the exemption leaves the durable shape and the readable payload untouched.
 5. Assert both records still parse through the delivered reader (no schema bump) and that the reversal preserves history rather than deleting the flip.
 
 **Expected Outcome**:
-- Record shape unchanged; replay idempotent; history preserved; the additive keys live only on the command data.
+- Record shape unchanged; replay idempotent and carrying none of the additive keys; history preserved; the additive keys live only on the evidence-reading command data.
 
 #### TC-ENGINE-013 - Per-repository isolation: flipping alpha leaves beta's gate data and authority untouched
 
@@ -513,18 +527,19 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 2. Flip alpha; assert alpha is authoritative.
 3. Re-read beta: assert the summary `conditions`, `cleanDispatches`, `verdict`, and `unmetConditions` are unchanged; assert `handover <beta>` still refuses with `reversible: false`; assert beta's ledger record count is unchanged; assert beta's authority document bytes are identical.
 4. Revert alpha; re-read beta again and assert the same four observations are still identical.
-5. Assert the authority document for beta never carried alpha's repository key (no cross-write).
+5. Replay the revert on the now-`dual-run` alpha (the declared exemption): assert it exits `0` with no `conditions`, appends no record to alpha, and leaves beta's four observations and record count unchanged.
+6. Assert the authority document for beta never carried alpha's repository key (no cross-write).
 
 **Expected Outcome**:
 - Beta is bit-for-bit unaffected by alpha's flip and revert; isolation holds on both the decision and the durable surfaces.
 
-#### TC-ENGINE-014 - Truncation iff verdict unverifiable; no condition status is ever unverifiable
+#### TC-ENGINE-014 - Truncation iff verdict unverifiable; no condition status is ever unverifiable; the recorded revert refuses under a torn ledger while the noop answers
 
-**Objective**: Keep unverifiability at window level and make both implications fail loudly.
+**Objective**: Keep unverifiability at window level, make both implications fail loudly, and pin the read-posture asymmetry the amendment declares: an unreadable ledger refuses the *recorded* revert but never the *noop*.
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F2-3, F-2, DM-2, NFR-4, DEC-2
+**Related IDs**: AC-F2-3, AC-F2-4; F-2; DM-2; NFR-4, NFR-11; DEC-2, DEC-12
 **Test Type(s)**: Integration, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-handover-conditions.test.ts` (new)
@@ -532,18 +547,19 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 **Tags**: @backend, @behaviour, @invariant
 
 **Preconditions**:
-- Four handover cells: recorded flip (eligible), clean refusal (ineligible), truncated read (`gate: { max: 5 }` over an eleven-token ledger), and an unreadable/torn attempt ledger.
+- Five handover cells: recorded flip (eligible), clean refusal (ineligible), recorded revert (after an eligible flip), a truncated read (`gate: { max: 5 }` over an eleven-token ledger), and a torn attempts ledger applied to two outcomes (a recorded revert on a flipped repository, and a revert noop on an already-`dual-run` repository).
 - The delivered exit projection is unchanged (`verdict !== eligible && recorded !== true` ⇒ user-validation ⇒ exit `1`).
 
 **Steps**:
 1. Truncated cell: assert `data` is returned, `data.verdict === "unverifiable"`, `data.truncation` is present with `["bound","omittedRecords"]`, and `data.conditions` is four entries computed over the visible window.
-2. Non-truncated cells: assert `Object.hasOwn(data, "truncation") === false` (absent key, not a null value).
-3. Assert both implications explicitly: `truncation present ⇒ verdict === "unverifiable"` and `verdict === "unverifiable" ⇒ truncation present`.
-4. Assert exit codes: truncated read exits `1` with data; flip and refusal keep their delivered exits; the torn-ledger cell exits `2` with `dispatch.state-unverified` and **no** data.
-5. Assert no condition carries `"unverifiable"` and `data.eligibility` is the only eligibility signal beside `verdict` (assert `eligibility === false` under truncation).
+2. Recorded-revert cell (untruncated): assert `data.verdict` is **present** and not `"unverifiable"` (the key is now populated on this outcome so the invariant is expressible there), `Object.hasOwn(data, "truncation") === false`, `data.conditions` is four entries, and `data.reversible === false`.
+3. Non-truncated cells (flip, flip noop, refusal): assert `Object.hasOwn(data, "truncation") === false` — absent key, not a null value.
+4. Assert both implications explicitly: `truncation present ⇒ verdict === "unverifiable"` and `verdict === "unverifiable" ⇒ truncation present`; assert the converse guard on the exemption cell, which carries no `verdict` and therefore must carry no `truncation`.
+5. Exit codes and read posture: the truncated read exits `1` with data; flip and refusal keep their delivered exits; over the torn ledger the **recorded revert** exits `2` with `dispatch.state-unverified`, **no** `data`, no record appended, and the authority document still `authoritative` with `reversalAvailable: true` (the prior flip stands — the declared TDR-0031 D4 residual); over that **same** ledger the **revert noop** exits `0` with data and no `conditions`.
+6. Assert no condition carries `"unverifiable"` and `data.eligibility` is the only eligibility signal beside `verdict` (assert `eligibility === false` under truncation).
 
 **Expected Outcome**:
-- The biconditional holds on every data-returning surface; unreadable evidence never returns data; no third status.
+- The biconditional holds on every verdict-bearing surface; the verdict-less noop carries no truncation; unreadable evidence never returns data on an evidence-reading outcome, while the declared noop still answers; no third status.
 
 #### TC-ENGINE-015 - Handover text output is unchanged: the addition is data-only
 
@@ -559,23 +575,24 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 **Tags**: @backend, @regression
 
 **Preconditions**:
-- Two text-mode invocations: a recorded flip and a clean refusal, each rendered without `--json`.
+- Three text-mode invocations: a recorded flip, a clean refusal, and the idempotent revert noop on an already-`dual-run` repository, each rendered without `--json`.
 
 **Steps**:
 1. Assert the text output contains no `conditions=` and no `reversible=` line and no `clean_dispatches=` line — the spec adds text lines to the summary only.
 2. Assert the rendered text equals the delivered renderer's form for the same operation/recorded/noop tuple (compare against `renderDispatchHandoverText` output built from the same data), so the addition is provably data-only.
-3. Assert the exit code of each text invocation equals the exit code of its `--json` twin.
+3. Assert the noop cell's text equals the delivered renderer's output for `(operation: "dual-run", recorded: false, noop: true)` and names no condition — the exemption is invisible in text as well as absent in data.
+4. Assert the exit code of each text invocation equals the exit code of its `--json` twin.
 
 **Expected Outcome**:
 - Handover text is byte-identical to the delivered renderer; only the JSON data grew.
 
-#### TC-ENGINE-016 - Handover delivered key order preserved; conditions then reversible appended; truncation last
+#### TC-ENGINE-016 - Handover delivered key order preserved on the non-exempt outcomes; conditions then reversible appended; truncation last
 
-**Objective**: Extend the delivered handover order pin without weakening it.
+**Objective**: Extend the delivered handover order pin without weakening it, and pin the exemption's key set so the absence cannot be implemented as a `null`-valued key.
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F2-3, F-2, DM-2, NFR-1, DEC-9
+**Related IDs**: AC-F2-3; F-2; DM-2; NFR-1, NFR-11; DEC-9, DEC-12
 **Test Type(s)**: Contract, Regression
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/dispatch-additive-stability.test.ts` (delivered handover case at lines 136-157, extended)
@@ -584,24 +601,26 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 
 **Preconditions**:
 - The delivered expectation (`repository, operation, recorded, noop, verdict, unmetConditions`) stays as the prefix of the refusal cell.
-- A truncated cell is added for the `truncation`-last position.
+- A truncated cell is added for the `truncation`-last position, and a noop cell for the exemption's key set.
 
 **Steps**:
 1. Refusal cell: assert `Object.keys(data)` deep-equals the delivered six keys followed by `conditions`, `reversible` — the delivered order preserved and extended by appending.
 2. Flip cell: assert the same list **without** `unmetConditions` (still refusal-only) in the delivered relative position, i.e. `repository, operation, recorded, noop, verdict, conditions, reversible`.
-3. Truncated cell: assert `truncation` is the last key after `reversible`.
-4. Assert no delivered key moved: compare the prefix against the delivered literal array element by element, and assert `reversible` is the last required key in every non-truncated outcome.
+3. Recorded-revert cell: assert the same key list as the flip cell (the recorded revert now carries `verdict`, so nothing moves) and that `reversible` follows `conditions`.
+4. Truncated cell: assert `truncation` is the last key after `reversible`.
+5. Noop cell: assert `Object.keys(data)` deep-equals exactly `["repository","operation","recorded","noop","reversible"]` — the three exempt keys are absent, not `null`-valued, and `reversible` is last.
+6. Assert no delivered key moved: compare the prefix against the delivered literal array element by element, and assert `reversible` is the last required key in every non-truncated outcome.
 
 **Expected Outcome**:
-- Appended-only with `unmetConditions` still refusal-only; `truncation` last when present.
+- Appended-only with `unmetConditions` still refusal-only; `truncation` last when present; the exemption's key set exactly five keys with no null placeholders.
 
-#### TC-ENGINE-020 - Fleet row carries exactly seven ordered fields; the block is declared; the text table is unchanged
+#### TC-ENGINE-020 - Fleet row carries exactly seven ordered fields, bound to its own repository identity; the block is declared; the text table is unchanged
 
-**Objective**: Pin the row contract **in order** (the delivered test compares sorted sets, which cannot catch a reorder) and prove the text table did not gain a column.
+**Objective**: Pin the row contract **in order** (the delivered test compares sorted sets, which cannot catch a reorder), prove the evaluation is bound to the row's own resolved repository identity without opening an extra store, and prove the text table did not gain a column.
 **Scenario Type**: Contract
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F3-5, AC-F3-6, F-3, DM-3, DM-4, NFR-1, DEC-1; SC-M2-S16-01
+**Related IDs**: AC-F3-5, AC-F3-6; F-3; DM-3, DM-4, DM-7; NFR-1, NFR-13; DEC-1, DEC-15; SC-M2-S16-01
 **Test Type(s)**: Contract, Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/repos-list-contract.test.ts` (delivered shape case at lines 88-107, extended by appending; existing sorted-set assertion stays)
@@ -610,25 +629,28 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 
 **Preconditions**:
 - One host with two registered checkouts; one project whose state root is `ready` (seeded through the delivered ledger APIs) and one whose state root is absent (`first-use`).
+- The `ready` checkout carries a resolvable identity: a persisted create-once binding recorded with its git common directory, or (in a second cell) only its configured remote; a foreign-repository record sits in the same store.
 - The `repos` text table invocation and the `--json` invocation over the same host.
 
 **Steps**:
 1. Assert, **without sorting**, `Object.keys(entry)` deep-equals `["repoKey","root","stateLocation","daemonReachable","handoverState","reversible","handoverGate"]` for every row, and that `REPOS_ENTRY_FIELDS` equals the same array (the contract constant and the payload cannot drift).
 2. Assert `Object.keys(entry.handoverGate)` deep-equals `["verdict","conditions","countedDeliveries","cleanDispatches"]` on an untruncated row and `[..., "truncation"]` on a truncated row.
 3. Assert `handoverGate.verdict ∈ {"eligible","ineligible","unverifiable"}`, `handoverGate.conditions` is four entries in the declared order with `met|open`, and both numbers are numbers.
-4. `first-use` row: assert the state directory is absent on disk, the row exists with `handoverGate.verdict === "ineligible"`, `countedDeliveries === 0`, `truth: met`, `corroboration: met`, `coverage: open`, `floor: open`, and that a host-root tree snapshot before/after the read is identical (AMB-ENG-1) — no store was opened and no directory appeared.
-5. Text table: assert the header is exactly `KEY  ROOT  STATE  DAEMON  HANDOVER`, each data row splits into exactly five cells, and two consecutive text runs are byte-identical.
+4. `first-use` row: assert the state directory is absent on disk, the row exists with `handoverGate.verdict === "ineligible"`, `countedDeliveries === 0`, `truth: met`, `corroboration: met`, `coverage: open`, `floor: open`, `reversible === false`, and that a host-root tree snapshot before/after the read is identical (AMB-ENG-1) — no store was opened and no directory appeared.
+5. Binding: assert the `ready` row's `handoverGate.countedDeliveries`, `cleanDispatches`, and `conditions` are exactly those of the records whose `repository` equals the row's resolved `host/owner/name` identity, and that seeding/removing the foreign record in the same store changes none of them (the scope rule; the derivation is `TC-ENGINE-021`'s agreement half).
+6. Non-persisting: assert the persisted identity binding file (when present) is byte-identical before and after the read, no new binding file appears, and no additional project store file is created — the row resolves read-only.
+7. Text table: assert the header is exactly `KEY  ROOT  STATE  DAEMON  HANDOVER`, each data row splits into exactly five cells, and two consecutive text runs are byte-identical.
 
 **Expected Outcome**:
-- Seven ordered fields; the block declared; the empty-window evaluation exact; no store-creation side effect; no sixth column.
+- Seven ordered fields; the block declared; the empty-window evaluation exact (including `reversible: false`); the evaluation bound to the row's own identity with the foreign record excluded; no binding write and no store-creation side effect; no sixth column.
 
-#### TC-ENGINE-021 - The row's gate block agrees with the summary for the same ledger
+#### TC-ENGINE-021 - The row's gate block agrees with the summary for the same ledger and excludes foreign repositories
 
-**Objective**: Prove "one fact, one derivation" by comparing the fleet row and the summary over the same repository and ledger.
+**Objective**: Prove "one fact, one derivation" by comparing the fleet row and the summary over the same repository and ledger, and prove the row evaluated **its own** repository identity rather than the whole store.
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F3-5, F-3, NFR-10, DEC-1
+**Related IDs**: AC-F3-5; F-3; DM-7; NFR-10, NFR-13; DEC-1, DEC-15
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/repos-handover-gate.test.ts` (new)
@@ -636,23 +658,24 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 **Tags**: @backend, @behaviour
 
 **Preconditions**:
-- One registered project whose checkout origin is `https://github.com/owner/<label>.git` (so its repository string is knowable from the fixture), with its state root seeded with a mixed ledger: corroborated successes, one uncorroborated success claim, one failure token, one `falseSuccess` incident, and one resolved divergence.
+- One registered project whose checkout identity resolves to `github.com/owner/<label>` — first cell through the persisted create-once binding, second cell through the normalized configured remote (`https://github.com/owner/<label>.git`) with the binding absent — with its state root seeded with a mixed ledger: corroborated successes, one uncorroborated success claim, one failure token, one `falseSuccess` incident, and one resolved divergence.
 - Two foreign-repository records are seeded into the **same** store (a different `repository` field) so the scope rule is observable: the row must be a per-repository evaluation, not a whole-store count.
-- The summary is invoked with the row's own repository string (`--repo github.com/owner/<label>`), which the fixture derives from the checkout origin.
+- The summary is invoked with the row's resolved repository string (`--repo github.com/owner/<label>`).
 
 **Steps**:
 1. Read `dispatch dual-run summary --repo <row repository> --json`; capture `verdict`, `conditions`, `countedDeliveries`, `cleanDispatches`.
 2. Read `repos list --json`; select the row for that repo key and capture the same four facts from `handoverGate`.
 3. Assert deep equality of `conditions` arrays (order included), equality of `verdict`, of `countedDeliveries`, and of `cleanDispatches`.
 4. Assert the corroboration-honest identity survives the projection: the row's `cleanDispatches` equals the summary's `corroboration.satisfied` for the same ledger (the block carries no corroboration object, so this is the only way the identity is checkable from the fleet side).
-5. Assert the scope rule: `handoverGate.countedDeliveries` equals the number of counted attempts for the row's own repository, so the two foreign records are excluded (a whole-store fold would report them).
-6. Assert `reversible` follows the folded authority: a row with no handover record reads `false`; after a flip seeded through the delivered ledger API it reads `true`.
+5. Assert the scope rule: `handoverGate.countedDeliveries` equals the number of counted attempts for the row's own repository, so the two foreign records are excluded (a whole-store fold would report them); assert the same four facts still agree after appending a third foreign record, so the exclusion is a filter and not a fixed number.
+6. Assert both identity-resolution cells (persisted binding, and binding-absent → normalized configured remote) produce the **same** row values for the same ledger — the declared resolution order, observed through the scope rule rather than by reading the resolver.
+7. Assert `reversible` follows the folded authority: a row with no handover record reads `false`; after a flip seeded through the delivered ledger API it reads `true`.
 
 **Expected Outcome**:
-- Four-for-four agreement between the fleet row and the summary for the same repository; foreign records excluded; `reversible` equals the fold.
+- Four-for-four agreement between the fleet row and the summary for the same repository; foreign records excluded under both resolution cells; `reversible` equals the fold.
 
 **Notes / Clarifications**:
-- The row's repository binding (how a project row learns its repository string for the fold) is delivery-pinned and is logged as OQ-TP-8; the fixture uses the checkout origin, which is the only per-project fact the host index already carries via `root`.
+- The binding source is declared (DEC-15, DM-7), so the fixture no longer guesses: it supplies the identity the delivered policy would resolve and asserts the *scope rule*, which fails any other binding (whole-store fold, repo key used as identity, or an extra store open — the last is caught by `TC-ENGINE-020`'s snapshot).
 
 #### TC-ENGINE-022 - projects list --flat stays byte-identical and carries neither new field
 
@@ -680,13 +703,13 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 **Expected Outcome**:
 - Golden bytes unchanged; neither new field leaks into the alias; the `repos` row proves the fields exist.
 
-#### TC-ENGINE-023 - Unreadable or torn ledger fails the fleet read at exit 2 with no fabricated row
+#### TC-ENGINE-023 - Unreadable, torn, or unresolvable-identity reads fail the fleet read at exit 2 with no fabricated row
 
-**Objective**: Pin the declared failure behaviour, including the half that is easy to fake: **no row** must mean no data at all.
+**Objective**: Pin the declared failure behaviour, including the two halves that are easy to fake: **no row** must mean no data at all, and an unresolvable identity must fail rather than fold something else.
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F3-6, F-3, DM-4, NFR-4, DEC-1
+**Related IDs**: AC-F3-6; F-3; DM-4, DM-7; NFR-4, NFR-13; DEC-1, DEC-15
 **Test Type(s)**: Integration, Negative
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/repos-handover-gate.test.ts` (new)
@@ -694,19 +717,19 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 **Tags**: @backend, @behaviour, @errors
 
 **Preconditions**:
-- Three fixtures over a host with two registered projects (one healthy, one degraded): (a) a torn attempt ledger (a truncated final line / a record failing the delivered framing-and-checksum verification), (b) an unreadable attempts ledger (mode `000`), (c) a malformed divergence ledger.
-- A healthy control run over the same host before the degradation, to prove the failure is caused by the ledger and not the host.
+- Five fixtures over a host with two registered projects (one healthy, one degraded): (a) a torn attempt ledger (a truncated final line / a record failing the delivered framing-and-checksum verification), (b) an unreadable attempts ledger (mode `000`), (c) a malformed divergence ledger, (d) a `ready` checkout with **no** persisted binding and **no** configured VCS remote, and (e) a `ready` checkout whose persisted binding is malformed and whose remote is absent.
+- A healthy control run over the same host before the degradation, to prove the failure is caused by the ledger or the identity and not the host.
 
 **Steps**:
 1. Control: `repos list --json` exits `0` and returns both rows.
-2. For each degraded fixture: assert the exit is `2` and the error code is exactly `repos.state-unavailable`.
+2. For each degraded fixture: assert the exit is `2` and the error code is exactly `repos.state-unavailable` (the unresolvable-identity cells reuse the same delivered identity, never a new one).
 3. Assert `envelope.data` is `undefined` (no fabricated row, no empty array presented as a result) and that no row for the degraded repository appears anywhere in stdout.
-4. Assert the classified summary names the repository (evidence naming), not the healthy one.
-5. Assert the read wrote nothing: the host-root tree snapshot before/after is identical for every degraded fixture.
+4. Assert the classified summary names the repository (evidence naming), not the healthy one; for the unresolvable cells, assert the summary names the checkout so an operator can act.
+5. Assert the read wrote nothing: the host-root tree snapshot before/after is identical for every degraded fixture — in particular the unresolvable-identity cells create **no** binding file, so a read can never bind a repository.
 6. Cross-witness: over the **same** degraded host, `projects list --flat --json` exits `0` and returns its rows unchanged — the production `projects` read does not pass through the `repos` projection, so the evaluation is hosted on the `repos` row only (D1's "and only the `repos` row").
 
 **Expected Outcome**:
-- `repos.state-unavailable` at exit `2` with no data, for torn, unreadable, and malformed ledgers; flat alias unaffected; nothing written.
+- `repos.state-unavailable` at exit `2` with no data for torn, unreadable, malformed, and unresolvable-identity cells; no binding written; flat alias unaffected.
 
 #### TC-ENGINE-024 - Truncated ledger reports unverifiable plus truncation over the visible window at exit 0
 
@@ -714,7 +737,7 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F3-6, F-3, DM-4, NFR-2, NFR-4, DEC-1; TRUNC-ENG-1
+**Related IDs**: AC-F3-6; F-3; DM-4, DM-7; NFR-2, NFR-4, NFR-13; DEC-1, DEC-15; TRUNC-ENG-1
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/repos-handover-gate.test.ts` (new)
@@ -722,7 +745,7 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 **Tags**: @backend, @behaviour, @perf
 
 **Preconditions**:
-- One registered project seeded with 5,005 counted attempts through the delivered append path (fixed past timestamps), so the bounded read keeps 5,000 and omits 5.
+- One registered project whose checkout identity resolves (persisted binding, else normalized configured remote) seeded with 5,005 counted attempts **for that identity** through the delivered append path (fixed past timestamps), so the bounded read keeps 5,000 and omits 5; plus one foreign-repository record in the same store, which must not affect the bound or the counts.
 - A healthy second project as the control row; the fixture prints record count and elapsed milliseconds on construction.
 
 **Steps**:
@@ -731,6 +754,7 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 3. Assert `handoverGate.countedDeliveries <= 5000` and `handoverGate.conditions` is four entries computed over the visible window (open set equals what the visible records imply — `truth` and `corroboration` met, coverage/floor per the seeded token mix).
 4. Assert the truncation key is the **last** key of the block and the control row has no `truncation` key at all.
 5. Assert the read wrote nothing (tree snapshot identical) and made zero transport calls (`harness.transportCalls` empty).
+6. Assert the foreign-repository record is excluded: `countedDeliveries` and `truncation.omittedRecords` stay `5000`/`5` after that record is removed, so neither the bound nor the counts are influenced by another repository's writes.
 
 **Expected Outcome**:
 - Exit `0`; declared truncation at the declared bound; visible-window conditions; no fabrication, no write, no network.
@@ -965,13 +989,13 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 **Expected Outcome**:
 - Both absences hold and are named when violated; the delivered controls pass unmodified.
 
-#### TC-ENGINE-050 - Production dry run over a real checkout: real reads, delivered report, no fallback.internal
+#### TC-ENGINE-050 - Production dry run over a real checkout: real reads, declared owner principal, delivered report, no fallback.internal
 
-**Objective**: Prove the merge transaction is reachable in the shipped composition with real reads over injected transports, not stubs.
+**Objective**: Prove the merge transaction is reachable in the shipped composition with real reads over injected transports, and that the owner principal comes from the declared identity source rather than a new setting.
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F6-10, F-6, DEC-8, NFR-9; AMB-ENG-5
+**Related IDs**: AC-F6-10; F-6; DM-5; DEC-8, DEC-13; NFR-9; AMB-ENG-5
 **Test Type(s)**: Integration, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/merge-production-composition.test.ts` (new); `createProductionComposer` over a real temp git checkout
@@ -980,6 +1004,7 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 
 **Preconditions**:
 - A real temp checkout (`createRepository` + a feature commit on a branch, with `main-tools` as the base branch present locally), a distinct `HOME`, and the approved state base under `tmp/tmpdir`.
+- The checkout's normalized identity resolves to `github.com/<owner>/<label>` through the delivered identity policy, so the declared owner principal is `<owner>`; the fixture never supplies a principal through a configuration key.
 - Injected seams: a recording GitHub transport returning a work item, a check-run page for the head sha, and a request detail whose head sha is the branch head; a resolving credential port; the environment deliberately contains **no** `GITHUB_TOKEN`, so a real credential read would fail.
 - The no-network guard installed for the duration (`createNoNetworkGuard`).
 
@@ -989,13 +1014,15 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 3. Assert exactly one verification record was appended and zero transaction records and zero waiver records (`readMergeGateVerifications`/`readMergeTransactions`/`readMergeWaivers`).
 4. Assert the real reads happened through the injected transport: the recorded call list contains the work-item read, the check-run read, and the request-detail read; assert the credential port was consulted at least once.
 5. Assert `guard.calls` is empty (zero live network) and that no response payload body was logged (privacy posture unchanged).
-6. Owner principal (AMB-ENG-5): run a dry run with `--waive owner-gate --waived-by <resolved principal>` in a fixture where the owner label is present; assert `waiver=owner-gate:authorized` in text mode and zero waiver records; then run with a different principal and assert `merge.waiver-unauthorized` at exit `1`.
+6. Owner principal (DEC-13, AMB-ENG-5): run a dry run with `--waive owner-gate --waived-by <owner>` in a fixture where the owner label is present; assert `waiver=owner-gate:authorized` in text mode and zero waiver records. Then run the same waiver with any other principal (a different owner string, including the repository **name** and a bare ref) and assert `merge.waiver-unauthorized` at exit `1` with zero waiver records.
+7. No new configuration key: assert the resolved `merge` configuration exposes exactly `gate-freshness`, `gates`, and `deploy-expectations` (no owner-principal, branch, or base-reference key), and assert the step-6 authorization result is unchanged when `gates` and `deploy-expectations` are overridden — the principal comes from the checkout's identity, not from configuration.
 
 **Expected Outcome**:
-- Delivered dry-run report at exit `0`; one verification record; zero landing mutations; real reads observed; zero live calls; principal resolution observable through the waiver effect.
+- Delivered dry-run report at exit `0`; one verification record; zero landing mutations; real reads observed; zero live calls; the principal resolved from the checkout identity and observable through the waiver effect; the three declared configuration keys unchanged.
 
 **Notes / Clarifications**:
 - If the composition cannot resolve a request for a ref, that path is `TC-ENGINE-053`'s business; this case uses a fixture where it resolves.
+- The principal is asserted through its effect (authorized vs `merge.waiver-unauthorized`) because reading the resolved value directly would test the identity resolver rather than the composition's use of it (AMB-ENG-5).
 
 #### TC-ENGINE-051 - A failing gate is a classified refusal at exit 1 through the production composition
 
@@ -1030,7 +1057,7 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F7-11, F-7, DM-5, NFR-5, DEC-7
+**Related IDs**: AC-F7-11; F-7; DM-5, DM-6; NFR-5, NFR-12; DEC-7, DEC-14
 **Test Type(s)**: Integration, Negative
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/merge-production-composition.test.ts` (new)
@@ -1048,6 +1075,7 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 4. Assert the classified summary names the credential reference (evidence) so an operator can act, and that no body/secret text is logged.
 5. Assert zero verification records, zero transactions, zero waivers and zero transport calls (the read was refused before any request left the process).
 6. Assert the resolved row is the single source: look up the code in `ERROR_TABLE`, assert `domainKind === "config"`, and assert the envelope kind equals that value (not a transcribed literal).
+7. Assert the code is a member of the composition's exported `MERGE_COMPOSITION_EMITTABLE_CODES`, so the credential branch is inside the declaration the conformance case ranges over (a refusal branch outside the constant is the declared conformance failure).
 
 **Expected Outcome**:
 - `kind: "config"` at the declared exit; no containment; zero records; zero network; the table is the oracle.
@@ -1058,7 +1086,7 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F6-10, AC-F7-11, F-6, F-7, DM-5, NFR-5
+**Related IDs**: AC-F6-10, AC-F7-11; F-6, F-7; DM-5, DM-6; NFR-5, NFR-12; DEC-13, DEC-14
 **Test Type(s)**: Integration, Negative
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/merge-production-composition.test.ts` (new)
@@ -1066,8 +1094,8 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 **Tags**: @backend, @errors
 
 **Preconditions**:
-- A matrix over the composition: (a) transport returns a 5xx (`provider.outage`), (b) transport returns 401 (`provider.auth.rejected`), (c) the state store append fails (`state.*`), (d) a stale verification envelope (`merge.gates-stale`), each on both the dry-run and the landing path where applicable.
-- The error-table row for each code is read as the oracle.
+- A matrix over the composition: (a) transport returns a 5xx (`provider.outage`), (b) transport returns 401 (`provider.auth.rejected`), (c) the state store append fails (`state.*`), (d) a stale verification envelope (`merge.gates-stale`), (e) a ref whose request detail does not resolve, each on both the dry-run and the landing path where applicable.
+- The error-table row for each code is read as the oracle, and `MERGE_COMPOSITION_EMITTABLE_CODES` is read as the membership oracle.
 
 **Steps**:
 1. For each fault, run the composed command (`--dry-run` and, where landing is meaningful, without it); assert the exit equals the declared exit for that row's projection class.
@@ -1075,36 +1103,39 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 3. Assert no envelope carries `fallback.internal` for any fault.
 4. Assert the landing-path faults append no transaction record (no partial landing) and the dry-run faults append at most the delivered verification behaviour.
 5. Assert `guard.calls` is empty for every cell.
+6. Assert every emitted code in this matrix is a member of `MERGE_COMPOSITION_EMITTABLE_CODES`; for the non-resolving-ref cell, assert the composition emits a code the table already declares (a declared refusal expressed through an existing identity) rather than inventing one — a code outside the constant, or absent from the table, fails here naming both.
 
 **Expected Outcome**:
 - Every fault classified by its declared row at its declared exit on both paths; no containment; no partial landing.
 
-#### TC-ENGINE-054 - Classification conformance is total over the declared emittable-code set
+#### TC-ENGINE-054 - Classification conformance is total and non-vacuous over MERGE_COMPOSITION_EMITTABLE_CODES
 
-**Objective**: Make classification totality a property test over the composition's declared codes rather than a hand-picked example set.
+**Objective**: Make classification totality a property test over the composition's **exported declaration** — every refusal branch contributes its code, so the test's domain is the composition rather than a hand-picked list, and an empty or one-family enumeration cannot pass.
 **Scenario Type**: Contract
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F7-11, F-7, DM-5, NFR-5; AMB-ENG-4
+**Related IDs**: AC-F7-11; F-7; DM-5, DM-6; NFR-5, NFR-12; DEC-7, DEC-14; AMB-ENG-4
 **Test Type(s)**: Contract, Unit
 **Automation Level**: Automated
-**Target Layer / Location**: `tests/structure/merge-classification-conformance.test.ts` (new); oracle `packages/core/src/contracts/error-table.ts`, resolver `packages/cli/src/classify.ts`
+**Target Layer / Location**: `tests/structure/merge-classification-conformance.test.ts` (new); declaration exported by the production merge composition; oracles `packages/core/src/contracts/error-table.ts`, `packages/cli/src/classify.ts`
 **Harness entry**: `bun test tests/structure/merge-classification-conformance.test.ts`
 **Tags**: @backend, @contract
 
 **Preconditions**:
-- A declared emittable-code list exported by the composition (delivery must publish it; the plan names the requirement, not the module).
+- `MERGE_COMPOSITION_EMITTABLE_CODES` imported from the production composition module (never from a test fixture or a transcribed list); the case fails naming the missing export if delivery does not publish it.
 - The delivered `resolveAppErrorCode`/`classifyDomainKind`/`classifyThrown` and the delivered `ERROR_TABLE`.
 
 **Steps**:
-1. Assert the declared list is non-empty, has no duplicates, and contains at least one `config.*`, one `provider.*`, one `state.*`, and one `merge.*` code — the anti-vacuity guard.
-2. For every declared code: assert `resolveAppErrorCode(code)` resolves to a row and that the row's `domainKind` equals the kind the composition would emit for it (the composition's failure constructor for that code exposes the pair).
-3. For every declared code: assert `classifyThrown({ kind: row.domainKind, code })` returns that row, and that `classifyThrown({ kind: row.domainKind, code }).code === code`.
-4. Assert the negative control is live: `classifyThrown({ kind: "provider", code: "config.credential.missing" })` returns `fallback.internal` — proving the containment exists and that the *composition* is what must not produce the wrong pair.
-5. Assert no declared code resolves to a new row: compare the resolved codes against the delivered table snapshot and assert every one of them already exists (no row added by this change).
+1. Structural: assert the constant is a non-empty collection of string codes with no duplicates, and that it carries at least one `config.*`, one `provider.*`, one `state.*`, and one `merge.*` member — the anti-vacuity guard (an empty, single-entry, or single-family list fails naming the missing family).
+2. Totality: for every member assert `resolveAppErrorCode(code)` resolves to a declared row, so no member is absent from the table.
+3. Kind agreement: for every member assert the kind the composition emits for that code — read from the composition's export for that code, not from a transcribed literal — equals the resolved row's declared `domainKind`.
+4. Classifier agreement: for every member assert `classifyThrown({ kind: row.domainKind, code })` returns that row and `.code === code`, so no member is contained.
+5. Negative control is live: `classifyThrown({ kind: "provider", code: "config.credential.missing" })` returns `fallback.internal` — the containment exists, and the *composition* is what must not produce the wrong pair (so a pass cannot be vacuous).
+6. No vocabulary growth: compare the resolved rows against the delivered table snapshot and assert the per-kind row counts, `DOMAIN_KINDS` membership, and exit classes are unchanged.
+7. Exhaustive by construction: source-scan the production composition and assert every refusal site that emits an error code references a member of the constant (directly or through a helper typed by it), so a branch added outside the declaration fails here; print the refusal-site count and the member count so a mismatch is diagnosable.
 
 **Expected Outcome**:
-- Every emittable pair resolves to its declared row; the mismatch control still contains (proving the test can fail); no new row.
+- Non-empty, duplicate-free, four-family constant; every member a declared row with a matching kind; classifier agreement per member; live mismatch control; no new row/kind/exit; every refusal branch inside the declaration.
 
 #### TC-ENGINE-055 - verify deploy remains a declared residual, not a claimed capability
 
@@ -1158,13 +1189,13 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 **Expected Outcome**:
 - Marker present and valid; four topics covered; the no-flip and residual statements present; the distribution guard green.
 
-#### TC-ENGINE-061 - The six feature pages state the declared contracts and residuals
+#### TC-ENGINE-061 - The six feature pages state the declared contracts and residuals, and the two broader test specs are handed to phase 7
 
-**Objective**: Reconcile the contract reference so the corpus never states the new payloads or the restored composition without their contracts.
+**Objective**: Reconcile the contract reference so the corpus never states the new payloads or the restored composition without their contracts, and make the test-spec reconciliation a declared **phase-7 handoff** rather than a claim that test planning aligned it.
 **Scenario Type**: Contract
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F8-12, F-8, NFR-8, DEC-10, DEC-11
+**Related IDs**: AC-F8-12; F-8; NFR-8; DEC-10, DEC-11, DEC-16
 **Test Type(s)**: Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/checks/engine-first-doc-reconciliation.test.ts` (new)
@@ -1175,14 +1206,15 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 - Sections resolved by their delivered headings: `feature-dispatch-engine.md` §Handover gate (line 316) and §Dual-run evidence; `feature-projects.md` §`repos list` contract (line 160) and §The `projects list --flat` alias (line 199); `feature-merge-verify-deploy.md` §Classification and waivers (line 109) and §verify deploy (line 153); `feature-autonomous-delivery.md`; `feature-resident-daemon.md` §Declared residuals (line 473).
 
 **Steps**:
-1. `feature-dispatch-engine.md`: assert the summary's three additive fields and the handover's two are named with their declared order, the fleet evaluation host is named (read-time, `repos list`), and the no-flip operating definition is stated.
-2. `feature-projects.md`: assert the row is documented as seven fields in the declared order, that the block's members are named, and that the flat alias is stated as unchanged and carrying neither field.
-3. `feature-merge-verify-deploy.md`: assert the production composition (real reads, configuration/branch/base/owner resolution) is stated, that classification derives from the resolved row, and that `verify deploy` is a residual.
+1. `feature-dispatch-engine.md`: assert the summary's three additive fields and the handover's two are named with their declared order, the fleet evaluation host is named (read-time, `repos list`), the no-flip operating definition is stated, and the **declared handover exemption** is stated as exactly one outcome (the idempotent revert noop, evidence-read-free, no `conditions`).
+2. `feature-projects.md`: assert the row is documented as seven fields in the declared order, that the block's members are named, that the flat alias is stated as unchanged and carrying neither field, and that the row's evaluation is stated as bound to its own resolved repository identity with foreign records excluded (DM-7, DEC-15).
+3. `feature-merge-verify-deploy.md`: assert the production composition (real reads, configuration/branch/base-reference resolution) is stated, the **owner principal** is named as the provider-resolved repository owner with no configuration key added (DEC-13), the **emittable-code constant** is named (DEC-14), classification is stated as derived from the resolved row, and `verify deploy` is a residual.
 4. `feature-autonomous-delivery.md` and `feature-resident-daemon.md`: assert the residual/engine-first wording is consistent (no page claims a daemon-hosted periodic evaluation).
-5. Absence: assert no reconciled page states a lane-read provider profile or a declared-window read, and assert `doc/quality/test-specs/` gained no new entry (DEC-11) while the existing dispatch-engine and merge/verify specs were aligned (review-attested, with the directory listing printed).
+5. Absence: assert no reconciled page states a lane-read provider profile or a declared-window read.
+6. Phase-7 handoff (DEC-16): assert no page or change artifact claims the two broader test specs were reconciled **during test planning**; assert the pages state that `doc/quality/test-specs/test-spec-dispatch-engine.md` and `test-spec-merge-verify-deploy.md` are reconciled in the documentation phase (phase 7, `@doc-syncer`); and assert `doc/quality/test-specs/` gained no new entry (DEC-11), printing the directory listing so the absence is falsifiable and the reconciliation itself is recorded as an attestation in §10.
 
 **Expected Outcome**:
-- Every named page states its contract and residual; the negative claims are absent; the test-spec convention holds.
+- Every named page states its contract and residual, including the four declared seams; the negative claims are absent; the test-spec reconciliation is a declared phase-7 handoff with no new entry and no test-planning-alignment claim.
 
 #### TC-ENGINE-062 - The planning corpus carries the progress line, addendum, scenario row, and both restatements
 
@@ -1291,11 +1323,11 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 
 #### TC-ENGINE-091 - No new command, verb, flag, error row, DOMAIN_KINDS member, or exit class
 
-**Objective**: Hold the closed vocabularies the change promises not to widen.
+**Objective**: Hold the closed vocabularies the change promises not to widen, including the merge configuration branch and the exported emittable-code set's membership in the delivered table.
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-NFR1-14, AC-F7-11, NFR-5, DEC-9
+**Related IDs**: AC-NFR1-14, AC-F7-11; NFR-5, NFR-12; DEC-9, DEC-13, DEC-14
 **Test Type(s)**: Regression, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/structure/error-table.test.ts`, `tests/structure/dispatch-error-identity.test.ts`, `tests/structure/dispatch-help-inventory.test.ts`, `tests/checks/help-guide-coverage.test.ts`, `tests/checks/prompt-conformance.test.ts`, `tests/behaviour/repos-list-contract.test.ts` (verb refusal case), `tests/golden/dispatch-errors.test.ts`
@@ -1310,9 +1342,11 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 2. Assert exit classes are unchanged: `dispatch` and `repos` still project {0,1,2}; the delivered exit-literal check (`tests/checks/exit-code-literals.test.ts`) passes.
 3. Assert the command/verb inventory is unchanged: the prompt-required command set is identical, `repos <unknown>` still refuses `fallback.invocation` at exit `1`, and `dispatch` accepts no new verb or flag (the delivered undeclared-flag cases still refuse).
 4. Assert the error-taxonomy/golden error surface is unchanged (`tests/golden/dispatch-errors.test.ts` passes unmodified).
+5. Assert the configuration vocabulary is unchanged: the typed `merge` configuration branch still exposes exactly `gate-freshness`, `gates`, and `deploy-expectations`, and no key naming an owner principal, a branch, or a base reference exists anywhere in the configuration schema — a new key fails naming it (DEC-13).
+6. Assert the composition's `MERGE_COMPOSITION_EMITTABLE_CODES` adds no vocabulary: every member is a pre-existing table code (it is a declaration, not a row source), so the table row counts and `DOMAIN_KINDS` asserted in steps 1–2 bound it as well (DEC-14).
 
 **Expected Outcome**:
-- No vocabulary growth in any dimension; every delivered refusal still refuses.
+- No vocabulary growth in any dimension (commands, flags, error rows, kinds, exits, configuration keys); every delivered refusal still refuses; the emittable-code constant is a declaration over existing codes.
 
 #### TC-ENGINE-092 - Hermeticity: zero live network, credential, model, or sleep in the delivering suites
 
@@ -1346,7 +1380,7 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 **Scenario Type**: Corner Case
 **Impact Level**: Critical
 **Priority**: High
-**Related IDs**: AC-F3-6, F-3, NFR-3, DEC-1
+**Related IDs**: AC-F3-6; F-3; DM-7; NFR-3, NFR-13; DEC-1, DEC-15
 **Test Type(s)**: Integration
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/repos-handover-gate.test.ts` (new)
@@ -1362,6 +1396,7 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 2. Deep-scan the payload for wall-clock or relative-time keys (`recordedAt`, `now`, `asOf`, `windowEnd`, `lastSeen`, `ageSeconds`, `*Ago`) and assert none appear in any row or in `handoverGate`.
 3. Assert the payload carries no field whose value changes between the two reads (compare key-by-key).
 4. Assert the text table is also byte-identical across the two runs (delivered behaviour preserved).
+5. Assert no row was evaluated under an unresolved identity: every `ready` row's `handoverGate` is present and equal (field by field) to a summary read for that row's resolved repository identity, and no row carries an empty or placeholder identity-derived zero (`TC-ENGINE-021` supplies the identity cells; this step pins that determinism does not come from skipping a row).
 
 **Expected Outcome**:
 - Byte identity across reads; no time-derived field; text determinism preserved.
@@ -1372,7 +1407,7 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 **Scenario Type**: Corner Case
 **Impact Level**: Important
 **Priority**: High
-**Related IDs**: AC-NFR1-14, F-3, NFR-2, DEC-1; AMB-ENG-2
+**Related IDs**: AC-NFR1-14, F-3, DM-7, NFR-2, NFR-13, DEC-1, DEC-15; AMB-ENG-2
 **Test Type(s)**: Integration, Performance
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/behaviour/repos-handover-gate.test.ts` (new) + `tests/behaviour/projects-performance.test.ts` (delivered precedent for the floor)
@@ -1389,6 +1424,7 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 3. Assert no write happened on the read path: host-root tree snapshot before/after each of the two reads is identical (the delivered create-once marker and temp-sibling rules are the only permitted effects and are outside the snapshot's scope or idempotent between reads).
 4. Fleet floor: run the 25-row read ten times, print the row count and the p95 milliseconds, and assert the read completes and that the per-row block is present on all 25 rows (AMB-ENG-2 substitute; no wall-clock latency is a pass condition).
 5. Assert zero transport calls across all reads (the fleet read is local).
+6. Assert identity resolution is free of persistence and of extra store opens: no identity-binding file is created or modified by either read (covered by the same snapshot), and the 25-row floor includes the resolution cost — a per-row store open via identity resolution would surface as a step change against the delivered `projects-performance` floor (AMB-ENG-2; NFR-13).
 
 **Expected Outcome**:
 - Fresh values after the append; nothing written; 25 rows evaluated; no network.
@@ -1408,7 +1444,7 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 
 **Preconditions**:
 - Six fixture families, each seeded into one registered project's state root: eligible; truth incident (`falseSuccess`); coverage missing; floor missing; corroboration unsatisfied; truncated.
-- The project's checkout origin supplies the repository string the fixture also passes to `--repo`, so the summary, the handover decision, and the row address the same repository (the binding source is OQ-TP-8; the fixture removes the ambiguity).
+- The project's checkout identity resolves to the same `host/owner/name` string the fixture passes to `--repo` (via the persisted binding, or its normalized configured remote), so the summary, the handover decision, and the row address the same repository (DM-7, DEC-15).
 
 **Steps**:
 1. For each family: read the summary (`dispatch dual-run summary --repo <repo> --json`), the handover decision (`dispatch handover <repo> --json`), and the fleet row (`repos list --json`).
@@ -1417,6 +1453,7 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 4. Assert `countedDeliveries` and `cleanDispatches` agree between the summary and the row.
 5. Assert the open-set identity holds on all three surfaces and that `truncation` appears on exactly the truncated family on **every** surface that carries the key (summary `truncation`, handover `truncation`, row `handoverGate.truncation`).
 6. Assert no family produces a condition status outside `met|open` and no surface invents a status the others lack.
+7. Assert the matrix's handover cell is an evidence-reading outcome (a forward `dispatch handover <repo>`, never a `--revert` noop) and that every family's handover data carries `conditions` — the single declared exemption is excluded by fixture construction, so a surface silently relying on its absence fails here.
 
 **Expected Outcome**:
 - Six-for-six agreement across three surfaces; the metric in §4.1 of the spec is a test result rather than a claim.
@@ -1429,6 +1466,7 @@ TC IDs use the `ENGINE` feature prefix and follow the capability blocks of the s
 - **Environments.** One hermetic local environment: Bun test runner over temp state directories under `tmp/tmpdir` (`APPROVED_BASE = <cwd>/tmp/tmpdir`), plus `bash` suites under `scripts/.tests/` with `mktemp -d` roots. No staging, no external system, no daemon, no network. `guardStateFixtureRoot` refuses the live checkout, any ancestor, and the home-derived real state directory, so a fixture cannot write into an operator's state.
 - **State stores.** Real `delivery.state.v1` JSONL stores per fixture (`createStateStore`), seeded only through the delivered ledger APIs (`appendDispatchAttempt`, `appendDispatchDivergence`, `appendDispatchHandover`, `writeDispatchAuthority`) so the assertions are about the projection rather than about fixture JSON. Pre-change records are seeded as delivered-shape records (`TC-ENGINE-012`).
 - **Dispatch fixtures.** `tests/fixtures/dispatch/evidence-windows.ts` (`buildAttempts`, `eligibleSpecs`, `missingClassSpecs`, `uncorroboratedSpecs`, `dayAt`) and `tests/fixtures/dispatch/ledger.ts` (`REPOSITORY`, `REPOSITORY_BETA`, `makeDivergence`, `makeHandover`, `makeAuthorityView`, `corroborationFor`). Append order equals spec order, which is what makes the trailing-run assertion meaningful. Truncation fixtures use the delivered `gate.max` seam.
+- **Repository-identity fixtures.** Every `ready` checkout in a fleet or merge fixture declares an identity through the delivered policy in three cells: (i) a persisted create-once binding recorded with the checkout's git common directory, (ii) no binding plus a normalized `origin` remote (`https://github.com/<owner>/<label>.git`), and (iii) neither — the unresolvable cell behind `TC-ENGINE-023`. Attempt, divergence, and handover records are seeded under that normalized `host/owner/name` string; foreign-record cells seed a second identity into the same store. No fixture creates or repairs a binding through a read path, and the merge fixture derives the owner principal (`<owner>`) from the same normalized identity.
 - **Host and checkout fixtures.** `tests/fixtures/projects/state-scope.ts` (host fixture, approved base), `tests/fixtures/projects/temp-repos.ts` (real `git init` + commits, sanitized git environment, `GIT_CEILING_DIRECTORIES`), `tests/fixtures/projects/host-index.ts` (seeded index), `tests/fixtures/projects/host-root.ts` (`snapshotTree`, `snapshotDifferences`).
 - **Production composition.** `tests/fixtures/projects/production.ts` (`createProductionProjectsHarness`) composes the real `createProductionComposer` over a real checkout with an injected recording GitHub transport, a resolving or refusing credential port, a recording harness spawn, and a recording git runner; it exposes `transportCalls`, `spawns`, `gitCalls`, `snapshot`, and `fileList`. The environment never carries a real token, so a real credential read fails the run.
 - **Merge fixtures.** `tests/fixtures/merge/harness.ts` remains the in-process seam harness for the delivered cases; the new production-composition cases build their own fixture from `createRepository` + `git(...)` (`main-tools` base branch, a feature branch with one commit) and inject the provider transport at the composer, so the reads are real code paths and the bytes are synthetic.
@@ -1449,18 +1487,18 @@ Every case is automated. New `bun:test` suites live under the delivered test lay
 | TC-ENGINE-004 | `tests/behaviour/dispatch-conditions-projection.test.ts` | `bun test … --filter open-set` | Six fixture families incl. `falseSuccess` and `gate: { max: 5 }`; truncation fixture | To Implement |
 | TC-ENGINE-005 | `tests/behaviour/dispatch-additive-stability.test.ts` | `bun test tests/behaviour/dispatch-additive-stability.test.ts --filter summary` | Delivered summary case extended; truncated variant added; delivered sixteen-key literal kept as prefix | Existing – Update |
 | TC-ENGINE-006 | `tests/golden/dispatch-summary.test.ts` + `tests/fixtures/dispatch/golden/summary.txt` | `bun test tests/golden/dispatch-summary.test.ts` | Deliberate single golden regeneration; in-memory truncated cell for the last-line rule | Existing – Update |
-| TC-ENGINE-010 | `tests/behaviour/dispatch-handover-conditions.test.ts` | `bun test tests/behaviour/dispatch-handover-conditions.test.ts` | Eligible / refusing / truncated ledgers + an empty repository; five outcomes incl. revert noop | To Implement |
-| TC-ENGINE-011 | `tests/behaviour/dispatch-handover-conditions.test.ts` | `bun test … --filter reversible` | Alpha eligible + beta refusing; `readDispatchAuthority` as the second reader | To Implement |
-| TC-ENGINE-012 | `tests/behaviour/dispatch-handover-conditions.test.ts` | `bun test … --filter record-shape` | Flip + revert + replay; `readDispatchHandover` record key sets | To Implement |
-| TC-ENGINE-013 | `tests/behaviour/dispatch-handover-conditions.test.ts` | `bun test … --filter isolation` | Two-repository store; beta byte snapshots around alpha's flip and revert | To Implement |
-| TC-ENGINE-014 | `tests/behaviour/dispatch-handover-conditions.test.ts` | `bun test … --filter truncation` | Four cells incl. a torn attempt ledger; delivered exit projection | To Implement |
-| TC-ENGINE-015 | `tests/behaviour/dispatch-handover-conditions.test.ts` | `bun test … --filter text` | Text-mode flip and refusal; comparison against `renderDispatchHandoverText` | To Implement |
-| TC-ENGINE-016 | `tests/behaviour/dispatch-additive-stability.test.ts` | `bun test tests/behaviour/dispatch-additive-stability.test.ts --filter handover` | Delivered handover case extended; flip and truncated cells added | Existing – Update |
-| TC-ENGINE-020 | `tests/behaviour/repos-list-contract.test.ts` | `bun test tests/behaviour/repos-list-contract.test.ts` | Two-project host (one `ready`, one `first-use`); ordered key assertions; tree snapshot; text table | Existing – Update |
-| TC-ENGINE-021 | `tests/behaviour/repos-handover-gate.test.ts` | `bun test tests/behaviour/repos-handover-gate.test.ts --filter agreement` | One bound repository's mixed ledger + two foreign-repository records in the same store; summary + fleet reads; scope rule asserted | To Implement |
+| TC-ENGINE-010 | `tests/behaviour/dispatch-handover-conditions.test.ts` | `bun test tests/behaviour/dispatch-handover-conditions.test.ts` | Eligible / refusing / truncated ledgers + an empty repository; five outcomes incl. the revert noop; torn-attempt and unreadable-divergence noop cells | To Implement |
+| TC-ENGINE-011 | `tests/behaviour/dispatch-handover-conditions.test.ts` | `bun test … --filter reversible` | Alpha eligible + beta refusing; `readDispatchAuthority` as the second reader; torn-ledger recorded-revert vs noop pair | To Implement |
+| TC-ENGINE-012 | `tests/behaviour/dispatch-handover-conditions.test.ts` | `bun test … --filter record-shape` | Flip + revert + replay; `readDispatchHandover` record key sets; noop appends nothing | To Implement |
+| TC-ENGINE-013 | `tests/behaviour/dispatch-handover-conditions.test.ts` | `bun test … --filter isolation` | Two-repository store; beta byte snapshots around alpha's flip, revert, and revert noop | To Implement |
+| TC-ENGINE-014 | `tests/behaviour/dispatch-handover-conditions.test.ts` | `bun test … --filter truncation` | Five cells incl. a truncated read, a recorded revert with `verdict`, and a torn attempts ledger applied to both the recorded revert and the noop; delivered exit projection | To Implement |
+| TC-ENGINE-015 | `tests/behaviour/dispatch-handover-conditions.test.ts` | `bun test … --filter text` | Text-mode flip, refusal, and noop; comparison against `renderDispatchHandoverText` | To Implement |
+| TC-ENGINE-016 | `tests/behaviour/dispatch-additive-stability.test.ts` | `bun test tests/behaviour/dispatch-additive-stability.test.ts --filter handover` | Delivered handover case extended; recorded-revert, truncated, and noop key-set cells added | Existing – Update |
+| TC-ENGINE-020 | `tests/behaviour/repos-list-contract.test.ts` | `bun test tests/behaviour/repos-list-contract.test.ts` | Two-project host (one `ready`, one `first-use`); binding cell and remote-only cell; one foreign record; ordered key assertions; binding-file and tree snapshots; text table | Existing – Update |
+| TC-ENGINE-021 | `tests/behaviour/repos-handover-gate.test.ts` | `bun test tests/behaviour/repos-handover-gate.test.ts --filter agreement` | Identity via persisted binding and via normalized remote; mixed ledger + foreign records in the same store; summary + fleet reads; scope rule asserted | To Implement |
 | TC-ENGINE-022 | `tests/behaviour/projects-flat-alias.test.ts` | `bun test tests/behaviour/projects-flat-alias.test.ts` | Delivered alias fixture + one gated `ready` row; deep absence scan; committed golden unchanged | Existing – Update |
-| TC-ENGINE-023 | `tests/behaviour/repos-handover-gate.test.ts` | `bun test … --filter unreadable` | Torn / unreadable / malformed ledgers; healthy control; flat-alias cross-witness; tree snapshot | To Implement |
-| TC-ENGINE-024 | `tests/behaviour/repos-handover-gate.test.ts` | `bun test … --filter truncated` | 5,005-record project ledger seeded through the delivered append path; printed count + elapsed | To Implement |
+| TC-ENGINE-023 | `tests/behaviour/repos-handover-gate.test.ts` | `bun test … --filter unreadable` | Torn / unreadable / malformed ledgers, plus unresolvable and malformed-binding identity cells; healthy control; flat-alias cross-witness; tree snapshot (no binding written) | To Implement |
+| TC-ENGINE-024 | `tests/behaviour/repos-handover-gate.test.ts` | `bun test … --filter truncated` | 5,005-record identity-bound ledger seeded through the delivered append path + one foreign record; printed count + elapsed | To Implement |
 | TC-ENGINE-030 | `scripts/.tests/test-dispatch-bash-fallback.sh` | `bash scripts/.tests/test-dispatch-bash-fallback.sh` | Delivered suite unmodified; temp checkout copy; seeded authority documents | Existing – No Change |
 | TC-ENGINE-031 | `scripts/.tests/test-dispatch-bash-fallback.sh` | `bash scripts/.tests/test-dispatch-bash-fallback.sh` | `TC-BASH-002` cell; authoritative document; stderr capture | Existing – No Change |
 | TC-ENGINE-032 | `scripts/.tests/test-deliver-ticket.sh` | `bash scripts/.tests/test-deliver-ticket.sh` | Delivered mock loop; five-key order pin at line 724 | Existing – No Change |
@@ -1470,22 +1508,22 @@ Every case is automated. New `bun:test` suites live under the delivered test lay
 | TC-ENGINE-040 | `tests/checks/engine-first-doc-reconciliation.test.ts` | `bun test … --filter mapping` | `feature-peak-pausing.md` sections resolved non-empty; whitespace-normalised tokens | To Implement |
 | TC-ENGINE-041 | `tests/checks/engine-first-doc-reconciliation.test.ts` | `bun test … --filter over-claim` | Forbidden phrase literal; replacement surface list; allowlist non-vacuity | To Implement |
 | TC-ENGINE-042 | `tests/checks/engine-first-doc-reconciliation.test.ts` (+ delivered help/lanes controls) | `bun test tests/checks/engine-first-doc-reconciliation.test.ts tests/structure/dispatch-help-inventory.test.ts tests/checks/help-guide-coverage.test.ts tests/golden/lanes-list.test.ts` | `queue.ts` source scan; transcribed `QueueLane` member list; delivered goldens unmodified | To Implement + Existing – No Change (controls) |
-| TC-ENGINE-050 | `tests/behaviour/merge-production-composition.test.ts` | `bun test tests/behaviour/merge-production-composition.test.ts` | Real temp checkout (`createRepository` + commits, `main-tools` base); injected recording transport + credential port; no-network guard; waiver-principal cells | To Implement |
+| TC-ENGINE-050 | `tests/behaviour/merge-production-composition.test.ts` | `bun test tests/behaviour/merge-production-composition.test.ts` | Real temp checkout (`createRepository` + commits, `main-tools` base) whose normalized identity yields the owner principal; injected recording transport + credential port; no-network guard; waiver-principal cells (owner authorized, two others refused); three-configuration-key assertion | To Implement |
 | TC-ENGINE-051 | `tests/behaviour/merge-production-composition.test.ts` | `bun test … --filter gate-refusal` | Failing required check-run (or failing owner gate) on the same composition | To Implement |
-| TC-ENGINE-052 | `tests/behaviour/merge-production-composition.test.ts` | `bun test … --filter credential` | Refusing credential port with `config.credential.missing`; empty state root; `ERROR_TABLE` as oracle | To Implement |
-| TC-ENGINE-053 | `tests/behaviour/merge-production-composition.test.ts` | `bun test … --filter read-faults` | Fault matrix (5xx, 401, state append failure, stale envelope) on dry-run and landing paths | To Implement |
-| TC-ENGINE-054 | `tests/structure/merge-classification-conformance.test.ts` | `bun test tests/structure/merge-classification-conformance.test.ts` | Declared emittable-code list fixture; `resolveAppErrorCode`/`classifyThrown`; mismatch control | To Implement |
+| TC-ENGINE-052 | `tests/behaviour/merge-production-composition.test.ts` | `bun test … --filter credential` | Refusing credential port with `config.credential.missing`; empty state root; `ERROR_TABLE` as oracle; membership in `MERGE_COMPOSITION_EMITTABLE_CODES` | To Implement |
+| TC-ENGINE-053 | `tests/behaviour/merge-production-composition.test.ts` | `bun test … --filter read-faults` | Fault matrix (5xx, 401, state append failure, stale envelope, non-resolving ref) on dry-run and landing paths; constant-membership assertion | To Implement |
+| TC-ENGINE-054 | `tests/structure/merge-classification-conformance.test.ts` | `bun test tests/structure/merge-classification-conformance.test.ts` | `MERGE_COMPOSITION_EMITTABLE_CODES` imported from the composition (never a fixture copy); `resolveAppErrorCode`/`classifyThrown`; mismatch control; refusal-site source scan; printed counts | To Implement |
 | TC-ENGINE-055 | `tests/golden/verify-deploy.test.ts` + `tests/checks/engine-first-doc-reconciliation.test.ts` | `bun test tests/golden/verify-deploy.test.ts && bun test tests/checks/engine-first-doc-reconciliation.test.ts --filter residual` | Delivered deploy golden unchanged; residual wording asserted in the merge page and the guide | Existing – No Change + To Implement |
 | TC-ENGINE-060 | `tests/checks/engine-first-doc-reconciliation.test.ts` + `scripts/.tests/test-doc-distribution.sh` | `bun test … --filter guide` and `bash scripts/.tests/test-doc-distribution.sh` | Guide selected by marker + topic coverage; four topic sections; distribution guard | To Implement |
-| TC-ENGINE-061 | `tests/checks/engine-first-doc-reconciliation.test.ts` | `bun test … --filter pages` | Six pages, headings resolved as delivered; `doc/quality/test-specs/` listing printed | To Implement |
+| TC-ENGINE-061 | `tests/checks/engine-first-doc-reconciliation.test.ts` | `bun test … --filter pages` | Six pages, headings resolved as delivered; the four declared seams named; phase-7 handoff statement; `doc/quality/test-specs/` listing printed | To Implement |
 | TC-ENGINE-062 | `tests/checks/engine-first-doc-reconciliation.test.ts` | `bun test … --filter corpus` | Backlog / status / README / test-scenarios; absence of both original assertions; `planning-truth` control | To Implement |
 | TC-ENGINE-063 | `tests/checks/engine-first-doc-reconciliation.test.ts` | `bun test … --filter traceability` | Spec Appendix B + corpus restatements; forcing-fact tokens | To Implement |
 | TC-ENGINE-064 | `tests/checks/engine-first-doc-reconciliation.test.ts` | `bun test … --filter tdr` | `TDR-0031` file + `00-index.md` row + link resolution + status agreement | To Implement |
 | TC-ENGINE-090 | delivered pins (see location) | `bun test tests/behaviour/dispatch-additive-stability.test.ts tests/behaviour/repos-list-contract.test.ts tests/behaviour/projects-flat-alias.test.ts tests/golden/dispatch-summary.test.ts tests/structure/content-inventory.test.ts tests/structure/dispatch-imports.test.ts tests/structure/dispatch-merge-boundary.test.ts` | All delivered assertions retained; inventory + structural lists extended by appending | Existing – Update (additions only) + Existing – No Change |
-| TC-ENGINE-091 | delivered vocabularies (see location) | `bun test tests/structure/error-table.test.ts tests/structure/dispatch-error-identity.test.ts tests/structure/dispatch-help-inventory.test.ts tests/checks/help-guide-coverage.test.ts tests/checks/prompt-conformance.test.ts tests/checks/exit-code-literals.test.ts tests/behaviour/repos-list-contract.test.ts` | Per-kind row counts, `DOMAIN_KINDS`, help inventory, verb refusals, exit literals | Existing – No Change |
+| TC-ENGINE-091 | delivered vocabularies (see location) | `bun test tests/structure/error-table.test.ts tests/structure/dispatch-error-identity.test.ts tests/structure/dispatch-help-inventory.test.ts tests/checks/help-guide-coverage.test.ts tests/checks/prompt-conformance.test.ts tests/checks/exit-code-literals.test.ts tests/behaviour/repos-list-contract.test.ts` | Per-kind row counts, `DOMAIN_KINDS`, help inventory, verb refusals, exit literals, the three `merge` configuration keys, and the constant's membership in the existing table | Existing – No Change |
 | TC-ENGINE-092 | `tests/checks/engine-first-hermetic.test.ts` + delivered `merge-deploy-no-live-calls` module list | `bun test tests/checks/engine-first-hermetic.test.ts tests/checks/merge-deploy-no-live-calls.test.ts` | `createNoNetworkGuard` + `scanForLiveCalls`; spawn/sleep counters; non-empty file list | To Implement + Existing – Update |
-| TC-ENGINE-093 | `tests/behaviour/repos-handover-gate.test.ts` | `bun test … --filter determinism` | Three-project host (mixed, truncated, first-use); paired reads; wall-clock key scan | To Implement |
-| TC-ENGINE-094 | `tests/behaviour/repos-handover-gate.test.ts` + `tests/behaviour/projects-performance.test.ts` (precedent) | `bun test tests/behaviour/repos-handover-gate.test.ts --filter re-evaluation` | Append-between-reads freshness; tree snapshots; 25-project fleet floor with printed p95 | To Implement |
+| TC-ENGINE-093 | `tests/behaviour/repos-handover-gate.test.ts` | `bun test … --filter determinism` | Three-project host (mixed, truncated, first-use); paired reads; wall-clock key scan; per-row equality against a summary read for the row's resolved identity | To Implement |
+| TC-ENGINE-094 | `tests/behaviour/repos-handover-gate.test.ts` + `tests/behaviour/projects-performance.test.ts` (precedent) | `bun test tests/behaviour/repos-handover-gate.test.ts --filter re-evaluation` | Append-between-reads freshness; tree snapshots (no binding write, no extra store); 25-project fleet floor with printed p95 | To Implement |
 | TC-ENGINE-095 | `tests/behaviour/engine-first-cross-surface.test.ts` | `bun test tests/behaviour/engine-first-cross-surface.test.ts` | Six fixture families × three reads; ledger count per family | To Implement |
 
 **Phase 9 gate commands (recommended)**
@@ -1526,8 +1564,10 @@ git diff --check
 | Risk | Mitigation in this plan |
 |---|---|
 | **R-TP-1 — A projection disagrees with its source and every case passes because each reads its own derivation.** | Every claim is a comparison between two surfaces over one fixture: `cleanDispatches` vs `corroboration.satisfied` (`001`), open set vs `unmetConditions` (`004`), row vs summary (`021`), three surfaces vs each other (`095`), `reversible` vs the authority document (`011`). A second derivation fails at least one of them. |
-| **R-TP-2 — A degraded read is "handled" by rendering an empty or zero value.** | `023` asserts `data` is absent (not `[]`) at exit 2 for three degradation shapes; `024` asserts a truncated read produces a verdict plus truncation rather than a padded window; `004`/`014` assert no third status exists to absorb "unknown". |
-| **R-TP-3 — The classification conformance test is vacuous (empty or hand-picked enumeration).** | `054` requires a non-empty, duplicate-free, four-family enumeration with an anti-vacuity guard and a live mismatch control (`classifyThrown({kind:"provider", code:"config.credential.missing"})` must still contain), so a pass means the mapping was checked. AMB-ENG-4 records the residual limit for future codes. |
+| **R-TP-2 — A degraded read is "handled" by rendering an empty or zero value, or the noop is made to depend on ledger readability.** | `023` asserts `data` is absent (not `[]`) at exit 2 for four degradation shapes including the unresolvable identity; `024` asserts a truncated read produces a verdict plus truncation rather than a padded window; `004`/`014` assert no third status exists to absorb "unknown"; `010`/`014` assert the noop answers at exit `0` under a torn ledger while the recorded revert refuses. |
+| **R-TP-3 — The classification conformance test is vacuous (empty or hand-picked enumeration), or a refusal branch escapes the constant.** | `054` ranges over the composition's exported `MERGE_COMPOSITION_EMITTABLE_CODES`, requires it to be non-empty, duplicate-free, and four-family spanning, checks every member against the declared row's `domainKind`, keeps a live mismatch control, and source-scans the refusal sites so a branch outside the declaration fails. The residual limit — a future branch that emits a code without extending the constant — is declared in AMB-ENG-4 and RSK-13. |
+| **R-TP-9 — The declared exemption is read as licence to omit `conditions` elsewhere, or is implemented as `null`-valued keys instead of absences.** | `010` asserts both directions (the four evidence-reading outcomes carry four entries; the noop carries the three exempt keys **absent**) and that exactly one outcome omits `conditions`; `016` pins the noop key list as exactly `["repository","operation","recorded","noop","reversible"]`, so a `null` placeholder fails at the key-order level; `095` excludes the exemption by fixture construction. |
+| **R-TP-10 — The row's identity binding drifts: the row folds another repository, or the read writes a binding.** | `020` seeds a foreign record and asserts it changes none of the row's numbers, then asserts the binding file is byte-identical after the read; `021` asserts the same scope rule under both resolution cells (persisted binding, normalized remote) and after a third foreign append; `023` asserts an unresolvable identity fails at exit `2` with no binding created; `094` asserts no binding write and no extra store open on the read path. |
 | **R-TP-4 — The shell "non-change" is asserted by running the changed code, so a change hides.** | The controls run the delivered suites and files unmodified (`030`..`033`), and `034` adds the cross-state stdout identity the delivered suite lacks. The plan records the file-level non-change diff as a review attestation (§10). |
 | **R-TP-5 — The fleet read accidentally changes the flat alias.** | `022` pins the committed golden and scans for both new fields at every depth; `023` adds the divergence witness (flat alias stays exit 0 while `repos` fails on the same degraded host). Either a leaked field or a leaked read cost fails. |
 | **R-TP-6 — The 5,005-record fixture makes the suite slow or flaky.** | `024` is the only large fixture, seeded once per suite through the delivered append path, with printed count and elapsed time; no timing assertion, no network, no sleep. If the cost is unacceptable, the fixture bound is declared by delivery and logged as OQ-TP-5 — not silently reduced. |
@@ -1542,33 +1582,36 @@ git diff --check
 - The production composer's injected seams (`githubTransport`, `credentials`, `gitChildRunner`, `repositoryFacts`, `harnessSpawnRunner`) are sufficient to exercise the merge composition hermetically; the new cases need no new production seam.
 - Real temp git checkouts (`createRepository`, `git(...)` with a sanitized environment) are an accepted fixture cost; `tests/fixtures/projects/temp-repos.ts` is the delivered precedent.
 - The delivered shell suites and `scripts/lib/dispatch-authority.sh` need no change; a diff to them is a plan violation, not a mechanism choice.
-- Exact suite filenames, module paths, the guide's filename, and the composition's emittable-code module are delivery-bound (GAP-T4); behaviours, identities, orders, exits, and AC traceability are not.
+- The delivered identity policy (`packages/core/src/domain/dispatch-identity.ts`) resolves a rename-invariant `host/owner/name` identity from the checkout (persisted binding first, then the normalized configured remote), so the fleet row and the merge composition consume it with no new source (DEC-13, DEC-15).
+- The production merge composition exports `MERGE_COMPOSITION_EMITTABLE_CODES` from its own module and the `merge` configuration branch keeps exactly its three declared keys; both are declarations, not delivery choices (DEC-13, DEC-14).
+- Exact suite filenames, module paths, and the guide's filename are delivery-bound (GAP-T4); behaviours, identities, orders, exits, configuration-key sets, and AC traceability are not.
 - The 5,005-record truncation fixture and the 25-row fleet floor are acceptable at this scale; both print their context and neither asserts latency.
 
 ### 8.3 Open Questions
 
 | ID | Question | Status / Owner | Blocking |
 |---|---|---|---|
-| OQ-TP-1 | Which module declares the production composition's emittable-code set that `TC-ENGINE-054` consumes, and does the declaration cover the branches that only exist after the restoration (request resolution, branch/base resolution)? | Open — `@coder` publishes the declaration at delivery; `TC-ENGINE-054` fails naming the missing declaration if absent (AMB-ENG-4). | No |
-| OQ-TP-2 | Which declared source resolves the owner principal (config key, git identity, or tracker actor)? AC-F6-10 requires "real sources" without naming one. | Open — `@coder`/`@plan-writer` pin the source; `TC-ENGINE-050` asserts the effect only (AMB-ENG-5). | No |
-| OQ-TP-3 | Does `dispatch handover <repo> --revert` on an already-`dual-run` repository read the gate (making a torn ledger refuse the noop at exit 2), or is that outcome exempt from "conditions always present"? | Open — `@coder` with `@spec-writer`: the AC implies the read; the spec should extend the declared residual to the noop case or exempt it. `TC-ENGINE-010` asserts the AC; `TC-ENGINE-014` asserts the unreadable-evidence rule. | No |
-| OQ-TP-4 | What is `reversible` on a `first-use` row? D4's total rule ("`true` iff authoritative") gives `false`; the spec states the empty-window verdict fields but not this one. | Open — `@spec-writer` confirms or amends; `TC-ENGINE-020` asserts `false` (the fold of no records is `dual-run`). | No |
+| OQ-TP-1 | Which module declares the production composition's emittable-code set that `TC-ENGINE-054` consumes, and does the declaration cover the branches that only exist after the restoration? | **Resolved (spec v1.1, DEC-14/DM-6):** the production composition exports `MERGE_COMPOSITION_EMITTABLE_CODES`, exhaustive by construction over its refusal branches; `TC-ENGINE-054` imports it from the composition (never a fixture copy) and fails naming the missing export. | No |
+| OQ-TP-2 | Which declared source resolves the owner principal? | **Resolved (spec v1.1, DEC-13):** the provider-resolved repository owner — the owner component of the checkout's normalized `host/owner/name` identity — supplied to the composition's declared owner-principal input, with no new configuration key; `TC-ENGINE-050` asserts the waiver effect and the three-key configuration branch. | No |
+| OQ-TP-3 | Does `dispatch handover <repo> --revert` on an already-`dual-run` repository read the gate, making a torn ledger refuse the noop at exit `2`? | **Resolved (spec v1.1, DEC-12, Appendix E.1):** no. The noop is answered before any evidence read, carries `recorded: false`, `noop: true`, `operation: "dual-run"`, `reversible: false`, and no `conditions`/`verdict`/`truncation`, and it answers under a torn ledger; only a recorded revert reads and refuses. `TC-ENGINE-010`/`011`/`012`/`014`/`016` assert both directions. | No |
+| OQ-TP-4 | What is `reversible` on a `first-use` row? | **Resolved (spec v1.1, AC-F3-6):** `false` — the empty-window evaluation states it field by field; `TC-ENGINE-020` asserts it alongside `countedDeliveries: 0` and the four statuses. | No |
 | OQ-TP-5 | Is seeding 5,005 attempt records in one suite acceptable, or should the fleet read expose a declared test seam for the bound? | Open — `@coder` measures; `TC-ENGINE-024` prints elapsed and record count (TRUNC-ENG-1). | No |
-| OQ-TP-6 | Which code does the composition emit when no request/PR resolves for a ref? The error table has no `provider.request.*` row, so the code must be a declared one (or the check-run/request read must be skipped) — an undeclared code fails `TC-ENGINE-054`. | Open — `@coder`/`@spec-writer` decide; `TC-ENGINE-053` asserts only declared pairs. | No |
+| OQ-TP-6 | Which code does the composition emit when no request/PR resolves for a ref? | **Narrowed (spec v1.1, F-7, Appendix E.3):** it must be a code the error table already declares and a member of `MERGE_COMPOSITION_EMITTABLE_CODES` — the change invents no identity. Which declared code is delivery-bound; `TC-ENGINE-053` asserts the chosen code is declared and a constant member, and fails an undeclared pair. | No |
 | OQ-TP-7 | Does the restated `SC-M2-S16-03` get its own cross-story entry restated in `test-scenarios.md` (line 534 section) in addition to the M2-S16 section? | Open — `@doc-syncer` reconciles; `TC-ENGINE-062` selects by scenario id, not by section, so either placement passes while a missing restatement fails. | No |
-| OQ-TP-8 | How does a `repos list` row learn the repository string its evaluation folds over (checkout origin, the store's own records, or a host-index fact)? The delivered fold is repository-scoped, so the binding must exist and be declared; deriving it from each checkout's origin adds a per-row read. | Open — `@coder`/`@plan-writer` declare the source; `TC-ENGINE-021` asserts the scope rule (foreign records excluded) and `TC-ENGINE-094` watches the cost (GAP-T6). | No |
+| OQ-TP-8 | How does a `repos list` row learn the repository identity its evaluation folds over? | **Resolved (spec v1.1, DEC-15/DM-7):** through the delivered identity policy for that row's own checkout (persisted create-once binding, otherwise the normalized configured remote), read-only and non-persisting, at no additional store open; foreign records are excluded and an unresolvable identity fails `repos.state-unavailable` at exit `2` with no row. `TC-ENGINE-020`, `021`, `023`, `024`, `093`, `094` assert it. | No |
 
 ## 9. Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-17 | @test-plan-writer | Initial test plan against spec v1.0: all 14 ACs (AC-F1-1 … AC-NFR1-14) bound to 44 cases in eight blocks (accrual 001–006, handover 010–016, fleet 020–024, shell/no-flip 030–035, windows/holds docs 040–042, merge/classification 050–055, documentation 060–064, cross-cutting 090–095); all F-1..F-8, NFR-1..NFR-10, DM-1..DM-5, and DEC-1..DEC-11 mapped; both forced scenario restatements encoded as oracles with their unrepresentable originals asserted absent; seven substitute assertions registered (§3.5); eight open questions logged from spec/decision gaps (§8.3); no TODO rows, no orphans. |
+| 1.1 | 2026-11-17 | @test-plan-writer | Amendment against spec v1.1's declared seams, short form: 010/011/012/013/014/015/016 assert the idempotent-revert-noop exemption as a declared absence **and** presence on the four evidence-reading outcomes, with the recorded revert refusing `dispatch.state-unverified` at exit `2` under the same torn ledger (DEC-12, NFR-11); 050 asserts the owner principal as the provider-resolved repository owner plus the unchanged three-key `merge` configuration branch (DEC-13); 052/053/054/091 range over the exported `MERGE_COMPOSITION_EMITTABLE_CODES` with non-vacuity, row/kind agreement, and a refusal-site scan (DEC-14, NFR-12); 020/021/023/024/093/094 assert the row's read-only non-persisting binding to its own repository identity, foreign-record exclusion, and the unresolvable-identity failure (DEC-15, NFR-13); 061 asserts the phase-7 handoff of the two broader test specs with no test-planning-alignment claim (DEC-16). NFR-11..NFR-13, DM-6, DM-7, DEC-12..DEC-16 mapped; OQ-TP-1/2/3/4/8 closed and OQ-TP-6 narrowed; GAP-T1/T2/T3/T6 closed and GAP-T7 added. Still 44 cases, 14 ACs covered, no orphans, no case weakened. |
 
 ## 10. Test Execution Log
 
 No case has been executed against an implementation at authoring time; this plan is a verification map. Results are recorded here as delivery proceeds, with the command, the exit status, and a one-line result summary per row (the testing-strategy evidence convention).
 
-**Review attestations to record here at phases 8–9** (not test rows, because they are facts about the tree or about untracked operator state):
+**Review attestations to record here at phases 7–9** (not test rows, because they are facts about the tree or about untracked operator state):
 
 | Attestation | Who | Evidence to quote |
 |---|---|---|
@@ -1576,7 +1619,9 @@ No case has been executed against an implementation at authoring time; this plan
 | No-flip audit: zero `dispatch.handover` authoritative records attributable to the change in the operator state root | `@reviewer` | state-root listing / record count before and after the change (AMB-ENG-3) |
 | Delivered pins extended by appending only: the sixteen-key summary literal, the six-key handover literal, and the sorted-set `REPOS_ENTRY_FIELDS` assertion still exist | `@reviewer` | the two suite diffs showing suffix additions |
 | Golden regeneration was deliberate and shows only the three additive summary lines | `@reviewer` | the `tests/fixtures/dispatch/golden/summary.txt` diff |
-| `doc/quality/test-specs/` gained no entry (DEC-11) while the dispatch-engine and merge/verify specs were aligned | `@doc-syncer`, `@reviewer` | the directory listing and the two spec diffs |
+| `doc/quality/test-specs/` gained no entry (DEC-11) and the two broader specs were reconciled in **phase 7** by `@doc-syncer` (DEC-16), not during test planning | `@doc-syncer`, `@reviewer` | the directory listing plus the two spec diffs landed in the documentation phase |
+| The handover exemption stayed exactly one outcome: no evidence-reading outcome omits `conditions`, and no second evidence-read-free outcome was added (DEC-12, NFR-11) | `@reviewer` | the handover data key sets across the five outcomes, and the `data.conditions` presence count |
+| No new configuration key, identity source, or persisted binding was introduced for the owner principal or the row identity (DEC-13, DEC-15) | `@reviewer` | the `merge` configuration key set diff and the identity-binding diff (both empty) |
 
 | TC ID | Run Date | Result | Notes |
 |-------|----------|--------|-------|
