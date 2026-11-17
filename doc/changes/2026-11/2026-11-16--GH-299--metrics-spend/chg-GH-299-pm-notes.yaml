@@ -249,3 +249,32 @@ notes:
       story-to-artifact map."
     type: info
     date: "2026-11-17"
+  - text: "Code review iteration 1: FAIL (code-review/review-iter-1.yaml), 12
+      findings (1 critical / 1 high / 4 medium / 4 low / 2 info). Critical F-1:
+      the baseline adapter demands {reason,count} exclusions while the real
+      committed measurement-baseline log carries {ref,reason} per-change rows —
+      empirically verified: every metrics invocation on the delivering tree
+      refuses metrics.baseline-unreadable at exit 2 (fixture synthesized the
+      wrong shape, so all 58 TCs stayed green). High F-2: burn-rate measured
+      spend reimplements the spend ingest with a global steps-preference,
+      diverging from the delivered fold's per-session plane selection —
+      closeout-only sessions dropped when any stream step exists, undercounting
+      spend. Mediums F-3 (metrics_corpus opt-in block authored by no committed
+      document — CI proxy and escaped defects honestly UNAVAILABLE on the real
+      tree), F-4 (stale 146/62 pins in feature-ceremony-runner.md outside the
+      no-leftover scan list), F-5 (phase 4/6/9 pm-notes evidence entries lack
+      commit hashes), F-6 (NFR-7 latency measured at 50/250 not 1k/10k).
+      Remediation plan phase 10 appended (tasks 10.1-10.9, plan validate
+      verdict=valid). Reopening delivery-adjacent remediation via the plan."
+    type: info
+    date: "2026-11-17"
+  - text: "Retro: the fixture-only battery produced a dead-on-delivery feature —
+      the GH-170 lesson class. Root causes worth encoding for future stories:
+      (1) every read-side story whose input is a committed repo artifact (the
+      measurement baseline log, pm-notes corpora) must include at least one
+      test reading the REAL committed file from the tree, not a synthesized
+      fixture; (2) adapters composing derived numbers must reuse the delivered
+      fold's record-selection function rather than re-implementing ingest
+      preferences. Both are now remediation tasks 10.1/10.2 and 10.3."
+    type: retro
+    date: "2026-11-17"

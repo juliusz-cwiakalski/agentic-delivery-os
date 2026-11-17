@@ -342,7 +342,7 @@ schemaVersion: delivery.plan.v1
 workItemRef: GH-299
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
   escalationTriggers:
     - "A second `metrics.*` error identity, a family/pattern widening, or a new domain kind would be required (DEC-8, DM-7)"
     - "An Appendix D count pin is left stale, the no-leftover scan finds a leftover, or four-way classifier/sync/mirror/carrier agreement breaks (AC-F10-1, RSK-4)"
@@ -1131,3 +1131,88 @@ phases:
       mergeRequestUrl: "pull request for feat/GH-299/metrics-spend targeting main-tools, left open for human review"
       pipelineId: "CI pipeline for the GH-299 delivery branch (required checks green on the pushed HEAD)"
       trackerTransition: "in-review"
+
+  # ---------------------------------------------------------------------------
+  # Phase 10 — Code Review Remediation (Iteration 1) — review-iter-1.yaml.
+  # Findings F-1..F-10 (F-8 process note and F-11/F-12 informational entries
+  # carry no remediation task). The gate contract and the one-commit-per-phase
+  # discipline apply unchanged; every task lands failing-first.
+  #
+  # Obligations (tasks):
+  #   10.1 (F-1, critical) Fix the baseline-log exclusion parse: the real
+  #        committed log's `metric_excluded_changes` entries are per-change
+  #        `{ref, reason}` rows (doc/planning/oss-tooling/
+  #        measurement-baseline.yaml:752-798) while
+  #        packages/adapters/src/file/metrics-baseline.ts `exclusionsOf`
+  #        demands `{reason, count}` — verified: the real log classifies
+  #        `invalid` so every invocation refuses
+  #        `metrics.baseline-unreadable` at exit 2. Parse the real shape
+  #        (counting entries per closed reason), pin the fixture to a copy of
+  #        the real document's row shapes, and add a real-tree smoke cell
+  #        asserting `state: "present"` over the committed log.
+  #   10.2 (F-2, high) Compose the burn-rate measurement over the delivered
+  #        fold's per-session plane-preference selection (spend.ts
+  #        `selectedRecords` over the union of steps and records) instead of
+  #        the global steps-preference fallback in
+  #        packages/core/src/domain/metrics.ts `measureSpend`; add a
+  #        mixed-plane alarm fixture asserting measured equals the fold's
+  #        windowed total.
+  #   10.3 (F-3, medium) Close the corpus adoption gap: either consume the
+  #        committed per-change spine rows for the CI proxy or document the
+  #        `metrics_corpus` authoring convention in the M2 reference page and
+  #        feature-metrics.md as the evidence-authoring path (owner decision;
+  #        the minimum is the documentation).
+  #   10.4 (F-4, medium) Move the stale 146/62 pins at doc/spec/features/
+  #        feature-ceremony-runner.md:341,364,392 to 147/63 and extend the
+  #        no-leftover scan's APPENDIX_D_FILES with that document (D-14
+  #        amendment).
+  #   10.5 (F-5, medium) Append the pm-notes evidence correction naming the
+  #        phase 4/6/9 commits (138b802a, 9903955c, 3303d399) with their
+  #        recorded test results.
+  #   10.6 (F-6, medium) Measure the NFR-7 latency reference at the declared
+  #        1k/10k points (bulk seeding or fold-only timing), or record the
+  #        owner's amendment to the measured reference points.
+  #   10.7 (F-7, low) Add the missing mutants (zero-fill CI-rate,
+  #        zero-fill absent-telemetry, reversed drop order) to
+  #        tests/checks/metrics-mutants.test.ts, or record the direct
+  #        assertions as declared equivalents in the test plan.
+  #   10.8 (F-9, low) Bound the human renderer's fallback truncation loop to
+  #        the declared never-dropped set and name the actually-dropped
+  #        sections in the truncated marker (packages/core/src/domain/
+  #        metrics-text.ts:151-188).
+  #   10.9 (F-10, low) Reject interior `..` path segments in both
+  #        committed-path predicates (packages/adapters/src/file/
+  #        metrics-corpus.ts:46, packages/core/src/domain/metrics.ts:324)
+  #        with a traversal-probe test cell.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/metrics-baseline.test.ts tests/behaviour/metrics-alarms.test.ts
+  #   bun test tests/behaviour/metrics-bounds.test.ts tests/checks/metrics-mutants.test.ts
+  #   bun test tests/structure/error-table.test.ts
+  #   bun run scripts/checks/error-table-sync.ts
+  #   git diff --check
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check
+  # ---------------------------------------------------------------------------
+  - id: 10
+    title: "Code review remediation (iteration 1): real-log baseline parse, burn-rate ingest parity, corpus adoption gap, stale doc pins, evidence and test gaps"
+    kind: delivery
+    summary: "fix(GH-299): code review remediation iteration 1"
+    scope:
+      files:
+        - packages/adapters/src/file/metrics-baseline.ts
+        - packages/core/src/domain/metrics.ts
+        - packages/core/src/domain/metrics-text.ts
+        - packages/adapters/src/file/metrics-corpus.ts
+        - doc/spec/features/feature-ceremony-runner.md
+        - doc/spec/features/feature-metrics.md
+        - doc/planning/oss-tooling/milestones/m2/commands/metrics.md
+        - tests/structure/error-table.test.ts
+        - tests/behaviour/metrics-baseline.test.ts
+        - tests/behaviour/metrics-alarms.test.ts
+        - tests/behaviour/metrics-bounds.test.ts
+        - tests/behaviour/metrics-read-cost.test.ts
+        - tests/checks/metrics-mutants.test.ts
+      folders:
+        - tests/fixtures/metrics
+        - doc/changes/2026-11/2026-11-16--GH-299--metrics-spend

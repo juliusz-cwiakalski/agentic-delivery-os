@@ -1,0 +1,332 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-299
+branch: feat/GH-299/metrics-spend
+status: FAIL
+summary: >-
+  The change is structurally excellent — clean layering (contracts/pure
+  domain/state/adapters/command), exact error-table registration with verified
+  four-way agreement (147/146/63/+113), complete 24th-family mounting, solid
+  absence-honesty and bounds/truncation discipline, and 380+ metrics tests
+  re-run green in this review. However, the delivered baseline-log adapter
+  rejects the repository's own committed measurement-baseline.yaml (its
+  `metric_excluded_changes` entries are `{ref, reason}`, the validator demands
+  `{reason, count}` — empirically confirmed: state `invalid`, so every
+  `metrics` invocation on this tree refuses `metrics.baseline-unreadable` at
+  exit 2 and renders nothing), and the burn-rate measurement reimplements the
+  spend ingest with a global plane preference that drops closeout-only
+  sessions whenever any stream step exists, undercounting measured spend
+  against the delivered fold. Both defects are invisible to the suite because
+  every fixture synthesizes its own world (the GH-170 lesson). Corpus metrics
+  (CI proxy, escaped defects) additionally read a new opt-in `metrics_corpus`
+  block that no committed document authors, so those entries are honestly
+  UNAVAILABLE on the real tree.
+severity_breakdown:
+  critical: 1
+  high: 1
+  medium: 4
+  low: 4
+  info: 2
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: critical
+    confidence: high
+    category: correctness
+    location: packages/adapters/src/file/metrics-baseline.ts:44
+    message: >-
+      The baseline-log validator rejects the repository's own committed
+      measurement-baseline.yaml. `exclusionsOf` requires every
+      `metric_excluded_changes` entry to carry `{reason, count}`, but the real
+      log's entries are per-change `{ref, reason}` rows
+      (doc/planning/oss-tooling/measurement-baseline.yaml:752-798). Verified
+      empirically in this review: `readMetricsBaselineLog` over the real
+      project root returns `{ok: false, state: "invalid", detail:
+      "document.metric-row"}`, so every `metrics` invocation on this checkout
+      is refused `metrics.baseline-unreadable` at exit 2 with no report. The
+      fixture (tests/fixtures/metrics/baseline.ts:58-64) generates the
+      `{reason, count}` shape, so all 58 TCs stay green while production is
+      dead — AC-F2-1/AC-F1-1 and the ticket AC ("exit criteria measurable
+      with committed numbers") do not hold on the delivering repository.
+    suggestion: >-
+      Parse the real entry shape (`{ref, reason}`) — count entries per reason
+      into the closed exclusion counters — and keep the `{reason, count}`
+      shape tolerated or reject it deliberately. Pin a fixture (or golden)
+      copied from the real document, and add a real-tree smoke case that
+      reads doc/planning/oss-tooling/measurement-baseline.yaml and asserts
+      `state: "present"`. Owning plan phase: 3 (adapter) with the behaviour
+      cells of phase 4.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-2
+    severity: high
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/metrics.ts:741
+    message: >-
+      The burn-rate `measureSpend` sums step records only when any step exists
+      (falling back to closeout records only when steps are empty), while the
+      delivered spend fold it must mirror (`selectedRecords`,
+      packages/core/src/domain/spend.ts:240-254) unions steps and records and
+      applies per-session plane preference ("one session, one plane's
+      figures"). On a store with a closeout-only session alongside any stream
+      step (the delivered "combined" reading basis), the closeout session is
+      dropped from `measured`, undercounting spend and potentially suppressing
+      a crossing alarm. Spec F-6 requires the evaluation to read "the same
+      telemetry records the spend fold reads — applying the delivered ingest
+      rules unchanged"; no alarm fixture seeds a mixed-plane store.
+    suggestion: >-
+      Compose the alarm measurement over the same per-session plane-preference
+      selection the delivered fold uses (reuse `selectedRecords` semantics
+      over the union of steps and records, windowed by capturedAt), or reuse
+      the fold's figures windowed after selection. Add a mixed-plane alarm
+      fixture asserting measured equals the fold's total for the same window.
+      Owning plan phase: 5.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/adapters/src/file/metrics-corpus.ts:22
+    message: >-
+      The CI-failure-rate proxy and escaped-defects curation read only a new
+      opt-in `metrics_corpus` block under doc/changes; no committed document
+      declares it (repo-wide grep: only the fixture and the new feature spec
+      mention it). The committed corpus data that exists today — the per-change
+      `ci_observed`/`ci_outcome` spine rows inside measurement-baseline.yaml —
+      is not read. Spec F-3/DEC-7 name "the committed pm-notes corpus" as the
+      source class. On the delivered tree both entries are honestly
+      UNAVAILABLE, so the ticket's CI-failure-rate and escaped-defects exit
+      criteria are measurable only after future hand-authoring of corpus
+      blocks; the operator reference page
+      (doc/planning/oss-tooling/milestones/m2/commands/metrics.md) does not
+      document the authoring convention.
+    suggestion: >-
+      Either consume the committed spine rows (the log already carries
+      per-change CI observations) for the proxy, or document the
+      `metrics_corpus` authoring convention in the M2 reference page and
+      feature spec as the evidence-authoring path, and record the adoption
+      posture as a known limitation in the PR description. Owning plan phases:
+      3 and 6.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: doc/spec/features/feature-ceremony-runner.md:341
+    message: >-
+      Stale pre-change count pins survive in a current-truth feature spec:
+      lines 341, 364, and 392 still state "146 identities and a 62-entry
+      reserved two-segment allowlist" / "Delivered at 146 identities and a
+      62-entry allowlist" while the delivered truth is 147/63. The no-leftover
+      scan's APPENDIX_D_FILES list (tests/structure/error-table.test.ts:2403)
+      does not include this document, so AC-F10-1(c) passes on the named files
+      while a current-truth doc contradicts the table the change pins.
+    suggestion: >-
+      Move the three pins to 147/63 (a doc-syncer touch), and extend the
+      no-leftover scan's file list with doc/spec/features/feature-ceremony-
+      runner.md (D-14 amendment) so the class of miss is gated. Owning
+      artifacts: plan phase 1 enumeration / lifecycle phase 7.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-5
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-16--GH-299--metrics-spend/chg-GH-299-pm-notes.yaml:150
+    message: >-
+      Per-phase completion evidence is incomplete against the plan's evidence
+      contract (phase id + commit hash + test result). Phase 4's note says
+      "Commit recorded in the phase-5 note" but the phase-5 note names only
+      9eb96b7f (phase 5's own commit; phase 4's is 138b802a). Phase 6's note
+      defers to the phase-7 note, which names only 0cdaec94 (shared by 7+8;
+      phase 6's is 9903955c). Phase 9's note defers to "the delivery-phase
+      completion", which names no hash (phase 9's is 3303d399). The hashes are
+      recoverable from git, but the recorded evidence chain has gaps
+      (EVIDENCE_MISSING).
+    suggestion: >-
+      Append a pm-notes correction entry naming 138b802a (phase 4), 9903955c
+      (phase 6), and 3303d399 (phase 9) with their recorded test results, so
+      every phase's evidence entry is self-contained.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-6
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: tests/behaviour/metrics-read-cost.test.ts:84
+    message: >-
+      The read-cost reference measures 50/250 records, not the NFR-7 declared
+      p95 targets (≤ 500 ms at 1 000 records, ≤ 2 s at 10 000); the latency
+      thresholds are therefore unverified. The deviation is recorded in
+      pm-notes (phase 8) with a plausible cause (O(n^2) verify-on-append
+      seeding), but NFR-7's latency half remains an unproven declaration.
+    suggestion: >-
+      Either seed via a bulk path (or time only the read+fold over a
+      pre-seeded store) to measure the declared 1k/10k points, or amend NFR-7
+      with the owner's sign-off to the measured reference points. Owning plan
+      phase: 8.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-7
+    severity: low
+    confidence: high
+    category: test-quality
+    location: tests/checks/metrics-mutants.test.ts:90
+    message: >-
+      The mutant battery delivers 11 mutant groups against the plan's declared
+      "twelve mutant families" and the test plan's TC-METRICS-112 enumeration.
+      Missing: the zero-fill mutants for the CI-rate and absent-telemetry
+      variants, the truncation-order-reversal mutant, and the
+      registration/mounting mutants. Mounting and near-miss rejection are
+      compensated by direct assertions (planted-stale scan arm, partial-mount
+      detection, near-miss probes), and the drop order is directly asserted in
+      metrics-bounds, but the pm-notes phase-8 entry records "eleven mutant
+      families" without flagging the shortfall against the declared twelve.
+    suggestion: >-
+      Add the two missing zero-fill mutants and the reversed-drop-order mutant
+      to the temp-copy battery (cheap, same pattern), or record the direct
+      assertions as the declared equivalents in the test plan's TC-METRICS-112
+      and pm-notes. Owning plan phase: 8.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-8
+    severity: low
+    confidence: medium
+    category: process
+    location: doc/changes/2026-11/2026-11-16--GH-299--metrics-spend/chg-GH-299-pm-notes.yaml:156
+    message: >-
+      The plan's gate contract ("A phase is not complete until the aggregate is
+      green at its commit") was not met at phases 4, 5, and 6, where
+      `pnpm check` recorded 2 failures each from load-sensitive delivered
+      suites (daemon-foreground-stop-latency, prior-identity-notice, the
+      dispatch-attempts pair), rationalized as green-modulo-environment-flake
+      and re-proven at phase 9 (0 fail). The four flaky delivered suites remain
+      a standing CI reliability risk independent of this change.
+    suggestion: >-
+      No code change in this remediation. Record the flake set on the ticket
+      (or a follow-up) for timeout/stability hardening so phase-boundary
+      aggregates stop going red under load.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-9
+    severity: low
+    confidence: medium
+    category: correctness
+    location: packages/core/src/domain/metrics-text.ts:179
+    message: >-
+      The human renderer's fallback truncation loop can drop alarm and
+      dispatch lines (they sit between `entries` and the tail), contradicting
+      the module comment's "the alarm rows, the evaluation, the window, and
+      the metric entries are never dropped"; and the truncated marker line
+      (line 155) labels every omission a "comparisons row" drop even when
+      incidents or perAgent rows were dropped by the machine bound. Both paths
+      are unreachable under the current row caps, but the code contradicts its
+      declared invariant.
+    suggestion: >-
+      Bound the fallback loop to stop before the alarm/dispatch sections (or
+      drop declared sections in the same tail-first order as the machine
+      bound), and make the marker line name the sections actually dropped.
+      Owning plan phase: 2/8.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-10
+    severity: low
+    confidence: medium
+    category: security
+    location: packages/adapters/src/file/metrics-corpus.ts:46
+    message: >-
+      `isCommittedRelative` blocks absolute paths and leading `../`, but
+      accepts interior traversal (`doc/../../etc/passwd` passes the prefix
+      checks), so a committed corpus/evidence row can probe readable files
+      outside the project root for anchor inclusion. Impact is bounded —
+      read-only, output emits only paths and anchors already committed in the
+      same repo, no file content is disclosed — but the committed-path rule
+      the spec states ("no tmp/**, .ai/local/**, uncommitted, or external
+      source") is not enforced against traversal.
+    suggestion: >-
+      Reject path segments equal to `..` (split on "/" and check) in both
+      copies of the predicate (metrics-corpus.ts and domain/metrics.ts:324).
+      Owning plan phase: 3.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-11
+    severity: info
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/metrics.ts:263
+    message: >-
+      Known carried risk, verified disclosed: native ceremony share is
+      measured as total ceremony run time over the evidence window's elapsed
+      time, so on the default trailing 30-day window values are ~1e-6 scale
+      and grow as the window shrinks. The entry limitation names the basis and
+      the non-interchangeability with the committed duration-ratio proxy, and
+      cross-kind comparison rows carry the caveat — the disclosure the
+      carried-risk note requires is present.
+    suggestion: >-
+      No action required; flagged for owner awareness of the window-length
+      sensitivity.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-12
+    severity: info
+    confidence: medium
+    category: correctness
+    location: packages/core/src/contracts/metrics.ts:509
+    message: >-
+      `MetricsStateRead.transitions.operation` is typed `"start" | "complete"
+      | "reopen"` while the delivered `PhaseTransitionOperation` is `"complete"
+      | "reopen"`; the `start` branch in `foldTransitions` (domain/metrics.ts:
+      147-161) is dead in production, and its "lone start records nothing"
+      behaviour would mis-anchor cycle time if a start operation ever appeared.
+      Relatedly, `statusOf` (domain/metrics.ts:424) overrides a committed
+      row's UNAVAILABLE to MEASURED but inherits PARTIAL — an inconsistent mix
+      for native entries whose status should reflect the fresh measurement.
+    suggestion: >-
+      Narrow the contract type to the delivered operation set (or handle
+      `start` by recording the anchor), and derive native-entry status from
+      the fresh measurement alone. Cosmetic while F-1 blocks real-log reads.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-17T00:00:00Z
+next_step: EXECUTE_REMEDIATION_PHASE
