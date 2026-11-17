@@ -6,7 +6,7 @@ created: 2026-11-07
 last_updated: 2026-11-17
 owners: ["engineering"]
 service: delivery-os
-summary: "The daemon-free scheduling engine: one fenced, replay-idempotent queue graph; per-member entries for a cross-repository change keyed by the derived `<canonicalChangeRef>@<repoKey>` ref with one lane per member, per-member dependency edges, release, and landing removal, and the additive `data.members[]` on `queue add`; readiness re-derived on the delivered six-condition model with scheduler sources; a global owner-hold gate that outranks parks and provider windows; repo-exclusive leases with a fence-token claim, release, and evidenced stale takeover; build weight as a per-runner resource class; producer-before-consumer batching with a producer-bound deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, a durable clear-observed marker, recovery incidents, and the classified stuck finding, over the closed six-cause park vocabulary (`peak-window`, `owner-hold`, and the supervised-stall cause `liveness-stall` riding the delivered condition types); the complete queue lifecycle — reason-bearing append-only removal whose append position decides presence, the `dep add`/`dep remove` edge grammar, the per-ref single-flight admission refusal that names the holder at the envelope root, and bounded tracker-truth reconciliation; the queue and lanes command surfaces with bounded payloads, closed vocabularies, truthful daemon-down degradation, the `peakEnforcement` machine read, the additive `leaseHolder` and `until` lane fields, and truthful read-surface exits; and the additive record kinds, error rows, collector ids, and typed configuration branch, all synchronized in-change; the typed dispatch engine claims and releases the same repository lease for one-shot execution."
+summary: "The daemon-free scheduling engine: one fenced, replay-idempotent queue graph; per-member entries for a cross-repository change keyed by the derived `<canonicalChangeRef>@<repoKey>` ref with one lane per member, per-member dependency edges, release, and landing removal, and the additive `data.members[]` on `queue add`; readiness re-derived on the delivered six-condition model with scheduler sources; a global owner-hold gate that outranks parks and provider windows; repo-exclusive leases with a fence-token claim, release, and evidenced stale takeover; build weight as a per-runner resource class; producer-before-consumer batching with a producer-bound deploy-verified gate; a declared total precedence in which closing beats opening; parks with per-type recheck, a durable clear-observed marker, recovery incidents, and the classified stuck finding, over the closed six-cause park vocabulary (`peak-window`, `owner-hold`, and the supervised-stall cause `liveness-stall` riding the delivered condition types, battery-written only and refused by name on the operator path); the complete queue lifecycle — reason-bearing append-only removal whose append position decides presence, the `dep add`/`dep remove` edge grammar, the per-ref single-flight admission refusal that names the holder at the envelope root, and bounded tracker-truth reconciliation; the queue and lanes command surfaces with bounded payloads, closed vocabularies, truthful daemon-down degradation, the `peakEnforcement` machine read, the additive `leaseHolder` and `until` lane fields, and truthful read-surface exits; and the additive record kinds, error rows, collector ids, and typed configuration branch, all synchronized in-change; the typed dispatch engine claims and releases the same repository lease for one-shot execution."
 links:
   related_changes: ["GH-237", "GH-176", "GH-222", "GH-225", "GH-226", "GH-235", "GH-182", "GH-240", "GH-238", "GH-242", "GH-239", "GH-273", "GH-280", "GH-286", "GH-288", "GH-292", "GH-294", "GH-295", "GH-309", "GH-310", "GH-297"]
   related_decisions: ["ADR-0003", "TDR-0005", "ODR-0003", "TDR-0026", "TDR-0027", "TDR-0030"]
@@ -98,7 +98,11 @@ than discovering work by hand.
   classified state failure. A successful release+park leaves both records
   durable; on a failed lease release the compensating record keeps the park out
   of the active fold. An unknown cause is an
-  invocation rejection at exit 1 that appends nothing.
+  invocation rejection at exit 1 that appends nothing. The supervised-stall
+  cause `liveness-stall` is battery-written only: the operator path refuses
+  `queue release --park liveness-stall` by name before any read or write,
+  whatever flags accompany it, so the operator-writable cause set is the five
+  delivered causes.
 - **Weight as a resource class.** A validated plan that omits `weightClass`
   resolves to `standard`; a declared-but-unrecognized value resolves to `heavy`;
   an invalid, unreadable, or absent plan resolves to `heavy` with named source
@@ -158,11 +162,16 @@ than discovering work by hand.
   `queue release --park provider-window --until <iso>` and
   `queue release --park peak-window --until <iso>` record the supplied
   absolute expiry; `--until` is required for those two causes and refused for
-  every other park cause through `fallback.invocation`. An absent `--until`, or
-  an `--until` paired with a cause that carries no expiry, is refused and
-  appends nothing. The `supervise` battery's supervised-stall writer is the
-  path that records a `liveness-stall` park with `until` at the stall recheck
-  horizon ([Supervise](feature-supervise.md)). An
+  the causes that carry no expiry through `fallback.invocation`. The
+  supervised-stall cause `liveness-stall` is refused by name on the operator
+  path as battery-written only, with or without `--until`, before any read or
+  write. An absent `--until`, or an `--until` paired with a cause that carries
+  no expiry, is refused and appends nothing. The `supervise` battery's
+  supervised-stall writer is the only writer of a `liveness-stall` park, and it
+  always records a non-null `until` at the stall recheck horizon; both append
+  seams additionally refuse a `provider-window`-mapped park whose expiry is
+  empty or missing, so a record the read validator rejects can never reach the
+  append-only ledger ([Supervise](feature-supervise.md)). An
   `owner-hold` park's expiry is a declared classified
   absence: the hold is a read-time gate with no expiry, the record carries no
   `until`, and the invoked `queue release --park owner-hold` command is the one
@@ -610,7 +619,8 @@ caused by the serialized byte cap also sets `truncationReason:
   `dependency-unobserved` until its edge is edited with `queue dep remove`.
 - `queue release --park provider-window` and `queue release --park peak-window`
   require an explicit `--until <iso>` expiry; `--park owner-hold` refuses
-  `--until` because the hold has no expiry. A provider-engine-generated window is
+  `--until` because the hold has no expiry, and `--park liveness-stall` is
+  refused by name because that cause is battery-written only. A provider-engine-generated window is
   expected from the
   provider engine's own park records; an in-flight peak pause is expected from
   the resident daemon's window watch ([Provider Peak Pausing](feature-peak-pausing.md)).
@@ -752,8 +762,9 @@ travels in the bounded refusal summary and detail, never as a change to the
 
 An unreadable or torn lease, park, entry, or removal history reuses the delivered
 `state.*` identity at exit 2; an unreadable queue store on the lane surfaces
-reuses `status.collector.lanes.unavailable` at exit 2; an unknown park cause or an
-extra positional reuses `fallback.invocation` at exit 1; an out-of-vocabulary
+reuses `status.collector.lanes.unavailable` at exit 2; an unknown park cause, a
+battery-only park cause refused on the operator path, or an extra positional
+reuses `fallback.invocation` at exit 1; an out-of-vocabulary
 removal reason or a non-canonical ref reuses `input.value.rejected` at exit 1; and
 a reconcile whose tracker read fails surfaces the provider's own identity at that
 row's exit. `queue ready` gains no row. Member entries add no identity: the

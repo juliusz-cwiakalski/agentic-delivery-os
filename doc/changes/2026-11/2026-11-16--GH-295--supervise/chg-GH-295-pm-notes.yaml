@@ -9,7 +9,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-16T23:18:06.308Z }
   dor_check: { started: null, completed: 2026-11-16T23:23:38.081Z }
   delivery: { started: null, completed: 2026-11-17T05:54:34.230Z }
-  system_spec_update: { started: null, completed: 2026-11-17T10:16:47.821Z }
+  system_spec_update: { started: null, completed: 2026-11-17T12:53:38.827Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -472,4 +472,58 @@ notes:
       flag today (plan phase ids rejected), so delivery-generated subjects drift
       by construction — a tooling gap worth a future ticket."
     type: "retro"
+    date: "2026-11-17"
+  - text: "Plan phase 9 complete (review remediation) at commit 3d4ffaa8. F-1
+      blocker fixed: QUEUE_BATTERY_ONLY_PARK_CAUSES declares liveness-stall
+      battery-written only; queue release refuses it by name through the
+      delivered fallback.invocation identity at both the command and edge
+      runtime (zero append, later reads healthy), and the append seam refuses a
+      provider-window-mapped park with an empty/missing expiry before any write
+      (releaseQueueLease and the battery write port both refuse; store stays
+      readable, then a legitimate park appends). F-2 fixed: restart admission
+      consumes the fold snapshot's restart records, the per-ref answer uses the
+      delivered pure single-flight helper over the snapshot leases, the park
+      write port performs no reads, and the blocker ledger is read once per run;
+      TC-SUP-103 instruments store.readRecords and asserts one whole-store read
+      for 50- and 200-lane acting runs with no per-lane call site. F-6 fixed:
+      lane heartbeat is the lane's own daemon.lane observation with the scope
+      heartbeat as the declared artifact-source-absent fallback (TC-SUP-001/004,
+      goldens). F-7 fixed: heartbeat evidence names the source record kind
+      (daemon.heartbeat / coordinator.iteration / queue.lease / daemon.lane);
+      live-claims golden updated. F-8 fixed: the injected run id threads through
+      the command runtime and production into restart runId/sessionId, the
+      exhaustion runId, and the question id suffix; action evidence echoes it;
+      structure scan forbids the retired supervise literals. F-9 fixed: the
+      presence cell seeds a genuinely live daemon trail ending at the injected
+      now beside an own-observation stalled lane. F-11 fixed:
+      boundSupervisionEvidence only markers a truncated list and pops until the
+      marker fits, so a single oversized entry clamps; action evidence bounded
+      with the action fact first. F-12 fixed: heartbeatOrdinal removed from the
+      exact classification input and from the lane/claim facts; exact-shape and
+      dead-member guards updated. F-13 fixed: steer-mounting reads the one
+      captured supervision base and asserts exact set equality again. F-14
+      fixed: a run inside the park's re-entry horizon appends nothing
+      (TC-SUP-044 cell); parked action fixtures seed an elapsed horizon.
+      F-4/TC-SUP-043 aligned to DEC-9(b) (immediate carrier + unheld-twin
+      comparison). F-3 and F-5 remain accepted-with-disclosure per PM triage
+      (not reworded/rewritten). F-15 accepted-with-disclosure: the
+      advancing/staleness mapping is a declared adaptation documented by the
+      delivered lane classification consumption; the guard remains
+      identifier-shaped rather than shape-based (one-line rationale, no code
+      change). Scope additions beyond the phase's declared file list, required
+      by the obligations: packages/cli/src/commands/ supervise.ts (run-id port),
+      packages/core/src/contracts/index.ts (barrel export),
+      tests/fixtures/supervise/harness.ts (run id + read instrumentation),
+      tests/fixtures/ports/v1-contract-inventory.json and
+      tests/structure/content-inventory.test.ts (export inventory), plus runId
+      threading in the four direct-call scale/determinism suites. Delivered
+      suite count moved additively (TC-SUP-100..103 plus the snapshot-default
+      single-flight cell, the re-entry-horizon cell, the single-oversized-
+      evidence cell, and the operator-refusal cell in the queue park-cause
+      suite). Gate: TMPDIR=$PWD/tmp/tmpdir pnpm check green at 3d4ffaa8 — 9995
+      pass, 4 skip, 0 fail, 1272 files; lint, format, typecheck, boundaries,
+      memory, prompt-conformance, help-guide-coverage, exports-parity all PASS.
+      Doc-spec resync remains lifecycle phase 7 (@doc-syncer); no doc/spec/**
+      file was edited here."
+    type: "info"
     date: "2026-11-17"
