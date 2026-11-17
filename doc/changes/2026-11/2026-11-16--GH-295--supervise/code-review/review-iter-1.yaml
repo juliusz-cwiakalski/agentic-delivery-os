@@ -1,0 +1,544 @@
+# GH-295 local pipeline review — iteration 1
+# Severity scale used below: critical=blocker, high=major, medium=minor, low=nit, info=info.
+# (Schema severities are kept in `severity`; the requested label is carried in `severity_label`.)
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-295
+branch: feat/GH-295/supervise
+status: FAIL
+summary: >-
+  The supervision battery itself is well built: the contract is data-only with one home per
+  vocabulary, the fold is a pure artifact-only function with an injected clock, parks and restarts
+  append only through delivered paths, the tri-state (including the ticket AC's lying-liveness cell)
+  is exercised across structure, behaviour, golden and checks levels, and the full test battery,
+  typecheck, boundaries, lint, format, help-coverage, exports-parity, doc-distribution and memory
+  gates are green on a clean worktree. One blocker defeats the change as delivered: adding
+  `liveness-stall` to the closed park-cause set made the delivered operator command
+  `queue release <ref> --park liveness-stall` legal without `--until`, and that path writes a
+  `provider-window` park whose `condition.expiresAt` is the empty string, which the park record's own
+  validator rejects - so every later park read fails closed with `state.store.torn` and `queue`,
+  `lanes` and the battery's park path stop working permanently (append-only ledger; reproduced
+  end-to-end). Three majors follow: the action path performs per-lane whole-store re-reads (the
+  declared one-read NFR and the 200-lane latency cell only cover a read-only fold), the eight
+  phase commits ignore the plan's declared conventional subjects (all are generic path-derived
+  `chore(GH-295): update <path>...` with empty bodies), and the safe-boundary "park lands at the next
+  boundary" mechanism declared by F-5/DEC-7 and TC-SUP-043 is not what was built (park record lands
+  immediately as the intent) and the spec/test plan were not amended. Spec and plan compliance are
+  therefore FAIL even though all eight ACs are functionally met.
+severity_breakdown:
+  critical: 1
+  high: 3
+  medium: 12
+  low: 4
+  info: 1
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: critical
+    severity_label: blocker
+    confidence: high
+    category: correctness
+    location: packages/core/src/contracts/queue.ts:133
+    message: >-
+      Adding `liveness-stall` to `QUEUE_PARK_CAUSES` makes the delivered operator path
+      `queue release <ref> --park liveness-stall` legal, but no guard requires `--until` for this
+      cause (`packages/cli/src/commands/queue.ts:715-736` lists only provider-window/peak-window, and
+      `packages/cli/src/edge.ts:6372-6402` mirrors that), so `parkConditionForCause` supplies
+      `expiresAt: ""` (`packages/core/src/domain/queue-park.ts:42`) and `releaseQueueLease` appends a
+      `provider-window` park without `until`
+      (`packages/core/src/app/queue.ts:2290-2330`). That record fails the ecosystem's own park
+      validator (`isParkRecord`, `packages/core/src/app/queue.ts:374` requires a non-empty
+      `condition.expiresAt` for `provider-window`), so from that moment every park read returns
+      `state.store.torn`. Reproduced twice: (a) direct core call
+      `releaseQueueLease(... park: { cause: "liveness-stall", condition: parkConditionForCause("liveness-stall") })`
+      returns `ok: true` and the next `readQueueParks` returns `{ok:false, reason:"torn"}`; (b) through
+      the delivered queue edge harness, `queue release GH-320 --holder holder-a --park liveness-stall
+      --json` exits 0 with `result: "parked"`, then `readQueueParks` fails and `queue --json` /
+      `lanes --json` exit 1. The ledger is append-only, so the damage needs manual record surgery,
+      and it disables the battery's own park path (its write port starts with `readQueueParks`).
+      No case covers the new cause through the operator path; TC-SUP-045 only asserts the vocabulary
+      and the resolver mapping.
+    suggestion: >-
+      Make the new cause non-operator-writable - refuse `--park liveness-stall` at the queue command
+      and edge runtime with a delivered identity (the park is battery-written only, mirroring the
+      owner-hold "one writer" rule) - or, alternatively, treat it as an expiry-carrying cause
+      (require `--until` and stamp both `condition.expiresAt` and the top-level `until`). Harden
+      `releaseQueueLease`/`createParkRecord` so a `provider-window` condition can never be built from
+      an empty expiry. Add a closed-set regression case asserting that every member of
+      `QUEUE_PARK_CAUSES` either round-trips a record its own guard accepts or is refused with a
+      named identity, and update the scheduling-engine park text accordingly.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: high
+    severity_label: major
+    confidence: high
+    category: performance
+    location: packages/cli/src/production.ts:3372-3400
+    message: >-
+      The action path breaks the declared read contract. NFR-4 requires one whole-store read fold per
+      run and feature-supervise section 3.8 states "exactly one whole-store read per battery run",
+      but the production closures re-read the entire ledger per action: `admitRestart` calls
+      `readEconomicsRecords(store, ref)` (a full `store.readRecords()`) once per already-parked
+      stalled lane (`packages/cli/src/production.ts:3375`, `packages/core/src/state/economics.ts:205`),
+      `claimRefusal` calls `claimSingleFlightRefusal` which takes a verified whole-store snapshot per
+      lane (`production.ts:3391`), the park write port calls `readQueueParks` twice per park
+      (`packages/core/src/app/supervise.ts:693,723`), and each exhausted lane calls
+      `readBlockerLedger` (`production.ts:3345`). With the 200-lane cap and many stale lanes this is
+      O(lanes x ledger) reads. The read-cost case (`tests/behaviour/supervision-read-cost.test.ts`)
+      counts only the injected fold port, and the latency case
+      (`tests/behaviour/supervision-performance.test.ts`) runs a read-only fold with no write or
+      admission seams, so the 5,000 ms bound is not proven for a run that acts. Related dead data:
+      the read port already builds a per-ref restart map (`app/supervise.ts:141,483-505,672`) that the
+      battery never consumes.
+    suggestion: >-
+      Consume the snapshot the fold already carries: derive the restart-budget admission and the
+      per-ref live-lease/single-flight answers from `SupervisionScopeSnapshot` (restarts + leases) so
+      budget admission needs no extra store read, and dedupe the blocker-ledger read (once per run,
+      not once per lane), or declare these as explicit extra reads and drop the "exactly one read"
+      claim from the feature page. Add a read-count cell and a latency cell over an acting run at the
+      cap (park + restart paths composed), and either use or remove `SupervisionScopeSnapshot.restarts`.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: high
+    severity_label: major
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-16--GH-295--supervise/chg-GH-295-plan.yaml:290-300
+    message: >-
+      The plan's COMMIT CONVENTION block declares one conventional subject per phase (for example
+      `feat(GH-295): supervision contracts, liveness-stall cause, two error identities`, and
+      `test(GH-295): determinism, bounds, latency, failure-envelope goldens`), and states the
+      subjects are declared "so the commit path and review agree". None of the eight phase commits
+      uses its declared subject: every one is a generic path-derived
+      `<type>(GH-295): update <first-changed-path>` with a Unicode ellipsis and an empty body -
+      1309166f, 4094dd53, 9ca4b26a, 70071c71, fbbe3c14, 3f8ece79 are
+      `chore(GH-295): update doc/changes/...supervise...`, ae4ab741 is
+      `chore(GH-295): update .changeset/gh-295-supervise-minor.md`, a330a531 is
+      `chore(GH-295): update packages/cli/src/commands/supervise.ts`. Three phases are mis-typed
+      (a feat, a test and a docs phase committed as `chore`), and the subject names the incidental
+      first path rather than the change. `./scripts/lint-commit-range.sh --base main-tools` reports
+      PASS, so commitlint tolerates it, but phase-to-commit traceability exists only in pm-notes and
+      the delivered history is not reviewable on its own.
+    suggestion: >-
+      Reword the eight delivery commits to the declared subjects before the PR (interactive rebase /
+      amend, preserving the current tree), or record an explicit, owner-accepted deviation in
+      pm-notes. Treat the declared-subject list as binding in future plans by deriving the subject
+      from the plan phase rather than from the staged paths.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: high
+    severity_label: major
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-16--GH-295--supervise/chg-GH-295-spec.md:126
+    message: >-
+      Spec F-5 (and DEC-7) declare that a stall over an actively held session records a durable
+      intent and that "the park lands at the next safe boundary", and test plan TC-SUP-043 asserts
+      "durable intent visible before the boundary, the park landing at the boundary". The delivered
+      battery appends the active `liveness-stall` park immediately and only reports the action kind as
+      `safe-boundary-park-intent` (`packages/core/src/app/supervise.ts:1027-1063`); nothing defers the
+      landing, and the rewritten case asserts the immediate park
+      (`tests/behaviour/supervision-stall-park.test.ts`, TC-SUP-043). The deviation is honestly
+      disclosed in pm-notes (phase-4 note) and well argued (the delivered preemption record cannot
+      carry this intent without lying, and DM-4/NG-6 forbid a new record kind), and
+      `doc/spec/features/feature-supervise.md` describes the delivered behaviour - but the spec, DEC-7
+      and TC-SUP-043 still state a mechanism that was not built, so the requirements chain and the
+      code disagree. AC-F5-1 itself (heartbeat beyond threshold -> parked + reason + until) is met.
+    suggestion: >-
+      Amend spec F-5/DEC-7 (and TC-SUP-043's oracle) to the delivered, honest semantics: the park
+      record is the durable intent and reads parked immediately; the running session observes it at
+      its next boundary and is never signalled. Alternatively implement deferred landing if the
+      product intent is a park that only becomes active at the boundary, but that needs a delivered
+      durable carrier and therefore a spec/DM change.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-16--GH-295--supervise/chg-GH-295-pm-notes.yaml:394-405
+    message: >-
+      The phases summary claims the delivered-suite sites beyond the named pin lists and the other
+      drift are "all enumerated in the per-phase notes", but several non-test source files landed in
+      phases whose declared `scope.files` omit them and are not itemised: phase 4 added
+      `packages/cli/src/production.ts`, `packages/cli/src/commands/supervise.ts`,
+      `packages/core/src/app/index.ts`, `packages/core/src/index.ts` and edits to
+      `tests/fixtures/supervise/harness.ts` + `tests/structure/content-inventory.test.ts`; phase 5
+      added the same production/CLI/app-index/core-index files plus
+      `tests/behaviour/supervision-corroboration.test.ts`; phase 3 added
+      `tests/fixtures/supervise/harness.ts`, `tests/structure/inventory.json` and
+      `tests/structure/content-inventory.test.ts` outside its scope. Only the core-index re-exports
+      are covered by the summary's "core index re-exports landed with their phase". The declared
+      escalation trigger "a-delivered-suite-needs-an-edit-outside-the-declared-update-rows" cannot be
+      audited from pm-notes as written.
+    suggestion: >-
+      Add one pm-notes entry enumerating every file that landed outside its phase's declared scope
+      (or extend each phase's `scope.files`) so a `plan diff` audit and the phase-9 review can
+      confirm the change set is exactly the declared one.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/app/supervise.ts:593-607
+    message: >-
+      AC-F1-1 requires "that lane's ... last heartbeat observation", but every lane entry inherits the
+      scope's daemon heartbeat trail (`firstHeartbeatAt`/`lastHeartbeatAt` from the daemon heartbeat
+      records, `app/supervise.ts:385-392`; applied to all lanes at `:601-603`), not a lane-specific
+      observation - even though the delivered daemon lane record already carries a per-lane
+      `liveness.observedAt` (which the implementation uses only as an artifact instant, `:413-417`).
+      The consequence is visible: a lane with no artifacts of its own whose daemon is beating reads
+      `progressing`, and every lane in the report shows the same heartbeat. The choice is disclosed
+      (phase-2 note) and documented (feature-supervise section 3.2), so this is a claim-accuracy gap,
+      not a hidden defect, but the per-lane heartbeat the AC names is not actually reported.
+    suggestion: >-
+      Prefer the daemon lane record's `liveness.observedAt` (the lane's own observation) for the lane
+      `heartbeat` when present, falling back to the daemon heartbeat with a declared degradation
+      marker; assert both cells in TC-SUP-001. If the scope heartbeat is the deliberate contract,
+      amend AC-F1-1's wording to "the scope's last daemon heartbeat observation".
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/supervise.ts:107-117
+    message: >-
+      Every heartbeat evidence fact is labelled `recordKind: "daemon.heartbeat"` regardless of the
+      source. For a coordinator claim the heartbeat instant comes from `coordinator.iteration`
+      records, and for a per-ref lease claim it comes from `queue.lease`; both are reported as
+      `daemon.heartbeat`. The committed golden shows it: `supervision-live-claims.json` carries the
+      coordinator entry with `"code": "artifact-heartbeat-fresh", "recordKind": "daemon.heartbeat",
+      "instant": "2026-11-16T23:59:00.000Z"` although that instant is an iteration record. NFR-3
+      requires evidence to name refs, record kinds, instants and codes; a wrong record kind makes the
+      evidence non-reconstructible for claim cells.
+    suggestion: >-
+      Carry the source record kind on the classification input (it is artifact-only, so this stays
+      inside DEC-4) and emit it in the heartbeat evidence; assert per-claim-kind record kinds in
+      TC-SUP-050 and regenerate the live-claims golden.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-8
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: observability
+    location: packages/core/src/app/supervise.ts:945
+    message: >-
+      The durable records the battery appends do not carry the run's injected identity: the restart
+      append hard-codes `runId: "supervise"` in the app tier even though `SupervisionRestartAppend`
+      has a `runId` member, production writes `sessionId: "supervise"` and `runId: "supervise"` for the
+      exhaustion record, and the typed question id is the literal `supervise-exhaustion-<ref>`
+      (`packages/cli/src/production.ts:3319,3332,3347`). The envelope's injected `runId` (asserted by
+      TC-SUP-085) therefore never reaches the audit trail, so a restart/exhaustion/question cannot be
+      correlated with the battery run that caused it - the opposite of F-7's "rides the delivered
+      path" audit intent and of NFR-3/NFR-7's injected run identity.
+    suggestion: >-
+      Thread the injected run id from the command runtime into `runBattery`/the append ports and use
+      it for `runId`, the question id suffix and the session id; assert the injected id appears in the
+      restart record in TC-SUP-060.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-9
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: testing
+    location: tests/behaviour/supervision-duplicate-refusal.test.ts:79-101
+    message: >-
+      The "presence alone refuses nothing" cell is named "a live resident daemon claim rides data
+      while the park lands at exit 0", but it seeds `daemonClaim({ live: true, heartbeatOffsetsMs:
+      [-(300_000 + 5)] })`; the fixture derives liveness from the recorded heartbeat
+      (`tests/fixtures/supervise/records.ts:318-330`), so the claim is 300,005 ms old and is not live
+      (it classifies `stalled`). The case asserts only that a supervisor entry exists, so DEC-8's
+      "a live resident daemon's existence alone refuses nothing" is not exercised with a live claim
+      and a simultaneous action. The live-claims golden covers live claims but with no action.
+    suggestion: >-
+      Seed a claim that is actually live (a recent heartbeat) *and* a stalled lane - e.g. a heartbeat
+      trail spanning the window ending now, which keeps the claim live while the lane trail is flat -
+      and assert `claim-live` on the entry plus the park action at exit 0 in the same run.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-10
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: testing
+    location: packages/cli/src/production.ts:3303-3400
+    message: >-
+      The production supervision composition (the park write port wiring, the economics append
+      closures, `admitRestart`, `claimRefusal`) has no behaviour test. The suites build their own
+      copies in `tests/fixtures/supervise/harness.ts:47-106`, which re-declares the economics schema
+      ids and exhaustion options as literals, and the only production-path assertion is the mounting
+      case over an empty store (no action). A drift in production (wrong schema id, wrong exhaustion
+      option, wrong admission wiring, missing holder) would keep every suite green.
+    suggestion: >-
+      Add one composed-production behaviour case over a real temp checkout that parks a stale lane
+      and runs one restart + one exhaustion through `createProductionComposer`, and replace the
+      harness's duplicated economics closure with imports of the production composition (or of the
+      shared `ECONOMICS_*` constants) so the fixture cannot drift.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-11
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: correctness
+    location: packages/core/src/domain/supervise.ts:140-148
+    message: >-
+      `boundSupervisionEvidence` stops popping at one remaining entry and then appends the
+      `evidence-truncated` marker, so a single evidence entry at or above
+      `SUPERVISION_MAX_EVIDENCE_BYTES` yields a list that exceeds the cap it claims to enforce
+      (NFR-4/NFR-6). The case only exercises a list of many small entries, where popping works, so
+      the boundary is untested.
+    suggestion: >-
+      Pop until the serialized size including the marker fits (or replace the remaining entry with the
+      marker), and add a cell with one oversized entry asserting the final serialized size is within
+      the cap.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-12
+    severity: medium
+    severity_label: minor
+    confidence: medium
+    category: correctness
+    location: packages/core/src/contracts/supervise.ts:142
+    message: >-
+      `heartbeatOrdinal` is declared in the artifact-only classification input, populated by the read
+      port for both lanes and claims, and never read by `classifySupervision`
+      (`packages/core/src/domain/supervise.ts` has no reference to it). F-3 names "heartbeat ordinals
+      advancing" as part of the lying-liveness evidence, but the predicate uses first/last instants
+      instead, so the declared input member is dead and the spec's ordinal-based evidence is not
+      implemented or documented as an interpretation.
+    suggestion: >-
+      Either use the ordinal (e.g. require an advancing ordinal inside the span as part of the
+      evidence) or remove it from the input shape and record the first/last-instant interpretation
+      against F-3; an unused declared member also weakens the exact-shape guard (TC-SUP-014).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-13
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: testing
+    location: tests/structure/steer-mounting.test.ts:40-75
+    message: >-
+      A delivered suite's strongest assertion was weakened: TC-STEER-060 previously asserted
+      `PROMPT_REQUIRED_COMMANDS` equals the captured mounted list exactly (and that steer is last);
+      it now asserts only that the captured list is a *prefix* of the mounted set and that the last
+      member is `supervise`, and its stale-pin scan now filters out lines containing BASE/MOUNTED
+      constant names. The new `supervision-mounting` case restores exact equality against its own
+      captured base, so the effective guard survives only while both files stay in sync. This is
+      disclosed in pm-notes and is a legitimate consequence of appending a family, but it is an
+      assertion weakening in a delivered suite and needs explicit acceptance (or a shared captured
+      base) rather than silent replacement.
+    suggestion: >-
+      Point the steer case at the same captured base constant used by the supervision case and assert
+      exact set equality plus membership, so one captured list backs every family-count pin; or state
+      in the case comment why prefix equality is the deliberate contract for earlier families.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-14
+    severity: medium
+    severity_label: minor
+    confidence: medium
+    category: correctness
+    location: packages/core/src/app/supervise.ts:908-1025
+    message: >-
+      The supervised-stall park's declared re-entry instant (`until` = run instant + the mapped 60,000
+      ms recheck default, described in the feature page as "the re-entry instant") is never consulted
+      before acting. On the next battery run over the same still-stalled lane the battery skips the
+      park (already parked) and immediately consults restart admission; nothing compares the run
+      instant with the park's `until`/`recheckMs`. So an operator who runs the battery twice in a row
+      restarts (and burns budget on) a lane the park declared as not re-entrant for another minute.
+      AC-F7-1 does not forbid this and the feature page documents the branch, but the operational
+      meaning of "re-entry instant" is not honoured.
+    suggestion: >-
+      Skip the restart branch while `now < park.until` (or the recheck interval has not elapsed),
+      reporting no action, and add a cell asserting a second run inside the horizon appends nothing;
+      or state explicitly that the horizon governs only the park pass, not battery actions, and rename
+      it so the projection does not promise re-entry.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-15
+    severity: medium
+    severity_label: minor
+    confidence: medium
+    category: design
+    location: packages/core/src/domain/supervise.ts:88-104
+    message: >-
+      AC-F4-1/TC-SUP-032 claim the delivered classification is consumed rather than reimplemented,
+      but the substantive predicates live in the supervise domain: `artifactAdvancing` (any artifact
+      instant inside the span) and `corroborated` (heartbeat present, no advancing artifact, aged or
+      spanning trail) are computed locally and handed to `classifyLaneProgress` as
+      `tokenDelta = advancing ? 1 : 0` and `traffic = fresh && !spanning ? 1 : 0`, which reduces the
+      delivered function to a trivial selector. The structure guard only greps for identifiers named
+      `isStale`/`isAdvancing`, so the "one predicate home" claim is name-based, not structural. The
+      behaviour is correct and the delivered vocabulary/bound are genuinely imported, so this is a
+      claim/guard gap rather than a defect.
+    suggestion: >-
+      Either push the advancing/staleness decision into the delivered lane-classification home (e.g. a
+      delivered helper that takes artifact instants) and call it, or document the mapping as the
+      declared adaptation in the spec/feature page and strengthen the guard so a second local
+      advancing predicate is detected by shape, not by identifier name.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-16
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/app/supervise.ts:457-480
+    message: >-
+      DEC-8(a) names the guarded object as "a supervision authority actively acting ... for example
+      another battery run mid-action, or a coordinator claim actively acting over that object", but
+      the only recognised acting evidence is a pending `daemon.preemption` record
+      (`app/supervise.ts:457-480`), so another battery run mid-action and a coordinator actively
+      acting are never detected and have no case. OQ-1/RSK-2 declare the battery-vs-battery residual,
+      but the coordinator-acting class is undeclared. (The narrower rule is documented in
+      feature-supervise section 3.4, so current truth is honest.)
+    suggestion: >-
+      Record the undetected authority classes explicitly next to OQ-1/RSK-2 (and in the feature page)
+      as declared limits, or add the durable evidence class that would let the guard see them; add a
+      case that a non-preemption authority record does not refuse (today only an unrelated-object
+      preemption is tested, TC-SUP-054).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-17
+    severity: low
+    severity_label: nit
+    confidence: high
+    category: testing
+    location: tests/golden/supervision-report.test.ts:66
+    message: >-
+      `expect(NORMALIZER_REPLACEMENTS).toHaveLength(3)` asserts a module constant's length, i.e. it is
+      a tautology that cannot fail if a replacement is added or removed from the normalizer; it does
+      not bind the constant to the actual normalizer behaviour.
+    suggestion: >-
+      Derive the replacement list from the normalizer (or assert the normalized output of a crafted
+      input that contains a root, a run id and a timing value) so the "exactly three replacements"
+      obligation is behaviourally proven.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-18
+    severity: low
+    severity_label: nit
+    confidence: high
+    category: testing
+    location: tests/fixtures/supervise/harness.ts:127-128
+    message: >-
+      The harness doc comment says "the read counter resets" for `battery()`, but only `runCli()`
+      resets `reads.count`; successive `battery()` calls accumulate. It does not affect any current
+      assertion, but it is a misleading contract for future cases.
+    suggestion: >-
+      Reset `reads.count` at the start of `battery()` (or correct the comment), matching `runCli()`.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-19
+    severity: low
+    severity_label: nit
+    confidence: medium
+    category: correctness
+    location: packages/core/src/domain/supervise-text.ts:52-71
+    message: >-
+      The phase-3 obligation and the plan say "bounded human render", but only the lane population is
+      bounded (200). `supervisors[]` and `actions[]` have no numeric cap (OQ-TP-1) and the renderer
+      emits one line per entry plus unbounded evidence-code lists, so a large claim/action population
+      produces an unbounded terminal payload with no truncation marker.
+    suggestion: >-
+      Either declare the human render bounded only by the lane cap and drop the word "bounded", or add
+      a declared line/byte bound with the same counted-truncation discipline the machine payload uses.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-20
+    severity: low
+    severity_label: nit
+    confidence: high
+    category: documentation
+    location: doc/spec/features/feature-supervise.md:186
+    message: >-
+      The current-truth page states "Exactly one whole-store read per battery run, independent of lane
+      count", which is only true of the fold and false for a run that acts (see F-2). The same
+      overstatement appears in section 8 ("Read cost"). Current-truth documentation should not claim a
+      bound the composed action path breaks.
+    suggestion: >-
+      State the read discipline precisely: one fold read per run, plus the declared action-path reads
+      (or make F-2's change true and keep the sentence).
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-21
+    severity: info
+    severity_label: info
+    confidence: high
+    category: tooling
+    location: packages/cli/src/commands/plan.ts:112-150
+    message: >-
+      Verification limitation, not a change defect: `delivery-os plan diff GH-295 --against
+      main-tools` fails with `input.value.rejected` ("repository diff for GH-295 could not be read")
+      because the production composer wires `readDiff` to the unreadable default
+      (`packages/cli/src/edge.ts:3114-3115`). `plan validate GH-295` returns `verdict=valid,
+      readyForDevelopment=true`. The plan-scope audit for this review was therefore performed
+      manually against each phase commit (`git show --name-only` vs `scope.files`/`folders`), which is
+      what surfaced F-5.
+    suggestion: >-
+      Out of scope for GH-295. Record it as tooling follow-up so phase-9/DoD reviewers can use
+      `plan diff` as the documented scope-audit tool.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-17T10:44:11Z
+evidence:
+  gates_run:
+    - "bun test (full): 9984 pass, 4 skip, 0 fail, 1271 files"
+    - "pnpm typecheck: PASS (all packages + tests/types)"
+    - "pnpm lint: exit 0 (101 warnings, 37 infos, pre-existing style level)"
+    - "pnpm format:check: clean"
+    - "pnpm check:boundaries (depcruise + ambient + entrypoints + secret-read): PASS"
+    - "prompt-conformance, help-guide-coverage, exports-parity: PASS"
+    - "scripts/.tests/test-doc-distribution.sh: PASS (no drift, 95 docs)"
+    - "memory-lint: 0 errors, 0 advisories"
+    - "scripts/lint-commit-range.sh --base main-tools: PASS (19 commits)"
+    - "delivery-os plan validate GH-295: valid / readyForDevelopment=true"
+    - "delivery-os supervise --help / --version: exit 0; extra positional and unknown flag: exit 1 fallback.invocation"
+  reproducer:
+    - "Direct core: releaseQueueLease with parkConditionForCause(\"liveness-stall\") returns ok=true; readQueueParks then returns {ok:false, reason:\"torn\", code:\"state.store.torn\"} (scratch script, no repo changes)."
+    - "Delivered queue edge harness: `queue release GH-320 --holder holder-a --park liveness-stall --json` exits 0 (result parked); `readQueueParks` torn; `queue --json` and `lanes --json` exit 1."
+  ac_verification:
+    AC-F1-1: "PASS-by-evidence with caveat F-6: TC-SUP-001/002/004/005/090 green; the reported per-lane heartbeat is the scope daemon heartbeat, not a lane observation."
+    AC-F2-1: "PASS: matrix totality (12/12), prefill cells progressing, corroboration at 299_999/300_000/300_001, unknown truthful, exact artifact-only input shape."
+    AC-F3-1: "PASS: TC-SUP-020 (lane) and TC-SUP-021 (daemon + coordinator claim) stalled from records alone; TC-SUP-022 advancing control; no process-shaped member or seam exists."
+    AC-F4-1: "PASS functionally (imported WATCHDOG_STALL_HEARTBEAT_MS, probe-name subset, absent -> unknown, no CPU/pid markers); the 'consumed not reimplemented' claim is only nominally guarded (F-15)."
+    AC-F5-1: "PASS for the seed: exactly one park (cause liveness-stall, conditionType via the delivered resolver, non-null until = now + provider-window recheck default), lanes show parked / parked:liveness-stall / until, goldens committed. Caveats: held-session landing mechanism differs from F-5/DEC-7 (F-4); the operator release path violates DM-2's non-null until (F-1)."
+    AC-F6-1: "PASS for claim data, per-action refusal with holder, per-ref single-flight reuse, presence-not-gating and the non-claiming park intent; caveats F-9 (presence cell not truly live) and F-16 (only preemption-backed authorities are detected)."
+    AC-F7-1: "PASS: delivered restart record with ordinal step, idempotent terminal exhaustion + one typed question, unavailable outcome with no budget consumed, zero signal/spawn markers. Caveats F-2 (per-lane reads) and F-8 (run identity not propagated)."
+    AC-F8-1: "PASS: exactly two appended rows, no delivered row changed, 148/148/64 and corpus 70 bound in both directions, exit 1/2 projections, reuse cells asserted."
+next_step: CALL_CODER

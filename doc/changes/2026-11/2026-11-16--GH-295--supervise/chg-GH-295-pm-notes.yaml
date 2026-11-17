@@ -4,8 +4,8 @@ milestone: "M2: Ceremonies, measurement, and memory"
 delivery_mode: autonomous
 phases:
   clarify_scope: { started: null, completed: 2026-11-16T22:21:11.981Z }
-  specification: { started: null, completed: 2026-11-16T22:45:00.487Z }
-  test_planning: { started: null, completed: 2026-11-16T22:47:40.120Z }
+  specification: { started: null, completed: 2026-11-17T11:01:00.351Z }
+  test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: 2026-11-16T23:18:06.308Z }
   dor_check: { started: null, completed: 2026-11-16T23:23:38.081Z }
   delivery: { started: null, completed: 2026-11-17T05:54:34.230Z }
@@ -425,4 +425,51 @@ notes:
       Evidence convention for gate commands: TMPDIR=$PWD/tmp/tmpdir pnpm check
       (never absolute paths)."
     type: "info"
+    date: "2026-11-17"
+  - text: "Review iteration 1 verdict: FAIL (code-review/review-iter-1.yaml). 21
+      findings: 1 critical, 3 high, 12 medium, 4 low, 1 info. All 8 ACs
+      functionally verified. Blocker F-1: `liveness-stall` in QUEUE_PARK_CAUSES
+      makes operator `queue release --park liveness-stall` legal without --until
+      -> provider-window park with empty expiresAt fails isParkRecord -> every
+      park read returns state.store.torn (reproduced direct-core and via queue
+      edge). High: F-2 action-path per-lane reads break NFR-4 one-fold; F-3
+      phase commits use path-derived subjects, not the plan's declared
+      summaries; F-4 safe-boundary deviation (immediate durable park + action
+      label) disclosed in pm-notes and feature page but spec/test plan
+      unamended."
+    type: "info"
+    date: "2026-11-17"
+  - text: "PM triage for review remediation: (1) F-1 fix by design decision —
+      `liveness-stall` is battery-written only; the operator path refuses
+      `--park liveness-stall` with a delivered identity (owner-hold one-writer
+      precedent), plus empty-expiry hardening in the park write path and a
+      closed-set round-trip case. (2) F-2 accepted as real: action path must
+      reuse the single fold snapshot (restarts already collected unused). (3)
+      F-3 accepted with disclosure, NOT reworded: branch is unpushed but
+      rewording 8 commits invalidates the plan-phase SHAs cited in pm-notes DoD
+      evidence, the PR is squash-merged (GH-298 precedent), commitlint range
+      gate is PASS, and the PR body will carry the phase-to-commit mapping; the
+      tool limitation (commit --phase rejects plan phase ids, recorded in
+      phase-1 findings) is the root cause. (4) F-4 fixed by amending spec (DEC-9
+      delivery-time resolutions: safe-boundary carrier and acting-authority
+      artifact class) and test plan TC-SUP-043, then the feature page if needed.
+      (5) Concrete code minors fixed by @coder (F-6 lane heartbeat observation,
+      F-7 claim evidence recordKind, F-8 run id in durable
+      restart/exhaustion/question records, F-9 presence-cell fixture, F-11
+      evidence cap, F-12 unused heartbeatOrdinal, F-13 restored exact-set
+      assertion where possible); design-level minors disclosed with rationale
+      (F-15/F-16). Remediation tracked as plan phase 9 (review_remediation) via
+      @plan-writer; specification and test_planning reopened for the two
+      artifact amendments."
+    type: "decision"
+    date: "2026-11-17"
+  - text: "Retro: the critical blocker was a closed-set extension whose operator
+      surface was not closed — adding a cause to the shared vocabulary made an
+      unguarded writer legal. Lesson: every closed-set addition needs a
+      round-trip case for every writer path (operator CLI + internal writer),
+      not just the vocabulary/resolver tests the plan named. Also: plan-declared
+      commit summaries are not enforceable via the commit primitive's --phase
+      flag today (plan phase ids rejected), so delivery-generated subjects drift
+      by construction — a tooling gap worth a future ticket."
+    type: "retro"
     date: "2026-11-17"

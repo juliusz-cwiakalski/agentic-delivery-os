@@ -1,5 +1,13 @@
-# GH-295 delivery plan — machine-readable document (delivery.plan.v1), revision 1.2
-# (2026-11-17). Revision 1.2 applies the DoR iteration-2 findings (readiness-
+# GH-295 delivery plan — machine-readable document (delivery.plan.v1), revision 1.3
+# (2026-11-17). Revision 1.3 is the review-driven amendment of a plan whose
+# phases 1-8 are delivered: review iteration 1
+# (code-review/review-iter-1.yaml, verdict FAIL — F-1 critical, F-2/F-4 high)
+# added phase 9 (review remediation) and re-pointed the sources at spec v1.2
+# (DEC-9(a)-(d)) and test plan v1.4 (55 TCs, the four added cases
+# TC-SUP-100..103). Phases 1-8 are not rewritten by this revision; the tier's
+# declared phase set, the phase-order list, the AC ownership enumeration, the
+# TC ownership totals, and the commit convention now read nine phases.
+# Revision 1.2 applies the DoR iteration-2 findings (readiness-
 # iter-2.md): the error-table base-state pin corrected to the delivered truth
 # (146 rows at base; the phase-1 mirror move corrected to 146 -> 148; the
 # no-leftover scan re-keyed to the real pre-change tokens 146/62/+112; count
@@ -16,7 +24,7 @@
 # AC-F1-1..AC-F8-1; F-1..F-8;
 # DM-1..DM-4; EVT-1; NFR-1..NFR-7; NG-1..NG-7; RSK-1..RSK-6; DEC-1..DEC-8;
 # OQ-1 deferred non-blocking; seeds SC-M2-S2-01/02 reconciled per DEC-2) and
-# the test plan, now v1.3 (51 TCs TC-SUP-001..097, all 8 ACs Covered, no
+# the test plan, then v1.3 (51 TCs TC-SUP-001..097, all 8 ACs Covered, no
 # open gap — GAP-T1 closed by spec v1.1 DEC-8; v1.2 fixed reference paths
 # and v1.3 fixed the DEC range, with no case, ID, coverage row, or
 # assertion changed) on branch feat/GH-295/supervise from
@@ -24,7 +32,7 @@
 # GH-296 ceremony, GH-297 board and GH-287 retro action registry already in
 # the base).
 #
-# One ticket, one PR against main-tools, eight delivery phases. Every phase is
+# One ticket, one PR against main-tools, nine delivery phases. Every phase is
 # an independently committable slice that is green at its own boundary
 # (targeted suites plus the aggregate gate battery below), and every phase is
 # ONE delivery commit through the commit primitive (conventional subject,
@@ -40,7 +48,7 @@
 # `tasks` key and no progress log.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:      ./chg-GH-295-spec.md v1.1 — F-1..F-8 (§5.1 details); DM-1
+#   - Spec:      ./chg-GH-295-spec.md v1.2 — F-1..F-8 (§5.1 details); DM-1
 #                (delivery.supervision.v1 report), DM-2 (liveness-stall cause
 #                + condition mapping + non-null until), DM-3 (additive
 #                active-park until on the lane projection), DM-4 (no new
@@ -57,9 +65,17 @@
 #                truthfulness 0/1/2), DEC-7 (never signal; safe-boundary;
 #                delivered economics), DEC-8 (refusal guarded object =
 #                authority actively acting; per-action projection; park
-#                intent non-claiming); §17 AC table; §7.1 in-scope incl.
+#                intent non-claiming); DEC-9 (a: operator-path refusal for
+#                liveness-stall — the cause is battery-written only and every
+#                cause-writer pair round-trips a record its own validator
+#                accepts or is refused by name; b: the durable park record is
+#                the safe-boundary intent carrier reported as
+#                safe-boundary-park-intent; c: the daemon.preemption pending
+#                record is the acting-authority artifact class; d: the single
+#                fold covers the action path); §17 AC table; §7.1 in-scope incl.
 #                documentation reconciliation inputs.
-#   - Test plan: ./chg-GH-295-test-plan.md v1.3 — 51 TCs; §3 coverage
+#   - Test plan: ./chg-GH-295-test-plan.md v1.4 — 55 TCs (51 delivered plus
+#                TC-SUP-100..103 added by the review amendment); §3 coverage
 #                matrices (AC, DM, NFR, seeds); §4.3 permanent structure
 #                obligations; §5.2 case oracles; §6 fixtures and goldens
 #                (GAP-T2 key spellings, GAP-T3 goldens created not
@@ -67,7 +83,8 @@
 #                case-to-file mapping; §7.3 the exhaustive list of allowed
 #                delivered-suite edits; §7.4 per-level PASS definitions and
 #                per-stage evidence; §8.3 OQ-TP-1..TP-3 (deferred to this
-#                plan) and OQ-TP-4 (settled by DEC-8c).
+#                plan), OQ-TP-4 (settled by DEC-8c), and OQ-TP-5..OQ-TP-8
+#                (closed by DEC-9).
 #   - PM notes:  ./chg-GH-295-pm-notes.yaml — ticket AC restatement, the two
 #                inherited seeds, delivery conventions (gate command, PR
 #                target main-tools, commit body width, backlog marker
@@ -204,6 +221,17 @@
 #     reference-page status flip, the five-package minor changeset, the
 #     staging obligations for lifecycle phase 7, and the full gate battery
 #     at the delivered HEAD.
+#   9 Review remediation ninth — the review iteration-1 closure (F-1
+#     critical, F-2/F-4 high, plus the accepted mediums): the battery-only
+#     liveness-stall cause refused by name on the operator path, the
+#     empty-expiry guard in the park write path, the action path consuming
+#     the one fold snapshot instead of re-reading the ledger per lane, and
+#     the named assertion-level corrections (per-lane heartbeat, per-claim-
+#     kind record kinds, injected run identity, the genuinely live presence
+#     cell, the evidence-cap boundary, the dead declared input member, the
+#     restored exact-set family pin) landed in the suites that own them.
+#     This phase re-opens delivered code, so it follows the release phase
+#     and precedes the post-remediation doc resync and PR.
 #
 # AC OWNERSHIP (8/8 — every AC is enumerated with its owning phase(s);
 # earlier phases may produce partial verdicts, which are additive and never
@@ -230,7 +258,16 @@
 #            AC-F1-1 ownership stays with phase 3)
 #   phase 7  (cross-cutting NFR proofs; no new AC)
 #   phase 8  (release obligations; no new AC)
-#   Enumeration of all eight: AC-F1-1 @ phase 3; AC-F2-1 @ phase 2; AC-F3-1
+#   phase 9  (review remediation; NO new AC and NO ownership change).
+#            Phase 9 reinforces three already-owned ACs at their own phases'
+#            evidence: AC-F5-1 (the cause-writer round-trip and the
+#            empty-expiry guard, TC-SUP-100..102), AC-F6-1 (the action path
+#            consuming the one fold snapshot, TC-SUP-103), and AC-F1-1 (the
+#            lane's own heartbeat observation, TC-SUP-001/004/090). AC-F5-1
+#            stays owned by phase 4, AC-F6-1 by phase 5, AC-F1-1 by phase 3;
+#            phase 9's evidence is additional proof of the same criteria,
+#            never a re-assignment.
+#   Enumeration of all nine: AC-F1-1 @ phase 3; AC-F2-1 @ phase 2; AC-F3-1
 #   split — lane half (TC-SUP-020/022) @ phase 4, claim half (TC-SUP-021/
 #   054) @ phase 5, the union completing the ticket's acceptance criterion
 #   ("a stuck supervisor is detected by artifact evidence, not process
@@ -239,9 +276,9 @@
 #   carrier, corpora) @ phase 1, projection half @ phase 5. Both split ACs
 #   are complete unions at the delivered HEAD; all 8 ACs are enumerated
 #   with owning phases and dod_check verifies each against the named
-#   per-phase evidence.
+#   per-phase evidence, including the phase-9 reinforcement rows.
 #
-# TC OWNERSHIP (51/51; ownership = the phase that lands the asserted content
+# TC OWNERSHIP (55/55; ownership = the phase that lands the asserted content
 # and where the TC's verdict is first fully green; every case is authored
 # failing-first against its owning phase — committed red before the
 # implementation that makes it green, so no case is vacuously green):
@@ -256,7 +293,24 @@
 #   phase 6  TC-SUP-096                                    (1)
 #   phase 7  TC-SUP-080, 082, 083, 084, 092, 095           (6)
 #   phase 8  TC-SUP-097 (manual, review-verified record)   (1)
-#   Count: 5 + 6 + 9 + 12 + 11 + 1 + 6 + 1 = 51.
+#   phase 9  TC-SUP-100, 101, 102, 103                     (4)
+#   Count: 5 + 6 + 9 + 12 + 11 + 1 + 6 + 1 + 4 = 55.
+#   REVIEW-AMENDMENT NOTES (test plan v1.4 against spec v1.2 DEC-9): the four
+#   added cases are owned by phase 9 — TC-SUP-100/101/102 (the closed-set
+#   cause/writer round-trip, the operator refusal, the empty-expiry guard) in
+#   the NEW tests/behaviour/supervision-park-writers.test.ts and TC-SUP-103
+#   (the action-path one-fold) extending the delivered
+#   tests/behaviour/supervision-read-cost.test.ts; all four are authored
+#   failing-first against the pre-remediation tree, which is their red
+#   evidence. Ownership of the delivered cases does NOT move: TC-SUP-043
+#   (rewritten to the DEC-9(b) intent carrier) stays phase 4, TC-SUP-051
+#   (aligned to the DEC-9(c) daemon.preemption acting class) stays phase 5,
+#   and the oracle re-points F-6 (TC-SUP-001/004/090), F-7 (TC-SUP-050/092),
+#   F-8 (TC-SUP-060..063), F-9 (TC-SUP-051), F-11 (TC-SUP-082), F-12
+#   (TC-SUP-014), and F-13 (TC-SUP-096) stay with their owning phases too;
+#   phase 9 lands the corrected assertions in those named suites, so each
+#   case's amended verdict is green at the phase-9 boundary while its
+#   ownership and its phase's evidence row stay unchanged.
 #   NON-VACUITY ALLOCATION NOTES: TC-SUP-011 and TC-SUP-022 (their no-park
 #   halves), TC-SUP-020 and TC-SUP-023 (their park-action halves), and
 #   TC-SUP-021's no-action-targets-a-claim half are owned by the phase where
@@ -297,6 +351,7 @@
 #   phase 6  feat(GH-295): mount supervise as the 24th prompt-required family
 #   phase 7  test(GH-295): determinism, bounds, latency, failure-envelope goldens
 #   phase 8  docs(GH-295): planning bookkeeping, changeset, release obligations
+#   phase 9  fix(GH-295): review remediation — park writer hardening, action-path one-fold, finding fixes
 #
 # CONSTRAINTS BINDING ON EVERY PHASE (spec sections 5-9; do not reshape at
 # delivery):
@@ -330,7 +385,8 @@
 #     fenced paths; pre-change records replay unchanged and a missing new
 #     cause reads as a classified absence; the only new schema identity is
 #     delivery.supervision.v1.
-#   - Park vocabulary exactness (DM-2, DEC-2, RSK-6): QUEUE_PARK_CAUSES is
+#   - Park vocabulary exactness (DM-2, DEC-2, DEC-9(a), RSK-6):
+#     QUEUE_PARK_CAUSES is
 #     the delivered five in position plus exactly liveness-stall sixth;
 #     QUEUE_PARK_CONDITION_TYPES unchanged; the pair table gains exactly
 #     one row mapping liveness-stall onto provider-window (the
@@ -338,7 +394,10 @@
 #     QUEUE_PARK_RECHECK_DEFAULTS gains no key (provider-window's declared
 #     default governs); the parked:<cause> template renders
 #     parked:liveness-stall with every delivered render unchanged; mapping
-#     asserted through conditionTypeForCause, never a literal.
+#     asserted through conditionTypeForCause, never a literal; the cause is
+#     BATTERY-WRITTEN ONLY — the operator path refuses it by name, and every
+#     cause-writer pair either round-trips a record its own validator
+#     accepts or is refused by name (DEC-9(a)).
 #   - Evidence discipline (NFR-3, NFR-6): every entry, action, and refusal
 #     carries non-empty evidence naming refs, record kinds, instants, and
 #     codes bounded to the scope; lock tokens, session ids, and process
@@ -353,14 +412,19 @@
 #     either projection.
 #   - Delivered-suite edit budget (test plan §7.3 — exhaustive): exactly
 #     these delivered suites may change, each additively — the park-cause/
-#     pair equality in tests/behaviour/queue-park-causes-s17.test.ts (+1
-#     cause, +1 pair), the error-table expectations/counts/corpora in
+#     pair equality and the operator-path refusal of the battery-only cause
+#     in tests/behaviour/queue-park-causes-s17.test.ts (+1
+#     cause, +1 pair, +the refusal cell), the error-table expectations/counts/corpora in
 #     tests/checks/error-table-sync.test.ts (+2 rows, documented page,
 #     corpora), the inventory/export registries (tests/structure/
 #     inventory.json, tests/structure/content-inventory.test.ts,
 #     tests/fixtures/ports/v1-contract-inventory.json), the lanes golden
-#     family (tests/golden/lanes-show.test.ts + new parked fixtures), and
-#     the family-count pins (delta +1). Anything else that must change is a
+#     family (tests/golden/lanes-show.test.ts + new parked fixtures), the
+#     family-count pins (delta +1, now reading ONE captured mounted list with
+#     exact-set equality — the restored exact-set assertion in tests/structure/
+#     steer-mounting.test.ts, review F-13), and the delivered queue command's
+#     printed accepted-cause/help text if it enumerates the causes. Anything
+#     else that must change is a
 #     finding and the escalation trigger the tier reserves.
 #   - Current-truth boundary: doc/spec/** flips only in lifecycle phase 7
 #     (@doc-syncer), never in a delivery phase; the ONE same-commit
@@ -387,19 +451,28 @@
 #     aggregate is green at its commit.
 #   - Lifecycle commands (phase complete, commit) run with
 #     PATH="$PWD/node_modules/.bin:$PATH" so the commitlint probe resolves.
-#     The phase-9 range gate ./scripts/lint-commit-range.sh --base main-tools
-#     is run by @pm and recorded in pm-notes; it is not re-implemented here.
+#     The lifecycle phase-9 range gate ./scripts/lint-commit-range.sh --base
+#     main-tools is run by @pm and recorded in pm-notes; it is not
+#     re-implemented here.
 #   - Mutation discipline (test plan §4.2): every structure/vocabulary
 #     guard ships its named mutations in mkdtemp copies of the live tree,
 #     never in-place; goldens are CREATED in this change (GAP-T3 — no
 #     delivered golden regenerates) with regeneration only on an explicit
 #     recorded command; no moving-base assertions anywhere (count pins are
-#     deltas against captured base constants plus stale-pin scans).
+#     deltas against captured base constants plus stale-pin scans). Phase 9
+#     carries its own two named mutants (test plan §4.2): an operator path
+#     that accepts the battery-only cause (TC-SUP-100/101 must fail naming
+#     the cause) and a re-introduced per-lane whole-store read on the action
+#     path (TC-SUP-103 must fail with the observed read count).
 #
 # LIFECYCLE PHASE 7 HANDOFF OBLIGATIONS (system_spec_update, @doc-syncer;
 # declared here so nothing is dropped after DoD — NOT plan scope beyond the
-# phase-8 staging rows, and no delivery phase edits doc/spec/** beyond the
-# phase-1 error-table carrier):
+# phase-8 and phase-9 staging rows, and no delivery phase edits doc/spec/**
+# beyond the phase-1 error-table carrier). The handoff runs AFTER phase 9:
+# the remediation changes behaviour the page describes (the lane's own
+# heartbeat, per-claim-kind evidence record kinds, the one-fold action path),
+# so the reconciliation is authored against the post-remediation tree and the
+# phase-9 staging row exists only so the commit primitive can stage it.
 #   - New current-truth feature spec (first-spec-only rule): doc/spec/
 #     features/feature-supervise.md authored in lifecycle phase 7 — the
 #     battery, the tri-state fold, lying liveness, watchdog/daemon
@@ -1106,7 +1179,7 @@
 #      staging commit so `pnpm check` runs the docs scope green.
 #  8.4 Final battery: run TMPDIR=$PWD/tmp/tmpdir pnpm check at the
 #      delivered HEAD and record the command and result in pm-notes
-#      `notes:`; run git diff --check; the phase-9 range gate
+#      `notes:`; run git diff --check; the lifecycle phase-9 range gate
 #      ./scripts/lint-commit-range.sh --base main-tools is run by @pm and
 #      recorded (PASS, or SKIP only when no commitlint configuration
 #      exists; an ERROR is never recorded as a pass). TC-SUP-097 is the
@@ -1126,15 +1199,183 @@
 #      reference-page status state delivery truth; the five-package minor
 #      changeset is present; the spec staging rows are declared for
 #      lifecycle phase 7; the full gate battery is green and recorded with
-#      the range-gate verdict; all eight plan phases are complete with
+#      the range-gate verdict; all eight phases 1-8 are complete with
 #      per-phase pm-notes evidence (dod_check reads that evidence, not
-#      this file).
+#      this file; the ninth phase's evidence is phase 9's own).
+# ---------------------------------------------------------------------------
+# Phase 9 — Review remediation: the operator-path park refusal, the
+#           empty-expiry hardening, the action-path one-fold, and the
+#           review-finding fixes in the named suites
+# Commit: fix(GH-295): review remediation — park writer hardening, action-path one-fold, finding fixes
+#
+# Goal: close review iteration 1 (code-review/review-iter-1.yaml, FAIL)
+# against spec v1.2 DEC-9 and test plan v1.4 — the battery-written cause can
+# no longer be written by the operator path that cannot supply its expiry, a
+# provider-window-mapped park can never be appended from an empty or missing
+# expiry, the action path consumes the one fold snapshot instead of
+# re-reading the ledger per lane, and the named assertion-level corrections
+# land in the suites that own them. No requirement is invented here: every
+# obligation names its DEC-9 clause, its review finding, or its TC.
+#
+# Obligations:
+#  9.1 Operator-path park refusal (F-1, DEC-9(a); TC-SUP-100/101):
+#      packages/cli/src/commands/queue.ts and packages/cli/src/edge.ts
+#      refuse `queue release <ref> --park liveness-stall` by name BEFORE any
+#      store write (the mirrored edge runtime refuses identically, so no
+#      second writer path can accept it), naming the cause and the
+#      battery-only rule with a DELIVERED identity — no new error row, the
+#      two-segment allowlist stays at its delivered 64 members and the
+#      supervise kind contributes nothing here; the command's printed
+#      accepted-cause/help text follows the refusal if it enumerates causes;
+#      zero append in the refused run and every later park read stays
+#      healthy. packages/core/src/contracts/queue.ts carries the declaration
+#      the guard reads (the battery-written-only cause), with the delivered
+#      five causes in position, the mapped condition type, and the recheck
+#      defaults unchanged.
+#  9.2 Empty-expiry hardening (F-1, DEC-9(a); TC-SUP-102):
+#      packages/core/src/domain/queue-park.ts and packages/core/src/app/
+#      queue.ts — a provider-window-mapped park can never be built or
+#      appended from an empty or missing expiry: the guard refuses at the
+#      append seam (before the fenced write) and the store stays readable, so
+#      the append-only poisoning path is unreachable from ANY writer, not
+#      only the refused CLI path. The guard is drivable as write ->
+#      read-back -> validate so the round-trip is asserted at the seam, not
+#      only through the CLI.
+#  9.3 Action-path one-fold (F-2, NFR-4, DEC-9(d); TC-SUP-103):
+#      packages/cli/src/production.ts and packages/core/src/app/supervise.ts
+#      — restart-budget admission, the per-ref live-lease/single-flight
+#      answer, the park write port's park reads, and the blocker-ledger read
+#      all derive from the single per-run fold snapshot (the scope snapshot's
+#      restarts and leases; one ledger read per run, not one per lane); the
+#      per-lane whole-store re-read is removed, no dead snapshot data remains
+#      unconsumed, and the read instrumentation records each read call's
+#      scope (whole-store vs key-range) and call site so a re-introduced
+#      per-lane read is detectable by measurement.
+#  9.4 Fold and append-tier corrections (F-6, F-7, F-8, F-11, F-12):
+#      packages/core/src/domain/supervise.ts, packages/core/src/app/
+#      supervise.ts, and packages/core/src/contracts/supervise.ts — the lane
+#      entry's heartbeat is the LANE'S OWN observation (the delivered daemon
+#      lane record's liveness.observedAt) with the scope daemon heartbeat as
+#      the declared-degradation fallback, so all lanes no longer report one
+#      instant (F-6); heartbeat evidence carries the SOURCE record kind
+#      (daemon.heartbeat, coordinator.iteration, queue.lease as applicable)
+#      so claim evidence stays reconstructible (F-7); the injected run
+#      identity threads from the command runtime into runBattery and the
+#      append ports and is used for the restart record's runId, the
+#      exhaustion record's runId/session id, and the typed question's id
+#      suffix instead of the hard-coded "supervise" literals (F-8);
+#      boundSupervisionEvidence pops until the serialized list INCLUDING the
+#      truncation marker fits the imported cap, so a single oversized entry
+#      can never exceed the bound it claims (F-11); the dead declared
+#      classification-input member heartbeatOrdinal is resolved — removed
+#      from the exact artifact-only shape (the instants-based lying-liveness
+#      interpretation recorded against F-3) unless it is consumed as the
+#      evidence requires — with no unused declared member left to weaken the
+#      exact-shape guard (F-12).
+#  9.5 Suites (failing-first against the pre-remediation tree; the plan's
+#      declared owners):
+#      tests/behaviour/queue-park-causes-s17.test.ts extended with the
+#      operator-path refusal of the battery-only cause (closed-set policy
+#      equality, +1 cause, +1 pair); tests/behaviour/
+#      supervision-park-writers.test.ts (NEW) carrying TC-SUP-100 the
+#      closed-set cause/writer round-trip (one cell per cause: its sanctioned
+#      writer and a read-back the delivered validator accepts, or the
+#      operator-path refusal), TC-SUP-101 the refusal with the zero-append
+#      and healthy-later-reads assertions, and TC-SUP-102 the empty/missing-
+#      expiry guard; tests/behaviour/supervision-read-cost.test.ts extended
+#      with TC-SUP-103's acting-run cells (park + restart + claim composed,
+#      read count not scaling with lane count, call-scope log);
+#      tests/behaviour/supervision-report.test.ts (TC-SUP-001/004 — the
+#      lane's own heartbeat distinct from the scope instance heartbeat, both
+#      cells plus the fallback degradation marker); tests/behaviour/
+#      supervision-classification.test.ts and tests/behaviour/
+#      supervision-claims.test.ts (TC-SUP-050 — per-claim-kind heartbeat
+#      record kinds); tests/behaviour/supervision-stall-park.test.ts
+#      (TC-SUP-043 — the immediate DEC-9(b) carrier, its absence assertions,
+#      and the unheld-twin outcome comparison); tests/behaviour/
+#      supervision-duplicate-refusal.test.ts (TC-SUP-051 — a genuinely LIVE
+#      daemon claim beside a stalled lane with the park landing at exit 0,
+#      plus the DEC-9(c) detection-limit cell); tests/behaviour/
+#      supervision-restart.test.ts (TC-SUP-060..063 — the injected run
+#      identity on the restart/exhaustion records, the question id, and the
+#      action evidence); tests/behaviour/supervision-bounds.test.ts
+#      (TC-SUP-082 — the single-oversized-entry cell asserting the serialized
+#      evidence including the marker is within the cap); tests/structure/
+#      supervision-no-process-input.test.ts and tests/structure/
+#      supervision-contract.test.ts (TC-SUP-014/094 — the exact member
+#      equality after F-12, no unused declared member, the marker scan);
+#      tests/structure/supervision-error-family.test.ts (the closed-set home:
+#      still exactly two supervise rows, no identity minted for the operator
+#      refusal); tests/structure/supervision-mounting.test.ts (TC-SUP-096 —
+#      exact-set membership against the one captured base, plus the
+#      composed-production action-path cell); tests/structure/
+#      steer-mounting.test.ts (F-13 — the delivered case points at the SAME
+#      captured mounted list and asserts exact-set membership again, so one
+#      captured list backs every family pin); fixtures tests/fixtures/
+#      supervise/records.ts (a genuinely live daemon claim whose heartbeat
+#      trail ends at the run instant while the lane trail stays flat).
+#  9.6 Goldens (written with the implementation, never regenerated to match
+#      whatever the code prints): tests/golden/supervision-report.test.ts
+#      with supervision-report.json/.txt carrying the lane's own heartbeat
+#      (F-6); tests/golden/supervision-failure.test.ts with
+#      supervision-live-claims.json carrying per-claim-kind record kinds
+#      (F-7); the stalled/parked and lanes-show goldens re-verified unchanged
+#      and committed only if a declared assertion above changes them.
+#  9.7 Documentation staging: doc/spec/features/feature-supervise.md is in
+#      this phase's scope ONLY for staging — the post-remediation resync is
+#      authored by @doc-syncer in lifecycle phase 7, exactly as phase 8's
+#      staging rows work; no delivery phase authors current truth.
+#  9.8 Boundary discipline: TMPDIR=$PWD/tmp/tmpdir pnpm check green at the
+#      phase commit, the phase's targeted suites green, git diff --check
+#      clean, one commit with the declared subject, and the pm-notes `notes:`
+#      entry naming the phase id, the commit hash, and the test result.
+#
+# Bound: AC-F5-1 (writer round-trip + empty-expiry guard), AC-F6-1 (action-
+# path one-fold), AC-F1-1 (per-lane heartbeat) — reinforcements of already-
+# owned ACs, no ownership change; F-1, F-2, F-6, F-7, F-8, F-9, F-11, F-12,
+# F-13; DEC-9(a)-(d); NFR-3, NFR-4 (action-path half), NFR-6, NFR-7.
+# Test obligations: TC-SUP-100, 101, 102, 103 (new/owned here) plus the
+# amended oracles of TC-SUP-001, 004, 014, 043, 050, 051, 060, 061, 062,
+# 063, 082, 090, 092, 094, 096 (ownership unchanged; phase 9 makes their
+# amended verdicts green).
+#
+# Done when: `queue release --park liveness-stall` refuses by name at the
+# command and the edge runtime with zero append and healthy later reads;
+# every cause-writer pair round-trips a record its own validator accepts or
+# is refused by name; a provider-window-mapped park cannot be appended from
+# an empty or missing expiry and the store stays readable; an acting run at
+# the lane cap performs one whole-store read and the per-call scope log shows
+# no per-lane re-read; restart admission, the per-ref decision, the park
+# write port, and the blocker ledger read consume that one snapshot; lane
+# entries carry their own heartbeat and claim evidence carries its source
+# record kind; appended records and the typed question carry the injected run
+# identity; the evidence cap holds at the single-oversized-entry boundary;
+# no unused declared input member remains; every family pin reads one
+# captured list with exact-set equality; the amended goldens are committed
+# with the implementation; TC-SUP-100..103 and the listed amended cells are
+# green, the named mutants fail, and TMPDIR=$PWD/tmp/tmpdir pnpm check is
+# green at the phase commit.
+#
+# NOTE (remediation provenance and TC map): this phase is driven by
+# review iteration 1 — F-1 (critical), F-2 and F-4 (high), the accepted
+# concrete mediums F-6, F-7, F-8, F-9, F-11, F-12, F-13, and the
+# declared-disclosure items F-3, F-5, F-14, F-15 (routed to the PR
+# description as accepted deviations/limits, not implemented here). TC map:
+# TC-SUP-100, TC-SUP-101, TC-SUP-102, TC-SUP-103 are NEW in test plan v1.4
+# and owned here; TC-SUP-043 (phase 4) and TC-SUP-051 (phase 5) are ALIGNED
+# to DEC-9(b)/(c) with ownership unchanged; the F-6, F-7, F-8, F-9, F-11,
+# F-12, F-13 oracles are aligned in the named suites above
+# (supervision-report, supervision-claims/classification,
+# supervision-restart, supervision-duplicate-refusal, supervision-bounds,
+# supervision-no-process-input/contract, supervision-mounting +
+# steer-mounting). Spec v1.2 DEC-9(a)-(d) is the authority for every
+# behaviour change; no AC is added, removed, or re-owned.
 # ---------------------------------------------------------------------------
 schemaVersion: delivery.plan.v1
 workItemRef: GH-295
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6, 7, 8]
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9]
   escalationTriggers:
     - error-table-gains-more-than-two-supervise-rows-or-a-delivered-row-changes
     - park-cause-set-gains-more-than-liveness-stall-or-a-condition-type-is-added
@@ -1377,4 +1618,51 @@ phases:
         target: doc/spec/features/feature-supervise.md
         role: consumer
     doneArtifacts:
-      trackerTransition: "GH-295 delivery complete: all eight plan phases done, the contracts and two supervise identities registered with every count pin moved atomically, the artifact-evidence fold with tri-state classification and lying-liveness detection delivered, the battery surface with grammar/scope/exits, the supervised-stall park with the additive lane until, restart composition and the DEC-8 refusals, supervise mounted as the 24th family, the cross-cutting proofs and failure-envelope goldens committed, planning truth recorded and the changeset shipped; PR-ready against main-tools and left open for human review (PR creation is lifecycle phase 11; never merged by the delivery)"
+      trackerTransition: "GH-295 delivery complete: all nine plan phases done, the contracts and two supervise identities registered with every count pin moved atomically, the artifact-evidence fold with tri-state classification and lying-liveness detection delivered, the battery surface with grammar/scope/exits, the supervised-stall park with the additive lane until, restart composition and the DEC-8 refusals, supervise mounted as the 24th family, the cross-cutting proofs and failure-envelope goldens committed, planning truth recorded and the changeset shipped, and the review iteration-1 remediation landed (battery-only park cause refused by name on the operator path, empty-expiry guard, action-path one-fold, and the named finding fixes); PR-ready against main-tools and left open for human review (PR creation is lifecycle phase 11; never merged by the delivery)"
+
+  - id: 9
+    title: "Review remediation: operator-path park refusal, empty-expiry hardening, action-path one-fold, and review-finding fixes"
+    kind: delivery
+    summary: "fix(GH-295): review remediation — park writer hardening, action-path one-fold, finding fixes"
+    scope:
+      files:
+        - packages/core/src/contracts/queue.ts
+        - packages/core/src/contracts/supervise.ts
+        - packages/core/src/domain/queue-park.ts
+        - packages/core/src/domain/supervise.ts
+        - packages/core/src/app/queue.ts
+        - packages/core/src/app/supervise.ts
+        - packages/cli/src/commands/queue.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - tests/fixtures/supervise/mounting.ts
+        - tests/fixtures/supervise/records.ts
+        - tests/behaviour/queue-park-causes-s17.test.ts
+        - tests/behaviour/supervision-park-writers.test.ts
+        - tests/behaviour/supervision-read-cost.test.ts
+        - tests/behaviour/supervision-report.test.ts
+        - tests/behaviour/supervision-classification.test.ts
+        - tests/behaviour/supervision-claims.test.ts
+        - tests/behaviour/supervision-stall-park.test.ts
+        - tests/behaviour/supervision-duplicate-refusal.test.ts
+        - tests/behaviour/supervision-restart.test.ts
+        - tests/behaviour/supervision-bounds.test.ts
+        - tests/structure/supervision-contract.test.ts
+        - tests/structure/supervision-park-vocabulary.test.ts
+        - tests/structure/supervision-error-family.test.ts
+        - tests/structure/supervision-no-process-input.test.ts
+        - tests/structure/supervision-mounting.test.ts
+        - tests/structure/steer-mounting.test.ts
+        - tests/golden/supervision-report.test.ts
+        - tests/golden/supervision-failure.test.ts
+        # Staged only: authored/reconciled by @doc-syncer in lifecycle phase 7
+        # AFTER this remediation (phase-8 staging pattern); listed so the
+        # commit primitive can stage it, never authored by a delivery phase.
+        - doc/spec/features/feature-supervise.md
+      folders:
+        - doc/changes/2026-11/2026-11-16--GH-295--supervise
+        - tests/fixtures/supervise/golden
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/queue.ts
+        role: consumer
