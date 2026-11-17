@@ -18,7 +18,8 @@ hood.
 
 - **EC-1 Installed-binary delivery.** Versioned, self-contained install
   performs all delivery; repository edits have zero effect until an explicit
-  upgrade; install/upgrade/rollback documented and tested on a clean profile.
+  upgrade; install/upgrade/rollback follow [install-model.md](install-model.md)
+  and use only Jaiship namespaces.
 - **EC-2 Namespace migration.** No `delivery-os` identifiers remain in the
   product surface (binary, config/state directories, environment prefix,
   package/CLI names in docs and prompts); conformance scan prevents
@@ -62,6 +63,13 @@ hood.
   only as a compatibility wrapper. Removal is a later decision (M5).
 - **D4.** History/statistics are CLI/JSON output and files with a versioned
   contract; no embedded server or presentation layer in this repository.
+- **D5.** Project model: a project owns its issue trackers plus queue and
+  pacing state (owner decision 2026-11-17).
+- **D6.** Install model: local user install from the cloned repository for
+  now — one self-contained binary in `~/.jaiship/bin/jaiship`, config in
+  `~/.jaiship/`, state in `~/.jaiship-state/`, project-local config in
+  `<repo>/.jaiship/`; no `ados`/`delivery-os` paths. Design:
+  [install-model.md](install-model.md).
 
 ## Sequencing
 
@@ -88,9 +96,6 @@ hood.
 
 ## Open questions
 
-- **Q1. Install channel.** Proposed default: local install from a built
-  artifact (single self-contained binary, explicit upgrade); a package-manager
-  channel can follow. Confirm or override.
-- **Q2. Project model.** Proposed default: a project owns tracker issues plus
-  queue and pacing state; per-project planning documents are optional and
-  referenced. Confirm or override.
+None at present. Install channel and project model are decided (D5, D6);
+package-manager channels and per-project planning documents remain out of
+scope for M4.

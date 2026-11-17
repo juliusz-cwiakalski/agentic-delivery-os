@@ -1,6 +1,7 @@
 # M3 — Harness and tracker integrations (planning draft)
 
 Status: **draft for review** (planning PR GH-333). Owner directive 2026-11-17.
+Open questions to answer in writing: [open-questions.md](open-questions.md).
 
 ## Goal
 
