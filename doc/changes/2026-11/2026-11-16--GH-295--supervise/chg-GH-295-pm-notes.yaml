@@ -645,3 +645,27 @@ notes:
       post-remediation resync remains lifecycle phase 7 (@doc-syncer)."
     type: "info"
     date: "2026-11-17"
+  - text: "Quality-gates iteration 1: battery FAIL (3 timeouts, no assertion
+      failures); range lint gate PASS (26 commits, 0 offending, mode none,
+      binary node_modules/.bin/commitlint origin repository-local, merge-base
+      5f25da8, head b9c5e1a). Timeouts: TC-BIN-020 (5003ms/5000ms) and
+      TC-ATTEMPT-009/010/037 (8863ms/5000ms) in delivered suites — diagnosed as
+      parallel-load flakes (green standalone twice with ~3x margin, no latency
+      assertion in the failing cases; suites owned outside GH-295, no change).
+      TC-SUP-103 (32666ms/30000ms) — our hang guard sized too tight for the
+      composed 200-lane fixture under battery parallelism; profiling showed ~98%
+      of runtime is fixture seeding (delivered append read-back O(n^2)) and the
+      battery call itself is 0.03-0.16s. Remediation (test-only): guard raised
+      30s -> 90s and an in-case NFR-5 assertion added on the battery call only
+      (performance.now around harness.battery, <5000ms; NFR-5 also stands
+      separately in TC-SUP-083 at 3.3ms). Re-run: 4 pass twice, 6.4-6.5s."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Retro: NFR-5 was already honestly asserted on the synthetic snapshot;
+      the new composed case wrapped fixture cost in its hang guard, so load
+      sensitivity read like a regression. Lesson: separate the measured work
+      from fixture setup explicitly in every heavy case (guard for hangs,
+      measured bound for the requirement), and record delivered-suite timeout
+      flakes as environmental only after a standalone-2x plus margin check."
+    type: "retro"
+    date: "2026-11-17"

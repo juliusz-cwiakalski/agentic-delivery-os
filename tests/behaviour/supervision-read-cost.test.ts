@@ -22,6 +22,9 @@ import {
   seedRestart,
 } from "../fixtures/supervise/records";
 
+/** NFR-5 wall-clock bound; measured on the battery call only, never on fixture setup. */
+const NFR5_BATTERY_BOUND_MS = 5_000;
+
 describe("TC-SUP-103 the decision path is one fold over the composed closures", () => {
   const seedActingScope = (
     harness: ReturnType<typeof createSupervisionHarness>,
@@ -60,6 +63,8 @@ describe("TC-SUP-103 the decision path is one fold over the composed closures", 
     return { parkedRestart, parkedExhausted };
   };
 
+  // The 90 s timeout is a hang guard sized to the composed 200-lane fixture, not a
+  // latency target; NFR-5 is measured on the battery call below.
   test("50 and 200 acting lanes: one decision fold, no per-lane re-read, bounded append read-backs", () => {
     const totals: number[] = [];
     for (const laneCount of [50, 200]) {
@@ -68,6 +73,9 @@ describe("TC-SUP-103 the decision path is one fold over the composed closures", 
         const { parkedRestart, parkedExhausted } = seedActingScope(harness, laneCount);
         let admissionRestarts = -1;
         // No store-free fake here: the composed production closure factory runs.
+        // The NFR-5 clock wraps the battery call only; harness creation and
+        // fixture seeding are excluded because they are not the measured work.
+        const batteryStarted = performance.now();
         const result = harness.battery({
           admitRestart: ({ ref, restarts }) => {
             if (ref === parkedRestart) {
@@ -80,8 +88,15 @@ describe("TC-SUP-103 the decision path is one fold over the composed closures", 
             return undefined;
           },
         });
+        const batteryElapsedMs = performance.now() - batteryStarted;
         expect(result.ok, `lanes ${laneCount}`).toBe(true);
         if (!result.ok) continue;
+        if (laneCount === 200) {
+          expect(
+            batteryElapsedMs,
+            `battery 200 lanes measured ${batteryElapsedMs.toFixed(1)} ms`,
+          ).toBeLessThan(NFR5_BATTERY_BOUND_MS);
+        }
         const readCount = harness.storeReads.count;
         const readCalls = [...harness.storeReads.calls];
         // Non-vacuity: the run parked, restarted, exhausted, and classified claims.
@@ -137,7 +152,7 @@ describe("TC-SUP-103 the decision path is one fold over the composed closures", 
     }
     // The decision and append-read-back budget is flat against lane count.
     expect(new Set(totals).size).toBe(1);
-  }, 30_000);
+  }, 90_000);
 });
 
 describe("TC-SUP-081 one read pass per run", () => {
