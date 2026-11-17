@@ -371,6 +371,7 @@ import {
   type WatchdogSignalSource,
   type WorkItem,
 } from "@delivery-os/core/contracts";
+import { QUEUE_BATTERY_ONLY_PARK_CAUSES } from "@delivery-os/core/contracts";
 import {
   createProfileProbePort,
   createProviderEngine,
@@ -6363,6 +6364,22 @@ export const createQueueCommandRuntime = (composition: QueueComposition): QueueC
       };
     },
     release: (input) => {
+      // GH-295 DEC-9(a): the supervised-stall cause is battery-written only.
+      // The mirrored edge runtime refuses it identically to the command layer,
+      // before any read or write, so no second writer path can accept it.
+      if (
+        input.parkCause !== undefined &&
+        (QUEUE_BATTERY_ONLY_PARK_CAUSES as readonly string[]).includes(input.parkCause)
+      ) {
+        return {
+          ok: false,
+          kind: "input",
+          code: "input.value.rejected",
+          summary:
+            `reason=park-${input.parkCause}-battery-only; ` +
+            `accepted=provider-window|provider-quota|preempted-for-close-item|peak-window|owner-hold`,
+        };
+      }
       // GH-294 F-2: both expiry-carrying window causes pair with `--until`
       // exactly alike at the edge runtime — required and accepted (the
       // command-layer grammar already enforces the same rule; this is the

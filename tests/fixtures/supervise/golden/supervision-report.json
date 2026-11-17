@@ -18,14 +18,14 @@
           {
             "code": "artifact-heartbeat-fresh",
             "ref": "GH-295",
-            "recordKind": "daemon.heartbeat",
+            "recordKind": "daemon.lane",
             "instant": "2026-11-16T23:58:00.000Z"
           },
           {
             "code": "artifact-progress",
             "ref": "GH-295",
-            "recordKind": "effect-record",
-            "instant": "2026-11-16T23:59:00.000Z"
+            "recordKind": "daemon-lane",
+            "instant": "2026-11-16T23:58:00.000Z"
           },
           {
             "code": "bound-applied",
@@ -47,14 +47,14 @@
           {
             "code": "artifact-heartbeat-fresh",
             "ref": "GH-295",
-            "recordKind": "daemon.heartbeat",
+            "recordKind": "queue.lease",
             "instant": "2026-11-17T00:00:00.000Z"
           },
           {
             "code": "artifact-progress",
             "ref": "GH-295",
-            "recordKind": "effect-record",
-            "instant": "2026-11-16T23:59:00.000Z"
+            "recordKind": "daemon-lane",
+            "instant": "2026-11-16T23:58:00.000Z"
           },
           {
             "code": "bound-applied",

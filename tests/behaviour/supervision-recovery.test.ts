@@ -10,6 +10,34 @@ import { createSupervisionHarness } from "../fixtures/supervise/harness";
 import { stalledAndParked } from "../fixtures/supervise/records";
 
 describe("TC-SUP-044 a parked stall lane recovers only through the delivered path", () => {
+  test("a run inside the park's re-entry horizon appends nothing and burns no budget", async () => {
+    const harness = createSupervisionHarness({ label: "reentry-horizon" });
+    try {
+      stalledAndParked(harness.seed, { untilOffsetMs: 60_000 });
+      let admissionCalls = 0;
+      const run = await harness.runCli(["supervise", "--json"], {
+        admitRestart: () => {
+          admissionCalls += 1;
+          return { outcome: "admit", restarts: 0 };
+        },
+      });
+      expect(run.exitCode).toBe(0);
+      expect(admissionCalls).toBe(0);
+      const data = (JSON.parse(run.stdout) as { data?: Record<string, unknown> }).data;
+      expect(data?.actions).toEqual([]);
+      const records = harness.store.readRecords();
+      if (!records.ok) throw new Error("ledger read failed");
+      expect(
+        records.value.records.filter((record) => record.kind === "economics.restart"),
+      ).toHaveLength(0);
+      const parks = readQueueParks(harness.store);
+      if (!parks.ok) throw new Error("park read failed");
+      expect(parks.records).toHaveLength(1);
+    } finally {
+      harness.remove();
+    }
+  });
+
   test("a second run appends no second park and restarts nothing outside admission", async () => {
     const harness = createSupervisionHarness({ label: "recovery" });
     try {

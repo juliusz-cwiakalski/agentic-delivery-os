@@ -14,7 +14,7 @@ import {
   removeDirectoryTree,
 } from "../fixtures/projects/production";
 import { createRepository } from "../fixtures/projects/temp-repos";
-import { BASE_FAMILIES, MOUNTED_FAMILIES } from "../fixtures/steer/mounting";
+import { BASE_FAMILIES, MOUNTED_FAMILIES } from "../fixtures/supervise/mounting";
 import { SYNTHETIC_BRAND } from "../golden/helpers";
 
 const ROOT = process.cwd();
@@ -38,15 +38,14 @@ const familyLines = (help: string): readonly string[] =>
   help.split("\n").filter((line) => /^ {2}[a-z][a-z0-9-]* {2}/u.test(line));
 
 describe("TC-STEER-060 steer is the twenty-third prompt-required family", () => {
-  test("the steer mount is the captured 22-entry base plus steer, contained in the mounted set", () => {
-    expect(BASE_FAMILIES).toHaveLength(22);
-    expect(MOUNTED_FAMILIES).toHaveLength(23);
-    // The steer base keeps its order inside the mounted set; later families
-    // (GH-295 supervise) append after it.
-    expect([...PROMPT_REQUIRED_COMMANDS].slice(0, MOUNTED_FAMILIES.length)).toEqual([
-      ...MOUNTED_FAMILIES,
-    ]);
+  test("the mounted set is the one captured 23-entry base plus supervise, exact equality", () => {
+    // F-13: the steer case points at the same captured base the supervision
+    // case uses, so one captured list backs every family pin and the strongest
+    // assertion (exact set equality) is restored.
+    expect(BASE_FAMILIES).toHaveLength(23);
+    expect([...PROMPT_REQUIRED_COMMANDS]).toEqual([...MOUNTED_FAMILIES]);
     expect(PROMPT_REQUIRED_COMMANDS.filter((name) => name === "steer")).toHaveLength(1);
+    expect(PROMPT_REQUIRED_COMMANDS).toContain("steer");
     expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("supervise");
   });
 
@@ -114,9 +113,7 @@ describe("TC-STEER-063 the mount changes no other family", () => {
     const families = allHelpEntries()
       .filter((entry) => entry.path.length === 1)
       .map((entry) => entry.path[0]);
-    expect([...families].slice(0, MOUNTED_FAMILIES.length).sort()).toEqual(
-      [...MOUNTED_FAMILIES].sort(),
-    );
+    expect([...families].sort()).toEqual([...MOUNTED_FAMILIES].sort());
     expect(families.at(-1)).toBe("supervise");
   });
 

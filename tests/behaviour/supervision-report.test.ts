@@ -11,6 +11,7 @@ import {
   seedCommitEffect,
   seedHeartbeat,
   seedLane,
+  seedLaneRecord,
   seedLiveLease,
 } from "../fixtures/supervise/records";
 
@@ -24,8 +25,10 @@ describe("TC-SUP-001 the seed reports one lane's ref, heartbeat, and holder", ()
     const harness = createSupervisionHarness({ label: "seed-01" });
     try {
       seedLane(harness.seed, LANE_REF);
-      seedHeartbeat(harness.seed, { ordinal: 1, offsetMs: -120_000 });
-      seedCommitEffect(harness.seed, { offsetMs: -60_000 });
+      // Two deliberately different instants: the lane's own daemon lane record
+      // observes at now-120s, the scope heartbeat at now-30s (F-6).
+      seedHeartbeat(harness.seed, { ordinal: 1, offsetMs: -30_000 });
+      seedLaneRecord(harness.seed, { offsetMs: -120_000, lastCompletedPhase: "4" });
       seedLiveLease(harness.seed, { ref: LANE_REF, holder: "holder-a" });
       const run = await harness.runCli(["supervise", "--json"]);
       expect(run.exitCode).toBe(0);
@@ -40,14 +43,23 @@ describe("TC-SUP-001 the seed reports one lane's ref, heartbeat, and holder", ()
       const lane = lanes[0] as Record<string, unknown>;
       expect(lane.ref).toBe(LANE_REF);
       expect(lane.heartbeat).toBe(new Date(harness.nowMs - 120_000).toISOString());
+      expect(lane.heartbeat).not.toBe(new Date(harness.nowMs - 30_000).toISOString());
       expect(lane.holder).toBe("holder-a");
       expect(lane.classification).toBe("progressing");
       expect(Array.isArray(lane.evidence) && (lane.evidence as unknown[]).length > 0).toBe(true);
+      // The lane's own observation is named as its source record kind.
+      expect(
+        (lane.evidence as readonly { recordKind?: string }[]).some(
+          (item) => item.recordKind === "daemon.lane",
+        ),
+      ).toBe(true);
       const counts = data.counts as Record<string, number>;
       expect(counts.lanes).toBe(1);
       expect(counts.progressing).toBe(1);
       expect(data.actions).toEqual([]);
       expect(data.degraded).toContain("daemon-absent");
+      // No fallback marker when the lane owns its observation.
+      expect(data.degraded).not.toContain("artifact-source-absent");
       // One read fold per run.
       expect(harness.reads.count).toBe(1);
     } finally {
@@ -89,7 +101,7 @@ describe("TC-SUP-004 the report shape is total over every population", () => {
     }
   });
 
-  test("a many-lane scope keeps the member set and derives counts and truncation", async () => {
+  test("a many-lane scope keeps the member set and derives per-lane heartbeats and counts", async () => {
     const harness = createSupervisionHarness({ label: "shape-many" });
     try {
       seedHeartbeat(harness.seed, { ordinal: 1, offsetMs: -(300_000 + 1) });
@@ -98,12 +110,25 @@ describe("TC-SUP-004 the report shape is total over every population", () => {
         seedLane(harness.seed, ref);
         if (index % 3 === 0) seedCommitEffect(harness.seed, { ref, offsetMs: -60_000 });
       }
+      // Two advancing lanes own distinct observations; one stalled lane owns an
+      // aged observation; one lane has no lane record at all (the fallback).
+      seedLaneRecord(harness.seed, { ref: "GH-100", offsetMs: -60_000 });
+      seedLaneRecord(harness.seed, { ref: "GH-103", offsetMs: -90_000 });
+      seedLaneRecord(harness.seed, { ref: "GH-101", offsetMs: -(300_000 + 5) });
       const run = await harness.runCli(["supervise", "--json"]);
       expect(run.exitCode).toBe(0);
       const data = (JSON.parse(run.stdout) as JsonEnvelope).data;
       if (data === undefined) throw new Error("report data missing");
       expect(Object.keys(data).sort()).toEqual([...SUPERVISION_REPORT_MEMBERS].sort());
       expect(data.lanes).toHaveLength(12);
+      const lanes = data.lanes as readonly Record<string, unknown>[];
+      const byRef = (ref: string) => lanes.find((lane) => lane.ref === ref);
+      const scopeHeartbeat = new Date(harness.nowMs - (300_000 + 1)).toISOString();
+      expect(byRef("GH-100")?.heartbeat).toBe(new Date(harness.nowMs - 60_000).toISOString());
+      expect(byRef("GH-103")?.heartbeat).toBe(new Date(harness.nowMs - 90_000).toISOString());
+      expect(byRef("GH-103")?.heartbeat).not.toBe(byRef("GH-100")?.heartbeat);
+      expect(byRef("GH-102")?.heartbeat).toBe(scopeHeartbeat);
+      expect(data.degraded).toContain("artifact-source-absent");
       const counts = data.counts as Record<string, number>;
       expect(counts.lanes).toBe(12);
       expect(counts.progressing + counts.stalled + counts.unknown).toBe(12);

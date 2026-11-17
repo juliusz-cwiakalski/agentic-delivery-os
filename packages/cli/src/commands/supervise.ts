@@ -9,10 +9,10 @@
  */
 
 import type {
+  SupervisionBatteryInput,
   SupervisionClaimRefusal,
   SupervisionEconomicsWritePort,
   SupervisionReadPort,
-  SupervisionRestartAdmission,
   SupervisionWritePort,
 } from "@delivery-os/core";
 import { renderSupervisionHuman, runSupervisionBattery } from "@delivery-os/core";
@@ -22,11 +22,13 @@ import type { CommandDefinition } from "../index.js";
 export type SuperviseCommandRuntime = {
   /** The invoking checkout's single managed repository key. */
   readonly repository: string;
+  /** The invocation's injected run identity (F-8, NFR-7). */
+  readonly runId: string;
   readonly read: SupervisionReadPort;
   /** The delivered park append path; absent keeps the run read-only. */
   readonly write?: SupervisionWritePort;
   readonly economicsWrite?: SupervisionEconomicsWritePort;
-  readonly admitRestart?: (ref: string) => SupervisionRestartAdmission;
+  readonly admitRestart?: NonNullable<SupervisionBatteryInput["admitRestart"]>;
   readonly claimRefusal?: (ref: string) => SupervisionClaimRefusal | undefined;
   readonly nowMs: () => number;
   readonly nowIso: () => string;
@@ -48,6 +50,7 @@ export const createSuperviseCommandDefinition = (
       repository: runtime.repository,
       nowMs: runtime.nowMs(),
       nowIso: runtime.nowIso(),
+      runId: runtime.runId,
       read: runtime.read,
       ...(runtime.write === undefined ? {} : { write: runtime.write }),
       ...(runtime.economicsWrite === undefined ? {} : { economicsWrite: runtime.economicsWrite }),

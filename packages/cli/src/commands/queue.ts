@@ -25,6 +25,7 @@ import {
   QUEUE_CLAIM_RESULTS,
   QUEUE_DEFAULT_NEXT_ACTIONS,
   QUEUE_DEPENDENCY_MUTATION_RESULTS,
+  QUEUE_BATTERY_ONLY_PARK_CAUSES,
   QUEUE_MAX_NEXT_ACTIONS,
   QUEUE_MAX_REF_CHARS,
   QUEUE_MUTATION_RESULTS,
@@ -332,6 +333,22 @@ const invocationRefusal = (reason: string): { readonly error: Record<string, str
     kind: "fallback",
     code: "fallback.invocation",
     summary: `result=refused; reason=${reason}`,
+  },
+});
+
+/**
+ * The battery-only park-cause refusal (GH-295 DEC-9(a)): the delivered
+ * container identity names the cause and the accepted operator causes, so the
+ * operator learns why the cause is not operator-writable rather than seeing a
+ * generic grammar refusal.
+ */
+const batteryOnlyParkRefusal = (cause: string): { readonly error: Record<string, string> } => ({
+  error: {
+    kind: "fallback",
+    code: "fallback.invocation",
+    summary:
+      `result=refused; reason=park-${cause}-battery-only; ` +
+      `accepted=provider-window|provider-quota|preempted-for-close-item|peak-window|owner-hold`,
   },
 });
 
@@ -708,6 +725,13 @@ export const createQueueCommandDefinition = (runtime: QueueCommandRuntime): Comm
       if (parkFlag !== undefined) {
         if (typeof parkFlag !== "string" || !isParkCause(parkFlag)) {
           return fullGrammarRejection("park-cause");
+        }
+        if ((QUEUE_BATTERY_ONLY_PARK_CAUSES as readonly string[]).includes(parkFlag)) {
+          // GH-295 DEC-9(a): the supervised-stall cause is battery-written only
+          // (its mapped condition type needs a re-entry instant the operator
+          // cannot derive); refuse before any read or write, whatever flags
+          // accompany it.
+          return batteryOnlyParkRefusal(parkFlag);
         }
       }
       const until = parseUntil(untilFlag);

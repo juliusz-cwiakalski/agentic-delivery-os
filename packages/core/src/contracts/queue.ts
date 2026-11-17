@@ -135,6 +135,18 @@ export const QUEUE_PARK_CAUSES = [
 export type QueueParkCause = (typeof QUEUE_PARK_CAUSES)[number];
 
 /**
+ * The causes only the supervision battery may write (GH-295 DEC-9(a)).
+ *
+ * `liveness-stall` is battery-written only: its mapped condition type carries
+ * an absolute re-entry instant the operator grammar cannot derive from a stall
+ * observation, so the operator path refuses the cause by name instead of
+ * appending a record its own validator rejects. Every cause–writer pair either
+ * round-trips a park its own guard accepts or is refused by name.
+ */
+export const QUEUE_BATTERY_ONLY_PARK_CAUSES = ["liveness-stall"] as const;
+export type QueueBatteryOnlyParkCause = (typeof QUEUE_BATTERY_ONLY_PARK_CAUSES)[number];
+
+/**
  * The declared cause -> condition-type mapping (DM-5; GH-294 DEC-2; GH-295
  * DM-2) — many-to-one by design: `peak-window` rides the existing
  * `provider-window` condition type (no duplicate cause, no silent rename),

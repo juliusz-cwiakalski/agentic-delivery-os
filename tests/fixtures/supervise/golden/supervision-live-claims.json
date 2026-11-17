@@ -12,13 +12,13 @@
       {
         "ref": "GH-295",
         "classification": "progressing",
-        "heartbeat": "2026-11-16T23:59:55.000Z",
+        "heartbeat": "2026-11-17T00:00:00.000Z",
         "evidence": [
           {
             "code": "artifact-heartbeat-fresh",
             "ref": "GH-295",
             "recordKind": "daemon.heartbeat",
-            "instant": "2026-11-16T23:59:55.000Z"
+            "instant": "2026-11-17T00:00:00.000Z"
           },
           {
             "code": "artifact-flat",
@@ -39,12 +39,12 @@
         "claimKind": "daemon-instance",
         "identity": "instance-a",
         "classification": "progressing",
-        "heartbeat": "2026-11-16T23:59:55.000Z",
+        "heartbeat": "2026-11-17T00:00:00.000Z",
         "evidence": [
           {
             "code": "artifact-heartbeat-fresh",
             "recordKind": "daemon.heartbeat",
-            "instant": "2026-11-16T23:59:55.000Z"
+            "instant": "2026-11-17T00:00:00.000Z"
           },
           {
             "code": "artifact-flat",
@@ -70,7 +70,7 @@
         "evidence": [
           {
             "code": "artifact-heartbeat-fresh",
-            "recordKind": "daemon.heartbeat",
+            "recordKind": "coordinator.iteration",
             "instant": "2026-11-16T23:59:00.000Z"
           },
           {
@@ -101,7 +101,7 @@
       "actions": 0,
       "parked": 0
     },
-    "degraded": [],
+    "degraded": ["artifact-source-absent"],
     "truncated": false,
     "observedAt": "2026-11-17T00:00:00.000Z"
   }

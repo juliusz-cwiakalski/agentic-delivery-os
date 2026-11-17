@@ -19,6 +19,7 @@ describe("TC-SUP-083 the 200-lane run stays under the declared bound", () => {
         repository: "github.com/example/supervision-repo",
         nowMs: Date.parse("2026-11-17T00:00:00.000Z"),
         nowIso: "2026-11-17T00:00:00.000Z",
+        runId: "run-supervision-fixture",
         read: syntheticReadPort(cappedScope(200), reads),
       });
       const elapsed = performance.now() - started;

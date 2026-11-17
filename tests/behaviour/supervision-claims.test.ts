@@ -3,6 +3,11 @@
  * and scope evidence (GH-295 AC-F6-1, DEC-3).
  */
 import { describe, expect, test } from "bun:test";
+import {
+  COORDINATOR_ITERATION_RECORD_KIND,
+  DAEMON_HEARTBEAT_RECORD_KIND,
+  QUEUE_LEASE_RECORD_KIND,
+} from "../../packages/core/src/contracts/index";
 import { createSupervisionHarness } from "../fixtures/supervise/harness";
 import {
   actingAuthority,
@@ -48,6 +53,17 @@ describe("TC-SUP-050 every claim kind is inventoried", () => {
       expect(perRef?.holder).toBe("holder-a");
       expect(perRef?.identity).toBe("holder-a");
       expect(perRef?.classification).toBe("progressing");
+      // F-7: each claim names the record kind its heartbeat instant came from.
+      const heartbeatKind = (claimKind: string): string | undefined =>
+        result.report.supervisors
+          .find((claim) => claim.claimKind === claimKind)
+          ?.evidence.find(
+            (item) =>
+              item.code === "artifact-heartbeat-fresh" || item.code === "artifact-heartbeat-aged",
+          )?.recordKind;
+      expect(heartbeatKind("daemon-instance")).toBe(DAEMON_HEARTBEAT_RECORD_KIND);
+      expect(heartbeatKind("coordinator-lease")).toBe(COORDINATOR_ITERATION_RECORD_KIND);
+      expect(heartbeatKind("per-ref-lease")).toBe(QUEUE_LEASE_RECORD_KIND);
       for (const claim of result.report.supervisors) {
         expect(claim.evidence.length).toBeGreaterThan(0);
       }

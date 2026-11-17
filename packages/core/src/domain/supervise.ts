@@ -104,16 +104,17 @@ export const classifySupervision = (
   const state = SUPERVISION_STATE_FROM_DAEMON_LIVENESS[delivered];
 
   const facts: SupervisionEvidence[] = [];
+  const heartbeatRecordKind = input.heartbeatRecordKind ?? "daemon.heartbeat";
   if (heartbeatPresent && input.lastHeartbeatAt !== undefined) {
     facts.push(
       evidence(heartbeatFresh ? "artifact-heartbeat-fresh" : "artifact-heartbeat-aged", {
         ...scope,
-        recordKind: "daemon.heartbeat",
+        recordKind: heartbeatRecordKind,
         instant: input.lastHeartbeatAt,
       }),
     );
   } else {
-    facts.push(evidence("artifact-source-absent", { ...scope, recordKind: "daemon.heartbeat" }));
+    facts.push(evidence("artifact-source-absent", { ...scope, recordKind: heartbeatRecordKind }));
   }
   if (artifactAdvancing) {
     const advancingInstant = input.artifactInstants.find((instant) => withinSpan(instant, nowMs));
@@ -140,10 +141,18 @@ export const classifySupervision = (
 export const boundSupervisionEvidence = (
   entries: readonly SupervisionEvidence[],
 ): readonly SupervisionEvidence[] => {
+  const marker: SupervisionEvidence = { code: "evidence-truncated" };
   const kept = [...entries];
-  const size = (): number => new TextEncoder().encode(JSON.stringify(kept)).length;
-  while (kept.length > 1 && size() > SUPERVISION_MAX_EVIDENCE_BYTES) kept.pop();
-  if (kept.length < entries.length) kept.push({ code: "evidence-truncated" });
+  const size = (values: readonly SupervisionEvidence[]): number =>
+    new TextEncoder().encode(JSON.stringify(values)).length;
+  // The unmodified list fits: no truncation happened, so no marker is added
+  // (the marker is the declaration that entries were dropped).
+  if (size(kept) <= SUPERVISION_MAX_EVIDENCE_BYTES) return kept;
+  // GH-295 F-11: the cap is a hard upper bound on the serialized list INCLUDING
+  // the truncation marker, so a single oversized entry is dropped rather than
+  // left in place beside a marker that pushes the list over the cap.
+  while (kept.length > 0 && size([...kept, marker]) > SUPERVISION_MAX_EVIDENCE_BYTES) kept.pop();
+  kept.push(marker);
   return kept;
 };
 

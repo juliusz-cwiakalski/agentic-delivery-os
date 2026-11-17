@@ -107,6 +107,12 @@
         "ref": "GH-295",
         "evidence": [
           {
+            "code": "park-applied",
+            "ref": "GH-295",
+            "recordKind": "queue.park",
+            "instant": "2026-11-17T00:01:00.000Z"
+          },
+          {
             "code": "artifact-heartbeat-aged",
             "ref": "GH-295",
             "recordKind": "daemon.heartbeat",
@@ -127,12 +133,6 @@
             "ref": "GH-295",
             "recordKind": "watchdog.stall-bound",
             "instant": "2026-11-16T23:55:00.000Z"
-          },
-          {
-            "code": "park-applied",
-            "ref": "GH-295",
-            "recordKind": "queue.park",
-            "instant": "2026-11-17T00:01:00.000Z"
           }
         ]
       }
@@ -146,7 +146,7 @@
       "actions": 1,
       "parked": 1
     },
-    "degraded": [],
+    "degraded": ["artifact-source-absent"],
     "truncated": false,
     "observedAt": "2026-11-17T00:00:00.000Z"
   }

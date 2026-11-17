@@ -73,7 +73,6 @@ import {
   buildHarnessSpawnEnvironment,
   type CoordinatorSettings,
   claimQueueLease,
-  claimSingleFlightRefusal,
   classifyHarnessEvidence,
   classifyProjectStateLocation,
   classifyVerifyDocument,
@@ -132,7 +131,6 @@ import {
   resolveOwnerHoldFact,
   resolveProjectGroupMember,
   resolveProjectScope,
-  type SupervisionClaimRefusal,
   type SupervisionEconomicsWritePort,
   type SupervisionRestartAdmission,
   selectDaemonReachability,
@@ -3123,6 +3121,17 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     };
     readProjectGroupWork = readProjectGroupWorkFor;
 
+    // The supervision battery's per-invocation action facts (F-2, F-8): the
+    // injected run identity, the restart bound resolved once, and one blocker
+    // ledger read shared by every exhausted lane in this run.
+    const superviseRunId = invocation?.runId ?? globalThis.crypto.randomUUID();
+    let superviseRestartBound: number | undefined;
+    const supervisionRestartBound = (): number =>
+      (superviseRestartBound ??=
+        readDaemonConfiguration(checkoutRoot)?.restartBound ??
+        PRODUCTION_DEFAULTS.lane["restart-budget"]);
+    let superviseBlockerLedger: ReturnType<typeof readBlockerLedger> | undefined;
+
     const configured: ConfigProgramOptions = {
       workingName: facts.workingName,
       environment,
@@ -3305,18 +3314,22 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       },
       // The supervise battery is composed unconditionally over the invoking
       // store and clock (GH-295 F-1, DEC-1): one read per run, no lane
-      // composition, and no process surface.
+      // composition, and no process surface. The run identity comes from the
+      // invocation so every appended record is correlatable (F-8); the
+      // restart bound is resolved once per composition instead of once per
+      // parked lane, and the action path consumes the fold's restart facts.
       supervise: {
         repository: repositoryKey ?? (basename(checkoutRoot).toLowerCase() || "repository"),
+        runId: superviseRunId,
         read: createStateSupervisionReadPort(store),
         write: createStateSupervisionWritePort({ store, newFenceToken }),
         economicsWrite: {
-          appendRestart: ({ ref, ordinal, runId, recordedAt }) => {
+          appendRestart: ({ ref, ordinal, runId: recordRunId, recordedAt }) => {
             const outcome = appendEconomicsRestartEvent(store, newFenceToken(), {
               schemaId: ECONOMICS_RESTART_SCHEMA_ID,
               workItemRef: ref,
-              runId,
-              sessionId: "supervise",
+              runId: recordRunId,
+              sessionId: recordRunId,
               ordinal,
               reason: "session-interrupted",
               recordedAt,
@@ -3325,11 +3338,11 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
               ? { ok: true, appended: outcome.appended }
               : { ok: false, code: outcome.code };
           },
-          ensureExhaustion: ({ ref, restarts, recordedAt }) => {
+          ensureExhaustion: ({ ref, restarts, runId: recordRunId, recordedAt }) => {
             const outcome = ensureEconomicsExhaustionRecord(store, newFenceToken(), {
               schemaId: ECONOMICS_EXHAUSTION_SCHEMA_ID,
               workItemRef: ref,
-              runId: "supervise",
+              runId: recordRunId,
               reason: "dispatch.restart-budget-exceeded",
               restarts,
               historyRef: `economics/${ref}`,
@@ -3341,10 +3354,12 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
               ? { ok: true, appended: outcome.appended }
               : { ok: false, code: outcome.code };
           },
-          raiseQuestion: ({ ref, restarts, askedAt }) => {
-            const ledger = readBlockerLedger(store);
+          raiseQuestion: ({ ref, restarts, runId: recordRunId, askedAt }) => {
+            // One ledger read per run, not one per lane (F-2, DEC-9(d)).
+            const ledger = superviseBlockerLedger ?? readBlockerLedger(store);
+            superviseBlockerLedger = ledger;
             if (!ledger.ok) return { ok: false, code: ledger.error.code };
-            const id = `supervise-exhaustion-${ref}`;
+            const id = `exhaustion-${ref}-${recordRunId}`;
             if (ledger.value.questions.some((question) => question.id === id)) {
               return { ok: true, appended: false };
             }
@@ -3369,15 +3384,11 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
               : { ok: false, code: appended.error.code };
           },
         } satisfies SupervisionEconomicsWritePort,
-        admitRestart: (ref): SupervisionRestartAdmission => {
-          const configuration = readDaemonConfiguration(checkoutRoot);
-          const bound = configuration?.restartBound ?? PRODUCTION_DEFAULTS.lane["restart-budget"];
-          const read = readEconomicsRecords(store, ref);
-          if (!read.ok) return { outcome: "unavailable", restarts: 0, code: read.code };
+        admitRestart: ({ ref, restarts }): SupervisionRestartAdmission => {
           const decision = evaluateRestartBudget({
             workItemRef: ref,
-            bound,
-            records: read.restarts,
+            bound: supervisionRestartBound(),
+            records: restarts,
           });
           if (decision.outcome === "admit") {
             return { outcome: "admit", restarts: decision.count };
@@ -3386,18 +3397,6 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             return { outcome: "exhausted", restarts: decision.count };
           }
           return { outcome: "unavailable", restarts: 0, code: decision.code };
-        },
-        claimRefusal: (ref): SupervisionClaimRefusal | undefined => {
-          const refusal = claimSingleFlightRefusal(store, {
-            ref,
-            holder: "supervise",
-            nowMs: nowMs(),
-          });
-          if (refusal === undefined) return undefined;
-          return {
-            code: "queue.single-flight",
-            ...(refusal.holder === undefined ? {} : { holder: refusal.holder }),
-          };
         },
         nowMs,
         nowIso,

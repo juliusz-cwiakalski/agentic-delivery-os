@@ -28,6 +28,7 @@ import {
   DISPATCH_ATTEMPT_RECORD_KIND,
   ECONOMICS_RECORD_KEY_PREFIX,
   ECONOMICS_RESTART_RECORD_KIND,
+  type EconomicsRestartRecord,
   OUTBOX_EFFECT_KEY_PREFIX,
   OUTBOX_EFFECT_RECORD_KIND,
   QUEUE_ENTRY_KEY_PREFIX,
@@ -57,14 +58,15 @@ import {
   conditionTypeForCause,
   createParkRecord,
   defaultParkRecheckMs,
-  latestParkRecords,
+  parkConditionExpiryMissing,
 } from "../domain/queue-park.js";
 import {
+  boundSupervisionEvidence,
   boundSupervisionLanes,
   classifySupervision,
   summarizeSupervision,
 } from "../domain/supervise.js";
-import { queueParkRecordKey, readQueueParks } from "./queue.js";
+import { queueParkRecordKey, singleFlightRefusalFromLeases } from "./queue.js";
 
 /** One supervision claim's artifact-only facts (no process-derived member). */
 export type SupervisionClaimFact = {
@@ -74,7 +76,8 @@ export type SupervisionClaimFact = {
   readonly holder?: string;
   readonly firstHeartbeatAt?: string;
   readonly lastHeartbeatAt?: string;
-  readonly heartbeatOrdinal?: number;
+  /** The record kind the heartbeat instants came from (F-7). */
+  readonly heartbeatRecordKind?: string;
   readonly artifacts: {
     readonly classes: readonly SupervisionArtifactClass[];
     readonly instants: readonly string[];
@@ -87,7 +90,11 @@ export type SupervisionLaneFact = {
   readonly repository?: string;
   readonly firstHeartbeatAt?: string;
   readonly lastHeartbeatAt?: string;
-  readonly heartbeatOrdinal?: number;
+  /**
+   * The lane's own observation source kind (`daemon.lane`) or the declared
+   * scope-heartbeat fallback (`daemon.heartbeat`) (F-6, F-7).
+   */
+  readonly heartbeatRecordKind?: string;
   readonly artifacts: {
     readonly classes: readonly SupervisionArtifactClass[];
     readonly instants: readonly string[];
@@ -100,6 +107,8 @@ export type SupervisionLeaseFact = {
   readonly ref: string;
   readonly holder: string;
   readonly heartbeatAt: string;
+  readonly heartbeatAgeMs: number;
+  readonly ttlMs: number;
   readonly live: boolean;
 };
 
@@ -112,11 +121,7 @@ export type SupervisionActingFact = {
 };
 
 /** One delivered restart record for a ref (the budget source, never a local counter). */
-export type SupervisionRestartFact = {
-  readonly ordinal: number;
-  readonly recordedAt: string;
-  readonly runId: string;
-};
+export type SupervisionRestartFact = EconomicsRestartRecord;
 
 /** The delivered restart-budget admission answer for one ref. */
 export type SupervisionRestartAdmission =
@@ -159,14 +164,26 @@ export type SupervisionBatteryInput = {
   readonly repository: string;
   readonly nowMs: number;
   readonly nowIso: string;
+  /** The invocation's injected run identity (F-8, NFR-7). */
+  readonly runId: string;
   readonly read: SupervisionReadPort;
   /** The delivered park append path; absent means a read-only run. */
   readonly write?: SupervisionWritePort;
   /** The delivered restart/exhaustion/question append paths. */
   readonly economicsWrite?: SupervisionEconomicsWritePort;
-  /** The delivered restart-budget admission (consulted once per parked stall). */
-  readonly admitRestart?: (ref: string) => SupervisionRestartAdmission;
-  /** The delivered per-ref single-flight refusal for a claiming action. */
+  /**
+   * The delivered restart-budget admission. The battery passes the single
+   * fold snapshot's restart records, so the decision never re-reads the ledger
+   * (F-2, DEC-9(d)).
+   */
+  readonly admitRestart?: (request: {
+    readonly ref: string;
+    readonly restarts: readonly SupervisionRestartFact[];
+  }) => SupervisionRestartAdmission;
+  /**
+   * An explicit per-ref single-flight override (the delivered snapshot helper
+   * answers by default), consulted for a claiming action only.
+   */
   readonly claimRefusal?: (ref: string) => SupervisionClaimRefusal | undefined;
 };
 
@@ -194,6 +211,7 @@ export type SupervisionRestartAppend = {
 export type SupervisionExhaustionAppend = {
   readonly ref: string;
   readonly restarts: number;
+  readonly runId: string;
   readonly recordedAt: string;
 };
 
@@ -219,6 +237,7 @@ export type SupervisionEconomicsWritePort = {
   readonly raiseQuestion: (input: {
     readonly ref: string;
     readonly restarts: number;
+    readonly runId: string;
     readonly askedAt: string;
   }) => SupervisionAppendResult;
 };
@@ -389,7 +408,6 @@ export const createStateSupervisionReadPort = (store: StateStorePort): Supervisi
       .sort((left, right) => left.ordinal - right.ordinal);
     const lastHeartbeatAt = heartbeats.at(-1)?.beatAt;
     const firstHeartbeatAt = heartbeats[0]?.beatAt;
-    const heartbeatOrdinal = heartbeats.at(-1)?.ordinal;
     const daemonLive =
       daemonClaimed &&
       lastHeartbeatAt !== undefined &&
@@ -398,6 +416,10 @@ export const createStateSupervisionReadPort = (store: StateStorePort): Supervisi
     // Lane records: daemon lane progress per ref (artifact class daemon-lane).
     const laneArtifactEntries: { ref: string; class: SupervisionArtifactClass; instant: string }[] =
       [];
+    // The lane's OWN observation trail (F-6): the delivered daemon lane record's
+    // `liveness.observedAt`, never a copy of the scope heartbeat.
+    const laneObservedFirst = new Map<string, string>();
+    const laneObservedLast = new Map<string, string>();
     for (const record of records) {
       if (record.kind === DAEMON_LANE_RECORD_KIND) {
         const payload = asRecord(record.payload);
@@ -414,6 +436,14 @@ export const createStateSupervisionReadPort = (store: StateStorePort): Supervisi
         const observedAt = str(laneLiveness?.observedAt);
         if (observedAt !== undefined) {
           laneArtifactEntries.push({ ref, class: "daemon-lane", instant: observedAt });
+          const previous = laneObservedLast.get(ref);
+          if (previous === undefined || Date.parse(observedAt) >= Date.parse(previous)) {
+            laneObservedLast.set(ref, observedAt);
+          }
+          const first = laneObservedFirst.get(ref);
+          if (first === undefined || Date.parse(observedAt) < Date.parse(first)) {
+            laneObservedFirst.set(ref, observedAt);
+          }
         }
         continue;
       }
@@ -480,7 +510,9 @@ export const createStateSupervisionReadPort = (store: StateStorePort): Supervisi
       .filter((entry) => entry.objectRef.length > 0 && entry.recordedAt.length > 0);
 
     // The delivered restart records per ref (the budget source of truth).
-    const restarts: Record<string, { ordinal: number; recordedAt: string; runId: string }[]> = {};
+    // The full delivered record rides the snapshot so the action path's
+    // admission decision consumes the one fold instead of re-reading (F-2).
+    const restarts: Record<string, EconomicsRestartRecord[]> = {};
     for (const record of records) {
       if (
         record.kind !== ECONOMICS_RESTART_RECORD_KIND ||
@@ -493,15 +525,22 @@ export const createStateSupervisionReadPort = (store: StateStorePort): Supervisi
       const ordinal = positiveInt(payload?.ordinal);
       const recordedAt = str(payload?.recordedAt);
       const runId = str(payload?.runId);
+      const sessionId = str(payload?.sessionId);
+      const schemaId = str(payload?.schemaId);
+      const reason = str(payload?.reason);
       if (
         ref === undefined ||
         ordinal === undefined ||
         recordedAt === undefined ||
-        runId === undefined
+        runId === undefined ||
+        sessionId === undefined ||
+        schemaId === undefined ||
+        reason === undefined
       ) {
         continue;
       }
-      restarts[ref] = [...(restarts[ref] ?? []), { ordinal, recordedAt, runId }];
+      const restart = payload as unknown as EconomicsRestartRecord;
+      restarts[ref] = [...(restarts[ref] ?? []), restart];
     }
 
     // Active per-ref leases, folded through the delivered lease fold.
@@ -527,6 +566,8 @@ export const createStateSupervisionReadPort = (store: StateStorePort): Supervisi
         ref: lease.ref,
         holder: lease.holder,
         heartbeatAt: lease.heartbeatAt,
+        heartbeatAgeMs: lease.heartbeatAgeMs,
+        ttlMs: lease.ttlMs,
         live: !isLeaseStale(lease.heartbeatAgeMs, lease.ttlMs),
       }));
 
@@ -590,17 +631,30 @@ export const createStateSupervisionReadPort = (store: StateStorePort): Supervisi
       .map((payload) => str(payload?.completedAt))
       .filter((instant): instant is string => instant !== undefined);
 
+    let heartbeatFallback = false;
     const lanes: SupervisionLaneFact[] = laneRefs.map((ref) => {
       const park = latestParkByRef.get(ref);
       const artifacts = artifactsOf(laneArtifactEntries.filter((entry) => entry.ref === ref));
+      const ownFirst = laneObservedFirst.get(ref);
+      const ownLast = laneObservedLast.get(ref);
+      const laneHeartbeatFirst = ownFirst ?? firstHeartbeatAt;
+      const laneHeartbeatLast = ownLast ?? lastHeartbeatAt;
+      const heartbeatRecordKind =
+        ownLast !== undefined
+          ? "daemon.lane"
+          : laneHeartbeatLast === undefined
+            ? undefined
+            : "daemon.heartbeat";
+      if (ownLast === undefined)
+        heartbeatFallback = heartbeatFallback || laneHeartbeatLast !== undefined;
       return {
         ref,
         ...(scopedEntries.find((entry) => entry.ref === ref)?.repository === undefined
           ? {}
           : { repository: request.repository }),
-        ...(firstHeartbeatAt === undefined ? {} : { firstHeartbeatAt }),
-        ...(lastHeartbeatAt === undefined ? {} : { lastHeartbeatAt }),
-        ...(heartbeatOrdinal === undefined ? {} : { heartbeatOrdinal }),
+        ...(laneHeartbeatFirst === undefined ? {} : { firstHeartbeatAt: laneHeartbeatFirst }),
+        ...(laneHeartbeatLast === undefined ? {} : { lastHeartbeatAt: laneHeartbeatLast }),
+        ...(heartbeatRecordKind === undefined ? {} : { heartbeatRecordKind }),
         artifacts,
         ...(park === undefined || park.cause === "" ? {} : { activePark: park }),
       };
@@ -609,10 +663,13 @@ export const createStateSupervisionReadPort = (store: StateStorePort): Supervisi
     const degraded: SupervisionDegradationMarker[] = [];
     if (!daemonClaimed) degraded.push("daemon-absent");
     if (
+      heartbeatFallback ||
       lanes.some(
         (lane) => lane.artifacts.instants.length === 0 && lane.lastHeartbeatAt === undefined,
       )
     ) {
+      // The declared fallback marker: a lane without its own observation is
+      // enriched from the scope heartbeat, never presented as owning it (F-6).
       degraded.push("artifact-source-absent");
     }
     degraded.push(...partial);
@@ -630,7 +687,7 @@ export const createStateSupervisionReadPort = (store: StateStorePort): Supervisi
           live: daemonLive,
           ...(firstHeartbeatAt === undefined ? {} : { firstHeartbeatAt }),
           ...(lastHeartbeatAt === undefined ? {} : { lastHeartbeatAt }),
-          ...(heartbeatOrdinal === undefined ? {} : { heartbeatOrdinal }),
+          ...(lastHeartbeatAt === undefined ? {} : { heartbeatRecordKind: "daemon.heartbeat" }),
           artifacts: claimArtifacts(
             sortInstants([
               ...laneArtifactEntries
@@ -656,7 +713,7 @@ export const createStateSupervisionReadPort = (store: StateStorePort): Supervisi
             : {
                 firstHeartbeatAt: firstIteration,
                 lastHeartbeatAt: lastIteration,
-                heartbeatOrdinal: iterationInstants.length,
+                heartbeatRecordKind: "coordinator.iteration",
               }),
           artifacts: { classes: ["ledger-position"], instants: iterationInstants },
         }
@@ -690,16 +747,19 @@ export const createStateSupervisionWritePort = (input: {
   readonly newFenceToken: () => string;
 }): SupervisionWritePort => ({
   appendPark: (request: SupervisionParkAppend): SupervisionParkAppendResult => {
-    const existing = readQueueParks(input.store);
-    if (!existing.ok) return { ok: false, code: existing.code };
-    const latest = latestParkRecords(existing.records).find((record) => record.ref === request.ref);
+    // The append seam's own guard (DEC-9(a)): a provider-window-mapped park is
+    // never written from an empty expiry, through any writer.
     if (
-      latest !== undefined &&
-      latest.recoveryState === "parked" &&
-      latest.cause === "liveness-stall"
+      parkConditionExpiryMissing("liveness-stall", {
+        type: "provider-window",
+        expiresAt: request.until,
+      })
     ) {
-      return { ok: true, appended: false, record: latest };
+      return { ok: false, code: "input.value.rejected" };
     }
+    // The already-parked answer comes from the run's fold snapshot: the write
+    // port performs no read of its own, so the action path stays one-fold
+    // (F-2, DEC-9(d)). The fenced append is the only write.
     const record = createParkRecord({
       ref: request.ref,
       repository: request.repository,
@@ -720,15 +780,6 @@ export const createStateSupervisionWritePort = (input: {
     const released = input.store.releaseFence(acquired.value.handle);
     if (!appended.ok) return { ok: false, code: appended.error.code };
     if (!released.ok) return { ok: false, code: released.error.code };
-    const verified = readQueueParks(input.store);
-    if (!verified.ok) return { ok: false, code: verified.code };
-    const landed = verified.records.some(
-      (candidate) =>
-        candidate.ref === request.ref &&
-        candidate.cause === "liveness-stall" &&
-        candidate.recoveryState === "parked",
-    );
-    if (!landed) return { ok: false, code: "state.write.failed" };
     return { ok: true, appended: true, record };
   },
 });
@@ -752,7 +803,9 @@ const entryForFact = (
         (fact.activePark !== undefined && fact.activePark.until !== undefined),
       ...(fact.lastHeartbeatAt === undefined ? {} : { lastHeartbeatAt: fact.lastHeartbeatAt }),
       ...(fact.firstHeartbeatAt === undefined ? {} : { firstHeartbeatAt: fact.firstHeartbeatAt }),
-      ...(fact.heartbeatOrdinal === undefined ? {} : { heartbeatOrdinal: fact.heartbeatOrdinal }),
+      ...(fact.heartbeatRecordKind === undefined
+        ? {}
+        : { heartbeatRecordKind: fact.heartbeatRecordKind }),
       artifactClasses: fact.artifacts.classes,
       artifactInstants: fact.artifacts.instants,
       artifactAdvancing: false,
@@ -780,7 +833,9 @@ const supervisorEntryFor = (
       sourcePresent: true,
       ...(claim.lastHeartbeatAt === undefined ? {} : { lastHeartbeatAt: claim.lastHeartbeatAt }),
       ...(claim.firstHeartbeatAt === undefined ? {} : { firstHeartbeatAt: claim.firstHeartbeatAt }),
-      ...(claim.heartbeatOrdinal === undefined ? {} : { heartbeatOrdinal: claim.heartbeatOrdinal }),
+      ...(claim.heartbeatRecordKind === undefined
+        ? {}
+        : { heartbeatRecordKind: claim.heartbeatRecordKind }),
       artifactClasses: claim.artifacts.classes,
       artifactInstants: claim.artifacts.instants,
       artifactAdvancing: false,
@@ -826,6 +881,7 @@ const leaseClaimEntry = (
       identity: lease.holder,
       sourcePresent: true,
       lastHeartbeatAt: lease.heartbeatAt,
+      heartbeatRecordKind: "queue.lease",
       artifactClasses: lane?.artifacts.classes ?? [],
       artifactInstants: lane?.artifacts.instants ?? [],
       artifactAdvancing: false,
@@ -908,6 +964,18 @@ export const runSupervisionBattery = (input: SupervisionBatteryInput): Supervisi
       const alreadyParked =
         fact.activePark !== undefined && fact.activePark.cause === "liveness-stall";
       if (alreadyParked) {
+        // GH-295 F-14: the park's declared re-entry instant governs this run's
+        // actions too. A second battery inside the recheck horizon appends
+        // nothing and burns no restart budget.
+        const reentryAtMs =
+          fact.activePark?.until === undefined ? undefined : Date.parse(fact.activePark.until);
+        if (
+          reentryAtMs !== undefined &&
+          Number.isFinite(reentryAtMs) &&
+          input.nowMs < reentryAtMs
+        ) {
+          continue;
+        }
         // A parked stall that is still stale is the restart-policy cell: an
         // acting authority refuses the action (DEC-8a), a live per-ref holder
         // refuses it through the delivered single-flight identity, and the
@@ -927,7 +995,14 @@ export const runSupervisionBattery = (input: SupervisionBatteryInput): Supervisi
             }) is actively acting on ${fact.ref}`,
           };
         }
-        const refusal = input.claimRefusal?.(fact.ref);
+        // The per-ref answer comes from the one fold snapshot through the
+        // delivered single-flight helper (F-2, DEC-9(d)).
+        const refusal =
+          input.claimRefusal?.(fact.ref) ??
+          singleFlightRefusalFromLeases(snapshot.leases, {
+            ref: fact.ref,
+            holder: input.runId,
+          });
         if (refusal !== undefined) {
           return {
             ok: false,
@@ -936,13 +1011,16 @@ export const runSupervisionBattery = (input: SupervisionBatteryInput): Supervisi
             summary: `holder:${refusal.holder ?? "unknown"}; ref:${fact.ref}`,
           };
         }
-        const admission = input.admitRestart?.(fact.ref);
+        const admission = input.admitRestart?.({
+          ref: fact.ref,
+          restarts: snapshot.restarts[fact.ref] ?? [],
+        });
         if (admission === undefined) continue;
         if (admission.outcome === "admit" && input.economicsWrite !== undefined) {
           const appended = input.economicsWrite.appendRestart({
             ref: fact.ref,
             ordinal: admission.restarts + 1,
-            runId: "supervise",
+            runId: input.runId,
             recordedAt: input.nowIso,
           });
           if (!appended.ok) {
@@ -956,21 +1034,23 @@ export const runSupervisionBattery = (input: SupervisionBatteryInput): Supervisi
           actions.push({
             kind: "restart-admission",
             ref: fact.ref,
-            evidence: [
-              ...entry.evidence,
+            evidence: boundSupervisionEvidence([
               {
                 code: "restart-admitted",
                 ref: fact.ref,
                 recordKind: "economics.restart",
                 instant: input.nowIso,
+                runId: input.runId,
               },
               { code: "bound-applied", ref: fact.ref, recordKind: "economics.restart" },
-            ],
+              ...entry.evidence,
+            ]),
           });
         } else if (admission.outcome === "exhausted" && input.economicsWrite !== undefined) {
           const terminal = input.economicsWrite.ensureExhaustion({
             ref: fact.ref,
             restarts: admission.restarts,
+            runId: input.runId,
             recordedAt: input.nowIso,
           });
           if (!terminal.ok) {
@@ -984,6 +1064,7 @@ export const runSupervisionBattery = (input: SupervisionBatteryInput): Supervisi
           const question = input.economicsWrite.raiseQuestion({
             ref: fact.ref,
             restarts: admission.restarts,
+            runId: input.runId,
             askedAt: input.nowIso,
           });
           if (!question.ok) {
@@ -997,29 +1078,31 @@ export const runSupervisionBattery = (input: SupervisionBatteryInput): Supervisi
           actions.push({
             kind: "exhaustion-record",
             ref: fact.ref,
-            evidence: [
-              ...entry.evidence,
+            evidence: boundSupervisionEvidence([
               {
                 code: "restart-exhausted",
                 ref: fact.ref,
                 recordKind: "economics.budget-exhaustion",
                 instant: input.nowIso,
+                runId: input.runId,
               },
-            ],
+              ...entry.evidence,
+            ]),
           });
         } else if (admission.outcome === "unavailable") {
           actions.push({
             kind: "unavailable-outcome",
             ref: fact.ref,
-            evidence: [
-              ...entry.evidence,
+            evidence: boundSupervisionEvidence([
               {
                 code: "restart-unavailable",
                 ref: fact.ref,
                 recordKind: "economics.restart",
                 instant: input.nowIso,
+                runId: input.runId,
               },
-            ],
+              ...entry.evidence,
+            ]),
           });
         }
         continue;
@@ -1048,8 +1131,7 @@ export const runSupervisionBattery = (input: SupervisionBatteryInput): Supervisi
       actions.push({
         kind: held === undefined ? "supervised-stall-park" : "safe-boundary-park-intent",
         ref: fact.ref,
-        evidence: [
-          ...entry.evidence,
+        evidence: boundSupervisionEvidence([
           {
             code: held === undefined ? "park-applied" : "park-intent-recorded",
             ref: fact.ref,
@@ -1059,7 +1141,8 @@ export const runSupervisionBattery = (input: SupervisionBatteryInput): Supervisi
           ...(held === undefined
             ? []
             : [{ code: "holder-recorded" as const, ref: held.holder, recordKind: "queue.lease" }]),
-        ],
+          ...entry.evidence,
+        ]),
       });
     }
   }

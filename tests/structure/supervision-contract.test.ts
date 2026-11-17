@@ -125,11 +125,21 @@ describe("TC-SUP-094 the closed vocabularies have one home", () => {
       "sourcePresent",
       "lastHeartbeatAt",
       "firstHeartbeatAt",
-      "heartbeatOrdinal",
+      "heartbeatRecordKind",
       "artifactClasses",
       "artifactInstants",
       "artifactAdvancing",
     ]);
+  });
+
+  test("no declared classification member is dead (F-12)", () => {
+    expect(SUPERVISION_CLASSIFICATION_INPUT_FIELDS).not.toContain("heartbeatOrdinal");
+    const domain = readFileSync(join(ROOT, "packages/core/src/domain/supervise.ts"), "utf8");
+    const app = readFileSync(join(ROOT, "packages/core/src/app/supervise.ts"), "utf8");
+    expect(domain).not.toContain("heartbeatOrdinal");
+    expect(app).not.toContain("heartbeatOrdinal");
+    // The source-record-kind member is consumed, not merely declared.
+    expect(domain).toContain("input.heartbeatRecordKind");
   });
 
   test("the tri-state is a declared mapping of the delivered vocabularies, not a rename", () => {

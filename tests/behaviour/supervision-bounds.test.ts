@@ -20,6 +20,7 @@ const run = (laneCount: number) => {
     repository: "github.com/example/supervision-repo",
     nowMs: Date.parse("2026-11-17T00:00:00.000Z"),
     nowIso: "2026-11-17T00:00:00.000Z",
+    runId: "run-supervision-fixture",
     read: syntheticReadPort(cappedScope(laneCount), reads),
   });
   if (!result.ok) throw new Error("battery failed");
@@ -60,7 +61,22 @@ describe("TC-SUP-082 the lane bound and its named truncation", () => {
       SUPERVISION_MAX_EVIDENCE_BYTES,
     );
     expect(bounded.at(-1)?.code).toBe("evidence-truncated");
-    // The report's own evidence respects the cap without a marker.
+  });
+
+  test("a single oversized entry is clamped inside the cap, marker included", () => {
+    const oversizedEntry = {
+      code: "artifact-progress" as const,
+      ref: "GH-1",
+      recordKind: "daemon-lane",
+      instant: "2026-11-17T00:00:00.000Z",
+      blob: "x".repeat(SUPERVISION_MAX_EVIDENCE_BYTES),
+    };
+    const bounded = boundSupervisionEvidence([oversizedEntry]);
+    const bytes = new TextEncoder().encode(JSON.stringify(bounded)).length;
+    expect(bytes).toBeLessThanOrEqual(SUPERVISION_MAX_EVIDENCE_BYTES);
+    expect(bounded.at(-1)?.code).toBe("evidence-truncated");
+    // A legitimate battery-written park still lands after the clamp: the guard
+    // rejects the malformed value without poisoning the ledger.
     const report = run(SUPERVISION_LANE_CAP);
     for (const lane of report.lanes) {
       expect(new TextEncoder().encode(JSON.stringify(lane.evidence)).length).toBeLessThanOrEqual(

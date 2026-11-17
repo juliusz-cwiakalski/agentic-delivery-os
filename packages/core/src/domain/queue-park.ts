@@ -48,6 +48,21 @@ export const parkConditionForCause = (
 export const defaultParkRecheckMs = (conditionType: QueueParkConditionType): number =>
   QUEUE_PARK_RECHECK_DEFAULTS[conditionType];
 
+/**
+ * The park-expiry invariant (GH-295 DEC-9(a)): an expiry-carrying condition
+ * type always carries a non-empty absolute expiry. Every writer consults this
+ * before its fenced append, so a record its own read validator rejects can
+ * never reach the append-only ledger.
+ */
+export const parkConditionExpiryMissing = (
+  cause: QueueParkCause,
+  condition: QueueParkCondition,
+): boolean =>
+  conditionTypeForCause(cause) === "provider-window" &&
+  (condition.type !== "provider-window" ||
+    typeof condition.expiresAt !== "string" ||
+    condition.expiresAt.trim().length === 0);
+
 /** Observation gap in integer milliseconds, never negative. */
 export const observationGapMs = (previousEvaluatedAt: string, nowMs: number): number => {
   const parsed = Date.parse(previousEvaluatedAt);

@@ -118,6 +118,7 @@ import {
   hasDuplicateActiveParks,
   latestParkRecords,
   observationGapMs,
+  parkConditionExpiryMissing,
   type QueueParkContext,
   type QueueParkPass,
   recoveredRecord,
@@ -1204,6 +1205,40 @@ export const dispatchAdmissionRefusal = (
  * whole-store read; an unreadable or torn ledger abstains and the claim path
  * classifies the state failure with the delivered `state.*` identity.
  */
+/** One active lease fact the pure single-flight predicate consumes. */
+export type SingleFlightLeaseFact = {
+  readonly repository?: string;
+  readonly ref: string;
+  readonly holder: string;
+  readonly heartbeatAgeMs: number;
+  readonly ttlMs: number;
+};
+
+/**
+ * The delivered per-ref single-flight predicate over an already-folded lease
+ * set (GH-295 DEC-9(d)): the battery's action path consumes the one per-run
+ * snapshot instead of re-reading the whole store per lane. A stale lease takes
+ * over as delivered; the holder is named exactly as recorded.
+ */
+export const singleFlightRefusalFromLeases = (
+  leases: readonly SingleFlightLeaseFact[],
+  input: { readonly ref: string; readonly holder: string; readonly repository?: string },
+): DispatchAdmissionRefusal | undefined => {
+  const held = leases.find(
+    (lease) =>
+      lease.ref === input.ref &&
+      (input.repository === undefined || lease.repository === input.repository) &&
+      lease.holder !== input.holder &&
+      !isLeaseStale(lease.heartbeatAgeMs, lease.ttlMs),
+  );
+  if (held === undefined) return undefined;
+  return {
+    code: "queue.single-flight",
+    holder: held.holder,
+    summary: `holder:${held.holder}; ref:${held.ref}`,
+  };
+};
+
 export const claimSingleFlightRefusal = (
   store: StateStorePort,
   input: { readonly ref: string; readonly holder: string; readonly nowMs: number },
@@ -1222,15 +1257,13 @@ export const claimSingleFlightRefusal = (
     .find((record) => canonicalQueueRef(record.ref) === ref);
   const repository = latestEntry?.repository;
   if (repository === undefined) return undefined;
-  const held = active.find((lease) => lease.repository === repository);
-  if (held === undefined || held.ref !== ref || held.holder === input.holder) return undefined;
-  // The liveness predicate is shared: a stale lease takes over as delivered.
-  if (isLeaseStale(held.heartbeatAgeMs, held.ttlMs)) return undefined;
-  return {
-    code: "queue.single-flight",
-    holder: held.holder,
-    summary: `holder:${held.holder}; ref:${held.ref}`,
-  };
+  // The liveness predicate is shared with the battery's snapshot path: both
+  // resolve through the one delivered helper.
+  return singleFlightRefusalFromLeases(active, {
+    ref,
+    holder: input.holder,
+    repository,
+  });
 };
 
 /* --------------------------- removal (GH-292 F-1) ------------------------- */
@@ -2294,6 +2327,17 @@ export const releaseQueueLease = (
         kind: "input",
         code: "input.value.rejected",
         detail: `cause ${request.park.cause} pairs with condition type ${expectedConditionType}`,
+      };
+    }
+    // GH-295 DEC-9(a): the append-only ledger never receives a park record its
+    // own read validator rejects. The guard runs before the fenced write, so
+    // the store stays readable and every later park read stays healthy.
+    if (parkConditionExpiryMissing(request.park.cause, request.park.condition)) {
+      return {
+        ok: false,
+        kind: "input",
+        code: "input.value.rejected",
+        detail: `cause ${request.park.cause} requires a non-empty condition.expiresAt`,
       };
     }
     const parkRecord = createParkRecord({

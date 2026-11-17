@@ -62,6 +62,7 @@ const seedPreChangePark = (harness: ReturnType<typeof createSupervisionHarness>)
     runner: "runner-a",
     weightClass: "standard",
     nowIso: harness.nowIso,
+    runId: "run-supervision-fixture",
     nowMs: harness.nowMs,
     fenceToken: "pre-claim",
   });
@@ -77,6 +78,7 @@ const seedPreChangePark = (harness: ReturnType<typeof createSupervisionHarness>)
       },
     },
     nowIso: harness.nowIso,
+    runId: "run-supervision-fixture",
     nowMs: harness.nowMs,
     fenceToken: "pre-release",
   });
@@ -117,6 +119,7 @@ describe("TC-SUP-046 no new record kind and no pre-change rewrite", () => {
         repository: harness.repository,
         nowMs: harness.nowMs,
         nowIso: harness.nowIso,
+        runId: "run-supervision-fixture",
         read: createStateSupervisionReadPort(harness.store),
       });
       expect(readOnly.ok).toBe(true);

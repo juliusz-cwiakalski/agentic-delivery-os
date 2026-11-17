@@ -20,6 +20,7 @@ import {
   runSupervisionBattery,
   type SupervisionBatteryResult,
   type SupervisionReadPort,
+  type SupervisionScopeSnapshot,
 } from "../../../packages/core/src/app/index";
 import type {
   QueueLanesData,
@@ -47,73 +48,84 @@ import { createSupervisionRepository, type SupervisionTempRepository } from "./t
 export const createTestEconomicsWrite = (
   store: StateStorePort,
   fence: (label: string) => string,
-): SupervisionEconomicsWritePort => ({
-  appendRestart: ({ ref, ordinal, runId, recordedAt }) => {
-    const outcome = appendEconomicsRestartEvent(store, fence("economics-restart"), {
-      schemaId: "delivery.economics.restart.v1",
-      workItemRef: ref,
-      runId,
-      sessionId: "supervise",
-      ordinal,
-      reason: "session-interrupted",
-      recordedAt,
-    });
-    return outcome.ok
-      ? { ok: true, appended: outcome.appended }
-      : { ok: false, code: outcome.code };
-  },
-  ensureExhaustion: ({ ref, restarts, recordedAt }) => {
-    const outcome = ensureEconomicsExhaustionRecord(store, fence("economics-exhaustion"), {
-      schemaId: "delivery.economics.exhaustion.v1",
-      workItemRef: ref,
-      runId: "supervise",
-      reason: "dispatch.restart-budget-exceeded",
-      restarts,
-      historyRef: `economics/${ref}`,
-      terminal: true,
-      options: ["requeue-fresh-budget", "park-owner-review"],
-      recordedAt,
-    });
-    return outcome.ok
-      ? { ok: true, appended: outcome.appended }
-      : { ok: false, code: outcome.code };
-  },
-  raiseQuestion: ({ ref, restarts, askedAt }) => {
-    const ledger = readBlockerLedger(store);
-    if (!ledger.ok) return { ok: false, code: ledger.error.code };
-    const id = `supervise-exhaustion-${ref}`;
-    if (ledger.value.questions.some((question) => question.id === id)) {
-      return { ok: true, appended: false };
-    }
-    const appended = appendBlockerQuestion(store, {
-      record: {
-        schemaId: "delivery.blocker.question.v1",
-        id,
-        type: "decision-needed",
-        audience: "owner",
-        lane: "supervise",
-        ref,
-        question: `the restart budget for ${ref} is exhausted after ${String(restarts)} restarts; choose the recovery route`,
+): SupervisionEconomicsWritePort => {
+  // One ledger read per run, not one per lane (F-2, DEC-9(d)).
+  let cachedLedger: ReturnType<typeof readBlockerLedger> | undefined;
+  return {
+    appendRestart: ({ ref, ordinal, runId, recordedAt }) => {
+      const outcome = appendEconomicsRestartEvent(store, fence("economics-restart"), {
+        schemaId: "delivery.economics.restart.v1",
+        workItemRef: ref,
+        runId,
+        sessionId: runId,
+        ordinal,
+        reason: "session-interrupted",
+        recordedAt,
+      });
+      return outcome.ok
+        ? { ok: true, appended: outcome.appended }
+        : { ok: false, code: outcome.code };
+    },
+    ensureExhaustion: ({ ref, restarts, runId, recordedAt }) => {
+      const outcome = ensureEconomicsExhaustionRecord(store, fence("economics-exhaustion"), {
+        schemaId: "delivery.economics.exhaustion.v1",
+        workItemRef: ref,
+        runId,
+        reason: "dispatch.restart-budget-exceeded",
+        restarts,
+        historyRef: `economics/${ref}`,
+        terminal: true,
         options: ["requeue-fresh-budget", "park-owner-review"],
-        askedAt,
-      },
-      fenceToken: fence("supervise-question"),
-    });
-    return appended.ok
-      ? { ok: true, appended: appended.value.appended }
-      : { ok: false, code: appended.error.code };
-  },
-});
+        recordedAt,
+      });
+      return outcome.ok
+        ? { ok: true, appended: outcome.appended }
+        : { ok: false, code: outcome.code };
+    },
+    raiseQuestion: ({ ref, restarts, runId, askedAt }) => {
+      const ledger = cachedLedger ?? readBlockerLedger(store);
+      cachedLedger = ledger;
+      if (!ledger.ok) return { ok: false, code: ledger.error.code };
+      const id = `exhaustion-${ref}-${runId}`;
+      if (ledger.value.questions.some((question) => question.id === id)) {
+        return { ok: true, appended: false };
+      }
+      const appended = appendBlockerQuestion(store, {
+        record: {
+          schemaId: "delivery.blocker.question.v1",
+          id,
+          type: "decision-needed",
+          audience: "owner",
+          lane: "supervise",
+          ref,
+          question: `the restart budget for ${ref} is exhausted after ${String(restarts)} restarts; choose the recovery route`,
+          options: ["requeue-fresh-budget", "park-owner-review"],
+          askedAt,
+        },
+        fenceToken: fence("supervise-question"),
+      });
+      return appended.ok
+        ? { ok: true, appended: appended.value.appended }
+        : { ok: false, code: appended.error.code };
+    },
+  };
+};
 
 export const HARNESS_NOW_ISO = "2026-11-17T00:00:00.000Z";
 export const HARNESS_REPOSITORY = "github.com/example/supervision-repo";
+export const HARNESS_RUN_ID = "run-supervision-fixture";
 
 export type SupervisionRunOptions = {
   readonly repository?: string;
   readonly nowMs?: number;
   readonly runId?: string;
-  readonly admitRestart?: (ref: string) => SupervisionRestartAdmission | undefined;
+  readonly admitRestart?: (request: {
+    readonly ref: string;
+    readonly restarts: readonly unknown[];
+  }) => SupervisionRestartAdmission | undefined;
   readonly claimRefusal?: (ref: string) => SupervisionClaimRefusal | undefined;
+  /** Replace the default delivered economics append paths (TC-SUP-103). */
+  readonly economicsWrite?: SupervisionEconomicsWritePort;
 };
 
 export type SupervisionHarness = {
@@ -128,6 +140,15 @@ export type SupervisionHarness = {
   readonly battery: (options?: SupervisionRunOptions) => SupervisionBatteryResult;
   /** The port read passes observed by the most recent battery run. */
   readonly reads: { count: number };
+  /**
+   * Every `store.readRecords()` call observed by the most recent run, with its
+   * scope and call site (TC-SUP-103). The fold is one call; an action path
+   * that re-reads the ledger shows up here.
+   */
+  readonly storeReads: {
+    count: number;
+    calls: { scope: "whole-store"; site: string }[];
+  };
   /** Run the composed `supervise` command in process (captured streams). */
   readonly runCli: (
     argv: readonly string[],
@@ -149,7 +170,27 @@ export const createSupervisionHarness = (
   const directory = repositoryFixture.directory;
   const stateDirectory = join(directory, ".supervision-state");
   mkdirSync(stateDirectory, { recursive: true, mode: 0o700 });
-  const { store } = openStore(makeIdentity(stateDirectory));
+  const { store: rawStore } = openStore(makeIdentity(stateDirectory));
+  const storeReads: SupervisionHarness["storeReads"] = { count: 0, calls: [] };
+  const store: StateStorePort = new Proxy(rawStore, {
+    get(target, property) {
+      if (property === "readRecords") {
+        return () => {
+          const stack = new Error().stack ?? "";
+          const site = stack
+            .split("\n")
+            .slice(2, 4)
+            .map((line) => line.trim())
+            .join(" | ");
+          storeReads.count += 1;
+          storeReads.calls.push({ scope: "whole-store", site });
+          return target.readRecords();
+        };
+      }
+      const value = Reflect.get(target, property, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
   const nowMs = options.nowMs ?? Date.parse(HARNESS_NOW_ISO);
   const nowIso = new Date(nowMs).toISOString();
   const repository = options.repository ?? HARNESS_REPOSITORY;
@@ -170,8 +211,13 @@ export const createSupervisionHarness = (
     nowIso,
     seed,
     reads,
+    storeReads,
     battery: (runOptions = {}) => {
+      reads.count = 0;
+      storeReads.count = 0;
+      storeReads.calls = [];
       const runNowMs = runOptions.nowMs ?? nowMs;
+      const runId = runOptions.runId ?? HARNESS_RUN_ID;
       const inner = createStateSupervisionReadPort(store);
       const port: SupervisionReadPort = {
         read: (request) => {
@@ -183,16 +229,20 @@ export const createSupervisionHarness = (
         repository: runOptions.repository ?? repository,
         nowMs: runNowMs,
         nowIso: new Date(runNowMs).toISOString(),
+        runId,
         read: port,
         write: createStateSupervisionWritePort({ store, newFenceToken: fence }),
-        economicsWrite: createTestEconomicsWrite(store, fence),
+        economicsWrite: runOptions.economicsWrite ?? createTestEconomicsWrite(store, fence),
         ...(runOptions.admitRestart === undefined ? {} : { admitRestart: runOptions.admitRestart }),
         ...(runOptions.claimRefusal === undefined ? {} : { claimRefusal: runOptions.claimRefusal }),
       });
     },
     runCli: async (argv, runOptions = {}) => {
       reads.count = 0;
+      storeReads.count = 0;
+      storeReads.calls = [];
       const runNowMs = runOptions.nowMs ?? nowMs;
+      const runId = runOptions.runId ?? HARNESS_RUN_ID;
       const inner = createStateSupervisionReadPort(store);
       const port: SupervisionReadPort = {
         read: (request) => {
@@ -206,9 +256,10 @@ export const createSupervisionHarness = (
           commands: {
             supervise: createSuperviseCommandDefinition({
               repository: runOptions.repository ?? repository,
+              runId,
               read: port,
               write: createStateSupervisionWritePort({ store, newFenceToken: fence }),
-              economicsWrite: createTestEconomicsWrite(store, fence),
+              economicsWrite: runOptions.economicsWrite ?? createTestEconomicsWrite(store, fence),
               ...(runOptions.admitRestart === undefined
                 ? {}
                 : { admitRestart: runOptions.admitRestart }),
@@ -220,7 +271,7 @@ export const createSupervisionHarness = (
             }),
           },
         },
-        { runId: runOptions.runId ?? "run-supervision-fixture" },
+        { runId: runOptions.runId ?? HARNESS_RUN_ID },
       );
     },
     remove: () => repositoryFixture.remove(),
@@ -238,13 +289,14 @@ export const syntheticLaneSnapshot = (
     repository,
     firstHeartbeatAt: "2026-11-16T23:55:00.000Z",
     lastHeartbeatAt: "2026-11-16T23:58:00.000Z",
-    heartbeatOrdinal: 1,
     artifacts:
       index % 2 === 0
         ? { classes: ["commit-record"], instants: ["2026-11-16T23:59:00.000Z"] }
         : { classes: [], instants: [] },
   })),
   leases: [],
+  acting: [],
+  restarts: {},
   degraded: [],
 });
 

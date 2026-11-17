@@ -1525,6 +1525,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "QUEUE_READY_WORK_ITEM_REF_PATTERN",
   ],
   "core/src/contracts/queue.ts": [
+    "QUEUE_BATTERY_ONLY_PARK_CAUSES",
     "QUEUE_PEAK_ENFORCEMENT_MODES",
     "QUEUE_BLOCKING_REASONS",
     "QUEUE_PARK_PRESERVATIONS",
@@ -1688,6 +1689,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/domain/queue-park.ts": [
     "clearObservedRecord",
+    "parkConditionExpiryMissing",
     "conditionTypeForCause",
     "createParkRecord",
     "defaultParkRecheckMs",
@@ -1959,6 +1961,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "cli/src/output/merge-text.ts": ["renderDryRunHuman", "renderMergeHuman"],
   "core/src/app/queue.ts": [
     "addQueueDependency",
+    "singleFlightRefusalFromLeases",
     "claimQueueLease",
     "claimSingleFlightRefusal",
     "dispatchAdmissionRefusal",

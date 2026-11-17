@@ -3096,6 +3096,7 @@
       "ProviderWatchSnapshot",
       "ProviderWatchTarget",
       "PruneData",
+      "QUEUE_BATTERY_ONLY_PARK_CAUSES",
       "QUEUE_BLOCKING_REASONS",
       "QUEUE_CLAIM_RESULTS",
       "QUEUE_CONFIG_BRANCH",
@@ -4650,6 +4651,7 @@
       "QueueReadyWorkItemRelation"
     ],
     "queue.ts": [
+      "QUEUE_BATTERY_ONLY_PARK_CAUSES",
       "QUEUE_BLOCKING_REASONS",
       "QUEUE_CLAIM_RESULTS",
       "QUEUE_CONFIG_BRANCH",
@@ -4727,6 +4729,7 @@
       "QUEUE_WEIGHT_CLASSES",
       "QUEUE_WEIGHT_CLASS_SOURCES",
       "QueueActiveLease",
+      "QueueBatteryOnlyParkCause",
       "QueueBlocking",
       "QueueBlockingReason",
       "QueueClaimData",

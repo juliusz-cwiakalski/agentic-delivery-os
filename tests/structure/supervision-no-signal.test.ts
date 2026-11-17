@@ -45,4 +45,17 @@ describe("TC-SUP-063 no supervision module can signal a process", () => {
     const mutated = `${readFileSync(join(ROOT, "packages/core/src/app/supervise.ts"), "utf8")}\nprocess.kill(1);\n`;
     expect(SIGNAL_MARKERS.some((marker) => mutated.includes(marker))).toBe(true);
   });
+
+  test("no hard-coded supervise run, session, or question identity remains", () => {
+    const files = [...SUPERVISE_MODULES, "packages/cli/src/production.ts"] as const;
+    const markers = ['runId: "supervise"', 'sessionId: "supervise"', '"supervise-exhaustion-'];
+    const violations: string[] = [];
+    for (const file of files) {
+      const text = readFileSync(join(ROOT, file), "utf8");
+      for (const marker of markers) {
+        if (text.includes(marker)) violations.push(`${file}: ${marker}`);
+      }
+    }
+    expect(violations).toEqual([]);
+  });
 });

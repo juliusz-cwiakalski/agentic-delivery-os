@@ -18,6 +18,7 @@ import {
   seedDaemonInstance,
   seedHeartbeat,
   seedLane,
+  seedLaneRecord,
   seedLiveLease,
 } from "../fixtures/supervise/records";
 
@@ -53,8 +54,8 @@ describe("TC-SUP-090 the healthy report golden", () => {
     const harness = createSupervisionHarness({ label: "golden-machine" });
     try {
       seedLane(harness.seed, LANE_REF);
-      seedHeartbeat(harness.seed, { ordinal: 1, offsetMs: -120_000 });
-      seedCommitEffect(harness.seed, { offsetMs: -60_000 });
+      seedHeartbeat(harness.seed, { ordinal: 1, offsetMs: -30_000 });
+      seedLaneRecord(harness.seed, { offsetMs: -120_000, lastCompletedPhase: "4" });
       seedLiveLease(harness.seed, { ref: LANE_REF, holder: "holder-a" });
       const run = await harness.runCli(["supervise", "--json"], { runId: RUN_ID });
       expect(run.exitCode).toBe(0);
@@ -73,8 +74,8 @@ describe("TC-SUP-090 the healthy report golden", () => {
     const harness = createSupervisionHarness({ label: "golden-human" });
     try {
       seedLane(harness.seed, LANE_REF);
-      seedHeartbeat(harness.seed, { ordinal: 1, offsetMs: -120_000 });
-      seedCommitEffect(harness.seed, { offsetMs: -60_000 });
+      seedHeartbeat(harness.seed, { ordinal: 1, offsetMs: -30_000 });
+      seedLaneRecord(harness.seed, { offsetMs: -120_000, lastCompletedPhase: "4" });
       seedLiveLease(harness.seed, { ref: LANE_REF, holder: "holder-a" });
       const run = await harness.runCli(["supervise"], { runId: RUN_ID });
       expect(run.exitCode).toBe(0);

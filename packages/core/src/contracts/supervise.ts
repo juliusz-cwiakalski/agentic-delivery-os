@@ -139,7 +139,7 @@ export const SUPERVISION_CLASSIFICATION_INPUT_FIELDS = [
   "sourcePresent",
   "lastHeartbeatAt",
   "firstHeartbeatAt",
-  "heartbeatOrdinal",
+  "heartbeatRecordKind",
   "artifactClasses",
   "artifactInstants",
   "artifactAdvancing",
@@ -229,6 +229,8 @@ export type SupervisionEvidence = {
   readonly ref?: string;
   readonly recordKind?: string;
   readonly instant?: string;
+  /** The injected run identity, echoed so an action is correlatable to its run. */
+  readonly runId?: string;
 };
 
 /** One lane entry in the report (DM-1). */
@@ -296,7 +298,12 @@ export type SupervisionClassificationInput = {
   readonly sourcePresent: boolean;
   readonly lastHeartbeatAt?: string;
   readonly firstHeartbeatAt?: string;
-  readonly heartbeatOrdinal?: number;
+  /**
+   * The record kind the heartbeat instant actually came from (daemon heartbeat,
+   * coordinator iteration, queue lease, or daemon lane observation), so every
+   * heartbeat evidence fact stays reconstructible (F-7).
+   */
+  readonly heartbeatRecordKind?: string;
   readonly artifactClasses: readonly SupervisionArtifactClass[];
   readonly artifactInstants: readonly string[];
   readonly artifactAdvancing: boolean;

@@ -5,6 +5,7 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
+  QUEUE_BATTERY_ONLY_PARK_CAUSES,
   QUEUE_PARK_CAUSE_CONDITION_PAIRS,
   QUEUE_PARK_CAUSES,
   QUEUE_PARK_CONDITION_TYPES,
@@ -70,6 +71,13 @@ describe("TC-SUP-045 the park-cause set gains exactly one member", () => {
     expect(defaultParkRecheckMs("provider-window")).toBe(
       QUEUE_PARK_RECHECK_DEFAULTS["provider-window"],
     );
+  });
+
+  test("the battery-only cause declaration names exactly the supervised-stall cause", () => {
+    expect([...QUEUE_BATTERY_ONLY_PARK_CAUSES]).toEqual(["liveness-stall"]);
+    for (const cause of QUEUE_BATTERY_ONLY_PARK_CAUSES) {
+      expect(QUEUE_PARK_CAUSES).toContain(cause);
+    }
   });
 });
 

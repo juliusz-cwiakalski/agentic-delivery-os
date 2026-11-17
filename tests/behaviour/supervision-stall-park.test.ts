@@ -88,6 +88,39 @@ describe("TC-SUP-043 a held session records the safe-boundary intent", () => {
       const leases = readQueueLeases(harness.store);
       if (!leases.ok) throw new Error("lease read failed");
       expect(leases.records.at(-1)?.operation).toBe("acquired");
+      const heldPark = parks.records[0];
+      // The re-run at the same injected instant appends nothing and creates no
+      // deferral state (the landed park refuses an identical second park).
+      const second = await harness.runCli(["supervise", "--json"]);
+      expect(second.exitCode).toBe(0);
+      const parksAfter = readQueueParks(harness.store);
+      if (!parksAfter.ok) throw new Error("park read failed");
+      expect(parksAfter.records).toHaveLength(1);
+      expect(
+        ((JSON.parse(second.stdout) as { data?: { actions?: readonly unknown[] } }).data?.actions ??
+          []) as readonly unknown[],
+      ).toHaveLength(0);
+      // The unheld twin lands the same operator-visible park outcome.
+      const twin = createSupervisionHarness({ label: "stall-unheld" });
+      try {
+        seedLane(twin.seed, LANE_REF);
+        seedHeartbeat(twin.seed, { ordinal: 1, offsetMs: -(300_000 + 1) });
+        const twinRun = await twin.runCli(["supervise", "--json"]);
+        expect(twinRun.exitCode).toBe(0);
+        const twinParks = readQueueParks(twin.store);
+        if (!twinParks.ok) throw new Error("twin park read failed");
+        const twinPark = twinParks.records[0];
+        expect(twinPark?.cause).toBe(heldPark?.cause);
+        expect(twinPark?.conditionType).toBe(heldPark?.conditionType);
+        expect(twinPark?.until).toBe(heldPark?.until);
+        expect(twinPark?.recheckMs).toBe(heldPark?.recheckMs);
+        expect(
+          ((JSON.parse(twinRun.stdout) as { data?: { actions?: readonly unknown[] } }).data
+            ?.actions ?? []) as readonly unknown[],
+        ).toHaveLength(1);
+      } finally {
+        twin.remove();
+      }
     } finally {
       harness.remove();
     }

@@ -17,6 +17,7 @@ import {
   appendDaemonReconciliation,
   claimQueueLease,
   declareQueueEntry,
+  queueEntryRecordKey,
   releaseQueueLease,
 } from "../../../packages/core/src/app/index";
 import {
@@ -39,7 +40,10 @@ import {
   type EconomicsRestartRecord,
   OUTBOX_EFFECT_RECORD_KIND,
   type OutboxEffectRecord,
+  QUEUE_ENTRY_RECORD_KIND,
+  QUEUE_ENTRY_SCHEMA,
   type QueueLeaseRecord,
+  type StateJsonValue,
   type StateStorePort,
 } from "../../../packages/core/src/contracts/index";
 import { appendEconomicsRestartEvent } from "../../../packages/core/src/state/economics";
@@ -80,6 +84,34 @@ export const seedLane = (target: SupervisionSeedTarget, ref = LANE_REF): void =>
     fenceToken: target.fence(`entry-${ref}`),
   });
   expectOk(`entry ${ref}`, declared);
+};
+
+/**
+ * Declare many lane entries in one fenced pass through the delivered state
+ * append seam. The scale cells need hundreds of entries; the per-entry intent
+ * path re-reads the whole ledger, so this keeps the fixture to one fence and
+ * the same delivered record shape.
+ */
+export const seedLaneBatch = (target: SupervisionSeedTarget, refs: readonly string[]): void => {
+  const acquired = target.store.acquireFence(target.fence("entries-batch"));
+  if (!acquired.ok) throw new Error("supervision fixture seam failed: entries-batch fence");
+  for (const ref of refs) {
+    const appended = target.store.append(acquired.value.handle, {
+      kind: QUEUE_ENTRY_RECORD_KIND,
+      recordKey: queueEntryRecordKey(ref),
+      payload: {
+        schema: QUEUE_ENTRY_SCHEMA,
+        ref,
+        repository: target.repository,
+        repositoryRoot: target.root,
+        priority: 1,
+        recordedAt: target.nowIso,
+      } as unknown as StateJsonValue,
+    });
+    if (!appended.ok) throw new Error(`supervision fixture seam failed: entry ${ref}`);
+  }
+  const released = target.store.releaseFence(acquired.value.handle);
+  if (!released.ok) throw new Error("supervision fixture seam failed: entries-batch release");
 };
 
 export const seedForeignLane = (
@@ -321,8 +353,7 @@ export const daemonClaim = (
     live: true,
   },
 ): void => {
-  const offsets =
-    input.heartbeatOffsetsMs ?? (input.live ? [-20_000, -5_000] : [-130_000, -120_000]);
+  const offsets = input.heartbeatOffsetsMs ?? (input.live ? [-20_000, 0] : [-130_000, -120_000]);
   seedDaemonInstance(target, { heartbeatAt: isoAt(target, offsets.at(-1) ?? 0) });
   offsets.forEach((offset, index) => {
     seedHeartbeat(target, { ordinal: index + 1, offsetMs: offset });
@@ -394,7 +425,9 @@ export const seedLivenessPark = (
       cause: "liveness-stall",
       condition: {
         type: "provider-window",
-        expiresAt: isoAt(target, input.untilOffsetMs ?? 60_000),
+        // The action cells seed a park from a prior run whose declared
+        // re-entry instant has elapsed, so the restart branch is reachable.
+        expiresAt: isoAt(target, input.untilOffsetMs ?? -1_000),
       },
     },
     nowIso: target.nowIso,
@@ -479,7 +512,6 @@ export const cappedScope = (n: number): SupervisionScopeSnapshot => ({
     repository: "github.com/example/supervision-repo",
     firstHeartbeatAt: "2026-11-16T23:55:00.000Z",
     lastHeartbeatAt: "2026-11-16T23:58:00.000Z",
-    heartbeatOrdinal: 1,
     artifacts:
       index % 2 === 0
         ? { classes: ["commit-record"] as const, instants: ["2026-11-16T23:59:00.000Z"] }
@@ -503,7 +535,6 @@ export const mixedScope = (): SupervisionScopeSnapshot => ({
       repository: "github.com/example/supervision-repo",
       firstHeartbeatAt: "2026-11-16T23:55:00.000Z",
       lastHeartbeatAt: "2026-11-16T23:58:00.000Z",
-      heartbeatOrdinal: 1,
       artifacts: { classes: ["commit-record"], instants: ["2026-11-16T23:59:00.000Z"] },
     },
     {
@@ -511,7 +542,6 @@ export const mixedScope = (): SupervisionScopeSnapshot => ({
       repository: "github.com/example/supervision-repo",
       firstHeartbeatAt: "2026-11-16T23:50:00.000Z",
       lastHeartbeatAt: "2026-11-16T23:50:00.000Z",
-      heartbeatOrdinal: 1,
       artifacts: { classes: [], instants: [] },
     },
   ],

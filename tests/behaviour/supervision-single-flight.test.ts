@@ -57,3 +57,20 @@ describe("TC-SUP-052 the per-ref double-claim reuses queue.single-flight", () =>
     }
   });
 });
+
+describe("TC-SUP-052 the snapshot path answers by default", () => {
+  test("the battery refuses from the fold snapshot without a second store read", () => {
+    const harness = createSupervisionHarness({ label: "single-flight-snapshot" });
+    try {
+      stalledAndParked(harness.seed);
+      seedLiveLease(harness.seed, { ref: LANE_REF, holder: "holder-a" });
+      const result = harness.battery();
+      expect(result.ok).toBe(false);
+      if (result.ok) return;
+      expect(result.code).toBe("queue.single-flight");
+      expect(result.summary).toContain("holder-a");
+    } finally {
+      harness.remove();
+    }
+  });
+});

@@ -24,6 +24,7 @@ const readOnlyRun = (harness: ReturnType<typeof createSupervisionHarness>, nowMs
     repository: harness.repository,
     nowMs: nowMs ?? harness.nowMs,
     nowIso: new Date(nowMs ?? harness.nowMs).toISOString(),
+    runId: "run-supervision-fixture",
     read: createStateSupervisionReadPort(harness.store),
   });
 

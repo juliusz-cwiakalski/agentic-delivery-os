@@ -54,6 +54,7 @@ describe("TC-SUP-084 the mixed scope carries evidence everywhere", () => {
       repository: "github.com/example/supervision-repo",
       nowMs: Date.parse("2026-11-17T00:00:00.000Z"),
       nowIso: "2026-11-17T00:00:00.000Z",
+      runId: "run-supervision-fixture",
       read: syntheticReadPort(mixedScope(), reads),
     });
     // The mixed scope parks the stalled lane and reports the claim, so both the
