@@ -8,8 +8,9 @@ source: https://github.com/juliusz-cwiakalski/agentic-delivery-os/blob/main-tool
 Direction for the open-source tooling: a TypeScript CLI plus MCP server plus
 opencode-native surface over one shared typed core (per
 [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md)). Milestones
-M0-M4 are in scope for this repository. Later directions exist but are not
-planned here. Story-level scope lives in [backlog.md](backlog.md); the
+M0-M5 are in scope for this repository. Later directions exist but are not
+planned here. Story-level scope lives in the per-milestone backlogs under
+[milestones/](milestones/); the
 command surface lives in [cli-command-registry.md](cli-command-registry.md);
 the usage flows live in [user-journeys.md](user-journeys.md).
 
@@ -53,8 +54,9 @@ dates are adjusted as evidence lands.
 | M0 | Trust substrate | weeks 1-4 | Typed core, result contract, status and verify change working end-to-end; verify gates, closeout, provider, and pm-notes validation bundled; the delivery loop usable on real tickets |
 | M1 | Delivery engine and autonomous dispatch | months 2-3 | Bash delivery stack replaced: truthful signals, merge as a transaction, machine-readable delivery plans, scheduling engine plus resident daemon; the new stack authoritative on pilot repos |
 | M2 | Ceremonies, measurement, and memory | months 3-6 | Supervision battery, ceremonies, board, steer, metrics and spend alarms; the committed memory tree with typed records and lint |
-| M3 | Surfaces, adapters, validators | months 6-9 | Harness surfaces (opencode, Claude Code) plus full MCP; adapter completion; validators; v1.0 internal readiness with deprecation notices |
-| M4 | Public release readiness | after M3 | Naming freeze, publication, docs, merge of the tooling branch to the default branch, bash retirement |
+| M3 | Harness and tracker integrations | months 6-8 | opencode v2.x harness with telemetry and statistics; GitHub, GitLab, and Jira tracker adapters over one contract (CLI-first, API fallback) so any project can be delivered with the tooling as-is |
+| M4 | Jaiship-native delivery | months 8-10 | Installed, versioned binary performs all delivery; namespace migration; command conformance; declarative provider policy; project-scoped queues; history export; agent prompts on Jaiship primitives; shell entry points become thin wrappers |
+| M5 | Public release readiness | after M4 | Naming freeze, publication, docs, merge of the tooling branch to the default branch, wrapper removal |
 
 ## M0: Trust substrate (weeks 1-4)
 
@@ -127,7 +129,7 @@ pack (architecture, journeys, man page, contracts) lives in
 Exit criteria: the four bash scripts' functions run end to end on the new
 stack on pilot repositories and the new stack is authoritative there, with
 the bash stack demoted to fallback with deprecation pointers (removal stays
-M4-S5); false-success and lying-liveness counts near zero on migrated
+M5-S5); false-success and lying-liveness counts near zero on migrated
 engines (near zero, unlike M0's zero: residuals are classified and
 counted, not silently accepted); merge near-miss classes structurally
 impossible; no resume-loop class (sessions resume without re-paying
@@ -178,22 +180,32 @@ percent; idle coordination iterations near zero; owner-gate median age
 under two days; exit criteria measurable with committed numbers from the
 metrics engine.
 
-## M3: Surfaces, adapters, validators (months 6-9)
+## M3: Harness and tracker integrations (months 6-8)
 
-Goal: every engine multiplied into every agent session; the tooling
-delivers this repository itself; internal v1.0 readiness.
+Make Jaiship portable across execution surfaces and trackers. opencode v2.x
+becomes the first-class harness (standalone and background-service modes,
+per-spawn profile propagation, telemetry and statistics extraction). GitHub,
+GitLab, and Jira become first-class trackers behind one adapter contract,
+CLI-first (`gh`, `glab`, Jira MCP) with direct API fallback. A conformance and
+parity suite proves that switching harness or tracker never changes the
+lifecycle contract. Exit evidence includes one real delivery per adapter
+combination. Detail: [milestones/m3/](milestones/m3/).
 
-Scope: opencode native integration; full MCP; GitHub and Azure adapters
-alongside GitLab and Jira; validators (decision records, frontmatter,
-deploy checklist); the policy engine; repository utilities; v1.0 internal
-readiness with deprecation notices on the bash stack.
+## M4: Jaiship-native delivery (months 8-10)
 
-Exit criteria: this repository self-delivers through the new CLI for a
-consecutive run of changes; the MCP server is used by coordinating sessions;
-every replaced bash command has a working equivalent with a deprecation
-notice.
+The installed, versioned binary performs all delivery: no source-tree
+coupling, no shell orchestrator doing lifecycle work. The product identity
+migrates to Jaiship across configuration, state, environment, packages, docs,
+and prompts. Command conformance repairs the merge/dispatch/queue/closeout/
+commit surfaces with regression tests. Provider policy (quota-aware pacing,
+peaks, chains, budgets) becomes declarative configuration. Projects get
+isolated backlogs, queues, priorities, and pacing, with project-attributed
+events and a versioned history/statistics export. Agent prompts target
+Jaiship primitives, and the shell entry points are rewritten as thin wrappers
+over `jship` after the dogfood evidence bar. Detail:
+[milestones/m4/](milestones/m4/).
 
-## M4: Public release readiness
+## M5: Public release readiness
 
 Goal: stable, public-ready tooling shipped from the default branch under
 the final name.

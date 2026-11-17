@@ -3,7 +3,7 @@
 Planned scenario seeds for stories M2-S2 through M2-S20, at least two per
 story. Each scenario names an invocation and an observable result so the
 owning story's test plan starts from a concrete draft instead of a blank page.
-Scope and acceptance stay in [../../backlog.md](../../backlog.md); the
+Scope and acceptance stay in [../backlog.md](../backlog.md); the
 surfaces are in [contracts.md](contracts.md); flows are in
 [architecture.md](architecture.md). Scenario ids use the story code, so a
 scenario is attributable without reading its body.

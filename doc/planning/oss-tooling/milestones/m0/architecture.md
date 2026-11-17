@@ -3,7 +3,7 @@
 Backfill: the system as it stood at M0 completion (all 20 stories merged).
 The M0 CLI engines exist beside the bash delivery stack; the bash stack
 stays authoritative for dispatch and merge throughout M0. Story numbers
-reference [../../backlog.md](../../backlog.md).
+reference [backlog.md](backlog.md).
 
 ## C4 Level 1: system context (M0 end state)
 

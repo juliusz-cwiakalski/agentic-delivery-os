@@ -2,7 +2,7 @@
 
 The M2 end state, written down before delivery so each story starts from a
 committed blueprint instead of a ticket memory. Story numbers reference the
-canonical scope source, [../../backlog.md](../../backlog.md); the pack
+canonical scope source, [../backlog.md](../backlog.md); the pack
 conventions are in [../README.md](../README.md); the M1 snapshot stays in
 [../m1/architecture.md](../m1/architecture.md).
 
@@ -70,7 +70,7 @@ deliberate and the generic table is left unchanged until milestone exit.
 
 ## How to read
 
-1. Start with the story entry in [../../backlog.md](../../backlog.md); it is
+1. Start with the story entry in [../backlog.md](../backlog.md); it is
    canonical for scope, acceptance, and dependencies.
 2. Read the architecture flow this story changes, then the contract surface it
    implements; a `none in this pack` row is owned by an M1 or M3 surface, and
