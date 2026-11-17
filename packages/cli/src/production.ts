@@ -482,6 +482,12 @@ export type ProductionCompositionFacts = {
    * facts; a test may inject counting facts so per-layer reads are observable.
    */
   readonly configurationFs?: FileSystemFacts;
+  /**
+   * A test/embedder observability seam over the main state store (GH-295 §22):
+   * the composed program keeps using the returned port, so a composition proof
+   * can instrument reads without changing the state location.
+   */
+  readonly stateStoreWrap?: (store: StateStorePort) => StateStorePort;
 };
 
 /** The one bounded warning an invocation outside any checkout emits (DEC-10). */
@@ -726,6 +732,103 @@ export const daemonReentryEnvironment = (
  * source; only the working name input is repeated for `createConfigProgram`'s
  * own brand check.
  */
+/** The ref-stable typed-question identity (DEC-9(f)); never embeds the run id. */
+export const supervisionExhaustionQuestionId = (ref: string): string => `exhaustion-${ref}`;
+
+/** The typed recovery options the exhaustion question offers (declared once). */
+export const SUPERVISION_EXHAUSTION_QUESTION_OPTIONS = [
+  "restart-fresh-budget",
+  "park-owner-review",
+] as const;
+
+/**
+ * The ONE supervision economics/append closure factory (F-4v2): schema ids,
+ * exhaustion options, the ref-stable question identity, and the per-run
+ * blocker-ledger cache are authored here, and both the production composition
+ * and the test harness build their closures from it. The blocker ledger is read
+ * at most once per run and its snapshot is passed to the append as the current
+ * view (DEC-9(d)); the run id is record/evidence metadata only.
+ */
+export const createSupervisionEconomicsWritePort = (input: {
+  readonly store: StateStorePort;
+  readonly newFenceToken: () => string;
+}): SupervisionEconomicsWritePort => {
+  let cachedLedger: ReturnType<typeof readBlockerLedger> | undefined;
+  return {
+    appendRestart: ({ ref, ordinal, runId, recordedAt }) => {
+      const outcome = appendEconomicsRestartEvent(input.store, input.newFenceToken(), {
+        schemaId: ECONOMICS_RESTART_SCHEMA_ID,
+        workItemRef: ref,
+        runId,
+        sessionId: runId,
+        ordinal,
+        reason: "session-interrupted",
+        recordedAt,
+      });
+      return outcome.ok
+        ? { ok: true, appended: outcome.appended }
+        : { ok: false, code: outcome.code };
+    },
+    ensureExhaustion: ({ ref, restarts, runId, recordedAt }) => {
+      const outcome = ensureEconomicsExhaustionRecord(input.store, input.newFenceToken(), {
+        schemaId: ECONOMICS_EXHAUSTION_SCHEMA_ID,
+        workItemRef: ref,
+        runId,
+        reason: "dispatch.restart-budget-exceeded",
+        restarts,
+        historyRef: `economics/${ref}`,
+        terminal: true,
+        options: [...ECONOMICS_EXHAUSTION_OPTIONS],
+        recordedAt,
+      });
+      return outcome.ok
+        ? { ok: true, appended: outcome.appended }
+        : { ok: false, code: outcome.code };
+    },
+    raiseQuestion: ({ ref, restarts, askedAt }) => {
+      const ledger = cachedLedger ?? readBlockerLedger(input.store);
+      cachedLedger = ledger;
+      if (!ledger.ok) return { ok: false, code: ledger.error.code };
+      const id = supervisionExhaustionQuestionId(ref);
+      if (ledger.value.questions.some((question) => question.id === id)) {
+        return { ok: true, appended: false };
+      }
+      const record = {
+        schemaId: BLOCKER_QUESTION_PAYLOAD_SCHEMA,
+        id,
+        type: "decision-needed" as const,
+        audience: "owner" as const,
+        lane: "supervise",
+        ref,
+        question: `the restart budget for ${ref} is exhausted after ${String(
+          restarts,
+        )} restarts; choose the recovery route`,
+        options: [...SUPERVISION_EXHAUSTION_QUESTION_OPTIONS],
+        askedAt,
+      };
+      const appended = appendBlockerQuestion(input.store, {
+        record,
+        fenceToken: input.newFenceToken(),
+        current: ledger.value,
+      });
+      if (!appended.ok) return { ok: false, code: appended.error.code };
+      if (appended.value.appended) {
+        // One ledger read per run: the cached snapshot absorbs this question
+        // so a second exhausted lane appends against a current view.
+        cachedLedger = {
+          ok: true,
+          value: {
+            ...ledger.value,
+            questions: [...ledger.value.questions, record],
+            recordCount: ledger.value.recordCount + 1,
+          },
+        };
+      }
+      return { ok: true, appended: appended.value.appended };
+    },
+  };
+};
+
 export const createProductionComposer = (facts: ProductionCompositionFacts): EntrypointComposer => {
   return (brand: BrandIdentity, invocation?: EntrypointInvocationFact) => {
     const environment = facts.environment;
@@ -974,7 +1077,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       }
     }
 
-    const store = createStateStore(
+    const openedStore = createStateStore(
       {
         level: "local",
         workspaceId,
@@ -984,6 +1087,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       },
       { driver: "jsonl", edge: createNodeStateEdge() },
     );
+    const store = facts.stateStoreWrap?.(openedStore) ?? openedStore;
 
     /**
      * Resolve the daemon settings and the lane restart bound over one
@@ -3130,7 +3234,6 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       (superviseRestartBound ??=
         readDaemonConfiguration(checkoutRoot)?.restartBound ??
         PRODUCTION_DEFAULTS.lane["restart-budget"]);
-    let superviseBlockerLedger: ReturnType<typeof readBlockerLedger> | undefined;
 
     const configured: ConfigProgramOptions = {
       workingName: facts.workingName,
@@ -3323,67 +3426,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         runId: superviseRunId,
         read: createStateSupervisionReadPort(store),
         write: createStateSupervisionWritePort({ store, newFenceToken }),
-        economicsWrite: {
-          appendRestart: ({ ref, ordinal, runId: recordRunId, recordedAt }) => {
-            const outcome = appendEconomicsRestartEvent(store, newFenceToken(), {
-              schemaId: ECONOMICS_RESTART_SCHEMA_ID,
-              workItemRef: ref,
-              runId: recordRunId,
-              sessionId: recordRunId,
-              ordinal,
-              reason: "session-interrupted",
-              recordedAt,
-            });
-            return outcome.ok
-              ? { ok: true, appended: outcome.appended }
-              : { ok: false, code: outcome.code };
-          },
-          ensureExhaustion: ({ ref, restarts, runId: recordRunId, recordedAt }) => {
-            const outcome = ensureEconomicsExhaustionRecord(store, newFenceToken(), {
-              schemaId: ECONOMICS_EXHAUSTION_SCHEMA_ID,
-              workItemRef: ref,
-              runId: recordRunId,
-              reason: "dispatch.restart-budget-exceeded",
-              restarts,
-              historyRef: `economics/${ref}`,
-              terminal: true,
-              options: [...ECONOMICS_EXHAUSTION_OPTIONS],
-              recordedAt,
-            });
-            return outcome.ok
-              ? { ok: true, appended: outcome.appended }
-              : { ok: false, code: outcome.code };
-          },
-          raiseQuestion: ({ ref, restarts, runId: recordRunId, askedAt }) => {
-            // One ledger read per run, not one per lane (F-2, DEC-9(d)).
-            const ledger = superviseBlockerLedger ?? readBlockerLedger(store);
-            superviseBlockerLedger = ledger;
-            if (!ledger.ok) return { ok: false, code: ledger.error.code };
-            const id = `exhaustion-${ref}-${recordRunId}`;
-            if (ledger.value.questions.some((question) => question.id === id)) {
-              return { ok: true, appended: false };
-            }
-            const appended = appendBlockerQuestion(store, {
-              record: {
-                schemaId: BLOCKER_QUESTION_PAYLOAD_SCHEMA,
-                id,
-                type: "decision-needed",
-                audience: "owner",
-                lane: "supervise",
-                ref,
-                question: `the restart budget for ${ref} is exhausted after ${String(
-                  restarts,
-                )} restarts; choose the recovery route`,
-                options: ["restart-fresh-budget", "park-owner-review"],
-                askedAt,
-              },
-              fenceToken: newFenceToken(),
-            });
-            return appended.ok
-              ? { ok: true, appended: appended.value.appended }
-              : { ok: false, code: appended.error.code };
-          },
-        } satisfies SupervisionEconomicsWritePort,
+        economicsWrite: createSupervisionEconomicsWritePort({ store, newFenceToken }),
         admitRestart: ({ ref, restarts }): SupervisionRestartAdmission => {
           const decision = evaluateRestartBudget({
             workItemRef: ref,

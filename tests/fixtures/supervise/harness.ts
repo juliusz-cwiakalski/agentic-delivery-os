@@ -7,7 +7,7 @@
  * the process table.
  */
 import { mkdirSync } from "node:fs";
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import { createSuperviseCommandDefinition } from "../../../packages/cli/src/commands/supervise";
 import type {
   SupervisionClaimRefusal,
@@ -31,85 +31,27 @@ import type {
 import { foldLanes, type QueueLaneEconomics } from "../../../packages/core/src/domain/queue-lanes";
 import { createParkRecord } from "../../../packages/core/src/domain/queue-park";
 import { computeQueueSchedule } from "../../../packages/core/src/domain/queue-precedence";
-import {
-  appendBlockerQuestion,
-  appendEconomicsRestartEvent,
-  ensureEconomicsExhaustionRecord,
-  readBlockerLedger,
-} from "../../../packages/core/src/state/index";
+import { createSupervisionEconomicsWritePort } from "../../../packages/cli/src/production";
 import { activeLease, makeFacts, REPO_A } from "../queue/schedule/harness";
 import { type QueueCliRun, runProgram } from "../queue-ready/harness";
+import {
+  createProductionProjectsHarness,
+  makeBaseDirectory,
+  removeDirectoryTree,
+  type ProductionRun,
+} from "../projects/production";
+import { createRepository } from "../projects/temp-repos";
 import { makeIdentity, openStore } from "../state/harness";
 import type { SupervisionSeedTarget } from "./records";
 import { isoAt } from "./records";
 import { createSupervisionRepository, type SupervisionTempRepository } from "./temp-git";
 
-/** The delivered economics append paths over the fixture store. */
+/** The shared production closure factory (F-4v2): no fixture re-implementation. */
 export const createTestEconomicsWrite = (
   store: StateStorePort,
   fence: (label: string) => string,
-): SupervisionEconomicsWritePort => {
-  // One ledger read per run, not one per lane (F-2, DEC-9(d)).
-  let cachedLedger: ReturnType<typeof readBlockerLedger> | undefined;
-  return {
-    appendRestart: ({ ref, ordinal, runId, recordedAt }) => {
-      const outcome = appendEconomicsRestartEvent(store, fence("economics-restart"), {
-        schemaId: "delivery.economics.restart.v1",
-        workItemRef: ref,
-        runId,
-        sessionId: runId,
-        ordinal,
-        reason: "session-interrupted",
-        recordedAt,
-      });
-      return outcome.ok
-        ? { ok: true, appended: outcome.appended }
-        : { ok: false, code: outcome.code };
-    },
-    ensureExhaustion: ({ ref, restarts, runId, recordedAt }) => {
-      const outcome = ensureEconomicsExhaustionRecord(store, fence("economics-exhaustion"), {
-        schemaId: "delivery.economics.exhaustion.v1",
-        workItemRef: ref,
-        runId,
-        reason: "dispatch.restart-budget-exceeded",
-        restarts,
-        historyRef: `economics/${ref}`,
-        terminal: true,
-        options: ["requeue-fresh-budget", "park-owner-review"],
-        recordedAt,
-      });
-      return outcome.ok
-        ? { ok: true, appended: outcome.appended }
-        : { ok: false, code: outcome.code };
-    },
-    raiseQuestion: ({ ref, restarts, runId, askedAt }) => {
-      const ledger = cachedLedger ?? readBlockerLedger(store);
-      cachedLedger = ledger;
-      if (!ledger.ok) return { ok: false, code: ledger.error.code };
-      const id = `exhaustion-${ref}-${runId}`;
-      if (ledger.value.questions.some((question) => question.id === id)) {
-        return { ok: true, appended: false };
-      }
-      const appended = appendBlockerQuestion(store, {
-        record: {
-          schemaId: "delivery.blocker.question.v1",
-          id,
-          type: "decision-needed",
-          audience: "owner",
-          lane: "supervise",
-          ref,
-          question: `the restart budget for ${ref} is exhausted after ${String(restarts)} restarts; choose the recovery route`,
-          options: ["requeue-fresh-budget", "park-owner-review"],
-          askedAt,
-        },
-        fenceToken: fence("supervise-question"),
-      });
-      return appended.ok
-        ? { ok: true, appended: appended.value.appended }
-        : { ok: false, code: appended.error.code };
-    },
-  };
-};
+): SupervisionEconomicsWritePort =>
+  createSupervisionEconomicsWritePort({ store, newFenceToken: fence });
 
 export const HARNESS_NOW_ISO = "2026-11-17T00:00:00.000Z";
 export const HARNESS_REPOSITORY = "github.com/example/supervision-repo";
@@ -179,7 +121,7 @@ export const createSupervisionHarness = (
           const stack = new Error().stack ?? "";
           const site = stack
             .split("\n")
-            .slice(2, 4)
+            .slice(2, 6)
             .map((line) => line.trim())
             .join(" | ");
           storeReads.count += 1;
@@ -275,6 +217,95 @@ export const createSupervisionHarness = (
       );
     },
     remove: () => repositoryFixture.remove(),
+  };
+};
+
+/**
+ * A composed-production harness (GH-295 TC-SUP-105): `createProductionComposer`
+ * over a real temporary checkout, with the main state store wrapped so every
+ * whole-store read is attributable. The fixture seeds through the delivered
+ * seams and never injects a store-free economics fake.
+ */
+export type ComposedSupervisionHarness = {
+  readonly base: string;
+  readonly checkout: string;
+  readonly store: StateStorePort;
+  readonly reads: {
+    count: number;
+    calls: { scope: "whole-store"; site: string }[];
+  };
+  readonly seed: SupervisionSeedTarget;
+  readonly run: (argv: readonly string[]) => Promise<ProductionRun>;
+  readonly remove: () => void;
+};
+
+export const COMPOSED_NOW_ISO = "2026-11-11T10:00:00.000Z";
+export const COMPOSED_NOW_MS = Date.parse(COMPOSED_NOW_ISO);
+
+const instrumentStore = (
+  store: StateStorePort,
+  reads: ComposedSupervisionHarness["reads"],
+): StateStorePort =>
+  new Proxy(store, {
+    get(target, property) {
+      if (property === "readRecords") {
+        return () => {
+          const stack = new Error().stack ?? "";
+          const site = stack
+            .split("\n")
+            .slice(2, 6)
+            .map((line) => line.trim())
+            .join(" | ");
+          reads.count += 1;
+          reads.calls.push({ scope: "whole-store", site });
+          return target.readRecords();
+        };
+      }
+      const value = Reflect.get(target, property, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  });
+
+export const createComposedSupervisionHarness = (
+  options: { readonly label?: string } = {},
+): ComposedSupervisionHarness => {
+  const label = options.label ?? "composed";
+  const base = makeBaseDirectory(`supervise-${label}`);
+  const checkout = createRepository(base, "checkout");
+  mkdirSync(join(checkout, ".ai/local"), { recursive: true });
+  const reads: ComposedSupervisionHarness["reads"] = { count: 0, calls: [] };
+  const harness = createProductionProjectsHarness({
+    label: `supervise-${label}`,
+    workingDirectory: checkout,
+    stateStoreWrap: (store) => instrumentStore(store, reads),
+  });
+  let fenceSequence = 0;
+  const fence = (name: string): string => {
+    fenceSequence += 1;
+    return `${name}-${String(fenceSequence)}`;
+  };
+  return {
+    base,
+    checkout,
+    store: harness.store,
+    reads,
+    seed: {
+      store: harness.store,
+      nowMs: COMPOSED_NOW_MS,
+      nowIso: COMPOSED_NOW_ISO,
+      repository: basename(checkout).toLowerCase(),
+      root: checkout,
+      fence,
+    },
+    run: async (argv) => {
+      reads.count = 0;
+      reads.calls = [];
+      return harness.run(argv);
+    },
+    remove: () => {
+      harness.dispose();
+      removeDirectoryTree(base);
+    },
   };
 };
 

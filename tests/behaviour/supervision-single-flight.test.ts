@@ -5,7 +5,11 @@
  * a parallel predicate would fail the case.
  */
 import { describe, expect, test } from "bun:test";
-import { claimSingleFlightRefusal, readQueueLeases } from "../../packages/core/src/app/index";
+import {
+  claimSingleFlightRefusal,
+  readQueueLeases,
+  readQueueParks,
+} from "../../packages/core/src/app/index";
 import { createSupervisionHarness } from "../fixtures/supervise/harness";
 import { LANE_REF, seedLiveLease, stalledAndParked } from "../fixtures/supervise/records";
 
@@ -52,6 +56,7 @@ describe("TC-SUP-052 the per-ref double-claim reuses queue.single-flight", () =>
       expect(
         records.value.records.filter((record) => record.kind === "economics.restart"),
       ).toHaveLength(0);
+      expect(readQueueParks(harness.store).ok).toBe(true);
     } finally {
       harness.remove();
     }
@@ -69,6 +74,7 @@ describe("TC-SUP-052 the snapshot path answers by default", () => {
       if (result.ok) return;
       expect(result.code).toBe("queue.single-flight");
       expect(result.summary).toContain("holder-a");
+      expect(readQueueParks(harness.store).ok).toBe(true);
     } finally {
       harness.remove();
     }

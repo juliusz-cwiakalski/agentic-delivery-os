@@ -57,6 +57,7 @@ describe("TC-SUP-040 the corroborated stall appends one liveness-stall park", ()
       }
       expect(entriesAfter.records).toHaveLength(entriesBefore.records.length);
       expect(leasesAfter.records).toHaveLength(leasesBefore.records.length);
+      expect(readQueueParks(harness.store).ok).toBe(true);
     } finally {
       harness.remove();
     }
@@ -114,6 +115,7 @@ describe("TC-SUP-043 a held session records the safe-boundary intent", () => {
         expect(twinPark?.conditionType).toBe(heldPark?.conditionType);
         expect(twinPark?.until).toBe(heldPark?.until);
         expect(twinPark?.recheckMs).toBe(heldPark?.recheckMs);
+        expect(readQueueParks(twin.store).ok).toBe(true);
         expect(
           ((JSON.parse(twinRun.stdout) as { data?: { actions?: readonly unknown[] } }).data
             ?.actions ?? []) as readonly unknown[],
@@ -152,6 +154,7 @@ describe("TC-SUP-047 the park carries auditable corroborating evidence", () => {
         SUPERVISION_MAX_EVIDENCE_BYTES,
       );
       expect(JSON.stringify(evidence)).not.toContain("lock-");
+      expect(readQueueParks(harness.store).ok).toBe(true);
     } finally {
       harness.remove();
     }

@@ -6,6 +6,7 @@
  * (GH-295 AC-F6-1, AC-F8-1, DEC-8).
  */
 import { describe, expect, test } from "bun:test";
+import { readQueueParks } from "../../packages/core/src/app/index";
 import { createSupervisionHarness } from "../fixtures/supervise/harness";
 import {
   actingAuthority,
@@ -50,6 +51,7 @@ describe("TC-SUP-051 the acting-authority cell refuses per action", () => {
       expect(envelope.error?.summary ?? "").toContain("daemon-preemption");
       expect(envelope.error?.summary ?? "").toContain("acting-holder");
       expect(restarts(harness)).toBe(0);
+      expect(readQueueParks(harness.store).ok).toBe(true);
     } finally {
       harness.remove();
     }
@@ -69,6 +71,7 @@ describe("TC-SUP-051 the acting-authority cell refuses per action", () => {
       const data = (JSON.parse(run.stdout) as JsonEnvelope).data;
       expect(data).toBeDefined();
       expect(restarts(harness)).toBe(1);
+      expect(readQueueParks(harness.store).ok).toBe(true);
     } finally {
       harness.remove();
     }
@@ -103,6 +106,7 @@ describe("TC-SUP-051 presence alone refuses nothing", () => {
       expect(((data.actions ?? []) as readonly Record<string, unknown>[])[0]?.kind).toBe(
         "supervised-stall-park",
       );
+      expect(readQueueParks(harness.store).ok).toBe(true);
     } finally {
       harness.remove();
     }

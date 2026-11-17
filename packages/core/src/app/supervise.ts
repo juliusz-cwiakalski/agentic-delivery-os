@@ -55,6 +55,7 @@ import {
 } from "#contracts";
 import { foldActiveLeases, isLeaseStale } from "../domain/queue-lease.js";
 import {
+  activeParkRecords,
   conditionTypeForCause,
   createParkRecord,
   defaultParkRecheckMs,
@@ -237,7 +238,6 @@ export type SupervisionEconomicsWritePort = {
   readonly raiseQuestion: (input: {
     readonly ref: string;
     readonly restarts: number;
-    readonly runId: string;
     readonly askedAt: string;
   }) => SupervisionAppendResult;
 };
@@ -571,24 +571,47 @@ export const createStateSupervisionReadPort = (store: StateStorePort): Supervisi
         live: !isLeaseStale(lease.heartbeatAgeMs, lease.ttlMs),
       }));
 
-    // Active parks per lane (the delivered latest-park semantics).
-    const latestParkByRef = new Map<string, { cause: string; until?: string }>();
+    // Active parks per lane, judged by the ONE occupancy home whose semantics
+    // agree with the delivered duplicate-active-park validator (DEC-9(e)): a
+    // `parked` record stays active until a `recovered`/`released` record
+    // clears it, so a stuck `clear-observed` record still occupies the lane
+    // even though its latest state is not `parked`.
+    const parkEntries: {
+      ref: string;
+      recoveryState: QueueParkRecord["recoveryState"];
+      cause: string;
+      until?: string;
+    }[] = [];
     for (const record of records) {
       if (record.kind !== QUEUE_PARK_RECORD_KIND || !record.key.startsWith(QUEUE_PARK_KEY_PREFIX)) {
         continue;
       }
       const payload = asRecord(record.payload);
       const ref = str(payload?.ref);
-      if (ref === undefined || !inScope.has(ref)) continue;
+      const recoveryState = payload?.recoveryState;
+      if (
+        ref === undefined ||
+        !inScope.has(ref) ||
+        (recoveryState !== "parked" &&
+          recoveryState !== "clear-observed" &&
+          recoveryState !== "recovered" &&
+          recoveryState !== "released")
+      ) {
+        continue;
+      }
       const condition = asRecord(payload?.condition);
       const expiresAt = str(condition?.expiresAt);
       const until = str(payload?.until) ?? expiresAt;
-      latestParkByRef.set(ref, {
+      parkEntries.push({
+        ref,
+        recoveryState,
         cause: str(payload?.cause) ?? "provider-window",
         ...(until === undefined ? {} : { until }),
-        ...(payload?.recoveryState === "parked" ? {} : { cause: "" }),
       });
     }
+    const activeParkByRef = new Map(
+      activeParkRecords(parkEntries).map((park) => [park.ref, park] as const),
+    );
 
     // Coordinator ledger-lease claim and its ledger-position movement.
     const fenceRecords = records.filter(
@@ -633,7 +656,7 @@ export const createStateSupervisionReadPort = (store: StateStorePort): Supervisi
 
     let heartbeatFallback = false;
     const lanes: SupervisionLaneFact[] = laneRefs.map((ref) => {
-      const park = latestParkByRef.get(ref);
+      const park = activeParkByRef.get(ref);
       const artifacts = artifactsOf(laneArtifactEntries.filter((entry) => entry.ref === ref));
       const ownFirst = laneObservedFirst.get(ref);
       const ownLast = laneObservedLast.get(ref);
@@ -656,7 +679,7 @@ export const createStateSupervisionReadPort = (store: StateStorePort): Supervisi
         ...(laneHeartbeatLast === undefined ? {} : { lastHeartbeatAt: laneHeartbeatLast }),
         ...(heartbeatRecordKind === undefined ? {} : { heartbeatRecordKind }),
         artifacts,
-        ...(park === undefined || park.cause === "" ? {} : { activePark: park }),
+        ...(park === undefined ? {} : { activePark: park }),
       };
     });
 
@@ -961,14 +984,19 @@ export const runSupervisionBattery = (input: SupervisionBatteryInput): Supervisi
     for (const fact of bounded.lanes) {
       const entry = lanes.find((candidate) => candidate.ref === fact.ref);
       if (entry === undefined || entry.classification !== "stalled") continue;
-      const alreadyParked =
-        fact.activePark !== undefined && fact.activePark.cause === "liveness-stall";
-      if (alreadyParked) {
+      // DEC-9(e): the park append is gated on the lane carrying NO active park
+      // of any cause, judged by the delivered occupancy semantics. An
+      // owner-hold, peak-window, quota, close-item-preemption or stuck
+      // clear-observed park is respected rather than stacked; restart
+      // admission stays liveness-stall-only.
+      const activePark = fact.activePark;
+      if (activePark !== undefined) {
+        if (activePark.cause !== "liveness-stall") continue;
         // GH-295 F-14: the park's declared re-entry instant governs this run's
         // actions too. A second battery inside the recheck horizon appends
         // nothing and burns no restart budget.
         const reentryAtMs =
-          fact.activePark?.until === undefined ? undefined : Date.parse(fact.activePark.until);
+          activePark.until === undefined ? undefined : Date.parse(activePark.until);
         if (
           reentryAtMs !== undefined &&
           Number.isFinite(reentryAtMs) &&
@@ -1061,10 +1089,12 @@ export const runSupervisionBattery = (input: SupervisionBatteryInput): Supervisi
               summary: `the terminal exhaustion for ${fact.ref} did not land (${terminal.code})`,
             };
           }
+          // DEC-9(f): an already-landed terminal record is inert. Nothing
+          // lands, so the run raises no question and reports no action.
+          if (!terminal.appended) continue;
           const question = input.economicsWrite.raiseQuestion({
             ref: fact.ref,
             restarts: admission.restarts,
-            runId: input.runId,
             askedAt: input.nowIso,
           });
           if (!question.ok) {

@@ -1688,6 +1688,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "renewalCadenceMs",
   ],
   "core/src/domain/queue-park.ts": [
+    "activeParkRecords",
     "clearObservedRecord",
     "parkConditionExpiryMissing",
     "conditionTypeForCause",
@@ -2179,6 +2180,9 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "cli/src/help/prompt-required-commands.ts": ["PROMPT_REQUIRED_COMMANDS"],
   "cli/src/production.ts": [
     "createProductionComposer",
+    "createSupervisionEconomicsWritePort",
+    "SUPERVISION_EXHAUSTION_QUESTION_OPTIONS",
+    "supervisionExhaustionQuestionId",
     "createProductionTelemetrySink",
     "daemonReachable",
     "daemonReentryEnvironment",

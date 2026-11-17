@@ -18,6 +18,8 @@ import {
   claimQueueLease,
   declareQueueEntry,
   queueEntryRecordKey,
+  queueParkRecordKey,
+  readQueueParks,
   releaseQueueLease,
 } from "../../../packages/core/src/app/index";
 import {
@@ -37,16 +39,19 @@ import {
   DISPATCH_ATTEMPT_RECORD_KIND,
   type DispatchAttemptRecord,
   ECONOMICS_RESTART_RECORD_KIND,
+  ECONOMICS_RESTART_SCHEMA_ID,
   type EconomicsRestartRecord,
   OUTBOX_EFFECT_RECORD_KIND,
   type OutboxEffectRecord,
   QUEUE_ENTRY_RECORD_KIND,
   QUEUE_ENTRY_SCHEMA,
+  QUEUE_PARK_RECORD_KIND,
   type QueueLeaseRecord,
   type StateJsonValue,
   type StateStorePort,
 } from "../../../packages/core/src/contracts/index";
 import { appendEconomicsRestartEvent } from "../../../packages/core/src/state/economics";
+import { clearObservedRecord } from "../../../packages/core/src/domain/queue-park";
 import {
   appendCoordinatorFence,
   appendCoordinatorIteration,
@@ -324,7 +329,7 @@ export const seedRestart = (
 ): EconomicsRestartRecord => {
   const ref = input.ref ?? LANE_REF;
   const record: EconomicsRestartRecord = {
-    schemaId: "delivery.economics.restart.v1",
+    schemaId: ECONOMICS_RESTART_SCHEMA_ID,
     workItemRef: ref,
     runId: input.runId ?? "run-fixture",
     sessionId: "session-fixture",
@@ -436,6 +441,106 @@ export const seedLivenessPark = (
   });
   expectOk(`liveness park ${ref}`, released);
 };
+
+/** A park-eligible stalled lane already carrying one active park under a cause (TC-SUP-104). */
+export const stalledLaneParkedUnder = (
+  target: SupervisionSeedTarget,
+  input: {
+    readonly cause: "owner-hold" | "peak-window";
+    readonly ref?: string;
+    readonly untilOffsetMs?: number;
+  },
+): void => {
+  const ref = input.ref ?? LANE_REF;
+  seedLane(target, ref);
+  // The lane's own observation is aged, so it is a corroborated stall.
+  seedLaneRecord(target, { ref, offsetMs: -(300_000 + 5) });
+  const holder = `holder-park-${input.cause}`;
+  seedLiveLease(target, { ref, holder });
+  const until = isoAt(target, input.untilOffsetMs ?? 60_000);
+  const released = releaseQueueLease(target.store, {
+    ref,
+    holder,
+    park: {
+      cause: input.cause,
+      condition:
+        input.cause === "owner-hold"
+          ? { type: "preemption" }
+          : { type: "provider-window", expiresAt: until },
+      recheckMs: 60_000,
+    },
+    nowIso: target.nowIso,
+    nowMs: target.nowMs,
+    fenceToken: target.fence(`park-under-${input.cause}`),
+  });
+  expectOk(`park under ${input.cause}`, released);
+};
+
+/**
+ * A stuck `clear-observed` park (TC-SUP-104): the latest record is not
+ * `parked`, yet the delivered duplicate-active-park rule still counts the ref
+ * as occupied until a recovered/released record lands.
+ */
+export const staleClearObservedPark = (
+  target: SupervisionSeedTarget,
+  input: { readonly ref?: string } = {},
+): void => {
+  const ref = input.ref ?? LANE_REF;
+  seedLane(target, ref);
+  seedLaneRecord(target, { ref, offsetMs: -(300_000 + 5) });
+  const holder = "holder-park-clear-observed";
+  seedLiveLease(target, { ref, holder });
+  const until = isoAt(target, 60_000);
+  const released = releaseQueueLease(target.store, {
+    ref,
+    holder,
+    park: {
+      cause: "peak-window",
+      condition: { type: "provider-window", expiresAt: until },
+      recheckMs: 60_000,
+    },
+    nowIso: target.nowIso,
+    nowMs: target.nowMs,
+    fenceToken: target.fence("park-clear-observed-base"),
+  });
+  expectOk(`park base ${ref}`, released);
+  const parks = readQueueParks(target.store);
+  if (!parks.ok) throw new Error("supervision fixture seam failed: park read");
+  const latest = [...parks.records].reverse().find((record) => record.ref === ref);
+  if (latest === undefined) throw new Error("supervision fixture seam failed: park missing");
+  const marker = clearObservedRecord(latest, {
+    nowIso: target.nowIso,
+    nowMs: target.nowMs,
+  });
+  const acquired = target.store.acquireFence(target.fence("park-clear-observed-marker"));
+  if (!acquired.ok) throw new Error("supervision fixture seam failed: marker fence");
+  const appended = target.store.append(acquired.value.handle, {
+    kind: QUEUE_PARK_RECORD_KIND,
+    recordKey: queueParkRecordKey(ref),
+    payload: marker as unknown as StateJsonValue,
+  });
+  const releasedFence = target.store.releaseFence(acquired.value.handle);
+  if (!appended.ok || !releasedFence.ok) {
+    throw new Error("supervision fixture seam failed: clear-observed marker");
+  }
+};
+
+/** A crafted payload carrying the declared volatile values (TC-SUP-106). */
+export const volatilePayload = (input: {
+  readonly root: string;
+  readonly runId: string;
+}): Record<string, unknown> => ({
+  schemaVersion: "delivery.result.v1",
+  runId: input.runId,
+  exitCode: 0,
+  timing: { totalMs: 1234 },
+  data: {
+    repo: "github.com/example/supervision-repo",
+    ref: "GH-295",
+    root: input.root,
+    observedAt: "2026-11-17T00:00:00.000Z",
+  },
+});
 
 /** Record kinds the fixtures seed (asserted by the additivity case). */
 export const SUPERVISION_SEEDED_RECORD_KINDS = [

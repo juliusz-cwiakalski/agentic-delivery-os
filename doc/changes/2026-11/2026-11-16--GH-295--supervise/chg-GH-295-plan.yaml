@@ -1,12 +1,25 @@
-# GH-295 delivery plan — machine-readable document (delivery.plan.v1), revision 1.3
-# (2026-11-17). Revision 1.3 is the review-driven amendment of a plan whose
+# GH-295 delivery plan — machine-readable document (delivery.plan.v1), revision 1.4
+# (2026-11-17). Revision 1.4 is the second review-driven amendment of a plan
+# whose phases 1-9 are delivered: review iteration 2
+# (code-review/review-iter-2.yaml, verdict FAIL — F-1 critical second active
+# park under another cause, F-2 high duplicate exhaustion questions, F-3/F-4
+# medium composed-read and harness duplication) added phase 10 (remediation
+# round 2) and re-pointed the sources at spec v1.3 (DEC-9(e) park-state
+# interaction, DEC-9(f) question idempotence, the restated DEC-9(d)/NFR-4 read
+# discipline, §22's composition proof obligation) and test plan v1.5
+# (58 TCs; TC-SUP-103 rewritten, TC-SUP-104/105/106 added, TC-SUP-061 fixed).
+# Phases 1-9 are not rewritten by this revision; the tier's declared phase
+# set, the phase-order list, the AC ownership enumeration, the TC ownership
+# totals, and the commit convention now read ten phases.
+# Revision 1.3 is the review-driven amendment of a plan whose
 # phases 1-8 are delivered: review iteration 1
 # (code-review/review-iter-1.yaml, verdict FAIL — F-1 critical, F-2/F-4 high)
 # added phase 9 (review remediation) and re-pointed the sources at spec v1.2
 # (DEC-9(a)-(d)) and test plan v1.4 (55 TCs, the four added cases
-# TC-SUP-100..103). Phases 1-8 are not rewritten by this revision; the tier's
+# TC-SUP-100..103). Phases 1-8 were not rewritten by that revision; the tier's
 # declared phase set, the phase-order list, the AC ownership enumeration, the
-# TC ownership totals, and the commit convention now read nine phases.
+# TC ownership totals, and the commit convention read nine phases there and
+# ten after revision 1.4.
 # Revision 1.2 applies the DoR iteration-2 findings (readiness-
 # iter-2.md): the error-table base-state pin corrected to the delivered truth
 # (146 rows at base; the phase-1 mirror move corrected to 146 -> 148; the
@@ -32,7 +45,7 @@
 # GH-296 ceremony, GH-297 board and GH-287 retro action registry already in
 # the base).
 #
-# One ticket, one PR against main-tools, nine delivery phases. Every phase is
+# One ticket, one PR against main-tools, ten delivery phases. Every phase is
 # an independently committable slice that is green at its own boundary
 # (targeted suites plus the aggregate gate battery below), and every phase is
 # ONE delivery commit through the commit primitive (conventional subject,
@@ -48,7 +61,7 @@
 # `tasks` key and no progress log.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:      ./chg-GH-295-spec.md v1.2 — F-1..F-8 (§5.1 details); DM-1
+#   - Spec:      ./chg-GH-295-spec.md v1.3 — F-1..F-8 (§5.1 details); DM-1
 #                (delivery.supervision.v1 report), DM-2 (liveness-stall cause
 #                + condition mapping + non-null until), DM-3 (additive
 #                active-park until on the lane projection), DM-4 (no new
@@ -71,11 +84,29 @@
 #                accepts or is refused by name; b: the durable park record is
 #                the safe-boundary intent carrier reported as
 #                safe-boundary-park-intent; c: the daemon.preemption pending
-#                record is the acting-authority artifact class; d: the single
-#                fold covers the action path); §17 AC table; §7.1 in-scope incl.
-#                documentation reconciliation inputs.
-#   - Test plan: ./chg-GH-295-test-plan.md v1.4 — 55 TCs (51 delivered plus
-#                TC-SUP-100..103 added by the review amendment); §3 coverage
+#                record is the acting-authority artifact class; d: the read
+#                discipline — exactly one decision fold per run, the action
+#                path consuming its snapshot with no per-lane whole-store
+#                re-read, the delivered append helpers' bounded read-then-
+#                verify per append, and the blocker ledger read at most once
+#                per run with its snapshot passed as the current view, no
+#                claim of exactly one store read in total for a composed
+#                acting run; e: the park-state interaction rule — a
+#                supervised-stall park is appended only when NO active park
+#                of any cause exists (owner-hold, peak-window, provider-quota,
+#                preempted-for-close-item and a stuck clear-observed park
+#                included), restart admission stays liveness-stall-only;
+#                f: question idempotence — the exhaustion question is raised
+#                only when the terminal record actually appended or is
+#                deduped by ref+type, the run id being record/evidence
+#                metadata and never the question identity); §17 AC table;
+#                §7.1 in-scope incl.
+#                documentation reconciliation inputs; §22 composition proof.
+#   - Test plan: ./chg-GH-295-test-plan.md v1.5 — 58 TCs (51 delivered plus
+#                TC-SUP-100..103 from the iteration-1 amendment and
+#                TC-SUP-104..106 from the iteration-2 amendment, with
+#                TC-SUP-103 rewritten, TC-SUP-061 fixed and TC-SUP-082's
+#                human-render statement corrected); §3 coverage
 #                matrices (AC, DM, NFR, seeds); §4.3 permanent structure
 #                obligations; §5.2 case oracles; §6 fixtures and goldens
 #                (GAP-T2 key spellings, GAP-T3 goldens created not
@@ -232,6 +263,19 @@
 #     restored exact-set family pin) landed in the suites that own them.
 #     This phase re-opens delivered code, so it follows the release phase
 #     and precedes the post-remediation doc resync and PR.
+#  10 Review remediation round 2 tenth — the review iteration-2 closure
+#     (F-1 critical second active park under another cause, F-2 high
+#     duplicate exhaustion questions, F-3/F-4 medium composed-read and
+#     harness duplication, plus the two low residuals): the park append
+#     gated on NO active park of any cause with occupancy that agrees with
+#     the delivered duplicate-active-park validator (the stuck clear-observed
+#     cell included), the exhaustion question raised only when the terminal
+#     record actually landed or deduped by ref+type with the run id demoted
+#     to metadata, the read discipline stated and proven exactly over the
+#     composed production closures with one shared closure factory, and the
+#     normalizer's volatile-field discipline asserted behaviourally. This
+#     phase re-opens delivered code again, so it also follows the release
+#     phase and precedes the doc resync and PR.
 #
 # AC OWNERSHIP (8/8 — every AC is enumerated with its owning phase(s);
 # earlier phases may produce partial verdicts, which are additive and never
@@ -267,7 +311,19 @@
 #            stays owned by phase 4, AC-F6-1 by phase 5, AC-F1-1 by phase 3;
 #            phase 9's evidence is additional proof of the same criteria,
 #            never a re-assignment.
-#   Enumeration of all nine: AC-F1-1 @ phase 3; AC-F2-1 @ phase 2; AC-F3-1
+#   phase 10 (review remediation round 2; NO new AC and NO ownership change).
+#            Phase 10 reinforces three already-owned ACs: AC-F5-1 (the
+#            park-append precondition — no action over a lane already parked
+#            under any cause, with a healthy delivered read afterwards,
+#            TC-SUP-104/105), AC-F7-1 (question idempotence across two runs
+#            with different injected run ids and no action for a record that
+#            did not land, TC-SUP-061/105), and AC-F2-1 (the exact read
+#            discipline measured over the composed production closures,
+#            TC-SUP-103/105; the already-parked lane is still classified and
+#            reported honestly, TC-SUP-104). AC-F5-1 stays owned by phase 4,
+#            AC-F7-1 and AC-F2-1 by phases 5 and 2; phase 10's evidence is
+#            additional proof of the same criteria, never a re-assignment.
+#   Enumeration of all ten: AC-F1-1 @ phase 3; AC-F2-1 @ phase 2; AC-F3-1
 #   split — lane half (TC-SUP-020/022) @ phase 4, claim half (TC-SUP-021/
 #   054) @ phase 5, the union completing the ticket's acceptance criterion
 #   ("a stuck supervisor is detected by artifact evidence, not process
@@ -276,9 +332,9 @@
 #   carrier, corpora) @ phase 1, projection half @ phase 5. Both split ACs
 #   are complete unions at the delivered HEAD; all 8 ACs are enumerated
 #   with owning phases and dod_check verifies each against the named
-#   per-phase evidence, including the phase-9 reinforcement rows.
+#   per-phase evidence, including the phase-9 and phase-10 reinforcement rows.
 #
-# TC OWNERSHIP (55/55; ownership = the phase that lands the asserted content
+# TC OWNERSHIP (58/58; ownership = the phase that lands the asserted content
 # and where the TC's verdict is first fully green; every case is authored
 # failing-first against its owning phase — committed red before the
 # implementation that makes it green, so no case is vacuously green):
@@ -294,7 +350,8 @@
 #   phase 7  TC-SUP-080, 082, 083, 084, 092, 095           (6)
 #   phase 8  TC-SUP-097 (manual, review-verified record)   (1)
 #   phase 9  TC-SUP-100, 101, 102, 103                     (4)
-#   Count: 5 + 6 + 9 + 12 + 11 + 1 + 6 + 1 + 4 = 55.
+#   phase 10 TC-SUP-104, 105, 106                          (3)
+#   Count: 5 + 6 + 9 + 12 + 11 + 1 + 6 + 1 + 4 + 3 = 58.
 #   REVIEW-AMENDMENT NOTES (test plan v1.4 against spec v1.2 DEC-9): the four
 #   added cases are owned by phase 9 — TC-SUP-100/101/102 (the closed-set
 #   cause/writer round-trip, the operator refusal, the empty-expiry guard) in
@@ -311,6 +368,27 @@
 #   phase 9 lands the corrected assertions in those named suites, so each
 #   case's amended verdict is green at the phase-9 boundary while its
 #   ownership and its phase's evidence row stay unchanged.
+#   REVIEW-AMENDMENT ROUND 2 NOTES (test plan v1.5 against spec v1.3 DEC-9(e)/
+#   (f) and the restated (d)/NFR-4): the three added cases are owned by
+#   phase 10 — TC-SUP-104 (park-state interaction) in the NEW
+#   tests/behaviour/supervision-park-state.test.ts, TC-SUP-105 (composed-
+#   production acting run) in the NEW tests/behaviour/
+#   supervision-composed-production.test.ts plus the NEW tests/structure/
+#   supervision-composition-factory.test.ts one-factory assertion, and
+#   TC-SUP-106 (normalizer volatile-field integrity) in the NEW
+#   tests/golden/supervision-normalizer.test.ts over the NEW
+#   tests/fixtures/supervise/golden/normalize.ts; all three are authored
+#   failing-first against the pre-remediation tree. Ownership of the rewritten
+#   delivered cases does NOT move: TC-SUP-103 (rewritten to the precise
+#   decision-fold discipline over the composed closures) stays phase 9 — its
+#   file was created there — and TC-SUP-061 (rewritten to two runs with
+#   different injected run ids, DEC-9(f)) stays phase 5; TC-SUP-082 (the
+#   human-render cell) stays phase 7, TC-SUP-040 (the post-action
+#   healthy-read assertion) stays phase 4, and every other action cell that
+#   gains the healthy-read tail keeps its phase. Phase 10 lands the corrected
+#   assertions in those suites, so each amended verdict is green at the
+#   phase-10 boundary while ownership and each phase's evidence row stay
+#   unchanged.
 #   NON-VACUITY ALLOCATION NOTES: TC-SUP-011 and TC-SUP-022 (their no-park
 #   halves), TC-SUP-020 and TC-SUP-023 (their park-action halves), and
 #   TC-SUP-021's no-action-targets-a-claim half are owned by the phase where
@@ -339,10 +417,17 @@
 #   fold) and is extended in phases 4 (park actions) and 5 (restart +
 #   refusals); tests/fixtures/supervise/records.ts starts phase 2 and is
 #   extended in phases 4 (stalledAndParked), 5 (actingAuthority,
-#   claimsOnly) and 7 (mixedScope, cappedScope).
+#   claimsOnly), 7 (mixedScope, cappedScope) and 10 (stalledLaneParkedUnder,
+#   staleClearObservedPark, volatilePayload); tests/fixtures/supervise/
+#   harness.ts builds its closures from the shared factory in phase 10
+#   (TC-SUP-105) and is otherwise extended in phases 3, 4 and 5.
 #
-# COMMIT CONVENTION (one commit per plan phase; subjects declared here so the
-# commit path and review agree; scope is the workItemRef per repo convention):
+# COMMIT CONVENTION (one commit per plan phase; subjects declared here as the
+# intended subject per phase — ASPIRATIONAL on this branch: the delivered
+# history uses path-derived subjects and pm-notes records the owner-accepted
+# disclosure with the phase-to-commit mapping (review F-3/F-9); a future plan
+# should derive the subject from its phase. Scope is the workItemRef per repo
+# convention):
 #   phase 1  feat(GH-295): supervision contracts, liveness-stall cause, two error identities
 #   phase 2  feat(GH-295): artifact-evidence fold with tri-state classification and claims
 #   phase 3  feat(GH-295): supervise battery surface with grammar, scope and exits
@@ -352,6 +437,7 @@
 #   phase 7  test(GH-295): determinism, bounds, latency, failure-envelope goldens
 #   phase 8  docs(GH-295): planning bookkeeping, changeset, release obligations
 #   phase 9  fix(GH-295): review remediation — park writer hardening, action-path one-fold, finding fixes
+#   phase 10 fix(GH-295): review round 2 — park-state gate, question idempotence, composed read proof
 #
 # CONSTRAINTS BINDING ON EVERY PHASE (spec sections 5-9; do not reshape at
 # delivery):
@@ -397,7 +483,26 @@
 #     asserted through conditionTypeForCause, never a literal; the cause is
 #     BATTERY-WRITTEN ONLY — the operator path refuses it by name, and every
 #     cause-writer pair either round-trips a record its own validator
-#     accepts or is refused by name (DEC-9(a)).
+#     accepts or is refused by name (DEC-9(a)); the battery appends a park
+#     ONLY when the lane carries no active park of ANY cause, with the
+#     occupancy judgement agreeing with the delivered duplicate-active-park
+#     validator (a stuck clear-observed park included), so no second active
+#     park is ever stacked and restart admission stays liveness-stall-only
+#     (DEC-9(e)). The delivered validator itself is NOT modified — the
+#     battery conforms to it.
+#   - Question idempotence (DEC-9(f)): the exhaustion typed question is
+#     raised only when the terminal exhaustion record actually appended
+#     (appended === true) or the question dedupes by ref + type; the run id is
+#     record and evidence metadata only, never part of the question identity,
+#     and no action is reported for a record that did not land.
+#   - Read discipline (DEC-9(d) as restated): exactly one decision fold per
+#     run supplies park, restart, and claim decisions with no per-lane
+#     whole-store re-read; the delivered append helpers' read-then-verify is a
+#     declared bounded per-append cost and the blocker ledger is read at most
+#     once per run with its snapshot passed as the current view; no claim of
+#     exactly one store read in total for a composed acting run, and every
+#     such claim is measured over the composed production closures, never a
+#     store-free fake.
 #   - Evidence discipline (NFR-3, NFR-6): every entry, action, and refusal
 #     carries non-empty evidence naming refs, record kinds, instants, and
 #     codes bounded to the scope; lock tokens, session ids, and process
@@ -423,7 +528,9 @@
 #     family-count pins (delta +1, now reading ONE captured mounted list with
 #     exact-set equality — the restored exact-set assertion in tests/structure/
 #     steer-mounting.test.ts, review F-13), and the delivered queue command's
-#     printed accepted-cause/help text if it enumerates the causes. Anything
+#     printed accepted-cause/help text if it enumerates the causes. Phase 10
+#     edits no delivered suite: its new homes are new files and its corrected
+#     assertions live in this change's own supervision suites. Anything
 #     else that must change is a
 #     finding and the escalation trigger the tier reserves.
 #   - Current-truth boundary: doc/spec/** flips only in lifecycle phase 7
@@ -463,16 +570,24 @@
 #     carries its own two named mutants (test plan §4.2): an operator path
 #     that accepts the battery-only cause (TC-SUP-100/101 must fail naming
 #     the cause) and a re-introduced per-lane whole-store read on the action
-#     path (TC-SUP-103 must fail with the observed read count).
+#     path (TC-SUP-103 must fail with the observed read count). Phase 10
+#     carries its own three named mutants (test plan §4.2): stack a second
+#     active park beside an existing owner-hold park (TC-SUP-104 must fail on
+#     the zero-append and healthy-read assertions), make the typed question's
+#     id run-scoped (TC-SUP-061 must fail with two questions across the two
+#     distinct run ids), and duplicate the production economics closure in the
+#     fixture (TC-SUP-105 must fail the one-factory assertion).
 #
 # LIFECYCLE PHASE 7 HANDOFF OBLIGATIONS (system_spec_update, @doc-syncer;
 # declared here so nothing is dropped after DoD — NOT plan scope beyond the
-# phase-8 and phase-9 staging rows, and no delivery phase edits doc/spec/**
-# beyond the phase-1 error-table carrier). The handoff runs AFTER phase 9:
-# the remediation changes behaviour the page describes (the lane's own
-# heartbeat, per-claim-kind evidence record kinds, the one-fold action path),
-# so the reconciliation is authored against the post-remediation tree and the
-# phase-9 staging row exists only so the commit primitive can stage it.
+# phase-8, phase-9 and phase-10 staging rows, and no delivery phase edits
+# doc/spec/** beyond the phase-1 error-table carrier). The handoff runs AFTER
+# phase 10: the remediations change behaviour the page describes (the lane's
+# own heartbeat, per-claim-kind evidence record kinds, the one-fold action
+# path, the park-appended-only-when-unparked gate, the ref-stable exhaustion
+# question and the exact read discipline), so the reconciliation is authored
+# against the post-remediation tree and the phase-9/phase-10 staging rows
+# exist only so the commit primitive can stage them.
 #   - New current-truth feature spec (first-spec-only rule): doc/spec/
 #     features/feature-supervise.md authored in lifecycle phase 7 — the
 #     battery, the tri-state fold, lying liveness, watchdog/daemon
@@ -1201,7 +1316,7 @@
 #      lifecycle phase 7; the full gate battery is green and recorded with
 #      the range-gate verdict; all eight phases 1-8 are complete with
 #      per-phase pm-notes evidence (dod_check reads that evidence, not
-#      this file; the ninth phase's evidence is phase 9's own).
+#      this file; phases 9 and 10 carry their own evidence).
 # ---------------------------------------------------------------------------
 # Phase 9 — Review remediation: the operator-path park refusal, the
 #           empty-expiry hardening, the action-path one-fold, and the
@@ -1354,7 +1469,11 @@
 # captured list with exact-set equality; the amended goldens are committed
 # with the implementation; TC-SUP-100..103 and the listed amended cells are
 # green, the named mutants fail, and TMPDIR=$PWD/tmp/tmpdir pnpm check is
-# green at the phase commit.
+# green at the phase commit. SUPERSEDED READING: the clause "an acting run at
+# the lane cap performs one whole-store read" is the coarse iteration-1
+# framing; spec v1.3 DEC-9(d)/NFR-4 restates the discipline precisely and
+# phase 10 owns the corrected, composed-production measurement — phase 9's
+# delivered evidence stands for what it actually asserted.
 #
 # NOTE (remediation provenance and TC map): this phase is driven by
 # review iteration 1 — F-1 (critical), F-2 and F-4 (high), the accepted
@@ -1371,11 +1490,163 @@
 # steer-mounting). Spec v1.2 DEC-9(a)-(d) is the authority for every
 # behaviour change; no AC is added, removed, or re-owned.
 # ---------------------------------------------------------------------------
+# Phase 10 — Review remediation round 2: the park-state interaction gate, the
+#            ref-stable exhaustion question, and the composed-production read
+#            proof
+# Commit: fix(GH-295): review round 2 — park-state gate, question idempotence, composed read proof
+#
+# Goal: close review iteration 2 (code-review/review-iter-2.yaml, FAIL)
+# against spec v1.3 DEC-9(e)/(f), the restated DEC-9(d)/NFR-4 and §22 — the
+# battery never stacks a second active park on a lane already parked under any
+# cause (so the delivered duplicate-active-park validator is never tripped and
+# queue/lanes reads stay healthy), the exhaustion question is raised once per
+# ref across repeated runs with different injected run ids, and the read
+# discipline is stated exactly and measured over the composed production
+# closures built by one shared factory. No requirement is invented: every
+# obligation names its DEC-9 clause, its review finding, or its TC.
+#
+# Obligations:
+# 10.1 Park-state interaction gate (F-1v2, DEC-9(e); TC-SUP-104):
+#      packages/core/src/app/supervise.ts gates the supervised-stall park
+#      append on "the lane carries NO active park of any cause"
+#      (fact.activePark === undefined, not cause === "liveness-stall"), so an
+#      owner-hold, peak-window, provider-quota, preempted-for-close-item or
+#      stuck clear-observed park is respected instead of stacked; restart
+#      admission stays liveness-stall-only; the already-parked lane is still
+#      classified and reported honestly (AC-F2-1) and no action is reported
+#      for a park that did not land. packages/core/src/domain/queue-park.ts
+#      gains the ONE occupancy home — a pure per-ref active-park judgement
+#      whose semantics agree with the delivered hasDuplicateActiveParks /
+#      isParkRecord sequence (a `parked` record stays active until a
+#      `recovered`/`released` record clears it, so a stuck clear-observed
+#      record still counts as occupying the lane) — consumed by the fold's
+#      activePark construction, replacing the latest-record-wins reading that
+#      disagreed with the validator. The delivered validator is NOT modified.
+# 10.2 Question idempotence (F-2v2, DEC-9(f); TC-SUP-061):
+#      packages/core/src/app/supervise.ts raises the terminal exhaustion
+#      action and its typed question only when the delivered
+#      ensureExhaustion append actually landed (appended === true); the
+#      question identity is ref-stable (or deduped by ref + question type),
+#      never derived from the run id; the injected run id remains record and
+#      evidence metadata only. packages/cli/src/production.ts stops encoding
+#      the run id in the question id and passes the run's blocker-ledger
+#      snapshot as the current view so the question append performs no extra
+#      ledger read (DEC-9(d)'s "blocker ledger read at most once per run"
+#      becomes true). A run that lands nothing reports no exhaustion action.
+# 10.3 One closure factory and the composed read discipline (F-3v2/F-4v2,
+#      DEC-9(d), NFR-4, §22; TC-SUP-103/105): the economics/append closures
+#      (schema ids, option lists, question-id derivation, per-run ledger
+#      cache) are authored ONCE and shared between the production supervise
+#      composition (packages/cli/src/production.ts) and the test harness
+#      (tests/fixtures/supervise/harness.ts), so a production drift cannot
+#      keep the suites green; the read instrumentation records each read's
+#      scope (whole-store vs key-range) and call site, and the measured
+#      expectations are the declared ones — exactly one decision-path
+#      whole-store read, zero per-lane whole-store re-reads, and the
+#      delivered append helpers' read-backs within a declared per-run budget
+#      that is flat against lane count — never a bare total of 1 and never
+#      measured through a store-free economics fake. packages/core/src/index.ts
+#      and packages/core/src/app/index.ts are touched ONLY if the shared
+#      factory needs an export; the contract shape gains no member (the gate
+#      and the idempotence are behaviour, not declared data).
+# 10.4 Suites (failing-first against the pre-remediation tree):
+#      tests/behaviour/supervision-park-state.test.ts (NEW; TC-SUP-104's three
+#      already-parked cells — owner-hold, peak-window, stuck clear-observed —
+#      each asserting zero appends, exit 0, the lane still reported honestly,
+#      liveness-stall-only admission, and a healthy delivered
+#      readQueueParks/queue/lanes read afterwards) with the post-action
+#      healthy-read tail added to every existing action cell (TC-SUP-040 and
+#      the restart/park cells); tests/behaviour/supervision-restart.test.ts
+#      (TC-SUP-061's rewritten two-run cell — two DIFFERENT injected run ids,
+#      exactly one terminal exhaustion record, exactly one ref-stable
+#      question, no action for a record that did not land);
+#      tests/behaviour/supervision-composed-production.test.ts (NEW;
+#      TC-SUP-105's acting run through createProductionComposer over a real
+#      temp checkout — one park, one restart, one exhaustion — asserting the
+#      outcomes and the same read discipline); tests/structure/
+#      supervision-composition-factory.test.ts (NEW; TC-SUP-105's structure
+#      half — production and the harness obtain their closures from one
+#      factory, a second implementation fails); tests/behaviour/
+#      supervision-read-cost.test.ts (TC-SUP-103 rewritten to the precise
+#      discipline over the composed production closures); tests/behaviour/
+#      supervision-bounds.test.ts (TC-SUP-082's human-render cell and the
+#      "bounded only by the lane cap" statement); tests/golden/
+#      supervision-normalizer.test.ts (NEW; TC-SUP-106 — the declared volatile
+#      fields replaced exactly, undeclared values untouched, and no committed
+#      golden carrying a volatile value) over the NEW
+#      tests/fixtures/supervise/golden/normalize.ts; tests/golden/
+#      supervision-report.test.ts and tests/golden/supervision-failure.test.ts
+#      (the constant-length tautology replaced by the behavioural assertion;
+#      goldens regrown only where a declared behaviour change requires it, and
+#      a regenerated golden records the reviewed diff); tests/structure/
+#      supervision-contract.test.ts is in scope ONLY if a declared-shape pin
+#      must move — expected unchanged, since neither fix adds contract data;
+#      fixtures tests/fixtures/supervise/records.ts gains
+#      stalledLaneParkedUnder(cause), staleClearObservedPark() and
+#      volatilePayload().
+# 10.5 Registration: tests/structure/inventory.json and
+#      tests/fixtures/ports/v1-contract-inventory.json register the new
+#      suites and any new export in the same commit that introduces them.
+# 10.6 Documentation staging: doc/spec/features/feature-supervise.md is in
+#      this phase's scope ONLY for staging — the post-remediation resync is
+#      authored by @doc-syncer in lifecycle phase 7 (phase-8/phase-9 pattern);
+#      no delivery phase authors current truth.
+# 10.7 Boundary discipline: TMPDIR=$PWD/tmp/tmpdir pnpm check green at the
+#      phase commit, the phase's targeted suites green, git diff --check
+#      clean, one commit with the declared subject, and the pm-notes `notes:`
+#      entry naming the phase id, the commit hash, and the test result.
+#
+# Bound: AC-F5-1 (park-append precondition + healthy reads), AC-F7-1
+# (question idempotence, no action for an unlanded record), AC-F2-1 (honest
+# classification of an already-parked lane; the exact read discipline) —
+# reinforcements of already-owned ACs, no ownership change; F-1v2, F-2v2,
+# F-3v2, F-4v2 plus the two low residuals (normalizer tautology, unbounded
+# human-render wording); DEC-9(d), DEC-9(e), DEC-9(f); NFR-4 (precise),
+# NFR-3 (normalizer discipline), DM-2, DM-4, §22 composition proof.
+# Test obligations: TC-SUP-104, 105, 106 (new/owned here) plus the amended
+# oracles of TC-SUP-103, 061, 082, 040 and the action cells that gain the
+# healthy-read tail (ownership unchanged; phase 10 makes their amended
+# verdicts green).
+#
+# Done when: a stalled lane already parked under owner-hold, peak-window or a
+# stuck clear-observed park appends nothing, is reported honestly and leaves
+# readQueueParks/queue/lanes healthy; the park gate reads one occupancy
+# judgement that agrees with the delivered duplicate-active-park validator
+# and restart admission remains liveness-stall-only; two runs with different
+# injected run ids over one exhausted lane leave exactly one terminal record
+# and exactly one ref-stable question, with no exhaustion action for a record
+# that did not land; production and the harness build their closures from one
+# factory; a composed acting run (park + restart + exhaustion) over a real
+# checkout measures one decision-path whole-store read, no per-lane re-read,
+# and append read-backs within the declared flat budget; no committed golden
+# carries a volatile value and the normalizer's replacements are proven
+# behaviourally; TC-SUP-104/105/106 and the listed amended cells are green,
+# the three named mutants fail, and TMPDIR=$PWD/tmp/tmpdir pnpm check is green
+# at the phase commit.
+#
+# NOTE (remediation provenance and TC map): this phase is driven by review
+# iteration 2 (code-review/review-iter-2.yaml) — F-1v2 critical (a second active
+# park under another cause tears every later park read), F-2v2 high (run-scoped
+# exhaustion question duplicates across runs), F-3v2 and F-4v2 medium (the
+# one-fold claim overstated for composed runs; the harness duplicating the
+# production closures), plus the two low residuals (the tautological normalizer
+# length assertion, the unbounded "bounded human render" wording). TC map:
+# TC-SUP-104, TC-SUP-105, TC-SUP-106 are NEW in test plan v1.5 and owned here;
+# TC-SUP-103 (phase 9's file) and TC-SUP-061 (phase 5) are ALIGNED to
+# DEC-9(d)/(f) with ownership unchanged, and TC-SUP-082 (phase 7) plus
+# TC-SUP-040 (phase 4) carry the human-render and healthy-read corrections.
+# Declared-disclosure carryovers are unchanged and stay out of this phase:
+# F-3/F-5 (commit subjects and the pm-notes scope enumeration — the COMMIT
+# CONVENTION block above now records the aspiration and points at the
+# pm-notes disclosure) and F-15 (the name-based one-home mapping guard). Spec
+# v1.3 DEC-9(d)-(f) is the authority for every behaviour change; no AC is
+# added, removed, or re-owned.
+# ---------------------------------------------------------------------------
 schemaVersion: delivery.plan.v1
 workItemRef: GH-295
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
   escalationTriggers:
     - error-table-gains-more-than-two-supervise-rows-or-a-delivered-row-changes
     - park-cause-set-gains-more-than-liveness-stall-or-a-condition-type-is-added
@@ -1618,7 +1889,7 @@ phases:
         target: doc/spec/features/feature-supervise.md
         role: consumer
     doneArtifacts:
-      trackerTransition: "GH-295 delivery complete: all nine plan phases done, the contracts and two supervise identities registered with every count pin moved atomically, the artifact-evidence fold with tri-state classification and lying-liveness detection delivered, the battery surface with grammar/scope/exits, the supervised-stall park with the additive lane until, restart composition and the DEC-8 refusals, supervise mounted as the 24th family, the cross-cutting proofs and failure-envelope goldens committed, planning truth recorded and the changeset shipped, and the review iteration-1 remediation landed (battery-only park cause refused by name on the operator path, empty-expiry guard, action-path one-fold, and the named finding fixes); PR-ready against main-tools and left open for human review (PR creation is lifecycle phase 11; never merged by the delivery)"
+      trackerTransition: "GH-295 delivery complete: all ten plan phases done, the contracts and two supervise identities registered with every count pin moved atomically, the artifact-evidence fold with tri-state classification and lying-liveness detection delivered, the battery surface with grammar/scope/exits, the supervised-stall park with the additive lane until, restart composition and the DEC-8 refusals, supervise mounted as the 24th family, the cross-cutting proofs and failure-envelope goldens committed, planning truth recorded and the changeset shipped, the review iteration-1 remediation landed (battery-only park cause refused by name on the operator path, empty-expiry guard, action-path one-fold), and the review iteration-2 remediation landed (park appended only when no active park of any cause exists, ref-stable exhaustion question raised only on an appended terminal record, the exact read discipline proven over the composed production closures, behavioural normalizer integrity); PR-ready against main-tools and left open for human review (PR creation is lifecycle phase 11; never merged by the delivery)"
 
   - id: 9
     title: "Review remediation: operator-path park refusal, empty-expiry hardening, action-path one-fold, and review-finding fixes"
@@ -1666,3 +1937,43 @@ phases:
       - kind: contract-file
         target: packages/core/src/contracts/queue.ts
         role: consumer
+
+  - id: 10
+    title: "Review remediation round 2: park-state interaction gate, question idempotence, composed-production read proof"
+    kind: delivery
+    summary: "fix(GH-295): review round 2 — park-state gate, question idempotence, composed read proof"
+    scope:
+      files:
+        - packages/core/src/domain/queue-park.ts
+        - packages/core/src/app/supervise.ts
+        - packages/cli/src/production.ts
+        - packages/core/src/app/index.ts
+        - packages/core/src/index.ts
+        - tests/fixtures/supervise/harness.ts
+        - tests/fixtures/supervise/records.ts
+        - tests/fixtures/supervise/golden/normalize.ts
+        - tests/behaviour/supervision-park-state.test.ts
+        - tests/behaviour/supervision-composed-production.test.ts
+        - tests/behaviour/supervision-read-cost.test.ts
+        - tests/behaviour/supervision-restart.test.ts
+        - tests/behaviour/supervision-bounds.test.ts
+        - tests/behaviour/supervision-stall-park.test.ts
+        - tests/structure/supervision-composition-factory.test.ts
+        - tests/structure/supervision-contract.test.ts
+        - tests/structure/inventory.json
+        - tests/fixtures/ports/v1-contract-inventory.json
+        - tests/golden/supervision-normalizer.test.ts
+        - tests/golden/supervision-report.test.ts
+        - tests/golden/supervision-failure.test.ts
+        # Staged only: authored/reconciled by @doc-syncer in lifecycle phase 7
+        # AFTER this remediation (phase-8/phase-9 staging pattern); listed so
+        # the commit primitive can stage it, never authored by a delivery
+        # phase.
+        - doc/spec/features/feature-supervise.md
+      folders:
+        - doc/changes/2026-11/2026-11-16--GH-295--supervise
+        - tests/fixtures/supervise/golden
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/app/supervise.ts
+        role: producer

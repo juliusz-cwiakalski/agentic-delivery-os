@@ -11,8 +11,10 @@ import {
   SUPERVISION_TRUNCATION_REASONS,
 } from "../../packages/core/src/contracts/index";
 import { boundSupervisionEvidence } from "../../packages/core/src/domain/index";
+import { renderSupervisionHuman } from "../../packages/core/src/domain/supervise-text";
 import { syntheticReadPort } from "../fixtures/supervise/harness";
 import { cappedScope } from "../fixtures/supervise/records";
+import { SYNTHETIC_BRAND } from "../golden/helpers";
 
 const run = (laneCount: number) => {
   const reads = { count: 0 };
@@ -47,6 +49,16 @@ describe("TC-SUP-082 the lane bound and its named truncation", () => {
     expect(report.counts.progressing + report.counts.stalled + report.counts.unknown).toBe(
       report.counts.lanes,
     );
+  });
+
+  test("the human render is bounded only by the delivered lane cap", () => {
+    const report = run(SUPERVISION_LANE_CAP);
+    const human = renderSupervisionHuman(report, SYNTHETIC_BRAND);
+    const lines = human.split("\n").length;
+    // No separate render bound is claimed; the lane cap bounds the population
+    // and a small fixed header/footer accompanies it.
+    expect(lines, `measured ${String(lines)} lines`).toBeLessThanOrEqual(SUPERVISION_LANE_CAP + 20);
+    expect(human).toContain("lanes");
   });
 
   test("evidence is bounded by the delivered cap with a declared overflow marker", () => {

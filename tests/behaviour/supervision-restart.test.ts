@@ -6,6 +6,11 @@
  * DEC-7).
  */
 import { describe, expect, test } from "bun:test";
+import { readQueueParks } from "../../packages/core/src/app/index";
+import {
+  SUPERVISION_EXHAUSTION_QUESTION_OPTIONS,
+  supervisionExhaustionQuestionId,
+} from "../../packages/cli/src/production";
 import { readBlockerLedger } from "../../packages/core/src/state/index";
 import { createSupervisionHarness } from "../fixtures/supervise/harness";
 import { LANE_REF, stalledAndParked } from "../fixtures/supervise/records";
@@ -59,6 +64,8 @@ describe("TC-SUP-060 an admitted restart appends the delivered restart record", 
       const kinds = records.value.records.map((record) => record.kind);
       expect(kinds).not.toContain("queue.entry.reopened");
       expect(kinds).toContain("economics.restart");
+      // Post-action delivered reads stay healthy (TC-SUP-104's tail).
+      expect(readQueueParks(harness.store).ok).toBe(true);
     } finally {
       harness.remove();
     }
@@ -66,15 +73,15 @@ describe("TC-SUP-060 an admitted restart appends the delivered restart record", 
 });
 
 describe("TC-SUP-061 exhaustion is terminal and loud exactly once", () => {
-  test("the terminal record and one typed question land; a repeat adds no second question", async () => {
+  test("two different run ids leave one terminal record and one ref-stable question", async () => {
     const harness = createSupervisionHarness({ label: "restart-exhausted" });
     try {
       stalledAndParked(harness.seed);
-      const options = {
-        runId: "run-exhaustion-injected",
-        admitRestart: () => ({ outcome: "exhausted" as const, restarts: 3 }),
-      };
-      const first = await harness.runCli(["supervise", "--json"], options);
+      const admission = { outcome: "exhausted" as const, restarts: 3 };
+      const first = await harness.runCli(["supervise", "--json"], {
+        runId: "run-invocation-1",
+        admitRestart: () => admission,
+      });
       expect(first.exitCode).toBe(0);
       const records = harness.store.readRecords();
       if (!records.ok) throw new Error("ledger read failed");
@@ -84,32 +91,43 @@ describe("TC-SUP-061 exhaustion is terminal and loud exactly once", () => {
       const exhaustion = records.value.records.find(
         (record) => record.kind === "economics.budget-exhaustion",
       );
-      expect(JSON.stringify(exhaustion?.payload)).toContain('"runId":"run-exhaustion-injected"');
+      // The run id is record metadata, not identity.
+      expect(JSON.stringify(exhaustion?.payload)).toContain('"runId":"run-invocation-1"');
       const ledger = readBlockerLedger(harness.store);
       if (!ledger.ok) throw new Error("blocker ledger read failed");
       expect(ledger.value.questions).toHaveLength(1);
-      expect(ledger.value.questions[0]?.type).toBe("decision-needed");
-      expect(ledger.value.questions[0]?.id).toContain("run-exhaustion-injected");
-      expect(ledger.value.questions[0]?.id).not.toBe("supervise-exhaustion-GH-295");
-      expect(ledger.value.questions[0]?.options).toEqual([
-        "requeue-fresh-budget",
-        "park-owner-review",
-      ]);
-      const data = (JSON.parse(first.stdout) as { data?: Record<string, unknown> }).data;
+      const question = ledger.value.questions[0];
+      expect(question?.type).toBe("decision-needed");
+      expect(question?.id).toBe(supervisionExhaustionQuestionId(LANE_REF));
+      expect(question?.id).not.toContain("run-invocation-1");
+      expect(question?.options).toEqual([...SUPERVISION_EXHAUSTION_QUESTION_OPTIONS]);
+      const firstData = (JSON.parse(first.stdout) as { data?: Record<string, unknown> }).data;
       expect(
-        ((data?.actions ?? []) as readonly Record<string, unknown>[]).map((action) => action.kind),
+        ((firstData?.actions ?? []) as readonly Record<string, unknown>[]).map(
+          (action) => action.kind,
+        ),
       ).toEqual(["exhaustion-record"]);
-      // A repeated run does not duplicate the question or the terminal record.
-      const second = await harness.runCli(["supervise", "--json"], options);
+
+      // A second run with a DIFFERENT injected run id must be inert.
+      const second = await harness.runCli(["supervise", "--json"], {
+        runId: "run-invocation-2",
+        admitRestart: () => admission,
+      });
       expect(second.exitCode).toBe(0);
+      const secondData = (JSON.parse(second.stdout) as { data?: Record<string, unknown> }).data;
+      expect(secondData?.actions ?? []).toEqual([]);
       const after = readBlockerLedger(harness.store);
       if (!after.ok) throw new Error("blocker ledger read failed");
       expect(after.value.questions).toHaveLength(1);
+      expect(after.value.questions[0]?.id).toBe(question?.id);
+      expect(after.value.questions[0]?.id).not.toContain("run-invocation-2");
       const repeated = harness.store.readRecords();
       if (!repeated.ok) throw new Error("ledger read failed");
       expect(
         repeated.value.records.filter((record) => record.kind === "economics.budget-exhaustion"),
       ).toHaveLength(1);
+      // Post-action delivered reads stay healthy.
+      expect(readQueueParks(harness.store).ok).toBe(true);
     } finally {
       harness.remove();
     }
@@ -142,6 +160,7 @@ describe("TC-SUP-062 an unevaluable admission is the declared unavailable outcom
       expect(
         records.value.records.filter((record) => record.kind === "economics.budget-exhaustion"),
       ).toHaveLength(0);
+      expect(readQueueParks(harness.store).ok).toBe(true);
     } finally {
       harness.remove();
     }

@@ -3,11 +3,7 @@
  * no per-lane re-read or second fold for the human projection (GH-295 NFR-4).
  */
 import { describe, expect, test } from "bun:test";
-import {
-  type SupervisionEconomicsWritePort,
-  readQueueParks,
-  runSupervisionBattery,
-} from "../../packages/core/src/app/index";
+import { readQueueParks, runSupervisionBattery } from "../../packages/core/src/app/index";
 import {
   createSupervisionHarness,
   syntheticLaneSnapshot,
@@ -26,22 +22,7 @@ import {
   seedRestart,
 } from "../fixtures/supervise/records";
 
-describe("TC-SUP-103 the action path consumes the one fold snapshot", () => {
-  const fakeEconomics = (appends: string[]): SupervisionEconomicsWritePort => ({
-    appendRestart: ({ ref }) => {
-      appends.push(`restart:${ref}`);
-      return { ok: true, appended: true };
-    },
-    ensureExhaustion: ({ ref }) => {
-      appends.push(`exhaustion:${ref}`);
-      return { ok: true, appended: true };
-    },
-    raiseQuestion: ({ ref }) => {
-      appends.push(`question:${ref}`);
-      return { ok: true, appended: true };
-    },
-  });
-
+describe("TC-SUP-103 the decision path is one fold over the composed closures", () => {
   const seedActingScope = (
     harness: ReturnType<typeof createSupervisionHarness>,
     laneCount: number,
@@ -79,16 +60,15 @@ describe("TC-SUP-103 the action path consumes the one fold snapshot", () => {
     return { parkedRestart, parkedExhausted };
   };
 
-  test("50 and 200 acting lanes take exactly one whole-store read and act for real", () => {
-    const counts: number[] = [];
+  test("50 and 200 acting lanes: one decision fold, no per-lane re-read, bounded append read-backs", () => {
+    const totals: number[] = [];
     for (const laneCount of [50, 200]) {
       const harness = createSupervisionHarness({ label: `acting-read-cost-${laneCount}` });
       try {
         const { parkedRestart, parkedExhausted } = seedActingScope(harness, laneCount);
-        const appends: string[] = [];
         let admissionRestarts = -1;
+        // No store-free fake here: the composed production closure factory runs.
         const result = harness.battery({
-          economicsWrite: fakeEconomics(appends),
           admitRestart: ({ ref, restarts }) => {
             if (ref === parkedRestart) {
               admissionRestarts = restarts.length;
@@ -112,29 +92,51 @@ describe("TC-SUP-103 the action path consumes the one fold snapshot", () => {
         expect(
           result.report.supervisors.some((claim) => claim.claimKind === "daemon-instance"),
         ).toBe(true);
-        expect(appends).toContain(`restart:${parkedRestart}`);
-        expect(appends).toContain(`exhaustion:${parkedExhausted}`);
         expect(admissionRestarts).toBe(1);
         const parks = readQueueParks(harness.store);
         expect(parks.ok).toBe(true);
         if (parks.ok) expect(parks.records).toHaveLength(4);
-        // One whole-store read for a run that acts, independent of lane count.
-        expect(readCount, JSON.stringify(readCalls, null, 2)).toBe(1);
-        expect(readCalls.every((call) => call.scope === "whole-store")).toBe(true);
+
+        // (1) Exactly one decision-path fold read.
+        const decisionReads = readCalls.filter((call) => {
+          const first = call.site.split(" | ")[0] ?? "";
+          return first.startsWith("at read (") && first.includes("/app/supervise.");
+        });
+        expect(decisionReads, JSON.stringify(readCalls, null, 2)).toHaveLength(1);
+        // (2) No per-lane whole-store re-read: the removed per-lane closures never
+        // appear, and the blocker ledger is read at most once per run.
+        expect(readCalls.some((call) => call.site.includes("claimSingleFlightRefusal"))).toBe(
+          false,
+        );
+        const economicsReads = readCalls.filter((call) =>
+          call.site.includes("readEconomicsRecords"),
+        );
+        // The delivered append helpers (restart/exhaustion) keep their own
+        // read-then-verify; no decision closure re-reads the ledger.
+        expect(economicsReads).toHaveLength(4);
         expect(
-          readCalls.some(
-            (call) =>
-              call.site.includes("readEconomicsRecords") ||
-              call.site.includes("claimSingleFlightRefusal"),
+          economicsReads.every(
+            (call) => call.site.includes("appendRestart") || call.site.includes("ensureExhaustion"),
           ),
-        ).toBe(false);
-        counts.push(readCount);
+        ).toBe(true);
+        const blockerReads = readCalls.filter((call) => call.site.includes("readBlockerLedger"));
+        expect(blockerReads.length).toBeLessThanOrEqual(1);
+        // (3) Every remaining read is a delivered append-helper read-back.
+        const appendBacks = readCalls.filter(
+          (call) =>
+            call.site.includes("/state/economics.") || call.site.includes("/state/blockers."),
+        );
+        expect(appendBacks.length).toBe(readCount - 1);
+        // The measured total is declared, not a bare 1 (DEC-9(d)).
+        expect(readCount).toBe(1 + appendBacks.length);
+        expect(readCount).toBeLessThanOrEqual(8);
+        totals.push(readCount);
       } finally {
         harness.remove();
       }
     }
-    // The count does not scale with the lane population.
-    expect(new Set(counts)).toEqual(new Set([1]));
+    // The decision and append-read-back budget is flat against lane count.
+    expect(new Set(totals).size).toBe(1);
   }, 30_000);
 });
 

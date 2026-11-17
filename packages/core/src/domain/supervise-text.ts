@@ -1,9 +1,12 @@
 /**
- * The bounded human render of the supervision report (GH-295 F-1, DM-1).
+ * The human render of the supervision report (GH-295 F-1, DM-1).
  *
  * The text is produced from exactly the same report object the machine payload
  * carries: no second fold, no second read, and the binary name arrives through
- * the branding seam only. An empty population states the empty population.
+ * the branding seam only. An empty population states the empty population. The
+ * render is bounded only by the delivered lane cap (200 lanes and the claims
+ * that ride the same scope); it declares no separate byte or line bound
+ * (TC-SUP-082).
  */
 import type {
   BrandIdentity,

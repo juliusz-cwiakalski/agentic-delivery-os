@@ -100,6 +100,8 @@ export type ProductionProjectsHarnessOptions = {
   readonly credential?: "resolved" | "missing";
   /** The injected resident-daemon mount capability; absent means unmounted. */
   readonly daemon?: DaemonComposition;
+  /** The observability-only wrapper over the main state store (GH-295 §22). */
+  readonly stateStoreWrap?: (store: StateStorePort) => StateStorePort;
 };
 
 const hashFile = (path: string): string =>
@@ -172,7 +174,7 @@ export const createProductionProjectsHarness = (
   // harness never reuses a composed program, so per-invocation work (index
   // maintenance, counters) is observable. The group-scope fact mirrors the
   // entrypoint's argv resolution (GH-309 F-3).
-  const composeProgram = (command?: string, groupScoped = false) => {
+  const composeProgram = (command?: string, groupScoped = false, runId?: string) => {
     const composer = createProductionComposer({
       environment: {
         HOME: host.home,
@@ -207,8 +209,15 @@ export const createProductionProjectsHarness = (
       gitChildRunner: gitRunner,
       hostIndexAccess,
       ...(options.daemon === undefined ? {} : { daemon: options.daemon }),
+      ...(options.stateStoreWrap === undefined ? {} : { stateStoreWrap: options.stateStoreWrap }),
     });
-    return command === undefined ? composer(brand) : composer(brand, { command, groupScoped });
+    return command === undefined
+      ? composer(brand)
+      : composer(brand, {
+          command,
+          groupScoped,
+          ...(runId === undefined ? {} : { runId }),
+        });
   };
   // A checkout whose identity cannot be read still composes: every command then
   // answers through the classified refusal program, which the suite asserts.
@@ -244,14 +253,15 @@ export const createProductionProjectsHarness = (
       stderr: { write: (chunk: string) => err.push(chunk) },
     };
     runOrdinal += 1;
+    const runId = `run-gh288-${String(runOrdinal)}`;
     const first = argv.find((token) => token.length > 0 && !token.startsWith("-"));
     const groupScoped = (first === "queue" || first === "status") && argv.includes("--project");
     const exitCode = await runCli(argv, streams, {
       brand,
       clock: { now: () => Date.parse("2026-11-11T10:00:00.000Z") },
-      newRunId: () => `run-gh288-${String(runOrdinal)}`,
+      newRunId: () => runId,
       secrets: [],
-      program: composeProgram(first, groupScoped),
+      program: composeProgram(first, groupScoped, runId),
     });
     const stdout = out.join("");
     const stderr = err.join("");
