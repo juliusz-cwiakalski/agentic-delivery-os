@@ -8,7 +8,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-16T23:02:19.290Z }
   delivery_planning: { started: null, completed: 2026-11-16T23:13:05.295Z }
   dor_check: { started: null, completed: 2026-11-16T23:19:21.213Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-17T05:13:36.404Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -107,26 +107,26 @@ notes:
     type: info
     date: "2026-11-17"
   - text: "Plan phase 1 complete (contracts and the one error row with every count
-      pin). Commit c71e33c4. Verification: bun test metrics-contract
-      (14/14), error-table (126/126), dispatch-attempts-taxonomy,
+      pin). Commit c71e33c4. Verification: bun test metrics-contract (14/14),
+      error-table (126/126), dispatch-attempts-taxonomy,
       verify-gates-suite-map-contract, error-table-sync (134/134 across the
-      four), `bun run scripts/checks/error-table-sync.ts` OK at
-      147/147/63/1, and TMPDIR=$PWD/tmp/tmpdir pnpm check green (9841 pass,
-      4 pre-existing skip, 0 fail). Recorded deviations: the Appendix D
-      appendix-amendment path applied for D-5 (3 delivered-row sites) and for a
-      discovered D-14 site group (event/port/cross-repository pinning fixtures,
-      content-inventory executable allowance, the events error-table baseline,
-      the DOMAIN_KINDS tail position); the commit primitive owns the subject and
-      emitted its conventional template subject (the plan's declared per-phase
-      subject is not a message-passing surface)."
+      four), `bun run scripts/checks/error-table-sync.ts` OK at 147/147/63/1,
+      and TMPDIR=$PWD/tmp/tmpdir pnpm check green (9841 pass, 4 pre-existing
+      skip, 0 fail). Recorded deviations: the Appendix D appendix-amendment path
+      applied for D-5 (3 delivered-row sites) and for a discovered D-14 site
+      group (event/port/cross-repository pinning fixtures, content-inventory
+      executable allowance, the events error-table baseline, the DOMAIN_KINDS
+      tail position); the commit primitive owns the subject and emitted its
+      conventional template subject (the plan's declared per-phase subject is
+      not a message-passing surface)."
     type: info
     date: "2026-11-17"
   - text: "Plan phase 2 complete (pure report domain: entries, kinds, comparisons,
       absence classification, truncation, bounded renderer). Commit e88a74c1.
       Verification: bun test metrics-contract (20/20), metrics-imports,
       content-inventory, config-contract green; ambient-globals clean;
-      exports-parity pass; TMPDIR=$PWD/tmp/tmpdir pnpm check green (9849 pass,
-      4 pre-existing skip, 0 fail). Deviation: the lockstep five-package minor
+      exports-parity pass; TMPDIR=$PWD/tmp/tmpdir pnpm check green (9849 pass, 4
+      pre-existing skip, 0 fail). Deviation: the lockstep five-package minor
       changeset was staged with this phase rather than phase 9 because
       tests/checks/privacy-release.test.ts requires one whenever a publishable
       path changes; phase 9 verifies it instead of authoring it."
@@ -134,15 +134,15 @@ notes:
     date: "2026-11-17"
   - text: "Plan phase 3 complete (verified metrics reads, the committed baseline-log
       read, the declaration-node read, the bounded corpus scan, and the pure
-      burn-rate resolver). Commit ffc206fc. Verification:
-      config-contract (catalog metrics branch), metrics-imports (seven modules
-      tier-checked), config-imports, event-additivity and port-inventory pins
-      green; ambient-globals and exports-parity pass;
-      TMPDIR=$PWD/tmp/tmpdir pnpm check green (9855 pass, 4 pre-existing skip,
-      0 fail). Discovered sites joining the commits: the config catalog
-      `metrics` branch (additive, GH-300 precedent), the config key pin in
-      tests/behaviour/config-schema.test.ts, and the state-tier file pin in
-      event-additivity-inventory; recorded under Appendix D D-14."
+      burn-rate resolver). Commit ffc206fc. Verification: config-contract
+      (catalog metrics branch), metrics-imports (seven modules tier-checked),
+      config-imports, event-additivity and port-inventory pins green;
+      ambient-globals and exports-parity pass; TMPDIR=$PWD/tmp/tmpdir pnpm check
+      green (9855 pass, 4 pre-existing skip, 0 fail). Discovered sites joining
+      the commits: the config catalog `metrics` branch (additive, GH-300
+      precedent), the config key pin in tests/behaviour/config-schema.test.ts,
+      and the state-tier file pin in event-additivity-inventory; recorded under
+      Appendix D D-14."
     type: info
     date: "2026-11-17"
   - text: "Plan phase 4 complete (the metrics report command grammar, the edge
@@ -153,8 +153,8 @@ notes:
       metrics-write-discipline 4/4, metrics-cycle-time 6/6,
       metrics-ceremony-share 4/4, metrics-ci-proxy 5/5, metrics-caveat 5/5,
       metrics-comparisons 12/12; typecheck, lint, format, exports-parity green;
-      TMPDIR=$PWD/tmp/tmpdir pnpm check 9931 pass / 4 pre-existing skip / 2 fail,
-      where the two failures are the known load-sensitive delivered suites
+      TMPDIR=$PWD/tmp/tmpdir pnpm check 9931 pass / 4 pre-existing skip / 2
+      fail, where the two failures are the known load-sensitive delivered suites
       (daemon-foreground-stop-latency and prior-identity-notice's 5s per-test
       timeout); both pass in isolation on this tree (1/1 and 14/14), so the
       boundary is recorded as green-modulo-environment-flake and re-proven at
@@ -168,34 +168,33 @@ notes:
     date: "2026-11-17"
   - text: "Plan phase 5 complete (dispatch parity, burn-rate alarms, the classified
       threshold states, the full-report capstone, and the four TC-pinned
-      goldens). Commit 9eb96b7f.
-      Verification: metrics-report 9/9, metrics-dispatch 6/6, metrics-alarms
-      18/18, metrics-burn-rate-config 18/18, metrics-write-discipline 5/5,
-      tests/golden/metrics.test.ts 6/6; typecheck, lint, format green;
-      TMPDIR=$PWD/tmp/tmpdir pnpm check 9989 pass / 4 pre-existing skip / 2 fail,
-      both load-sensitive delivered suites (dispatch-attempts limit grammar and
-      byte budget) that pass in isolation (26/26 in 2.28s) — recorded as
-      green-modulo-environment-flake and re-proven in the phase-9 battery.
-      Scenario seeds: SC-M2-S6-01 proven by metrics-dispatch (deep equality
-      with spend, breakdown sums, perAgent equality on the fully attributable
-      fixture); SC-M2-S6-02 proven by metrics-alarms (exactly one alarm,
-      threshold echoed, byte-identical repeat)."
+      goldens). Commit 9eb96b7f. Verification: metrics-report 9/9,
+      metrics-dispatch 6/6, metrics-alarms 18/18, metrics-burn-rate-config
+      18/18, metrics-write-discipline 5/5, tests/golden/metrics.test.ts 6/6;
+      typecheck, lint, format green; TMPDIR=$PWD/tmp/tmpdir pnpm check 9989 pass
+      / 4 pre-existing skip / 2 fail, both load-sensitive delivered suites
+      (dispatch-attempts limit grammar and byte budget) that pass in isolation
+      (26/26 in 2.28s) — recorded as green-modulo-environment-flake and
+      re-proven in the phase-9 battery. Scenario seeds: SC-M2-S6-01 proven by
+      metrics-dispatch (deep equality with spend, breakdown sums, perAgent
+      equality on the fully attributable fixture); SC-M2-S6-02 proven by
+      metrics-alarms (exactly one alarm, threshold echoed, byte-identical
+      repeat)."
     type: info
     date: "2026-11-17"
   - text: "Plan phase 6 complete (escaped-defects curation, the cross-section
       absence/damage matrix, row-absent completion of TC-METRICS-013, and the
-      incidents display cap). Commit recorded in the phase-7 note.
-      Verification: metrics-escaped-defects 9/9, metrics-absence 8/8,
-      metrics-store-damage 9/9, metrics-baseline-damage 9/9, metrics-bounds 2/2;
-      typecheck, lint, format green; TMPDIR=$PWD/tmp/tmpdir pnpm check 10018
-      pass / 4 pre-existing skip / 2 fail — the same two load-sensitive
+      incidents display cap). Commit recorded in the phase-7 note. Verification:
+      metrics-escaped-defects 9/9, metrics-absence 8/8, metrics-store-damage
+      9/9, metrics-baseline-damage 9/9, metrics-bounds 2/2; typecheck, lint,
+      format green; TMPDIR=$PWD/tmp/tmpdir pnpm check 10018 pass / 4
+      pre-existing skip / 2 fail — the same two load-sensitive
       dispatch-attempts-ref suites (8-10s under full-suite load, 26/26 in 2.28s
-      in isolation), recorded as green-modulo-environment-flake.
-      Contract refinement inside the phase: a curated evidence row now carries
-      the adapter's citation outcome (`resolved`/`unresolved`) so an
-      unresolvable citation is excluded and disclosed instead of being dropped
-      by the scanner; the fold still enforces anchor, path, window, and
-      attribution."
+      in isolation), recorded as green-modulo-environment-flake. Contract
+      refinement inside the phase: a curated evidence row now carries the
+      adapter's citation outcome (`resolved`/`unresolved`) so an unresolvable
+      citation is excluded and disclosed instead of being dropped by the
+      scanner; the fold still enforces anchor, path, window, and attribution."
     type: info
     date: "2026-11-17"
   - text: "Plan phase 7 complete (metrics mounted as the 24th prompt-required
@@ -221,12 +220,12 @@ notes:
       Commit recorded in the phase-9 note. Verification: metrics-determinism
       10/10, metrics-bounds 13/13, metrics-purity 6/6, metrics-read-cost 3/3,
       metrics-mutants 11/11, metrics-hermetic 5/5, tests/golden/metrics.test.ts
-      6/6; TMPDIR=$PWD/tmp/tmpdir pnpm check green at 10078 pass / 4 pre-existing
-      skip / 0 fail. Notes: the read-budget cell records 50/250-record
-      references rather than the plan's 1k/10k (the delivered append path
-      verifies each record, making 10k seeding O(n^2) and impractical inside a
-      suite); `boundMetricsReport` is exported as the pure bounding stage so the
-      cap/drop-order cells test it directly."
+      6/6; TMPDIR=$PWD/tmp/tmpdir pnpm check green at 10078 pass / 4
+      pre-existing skip / 0 fail. Notes: the read-budget cell records
+      50/250-record references rather than the plan's 1k/10k (the delivered
+      append path verifies each record, making 10k seeding O(n^2) and
+      impractical inside a suite); `boundMetricsReport` is exported as the pure
+      bounding stage so the cap/drop-order cells test it directly."
     type: info
     date: "2026-11-17"
   - text: "Plan phase 8 complete; commit 0cdaec94 (see the phase-8 note above)."
@@ -237,12 +236,12 @@ notes:
       battery at the delivered HEAD). Commit recorded in the delivery-phase
       completion. Verification: `plan validate GH-299` verdict=valid;
       TMPDIR=$PWD/tmp/tmpdir pnpm check EXIT 0 with 10078 pass / 4 pre-existing
-      skip / 0 fail (10082 tests, 1262 files); git diff --check clean;
-      `bash scripts/.tests/test-doc-distribution.sh` no drift (95 in-scope docs);
-      `bun run scripts/checks/changesets-group.ts` exactly one fixed group of
-      five; `./scripts/lint-commit-range.sh --base origin/main-tools` VERDICT
-      PASS (13 commits, 0 offending). The planning corpus records the M2-S6
-      delivery in backlog.md, status.md, cli-command-registry.md, and the M2
-      README story-to-artifact map."
+      skip / 0 fail (10082 tests, 1262 files); git diff --check clean; `bash
+      scripts/.tests/test-doc-distribution.sh` no drift (95 in-scope docs); `bun
+      run scripts/checks/changesets-group.ts` exactly one fixed group of five;
+      `./scripts/lint-commit-range.sh --base origin/main-tools` VERDICT PASS (13
+      commits, 0 offending). The planning corpus records the M2-S6 delivery in
+      backlog.md, status.md, cli-command-registry.md, and the M2 README
+      story-to-artifact map."
     type: info
     date: "2026-11-17"
