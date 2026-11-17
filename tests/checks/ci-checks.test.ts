@@ -30,6 +30,8 @@ import { runSyncCheck } from "../../scripts/checks/error-table-sync";
 import { validate as validatePins } from "../../scripts/checks/pin-equality";
 import { validate as validateScriptSurface } from "../../scripts/checks/script-surface";
 import {
+  evaluateReport,
+  loadAccepted,
   validateFixture,
   validate as validateVulnerabilities,
 } from "../../scripts/checks/vulnerability-gate";
@@ -176,6 +178,56 @@ describe("vulnerability gate", () => {
   test("a fixture advisory makes the gate fail", () => {
     const failures = validateFixture(ROOT);
     expect(failures.some((message) => message.includes("high"))).toBe(true);
+  });
+
+  test("an unexpired acceptance suppresses exactly the named advisory", () => {
+    const report = {
+      advisories: {
+        "1": {
+          severity: "high",
+          module_name: "picomatch",
+          title: "picomatch vulnerable to ReDoS through single-branch repeated extglobs",
+        },
+      },
+    };
+    const accepted = [
+      {
+        package: "picomatch",
+        title: "picomatch vulnerable to ReDoS through single-branch repeated extglobs",
+        reason: "test",
+        expiresOn: "2099-01-01",
+      },
+    ];
+    expect(evaluateReport(report, accepted)).toEqual([]);
+    const other = [
+      {
+        package: "other-package",
+        title: "picomatch vulnerable",
+        reason: "test",
+        expiresOn: "2099-01-01",
+      },
+    ];
+    expect(evaluateReport(report, other)).toHaveLength(1);
+  });
+
+  test("an expired acceptance is dropped at load time", () => {
+    const directory = mkdtempSync(join(tmpdir(), "vuln-accepted-"));
+    try {
+      mkdirSync(join(directory, "scripts/checks"), { recursive: true });
+      writeFileSync(
+        join(directory, "scripts/checks/vulnerability-accepted.json"),
+        JSON.stringify({
+          accepted: [
+            { package: "picomatch", title: "t", reason: "r", expiresOn: "2000-01-01" },
+            { package: "picomatch", title: "t", reason: "r", expiresOn: "2099-01-01" },
+          ],
+        }),
+      );
+      // loadAccepted reads scripts/checks/vulnerability-accepted.json under the root
+      expect(loadAccepted(directory, new Date("2026-11-17T00:00:00Z"))).toHaveLength(1);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 });
 
