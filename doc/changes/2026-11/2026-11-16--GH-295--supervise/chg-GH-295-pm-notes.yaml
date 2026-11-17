@@ -10,7 +10,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-16T23:23:38.081Z }
   delivery: { started: null, completed: 2026-11-17T05:54:34.230Z }
   system_spec_update: { started: null, completed: 2026-11-17T13:57:13.092Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-17T14:10:27.441Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -513,6 +513,25 @@ notes:
       read-bound claim needs a measurement over the COMPOSED production
       closures, not a fake-port harness."
     type: "retro"
+    date: "2026-11-17"
+  - text: "Review iteration 3 verdict: PASS (code-review/review-iter-3.yaml) —
+      spec_compliance PASS, plan_compliance PASS, next_step PROCEED; 0 critical,
+      0 high. Verified: F-1v2 closed beyond the suite's cells (owner-hold,
+      peak-window, plus stuck-marker combinations, recovered re-parks once);
+      F-2v2 holds across different run ids and two-lane runs; F-3v2 measured
+      honestly over the composed wiring (7 reads flat at 50/200 lanes: 1
+      decision fold + 4 delivered append read-backs + 1 blocker ledger + 1
+      coverage read); F-4v2 one-factory test effective; F-17/F-19 behavioural.
+      Residual medium/minor accuracy nits fixed before phase close: spec v1.4
+      (mechanism attribution: caller occupancy gate + fence ordering, seam
+      performs no dedupe — F-6/DEC-8c/RSK-2) and test plan v1.6 (occupancy truth
+      + failing mutant 'latest-record-wins', no case or expectation changed).
+      Residual accepted-with-disclosure inventory: F-3 commit subjects, F-5
+      phase-scope enumeration, F-15 name-based one-home guard, iter-2 F-6
+      detection-limit test cell absence (feature-page sentence present), F-9
+      info, RSK-2/OQ-1 cross-battery window; review-iter-3 lows F-3/F-4/F-5
+      (vacuous normalizer assertion, bookkeeping) declared."
+    type: "info"
     date: "2026-11-17"
   - text: "Plan phase 9 complete (review remediation) at commit 3d4ffaa8. F-1
       blocker fixed: QUEUE_BATTERY_ONLY_PARK_CAUSES declares liveness-stall
