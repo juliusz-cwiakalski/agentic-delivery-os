@@ -3,6 +3,9 @@
  * family: one entry, every count pin moved, a stale-count arm that detects
  * planted pins, the production composer answering over an empty store, and no
  * other family disturbed.
+ *
+ * GH-295 then appends `supervise` as the twenty-fifth family, so the merged
+ * mounted set is the captured 23-entry base plus `metrics` and `supervise`.
  */
 import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
@@ -12,6 +15,7 @@ import { allHelpEntries, helpEntryFor, renderRootHelp } from "../../packages/cli
 import { PROMPT_REQUIRED_COMMANDS } from "../../packages/cli/src/help/prompt-required-commands";
 import {
   DELIVERED_FAMILIES,
+  METRICS_MOUNTED_FAMILIES,
   MOUNTED_FAMILIES,
   NON_COUNT_RESIDUAL,
   PINNING_FILES,
@@ -30,32 +34,40 @@ const familyLines = (help: string): readonly string[] =>
   help.split("\n").filter((line) => /^ {2}[a-z][a-z0-9-]* {2}/u.test(line));
 
 describe("TC-METRICS-080 metrics is the twenty-fourth prompt-required family", () => {
-  test("the captured base holds 23 entries with steer last and the mounted set holds 24", () => {
+  test("the captured base holds 23 entries with steer last, metrics mounts at 23 of 25", () => {
     expect([...DELIVERED_FAMILIES].length).toBe(23);
     expect(DELIVERED_FAMILIES.at(-1)).toBe("steer");
-    expect(MOUNTED_FAMILIES).toHaveLength(24);
+    expect(METRICS_MOUNTED_FAMILIES).toHaveLength(24);
+    expect(MOUNTED_FAMILIES).toHaveLength(25);
     expect([...PROMPT_REQUIRED_COMMANDS]).toEqual([...MOUNTED_FAMILIES]);
     expect(PROMPT_REQUIRED_COMMANDS.filter((name) => name === "metrics")).toHaveLength(1);
-    expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("metrics");
+    expect(PROMPT_REQUIRED_COMMANDS[23]).toBe("metrics");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("supervise");
   });
 
-  test("root --help lists metrics as the last family line among 24 families", () => {
+  test("root --help lists metrics at index 23 and supervise last among 25 families", () => {
     const families = familyLines(renderRootHelp(SYNTHETIC_BRAND));
-    expect(families).toHaveLength(24);
-    expect(families.at(-1)?.trimStart().startsWith("metrics  ")).toBe(true);
+    expect(families).toHaveLength(25);
+    expect(families[23]?.trimStart().startsWith("metrics  ")).toBe(true);
+    expect(families.at(-1)?.trimStart().startsWith("supervise  ")).toBe(true);
     for (const family of DELIVERED_FAMILIES) {
       expect(families.some((line) => line.trimStart().startsWith(`${family}  `))).toBe(true);
     }
   });
 
-  test("every pinning file reads 24 and no stale 23 survives outside the declared residual", () => {
+  test("every pinning file reads 25 and no stale 23 or 24 survives outside the declared residual", () => {
     const failures: string[] = [];
-    const stale = (count: number): string => `toHaveLength(${String(count)})`;
     for (const file of PINNING_FILES) {
       const text = readFileSync(join(ROOT, file), "utf8");
-      if (text.includes(stale(23))) failures.push(`${file}: stale family-count pin 23`);
-      if (!/toHaveLength\(24\)|\.toBe\(\s*24\s*,?\s*\)/su.test(text)) {
-        failures.push(`${file}: no family-count pin 24`);
+      const withoutMountingFixture = text
+        .split("\n")
+        .filter((line) => !line.includes("BASE_FAMILIES") && !line.includes("MOUNTED_FAMILIES"))
+        .join("\n");
+      if (/toHaveLength\(2[34]\)/u.test(withoutMountingFixture)) {
+        failures.push(`${file}: stale family-count pin 23 or 24`);
+      }
+      if (!/toHaveLength\(25\)|\.toBe\(\s*25\s*,?\s*\)/su.test(text)) {
+        failures.push(`${file}: no family-count pin 25`);
       }
     }
     expect(failures).toEqual([]);
@@ -114,7 +126,7 @@ describe("TC-METRICS-083 mounting changes no other family", () => {
       .filter((entry) => entry.path.length === 1)
       .map((entry) => entry.path[0]);
     expect([...families].sort()).toEqual([...MOUNTED_FAMILIES].sort());
-    expect(families.at(-1)).toBe("metrics");
+    expect(families.at(-1)).toBe("supervise");
   });
 
   test("the delivered families' help text carries no metrics line", () => {

@@ -1,0 +1,711 @@
+change_id: GH-295
+title: "M2-S2: Supervise (M2)"
+milestone: "M2: Ceremonies, measurement, and memory"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: null, completed: 2026-11-16T22:21:11.981Z }
+  specification: { started: null, completed: 2026-11-17T11:01:00.351Z }
+  test_planning: { started: null, completed: 2026-11-17T11:01:05.192Z }
+  delivery_planning: { started: null, completed: 2026-11-16T23:18:06.308Z }
+  dor_check: { started: null, completed: 2026-11-16T23:23:38.081Z }
+  delivery: { started: null, completed: 2026-11-17T05:54:34.230Z }
+  system_spec_update: { started: null, completed: 2026-11-17T13:57:13.092Z }
+  review_fix: { started: null, completed: 2026-11-17T14:10:27.441Z }
+  quality_gates: { started: null, completed: 2026-11-17T14:57:39.333Z }
+  dod_check: { started: null, completed: 2026-11-17T14:59:03.035Z }
+  pr_creation: { started: null, completed: 2026-11-17T15:02:10.862Z }
+decisions: []
+open_questions: []
+blockers: []
+notes:
+  - text: "State detection: GitHub tracker; issue open with label change; milestone
+      M2 attached (M2: Ceremonies, measurement, and memory); no open or merged
+      PR for feat/GH-295/supervise; branch identical to main-tools HEAD
+      5f25da89623f4e5cc56f55c6b48 (fresh, zero own commits); no prior change
+      artifacts."
+    type: "info"
+    date: "2026-11-16"
+  - text: "Clarify-scope cross-check: ticket mirrors backlog story M2-S2
+      (doc/planning/oss-tooling/backlog.md) and the M2 pack; scenario seeds
+      SC-M2-S2-01 (supervise.data.lanes[] with ref/heartbeat/holder per repo)
+      and SC-M2-S2-02 (lanes show <ref>.data.state == parked with classified
+      parkReason and non-null until) are the inherited test-plan starting point.
+      Dependencies M1-S1 and M1-S18 delivered. Watchdog family (GH-221/235/238)
+      explicitly defers supervision consumption to this story: watchdog checks
+      never supervise. Daemon production composition runs supervise-only mode
+      today. No contradictions or gaps found; no human input needed."
+    type: "info"
+    date: "2026-11-16"
+  - text: "Delivery conventions from ticket: full 11-phase lifecycle; plan phases
+      declared in plan.yaml; commits through commit primitive with conventional
+      subjects, every body/footer line <= 100 chars; quality gates command is
+      TMPDIR=$PWD/tmp/tmpdir pnpm check; PR targets main-tools; STOP with PR
+      open (merge authority: CEO); maintain doc/planning/oss-tooling/ backlog
+      markers per convention."
+    type: "info"
+    date: "2026-11-16"
+  - text: "Known doc risks for phase 7: new feature area supervise will need
+      first-spec authoring (feature-supervise.md, first-spec-only rule);
+      watchdog spec section 7 lists supervise as out-of-scope boundary text that
+      may need reconciliation once supervise consumes its probes;
+      resident-daemon spec supervise-only mode notes and declared residuals may
+      need updates; entrypoint-delta (root family listing) is planning truth,
+      not current truth."
+    type: "info"
+    date: "2026-11-16"
+  - text: "Retro: fresh worktree had no dist/ build outputs, so the CLI phase
+      command failed at import time (Cannot find module
+      '@delivery-os/adapters/credentials'); fixed by running pnpm build first.
+      Improvement: bootstrap in a fresh worktree should build before invoking
+      any lifecycle CLI."
+    type: "retro"
+    date: "2026-11-16"
+  - text: "Retro: the commit primitive reported a misleading
+      commit.commitlint-failed / 'commitlint rejected the message' when the
+      commitlint binary was absent from PATH (installed in node_modules/.bin but
+      not resolvable via execFile PATH lookup). Fix:
+      PATH=\"$PWD/node_modules/.bin:$PATH\" before CLI invocations, or pnpm
+      exec. Improvement: the primitive could classify binary-absent as a
+      distinct, actionable identity instead of a message rejection."
+    type: "retro"
+    date: "2026-11-16"
+  - text: "Test-plan author surfaced blocking spec gap GAP-T1 in F-6/AC-F6-1/DEC-6:
+      duplicate-supervision refusal under-determined on (a) guarded object
+      granularity, (b) exclusive-envelope projection vs exit-1 refusal plus
+      required report, (c) live per-ref lease counted as a supervision claim
+      would refuse the DEC-7 safe-boundary park and make AC-F5-1 unreachable.
+      Specification reopened once to add the missing decision; test-plan cases
+      TC-SUP-051 and the refusal half of TC-SUP-092 are parked TODO(blocked)
+      until the spec is corrected."
+    type: "blocker"
+    date: "2026-11-16"
+  - text: "Retro: the reopen-on-gap loop worked as designed — the gap was caught at
+      artifact time by the downstream author (test planning), before any
+      delivery code; cost is one spec iteration, zero code rework."
+    type: "retro"
+    date: "2026-11-16"
+  - text: "DoR iteration 1 verdict: NOT_READY
+      (readiness-review/readiness-iter-1.md). Blocking: plan AC-ownership omits
+      AC-F3-1 (the ticket AC) from every phase while claiming all 8 ACs met —
+      DoD verification undefined. Advisory (plan): phantom doc-reconciliation
+      targets (feature-queue-lifecycle.md / feature-lanes-surface.md do not
+      exist; real homes are scheduling-engine/queue-ready/peak-pausing) and
+      phase-5 scope missing supervision-error-family.test.ts. Advisory
+      (spec-level): re-entry-instant horizon under-declared (300,000 ms
+      corroboration bound vs mapped 60,000 ms recheck default). Base-state pins
+      verified correct (144/62/+112 error table; family count 23). Remediation:
+      reopen delivery_planning; plan-writer declares AC-F3-1 ownership split,
+      fixes doc targets and phase-5 scope, records the horizon constant; spec
+      advisory folded into plan declarations (no spec reopen)."
+    type: "decision"
+    date: "2026-11-17"
+  - text: "Retro: the DoR gate caught a real delivery-blocking gap (missing AC
+      ownership for the ticket's central criterion) that would have surfaced as
+      DoD ambiguity at phase 10 — cheap fix now, expensive later. Also: sibling
+      merges (GH-287) moved the error-table base state after the plan was
+      drafted from older pins; DoR verification against the live tree confirmed
+      the pins current."
+    type: "retro"
+    date: "2026-11-17"
+  - text: "DoR iteration 2 verdict: NOT_READY
+      (readiness-review/readiness-iter-2.md). Iteration-1 findings all verified
+      closed (AC-F3-1 split consistent, phantom paths gone, horizon unambiguous,
+      phase-5 scope complete). New blocking finding: the plan's error-table
+      ABSOLUTE pin is false — table holds 146 rows at branch base (runtime
+      import + mirror toHaveLength(146) + GH-287 143-to-146 move), plan asserts
+      144 and instructs a '144 to 146' mirror move with a stale scan token;
+      delta instructions (+2, 62-to-64, +112-to-+114) are correct so the defect
+      fails closed and cannot ship silently. Remediation: reopen
+      delivery_planning; plan-writer corrects the absolute pin and mirror-move
+      instruction and bumps the test-plan version citation (v1.1 to v1.3)."
+    type: "decision"
+    date: "2026-11-17"
+  - text: "Retro: iteration-1 reviewer affirmed the 144 pin as 'verified against the
+      live tree' — it was wrong (146 is actual); iteration-2 reviewer caught it
+      by re-verifying directly. The prior retro note above (pins confirmed
+      current) repeated the same false claim. Lesson: a reviewer's verification
+      claim is data, not truth; count-sensitive pins must be confirmed by direct
+      read (runtime import or test assertion), never inherited from a prior
+      verdict — including one's own earlier iteration."
+    type: "retro"
+    date: "2026-11-17"
+  - text: "DoR iteration 3 verdict: READY (readiness-review/readiness-iter-3.md), 0
+      blocking, 1 nit advisory (header ordinal 'board 22nd' vs 21st — keys no
+      obligation, pin, or scan). Verified by direct read: the reviewer ran the
+      sync check itself (entries=146 documented=146 corpus=67), imported
+      ERROR_TABLE.length===146 at runtime, counted allowlist 62 and
+      BASELINE_ROWS.length=34, and confirmed the oracle semantics
+      (occurrence-relative) match the plan arithmetic exactly (146+2=148,
+      62+2=64, 34+114=148). Gate cleared at iteration 3 of budget; delivery may
+      proceed."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Delivery resumed after the first @coder session aborted mid-plan-phase-1
+      (headless interruption): worktree dirty with 22 modified + 7 untracked
+      paths matching almost all of phase-1 declared scope
+      (contracts/supervise.ts new;
+      queue/error-table/index/sync-check/delivered-suite fixtures updated; four
+      supervision structure tests new); no phase-1 commit and no pm-notes phase
+      evidence recorded; packages/cli/src/classify.ts (declared in phase 1)
+      absent from the dirt — coder to verify whether needed. Upstream
+      origin/main-tools unchanged (0 behind). Resume instruction: re-inspect
+      against phase-1 scope, complete/test, commit, evidence, then phases 2-8
+      and phase complete delivery."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Retro: a headless subagent abort leaves uncommitted in-flight work and no
+      evidence record; the per-plan-phase commit discipline limits the blast
+      radius to one phase, and the resume path (state probe + scope diff +
+      session continuation) worked. Improvement: consider committing
+      incrementally within very large plan phases, or a pre-abort checkpoint
+      note."
+    type: "retro"
+    date: "2026-11-17"
+  - text: "Plan phase 1 complete (contracts, liveness-stall cause, two error
+      identities) at commit 1309166f. Delivered: packages/core/src/contracts/
+      supervise.ts (data-only report/tri-state/claim/action/degradation/
+      truncation vocabularies, artifact-only classification shape, imported
+      bounds), QUEUE_PARK_CAUSES +QUEUE_PARK_CAUSE_CONDITION_PAIRS +liveness-
+      stall->provider-window, QueueLane.until (DM-3 contract data), error-table
+      supervise kind + supervise.duplicate-supervision (user, exit 1, retryable,
+      not_landed) + supervise.evidence-absent (platform, exit 2, retryable,
+      not_landed), sync-check allowlist 62->64, structure mirror 62->64, counts
+      146->148 / delivered 145->147 / BASELINE_ROWS.length+112->+114, carrier
+      doc rows+counts, corpora +2 true positives +1 lookalike, captured
+      error-table baseline (146 rows), and the four supervision structure suite
+      plus the checks mutation suite. Tests: TC-SUP-014/045/070/071/094 green;
+      TMPDIR=$PWD/tmp/tmpdir pnpm check PASS (9852 pass / 0 fail)."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Phase-1 delivery findings (all additive or mechanical, none changes a
+      semantic): (1) packages/cli/src/classify.ts needed no edit — it resolves
+      table codes generically, so both supervise identities classify by exact
+      code; (2) the no-leftover scan tokens 146/62/+112 forced two further
+      delivered count sites outside the plan's named list —
+      tests/structure/ceremony-contract.test.ts and tests/behaviour/
+      ceremony-nonregression.test.ts; (3)
+      tests/types/queue-scheduling.type-test. ts pinned the closed
+      QueueParkCause union and tests/fixtures/queue/ vocabulary/closed-sets.json
+      + the queue-scheduling-contract pairing assertion pinned the
+      five-cause/five-pair table, so all three moved additively with the sixth
+      cause; provider-window now carries three causes; (4)
+      tests/fixtures/events/error-table-baseline.json captured the two new rows
+      so its delivered-row oracle stays true; (5) DOMAIN_KINDS tail ordinals and
+      the kind-count 29->30 moved in the delivered suites. (6) The commit
+      primitive's --phase flag accepts only canonical lifecycle phase ids (phase
+      \"1\" is rejected), so each plan-phase commit is made standalone
+      (plan-union scope) and the lifecycle delivery phase is completed only at
+      the end."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Plan phase 2 complete (artifact-evidence fold, tri-state, claims) at
+      commit ae4ab741. Delivered: packages/core/src/domain/supervise.ts (pure
+      classifySupervision delegating to the delivered classifyLaneProgress,
+      evidence builder with the delivered byte cap and overflow marker, derived
+      counts, 200-lane bound), packages/core/src/app/supervise.ts (one
+      store.readRecords() read projected into artifact-only facts, scope filter
+      on the invoking repository key, daemon/coordinator/per-ref claims,
+      degradation markers, evidence-absent derivation), the four new fixtures
+      (real temp repo with a two-message guard, delivered-seam record seeders,
+      the 12-cell matrix with a totality guard, the in-process harness with a
+      recording read port), TC-SUP-010/012/031/032 behaviour suites, TC-SUP-030/
+      032 structure suites, and the starting TC-SUP-095 inventory/tier case.
+      Tests: 33 phase-2 cases green; TMPDIR=$PWD/tmp/tmpdir pnpm check PASS
+      (9885 pass / 0 fail)."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Phase-2 delivery findings: (1) the classification maps heartbeat
+      freshness to the delivered traffic input only when the heartbeat trail
+      does not span the observation window; otherwise a lying lane would read
+      progressing before the corroboration branch, so the delivery passes
+      traffic=0 for the lying cell (the corroborated branch answers). (2) A
+      corroborated stall now requires a present heartbeat: an absent heartbeat
+      with a flat artifact trail reads unknown (insufficient evidence), never
+      stalled. (3) Lane heartbeat observations use the scope's latest heartbeat
+      instance trail (the claim's instance when a claim exists), so a store with
+      no daemon instance still classifies lanes. (4) The release changeset
+      .changeset/gh-295-supervise-minor.md landed in this commit, one phase
+      early versus plan phase 8: the delivered release invariant
+      (tests/checks/privacy-release.test.ts) reads the committed range against
+      origin/main-tools and fails any publishable diff without an added
+      changeset, so the plan's 'never gates an implementation phase' intent and
+      the repository gate conflict; landing it early keeps every phase boundary
+      green. No other release obligation moved."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Plan phase 3 complete (battery surface: grammar, scope, exits, human
+      render) at commit 4094dd53. Delivered:
+      packages/cli/src/commands/supervise.ts (zero positionals, no family flags,
+      one battery call, humanText from the same report), production + edge
+      composition (unconditional, still dropped by the entrypoint until phase 6
+      so root --help is unchanged), packages/core/src/domain/supervise-text.ts
+      (bounded human render, empty population stated, brand seam only), and
+      TC-SUP-001/002/003/004/005/013/081/ 085/090 suites plus the healthy report
+      golden pair and the in-process CLI harness. Tests: 44 phase-3 cases green;
+      TMPDIR=$PWD/tmp/tmpdir pnpm check PASS (9907 pass / 0 fail)."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Phase-3 findings: (1) packages/core/src/index.ts gained the supervision
+      re-exports (the CLI imports the composition root); the file is outside the
+      plan's declared per-phase file list, so it rides as disclosed scope drift
+      — required for the package surface and exports-parity. (2)
+      tests/structure/cli-edge-seam.test.ts pins the command modules declaring
+      humanText; supervise joined that additive list. (3) The scale/read-cost
+      cells use an injected synthetic snapshot because seeding 200 lanes through
+      the delivered queue intent path is quadratic (~200 s); the fold is the
+      subject there and the real-store path is exercised by every other case."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Plan phase 4 complete (supervised-stall park, safe-boundary intent,
+      additive lane until) at commit a330a531. Delivered: the park action
+      through the delivered park record shape/key/fence (cause liveness-stall,
+      resolver- mapped provider-window condition, until at the imported recheck
+      default, idempotent against an active liveness-stall park, no lease
+      claim/release/ creation), safe-boundary park intent over a live holder,
+      the additive QueueLane.until on the delivered lane fold (present exactly
+      for an active expiry-carrying park),
+      TC-SUP-011/020/022/023/040/041/042/043/046/047/091/ 093 suites, the
+      stalled report golden, and the parked lanes golden pair. Tests: 122
+      phase-4 cases green; TMPDIR=$PWD/tmp/tmpdir pnpm check PASS (9933 pass / 0
+      fail)."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Phase-4 deviation (DECLARED, for review): a stall over an actively held
+      session records the park record immediately and reports the action as
+      safe-boundary-park-intent (durable intent, zero session effect, zero
+      signals); the park does not wait for a boundary write. The plan/TC-SUP-043
+      phrase 'delivered preemption pending state' cannot be satisfied without
+      lying in the delivered close-item preemption record (fixed
+      parkCause/closeRef) or adding a record kind / changing the daemon
+      contract, both forbidden by DM-4 and NG-6; the chosen carrier is the
+      delivered park record, which is the only honest durable intent in the
+      delivered set. All other TC-SUP-043 assertions hold (intent durable before
+      any session effect, holder named, no kill/signal/stop seam). Also:
+      foldLanes tolerates a schedule fixture without a parks member (delivered
+      fixture passed a partial schedule); production always supplies it."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Plan phase 5 complete (restart composition, duplicate refusals,
+      non-regression proofs) at commit 9ca4b26a. Delivered: the restart branch
+      for an already-parked stale lane (delivered budget admission consulted
+      once, one delivered restart record with ordinal +1, terminal exhaustion +
+      one idempotent typed question, the declared unavailable outcome consuming
+      no budget), the per-action duplicate-supervision refusal against a durable
+      acting authority (pending delivered preemption record, observation-window
+      bounded, retry control), per-ref double-claim refusal through the
+      delivered claimSingleFlightRefusal helper, the acting/restart facts in the
+      one-read snapshot, and TC-SUP-021/044/051/052/053/054/060/061/062/063/072
+      suites. Tests: 136 supervision cases green; TMPDIR=$PWD/tmp/tmpdir pnpm
+      check PASS (9955 pass / 0 fail)."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Phase-5 notes: (1) the acting-authority artifact is the delivered
+      daemon.preemption pending record (the only durable record naming an object
+      another supervision authority is acting on); detection is record-only and
+      its acting window is the imported corroboration bound. (2) Restart
+      admission runs only for an already-parked stale lane so one run never
+      parks and restarts the same lane; this keeps TC-SUP-040's single-action
+      park and TC-SUP-052's parked-lane claim action coherent. (3) The delivered
+      exhaustion options are requeue-fresh-budget/park-owner-review; the fixture
+      initially used a wrong first member and the state layer failed closed with
+      state.store.torn — the fail-closed behaviour is correct and the fixture
+      was fixed. (4) One aggregate-gate run failed a delivered suite
+      (prior-identity-notice TC-BIN-045 invariance) at its 5 s bun timeout under
+      load; the immediate rerun was green (9955/0) and the suite passes
+      standalone — recorded as an environmental flake, not a regression."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Plan phase 6 complete (mounting as the 24th prompt-required family) at
+      commit 70071c71. Delivered: PROMPT_REQUIRED_COMMANDS gains supervise last
+      (23 -> 24), the root family entry and the family help page (m2 reference
+      page, usage/options/examples plus the shared 0/1/2 exit table), the new
+      reference page
+      doc/planning/oss-tooling/milestones/m2/commands/supervise.md, the coverage
+      inventory row + pageFor branch, the captured BASE_FAMILIES fixture,
+      TC-SUP-096 mounting/help suites, and the atomic count/set move across
+      every pinning suite. Tests: 43 mounting/help cases green;
+      TMPDIR=$PWD/tmp/tmpdir pnpm check PASS (9964 pass / 0 fail)."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Phase-6 findings (sites beyond the plan's named pin list, all additive
+      and in the same commit): (1)
+      tests/behaviour/entrypoint-composition.test.ts and
+      entrypoint-help-coverage.test.ts pin the literal prompt-required set; (2)
+      tests/structure/events-production-composition.test.ts pins the tail
+      ordinals; (3) tests/checks/event-mount-guards.test.ts pins the delivered
+      inline-name negative control; (4) tests/structure/steer-mounting.test.ts
+      asserted steer was last — now supervise follows it; (5)
+      tests/fixtures/entrypoint/alias-baseline.json is a captured help baseline
+      that gains the supervise family line (additively noted in its provenance);
+      (6) the new planning page required a
+      scripts/checks/forbidden-literals.registry.json corpus row (declared in
+      phase 8's scope, landed early so the docs guard is green). (7) Two
+      aggregate-gate runs each tripped a different delivered suite's 5 s bun
+      timeout under load (prior-identity-notice, hermetic preload); both pass
+      standalone and the immediate rerun was green — environmental flake."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Plan phase 7 complete (cross-cutting proofs) at commit fbbe3c14.
+      Delivered: determinism paired-run + replay + evidence-shape +
+      clock-advance + ordering cells (TC-SUP-080), the 200/201 bound with the
+      named lane-cap reason and the evidence-cap marker (TC-SUP-082), the
+      measured 200-lane latency cell (TC-SUP-083), the evidence-totality walk
+      over a mixed scope plus a real applied action and the single-flight
+      refusal (TC-SUP-084), the three committed failure/live-claims goldens
+      (TC-SUP-092), and the completed imports/boundary/inventory case
+      (TC-SUP-095). Tests: 166 supervision cases green; TMPDIR=$PWD/tmp/tmpdir
+      pnpm check PASS (9984 pass / 0 fail). Measured 200-lane run: 3.41 ms and
+      1.47 ms over two warm in-process runs (bound 5,000 ms), one read pass
+      each, 200 entries each."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Phase-7 findings: (1) the scale cells inject a synthetic snapshot
+      (cappedScope/mixedScope) because the delivered queue intent path is
+      quadratic; the real-store path is covered by every other case and the read
+      adapter's one-read contract is asserted at the port. (2) Two consecutive
+      aggregate-gate attempts tripped different delivered timing-sensitive suite
+      budgets under machine load (status prior-read 5 s default; daemon
+      foreground-stop 250 ms cancellation) and the third attempt was fully green
+      with no code change — recorded as environmental flakes on delivered
+      suites, not regressions. (3) All three failure/data goldens are created in
+      this change (GAP-T3) and regenerate only on an explicit command."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Plan phase 8 complete (planning bookkeeping, changeset, release
+      obligations) at commit 3f8ece79. Delivered: the M2-S2 Progress marker in
+      doc/planning/oss-tooling/backlog.md, the M2-S2 delivery snapshot in
+      doc/planning/oss-tooling/status.md, the `supervise` row in
+      cli-command-registry.md (delivered, 24th family), the observed 24-family
+      root listing in milestones/m2/entrypoint-delta.md, the reference-page
+      status flip, the test-plan §10 execution log (structure/behaviour/golden/
+      checks/docs/error-socialisation/aggregate rows), and the release artifacts
+      already present (.changeset/gh-295-supervise-minor.md landed in the
+      phase-2 commit so the committed-range release invariant stays green;
+      scripts/checks/forbidden-literals.registry.json carries the planning page
+      row, landed with the page). The lifecycle phase-7 spec staging obligations
+      (doc/spec/features/feature-supervise.md first-spec page, watchdog/daemon/
+      scheduling-engine/queue-ready/peak-pausing boundary reconciliations,
+      result-contract wording check) are declared for @doc-syncer and were NOT
+      edited by delivery. Final battery at the delivered HEAD:
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exits 0 (9984 pass / 0 fail); git diff
+      --check clean."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Plan phases summary: 1 1309166f (contracts/cause/error identities), 2
+      ae4ab741 (artifact-evidence fold), 3 4094dd53 (battery surface), 4
+      a330a531 (stall park + additive lane until), 5 9ca4b26a (restart/refusals/
+      non-regression), 6 70071c71 (24th family mount), 7 fbbe3c14 (determinism/
+      bounds/latency/evidence/failure goldens), 8 3f8ece79
+      (bookkeeping/release). Every phase boundary's aggregate gate was green.
+      Declared deviations: safe-boundary intent carrier (phase 4 note),
+      changeset landed in phase 2 (release invariant reads the committed range),
+      core index re-exports and the planning-page literal-registry row landed
+      with their phase, and the delivered-suite sites beyond the named pin lists
+      moved additively in the phase that required them (all enumerated in the
+      per-phase notes)."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Lifecycle phase 7 (system_spec_update) iteration 1 (@doc-syncer):
+      authored doc/spec/features/feature-supervise.md (first-spec page,
+      ados_distribution internal); reconciled doc/00-index.md,
+      doc/overview/{architecture-overview, glossary}.md,
+      feature-watchdog-lane-contracts, feature-resident-daemon,
+      feature-scheduling-engine (six-cause set), feature-peak-pausing,
+      feature-cli-entrypoint (24 families), feature-agents-and-commands,
+      feature-result-contract (DOMAIN_KINDS), feature-event-taxonomy,
+      feature-board, feature-session-lifecycle-economics; feature-queue-ready
+      inspected, unchanged. Residual gap (routed to @coder): the new page needs
+      its registration row in scripts/checks/forbidden-literals.registry.json
+      (alphabetical, between feature-steer and feature-telemetry-v2) or
+      forbidden-literals and identity-docs seed-cleanliness fail. Staging
+      resolution (dry-run verified): phase complete system_spec_update stages
+      modified tracked files (13 docs + registry once touched) but excludes the
+      untracked feature-supervise.md (untrackedNotStaged); after phase-complete,
+      a standalone commit GH-295 via the commit primitive lands the new page.
+      Evidence convention for gate commands: TMPDIR=$PWD/tmp/tmpdir pnpm check
+      (never absolute paths)."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Review iteration 1 verdict: FAIL (code-review/review-iter-1.yaml). 21
+      findings: 1 critical, 3 high, 12 medium, 4 low, 1 info. All 8 ACs
+      functionally verified. Blocker F-1: `liveness-stall` in QUEUE_PARK_CAUSES
+      makes operator `queue release --park liveness-stall` legal without --until
+      -> provider-window park with empty expiresAt fails isParkRecord -> every
+      park read returns state.store.torn (reproduced direct-core and via queue
+      edge). High: F-2 action-path per-lane reads break NFR-4 one-fold; F-3
+      phase commits use path-derived subjects, not the plan's declared
+      summaries; F-4 safe-boundary deviation (immediate durable park + action
+      label) disclosed in pm-notes and feature page but spec/test plan
+      unamended."
+    type: "info"
+    date: "2026-11-17"
+  - text: "PM triage for review remediation: (1) F-1 fix by design decision —
+      `liveness-stall` is battery-written only; the operator path refuses
+      `--park liveness-stall` with a delivered identity (owner-hold one-writer
+      precedent), plus empty-expiry hardening in the park write path and a
+      closed-set round-trip case. (2) F-2 accepted as real: action path must
+      reuse the single fold snapshot (restarts already collected unused). (3)
+      F-3 accepted with disclosure, NOT reworded: branch is unpushed but
+      rewording 8 commits invalidates the plan-phase SHAs cited in pm-notes DoD
+      evidence, the PR is squash-merged (GH-298 precedent), commitlint range
+      gate is PASS, and the PR body will carry the phase-to-commit mapping; the
+      tool limitation (commit --phase rejects plan phase ids, recorded in
+      phase-1 findings) is the root cause. (4) F-4 fixed by amending spec (DEC-9
+      delivery-time resolutions: safe-boundary carrier and acting-authority
+      artifact class) and test plan TC-SUP-043, then the feature page if needed.
+      (5) Concrete code minors fixed by @coder (F-6 lane heartbeat observation,
+      F-7 claim evidence recordKind, F-8 run id in durable
+      restart/exhaustion/question records, F-9 presence-cell fixture, F-11
+      evidence cap, F-12 unused heartbeatOrdinal, F-13 restored exact-set
+      assertion where possible); design-level minors disclosed with rationale
+      (F-15/F-16). Remediation tracked as plan phase 9 (review_remediation) via
+      @plan-writer; specification and test_planning reopened for the two
+      artifact amendments."
+    type: "decision"
+    date: "2026-11-17"
+  - text: "Retro: the critical blocker was a closed-set extension whose operator
+      surface was not closed — adding a cause to the shared vocabulary made an
+      unguarded writer legal. Lesson: every closed-set addition needs a
+      round-trip case for every writer path (operator CLI + internal writer),
+      not just the vocabulary/resolver tests the plan named. Also: plan-declared
+      commit summaries are not enforceable via the commit primitive's --phase
+      flag today (plan phase ids rejected), so delivery-generated subjects drift
+      by construction — a tooling gap worth a future ticket."
+    type: "retro"
+    date: "2026-11-17"
+  - text: "Review iteration 2 verdict: FAIL (code-review/review-iter-2.yaml). The
+      iteration-1 blocker is closed (verified at every writer path). NEW
+      critical F-1v2: the already-parked guard recognises only an active
+      liveness-stall park, so a stalled lane already parked under another cause
+      (owner-hold, peak-window, stale clear-observed) gets a second active
+      parked record -> duplicate active parks -> every later queue/lanes read is
+      torn (append-only; reproduced). High F-2: run id in the exhaustion
+      question identity makes repeat runs raise duplicate questions (one record,
+      two questions; reproduced). Medium F-3: the absolute one-fold claim is
+      false for a composed acting run (8 reads measured; append helpers
+      read-then-verify, blocker append re-reads) while TC-SUP-103 passes via a
+      store-free fake. Medium F-4: the harness re-implements production
+      closures, hiding F-2. Residual lows F-5/F-16/F-17/F-19 disclosed."
+    type: "info"
+    date: "2026-11-17"
+  - text: "PM triage review iteration 2 remediation (round 2): (1) F-1v2 fix: gate
+      the park append on any active park (fact.activePark === undefined); keep
+      restart admission liveness-stall-only; add owner-hold/peak-window/stuck
+      cells with a post-action reads-healthy assertion. (2) F-2 fix: gate the
+      exhaustion question on appended === true (or ref+type dedupe); run id as
+      metadata, not identity; test with two DIFFERENT injected ids. (3) F-3 fix:
+      pass current: ledger.value to appendBlockerQuestion; correct the spec
+      NFR-4/DEC-9(d), test-plan TC-SUP-103 and feature-page wording to the
+      precise discipline (one decision fold; delivered append helpers perform
+      read-then-verify; at most the declared ledger read); add a
+      composed-production acting cell. (4) F-4 fix: share/export the closure
+      factory and add one composed-production case. (5) Residual lows: F-17
+      normalizer tautology tightened, F-19 render claim corrected, F-16
+      detection-limit line added to the feature page and plan cell; F-5/F-3
+      disclosures remain. Artifacts: spec v1.3, test plan v1.5, plan phase 10."
+    type: "decision"
+    date: "2026-11-17"
+  - text: "Retro: the second blocker proves the iteration-1 lesson was only
+      half-applied — the closed-set round-trip case covered cause/writer pairs
+      but not PARK-STATE interactions (a pre-existing active park under a
+      different cause). Pattern to generalize: every state-writing action needs
+      a 'something else already owns this state' cell, and every absolute
+      read-bound claim needs a measurement over the COMPOSED production
+      closures, not a fake-port harness."
+    type: "retro"
+    date: "2026-11-17"
+  - text: "Review iteration 3 verdict: PASS (code-review/review-iter-3.yaml) —
+      spec_compliance PASS, plan_compliance PASS, next_step PROCEED; 0 critical,
+      0 high. Verified: F-1v2 closed beyond the suite's cells (owner-hold,
+      peak-window, plus stuck-marker combinations, recovered re-parks once);
+      F-2v2 holds across different run ids and two-lane runs; F-3v2 measured
+      honestly over the composed wiring (7 reads flat at 50/200 lanes: 1
+      decision fold + 4 delivered append read-backs + 1 blocker ledger + 1
+      coverage read); F-4v2 one-factory test effective; F-17/F-19 behavioural.
+      Residual medium/minor accuracy nits fixed before phase close: spec v1.4
+      (mechanism attribution: caller occupancy gate + fence ordering, seam
+      performs no dedupe — F-6/DEC-8c/RSK-2) and test plan v1.6 (occupancy truth
+      + failing mutant 'latest-record-wins', no case or expectation changed).
+      Residual accepted-with-disclosure inventory: F-3 commit subjects, F-5
+      phase-scope enumeration, F-15 name-based one-home guard, iter-2 F-6
+      detection-limit test cell absence (feature-page sentence present), F-9
+      info, RSK-2/OQ-1 cross-battery window; review-iter-3 lows F-3/F-4/F-5
+      (vacuous normalizer assertion, bookkeeping) declared."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Plan phase 9 complete (review remediation) at commit 3d4ffaa8. F-1
+      blocker fixed: QUEUE_BATTERY_ONLY_PARK_CAUSES declares liveness-stall
+      battery-written only; queue release refuses it by name through the
+      delivered fallback.invocation identity at both the command and edge
+      runtime (zero append, later reads healthy), and the append seam refuses a
+      provider-window-mapped park with an empty/missing expiry before any write
+      (releaseQueueLease and the battery write port both refuse; store stays
+      readable, then a legitimate park appends). F-2 fixed: restart admission
+      consumes the fold snapshot's restart records, the per-ref answer uses the
+      delivered pure single-flight helper over the snapshot leases, the park
+      write port performs no reads, and the blocker ledger is read once per run;
+      TC-SUP-103 instruments store.readRecords and asserts one whole-store read
+      for 50- and 200-lane acting runs with no per-lane call site. F-6 fixed:
+      lane heartbeat is the lane's own daemon.lane observation with the scope
+      heartbeat as the declared artifact-source-absent fallback (TC-SUP-001/004,
+      goldens). F-7 fixed: heartbeat evidence names the source record kind
+      (daemon.heartbeat / coordinator.iteration / queue.lease / daemon.lane);
+      live-claims golden updated. F-8 fixed: the injected run id threads through
+      the command runtime and production into restart runId/sessionId, the
+      exhaustion runId, and the question id suffix; action evidence echoes it;
+      structure scan forbids the retired supervise literals. F-9 fixed: the
+      presence cell seeds a genuinely live daemon trail ending at the injected
+      now beside an own-observation stalled lane. F-11 fixed:
+      boundSupervisionEvidence only markers a truncated list and pops until the
+      marker fits, so a single oversized entry clamps; action evidence bounded
+      with the action fact first. F-12 fixed: heartbeatOrdinal removed from the
+      exact classification input and from the lane/claim facts; exact-shape and
+      dead-member guards updated. F-13 fixed: steer-mounting reads the one
+      captured supervision base and asserts exact set equality again. F-14
+      fixed: a run inside the park's re-entry horizon appends nothing
+      (TC-SUP-044 cell); parked action fixtures seed an elapsed horizon.
+      F-4/TC-SUP-043 aligned to DEC-9(b) (immediate carrier + unheld-twin
+      comparison). F-3 and F-5 remain accepted-with-disclosure per PM triage
+      (not reworded/rewritten). F-15 accepted-with-disclosure: the
+      advancing/staleness mapping is a declared adaptation documented by the
+      delivered lane classification consumption; the guard remains
+      identifier-shaped rather than shape-based (one-line rationale, no code
+      change). Scope additions beyond the phase's declared file list, required
+      by the obligations: packages/cli/src/commands/ supervise.ts (run-id port),
+      packages/core/src/contracts/index.ts (barrel export),
+      tests/fixtures/supervise/harness.ts (run id + read instrumentation),
+      tests/fixtures/ports/v1-contract-inventory.json and
+      tests/structure/content-inventory.test.ts (export inventory), plus runId
+      threading in the four direct-call scale/determinism suites. Delivered
+      suite count moved additively (TC-SUP-100..103 plus the snapshot-default
+      single-flight cell, the re-entry-horizon cell, the single-oversized-
+      evidence cell, and the operator-refusal cell in the queue park-cause
+      suite). Gate: TMPDIR=$PWD/tmp/tmpdir pnpm check green at 3d4ffaa8 — 9995
+      pass, 4 skip, 0 fail, 1272 files; lint, format, typecheck, boundaries,
+      memory, prompt-conformance, help-guide-coverage, exports-parity all PASS.
+      Doc-spec resync remains lifecycle phase 7 (@doc-syncer); no doc/spec/**
+      file was edited here."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Plan phase 10 complete (review remediation round 2) at commit 2a91e679.
+      F-1v2 blocker fixed: the supervised-stall park append is gated on NO
+      active park of any cause, judged by the new one-home activeParkRecords in
+      packages/core/src/domain/queue-park.ts whose sequence semantics agree with
+      the delivered duplicate-active-park validator (parked stays active until
+      recovered/released; a stuck clear-observed marker keeps the standing
+      occupancy). The fold consumes that judgement for activePark, restart
+      admission stays liveness-stall- only, and a lane parked under owner-hold,
+      peak-window, or a stale clear-observed park appends nothing, is reported
+      honestly, and leaves readQueueParks/queue list/lanes list healthy
+      (TC-SUP-104 on the composed production harness, three cells plus the
+      non-vacuity control). F-2v2 fixed: exhaustion action and question are
+      raised only when the terminal record actually landed (appended===true);
+      the question id is ref-stable (exhaustion-<ref>) and never embeds a run
+      id; the run id stays record/evidence metadata. TC-SUP-061 now runs two
+      DIFFERENT injected run ids over one exhausted lane and asserts one
+      terminal record, one question with the same id, and no exhaustion action
+      on the second run. F-3v2 fixed: the production closure factory passes the
+      cached ledger value as current to appendBlockerQuestion (the blocker
+      ledger is read at most once per run) and absorbs the appended question
+      into the cache for a second exhausted lane; TC-SUP-103 now runs the
+      composed production closures (no store-free fake), asserts one decision
+      fold, no per-lane re-read, a readEconomicsRecords population only from the
+      delivered append helpers (2 restart + 2 exhaustion), at most one
+      readBlockerLedger, and a flat measured total between 50 and 200 lanes.
+      F-4v2 fixed: the economics/append closures are authored once in
+      production's exported createSupervisionEconomicsWritePort (schema ids,
+      exhaustion options, ref-stable question id and options, per-run ledger
+      cache) and the harness imports that same factory;
+      tests/structure/supervision-composition-factory .test.ts fails naming a
+      duplicated symbol, and TC-SUP-105 runs one acting run through
+      createProductionComposer over a real checkout (park + restart +
+      exhaustion, schema/option fidelity, the same read discipline, post-run
+      healthy reads). F-17 fixed: the golden normalizer moved to
+      tests/fixtures/supervise/golden/normalize.ts with behavioural coverage
+      (TC-SUP-106: declared volatile fields replaced, undeclared values
+      untouched, zero volatile values in every committed golden); the
+      constant-length tautology is removed. F-19 fixed: the human-render claim
+      now says bounded only by the delivered lane cap, and TC-SUP-082 measures
+      the 200-lane render. Scope disclosures: tests/fixtures/projects/production
+      .ts gained an additive stateStoreWrap option plus run-id injection so the
+      composed-production proof can instrument the main store and correlate the
+      envelope/record identity (the commit primitive reported it as scope
+      drift); packages/cli/src/production.ts gained the exported closure factory
+      and the observability-only stateStoreWrap fact; harness.ts and records.ts
+      gained the composed-production harness and the park-state / volatile
+      fixtures. The PM-authored plan v1.4, spec v1.3, test plan v1.5 and
+      review-iter-2 artifact were staged by the commit primitive in the same
+      change folder. Carried disclosures unchanged: F-3 (path-derived commit
+      subjects; commit 2a91e679 is again path-derived) and F-5 (phase-scope
+      enumeration) remain accepted with disclosure, and F-15 remains accepted
+      with disclosure. Gate: TMPDIR=$PWD/tmp/tmpdir pnpm check green at 2a91e679
+      — 10010 pass, 4 skip, 0 fail, 1276 files; lint, format, typecheck,
+      boundaries, memory, prompt-conformance, help-guide-coverage,
+      exports-parity all PASS. No doc/spec/** file was edited here; the
+      post-remediation resync remains lifecycle phase 7 (@doc-syncer)."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Quality-gates iteration 1: battery FAIL (3 timeouts, no assertion
+      failures); range lint gate PASS (26 commits, 0 offending, mode none,
+      binary node_modules/.bin/commitlint origin repository-local, merge-base
+      5f25da8, head b9c5e1a). Timeouts: TC-BIN-020 (5003ms/5000ms) and
+      TC-ATTEMPT-009/010/037 (8863ms/5000ms) in delivered suites — diagnosed as
+      parallel-load flakes (green standalone twice with ~3x margin, no latency
+      assertion in the failing cases; suites owned outside GH-295, no change).
+      TC-SUP-103 (32666ms/30000ms) — our hang guard sized too tight for the
+      composed 200-lane fixture under battery parallelism; profiling showed ~98%
+      of runtime is fixture seeding (delivered append read-back O(n^2)) and the
+      battery call itself is 0.03-0.16s. Remediation (test-only): guard raised
+      30s -> 90s and an in-case NFR-5 assertion added on the battery call only
+      (performance.now around harness.battery, <5000ms; NFR-5 also stands
+      separately in TC-SUP-083 at 3.3ms). Re-run: 4 pass twice, 6.4-6.5s."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Retro: NFR-5 was already honestly asserted on the synthetic snapshot; the
+      new composed case wrapped fixture cost in its hang guard, so load
+      sensitivity read like a regression. Lesson: separate the measured work
+      from fixture setup explicitly in every heavy case (guard for hangs,
+      measured bound for the requirement), and record delivered-suite timeout
+      flakes as environmental only after a standalone-2x plus margin check."
+    type: "retro"
+    date: "2026-11-17"
+  - text: "Quality-gates iteration 2 verdict: GREEN. Battery (TMPDIR=$PWD/tmp/tmpdir
+      pnpm check) exit 0 at 3f241a7f: 10010 pass, 4 skip, 0 fail, 1276 files
+      (89513 expects); post-test gates all green (dependency-cruiser no
+      violations, ambient-globals, workspace-entrypoints, secret-read-boundary,
+      memory-lint, prompt-conformance, help-guide-coverage, exports-parity).
+      Range lint gate: verdict PASS, 27 commits in range, 0 offending commits, 0
+      distinct rules, mode none, binary node_modules/.bin/commitlint origin
+      repository-local, merge-base 5f25da8, head 3f241a7f. Guard-fix commit
+      3f241a7f (test-only: supervision-read-cost guard 30s->90s + in-case NFR-5
+      on the battery call; pm-notes)."
+    type: "info"
+    date: "2026-11-17"
+  - text: "DoD check verdict: PASS. Verified: (1) all 10 plan phases carry pm-notes
+      evidence naming the phase id, commit SHA (all resolve via git cat-file),
+      and test result; (2) plan validate GH-295 = valid/readyForDevelopment with
+      10 contiguous phases and TC ownership 58/58; (3) spec v1.4 defines
+      AC-F1-1..AC-F8-1 and review-iter-3.yaml status PASS covers all 8; (4)
+      documentation complete — doc-syncer reported zero residual gaps twice
+      (post-delivery and post-remediation) and the feature page is tracked; (5)
+      tree clean at 4dbdf75a; (6) verify change GH-295 reports
+      missing=dod_check,pr_creation only (expected pre-PR). Observed tooling
+      notes (not GH-295 defects): verify gates 1/5 because the branch is
+      unpushed (push-parity/squash-preflight branch-mismatch, ci-green
+      head-unresolved) and lifecycle-finalization awaits dod_check+pr_creation;
+      no events.jsonl/candidates/ capsule files exist in ANY 2026-11 change
+      folder including merged siblings, so capsule-file emission is repo-wide
+      tooling state, not a change defect. Phase-8 evidence uses 'exits 0' rather
+      than the literal PASS keyword (semantically equivalent)."
+    type: "info"
+    date: "2026-11-17"
+  - text: "PR created:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/332 — title
+      'feat(GH-295): supervise — artifact-evidence supervision battery over
+      daemon lanes (M2-S2)', base main-tools, head feat/GH-295/supervise @
+      46242ddf, open, not merged, no auto-merge. PR body carries the summary,
+      ticket/AC mapping, the plan-phase-to-commit map (F-3 disclosure), testing
+      evidence, DEC-1..DEC-9 decisions, and the accepted-with-disclosure
+      inventory. Branch pushed with tracking; local head == remote head."
+    type: "info"
+    date: "2026-11-17"

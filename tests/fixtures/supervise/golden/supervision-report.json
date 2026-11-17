@@ -1,0 +1,92 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "<run-id>",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 0
+  },
+  "data": {
+    "schemaVersion": "delivery.supervision.v1",
+    "repo": "github.com/example/supervision-repo",
+    "lanes": [
+      {
+        "ref": "GH-295",
+        "classification": "progressing",
+        "heartbeat": "2026-11-16T23:58:00.000Z",
+        "holder": "holder-a",
+        "evidence": [
+          {
+            "code": "artifact-heartbeat-fresh",
+            "ref": "GH-295",
+            "recordKind": "daemon.lane",
+            "instant": "2026-11-16T23:58:00.000Z"
+          },
+          {
+            "code": "artifact-progress",
+            "ref": "GH-295",
+            "recordKind": "daemon-lane",
+            "instant": "2026-11-16T23:58:00.000Z"
+          },
+          {
+            "code": "bound-applied",
+            "ref": "GH-295",
+            "recordKind": "watchdog.stall-bound",
+            "instant": "2026-11-16T23:55:00.000Z"
+          }
+        ]
+      }
+    ],
+    "supervisors": [
+      {
+        "claimKind": "per-ref-lease",
+        "identity": "holder-a",
+        "classification": "progressing",
+        "heartbeat": "2026-11-17T00:00:00.000Z",
+        "holder": "holder-a",
+        "evidence": [
+          {
+            "code": "artifact-heartbeat-fresh",
+            "ref": "GH-295",
+            "recordKind": "queue.lease",
+            "instant": "2026-11-17T00:00:00.000Z"
+          },
+          {
+            "code": "artifact-progress",
+            "ref": "GH-295",
+            "recordKind": "daemon-lane",
+            "instant": "2026-11-16T23:58:00.000Z"
+          },
+          {
+            "code": "bound-applied",
+            "ref": "GH-295",
+            "recordKind": "watchdog.stall-bound",
+            "instant": "2026-11-16T23:55:00.000Z"
+          },
+          {
+            "code": "claim-live",
+            "ref": "holder-a",
+            "recordKind": "queue.lease"
+          },
+          {
+            "code": "holder-recorded",
+            "ref": "holder-a",
+            "recordKind": "queue.lease"
+          }
+        ]
+      }
+    ],
+    "actions": [],
+    "counts": {
+      "lanes": 1,
+      "progressing": 1,
+      "stalled": 0,
+      "unknown": 0,
+      "supervisors": 1,
+      "actions": 0,
+      "parked": 0
+    },
+    "degraded": ["daemon-absent"],
+    "truncated": false,
+    "observedAt": "2026-11-17T00:00:00.000Z"
+  }
+}

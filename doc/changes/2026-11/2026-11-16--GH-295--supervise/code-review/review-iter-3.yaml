@@ -1,0 +1,287 @@
+# GH-295 local pipeline review — iteration 3 (final, post-remediation round 2)
+# Severity scale: critical=blocker, high=major, medium=minor, low=nit, info=info.
+# Schema severities stay in `severity`; the requested label rides in `severity_label`.
+# Reviewed state: HEAD dc8bddf7 (docs-only resync after 2a91e679), clean tracked tree.
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-295
+branch: feat/GH-295/supervise
+status: PASS
+summary: >-
+  Iteration-2's blocker and major are genuinely closed, and the two minors are closed at the
+  level the reviewer asked for. The park append is gated on the ONE occupancy home
+  (`activeParkRecords`), whose sequence semantics match the delivered duplicate-active-park
+  validator; I re-ran the reproducers from iteration 2 plus four adversarial variants the suite
+  does not carry (owner-hold, peak-window, an owner-hold park followed by a stuck
+  `clear-observed` marker, a peak-window park followed by the same marker): zero appends, byte-
+  identical prior records, honest `stalled` classification, no restart, and healthy
+  `readQueueParks` / `queue list` / `lanes list` in every cell; a lane parked and then genuinely
+  `recovered` still re-parks once, so the gate is not over-broad, and the delivered recovery pass
+  appends `clear-observed` then `recovered`, which the new occupancy fold clears exactly as the
+  validator does. The exhaustion question is ref-stable (`exhaustion-<ref>`) and the action/question
+  are raised only when the terminal record actually appends: two runs with different injected run
+  ids leave one terminal record and one question, the second run reports no action, and a single
+  run with two exhausted lanes raises two distinct questions. The read discipline is honest over
+  the composed wiring: I measured 7 whole-store reads for both 50- and 200-lane acting runs (one
+  decision fold, the four delivered economics append read-backs, one blocker-ledger read, one
+  blocker coverage read), matching spec v1.3 DEC-9(d)/NFR-4 and the feature page, which now
+  explicitly disclaims a total of one. The one-factory structure guard plus the composed
+  production acting run close the re-implementation hole. No blocking or major finding remains;
+  the surviving findings are accuracy nits: a pre-existing "a landed park refuses a second
+  identical park" claim in spec F-6/DEC-8(c)/RSK-2 and the write-seam comment is not what the
+  seam does (the run's occupancy gate is; RSK-2 already declares the concurrent-writer window),
+  and test plan v1.5 still describes the pre-fix fold/validator disagreement and prescribes a
+  mutant that can no longer fail.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 2
+  low: 3
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: spec-compliance
+    location: doc/changes/2026-11/2026-11-16--GH-295--supervise/chg-GH-295-spec.md:128
+    message: >-
+      Spec F-6 and DEC-8(c) (and RSK-2's mitigation clause, and the write-seam doc comment at
+      packages/core/src/app/supervise.ts:762-766) still attribute park-action safety to a landed
+      park refusing a second identical one: "its safety comes from the delivered fenced append and
+      write serialization (a landed park refuses a second identical park)". The seam does no such
+      thing — `createStateSupervisionWritePort.appendPark` performs no read and no duplicate check.
+      Reproduced on a temp store with the delivered port only: two `appendPark` calls for one ref
+      both return `{ok:true, appended:true}` and `readQueueParks` then returns
+      `{ok:false, reason:"torn", code:"state.store.torn"}`. The protection that actually exists is
+      the caller's occupancy gate over the run's fold snapshot, which is exactly RSK-2's declared
+      window ("the fence serializes appends but not decisions"), so the residual is disclosed; only
+      the mechanism attribution is wrong, and it is repeated in three artifacts plus one comment.
+    suggestion: >-
+      Reword the four places to name the mechanism that exists (the run's occupancy gate over the
+      one fold; a second append races only inside the RSK-2 window that OQ-1 defers) instead of a
+      landed-park refusal. If the seam-level guarantee is wanted, make `appendPark` read the parks
+      under its own fence and refuse on any active park; otherwise declare the seam as
+      intentionally read-free and point at RSK-2.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: testing
+    location: doc/changes/2026-11/2026-11-16--GH-295--supervise/chg-GH-295-test-plan.md:188
+    message: >-
+      Test plan v1.5 still encodes the pre-fix fold/validator disagreement it set out to remove.
+      Line 188 (§4.2), TC-SUP-104 step 6 (line 1996), the note at line 2001, AMB-9 (line 2248) and
+      the fixture inventory (line 2110) all assert that a stuck `clear-observed` park "is no active
+      park to the fold" and that gating "on the fold's `activePark` alone" leaves the stuck cell
+      appending. Delivered: the fold takes its occupancy from `activeParkRecords`, so a stuck
+      `clear-observed` record IS the fold's active park, and the battery gates on `fact.activePark`
+      alone — my stuck-cell probe appends nothing and leaves reads healthy. Consequently one
+      prescribed mutant cannot fail: TC-SUP-104 step 6's "gate on the fold's `activePark` alone →
+      the stuck cell still appends" is the delivered implementation, and it passes. The regression
+      the cell actually catches (reverting the fold to latest-record-wins) is not the mutant named.
+    suggestion: >-
+      Restate §4.2, the TC-SUP-104 notes, AMB-9 and the `staleClearObservedPark()` description to
+      the delivered one-home semantics (the fold's active park already carries the stuck
+      occupancy), and replace the second mutant with the one that does fail — make the fold use
+      latest-record-wins instead of `activeParkRecords` — so the plan's mutation obligation stays
+      executable.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: low
+    severity_label: nit
+    confidence: high
+    category: testing
+    location: tests/behaviour/supervision-duplicate-refusal.test.ts:37-137
+    message: >-
+      Test plan §10 (line 2205) claims "Behaviour green for ... all four TC-SUP-051 cells ...
+      declared detection limit", and the §5 row (line 2142) still lists four cells, but the
+      delivered suite has three describes (acting authority, presence, held session). The presence
+      cell exercises the behaviour (a live claim with no preemption artifact does not gate) but no
+      cell records the limit explicitly as the plan's step 6 (line 1074) requires. This is the
+      iteration-2 F-6 residual (itself iteration-1 F-16); the remediation added the feature-page
+      sentence (verified at feature-supervise.md:139) but not the cell, and the plan's "all four
+      cells green" promotion is now a claim the tree does not support.
+    suggestion: >-
+      Add the fourth TC-SUP-051 cell (an authority with no `daemon.preemption` record; assert no
+      refusal, exit 0, park landed, and record the declared limit) or narrow the §10 promotion to
+      the three delivered cells and carry the limit as the disclosed residual.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: low
+    severity_label: nit
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-16--GH-295--supervise/chg-GH-295-pm-notes.yaml:571-628
+    message: >-
+      Phase-10 scope conformance is still not auditable, the same class as the accepted F-5. The
+      delivered round-2 diff touches four files outside the declared phase-10 `scope.files` that
+      the pm-notes disclosure does not name — packages/core/src/domain/supervise-text.ts (the F-19
+      comment), tests/behaviour/supervision-duplicate-refusal.test.ts and
+      supervision-single-flight.test.ts (the healthy-read tails), and
+      tests/structure/content-inventory.test.ts (the `activeParkRecords` allowance). The disclosure
+      names only the projects/production.ts and production.ts drift; conversely the scope lists
+      files this round did not change (supervision-contract.test.ts, the two inventory files). No
+      delivered mechanism sits outside the phase's intent, so this is bookkeeping, not behaviour.
+    suggestion: >-
+      Enumerate the four unnamed files in the phase-10 `scope.files`/pm-notes disclosure (or record
+      them as the accepted F-5 drift it is), and drop the unchanging entries from the scope list.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: low
+    severity_label: nit
+    confidence: high
+    category: testing
+    location: tests/golden/supervision-normalizer.test.ts:76
+    message: >-
+      The "scan mutant detects a volatile value" cell contains an assertion that cannot fail:
+      `expect(VOLATILE_GOLDEN_VALUES.some((value) => `run=${value}`.includes(value))).toBe(true)`
+      is true by construction for every array member, so it proves nothing about the golden scan.
+      The timing half of the same test is behavioural and sound, and TC-SUP-106's main cells do
+      bind the normalizer's behaviour, so this does not reopen iteration-2 F-7 / iteration-1 F-17.
+    suggestion: >-
+      Feed the scan a crafted text carrying a declared volatile value (e.g. a temp path and a run
+      id) and assert the scan flags it, mirroring the `hasVolatileTiming` mutant.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: info
+    severity_label: info
+    confidence: high
+    category: correctness
+    location: packages/core/src/app/supervise.ts:347-614
+    message: >-
+      Observation, not a regression: the supervision read port folds park records itself and does
+      not consult the delivered duplicate-active-park validator, so an already-torn park ledger is
+      folded last-parked-wins. Reproduced (two active parks written through the delivered port,
+      then one battery run): the run reports data at exit 0 with no actions and no degradation
+      marker while `readQueueParks` / `queue` / `lanes` fail closed on the same store. The battery
+      neither repairs nor worsens the store; the operator-facing queue surfaces already raise the
+      torn state.
+    suggestion: >-
+      No action required for this change. If a future revision wants the fold to fail closed,
+      run `hasDuplicateActiveParks` over the park records in the read port and return
+      `state.store.torn` rather than a snapshot.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: info
+    severity_label: info
+    confidence: medium
+    category: design
+    location: packages/core/src/domain/queue-park.ts:114
+    message: >-
+      `activeParkRecords` is described as "the ONE occupancy home; the supervision fold and any
+      future writer gate consult it", but it is not exported through `domain/index.ts`,
+      `core/index.ts` or `app/index.ts`; the fold imports it by module path. The one-home property
+      holds today (one definition, one consumer), while a writer outside the domain folder would
+      have to import across the module boundary instead of the package surface.
+    suggestion: >-
+      Optional: re-export it from the domain barrel (and the core barrel) so the declared one home
+      is also the reachable one, or state in the comment that the home is package-internal.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-17T15:40:00Z
+evidence:
+  gates_run:
+    - "bun test tests/behaviour/supervision-park-state.test.ts tests/behaviour/supervision-restart.test.ts tests/behaviour/supervision-composed-production.test.ts tests/behaviour/supervision-read-cost.test.ts: 12 pass, 0 fail (147 assertions)"
+    - "bun test tests/structure/supervision-composition-factory.test.ts tests/golden/supervision-normalizer.test.ts tests/golden/supervision-report.test.ts tests/behaviour/supervision-bounds.test.ts: 18 pass, 0 fail (253 assertions)"
+    - "bun test tests/behaviour/supervision-*.test.ts tests/behaviour/lanes-*.test.ts: 102 pass, 0 fail, 28 files (988 assertions)"
+    - "bun test tests/structure/supervision-*.test.ts tests/structure/content-inventory.test.ts tests/structure/error-table.test.ts tests/structure/steer-mounting.test.ts tests/golden/lanes-show.test.ts: 216 pass, 0 fail (5856 assertions)"
+    - "bun packages/cli/bin/delivery-os.ts plan validate GH-295: verdict=valid, tier=full, readyForDevelopment=true"
+    - "./scripts/lint-commit-range.sh --base main-tools: PASS — 25 commits in range, 0 offending"
+    - "Full `pnpm check` not re-run here: the battery was green at 2a91e679 (10010 pass, 4 skip, 0 fail, 1276 files) and dc8bddf7 is docs-only; focused suites covering every changed surface were re-run green on dc8bddf7."
+  probes:
+    - "Read cost (scratch probe, temp repo, delivered closures): 50-lane acting run 7 whole-store reads, 200-lane acting run 7 — fold (app/supervise.ts read) 1, readEconomicsRecords 4 (2 inside appendEconomicsRestartEvent, 2 inside ensureEconomicsExhaustionRecord), readBlockerLedger 1, blocker coverage read 1. Flat, identical site partition at both sizes."
+    - "Composed production acting run (createProductionComposer over a temp checkout, instrumented main store): exit 0, actions supervised-stall-park + restart-admission + exhaustion-record, 7 reads with the same partition as the harness run."
+    - "Park-state adversarial cells (composed harness): owner-hold -> 0 actions, 1 park; peak-window -> 0 actions, 1 park; owner-hold then stuck clear-observed -> 0 actions, 2 park records, reads healthy; peak-window then stuck clear-observed -> 0 actions, 2 records, reads healthy; owner-hold then recovered -> 1 supervised-stall-park and 3 records; no-park control -> 1 park. queue list / lanes list exit 0 in every cell."
+    - "Two exhausted lanes in ONE run: 2 economics.budget-exhaustion records, questions exhaustion-GH-3001 and exhaustion-GH-3002, parks readable."
+    - "Seam probe: two `appendPark` calls through the delivered write port for one ref both append, and readQueueParks then returns state.store.torn (the F-1 evidence)."
+    - "Torn-ledger probe: battery over an already-torn park ledger returns ok with no actions and no degradation marker, leaving the torn state unchanged (the F-6 observation)."
+  reviewed_state: >-
+    Reviewed HEAD dc8bddf7 with a clean tracked tree. Code reviewed as 55df1a45..2a91e679 (the
+    round-2 remediation) plus the docs-only resync 2a91e679..dc8bddf7 (feature page, overview,
+    glossary, index). Scratch probes ran from the git-ignored tmp/ folder and were removed; the
+    tracked tree is untouched.
+  remediation_verification:
+    F-1v2: >-
+      CLOSED. One occupancy home (`activeParkRecords`, domain/queue-park.ts) with the validator's
+      sequence semantics; the fold builds `activePark` from it and the battery gates on
+      `fact.activePark` with restart admission still `liveness-stall`-only. Delivered behavioural
+      evidence: TC-SUP-104 (three cells + non-vacuity control over the composed production
+      harness). Adversarial additions verified by the reviewer: the stuck marker stacked on
+      owner-hold and on peak-window (not covered by the suite) also append nothing; a recovered
+      park still allows exactly one re-park; the delivered recovery pass appends
+      clear-observed+recovered, which the new fold clears exactly as the validator does. Not a
+      test-only special case: the gate reads the same record sequence the read validator uses.
+    F-2v2: >-
+      CLOSED. `raiseQuestion` is gated on `terminal.appended === true` (app/supervise.ts:1092-1094)
+      and the id is `exhaustion-<ref>` (production.ts `supervisionExhaustionQuestionId`). TC-SUP-061
+      now runs two distinct injected run ids and asserts one record, one ref-stable question, and
+      no second-run action; verified independently (two-lane single-run cell, and the composed
+      production run's question id).
+    F-3v2: >-
+      CLOSED. The shared factory passes the cached ledger as `current`, so the ledger is read once
+      per run (measured 1); the append helpers' own read-backs are the only other reads (measured
+      4), plus one blocker coverage read; total 7 and flat 50 vs 200. Spec v1.3 DEC-9(d), NFR-4,
+      test plan §3.3 and the feature page now state exactly this and explicitly disclaim a total
+      of one.
+    F-4v2: >-
+      CLOSED. `createSupervisionEconomicsWritePort` is the single factory; production mounts it and
+      the harness imports it (no fixture copy remains); the structure test fails on the declared
+      duplication symbols; TC-SUP-105 runs park + restart + exhaustion through
+      createProductionComposer over a real checkout and asserts schema/option fidelity, the same
+      read partition, and post-run healthy reads. The guard is name/symbol-based (F-15 class), but
+      the behavioural half (one shared implementation plus a composed run) is what removes the
+      drift.
+    F-17: >-
+      CLOSED. The normalizer moved to tests/fixtures/supervise/golden/normalize.ts with behavioural
+      coverage (TC-SUP-106: root/run-id replaced, timing zeroed, undeclared values byte-identical,
+      committed goldens scanned); the constant-length tautology is gone from the golden test. One
+      vacuous sub-assertion remains and is filed as low F-5.
+    F-19: >-
+      CLOSED. The render module now declares "bounded only by the delivered lane cap ... no
+      separate byte or line bound"; TC-SUP-082 measures the 200-lane render (<= cap + 20 lines).
+      The declaration matches the delivered renderer, which emits per-entry lines plus evidence
+      lists with no numeric cap.
+    F-5_F-3_F-15_carryovers: >-
+      Verified as accepted, not re-blocked: F-3 (path-derived commit subjects; 2a91e679 and
+      dc8bddf7 are both path-derived, lint-commit-range PASS), F-5 (phase-scope enumeration — new
+      instances filed as low F-4), F-15 (name-based one-home guard; disclosed, no spec claim of
+      structural enforcement).
+    F-6_detection_limit: >-
+      Feature page sentence verified (feature-supervise.md:139: authority classes leaving no
+      durable record are a declared detection limit, not an inferred gate). The test-plan cell is
+      still not delivered and the plan's promotion overstates it (low F-3).
+    F-9_info: >-
+      Remains information only: the plan's COMMIT CONVENTION block still describes declared commit
+      subjects that the path-derived history contradicts; unchanged and non-blocking.
+  ac_verification:
+    AC-F5-1: >-
+      PASS with the amended "no active park of any cause" precondition: park + safe-boundary intent
+      + any-cause occupancy gate, zero second appends, healthy delivered reads (TC-SUP-040/043/104,
+      reviewed probes).
+    AC-F6-1: >-
+      PASS: claims and holders ride data, per-ref single-flight and the acting-authority refusal
+      behave per DEC-8/9(c), presence gates nothing, park intents are non-claiming, and the
+      production composition is exercised over a real checkout (TC-SUP-051/052/105).
+    AC-F7-1: >-
+      PASS: restart admission, terminal exhaustion with the ref-stable question exactly once across
+      different run ids, no action for a record that did not land, unavailable outcome, no
+      signalling (TC-SUP-060/061/062/063/104/105).
+next_step: PROCEED

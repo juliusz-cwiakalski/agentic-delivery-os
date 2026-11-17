@@ -30,7 +30,8 @@
     "doc/planning/oss-tooling/milestones/m2/commands/ceremony.md",
     "doc/planning/oss-tooling/milestones/m2/commands/retro.md",
     "doc/planning/oss-tooling/milestones/m2/commands/steer.md",
-    "doc/planning/oss-tooling/milestones/m2/commands/metrics.md"
+    "doc/planning/oss-tooling/milestones/m2/commands/metrics.md",
+    "doc/planning/oss-tooling/milestones/m2/commands/supervise.md"
   ],
   "commands": [
     "status",
@@ -56,6 +57,7 @@
     "board",
     "ceremony",
     "steer",
-    "metrics"
+    "metrics",
+    "supervise"
   ]
 }

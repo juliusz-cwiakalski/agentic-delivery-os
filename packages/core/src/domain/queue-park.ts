@@ -48,6 +48,21 @@ export const parkConditionForCause = (
 export const defaultParkRecheckMs = (conditionType: QueueParkConditionType): number =>
   QUEUE_PARK_RECHECK_DEFAULTS[conditionType];
 
+/**
+ * The park-expiry invariant (GH-295 DEC-9(a)): an expiry-carrying condition
+ * type always carries a non-empty absolute expiry. Every writer consults this
+ * before its fenced append, so a record its own read validator rejects can
+ * never reach the append-only ledger.
+ */
+export const parkConditionExpiryMissing = (
+  cause: QueueParkCause,
+  condition: QueueParkCondition,
+): boolean =>
+  conditionTypeForCause(cause) === "provider-window" &&
+  (condition.type !== "provider-window" ||
+    typeof condition.expiresAt !== "string" ||
+    condition.expiresAt.trim().length === 0);
+
 /** Observation gap in integer milliseconds, never negative. */
 export const observationGapMs = (previousEvaluatedAt: string, nowMs: number): number => {
   const parsed = Date.parse(previousEvaluatedAt);
@@ -84,6 +99,38 @@ export const hasDuplicateActiveParks = (records: readonly QueueParkRecord[]): bo
     }
   }
   return false;
+};
+
+/**
+ * The active park per ref under the delivered duplicate-active-park semantics
+ * (DEC-9(e)): a `parked` record occupies the ref until a `recovered` or
+ * `released` record clears it; a `clear-observed` marker leaves the existing
+ * occupancy standing (the stuck class), so the fold's notion of "occupied"
+ * agrees with the validator that runs on every read.
+ *
+ * This is the ONE occupancy home; the supervision fold and any future writer
+ * gate consult it instead of re-deriving a latest-record-wins answer.
+ */
+export const activeParkRecords = <
+  T extends { readonly ref: string; readonly recoveryState: QueueParkRecoveryState },
+>(
+  records: readonly T[],
+): readonly T[] => {
+  const active = new Map<string, T>();
+  for (const record of records) {
+    if (record.recoveryState === "parked") {
+      active.set(record.ref, record);
+      continue;
+    }
+    if (record.recoveryState === "recovered" || record.recoveryState === "released") {
+      active.delete(record.ref);
+    }
+    // `clear-observed` keeps the standing occupancy: the validator treats it
+    // as the stuck marker, not as a clearing record.
+  }
+  return [...active.values()].sort((left, right) =>
+    left.ref < right.ref ? -1 : left.ref > right.ref ? 1 : 0,
+  );
 };
 
 /** Context a pass injects while re-evaluating parks. */

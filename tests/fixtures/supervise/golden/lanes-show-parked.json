@@ -1,0 +1,37 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "<run-id>",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 0
+  },
+  "data": {
+    "schemaVersion": "delivery.lanes.v1",
+    "lanes": [
+      {
+        "id": "GH-295",
+        "ref": "GH-295",
+        "state": "parked",
+        "reason": "parked:liveness-stall",
+        "until": "2026-11-17T00:01:00.000Z",
+        "restarts": 1,
+        "amplification": 2,
+        "weightClass": "standard"
+      }
+    ],
+    "findings": [],
+    "degraded": [],
+    "truncated": false,
+    "counts": {
+      "lanes": 1,
+      "delivering": 0,
+      "idle": 0,
+      "parked": 1,
+      "failed": 0
+    },
+    "peakEnforcement": {
+      "mode": "iteration-start-gating",
+      "parkClaimed": false
+    }
+  }
+}

@@ -1,0 +1,322 @@
+# GH-295 local pipeline review — iteration 2 (post-remediation re-review)
+# Severity scale: critical=blocker, high=major, medium=minor, low=nit, info=info.
+# Schema severities stay in `severity`; the requested label rides in `severity_label`.
+# `suppressed: true` = duplicate of an open iteration-1 finding (still open, not re-raised as new).
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-295
+branch: feat/GH-295/supervise
+status: FAIL
+summary: >-
+  The iteration-1 blocker is genuinely closed: `liveness-stall` is battery-written only, the
+  operator path refuses it by name through delivered identities at both the command and the edge
+  runtime with zero appends and healthy reads, and both append seams refuse a provider-window park
+  with an empty or missing expiry before any write; TC-SUP-100 proves the closed-set rule by
+  iterating `QUEUE_PARK_CAUSES` (one accounting row per member, read-back validated) so a new cause
+  cannot ship uncovered. F-6, F-7, F-8, F-9, F-11, F-12, F-13 and F-14 are real fixes whose asserted
+  expectations match the delivered code (own `daemon.lane` heartbeat with the declared fallback,
+  per-claim `recordKind`, injected run identity in restart/exhaustion/question records, a genuinely
+  live presence cell, the oversized-entry clamp, the removed dead `heartbeatOrdinal`, the restored
+  exact-set mounting guard, and the re-entry horizon that makes a second run inert), and DEC-9(a)-(d)
+  is honestly reflected in code, spec v1.2, test plan v1.4 and the feature page. Two defects remain,
+  one of them a blocker of the same class the change set out to close: the battery still appends a
+  second active park when the lane is already parked under ANOTHER cause (owner-hold, peak-window,
+  or a stuck `clear-observed` park), and that record trips the delivered duplicate-active-park
+  validator, so every later `queue`/`lanes` read returns `state.store.torn` permanently (reproduced
+  end to end). Second, the run-scoped typed-question identity introduced by the F-8 fix makes every
+  repeated `supervise` invocation append another owner-facing decision question for the same
+  exhausted lane, while TC-SUP-061's "no second question" cell passes only because it reuses one
+  injected run id. Both are functional, both reproduce outside the fixtures, and neither is
+  disclosed. The declared one-read discipline is also still overstated for a composed acting run.
+severity_breakdown:
+  critical: 1
+  high: 1
+  medium: 2
+  low: 4
+  info: 1
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: critical
+    severity_label: blocker
+    confidence: high
+    category: correctness
+    location: packages/core/src/app/supervise.ts:964-965
+    message: >-
+      The battery treats a lane as "already parked" only when the existing active park's cause is
+      `liveness-stall` (`fact.activePark.cause === "liveness-stall"`, app/supervise.ts:964-965), and
+      the park write port now performs no read of its own (createStateSupervisionWritePort,
+      app/supervise.ts:745-786). So a stalled lane whose latest park is an ACTIVE park of any other
+      cause (owner-hold, peak-window, provider-quota, preempted-for-close-item — or a stuck
+      `clear-observed` park, which the fold reports as no active park because the latest record is
+      not `parked`) falls through to `input.write.appendPark` (app/supervise.ts:1114) and appends a
+      second active `parked` record for the same ref. `readQueueParks` fails closed on exactly that
+      shape (`hasDuplicateActiveParks`, packages/core/src/app/queue.ts:721-727), so from that moment
+      every `queue` and `lanes` read returns `state.store.torn` and the ledger is append-only.
+      Reproduced (temp repository, delivered seams only): declare GH-295, write an aged own
+      daemon-lane observation (-300_005 ms), park it under `owner-hold` through `releaseQueueLease`
+      (the exact writer `queue release --park owner-hold` uses), then `supervise --json` -> exit 0
+      with action `supervised-stall-park`, after which `readQueueParks` returns
+      `{ok:false, reason:"torn", code:"state.store.torn"}` and `queue list --json` /
+      `lanes list --json` both exit 1. The delivered peak machinery reaches the same cell
+      (`cause: "peak-window"` records, packages/core/src/domain/daemon-peak-pause.ts:208): a lane
+      stopped by a peak pause leaves an aged lane record, so a battery run inside the window stacks
+      a liveness-stall park on the peak-window park. This is the same defect class as iteration-1 F-1
+      (a battery append the ecosystem's own read validator rejects) and it silently defeats the
+      change's own rule that "every cause-writer pair either round-trips a park its own validator
+      accepts or is refused by name" (DEC-9(a)): the battery kept working, the operator's queue and
+      lanes surfaces stopped.
+    suggestion: >-
+      Gate the park append on "no active park at all" (`fact.activePark === undefined`) and keep
+      restart admission limited to the `liveness-stall` cause, so an owner-hold, peak-window, quota
+      or stuck park is respected instead of stacked; and make the guard explicit at the seam (the
+      fold already knows the active park, so the caller can pass it). Add three behaviour cells — an
+      owner-hold-parked stalled lane, a peak-window-parked stalled lane, and a `clear-observed`
+      stuck park — each asserting zero appends, exit 0, and a healthy `readQueueParks`; add a
+      post-action `readQueueParks`/`lanes`-healthy assertion to every existing action cell so a
+      future writer cannot corrupt the ledger silently.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-2
+    severity: high
+    severity_label: major
+    confidence: high
+    category: correctness
+    location: packages/cli/src/production.ts:3362
+    message: >-
+      The F-8 fix put the invocation's run id into the typed question's identity
+      (`const id = \`exhaustion-${ref}-${recordRunId}\``, production.ts:3362; mirrored in
+      tests/fixtures/supervise/harness.ts:89), and `superviseRunId` is a fresh per-invocation uuid
+      (production.ts:3127; entrypoint.ts:408), so the idempotence check
+      (`questions.some(q => q.id === id)`) can never fire across two real runs. The battery also
+      raises the question unconditionally even when `ensureExhaustion` returned `appended:false`
+      (app/supervise.ts:1050-1080). Reproduced: two `supervise` runs over the same exhausted lane
+      with distinct injected run ids leave one `economics.budget-exhaustion` record but TWO
+      decision-needed questions in the blocker ledger (`exhaustion-GH-295-run-invocation-1`,
+      `exhaustion-GH-295-run-invocation-2`), and the second run still reports an `exhaustion-record`
+      action although nothing landed. Every repeated run (the natural operator retry, and the case
+      the feature page calls inert) appends another owner-facing question — including after the
+      previous question was answered, because the check compares ids only and never ref+type. TC-SUP-061's cell "a
+      repeat adds no second question" passes only because both runs reuse the same injected run id,
+      and the test plan states both halves of the contradiction in adjacent sentences ("the question
+      id stays unique per run and per ref" and "a repeated run does not duplicate the question",
+      chg-GH-295-test-plan.md:1231-1232); the plan's phase-5 obligation names it explicitly ("the
+      typed question exactly once, no second question on repeat", chg-GH-295-plan.yaml:914-916).
+    suggestion: >-
+      Make the question id ref-stable (e.g. `exhaustion-<ref>`) or, better, gate the raise on the
+      terminal record actually landing (`ensureExhaustion(...).appended === true`) and only report an
+      `exhaustion-record` action when something landed; keep the run id as record/evidence metadata,
+      not as the identity key. Replace TC-SUP-061's repeat cell with two runs carrying different
+      injected run ids and assert exactly one question and one terminal record.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-3
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: performance
+    location: doc/spec/features/feature-supervise.md:186
+    message: >-
+      The decision path really is one-fold now (the park write port performs no `readRecords`, the
+      restart admission consumes `snapshot.restarts`, and the per-ref refusal is the delivered pure
+      `singleFlightRefusalFromLeases` over the snapshot leases) — iteration-1 F-2's O(lanes) decision
+      reads are gone. But the absolute claims are still false for a composed acting run: measured
+      `store.readRecords()` calls for one 50-lane run with two parks, one restart and one exhaustion
+      = 8 (1 fold; 2 inside `appendEconomicsRestartEvent`; 2 inside
+      `ensureEconomicsExhaustionRecord`; 2 `readBlockerLedger` calls; 1 blockers boundary coverage
+      read), all from the delivered append helpers the battery rides
+      (packages/core/src/state/economics.ts:280-340, packages/core/src/state/blockers.ts:342-460).
+      Production additionally re-reads the ledger inside `appendBlockerQuestion` because `current`
+      is not passed (production.ts:3366-3380), so "the blocker ledger is read at most once per run"
+      (feature page:186 and :250) is false. NFR-4 as amended in spec v1.2 ("One whole-store read fold
+      per battery run ... covering the action path"), the test-plan NFR-4 row
+      (chg-GH-295-test-plan.md:128, "Recorded read count == 1 ... for an acting run") and the
+      phase-9 pm-notes claim all assert the absolute bound. TC-SUP-103 asserts `count === 1` only
+      because it injects a store-free fake economics port
+      (tests/behaviour/supervision-read-cost.test.ts:24-40), so its "acting run" proof does not cover
+      the composed path; the harness's own real-store economics copy would report 8.
+    suggestion: >-
+      Pass `current: ledger.value` to `appendBlockerQuestion` (one fewer ledger read, and it makes
+      the "at most once per run" sentence true), then state the read discipline exactly in NFR-4,
+      the feature page, the test-plan row and the pm-notes: one fold read for the decision path, plus
+      each delivered append's own bounded read-back — or give the action path read-free appends. Add
+      one read-count cell over the composed production economics closures so the claim is proven
+      where it matters.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-4
+    severity: medium
+    severity_label: minor
+    confidence: high
+    category: testing
+    location: tests/fixtures/supervise/harness.ts:47-106
+    message: >-
+      Residual of iteration-1 F-10, now more consequential: the harness re-implements production's
+      economics closures (question-id format, option list literal, per-run ledger cache) and no case
+      runs the production supervise wiring over a real checkout with actions; the only production
+      assertion is the empty-store mounting case. That duplication is exactly why F-2 above was not
+      caught: the harness copy reproduces the run-scoped question id, but every case injects one run
+      id, so the per-run duplication never appears. A production drift (schema id, option list,
+      admission wiring, id format) keeps every suite green.
+    suggestion: >-
+      Move the economics-closure factory into the app tier (or export it from production) and run
+      one composed-production behaviour case that parks, restarts and exhausts over a real temp
+      checkout; failing that, import the shared constants and a shared question-id helper so the
+      fixture cannot drift.
+    suppressed: false
+    published_url: null
+    published_at: null
+  - id: F-5
+    severity: low
+    severity_label: nit
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-16--GH-295--supervise/chg-GH-295-pm-notes.yaml:400-406
+    message: >-
+      Residual of iteration-1 F-5 (accepted-with-disclosure). The phases summary still states the
+      delivered-suite sites and the other drift are "all enumerated in the per-phase notes", but
+      phases 4 and 5 landed `packages/cli/src/production.ts`, `packages/cli/src/commands/supervise.ts`,
+      `packages/core/src/app/index.ts` and the harness/inventory edits without naming them (only
+      phase 3's core-index re-export and phase 9's own additions are enumerated). The disclosure is
+      therefore still not auditable against the phase scopes; the PM acceptance does not make the
+      sentence true.
+    suggestion: >-
+      Enumerate the phase-4/5 files (or extend their `scope.files`) or soften the summary sentence to
+      what is actually recorded.
+    suppressed: true
+    published_url: null
+    published_at: null
+  - id: F-6
+    severity: low
+    severity_label: nit
+    confidence: high
+    category: spec-compliance
+    location: doc/spec/features/feature-supervise.md:138-140
+    message: >-
+      Residual of iteration-1 F-16 (partly disclosed). DEC-9(c) and spec F-6 now declare that an
+      acting-authority class leaving no durable record is "a declared detection limit", which is
+      honest, but the current-truth page states only what detection reads and never states the limit
+      (another battery run mid-action or a coordinator acting without a pending `daemon.preemption`
+      record is undetected), and the test plan's required "detection-limit cell"
+      (chg-GH-295-test-plan.md:1055 and step 6 at :1064 — an authority with no preemption artifact,
+      asserting no refusal) has no delivered case; the presence cell covers a live daemon claim, not
+      that class.
+    suggestion: >-
+      Add one sentence to the feature page naming the declared detection limits, and add the plan's
+      detection-limit cell (no preemption artifact -> no refusal, limit recorded) to
+      supervision-duplicate-refusal.test.ts.
+    suppressed: true
+    published_url: null
+    published_at: null
+  - id: F-7
+    severity: low
+    severity_label: nit
+    confidence: high
+    category: testing
+    location: tests/golden/supervision-report.test.ts:67
+    message: >-
+      Residual of iteration-1 F-17: `expect(NORMALIZER_REPLACEMENTS).toHaveLength(3)` still asserts a
+      module constant's length, so it cannot fail if the normalizer's actual replacements change; it
+      does not bind the constant to behaviour.
+    suggestion: >-
+      Assert the normalized output of a crafted input containing the temp root, the run id and a
+      timing value (or derive the list from the normalizer) instead of the constant's length.
+    suppressed: true
+    published_url: null
+    published_at: null
+  - id: F-8
+    severity: low
+    severity_label: nit
+    confidence: medium
+    category: documentation
+    location: packages/core/src/domain/supervise-text.ts:1-6
+    message: >-
+      Residual of iteration-1 F-19: the module still calls itself "the bounded human render" while
+      only the lane population is bounded; `supervisors[]` and `actions[]` carry no numeric cap and
+      the renderer emits one line per entry plus one evidence-code list per line with no truncation
+      marker. In practice both populations are bounded by the lane cap, so the risk is small, but the
+      declared bound does not exist as a check.
+    suggestion: >-
+      Either declare the render bounded by the lane cap (and say so) or add a line/byte bound with
+      the same counted-truncation discipline the machine payload uses.
+    suppressed: true
+    published_url: null
+    published_at: null
+  - id: F-9
+    severity: info
+    severity_label: info
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-16--GH-295--supervise/chg-GH-295-pm-notes.yaml:442-452
+    message: >-
+      F-3 disclosure verified honest as far as it goes: pm-notes records the accepted-with-disclosure
+      decision (unpushed branch, plan-phase SHAs cited as DoD evidence, squash-merge precedent,
+      commitlint range PASS, PR body to carry the phase-to-commit mapping), and
+      ./scripts/lint-commit-range.sh --base main-tools reports PASS over 23 commits. Residual
+      wording note, not a defect: the plan's COMMIT CONVENTION block still says the declared
+      subjects exist "so the commit path and review agree", which the delivered history (23
+      path-derived subjects, including phase 9's `docs(GH-295): update
+      packages/cli/src/commands/queue.ts`) contradicts by construction.
+    suggestion: >-
+      When the plan is next edited, mark the subject list as aspirational on this branch (or point it
+      at the pm-notes disclosure) so plan and history do not disagree in the record.
+    suppressed: false
+    published_url: null
+    published_at: null
+reviewed_at: 2026-11-17T14:20:00Z
+evidence:
+  gates_run:
+    - "bun test (focused, 27 files: all supervision behaviour/structure suites, queue-park-causes-s17, lanes-parked-stall, supervision goldens): 105 pass, 0 fail"
+    - "bun test (supervision-park-writers + supervision-read-cost): 7 pass, 0 fail"
+    - "bun test (structure supervision family, steer-mounting, supervision-mounting, supervision-contract, supervision-park-vocabulary, content-inventory, error-table-sync, error-table, lanes-show golden, lanes-parked-stall): 311 pass, 0 fail"
+    - "delivery-os plan validate GH-295: verdict=valid, readyForDevelopment=true"
+    - "./scripts/lint-commit-range.sh --base main-tools: PASS (23 commits, 0 offending)"
+    - "pnpm check (full battery): 9994 pass, 4 skip, 1 fail (9999 tests, 1272 files, 1218 s) — the single failure is tests/checks/privacy-ci-wiring.test.ts TC-WIRE-002 (live-tree snapshot race while another session was editing the change artifacts); that file is 14/14 green re-run in isolation on the same tree"
+  gate_note: >-
+    Full battery: 9994 pass / 4 skip / 1 fail. The failure is TC-WIRE-002 in
+    tests/checks/privacy-ci-wiring.test.ts, which hashes the ENTIRE live working tree before and after
+    two privacy-guard runs and asserts byte equality; the only differing line was
+    chg-GH-295-plan.yaml. It reproduces only under concurrent activity: the parent PM session was
+    writing chg-GH-295-{pm-notes,spec,test-plan} during the window (mtimes 14:11-14:19, spec v1.3 /
+    test plan v1.5 remediation-in-progress), and the same file re-run in isolation on the same tree is
+    14/14 green. It is therefore not attributable to GH-295's delivered code, and no delivered suite
+    covering the changed surfaces is red (423 focused assertions re-run green). The findings above are
+    green-battery-compatible by construction: F-1 needs a non-liveness-stall active park, F-2 two
+    different injected run ids, F-3 the composed production economics closures - none of which any
+    delivered cell exercises.
+  reviewed_state: >-
+    Reviewed baseline is HEAD 55df1a45 with a clean tracked tree; the uncommitted
+    chg-GH-295-{spec,test-plan,pm-notes} edits that appeared during the gate run are the PM's
+    iteration-2 triage/remediation (spec v1.3, test plan v1.5) and are not part of the reviewed state.
+  reproducers:
+    - "F-1: temp repository (harness), declare GH-295 + aged own daemon-lane observation (-300_005 ms), park under owner-hold through releaseQueueLease (the `queue release --park owner-hold` writer), then `supervise --json` -> exit 0, action supervised-stall-park; readQueueParks -> {ok:false, reason:\"torn\", code:\"state.store.torn\"}; `queue list --json` and `lanes list --json` -> exit 1. No repo files touched."
+    - "F-2: temp repository, stalledAndParked(GH-295), two `supervise --json` runs with runId run-invocation-1 / run-invocation-2 and an exhaustion admission -> 1 economics.budget-exhaustion record, 2 blocker questions (exhaustion-GH-295-run-invocation-1, exhaustion-GH-295-run-invocation-2), second run reports an exhaustion-record action."
+    - "F-3: temp repository, 50 lanes (2 parks + 1 restart + 1 exhaustion) run with the harness's real delivered economics closures -> harness.storeReads.count = 8, call sites: app/supervise.ts read (1), economics.ts append restart x2, economics.ts exhaustion x2, blockers.ts readBlockerLedger x2, blockers.ts appendRecord coverage x1."
+  remediation_verification:
+    F-1_iter1_empty_expiry: "CLOSED at every writer path: commands/queue.ts:726-735 and edge.ts:6369-6382 refuse `--park liveness-stall` by name before any read/write (fallback.invocation / input.value.rejected, zero append); releaseQueueLease (app/queue.ts:2332-2342) and the battery write port (app/supervise.ts:751-761) refuse an empty/missing provider-window expiry; TC-SUP-100 iterates QUEUE_PARK_CAUSES (round-trip or refused-by-name accounting, read-back validated) and TC-SUP-101/102 prove the refusal and the healthy reads. The remaining hazard is a different validator (F-1 above)."
+    F-2_iter1: "Decision path closed (write port zero reads, snapshot restart facts, pure single-flight helper over snapshot leases, blocker ledger cached per run); the absolute read claim is still not true of the composed append path (F-3 above)."
+    F-4_iter1: "CLOSED by spec v1.2 DEC-9(a)-(d) + test plan v1.4 + feature page; spot-checked all four resolutions against code (operator refusal, immediate park carrier + safe-boundary-park-intent, daemon.preemption pending as the acting artifact, action-path one-fold intent)."
+    F-6_iter1: "CLOSED: lane heartbeat is the own daemon.lane `liveness.observedAt` with the scope heartbeat only as declared fallback (app/supervise.ts:627-651); TC-SUP-001 asserts the own instant and the no-fallback marker; live-claims golden reflects it."
+    F-7_iter1: "CLOSED: heartbeat evidence carries daemon.heartbeat / coordinator.iteration / queue.lease / daemon.lane; TC-SUP-050 asserts each from the delivered constants; live-claims golden updated."
+    F-8_iter1: "CLOSED for record identity: restart runId/sessionId, exhaustion runId, question id and action evidence all carry the injected id (TC-SUP-060/061/062; structure scan forbids the retired literals) - but the run-scoped question id introduced F-2 above."
+    F-9_iter1: "CLOSED: presence cell seeds a live daemon trail ending at the injected now beside an own-observation stalled lane and asserts progressing + claim-live + the park action."
+    F-11_iter1: "CLOSED: boundSupervisionEvidence pops until the marker fits (marker included) and the single-oversized-entry cell asserts the byte bound."
+    F-12_iter1: "CLOSED: heartbeatOrdinal removed from the input shape and the facts; exact-shape guard asserts its absence."
+    F-13_iter1: "CLOSED: steer-mounting uses the shared BASE_FAMILIES/MOUNTED_FAMILIES and asserts exact set equality again."
+    F-14_iter1: "CLOSED: an already-parked liveness-stall lane inside the re-entry horizon appends nothing and burns no budget (TC-SUP-044 cell); park fixtures seed an elapsed horizon so the action cells stay reachable."
+    accepted_with_disclosure: "F-3 (commit subjects), F-5 (phase-scope drift, disclosure still overstated - F-5 above), F-15 (name-based one-home mapping guard: the advancing/staleness mapping lives in the domain and the guard is identifier-shaped; disclosed in pm-notes only, no defect, no spec/page claim of structural enforcement) verified as accepted, not re-blocked."
+  ac_verification:
+    AC-F1-1: "PASS: per-lane own observation with the declared fallback; TC-SUP-001/004/005/090 green."
+    AC-F2-1: "PASS: matrix totality, prefill cells, corroboration boundary, unknown truthful, artifact-only input shape."
+    AC-F3-1: "PASS: lane and claim stalls from records alone; no process-shaped member or seam."
+    AC-F4-1: "PASS functionally (imported stall bound, probe subset, absent -> unknown)."
+    AC-F5-1: "PASS for the seed and the held-session twin (immediate carrier per DEC-9(b), unheld comparison). Caveat: an already-parked-other-cause lane can now corrupt the park ledger (F-1)."
+    AC-F6-1: "PASS: claims with tri-state/holder, per-action refusal naming the acting authority, per-ref single-flight from the snapshot, presence-not-gating, non-claiming park intent. Caveat F-6 (declared detection limits not in the page, no detection-limit cell)."
+    AC-F7-1: "PASS for restart/exhaustion/unavailable and the never-signal discipline. Caveat: exhaustion re-raises the typed question on every run (F-2) and reports an action that did not land."
+    AC-F8-1: "PASS: exactly two identities, 148/148/64 and corpus bound in both directions, exit 1/2 projections."
+next_step: CALL_CODER

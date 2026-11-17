@@ -281,6 +281,31 @@ export {
   stateScopeRoots,
   unboundStateRoot,
 } from "./app/state-scope.js";
+export {
+  createStateSupervisionReadPort,
+  createStateSupervisionWritePort,
+  runSupervisionBattery,
+  type SupervisionBatteryInput,
+  type SupervisionBatteryResult,
+  type SupervisionActingFact,
+  type SupervisionAppendResult,
+  type SupervisionClaimFact,
+  type SupervisionClaimRefusal,
+  type SupervisionEconomicsWritePort,
+  type SupervisionExhaustionAppend,
+  type SupervisionLaneFact,
+  type SupervisionLeaseFact,
+  type SupervisionParkAppend,
+  type SupervisionParkAppendResult,
+  type SupervisionReadPort,
+  type SupervisionReadRequest,
+  type SupervisionReadResult,
+  type SupervisionRestartAdmission,
+  type SupervisionRestartAppend,
+  type SupervisionRestartFact,
+  type SupervisionScopeSnapshot,
+  type SupervisionWritePort,
+} from "./app/supervise.js";
 export { type WatchInput, type WatchRead, watchLines } from "./app/watch.js";
 export {
   BOOTSTRAP_DESCRIPTOR,
@@ -1177,6 +1202,18 @@ export {
   validateSteerMessage,
   validateSteerSend,
 } from "./domain/steer.js";
+/**
+ * The supervision battery surface (GH-295 F-1..F-7): the pure tri-state fold,
+ * the one-read battery, and the bounded human render.
+ */
+export {
+  boundSupervisionEvidence,
+  boundSupervisionLanes,
+  classifySupervision,
+  type SupervisionClassification,
+  summarizeSupervision,
+} from "./domain/supervise.js";
+export { renderSupervisionHuman } from "./domain/supervise-text.js";
 export {
   attributedValue,
   attributeStep,

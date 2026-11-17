@@ -223,6 +223,7 @@ describe("TC-VOCAB-005 / TC-HOLDQUEUE-011 / TC-HOLDNEG-002 closed sets are exact
       // silent rename), so those two condition types now carry two causes
       // each while `provider-quota` keeps exactly one.
       if (conditionType === "provider-quota") expect(causes).toBe(1);
+      else if (conditionType === "provider-window") expect(causes).toBe(3);
       else expect(causes).toBe(2);
     }
     expect([...QUEUE_PARK_RECOVERY_STATES]).toEqual(closedSets.recoveryStates);

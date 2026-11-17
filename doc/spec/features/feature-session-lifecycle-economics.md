@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-SESSION-LIFECYCLE-ECONOMICS
 status: Current
 created: 2026-11-07
-last_updated: 2026-11-13
+last_updated: 2026-11-17
 owners: ["engineering"]
 service: delivery-os
 summary: "Session lifecycle economics: adapter-sourced progress signals (heartbeat age, session traffic, token delta) projected into the unchanged watchdog signal shape with the exact-three liveness-kind vocabulary untouched, source-less lanes still classifying `watchdog.signals-absent` and no CPU signal anywhere; prefill/resume safety so a rising token delta or traffic classifies `progressing` and a stall requires the full corroboration; the classified `watchdog.liveness-stalled` refusal at exit 1; capability-driven attach-and-continue versus classified uneconomical re-entry; a durable per-delivery restart budget consumed by supervised-style and one-shot-style compositions through one gate, with the budget gate evaluated before evidence completeness, a loud `dispatch.restart-budget-exceeded` refusal, a terminal exhaustion record carrying the restart history, and a failed terminal append surfaced as `terminalAppendError`; additive `economics.restart` and `economics.budget-exhaustion` record kinds with no schema-version bump; a rebuildable per-delivery economics view deriving restart count, ordered history, and the resume-amplification signal with null-with-warning degradation; and the typed `lane.liveness-interval` and `lane.restart-budget` configuration branch; the dispatch engine composes the restart gate and resume admission for one-shot lanes with the pinned failure tokens."
 links:
-  related_changes: ["GH-235", "GH-237", "GH-238", "GH-239", "GH-241", "GH-291"]
+  related_changes: ["GH-235", "GH-237", "GH-238", "GH-239", "GH-241", "GH-291", "GH-295"]
   related_decisions: ["ADR-0003", "ADR-0008", "TDR-0004", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/economics.ts"
@@ -28,7 +28,7 @@ The session lifecycle economics surface kills the resume-loop amplification clas
 
 The machine surface stays inside the existing v1 envelope, the `{0, 1, 2}` exit taxonomy, and the closed error table. A fully corroborated stall is the classified refusal `watchdog.liveness-stalled` at exit `1`; `progressing` remains a success verdict at exit `0`; and a lane without signal sources keeps the `watchdog.signals-absent` answer at exit `2` — unknown, never guessed. Budget exhaustion is `dispatch.restart-budget-exceeded` and within-budget uneconomical re-entry is `dispatch.resume-uneconomical`, both at exit `1`, with bounded key=value evidence and the durable economics records as the resolvable full-history carrier.
 
-The surface classifies, records, and refuses. It exposes no spawn, kill, steer, restart-execution, or supervision capability; the scheduler, daemon, queue marking, typed-question channel, and spend rendering are separate consumers. The dispatch engine composes this restart gate and resume admission for one-shot lanes, and the resident daemon composes the same gate for supervised lanes.
+The surface classifies, records, and refuses. It exposes no spawn, kill, steer, restart-execution, or supervision capability; the scheduler, daemon, queue marking, typed-question channel, spend rendering, and the operator `supervise` battery are separate consumers. The dispatch engine composes this restart gate and resume admission for one-shot lanes, and the resident daemon composes the same gate for supervised lanes.
 
 ## 2. Business Context
 
@@ -298,7 +298,7 @@ The two record kinds are the observability substrate: restart count, per-restart
 
 ### 7.3 Consumers and boundaries
 
-The restart count, history, and amplification are the data the dispatch envelope declares (`restarts`, `resumeAmplification`), lane status renders, and spend consumes. The dispatch engine composes this gate and admission for one-shot lanes and carries the recorded resume mode and admission verdict onto its attempt record; the daemon supervises lanes through the same gate. Queue-entry failed-marking, typed-question publication and delivery, and spend rendering are separate consumers of this substrate; the economics surface classifies, records, and refuses only.
+The restart count, history, and amplification are the data the dispatch envelope declares (`restarts`, `resumeAmplification`), lane status renders, and spend consumes. The dispatch engine composes this gate and admission for one-shot lanes and carries the recorded resume mode and admission verdict onto its attempt record; the daemon supervises lanes through the same gate. Queue-entry failed-marking, typed-question publication and delivery, spend rendering, and the operator `supervise` battery's restart composition are separate consumers of this substrate; the economics surface classifies, records, and refuses only.
 
 Worktree-activity sourcing remains the declared opencode gap, and Claude Code's liveness gaps remain gaps. No state schema-version change, migration, or watchdog corroboration change exists.
 

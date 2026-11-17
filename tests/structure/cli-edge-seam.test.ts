@@ -607,7 +607,7 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
     expect(exported(`${CLI_DIR}/commands/spend.ts`)).toEqual(["createSpendCommandDefinition"]);
   });
 
-  test("only blockers, board, brief, ceremony, closeout, coordinator, daemon, db, dispatch, doctor, events, lanes, merge, metrics, plan, projects, provider, queue, repos, retro, spend, status, steer, verify, and watchdog declare the optional human-text renderer", () => {
+  test("only blockers, board, brief, ceremony, closeout, coordinator, daemon, db, dispatch, doctor, events, lanes, merge, metrics, plan, projects, provider, queue, repos, retro, spend, status, steer, supervise, verify, and watchdog declare the optional human-text renderer", () => {
     const declarers = listTypeScriptFiles(ROOT, `${CLI_DIR}/commands`).filter((file) =>
       readFileSync(join(ROOT, file), "utf8").includes("humanText"),
     );
@@ -635,6 +635,7 @@ describe("TC-BOUND-002 GH-179 command composition and edge ownership", () => {
       `${CLI_DIR}/commands/spend.ts`,
       `${CLI_DIR}/commands/status.ts`,
       `${CLI_DIR}/commands/steer.ts`,
+      `${CLI_DIR}/commands/supervise.ts`,
       `${CLI_DIR}/commands/verify.ts`,
       `${CLI_DIR}/commands/watchdog.ts`,
     ]);

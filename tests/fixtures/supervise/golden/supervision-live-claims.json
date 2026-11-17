@@ -1,0 +1,108 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "<run-id>",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 0
+  },
+  "data": {
+    "schemaVersion": "delivery.supervision.v1",
+    "repo": "github.com/example/supervision-repo",
+    "lanes": [
+      {
+        "ref": "GH-295",
+        "classification": "progressing",
+        "heartbeat": "2026-11-17T00:00:00.000Z",
+        "evidence": [
+          {
+            "code": "artifact-heartbeat-fresh",
+            "ref": "GH-295",
+            "recordKind": "daemon.heartbeat",
+            "instant": "2026-11-17T00:00:00.000Z"
+          },
+          {
+            "code": "artifact-flat",
+            "ref": "GH-295",
+            "recordKind": "artifact-trail"
+          },
+          {
+            "code": "bound-applied",
+            "ref": "GH-295",
+            "recordKind": "watchdog.stall-bound",
+            "instant": "2026-11-16T23:55:00.000Z"
+          }
+        ]
+      }
+    ],
+    "supervisors": [
+      {
+        "claimKind": "daemon-instance",
+        "identity": "instance-a",
+        "classification": "progressing",
+        "heartbeat": "2026-11-17T00:00:00.000Z",
+        "evidence": [
+          {
+            "code": "artifact-heartbeat-fresh",
+            "recordKind": "daemon.heartbeat",
+            "instant": "2026-11-17T00:00:00.000Z"
+          },
+          {
+            "code": "artifact-flat",
+            "recordKind": "daemon-lane"
+          },
+          {
+            "code": "bound-applied",
+            "recordKind": "watchdog.stall-bound",
+            "instant": "2026-11-16T23:55:00.000Z"
+          },
+          {
+            "code": "claim-live",
+            "recordKind": "daemon-instance"
+          }
+        ]
+      },
+      {
+        "claimKind": "coordinator-lease",
+        "identity": "coordinator-a",
+        "classification": "progressing",
+        "heartbeat": "2026-11-16T23:59:00.000Z",
+        "holder": "coordinator-holder",
+        "evidence": [
+          {
+            "code": "artifact-heartbeat-fresh",
+            "recordKind": "coordinator.iteration",
+            "instant": "2026-11-16T23:59:00.000Z"
+          },
+          {
+            "code": "artifact-progress",
+            "recordKind": "ledger-position",
+            "instant": "2026-11-16T23:56:00.000Z"
+          },
+          {
+            "code": "bound-applied",
+            "recordKind": "watchdog.stall-bound",
+            "instant": "2026-11-16T23:55:00.000Z"
+          },
+          {
+            "code": "claim-live",
+            "recordKind": "coordinator-lease",
+            "ref": "coordinator-holder"
+          }
+        ]
+      }
+    ],
+    "actions": [],
+    "counts": {
+      "lanes": 1,
+      "progressing": 1,
+      "stalled": 0,
+      "unknown": 0,
+      "supervisors": 2,
+      "actions": 0,
+      "parked": 0
+    },
+    "degraded": ["artifact-source-absent"],
+    "truncated": false,
+    "observedAt": "2026-11-17T00:00:00.000Z"
+  }
+}

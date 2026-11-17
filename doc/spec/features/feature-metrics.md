@@ -257,11 +257,11 @@ One domain kind, `metrics`, carries exactly one row: `metrics.baseline-unreadabl
 | Telemetry, ceremony, transition, or audit store damage | the delivered `state.*` row | 1 or 2 per row |
 | Unclassifiable handler failure, or a kind-only `metrics` discriminant | `fallback.internal` | 2 |
 
-The identity resolves by exact code only and joins the closed two-segment allowlist by exact declaration: the table holds 147 entries, 146 delivered rows, and 63 allowlisted two-segment codes, with the sync-suite arithmetic at `BASELINE_ROWS.length + 113` and four-way agreement between the classifier, the sync check, its structural mirror, and the documented carrier. No `metrics.*` family or pattern widening exists.
+The identity resolves by exact code only and joins the closed two-segment allowlist by exact declaration: the table holds 149 entries, 148 delivered rows, and 65 allowlisted two-segment codes, with the sync-suite arithmetic at `BASELINE_ROWS.length + 115` and four-way agreement between the classifier, the sync check, its structural mirror, and the documented carrier. No `metrics.*` family or pattern widening exists.
 
 ### Mounting
 
-`metrics` is the twenty-fourth prompt-required command family, appended last in `PROMPT_REQUIRED_COMMANDS`. The production composition supplies its runtime unconditionally — the read-only state store, the local PM context, the project root and its configuration directory, the injected clock, and the file facts — so the family appears in root `--help`, answers `metrics --help` at exit 0, and serves its M2 reference page through the per-command page-root mapping. The help-coverage inventory carries the metrics row and reference page. The family-count pins read 24 and no stale 23 remains, and mounting changes no other command's composition.
+`metrics` is the twenty-fourth prompt-required command family, appended after `steer` and before GH-295's `supervise` in `PROMPT_REQUIRED_COMMANDS`. The production composition supplies its runtime unconditionally — the read-only state store, the local PM context, the project root and its configuration directory, the injected clock, and the file facts — so the family appears in root `--help`, answers `metrics --help` at exit 0, and serves its M2 reference page through the per-command page-root mapping. The help-coverage inventory carries the metrics row and reference page. The family-count pins read 24 and no stale 23 remains, and mounting changes no other command's composition.
 
 ## Technical Architecture & Codebase Map
 
@@ -345,7 +345,7 @@ function createMetricsCommandDefinition(runtime: MetricsCommandRuntime): Command
 | Read cost | One verified state read pass covering the telemetry families, transitions, and ceremony records; at most one baseline-log read, one declaration-node read, and one bounded corpus scan per invocation; no read beyond the declared sources. The read-cost suite prints a fold-only latency reference at the declared 1 000- and 10 000-record points and asserts the read counts, never the wall clock. |
 | Clock discipline | Window bounds, the drawn default, censoring anchors, `crossedAt`, and the evaluation window all derive from the injected clock. |
 | Privacy | Aggregate figures and identity references only; redaction chokepoint unchanged. |
-| Contract sync | The machine and documented error tables agree on the `metrics` row bidirectionally at 147 entries / 146 delivered / 63 allowlist / +113; no exit literal outside the projection module. |
+| Contract sync | The machine and documented error tables agree on the `metrics` row bidirectionally at 149 entries / 148 delivered / 65 allowlist / +115; no exit literal outside the projection module. |
 | Offline evidence | Every reporting path is proven on fixture-seeded temp stores and temp documents; zero live stores, credentials, or network. |
 
 ## Quality Assurance Strategy
@@ -387,7 +387,7 @@ The family writes nothing and retains nothing. Its recurring cost is one verifie
 ### Maintenance
 
 - **Committed-data coupling.** The baseline-consumed entries depend on the log's metric IDs, definitions, and status semantics. A definition change allocates a new `MET-` ID and the vocabulary extends by exact declaration, never by pattern.
-- **Count pins.** The error-table counts (147 / 146 / 63 / +113) and the family count (24) are pinned in the sites the registration and mounting suites enumerate; a future identity or family addition moves them the same way.
+- **Count pins.** The error-table counts (149 / 148 / 65 / +115) and the mounted family count (25) are pinned in the sites the registration and mounting suites enumerate; a future identity or family addition moves them the same way.
 - **Vocabulary closure.** Metric IDs, classes, verdicts, evaluation states, and bases are closed sets in the contract module; a new member is a contract change with its own consumers, not a data value.
 - **Threshold ownership.** Thresholds are project policy; the tooling ships none and operators maintain theirs in their project's committed document.
 

@@ -2134,6 +2134,7 @@ export {
   QUEUE_MAX_NEXT_ACTIONS,
   QUEUE_MAX_REASONS,
   QUEUE_MAX_REF_CHARS,
+  QUEUE_BATTERY_ONLY_PARK_CAUSES,
   QUEUE_MEMBER_REF_SEPARATOR,
   QUEUE_MIN_RENEWAL_MS,
   QUEUE_MUTATION_RESULTS,
@@ -2817,6 +2818,52 @@ export {
   type SteerSendInput,
   type SteerTtlUnit,
 } from "./steer.js";
+// The `delivery.supervision.v1` vocabulary (GH-295 DM-1..DM-4): the report
+// shape, the tri-state set, the claim-kind and action-kind sets, the
+// degradation and truncation vocabularies, the artifact-only classification
+// input shape, and the imported bounds. Data and types only; the pure
+// classification lives in the domain tier and the fold in the app tier.
+export {
+  SUPERVISE_ERROR_CODES,
+  SUPERVISION_ACTION_FIELDS,
+  SUPERVISION_ACTION_KINDS,
+  SUPERVISION_ARTIFACT_CLASSES,
+  SUPERVISION_CLAIM_KINDS,
+  SUPERVISION_CLAIM_LIVENESS_BOUND_MS,
+  SUPERVISION_CLASSIFICATION_INPUT_FIELDS,
+  SUPERVISION_CORROBORATION_BOUND_MS,
+  SUPERVISION_COUNT_FIELDS,
+  SUPERVISION_DEGRADATION_MARKERS,
+  SUPERVISION_EVIDENCE_CODES,
+  SUPERVISION_LANE_CAP,
+  SUPERVISION_LANE_ENTRY_FIELDS,
+  SUPERVISION_MAX_EVIDENCE_BYTES,
+  SUPERVISION_OPTIONAL_REPORT_MEMBERS,
+  SUPERVISION_REPORT_MEMBERS,
+  SUPERVISION_SCHEMA_VERSION,
+  SUPERVISION_STATE_FROM_DAEMON_LIVENESS,
+  SUPERVISION_STATE_FROM_WATCHDOG_VERDICT,
+  SUPERVISION_STATES,
+  SUPERVISION_SUPERVISOR_ENTRY_FIELDS,
+  SUPERVISION_TRUNCATION_REASONS,
+  type SuperviseErrorCode,
+  type SupervisionActionEntry,
+  type SupervisionActionKind,
+  type SupervisionArtifactClass,
+  type SupervisionClaimKind,
+  type SupervisionClassificationField,
+  type SupervisionClassificationInput,
+  type SupervisionCounts,
+  type SupervisionDegradationMarker,
+  type SupervisionEvidence,
+  type SupervisionEvidenceCode,
+  type SupervisionLaneEntry,
+  type SupervisionReport,
+  type SupervisionSchemaVersion,
+  type SupervisionState,
+  type SupervisionSupervisorEntry,
+  type SupervisionTruncationReason,
+} from "./supervise.js";
 // The public event-taxonomy v1 declaration (GH-290 F-1, DM-1, DM-7; DEC-E,
 // DEC-K, DEC-M): the six topics, their shapes, frame fields, lane rules, kind
 // records, derived payload-field unions, ordering, overflow, and the module's

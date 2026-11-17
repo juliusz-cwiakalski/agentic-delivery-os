@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "<run-id>",
+  "exitCode": 1,
+  "timing": {
+    "totalMs": 0
+  },
+  "error": {
+    "code": "supervise.duplicate-supervision",
+    "category": "user",
+    "retryable": true,
+    "consequence": "not_landed",
+    "remediationHint": "Wait for the named supervision authority to stop acting on the object, then rerun supervise; the refused action never lands.",
+    "summary": "another supervision authority (daemon-preemption holder authority-holder) is actively acting on GH-295"
+  }
+}

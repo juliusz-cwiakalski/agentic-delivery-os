@@ -81,6 +81,24 @@ const entry = (
   seeAlso: [page(pageName)],
 });
 
+/** An M2-rooted family page for one named reference page. */
+const m2PageEntry =
+  (pageName: string) =>
+  (
+    path: readonly string[],
+    summary: string,
+    usage: readonly string[],
+    options: readonly (readonly [string, string])[],
+    examples: readonly string[],
+  ): HelpEntry => ({
+    path,
+    summary,
+    usage,
+    options: [...options, ...GLOBAL_OPTIONS],
+    examples,
+    seeAlso: [pageIn(M2_REFERENCE_ROOT, pageName)],
+  });
+
 /** The M2-rooted family pages (GH-298): steer documents itself in its milestone. */
 const m2Entry = (
   path: readonly string[],
@@ -964,6 +982,14 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
     ["<binary> steer complete <id> --ref <artifact>"],
     [["--ref <artifact>", "The proving artifact reference (required, at most 160 characters)"]],
     ["<binary> steer complete msg-1 --ref doc/changes/proof.yaml"],
+  ),
+
+  m2PageEntry("supervise")(
+    ["supervise"],
+    "Run the supervisor battery: classify every lane and supervision claim from artifact evidence",
+    ["<binary> supervise [--json]"],
+    [],
+    ["<binary> supervise", "<binary> supervise --json"],
   ),
 ];
 

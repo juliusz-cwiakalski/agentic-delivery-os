@@ -30,6 +30,3 @@ export const BASE_FAMILIES = [
 
 /** The mounted set through GH-298: the delivered 22 plus steer at index 22. */
 export const STEER_MOUNTED_FAMILIES = [...BASE_FAMILIES, "steer"] as const;
-
-/** The mounted set: steer at index 22, metrics appended as the twenty-fourth. */
-export const MOUNTED_FAMILIES = [...STEER_MOUNTED_FAMILIES, "metrics"] as const;

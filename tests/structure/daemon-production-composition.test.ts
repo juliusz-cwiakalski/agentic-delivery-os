@@ -69,7 +69,7 @@ describe("TC-DAEMON-010 the family is prompt-required and composed unconditional
     // The delivered sixteen families, plus the GH-286 mount, the GH-288
     // `projects` family, and the GH-290 `events` family: one member per
     // prompt-required command, no duplicate.
-    expect([...PROMPT_REQUIRED_COMMANDS]).toHaveLength(24);
+    expect([...PROMPT_REQUIRED_COMMANDS]).toHaveLength(25);
   });
 
   test("the composed program registers the declared grammar unchanged", () => {
@@ -136,7 +136,7 @@ describe("TC-DAEMON-014 a composition with every optional input absent", () => {
       expect(program.commands.daemon).toBeDefined();
       const selected = selectPromptRequiredProgram(program);
       expect(selected.commands.daemon).toBeDefined();
-      expect([...PROMPT_REQUIRED_COMMANDS]).toHaveLength(24);
+      expect([...PROMPT_REQUIRED_COMMANDS]).toHaveLength(25);
     } finally {
       harness.dispose();
     }

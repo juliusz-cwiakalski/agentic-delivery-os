@@ -1,0 +1,16 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "<run-id>",
+  "exitCode": 2,
+  "timing": {
+    "totalMs": 0
+  },
+  "error": {
+    "code": "supervise.evidence-absent",
+    "category": "platform",
+    "retryable": true,
+    "consequence": "not_landed",
+    "remediationHint": "Record the named artifact sources (heartbeat, lane, lease, dispatch, or commit records) for this repository and rerun supervise; the answer stays unknown, never guessed.",
+    "summary": "no artifact-evidence source exists for: lane GH-295 (heartbeat, artifact trail); daemon-instance instance-a (heartbeat, supervision artifacts)"
+  }
+}

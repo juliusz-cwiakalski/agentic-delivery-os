@@ -44,8 +44,9 @@ describe("TC-PAUSE-072 the closed park-cause vocabulary", () => {
       "preempted-for-close-item",
       "peak-window",
       "owner-hold",
+      "liveness-stall",
     ]);
-    expect(QUEUE_PARK_CAUSES).toHaveLength(5);
+    expect(QUEUE_PARK_CAUSES).toHaveLength(6);
     // No fourth vocabulary appeared beside the delivered sets plus the two
     // additions (DEC-2, G-9): the condition-type set is unchanged.
     expect([...QUEUE_PARK_CONDITION_TYPES]).toEqual([
@@ -61,7 +62,9 @@ describe("TC-PAUSE-072 the closed park-cause vocabulary", () => {
       { cause: "preempted-for-close-item", conditionType: "preemption" },
       { cause: "peak-window", conditionType: "provider-window" },
       { cause: "owner-hold", conditionType: "preemption" },
+      { cause: "liveness-stall", conditionType: "provider-window" },
     ]);
+    expect(conditionTypeForCause("liveness-stall")).toBe("provider-window");
     expect(conditionTypeForCause("peak-window")).toBe("provider-window");
     expect(conditionTypeForCause("owner-hold")).toBe("preemption");
     // The delivered mappings are untouched.
@@ -142,6 +145,61 @@ describe("TC-PAUSE-072 the queue release park grammar and writers", () => {
     ]);
     expect(quotaWithUntil.exitCode).toBe(1);
     expect(quotaWithUntil.stdout).toContain("reason=until-unsupported");
+  });
+
+  test("the operator path refuses the battery-only liveness-stall cause by name", async () => {
+    const harness = createQueueEdgeHarness("s17-battery-only");
+    const store = harness.composition.store;
+    const declared = declareQueueEntry(store, {
+      ref: "GH-320",
+      repository: "github.com/example/repo-alpha",
+      repositoryRoot: "/work/repo-alpha",
+      priority: 1,
+      recordedAt: NOW,
+      fenceToken: "seed-battery-only-entry",
+    });
+    expect(declared.ok).toBe(true);
+    const claimed = claimQueueLease(store, {
+      ref: "GH-320",
+      holder: "holder-a",
+      runner: "runner-a",
+      weightClass: "standard",
+      nowIso: NOW,
+      nowMs: Date.parse(NOW),
+      fenceToken: "seed-battery-only-claim",
+    });
+    expect(claimed.ok).toBe(true);
+    const parksBefore = readQueueParks(store);
+    if (!parksBefore.ok) throw new Error("park read failed");
+    for (const argv of [
+      ["queue", "release", "GH-320", "--holder", "holder-a", "--park", "liveness-stall", "--json"],
+      [
+        "queue",
+        "release",
+        "GH-320",
+        "--holder",
+        "holder-a",
+        "--park",
+        "liveness-stall",
+        "--until",
+        UNTIL,
+        "--json",
+      ],
+    ]) {
+      const run = await harness.run(argv);
+      expect(run.exitCode).toBe(1);
+      expect(run.stdout).toContain("fallback.invocation");
+      expect(run.stdout).toContain("liveness-stall");
+      expect(run.stdout).not.toContain('"data"');
+    }
+    const parksAfter = readQueueParks(store);
+    if (!parksAfter.ok) throw new Error("park read failed after refusal");
+    expect(parksAfter.records).toHaveLength(parksBefore.records.length);
+    // Later reads stay healthy.
+    const queueRead = await harness.run(["queue", "list", "--json"]);
+    const lanesRead = await harness.run(["lanes", "list", "--json"]);
+    expect(queueRead.exitCode).toBe(0);
+    expect(lanesRead.exitCode).toBe(0);
   });
 
   test("the invoked release command writes the owner-hold park record with no until", () => {

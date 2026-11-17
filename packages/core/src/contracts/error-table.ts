@@ -39,6 +39,7 @@ export const DOMAIN_KINDS = [
   "events",
   "board",
   "steer",
+  "supervise",
   // GH-299 registers the metrics read-side kind with exactly one row.
   "metrics",
 ] as const;
@@ -1726,6 +1727,33 @@ export const ERROR_TABLE = [
       "Repair the repository's local state store or the unverified append, then retry; nothing is reported landed or completed.",
     projectionClass: "platform-provider",
     summary: "The steering store cannot be read, written, or verified.",
+  },
+  /**
+   * GH-295: the supervise family's two exact identities (DEC-6, DEC-8, C-8).
+   * They join the closed allowlist by exact declaration; there is no
+   * `supervise.*` family and no pattern widening.
+   */
+  {
+    code: "supervise.duplicate-supervision",
+    domainKind: "supervise",
+    category: "user",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Wait for the named supervision authority to stop acting on the object, then rerun supervise; the refused action never lands.",
+    projectionClass: "user-validation",
+    summary: "Another supervision authority is actively acting on the targeted object.",
+  },
+  {
+    code: "supervise.evidence-absent",
+    domainKind: "supervise",
+    category: "platform",
+    retryable: true,
+    consequence: "not_landed",
+    remediationHint:
+      "Record the named artifact sources (heartbeat, lane, lease, dispatch, or commit records) for this repository and rerun supervise; the answer stays unknown, never guessed.",
+    projectionClass: "platform-provider",
+    summary: "No artifact-evidence source exists for the supervision scope.",
   },
   /**
    * GH-299: the metrics read side's one exact identity (DEC-8, DM-7). It joins

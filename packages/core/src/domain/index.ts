@@ -1120,3 +1120,16 @@ export {
   validateSteerMessage,
   validateSteerSend,
 } from "./steer.js";
+
+/**
+ * The supervision tri-state fold (GH-295 F-2..F-4, DEC-4, DEC-5): pure
+ * classification over artifact facts, the report-count derivation, the lane
+ * bound, and the evidence byte bound.
+ */
+export {
+  boundSupervisionEvidence,
+  boundSupervisionLanes,
+  classifySupervision,
+  type SupervisionClassification,
+  summarizeSupervision,
+} from "./supervise.js";

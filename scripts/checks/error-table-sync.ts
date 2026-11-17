@@ -239,6 +239,10 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "steer.unknown-id",
   "steer.credential-value-rejected",
   "steer.queue-unavailable",
+  // GH-295 pins the two supervise identities exactly (DEC-6, DEC-8); the
+  // supervise family stays closed to these two members with no widening.
+  "supervise.duplicate-supervision",
+  "supervise.evidence-absent",
   // GH-299 pins the one metrics read-side identity exactly (DEC-8, DM-7); the
   // metrics family stays closed to this single member with no pattern widening.
   "metrics.baseline-unreadable",

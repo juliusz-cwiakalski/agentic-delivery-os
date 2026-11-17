@@ -257,6 +257,18 @@
       "text": "retro.wip-limit-exceeded",
       "recognized": true,
       "resolves": true
+    },
+    {
+      "id": "supervise-duplicate-supervision",
+      "text": "supervise.duplicate-supervision",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "supervise-evidence-absent",
+      "text": "supervise.evidence-absent",
+      "recognized": true,
+      "resolves": true
     }
   ]
 }

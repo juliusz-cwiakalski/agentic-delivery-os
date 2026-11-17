@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-EVENT-TAXONOMY
 status: Current
 created: 2026-11-12
-last_updated: 2026-11-14
+last_updated: 2026-11-17
 owners: ["engineering"]
 service: delivery-os
 summary: "The published event taxonomy v2 on the resident daemon's subscribe surface and its reference command family: six closed topics (`queue` and `lanes` snapshot topics; `queue.graph`, `dispatch.attempt`, `phase.state`, and `blockers.state` event topics), the eight-field event envelope with its per-topic `lane` and `ref` rule, per-`(topic, lane)` process-scoped `sequence` as the only ordering guarantee with gap-to-repoll, preserved overflow carriage stamped `overflow: \"repoll\"`, the peak-pause kinds `stop`/`parked`/`resumed`/`park-edge` carried by taxonomy v2 as the single spoken version with every v1 kind and payload byte-identical and v1 retired, the watcher's episode frames emitted only over records whose episode frame is complete while operator-shaped parks project the `park-edge` alone, the unknown-topic subscribe refusal, the generated `events list` / `events describe <topic>` surface with its three error identities and `{0, 1, 2}` exits, every declared kind with a producer, and the mount as one prompt-required unit."
 links:
-  related_changes: ["GH-290", "GH-292", "GH-294"]
+  related_changes: ["GH-290", "GH-292", "GH-294", "GH-295"]
   related_decisions: ["TDR-0025", "TDR-0005", "TDR-0029"]
   contracts:
     - "packages/core/src/contracts/taxonomy.ts"
@@ -171,9 +171,10 @@ Three further facts pin the peak-pause episode kinds ([Provider Peak Pausing](fe
   `park-edge` with `until` as a declared classified absence; an operator-shaped
   `peak-window` park — the release writer stamps only the minimal episode
   identity and the operator-declared `until`, not the watcher's episode fields —
-  emits the `park-edge` alone, never a `stop` or `parked` frame; the delivered
-  park causes (`provider-window`, `provider-quota`, `preempted-for-close-item`)
-  emit nothing.
+  emits the `park-edge` alone, never a `stop` or `parked` frame; every other
+  park cause — the delivered `provider-window`, `provider-quota`, and
+  `preempted-for-close-item` causes and the supervised-stall cause
+  `liveness-stall` — emits nothing.
 
 A `dependency-edge` event is emitted only when the folded edge set differs from
 the previous record for the same ref; a rewritten identical record publishes

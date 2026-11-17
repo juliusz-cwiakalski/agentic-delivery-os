@@ -122,6 +122,18 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "supervisorSupported",
   ],
   "core/src/app/watch.ts": ["watchLines"],
+  "core/src/app/supervise.ts": [
+    "createStateSupervisionReadPort",
+    "createStateSupervisionWritePort",
+    "runSupervisionBattery",
+  ],
+  "core/src/domain/supervise-text.ts": ["renderSupervisionHuman"],
+  "core/src/domain/supervise.ts": [
+    "boundSupervisionEvidence",
+    "boundSupervisionLanes",
+    "classifySupervision",
+    "summarizeSupervision",
+  ],
   "core/src/domain/watch-stream.ts": ["boundWatchLine", "createWatchProjection"],
   "core/src/app/daemon-preemption.ts": ["applyPreemption", "reevaluatePendingPreemptions"],
   "core/src/domain/daemon-preemption.ts": ["PREEMPTION_WRITABLE_STATES", "decidePreemption"],
@@ -1568,6 +1580,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "QUEUE_READY_WORK_ITEM_REF_PATTERN",
   ],
   "core/src/contracts/queue.ts": [
+    "QUEUE_BATTERY_ONLY_PARK_CAUSES",
     "QUEUE_PEAK_ENFORCEMENT_MODES",
     "QUEUE_BLOCKING_REASONS",
     "QUEUE_PARK_PRESERVATIONS",
@@ -1730,7 +1743,9 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "renewalCadenceMs",
   ],
   "core/src/domain/queue-park.ts": [
+    "activeParkRecords",
     "clearObservedRecord",
+    "parkConditionExpiryMissing",
     "conditionTypeForCause",
     "createParkRecord",
     "defaultParkRecheckMs",
@@ -2004,6 +2019,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "cli/src/output/merge-text.ts": ["renderDryRunHuman", "renderMergeHuman"],
   "core/src/app/queue.ts": [
     "addQueueDependency",
+    "singleFlightRefusalFromLeases",
     "claimQueueLease",
     "claimSingleFlightRefusal",
     "dispatchAdmissionRefusal",
@@ -2225,6 +2241,9 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "cli/src/help/prompt-required-commands.ts": ["PROMPT_REQUIRED_COMMANDS"],
   "cli/src/production.ts": [
     "createProductionComposer",
+    "createSupervisionEconomicsWritePort",
+    "SUPERVISION_EXHAUSTION_QUESTION_OPTIONS",
+    "supervisionExhaustionQuestionId",
     "createProductionTelemetrySink",
     "daemonReachable",
     "daemonReentryEnvironment",
@@ -2429,6 +2448,30 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "PRIOR_IDENTITY_NOTICE_REASONS",
     "priorIdentityNoticeToken",
     "renderPriorIdentityNotice",
+  ],
+  "core/src/contracts/supervise.ts": [
+    "SUPERVISE_ERROR_CODES",
+    "SUPERVISION_ACTION_FIELDS",
+    "SUPERVISION_ACTION_KINDS",
+    "SUPERVISION_ARTIFACT_CLASSES",
+    "SUPERVISION_CLAIM_KINDS",
+    "SUPERVISION_CLAIM_LIVENESS_BOUND_MS",
+    "SUPERVISION_CLASSIFICATION_INPUT_FIELDS",
+    "SUPERVISION_CORROBORATION_BOUND_MS",
+    "SUPERVISION_COUNT_FIELDS",
+    "SUPERVISION_DEGRADATION_MARKERS",
+    "SUPERVISION_EVIDENCE_CODES",
+    "SUPERVISION_LANE_CAP",
+    "SUPERVISION_LANE_ENTRY_FIELDS",
+    "SUPERVISION_MAX_EVIDENCE_BYTES",
+    "SUPERVISION_OPTIONAL_REPORT_MEMBERS",
+    "SUPERVISION_REPORT_MEMBERS",
+    "SUPERVISION_SCHEMA_VERSION",
+    "SUPERVISION_STATES",
+    "SUPERVISION_STATE_FROM_DAEMON_LIVENESS",
+    "SUPERVISION_STATE_FROM_WATCHDOG_VERDICT",
+    "SUPERVISION_SUPERVISOR_ENTRY_FIELDS",
+    "SUPERVISION_TRUNCATION_REASONS",
   ],
   "core/src/contracts/watchdog.ts": [
     "WATCHDOG_ERROR_CODES",
@@ -3135,6 +3178,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "appendSteeringCompletion",
   ],
   "cli/src/commands/steer.ts": ["createSteerCommandDefinition"],
+  "cli/src/commands/supervise.ts": ["createSuperviseCommandDefinition"],
 };
 
 const listTypeScriptFiles = (packageDir: string): string[] => {

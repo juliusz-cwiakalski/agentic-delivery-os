@@ -50,7 +50,12 @@ type LeaseOperationUnion = Expect<
 type ParkCauseUnion = Expect<
   Equal<
     QueueParkCause,
-    "provider-window" | "provider-quota" | "preempted-for-close-item" | "peak-window" | "owner-hold"
+    | "provider-window"
+    | "provider-quota"
+    | "preempted-for-close-item"
+    | "peak-window"
+    | "owner-hold"
+    | "liveness-stall"
   >
 >;
 type ParkConditionUnion = Expect<
