@@ -7,7 +7,7 @@ phases:
   specification: { started: null, completed: 2026-11-17T23:34:03.600Z }
   test_planning: { started: null, completed: 2026-11-17T23:34:06.905Z }
   delivery_planning: { started: null, completed: 2026-11-17T23:34:10.150Z }
-  dor_check: { started: null, completed: null }
+  dor_check: { started: null, completed: 2026-11-17T23:39:09.787Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -56,6 +56,22 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "DoR gate iteration 3 = READY (readiness-review/readiness-iter-3.md), all
+      ten facets PASS; 11 of 12 iteration-2 findings Resolved and R10 resolved
+      with a recorded residue (the test plan still names the old resolver name
+      once). Two remediated majors: R1 terminal-read write refusal (a label-swap
+      write to a done-resolving issue refuses with zero provider requests, owned
+      by AC-F6-4) and R2 the phase-2 cross-transport route table restricted to
+      members that exist after phase 1 with the write routes as a declared
+      phase-3 extension. Adjudicated scope delta accepted: packages/cli/src/
+      entrypoint.ts joins phase-2 scope with an additive EntrypointComposer
+      return widening (CommandProgram | Promise<CommandProgram>); the await must
+      stay inside the existing try so a rejected composition keeps the
+      containment identity. Twelve delivery notes (nit-level, each with an
+      owning plan phase and an instruction) are recorded in the verdict file and
+      must be carried by the coder rather than reopening a phase."
+    type: info
+    date: "2026-11-18"
   - text: "DoR gate iteration 1 = NOT_READY (readiness-review/readiness-iter-1.md),
       no pause flag, 7 blocking findings + 10 minors, all author-side. Reopened
       delivery_planning, test_planning and specification. Blockers: F1
