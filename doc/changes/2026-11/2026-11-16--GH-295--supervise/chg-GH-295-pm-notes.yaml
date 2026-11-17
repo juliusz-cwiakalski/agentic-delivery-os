@@ -699,3 +699,12 @@ notes:
       than the literal PASS keyword (semantically equivalent)."
     type: "info"
     date: "2026-11-17"
+  - text: "PR created: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/332
+      — title 'feat(GH-295): supervise — artifact-evidence supervision battery
+      over daemon lanes (M2-S2)', base main-tools, head feat/GH-295/supervise @
+      46242ddf, open, not merged, no auto-merge. PR body carries the summary,
+      ticket/AC mapping, the plan-phase-to-commit map (F-3 disclosure), testing
+      evidence, DEC-1..DEC-9 decisions, and the accepted-with-disclosure
+      inventory. Branch pushed with tracking; local head == remote head."
+    type: "info"
+    date: "2026-11-17"
