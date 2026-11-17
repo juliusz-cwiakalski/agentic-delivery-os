@@ -8,20 +8,41 @@
 # test result).
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:     ./chg-GH-338-spec.md (v1.0: F-1..F-8; 40 ACs AC-F1-1..AC-F8-6;
-#               API-1..API-7; DM-1..DM-8; NFR-1..NFR-11; NG-1..NG-8;
+#   - Spec:     ./chg-GH-338-spec.md (v1.1: F-1..F-8; 40 ACs AC-F1-1..AC-F8-6;
+#               API-1..API-7; DM-1..DM-10; NFR-1..NFR-11; NG-1..NG-8;
 #               DEC-1..DEC-6; RSK-1..RSK-11; §6 flows 1–7; §7.1 in-scope list;
 #               §8.4.1 normative Tables A–E; §18 sequencing; §21 security
 #               highlights; §24.1 Appendix A doc impacts; §24.3 Appendix C
 #               deliberate non-decisions binding on this plan; §24.4 Appendix D
-#               fixture-decided provider details).
-#   - Tests:    ./chg-GH-338-test-plan.md (v1.0: 81 TCs —
+#               fixture-decided provider details). v1.1 carries the shapes this
+#               plan's phases own: DM-9 (adapter-local delivery-request
+#               create/update input), DM-10 (`GithubTransportSelection`, the one
+#               composition-scoped selection value), the mechanism-scoped label
+#               rule (only a `label-swap` row touches labels; a `field-update`
+#               row writes provider state only), the one-refusal-class /
+#               four-outcome read resolution (exact-case precedence, a
+#               `label-swap`-token case collision refuses, unknown labels and a
+#               labelless issue resolve natively), the non-terminal
+#               `field-update` write refusal, and the writable set (`done` plus
+#               each `label-swap` alias).
+#   - Tests:    ./chg-GH-338-test-plan.md (v1.1: 81 TCs —
 #               TC-POSTURE-001..003, TC-CLI-001..013, TC-LAND-001..008,
 #               TC-CHECK-001..012, TC-THREAD-001..011, TC-BACKLOG-001..011,
 #               TC-REF-001..006, TC-PARITY-001..010, TC-FLOOR-001..007; 40/40
 #               AC coverage; §7.1 suite map; §7.2 fixtures to author; §7.4 gate
 #               commands G1..G10 with G10 binding; GAP-TP-1..7 and OQ-TP-1..5
 #               (TO-CONFIRM details are fixture-decided, never test-decided).
+#               v1.1 binds this plan's oracles: TC-POSTURE-001 is SET equality
+#               both directions with declaration order explicitly outside the
+#               contract; TC-PARITY-003 is ONE `write-delivery-request` registry
+#               step plus both tenant routes and a direct client call for the
+#               update, and states that this is the declared oracle change;
+#               TC-FLOOR-001 allows exactly one declared delivered
+#               trap-outcome amendment (`GH-ISSUE-TO-WORKITEM`) owned by phase 3
+#               and the unchanged delivered closeout `done` oracle; the fixture
+#               sets extend `workflow-map-cases.json` (read-outcome truth table,
+#               writable-set round trips, non-terminal `field-update` refusal)
+#               and `issue-writes.json` (DM-9 variants, label-free `done` write)).
 #   - PM record: ./chg-GH-338-pm-notes.yaml (the four accepted decision records
 #               DEC-1..DEC-4 = TDR-0031..TDR-0034; the current-state facts; the
 #               delivery conventions — gate commands carry
@@ -52,13 +73,16 @@
 #               documents).
 #
 # COMMIT-BOUNDARY REALITY (binding on phase 1):
-#   The four decision records are UNTRACKED in the worktree at plan time:
-#     doc/decisions/TDR-0031-github-adapter-cli-first-provider-transport.md
-#     doc/decisions/TDR-0032-github-adapter-completion-contract-extensions.md
-#     doc/decisions/TDR-0033-review-thread-discussion-bodies-bounded-adapter-read.md
-#     doc/decisions/TDR-0034-github-issues-transition-mapping-injected-workflow-map.md
+#   Four decision records are UNTRACKED in the worktree at plan time and one is
+#   tracked-and-MODIFIED (the ADR-0005 editorial pointer to TDR-0031, amended in
+#   the same branch state):
+#     doc/decisions/TDR-0031-github-adapter-cli-first-provider-transport.md   (untracked)
+#     doc/decisions/TDR-0032-github-adapter-completion-contract-extensions.md (untracked)
+#     doc/decisions/TDR-0033-review-thread-discussion-bodies-bounded-adapter-read.md (untracked)
+#     doc/decisions/TDR-0034-github-issues-transition-mapping-injected-workflow-map.md (untracked)
+#     doc/decisions/ADR-0005-runtime-confinement-provider-client-subpaths.md  (modified)
 #   The commit primitive stages only plan-declared scope plus the change
-#   folder, so phase 1 declares those four exact paths (and the doc/decisions
+#   folder, so phase 1 declares those five exact paths (and the doc/decisions
 #   folder) and they land on `phase complete delivery_planning`. Their
 #   doc/decisions/00-index.md rows already exist in the tracked index; the index
 #   is declared so any status/typo touch stages with them.
@@ -127,9 +151,10 @@
 #   Count: 13 + 14 + 15 + 12 + 12 + 6 + 9 = 81.
 #   SPLIT-CASE NOTES (a case whose suite is extended by two phases stays green
 #   at both boundaries; ownership follows the phase that completes it):
-#   TC-POSTURE-001's fixture rows move in phase 1 and the case completes in
-#   phase 3; TC-CLI-001's behaviour half is phase 2 and its reference-behavior
-#   cross-check half is phase 6 (tests/structure/reference-behavior.test.ts);
+#   TC-POSTURE-001's expected posture moves 7/2 in phase 1 and 9/0 in phase 3
+#   (the case completes there); TC-CLI-001's behaviour half is phase 2 and its
+#   reference-behavior cross-check half is phase 6
+#   (tests/structure/reference-behavior.test.ts);
 #   TC-PARITY-010's operation-union half and timings half both land in phase 1,
 #   the `provider-views` extension follows normalization in phase 4;
 #   TC-PARITY-005 (every new behavior has a trap entry and fixture) completes in
@@ -155,8 +180,13 @@
 #   write, content write, mapped transition) and their trap entries.
 #
 # PLAN-LEVEL REFINEMENTS (recorded as this plan's design decisions; the spec
-#   pins the contracts, the test plan pins the behaviours, and none of the below
-#   reshapes a TC oracle, identity, exit, bound, or AC/NFR mapping):
+#   pins the contracts and the test plan pins the behaviours):
+#   These refinements bind file homes, composition seams, and fixture homes.
+#   Refinement 2 is the ONE declared oracle resolution in this plan and it is
+#   the resolution test plan v1.1's TC-PARITY-003 itself now states, so plan and
+#   test plan agree instead of the plan claiming an unchanged oracle. No AC/NFR
+#   mapping, case identity, exit code, cap, or bound is changed by any item
+#   below.
 #   1. MODULE HOMES (GAP-TP-4 makes production module naming delivery-bound;
 #      these homes follow the delivered deploy-trace/`./git` precedents and are
 #      declared so the commit primitive accepts the files):
@@ -164,11 +194,13 @@
 #          ProviderTransport (`gh api` mapping), the local child-runner seam
 #          with an `execFile` default, the argv and child-environment builders,
 #          the `--include` status/body parser, the probe with its three closed
-#          refusal codes, and `GITHUB_TRANSPORT_MATRIX`;
+#          refusal codes, `GITHUB_TRANSPORT_MATRIX`, the adapter-local DM-10
+#          `GithubTransportSelection` type, and the pure selection resolver;
 #        packages/adapters/src/github/workflow-map.ts   — the four-row
 #          precedence-ordered seed, the injected-map acceptance, the internal
-#          validator, and the one resolver used by read normalization AND the
-#          transition write;
+#          validator, the writable-set derivation (`done` plus each `label-swap`
+#          alias), and the one resolver used by read normalization AND the
+#          mechanism-scoped transition write (label rows only);
 #        packages/adapters/src/github/log-excerpt.ts    — the bounded excerpt
 #          read, its closed shape, and the single fixed cap constant;
 #        packages/adapters/src/github/thread-discussion.ts — the bounded
@@ -181,17 +213,22 @@
 #      declares an `expected` entry returns a normalized value and is compared
 #      exactly; a write step with no declared entry behaves exactly as today, so
 #      the GitLab and Jira reports stay byte-identical (TC-FLOOR-003). The
-#      `write-delivery-request` create/update pair is one registry step (the
-#      closed set stays nine): the update path is proven over the same tenant
-#      routes by the behaviour suite and a direct client call in the conformance
-#      suite, which is what TC-PARITY-003's "create/update" wording asserts.
-#      See the reported upstream ambiguity in the return note.
+#      `write-delivery-request` create/update pair is ONE registry step (the
+#      closed set stays nine, the step pin moves 13 -> 14 only for the landing
+#      step): the registry step's dispatch member is the create variant, and the
+#      update path is proven over the same tenant routes by TC-BACKLOG-002 plus a
+#      direct client call in the conformance suite (the TC-CONF-008 pattern).
+#      This is the declared oracle change: TC-PARITY-003 v1.1 states it in those
+#      words, so neither artifact denies it. No second `write-delivery-request`
+#      step is added — a second step would contradict TDR-0032's "append a
+#      `merge-delivery-request` step" and buy no coverage.
 #   3. STATEFUL REPLAY FOR READ-BACK CASES: the mock-tenant transport is
 #      stateless and body-keyed (packages/testkit/src/conformance/mock-tenant.ts,
-#      unchanged). Read-after-write cases (TC-BACKLOG-004/010, TC-LAND-004)
-#      therefore use a stateful scripted transport helper added to
-#      tests/behaviour/providers/support.ts; the tenant tier is never asked to
-#      become stateful.
+#      unchanged). Read-after-write cases (TC-LAND-004/005, TC-BACKLOG-004/010)
+#      therefore use one stateful scripted transport helper added to
+#      tests/behaviour/providers/support.ts in PHASE 1 — the phase that owns the
+#      first case needing it — and reused by phase 3; the tenant tier is never
+#      asked to become stateful.
 #   4. REFERENCE-BEHAVIOR DELIVERY (mission constraint): the normative
 #      reference-behavior surface is authored in plan phase 6 together with the
 #      doc-to-declaration drift test, because AC-F7-1..5 bind at DoD and the
@@ -209,7 +246,58 @@
 #      `redact()` in packages/cli/src/output/serialize.ts. No excerpt or body is
 #      redacted at read time (the excerpt must stay a faithful byte prefix), and
 #      no production module changes there; the privacy cases prove the
-#      chokepoint transforms the rendered text.
+#      chokepoint transforms the rendered text. No delivered command renders an
+#      excerpt or a body, so the obligation is a forward-looking invariant proven
+#      at that one chokepoint with its paired positive (N8).
+#
+#   7. PROBE PLACEMENT AND SELECTION DELIVERY (the one bound mechanism; the
+#      synchronous composer never probes). `EntrypointComposer` is synchronous
+#      (packages/cli/src/entrypoint.ts) and is invoked synchronously, so the
+#      Promise-based probe cannot run inside it:
+#        a. `packages/adapters/src/github/cli-transport.ts` exports
+#           `probeGithubCli(...)` (one bounded `gh --version`, DM-7 result), the
+#           transport factory, and the PURE resolver
+#           `resolveGithubTransportSelection({ policy, probe })` returning the
+#           DM-10 value `{ policy, selected, degradation? }` plus the transport
+#           choice. `GithubTransportSelection` is an adapter-local type exported
+#           additively from `./github` — never a core contract type (the only
+#           core additions stay DM-1 and DM-2).
+#        b. `packages/cli/src/production.ts` exports the ASYNC composition
+#           resolver `resolveGithubTransportSelection(facts)`: `api-only`
+#           returns `{ policy: "api-only", selected: "api" }` with zero spawns;
+#           `prefer-cli` awaits one probe through the injected runner and
+#           returns `selected: "gh"` on success or `selected: "api"` with
+#           `degradation.code` equal to the refusal code.
+#        c. `packages/cli/src/bin-launcher.ts` — the delivered async launch site
+#           and the only async composition edge — AWAITS that resolver before
+#           calling `createProductionComposer(...)` and passes the resolved value
+#           as `ProductionCompositionFacts.githubTransportSelection`. That fact
+#           is how the value reaches the synchronous composer, which reads it and
+#           never probes.
+#        d. `createProductionComposer` stays synchronous and keeps its delivered
+#           signature. A present selection picks the transport (CLI transport
+#           built with the injected runner, or the exported native-fetch
+#           factory); an ABSENT selection is the delivered offline default (the
+#           native-fetch transport, no probe, no diagnostic line), so every
+#           delivered composition test and every embedder stays probe-free.
+#        e. The degradation renders exactly ONE human diagnostic line pushed into
+#           the composer's existing `compositionNotices` list (the delivered
+#           warnings channel that reaches the serializer), exactly once per
+#           composed program; it is never persisted, never a telemetry/state
+#           record, never an error-table row, and never widened into a
+#           normalized view.
+#   8. CHILD ENVIRONMENT FROM INJECTED DATA (N9). The child environment is
+#      constructed entirely from injected records: the base record is the
+#      composition's injected `environment` (which supplies `PATH` — the CLI is
+#      never resolved through an ambient read, and no `process.env` access is
+#      added to `packages/**` outside the delivered allowlist), the credential
+#      value is the resolved credential material the client already put on the
+#      request's `Authorization` header (resolved through the credential port,
+#      never a second source), and the transport adds the isolated
+#      `GH_CONFIG_DIR`, `GH_PROMPT_DISABLED`, `NO_COLOR`, and the update-notifier
+#      suppressor. No secret enters argv, and no absolute binary path is
+#      injected (the `PATH`-based resolution is the bound option; a future
+#      absolute-path injection would be its own change).
 #
 # DoD MAPPING (spec §17 ACs -> this plan's owning phases) is exactly the AC
 #   ownership block. The change-level Definition of Done is: all 40 ACs met with
@@ -217,8 +305,10 @@
 #   `notes:` evidence (phase id, commit hash, gate result);
 #   `TMPDIR=$PWD/tmp/tmpdir pnpm check` green at the delivered HEAD;
 #   `plan validate GH-338` valid at the delivered HEAD; the four decision
-#   records tracked; the pinned structural surfaces exact and non-vacuous; PR
-#   against main-tools left open for human review (lifecycle phase 11).
+#   records AND the ADR-0005 editorial pointer file tracked; the pinned
+#   structural surfaces (including the exact child-process site set) exact and
+#   non-vacuous; PR against main-tools left open for human review (lifecycle
+#   phase 11).
 #
 # CONSTRAINTS BINDING ON EVERY PHASE (spec §24.3, §21; do not reshape at
 #   delivery):
@@ -231,18 +321,27 @@
 #     field sets; no configuration schema/key/settings type/catalog branch; no
 #     thread pagination, log archive, tail-follow, or caller-tunable evidence
 #     bound; no force/bypass/auto-merge/queue/rebase/merge-commit strategy is
-#     representable; no new telemetry/event/state record or transport-in-use
-#     declaration; the review-feedback flow is not migrated; Jira's workflow map
-#     stays a module constant; GitLab/Jira gain ONLY the new operation's gap.
+#     representable; no new telemetry/event/state record and no transport-in-use
+#     declaration beyond the one composition-scoped `GithubTransportSelection`
+#     value and its single line; the review-feedback flow is not migrated; Jira's
+#     workflow map stays a module constant; GitLab/Jira gain ONLY the new
+#     operation's gap. A `field-update` transition never touches labels (no label
+#     read, no label write, no label-signal refusal), so the delivered closeout
+#     `done` write keeps its single state-only `PATCH`; the `write-delivery-request`
+#     create never lands and never sets merge state.
 #   - Offline determinism (NFR-2): zero live network calls and zero live child
 #     processes in the mock tier; every new behavior proven through committed
 #     sanitized fixtures ("provenance": "hand-authored-synthetic 2026-11-17"),
 #     no `test.skip`, no environment-gated pass (test plan §3.4 no-skip rule).
 #   - Secret hygiene (NFR-3): credential material arrives as child-environment
-#     data and never in argv, stdout, stderr, diagnostics, or failure detail;
-#     the isolated configuration directory and prompt suppression on every
-#     invocation; the secret-read allowlist count stays unchanged with exactly
-#     one credential-material entry; stderr prose never becomes a failure detail.
+#     data built from injected records (the injected `environment` base record,
+#     including `PATH`, plus the resolved credential value the client already
+#     placed on the request's `Authorization` header) and never in argv, stdout,
+#     stderr, diagnostics, or failure detail; no ambient `process.env` read is
+#     added anywhere under packages/**; the isolated configuration directory and
+#     prompt suppression are set on every invocation; the secret-read allowlist
+#     count stays unchanged with exactly one credential-material entry; stderr
+#     prose never becomes a failure detail.
 #   - Destructive-action safety (NFR-5): landing is at most once per invocation,
 #     never retried, never re-issued on the other transport; already-merged is
 #     success only after a read-back that observes provider-asserted merged
@@ -253,8 +352,9 @@
 #   - Pinned surfaces are updated exactly and never relaxed: provider subpath
 #     export lists, per-file executable allowances, the source inventory, the
 #     port-contract inventory, the conformance flow/step pins, the trap-catalog
-#     EXPECTED_TRAPS lists. A wildcard, prefix allowance, or deleted assertion
-#     is a blocking review finding (RSK-TP-7/RSK-TP-8).
+#     EXPECTED_TRAPS lists, and the exact `node:child_process` site set
+#     (tests/structure/harness-imports.test.ts). A wildcard, prefix allowance, or
+#     deleted assertion is a blocking review finding (RSK-TP-7/RSK-TP-8).
 #   - Layering (.ai/rules/typescript.md, ADR-0003/ADR-0005): contracts and pure
 #     domain stay runtime-neutral; adapters own I/O; the new child invocation
 #     lives only in packages/adapters/src/github/ under the EXACT existing
@@ -294,31 +394,60 @@
 #
 # LIFECYCLE PHASE 7 HANDOFF OBLIGATIONS (system_spec_update, @doc-syncer;
 #   declared here so nothing is dropped after DoD — NOT plan authoring beyond
-#   phase 6's normative surface): feature-provider-client-seeds.md (capability
-#   table 9/0, operation list, GitHub normalization, transport section, trap
-#   catalog minima and QA table, the corrected export list), feature-adapter-ports.md
-#   (closed set grows to nine, PipelineJob rows, additive-extension record,
-#   confinement wording for the bounded child invocation), feature-adapter-conformance.md
-#   (flow/step table, operation-set equality, mock routes and projections, the
-#   child-process guard, the carrier skip-kind change, coverage-gate wording),
-#   feature-merge-verify-deploy.md (the coexistence statement), the documentation
-#   index rows and the decision index confirmation (Appendix A).
+#   phase 6's normative surface). The targets are NAMED, not discovered:
+#   - feature-provider-client-seeds.md: the capability table (GitHub 9 supported
+#     / 0 gaps), the operation list, the GitHub normalization section (timings,
+#     landing, comments, DM-9 content writes, the workflow mapping with the
+#     mechanism-scoped label rule and the four read outcomes, thread discussion),
+#     the transport section (CLI-first, matrix, probe, no failover, DM-10 value
+#     and its single line), the trap-catalog minima and QA table, and the export
+#     list correction. THE FALSE SENTENCE TO FIX: line 169
+#     "GitHub issue statuses | `open` -> `ready`, `closed` -> `done`" — the
+#     mapping is now label-aware and mechanism-scoped; the delivered drift also
+#     covers the pre-existing claim that the GitHub subpath exports five names.
+#   - feature-adapter-ports.md: the closed set grows to nine, the `PipelineJob`
+#     rows gain the two optional timestamps, the additive-extension record gains
+#     the landing operation, and the confinement wording records the bounded
+#     fixed-argv child invocation in the GitHub subpath (secret-read boundary
+#     unchanged).
+#   - feature-adapter-conformance.md: five NAMED sentences move —
+#     (1) line 9 "one three-flow registry over the **eight** closed adapter
+#         operations" and "zero live network calls" -> nine operations with the
+#         landing step, and zero network calls AND zero child processes;
+#     (2) line 33 "**Merge** and the deploy-trace read sit **outside** the
+#         three-flow registry" -> merge now sits INSIDE it; the deploy-trace read
+#         still does not;
+#     (3) line 53 the executed write-member list (`writeWorkItem`,
+#         `transitionWorkItem`, `resolveDeliveryThread`) -> the six-member list
+#         (adding `writeComment`, `createDeliveryRequest`/`writeDeliveryRequest`,
+#         `mergeDeliveryRequest`);
+#     (4) line 57 "all **eight** operations represented" -> nine;
+#     (5) lines 61/63 "installs a throwing-`fetch` guard" / "zero live network
+#         calls" -> the child-process guard joins it and child processes are
+#         zero;
+#     plus the flow/step table, operation-set equality wording, mock routes and
+#     projections, the carrier skip-kind change, and the coverage-gate wording.
+#   - feature-merge-verify-deploy.md: the coexistence statement (a provider-side
+#     landing capability now exists; the lifecycle merge path is deliberately
+#     unchanged and not rewired).
+#   - doc/00-index.md: index the new reference-behavior surface; confirm the
+#     prompt-required command help/reference coverage is unaffected.
+#   - doc/decisions/00-index.md: confirm the TDR-0031..TDR-0034 rows and the
+#     ADR-0005 pointer state (Appendix A).
 #
-# INCONSISTENCIES: none blocking between spec v1.0 and test plan v1.0. Two
-#   upstream ambiguities are reported (not patched):
-#   (a) TC-PARITY-003 speaks of "content-write create/update steps" while the
-#       registry carries a single `write-delivery-request` step and the change
-#       adds exactly three dispatch members (writeComment, createDeliveryRequest,
-#       mergeDeliveryRequest) with no update member; the plan resolves it as
-#       refinement 2 above without changing the closed operation set or any TC
-#       oracle.
-#   (b) TC-POSTURE-001 asks for `supportedOperations` "equal to
-#       ADAPTER_OPERATIONS in order", while the delivered GitHub declaration's
-#       order differs from the closed-set order. The plan binds the strong
-#       reading (declaration order follows ADAPTER_OPERATIONS), so the exact
-#       list in tests/structure/provider-surface.test.ts moves in phases 1 and 3
-#       rather than being compared as a set; the reorder is inert because every
-#       consumer resolves by membership.
+# INCONSISTENCIES: none blocking between spec v1.1 and test plan v1.1. The two
+#   v1.0 ambiguities this plan previously reported are now RESOLVED upstream, and
+#   this plan binds the resolved readings rather than a private interpretation:
+#   (a) TC-PARITY-003 v1.1 states the one-step resolution itself (one registry
+#       step whose dispatch member is the create variant, both tenant routes, the
+#       update proven by TC-BACKLOG-002 plus a direct client call) and declares
+#       that this IS the oracle change. The plan matches it (refinement 2) and no
+#       longer claims an unchanged oracle.
+#   (b) TC-POSTURE-001 v1.1 asserts SET equality both directions (supported
+#       union gaps equals the closed set, the two lists disjoint, no extras, no
+#       omissions) and states that declaration order is NOT part of the contract.
+#       The plan therefore keeps the delivered declaration order and APPENDS in
+#       phases 1 and 3; no reorder and no order assertion exists anywhere.
 
 schemaVersion: delivery.plan.v1
 workItemRef: GH-338
@@ -331,14 +460,17 @@ tier:
     - "A write is re-issued on the second transport, a landing is retried, or already-merged is called success without a provider-asserted read-back (AC-F3-4, AC-F3-5, NFR-5)"
     - "Credential material reaches argv, stdout, stderr, diagnostics, a failure detail, or the secret-read allowlist grows beyond one credential-material entry (AC-F2-3, NFR-3)"
     - "The CLI probe runs at module load, per request, or in the mock tier, or a fourth probe refusal code appears (AC-F2-2, DM-7)"
+    - "The composed selection value is persisted, emitted more than once, rendered outside the single composition-notice line, or resolved inside the synchronous composer (AC-F2-2, DM-10)"
     - "A live network call or a live child process occurs in the mock tier, or the child-process guard is absent or disarmed (AC-F8-3, NFR-2)"
+    - "The child environment is built from an ambient read instead of the injected environment record, or the CLI is resolved without `PATH` from injected data (AC-F2-3, NFR-3)"
     - "An excerpt exceeds 8192 bytes, a thread exceeds 50 comments or 4096 bytes per body, evidence is persisted, or evidence enters the conformance artifact (AC-F4-4, AC-F5-6, NFR-6)"
     - "A thread body, a log excerpt, or other provider prose decides a lifecycle or closeout outcome (AC-F5-5, NFR-6)"
-    - "The workflow map is split into a read map and a write map, a label transition replaces the whole label array, or an unavailable label signal is treated as empty (AC-F6-3, AC-F6-4)"
+    - "The workflow map is split into a read map and a write map, a `label-swap` transition replaces the whole label array, an unavailable label signal is treated as empty, or a `field-update` transition reads or writes labels (AC-F6-3, AC-F6-4, DM-6)"
+    - "A declared non-terminal `field-update` alias becomes writable, or a `write-delivery-request` create lands/sets merge state, an update creates, or a write missing required input issues a provider request (AC-F6-1, AC-F6-4, DM-9)"
     - "A configuration key, settings type, catalog branch, or file format is added for the transport policy or the mapping (AC-F6-6, NG-2)"
     - "The lifecycle merge transaction, the CLI merge composition, DeliveryThread, or DeliveryRequest is touched (NG-1, NG-4)"
     - "GitLab or Jira gains any posture change beyond the new operation's declared gap (AC-F1-2, NG-3)"
-    - "A pinned surface is relaxed (wildcard/prefix allowance, deleted assertion, narrowed EXPECTED_SURFACE) instead of updated exactly (AC-F8-6, NFR-8)"
+    - "A pinned surface is relaxed (wildcard/prefix allowance, deleted assertion, narrowed EXPECTED_SURFACE) instead of updated exactly, including the exact `node:child_process` site set (AC-F8-6, NFR-8)"
     - "The reference-behavior document drifts from the exported matrix, capabilities, seed, caps, or probe codes, or is deferred to lifecycle phase 7 discovery (AC-F7-2)"
     - "A delivered suite is made green by deleting or renaming an assertion, or a new case is skipped or environment-gated (test plan §3.4)"
     - "TMPDIR=$PWD/tmp/tmpdir pnpm check is not green at a phase boundary (NFR-8)"
@@ -366,12 +498,16 @@ phases:
   # derived); `PipelineJob` gains optional `startedAt`/`completedAt` copied
   # verbatim by the provider normalizer (no `durationMs`, no derived span).
   # Posture: GitHub 7 supported + 2 gaps; GitLab `adapter-not-implemented`;
-  # Jira `provider-unsupported`; nothing else moves. The declaration order
-  # follows ADAPTER_OPERATIONS from this phase on (TC-POSTURE-001 asks for the
-  # closed set "in order"; order is inert — every consumer resolves by
-  # membership — and §8.5 additivity is about presence, not sequence), so the
-  # exact-order pin in tests/structure/provider-surface.test.ts moves here to the
-  # seven closed-order members and again in phase 3 to all nine.
+  # Jira `provider-unsupported`; nothing else moves. The posture contract is SET
+  # equality both directions (supported union gaps equals the closed set, the two
+  # lists disjoint, no extras, no omissions) — TC-POSTURE-001 v1.1 says so and
+  # states that declaration order is NOT part of the contract. The plan therefore
+  # KEEPS the delivered declaration order and APPENDS: the GitHub declaration
+  # keeps its delivered six members and gains `merge-delivery-request` last, so
+  # the exact list in tests/structure/provider-surface.test.ts moves here to
+  # seven members (delivered order preserved) and again in phase 3 to nine. No
+  # reorder and no ordering assertion exists anywhere; the delivered closed set
+  # itself appends (index 7 stays `resolve-delivery-thread`).
   # Landing semantics (GitHub member): one request, squash only, crafted
   # title/message transmitted verbatim, the head guard never overridden, a guard
   # rejection classified, a non-2xx classified with structured status, a
@@ -380,8 +516,9 @@ phases:
   # per invocation and never retried, and no representable force/bypass/
   # auto-merge/queue/rebase/merge-commit strategy. `write-delivery-request`
   # stays a content write and never lands.
-  # Decision records: the four TDRs (DEC-1..DEC-4) land here from the worktree
-  # (see COMMIT-BOUNDARY REALITY) together with the index.
+  # Decision records: the four TDRs (DEC-1..DEC-4) and the ADR-0005 editorial
+  # pointer file land here from the worktree (see COMMIT-BOUNDARY REALITY)
+  # together with the decision index.
   #
   # Obligations:
   #   1.1 Declare the ninth operation and the landing argument/outcome types;
@@ -398,8 +535,9 @@ phases:
   #       catalog and its EXPECTED_TRAPS pin with the landing entries.
   #   1.6 Move the operation- and step-count pins in the SAME commit. The closed
   #       set APPENDS and is never reordered (`ADAPTER_OPERATIONS` 8 -> 9 with
-  #       index 7 still "resolve-delivery-thread"); the GitHub DECLARATION is
-  #       reordered to follow the closed set (see the posture note above):
+  #       index 7 still "resolve-delivery-thread"); the GitHub DECLARATION also
+  #       APPENDS one member and keeps its delivered order (see the posture note
+  #       above):
   #       tests/structure/closeout-contract.test.ts and
   #       tests/behaviour/providers/github-collection.test.ts carry the 8 -> 9
   #       operation pins; the change-lifecycle step-id list gains
@@ -412,7 +550,12 @@ phases:
   #   1.7 Move tests/fixtures/ports/capabilities.ts and
   #       tests/fixtures/ports/v1-contract-inventory.json; keep the nine
   #       catalogue primitives unchanged.
-  #   1.8 Stage the four decision records and the decision index.
+  #   1.8 Stage the four decision records, the ADR-0005 editorial pointer file
+  #       (tracked and modified in this branch state), and the decision index.
+  #   1.9 Add the ONE stateful scripted transport helper to
+  #       tests/behaviour/providers/support.ts (refinement 3) because
+  #       TC-LAND-004/005 own the first read-after-write cases; phase 3 reuses it
+  #       for TC-BACKLOG-004/010. The mock tenant stays stateless.
   #
   # Acceptance: AC-F1-2 (TC-POSTURE-002), AC-F1-3 (TC-POSTURE-003), AC-F3-1
   #   (TC-LAND-001), AC-F3-2 (TC-LAND-002), AC-F3-3 (TC-LAND-003), AC-F3-4
@@ -421,7 +564,8 @@ phases:
   #   GitLab/Jira), TC-PARITY-008 (the broken-adapter control still fires and the
   #   coverage gates stay non-vacuous for the ninth operation), TC-PARITY-010
   #   (the union grew and an exhaustive consumer fails to compile; optional
-  #   timings leave existing literals compiling).
+  #   timings leave existing literals compiling). TC-POSTURE-001's fixture rows
+  #   move here (7/2) but the case completes in phase 3 at 9/0.
   #
   # Gate (expected signal: exit 0 at every line; the pinned surfaces agree in
   # both directions and the landing step reports `executed` for GitHub):
@@ -473,12 +617,19 @@ phases:
         - tests/structure/trap-catalog.test.ts
         - tests/types/merge-delivery-request.type-test.ts
         - tests/types/pipeline-job-timings.type-test.ts
-        # The four decision records are untracked at plan time and land here
-        # (COMMIT-BOUNDARY REALITY). The index already carries their rows.
+        # The stateful scripted transport helper: TC-LAND-004/005 own the first
+        # read-after-write cases in this phase (refinement 3, obligation 1.9);
+        # phase 3 reuses it. The mock tenant is never made stateful.
+        - tests/behaviour/providers/support.ts
+        # The four decision records are untracked at plan time and land here,
+        # together with the ADR-0005 editorial pointer file, which is tracked and
+        # modified in this branch state (COMMIT-BOUNDARY REALITY). The index
+        # already carries the four TDR rows.
         - doc/decisions/TDR-0031-github-adapter-cli-first-provider-transport.md
         - doc/decisions/TDR-0032-github-adapter-completion-contract-extensions.md
         - doc/decisions/TDR-0033-review-thread-discussion-bodies-bounded-adapter-read.md
         - doc/decisions/TDR-0034-github-issues-transition-mapping-injected-workflow-map.md
+        - doc/decisions/ADR-0005-runtime-confinement-provider-client-subpaths.md
         - doc/decisions/00-index.md
       folders:
         - doc/decisions
@@ -496,25 +647,47 @@ phases:
   # DEC-1/TDR-0031; RSK-1, RSK-2, RSK-3, RSK-10; NFR-1, NFR-2, NFR-3, NFR-4,
   # NFR-9).
   #
-  # Goal: one second ProviderTransport over `gh api`, selected once at
-  # composition by a bounded probe, with a declared API fallback and no
+  # Goal: one second ProviderTransport over `gh api`, selected once at the
+  # composition edge by a bounded probe, with a declared API fallback and no
   # per-request failover — proven entirely offline through an injected runner.
   # The transport maps an already-shaped ProviderRequest to one fixed argv
   # (`api <path> --method <METHOD> --hostname <host> --include`, `--input -` for a
   # body; never `--paginate`, never `--jq`, never a shell), removes the
-  # Authorization header from the forwarded headers, builds the child
-  # environment as data (token variable, host variable, isolated GH_CONFIG_DIR,
-  # prompt suppression, no-colour and update-notifier suppression), reconstructs
-  # status plus body from the final `--include` status block, and classifies an
-  # unparsable or missing status block as a refusal rather than assuming 200.
+  # Authorization header from the forwarded headers, reconstructs status plus body
+  # from the final `--include` status block, and classifies an unparsable or
+  # missing status block as a refusal rather than assuming 200.
+  # The child environment is built ENTIRELY from injected data (refinement 8): the
+  # base record is the composition's injected `environment`, which supplies `PATH`
+  # — so the binary is never resolved through an ambient read and no
+  # `process.env` access is added under packages/** — the credential value is the
+  # resolved material the client already placed on the request's `Authorization`
+  # header (resolved through the credential port, never a second source), and the
+  # builder adds the isolated `GH_CONFIG_DIR`, `GH_PROMPT_DISABLED`, `NO_COLOR`,
+  # and the update-notifier suppressor. No secret enters argv or any diagnostic.
+  # WHERE THE PROBE RUNS (refinement 7 — the bound mechanism, because
+  # `EntrypointComposer` is synchronous and only the launcher is async):
+  #   packages/adapters/src/github/cli-transport.ts exports the Promise-based
+  #   `probeGithubCli`, the transport factory, the DM-10 `GithubTransportSelection`
+  #   type, and the pure selection resolver;
+  #   packages/cli/src/production.ts exports the async composition resolver
+  #   `resolveGithubTransportSelection(facts)`;
+  #   packages/cli/src/bin-launcher.ts AWAITS that resolver before composing and
+  #   passes the value as `ProductionCompositionFacts.githubTransportSelection`,
+  #   which is how it reaches the synchronous `createProductionComposer`. The
+  #   composer never probes: a present selection picks the transport, an absent
+  #   selection is the delivered offline API default (so every delivered
+  #   composition test and every embedder stays probe-free with zero spawns).
   # The probe performs one bounded version invocation and returns exactly one of
   # `provider.cli.unavailable`, `provider.cli.version-unsupported`,
   # `provider.cli.capability-unsupported`; it runs at composition only, never at
-  # module load, never per request, and never in the mock tier. Composition
-  # records the declared degradation once when the API transport serves under
-  # `prefer-cli`; `api-only` never probes. Mid-run failure is a classified
-  # transport failure with no status and nothing is re-issued on the other
-  # transport (a write is never landed twice).
+  # module load, never per request, and never in the mock tier. Under `prefer-cli`
+  # a refusal selects the API transport, carries exactly one DM-10 value
+  # (`policy`, `selected: "api"`, `degradation.code` = that refusal code) on the
+  # composed runtime, and renders exactly one human diagnostic line naming the
+  # code through the delivered composition-notice/warnings channel; `api-only`
+  # never probes and carries `degradation` absent. Nothing is persisted. Mid-run
+  # failure is a classified transport failure with no status and nothing is
+  # re-issued on the other transport (a write is never landed twice).
   # The child-process guard joins the throwing-`fetch` guard in the mock tier,
   # covering spawn/spawnSync/exec/execFile/fork, with a firing canary; the
   # runtime-API confinement allowance keeps its exact-path reason-bearing form
@@ -523,30 +696,59 @@ phases:
   #
   # Obligations:
   #   2.1 Author the transport module, the runner seam with its execFile default,
-  #       the argv/environment builders, the status parser, the probe, and
+  #       the argv/environment builders, the status parser, the probe
+  #       (`probeGithubCli`), the DM-10 type, the PURE selection resolver, and
   #       GITHUB_TRANSPORT_MATRIX; export the native-fetch factory and the
   #       additive subpath names.
-  #   2.2 Compose the probe/selection/degradation at the one place the GitHub
-  #       transport is built (production facts), keeping an injected transport
-  #       probe-free.
-  #   2.3 Move the confinement allowance comment and the boundary fixtures; add
+  #   2.2 Wire the async composition edge: export `resolveGithubTransportSelection`
+  #       from production.ts, await it in bin-launcher.ts before
+  #       `createProductionComposer(...)`, and pass the resolved value as the
+  #       `githubTransportSelection` fact. The launcher gains exactly one await
+  #       and one forwarded fact — no composition logic, and the single
+  #       `createProductionComposer(` call site stays the launcher's. An injected
+  #       `githubTransport` still bypasses selection entirely (probe-free). The
+  #       value the resolver returns IS the composed selection: the composer holds
+  #       it for the invocation to pick the transport and to render the one line,
+  #       and it is never added to `GithubClient`, `GithubClientOptions`, a
+  #       normalized view, a state record, or the conformance artifact.
+  #   2.3 Render the DM-10 degradation exactly once: one line pushed into the
+  #       composer's existing `compositionNotices` (the delivered warnings
+  #       channel), once per composed program, nothing persisted and nothing
+  #       added to an error table or a normalized view; `api-only` and a
+  #       successful CLI selection render nothing.
+  #   2.4 Build the child environment from the injected environment record
+  #       (PATH plus the declared variable set) and the request's resolved
+  #       credential; assert the exact key set in TC-CLI-003, keep the
+  #       secret-read allowlist count unchanged, and prove no ambient read exists
+  #       in the transport module.
+  #   2.5 Move the confinement allowance comment and the boundary fixtures; add
   #       the child-process fixture case(s) and registry rows.
-  #   2.4 Install the child-process guard beside the network guard; assert zero
+  #   2.6 Install the child-process guard beside the network guard; assert zero
   #       spawns for the whole mock tier with a firing canary.
-  #   2.5 Author the four CLI fixture tables and the two suites (behaviour +
+  #   2.7 Author the four CLI fixture tables and the two suites (behaviour +
   #       cross-transport parity over one route table); extend the trap catalog
   #       (status recovery, credential absence) and its pins.
-  #   2.6 Update the pinned provider surface, per-file allowances, and the
-  #       source inventory exactly.
+  #   2.8 Update the pinned surfaces exactly, INCLUDING the child-process site
+  #       set: tests/structure/harness-imports.test.ts declares
+  #       `DECLARED_CHILD_PROCESS_SITES` as an exact-equality list over
+  #       packages/**, so it moves 12 -> 13 by adding
+  #       "packages/adapters/src/github/cli-transport.ts" (the one new site) and
+  #       its header comment states the set is a declared site inventory, never a
+  #       prefix or wildcard. This test file is part of this phase's own G1 gate.
   #
-  # Acceptance: AC-F2-1 (TC-CLI-001), AC-F2-2 (TC-CLI-010/011), AC-F2-3
-  #   (TC-CLI-002/003/013), AC-F2-4 (TC-CLI-004/005/009), AC-F2-5
+  # Acceptance: AC-F2-1 (TC-CLI-001), AC-F2-2 (TC-CLI-010/011 — the DM-10 value
+  #   `{policy, selected, degradation.code}`, exactly one rendered line, zero
+  #   persisted copies, zero probe spawns under `api-only`; the AC-F7-4
+  #   documentary half of the same facts completes in phase 6 via TC-REF-005),
+  #   AC-F2-3 (TC-CLI-002/003/013), AC-F2-4 (TC-CLI-004/005/009), AC-F2-5
   #   (TC-CLI-006/007/008/012), AC-F8-3 (TC-PARITY-006). TC-FLOOR-004's
   #   confinement assertions are green as a control.
   #
   # Gate (expected signal: exit 0; golden argv deep-equals with zero canary
   #   occurrences, `{cli:1, api:0}` request counts on mid-run failure, zero
-  #   spawns for the API tier and both guard counters zero):
+  #   spawns for the API tier and both guard counters zero, the child-process site
+  #   set equal to the declared thirteen and the launcher still the single
+  #   composition call site):
   #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck                                   (G6)
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/providers               (G2)
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance                       (G3)
@@ -558,7 +760,7 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                       (G10, binding)
   # ---------------------------------------------------------------------------
   - id: 2
-    title: "CLI-first provider transport, bounded probe, composition selection with recorded degradation, child-process guard, and cross-transport parity"
+    title: "CLI-first provider transport, bounded probe, async composition selection carrying one GithubTransportSelection, child-process guard, and cross-transport parity"
     kind: delivery
     summary: "feat(GH-338): CLI-first GitHub transport with probe and transport parity"
     scope:
@@ -567,6 +769,9 @@ phases:
         - packages/adapters/src/github/client.ts
         - packages/adapters/src/github/index.ts
         - packages/cli/src/production.ts
+        # The async composition edge: it awaits the resolver and forwards the
+        # resolved DM-10 value into the synchronous composer (refinement 7).
+        - packages/cli/src/bin-launcher.ts
         - .dependency-cruiser.cjs
         - tests/boundaries/boundaries.test.ts
         - tests/boundaries/fixture-registry.json
@@ -582,6 +787,16 @@ phases:
         - tests/fixtures/providers/github/cli-status-blocks.json
         - tests/fixtures/providers/github/transport-parity-routes.json
         - tests/fixtures/providers/traps/github.traps.json
+        # The exact `node:child_process` site-set pin: 12 -> 13 with the new
+        # cli-transport.ts site (F3). Declared because this phase's own G1 gate
+        # cannot be green without it.
+        - tests/structure/harness-imports.test.ts
+        # NOT declared: tests/structure/entrypoint-bin.test.ts. Its pins (the
+        # single `createProductionComposer(` call site, no ambient read, no
+        # exported string literal in the launcher) are expected to hold
+        # unchanged, because the launcher gains one await and one forwarded fact
+        # and no new export. A coder who finds a pin that must move re-plans
+        # instead of widening scope silently.
         - tests/structure/content-inventory.test.ts
         - tests/structure/inventory.json
         - tests/structure/provider-surface.test.ts
@@ -602,57 +817,127 @@ phases:
   #
   # Goal: GitHub becomes the complete backlog reference. `write-comment` accepts
   # carrier-free human text only (empty carrier arrays, no envelope block) and
-  # returns the provider comment identity; `write-delivery-request` creates and
-  # updates title/body and never lands. Transitions resolve through ONE map used
-  # by both directions: the four-row precedence-ordered seed (`closed` -> `done`
-  # field-update; `review` -> `in-review` label-swap; `in-progress` ->
-  # `in-progress` label-swap; `open` -> `ready` field-update), optionally
-  # injected, validated internally (no duplicate token, unknown mechanism,
-  # empty states), with status tokens being native issue states or lifecycle
-  # label names. A label transition removes only declared lifecycle tokens before
-  # applying the row token (never replaces the whole array, unrelated labels
-  # survive) and refuses when the label signal is unavailable; an undeclared
-  # alias is a named adapter-local typed refusal with zero provider writes; a
-  # casing mismatch is a visible refusal, never a silent match. The mapping and
-  # the transport policy are construction data: no settings type, catalog
-  # branch, configuration key, or file format is added.
+  # returns the provider comment identity. `write-delivery-request` is a CONTENT
+  # write with one adapter-local input (DM-9) in two declared variants — a
+  # `create` carrying `{ sourceRef, targetRef, title, body, draft? }` and an
+  # `update` carrying `{ deliveryRequest, title?, body? }`; a create requires both
+  # refs and a non-empty title, never lands, and never sets merge state; an update
+  # never creates; a write missing its required input is a named typed refusal
+  # carried by the existing `provider.payload.invalid` identity with a detail
+  # naming the missing field and ZERO provider requests; success returns the
+  # normalized delivery-request view whose identity is the returned identity.
+  # Transitions resolve through ONE map used by both directions: the four-row
+  # precedence-ordered seed (`closed` -> `done` field-update; `review` ->
+  # `in-review` label-swap; `in-progress` -> `in-progress` label-swap; `open` ->
+  # `ready` field-update), optionally injected, validated internally (no duplicate
+  # token, unknown mechanism, empty states — and, per TC-BACKLOG-010's invalid-map
+  # set, a map with no `done` row), with status tokens being native issue states
+  # or lifecycle label names.
+  # THE LABEL RULE IS MECHANISM-SCOPED (never universal): only a `label-swap`
+  # transition reads, removes, or adds labels — it removes exactly the declared
+  # `label-swap` tokens that are present, adds the row token, never replaces the
+  # whole array, preserves unrelated labels, treats a `field-update` row's token
+  # as a provider state rather than a label, and refuses on an unavailable label
+  # signal with zero provider requests. A `field-update` transition writes ONLY
+  # the provider state: no label read, no label write, no label-signal refusal —
+  # so the delivered closeout `done` write stays byte-identical (one state-only
+  # `PATCH`, body exactly `{"state":"closed"}`, zero label requests, success even
+  # when the label signal is unavailable). A transition to a declared NON-TERMINAL
+  # `field-update` alias (`ready` via the `open` row) is a named typed refusal
+  # with zero provider requests; the writable set is exactly `done` plus each
+  # declared `label-swap` alias. An undeclared alias is a named adapter-local
+  # typed refusal with zero provider writes.
+  # Read resolution is one refusal class with FOUR declared outcomes: a `closed`
+  # issue resolves to `done` regardless of labels; otherwise the first
+  # declared-precedence row whose token equals a present label name EXACTLY wins;
+  # otherwise a label differing from a declared `label-swap` token by case alone
+  # is a visible normalization failure carried by the existing
+  # `provider.payload.invalid` identity (detail names the label and the colliding
+  # token, no new error-table row) — a case difference on a `field-update` token
+  # is NOT a collision (`CLOSED` resolves natively); otherwise the issue resolves
+  # through its native-state row. An unrecognized label, a labelless issue, and an
+  # unavailable label signal never refuse a read; only a missing row for the
+  # resolved native state refuses.
+  # The mapping and the transport policy are construction data: no settings type,
+  # catalog branch, configuration key, or file format is added.
   # This phase closes GitHub's last two gaps (9 supported / 0 gaps), which
   # completes AC-F1-1 and turns the comment-provenance carrier roundtrip into a
   # `capability-absent` skip for GitHub (GitLab and Jira keep their declared-gap
   # skip — the gap-encounter gate stays non-vacuous, GAP-TP-5).
   #
   # Obligations:
-  #   3.1 Author the workflow-map module (seed, injection, validator, one
-  #       resolver) and route both read normalization and the transition write
-  #       through it; keep `open`/`closed` normalization exactly as delivered.
-  #   3.2 Implement the comment write and the content create/update; keep
-  #       carriers empty and never issue a landing request from either. The
+  #   3.1 Author the workflow-map module (seed, injection, validator, writable-set
+  #       derivation, one resolver) and route read normalization and the
+  #       mechanism-scoped transition write through it. A `field-update` row
+  #       writes provider state only; a `label-swap` row owns label removal and
+  #       the unavailable-signal refusal; a non-terminal `field-update` alias
+  #       refuses on write. Delivered `open`/`closed` READ normalization is
+  #       preserved exactly (TC-BACKLOG-011).
+  #   3.2 Implement the comment write and the DM-9 content write (both variants,
+  #       the required-input refusals with zero requests, and the
+  #       never-lands/never-sets-merge-state guarantee); keep carriers empty. The
   #       client member names stay the ones the capability suite pins
-  #       (`writeComment`, `writeDeliveryRequest` — create and update), while
-  #       the conformance dispatch member is `createDeliveryRequest`: the two
-  #       layers keep their own names and neither pin moves for naming.
-  #   3.3 Close GitHub's last two gaps; move EXPECTED_SEED_POSTURES to 9/0 and the
-  #       declaration to exactly ADAPTER_OPERATIONS (order included), moving the
-  #       exact-order pin in tests/structure/provider-surface.test.ts to the
-  #       nine-member list.
+  #       (`writeComment`, `writeDeliveryRequest` handling both DM-9 variants),
+  #       while the conformance dispatch member is `createDeliveryRequest`: the
+  #       two layers keep their own names and neither pin moves for naming.
+  #   3.3 Close GitHub's last two gaps; move EXPECTED_SEED_POSTURES to 9/0. The
+  #       declaration is asserted by SET equality both directions (supported union
+  #       gaps equals the closed set, disjoint, no extras, no omissions) and the
+  #       delivered order is KEPT: the exact list in
+  #       tests/structure/provider-surface.test.ts appends `write-comment` and
+  #       `write-delivery-request` after the seven phase-1 members. No reorder and
+  #       no ordering assertion (TC-POSTURE-001 v1.1).
   #   3.4 Extend the conformance dispatch (writeComment, createDeliveryRequest)
-  #       and the GitHub tenant with the comment/content routes and expected
-  #       projections; assert the carrier skip-kind change.
-  #   3.5 Author the backlog/mapping fixtures and the workflow-map suite;
-  #       extend the collection/inputs/closeout suites; add the stateful
-  #       scripted transport helper for read-back cases (refinement 3).
+  #       and the GitHub tenant with the comment route plus BOTH content-write
+  #       routes and their expected projections (create through the single
+  #       registry step, update through the direct client call); assert the
+  #       carrier skip-kind change.
+  #   3.5 Author the fixtures and the workflow-map suite:
+  #       `workflow-map-cases.json` gains the read-outcome truth table
+  #       (`exact-case-twin`, `case-collision-label-swap`, `case-variant-state-label`
+  #       with `CLOSED`, `unknown-labels`, `labelless-read`,
+  #       `native-state-row-missing`), the writable-set round trips (`done`,
+  #       `in-review`, `in-progress`), and the non-terminal `field-update` write
+  #       refusal (`ready`); `issue-writes.json` gains the DM-9 create/update
+  #       variants, the required-input refusals, and the label-free `done` write
+  #       expectation (one `PATCH`, body `{"state":"closed"}`, zero label
+  #       requests). Extend the collection/inputs/closeout suites and reuse the
+  #       phase-1 stateful scripted transport helper from
+  #       tests/behaviour/providers/support.ts for read-back (refinement 3).
   #   3.6 Prove the no-configuration-surface obligation; extend the trap catalog
-  #       and its pins; update the pinned surfaces.
+  #       and its pins; update the pinned surfaces. Author EXACTLY ONE delivered
+  #       trap-outcome amendment here: the `GH-ISSUE-TO-WORKITEM` entry gains
+  #       "labelled `review`/`in-progress` issues resolve to
+  #       `in-review`/`in-progress` by declared precedence, and an exact-case
+  #       label equal to a declared `label-swap` token wins" appended to its
+  #       `expectedNormalizedOutcome` — same `trapName`, same four-field shape,
+  #       one entry, outcome text only. Every other delivered entry, name, and
+  #       fixtureReference stays frozen.
+  #   3.7 Keep the delivered closeout terminal write byte-identical and prove it:
+  #       `transitionWorkItem({ deliveryState: "done" })` issues exactly one
+  #       state-only `PATCH` with body exactly `{"state":"closed"}`, zero label
+  #       requests, and succeeds when the label signal is unavailable. The
+  #       delivered closeout fixtures stay unchanged; the labelless half reads
+  #       `workflow-map-cases.json#labelless-issue` and
+  #       `issue-writes.json#done-write-labelless`.
   #
-  # Acceptance: AC-F1-1 (TC-POSTURE-001), AC-F6-1 (TC-BACKLOG-001/002), AC-F6-2
-  #   (TC-BACKLOG-003/011), AC-F6-3 (TC-BACKLOG-004/010), AC-F6-4
-  #   (TC-BACKLOG-005/006), AC-F6-5 (TC-BACKLOG-007/008), AC-F6-6
+  # Acceptance: AC-F1-1 (TC-POSTURE-001), AC-F6-1 (TC-BACKLOG-001/002 — DM-9
+  #   create and update asserted separately, refusals with zero requests), AC-F6-2
+  #   (TC-BACKLOG-003/008/011 — the four read outcomes), AC-F6-3
+  #   (TC-BACKLOG-004/010 — the writable set and the injected map), AC-F6-4
+  #   (TC-BACKLOG-004/005/006 — label-swap scope, the non-terminal refusal, and the
+  #   unchanged `done` write), AC-F6-5 (TC-BACKLOG-007), AC-F6-6
   #   (TC-BACKLOG-009), AC-F8-1 (TC-PARITY-001), AC-F8-2 (TC-PARITY-002),
-  #   TC-PARITY-003 (the newly supported writes execute with exact projections).
+  #   TC-PARITY-003 (the newly supported writes execute with exact projections;
+  #   the one-step resolution and the update-by-direct-call are its declared
+  #   oracle). TC-FLOOR-001's delivered-trap and closeout oracles are green as
+  #   controls from this phase; the case itself is owned by phase 7.
   #
   # Gate (expected signal: exit 0; every supported GitHub operation reports
   #   `executed`, zero declared gaps for GitHub, GitLab/Jira gaps encountered
-  #   with exact reasons, the carrier step `capability-absent` for GitHub,
+  #   with exact reasons, the carrier step `capability-absent` for GitHub, the
+  #   delivered closeout request count 1 / `PATCH` / `{"state":"closed"}` / zero
+  #   label requests on the labelless fixture,
   #   `github: failed step counted as passed`-style vacuity controls firing):
   #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck                                   (G6)
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/providers               (G2)
@@ -724,15 +1009,25 @@ phases:
   #   4.2 Author the two fixtures (timings matrix; excerpt cap/prefix/absence/
   #       classification matrix) and the evidence suite plus the type probe that
   #       proves the cap is not caller-tunable.
-  #   4.3 Extend the artifact suite with the no-excerpt assertions and the
+  #   4.3 Move the conformance tenant's pipeline-run projection (N6): the GitHub
+  #       tenant gains provider-asserted timestamps on the check-runs payload (the
+  #       exact field names stay fixture-decided per Appendix D; GitHub's
+  #       documented pair is `started_at`/`completed_at`) and its
+  #       `change-lifecycle.read-pipeline-run` expected projection gains the two
+  #       optional job fields for every run whose payload carries them. The
+  #       projection is compared exactly, so this fixture moves with the
+  #       normalizer in the same commit; the other tenants' projections stay
+  #       byte-identical (TC-FLOOR-003).
+  #   4.4 Extend the artifact suite with the no-excerpt assertions and the
   #       rendered-excerpt redaction case (paired positive, via the delivered
   #       chokepoint at packages/cli/src/output/serialize.ts).
-  #   4.4 Extend the trap catalog (timings, excerpt cap/truncation) and its pins;
+  #   4.5 Extend the trap catalog (timings, excerpt cap/truncation) and its pins;
   #       update the pinned surfaces exactly.
   #
-  # Acceptance: AC-F4-1 (TC-CHECK-001/002), AC-F4-2 (TC-CHECK-003/004/012),
-  #   AC-F4-3 (TC-CHECK-005/006/007/008), AC-F4-4 (TC-CHECK-010/011);
-  #   NFR-10 (TC-CHECK-009).
+  # Acceptance: AC-F4-1 (TC-CHECK-001/002 — proven through the behaviour suite
+  #   AND the tenant's exact `read-pipeline-run` projection), AC-F4-2
+  #   (TC-CHECK-003/004/012), AC-F4-3 (TC-CHECK-005/006/007/008), AC-F4-4
+  #   (TC-CHECK-010/011); NFR-10 (TC-CHECK-009).
   #
   # Gate (expected signal: exit 0; Buffer.byteLength(excerpt) equals byteLength
   #   and is <= 8192 in every case, `Object.hasOwn` false for absent timings, one
@@ -760,6 +1055,9 @@ phases:
         - tests/conformance/artifact.test.ts
         - tests/fixtures/providers/github/check-run-log-excerpt.json
         - tests/fixtures/providers/github/check-run-timings.json
+        # The conformance tenant owns the pipeline-run projection, so the exact
+        # projection gains the two optional timestamps here (obligation 4.3, N6).
+        - tests/fixtures/providers/conformance/github/tenant.json
         - tests/fixtures/providers/traps/github.traps.json
         - tests/structure/content-inventory.test.ts
         - tests/structure/inventory.json
@@ -861,8 +1159,14 @@ phases:
   # absences), that bodies and excerpts are evidence and never lifecycle truth,
   # that the other adapters take an explicit same-behavior-or-absent position
   # outside the closed set, the three closed probe refusal codes with the
-  # composition-only probe and the no-failover rule, and the transition-mapping
-  # vocabulary, precedence order, four seed rows, deliberately unmapped tokens
+  # composition-only probe, the no-failover rule, and the composition-edge
+  # selection: one `GithubTransportSelection` value (DM-10) whose
+  # `degradation.code` is the probe refusal code and which renders exactly one
+  # diagnostic line — and the transition-mapping vocabulary, precedence order,
+  # four seed rows with their mechanisms, the mechanism-scoped label rule, the
+  # four read outcomes (including the `label-swap`-token case collision and the
+  # native fallback), the writable set (`done` plus each `label-swap` alias), the
+  # non-terminal `field-update` read-only rule, the deliberately unmapped tokens
   # and aliases, and the not-yet-operator-configurable limitation. It is
   # registered in the documentation index.
   # tests/structure/reference-behavior.test.ts parses the document through the
@@ -877,11 +1181,18 @@ phases:
   #       with the delivered declarations.
   #   6.2 Add the index row and the locator fixture.
   #   6.3 Author the drift suite: operation rows, transports, caps, gaps,
-  #       absence table, evidence statements, probe/refusal/no-failover, mapping
-  #       seed — each with a one-digit/one-row mutation control.
+  #       absence table, evidence statements, probe/refusal/no-failover, the
+  #       DM-10 selection value and its single line, and the mapping (seed,
+  #       mechanisms, four read outcomes, writable set) — each with a
+  #       one-digit/one-row mutation control.
   #
   # Acceptance: AC-F7-1 (TC-REF-001), AC-F7-2 (TC-REF-002/003), AC-F7-3
-  #   (TC-REF-004), AC-F7-4 (TC-REF-005), AC-F7-5 (TC-REF-006); the matrix
+  #   (TC-REF-004), AC-F7-4 (TC-REF-005 — the closed refusal codes, the
+  #   composition-only probe, the no-failover rule, and the one DM-10 selection
+  #   value with its single diagnostic line, which completes the documentary half
+  #   of AC-F2-2's machine facts established in phase 2), AC-F7-5 (TC-REF-006 —
+  #   token vocabulary, precedence, the four seed rows and their mechanisms, the
+  #   four read outcomes, the writable set, the unmapped set); the matrix
   #   cross-check half of TC-CLI-001.
   #
   # Gate (expected signal: exit 0; nine extracted operation rows, three adapter
@@ -942,9 +1253,38 @@ phases:
   # Obligations:
   #   7.1 Author the changeset.
   #   7.2 Add the trap-completeness and determinism cases; add the scope-boundary
-  #       assertions and probes.
+  #       assertions and probes. TC-FLOOR-001 asserts the delivered trap-name list
+  #       unchanged as a list with EXACTLY ONE declared outcome-text amendment
+  #       (`GH-ISSUE-TO-WORKITEM`, authored in phase 3) via an explicit diff, and
+  #       carries the unchanged delivered closeout oracle (request count 1,
+  #       `PATCH`, body exactly `{"state":"closed"}`, zero label requests, success
+  #       with an unavailable label signal).
   #   7.3 Run the full battery, record the evidence, and leave the PR open
   #       against main-tools (merge authority stays with the owner/CEO).
+  #   7.4 Carry the NAMED reconciliation handoff to lifecycle phase 7 so no target
+  #       is left to discovery (the full sentence-level checklist is the
+  #       LIFECYCLE PHASE 7 HANDOFF OBLIGATIONS block above):
+  #       feature-adapter-conformance.md — line 9 (three flows over EIGHT
+  #       operations -> nine; zero network calls -> zero network AND zero child
+  #       processes), line 33 ("Merge ... sit outside the three-flow registry" ->
+  #       merge is inside it; the deploy-trace read still is not), line 53 (the
+  #       executed write-member list -> the six members), line 57 ("all eight
+  #       operations represented" -> nine), lines 61/63 (the throwing-`fetch`
+  #       guard -> plus the child-process guard; "zero live network calls" -> plus
+  #       zero live child processes), and the flow/step table, operation-set
+  #       equality, mock routes/projections, carrier skip-kind, and coverage-gate
+  #       wording;
+  #       feature-provider-client-seeds.md — line 169 ("GitHub issue statuses |
+  #       `open` -> `ready`, `closed` -> `done`") becomes the label-aware,
+  #       mechanism-scoped mapping, plus the capability table 9/0, operation
+  #       list, normalization section, transport section (matrix, probe, DM-10
+  #       value and its single line), trap minima, and the export-list correction;
+  #       feature-adapter-ports.md — nine operations, the two optional
+  #       `PipelineJob` timestamps, the additive-extension record, and the
+  #       confinement wording;
+  #       feature-merge-verify-deploy.md — the coexistence statement;
+  #       doc/00-index.md and doc/decisions/00-index.md — the new surface and the
+  #       TDR-0031..TDR-0034 / ADR-0005 pointer confirmation.
   #
   # Acceptance: AC-F8-4 (TC-PARITY-005, rolling up the per-behavior fixtures of
   #   phases 1/3/4/5 and the landing projection TC-PARITY-004), AC-F8-5
@@ -988,7 +1328,9 @@ phases:
         # Reconciled in lifecycle phase 7 (system_spec_update, @doc-syncer), not
         # by this phase. Declared here so the commit primitive can stage them;
         # an untracked or modified file outside every declared scope is a stray
-        # and is never staged.
+        # and is never staged. The named sentences each file must reconcile are
+        # obligation 7.4 and the LIFECYCLE PHASE 7 HANDOFF block above — nothing
+        # is left to discovery.
         - doc/spec/features/feature-provider-client-seeds.md
         - doc/spec/features/feature-adapter-ports.md
         - doc/spec/features/feature-adapter-conformance.md
