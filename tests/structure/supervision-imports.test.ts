@@ -112,3 +112,46 @@ describe("TC-SUP-095 tier placement is structural", () => {
     expect(fixture.modules["supervise.ts"]).toContain("SUPERVISION_SCHEMA_VERSION");
   });
 });
+
+describe("TC-SUP-095 the boundary battery holds with no new rule or exemption", () => {
+  test("the dependency-cruiser configuration grants no supervision exemption", () => {
+    const config = readFileSync(join(ROOT, ".dependency-cruiser.cjs"), "utf8");
+    expect(config.toLowerCase()).not.toContain("supervise");
+  });
+
+  test("the app tier imports neither the state tier nor the branding tier", () => {
+    const specifiers = moduleSpecifiers("core/src/app/supervise.ts");
+    for (const specifier of specifiers) {
+      expect(specifier).not.toContain("../state/");
+      expect(specifier).not.toContain("../branding/");
+      expect(specifier).not.toContain("adapters");
+    }
+  });
+
+  test("every supervision module is in the committed inventory in both directions", () => {
+    const root = join(ROOT, "packages");
+    const failures: string[] = [];
+    for (const relative of SUPERVISE_SOURCES) {
+      const absolute = join(root, relative);
+      if (!existsSync(absolute)) continue;
+      if (!isRegistered(relative)) failures.push(`${relative}: missing from inventory`);
+    }
+    expect(failures).toEqual([]);
+  });
+
+  test("the contract export inventory lists the supervise module exports", () => {
+    const fixture = JSON.parse(
+      readFileSync(join(ROOT, "tests/fixtures/ports/v1-contract-inventory.json"), "utf8"),
+    ) as { readonly modules: Readonly<Record<string, readonly string[]>> };
+    const names = fixture.modules["supervise.ts"] ?? [];
+    for (const name of [
+      "SUPERVISION_SCHEMA_VERSION",
+      "SUPERVISION_STATES",
+      "SUPERVISION_CLAIM_KINDS",
+      "SUPERVISION_CLASSIFICATION_INPUT_FIELDS",
+      "SupervisionReport",
+    ]) {
+      expect(names, name).toContain(name);
+    }
+  });
+});

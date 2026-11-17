@@ -8,6 +8,7 @@
 
 import { appendDispatchAttempt } from "../../../packages/core/src/app/dispatch-ledger";
 import { appendOutboxEffect } from "../../../packages/core/src/app/effects";
+import type { SupervisionScopeSnapshot } from "../../../packages/core/src/app/index";
 import {
   appendDaemonHeartbeat,
   appendDaemonInstance,
@@ -469,3 +470,59 @@ export const claimsOnly = (
   daemonClaim(target, { live: input.daemonLive ?? true });
   coordinatorClaim(target, { live: input.coordinatorLive ?? true });
 };
+
+/** A deterministic capped scope snapshot: `n` lanes, alternating advancing/flat. */
+export const cappedScope = (n: number): SupervisionScopeSnapshot => ({
+  repository: "github.com/example/supervision-repo",
+  lanes: Array.from({ length: n }, (_, index) => ({
+    ref: `GH-${String(1_000 + index)}`,
+    repository: "github.com/example/supervision-repo",
+    firstHeartbeatAt: "2026-11-16T23:55:00.000Z",
+    lastHeartbeatAt: "2026-11-16T23:58:00.000Z",
+    heartbeatOrdinal: 1,
+    artifacts:
+      index % 2 === 0
+        ? { classes: ["commit-record"] as const, instants: ["2026-11-16T23:59:00.000Z"] }
+        : { classes: [] as const, instants: [] as const },
+  })),
+  leases: [],
+  acting: [],
+  restarts: {},
+  degraded: [],
+});
+
+/**
+ * A mixed scope: one progressing lane, one stalled lane, and one unknown daemon
+ * claim, for the evidence-totality walk and the failure goldens.
+ */
+export const mixedScope = (): SupervisionScopeSnapshot => ({
+  repository: "github.com/example/supervision-repo",
+  lanes: [
+    {
+      ref: "GH-295",
+      repository: "github.com/example/supervision-repo",
+      firstHeartbeatAt: "2026-11-16T23:55:00.000Z",
+      lastHeartbeatAt: "2026-11-16T23:58:00.000Z",
+      heartbeatOrdinal: 1,
+      artifacts: { classes: ["commit-record"], instants: ["2026-11-16T23:59:00.000Z"] },
+    },
+    {
+      ref: "GH-296",
+      repository: "github.com/example/supervision-repo",
+      firstHeartbeatAt: "2026-11-16T23:50:00.000Z",
+      lastHeartbeatAt: "2026-11-16T23:50:00.000Z",
+      heartbeatOrdinal: 1,
+      artifacts: { classes: [], instants: [] },
+    },
+  ],
+  leases: [],
+  daemonClaim: {
+    claimKind: "daemon-instance",
+    identity: "instance-unknown",
+    live: false,
+    artifacts: { classes: [], instants: [] },
+  },
+  acting: [],
+  restarts: {},
+  degraded: ["artifact-source-absent"],
+});

@@ -312,3 +312,31 @@ notes:
       standalone — recorded as an environmental flake, not a regression."
     type: "info"
     date: "2026-11-17"
+  - text: "Plan phase 6 complete (mounting as the 24th prompt-required family) at
+      commit 70071c71. Delivered: PROMPT_REQUIRED_COMMANDS gains supervise last
+      (23 -> 24), the root family entry and the family help page (m2 reference
+      page, usage/options/examples plus the shared 0/1/2 exit table), the new
+      reference page doc/planning/oss-tooling/milestones/m2/commands/supervise.md,
+      the coverage inventory row + pageFor branch, the captured BASE_FAMILIES
+      fixture, TC-SUP-096 mounting/help suites, and the atomic count/set move
+      across every pinning suite. Tests: 43 mounting/help cases green;
+      TMPDIR=$PWD/tmp/tmpdir pnpm check PASS (9964 pass / 0 fail)."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Phase-6 findings (sites beyond the plan's named pin list, all additive
+      and in the same commit): (1) tests/behaviour/entrypoint-composition.test.ts
+      and entrypoint-help-coverage.test.ts pin the literal prompt-required set;
+      (2) tests/structure/events-production-composition.test.ts pins the tail
+      ordinals; (3) tests/checks/event-mount-guards.test.ts pins the delivered
+      inline-name negative control; (4) tests/structure/steer-mounting.test.ts
+      asserted steer was last — now supervise follows it; (5)
+      tests/fixtures/entrypoint/alias-baseline.json is a captured help baseline
+      that gains the supervise family line (additively noted in its provenance);
+      (6) the new planning page required a
+      scripts/checks/forbidden-literals.registry.json corpus row (declared in
+      phase 8's scope, landed early so the docs guard is green). (7) Two
+      aggregate-gate runs each tripped a different delivered suite's 5 s bun
+      timeout under load (prior-identity-notice, hermetic preload); both pass
+      standalone and the immediate rerun was green — environmental flake."
+    type: "info"
+    date: "2026-11-17"
