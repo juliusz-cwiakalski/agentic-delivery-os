@@ -4,6 +4,7 @@ Canonical scope for M3 (see `README.md` for exit criteria and sequencing).
 Ticket references are added when the story tickets are created.
 
 ### M3-S1 opencode v2.x harness and telemetry
+- Ticket: GH-335 (milestone M3)
 - Goal: the harness port drives opencode v2.x reliably and reports facts
   statistics need; opencode is the only delivery harness (Claude Code remains
   generated artifacts only).
@@ -18,6 +19,7 @@ Ticket references are added when the story tickets are created.
 - Depends on: M1-S11, M2-S14.
 
 ### M3-S2 Jira backlog adapter (MCP-first)
+- Ticket: GH-336 (milestone M3)
 - Goal: Jira work items drive the same lifecycle primitives.
 - Tasks: Jira MCP integration (issue, transitions, comments, links);
   configurable per-project workflow mapping validated at startup; primitive
@@ -28,6 +30,7 @@ Ticket references are added when the story tickets are created.
 - Depends on: M0-S19, M3-S5.
 
 ### M3-S3 GitLab code-host adapter (CLI-first)
+- Ticket: GH-337 (milestone M3)
 - Goal: GitLab MRs and pipelines behave exactly like GitHub PRs and checks.
 - Tasks: `glab` CLI adapter with API fallback; MR create/update with threaded
   discussions and resolution; pipelines-as-checks with failure job/task
@@ -39,6 +42,7 @@ Ticket references are added when the story tickets are created.
 - Depends on: M0-S19, M3-S5.
 
 ### M3-S4 GitHub adapter completion (code host + backlog)
+- Ticket: GH-338 (milestone M3)
 - Goal: complete the GitHub adapter as the reference implementation for code
   hosting and backlog management.
 - Tasks: full primitive coverage over `gh` with API fallback — PRs with
@@ -49,6 +53,7 @@ Ticket references are added when the story tickets are created.
 - Depends on: M0-S19.
 
 ### M3-S5 Adapter conformance and parity suite
+- Ticket: GH-339 (milestone M3)
 - Goal: one contract, provable across adapters.
 - Tasks: extend the conformance suite (M0-S20) to tracker primitives; error
   taxonomy and trap catalogs per adapter; simulated tracker double for
@@ -58,6 +63,7 @@ Ticket references are added when the story tickets are created.
 - Depends on: M0-S20.
 
 ### M3-S6 Multi-tracker per project
+- Ticket: GH-340 (milestone M3)
 - Goal: one project can carry more than one tracker (migration scenarios)
   without ambiguity.
 - Tasks: work-item references carry tracker identity; per-project tracker
