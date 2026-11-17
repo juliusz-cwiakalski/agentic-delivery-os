@@ -199,7 +199,11 @@ notes:
     date: "2026-11-17"
   - text: "Plan phase 7 complete (metrics mounted as the 24th prompt-required
       family: prompt-set entry, root/family help, M2 reference page, coverage
-      row, and the atomic 23 -> 24 count move). Commit 9903955c. Verification:
+      row, and the atomic 23 -> 24 count move). Commit 0cdaec94 — shared with
+      phase 8 because the phase-7 boundary commit was folded into the phase-8
+      commit after the phase-7 gate turned green (recorded process deviation:
+      phases 7 and 8 share one commit; the work and both gates are complete).
+      Verification:
       metrics-mounting 8/8, metrics-help 4/4, entrypoint-bin, steer-mounting,
       board/events/dispatch/daemon mounting, the four behaviour help suites,
       entrypoint-composition/two-bins/help-coverage, help-guide-coverage and
@@ -217,7 +221,7 @@ notes:
       never-dropped set, purity and brand neutrality, the counted read budget
       with a printed latency reference, the hermeticity scan, and eleven mutant
       families over temp copies of the pure domain with an unmutated control).
-      Commit recorded in the phase-9 note. Verification: metrics-determinism
+      Commit 0cdaec94 (shared with phase 7). Verification: metrics-determinism
       10/10, metrics-bounds 13/13, metrics-purity 6/6, metrics-read-cost 3/3,
       metrics-mutants 11/11, metrics-hermetic 5/5, tests/golden/metrics.test.ts
       6/6; TMPDIR=$PWD/tmp/tmpdir pnpm check green at 10078 pass / 4
