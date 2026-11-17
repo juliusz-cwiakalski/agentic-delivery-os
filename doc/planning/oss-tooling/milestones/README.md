@@ -3,8 +3,8 @@
 Per-milestone review surfaces for planned outcomes: the architecture, the
 journeys, the command surface, and the command contracts as they will exist
 at the end of a milestone. They exist so the owner can validate and refine
-the planned shape before delivery starts; the backlog
-([../backlog.md](../backlog.md)) stays canonical for scope and order, and
+the planned shape before delivery starts; each milestone's `backlog.md` stays canonical for that milestone's scope
+and order (the root [../backlog.md](../backlog.md) holds unplanned ideas), and
 the command registry
 ([../cli-command-registry.md](../cli-command-registry.md)) stays canonical
 for the locked naming surface.

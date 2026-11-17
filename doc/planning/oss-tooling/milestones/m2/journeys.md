@@ -2,7 +2,7 @@
 
 Planned journeys for the M2 end state. Each journey is written from the
 operator's side: what they ask, what the engine answers, and what must stay
-true. Scope is in [../../backlog.md](../../backlog.md); the surfaces are in
+true. Scope is in [../backlog.md](../backlog.md); the surfaces are in
 [contracts.md](contracts.md) and the flows in [architecture.md](architecture.md).
 
 ## Multi-repo morning overview

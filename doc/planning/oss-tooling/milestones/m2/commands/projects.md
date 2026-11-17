@@ -154,4 +154,4 @@ rule: it returns the delivered flat payload and is not restated here.
 [project-groups.v1](../contracts.md), [repos](./repos.md),
 [architecture: multi-repository overview](../architecture.md),
 [entrypoint delta](../entrypoint-delta.md),
-[backlog](../../../backlog.md)
+[backlog](../../backlog.md)

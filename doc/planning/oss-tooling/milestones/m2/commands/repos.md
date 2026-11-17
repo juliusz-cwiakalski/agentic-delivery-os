@@ -139,7 +139,7 @@ the `repos.*` identities above (see [../contracts.md](../contracts.md)).
 [repos.v1](../contracts.md), [projects](./projects.md),
 [architecture: multi-repository overview](../architecture.md),
 [entrypoint delta](../entrypoint-delta.md),
-[backlog](../../../backlog.md)
+[backlog](../../backlog.md)
 
 The rename and its alias are stated once in the
 [rename rule](../contracts.md#naming-boundary-and-the-rename-rule).

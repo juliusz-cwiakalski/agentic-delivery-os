@@ -3,7 +3,7 @@
 Planned M2 contracts. Every surface below is a proposal refined at story
 delivery; the M1 contracts in [../m1/contracts.md](../m1/contracts.md) stay in
 force until a story supersedes them. Scope and acceptance live in
-[../../backlog.md](../../backlog.md); flows are in
+[../backlog.md](../backlog.md); flows are in
 [architecture.md](architecture.md).
 
 ## Shared contract continuity

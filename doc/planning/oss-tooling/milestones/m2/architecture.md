@@ -4,7 +4,7 @@ The system at M2 exit: one workstation manages several delivery repositories,
 grouped as configured projects, while the typed engine carries day-to-day
 delivery, the queue lifecycle closes itself, the daemon publishes a versioned
 event taxonomy, and telemetry turns spend, metrics, and retro into stated facts.
-Planned state; story numbers reference [../../backlog.md](../../backlog.md).
+Planned state; story numbers reference [../backlog.md](../backlog.md).
 Pack conventions are in [README.md](README.md); contract detail is in
 [contracts.md](contracts.md).
 

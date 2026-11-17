@@ -1,7 +1,4 @@
 {
-  "schemaVersion": "milestone-attachment.planning-headings.v1",
-  "note": "Baseline story-code sets; M2 is the pre-change set so the one-addition assertion stays meaningful.",
-  "milestoneOrder": ["M0", "M1", "M2", "M3", "M4"],
   "sections": {
     "M0": [
       "M0-S1",
@@ -68,9 +65,11 @@
       "M2-S16",
       "M2-S17",
       "M2-S18",
-      "M2-S19"
+      "M2-S19",
+      "M2-S20"
     ],
-    "M3": ["M3-S1", "M3-S2", "M3-S3", "M3-S4", "M3-S5", "M3-S6", "M3-S7", "M3-S8", "M3-S9"],
-    "M4": ["M4-S1", "M4-S2", "M4-S3", "M4-S4", "M4-S5", "M4-S6"]
+    "M3": ["M3-S1", "M3-S2", "M3-S3", "M3-S4", "M3-S5", "M3-S6"],
+    "M4": ["M4-S1", "M4-S2", "M4-S3", "M4-S4", "M4-S5", "M4-S6", "M4-S7", "M4-S8"],
+    "M5": ["M5-S1", "M5-S2", "M5-S3", "M5-S4", "M5-S5", "M5-S6"]
   }
 }

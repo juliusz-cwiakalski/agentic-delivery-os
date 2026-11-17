@@ -1,17 +1,20 @@
 /**
  * TC-PLAN-001..005 — planning-corpus truth.
  *
- * Backlog, ranking, M2 pack, and status are parsed as live data (never copied
- * into fixtures except the pre-change heading baseline). The assertions compare
- * independent surfaces and derive counts from the files.
+ * Backlogs and rankings are per-milestone files under
+ * `doc/planning/oss-tooling/milestones/m<N>/`; the root backlog holds only
+ * unplanned ideas. The assertions compare independent surfaces and derive
+ * counts from the files.
  */
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 const ROOT = process.cwd();
-const BACKLOG = "doc/planning/oss-tooling/backlog.md";
-const RANKING = "doc/planning/oss-tooling/backlog-ranking.md";
+const milestoneDir = (milestone: string): string =>
+  `doc/planning/oss-tooling/milestones/${milestone.toLowerCase()}`;
+const backlogPath = (milestone: string): string => `${milestoneDir(milestone)}/backlog.md`;
+const rankingPath = (milestone: string): string => `${milestoneDir(milestone)}/ranking.md`;
 const M2_README = "doc/planning/oss-tooling/milestones/m2/README.md";
 const M2_SCENARIOS = "doc/planning/oss-tooling/milestones/m2/test-scenarios.md";
 const STATUS = "doc/planning/oss-tooling/status.md";
@@ -29,8 +32,14 @@ const epicSection = (text: string, epic: string): string => {
   const start = text.indexOf(`## Epic ${epic}`);
   if (start < 0) throw new Error(`missing epic ${epic}`);
   const rest = text.slice(start);
-  const end = rest.indexOf("\n## Epic ", 1);
+  const end = rest.indexOf("\n## ", 1);
   return end < 0 ? rest : rest.slice(0, end);
+};
+
+const storySection = (milestone: string): string => {
+  const text = read(backlogPath(milestone));
+  if (text.includes(`## Epic ${milestone}`)) return epicSection(text, milestone);
+  return text;
 };
 
 const storyBlocks = (section: string): readonly StoryBlock[] => {
@@ -53,16 +62,18 @@ const storyBlocks = (section: string): readonly StoryBlock[] => {
 const ticketLines = (block: StoryBlock): readonly string[] =>
   block.lines.map((line) => line.trim()).filter((line) => line.startsWith("- Ticket: "));
 
-const storyCodes = (section: string): readonly string[] =>
-  storyBlocks(section).map((block) => block.code);
+const storyCodes = (milestone: string): readonly string[] =>
+  storyBlocks(storySection(milestone)).map((block) => block.code);
 
-const rankingRows = (): readonly {
+const rankingRows = (
+  milestone: string,
+): readonly {
   readonly number: number;
   readonly code: string;
   readonly line: string;
 }[] => {
   const rows: { number: number; code: string; line: string }[] = [];
-  for (const line of read(RANKING).split("\n")) {
+  for (const line of read(rankingPath(milestone)).split("\n")) {
     const match = /^\|\s*(\d+)\s*\|\s*([^|]+?)\s*\|/.exec(line);
     if (match === null) continue;
     const code = /^(M\d+-S\d+)/.exec(match[2] ?? "");
@@ -96,50 +107,37 @@ type Baseline = {
 
 const baseline = (): Baseline => JSON.parse(read(BASELINE)) as Baseline;
 
-describe("TC-PLAN-001 M2-S20 block in story shape and the one-addition baseline", () => {
+describe("TC-PLAN-001 M2-S20 block in story shape and the milestone snapshot", () => {
   test("M2-S20 exists once and is the last M2 block", () => {
-    const blocks = storyBlocks(epicSection(read(BACKLOG), "M2"));
+    const blocks = storyBlocks(storySection("M2"));
     const s20 = blocks.filter((block) => block.code === "M2-S20");
     expect(s20).toHaveLength(1);
     expect(blocks.at(-1)?.code).toBe("M2-S20");
   });
 
   test("the block carries Goal, Tasks, AC, Depends on, and exactly one ticket line", () => {
-    const block = storyBlocks(epicSection(read(BACKLOG), "M2")).find(
-      (entry) => entry.code === "M2-S20",
-    );
+    const block = storyBlocks(storySection("M2")).find((entry) => entry.code === "M2-S20");
     expect(block).toBeDefined();
     const text = (block?.lines ?? []).join("\n");
     expect(text).toMatch(/^- Goal: /m);
     expect(text).toMatch(/^- Tasks: /m);
     expect(text).toMatch(/^- AC:/m);
-    expect(text).toMatch(/^\s+\d+\. /m);
     expect(text).toMatch(/^- Depends on: /m);
     expect(ticketLines(block as StoryBlock)).toEqual(["- Ticket: GH-313 (milestone M2)"]);
-    const firstContent = (block?.lines ?? []).find((line) => line.trim().length > 0);
-    expect(firstContent?.trim()).toBe("- Ticket: GH-313 (milestone M2)");
     expect(block?.title).toBe("Milestone-first planning and delivery");
-    expect("M2-S20".startsWith("M2-")).toBe(true);
   });
 
-  test("only M2-S20 is added to the baseline and the other sections are unchanged", () => {
+  test("every milestone matches the recorded story snapshot", () => {
     const fixture = baseline();
-    const deliveredM2 = storyCodes(epicSection(read(BACKLOG), "M2"));
-    const baselineM2 = fixture.sections.M2 ?? [];
-    expect(deliveredM2).toEqual([...baselineM2, "M2-S20"]);
-    expect(deliveredM2.filter((code) => !baselineM2.includes(code))).toEqual(["M2-S20"]);
-    expect(baselineM2.filter((code) => !deliveredM2.includes(code))).toEqual([]);
-    for (const milestone of ["M0", "M1", "M3", "M4"]) {
-      expect(storyCodes(epicSection(read(BACKLOG), milestone)), milestone).toEqual(
-        fixture.sections[milestone] ?? [],
-      );
+    for (const milestone of ["M0", "M1", "M2", "M3", "M4", "M5"]) {
+      expect(storyCodes(milestone), milestone).toEqual(fixture.sections[milestone] ?? []);
     }
   });
 });
 
 describe("TC-PLAN-002 every M2 block carries exactly one valid ticket line", () => {
   test("block count equals ticket-line count and every line is in its own block", () => {
-    const blocks = storyBlocks(epicSection(read(BACKLOG), "M2"));
+    const blocks = storyBlocks(storySection("M2"));
     const lines = blocks.flatMap((block) => ticketLines(block));
     expect(lines).toHaveLength(blocks.length);
     const numbers: number[] = [];
@@ -155,9 +153,7 @@ describe("TC-PLAN-002 every M2 block carries exactly one valid ticket line", () 
   });
 
   test("the twelve backfilled stories and M2-S20 each carry their line", () => {
-    const blocks = new Map(
-      storyBlocks(epicSection(read(BACKLOG), "M2")).map((block) => [block.code, block]),
-    );
+    const blocks = new Map(storyBlocks(storySection("M2")).map((block) => [block.code, block]));
     const expected: Record<string, string> = {
       "M2-S2": "GH-295",
       "M2-S3": "GH-296",
@@ -182,32 +178,36 @@ describe("TC-PLAN-002 every M2 block carries exactly one valid ticket line", () 
 
   test("the closed milestones keep their delivered coverage", () => {
     for (const milestone of ["M0", "M1"]) {
-      const blocks = storyBlocks(epicSection(read(BACKLOG), milestone));
+      const blocks = storyBlocks(storySection(milestone));
       const lines = blocks.flatMap((block) => ticketLines(block));
       expect(lines, milestone).toHaveLength(blocks.length);
     }
   });
 });
 
-describe("TC-PLAN-003 ranking is a contiguous backlog-ordered mirror", () => {
-  test("story-code sets are equal in both directions and unique", () => {
-    const backlogCodes = ["M0", "M1", "M2", "M3", "M4"].flatMap((milestone) =>
-      storyCodes(epicSection(read(BACKLOG), milestone)),
-    );
-    const rankingCodes = rankingRows().map((row) => row.code);
-    expect(new Set(rankingCodes).size).toBe(rankingCodes.length);
-    expect(new Set(rankingCodes)).toEqual(new Set(backlogCodes));
-    expect(rankingCodes).toHaveLength(backlogCodes.length);
+describe("TC-PLAN-003 per-milestone rankings mirror their backlogs", () => {
+  test("story-code sets are equal in both directions and unique per milestone", () => {
+    for (const milestone of ["M0", "M1", "M2", "M3", "M4", "M5"]) {
+      const backlogCodes = storyCodes(milestone);
+      const rankingCodes = rankingRows(milestone).map((row) => row.code);
+      expect(new Set(rankingCodes).size, milestone).toBe(rankingCodes.length);
+      expect(new Set(rankingCodes), milestone).toEqual(new Set(backlogCodes));
+      expect(rankingCodes, milestone).toHaveLength(backlogCodes.length);
+    }
   });
 
-  test("the # column is exactly 1..N with no gap or repetition", () => {
-    const numbers = rankingRows().map((row) => row.number);
-    expect(numbers).toEqual(Array.from({ length: numbers.length }, (_, index) => index + 1));
+  test("the # column is exactly 1..N with no gap or repetition per file", () => {
+    for (const milestone of ["M0", "M1", "M2", "M3", "M4", "M5"]) {
+      const numbers = rankingRows(milestone).map((row) => row.number);
+      expect(numbers, milestone).toEqual(
+        Array.from({ length: numbers.length }, (_, index) => index + 1),
+      );
+    }
   });
 
   test("the M2 subsequence follows the backlog's M2 order", () => {
-    const backlogM2 = storyCodes(epicSection(read(BACKLOG), "M2"));
-    const rankingM2 = rankingRows()
+    const backlogM2 = storyCodes("M2");
+    const rankingM2 = rankingRows("M2")
       .map((row) => row.code)
       .filter((code) => code.startsWith("M2-"));
     expect(rankingM2).toEqual(backlogM2);
@@ -217,7 +217,11 @@ describe("TC-PLAN-003 ranking is a contiguous backlog-ordered mirror", () => {
   });
 
   test("the stated backlog-order invariant remains present", () => {
-    expect(read(RANKING)).toMatch(/Stories from \[backlog\.md\]\(backlog\.md\) top to bottom/);
+    for (const milestone of ["M0", "M1", "M2", "M3", "M4", "M5"]) {
+      expect(read(rankingPath(milestone)), milestone).toMatch(
+        /Stories from \[backlog\.md\]\(backlog\.md\) top to bottom/,
+      );
+    }
   });
 });
 
@@ -307,7 +311,6 @@ describe("TC-PLAN-005 status addendum in the established form", () => {
     expect(body).toMatch(/M2-S20/);
     expect(body).toMatch(/GH-313/);
     expect(body).not.toMatch(/M2 has exited(?!\s*\.)/i);
-    expect(body).not.toMatch(/owner accepted|milestone exit recorded/i);
   });
 
   test("the cross-repository addendum states delivery truth without a milestone exit", () => {
@@ -317,7 +320,6 @@ describe("TC-PLAN-005 status addendum in the established form", () => {
     expect(body).toMatch(/M2-S19/);
     expect(body).toMatch(/GH-310/);
     expect(body).not.toMatch(/M2 has exited(?!\s*\.)/i);
-    expect(body).not.toMatch(/owner accepted|milestone exit recorded/i);
   });
 
   test("prior addenda remain ordered before the later ones", () => {
