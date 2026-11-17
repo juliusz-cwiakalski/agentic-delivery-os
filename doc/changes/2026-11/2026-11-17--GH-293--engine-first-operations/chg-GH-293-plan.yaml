@@ -1,11 +1,50 @@
-# GH-293 delivery plan — machine-readable document (delivery.plan.v1), revision 1.1
-# (2026-11-18; readiness iteration 1's plan-routed findings F-3, F-4, F-10 plus the
-# mechanical alignment to spec v1.2 / test plan v1.2 / amended TDR-0031).
+# GH-293 delivery plan — machine-readable document (delivery.plan.v1), revision 1.2
+# (2026-11-18; readiness iteration 2 — one closure-model correction plus one wording
+# narrowing. Revision 1.1 carried iteration 1's plan-routed findings F-3, F-4, F-10
+# and the mechanical alignment to spec v1.2 / test plan v1.2 / amended TDR-0031.)
 # Revision 1.0 was authored in lifecycle phase 4 (`delivery_planning`) against spec
 # v1.1 and test plan v1.1 (44 cases).
 # Canonical plan artifact: this YAML document is the only plan file for the
 # change. `plan validate`, `plan diff`, `plan overlap`, and `lint plan` read it
 # directly.
+#
+# REVISION 1.2 AMENDMENT (2026-11-18) — readiness iteration 2. No phase added,
+# removed, or renumbered; no scope removed; no acceptance criterion weakened; the
+# 45-case ownership map and the DoD-1..DoD-10 mapping are unchanged:
+#   - Finding 1 (major, plan_coverage) SELF-CONTRADICTORY CLOSURE. Revision 1.1 made
+#     the two `doc/quality/test-specs/` reconciliations BOTH a lifecycle-phase-7
+#     obligation AND a plan-phase-7 exit test, then forbade closing the phase with it
+#     outstanding and forbade stalling delivery — an exit the plan phase could never
+#     satisfy in the declared lifecycle order. The closure model is now the
+#     GH-294/GH-299 staged-handoff precedent, stated ONCE:
+#       (a) plan Phase 7's EXIT does NOT include the reconciliation. Its exit is:
+#           all in-scope code, tests, docs and the new guide landed; the
+#           change-specific suites and the gate battery green; the no-flip and
+#           shell-non-change controls green; and the handoff RECORDED;
+#       (b) the reconciliation is a HANDOFF OBLIGATION owned by lifecycle phase 7
+#           (`system_spec_update`, `@doc-syncer`), satisfied by the PM's `dod_check`
+#           (DoD-7); the two files stay declared in plan Phase 7 `scope.files` for
+#           STAGING only, so the `@doc-syncer` edit is committable without
+#           reopening the plan;
+#       (c) the failure path is stated: if the reconciliation is absent at DoD time,
+#           the PM reopens `system_spec_update` and re-runs `@doc-syncer`, then
+#           re-checks DoD-7; it is never a residual and never closes unmet;
+#       (d) every "no phase may close with it outstanding" and "this phase is
+#           satisfied only when that landing row is met" sentence is replaced by:
+#           "no phase of this plan may close with an unmet AC or with in-scope work
+#           unlanded; the reconciliation is not in-scope work for this plan — its
+#           satisfaction point is lifecycle phase 7 and it is verified at DoD-7";
+#       (e) the closure escalation trigger is re-aimed from "any phase" to "the
+#           change": it fires when someone proposes closing the CHANGE with an
+#           outstanding AC or DoD item, never when the plan phase ends with the
+#           handoff pending.
+#   - Finding 4 (nit, plan_coverage) the DECLARED CONTROLS parenthetical is narrowed:
+#     the prohibition covers the existing delivered shell entry points and
+#     `scripts/lib/**`; the ONE permitted addition under `scripts/` is the new
+#     stdout-identity parity suite `scripts/.tests/test-engine-first-shell-parity.sh`
+#     declared in plan Phase 7 scope, and it must not alter existing shell behaviour,
+#     any exit, or the pinned five-key delivery summary. The matching shell
+#     escalation trigger is narrowed identically.
 #
 # REVISION 1.1 AMENDMENT (2026-11-18) — no phase removed, no id renumbered, no
 # acceptance criterion weakened, and no phase pre-authorizes an unmet AC; the phase
@@ -19,10 +58,11 @@
 #   - F-4 (major) the closable-residual escape for the two
 #     `doc/quality/test-specs/` reconciliations is REMOVED. That reconciliation is
 #     a mandatory obligation owned by lifecycle phase 7 (`@doc-syncer`, DEC-16):
-#     Phase 6 authors only the handoff statement, and Phase 7 carries the
-#     obligation as a mandatory landing row gated on `system_spec_update`
-#     completion. Spec §17.1 DoD-7 requires it; nothing in this plan may close
-#     without it.
+#     Phase 6 authors only the handoff statement, and Phase 7 records the handoff
+#     obligation gated on `system_spec_update` completion. Spec §17.1 DoD-7
+#     requires it and the CHANGE may not close without it; its closure mechanics
+#     are the Revision 1.2 amendment above — the handoff is a lifecycle-phase-7
+#     obligation verified at DoD-7, never a plan-phase exit test.
 #   - F-10 (minor) the delivery-bound refusal code for a non-resolving merge
 #     request is stated as a selection criterion (a code the error table already
 #     declares, reused with its declared meaning, refused at its declared
@@ -229,11 +269,11 @@
 #   These three are the plan's ONLY residuals, and none of them is an acceptance
 #   criterion: each is either a declared product gap the documentation names
 #   (RSK-8), a declared decision residual the record carries (D4), or a placement
-#   note whose case asserts the contract either way (OQ-TP-5). No AC, no §17.1 DoD
-#   item, and no plan phase may close unmet — the bounded lifecycle prose is Phase 6
-#   scope, and the two `doc/quality/test-specs/` reconciliations are a mandatory
-#   lifecycle-phase-7 obligation (DEC-16) whose completion the PM's DoD check
-#   enforces.
+#   note whose case asserts the contract either way (OQ-TP-5). No phase of this
+#   plan may close with an unmet AC or with in-scope work unlanded; the two
+#   `doc/quality/test-specs/` reconciliations are not in-scope work for this plan —
+#   they are a HANDOFF OBLIGATION whose satisfaction point is lifecycle phase 7
+#   (DEC-16) and they are verified at DoD-7 (see DOC BOUNDARY and CLOSURE MODEL).
 #
 # PHASE ORDERING AND TESTABILITY:
 #   Each phase is one commit whose declared narrow gate is green at its boundary.
@@ -250,8 +290,8 @@
 #   lifecycle prose, the planning corpus, and the phase-7 test-spec handoff
 #   statement. Phase 7 is the closing battery: cross-surface coherence, shell
 #   non-change controls, no-flip discipline, hermeticity, additivity, the
-#   changeset, the full gate, and the mandatory lifecycle-phase-7 reconciliation
-#   landing row. The seams land with the surface they constrain (spec §18): the
+#   changeset, the full gate, and the RECORDED lifecycle-phase-7 reconciliation
+#   handoff. The seams land with the surface they constrain (spec §18): the
 #   handover exemption with F-2 (Phase 3), the row binding and the scope fold with
 #   the fleet host (Phase 4), and the owner principal plus the emittable-code
 #   constant with the merge composition (Phase 5).
@@ -302,8 +342,13 @@
 #   `tests/golden/verify-deploy`, `tests/golden/dispatch-text`,
 #   `tests/golden/lanes-list`, and the delivered shell suites
 #   `test-dispatch-bash-fallback.sh` and `test-deliver-ticket.sh` (the shell
-#   non-change control; a diff to `scripts/` is a plan violation, not a mechanism
-#   choice). Golden regenerations are deliberate and once: only
+#   non-change control: no diff to any EXISTING `scripts/*.sh` entry point or to
+#   `scripts/lib/**` is permitted — such a diff is a plan violation, not a
+#   mechanism choice. The ONE permitted addition under `scripts/` is the new
+#   stdout-identity parity suite `scripts/.tests/test-engine-first-shell-parity.sh`
+#   declared in Phase 7 scope; it adds a suite and must not alter existing shell
+#   behaviour, any exit, or the pinned five-key delivery summary). Golden
+#   regenerations are deliberate and once: only
 #   `tests/fixtures/dispatch/golden/summary.txt` (Phase 2, three additive lines).
 #
 # DOC BOUNDARY: this change delivers documentation, so the current-truth pages
@@ -318,21 +363,39 @@
 #   `ados_distribution` marker, and the guide keeping its existing one
 #   (TC-ENGINE-065).
 #
-#   The two broader test specs (`doc/quality/test-specs/test-spec-dispatch-
-#   engine.md`, `test-spec-merge-verify-deploy.md`) are a MANDATORY obligation of
-#   this change, owned by lifecycle phase 7 (`system_spec_update`, `@doc-syncer`)
-#   per DEC-16 — not a residual and not optional. Phase 6 authors only the handoff
-#   statement (in the pages and the guide) and declares the two files in its own
-#   scope only as the subject of that statement, never as an authored
-#   reconciliation. Phase 7 carries the obligation as a mandatory landing row and
-#   re-declares the two files so the `@doc-syncer` reconciliation is stageable
-#   without reopening the plan. The obligation is gated on `system_spec_update`
-#   completion: AC-F8-12 and spec §17.1 DoD-7 are met only when the two files read
-#   as reconciled to the delivered contracts. If lifecycle phase 7 has not run when
-#   the plan-phase-7 battery ends, the two rows stay untouched and the obligation
-#   remains OPEN — the PM's DoD check (lifecycle phase 10) re-runs
-#   `system_spec_update` for them and does not close the change until DoD-7 is met.
-#   No phase of this plan may close with that obligation outstanding.
+#   HANDOFF OBLIGATION (DEC-16; AC-F8-12; spec §17.1 DoD-7) — the two broader test
+#   specs (`doc/quality/test-specs/test-spec-dispatch-engine.md`,
+#   `test-spec-merge-verify-deploy.md`) are reconciled to the delivered contracts by
+#   LIFECYCLE PHASE 7 (`system_spec_update`, `@doc-syncer`), which runs after this
+#   plan's delivery phases end. It is a mandatory obligation of this change — not a
+#   residual, not optional, and never closed unmet — but it is NOT a plan-phase
+#   exit test: no plan phase authors, asserts, or waits on it.
+#     owner               lifecycle phase 7 `system_spec_update` (`@doc-syncer`);
+#     staging             the two files are declared in plan Phase 7's
+#                         `scope.files` so the `@doc-syncer` edit is committable
+#                         without reopening the plan — STAGING ONLY; plan Phase 7
+#                         authors no content of them;
+#     satisfaction point  lifecycle phase 7 producing the reconciliation, verified
+#                         by the PM at `dod_check` (lifecycle phase 10) as DoD-7
+#                         (including DEC-11: no new test-spec entry);
+#     failure path        if the reconciliation is absent at DoD time, the PM
+#                         REOPENS `system_spec_update` and re-runs `@doc-syncer` for
+#                         the two files, then re-checks DoD-7 before the PR. It is
+#                         never converted into a residual, never "recorded instead",
+#                         and the change never closes with it unmet.
+#   Phase 6 authors only the handoff statement (in the pages and the guide) and
+#   declares the two files in its own scope only as the subject of that statement,
+#   never as an authored reconciliation.
+#
+#   CLOSURE MODEL (stated once; binding on every phase and on the escalation
+#   triggers below): no phase of this plan may close with an unmet AC or with
+#   in-scope work unlanded; the reconciliation is not in-scope work for this plan —
+#   its satisfaction point is lifecycle phase 7 and it is verified at DoD-7. Plan
+#   Phase 7 therefore CLOSES with the handoff RECORDED while the reconciliation is
+#   still pending, and it is the CHANGE that waits, at lifecycle phase 10, never the
+#   phase. This is the GH-294/GH-299 staged-handoff precedent: the handoff is
+#   declared so the commit primitive can stage it, never applied as a phase-exit
+#   test.
 #
 # RELEASE: one lockstep minor changeset over the five publishables
 #   (`@delivery-os/core`, `adapters`, `cli`, `mcp`, `opencode`), matching the
@@ -349,7 +412,7 @@ tier:
     - "A new command, verb, flag, daemon tick, scheduler, cache, sampling rule, or configuration key appears for gate evaluation, the owner principal, or the row identity (NG-2, NG-11, DEC-1, DEC-13)"
     - "An error-table row, DOMAIN_KINDS member, exit class, or error identity is added, or a condition status other than met|open appears (NG-7, NFR-5)"
     - "projects.v1 rows or the projects list --flat bytes change, or either new row field appears on the flat alias (NG-6, BYTE-ENG-1)"
-    - "The shell delivery summary gains a key or line, changes an exit, or gains a machine mode, or any script under scripts/ is edited (NFR-6, NG-5)"
+    - "The shell delivery summary gains a key or line, changes an exit, or gains a machine mode, or an existing scripts/*.sh entry point or scripts/lib/** is edited (NFR-6, NG-5)"
     - "A second derivation of the condition statuses, the accrual counters, or reversibility appears beside the shared producer, or open conditions stop equalling unmetConditions in order (DEC-2, DEC-3, DEC-4, NFR-10)"
     - "A second handover outcome omits conditions, or an evidence-reading outcome omits them, or the idempotent revert noop performs a gate evidence read (NFR-11, DEC-12)"
     - "A fleet row is evaluated under an unresolved or foreign repository identity, resolution writes or repairs a binding, opens an additional store, or counts another repository's records (NFR-13, DEC-15)"
@@ -358,7 +421,7 @@ tier:
     - "The verify deploy stub is presented as delivered capability, or this change attempts its production fix (NG-8, RSK-8)"
     - "Any repository is flipped, or a dispatch.handover authoritative record is appended by this change (NG-1, NFR-7)"
     - "doc/quality/test-specs/ gains a new entry, or the two broader specs are reconciled outside lifecycle phase 7 (@doc-syncer) (DEC-11, DEC-16)"
-    - "Any phase is proposed to close with an acceptance criterion or a spec §17.1 DoD item outstanding, or the lifecycle-phase-7 test-spec reconciliation is described as a residual instead of a met obligation (AC-F4-8, AC-F8-12, DoD-7, DEC-16)"
+    - "The CHANGE is proposed to close with an acceptance criterion or a spec §17.1 DoD item outstanding (including the lifecycle-phase-7 test-spec reconciliation), or that reconciliation is described as a residual instead of a handoff obligation verified at DoD-7 (AC-F4-8, AC-F8-12, DoD-7, DEC-16)"
     - "A delivering suite needs live network, a live credential read, a live model call, real sleeps, or the live tree/$HOME as state (NFR-9)"
 defaultLeases:
   - repo:main-tools
@@ -864,8 +927,10 @@ phases:
   # places their reconciliation in lifecycle phase 7 (`@doc-syncer`) and it is a
   # MANDATORY obligation of this change (spec §17.1 DoD-7), never a residual. This
   # phase states the handoff in the pages and the guide and touches neither file;
-  # Phase 7 carries the obligation as its landing row and re-declares the two files
-  # so the phase-7-authored reconciliation is stageable. No new
+  # Phase 7 RECORDS the handoff obligation and re-declares the two files for
+  # STAGING so the lifecycle-phase-7-authored reconciliation is committable. The
+  # obligation is satisfied in lifecycle phase 7 and verified at DoD-7 — it is not
+  # a plan-phase exit test (see DOC BOUNDARY, CLOSURE MODEL). No new
   # `doc/quality/test-specs/` entry is created (DEC-11).
   #
   # AC/TC coverage: AC-F5-9 (TC-ENGINE-040..042), AC-F8-12 (TC-ENGINE-060..065),
@@ -927,10 +992,11 @@ phases:
 
   # ---------------------------------------------------------------------------
   # Phase 7 — Closing battery: cross-surface coherence, shell non-change,
-  # no-flip discipline, hermeticity, additivity, the mandatory lifecycle-phase-7
-  # reconciliation landing, the release, and the gate
-  # (AC-NFR1-14; AC-F4-7, AC-F4-8, AC-F8-12; spec §17.1 DoD-1..DoD-10; NFR-6,
-  #  NFR-7, NFR-9, NFR-10; DEC-6, DEC-9, DEC-16).
+  # no-flip discipline, hermeticity, additivity, the RECORDED lifecycle-phase-7
+  # reconciliation handoff, the release, and the gate
+  # (AC-NFR1-14; AC-F4-7, AC-F4-8, AC-F8-12; spec §17.1 DoD-1..DoD-10, of which the
+  #  DoD-7 reconciliation half and DoD-10 are verified by the PM at lifecycle
+  #  phase 10; NFR-6, NFR-7, NFR-9, NFR-10; DEC-6, DEC-9, DEC-16).
   #
   # Objective: prove the change as a whole and close the release. One ledger, one
   # summary read, one handover read, and one fleet read must agree on all four
@@ -948,32 +1014,43 @@ phases:
   # scan, spawn/sleep counters, a non-empty file list, and a canary so the guard
   # cannot pass vacuously (TC-ENGINE-092).
   #
-  # MANDATORY LIFECYCLE-PHASE-7 LANDING ROW (DEC-16; AC-F8-12; spec §17.1 DoD-7) —
-  #   not a residual, not conditional, and never "recorded and closed":
+  # HANDOFF OBLIGATION (DEC-16; AC-F8-12; spec §17.1 DoD-7) — RECORDED by this
+  #   phase, SATISFIED in lifecycle phase 7, VERIFIED at DoD-7. It is NOT an exit
+  #   condition of this phase, and this phase never waits on it:
   #   obligation  reconcile `doc/quality/test-specs/test-spec-dispatch-engine.md`
   #               and `doc/quality/test-specs/test-spec-merge-verify-deploy.md` to
   #               the delivered contracts;
-  #   owner       lifecycle phase 7 `system_spec_update` (`@doc-syncer`);
+  #   owner       lifecycle phase 7 `system_spec_update` (`@doc-syncer`), which runs
+  #               AFTER this battery in the declared lifecycle order;
   #   staging     the two files are declared in this phase's `scope.files` so the
-  #               `@doc-syncer` reconciliation is committable here without
-  #               reopening the plan (this phase authors no content of them);
-  #   gate        the obligation is a completion gate on `system_spec_update`: it
-  #               is met only when both files read as reconciled (documented
-  #               contracts, no superseded claim, no new test-spec entry, DEC-11);
-  #   failure     if lifecycle phase 7 has not produced the reconciliation when
-  #               this battery ends, the obligation stays OPEN and this phase does
-  #               NOT close the change: the PM's DoD check (lifecycle phase 10)
-  #               re-runs `system_spec_update` for the two files and re-checks
-  #               DoD-7 before the PR. An outstanding reconciliation is the only
-  #               legitimate reason the change waits, and it is never converted
-  #               into a residual.
+  #               `@doc-syncer` reconciliation is committable without reopening the
+  #               plan — STAGING ONLY: this phase authors no content of them;
+  #   recorded    this phase's evidence is the handoff record itself — the
+  #               obligation named, its owner, its two staged paths, and its DoD-7
+  #               satisfaction point, written into the phase notes and attested in
+  #               test-plan §10;
+  #   satisfied   by lifecycle phase 7 producing the reconciliation and the PM's
+  #               `dod_check` (lifecycle phase 10) confirming DoD-7, including the
+  #               DEC-11 fact that no new test-spec entry appears;
+  #   failure     if the reconciliation is absent at DoD time, the PM REOPENS
+  #               `system_spec_update` and re-runs `@doc-syncer` for the two files,
+  #               then re-checks DoD-7 before the PR. It is never a residual, never a
+  #               "recorded instead" substitute, and the change never closes unmet.
+  #   CLOSURE MODEL: no phase of this plan may close with an unmet AC or with
+  #   in-scope work unlanded; the reconciliation is not in-scope work for this plan —
+  #   its satisfaction point is lifecycle phase 7 and it is verified at DoD-7. This
+  #   phase therefore closes with the handoff RECORDED while the reconciliation is
+  #   still pending, and it is the CHANGE (lifecycle phase 10) that waits, never the
+  #   phase. No stall and no exception is needed: the two obligations are disjoint.
   #
   # Release obligations: one lockstep minor changeset over the five publishables;
   # the change folder carries this plan, the pm-notes evidence, and the capsule
   # residue.
   #
-  # DoD ASSERTIONS (spec §17.1) — this phase is where DoD-1..DoD-10 are asserted
-  #   and evidenced; all ten are required and none is waivable:
+  # DoD ASSERTIONS (spec §17.1) — this phase asserts and evidences every DoD item
+  #   delivery can assert; DoD-7's reconciliation half and DoD-10 are the PM's
+  #   lifecycle-phase-10 checks, which this phase RECORDS as owed. All ten are
+  #   required and none is waivable:
   #   DoD-1  additive contracts: the appended keys, their declared order, and the
   #          appended text lines hold; no delivered key, exit, or identity moved
   #          except the declared credential-read exit (the phases 1-4 suites with
@@ -992,12 +1069,11 @@ phases:
   #          with the state-root audit recorded in test-plan §10).
   #   DoD-7  documentation set landed: guide, six feature pages, the BOUNDED
   #          lifecycle-prose edits in `AGENTS.md` and
-  #          `doc/guides/change-lifecycle.md`, the two broader test specs
-  #          reconciled in lifecycle phase 7 by `@doc-syncer`, the corpus
-  #          restatements, and TDR-0031 with its index row (TC-ENGINE-040, 041, 042,
-  #          055, 060, 061, 062, 063, 064, 065 plus the landing row's attestation) —
-  #          the reconciliation half is the landing row above and blocks closure
-  #          while open.
+  #          `doc/guides/change-lifecycle.md`, the corpus restatements, and
+  #          TDR-0031 with its index row (TC-ENGINE-040, 041, 042, 055, 060, 061,
+  #          062, 063, 064, 065). The two broader test specs' reconciliation is the
+  #          HANDOFF OBLIGATION above: satisfied in lifecycle phase 7 and verified
+  #          by the PM at DoD-7 — never a phase-7 exit test and never a residual.
   #   DoD-8  quality gates green hermetically: `TMPDIR=$PWD/tmp/tmpdir pnpm
   #          check` plus the change-specific suites, the doc-distribution check,
   #          and the shell suites (this phase's gate battery).
@@ -1014,9 +1090,11 @@ phases:
   #          test asserts it (test-plan §3.6/§10, review-attested).
   #
   # AC/TC coverage: AC-NFR1-14 (TC-ENGINE-090..092), AC-F4-7 (TC-ENGINE-030..034),
-  # AC-F4-8 and NFR-7 (TC-ENGINE-035), AC-F8-12's landing half (the landing row
-  # above, attested at DoD-7), NFR-10 and AC-F1-2/AC-F3-5 coherence (TC-ENGINE-095);
-  # spec §17.1 DoD-1..DoD-10.
+  # AC-F4-8 and NFR-7 (TC-ENGINE-035), AC-F8-12's delivery half (the suites of
+  # Phases 6 and 7) whose reconciliation half is the HANDOFF OBLIGATION above —
+  # satisfied in lifecycle phase 7 and verified at DoD-7, never in this phase;
+  # NFR-10 and AC-F1-2/AC-F3-5 coherence (TC-ENGINE-095); spec §17.1 DoD-1..DoD-10
+  # (DoD-7's reconciliation half and DoD-10 verified by the PM at lifecycle phase 10).
   #
   # Gate:
   #   pnpm typecheck
@@ -1045,38 +1123,49 @@ phases:
   #   delivered controls unmodified, one new parity suite), doc-distribution,
   #   changesets-group, the commit-range gate (its verbatim verdict quoted in the
   #   phase notes, an `ERROR` never recorded as a pass), the full aggregate
-  #   battery, the plan verdict, the pm-notes/plan conformance, and the
-  #   lifecycle-phase-7 reconciliation landing row attested in test-plan §10
-  #   (`@doc-syncer` changed both files; no new test-spec entry; DoD-7 met).
+  #   battery, the plan verdict, and the pm-notes/plan conformance. The
+  #   lifecycle-phase-7 reconciliation is NOT in this battery's green set: this phase
+  #   records the handoff only, and that reconciliation's green belongs to lifecycle
+  #   phase 7 and is attested at DoD-7 (test-plan §10).
   #
-  # Exit: every AC is met and every declared phase complete; DoD-1..DoD-10
-  # (spec §17.1) are all satisfied — with DoD-9's gate verdict quoted and DoD-10
-  # left to the PM's phase-10 check; the four condition
-  # statuses agree across the three surfaces on every fixture; no repository is
-  # flipped and no authoritative record exists; `projects.v1` and the flat alias
-  # are byte-identical; the five-key shell tail is unchanged; every emitted merge
-  # (kind, code) pair matches its declared row; `verify deploy` is stated as a
-  # residual; TDR-0031 landed (as amended) in Phase 1; the bounded lifecycle prose
-  # is reconciled in Phase 6 (TC-ENGINE-065); and the two
-  # `doc/quality/test-specs/` files ARE reconciled by lifecycle phase 7
-  # (`@doc-syncer`) — this phase is satisfied only when that landing row is met.
-  # There is no "recorded instead" branch: an outstanding reconciliation keeps the
-  # obligation open for the PM's DoD check.
+  # Exit: all in-scope work landed — the code and tests of Phases 1-5, the
+  # documentation set, the guide, the bounded lifecycle prose, the planning corpus,
+  # and this phase's own suites and changeset; the change-specific suites and the
+  # gate battery are green (including DoD-8's aggregate run and DoD-9's commit-range
+  # verdict, quoted in the phase notes); the no-flip control is green (no repository
+  # flipped, no authoritative record); the shell-non-change controls are green (the
+  # five-key tail, exits, and pointer unchanged; the two delivered suites unmodified
+  # plus the one permitted new parity suite); the four condition statuses agree
+  # across the three surfaces on every fixture; `projects.v1` and the flat alias are
+  # byte-identical; every emitted merge (kind, code) pair matches its declared row;
+  # `verify deploy` is stated as a residual; TDR-0031 landed (as amended) in Phase 1;
+  # the bounded lifecycle prose is reconciled in Phase 6 (TC-ENGINE-065); and the
+  # lifecycle-phase-7 reconciliation HANDOFF is RECORDED (owner `@doc-syncer`, the
+  # two staged paths, satisfaction at DoD-7).
+  # The reconciliation itself is NOT part of this exit: no phase of this plan may
+  # close with an unmet AC or with in-scope work unlanded; the reconciliation is not
+  # in-scope work for this plan — its satisfaction point is lifecycle phase 7 and it
+  # is verified at DoD-7. This phase closes with the handoff pending; if DoD-7 is
+  # unmet it is the CHANGE that waits at lifecycle phase 10, and the PM reopens
+  # `system_spec_update` rather than closing. DoD-10 (per-phase pm-notes evidence) is
+  # likewise the PM's phase-10 check, never this phase's self-certification.
   #
-  # No scope drift: tests, the changeset, the change folder, the two test-spec
-  # files that lifecycle phase 7 authors, and nothing else — no
-  # production behaviour change, no shell change, no flip, and no plan-goal
-  # amendment.
+  # No scope drift: tests, the one permitted new shell parity suite, the changeset,
+  # the change folder, the two test-spec files staged for lifecycle phase 7, and
+  # nothing else — no production behaviour change, no edit to an existing
+  # `scripts/*.sh` entry point or `scripts/lib/**`, no change to shell behaviour, an
+  # exit, or the pinned five-key summary, no flip, and no plan-goal amendment.
   # Conditional rows: `tests/fixtures/dispatch` is declared folder-wise only if
   # the closing battery reuses a fixture helper that must be extended. The two
-  # `doc/quality/test-specs/` files are a MANDATORY obligation of the landing row
-  # above (DEC-16, DoD-7), declared here so the `@doc-syncer` edit is stageable;
-  # they are never optional and no content of them is authored by this phase.
+  # `doc/quality/test-specs/` files are the HANDOFF OBLIGATION above (DEC-16, DoD-7),
+  # declared here for STAGING only so the `@doc-syncer` edit is committable; they are
+  # never optional, are satisfied in lifecycle phase 7, and no content of them is
+  # authored by this phase.
   # ---------------------------------------------------------------------------
   - id: 7
-    title: "Cross-surface coherence, shell non-change, no-flip discipline, hermeticity, the lifecycle-phase-7 reconciliation landing, release, and gate closure"
+    title: "Cross-surface coherence, shell non-change, no-flip discipline, hermeticity, the recorded lifecycle-phase-7 reconciliation handoff, release, and gate closure"
     kind: delivery
-    summary: "test(engine-first): close the cross-surface, no-flip, and hermetic battery, land the phase-7 reconciliation, and cut the release"
+    summary: "test(engine-first): close the cross-surface, no-flip, and hermetic battery, record the phase-7 reconciliation handoff, and cut the release"
     scope:
       files:
         - .changeset/gh-293-engine-first-operations-minor.md
