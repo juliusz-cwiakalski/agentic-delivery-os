@@ -1,5 +1,7 @@
 # M3 — suggested delivery order
 
+Stories from [backlog.md](backlog.md) top to bottom in the suggested order.
+
 | # | Story | Depends on | Why here |
 |---|---|---|---|
 | 1 | M3-S4 GitHub adapter completion | M0-S19 | Reference code host + backlog first; parity targets need a reference |

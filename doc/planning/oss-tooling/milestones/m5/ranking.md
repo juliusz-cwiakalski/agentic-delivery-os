@@ -30,8 +30,9 @@ Reading notes:
 
 | # | Story | Depends on | Why here |
 |---|---|---|---|
-| 72 | M5-S1 Naming freeze and rename | M0-S2 | At M4 start so every name-derived surface exists before the freeze |
-| 73 | M5-S3 Docs, license registry, and public materials | M0-S18 | Finalized before first publication; written continuously from M0, closed out here |
-| 74 | M5-S2 Publication and release automation | M0-S17, M3-S7, M5-S1 | The release job follows the frozen name and the readiness verdict |
-| 75 | M5-S4 Merge the tooling branch to the default branch | M5-S2 | Installs move to the default branch only after a real release |
-| 76 | M5-S5 Bash stack retirement | M3-S7, M5-S4 | Wrappers outlived their purpose once installs come from the default branch |
+| 1 | M5-S1 Naming freeze and rename | M0-S2 | At M5 start so every name-derived surface exists before the freeze |
+| 2 | M5-S3 Docs, license registry, and public materials | M0-S18 | Finalized before first publication; written continuously from M0, closed out here |
+| 3 | M5-S2 Publication and release automation | M0-S17, M5-S1 | The release job follows the frozen name and the readiness verdict |
+| 4 | M5-S4 Merge the tooling branch to the default branch | M5-S2 | Installs move to the default branch only after a real release |
+| 5 | M5-S5 Bash stack retirement | M4-S8, M5-S4 | Wrappers outlived their purpose once installs come from the default branch |
+| 6 | M5-S6 Extension hooks (open-source side) | M0-S5 | Ships with the public surface; independent of release mechanics and off by default |

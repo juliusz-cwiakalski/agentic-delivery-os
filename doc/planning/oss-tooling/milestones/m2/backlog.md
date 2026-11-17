@@ -351,3 +351,183 @@ the project family separately.
   refused with a classified error naming the holder; stale entries are
   reconcilable without editing state files.
 - Depends on: M1-S9, M1-S17, M1-S18, M2-S13.
+
+### M2-S16 Engine-first delivery operations
+- Ticket: GH-293 (milestone M2)
+- Goal: Day-to-day delivery of this repository runs primarily through the
+  typed engine with the shell stack as documented fallback, accumulating the
+  evidence the handover gate requires.
+- Tasks: operate dispatch through the engine for regular delivery;
+  provider windows and holds as engine-visible data (building on the
+  pre-iteration hold hook and lane economics);
+  periodic handover-gate evaluation on accrued evidence per repository with
+  the shell path kept green; deprecation pointers from shell entry points
+  toward the engine once a repository flips.
+- AC: consecutive engine dispatches with corroborated outcomes accrue in the
+  summary; handover evaluation reports per-condition status;
+  the shell path remains usable and documented throughout; any flip is
+  per-repository and reversible.
+- Depends on: M1-S9, M1-S18, M1-S21, M2-S12, M2-S13, and the owner-hold hook change (#280).
+
+### M2-S17 Provider-aware peak pausing
+- Ticket: GH-294 (milestone M2)
+- Progress: delivered by GH-294 — every delivery nominates its provider profile
+  at dispatch admission (recorded on the lane and attempt records with the
+  classified no-nomination refusal reusing the resolve identities); peak-window
+  rules as versioned per-profile data (windows, multipliers, buffers,
+  graceSeconds with a bound derived from the smallest declared buffer); the
+  daemon's window watch parks every in-flight lane of the opening profile with
+  a bounded-grace stop, reason `peak-window`, `until` at the effective end, and
+  the `preserved | session-state-not-preserved` classification; automatic
+  window-end resume (session resume path for preserved lanes, delivered
+  interrupted-lane recovery for the rest, owner-hold precedence intact);
+  taxonomy v2 carrying stop/parked/resumed/park-edge with v1 byte-identical;
+  the window-scoped zero-spend reading over the telemetry v2 join with
+  classified absence; status and brief park fields; and the declared
+  daemon-absent degradation (`iteration-start-gating`, `parkClaimed: false`)
+  in the lanes machine read.
+- Goal: Peak-hour cost control is enforced per provider profile: in-flight
+  sessions whose nominated provider enters a peak window are stopped and later
+  resumed, while deliveries on other providers continue untouched.
+- Tasks: every delivery nominates its provider profile at dispatch admission
+  (recorded on the lane and attempt records, building on M1-S21 profiles and
+  M1-S22 identity); peak-window rules as data per provider profile (windows,
+  multipliers, buffers); the resident daemon watches profile windows and parks
+  in-flight lanes whose profile enters peak (bounded-grace stop, session state
+  preserved, park reason recorded);
+  automatic resume from preserved session state when the window ends
+  (same branch, session resume path, never re-dispatch from scratch);
+  zero-spend assertion through telemetry (M2-S14): no model calls bill
+  on a parked profile during its window; daemon-absent degrades to the
+  existing iteration-start gating, documented.
+- AC:
+  1. A dispatch records its nominated provider profile; the nomination is visible on lane and attempt records.
+  2. When a peak window starts for profile P, every in-flight lane using P is stopped with bounded grace, marked parked with reason `peak-window` and the window end, and stays parked until it ends.
+  3. Lanes using other providers are unaffected during a P peak window and keep running.
+  4. When the window ends, parked lanes resume automatically from preserved session state; no branch, artifact, or queue state is lost or duplicated.
+  5. Telemetry proves zero billable model calls on profile P during its peak window for parked lanes.
+  6. Stop, park, and resume are auditable ledger events surfaced in status and brief.
+  7. Works with the daemon resident; without it, behavior degrades to iteration-start gating with the difference declared.
+- Depends on: M1-S15, M1-S18, M1-S21, M1-S22, M2-S14, and the owner-hold semantics (#280).
+
+### M2-S18 Project groups
+- Ticket: GH-309 (milestone M2)
+- Progress: delivered by GH-309 — the project configuration document declaring
+  member repositories (mixed tracker kinds accepted, `not-yet-supported`
+  mandatory for an unimplemented kind) with classified load-time validation
+  (`projects.config-invalid`, `projects.unknown-group`,
+  `projects.scope-unavailable`); configuration-only membership with an optional
+  `workspaceRoot` that only locates declared members and never admits an
+  undeclared clone; the `project-groups.v1` group surface (`projects list`)
+  with member health and state; group-scoped `queue list --project <groupKey>`
+  and `status --project <groupKey>` reads over per-checkout state with one
+  classified partial result and no group-scoped store; the flat record set
+  moved to `repos list` under `repos.v1` with the three `repos.*` identities;
+  the `projects list --flat` byte-compat alias returning the delivered
+  `projects.v1` payload until the M3 boundary; the `repos` root listing mount
+  with its help entry and reference page; and the naming boundary stated across
+  help, reference pages, and the migration guide, lawful under the superseding
+  decision record ODR-0004.
+- Goal: A project is a configured group of repositories that belong together,
+  so the tooling can enumerate groups with their members and scope delivery
+  views per project, with a workspace directory usable as an optional
+  discovery root.
+- Tasks: project configuration declaring member repositories, with any
+  tracker adapter and mixed trackers remaining valid configuration even if
+  only GitHub is exercised initially; an optional workspace-directory
+  discovery root: register a directory, scan for managed clones inside, and
+  never require it; `projects list` rendering groups with member repositories,
+  their health, and their state; project scoping for queue and status reads;
+  the naming boundary documented, where `repos` is the flat record set and
+  `projects` describes groups. Derived tasks: (a) the rename — from M2-S18,
+  `projects list` enumerates groups and `repos list` enumerates the flat
+  record set; (b) the alias — `projects list --flat` returns the delivered
+  `projects.v1` payload (`data.projects[]`, `projectKey`, `hostIndexRevision`),
+  owned by M2-S18 and retired at the M3 boundary; (c) the field renames
+  `projectKey → repoKey` and `data.projects[] → data.repos[]` on the flat
+  surface; (d) the update of
+  `doc/guides/migrating-to-per-repository-state.md`; (e) configuration-only
+  membership declared through `workspaceRoot` and `members` in the project
+  configuration document, where a scan only locates declared members and never
+  admits an undeclared clone, plus the scoped-read grammar
+  `queue list --project <groupKey>` and `status --project <groupKey>`;
+  (f) the superseding decision record for the `repos` name before the registry
+  row moves to Delivery. This rename is S18 code work, delivered by GH-309.
+- AC:
+  1. A project with two member repositories in one workspace directory is discoverable by registering that directory.
+  2. The same project configured with repositories in unrelated directories behaves identically, because a workspace is optional.
+  3. `projects list` shows the group with both members and their state.
+  4. Queue and status accept a project scope.
+  5. A configuration mixing tracker kinds is accepted at validation time with the unimplemented member classified `not-yet-supported` rather than rejected silently.
+  6. `projects list --flat --json` returns the delivered `projects.v1` payload with `data.projects[]`, `projectKey`, and `hostIndexRevision`, while `projects list --json` returns `project-groups.v1` with `data.groups[]` and `groupKey`.
+- Depends on: M2-S11.
+
+### M2-S19 Cross-repository changes
+- Ticket: GH-310 (milestone M2)
+- Progress: delivered by GH-310 — one change declares its member set in
+  `plan.data.members[]` (closed per-member validation with the plan validate
+  echo); one queue entry and one lane per member ref
+  (`<canonicalChangeRef>@<repoKey>`, per-member dependency edges, per-member
+  release and landing removal) and the delivered `queue add` payload plus an
+  additive ordered `data.members[]`; one shared definition of done at
+  `verify gates` (`data.definitionOfDone` with per-member `gates.ci` and
+  `verdict`, landing-ordered `evidence[]`, `data.blockingMembers[]`, and one
+  `data.reviewFlow` run over the declared pull-request set) as the distinct
+  `CrossRepositoryVerifyGatesReport`, while the delivered `VerifyGatesReport`
+  keeps its literal `overall: "pass"`, member-less records, envelope, and exits;
+  and `closeout.data.members[]` with merge-truth `landed`, mode-scoped cleanup
+  and issue-closure columns, plus per-member landing removal. Zero new
+  error-table rows and zero new domain kinds; every member-less plan, gates,
+  closeout, and queue payload and exit is byte-identical.
+- Goal: One change may span multiple repositories of one project: one
+  lifecycle, one spec and plan, one definition of done, with a branch and
+  pull request per member repository.
+- Tasks: the plan declares member repositories and their slices; one
+  lifecycle drives per-repo branches and PRs; per-repo gates and one shared
+  DoD; closeout across member repositories, with branch cleanup and issue
+  closure per tracker; dependency edges between member repositories' steps
+  where order matters; evidence records enumerate all member PRs. One review
+  flow is defined executably: exactly one review run over the declared member
+  pull-request set, one verdict per member, and each member reviewed once.
+- AC:
+  1. A two-repository change produces one spec, two branches, two PRs, one review flow, and a closeout that lands both.
+  2. Per-repo CI truth is corroborated per member before the change counts done; an unavailable CI reading blocks the shared definition of done as a classified outcome rather than counting as green.
+  3. A member failing its gates blocks the shared DoD with the failing member named.
+  4. Member dependency order holds: a member step with a dependency edge does not start before the prerequisite member's pull request lands, and the evidence lists the pull requests in landing order.
+- Depends on: M2-S11, M2-S18, M1-S17.
+
+### M2-S20 Milestone-first planning and delivery
+- Ticket: GH-313 (milestone M2)
+- Goal: A milestone and every ticket attached to it exist in the tracker
+  before work starts, every new change ticket is attached at creation or
+  explicitly captured as backlog, and the committed planning corpus mirrors
+  that attachment.
+- Tasks: author the milestone-management guide and record the operating rule
+  as PDR-0005; require a milestone in the ticket-creation path and verify it
+  at intake; add the required `change.milestone` field to the change-spec
+  template and the `@spec-writer` rules; carry the rule into bootstrapped
+  project tracker instructions; deliver the event-driven milestone-attachment
+  check with its capture exemption and zero-write advisory sweep; repair the
+  M2 planning corpus so the backlog, ranking, pack, and status mirror the
+  tracker.
+- AC:
+  1. `doc/guides/milestone-management.md` exists with a redistributable marker,
+     one script-generated header, the nine lifecycle topics, and a link from
+     the documentation index; the pack conventions point at it without
+     restating the procedure.
+  2. Ticket creation requires a milestone resolved from the project's existing
+     set in both the tracker instructions and the `@pm` prompt; intake verifies
+     attachment, records it in pm-notes, and stops on an unattached ticket;
+     the `@bootstrapper` guidance carries the same rule.
+  3. The change-spec template requires `change.milestone` with its resolution
+     rule, and no other template gains a milestone field.
+  4. The milestone-attachment check evaluates the ordered contract offline,
+     flags a new unattached `change` issue once, respects the capture exemption
+     and manual flag removal, reverses on attach/detach, writes only its closed
+     vocabulary, and sweeps the existing debt with zero tracker writes.
+  5. The M2 backlog carries 19/19 ticket lines including M2-S20, the ranking is
+     contiguous and backlog-ordered, the M2 pack carries the M2-S20 row and its
+     five seeds, and the status snapshot carries the delivery addendum.
+- Depends on: none.
+
+---

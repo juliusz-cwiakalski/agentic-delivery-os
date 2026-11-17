@@ -1,5 +1,7 @@
 # M4 — suggested delivery order
 
+Stories from [backlog.md](backlog.md) top to bottom in the suggested order.
+
 | # | Story | Depends on | Why here |
 |---|---|---|---|
 | 1 | M4-S2 Namespace migration | none | Every later surface is named once, early |
