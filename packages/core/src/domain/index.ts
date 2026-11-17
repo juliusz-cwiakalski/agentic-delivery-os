@@ -470,6 +470,7 @@ export {
 } from "./merge-waiver.js";
 export {
   BASELINE_ENTRY_DECLARATIONS,
+  boundMetricsReport,
   computeMetricsReport,
   drawMetricsWindow,
   METRICS_ENTRY_ORDER,

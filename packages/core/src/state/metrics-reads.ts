@@ -14,7 +14,7 @@ import type {
   StateResult,
   StateStorePort,
 } from "#contracts";
-import { readCeremonyRuns, readCeremonySteps } from "./ceremony.js";
+import { readCeremonyState } from "./ceremony.js";
 import { readSpendLedger } from "./spend-reads.js";
 
 /** The declared evidence boundary: the read's verified store path. */
@@ -43,25 +43,28 @@ export const readMetricsLedger = (
 ): StateResult<MetricsLedgerComposition> => {
   const spend = readSpendLedger(store, workItemRef);
   if (!spend.ok) return spend;
-  const runs = readCeremonyRuns(store);
-  if (!runs.ok) return runs;
-  const ceremony: MetricsCeremonyRun[] = [];
-  let stepCount = 0;
-  for (const run of runs.value.records) {
-    const steps = readCeremonySteps(store, run.runId);
-    if (!steps.ok) return steps;
-    stepCount += steps.value.records.length;
-    ceremony.push({
-      runId: run.runId,
-      ceremony: run.ceremonyId,
-      steps: steps.value.records.map((step) => ({
-        phaseIndex: step.phaseIndex,
-        startedAtMs: step.startedAtMs,
-        endedAtMs: step.endedAtMs,
-        durationMs: step.durationMs,
-      })),
+  // One verified scan partitions the ceremony runs and every step record.
+  const ceremonyState = readCeremonyState(store);
+  if (!ceremonyState.ok) return ceremonyState;
+  const stepsByRun = new Map<string, MetricsCeremonyRun["steps"][number][]>();
+  for (const step of ceremonyState.value.steps) {
+    const list = stepsByRun.get(step.runId) ?? [];
+    list.push({
+      phaseIndex: step.phaseIndex,
+      startedAtMs: step.startedAtMs,
+      endedAtMs: step.endedAtMs,
+      durationMs: step.durationMs,
     });
+    stepsByRun.set(step.runId, list);
   }
+  const ceremony: MetricsCeremonyRun[] = ceremonyState.value.runs.map((run) => ({
+    runId: run.runId,
+    ceremony: run.ceremonyId,
+    steps: (stepsByRun.get(run.runId) ?? []).sort(
+      (left, right) => left.phaseIndex - right.phaseIndex,
+    ),
+  }));
+  const stepCount = ceremonyState.value.steps.length;
   const telemetryEmpty =
     (spend.value.steps ?? []).length === 0 &&
     spend.value.records.length === 0 &&

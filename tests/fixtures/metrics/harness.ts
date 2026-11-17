@@ -241,14 +241,18 @@ export type MetricsRun = {
 export const runMetrics = async (
   fixture: MetricsFixture,
   argv: readonly string[],
-  options: { readonly secrets?: readonly string[]; readonly runId?: string } = {},
+  options: {
+    readonly secrets?: readonly string[];
+    readonly runId?: string;
+    readonly brand?: typeof SYNTHETIC_BRAND;
+  } = {},
 ): Promise<MetricsRun> => {
   const stdout = bufferSink();
   const stderr = bufferSink();
   const ticks = [100, 110] as const;
   let tick = 0;
   const deps: CliDependencies = {
-    brand: SYNTHETIC_BRAND,
+    brand: options.brand ?? SYNTHETIC_BRAND,
     clock: {
       now: () => {
         const value = ticks[Math.min(tick, 1)] as number;

@@ -332,6 +332,7 @@ import {
   type HarnessSessionHandle,
   type HarnessSessionPort,
   type MetricsReadSeams,
+  type MetricsStateRead,
   OWNER_GATE_SLA_POLICY,
   type OwnerGateCollectorRead,
   type OwnerGateSlaDecisionRecord,
@@ -436,6 +437,7 @@ import {
   readMergeGateVerifications,
   readMergeTransactions,
   readMergeWaivers,
+  type MetricsLedgerComposition,
   readMetricsLedger,
   readOwnerGateSlaDecisions,
   readRetroRegistry,
@@ -5688,6 +5690,66 @@ export const createMetricsRuntimeFromSeams = (
   },
 });
 
+/** Project the verified ledger onto the pure fold's state input (DM-3, DEC-14). */
+export const metricsStateFromLedger = (
+  ledger: MetricsLedgerComposition,
+  ref: string,
+): MetricsStateRead => {
+  const spend = ledger.spend;
+  const ledgerRecords = spend.records;
+  const ledgerTransitions = spend.transitions;
+  const folded = computeSpendReport(spend, { workItemRef: ref });
+  const dispatch = folded.ok
+    ? {
+        tokensByClass: folded.data.tokensByClass,
+        costTotals: folded.data.costTotals,
+        restarts: folded.data.restarts,
+        perAgent: folded.data.perAgent.map((entry) => ({
+          role: entry.agent,
+          model: entry.model,
+          calls: entry.calls,
+          tokens: entry.tokens,
+        })),
+        breakdowns: {
+          role: folded.data.breakdowns.role,
+          model: folded.data.breakdowns.model,
+        },
+        reconciliation: {
+          basis: folded.data.reconciliation.basis,
+          verdict: folded.data.reconciliation.verdict,
+        },
+      }
+    : undefined;
+  return {
+    workItemRef: ref,
+    telemetryState: ledger.telemetryState,
+    records: ledgerRecords.map((record) => ({
+      runId: record.runId,
+      capturedAt: record.capturedAt,
+      tokens: record.tokens,
+      cost: record.cost,
+      calls: record.calls,
+    })),
+    steps: (spend.steps ?? []).map((step) => ({
+      runId: step.runId,
+      model: step.model,
+      agentRole: step.agentRole,
+      tokens: step.tokens,
+      calls: step.calls,
+      cost: step.cost,
+      capturedAt: step.capturedAt,
+    })),
+    transitions: ledgerTransitions.map((transition) => ({
+      phaseId: transition.phaseId,
+      operation: transition.operation,
+      timestamp: transition.timestamp,
+    })),
+    ceremony: ledger.ceremony,
+    ...(ledger.telemetryState === "absent" ? { absenceReason: "spend.telemetry-absent" } : {}),
+    ...(dispatch === undefined ? {} : { dispatch }),
+  };
+};
+
 /** Compose the metrics runtime from the injected read-only seams. */
 export const createMetricsCommandRuntime = (
   options: MetricsCompositionOptions,
@@ -5706,64 +5768,7 @@ export const createMetricsCommandRuntime = (
       readState: (ref) => {
         const ledger = readMetricsLedger(options.store, ref);
         if (!ledger.ok) return { ok: false, error: ledger.error };
-        const spend = ledger.value.spend;
-        const readRecords = spend.records;
-        const readTransitions = spend.transitions;
-        const folded = computeSpendReport(spend, { workItemRef: ref });
-        const dispatch = folded.ok
-          ? {
-              tokensByClass: folded.data.tokensByClass,
-              costTotals: folded.data.costTotals,
-              restarts: folded.data.restarts,
-              perAgent: folded.data.perAgent.map((entry) => ({
-                role: entry.agent,
-                model: entry.model,
-                calls: entry.calls,
-                tokens: entry.tokens,
-              })),
-              breakdowns: {
-                role: folded.data.breakdowns.role,
-                model: folded.data.breakdowns.model,
-              },
-              reconciliation: {
-                basis: folded.data.reconciliation.basis,
-                verdict: folded.data.reconciliation.verdict,
-              },
-            }
-          : undefined;
-        return {
-          ok: true,
-          value: {
-            workItemRef: ref,
-            telemetryState: ledger.value.telemetryState,
-            records: readRecords.map((record) => ({
-              runId: record.runId,
-              capturedAt: record.capturedAt,
-              tokens: record.tokens,
-              cost: record.cost,
-              calls: record.calls,
-            })),
-            steps: (spend.steps ?? []).map((step) => ({
-              runId: step.runId,
-              model: step.model,
-              agentRole: step.agentRole,
-              tokens: step.tokens,
-              calls: step.calls,
-              cost: step.cost,
-              capturedAt: step.capturedAt,
-            })),
-            transitions: readTransitions.map((transition) => ({
-              phaseId: transition.phaseId,
-              operation: transition.operation,
-              timestamp: transition.timestamp,
-            })),
-            ceremony: ledger.value.ceremony,
-            ...(ledger.value.telemetryState === "absent"
-              ? { absenceReason: "spend.telemetry-absent" }
-              : {}),
-            ...(dispatch === undefined ? {} : { dispatch }),
-          },
-        };
+        return { ok: true, value: metricsStateFromLedger(ledger.value, ref) };
       },
       readBaselineLog: () =>
         readMetricsBaselineLog({ projectRoot: options.projectRoot, fs: options.fs }),

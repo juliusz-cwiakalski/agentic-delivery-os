@@ -29,7 +29,8 @@
     "doc/planning/oss-tooling/milestones/m2/commands/board.md",
     "doc/planning/oss-tooling/milestones/m2/commands/ceremony.md",
     "doc/planning/oss-tooling/milestones/m2/commands/retro.md",
-    "doc/planning/oss-tooling/milestones/m2/commands/steer.md"
+    "doc/planning/oss-tooling/milestones/m2/commands/steer.md",
+    "doc/planning/oss-tooling/milestones/m2/commands/metrics.md"
   ],
   "commands": [
     "status",
@@ -54,6 +55,7 @@
     "events",
     "board",
     "ceremony",
-    "steer"
+    "steer",
+    "metrics"
   ]
 }

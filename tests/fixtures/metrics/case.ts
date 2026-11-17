@@ -6,6 +6,18 @@
  * in-window ceremony records, and a committed corpus document — so a suite can
  * name only the dimension it varies.
  */
+import {
+  readMetricsBaselineLog,
+  readMetricsBurnRateNode,
+  scanMetricsCorpus,
+} from "../../../packages/adapters/src/file/index";
+import { metricsStateFromLedger } from "../../../packages/cli/src/edge";
+import {
+  drawMetricsWindow,
+  type MetricsFoldInput,
+  resolveMetricsBurnRate,
+} from "../../../packages/core/src/domain/metrics";
+import { readMetricsLedger } from "../../../packages/core/src/state/index";
 import { baselineDocument, CEREMONY_ROW, CI_ROW, CYCLE_ROW, FALSE_SIGNAL_ROW } from "./baseline";
 import { type CeremonySeedRun, inWindowCeremonies, seedCeremony } from "./ceremony";
 import { type BurnRateConfigInput, burnRateConfig } from "./config";
@@ -102,4 +114,41 @@ export const makeMetricsCase = (options: MetricsCaseOptions = {}): MetricsFixtur
     corpusDocument({ ci: options.ci ?? defaultCi(), evidence: options.evidence ?? [] }),
   );
   return fixture;
+};
+
+/** Build the pure fold's input from one composed case over the real reads. */
+export const foldInputFor = (fixture: MetricsFixture): MetricsFoldInput => {
+  const ledger = readMetricsLedger(fixture.store, METRICS_REF);
+  if (!ledger.ok) throw new Error(`ledger read failed: ${ledger.error.code}`);
+  const baseline = readMetricsBaselineLog({ projectRoot: fixture.root, fs: fixture.project });
+  const nodeRead = readMetricsBurnRateNode({
+    platform: "linux",
+    homeDirectory: `${fixture.root}/home`,
+    environment: {},
+    gitRoot: fixture.root,
+    enableSystemConfig: false,
+    enableUserConfig: false,
+    enableProjectLocalConfig: false,
+    configurationDirectoryName: ".example-product",
+    fs: fixture.project,
+  });
+  const node = nodeRead.ok
+    ? nodeRead.state === "absent"
+      ? ({ ok: true, declared: false } as const)
+      : resolveMetricsBurnRate(nodeRead.node)
+    : ({ ok: false, code: "config.value.invalid" } as const);
+  const corpus = scanMetricsCorpus({
+    projectRoot: fixture.root,
+    changesDirectory: "doc/changes",
+    fs: fixture.project,
+  });
+  return {
+    ref: METRICS_REF,
+    window: drawMetricsWindow(fixture.nowMs),
+    nowMs: fixture.nowMs,
+    state: metricsStateFromLedger(ledger.value, METRICS_REF),
+    baseline,
+    node,
+    corpus,
+  };
 };

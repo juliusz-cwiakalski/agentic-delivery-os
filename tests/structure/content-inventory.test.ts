@@ -32,6 +32,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "core/src/app/daemon-supervisor.ts": ["installSupervisor", "uninstallSupervisor"],
   "core/src/domain/metrics.ts": [
     "BASELINE_ENTRY_DECLARATIONS",
+    "boundMetricsReport",
     "computeMetricsReport",
     "drawMetricsWindow",
     "mapMeasurementKind",
@@ -2180,6 +2181,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "createSpendCommandRuntime",
     "createMetricsCommandRuntime",
     "createMetricsRuntimeFromSeams",
+    "metricsStateFromLedger",
     "createTelemetryIngestSink",
     "createRegistryLintReader",
     "createStatusCommandRuntime",

@@ -1085,6 +1085,7 @@ export {
 // GH-299: the pure metrics report domain and its bounded human renderer.
 export {
   BASELINE_ENTRY_DECLARATIONS,
+  boundMetricsReport,
   computeMetricsReport,
   drawMetricsWindow,
   METRICS_ENTRY_ORDER,

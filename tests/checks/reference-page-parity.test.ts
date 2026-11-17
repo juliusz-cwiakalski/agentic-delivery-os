@@ -31,7 +31,9 @@ const pageFor = (command: string): string =>
                 ? `${M2_PAGE_ROOT}/ceremony.md`
                 : command === "retro"
                   ? `${M2_PAGE_ROOT}/retro.md`
-                  : `${PAGE_ROOT}/${command}.md`;
+                  : command === "metrics"
+                    ? `${M2_PAGE_ROOT}/metrics.md`
+                    : `${PAGE_ROOT}/${command}.md`;
 const coverage = JSON.parse(
   readFileSync(join(ROOT, "tests/fixtures/help-guide/coverage.json"), "utf8"),
 ) as { readonly commands: readonly string[]; readonly referencePages: readonly string[] };
@@ -73,6 +75,7 @@ describe("TC-HELP-003 reference-page parity", () => {
 describe("TC-ACTION-036 the retro family's reference page is the M2 page", () => {
   test("the retro help entry points at the reconciled M2 page and the M1 snapshot stays", () => {
     expect(pageFor("retro")).toBe(`${M2_PAGE_ROOT}/retro.md`);
+    expect(pageFor("metrics")).toBe(`${M2_PAGE_ROOT}/metrics.md`);
     const retro = allHelpEntries().filter((help) => help.path[0] === "retro");
     expect(retro.length).toBeGreaterThanOrEqual(2);
     for (const help of retro) {

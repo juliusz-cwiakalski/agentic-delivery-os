@@ -848,7 +848,8 @@ const applyRowCaps = (
   };
 };
 
-const boundMachine = (
+/** Bound the machine payload: row caps first, then the tail-ordered byte drops. */
+export const boundMetricsReport = (
   report: MetricsReport,
 ): { readonly report: MetricsReport } & TruncationState => {
   const capped = applyRowCaps(report);
@@ -935,7 +936,7 @@ export const computeMetricsReport = (input: MetricsFoldInput): MetricsReport => 
     omitted: 0,
     truncated: false,
   };
-  return boundMachine(report).report;
+  return boundMetricsReport(report).report;
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
