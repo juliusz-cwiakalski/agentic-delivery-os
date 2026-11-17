@@ -282,3 +282,33 @@ notes:
       schedule); production always supplies it."
     type: "info"
     date: "2026-11-17"
+  - text: "Plan phase 5 complete (restart composition, duplicate refusals,
+      non-regression proofs) at commit 9ca4b26a. Delivered: the restart branch for
+      an already-parked stale lane (delivered budget admission consulted once,
+      one delivered restart record with ordinal +1, terminal exhaustion + one
+      idempotent typed question, the declared unavailable outcome consuming no
+      budget), the per-action duplicate-supervision refusal against a durable
+      acting authority (pending delivered preemption record, observation-window
+      bounded, retry control), per-ref double-claim refusal through the delivered
+      claimSingleFlightRefusal helper, the acting/restart facts in the one-read
+      snapshot, and TC-SUP-021/044/051/052/053/054/060/061/062/063/072 suites.
+      Tests: 136 supervision cases green; TMPDIR=$PWD/tmp/tmpdir pnpm check PASS
+      (9955 pass / 0 fail)."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Phase-5 notes: (1) the acting-authority artifact is the delivered
+      daemon.preemption pending record (the only durable record naming an object
+      another supervision authority is acting on); detection is record-only and
+      its acting window is the imported corroboration bound. (2) Restart
+      admission runs only for an already-parked stale lane so one run never parks
+      and restarts the same lane; this keeps TC-SUP-040's single-action park and
+      TC-SUP-052's parked-lane claim action coherent. (3) The delivered
+      exhaustion options are requeue-fresh-budget/park-owner-review; the fixture
+      initially used a wrong first member and the state layer failed closed with
+      state.store.torn — the fail-closed behaviour is correct and the fixture was
+      fixed. (4) One aggregate-gate run failed a delivered suite
+      (prior-identity-notice TC-BIN-045 invariance) at its 5 s bun timeout under
+      load; the immediate rerun was green (9955/0) and the suite passes
+      standalone — recorded as an environmental flake, not a regression."
+    type: "info"
+    date: "2026-11-17"

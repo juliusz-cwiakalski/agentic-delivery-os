@@ -38,6 +38,7 @@ const EXPECTED: readonly PromptRequiredCommand[] = [
   "board",
   "ceremony",
   "steer",
+  "supervise",
 ];
 
 const withExtras = (): CommandProgram => {
