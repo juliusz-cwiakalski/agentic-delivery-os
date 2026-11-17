@@ -13,7 +13,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-17T12:14:50.209Z }
   quality_gates: { started: null, completed: 2026-11-17T12:40:59.433Z }
   dod_check: { started: null, completed: 2026-11-17T12:42:51.088Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-17T12:45:42.625Z }
 decisions:
   - text: "Quota snapshots are OUT of scope for GH-299. Authority: the canonical
       backlog story row (backlog.md M2-S6 task list and the ticket body) names
@@ -438,5 +438,13 @@ notes:
       node_modules/.bin/commitlint (origin repository-local, ref
       refs/remotes/origin/main-tools). No remediation mode selected (none
       needed)."
+    type: info
+    date: "2026-11-17"
+  - text: "PR created:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/331 — base
+      main-tools, head feat/GH-299/metrics-spend @ 4385a35c (branch pushed;
+      explicit refspec used because the local upstream was wrongly set to
+      origin/main-tools). PR left open; merge authority is the CEO (Mode A) or a
+      human via batch-deliver.sh (Mode B)."
     type: info
     date: "2026-11-17"
