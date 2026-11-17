@@ -57,6 +57,7 @@ import {
   type MetricsStateRead,
   type MetricsWindow,
 } from "#contracts";
+import { preferStreamBySession } from "./spend.js";
 
 /** The window resolution outcome: one effective window or a grammar reason. */
 export type MetricsWindowOutcome =
@@ -326,6 +327,7 @@ const isCommittedPath = (path: string): boolean =>
   !path.startsWith("/") &&
   !path.includes("/tmp/") &&
   !path.startsWith("../") &&
+  !path.split("/").includes("..") &&
   !PROHIBITED_PREFIXES.some((prefix) => path === prefix.slice(0, -1) || path.startsWith(prefix));
 
 const isEscapedClass = (value: unknown): value is EscapedDefectClass =>
@@ -717,37 +719,56 @@ const dispatchOf = (state: MetricsStateRead): MetricsDispatch => {
   };
 };
 
-/** The windowed measured spend one alarm evaluation consumes (F-6). */
+type MetricsSpendRecord = {
+  readonly sessionId: string;
+  readonly plane: "stream" | "closeout";
+  readonly capturedAt: string;
+  readonly tokens: Readonly<Record<string, number | null>>;
+  readonly cost: number | null;
+};
+
+/**
+ * The windowed measured spend one alarm evaluation consumes (F-6).
+ *
+ * The union of both capture planes is reduced by the delivered fold's
+ * per-session plane preference (one session, one plane's figures), then
+ * windowed by capture instant. A closeout-only session beside any stream step
+ * stays counted, so the measured figure matches `spend` for the same window.
+ */
 const measureSpend = (
   state: MetricsStateRead,
   window: { readonly start: string; readonly end: string },
 ): { readonly tokens: number; readonly cost: number | null; readonly sparse: boolean } => {
   const startMs = Date.parse(window.start);
   const endMs = Date.parse(window.end);
+  const measured: MetricsSpendRecord[] = [
+    ...state.steps.map((step) => ({
+      sessionId: step.sessionId,
+      plane: "stream" as const,
+      capturedAt: step.capturedAt,
+      tokens: step.tokens,
+      cost: step.cost,
+    })),
+    ...state.records.map((record) => ({
+      sessionId: record.sessionId,
+      plane: "closeout" as const,
+      capturedAt: record.capturedAt,
+      tokens: record.tokens,
+      cost: record.cost,
+    })),
+  ];
   let tokens = 0;
   let cost = 0;
   let priced = 0;
   let sparse = false;
-  for (const step of state.steps) {
-    const instant = Date.parse(step.capturedAt);
+  for (const record of preferStreamBySession(measured)) {
+    const instant = Date.parse(record.capturedAt);
     if (!Number.isFinite(instant) || instant < startMs || instant > endMs) continue;
-    for (const value of Object.values(step.tokens)) tokens += value ?? 0;
-    if (step.cost === null) sparse = true;
+    for (const value of Object.values(record.tokens)) tokens += value ?? 0;
+    if (record.cost === null) sparse = true;
     else {
-      cost += step.cost;
+      cost += record.cost;
       priced += 1;
-    }
-  }
-  if (state.steps.length === 0) {
-    for (const record of state.records) {
-      const instant = Date.parse(record.capturedAt);
-      if (!Number.isFinite(instant) || instant < startMs || instant > endMs) continue;
-      for (const value of Object.values(record.tokens)) tokens += value ?? 0;
-      if (record.cost === null) sparse = true;
-      else {
-        cost += record.cost;
-        priced += 1;
-      }
     }
   }
   return { tokens, cost: priced === 0 ? null : cost, sparse };

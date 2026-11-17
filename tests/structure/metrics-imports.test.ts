@@ -56,7 +56,7 @@ const specifiersOf = (source: string, name: string): readonly Specifier[] => {
 /** The admitted relative siblings per tier. */
 const ADMITTED_RELATIVES: Readonly<Record<string, readonly RegExp[]>> = {
   contracts: [/^\.\/(state|telemetry|spend)\.js$/u],
-  domain: [/^\.\/metrics(-text)?\.js$/u],
+  domain: [/^\.\/(metrics(-text)?|spend)\.js$/u],
   state: [/^\.\/(ceremony|spend-reads)\.js$/u],
   adapters: [/^\.\/(config-source|yaml-parser)\.js$/u],
 };

@@ -22,7 +22,14 @@ import {
   reportOf,
   runMetrics,
 } from "../fixtures/metrics/harness";
-import { seedTelemetry, stepOf, tokens } from "../fixtures/metrics/telemetry";
+import {
+  makeStepRecord,
+  makeV1Record,
+  seedTelemetry,
+  seedV1Records,
+  stepOf,
+  tokens,
+} from "../fixtures/metrics/telemetry";
 
 const fixtures: MetricsFixture[] = [];
 
@@ -103,6 +110,56 @@ describe("TC-METRICS-050 exactly one alarm per crossing with every member echoed
       measured: 2,
       sparse: true,
     });
+  });
+
+  test("a mixed-plane store counts the closeout-only session, equal to the delivered fold", async () => {
+    const fixture = makeMetricsFixture({ label: "alarm-mixed-plane", activeRef: METRICS_REF });
+    fixtures.push(fixture);
+    fixture.setConfig(burnRateConfig({ threshold: 1000, basis: "tokens", window: "14d" }));
+    fixture.setBaseline(fullBaseline());
+    seedTelemetry(fixture.store, [
+      makeStepRecord({
+        ref: METRICS_REF,
+        runId: "run-stream",
+        sessionId: "session-stream",
+        agentRole: "coder",
+        model: "model-alpha",
+        tokens: tokens({ input: 400 }),
+        cost: 1,
+        capturedAt,
+      }),
+    ]);
+    seedV1Records(fixture.store, [
+      // A closeout-only session beside a stream step must not be dropped.
+      makeV1Record({
+        ref: METRICS_REF,
+        runId: "run-closeout",
+        sessionId: "session-closeout",
+        agent: "coder",
+        model: "model-alpha",
+        tokens: tokens({ input: 600 }),
+        cost: 1.5,
+        capturedAt,
+      }),
+      // The same session's closeout plane loses to its stream plane.
+      makeV1Record({
+        ref: METRICS_REF,
+        runId: "run-stream",
+        sessionId: "session-stream",
+        agent: "coder",
+        model: "model-alpha",
+        tokens: tokens({ input: 9_999 }),
+        cost: 99,
+        capturedAt,
+      }),
+    ]);
+    const data = reportOf(await runMetrics(fixture, ["metrics", "--json"]));
+    const alarms = data.alarms as readonly Record<string, unknown>[];
+    expect(alarms).toHaveLength(1);
+    expect(alarms[0]?.measured).toBe(1000);
+    const dispatch = data.dispatch as { tokensByClass: Record<string, number> };
+    const foldTotal = Object.values(dispatch.tokensByClass).reduce((sum, value) => sum + value, 0);
+    expect(alarms[0]?.measured).toBe(foldTotal);
   });
 
   test("the alarm is report data: no store member is written", async () => {

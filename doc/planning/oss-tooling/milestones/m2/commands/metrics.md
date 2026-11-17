@@ -69,6 +69,40 @@ evidence:
 The report never refuses for absent evidence: the all-absent picture is a
 success envelope at exit 0.
 
+## Authoring committed corpus evidence
+
+The CI-failure-rate proxy and escaped-defects curation read only committed
+documents under the change directory that declare a top-level `metrics_corpus`
+block. A committed change document (for example `chg-<ref>-pm-notes.yaml`)
+opts in like this:
+
+```yaml
+metrics_corpus:
+  ci_observations:
+    - ref: GH-170
+      path: doc/changes/2026-10/2026-10-29--GH-170--monorepo-scaffold-toolchain/chg-GH-170-pm-notes.yaml
+      observed: true
+      outcome: mixed
+      observed_at: '2026-10-29T18:00:00Z'
+  evidence:
+    - path: doc/changes/2026-10/2026-10-29--GH-170--monorepo-scaffold-toolchain/chg-GH-170-pm-notes.yaml
+      anchor: phases.quality_gate_iterations
+      class: post-gate-review
+      observed_at: '2026-10-29T18:00:00Z'
+      ref: GH-170
+```
+
+Rules: every `path` is a committed relative path (no absolute path, no
+`tmp/**`, no `.ai/local/**`, no `..` segment); an evidence row needs a
+non-empty `anchor` that appears in the cited committed artifact, otherwise it
+is excluded and disclosed; `observed_at` must be an ISO instant inside the
+report's evidence window; outcomes are `green`, `red`, or `mixed`; classes are
+`post-gate-review`, `landed-ci-failure`, or `retro-attributed`. Unobserved
+deliveries are never assumed green. Until a committed document opts in, both
+entries are `UNAVAILABLE` on that tree, never `0`. The baseline log's
+per-change spine rows are not a substitute because they carry no
+per-observation timestamp and therefore cannot be windowed honestly.
+
 ## Refusals and exit codes
 
 | Outcome | Identity | Exit |

@@ -2408,6 +2408,7 @@ const APPENDIX_D_FILES = [
   "tests/behaviour/ceremony-nonregression.test.ts",
   "tests/checks/error-table-sync.test.ts",
   "doc/spec/features/feature-result-contract.md",
+  "doc/spec/features/feature-ceremony-runner.md",
 ] as const;
 
 const leftoverPins = (text: string): string[] =>
@@ -2465,7 +2466,7 @@ describe("TC-BOARD-053 board identities and Appendix D", () => {
     expect(carrier).toContain("exact two-segment allowlist of 63 declared identities");
   });
 
-  test("the repo-wide no-leftover scan reports no legacy count pin across the five files", () => {
+  test("the repo-wide no-leftover scan reports no legacy count pin across the declared files", () => {
     for (const file of APPENDIX_D_FILES) {
       const text = readFileSync(join(ROOT, file), "utf8");
       expect(leftoverPins(text), file).toEqual([]);

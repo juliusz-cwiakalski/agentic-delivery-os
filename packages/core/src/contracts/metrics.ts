@@ -490,6 +490,8 @@ export type MetricsStateRead = {
   readonly telemetryState: TelemetryState;
   readonly records: readonly {
     readonly runId: string;
+    /** The delivered session identity for the per-session plane selection (F-6). */
+    readonly sessionId: string;
     readonly capturedAt: string;
     readonly tokens: Readonly<Record<string, number | null>>;
     readonly cost: number | null;
@@ -497,6 +499,8 @@ export type MetricsStateRead = {
   }[];
   readonly steps: readonly {
     readonly runId: string;
+    /** The delivered session identity for the per-session plane selection (F-6). */
+    readonly sessionId: string;
     readonly model: string | null;
     readonly agentRole: string | null;
     readonly tokens: Readonly<Record<string, number | null>>;

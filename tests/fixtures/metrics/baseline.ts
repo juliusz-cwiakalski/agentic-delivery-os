@@ -15,7 +15,8 @@ export type BaselineRowInput = {
   readonly direction: string;
   readonly value: number | null;
   readonly limitation: string;
-  readonly excluded?: readonly { readonly reason: string; readonly count: number }[];
+  /** The committed per-change exclusion rows: `{ref, reason}` (the real log shape). */
+  readonly excluded?: readonly { readonly ref: string; readonly reason: string }[];
   readonly sample?: Readonly<Record<string, number>>;
 };
 
@@ -57,8 +58,8 @@ const rowText = (row: BaselineRowInput): string => {
   if (row.sample === undefined) lines.push("      metric_included: 0");
   lines.push("    metric_excluded_changes:");
   for (const exclusion of row.excluded ?? []) {
-    lines.push(`      - reason: ${exclusion.reason}`);
-    lines.push(`        count: ${exclusion.count}`);
+    lines.push(`      - ref: ${exclusion.ref}`);
+    lines.push(`        reason: ${exclusion.reason}`);
   }
   if ((row.excluded ?? []).length === 0)
     lines[lines.length - 1] = "    metric_excluded_changes: []";
@@ -125,7 +126,7 @@ export const CI_ROW: BaselineRowInput = {
   value: 0.25,
   limitation:
     "No committed CI run log exists. This is a session-level proxy, not a per-run or per-check rate.",
-  excluded: [{ reason: "no_ci_observation", count: 1 }],
+  excluded: [{ ref: "GH-32", reason: "no_ci_observation" }],
   sample: { spine_included: 23, metric_included: 4 },
 };
 
@@ -188,7 +189,7 @@ export const damageDocuments = (): Readonly<Record<string, string>> => {
       rows: [
         {
           ...CI_ROW,
-          excluded: [{ reason: "invented_reason", count: 1 }],
+          excluded: [{ ref: "GH-1", reason: "invented_reason" }],
         },
         CEREMONY_ROW,
         CYCLE_ROW,

@@ -278,3 +278,25 @@ notes:
       preferences. Both are now remediation tasks 10.1/10.2 and 10.3."
     type: retro
     date: "2026-11-17"
+  - text: "Evidence correction (review iteration 1 finding F-5): the phase 4, 6,
+      and 9 notes deferred their commit hashes to later notes. Self-contained
+      records, with the test results already reported for each phase:
+      (phase 4) commit 138b802a — metrics-grammar 12/12, metrics-envelope 9/9,
+      metrics-baseline 12/12, metrics-baseline-damage 8/8,
+      metrics-write-discipline 4/4, metrics-cycle-time 6/6,
+      metrics-ceremony-share 4/4, metrics-ci-proxy 5/5, metrics-caveat 5/5,
+      metrics-comparisons 12/12; TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0
+      except the two known load-sensitive delivered suites (9931 pass / 4
+      pre-existing skip / 2 fail), both re-proven green in isolation and at
+      the phase-9 battery. (phase 6) commit 9903955c —
+      metrics-escaped-defects 9/9, metrics-absence 8/8, metrics-store-damage
+      9/9, metrics-baseline-damage 9/9, metrics-bounds 2/2;
+      TMPDIR=$PWD/tmp/tmpdir pnpm check 10018 pass / 4 pre-existing skip / 2
+      fail, the same two load-sensitive suites, re-proven green in isolation
+      and at the phase-9 battery. (phase 9) commit 3303d399 — plan validate
+      GH-299 verdict=valid; TMPDIR=$PWD/tmp/tmpdir pnpm check EXIT 0 with
+      10078 pass / 4 pre-existing skip / 0 fail; doc-distribution guard no
+      drift; changesets group exactly one fixed group of five;
+      ./scripts/lint-commit-range.sh --base origin/main-tools VERDICT PASS."
+    type: info
+    date: "2026-11-17"

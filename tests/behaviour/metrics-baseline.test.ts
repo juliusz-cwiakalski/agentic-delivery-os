@@ -5,6 +5,9 @@
  * declared source), partial-log row absence, and the untouched fourth row.
  */
 import { afterEach, describe, expect, test } from "bun:test";
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { readMetricsBaselineLog } from "../../packages/adapters/src/file/metrics-baseline";
 import {
   BASELINE_SOURCE_COMMIT,
   BASELINE_WINDOW,
@@ -18,6 +21,7 @@ import {
 } from "../fixtures/metrics/baseline";
 import { defaultBaseline, makeMetricsCase } from "../fixtures/metrics/case";
 import {
+  BASELINE_RELATIVE,
   documentText,
   entriesById,
   METRICS_REF,
@@ -65,18 +69,21 @@ describe("TC-METRICS-010 each baseline entry cites its committed definition", ()
     expect(entries["MET-CI-FAILURE-RATE"]?.status).toBe("PARTIAL");
   });
 
-  test("counted exclusions are conserved and zero-count reasons are absent", async () => {
+  test("per-change exclusions are counted per reason, and zero-count reasons are absent", async () => {
     const data = await report(makeMetricsCase({ label: "baseline-exclusions" }));
     const entries = entriesById(data);
     for (const row of [CEREMONY_ROW, CYCLE_ROW, CI_ROW]) {
       const entry = entries[row.id];
-      const expected = row.excluded ?? [];
-      if (expected.length === 0) {
+      const expected = new Map<string, number>();
+      for (const exclusion of row.excluded ?? []) {
+        expected.set(exclusion.reason, (expected.get(exclusion.reason) ?? 0) + 1);
+      }
+      if (expected.size === 0) {
         expect(entry?.excluded ?? []).toEqual([]);
         continue;
       }
-      for (const exclusion of expected) {
-        expect(entry?.excluded).toContainEqual(exclusion);
+      for (const [reason, count] of expected) {
+        expect(entry?.excluded).toContainEqual({ reason, count });
       }
       for (const exclusion of (entry?.excluded ?? []) as readonly {
         readonly count: number;
@@ -220,5 +227,51 @@ describe("TC-METRICS-016 the fourth log row is not surfaced", () => {
     const after = documentText(fixture, "doc/planning/oss-tooling/measurement-baseline.yaml");
     expect(after).toBe(before);
     expect(METRICS_REF).toBe("GH-299");
+  });
+});
+
+describe("TC-METRICS-010 the real committed log is readable from the tree", () => {
+  const root = resolve(import.meta.dir, "../..");
+  const realLog = (): string => readFileSync(resolve(root, BASELINE_RELATIVE), "utf8");
+  const realFs = {
+    exists: (path: string) => existsSync(path),
+    readText: (path: string) => readFileSync(path, "utf8"),
+  };
+
+  test("the adapter classifies the committed measurement-baseline.yaml as present", () => {
+    const read = readMetricsBaselineLog({ projectRoot: root, fs: realFs });
+    expect(read.ok).toBe(true);
+    if (!read.ok || read.state !== "present") throw new Error("real log not present");
+    expect(read.document.rows.map((row) => row.id)).toEqual([
+      "MET-CEREMONY-SHARE",
+      "MET-CYCLE-TIME",
+      "MET-CI-FAILURE-RATE",
+      "MET-FALSE-SIGNAL-INCIDENTS",
+    ]);
+    // The real per-change exclusion rows are counted per closed reason.
+    const cycle = read.document.rows.find((row) => row.id === "MET-CYCLE-TIME");
+    expect(cycle?.excluded).toEqual([{ reason: "missing_metric_input", count: 3 }]);
+  });
+
+  test("a report over the real committed log renders at exit 0", async () => {
+    const fixture = makeMetricsCase({ label: "real-baseline", baseline: realLog() });
+    fixtures.push(fixture);
+    const machine = await runMetrics(fixture, ["metrics", "--json"]);
+    expect(machine.exitCode).toBe(0);
+    expect(machine.envelope?.error).toBeUndefined();
+    const data = machine.envelope?.data as Record<string, unknown>;
+    expect((data.metrics as readonly { id: string }[]).map((entry) => entry.id)).toEqual([
+      "MET-CEREMONY-SHARE",
+      "MET-CYCLE-TIME",
+      "MET-CI-FAILURE-RATE",
+      "escaped-defects",
+    ]);
+    expect(
+      (data.metrics as readonly { definitionRef?: unknown }[])[0]?.definitionRef,
+    ).toBeDefined();
+    const human = await runMetrics(fixture, ["metrics"]);
+    expect(human.exitCode).toBe(0);
+    expect(human.human).toContain("metrics — delivery metrics");
+    expect(human.human).toContain("MET-CYCLE-TIME");
   });
 });

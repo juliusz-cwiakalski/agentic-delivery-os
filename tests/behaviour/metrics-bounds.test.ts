@@ -13,6 +13,7 @@ import {
   type MetricsReport,
 } from "../../packages/core/src/contracts/index";
 import { boundMetricsReport } from "../../packages/core/src/domain/metrics";
+import { renderMetricsHuman } from "../../packages/core/src/domain/metrics-text";
 import { makeMetricsCase } from "../fixtures/metrics/case";
 import { burnRateConfig } from "../fixtures/metrics/config";
 import type { EvidenceInput } from "../fixtures/metrics/corpus";
@@ -24,6 +25,7 @@ import {
   makeMetricsFixture,
   reportOf,
   runMetrics,
+  SYNTHETIC_BRAND,
 } from "../fixtures/metrics/harness";
 import { seedTelemetry, stepOf, tokens } from "../fixtures/metrics/telemetry";
 import { completeHistory, seedHistory } from "../fixtures/metrics/transitions";
@@ -100,7 +102,7 @@ const syntheticReport = (): MetricsReport => {
         end: new Date(METRICS_NOW_MS).toISOString(),
       },
     },
-    comparisons: Array.from({ length: 20 }, (_unused, index) => ({
+    comparisons: Array.from({ length: 20 }, (_unused, _index) => ({
       metricId: "MET-CI-FAILURE-RATE" as const,
       definitionRef: { logPath: "log.yaml", sourceCommit: "commit" },
       before: {
@@ -337,5 +339,48 @@ describe("TC-METRICS-063/104 the incidents row cap counts its omissions", () => 
     const sample = (entry?.sample ?? {}) as Record<string, number>;
     expect(sample.n).toBe(11);
     expect((await runMetrics(fixture, ["metrics"])).human).toContain("truncated");
+  });
+});
+
+describe("TC-METRICS-102 the human fallback drops tail-first and names the sections", () => {
+  test("the fallback respects the bounds and keeps the alarm, evaluation, and entries", () => {
+    const report = syntheticReport();
+    const human = renderMetricsHuman(report, SYNTHETIC_BRAND);
+    const lines = human.split("\n");
+    expect(lines.length).toBeLessThanOrEqual(METRICS_MAX_HUMAN_LINES);
+    expect(Buffer.byteLength(human, "utf8")).toBeLessThanOrEqual(METRICS_MAX_HUMAN_BYTES);
+    expect(human).toContain("Alarm evaluation:");
+    expect(human).toContain("Alarm: burn-rate");
+    expect(human).toContain("escaped-defects");
+    expect(human).toContain("truncated");
+    // The marker names the sections actually dropped, not a fixed "comparisons".
+    expect(human).toMatch(/comparisons=\d+/u);
+    expect(human).toMatch(/incidents=\d+/u);
+    expect(human).toMatch(/perAgent=\d+/u);
+  });
+
+  test("dropping never reaches the dispatch summary before the declared tail sections", () => {
+    const report = syntheticReport();
+    const long = "y".repeat(6_000);
+    const humanOnlyAgents = {
+      ...report,
+      comparisons: [],
+      metrics: report.metrics.map((entry) => ({ ...entry, incidents: undefined })),
+      dispatch: {
+        ...report.dispatch,
+        perAgent: Array.from({ length: 20 }, (_unused, index) => ({
+          role: `role-${String(index)}`,
+          model: long,
+          calls: 1,
+          tokens: 1,
+        })),
+      },
+    };
+    const human = renderMetricsHuman(humanOnlyAgents, SYNTHETIC_BRAND);
+    expect(Buffer.byteLength(human, "utf8")).toBeLessThanOrEqual(METRICS_MAX_HUMAN_BYTES);
+    expect(human).toContain("Dispatch: telemetry present");
+    expect(human).not.toMatch(/comparisons=\d+/u);
+    expect(human).toMatch(/perAgent=\d+/u);
+    expect(human).toContain("Alarm: burn-rate");
   });
 });

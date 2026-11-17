@@ -425,6 +425,7 @@ import {
   foldCeremonyRunVerdict,
   foldCloseoutHistory,
   foldPhaseState,
+  type MetricsLedgerComposition,
   readActionRegistry,
   readAllMergeWaivers,
   readAuditLedger,
@@ -437,7 +438,6 @@ import {
   readMergeGateVerifications,
   readMergeTransactions,
   readMergeWaivers,
-  type MetricsLedgerComposition,
   readMetricsLedger,
   readOwnerGateSlaDecisions,
   readRetroRegistry,
@@ -5725,6 +5725,7 @@ export const metricsStateFromLedger = (
     telemetryState: ledger.telemetryState,
     records: ledgerRecords.map((record) => ({
       runId: record.runId,
+      sessionId: record.sessionId,
       capturedAt: record.capturedAt,
       tokens: record.tokens,
       cost: record.cost,
@@ -5732,6 +5733,7 @@ export const metricsStateFromLedger = (
     })),
     steps: (spend.steps ?? []).map((step) => ({
       runId: step.runId,
+      sessionId: step.sessionId,
       model: step.model,
       agentRole: step.agentRole,
       tokens: step.tokens,

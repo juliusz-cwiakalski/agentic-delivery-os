@@ -7,8 +7,11 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync, rmSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { pathToFileURL } from "node:url";
-import type { MetricsReport } from "../../packages/core/src/contracts/index";
-import { computeMetricsReport } from "../../packages/core/src/domain/metrics";
+import {
+  METRICS_MAX_MACHINE_BYTES,
+  type MetricsReport,
+} from "../../packages/core/src/contracts/index";
+import { boundMetricsReport, computeMetricsReport } from "../../packages/core/src/domain/metrics";
 import { foldInputFor, makeMetricsCase } from "../fixtures/metrics/case";
 import { burnRateConfig } from "../fixtures/metrics/config";
 import type { EvidenceInput } from "../fixtures/metrics/corpus";
@@ -22,6 +25,7 @@ type Replacement = readonly [string, string];
 
 type Module = {
   readonly computeMetricsReport: (input: ReturnType<typeof foldInputFor>) => MetricsReport;
+  readonly boundMetricsReport: typeof boundMetricsReport;
 };
 
 const withMutant = async (
@@ -293,6 +297,129 @@ describe("TC-METRICS-112 every honesty rule has a disabling mutant", () => {
       },
     );
     built.dispose();
+  });
+
+  test("zero-fill CI rate: an unavailable proxy rendering zero is detected", async () => {
+    const built = makeMetricsCase({ label: "mutant-zero-ci", ci: [] });
+    expect(
+      entryOf(computeMetricsReport(foldInputFor(built)), "MET-CI-FAILURE-RATE")?.value,
+    ).toBeUndefined();
+    const unavailableLine =
+      "          limitation: `" +
+      "$" +
+      "{row.limitation} No committed row in the evidence window carries a CI observation, so sample.n is 0 and no rate is reported; unobserved deliveries are never assumed green.`,";
+    const zeroFillLine =
+      "          value: 0,\n          limitation: `" + "$" + "{row.limitation} no CI observation`,";
+    await withMutant("zero-ci", [[unavailableLine, zeroFillLine]], (module) => {
+      expect(
+        entryOf(module.computeMetricsReport(foldInputFor(built)), "MET-CI-FAILURE-RATE")?.value,
+      ).toBe(0);
+    });
+    built.dispose();
+  });
+
+  test("zero-fill absent telemetry: an absent dispatch rendered with figures is detected", async () => {
+    const built = makeMetricsCase({ label: "mutant-zero-dispatch", steps: [] });
+    const control = computeMetricsReport(foldInputFor(built));
+    expect(control.dispatch.telemetryState).toBe("absent");
+    expect(control.dispatch.tokensByClass).toBeUndefined();
+    await withMutant(
+      "zero-dispatch",
+      [
+        [
+          '      telemetryState: "absent",\n      absenceReason: state.absenceReason ?? METRICS_TELEMETRY_ABSENT_REASON,',
+          '      telemetryState: "absent",\n      tokensByClass: { input: 0 },\n      absenceReason: state.absenceReason ?? METRICS_TELEMETRY_ABSENT_REASON,',
+        ],
+      ],
+      (module) => {
+        expect(module.computeMetricsReport(foldInputFor(built)).dispatch.tokensByClass).toEqual({
+          input: 0,
+        });
+      },
+    );
+    built.dispose();
+  });
+
+  test("reversed drop order: dropping per-agent rows before comparisons is detected", async () => {
+    const long = "x".repeat(4_000);
+    const inflated: MetricsReport = {
+      ref: METRICS_REF,
+      window: {
+        from: new Date(METRICS_NOW_MS - 30 * 86_400_000).toISOString(),
+        through: new Date(METRICS_NOW_MS).toISOString(),
+      },
+      metrics: [
+        {
+          id: "escaped-defects",
+          value: 8,
+          status: "MEASURED",
+          measurementKind: "curated-count",
+          basis: "committed-evidence-corpus",
+          unit: "count",
+          direction: "lower is better",
+          sample: { n: 8 },
+          limitation: "floor",
+          incidents: Array.from({ length: 8 }, (_unused, index) => ({
+            artifact: `doc/changes/x/incident-${String(index)}.md`,
+            anchor: `ANCHOR-${String(index)}`,
+            class: "post-gate-review" as const,
+            observedAt: at(1),
+          })),
+        },
+      ],
+      dispatch: {
+        telemetryState: "present",
+        tokensByClass: { input: 1 },
+        costTotals: { total: 1, models: [], sparse: false },
+        restarts: 0,
+        perAgent: [{ role: "coder", model: long, calls: 1, tokens: 1 }],
+        breakdowns: { role: [], model: [] },
+      },
+      alarms: [],
+      alarmEvaluation: { kind: "burn-rate", status: "threshold-undeclared" },
+      comparisons: Array.from({ length: 20 }, () => ({
+        metricId: "MET-CI-FAILURE-RATE" as const,
+        definitionRef: { logPath: "log.yaml", sourceCommit: "commit" },
+        before: {
+          value: 0.5,
+          window: { start: "2026-01-01T00:00:00Z", end: "2026-02-01T00:00:00Z" },
+          basis: "session_proxy",
+          measurementKind: "proxy" as const,
+          status: "PARTIAL",
+        },
+        after: {
+          value: 0.5,
+          window: { from: "2026-10-01T00:00:00Z", through: "2026-11-01T00:00:00Z" },
+          measurementKind: "proxy" as const,
+          status: "PARTIAL" as const,
+          sampleSize: 10,
+        },
+        sampleMinimum: 5 as const,
+        verdict: "flat" as const,
+        caveat: long,
+      })),
+      omitted: 0,
+      truncated: false,
+    };
+    expect(Buffer.byteLength(JSON.stringify(inflated), "utf8")).toBeGreaterThan(
+      METRICS_MAX_MACHINE_BYTES,
+    );
+    const control = boundMetricsReport(inflated).report;
+    expect(control.comparisons.length).toBeLessThan(inflated.comparisons.length);
+    await withMutant(
+      "reversed-drop",
+      [
+        [
+          "    if (state.comparisons.length > 0) {",
+          "    if (false && state.comparisons.length > 0) {",
+        ],
+      ],
+      (module) => {
+        const mutated = module.boundMetricsReport(inflated).report;
+        expect(mutated.comparisons.length).toBe(inflated.comparisons.length);
+        expect(mutated.metrics[0]?.incidents?.length ?? 0).toBeLessThan(8);
+      },
+    );
   });
 
   test("the unmutated module passes every control above", () => {

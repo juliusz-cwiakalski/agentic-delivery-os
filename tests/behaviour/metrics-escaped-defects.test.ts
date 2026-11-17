@@ -4,6 +4,7 @@
  * evidence, non-evidence excluded and disclosed, and the display cap counted.
  */
 import { afterEach, describe, expect, test } from "bun:test";
+import { scanMetricsCorpus } from "../../packages/adapters/src/file/index";
 import { METRICS_ESCAPED_DEFECTS_FLOOR_CAVEAT } from "../../packages/core/src/contracts/index";
 import { makeMetricsCase } from "../fixtures/metrics/case";
 import { corpusDocument, type EvidenceInput } from "../fixtures/metrics/corpus";
@@ -14,6 +15,7 @@ import {
   METRICS_NOW_MS,
   METRICS_REF,
   type MetricsFixture,
+  makeMetricsFixture,
   runMetrics,
 } from "../fixtures/metrics/harness";
 
@@ -261,6 +263,13 @@ describe("TC-METRICS-062 non-evidence is never counted and is disclosed", () => 
           observedAt: at(1),
           ref: METRICS_REF,
         },
+        {
+          path: "doc/changes/../../etc/passwd",
+          anchor: "ROOT-SECRET",
+          class: "post-gate-review",
+          observedAt: at(1),
+          ref: METRICS_REF,
+        },
       ],
       {
         "doc/changes/2026-11/2026-11-16--GH-299--metrics-spend/review/uncited.md":
@@ -269,6 +278,7 @@ describe("TC-METRICS-062 non-evidence is never counted and is disclosed", () => 
           "nothing to resolve\n",
         "doc/changes/2026-11/2026-11-16--GH-299--metrics-spend/review/conforming.md":
           "CONFORMING-DEFECT counted\n",
+        "doc/changes/../../etc/passwd": "ROOT-SECRET outside the tree\n",
       },
     );
     const entry = await escaped(fixturesCase);
@@ -276,6 +286,7 @@ describe("TC-METRICS-062 non-evidence is never counted and is disclosed", () => 
     const incidents = entry.incidents as readonly Record<string, unknown>[];
     expect(incidents.map((row) => row.anchor)).toEqual(["CONFORMING-DEFECT"]);
     expect((entry.sample as Record<string, number>).excludedNonEvidence).toBeGreaterThan(0);
+    expect(JSON.stringify(entry)).not.toContain("ROOT-SECRET");
     const before = fixturesCase.snapshot();
     await runMetrics(fixturesCase, ["metrics", "--json"]);
     expect(fixturesCase.snapshot()).toBe(before);
@@ -285,6 +296,47 @@ describe("TC-METRICS-062 non-evidence is never counted and is disclosed", () => 
         true,
       );
     }
+  });
+
+  test("the scan rejects an interior traversal segment in a committed-relative path", () => {
+    const fixture = makeMetricsFixture({ label: "corpus-traversal", activeRef: METRICS_REF });
+    fixtures.push(fixture);
+    fixture.setCorpusDocument(
+      "x/corpus.yaml",
+      corpusDocument({
+        ci: [
+          {
+            ref: "GH-1",
+            path: "doc/../../etc/passwd",
+            observed: true,
+            outcome: "red",
+            observedAt: at(1),
+          },
+        ],
+        evidence: [
+          {
+            path: "doc/../../etc/passwd",
+            anchor: "ROOT-SECRET",
+            class: "post-gate-review",
+            observedAt: at(1),
+            ref: METRICS_REF,
+          },
+        ],
+      }),
+    );
+    fixture.project.set("doc/../../etc/passwd", "ROOT-SECRET\n");
+    const read = scanMetricsCorpus({
+      projectRoot: fixture.root,
+      changesDirectory: "doc/changes",
+      fs: fixture.project,
+    });
+    // The CI row is dropped outright; the evidence row remains but never resolves.
+    expect(read.rows.filter((row) => row.kind === "ci-observation")).toEqual([]);
+    expect(read.rows).toHaveLength(1);
+    expect(read.rows[0]).toMatchObject({
+      kind: "evidence",
+      citation: "unresolved",
+    });
   });
 });
 

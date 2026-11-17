@@ -47,6 +47,7 @@ const isCommittedRelative = (path: string): boolean =>
   path.length > 0 &&
   !path.startsWith("/") &&
   !path.startsWith("../") &&
+  !path.split("/").includes("..") &&
   !/^tmp\//u.test(path) &&
   !path.startsWith(".ai/local/");
 

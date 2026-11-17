@@ -74,7 +74,7 @@ const entryDetailLines = (entry: MetricsMetricEntry): readonly string[] => {
   return lines;
 };
 
-const dispatchLines = (report: MetricsReport): readonly string[] => {
+const dispatchLines = (report: MetricsReport, agentLimit?: number): readonly string[] => {
   const dispatch = report.dispatch;
   if (dispatch.telemetryState === "absent") {
     return [
@@ -87,15 +87,19 @@ const dispatchLines = (report: MetricsReport): readonly string[] => {
     cost === undefined
       ? "none reported"
       : `${cost.total === null ? "none reported" : String(cost.total)}${cost.sparse ? " (sparse)" : ""}`;
+  const agents =
+    agentLimit === undefined
+      ? (dispatch.perAgent ?? [])
+      : (dispatch.perAgent ?? []).slice(0, agentLimit);
   const lines = [
-    `Dispatch: telemetry present tokens=${String(tokens)} cost=${costText} restarts=${String(dispatch.restarts ?? 0)} perAgent=${String(dispatch.perAgent?.length ?? 0)}`,
+    `Dispatch: telemetry present tokens=${String(tokens)} cost=${costText} restarts=${String(dispatch.restarts ?? 0)} perAgent=${String(agents.length)}`,
   ];
   if (dispatch.reconciliation !== undefined) {
     lines.push(
       `  reconciliation basis=${dispatch.reconciliation.basis} verdict=${dispatch.reconciliation.verdict}`,
     );
   }
-  for (const agent of dispatch.perAgent ?? []) {
+  for (const agent of agents) {
     lines.push(
       `  agent ${agent.role}/${agent.model}: ${String(agent.calls)} calls, ${String(agent.tokens)} tokens`,
     );
@@ -135,7 +139,14 @@ const comparisonLines = (report: MetricsReport): readonly string[] =>
 const withinBounds = (lines: readonly string[]): boolean =>
   lines.length <= METRICS_MAX_HUMAN_LINES && utf8Bytes(lines.join("\n")) <= METRICS_MAX_HUMAN_BYTES;
 
-/** Render the bounded human digest; the same facts always produce the same text. */
+/**
+ * Render the bounded human digest; the same facts always produce the same text.
+ *
+ * The fallback drop order mirrors the machine bound — comparisons, then
+ * incidents, then per-agent rows — and stops before the never-dropped set (the
+ * header, the metric entries, the dispatch summary, the alarms, and the
+ * evaluation). The truncated marker names the sections actually dropped.
+ */
 export const renderMetricsHuman = (report: MetricsReport, brand: BrandIdentity): string => {
   const head: string[] = [
     `${brand.binaryName} metrics — delivery metrics`,
@@ -143,48 +154,71 @@ export const renderMetricsHuman = (report: MetricsReport, brand: BrandIdentity):
     `window ${report.window.from} .. ${report.window.through} (inclusive)`,
     "Metrics:",
   ];
-  const entries = report.metrics.flatMap((entry) => [entryLine(entry), ...entryDetailLines(entry)]);
-  const dispatch = dispatchLines(report);
   const alarms = alarmLines(report);
   const comparisonsHead = ["Comparisons:"];
-  const comparisons = [...comparisonLines(report)];
-  const tail = [
-    `omitted=${String(report.omitted)} truncated=${String(report.truncated)}`,
-    ...(report.truncated
-      ? [
-          `${METRICS_TRUNCATION_MARKER}  comparisons ${String(Math.max(0, report.omitted))} row(s) dropped tail-first`,
-        ]
-      : []),
-  ];
-
-  const assemble = (rows: readonly string[]): string[] => [
-    ...head,
-    ...entries,
-    ...dispatch,
-    ...alarms,
-    ...comparisonsHead,
-    ...rows,
-    ...tail,
-  ];
-
-  let rows = comparisons;
-  let lines = assemble(rows);
-  // Tail-first section drops keep the never-dropped set intact.
-  let humanOmitted = 0;
-  while (!withinBounds(lines) && rows.length > 0) {
-    rows = rows.slice(0, -1);
-    humanOmitted += 1;
-    lines = assemble(rows);
+  const incidentLimits = new Map<string, number>();
+  for (const entry of report.metrics) {
+    if (entry.incidents !== undefined) incidentLimits.set(entry.id, entry.incidents.length);
   }
-  while (!withinBounds(lines) && lines.length > head.length + entries.length) {
-    lines = lines.slice(0, -1);
-    humanOmitted += 1;
-  }
-  if (humanOmitted > 0) {
-    lines = [
-      ...lines,
-      `${METRICS_TRUNCATION_MARKER}  ${String(humanOmitted)} human row(s) omitted to respect the digest bounds`,
+  let comparisonRows = report.comparisons.length;
+  let agentRows = report.dispatch.perAgent?.length ?? 0;
+  const dropped = { comparisons: 0, incidents: 0, perAgent: 0 };
+
+  const assemble = (): string[] => {
+    const entries = report.metrics.flatMap((entry) => {
+      const limit = incidentLimits.get(entry.id);
+      const view =
+        limit === undefined || entry.incidents === undefined
+          ? entry
+          : { ...entry, incidents: entry.incidents.slice(0, limit) };
+      return [entryLine(view), ...entryDetailLines(view)];
+    });
+    const comparisons = comparisonLines(report).slice(0, comparisonRows);
+    const drops: string[] = [];
+    if (dropped.comparisons > 0) drops.push(`comparisons=${String(dropped.comparisons)}`);
+    if (dropped.incidents > 0) drops.push(`incidents=${String(dropped.incidents)}`);
+    if (dropped.perAgent > 0) drops.push(`perAgent=${String(dropped.perAgent)}`);
+    const humanTruncated = report.truncated || drops.length > 0;
+    const tail = [
+      `omitted=${String(report.omitted)} truncated=${String(humanTruncated)}`,
+      ...(drops.length > 0
+        ? [`${METRICS_TRUNCATION_MARKER}  ${drops.join(" ")} row(s) dropped tail-first`]
+        : report.truncated
+          ? [
+              `${METRICS_TRUNCATION_MARKER}  ${String(report.omitted)} row(s) dropped before rendering by the row caps`,
+            ]
+          : []),
     ];
+    return [
+      ...head,
+      ...entries,
+      ...dispatchLines(report, agentRows),
+      ...alarms,
+      ...comparisonsHead,
+      ...comparisons,
+      ...tail,
+    ];
+  };
+
+  let lines = assemble();
+  // Tail-first section drops keep the never-dropped set intact.
+  while (!withinBounds(lines)) {
+    if (comparisonRows > 0) {
+      comparisonRows -= 1;
+      dropped.comparisons += 1;
+    } else {
+      const incidentEntry = report.metrics.find((entry) => (incidentLimits.get(entry.id) ?? 0) > 0);
+      if (incidentEntry !== undefined) {
+        incidentLimits.set(incidentEntry.id, (incidentLimits.get(incidentEntry.id) ?? 1) - 1);
+        dropped.incidents += 1;
+      } else if (agentRows > 0) {
+        agentRows -= 1;
+        dropped.perAgent += 1;
+      } else {
+        break;
+      }
+    }
+    lines = assemble();
   }
   return `${lines.join("\n")}\n`;
 };

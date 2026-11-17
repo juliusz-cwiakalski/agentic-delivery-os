@@ -41,19 +41,39 @@ const invalid = (detail: string): MetricsBaselineLogRead => ({
   detail,
 });
 
+/**
+ * The committed exclusion counters.
+ *
+ * The committed log records one row per excluded change (`{ref, reason}`); a
+ * legacy counter row (`{reason, count}`) is tolerated. Entries are counted per
+ * closed reason so the report carries the conserved totals, and a zero count
+ * never surfaces.
+ */
 const exclusionsOf = (value: unknown): readonly MetricsExclusion[] | undefined => {
   if (value === undefined) return [];
   if (!Array.isArray(value)) return undefined;
-  const entries: MetricsExclusion[] = [];
+  const counts = new Map<MetricsExclusionReason, number>();
+  const order: MetricsExclusionReason[] = [];
   for (const row of value) {
     if (!isRecord(row)) return undefined;
     const reason = row.reason;
-    const count = row.count;
     if (typeof reason !== "string" || !REASON_SET.has(reason)) return undefined;
-    if (typeof count !== "number" || !Number.isInteger(count) || count < 0) return undefined;
-    entries.push({ reason: reason as MetricsExclusionReason, count });
+    let count: number;
+    if (typeof row.count === "number") {
+      if (!Number.isInteger(row.count) || row.count < 0) return undefined;
+      count = row.count;
+    } else if (isNonEmptyString(row.ref)) {
+      count = 1;
+    } else {
+      return undefined;
+    }
+    const key = reason as MetricsExclusionReason;
+    if (!counts.has(key)) order.push(key);
+    counts.set(key, (counts.get(key) ?? 0) + count);
   }
-  return entries;
+  return order
+    .map((reason) => ({ reason, count: counts.get(reason) ?? 0 }))
+    .filter((entry) => entry.count > 0);
 };
 
 const countersOf = (sample: unknown): Readonly<Record<string, number>> => {

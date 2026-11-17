@@ -4,7 +4,8 @@
  * counts on a repeat, and a printed latency reference that is never asserted.
  */
 import { afterEach, describe, expect, test } from "bun:test";
-import { makeMetricsCase } from "../fixtures/metrics/case";
+import { computeMetricsReport } from "../../packages/core/src/domain/metrics";
+import { foldInputFor, makeMetricsCase } from "../fixtures/metrics/case";
 import {
   DAY_MS,
   METRICS_NOW_MS,
@@ -98,5 +99,39 @@ describe("TC-METRICS-106 the read budget holds", () => {
       large.reads.storeReads.filter((entry) => entry === "readRecords").length,
     );
     expect(small.reads.documentReads).toEqual(large.reads.documentReads);
+  });
+
+  test("the latency reference covers the declared 1k and 10k record points (fold-only)", () => {
+    const fixture = makeMetricsCase({ label: "read-cost-declared", steps: [] });
+    fixtures.push(fixture);
+    const base = foldInputFor(fixture);
+    const capturedAt = new Date(METRICS_NOW_MS - DAY_MS).toISOString();
+    const stateWith = (count: number) => ({
+      ...base.state,
+      records: [],
+      steps: Array.from({ length: count }, (_, index) => ({
+        runId: `run-declared-${String(index % 25)}`,
+        sessionId: `session-declared-${String(index % 25)}`,
+        model: "model-alpha",
+        agentRole: "coder",
+        tokens: tokens({ input: 1 }),
+        calls: 1,
+        cost: 0.001,
+        capturedAt,
+      })),
+    });
+    const measure = (count: number): number => {
+      const started = performance.now();
+      computeMetricsReport({ ...base, state: stateWith(count) });
+      return performance.now() - started;
+    };
+    const oneThousand = measure(1_000);
+    const tenThousand = measure(10_000);
+    // Reference only: the declared points are measured, never asserted as a gate.
+    process.stdout.write(
+      `metrics fold reference: 1k records ${oneThousand.toFixed(1)}ms; 10k records ${tenThousand.toFixed(1)}ms\n`,
+    );
+    expect(oneThousand).toBeGreaterThanOrEqual(0);
+    expect(tenThousand).toBeGreaterThanOrEqual(0);
   });
 });

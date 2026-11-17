@@ -13,13 +13,14 @@ import type {
 } from "../../../packages/core/src/contracts/index";
 import {
   makeStepRecord,
+  makeV1Record,
   seedBaselines,
   seedSteps,
   seedV1Records,
   tokens,
 } from "../telemetry/index";
 
-export { makeStepRecord, seedBaselines, seedSteps, seedV1Records, tokens };
+export { makeStepRecord, makeV1Record, seedBaselines, seedSteps, seedV1Records, tokens };
 
 export type StepSeed = {
   readonly ref?: string;

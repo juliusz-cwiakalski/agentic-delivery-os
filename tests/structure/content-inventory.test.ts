@@ -1852,6 +1852,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "core/src/domain/status.ts": ["aggregateStatus", "evaluateStatusFindings", "renderStatusHuman"],
   "core/src/domain/spend.ts": [
     "computeSpendReport",
+    "preferStreamBySession",
     "spendDigestSection",
     "spendTruncationWarning",
     "windowSpendEvidence",
