@@ -6,12 +6,12 @@ ados_distribution: internal
 id: SPEC-MEASUREMENT-BASELINE
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-16
+last_updated: 2026-11-17
 owners: ["engineering"]
 service: delivery-os measurement substrate
-summary: "The committed, schema-versioned bash-era measurement baseline log: its path, schema, four MET- metric definitions, MEASURED/PARTIAL/UNAVAILABLE status semantics, source-traceability rule, fixed window, and comparison protocol. The log is canonical data; this spec describes the contract and does not restate values."
+summary: "The committed, schema-versioned bash-era measurement baseline log: its path, schema, four MET- metric definitions, MEASURED/PARTIAL/UNAVAILABLE status semantics, source-traceability rule, fixed window, and comparison protocol. The log is canonical data; this spec describes the contract and does not restate values. The metrics report is its command-surface consumer."
 links:
-  related_changes: ["GH-186", "GH-296"]
+  related_changes: ["GH-186", "GH-296", "GH-299"]
   decisions: ["ODR-0002"]
   contracts:
     - "doc/planning/oss-tooling/measurement-baseline.yaml"
@@ -25,7 +25,7 @@ links:
 
 The measurement baseline is a committed, repository-local data artifact at `doc/planning/oss-tooling/measurement-baseline.yaml`. It records the bash-era delivery baseline — ceremony share, cycle time, CI failure session proxy, and false-signal incidents — so later milestones can compare against recorded numbers rather than memory.
 
-The log is schema-versioned (`schema_version: 2`, the additive `comparisons[]` bump) and its existing metric values are immutable once committed. This feature spec describes the log's contract: path, schema, metric IDs, status semantics, source traceability, window, and comparison protocol. Metric values are read from the log; they are never restated here. M2-S6 owns native metrics and consumes the log by metric ID and definition.
+The log is schema-versioned (`schema_version: 2`, the additive `comparisons[]` bump) and its existing metric values are immutable once committed. This feature spec describes the log's contract: path, schema, metric IDs, status semantics, source traceability, window, and comparison protocol. Metric values are read from the log; they are never restated here. The metrics report owns the native measurements and consumes the log by metric ID and definition ([Metrics Report and Burn-Rate Alarms](feature-metrics.md)).
 
 The log is a user-facing document registered with the forbidden-literal check. It refers to the command surface generically as "the CLI" and carries no working-name literal on a non-allowlisted line.
 
@@ -149,6 +149,7 @@ A time metric whose corpus contains an `unparseable_yaml` or `placeholder_zero_t
 - [Measurement baseline log](../../planning/oss-tooling/measurement-baseline.yaml) — canonical data.
 - [GH-186 delivery plan](../../changes/2026-10/2026-10-31--GH-186--decision-records-measurement-baseline/chg-GH-186-plan.md) — the delivery plan that produced the log.
 - [ODR-0002 — ID Prefix Scheme and Project Catalog](../../decisions/ODR-0002-id-prefix-scheme-and-project-catalog.md) — `MET-` adoption and the allocator.
+- [Metrics Report and Burn-Rate Alarms](feature-metrics.md) — the command-surface consumer that reads this log by metric ID and definition.
 - [Feature: Decision Records Management](feature-decision-records.md) — the register and the decision-records standard.
 - [Glossary](../../overview/glossary.md) — term definitions.
 
@@ -175,3 +176,33 @@ change artifact carries a trend claim; the record committed with this delivery
 observes an empty after sample (`sampleSize: 0`), so it records
 `insufficient-sample` and no direction. The record is recomputed per delivery
 rather than carried forward.
+
+## Command-surface consumer (the metrics report)
+
+The `metrics` family is the log's command-surface consumer
+([Metrics Report and Burn-Rate Alarms](feature-metrics.md)). It reads the log as
+canonical data and reports three of its metric rows by ID and definition —
+`MET-CEREMONY-SHARE`, `MET-CYCLE-TIME`, and `MET-CI-FAILURE-RATE` — each entry
+citing `definitionRef` (this log's path plus the row's committed `source_commit`)
+and reusing the row's status semantics, unit, direction, limitation, and closed
+exclusion reasons. The fourth row, `MET-FALSE-SIGNAL-INCIDENTS`, is not surfaced
+by that report and stays untouched canonical data.
+
+The consumer is read-only: it writes no value, appends no row, allocates no new
+`MET-` ID (escaped defects is a non-`MET-` vocabulary member), and never restates
+a committed value as a fresh measurement. A committed-basis entry (the
+CI-failure-rate proxy) recomputes its figure under the committed definition; a
+native-basis entry (cycle time from the transition history, ceremony share from
+the runner fold) computes its figure from its declared native source, carries the
+`definitionRef` for provenance, and is never presented as the committed
+definition's value. Its comparison view applies this protocol as a live, read-only
+evaluation — same metric ID and definition, equal-length windows rendered
+verbatim, `sampleMinimum: 5`, the closed verdicts, and the proxy-vs-native caveat
+on exactly the cross-kind rows — and it never rewrites or restates the committed
+`comparisons[]` records, which remain authored per delivery.
+
+An absent log classifies the consumed entries row-absent at exit `0`; a log that
+exists but cannot be parsed or validated is refused `metrics.baseline-unreadable`
+at exit `2`, so damaged canonical data never masquerades as absence. The
+immutability rule (NFR-5) and the `MET-` allocator (ODR-0002) are unchanged.
+

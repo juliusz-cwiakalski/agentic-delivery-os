@@ -9,7 +9,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-16T23:13:05.295Z }
   dor_check: { started: null, completed: 2026-11-16T23:19:21.213Z }
   delivery: { started: null, completed: 2026-11-17T05:13:36.404Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-17T05:25:54.084Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -203,17 +203,17 @@ notes:
       phase 8 because the phase-7 boundary commit was folded into the phase-8
       commit after the phase-7 gate turned green (recorded process deviation:
       phases 7 and 8 share one commit; the work and both gates are complete).
-      Verification:
-      metrics-mounting 8/8, metrics-help 4/4, entrypoint-bin, steer-mounting,
-      board/events/dispatch/daemon mounting, the four behaviour help suites,
-      entrypoint-composition/two-bins/help-coverage, help-guide-coverage and
-      reference-page-parity, event-mount guards, forbidden-literals and the
-      doc-distribution guard all green; TMPDIR=$PWD/tmp/tmpdir pnpm check green
-      (10032 pass, 4 pre-existing skip, 0 fail). Discovered pins moved in the
-      same commit: the alias baseline help/version cells (deliberate
-      regeneration), the entrypoint composition/help-coverage family lists, the
-      events mount-mutant inline list, and the events-family positional pin;
-      recorded under Appendix D D-14."
+      Verification: metrics-mounting 8/8, metrics-help 4/4, entrypoint-bin,
+      steer-mounting, board/events/dispatch/daemon mounting, the four behaviour
+      help suites, entrypoint-composition/two-bins/help-coverage,
+      help-guide-coverage and reference-page-parity, event-mount guards,
+      forbidden-literals and the doc-distribution guard all green;
+      TMPDIR=$PWD/tmp/tmpdir pnpm check green (10032 pass, 4 pre-existing skip,
+      0 fail). Discovered pins moved in the same commit: the alias baseline
+      help/version cells (deliberate regeneration), the entrypoint
+      composition/help-coverage family lists, the events mount-mutant inline
+      list, and the events-family positional pin; recorded under Appendix D
+      D-14."
     type: info
     date: "2026-11-17"
   - text: "Plan phase 8 complete (the cross-cutting honesty battery:

@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-TELEMETRY-V2
 status: Current
 created: 2026-11-13
-last_updated: 2026-11-13
+last_updated: 2026-11-17
 owners: ["engineering"]
 service: delivery-os
-summary: "Harness telemetry v2: per-step token, calls, and cost ingest beside the delivered opencode JSONL drain with present-zero distinguished from omitted, five-dimension attribution joined from session economics and command-audit identity, one bounded read-only per-session totals query at stream close captured as a harness.telemetry.baseline record, schema-versioned additive step and baseline record families under delivery.telemetry.storage.v1 with re-read migration, classified damage, linear growth, the stream-ingest/closeout-capture/combined reading bases with the declared session-dedup combination rule, the storage identity the peak-pause window-scoped zero-spend evidence counts over, and aggregates-only privacy."
+summary: "Harness telemetry v2: per-step token, calls, and cost ingest beside the delivered opencode JSONL drain with present-zero distinguished from omitted, five-dimension attribution joined from session economics and command-audit identity, one bounded read-only per-session totals query at stream close captured as a harness.telemetry.baseline record, schema-versioned additive step and baseline record families under delivery.telemetry.storage.v1 with re-read migration, classified damage, linear growth, the stream-ingest/closeout-capture/combined reading bases with the declared session-dedup combination rule, the storage identity the peak-pause window-scoped zero-spend evidence counts over, the metrics report's dispatch and burn-rate reads over the same families, and aggregates-only privacy."
 links:
-  related_changes: ["GH-291", "GH-294"]
+  related_changes: ["GH-291", "GH-294", "GH-299"]
   related_decisions: ["ADR-0003", "ADR-0008", "TDR-0004", "TDR-0016"]
   contracts:
     - "packages/core/src/contracts/telemetry.ts"
@@ -85,6 +85,8 @@ The combination rule deduplicates by `sessionId`: a session present in both plan
 
 The peak-pause zero-spend evidence is a declared consumer of this storage: the count of billable model calls attributable to the parked lane (the `lane` dimension of the attribution join) from the park timestamp through the window end, both boundaries inclusive, read over the same `delivery.telemetry.storage.v1` identity and disclosed with a `telemetryState` that never renders a classified absence as zero. The scoping contract lives in [Spend Read Side](feature-spend.md) and [Provider Peak Pausing](feature-peak-pausing.md); the storage adds nothing for it — the step records and their positions are the evidence.
 
+The metrics report is the second declared consumer: its `dispatch` block reads the same step and session families through the delivered spend fold for its per-role and per-model facts, and its burn-rate evaluation sums the same step tokens and harness-reported costs over the declared trailing window. Classified telemetry absence is named verbatim there and never rendered as a zero figure; the report adds no record kind, no storage version, and no read beyond the one verified pass ([Metrics Report and Burn-Rate Alarms](feature-metrics.md)).
+
 ## 6. Privacy and boundaries
 
 - Records carry aggregate counts, identity references, and time windows only: no prompt text, message body, transcript, diff, tool output, or credential material. The delivered redaction chokepoint composes unchanged.
@@ -104,6 +106,7 @@ The peak-pause zero-spend evidence is a declared consumer of this storage: the c
 ## 8. Related
 
 - [Spend Read Side](feature-spend.md) — the fold, breakdowns, timing summaries, window-scoped zero-spend evidence, and reconciliation disclosure over these records.
+- [Metrics Report and Burn-Rate Alarms](feature-metrics.md) — the per-dispatch block and the windowed burn-rate evaluation over these records.
 - [Provider Peak Pausing](feature-peak-pausing.md) — the peak-pause consumer of the window-scoped evidence.
 - [Harness Adapters](feature-harness-adapters.md) — the delivered port surface, the streaming drain, and the unchanged closeout capture.
 - [Session Lifecycle Economics](feature-session-lifecycle-economics.md) — the run and session identity the attribution joins.

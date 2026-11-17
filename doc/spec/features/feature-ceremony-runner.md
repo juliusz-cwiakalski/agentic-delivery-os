@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-CEREMONY-RUNNER
 status: Current
 created: 2026-11-16
-last_updated: 2026-11-16
+last_updated: 2026-11-17
 owners: ["engineering"]
 service: delivery-os
 summary: "The `ceremony` family and the ceremony layer: four verbs (list, run, resume, catch-up) over one declaration contract (`delivery.ceremony.declarations.v1`) with closed step, slot, verification, trigger, cadence, scope-key, recorded-trigger and verdict vocabularies plus fixed bounds; six built-in declarations (morning brief, retro evidence pass, sprint rollover, night-watch, testing-session assessment, decision-record mirror sync) executed through one runner path; deterministic intake (declaration-held scope key, note or cadence-derived window, recorded trigger provenance), artifact-verified per-step execution with read-back verification, durable `ceremony.run` and `ceremony.step` records with derived durations, phase-boundary compaction, resume from the first unverified step, and single-window catch-up with identity-based satisfaction; project declarations in one committed `<configDirectoryName>/ceremonies.yaml` document with no tooling change; the pure tier engine over the delivered plan `tier` and pm-notes `variant` phase sets with a `tier-mismatch`/`unresolved-phase`/`unevaluated-trigger` finding vocabulary; the four sub-R1 retro levels with the concept's fixed note schema and follow-through-first agenda; the ceremony artifact family; and exactly two `ceremony.*` error identities under a new `ceremony` domain kind."
 links:
-  related_changes: ["GH-296", "GH-287", "GH-298"]
+  related_changes: ["GH-296", "GH-287", "GH-298", "GH-299"]
   contracts:
     - "packages/core/src/contracts/ceremony.ts"
     - "packages/core/src/contracts/ceremony-builtins.ts"
@@ -51,7 +51,7 @@ The runner adds no event topic, no MCP tool, no scheduler, no model call, no met
 
 ### 2.3 Non-Goals
 
-- No metrics presentation, aggregate report, alarm, or threshold (the `metrics` surface is M2-S6); the runner records data and one committed comparison.
+- No metrics presentation, aggregate report, alarm, or threshold in the runner: those live in the delivered metrics surface ([Metrics Report and Burn-Rate Alarms](feature-metrics.md)); the runner records data and one committed comparison.
 - No retro action registry surface of its own: filing, artifact/outcome closure, aging, and the action board are owned by the sibling registry ([Retro Action Registry](feature-retro-action-registry.md), GH-287); the retro ceremony records a declared-actions handoff and reads the registry's recorded actions through the composed follow-through producer. Declarations, agendas, the note schema, and the asserted follow-through-first position stay unchanged.
 - No ceremony packs, no pack registry, no signed bundle, no cross-repository ceremony coordination.
 - No scheduler: no daemon integration, cron/systemd unit, timer, unattended cadence, sleep, or child process. The runner evaluates schedules and offers `catch-up`.
@@ -236,7 +236,7 @@ Rules:
 - **Derived, not stored twice.** Run status, run duration, and per-phase durations are folds over the records.
 - **The native basis.** The measurement fold derives per-run duration, per-ceremony run counts, arithmetic mean and nearest-rank p90, and run/step/phase totals from the verified records — no self-reported input.
 - **The committed comparison.** One `delivery.ceremony.comparison.v1` record is committed in the measurement log's additive `comparisons[]` list: the committed `MET-CEREMONY-SHARE` identity, the definition reference with the log path and the metric row's `source_commit`, the `before` value with its window, sample size, status and basis, the `after` value with its window, per-change samples, sample size and basis, `sampleMinimum: 5`, the closed verdict, the native basis with the non-interchangeability statement, and a `disclosure` naming sample, window and basis difference. `improved` requires the sample minimum met and `after < before`. Below the minimum the verdict is `insufficient-sample` and no trend is claimed. At delivery the observed after sample is zero.
-- **No reporting surface.** There is no command that computes or prints a metric; the builder is a library function, and the record is committed data. Aggregation, thresholds, alarms and presentation are M2-S6's.
+- **No reporting surface.** There is no ceremony command that computes or prints a metric; the builder is a library function, and the record is committed data. Aggregation, thresholds, alarms, and presentation belong to the metrics surface ([Metrics Report and Burn-Rate Alarms](feature-metrics.md)), which reads the records and the committed comparison as data.
 
 ### 3.11 Envelope, exit projection, human output
 
@@ -421,7 +421,7 @@ One run record, one step record per attempt, and one artifact file per step slot
 | Depends on | State layer | Ledger, artifact boundaries, fenced appends, classified damage, retention |
 | Depends on | Entrypoint and self-description | Prompt-required composition, family and verb help, reference-page coverage |
 | Depends on | Measurement baseline | The committed metric definition, formula, status semantics, and comparison protocol |
-| Blocks | the `metrics` surface (M2-S6) | The metric surface consumes runner durations and the committed comparison |
+| Delivered consumer | the metrics report ([Metrics Report and Burn-Rate Alarms](feature-metrics.md)) | `MET-CEREMONY-SHARE` is measured natively through the runner fold over the window's run/step records; the committed comparison records are read as data, never recomputed |
 | Feeds (no recorded board edge) | Board ceremony surface (M2-S4+) | The ceremony state is recorded; no board section projects it |
 | Risk | The declaration vocabulary is too narrow for a real ritual | The six built-ins are the expressiveness proof; a missing vocabulary is a reviewed contract extension, never a silent code path |
 | Risk | A declaration becomes a scripting surface | Closed vocabularies plus the recursive executable-member refusal, asserted structurally |

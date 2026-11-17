@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-SPEND
 status: Current
 created: 2026-11-07
-last_updated: 2026-11-14
+last_updated: 2026-11-17
 owners: ["engineering"]
 service: delivery-os
 summary: "The Learn-family spend read side: the read-only `spend [--ref <ref>] [--phase <phase>] [--breakdown <field>] [--amplification] [--window-evidence --from <iso> --through <iso>] [--json]` command folding the closeout-captured harness.telemetry session-group and capture-outcome records, the v2 per-step and session-baseline telemetry families, and phase.transition history into five-class token totals, calls, per-agent/model roll-ups, capture-time per-phase attribution with the named unknown fallback, restart counts over the union of run identities, the TDR-0011 resume-amplification ratio with the additive progressRun field and named restart-loop prefill re-pay events, the additive v2 cost totals, five-dimension breakdowns, per-phase timing summaries, the telemetry-state disclosure, the window-scoped zero-spend evidence for peak-pause episodes with its closed four-value exclusion-reason set and classified telemetry absence, the DEC-5 reconciliation disclosure against summed harness session totals at the stated 0.02 tolerance, the closed degradation disclosure, bounded deterministic human and machine output with breakdown-aware truncation, the single spend.telemetry-absent error row, and the status digest section 8 projection fed by the same fold."
 links:
-  related_changes: ["GH-236", "GH-240", "GH-291", "GH-294"]
+  related_changes: ["GH-236", "GH-240", "GH-291", "GH-294", "GH-299"]
   related_decisions: ["TDR-0011", "ADR-0003", "TDR-0004", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/spend.ts"
@@ -33,7 +33,7 @@ Telemetry-absent is a first-class classified outcome (`spend.telemetry-absent`, 
 ### Problem Statement
 
 - **Problem:** Delivery spend is invisible when it must be reconstructed by hand: per-ticket and per-phase token breakdowns, per-agent/model attribution, restart volume, and the paid-versus-progress waste signal are not answerable from the tooling, and a digest section without spend evidence is a placeholder rather than proof. Closeout constructs the harness capture from resolved settings and writes `harness.telemetry` records to the state log, while a store with no capture for the selected ref remains telemetry-absent by contract. A read side that treated absence as an edge case, a silent zero, or an unclassified failure would be wrong in every such invocation.
-- **Affected Users:** The operator and coordinator reading delivery economics, lifecycle agents consuming the report, and the later alarm/burn-rate and model-routing surfaces that consume the amplification signal.
+- **Affected Users:** The operator and coordinator reading delivery economics, lifecycle agents consuming the report, and the alarm and metric layer ([Metrics Report and Burn-Rate Alarms](feature-metrics.md)), which composes this fold's figures into its per-dispatch block. Model-profile routing (M1-S21) is the later consumer of the amplification signal.
 - **Business Impact:** The two operator waste classes this surface exists for — restart re-payment and re-run spend — become answerable from one invocation over the log alone, without harness re-query and without reconstructing numbers by hand.
 
 ### Goals
@@ -336,7 +336,7 @@ The command writes nothing and retains nothing. Its recurring cost is the local 
 - **Depends on** the state layer ([feature-state-layer.md](feature-state-layer.md)) for verified reads, presence tolerance, and classified `state.*` failures.
 - **Depends on** the delivery registry ([feature-pm-notes-lint-and-phase-transitions.md](feature-pm-notes-lint-and-phase-transitions.md)) for timestamped `phase.transition` history.
 - **Depends on** the result contract ([feature-result-contract.md](feature-result-contract.md)) for the envelope, error table, exact-code classification, exit projection, and redaction chokepoint.
-- **Feeds** the status digest ([feature-status-digest.md](feature-status-digest.md)) section 8 and is consumed later by alarm/burn-rate (M2-S6) and model-profile routing (M1-S21).
+- **Feeds** the status digest ([feature-status-digest.md](feature-status-digest.md)) section 8 and the metrics layer ([feature-metrics.md](feature-metrics.md)), whose `dispatch` block composes these figures for the same selection under the `delivery.metrics.v1` report; model-profile routing (M1-S21) consumes the amplification signal later.
 - **Risk — over-interpreting the ratio:** mitigated by the in-report honesty limits and the closed cause name.
 - **Risk — coarse per-phase attribution:** a record's whole spend lands on one phase under the capture-time rule; the basis and the `unknown` fallback are named, and finer attribution is deferred.
 - **Risk — restart undercount:** runs aborted before closeout capture are invisible; the evidence basis is disclosed, and lane economics later enriches restart evidence.
