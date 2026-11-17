@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-WATCHDOG-LANE-CONTRACTS
 status: Current
 created: 2026-11-05
-last_updated: 2026-11-08
+last_updated: 2026-11-17
 owners: ["engineering"]
 service: delivery-os
 summary: "The watchdog check family: `watchdog preflight <lane>` refuses dirty or non-base checkouts with named evidence and mutates nothing, `watchdog teardown <lane>` restores the lane's base checkout on every caller-invoked exit path and reports each action while verifying that agent-memory publications are committed or preserved (never discarded), and `watchdog liveness <lane>` evaluates adapter-sourced heartbeat age, session traffic, and token delta through the neutral harness-liveness bridge: a fully corroborated stall is the classified refusal `watchdog.liveness-stalled` at exit `1`, `progressing` is a success verdict at exit `0`, and genuinely absent sources keep `watchdog.signals-absent` at exit `2` (unknown, never guessed; CPU is never a signal). A `watchdog` domain kind joins the closed error-table union with exactly four identities, every probe projects through the v1 envelope and the `{0, 1, 2}` exit taxonomy, and the surface checks rather than runs."
 links:
-  related_changes: ["GH-221", "GH-235", "GH-238"]
+  related_changes: ["GH-221", "GH-235", "GH-238", "GH-295"]
   related_decisions: ["ADR-0003", "TDR-0005"]
   contracts:
     - "packages/core/src/contracts/watchdog.ts"
@@ -44,7 +44,7 @@ The bash-era delivery stack carries the "lying liveness" defect family: exit-zer
 
 - **Delivery coordinators and agents** get an evidence-bearing refusal before foreign work lands and a restoration report after every lane exit.
 - **Operators** gain a stable refusal/restore evidence trail instead of manual forensic inspection of stranded state.
-- **Later lane consumers** (the scheduling engine M1-S17, the resident daemon M1-S18, and supervise M2-S2) consume these probes instead of reimplementing them.
+- **Lane consumers** (the scheduling engine M1-S17, the resident daemon M1-S18, and the `supervise` battery M2-S2) consume the delivered probe vocabulary and classification instead of reimplementing them.
 
 ## 3. Capabilities
 
@@ -150,7 +150,7 @@ The domain tier `packages/core/src/domain/watchdog.ts` is runtime-neutral and ex
 ## 7. Boundaries and Deferred Work
 
 - Adapter-level progress-signal sourcing, the sourced stall identity, restart budgeting, resume economics, and amplification derivation are delivered and documented in [Session Lifecycle Economics](feature-session-lifecycle-economics.md). The watchdog family consumes the sourced signal facts; it does not perform harness-store queries, restart a session, or evaluate economics.
-- Daemon consumption, supervise, the `lanes` surface, scheduling, dispatch, and session kill are out of scope. The watchdog surface checks and restores; it never dispatches a lane, spawns a session, kills a process, restarts, or supervises.
+- Daemon consumption and `supervise` consumption sit adjacent to this family, not inside it: the resident daemon and the `supervise` battery consume the delivered probes, the corroboration bound, and the classifications, while the watchdog surface itself checks and restores. The `lanes` surface, scheduling, dispatch, and session kill are outside this family. The watchdog surface never dispatches a lane, spawns a session, kills a process, restarts, or supervises.
 - The lane record arrives through the injected reader; no state-layer import, contract change, or stored-record migration is involved. The v1 envelope, `{0, 1, 2}` projection, and branding seam are reused unchanged.
 - Lane-branch deletion and closeout branch cleanup remain the delivered `closeout` surface.
 
@@ -190,3 +190,7 @@ See also: [Session Lifecycle Economics](feature-session-lifecycle-economics.md),
 ## GH-238 consumption
 
 The daemon consumes the delivered liveness classification and prefill-safe rules; only a fully corroborated stall applies `watchdog.liveness-stalled` and restart admission. The deliverables themselves are unchanged.
+
+## Supervise consumption
+
+The `supervise` battery ([Supervise](feature-supervise.md)) is the operator-facing consumer this specification names: it consumes the delivered liveness classification and verdict vocabulary, the declared stall bound, the prefill-safe rule, and the signals-absent discipline to classify lanes and supervision claims from artifact evidence, and it declares no second advancing/stale predicate. The watchdog family itself stays check-only: it gains no supervision, restart, or process-management behaviour, and its four identities, verdicts, and probe vocabulary are unchanged.

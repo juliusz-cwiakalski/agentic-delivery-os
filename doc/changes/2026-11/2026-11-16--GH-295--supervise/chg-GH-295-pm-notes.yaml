@@ -9,7 +9,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-16T23:18:06.308Z }
   dor_check: { started: null, completed: 2026-11-16T23:23:38.081Z }
   delivery: { started: null, completed: 2026-11-17T05:54:34.230Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-17T10:16:47.821Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -403,5 +403,26 @@ notes:
       with their phase, and the delivered-suite sites beyond the named pin lists
       moved additively in the phase that required them (all enumerated in the
       per-phase notes)."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Lifecycle phase 7 (system_spec_update) iteration 1 (@doc-syncer):
+      authored doc/spec/features/feature-supervise.md (first-spec page,
+      ados_distribution internal); reconciled doc/00-index.md,
+      doc/overview/{architecture-overview, glossary}.md,
+      feature-watchdog-lane-contracts, feature-resident-daemon,
+      feature-scheduling-engine (six-cause set), feature-peak-pausing,
+      feature-cli-entrypoint (24 families), feature-agents-and-commands,
+      feature-result-contract (DOMAIN_KINDS), feature-event-taxonomy,
+      feature-board, feature-session-lifecycle-economics; feature-queue-ready
+      inspected, unchanged. Residual gap (routed to @coder): the new page needs
+      its registration row in scripts/checks/forbidden-literals.registry.json
+      (alphabetical, between feature-steer and feature-telemetry-v2) or
+      forbidden-literals and identity-docs seed-cleanliness fail. Staging
+      resolution (dry-run verified): phase complete system_spec_update stages
+      modified tracked files (13 docs + registry once touched) but excludes the
+      untracked feature-supervise.md (untrackedNotStaged); after phase-complete,
+      a standalone commit GH-295 via the commit primitive lands the new page.
+      Evidence convention for gate commands: TMPDIR=$PWD/tmp/tmpdir pnpm check
+      (never absolute paths)."
     type: "info"
     date: "2026-11-17"

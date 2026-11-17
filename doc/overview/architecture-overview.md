@@ -3,13 +3,13 @@ ados_distribution: internal
 id: TOOLING-ARCHITECTURE-OVERVIEW
 status: Draft
 created: 2026-11-01
-last_updated: 2026-11-16
+last_updated: 2026-11-17
 owners: [engineering]
 area: engineering
 document_classification: working-analysis
 links:
   related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, TDR-0012, ADR-0010, TDR-0016, TDR-0023, TDR-0024, TDR-0025]
-  related_changes: ["GH-290", "GH-291", "GH-292", "GH-300", "GH-320", "GH-287"]
+  related_changes: ["GH-290", "GH-291", "GH-292", "GH-300", "GH-320", "GH-287", "GH-295"]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
 
@@ -306,6 +306,7 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   store, the node process port, and the delivered harness session port selected
   per harness kind, so the shipped binary runs the family. See
   [coordinator supervision](../spec/features/feature-coordinator-supervision.md).
+- `supervise` is the operator-facing supervisor battery: one run folds the invoking repository's durable daemon, queue, dispatch, economics, and effect records into the `delivery.supervision.v1` report, classifies every lane and supervision claim `progressing`/`stalled`/`unknown` from artifact evidence alone, parks a corroborated stalled lane with cause `liveness-stall` and a non-null re-entry instant, refuses an action whose object another supervision authority is actively acting on, and composes restart admission over the delivered budget and typed-question path. It reads the daemon's records and needs no lane composition; the daemon stays `supervise-only`. See [supervise](../spec/features/feature-supervise.md).
 - Accepted architecture calls for one shared composition root. Today the working
   compositions are command-specific CLI edge functions. Optional registrations
   require supplied ports. Production credential/quota factories and a spawn gate

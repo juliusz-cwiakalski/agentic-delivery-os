@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-PEAK-PAUSING
 status: Current
 created: 2026-11-13
-last_updated: 2026-11-16
+last_updated: 2026-11-17
 owners: ["engineering"]
 service: delivery-os
 summary: "Provider-aware peak pausing (M2-S17): the provider profile nominated at dispatch admission and recorded on lane and attempt records with the classified no-nomination pre-session refusal, peak-window rules as versioned per-profile data (windows, multipliers, buffers, grace bounded by the buffer, fail-closed validation, UTC-only), the resident daemon's window watch with bounded-grace in-flight parking and the preserved|session-state-not-preserved classification, classification-routed window-end resume from preserved session state or the delivered interrupted-lane recovery with per-profile isolation and owner-hold precedence, taxonomy v2 stop/parked/resumed/park-edge episode events, the window-scoped zero-spend evidence over telemetry v2 with classified absence, the status/brief/lanes/board park surfaces, and the composition-fact peak-enforcement read with the declared degradation to iteration-start gating when no composition supplies the watch."
 links:
-  related_changes: ["GH-294", "GH-297", "GH-287"]
+  related_changes: ["GH-294", "GH-297", "GH-287", "GH-295"]
   related_decisions: ["TDR-0025", "TDR-0028", "TDR-0029", "TDR-0030"]
   contracts:
     - "packages/core/src/contracts/provider-profile.ts"
@@ -90,7 +90,7 @@ Zero is a positive reading backed by present telemetry; telemetry absence is a c
 ## 8. Surfaces
 
 - **`queue release --park peak-window --until <iso>`** — the expiry-carrying window cause: `--until` is required, as for `provider-window`. The release writer stamps the record's minimal episode identity (`peak-<ref>-<nowIso>`) and the operator-declared `until`; the watcher's episode fields stay unwritten, so the record projects the `park-edge` alone. **`queue release --park owner-hold`** — refuses `--until`; an owner-hold park's `until` is a declared classified absence (the hold is a read-time gate with no expiry — DEC-12), and the invoked command is the one writer of an owner-hold park record: the hold itself writes none, and neither the watcher nor the window-end resume path creates a synthetic one.
-- **`lanes`** — the `parked:<cause>` projection gains `parked:peak-window` and `parked:owner-hold` beside the delivered three, which render unchanged. The `lanes --json` machine read carries `peakEnforcement: { mode, parkClaimed }`. The mode reflects the composition fact: it is `window-watch` iff the running composition actually supplies the profile-window watcher ports, otherwise `iteration-start-gating` — never an inference from daemon reachability, which says nothing about whether a watcher exists. `parkClaimed` is read from durable park records — the fold never claims a park that did not happen.
+- **`lanes`** — the `parked:<cause>` projection gains `parked:peak-window` and `parked:owner-hold` beside the other delivered causes, and the supervised-stall cause `liveness-stall` renders through the same `parked:<cause>` template; every delivered render is unchanged. The `lanes --json` machine read carries `peakEnforcement: { mode, parkClaimed }`. The mode reflects the composition fact: it is `window-watch` iff the running composition actually supplies the profile-window watcher ports, otherwise `iteration-start-gating` — never an inference from daemon reachability, which says nothing about whether a watcher exists. `parkClaimed` is read from durable park records — the fold never claims a park that did not happen.
 - **`status`** — the providers section gains the bounded `laneParks[]` park fields (`ref`, `reason`, `until`, `preservation`, `providerProfile`) for open episodes, read in the same collector pass and carried verbatim from the park records; fields clear after the episode closes and an owner-hold `until` renders absent.
 - **`brief`** — the providers surface projects the identical park fields with zero added reads, rendering one `lane-park <ref> <reason> until=<instant|absent> <preservation>` line per open episode.
 - **`board`** — the `PARKED` section is the open lane park-episode population (`peak-window` and `owner-hold` only) with `ref`, `reason`, `until`, optional `preservation`, and optional `providerProfile`; an owner-hold row carries the classified `owner-hold-no-expiry` absence, and a `provider-quota` park never appears. The host-wide owner hold is carried once on the board payload as `ownerHold` ([Board](feature-board.md)).
@@ -118,6 +118,7 @@ Without a resident daemon there is no window watcher and no mid-flight park. The
 - [Dispatch Engine](feature-dispatch-engine.md) — the admission order, attempt records, restart budget, and resume economics the nomination and recovery consume.
 - [Resident Dispatch Daemon](feature-resident-daemon.md) — the supervision cycle the watch rides and the lane composition requirement.
 - [Scheduling Engine](feature-scheduling-engine.md) — the park record family, cause/condition vocabulary, owner hold, and the lanes surfaces.
+- [Supervise](feature-supervise.md) — the operator battery whose supervised-stall cause rides the same many-to-one cause-to-condition mapping the `peak-window` cause established.
 - [Event Taxonomy v2](feature-event-taxonomy.md) — the declaration, envelope, and v1-compatibility contract the episode events join.
 - [Spend Read Side](feature-spend.md) — the window-evidence form and its `telemetryState` disclosure.
 - [Harness Telemetry v2](feature-telemetry-v2.md) — the storage identity and attribution join the evidence counts over.
