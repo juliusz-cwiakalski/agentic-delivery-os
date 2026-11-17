@@ -1,28 +1,70 @@
-# GH-293 implementation plan — machine-readable projection (delivery.plan.v1).
+# GH-293 delivery plan — machine-readable document (delivery.plan.v1), revision 1.1
+# (2026-11-18; readiness iteration 1's plan-routed findings F-3, F-4, F-10 plus the
+# mechanical alignment to spec v1.2 / test plan v1.2 / amended TDR-0031).
+# Revision 1.0 was authored in lifecycle phase 4 (`delivery_planning`) against spec
+# v1.1 and test plan v1.1 (44 cases).
 # Canonical plan artifact: this YAML document is the only plan file for the
 # change. `plan validate`, `plan diff`, `plan overlap`, and `lint plan` read it
 # directly.
 #
+# REVISION 1.1 AMENDMENT (2026-11-18) — no phase removed, no id renumbered, no
+# acceptance criterion weakened, and no phase pre-authorizes an unmet AC; the phase
+# set stays 1..7:
+#   - F-3 (major) the documentation phase now scopes the BOUNDED lifecycle-prose
+#     edits — the delivery-process paragraph in `AGENTS.md` and the lifecycle-state
+#     paragraph in `doc/guides/change-lifecycle.md` — so AC-F4-8/AC-F8-12 cannot
+#     pass while either document still calls `deliver-ticket.sh` and
+#     `ceo-loop.sh` "retained primary entry points". The bounded-edit constraint
+#     is stated in the Phase 6 scope block, and TC-ENGINE-065 is pinned to Phase 6.
+#   - F-4 (major) the closable-residual escape for the two
+#     `doc/quality/test-specs/` reconciliations is REMOVED. That reconciliation is
+#     a mandatory obligation owned by lifecycle phase 7 (`@doc-syncer`, DEC-16):
+#     Phase 6 authors only the handoff statement, and Phase 7 carries the
+#     obligation as a mandatory landing row gated on `system_spec_update`
+#     completion. Spec §17.1 DoD-7 requires it; nothing in this plan may close
+#     without it.
+#   - F-10 (minor) the delivery-bound refusal code for a non-resolving merge
+#     request is stated as a selection criterion (a code the error table already
+#     declares, reused with its declared meaning, refused at its declared
+#     projection and exit; stop and reopen specification if no row fits) instead of
+#     an unqualified candidate.
+#   - Mechanical alignment: 45 cases (TC-ENGINE-065 added to Phase 6); Phase 4
+#     cites DEC-17 / TDR-0031 D11 for the row's `production` evidence-scope fold;
+#     Phases 1 and 3 cite the amended TDR-0031 (D2's five-outcome table, D7's
+#     declared exit projection, D8..D11); Phase 7 asserts spec §17.1 DoD-1..DoD-10,
+#     with DoD-9 (commit-range gate) in the gate battery and DoD-10 (per-phase
+#     pm-notes evidence) declared as the PM's own phase-10 check, never the
+#     coder's.
+#
 # SOURCES (single source of truth):
-#   - Spec:      ./chg-GH-293-spec.md (v1.1, 14 ACs — AC-F1-1, AC-F1-2, AC-F2-3,
+#   - Spec:      ./chg-GH-293-spec.md (v1.2, 14 ACs — AC-F1-1, AC-F1-2, AC-F2-3,
 #                AC-F2-4, AC-F3-5, AC-F3-6, AC-F4-7, AC-F4-8, AC-F5-9, AC-F6-10,
 #                AC-F7-11, AC-F8-12, AC-F8-13, AC-NFR1-14; F-1..F-8; NFR-1..NFR-13;
-#                DM-1..DM-7; DEC-1..DEC-16; §5.1 capability details; §6 flows 1-5;
-#                §7 scope; §8.5 compatibility; §16 affected components; Appendix A
-#                exact additive shapes, Appendix B scenario restatements, Appendix C
-#                window/hold effect mapping, Appendix D source anchors, and
-#                Appendix E declared outcome and failure behaviour).
-#   - Tests:     ./chg-GH-293-test-plan.md (v1.1, 44 cases TC-ENGINE-001..095 in
-#                eight blocks; 14/14 AC coverage; DEC-1..DEC-16 coverage;
-#                §3.5 substitute assertions AMB-ENG-1..5, BYTE-ENG-1,
-#                TRUNC-ENG-1; §4 layers; §7 automation map with the planned suite
-#                paths this plan declares; §8.3 OQ-TP-1..8). No case id, oracle,
-#                identity, exit, bound, or AC/NFR mapping is reshaped by this
-#                plan; phase ownership of every id is declared in the TC -> PHASE
-#                MAP below.
+#                DM-1..DM-7; DEC-1..DEC-17; §5.1 capability details; §6 flows 1-5;
+#                §7.1/§7.2 scope (including the bounded lifecycle-prose boundary);
+#                §8.5 compatibility; §16 affected components; §17.1 Definition of
+#                Done DoD-1..DoD-10; Appendix A exact additive shapes, Appendix B
+#                scenario restatements, Appendix C window/hold effect mapping,
+#                Appendix D source anchors, and Appendix E the five-outcome handover
+#                table, the fleet failure table, the emittable-code declaration, and
+#                the credential-read exit projection).
+#   - Tests:     ./chg-GH-293-test-plan.md (v1.2, 45 cases TC-ENGINE-001..095 in
+#                eight blocks — TC-ENGINE-065 is the bounded lifecycle-prose case;
+#                14/14 AC coverage; DEC-1..DEC-17 coverage; TDR-0031 clause coverage
+#                D1..D11; §3.5 substitute assertions AMB-ENG-1..5, BYTE-ENG-1,
+#                TRUNC-ENG-1, SCOPE-ENG-1; §3.6 the spec §17.1 DoD-1..DoD-10 trace;
+#                §4 layers; §7 automation map with the planned suite paths this
+#                plan declares; §8.3 OQ-TP-1..10; §10 review attestations). No case
+#                id, oracle, identity, exit, bound, or AC/NFR mapping is reshaped by
+#                this plan; phase ownership of every id is declared in the TC ->
+#                PHASE MAP below.
 #   - Decisions: doc/decisions/TDR-0031-engine-first-evaluation-surfaces.md
-#                (status Proposed, UNTRACKED working-tree file; binding clauses
-#                D1..D7 and constraints C-1..C-8 consumed as pinned).
+#                (status Proposed, UNTRACKED working-tree file, AMENDED 2026-11-18;
+#                eleven binding clauses D1..D11 — D2's five-outcome table with the
+#                single evidence-read-free exemption, D7's declared exit projection
+#                (the credential-read move 2 -> 1, no class, row, or exit added),
+#                and the seam declarations D8..D11 — plus constraints C-1..C-8,
+#                consumed as pinned).
 #   - PM record: ./chg-GH-293-pm-notes.yaml (owner-authored scope comment of
 #                2026-11-15 placing the production merge-composition defect in
 #                this ticket; milestone M2; delivery conventions — this plan
@@ -43,12 +85,15 @@
 #   (b0573fd8, line 61: `| TDR-0031 | ... | Proposed | 2026-11-17 |`). The commit
 #   primitive stages tracked-pending work plus untracked files only inside the
 #   declared phase scope, so the record MUST be declared in the FIRST plan
-#   phase or the index row dangles at PR time. It lands as authored (status
-#   Proposed; owner acceptance is the GH-293 PR review, per the record's
-#   governance block). The index row is already correct and is not edited, so
+#   phase or the index row dangles at PR time. It lands as AMENDED — status
+#   Proposed, eleven clauses D1..D11, D2's five-outcome table with the single
+#   evidence-read-free exemption, D7's declared credential-read exit projection
+#   (2 -> 1 with no class, row, or exit added), and the seam declarations
+#   D8..D11 — and owner acceptance is the GH-293 PR review, per the record's
+#   governance block. The index row is already correct and is not edited, so
 #   `doc/decisions/00-index.md` is not declared. TC-ENGINE-064 (Phase 6) proves
-#   the landing: file, index row, resolvable bidirectional reference, and status
-#   agreement.
+#   the landing: file, index row, resolvable bidirectional reference, status
+#   agreement, and the D1..D11 clause set with the five-outcome table.
 #
 # OQ-TP PLACEMENTS (test plan §8.3; each is placed in a named phase and asserted
 # by the named case — a placement that cannot hold fails its case, never skips):
@@ -92,14 +137,33 @@
 #     silently reduced and never replaced by an invented test seam.
 #
 #   OQ-TP-6 (which code a non-resolving request emits) — NARROWED and PLACED in
-#     PHASE 5 as a constraint, not an identifier: the refusal MUST be a code the
-#     error table already declares and a member of
-#     `MERGE_COMPOSITION_EMITTABLE_CODES` (the change invents no identity). The
-#     exact member is delivery-bound; TC-ENGINE-053 asserts the chosen code is
-#     declared and a constant member and fails an undeclared pair. The declared
-#     candidate class is the delivered `merge.transaction-aborted` (user,
-#     `not_landed`, "aborted cleanly before any landing mutation"), which the
-#     composition may reuse — never re-mean.
+#     PHASE 5 as a SELECTION CRITERION, not an identifier. The refusal code is
+#     delivery-bound, and the criterion is binding on whoever binds it:
+#       (a) the code must already be declared in the error table — this change adds
+#           no row, no kind, and no exit class (NFR-5, NG-7);
+#       (b) it must be reused WITH ITS DECLARED MEANING — the composition's
+#           situation must satisfy the row's declared `summary`, `consequence`, and
+#           `category`, not merely be nameable by the code;
+#       (c) it must be refused at that row's declared projection and therefore its
+#           declared exit (`projectExitCode`), never at a hand-picked exit;
+#       (d) it must be a member of `MERGE_COMPOSITION_EMITTABLE_CODES` and agree
+#           with the `domainKind` the composition emits for it (TC-ENGINE-054);
+#       (e) if no existing row's declared meaning covers "the ref's request could
+#           not be resolved", the coder MUST STOP and reopen specification rather
+#           than invent an identity, stretch a row, or return an unclassified
+#           failure.
+#     The declared candidate remains the delivered `merge.transaction-aborted`
+#     (kind `merge`, category `user`, retryable, consequence `not_landed`,
+#     projection `user-validation` -> exit 1, summary "The transaction aborted
+#     cleanly before any landing mutation"). Its row meaning DOES cover the abort
+#     case: the composition cannot resolve the ref's request, so it aborts before
+#     any landing mutation, nothing landed and a re-run with a valid ref
+#     converges — the row's declared consequence, remediation, and summary all
+#     hold without re-meaning the code. TC-ENGINE-053's non-resolving-ref cell
+#     asserts the chosen code's declared row shape (declared row, membership in
+#     `MERGE_COMPOSITION_EMITTABLE_CODES`, exit derived from the row's
+#     `projectionClass`) and fails an undeclared, re-meaned, or off-exit pair;
+#     TC-ENGINE-054 proves the constant is total over the refusal branches.
 #
 #   OQ-TP-7 (second placement of the restated SC-M2-S16-03) — OPEN and PLACED in
 #     PHASE 6: `@doc-syncer` reconciles; TC-ENGINE-062 selects by scenario id, so
@@ -131,7 +195,11 @@
 #     Phase 5 (TC-ENGINE-050); BYTE-ENG-1 (flat-alias byte identity is a golden
 #     plus absence scans plus a repos read that does carry both fields) ->
 #     Phase 4 (TC-ENGINE-022); TRUNC-ENG-1 (the 5,005-record fixture prints its
-#     context) -> Phase 4 (TC-ENGINE-024).
+#     context) -> Phase 4 (TC-ENGINE-024); SCOPE-ENG-1 (no shipped flag selects the
+#     `controlled` scope, so the DEC-17 `production` fold is asserted through its
+#     effect: a `controlled-proof` seed moves neither the row nor the summary, a
+#     `pilot` seed advances both by one, and no scope key exists in either payload)
+#     -> Phase 4 (TC-ENGINE-020, 021, 022, 093) and Phase 7 (TC-ENGINE-095).
 #
 # ADDITIVE CONTRACT DISCIPLINE (binding on every phase; DEC-9, NFR-1, NG-7):
 #   no new command, verb, flag, error-table row, `DOMAIN_KINDS` member, exit
@@ -158,29 +226,43 @@
 #     refuses `dispatch.state-unverified` at exit 2 while the prior flip stands;
 #     only the idempotent revert noop is evidence-read-free (DEC-12).
 #   OQ-TP-5 — the 5,005-record fixture's cost is measured at delivery.
+#   These three are the plan's ONLY residuals, and none of them is an acceptance
+#   criterion: each is either a declared product gap the documentation names
+#   (RSK-8), a declared decision residual the record carries (D4), or a placement
+#   note whose case asserts the contract either way (OQ-TP-5). No AC, no §17.1 DoD
+#   item, and no plan phase may close unmet — the bounded lifecycle prose is Phase 6
+#   scope, and the two `doc/quality/test-specs/` reconciliations are a mandatory
+#   lifecycle-phase-7 obligation (DEC-16) whose completion the PM's DoD check
+#   enforces.
 #
 # PHASE ORDERING AND TESTABILITY:
 #   Each phase is one commit whose declared narrow gate is green at its boundary.
-#   Phase 1 lands the decision record and the one shared condition-status shape
-#   (and nothing that breaks typecheck: no payload type gains a field until its
-#   producer lands). Phase 2 lands the summary accrual and the condition
-#   projection. Phase 3 lands the handover surfaces, the declared exemption, and
-#   `reversible`. Phase 4 lands the fleet host with the row binding. Phase 5
-#   lands the merge composition restoration and the classification conformance
-#   (the only phase that touches provider read composition). Phase 6 lands the
-#   documentation, the operating guide, the planning corpus, and the phase-7
-#   test-spec handoff. Phase 7 is the closing battery: cross-surface coherence,
-#   shell non-change controls, no-flip discipline, hermeticity, additivity, the
-#   changeset, and the full gate. The seams land with the surface they constrain
-#   (spec §18): the handover exemption with F-2 (Phase 3), the row binding with
-#   the fleet host (Phase 4), the owner principal and the emittable-code constant
-#   with the merge composition (Phase 5).
+#   Phase 1 lands the amended decision record (D1..D11; D2's five-outcome table,
+#   D7's exit projection) and the one shared condition-status shape (and nothing
+#   that breaks typecheck: no payload type gains a field until its producer lands).
+#   Phase 2 lands the summary accrual and the condition projection. Phase 3 lands
+#   the handover surfaces as D2's five-outcome table states them, the declared
+#   exemption, and `reversible`. Phase 4 lands the fleet host with the row binding
+#   and the declared `production` evidence-scope fold (DEC-17 / D11). Phase 5 lands
+#   the merge composition restoration and the classification conformance (the only
+#   phase that touches provider read composition; D7's exit projection is what its
+#   cases assert). Phase 6 lands the documentation, the operating guide, the bounded
+#   lifecycle prose, the planning corpus, and the phase-7 test-spec handoff
+#   statement. Phase 7 is the closing battery: cross-surface coherence, shell
+#   non-change controls, no-flip discipline, hermeticity, additivity, the
+#   changeset, the full gate, and the mandatory lifecycle-phase-7 reconciliation
+#   landing row. The seams land with the surface they constrain (spec §18): the
+#   handover exemption with F-2 (Phase 3), the row binding and the scope fold with
+#   the fleet host (Phase 4), and the owner principal plus the emittable-code
+#   constant with the merge composition (Phase 5).
 #
-# TC -> PHASE MAP (44 ids; every id is owned by exactly one phase — the phase
+# TC -> PHASE MAP (45 ids; every id is owned by exactly one phase — the phase
 #   which first makes its complete suite set green):
 #   Phase 1 contracts and TDR landing (0): none — proven by the exports, error
 #           table, decision-record, and content-inventory guards; the TDR landing
-#           itself is proven by TC-ENGINE-064 in Phase 6.
+#           itself is proven by the single TDR-landing case, which this map owns in
+#           the Phase 6 row below (no id is listed here, so every id appears exactly
+#           once in this map).
 #   Phase 2 summary accrual and conditions (6): TC-ENGINE-001, 002, 003, 004,
 #           005, 006.
 #   Phase 3 handover conditions, exemption, reversibility (7): TC-ENGINE-010,
@@ -189,11 +271,14 @@
 #           093, 094.
 #   Phase 5 merge restoration and classification (6): TC-ENGINE-050, 051, 052,
 #           053, 054, 055.
-#   Phase 6 documentation, guide, corpus, test-spec handoff (8): TC-ENGINE-040,
-#           041, 042, 060, 061, 062, 063, 064.
+#   Phase 6 documentation, guide, bounded lifecycle prose, corpus, test-spec
+#           handoff (9): TC-ENGINE-040, 041, 042, 060, 061, 062, 063, 064, 065.
 #   Phase 7 cross-surface, shell, no-flip, additivity (10): TC-ENGINE-030, 031,
 #           032, 033, 034, 035, 090, 091, 092, 095.
-#   Totals: 6 + 7 + 7 + 6 + 8 + 10 = 44.
+#   Totals: 6 + 7 + 7 + 6 + 9 + 10 = 45. 0 unassigned: the eight blocks hold
+#   001..006 (6), 010..016 (7), 020..024 (5), 030..035 (6), 040..042 (3),
+#   050..055 (6), 060..065 (6), 090..095 (6) = 45, and every one of them appears
+#   in exactly one phase row above.
 #
 # SCOPE CONVENTION: concrete files are exact paths; folders are declared by every
 #   phase that writes a new file inside them (the commit primitive stages only the
@@ -223,13 +308,31 @@
 #
 # DOC BOUNDARY: this change delivers documentation, so the current-truth pages
 #   are Phase 6 scope (spec §7.1, §18, AC-F8-12), not deferred to lifecycle phase
-#   7. The one exception is DEC-16: `doc/quality/test-specs/test-spec-dispatch-
-#   engine.md` and `test-spec-merge-verify-deploy.md` are reconciled in lifecycle
-#   phase 7 by `@doc-syncer`; Phase 6 authors only the handoff statement (in the
-#   feature pages and the guide) and Phase 7 re-declares the two files so a
-#   phase-7-authored reconciliation can be committed without reopening the plan.
-#   If lifecycle phase 7 has not run when Phase 7 executes, the two rows are
-#   untouched and the obligation stays recorded as a residual of this plan.
+#   7. Phase 6 also owns the BOUNDED lifecycle-prose reconciliation (AC-F4-8,
+#   AC-F8-12): `AGENTS.md`'s delivery-process paragraph and
+#   `doc/guides/change-lifecycle.md`'s lifecycle-state paragraph state the typed
+#   engine as the regular delivery path and the shell entry points as the
+#   documented, still-executable fallback with the delivered pointer — no flip
+#   claim, no deprecation-in-`dual-run` claim, zero "retained primary entry
+#   points" occurrences, no other paragraph rewritten, `AGENTS.md` gaining no
+#   `ados_distribution` marker, and the guide keeping its existing one
+#   (TC-ENGINE-065).
+#
+#   The two broader test specs (`doc/quality/test-specs/test-spec-dispatch-
+#   engine.md`, `test-spec-merge-verify-deploy.md`) are a MANDATORY obligation of
+#   this change, owned by lifecycle phase 7 (`system_spec_update`, `@doc-syncer`)
+#   per DEC-16 — not a residual and not optional. Phase 6 authors only the handoff
+#   statement (in the pages and the guide) and declares the two files in its own
+#   scope only as the subject of that statement, never as an authored
+#   reconciliation. Phase 7 carries the obligation as a mandatory landing row and
+#   re-declares the two files so the `@doc-syncer` reconciliation is stageable
+#   without reopening the plan. The obligation is gated on `system_spec_update`
+#   completion: AC-F8-12 and spec §17.1 DoD-7 are met only when the two files read
+#   as reconciled to the delivered contracts. If lifecycle phase 7 has not run when
+#   the plan-phase-7 battery ends, the two rows stay untouched and the obligation
+#   remains OPEN — the PM's DoD check (lifecycle phase 10) re-runs
+#   `system_spec_update` for them and does not close the change until DoD-7 is met.
+#   No phase of this plan may close with that obligation outstanding.
 #
 # RELEASE: one lockstep minor changeset over the five publishables
 #   (`@delivery-os/core`, `adapters`, `cli`, `mcp`, `opencode`), matching the
@@ -255,6 +358,7 @@ tier:
     - "The verify deploy stub is presented as delivered capability, or this change attempts its production fix (NG-8, RSK-8)"
     - "Any repository is flipped, or a dispatch.handover authoritative record is appended by this change (NG-1, NFR-7)"
     - "doc/quality/test-specs/ gains a new entry, or the two broader specs are reconciled outside lifecycle phase 7 (@doc-syncer) (DEC-11, DEC-16)"
+    - "Any phase is proposed to close with an acceptance criterion or a spec §17.1 DoD item outstanding, or the lifecycle-phase-7 test-spec reconciliation is described as a residual instead of a met obligation (AC-F4-8, AC-F8-12, DoD-7, DEC-16)"
     - "A delivering suite needs live network, a live credential read, a live model call, real sleeps, or the live tree/$HOME as state (NFR-9)"
 defaultLeases:
   - repo:main-tools
@@ -264,8 +368,16 @@ phases:
   # Phase 1 — Contracts and the shared condition-status shape; land TDR-0031.
   #
   # Objective: declare the one condition vocabulary the three surfaces read and
-  # land the binding decision record its index row already references. The shape
-  # is `DispatchConditionStatus = {condition, status}` with `condition` from the
+  # land the binding decision record its index row already references. The record
+  # lands AS AMENDED (2026-11-18, TDR-0031 v2): eleven clauses D1..D11 — D2's
+  # five-outcome table (four evidence-reading outcomes carry `conditions`; the one
+  # exempt outcome, the idempotent revert noop, carries none, no `verdict`, no
+  # `truncation`), D7's declared exit projection (the credential-read move 2 -> 1
+  # with no class, row, or exit added), and the seam declarations D8..D11 (owner
+  # principal, emittable-code constant, row repository binding, row evidence-class
+  # scope). This phase writes no clause; it lands the amended file, and TC-ENGINE-064
+  # (Phase 6) proves the landing and the clause set.
+  # The shape is `DispatchConditionStatus = {condition, status}` with `condition` from the
   # delivered `DISPATCH_HANDOVER_CONDITIONS` order (`truth, coverage, floor,
   # corroboration`) and `status` in the closed pair `met | open`, no `detail`;
   # the status set is declared once as data. The domain gains the single producer
@@ -275,8 +387,12 @@ phases:
   # type gains a field until its producer lands, so the phase is green on its own.
   #
   # AC/TC coverage: DM-3 (the shared shape and declared order), the declaration
-  # half of DEC-2; AC-F8-12's TDR landing half (proven by TC-ENGINE-064 in
-  # Phase 6); AC-NFR1-14 (no new vocabulary). Owns no TC id.
+  # half of DEC-2 as amended TDR-0031 D2 states it (the five-outcome table the
+  # shape must be able to express, including the one exempt outcome); TDR-0031 D7
+  # is cited because the declared exit projection is what this phase leaves
+  # untouched — the shape adds no exit class and moves no exit; AC-F8-12's TDR
+  # landing half (proven by TC-ENGINE-064 in Phase 6); AC-NFR1-14 (no new
+  # vocabulary). Owns no TC id.
   #
   # Gate:
   #   pnpm typecheck
@@ -290,7 +406,8 @@ phases:
   # Left green: exports-parity (the new declaration is re-exported from the
   #   public surfaces it belongs to), error-table-sync and error-table (row count
   #   and per-kind pins unchanged — this phase adds no row), decision-record
-  #   (TDR-0031's front matter and index agreement), content-inventory.
+  #   (TDR-0031's front matter, its amended D1..D11 clause set, and index
+  #   agreement), content-inventory.
   #
   # No scope drift: only the four declared source files, the decision record, and
   # the change folder (which stages this plan) are touched; no payload type, no
@@ -399,14 +516,17 @@ phases:
   # (F-2, DM-2, DM-3; DEC-2, DEC-4, DEC-12).
   #
   # Objective: give the decision surface the same four conditions and the
-  # authority fact, without changing any record or read order. `dispatch
+  # authority fact, without changing any record or read order. The delivered
+  # behaviour is exactly amended TDR-0031 D2's five-outcome table: `dispatch
   # handover` data carries the four ordered `conditions` and `reversible` on
   # every outcome that performs the gate evidence read — recorded flip,
   # idempotent flip noop, clean refusal, recorded revert — appended after
   # `unmetConditions` (which stays refusal-only and unchanged). The recorded
   # revert additionally carries `verdict`, populating an already-declared key so
   # `truncation` present exactly when `verdict == "unverifiable"` is expressible
-  # there. The single declared exemption is the idempotent revert noop: the
+  # there (D2's invariant and D7's projection rule: `unverifiable` is a verdict,
+  # never a condition status, and no exit class moves). The single declared
+  # exemption is the fifth row of that table — the idempotent revert noop: the
   # delivered code already answers it after the handover-ledger fold and before
   # `readDispatchGate`; this phase preserves that order, adds `reversible: false`,
   # and keeps `conditions`, `verdict`, and `truncation` absent, so the noop still
@@ -422,7 +542,9 @@ phases:
   # Handover and reversal record shapes are unchanged; replay remains idempotent.
   #
   # AC/TC coverage: AC-F2-3, AC-F2-4 complete (TC-ENGINE-010..016); AC-F8-13's
-  # SC-M2-S16-03 engine-surface half; NFR-4, NFR-7, NFR-11; DEC-2, DEC-4, DEC-12.
+  # SC-M2-S16-03 engine-surface half; NFR-4, NFR-7, NFR-11; DEC-2, DEC-4, DEC-12;
+  # TDR-0031 D2 (the five-outcome table this phase implements cell for cell) and
+  # D4 (the reversibility rule and its declared residual).
   #
   # Gate:
   #   pnpm typecheck
@@ -484,8 +606,15 @@ phases:
   # (persisted marker first, then the normalized configured remote; no scheduler
   # key on this path), at no additional store open and with no binding write;
   # records of another repository in the same store are excluded from
-  # `countedDeliveries`, `conditions`, and `cleanDispatches`. A `first-use` row
-  # reports the empty-window evaluation (`ineligible`; truth met; corroboration
+  # `countedDeliveries`, `conditions`, and `cleanDispatches`. The row folds the
+  # DECLARED `production` evidence scope — the scope that counts `pilot` attempts,
+  # the same scope the shipped `dispatch dual-run summary --repo` and the handover
+  # decision use (DEC-17, TDR-0031 D11) — so `handoverGate.conditions` and
+  # `handoverGate.cleanDispatches` are required to equal the summary's over the
+  # same ledger; the `controlled` scope (counting `controlled-proof`) stays
+  # available to controlled compositions and fixtures and is never the row's
+  # scope, and no scope key, flag, or configuration member is added. A `first-use`
+  # row reports the empty-window evaluation (`ineligible`; truth met; corroboration
   # met vacuously; coverage and floor open; `countedDeliveries: 0`;
   # `cleanDispatches: 0`; `reversible: false`) without opening a store. Failure
   # behaviour is declared: an unreadable/torn ledger or an unresolvable identity
@@ -496,9 +625,10 @@ phases:
   # projection input, never the `projects.v1` rows.
   #
   # AC/TC coverage: AC-F3-5, AC-F3-6 complete (TC-ENGINE-020..024, 093, 094);
-  # SC-M2-S16-01; NFR-1, NFR-2, NFR-3, NFR-4, NFR-10, NFR-13; DEC-1, DEC-15;
-  # AMB-ENG-1, AMB-ENG-2, BYTE-ENG-1, TRUNC-ENG-1; OQ-TP-4 and OQ-TP-8 pinned
-  # here, OQ-TP-5 measured here.
+  # SC-M2-S16-01; NFR-1, NFR-2, NFR-3, NFR-4, NFR-10, NFR-13; DEC-1, DEC-15,
+  # DEC-17; TDR-0031 D1, D10 (the row binding), D11 (the `production` scope fold);
+  # AMB-ENG-1, AMB-ENG-2, BYTE-ENG-1, TRUNC-ENG-1, SCOPE-ENG-1; OQ-TP-4 and
+  # OQ-TP-8 pinned here, OQ-TP-5 measured here.
   #
   # Gate:
   #   pnpm typecheck
@@ -522,8 +652,9 @@ phases:
   #
   # No scope drift: one bounded read pair per ready row, zero writes, no cache, no
   # scheduler, no extra store open, no identity persistence; no field is added to
-  # `projects.v1`, the flat alias, or the text table; no new error identity (the
-  # failure reuses `repos.state-unavailable`).
+  # `projects.v1`, the flat alias, or the text table; no evidence-scope selector,
+  # key, or flag appears — the fold is the declared `production` scope (DEC-17);
+  # no new error identity (the failure reuses `repos.state-unavailable`).
   # Conditional rows: `packages/cli/src/commands/repos.ts` and
   # `packages/cli/src/output/repos-text.ts` are declared because the row's
   # projection moves, but both are expected to stay untouched — the table keeps
@@ -577,7 +708,10 @@ phases:
   # the declared `ownerPrincipal` input. Simultaneously, failure classification
   # derives `domainKind` from the resolved error-table row instead of hard-coding
   # `provider`: `config.credential.missing` emits `config` at its declared
-  # projection and exit and can no longer be contained as `fallback.internal`.
+  # projection and therefore exit 1 (`user-validation`, TDR-0031 D7), and can no
+  # longer be contained as `fallback.internal`; exit 2 belongs to
+  # `platform-provider` and is the repaired defect's signature, which no case on
+  # this path may assert.
   # The composition publishes `MERGE_COMPOSITION_EMITTABLE_CODES` — its declared
   # emittable failure-code set, exhaustive by construction over its refusal
   # branches, one member per branch, every member a code the error table already
@@ -586,8 +720,9 @@ phases:
   # stub is untouched and stays a declared residual.
   #
   # AC/TC coverage: AC-F6-10, AC-F7-11 complete (TC-ENGINE-050..055); NFR-5,
-  # NFR-9, NFR-12; DEC-7, DEC-8, DEC-13, DEC-14; AMB-ENG-4, AMB-ENG-5; OQ-TP-1,
-  # OQ-TP-2, OQ-TP-6 placed here.
+  # NFR-9, NFR-12; DEC-7, DEC-8, DEC-13, DEC-14; TDR-0031 D7 (the declared exit
+  # projection), D8 (the owner principal), D9 (the emittable-code enumeration);
+  # AMB-ENG-4, AMB-ENG-5; OQ-TP-1, OQ-TP-2, OQ-TP-6 placed here.
   #
   # Gate:
   #   pnpm typecheck
@@ -654,9 +789,9 @@ phases:
         role: producer
 
   # ---------------------------------------------------------------------------
-  # Phase 6 — Documentation, the operating guide, the planning corpus, and the
-  # phase-7 test-spec handoff (F-4, F-5, F-8; AC-F5-9, AC-F8-12, AC-F8-13,
-  # AC-F4-8's documented half; NFR-8; DEC-5, DEC-10, DEC-11, DEC-16).
+  # Phase 6 — Documentation, the operating guide, the bounded lifecycle prose, the
+  # planning corpus, and the phase-7 test-spec handoff (F-4, F-5, F-8; AC-F5-9,
+  # AC-F8-12, AC-F8-13, AC-F4-8; NFR-8; DEC-5, DEC-10, DEC-11, DEC-16).
   #
   # Objective: make the delivered contracts the documented truth and record the
   # story's restatements. Deliverables: (a) a new operator guide
@@ -667,9 +802,11 @@ phases:
   # `verify deploy` residual stated as a gap; (b) reconciliation of
   # `feature-dispatch-engine.md` (summary/handover surfaces with the four
   # conditions and `reversible`, the declared revert-noop exemption, the fleet
-  # evaluation host, the no-flip operating definition, and the merge composition
-  # and classification truth), `feature-projects.md` (`repos list` row contract
+  # evaluation host incl. the declared `production` evidence scope, the no-flip
+  # operating definition, and the merge composition and classification truth),
+  # `feature-projects.md` (`repos list` row contract
   # with `reversible` then `handoverGate`, the row's own repository binding, the
+  # declared `production` scope fold, the
   # failure behaviour, the five-column text table, and the unchanged flat alias),
   # `feature-peak-pausing.md` (the effect-surface mapping per Appendix C, the
   # correction of the §2 over-claim that "the attempt-history read, the lanes
@@ -678,27 +815,65 @@ phases:
   # lane records, `status.laneParks`, board `PARKED`, spend window evidence; plus
   # the declared lanes-read profile blindness and the absence of any new window
   # read), `feature-merge-verify-deploy.md` (production composition, the
-  # error-table-derived classification, `MERGE_COMPOSITION_EMITTABLE_CODES`, and
+  # error-table-derived classification, `MERGE_COMPOSITION_EMITTABLE_CODES`, the
+  # declared credential-read exit projection at exit 1, and
   # the `verify deploy` residual), and the residual wording in
   # `feature-autonomous-delivery.md` and `feature-resident-daemon.md` (the engine
   # is the regular path; the shell remains the documented fallback and the daemon
-  # composition stays `supervise-only`); (c) the planning corpus: the M2-S16
+  # composition stays `supervise-only`); (c) the BOUNDED lifecycle-prose
+  # reconciliation of `AGENTS.md` (the delivery-process paragraph) and
+  # `doc/guides/change-lifecycle.md` (the lifecycle-state paragraph) — see the
+  # bounded-edit constraint below; (d) the planning corpus: the M2-S16
   # `- Progress:` line in `backlog.md`, the `status.md` M2 snapshot addendum, the
   # `milestones/m2/README.md` M2-S16 scenario cell gaining `SC-M2-S16-03` beside
   # `SC-M2-S16-01/02`, and the restated `SC-M2-S16-02` / `SC-M2-S16-03` text with
   # their forcing facts and story-AC traces in `test-scenarios.md` (OQ-TP-7 leaves
   # the placement to `@doc-syncer`; both scenarios are selected by id).
   #
+  # BOUNDED LIFECYCLE-PROSE CONSTRAINT (AC-F4-8, AC-F8-12, NFR-8; readiness F-3).
+  #   Two documents still assert the opposite primary path — `AGENTS.md`'s
+  #   delivery-process paragraph ("`deliver-ticket.sh` and `ceo-loop.sh` remain
+  #   retained primary entry points") and `doc/guides/change-lifecycle.md`'s
+  #   lifecycle-state paragraph (the same sentence). Both are edited, and only
+  #   within that one paragraph each, to state that the TYPED ENGINE is the regular
+  #   delivery path (`dispatch <ref>` appending real `pilot` attempts, lifecycle
+  #   merge/closeout through the engine primitives) and that the shell entry points
+  #   are the DOCUMENTED, STILL-EXECUTABLE FALLBACK whose authoritative-mode
+  #   deprecation pointer is delivered. Hard bounds:
+  #     - zero occurrences of "retained primary entry points" (or an equivalent
+  #       "primary delivery path" restatement) remain in either document;
+  #     - neither document claims this or any repository is flipped/authoritative,
+  #       or that the shell is deprecated or unsupported in `dual-run`; the flip is
+  #       stated as a separate owner act executed by `dispatch handover <repo>` once
+  #       the gate reads eligible;
+  #     - no other paragraph, table, heading, or instruction of either document is
+  #       rewritten (a broader edit fails TC-ENGINE-065, not a review preference);
+  #     - `AGENTS.md` is a root document and gains NO `ados_distribution` marker;
+  #       `doc/guides/change-lifecycle.md` KEEPS its existing
+  #       `ados_distribution: redistributable` marker inside its existing front
+  #       matter block (no second block, no second header);
+  #     - the edit lands here, after the surfaces it describes exist (spec §18), and
+  #       never as an ahead-of-implementation claim.
+  #   TC-ENGINE-065 asserts the positive claim in both resolved spans, the
+  #   whole-document absence scans, the no-flip/no-deprecation claims, the marker
+  #   facts, and the bounded-edit changed-line print. `doc-conformance` runs as the
+  #   control so the new wording introduces no history phrasing.
+  #
   # The two broader test specs (`doc/quality/test-specs/test-spec-dispatch-
   # engine.md`, `test-spec-merge-verify-deploy.md`) are NOT reconciled here: DEC-16
-  # places their reconciliation in lifecycle phase 7 (`@doc-syncer`). This phase
-  # states the handoff in the pages and the guide; Phase 7 re-declares the two
-  # files so a phase-7-authored reconciliation can be committed. No new
+  # places their reconciliation in lifecycle phase 7 (`@doc-syncer`) and it is a
+  # MANDATORY obligation of this change (spec §17.1 DoD-7), never a residual. This
+  # phase states the handoff in the pages and the guide and touches neither file;
+  # Phase 7 carries the obligation as its landing row and re-declares the two files
+  # so the phase-7-authored reconciliation is stageable. No new
   # `doc/quality/test-specs/` entry is created (DEC-11).
   #
-  # AC/TC coverage: AC-F5-9 (TC-ENGINE-040..042), AC-F8-12 (TC-ENGINE-060..064),
-  # AC-F8-13 (TC-ENGINE-062, 063), AC-F4-8's documented half (TC-ENGINE-060);
-  # NFR-8; DEC-5, DEC-10, DEC-11, DEC-16; GAP-T7.
+  # AC/TC coverage: AC-F5-9 (TC-ENGINE-040..042), AC-F8-12 (TC-ENGINE-060..065),
+  # AC-F8-13 (TC-ENGINE-062, 063), AC-F4-8's documented half (TC-ENGINE-060 for the
+  # guide/engine-as-regular-path claim, TC-ENGINE-065 for the bounded
+  # lifecycle-prose reconciliation) — AC-F4-8's authority half (nothing flipped, no
+  # authoritative record) is proven in Phase 7 by TC-ENGINE-035; NFR-8; DEC-5,
+  # DEC-6, DEC-10, DEC-11, DEC-16; GAP-T7.
   #
   # Gate:
   #   bun test tests/checks/engine-first-doc-reconciliation.test.ts
@@ -712,22 +887,30 @@ phases:
   #   window read and no `QueueLane.providerProfile`, guide marker and four topics,
   #   six pages resolved by heading with the four declared seams named, corpus
   #   progress/addendum/scenario row plus both restatements and the absence of the
-  #   two unrepresentable originals, restatement traceability, TDR landing),
+  #   two unrepresentable originals, restatement traceability, TDR landing, and the
+  #   bounded lifecycle-prose block: both spans positive, zero "retained primary
+  #   entry points" occurrences, no flip or deprecation-in-`dual-run` claim, marker
+  #   facts preserved, changed lines confined to the two paragraphs),
   #   doc-conformance and dispatch-doc-conformance (current-truth phrase table),
-  #   doc-distribution (`ados_distribution` marker present and consistent),
+  #   doc-distribution (`ados_distribution` marker present and consistent for the
+  #   guide and the lifecycle guide; `AGENTS.md` correctly carries none),
   #   content-inventory.
   #
   # No scope drift: documentation only — no production file changes, no shell
   # change, no new window/hold read, no `QueueLane.providerProfile`, no new
-  # test-spec entry, and no story-AC weakening in either restatement.
+  # test-spec entry, no reconciliation of the two broader test specs (lifecycle
+  # phase 7 owns that), no edit outside the two bounded lifecycle paragraphs, and
+  # no story-AC weakening in either restatement.
   # ---------------------------------------------------------------------------
   - id: 6
-    title: "Engine-first guide, six reconciled feature pages, planning corpus restatements, and the phase-7 test-spec handoff"
+    title: "Engine-first guide, six reconciled feature pages, bounded lifecycle prose, planning corpus restatements, and the phase-7 test-spec handoff"
     kind: delivery
-    summary: "docs(engine-first): add the operating guide and reconcile the pages, corpus, and restatements"
+    summary: "docs(engine-first): add the guide, reconcile the pages, corpus, and lifecycle prose, and state the phase-7 handoff"
     scope:
       files:
         - doc/guides/engine-first-operations.md
+        - AGENTS.md
+        - doc/guides/change-lifecycle.md
         - doc/spec/features/feature-dispatch-engine.md
         - doc/spec/features/feature-projects.md
         - doc/spec/features/feature-peak-pausing.md
@@ -744,8 +927,10 @@ phases:
 
   # ---------------------------------------------------------------------------
   # Phase 7 — Closing battery: cross-surface coherence, shell non-change,
-  # no-flip discipline, hermeticity, additivity, the release, and the gate
-  # (AC-NFR1-14; AC-F4-7, AC-F4-8; NFR-6, NFR-7, NFR-9, NFR-10; DEC-6, DEC-9).
+  # no-flip discipline, hermeticity, additivity, the mandatory lifecycle-phase-7
+  # reconciliation landing, the release, and the gate
+  # (AC-NFR1-14; AC-F4-7, AC-F4-8, AC-F8-12; spec §17.1 DoD-1..DoD-10; NFR-6,
+  #  NFR-7, NFR-9, NFR-10; DEC-6, DEC-9, DEC-16).
   #
   # Objective: prove the change as a whole and close the release. One ledger, one
   # summary read, one handover read, and one fleet read must agree on all four
@@ -763,16 +948,75 @@ phases:
   # scan, spawn/sleep counters, a non-empty file list, and a canary so the guard
   # cannot pass vacuously (TC-ENGINE-092).
   #
+  # MANDATORY LIFECYCLE-PHASE-7 LANDING ROW (DEC-16; AC-F8-12; spec §17.1 DoD-7) —
+  #   not a residual, not conditional, and never "recorded and closed":
+  #   obligation  reconcile `doc/quality/test-specs/test-spec-dispatch-engine.md`
+  #               and `doc/quality/test-specs/test-spec-merge-verify-deploy.md` to
+  #               the delivered contracts;
+  #   owner       lifecycle phase 7 `system_spec_update` (`@doc-syncer`);
+  #   staging     the two files are declared in this phase's `scope.files` so the
+  #               `@doc-syncer` reconciliation is committable here without
+  #               reopening the plan (this phase authors no content of them);
+  #   gate        the obligation is a completion gate on `system_spec_update`: it
+  #               is met only when both files read as reconciled (documented
+  #               contracts, no superseded claim, no new test-spec entry, DEC-11);
+  #   failure     if lifecycle phase 7 has not produced the reconciliation when
+  #               this battery ends, the obligation stays OPEN and this phase does
+  #               NOT close the change: the PM's DoD check (lifecycle phase 10)
+  #               re-runs `system_spec_update` for the two files and re-checks
+  #               DoD-7 before the PR. An outstanding reconciliation is the only
+  #               legitimate reason the change waits, and it is never converted
+  #               into a residual.
+  #
   # Release obligations: one lockstep minor changeset over the five publishables;
   # the change folder carries this plan, the pm-notes evidence, and the capsule
-  # residue; the two phase-7 test-spec files are re-declared so a `@doc-syncer`
-  # reconciliation can be committed without reopening the plan (DEC-16) — if
-  # lifecycle phase 7 has not run, they stay untouched and the obligation stays
-  # recorded.
+  # residue.
+  #
+  # DoD ASSERTIONS (spec §17.1) — this phase is where DoD-1..DoD-10 are asserted
+  #   and evidenced; all ten are required and none is waivable:
+  #   DoD-1  additive contracts: the appended keys, their declared order, and the
+  #          appended text lines hold; no delivered key, exit, or identity moved
+  #          except the declared credential-read exit (the phases 1-4 suites with
+  #          TC-ENGINE-001, 002, 003, 005, 006, 010, 016, 020, 022, plus 090 here).
+  #   DoD-2  handover conditions bounded to amended D2's five outcomes: four
+  #          evidence-reading outcomes carry them, the revert noop carries none and
+  #          still answers under a torn ledger (TC-ENGINE-010, 011, 012, 014, 016).
+  #   DoD-3  summary/handover/row coherence at one `production` scope (TC-ENGINE-003,
+  #          004, 020, 021, 023, 024, 093 plus 095 here).
+  #   DoD-4  merge composition real and honest incl. the declared exit-1 credential
+  #          refusal and a total emittable constant (TC-ENGINE-050, 051, 052, 053,
+  #          054 plus 091 here).
+  #   DoD-5  shell non-change controls: five-key tail, exits, pointer, four entry
+  #          points (TC-ENGINE-030..034 and the delivered shell suites here).
+  #   DoD-6  no repository flipped, zero authoritative records (TC-ENGINE-013, 035,
+  #          with the state-root audit recorded in test-plan §10).
+  #   DoD-7  documentation set landed: guide, six feature pages, the BOUNDED
+  #          lifecycle-prose edits in `AGENTS.md` and
+  #          `doc/guides/change-lifecycle.md`, the two broader test specs
+  #          reconciled in lifecycle phase 7 by `@doc-syncer`, the corpus
+  #          restatements, and TDR-0031 with its index row (TC-ENGINE-040, 041, 042,
+  #          055, 060, 061, 062, 063, 064, 065 plus the landing row's attestation) —
+  #          the reconciliation half is the landing row above and blocks closure
+  #          while open.
+  #   DoD-8  quality gates green hermetically: `TMPDIR=$PWD/tmp/tmpdir pnpm
+  #          check` plus the change-specific suites, the doc-distribution check,
+  #          and the shell suites (this phase's gate battery).
+  #   DoD-9  commit-range gate: `./scripts/lint-commit-range.sh --base main-tools`
+  #          reports `PASS` (or `SKIP` for its declared no-configuration reason);
+  #          a `FAIL` is remediated in the mode the gate names and re-run, and an
+  #          unresolved `ERROR` is NEVER recorded as a pass (gate row below; the
+  #          verdict string is quoted in the phase notes).
+  #   DoD-10 plan phases closed with evidence: every declared plan phase complete
+  #          with its per-phase pm-notes `notes:` evidence (phase id, commit hash,
+  #          gate result). THIS IS THE PM'S OWN CHECK at lifecycle phase 10
+  #          (`dod_check`) — the coder records the per-phase notes entries through
+  #          the `commit`/`phase` primitives and never self-certifies DoD-10; no
+  #          test asserts it (test-plan §3.6/§10, review-attested).
   #
   # AC/TC coverage: AC-NFR1-14 (TC-ENGINE-090..092), AC-F4-7 (TC-ENGINE-030..034),
-  # AC-F4-8 and NFR-7 (TC-ENGINE-035), NFR-10 and AC-F1-2/AC-F3-5 coherence
-  # (TC-ENGINE-095).
+  # AC-F4-8 and NFR-7 (TC-ENGINE-035), AC-F8-12's landing half (the landing row
+  # above, attested at DoD-7), NFR-10 and AC-F1-2/AC-F3-5 coherence (TC-ENGINE-095);
+  # spec §17.1 DoD-1..DoD-10.
   #
   # Gate:
   #   pnpm typecheck
@@ -799,29 +1043,40 @@ phases:
   #   canary), dispatch-imports + dispatch-merge-boundary (structural lists
   #   extended by appending), content-inventory, the three shell suites (two
   #   delivered controls unmodified, one new parity suite), doc-distribution,
-  #   changesets-group, the commit-range gate, the full aggregate battery, the
-  #   plan verdict, and the pm-notes/plan conformance.
+  #   changesets-group, the commit-range gate (its verbatim verdict quoted in the
+  #   phase notes, an `ERROR` never recorded as a pass), the full aggregate
+  #   battery, the plan verdict, the pm-notes/plan conformance, and the
+  #   lifecycle-phase-7 reconciliation landing row attested in test-plan §10
+  #   (`@doc-syncer` changed both files; no new test-spec entry; DoD-7 met).
   #
-  # Exit: every AC is met and every declared phase complete; the four condition
+  # Exit: every AC is met and every declared phase complete; DoD-1..DoD-10
+  # (spec §17.1) are all satisfied — with DoD-9's gate verdict quoted and DoD-10
+  # left to the PM's phase-10 check; the four condition
   # statuses agree across the three surfaces on every fixture; no repository is
   # flipped and no authoritative record exists; `projects.v1` and the flat alias
   # are byte-identical; the five-key shell tail is unchanged; every emitted merge
   # (kind, code) pair matches its declared row; `verify deploy` is stated as a
-  # residual; the TDR-0031 file landed in Phase 1; and the phase-7 test-spec
-  # handoff is either satisfied or recorded as the residual this phase declares.
+  # residual; TDR-0031 landed (as amended) in Phase 1; the bounded lifecycle prose
+  # is reconciled in Phase 6 (TC-ENGINE-065); and the two
+  # `doc/quality/test-specs/` files ARE reconciled by lifecycle phase 7
+  # (`@doc-syncer`) — this phase is satisfied only when that landing row is met.
+  # There is no "recorded instead" branch: an outstanding reconciliation keeps the
+  # obligation open for the PM's DoD check.
   #
-  # No scope drift: tests, the changeset, the change folder, and (conditionally)
-  # the two phase-7-authored test-spec files only — no production behaviour
-  # change, no shell change, no flip, and no plan-goal amendment.
+  # No scope drift: tests, the changeset, the change folder, the two test-spec
+  # files that lifecycle phase 7 authors, and nothing else — no
+  # production behaviour change, no shell change, no flip, and no plan-goal
+  # amendment.
   # Conditional rows: `tests/fixtures/dispatch` is declared folder-wise only if
-  # the closing battery reuses a fixture helper that must be extended; the two
-  # `doc/quality/test-specs/` files are staged only if lifecycle phase 7
-  # (`@doc-syncer`) has reconciled them (DEC-16) — no content is authored here.
+  # the closing battery reuses a fixture helper that must be extended. The two
+  # `doc/quality/test-specs/` files are a MANDATORY obligation of the landing row
+  # above (DEC-16, DoD-7), declared here so the `@doc-syncer` edit is stageable;
+  # they are never optional and no content of them is authored by this phase.
   # ---------------------------------------------------------------------------
   - id: 7
-    title: "Cross-surface coherence, shell non-change, no-flip discipline, hermeticity, release, and gate closure"
+    title: "Cross-surface coherence, shell non-change, no-flip discipline, hermeticity, the lifecycle-phase-7 reconciliation landing, release, and gate closure"
     kind: delivery
-    summary: "test(engine-first): close the cross-surface, no-flip, and hermetic battery with the release"
+    summary: "test(engine-first): close the cross-surface, no-flip, and hermetic battery, land the phase-7 reconciliation, and cut the release"
     scope:
       files:
         - .changeset/gh-293-engine-first-operations-minor.md
