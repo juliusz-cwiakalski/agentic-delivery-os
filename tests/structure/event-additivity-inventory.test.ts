@@ -81,8 +81,9 @@ describe("TC-EVT-074 additivity inventory", () => {
     const files = readdirSync(join(ROOT, "packages/core/src/state"))
       .filter((file) => file.endsWith(".ts"))
       .sort();
-    // GH-291 adds exactly one state-tier module beside the delivered set.
-    expect(files).toEqual([...baseline.stateFiles, "telemetry.ts"].sort());
+    // GH-291 adds exactly one state-tier module beside the delivered set;
+    // GH-299 adds the read-only metrics composition, which carries no kind.
+    expect(files).toEqual([...baseline.stateFiles, "metrics-reads.ts", "telemetry.ts"].sort());
     expect(files.filter((file) => /event|taxonomy/iu.test(file))).toEqual([]);
   });
 

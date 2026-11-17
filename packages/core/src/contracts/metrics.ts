@@ -9,6 +9,7 @@
  * ordering rule lives here so the pure domain, the command surface, and the
  * checks assert through one declaration.
  */
+import type { SpendLedgerRead } from "./spend.js";
 import type { StateFailure, StateSafeLocation } from "./state.js";
 import type { TelemetryState } from "./telemetry.js";
 
@@ -471,6 +472,14 @@ export type MetricsCeremonyRun = {
     readonly endedAtMs: number;
     readonly durationMs: number;
   }[];
+};
+
+/** The verified read one metrics invocation composes before the pure fold. */
+export type MetricsLedgerRead = {
+  readonly workItemRef: string;
+  readonly telemetryState: TelemetryState;
+  readonly ceremony: readonly MetricsCeremonyRun[];
+  readonly spend: SpendLedgerRead;
 };
 
 /** The verified state read one report consumes (F-2..F-5). */

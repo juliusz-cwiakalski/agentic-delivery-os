@@ -477,6 +477,7 @@ export {
   type MetricsFoldInput,
   type MetricsWindowOutcome,
   mapMeasurementKind,
+  resolveMetricsBurnRate,
   resolveMetricsWindow,
 } from "./metrics.js";
 export { renderMetricsHuman } from "./metrics-text.js";

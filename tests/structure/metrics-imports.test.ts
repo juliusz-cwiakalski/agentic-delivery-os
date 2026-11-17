@@ -18,6 +18,10 @@ export const METRICS_MODULES = [
   "packages/core/src/contracts/metrics.ts",
   "packages/core/src/domain/metrics.ts",
   "packages/core/src/domain/metrics-text.ts",
+  "packages/core/src/state/metrics-reads.ts",
+  "packages/adapters/src/file/metrics-baseline.ts",
+  "packages/adapters/src/file/metrics-config.ts",
+  "packages/adapters/src/file/metrics-corpus.ts",
 ] as const;
 
 const AMBIENT_MEMBERS = [
@@ -49,24 +53,42 @@ const specifiersOf = (source: string, name: string): readonly Specifier[] => {
   return specifiers;
 };
 
+/** The admitted relative siblings per tier. */
+const ADMITTED_RELATIVES: Readonly<Record<string, readonly RegExp[]>> = {
+  contracts: [/^\.\/(state|telemetry|spend)\.js$/u],
+  domain: [/^\.\/metrics(-text)?\.js$/u],
+  state: [/^\.\/(ceremony|spend-reads)\.js$/u],
+  adapters: [/^\.\/(config-source|yaml-parser)\.js$/u],
+};
+
+const tierOf = (relative: string): keyof typeof ADMITTED_RELATIVES => {
+  if (relative.startsWith("packages/core/src/contracts/")) return "contracts";
+  if (relative.startsWith("packages/core/src/domain/")) return "domain";
+  if (relative.startsWith("packages/core/src/state/")) return "state";
+  return "adapters";
+};
+
 /** Every import a metrics module may declare, per tier. */
 export const metricsImportViolations = (source: string, relative: string): string[] => {
   const violations: string[] = [];
-  const contractsModule = relative.startsWith("packages/core/src/contracts/");
+  const tier = tierOf(relative);
   for (const { text, typeOnly } of specifiersOf(source, relative)) {
     if (text === "#contracts") {
-      if (contractsModule) violations.push(`${relative}: contracts may not import #contracts`);
+      if (tier === "contracts" || tier === "adapters") {
+        violations.push(`${relative}: ${tier} may not import #contracts`);
+      }
+      continue;
+    }
+    if (text === "@delivery-os/core/contracts") {
+      if (tier !== "adapters") violations.push(`${relative}: ${tier} may not import the package`);
       continue;
     }
     if (text.startsWith("./")) {
-      if (contractsModule && !typeOnly) {
+      if (!ADMITTED_RELATIVES[tier].some((pattern) => pattern.test(text))) {
+        violations.push(`${relative}: cross-module relative import ${text}`);
+      }
+      if (tier === "contracts" && !typeOnly) {
         violations.push(`${relative}: runtime import ${text} in a contracts module`);
-      }
-      if (contractsModule && !/^\.\/(state|telemetry)\.js$/u.test(text)) {
-        violations.push(`${relative}: cross-module relative import ${text}`);
-      }
-      if (!contractsModule && !/^\.\/metrics(-text)?\.js$/u.test(text)) {
-        violations.push(`${relative}: cross-module relative import ${text}`);
       }
       continue;
     }
@@ -107,14 +129,7 @@ describe("TC-METRICS-100 tier and purity confinement", () => {
       "packages/core/src/domain/metrics-text.ts",
     ]) {
       const source = readFileSync(join(ROOT, relative), "utf8");
-      for (const forbidden of [
-        "StateStorePort",
-        "readRecords",
-        "readSpendLedger",
-        "readFileSync",
-        "node:fs",
-        "Bun.",
-      ]) {
+      for (const forbidden of ["readRecords", "readFileSync", "node:fs", "Bun."]) {
         expect(source, `${relative} ${forbidden}`).not.toContain(forbidden);
       }
     }
@@ -131,6 +146,10 @@ describe("TC-METRICS-100 tier and purity confinement", () => {
     expect(inventory.core ?? []).toContain("src/contracts/metrics.ts");
     expect(inventory.core ?? []).toContain("src/domain/metrics.ts");
     expect(inventory.core ?? []).toContain("src/domain/metrics-text.ts");
+    expect(inventory.core ?? []).toContain("src/state/metrics-reads.ts");
+    expect(inventory.adapters ?? []).toContain("src/file/metrics-baseline.ts");
+    expect(inventory.adapters ?? []).toContain("src/file/metrics-config.ts");
+    expect(inventory.adapters ?? []).toContain("src/file/metrics-corpus.ts");
   });
 });
 

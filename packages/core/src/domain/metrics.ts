@@ -19,6 +19,10 @@ import {
   type METRIC_BASES,
   METRIC_IDS,
   METRICS_BASELINE_LOG_PATH,
+  METRICS_BURN_RATE_BASES,
+  METRICS_BURN_RATE_MAX_WINDOW_DAYS,
+  METRICS_BURN_RATE_MIN_WINDOW_DAYS,
+  METRICS_BURN_RATE_NODE_KEYS,
   METRICS_DAY_MS,
   METRICS_DRAWN_WINDOW_DAYS,
   METRICS_ESCAPED_DEFECTS_FLOOR_CAVEAT,
@@ -37,6 +41,7 @@ import {
   type MetricsBaselineLogRead,
   type MetricsBaselineRow,
   type MetricsBreakdowns,
+  type MetricsBurnRateDeclaration,
   type MetricsBurnRateNodeRead,
   type MetricsCeremonyRun,
   type MetricsComparisonRow,
@@ -927,6 +932,61 @@ export const computeMetricsReport = (input: MetricsFoldInput): MetricsReport => 
     truncated: false,
   };
   return boundMachine(report).report;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const WINDOW_DAYS = /^(\d{1,3})d$/u;
+
+/**
+ * Resolve one raw `metrics.burn-rate` node (DM-6, DEC-4).
+ *
+ * Absent is never a defect. Every defect — a non-mapping value, a missing or
+ * non-positive threshold, an unknown basis, a non-conforming or out-of-range
+ * window, or a non-string window — is `config.value.invalid` with no invented
+ * default. An unknown extra member is tolerated: the declared three are the
+ * contract.
+ */
+export const resolveMetricsBurnRate = (node: unknown): MetricsBurnRateNodeRead => {
+  if (!isRecord(node)) {
+    return { ok: false, code: "config.value.invalid", detail: "burn-rate.not-a-mapping" };
+  }
+  for (const key of METRICS_BURN_RATE_NODE_KEYS) {
+    if (!Object.hasOwn(node, key)) {
+      return { ok: false, code: "config.value.invalid", detail: `burn-rate.${key}.missing` };
+    }
+  }
+  const threshold = node.threshold;
+  if (typeof threshold !== "number" || !Number.isFinite(threshold) || threshold <= 0) {
+    return { ok: false, code: "config.value.invalid", detail: "burn-rate.threshold" };
+  }
+  const basis = node.basis;
+  if (
+    typeof basis !== "string" ||
+    !(METRICS_BURN_RATE_BASES as readonly string[]).includes(basis)
+  ) {
+    return { ok: false, code: "config.value.invalid", detail: "burn-rate.basis" };
+  }
+  const window = node.window;
+  if (typeof window !== "string") {
+    return { ok: false, code: "config.value.invalid", detail: "burn-rate.window" };
+  }
+  const match = WINDOW_DAYS.exec(window);
+  const days = match === null ? Number.NaN : Number(match[1]);
+  if (
+    !Number.isInteger(days) ||
+    days < METRICS_BURN_RATE_MIN_WINDOW_DAYS ||
+    days > METRICS_BURN_RATE_MAX_WINDOW_DAYS
+  ) {
+    return { ok: false, code: "config.value.invalid", detail: "burn-rate.window" };
+  }
+  const value: MetricsBurnRateDeclaration = {
+    threshold,
+    basis: basis as MetricsBurnRateDeclaration["basis"],
+    windowDays: days,
+  };
+  return { ok: true, declared: true, value };
 };
 
 /** The closed verdict set, re-exported so the renderer asserts through it. */

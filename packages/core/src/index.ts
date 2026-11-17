@@ -1092,6 +1092,7 @@ export {
   type MetricsFoldInput,
   type MetricsWindowOutcome,
   mapMeasurementKind,
+  resolveMetricsBurnRate,
   resolveMetricsWindow,
 } from "./domain/metrics.js";
 export { renderMetricsHuman } from "./domain/metrics-text.js";
@@ -1203,3 +1204,9 @@ export {
   type WatchLine,
   type WatchProjection,
 } from "./domain/watch-stream.js";
+// GH-299: the verified metrics read composition over the delivered seams.
+export {
+  type MetricsLedgerComposition,
+  type MetricsLedgerEvidence,
+  readMetricsLedger,
+} from "./state/metrics-reads.js";

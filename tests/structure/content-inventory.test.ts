@@ -37,6 +37,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "mapMeasurementKind",
     "METRICS_ENTRY_ORDER",
     "METRICS_VERDICTS",
+    "resolveMetricsBurnRate",
     "resolveMetricsWindow",
   ],
   "core/src/domain/metrics-text.ts": ["renderMetricsHuman"],
@@ -1945,6 +1946,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "core/src/domain/brief.ts": ["projectBrief", "renderBriefHuman"],
   "core/src/state/index.ts": ["createStateStore"],
   "core/src/state/spend-reads.ts": ["readSpendLedger"],
+  "core/src/state/metrics-reads.ts": ["readMetricsLedger"],
   "core/src/state/economics.ts": [
     "appendEconomicsRestartEvent",
     "createEconomicsResumeStorePort",
@@ -2664,6 +2666,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "COORDINATOR_BRANCH",
     "DAEMON_BRANCH",
     "LANE_BRANCH",
+    "METRICS_BRANCH",
     "POLL_BRANCH",
     "PRODUCTION_CATALOG",
     "QUEUE_BRANCH",
@@ -2728,6 +2731,18 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "runtimePlatform",
   ],
   "adapters/src/file/yaml-parser.ts": ["parseConfigYaml", "parserHostSwitchBlocked"],
+  "adapters/src/file/metrics-baseline.ts": [
+    "readMetricsBaselineLog",
+    "validateMetricsBaselineDocument",
+  ],
+  "adapters/src/file/metrics-config.ts": ["extractMetricsBurnRateNode", "readMetricsBurnRateNode"],
+  "adapters/src/file/metrics-corpus.ts": [
+    "METRICS_CORPUS_BLOCK",
+    "METRICS_CORPUS_MAX_DEPTH",
+    "METRICS_CORPUS_MAX_FILES",
+    "corpusRowsOfDocument",
+    "scanMetricsCorpus",
+  ],
   "adapters/src/io/envelope-content-policy.ts": ["buildEnvelopeContentPolicy"],
   "adapters/src/io/envelope-codec.ts": [
     "ENVELOPE_FIELD_NAME",

@@ -110,6 +110,24 @@ export {
   scanMemoryTree,
 } from "./memory-scan.js";
 export {
+  type MetricsBaselineReadInput,
+  readMetricsBaselineLog,
+  validateMetricsBaselineDocument,
+} from "./metrics-baseline.js";
+export {
+  extractMetricsBurnRateNode,
+  readMetricsBurnRateNode,
+} from "./metrics-config.js";
+export {
+  corpusRowsOfDocument,
+  METRICS_CORPUS_BLOCK,
+  METRICS_CORPUS_MAX_DEPTH,
+  METRICS_CORPUS_MAX_FILES,
+  type MetricsCorpusFileSystemFacts,
+  type MetricsCorpusReadInput,
+  scanMetricsCorpus,
+} from "./metrics-corpus.js";
+export {
   nodeOwnerHoldMarkerFileSystem,
   type OwnerHoldMarkerFileSystem,
   type OwnerHoldMarkerReadInput,

@@ -41,6 +41,10 @@ import {
   METRICS_SAMPLE_MINIMUM,
   METRICS_TRUNCATION_TARGETS,
 } from "../../packages/core/src/contracts/index";
+import {
+  resolveMetricsBurnRate,
+  resolveMetricsWindow,
+} from "../../packages/core/src/domain/metrics";
 
 const ROOT = process.cwd();
 const CONTRACT_TEXT = readFileSync(join(ROOT, "packages/core/src/contracts/metrics.ts"), "utf8");
@@ -191,5 +195,119 @@ describe("the disclosures and the declaration node are declared once", () => {
   test("the one failure identity is exact-code only", () => {
     expect(METRICS_BASELINE_UNREADABLE_CODE).toBe("metrics.baseline-unreadable");
     expect([...EXACT_CODE_DOMAIN_KINDS]).toContain("metrics");
+  });
+});
+
+describe("TC-METRICS-054 the declaration-node resolver is exact (unit half)", () => {
+  test("the at-limit valid twins resolve", () => {
+    for (const node of [
+      { threshold: 0.01, basis: "cost", window: "1d" },
+      { threshold: 1000, basis: "tokens", window: "90d" },
+      { threshold: 12.5, basis: "cost", window: "14d" },
+    ]) {
+      expect(resolveMetricsBurnRate(node)).toEqual({
+        ok: true,
+        declared: true,
+        value: {
+          threshold: node.threshold,
+          basis: node.basis,
+          windowDays: Number(node.window.replace("d", "")),
+        },
+      });
+    }
+  });
+
+  test("every defect class is refused with no invented default", () => {
+    const defects: readonly unknown[] = [
+      null,
+      "declared",
+      [],
+      {},
+      { threshold: 0, basis: "cost", window: "7d" },
+      { threshold: -1, basis: "cost", window: "7d" },
+      { threshold: "1000", basis: "cost", window: "7d" },
+      { threshold: null, basis: "cost", window: "7d" },
+      { basis: "cost", window: "7d" },
+      { threshold: 10, basis: "money", window: "7d" },
+      { threshold: 10, basis: "costs", window: "7d" },
+      { threshold: 10, window: "7d" },
+      { threshold: 10, basis: "cost", window: "0d" },
+      { threshold: 10, basis: "cost", window: "91d" },
+      { threshold: 10, basis: "cost", window: "30" },
+      { threshold: 10, basis: "cost", window: "30 days" },
+      { threshold: 10, basis: "cost", window: "-1d" },
+      { threshold: 10, basis: "cost" },
+    ];
+    for (const node of defects) {
+      expect(resolveMetricsBurnRate(node), JSON.stringify(node)).toEqual({
+        ok: false,
+        code: "config.value.invalid",
+        detail: expect.any(String),
+      });
+    }
+  });
+
+  test("an unknown extra member is tolerated and the declared three still validate", () => {
+    expect(
+      resolveMetricsBurnRate({ threshold: 5, basis: "tokens", window: "30d", note: "x" }),
+    ).toEqual({
+      ok: true,
+      declared: true,
+      value: { threshold: 5, basis: "tokens", windowDays: 30 },
+    });
+  });
+});
+
+describe("TC-METRICS-003 the window grammar predicate is exact (unit half)", () => {
+  const NOW = Date.UTC(2026, 10, 17, 9, 0, 0);
+
+  test("the drawn window is the trailing 30 days ending at the read instant", () => {
+    const drawn = resolveMetricsWindow({ nowMs: NOW });
+    expect(drawn).toEqual({
+      ok: true,
+      drawn: true,
+      window: {
+        from: new Date(NOW - 30 * 86_400_000).toISOString(),
+        through: new Date(NOW).toISOString(),
+      },
+    });
+  });
+
+  test("lone, malformed, date-only, zone-less, and reversed bounds are refused", () => {
+    const cases = [
+      { from: "2026-11-01T00:00:00Z", nowMs: NOW },
+      { through: "2026-11-01T00:00:00Z", nowMs: NOW },
+      { from: "2026-11-01", through: "2026-11-02T00:00:00Z", nowMs: NOW },
+      { from: "2026-11-01T00:00:00", through: "2026-11-02T00:00:00Z", nowMs: NOW },
+      { from: "2026-11-01T00:00:00+", through: "2026-11-02T00:00:00Z", nowMs: NOW },
+      { from: "2026-11-03T00:00:00Z", through: "2026-11-02T00:00:00Z", nowMs: NOW },
+      { from: "", through: "2026-11-02T00:00:00Z", nowMs: NOW },
+    ];
+    for (const input of cases) {
+      expect(resolveMetricsWindow(input).ok, JSON.stringify(input)).toBe(false);
+    }
+  });
+
+  test("the equivalent-offset and equal-instant twins are accepted", () => {
+    const zulu = resolveMetricsWindow({
+      from: "2026-11-01T00:00:00Z",
+      through: "2026-11-02T00:00:00Z",
+      nowMs: NOW,
+    });
+    const offset = resolveMetricsWindow({
+      from: "2026-11-01T01:00:00+01:00",
+      through: "2026-11-02T00:00:00Z",
+      nowMs: NOW,
+    });
+    expect(zulu.ok && offset.ok).toBe(true);
+    expect(zulu.ok && Date.parse(zulu.window.from)).toBe(
+      offset.ok ? Date.parse(offset.window.from) : -1,
+    );
+    const equal = resolveMetricsWindow({
+      from: "2026-11-01T00:00:00Z",
+      through: "2026-11-01T00:00:00Z",
+      nowMs: NOW,
+    });
+    expect(equal.ok).toBe(true);
   });
 });

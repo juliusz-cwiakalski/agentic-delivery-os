@@ -121,3 +121,27 @@ notes:
       subject is not a message-passing surface)."
     type: info
     date: "2026-11-17"
+  - text: "Plan phase 2 complete (pure report domain: entries, kinds, comparisons,
+      absence classification, truncation, bounded renderer). Commit e88a74c1.
+      Verification: bun test metrics-contract (20/20), metrics-imports,
+      content-inventory, config-contract green; ambient-globals clean;
+      exports-parity pass; TMPDIR=$PWD/tmp/tmpdir pnpm check green (9849 pass,
+      4 pre-existing skip, 0 fail). Deviation: the lockstep five-package minor
+      changeset was staged with this phase rather than phase 9 because
+      tests/checks/privacy-release.test.ts requires one whenever a publishable
+      path changes; phase 9 verifies it instead of authoring it."
+    type: info
+    date: "2026-11-17"
+  - text: "Plan phase 3 complete (verified metrics reads, the committed baseline-log
+      read, the declaration-node read, the bounded corpus scan, and the pure
+      burn-rate resolver). Commit recorded in the phase-4 note. Verification:
+      config-contract (catalog metrics branch), metrics-imports (seven modules
+      tier-checked), config-imports, event-additivity and port-inventory pins
+      green; ambient-globals and exports-parity pass;
+      TMPDIR=$PWD/tmp/tmpdir pnpm check green (9855 pass, 4 pre-existing skip,
+      0 fail). Discovered sites joining the commits: the config catalog
+      `metrics` branch (additive, GH-300 precedent), the config key pin in
+      tests/behaviour/config-schema.test.ts, and the state-tier file pin in
+      event-additivity-inventory; recorded under Appendix D D-14."
+    type: info
+    date: "2026-11-17"
