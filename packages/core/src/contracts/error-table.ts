@@ -39,6 +39,8 @@ export const DOMAIN_KINDS = [
   "events",
   "board",
   "steer",
+  // GH-299 registers the metrics read-side kind with exactly one row.
+  "metrics",
 ] as const;
 
 /**
@@ -48,7 +50,7 @@ export const DOMAIN_KINDS = [
  * rather than resolved to the kind's only row, so a malformed failure object
  * can never masquerade as the declared identity.
  */
-export const EXACT_CODE_DOMAIN_KINDS = ["spend"] as const;
+export const EXACT_CODE_DOMAIN_KINDS = ["spend", "metrics"] as const;
 export type ExactCodeDomainKind = (typeof EXACT_CODE_DOMAIN_KINDS)[number];
 
 /** Reserved containment code for broken invocations and unknown commands. */
@@ -1724,5 +1726,21 @@ export const ERROR_TABLE = [
       "Repair the repository's local state store or the unverified append, then retry; nothing is reported landed or completed.",
     projectionClass: "platform-provider",
     summary: "The steering store cannot be read, written, or verified.",
+  },
+  /**
+   * GH-299: the metrics read side's one exact identity (DEC-8, DM-7). It joins
+   * the closed allowlist by exact declaration; there is no `metrics.*` family
+   * and no pattern widening.
+   */
+  {
+    code: "metrics.baseline-unreadable",
+    domainKind: "metrics",
+    category: "platform",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Restore the committed measurement baseline log to a parseable, schema-valid document or remove it entirely; damaged canonical data is never treated as absence, and no report was produced.",
+    projectionClass: "platform-provider",
+    summary: "The committed measurement baseline log exists but cannot be parsed or validated.",
   },
 ] as const satisfies readonly ErrorTableEntry[];

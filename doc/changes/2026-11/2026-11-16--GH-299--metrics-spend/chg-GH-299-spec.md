@@ -592,7 +592,7 @@ The current delivered numbers are **146** `ERROR_TABLE` entries, **145** deliver
 | D-2 | `scripts/checks/error-table-sync.ts` | `RESERVED_TWO_SEGMENT_CODES` set gains exactly `metrics.baseline-unreadable` with the GH-299 comment | 62 → 63 members |
 | D-3 | `tests/structure/error-table.test.ts` | The mirror `RESERVED_TWO_SEGMENT_CODES` set gains the same code | 62 → 63 members |
 | D-4 | `tests/structure/error-table.test.ts` | `toHaveLength(146)` entry assertions (7 sites) | 147 |
-| D-5 | `tests/structure/error-table.test.ts` | Delivered-row (spend-exclusion) assertions `toHaveLength(145)` (2 sites) | 146 |
+| D-5 | `tests/structure/error-table.test.ts` | Delivered-row (spend-exclusion) assertions `toHaveLength(145)` (3 sites: the delivered-row assertions and the filter-form `entries.filter((entry) => entry.domainKind !== "spend")` arm) | 146 |
 | D-6 | `tests/structure/error-table.test.ts` | Allowlist-size assertions `toHaveLength(62)` (5 sites) and the allowlist test names pinning "62 members" (2 names) | 63 |
 | D-7 | `tests/structure/error-table.test.ts` | The four-surfaces agreement test name "146 entries / 145 delivered / 62 allowlist / 2 board / 3 steer / 3 retro / 146 documented" | "147 entries / 146 delivered / 63 allowlist / 2 board / 3 steer / 3 retro / 1 metrics / 147 documented" |
 | D-8 | `tests/structure/error-table.test.ts` | Carrier/doc text pins `toContain("146 machine identities")`, `toContain("the same 146 identities")`, `toContain("146 identities")`, and `toContain("exact two-segment allowlist of 62 declared identities")` (the four distinct pin sites across the suites) | 147 / 63 wording |
@@ -602,6 +602,7 @@ The current delivered numbers are **146** `ERROR_TABLE` entries, **145** deliver
 | D-12 | `tests/checks/error-table-sync.test.ts` | The frozen-oracle arithmetic `BASELINE_ROWS.length + 112` at all four sites (length check, failure message, counts assertions) | +113 |
 | D-13 | `doc/spec/features/feature-result-contract.md` | The documented-table paragraph: "146 machine identities" and "the same 146 identities", the kind inventory (gains `metrics` and its row), and the allowlist paragraph ("62 declared identities", gains the metrics code) | 147 wording, `metrics` row, 63 codes |
 
+| D-14 | Discovered at delivery (phase 1), joins the same commit under the appendix-amendment rule | `tests/structure/event-additivity-inventory.test.ts` (contract-file filter and kind count), `tests/structure/cross-repository-contract.test.ts` + `tests/fixtures/events/state-additivity-baseline.json` (the two new schema constants), `tests/structure/port-contract-inventory.test.ts` + `tests/fixtures/ports/v1-contract-inventory.json` (the new contract module and its re-exported names), `tests/structure/content-inventory.test.ts` (the new file's executable-allowance entry), `tests/fixtures/events/error-table-baseline.json` (the new row), and the `DOMAIN_KINDS` tail position asserted in `error-table.test.ts` | N/A — each site moves mechanically with the one row and the one new contract module |
 The plan enumerates the exact post-change text for each site; the test plan owns the near-miss rejection case (a two-segment `metrics.*` code outside the declared one is rejected) and the four-way agreement case. Any site discovered beyond this list during delivery joins the same commit and this appendix is amended — never silently.
 
 ## 25. DOCUMENT HISTORY
@@ -610,6 +611,7 @@ The plan enumerates the exact post-change text for each site; the test plan owns
 |---------|------|--------|---------|
 | 1.0 | 2026-11-16 | @spec-writer (GH-299, phase 2 specification) | Initial specification |
 | 1.1 | 2026-11-16 | @spec-writer (GH-299, phase 2 specification reopened) | Test-plan review amendments: basis-scoped baseline-consumed value rule (AC-F2-1, F-2, DM-2, DEC-13), attributable-scoped perAgent equality (AC-F5-1, F-5, DM-3, DEC-14), `crossedAt` pinned to the read instant (DM-4, DEC-5), comparison-window render posture declared (F-4, DM-5, glossary) |
+| 1.2 | 2026-11-17 | @coder (GH-299, plan phase 1) | Appendix D amendment under the declared appendix-amendment path (DoR finding, pre-authorized): D-5 undercounted the delivered-row `toHaveLength(145)` sites as 2 while the tree holds 3 (the filter-form assertion at `tests/structure/error-table.test.ts:2520`); all three moved in the phase-1 registration commit. No requirement, AC, or decision changed |
 
 ---
 

@@ -67,13 +67,14 @@ describe("TC-EVT-074 additivity inventory", () => {
     expect([...CAPSULE_EVENT_KINDS]).toEqual([...baseline.capsuleEventKinds]);
   });
 
-  test("no outbox effect kind was added; the declared telemetry contract files are exactly the two", () => {
+  test("no outbox effect kind was added; the telemetry/metric contract files are exactly the three", () => {
     expect([...EFFECT_KINDS]).toEqual([...baseline.effectKinds]);
     const telemetry = readdirSync(join(ROOT, "packages/core/src/contracts")).filter((file) =>
       /telemetry|metric|trace/iu.test(file),
     );
-    // GH-291 declares the telemetry v2 contract beside the delivered harness one.
-    expect(telemetry.sort()).toEqual(["harness-telemetry.ts", "telemetry.ts"]);
+    // GH-291 declares the telemetry v2 contract beside the delivered harness one;
+    // GH-299 declares the metrics read-side vocabulary, which carries no effect kind.
+    expect(telemetry.sort()).toEqual(["harness-telemetry.ts", "metrics.ts", "telemetry.ts"]);
   });
 
   test("the state tier's file set adds only the declared telemetry storage", () => {
@@ -90,8 +91,8 @@ describe("TC-EVT-074 additivity inventory", () => {
     expect(kinds.filter((kind) => kind === "events")).toHaveLength(1);
     expect(ERROR_TABLE.filter((entry) => entry.domainKind === "events")).toHaveLength(3);
     // GH-309 adds the `repos` kind, GH-297 the `board` kind, GH-296 the
-    // `ceremony` kind, and GH-298 the `steer` kind.
-    expect(kinds).toHaveLength(29);
+    // `ceremony` kind, GH-298 the `steer` kind, and GH-299 the `metrics` kind.
+    expect(kinds).toHaveLength(30);
   });
 
   test("the declared writable-root set is unchanged", () => {
