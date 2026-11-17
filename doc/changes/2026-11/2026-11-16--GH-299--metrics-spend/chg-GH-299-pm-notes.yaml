@@ -10,7 +10,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-16T23:19:21.213Z }
   delivery: { started: null, completed: 2026-11-17T05:13:36.404Z }
   system_spec_update: { started: null, completed: 2026-11-17T05:25:54.084Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-17T12:14:50.209Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -268,57 +268,56 @@ notes:
       verdict=valid). Reopening delivery-adjacent remediation via the plan."
     type: info
     date: "2026-11-17"
-  - text: "Retro: the fixture-only battery produced a dead-on-delivery feature —
-      the GH-170 lesson class. Root causes worth encoding for future stories:
-      (1) every read-side story whose input is a committed repo artifact (the
-      measurement baseline log, pm-notes corpora) must include at least one
-      test reading the REAL committed file from the tree, not a synthesized
-      fixture; (2) adapters composing derived numbers must reuse the delivered
-      fold's record-selection function rather than re-implementing ingest
-      preferences. Both are now remediation tasks 10.1/10.2 and 10.3."
+  - text: "Retro: the fixture-only battery produced a dead-on-delivery feature — the
+      GH-170 lesson class. Root causes worth encoding for future stories: (1)
+      every read-side story whose input is a committed repo artifact (the
+      measurement baseline log, pm-notes corpora) must include at least one test
+      reading the REAL committed file from the tree, not a synthesized fixture;
+      (2) adapters composing derived numbers must reuse the delivered fold's
+      record-selection function rather than re-implementing ingest preferences.
+      Both are now remediation tasks 10.1/10.2 and 10.3."
     type: retro
     date: "2026-11-17"
-  - text: "Evidence correction (review iteration 1 finding F-5): the phase 4, 6,
-      and 9 notes deferred their commit hashes to later notes. Self-contained
-      records, with the test results already reported for each phase:
-      (phase 4) commit 138b802a — metrics-grammar 12/12, metrics-envelope 9/9,
+  - text: "Evidence correction (review iteration 1 finding F-5): the phase 4, 6, and
+      9 notes deferred their commit hashes to later notes. Self-contained
+      records, with the test results already reported for each phase: (phase 4)
+      commit 138b802a — metrics-grammar 12/12, metrics-envelope 9/9,
       metrics-baseline 12/12, metrics-baseline-damage 8/8,
       metrics-write-discipline 4/4, metrics-cycle-time 6/6,
       metrics-ceremony-share 4/4, metrics-ci-proxy 5/5, metrics-caveat 5/5,
-      metrics-comparisons 12/12; TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0
-      except the two known load-sensitive delivered suites (9931 pass / 4
-      pre-existing skip / 2 fail), both re-proven green in isolation and at
-      the phase-9 battery. (phase 6) commit 9903955c —
-      metrics-escaped-defects 9/9, metrics-absence 8/8, metrics-store-damage
-      9/9, metrics-baseline-damage 9/9, metrics-bounds 2/2;
-      TMPDIR=$PWD/tmp/tmpdir pnpm check 10018 pass / 4 pre-existing skip / 2
-      fail, the same two load-sensitive suites, re-proven green in isolation
-      and at the phase-9 battery. (phase 9) commit 3303d399 — plan validate
-      GH-299 verdict=valid; TMPDIR=$PWD/tmp/tmpdir pnpm check EXIT 0 with
-      10078 pass / 4 pre-existing skip / 0 fail; doc-distribution guard no
-      drift; changesets group exactly one fixed group of five;
+      metrics-comparisons 12/12; TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 except
+      the two known load-sensitive delivered suites (9931 pass / 4 pre-existing
+      skip / 2 fail), both re-proven green in isolation and at the phase-9
+      battery. (phase 6) commit 9903955c — metrics-escaped-defects 9/9,
+      metrics-absence 8/8, metrics-store-damage 9/9, metrics-baseline-damage
+      9/9, metrics-bounds 2/2; TMPDIR=$PWD/tmp/tmpdir pnpm check 10018 pass / 4
+      pre-existing skip / 2 fail, the same two load-sensitive suites, re-proven
+      green in isolation and at the phase-9 battery. (phase 9) commit 3303d399 —
+      plan validate GH-299 verdict=valid; TMPDIR=$PWD/tmp/tmpdir pnpm check EXIT
+      0 with 10078 pass / 4 pre-existing skip / 0 fail; doc-distribution guard
+      no drift; changesets group exactly one fixed group of five;
       ./scripts/lint-commit-range.sh --base origin/main-tools VERDICT PASS."
     type: info
     date: "2026-11-17"
   - text: "Plan phase 10 complete (code review remediation iteration 1, findings
       F-1..F-10). Commit 1e5a0af8. F-1: real {ref, reason} baseline parse plus
-      real-tree committed-log tests, with the adapter classification present
-      and the report exiting 0. F-2: shared preferStreamBySession plane
-      selection (union of steps and records, windowed after; sessionId plumbed
-      through contracts and the CLI edge; mixed-plane equality test). F-3: the
-      metrics_corpus authoring convention is documented in the M2 reference
-      page and doc/spec/features/feature-metrics.md per plan task 10.3
-      (documentation minimum; entries stay honestly UNAVAILABLE, never 0).
-      F-4: ceremony-runner pins move 146/62 to 147/63, APPENDIX_D_FILES
-      extended. F-5: phase 4/6/9 commit-hash evidence correction
-      (138b802a/9903955c/3303d399). F-6: latency reference measured at the
-      declared 1k/10k points (fold-only, printed, not asserted). F-7: three new
-      mutants — zero-fill CI, zero-fill absent telemetry, reversed drop order.
-      F-8: process note, no task. F-9: human fallback truncation bounded and
-      actually-dropped sections named. F-10: interior `..` rejection in both
-      committed-path predicates plus a traversal-probe cell. Gate fix: the new
-      shared spend export is declared in the content-inventory executable
-      allowlist (tests/structure/content-inventory.test.ts)."
+      real-tree committed-log tests, with the adapter classification present and
+      the report exiting 0. F-2: shared preferStreamBySession plane selection
+      (union of steps and records, windowed after; sessionId plumbed through
+      contracts and the CLI edge; mixed-plane equality test). F-3: the
+      metrics_corpus authoring convention is documented in the M2 reference page
+      and doc/spec/features/feature-metrics.md per plan task 10.3 (documentation
+      minimum; entries stay honestly UNAVAILABLE, never 0). F-4: ceremony-runner
+      pins move 146/62 to 147/63, APPENDIX_D_FILES extended. F-5: phase 4/6/9
+      commit-hash evidence correction (138b802a/9903955c/3303d399). F-6: latency
+      reference measured at the declared 1k/10k points (fold-only, printed, not
+      asserted). F-7: three new mutants — zero-fill CI, zero-fill absent
+      telemetry, reversed drop order. F-8: process note, no task. F-9: human
+      fallback truncation bounded and actually-dropped sections named. F-10:
+      interior `..` rejection in both committed-path predicates plus a
+      traversal-probe cell. Gate fix: the new shared spend export is declared in
+      the content-inventory executable allowlist
+      (tests/structure/content-inventory.test.ts)."
     type: info
     date: "2026-11-17"
   - text: "Plan phase 10 verification: TMPDIR=$PWD/tmp/tmpdir bun test
@@ -326,31 +325,31 @@ notes:
       TMPDIR=$PWD/tmp/tmpdir pnpm check — exit 0, 10088 pass / 4 pre-existing
       skip / 0 fail across 1262 files, all package typechecks clean, and
       boundaries, ambient-globals, exports-parity, memory-lint,
-      prompt-conformance, and help-guide coverage green. Targeted suites:
-      33 pass (metrics-alarms + metrics-baseline), 29 pass (metrics-bounds +
+      prompt-conformance, and help-guide coverage green. Targeted suites: 33
+      pass (metrics-alarms + metrics-baseline), 29 pass (metrics-bounds +
       metrics-escaped-defects + metrics-read-cost), 134 pass (error-table +
-      metrics-imports), all 0 fail. error-table sync entries=147
-      documented=147. git diff --check clean. plan validate GH-299
-      verdict=valid."
+      metrics-imports), all 0 fail. error-table sync entries=147 documented=147.
+      git diff --check clean. plan validate GH-299 verdict=valid."
     type: info
     date: "2026-11-17"
-  - text: "Code review iteration 2: FAIL (code-review/review-iter-2.yaml) but degraded
-      to 0 critical / 0 high / 1 medium / 3 low / 3 info. All nine remediable
-      iteration-1 findings verified closed (F-1 real baseline shape + real-tree
-      tests, F-2 shared plane selection, F-3 corpus documentation minimum, F-4
-      pins, F-5 evidence, F-6 latency basis, F-7 mutants, F-9 fallback bounds,
-      F-10 traversal). New medium F-1: the doc-syncer post-remediation correction
-      (feature-metrics.md:140) and the adapter comment overstate semantics — they
-      claim the metric entry carries the committed log's per-reason exclusion
-      totals, but the fold renders its own evaluated basis (CI entry renders no
-      excluded block where the log lists 19; cycle renders 1 where the log lists
-      3). Lows: phase-10 declared scope omits 8 changed paths (observational,
-      non-blocking); debug console.log in metrics-mutants.test.ts:44-47; legacy
-      {reason,count} tolerance untested. Remediation plan phase 11 appended
-      (tasks 11.1-11.4), plan validate valid. Environment: state.store.torn
-      confirmed pre-existing and out of scope (telemetry.ts:709-711 treats
-      another ref's step key as damage; telemetry.ts untouched by GH-299; the
-      untouched spend command fails identically)."
+  - text: "Code review iteration 2: FAIL (code-review/review-iter-2.yaml) but
+      degraded to 0 critical / 0 high / 1 medium / 3 low / 3 info. All nine
+      remediable iteration-1 findings verified closed (F-1 real baseline shape +
+      real-tree tests, F-2 shared plane selection, F-3 corpus documentation
+      minimum, F-4 pins, F-5 evidence, F-6 latency basis, F-7 mutants, F-9
+      fallback bounds, F-10 traversal). New medium F-1: the doc-syncer
+      post-remediation correction (feature-metrics.md:140) and the adapter
+      comment overstate semantics — they claim the metric entry carries the
+      committed log's per-reason exclusion totals, but the fold renders its own
+      evaluated basis (CI entry renders no excluded block where the log lists
+      19; cycle renders 1 where the log lists 3). Lows: phase-10 declared scope
+      omits 8 changed paths (observational, non-blocking); debug console.log in
+      metrics-mutants.test.ts:44-47; legacy {reason,count} tolerance untested.
+      Remediation plan phase 11 appended (tasks 11.1-11.4), plan validate valid.
+      Environment: state.store.torn confirmed pre-existing and out of scope
+      (telemetry.ts:709-711 treats another ref's step key as damage;
+      telemetry.ts untouched by GH-299; the untouched spend command fails
+      identically)."
     type: info
     date: "2026-11-17"
   - text: "Retro: the doc-syncer's post-remediation pass introduced a current-truth
@@ -360,4 +359,68 @@ notes:
       remediation summary. Cost: one extra review iteration (iteration 2 -> 3,
       the last before the iteration cap)."
     type: retro
+    date: "2026-11-17"
+  - text: "Code review iteration 3: PASS (code-review/review-iter-3.yaml;
+      spec_compliance PASS, plan_compliance PASS, next_step PROCEED). All
+      iteration-2 findings closed and independently re-verified (F-1 spec truth
+      vs delivered basis-scoped exclusions, probed on the real log; F-2 phase-10
+      scope 8/8; F-3 debug log removed; F-4 legacy {reason,count} tolerance
+      tested). Full pass: 22/22 ACs evidenced (264 metrics tests green),
+      DEC-1..DEC-14 postures match, SC-M2-S6-01/02 proven, error-table two-way
+      sync 147/147 with 147/146/63/+113 pins, 24th-family mount green,
+      bounds/absence/purity/determinism green. Gates this iteration:
+      TMPDIR=$PWD/tmp/tmpdir pnpm check EXIT 0 (10091 pass / 4 pre-existing skip
+      / 0 fail, 10095 tests / 1262 files); ./scripts/lint-commit-range.sh --base
+      origin/main-tools VERDICT PASS, mode range, merge-base 5f25da89, head
+      80477ce3, 22 commits, 0 offending, 0 rules hit. Three non-blocking lows
+      recorded (data-cap last-resort edge for over-long never-droppable strings;
+      test-plan wording resync — fixed in-place as test plan v1.2 in this same
+      commit; phases 1-9 observational scope drift per plan schema). No further
+      remediation phase required. Review loop closed at iteration 3 of 3."
+    type: info
+    date: "2026-11-17"
+  - text: "Plan phase 11 complete (code review remediation iteration 2, findings
+      F-1..F-4). Commit 80477ce3. F-1: the current-truth correction states the
+      delivered semantics — doc/spec/features/feature-metrics.md:140 and the
+      packages/adapters/src/file/metrics-baseline.ts:44-52 comment now state
+      that the committed log listing is parsed, validated, and left
+      byte-identical while each entry's excluded[] reports its own evaluated
+      basis's exclusions (per ref, per window) over the log's closed reason
+      vocabulary, never the log's aggregate totals; the same wording was aligned
+      in doc/spec/features/feature-measurement-baseline.md (consumer paragraph)
+      and in the metrics-baseline suite header; runtime behaviour is unchanged.
+      The overstating conservation cell was split into a parsed-document cell
+      (the adapter's per-reason counts) and an entry-basis cell (a 19-row listed
+      log still renders the basis's 1 no_ci_observation + 1 outside_window).
+      F-2: phase 10's declared scope gains the eight delivered paths
+      (packages/core/src/domain/spend.ts,
+      packages/core/src/contracts/metrics.ts, packages/cli/src/edge.ts,
+      tests/structure/metrics-imports.test.ts,
+      tests/structure/content-inventory.test.ts,
+      tests/behaviour/metrics-escaped-defects.test.ts,
+      doc/spec/features/feature-measurement-baseline.md,
+      doc/spec/nonfunctional.md), and phase 11's own scope gains
+      doc/spec/features/feature-measurement-baseline.md. F-3: the debug
+      console.log MUTANT REGION block is removed from
+      tests/checks/metrics-mutants.test.ts. F-4: tests/fixtures/metrics/
+      baseline.ts gains a legacyCounters reason/count row shape and the suite
+      pins the tolerance — the adapter preserves count 7 and drops the zero
+      count, and a report over that document stays basis-scoped at exit 0. plan
+      validate GH-299 verdict=valid."
+    type: info
+    date: "2026-11-17"
+  - text: "Plan phase 11 verification: pnpm typecheck — clean across the workspace
+      and the tests type project. TMPDIR=$PWD/tmp/tmpdir bun test
+      tests/behaviour/metrics-baseline.test.ts
+      tests/checks/metrics-mutants.test.ts — 31 pass / 0 fail.
+      TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/error-table.test.ts
+      tests/structure/content-inventory.test.ts — 138 pass / 0 fail. bun run
+      scripts/checks/error-table-sync.ts — entries=147 documented=147,
+      source/documented/fixtures agree. git diff --check — clean.
+      TMPDIR=$PWD/tmp/tmpdir pnpm check — exit 0, 10091 pass / 4 pre-existing
+      skip / 0 fail across 1262 files; boundaries, ambient-globals,
+      workspace-entrypoints, secret-read-boundary, memory-lint, exports-parity,
+      prompt-conformance, and help-guide coverage green. pnpm exec delivery-os
+      plan validate GH-299 — verdict=valid."
+    type: info
     date: "2026-11-17"
