@@ -1,0 +1,106 @@
+change_id: GH-335
+title: "M3-S1: opencode v2.x harness and telemetry (M3)"
+delivery_mode: autonomous
+milestone: "M3: Harness and tracker integrations"
+phases:
+  clarify_scope: { started: null, completed: 2026-11-17T22:03:08.077Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions: []
+open_questions: []
+blockers: []
+notes:
+  - text: "Scope source: ticket body GH-335 (M3-S1) + blueprint
+      doc/planning/oss-tooling/milestones/m3/ (README.md, architecture.md,
+      contracts.md, test-scenarios.md TC-M3-HARNESS-001/002) + backlog.md
+      M3-S1."
+    type: info
+    date: "2026-11-17"
+  - text: "Ticket AC: dispatch through the installed harness port runs with the
+      resolved profile; telemetry rows land with schema version and per-seat
+      models; unsupported versions refuse with a typed error; integration-mode
+      decision recorded. Depends on M1-S11 and M2-S14 (both delivered)."
+    type: info
+    date: "2026-11-17"
+  - text: "Cross-check vs system spec: doc/spec/features/feature-harness-adapters.md
+      is current truth for the harness seam — HarnessInstance (kind,
+      observedVersion, capability declaration), HarnessSessionPort
+      (spawn/deliver/resume/collect/classify/liveness/listSessions), opencode
+      streaming JSONL adapter, deny-by-default spawn environment with optional
+      profile record map, read-only bounded telemetry extraction into
+      delivery.harness.telemetry.v1, conformance registry with exactly two
+      harnesses and a six-scenario classification floor. Change must extend
+      these additively."
+    type: info
+    date: "2026-11-17"
+  - text: "Gap G1 (version window): observedVersion is injected and probe failure
+      yields version-probe-failed, but there is no supported-window evaluation
+      and no typed refusal. m3/contracts.md declares
+      harness.version.unsupported; HARNESS_FAILURE_CODES has no such identity.
+      AC and EC-1 require the typed refusal."
+    type: info
+    date: "2026-11-17"
+  - text: "Gap G2 (per-spawn model propagation):
+      packages/core/src/provider/profile-env-record.ts derives per-seat model
+      env record names (OC_<PREFIX>_AGENT_<SEAT>_MODEL). Plan must confirm the
+      record map reaches the spawn descriptor for opencode v2.x and that the
+      resolved profile is authoritative per spawn, or declare a typed refusal
+      where it cannot be."
+    type: info
+    date: "2026-11-17"
+  - text: "Gap G3 (integration mode): opencode v2.2.5 on PATH exposes
+      run/session/service/serve/api/--standalone and a local store
+      (~/.local/share/opencode/opencode.db). No integration-mode decision record
+      exists in doc/decisions. The spike and its record are in-change work; an
+      adapter-contract change also owes a decision record per the repo rule."
+    type: info
+    date: "2026-11-17"
+  - text: "Gap G4 (telemetry under v2.x): extraction exists over the opencode store
+      with schema delivery.harness.telemetry.v1 and per-record model identity;
+      v2.x store shape, per-seat model attribution, and version stamping must be
+      verified and pinned, without a schema break (OQ-M3-07: additive only)."
+    type: info
+    date: "2026-11-17"
+  - text: "Gap G5 (conformance): the conformance registry covers the six-scenario
+      classification floor for two harnesses but has no version-window refusal
+      scenario and no opencode v2.x profile-propagation case; AC requires
+      conformance against the harness port."
+    type: info
+    date: "2026-11-17"
+  - text: "Open question Q-06 (opencode version window) in GH-342 is unanswered; its
+      stated default therefore applies: current minor line at delivery time plus
+      one previous minor, unsupported versions refuse with a typed error.
+      Observed harness version at intake: opencode v2.2.5."
+    type: info
+    date: "2026-11-17"
+  - text: "No contradiction requiring human input found: M3 keeps opencode as the
+      only delivery harness while the delivered claude-code adapter stays
+      registered as a generated-artifact/harness surface and is simply not
+      extended in this change. Blueprint wording 'degrade with a typed refusal'
+      (README) and 'refuse with a typed error' (ticket AC) resolve to a typed
+      refusal."
+    type: info
+    date: "2026-11-17"
+  - text: "Anticipated doc impacts for phase 7:
+      doc/spec/features/feature-harness-adapters.md (version window, typed
+      refusal, profile propagation, v2.x integration mode), possibly a new
+      feature spec section for integration mode, doc/decisions/<TDR>-* for the
+      integration-mode and adapter-contract decisions, and
+      doc/planning/oss-tooling milestone status markers."
+    type: info
+    date: "2026-11-17"
+  - text: "Delivery conventions from ticket: full 11-phase lifecycle; plan phases
+      declared in plan.yaml; commits through the commit primitive with
+      conventional subjects and body/footer lines <= 100 chars; gate commands
+      recorded in pm-notes MUST use TMPDIR=$PWD/tmp/tmpdir; PR targets
+      main-tools and stays open (merge authority: CEO)."
+    type: info
+    date: "2026-11-17"
