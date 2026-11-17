@@ -113,7 +113,7 @@ The log has these top-level keys:
 
 A **change row** carries `ref`, `pm_notes`, `included`, `excluded_reason`, `phase_pairs_included`, `phase_pairs_excluded`, `date_only_pairs_excluded`, `ceremony_duration_h`, `total_phase_duration_h`, `cycle_time_h`, `cycle_time_censored`, `ci_observed`, `ci_outcome`, `ci_observations[]`, and `false_signal_incidents[]`. Every `ci_observations` and `false_signal_incidents` row cites `artifact` and `anchor`.
 
-A **metric row** carries `id`, `name`, `status`, `measurement_kind`, `definition`, `formula`, `unit`, `window`, `sources`, `sample` (`spine_rows`, `spine_included`, `spine_excluded`, `metric_included`, `metric_excluded`, `phase_pairs_included`, `phase_pairs_excluded`, `date_only_pairs_excluded`, `excluded_unobserved`), `metric_excluded_changes[]`, `numerator`, `denominator`, `value`, `aggregates`, `limitation`, `direction`, and `comparison_note`. `missing_source` appears only when a metric is `UNAVAILABLE`.
+A **metric row** carries `id`, `name`, `status`, `measurement_kind`, `definition`, `formula`, `unit`, `window`, `sources`, `sample` (`spine_rows`, `spine_included`, `spine_excluded`, `metric_included`, `metric_excluded`, `phase_pairs_included`, `phase_pairs_excluded`, `date_only_pairs_excluded`, `excluded_unobserved`), `metric_excluded_changes[]`, `numerator`, `denominator`, `value`, `aggregates`, `limitation`, `direction`, and `comparison_note`. Each `metric_excluded_changes[]` row is one excluded change as `{ref, reason}`, so its length equals `metric_excluded`. `missing_source` appears only when a metric is `UNAVAILABLE`.
 
 ## 5. Non-Functional Requirements
 

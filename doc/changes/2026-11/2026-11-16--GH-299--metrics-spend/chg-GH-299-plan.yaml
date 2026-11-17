@@ -342,7 +342,7 @@ schemaVersion: delivery.plan.v1
 workItemRef: GH-299
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
   escalationTriggers:
     - "A second `metrics.*` error identity, a family/pattern widening, or a new domain kind would be required (DEC-8, DM-7)"
     - "An Appendix D count pin is left stale, the no-leftover scan finds a leftover, or four-way classifier/sync/mirror/carrier agreement breaks (AC-F10-1, RSK-4)"
@@ -1213,6 +1213,65 @@ phases:
         - tests/behaviour/metrics-bounds.test.ts
         - tests/behaviour/metrics-read-cost.test.ts
         - tests/checks/metrics-mutants.test.ts
+      folders:
+        - tests/fixtures/metrics
+        - doc/changes/2026-11/2026-11-16--GH-299--metrics-spend
+
+  # ---------------------------------------------------------------------------
+  # Phase 11 — Code Review Remediation (Iteration 2) — review-iter-2.yaml.
+  # Findings F-1 (medium) and F-2..F-4 (low); F-5..F-7 are informational and
+  # carry no remediation task. The gate contract and the one-commit-per-phase
+  # discipline apply unchanged; every task lands failing-first.
+  #
+  # Obligations (tasks):
+  #   11.1 (F-1, medium) Correct the spec-truth claim introduced by the
+  #        post-remediation doc-sync: doc/spec/features/feature-metrics.md:140
+  #        and the
+  #        packages/adapters/src/file/metrics-baseline.ts:44-51 comment claim
+  #        the entry aggregates and carries the committed log's per-reason
+  #        exclusion totals, while the fold surfaces only its own measurement's
+  #        exclusions (packages/core/src/domain/metrics.ts:480-582 never reads
+  #        `MetricsBaselineRow.excluded`): on the real log the CI entry renders
+  #        with no exclusions although 19 `no_ci_observation` rows are listed,
+  #        and the cycle entry renders 1 `missing_metric_input` against 3.
+  #        State the delivered semantics (log listing parsed, validated, and
+  #        left byte-identical; entry reports the evaluated basis's exclusions
+  #        over the closed reason vocabulary) or, if the log totals are meant to
+  #        render, wire them in behind an explicit scope label. Split the
+  #        conservation cell so one case asserts the parsed document and the
+  #        other the entry's basis exclusions.
+  #   11.2 (F-2, low) Extend phase 10's declared scope with the eight delivered
+  #        paths (packages/core/src/domain/spend.ts,
+  #        packages/core/src/contracts/metrics.ts, packages/cli/src/edge.ts,
+  #        tests/structure/metrics-imports.test.ts,
+  #        tests/structure/content-inventory.test.ts,
+  #        tests/behaviour/metrics-escaped-defects.test.ts,
+  #        doc/spec/features/feature-measurement-baseline.md,
+  #        doc/spec/nonfunctional.md) or add
+  #        `packages: [core, cli, adapters]`, then re-run plan validate.
+  #   11.3 (F-3, low) Remove the debug `console.log("MUTANT REGION", ...)` block
+  #        at tests/checks/metrics-mutants.test.ts:44-47.
+  #   11.4 (F-4, low) Add the legacy `{reason, count}` tolerance cell (including
+  #        a zero count that must not surface) for the baseline exclusion parse.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/metrics-baseline.test.ts tests/checks/metrics-mutants.test.ts
+  #   bun run scripts/checks/error-table-sync.ts
+  #   git diff --check
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check
+  # ---------------------------------------------------------------------------
+  - id: 11
+    title: "Code review remediation (iteration 2): spec-truth correction for the exclusion counters, phase-10 scope completeness, mutant-helper hygiene, and legacy-shape coverage"
+    kind: delivery
+    summary: "fix(GH-299): code review remediation iteration 2"
+    scope:
+      files:
+        - doc/spec/features/feature-metrics.md
+        - packages/adapters/src/file/metrics-baseline.ts
+        - tests/behaviour/metrics-baseline.test.ts
+        - tests/checks/metrics-mutants.test.ts
+        - doc/changes/2026-11/2026-11-16--GH-299--metrics-spend/chg-GH-299-plan.yaml
       folders:
         - tests/fixtures/metrics
         - doc/changes/2026-11/2026-11-16--GH-299--metrics-spend
