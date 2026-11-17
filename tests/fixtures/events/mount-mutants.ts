@@ -177,6 +177,7 @@ export const DELIVERED_INLINE_NAMES = [
   "board",
   "ceremony",
   "repos",
+  "metrics",
 ] as const;
 
 /** Files under the packages tree, for the tree-vs-inventory direction. */

@@ -1,0 +1,18 @@
+example-product metrics — delivery metrics
+ref GH-299
+window 2026-10-18T09:00:00.000Z .. 2026-11-17T09:00:00.000Z (inclusive)
+Metrics:
+  MET-CEREMONY-SHARE  native  PARTIAL  value=0.0000034722222222222224 unit=ratio sample.n=3 runs=3 steps=7 phases=7 direction=lower is better basis=ceremony-runner-fold
+    caveat: Proxy vs native: the before value is the committed pm-notes proxy basis and the after value is measured from the native source; the two bases are not interchangeable and no trend is claimed across them.
+  MET-CYCLE-TIME  native  MEASURED  value=7 unit=hours sample.n=1 censored=0 direction=lower is better basis=phase-transition-history
+    caveat: Proxy vs native: the before value is the committed pm-notes proxy basis and the after value is measured from the native source; the two bases are not interchangeable and no trend is claimed across them.
+  MET-CI-FAILURE-RATE  proxy  PARTIAL  value=1 unit=ratio sample.n=1 observed=1 unobserved=0 direction=lower is better basis=committed-pm-notes-corpus
+  escaped-defects  curated-count  UNAVAILABLE  value=absent unit=count sample.n=0 postGateReview=0 landedCiFailure=0 retroAttributed=0 excludedNonEvidence=0 direction=lower is better basis=committed-evidence-corpus
+Dispatch: telemetry absent (spend.telemetry-absent) — no figures are reported
+Alarm evaluation: telemetry-absent
+Alarms: none
+Comparisons:
+  MET-CEREMONY-SHARE before=0.406648 after=0.0000034722222222222224 verdict=insufficient-sample sampleMinimum=5 sampleSize=3 [caveat: Proxy vs native: the before value is the committed pm-notes proxy basis and the after value is measured from the native source; the two bases are not interchangeable and no trend is claimed across them.]
+  MET-CYCLE-TIME before=5.3 after=7 verdict=insufficient-sample sampleMinimum=5 sampleSize=1 [caveat: Proxy vs native: the before value is the committed pm-notes proxy basis and the after value is measured from the native source; the two bases are not interchangeable and no trend is claimed across them.]
+  MET-CI-FAILURE-RATE before=0.25 after=1 verdict=insufficient-sample sampleMinimum=5 sampleSize=1
+omitted=0 truncated=false

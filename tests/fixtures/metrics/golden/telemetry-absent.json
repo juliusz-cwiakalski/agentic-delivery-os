@@ -1,0 +1,196 @@
+{
+  "ref": "GH-299",
+  "window": {
+    "from": "2026-10-18T09:00:00.000Z",
+    "through": "2026-11-17T09:00:00.000Z"
+  },
+  "metrics": [
+    {
+      "id": "MET-CEREMONY-SHARE",
+      "value": 0.0000034722222222222224,
+      "status": "PARTIAL",
+      "measurementKind": "native",
+      "basis": "ceremony-runner-fold",
+      "unit": "ratio",
+      "direction": "lower is better",
+      "sample": {
+        "n": 3,
+        "runs": 3,
+        "steps": 7,
+        "phases": 7
+      },
+      "definitionRef": {
+        "logPath": "doc/planning/oss-tooling/measurement-baseline.yaml",
+        "sourceCommit": "75b4e7602ad89bd26f96912ac06ed8bfcb72a5ae"
+      },
+      "limitation": "Duration share, not wall-clock union: overlapping phases count in both numerator and denominator. Self-reported timestamps. Native basis: measured ceremony run time over the evidence window's elapsed time; this figure is not the committed pm-notes duration-ratio proxy and is not interchangeable with it.",
+      "caveat": "Proxy vs native: the before value is the committed pm-notes proxy basis and the after value is measured from the native source; the two bases are not interchangeable and no trend is claimed across them."
+    },
+    {
+      "id": "MET-CYCLE-TIME",
+      "value": 7,
+      "status": "MEASURED",
+      "measurementKind": "native",
+      "basis": "phase-transition-history",
+      "unit": "hours",
+      "direction": "lower is better",
+      "sample": {
+        "n": 1,
+        "censored": 0
+      },
+      "definitionRef": {
+        "logPath": "doc/planning/oss-tooling/measurement-baseline.yaml",
+        "sourceCommit": "75b4e7602ad89bd26f96912ac06ed8bfcb72a5ae"
+      },
+      "limitation": "Self-reported timestamps; clock skew is possible; measures elapsed time, not effort.",
+      "caveat": "Proxy vs native: the before value is the committed pm-notes proxy basis and the after value is measured from the native source; the two bases are not interchangeable and no trend is claimed across them."
+    },
+    {
+      "id": "MET-CI-FAILURE-RATE",
+      "value": 0.6666666666666666,
+      "status": "PARTIAL",
+      "measurementKind": "proxy",
+      "basis": "committed-pm-notes-corpus",
+      "unit": "ratio",
+      "direction": "lower is better",
+      "sample": {
+        "n": 3,
+        "observed": 3,
+        "unobserved": 1
+      },
+      "definitionRef": {
+        "logPath": "doc/planning/oss-tooling/measurement-baseline.yaml",
+        "sourceCommit": "75b4e7602ad89bd26f96912ac06ed8bfcb72a5ae"
+      },
+      "excluded": [
+        {
+          "reason": "outside_window",
+          "count": 1
+        },
+        {
+          "reason": "no_ci_observation",
+          "count": 1
+        }
+      ],
+      "limitation": "No committed CI run log exists. This is a session-level proxy, not a per-run or per-check rate."
+    },
+    {
+      "id": "escaped-defects",
+      "status": "UNAVAILABLE",
+      "measurementKind": "curated-count",
+      "basis": "committed-evidence-corpus",
+      "unit": "count",
+      "direction": "lower is better",
+      "sample": {
+        "n": 0,
+        "postGateReview": 0,
+        "landedCiFailure": 0,
+        "retroAttributed": 0,
+        "excludedNonEvidence": 0
+      },
+      "limitation": "Curated floor, not a census: unrecorded incidents are invisible and only artifact-anchored incidents in committed evidence count; tmp/**, .ai/local/**, uncommitted, and external sources are never counted."
+    }
+  ],
+  "dispatch": {
+    "telemetryState": "absent",
+    "absenceReason": "spend.telemetry-absent"
+  },
+  "alarms": [],
+  "alarmEvaluation": {
+    "kind": "burn-rate",
+    "status": "telemetry-absent"
+  },
+  "comparisons": [
+    {
+      "metricId": "MET-CEREMONY-SHARE",
+      "definitionRef": {
+        "logPath": "doc/planning/oss-tooling/measurement-baseline.yaml",
+        "sourceCommit": "75b4e7602ad89bd26f96912ac06ed8bfcb72a5ae"
+      },
+      "before": {
+        "value": 0.406648,
+        "window": {
+          "start": "2026-02-01T00:00:00Z",
+          "end": "2026-10-31T23:59:59Z"
+        },
+        "basis": "duration_ratio_proxy",
+        "measurementKind": "proxy",
+        "status": "PARTIAL"
+      },
+      "after": {
+        "value": 0.0000034722222222222224,
+        "window": {
+          "from": "2026-10-18T09:00:00.000Z",
+          "through": "2026-11-17T09:00:00.000Z"
+        },
+        "measurementKind": "native",
+        "status": "PARTIAL",
+        "sampleSize": 3
+      },
+      "sampleMinimum": 5,
+      "verdict": "insufficient-sample",
+      "caveat": "Proxy vs native: the before value is the committed pm-notes proxy basis and the after value is measured from the native source; the two bases are not interchangeable and no trend is claimed across them."
+    },
+    {
+      "metricId": "MET-CYCLE-TIME",
+      "definitionRef": {
+        "logPath": "doc/planning/oss-tooling/measurement-baseline.yaml",
+        "sourceCommit": "75b4e7602ad89bd26f96912ac06ed8bfcb72a5ae"
+      },
+      "before": {
+        "value": 5.3,
+        "window": {
+          "start": "2026-02-01T00:00:00Z",
+          "end": "2026-10-31T23:59:59Z"
+        },
+        "basis": "duration_proxy",
+        "measurementKind": "proxy",
+        "status": "MEASURED"
+      },
+      "after": {
+        "value": 7,
+        "window": {
+          "from": "2026-10-18T09:00:00.000Z",
+          "through": "2026-11-17T09:00:00.000Z"
+        },
+        "measurementKind": "native",
+        "status": "MEASURED",
+        "sampleSize": 1
+      },
+      "sampleMinimum": 5,
+      "verdict": "insufficient-sample",
+      "caveat": "Proxy vs native: the before value is the committed pm-notes proxy basis and the after value is measured from the native source; the two bases are not interchangeable and no trend is claimed across them."
+    },
+    {
+      "metricId": "MET-CI-FAILURE-RATE",
+      "definitionRef": {
+        "logPath": "doc/planning/oss-tooling/measurement-baseline.yaml",
+        "sourceCommit": "75b4e7602ad89bd26f96912ac06ed8bfcb72a5ae"
+      },
+      "before": {
+        "value": 0.25,
+        "window": {
+          "start": "2026-02-01T00:00:00Z",
+          "end": "2026-10-31T23:59:59Z"
+        },
+        "basis": "session_proxy",
+        "measurementKind": "proxy",
+        "status": "PARTIAL"
+      },
+      "after": {
+        "value": 0.6666666666666666,
+        "window": {
+          "from": "2026-10-18T09:00:00.000Z",
+          "through": "2026-11-17T09:00:00.000Z"
+        },
+        "measurementKind": "proxy",
+        "status": "PARTIAL",
+        "sampleSize": 3
+      },
+      "sampleMinimum": 5,
+      "verdict": "insufficient-sample"
+    }
+  ],
+  "omitted": 0,
+  "truncated": false
+}

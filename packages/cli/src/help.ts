@@ -902,6 +902,31 @@ export const COMMAND_HELP: readonly HelpEntry[] = [
     seeAlso: [pageIn(M2_REFERENCE_ROOT, "steer")],
   },
 
+  {
+    path: ["metrics"],
+    summary:
+      "Report the delivery's metrics, per-dispatch spend, burn-rate alarms, and comparison view",
+    usage: [
+      "<binary> metrics [--ref <ref>] [--from <iso>] [--through <iso>] [--json]",
+      "<binary> metrics --from 2026-10-18T00:00:00Z --through 2026-11-17T00:00:00Z",
+    ],
+    options: [
+      ["--ref <ref>", "Evaluate this work-item ref (drawn from the active change context)"],
+      [
+        "--from <iso>",
+        "Inclusive evidence-window start (jointly required with --through; drawn: trailing 30 days)",
+      ],
+      ["--through <iso>", "Inclusive evidence-window end (drawn: the read instant)"],
+      ...GLOBAL_OPTIONS,
+    ],
+    examples: [
+      "<binary> metrics",
+      "<binary> metrics --ref GH-299 --json",
+      "<binary> metrics --from 2026-10-18T00:00:00Z --through 2026-11-17T00:00:00Z",
+    ],
+    seeAlso: [pageIn(M2_REFERENCE_ROOT, "metrics")],
+  },
+
   m2Entry(
     ["steer", "send"],
     "File one steering note with drawn defaults",

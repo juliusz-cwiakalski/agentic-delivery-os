@@ -2,13 +2,13 @@
 id: SPEC-CONFIG-LAYER
 status: Current
 created: 2026-10-30
-last_updated: 2026-11-15
+last_updated: 2026-11-17
 owners: ["engineering"]
 service: delivery-os
 ados_distribution: internal
-summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed verify branch (the declared suite-to-job map), the typed harness branch (selected kind, execution kind, store locations, deny-by-default environment allowlist with a variable-only optional marker), the typed lane branch (liveness interval and restart budget), the typed queue branch (lease TTL and per-condition-type park recheck), the typed daemon branch (eleven cadence, transport, and socket keys), the typed coordinator branch (six supervision policy keys), and the typed poll branch (per-platform base, maximum, and minimum spacing), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, the per-layer prior-identity read fallback for the two repository-owned layers, and nine classified config errors."
+summary: "The implemented seven-layer configuration system: ordered defaults, platform and repository sources, environment and CLI facts, a trusted draft-07 partial/final schema, the typed provider catalog branch with dynamic-name record maps and shipped overridable defaults, the typed commit branch with the phase-commit disable key, the typed merge branch (freshness bound, declared gate set, deploy expectations), the typed verify branch (the declared suite-to-job map), the typed metrics branch (the burn-rate threshold declaration), the typed harness branch (selected kind, execution kind, store locations, deny-by-default environment allowlist with a variable-only optional marker), the typed lane branch (liveness interval and restart budget), the typed queue branch (lease TTL and per-condition-type park recheck), the typed daemon branch (eleven cadence, transport, and socket keys), the typed coordinator branch (six supervision policy keys), and the typed poll branch (per-platform base, maximum, and minimum spacing), source restrictions, reset and warning semantics, real origin evidence, the config inspection command in human and machine modes, the per-layer prior-identity read fallback for the two repository-owned layers, and nine classified config errors."
 links:
-  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237", "GH-238", "GH-241", "GH-277", "GH-280", "GH-286", "GH-288", "GH-300", "GH-320"]
+  related_changes: ["GH-173", "GH-181", "GH-182", "GH-175", "GH-176", "GH-227", "GH-224", "GH-225", "GH-251", "GH-233", "GH-234", "GH-235", "GH-237", "GH-238", "GH-241", "GH-277", "GH-280", "GH-286", "GH-288", "GH-300", "GH-320", "GH-299"]
   related_decisions: ["ADR-0003", "ADR-0008", "TDR-0003", "TDR-0021"]
 ---
 
@@ -16,7 +16,7 @@ links:
 
 ## Overview
 
-Configuration resolves from seven ordered layers into one validated, traceable tree. Resolution is pure in `@delivery-os/core`; acquisition of files, platform locations, repository roots, environment facts and legacy names lives behind the existing adapters and the runtime-aware CLI edge. The production ordinary catalog declares the typed `provider`, `commit`, `merge`, `verify`, `harness`, `lane`, `queue`, `daemon`, `coordinator`, and `poll` branches; unrelated configuration resolves to `{}` until a consumer declares typed settings.
+Configuration resolves from seven ordered layers into one validated, traceable tree. Resolution is pure in `@delivery-os/core`; acquisition of files, platform locations, repository roots, environment facts and legacy names lives behind the existing adapters and the runtime-aware CLI edge. The production ordinary catalog declares the typed `provider`, `commit`, `merge`, `verify`, `metrics`, `harness`, `lane`, `queue`, `daemon`, `coordinator`, and `poll` branches; unrelated configuration resolves to `{}` until a consumer declares typed settings.
 
 Every source is validated before it is merged, every effective value can report where it came from, and inspection through the `config` command uses the same serialization and redaction boundary as every other command. Configuration cannot rename the frozen brand identity, supply a credential from a repository file, or silently interpolate environment values into files.
 
@@ -229,6 +229,7 @@ Configuration adds the proposed Ajv and YAML runtime dependencies recorded in th
 - **Consumed by** the doctor diagnostic ([Doctor](feature-doctor.md)) for the resolved provider branch only, read tolerantly so a resolution failure becomes provider-check evidence; doctor adds no keys and no doctor configuration branch.
 - **Consumed by** coordinator supervision ([Coordinator Supervision](feature-coordinator-supervision.md)) for the resolved `coordinator` branch; the six values are policy data and the branch reuses the existing configuration identities.
 - **Consumed by** verify gates ([Verify Gates](feature-verify-gates.md)) for the one `verify.suite-map` node, read from the project-committed document alone rather than from a resolved merged tree.
+- **Consumed by** the metrics report ([Metrics Report and Burn-Rate Alarms](feature-metrics.md)) for the one `metrics.burn-rate` node, read from the project-committed document alone rather than from a resolved merged tree. The node declares the threshold, basis, and window of the burn-rate alarm; absent means undeclared and no default threshold exists.
 - **Separate capability:** credential resolution is the port documented in [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md); keyring sources and sidecar transport remain later capabilities, and state storage is the separate [State Layer](feature-state-layer.md).
 
 ## Glossary & References
@@ -244,6 +245,7 @@ Configuration adds the proposed Ajv and YAML runtime dependencies recorded in th
 | Lane branch | The typed `lane.liveness-interval` and `lane.restart-budget` policy data with shipped defaults and existing configuration identities. |
 | Queue branch | The typed `queue.lease-ttl` and `queue.park-recheck.<condition-type>` policy data with shipped defaults and existing configuration identities. |
 | Coordinator branch | The typed `coordinator.stuck-window`, `coordinator.kill-grace`, `coordinator.restart-budget`, `coordinator.resume-context-limit`, `coordinator.collection-interval`, and `coordinator.progress-bound` policy data with shipped defaults and existing configuration identities. |
+| Metrics branch | The typed `metrics.burn-rate` threshold declaration (positive `threshold`, `cost` or `tokens` `basis`, 1..90-day `window`) with no default; absent means undeclared and every defect is refused `config.value.invalid` before any read. |
 
 See also: [Local Install and Prior-Identity Transition](../../../guides/local-install.md), [Provider Engine](feature-provider-engine.md), [Result Contract and Error Table](feature-result-contract.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), [Branding Seam and Working Name](feature-branding-seam.md), [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md), [Session Lifecycle Economics](feature-session-lifecycle-economics.md), [Scheduling Engine](feature-scheduling-engine.md), [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md), [TDR-0003](../../decisions/TDR-0003-config-parser-schema-and-acquisition.md), and the [repository glossary](../../overview/glossary.md).
 
@@ -282,6 +284,25 @@ refusal, never the undeclared parity path; an unreadable, unparseable, or
 defective-node document refuses before any gates source read; a parsed document
 without the node is undeclared; and a schema or semantic defect outside the node
 is not interpreted. The declaration is consumed by [Verify Gates](feature-verify-gates.md).
+
+## The metrics configuration branch
+
+The production catalog declares a typed `metrics` branch with one key:
+
+| Key | Shape | Default | Semantics |
+|---|---|---|---|
+| `metrics.burn-rate` | `{ threshold, basis, window }` | absent | The burn-rate threshold declaration (schema `delivery.metrics.burn-rate.v1`). `threshold` is a positive number, `basis` is `cost` or `tokens`, and `window` is `<positive-integer>d` at 1..90 days. Absent means undeclared and no default threshold is invented. Every defect — a non-mapping node, a missing or non-positive threshold, an unknown basis, or a non-conforming or out-of-range window — is refused `config.value.invalid` before any telemetry, log, ceremony, transition, or corpus read. |
+
+Like the `verify` branch, the catalog branch constrains whole-document validity for
+consumers that resolve the merged tree; it is not the validator for this node,
+because it cannot express the positive-threshold rule or the window grammar. The
+metrics report reads exactly that node from the project-committed document alone —
+never from the merged layer tree and never from a system, user-global,
+project-local, environment, or CLI source — by one bounded acquisition. An absent
+node is the undeclared parity path, a present but unreadable or unparseable
+document refuses before any read, and a defect outside the node is not
+interpreted. The declaration is consumed by
+[Metrics Report and Burn-Rate Alarms](feature-metrics.md).
 
 ## The harness configuration branch
 

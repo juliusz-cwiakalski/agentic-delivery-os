@@ -14,7 +14,11 @@ import {
   removeDirectoryTree,
 } from "../fixtures/projects/production";
 import { createRepository } from "../fixtures/projects/temp-repos";
-import { BASE_FAMILIES, MOUNTED_FAMILIES } from "../fixtures/steer/mounting";
+import {
+  BASE_FAMILIES,
+  MOUNTED_FAMILIES,
+  STEER_MOUNTED_FAMILIES,
+} from "../fixtures/steer/mounting";
 import { SYNTHETIC_BRAND } from "../golden/helpers";
 
 const ROOT = process.cwd();
@@ -29,6 +33,7 @@ const PINNING_FILES = [
   "tests/behaviour/board-help.test.ts",
   "tests/behaviour/events-mount-help.test.ts",
   "tests/behaviour/ceremony-cli.test.ts",
+  "tests/structure/metrics-mounting.test.ts",
 ] as const;
 
 /** The declared non-count residual: the queue-ready control-matrix count. */
@@ -38,34 +43,44 @@ const familyLines = (help: string): readonly string[] =>
   help.split("\n").filter((line) => /^ {2}[a-z][a-z0-9-]* {2}/u.test(line));
 
 describe("TC-STEER-060 steer is the twenty-third prompt-required family", () => {
-  test("the mounted set is the captured 22-entry base plus steer, count 23", () => {
+  test("the mounted set is the captured 22-entry base plus steer at index 22, count 24 after GH-299", () => {
     expect(BASE_FAMILIES).toHaveLength(22);
+    expect(STEER_MOUNTED_FAMILIES).toEqual([...BASE_FAMILIES, "steer"]);
     expect([...PROMPT_REQUIRED_COMMANDS]).toEqual([...MOUNTED_FAMILIES]);
-    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(23);
+    expect(PROMPT_REQUIRED_COMMANDS).toHaveLength(24);
     expect(PROMPT_REQUIRED_COMMANDS.filter((name) => name === "steer")).toHaveLength(1);
-    expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("steer");
+    expect(PROMPT_REQUIRED_COMMANDS[22]).toBe("steer");
+    expect(PROMPT_REQUIRED_COMMANDS.at(-1)).toBe("metrics");
   });
 
-  test("root --help lists steer as the last family line among 23 families", () => {
+  test("root --help lists steer at index 22 and metrics last among 24 families", () => {
     const help = renderRootHelp(SYNTHETIC_BRAND);
     const families = familyLines(help);
-    expect(families).toHaveLength(23);
-    expect(families.at(-1)?.trimStart().startsWith("steer  ")).toBe(true);
+    expect(families).toHaveLength(24);
+    expect(families[22]?.trimStart().startsWith("steer  ")).toBe(true);
+    expect(families.at(-1)?.trimStart().startsWith("metrics  ")).toBe(true);
     for (const family of BASE_FAMILIES) {
       expect(families.some((line) => line.trimStart().startsWith(`${family}  `))).toBe(true);
     }
   });
 
-  test("every family-count pin reads 23 and no stale 22 remains outside the declared residual", () => {
+  test("every family-count pin reads 24 and no stale 22 or 23 remains outside the declared residual", () => {
     const failures: string[] = [];
+    const stale = (count: number): string => `toHaveLength(${String(count)})`;
     for (const file of PINNING_FILES) {
       const text = readFileSync(join(ROOT, file), "utf8");
-      if (/toHaveLength\(22\)/u.test(text)) failures.push(`${file}: stale family-count pin 22`);
-      if (!/toHaveLength\(23\)|\.toBe\(\s*23\s*,?\s*\)/su.test(text)) {
-        failures.push(`${file}: no family-count pin 23`);
+      if (text.includes(stale(22))) failures.push(`${file}: stale family-count pin 22`);
+      if (text.includes(stale(23))) failures.push(`${file}: stale family-count pin 23`);
+      if (!/toHaveLength\(24\)|\.toBe\(\s*24\s*,?\s*\)/su.test(text)) {
+        failures.push(`${file}: no family-count pin 24`);
       }
     }
     expect(failures).toEqual([]);
+    // The planted stale-23 arm is proven on a temp copy.
+    const staleCopy =
+      readFileSync(join(ROOT, PINNING_FILES[0] as string), "utf8") +
+      `\n// toHaveLength(${String(23)})\n`;
+    expect(/toHaveLength\(23\)/u.test(staleCopy)).toBe(true);
     // The queue-ready control-matrix literal 22 is explicitly not a family pin.
     const residual = readFileSync(join(ROOT, NON_COUNT_RESIDUAL), "utf8");
     expect(residual).toContain("toHaveLength(22)");
@@ -105,7 +120,7 @@ describe("TC-STEER-063 the mount changes no other family", () => {
       .filter((entry) => entry.path.length === 1)
       .map((entry) => entry.path[0]);
     expect([...families].sort()).toEqual([...MOUNTED_FAMILIES].sort());
-    expect(families.at(-1)).toBe("steer");
+    expect(families.at(-1)).toBe("metrics");
   });
 
   test("the delivered families' help text carries no steering line", () => {

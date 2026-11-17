@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-CEREMONY-RUNNER
 status: Current
 created: 2026-11-16
-last_updated: 2026-11-16
+last_updated: 2026-11-17
 owners: ["engineering"]
 service: delivery-os
 summary: "The `ceremony` family and the ceremony layer: four verbs (list, run, resume, catch-up) over one declaration contract (`delivery.ceremony.declarations.v1`) with closed step, slot, verification, trigger, cadence, scope-key, recorded-trigger and verdict vocabularies plus fixed bounds; six built-in declarations (morning brief, retro evidence pass, sprint rollover, night-watch, testing-session assessment, decision-record mirror sync) executed through one runner path; deterministic intake (declaration-held scope key, note or cadence-derived window, recorded trigger provenance), artifact-verified per-step execution with read-back verification, durable `ceremony.run` and `ceremony.step` records with derived durations, phase-boundary compaction, resume from the first unverified step, and single-window catch-up with identity-based satisfaction; project declarations in one committed `<configDirectoryName>/ceremonies.yaml` document with no tooling change; the pure tier engine over the delivered plan `tier` and pm-notes `variant` phase sets with a `tier-mismatch`/`unresolved-phase`/`unevaluated-trigger` finding vocabulary; the four sub-R1 retro levels with the concept's fixed note schema and follow-through-first agenda; the ceremony artifact family; and exactly two `ceremony.*` error identities under a new `ceremony` domain kind."
 links:
-  related_changes: ["GH-296", "GH-287", "GH-298"]
+  related_changes: ["GH-296", "GH-287", "GH-298", "GH-299"]
   contracts:
     - "packages/core/src/contracts/ceremony.ts"
     - "packages/core/src/contracts/ceremony-builtins.ts"
@@ -51,7 +51,7 @@ The runner adds no event topic, no MCP tool, no scheduler, no model call, no met
 
 ### 2.3 Non-Goals
 
-- No metrics presentation, aggregate report, alarm, or threshold (the `metrics` surface is M2-S6); the runner records data and one committed comparison.
+- No metrics presentation, aggregate report, alarm, or threshold in the runner: those live in the delivered metrics surface ([Metrics Report and Burn-Rate Alarms](feature-metrics.md)); the runner records data and one committed comparison.
 - No retro action registry surface of its own: filing, artifact/outcome closure, aging, and the action board are owned by the sibling registry ([Retro Action Registry](feature-retro-action-registry.md), GH-287); the retro ceremony records a declared-actions handoff and reads the registry's recorded actions through the composed follow-through producer. Declarations, agendas, the note schema, and the asserted follow-through-first position stay unchanged.
 - No ceremony packs, no pack registry, no signed bundle, no cross-repository ceremony coordination.
 - No scheduler: no daemon integration, cron/systemd unit, timer, unattended cadence, sleep, or child process. The runner evaluates schedules and offers `catch-up`.
@@ -236,7 +236,7 @@ Rules:
 - **Derived, not stored twice.** Run status, run duration, and per-phase durations are folds over the records.
 - **The native basis.** The measurement fold derives per-run duration, per-ceremony run counts, arithmetic mean and nearest-rank p90, and run/step/phase totals from the verified records — no self-reported input.
 - **The committed comparison.** One `delivery.ceremony.comparison.v1` record is committed in the measurement log's additive `comparisons[]` list: the committed `MET-CEREMONY-SHARE` identity, the definition reference with the log path and the metric row's `source_commit`, the `before` value with its window, sample size, status and basis, the `after` value with its window, per-change samples, sample size and basis, `sampleMinimum: 5`, the closed verdict, the native basis with the non-interchangeability statement, and a `disclosure` naming sample, window and basis difference. `improved` requires the sample minimum met and `after < before`. Below the minimum the verdict is `insufficient-sample` and no trend is claimed. At delivery the observed after sample is zero.
-- **No reporting surface.** There is no command that computes or prints a metric; the builder is a library function, and the record is committed data. Aggregation, thresholds, alarms and presentation are M2-S6's.
+- **No reporting surface.** There is no ceremony command that computes or prints a metric; the builder is a library function, and the record is committed data. Aggregation, thresholds, alarms, and presentation belong to the metrics surface ([Metrics Report and Burn-Rate Alarms](feature-metrics.md)), which reads the records and the committed comparison as data.
 
 ### 3.11 Envelope, exit projection, human output
 
@@ -338,7 +338,7 @@ Each artifact names its schema identifier; a render that cannot be read back fai
 | `ceremony.note-invalid` | `ceremony` | `user` | `false` | `not_landed` | `user-validation` | `1` | A note required by the declaration is absent, omits a required member or its idempotent `scopeKey`, names another ceremony, or disagrees with the declaration's scope key; the field is named and no partial ceremony output is written. |
 | `ceremony.declaration.invalid` | `ceremony` | `user` | `false` | `not_landed` | `user-validation` | `1` | A built-in or project declaration violates the contract — unknown step kind, input source, output slot, verification mode, trigger event, cadence, or tier; missing verification or output schema; duplicate id; built-in collision; unparseable schedule; over-bound collection; missing or illegal scope-key derivation; executable content — naming the ceremony id and the field, with nothing registered. |
 
-`ceremony.note-invalid` is a kind-first two-segment code and is in the reserved exact allowlist; `ceremony.declaration.invalid` is three-segment. Grammar refusals use `fallback.invocation`; undeclared names, a missing note, a missing `--window`, and window disagreement use `input.value.rejected`; a malformed declaration document uses `config.file.malformed`; a contradicted record sequence or unreadable records use `state.store.torn`/`state.store.unknown`; a failed verification is a data-bearing `unverified` verdict, not an error row. The machine table and the documented table in [Result Contract](feature-result-contract.md) are in two-way sync at 146 identities and a 62-entry reserved two-segment allowlist.
+`ceremony.note-invalid` is a kind-first two-segment code and is in the reserved exact allowlist; `ceremony.declaration.invalid` is three-segment. Grammar refusals use `fallback.invocation`; undeclared names, a missing note, a missing `--window`, and window disagreement use `input.value.rejected`; a malformed declaration document uses `config.file.malformed`; a contradicted record sequence or unreadable records use `state.store.torn`/`state.store.unknown`; a failed verification is a data-bearing `unverified` verdict, not an error row. The machine table and the documented table in [Result Contract](feature-result-contract.md) are in two-way sync at 147 identities and a 63-entry reserved two-segment allowlist.
 
 ### 4.7 Invariants
 
@@ -361,7 +361,7 @@ Each artifact names its schema identifier; a render that cannot be read back fai
 | Idempotency | Zero duplicate run records per identity; addenda only for notes; zero appends for a caught-up window | Delivered |
 | Catch-up boundedness | ≤1 replayed window per ceremony per invocation; zero fabricated windows; zero replays for an occupied identity | Delivered |
 | Bounded carried state | Summary ≤4 096 bytes / 40 lines with an explicit omission count; run record ≤16 KiB; step record ≤2 KiB; declaration document ≤1 MiB | Delivered |
-| Error-table binding | Two rows, one domain kind, one reserved two-segment entry, two-way sync | Delivered at 146 identities and a 62-entry allowlist |
+| Error-table binding | Two rows, one domain kind, one reserved two-segment entry, two-way sync | Delivered at 147 identities and a 63-entry allowlist |
 | Tier neutrality | Exactly two phase-set sources, no third vocabulary, no hardcoded default set | Delivered; a structure suite fails on a second literal |
 | Measurement completeness | Every executed step carries a duration and a verification verdict | Delivered |
 | Mirror safety | Declared targets only (≤8), equality in both directions, no force path, no landing without `--apply` | Delivered over injected mirror ports |
@@ -389,7 +389,7 @@ All ceremony fixtures are synthetic and committed: injected clocks, id factories
 | `tests/behaviour/ceremony-bounds.test.ts`, `ceremony-determinism.test.ts`, `ceremony-performance.test.ts` (TC-050, TC-053..055) | Output and record bounds, replay determinism, measured read cost and bounded-work posture |
 | `tests/behaviour/ceremony-nonregression.test.ts` (TC-057) | The retro pipeline's payloads, identities, and registry status stay byte-identical |
 | `tests/checks/ceremony-hermetic.test.ts`, `ceremony-mutants.test.ts` (TC-050, TC-056) | No skips, sockets, spawns, `HOME` reads, or live-tree writes; sixteen disabled rules each fail their suite |
-| `tests/checks/error-table-sync.test.ts`, `tests/structure/error-table.test.ts`, `doc-conformance.test.ts` | Two-way error sync, 146 identities, 62-entry allowlist, documentation truth |
+| `tests/checks/error-table-sync.test.ts`, `tests/structure/error-table.test.ts`, `doc-conformance.test.ts` | Two-way error sync, 147 identities, 63-entry allowlist, documentation truth |
 
 Mounting is covered by the help/coverage matrix, the prompt-set count assertion, root and family help, and the M2 reference page; a mapping whose reference page is absent fails `pnpm check:help`.
 
@@ -421,7 +421,7 @@ One run record, one step record per attempt, and one artifact file per step slot
 | Depends on | State layer | Ledger, artifact boundaries, fenced appends, classified damage, retention |
 | Depends on | Entrypoint and self-description | Prompt-required composition, family and verb help, reference-page coverage |
 | Depends on | Measurement baseline | The committed metric definition, formula, status semantics, and comparison protocol |
-| Blocks | the `metrics` surface (M2-S6) | The metric surface consumes runner durations and the committed comparison |
+| Delivered consumer | the metrics report ([Metrics Report and Burn-Rate Alarms](feature-metrics.md)) | `MET-CEREMONY-SHARE` is measured natively through the runner fold over the window's run/step records; the committed comparison records are read as data, never recomputed |
 | Feeds (no recorded board edge) | Board ceremony surface (M2-S4+) | The ceremony state is recorded; no board section projects it |
 | Risk | The declaration vocabulary is too narrow for a real ritual | The six built-ins are the expressiveness proof; a missing vocabulary is a reviewed contract extension, never a silent code path |
 | Risk | A declaration becomes a scripting surface | Closed vocabularies plus the recursive executable-member refusal, asserted structurally |

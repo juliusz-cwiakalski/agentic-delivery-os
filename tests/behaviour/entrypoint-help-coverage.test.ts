@@ -172,6 +172,7 @@ describe("TC-ENTRY-004 help coverage", () => {
         "board",
         "ceremony",
         "steer",
+        "metrics",
       ].sort(),
     );
   });

@@ -239,6 +239,9 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "steer.unknown-id",
   "steer.credential-value-rejected",
   "steer.queue-unavailable",
+  // GH-299 pins the one metrics read-side identity exactly (DEC-8, DM-7); the
+  // metrics family stays closed to this single member with no pattern widening.
+  "metrics.baseline-unreadable",
 ]);
 const CODE_PATTERN = /\b[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*){2,}\b/g;
 const TWO_SEGMENT_PATTERN = /\b[a-z][a-z0-9-]*\.[a-z][a-z0-9-]*\b/g;
