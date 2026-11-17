@@ -160,3 +160,39 @@ notes:
       note."
     type: "retro"
     date: "2026-11-17"
+  - text: "Plan phase 1 complete (contracts, liveness-stall cause, two error
+      identities) at commit 1309166f. Delivered: packages/core/src/contracts/
+      supervise.ts (data-only report/tri-state/claim/action/degradation/
+      truncation vocabularies, artifact-only classification shape, imported
+      bounds), QUEUE_PARK_CAUSES +QUEUE_PARK_CAUSE_CONDITION_PAIRS +liveness-
+      stall->provider-window, QueueLane.until (DM-3 contract data), error-table
+      supervise kind + supervise.duplicate-supervision (user, exit 1, retryable,
+      not_landed) + supervise.evidence-absent (platform, exit 2, retryable,
+      not_landed), sync-check allowlist 62->64, structure mirror 62->64, counts
+      146->148 / delivered 145->147 / BASELINE_ROWS.length+112->+114, carrier
+      doc rows+counts, corpora +2 true positives +1 lookalike, captured
+      error-table baseline (146 rows), and the four supervision structure suite
+      plus the checks mutation suite. Tests: TC-SUP-014/045/070/071/094 green;
+      TMPDIR=$PWD/tmp/tmpdir pnpm check PASS (9852 pass / 0 fail)."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Phase-1 delivery findings (all additive or mechanical, none changes a
+      semantic): (1) packages/cli/src/classify.ts needed no edit — it resolves
+      table codes generically, so both supervise identities classify by exact
+      code; (2) the no-leftover scan tokens 146/62/+112 forced two further
+      delivered count sites outside the plan's named list —
+      tests/structure/ceremony-contract.test.ts and tests/behaviour/
+      ceremony-nonregression.test.ts; (3) tests/types/queue-scheduling.type-test.
+      ts pinned the closed QueueParkCause union and tests/fixtures/queue/
+      vocabulary/closed-sets.json + the queue-scheduling-contract pairing
+      assertion pinned the five-cause/five-pair table, so all three moved
+      additively with the sixth cause; provider-window now carries three causes;
+      (4) tests/fixtures/events/error-table-baseline.json captured the two new
+      rows so its delivered-row oracle stays true; (5) DOMAIN_KINDS tail
+      ordinals and the kind-count 29->30 moved in the delivered suites.
+      (6) The commit primitive's --phase flag accepts only canonical lifecycle
+      phase ids (phase \"1\" is rejected), so each plan-phase commit is made
+      standalone (plan-union scope) and the lifecycle delivery phase is
+      completed only at the end."
+    type: "info"
+    date: "2026-11-17"

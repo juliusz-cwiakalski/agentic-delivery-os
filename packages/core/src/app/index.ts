@@ -273,6 +273,24 @@ export {
   stateScopeRoots,
   unboundStateRoot,
 } from "./state-scope.js";
+/**
+ * The supervision battery fold (GH-295 F-1..F-7, DM-1..DM-4): one whole-store
+ * read projected into artifact facts, classified, and assembled into the
+ * `delivery.supervision.v1` report.
+ */
+export {
+  createStateSupervisionReadPort,
+  runSupervisionBattery,
+  type SupervisionBatteryInput,
+  type SupervisionBatteryResult,
+  type SupervisionClaimFact,
+  type SupervisionLaneFact,
+  type SupervisionLeaseFact,
+  type SupervisionReadPort,
+  type SupervisionReadRequest,
+  type SupervisionReadResult,
+  type SupervisionScopeSnapshot,
+} from "./supervise.js";
 export {
   type WatchInput,
   type WatchRead,

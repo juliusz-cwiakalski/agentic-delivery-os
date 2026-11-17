@@ -67,6 +67,13 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "supervisorSupported",
   ],
   "core/src/app/watch.ts": ["watchLines"],
+  "core/src/app/supervise.ts": ["createStateSupervisionReadPort", "runSupervisionBattery"],
+  "core/src/domain/supervise.ts": [
+    "boundSupervisionEvidence",
+    "boundSupervisionLanes",
+    "classifySupervision",
+    "summarizeSupervision",
+  ],
   "core/src/domain/watch-stream.ts": ["boundWatchLine", "createWatchProjection"],
   "core/src/app/daemon-preemption.ts": ["applyPreemption", "reevaluatePendingPreemptions"],
   "core/src/domain/daemon-preemption.ts": ["PREEMPTION_WRITABLE_STATES", "decidePreemption"],
