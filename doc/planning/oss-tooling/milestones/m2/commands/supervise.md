@@ -1,5 +1,7 @@
 # supervise — run the supervisor battery
 
+> Status: delivered by GH-295 (M2-S2).
+
 `supervise` is the operator-invoked supervisor battery: one run reads the
 invoking checkout's durable delivery records once and classifies every lane and
 every intersecting supervision claim as `progressing`, `stalled`, or `unknown`.

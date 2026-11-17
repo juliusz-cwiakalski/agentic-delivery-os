@@ -531,3 +531,38 @@ The family is mounted as the 23rd prompt-required command with root/family help,
 the M2 reference page, and the coverage-inventory row. The run carries
 `feat/GH-298/steer`; M2 has not exited, and the remaining M2 stories are
 unaffected by this delivery.
+
+## M2 delivery snapshot addendum (2026-11-17): M2-S2 delivered by GH-295
+
+M2-S2 (supervise) was delivered by GH-295 on `feat/GH-295/supervise`. The new
+`supervise` family runs one operator-invoked battery over the invoking checkout's
+single managed repository key and projects the schema-versioned
+`delivery.supervision.v1` report: one tri-state entry per lane (ref, heartbeat,
+live holder, evidence) and per supervision claim (daemon instance, coordinator
+ledger lease, live per-ref lease), the actions the run applied, derived counts,
+degradation markers, named truncation, and the run instant. Classification is a
+pure artifact-evidence fold over the delivered record kinds: any advancing
+artifact inside the observation span reads `progressing` (prefill-safe), the full
+corroboration combination (heartbeat age at or beyond the delivered 300,000 ms
+stall bound, or a heartbeat trail spanning the window, with a flat artifact
+trail) reads `stalled`, and absent evidence reads `unknown` and is never guessed.
+A corroborated lane stall is parked through the delivered park machinery with the
+new `liveness-stall` cause mapped onto the expiry-carrying `provider-window`
+condition type, a non-null `until` at the mapped recheck default, and its
+corroborating evidence; the delivered `lanes show` read reports state `parked`,
+reason `parked:liveness-stall`, and the additive active-park `until`. A held
+session records a safe-boundary park intent without touching the lease and
+without signalling. Already-parked stale lanes consult the delivered restart
+budget and resume economics once, append the delivered restart record, or land
+the terminal exhaustion record plus one typed question; an unevaluable admission
+is the declared unavailable outcome. The per-action duplicate-supervision refusal
+fires only against a supervision authority actively acting over the target object
+(a live daemon's presence refuses nothing, and a park intent is non-claiming);
+per-ref double-claims reuse the delivered `queue.single-flight` identity. Two
+exact `supervise` identities join the error-table allowlist (62 -> 64) with every
+count pin moved (146 -> 148). The family is mounted as the 24th prompt-required
+command with root/family help, the M2 reference page, and the coverage-inventory
+row. No state record kind, event taxonomy member, daemon/coordinator/queue
+mechanism, or production composition changed, and the daemon's composition stays
+supervise-only. The run carries `feat/GH-295/supervise`; M2 has not exited, and
+the remaining M2 stories are unaffected by this delivery.

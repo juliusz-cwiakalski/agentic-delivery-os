@@ -210,3 +210,22 @@ composed unconditionally by the production entrypoint, advertised in root
 named by the coverage inventory. The four verbs are exactly `send`, `list`,
 `read`, and `complete`; no `collect`, `poll`, `deliver`, or `ack` verb is
 registered.
+
+## Observation (2026-11-17): `supervise` mounted
+
+Observed from the built workspace after the GH-295 mount.
+
+```
+$ <binary> --help
+Commands: status brief queue lanes blockers phase commit lint plan
+          verify merge closeout spend retro dispatch coordinator daemon
+          projects repos events board ceremony steer supervise
+```
+
+Twenty-four families are registered after the GH-295 mount: the twenty-three
+observed on 2026-11-16 plus `supervise`. `supervise` is in the prompt-required
+set, composed unconditionally by the production entrypoint, advertised in root
+`--help` with a family page, served by the M2 `supervise` reference page, and
+named by the coverage inventory. The one battery invocation takes no positionals
+and no family flags (`--json` is the global machine switch); no `run`, `watch`,
+`park`, `restart`, or `status` verb is registered.

@@ -1075,6 +1075,16 @@ the project family separately.
 - AC: a stuck supervisor is detected by artifact evidence, not process
   state.
 - Depends on: M1-S1, M1-S18.
+- Progress: delivered by GH-295 on `feat/GH-295/supervise` (M2-S2 complete; the
+  operator-facing `supervise` battery with the `delivery.supervision.v1` report,
+  the artifact-only tri-state fold (progressing/stalled/unknown with the
+  delivered corroboration bound and prefill-safe rule), lying-liveness detection
+  for lanes and supervision claims, the supervised-stall park with the
+  `liveness-stall` cause, mapped condition, non-null `until` and the additive
+  lane read, restart composition over the delivered economics with terminal
+  exhaustion plus one typed question, the per-action duplicate-supervision
+  refusal and per-ref single-flight reuse, two exact error identities, and the
+  24th prompt-required family).
 
 ### M2-S3 Ceremony runner
 - Ticket: GH-296 (milestone M2)

@@ -340,3 +340,28 @@ notes:
       standalone and the immediate rerun was green — environmental flake."
     type: "info"
     date: "2026-11-17"
+  - text: "Plan phase 7 complete (cross-cutting proofs) at commit fbbe3c14.
+      Delivered: determinism paired-run + replay + evidence-shape + clock-advance
+      + ordering cells (TC-SUP-080), the 200/201 bound with the named lane-cap
+      reason and the evidence-cap marker (TC-SUP-082), the measured 200-lane
+      latency cell (TC-SUP-083), the evidence-totality walk over a mixed scope
+      plus a real applied action and the single-flight refusal (TC-SUP-084), the
+      three committed failure/live-claims goldens (TC-SUP-092), and the completed
+      imports/boundary/inventory case (TC-SUP-095). Tests: 166 supervision cases
+      green; TMPDIR=$PWD/tmp/tmpdir pnpm check PASS (9984 pass / 0 fail).
+      Measured 200-lane run: 3.41 ms and 1.47 ms over two warm in-process runs
+      (bound 5,000 ms), one read pass each, 200 entries each."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Phase-7 findings: (1) the scale cells inject a synthetic snapshot
+      (cappedScope/mixedScope) because the delivered queue intent path is
+      quadratic; the real-store path is covered by every other case and the read
+      adapter's one-read contract is asserted at the port. (2) Two consecutive
+      aggregate-gate attempts tripped different delivered timing-sensitive suite
+      budgets under machine load (status prior-read 5 s default; daemon
+      foreground-stop 250 ms cancellation) and the third attempt was fully green
+      with no code change — recorded as environmental flakes on delivered suites,
+      not regressions. (3) All three failure/data goldens are created in this
+      change (GAP-T3) and regenerate only on an explicit command."
+    type: "info"
+    date: "2026-11-17"
