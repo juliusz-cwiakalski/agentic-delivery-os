@@ -4,10 +4,10 @@ delivery_mode: autonomous
 milestone: "M3: Harness and tracker integrations"
 phases:
   clarify_scope: { started: null, completed: 2026-11-17T22:03:08.077Z }
-  specification: { started: null, completed: 2026-11-17T22:06:55.156Z }
-  test_planning: { started: null, completed: 2026-11-17T22:12:44.159Z }
-  delivery_planning: { started: null, completed: 2026-11-17T22:19:28.746Z }
-  dor_check: { started: null, completed: null }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: 2026-11-17T22:29:25.665Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
@@ -103,4 +103,43 @@ notes:
       recorded in pm-notes MUST use TMPDIR=$PWD/tmp/tmpdir; PR targets
       main-tools and stays open (merge authority: CEO)."
     type: info
+    date: "2026-11-17"
+  - text: "dor_check iteration 1: NOT_READY (19 findings: 3 critical, 8 major, 6
+      minor, 2 nit). Verdict artifact: readiness-review/readiness-iter-1.md.
+      Remediation reopened specification, test_planning, and delivery_planning."
+    type: info
+    date: "2026-11-17"
+  - text: "DoR critical findings: (1) real opencode v2.2.5 store schema lacks
+      work_item_ref/harness_version columns and the config default store path is
+      absent, so fixtures modelled a synthetic shape and AC-F5-1 could pass
+      while production lands zero rows; (2) AC-F6-1/AC-F6-2 assert a
+      telemetry-refusal surface that does not exist and NG-9 forbids adding one;
+      (3) per-seat telemetry fields are dropped by the state-layer payload
+      allowlist in packages/core/src/state/harness-telemetry.ts, which is in no
+      plan phase."
+    type: info
+    date: "2026-11-17"
+  - text: "DoR major findings: RSK-1 confirmed worse than assumed (v2.2.5 exposes no
+      OC_*_AGENT_*_MODEL; models resolve through opencode's own config surface);
+      the per-spawn record seam is missing from the environment builder;
+      detail.harness is blocked by the closed envelope detail type; the version
+      probe contract is unpinned ('opencode v2.2.5' vs fixtures '2.2.5');
+      TC-006's 5s probe bound is unprovable; AC-N1-1 self-contradicts; no
+      Definition of Done; TC-010 phase conflict."
+    type: info
+    date: "2026-11-17"
+  - text: "First-pass analysis trusted the delivered extractor's SQL rather than the
+      installed harness store, so three artifacts encoded a store shape the real
+      v2.2.5 database does not have. Adversarial readiness review against the
+      live store caught it before delivery. Standing lesson: for a harness
+      integration change, inspect the installed harness's real store and real
+      CLI output first, then write requirements."
+    type: retro
+    date: "2026-11-17"
+  - text: "Commit primitive requires repo-local binaries on PATH: commitlint is
+      resolved by bare name, so `jaiship phase complete` fails
+      commit.commitlint-failed unless node_modules/.bin is on PATH. Appending
+      (never prepending) node_modules/.bin keeps the installed jaiship
+      resolution intact."
+    type: retro
     date: "2026-11-17"
