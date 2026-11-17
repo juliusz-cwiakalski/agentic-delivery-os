@@ -9,7 +9,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-16T23:18:06.308Z }
   dor_check: { started: null, completed: 2026-11-16T23:23:38.081Z }
   delivery: { started: null, completed: 2026-11-17T05:54:34.230Z }
-  system_spec_update: { started: null, completed: 2026-11-17T12:53:38.827Z }
+  system_spec_update: { started: null, completed: 2026-11-17T13:57:13.092Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -478,15 +478,14 @@ notes:
       critical F-1v2: the already-parked guard recognises only an active
       liveness-stall park, so a stalled lane already parked under another cause
       (owner-hold, peak-window, stale clear-observed) gets a second active
-      parked record -> duplicate active parks -> every later queue/lanes read
-      is torn (append-only; reproduced). High F-2: run id in the exhaustion
-      question identity makes repeat runs raise duplicate questions (one
-      record, two questions; reproduced). Medium F-3: the absolute one-fold
-      claim is false for a composed acting run (8 reads measured; append
-      helpers read-then-verify, blocker append re-reads) while TC-SUP-103
-      passes via a store-free fake. Medium F-4: the harness re-implements
-      production closures, hiding F-2. Residual lows F-5/F-16/F-17/F-19
-      disclosed."
+      parked record -> duplicate active parks -> every later queue/lanes read is
+      torn (append-only; reproduced). High F-2: run id in the exhaustion
+      question identity makes repeat runs raise duplicate questions (one record,
+      two questions; reproduced). Medium F-3: the absolute one-fold claim is
+      false for a composed acting run (8 reads measured; append helpers
+      read-then-verify, blocker append re-reads) while TC-SUP-103 passes via a
+      store-free fake. Medium F-4: the harness re-implements production
+      closures, hiding F-2. Residual lows F-5/F-16/F-17/F-19 disclosed."
     type: "info"
     date: "2026-11-17"
   - text: "PM triage review iteration 2 remediation (round 2): (1) F-1v2 fix: gate
@@ -494,9 +493,9 @@ notes:
       restart admission liveness-stall-only; add owner-hold/peak-window/stuck
       cells with a post-action reads-healthy assertion. (2) F-2 fix: gate the
       exhaustion question on appended === true (or ref+type dedupe); run id as
-      metadata, not identity; test with two DIFFERENT injected ids. (3) F-3
-      fix: pass current: ledger.value to appendBlockerQuestion; correct the
-      spec NFR-4/DEC-9(d), test-plan TC-SUP-103 and feature-page wording to the
+      metadata, not identity; test with two DIFFERENT injected ids. (3) F-3 fix:
+      pass current: ledger.value to appendBlockerQuestion; correct the spec
+      NFR-4/DEC-9(d), test-plan TC-SUP-103 and feature-page wording to the
       precise discipline (one decision fold; delivered append helpers perform
       read-then-verify; at most the declared ledger read); add a
       composed-production acting cell. (4) F-4 fix: share/export the closure
@@ -567,5 +566,63 @@ notes:
       memory, prompt-conformance, help-guide-coverage, exports-parity all PASS.
       Doc-spec resync remains lifecycle phase 7 (@doc-syncer); no doc/spec/**
       file was edited here."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Plan phase 10 complete (review remediation round 2) at commit 2a91e679.
+      F-1v2 blocker fixed: the supervised-stall park append is gated on NO
+      active park of any cause, judged by the new one-home activeParkRecords in
+      packages/core/src/domain/queue-park.ts whose sequence semantics agree with
+      the delivered duplicate-active-park validator (parked stays active until
+      recovered/released; a stuck clear-observed marker keeps the standing
+      occupancy). The fold consumes that judgement for activePark, restart
+      admission stays liveness-stall- only, and a lane parked under owner-hold,
+      peak-window, or a stale clear-observed park appends nothing, is reported
+      honestly, and leaves readQueueParks/queue list/lanes list healthy
+      (TC-SUP-104 on the composed production harness, three cells plus the
+      non-vacuity control). F-2v2 fixed: exhaustion action and question are
+      raised only when the terminal record actually landed (appended===true);
+      the question id is ref-stable (exhaustion-<ref>) and never embeds a run
+      id; the run id stays record/evidence metadata. TC-SUP-061 now runs two
+      DIFFERENT injected run ids over one exhausted lane and asserts one
+      terminal record, one question with the same id, and no exhaustion action
+      on the second run. F-3v2 fixed: the production closure factory passes the
+      cached ledger value as current to appendBlockerQuestion (the blocker
+      ledger is read at most once per run) and absorbs the appended question
+      into the cache for a second exhausted lane; TC-SUP-103 now runs the
+      composed production closures (no store-free fake), asserts one decision
+      fold, no per-lane re-read, a readEconomicsRecords population only from the
+      delivered append helpers (2 restart + 2 exhaustion), at most one
+      readBlockerLedger, and a flat measured total between 50 and 200 lanes.
+      F-4v2 fixed: the economics/append closures are authored once in
+      production's exported createSupervisionEconomicsWritePort (schema ids,
+      exhaustion options, ref-stable question id and options, per-run ledger
+      cache) and the harness imports that same factory;
+      tests/structure/supervision-composition-factory .test.ts fails naming a
+      duplicated symbol, and TC-SUP-105 runs one acting run through
+      createProductionComposer over a real checkout (park + restart +
+      exhaustion, schema/option fidelity, the same read discipline, post-run
+      healthy reads). F-17 fixed: the golden normalizer moved to
+      tests/fixtures/supervise/golden/normalize.ts with behavioural coverage
+      (TC-SUP-106: declared volatile fields replaced, undeclared values
+      untouched, zero volatile values in every committed golden); the
+      constant-length tautology is removed. F-19 fixed: the human-render claim
+      now says bounded only by the delivered lane cap, and TC-SUP-082 measures
+      the 200-lane render. Scope disclosures: tests/fixtures/projects/production
+      .ts gained an additive stateStoreWrap option plus run-id injection so the
+      composed-production proof can instrument the main store and correlate the
+      envelope/record identity (the commit primitive reported it as scope
+      drift); packages/cli/src/production.ts gained the exported closure factory
+      and the observability-only stateStoreWrap fact; harness.ts and records.ts
+      gained the composed-production harness and the park-state / volatile
+      fixtures. The PM-authored plan v1.4, spec v1.3, test plan v1.5 and
+      review-iter-2 artifact were staged by the commit primitive in the same
+      change folder. Carried disclosures unchanged: F-3 (path-derived commit
+      subjects; commit 2a91e679 is again path-derived) and F-5 (phase-scope
+      enumeration) remain accepted with disclosure, and F-15 remains accepted
+      with disclosure. Gate: TMPDIR=$PWD/tmp/tmpdir pnpm check green at 2a91e679
+      — 10010 pass, 4 skip, 0 fail, 1276 files; lint, format, typecheck,
+      boundaries, memory, prompt-conformance, help-guide-coverage,
+      exports-parity all PASS. No doc/spec/** file was edited here; the
+      post-remediation resync remains lifecycle phase 7 (@doc-syncer)."
     type: "info"
     date: "2026-11-17"
