@@ -1,12 +1,45 @@
-# GH-293 delivery plan — machine-readable document (delivery.plan.v1), revision 1.2
-# (2026-11-18; readiness iteration 2 — one closure-model correction plus one wording
-# narrowing. Revision 1.1 carried iteration 1's plan-routed findings F-3, F-4, F-10
-# and the mechanical alignment to spec v1.2 / test plan v1.2 / amended TDR-0031.)
+# GH-293 delivery plan — machine-readable document (delivery.plan.v1), revision 1.3
+# (2026-11-18; readiness iteration 3 — a source re-pin plus one closure-sentence
+# restatement. Revision 1.2 carried iteration 2's closure-model correction and one
+# wording narrowing; revision 1.1 carried iteration 1's plan-routed findings F-3,
+# F-4, F-10 and the mechanical alignment to spec v1.2 / test plan v1.2 / amended
+# TDR-0031.)
 # Revision 1.0 was authored in lifecycle phase 4 (`delivery_planning`) against spec
 # v1.1 and test plan v1.1 (44 cases).
 # Canonical plan artifact: this YAML document is the only plan file for the
 # change. `plan validate`, `plan diff`, `plan overlap`, and `lint plan` read it
 # directly.
+#
+# REVISION 1.3 AMENDMENT (2026-11-18) — readiness iteration 3. No phase added,
+# removed, or renumbered; no scope removed; no acceptance criterion weakened; the
+# DoD-1..DoD-10 mapping is unchanged; the ownership map moves 45 -> 46 cases:
+#   - Finding 2 (nit, cross_artifact_consistency) STALE SOURCES. The SOURCES block
+#     is re-pinned to spec v1.4 and to test plan v1.3. Spec v1.4 is the iteration-3
+#     terminology pass only: lifecycle phase 7 is `system_spec_update`, not a
+#     "documentation phase" — no requirement, AC, NFR, decision, key, or anchor
+#     changes. Test plan v1.3 carries 46 cases: TC-ENGINE-017 is appended to the
+#     handover block (so that block is `010`–`017`) and AC-F2-3 now rests on five
+#     cases. The TC -> PHASE MAP now totals 46, with TC-ENGINE-017 owned by Phase 3
+#     beside TC-ENGINE-010..016 — the phase the test plan's own location field
+#     names. Phase 1 still deliberately lists no case id, so every id appears in
+#     exactly one phase row.
+#   - Finding 4 (nit, plan_coverage) ABSOLUTE CLOSURE SENTENCE. Revision 1.2 read
+#     "no phase of this plan may close with an unmet AC or with in-scope work
+#     unlanded", which reads absolutely while AC-F8-12 is by construction only
+#     partly satisfied when plan Phase 7 closes — its reconciliation portion is
+#     lifecycle phase 7's. The rule is now stated over IN-SCOPE obligations and
+#     repeated verbatim at every closure site (CLOSURE MODEL in DOC BOUNDARY,
+#     DECLARED RESIDUALS, Phase 7's handoff block, Phase 7's exit, DoD-7, and the
+#     closure escalation trigger):
+#       "no phase of this plan may close with in-scope work unlanded or with an AC
+#        whose in-scope portion is unmet; the lifecycle-phase-7 reconciliation
+#        portion of AC-F8-12 is not in-scope work for this plan — its satisfaction
+#        point is lifecycle phase 7 (`system_spec_update`, `@doc-syncer`) and it is
+#        verified at DoD-7."
+#     Only the PHASE-exit claim is narrowed to what a phase can land; the change
+#     still never closes with that portion unmet. Every reference to lifecycle
+#     phase 7 that read "documentation phase" now reads "lifecycle phase 7
+#     (`system_spec_update`, `@doc-syncer`)".
 #
 # REVISION 1.2 AMENDMENT (2026-11-18) — readiness iteration 2. No phase added,
 # removed, or renumbered; no scope removed; no acceptance criterion weakened; the
@@ -49,7 +82,7 @@
 # REVISION 1.1 AMENDMENT (2026-11-18) — no phase removed, no id renumbered, no
 # acceptance criterion weakened, and no phase pre-authorizes an unmet AC; the phase
 # set stays 1..7:
-#   - F-3 (major) the documentation phase now scopes the BOUNDED lifecycle-prose
+#   - F-3 (major) Phase 6 (documentation) now scopes the BOUNDED lifecycle-prose
 #     edits — the delivery-process paragraph in `AGENTS.md` and the lifecycle-state
 #     paragraph in `doc/guides/change-lifecycle.md` — so AC-F4-8/AC-F8-12 cannot
 #     pass while either document still calls `deliver-ticket.sh` and
@@ -77,7 +110,7 @@
 #     coder's.
 #
 # SOURCES (single source of truth):
-#   - Spec:      ./chg-GH-293-spec.md (v1.2, 14 ACs — AC-F1-1, AC-F1-2, AC-F2-3,
+#   - Spec:      ./chg-GH-293-spec.md (v1.4, 14 ACs — AC-F1-1, AC-F1-2, AC-F2-3,
 #                AC-F2-4, AC-F3-5, AC-F3-6, AC-F4-7, AC-F4-8, AC-F5-9, AC-F6-10,
 #                AC-F7-11, AC-F8-12, AC-F8-13, AC-NFR1-14; F-1..F-8; NFR-1..NFR-13;
 #                DM-1..DM-7; DEC-1..DEC-17; §5.1 capability details; §6 flows 1-5;
@@ -87,17 +120,28 @@
 #                scenario restatements, Appendix C window/hold effect mapping,
 #                Appendix D source anchors, and Appendix E the five-outcome handover
 #                table, the fleet failure table, the emittable-code declaration, and
-#                the credential-read exit projection).
-#   - Tests:     ./chg-GH-293-test-plan.md (v1.2, 45 cases TC-ENGINE-001..095 in
-#                eight blocks — TC-ENGINE-065 is the bounded lifecycle-prose case;
-#                14/14 AC coverage; DEC-1..DEC-17 coverage; TDR-0031 clause coverage
-#                D1..D11; §3.5 substitute assertions AMB-ENG-1..5, BYTE-ENG-1,
-#                TRUNC-ENG-1, SCOPE-ENG-1; §3.6 the spec §17.1 DoD-1..DoD-10 trace;
-#                §4 layers; §7 automation map with the planned suite paths this
-#                plan declares; §8.3 OQ-TP-1..10; §10 review attestations). No case
-#                id, oracle, identity, exit, bound, or AC/NFR mapping is reshaped by
-#                this plan; phase ownership of every id is declared in the TC ->
-#                PHASE MAP below.
+#                the credential-read exit projection). The v1.3 amendment scoped the
+#                revert-noop exemption to the attempts/divergences evidence read and
+#                stated the handover-ledger refusal beside it; the v1.4 amendment is
+#                the readiness-iteration-3 TERMINOLOGY pass only — lifecycle phase 7
+#                is `system_spec_update` (`@doc-syncer`), never a "documentation
+#                phase" — and changes no requirement, criterion, decision, key, or
+#                anchor.
+#   - Tests:     ./chg-GH-293-test-plan.md (v1.3, 46 cases TC-ENGINE-001..095 in
+#                eight blocks — the handover block is `010`..`017` because
+#                TC-ENGINE-017 is the revert noop over an unreadable or torn handover
+#                ledger, AC-F2-3 therefore rests on five cases (`010`, `011`, `014`,
+#                `016`, `017`), and TC-ENGINE-065 is the bounded lifecycle-prose
+#                case; 14/14 AC coverage; DEC-1..DEC-17 coverage; TDR-0031 clause
+#                coverage D1..D11; §3.5 substitute assertions AMB-ENG-1..5,
+#                BYTE-ENG-1, TRUNC-ENG-1, SCOPE-ENG-1; §3.6 the spec §17.1
+#                DoD-1..DoD-10 trace; §4 layers; §7 automation map with the planned
+#                suite paths this plan declares; §8.3 OQ-TP-1..10; §10 review
+#                attestations). The v1.3 revision appended TC-ENGINE-017 to the
+#                handover block and requalified every readability claim; no existing
+#                id, oracle, identity, exit, bound, or AC/NFR mapping moved, and none
+#                is reshaped by this plan; phase ownership of every id is declared in
+#                the TC -> PHASE MAP below.
 #   - Decisions: doc/decisions/TDR-0031-engine-first-evaluation-surfaces.md
 #                (status Proposed, UNTRACKED working-tree file, AMENDED 2026-11-18;
 #                eleven binding clauses D1..D11 — D2's five-outcome table with the
@@ -269,11 +313,14 @@
 #   These three are the plan's ONLY residuals, and none of them is an acceptance
 #   criterion: each is either a declared product gap the documentation names
 #   (RSK-8), a declared decision residual the record carries (D4), or a placement
-#   note whose case asserts the contract either way (OQ-TP-5). No phase of this
-#   plan may close with an unmet AC or with in-scope work unlanded; the two
-#   `doc/quality/test-specs/` reconciliations are not in-scope work for this plan —
-#   they are a HANDOFF OBLIGATION whose satisfaction point is lifecycle phase 7
-#   (DEC-16) and they are verified at DoD-7 (see DOC BOUNDARY and CLOSURE MODEL).
+#   note whose case asserts the contract either way (OQ-TP-5). CLOSURE RULE (stated
+#   once in DOC BOUNDARY and quoted verbatim here): no phase of this plan may close
+#   with in-scope work unlanded or with an AC whose in-scope portion is unmet; the
+#   lifecycle-phase-7 reconciliation portion of AC-F8-12 is not in-scope work for
+#   this plan — its satisfaction point is lifecycle phase 7 (`system_spec_update`,
+#   `@doc-syncer`) and it is verified at DoD-7. The two
+#   `doc/quality/test-specs/` reconciliations are therefore a HANDOFF OBLIGATION
+#   (DEC-16), never a residual and never a plan-phase exit test.
 #
 # PHASE ORDERING AND TESTABILITY:
 #   Each phase is one commit whose declared narrow gate is green at its boundary.
@@ -296,7 +343,7 @@
 #   the fleet host (Phase 4), and the owner principal plus the emittable-code
 #   constant with the merge composition (Phase 5).
 #
-# TC -> PHASE MAP (45 ids; every id is owned by exactly one phase — the phase
+# TC -> PHASE MAP (46 ids; every id is owned by exactly one phase — the phase
 #   which first makes its complete suite set green):
 #   Phase 1 contracts and TDR landing (0): none — proven by the exports, error
 #           table, decision-record, and content-inventory guards; the TDR landing
@@ -305,8 +352,9 @@
 #           once in this map).
 #   Phase 2 summary accrual and conditions (6): TC-ENGINE-001, 002, 003, 004,
 #           005, 006.
-#   Phase 3 handover conditions, exemption, reversibility (7): TC-ENGINE-010,
-#           011, 012, 013, 014, 015, 016.
+#   Phase 3 handover conditions, exemption, reversibility (8): TC-ENGINE-010,
+#           011, 012, 013, 014, 015, 016, 017 (the last is the exempt noop over an
+#           unreadable or torn handover ledger — the same suite, same phase).
 #   Phase 4 fleet read-time evaluation (7): TC-ENGINE-020, 021, 022, 023, 024,
 #           093, 094.
 #   Phase 5 merge restoration and classification (6): TC-ENGINE-050, 051, 052,
@@ -315,9 +363,9 @@
 #           handoff (9): TC-ENGINE-040, 041, 042, 060, 061, 062, 063, 064, 065.
 #   Phase 7 cross-surface, shell, no-flip, additivity (10): TC-ENGINE-030, 031,
 #           032, 033, 034, 035, 090, 091, 092, 095.
-#   Totals: 6 + 7 + 7 + 6 + 9 + 10 = 45. 0 unassigned: the eight blocks hold
-#   001..006 (6), 010..016 (7), 020..024 (5), 030..035 (6), 040..042 (3),
-#   050..055 (6), 060..065 (6), 090..095 (6) = 45, and every one of them appears
+#   Totals: 6 + 8 + 7 + 6 + 9 + 10 = 46. 0 unassigned: the eight blocks hold
+#   001..006 (6), 010..017 (8), 020..024 (5), 030..035 (6), 040..042 (3),
+#   050..055 (6), 060..065 (6), 090..095 (6) = 46, and every one of them appears
 #   in exactly one phase row above.
 #
 # SCOPE CONVENTION: concrete files are exact paths; folders are declared by every
@@ -387,12 +435,14 @@
 #   declares the two files in its own scope only as the subject of that statement,
 #   never as an authored reconciliation.
 #
-#   CLOSURE MODEL (stated once; binding on every phase and on the escalation
-#   triggers below): no phase of this plan may close with an unmet AC or with
-#   in-scope work unlanded; the reconciliation is not in-scope work for this plan —
-#   its satisfaction point is lifecycle phase 7 and it is verified at DoD-7. Plan
-#   Phase 7 therefore CLOSES with the handoff RECORDED while the reconciliation is
-#   still pending, and it is the CHANGE that waits, at lifecycle phase 10, never the
+#   CLOSURE MODEL (stated once; quoted verbatim at every closure site and binding
+#   on every phase and on the escalation triggers below): no phase of this plan may
+#   close with in-scope work unlanded or with an AC whose in-scope portion is unmet;
+#   the lifecycle-phase-7 reconciliation portion of AC-F8-12 is not in-scope work
+#   for this plan — its satisfaction point is lifecycle phase 7
+#   (`system_spec_update`, `@doc-syncer`) and it is verified at DoD-7. Plan Phase 7
+#   therefore CLOSES with the handoff RECORDED while the reconciliation is still
+#   pending, and it is the CHANGE that waits, at lifecycle phase 10, never the
 #   phase. This is the GH-294/GH-299 staged-handoff precedent: the handoff is
 #   declared so the commit primitive can stage it, never applied as a phase-exit
 #   test.
@@ -420,8 +470,8 @@ tier:
     - "An emitted (kind, code) pair contradicts the declared error-table row, a refusal branch falls outside MERGE_COMPOSITION_EMITTABLE_CODES, or a legitimate production failure reaches fallback.internal (NFR-5, NFR-12, DEC-7, DEC-14)"
     - "The verify deploy stub is presented as delivered capability, or this change attempts its production fix (NG-8, RSK-8)"
     - "Any repository is flipped, or a dispatch.handover authoritative record is appended by this change (NG-1, NFR-7)"
-    - "doc/quality/test-specs/ gains a new entry, or the two broader specs are reconciled outside lifecycle phase 7 (@doc-syncer) (DEC-11, DEC-16)"
-    - "The CHANGE is proposed to close with an acceptance criterion or a spec §17.1 DoD item outstanding (including the lifecycle-phase-7 test-spec reconciliation), or that reconciliation is described as a residual instead of a handoff obligation verified at DoD-7 (AC-F4-8, AC-F8-12, DoD-7, DEC-16)"
+    - "doc/quality/test-specs/ gains a new entry, or the two broader specs are reconciled outside lifecycle phase 7 (`system_spec_update`, `@doc-syncer`) (DEC-11, DEC-16)"
+    - "A plan phase is proposed to close with in-scope work unlanded or with an AC whose in-scope portion is unmet, or the CHANGE is proposed to close with any acceptance criterion or spec §17.1 DoD item outstanding — including the lifecycle-phase-7 reconciliation portion of AC-F8-12, which is not in-scope work for this plan, whose satisfaction point is lifecycle phase 7 (`system_spec_update`, `@doc-syncer`), and which is verified at DoD-7 — or that reconciliation is described as a residual instead of a lifecycle-phase-7 handoff obligation (AC-F4-8, AC-F8-12, DoD-7, DEC-16)"
     - "A delivering suite needs live network, a live credential read, a live model call, real sleeps, or the live tree/$HOME as state (NFR-9)"
 defaultLeases:
   - repo:main-tools
@@ -604,8 +654,11 @@ phases:
   # the authority document applies to `reversalAvailable`, never a second one.
   # Handover and reversal record shapes are unchanged; replay remains idempotent.
   #
-  # AC/TC coverage: AC-F2-3, AC-F2-4 complete (TC-ENGINE-010..016); AC-F8-13's
-  # SC-M2-S16-03 engine-surface half; NFR-4, NFR-7, NFR-11; DEC-2, DEC-4, DEC-12;
+  # AC/TC coverage: AC-F2-3, AC-F2-4 complete (TC-ENGINE-010..017 — the whole
+  # handover block, eight cases; TC-ENGINE-017 is the exempt noop refused over an
+  # unreadable or torn handover ledger, so all five of AC-F2-3's cases are green
+  # here); AC-F8-13's SC-M2-S16-03 engine-surface half; NFR-4, NFR-7, NFR-11;
+  # DEC-2, DEC-4, DEC-12;
   # TDR-0031 D2 (the five-outcome table this phase implements cell for cell) and
   # D4 (the reversibility rule and its declared residual).
   #
@@ -621,8 +674,10 @@ phases:
   #
   # Left green: dispatch-handover-conditions (five outcomes with their declared
   #   key sets and exits, the noop's three absences, the noop under a torn
-  #   ledger, the reversible truth table, record shape and replay, per-repository
-  #   isolation, truncation biconditional, text unchanged),
+  #   attempts/divergences ledger, the noop refused `dispatch.state-unverified` at
+  #   its declared exit 2 over an unreadable or torn handover ledger
+  #   (TC-ENGINE-017), the reversible truth table, record shape and replay,
+  #   per-repository isolation, truncation biconditional, text unchanged),
   #   dispatch-additive-stability (handover case extended by appending),
   #   dispatch-handover + dispatch-authority-view + dispatch-state-unverified +
   #   dispatch-exit-projection (delivered controls), golden dispatch-text.
@@ -924,7 +979,8 @@ phases:
   #
   # The two broader test specs (`doc/quality/test-specs/test-spec-dispatch-
   # engine.md`, `test-spec-merge-verify-deploy.md`) are NOT reconciled here: DEC-16
-  # places their reconciliation in lifecycle phase 7 (`@doc-syncer`) and it is a
+  # places their reconciliation in lifecycle phase 7 (`system_spec_update`,
+  # `@doc-syncer`) and it is a
   # MANDATORY obligation of this change (spec §17.1 DoD-7), never a residual. This
   # phase states the handoff in the pages and the guide and touches neither file;
   # Phase 7 RECORDS the handoff obligation and re-declares the two files for
@@ -1036,12 +1092,14 @@ phases:
   #               `system_spec_update` and re-runs `@doc-syncer` for the two files,
   #               then re-checks DoD-7 before the PR. It is never a residual, never a
   #               "recorded instead" substitute, and the change never closes unmet.
-  #   CLOSURE MODEL: no phase of this plan may close with an unmet AC or with
-  #   in-scope work unlanded; the reconciliation is not in-scope work for this plan —
-  #   its satisfaction point is lifecycle phase 7 and it is verified at DoD-7. This
-  #   phase therefore closes with the handoff RECORDED while the reconciliation is
-  #   still pending, and it is the CHANGE (lifecycle phase 10) that waits, never the
-  #   phase. No stall and no exception is needed: the two obligations are disjoint.
+  #   CLOSURE MODEL: no phase of this plan may close with in-scope work unlanded or
+  #   with an AC whose in-scope portion is unmet; the lifecycle-phase-7
+  #   reconciliation portion of AC-F8-12 is not in-scope work for this plan — its
+  #   satisfaction point is lifecycle phase 7 (`system_spec_update`, `@doc-syncer`)
+  #   and it is verified at DoD-7. This phase therefore closes with the handoff
+  #   RECORDED while the reconciliation is still pending, and it is the CHANGE
+  #   (lifecycle phase 10) that waits, never the phase. No stall and no exception is
+  #   needed: the two obligations are disjoint.
   #
   # Release obligations: one lockstep minor changeset over the five publishables;
   # the change folder carries this plan, the pm-notes evidence, and the capsule
@@ -1056,8 +1114,11 @@ phases:
   #          except the declared credential-read exit (the phases 1-4 suites with
   #          TC-ENGINE-001, 002, 003, 005, 006, 010, 016, 020, 022, plus 090 here).
   #   DoD-2  handover conditions bounded to amended D2's five outcomes: four
-  #          evidence-reading outcomes carry them, the revert noop carries none and
-  #          still answers under a torn ledger (TC-ENGINE-010, 011, 012, 014, 016).
+  #          evidence-reading outcomes carry them, the revert noop carries none, and
+  #          the exemption is scoped to the attempts/divergences read — the noop
+  #          still answers under a torn attempts or divergences ledger and is still
+  #          refused `dispatch.state-unverified` over an unreadable or torn handover
+  #          ledger (TC-ENGINE-010, 011, 012, 014, 016, 017).
   #   DoD-3  summary/handover/row coherence at one `production` scope (TC-ENGINE-003,
   #          004, 020, 021, 023, 024, 093 plus 095 here).
   #   DoD-4  merge composition real and honest incl. the declared exit-1 credential
@@ -1072,8 +1133,15 @@ phases:
   #          `doc/guides/change-lifecycle.md`, the corpus restatements, and
   #          TDR-0031 with its index row (TC-ENGINE-040, 041, 042, 055, 060, 061,
   #          062, 063, 064, 065). The two broader test specs' reconciliation is the
-  #          HANDOFF OBLIGATION above: satisfied in lifecycle phase 7 and verified
-  #          by the PM at DoD-7 — never a phase-7 exit test and never a residual.
+  #          HANDOFF OBLIGATION above: satisfied in lifecycle phase 7
+  #          (`system_spec_update`, `@doc-syncer`) and verified by the PM at DoD-7 —
+  #          never a phase-7 exit test and never a residual. This is the AC the
+  #          CLOSURE MODEL carves out explicitly: no phase of this plan may
+  #          close with in-scope work unlanded or with an AC whose in-scope portion
+  #          is unmet; the lifecycle-phase-7 reconciliation portion of AC-F8-12 is
+  #          not in-scope work for this plan — its satisfaction point is lifecycle
+  #          phase 7 (`system_spec_update`, `@doc-syncer`) and it is verified at
+  #          DoD-7.
   #   DoD-8  quality gates green hermetically: `TMPDIR=$PWD/tmp/tmpdir pnpm
   #          check` plus the change-specific suites, the doc-distribution check,
   #          and the shell suites (this phase's gate battery).
@@ -1143,12 +1211,14 @@ phases:
   # lifecycle-phase-7 reconciliation HANDOFF is RECORDED (owner `@doc-syncer`, the
   # two staged paths, satisfaction at DoD-7).
   # The reconciliation itself is NOT part of this exit: no phase of this plan may
-  # close with an unmet AC or with in-scope work unlanded; the reconciliation is not
-  # in-scope work for this plan — its satisfaction point is lifecycle phase 7 and it
-  # is verified at DoD-7. This phase closes with the handoff pending; if DoD-7 is
-  # unmet it is the CHANGE that waits at lifecycle phase 10, and the PM reopens
-  # `system_spec_update` rather than closing. DoD-10 (per-phase pm-notes evidence) is
-  # likewise the PM's phase-10 check, never this phase's self-certification.
+  # close with in-scope work unlanded or with an AC whose in-scope portion is unmet;
+  # the lifecycle-phase-7 reconciliation portion of AC-F8-12 is not in-scope work
+  # for this plan — its satisfaction point is lifecycle phase 7
+  # (`system_spec_update`, `@doc-syncer`) and it is verified at DoD-7. This phase
+  # closes with the handoff pending; if DoD-7 is unmet it is the CHANGE that waits
+  # at lifecycle phase 10, and the PM reopens `system_spec_update` rather than
+  # closing. DoD-10 (per-phase pm-notes evidence) is likewise the PM's phase-10
+  # check, never this phase's self-certification.
   #
   # No scope drift: tests, the one permitted new shell parity suite, the changeset,
   # the change folder, the two test-spec files staged for lifecycle phase 7, and
