@@ -8,6 +8,7 @@
  */
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { createSuperviseCommandDefinition } from "../../../packages/cli/src/commands/supervise";
 import {
   createStateSupervisionReadPort,
   runSupervisionBattery,
@@ -15,6 +16,7 @@ import {
   type SupervisionReadPort,
 } from "../../../packages/core/src/app/index";
 import type { StateStorePort } from "../../../packages/core/src/contracts/index";
+import { type QueueCliRun, runProgram } from "../queue-ready/harness";
 import { makeIdentity, openStore } from "../state/harness";
 import type { SupervisionSeedTarget } from "./records";
 import { isoAt } from "./records";
@@ -38,6 +40,11 @@ export type SupervisionHarness = {
   }) => SupervisionBatteryResult;
   /** The port read passes observed by the most recent battery run. */
   readonly reads: { count: number };
+  /** Run the composed `supervise` command in process (captured streams). */
+  readonly runCli: (
+    argv: readonly string[],
+    options?: { readonly repository?: string; readonly nowMs?: number; readonly runId?: string },
+  ) => Promise<QueueCliRun>;
   readonly remove: () => void;
 };
 
@@ -91,8 +98,65 @@ export const createSupervisionHarness = (
         read: port,
       });
     },
+    runCli: async (argv, runOptions = {}) => {
+      reads.count = 0;
+      const runNowMs = runOptions.nowMs ?? nowMs;
+      const inner = createStateSupervisionReadPort(store);
+      const port: SupervisionReadPort = {
+        read: (request) => {
+          reads.count += 1;
+          return inner.read(request);
+        },
+      };
+      return runProgram(
+        argv,
+        {
+          commands: {
+            supervise: createSuperviseCommandDefinition({
+              repository: runOptions.repository ?? repository,
+              read: port,
+              nowMs: () => runNowMs,
+              nowIso: () => new Date(runNowMs).toISOString(),
+            }),
+          },
+        },
+        { runId: runOptions.runId ?? "run-supervision-fixture" },
+      );
+    },
     remove: () => repositoryFixture.remove(),
   };
 };
+
+/** A deterministic synthetic snapshot for scale cells (the fold is the subject). */
+export const syntheticLaneSnapshot = (
+  repository: string,
+  laneCount: number,
+): SupervisionScopeSnapshot => ({
+  repository,
+  lanes: Array.from({ length: laneCount }, (_, index) => ({
+    ref: `GH-${1_000 + index}`,
+    repository,
+    firstHeartbeatAt: "2026-11-16T23:55:00.000Z",
+    lastHeartbeatAt: "2026-11-16T23:58:00.000Z",
+    heartbeatOrdinal: 1,
+    artifacts:
+      index % 2 === 0
+        ? { classes: ["commit-record"], instants: ["2026-11-16T23:59:00.000Z"] }
+        : { classes: [], instants: [] },
+  })),
+  leases: [],
+  degraded: [],
+});
+
+/** A recording port over a synthetic snapshot: one read pass per run. */
+export const syntheticReadPort = (
+  snapshot: SupervisionScopeSnapshot,
+  reads: { count: number },
+): SupervisionReadPort => ({
+  read: (request) => {
+    reads.count += 1;
+    return { ok: true, snapshot: { ...snapshot, repository: request.repository } };
+  },
+});
 
 export { isoAt };

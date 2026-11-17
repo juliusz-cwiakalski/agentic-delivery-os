@@ -76,6 +76,7 @@ import {
   classifyHarnessEvidence,
   classifyProjectStateLocation,
   classifyVerifyDocument,
+  createStateSupervisionReadPort,
   type DaemonComposition,
   type DispatchArtifactFacts,
   type DispatchLedgerFacts,
@@ -3291,6 +3292,15 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             { driver: "jsonl", edge: createNodeStateEdge() },
           ),
         readOwnerHold,
+      },
+      // The supervise battery is composed unconditionally over the invoking
+      // store and clock (GH-295 F-1, DEC-1): one read per run, no lane
+      // composition, and no process surface.
+      supervise: {
+        repository: repositoryKey ?? (basename(checkoutRoot).toLowerCase() || "repository"),
+        read: createStateSupervisionReadPort(store),
+        nowMs,
+        nowIso,
       },
       // The taxonomy reference surface needs nothing: the runtime is the
       // compiled declaration, so the production composer supplies it

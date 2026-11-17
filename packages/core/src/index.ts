@@ -281,6 +281,19 @@ export {
   stateScopeRoots,
   unboundStateRoot,
 } from "./app/state-scope.js";
+export {
+  createStateSupervisionReadPort,
+  runSupervisionBattery,
+  type SupervisionBatteryInput,
+  type SupervisionBatteryResult,
+  type SupervisionClaimFact,
+  type SupervisionLaneFact,
+  type SupervisionLeaseFact,
+  type SupervisionReadPort,
+  type SupervisionReadRequest,
+  type SupervisionReadResult,
+  type SupervisionScopeSnapshot,
+} from "./app/supervise.js";
 export { type WatchInput, type WatchRead, watchLines } from "./app/watch.js";
 export {
   BOOTSTRAP_DESCRIPTOR,
@@ -314,6 +327,56 @@ export {
   resolveQueueSettings,
   serializeProductionSchema,
 } from "./config/index.js";
+// GH-298: the shared typed message record and the `steer` family's declared
+// contract data. The full vocabulary lives in `@delivery-os/core/contracts`;
+// this entry re-exports the record schema, the shared closed sets, the filing
+// subset, the ttl grammar, and every declared bound once for consumers that
+// import the composition root.
+export {
+  STEER_DEFAULT_TTL,
+  STEER_DEFAULT_TTL_MS,
+  STEER_ERROR_CODES,
+  STEER_EXPIRY_REASON,
+  STEER_FILING_KINDS,
+  STEER_FILING_SUBSET,
+  STEER_KINDS,
+  STEER_LIFECYCLES,
+  STEER_MAX_ASKS,
+  STEER_MAX_HUMAN_BYTES,
+  STEER_MAX_HUMAN_LINES,
+  STEER_MAX_LIST_ROWS_PER_GROUP,
+  STEER_MAX_MACHINE_BYTES,
+  STEER_MAX_READ_PAYLOAD_NOTES,
+  STEER_MAX_REF_CHARS,
+  STEER_MAX_TEXT_CHARS,
+  STEER_MAX_TTL_MS,
+  STEER_MAX_TTL_SECONDS,
+  STEER_MESSAGE_ID_PREFIX,
+  STEER_PHASE_IN_PROGRESS_REASON,
+  STEER_PRIORITIES,
+  STEER_PRIORITY_CLASS_BY_PRIORITY,
+  STEER_RANK_KEY,
+  STEER_RECORD_FIELDS,
+  STEER_RECORD_KINDS,
+  STEER_SCHEMA_VERSION,
+  STEER_SCOPES,
+  STEER_TTL_UNIT_MS,
+  STEER_TTL_UNITS,
+  type SteerAskRow,
+  type SteerBoundaryBlock,
+  type SteerCompleteData,
+  type SteerCompletionRecord,
+  type SteerListData,
+  type SteerListRow,
+  type SteerMessageRecord,
+  type SteerOrigin,
+  type SteerOutcome,
+  type SteerReadData,
+  type SteerReadNote,
+  type SteerReceipt,
+  type SteerRecordProjection,
+  type SteerSendData,
+} from "./contracts/steer.js";
 export {
   actionOpenDays,
   evaluateActionAging,
@@ -1084,85 +1147,6 @@ export {
   windowSpendEvidence,
 } from "./domain/spend.js";
 export { renderSpendHuman, type SpendHumanOptions } from "./domain/spend-text.js";
-export {
-  attributedValue,
-  attributeStep,
-  joinAttributionSubstrates,
-  type TelemetryAttribution,
-  type TelemetryAttributionInput,
-  type TelemetryAttributionSubstrates,
-  type TelemetryClaimedIdentity,
-  type TelemetrySessionIdentity,
-} from "./domain/telemetry-attribution.js";
-export {
-  decodeTelemetryStepFrame,
-  emptyIngestTally,
-  TELEMETRY_IGNORED_FRAME_TYPES,
-  type TelemetryFrameContext,
-  type TelemetryFrameOutcome,
-  type TelemetryIngestTally,
-  type TelemetrySessionTotals,
-  type TelemetrySessionTotalsReader,
-  tallyFrame,
-  tallyIngestDegradation,
-} from "./domain/telemetry-ingest.js";
-export {
-  boundWatchLine,
-  createWatchProjection,
-  type WatchLine,
-  type WatchProjection,
-} from "./domain/watch-stream.js";
-
-// GH-298: the shared typed message record and the `steer` family's declared
-// contract data. The full vocabulary lives in `@delivery-os/core/contracts`;
-// this entry re-exports the record schema, the shared closed sets, the filing
-// subset, the ttl grammar, and every declared bound once for consumers that
-// import the composition root.
-export {
-  STEER_DEFAULT_TTL,
-  STEER_DEFAULT_TTL_MS,
-  STEER_ERROR_CODES,
-  STEER_EXPIRY_REASON,
-  STEER_FILING_KINDS,
-  STEER_FILING_SUBSET,
-  STEER_KINDS,
-  STEER_LIFECYCLES,
-  STEER_MAX_ASKS,
-  STEER_MAX_HUMAN_BYTES,
-  STEER_MAX_HUMAN_LINES,
-  STEER_MAX_LIST_ROWS_PER_GROUP,
-  STEER_MAX_MACHINE_BYTES,
-  STEER_MAX_READ_PAYLOAD_NOTES,
-  STEER_MAX_REF_CHARS,
-  STEER_MAX_TEXT_CHARS,
-  STEER_MAX_TTL_MS,
-  STEER_MAX_TTL_SECONDS,
-  STEER_MESSAGE_ID_PREFIX,
-  STEER_PHASE_IN_PROGRESS_REASON,
-  STEER_PRIORITIES,
-  STEER_PRIORITY_CLASS_BY_PRIORITY,
-  STEER_RANK_KEY,
-  STEER_RECORD_FIELDS,
-  STEER_RECORD_KINDS,
-  STEER_SCHEMA_VERSION,
-  STEER_SCOPES,
-  STEER_TTL_UNIT_MS,
-  STEER_TTL_UNITS,
-  type SteerAskRow,
-  type SteerBoundaryBlock,
-  type SteerCompleteData,
-  type SteerCompletionRecord,
-  type SteerListData,
-  type SteerListRow,
-  type SteerMessageRecord,
-  type SteerOrigin,
-  type SteerOutcome,
-  type SteerReadData,
-  type SteerReadNote,
-  type SteerRecordProjection,
-  type SteerReceipt,
-  type SteerSendData,
-} from "./contracts/steer.js";
 // GH-298: the pure steering domain — the shared validator, the ttl grammar and
 // predicate, measured aging, the shared rank, boundary/lifecycle derivation,
 // the send/list/read/complete projections, the asks composition, the guard,
@@ -1191,3 +1175,43 @@ export {
   validateSteerMessage,
   validateSteerSend,
 } from "./domain/steer.js";
+/**
+ * The supervision battery surface (GH-295 F-1..F-7): the pure tri-state fold,
+ * the one-read battery, and the bounded human render.
+ */
+export {
+  boundSupervisionEvidence,
+  boundSupervisionLanes,
+  classifySupervision,
+  type SupervisionClassification,
+  summarizeSupervision,
+} from "./domain/supervise.js";
+export { renderSupervisionHuman } from "./domain/supervise-text.js";
+export {
+  attributedValue,
+  attributeStep,
+  joinAttributionSubstrates,
+  type TelemetryAttribution,
+  type TelemetryAttributionInput,
+  type TelemetryAttributionSubstrates,
+  type TelemetryClaimedIdentity,
+  type TelemetrySessionIdentity,
+} from "./domain/telemetry-attribution.js";
+export {
+  decodeTelemetryStepFrame,
+  emptyIngestTally,
+  TELEMETRY_IGNORED_FRAME_TYPES,
+  type TelemetryFrameContext,
+  type TelemetryFrameOutcome,
+  type TelemetryIngestTally,
+  type TelemetrySessionTotals,
+  type TelemetrySessionTotalsReader,
+  tallyFrame,
+  tallyIngestDegradation,
+} from "./domain/telemetry-ingest.js";
+export {
+  boundWatchLine,
+  createWatchProjection,
+  type WatchLine,
+  type WatchProjection,
+} from "./domain/watch-stream.js";

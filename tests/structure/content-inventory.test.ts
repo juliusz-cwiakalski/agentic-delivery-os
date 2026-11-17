@@ -68,6 +68,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "core/src/app/watch.ts": ["watchLines"],
   "core/src/app/supervise.ts": ["createStateSupervisionReadPort", "runSupervisionBattery"],
+  "core/src/domain/supervise-text.ts": ["renderSupervisionHuman"],
   "core/src/domain/supervise.ts": [
     "boundSupervisionEvidence",
     "boundSupervisionLanes",
@@ -3092,6 +3093,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "appendSteeringCompletion",
   ],
   "cli/src/commands/steer.ts": ["createSteerCommandDefinition"],
+  "cli/src/commands/supervise.ts": ["createSuperviseCommandDefinition"],
 };
 
 const listTypeScriptFiles = (packageDir: string): string[] => {

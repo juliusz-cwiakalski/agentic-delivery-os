@@ -196,3 +196,38 @@ notes:
       completed only at the end."
     type: "info"
     date: "2026-11-17"
+  - text: "Plan phase 2 complete (artifact-evidence fold, tri-state, claims) at
+      commit ae4ab741. Delivered: packages/core/src/domain/supervise.ts (pure
+      classifySupervision delegating to the delivered classifyLaneProgress,
+      evidence builder with the delivered byte cap and overflow marker, derived
+      counts, 200-lane bound), packages/core/src/app/supervise.ts (one
+      store.readRecords() read projected into artifact-only facts, scope filter
+      on the invoking repository key, daemon/coordinator/per-ref claims,
+      degradation markers, evidence-absent derivation), the four new fixtures
+      (real temp repo with a two-message guard, delivered-seam record seeders,
+      the 12-cell matrix with a totality guard, the in-process harness with a
+      recording read port), TC-SUP-010/012/031/032 behaviour suites, TC-SUP-030/
+      032 structure suites, and the starting TC-SUP-095 inventory/tier case.
+      Tests: 33 phase-2 cases green; TMPDIR=$PWD/tmp/tmpdir pnpm check PASS
+      (9885 pass / 0 fail)."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Phase-2 delivery findings: (1) the classification maps heartbeat
+      freshness to the delivered traffic input only when the heartbeat trail does
+      not span the observation window; otherwise a lying lane would read
+      progressing before the corroboration branch, so the delivery passes
+      traffic=0 for the lying cell (the corroborated branch answers). (2) A
+      corroborated stall now requires a present heartbeat: an absent heartbeat
+      with a flat artifact trail reads unknown (insufficient evidence), never
+      stalled. (3) Lane heartbeat observations use the scope's latest heartbeat
+      instance trail (the claim's instance when a claim exists), so a store with
+      no daemon instance still classifies lanes. (4) The release changeset
+      .changeset/gh-295-supervise-minor.md landed in this commit, one phase early
+      versus plan phase 8: the delivered release invariant
+      (tests/checks/privacy-release.test.ts) reads the committed range against
+      origin/main-tools and fails any publishable diff without an added
+      changeset, so the plan's 'never gates an implementation phase' intent and
+      the repository gate conflict; landing it early keeps every phase boundary
+      green. No other release obligation moved."
+    type: "info"
+    date: "2026-11-17"

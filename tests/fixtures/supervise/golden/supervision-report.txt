@@ -1,0 +1,10 @@
+example-product supervise — github.com/example/supervision-repo
+lanes 1 (progressing 1, stalled 0, unknown 0)
+lane GH-295 progressing holder holder-a heartbeat 2026-11-16T23:58:00.000Z — artifact-heartbeat-fresh,artifact-progress,bound-applied
+supervisors 1
+supervisor per-ref-lease holder-a progressing holder holder-a heartbeat 2026-11-17T00:00:00.000Z — artifact-heartbeat-fresh,artifact-progress,bound-applied,claim-live,holder-recorded
+actions 0
+parked 0
+degraded daemon-absent
+truncated false
+observedAt 2026-11-17T00:00:00.000Z

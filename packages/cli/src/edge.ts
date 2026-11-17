@@ -528,6 +528,10 @@ import {
 import { createSpendCommandDefinition, type SpendCommandRuntime } from "./commands/spend.js";
 import { createStatusCommandDefinition, type StatusCommandRuntime } from "./commands/status.js";
 import { createSteerCommandDefinition, type SteerCommandRuntime } from "./commands/steer.js";
+import {
+  createSuperviseCommandDefinition,
+  type SuperviseCommandRuntime,
+} from "./commands/supervise.js";
 import { createVerifyCommandDefinition, type VerifyCommandRuntime } from "./commands/verify.js";
 
 export type { DispatchAttemptsRuntime, DispatchCommandRuntime } from "./commands/dispatch.js";
@@ -3860,6 +3864,7 @@ export type ConfigProgramOptions = {
   readonly retro?: RetroCompositionOptions;
   readonly ceremony?: CeremonyCompositionOptions;
   readonly steer?: SteerComposition;
+  readonly supervise?: SuperviseCommandRuntime;
   readonly spend?: SpendCompositionOptions;
   readonly projects?: ProjectsCommandRuntime;
   readonly repos?: ReposCommandRuntime;
@@ -4978,6 +4983,9 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   }
   if (options.spend !== undefined) {
     commands.spend = createSpendCommandDefinition(createSpendCommandRuntime(options.spend));
+  }
+  if (options.supervise !== undefined) {
+    commands.supervise = createSuperviseCommandDefinition(options.supervise);
   }
   if (options.daemon !== undefined) {
     commands.daemon = createDaemonCommandDefinition(options.daemon);
