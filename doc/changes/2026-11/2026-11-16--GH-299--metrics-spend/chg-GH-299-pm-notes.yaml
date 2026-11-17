@@ -134,7 +134,7 @@ notes:
     date: "2026-11-17"
   - text: "Plan phase 3 complete (verified metrics reads, the committed baseline-log
       read, the declaration-node read, the bounded corpus scan, and the pure
-      burn-rate resolver). Commit recorded in the phase-4 note. Verification:
+      burn-rate resolver). Commit ffc206fc. Verification:
       config-contract (catalog metrics branch), metrics-imports (seven modules
       tier-checked), config-imports, event-additivity and port-inventory pins
       green; ambient-globals and exports-parity pass;
@@ -143,5 +143,26 @@ notes:
       `metrics` branch (additive, GH-300 precedent), the config key pin in
       tests/behaviour/config-schema.test.ts, and the state-tier file pin in
       event-additivity-inventory; recorded under Appendix D D-14."
+    type: info
+    date: "2026-11-17"
+  - text: "Plan phase 4 complete (the metrics report command grammar, the edge
+      composition from injected seams, the production composition, the fixture
+      harness, and the baseline/kind/caveat/comparison suites). Commit recorded
+      in the phase-5 note. Verification: metrics-grammar 12/12, metrics-envelope
+      9/9, metrics-baseline 12/12, metrics-baseline-damage 8/8,
+      metrics-write-discipline 4/4, metrics-cycle-time 6/6,
+      metrics-ceremony-share 4/4, metrics-ci-proxy 5/5, metrics-caveat 5/5,
+      metrics-comparisons 12/12; typecheck, lint, format, exports-parity green;
+      TMPDIR=$PWD/tmp/tmpdir pnpm check 9931 pass / 4 pre-existing skip / 2 fail,
+      where the two failures are the known load-sensitive delivered suites
+      (daemon-foreground-stop-latency and prior-identity-notice's 5s per-test
+      timeout); both pass in isolation on this tree (1/1 and 14/14), so the
+      boundary is recorded as green-modulo-environment-flake and re-proven at
+      the phase-9 battery. Discovered delivered pins moved in this commit: the
+      human-text renderer inventory (cli-edge-seam) and the ceremony
+      nonregression excluded-surface pin (metrics now exists); recorded under
+      Appendix D D-14. TC-METRICS-004's help-control step is deferred to the
+      phase-7 mount (the help entry does not exist before the mount; TC-081
+      proves it there)."
     type: info
     date: "2026-11-17"

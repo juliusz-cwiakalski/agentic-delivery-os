@@ -545,6 +545,11 @@ export type MetricsStateOutcome =
 /** One classified metrics failure: the log's damage, a node defect, or store damage. */
 export type MetricsCommandFailure =
   | {
+      readonly kind: "input";
+      readonly code: "input.value.rejected";
+      readonly summary?: string;
+    }
+  | {
       readonly kind: "metrics";
       readonly code: typeof METRICS_BASELINE_UNREADABLE_CODE;
       readonly summary?: string;

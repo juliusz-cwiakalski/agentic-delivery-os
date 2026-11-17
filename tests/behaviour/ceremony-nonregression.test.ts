@@ -63,8 +63,9 @@ describe("TC-CEREMONY-057 delivered surfaces are unchanged", () => {
 });
 
 describe("TC-CEREMONY-057 excluded surfaces are absent", () => {
-  test("no metrics command, action registry, pack, scheduler, or MCP ceremony surface exists", () => {
-    expect(existsSync(join(ROOT, "packages/cli/src/commands/metrics.ts"))).toBe(false);
+  test("the metrics family is delivered while the action, pack, scheduler, and MCP surfaces stay absent", () => {
+    // GH-299 delivers the metrics read side; the other excluded surfaces remain absent.
+    expect(existsSync(join(ROOT, "packages/cli/src/commands/metrics.ts"))).toBe(true);
     expect(existsSync(join(ROOT, "packages/core/src/domain/retro-actions.ts"))).toBe(false);
     expect(existsSync(join(ROOT, "packages/core/src/domain/ceremony-pack.ts"))).toBe(false);
     expect(existsSync(join(ROOT, "packages/core/src/domain/ceremony-scheduler.ts"))).toBe(false);

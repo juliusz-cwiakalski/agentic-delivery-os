@@ -30,6 +30,7 @@ import {
   decisionRecordIds,
   ensureProjectIdentityMarkerText,
   type FileSystemFacts,
+  type MetricsCorpusFileSystemFacts,
   neutralEnvironmentFacts,
   nodeCapsuleFileSystemFacts,
   nodeCeremonyTierContextFileSystem,
@@ -46,11 +47,14 @@ import {
   readDispatchAuthority,
   readLocalPmContext,
   readMemoryFacts,
+  readMetricsBaselineLog,
+  readMetricsBurnRateNode,
   readPlanArtifact,
   readPmNotesText,
   readProjectGroupsConfig,
   readProjectIdentityMarker,
   runtimePlatform,
+  scanMetricsCorpus,
   stagePmNotesPhaseEntry,
 } from "@delivery-os/adapters/file";
 import {
@@ -131,6 +135,7 @@ import {
   collectRetro,
   computeDbCutoffMs,
   computeDbLiveBoundaryMs,
+  computeMetricsReport,
   computeQueueSchedule,
   computeSpendReport,
   computeStagingPlan,
@@ -209,6 +214,8 @@ import {
   resolveDispatchDivergenceEvidence,
   resolveHostStateRoot,
   resolveMergeGateSet,
+  resolveMetricsBurnRate,
+  resolveMetricsWindow,
   resolveProjectScope,
   resolveQueueSettings,
   resolveQueueWeight,
@@ -324,6 +331,7 @@ import {
   type HarnessLivenessFacts,
   type HarnessSessionHandle,
   type HarnessSessionPort,
+  type MetricsReadSeams,
   OWNER_GATE_SLA_POLICY,
   type OwnerGateCollectorRead,
   type OwnerGateSlaDecisionRecord,
@@ -428,6 +436,7 @@ import {
   readMergeGateVerifications,
   readMergeTransactions,
   readMergeWaivers,
+  readMetricsLedger,
   readOwnerGateSlaDecisions,
   readRetroRegistry,
   readRetroRuns,
@@ -491,6 +500,7 @@ import {
   type LintRegistryRead,
 } from "./commands/lint.js";
 import { createMergeCommandDefinition, type MergeCommandRuntime } from "./commands/merge.js";
+import { createMetricsCommandDefinition, type MetricsCommandRuntime } from "./commands/metrics.js";
 import {
   createPhaseCommandDefinition,
   type PhaseCommandRuntime,
@@ -3861,6 +3871,7 @@ export type ConfigProgramOptions = {
   readonly ceremony?: CeremonyCompositionOptions;
   readonly steer?: SteerComposition;
   readonly spend?: SpendCompositionOptions;
+  readonly metrics?: MetricsCompositionOptions;
   readonly projects?: ProjectsCommandRuntime;
   readonly repos?: ReposCommandRuntime;
   readonly events?: EventsCommandRuntime;
@@ -4979,6 +4990,9 @@ export const createConfigProgram = (options: ConfigProgramOptions): ConfigProgra
   if (options.spend !== undefined) {
     commands.spend = createSpendCommandDefinition(createSpendCommandRuntime(options.spend));
   }
+  if (options.metrics !== undefined) {
+    commands.metrics = createMetricsCommandDefinition(createMetricsCommandRuntime(options.metrics));
+  }
   if (options.daemon !== undefined) {
     commands.daemon = createDaemonCommandDefinition(options.daemon);
   }
@@ -5559,6 +5573,220 @@ export const createSpendCommandRuntime = (
     };
   },
 });
+
+/* ------------------------------ metrics edge ------------------------------ */
+
+/**
+ * The metrics composition seams (GH-299 F-1..F-8): the read-only store, the
+ * local PM context, the project root and its configuration directory, the
+ * injected clock, and the file facts. The command is read-only: no fence, no
+ * append, no process launch, no secret resolution, and no provider or network
+ * client is composed here.
+ */
+export type MetricsCompositionOptions = {
+  readonly store: StateStorePort;
+  readonly localContext: { readonly path: string; readonly fs: FileSystemFacts };
+  readonly projectRoot: string;
+  readonly configurationDirectoryName: string;
+  readonly fs: MetricsCorpusFileSystemFacts;
+  readonly clock: { readonly nowMs: () => number };
+  readonly platform?: RuntimePlatform;
+  readonly environment?: Readonly<Record<string, string | undefined>>;
+  readonly homeDirectory?: string;
+  readonly changesDirectory?: string;
+};
+
+/** The seam-injected runtime: one window resolution, one node read, then reads. */
+export type MetricsRuntimeOptions = {
+  readonly seams: MetricsReadSeams;
+  readonly clock: { readonly nowMs: () => number };
+  readonly resolveActiveRef: () => { readonly ref: string } | { readonly ref: null };
+};
+
+/**
+ * Compose the metrics runtime from injected seams.
+ *
+ * The declaration node is validated before any telemetry, log, ceremony,
+ * transition, or corpus read: an absent node is undeclared, a defective node is
+ * `config.value.invalid`, and a damaged baseline log is the one metrics
+ * identity. The window is resolved from the injected clock, so every timestamp
+ * on the payload is reproducible from the fixture.
+ */
+export const createMetricsRuntimeFromSeams = (
+  options: MetricsRuntimeOptions,
+): MetricsCommandRuntime => ({
+  resolveActiveRef: options.resolveActiveRef,
+  report: (request) => {
+    const nowMs = options.clock.nowMs();
+    const window = resolveMetricsWindow({
+      ...(request.from === undefined ? {} : { from: request.from }),
+      ...(request.through === undefined ? {} : { through: request.through }),
+      nowMs,
+    });
+    if (!window.ok) {
+      return {
+        ok: false,
+        error: {
+          kind: "input",
+          code: "input.value.rejected",
+          summary: `metrics: ${window.reason}`,
+        },
+      };
+    }
+    const nodeRead = options.seams.readConfigNode();
+    if (!nodeRead.ok) {
+      return {
+        ok: false,
+        error: {
+          kind: "config",
+          code: "config.value.invalid",
+          summary: "metrics: the project-committed configuration document is not usable",
+          cause: `document.${nodeRead.state}`,
+        },
+      };
+    }
+    const resolved =
+      nodeRead.state === "absent"
+        ? ({ ok: true, declared: false } as const)
+        : resolveMetricsBurnRate(nodeRead.node);
+    if (!resolved.ok) {
+      return {
+        ok: false,
+        error: {
+          kind: "config",
+          code: "config.value.invalid",
+          summary: "metrics: the metrics.burn-rate declaration is defective",
+          ...(resolved.detail === undefined ? {} : { cause: resolved.detail }),
+        },
+      };
+    }
+    const state = options.seams.readState(request.ref);
+    if (!state.ok) return { ok: false, error: state.error };
+    const baseline = options.seams.readBaselineLog();
+    if (!baseline.ok) {
+      return {
+        ok: false,
+        error: {
+          kind: "metrics",
+          code: "metrics.baseline-unreadable",
+          summary:
+            "metrics: the committed measurement baseline log exists but cannot be parsed or validated",
+        },
+      };
+    }
+    const corpus = options.seams.readCorpus();
+    const data = computeMetricsReport({
+      ref: request.ref,
+      window: window.window,
+      nowMs,
+      state: state.value,
+      baseline,
+      node: resolved,
+      corpus,
+    });
+    return { ok: true, data };
+  },
+});
+
+/** Compose the metrics runtime from the injected read-only seams. */
+export const createMetricsCommandRuntime = (
+  options: MetricsCompositionOptions,
+): MetricsCommandRuntime =>
+  createMetricsRuntimeFromSeams({
+    clock: options.clock,
+    resolveActiveRef: () => {
+      const context = readLocalPmContext({
+        path: options.localContext.path,
+        fs: options.localContext.fs,
+      });
+      const ref = context.ok ? context.context.activeChange?.workItemRef : undefined;
+      return ref === undefined ? { ref: null } : { ref };
+    },
+    seams: {
+      readState: (ref) => {
+        const ledger = readMetricsLedger(options.store, ref);
+        if (!ledger.ok) return { ok: false, error: ledger.error };
+        const spend = ledger.value.spend;
+        const readRecords = spend.records;
+        const readTransitions = spend.transitions;
+        const folded = computeSpendReport(spend, { workItemRef: ref });
+        const dispatch = folded.ok
+          ? {
+              tokensByClass: folded.data.tokensByClass,
+              costTotals: folded.data.costTotals,
+              restarts: folded.data.restarts,
+              perAgent: folded.data.perAgent.map((entry) => ({
+                role: entry.agent,
+                model: entry.model,
+                calls: entry.calls,
+                tokens: entry.tokens,
+              })),
+              breakdowns: {
+                role: folded.data.breakdowns.role,
+                model: folded.data.breakdowns.model,
+              },
+              reconciliation: {
+                basis: folded.data.reconciliation.basis,
+                verdict: folded.data.reconciliation.verdict,
+              },
+            }
+          : undefined;
+        return {
+          ok: true,
+          value: {
+            workItemRef: ref,
+            telemetryState: ledger.value.telemetryState,
+            records: readRecords.map((record) => ({
+              runId: record.runId,
+              capturedAt: record.capturedAt,
+              tokens: record.tokens,
+              cost: record.cost,
+              calls: record.calls,
+            })),
+            steps: (spend.steps ?? []).map((step) => ({
+              runId: step.runId,
+              model: step.model,
+              agentRole: step.agentRole,
+              tokens: step.tokens,
+              calls: step.calls,
+              cost: step.cost,
+              capturedAt: step.capturedAt,
+            })),
+            transitions: readTransitions.map((transition) => ({
+              phaseId: transition.phaseId,
+              operation: transition.operation,
+              timestamp: transition.timestamp,
+            })),
+            ceremony: ledger.value.ceremony,
+            ...(ledger.value.telemetryState === "absent"
+              ? { absenceReason: "spend.telemetry-absent" }
+              : {}),
+            ...(dispatch === undefined ? {} : { dispatch }),
+          },
+        };
+      },
+      readBaselineLog: () =>
+        readMetricsBaselineLog({ projectRoot: options.projectRoot, fs: options.fs }),
+      readConfigNode: () =>
+        readMetricsBurnRateNode({
+          platform: options.platform ?? "linux",
+          homeDirectory: options.homeDirectory ?? "",
+          environment: options.environment ?? {},
+          gitRoot: options.projectRoot,
+          enableSystemConfig: false,
+          enableUserConfig: false,
+          enableProjectLocalConfig: false,
+          configurationDirectoryName: options.configurationDirectoryName,
+          fs: options.fs,
+        }),
+      readCorpus: () =>
+        scanMetricsCorpus({
+          projectRoot: options.projectRoot,
+          changesDirectory: options.changesDirectory ?? "doc/changes",
+          fs: options.fs,
+        }),
+    },
+  });
 
 /* ------------------------- scheduling engine edge ------------------------- */
 

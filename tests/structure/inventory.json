@@ -357,6 +357,7 @@
     "src/commands/lanes.ts",
     "src/commands/lint.ts",
     "src/commands/merge.ts",
+    "src/commands/metrics.ts",
     "src/commands/phase.ts",
     "src/commands/plan.ts",
     "src/commands/projects.ts",
