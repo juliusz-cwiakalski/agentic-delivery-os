@@ -5,9 +5,14 @@
 import { describe, expect, test } from "bun:test";
 import { createSupervisionHarness } from "../fixtures/supervise/harness";
 import {
+  actingAuthority,
+  claimsOnly,
   coordinatorClaim,
   daemonClaim,
   LANE_REF,
+  seedCommitEffect,
+  seedDaemonInstance,
+  seedHeartbeat,
   seedLane,
   seedLiveLease,
 } from "../fixtures/supervise/records";
@@ -76,6 +81,54 @@ describe("TC-SUP-050 every claim kind is inventoried", () => {
       expect(daemon?.evidence.some((item) => item.code === "claim-not-live")).toBe(true);
       // Staleness is read from the imported bound, never re-declared.
       expect(daemon?.heartbeat).toBeDefined();
+    } finally {
+      harness.remove();
+    }
+  });
+});
+
+describe("TC-SUP-054 duplicate detection reads records only", () => {
+  test("claim-only records ride data at exit 0 and out-of-shape noise changes nothing", async () => {
+    const harness = createSupervisionHarness({ label: "claims-only" });
+    try {
+      seedLane(harness.seed, LANE_REF);
+      claimsOnly(harness.seed, { daemonLive: true, coordinatorLive: true });
+      const before = await harness.runCli(["supervise", "--json"]);
+      expect(before.exitCode).toBe(0);
+      // A record the classification shape does not read (an acting preemption
+      // for an unrelated object) changes no claim classification.
+      actingAuthority(harness.seed, { objectRef: "GH-999" });
+      const after = await harness.runCli(["supervise", "--json"]);
+      expect(after.exitCode).toBe(0);
+      const parseClaims = (text: string) =>
+        ((JSON.parse(text) as { data?: Record<string, unknown> }).data?.supervisors ??
+          []) as readonly Record<string, unknown>[];
+      expect(parseClaims(after.stdout)).toEqual(parseClaims(before.stdout));
+      expect(parseClaims(after.stdout).map((claim) => claim.claimKind)).toEqual([
+        "daemon-instance",
+        "coordinator-lease",
+      ]);
+    } finally {
+      harness.remove();
+    }
+  });
+
+  test("removing the heartbeat trail flips a claim to unknown", async () => {
+    // The control: the same claim records without heartbeats read unknown, which
+    // proves records (not any process observation) are the input.
+    const harness = createSupervisionHarness({ label: "claims-no-heartbeat" });
+    try {
+      seedLane(harness.seed, LANE_REF);
+      seedCommitEffect(harness.seed, { offsetMs: -60_000 });
+      seedDaemonInstance(harness.seed);
+      const run = await harness.runCli(["supervise", "--json"]);
+      expect(run.exitCode).toBe(0);
+      const data = (JSON.parse(run.stdout) as { data?: Record<string, unknown> }).data;
+      if (data === undefined) throw new Error("report data missing");
+      const daemon = (data.supervisors as readonly Record<string, unknown>[]).find(
+        (claim) => claim.claimKind === "daemon-instance",
+      );
+      expect(daemon?.classification).toBe("unknown");
     } finally {
       harness.remove();
     }

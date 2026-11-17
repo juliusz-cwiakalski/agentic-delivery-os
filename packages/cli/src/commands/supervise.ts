@@ -8,7 +8,13 @@
  * envelope's exit projection is the shared surface's.
  */
 
-import type { SupervisionReadPort, SupervisionWritePort } from "@delivery-os/core";
+import type {
+  SupervisionClaimRefusal,
+  SupervisionEconomicsWritePort,
+  SupervisionReadPort,
+  SupervisionRestartAdmission,
+  SupervisionWritePort,
+} from "@delivery-os/core";
 import { renderSupervisionHuman, runSupervisionBattery } from "@delivery-os/core";
 import type { CommandDefinition } from "../index.js";
 
@@ -19,6 +25,9 @@ export type SuperviseCommandRuntime = {
   readonly read: SupervisionReadPort;
   /** The delivered park append path; absent keeps the run read-only. */
   readonly write?: SupervisionWritePort;
+  readonly economicsWrite?: SupervisionEconomicsWritePort;
+  readonly admitRestart?: (ref: string) => SupervisionRestartAdmission;
+  readonly claimRefusal?: (ref: string) => SupervisionClaimRefusal | undefined;
   readonly nowMs: () => number;
   readonly nowIso: () => string;
 };
@@ -41,6 +50,9 @@ export const createSuperviseCommandDefinition = (
       nowIso: runtime.nowIso(),
       read: runtime.read,
       ...(runtime.write === undefined ? {} : { write: runtime.write }),
+      ...(runtime.economicsWrite === undefined ? {} : { economicsWrite: runtime.economicsWrite }),
+      ...(runtime.admitRestart === undefined ? {} : { admitRestart: runtime.admitRestart }),
+      ...(runtime.claimRefusal === undefined ? {} : { claimRefusal: runtime.claimRefusal }),
     });
     if (!result.ok) {
       return { error: { kind: result.kind, code: result.code, summary: result.summary } };

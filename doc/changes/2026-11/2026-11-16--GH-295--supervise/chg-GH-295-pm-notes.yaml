@@ -231,3 +231,54 @@ notes:
       green. No other release obligation moved."
     type: "info"
     date: "2026-11-17"
+  - text: "Plan phase 3 complete (battery surface: grammar, scope, exits, human
+      render) at commit 4094dd53. Delivered: packages/cli/src/commands/supervise.ts
+      (zero positionals, no family flags, one battery call, humanText from the
+      same report), production + edge composition (unconditional, still dropped by
+      the entrypoint until phase 6 so root --help is unchanged),
+      packages/core/src/domain/supervise-text.ts (bounded human render, empty
+      population stated, brand seam only), and TC-SUP-001/002/003/004/005/013/081/
+      085/090 suites plus the healthy report golden pair and the in-process CLI
+      harness. Tests: 44 phase-3 cases green; TMPDIR=$PWD/tmp/tmpdir pnpm check
+      PASS (9907 pass / 0 fail)."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Phase-3 findings: (1) packages/core/src/index.ts gained the supervision
+      re-exports (the CLI imports the composition root); the file is outside the
+      plan's declared per-phase file list, so it rides as disclosed scope drift —
+      required for the package surface and exports-parity. (2)
+      tests/structure/cli-edge-seam.test.ts pins the command modules declaring
+      humanText; supervise joined that additive list. (3) The scale/read-cost
+      cells use an injected synthetic snapshot because seeding 200 lanes through
+      the delivered queue intent path is quadratic (~200 s); the fold is the
+      subject there and the real-store path is exercised by every other case."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Plan phase 4 complete (supervised-stall park, safe-boundary intent,
+      additive lane until) at commit a330a531. Delivered: the park action through
+      the delivered park record shape/key/fence (cause liveness-stall, resolver-
+      mapped provider-window condition, until at the imported recheck default,
+      idempotent against an active liveness-stall park, no lease claim/release/
+      creation), safe-boundary park intent over a live holder, the additive
+      QueueLane.until on the delivered lane fold (present exactly for an active
+      expiry-carrying park), TC-SUP-011/020/022/023/040/041/042/043/046/047/091/
+      093 suites, the stalled report golden, and the parked lanes golden pair.
+      Tests: 122 phase-4 cases green; TMPDIR=$PWD/tmp/tmpdir pnpm check PASS
+      (9933 pass / 0 fail)."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Phase-4 deviation (DECLARED, for review): a stall over an actively held
+      session records the park record immediately and reports the action as
+      safe-boundary-park-intent (durable intent, zero session effect, zero
+      signals); the park does not wait for a boundary write. The plan/TC-SUP-043
+      phrase 'delivered preemption pending state' cannot be satisfied without
+      lying in the delivered close-item preemption record (fixed
+      parkCause/closeRef) or adding a record kind / changing the daemon contract,
+      both forbidden by DM-4 and NG-6; the chosen carrier is the delivered park
+      record, which is the only honest durable intent in the delivered set. All
+      other TC-SUP-043 assertions hold (intent durable before any session effect,
+      holder named, no kill/signal/stop seam). Also: foldLanes tolerates a
+      schedule fixture without a parks member (delivered fixture passed a partial
+      schedule); production always supplies it."
+    type: "info"
+    date: "2026-11-17"

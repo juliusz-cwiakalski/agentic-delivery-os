@@ -20,6 +20,8 @@ import {
   DAEMON_INSTANCE_RECORD_KEY,
   DAEMON_INSTANCE_RECORD_KIND,
   DAEMON_LANE_RECORD_KIND,
+  DAEMON_PREEMPTION_KEY_PREFIX,
+  DAEMON_PREEMPTION_RECORD_KIND,
   DAEMON_RECONCILIATION_KEY_PREFIX,
   DAEMON_RECONCILIATION_RECORD_KIND,
   DISPATCH_ATTEMPT_KEY_PREFIX,
@@ -39,6 +41,7 @@ import {
   type StateRecord,
   type StateStorePort,
   SUPERVISION_CLAIM_LIVENESS_BOUND_MS,
+  SUPERVISION_CORROBORATION_BOUND_MS,
   SUPERVISION_SCHEMA_VERSION,
   type SupervisionActionEntry,
   type SupervisionArtifactClass,
@@ -100,6 +103,33 @@ export type SupervisionLeaseFact = {
   readonly live: boolean;
 };
 
+/** One durable acting-authority record naming the object it is acting on. */
+export type SupervisionActingFact = {
+  readonly objectRef: string;
+  readonly authority: string;
+  readonly holder?: string;
+  readonly recordedAt: string;
+};
+
+/** One delivered restart record for a ref (the budget source, never a local counter). */
+export type SupervisionRestartFact = {
+  readonly ordinal: number;
+  readonly recordedAt: string;
+  readonly runId: string;
+};
+
+/** The delivered restart-budget admission answer for one ref. */
+export type SupervisionRestartAdmission =
+  | { readonly outcome: "admit"; readonly restarts: number }
+  | { readonly outcome: "exhausted"; readonly restarts: number }
+  | { readonly outcome: "unavailable"; readonly restarts: number; readonly code: string };
+
+/** The delivered per-ref single-flight refusal. */
+export type SupervisionClaimRefusal = {
+  readonly code: "queue.single-flight";
+  readonly holder?: string;
+};
+
 /** The one-read scope snapshot the fold classifies. */
 export type SupervisionScopeSnapshot = {
   readonly repository: string;
@@ -107,6 +137,8 @@ export type SupervisionScopeSnapshot = {
   readonly leases: readonly SupervisionLeaseFact[];
   readonly daemonClaim?: SupervisionClaimFact;
   readonly coordinatorClaim?: SupervisionClaimFact;
+  readonly acting: readonly SupervisionActingFact[];
+  readonly restarts: Readonly<Record<string, readonly SupervisionRestartFact[]>>;
   readonly degraded: readonly SupervisionDegradationMarker[];
 };
 
@@ -130,6 +162,12 @@ export type SupervisionBatteryInput = {
   readonly read: SupervisionReadPort;
   /** The delivered park append path; absent means a read-only run. */
   readonly write?: SupervisionWritePort;
+  /** The delivered restart/exhaustion/question append paths. */
+  readonly economicsWrite?: SupervisionEconomicsWritePort;
+  /** The delivered restart-budget admission (consulted once per parked stall). */
+  readonly admitRestart?: (ref: string) => SupervisionRestartAdmission;
+  /** The delivered per-ref single-flight refusal for a claiming action. */
+  readonly claimRefusal?: (ref: string) => SupervisionClaimRefusal | undefined;
 };
 
 /** One supervised-stall park the battery asks the delivered park path to land. */
@@ -146,15 +184,50 @@ export type SupervisionParkAppendResult =
   | { readonly ok: false; readonly code: string };
 
 /** The injected write seam: the one delivered park path the battery appends through. */
+export type SupervisionRestartAppend = {
+  readonly ref: string;
+  readonly ordinal: number;
+  readonly runId: string;
+  readonly recordedAt: string;
+};
+
+export type SupervisionExhaustionAppend = {
+  readonly ref: string;
+  readonly restarts: number;
+  readonly recordedAt: string;
+};
+
+export type SupervisionAppendResult =
+  | { readonly ok: true; readonly appended: boolean }
+  | { readonly ok: false; readonly code: string };
+
 export type SupervisionWritePort = {
   readonly appendPark: (input: SupervisionParkAppend) => SupervisionParkAppendResult;
+};
+
+/**
+ * The delivered economics append paths. Composed at the edge (the state tier is
+ * not reachable from the app tier): the restart record, the terminal exhaustion
+ * record, and the typed question, each through its delivered fenced path.
+ */
+export type SupervisionEconomicsWritePort = {
+  /** The delivered restart path; the budget ordinal moves exactly one step. */
+  readonly appendRestart: (input: SupervisionRestartAppend) => SupervisionAppendResult;
+  /** The delivered terminal exhaustion path (single record per delivery). */
+  readonly ensureExhaustion: (input: SupervisionExhaustionAppend) => SupervisionAppendResult;
+  /** The delivered typed-question path (idempotent by identity). */
+  readonly raiseQuestion: (input: {
+    readonly ref: string;
+    readonly restarts: number;
+    readonly askedAt: string;
+  }) => SupervisionAppendResult;
 };
 
 export type SupervisionBatteryResult =
   | { readonly ok: true; readonly report: SupervisionReport }
   | {
       readonly ok: false;
-      readonly kind: "state" | "supervise";
+      readonly kind: "state" | "supervise" | "queue";
       readonly code: string;
       readonly summary: string;
     };
@@ -381,6 +454,56 @@ export const createStateSupervisionReadPort = (store: StateStorePort): Supervisi
       }
     }
 
+    // Durable acting authorities: a pending delivered preemption record means
+    // the resident daemon is actively acting on that object (DEC-8a). Detection
+    // reads records only.
+    const acting: SupervisionActingFact[] = records
+      .filter(
+        (record) =>
+          record.kind === DAEMON_PREEMPTION_RECORD_KIND &&
+          record.key.startsWith(DAEMON_PREEMPTION_KEY_PREFIX),
+      )
+      .map((record) => asRecord(record.payload))
+      .filter(
+        (payload): payload is Readonly<Record<string, unknown>> =>
+          payload !== undefined && payload.state === "pending",
+      )
+      .map((payload) => {
+        const holder = str(payload.holder);
+        return {
+          objectRef: str(payload.ref) ?? "",
+          authority: "daemon-preemption",
+          ...(holder === undefined ? {} : { holder }),
+          recordedAt: str(payload.requestedAt) ?? str(payload.recordedAt) ?? "",
+        };
+      })
+      .filter((entry) => entry.objectRef.length > 0 && entry.recordedAt.length > 0);
+
+    // The delivered restart records per ref (the budget source of truth).
+    const restarts: Record<string, { ordinal: number; recordedAt: string; runId: string }[]> = {};
+    for (const record of records) {
+      if (
+        record.kind !== ECONOMICS_RESTART_RECORD_KIND ||
+        !record.key.startsWith(ECONOMICS_RECORD_KEY_PREFIX)
+      ) {
+        continue;
+      }
+      const payload = asRecord(record.payload);
+      const ref = str(payload?.workItemRef);
+      const ordinal = positiveInt(payload?.ordinal);
+      const recordedAt = str(payload?.recordedAt);
+      const runId = str(payload?.runId);
+      if (
+        ref === undefined ||
+        ordinal === undefined ||
+        recordedAt === undefined ||
+        runId === undefined
+      ) {
+        continue;
+      }
+      restarts[ref] = [...(restarts[ref] ?? []), { ordinal, recordedAt, runId }];
+    }
+
     // Active per-ref leases, folded through the delivered lease fold.
     const leaseRecords: QueueLeaseRecord[] = [];
     for (const record of records) {
@@ -545,6 +668,8 @@ export const createStateSupervisionReadPort = (store: StateStorePort): Supervisi
       leases,
       ...(daemonClaim === undefined ? {} : { daemonClaim }),
       ...(coordinatorClaim === undefined ? {} : { coordinatorClaim }),
+      acting,
+      restarts,
       degraded: uniqueDegraded,
     };
     return { ok: true, snapshot };
@@ -782,7 +907,123 @@ export const runSupervisionBattery = (input: SupervisionBatteryInput): Supervisi
       if (entry === undefined || entry.classification !== "stalled") continue;
       const alreadyParked =
         fact.activePark !== undefined && fact.activePark.cause === "liveness-stall";
-      if (alreadyParked) continue;
+      if (alreadyParked) {
+        // A parked stall that is still stale is the restart-policy cell: an
+        // acting authority refuses the action (DEC-8a), a live per-ref holder
+        // refuses it through the delivered single-flight identity, and the
+        // delivered budget decides the rest.
+        const acting = snapshot.acting.find(
+          (authority) =>
+            authority.objectRef === fact.ref &&
+            input.nowMs - Date.parse(authority.recordedAt) <= SUPERVISION_CORROBORATION_BOUND_MS,
+        );
+        if (acting !== undefined) {
+          return {
+            ok: false,
+            kind: "supervise",
+            code: "supervise.duplicate-supervision",
+            summary: `another supervision authority (${acting.authority}${
+              acting.holder === undefined ? "" : ` holder ${acting.holder}`
+            }) is actively acting on ${fact.ref}`,
+          };
+        }
+        const refusal = input.claimRefusal?.(fact.ref);
+        if (refusal !== undefined) {
+          return {
+            ok: false,
+            kind: "queue",
+            code: refusal.code,
+            summary: `holder:${refusal.holder ?? "unknown"}; ref:${fact.ref}`,
+          };
+        }
+        const admission = input.admitRestart?.(fact.ref);
+        if (admission === undefined) continue;
+        if (admission.outcome === "admit" && input.economicsWrite !== undefined) {
+          const appended = input.economicsWrite.appendRestart({
+            ref: fact.ref,
+            ordinal: admission.restarts + 1,
+            runId: "supervise",
+            recordedAt: input.nowIso,
+          });
+          if (!appended.ok) {
+            return {
+              ok: false,
+              kind: "state",
+              code: appended.code,
+              summary: `the restart for ${fact.ref} did not land (${appended.code})`,
+            };
+          }
+          actions.push({
+            kind: "restart-admission",
+            ref: fact.ref,
+            evidence: [
+              ...entry.evidence,
+              {
+                code: "restart-admitted",
+                ref: fact.ref,
+                recordKind: "economics.restart",
+                instant: input.nowIso,
+              },
+              { code: "bound-applied", ref: fact.ref, recordKind: "economics.restart" },
+            ],
+          });
+        } else if (admission.outcome === "exhausted" && input.economicsWrite !== undefined) {
+          const terminal = input.economicsWrite.ensureExhaustion({
+            ref: fact.ref,
+            restarts: admission.restarts,
+            recordedAt: input.nowIso,
+          });
+          if (!terminal.ok) {
+            return {
+              ok: false,
+              kind: "state",
+              code: terminal.code,
+              summary: `the terminal exhaustion for ${fact.ref} did not land (${terminal.code})`,
+            };
+          }
+          const question = input.economicsWrite.raiseQuestion({
+            ref: fact.ref,
+            restarts: admission.restarts,
+            askedAt: input.nowIso,
+          });
+          if (!question.ok) {
+            return {
+              ok: false,
+              kind: "state",
+              code: question.code,
+              summary: `the typed question for ${fact.ref} did not land (${question.code})`,
+            };
+          }
+          actions.push({
+            kind: "exhaustion-record",
+            ref: fact.ref,
+            evidence: [
+              ...entry.evidence,
+              {
+                code: "restart-exhausted",
+                ref: fact.ref,
+                recordKind: "economics.budget-exhaustion",
+                instant: input.nowIso,
+              },
+            ],
+          });
+        } else if (admission.outcome === "unavailable") {
+          actions.push({
+            kind: "unavailable-outcome",
+            ref: fact.ref,
+            evidence: [
+              ...entry.evidence,
+              {
+                code: "restart-unavailable",
+                ref: fact.ref,
+                recordKind: "economics.restart",
+                instant: input.nowIso,
+              },
+            ],
+          });
+        }
+        continue;
+      }
       const held = liveLeaseFor(fact.ref);
       // The declared stall recheck horizon: the mapped condition type's
       // delivered default, never a literal (RE-ENTRY HORIZON).

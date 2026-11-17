@@ -5,11 +5,11 @@
  * hard-coded `>` instead of `>=` fails the at-bound cell.
  */
 import { describe, expect, test } from "bun:test";
+import { readQueueParks } from "../../packages/core/src/app/index";
 import {
   SUPERVISION_CORROBORATION_BOUND_MS,
   WATCHDOG_STALL_HEARTBEAT_MS,
 } from "../../packages/core/src/contracts/index";
-import { readQueueParks } from "../../packages/core/src/app/index";
 import { createSupervisionHarness } from "../fixtures/supervise/harness";
 import { LANE_REF, seedCommitEffect, seedHeartbeat, seedLane } from "../fixtures/supervise/records";
 

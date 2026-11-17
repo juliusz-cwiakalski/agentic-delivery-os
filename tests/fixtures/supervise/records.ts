@@ -12,6 +12,7 @@ import {
   appendDaemonHeartbeat,
   appendDaemonInstance,
   appendDaemonLane,
+  appendDaemonPreemption,
   appendDaemonReconciliation,
   claimQueueLease,
   declareQueueEntry,
@@ -29,6 +30,7 @@ import {
   type DaemonHeartbeatRecord,
   type DaemonInstanceRecord,
   type DaemonLaneRecord,
+  type DaemonPreemptionRecord,
   type DaemonReconciliationRecord,
   DISPATCH_ATTEMPT_RECORD_KIND,
   type DispatchAttemptRecord,
@@ -427,4 +429,43 @@ export const stalledAndParked = (
     ...(input.holder === undefined ? {} : { holder: input.holder }),
     ...(input.untilOffsetMs === undefined ? {} : { untilOffsetMs: input.untilOffsetMs }),
   });
+};
+
+/** One durable acting record from another supervision authority (DEC-8a). */
+export const actingAuthority = (
+  target: SupervisionSeedTarget,
+  input: {
+    readonly objectRef?: string;
+    readonly authorityHolder?: string;
+    readonly offsetMs?: number;
+  } = {},
+): void => {
+  const ref = input.objectRef ?? LANE_REF;
+  const at = isoAt(target, input.offsetMs ?? 0);
+  const record: DaemonPreemptionRecord = {
+    schema: "delivery.daemon.preemption.v1",
+    ref,
+    repository: target.repository,
+    closeRef: "GH-999",
+    parkCause: "preempted-for-close-item",
+    conditionType: "preemption",
+    holder: input.authorityHolder ?? "authority-holder",
+    state: "pending",
+    requestedAt: at,
+    evidence: ["acting-authority-fixture"],
+    recordedAt: at,
+  };
+  expectOk(
+    `acting authority ${ref}`,
+    appendDaemonPreemption(target.store, target.fence(`acting-${ref}`), record),
+  );
+};
+
+/** Claim records only (no acting authority), for the paired exit-0 control. */
+export const claimsOnly = (
+  target: SupervisionSeedTarget,
+  input: { readonly daemonLive?: boolean; readonly coordinatorLive?: boolean } = {},
+): void => {
+  daemonClaim(target, { live: input.daemonLive ?? true });
+  coordinatorClaim(target, { live: input.coordinatorLive ?? true });
 };

@@ -107,3 +107,23 @@ describe("TC-SUP-070 the supervise kind declares exactly two rows", () => {
     expect(absent.entry.retryable).toBe(true);
   });
 });
+
+describe("TC-SUP-072 (structure half) the reuse outcomes contribute no supervise identity", () => {
+  test("containment, state, and single-flight identities resolve outside the supervise kind", () => {
+    for (const code of ["fallback.invocation", "state.store.torn", "queue.single-flight"]) {
+      const resolution = resolveAppErrorCode(code);
+      expect(resolution.ok, code).toBe(true);
+      if (!resolution.ok) continue;
+      expect(resolution.entry.domainKind, code).not.toBe("supervise");
+    }
+  });
+
+  test("the supervise kind declares exactly the two identities (no reuse member)", () => {
+    expect(
+      (ERROR_TABLE as readonly ErrorTableEntry[])
+        .filter((entry) => entry.domainKind === "supervise")
+        .map((entry) => entry.code)
+        .sort(),
+    ).toEqual(["supervise.duplicate-supervision", "supervise.evidence-absent"]);
+  });
+});

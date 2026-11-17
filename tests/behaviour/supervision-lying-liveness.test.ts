@@ -8,6 +8,8 @@ import { describe, expect, test } from "bun:test";
 import { readQueueParks } from "../../packages/core/src/app/index";
 import { createSupervisionHarness } from "../fixtures/supervise/harness";
 import {
+  coordinatorClaim,
+  daemonClaim,
   LANE_REF,
   seedCommitEffect,
   seedHeartbeat,
@@ -108,6 +110,43 @@ describe("TC-SUP-022 advancing artifacts defeat any out-of-shape reading", () =>
     } finally {
       base.remove();
       control.remove();
+    }
+  });
+});
+
+describe("TC-SUP-021 a lying supervisor claim reads stalled by artifact evidence", () => {
+  test("continuing liveness with flat supervision artifacts classifies stalled; claims are never acted on", async () => {
+    const harness = createSupervisionHarness({ label: "lying-claim" });
+    try {
+      seedLane(harness.seed, LANE_REF);
+      // A daemon claim whose heartbeats span the window with a flat artifact
+      // trail (no lane progress, no reconciliation records).
+      daemonClaim(harness.seed, { live: true, heartbeatOffsetsMs: [-400_000, -5_000] });
+      // A coordinator claim whose ledger position is flat and aged.
+      coordinatorClaim(harness.seed, { live: true, iterationOffsetsMs: [-400_000, -330_000] });
+      const run = await harness.runCli(["supervise", "--json"]);
+      expect(run.exitCode).toBe(0);
+      const data = (JSON.parse(run.stdout) as { data?: Record<string, unknown> }).data;
+      if (data === undefined) throw new Error("report data missing");
+      const claims = data.supervisors as readonly Record<string, unknown>[];
+      const daemon = claims.find((claim) => claim.claimKind === "daemon-instance");
+      const coordinator = claims.find((claim) => claim.claimKind === "coordinator-lease");
+      expect(daemon?.classification).toBe("stalled");
+      expect(daemon?.identity).toBe("instance-a");
+      expect(coordinator?.classification).toBe("stalled");
+      expect(coordinator?.identity).toBe("coordinator-a");
+      expect(coordinator?.holder).toBe("coordinator-holder");
+      const payload = JSON.stringify(data);
+      expect(payload).not.toContain("lock-");
+      expect(payload).not.toContain("session-fixture");
+      // No park or restart action targets a claim entry.
+      const actions = (data.actions ?? []) as readonly Record<string, unknown>[];
+      for (const action of actions) {
+        expect(action.ref).not.toBe("instance-a");
+        expect(action.ref).not.toBe("coordinator-a");
+      }
+    } finally {
+      harness.remove();
     }
   });
 });

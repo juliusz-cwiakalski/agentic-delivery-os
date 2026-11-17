@@ -73,6 +73,7 @@ import {
   buildHarnessSpawnEnvironment,
   type CoordinatorSettings,
   claimQueueLease,
+  claimSingleFlightRefusal,
   classifyHarnessEvidence,
   classifyProjectStateLocation,
   classifyVerifyDocument,
@@ -89,6 +90,7 @@ import {
   type DispatchTruthReads,
   dispatchAdmissionRefusal,
   EvaluateVerifyChange,
+  evaluateRestartBudget,
   foldDispatchHandover,
   type HandoverEvidence,
   type HarnessSettings,
@@ -130,6 +132,9 @@ import {
   resolveOwnerHoldFact,
   resolveProjectGroupMember,
   resolveProjectScope,
+  type SupervisionClaimRefusal,
+  type SupervisionEconomicsWritePort,
+  type SupervisionRestartAdmission,
   selectDaemonReachability,
   selectProjectGroups,
   serializeHostIndexDocument,
@@ -146,6 +151,7 @@ import {
 } from "@delivery-os/core";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
 import {
+  BLOCKER_QUESTION_PAYLOAD_SCHEMA,
   type BrandIdentity,
   CLOSEOUT_INTEGRATION_BASE,
   type ConfigNodeOrigins,
@@ -163,6 +169,7 @@ import {
   type DispatchPhaseLedger,
   ECONOMICS_EXHAUSTION_OPTIONS,
   ECONOMICS_EXHAUSTION_SCHEMA_ID,
+  ECONOMICS_RESTART_SCHEMA_ID,
   type ExternalSystemInstance,
   HARNESS_KINDS,
   type HarnessEnvironmentBuilder,
@@ -209,6 +216,8 @@ import {
   parseAndValidateProviderConfiguration,
 } from "@delivery-os/core/provider";
 import {
+  appendBlockerQuestion,
+  appendEconomicsRestartEvent,
   createDaemonLockPort,
   createNodeStateEdge,
   createStateStore,
@@ -3301,6 +3310,95 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         repository: repositoryKey ?? (basename(checkoutRoot).toLowerCase() || "repository"),
         read: createStateSupervisionReadPort(store),
         write: createStateSupervisionWritePort({ store, newFenceToken }),
+        economicsWrite: {
+          appendRestart: ({ ref, ordinal, runId, recordedAt }) => {
+            const outcome = appendEconomicsRestartEvent(store, newFenceToken(), {
+              schemaId: ECONOMICS_RESTART_SCHEMA_ID,
+              workItemRef: ref,
+              runId,
+              sessionId: "supervise",
+              ordinal,
+              reason: "session-interrupted",
+              recordedAt,
+            });
+            return outcome.ok
+              ? { ok: true, appended: outcome.appended }
+              : { ok: false, code: outcome.code };
+          },
+          ensureExhaustion: ({ ref, restarts, recordedAt }) => {
+            const outcome = ensureEconomicsExhaustionRecord(store, newFenceToken(), {
+              schemaId: ECONOMICS_EXHAUSTION_SCHEMA_ID,
+              workItemRef: ref,
+              runId: "supervise",
+              reason: "dispatch.restart-budget-exceeded",
+              restarts,
+              historyRef: `economics/${ref}`,
+              terminal: true,
+              options: [...ECONOMICS_EXHAUSTION_OPTIONS],
+              recordedAt,
+            });
+            return outcome.ok
+              ? { ok: true, appended: outcome.appended }
+              : { ok: false, code: outcome.code };
+          },
+          raiseQuestion: ({ ref, restarts, askedAt }) => {
+            const ledger = readBlockerLedger(store);
+            if (!ledger.ok) return { ok: false, code: ledger.error.code };
+            const id = `supervise-exhaustion-${ref}`;
+            if (ledger.value.questions.some((question) => question.id === id)) {
+              return { ok: true, appended: false };
+            }
+            const appended = appendBlockerQuestion(store, {
+              record: {
+                schemaId: BLOCKER_QUESTION_PAYLOAD_SCHEMA,
+                id,
+                type: "decision-needed",
+                audience: "owner",
+                lane: "supervise",
+                ref,
+                question: `the restart budget for ${ref} is exhausted after ${String(
+                  restarts,
+                )} restarts; choose the recovery route`,
+                options: ["restart-fresh-budget", "park-owner-review"],
+                askedAt,
+              },
+              fenceToken: newFenceToken(),
+            });
+            return appended.ok
+              ? { ok: true, appended: appended.value.appended }
+              : { ok: false, code: appended.error.code };
+          },
+        } satisfies SupervisionEconomicsWritePort,
+        admitRestart: (ref): SupervisionRestartAdmission => {
+          const configuration = readDaemonConfiguration(checkoutRoot);
+          const bound = configuration?.restartBound ?? PRODUCTION_DEFAULTS.lane["restart-budget"];
+          const read = readEconomicsRecords(store, ref);
+          if (!read.ok) return { outcome: "unavailable", restarts: 0, code: read.code };
+          const decision = evaluateRestartBudget({
+            workItemRef: ref,
+            bound,
+            records: read.restarts,
+          });
+          if (decision.outcome === "admit") {
+            return { outcome: "admit", restarts: decision.count };
+          }
+          if (decision.outcome === "refuse-budget") {
+            return { outcome: "exhausted", restarts: decision.count };
+          }
+          return { outcome: "unavailable", restarts: 0, code: decision.code };
+        },
+        claimRefusal: (ref): SupervisionClaimRefusal | undefined => {
+          const refusal = claimSingleFlightRefusal(store, {
+            ref,
+            holder: "supervise",
+            nowMs: nowMs(),
+          });
+          if (refusal === undefined) return undefined;
+          return {
+            code: "queue.single-flight",
+            ...(refusal.holder === undefined ? {} : { holder: refusal.holder }),
+          };
+        },
         nowMs,
         nowIso,
       },

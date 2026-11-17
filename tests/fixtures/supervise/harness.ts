@@ -9,6 +9,11 @@
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { createSuperviseCommandDefinition } from "../../../packages/cli/src/commands/supervise";
+import type {
+  SupervisionClaimRefusal,
+  SupervisionEconomicsWritePort,
+  SupervisionRestartAdmission,
+} from "../../../packages/core/src/app/index";
 import {
   createStateSupervisionReadPort,
   createStateSupervisionWritePort,
@@ -25,6 +30,12 @@ import type {
 import { foldLanes, type QueueLaneEconomics } from "../../../packages/core/src/domain/queue-lanes";
 import { createParkRecord } from "../../../packages/core/src/domain/queue-park";
 import { computeQueueSchedule } from "../../../packages/core/src/domain/queue-precedence";
+import {
+  appendBlockerQuestion,
+  appendEconomicsRestartEvent,
+  ensureEconomicsExhaustionRecord,
+  readBlockerLedger,
+} from "../../../packages/core/src/state/index";
 import { activeLease, makeFacts, REPO_A } from "../queue/schedule/harness";
 import { type QueueCliRun, runProgram } from "../queue-ready/harness";
 import { makeIdentity, openStore } from "../state/harness";
@@ -32,8 +43,78 @@ import type { SupervisionSeedTarget } from "./records";
 import { isoAt } from "./records";
 import { createSupervisionRepository, type SupervisionTempRepository } from "./temp-git";
 
+/** The delivered economics append paths over the fixture store. */
+export const createTestEconomicsWrite = (
+  store: StateStorePort,
+  fence: (label: string) => string,
+): SupervisionEconomicsWritePort => ({
+  appendRestart: ({ ref, ordinal, runId, recordedAt }) => {
+    const outcome = appendEconomicsRestartEvent(store, fence("economics-restart"), {
+      schemaId: "delivery.economics.restart.v1",
+      workItemRef: ref,
+      runId,
+      sessionId: "supervise",
+      ordinal,
+      reason: "session-interrupted",
+      recordedAt,
+    });
+    return outcome.ok
+      ? { ok: true, appended: outcome.appended }
+      : { ok: false, code: outcome.code };
+  },
+  ensureExhaustion: ({ ref, restarts, recordedAt }) => {
+    const outcome = ensureEconomicsExhaustionRecord(store, fence("economics-exhaustion"), {
+      schemaId: "delivery.economics.exhaustion.v1",
+      workItemRef: ref,
+      runId: "supervise",
+      reason: "dispatch.restart-budget-exceeded",
+      restarts,
+      historyRef: `economics/${ref}`,
+      terminal: true,
+      options: ["requeue-fresh-budget", "park-owner-review"],
+      recordedAt,
+    });
+    return outcome.ok
+      ? { ok: true, appended: outcome.appended }
+      : { ok: false, code: outcome.code };
+  },
+  raiseQuestion: ({ ref, restarts, askedAt }) => {
+    const ledger = readBlockerLedger(store);
+    if (!ledger.ok) return { ok: false, code: ledger.error.code };
+    const id = `supervise-exhaustion-${ref}`;
+    if (ledger.value.questions.some((question) => question.id === id)) {
+      return { ok: true, appended: false };
+    }
+    const appended = appendBlockerQuestion(store, {
+      record: {
+        schemaId: "delivery.blocker.question.v1",
+        id,
+        type: "decision-needed",
+        audience: "owner",
+        lane: "supervise",
+        ref,
+        question: `the restart budget for ${ref} is exhausted after ${String(restarts)} restarts; choose the recovery route`,
+        options: ["requeue-fresh-budget", "park-owner-review"],
+        askedAt,
+      },
+      fenceToken: fence("supervise-question"),
+    });
+    return appended.ok
+      ? { ok: true, appended: appended.value.appended }
+      : { ok: false, code: appended.error.code };
+  },
+});
+
 export const HARNESS_NOW_ISO = "2026-11-17T00:00:00.000Z";
 export const HARNESS_REPOSITORY = "github.com/example/supervision-repo";
+
+export type SupervisionRunOptions = {
+  readonly repository?: string;
+  readonly nowMs?: number;
+  readonly runId?: string;
+  readonly admitRestart?: (ref: string) => SupervisionRestartAdmission | undefined;
+  readonly claimRefusal?: (ref: string) => SupervisionClaimRefusal | undefined;
+};
 
 export type SupervisionHarness = {
   readonly directory: string;
@@ -44,16 +125,13 @@ export type SupervisionHarness = {
   readonly nowIso: string;
   readonly seed: SupervisionSeedTarget;
   /** Run one battery pass and return its result; the read counter resets. */
-  readonly battery: (options?: {
-    readonly repository?: string;
-    readonly nowMs?: number;
-  }) => SupervisionBatteryResult;
+  readonly battery: (options?: SupervisionRunOptions) => SupervisionBatteryResult;
   /** The port read passes observed by the most recent battery run. */
   readonly reads: { count: number };
   /** Run the composed `supervise` command in process (captured streams). */
   readonly runCli: (
     argv: readonly string[],
-    options?: { readonly repository?: string; readonly nowMs?: number; readonly runId?: string },
+    options?: SupervisionRunOptions,
   ) => Promise<QueueCliRun>;
   readonly remove: () => void;
 };
@@ -107,6 +185,9 @@ export const createSupervisionHarness = (
         nowIso: new Date(runNowMs).toISOString(),
         read: port,
         write: createStateSupervisionWritePort({ store, newFenceToken: fence }),
+        economicsWrite: createTestEconomicsWrite(store, fence),
+        ...(runOptions.admitRestart === undefined ? {} : { admitRestart: runOptions.admitRestart }),
+        ...(runOptions.claimRefusal === undefined ? {} : { claimRefusal: runOptions.claimRefusal }),
       });
     },
     runCli: async (argv, runOptions = {}) => {
@@ -127,6 +208,13 @@ export const createSupervisionHarness = (
               repository: runOptions.repository ?? repository,
               read: port,
               write: createStateSupervisionWritePort({ store, newFenceToken: fence }),
+              economicsWrite: createTestEconomicsWrite(store, fence),
+              ...(runOptions.admitRestart === undefined
+                ? {}
+                : { admitRestart: runOptions.admitRestart }),
+              ...(runOptions.claimRefusal === undefined
+                ? {}
+                : { claimRefusal: runOptions.claimRefusal }),
               nowMs: () => runNowMs,
               nowIso: () => new Date(runNowMs).toISOString(),
             }),
