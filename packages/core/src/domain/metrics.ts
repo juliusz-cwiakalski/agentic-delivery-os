@@ -363,6 +363,10 @@ const curateEscapedDefects = (
       excluded += 1;
       continue;
     }
+    if (row.citation === "unresolved") {
+      excluded += 1;
+      continue;
+    }
     if (row.observedAt === null || !inWindow(row.observedAt, window)) {
       excluded += 1;
       continue;
@@ -607,7 +611,7 @@ const buildEntries = (input: EntryBuildInput): readonly MetricsMetricEntry[] => 
         ? {}
         : {
             value: total,
-            incidents: curated.incidents.slice(0, METRICS_MAX_INCIDENTS),
+            incidents: curated.incidents,
           }),
     };
     entries.push(base);

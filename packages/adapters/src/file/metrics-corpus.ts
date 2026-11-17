@@ -108,6 +108,30 @@ export const corpusRowsOfDocument = (document: unknown): readonly MetricsCorpusR
 };
 
 /**
+ * A curated citation must resolve: the cited artifact is a readable committed
+ * document and the anchor appears in it. An unresolvable citation is never
+ * counted (F-7, DEC-2); the scan drops it rather than counting an unevidenced
+ * claim.
+ */
+const citesResolvableArtifact = (
+  input: MetricsCorpusReadInput,
+  artifact: string,
+  anchor: string | null,
+): boolean => {
+  if (anchor === null || anchor.trim().length === 0) return false;
+  if (!isCommittedRelative(artifact)) return false;
+  const path = `${input.projectRoot.replace(/\/+$/u, "")}/${artifact}`;
+  let text: string;
+  try {
+    if (!input.fs.exists(path)) return false;
+    text = input.fs.readText(path);
+  } catch {
+    return false;
+  }
+  return text.includes(anchor);
+};
+
+/**
  * Walk the committed change directory and collect the declared corpus rows.
  *
  * A directory that cannot be listed contributes no rows (absence is never a
@@ -148,7 +172,18 @@ export const scanMetricsCorpus = (input: MetricsCorpusReadInput): MetricsCorpusR
       }
       const parsed = parseConfigYaml(text, "project-committed", path);
       if (!parsed.ok) continue;
-      rows.push(...corpusRowsOfDocument(parsed.facts.values));
+      for (const row of corpusRowsOfDocument(parsed.facts.values)) {
+        if (row.kind === "evidence") {
+          rows.push({
+            ...row,
+            citation: citesResolvableArtifact(input, row.path, row.anchor)
+              ? "resolved"
+              : "unresolved",
+          });
+          continue;
+        }
+        rows.push(row);
+      }
     }
   };
   walk(root, 0);

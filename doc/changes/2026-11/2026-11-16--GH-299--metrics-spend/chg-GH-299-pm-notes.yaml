@@ -168,7 +168,7 @@ notes:
     date: "2026-11-17"
   - text: "Plan phase 5 complete (dispatch parity, burn-rate alarms, the classified
       threshold states, the full-report capstone, and the four TC-pinned
-      goldens). Commit 9541774a (see phase-6 note for the hash check).
+      goldens). Commit 9eb96b7f.
       Verification: metrics-report 9/9, metrics-dispatch 6/6, metrics-alarms
       18/18, metrics-burn-rate-config 18/18, metrics-write-discipline 5/5,
       tests/golden/metrics.test.ts 6/6; typecheck, lint, format green;
@@ -180,5 +180,21 @@ notes:
       with spend, breakdown sums, perAgent equality on the fully attributable
       fixture); SC-M2-S6-02 proven by metrics-alarms (exactly one alarm,
       threshold echoed, byte-identical repeat)."
+    type: info
+    date: "2026-11-17"
+  - text: "Plan phase 6 complete (escaped-defects curation, the cross-section
+      absence/damage matrix, row-absent completion of TC-METRICS-013, and the
+      incidents display cap). Commit recorded in the phase-7 note.
+      Verification: metrics-escaped-defects 9/9, metrics-absence 8/8,
+      metrics-store-damage 9/9, metrics-baseline-damage 9/9, metrics-bounds 2/2;
+      typecheck, lint, format green; TMPDIR=$PWD/tmp/tmpdir pnpm check 10018
+      pass / 4 pre-existing skip / 2 fail — the same two load-sensitive
+      dispatch-attempts-ref suites (8-10s under full-suite load, 26/26 in 2.28s
+      in isolation), recorded as green-modulo-environment-flake.
+      Contract refinement inside the phase: a curated evidence row now carries
+      the adapter's citation outcome (`resolved`/`unresolved`) so an
+      unresolvable citation is excluded and disclosed instead of being dropped
+      by the scanner; the fold still enforces anchor, path, window, and
+      attribution."
     type: info
     date: "2026-11-17"

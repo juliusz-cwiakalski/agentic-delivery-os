@@ -452,6 +452,8 @@ export type MetricsEvidenceRow = {
   readonly class: EscapedDefectClass | null;
   readonly observedAt: string | null;
   readonly ref: string | null;
+  /** The citation check: a readable committed artifact containing the anchor. */
+  readonly citation?: "resolved" | "unresolved";
 };
 
 /** One row of the bounded committed corpus scan (NFR-7). */
