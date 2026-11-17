@@ -8,7 +8,7 @@
  * envelope's exit projection is the shared surface's.
  */
 
-import type { SupervisionReadPort } from "@delivery-os/core";
+import type { SupervisionReadPort, SupervisionWritePort } from "@delivery-os/core";
 import { renderSupervisionHuman, runSupervisionBattery } from "@delivery-os/core";
 import type { CommandDefinition } from "../index.js";
 
@@ -17,6 +17,8 @@ export type SuperviseCommandRuntime = {
   /** The invoking checkout's single managed repository key. */
   readonly repository: string;
   readonly read: SupervisionReadPort;
+  /** The delivered park append path; absent keeps the run read-only. */
+  readonly write?: SupervisionWritePort;
   readonly nowMs: () => number;
   readonly nowIso: () => string;
 };
@@ -38,6 +40,7 @@ export const createSuperviseCommandDefinition = (
       nowMs: runtime.nowMs(),
       nowIso: runtime.nowIso(),
       read: runtime.read,
+      ...(runtime.write === undefined ? {} : { write: runtime.write }),
     });
     if (!result.ok) {
       return { error: { kind: result.kind, code: result.code, summary: result.summary } };

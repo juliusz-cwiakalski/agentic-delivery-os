@@ -11,11 +11,21 @@ import { join } from "node:path";
 import { createSuperviseCommandDefinition } from "../../../packages/cli/src/commands/supervise";
 import {
   createStateSupervisionReadPort,
+  createStateSupervisionWritePort,
   runSupervisionBattery,
   type SupervisionBatteryResult,
   type SupervisionReadPort,
 } from "../../../packages/core/src/app/index";
-import type { StateStorePort } from "../../../packages/core/src/contracts/index";
+import type {
+  QueueLanesData,
+  QueueParkCause,
+  QueueParkEvaluation,
+  StateStorePort,
+} from "../../../packages/core/src/contracts/index";
+import { foldLanes, type QueueLaneEconomics } from "../../../packages/core/src/domain/queue-lanes";
+import { createParkRecord } from "../../../packages/core/src/domain/queue-park";
+import { computeQueueSchedule } from "../../../packages/core/src/domain/queue-precedence";
+import { activeLease, makeFacts, REPO_A } from "../queue/schedule/harness";
 import { type QueueCliRun, runProgram } from "../queue-ready/harness";
 import { makeIdentity, openStore } from "../state/harness";
 import type { SupervisionSeedTarget } from "./records";
@@ -96,6 +106,7 @@ export const createSupervisionHarness = (
         nowMs: runNowMs,
         nowIso: new Date(runNowMs).toISOString(),
         read: port,
+        write: createStateSupervisionWritePort({ store, newFenceToken: fence }),
       });
     },
     runCli: async (argv, runOptions = {}) => {
@@ -115,6 +126,7 @@ export const createSupervisionHarness = (
             supervise: createSuperviseCommandDefinition({
               repository: runOptions.repository ?? repository,
               read: port,
+              write: createStateSupervisionWritePort({ store, newFenceToken: fence }),
               nowMs: () => runNowMs,
               nowIso: () => new Date(runNowMs).toISOString(),
             }),
@@ -158,5 +170,68 @@ export const syntheticReadPort = (
     return { ok: true, snapshot: { ...snapshot, repository: request.repository } };
   },
 });
+
+export const LANES_NOW_ISO = "2026-11-17T00:00:00.000Z";
+export const LANES_RECHECK_MS = 60_000;
+
+/**
+ * Fold one lane read exactly as the delivered lanes surface does, carrying the
+ * park evaluation and record so the additive `until` is exercised end to end.
+ */
+export const lanesReadFor = (input: {
+  readonly ref?: string;
+  readonly cause?: QueueParkCause;
+  readonly until?: string;
+  readonly leased?: boolean;
+}): QueueLanesData => {
+  const ref = input.ref ?? "GH-295";
+  const cause = input.cause;
+  const record =
+    cause === undefined
+      ? undefined
+      : createParkRecord({
+          ref,
+          repository: REPO_A,
+          cause,
+          condition:
+            cause === "owner-hold"
+              ? { type: "preemption" }
+              : { type: "provider-window", expiresAt: input.until ?? LANES_NOW_ISO },
+          recheckMs: LANES_RECHECK_MS,
+          evaluatedAt: LANES_NOW_ISO,
+          recordedAt: LANES_NOW_ISO,
+          ...(input.until === undefined ? {} : { until: input.until }),
+        });
+  const evaluation: QueueParkEvaluation | undefined =
+    cause === undefined
+      ? undefined
+      : {
+          state: "active",
+          cause,
+          recheckMs: LANES_RECHECK_MS,
+          lastEvaluatedAt: LANES_NOW_ISO,
+          ...(input.until === undefined ? {} : { expiresAt: input.until }),
+        };
+  const facts = makeFacts(
+    [
+      {
+        ref,
+        repository: REPO_A,
+        priority: 1,
+        ...(evaluation === undefined ? {} : { park: evaluation }),
+      },
+    ],
+    {
+      parkRecords: record === undefined ? [] : [record],
+      leases:
+        input.leased === true ? [activeLease({ repository: REPO_A, holder: "holder-a", ref })] : [],
+    },
+  );
+  const economics: Readonly<Record<string, QueueLaneEconomics>> = {
+    [ref]: { restarts: 1, amplification: 2 },
+  };
+  const schedule = computeQueueSchedule(facts, { next: 20 });
+  return foldLanes({ schedule, economics, degraded: [] });
+};
 
 export { isoAt };

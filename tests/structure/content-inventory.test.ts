@@ -67,7 +67,11 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "supervisorSupported",
   ],
   "core/src/app/watch.ts": ["watchLines"],
-  "core/src/app/supervise.ts": ["createStateSupervisionReadPort", "runSupervisionBattery"],
+  "core/src/app/supervise.ts": [
+    "createStateSupervisionReadPort",
+    "createStateSupervisionWritePort",
+    "runSupervisionBattery",
+  ],
   "core/src/domain/supervise-text.ts": ["renderSupervisionHuman"],
   "core/src/domain/supervise.ts": [
     "boundSupervisionEvidence",

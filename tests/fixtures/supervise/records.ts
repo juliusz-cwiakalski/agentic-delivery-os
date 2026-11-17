@@ -413,3 +413,18 @@ export const SUPERVISION_SEEDED_RECORD_KINDS = [
   OUTBOX_EFFECT_RECORD_KIND,
   ECONOMICS_RESTART_RECORD_KIND,
 ] as const;
+
+/** The seed-02 fixture: a lane parked by the supervised-stall cause. */
+export const stalledAndParked = (
+  target: SupervisionSeedTarget,
+  input: { readonly ref?: string; readonly holder?: string; readonly untilOffsetMs?: number } = {},
+): void => {
+  const ref = input.ref ?? LANE_REF;
+  seedLane(target, ref);
+  seedHeartbeat(target, { ordinal: 1, offsetMs: -(300_000 + 1) });
+  seedLivenessPark(target, {
+    ref,
+    ...(input.holder === undefined ? {} : { holder: input.holder }),
+    ...(input.untilOffsetMs === undefined ? {} : { untilOffsetMs: input.untilOffsetMs }),
+  });
+};

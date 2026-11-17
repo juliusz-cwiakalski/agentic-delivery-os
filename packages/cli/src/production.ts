@@ -77,6 +77,7 @@ import {
   classifyProjectStateLocation,
   classifyVerifyDocument,
   createStateSupervisionReadPort,
+  createStateSupervisionWritePort,
   type DaemonComposition,
   type DispatchArtifactFacts,
   type DispatchLedgerFacts,
@@ -3299,6 +3300,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       supervise: {
         repository: repositoryKey ?? (basename(checkoutRoot).toLowerCase() || "repository"),
         read: createStateSupervisionReadPort(store),
+        write: createStateSupervisionWritePort({ store, newFenceToken }),
         nowMs,
         nowIso,
       },

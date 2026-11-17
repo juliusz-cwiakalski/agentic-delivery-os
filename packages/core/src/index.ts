@@ -283,16 +283,20 @@ export {
 } from "./app/state-scope.js";
 export {
   createStateSupervisionReadPort,
+  createStateSupervisionWritePort,
   runSupervisionBattery,
   type SupervisionBatteryInput,
   type SupervisionBatteryResult,
   type SupervisionClaimFact,
   type SupervisionLaneFact,
   type SupervisionLeaseFact,
+  type SupervisionParkAppend,
+  type SupervisionParkAppendResult,
   type SupervisionReadPort,
   type SupervisionReadRequest,
   type SupervisionReadResult,
   type SupervisionScopeSnapshot,
+  type SupervisionWritePort,
 } from "./app/supervise.js";
 export { type WatchInput, type WatchRead, watchLines } from "./app/watch.js";
 export {

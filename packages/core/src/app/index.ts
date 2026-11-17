@@ -280,16 +280,20 @@ export {
  */
 export {
   createStateSupervisionReadPort,
+  createStateSupervisionWritePort,
   runSupervisionBattery,
   type SupervisionBatteryInput,
   type SupervisionBatteryResult,
   type SupervisionClaimFact,
   type SupervisionLaneFact,
   type SupervisionLeaseFact,
+  type SupervisionParkAppend,
+  type SupervisionParkAppendResult,
   type SupervisionReadPort,
   type SupervisionReadRequest,
   type SupervisionReadResult,
   type SupervisionScopeSnapshot,
+  type SupervisionWritePort,
 } from "./supervise.js";
 export {
   type WatchInput,

@@ -110,11 +110,20 @@ export const foldLanes = (input: QueueLaneFoldInput): QueueLanesData => {
   );
   const daemonByRef = new Map<string, DaemonLaneRecord>();
   for (const lane of input.daemonLanes ?? []) daemonByRef.set(lane.ref, lane);
+  // The active expiry-carrying park per lane (GH-295 DM-3): `until` is present
+  // exactly when such a park stands, equal to the park's recorded re-entry
+  // instant, and absent otherwise — never inferred, never defaulted.
+  const activeParkByRef = new Map(
+    (input.schedule.parks ?? [])
+      .filter((park) => park.recoveryState === "parked")
+      .map((park) => [park.ref, park] as const),
+  );
   const lanes: QueueLane[] = entries.map((entry) => {
     const lease =
       entry.repository === undefined ? undefined : leaseByRepository.get(entry.repository);
     const economics = input.economics[entry.ref];
     const daemon = daemonByRef.get(entry.ref);
+    const activePark = activeParkByRef.get(entry.ref);
     const resolved = laneStateFor(entry, lease !== undefined, economics);
     if (daemon?.state === "failed") {
       resolved.state = "failed";
@@ -139,6 +148,7 @@ export const foldLanes = (input: QueueLaneFoldInput): QueueLanesData => {
       ...(lease === undefined ? {} : { lease: lease.leaseId }),
       ...(lease === undefined ? {} : { leaseScope: lease.scope }),
       ...(lease === undefined ? {} : { leaseHolder: lease.holder }),
+      ...(activePark?.expiresAt === undefined ? {} : { until: activePark.expiresAt }),
       restarts: economics?.restarts ?? null,
       amplification: economics?.amplification ?? null,
       ...(amplificationWarning === undefined ? {} : { amplificationWarning }),

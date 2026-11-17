@@ -35,6 +35,7 @@ import {
   QUEUE_PARK_KEY_PREFIX,
   QUEUE_PARK_RECORD_KIND,
   type QueueLeaseRecord,
+  type QueueParkRecord,
   type StateRecord,
   type StateStorePort,
   SUPERVISION_CLAIM_LIVENESS_BOUND_MS,
@@ -50,10 +51,17 @@ import {
 } from "#contracts";
 import { foldActiveLeases, isLeaseStale } from "../domain/queue-lease.js";
 import {
+  conditionTypeForCause,
+  createParkRecord,
+  defaultParkRecheckMs,
+  latestParkRecords,
+} from "../domain/queue-park.js";
+import {
   boundSupervisionLanes,
   classifySupervision,
   summarizeSupervision,
 } from "../domain/supervise.js";
+import { queueParkRecordKey, readQueueParks } from "./queue.js";
 
 /** One supervision claim's artifact-only facts (no process-derived member). */
 export type SupervisionClaimFact = {
@@ -120,6 +128,26 @@ export type SupervisionBatteryInput = {
   readonly nowMs: number;
   readonly nowIso: string;
   readonly read: SupervisionReadPort;
+  /** The delivered park append path; absent means a read-only run. */
+  readonly write?: SupervisionWritePort;
+};
+
+/** One supervised-stall park the battery asks the delivered park path to land. */
+export type SupervisionParkAppend = {
+  readonly ref: string;
+  readonly repository: string;
+  readonly until: string;
+  readonly recheckMs: number;
+  readonly nowIso: string;
+};
+
+export type SupervisionParkAppendResult =
+  | { readonly ok: true; readonly appended: boolean; readonly record: QueueParkRecord }
+  | { readonly ok: false; readonly code: string };
+
+/** The injected write seam: the one delivered park path the battery appends through. */
+export type SupervisionWritePort = {
+  readonly appendPark: (input: SupervisionParkAppend) => SupervisionParkAppendResult;
 };
 
 export type SupervisionBatteryResult =
@@ -523,6 +551,63 @@ export const createStateSupervisionReadPort = (store: StateStorePort): Supervisi
   },
 });
 
+/* ------------------------------ write seam ------------------------------- */
+
+/**
+ * The one durable write the battery performs: a supervised-stall park appended
+ * through the delivered park record shape, key, and fence discipline. A landed
+ * active `liveness-stall` park refuses a second identical park, so a repeated
+ * run never double-parks. No lease is acquired, released, or created, and no
+ * payload outside the park record is written.
+ */
+export const createStateSupervisionWritePort = (input: {
+  readonly store: StateStorePort;
+  readonly newFenceToken: () => string;
+}): SupervisionWritePort => ({
+  appendPark: (request: SupervisionParkAppend): SupervisionParkAppendResult => {
+    const existing = readQueueParks(input.store);
+    if (!existing.ok) return { ok: false, code: existing.code };
+    const latest = latestParkRecords(existing.records).find((record) => record.ref === request.ref);
+    if (
+      latest !== undefined &&
+      latest.recoveryState === "parked" &&
+      latest.cause === "liveness-stall"
+    ) {
+      return { ok: true, appended: false, record: latest };
+    }
+    const record = createParkRecord({
+      ref: request.ref,
+      repository: request.repository,
+      cause: "liveness-stall",
+      condition: { type: "provider-window", expiresAt: request.until },
+      recheckMs: request.recheckMs,
+      evaluatedAt: request.nowIso,
+      recordedAt: request.nowIso,
+      until: request.until,
+    });
+    const acquired = input.store.acquireFence(input.newFenceToken());
+    if (!acquired.ok) return { ok: false, code: acquired.error.code };
+    const appended = input.store.append(acquired.value.handle, {
+      kind: QUEUE_PARK_RECORD_KIND,
+      recordKey: queueParkRecordKey(request.ref),
+      payload: record as unknown as import("#contracts").StateJsonValue,
+    });
+    const released = input.store.releaseFence(acquired.value.handle);
+    if (!appended.ok) return { ok: false, code: appended.error.code };
+    if (!released.ok) return { ok: false, code: released.error.code };
+    const verified = readQueueParks(input.store);
+    if (!verified.ok) return { ok: false, code: verified.code };
+    const landed = verified.records.some(
+      (candidate) =>
+        candidate.ref === request.ref &&
+        candidate.cause === "liveness-stall" &&
+        candidate.recoveryState === "parked",
+    );
+    if (!landed) return { ok: false, code: "state.write.failed" };
+    return { ok: true, appended: true, record };
+  },
+});
+
 /* -------------------------------- battery -------------------------------- */
 
 const entryForFact = (
@@ -688,6 +773,55 @@ export const runSupervisionBattery = (input: SupervisionBatteryInput): Supervisi
     ...snapshot.leases.map((lease) => leaseClaimEntry(snapshot, lease, input.nowMs)),
   ];
   const actions: SupervisionActionEntry[] = [];
+  let newlyParked = 0;
+  if (input.write !== undefined) {
+    const conditionType = conditionTypeForCause("liveness-stall");
+    const recheckMs = defaultParkRecheckMs(conditionType);
+    for (const fact of bounded.lanes) {
+      const entry = lanes.find((candidate) => candidate.ref === fact.ref);
+      if (entry === undefined || entry.classification !== "stalled") continue;
+      const alreadyParked =
+        fact.activePark !== undefined && fact.activePark.cause === "liveness-stall";
+      if (alreadyParked) continue;
+      const held = liveLeaseFor(fact.ref);
+      // The declared stall recheck horizon: the mapped condition type's
+      // delivered default, never a literal (RE-ENTRY HORIZON).
+      const until = new Date(input.nowMs + recheckMs).toISOString();
+      const appended = input.write.appendPark({
+        ref: fact.ref,
+        repository: fact.repository ?? snapshot.repository,
+        until,
+        recheckMs,
+        nowIso: input.nowIso,
+      });
+      if (!appended.ok) {
+        return {
+          ok: false,
+          kind: "state",
+          code: appended.code,
+          summary: `the supervised-stall park for ${fact.ref} did not land (${appended.code})`,
+        };
+      }
+      if (!appended.appended) continue;
+      newlyParked += 1;
+      actions.push({
+        kind: held === undefined ? "supervised-stall-park" : "safe-boundary-park-intent",
+        ref: fact.ref,
+        evidence: [
+          ...entry.evidence,
+          {
+            code: held === undefined ? "park-applied" : "park-intent-recorded",
+            ref: fact.ref,
+            recordKind: "queue.park",
+            instant: until,
+          },
+          ...(held === undefined
+            ? []
+            : [{ code: "holder-recorded" as const, ref: held.holder, recordKind: "queue.lease" }]),
+        ],
+      });
+    }
+  }
 
   const entries = [
     ...lanes.map((lane) => lane.classification),
@@ -702,7 +836,7 @@ export const runSupervisionBattery = (input: SupervisionBatteryInput): Supervisi
     };
   }
 
-  const parked = bounded.lanes.filter((fact) => fact.activePark !== undefined).length;
+  const parked = bounded.lanes.filter((fact) => fact.activePark !== undefined).length + newlyParked;
   const report: SupervisionReport = {
     schemaVersion: SUPERVISION_SCHEMA_VERSION,
     repo: snapshot.repository,

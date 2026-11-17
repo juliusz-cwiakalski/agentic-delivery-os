@@ -14,7 +14,11 @@ import {
   LANE_REF,
   seedCommitEffect,
   seedDaemonInstance,
+  seedDispatchAttempt,
+  seedHeartbeat,
   seedLane,
+  seedLaneRecord,
+  seedRestart,
 } from "../fixtures/supervise/records";
 
 const withHarness = (body: (harness: SupervisionHarness) => void): void => {
@@ -107,5 +111,107 @@ describe("TC-SUP-012 unknown is truthful and never defaulted", () => {
       ).toBe(result.report.counts.lanes);
       expect(result.report.degraded).toContain("artifact-source-absent");
     });
+  });
+});
+
+describe("TC-SUP-011 prefill and resume cells: any advancing evidence reads progressing", () => {
+  test("a freshly started lane with a flat trail but an age below the bound progresses", async () => {
+    const harness = createSupervisionHarness({ label: "prefill-fresh" });
+    try {
+      seedLane(harness.seed, LANE_REF);
+      seedHeartbeat(harness.seed, { ordinal: 1, offsetMs: -1_000 });
+      const result = harness.battery();
+      expect(result.ok).toBe(true);
+      if (!result.ok) return;
+      expect(result.report.lanes[0]?.classification).toBe("progressing");
+      expect(result.report.actions).toEqual([]);
+    } finally {
+      harness.remove();
+    }
+  });
+
+  test("one advancing artifact of each class defeats the aged heartbeat", async () => {
+    const cells = [
+      {
+        label: "ledger-position",
+        seed: (harness: SupervisionHarness) =>
+          seedLaneRecord(harness.seed, { offsetMs: -60_000, lastCompletedPhase: "5" }),
+        artifact: "daemon-lane",
+      },
+      {
+        label: "commit-record",
+        seed: (harness: SupervisionHarness) =>
+          seedCommitEffect(harness.seed, { offsetMs: -60_000 }),
+        artifact: "effect-record",
+      },
+      {
+        label: "dispatch-attempt",
+        seed: (harness: SupervisionHarness) =>
+          seedDispatchAttempt(harness.seed, { offsetMs: -60_000 }),
+        artifact: "dispatch-attempt",
+      },
+      {
+        label: "restart-record",
+        seed: (harness: SupervisionHarness) => seedRestart(harness.seed, { offsetMs: -60_000 }),
+        artifact: "restart-record",
+      },
+    ] as const;
+    for (const cell of cells) {
+      const harness = createSupervisionHarness({ label: `prefill-${cell.label}` });
+      try {
+        seedLane(harness.seed, LANE_REF);
+        seedHeartbeat(harness.seed, { ordinal: 1, offsetMs: -300_001 });
+        cell.seed(harness);
+        const result = harness.battery();
+        expect(result.ok, cell.label).toBe(true);
+        if (!result.ok) continue;
+        const lane = result.report.lanes[0];
+        expect(lane?.classification, cell.label).toBe("progressing");
+        expect(lane?.evidence.some((item) => item.code === "artifact-progress")).toBe(true);
+        expect(
+          lane?.evidence.some(
+            (item) => item.code === "artifact-progress" && item.recordKind === cell.artifact,
+          ),
+        ).toBe(true);
+        expect(result.report.actions, cell.label).toEqual([]);
+      } finally {
+        harness.remove();
+      }
+    }
+  });
+
+  test("ignoring the artifact half would misfire, so the case is not vacuous", async () => {
+    const harness = createSupervisionHarness({ label: "prefill-mutant" });
+    try {
+      seedLane(harness.seed, LANE_REF);
+      seedHeartbeat(harness.seed, { ordinal: 1, offsetMs: -300_001 });
+      seedCommitEffect(harness.seed, { offsetMs: -60_000 });
+      const result = harness.battery();
+      if (!result.ok) throw new Error("report data missing");
+      const progressing = result.report.lanes[0]?.classification;
+      expect(progressing).toBe("progressing");
+      // The stripped input (the mutant's view: artifacts ignored) reads stalled
+      // and names the ignored artifact class it failed to consider.
+      const { classifySupervision } = await import("../../packages/core/src/domain/index");
+      const mutant = classifySupervision(
+        {
+          repository: harness.repository,
+          ref: LANE_REF,
+          claimKind: "per-ref-lease",
+          identity: LANE_REF,
+          sourcePresent: true,
+          lastHeartbeatAt: new Date(harness.nowMs - 300_001).toISOString(),
+          firstHeartbeatAt: new Date(harness.nowMs - 300_001).toISOString(),
+          artifactClasses: ["effect-record"],
+          artifactInstants: [],
+          artifactAdvancing: false,
+        },
+        harness.nowMs,
+      );
+      expect(mutant.state).toBe("stalled");
+      expect(mutant.evidence.some((item) => item.recordKind === "effect-record")).toBe(true);
+    } finally {
+      harness.remove();
+    }
   });
 });

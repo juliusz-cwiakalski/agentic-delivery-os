@@ -1,0 +1,153 @@
+{
+  "schemaVersion": "delivery.result.v1",
+  "runId": "<run-id>",
+  "exitCode": 0,
+  "timing": {
+    "totalMs": 0
+  },
+  "data": {
+    "schemaVersion": "delivery.supervision.v1",
+    "repo": "github.com/example/supervision-repo",
+    "lanes": [
+      {
+        "ref": "GH-295",
+        "classification": "stalled",
+        "heartbeat": "2026-11-16T23:54:59.999Z",
+        "evidence": [
+          {
+            "code": "artifact-heartbeat-aged",
+            "ref": "GH-295",
+            "recordKind": "daemon.heartbeat",
+            "instant": "2026-11-16T23:54:59.999Z"
+          },
+          {
+            "code": "artifact-flat",
+            "ref": "GH-295",
+            "recordKind": "artifact-trail"
+          },
+          {
+            "code": "observation-span",
+            "ref": "GH-295",
+            "instant": "2026-11-16T23:55:00.000Z"
+          },
+          {
+            "code": "bound-applied",
+            "ref": "GH-295",
+            "recordKind": "watchdog.stall-bound",
+            "instant": "2026-11-16T23:55:00.000Z"
+          }
+        ]
+      },
+      {
+        "ref": "GH-296",
+        "classification": "progressing",
+        "heartbeat": "2026-11-16T23:54:59.999Z",
+        "evidence": [
+          {
+            "code": "artifact-heartbeat-aged",
+            "ref": "GH-296",
+            "recordKind": "daemon.heartbeat",
+            "instant": "2026-11-16T23:54:59.999Z"
+          },
+          {
+            "code": "artifact-progress",
+            "ref": "GH-296",
+            "recordKind": "effect-record",
+            "instant": "2026-11-16T23:59:00.000Z"
+          },
+          {
+            "code": "observation-span",
+            "ref": "GH-296",
+            "instant": "2026-11-16T23:55:00.000Z"
+          },
+          {
+            "code": "bound-applied",
+            "ref": "GH-296",
+            "recordKind": "watchdog.stall-bound",
+            "instant": "2026-11-16T23:55:00.000Z"
+          }
+        ]
+      }
+    ],
+    "supervisors": [
+      {
+        "claimKind": "daemon-instance",
+        "identity": "instance-a",
+        "classification": "stalled",
+        "heartbeat": "2026-11-16T23:54:59.999Z",
+        "evidence": [
+          {
+            "code": "artifact-heartbeat-aged",
+            "recordKind": "daemon.heartbeat",
+            "instant": "2026-11-16T23:54:59.999Z"
+          },
+          {
+            "code": "artifact-flat",
+            "recordKind": "daemon-lane"
+          },
+          {
+            "code": "observation-span",
+            "instant": "2026-11-16T23:55:00.000Z"
+          },
+          {
+            "code": "bound-applied",
+            "recordKind": "watchdog.stall-bound",
+            "instant": "2026-11-16T23:55:00.000Z"
+          },
+          {
+            "code": "claim-not-live",
+            "recordKind": "daemon-instance"
+          }
+        ]
+      }
+    ],
+    "actions": [
+      {
+        "kind": "supervised-stall-park",
+        "ref": "GH-295",
+        "evidence": [
+          {
+            "code": "artifact-heartbeat-aged",
+            "ref": "GH-295",
+            "recordKind": "daemon.heartbeat",
+            "instant": "2026-11-16T23:54:59.999Z"
+          },
+          {
+            "code": "artifact-flat",
+            "ref": "GH-295",
+            "recordKind": "artifact-trail"
+          },
+          {
+            "code": "observation-span",
+            "ref": "GH-295",
+            "instant": "2026-11-16T23:55:00.000Z"
+          },
+          {
+            "code": "bound-applied",
+            "ref": "GH-295",
+            "recordKind": "watchdog.stall-bound",
+            "instant": "2026-11-16T23:55:00.000Z"
+          },
+          {
+            "code": "park-applied",
+            "ref": "GH-295",
+            "recordKind": "queue.park",
+            "instant": "2026-11-17T00:01:00.000Z"
+          }
+        ]
+      }
+    ],
+    "counts": {
+      "lanes": 2,
+      "progressing": 1,
+      "stalled": 1,
+      "unknown": 0,
+      "supervisors": 1,
+      "actions": 1,
+      "parked": 1
+    },
+    "degraded": [],
+    "truncated": false,
+    "observedAt": "2026-11-17T00:00:00.000Z"
+  }
+}
