@@ -1,16 +1,16 @@
 ---
 id: chg-GH-335-test-plan
-status: Proposed
+status: Updated
 created: 2026-11-17T00:00:00Z
-last_updated: 2026-11-17T00:00:00Z
+last_updated: 2026-11-17T22:50:00Z
 owners: [engineering]
 service: "delivery-os harness plane (harness port, opencode adapter, version gate, profile propagation, telemetry extraction)"
 labels: [m3, harness, opencode, telemetry, version-gate, conformance, decision-record]
 version_impact: minor
-summary: "Traceable verification of M3-S1 opencode v2.x harness and telemetry: a supported-version window (2.2.x plus 2.1.x, pinned as data) evaluated once per dispatch before any session exists, refusing out-of-window versions with `harness.version.unsupported` at exit 1 and undeterminable or unparseable versions with the distinct `harness.version.unknown` while the observed version stays the explicit unknown and the delivered `version-probe-failed` warning is preserved; exactly one declared integration mode for dispatch that never falls back at runtime, refuses any other requested mode with `harness.mode.unavailable`, expresses the mode on the harness configuration branch with a `defaults` origin when omitted, refuses an unknown value instead of defaulting, and is governed by an in-change decision record; per-spawn propagation of the resolved per-seat model record map into the spawn descriptor where a record value beats a conflicting ambient parent value, undeclared record names change nothing and never widen the deny-by-default allowlist, an inexpressible required seat refuses with `harness.profile.model-unrepresentable` before any session exists, and the identical contract drives deliver and resume; resume and attach continuing one session identity with the tree root preserved; per-seat telemetry rows inside the unchanged `delivery.harness.telemetry.v1` identity carrying seat identity, the resolved model beside the never-overwritten harness-reported model with divergence disclosed by a closed-vocabulary warning, the five token classes, calls, cost that is null and never zero when missing, and durations that are explicitly absent with a warning and never derived from the capture timestamp; `harness.telemetry.absent` at exit 1 with no zero-valued row kept distinct from the delivered `harness.telemetry.extraction-failed`; the conformance registry gaining the version-window, unknown-version, mode-unavailable and profile-propagation scenarios while the delivered six-scenario classification floor stays unchanged; and refusal hygiene — a closed identity with a stable code, exit projection and non-empty remediation hint, and no session-bearing side effect — proven for every new identity. Every acceptance criterion maps to at least one automated case; the plan runs offline against simulated harness I/O and fixture stores with zero live harness invocations, credentials or network, and carries a refusal/oracle matrix, a version verdict matrix, a telemetry field matrix, a conformance scenario matrix, a binding fixture contract, and a mutant non-vacuity contract."
+summary: "Traceable verification of M3-S1 opencode v2.x harness and telemetry against the observed v2.2.5 surfaces. The version gate: one production probe whose accepted output grammar and normalization are pinned (`opencode v2.2.5` -> `2.2.5`, raw line diagnostic only) and whose 5 s bound is enforced through a declared deadline seam and asserted as such, evaluated once per dispatch before any session exists, refusing out-of-window versions with `harness.version.unsupported` and indeterminate versions with the distinct `harness.version.unknown`. The mode: exactly one declared integration mode drawn from the observed surfaces (`standalone` delivered default, `background-service`, `server-client`), never a runtime fallback, any other requested mode refused with `harness.mode.unavailable`, and a decision record whose chosen mode equals the delivered constant. Propagation: a harness-neutral per-seat binding record mapped onto the surface the harness honours - for opencode the per-invocation `run --agent` / `run --model provider/model#variant` selection, because the installed harness exposes no per-seat model variable family (DEC-8, OQ-2 closed) - plus record-over-ambient precedence and undeclared-name neutrality where a harness consumes variables, and `harness.profile.model-unrepresentable` for a seat the honoured surface cannot express. Telemetry: per-seat rows inside the unchanged `delivery.harness.telemetry.v1` identity, attributed by the session identity the dispatch holds and sourced only from the observed store contract (DM-10: `session_v2`/`session_message` current generation, legacy `session`/`message`/`part` tolerated, no work-item or harness-version column, no per-message token columns, no `part.tool` column), stamping the session record's own normalized version and carrying seat, the resolved model beside the never-overwritten observed model with divergence warned, the five token classes, calls, store-reported cost (a reported zero kept as zero, no cost source null and never zero) and store-timestamp durations absent only when the timestamp pair is missing. Absence: a three-way capture taxonomy (session not held = absence, optional fields absent = degraded with warnings, unreadable store = extraction failure) disclosed inside the delivered capture envelope, the delivered `spend.telemetry-absent` read side untouched, closeout capture non-gating, and no `harness.telemetry.absent` identity (DEC-10). Disclosure: the four new refusal identities carry the declared `detail.harness` envelope member (kind, observedVersion, versionVerdict, mode omitted when unresolved - TDR-0031) and no other failure carries it. Conformance: a four-id additive extension (version-window, version-unknown, mode-unavailable, profile-propagation) executed by an additive scenario executor while the delivered six-id floor constant stays exact. One human-gated live observation, never a CI oracle."
 links:
   change_spec: ./chg-GH-335-spec.md
-  implementation_plan: ./chg-GH-335-plan.yaml   # authored in phase 4; not yet present (GAP-1)
+  implementation_plan: ./chg-GH-335-plan.yaml
   testing_strategy: ../../../../.ai/rules/testing-strategy.md
 ---
 
@@ -18,42 +18,49 @@ links:
 
 ## 1. Scope and Objectives
 
-This change makes a dispatch either run on a compatible harness with the resolved profile or refuse with a typed, actionable identity. Four properties are load-bearing and each is tested independently so weakening one cannot hide behind another.
+This change makes a dispatch either run on a compatible harness with the resolved profile expressed on a surface the harness actually honours, or refuse with a typed, actionable identity — and it makes the telemetry it lands readable from the store that exists rather than from the store the delivered extractor assumed. Five properties are load-bearing and each is tested independently so weakening one cannot hide behind another.
 
-**First, the version gate must decide before a session exists, and it must be honest about what it knows.** The supported window ships as data (`2.2.x` plus `2.1.x` at intake, pinned from the observed `v2.2.5`), is evaluated once per dispatch at harness resolution, and carries one verdict on the instance every consumer reads (AC-F1-1). A version outside the window refuses with `harness.version.unsupported` at exit 1 and starts no session (AC-F1-2, the pinned blueprint scenario TC-M3-HARNESS-002). A version that cannot be probed or parsed refuses with the distinct `harness.version.unknown`, keeps `observedVersion === null`, and never fabricates a version or passes silently (AC-F1-3, DEC-3). The delivered `version-probe-failed` warning keeps its meaning beside the refusal. An absent or unusable window setting degrades to the pinned default and never widens acceptance (AC-F1-4).
+**First, the version gate must decide before a session exists, and it must be honest about what it read.** The supported window ships as pinned data (`2.2.x` plus `2.1.x` at intake), is evaluated once per dispatch at harness resolution — the single production probe point — and carries one verdict on the instance every consumer reads (AC-F1-1). A version outside the window refuses with `harness.version.unsupported` at exit 1 and starts no session (AC-F1-2, the pinned blueprint scenario TC-M3-HARNESS-002). A version that cannot be probed or parsed refuses with the distinct `harness.version.unknown`, keeps `observedVersion === null`, and never fabricates a version or passes silently (AC-F1-3, DEC-3). The probe's accepted output grammar and normalization are pinned from the observed line — `opencode v2.2.5` becomes the bare `2.2.5`, the raw line is diagnostic only, and empty, non-zero, timed-out, multi-line or non-matching output is indeterminate — so a naive substring or partial match cannot widen acceptance and a bare-semver assumption cannot refuse every dispatch (AC-F1-5, DEC-11). NFR-2's 5 s bound is verified through the declared deadline seam the implementation must introduce (§4.4a), not through a wall-clock assertion in CI (GAP-3). No configuration key widens or narrows the window (AC-F1-4).
 
-**Second, the mode is declared, not inferred, and the profile is propagated, not hoped for.** Exactly one integration mode is the delivered default; a dispatch never falls back between modes (AC-F2-1); any other requested mode refuses with `harness.mode.unavailable` naming both values before any spawn (AC-F2-3); the mode lives on the harness configuration branch with a `defaults` origin when omitted and a refusal — never a silent default — for an unknown value (AC-F2-4); and a decision record states the chosen mode among the three declared modes, with the read-only direct-store rationale, and is linked from the change and the harness feature spec (AC-F2-2). Per spawn, the resolved per-seat model record map reaches the spawn descriptor, a record value beats a conflicting ambient parent value, undeclared record names change nothing, and an inexpressible required seat refuses with `harness.profile.model-unrepresentable` before any session exists (AC-F3-1..AC-F3-4). The identical contract drives deliver, resume and attach, which continue one session identity with the tree root preserved (AC-F4-1).
+**Second, the mode is declared, not inferred, and the profile is propagated on the surface the harness honours.** Exactly one integration mode is the delivered default, drawn from the surfaces the installed harness exposes; a dispatch never falls back between modes (AC-F2-1); any other requested mode refuses with `harness.mode.unavailable` naming both values before any spawn (AC-F2-3); the mode lives on the harness configuration branch with a `defaults` origin when omitted and a refusal — never a silent default — for an unknown value (AC-F2-4); and a decision record states the chosen mode, with the read-only direct-store rationale, and is linked from the change and the harness feature spec (AC-F2-2). The installed harness exposes no per-seat model variable family (OQ-2 closed, zero `OC_*` tokens in the binary), so the propagation contract is a harness-neutral binding record mapped per adapter (DEC-8): for opencode the observed per-invocation `run --agent` / `run --model provider/model#variant` selection, and for a variable-consuming harness the declared variable name. Per spawn the binding is carried as data, a record value beats a conflicting ambient parent value, undeclared record names change nothing, and a required seat that cannot be expressed on the honoured surface refuses with `harness.profile.model-unrepresentable` before any session exists (AC-F3-1..AC-F3-4). The identical contract drives deliver, resume and attach, which continue one session identity with the tree root preserved (AC-F4-1).
 
-**Third, telemetry must attribute without fabricating or double counting.** Every landed row keeps the schema identity `delivery.harness.telemetry.v1` and stamps the harness kind and version, the seat identity, the resolved seat model beside the harness-reported model, the five token classes, calls, cost (null when missing), and durations (AC-F5-1). Pre-change rows stay readable and unchanged with additions only (AC-F5-2, DEC-4). A resolved-versus-reported divergence keeps both values and discloses itself with a closed-vocabulary warning, never reconciling by overwrite (AC-F5-3, DEC-5). A duration the store does not expose is explicitly absent with a warning and is never derived from the capture timestamp (AC-F5-4). Seat attribution is an added dimension, not a second reading basis, so session totals stay single-counted (RSK-7). Absence stays `harness.telemetry.absent` at exit 1 with no zero-valued row, and an unreadable store keeps the delivered `harness.telemetry.extraction-failed` and is never re-projected as absence (AC-F6-1, AC-F6-2).
+**Third, telemetry must be sourced from the observed store and attribute without fabricating or double counting.** Every landed row keeps the schema identity `delivery.harness.telemetry.v1`, is attributed by the session identity the dispatch holds, stamps the session record's own normalized version, and carries the seat identity, the resolved seat model beside the harness-reported model, the five token classes, calls, store-reported cost and store-timestamp durations (AC-F5-1, AC-F5-5). Fixtures derive from the recorded contract (DM-10, Appendix C): the current `session_v2`/`session_message` generation and the legacy `session`/`message`/`part` generation, with no work-item column, no separate harness-version column, no per-message token columns, and no `tool` column on the legacy `part` table. Pre-change rows stay readable and unchanged with additions only (AC-F5-2, DEC-4). A resolved-versus-observed model divergence — and the probed-versus-stored version divergence — keeps both values and discloses itself with a closed-vocabulary warning, never reconciling by overwrite (AC-F5-3, DEC-5, DM-9). Durations come from the store's timestamp pairs and are explicitly absent with a warning only when the pair is missing; they are never derived from the capture timestamp (AC-F5-4, DM-6). A reported zero cost is recorded as the reported zero — the store contains free models with non-zero tokens — while a store with no cost source yields null: zero is never a substitute for absence and absence is never a substitute for a reported zero (NFR-6). Seat attribution is an added dimension, not a second reading basis, so session totals stay single-counted (RSK-7).
 
-**Fourth, conformance and refusal hygiene must make regression visible, and the whole battery must stay offline.** The registry keeps exactly the two shipped harnesses and their six-scenario classification floor (AC-F7-1), gains the version-window, unknown-version, mode-unavailable and profile-propagation scenarios as data on the same registry, and fails a harness or an identity that is missing one while naming both (AC-F7-2). It runs with zero live harness invocations (AC-F7-3). Every refusal carries a closed identity with a stable code, a projection-derived exit and a non-empty remediation hint, and leaves no session-bearing side effect (AC-N1-1). Every new test runs offline against simulated harness I/O and fixture stores with no network, no credentials and no live harness store (NFR-10).
+**Fourth, absence must stay classified inside the delivered envelopes, not invented as a new surface.** The capture envelope distinguishes three outcomes: a session the readable store does not hold is an absence, a held session whose optional fields are absent is degraded with warnings, and a held session with no observable usage fact is a failed-session entry — while an unreadable store keeps the delivered `harness.telemetry.extraction-failed` and is never re-projected as absence (AC-F6-2, DEC-9). The work-item read side keeps the delivered `spend.telemetry-absent` meaning untouched, closeout capture stays non-gating, no command, verb or exit projection is added, and **no `harness.telemetry.absent` identity exists** (AC-F6-1, DEC-10). A zero-row capture for a session the dispatch ran and the store can read is a failure, never a clean pass (AC-F5-1).
+
+**Fifth, conformance, disclosure and offline hygiene must make regression visible.** The registry keeps exactly the two shipped harnesses and their six-scenario classification floor (AC-F7-1), gains a four-id extension — version-window, version-unknown, mode-unavailable, profile-propagation — as data on the same registry, executed by an additive scenario executor, and fails a harness or an identity that is missing one while naming both (AC-F7-2). It runs with zero live harness invocations (AC-F7-3). Every refusal carries a closed identity with a stable code, a projection-derived exit and a non-empty remediation hint, discloses the harness facts through the declared `detail.harness` envelope member and on no other failure (TDR-0031), and leaves no session-bearing side effect; the single bounded probe is the declared exception, at most one per dispatch, completed and reaped before the verdict (AC-N1-1). Every new test runs offline against simulated harness I/O and fixture stores with no network, no credentials and no live harness store; the one permitted live observation is human-gated, outside `bun test`, and never an oracle (AC-F5-6, NFR-10).
 
 This is a design and verification map, not an execution claim: no suites were run while authoring it.
 
 ### 1.1 In Scope
 
-- Supported-version window as data: the pinned `2.2.x` + `2.1.x` default, the evaluation verdict (inside, outside, indeterminate) carried on the instance, and the one-evaluation-per-dispatch rule (F-1, DM-1, DM-2, AC-F1-1, AC-F1-4).
+- Supported-version window as pinned data: no configuration key widens or narrows it, the three value verdicts (inside, outside, indeterminate) carried on the instance, and the one-evaluation-per-dispatch rule (F-1, DM-1, DM-2, AC-F1-1, AC-F1-4).
 - Out-of-window refusal `harness.version.unsupported` at exit 1 with remediation naming the supported lines and zero spawned sessions (F-1, AC-F1-2, NFR-1, pinned TC-M3-HARNESS-002).
 - Indeterminate refusal `harness.version.unknown` as a distinct identity, explicit-unknown observation, preserved `version-probe-failed` warning, and zero fabrication (F-1, AC-F1-3, NFR-6, DEC-3).
-- Version-probe bound: one bounded shell-free invocation per dispatch within 5 s, no retry loop, failure distinguishable from out-of-window (NFR-2, RSK-8).
-- Integration-mode declaration: exactly one delivered default, no runtime fallback, `defaults` origin when omitted, refusal for an unknown configured value, and the closed requested-mode vocabulary (F-2, DM-3, AC-F2-1, AC-F2-4, DEC-2).
+- Probe output grammar and normalization: product token, optional `v`, three-part semantic version, newline-terminated; `opencode v2.2.5` → `2.2.5`; raw line diagnostic only; empty, non-zero, timed-out, multi-line and non-matching output indeterminate; never a substring or partial match (F-1, AC-F1-5, DM-2, DEC-11).
+- Probe bound: one bounded shell-free invocation per dispatch, the deadline carried on the declared probe seam and mapped to the runner's timeout, a `timed-out` outcome yielding an indeterminate verdict, no retry loop (NFR-2, RSK-8, §4.4a).
+- Integration-mode declaration drawn from the observed surfaces (`standalone` delivered default with the per-invocation private server, `background-service` via `service start|restart|status|stop`, `server-client` via `--server`/`api`): exactly one delivered default, no runtime fallback, `defaults` origin when omitted, refusal for an unknown configured value (F-2, DM-3, AC-F2-1, AC-F2-4, DEC-2).
 - `harness.mode.unavailable` refusal naming the requested and available mode before any spawn (F-2, AC-F2-3, NFR-1).
-- Integration-mode decision record and adapters-contract decision record authored in-change, with the chosen mode matching the delivered default constant and the read-only direct-store rationale recorded (F-2, G-8, AC-F2-2, DEC-7).
-- Per-spawn propagation of the resolved per-seat model record map into the spawn descriptor, bound per declared model variable name or seat `envName` (F-3, DM-4, AC-F3-1).
-- Record precedence over a conflicting ambient parent value, undeclared-record neutrality, and preservation of the deny-by-default posture (F-3, NFR-9, AC-F3-2, AC-F3-3, RSK-6).
-- `harness.profile.model-unrepresentable` refusal naming the seat, before any session exists, with no partial profile (F-3, AC-F3-4, DEC-6).
+- Integration-mode and adapters-contract decision records authored in-change, with the chosen mode equal to the delivered default constant and the read-only direct-store rationale recorded (F-2, G-8, AC-F2-2, DEC-7).
+- Per-spawn propagation of the resolved per-seat binding record as data, mapped onto the surface the harness honours: the opencode per-invocation `--agent` / `--model provider/model#variant` selection, and the declared variable name for a variable-consuming harness (F-3, DM-4, AC-F3-1, DEC-8).
+- Record precedence over a conflicting ambient parent value, undeclared-record neutrality, no `OC_*` per-seat variable injected into the opencode spawn, and preservation of the deny-by-default posture (F-3, NFR-9, AC-F3-2, AC-F3-3, RSK-6).
+- `harness.profile.model-unrepresentable` refusal naming the seat before any session exists, for a value the honoured surface cannot express or a model the harness does not recognise (F-3, AC-F3-4, DEC-6).
 - Per-spawn (not process-global) propagation semantics across consecutive spawns with different resolved profiles (F-3, AC-F3-1).
 - Identical propagation contract for spawn, deliver and resume; resume/attach identity continuation with the tree root preserved and delivered `harness.session.unknown` semantics retained (F-4, AC-F4-1).
-- Per-seat telemetry rows: schema identity unchanged, harness kind and version stamped, seat identity, resolved model beside never-overwritten reported model, five token classes, calls, cost null-when-missing, durations or explicit absence (F-5, DM-5, DM-6, AC-F5-1, AC-F5-3, AC-F5-4).
+- Per-seat telemetry rows sourced only from the observed store contract: schema identity unchanged, the session record's own normalized version, seat identity, resolved model beside never-overwritten observed model, five token classes, calls, store-reported cost with the reported-zero rule, store-timestamp durations or explicit absence (F-5, DM-5, DM-6, DM-9, DM-10, AC-F5-1, AC-F5-3, AC-F5-4).
+- Session-identity attribution: the run's recorded session identity is the key, the tree comes from parent links, no work-item column is assumed, no store-wide scan, and no recorded session identity yields a classified absence (F-5, DM-8, AC-F5-5).
 - Additive-only schema growth with pre-change rows readable unchanged and no new major version (F-5, AC-F5-2, DEC-4).
-- Single totals basis: seat attribution adds a dimension without double counting per-step rows against the session baseline (RSK-7).
-- Absence/failure taxonomy: `harness.telemetry.absent` at exit 1 with no zero-valued row beside the delivered `harness.telemetry.extraction-failed` (F-6, AC-F6-1, AC-F6-2).
-- Telemetry read discipline unchanged: read-only open, query-only pragma before the first read, bounded indexed queries, caps 64 sessions / 16 agents / 16 models / 24 tools per agent with explicit truncation marks (NFR-3).
-- Conformance registry extension: the five new scenarios registered per harness, the delivered six-scenario floor unchanged, and violations naming the harness and the scenario or identity (F-7, DM-7, AC-F7-1, AC-F7-2, AC-F7-3).
-- Refusal hygiene: the five new identities declared once with stable codes, projection-derived exits, non-empty remediation hints, additive `HARNESS_FAILURE_CODES` growth, and zero session-bearing side effects (AC-N1-1, RSK-5).
+- Store-generation tolerance across the observed current (`session_v2`/`session_message`/`session_part`) and legacy (`session`/`message`/`part`) generations, including the legacy `part` table's absent `tool` column and the delivered extractor's absent work-item and harness-version columns (NFR-11, DM-10, AC-F5-1, AC-F5-5, RSK-4, RSK-9).
+- Single totals basis: seat attribution adds a dimension without double counting per-step rows against the session baseline, and a reported zero cost with non-zero tokens is not collapsed to absence (RSK-7, NFR-6).
+- Three-way capture taxonomy inside the delivered capture envelope — absence (session not held), degradation (optional fields absent, warnings), extraction failure (store unreadable) — with the delivered `spend.telemetry-absent` read side untouched and closeout capture non-gating (F-6, AC-F6-1, AC-F6-2, DEC-9, DEC-10).
+- Telemetry read discipline: read-only open, query-only pragma before the first read, bounded indexed queries, bounded per-message metadata reads scoped by session and message type, no content projection, caps 64 sessions / 16 agents / 16 models / 24 tools per agent where a populated tool source exists (NFR-3, NFR-5).
+- The declared `detail.harness` failure-envelope member (kind, observedVersion, versionVerdict, mode omitted when unresolved) on exactly the four new pre-session refusals and on no other failure, with the closed-member type pin, runtime validator, key-set fixture and documented member set moved two-sidedly (TDR-0031, §8.2 disclosure row, §10).
+- Conformance registry extension: the four-id additive extension executed by an additive scenario executor, the delivered six-id floor constant unchanged, and violations naming the harness and the scenario or identity (F-7, DM-7, AC-F7-1, AC-F7-2, AC-F7-3).
+- Refusal hygiene: the four new identities declared once with stable codes, projection-derived exits, non-empty remediation hints, additive `HARNESS_FAILURE_CODES` growth, no telemetry-absence identity, and zero session-bearing side effects (AC-N1-1, RSK-5, DEC-10).
+- One human-gated live observation of rows captured from the installed in-window harness, recorded in the change folder, outside `bun test`, never an oracle (AC-F5-6, AC-F3-1 DoD clause, NFR-10, RSK-1).
 - Bounds, privacy, determinism, non-interference and offline hermeticity across every new path (NFR-4, NFR-5, NFR-7, NFR-8, NFR-10).
-- Documentation reconciliation: harness feature spec, non-functional harness rows, decision index and planning status markers reflecting the delivered window, mode, propagation and seat telemetry (G-8, AC-F2-2).
-- Test evidence for the pinned blueprint scenarios TC-M3-HARNESS-001 and TC-M3-HARNESS-002 and every acceptance criterion, offline (spec §17 traceability note, NFR-10).
+- Documentation reconciliation: harness feature spec, non-functional harness rows, state/telemetry/spend/result/dispatch pages, decision index and planning status markers reflecting the delivered window, mode, propagation and seat telemetry (G-8, AC-F2-2).
+- Test evidence for the pinned blueprint scenarios TC-M3-HARNESS-001 and TC-M3-HARNESS-002 and every acceptance criterion that is provable offline (spec §17 traceability note, NFR-10).
 
 ### 1.2 Out of Scope & Known Gaps
 
@@ -64,30 +71,34 @@ This is a design and verification map, not an execution claim: no suites were ru
 - [OUT] Harness store writes of any kind, including harness-side configuration mutation to force model selection. Asserted as a zero-write posture, never exercised as a write path (NG-5, NFR-3).
 - [OUT] Provider profile resolution, model selection, pacing, nomination, or cost normalization: consumed as input and seeded as fixtures (NG-6).
 - [OUT] Tracker adapters, the parity/trap-catalog suite, and multi-tracker composition (NG-7); background-service supervision, daemonization, or harness health management (NG-8); a new CLI command surface (NG-9).
-- [OUT] Real harness stores, live sessions, provider calls, network I/O, and real user state directories on any test path (NFR-10). See §6 for the single documented, gated, non-CI probe and why it is not a test.
-- [GAP-1 — implementation-plan mapping — PENDING] `chg-GH-335-plan.yaml` is authored in `delivery_planning` (phase 4) and does not exist yet. It must map `TC-HARNESS-001..041` onto phases without reshaping any TC's behavior, oracle, identity, exit, bound, or AC/NFR mapping, and it must resolve OQ-4 and OQ-5 below. Any later plan that changes a pinned contract reopens this test plan.
-- [GAP-2 — delivery-bound, non-blocking: the live-harness half of AC-F3-1] Offline tests prove the resolved per-seat model record map reaches the spawn descriptor as data and that a simulated harness double reports back exactly what it received. They cannot prove that a real opencode v2.x reads that variable family (RSK-1, OQ-2). The in-change spike is the named evidence for that half; an optional documented, gated, non-CI probe (§6) may record it. AC-F3-1 is marked Covered-offline with this named boundary, never as fully proven.
-- [GAP-3 — delivery-bound, non-blocking: NFR-2's 5 s wall-clock bound is runner-dependent] The CI oracle is **bounded work** — exactly one shell-free probe invocation per dispatch, no retry loop, a timeout that yields `indeterminate` rather than a hang — plus a reference measurement recorded in §10. The wall-clock half is never reported as a passing CI threshold.
-- [GAP-4 — delivery-bound, non-blocking: AC-F2-2 is a human-gated record] A test can assert that both decision records exist, follow the per-type identifier convention, state the chosen mode among exactly the three declared modes, carry the read-only direct-store rationale, and are linked from the harness feature spec. It cannot assert that the decision is *correct* or accepted; the records stay `Proposed` until a human decides (DEC-7, spec §12).
-- [GAP-5 — delivery-bound, non-blocking: new field and reason-constant names] The spec pins the *obligations* (seat identity, resolved model, observed model, durations, a divergence warning, an explicit duration absence) but not the exact JSON field names or the exact new closed-vocabulary reason strings. Every assertion goes through declared contract constants pinned once in the contract suite (TC-HARNESS-019, TC-HARNESS-035); no test asserts an inline string literal.
-- [GAP-6 — delivery-bound, non-blocking: 2.1.x store shape is unobserved at intake] The window includes a minor line whose store layout was not observed (RSK-4). Its fixture is a declared shape derived from the `2.2.5` shape with named removals; the degrade-versus-failed split is asserted through the mandatory-field set declared by OQ-8's default, not against an unobserved real store.
+- [OUT] A `harness.telemetry.absent` identity, a per-session telemetry request surface, or any new telemetry exit projection: the spec pins four new identities, not five, and classifies absence inside the delivered envelopes (DEC-10, NG-9). Asserted as an explicit absence-of-identity check, never implemented.
+- [OUT] Real harness stores, live sessions, provider calls, network I/O, and real user state directories on any test path (NFR-10). See §6 for the one human-gated live observation and why it is not a test.
+- [GAP-1 — plan mapping must be re-cut — PENDING] `chg-GH-335-plan.yaml` exists and maps `TC-HARNESS-001..041` onto eight phases. This revision adds four TCs, retargets or reshapes thirty-two, and changes two contract seams (the probe deadline seam, the conformance executor and scenario-id union split), so the plan must re-cut the TC→phase map and the affected scope files without reshaping any TC's behaviour, oracle, identity, exit, bound or AC/NFR mapping. See §11 and §7; owners `@plan-writer`.
+- [GAP-2 — human-gated, non-blocking: the live half of propagation and of telemetry is AC-F5-6 plus a Definition-of-Done clause, never a CI oracle] Offline tests prove the resolved per-seat binding reaches the honoured surface (the recorded invocation arguments for opencode) and that a simulated harness double reports back the model it was given. They cannot prove that a real harness runs it. AC-F5-6 and the spec's DoD clause own that half: a human-gated observation recorded in the change folder, run outside `bun test`, never consulted by any TC (RSK-1, NFR-10). AC-F3-1 is covered offline **and** bounded by that named human gate; it is never claimed as proven by a fixture.
+- [GAP-3 — non-blocking: NFR-2's 5 s wall-clock bound is not a CI threshold, but its enforcement seam is now pinned and tested] §4.4a pins the probe seam the implementation must introduce (a deadline argument plus an explicit `timed-out` outcome). CI asserts: exactly one invocation, `deadlineMs === HARNESS_VERSION_PROBE_TIMEOUT_MS`, the production probe hands that bound to the child-process runner, a `timed-out` outcome yields `indeterminate` → `harness.version.unknown`, and no retry loop. Wall-clock duration remains a reference measurement recorded in §10, never reported as a passing CI threshold.
+- [GAP-4 — human-gated, non-blocking: AC-F2-2's acceptance half] A test can assert that the records exist, follow the per-type identifier convention, carry the R2 body, state a chosen mode equal to the delivered constant and drawn from the declared vocabulary, carry the read-only direct-store rationale, and are indexed. It cannot assert that the decision is *correct* or accepted; the records stay `Proposed` until a human decides (DEC-7, TDR-0031, spec §12).
+- [GAP-5 — non-blocking: exact field, reason and vocabulary constant names] The spec pins the *obligations* (seat identity, resolved model, observed model, durations, a model-divergence warning, a version-divergence warning, an explicit duration absence, an absence reason) but not the exact JSON field names, the exact new closed-vocabulary reason strings, the mode identifiers or the verdict identifiers. Every assertion goes through declared contract constants pinned once in the contract suite (TC-HARNESS-019, TC-HARNESS-035); no test asserts an inline string literal beyond the identities the spec pins verbatim.
+- [GAP-6 — non-blocking: the in-window 2.1.x store generation is unobserved] The window includes the `2.1.x` line; its store layout was not observed, and the store evidence shows the legacy `session` generation's newest row predating the v2.2.5 cohort. Generation tolerance is therefore asserted for the two *observed* generations (current and legacy) with named omissions, not against a claimed 2.1.x shape (RSK-4, RSK-9, NFR-11).
+- [GAP-7 — non-blocking: the probe grammar is observed on one harness line] The accepted grammar and normalization are pinned from `opencode v2.2.5` only. A 2.1.x line whose output deviates surfaces as an indeterminate version and therefore as an explicit `harness.version.unknown` refusal — a visible, actionable outcome rather than a silent pass. Re-observation is required on each harness minor release (spec §22, RSK-2).
 
 ## 2. References
 
-- **Change specification**: [chg-GH-335-spec.md](./chg-GH-335-spec.md) — 23 ACs (AC-F1-1..4, AC-F2-1..4, AC-F3-1..4, AC-F4-1, AC-F5-1..4, AC-F6-1..2, AC-F7-1..3, AC-N1-1), F-1..F-7, DM-1..DM-7, NFR-1..NFR-10, DEC-1..DEC-7, RSK-1..RSK-8, OQ-1..OQ-3, §17 traceability note, Appendix B (pinned scenarios verbatim).
-- **Ticket**: GH-335 — M3-S1: opencode v2.x harness and telemetry (https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/335). Ticket AC decomposes per spec §17: dispatch runs with the resolved profile (AC-F2-1, AC-F3-1..4, AC-F4-1), telemetry rows land with schema version and per-seat models (AC-F5-1, AC-F5-3, AC-F5-4), unsupported versions refuse with a typed error (AC-F1-2, AC-F1-3, AC-N1-1), integration-mode decision recorded (AC-F2-2).
-- **PM record**: [chg-GH-335-pm-notes.yaml](./chg-GH-335-pm-notes.yaml) — scope source, the delivered-seam cross-check, gaps G1–G5, the GH-342 Q-06 default, observed harness `v2.2.5`, and the gate-command convention (`TMPDIR=$PWD/tmp/tmpdir`).
+- **Change specification**: [chg-GH-335-spec.md](./chg-GH-335-spec.md) — 26 ACs (AC-F1-1..5, AC-F2-1..4, AC-F3-1..4, AC-F4-1, AC-F5-1..6, AC-F6-1..2, AC-F7-1..3, AC-N1-1), F-1..F-7, DM-1..DM-10, NFR-1..NFR-11, DEC-1..DEC-12, RSK-1..RSK-10, OQ-1..OQ-3 (OQ-2 and OQ-3 closed), §17.2 Definition of Done, Appendix B (pinned scenarios verbatim), Appendix C (observation evidence: the v2.2.5 store generations, the `opencode v2.2.5` output, the zero `OC_*` tokens, and the available mode surfaces).
+- **Decision record**: [TDR-0031](../../../decisions/TDR-0031-harness-dispatch-outcome-envelope-detail.md) — the additively declared `detail.harness` failure-envelope member: four members (`kind`, `observedVersion`, `versionVerdict`, `mode` omitted when unresolved), present only on the four new pre-session harness refusals, with the one-commit file set, the identity→member mapping, and the three distinct absence rules.
+- **Ticket**: GH-335 — M3-S1: opencode v2.x harness and telemetry (https://github.com/juliusz-cwiakalski/agentic-delivery-os/issues/335). Ticket AC decomposes per spec §17.1: dispatch runs with the resolved profile (AC-F2-1, AC-F3-1..AC-F3-4, AC-F4-1), telemetry rows land with the session's schema identity and per-seat models (AC-F5-1, AC-F5-3, AC-F5-4, AC-F5-5), unsupported versions refuse with a typed error (AC-F1-2, AC-F1-3, AC-F1-5, AC-N1-1), integration-mode decision recorded (AC-F2-2); EC-1 additionally owes AC-F5-6 (live rows).
+- **PM record**: [chg-GH-335-pm-notes.yaml](./chg-GH-335-pm-notes.yaml) — scope source, the delivered-seam cross-check, gaps G1–G7, the GH-342 Q-06 default, observed harness `v2.2.5`, and the gate-command convention (`TMPDIR=$PWD/tmp/tmpdir`).
+- **Readiness record**: [readiness-review/readiness-iter-1.md](./readiness-review/readiness-iter-1.md) — the NOT_READY verdict this revision answers (findings 1, 2, 7, 8, 11, 13, 15, 16 and the test-plan follow-ups).
 - **Milestone pack (planning truth)**: [m3/test-scenarios.md](../../../planning/oss-tooling/milestones/m3/test-scenarios.md) — TC-M3-HARNESS-001 and TC-M3-HARNESS-002 verbatim; [m3/README.md](../../../planning/oss-tooling/milestones/m3/README.md) EC-1; [m3/contracts.md](../../../planning/oss-tooling/milestones/m3/contracts.md) (extended harness port and the three declared typed refusals); [m3/architecture.md](../../../planning/oss-tooling/milestones/m3/architecture.md) (boundary invariants); [m3/open-questions.md](../../../planning/oss-tooling/milestones/m3/open-questions.md) (OQ-M3-01, OQ-M3-02, OQ-M3-07).
-- **Implementation plan**: `./chg-GH-335-plan.yaml` — authored in phase 4; not yet present (GAP-1).
-- **Testing strategy**: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — layers, module→test mapping, `bun:test`, invariant-test authoring rules, aggregate `pnpm check`, fixture conventions.
+- **Implementation plan**: [./chg-GH-335-plan.yaml](./chg-GH-335-plan.yaml) — eight phases; its TC→phase map must be re-cut for the four added and six retargeted TCs (GAP-1, §11).
+- **Testing strategy**: [.ai/rules/testing-strategy.md](../../../../.ai/rules/testing-strategy.md) — layers, module→test mapping, `bun:test`, invariant-test authoring rules (assert the meaning, not a growing count), aggregate `pnpm check`, fixture conventions.
 - **TypeScript rules**: [.ai/rules/typescript.md](../../../../.ai/rules/typescript.md) — strict typing, purity, ports and adapters, the error contract, `bun:test` authoring.
-- **Current system truth — harness seam**: [feature-harness-adapters.md](../../../spec/features/feature-harness-adapters.md) — `HarnessInstance` (`observedVersion: string | null`, `versionWarning`), `HarnessSessionPort`, opencode streaming JSONL adapter, deny-by-default spawn environment with the optional profile record map, read-only bounded extraction into `delivery.harness.telemetry.v1`, closeout capture, the conformance registry with two registrations and the six-scenario floor.
+- **Current system truth — harness seam**: [feature-harness-adapters.md](../../../spec/features/feature-harness-adapters.md) — `HarnessInstance` (`observedVersion: string | null`, `versionWarning`), `HarnessSessionPort` (spawn, deliver, resume, collect, classify, liveness, read-only session listing; steering rides `deliver`/`resume`, it is not a port member), opencode streaming JSONL adapter, deny-by-default spawn environment with the optional profile record map, read-only bounded extraction into `delivery.harness.telemetry.v1`, closeout capture, the conformance registry with two registrations and the six-scenario floor.
 - **Current system truth — NFRs**: [nonfunctional.md](../../../spec/nonfunctional.md) harness rows — read budget and query-only pragma, machine payload ≤ 65 536 UTF-8 bytes, human disclosure ≤ 4 096 bytes / 24 lines, byte-identical determinism, conformance-registration invariants, deny-by-default spawn environment.
-- **Current system truth — telemetry v2 and spend**: [feature-telemetry-v2.md](../../../spec/features/feature-telemetry-v2.md), [feature-spend.md](../../../spec/features/feature-spend.md) — record families, attribution dimensions, reading bases, `spend.telemetry-absent` meaning (untouched here), bounded read discipline.
-- **Current system truth — result contract and state**: [feature-result-contract.md](../../../spec/features/feature-result-contract.md) (`delivery.result.v1`, error table, projection-derived exit, redaction chokepoint), [feature-state-layer.md](../../../spec/features/feature-state-layer.md) (fenced verified appends, `state.*` identities), [feature-config-layer.md](../../../spec/features/feature-config-layer.md) (typed `harness` branch and `defaults` origins).
-- **Contracts and seams consumed**: `packages/core/src/contracts/harness.ts` (`HARNESS_KINDS`, `HARNESS_FAILURE_CODES` — nine delivered codes, `HARNESS_VERSION_WARNINGS` = `["version-probe-failed"]`, `HarnessInstance`, `HarnessExecutionEnvironmentDescriptor`, the spawn/resume inputs, `HarnessSessionHandle`), `packages/core/src/contracts/harness-telemetry.ts` (`HARNESS_TELEMETRY_SCHEMA_ID`, `HARNESS_TOKEN_CLASSES`, `HARNESS_WARNING_REASONS`, `HarnessTelemetryRecord`, `HarnessTruncation`), `packages/core/src/contracts/error-table.ts` (rows with `code`, `domainKind`, `category`, `retryable`, `consequence`, `remediationHint`, `projectionClass`, `summary`), `packages/core/src/contracts/result.ts` (`RESULT_SCHEMA_VERSION`, `error.code`, `error.remediationHint`), `packages/cli/src/projection.ts` (`success → 0`, `user-validation → 1`, `platform-provider → 2`, `attention → 1`), `packages/core/src/domain/harness-registry.ts` (injected version probe, `null` + `version-probe-failed` on failure), `packages/core/src/domain/harness-spawn-env.ts` (deny-by-default builder), `packages/core/src/provider/profile-env-record.ts` (`envRecordNameForSeat`, `buildProfileEnvRecord`), `packages/adapters/src/harness/opencode.ts`, `telemetry-opencode.ts`, `telemetry-session-totals.ts`, `packages/adapters/src/host/index.ts`.
-- **Conformance testkit**: [packages/testkit/src/conformance/harness.ts](../../../../packages/testkit/src/conformance/harness.ts) — `HARNESS_CONFORMANCE_SCENARIOS` (the six ids), `HarnessConformanceRegistration`, `HARNESS_CONFORMANCE_REGISTRY` (exactly `opencode` and `claude-code`), `harnessConformanceViolations`.
-- **Existing evidence to extend (not replace)**: `tests/structure/{harness-contract,harness-stream-contract,harness-neutrality,harness-environment-marker,harness-review-deferrals,error-table,conformance-coverage,content-inventory}.test.ts`; `tests/behaviour/{harness-spawn-env,harness-spawn-credential,harness-default-path,harness-config,harness-opencode-session,harness-opencode-stream,harness-opencode-resume-stream,harness-host-stream,harness-stream-hygiene,harness-telemetry-opencode,harness-telemetry-shape,harness-telemetry-drift,harness-telemetry-claude,harness-telemetry-claude-budget,harness-telemetry-opencode-orphan-scope,harness-closeout-capture,harness-closeout-idempotency,harness-closeout-nongating,harness-output-bounds,dispatch-harness-acquisition,dispatch-harness-default-spawn}.test.ts`; `tests/conformance/{harness-classification,harness-liveness}.test.ts`; `tests/checks/{harness-mutants,harness-determinism,harness-ci-parity,error-table-sync,exit-code-literals,decision-record,fixture-privacy}.test.ts`; `tests/fixtures/harness/{spawn-env,harness-io,opencode-store/build,scenarios/classification,scenarios/stream,stream/README}.ts`; `tests/fixtures/harness/stream/opencode-v2.2.5{,-tool-error,-stream-error,-tokens}.jsonl`.
+- **Current system truth — telemetry v2, spend, state**: [feature-telemetry-v2.md](../../../spec/features/feature-telemetry-v2.md), [feature-spend.md](../../../spec/features/feature-spend.md) (`spend.telemetry-absent` meaning, untouched here), [feature-state-layer.md](../../../spec/features/feature-state-layer.md) (the `harness.telemetry` payload allowlist and idempotency key — the seat/duration fields must survive `payloadFor`).
+- **Current system truth — result contract, dispatch, config**: [feature-result-contract.md](../../../spec/features/feature-result-contract.md) (`delivery.result.v1`, the closed `detail` slot, the six-field `error`, the scripted `{error, runId}` projection, redaction chokepoint), [feature-dispatch-engine.md](../../../spec/features/feature-dispatch-engine.md) (pre-session refusal vs attempt-stage shape), [feature-config-layer.md](../../../spec/features/feature-config-layer.md) (typed `harness` branch and `defaults` origins).
+- **Contracts and seams consumed**: `packages/core/src/contracts/harness.ts` (`HARNESS_KINDS`, `HARNESS_FAILURE_CODES` — nine delivered codes, `HARNESS_VERSION_WARNINGS` = `["version-probe-failed"]`, `HarnessInstance`, `HarnessVersionProbe`, `HarnessExecutionEnvironmentDescriptor`, `HarnessSpawnInput`/`HarnessResumeInput`), `packages/core/src/contracts/harness-telemetry.ts` (`HARNESS_TELEMETRY_SCHEMA_ID`, `HARNESS_TOKEN_CLASSES`, `HARNESS_WARNING_REASONS`, `HarnessTelemetryRecord`, `HarnessTelemetryCapture`, `HarnessFailedSession`, `HarnessTruncation`), `packages/core/src/contracts/result.ts` (`RESULT_SCHEMA_VERSION`, `CommandResultDetail` — closed at `holder | suiteBreadth`, the slot TDR-0031 extends), `packages/core/src/contracts/error-table.ts` (rows with `code`, `domainKind`, `category`, `retryable`, `consequence`, `remediationHint`, `projectionClass`, `summary`), `packages/cli/src/projection.ts` (`success → 0`, `user-validation → 1`, `platform-provider → 2`, `attention → 1`), `packages/cli/src/index.ts` (`explicitDetail` — projects only the keys it names), `packages/core/src/domain/harness-registry.ts` (`resolveHarnessInstance`, the injected version probe), `packages/core/src/domain/harness-spawn-env.ts` (deny-by-default builder), `packages/core/src/provider/profile-env-record.ts` (`envRecordNameForSeat`, `buildProfileEnvRecord`), `packages/core/src/state/harness-telemetry.ts` (`payloadFor`, `appendHarnessTelemetry`), `packages/adapters/src/harness/{opencode,telemetry-opencode,telemetry-session-totals,sqlite-loader}.ts`, `packages/adapters/src/host/index.ts`.
+- **Conformance testkit**: [packages/testkit/src/conformance/harness.ts](../../../../packages/testkit/src/conformance/harness.ts) — `HARNESS_CONFORMANCE_SCENARIOS` (the six floor ids, pinned by value in TC-HARNESS-031; this change may rename it `HARNESS_CONFORMANCE_FLOOR_SCENARIOS` without changing its value), `HarnessConformanceScenarioId` (the closed union this change must split without widening the floor), `HarnessConformanceRegistration` (`kind`, `capabilities`, `scenarios`, `build`), `HARNESS_CONFORMANCE_REGISTRY` (exactly `opencode` and `claude-code`), `harnessConformanceViolations`. There is no scenario executor today: §4.6 (C-06, C-09, C-10) declares the additive one this change must ship, alongside the floor/extension constant split that keeps the delivered six-id value exact.
+- **Existing evidence to extend (not replace)**: `tests/structure/{harness-contract,harness-stream-contract,harness-neutrality,harness-environment-marker,harness-review-deferrals,error-table,conformance-coverage,content-inventory,result-contract,dispatch-envelope-detail}.test.ts`; `tests/types/{verify-gates-suite-map,dispatch-envelope-detail}.type-test.ts`; `tests/behaviour/{harness-spawn-env,harness-spawn-credential,harness-default-path,harness-config,harness-opencode-session,harness-opencode-stream,harness-opencode-resume-stream,harness-host-stream,harness-stream-hygiene,harness-telemetry-opencode,harness-telemetry-shape,harness-telemetry-drift,harness-telemetry-claude,harness-telemetry-claude-budget,harness-telemetry-opencode-orphan-scope,harness-closeout-capture,harness-closeout-idempotency,harness-closeout-nongating,harness-output-bounds,dispatch-harness-acquisition,dispatch-harness-default-spawn}.test.ts`; `tests/conformance/{harness-classification,harness-liveness}.test.ts`; `tests/checks/{harness-mutants,harness-determinism,harness-ci-parity,error-table-sync,exit-code-literals,decision-record,fixture-privacy}.test.ts`; `tests/fixtures/harness/{spawn-env,harness-io,opencode-store/build,scenarios/classification,scenarios/stream,stream/README}.ts`; `tests/fixtures/result/envelope-key-set.json`; `tests/fixtures/harness/stream/opencode-v2.2.5{,-tool-error,-stream-error,-tokens}.jsonl`.
 - **Closest delivered precedent**: [chg-GH-291-test-plan.md](../2026-11-12--GH-291--telemetry-v2/chg-GH-291-test-plan.md) — the fixture contract, non-vacuity contract, oracle matrices and mutant discipline mirrored here; and [chg-GH-233-test-plan.md](../2026-11-06--GH-233--harness-adapters/chg-GH-233-test-plan.md) for the harness-port conventions (`TC-HARN` numbering, the `harness-mutants` pattern).
 
 ## 3. Coverage Overview
@@ -96,42 +107,45 @@ This is a design and verification map, not an execution claim: no suites were ru
 
 | AC ID | Criterion (abbreviated) | TC ID(s) | Status |
 |-------|--------------------------|----------|--------|
-| AC-F1-1 | An in-window version with a resolved profile proceeds, and the observed version plus window verdict ride the resolved instance | TC-HARNESS-001, TC-HARNESS-004, TC-HARNESS-006, TC-HARNESS-040 | Covered |
+| AC-F1-1 | An in-window version with a resolved profile proceeds, and the observed version plus window verdict ride the resolved instance | TC-HARNESS-001, TC-HARNESS-004, TC-HARNESS-006, TC-HARNESS-042, TC-HARNESS-040 | Covered |
 | AC-F1-2 | **Pinned TC-M3-HARNESS-002** — an out-of-window version refuses with `harness.version.unsupported` (exit 1, remediation naming the window) and no session is spawned | TC-HARNESS-002, TC-HARNESS-004, TC-HARNESS-006, TC-HARNESS-036 | Covered |
-| AC-F1-3 | An undeterminable or unparseable version refuses with `harness.version.unknown`, the observation stays the explicit unknown, and nothing is fabricated or silently permitted | TC-HARNESS-003, TC-HARNESS-006 | Covered |
-| AC-F1-4 | The window is data: absent or unusable configuration degrades to the pinned default, never to an unbounded or wider window | TC-HARNESS-005 | Covered |
+| AC-F1-3 | A harness version that cannot be determined or parsed refuses with `harness.version.unknown`, the observation stays the explicit unknown, and nothing is fabricated or silently permitted | TC-HARNESS-003, TC-HARNESS-006, TC-HARNESS-042 | Covered |
+| AC-F1-4 | The window is pinned with no configuration key that widens or narrows it; only an inside-window version proceeds | TC-HARNESS-005 | Covered |
+| AC-F1-5 | `opencode v2.2.5` normalizes to `2.2.5` with the raw line diagnostic only, and empty, non-zero, timed-out, multi-line or off-grammar output is indeterminate → `harness.version.unknown`, never a substring or partial match | TC-HARNESS-042, TC-HARNESS-003, TC-HARNESS-006 | Covered |
 | AC-F2-1 | The delivered default mode is used for a spawn, with no other mode attempted as a runtime fallback | TC-HARNESS-007, TC-HARNESS-040 | Covered |
-| AC-F2-2 | An integration-mode decision record states the chosen mode among the three declared modes with the read-only direct-store rationale, linked from the change and the harness feature spec | TC-HARNESS-010, TC-HARNESS-041 | Covered (structural half; human-gated — GAP-4) |
+| AC-F2-2 | A decision record states the chosen mode among the harness's exposed surfaces with the read-only direct-store rationale, and is linked from the change and the harness feature spec | TC-HARNESS-010 (record content; Phase 1–2), TC-HARNESS-041 (feature-spec link and index; Phase 8) | Covered (structural; acceptance human-gated — GAP-4) |
 | AC-F2-3 | A requested mode the delivery does not support refuses with `harness.mode.unavailable` before any spawn, naming requested and available | TC-HARNESS-008, TC-HARNESS-036 | Covered |
 | AC-F2-4 | An omitted mode applies the default with a `defaults` origin; an unknown value is refused rather than silently defaulted | TC-HARNESS-009 | Covered |
-| AC-F3-1 | **Pinned TC-M3-HARNESS-001** — the spawn descriptor carries each declared seat's model record, the session reports the resolved per-seat models, and telemetry rows carry those seats with tokens and cost | TC-HARNESS-011, TC-HARNESS-015, TC-HARNESS-016 | Covered (offline against a simulated harness double — GAP-2) |
+| AC-F3-1 | **Pinned TC-M3-HARNESS-001** — the spawn carries the resolved per-seat binding on the honoured surface (opencode: per-invocation agent/model selection), and rows keep the resolved model beside the observed one | TC-HARNESS-011, TC-HARNESS-015, TC-HARNESS-016; live half TC-HARNESS-045 (human-gated) | Covered offline (GAP-2 names the live half) |
 | AC-F3-2 | A resolved record value wins over a conflicting ambient parent value for a declared name | TC-HARNESS-012, TC-HARNESS-015 | Covered |
 | AC-F3-3 | Undeclared record names change nothing and no undeclared parent variable is forwarded | TC-HARNESS-013 | Covered |
-| AC-F3-4 | An inexpressible required seat model refuses with `harness.profile.model-unrepresentable` naming the seat, with no session spawned | TC-HARNESS-014, TC-HARNESS-036 | Covered |
+| AC-F3-4 | A required seat model the honoured surface cannot express, or the harness does not recognise, refuses with `harness.profile.model-unrepresentable` naming the seat, with no session spawned | TC-HARNESS-014, TC-HARNESS-036 | Covered |
 | AC-F4-1 | Resume or attach continues the session identity with the tree root and propagation contract preserved; unknown or different sessions keep delivered `harness.session.unknown` semantics | TC-HARNESS-016, TC-HARNESS-017, TC-HARNESS-018 | Covered |
-| AC-F5-1 | Every landed row stamps the schema version, harness kind and version, seat identity, resolved seat model, reported model, five token classes, calls, cost (null when missing), and durations | TC-HARNESS-011, TC-HARNESS-019, TC-HARNESS-026, TC-HARNESS-028 | Covered |
+| AC-F5-1 | At least one row lands for a held session of the observed store, stamping the schema identity and the session record's normalized version and carrying seat, resolved model, observed model, five token classes, calls, cost, and durations-or-explicit-absence; zero rows for that session is a failure | TC-HARNESS-011, TC-HARNESS-019, TC-HARNESS-026, TC-HARNESS-028 | Covered |
 | AC-F5-2 | Pre-change `delivery.harness.telemetry.v1` rows remain readable and unchanged; fields are additions with no removal, rename, or new major version | TC-HARNESS-020 | Covered |
-| AC-F5-3 | A resolved-versus-reported model divergence keeps both values and discloses itself with a closed-vocabulary warning, never by overwrite | TC-HARNESS-021 | Covered |
-| AC-F5-4 | A duration the store does not expose is explicitly absent with a closed-vocabulary warning and is never derived or estimated | TC-HARNESS-022, TC-HARNESS-028 | Covered |
-| AC-F6-1 | A session with no telemetry rows returns `harness.telemetry.absent` at exit 1 and produces no zero-valued row | TC-HARNESS-023 | Covered |
-| AC-F6-2 | An unreadable or unopenable store keeps `harness.telemetry.extraction-failed` and is never re-projected as absence | TC-HARNESS-024 | Covered |
+| AC-F5-3 | A resolved-versus-observed model divergence keeps both values and discloses itself with a closed-vocabulary warning, never by overwrite | TC-HARNESS-021 | Covered |
+| AC-F5-4 | Durations come from the store's own timestamp pairs; a pair the row cannot read is explicitly absent with a closed-vocabulary warning and is never derived or estimated | TC-HARNESS-022, TC-HARNESS-028 | Covered |
+| AC-F5-5 | Attribution comes from the run's recorded session identity and the store tree below it — no work-item or harness-version column, no store-wide scan; no recorded identity yields a classified absence with no rows; a held session with no observable usage fact becomes a failed-session entry | TC-HARNESS-043, TC-HARNESS-044, TC-HARNESS-023, TC-HARNESS-025 | Covered |
+| AC-F5-6 | A human-gated live observation captures ≥ 1 row for a session the dispatch ran through the installed in-window harness, carrying its stored version, seat and tokens, recorded in the change folder and never a CI oracle; zero rows fails | TC-HARNESS-045 | Covered manually (human-gated — GAP-2) |
+| AC-F6-1 | An absent work-item telemetry reading carries the delivered `spend.telemetry-absent` classification with no zero figures, and an absent or failed closeout capture writes no zero-valued record and changes no other closeout effect | TC-HARNESS-023 | Covered |
+| AC-F6-2 | Absence (session not held), degraded capture (optional fields absent) and extraction failure (store unreadable) are three distinct classifications inside the delivered capture envelope with counts, reasons and warnings; no command, verb or exit projection is added and the delivery's exit code is unchanged | TC-HARNESS-023, TC-HARNESS-024, TC-HARNESS-028, TC-HARNESS-044 | Covered |
 | AC-F7-1 | Both registered harnesses still cover and pass the unchanged six-scenario classification floor | TC-HARNESS-031 | Covered |
 | AC-F7-2 | A registered harness missing a version-window, unknown-version, mode-unavailable, or profile-propagation scenario fails the suite, naming the harness and the scenario; a new refusal identity with no scenario fails too | TC-HARNESS-032, TC-HARNESS-033 | Covered |
 | AC-F7-3 | The conformance suite runs offline against simulated harness I/O with zero live harness invocations | TC-HARNESS-033, TC-HARNESS-034 | Covered |
-| AC-N1-1 | Any version, mode, or profile refusal leaves no child session, no orphan process, no telemetry row, and no other spawn side effect | TC-HARNESS-035, TC-HARNESS-036, TC-HARNESS-038 | Covered (with the probe-scope clarification recorded as OQ-6) |
+| AC-N1-1 | Any version, mode, or profile refusal leaves no session-bearing child process, no orphan, no telemetry row, and no other spawn side effect; the single bounded probe is the declared exception, completed and reaped before the verdict | TC-HARNESS-035, TC-HARNESS-036, TC-HARNESS-038 | Covered |
 
 **Traceability to the ticket AC (verbatim, binding).**
 
 | Ticket AC | Covered by | How the plan proves it |
 |---|---|---|
-| "dispatch through the installed harness port runs with the resolved profile" | TC-HARNESS-011, TC-HARNESS-012, TC-HARNESS-013, TC-HARNESS-014, TC-HARNESS-016, TC-HARNESS-017, TC-HARNESS-007 | The profile-propagation matrix P-01..P-08 plus the recorded child environment of a simulated harness double: each declared seat's variable carries the resolved value, a conflicting parent value loses, an undeclared name vanishes, and an unrepresentable seat refuses before spawn |
-| "telemetry rows land with schema version and per-seat models" | TC-HARNESS-019, TC-HARNESS-021, TC-HARNESS-022, TC-HARNESS-026 | Field matrix T-01..T-14 on fixture-seeded stores: schema constant equality, seat identity, resolved and observed model kept side by side, token/cost/duration fields or explicit absence, one totals basis |
-| "unsupported versions refuse with a typed error" | TC-HARNESS-002, TC-HARNESS-003, TC-HARNESS-036 | Version verdict matrix V-01..V-12 plus the refusal/oracle matrix M-01..M-10: exact identity, projection class, exit, envelope shape, session-seam call count 0 |
-| "integration-mode decision recorded" | TC-HARNESS-010, TC-HARNESS-041 | Both decision records exist with required fields, the chosen mode equals the delivered default constant and is one of the three declared modes, and the harness feature spec links it |
+| "dispatch through the installed harness port runs with the resolved profile" | TC-HARNESS-011, TC-HARNESS-012, TC-HARNESS-013, TC-HARNESS-014, TC-HARNESS-015, TC-HARNESS-016, TC-HARNESS-017, TC-HARNESS-007; live TC-HARNESS-045 | The recorded invocation arguments and built environments of a simulated harness: each declared seat's binding reaches the honoured surface (opencode: `--agent`/`--model` pairs), a conflicting parent value loses where a harness consumes variables, an undeclared name vanishes, an unrepresentable seat refuses before spawn, and no `OC_*` family is invented |
+| "telemetry rows land with schema version and per-seat models" | TC-HARNESS-019, TC-HARNESS-021, TC-HARNESS-022, TC-HARNESS-026, TC-HARNESS-028, TC-HARNESS-043 | Field matrix T-01..T-16 over fixture stores of the observed contract: schema constant equality, the session's own version, seat identity, resolved and observed model kept side by side, tokens/cost/durations or explicit absence, one totals basis, and attribution by the held session identity only |
+| "unsupported versions refuse with a typed error" | TC-HARNESS-002, TC-HARNESS-003, TC-HARNESS-036, TC-HARNESS-042 | Version verdict and grammar matrix V-01..V-19 plus the refusal/oracle matrix M-01..M-09: exact identity, projection class, exit, the `detail.harness` member, session-seam call count 0 |
+| "integration-mode decision recorded" | TC-HARNESS-010, TC-HARNESS-041 | Both records exist with required content, the chosen mode equals the delivered default constant and is one of the three declared observed surfaces, and the harness feature spec links the record (Phase 8) |
 
-**Capability coverage** (no capability unlinked): F-1 → TC-HARNESS-001..006; F-2 → TC-HARNESS-007..010, 040; F-3 → TC-HARNESS-011..016; F-4 → TC-HARNESS-016..018; F-5 → TC-HARNESS-019..030; F-6 → TC-HARNESS-023, 024; F-7 → TC-HARNESS-031..034. Cross-cutting hygiene, mutation, hermeticity and docs: TC-HARNESS-035..041.
+**Capability coverage** (no capability unlinked): F-1 → TC-HARNESS-001..006, 042; F-2 → TC-HARNESS-007..010, 040; F-3 → TC-HARNESS-011..016; F-4 → TC-HARNESS-016..018; F-5 → TC-HARNESS-019..030, 043, 044; F-6 → TC-HARNESS-023, 024, 028, 044; F-7 → TC-HARNESS-031..034. Cross-cutting hygiene, mutation, hermeticity and docs: TC-HARNESS-035..041; the human-gated live observation: TC-HARNESS-045.
 
-All 23 acceptance criteria map to at least one automated case; none is left unmapped. Two criteria carry an explicit named boundary instead of a silent claim: AC-F3-1's live-harness half (GAP-2) and AC-F2-2's human-gated correctness half (GAP-4).
+All 26 acceptance criteria map to at least one case; none is left unmapped. Three criteria carry an explicit named boundary instead of a silent claim: AC-F3-1's live half and AC-F5-6 (GAP-2), and AC-F2-2's acceptance half (GAP-4).
 
 **Pinned blueprint scenarios (verbatim, binding).**
 
@@ -150,8 +164,8 @@ Then it refuses with `harness.version.unsupported` and no session is spawned.
 
 | Pinned scenario | Delivered as | Assertions that make it non-vacuous |
 |---|---|---|
-| TC-M3-HARNESS-001 | TC-HARNESS-011 (with TC-HARNESS-019, TC-HARNESS-026 supplying the row and totals half) | Seat count N ≥ 2 and distinct resolved models, so a single collapsed seat fails; the spawn descriptor *and* the echoed child environment are both inspected, so a descriptor that never reaches the spawn fails; rows must be non-empty with non-null tokens and cost, so a rows-present claim with zero rows fails |
-| TC-M3-HARNESS-002 | TC-HARNESS-002 (with TC-HARNESS-036 supplying the side-effect half) | A paired in-window control must proceed on the same fixture, so a blanket refusal fails; the version string is mutated from the out-of-window fixture to an in-window one and the verdict must flip, so a hardcoded refusal fails; the session-spawn seam call count is asserted to be 0, so "refused after spawning" fails |
+| TC-M3-HARNESS-001 | TC-HARNESS-011 (with TC-HARNESS-019, TC-HARNESS-043 supplying the row and attribution half, and TC-HARNESS-045 the human-gated live half) | Seat count N ≥ 2 with distinct resolved models, so a single collapsed seat fails; the *recorded invocation arguments* the harness seam received are inspected (not a descriptor object), so a binding that is built and discarded fails; the child environment is asserted to gain no per-seat `OC_*` variable, so a nominal variable family cannot pass for the honoured surface; rows must be non-empty with non-null tokens and cost, so a rows-present claim with zero rows fails; the live observation is recorded separately and is never the oracle |
+| TC-M3-HARNESS-002 | TC-HARNESS-002 (with TC-HARNESS-036 supplying the side-effect half and TC-HARNESS-042 the grammar/normalization half) | A paired in-window control must proceed on the same fixture, so a blanket refusal fails; the probe output is mutated from `opencode v2.3.0` to `opencode v2.2.5` and the verdict must flip, so a hardcoded refusal fails; the session-spawn seam call count is asserted to be 0, so "refused after spawning" fails |
 
 ### 3.2 Interface Coverage (API-#, EVT-#, DM-#)
 
@@ -159,42 +173,51 @@ The specification declares no HTTP endpoint (§8.1: N/A) and adds no message/eve
 
 | Interface / data model | Description | TC ID(s) | Status |
 |------------------------|-------------|----------|--------|
-| Outbound — version probe invocation (§8.2) | One bounded, shell-free invocation through the delivered child-process seam at resolution; no session, no prompt, no allowlist bypass | TC-HARNESS-006, TC-HARNESS-036 | Covered |
-| Internal — spawn descriptor environment records (§8.2) | The resolved per-seat model record map carried as data per spawn; record values win for declared names; undeclared names change nothing | TC-HARNESS-012, TC-HARNESS-013, TC-HARNESS-015, TC-HARNESS-016 | Covered |
+| Outbound — version probe invocation (§8.2) | One bounded, shell-free invocation through the delivered child-process seam at the single production probe point; accepted grammar pinned; no session, no prompt, no allowlist bypass | TC-HARNESS-006, TC-HARNESS-036, TC-HARNESS-042 | Covered |
+| Outbound — probe deadline seam (§8.2, NFR-2) | The probe receives its bound as data (`deadlineMs`) and returns an explicit `timed-out` outcome; the production probe maps the bound onto the runner's timeout; a timed-out probe is an indeterminate verdict, never a retry | TC-HARNESS-006, TC-HARNESS-042 | Covered (§4.4a) |
+| Internal — per-spawn profile binding (§8.2) | The resolved per-seat binding record carried as data per spawn and mapped onto the surface the harness honours: opencode per-invocation `--agent`/`--model`, a variable-consuming harness's declared variable name; record values win for declared names; undeclared names change nothing | TC-HARNESS-011, TC-HARNESS-012, TC-HARNESS-013, TC-HARNESS-015, TC-HARNESS-016 | Covered |
 | Inbound — harness JSONL stream (§8.2) | Unchanged read-only consumption over the delivered streaming seam; no new frame-parsing contract | TC-HARNESS-037 | Covered (regression half) |
-| Storage — `harness.telemetry` rows (§8.2) | Additive fields under the unchanged `delivery.harness.telemetry.v1` identity; schema version and harness version stamped per row | TC-HARNESS-019, TC-HARNESS-020, TC-HARNESS-021, TC-HARNESS-022 | Covered |
-| Derived — refusal disclosure (§8.2) | Every version, mode and profile refusal names the identity, the observed/requested value, the supported/available alternative, and a remediation hint | TC-HARNESS-035, TC-HARNESS-036 | Covered |
-| DM-1 — Supported-version window | The declared minor lines a harness may run on, carried as data with the verdict; one pinned default | TC-HARNESS-004, TC-HARNESS-005, TC-HARNESS-006 | Covered |
-| DM-2 — Version evaluation result | The verdict (inside, outside, indeterminate) with the observed version or explicit unknown and the warning that rides an unknown | TC-HARNESS-001, TC-HARNESS-002, TC-HARNESS-003, TC-HARNESS-006, TC-HARNESS-040 | Covered |
-| DM-3 — Integration-mode declaration | The declared mode, its origin (default or configured), and the closed vocabulary of requestable modes | TC-HARNESS-007, TC-HARNESS-008, TC-HARNESS-009, TC-HARNESS-040 | Covered |
-| DM-4 — Profile propagation record | Per seat: the declared model variable name, the resolved model value, and the seat identity, carried into the spawn descriptor | TC-HARNESS-011..TC-HARNESS-017 | Covered |
+| Storage — session-store read (§8.2) | Read-only, query-only, bounded indexed reads of the held session identity and its tree across the observed generations; only non-content fields projected | TC-HARNESS-025, TC-HARNESS-043, TC-HARNESS-028 | Covered |
+| Storage — `harness.telemetry` rows (§8.2) | Additive fields under the unchanged `delivery.harness.telemetry.v1` identity; the schema identity and the session record's own normalized version stamped per row; the payload allowlist must carry them | TC-HARNESS-019, TC-HARNESS-020, TC-HARNESS-021, TC-HARNESS-022 | Covered |
+| Derived — refusal disclosure (§8.2, TDR-0031) | Every version, mode and profile refusal carries its identity, the observed/requested value, the supported/available alternative, a remediation hint, and the declared `detail.harness` member — and no other failure carries that member | TC-HARNESS-035, TC-HARNESS-036, TC-HARNESS-040 | Covered |
+| Derived — capture disclosure (§8.2, DEC-9/DEC-10) | Absence, degradation and extraction failure classified inside the delivered capture envelope with counts, reasons and warnings; no new command, verb or exit projection | TC-HARNESS-023, TC-HARNESS-024, TC-HARNESS-028, TC-HARNESS-044 | Covered |
+| DM-1 — Supported-version window | The declared minor lines a harness may run on, carried as data with the verdict; one pinned default; no configuration key | TC-HARNESS-004, TC-HARNESS-005, TC-HARNESS-006 | Covered |
+| DM-2 — Version evaluation result | The verdict (inside, outside, indeterminate) with the normalized observed version or explicit unknown and the warning that rides an unknown | TC-HARNESS-001, TC-HARNESS-002, TC-HARNESS-003, TC-HARNESS-006, TC-HARNESS-040, TC-HARNESS-042 | Covered |
+| DM-3 — Integration-mode declaration | The declared mode, its origin (default or configured), and the closed vocabulary of requestable modes drawn from the observed surfaces | TC-HARNESS-007, TC-HARNESS-008, TC-HARNESS-009, TC-HARNESS-040 | Covered |
+| DM-4 — Profile propagation record | Per seat: the seat identity, the resolved model value, and — where a harness consumes variables — the declared name, carried as per-spawn data and mapped to the honoured surface | TC-HARNESS-011..TC-HARNESS-017 | Covered |
 | DM-5 — Seat telemetry attribution | Additive row fields: seat identity, resolved model, and the observed harness-reported model with its divergence warning | TC-HARNESS-019, TC-HARNESS-021 | Covered |
-| DM-6 — Duration fields | Additive per-row durations (start, end, elapsed) or an explicit absence with a closed warning; never derived from capture time | TC-HARNESS-019, TC-HARNESS-022, TC-HARNESS-028 | Covered |
-| DM-7 — Conformance scenario set | The delivered six-scenario floor plus version-window, unknown-version, mode-unavailable, and profile-propagation scenarios | TC-HARNESS-031, TC-HARNESS-032, TC-HARNESS-033 | Covered |
+| DM-6 — Duration fields | Additive per-row durations (start, end, elapsed) from the store's timestamp pairs, or an explicit absence with a closed warning; never derived from capture time | TC-HARNESS-019, TC-HARNESS-022, TC-HARNESS-028 | Covered |
+| DM-7 — Conformance scenario set | The delivered six-id floor plus the four-id additive extension (version-window, version-unknown, mode-unavailable, profile-propagation) | TC-HARNESS-031, TC-HARNESS-032, TC-HARNESS-033 | Covered |
+| DM-8 — Store-to-delivery binding | The run's session identity is the attribution key; the store supplies the tree through parent links; no store column names the work item | TC-HARNESS-043, TC-HARNESS-025 | Covered |
+| DM-9 — Harness-version stamp source | The normalized version the session record states; the dispatch-probed installed version disclosed separately; divergence warned, never reconciled | TC-HARNESS-019, TC-HARNESS-021 | Covered |
+| DM-10 — Observed store contract | The table/column/field inventory every extraction fixture derives from, across the current and legacy generations | TC-HARNESS-019, TC-HARNESS-028, TC-HARNESS-043, TC-HARNESS-044 | Covered (§4.1a) |
+| `CommandResultDetail.harness` (TDR-0031) | Closed, identifier-only member: `kind`, `observedVersion` (`null` iff indeterminate), `versionVerdict`, `mode` omitted when unresolved; present only on the four pre-session refusals; the exact-key pin, runtime validator, key-set fixture and documented member sentence move together | TC-HARNESS-035, TC-HARNESS-040 | Covered |
 
 ### 3.3 Non-Functional Coverage (NFR-#)
 
 | NFR | Requirement (threshold) | TC ID(s) | Status |
 |-----|--------------------------|----------|--------|
-| NFR-1 | A version, mode, or profile refusal occurs before any session: zero spawned sessions, zero orphans, zero telemetry rows, zero store writes | TC-HARNESS-006, TC-HARNESS-008, TC-HARNESS-014, TC-HARNESS-036 | Covered |
-| NFR-2 | The probe resolves within 5 s; an unanswered probe is an explicit indeterminate version, never a retried loop, never a fabricated version | TC-HARNESS-006 | Covered by bounded work in CI plus a non-CI reference measurement (GAP-3) |
-| NFR-3 | Read-only open, query-only pragma before the first read, bounded indexed queries only, caps 64 / 16 / 16 / 24 with explicit truncation marks | TC-HARNESS-025 | Covered |
+| NFR-1 | A version, mode, or profile refusal occurs before any session-bearing child exists: zero spawned sessions, zero orphans, zero telemetry rows, zero store writes; the single bounded probe is the exception and is reaped | TC-HARNESS-006, TC-HARNESS-008, TC-HARNESS-014, TC-HARNESS-036 | Covered |
+| NFR-2 | The probe resolves within 5 s in the reference environment, at most once per dispatch; a probe that cannot answer is an explicit indeterminate version, never a retried loop, never a fabricated version; the probe is reaped before the verdict | TC-HARNESS-006, TC-HARNESS-042 | Covered as bounded work plus the pinned deadline seam (§4.4a) and a non-CI reference measurement (GAP-3) |
+| NFR-3 | Read-only open, query-only pragma before the first read, bounded indexed queries only, no full-table message/part scans, no content projection; caps 64 / 16 / 16 / 24 with explicit truncation marks; per-message reads scoped by session and message type | TC-HARNESS-025, TC-HARNESS-043 | Covered |
 | NFR-4 | Machine payload ≤ 65 536 UTF-8 bytes; human disclosure ≤ 4 096 bytes and ≤ 24 lines; truncation deterministic, tail-ordered, marked; refusal identities and hints never truncated | TC-HARNESS-030 | Covered |
-| NFR-5 | Rows and refusals carry identity references, counts, costs and durations only — never prompt text, message bodies, transcripts, diffs, tool output, credential material, or harness configuration values | TC-HARNESS-027 | Covered |
-| NFR-6 | No figure is invented: missing cost is null, missing token class is null with a warning, missing duration is explicitly absent, missing version is the explicit unknown; zero is never a substitute for absence | TC-HARNESS-003, TC-HARNESS-019, TC-HARNESS-022, TC-HARNESS-023, TC-HARNESS-028 | Covered |
+| NFR-5 | Rows, warnings and refusals carry identity references, counts, costs and durations only — never prompt text, message bodies, transcripts, diffs, tool output, credential material, or harness configuration values | TC-HARNESS-027, TC-HARNESS-043 | Covered |
+| NFR-6 | No figure is invented: a cost source the store does not expose is null, a reported zero is kept as zero, a missing token class is null with a warning, a duration the timestamp pair cannot express is explicitly absent, a missing or unparseable version is the explicit unknown; zero is never a substitute for absence and absence is never a substitute for a reported zero | TC-HARNESS-003, TC-HARNESS-019, TC-HARNESS-022, TC-HARNESS-023, TC-HARNESS-028, TC-HARNESS-042 | Covered |
 | NFR-7 | Byte-identical output for identical injected harness facts, probe result, resolved profile and clock; zero model calls and zero network on any evaluation, refusal, or render path | TC-HARNESS-029 | Covered |
 | NFR-8 | Version evaluation, mode resolution and profile propagation add no blocking work to the delivered stream drain, handle acquisition, or output-bound behavior | TC-HARNESS-037 | Covered |
-| NFR-9 | No ambient environment read outside the injected seams; the profile record map is passed as data and adapters read no ambient environment | TC-HARNESS-013, TC-HARNESS-015, TC-HARNESS-027 | Covered |
-| NFR-10 | 100% of new tests offline against simulated harness I/O and fixture stores; zero live harness invocations, credentials, or network | TC-HARNESS-034, TC-HARNESS-039 | Covered |
+| NFR-9 | No ambient environment read outside the injected seams; the per-spawn binding is passed as data and adapters read no ambient environment | TC-HARNESS-013, TC-HARNESS-015, TC-HARNESS-027 | Covered |
+| NFR-10 | 100% of new tests offline against simulated harness I/O and fixture stores; zero live harness invocations, credentials, or network; one human-gated live observation permitted outside CI and never an oracle | TC-HARNESS-034, TC-HARNESS-039 | Covered (live half in TC-HARNESS-045, GAP-2) |
+| NFR-11 | Extraction recognises the observed store generations and the field set each provides; an unrecognised generation or an absent mandatory field is a classified outcome (absence, degraded capture, or extraction failure), never a silent zero-row pass and never a fabricated row | TC-HARNESS-028, TC-HARNESS-044, TC-HARNESS-024 | Covered |
 
 ### 3.4 Gap Check (coverage-matrix integrity)
 
-- **Uncovered ACs**: none. All 23 are mapped. AC-F3-1 is Covered-offline with GAP-2 naming its live-harness half; AC-F2-2 is Covered-structural with GAP-4 naming its human-gated half. Neither is left unmapped.
+- **Uncovered ACs**: none. All 26 are mapped. AC-F3-1 is covered offline with GAP-2 naming its human-gated live half; AC-F5-6 is covered by TC-HARNESS-045 (manual, human-gated); AC-F2-2 is covered structurally with GAP-4 naming its acceptance half. None is left unmapped.
 - **Orphan TCs**: none. Every TC names at least one AC, NFR or DM in §5.1 and §5.2.
-- **Uncovered NFRs**: none. NFR-2's wall-clock half is explicitly reference-only (GAP-3); its CI-verifiable bounded-work half is asserted in TC-HARNESS-006.
-- **Uncovered DMs**: none (DM-1..DM-7 all mapped).
-- **Gap status**: GAP-1 (plan mapping) is phase-4-pending; GAP-2 (live-harness propagation), GAP-3 (probe wall-clock), GAP-4 (human-gated record), GAP-5 (field/reason constant names), GAP-6 (unobserved 2.1.x shape) are delivery-bound and non-blocking, each with a named oracle and owner.
-- **Intentional duplicate coverage**: AC-F1-1 spans four TCs because verdict carriage, boundary parsing, the pre-spawn evaluation point and outcome disclosure fail independently. AC-F3-1 spans three because descriptor content, per-spawn (not process-global) semantics, and the spawn/deliver/resume identity of the contract are separately falsifiable. AC-F5-1 spans four because row shape, totals basis, and the two store-shape variants degrade differently. AC-F5-4 spans two because the field contract and the 2.1.x shape are separate fixtures. AC-F7-2 spans two because "missing scenario fails" and "scenario actually proves the property" are distinct regressions. AC-N1-1 spans three because identity/exit hygiene, side-effect freedom, and mutant coverage fail independently.
+- **Uncovered NFRs**: none. NFR-2's wall-clock half is reference-only (GAP-3); its enforcement half is asserted through the pinned deadline seam (§4.4a).
+- **Uncovered DMs**: none (DM-1..DM-10 all mapped, plus the TDR-0031 envelope member).
+- **Removed identity**: `harness.telemetry.absent` is not covered because it does not exist in this change; TC-HARNESS-023 asserts its absence from the closed vocabulary and the error table, so the removal cannot be silently reversed.
+- **Gap status**: GAP-1 (plan mapping re-cut) is pending on `@plan-writer`; GAP-2 (human-gated live half), GAP-3 (probe wall-clock), GAP-4 (record acceptance), GAP-5 (constant names), GAP-6 (unobserved 2.1.x generation) and GAP-7 (grammar observed on one line) are non-blocking, each with a named oracle and owner.
+- **Intentional duplicate coverage**: AC-F1-1 and AC-F1-5 span several TCs because verdict carriage, grammar/normalization, the pre-spawn evaluation point and outcome disclosure fail independently. AC-F3-1 spans four because binding content, per-spawn (not process-global) semantics, the spawn/deliver/resume identity of the contract, and the live confirmation are separately falsifiable. AC-F5-1 spans four because row shape, totals basis, and the two store generations degrade differently. AC-F5-5 spans four because attribution, the absence taxonomy, the mandatory-usage boundary and the read discipline are independently falsifiable. AC-F5-4 spans two because the field contract and the legacy generation are separate fixtures. AC-F7-2 spans two because "missing scenario fails" and "scenario actually proves the property" are distinct regressions. AC-N1-1 spans three because identity/exit hygiene, side-effect freedom, and mutant coverage fail independently. AC-F6-2 spans four because the three classifications and the read-side identity are separate oracles.
 - **Spec-named behavior bound to an existing AC/NFR** (no dedicated AC by design):
 
 | Behavior | Spec source | Bound AC/NFR | Where |
@@ -202,74 +225,91 @@ The specification declares no HTTP endpoint (§8.1: N/A) and adds no message/eve
 | The window is a maintained constant with a declared revisit trigger | §22, RSK-2 | AC-F1-4 | TC-HARNESS-005 |
 | "Refuse" wording resolved over "degrade with a typed refusal" | pm-notes, §1 | AC-F1-2, AC-F2-3, AC-F3-4 | TC-HARNESS-002, 008, 014 |
 | Every dispatch discloses the version verdict and the selected mode | §10 | AC-F1-1, AC-F2-1 | TC-HARNESS-040 |
-| Telemetry capture stays non-gating and never changes a delivery outcome | §10 | AC-F5-1, AC-F6-1 | TC-HARNESS-023, 037 |
-| Per-seat attribution discloses unresolved seats and divergence with counts and reasons | §10 | AC-F5-3 | TC-HARNESS-021 |
+| The four pre-session refusals disclose kind/version/verdict/mode as declared envelope members; no other failure does | §8.2, §10, TDR-0031 | AC-F1-2, AC-F1-3, AC-F2-3, AC-F3-4 | TC-HARNESS-035, 040 |
+| Telemetry capture stays non-gating and never changes a delivery outcome | §10, DEC-10 | AC-F5-1, AC-F6-1, AC-F6-2 | TC-HARNESS-023, 024, 037 |
+| Per-seat attribution discloses unresolved seats and divergence with counts and reasons | §10 | AC-F5-3, AC-F5-5 | TC-HARNESS-021, 043 |
 | Every invocation lands its command-audit record; an audit-write failure is diagnostic | §10 | AC-N1-1 | TC-HARNESS-037 |
-| Failure identities are declared once; delivered meanings are untouched | §8.5, RSK-5 | AC-N1-1 | TC-HARNESS-035 |
-| Store access is read-only with the query-only pragma before the first read | §8.4, §21 | NFR-3 | TC-HARNESS-025 |
+| Failure identities are declared once; delivered meanings are untouched; no telemetry-absence identity is added | §8.5, RSK-5, DEC-10 | AC-N1-1, AC-F6-2 | TC-HARNESS-035 |
+| Store access is read-only with the query-only pragma before the first read, and no generation is guessed | §8.4, §21, NFR-11 | NFR-3, NFR-11 | TC-HARNESS-025, 028 |
 | Brand neutrality: no hardcoded product or binary name in tooling contracts | §21 | NFR-7 (determinism/naming discipline), AC-F2-2 | TC-HARNESS-029, TC-HARNESS-035 |
 | Planning status markers and decision index reconciled | §18 | AC-F2-2 | TC-HARNESS-041 |
+| The v2.2.5 store contract is re-observed on each harness minor release | §22, RSK-9 | NFR-11 | TC-HARNESS-028, TC-HARNESS-043 |
 
 ## 4. Test Types and Layers
 
 | Layer | Runner / invocation | Location | Covers |
 |-------|--------------------|----------|--------|
-| Contract and vocabulary | `bun test tests/structure` | `tests/structure/harness-contract.test.ts` (update), `tests/structure/harness-version-window-contract.test.ts` (new), `tests/structure/harness-neutrality.test.ts` (update if literals extend) | TC-HARNESS-004 (constant half), 005, 019 (shape half), 020, 035 |
-| Error identity and sync | `bun test tests/checks`; `bun run scripts/checks/error-table-sync.ts` | `tests/structure/error-table.test.ts` (update), `tests/checks/error-table-sync.test.ts` (update), `tests/checks/exit-code-literals.test.ts` (must stay green) | TC-HARNESS-035 |
-| Behaviour — version gate | `bun test tests/behaviour` | `tests/behaviour/harness-version-gate.test.ts`, `harness-version-window.test.ts`, `harness-version-probe-bound.test.ts` (new) | TC-HARNESS-001..006 |
+| Contract and vocabulary | `bun test tests/structure` | `tests/structure/harness-contract.test.ts` (update), `tests/structure/harness-version-window-contract.test.ts` (new), `tests/structure/harness-probe-grammar-contract.test.ts` (new), `tests/structure/harness-neutrality.test.ts` (update if literals extend) | TC-HARNESS-004 (constant half), 005, 042 (grammar constant half), 019 (shape half), 020, 035 |
+| Error identity, envelope member and sync | `bun test tests/structure tests/checks tests/types`; `bun run scripts/checks/error-table-sync.ts` | `tests/structure/error-table.test.ts` (update), `tests/structure/result-contract.test.ts` (update), `tests/structure/dispatch-envelope-detail.test.ts` (update), `tests/types/verify-gates-suite-map.type-test.ts` (exact-key pin moves), `tests/types/dispatch-envelope-detail.type-test.ts` (member cell added), `tests/fixtures/result/envelope-key-set.json` (update), `tests/checks/error-table-sync.test.ts` (update), `tests/checks/exit-code-literals.test.ts` (must stay green) | TC-HARNESS-035, 040 (pin half) |
+| Behaviour — version gate | `bun test tests/behaviour` | `tests/behaviour/harness-version-gate.test.ts`, `harness-version-window.test.ts`, `harness-version-probe-seam.test.ts` (new; replaces the previously planned `harness-version-probe-bound.test.ts`) | TC-HARNESS-001..006, 042 |
 | Behaviour — integration mode | `bun test tests/behaviour` | `tests/behaviour/harness-mode-selection.test.ts`, `harness-mode-refusal.test.ts`, `harness-mode-config.test.ts` (new) | TC-HARNESS-007..009 |
-| Behaviour — profile propagation | `bun test tests/behaviour` | `tests/behaviour/harness-profile-propagation.test.ts`, `harness-profile-precedence.test.ts`, `harness-profile-neutrality.test.ts`, `harness-profile-unrepresentable.test.ts`, `harness-profile-per-spawn.test.ts` (new) | TC-HARNESS-011..016 |
+| Behaviour — profile propagation | `bun test tests/behaviour` | `tests/behaviour/harness-profile-propagation.test.ts`, `harness-profile-per-spawn.test.ts` (new); `harness-profile-precedence.test.ts`, `harness-profile-neutrality.test.ts`, `harness-profile-unrepresentable.test.ts` (new, variable-consuming and honoured-surface variants) | TC-HARNESS-011..016 |
 | Behaviour — resume and attach | `bun test tests/behaviour` | `tests/behaviour/harness-resume-propagation.test.ts`, `harness-attach.test.ts` (new); `harness-opencode-resume-stream.test.ts` (assertions unchanged) | TC-HARNESS-017, 018 |
-| Behaviour — telemetry rows | `bun test tests/behaviour` | `tests/behaviour/harness-telemetry-seat-attribution.test.ts`, `harness-telemetry-durations.test.ts`, `harness-telemetry-divergence.test.ts`, `harness-telemetry-version-compat.test.ts`, `harness-telemetry-absent.test.ts`, `harness-telemetry-extraction-failure.test.ts`, `harness-telemetry-seat-totals.test.ts` (new); `harness-telemetry-shape.test.ts`, `harness-telemetry-opencode.test.ts` (update) | TC-HARNESS-019..028 |
+| Behaviour — telemetry rows | `bun test tests/behaviour` | `tests/behaviour/harness-telemetry-seat-attribution.test.ts`, `harness-telemetry-durations.test.ts`, `harness-telemetry-divergence.test.ts`, `harness-telemetry-version-compat.test.ts`, `harness-telemetry-classification.test.ts`, `harness-telemetry-extraction-failure.test.ts`, `harness-telemetry-seat-totals.test.ts`, `harness-telemetry-generation.test.ts`, `harness-telemetry-attribution.test.ts`, `harness-telemetry-mandatory-usage.test.ts` (new); `harness-telemetry-shape.test.ts`, `harness-telemetry-opencode.test.ts` (update) | TC-HARNESS-019..028, 043, 044 |
 | Behaviour — dispatch disclosure | `bun test tests/behaviour` | `tests/behaviour/dispatch-harness-verdict-mode.test.ts` (new); `dispatch-harness-acquisition.test.ts`, `dispatch-harness-default-spawn.test.ts` (assertions unchanged) | TC-HARNESS-040, 037 |
-| Conformance — registry extension | `bun test tests/conformance tests/structure` | `tests/conformance/harness-version-mode-propagation.test.ts` (new); `tests/conformance/harness-classification.test.ts` (assertions unchanged); `tests/structure/conformance-coverage.test.ts` (update) | TC-HARNESS-031..034 |
+| Conformance — registry extension and executor | `bun test tests/conformance tests/structure` | `packages/testkit/src/conformance/harness.ts` (extend: floor/extension constants, union split, additive executor), `tests/conformance/harness-extension-scenarios.test.ts` (new), `tests/structure/conformance-coverage.test.ts` (update); `tests/conformance/harness-classification.test.ts` (assertions unchanged) | TC-HARNESS-031..034 |
 | Mutation meta-suite | `bun test tests/checks` | `tests/checks/harness-mutants.test.ts` (extend the delivered pattern) | TC-HARNESS-038 |
 | Determinism | `bun test tests/checks` | `tests/checks/harness-determinism.test.ts` (update), `tests/checks/harness-ci-parity.test.ts` (assertions unchanged) | TC-HARNESS-029 |
 | Hermeticity | `bun test tests/checks` | `tests/checks/harness-hermetic.test.ts` (new; the `telemetry-hermetic` / `provider-hermetic` pattern) | TC-HARNESS-039, 034 |
-| Privacy and bounds | `bun test tests/behaviour tests/checks` | `tests/behaviour/harness-telemetry-privacy.test.ts` (new), `harness-output-bounds.test.ts` (update), `tests/checks/fixture-privacy.test.ts` (fixture scan), `tests/checks/privacy-literals.test.ts` (update if literals extend) | TC-HARNESS-027, 030 |
+| Privacy and bounds | `bun test tests/behaviour tests/checks` | `tests/behaviour/harness-telemetry-privacy.test.ts` (new), `harness-output-bounds.test.ts` (update), `tests/checks/fixture-privacy.test.ts` (fixture scan), `tests/checks/fixture-store-shape.test.ts` (new DDL scan: no forbidden column), `tests/checks/privacy-literals.test.ts` (update if literals extend) | TC-HARNESS-027, 030, 043 |
 | Decision records | `bun test tests/checks` | `tests/checks/decision-record.test.ts` (extend the inventory) | TC-HARNESS-010 |
-| Documentation surface | Manual content check + `bun test tests/checks` | `doc/spec/features/feature-harness-adapters.md`, `doc/spec/nonfunctional.md`, `doc/decisions/00-index.md`, `doc/planning/oss-tooling/` status markers; `tests/checks/doc-conformance.test.ts`, `tests/structure/content-inventory.test.ts` | TC-HARNESS-041 |
+| Documentation surface | Manual content check + `bun test tests/checks` | `doc/spec/features/{feature-harness-adapters,feature-telemetry-v2,feature-state-layer,feature-spend,feature-result-contract,feature-dispatch-engine,feature-config-layer,feature-adapter-ports}.md`, `doc/spec/nonfunctional.md`, `doc/decisions/00-index.md`, `doc/planning/oss-tooling/` status markers; `tests/checks/doc-conformance.test.ts`, `tests/structure/content-inventory.test.ts` | TC-HARNESS-041 |
+| Human-gated live observation | Not a test runner: a recorded manual observation | `doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/chg-GH-335-live-observation.md` (new record) | TC-HARNESS-045 (never an oracle) |
 | Aggregate and non-regression | `TMPDIR=$PWD/tmp/tmpdir pnpm check` | repo root; unchanged gates (`lint → format:check → typecheck → test → check:boundaries` plus the repository invariant checks) | All TCs (regression half) |
 
 ### 4.1 Fixture and Harness Contract (binding for every TC)
 
 1. **No live harness, network, credential, or user state directory.** Every suite imports production modules and injects fakes plus a per-test temp root. No suite starts the opencode binary, opens a real harness store, reads `$HOME`, resolves a credential through a real source, or opens a socket (NFR-10).
-2. **The harness double is injected, not mocked globally.** Version probing, streaming spawn, one-shot spawn, session listing and telemetry-store reading are injected seams. No test installs a process-global `node:child_process` mock (the delivered `harness-stream-hygiene.test.ts` read-only guard forbids it). A double records every call and its arguments so "was a session started" is asserted from recorded arguments, never inferred.
-3. **The version table is data.** One fixture module declares the version verdict table (V-01..V-12 in §4.4): observed string, expected verdict, expected identity, expected exit. Suites iterate the table; adding a row is a data edit, not a new test body.
-4. **Propagation fixtures are declared profile records, not ad-hoc object literals.** One fixture module declares resolved profiles with N seats, their declared variable names or explicit `envName`, the resolved models, the conflicting ambient parent values, the undeclared record names with unique canaries, and one unrepresentable seat. Canaries are unique strings asserted absent elsewhere.
-5. **The telemetry store oracle is a fixture builder.** `tests/fixtures/harness/opencode-store/build.ts` is extended with declared variants: complete seat/duration row, missing-duration, missing-cost, missing token class, model divergence, no optional columns, 2.1.x-shape degradation, unreadable/unopenable, and zero-rows. Each variant carries a privacy canary in place of message bodies. No binary store is committed.
-6. **Injected time, ids and brand.** A fixed `NOW_MS`; `capturedAt` and any duration fixtures are literal constants, never `Date.now()`. Session ids and run ids are fixed sequences. The brand is a synthetic brand constant so a hardcoded product name fails.
-7. **Read-only fixture discipline.** Truncation, clamp, and mutation probes run against temp copies (the delivered `tests/checks/harness-mutants.test.ts` temp-copy pattern); the live tree and committed fixtures are never written, and no assertion reads a diff against a moving base branch.
-8. **The one permitted real-store read is not a test.** The in-change spike may record a real harness observation through a documented live entrypoint modelled on `tests/conformance/live/run-live.ts`: it is not `*.test.ts`, is not discovered by `bun test`, is never invoked by `pnpm check` or CI, and its output is recorded in the change artifacts as spike evidence. The spec's spike deliverable (AC-F2-2, GAP-2) is the only justification for its existence; it is never an oracle for any TC.
-9. **Fixture privacy.** Every new fixture passes `tests/checks/fixture-privacy.test.ts`: synthetic, redacted content only — no real session ids, credentials, model-provider secrets, or personal data.
+2. **The harness double is injected, not mocked globally.** Version probing, streaming spawn, one-shot spawn, session listing and telemetry-store reading are injected seams. No test installs a process-global `node:child_process` mock (the delivered `harness-stream-hygiene.test.ts` read-only guard forbids it). A double records every call *and its arguments* so "was a session started" and "what binding reached the invocation" are asserted from recorded arguments, never inferred.
+3. **The version table is data.** One fixture module declares the version verdict and grammar table (V-01..V-19 in §4.4): raw probe stdout, expected normalized version, expected verdict, expected identity, expected exit. Suites iterate the table; adding a row is a data edit, not a new test body.
+4. **Propagation fixtures are declared binding records, not ad-hoc object literals.** One fixture module declares resolved profiles with N seats, their seat identities, resolved models (`provider/model#variant`), the conflicting ambient parent values and undeclared record names used only by the variable-consuming double, and one unrepresentable seat per variant. Canaries are unique strings asserted absent elsewhere.
+5. **Every store fixture is derived from DM-10 / Appendix C (§4.1a) — never from the delivered extractor's assumptions.** Two committed builders: `tests/fixtures/harness/opencode-store/current-generation.ts` (the `session_v2`/`session_message`/`session_part` families the installed v2.2.5 writes) and `tests/fixtures/harness/opencode-store/legacy-generation.ts` (the `session`/`message`/`part` families with the observed column inventory, including the legacy `part` table having **no** `tool` column). `tests/fixtures/harness/opencode-store/build.ts` becomes the shared seeding layer over both. A fixture may declare variants by named removal (a missing optional column, a null timestamp pair, a zero cost, a missing `version`), never by inventing a column. Every variant is built in a temp directory; no binary store is committed; every variant carries a privacy canary in place of message bodies.
+6. **Forbidden shapes are asserted absent, not merely avoided.** `tests/checks/fixture-store-shape.test.ts` scans every fixture DDL and builder for `work_item_ref`, `harness_version`, per-message `agent`/`model`/`input_tokens`/`output_tokens`/`reasoning_tokens`/`cache_read_tokens`/`cache_write_tokens`/`cost` columns, and `part(tool …)`; a reappearance fails the suite. This is the executable form of the spec's "zero assertions depend on a work-item column, a separate harness-version column, or per-message token columns" metric.
+7. **Injected time, ids and brand.** A fixed `NOW_MS`; `capturedAt`, store timestamps and duration fixtures are literal constants, never `Date.now()`. Session ids and run ids are fixed sequences. The brand is a synthetic brand constant so a hardcoded product name fails. The probe's `now` is the injected clock, passed by identity.
+8. **Read-only fixture discipline.** Truncation, clamp, and mutation probes run against temp copies (the delivered `tests/checks/harness-mutants.test.ts` temp-copy pattern); the live tree and committed fixtures are never written, and no assertion reads a diff against a moving base branch.
+9. **The one permitted live observation is not a test.** It is a human-gated manual run recorded in `chg-GH-335-live-observation.md` (TC-HARNESS-045): no `.test.ts` file, not discovered by `bun test`, never invoked by `pnpm check` or CI, and never read as an oracle by any TC.
+10. **Fixture privacy.** Every new fixture passes `tests/checks/fixture-privacy.test.ts`: synthetic, redacted content only — no real session ids, credentials, model-provider secrets, or personal data.
 
-### 4.2 Non-Vacuity Contract (binding for every refusal, absence, bound, divergence and propagation case)
+### 4.1a Observed store contract (DM-10) — the only shape fixtures may model
 
-1. **A planted positive is asserted before the absence or refusal.** Before asserting `harness.telemetry.absent`, a paired store with one row appends and renders. Before asserting an unrepresentable seat refuses, a paired representable seat spawns. Before asserting a duration is absent, a paired complete row carries literal start/end/elapsed. Before asserting a payload is bounded, an under-cap render is asserted untruncated.
-2. **A paired live control runs in the same test.** Every out-of-window fixture beside an in-window fixture; every unavailable-mode request beside the default-mode request; every conflicting parent value beside a record-absent case; every divergent model pair beside an agreeing pair; every damaged store beside a healthy store.
-3. **The gate is exercised, not hardcoded.** Mutating the pinned window value in a temp copy of the window module must flip the verdict of the same fixture (V-10): an out-of-window fixture that still refuses under a widened window proves the test is asserting a literal, not the gate. Conversely, widening the window to an unbounded value must make V-04 accept, so "never widen silently" (AC-F1-4) is falsifiable.
-4. **The probe is exercised, not skipped.** A passing probe control beside the failing probe; a recorded invocation count of exactly 1 proves the evaluation happened once rather than not at all; a 5 001 ms fake-clock advance proves the bound is applied rather than the verdict being computed from a cached "inside".
-5. **Propagation is proven at the spawn, not at the derivation.** The oracle is the child environment the spawn seam actually received, cross-checked against the session's echoed report. A descriptor object that is built and discarded fails.
-6. **A disabling mutant must fail the suite (TC-HARNESS-038).** Each mutant is a temporary copy of one production module with one honesty rule disabled. The mutant must produce the prohibited observable on an unchanged fixture; if the real module also produces nothing, the suite fails.
-7. **Bounds are measured, never assumed.** Byte bounds are measured on serialized UTF-8 bytes with a positive measured length asserted first; line bounds by counting rendered lines; truncation by comparing the under-cap and over-cap renders.
-8. **Permutation invariance is asserted, not assumed.** Store rows appended in shuffled order must yield byte-identical rows, verdicts and renders; a fixture whose expected result depends on append order fails.
+Recorded from Appendix C and the readiness observation. Column lists name only the fields the extractor may read; `data` documents are JSON and only non-content keys may be projected.
 
-### 4.3 Refusal / Oracle Matrix (binding for AC-F1-2, AC-F1-3, AC-F2-3, AC-F3-4, AC-F6-1, AC-F6-2, AC-N1-1)
+| Generation | Tables and readable fields | Telemetry use | Never assumed |
+|---|---|---|---|
+| Current (written by v2.2.5) | `session_v2(id, parent_id, version, agent, model, cost, tokens_input, tokens_output, tokens_reasoning, tokens_cache_read, tokens_cache_write, time_created, time_updated)`; `session_message(id, session_id, type, seq, time_created, time_updated, data)` where `data` (assistant) = `{agent, model:{id,providerID,variant}, cost, tokens:{input,output,reasoning,cache}, time}` and switch events are `agent-switched`/`model-switched`; `session_part` (unpopulated) | Session identity and tree from `id`/`parent_id`; version stamp from `version` (bare semver: `2.2.5`, `1.19.0`, `1.19.3` coexist); seat baseline `session_v2.agent` with per-message `agent` and `agent-switched`; observed model from the `model` object normalized to one canonical identifier; tokens from `session_v2.tokens_*` with per-message `tokens` for group detail; cost from `session_v2.cost` (`NOT NULL DEFAULT 0`); calls = count of usage-bearing message rows; durations from `time_created`/`time_updated` plus the per-message pair; tool counts absent with a warning | A work-item column; a separate harness-version column; per-message token/agent/model/cost columns; a populated tool source; conversation content |
+| Legacy (coexists in the same store) | `session(id, parent_id, version, agent, model, cost, tokens_*, time_created, time_updated, …)`; `message(id, session_id, time_created, time_updated, data)`; `part(id, message_id, session_id, time_created, time_updated, data)` | Same field sources as the current generation, read through the legacy table names; tool counts absent with a warning because `part` has no `tool` column | A `tool` column on `part`; new sessions landing in `session` |
+| Neither | — | — | `work_item_ref` anywhere; a store-wide scan; content, prompt, diff or tool-output projection |
 
-Envelope shape for every row: `RESULT_SCHEMA_VERSION` = `delivery.result.v1` with `error.code` equal to the identity verbatim and `error.remediationHint` non-empty. Exit is a pure function of `projectionClass` via `packages/cli/src/projection.ts` (`user-validation → 1`, `platform-provider → 2`, `attention → 1`, `success → 0`) and is never read from a table entry.
+**Store path note.** The observed store is the SQLite file in the harness data directory, not the state directory the delivered default names. The configured path reconciliation is asserted structurally (TC-HARNESS-025) and is not a live read in any suite.
 
-| ID | Trigger | Identity (closed) | Projection class | Exit | Remediation hint must state | Session-bearing side effects |
+### 4.2 Non-Vacuity Contract (binding for every refusal, absence, bound, divergence, generation and propagation case)
+
+1. **A planted positive is asserted before the absence or refusal.** Before asserting a session is classified absent, a paired store that holds it lands ≥ 1 row. Before asserting an unrepresentable seat refuses, a paired representable seat spawns. Before asserting a duration is absent, a paired complete row carries literal start/end/elapsed. Before asserting a payload is bounded, an under-cap render is asserted untruncated.
+2. **A paired control runs in the same test.** Every out-of-window fixture beside an in-window fixture; every unavailable-mode request beside the default-mode request; every off-grammar probe output beside the observed `opencode v2.2.5` line; every conflicting parent value beside a record-absent case; every divergent model pair beside an agreeing pair; every damaged store beside a healthy store.
+3. **The gate is exercised, not hardcoded.** Mutating the pinned window value in a temp copy of the window module must flip the verdict of the same fixture (V-18): an out-of-window fixture that still refuses under a widened window proves the test asserts a literal, not the gate. Making the window unbounded must make V-19 accept, so "never widen silently" (AC-F1-4) is falsifiable in both directions.
+4. **The probe is exercised, not skipped.** A passing probe control beside each failing probe; a recorded invocation count of exactly 1 proves the evaluation happened once rather than not at all; the deadline argument and the `timed-out` outcome prove the bound is applied by the gate rather than by the double.
+5. **Propagation is proven at the invocation, not at the derivation.** For opencode the oracle is the recorded invocation arguments the harness seam received, cross-checked against the store's observed model; a binding object that is built and discarded fails. For a variable-consuming harness the oracle is the built child environment, cross-checked against the same record.
+6. **Generation non-vacuity is two-sided.** A test that passes against the legacy-generation fixture must fail against the current-generation fixture and vice versa where the property is generation-specific: a legacy-only extractor must land zero rows (and therefore a capture failure) on the current fixture, and a current-only extractor must land zero rows on the legacy fixture. TC-HARNESS-028 asserts both directions with mutants.
+7. **A disabling mutant must fail the suite (TC-HARNESS-038).** Each mutant is a temporary copy of one production module with one honesty rule disabled. The mutant must produce the prohibited observable on an unchanged fixture; if the real module also produces nothing, the suite fails.
+8. **Bounds are measured, never assumed.** Byte bounds are measured on serialized UTF-8 bytes with a positive measured length asserted first; line bounds by counting rendered lines; truncation by comparing the under-cap and over-cap renders.
+9. **Permutation invariance is asserted, not assumed.** Store rows appended in shuffled order — across both generations — must yield byte-identical rows, verdicts and renders; a fixture whose expected result depends on append order fails.
+
+### 4.3 Refusal / Oracle Matrix (binding for AC-F1-2, AC-F1-3, AC-F2-3, AC-F3-4, AC-F5-5, AC-F6-1, AC-F6-2, AC-N1-1)
+
+Envelope shape for every refusal row: `RESULT_SCHEMA_VERSION` = `delivery.result.v1`, `error.code` equal to the identity verbatim, `error` keys exactly the six delivered fields, and `error.remediationHint` non-empty. Exit is a pure function of `projectionClass` via `packages/cli/src/projection.ts` (`user-validation → 1`, `platform-provider → 2`, `attention → 1`, `success → 0`) and is never read from a table entry. The `detail.harness` column is the TDR-0031 mapping and is asserted per identity.
+
+| ID | Trigger | Identity (closed) | Projection class | Exit | `detail.harness` | Session-bearing side effects |
 |---|---|---|---|---|---|---|
-| M-01 | Observed version outside the supported window | `harness.version.unsupported` | user-validation | 1 | The observed version and the supported lines (`2.2.x`, `2.1.x`) so the fix is an upgrade | Session-spawn seam calls 0; telemetry rows 0; store writes 0 |
-| M-02 | Version probe fails, is empty, or yields an unparseable string | `harness.version.unknown` | user-validation | 1 | That the installation's version could not be determined and must be repaired; never an "upgrade" instruction | Session-spawn seam calls 0; `observedVersion === null`; telemetry rows 0 |
-| M-03 | Requested mode is not the delivered default | `harness.mode.unavailable` | user-validation | 1 | The requested mode and the available mode | Session-spawn seam calls 0; no alternate transport attempt |
-| M-04 | Mode branch carries an unknown value | The delivered configuration refusal identity for an invalid value (`config.value.invalid`; OQ-5 default) | user-validation | 1 | The received value and the accepted values | No silent default applied; session-spawn seam calls 0 |
-| M-05 | A required seat model cannot be expressed as a declared per-spawn variable | `harness.profile.model-unrepresentable` | user-validation (OQ-5 default) | 1 | The seat and the declared name or `envName` it needs | Session-spawn seam calls 0; no partial environment built |
-| M-06 | Session has no telemetry rows | `harness.telemetry.absent` | user-validation | 1 | That no rows exist for the session and capture must run | No zero-valued row appended; no report rendered |
-| M-07 | Harness store cannot be opened or read | `harness.telemetry.extraction-failed` (delivered, unchanged) | platform-provider | 2 | The configured store location and read permissions | No row; never re-projected as M-06 |
-| M-08 | Resume or attach names a different or absent session | `harness.session.unknown` (delivered, unchanged) | user-validation | 1 | The existing session identity from the original spawn | Idempotent kill; no orphan; no new root |
-| M-09 | A declared spawn variable is absent | `harness.spawn.variable-missing` (delivered, unchanged) | user-validation | 1 | The variable name in `field` | Session-spawn seam calls 0 |
-| M-10 | In-window version, available mode, complete representable profile | — (success) | success | 0 | — | Rows land; one session |
+| M-01 | Observed version outside the supported window (`opencode v2.3.0`) | `harness.version.unsupported` | user-validation | 1 | Present: `kind`, `observedVersion` = `2.3.0`, `versionVerdict` = `outside`, **no** `mode` key | Session-spawn seam calls 0; telemetry rows 0; store writes 0; probe calls ≤ 1 and reaped |
+| M-02 | Version indeterminate: empty stdout, non-zero exit, timeout, multi-line, or off-grammar output | `harness.version.unknown` | user-validation | 1 | Present: `kind`, `observedVersion` = `null`, `versionVerdict` = `indeterminate`, **no** `mode` key | Session-spawn seam calls 0; probe calls ≤ 1 and reaped; no version-shaped string in the slot |
+| M-03 | Requested mode is not the delivered default | `harness.mode.unavailable` | user-validation | 1 | Present: `kind`, `observedVersion` non-null, `versionVerdict` = `inside`, `mode` = the **requested** mode | Session-spawn seam calls 0; no alternate transport attempt |
+| M-04 | Mode branch carries an unknown value | The delivered configuration refusal identity for an invalid value (`config.value.invalid`; OQ-5 default) | user-validation | 1 | **Absent** (not a harness refusal) | No silent default applied; session-spawn seam calls 0 |
+| M-05 | A required seat model the honoured surface cannot express, or the harness does not recognise | `harness.profile.model-unrepresentable` | user-validation (OQ-5 default) | 1 | Present: `kind`, `observedVersion` non-null, `versionVerdict` = `inside`, `mode` = the **resolved** mode | Session-spawn seam calls 0; no partial binding handed to any seam; rows 0 |
+| M-06 | A readable store does not hold the session the dispatch ran | No new identity: classified **absence** inside the capture envelope (zero records for that session, a closed absence reason, count) ; the work-item read side reports the delivered `spend.telemetry-absent` | — (no projection change) | Unchanged (equals the paired control) | **Absent** | No zero-valued row appended; no report with zero figures; no store-wide scan |
+| M-07 | Harness store cannot be opened or read | `harness.telemetry.extraction-failed` (delivered, unchanged) | platform-provider where surfaced as a command failure | Unchanged for a closeout capture (non-gating); its delivered row projection otherwise | **Absent** | No row; never re-projected as M-06; the capture envelope carries the failure reason and count |
+| M-08 | Resume or attach names a different or absent session | `harness.session.unknown` (delivered, unchanged) | user-validation | 1 | **Absent** (attempt-stage shape keeps `data.error.detail`) | Idempotent kill; no orphan; no new root |
+| M-09 | A declared spawn variable is absent | `harness.spawn.variable-missing` (delivered, unchanged) | user-validation | 1 | **Absent** | Session-spawn seam calls 0 |
+| M-10 | In-window version, available mode, complete representable profile | — (success) | success | 0 | **Absent** | Rows land; one session |
 
 **Refusal precedence (Flow 1 / Flow 2 order, binding).**
 
@@ -277,62 +317,91 @@ Envelope shape for every row: `RESULT_SCHEMA_VERSION` = `delivery.result.v1` wit
 |---|---|---|
 | P-01 | Out-of-window version *and* an unavailable requested mode | M-01 wins; M-03 is not evaluated; exactly one identity on the envelope |
 | P-02 | In-window version *and* unavailable requested mode | M-03; no spawn |
-| P-03 | In-window version, available mode, unrepresentable required seat | M-05; no spawn, no rows, no partial environment |
+| P-03 | In-window version, available mode, unrepresentable required seat | M-05; no spawn, no rows, no partial binding |
+| P-04 | Version indeterminate *and* an unavailable requested mode | M-02 wins; `mode` is **omitted** from the slot because mode resolution has not run — never the delivered default, never `null` |
 
-**Invariants.** Each new identity is declared exactly once; the nine delivered codes keep their meaning; no exit literal exists outside the projection module; absence is never reused for damage and damage is never reused for absence; a refusal is a classified outcome, never a bare exit status.
+**Invariants.** Each of the four new identities is declared exactly once; the nine delivered codes keep their meaning; `harness.telemetry.absent` exists nowhere in the closed vocabulary or the error table; no exit literal exists outside the projection module; absence is never reused for damage and damage is never reused for absence; a refusal is a classified outcome, never a bare exit status; the `detail.harness` slot is present only on M-01, M-02, M-03 and M-05.
 
-### 4.4 Version Verdict Matrix (binding for AC-F1-1..AC-F1-4)
+### 4.4 Version Verdict and Probe Grammar Matrix (binding for AC-F1-1..AC-F1-5)
 
-`W` = the pinned window `{2.2.x, 2.1.x}` (DEC-1). The accepted version grammar is a declared contract constant (GAP-5); the table below is generated from it so parse acceptance and rejection cannot drift apart.
+`W` = the pinned window `{2.2.x, 2.1.x}` (DEC-1). The accepted grammar is the declared contract constant (GAP-5): a product token, an optional `v`, a three-part semantic version, newline-terminated. The table is generated from that constant so parse acceptance and rejection cannot drift apart. `raw` is the probe stdout; `normalized` is `observedVersion`.
 
-| ID | Observed version | Expected verdict | Expected identity | Exit | Notes |
-|---|---|---|---|---|---|
-| V-01 | `2.2.5` | inside | — | 0 | The intake observation |
-| V-02 | `2.1.7` | inside | — | 0 | The previous minor line |
-| V-03 | `2.2.0` | inside | — | 0 | Lower bound of the current line |
-| V-04 | `2.3.0` | outside | `harness.version.unsupported` | 1 | The next minor is out |
-| V-05 | `2.0.9` | outside | `harness.version.unsupported` | 1 | Two minors back |
-| V-06 | `3.0.0` | outside | `harness.version.unsupported` | 1 | A major beyond the window |
-| V-07 | `""` (empty probe) | indeterminate | `harness.version.unknown` | 1 | Delivered `version-probe-failed` warning preserved at instance level |
-| V-08 | probe throws / exceeds 5 s | indeterminate | `harness.version.unknown` | 1 | One invocation; no retry |
-| V-09 | `2.two.5`, `2.2.x`, `latest` | indeterminate | `harness.version.unknown` | 1 | Unparseable is unknown, never a match |
-| V-10 | `2.3.0` with the window constant widened to include `2.3` (temp copy) | inside | — | 0 | Non-vacuity: the gate is exercised |
-| V-11 | `9.9.9` with the window constant made unbounded (temp copy) | inside | — | 0 | Proves V-04 is not a hardcoded literal in the *other* direction; the production constant still refuses |
-| V-12 | `9.9.9` with an absent or malformed configured window | outside | `harness.version.unsupported` | 1 | Degrades to the pinned default, never unbounded (AC-F1-4) |
+| ID | Raw probe output | Expected normalized version | Expected verdict | Expected identity | Exit | Notes |
+|---|---|---|---|---|---|---|
+| V-01 | `opencode v2.2.5` | `2.2.5` | inside | — | 0 | **The observed output** (16 bytes, exit 0, empty stderr): the primary row |
+| V-02 | `opencode v2.1.7` | `2.1.7` | inside | — | 0 | The previous minor line |
+| V-03 | `opencode v2.2.0` | `2.2.0` | inside | — | 0 | Lower bound of the current line |
+| V-04 | `opencode v2.3.0` | `2.3.0` | outside | `harness.version.unsupported` | 1 | The next minor is out |
+| V-05 | `opencode v2.0.9` | `2.0.9` | outside | `harness.version.unsupported` | 1 | Two minors back |
+| V-06 | `opencode v3.0.0` | `3.0.0` | outside | `harness.version.unsupported` | 1 | A major beyond the window |
+| V-07 | `opencode v2.2.5\n` (newline-terminated) | `2.2.5` | inside | — | 0 | The observed framing is accepted |
+| V-08 | `opencode 2.2.5` (no `v`) | `2.2.5` | inside | — | 0 | The `v` is optional in the declared grammar |
+| V-09 | `2.2.5` (bare semver, no product token) | — | indeterminate | `harness.version.unknown` | 1 | Off-grammar: demonstrates that a bare-semver assumption refuses and that no substring fallback exists |
+| V-10 | `""` (empty stdout, exit 0) | — | indeterminate | `harness.version.unknown` | 1 | Delivered `version-probe-failed` warning preserved at instance level |
+| V-11 | `opencode v2.2.5\nopencode v2.3.0` (multi-line) | — | indeterminate | `harness.version.unknown` | 1 | Multiple lines are never "pick one" |
+| V-12 | `opencode v2.2.5 extra` (trailing junk) | — | indeterminate | `harness.version.unknown` | 1 | The line must match the grammar end to end |
+| V-13 | `opencode v2.2` (two-part), `opencode v2.2.5.1` (four-part) | — | indeterminate | `harness.version.unknown` | 1 | A partial or extended version is never a match |
+| V-14 | `v2.2.5`, `latest`, `2.two.5`, `2.2.x` | — | indeterminate | `harness.version.unknown` | 1 | Unparseable is unknown, never a match and never a partial version |
+| V-15 | `opencode v2.20.0`, `opencode v12.2.5` | `2.20.0`, `12.2.5` | outside | `harness.version.unsupported` | 1 | Prefix-shaped near-misses parse but are out of window — never inside by prefix |
+| V-16 | probe exits non-zero (any output) | — | indeterminate | `harness.version.unknown` | 1 | Non-zero is indeterminate regardless of stdout |
+| V-17 | probe returns the `timed-out` outcome | — | indeterminate | `harness.version.unknown` | 1 | One invocation; no retry loop (NFR-2) |
+| V-18 | `opencode v2.3.0` with the window constant widened to include `2.3` (temp copy) | `2.3.0` | inside | — | 0 | Non-vacuity: the gate is exercised |
+| V-19 | `opencode v9.9.9` with the window constant made unbounded (temp copy) | `9.9.9` | inside | — | 0 | Proves V-04 is not hardcoded in the other direction; the production constant still refuses |
 
-### 4.5 Telemetry Field Matrix (binding for AC-F5-1..AC-F5-4, NFR-3, NFR-6)
+**No-configuration invariant (AC-F1-4).** The typed harness configuration branch declares no window member: a configuration document carrying an invented window key cannot widen or narrow acceptance (`opencode v2.3.0` still refuses, `opencode v2.2.5` still proceeds), whether the key is refused by the typed layer or ignored. TC-HARNESS-005 asserts the schema's key set and the unchanged verdicts.
 
-Field names below are role names; the exact JSON keys and warning reason strings are declared once in the contract module and asserted through those constants (GAP-5). `schemaId` is exact: `delivery.harness.telemetry.v1`.
+### 4.4a Pinned probe seam (the enforcement point NFR-2 and AC-F1-5 require)
+
+The delivered seam is `HarnessVersionProbe = () => Promise<string>`: a bare promise function with no deadline, no result status and no clock, so a test can only prove that the double rejected. This plan therefore pins the seam the implementation must introduce, and every NFR-2/AC-F1-5 bound assertion targets it:
+
+```
+HARNESS_VERSION_PROBE_TIMEOUT_MS = 5000            // declared constant, the only home of the bound
+HarnessVersionProbeOutcome =
+  | { status: "answered"; stdout: string }
+  | { status: "timed-out" }
+HarnessVersionProbe = (input: { deadlineMs: number; now: () => number })
+  => Promise<HarnessVersionProbeOutcome>
+```
+
+Binding assertions: (a) the resolver passes `deadlineMs === HARNESS_VERSION_PROBE_TIMEOUT_MS` exactly once per dispatch, together with the injected clock (asserted by reference, so an ambient clock fails); (b) the production probe hands that bound to the child-process runner (`timeoutMs` option asserted on a recording runner double); (c) `timed-out` and a rejected `answered` promise both yield `indeterminate` → `harness.version.unknown`, with exactly one invocation and no retry; (d) the verdict is published only after the probe outcome is settled (ordering asserted by the double's call log). Wall-clock duration remains a reference measurement (GAP-3), never a CI threshold. This seam is recorded as OQ-10 for `@plan-writer`; until the plan declares it, TC-HARNESS-006's bound half is unimplementable and must not be reported as passing.
+
+### 4.5 Telemetry Field Matrix (binding for AC-F5-1..AC-F5-5, NFR-3, NFR-6, NFR-11)
+
+Field names below are role names; the exact JSON keys and warning reason strings are declared once in the contract module and asserted through those constants (GAP-5). `schemaId` is exact: `delivery.harness.telemetry.v1`. Every row's fixture is a DM-10 store (§4.1a).
 
 | ID | Store / spawn shape | Expected row | Never |
 |---|---|---|---|
-| T-01 | Complete seat, both models equal, all classes, cost, durations | Every field present; `schemaId === "delivery.harness.telemetry.v1"`; `harnessKind === "opencode"`; `harnessVersion === "2.2.5"`; seat identity; resolved model; observed model; five token classes; calls; cost; `{start, end, elapsed}` matching literal fixtures; `warnings` empty | A missing mandatory field; a warning on a complete row |
-| T-02 | Store exposes no duration | Durations explicitly absent with the declared absence reason in `warnings`; `capturedAt` still present | A duration computed from `capturedAt`, an estimate, a `0`, or any number |
-| T-03 | Store exposes no cost | `cost === null` with the delivered `cost-missing` warning | `cost === 0` |
-| T-04 | Store omits one token class | That class `null` with a warning; the other four counted exactly; excluded from sums | `0` in the sum for the omitted class |
-| T-05 | Resolved model ≠ observed model | Both values kept; divergence warning from the closed vocabulary; one row per agent/model group | Overwriting either value; collapsing to one model |
-| T-06 | Resolved model == observed model | No divergence warning (paired control for T-05) | A warning on agreement |
-| T-07 | A seat cannot be resolved | Disclosed with the declared reason and a count; never guessed into another seat | A fabricated seat name; a silently dropped row |
+| T-01 | Current generation, complete: `session_v2` row (version `2.2.5`, agent, model object, cost, five token columns, `time_created`/`time_updated`) plus usage-bearing `session_message` rows | Every field present; `schemaId === "delivery.harness.telemetry.v1"`; `harnessKind === "opencode"`; version `2.2.5` (from `session_v2.version`, normalized); seat identity; resolved model; observed model; five token classes; calls = usage-bearing message count; cost; `{start, end, elapsed}` from the store pair; tool counts absent with the declared warning | A missing mandatory field; a fabricated tool count; a version read from a column that does not exist |
+| T-02 | Durations: store pair present (control) vs `time_updated` null or the per-message pair absent | Present pair → literals from the pair difference, including `elapsed === 0` when start equals end; absent pair → durations explicitly absent with the declared absence reason; `capturedAt` still present | A duration computed from `capturedAt`, an estimate, or a negative number |
+| T-03 | Cost: (a) reported `0` with non-zero tokens (free model), (b) no cost source in the generation, (c) non-numeric cost | (a) `cost === 0` recorded as reported, **no** `cost-missing` warning; (b) `cost === null` + `cost-missing`; (c) `cost === null` + `non-numeric-value` | `null` for a reported zero; `0` for an absent source; a warning on the reported zero |
+| T-04 | One token class absent from the generation | That class `null` with a warning; the other four counted exactly; excluded from sums | `0` in the sum for the omitted class |
+| T-05 | Resolved model ≠ observed model (normalized from the per-message `model` object) | Both values kept; divergence warning from the closed vocabulary; one row per agent/model group | Overwriting either value; collapsing to one model |
+| T-06 | Resolved model == observed model (agreement control, including a variant-only difference normalized to the same canonical identifier) | No divergence warning | A warning on agreement; two identifiers for one canonical model |
+| T-07 | Seat unresolved (`agent` null on the session row and every message) | Disclosed with the declared reason and a count; never guessed into another seat | A fabricated seat name; a silently dropped row |
 | T-08 | Pre-change row (no seat, no durations, no resolved model) | Read unchanged; new fields absent; no backfill; no crash | Enriching the stored row; a schema bump |
-| T-09 | Additive-only assertion | `HARNESS_TELEMETRY_SCHEMA_ID` unchanged; no field removed or renamed; a consumer ignoring new fields behaves as before | A new major identity; a structural re-shape |
-| T-10 | Caps exceeded (65 sessions / 17 agents / 17 models / 25 tools) | `HarnessTruncation` marks `{truncated: true, omitted, cap}` at the exact caps 64 / 16 / 16 / 24 | A silent drop; an uncounted omission |
-| T-11 | Any read | `PRAGMA query_only = 1` recorded before the first `SELECT`; only bounded indexed statements; no `message`/`part` scan | A write, a schema mutation, a full scan |
-| T-12 | Store seeded with prompt, transcript, diff, tool-output, credential and config canaries | No canary appears in any row, warning, or refusal envelope | Content leakage |
-| T-13 | Per-step rows plus a session baseline | One totals basis: session totals equal the baseline once; seat breakdown sums equal the totals per class | Summing steps *and* the baseline into one total |
-| T-14 | 2.1.x-shape store (durations and seat columns absent; identity and token fields present) | Rows land with degradation warnings and explicit duration absence; a session missing mandatory identity/token fields becomes a failed-session entry with its closed reason | Fabricated seat/duration; a zero-valued row; classifying a present-fields session as failed |
+| T-09 | Additive-only assertion | `HARNESS_TELEMETRY_SCHEMA_ID` unchanged; no field removed or renamed; a consumer ignoring new fields behaves as before; the state-layer payload allowlist persists the new fields | A new major identity; a structural re-shape; a field dropped by the payload projection |
+| T-10 | Caps exceeded (65 sessions / 17 agents / 17 models / 25 tools) | `HarnessTruncation` marks `{truncated: true, omitted, cap}` at the exact caps 64 / 16 / 16 / 24; the tool cap applies only where a populated tool source exists | A silent drop; an uncounted omission; a tool cap asserted on a store with no tool source |
+| T-11 | Any read | `PRAGMA query_only = 1` recorded before the first `SELECT`; every statement bounded and scoped (a session-id predicate; per-message reads additionally scoped by message type); no full-table `message`/`part`/`session_message` scan; no `content`/`data`-content projection; no write | A write; a schema mutation; a full scan; a content column in a projection list |
+| T-12 | Store seeded with prompt, transcript, diff, tool-output, credential and config canaries inside `session_message.data.content` and legacy `message.data` | No canary appears in any row, warning, or refusal envelope; no statement selects the content key | Content leakage |
+| T-13 | Per-step rows plus a session baseline, including a zero-cost session with non-zero tokens | One totals basis: session totals equal the baseline once; seat breakdown sums equal the totals per class; the zero-cost session reports `0` and is not classified absent | Summing steps *and* the baseline into one total; converting a reported zero into absence |
+| T-14 | Generation discrimination: current-generation fixture and legacy-generation fixture, each complete | Both land rows with the same field set read from their own tables; the legacy generation reports tool counts absent with a warning (`part` has no `tool` column); each generation's fixture fails the other generation's extractor (legacy-only and current-only mutants) | Reading `part.tool`; assuming new sessions land in `session`; a silent zero-row pass on an unrecognised generation |
+| T-15 | Session-identity attribution: the held session plus many unrelated sessions (same directory, other work items, other roots) | Exactly the held session's tree is read (parent links below the held identity); zero records for unrelated sessions; zero statements match a work-item-shaped column | A work-item query; a store-wide scan; attributing by title or directory |
+| T-16 | Version stamp and divergence: `session_v2.version` present (control) vs null/absent; probed installed version equal vs different | Present → normalized stamp on every row; absent → `null` + warning; divergence from the probed version → `version-drift` warning with both values kept | A fabricated version; overwriting either value; a `v`-prefixed stamp |
 
 ### 4.6 Conformance Scenario Matrix (binding for AC-F7-1..AC-F7-3)
 
 | ID | Registry condition | Expected outcome | Never |
 |---|---|---|---|
-| C-01 | Delivered registry unchanged | `HARNESS_CONFORMANCE_SCENARIOS` is exactly the six delivered ids in order; both `opencode` and `claude-code` register every one; `harnessConformanceViolations` is `[]` | A renamed, reordered or removed floor scenario |
-| C-02 | Extended registry | Each registration also declares exactly the five new ids: version-inside-window, version-outside-window, version-unknown, mode-unavailable, profile-propagation | A new id registered on only one harness without declaration |
-| C-03 | One registration missing one new scenario | Violations contain a message naming the harness *and* the missing scenario; the suite fails | A silent pass; a message naming only one of the two |
-| C-04 | A new refusal identity with no registered scenario | Violations name the identity; the suite fails | An identity that ships unexercised |
-| C-05 | Each new scenario executed over simulated harness I/O | The scenario's expected verdict/identity is produced; the session-spawn seam double records 0 session starts for refusals | A live process; a store read |
-| C-06 | Extension shape | The new scenarios resolve through the same registry functions and data declarations as the floor — no forked conformance module or parallel path | A second registry, a private code path |
+| C-01 | Delivered floor unchanged | `HARNESS_CONFORMANCE_FLOOR_SCENARIOS` is exactly the six delivered ids in order; both `opencode` and `claude-code` register every one; `harnessConformanceViolations` is `[]` | A renamed, reordered or removed floor scenario; the floor constant widened by the extension |
+| C-02 | Extension declared | `HARNESS_CONFORMANCE_EXTENSION_SCENARIOS` is exactly the four ids — `version-window`, `version-unknown`, `mode-unavailable`, `profile-propagation` — and each registration declares all four | A fifth id invented at registration time; an extension id mixed into the floor constant |
+| C-03 | One registration missing one extension scenario | Violations contain a message naming the harness *and* the missing scenario; the suite fails | A silent pass; a message naming only one of the two |
+| C-04 | A new refusal identity with no registered scenario | Violations name the identity; the identity→scenario map covers `harness.version.unsupported` → `version-window`, `harness.version.unknown` → `version-unknown`, `harness.mode.unavailable` → `mode-unavailable`, `harness.profile.model-unrepresentable` → `profile-propagation` | An identity that ships unexercised; a new telemetry-absence identity (there is none) |
+| C-05 | Each extension scenario executed through the additive executor | The scenario's declared expectation is produced: `version-window` asserts inside-proceeds **and** outside-refuses; `version-unknown` asserts the unknown identity with `null`; `mode-unavailable` asserts the identity and the requested mode; `profile-propagation` asserts the binding reaches the honoured invocation surface **and** an unrepresentable seat refuses; refusal directions record zero session starts | A declaration-only id; a live process; a store read |
+| C-06 | Executor surface | One additive executor beside the registry (`runHarnessConformanceScenario`-shaped, GAP-5) consumes `{ registration, scenarioId, io, deps }` and returns the scenario's declared outcome; the registry keeps `build` for the floor | A second registry, a forked module, or a test-local re-implementation of the scenarios |
 | C-07 | CI execution | Zero sockets, zero live harness invocations, zero credentials; the suite runs inside `bun test tests/conformance` | Any network or process dependency |
-| C-08 | One new scenario's guard disabled (mutant) | That scenario's oracle fails while its fixture is unchanged | A scenario that cannot fail |
+| C-08 | One extension scenario's guard disabled (mutant) | That scenario's oracle fails while its fixture is unchanged | A scenario that cannot fail |
+| C-09 | Scenario-id union discipline | `HarnessConformanceScenarioId` is a union of the floor type and the extension type; a test pinning the floor's exact six values still passes after an extension id is added, and a test pinning the extension's exact four values fails when it changes | A single flat union that makes a new id silently widen the floor; an `as`-cast that bypasses the union |
+| C-10 | Executor location | The executor and both id constants live in `packages/testkit/src/conformance/harness.ts` (beside the registry), and the suite that drives them lives in `tests/conformance/harness-extension-scenarios.test.ts` | The executor inlined in a test file, duplicated per adapter, or placed in a package the adapters cannot import |
 
 ## 5. Test Scenarios
 
@@ -342,15 +411,15 @@ Field names below are role names; the exact JSON keys and warning reason strings
 |-------|-------|-------------|---------------|-------|----------|-------------|
 | TC-HARNESS-001 | In-window dispatch proceeds and carries one version verdict | behaviour | Happy Path | Integration | Critical | AC-F1-1 |
 | TC-HARNESS-002 | **TC-M3-HARNESS-002** — out-of-window version refuses, no session spawned | behaviour | Negative | Integration | Critical | AC-F1-2, NFR-1 |
-| TC-HARNESS-003 | Indeterminate or unparseable version refuses with the distinct unknown identity | behaviour | Negative | Unit/Behaviour | Critical | AC-F1-3, NFR-6 |
+| TC-HARNESS-003 | Indeterminate or unparseable version refuses with the distinct unknown identity | behaviour | Negative | Unit/Behaviour | Critical | AC-F1-3, AC-F1-5, NFR-6 |
 | TC-HARNESS-004 | Version verdict matrix: boundary and parse table | unit | Corner Case | Unit | High | AC-F1-1, AC-F1-2 |
-| TC-HARNESS-005 | Window as data: pinned default and unusable-config degradation | unit | Edge Case | Unit/Behaviour | Critical | AC-F1-4 |
-| TC-HARNESS-006 | One bounded probe per dispatch before any session; probe-failure warning preserved | behaviour | Regression | Integration | Critical | AC-F1-1, AC-F1-2, AC-F1-3, NFR-1, NFR-2 |
-| TC-HARNESS-007 | Delivered default mode used with no runtime fallback | behaviour | Happy Path | Behaviour | Critical | AC-F2-1 |
+| TC-HARNESS-005 | Window is pinned data: no configuration key widens or narrows it | unit | Edge Case | Unit/Behaviour | Critical | AC-F1-4 |
+| TC-HARNESS-006 | One bounded probe per dispatch through the pinned deadline seam, before any session | behaviour | Regression | Integration | Critical | AC-F1-1, AC-F1-2, AC-F1-3, AC-F1-5, NFR-1, NFR-2 |
+| TC-HARNESS-007 | Delivered default mode used on its observed surface with no runtime fallback | behaviour | Happy Path | Behaviour | Critical | AC-F2-1 |
 | TC-HARNESS-008 | Unavailable requested mode refuses naming requested and available | behaviour | Negative | Behaviour | Critical | AC-F2-3, NFR-1 |
 | TC-HARNESS-009 | Mode origin: omitted → `defaults`; unknown value → refusal, never default | behaviour | Edge Case | Behaviour | High | AC-F2-4 |
-| TC-HARNESS-010 | Mode and adapter-contract decision records exist, agree with the default, and are linked | structure | Regression | Structure | Critical | AC-F2-2 |
-| TC-HARNESS-011 | **TC-M3-HARNESS-001** — profile propagation into spawn plus seat-attributed rows | behaviour | Happy Path | Integration | Critical | AC-F3-1, AC-F5-1 |
+| TC-HARNESS-010 | Mode and adapter-contract decision records: content, chosen-mode equality, index row | structure | Regression | Structure | Critical | AC-F2-2 |
+| TC-HARNESS-011 | **TC-M3-HARNESS-001** — per-seat binding reaches the honoured surface plus seat-attributed rows | behaviour | Happy Path | Integration | Critical | AC-F3-1, AC-F5-1 |
 | TC-HARNESS-012 | Record value beats a conflicting ambient parent value | unit | Happy Path | Unit/Behaviour | Critical | AC-F3-2 |
 | TC-HARNESS-013 | Undeclared record names change nothing; no ambient forwarding; allowlist not widened | unit | Negative | Unit/Behaviour | Critical | AC-F3-3, NFR-9 |
 | TC-HARNESS-014 | Unrepresentable required seat refuses naming the seat, no session | behaviour | Negative | Behaviour | Critical | AC-F3-4, NFR-1 |
@@ -358,29 +427,33 @@ Field names below are role names; the exact JSON keys and warning reason strings
 | TC-HARNESS-016 | Spawn, deliver and resume share one propagation contract | behaviour | Regression | Integration | High | AC-F3-1, AC-F4-1 |
 | TC-HARNESS-017 | Resume continues identity and preserves the tree root | behaviour | Happy Path | Behaviour | High | AC-F4-1 |
 | TC-HARNESS-018 | Attach resolves from a bounded listing, spawns nothing, and keeps unknown-session semantics | behaviour | Edge Case | Behaviour | High | AC-F4-1 |
-| TC-HARNESS-019 | Row shape: schema identity, harness version, seat, both models, tokens, calls, cost, durations | behaviour | Happy Path | Contract/Behaviour | Critical | AC-F5-1 |
+| TC-HARNESS-019 | Row shape from the current generation: identity, session version, seat, both models, tokens, calls, cost, durations | behaviour | Happy Path | Contract/Behaviour | Critical | AC-F5-1, DM-9, DM-10 |
 | TC-HARNESS-020 | Pre-change rows stay readable and unchanged; additive only | behaviour | Regression | Contract/Behaviour | Critical | AC-F5-2 |
-| TC-HARNESS-021 | Model divergence disclosed with both values kept, never overwritten | behaviour | Edge Case | Behaviour | Critical | AC-F5-3 |
-| TC-HARNESS-022 | Missing duration is explicitly absent, never derived from capture time | behaviour | Negative | Behaviour | Critical | AC-F5-4, NFR-6 |
-| TC-HARNESS-023 | Absence is `harness.telemetry.absent` at exit 1 with no zero-valued row | behaviour | Negative | Behaviour | Critical | AC-F6-1 |
-| TC-HARNESS-024 | Unreadable store keeps `harness.telemetry.extraction-failed`, never absence | behaviour | Negative | Behaviour | Critical | AC-F6-2 |
-| TC-HARNESS-025 | Bounded read discipline: query-only pragma, indexed queries, exact caps, truncation marks | behaviour | Regression | Behaviour | High | NFR-3 |
-| TC-HARNESS-026 | One totals basis: seat attribution does not double count | behaviour | Corner Case | Behaviour | High | AC-F5-1 |
+| TC-HARNESS-021 | Model and version divergence disclosed with both values kept, never overwritten | behaviour | Edge Case | Behaviour | Critical | AC-F5-3, DM-9 |
+| TC-HARNESS-022 | Durations come from store timestamps; a missing pair is explicitly absent | behaviour | Negative | Behaviour | Critical | AC-F5-4, NFR-6 |
+| TC-HARNESS-023 | Absence is classified inside the capture envelope; no identity, no zero row, read side untouched | behaviour | Negative | Behaviour | Critical | AC-F6-1, AC-F6-2, AC-F5-5, NFR-6 |
+| TC-HARNESS-024 | Unreadable store is extraction failure, never absence, and stays non-gating | behaviour | Negative | Behaviour | Critical | AC-F6-2, NFR-11 |
+| TC-HARNESS-025 | Bounded read discipline: query-only pragma, scoped and indexed statements, exact caps | behaviour | Regression | Behaviour | High | NFR-3, AC-F5-5 |
+| TC-HARNESS-026 | One totals basis: seat attribution does not double count | behaviour | Corner Case | Behaviour | High | AC-F5-1, NFR-6 |
 | TC-HARNESS-027 | Privacy: identity, counts, cost and durations only | behaviour | Regression | Behaviour/Checks | High | NFR-5, NFR-9 |
-| TC-HARNESS-028 | 2.1.x store shape degrades with warnings, never fabricates | behaviour | Edge Case | Behaviour | High | AC-F5-1, AC-F5-4, NFR-6 |
+| TC-HARNESS-028 | Store-generation tolerance: current and legacy fixtures degrade honestly, both directions | behaviour | Edge Case | Behaviour | High | AC-F5-1, AC-F5-4, NFR-11 |
 | TC-HARNESS-029 | Byte-identical determinism and zero network or model calls | behaviour | Regression | Checks | High | NFR-7 |
 | TC-HARNESS-030 | Bounded output with marked truncation; refusal identity and hint never truncated | behaviour | Corner Case | Behaviour | High | NFR-4 |
-| TC-HARNESS-031 | Delivered six-scenario classification floor unchanged and passing | conformance | Regression | Conformance | Critical | AC-F7-1 |
-| TC-HARNESS-032 | Missing new scenario or unexercised identity fails and names both | conformance | Negative | Conformance | Critical | AC-F7-2 |
-| TC-HARNESS-033 | New scenarios execute over simulated I/O and prove their property | conformance | Happy Path | Conformance | Critical | AC-F7-2, AC-F7-3 |
+| TC-HARNESS-031 | Delivered six-id classification floor unchanged and passing | conformance | Regression | Conformance | Critical | AC-F7-1 |
+| TC-HARNESS-032 | Missing extension scenario or unexercised identity fails and names both | conformance | Negative | Conformance | Critical | AC-F7-2 |
+| TC-HARNESS-033 | Extension scenarios execute through the additive executor and prove their property | conformance | Happy Path | Conformance | Critical | AC-F7-2, AC-F7-3 |
 | TC-HARNESS-034 | Conformance runs offline with zero live harness invocations | conformance | Regression | Checks | Critical | AC-F7-3, NFR-10 |
-| TC-HARNESS-035 | Refusal identity contract: one row per identity, stable code, derived exit, hint present | structure | Regression | Structure/Checks | Critical | AC-N1-1 |
-| TC-HARNESS-036 | Refusals leave no session-bearing side effect | negative | Negative | Integration | Critical | AC-N1-1, NFR-1 |
+| TC-HARNESS-035 | Refusal identity contract: four rows, no telemetry-absence identity, envelope member pins | structure | Regression | Structure/Checks | Critical | AC-N1-1 |
+| TC-HARNESS-036 | Refusals leave no session-bearing side effect; the single probe is completed and reaped | negative | Negative | Integration | Critical | AC-N1-1, NFR-1 |
 | TC-HARNESS-037 | Gate composition does not disturb the delivered stream, handle or bounds behaviour | behaviour | Regression | Integration | High | NFR-8 |
-| TC-HARNESS-038 | Mutant meta-suite over every new honesty rule | fixture | Regression | Checks (mutation) | Critical | AC-F1-2, AC-F1-3, AC-F1-4, AC-F2-1, AC-F3-2, AC-F3-3, AC-F3-4, AC-F5-3, AC-F5-4, AC-F6-1, AC-F6-2, AC-F7-2 |
+| TC-HARNESS-038 | Mutant meta-suite over every new honesty rule | fixture | Regression | Checks (mutation) | Critical | AC-F1-2, AC-F1-3, AC-F1-4, AC-F1-5, AC-F2-1, AC-F3-2, AC-F3-3, AC-F3-4, AC-F5-1, AC-F5-3, AC-F5-4, AC-F6-1, AC-F6-2, AC-F7-2 |
 | TC-HARNESS-039 | Whole-change offline hermetic posture | fixture | Regression | Checks | Critical | NFR-10 |
-| TC-HARNESS-040 | Dispatch outcome discloses the version verdict and the selected mode | behaviour | Happy Path | Behaviour | Important | AC-F1-1, AC-F2-1 |
-| TC-HARNESS-041 | Documentation and conformance reconciliation for window, mode, propagation and seat telemetry | structure | Regression | Manual + Structure | Important | AC-F2-2 |
+| TC-HARNESS-040 | Dispatch outcome and refusal disclose the version verdict, the selected mode, and the `detail.harness` member | behaviour | Happy Path | Behaviour | Important | AC-F1-1, AC-F2-1, AC-F1-3, AC-F2-3, AC-F3-4 |
+| TC-HARNESS-041 | Documentation reconciliation for window, mode, propagation, seat telemetry and decision links | structure | Regression | Manual + Structure | Important | AC-F2-2 |
+| TC-HARNESS-042 | Probe grammar and normalization: the observed line, the accepted forms, and every failing shape | behaviour | Corner Case | Contract/Behaviour | Critical | AC-F1-5, AC-F1-1, AC-F1-3, NFR-2, NFR-6 |
+| TC-HARNESS-043 | Attribution by the held session identity; no work-item column, no store-wide scan | behaviour | Regression | Behaviour/Checks | Critical | AC-F5-5, DM-8, DM-10, NFR-3, NFR-5 |
+| TC-HARNESS-044 | Mandatory-usage boundary: a held session with no observable usage fact is a failed-session entry | behaviour | Negative | Behaviour | Critical | AC-F5-5, AC-F6-2, NFR-11 |
+| TC-HARNESS-045 | Human-gated live observation: rows for a session the dispatch ran through the installed harness | manual | Happy Path | Manual | Critical | AC-F5-6, AC-F3-1, NFR-10 |
 
 ### 5.2 Scenario Details
 
@@ -397,13 +470,13 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 **Preconditions**:
 
-- Injected version probe returning `2.2.5`; a resolved profile with two seats; a recording streaming-spawn double.
+- Injected version probe returning `{status: "answered", stdout: "opencode v2.2.5\n"}` through the pinned deadline seam (§4.4a); a resolved profile with two seats; a recording streaming-spawn double.
 - Injected clock and ids; the pinned window default (V-01 in §4.4).
 
 **Steps**:
 
 1. Resolve the harness with the in-window probe result and a resolved profile.
-2. Assert the resolved instance carries `observedVersion === "2.2.5"` and a verdict equal to the declared *inside* constant (DM-2).
+2. Assert the resolved instance carries `observedVersion === "2.2.5"` — the **normalized** bare semver, not the raw line — and a verdict equal to the declared *inside* constant (DM-2).
 3. Assert no `versionWarning` is set, and that resolution did not refuse.
 4. Spawn one session through the port and assert the session-spawn seam was called exactly once.
 
@@ -413,7 +486,7 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 **Binding oracle**:
 
-- `instance.observedVersion === "2.2.5"`; `instance.versionVerdict === INSIDE` (declared constant); `instance.versionWarning === undefined`; session-spawn seam `calls === 1`; exit `0`; zero refusal envelope.
+- `instance.observedVersion === "2.2.5"`; `instance.versionVerdict === INSIDE` (declared constant); `instance.versionWarning === undefined`; the raw probe line `opencode v2.2.5` is not the stamped value; session-spawn seam `calls === 1`; exit `0`; zero refusal envelope.
 
 **Postconditions**:
 
@@ -436,16 +509,16 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 **Preconditions**:
 
-- Injected probe returning `2.3.0` (outside `2.2.x` + `2.1.x`); a paired in-window fixture (`2.2.5`) in the same test.
+- Injected probe returning `{status: "answered", stdout: "opencode v2.3.0\n"}` (outside `2.2.x` + `2.1.x`); a paired in-window fixture (`opencode v2.2.5\n`) in the same test.
 - A recording streaming-spawn double and a recording telemetry-append seam.
 
 **Steps**:
 
 1. Attempt a dispatch with the out-of-window probe result.
-2. Assert the refusal identity, projection class and exit from matrix M-01.
+2. Assert the refusal identity, projection class and exit from matrix M-01, including the `detail.harness` member set (`outside`, normalized version present, no `mode` key).
 3. Assert the envelope carries the observed version and a remediation hint naming both supported lines.
 4. Assert the session-spawn seam call count is `0`, the telemetry append count is `0`, and the store write count is `0`.
-5. Mutate the observed version to `2.2.5` on the same fixture and assert the dispatch proceeds (non-vacuity per §4.2 rule 2).
+5. Mutate the probe output to `opencode v2.2.5\n` on the same fixture and assert the dispatch proceeds (non-vacuity per §4.2 rule 2).
 
 **Expected Outcome**:
 
@@ -453,70 +526,71 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 **Binding oracle**:
 
-- `error.code === "harness.version.unsupported"`; `projectionClass === "user-validation"`; exit `1`; envelope `schemaVersion === "delivery.result.v1"`; `remediationHint` non-empty and contains the supported lines; session-spawn seam `calls === 0`; telemetry appends `0`; store writes `0`.
+- `error.code === "harness.version.unsupported"`; `projectionClass === "user-validation"`; exit `1`; envelope `schemaVersion === "delivery.result.v1"`; `detail.harness.versionVerdict === "outside"` and `detail.harness.observedVersion === "2.3.0"` with no `mode` key; `remediationHint` non-empty and contains the supported lines; session-spawn seam `calls === 0`; telemetry appends `0`; store writes `0`.
 
 #### TC-HARNESS-003 - Indeterminate version refuses with the distinct unknown identity
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-1, AC-F1-3, NFR-6, DM-2, DEC-3
+**Related IDs**: F-1, AC-F1-3, AC-F1-5, NFR-6, DM-2, DEC-3, DEC-11
 **Test Type(s)**: Unit, Behaviour
 **Automation Level**: Automated
-**Target Layer / Location**: probe + verdict classification; `tests/behaviour/harness-version-gate.test.ts` (matrix M-02, V-07..V-09)
+**Target Layer / Location**: probe outcome classification and version parsing; `tests/behaviour/harness-version-gate.test.ts` (matrix M-02, V-09..V-17)
 **Tags**: @offline, @harness, @version-gate, @refusal
 
 **Preconditions**:
 
-- Four probe variants: throws; returns `""`; returns `2.two.5`; returns `latest`. A paired passing probe control.
+- Probe variants: a rejected `answered` promise; empty stdout with exit 0; `opencode v2.2`; `opencode v2.2.5 extra`; `latest`; `2.2.5` with no product token; the `timed-out` outcome. A paired passing probe control (`opencode v2.2.5\n`).
 
 **Steps**:
 
 1. Resolve the harness for each variant.
 2. Assert the refusal identity is `harness.version.unknown` and that it is **not** `harness.version.unsupported` (explicit distinctness assertion).
-3. Assert the instance-level observation remains `null` and the delivered warning is exactly `version-probe-failed`.
-4. Assert no version string is fabricated anywhere in the envelope, the instance, or the recorded facts.
+3. Assert the instance-level observation remains `null`, no `v`-prefixed or partial version is stamped anywhere, and the delivered warning is exactly `version-probe-failed` for the probe-failure variants.
+4. Assert the refusal envelope carries no version-shaped string beyond the identity text, and that `detail.harness.observedVersion === null` with `versionVerdict === "indeterminate"` and no `mode` key.
 5. Assert the paired passing probe resolves inside and spawns.
 
 **Expected Outcome**:
 
-- An undeterminable version is its own classified condition with its own identity; the observation stays the explicit unknown; nothing is guessed and nothing proceeds silently (DEC-3, NFR-6).
+- An undeterminable version is its own classified condition with its own identity; the observation stays the explicit unknown; nothing is guessed and nothing proceeds silently (DEC-3, DEC-11, NFR-6).
 
 **Binding oracle**:
 
-- `error.code === "harness.version.unknown"`; `error.code !== "harness.version.unsupported"`; `observedVersion === null`; `versionWarning === "version-probe-failed"`; exit `1`; session-spawn seam `calls === 0`; no string matching a version pattern in the serialized envelope beyond the identity text.
+- `error.code === "harness.version.unknown"`; `error.code !== "harness.version.unsupported"`; `observedVersion === null`; `versionWarning === "version-probe-failed"` where the probe failed or was `timed-out`; exit `1`; session-spawn seam `calls === 0`; no string matching a semantic-version pattern in the serialized envelope beyond the identity text.
 
 #### TC-HARNESS-004 - Version verdict matrix: boundary and parse table
 
 **Scenario Type**: Corner Case
 **Impact Level**: Important
 **Priority**: High
-**Related IDs**: F-1, AC-F1-1, AC-F1-2, DM-1, DM-2
+**Related IDs**: F-1, AC-F1-1, AC-F1-2, AC-F1-5, DM-1, DM-2
 **Test Type(s)**: Unit, Contract
 **Automation Level**: Automated
-**Target Layer / Location**: window evaluation and version parsing; `tests/behaviour/harness-version-window.test.ts` + `tests/structure/harness-version-window-contract.test.ts`
+**Target Layer / Location**: window evaluation, version parsing and normalization; `tests/behaviour/harness-version-window.test.ts` + `tests/structure/harness-version-window-contract.test.ts`
 **Tags**: @offline, @harness, @version-gate
 
 **Preconditions**:
 
-- The declared version table fixture (V-01..V-09) and the accepted-grammar constant.
+- The declared version/grammar table fixture (V-01..V-19) and the accepted-grammar constant.
 
 **Steps**:
 
-1. Iterate every table row and assert the verdict, identity and exit match exactly.
-2. Assert the parse-acceptance constant and the table agree: every accepted form appears in the table, every rejected form is `indeterminate`.
-3. Assert both minor lines of the window are represented (`2.2.0`, `2.2.5`, `2.1.7`) and both immediate outsides (`2.0.9`, `2.3.0`).
-4. Assert a version that merely *contains* a supported prefix (`2.20.0`, `12.2.5`) is outside or unknown — never inside.
+1. Iterate every table row and assert the normalized version, verdict, identity and exit match exactly.
+2. Assert the parse-acceptance constant and the table agree: every accepted form appears in the table, every rejected form is `indeterminate`, and the grammar requires a product token and a three-part semver (the `v` is optional).
+3. Assert both minor lines of the window are represented (`opencode v2.2.0`, `opencode v2.2.5`, `opencode v2.1.7`) and both immediate outsides (`opencode v2.0.9`, `opencode v2.3.0`).
+4. Assert prefix-shaped near-misses (`opencode v2.20.0`, `opencode v12.2.5`) parse but are **outside** — never inside by prefix — and that a bare `2.2.5` with no product token is indeterminate, not inside.
+5. Assert the stamped `observedVersion` is never the raw line and never carries a `v` prefix.
 
 **Expected Outcome**:
 
-- Boundary behavior is pinned as data, not as incidental parsing behavior; prefix-shaped near-misses never pass.
+- Boundary and grammar behavior is pinned as data, not as incidental parsing behavior; prefix-shaped near-misses never pass and off-grammar output never becomes a permissive pass.
 
 **Binding oracle**:
 
-- Per row: verdict, identity and exit as tabulated; `2.20.0` and `12.2.5` are not *inside*.
+- Per row: normalized version, verdict, identity and exit as tabulated; `opencode v2.20.0` and `opencode v12.2.5` are not *inside*; `2.2.5` is `indeterminate`; no stamped value starts with `v`.
 
-#### TC-HARNESS-005 - Window as data: pinned default and unusable-config degradation
+#### TC-HARNESS-005 - Window is pinned data: no configuration key widens or narrows it
 
 **Scenario Type**: Edge Case
 **Impact Level**: Critical
@@ -524,59 +598,65 @@ Field names below are role names; the exact JSON keys and warning reason strings
 **Related IDs**: F-1, AC-F1-4, DM-1, DEC-1, RSK-2
 **Test Type(s)**: Unit, Behaviour
 **Automation Level**: Automated
-**Target Layer / Location**: window policy constants; `tests/behaviour/harness-version-window.test.ts` + `tests/structure/harness-version-window-contract.test.ts` (V-11, V-12)
-**Tags**: @offline, @harness, @version-gate
+**Target Layer / Location**: window policy constants and the typed harness configuration branch; `tests/behaviour/harness-version-window.test.ts` + `tests/structure/harness-version-window-contract.test.ts` (V-18, V-19)
+**Tags**: @offline, @harness, @version-gate, @config
 
 **Preconditions**:
 
-- The declared pinned window constant. Configured-window variants: absent; empty string; `"2"`; `">=2"`; a value selecting a line older than `2.1`.
+- The declared pinned window constant. Configuration variants: the harness branch absent; the branch with only the declared members; a document carrying an invented window-shaped key (e.g. a value that would select `>=2` or a line older than `2.1`) as an unknown key.
 
 **Steps**:
 
 1. Assert the pinned constant is exactly the current minor line plus one previous minor (`2.2` + `2.1` at intake) and is the only place acceptance widens.
-2. With no configured value, assert the pinned default applies (`2.2.5` inside, `2.3.0` outside).
-3. For each malformed or unsupported configured value, assert the pinned default applies — never an unbounded window — by asserting `2.3.0` still refuses and `9.9.9` still refuses.
-4. Assert no configured value can widen acceptance beyond the pinned constant in this change.
+2. Assert structurally that the typed harness configuration branch declares no window member (its key set is pinned), so no shipped configuration path can widen or narrow acceptance.
+3. With the branch absent, assert the pinned default applies (`opencode v2.2.5` inside, `opencode v2.3.0` outside).
+4. With a document carrying an invented window-shaped key, assert acceptance is unchanged in both directions — `opencode v2.2.5` still proceeds and `opencode v2.3.0` still refuses — whether the key is refused by the typed layer or inert.
+5. Assert a temp-copy widening of the constant flips V-04 to inside and a temp-copy unbounded constant accepts `opencode v9.9.9`, so the assertion tracks the gate and not a literal.
 
 **Expected Outcome**:
 
-- A pinned, testable default governs acceptance; a configuration path cannot accidentally widen it (DEC-1, RSK-2).
+- A pinned, testable default governs acceptance and no configuration path can accidentally widen it (DEC-1, RSK-2, AC-F1-4).
 
 **Binding oracle**:
 
-- `WINDOW === {lines: ["2.2", "2.1"]}`; for every unusable-config variant: `2.3.0 → harness.version.unsupported`, `9.9.9 → harness.version.unsupported`, exit `1`.
+- `WINDOW === {lines: ["2.2", "2.1"]}`; the configuration branch's key set contains no window member; for every variant: `opencode v2.3.0 → harness.version.unsupported`, exit `1`, and `opencode v2.2.5 → inside`; `9.9.9` refuses under the production constant.
 
-#### TC-HARNESS-006 - One bounded probe per dispatch before any session; warning preserved
+#### TC-HARNESS-006 - One bounded probe per dispatch through the pinned deadline seam, before any session
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-1, AC-F1-1, AC-F1-2, AC-F1-3, NFR-1, NFR-2, RSK-8
+**Related IDs**: F-1, AC-F1-1, AC-F1-2, AC-F1-3, AC-F1-5, NFR-1, NFR-2, RSK-8
 **Test Type(s)**: Integration, Behaviour
 **Automation Level**: Automated
-**Target Layer / Location**: version probe seam and its ordering; `tests/behaviour/harness-version-probe-bound.test.ts`
+**Target Layer / Location**: harness resolution, the pinned probe seam (§4.4a) and the production probe's child-process call; `tests/behaviour/harness-version-probe-seam.test.ts`
 **Tags**: @offline, @harness, @version-gate, @bound
 
 **Preconditions**:
 
-- A recording child-process double for the probe (args, environment, invocation count) and a separate recording session-spawn double.
-- A fake clock able to advance past 5 000 ms.
+- A recording probe double that captures its input (`deadlineMs`, `now`) and returns a declared `HarnessVersionProbeOutcome`; a separate recording session-spawn double; a recording child-process runner double standing behind the production probe.
+- An injected clock returning a fixed number; `HARNESS_VERSION_PROBE_TIMEOUT_MS` imported from the contract.
 
 **Steps**:
 
-1. Run one dispatch and assert the probe is invoked exactly once, shell-free (no shell argument, no prompt, no session args), and before any session-spawn call.
-2. Assert the probe-invocation ordering flag recorded by the double is "probe, then session" for the in-window case and "probe, then nothing" for the refusal cases.
-3. Advance the fake clock by 5 001 ms without a probe answer and assert the verdict is `indeterminate` with identity `harness.version.unknown`, invocation count still `1`, and no retry loop.
-4. Assert a failing probe preserves the delivered `version-probe-failed` instance warning while the dispatch-level consequence is the refusal.
-5. Record a local reference measurement of probe duration in §10 (non-CI, GAP-3).
+1. Run one dispatch and assert the probe is invoked exactly once, before any session-spawn call (ordering asserted from the double's call log), and that its input carries `deadlineMs === HARNESS_VERSION_PROBE_TIMEOUT_MS` and the injected `now` **by reference**.
+2. Assert the production probe passes that bound to the child-process runner (`timeoutMs === HARNESS_VERSION_PROBE_TIMEOUT_MS`) and that the invocation is shell-free (no shell flag, no prompt, no session args).
+3. Assert ordering for both cases from the recorded log: in-window → "probe, then session"; refusal → "probe, then nothing".
+4. Return the `timed-out` outcome and assert the verdict is `indeterminate` with identity `harness.version.unknown`, invocation count still `1`, and no retry loop; assert the verdict is not published before the outcome settles.
+5. Assert a failed probe preserves the delivered `version-probe-failed` instance warning while the dispatch-level consequence is the refusal.
+6. Record a local reference measurement of the real probe duration in §10 (non-CI, GAP-3).
 
 **Expected Outcome**:
 
-- The gate is evaluated once, bounded, before any session; failure is classified, never retried, never fabricated (NFR-2, RSK-8 mitigation proven).
+- The gate is evaluated once, bounded through a pinned and asserted enforcement point, before any session; a probe that cannot answer is classified, never retried, never fabricated (NFR-2, RSK-8 mitigation proven at the seam).
 
 **Binding oracle**:
 
-- Probe seam `calls === 1`; probe args contain no shell and no prompt; session-spawn seam `calls === 0` on refusal; on the 5 001 ms advance: `error.code === "harness.version.unknown"`, exit `1`, probe `calls === 1`; on failure: `versionWarning === "version-probe-failed"`.
+- Probe seam `calls === 1`; input `deadlineMs === 5000` (the constant) and `now` identical by reference to the injected clock; runner `timeoutMs === 5000`; probe args contain no shell and no prompt; session-spawn seam `calls === 0` on refusal; on `timed-out`: `error.code === "harness.version.unknown"`, exit `1`, probe `calls === 1`; on failure: `versionWarning === "version-probe-failed"`.
+
+**Notes / Clarifications**:
+
+- The delivered `HarnessVersionProbe = () => Promise<string>` has no deadline, status or clock, so a 5 001 ms fake-clock advance cannot prove anything about the gate — it only proves the double rejected. The bound is therefore asserted at the seam §4.4a pins (deadline argument + explicit `timed-out` outcome + runner timeout), and the wall-clock half is demoted to the §10 reference measurement (GAP-3). If the plan does not declare this seam, this TC's bound half is unimplementable and must be reported as a GAP, never as passing (OQ-10).
 
 #### TC-HARNESS-007 - Delivered default mode used with no runtime fallback
 
@@ -591,23 +671,23 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 **Preconditions**:
 
-- No mode configured; recording doubles for every declared transport (per-spawn CLI invocation, service start, API client).
+- No mode configured; recording doubles for every observed transport surface: the per-invocation private-server invocation (`--standalone` on the spawn argv), the managed background service (`service start|restart|status|stop`), and the client to a running server (`--server`/`api`).
 
 **Steps**:
 
 1. Resolve settings and spawn one session.
-2. Assert the resolved mode equals the declared default-mode constant.
-3. Assert exactly one transport family recorded a call and it is the default's family; assert zero service starts and zero API client constructions.
+2. Assert the resolved mode equals the declared default-mode constant and that the default maps to the `standalone` surface in the declared surface table.
+3. Assert exactly one transport family recorded a call and it is the default's family; assert the spawn argv carries `--standalone` exactly once; assert zero `service` subcommand invocations and zero `api` client constructions.
 4. Make the default transport fail; assert the failure is the default mode's classified outcome and that no alternate transport was attempted afterwards.
-5. Assert the recovered outcome does not silently switch mode (the recorded mode on the outcome equals the resolved mode).
+5. Assert the recorded `mode` on the outcome equals the resolved mode, so a silent switch is observable.
 
 **Expected Outcome**:
 
-- The declared default is the only mode a dispatch uses, and a transport failure is reported rather than papered over by a fallback (DEC-2, NG-2).
+- The declared default is the only mode a dispatch uses on the surface the installed harness exposes, and a transport failure is reported rather than papered over by a fallback (DEC-2, NG-2, AC-F2-1).
 
 **Binding oracle**:
 
-- `resolvedMode === DEFAULT_MODE` (declared constant, OQ-1 answer); default transport `calls === 1`; every other transport `calls === 0`; on failure exit and identity are the default mode's classified outcome; recorded `mode === resolvedMode` in both cases.
+- `resolvedMode === DEFAULT_HARNESS_MODE` (declared constant, OQ-1 answer); default transport `calls === 1` with `--standalone` in the argv; every other transport `calls === 0`; on failure exit and identity are the default mode's classified outcome; recorded `mode === resolvedMode` in both cases.
 
 #### TC-HARNESS-008 - Unavailable requested mode refuses naming requested and available
 
@@ -628,7 +708,7 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 1. Resolve settings with a non-default mode requested and attempt a dispatch.
 2. Assert the refusal identity, projection class and exit per M-03.
-3. Assert the envelope names both the requested mode and the available mode (declared fields, GAP-5 constants).
+3. Assert the envelope names both the requested mode and the available mode through the declared closed vocabulary, and that `detail.harness.mode` equals the **requested** mode with `versionVerdict === "inside"`.
 4. Assert the session-spawn seam call count is `0` and no transport double recorded a call.
 5. Run the paired default-mode control and assert it spawns.
 
@@ -638,7 +718,7 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 **Binding oracle**:
 
-- `error.code === "harness.mode.unavailable"`; `projectionClass === "user-validation"`; exit `1`; structured error carries requested `"background-service"` (and the other non-default value) and available `DEFAULT_MODE`; all transport calls `0`.
+- `error.code === "harness.mode.unavailable"`; `projectionClass === "user-validation"`; exit `1`; the structured error carries each non-default vocabulary member in turn and the available `DEFAULT_HARNESS_MODE`; `detail.harness.mode === requestedMode` and `versionVerdict === "inside"`; all transport calls `0`.
 
 #### TC-HARNESS-009 - Mode origin and unknown-value refusal
 
@@ -659,18 +739,19 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 1. With the branch absent, resolve settings and assert the mode equals the default and its origin equals `defaults`.
 2. With the default set explicitly, assert origin equals `configured` and the same mode value.
-3. For each unknown or malformed value, assert a refusal (never a silent default) and that no spawn occurred.
-4. Assert the resolved mode is never inferred from ambient state: an ambient variable shaped like a mode is injected and must change nothing (NFR-9).
+3. For each unknown or malformed value, assert a refusal (never a silent default), that no spawn occurred, and that the refusal's `detail.harness` member is **absent** (this is a configuration refusal, not one of the four harness refusals).
+4. Assert the declared mode vocabulary is exactly the three observed surfaces, each mapped to its observed surface in the declared table, and that no vocabulary member exists without a surface.
+5. Assert the resolved mode is never inferred from ambient state: an ambient variable shaped like a mode is injected and must change nothing (NFR-9).
 
 **Expected Outcome**:
 
-- The mode is a declared value with an observable origin; an unknown value is refused rather than defaulted; ambient state cannot select a mode (AC-F2-4).
+- The mode is a declared value with an observable origin drawn from the surfaces the harness actually exposes; an unknown value is refused rather than defaulted; ambient state cannot select a mode (AC-F2-4, DM-3).
 
 **Binding oracle**:
 
-- Absent → `mode === DEFAULT_MODE` and `origin === "defaults"`; explicit → `origin === "configured"`; unknown `"daemon"` → `error.code === "config.value.invalid"` (OQ-5 default), exit `1`, spawn calls `0`; ambient canary changes nothing.
+- Absent → `mode === DEFAULT_HARNESS_MODE` and `origin === "defaults"`; explicit → `origin === "configured"`; unknown value → `error.code === "config.value.invalid"` (OQ-5 default), exit `1`, spawn calls `0`, no `detail.harness`; vocabulary length `3` with each member in the surface table; ambient canary changes nothing.
 
-#### TC-HARNESS-010 - Mode and adapter-contract decision records exist, agree with the default, and are linked
+#### TC-HARNESS-010 - Mode and adapter-contract decision records: content, chosen-mode equality, index row
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
@@ -678,64 +759,71 @@ Field names below are role names; the exact JSON keys and warning reason strings
 **Related IDs**: F-2, AC-F2-2, G-8, DEC-7, DM-3
 **Test Type(s)**: Contract, Structure
 **Automation Level**: Automated structural assertions + manual content review
-**Target Layer / Location**: `doc/decisions/`, `doc/spec/features/feature-harness-adapters.md`; `tests/checks/decision-record.test.ts` (extend the inventory)
+**Target Layer / Location**: `doc/decisions/`; `tests/checks/decision-record.test.ts` (extend the inventory)
 **Tags**: @offline, @docs, @decision
 
 **Preconditions**:
 
 - The delivered per-type identifier convention (`TYPE-NNNN-slug.md` under `doc/decisions/`) and the decision-record contract test.
+- The two records this change authors (the integration-mode record and the adapters-contract record; TDR-0031 is the third and is authored for the envelope member).
 
 **Steps**:
 
 1. Assert a mode decision record and an adapters-contract decision record exist and follow the identifier convention, with `Proposed` or `Accepted` status.
-2. Assert the mode record states a chosen mode that equals the delivered default-mode constant (the same constant TC-HARNESS-007 asserts) and that the chosen mode is one of exactly standalone service, background service, direct API.
+2. Assert the mode record states a chosen mode that equals the delivered default-mode constant (the same constant TC-HARNESS-007 asserts), that the chosen mode is one of exactly the three declared vocabulary members, and that each declared member names its observed surface.
 3. Assert the mode record states the read-only direct-store rationale.
-4. Assert the harness feature spec links the record and that `doc/decisions/00-index.md` lists it.
-5. Assert the decision-record conformance test passes with both new entries.
+4. Assert both records carry a reviewable body (problem framing, alternatives considered, consequences, verification criteria) rather than a decorative summary — the R2 body the decision instructions require.
+5. Assert `doc/decisions/00-index.md` lists both records.
 
 **Expected Outcome**:
 
-- The decision precedes the behavior it governs and cannot drift from the code: the record's chosen mode and the default constant are asserted equal (DEC-7; correctness is human-gated — GAP-4).
+- The decision precedes the behavior it governs and cannot drift from the code: the record's chosen mode and the default constant are asserted equal (DEC-7; acceptance is human-gated — GAP-4). The feature-spec and change-artifact *links* are owned by TC-HARNESS-041 in the documentation phase, so this TC can be green at its own phase boundary.
 
 **Binding oracle**:
 
-- Both record files exist under the convention; mode record `chosenMode === DEFAULT_MODE`; chosen mode ∈ `{standalone service, background service, direct API}`; read-only direct-store rationale present; `feature-harness-adapters.md` contains a link to the mode record; index row present; `tests/checks/decision-record.test.ts` green.
+- Both record files exist under the convention; mode record `chosenMode === DEFAULT_HARNESS_MODE`; chosen mode ∈ the declared three-member vocabulary; read-only direct-store rationale present; alternatives and verification sections non-empty; index rows present; `tests/checks/decision-record.test.ts` green.
+
+**Notes / Clarifications**:
+
+- Retargeted from readiness finding 11: the previous oracle required `feature-harness-adapters.md` to contain the mode-record link, which Phase 8 owns. That assertion now lives only in TC-HARNESS-041.
 
 #### TC-HARNESS-011 - Pinned TC-M3-HARNESS-001: profile propagation plus seat-attributed rows
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-3, F-5, AC-F3-1, AC-F5-1, DM-4, DM-5, DM-6
+**Related IDs**: F-3, F-5, AC-F3-1, AC-F5-1, DM-4, DM-5, DM-6, DM-8, DM-10
 **Test Type(s)**: Integration, Behaviour
 **Automation Level**: Automated
-**Target Layer / Location**: spawn descriptor construction, spawn seam and telemetry extraction; `tests/behaviour/harness-profile-propagation.test.ts` + `harness-telemetry-seat-attribution.test.ts`
+**Target Layer / Location**: per-spawn binding construction, the opencode adapter's invocation assembly (`packages/adapters/src/harness/opencode.ts`) and telemetry extraction; `tests/behaviour/harness-profile-propagation.test.ts` + `harness-telemetry-seat-attribution.test.ts`
 **Tags**: @offline, @harness, @profile, @telemetry
 
 **Preconditions**:
 
-- A resolved profile with three seats having distinct resolved models and declared variable names (one seat using an explicit `envName`).
-- A recording streaming-spawn double that echoes the child environment it received; a fixture-seeded store exposing seat, model, tokens and cost for the three seats.
+- A resolved profile with three seats having distinct resolved models in `provider/model#variant` form, one seat whose declared name is explicit.
+- A recording streaming-spawn double that records the **invocation arguments** and the child environment it received; a current-generation fixture store (§4.1a) exposing the three seats' agent/model, tokens and cost.
 
 **Steps**:
 
 1. Spawn one session through the port with the resolved profile.
-2. Assert the spawn descriptor's environment records name each declared seat variable with exactly its resolved model value.
-3. Assert the echoed child environment the spawn seam received carries the same three name/value pairs.
-4. Collect evidence and assert the session reports the resolved model for all three seats.
-5. Land telemetry rows and assert three seat-attributed rows with non-null tokens and cost, zero unattributed seats, and the schema identity on every row (`TC-HARNESS-019` supplies the full field assertions).
+2. Assert the spawn input carries the per-seat binding as data (one entry per seat with seat identity and resolved model).
+3. Assert the opencode adapter maps that binding onto the honoured surface: the recorded invocation argv contains exactly one `--agent <seat>` and one `--model <provider>/<model>#<variant>` pair per spawned seat, with no seat's model borrowed from another seat and no value read from ambient state.
+4. Assert the child environment gains **no** per-seat `OC_*` model variable: the environment key set equals the declared allowlist set, so the propagation is an argument, not an invented variable family (DEC-8, NG-10).
+5. Collect evidence and assert the store's observed model for each seat equals the resolved model (agreement; divergence is TC-HARNESS-021).
+6. Land telemetry rows and assert three seat-attributed rows with non-null tokens and cost, zero unattributed seats, and the schema identity on every row (TC-HARNESS-019 supplies the full field assertions; TC-HARNESS-043 supplies attribution).
 
 **Expected Outcome**:
 
-- The pinned scenario holds: the session reports the resolved per-seat models and emits versioned rows carrying those seats with tokens and cost; zero seats are unattributed.
+- The pinned scenario holds offline: the resolved per-seat binding reaches the surface the harness honours, the session's reported models agree, and versioned rows carry those seats with tokens and cost; zero seats are unattributed.
 
 **Binding oracle**:
 
-- Descriptor record names/values equal the resolved profile exactly (3/3); echoed child env equal (3/3); reported seat models equal resolved models (3/3); rows `count === 3` with distinct seat identities; every row `schemaId === "delivery.harness.telemetry.v1"`; `tokens` non-null; `cost` non-null; unattributed seats `0`; session-spawn seam `calls === 1`.
+- Spawn input binding entries equal the resolved profile exactly (3/3); recorded argv contains 3 `--agent` and 3 `--model` pairs equal to the resolved values; child environment keys equal the declared allowlist set (no added seat variable); observed models equal resolved models (3/3); rows `count === 3` with distinct seat identities; every row `schemaId === "delivery.harness.telemetry.v1"`; `tokens` non-null; `cost` non-null; unattributed seats `0`; session-spawn seam `calls === 1`.
 
 **Notes / Clarifications**:
 
-- GAP-2: this proves propagation *to* the harness. A real harness honouring the variable family is the in-change spike's evidence, not this test's.
+- Retargeted per DEC-8/OQ-2: the previous oracle inspected a spawn *descriptor* carrying `OC_*_AGENT_*_MODEL` values, a surface the installed harness does not consume. What is tested now is the surface that actually runs. GAP-2: this proves propagation *to* the harness; the real harness honouring it is AC-F5-6's human-gated observation (TC-HARNESS-045), never this test's oracle.
+- The variable-consuming path (declared name or seat `envName`) is still exercised — against a harness double that consumes variables — in TC-HARNESS-012 and TC-HARNESS-013.
 
 #### TC-HARNESS-012 - Record value beats a conflicting ambient parent value
 
@@ -745,12 +833,13 @@ Field names below are role names; the exact JSON keys and warning reason strings
 **Related IDs**: F-3, AC-F3-2, DM-4, NFR-9
 **Test Type(s)**: Unit
 **Automation Level**: Automated
-**Target Layer / Location**: deny-by-default environment builder (`packages/core/src/domain/harness-spawn-env.ts`) with a profile record map; `tests/behaviour/harness-profile-precedence.test.ts` (matrix P-02)
+**Target Layer / Location**: deny-by-default environment builder (`packages/core/src/domain/harness-spawn-env.ts`) with a per-spawn binding record map, exercised through a variable-consuming harness double; `tests/behaviour/harness-profile-precedence.test.ts` (matrix P-02)
 **Tags**: @offline, @harness, @profile, @spawn-env
 
 **Preconditions**:
 
 - A descriptor declaring the seat variable; an injected parent environment carrying a conflicting value (`canary-ambient-model`); a resolved record value (`synthetic/model-resolved`).
+- A harness double that consumes declared variables (the delivered `envName`/derived-name path). The opencode adapter does not use this path — its binding is an argument (TC-HARNESS-011) — so this case is asserted on the surface that does consume variables.
 
 **Steps**:
 
@@ -780,23 +869,24 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 **Preconditions**:
 
-- A record map containing a name outside the allowlist (`OC_ADOS_AGENT_REVIEWER_MODEL` style) with a unique value; the parent environment carrying unique undeclared canaries, including one shaped like a model variable.
+- A record map containing a name outside the allowlist (a seat-shaped model variable) with a unique value; the parent environment carrying unique undeclared canaries, including one shaped like a model variable.
+- Both surfaces are asserted: the environment builder (variable-consuming double) and the opencode invocation path, where the binding must reach the argv and add no environment key at all.
 
 **Steps**:
 
-1. Build the child environment.
+1. Build the child environment on the variable-consuming path and record the opencode invocation argv and environment on the honoured path.
 2. Assert `Object.keys(childEnv)` equals exactly the declared allowlist set — the undeclared record name added nothing and nothing was removed.
 3. Assert every undeclared canary (including the model-shaped decoy) is absent.
-4. Assert the allowlist itself is unchanged (same length and same names) after the build.
+4. Assert the allowlist itself is unchanged (same length and same names) after the build, and that the opencode environment carries no seat-shaped key while its argv carries the binding.
 5. Assert the delivered deny-by-default assertions still hold unchanged.
 
 **Expected Outcome**:
 
-- The record map supplies values only for already-declared names; adding profile data never widens the environment (AC-F3-3, RSK-6 mitigation proven).
+- The record map supplies values only for already-declared names; adding profile data never widens the environment, and on the invocation surface it adds no environment entry at all (AC-F3-3, RSK-6 mitigation proven).
 
 **Binding oracle**:
 
-- `sorted(Object.keys(childEnv)) === sorted(declaredNames)`; undeclared record name absent; all canaries absent; allowlist length unchanged; delivered `harness-spawn-env.test.ts` green.
+- `sorted(Object.keys(childEnv)) === sorted(declaredNames)`; undeclared record name absent; all canaries absent; allowlist length unchanged; opencode environment key set unchanged and its argv carries the binding; delivered `harness-spawn-env.test.ts` green.
 
 #### TC-HARNESS-014 - Unrepresentable required seat refuses naming the seat, no session
 
@@ -811,24 +901,24 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 **Preconditions**:
 
-- Three unrepresentable variants: a required seat whose model value is empty; whose declared name is not a valid environment variable name; whose model cannot be expressed in the declared variable family and which declares no honoured `envName`.
-- A recording spawn seam and a paired representable-seat control.
+- Three unrepresentable variants on the honoured surface: a required seat whose resolved model is empty; a resolved model that is not expressible as `provider/model#variant` on the per-invocation surface (missing provider, or a malformed variant); a seat whose model is absent from the injected recognised-model catalogue the adapter reads from the harness's own configuration surface.
+- A recording spawn seam; a paired representable-seat control with a catalogue containing every resolved model.
 
 **Steps**:
 
-1. Prepare each spawn and assert the refusal identity, projection class and exit per M-05.
+1. Prepare each spawn and assert the refusal identity, projection class and exit per M-05, including `detail.harness` (`versionVerdict === "inside"`, `mode` = the resolved mode).
 2. Assert the structured error names the offending seat (declared naming field, GAP-5 constant).
-3. Assert the session-spawn seam call count is `0` and no partial environment was handed to any seam.
+3. Assert the session-spawn seam call count is `0`, that no invocation argv was assembled, and that no partial binding was handed to any seam.
 4. Assert no telemetry row was written.
 5. Run the paired representable control and assert it spawns with the full profile.
 
 **Expected Outcome**:
 
-- A partial profile is refused rather than delivered under the wrong seat; the identity names the seat so the fix is actionable (DEC-6).
+- A partial profile is refused rather than delivered under the wrong seat; the identity names the seat so the fix is actionable (DEC-6, AC-F3-4).
 
 **Binding oracle**:
 
-- `error.code === "harness.profile.model-unrepresentable"`; projection class `user-validation` (OQ-5 default); exit `1`; seat identifier present in the structured error; spawn calls `0`; telemetry rows `0`; control spawns with 3/3 seats.
+- `error.code === "harness.profile.model-unrepresentable"`; projection class `user-validation` (OQ-5 default); exit `1`; seat identifier present in the structured error; spawn calls `0`; telemetry rows `0`; `detail.harness.mode === resolvedMode`; control spawns with 3/3 seats.
 
 #### TC-HARNESS-015 - Propagation is per spawn, not process-global
 
@@ -843,14 +933,14 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 **Preconditions**:
 
-- Two resolved profiles A and B differing in one seat's model; one shared composition instance reused for both spawns.
+- Two resolved profiles A and B differing in one seat's model; one shared composition instance reused for both spawns; a recording spawn double capturing invocation arguments and environment for each surface.
 
 **Steps**:
 
-1. Spawn with A, then with B on the same composition, asserting each spawn descriptor carries its own profile's value.
+1. Spawn with A, then with B on the same composition, asserting each spawn carries its own profile's binding on the surface in use (opencode: its own `--agent`/`--model` pairs; variable-consuming double: its own variable values).
 2. Repeat in reverse order (B then A) and assert the values follow the profiles, not the order.
-3. Spawn concurrently with A and B and assert neither descriptor is contaminated by the other.
-4. Assert no module-level mutable state carries a profile value: after both spawns, a third spawn with no profile declares no seat record.
+3. Spawn concurrently with A and B and assert neither spawn is contaminated by the other.
+4. Assert no module-level mutable state carries a binding: after both spawns, a third spawn with no profile carries no seat override on either surface.
 
 **Expected Outcome**:
 
@@ -858,7 +948,7 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 **Binding oracle**:
 
-- Spawn 1 `childEnv[SEAT_VAR] === modelA`; spawn 2 `=== modelB`; reversed order swaps accordingly; concurrent spawns each correct; profile-free spawn has no seat key.
+- Spawn 1 argv/variable === modelA; spawn 2 === modelB; reversed order swaps accordingly; concurrent spawns each correct; profile-free spawn carries no seat override and no seat key.
 
 #### TC-HARNESS-016 - Spawn, deliver and resume share one propagation contract
 
@@ -878,9 +968,9 @@ Field names below are role names; the exact JSON keys and warning reason strings
 **Steps**:
 
 1. Spawn, deliver and resume with the same profile.
-2. Assert the three constructed environments are canonically byte-identical (`canonicalHarnessJson`).
-3. Assert the resume that supplies the original descriptor reuses it rather than re-deriving a different map.
-4. Assert a resume whose descriptor is absent rebuilds an environment equal to the original.
+2. Assert the three constructed bindings and the three derived invocation argument sets are canonically byte-identical (`canonicalHarnessJson`).
+3. Assert the resume that supplies the original descriptor reuses its binding rather than re-deriving a different one.
+4. Assert a resume whose descriptor is absent rebuilds a binding equal to the original.
 
 **Expected Outcome**:
 
@@ -888,7 +978,7 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 **Binding oracle**:
 
-- `canonical(envSpawn) === canonical(envDeliver) === canonical(envResume)`; all three carry the same seat name/value pairs; zero divergence.
+- `canonical(bindingSpawn) === canonical(bindingDeliver) === canonical(bindingResume)`; `canonical(argvSpawn) === canonical(argvDeliver) === canonical(argvResume)`; all three carry the same seat/model pairs; zero divergence.
 
 #### TC-HARNESS-017 - Resume continues identity and preserves the tree root
 
@@ -950,36 +1040,42 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 - Listing `calls === 1` with cap constant; spawn `calls === 0`; resolved handle identity equal; over-cap listing has `{truncated: true, omitted, cap}`; unknown/different → `error.code === "harness.session.unknown"`, exit `1`, kill `calls === 1`, second kill no-op, live children `0`.
 
-#### TC-HARNESS-019 - Row shape: schema identity, harness version, seat, both models, tokens, calls, cost, durations
+#### TC-HARNESS-019 - Row shape from the current generation: identity, session version, seat, both models, tokens, calls, cost, durations
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-5, AC-F5-1, DM-5, DM-6, NFR-6
+**Related IDs**: F-5, AC-F5-1, DM-5, DM-6, DM-9, DM-10, NFR-6
 **Test Type(s)**: Contract, Behaviour
 **Automation Level**: Automated
-**Target Layer / Location**: telemetry row contract and opencode extractor; `tests/behaviour/harness-telemetry-seat-attribution.test.ts` + `harness-telemetry-shape.test.ts` (update); `tests/structure/harness-contract.test.ts`
+**Target Layer / Location**: telemetry row contract and the opencode extractor; `tests/behaviour/harness-telemetry-seat-attribution.test.ts` + `harness-telemetry-shape.test.ts` (update); `tests/structure/harness-contract.test.ts`
 **Tags**: @offline, @telemetry, @contract
 
 **Preconditions**:
 
-- The complete store variant (T-01) with literal token, call, cost and duration values; an injected `capturedAt`.
+- The T-01 current-generation fixture (§4.1a): a `session_v2` row with `version = "2.2.5"`, an `agent`, a `model` object, `cost`, the five `tokens_*` columns and `time_created`/`time_updated`, plus three usage-bearing `session_message` rows carrying per-message `agent`, `model`, `cost`, `tokens` and `time` inside `data`. Literal token, call, cost and duration values; an injected `capturedAt`.
 
 **Steps**:
 
-1. Extract and assert every mandatory field against the hand-written fixture constants.
-2. Assert `schemaId` equals the delivered constant exactly, `harnessKind` is `opencode`, and `harnessVersion` equals the store's version.
-3. Assert the seat identity, resolved model and observed model fields are present and equal to their distinct fixture values.
-4. Assert the five token classes, `calls`, `cost`, and the three duration fields equal the fixture literals.
-5. Assert the contract module exposes exactly the declared field names and the token-class set is still exactly five.
+1. Extract with the session identity the dispatch holds and assert every mandatory field against the hand-written fixture constants.
+2. Assert `schemaId` equals the delivered constant exactly, `harnessKind` is `opencode`, and the row's `harnessVersion` equals the **normalized** `session_v2.version` (`2.2.5`), not a `v`-prefixed or probed value.
+3. Assert the seat identity comes from the per-message `agent` with the session row as baseline, and that the resolved and observed model fields are both present and equal their distinct fixture values.
+4. Assert the five token classes equal the `session_v2.tokens_*` columns, `calls` equals the count of usage-bearing message rows, `cost` equals the stored cost, and the three duration fields equal the `time_created`/`time_updated` difference.
+5. Assert `records.length >= 1` for the held session and that a zero-row outcome for this fixture would fail the test (the capture-failure rule).
+6. Assert tool counts are absent with the declared warning, because the current generation exposes no populated tool source.
+7. Assert the contract module exposes exactly the declared field names and the token-class set is still exactly five.
 
 **Expected Outcome**:
 
-- The ticket's "schema version and per-seat models" is a row field set, not a claim: every mandatory field is present with the exact seeded value (AC-F5-1).
+- The ticket's "schema version and per-seat models" is a row field set sourced from the store that exists, not a claim: every mandatory field is present with the exact seeded value and a zero-row capture is a failure (AC-F5-1, DM-9, DM-10).
 
 **Binding oracle**:
 
-- `schemaId === "delivery.harness.telemetry.v1"`; `harnessVersion === "2.2.5"`; `seat === "reviewer"`; `resolvedModel === "synthetic/model-a"`; `observedModel === "synthetic/model-a"`; `tokens === {input: 11, output: 22, reasoning: 3, cacheRead: 4, cacheWrite: 5}` (fixture literals); `calls === 7`; `cost === 1.25`; `durations === {start: T0, end: T0+3000, elapsed: 3000}`; `warnings === []`.
+- `schemaId === "delivery.harness.telemetry.v1"`; `harnessVersion === "2.2.5"`; seat identity `=== "reviewer"` (fixture literal); `resolvedModel === "synthetic/model-a"`; `observedModel === "synthetic/model-a"`; `tokens === {input: 11, output: 22, reasoning: 3, cacheRead: 4, cacheWrite: 5}`; `calls === 3`; `cost === 1.25`; `durations === {start: T0, end: T0+3000, elapsed: 3000}`; `toolCounts === []` with the declared absence warning; `records.length >= 1`.
+
+**Notes / Clarifications**:
+
+- Retargeted per readiness finding 1: the previous fixture asserted `session.work_item_ref`, `session.harness_version` and per-message token columns, none of which exist in any observed store. Every assertion here names a field the observed contract provides (§4.1a).
 
 #### TC-HARNESS-020 - Pre-change rows stay readable and unchanged; additive only
 
@@ -1012,37 +1108,39 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 - Legacy row canonical JSON equal to the committed golden; `schemaId === "delivery.harness.telemetry.v1"`; seat/durations/resolvedModel absent in the legacy row; no mutation (store byte count unchanged); post-change row read by the ignoring projection yields the legacy field set.
 
-#### TC-HARNESS-021 - Model divergence disclosed with both values kept
+#### TC-HARNESS-021 - Model and version divergence disclosed with both values kept
 
 **Scenario Type**: Edge Case
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-5, AC-F5-3, DM-5, DEC-5
+**Related IDs**: F-5, AC-F5-3, DM-5, DM-9, DEC-5
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
-**Target Layer / Location**: extractor and row landing; `tests/behaviour/harness-telemetry-divergence.test.ts` (T-05, T-06)
+**Target Layer / Location**: extractor model normalization and row landing; `tests/behaviour/harness-telemetry-divergence.test.ts` (T-05, T-06, T-16)
 **Tags**: @offline, @telemetry, @divergence
 
 **Preconditions**:
 
-- A store reporting `synthetic/model-b` while the spawn profile resolved `synthetic/model-a`; a paired agreeing fixture.
+- A current-generation store reporting `synthetic/model-b` in the per-message `model` object while the spawn profile resolved `synthetic/model-a`; a paired agreeing fixture; a variant-only difference pair (same `id`/`providerID`, different `variant`) normalized to one canonical identifier.
+- A store whose `session_v2.version` differs from the dispatch-probed installed version.
 
 **Steps**:
 
 1. Land the row and assert `resolvedModel === "synthetic/model-a"` and `observedModel === "synthetic/model-b"` — both present and distinct.
-2. Assert the divergence warning is present and its reason is a member of `HARNESS_WARNING_REASONS` (the declared constant set).
+2. Assert the model-divergence warning is present and its reason is a member of `HARNESS_WARNING_REASONS` (the declared constant set).
 3. Assert neither value was overwritten in either direction, and the stored row keeps both.
-4. Run the paired agreeing fixture and assert no divergence warning appears.
+4. Run the paired agreeing fixture and assert no divergence warning appears; run the variant-only pair and assert both sides normalize to the same canonical identifier and no warning appears.
+5. Land a row where the stored version differs from the probed installed version and assert the row stamps the **stored** version, the probed version is disclosed separately, and the `version-drift` warning carries both — neither overwritten.
 
 **Expected Outcome**:
 
-- Divergence is evidence, not noise: both the intent and the observation survive, and silence about it is impossible when they differ (DEC-5).
+- Divergence is evidence, not noise: both the intent and the observation survive for models and for versions, and silence about it is impossible when they differ (DEC-5, DM-9).
 
 **Binding oracle**:
 
-- `resolvedModel !== observedModel` and both equal their seeded values; divergence reason ∈ `HARNESS_WARNING_REASONS`; agreement control has no divergence reason.
+- `resolvedModel !== observedModel` and both equal their seeded values; divergence reason ∈ `HARNESS_WARNING_REASONS`; agreement and variant-only controls carry no divergence reason; version case: row `harnessVersion === storedVersion` and the probed value appears only in the disclosure with a `version-drift` warning.
 
-#### TC-HARNESS-022 - Missing duration is explicitly absent, never derived
+#### TC-HARNESS-022 - Durations come from store timestamps; a missing pair is explicitly absent
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
@@ -1055,60 +1153,70 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 **Preconditions**:
 
-- The missing-duration store variant; the complete variant as control; `capturedAt` present in both.
+- The current-generation fixture with the session `time_created`/`time_updated` pair present (control), a variant with `time_updated` null, a variant with the per-message timestamp pair absent, a variant whose `time_updated` precedes `time_created`, and a variant where start equals end; `capturedAt` present in every variant.
 
 **Steps**:
 
-1. Land the row from the missing-duration store and assert the duration fields are absent, not `0` and not a number.
-2. Assert a warning with the declared duration-absence reason from the closed vocabulary.
-3. Assert that mutating `capturedAt` by +10 minutes does not change any duration value (it stays absent) — proving nothing is derived from capture time.
-4. Run the complete control and assert `{start, end, elapsed}` equal the fixture literals.
+1. Land the row from the complete fixture and assert `{start, end, elapsed}` equal the store pair's literals (the difference the pair expresses), not the capture time.
+2. Land the row from the missing-pair variants and assert the duration fields are absent — not `0` and not a number — with the declared absence reason from the closed vocabulary.
+3. Land the row where start equals end and assert `elapsed === 0` is reported as a genuine observation with no absence warning (a reported zero is never converted to absence).
+4. Land the row where the pair is inverted and assert the duration is explicitly absent with a warning, never a negative number.
+5. Mutate `capturedAt` by +10 minutes and assert no duration value changes (it stays absent or stays the pair's value) — proving nothing is derived from capture time.
 
 **Expected Outcome**:
 
-- Absence stays absence; a duration is never manufactured from timestamps or estimated (AC-F5-4, NFR-6).
+- Durations are store facts: they come from the timestamps the store holds, they are explicitly absent when the pair cannot express them, and they are never manufactured or estimated (AC-F5-4, NFR-6).
 
 **Binding oracle**:
 
-- Missing-duration row: duration fields absent (`undefined`), no numeric duration anywhere in the row; warning reason ∈ `HARNESS_WARNING_REASONS`; `capturedAt` mutation leaves durations absent; control `elapsed === 3000` exactly.
+- Complete pair → exact literals from the pair difference; missing/inverted pair → duration fields absent (`undefined`), no numeric duration anywhere in the row, warning reason ∈ `HARNESS_WARNING_REASONS`; equal pair → `elapsed === 0` with no absence warning; `capturedAt` mutation leaves every duration unchanged.
 
-#### TC-HARNESS-023 - Absence is `harness.telemetry.absent` at exit 1 with no zero-valued row
+**Notes / Clarifications**:
+
+- Inverted from the previous revision, which asserted "the store exposes no duration" as the primary case. Store timestamps are the source of truth (DM-6); absence is the exception and only when the pair is missing or unusable.
+
+#### TC-HARNESS-023 - Absence is classified inside the capture envelope; no identity, no zero row, read side untouched
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-6, AC-F6-1, NFR-6
+**Related IDs**: F-6, AC-F6-1, AC-F6-2, AC-F5-5, NFR-6, DEC-9, DEC-10
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
-**Target Layer / Location**: telemetry read/request path; `tests/behaviour/harness-telemetry-absent.test.ts` (matrix M-06)
+**Target Layer / Location**: capture envelope classification and the work-item read side; `tests/behaviour/harness-telemetry-classification.test.ts` (matrix M-06)
 **Tags**: @offline, @telemetry, @absence
 
 **Preconditions**:
 
-- A healthy store with zero rows for the requested session; a paired store with one row; a recording state-append seam.
+- A healthy, readable store that does **not** hold the session identity the dispatch recorded (the store holds other sessions); a paired control where it does hold it; a recording state-append seam; a captured telemetry set for the work item in one variant and none in another.
 
 **Steps**:
 
-1. Request telemetry for the empty session and assert the identity, projection class and exit per M-06.
-2. Assert the append seam recorded zero appends — no zero-valued row was produced.
-3. Assert no report or table with zero figures is rendered anywhere in the output.
-4. Assert the identity differs from `spend.telemetry-absent` (the delivered read-side meaning is untouched, not reused as a harness identity).
-5. Run the paired one-row control and assert a row lands and the invocation succeeds.
+1. Capture telemetry for the run whose session the store does not hold, and assert the capture envelope classifies it as **absence**: zero records for that session, an absence entry/count with a closed-vocabulary reason, and **no** `failedSessions` entry (absence is not damage).
+2. Assert the append seam recorded zero appends — no zero-valued row was produced — and that no rendered report shows zero token or cost figures.
+3. Assert the work-item read side reports the delivered `spend.telemetry-absent` classification for a work item with no captured telemetry, with no figures, and assert that `spend.telemetry-absent` is unchanged and not reused as a harness capture identity.
+4. Assert the delivery's outcome, phase, summary and exit code equal the paired control's — closeout capture is non-gating and an absent capture writes no zero-valued record.
+5. Assert no identity named `harness.telemetry.absent` exists anywhere in `HARNESS_FAILURE_CODES`, the error table, or the capture vocabulary (an explicit absence-of-identity assertion).
+6. Run the paired held-session control and assert ≥ 1 row lands and the run succeeds.
 
 **Expected Outcome**:
 
-- Absence is a classified condition at exit 1, and a zero-valued row can never masquerade as data (AC-F6-1).
+- Absence is a classification inside the delivered envelope, never a fabricated identity, never a zero-valued row, and never a change to the delivery — and the removal of the invented identity cannot be silently reversed (AC-F6-1, DEC-10).
 
 **Binding oracle**:
 
-- `error.code === "harness.telemetry.absent"`; `error.code !== "spend.telemetry-absent"`; `projectionClass === "user-validation"`; exit `1`; appends `0`; no `0` token or cost figure in the output; control appends `1` and exits `0`.
+- Capture envelope: `records` for the session `0`; absence count `1` with a closed reason; `failedSessions` `0`; appends `0`; no `0` token or cost figure rendered; read side `{state: "absent", code: "spend.telemetry-absent"}`; delivery exit equals the control's; `HARNESS_FAILURE_CODES` contains no `harness.telemetry.absent`; control appends `>= 1`.
 
-#### TC-HARNESS-024 - Unreadable store keeps `harness.telemetry.extraction-failed`, never absence
+**Notes / Clarifications**:
+
+- Retargeted per readiness finding 2 and DEC-10: the previous oracle asserted `harness.telemetry.absent` at exit 1 through a per-session telemetry request that does not exist and is not added (NG-9). The reachable surface is the capture envelope plus the delivered `spend.telemetry-absent` read side.
+
+#### TC-HARNESS-024 - Unreadable store is extraction failure, never absence, and stays non-gating
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-6, AC-F6-2, NFR-3
+**Related IDs**: F-6, AC-F6-2, NFR-11, DEC-9, DEC-10
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: store open/read failure classification; `tests/behaviour/harness-telemetry-extraction-failure.test.ts` (matrix M-07)
@@ -1116,30 +1224,31 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 **Preconditions**:
 
-- Four damaged variants: nonexistent path; permission-denied; not-a-database content; torn/invalid schema. A paired healthy store.
+- Five damaged variants: nonexistent path; permission-denied; not-a-database content; torn/invalid schema; an unrecognised generation (a store whose session tables are neither observed family). A paired healthy store and a paired absence case.
 
 **Steps**:
 
-1. Request telemetry for each damaged store and assert the delivered identity, projection class and exit per M-07.
-2. Assert no variant returns `harness.telemetry.absent` (the taxonomy boundary is explicit).
-3. Assert no row was written and no partial report rendered.
-4. Assert the delivered damaged-store assertions (`harness-telemetry-opencode`, `harness-telemetry-shape`) still hold unchanged.
-5. Run the healthy control and assert success.
+1. Capture telemetry for each damaged store and assert the delivered identity `harness.telemetry.extraction-failed` is raised, never a silent zero-row success.
+2. Assert no variant is classified as the absence case (the taxonomy boundary is explicit, asserted per variant) and that the capture envelope carries the failure reason and count.
+3. Assert no row was written and no partial report rendered, and that the delivery's outcome and exit code equal the paired control's (closeout capture is non-gating).
+4. Assert the unrecognised-generation variant is classified as extraction failure, not as absence and not as a degraded capture with zero rows (NFR-11).
+5. Assert the delivered damaged-store assertions (`harness-telemetry-opencode`, `harness-telemetry-shape`) still hold unchanged and that the identity is still a member of the delivered nine codes.
+6. Run the healthy control and assert success with ≥ 1 row.
 
 **Expected Outcome**:
 
-- Damage stays damage; absence is never used as a catch-all, so an operator fixes the right thing (AC-F6-2).
+- Damage stays damage; an unrecognised generation is a classified outcome; absence is never used as a catch-all, so an operator fixes the right thing (AC-F6-2, NFR-11).
 
 **Binding oracle**:
 
-- `error.code === "harness.telemetry.extraction-failed"` for all four variants; `projectionClass === "platform-provider"`; exit `2`; never `harness.telemetry.absent`; appends `0`; healthy control exit `0`.
+- `error.code === "harness.telemetry.extraction-failed"` for all five variants; `projectionClass === "platform-provider"` where surfaced as a command failure; capture envelope carries the failure reason and count; never the absence classification; appends `0`; delivery exit equals the control's; healthy control exits `0` with ≥ 1 row; identity present in the delivered nine.
 
 #### TC-HARNESS-025 - Bounded read discipline: query-only pragma, indexed queries, exact caps, truncation marks
 
 **Scenario Type**: Regression
 **Impact Level**: Important
 **Priority**: High
-**Related IDs**: NFR-3, RSK-4, NG-5
+**Related IDs**: NFR-3, NFR-5, AC-F5-5, RSK-4, RSK-10, NG-5
 **Test Type(s)**: Behaviour, Contract
 **Automation Level**: Automated
 **Target Layer / Location**: opencode store loader (`packages/adapters/src/harness/sqlite-loader.ts`, `telemetry-opencode.ts`); `tests/behaviour/harness-telemetry-bounds.test.ts` (T-10, T-11)
@@ -1147,30 +1256,34 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 **Preconditions**:
 
-- A recording store double capturing every statement in order; fixture stores exceeding each cap (65 sessions, 17 agents, 17 models, 25 tools).
+- A recording store double capturing every statement in order; current-generation fixtures exceeding each cap (65 sessions, 17 agents, 17 models, 25 tool rows), an at-cap fixture, and a store with no populated tool source.
 
 **Steps**:
 
-1. Read a store and assert the first recorded statement enables the query-only pragma before any `SELECT`.
-2. Assert every recorded statement is bounded and indexed per the declared allowlist; assert no statement touches message or part tables.
-3. For each cap, assert the truncation mark is `{truncated: true, omitted: n, cap: N}` with N equal to 64 / 16 / 16 / 24 and `n` the hand count.
-4. Assert an at-cap store produces no truncation mark (paired control).
-5. Assert the open mode is read-only and no write statement was recorded.
+1. Read a store and assert the first recorded statement enables the query-only pragma before any `SELECT`, that the connection is opened read-only, and that no write statement was recorded.
+2. Assert every `SELECT` is bounded and scoped: a session-identity predicate is present, per-message reads are additionally scoped by message type, no statement selects `content` or any content-bearing JSON key, and no statement performs an unbounded `message`/`part`/`session_message` scan.
+3. Assert the per-message metadata read is permitted only in that scoped form — a bounded read of `session_message` filtered by session id and a type allowlist is accepted, while an unfiltered read of the same table fails the assertion.
+4. For each cap, assert the truncation mark is `{truncated: true, omitted: n, cap: N}` with N equal to 64 / 16 / 16 / 24 and `n` the hand count; assert no tool-cap mark is produced on the store with no populated tool source.
+5. Assert an at-cap store produces no truncation mark (paired control), and that the configured store path is reconciled with the harness-declared data directory rather than defaulted to the state directory (structural assertion over the resolved path, no live read).
 
 **Expected Outcome**:
 
-- The read budget is unchanged and the new fields add no scan, no write, and no silent drop (NFR-3, NG-5).
+- The read budget holds while permitting the observed contract's per-message metadata reads: bounded, scoped, read-only, content-free, with explicit truncation marks (NFR-3, NFR-5, NG-5).
 
 **Binding oracle**:
 
-- `statements[0]` is the query-only pragma; zero message/part statements; truncation objects exactly `{truncated: true, omitted: 1, cap: 64|16|16|24}` for the over-cap fixtures; at-cap fixtures have no mark; write statements `0`.
+- `statements[0]` is the query-only pragma; every `SELECT` carries a session predicate, per-message statements also carry a type predicate; zero unbounded scans; zero content selections; truncation objects exactly `{truncated: true, omitted: 1, cap: 64|16|16|24}` for the over-cap fixtures; at-cap fixtures have no mark; write statements `0`; resolved store path is the data-directory path (or the documented override), never the state directory.
 
-#### TC-HARNESS-026 - One totals basis: seat attribution does not double count
+**Notes / Clarifications**:
+
+- Retargeted per the observed contract: the previous oracle said "no `message`/`part` scan" in a way that forbade the per-message metadata reads the current generation requires. What is forbidden is the *unbounded* read, not the scoped one.
+
+#### TC-HARNESS-026 - One totals basis: seat attribution does not double count, and a reported zero is not absence
 
 **Scenario Type**: Corner Case
 **Impact Level**: Important
 **Priority**: High
-**Related IDs**: F-5, AC-F5-1, RSK-7
+**Related IDs**: F-5, AC-F5-1, RSK-7, NFR-6, DM-6
 **Test Type(s)**: Behaviour
 **Automation Level**: Automated
 **Target Layer / Location**: totals fold over step rows and the session baseline; `tests/behaviour/harness-telemetry-seat-totals.test.ts` (T-13)
@@ -1178,22 +1291,23 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 **Preconditions**:
 
-- A store/fixture with per-step rows for two seats and one session baseline, all hand-summed; the baseline equals the seat sums.
+- A current-generation fixture with per-step rows for two seats and one session baseline, all hand-summed, where the baseline equals the seat sums; a second fixture with a session whose stored `cost` is `0` and whose token columns are non-zero (a free model, observed 2 918 times in the reference store).
 
 **Steps**:
 
 1. Fold totals and assert each token class total equals the baseline value exactly — not the baseline plus the step sum.
 2. Assert the seat breakdown sums equal the total per class.
 3. Assert adding a seat dimension does not change the delivered totals reading basis (the delivered fold's basis is asserted unchanged).
-4. Assert a fixture where the baseline is deliberately wrong still reports one basis (the baseline), with divergence disclosed rather than two conflicting totals.
+4. Assert the zero-cost-with-tokens session reports `cost === 0` with non-zero tokens, is **not** classified absent, and produces no `cost-missing` warning.
+5. Assert a fixture where the baseline is deliberately wrong still reports one basis (the baseline), with divergence disclosed rather than two conflicting totals.
 
 **Expected Outcome**:
 
-- Seat attribution is a dimension, not a second count: totals remain single-based and breakdowns reconcile to them (RSK-7 mitigation proven).
+- Seat attribution is a dimension, not a second count: totals remain single-based and breakdowns reconcile to them, and a reported zero cost is data rather than absence (RSK-7, NFR-6).
 
 **Binding oracle**:
 
-- `total.input === baseline.input`; `sum(perSeat.input) === total.input`; no doubled figure; one basis named; delivered totals assertions unchanged.
+- `total.input === baseline.input`; `sum(perSeat.input) === total.input`; no doubled figure; one basis named; zero-cost row `cost === 0`, `tokens.input > 0`, no `cost-missing` warning, not classified absent; delivered totals assertions unchanged.
 
 #### TC-HARNESS-027 - Privacy: identity, counts, cost and durations only
 
@@ -1225,36 +1339,42 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 - Zero canary occurrences across rows, warnings and envelopes; redaction suite green; fixture-privacy scan green.
 
-#### TC-HARNESS-028 - 2.1.x store shape degrades with warnings, never fabricates
+#### TC-HARNESS-028 - Store-generation tolerance: current and legacy fixtures degrade honestly, both directions
 
 **Scenario Type**: Edge Case
 **Impact Level**: Important
 **Priority**: High
-**Related IDs**: F-5, AC-F5-1, AC-F5-4, NFR-6, RSK-4, OQ-3, GAP-6
-**Test Type(s)**: Behaviour
+**Related IDs**: F-5, AC-F5-1, AC-F5-4, AC-F5-5, NFR-11, RSK-4, RSK-9, OQ-3, GAP-6
+**Test Type(s)**: Behaviour, Contract (mutation pair)
 **Automation Level**: Automated
-**Target Layer / Location**: extractor shape tolerance; `tests/behaviour/harness-telemetry-version-compat.test.ts` (T-14)
-**Tags**: @offline, @telemetry, @degradation
+**Target Layer / Location**: extractor generation detection and field-set tolerance; `tests/behaviour/harness-telemetry-generation.test.ts` (T-14)
+**Tags**: @offline, @telemetry, @degradation, @generation
 
 **Preconditions**:
 
-- A declared 2.1.x-shape store variant derived from the 2.2.5 shape with named removals: no duration columns, no seat column, identity and token fields present.
-- A second variant missing mandatory identity or token fields; a paired complete 2.2.5 fixture.
+- The two committed generation builders (§4.1a): a complete `session_v2`/`session_message` fixture and a complete legacy `session`/`message`/`part` fixture whose `part` table has no `tool` column.
+- A legacy variant with an optional column removed (a missing token class, a null timestamp pair); a current variant with `version` null; a paired complete control per generation; temp-copy mutant extractors (legacy-only and current-only).
 
 **Steps**:
 
-1. Land rows from the degrading variant and assert rows exist with the mandatory identity and token fields populated.
-2. Assert the duration is explicitly absent with a warning and the seat is disclosed as unresolved with a count — never guessed.
-3. Land the missing-mandatory variant and assert the affected session becomes a failed-session entry with a closed reason and no fabricated row.
-4. Assert no zero-filled value appears anywhere in either variant.
+1. Land rows from the current-generation fixture and assert every mandatory field is populated as in TC-HARNESS-019; assert tool counts are absent with a warning.
+2. Land rows from the legacy-generation fixture and assert rows exist with the same field set read from the legacy tables; assert tool counts are absent with a warning because the legacy `part` table exposes no `tool` column — and assert no statement references `part.tool`.
+3. Land the degrading variants and assert the absent optional field is `null` with a warning, that the duration is explicitly absent with a warning when the pair is missing, and that the session is **not** classified as failed while its mandatory set (identity + at least one usage fact) is present.
+4. Assert no zero-filled value appears anywhere in either generation.
+5. Run the two-sided mutation pair: a legacy-only extractor must land zero rows on the current fixture (and therefore classify a capture failure), and a current-only extractor must land zero rows on the legacy fixture; if either mutant passes its opposite fixture unchanged, the meta-check fails.
+6. Assert an unrecognised generation is classified as extraction failure (TC-HARNESS-024) and never as a silent zero-row pass.
 
 **Expected Outcome**:
 
-- The in-window older line survives with honest degradation, and only a session whose mandatory fields are absent is failed (OQ-3 default, RSK-4).
+- Both observed generations survive with honest degradation, only a session without the mandatory set is failed, and a generation-blind extractor cannot pass — the assertion is two-sided by construction (OQ-3 pinned set, NFR-11, RSK-9).
 
 **Binding oracle**:
 
-- Degrading variant: `records.length === expectedSessions`; durations absent + warning; unresolved seats count `> 0` and disclosed; missing-mandatory variant: `failedSessions` has one entry with a reason ∈ `HARNESS_WARNING_REASONS`; zero indices where absence should be.
+- Current fixture: `records.length >= expectedSessions`, all mandatory fields, `toolCounts === []` + warning; legacy fixture: same, with no `part.tool` reference and no `tool` column in any statement; degrading variants: absent field `null` + warning ∈ `HARNESS_WARNING_REASONS`, durations absent + warning, `failedSessions === []`; legacy-only mutant on current fixture: `records.length === 0` and a capture failure; current-only mutant on legacy fixture: `records.length === 0` and a capture failure.
+
+**Notes / Clarifications**:
+
+- Replaces the previous "2.1.x-shape" variant (GAP-6, T-14): the 2.1.x generation is unobserved, while both observed generations are recorded in DM-10. The window's 2.1.x line remains covered by the version gate (TC-HARNESS-004), not by an invented store shape.
 
 #### TC-HARNESS-029 - Byte-identical determinism and zero network or model calls
 
@@ -1317,7 +1437,7 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 - Machine ≤ `65536` bytes; human ≤ `4096` bytes and ≤ `24` lines; `error.code` and `error.remediationHint` present on every over-cap render; under-cap fixture has no truncation mark; measured length `> 0` asserted before the bound.
 
-#### TC-HARNESS-031 - Delivered six-scenario classification floor unchanged and passing
+#### TC-HARNESS-031 - Delivered six-id classification floor unchanged and passing
 
 **Scenario Type**: Regression
 **Impact Level**: Critical
@@ -1334,20 +1454,21 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 **Steps**:
 
-1. Assert `HARNESS_CONFORMANCE_SCENARIOS` is exactly the six delivered ids in the delivered order.
+1. Assert `HARNESS_CONFORMANCE_FLOOR_SCENARIOS` is exactly the six delivered ids in the delivered order.
 2. Assert exactly the two kinds are registered, each exactly once, each declaring all six floor scenarios.
-3. Run the delivered classification suite and assert identical classification on both adapters with the assertions unchanged.
-4. Assert `harnessConformanceViolations(HARNESS_CONFORMANCE_REGISTRY)` is `[]`.
+3. Assert the floor constant's value is not widened by the extension: the extension ids appear in `HARNESS_CONFORMANCE_EXTENSION_SCENARIOS` and never in the floor constant, and a length/exact-value pin on the floor still passes (matrix C-09).
+4. Run the delivered classification suite and assert identical classification on both adapters with the assertions unchanged.
+5. Assert `harnessConformanceViolations(HARNESS_CONFORMANCE_REGISTRY)` is `[]`.
 
 **Expected Outcome**:
 
-- The floor is untouched: same ids, same order, same two registrations, same passing classification (AC-F7-1).
+- The floor is untouched: same ids, same order, same two registrations, same passing classification, and the extension cannot widen it (AC-F7-1).
 
 **Binding oracle**:
 
-- Scenario ids exactly `["completed","tool-failure","premature-end","harness-failure","spawn-refusal","timeout"]`; violations `[]`; classification suite green unchanged.
+- Floor ids exactly `["completed","tool-failure","premature-end","harness-failure","spawn-refusal","timeout"]`; violations `[]`; classification suite green unchanged; floor value identical to the delivered constant before and after the extension is added.
 
-#### TC-HARNESS-032 - Missing new scenario or unexercised identity fails and names both
+#### TC-HARNESS-032 - Missing extension scenario or unexercised identity fails and names both
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
@@ -1355,57 +1476,63 @@ Field names below are role names; the exact JSON keys and warning reason strings
 **Related IDs**: F-7, AC-F7-2, DM-7, RSK-5
 **Test Type(s)**: Conformance, Contract
 **Automation Level**: Automated
-**Target Layer / Location**: registry violation function; `tests/structure/conformance-coverage.test.ts` (update) + `tests/conformance/harness-version-mode-propagation.test.ts` (matrix C-03, C-04)
+**Target Layer / Location**: registry violation function; `tests/structure/conformance-coverage.test.ts` (update) + `tests/conformance/harness-extension-scenarios.test.ts` (matrix C-03, C-04)
 **Tags**: @offline, @conformance, @negative
 
 **Preconditions**:
 
-- The delivered registry; a fixture builder producing a mutated registry with one new scenario removed from one registration; a fixture with a new refusal identity absent from the scenario set.
+- The delivered registry; a fixture builder producing a mutated registry with one extension scenario removed from one registration; a fixture with a new refusal identity outside the declared identity→scenario map.
 
 **Steps**:
 
 1. Assert the unmutated registry yields no violation (planted positive first).
-2. Remove `version-outside-window` from the opencode registration and assert a violation string naming both `opencode` and `version-outside-window`.
-3. Add a sixth new identity beyond the declared scenario set and assert a violation naming that identity.
+2. Remove `version-window` from the opencode registration and assert a violation string naming both `opencode` and `version-window`.
+3. Add a fifth refusal identity beyond the declared map and assert a violation naming that identity.
 4. Assert the suite fails on each mutation (the violation array is non-empty and the failing assertion names the pair).
 
 **Expected Outcome**:
 
-- A missing scenario or an unregistered identity cannot ship: the failure message is the diagnosis, naming both sides (AC-F7-2).
+- A missing extension scenario or an unregistered identity cannot ship: the failure message is the diagnosis, naming both sides (AC-F7-2).
 
 **Binding oracle**:
 
-- Baseline `violations.length === 0`; mutated → `violations` contains a string matching `opencode` and `version-outside-window`; identity case → a string containing the identity; both cases fail the suite.
+- Baseline `violations.length === 0`; mutated → `violations` contains a string matching `opencode` and `version-window`; identity case → a string containing the identity; both cases fail the suite.
 
-#### TC-HARNESS-033 - New scenarios execute over simulated I/O and prove their property
+#### TC-HARNESS-033 - Extension scenarios execute through the additive executor and prove their property
 
 **Scenario Type**: Happy Path
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: F-7, AC-F7-2, AC-F7-3, DM-7
+**Related IDs**: F-7, AC-F7-2, AC-F7-3, DM-7, DEC-8
 **Test Type(s)**: Conformance
 **Automation Level**: Automated
-**Target Layer / Location**: registry scenario execution; `tests/conformance/harness-version-mode-propagation.test.ts` (matrix C-05, C-06)
+**Target Layer / Location**: the additive executor in `packages/testkit/src/conformance/harness.ts`; `tests/conformance/harness-extension-scenarios.test.ts` (matrix C-05, C-06, C-09, C-10)
 **Tags**: @offline, @conformance
 
 **Preconditions**:
 
-- The five new scenario ids registered per harness; simulated harness I/O fixtures (probe results, spawn environment echo, store rows) with no process and no store.
+- The four extension ids registered per harness; simulated harness I/O fixtures (probe output strings, recorded invocation arguments, store rows) with no process and no store; the delivered `build(io, deps)` registry entry point.
 
 **Steps**:
 
-1. For each new scenario id, execute it through the registry and assert its declared expected outcome: inside → proceeds; outside → `harness.version.unsupported`; unknown → `harness.version.unknown`; unavailable mode → `harness.mode.unavailable`; propagation → the descriptor records reach the spawn and are echoed.
-2. Assert each refusal scenario records zero session starts.
-3. Assert the scenarios resolve through the same registry functions as the floor (no forked path) by asserting the registration type and builder entry point.
-4. Assert each new scenario can fail: flip its fixture's expected outcome and assert the scenario reports a mismatch (matrix C-08 half).
+1. For each extension id, execute it through the additive executor (`{ registration, scenarioId, io, deps }` → declared outcome) and assert its declared expectation: `version-window` asserts both directions (`opencode v2.2.5` proceeds, `opencode v2.3.0` refuses with `harness.version.unsupported`); `version-unknown` asserts `harness.version.unknown` with a `null` observation; `mode-unavailable` asserts the identity with the requested mode; `profile-propagation` asserts the per-seat binding reaches the honoured invocation surface **and** that an unrepresentable seat refuses with `harness.profile.model-unrepresentable`, zero session starts.
+2. Assert each refusal direction records zero session starts.
+3. Assert the scenarios resolve through the same registry module and builder as the floor (no forked path): the executor is imported from the testkit, the registration is a member of `HARNESS_CONFORMANCE_REGISTRY`, and no test-local scenario implementation exists (matrix C-10).
+4. Assert the union discipline: the scenario id type is the union of the floor type and the extension type; adding an extension id leaves a floor exact-value pin green and fails an extension exact-value pin (matrix C-09).
+5. Assert each extension scenario can fail: flip its fixture's expected outcome and assert the executor reports a mismatch (matrix C-08 half).
 
 **Expected Outcome**:
 
-- The new scenarios are real, executable checks of the new properties rather than declaration-only ids (AC-F7-2, AC-F7-3).
+- The extension scenarios are real, executable checks of the new properties rather than declaration-only ids, they run on the same registry surface as the floor, and the six-id floor is never widened by them (AC-F7-2, AC-F7-3).
 
 **Binding oracle**:
 
-- Five ids present per registration; each produces its declared verdict/identity; refusal scenarios session starts `0`; fixture flip produces a mismatch; extension resolves through `HARNESS_CONFORMANCE_REGISTRY`.
+- Four extension ids present per registration; each produces its declared verdict/identity/binding; refusal directions session starts `0`; fixture flip produces a mismatch; executor imported from the testkit and the registration present in `HARNESS_CONFORMANCE_REGISTRY`; floor pin green while the extension pin tracks the extension constant.
+
+**Notes / Clarifications**:
+
+- Retargeted per readiness finding 13 and DEC-8: the previous wording ("executed through the registry") had no executable surface, and the propagation half asserted a variable family the harness does not consume. The executor, its location and the union split are now declared in §4.6 (C-06, C-09, C-10); the propagation scenario asserts the invocation binding.
+- Scenario count: DM-7 and AC-F7-2 name four properties, while F-7 enumerates "inside and outside the window" separately. This plan applies the four-id default with `version-window` asserting both directions, and records the reading as OQ-12.
 
 #### TC-HARNESS-034 - Conformance runs offline with zero live harness invocations
 
@@ -1450,33 +1577,34 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 **Preconditions**:
 
-- The five new identities; the nine delivered `HARNESS_FAILURE_CODES`.
+- The four new identities; the nine delivered `HARNESS_FAILURE_CODES`; the closed `CommandResultDetail` member set and its pins (type pin, runtime validator, key-set fixture).
 
 **Steps**:
 
-1. Assert each new identity appears exactly once in the error table with `domainKind: "harness"`, a category, `retryable`, `consequence`, a non-empty `remediationHint`, and a `projectionClass`.
-2. Assert `HARNESS_FAILURE_CODES` grew by exactly the new codes and still contains all nine delivered codes unchanged.
+1. Assert each of the four new identities appears exactly once in the error table with `domainKind: "harness"`, a category, `retryable`, `consequence`, a non-empty `remediationHint`, and a `projectionClass`.
+2. Assert `HARNESS_FAILURE_CODES` grew by exactly those four codes and still contains all nine delivered codes unchanged.
 3. Assert the projection class → exit mapping resolves each new identity through `projectExitCode` (no exit literals outside the projection module).
 4. Assert documented and machine tables agree bidirectionally and no delivered row changed meaning.
-5. Assert `harness.telemetry.absent` and `harness.telemetry.extraction-failed` are distinct rows with distinct projection classes.
+5. Assert **no** telemetry-absence identity exists: `harness.telemetry.absent` is absent from `HARNESS_FAILURE_CODES`, from the error table and from every vocabulary constant, while `harness.telemetry.extraction-failed` keeps its delivered meaning.
+6. Assert the closed-member pins moved two-sidedly: `keyof CommandResultDetail` is exactly `holder | suiteBreadth | harness`; the runtime conformance validator admits the declared members; the key-set fixture and the documented member sentence agree; the six-field `CommandResultError` assertions and every existing `@ts-expect-error` cell are retained (TDR-0031 C-6).
 
 **Expected Outcome**:
 
-- Every refusal is a classified outcome with a stable contract; vocabulary growth is additive and cannot silently fork a delivered meaning (RSK-5).
+- Every refusal is a classified outcome with a stable contract; vocabulary growth is additive, cannot silently fork a delivered meaning, and the invented telemetry-absence identity stays removed (RSK-5, DEC-10, TDR-0031).
 
 **Binding oracle**:
 
-- Per identity: exactly one row; hint length `> 0`; `projectExitCode(row.projectionClass)` equals the matrix exit; `HARNESS_FAILURE_CODES` set-diff equals exactly the five new codes; delivered nine present and unchanged; sync test green.
+- Per identity: exactly one row; hint length `> 0`; `projectExitCode(row.projectionClass)` equals the matrix exit; `HARNESS_FAILURE_CODES` set-diff equals exactly the four new codes; delivered nine present and unchanged; `harness.telemetry.absent` absent everywhere; `keyof CommandResultDetail` exactly three members; validator and fixture agree in both directions; sync test green.
 
 #### TC-HARNESS-036 - Refusals leave no session-bearing side effect
 
 **Scenario Type**: Negative
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-N1-1, NFR-1, §5.1, OQ-6
+**Related IDs**: AC-N1-1, NFR-1, NFR-2, §5.1, §17
 **Test Type(s)**: Integration
 **Automation Level**: Automated
-**Target Layer / Location**: refusal paths at harness resolution and spawn preparation; `tests/behaviour/harness-refusal-side-effects.test.ts` (new; matrix M-01..M-05, P-01..P-03)
+**Target Layer / Location**: refusal paths at harness resolution and spawn preparation; `tests/behaviour/harness-refusal-side-effects.test.ts` (new; matrix M-01..M-05, P-01..P-04)
 **Tags**: @offline, @harness, @refusal, @side-effects
 
 **Preconditions**:
@@ -1485,23 +1613,23 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 **Steps**:
 
-1. For each refusal, assert the session-spawn seam and one-shot-runner session calls are `0`.
-2. Assert the probe child-process seam was invoked at most once, and if invoked, it completed and was reaped (fake process table empty — no orphan).
+1. For each refusal, assert **no session-bearing child** exists: the session-spawn seam and one-shot-runner session calls are `0`.
+2. Assert the probe child-process seam was invoked at most once (`calls <= 1`), and that if invoked it completed and was reaped before the verdict was published (fake process table empty — no orphan).
 3. Assert telemetry appends `0` and store writes `0`.
-4. Assert precedence P-01..P-03: exactly one identity, evaluated in order version → mode → profile.
+4. Assert precedence P-01..P-04: exactly one identity, evaluated in order version → mode → profile; for P-04 assert `mode` is omitted from `detail.harness`.
 5. Assert a paired in-window, available-mode, representable control spawns exactly one session (non-vacuity).
 
 **Expected Outcome**:
 
-- A refusal is inert: it starts no session, leaks no process, writes nothing, and reports exactly one identity (AC-N1-1).
+- A refusal is inert in the session sense: it starts no session-bearing child, leaks no process, writes nothing, and reports exactly one identity — while the single bounded probe the spec mandates is allowed, completed and reaped (AC-N1-1, NFR-1, NFR-2).
 
 **Binding oracle**:
 
-- Per refusal: session starts `0`; runner session calls `0`; probe calls `≤ 1`; live children `0`; appends `0`; store writes `0`; one `error.code`; control session starts `1`.
+- Per refusal: session starts `0`; runner session calls `0`; probe calls `<= 1`; live children `0` (probe reaped); appends `0`; store writes `0`; exactly one `error.code`; P-04 has no `mode` key; control session starts `1`.
 
 **Notes / Clarifications**:
 
-- OQ-6 records the reading applied here: AC-N1-1's "no child process" is read as "no session-bearing child process"; the version probe is the one bounded invocation the spec itself mandates (F-1, §8.2).
+- The spec (v1.1) now states "no session-bearing child process; the single bounded probe is the declared exception — at most one per dispatch, completed and reaped before the verdict", so this TC asserts the spec's own wording instead of a local reading. The assertion is "no session-bearing child", never "zero children".
 
 #### TC-HARNESS-037 - Gate composition does not disturb the delivered stream, handle or bounds behaviour
 
@@ -1538,7 +1666,7 @@ Field names below are role names; the exact JSON keys and warning reason strings
 **Scenario Type**: Regression
 **Impact Level**: Critical
 **Priority**: Critical
-**Related IDs**: AC-F1-2, AC-F1-3, AC-F1-4, AC-F2-1, AC-F3-2, AC-F3-3, AC-F3-4, AC-F5-3, AC-F5-4, AC-F6-1, AC-F6-2, AC-F7-2
+**Related IDs**: AC-F1-2, AC-F1-3, AC-F1-4, AC-F1-5, AC-F2-1, AC-F3-2, AC-F3-3, AC-F3-4, AC-F5-1, AC-F5-3, AC-F5-4, AC-F6-1, AC-F6-2, AC-F7-2, NFR-6, NFR-11
 **Test Type(s)**: Contract (mutation)
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/checks/harness-mutants.test.ts` (extend the delivered temp-copy pattern)
@@ -1546,33 +1674,48 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 **Preconditions**:
 
-- The TC-HARNESS-002/003/004/007/012/013/014/021/022/023/024 fixtures; temp mutant copies of the production modules.
+- The fixtures of TC-HARNESS-002/003/005/006/007/011/012/013/014/019/021/022/023/024/028/042; temp mutant copies of the production modules.
 
 **Steps**:
 
 1. For each mutant below, run the paired fixture suite against the mutant copy and assert it produces the prohibited observable while the fixture is unchanged:
    - **accept-outside-window**: treat an out-of-window version as inside → M-01 becomes a success (violates AC-F1-2).
+   - **probe-substring-match**: accept a bare `2.2.5` or any string containing a supported version → V-09/V-14 become inside (violates AC-F1-5, DEC-11).
+   - **stamp-raw-probe-line**: store the raw stdout (with product token and `v`) as the observed version → TC-HARNESS-019/042 fail on the `v`-prefixed stamp (violates AC-F5-1, DM-9).
+   - **ignore-probe-deadline**: call the probe without `deadlineMs` or treat `timed-out` as `answered` → TC-HARNESS-006 fails on the argument and the verdict (violates NFR-2).
    - **fabricate-version-on-failure**: substitute a default version string when the probe fails → `observedVersion` non-null (violates AC-F1-3, NFR-6).
    - **collapse-unknown-into-unsupported**: report the unknown case as unsupported → wrong code (violates DEC-3, AC-F1-3).
-   - **widen-window-on-bad-config**: fall back to an unbounded window for a malformed configured value → `9.9.9` accepted (violates AC-F1-4).
+   - **config-window-widens**: honour an invented window key and let it change acceptance → `opencode v2.3.0` accepted (violates AC-F1-4).
    - **fallback-to-default-mode**: spawn under the default mode when another mode was requested → M-03 becomes a success (violates AC-F2-1, AC-F2-3).
-   - **ambient-wins-over-record**: let the parent value beat the record value → wrong child value (violates AC-F3-2).
+   - **ambient-wins-over-record**: let the parent value beat the record value → wrong built value (violates AC-F3-2).
    - **forward-undeclared-record**: add an undeclared record name to the environment → extra key (violates AC-F3-3).
+   - **per-seat-env-family**: emit `OC_*` variables instead of the invocation arguments on opencode → the environment key set widens and the argv carries no binding (violates AC-F3-1, NFR-9, NG-10).
    - **partial-profile**: drop the unrepresentable seat and spawn → M-05 becomes a success (violates AC-F3-4).
-   - **overwrite-observed-with-resolved**: replace the reported model with the resolved one → divergence erased (violates AC-F5-3).
+   - **overwrite-observed-with-resolved**: replace the observed model with the resolved one → divergence erased (violates AC-F5-3).
+   - **zero-cost-as-absence**: map a reported `0` cost to `null` (or add `cost-missing`) → T-03/T-13 fail (violates NFR-6).
+   - **missing-cost-as-zero**: substitute `0` for a store with no cost source → T-03 fails the other direction (violates NFR-6).
    - **derive-duration-from-capture**: compute elapsed from `capturedAt` → a number appears where absence was required (violates AC-F5-4).
-   - **absence-as-empty-success**: return exit 0 with zero figures on an empty session → prohibited output (violates AC-F6-1).
-   - **absence-for-damage**: map an unreadable store to `harness.telemetry.absent` → wrong identity (violates AC-F6-2).
-   - **ignore-missing-scenario**: let a registration miss a new scenario without a violation → registry passes (violates AC-F7-2).
+   - **work-item-column-query**: query a `work_item_ref`/`harness_version` column → extraction failure on both observed fixtures (violates AC-F5-5, DM-8).
+   - **part-tool-query**: query `part.tool` or `session_part` for tool counts → extraction failure on the observed stores (violates DM-10, NFR-11).
+   - **legacy-only-extractor**: read only the legacy `session`/`message` tables → zero rows on the current-generation fixture, i.e. a capture failure that the suite must catch (violates AC-F5-1, NFR-11).
+   - **current-only-extractor**: read only `session_v2`/`session_message` → zero rows on the legacy fixture (violates NFR-11).
+   - **zero-row-as-pass**: return success with zero records for a held session → prohibited output (violates AC-F5-1).
+   - **absence-as-capture-failure**: classify a session the store does not hold as a failed session → wrong classification (violates AC-F6-2, DEC-9).
+   - **capture-failure-as-absence**: classify an unreadable store as absence → wrong classification (violates AC-F6-2, DEC-9).
+   - **ignore-missing-scenario**: let a registration miss an extension scenario without a violation → registry passes (violates AC-F7-2).
 2. Assert each real module produces none of the prohibited observables on the same fixtures; if a mutant changes nothing, the meta-check fails.
 
 **Expected Outcome**:
 
-- Every new honesty rule has a disabling mutant that fails the suite — the rules are load-bearing, not decorative.
+- Every new honesty rule has a disabling mutant that fails the suite — including the grammar, the deadline seam, the reported-zero rule, the observed store contract and both store generations — so the rules are load-bearing, not decorative.
 
 **Binding oracle**:
 
 - Per mutant: prohibited observable present under the mutant and absent under the real module; a mutant that fails to change behavior fails TC-HARNESS-038 by name.
+
+**Notes / Clarifications**:
+
+- Retargeted: the previous pair (`absence-as-empty-success`, `absence-for-damage`) asserted the removed `harness.telemetry.absent` identity. They are replaced by the two-way classification mutants above. New mutants cover the probe grammar, the deadline seam, the reported-zero rule, the forbidden columns and both generations.
 
 #### TC-HARNESS-039 - Whole-change offline hermetic posture
 
@@ -1604,45 +1747,50 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 - Sockets `0`; live harness `0`; real stores `0`; `$HOME` reads `0`; global process mocks `0`; fixture-privacy green.
 
-#### TC-HARNESS-040 - Dispatch outcome discloses the version verdict and the selected mode
+#### TC-HARNESS-040 - Dispatch outcome and refusal disclose the version verdict, the selected mode, and the `detail.harness` member
 
 **Scenario Type**: Happy Path
 **Impact Level**: Important
 **Priority**: Important
-**Related IDs**: AC-F1-1, AC-F2-1, DM-2, DM-3, §10
+**Related IDs**: AC-F1-1, AC-F1-3, AC-F2-1, AC-F2-3, AC-F3-4, DM-2, DM-3, §10, TDR-0031
 **Test Type(s)**: Behaviour, Integration
 **Automation Level**: Automated
-**Target Layer / Location**: dispatch outcome composition; `tests/behaviour/dispatch-harness-verdict-mode.test.ts` (new)
+**Target Layer / Location**: dispatch outcome composition and the CLI edge's `explicitDetail` projection; `tests/behaviour/dispatch-harness-verdict-mode.test.ts` (new)
 **Tags**: @offline, @dispatch, @observability
 
 **Preconditions**:
 
-- Two dispatches: one in-window with the default mode; one out-of-window refusal.
+- Five dispatches: one in-window with the default mode; one out-of-window refusal; one indeterminate-version refusal; one unavailable-mode refusal; one unrepresentable-seat refusal. Plus one control failure that is none of the four (`queue.single-flight`).
 
 **Steps**:
 
-1. Assert the successful dispatch's recorded outcome carries the observed version and the inside verdict and the selected mode.
-2. Assert the refusal's recorded facts carry the observed version and the outside verdict and the resolved mode (so a reader can tell what was attempted).
-3. Assert the two recorded facts differ in version and verdict (non-vacuity: the fields are not constants).
-4. Assert an absent mode run records the default mode with its `defaults` origin.
+1. Assert the successful dispatch's recorded outcome carries the normalized observed version, the inside verdict and the selected mode with its origin.
+2. Assert each of the four refusals carries `detail.harness` with exactly the mapped member set per matrix M-01/M-02/M-03/M-05: `kind`; `observedVersion` non-null except on the unknown-version refusal where it is `null`; `versionVerdict` `outside`/`indeterminate`/`inside`/`inside`; and `mode` present only on the mode and profile refusals (`mode` = requested / resolved respectively) and **absent** (not `null`) on the two version refusals.
+3. Assert the control failure and `harness.session.unknown` carry no `harness` member, while the delivered `holder` member still projects where it did.
+4. Assert a scripted-mode refusal line is exactly `{error, runId}` and contains no `harness` token; assert an interactive/`--verbose` envelope carries the member.
+5. Assert the two recorded facts differ in version and verdict (non-vacuity: the fields are not constants), and that an absent-mode run records the default mode with its `defaults` origin.
 
 **Expected Outcome**:
 
-- A later reader can always tell which harness line and which mode produced (or refused) a delivery (§10).
+- A later reader can tell which harness line, verdict and mode produced — or refused — a delivery, and the refusal evidence is machine-read rather than parsed out of prose (§10, TDR-0031).
 
 **Binding oracle**:
 
-- Success: `recorded.observedVersion === "2.2.5"`, `recorded.versionVerdict === INSIDE`, `recorded.mode === DEFAULT_MODE`; refusal: `recorded.versionVerdict === OUTSIDE` with identity `harness.version.unsupported`; the two records differ in verdict; absent-mode run `origin === "defaults"`.
+- Success: `recorded.observedVersion === "2.2.5"`, `recorded.versionVerdict === INSIDE`, `recorded.mode === DEFAULT_HARNESS_MODE`, `origin === "defaults"`; M-01 `detail.harness === {kind, observedVersion: "2.3.0", versionVerdict: "outside"}` with no `mode` key; M-02 `{kind, observedVersion: null, versionVerdict: "indeterminate"}`; M-03 `mode === requestedMode`; M-05 `mode === resolvedMode`; control and `harness.session.unknown` carry no member; scripted line exactly `{error, runId}`; `error` keys exactly the six.
 
-#### TC-HARNESS-041 - Documentation and conformance reconciliation for window, mode, propagation and seat telemetry
+**Notes / Clarifications**:
+
+- Extended per TDR-0031 and readiness finding 6: the previous oracle asserted only the recorded facts, while the plan put the refusal disclosure on a closed `detail` slot with no declared member. The identity→member mapping is now asserted per identity, including the identities that must **not** carry it.
+
+#### TC-HARNESS-041 - Documentation reconciliation for window, mode, propagation, seat telemetry and decision links
 
 **Scenario Type**: Regression
 **Impact Level**: Important
 **Priority**: Important
-**Related IDs**: AC-F2-2, G-8, §18, §22
+**Related IDs**: AC-F2-2, G-8, §8.5, §18, §22, DEC-8, DEC-9, DEC-10, TDR-0031
 **Test Type(s)**: Manual, Contract
 **Automation Level**: Semi-automated (structural checks + manual content review)
-**Target Layer / Location**: `doc/spec/features/feature-harness-adapters.md`, `doc/spec/nonfunctional.md`, `doc/decisions/00-index.md`, `doc/planning/oss-tooling/` markers; `tests/checks/doc-conformance.test.ts`, `tests/structure/content-inventory.test.ts`
+**Target Layer / Location**: `doc/spec/features/{feature-harness-adapters,feature-telemetry-v2,feature-state-layer,feature-spend,feature-result-contract,feature-dispatch-engine,feature-config-layer,feature-adapter-ports}.md`, `doc/spec/nonfunctional.md`, `doc/decisions/00-index.md`, `doc/planning/oss-tooling/` markers; `tests/checks/doc-conformance.test.ts`, `tests/structure/content-inventory.test.ts`
 **Tags**: @docs, @conformance
 
 **Preconditions**:
@@ -1651,62 +1799,215 @@ Field names below are role names; the exact JSON keys and warning reason strings
 
 **Steps**:
 
-1. Assert the harness feature spec states the supported window, the typed refusals, the mode declaration, the propagation contract, and the seat/duration telemetry fields as current truth.
-2. Assert the non-functional harness rows state the restated bounds and determinism invariants, including the unchanged read budget.
-3. Assert the decision index lists both new records and the harness feature spec links the mode record.
-4. Assert the planning status markers for M3-S1 are updated.
-5. Run the documentation conformance checks and record the manual traceability review in §10.
+1. Assert the harness feature spec states the pinned window and its two refusals with the probe grammar and normalization, the mode declaration with its observed surface mapping, the surface-mapped propagation contract (DEC-8), and the seat/duration telemetry fields as current truth.
+2. Assert the telemetry, state-layer, spend, result-contract, dispatch-engine, config-layer and adapter-ports pages state the observed store contract, the three-way classification, the non-gating closeout, the four new identities, the `detail.harness` member with its absence rules, and the unchanged `spend.telemetry-absent` meaning.
+3. Assert the decision index lists all three records (mode, adapters contract, TDR-0031), and that the harness feature spec **links** the mode record and the change spec/plan reference it — the link half of AC-F2-2 that TC-HARNESS-010 deliberately does not own.
+4. Assert the non-functional harness rows state the restated bounds and determinism invariants, including the unchanged read budget and store-generation tolerance.
+5. Assert the planning status markers for M3-S1 are updated.
+6. Run the documentation conformance checks and record the manual traceability review in §10.
 
 **Expected Outcome**:
 
-- Documentation matches the delivered behavior, so the next change reads current truth rather than a stale seam (G-8, AC-F2-2).
+- Documentation matches the delivered behavior — including the propagation surface, the store contract and the disclosure member — so the next change reads current truth rather than a stale seam (G-8, AC-F2-2).
 
 **Binding oracle**:
 
-- Every named statement present in the feature spec; both records in the index; feature spec contains the mode-record link; `doc-conformance` and `content-inventory` green; manual review recorded in §10.
+- Every named statement present in the named pages; all three records in the index; the harness feature spec contains the mode-record link and the change artifacts reference it; `doc-conformance` and `content-inventory` green; manual review recorded in §10.
+
+**Notes / Clarifications**:
+
+- Absorbs the link assertion moved out of TC-HARNESS-010 (readiness finding 11), so the record-content TC can be green in its own phase while the link is verified where the documentation phase owns it.
+
+---
+
+#### TC-HARNESS-042 - Probe grammar and normalization: the observed line, the accepted forms, and every failing shape
+
+**Scenario Type**: Corner Case
+**Impact Level**: Critical
+**Priority**: Critical
+**Related IDs**: F-1, AC-F1-5, AC-F1-1, AC-F1-3, DM-2, NFR-2, NFR-6, DEC-11
+**Test Type(s)**: Contract, Behaviour
+**Automation Level**: Automated
+**Target Layer / Location**: probe output parsing and normalization; `tests/structure/harness-probe-grammar-contract.test.ts` (grammar constant) + `tests/behaviour/harness-version-probe-seam.test.ts`
+**Tags**: @offline, @harness, @version-gate, @grammar
+
+**Preconditions**:
+
+- The declared grammar constant (product token, optional `v`, three-part semver, newline-terminated) and the version/grammar table V-01..V-19.
+- A probe double returning raw stdout strings, plus the `timed-out` outcome.
+
+**Steps**:
+
+1. Feed the observed line `opencode v2.2.5` with its trailing newline and assert the observed version is exactly `2.2.5`: no product token, no `v`, no trailing whitespace, and the bare semver is what the instance and the row carry.
+2. Assert the raw line is retained only as a diagnostic and never appears in `observedVersion`, in the telemetry row's version stamp, or in `detail.harness`.
+3. Assert every accepted form in the table normalizes (including `opencode 2.2.5` without the `v`) and every rejected form is indeterminate with `harness.version.unknown` — with particular attention to `2.2.5` (bare, no product token), which must **not** be accepted.
+4. Assert the grammar is anchored end to end: `opencode v2.2.5 extra`, `opencode v2.2.5\nopencode v2.3.0`, `opencode v2.2`, `opencode v2.2.5.1` are all indeterminate.
+5. Assert a non-zero exit or the `timed-out` outcome is indeterminate regardless of stdout, and that the raw line of a failing probe does not become a version.
+6. Assert the grammar constant is the only home of the pattern: no second regex or substring check exists in the classification path (a structural assertion over the module's exported constants).
+
+**Expected Outcome**:
+
+- The gate reads the harness's real output, normalizes it once, and cannot be widened by a substring, a partial version or a helpful guess (AC-F1-5, DEC-11, NFR-6).
+
+**Binding oracle**:
+
+- `observedVersion === "2.2.5"` for V-01/V-07/V-08; raw line absent from the stamped version and from `detail.harness`; `observedVersion === null` with `harness.version.unknown` for V-09..V-14, V-16, V-17; exactly one grammar constant exported; no version-shaped substring accepted.
+
+**Notes / Clarifications**:
+
+- Added for AC-F1-5 (DEC-12). The previous plan asserted a bare-semver observation with no grammar, so the real `opencode v2.2.5` output would have failed a literal implementation and a naive strip would have passed silently. V-09 is the row that keeps both failures visible.
+- GAP-7: the grammar is observed on one harness line; a deviating 2.1.x output surfaces as an explicit refusal rather than a silent pass.
+
+#### TC-HARNESS-043 - Attribution by the held session identity; no work-item column, no store-wide scan
+
+**Scenario Type**: Regression
+**Impact Level**: Critical
+**Priority**: Critical
+**Related IDs**: F-5, AC-F5-5, DM-8, DM-10, NFR-3, NFR-5, NG-11
+**Test Type(s)**: Behaviour, Checks
+**Automation Level**: Automated
+**Target Layer / Location**: extractor entry point and the store statement log; `tests/behaviour/harness-telemetry-attribution.test.ts` + `tests/checks/fixture-store-shape.test.ts` (new)
+**Tags**: @offline, @telemetry, @attribution, @fixture-shape
+
+**Preconditions**:
+
+- A current-generation fixture holding the run's session (identity S, one child) plus many unrelated sessions: other roots, other work items' directories, other generations' rows, and unrelated `session_v2` rows with the same `directory` value.
+- A recording statement log; a fixture-DDL scanner over every fixture builder.
+
+**Steps**:
+
+1. Capture with the recorded session identity S and assert exactly S and its child are projected — zero records for every unrelated session, even ones sharing the work directory.
+2. Assert the recorded statements bind on `session_v2.id`/`parent_id` (or the legacy equivalents) and never reference a work-item-, ticket-, or harness-version-shaped column; assert no statement lacks a session predicate (no store-wide scan).
+3. Assert a run with **no recorded session identity** yields a classified absence with zero records and zero statements issued against the store — never a scan to find "the right" session.
+4. Assert the fixture-DDL scan passes: no fixture declares `work_item_ref`, `harness_version`, per-message token/agent/model/cost columns, or a `tool` column on `part` (§4.1 rule 6).
+5. Assert the tree comes from parent links, not from a title/directory heuristic: a session whose title equals the work item's name but whose identity differs is not attributed.
+
+**Expected Outcome**:
+
+- Attribution is the session identity the dispatch already holds; a store-wide scan or a work-item column cannot reappear, and the fixtures that would hide such a query cannot be authored (AC-F5-5, DM-8, NG-11).
+
+**Binding oracle**:
+
+- `records` contain exactly S and its child; unrelated sessions `0`; zero work-item-shaped column references; every statement carries a session predicate; no-identity run → absence classification, records `0`, statements `0`; DDL scan finds no forbidden column; same-title session not attributed.
+
+**Notes / Clarifications**:
+
+- Added for AC-F5-5 (DEC-12). It also carries the executable form of the spec's observed-shape metric ("zero assertions depend on a work-item column, a separate harness-version column, or per-message token columns"), so a future fixture cannot quietly reintroduce the shape the delivered extractor assumed.
+
+#### TC-HARNESS-044 - Mandatory-usage boundary: a held session with no observable usage fact is a failed-session entry
+
+**Scenario Type**: Negative
+**Impact Level**: Critical
+**Priority**: Critical
+**Related IDs**: F-5, F-6, AC-F5-5, AC-F6-2, NFR-11, DEC-9, OQ-3
+**Test Type(s)**: Behaviour
+**Automation Level**: Automated
+**Target Layer / Location**: extraction classification boundary; `tests/behaviour/harness-telemetry-mandatory-usage.test.ts`
+**Tags**: @offline, @telemetry, @classification
+
+**Preconditions**:
+
+- A readable current-generation fixture that **holds** the session identity but exposes no usage fact for it: every token column `0`/absent with no cost source and no usage-bearing message row.
+- Paired controls: the same fixture with one non-zero token class, and the same fixture with a non-zero cost and zero tokens; plus the absence case (session not held) and a degraded case (optional fields absent).
+
+**Steps**:
+
+1. Capture for the held session with no usage fact and assert it becomes exactly one `failedSessions` entry with a closed-vocabulary reason and no fabricated row.
+2. Assert the run is not reported as a silent success: the capture envelope's counts show one failed session and zero records for it.
+3. Assert each paired control lands rows: a single non-zero token class is sufficient (mandatory set present), and a non-zero cost with zero tokens is sufficient.
+4. Assert the boundary is not confused with the neighbours: the not-held case is absence (not a failed session) and the optional-fields-absent case is degraded with warnings (not a failed session).
+5. Assert no zero-filled row is emitted for the failed session in any variant.
+
+**Expected Outcome**:
+
+- The classification taxonomy holds at the only boundary that is easy to get wrong: a held session that yields nothing observable is a failure to capture, while a session the store does not hold is absence and a session with missing optionals is merely degraded (DEC-9, OQ-3, NFR-11).
+
+**Binding oracle**:
+
+- No-usage held session → `records` for it `0`, `failedSessions` length `1` with a reason ∈ `HARNESS_WARNING_REASONS`; control with one token class → `records >= 1`, `failedSessions === []`; control with cost only → same; not-held → absence classification, `failedSessions === []`; optional-fields-absent → `records >= 1` with warnings; no zero-valued row anywhere.
+
+**Notes / Clarifications**:
+
+- Added for the second half of AC-F5-5. The mandatory set is the pinned OQ-3 answer: the session identity plus at least one observable usage fact; the first half (attribution) is TC-HARNESS-043, and the store-generation half is TC-HARNESS-028.
+
+#### TC-HARNESS-045 - Human-gated live observation: rows for a session the dispatch ran through the installed harness
+
+**Scenario Type**: Happy Path
+**Impact Level**: Critical
+**Priority**: Critical
+**Related IDs**: AC-F5-6, AC-F3-1, NFR-10, RSK-1, DM-10, §17.2 Definition of Done
+**Test Type(s)**: Manual
+**Automation Level**: Manual (human-gated; never executed by `bun test`, `pnpm check` or CI)
+**Target Layer / Location**: the change folder record `chg-GH-335-live-observation.md`; the observation runs on the delivery host against the installed in-window harness
+**Tags**: @manual, @live, @definition-of-done
+
+**Preconditions**:
+
+- The installed harness reports a version inside the pinned window (`opencode v2.2.5` at intake).
+- A human operator runs the observation; a resolved profile with at least two seats is available; the observation is read-only with respect to the harness store (no write, no configuration mutation, no credential material, no session content read).
+
+**Steps**:
+
+1. Run one dispatch through the installed harness port with the resolved profile, so the dispatch spawns a session it holds the identity of.
+2. Let telemetry capture run for that session and observe that **at least one row** lands carrying the session's stored version, its seat identity, and its token counts.
+3. Observe that the session reports the resolved seat model on the honoured surface (the per-invocation agent/model selection), and record the observed model beside the resolved one.
+4. Record the observation in `chg-GH-335-live-observation.md`: date, harness version output, the dispatch command, the session identity (redacted as required), the row's stamped version/seat/tokens, the resolved-vs-observed model comparison, and the store path family.
+5. If the observation is deferred, record the deferral, its reason and its exact boundary in the DoD, and do not claim "profile propagation proven" or "rows proven" anywhere in the change.
+6. Assert the record is not referenced by any automated oracle: no `*.test.ts` imports it, no gate reads it, and CI never invokes it.
+
+**Expected Outcome**:
+- The one live half of AC-F3-1 and AC-F5-6 is evidenced honestly and separately, and a zero-row or wrong-model outcome blocks the claim rather than being absorbed by a fixture (AC-F5-6, RSK-1, NFR-10).
+
+**Binding oracle**:
+
+- The record exists in the change folder and states: an in-window harness version; ≥ 1 captured row for the session the dispatch ran; the row's stored version, seat and tokens; the resolved-vs-observed model comparison; the store path family. A zero-row outcome fails the criterion. No automated test file or CI job references the record.
+
+**Notes / Clarifications**:
+- Added for AC-F5-6 (DEC-12) and re-scoped GAP-2: this is the *only* permitted live observation, it is human-gated, and it is never an oracle. TC-HARNESS-011 and TC-HARNESS-019 remain the offline proof; this record is the DoD evidence for what fixtures cannot claim.
 
 ## 6. Environments and Test Data
 
 - **Environment**: local developer machine or CI runner; Bun pinned via `.bun-version`; pnpm workspace. Offline and hermetic — no network, no live harness, no credentials, no real user state directories (NFR-10). Narrow suites while iterating; the aggregate gate before completion: `TMPDIR=$PWD/tmp/tmpdir pnpm check`.
-- **Version fixtures**: a version table module under `tests/fixtures/harness/` declaring V-01..V-12 (observed string, expected verdict, identity, exit) and the accepted-grammar constant. Probe doubles record invocation arguments and ordering; no test spawns a real binary.
-- **Mode fixtures**: config fixtures for absent / explicit-default / unknown / wrong-typed / empty mode values, plus recording doubles for every declared transport so "no fallback" is a recorded-call assertion.
-- **Propagation fixtures**: declared resolved profiles with N ≥ 2 seats, one seat using an explicit `envName`; conflicting ambient parent values; undeclared record names with unique canaries; one unrepresentable seat per variant; `tests/fixtures/harness/spawn-env.ts` extended rather than replaced.
-- **Store test data**: `tests/fixtures/harness/opencode-store/build.ts` extended with the declared variants (complete, multi-seat, missing-duration, missing-cost, missing token class, divergence, no-optional-columns, 2.1.x-shape, missing-mandatory, zero-rows, permission-denied, not-a-database, over-cap). Every variant is built in a temp directory; no binary store is committed; every variant carries a privacy canary.
+- **Version and grammar fixtures**: a fixture module under `tests/fixtures/harness/` declaring V-01..V-19 (raw probe stdout, expected normalized version, verdict, identity, exit) and the accepted-grammar constant. Probe doubles record their input (`deadlineMs`, `now`) and return a `HarnessVersionProbeOutcome`; no test spawns a real binary.
+- **Mode fixtures**: config fixtures for absent / explicit-default / unknown / wrong-typed / empty mode values, plus recording doubles for the three observed transport surfaces (`--standalone`, `service …`, `--server`/`api`) so "no fallback" is a recorded-call assertion.
+- **Propagation fixtures**: declared binding records with N ≥ 2 seats and `provider/model#variant` models; conflicting ambient parent values and undeclared record names used by the variable-consuming double; one unrepresentable seat per variant with an injected recognised-model catalogue; `tests/fixtures/harness/spawn-env.ts` extended rather than replaced.
+- **Store test data**: `tests/fixtures/harness/opencode-store/current-generation.ts` and `legacy-generation.ts` (the two observed families, §4.1a) behind the shared `opencode-store/build.ts`; declared variants: complete multi-seat, missing duration pair, inverted pair, equal pair, reported zero cost, no cost source, missing token class, model divergence, variant-only difference, version missing, version divergent, seat unresolved, no-usage held session, orphan/unrelated sessions, over-cap populations, unrecognised generation, permission-denied, not-a-database, torn schema, absent session. Every variant is built in a temp directory; no binary store is committed; every variant carries a privacy canary.
 - **Stream test data**: the committed real-shape captures at `tests/fixtures/harness/stream/` (`opencode-v2.2.5.jsonl`, `-tool-error`, `-stream-error`, `-tokens`) with their provenance README; synthetic frames only through `tests/fixtures/harness/scenarios/stream.ts`.
 - **Resume/attach fixtures**: the committed resume fixture plus a bounded listing fixture with an over-cap variant and an absent-identity variant.
-- **Injected nondeterminism sources**: fixed `NOW_MS`, fixed session/run id sequences, synthetic brand constant; duration fixtures are literals.
+- **Injected nondeterminism sources**: fixed `NOW_MS`, fixed session/run id sequences, synthetic brand constant; store timestamps, durations and version strings are literals.
 - **Isolation**: one temp root per case; mutation probes and clamp probes operate on temp copies; the live tree and real state directories are never written.
-- **The single permitted live observation**: the in-change spike may use a documented entrypoint modelled on `tests/conformance/live/run-live.ts` to record a real harness observation (version string, whether the per-seat model variable family is honoured). It is not `*.test.ts`, is not discovered by `bun test`, is never invoked by `pnpm check` or CI, and its output is recorded as spike evidence in the change artifacts (GAP-2). It is never an oracle for any TC in this plan.
+- **The single permitted live observation**: TC-HARNESS-045, human-gated, recorded in `chg-GH-335-live-observation.md`. It is not `*.test.ts`, is not discovered by `bun test`, is never invoked by `pnpm check` or CI, and is never an oracle for any TC in this plan (GAP-2).
 - **Cleanup**: temp roots discarded per test; no persistent state outside committed fixtures.
 
 ## 7. Automation Plan and Implementation Mapping
 
 | TC ID(s) | Test file(s) to create/update | Execution command | Mocking / seeding requirements | Status |
 |----------|------------------------------|-------------------|-------------------------------|--------|
-| 001, 002, 003, 006 | `tests/behaviour/harness-version-gate.test.ts`, `harness-version-probe-bound.test.ts` (new) | `bun test tests/behaviour/harness-version-gate.test.ts tests/behaviour/harness-version-probe-bound.test.ts` | Version table fixture; probe and session-spawn doubles; fake clock; paired in-window control | To Implement |
-| 004, 005 | `tests/behaviour/harness-version-window.test.ts`, `tests/structure/harness-version-window-contract.test.ts` (new) | `bun test tests/behaviour/harness-version-window.test.ts tests/structure/harness-version-window-contract.test.ts` | Version table + window constant; temp-copy window mutants for V-10/V-11 | To Implement |
-| 007, 008, 009 | `tests/behaviour/harness-mode-selection.test.ts`, `harness-mode-refusal.test.ts`, `harness-mode-config.test.ts` (new) | `bun test tests/behaviour/harness-mode-*.test.ts` | Mode config fixtures; recording transport doubles; ambient canary | To Implement |
-| 010 | `tests/checks/decision-record.test.ts` (extend inventory) | `bun test tests/checks/decision-record.test.ts` | The two authored records; chosen-mode constant equality | To Implement (+ docs) |
-| 011, 015 | `tests/behaviour/harness-profile-propagation.test.ts`, `harness-profile-per-spawn.test.ts` (new); `harness-telemetry-seat-attribution.test.ts` (new) | `bun test tests/behaviour/harness-profile-propagation.test.ts tests/behaviour/harness-profile-per-spawn.test.ts tests/behaviour/harness-telemetry-seat-attribution.test.ts` | N-seat profiles; environment-echoing spawn double; seat-attributed store variant | To Implement |
-| 012, 013, 014 | `tests/behaviour/harness-profile-precedence.test.ts`, `harness-profile-neutrality.test.ts`, `harness-profile-unrepresentable.test.ts` (new) | `bun test tests/behaviour/harness-profile-{precedence,neutrality,unrepresentable}.test.ts` | Conflicting parent values; undeclared canaries; three unrepresentable variants; delivered spawn-env assertions unchanged | To Implement |
-| 016, 017 | `tests/behaviour/harness-resume-propagation.test.ts` (new); `harness-opencode-resume-stream.test.ts` (assertions unchanged) | `bun test tests/behaviour/harness-resume-propagation.test.ts tests/behaviour/harness-opencode-resume-stream.test.ts` | Committed resume fixture; canonical environment comparison | To Implement |
+| 001, 002, 003, 006, 042 | `tests/behaviour/harness-version-gate.test.ts`, `harness-version-probe-seam.test.ts` (new), `tests/structure/harness-probe-grammar-contract.test.ts` (new) | `bun test tests/behaviour/harness-version-gate.test.ts tests/behaviour/harness-version-probe-seam.test.ts tests/structure/harness-probe-grammar-contract.test.ts` | Version/grammar table fixture; probe double with deadline input; recording runner; paired in-window control | To Implement |
+| 004, 005 | `tests/behaviour/harness-version-window.test.ts`, `tests/structure/harness-version-window-contract.test.ts` (new) | `bun test tests/behaviour/harness-version-window.test.ts tests/structure/harness-version-window-contract.test.ts` | Version table + window constant + config-branch key set; temp-copy window mutants for V-18/V-19 | To Implement |
+| 007, 008, 009 | `tests/behaviour/harness-mode-selection.test.ts`, `harness-mode-refusal.test.ts`, `harness-mode-config.test.ts` (new) | `bun test tests/behaviour/harness-mode-*.test.ts` | Mode config fixtures; recording doubles for the three observed surfaces; ambient canary | To Implement |
+| 010 | `tests/checks/decision-record.test.ts` (extend inventory) | `bun test tests/checks/decision-record.test.ts` | The authored records; chosen-mode constant equality | To Implement (+ docs) |
+| 011, 015 | `tests/behaviour/harness-profile-propagation.test.ts`, `harness-profile-per-spawn.test.ts` (new); `harness-telemetry-seat-attribution.test.ts` (new) | `bun test tests/behaviour/harness-profile-propagation.test.ts tests/behaviour/harness-profile-per-spawn.test.ts tests/behaviour/harness-telemetry-seat-attribution.test.ts` | N-seat binding records; argv-and-environment recording spawn double; current-generation store variant | To Implement |
+| 012, 013, 014 | `tests/behaviour/harness-profile-precedence.test.ts`, `harness-profile-neutrality.test.ts`, `harness-profile-unrepresentable.test.ts` (new) | `bun test tests/behaviour/harness-profile-{precedence,neutrality,unrepresentable}.test.ts` | Variable-consuming double; conflicting parent values; undeclared canaries; recognised-model catalogue; delivered spawn-env assertions unchanged | To Implement |
+| 016, 017 | `tests/behaviour/harness-resume-propagation.test.ts` (new); `harness-opencode-resume-stream.test.ts` (assertions unchanged) | `bun test tests/behaviour/harness-resume-propagation.test.ts tests/behaviour/harness-opencode-resume-stream.test.ts` | Committed resume fixture; canonical binding and argv comparison | To Implement |
 | 018 | `tests/behaviour/harness-attach.test.ts` (new) | `bun test tests/behaviour/harness-attach.test.ts` | Bounded listing fixtures (in-cap, over-cap, absent); kill double | To Implement |
-| 019, 021, 022 | `tests/behaviour/harness-telemetry-seat-attribution.test.ts`, `harness-telemetry-divergence.test.ts`, `harness-telemetry-durations.test.ts` (new); `harness-telemetry-shape.test.ts` (update) | `bun test tests/behaviour/harness-telemetry-{seat-attribution,divergence,durations,shape}.test.ts` | Complete / divergence / missing-duration store variants; literal duration constants | To Implement (+ update) |
-| 020, 028 | `tests/behaviour/harness-telemetry-version-compat.test.ts` (new) | `bun test tests/behaviour/harness-telemetry-version-compat.test.ts` | Committed legacy row golden; 2.1.x-shape and missing-mandatory variants | To Implement |
-| 023, 024 | `tests/behaviour/harness-telemetry-absent.test.ts`, `harness-telemetry-extraction-failure.test.ts` (new) | `bun test tests/behaviour/harness-telemetry-{absent,extraction-failure}.test.ts` | Zero-rows store; four damaged-store variants; recording append seam; paired controls | To Implement |
-| 025, 026 | `tests/behaviour/harness-telemetry-bounds.test.ts`, `harness-telemetry-seat-totals.test.ts` (new) | `bun test tests/behaviour/harness-telemetry-{bounds,seat-totals}.test.ts` | Recording statement double; over-cap and at-cap stores; baseline + step fixtures | To Implement |
-| 027, 029, 030 | `tests/behaviour/harness-telemetry-privacy.test.ts` (new); `harness-output-bounds.test.ts` (update); `tests/checks/harness-determinism.test.ts` (update); `tests/checks/fixture-privacy.test.ts`, `privacy-literals.test.ts` (update as needed) | `bun test tests/behaviour/harness-telemetry-privacy.test.ts tests/behaviour/harness-output-bounds.test.ts tests/checks/harness-determinism.test.ts tests/checks/fixture-privacy.test.ts` | Canary fixtures; over-cap render sets; injected clock and ids | To Implement (+ updates) |
-| 031, 032, 033 | `tests/conformance/harness-version-mode-propagation.test.ts` (new); `tests/structure/conformance-coverage.test.ts` (update); `tests/conformance/harness-classification.test.ts` (assertions unchanged) | `bun test tests/conformance tests/structure/conformance-coverage.test.ts` | Extended registry; mutated-registry fixtures; simulated harness I/O | To Implement (+ update) |
+| 019, 021, 022 | `tests/behaviour/harness-telemetry-seat-attribution.test.ts`, `harness-telemetry-divergence.test.ts`, `harness-telemetry-durations.test.ts` (new); `harness-telemetry-shape.test.ts` (update) | `bun test tests/behaviour/harness-telemetry-{seat-attribution,divergence,durations,shape}.test.ts` | Current-generation variants: complete, divergence, variant-only, missing/inverted/equal timestamp pair, reported zero cost, missing cost, version drift; literal constants | To Implement (+ update) |
+| 020, 028 | `tests/behaviour/harness-telemetry-version-compat.test.ts`, `harness-telemetry-generation.test.ts` (new) | `bun test tests/behaviour/harness-telemetry-version-compat.test.ts tests/behaviour/harness-telemetry-generation.test.ts` | Committed legacy row golden; current and legacy generation builders; legacy-only and current-only mutant extractors | To Implement |
+| 023, 024, 044 | `tests/behaviour/harness-telemetry-classification.test.ts`, `harness-telemetry-extraction-failure.test.ts`, `harness-telemetry-mandatory-usage.test.ts` (new) | `bun test tests/behaviour/harness-telemetry-{classification,extraction-failure,mandatory-usage}.test.ts` | Not-held session; five damaged stores; no-usage held session; recorded state-append seam; paired controls | To Implement |
+| 025, 026, 043 | `tests/behaviour/harness-telemetry-bounds.test.ts`, `harness-telemetry-seat-totals.test.ts`, `harness-telemetry-attribution.test.ts` (new); `tests/checks/fixture-store-shape.test.ts` (new) | `bun test tests/behaviour/harness-telemetry-{bounds,seat-totals,attribution}.test.ts tests/checks/fixture-store-shape.test.ts` | Recording statement log; over-cap/at-cap stores; baseline + step fixtures; unrelated-session population; fixture DDL scan | To Implement |
+| 027, 029, 030 | `tests/behaviour/harness-telemetry-privacy.test.ts` (new); `harness-output-bounds.test.ts` (update); `tests/checks/harness-determinism.test.ts` (update); `tests/checks/fixture-privacy.test.ts`, `privacy-literals.test.ts` (update as needed) | `bun test tests/behaviour/harness-telemetry-privacy.test.ts tests/behaviour/harness-output-bounds.test.ts tests/checks/harness-determinism.test.ts tests/checks/fixture-privacy.test.ts` | Content canaries in `session_message.data` and legacy `message.data`; over-cap render sets; injected clock and ids | To Implement (+ updates) |
+| 031, 032, 033 | `packages/testkit/src/conformance/harness.ts` (extend), `tests/conformance/harness-extension-scenarios.test.ts` (new); `tests/structure/conformance-coverage.test.ts` (update); `tests/conformance/harness-classification.test.ts` (assertions unchanged) | `bun test tests/conformance tests/structure/conformance-coverage.test.ts` | Floor/extension constants; additive executor; mutated-registry fixtures; simulated harness I/O | To Implement (+ update) |
 | 034, 039 | `tests/checks/harness-hermetic.test.ts` (new) | `bun test tests/checks/harness-hermetic.test.ts` | Network/credential/process probe harness; the full new suite set | To Implement |
-| 035 | `tests/structure/error-table.test.ts`, `tests/structure/harness-contract.test.ts` (update); `tests/checks/error-table-sync.test.ts` (update); `tests/checks/exit-code-literals.test.ts` (must stay green) | `bun test tests/structure tests/checks/error-table-sync.test.ts tests/checks/exit-code-literals.test.ts` | Five new identities; delivered nine codes; projection mapping | To Implement (+ updates) |
-| 036 | `tests/behaviour/harness-refusal-side-effects.test.ts` (new) | `bun test tests/behaviour/harness-refusal-side-effects.test.ts` | Recording probe/session/one-shot/append/store seams; fake process table; precedence fixtures | To Implement |
-| 037, 040 | `tests/behaviour/dispatch-harness-verdict-mode.test.ts` (new); `harness-stream-hygiene.test.ts`, `harness-opencode-stream.test.ts`, `dispatch-harness-*.test.ts` (assertions unchanged) | `bun test tests/behaviour/dispatch-harness-verdict-mode.test.ts tests/behaviour/harness-stream-hygiene.test.ts tests/behaviour/harness-opencode-stream.test.ts tests/behaviour/dispatch-harness-acquisition.test.ts` | Committed stream fixtures; synthetic long stream; audit seam | To Implement |
-| 038 | `tests/checks/harness-mutants.test.ts` (extend) | `bun test tests/checks/harness-mutants.test.ts` | Thirteen named mutants; paired fixtures | To Implement (+ extension) |
-| 041 | `doc/spec/features/feature-harness-adapters.md`, `doc/spec/nonfunctional.md`, `doc/decisions/00-index.md`, `doc/planning/oss-tooling/` markers | manual content check + `bun test tests/checks/doc-conformance.test.ts tests/structure/content-inventory.test.ts` | none | Manual + static checks |
-| Fixture set | `tests/fixtures/harness/version.ts`, `mode.ts`, `profile.ts` (new); `opencode-store/build.ts` (extend); `spawn-env.ts` (extend); `scenarios/` (extend) | `bun test tests/checks/fixture-privacy.test.ts` | Synthetic, privacy-scanned fixtures only | To Implement |
+| 035, 040 | `tests/structure/error-table.test.ts`, `tests/structure/harness-contract.test.ts`, `tests/structure/result-contract.test.ts`, `tests/structure/dispatch-envelope-detail.test.ts` (update); `tests/types/verify-gates-suite-map.type-test.ts`, `tests/types/dispatch-envelope-detail.type-test.ts` (update); `tests/fixtures/result/envelope-key-set.json` (update); `tests/checks/error-table-sync.test.ts` (update); `tests/checks/exit-code-literals.test.ts` (must stay green); `tests/behaviour/dispatch-harness-verdict-mode.test.ts` (new) | `bun test tests/structure tests/checks/error-table-sync.test.ts tests/checks/exit-code-literals.test.ts tests/behaviour/dispatch-harness-verdict-mode.test.ts && bun run scripts/checks/error-table-sync.ts` | Four new identities; delivered nine codes; the `detail.harness` member and its pins; per-identity refusal fixtures | To Implement (+ updates) |
+| 036 | `tests/behaviour/harness-refusal-side-effects.test.ts` (new) | `bun test tests/behaviour/harness-refusal-side-effects.test.ts` | Recording probe/session/one-shot/append/store seams; fake process table; precedence fixtures P-01..P-04 | To Implement |
+| 037 | `harness-stream-hygiene.test.ts`, `harness-opencode-stream.test.ts`, `dispatch-harness-*.test.ts` (assertions unchanged) | `bun test tests/behaviour/harness-stream-hygiene.test.ts tests/behaviour/harness-opencode-stream.test.ts tests/behaviour/dispatch-harness-acquisition.test.ts` | Committed stream fixtures; synthetic long stream; audit seam | Existing – assertions retained |
+| 038 | `tests/checks/harness-mutants.test.ts` (extend) | `bun test tests/checks/harness-mutants.test.ts` | Twenty-four named mutants; paired fixtures | To Implement (+ extension) |
+| 041 | The named `doc/spec/**` pages, `doc/decisions/00-index.md`, `doc/planning/oss-tooling/` markers | manual content check + `bun test tests/checks/doc-conformance.test.ts tests/structure/content-inventory.test.ts` | none | Manual + static checks |
+| 045 | `chg-GH-335-live-observation.md` (change folder) | none — human-gated observation, not a runner | Installed in-window harness; resolved profile; read-only store access | Manual (never CI) |
+| Fixture set | `tests/fixtures/harness/version.ts`, `mode.ts`, `profile.ts` (new); `opencode-store/{build,current-generation,legacy-generation}.ts`; `spawn-env.ts` (extend); `scenarios/` (extend) | `bun test tests/checks/fixture-privacy.test.ts tests/checks/fixture-store-shape.test.ts` | Synthetic, privacy-scanned fixtures derived from DM-10 only | To Implement |
 | Regression envelope | all suites above | `TMPDIR=$PWD/tmp/tmpdir pnpm check` | none (aggregate gate unchanged) | Existing – No Change |
 
-Existing suites asserted unchanged (regression half only): `tests/conformance/harness-classification.test.ts`, `harness-liveness.test.ts`, `tests/behaviour/harness-spawn-env.test.ts`, `harness-spawn-credential.test.ts`, `harness-default-path.test.ts`, `harness-opencode-stream.test.ts`, `harness-opencode-resume-stream.test.ts`, `harness-host-stream.test.ts`, `harness-stream-hygiene.test.ts`, `harness-telemetry-{opencode,claude,shape,drift,claude-budget,opencode-orphan-scope}.test.ts`, `harness-closeout-{capture,idempotency,nongating}.test.ts`, `dispatch-harness-{acquisition,default-spawn,lease}.test.ts`, `tests/checks/harness-ci-parity.test.ts`, and the delivered spend read-side suites (untouched: `spend.telemetry-absent` keeps its meaning).
+Existing suites asserted unchanged (regression half only): `tests/conformance/harness-classification.test.ts`, `harness-liveness.test.ts`, `tests/behaviour/harness-spawn-env.test.ts`, `harness-spawn-credential.test.ts`, `harness-default-path.test.ts`, `harness-opencode-stream.test.ts`, `harness-opencode-resume-stream.test.ts`, `harness-host-stream.test.ts`, `harness-stream-hygiene.test.ts`, `harness-telemetry-{opencode,claude,drift,claude-budget,opencode-orphan-scope}.test.ts` (with `harness-telemetry-shape.test.ts` updated by TC-HARNESS-019), `harness-closeout-{capture,idempotency,nongating}.test.ts`, `dispatch-harness-{acquisition,default-spawn,lease}.test.ts`, `tests/checks/harness-ci-parity.test.ts`, and the delivered spend read-side suites (untouched: `spend.telemetry-absent` keeps its meaning).
 
 ## 8. Risks, Assumptions, and Open Questions
 
@@ -1714,48 +2015,140 @@ Existing suites asserted unchanged (regression half only): `tests/conformance/ha
 
 | Risk | Mitigation in this plan |
 |------|------------------------|
-| Propagation is nominally correct but inert because a real harness ignores the variable family (RSK-1) | GAP-2 names the boundary explicitly: tests prove the descriptor and echoed child environment, never a live harness's honouring; the in-change spike is the named evidence and the optional gated probe records it. AC-F3-1 is never claimed beyond what is proven |
-| The pinned window ages out and blocks delivery (RSK-2) | TC-HARNESS-005 asserts the window is data with one pinned default and that a malformed configured value degrades to it; a stale window surfaces as a classified refusal (TC-HARNESS-002), not a silent acceptance |
-| New refusal identities fragment the error table or duplicate delivered meanings (RSK-5) | TC-HARNESS-035 asserts one row per identity, additive `HARNESS_FAILURE_CODES` growth, unchanged delivered codes, and a distinct absence/failure pair; TC-HARNESS-038's collapse mutant guards identity distinctness |
-| Deny-by-default environment is weakened while adding propagation (RSK-6) | TC-HARNESS-013 asserts exact key-set equality, allowlist immutability and canary absence; TC-HARNESS-012 asserts precedence; the `forward-undeclared-record` and `ambient-wins-over-record` mutants must fail |
-| Seat attribution double counts against session totals (RSK-7) | TC-HARNESS-026 asserts one totals basis with breakdown sums equal to totals and explicitly not baseline-plus-steps |
-| A 2.1.x store shape is unobserved, so degradation rules could be pinned against an invented shape (RSK-4, GAP-6) | The fixture is a declared derived shape; the assertions target the *rules* (degrade when mandatory fields exist, fail when absent) through the declared mandatory-field set (OQ-8 default), never the invented column names |
-| `AC-F2-2` could pass on a decorative record | TC-HARNESS-010 asserts the record's chosen mode equals the code's default constant and that the chosen mode is one of exactly three declared modes; correctness remains human-gated (GAP-4) |
-| The version probe's child process contradicts a literal reading of AC-N1-1 | OQ-6 records the reading applied (no *session-bearing* child process); TC-HARNESS-036 asserts probe count ≤ 1, reaping, and zero session starts, so the guarantee is tested in its meaningful form |
+| Propagation is nominally correct but inert because the harness ignores the surface (RSK-1) | DEC-8 is tested as delivered: TC-HARNESS-011 asserts the per-invocation `--agent`/`--model` arguments on the surface opencode honours, and asserts no `OC_*` variable is invented. The live confirmation is AC-F5-6's human-gated observation (TC-HARNESS-045, GAP-2), never a test oracle |
+| The pinned window ages out and blocks delivery (RSK-2) | TC-HARNESS-005 asserts the window is pinned with no configuration key and that a temp-copy widening flips the verdict; a stale window surfaces as a classified refusal (TC-HARNESS-002), not a silent acceptance |
+| Extraction reads a store shape that does not exist, so a real capture lands zero rows while tests stay green (RSK-9, GAP-7-of-spec) | Every fixture derives from DM-10 (§4.1a); TC-HARNESS-043 scans the fixture DDL for the forbidden columns and TC-HARNESS-038's `work-item-column-query`/`part-tool-query` mutants must fail; TC-HARNESS-019 asserts ≥ 1 row and treats zero rows as failure |
+| New refusal identities fragment the error table or duplicate delivered meanings (RSK-5) | TC-HARNESS-035 asserts exactly four additive codes, unchanged delivered meanings, and the absence of any telemetry-absence identity; TC-HARNESS-038's collapse mutant guards identity distinctness |
+| The declared `detail.harness` member is declared but never projected, so the disclosure is silently dropped (TDR-0031) | TC-HARNESS-040 asserts the member per identity through the rendered envelope (not the returned record), including the identities that must not carry it; TC-HARNESS-035 pins the closed member set, the validator and the fixture two-sidedly |
+| Deny-by-default environment is weakened while adding propagation (RSK-6) | TC-HARNESS-013 asserts exact key-set equality, allowlist immutability and canary absence on both surfaces; TC-HARNESS-011 asserts the environment gains no seat variable; the `forward-undeclared-record` and `per-seat-env-family` mutants must fail |
+| Seat attribution double counts against session totals, or a reported zero is read as absence (RSK-7, NFR-6) | TC-HARNESS-026 asserts one totals basis with breakdown sums equal to totals, and that a zero-cost-with-tokens session is data rather than absence |
+| A store generation is unrecognised, so a line inside the window silently yields nothing (RSK-4, GAP-6) | TC-HARNESS-028 asserts both observed generations and fails a generation-blind extractor in both directions; TC-HARNESS-024 classifies an unrecognised generation as extraction failure |
+| The probe grammar is pinned from one observed line (GAP-7) | TC-HARNESS-042 pins the grammar, the normalization and every failing shape, and a deviating output refuses explicitly as `harness.version.unknown` — a visible outcome, never a silent pass |
+| The 5 s probe bound is unprovable, so the oracle would test the double rather than the gate (readiness finding 8) | §4.4a pins the deadline seam the implementation must introduce; TC-HARNESS-006 asserts the deadline argument, the runner timeout and the `timed-out` → unknown mapping; the wall-clock half is demoted to a §10 reference measurement (GAP-3) |
+| `AC-F2-2` could pass on a decorative record | TC-HARNESS-010 asserts the record's chosen mode equals the code's default constant, its vocabulary membership and an R2 body; correctness remains human-gated (GAP-4) |
+| A test plan oracle requires an artifact another phase owns, so the phase gate can never be green (readiness finding 11) | TC-HARNESS-010 owns record content only; the feature-spec link and index assertions live in TC-HARNESS-041 (documentation phase) |
+| Conformance extension silently widens the six-id floor, or a scenario id has no executable surface (readiness finding 13) | §4.6 C-02/C-06/C-09/C-10 pin the floor/extension split, the additive executor and its location; TC-HARNESS-031 asserts the floor value is unchanged; TC-HARNESS-033 asserts execution, not declaration |
 | Adding gate work could disturb the delivered stream (NFR-8) | TC-HARNESS-037 replays the committed captures and asserts evidence, acquisition and bound parity, plus audit composition |
-| Tests could assert implementation strings and become brittle (GAP-5) | Every field name and warning reason goes through declared contract constants pinned in the contract suite; no TC asserts an inline literal |
+| Tests could assert implementation strings and become brittle (GAP-5) | Every field, reason, mode and verdict name goes through declared contract constants pinned in the contract suite; no TC asserts an inline literal beyond the identities the spec pins verbatim |
 
 ### 8.2 Assumptions
 
-- The harness rejects/accepts versions through the delivered injected probe seam; the probe stays one bounded shell-free invocation (spec §8.2, NFR-2).
-- The resolved per-seat model record map is available at spawn time as validated data from the delivered profile resolution (spec §12); profile resolution itself is not re-tested here.
-- A record name only binds when the name is declared in the harness environment allowlist; the delivery declares the per-seat names it propagates, and an undeclared record name is inert (AC-F3-3; OQ-4).
+- The harness exposes its version through one bounded shell-free invocation whose accepted grammar is pinned, and the probe seam is extended to carry a deadline and an explicit `timed-out` outcome (§4.4a, OQ-10).
+- The resolved per-seat binding record is available at spawn time as validated data from the delivered profile resolution (spec §12); profile resolution itself is not re-tested here.
+- On the opencode surface the binding is expressed as invocation arguments; a declared variable name binds only on a harness that consumes variables, and an undeclared record name is inert (DEC-8, AC-F3-3).
+- The recognised-model catalogue used by the representability check is injectable data read from the harness's own configuration surface at resolution (OQ-11); it is never read from the network.
 - The delivered telemetry row grouping (per session/agent/model) remains the coarse grain and seat identity is an added dimension (spec §12).
+- The state layer's `harness.telemetry` payload allowlist persists the additive fields; TC-HARNESS-019 (T-09) asserts the round trip rather than assuming it.
 - The delivered `error-table` rows derive exit purely from `projectionClass`; no new exit literal is introduced (spec §21, `packages/cli/src/projection.ts`).
-- The delivered six-scenario floor and both registrations survive unchanged; new scenarios are additions to the same registry (spec §8.5).
-- The 2.1.x store shape observed in fixtures is a declared derived shape, not an observed production capture (GAP-6).
+- The delivered six-id floor and both registrations survive unchanged; the extension is additive on the same registry (spec §8.5, DM-7).
+- Both observed store generations (current and legacy) are what the fixture pair models; the in-window `2.1.x` line's own generation remains unobserved (GAP-6).
 
 ### 8.3 Open Questions
 
 | ID | Question | Blocking status | Default applied here | Owner |
 |----|----------|-----------------|----------------------|-------|
-| OQ-4 | Do the per-seat model variable names have to be declared on the harness configuration branch for the record map to bind, and who declares them (configuration, profile resolution, or composition)? | Non-blocking for this plan; blocking for TC-HARNESS-011's fixture wiring | The allowlist must declare each propagated name; the delivery supplies the declaration; an undeclared record name changes nothing (AC-F3-3) | @plan-writer → @coder |
-| OQ-5 | Which refusal identity and projection class does AC-F2-4's "unknown mode value" use, and which projection class do `harness.mode.unavailable` and `harness.profile.model-unrepresentable` take? | Non-blocking; asserted through declared constants either way | Unknown mode value → the delivered `config.value.invalid` (user-validation, exit 1); mode-unavailable and model-unrepresentable → user-validation, exit 1 | @plan-writer |
-| OQ-6 | AC-N1-1 says "no child process has been started", but the version probe is itself a bounded child-process invocation (F-1, §8.2). Does the guarantee scope to session-bearing processes? | Non-blocking; the plan asserts the meaningful form and records the reading | Yes — zero session-bearing child processes; the probe is the single permitted invocation, completes, and is reaped | @plan-writer |
+| OQ-4 | Which name must be declared on the harness configuration branch for a binding to bind, and who declares it — configuration, profile resolution, or composition? | Non-blocking for the opencode path (the binding is an argument); blocking for TC-HARNESS-011/013's variable-consuming fixture wiring | The allowlist must declare each propagated name on a variable-consuming harness; the delivery supplies the declaration; an undeclared record name changes nothing; on opencode no declaration is needed and none is invented (AC-F3-3, DEC-8, NG-10) | @plan-writer → @coder |
+| OQ-5 | Which refusal identity and projection class does AC-F2-4's "unknown mode value" use, and which projection class do `harness.mode.unavailable` and `harness.profile.model-unrepresentable` take? | Non-blocking; asserted through declared constants either way | Unknown mode value → the delivered `config.value.invalid` (user-validation, exit 1; no `detail.harness`); mode-unavailable and model-unrepresentable → user-validation, exit 1, with the TDR-0031 member | @plan-writer |
+| OQ-6 | — **Closed** by the spec v1.1 amendment: AC-N1-1 now reads "no session-bearing child process" with the single bounded probe as the declared exception. | Closed | The reading is the spec's own wording; TC-HARNESS-036 asserts it (probe `calls <= 1`, completed and reaped) | — |
 | OQ-7 | Is `attach` a distinct port operation, or the bounded `listSessions` lookup followed by `resume`? | Non-blocking; the oracle asserts listing-once + spawn-zero either way | Attach = bounded listing plus resume; no new port member (F-4 wording) | @plan-writer → @coder |
-| OQ-8 | For the 2.1.x shape, which fields are "mandatory identity and token fields" that separate "degrade with warnings" from "classify the session as failed"? | Non-blocking; pins the degrade-vs-failed boundary in TC-HARNESS-028 | Mandatory = session identity plus at least one token class plus work-item attribution; absent → failed session with a closed reason; present → degrade for the missing optional fields | @plan-writer → @coder (fixtures) |
-| OQ-9 | What is the exact registry surface that supplies version and mode facts to a conformance scenario, given that the registry builds a session port while version and mode are resolution-time concerns? | Non-blocking for the plan's oracles (they assert through the registry API and violation messages); blocking for TC-HARNESS-033's implementation | Scenario facts are injected as data through the registration/deps surface; the production resolution path is untouched; the extension is data on the same registry (F-7) | @plan-writer → @coder |
+| OQ-8 | For a degraded generation, which fields are the "mandatory identity and usage fact" set that separates "degrade with warnings" from "classify the session as failed"? | Non-blocking; pins the boundary in TC-HARNESS-044/028 | Mandatory = the session identity the dispatch holds plus at least one observable usage fact (a token class or cost); absent → failed session with a closed reason; present → degrade for the missing optional fields (the spec's pinned OQ-3 answer) | @plan-writer → @coder (fixtures) |
+| OQ-9 | What is the exact registry surface that supplies version and mode facts to a conformance scenario, given the registry builds a session port while version and mode are resolution-time concerns? | Blocking for TC-HARNESS-033's implementation | Scenario facts are injected as data through the additive executor's `io`/`deps` surface; the production resolution path is untouched; the extension is data on the same registry (F-7) | @plan-writer → @coder |
+| OQ-10 | Is the deadline-carrying probe outcome (input `{deadlineMs, now}`, result `answered` or `timed-out`) an additive replacement for the delivered `HarnessVersionProbe = () => Promise<string>`, or a second seam beside it? | Blocking for TC-HARNESS-006's bound half; non-blocking for the verdict cases | Replace the delivered signature (a single production probe seam, §4.4a); the resolver passes the deadline and the injected clock; a `timed-out` outcome is indeterminate. Until the plan declares this seam, the bound half is reported as a GAP, never as passing | @plan-writer |
+| OQ-11 | What is the injectable source of the "recognised model" catalogue that AC-F3-4's second half depends on? | Blocking for TC-HARNESS-014 variant 3 | The harness's own declared agent/model configuration, read at resolution through an injected read-only seam and treated as data; no network, no store write | @plan-writer → @coder |
+| OQ-12 | Does the conformance extension carry four scenario ids (version-window, version-unknown, mode-unavailable, profile-propagation) or five (splitting version-inside / version-outside, as F-7's enumeration reads)? | Non-blocking; asserted through the declared constants either way | Four ids, with `version-window` asserting both directions and failing if either is wrong; the identity→scenario map is total over the four new identities | @plan-writer |
 
 ## 9. Plan Revision Log
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 1.0 | 2026-11-17 | @test-plan-writer | Initial test plan for GH-335 (M3-S1 opencode v2.x harness and telemetry): 41 scenarios (TC-HARNESS-001..041) covering all 23 ACs, DM-1..DM-7 and NFR-1..NFR-10 with every AC mapped; both pinned blueprint scenarios (TC-M3-HARNESS-001/002) delivered as dedicated cases with their verbatim Given/When/Then; refusal/oracle matrix M-01..M-10 with precedence P-01..P-03, version verdict matrix V-01..V-12, telemetry field matrix T-01..T-14, conformance scenario matrix C-01..C-08; binding fixture, non-vacuity and mutant contracts mirroring the GH-291 precedent; gaps GAP-1..GAP-6 and open questions OQ-4..OQ-9 declared with defaults and owners |
+| 1.1 | 2026-11-17 | @test-plan-writer | Readiness iteration 1 remediation (verdict NOT_READY): coverage re-cut to the revised spec's **26** ACs — four TCs added (TC-HARNESS-042 probe grammar and normalization, 043 attribution by the held session identity, 044 mandatory-usage boundary, 045 human-gated live observation) taking the count to 45; every store fixture rebuilt from DM-10/Appendix C (current `session_v2`/`session_message` generation plus legacy `session`/`message`/`part` with no `tool` column) and the forbidden synthetic shape deleted and asserted absent; T-02 inverted so store timestamps are the duration source, T-03 extended with the reported-zero-versus-no-cost-source rule and T-11 relaxed to permit bounded per-message metadata reads; T-14 replaced by two-generation tolerance with a two-sided mutant pair; the invented `harness.telemetry.absent` identity deleted from the matrix, the TCs, the code and the claims, replaced by the three-way in-envelope taxonomy plus the delivered `spend.telemetry-absent` read side and non-gating closeout; TC-HARNESS-006's unprovable 5 s wall-clock oracle replaced by a pinned deadline seam (§4.4a, OQ-10); TC-HARNESS-010's link assertion moved to TC-HARNESS-041 so the owning phase can be green; the conformance executor and the floor/extension scenario-id union split declared explicitly (§4.6 C-06/C-09/C-10); TC-HARNESS-036 re-scoped to "no session-bearing child, probe ≤ 1 completed and reaped"; the mode vocabulary and the propagation scenario retargeted to the observed surfaces (DEC-8: per-invocation `--agent`/`--model`); the refusal/disclosure matrix extended with the TDR-0031 `detail.harness` member and its identity mapping; GAP-2 re-scoped to AC-F5-6 plus the DoD, GAP-6 replaced by the unobserved 2.1.x generation, GAP-7 added for the single-line grammar observation; OQ-6 closed by the spec amendment, OQ-10..OQ-12 added. Full per-TC change list in §11 |
 
 ## 10. Test Execution Log
 
-No suites were run while authoring this plan. This log is populated during delivery (phase 6) and quality gates (phase 9). The NFR-2 reference measurement (TC-HARNESS-006, GAP-3) and the manual documentation traceability review (TC-HARNESS-041) are recorded here; the optional gated live probe (GAP-2) records its spike evidence in the change artifacts, not here.
+No suites were run while authoring this plan. This log is populated during delivery (phase 6) and quality gates (phase 9). The NFR-2 reference measurement (TC-HARNESS-006, GAP-3) and the manual documentation traceability review (TC-HARNESS-041) are recorded here; the human-gated live observation (TC-HARNESS-045, GAP-2) is recorded in `chg-GH-335-live-observation.md`, not here.
 
 | TC ID | Run Date | Result | Notes |
 |-------|----------|--------|-------|
 | — | — | — | Awaiting delivery |
+
+## 11. Change Log — Revision 1.1 (what moved, and why)
+
+**No test case was removed.** All forty-one previous ids (TC-HARNESS-001..041) survive with their ids unchanged; four are added (042–045), so the plan now holds forty-five. One TC absorbed another's assertion (TC-HARNESS-041 takes TC-HARNESS-010's link assertions), and one TC's subject was replaced rather than dropped (TC-HARNESS-028). This section states every reshaped oracle, identity, exit, bound and AC/NFR mapping so the readiness gate can check the change rather than infer it.
+
+### 11.1 Added test cases (4)
+
+| TC | Why | AC |
+|---|---|---|
+| TC-HARNESS-042 | AC-F1-5 is new: the probe grammar and normalization were unpinned, so the real `opencode v2.2.5` output had no oracle and a naive strip was invisible | AC-F1-5, AC-F1-1, AC-F1-3, NFR-2, NFR-6 |
+| TC-HARNESS-043 | AC-F5-5 is new: attribution by the held session identity, the no-work-item-column rule and the no-store-wide-scan rule had no dedicated oracle; it also carries the fixture-DDL scan that keeps the forbidden shape out | AC-F5-5, DM-8, DM-10, NFR-3, NFR-5 |
+| TC-HARNESS-044 | AC-F5-5's second half and the pinned OQ-3 taxonomy: a held session with no observable usage fact is a failed-session entry, distinct from absence and from degradation | AC-F5-5, AC-F6-2, NFR-11 |
+| TC-HARNESS-045 | AC-F5-6 is new: the human-gated live observation, recorded in the change folder, never a CI oracle | AC-F5-6, AC-F3-1, NFR-10 |
+
+### 11.2 Retargeted or reshaped surviving test cases (explicit)
+
+| TC | What changed | Why |
+|---|---|---|
+| 001 | Fixture probe returns `opencode v2.2.5\n`; `observedVersion` asserted **normalized** (`2.2.5`), raw line asserted not stamped | AC-F1-5, DEC-11 |
+| 002 | Fixture `opencode v2.3.0`; oracle gains the `detail.harness` member set (`outside`, version present, no `mode`) | TDR-0031, AC-F1-2 |
+| 003 | Variant set widened to empty / two-part / trailing junk / bare semver / `timed-out`; oracle gains `observedVersion === null` + `indeterminate`, `mode` absent | AC-F1-5, DEC-11 |
+| 004 | Table now V-01..V-19; step 2 asserts the grammar shape; step 4 adds `2.20.0`/`12.2.5` outside and bare `2.2.5` indeterminate | AC-F1-5 |
+| 005 | **Inverted**: no configurable window exists, so the oracle asserts the config branch has no window key and acceptance is unchanged under an invented key, plus two-direction temp-copy probes | AC-F1-4 rewritten (DEC-1) |
+| 006 | **Oracle replaced**: the 5 001 ms fake-clock advance is gone. New oracle: `deadlineMs === 5000`, injected clock by reference, runner `timeoutMs === 5000`, `timed-out` → unknown, `calls === 1`, ordering. Wall-clock demoted to §10 | readiness finding 8, NFR-2, §4.4a |
+| 007 | Transport doubles retargeted to the three observed surfaces; oracle gains `--standalone` in argv exactly once | DEC-2, observed mode surfaces |
+| 008 | Oracle names the requested/available values through the vocabulary constant and asserts `detail.harness.mode` = requested, `inside` | AC-F2-3, TDR-0031 |
+| 009 | Unknown-value case asserts `detail.harness` **absent**; adds the vocabulary↔surface table assertion | TDR-0031, DM-3 |
+| 010 | **Split**: feature-spec link, index link and change-artifact link assertions removed; R2-body assertion added | readiness finding 11 (Phase 8 owns the link) |
+| 011 | **Retargeted surface**: descriptor/child-environment oracle replaced by recorded invocation argv (`--agent`/`--model` per seat) plus "no `OC_*` added"; observed-model agreement read from the store | DEC-8, OQ-2 closed, NG-10 |
+| 012 | Scoped to a variable-consuming harness double; the opencode path is explicitly excluded (its binding is an argument) | DEC-8 |
+| 013 | Adds the opencode-side assertion that the environment gains no seat key while the argv carries the binding | DEC-8, AC-F3-3 |
+| 014 | Variant 2 becomes surface-expressibility (`provider/model#variant`), variant 3 becomes "not in the injected recognised-model catalogue"; oracle gains `detail.harness.mode` = resolved | AC-F3-4, DEC-8, OQ-11 |
+| 015 | Oracle reads invocation argv/variable per surface instead of `childEnv[SEAT_VAR]` | DEC-8 |
+| 016 | Canonical comparison now covers the binding **and** the derived invocation arguments | DEC-8, AC-F4-1 |
+| 019 | Fixture rebuilt on `session_v2`/`session_message`; version from `session_v2.version`; `calls` from usage-bearing message count; tool counts now absent-with-warning on the observed store; `records.length >= 1` and zero-row-fails added | DM-10, AC-F5-1 (rewritten) |
+| 021 | Adds version divergence (stored vs probed) beside model divergence, and a variant-only normalization control | DM-9, §10 |
+| 022 | **Inverted**: durations come from the store pair; absence only when the pair is missing/inverted; adds the legitimate `elapsed === 0` case | AC-F5-4, DM-6 |
+| 023 | **Identity deleted**: no `harness.telemetry.absent`, no exit 1, no per-session request. New oracle: absence classified in the capture envelope, `spend.telemetry-absent` read side, delivery exit unchanged, identity absent from every vocabulary | readiness finding 2, AC-F6-1/2 rewritten, DEC-10 |
+| 024 | Exit assertion replaced by "unchanged, equal to the paired control" (non-gating); adds the unrecognised-generation variant; `platform-provider` kept only where surfaced as a command failure | AC-F6-2, NFR-11 |
+| 025 | **Relaxed deliberately**: bounded per-message metadata reads are permitted when scoped by session id and message type; what remains forbidden is the unbounded scan and any content projection; adds the store-path reconciliation assertion | NFR-3 wording, DM-10 |
+| 026 | Adds the reported-zero-cost-with-tokens case (not absence, no warning) | NFR-6, T-03/T-13 |
+| 028 | **Replaced subject**: "2.1.x shape" → two observed generations with a two-sided mutant pair; tool counts absent because `part` has no `tool` column | DM-10, NFR-11, GAP-6 |
+| 031 | Floor constant renamed `HARNESS_CONFORMANCE_FLOOR_SCENARIOS`; adds the "extension cannot widen the floor" pin | readiness finding 13, AC-F7-1 |
+| 032 | Mutated scenario id becomes `version-window`; identity case now asserts the identity→scenario map | DM-7, AC-F7-2 |
+| 033 | **Executor made real**: additive `runHarnessConformanceScenario`-shaped executor in the testkit, union split, location assertion, propagation scenario on the invocation surface (both directions) | readiness finding 13, DEC-8 |
+| 035 | "five new identities" → **four**; adds the absence-of-`harness.telemetry.absent` assertion and the `detail.harness` pin-move assertions | TDR-0031, DEC-10 |
+| 036 | Oracle restated as "no session-bearing child; probe `calls <= 1`, completed and reaped"; adds P-04 (`mode` omitted) | AC-N1-1 amended, TDR-0031 |
+| 038 | Mutant list rebuilt: adds `probe-substring-match`, `stamp-raw-probe-line`, `ignore-probe-deadline`, `config-window-widens`, `per-seat-env-family`, `zero-cost-as-absence`, `missing-cost-as-zero`, `work-item-column-query`, `part-tool-query`, `legacy-only-extractor`, `current-only-extractor`, `zero-row-as-pass`; replaces the two absence mutants with **`absence-as-capture-failure`** and **`capture-failure-as-absence`**; removes `widen-window-on-bad-config` | AC-F1-5, DM-10, NFR-11, DEC-9/DEC-10 |
+| 040 | Oracle extended to the `detail.harness` member per identity, including the identities that must not carry it, the scripted line, and the six-field error | TDR-0031, §10 |
+| 041 | Absorbs the feature-spec link/index/change-reference assertions moved out of 010; page list widened to the telemetry, state, spend, result, dispatch, config and adapter-ports pages | readiness finding 11, TDR-0031 |
+
+### 11.3 Deleted claims and identities (so they cannot be re-added silently)
+
+| Deleted | Where it lived | Replaced by |
+|---|---|---|
+| Identity `harness.telemetry.absent` (exit 1, no zero row) | Matrix M-06, TC-023, TC-035, TC-038, §1, §3.1–3.3 | Three-way in-envelope taxonomy (TC-023, 024, 044), the delivered `spend.telemetry-absent` read side, non-gating closeout, and an explicit absence-of-identity assertion (TC-035, 023) |
+| Synthetic fixture shape (`session.work_item_ref`, `session.harness_version`, per-message token columns, `part.tool`) | §4.1 rule 5, §6 store data, T-01..T-14, TC-019/028 | DM-10 two-generation fixtures (§4.1a), the fixture-DDL scan (TC-043), and the `work-item-column-query` / `part-tool-query` mutants (TC-038) |
+| 5 s wall-clock assertion via a fake-clock advance | §4.2 rule 4, TC-006 | Pinned deadline seam (§4.4a) asserted at the seam; wall clock as a §10 reference measurement (GAP-3) |
+| `OC_<PREFIX>_AGENT_<SEAT>_MODEL` as the opencode propagation oracle | TC-011, TC-015, §3.1, §4.1 rule 4 | Per-invocation `--agent`/`--model` binding (TC-011, 015, 016) with "no `OC_*` added" asserted |
+| "2.1.x-shape" store variant | T-14, TC-028, GAP-6 | Current-generation + legacy-generation fixtures with a two-sided mutant pair; the 2.1.x generation recorded as unobserved (GAP-6) |
+| Feature-spec link assertion inside the record-content TC | TC-010 step 4, oracle | TC-041 (documentation phase) |
+| `widen-window-on-bad-config` mutant | TC-038 | `config-window-widens` (an invented key cannot change acceptance) |
+
+### 11.4 Coverage arithmetic
+
+- ACs: 26 (AC-F1-1..5, AC-F2-1..4, AC-F3-1..4, AC-F4-1, AC-F5-1..6, AC-F6-1..2, AC-F7-1..3, AC-N1-1) — all mapped in §3.1; none TODO-mapped, three carry a named boundary (GAP-2, GAP-4).
+- TCs: 45 (TC-HARNESS-001..045), each appearing in §5.1, §5.2 and §7.
+- Matrices: M-01..M-10 (with the `detail.harness` column and P-01..P-04), V-01..V-19, T-01..T-16, C-01..C-10.
+- Gaps: GAP-1..GAP-7; open questions OQ-4..OQ-12 (OQ-6 closed).
+
+### 11.5 What `@plan-writer` must change as a consequence
+
+1. **Re-cut the TC→phase map for 45 TCs** (the plan currently maps 41). Suggested ownership: Phase 1/2 keep TC-010 (now content-only); Phase 3 owns 042's grammar constant half and 005; Phase 4 owns 006 (deadline seam), 001–003, 007–009, 011, 014–018; Phase 5 owns 019–028, 043, 044; Phase 6 owns 029–034, 036, 038, 039; Phase 7 owns 037, 040; Phase 8 owns 041; TC-045 is a delivery-bound manual obligation recorded in Phase 8 or a dedicated DoD step, never a test-phase gate.
+2. **Declare the probe deadline seam** (`contracts/harness.ts` + `harness-registry.ts` + the production probe's runner wiring) in the phase that owns resolution, and change Phase 2's "five refusal identities" wording to four (the fifth is the removed telemetry-absence identity).
+3. **Declare the conformance executor and the constant split** in the testkit module (`HARNESS_CONFORMANCE_FLOOR_SCENARIOS`, `HARNESS_CONFORMANCE_EXTENSION_SCENARIOS`, the union type, `runHarnessConformanceScenario`) so Phase 6 can build the scenarios the registry declares.
+4. **Declare the fixture modules** in the phase whose tests need them: `tests/fixtures/harness/opencode-store/{current-generation,legacy-generation}.ts`, `tests/checks/fixture-store-shape.test.ts`, and the version/mode/profile fixture modules.
+5. **Declare the result-contract file set** TDR-0031 lists (`contracts/result.ts`, `contracts/index.ts`, `cli/src/index.ts`, `cli/src/commands/dispatch.ts`, `testkit/src/result-conformance.ts`, `tests/fixtures/result/envelope-key-set.json`, both type tests, both structure tests, the feature pages) in the phase that moves them.
+6. **Declare `packages/core/src/state/harness-telemetry.ts`** in the telemetry phase (the payload allowlist must persist the new fields — readiness finding 3), and add its round trip to that phase's gate.
+7. **Declare `tests/structure/inventory.json`** where the new exported constants are added (readiness finding 12).
+8. **Declare the store-path reconciliation** (`packages/core/src/config/*` + the adapter's store resolution) in the phase that owns telemetry reads, since TC-025 asserts the resolved path structurally.
+9. **Add the three new decision-record obligations**: TDR-0031 is authored and staged in a phase that owns it, and the documentation phase reconciles `feature-result-contract.md` and `feature-dispatch-engine.md` (the latter's "no other dispatch refusal populates it" claim is now false).
