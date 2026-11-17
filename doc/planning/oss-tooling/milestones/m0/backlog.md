@@ -40,13 +40,13 @@ floats behind it.
 ### M0-S2 Branding seam and working name
 - Ticket: GH-171 (milestone M0)
 - Goal: One branding constant derives every name-derived value so the eventual public rename is a single swap, not an archaeology dig; the forbidden-literal test keeps the seam honest.
-- Tasks: branding module with the single name constant (working name ados)
-  driving binary, package scope, env prefix `ADOS_`, config dir `.ados`,
+- Tasks: branding module with the single name constant (historical working name)
+  driving binary, package scope, environment prefix, config directory,
   MCP prefix, telemetry namespace, docs URL; env override to swap the name
   at the naming freeze; forbidden-literal test that fails CI on any name
   literal outside the allowlist (the branding module plus the legacy
   adapter, per ADR-0003 DEC-8; the scan covers new code, the pre-existing
-  corpus migrates separately); legacy `ADOS_*` and `~/.ados` adapter with a
+  corpus migrates separately); legacy environment prefix and config path adapter with a
   one-time warning; neutral telemetry schema (delivery.event.v1); rename
   drill documented.
 - AC: every name-derived value traces to the branding constant; the
@@ -81,7 +81,7 @@ floats behind it.
 - Goal: Configuration that is layered, validated, and traceable per key, so behavior differences are explainable and secrets never sit in files.
 - Tasks: layered chain built-in defaults < system < user-global < project
   committed (.<product>/config.yaml) < project local (config.local.yaml) <
-  environment (ADOS_*) < CLI flags; maps merge recursively, lists replace;
+  environment (legacy env prefix) < CLI flags; maps merge recursively, lists replace;
   per-key origin via `config debug`; one schema validating each layer and
   the merged result; unknown keys error with the x- vendor namespace
   allowed; fail closed on malformed file; secrets environment-only with a
@@ -169,10 +169,10 @@ floats behind it.
 - Ticket: GH-179 (milestone M0)
 - Goal: Pm-notes and registry writes are schema-checked and phase transitions flow through one idempotent path, making the ledger every verification reads authoritative.
 - Tasks: schema and format conformance checks at write time for pm-notes
-  and the delivery registry (`ados lint`); error on parse failure; key-set
+  and the delivery registry (the historical lint command); error on parse failure; key-set
   assertions; the pm-notes schema declares the change variant (full
   eleven-phase or LITE compressed set) and lint validates the declared
-  variant's required phases. Phase transitions through `ados phase`
+  variant's required phases. Phase transitions through the historical phase command
   (`phase list`, `phase complete`, `phase reopen` with a required
   reason) as the only write path for phase state; the coordinating
   agent and every lifecycle agent mark phases through it. Bundled with

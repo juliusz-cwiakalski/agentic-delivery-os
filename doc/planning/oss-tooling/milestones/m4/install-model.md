@@ -9,7 +9,7 @@ local-only install for now; only Jaiship namespaces.
   checkout.
 - Per-user install, no `sudo`, no system-wide paths.
 - Only Jaiship namespaces: `~/.jaiship/`, `~/.jaiship-state/`, and the optional
-  project-local `<repo>/.jaiship/`. Never `~/.ados*` or `~/.delivery-os*`.
+  project-local `<repo>/.jaiship/`. Never legacy pre-Jaiship config or state paths.
 - Upgrade is explicit; replace is atomic; uninstall is clean and reversible
   until purged.
 

@@ -12,7 +12,7 @@ Moved from `doc/planning/oss-tooling/backlog.md` (per-milestone split, 2026-11-1
 ### M5-S1 Naming freeze and rename
 - Goal: The public name frozen and the rename drill executed, unblocking publication.
 - Tasks: owner decides the final public name; swap the branding constant;
-  migrate legacy .ados config once; re-run the rename drill; update docs,
+  migrate legacy pre-Jaiship config once; re-run the rename drill; update docs,
   package scope, and registry names.
 - AC: one constant swap plus migration renames everything; legacy paths
   warn.
@@ -23,8 +23,8 @@ Moved from `doc/planning/oss-tooling/backlog.md` (per-milestone split, 2026-11-1
 - Goal: Release automation that publishes all public packages at one version from the frozen name, with provenance and self-update.
 - Tasks: release job flips private off for the frozen name; changesets
   fixed group publishes one lockstep version line; registry provenance and
-  SBOM; pinned tagged releases become the stable install source; `ados
-  update` self-update.
+  SBOM; pinned tagged releases become the stable install source; a self-update
+  command ships.
 - AC: a release publishes all five public packages at one version; the
   guard blocks any publish under a non-frozen name.
 - Depends on: M0-S17, M3-S7, M5-S1.

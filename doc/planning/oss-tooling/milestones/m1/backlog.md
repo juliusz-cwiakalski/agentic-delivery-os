@@ -274,10 +274,10 @@ the M1 redefinition).
   consumers mechanically; the change variant or ceremony tier is data in
   the plan (per-tier phase sets and escalation triggers; no hardcoded
   eleven); planning phases are declared lease-free (safely parallel) and
-  delivery phases lease-taking; the `ados plan` family: validate
+  delivery phases lease-taking; the historical plan command family: validate
   (schema), diff (declared scope versus actual branch diff), overlap
   (pairwise conflict answer: run in sequence or parallel); plan lint
-  integrated into `ados lint`; the ready-for-development gate: a change
+  integrated into the historical lint command; the ready-for-development gate: a change
   is ready for development when its plan validates and its scope is
   declared; migration path from the markdown plan format (writer output
   flips; legacy markdown plans remain readable during transition).
@@ -292,10 +292,10 @@ the M1 redefinition).
 ### M1-S14 Commit primitive and phase-transition commits
 - Ticket: GH-227 (milestone M1)
 - Goal: Commits become a tool primitive that computes the message from the working tree plus change context, and phase completion records and commits atomically, so agents stop hand-crafting commits and every transition lands as a conventional commit.
-- Tasks: `ados commit`: compute a conventional commit message from
+- Tasks: the historical commit command: compute a conventional commit message from
   uncommitted files plus the change context (ref, current phase, plan
   phase); precise staging (never untracked strays; privacy-scanned at the
-  emitter); phase-transition integration: `ados phase complete` performs
+  emitter); phase-transition integration: the historical phase-complete command performs
   the record plus commit atomically for the completed phase's pending
   work, **on by default** (`--no-commit` opts out per call; config
   disables per project) - the PM's ledger transitions and the coder's
@@ -348,7 +348,7 @@ the M1 redefinition).
   where policy-as-data explicitly delegates (the confused-deputy guard);
   free-text answers refuse credential values like the question path
   does; questions ranked in the
-  status digest and brief; answerable as data (`ados blockers answer`);
+  status digest and brief; answerable as data (the historical blockers-answer command);
   the answer is applied by the coordinator loop or the daemon and the
   lane resumes without a full session re-entry where the harness adapter
   declares the resume-injection capability (the laneResume mode records
@@ -509,7 +509,7 @@ the M1 redefinition).
 ### M1-S19 Spend read side and resume amplification
 - Ticket: GH-236 (milestone M1)
 - Goal: Per-ticket and per-phase spend plus the resume-amplification metric are visible from the event log, so waste classes are findable from the spend report alone.
-- Tasks: `ados spend` v0 read side over the closeout-captured harness
+- Tasks: the historical spend v0 read side over the closeout-captured harness
   telemetry: per-ticket and per-phase tokens by class, calls, per agent
   and model; the resume-amplification metric (tokens paid versus unique
   progress); per-delivery restart counts; text digest plus JSON; alarms,
@@ -524,7 +524,7 @@ the M1 redefinition).
 - Ticket: GH-242 (milestone M1)
 - Goal: The lifecycle agents (the PM-style coordinator and its lane agents: plan writer, coder, reviewer, and the rest) use the tool primitives for coordination, so coordination is tool calls, not prose discipline.
 - Tasks: update the agent prompt definitions and lifecycle instructions:
-  phase bookkeeping exclusively via `ados phase`; pm-notes writes through
+  phase bookkeeping exclusively via the historical phase command; pm-notes writes through
   the linted path; plan-writer emits the M1-S13 plan schema; coder
   executes against declared phase scope and marks phase completion
   (record plus commit via the M1-S14 primitive); blockers publish as

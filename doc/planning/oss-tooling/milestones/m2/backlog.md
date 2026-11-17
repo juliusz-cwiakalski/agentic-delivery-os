@@ -137,8 +137,7 @@ the project family separately.
 - Ticket: GH-299 (milestone M2)
 - Goal: Delivery metrics and spend from the event log with alarms, so success claims and cost drift are measurable, not anecdotal.
 - Tasks: ceremony share, per-dispatch tokens/cost/restarts, cycle time, CI
-  failure rate, escaped defects; burn-rate alarms. Builds on the `ados
-  spend` read side delivered in M1-S19; this story adds the alarm and
+  failure rate, escaped defects; burn-rate alarms. Builds on the historical spend read side delivered in M1-S19; this story adds the alarm and
   metric layers.
   Consumes M2-S14 telemetry for per-agent and per-model facts.
 - AC: exit criteria measurable with committed numbers.

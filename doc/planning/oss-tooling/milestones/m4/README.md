@@ -68,7 +68,7 @@ hood.
 - **D6.** Install model: local user install from the cloned repository for
   now — one self-contained binary in `~/.jaiship/bin/jaiship`, config in
   `~/.jaiship/`, state in `~/.jaiship-state/`, project-local config in
-  `<repo>/.jaiship/`; no `ados`/`delivery-os` paths. Design:
+  `<repo>/.jaiship/`; no legacy pre-Jaiship paths. Design:
   [install-model.md](install-model.md).
 
 ## Sequencing
