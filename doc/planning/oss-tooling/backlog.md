@@ -1392,6 +1392,20 @@ the project family separately.
   reconcilable without editing state files.
 - Depends on: M1-S9, M1-S17, M1-S18, M2-S13.
 
+## M3 — Jaiship-native delivery (planned)
+
+Blueprint: `doc/planning/oss-tooling/milestones/m3/README.md` (draft; ticket
+references are added when the story tickets are created after plan approval).
+
+- M3-S1 Installable, versioned binary — ticket TBD
+- M3-S2 Jaiship namespace migration — ticket TBD
+- M3-S3 Delivery command conformance and repair — ticket TBD
+- M3-S4 Declarative provider policy — ticket TBD
+- M3-S5 Project-scoped queues and parallel projects — ticket TBD
+- M3-S6 Delivery history and statistics export — ticket TBD
+- M3-S7 Agent prompts on Jaiship primitives — ticket TBD
+- M3-S8 Dogfood window and shell retirement — ticket TBD
+
 ### M2-S16 Engine-first delivery operations
 - Ticket: GH-293 (milestone M2)
 - Goal: Day-to-day delivery of this repository runs primarily through the
