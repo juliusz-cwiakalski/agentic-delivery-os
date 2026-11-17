@@ -248,7 +248,7 @@ floats behind it.
   rules in committed code plus a project-configurable hashed-literal
   list (raw private literals are never committed; only their hashes
   are); no-cloud-in-committed-files check; no secrets or private
-  identifiers in embedded ADOS metadata; wired into CI.
+  identifiers in embedded tooling metadata; wired into CI.
 - AC: a committed file containing a guarded literal fails CI; metadata
   envelopes are scanned at the emitter.
 - Depends on: M0-S1.
