@@ -12,7 +12,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-17T13:57:13.092Z }
   review_fix: { started: null, completed: 2026-11-17T14:10:27.441Z }
   quality_gates: { started: null, completed: 2026-11-17T14:57:39.333Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-17T14:59:03.035Z }
   pr_creation: { started: null, completed: null }
 decisions: []
 open_questions: []
@@ -679,5 +679,23 @@ notes:
       repository-local, merge-base 5f25da8, head 3f241a7f. Guard-fix commit
       3f241a7f (test-only: supervision-read-cost guard 30s->90s + in-case NFR-5
       on the battery call; pm-notes)."
+    type: "info"
+    date: "2026-11-17"
+  - text: "DoD check verdict: PASS. Verified: (1) all 10 plan phases carry pm-notes
+      evidence naming the phase id, commit SHA (all resolve via git cat-file),
+      and test result; (2) plan validate GH-295 = valid/readyForDevelopment with
+      10 contiguous phases and TC ownership 58/58; (3) spec v1.4 defines
+      AC-F1-1..AC-F8-1 and review-iter-3.yaml status PASS covers all 8; (4)
+      documentation complete — doc-syncer reported zero residual gaps twice
+      (post-delivery and post-remediation) and the feature page is tracked; (5)
+      tree clean at 4dbdf75a; (6) verify change GH-295 reports
+      missing=dod_check,pr_creation only (expected pre-PR). Observed tooling
+      notes (not GH-295 defects): verify gates 1/5 because the branch is
+      unpushed (push-parity/squash-preflight branch-mismatch, ci-green
+      head-unresolved) and lifecycle-finalization awaits dod_check+pr_creation;
+      no events.jsonl/candidates/ capsule files exist in ANY 2026-11 change
+      folder including merged siblings, so capsule-file emission is repo-wide
+      tooling state, not a change defect. Phase-8 evidence uses 'exits 0' rather
+      than the literal PASS keyword (semantically equivalent)."
     type: "info"
     date: "2026-11-17"
