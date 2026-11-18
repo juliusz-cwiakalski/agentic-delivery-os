@@ -56,6 +56,43 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 7 complete (release obligations and the regression floor).
+      Plan phase 6 commit: a3a52ebb62e5582b559d77e172b7ae69e9e28604 (the
+      phase-6 note names plan phase 6 and its gate result; this entry carries the
+      hash). Phase 7 delivered: the lockstep five-publishable minor changeset
+      (.changeset/gh-338-github-adapter-completion-minor.md) verified, not
+      duplicated; the TC-PARITY-005 completion roll-up in
+      tests/conformance/mock-conformance.test.ts asserts each of the seven
+      AC-F8-4 behaviors (landing, timings, excerpt, discussion, comment write,
+      content write, mapped transition) has exactly one four-field catalog entry
+      whose fixtureReference resolves, a named mutation in the trap suite (the
+      landing mutation added as an assertion extension; no trap entry added or
+      amended in this phase), and an executed closed-set half with a declared
+      projection (a void write is held to its exact tenant route truth); the
+      TC-PARITY-007 determinism case proves two whole-change replays are equal
+      and the committed tenants are byte-identical across loads; the TC-FLOOR-007
+      scope-boundary proofs assert the lifecycle merge transaction imports no
+      landing member and is not rewired, packages/core/src/state gains no new
+      record, no configuration surface exists in the GitHub subpath, and
+      DeliveryThread/DeliveryRequest/WorkItem field sets are exact in the type
+      probe and the source. Acceptance: AC-F8-4 (TC-PARITY-005), AC-F8-5
+      (TC-PARITY-007); the TC-FLOOR-001..007 delivered suites run green as
+      controls. Verification: `jaiship plan validate GH-338` -> verdict=valid,
+      tier=full, readyForDevelopment=true; G1 structure 1628 pass; G2
+      behaviour/providers 279 pass; G3 conformance 183 pass; G4 checks 1175 pass;
+      G5 boundaries 152 pass; G6 typecheck green; G7 secret-read boundary OK (5
+      allowlisted, unchanged); G8 fixture sanitization/privacy green;
+      error-table-sync OK (entries=149 documented=149); the doc-distribution
+      guard reports no drift; G9 git diff --check clean; G10
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (10498 pass, 4 pre-existing skips,
+      0 fail). No file outside the phase-7 declared scope moved; the four
+      declared feature specs and the two indexes stayed untouched for the
+      lifecycle phase-7 @doc-syncer handoff (pm-notes carries the sentence-level
+      checklist). Residual: lifecycle phase 7 docs; phase 8 review; phase 9
+      quality gates incl. the branch-range commit gate; phase 11 PR left open
+      against main-tools (merge authority stays with the owner/CEO)."
+    type: info
+    date: "2026-11-18"
   - text: "Plan phase 6 complete (adapter reference behavior and the drift check).
       Plan phase 5 commit: 94b31b47a7c7da2334cc8fcbff235544b60e1225 (the
       phase-5 note names plan phase 5 and its gate result; this entry carries the

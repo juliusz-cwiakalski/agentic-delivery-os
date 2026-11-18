@@ -7,7 +7,7 @@
  * carries a one-row/one-digit mutation that must fail by name.
  */
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { GITHUB_ADAPTER_CONTRACT } from "../../packages/adapters/src/github/capabilities";
 import {
@@ -27,6 +27,7 @@ import {
   type AdapterContract,
   type AdapterOperation,
 } from "../../packages/core/src/contracts/index";
+import { PRODUCTION_CATALOG } from "../../packages/core/src/index";
 import { arrayField, readJson } from "../behaviour/providers/support";
 import {
   REFERENCE_BEHAVIOR_DOCUMENT,
@@ -480,5 +481,106 @@ describe("TC-REF-006 mapping documentation agrees with the seed and states the r
     expect(mappingClaimFailures(sweeping).some((failure) => failure.includes("label-swap"))).toBe(
       true,
     );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TC-FLOOR-007 — the non-decision scope boundaries hold.
+// ---------------------------------------------------------------------------
+
+const listTs = (relative: string): string[] => {
+  const entries = readdirSync(join(ROOT, relative), { withFileTypes: true });
+  const files: string[] = [];
+  for (const entry of entries) {
+    const next = `${relative}/${entry.name}`;
+    if (entry.isDirectory()) files.push(...listTs(next));
+    else if (entry.name.endsWith(".ts")) files.push(next);
+  }
+  return files;
+};
+
+describe("TC-FLOOR-007 the change respects the declared non-decisions", () => {
+  test("the lifecycle merge transaction imports no provider landing member and is not rewired", () => {
+    const merge = read("packages/core/src/domain/merge-transaction.ts");
+    for (const forbidden of [
+      "mergeDeliveryRequest",
+      "MergeDeliveryRequestInput",
+      "@delivery-os/adapters",
+      "createGitHubClient",
+    ]) {
+      expect(merge.includes(forbidden), forbidden).toBe(false);
+    }
+    expect(merge).toContain("one squash commit");
+    for (const file of listTs("packages/core/src")) {
+      const text = read(file);
+      expect(text.includes("mergeDeliveryRequest"), file).toBe(false);
+    }
+  });
+
+  test("no persistence schema or state record is added for the new behavior", () => {
+    for (const file of listTs("packages/core/src/state")) {
+      const text = read(file);
+      for (const forbidden of [
+        "workflow-map",
+        "thread-discussion",
+        "log-excerpt",
+        "GithubTransportSelection",
+      ]) {
+        expect(text.includes(forbidden), `${file}:${forbidden}`).toBe(false);
+      }
+    }
+  });
+
+  test("no configuration surface is added for the transport or the mapping", () => {
+    expect(Object.keys(PRODUCTION_CATALOG).filter((key) => /github|adapter/iu.test(key))).toEqual(
+      [],
+    );
+    for (const file of listTs("packages/adapters/src/github")) {
+      const text = read(file);
+      for (const forbidden of ["process.env", "github.workflow", "PRODUCTION_CATALOG"]) {
+        expect(text.includes(forbidden), `${file}:${forbidden}`).toBe(false);
+      }
+    }
+  });
+
+  test("DeliveryThread, DeliveryRequest, and WorkItem field sets are unchanged", () => {
+    const ports = read("packages/core/src/contracts/ports.ts");
+    const threadStart = ports.indexOf("export type DeliveryThread = {");
+    const threadBlock = ports.slice(threadStart, ports.indexOf("};", threadStart));
+    expect([...threadBlock.matchAll(/readonly (\w+)\??:/gu)].map((match) => match[1])).toEqual([
+      "threadId",
+      "resolved",
+      "commentCount",
+      "authorLogin",
+      "authorKind",
+      "authorAssociation",
+    ]);
+    const requestStart = ports.indexOf("export type DeliveryRequest = {");
+    const requestBlock = ports.slice(requestStart, ports.indexOf("};", requestStart));
+    expect([...requestBlock.matchAll(/readonly (\w+)\??:/gu)].map((match) => match[1])).toEqual([
+      "identity",
+      "sourceRef",
+      "targetRef",
+      "reviewState",
+      "threads",
+      "headSha",
+      "sourceHeadSha",
+      "mergeableState",
+      "commitCount",
+      "changedFileCount",
+    ]);
+    const workItemStart = ports.indexOf("export type WorkItem = {");
+    const workItemBlock = ports.slice(workItemStart, ports.indexOf("};", workItemStart));
+    expect([...workItemBlock.matchAll(/readonly (\w+)\??:/gu)].map((match) => match[1])).toEqual([
+      "identity",
+      "title",
+      "status",
+      "labels",
+      "assignee",
+      "relations",
+      "comments",
+      "milestone",
+      "updatedAt",
+    ]);
   });
 });

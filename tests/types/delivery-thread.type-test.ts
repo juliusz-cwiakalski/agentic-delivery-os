@@ -45,3 +45,58 @@ export const withBody: DeliveryThread = { ...thread, body: "discussion text" };
 
 // @ts-expect-error no reply list is part of the thread contract
 export const withReplies: DeliveryThread = { ...thread, replies: [] };
+
+// ---------------------------------------------------------------------------
+// TC-FLOOR-007: the evidence work adds no field to the normalized views.
+// ---------------------------------------------------------------------------
+
+import type { DeliveryRequest, WorkItem } from "../../packages/core/src/contracts/index";
+
+export const exactDeliveryRequest: Exact<
+  keyof DeliveryRequest,
+  | "identity"
+  | "sourceRef"
+  | "targetRef"
+  | "reviewState"
+  | "threads"
+  | "headSha"
+  | "sourceHeadSha"
+  | "mergeableState"
+  | "commitCount"
+  | "changedFileCount"
+> = true;
+
+export const exactWorkItem: Exact<
+  keyof WorkItem,
+  | "identity"
+  | "title"
+  | "status"
+  | "labels"
+  | "assignee"
+  | "relations"
+  | "comments"
+  | "milestone"
+  | "updatedAt"
+> = true;
+
+// The evidence reads add no body to a delivery request.
+export const requestWithBody: DeliveryRequest = {
+  identity: { systemName: "github", entityId: "504" },
+  sourceRef: "feat/GH-338/x",
+  targetRef: "main-tools",
+  reviewState: "open",
+  threads: [],
+  // @ts-expect-error no body is part of the delivery-request contract
+  body: "evidence",
+};
+
+// The evidence reads add no excerpt to a work item.
+export const workItemWithExcerpt: WorkItem = {
+  identity: { systemName: "github", entityId: "601" },
+  title: "Issue",
+  status: { nativeStatus: "open", deliveryState: "ready" },
+  labels: [],
+  relations: [],
+  // @ts-expect-error no excerpt is part of the work-item contract
+  excerpt: "evidence",
+};

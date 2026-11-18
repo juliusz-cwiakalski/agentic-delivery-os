@@ -998,6 +998,17 @@ const mutationsForNewTraps = [
     },
   },
   {
+    trapName: "GITHUB-LANDING-CRAFTED-METADATA",
+    assertion: async (): Promise<void> => {
+      const { client, transport } = landingClient("landedWithSha");
+      await client.mergeDeliveryRequest(landingInput);
+      const landing = transport.requests.find((request) => request.method === "PUT");
+      const body = JSON.parse(landing?.body ?? "{}") as Record<string, unknown>;
+      // The mutated normalization drops the crafted squash title.
+      expect(body.commit_title).toBeUndefined();
+    },
+  },
+  {
     trapName: "GITHUB-THREAD-DISCUSSION-CAPS",
     assertion: async (): Promise<void> => {
       await discussionCapsCheck();

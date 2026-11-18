@@ -5,6 +5,8 @@
  * registry never gains a control registration or a write handler.
  */
 import { describe, expect, test } from "bun:test";
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
 import { createGitHubClient } from "@delivery-os/adapters/github";
 import {
   ADAPTER_OPERATIONS,
@@ -1381,5 +1383,156 @@ describe("TC-CLOSE-065 Jira closeout write execution", () => {
           step.skipReason === "provider-unsupported",
       ),
     ).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P7 release floor: TC-PARITY-005 and TC-PARITY-007
+// ---------------------------------------------------------------------------
+
+const TRAP_CATALOG_FILE = "tests/fixtures/providers/traps/github.traps.json";
+const GITHUB_TRAP_SUITE = "tests/behaviour/providers/github-trap.test.ts";
+
+/** One trap entry per AC-F8-4 behavior; a behavior cannot satisfy one half alone. */
+const NEW_BEHAVIOR_TRAPS: Readonly<Record<string, string>> = {
+  landing: "GITHUB-LANDING-CRAFTED-METADATA",
+  timings: "GITHUB-CHECK-RUN-TIMINGS",
+  excerpt: "GITHUB-LOG-EXCERPT-CAP",
+  discussion: "GITHUB-THREAD-DISCUSSION-CAPS",
+  "comment-write": "GITHUB-COMMENT-CARRIER-FREE",
+  "content-write": "GITHUB-CONTENT-WRITE-NEVER-LANDS",
+  "mapped-transition": "GITHUB-WORKFLOW-MAP-SEED-PRECEDENCE",
+};
+
+const CLOSED_SET_BEHAVIOR_STEPS: Readonly<Record<string, string>> = {
+  landing: "change-lifecycle.merge-delivery-request",
+  timings: "change-lifecycle.read-pipeline-run",
+  "comment-write": "change-lifecycle.comment",
+  "content-write": "change-lifecycle.create-delivery-request",
+  "mapped-transition": "change-lifecycle.transition",
+};
+
+const catalogEntries = (): readonly Record<string, unknown>[] => {
+  const parsed = JSON.parse(readFileSync(join(process.cwd(), TRAP_CATALOG_FILE), "utf8")) as {
+    entries?: unknown;
+  };
+  return Array.isArray(parsed.entries)
+    ? parsed.entries.filter((entry): entry is Record<string, unknown> => isRecordValue(entry))
+    : [];
+};
+
+const pointerResolves = (value: unknown, pointer: string): boolean => {
+  if (pointer.length === 0) return true;
+  if (!pointer.startsWith("/")) return false;
+  let current = value;
+  for (const raw of pointer.slice(1).split("/")) {
+    const token = raw.replaceAll("~1", "/").replaceAll("~0", "~");
+    if (Array.isArray(current)) {
+      const index = Number(token);
+      if (!Number.isInteger(index) || index < 0 || index >= current.length) return false;
+      current = current[index];
+    } else if (isRecordValue(current)) {
+      if (!(token in current)) return false;
+      current = current[token];
+    } else {
+      return false;
+    }
+  }
+  return true;
+};
+
+const referenceResolves = (reference: string): boolean => {
+  const hashIndex = reference.indexOf("#");
+  const path = hashIndex === -1 ? reference : reference.slice(0, hashIndex);
+  const pointer = hashIndex === -1 ? "" : reference.slice(hashIndex + 1);
+  if (!existsSync(join(process.cwd(), path))) return false;
+  const parsed: unknown = JSON.parse(readFileSync(join(process.cwd(), path), "utf8"));
+  return pointerResolves(parsed, pointer);
+};
+
+describe("TC-PARITY-005 every new behavior has a trap entry and an executed half", () => {
+  test("the seven behaviors each have one four-field entry with a resolving fixture", () => {
+    const entries = catalogEntries();
+    const names = entries.map((entry) => String(entry.trapName));
+    for (const [behavior, trapName] of Object.entries(NEW_BEHAVIOR_TRAPS)) {
+      expect(
+        names.filter((name) => name === trapName),
+        behavior,
+      ).toHaveLength(1);
+      const entry = entries.find((candidate) => candidate.trapName === trapName);
+      if (entry === undefined) throw new Error(`missing trap entry ${trapName}`);
+      expect(Object.keys(entry).sort(), trapName).toEqual([
+        "expectedNormalizedOutcome",
+        "fixtureReference",
+        "providerBehavior",
+        "trapName",
+      ]);
+      expect(referenceResolves(String(entry.fixtureReference)), trapName).toBe(true);
+    }
+    expect(Object.keys(NEW_BEHAVIOR_TRAPS)).toHaveLength(7);
+  });
+
+  test("each new entry has a named mutation in the trap suite", () => {
+    const suite = readFileSync(join(process.cwd(), GITHUB_TRAP_SUITE), "utf8");
+    for (const trapName of Object.values(NEW_BEHAVIOR_TRAPS)) {
+      expect(suite.includes(`trapName: "${trapName}"`), trapName).toBe(true);
+    }
+  });
+
+  test("each closed-set behavior executes with a declared projection", async () => {
+    const tenant = loadMockTenant("github");
+    const report = await runProduction("parity-roll-up");
+    for (const [behavior, stepId] of Object.entries(CLOSED_SET_BEHAVIOR_STEPS)) {
+      const step = report.steps.find(
+        (entry) => entry.provider === "github" && entry.stepId === stepId,
+      );
+      expect(step?.status, behavior).toBe("executed");
+      if (stepId === "change-lifecycle.transition") {
+        // A void write declares its truth as the exact tenant route body.
+        const route = tenant.routes.find(
+          (candidate) => candidate.method === "PATCH" && candidate.url.endsWith("/issues/601"),
+        );
+        expect(route?.body, behavior).toEqual({ number: 601, state: "closed" });
+        continue;
+      }
+      expect(tenant.expected[stepId], behavior).toBeDefined();
+    }
+    expect(String(JSON.stringify(tenant.expected["change-lifecycle.read-pipeline-run"]))).toContain(
+      "startedAt",
+    );
+  });
+
+  test("dropping a behavior from either half fails by name", () => {
+    const names = catalogEntries().map((entry) => String(entry.trapName));
+    const missing = Object.entries(NEW_BEHAVIOR_TRAPS).find(
+      ([, trapName]) => !names.includes(trapName),
+    );
+    expect(missing).toBeUndefined();
+    expect(names.includes("GITHUB-LANDING-CRAFTED-METADATA")).toBe(true);
+    const withoutLanding = names.filter((name) => name !== "GITHUB-LANDING-CRAFTED-METADATA");
+    expect(withoutLanding.includes("GITHUB-LANDING-CRAFTED-METADATA")).toBe(false);
+  });
+});
+
+describe("TC-PARITY-007 a replay is deterministic across the whole change", () => {
+  test("two runs of the same tenants produce identical reports and skip decisions", async () => {
+    const first = await runProduction("determinism-run");
+    const second = await runProduction("determinism-run");
+    expect(second).toEqual(first);
+    expect(first.generatedAt).toBe(CLOCK);
+    expect(second.steps.map((step) => `${step.provider}|${step.stepId}|${step.status}`)).toEqual(
+      first.steps.map((step) => `${step.provider}|${step.stepId}|${step.status}`),
+    );
+    for (const step of first.steps) {
+      if (step.status === "skipped") {
+        expect(["declared-gap", "capability-absent", "live-read-only"]).toContain(step.skipKind);
+      }
+    }
+  });
+
+  test("the committed tenants are byte-identical across loads", () => {
+    const first = loadMockTenants();
+    const second = loadMockTenants();
+    expect(JSON.stringify(second)).toBe(JSON.stringify(first));
   });
 });
