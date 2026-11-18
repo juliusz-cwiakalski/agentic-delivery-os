@@ -1,0 +1,1451 @@
+# GH-349 implementation plan — machine-readable projection (delivery.plan.v1).
+# Canonical plan artifact: this YAML document is the only plan file for the
+# change. `plan validate`, `plan diff`, `plan overlap`, and `lint plan` read it
+# directly. Extra phase data (goal, obligations, AC/TC ownership, gate commands,
+# the all-or-nothing ripple, the invariants) rides in YAML comments so the
+# parsed document stays schema-strict; the plan declares phases and scope only —
+# no `tasks` key and no progress log (progress is a pm-notes `notes:` entry
+# naming the plan phase id, the commit hash, and the gate result).
+#
+# SOURCES (single source of truth; this plan invents no requirement):
+#   - Spec:     ./chg-GH-349-spec.md (v1.2: F-1..F-7; 46 ACs —
+#               AC-F1-1..9, AC-F2-1..6, AC-F3-1..4, AC-F4-1..9, AC-F5-1..7,
+#               AC-F6-1..6, AC-F7-1..5; API-1..7; DM-1..9; NFR-1..13; NG-1..11;
+#               RSK-1..12; DEC-1..8; §18 sequencing; §24.1 Appendix A doc
+#               impacts (lifecycle phase 7, NOT this plan); §24.3 Appendix C
+#               invariants BINDING on every phase of this plan; §24.4 Appendix D
+#               additive inventory with before→after counts; §24.5 Appendix E
+#               atomic conformance/parity ripple; §24.6 Appendix F defect
+#               register; §24.7 Appendix G declared boundaries).
+#   - Tests:    ./chg-GH-349-test-plan.md (v1.2: 81 TCs —
+#               TC-F1-001..010 (10), TC-F2-001..008 (8), TC-F3-001..006 (6),
+#               TC-F4-001..015 (15), TC-F5-001..008 (8), TC-F6-001..012 (12),
+#               TC-F7-001..006 (6), TC-SYNC-001..008 (8), TC-FLOOR-001..008 (8);
+#               46/46 AC coverage, 0 orphans; §7.1 suite map; §7.2 fixtures to
+#               author; §7.3 extended-vs-authored sets; §7.4 gate battery G1..G12
+#               with G12 binding; §7.5 the 92-row mutation register M1..M92;
+#               §7.6 the phase/file bindings this plan must carry, including the
+#               seven verbatim obligations (i)..(vii); §8.3 OQ-TP-1..10;
+#               §11.2 D8, CLOSED by the ADR-0012 revision of 2026-11-18 — the
+#               record and the spec agree).
+#   - PM record: ./chg-GH-349-pm-notes.yaml (milestone "M4: Jaiship-native
+#               delivery", delivery_mode autonomous, the six positions, the
+#               TMPDIR=$PWD/tmp/tmpdir convention, the build-before-primitive
+#               prerequisite, and the obligation to land the three untracked
+#               decision records plus their index rows).
+#   - Decisions: doc/decisions/ADR-0012-provider-side-merge-landing-path.md
+#               (one lifecycle landing mechanism, crafted metadata + exact-head
+#               guard, provider-asserted truth, the refusal taxonomy, no rebase),
+#               doc/decisions/TDR-0040-phase-truth-registry-fold-mirror.md (the
+#               fold is the only truth, the mirror is derived, divergence is
+#               detected and never repaired, `verify change` unchanged), and
+#               doc/decisions/ODR-0005-closeout-milestone-synchronization.md
+#               (milestone synchronization as step 12 of 13 over one closed
+#               `close-milestone` operation, one bounded adapter-local read,
+#               exit-review-gated, withheld otherwise). All three are `Proposed`
+#               and are accepted by the OWNER at review — never by an agent.
+#   - Schema:   doc/spec/features/feature-plan-schema.md (scope keys
+#               files/folders/packages, per-phase one-line summary, typed
+#               done-artifacts, leases, weightClass, interactions, tier; no
+#               tasks key, no progress log).
+#   - Precedent: ../2026-11-18--GH-339--adapter-conformance-parity/
+#               chg-GH-339-plan.yaml (comment-carried phase data, the SCOPE
+#               DECLARATION RULE, one-commit-per-phase discipline,
+#               pin-moves-in-one-commit, decision-record staging, the release
+#               phase that declares spec-reconciliation files for STAGING ONLY,
+#               and the "declare only what the phase authors or edits" rule).
+#
+# SPEC-AUTHORITY NOTE (test plan §11.2 D8 — CLOSED):
+#   D8 is resolved, not carried. ADR-0012 was amended on 2026-11-18 (its
+#   `## Revision` section, "carrier details aligned with GH-349 specification
+#   v1.1/1.2"), and §2 now states exactly what the specification binds: the
+#   deterministic fallback subject `merge(<ref>): squash <sourceRef>` (the change
+#   ref, then the request's source ref) and the verbatim message line
+#   `Landed by the delivery lifecycle merge primitive.` — one bounded line,
+#   byte-identical for every landing, no leading or trailing whitespace, no
+#   interpolated value. The same revision carries the `merge.sync-required`
+#   reason triple `dirty`|`behind`|`behind-unconfirmed` (§5), the declared-gap
+#   refusal `merge.transaction-aborted` at exit 1 with the operation and its
+#   declared `CapabilityGapReason` and no added identity (§5), and the single
+#   additive `attribution` field with the closed pair `recorded`|`probe` (§7).
+#   The RECORD AND THE SPEC AGREE, so no phase may assert the superseded forms —
+#   `merge(<ref>): <sourceRef>`, or a trailer interpolating `Change: <ref>` /
+#   `Delivery-Request: <system>#<id>`. No phase edits, re-authors, or re-statuses
+#   the record either: it stays `Proposed`, and the owner accepts or rejects it
+#   at review.
+#   The binding reference for every phase remains the specification's own ids
+#   (AC-F1-6, AC-F1-1, DM-1, API-1, DEC-1), which state the same two literals the
+#   amended record now states.
+#   The two `<...>` spans in that subject are the specification's LITERAL pattern
+#   (change ref, then the request's source ref), not plan placeholders: every
+#   case composes the expected string from its own fixture values and compares
+#   bytes.
+#
+# COMMIT-BOUNDARY REALITY (binding on phase 1):
+#   Three decision records are UNTRACKED in the worktree at plan time because a
+#   non-delivery phase completion stages only the change folder:
+#     doc/decisions/ADR-0012-provider-side-merge-landing-path.md
+#     doc/decisions/TDR-0040-phase-truth-registry-fold-mirror.md
+#     doc/decisions/ODR-0005-closeout-milestone-synchronization.md
+#   Phase 1 declares those three exact paths so @coder lands them on the branch.
+#   Nothing else outside the change surface may be swept in.
+#   THE DECLARATION IS STAGING ONLY, NEVER AUTHORSHIP: the plan gives the commit
+#   primitive authority to COMMIT the records' bytes; no phase edits, re-authors,
+#   accepts, or re-statuses them (test plan §7.6's "no phase may declare the three
+#   decision records as editable" is read exactly this way, and obligation (i)
+#   requires the staging). A phase that touches their content is out of scope and
+#   returns for re-planning.
+#   VERIFIED AT PLAN TIME: the three `doc/decisions/00-index.md` ROWS ARE ALREADY
+#   COMMITTED on this branch (commit f7316855) and the file is clean
+#   (`git status --porcelain` shows exactly the three `??` record files and no
+#   entry for the index; `git show HEAD:doc/decisions/00-index.md` carries the
+#   ADR-0012, ODR-0005 and TDR-0040 rows with status `Proposed`). The index is
+#   therefore declared in phase 1 for CONDITIONAL STAGING ONLY — see the declared
+#   exception in the SCOPE DECLARATION RULE below — so that a status row or a
+#   typo touch made while landing the three records stages with them. If the
+#   phase does not touch it, `plan diff` reports at most an ADVISORY
+#   `undeclared-missing` for it, never a validation failure.
+#
+# SCOPE DECLARATION RULE (binding on every phase; inherited from GH-338/GH-339):
+#   A phase declares every path whose content it AUTHORS or EDITS — that is what
+#   gives the commit primitive staging authority. A file that is only RE-RUN as a
+#   regression control (the delivered read-only suites, the topology pin
+#   `tests/structure/ci-topology-pin.test.ts`, `scripts/checks/**`,
+#   `.github/workflows/**`, `tests/boundaries/**`, `tests/behaviour/providers/**`,
+#   `packages/adapters/src/git/merge.ts`) is NOT declared: declaring it would only
+#   produce an advisory `plan diff` `undeclared-missing` for a file that needs no
+#   edit. Every file the test plan names as an assertion site to CREATE or EXTEND
+#   is declared by the phase that owns that half of the case.
+#   ONE DECLARED EXCEPTION, stated so rule and declaration do not contradict:
+#   `doc/decisions/00-index.md` in phase 1 is a CONDITIONAL-STAGING declaration.
+#   It is clean at plan time and its rows are committed; it may be touched (a
+#   status row or a typo) while the three records it indexes land. It is never a
+#   licence to edit an unrelated row.
+#   A FILE TOUCHED BY TWO PHASES IS DECLARED BY BOTH, WITH ONE OWNER:
+#   `packages/core/src/domain/merge-transaction.ts` (phases 2 and 3),
+#   `packages/core/src/contracts/ports.ts` and
+#   `packages/core/src/contracts/index.ts` (phases 1 and 5),
+#   `packages/cli/src/edge.ts` (phases 2 and 4),
+#   `packages/cli/src/production.ts` (phases 2, 4 and 5),
+#   `tests/structure/content-inventory.test.ts` (phases 1 and 5),
+#   `tests/checks/error-table-sync.test.ts` (phases 1 and 7),
+#   and `packages/adapters/src/github/client.ts` (phases 2 and 5). In each case
+#   the split is an AUTHORING split: the owning phase named in the AC/TC tables
+#   below is the one that closes the case.
+#
+# ORDERING (spec §18 "by outcome, so each declaration lands with the evidence that
+# proves it"), made concrete. Seven phases; the reasons force the exact order:
+#
+#   (a) THE IDENTITY TOTAL MOVES ONCE (149 → 152 in a single commit).
+#       The delivered bidirectional sync check
+#       (`tests/checks/error-table-sync.test.ts` → `scripts/checks/error-table-sync.ts`)
+#       reads the DOCUMENTED table out of the live tree at
+#       `doc/spec/features/feature-result-contract.md`, and
+#       `tests/structure/error-table.test.ts` pins `149` in four places plus the
+#       documented statements and scans `APPENDIX_D_FILES` for a stale count —
+#       which includes `doc/spec/features/feature-ceremony-runner.md`. So the
+#       three rows, both tables, every `149` pin and those two carrier pages must
+#       land in ONE commit. Splitting the total across phases would move every
+#       pin twice and turn RSK-6's "half-moved surface" risk into a scheduled
+#       event; this plan does not do it. Phase 1 therefore carries all three rows
+#       (two `merge` + one `lint`), and phase 4 only gives the lint row its
+#       emitting branch. Test-plan §7.6 obligation (ii) is satisfied literally:
+#       both sides of every pair move in the same commit.
+#   (b) A DECLARED-BUT-UNEMITTED ROW IS LEGAL AT ITS DECLARING PHASE.
+#       The delivered error-table suites pin rows, kinds and counts; no delivered
+#       check asserts that every row is emitted. Reachability is asserted by THIS
+#       change's TC-SYNC-001, whose reachability half is authored in phase 7 —
+#       the first phase where all three rows have an emitting branch. That is why
+#       phase 1 can declare the lint row whose comparison lands in phase 4 and the
+#       two merge rows whose branches land in phase 2 without a red boundary.
+#   (c) THE MILESTONE ADDITIVE SURFACE AND THE WHOLE APPENDIX E RIPPLE ARE ONE
+#       COMMIT (phase 5), NOT TWO. The delivered
+#       `tests/structure/closeout-contract.test.ts` asserts
+#       `operationsInFlows` (from `packages/testkit/src/conformance/flows.ts`)
+#       EQUALS `ADAPTER_OPERATIONS`, each adapter's exact partition of the closed
+#       set, the `change-lifecycle` step list, the total flow step count (14), the
+#       closeout step-id list and its length (12); `tests/structure/closeout-additive.test.ts`
+#       and `tests/fixtures/closeout/plan.ts` pin the step inventory and the plan's
+#       step ids; `tests/checks/capsule-bounds.test.ts` pins the residue-kind count
+#       (8). Adding the tenth operation or the thirteenth step id without the
+#       registry, the three capability declarations, the parity matrix, the mock
+#       routes and the plan fixture fails a DELIVERED gate inside the same commit,
+#       and §24.5 says any subset is a red gate. §7.6 row 1 lists
+#       `adapter-capabilities.ts`, `closeout.ts` and `capsule.ts` with the first
+#       phase; this plan moves those three declarations to phase 5 as a DECLARED
+#       deviation, because a step id with no step, and an operation with no
+#       capability declaration, are exactly the half-moved surfaces RSK-6 and
+#       §24.5 forbid. TC-SYNC-002, TC-SYNC-003, TC-SYNC-007 and TC-SYNC-008 are
+#       phase-5-owned for the same reason.
+#   (d) THE PROBE EXTENSION FOLLOWS THE LANDING PATH (phase 3), because the
+#       additive attribution field is only observable through the refusal evidence
+#       the taxonomy produces, and its two goldens move in the same commit as the
+#       rendering that produces the attribution line.
+#   (e) THE PHASE MIRROR (phase 4) is independent of the merge work; it precedes
+#       the milestone step because the milestone step's apply evidence is recorded
+#       through the same phase/closeout command path.
+#   (f) THE QUEUE PROOFS (phase 6) are behaviour-identical by obligation and
+#       depend on the step insertion only for TC-F6-008 (the automatic `landed`
+#       removal across the milestone variants), which is why they follow phase 5.
+#   (g) THE DEFECT-NAMED REGRESSIONS AND THE FLOOR (phase 7) close the change:
+#       each defect suite's control RESTORES the pre-fix behaviour (the history
+#       lookup, the seventeen-member emittable set, the refresh injection), which
+#       is only a well-formed derivate once the repairs landed; and the residual
+#       pins plus the aggregate gate are whole-change evidence (spec §18 puts the
+#       defect regressions and the documentation reconciliation last).
+#
+# THE ADDITIVE SURFACE IS THREE MOVES, NEVER FOUR (Appendix D counts):
+#   1. phase 1: normalized title (0→1 optional field), concrete merge rows (7→9),
+#      lint family rows (5→6, lint-kind concrete rows 6→7), identity total
+#      (149→152), the ONE additive refusal-evidence field's CONTRACT half (the
+#      closed `recorded`|`probe` pair declared once), all count pins, and the two
+#      carrier pages the pins live in.
+#   2. phase 4: the sixth lint row's emitting branch (the divergence comparison)
+#      and the additive fold exposure on the lint registry read.
+#   3. phase 5: `CLOSEOUT_STEP_IDS` (12→13), residue kinds (8→9),
+#      `ADAPTER_OPERATIONS` (9→10), the parity matrix (27→30 cells), the
+#      conformance registry and both coverage gates, the mock routes and their
+#      projections, the export inventory, and the help/reference coverage set.
+#   There is no fourth move, and no surface moves in two commits.
+#
+# THE RIPPLE IS ALL-OR-NOTHING (Appendix E, binding on phase 5):
+#   An operation-set change is not complete until EVERY item below lands in the
+#   SAME commit: (1) the closed set gains `close-milestone` by APPEND with no
+#   index moving; (2) the flow registry represents it with a step (executing on
+#   GitHub, gap-reaching on GitLab and Jira) and renumbers nothing; (3) the
+#   structural coverage gate's representation requirement moves nine→ten; (4) the
+#   runtime coverage gate executes the supported operation on the mock tenant and
+#   encounters each declared gap with its exact reason; (5) the mock tenant's
+#   route table carries the write route and its read-back route with expected
+#   projections; (6) the parity matrix gains one row (30 cells) with three
+#   adjudicated cells — GitHub `same-as-reference`, the other two `gap` citing
+#   their declared reason; (7) the declared-difference register is unchanged or
+#   carries exactly one entry per new declared-difference cell; (8) the per-file
+#   executable-export inventory and discipline expectation are updated exactly for
+#   any new export; (9) the identity-construct scan's allowlist is unchanged;
+#   (10) every gap reason is drawn from the closed reason set; (11) the
+#   help/reference coverage inventory keeps its command set (no new command) and
+#   the touched pages keep `--help`/`--version`; (12) the topology contract test
+#   stays green with zero workflow-file, job, trigger, permission or upload
+#   change. A partial move is a RED GATE, not a partial success: TC-SYNC-003
+#   fails naming the missing item and M83 mutates each supplied item.
+#   The six-family × three-adapter accounting stays 18 cells, because
+#   `close-milestone` is NOT a trap family and must not enter the family
+#   vocabulary (DM-7, Appendix D).
+#
+# INVARIANTS BINDING ON EVERY PHASE (spec §24.3 Appendix C; a phase that needs to
+# cross one is out of scope and returns for a specification revision):
+#   C1  No new queue verb, subcommand, record kind, state key, or flag; queue
+#       integrity is property proof plus repair to the declared sentence.
+#   C2  No milestone create, attach, detach, rename, reopen, entry review,
+#       planned-scope verification, extension, or `milestone` command family, by
+#       any actor. The `close-milestone` vocabulary cannot express them.
+#   C3  No new closed adapter operation beyond the single milestone close; no
+#       removed, renamed, retyped, or reordered operation, carrier kind, gap
+#       reason, or capability flag.
+#   C4  No landing force, bypass, auto-merge, merge-queue, rebase, or
+#       merge-commit strategy, no landing retry, no second landing mechanism, and
+#       no silent local fallback on a declared gap.
+#   C5  No fetch, push, remote read, or base mutation on the merge path; the git
+#       seam stays remote-free; the merged-diff anchor stays a read of the
+#       recorded landing identity (Appendix G-2).
+#   C6  No second required-check evaluator and no prose matching anywhere in the
+#       check or refusal path.
+#   C7  No `phase repair`, no lint fix mode, no new phase state kind, and no
+#       change to `verify change`'s verdict, precedence, or read-only contract.
+#   C8  No second derived mirror of phase state, and no surface that treats the
+#       pm-notes document as truth.
+#   C9  No new error identity beyond the two `merge` rows and the one `lint` row;
+#       no pattern widening; no exit class, domain kind, or projection change; the
+#       retained reserved `merge.rebase-conflict` row is neither removed nor
+#       re-meant.
+#   C10 No new CI workflow file, job, trigger, permission, upload, or artifact
+#       field; every added suite rides the existing test jobs.
+#   C11 No new network location, credential, transport, secret-read allowlist
+#       entry, or ambient environment read.
+#   C12 No test executes a provider write, a close, or a phase transition: every
+#       new suite drives injected transports and temporary local repositories
+#       offline.
+#   C13 Capability declarations stay honest: every adapter declares support or a
+#       valid closed gap reason for every declared operation.
+#   C14 No adapter behaviour change outside the declared operation addition and
+#       the bounded milestone read.
+#   C15 Testkit stays runtime-neutral (no `node:*`/`bun:*`, no ambient
+#       environment/clock/randomness).
+#   C16 No change to the capsule event vocabulary, the promotion rules, the retro
+#       surface, or harness telemetry.
+#   C17 No touched pin is loosened, skipped, made vacuous, or updated without its
+#       pinned counterpart.
+#
+# PIN MOVEMENT — THE PAIRS (test plan §7.6 obligation (ii); RSK-6, NFR-6):
+#   Every count that exists in two places moves in BOTH, in ONE commit:
+#   - `ERROR_TABLE` (machine) ↔ `doc/spec/features/feature-result-contract.md`
+#     (documented) ↔ the `149`/`152` statements in
+#     `doc/spec/features/feature-ceremony-runner.md` ↔ the count pins in
+#     `tests/structure/error-table.test.ts`,
+#     `tests/structure/dispatch-attempts-taxonomy.test.ts`,
+#     `tests/structure/verify-gates-suite-map-contract.test.ts`,
+#     `tests/structure/ceremony-contract.test.ts`,
+#     `tests/behaviour/ceremony-nonregression.test.ts`                (phase 1)
+#   - `CLOSEOUT_STEP_IDS` ↔ `closeoutStepDefinitions` ↔ the documented
+#     twelve-step inventory ↔ `EXPECTED_STEPS` in
+#     `tests/structure/closeout-contract.test.ts` ↔ `EXPECTED_STEP_IDS` in
+#     `tests/fixtures/closeout/plan.ts` ↔ the structure/plan pins        (phase 5)
+#   - `CAPSULE_RESIDUE_KINDS` ↔ the documented residue vocabulary ↔ the
+#     residue count pins in `tests/checks/capsule-bounds.test.ts` and
+#     `tests/structure/capsule-contract.test.ts`                        (phase 5)
+#   - `ADAPTER_OPERATIONS` ↔ the three `capabilities.ts` declarations ↔ the flow
+#     registry ↔ both coverage gates ↔ the parity matrix and its register ↔ the
+#     mock tenant routes and projections ↔ the documented "nine operations"
+#     statements in `doc/spec/features/feature-adapter-conformance.md`  (phase 5)
+#   - the lint family ↔ the documented rule order ↔ the lint-kind row pins
+#     (`tests/structure/error-table.test.ts`)                            (phase 1)
+#   - the parity census in `tests/conformance/parity-gate.test.ts` ↔
+#     `packages/testkit/src/conformance/parity.ts`                      (phase 5)
+#   A phase may not move one side. Growing a pin, adding a wildcard, deleting an
+#   assertion, or regenerating a fixture to go green is a scope decision and a
+#   review finding, never a repair (test plan §7.4 triage rule 3).
+#
+# GOLDEN DISCIPLINE (test plan §7.6 obligation (vi); M91, TC-FLOOR-005):
+#   `MergeFailureEvidence` gains EXACTLY ONE additive optional bounded field for
+#   the closed pair `recorded`|`probe` and NO second field. The `recorded` arm
+#   identifies its source record by the effective gate id, the job and the
+#   verdict; the verification timestamp is NOT an evidence field and stays on the
+#   persisted `merge.gate-verification` record that gate id + job resolves to
+#   (M92 fails a `verifiedAt` evidence member by name).
+#   The required-job refusal summary renders the attribution, so EXACTLY TWO
+#   goldens move — `tests/fixtures/merge/golden/refusal-gate-human.txt` and
+#   `tests/fixtures/merge/golden/refusal-gate-scripted.json` — regenerated by the
+#   explicit command recorded in the test plan's §10, in the same commit as the
+#   rendering change (phase 3). The other thirteen files under
+#   `tests/fixtures/merge/golden/` are byte-identical by obligation.
+#   NO PHASE MAY DECLARE THE GOLDEN DIRECTORY AS A FOLDER: phase 3 declares the
+#   two moved files only, so a blanket regeneration is mechanically visible, and
+#   a third moved golden fails TC-FLOOR-005 naming it.
+#
+# REASON TRIPLE — ONE DECLARATION (test plan §7.6 obligation (vii)):
+#   `merge.sync-required` carries the closed triple `dirty`|`behind`|
+#   `behind-unconfirmed` in ONE declaration (phase 1, `packages/core/src/contracts/merge.ts`).
+#   The three refusing branches and the row's documented entry read from it; no
+#   phase introduces a second vocabulary for the same triple; a fourth value or a
+#   branch reporting `behind` where `behind-unconfirmed` is required fails by name
+#   (TC-F2-001/002/005, TC-F2-007, M90).
+#
+# THE EMITTABLE DECLARATION EXPRESSES THE FAMILY (test plan §7.6 obligation (iv);
+# RSK-TP-7, F1):
+#   `MERGE_COMPOSITION_EMITTABLE_CODES` (in `packages/cli/src/production.ts`) must
+#   cover `merge.gate.<gate-id>.failed` for EVERY gate id the effective set can
+#   resolve — as a declared FAMILY EXPRESSION expanded by the totality proof, not
+#   as a hand-written list of gate ids — and the existing refusal-site scan is
+#   extended so a family emission is visible to it. Enumerating gate ids instead
+#   re-opens F1 in a later change and makes TC-F7-001/TC-F7-002 vacuous.
+#   The convergence branch also stops treating local containment as merged truth:
+#   with `merge` no longer advancing the base, a provider landing leaves the merge
+#   commit outside the checkout, so the "already merged" replay decision comes
+#   from the provider request read (and the recorded identity when present) with
+#   zero landing calls (test plan §7.6 obligation (v); TC-F1-004, TC-SYNC-005).
+#
+# QUEUE: PROOF OR REPAIR, NEVER WIDENING (F-6, §24.7 G-7, DEC-6):
+#   Phase 6 proves seven properties through the production composition, each with
+#   a mutation control that injects exactly one breach over the production shapes
+#   (`tests/fixtures/queue/integrity-breaches.ts` — a compile error, not a passing
+#   no-op). A repair happens ONLY where a control demonstrates a breach, restores
+#   the declared sentence, and changes no vocabulary value, key, flag, or refusal
+#   into a success (AC-F6-2, TC-F6-012). The phase MUST record which of the seven
+#   proved clean and say so explicitly — "property proved clean; no repair" — so a
+#   silent no-op phase does not read as an unfinished one at the DoD gate. The
+#   automatic `landed` removal keeps its non-step, fail-open, merge-truth-gated,
+#   idempotent contract inside the transaction's existing fence, including when
+#   the milestone step was withheld or gapped (AC-F6-4, TC-F6-008).
+#
+# DEFECT REGRESSIONS ARE LAST AND ARE STILL PROOF (F-7; §24.6 Appendix F):
+#   Phase 7 authors the three defect-named suites and their pre-fix controls (F1's
+#   seventeen-member emittable declaration, F4's history lookup, F8's refresh
+#   injection), each asserting the differing pre-fix value LITERALLY before the
+#   equalities, so a control that returns the production value fails by name
+#   (RSK-TP-8, RSK-TP-10, M73..M75). The repairs themselves land earlier — F1 and
+#   F8 in phase 2, F4 in phase 4 — and each repair phase asserts the FIXED
+#   behaviour through its own behaviour suite, so no phase ships an unproven
+#   repair. Phase 7 additionally owns the meta-check (TC-F7-005: an
+#   assertion-presence registry plus a control-differs assertion per suite) and
+#   the discovery/offline/topology case (TC-F7-006).
+#
+# AC OWNERSHIP (46/46; every AC owned by exactly ONE phase; the groups below are
+#   the spec's own capability groups, so the partition is exact by construction —
+#   9 + 6 + 4 + 9 + 7 + 6 + 5 = 46, no id appears twice, no id is unowned):
+#   Phase 1  (0):  none — a declaration phase. The ACs whose CARRIERS it lands
+#                  (AC-F1-6's title half, AC-F2-5's documented/machine pairing,
+#                  AC-F5-6's row order) are owned by the phases that can satisfy
+#                  them end to end; see CROSS-PHASE CARRIER CASES.
+#   Phase 2  (15): AC-F1-1, AC-F1-2, AC-F1-3, AC-F1-4, AC-F1-5, AC-F1-6,
+#                  AC-F1-7, AC-F1-8, AC-F1-9 (9)
+#                  AC-F2-1, AC-F2-2, AC-F2-3, AC-F2-4, AC-F2-5, AC-F2-6 (6)
+#   Phase 3  (4):  AC-F3-1, AC-F3-2, AC-F3-3, AC-F3-4
+#   Phase 4  (7):  AC-F5-1, AC-F5-2, AC-F5-3, AC-F5-4, AC-F5-5, AC-F5-6,
+#                  AC-F5-7
+#   Phase 5  (9):  AC-F4-1, AC-F4-2, AC-F4-3, AC-F4-4, AC-F4-5, AC-F4-6,
+#                  AC-F4-7, AC-F4-8, AC-F4-9
+#   Phase 6  (6):  AC-F6-1, AC-F6-2, AC-F6-3, AC-F6-4, AC-F6-5, AC-F6-6
+#   Phase 7  (5):  AC-F7-1, AC-F7-2, AC-F7-3, AC-F7-4, AC-F7-5
+#   Count: 0 + 15 + 4 + 7 + 9 + 6 + 5 = 46.
+#   Per-phase AC count vector: [0, 15, 4, 7, 9, 6, 5]; sum 46. Each phase's list
+#   is enumerated above by id, so the claim is checkable id by id against spec
+#   §17.1..§17.7 without re-deriving a range.
+#
+# TC OWNERSHIP (81/81; every TC owned by exactly ONE phase — the phase whose
+#   commit lands the case together with the declaration that makes it green):
+#   Phase 1  (2):  TC-SYNC-001, TC-SYNC-004
+#   Phase 2  (19): TC-F1-001..TC-F1-010 (10), TC-F2-001..TC-F2-008 (8),
+#                  TC-SYNC-005 (1)
+#   Phase 3  (7):  TC-F3-001..TC-F3-006 (6), TC-FLOOR-005 (1)
+#   Phase 4  (9):  TC-F5-001..TC-F5-008 (8), TC-SYNC-006 (1)
+#   Phase 5  (19): TC-F4-001..TC-F4-015 (15), TC-SYNC-002, TC-SYNC-003,
+#                  TC-SYNC-007, TC-SYNC-008 (4)
+#   Phase 6  (12): TC-F6-001..TC-F6-012
+#   Phase 7  (13): TC-F7-001..TC-F7-006 (6), TC-FLOOR-001..TC-FLOOR-004 (4),
+#                  TC-FLOOR-006..TC-FLOOR-008 (3)
+#   Count: 2 + 19 + 7 + 9 + 19 + 12 + 13 = 81.
+#   Group check (every declared id is owned exactly once):
+#     TC-F1 001..010 → phase 2 (10/10)
+#     TC-F2 001..008 → phase 2 (8/8)
+#     TC-F3 001..006 → phase 3 (6/6)
+#     TC-F4 001..015 → phase 5 (15/15)
+#     TC-F5 001..008 → phase 4 (8/8)
+#     TC-F6 001..012 → phase 6 (12/12)
+#     TC-F7 001..006 → phase 7 (6/6)
+#     TC-SYNC 001,004 → phase 1 | 005 → phase 2 | 006 → phase 4 |
+#             002,003,007,008 → phase 5 (8/8)
+#     TC-FLOOR 005 → phase 3 | 001,002,003,004,006,007,008 → phase 7 (8/8)
+#
+# CROSS-PHASE CARRIER CASES (declared, not silent — the only three ACs whose
+#   cited TC lives in a different phase than the AC's owner):
+#   1. AC-F1-6 (owner phase 2) cites TC-SYNC-004 (phase 1): the normalized title
+#      is a CONTRACT declaration that must exist before the landing can compose
+#      it; the title's absence semantics and its "no schema change" half are
+#      green as soon as the field exists, and the byte assertions on the composed
+#      title stay with AC-F1-6's own phase-2 cases (TC-F1-001/006/007).
+#   2. AC-F2-5 (owner phase 2) cites TC-SYNC-001 (phase 1): the documented and
+#      machine rows moving together is a phase-1 fact (the binding sync check
+#      reads both tables from the live tree); the emitted-code/kind/exit half of
+#      AC-F2-5 stays with TC-F2-007 (phase 2).
+#   3. AC-F2-6 (owner phase 2) cites TC-SYNC-008 (phase 5): the forbidden-acts
+#      type probe covers the landing union AND the `close-milestone` argument and
+#      effect unions in ONE file, which cannot be complete before the operation
+#      exists. The landing half is additionally carried by TC-F2-008 (phase 2) in
+#      `tests/types/merge-landing.type-test.ts`, so AC-F2-6 is asserted at its own
+#      phase boundary and again at phase 5.
+#   No other AC cites a TC outside its owning phase, and no TC is owned twice.
+#
+# GATE CONVENTIONS (NFR-12; every recorded command uses the repository-local temp
+#   root; the workspace is unbuilt at plan time, so `TMPDIR=$PWD/tmp/tmpdir pnpm build`
+#   precedes every primitive invocation):
+#   G1  TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour tests/golden
+#   G2  TMPDIR=$PWD/tmp/tmpdir bun test tests/structure
+#   G3  TMPDIR=$PWD/tmp/tmpdir bun test tests/checks
+#   G4  TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance
+#   G5  TMPDIR=$PWD/tmp/tmpdir bun test tests/boundaries
+#   G6  TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
+#   G7  TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/ci-topology.ts
+#   G8  TMPDIR=$PWD/tmp/tmpdir bash scripts/.tests/test-doc-distribution.sh
+#   G9  TMPDIR=$PWD/tmp/tmpdir git diff --check
+#   G10 TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/defect-f1-merge-refusal-containment.test.ts tests/behaviour/defect-f4-phase-mirror.test.ts tests/behaviour/defect-f8-serial-merge-churn.test.ts
+#   G11 TMPDIR=$PWD/tmp/tmpdir PATH="$PWD/node_modules/.bin:$PATH" pnpm exec jaiship lint "$ref" --pm-notes --registry
+#       (corpus sweep over every change folder in the acceptance corpus, where
+#        `$ref` is that folder's change ref typed as the command argument, not a
+#        placeholder; recorded, and zero compared phases is an ERROR)
+#   G12 TMPDIR=$PWD/tmp/tmpdir pnpm check                                  (BINDING completion gate)
+#   A narrow-suite pass never substitutes for G12, and a missing
+#   `origin/main-tools` on G7 is an ERROR, never a skip (TC-FLOOR-007).
+#   A failing case is remediated in the phase that OWNS it (its scope is already
+#   there) or re-planned — never by deleting or renaming an assertion, never by
+#   regenerating a golden, never by widening a vocabulary or an allowlist.
+#
+# DOCUMENTATION (Appendix A; the "docs untouched" statement):
+#   No delivery phase edits a system specification page EXCEPT the two BINDING
+#   CARRIERS that a delivered check reads from the live tree in the same commit:
+#   `doc/spec/features/feature-result-contract.md` (the documented error table and
+#   its `149` statements, read by `tests/checks/error-table-sync.test.ts` and
+#   `tests/structure/error-table.test.ts`) and
+#   `doc/spec/features/feature-ceremony-runner.md` (a `149` statement inside
+#   `APPENDIX_D_FILES`). Both are edits of a COUNT STATEMENT, not a reconciliation
+#   of their substance, and both land in phase 1.
+#   Every OTHER documentation change Appendix A lists is lifecycle phase 7
+#   (@doc-syncer) and is declared in the final plan phase for STAGING ONLY — an
+#   untracked or modified doc outside every declared scope is a stray the commit
+#   primitive never stages. The redistributable pages touched there
+#   (`doc/guides/milestone-management.md`, `doc/00-index.md`,
+#   `doc/overview/glossary.md`) keep their `ados_distribution` marker, and G8 must
+#   pass in the same phase.
+#
+# OPEN ITEMS AT PLAN TIME (OQ-1..OQ-3 and RSK-1/DEC-8 carry; D8 is recorded as
+#   closed, and its closure statement is kept here so a reader sees it):
+#   OQ-1 (owner judgment) — PDR-0005's scope reading. If the owner reads the
+#     constraint globally, the write half is withdrawn and the step degrades to
+#     attachment verification plus a withheld-closure residue item; NO phase of
+#     this plan may decide it, and phase 5 must be able to land either reading
+#     without touching the rest of the change.
+#   OQ-2 (measurement) — whether the acceptance corpus already diverges. Phase 4
+#     measures it with G11; a hit is recorded and investigated as a second-writer
+#     defect, never suppressed.
+#   OQ-3 (fixture) — GitHub's milestone write surface, read-back shape and the
+#     stability of the 200-item bound. Settled by committed synthetic fixtures in
+#     phase 5; a set that cannot be read completely withholds closure.
+#   RSK-1 / DEC-8 — GH-349's own closeout WITHHOLDS milestone closure (M4 has
+#     other open tickets). The verified outcome is the attachment check plus a
+#     recorded exit-review verdict; any case asserting a closed M4 record is a
+#     blocking review finding (TC-F4-012, RSK-TP-4).
+#   D8 (test plan §11.2) — CLOSED. ADR-0012 was amended on 2026-11-18 and now
+#     states exactly what the specification binds: the fallback subject
+#     `merge(<ref>): squash <sourceRef>`, the verbatim message line
+#     `Landed by the delivery lifecycle merge primitive.`, the
+#     `merge.sync-required` reason triple `dirty`|`behind`|`behind-unconfirmed`,
+#     the declared-gap `merge.transaction-aborted` refusal, and the single
+#     additive `attribution` field (`recorded`|`probe`). The record and the spec
+#     agree, so no phase may assert the superseded form; acceptance of the record
+#     remains the owner's review act (see the SPEC-AUTHORITY NOTE above).
+#
+# -----------------------------------------------------------------------------
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-349
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+  escalationTriggers:
+    - "A landing is composed through any mechanism other than the closed `merge-delivery-request` adapter operation, a second landing mechanism becomes reachable by flag, configuration, or fallback, or a declared landing gap falls back to a local landing (§24.3 C4, C14, AC-F1-1/AC-F1-7, TC-F1-008/TC-F1-009)"
+    - "A force, bypass, auto-merge, merge-queue, rebase, merge-commit, or landing-retry variant becomes representable in a landing or mutation union, or a branch mutates the head it verified (§24.3 C4, AC-F2-6, TC-F2-008, TC-SYNC-008)"
+    - "`merge.rebase-conflict` is removed, re-meant, or dropped from the declared emittable set, or the emittable declaration enumerates gate ids instead of expressing `merge.gate.<gate-id>.failed` as a family (§24.3 C9, test plan §7.6(iv), TC-F7-001/TC-F7-002, M73)"
+    - "A fourth sync reason, a second attribution value, a verification timestamp inside the refusal evidence, or a second additive evidence field appears (DM-2, API-2, test plan §7.6(vi)/(vii), TC-F3-003, M85..M92)"
+    - "A second required-check evaluator or any prose matching appears in the check or refusal path (§24.3 C6, AC-F3-4, TC-F3-006)"
+    - "`close-milestone`, the tenth operation, the thirteenth step, the ninth residue kind, or the parity cells move over more than one commit, or any Appendix E item is left for later (§24.5, NFR-6/7, RSK-6, TC-SYNC-002/TC-SYNC-003, M78/M83)"
+    - "The milestone vocabulary can express create, attach, detach, rename, or reopen, a milestone is created or attached by any actor, or a close is attempted on a truncated, unknown, or unavailable view (§24.3 C2, AC-F4-5, AC-F4-4, TC-F4-009, TC-SYNC-008, M50)"
+    - "A required pin is loosened, skipped, made vacuous, wildcarded, or moved without its counterpart; a golden outside the two declared files moves; or a fixture is regenerated to go green (§24.3 C17, NFR-6, TC-FLOOR-001, TC-FLOOR-005, M78/M91)"
+    - "A phase document-writing branch derives `completed` from history instead of the post-transition fold, a divergence is repaired rather than reported, a `phase repair` or lint fix mode appears, or `verify change` changes (§24.3 C7/C8, AC-F5-1..AC-F5-6, TC-F5-001/TC-F5-007)"
+    - "The divergence rule writes, fences, appends, reads the clock, or reads the tracker, or treats null and a timestamp as equal (API-5, NFR-8, AC-F5-5, TC-F5-006, M58/M60)"
+    - "The queue surface gains a verb, subcommand, record kind, state key, or flag; a repair widens a vocabulary or turns a refusal into a success; or the automatic `landed` removal changes its non-step, fail-open, merge-truth-gated, idempotent contract across the milestone variants (§24.3 C1, AC-F6-2/AC-F6-3/AC-F6-4, TC-F6-008/TC-F6-011/TC-F6-012, M72)"
+    - "A workflow file, job, trigger, permission, upload, or artifact field changes, or an added suite lands under an ignored path (§24.3 C10, AC-F7-5, TC-F7-006, TC-FLOOR-006, M77)"
+    - "A new network location, credential, transport, secret-read allowlist entry, or ambient environment read appears, or a suite makes a live provider call or spawns a child process (§24.3 C11/C12, NFR-2/NFR-3, TC-FLOOR-002/TC-FLOOR-004, M79/M80)"
+    - "Testkit gains a `node:*`/`bun:*` import or an ambient environment, clock, or randomness read (§24.3 C15, NFR-10, TC-FLOOR-002)"
+    - "A defect suite cannot fail on its pre-fix behaviour, a control asserts the production value, or a defect suite is green while its control also passes (AC-F7-4, RSK-TP-8, TC-F7-005, M74/M75)"
+    - "A gate command is recorded without the TMPDIR=$PWD/tmp/tmpdir convention, a narrow run substitutes for G12, or a missing `origin/main-tools` is recorded as a skip (NFR-12, TC-FLOOR-007, test plan §7.4 triage rule 7)"
+    - "TMPDIR=$PWD/tmp/tmpdir pnpm check is not green at a phase boundary (G12, binding)"
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  # ---------------------------------------------------------------------------
+  # Phase 1 — The additive contract surface and its synchronized pins, with the
+  # three decision records landed on the branch (DEC-1..DEC-5 declarations).
+  #
+  # Goal: every additive declaration this change owes becomes visible in ONE
+  # commit together with every count that states it — so no later phase can move a
+  # table without its counterpart, and so no phase ever runs with a stale pin.
+  #
+  # Owns: ACs — none (a declaration phase; see CROSS-PHASE CARRIER CASES).
+  #       TCs — TC-SYNC-001 (table half; reachability half authored in phase 7,
+  #       one owner) and TC-SYNC-004. 2 of 81.
+  #
+  # Contract (DM-1, DM-2 rows, DM-8 row, API-2's reason triple; ADR-0012,
+  # TDR-0040 and ODR-0005 are cited, never duplicated):
+  #   - `DeliveryRequest` gains ONE additive optional `title` (provider-asserted,
+  #     verbatim; absent = unknown, never derived). No delivered field is removed,
+  #     retyped, or made required; no schema version changes (DM-1).
+  #   - The `merge` domain kind carries two additive concrete rows:
+  #     `merge.sync-required` (user, non-retryable, `not_landed`,
+  #     user-validation → exit 1) and `merge.mergeability-unknown` (platform,
+  #     retryable, `not_landed`, platform-provider → exit 2), taking the concrete
+  #     rows 7 → 9. The `merge.gate.<gate-id>.failed` open-slot family is
+  #     UNCHANGED in identity and slot rule. `merge.rebase-conflict` is retained
+  #     verbatim, stays in the declared emittable set, and carries its revisit
+  #     trigger (DM-2, §24.7 G-5).
+  #   - `merge.sync-required`'s closed reason triple `dirty`|`behind`|
+  #     `behind-unconfirmed` is declared ONCE (packages/core/src/contracts/merge.ts)
+  #     and consumed by all three refusing branches, the row's documented entry and
+  #     the caveated `behind-unconfirmed` remediation. No second vocabulary.
+  #   - The additive optional bounded refusal-evidence field carrying the closed
+  #     pair `recorded`|`probe` is DECLARED here as a closed constant pair; its
+  #     producer, rendering and the two moved goldens land in phase 3. Exactly one
+  #     field — a second evidence field is an escalation trigger.
+  #   - The pm-notes lint family gains `lint.phases.divergent` as its sixth row in
+  #     the declared rule order, documented and machine-declared together, so the
+  #     `lint` kind's concrete rows move 6 → 7 and the identity total moves
+  #     149 → 152. The five delivered rows keep their codes and remediation, and
+  #     the plan-target row is untouched (DM-8, AC-F5-6).
+  #   - NO closeout step id, NO residue kind and NO adapter operation is declared
+  #     here: see ORDERING (c). Those three declarations move with the surfaces
+  #     that make them meaningful in phase 5, and declaring them early would leave
+  #     a delivered structure gate red inside this commit.
+  #
+  # Pin movement IN THIS COMMIT (ORDERING (a); the pairs block in this file's
+  # header is the checklist):
+  #   `doc/spec/features/feature-result-contract.md` gains the three rows, the
+  #   `7 → 9` concrete merge-row statement, the `5 → 6` lint-family statement and
+  #   the `149 → 152` statements on BOTH sides;
+  #   `doc/spec/features/feature-ceremony-runner.md`'s `149` statements move with
+  #   them (it is read by the delivered no-leftover pin scan);
+  #   the five `149` pin sites in the suite set listed below move to `152` in the
+  #   same commit, and the documented↔machine comparison is extended to the three
+  #   new rows with a paired negative for each (no wildcard, no exemption).
+  #
+  # Obligations:
+  #   1.1 Declare the three rows, the title field, the reason triple, the
+  #       attribution pair and the lint row; move every counter part in the same
+  #       commit. A count that appears in two places moves in both (NFR-6).
+  #   1.2 Author TC-SYNC-001's TABLE half: bidirectional agreement at 152 on both
+  #       sides, exact-set delta of exactly three rows, no pattern widening, no
+  #       removed or retyped row, and a paired failing negative per assertion. The
+  #       row-REACHABILITY half of TC-SYNC-001 is authored in phase 7 (see
+  #       CROSS-PHASE notes in the phase-7 block), because only the final phase has
+  #       all three rows emitted; the case stays owned by this phase.
+  #   1.3 Author TC-SYNC-004: the title is one additive optional field; `absent`
+  #       stays unknown; the field participates only in the crafted subject; a
+  #       compile-time negative proves it is not required; the port-contract
+  #       inventory expectation moves with it (no schema version change).
+  #   1.4 Land the three decision records and, conditionally, the decision index
+  #       (COMMIT-BOUNDARY REALITY). STAGING ONLY: do not edit, re-author, accept,
+  #       or re-status any record — acceptance is the owner's review act.
+  #   1.5 Export inventory: the reason triple and the attribution pair are new
+  #       executable exports of existing contract modules, so the per-file
+  #       executable-export allowance moves in the same commit and exactly — one
+  #       named symbol per new export, no wildcard, and no entry for a symbol the
+  #       module does not export.
+  #
+  # Verification (expected signal: exit 0; 152 identities on both sides with a
+  # three-row exact delta and zero pattern widening; the five count pins read 152;
+  # the two documented statements read 152; the lint family reads six rows in the
+  # declared order; the port inventory carries `title` as optional and nothing
+  # else changed; the three records present and `Proposed`):
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/error-table-sync.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/error-table.test.ts tests/structure/port-contract-inventory.test.ts tests/structure/content-inventory.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/ceremony-contract.test.ts tests/structure/dispatch-attempts-taxonomy.test.ts tests/structure/verify-gates-suite-map-contract.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/ceremony-nonregression.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure                      (G2)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks                         (G3)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck                                (G6)
+  #   TMPDIR=$PWD/tmp/tmpdir git diff --check                              (G9)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                    (G12, binding)
+  # ---------------------------------------------------------------------------
+  - id: 1
+    title: "Additive contract surface (request title, two merge rows, the sync reason triple, the attribution pair, the sixth lint row) with every count pinned to 152 in one commit, and the three decision records landed"
+    kind: delivery
+    summary: "feat(GH-349): additive contract surface for the landing, refusal and phase-divergence identities"
+    weightClass: heavy
+    scope:
+      files:
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/contracts/merge.ts
+        - packages/core/src/contracts/ports.ts
+        - packages/core/src/contracts/index.ts
+        # The binding carriers: a delivered sync check reads the documented table
+        # and the no-leftover pin scan reads the ceremony page, so both move in
+        # THIS commit or the commit is red (ORDERING (a)).
+        - doc/spec/features/feature-result-contract.md
+        - doc/spec/features/feature-ceremony-runner.md
+        # Every count pin, in one commit (PIN MOVEMENT).
+        - tests/checks/error-table-sync.test.ts
+        - tests/structure/error-table.test.ts
+        - tests/structure/dispatch-attempts-taxonomy.test.ts
+        - tests/structure/verify-gates-suite-map-contract.test.ts
+        - tests/structure/ceremony-contract.test.ts
+        - tests/behaviour/ceremony-nonregression.test.ts
+        # TC-SYNC-004's port surface and TC-SYNC-001's export-discipline half.
+        - tests/structure/port-contract-inventory.test.ts
+        - tests/structure/content-inventory.test.ts
+        # Untracked at plan time (COMMIT-BOUNDARY REALITY); `Proposed`, STAGED,
+        # and never edited, re-authored, or accepted by any phase.
+        - doc/decisions/ADR-0012-provider-side-merge-landing-path.md
+        - doc/decisions/TDR-0040-phase-truth-registry-fold-mirror.md
+        - doc/decisions/ODR-0005-closeout-milestone-synchronization.md
+        # CONDITIONAL STAGING ONLY (the declared exception in the SCOPE
+        # DECLARATION RULE): the three rows are committed at f7316855 and the file
+        # is clean; declared so a status-row or typo touch made while landing the
+        # three records stages with them.
+        - doc/decisions/00-index.md
+      folders:
+        # The title expectation and the additive optional field's inventory entry.
+        - tests/fixtures/ports
+        - doc/decisions
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/error-table.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/merge.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 2 — The provider-side landing path and the total refusal taxonomy
+  # (F-1, F-2; DEC-1, DEC-2; ADR-0012 is the authority).
+  #
+  # Goal: a landing is one provider-verified mutation at the head the freshness
+  # envelope verified, carrying deterministic operator-free metadata, and every
+  # mergeability state resolves to exactly one declared identity with no head
+  # mutation anywhere on the path.
+  #
+  # Owns: ACs — AC-F1-1..AC-F1-9 (9) and AC-F2-1..AC-F2-6 (6) = 15 of 46.
+  #       TCs — TC-F1-001..010 (10), TC-F2-001..008 (8), TC-SYNC-005 (1) = 19 of 81.
+  #
+  # Contract (F-1, F-2, API-1, API-2, DM-3):
+  #   - EXACTLY ONE landing mechanism: the closed `merge-delivery-request` adapter
+  #     operation through the transaction's ports, issued at most once per
+  #     invocation, never re-issued after a failure, with no force, bypass,
+  #     auto-merge, queue, or retry variant — absent from the type, not rejected at
+  #     runtime. The local squash landing and the local refresh stay declared and
+  #     tested capabilities with ZERO composed callers (AC-F1-8 proves it with a
+  #     planted-caller control).
+  #   - The title is the provider-asserted request title VERBATIM; only when that
+  #     signal is absent does the deterministic fallback
+  #     `merge(<ref>): squash <sourceRef>` (change ref, then the request's source
+  #     ref) apply. The message is exactly
+  #     `Landed by the delivery lifecycle merge primitive.` for every landing — one
+  #     bounded line, no interpolation, no provider prose. No flag, free-form
+  #     input, or request body participates.
+  #   - `result=merged` requires a read-back in which the provider asserts merged;
+  #     the provider's merge commit is the recorded landing identity and its
+  #     absence is unknown (`merge.landing-unverified`), never derived. Local
+  #     containment stops being landing evidence, and the delivered "already
+  #     merged" converged-replay branch therefore decides from the PROVIDER request
+  #     read (and the recorded identity when present) with zero landing calls
+  #     (test plan §7.6(v); TC-F1-004, TC-SYNC-005).
+  #   - The exact-head guard binds the landing to the evidence: the expected head is
+  #     the verified head, and a moved head refuses `merge.gates-stale` with
+  #     recorded and current head and ZERO landing calls.
+  #   - The decision rule is total over `mergeable`, `conflicting`,
+  #     `not-mergeable`, `unknown`/absent, and "landing fired, truth not observed":
+  #     conflicting → one `merge.sync-required` reason `dirty`; not-mergeable →
+  #     offer the guarded landing, then classify ONE bounded post-refusal re-read
+  #     (decisive out-of-date → `sync-required` reason `behind`; checks posture →
+  #     the effective gate set's row with its delivered reason; inseparable →
+  #     `sync-required` reason `behind-unconfirmed` naming the observed provider
+  #     state, with the caveated remediation); unknown/absent → exactly one bounded
+  #     exact-head re-read (recovered → the rule above; head changed →
+  #     `merge.gates-stale`; still unknown → `merge.mergeability-unknown` retryable,
+  #     `not_landed`, exit 2, no polling).
+  #   - A declared landing gap refuses `merge.transaction-aborted` at exit 1 with
+  #     evidence naming the operation and its declared `CapabilityGapReason`, zero
+  #     landing attempts, zero local squash, zero fallback. No new identity: the
+  #     concrete `merge` rows stay at nine.
+  #   - NO internal rebase on the command path; no branch mutates the head it
+  #     verified. `merge.rebase-conflict` stays declared and reserved and no
+  #     delivered path emits it (§24.7 G-5).
+  #   - The classification-totality repair (F1, DEC-7): the composition's declared
+  #     emittable set covers EVERY code its refusal branches emit — the
+  #     `merge.gate.<gate-id>.failed` FAMILY as a declared family expression
+  #     expanded by the proof, never an enumerated gate-id list — and every emitted
+  #     pair resolves to a row whose declared kind equals the emitted kind, so a
+  #     declared refusal cannot reach `fallback.internal`. The refusal-site scan is
+  #     extended so a family emission is visible to it (test plan §7.6(iv)).
+  #
+  # Read-only controls in this phase (NOT declared): `packages/adapters/src/git/merge.ts`
+  #   (the retained capability), `MERGE_GIT_OPERATIONS`, the
+  #   `merge.rebase-conflict` row, `tests/fixtures/merge/golden/**` (the goldens
+  #   move in phase 3 and nowhere else), and `.github/workflows/**`.
+  #
+  # Obligations:
+  #   2.1 Re-point the transaction's landing port, remove the internal rebase, and
+  #       implement the five-outcome decision rule over the delivered identities.
+  #   2.2 Compose the crafted metadata in the production composition from the
+  #       request title and the declared fallback only.
+  #   2.3 Make the emittable declaration exhaustive over the family it emits, with
+  #       the family expression and the extended refusal-site scan.
+  #   2.4 Author the taxonomy, head-guard, metadata, gap-refusal, retirement,
+  #       convergence and classification-conformance suites this phase owns, each
+  #       with its injected-breach control (M1..M32).
+  #   2.5 Record the production-source scan's mandatory failing control: zero
+  #       composed callers of the local landing/refresh, and no platform-CLI
+  #       literal on any landing path.
+  #
+  # Verification (expected signal: exit 0; one landing call with the captured
+  # strategy/head/title/message bytes; zero landing calls on a moved head and on a
+  # gap adapter; each of the four reasons and both new identities emitted from
+  # their own branch; `merge.transaction-aborted` absent from the not-mergeable
+  # branches; the reserved row declared and emitted by no path; the emittable set
+  # covering every family code with a live mismatch control still containing):
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/merge-landing.test.ts tests/behaviour/merge-landing-metadata.test.ts tests/behaviour/merge-head-guard.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/merge-refusal-taxonomy.test.ts tests/behaviour/merge-refusal-surface.test.ts tests/behaviour/merge-convergence.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/merge-refusal-rows.test.ts tests/structure/merge-classification-conformance.test.ts tests/structure/merge-contract.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/merge-landing-retirement.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour tests/golden              (G1; the goldens must still be byte-identical)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck                                     (G6)
+  #   TMPDIR=$PWD/tmp/tmpdir git diff --check                                   (G9)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                         (G12, binding)
+  # ---------------------------------------------------------------------------
+  - id: 2
+    title: "Provider-side landing as the only lifecycle mechanism with crafted squash metadata and the exact-head guard, the total five-outcome refusal taxonomy, and the exhaustive emittable declaration"
+    kind: delivery
+    summary: "feat(GH-349): provider-side landing path and the typed merge refusal taxonomy"
+    weightClass: heavy
+    scope:
+      files:
+        - packages/core/src/domain/merge-transaction.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        # The provider-asserted title enters through the request decode; §7.6
+        # names both files. `client.ts` is declared because the decode is where
+        # the signal is read — no other adapter behaviour changes (C14).
+        - packages/adapters/src/github/normalize.ts
+        - packages/adapters/src/github/client.ts
+        - tests/behaviour/merge-landing.test.ts
+        - tests/behaviour/merge-landing-metadata.test.ts
+        - tests/behaviour/merge-head-guard.test.ts
+        - tests/behaviour/merge-refusal-taxonomy.test.ts
+        - tests/behaviour/merge-refusal-surface.test.ts
+        - tests/behaviour/merge-convergence.test.ts
+        - tests/structure/merge-refusal-rows.test.ts
+        - tests/structure/merge-classification-conformance.test.ts
+        - tests/structure/merge-contract.test.ts
+        - tests/types/merge-landing.type-test.ts
+        - tests/checks/merge-landing-retirement.test.ts
+        # The recording landing port, the title-bearing base request, the four
+        # read-back shapes and the head-mutation counter (append-only extension;
+        # every delivered helper keeps its signature).
+        - tests/fixtures/merge/harness.ts
+        - tests/fixtures/merge/production-composition.ts
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/merge-transaction.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 — Required-check awareness on both sides of the check boundary, the
+  # attribution of every not-green finding, and the two goldens that move (F-3;
+  # DEC-3).
+  #
+  # Goal: the post-verification probe is never narrower than the gate it
+  # post-checks, and every not-green finding says which source produced it —
+  # without a new row, kind, or exit.
+  #
+  # Owns: ACs — AC-F3-1..AC-F3-4 = 4 of 46.
+  #       TCs — TC-F3-001..006 (6), TC-FLOOR-005 (1) = 7 of 81.
+  #
+  # Contract (F-3, API-2, DM-2):
+  #   - `queued` and `running` are not-green with the delivered `ci-pending`
+  #     reason in BOTH the declared gate evaluation and the probe. That becomes an
+  #     asserted contract (a parity case), not an implicit agreement between two
+  #     implementations. `canceled`, `skipped` and `failed` keep their delivered
+  #     reasons (`ci-canceled`, `ci-all-skipped`, `ci-failed`).
+  #   - The probe is extended from "newly failing" to "not-green for a declared
+  #     required job" on the verified head, refusing on the existing
+  #     `merge.gate.<gate-id>.failed` family with the job named and its reason.
+  #   - EXACTLY ONE additive optional bounded evidence field carries the closed
+  #     attribution pair: `recorded` when the recorded gate verdict already
+  #     reported that job not green (the evidence also naming the gate's effective
+  #     id, the job and the verdict — those three facts identify the persisted
+  #     record), or `probe` when the recorded verdict was green and the probe
+  #     observed it. The verification timestamp is NOT an evidence field: it stays
+  #     on the persisted `merge.gate-verification` record that gate id + job
+  #     resolves to (M92 fails a `verifiedAt` member by name).
+  #   - An undeclared job is not gate evidence and produces no refusal and no
+  #     attribution; a check-run page for another head is never head evidence.
+  #   - A provider-required refusal is classified, never retried, never bypassed,
+  #     and no second evaluator and no prose matching exist on the path.
+  #   - The refusal summary renders the attribution, so EXACTLY TWO goldens move —
+  #     `tests/fixtures/merge/golden/refusal-gate-human.txt` and
+  #     `tests/fixtures/merge/golden/refusal-gate-scripted.json` — regenerated by
+  #     the explicit §10 command in the SAME commit. The other thirteen files are
+  #     byte-identical by obligation and the phase declares the two files only, so
+  #     a blanket regeneration is mechanically visible (GOLDEN DISCIPLINE).
+  #
+  # Obligations:
+  #   3.1 Extend the probe and pin the queued-is-not-green contract on both sides.
+  #   3.2 Add the attribution field's producer and its rendering; do not add a
+  #       second field and do not overload `detail` with the source (M85).
+  #   3.3 Regenerate exactly the two goldens by the recorded command; extend the
+  #       golden suite with the two attribution scenarios and the byte assertions.
+  #   3.4 Author the check-path scan (no second evaluator entry point, no prose
+  #       matcher) and the paired positive/negative for the undeclared-job and
+  #       other-head facts (M37, M38, M39).
+  #   3.5 Author TC-FLOOR-005's determinism + byte-pin case: two replays are
+  #       identical, the moved attribution golden matches, and every other golden
+  #       does not move (M81, M91).
+  #
+  # Verification (expected signal: exit 0; queued/running not-green with
+  # `ci-pending` on both sides; five stimuli each refusing with its own reason;
+  # both attribution arms asserted and exactly one value per refusal; no timestamp
+  # member on the evidence while `verifiedAt` resolves from the record; the
+  # undeclared job and other-head page producing neither refusal nor attribution;
+  # exactly two goldens moved, thirteen byte-identical; two replays identical):
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/merge-probe.test.ts tests/behaviour/merge-required-job-probe.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/merge-check-path-scan.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/golden/merge.test.ts tests/behaviour/merge-determinism.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour tests/golden              (G1)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure                           (G2)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks                              (G3)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck                                     (G6)
+  #   TMPDIR=$PWD/tmp/tmpdir git diff --check                                   (G9)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                         (G12, binding)
+  # ---------------------------------------------------------------------------
+  - id: 3
+    title: "Required-check awareness pinned on both sides of the check boundary, not-green declared jobs in the probe, one-additive-field attribution for every finding, and exactly the two moved refusal goldens"
+    kind: delivery
+    summary: "feat(GH-349): queued-check awareness and refusal-evidence attribution"
+    scope:
+      files:
+        - packages/core/src/domain/merge-probe.ts
+        # Split touch with phase 2: the evidence field's producer and its
+        # rendering live in the transaction module (renderMergeFailure).
+        - packages/core/src/domain/merge-transaction.ts
+        - tests/behaviour/merge-probe.test.ts
+        - tests/behaviour/merge-required-job-probe.test.ts
+        - tests/behaviour/merge-determinism.test.ts
+        - tests/checks/merge-check-path-scan.test.ts
+        - tests/golden/merge.test.ts
+        - tests/fixtures/merge/golden-scenarios.ts
+        # EXACTLY these two goldens move; the other thirteen are byte-identical
+        # by obligation and the directory is never declared as a folder.
+        - tests/fixtures/merge/golden/refusal-gate-human.txt
+        - tests/fixtures/merge/golden/refusal-gate-scripted.json
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/domain/merge-transaction.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 4 — One phase truth source: every document-writing branch derives the
+  # mirror from the post-transition fold, and divergence is detected in one
+  # read-only comparison (F-5; DEC-5; TDR-0040 is the authority).
+  #
+  # Goal: after every transition the pm-notes document equals the fold, and a
+  # disagreement is reported once — never repaired, never written, never read back
+  # as truth.
+  #
+  # Owns: ACs — AC-F5-1..AC-F5-7 = 7 of 46.
+  #       TCs — TC-F5-001..008 (8), TC-SYNC-006 (1) = 9 of 81.
+  #
+  # Contract (F-5, API-5, API-6, DM-8):
+  #   - Every branch that writes the pm-notes document derives the target entry's
+  #     `completed` from the post-transition fold (the ledger history including
+  #     the just-appended record, or the verified history on a convergence-only
+  #     branch) — never from a lookup over history. `started` is written only on
+  #     creation and never rewritten; a reopen writes null; the no-op evidence
+  #     reports the SAME fold value, so the stale-timestamp defect does not
+  #     survive in the envelope after the document is fixed (API-6).
+  #   - The both-target lint gains ONE comparison, run only AFTER both conformance
+  #     checks pass (so a malformed document is still reported as malformed): for
+  #     each canonical phase id with at least one ledger transition, the document's
+  #     `completed` must equal the fold's `completed`, and null and a timestamp are
+  #     DIFFERENT facts. The first divergence is `lint.phases.divergent` (user,
+  #     non-retryable, `not_landed`, exit 1) naming the phase id, both bounded
+  #     values, and the declared remediation.
+  #   - The rule performs zero document writes, zero fence acquisitions, zero
+  #     record appends, zero tracker reads and zero clock reads, and is
+  #     deterministic across replays (NFR-8).
+  #   - To implement it, the lint surface's registry read exposes the verified fold
+  #     ADDITIVELY; no other read changes and the rule order is not reordered
+  #     (DM-8). The sixth row was declared in phase 1; this phase gives it its
+  #     emitting branch.
+  #   - Two stated exclusions: a ledger-less phase produces no finding, and a
+  #     document completion with no ledger transition produces no finding (the
+  #     declaration question belongs to `verify change`, which is UNCHANGED — its
+  #     verdict, precedence and read-only contract stay as delivered).
+  #
+  # Read-only controls in this phase (NOT declared): `foldPhaseState` (the
+  #   authority), the delivered `verify change` suite, and the plan-target lint row.
+  #
+  # Obligations:
+  #   4.1 Fix every document-writing branch and the no-op evidence; prove the four
+  #       branches (`both`, `record-record-only`, `record-atomic-without-commit`,
+  #       `commit-without-record`) each carry the fold value (M54, M55, M56, M57).
+  #   4.2 Implement the comparison on the both-target lint over the additively
+  #       exposed fold; assert zero writes/fences/appends/tracker reads/clock reads
+  #       and replay identity (M58, M59, M60).
+  #   4.3 Prove the absence surfaces: no `phase repair`, no lint fix mode, no new
+  #       state kind, the five delivered rows keeping their codes and remediation,
+  #       and the sixth row appended in the declared order with both tables in sync
+  #       (AC-F5-6, M61).
+  #   4.4 Measure the acceptance corpus with G11 and RECORD it: `compared > 0` and
+  #       zero findings; a hit is recorded as second-writer evidence and
+  #       investigated, never suppressed and never excluded (AC-F5-7, RSK-TP-6,
+  #       M62).
+  #
+  # Verification (expected signal: exit 0; the three surfaces carry the second
+  # completion and the pre-reopen value appears nowhere; exactly one
+  # `lint.phases.divergent` naming the phase and both values for a hand-edited
+  # completion; a document-only completion and a ledger-less phase not flagged with
+  # a paired positive; zero write/fence/append/clock counters; two replays
+  # identical; the corpus run recording compared phases > 0 and zero findings):
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/phase-completion-convergence.test.ts tests/behaviour/pm-notes-lint-divergence.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/lint-surface.test.ts tests/structure/lint-registry-read.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour tests/golden              (G1)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure                           (G2)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks                              (G3)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck                                     (G6)
+  #   TMPDIR=$PWD/tmp/tmpdir PATH="$PWD/node_modules/.bin:$PATH" pnpm exec jaiship lint "$ref" --pm-notes --registry
+  #                                                                              (G11, corpus; recorded)
+  #   TMPDIR=$PWD/tmp/tmpdir git diff --check                                   (G9)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                         (G12, binding)
+  # ---------------------------------------------------------------------------
+  - id: 4
+    title: "Phase mirror derived from the post-transition fold on every document-writing branch, the no-op evidence reporting the fold value, and one read-only divergence finding on the both-target lint"
+    kind: delivery
+    summary: "feat(GH-349): one phase truth source and detected mirror divergence"
+    scope:
+      files:
+        - packages/cli/src/commands/phase.ts
+        - packages/cli/src/commands/lint.ts
+        - packages/cli/src/edge.ts
+        - packages/cli/src/production.ts
+        - tests/behaviour/phase-completion-convergence.test.ts
+        - tests/behaviour/pm-notes-lint-divergence.test.ts
+        - tests/structure/lint-surface.test.ts
+        - tests/structure/lint-registry-read.test.ts
+        - tests/fixtures/lint/divergence.ts
+      folders:
+        # Transition histories including complete → reopen → re-complete and the
+        # ledger-less / document-only exclusions (append-only).
+        - tests/fixtures/phase
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/commands/lint.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 5 — Milestone synchronization as step 12 of 13, both provider surfaces,
+  # and the WHOLE Appendix E conformance/parity ripple in ONE commit (F-4;
+  # DEC-4, DEC-8; ODR-0005 is the authority).
+  #
+  # Goal: the planning unit closes only when the exit review holds, through one
+  # narrow operation that cannot express an unsafe act — and the operation set,
+  # the capability declarations, the registry, both coverage gates, the parity
+  # matrix, the mock routes, the export inventory and the step/residue pins move
+  # with it, atomically.
+  #
+  # Owns: ACs — AC-F4-1..AC-F4-9 = 9 of 46.
+  #       TCs — TC-F4-001..015 (15), TC-SYNC-002, TC-SYNC-003, TC-SYNC-007,
+  #       TC-SYNC-008 (4) = 19 of 81.
+  #
+  # Contract (F-4, API-3, API-4, DM-4..DM-7, DM-9):
+  #   - `milestone-sync` is step 12 of thirteen; `capsule` stays terminal at 13;
+  #     consumers keep resolving by `stepId`, so the insertion is additive. The
+  #     `closeout.step.<id>.failed` family's slot rule validates against the
+  #     effective set unchanged and the plan/apply outcome vocabularies are REUSED,
+  #     not extended.
+  #   - The declared milestone is the change's pm-notes `milestone`; the observed
+  #     attachment is the provider-asserted milestone on the change's own work
+  #     item. An absent, non-`M<n>:`-shaped, or mismatched declaration never
+  #     becomes a target: `skipped-noop` with ONE residue item naming the closed
+  #     reason and zero writes; a declaration of `none` is `skipped-gap`.
+  #   - The exit review is the gate, over ONE bounded adapter-local read (identity,
+  #     title, state, attached items with delivery states, cap 200, truncation
+  #     marker): closure holds only when the record is open and EVERY attached item
+  #     is done or canceled. An unavailable signal, an unknown state, or a
+  #     truncated set WITHHOLDS — a partial view never closes a scope commitment.
+  #     The four facts (absent surface, unavailable signal, unknown state,
+  #     truncation) never collapse into an empty set.
+  #   - The effect is ONE new closed operation, `close-milestone`, whose arguments
+  #     name only the milestone identity and whose single effect is to set the
+  #     record closed. Create, attach, detach, rename and reopen are
+  #     UNREPRESENTABLE — structural, not a documented prohibition (NFR-9). The
+  #     write is read-back verified, at most once per run, never retried, and
+  #     reports `alreadyApplied` when the record already reads closed.
+  #   - GitHub supports it; GitLab declares `adapter-not-implemented`; Jira declares
+  #     `provider-unsupported`; an adapter gap is `skipped-gap`, never a silent
+  #     skip. The read adds NO operation and NO capability flag.
+  #   - The outcome table is closed: would-apply (plan) / applied (apply) on a
+  #     passing exit review; `satisfied` when already closed; `skipped-noop` with
+  #     one residue naming `declared-milestone-missing`, `attachment-mismatch`,
+  #     `closure-withheld`, `attached-set-truncated`, or
+  #     `milestone-signal-unavailable`; `skipped-gap` for `none` and for an adapter
+  #     gap; and on a close write that did not land or whose read-back did not
+  #     observe closed, `failed` in apply returning the delivered gating identity
+  #     `closeout.write.failed` at exit 2 with NO capsule close.
+  #   - ONE additive residue kind, `milestone-sync-withheld`, carrying the closed
+  #     reason as bounded item text and the work-item ref as its location; the
+  #     dedup key, ordering and the 50-item cap with its sentinel are unchanged.
+  #   - Plan mode reads and renders with zero writes, zero appends, zero fence
+  #     acquisitions; apply mode folds the ledger and reuses terminal outcomes, so
+  #     two consecutive applies perform at most one close and the second reports
+  #     `satisfied` with zero writes.
+  #   - The automatic `landed` queue removal keeps its non-step, fail-open,
+  #     merge-truth-gated, idempotent contract inside the existing fence, including
+  #     when the milestone closure was withheld or gapped (AC-F6-4, TC-F6-008 is
+  #     owned by phase 6 and proves it).
+  #   - OQ-1 (owner judgment) is not decided here: the implementation must land
+  #     EITHER reading without touching the rest of the change — on a global
+  #     PDR-0005 reading, the write half is withdrawn and the step degrades to
+  #     attachment verification plus a withheld-closure residue item.
+  #   - DEC-8 / RSK-1: GH-349's OWN closeout withholds milestone closure. The
+  #     verified outcome is the attachment check plus a recorded exit-review
+  #     verdict; any case asserting a closed M4 record is a blocking finding.
+  #
+  # THE RIPPLE — ALL-OR-NOTHING IN THIS COMMIT (the header's twelve-item list is
+  #   the checklist; a partial move is a RED GATE):
+  #   the tenth operation appended (no index moving), the flow registry step that
+  #   executes it on GitHub and reaches the declared gap on GitLab and Jira, the
+  #   structural coverage requirement nine→ten, the runtime coverage gate's
+  #   supported execution and exact-gap encounters, the mock tenant's write and
+  #   read-back routes with their projections, the parity matrix row (30 cells)
+  #   with three adjudicated cells, the register (unchanged, or exactly one entry
+  #   per new declared-difference cell), the per-file export inventory for any new
+  #   export, the unchanged identity-construct allowlist, the closed gap-reason
+  #   set, the unchanged help/reference command set, and the unchanged topology
+  #   pin. The six-family × three-adapter accounting stays 18 and the new
+  #   operation must NOT enter the family vocabulary.
+  #
+  # Obligations:
+  #   5.1 Insert the step, its label/definition, its predicate and its outcome
+  #       mapping in core; the residue kind and its producer; the plan/apply
+  #       rendering.
+  #   5.2 Compose the bounded read and the close write over the EXISTING injected
+  #       transport and credential port in the provider composition; declare the
+  #       three adapter postures.
+  #   5.3 Move the whole ripple above in the same commit, with the export inventory
+  #       and every step/residue pin (PIN MOVEMENT).
+  #   5.4 Author the milestone suites (outcome matrix, withholding facts, plan
+  #       zero-write, two-apply idempotency, write-failure gating, gap posture,
+  #       GH-349's own withheld case), the contract/vocabulary structure suite and
+  #       the type probes (M40..M53, M83).
+  #   5.5 Author TC-SYNC-003 (the atomic ripple) and TC-SYNC-002 (step and residue
+  #       pins in every place they exist), and extend TC-SYNC-001's assertions to
+  #       the operation/step/residue deltas the phase moved.
+  #   5.6 Author TC-SYNC-007 (the four distinct milestone facts) and TC-SYNC-008
+  #       (forbidden acts unrepresentable across the landing, mutation and
+  #       `close-milestone` vocabularies).
+  #
+  # Verification (expected signal: exit 0; thirteen steps with `milestone-sync` at
+  # 12 and `capsule` at 13 resolved by id; the closed outcome table with
+  # `would-refuse` unreachable; exactly one close on the satisfying fixture with
+  # every other step and the queue outcome unchanged; zero closes across the
+  # open-item, unavailable, unknown and truncated fixtures; zero writes in plan
+  # mode; one close across two applies; `closeout.write.failed` at exit 2 with no
+  # capsule close on a failed write and convergence on retry; ten operations, 30
+  # parity cells with three adjudicated, the registry and both gates at ten, the
+  # mock route and projection present, 18 family cells unchanged, the inventory
+  # exact):
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/closeout-milestone-sync.test.ts tests/behaviour/closeout-milestone-write-failure.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/closeout-contract.test.ts tests/structure/closeout-additive.test.ts tests/structure/closeout-milestone-contract.test.ts tests/structure/capsule-contract.test.ts tests/structure/conformance-coverage.test.ts tests/structure/content-inventory.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/capsule-bounds.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance                           (G4)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour tests/golden               (G1)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure                            (G2)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks                               (G3)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck                                      (G6)
+  #   TMPDIR=$PWD/tmp/tmpdir bash scripts/.tests/test-doc-distribution.sh         (G8)
+  #   TMPDIR=$PWD/tmp/tmpdir git diff --check                                    (G9)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                          (G12, binding)
+  # ---------------------------------------------------------------------------
+  - id: 5
+    title: "Milestone synchronization as step 12 of 13 over one closed close-milestone operation and one bounded read, with the tenth operation, the thirteenth step, the ninth residue kind and the whole conformance/parity ripple in one commit"
+    kind: delivery
+    summary: "feat(GH-349): exit-review-gated milestone synchronization and the atomic operation-set ripple"
+    weightClass: heavy
+    scope:
+      files:
+        - packages/core/src/contracts/closeout.ts
+        - packages/core/src/contracts/capsule.ts
+        - packages/core/src/contracts/adapter-capabilities.ts
+        # Split touch with phase 1: the milestone observation/read port shape.
+        - packages/core/src/contracts/ports.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/domain/closeout.ts
+        - packages/adapters/src/github/client.ts
+        - packages/adapters/src/github/capabilities.ts
+        - packages/adapters/src/gitlab/capabilities.ts
+        - packages/adapters/src/jira/capabilities.ts
+        - packages/cli/src/production.ts
+        # The Appendix E ripple's own sources.
+        - packages/testkit/src/conformance/flows.ts
+        - packages/testkit/src/conformance/coverage.ts
+        - packages/testkit/src/conformance/parity.ts
+        - packages/testkit/src/conformance/participation.ts
+        - packages/testkit/src/conformance/mock-tenant.ts
+        # Every pinned counterpart of the three moves, in this commit.
+        - tests/structure/closeout-contract.test.ts
+        - tests/structure/closeout-additive.test.ts
+        - tests/structure/capsule-contract.test.ts
+        - tests/structure/conformance-coverage.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/checks/capsule-bounds.test.ts
+        - tests/conformance/parity-gate.test.ts
+        - tests/conformance/mock-conformance.test.ts
+        - tests/structure/closeout-milestone-contract.test.ts
+        - tests/types/closeout-milestone.type-test.ts
+        - tests/types/forbidden-acts.type-test.ts
+        - tests/behaviour/closeout-milestone-sync.test.ts
+        - tests/behaviour/closeout-milestone-write-failure.test.ts
+        - tests/fixtures/closeout/harness.ts
+        - tests/fixtures/closeout/plan.ts
+        - tests/fixtures/closeout/milestone.ts
+        - tests/fixtures/closeout/m4-attached-set.ts
+        # The supported execution's route table and its two projections
+        # (append-only). The other two tenants stay byte-unchanged.
+        - tests/fixtures/providers/conformance/github/tenant.json
+      folders:
+        # The committed synthetic milestone shapes: record open/closed/unknown,
+        # attached sets all-done / one-open / truncated / absent / unavailable,
+        # each carrying its provenance marker and example-only hosts.
+        - tests/fixtures/providers/conformance/milestone
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/adapter-capabilities.ts
+        role: producer
+      - kind: contract-file
+        target: packages/testkit/src/conformance/parity.ts
+        role: consumer
+
+  # ---------------------------------------------------------------------------
+  # Phase 6 — Queue integrity proved property by property, repaired only where a
+  # control demonstrates a breach, and widened by nothing (F-6; DEC-6; API-7).
+  #
+  # Goal: each of the seven declared properties carries a named proof over the
+  # production composition with a control that injects exactly one breach and
+  # fails naming the property — and the change reports which properties proved
+  # clean.
+  #
+  # Owns: ACs — AC-F6-1..AC-F6-6 = 6 of 46.
+  #       TCs — TC-F6-001..012 = 12 of 81.
+  #
+  # Contract (F-6, API-7):
+  #   - The seven properties: claim integrity (single-flight naming the live
+  #     holder, same-holder renewal, stale takeover with incident evidence,
+  #     cross-ref lease conflict); park integrity (closed cause vocabulary, the
+  #     battery-only cause refused by name on the operator path, an
+  #     expiry-carrying cause requiring its expiry, a non-expiring cause refusing
+  #     one, and removal releasing the active park first); reconcile integrity
+  #     (done/canceled only, unobserved items retained, a bounded examined set
+  #     reporting its remainder, `--ref` narrowing to exactly one entry); CRUD
+  #     integrity (one edge per accepted add, a one-edge `dep remove`, an add-only
+  #     cycle check naming the existing path, no cascade, unchanged
+  #     `added`/`updated`/`noop` and `removed`/`noop`); reason-bearing removal (the
+  #     four closed reasons, the full refusal set, zero appends on any refusal, and
+  #     the deliberate non-idempotency of the explicit verb preserved alongside the
+  #     converging automatic path); single-flight (the holder named at the envelope
+  #     root within its bound, and the holder identity is the live one);
+  #     append-position presence (presence by record sequence, never timestamp
+  #     text, a later re-declaration restoring an entry with no special case, and
+  #     no representable tie).
+  #   - A repair happens ONLY where a control demonstrates a breach; it restores
+  #     the declared sentence and changes no vocabulary value, key, flag, or
+  #     refusal into a success (AC-F6-2, TC-F6-012). Where a property holds, the
+  #     change adds proof and nothing else.
+  #   - The phase MUST record which of the seven proved clean and say
+  #     "property proved clean; no repair" explicitly per property, so a silent
+  #     no-op does not read as an unfinished phase at the DoD gate.
+  #   - The automatic `landed` removal is proved unchanged across the milestone
+  #     variants (applied, withheld, gap): non-step, fail-open,
+  #     merge-truth-gated, idempotent, inside the transaction's existing fence,
+  #     with zero duplicate removals on re-run and no second fence (AC-F6-4).
+  #   - Nothing here moves the closeout interaction, and nothing widens the verb
+  #     set, the record kinds, the state keys, the flag grammar, the caps, or the
+  #     refusal-detail bound (AC-F6-3, AC-F6-6, §24.7 G-7).
+  #
+  # Conditional edit: `packages/core/src/app/queue.ts` is declared because a
+  #   failing control may require a repair THERE. If all seven prove clean, the
+  #   file is not edited and `plan diff` reports at most an advisory
+  #   `undeclared-missing` for it — and the phase says so in its record. The
+  #   declaration is never a licence to widen the surface.
+  #
+  # Obligations:
+  #   6.1 Author `tests/behaviour/queue-integrity.test.ts` with seven named
+  #       property blocks, each asserting its declared outcome through the
+  #       production composition.
+  #   6.2 Author the seven typed breach builders, one per property, so a breach
+  #       cannot silently stop being a breach when a type changes (a compile
+  #       error, not a passing no-op).
+  #   6.3 Author the surface and bounds pins: the verb/record-kind/state-key/flag
+  #       exact-set equality with add/remove mutations, the folded-read cap, the
+  #       reconcile cap and remainder, the four removal reasons and the
+  #       refusal-detail bound (M72).
+  #   6.4 Extend the closeout × queue-removal suites for TC-F6-008 across the
+  #       applied / withheld / gap milestone variants (M70).
+  #   6.5 Record, per property, "proved clean; no repair" or the repair and its
+  #       control, and confirm the control still fails on the injected breach
+  #       after the repair (AC-F6-2, M63..M71).
+  #
+  # Read-only controls in this phase (NOT declared): the delivered queue config,
+  #   park, lease and removal suites not listed below, and the automatic closeout
+  #   removal's contract.
+  #
+  # Verification (expected signal: exit 0; seven property blocks green with each
+  # control failing by name on its injected breach; the surface exact-set equality
+  # with no new verb/kind/key/flag; every cap and bound unchanged; the removal
+  # outcome, exit and single fence equal across the three milestone variants):
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/queue-integrity.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/queue-bounds.test.ts tests/structure/queue-surface.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/closeout-queue-removal.test.ts tests/behaviour/closeout-queue-removal-idempotency.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour tests/golden               (G1)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure                            (G2)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks                               (G3)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck                                      (G6)
+  #   TMPDIR=$PWD/tmp/tmpdir git diff --check                                    (G9)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                          (G12, binding)
+  # ---------------------------------------------------------------------------
+  - id: 6
+    title: "Seven queue integrity properties proved through the production composition with one injected-breach control each, repaired only where a control demonstrates a breach, and the automatic landed removal proved unchanged"
+    kind: delivery
+    summary: "test(GH-349): queue integrity property proofs and defect-named controls"
+    scope:
+      files:
+        - tests/behaviour/queue-integrity.test.ts
+        - tests/fixtures/queue/integrity-breaches.ts
+        - tests/structure/queue-bounds.test.ts
+        - tests/structure/queue-surface.test.ts
+        - tests/behaviour/closeout-queue-removal.test.ts
+        - tests/behaviour/closeout-queue-removal-idempotency.test.ts
+        # The property suites the new cases materially extend (append-only; the
+        # delivered assertions keep their names and expectations).
+        - tests/behaviour/queue-claim-single-flight.test.ts
+        - tests/behaviour/queue-lease-takeover.test.ts
+        - tests/behaviour/queue-park-causes-s17.test.ts
+        - tests/behaviour/queue-dep-cycle.test.ts
+        - tests/behaviour/queue-remove-refusals.test.ts
+        - tests/behaviour/queue-reconcile-bounds.test.ts
+        - tests/behaviour/queue-graph.test.ts
+        # CONDITIONAL, per the block above: declared so a control-demonstrated
+        # repair has staging authority, and never edited to widen the surface.
+        - packages/core/src/app/queue.ts
+      folders:
+        - tests/fixtures/queue
+
+  # ---------------------------------------------------------------------------
+  # Phase 7 — The three defect-named regressions with their pre-fix controls, the
+  # residual pins, the corpus record, and the release obligations (F-7; §24.6
+  # Appendix F; §18's final outcome).
+  #
+  # Goal: prove the WHOLE — each named defect carries a suite whose control fails
+  # on the pre-fix behaviour, every pin is exact and non-vacuous, the aggregate
+  # gate is green — and declare the release with the documentation reconciliation
+  # staged for lifecycle phase 7. Nothing new is designed here.
+  #
+  # Owns: ACs — AC-F7-1..AC-F7-5 = 5 of 46.
+  #       TCs — TC-F7-001..006 (6), TC-FLOOR-001..004 (4),
+  #       TC-FLOOR-006..008 (3) = 13 of 81.
+  #
+  # Defects (Appendix F; the repairs landed earlier, the proof lands here):
+  #   - F1 (a merge refusal reaching the containment identity; repaired in phase
+  #     2): the suite asserts a gate-family landing refusal carries the family
+  #     code, domain kind `merge` and exit 1 with `fallback.internal` ABSENT from
+  #     the outcome and the summary; asserts the two new rows' code/kind/exit; and
+  #     keeps a LIVE mismatch control that still reaches the containment identity,
+  #     so an empty or hand-picked assertion set cannot pass. Its control applies
+  #     the pre-fix SEVENTEEN-member emittable declaration and must fail naming the
+  #     uncovered family code (M73).
+  #   - F4 (the stale mirror timestamp; repaired in phase 4): the suite asserts
+  #     complete → reopen → re-complete leaves the SECOND completion in the fold,
+  #     `phase list` and the document, with the pre-reopen value absent and the
+  #     no-op re-run reporting the same value; companions assert a hand-edited
+  #     completion yields `lint.phases.divergent` naming the phase, a
+  #     document-only completion is not flagged, and detection writes nothing and
+  #     takes no fence. It asserts the INEQUALITY `T1 !== T2` before the
+  #     equalities, and its control restores the history lookup and must fail by
+  #     name (M75).
+  #   - F8 (serial-merge churn; repaired in phase 2): a three-merge serial fixture
+  #     asserts at most one landing call per invocation, zero head mutations, no
+  #     rebase attempt, and typed sync refusals for the second and third
+  #     invocations. Its control injects the refresh and must fail on the
+  #     head-mutation assertion at the named invocation index (M76).
+  #   - The meta-check: an assertion-presence registry per suite plus a
+  #     control-differs assertion, so removing a primary assertion or restoring the
+  #     pre-fix behaviour fails by name (AC-F7-4, RSK-TP-8).
+  #
+  # Residual pins and whole-change evidence:
+  #   - TC-SYNC-001's REACHABILITY half (owned by phase 1, authored here): every
+  #     new row is emitted from a named branch — this is the first phase where all
+  #     three exist, which is why the half lives here (CROSS-PHASE CARRIER CASES
+  #     note 2). The extension lands in `tests/checks/error-table-sync.test.ts`,
+  #     declared here for that half only.
+  #   - TC-FLOOR-001: every moved pin moves exactly, is not loosened, and fails by
+  #     name when only one side moves (M78).
+  #   - TC-FLOOR-002/003/004: the added suites are offline and the testkit stays
+  #     runtime-neutral; no adapter behaviour changed beyond the new operation and
+  #     its two declared gaps (set-and-reason equality); no new network location,
+  #     credential path, or secret-read allowlist entry (M79, M80).
+  #   - TC-FLOOR-006/007: the CI topology is unchanged and the new suites are
+  #     DISCOVERED by the existing jobs (never under an ignored path); the gate
+  #     battery and the corpus measurement are recorded with the TMPDIR
+  #     convention, and a missing `origin/main-tools` is an ERROR, never a skip
+  #     (M77).
+  #   - TC-FLOOR-008: every new diagnostic and outcome stays within its bound and
+  #     leaks no provider content (M82).
+  #
+  # Release obligations:
+  #   7.1 `TMPDIR=$PWD/tmp/tmpdir pnpm build` then
+  #       `TMPDIR=$PWD/tmp/tmpdir PATH="$PWD/node_modules/.bin:$PATH" pnpm exec jaiship plan validate GH-349`
+  #       is `valid` at the delivered HEAD, and
+  #       `... pnpm exec jaiship lint plan GH-349` is `conformant` with exit 0.
+  #       Both verdicts are recorded.
+  #   7.2 G12 (`pnpm check`) exits 0 through lint → format → typecheck → test →
+  #       boundaries → memory → prompt/help/exports parity, with the new suites
+  #       included in the `test` stage. Recorded as a pm-notes `notes:` entry.
+  #   7.3 The docs listed below are reconciled by LIFECYCLE PHASE 7
+  #       (@doc-syncer), not by this plan's phases; they are declared HERE for
+  #       STAGING ONLY. The delivery phases edited exactly two system pages — the
+  #       two binding carriers in phase 1 — and no other system page; that is the
+  #       "docs untouched" statement this plan makes. Every touched
+  #       `redistributable` page keeps its `ados_distribution` marker and G8 must
+  #       pass in this phase.
+  #   7.4 Leave the pull request open against main-tools for human review
+  #       (lifecycle phase 11; merge authority stays outside this change), and
+  #       record its URL as a pm-notes `notes:` entry.
+  #
+  # Verification (expected signal: exit 0 at every line; the three defect suites
+  # green WITH their controls failing as declared; reachability complete; every
+  # pin exact in both directions; the topology pin green with zero workflow
+  # changes; plan validate `valid`; lint plan conformant; the doc-distribution
+  # guard green; the aggregate gate green):
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/defect-f1-merge-refusal-containment.test.ts tests/structure/defect-suite-presence.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/defect-f4-phase-mirror.test.ts tests/behaviour/defect-f8-serial-merge-churn.test.ts   (G10)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/merge-suite-discovery.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/error-table-sync.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour tests/golden              (G1)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure                           (G2)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks                              (G3)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance                         (G4)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/boundaries                          (G5)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck                                     (G6)
+  #   TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/ci-topology.ts              (G7)
+  #   TMPDIR=$PWD/tmp/tmpdir bash scripts/.tests/test-doc-distribution.sh       (G8)
+  #   TMPDIR=$PWD/tmp/tmpdir git diff --check                                   (G9)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm build
+  #   TMPDIR=$PWD/tmp/tmpdir PATH="$PWD/node_modules/.bin:$PATH" pnpm exec jaiship plan validate GH-349
+  #   TMPDIR=$PWD/tmp/tmpdir PATH="$PWD/node_modules/.bin:$PATH" pnpm exec jaiship lint plan GH-349
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                         (G12, BINDING)
+  # ---------------------------------------------------------------------------
+  - id: 7
+    title: "Three defect-named regressions with pre-fix controls, every residual pin exact and non-vacuous, the topology and offline floor, plan validation, and the documentation reconciliation staged for lifecycle phase 7"
+    kind: delivery
+    summary: "test(GH-349): defect-named regressions, the pin floor and the release obligations"
+    weightClass: heavy
+    scope:
+      files:
+        - tests/structure/defect-f1-merge-refusal-containment.test.ts
+        - tests/behaviour/defect-f4-phase-mirror.test.ts
+        - tests/behaviour/defect-f8-serial-merge-churn.test.ts
+        - tests/structure/defect-suite-presence.test.ts
+        - tests/checks/merge-suite-discovery.test.ts
+        - tests/fixtures/merge/serial-three.ts
+        # TC-SYNC-001's reachability half (owned by phase 1, authored here).
+        - tests/checks/error-table-sync.test.ts
+        # Reconciled in lifecycle phase 7 (@doc-syncer), not by this plan's
+        # phases. Declared so the commit primitive can stage them; the required
+        # reconciliation per file is §24.1 Appendix A.
+        - doc/spec/features/feature-merge-verify-deploy.md
+        - doc/spec/features/feature-closeout.md
+        - doc/spec/features/feature-pm-notes-lint-and-phase-transitions.md
+        - doc/spec/features/feature-verify-change-and-exit-taxonomy.md
+        - doc/spec/features/feature-scheduling-engine.md
+        - doc/spec/features/feature-result-contract.md
+        - doc/spec/features/feature-adapter-ports.md
+        - doc/spec/features/feature-adapter-reference-behavior.md
+        - doc/spec/features/feature-adapter-conformance.md
+        - doc/spec/features/feature-capsule.md
+        - doc/guides/milestone-management.md
+        - doc/overview/glossary.md
+        - doc/00-index.md
+        # Command reference pages: the documented merge refusal list, closeout
+        # step list and residue vocabulary, phase mirror rule, lint row list and
+        # queue integrity statement. No new command is added, so the coverage
+        # inventory keeps its command set and every touched page keeps
+        # `--help`/`--version`.
+        - doc/planning/oss-tooling/milestones/m1/commands/merge.md
+        - doc/planning/oss-tooling/milestones/m1/commands/closeout.md
+        - doc/planning/oss-tooling/milestones/m1/commands/phase.md
+        - doc/planning/oss-tooling/milestones/m1/commands/lint.md
+        - doc/planning/oss-tooling/milestones/m1/commands/queue.md
+        - doc/planning/oss-tooling/milestones/m2/commands/queue.md
+      folders:
+        - doc/changes/2026-11/2026-11-18--GH-349--merge-closeout-queue-repair
+    doneArtifacts:
+      mergeRequestUrl: "pull request for feat/GH-349/merge-closeout-queue-repair targeting main-tools, left open for human review (lifecycle phase 11; merge authority stays outside this change)"
+      pipelineId: "CI pipeline for the GH-349 delivery branch (required checks green on the pushed HEAD, including the aggregate gate and the unchanged ts-test job)"
+      trackerTransition: "in-review"
