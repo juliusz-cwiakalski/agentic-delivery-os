@@ -18,6 +18,44 @@ decisions: []
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 3 complete (handover conditions, the declared
+      evidence-read-free revert noop, and per-repository reversibility).
+      Commit 5dd4a1d1. All four evidence-reading outcomes (recorded flip,
+      idempotent flip noop, clean refusal, recorded revert) carry the four
+      ordered `conditions` and `reversible`; the recorded revert now carries
+      `verdict` so `verdict == unverifiable ⟺ truncation` is expressible there;
+      the idempotent revert noop answers before any gate evidence read with
+      `reversible: false` and no `conditions`/`verdict`/`truncation`, while a
+      corrupt handover ledger still refuses `dispatch.state-unverified` at exit 2
+      with no data. Reversibility is one derivation (`reversibilityOf`) shared
+      with the authority document's `reversalAvailable`. Verification:
+      `pnpm typecheck` green; dispatch-handover-conditions 13/13,
+      dispatch-additive-stability 15/15, the four delivered handover controls
+      green, golden dispatch-text green, content-inventory green — 62/62 across
+      the declared gate set. Deviations: `packages/cli/src/edge.ts` now forwards
+      the composition's declared `gate.max` into the handover/revert use cases (a
+      wiring omission, no new flag or key) so the declared truncated-handover
+      cell is reachable; the content-inventory executable allowance gained
+      `reversibilityOf`."
+    type: "info"
+    date: "2026-11-18"
+  - text: "Plan phase 2 complete (summary clean accrual, the trailing streak, and
+      the four-condition projection). Commit aa92d3b8. Appended
+      `cleanDispatches` (declared identical to `corroboration.satisfied`, one
+      derivation), `consecutiveCleanDispatches` (trailing run over the counted
+      window in ledger append order), and `conditions` (four ordered
+      `{condition, status}` entries) after `floor`, with `truncation` last; the
+      text form gained `clean_dispatches=`, `consecutive_clean_dispatches=`, and
+      `conditions=` between `unmet_conditions=` and the truncation line. The
+      summary golden was regenerated once (three additive lines only).
+      Verification: `pnpm typecheck` green; dispatch-clean-accrual 8/8,
+      dispatch-conditions-projection 5/5, dispatch-additive-stability 9/9,
+      dispatch-dual-run-summary + dispatch-gate-window + dispatch-false-success +
+      dispatch-truth-derivation + dispatch-unevaluable green, golden
+      dispatch-summary 2/2, dispatch-text green, content-inventory green — 70/70
+      across the declared gate set."
+    type: "info"
+    date: "2026-11-18"
   - text: "Plan phase 1 complete (shared condition-status shape and the landed
       TDR-0031 decision record). Commit 48b69424. Declared the closed
       `met | open` pair and the

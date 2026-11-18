@@ -96,6 +96,7 @@ export {
 } from "./app/dispatch-attempts.js";
 export {
   type DispatchGateRead,
+  type DispatchHandoverData,
   type DispatchHandoverResult,
   type DispatchSummaryResult,
   handoverDispatchEvidence,

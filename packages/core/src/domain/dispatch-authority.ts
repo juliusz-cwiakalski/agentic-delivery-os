@@ -15,6 +15,16 @@ import {
   type DispatchHandoverState,
 } from "#contracts";
 
+/**
+ * The one reversibility rule: authority is reversible exactly when it is
+ * `authoritative` (TDR-0031 D4).
+ *
+ * The authority document's `reversalAvailable` and the handover/repos data's
+ * `reversible` read this same derivation, so the two readers cannot disagree.
+ */
+export const reversibilityOf = (authority: DispatchHandoverState): boolean =>
+  authority === "authoritative";
+
 /** The folded authority fact for one repository: latest operation wins. */
 export type DispatchAuthorityFold = {
   readonly repository: string;
@@ -51,7 +61,7 @@ export const foldDispatchHandover = (
       authority: authorityOf(record.operation),
       handoverRef: `${record.repository}#${record.recordedAt}`,
       recordedAt: record.recordedAt,
-      reversalAvailable: authorityOf(record.operation) === "authoritative",
+      reversalAvailable: reversibilityOf(authorityOf(record.operation)),
     }))
     .sort((left, right) => (left.repository < right.repository ? -1 : 1));
 };
@@ -73,8 +83,7 @@ export const buildDispatchAuthorityView = (
   };
 };
 
-/** Validate a parsed view; an out-of-shape document is never authoritative. */
-export const parseDispatchAuthorityView = (value: unknown): DispatchAuthorityView | undefined => {
+/** Validate a parsed view; an out-of-shape document is never authoritative. */export const parseDispatchAuthorityView = (value: unknown): DispatchAuthorityView | undefined => {
   if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
   const record = value as Partial<Record<keyof DispatchAuthorityView, unknown>>;
   if (record.schema !== DISPATCH_AUTHORITY_SCHEMA) return undefined;

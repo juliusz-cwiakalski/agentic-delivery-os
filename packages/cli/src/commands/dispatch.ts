@@ -12,7 +12,7 @@
  * or a classified failure and never chooses an exit literal.
  */
 
-import type { DispatchRunResult } from "@delivery-os/core";
+import type { DispatchHandoverData, DispatchRunResult } from "@delivery-os/core";
 import {
   ATTEMPTS_LIMIT_PATTERN,
   ATTEMPTS_MAX_LIMIT,
@@ -114,15 +114,7 @@ export type DispatchResolveRuntime = {
 /** The handover/reversal surface; phase 6 composes it. */
 export type DispatchHandoverRuntime = {
   readonly handover: (input: { readonly repo: string; readonly revert: boolean }) => Promise<
-    | {
-        readonly ok: true;
-        readonly data: {
-          readonly repository: string;
-          readonly operation: "authoritative" | "dual-run";
-          readonly recorded: boolean;
-          readonly noop: boolean;
-        };
-      }
+    | { readonly ok: true; readonly data: DispatchHandoverData }
     | { readonly ok: false; readonly error: DispatchRuntimeFailure }
   >;
 };

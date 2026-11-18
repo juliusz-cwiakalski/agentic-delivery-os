@@ -6978,6 +6978,7 @@ export const createDispatchGateRuntime = (
               scope: composition.gate.scope,
               nowIso: composition.nowIso(),
               principal: composition.gate.principal,
+              ...(composition.gate.max === undefined ? {} : { max: composition.gate.max }),
             })
           : handoverDispatchEvidence({
               store: composition.store,
@@ -6986,6 +6987,7 @@ export const createDispatchGateRuntime = (
               scope: composition.gate.scope,
               nowIso: composition.nowIso(),
               principal: composition.gate.principal,
+              ...(composition.gate.max === undefined ? {} : { max: composition.gate.max }),
             });
       },
     },

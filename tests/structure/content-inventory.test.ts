@@ -196,6 +196,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "isAuthoritative",
     "parseDispatchAuthorityText",
     "parseDispatchAuthorityView",
+    "reversibilityOf",
   ],
   "core/src/domain/dispatch-comparison.ts": [
     "buildComparisonRecord",
