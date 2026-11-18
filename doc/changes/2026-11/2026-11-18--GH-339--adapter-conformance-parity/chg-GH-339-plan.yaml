@@ -8,7 +8,7 @@
 # gate result).
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:     ./chg-GH-339-spec.md (v1.3: F-1..F-5; 34 ACs AC-F1-1..AC-F5-3;
+#   - Spec:     ./chg-GH-339-spec.md (v1.4: F-1..F-5; 34 ACs AC-F1-1..AC-F5-3;
 #               API-1..API-5; DM-1..DM-7; NFR-1..NFR-11; NG-1..NG-11;
 #               DEC-1..DEC-6; RSK-1..RSK-11; §6 flows 1–5; §7.1 in-scope list;
 #               §8.3 data model; §17 criteria; §18 sequencing; §24.1 Appendix A
@@ -280,8 +280,11 @@
 #                            WHETHER A PAGE COUNT IS REPORTED. The numeric bound and
 #                            count are diagnostic, never equality.
 #     carrier-absent         the adapter's declared carrier arrays plus the carrier
-#                            step's PARTICIPATION (executed, or skipped
-#                            `capability-absent` / `no-declared-carrier`).
+#                            step's PARTICIPATION — the participation half OBSERVED
+#                            ONLY on the pair whose operation is the carrier step
+#                            (`write-comment`), `not-observable` on every other pair,
+#                            and absent altogether on a declared-gap carrier pair
+#                            (which is a `gap` cell and compares nothing).
 #     failure-classification the API-2 class resolved from a trap-family stimulus on
 #                            the family's declared operation (identity plus status
 #                            presence and value), never prose.
@@ -1031,9 +1034,22 @@ phases:
   #       `pagination-model`       the read's DECLARED PAGE BOUND (or none declared)
   #                                and WHETHER A PAGE COUNT IS REPORTED. The numeric
   #                                bound and count are diagnostic, never equality.
-  #       `carrier-absent`         the adapter's declared carrier arrays plus the
-  #                                carrier step's PARTICIPATION (executed, or skipped
-  #                                `capability-absent` / `no-declared-carrier`).
+  #       `carrier-absent`         the adapter's declared carrier arrays
+  #                                (`writableCarriers`/`readableCarriers`, a subset
+  #                                of the closed `CARRIER_KINDS`), plus the carrier
+  #                                step's PARTICIPATION — and the participation half
+  #                                is observed ONLY on the pair whose operation IS
+  #                                the carrier step (`comment-provenance.carrier-roundtrip`
+  #                                on `write-comment`): there it is `executed`, or
+  #                                skipped `capability-absent` /
+  #                                `no-declared-carrier`. On EVERY other pair the
+  #                                participation half is `not-observable` (the step is
+  #                                not that pair's carrier step) and agrees with
+  #                                another `not-observable`. On an adapter whose
+  #                                carrier operation is a DECLARED GAP the pair is a
+  #                                `gap` cell, so it carries NO observation at all and
+  #                                the absence of participation produces NO difference
+  #                                — a gap is not a carrier divergence.
   #       `failure-classification` the API-2 class resolved from a trap-family
   #                                stimulus on the family's declared operation
   #                                (identity plus status presence and value), never
@@ -1050,8 +1066,10 @@ phases:
   #         the REPLAYED NORMALIZED RESULT on the pair's declared tenant;
   #     (ii) bound-and-count PRESENCE comes from the read's declared metadata and
   #          the read's own report;
-  #     (iii) the carrier declaration comes from the capability declaration and the
-  #           carrier step's participation from the report;
+  #     (iii) the carrier declaration comes from the capability declaration, and its
+  #           PARTICIPATION component from the report ONLY on the carrier pair
+  #           (`write-comment`); on every other pair that component is
+  #           `not-observable`;
   #     (iv) the class comes from API-2's classification of a trap-family stimulus.
   #     `not-observable` IS NOT AGREEMENT BY DEFAULT: two `not-observable`
   #     observations agree only when BOTH report it, and `observed` against
@@ -1177,9 +1195,10 @@ phases:
   #       (`tests/structure/inventory.json`, `EXECUTABLE_ALLOWANCES`).
   #       `packages/testkit/src/conformance/artifact.ts` is NOT edited: AC-F1-8
   #       and §24.3(4) make it a read-only control. The `ConformanceReport` shape is
-  #       likewise untouched: no observation, observation-state, identity-scheme,
-  #       pipeline-model, state-vocabulary, pagination, carrier, assertion-family or
-  #       truncation field is added to it, and no dimension may be made observable
+  #       likewise untouched: no observation or observation-state field, and no
+  #       dimension-derived field (identity scheme, pipeline unit/composition, state
+  #       mechanism, bound-and-count presence, carrier declaration or participation,
+  #       classification) is added to it, and no dimension may be made observable
   #       by widening the report.
   #
   # Acceptance: AC-F1-1 (PARITY-001/007), AC-F1-2 (002), AC-F1-3 (003),
@@ -1226,10 +1245,17 @@ phases:
         - tests/conformance/artifact.test.ts
         - tests/types/conformance-participation.type-test.ts
         - tests/fixtures/providers/conformance/parity/adjudication.json
-        # The gate's declared absence-and-truncation evidence per (adapter,
-        # operation) — the fourth observation dimension's ONLY source, since no
-        # closed-operation view carries a truncation signal. Input to the gate
-        # only; never a report or artifact field.
+        # The gate's declared observation record: one `{state:"observed", value}`
+        # or `{state:"not-observable", why}` per dimension per (adapter, operation)
+        # pair, across all SIX dimensions, with the per-dimension sources named
+        # above — the replayed normalized result (identity scheme, pipeline unit and
+        # composition, state-resolution mechanism), the read's declared bound and
+        # count presence, the carrier declaration plus the carrier-step
+        # participation (scoped to `write-comment`), and the API-2 classification.
+        # It HOLDS the declared observations; it is not any single dimension's only
+        # source, and no closed-operation view carries the pagination facts, which
+        # is why those are declared evidence. Input to the gate only; never a
+        # report or artifact field.
         - tests/fixtures/providers/conformance/parity/observation-record.json
         - tests/fixtures/providers/conformance/parity/mutations.ts
         - tests/structure/inventory.json
