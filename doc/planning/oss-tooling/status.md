@@ -23,6 +23,20 @@ ideas only). This file is a status snapshot; the backlogs remain canonical.
   unplanned ideas. The milestone renumbering is recorded in the roadmap
   (M3 integrations, M4 Jaiship-native delivery, M5 public release readiness).
 
+## M3-S1 delivery record (GH-335, 2026-11-18)
+
+M3-S1 (opencode v2.x harness and telemetry) is delivered on branch
+`feat/GH-335/opencode-harness-telemetry`: the pinned supported-version window and
+probe grammar with their two typed refusals, the declared integration mode with
+its origin, the pure agent-to-seat resolution and its per-spawn `--agent`/
+`--model` mapping at the harness port, the four new pre-session refusal identities
+with the declared `detail.harness` evidence member, per-attempt held identities and
+recorded bindings with union attribution at closeout, and additive
+`delivery.harness.telemetry.v1` fields (`seat`, `resolvedModel`, `durations`,
+`absentObservedAxes`) sourced from the observed store contract. The conformance
+registry keeps its six-scenario classification floor and adds four extension
+scenarios through the same registry. M3 remains open pending the remaining stories.
+
 ## M0 exit amendment and M1 re-planning (2026-11-03)
 
 Recorded with the M1 re-planning (GH-219):

@@ -4,7 +4,7 @@ Verdict: **READY**
 Work Item: GH-349 (M4-S11: Merge, closeout, and queue repair on the primitives, M4)
 Date: 2026-11-18
 Pause Required: no
-Reviewer stance: adversarial Definition-of-Ready gate (`@readiness-reviewer`), iteration 5, run at `c5dc2b15` (post-sync `f65beb4e`) against spec **v1.7**, test plan **v1.9** (87 TCs, 116 controls), the plan (7 phases; phase 5 = **64** files), the amended ADR-0012 / TDR-0040 / ODR-0005, pm-notes, the source ticket (`gh issue view 349`), and the delivered tree. At this gate: `delivery-os plan validate GH-349` → `valid / full / readyForDevelopment=true`; `delivery-os lint plan GH-349` → `valid`, zero errors.
+Reviewer stance: adversarial Definition-of-Ready gate (`@readiness-reviewer`), iteration 5, run at `c5dc2b15` (post-sync `f65beb4e`) against spec **v1.7**, test plan **v1.9** (87 TCs, 116 controls), the plan (7 phases; phase 5 = **64** files), the amended ADR-0012 / TDR-0044 / ODR-0005, pm-notes, the source ticket (`gh issue view 349`), and the delivered tree. At this gate: `delivery-os plan validate GH-349` → `valid / full / readyForDevelopment=true`; `delivery-os lint plan GH-349` → `valid`, zero errors.
 
 **All six iteration-4 residuals are closed, and the independent scan still finds no unowned pin.** The four required corrections landed exactly as specified: the parity module is now split into one derived column plus two authored literal columns with a reciprocal Appendix E item 6 cross-reference; the eighteen-pin count is unchanged and reproduces; no live "thirteen pins" count remains; `TC-FLOOR-003`'s read-only set is narrowed and names the four exceptions; both `provider-surface` arrays are named; the three scan hits are classified; and the stated sweep readings now reproduce numerically (measured at this gate: 275 / 423 / 947 / 1 095 / 391, population 2 135 — all five exact).
 
@@ -56,7 +56,7 @@ No file in this list is a pin omitted from the inventory, and the Appendix H res
 | plan_coverage | **PASS** — 87/87 TCs and 46/46 ACs appear in the plan; phase 5 owns the milestone set, the 18 pins and the parity edit; every AC keeps a case inside its owning phase. |
 | test_traceability | **PASS** — 46/46 §3.1 rows present (measured); the declared cross-phase citation set is five, with AC-F4-1 → TC-SYNC-010 as item 5 and a non-exclusivity proof; no orphan case. |
 | cross_artifact_consistency | **PASS** (N1, N2 recorded) — no contradiction that changes what delivery must do; the one count question is resolved by G2 against the real client. |
-| decision_capture | **PASS** — ADR-0012, TDR-0040, ODR-0005 all `status: Proposed`, each declared in phase 1 with its index row and never edited by a later phase; OQ-1 remains a phase-5 gate (see N6 on the tree state of the three files). |
+| decision_capture | **PASS** — ADR-0012, TDR-0044, ODR-0005 all `status: Proposed`, each declared in phase 1 with its index row and never edited by a later phase; OQ-1 remains a phase-5 gate (see N6 on the tree state of the three files). |
 | system_spec_consistency | **PASS** — no artifact contradicts a current-truth page; the three delivered-check-bound pages, the case-bound and AC-bound pages, and the registry-bound conformance page are correctly separated. |
 | plan_doc_update_coverage | **PASS** — phase 1: two identity pages + three decision records + the index; phase 5: `feature-adapter-reference-behavior`, `feature-closeout`, `milestone-management`; phase 7: 24 doc pages; the `ados_distribution` obligation is stated. |
 | plan_code_area_coverage | **PASS** — 18/18 pins, `parity.ts`, the state-layer arms, the two goldens, the conformance ripple and both `provider-surface` arrays are staged in phase 5; every file an edit is needed in is declared (N1 is a length, not a scope). |
@@ -100,7 +100,7 @@ Appendix H says "every hit of that filter is classified below" and "a hit a read
 
 ### N6 [nit] tree-state note — the three amended decision records are untracked at HEAD while their index rows are committed
 
-`git status` at this HEAD shows `doc/decisions/{ADR-0012,TDR-0040,ODR-0005}-*.md` as untracked, while `doc/decisions/00-index.md` (tracked, identical to HEAD) already links to all three at `:24`, `:27`, `:72` with `status: Proposed`. Phase 1 declares both the records and the index in its scope, so delivery closes the gap in its first commit; the note exists so the coder does not read the committed index rows as evidence that the records are already delivered, and passes the three files through the `commit` primitive with the rest of phase 1.
+`git status` at this HEAD shows `doc/decisions/{ADR-0012,TDR-0044,ODR-0005}-*.md` as untracked, while `doc/decisions/00-index.md` (tracked, identical to HEAD) already links to all three at `:24`, `:27`, `:72` with `status: Proposed`. Phase 1 declares both the records and the index in its scope, so delivery closes the gap in its first commit; the note exists so the coder does not read the committed index rows as evidence that the records are already delivered, and passes the three files through the `commit` primitive with the rest of phase 1.
 
 ## Prior-iteration regression check
 

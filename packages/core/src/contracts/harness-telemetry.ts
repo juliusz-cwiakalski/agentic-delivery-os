@@ -46,9 +46,61 @@ export const HARNESS_WARNING_REASONS = [
   "session-capture-failed",
   "unattributable-session",
   "invalid-session-identity",
+  // GH-335: the seat, divergence, duration, tool-source, and mandatory-usage reasons.
+  "model-divergence",
+  "agent-divergence",
+  "duration-absent",
+  "unresolved-seat",
+  "no-tool-source",
+  "no-usage-fact",
 ] as const;
 
 export type HarnessWarningReason = (typeof HARNESS_WARNING_REASONS)[number];
+
+/** The one reason a null seat cites (GH-335, TDR-0040 A-3). */
+export const HARNESS_UNRESOLVED_SEAT_REASON = "unresolved-seat" as const;
+
+/** The closed observed-identity axis vocabulary (GH-335 AC-F5-7). */
+export const HARNESS_OBSERVED_AXES = ["agent", "model"] as const;
+
+export type HarnessObservedAxis = (typeof HARNESS_OBSERVED_AXES)[number];
+
+/**
+ * The declared empty-string placeholder the delivered non-null `agent`/`model`
+ * fields hold when the store states no value for that axis (AC-F5-7).
+ *
+ * It names no identity, matches no neighbouring group, and is never read as a
+ * real identity: the machine-readable absence signal is `absentObservedAxes`.
+ */
+export const HARNESS_OBSERVED_ABSENCE_PLACEHOLDER = "" as const;
+
+/** The closed absence-reason vocabulary for a held session the store does not hold. */
+export const HARNESS_ABSENCE_REASONS = ["session-not-in-store"] as const;
+
+export type HarnessAbsenceReason = (typeof HARNESS_ABSENCE_REASONS)[number];
+
+/** One held session classified absent by the readable store. */
+export type HarnessCaptureAbsence = {
+  readonly sessionId: string;
+  readonly reason: HarnessAbsenceReason;
+};
+
+/**
+ * The store-sourced duration facts (GH-335 F-5, DM-6, AC-F5-4).
+ *
+ * `sourced` carries the store's own timestamp pair and the difference between
+ * them (including a reported zero). `absent` is an explicit absence with the
+ * declared reason; a duration is never estimated and never derived from the
+ * capture timestamp.
+ */
+export type HarnessTelemetryDurations =
+  | {
+      readonly status: "sourced";
+      readonly start: string;
+      readonly end: string;
+      readonly elapsedMs: number;
+    }
+  | { readonly status: "absent"; readonly reason: "duration-absent" };
 
 /** One warning: the closed reason plus the affected field or file. */
 export type HarnessTelemetryWarning = {
@@ -86,7 +138,16 @@ export type HarnessTelemetryRecord = {
   readonly sessionId: string;
   readonly harnessKind: HarnessKind;
   readonly harnessVersion: string | null;
+  /**
+   * The harness-reported agent (the field TDR-0040 A-3 calls `agentRole`).
+   * Non-null; holds the declared empty-string placeholder when the store states
+   * no agent, with `absentObservedAxes` naming that axis.
+   */
   readonly agent: string;
+  /**
+   * The observed model. Non-null; holds the declared empty-string placeholder
+   * when the store states no model, with `absentObservedAxes` naming that axis.
+   */
   readonly model: string;
   readonly treeRoot: string;
   readonly parentChain: readonly string[];
@@ -97,6 +158,22 @@ export type HarnessTelemetryRecord = {
   readonly cost: number | null;
   readonly capturedAt: string;
   readonly warnings: readonly HarnessTelemetryWarning[];
+  /**
+   * The recorded seat from the recording attempt's binding (GH-335 DM-5); `null`
+   * with the `unresolved-seat` warning where the run bound none, the group's
+   * observed agent differs from the binding's agent, or the observed agent is
+   * unstated. Absent on a pre-change row.
+   */
+  readonly seat?: string | null;
+  /** The recorded resolved model from the same binding; `null` under the same rule. */
+  readonly resolvedModel?: string | null;
+  /** The store-sourced duration facts, or an explicit absence (AC-F5-4). */
+  readonly durations?: HarnessTelemetryDurations;
+  /**
+   * The observed-identity axis or axes the store leaves unstated (AC-F5-7).
+   * Omitted when both axes are observed; never empty, never duplicated.
+   */
+  readonly absentObservedAxes?: readonly HarnessObservedAxis[];
 };
 
 /** One agent roll-up with its call count. */
@@ -130,6 +207,15 @@ export type HarnessTelemetryCapture = {
   readonly sessionTruncation?: HarnessTruncation;
   readonly agentTruncation?: HarnessTruncation;
   readonly modelTruncation?: HarnessTruncation;
+  /**
+   * Held sessions the readable store does not hold, classified absent (F-6).
+   * Never a zero-valued row, and never a damage classification.
+   */
+  readonly absences?: readonly HarnessCaptureAbsence[];
+  /** Recorded dispatch attempts that held no session identity (DM-8), counted. */
+  readonly unattributedAttempts?: number;
+  /** The counted truncation of the bounded attempt-ledger read (AC-F5-5). */
+  readonly attemptTruncation?: HarnessTruncation;
 };
 
 /** The append result: how many records landed and how many already existed. */
@@ -147,7 +233,19 @@ export type HarnessCaptureOutcomeRecord = {
   readonly degraded: number;
   readonly failed: number;
   readonly warnings: readonly HarnessTelemetryWarning[];
+  /** The held sessions the readable store does not hold, by closed reason (GH-335 F-4). */
+  readonly absences?: readonly HarnessCaptureAbsenceCount[];
+  /** Recorded attempts that held no session identity, counted (F-4). */
+  readonly unattributedAttempts?: number;
+  /** The bounded attempt read's counted truncation (F-4). */
+  readonly attemptTruncation?: HarnessTruncation;
   readonly capturedAt: string;
+};
+
+/** One counted absence reason on the durable capture outcome. */
+export type HarnessCaptureAbsenceCount = {
+  readonly reason: HarnessAbsenceReason;
+  readonly count: number;
 };
 
 /** The machine-payload byte bound shared with the result contract (NFR-4). */

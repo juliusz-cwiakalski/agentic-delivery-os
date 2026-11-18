@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-TELEMETRY-V2
 status: Current
 created: 2026-11-13
-last_updated: 2026-11-17
+last_updated: 2026-11-18
 owners: ["engineering"]
 service: delivery-os
-summary: "Harness telemetry v2: per-step token, calls, and cost ingest beside the delivered opencode JSONL drain with present-zero distinguished from omitted, five-dimension attribution joined from session economics and command-audit identity, one bounded read-only per-session totals query at stream close captured as a harness.telemetry.baseline record, schema-versioned additive step and baseline record families under delivery.telemetry.storage.v1 with re-read migration, classified damage, linear growth, the stream-ingest/closeout-capture/combined reading bases with the declared session-dedup combination rule, the storage identity the peak-pause window-scoped zero-spend evidence counts over, the metrics report's dispatch and burn-rate reads over the same families, and aggregates-only privacy."
+summary: "Harness telemetry v2: per-step token, calls, and cost ingest beside the delivered opencode JSONL drain with present-zero distinguished from omitted, five-dimension attribution joined from session economics and command-audit identity, one bounded read-only per-session totals query at stream close captured as a harness.telemetry.baseline record, schema-versioned additive step and baseline record families under delivery.telemetry.storage.v1 with re-read migration, classified damage, linear growth, the captured delivery.harness.telemetry.v1 row's additive seat, resolved-model, store-sourced duration, and observed-axis-absence members over the observed store contract, the stream-ingest/closeout-capture/combined reading bases with the declared session-dedup combination rule, the storage identity the peak-pause window-scoped zero-spend evidence counts over, the metrics report's dispatch and burn-rate reads over the same families, and aggregates-only privacy."
 links:
-  related_changes: ["GH-291", "GH-294", "GH-299"]
-  related_decisions: ["ADR-0003", "ADR-0008", "TDR-0004", "TDR-0016"]
+  related_changes: ["GH-291", "GH-294", "GH-299", "GH-335"]
+  related_decisions: ["ADR-0003", "ADR-0008", "TDR-0004", "TDR-0016", "TDR-0040", "TDR-0043"]
   contracts:
     - "packages/core/src/contracts/telemetry.ts"
     - "packages/core/src/contracts/harness-telemetry.ts"
@@ -19,7 +19,7 @@ links:
 
 # Feature: Harness Telemetry v2
 
-> **Role of this Document:** Source of truth for the delivered harness telemetry v2 capture, attribution, and storage contract (M2-S14). It describes the ingest path, the attribution join, the baseline capture, the storage families, and the reading bases. The read side that consumes these records is specified in [Spend Read Side](feature-spend.md); the delivered closeout capture path is specified in [Harness Adapters](feature-harness-adapters.md) and is unchanged.
+> **Role of this Document:** Source of truth for the delivered harness telemetry v2 capture, attribution, and storage contract (M2-S14). It describes the ingest path, the attribution join, the baseline capture, the storage families, and the reading bases. The read side that consumes these records is specified in [Spend Read Side](feature-spend.md); the delivered closeout capture path is specified in [Harness Adapters](feature-harness-adapters.md).
 
 ## 1. Overview
 
@@ -37,6 +37,55 @@ Every stored step carries five attribution dimensions: `ticket`, `repository`, `
 - `runId` and `sessionId` join the delivered session-economics identity; `treeRoot` records the checkout. The sink's run identity is the invoking command's audit run id, so every stored step record joins the command-audit ledger by that value; a composition that carries no invocation run id records the declared `run-unavailable` marker instead of inventing one.
 
 An absent dimension is stored as `null` and the record carries the closed `unattributable-step` warning naming the field. A dimension is never defaulted, guessed, or borrowed from another session.
+
+## 2a. Captured harness rows: seat, resolved model, and durations
+
+The closeout-captured `delivery.harness.telemetry.v1` row carries four additive
+optional members under the unchanged schema identity, and no delivered field is
+renamed, removed, or duplicated. `seat` and `resolvedModel` are the recording
+dispatch attempt's recorded binding (a single seat); they are `null` with the
+`unresolved-seat` warning where the attempt bound none, where the group's observed
+agent differs from the binding's agent (which also carries the `agent-divergence`
+warning with both values kept), or where the group's observed agent is unstated.
+`durations` is either the store's own timestamp pair with its literal start, end,
+and elapsed milliseconds or an explicit `{status: "absent"}` with the
+`duration-absent` warning; it is never estimated and never derived from the
+capture timestamp. The delivered non-null `agent` and `model` ARE the
+harness-reported agent and the observed model, so no duplicate member carries
+either; a model the store observes differently from the binding's resolved model
+adds the `model-divergence` warning with both values kept.
+
+An observed agent or model axis the store states nowhere lands with exactly one
+additive `absentObservedAxes` member over the closed `agent`/`model` vocabulary:
+the row still lands (the mandatory set is the session identity plus one observable
+usage fact), the delivered non-null field holds the declared empty-string
+placeholder, the delivered `optional-field-absent` warning names the same axis, and
+`invalid-session-identity` is not emitted for that group. The field is never
+widened to nullable, and an unstated observed agent forces a null seat with
+`unresolved-seat`. The delivered `invalid-session-identity` keeps only its literal
+meaning: a genuinely unusable group identity.
+
+A store-reported zero cost is recorded as the reported zero (no `cost-missing`
+warning); a cost source that supplies no value is `null` with `cost-missing`; a
+non-numeric cost is `null` with `non-numeric-value`. The opencode store's `cost`
+column is non-null with a zero default, so its reported zero is never read as an
+absence there. No observed opencode store generation exposes a populated tool
+source, so tool counts are absent with the `no-tool-source` warning. A held
+session with no observable usage fact is a failed-session entry with
+`no-usage-fact`, and a held session the readable store does not hold is an absence
+with `session-not-in-store` rather than damage.
+
+A row's `harnessVersion` is the session record's own `version` stamp normalized to
+the bare semantic version under the declared 32-character bound; a stamp that is
+absent, off-grammar, or over the bound lands as `null` with `optional-field-absent`
+naming `harnessVersion`, never fabricated or clipped into shape. When the recording
+attempt cited an observed version, a row whose normalized version differs carries
+the `version-drift` warning naming `harnessVersion`. On the current `session_message`
+generation the opencode group projection reads the assistant usage rows together
+with the observed `agent-switched` and `model-switched` transition rows in `seq`
+order and applies each switch as the running baseline, so a session that changes
+agent or model mid-run keeps one group per observed agent/model pair; the bounded
+per-session read counts rows, not usage rows.
 
 ## 3. Ingest rules
 
@@ -108,7 +157,7 @@ The metrics report is the second declared consumer: its `dispatch` block reads t
 - [Spend Read Side](feature-spend.md) — the fold, breakdowns, timing summaries, window-scoped zero-spend evidence, and reconciliation disclosure over these records.
 - [Metrics Report and Burn-Rate Alarms](feature-metrics.md) — the per-dispatch block and the windowed burn-rate evaluation over these records.
 - [Provider Peak Pausing](feature-peak-pausing.md) — the peak-pause consumer of the window-scoped evidence.
-- [Harness Adapters](feature-harness-adapters.md) — the delivered port surface, the streaming drain, and the unchanged closeout capture.
+- [Harness Adapters](feature-harness-adapters.md) — the delivered port surface, the streaming drain, and the closeout capture path.
 - [Session Lifecycle Economics](feature-session-lifecycle-economics.md) — the run and session identity the attribution joins.
 - [State Layer](feature-state-layer.md) — the record kind, fencing, verification, and classified damage identities.
 - [Status Digest](feature-status-digest.md) — section 8, fed by the same fold.

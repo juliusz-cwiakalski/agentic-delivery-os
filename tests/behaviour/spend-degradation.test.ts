@@ -99,6 +99,14 @@ describe("TC-SPEND-004 null classes are excluded, never fabricated", () => {
         "session-capture-failed": 1,
         "unattributable-session": 0,
         "invalid-session-identity": 0,
+        // GH-335 adds the seat, divergence, duration, tool-source, and
+        // mandatory-usage reasons; none is present in this seed.
+        "model-divergence": 0,
+        "agent-divergence": 0,
+        "duration-absent": 0,
+        "unresolved-seat": 0,
+        "no-tool-source": 0,
+        "no-usage-fact": 0,
       });
       expect(Object.keys(fold.data.degradation.byReason).sort()).toEqual(
         [...HARNESS_WARNING_REASONS].sort(),

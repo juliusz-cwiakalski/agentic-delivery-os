@@ -1,18 +1,20 @@
 /**
- * The opencode per-session totals read (GH-291 OQ-T2 §1, F-6, NFR-6).
+ * The opencode per-session totals read over the OBSERVED store contract
+ * (GH-291 OQ-T2 §1, GH-335 F-5/F-6; DM-10, NFR-6).
  *
  * At stream close the ingest seam asks the harness store one bounded, read-only
- * question: what did this one session report? The answer is the store's own
- * SUM aggregation — the same figures the delivered closeout extractor reads —
- * scoped to a single session id. The read opens the store read-only, sets the
- * query-only pragma before any read, and never touches conversation content.
+ * question: what did this one session report? The answer is the session row's
+ * own token columns and cost plus the count of its usage-bearing assistant
+ * messages — the same figures the closeout extractor reads, so the per-step
+ * rows and the session baseline are one totals basis rather than two.
  *
- * An unavailable store, an unreadable column set, or a query failure answers
- * `undefined`: no baseline is fabricated, and the session is disclosed as an
- * excluded baseline session downstream (DEC-5).
+ * An unavailable store, an unrecognised generation, or a query failure answers
+ * `undefined`: no baseline is fabricated and the session is disclosed as an
+ * excluded baseline downstream (DEC-5, DEC-9).
  */
-import { HARNESS_TOKEN_CLASSES, type HarnessTokenCounts } from "@delivery-os/core/contracts";
+import type { HarnessTokenCounts } from "@delivery-os/core/contracts";
 import {
+  type HarnessSqliteHandle,
   type HarnessSqliteRow,
   type HarnessStoreOpener,
   openHarnessStoreReadOnly,
@@ -36,23 +38,54 @@ export type OpencodeSessionTotalsOptions = {
   readonly onStatement?: (sql: string) => void;
 };
 
-/** The token columns the store actually declares (a renamed column is absent). */
-const COLUMNS: Readonly<Record<keyof HarnessTokenCounts, string>> = {
-  input: "input_tokens",
-  output: "output_tokens",
-  reasoning: "reasoning_tokens",
-  cacheRead: "cache_read_tokens",
-  cacheWrite: "cache_write_tokens",
-};
-
 const num = (value: unknown): number | null =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
 
 const str = (value: unknown): string | undefined =>
   typeof value === "string" && value.length > 0 ? value : undefined;
 
-const columnsOf = (rows: readonly HarnessSqliteRow[]): ReadonlySet<string> =>
-  new Set(rows.flatMap((row) => str(row.name) ?? []));
+/** The observed session generation the store carries, or undefined. */
+const generationOf = (handle: HarnessSqliteHandle): "current" | "legacy" | undefined => {
+  const tables = new Set(
+    handle
+      .query("SELECT name FROM sqlite_master WHERE type = 'table'")
+      .map((row) => str(row.name))
+      .filter((name): name is string => name !== undefined),
+  );
+  if (tables.has("session_v2") && tables.has("session_message")) return "current";
+  if (tables.has("session") && tables.has("message")) return "legacy";
+  return undefined;
+};
+
+const totalsOf = (
+  handle: HarnessSqliteHandle,
+  sessionId: string,
+): TelemetrySessionTotals | undefined => {
+  const generation = generationOf(handle);
+  if (generation === undefined) return undefined;
+  const sessionTable = generation === "current" ? "session_v2" : "session";
+  const row: HarnessSqliteRow | undefined = handle.query(
+    `SELECT cost, tokens_input, tokens_output, tokens_reasoning, tokens_cache_read, tokens_cache_write FROM ${sessionTable} WHERE id = ? LIMIT 1`,
+    [sessionId],
+  )[0];
+  if (row === undefined) return undefined;
+  const messageScope =
+    generation === "current"
+      ? `SELECT COUNT(*) AS calls FROM session_message WHERE session_id = ? AND type = 'assistant' LIMIT 1`
+      : `SELECT COUNT(*) AS calls FROM message WHERE session_id = ? LIMIT 1`;
+  const calls = num(handle.query(messageScope, [sessionId])[0]?.calls);
+  return {
+    tokens: {
+      input: num(row.tokens_input),
+      output: num(row.tokens_output),
+      reasoning: num(row.tokens_reasoning),
+      cacheRead: num(row.tokens_cache_read),
+      cacheWrite: num(row.tokens_cache_write),
+    },
+    calls,
+    cost: num(row.cost),
+  };
+};
 
 /** Build the read-only per-session totals reader. */
 export const createOpencodeSessionTotalsReader = (
@@ -61,42 +94,15 @@ export const createOpencodeSessionTotalsReader = (
   return (sessionId) => {
     const opened = openHarnessStoreReadOnly(options.opener, options.storePath, options.onStatement);
     if (!opened.ok) return undefined;
-    const handle = opened.handle;
     try {
-      const columns = columnsOf(handle.query("PRAGMA table_info(message)"));
-      const selected = HARNESS_TOKEN_CLASSES.map((tokenClass) => {
-        const column = COLUMNS[tokenClass];
-        return columns.has(column) ? `SUM(${column}) AS ${tokenClass}` : `NULL AS ${tokenClass}`;
-      });
-      const cost = columns.has("cost") ? "SUM(cost) AS cost" : "NULL AS cost";
-      const rows = handle.query(
-        `SELECT COUNT(*) AS calls, ${[...selected, cost].join(", ")} FROM message WHERE session_id = ?`,
-        [sessionId],
-      );
-      const row = rows[0];
-      if (row === undefined) return undefined;
-      const tokens: Record<string, number | null> = {};
-      for (const tokenClass of HARNESS_TOKEN_CLASSES) {
-        tokens[tokenClass] = columns.has(COLUMNS[tokenClass]) ? num(row[tokenClass]) : null;
-      }
-      return {
-        tokens: {
-          input: tokens.input ?? null,
-          output: tokens.output ?? null,
-          reasoning: tokens.reasoning ?? null,
-          cacheRead: tokens.cacheRead ?? null,
-          cacheWrite: tokens.cacheWrite ?? null,
-        },
-        calls: num(row.calls),
-        cost: columns.has("cost") ? num(row.cost) : null,
-      };
+      return totalsOf(opened.handle, sessionId);
     } catch {
       return undefined;
     } finally {
       try {
-        handle.close();
+        opened.handle.close();
       } catch {
-        // Closing a read-only handle is best effort; the store is untouched.
+        // Best effort: a read-only handle closes or fails harmlessly.
       }
     }
   };

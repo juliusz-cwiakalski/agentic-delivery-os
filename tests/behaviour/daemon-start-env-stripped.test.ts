@@ -206,6 +206,10 @@ describe("TC-DAEMON-041 fixture (b): no home and no override", () => {
     const existedBefore = existsSync(rootLevel);
     try {
       const composer = createProductionComposer({
+        harnessVersionProbe: async () => ({
+          status: "answered" as const,
+          stdout: "opencode v2.3.2",
+        }),
         environment: {},
         cwd: root,
         homeDirectory: "",

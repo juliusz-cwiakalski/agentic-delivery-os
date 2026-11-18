@@ -61,6 +61,10 @@ describe("TC-EVT-060 events production composition", () => {
     const root = tempRoot();
     try {
       const program = createProductionComposer({
+        harnessVersionProbe: async () => ({
+          status: "answered" as const,
+          stdout: "opencode v2.3.2",
+        }),
         environment: { HOME: root, PATH: "/usr/bin" },
         cwd: root,
         homeDirectory: root,
@@ -84,6 +88,10 @@ describe("TC-EVT-060 events production composition", () => {
       const stdout = bufferSink();
       const stderr = bufferSink();
       const composer = createProductionComposer({
+        harnessVersionProbe: async () => ({
+          status: "answered" as const,
+          stdout: "opencode v2.3.2",
+        }),
         environment: { HOME: root, PATH: "/usr/bin" },
         cwd: root,
         homeDirectory: root,

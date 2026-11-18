@@ -687,22 +687,82 @@ describe("TC-CONF-005 structural non-vacuity floors", () => {
   });
 });
 
-describe("TC-HARN-004 harness conformance registry coverage", () => {
-  test("the harness registry lists exactly the two shipped kinds with every scenario", async () => {
+describe("TC-HARN-004 / TC-HARNESS-031/032 harness conformance registry coverage", () => {
+  test("the floor is exactly the six delivered ids in order, and both kinds register them", async () => {
     const {
+      HARNESS_CONFORMANCE_FLOOR_SCENARIOS,
       HARNESS_CONFORMANCE_REGISTRY,
-      HARNESS_CONFORMANCE_SCENARIOS,
       harnessConformanceViolations,
     } = await import("../../packages/testkit/src/conformance/harness");
+    expect([...HARNESS_CONFORMANCE_FLOOR_SCENARIOS]).toEqual([
+      "completed",
+      "tool-failure",
+      "premature-end",
+      "harness-failure",
+      "spawn-refusal",
+      "timeout",
+    ]);
     expect(harnessConformanceViolations(HARNESS_CONFORMANCE_REGISTRY)).toEqual([]);
     expect(HARNESS_CONFORMANCE_REGISTRY.map((entry) => entry.kind).sort()).toEqual([
       "claude-code",
       "opencode",
     ]);
     for (const entry of HARNESS_CONFORMANCE_REGISTRY) {
-      for (const scenario of HARNESS_CONFORMANCE_SCENARIOS) {
+      for (const scenario of HARNESS_CONFORMANCE_FLOOR_SCENARIOS) {
         expect(entry.scenarios).toContain(scenario);
       }
+    }
+  });
+
+  test("the extension is exactly four ids on the same registry, never widening the floor", async () => {
+    const {
+      HARNESS_CONFORMANCE_EXTENSION_SCENARIOS,
+      HARNESS_CONFORMANCE_FLOOR_SCENARIOS,
+      HARNESS_CONFORMANCE_REGISTRY,
+    } = await import("../../packages/testkit/src/conformance/harness");
+    expect([...HARNESS_CONFORMANCE_EXTENSION_SCENARIOS]).toEqual([
+      "version-window",
+      "version-unknown",
+      "mode-unavailable",
+      "profile-propagation",
+    ]);
+    for (const entry of HARNESS_CONFORMANCE_REGISTRY) {
+      expect([...entry.extensionScenarios]).toEqual([...HARNESS_CONFORMANCE_EXTENSION_SCENARIOS]);
+    }
+    for (const scenario of HARNESS_CONFORMANCE_EXTENSION_SCENARIOS) {
+      expect(HARNESS_CONFORMANCE_FLOOR_SCENARIOS as readonly string[]).not.toContain(scenario);
+    }
+  });
+
+  test("a missing extension scenario fails naming the harness and the scenario", async () => {
+    const { HARNESS_CONFORMANCE_REGISTRY, harnessConformanceViolations } = await import(
+      "../../packages/testkit/src/conformance/harness"
+    );
+    const mutant = HARNESS_CONFORMANCE_REGISTRY.map((entry) =>
+      entry.kind === "opencode"
+        ? {
+            ...entry,
+            extensionScenarios: entry.extensionScenarios.filter((id) => id !== "mode-unavailable"),
+          }
+        : entry,
+    );
+    const violations = harnessConformanceViolations(mutant);
+    expect(violations.some((message) => message.includes("opencode"))).toBe(true);
+    expect(violations.some((message) => message.includes("mode-unavailable"))).toBe(true);
+  });
+
+  test("every new refusal identity maps to a registered scenario (C-04)", async () => {
+    const { HARNESS_CONFORMANCE_EXTENSION_SCENARIOS, HARNESS_REFUSAL_SCENARIO_MAP } = await import(
+      "../../packages/testkit/src/conformance/harness"
+    );
+    expect(Object.keys(HARNESS_REFUSAL_SCENARIO_MAP).sort()).toEqual([
+      "harness.mode.unavailable",
+      "harness.profile.model-unrepresentable",
+      "harness.version.unknown",
+      "harness.version.unsupported",
+    ]);
+    for (const scenario of Object.values(HARNESS_REFUSAL_SCENARIO_MAP)) {
+      expect(HARNESS_CONFORMANCE_EXTENSION_SCENARIOS as readonly string[]).toContain(scenario);
     }
   });
 });

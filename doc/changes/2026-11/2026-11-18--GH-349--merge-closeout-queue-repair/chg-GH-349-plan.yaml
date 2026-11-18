@@ -134,7 +134,7 @@
 #   - Decisions: doc/decisions/ADR-0012-provider-side-merge-landing-path.md
 #               (one lifecycle landing mechanism, crafted metadata + exact-head
 #               guard, provider-asserted truth, the refusal taxonomy, no rebase),
-#               doc/decisions/TDR-0040-phase-truth-registry-fold-mirror.md (the
+#               doc/decisions/TDR-0044-phase-truth-registry-fold-mirror.md (the
 #               fold is the only truth, the mirror is derived, divergence is
 #               detected and never repaired, `verify change` unchanged), and
 #               doc/decisions/ODR-0005-closeout-milestone-synchronization.md
@@ -193,7 +193,7 @@
 #   Three decision records are UNTRACKED in the worktree at plan time because a
 #   non-delivery phase completion stages only the change folder:
 #     doc/decisions/ADR-0012-provider-side-merge-landing-path.md
-#     doc/decisions/TDR-0040-phase-truth-registry-fold-mirror.md
+#     doc/decisions/TDR-0044-phase-truth-registry-fold-mirror.md
 #     doc/decisions/ODR-0005-closeout-milestone-synchronization.md
 #   Phase 1 declares those three exact paths so @coder lands them on the branch.
 #   Nothing else outside the change surface may be swept in.
@@ -207,7 +207,7 @@
 #   COMMITTED on this branch (commit f7316855) and the file is clean
 #   (`git status --porcelain` shows exactly the three `??` record files and no
 #   entry for the index; `git show HEAD:doc/decisions/00-index.md` carries the
-#   ADR-0012, ODR-0005 and TDR-0040 rows with status `Proposed`). The index is
+#   ADR-0012, ODR-0005 and TDR-0044 rows with status `Proposed`). The index is
 #   therefore declared in phase 1 for CONDITIONAL STAGING ONLY — see the declared
 #   exception in the SCOPE DECLARATION RULE below — so that a status row or a
 #   typo touch made while landing the three records stages with them. If the
@@ -1144,7 +1144,7 @@ phases:
   #       TC-SYNC-010 (the three prose-only operation-count pages) is a SEPARATE
   #       case owned by phase 7 and is NOT claimed here (test plan v1.7, retained by v1.8).
   #
-  # Contract (DM-1, DM-2 rows, DM-8 row, API-2's reason PAIR; ADR-0012, TDR-0040
+  # Contract (DM-1, DM-2 rows, DM-8 row, API-2's reason PAIR; ADR-0012, TDR-0044
   # and ODR-0005 are cited, never duplicated):
   #   - `DeliveryRequest` gains ONE additive optional `title` (provider-asserted,
   #     verbatim; absent = unknown, never derived). No delivered field is removed,
@@ -1327,7 +1327,7 @@ phases:
         # Untracked at plan time (COMMIT-BOUNDARY REALITY); `Proposed`, STAGED,
         # and never edited, re-authored, or accepted by any phase.
         - doc/decisions/ADR-0012-provider-side-merge-landing-path.md
-        - doc/decisions/TDR-0040-phase-truth-registry-fold-mirror.md
+        - doc/decisions/TDR-0044-phase-truth-registry-fold-mirror.md
         - doc/decisions/ODR-0005-closeout-milestone-synchronization.md
         # CONDITIONAL STAGING ONLY (the declared exception in the SCOPE
         # DECLARATION RULE): the three rows are committed at f7316855 and the file
@@ -1728,7 +1728,7 @@ phases:
   # ---------------------------------------------------------------------------
   # Phase 4 — One phase truth source: every document-writing branch derives the
   # mirror from the post-transition fold, and divergence is detected in one
-  # read-only comparison (F-5; DEC-5; TDR-0040 is the authority).
+  # read-only comparison (F-5; DEC-5; TDR-0044 is the authority).
   #
   # Goal: after every transition the pm-notes document equals the fold, and a
   # disagreement is reported once — never repaired, never written, never read back

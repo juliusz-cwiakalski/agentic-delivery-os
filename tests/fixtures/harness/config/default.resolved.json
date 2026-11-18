@@ -1,8 +1,9 @@
 {
   "kind": "opencode",
+  "mode": "per-invocation-private-server",
   "execution": { "kind": "host" },
   "stores": {
-    "opencode": { "databasePath": ".local/state/opencode/opencode.db" },
+    "opencode": { "databasePath": "~/.local/share/opencode/opencode.db" },
     "claude-code": { "sessionDirectory": ".local/state/claude-code" }
   },
   "environment": [

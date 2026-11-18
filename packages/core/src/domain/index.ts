@@ -389,6 +389,24 @@ export {
   harnessLivenessToWatchdogSignals,
 } from "./harness-liveness.js";
 export {
+  evaluateHarnessModeAvailability,
+  type HarnessModeAvailability,
+  type HarnessModeResolution,
+  resolveHarnessMode,
+} from "./harness-mode.js";
+export {
+  bindingEnvironmentRecords,
+  bindingInvocationArgs,
+  evaluateModelExpressibility,
+  type HarnessAgentIdentityViolation,
+  type HarnessBindingResolution,
+  type HarnessModelExpressibility,
+  type HarnessProfileView,
+  type HarnessSelectionView,
+  harnessAgentIdentityViolation,
+  resolveBinding,
+} from "./harness-profile-propagation.js";
+export {
   type HarnessAdapterRegistration,
   type HarnessVersionProbe,
   harnessRegistryViolations,
@@ -399,6 +417,14 @@ export {
   boundHarnessTelemetryCapture,
   renderHarnessTelemetryHuman,
 } from "./harness-telemetry.js";
+export {
+  evaluateHarnessVersion,
+  type HarnessVersionEvaluation,
+  type HarnessVersionRequirement,
+  harnessVersionInWindow,
+  indeterminateHarnessVersion,
+  normalizeHarnessVersion,
+} from "./harness-version-window.js";
 export {
   createLaneLaunchPlanner,
   type LaneLaunchPlanFacts,

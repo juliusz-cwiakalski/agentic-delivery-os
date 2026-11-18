@@ -858,7 +858,7 @@ describe("TC-VERIFY-019 verify kind and row", () => {
     expect(entries.filter((entry) => entry.domainKind === "daemon")).toHaveLength(8);
     expect(entries.filter((entry) => entry.domainKind === "coordinator")).toHaveLength(6);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(4);
-    expect(entries).toHaveLength(152);
+    expect(entries).toHaveLength(156);
   });
 });
 
@@ -934,7 +934,7 @@ describe("TC-DB-003 four db identities round-trip and contain", () => {
         classifyDomainKind("db", code),
       );
     }
-    expect(entries).toHaveLength(152);
+    expect(entries).toHaveLength(156);
     expect(db).toHaveLength(4);
   });
 
@@ -1168,7 +1168,7 @@ describe("TC-WATCHDOG-003 the watchdog kind has exactly four rows and round-trip
       });
       expect(String(hint).length).toBeGreaterThan(0);
     }
-    expect(entries).toHaveLength(152);
+    expect(entries).toHaveLength(156);
   });
 
   test("the two refusal rows project user-validation and signals-absent platform-provider", () => {
@@ -1805,7 +1805,7 @@ describe("TC-ECON-003 the dispatch kind carries the two economics rows plus the 
   });
 
   test("the three economics additions land and the delivered rows stay byte-identical", () => {
-    expect(entries).toHaveLength(152);
+    expect(entries).toHaveLength(156);
     expect(entries.filter((entry) => entry.domainKind === "dispatch")).toHaveLength(4);
     expect(entries.filter((entry) => entry.domainKind === "watchdog")).toHaveLength(4);
     // The delivered watchdog rows retain their exact declared columns.
@@ -1898,7 +1898,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
 
   test("no delivered row is re-projected by the spend addition", () => {
     const delivered = entries.filter((entry) => entry.domainKind !== "spend");
-    expect(delivered).toHaveLength(151);
+    expect(delivered).toHaveLength(155);
     expect(entries.filter((entry) => entry.domainKind === "state")).toHaveLength(9);
     expect(entries.filter((entry) => entry.domainKind === "input")).toHaveLength(1);
     expect(resolveAppErrorCode("state.store.torn")).toEqual({
@@ -1917,7 +1917,7 @@ describe("TC-SPEND-009 one spend row, exit projection and table sync", () => {
     const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
     const row = `| spend.telemetry-absent | spend | user | false | not_landed | ${SPEND_HINT} | user-validation | ${SPEND_SUMMARY} |`;
     expect(doc.split(row).length - 1).toBe(1);
-    expect(doc).toContain("152 identities");
+    expect(doc).toContain("156 identities");
   });
 
   test("the documented table is complete in both directions", () => {
@@ -2337,7 +2337,7 @@ describe("TC-CEREMONY-049 the ceremony kind and its two identities", () => {
       "ceremony.declaration.invalid",
       "ceremony.note-invalid",
     ]);
-    expect(entries).toHaveLength(152);
+    expect(entries).toHaveLength(156);
   });
 
   test("both rows carry the declared class and project to exit 1", () => {
@@ -2373,7 +2373,7 @@ describe("TC-CEREMONY-049 the ceremony kind and its two identities", () => {
     expect(doc).toContain(
       "The `ceremony` kind carries exactly the two additive ceremony-runner identities",
     );
-    expect(doc).toContain("152 machine identities");
+    expect(doc).toContain("156 machine identities");
   });
 });
 
@@ -2429,6 +2429,30 @@ const LEGACY_ENTRY_146_FORMS = [
   "14" + "6 documented",
   "entries).toHaveLength(14" + "6",
 ] as const;
+/** The pre-change entry forms, detected only in their entries wording. */
+const LEGACY_ENTRY_148_FORMS = [
+  "14" + "8 entries",
+  "14" + "8 identities",
+  "14" + "8 machine identities",
+  "14" + "8 documented",
+  "entries).toHaveLength(14" + "8",
+] as const;
+/** The pre-change entry forms (GH-335: the four new harness rows). */
+const LEGACY_ENTRY_149_FORMS = [
+  "14" + "9 entries",
+  "14" + "9 identities",
+  "14" + "9 machine identities",
+  "14" + "9 documented",
+  "entries).toHaveLength(14" + "9",
+] as const;
+/** The pre-change delivered-row forms, detected only in their entries wording. */
+const LEGACY_ENTRY_152_FORMS = [
+  "15" + "2 entries",
+  "15" + "2 identities",
+  "15" + "2 machine identities",
+  "15" + "2 documented",
+  "entries).toHaveLength(15" + "2",
+] as const;
 /**
  * The pre-change allowlist forms: the bare number stays valid in unrelated
  * declared bounds, so a stale allowlist size is detected only in its own
@@ -2443,7 +2467,13 @@ const LEGACY_ALLOWLIST_FORMS = [
     `size).toBe(${count})`,
   ]),
 ] as const;
-const LEGACY_FORM_ALTERNATION = [...LEGACY_ENTRY_146_FORMS, ...LEGACY_ALLOWLIST_FORMS]
+const LEGACY_FORM_ALTERNATION = [
+  ...LEGACY_ENTRY_146_FORMS,
+  ...LEGACY_ENTRY_148_FORMS,
+  ...LEGACY_ENTRY_149_FORMS,
+  ...LEGACY_ENTRY_152_FORMS,
+  ...LEGACY_ALLOWLIST_FORMS,
+]
   .map((form) => form.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"))
   .join("|");
 const LEGACY_PATTERN = new RegExp(
@@ -2500,11 +2530,11 @@ describe("TC-BOARD-053 board identities and Appendix D", () => {
     expect(resolveAppErrorCode("board.state-unavailable").ok).toBe(true);
   });
 
-  test("the four surfaces agree on 152 entries / 151 delivered / 67 allowlist / 2 board / 3 steer / 2 supervise / 1 metrics / 3 retro / 152 documented", () => {
+  test("the four surfaces agree on 156 entries / 155 delivered / 67 allowlist / 2 board / 3 steer / 2 supervise / 1 metrics / 3 retro / 156 documented", () => {
     const tableEntries = ERROR_TABLE as readonly { domainKind: string }[];
-    expect(tableEntries).toHaveLength(152);
+    expect(tableEntries).toHaveLength(156);
     const delivered = tableEntries.filter((entry) => entry.domainKind !== "spend");
-    expect(delivered).toHaveLength(151);
+    expect(delivered).toHaveLength(155);
     expect(tableEntries.filter((entry) => entry.domainKind === "board")).toHaveLength(2);
     expect(tableEntries.filter((entry) => entry.domainKind === "steer")).toHaveLength(3);
     expect(tableEntries.filter((entry) => entry.domainKind === "supervise")).toHaveLength(2);
@@ -2514,8 +2544,8 @@ describe("TC-BOARD-053 board identities and Appendix D", () => {
       join(ROOT, "doc/spec/features/feature-result-contract.md"),
       "utf8",
     );
-    expect(carrier).toContain("152 machine identities");
-    expect(carrier).toContain("the same 152 identities");
+    expect(carrier).toContain("156 machine identities");
+    expect(carrier).toContain("the same 156 identities");
     expect(carrier).toContain("exact two-segment allowlist of 67 declared identities");
   });
 
@@ -2591,8 +2621,8 @@ describe("TC-STEER-074/075/076 the steer kind and its three identities", () => {
   });
 
   test("the entry and delivered counts moved exactly once and no delivered row changed", () => {
-    expect(entries).toHaveLength(152);
-    expect(entries.filter((entry) => entry.domainKind !== "spend")).toHaveLength(151);
+    expect(entries).toHaveLength(156);
+    expect(entries.filter((entry) => entry.domainKind !== "spend")).toHaveLength(155);
     expect(entries.filter((entry) => entry.domainKind === "board")).toHaveLength(2);
     expect(entries.filter((entry) => entry.domainKind === "ceremony")).toHaveLength(2);
     expect(entries.filter((entry) => entry.domainKind === "steer")).toHaveLength(3);
@@ -2638,8 +2668,8 @@ describe("TC-STEER-074/075/076 the steer kind and its three identities", () => {
       expect(doc.split(row).length - 1, entry.code).toBe(1);
     }
     expect(doc).toContain("The `steer` kind carries exactly the three steering identities");
-    expect(doc).toContain("152 machine identities");
-    expect(doc).toContain("the same 152 identities");
+    expect(doc).toContain("156 machine identities");
+    expect(doc).toContain("the same 156 identities");
     expect(doc).toContain("exact two-segment allowlist of 67 declared identities");
   });
 
@@ -2657,9 +2687,9 @@ describe("TC-STEER-074/075/076 the steer kind and its three identities", () => {
       metrics: entries.filter((entry) => entry.domainKind === "metrics").length,
     };
     expect(tuple).toEqual({
-      entries: 152,
-      documented: 152,
-      deliverd: 151,
+      entries: 156,
+      documented: 156,
+      deliverd: 155,
       allowlist: 67,
       board: 2,
       steer: 3,
@@ -2704,8 +2734,8 @@ describe("TC-METRICS-090 the metrics kind and its one row", () => {
   });
 
   test("the entry and delivered-row counts moved and every other kind is unchanged", () => {
-    expect(entries).toHaveLength(152);
-    expect(entries.filter((entry) => entry.domainKind !== "spend")).toHaveLength(151);
+    expect(entries).toHaveLength(156);
+    expect(entries.filter((entry) => entry.domainKind !== "spend")).toHaveLength(155);
     expect(entries.filter((entry) => entry.domainKind === "board")).toHaveLength(2);
     expect(entries.filter((entry) => entry.domainKind === "steer")).toHaveLength(3);
     expect(entries.filter((entry) => entry.domainKind === "retro")).toHaveLength(7);
@@ -2719,8 +2749,8 @@ describe("TC-METRICS-090 the metrics kind and its one row", () => {
     if (row === undefined) throw new Error("metrics row missing");
     const documented = `| ${row.code} | metrics | ${row.category} | ${String(row.retryable)} | ${row.consequence} | ${row.remediationHint} | ${row.projectionClass} | ${row.summary ?? ""} |`;
     expect(doc.split(documented).length - 1).toBe(1);
-    expect(doc).toContain("152 machine identities");
-    expect(doc).toContain("the same 152 identities");
+    expect(doc).toContain("156 machine identities");
+    expect(doc).toContain("the same 156 identities");
     expect(doc).toContain("exact two-segment allowlist of 67 declared identities");
   });
 });
@@ -2774,8 +2804,8 @@ describe("TC-METRICS-092 every Appendix D site moved and four surfaces agree", (
     const { runSyncCheck } = await import("../../scripts/checks/error-table-sync");
     const result = await runSyncCheck({ root: ROOT });
     expect(result.failures).toEqual([]);
-    expect(result.counts.sourceEntries).toBe(152);
-    expect(result.counts.documentedRows).toBe(152);
+    expect(result.counts.sourceEntries).toBe(156);
+    expect(result.counts.documentedRows).toBe(156);
     expect(RESERVED_TWO_SEGMENT_CODES.size).toBe(67);
     const syncSource = readFileSync(join(ROOT, "scripts/checks/error-table-sync.ts"), "utf8");
     expect(syncSource).toContain('"metrics.baseline-unreadable"');
@@ -2812,9 +2842,9 @@ describe("TC-METRICS-092 every Appendix D site moved and four surfaces agree", (
       metrics: entries.filter((entry) => entry.domainKind === "metrics").length,
     };
     expect(tuple).toEqual({
-      entries: 152,
-      documented: 152,
-      delivered: 151,
+      entries: 156,
+      documented: 156,
+      delivered: 155,
       allowlist: 67,
       metrics: 1,
     });
@@ -2831,13 +2861,13 @@ describe("TC-METRICS-092 every Appendix D site moved and four surfaces agree", (
  * the delivered-check-bound reference-behavior table to TC-SYNC-009 (the
  * milestone phase), so this case names neither.
  */
-const IDENTITY_TOTAL = 152;
-const DELIVERED_TOTAL = 151;
+const IDENTITY_TOTAL = 156;
+const DELIVERED_TOTAL = 155;
 const ALLOWLIST_TOTAL = 67;
 /** The live sync-suite arithmetic; the pre-change form is a legacy token. */
-const LIVE_ARITHMETIC = `+ ${"11" + "8"}`;
+const LIVE_ARITHMETIC = `+ ${"12" + "2"}`;
 /** The same arithmetic as the pages spell it inside a slash-separated tuple. */
-const LIVE_ARITHMETIC_COMPACT = `+${"11" + "8"}`;
+const LIVE_ARITHMETIC_COMPACT = `+${"12" + "2"}`;
 /** The pre-change values, assembled so this file is clean under its own scan. */
 const STALE_TOTAL = `${"14"}${"9"}`;
 const STALE_DELIVERED = `${"14"}${"8"}`;
@@ -2894,8 +2924,8 @@ const SYNCS = (root: string): Promise<{ failures: readonly string[]; counts: unk
 
 const DOC_PATH = "doc/spec/features/feature-result-contract.md";
 
-describe("TC-SYNC-001 the identity total moves to 152 with a three-row exact delta", () => {
-  test("both tables agree at 152 and the delta is exactly the three additive rows", async () => {
+describe("TC-SYNC-001 the identity total moves to 156 with a three-row exact delta", () => {
+  test("both tables agree at 156 and the delta is exactly the three additive rows", async () => {
     const result = await SYNCS(ROOT);
     expect(result.failures).toEqual([]);
     const counts = result.counts as { sourceEntries: number; documentedRows: number };
@@ -2953,17 +2983,16 @@ describe("TC-SYNC-001 the identity total moves to 152 with a three-row exact del
   });
 });
 
-describe("TC-SYNC-001 all seven pin sites carry 152 and none carries the stale total", () => {
-  test("every pin site reads 152 and no pre-change count survives", () => {
+describe("TC-SYNC-001 all seven pin sites carry 156 and none carries the stale total", () => {
+  test("every pin site reads 156 and no pre-change count survives", () => {
     for (const site of IDENTITY_PIN_SITES) {
       const text = readFileSync(join(ROOT, site), "utf8");
       expect(text, site).toContain(String(IDENTITY_TOTAL));
-      expect(text, site).not.toContain(STALE_TOTAL);
-      expect(text, site).not.toContain(STALE_DELIVERED);
+      expect(leftoverPins(text), site).toEqual([]);
     }
   });
 
-  test("the delivered-row pin is 151 on the surface that states it", () => {
+  test("the delivered-row pin is 155 on the surface that states it", () => {
     const text = readFileSync(join(ROOT, "tests/structure/error-table.test.ts"), "utf8");
     expect(text).toContain(String(DELIVERED_TOTAL));
     expect(entries.filter((entry) => entry.domainKind !== "spend")).toHaveLength(DELIVERED_TOTAL);
@@ -3080,6 +3109,120 @@ describe("TC-SYNC-001 both sync directions fail naming the code and the side", (
       );
     } finally {
       rmSync(root, { recursive: true, force: true });
+    }
+  });
+});
+
+/**
+ * TC-HARNESS-035 — the four new pre-session harness refusal identities: one row
+ * each, the delivered nine untouched, no telemetry-absence identity anywhere,
+ * and no code for the unassigned named agent (it reuses the delivered
+ * `provider.profile.invalid`).
+ */
+describe("TC-HARNESS-035 GH-335 harness refusal identities", () => {
+  const GH335_ROWS: readonly (readonly [string, string, string])[] = [
+    [
+      "harness.version.unsupported",
+      "Install or select a harness line inside the declared supported window, then retry the dispatch.",
+      "The installed harness version is outside the supported window.",
+    ],
+    [
+      "harness.version.unknown",
+      "Verify the harness answers its version surface with the declared product line, then retry the dispatch; no version was fabricated.",
+      "The installed harness version could not be determined.",
+    ],
+    [
+      "harness.mode.unavailable",
+      "Set the harness mode to the delivered default or unset it, then retry the dispatch; no runtime fallback is applied.",
+      "The requested harness integration mode is not the available mode.",
+    ],
+    [
+      "harness.profile.model-unrepresentable",
+      "Declare the named seat's model as provider/model[#variant] within the adapter's declared bound, then retry the dispatch.",
+      "A seat's resolved model cannot be expressed on the honoured surface.",
+    ],
+  ];
+
+  test("the harness kind carries exactly the thirteen declared rows", () => {
+    const harness = ERROR_TABLE.filter((entry) => entry.domainKind === "harness");
+    expect(harness).toHaveLength(13);
+    const codes = harness.map((entry) => entry.code).sort();
+    expect(codes).toEqual(
+      [
+        "harness.capability.gap",
+        "harness.listing.invalid-output",
+        "harness.mode.unavailable",
+        "harness.profile.model-unrepresentable",
+        "harness.session.unknown",
+        "harness.spawn.invalid-output",
+        "harness.spawn.refused",
+        "harness.spawn.variable-missing",
+        "harness.telemetry.extraction-failed",
+        "harness.telemetry.invalid-identity",
+        "harness.telemetry.unattributable",
+        "harness.version.unknown",
+        "harness.version.unsupported",
+      ].sort(),
+    );
+  });
+
+  test("each new row is a non-retryable user-validation refusal at exit 1", () => {
+    for (const [code, hint, summary] of GH335_ROWS) {
+      const rows = ERROR_TABLE.filter((entry) => entry.code === code);
+      expect(rows, code).toHaveLength(1);
+      const row = rows[0];
+      expect(row).toMatchObject({
+        domainKind: "harness",
+        category: "user",
+        retryable: false,
+        consequence: "not_landed",
+        projectionClass: "user-validation",
+        remediationHint: hint,
+        summary,
+      });
+      expect(resolveAppErrorCode(code).ok).toBe(true);
+    }
+  });
+
+  test("every new row is documented exactly once and matches column-for-column", () => {
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    for (const [code, hint, summary] of GH335_ROWS) {
+      const row = `| ${code} | harness | user | false | not_landed | ${hint} | user-validation | ${summary} |`;
+      expect(doc.split(row).length - 1, code).toBe(1);
+    }
+    expect(doc).toContain(
+      "The `harness` kind carries exactly the thirteen harness-primitive identities",
+    );
+  });
+
+  test("no telemetry-absence identity and no unassigned-agent code exist anywhere", () => {
+    const codes = ERROR_TABLE.map((entry) => entry.code);
+    expect(codes).not.toContain("harness.telemetry.absent");
+    expect(codes.filter((code) => code.includes("telemetry-absence"))).toEqual([]);
+    // The unassigned named agent reuses the delivered provider-profile identity.
+    expect(codes.filter((code) => code.startsWith("harness.profile."))).toEqual([
+      "harness.profile.model-unrepresentable",
+    ]);
+    expect(codes).toContain("provider.profile.invalid");
+    const doc = readFileSync(join(ROOT, "doc/spec/features/feature-result-contract.md"), "utf8");
+    expect(doc).not.toContain("harness.telemetry.absent");
+  });
+
+  test("the nine delivered harness rows keep their delivered projections", () => {
+    const delivered: readonly (readonly [string, string])[] = [
+      ["harness.spawn.invalid-output", "user-validation"],
+      ["harness.spawn.refused", "user-validation"],
+      ["harness.spawn.variable-missing", "user-validation"],
+      ["harness.session.unknown", "user-validation"],
+      ["harness.capability.gap", "user-validation"],
+      ["harness.listing.invalid-output", "user-validation"],
+      ["harness.telemetry.unattributable", "user-validation"],
+      ["harness.telemetry.invalid-identity", "user-validation"],
+      ["harness.telemetry.extraction-failed", "platform-provider"],
+    ];
+    for (const [code, projection] of delivered) {
+      const row = ERROR_TABLE.find((entry) => entry.code === code);
+      expect(row?.projectionClass, code).toBe(projection);
     }
   });
 });

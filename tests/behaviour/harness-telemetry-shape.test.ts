@@ -1,168 +1,226 @@
 /**
- * TC-HARN-021 — the harness-neutral statistics shape shared by both extractors.
+ * TC-HARNESS-019 / TC-HARNESS-020 / TC-HARNESS-026 — the landed row shape from
+ * the observed current generation (DM-9, DM-10; AC-F5-1, AC-F5-2).
+ *
+ * Every field the ticket asks for is asserted on a LANDED row: the schema
+ * identity, the session's own version, the recorded seat and resolved model,
+ * the observed agent and model, the five token classes, calls, cost, and the
+ * store-sourced duration pair. Nothing is read from a column that does not
+ * exist.
  */
-import { afterEach, describe, expect, test } from "bun:test";
-import { rmSync } from "node:fs";
+import { describe, expect, test } from "bun:test";
+import { Database } from "bun:sqlite";
+import { readFileSync } from "node:fs";
 import {
-  createBunSqliteStoreOpener,
-  createClaudeTelemetryExtractor,
-  createOpencodeTelemetryExtractor,
-} from "../../packages/adapters/src/harness/index";
-import {
-  CLOSEOUT_SCHEMA_ID,
   HARNESS_TELEMETRY_SCHEMA_ID,
-  type HarnessTelemetryCapture,
-  STATE_SCHEMA_VERSION,
+  HARNESS_UNRESOLVED_SEAT_REASON,
 } from "../../packages/core/src/contracts/index";
-import { canonicalHarnessJson } from "../../packages/core/src/domain/index";
-import { CLAUDE_FIXTURE_FILES } from "../fixtures/harness/claude-code/load";
-import { createFakeFileReader } from "../fixtures/harness/claude-code/reader";
 import {
-  buildOpencodeStore,
-  FULL_FIXTURE_TOTALS,
-  PRIVACY_CANARY,
-  type StoreVariant,
+  CAPTURED_AT,
+  CHILD_BINDING,
+  ROOT_BINDING,
+  RUN_ID,
   WORK_ITEM_REF,
+  extractOpencode,
+} from "../fixtures/harness/telemetry-attempts";
+import {
+  CHILD_MODEL_ID,
+  CHILD_SESSION,
+  FULL_FIXTURE_TOTALS,
+  HARNESS_VERSION,
+  ROOT_AGENT,
+  ROOT_MODEL_ID,
+  ROOT_SESSION,
+  buildOpencodeStore,
 } from "../fixtures/harness/opencode-store/build";
 
-const NOW = "2026-11-06T00:00:00Z";
-const RUN_ID = "run-021";
-const roots: string[] = [];
+describe("TC-HARNESS-019 the current-generation row", () => {
+  test("a complete session lands one row per observed group with every field", () => {
+    const store = buildOpencodeStore();
+    const captured = extractOpencode({
+      store,
+      heldSessionIds: [ROOT_SESSION],
+      bindings: { [ROOT_SESSION]: ROOT_BINDING },
+    });
+    expect(captured.ok).toBe(true);
+    if (!captured.ok) return;
+    // The held identity's tree is root + one child; each is its own row.
+    expect(captured.value.records).toHaveLength(2);
+    const row = captured.value.records.find((entry) => entry.sessionId === ROOT_SESSION);
+    expect(row?.schemaId).toBe(HARNESS_TELEMETRY_SCHEMA_ID);
+    expect(row?.workItemRef).toBe(WORK_ITEM_REF);
+    expect(row?.runId).toBe(RUN_ID);
+    expect(row?.sessionId).toBe(ROOT_SESSION);
+    expect(row?.harnessKind).toBe("opencode");
+    expect(row?.harnessVersion).toBe(HARNESS_VERSION);
+    expect(row?.agent).toBe(ROOT_AGENT);
+    expect(row?.model).toBe(ROOT_MODEL_ID);
+    expect(row?.seat).toBe(ROOT_BINDING.seat);
+    expect(row?.resolvedModel).toBe(ROOT_MODEL_ID);
+    expect(row?.treeRoot).toBe(ROOT_SESSION);
+    expect(row?.parentChain).toEqual([]);
+    expect(row?.tokens.input).toBe(15);
+    expect(row?.tokens.output).toBe(8);
+    expect(row?.tokens.reasoning).toBe(2);
+    expect(row?.tokens.cacheRead).toBe(3);
+    expect(row?.tokens.cacheWrite).toBe(1);
+    expect(row?.calls).toBe(2);
+    expect(row?.cost).toBe(0.75);
+    expect(row?.capturedAt).toBe(CAPTURED_AT);
+    expect(row?.durations).toEqual({
+      status: "sourced",
+      start: new Date(1_700_000_000_000).toISOString(),
+      end: new Date(1_700_000_002_000).toISOString(),
+      elapsedMs: 2000,
+    });
+    // No observed generation exposes a populated tool source.
+    expect(row?.toolCounts).toEqual([]);
+    expect(row?.warnings.some((warning) => warning.reason === "no-tool-source")).toBe(true);
+    expect(row?.absentObservedAxes).toBeUndefined();
+  });
 
-afterEach(() => {
-  for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
+  test("the held identity's tree is read below it, with the child's own group", () => {
+    const store = buildOpencodeStore();
+    const captured = extractOpencode({
+      store,
+      heldSessionIds: [ROOT_SESSION],
+      bindings: {
+        [ROOT_SESSION]: {
+          ...ROOT_BINDING,
+          agent: "agent-b",
+          seat: "seat-execution",
+          resolvedModel: CHILD_MODEL_ID,
+        },
+      },
+    });
+    expect(captured.ok).toBe(true);
+    if (!captured.ok) return;
+    const child = captured.value.records.find((row) => row.sessionId === CHILD_SESSION);
+    expect(child).toBeDefined();
+    expect(child?.parentChain).toEqual([ROOT_SESSION]);
+    expect(child?.treeRoot).toBe(ROOT_SESSION);
+    expect(child?.agent).toBe("agent-b");
+    expect(child?.model).toBe(CHILD_MODEL_ID);
+    // The single binding's agent matches only the child's group.
+    expect(child?.seat).toBe("seat-execution");
+    const root = captured.value.records.find((row) => row.sessionId === ROOT_SESSION);
+    expect(root?.seat).toBeNull();
+    expect(
+      root?.warnings.some((warning) => warning.reason === HARNESS_UNRESOLVED_SEAT_REASON),
+    ).toBe(true);
+    const input = captured.value.records.reduce((total, row) => total + (row.tokens.input ?? 0), 0);
+    expect(input).toBe(FULL_FIXTURE_TOTALS.input);
+  });
+
+  test("the session totals equal the baseline once and the reported zero is kept", () => {
+    const store = buildOpencodeStore({ variant: "reported-zero-cost" });
+    const captured = extractOpencode({
+      store,
+      heldSessionIds: [ROOT_SESSION],
+      bindings: { [ROOT_SESSION]: CHILD_BINDING },
+    });
+    expect(captured.ok).toBe(true);
+    if (!captured.ok) return;
+    const root = captured.value.records.find((row) => row.sessionId === ROOT_SESSION);
+    // A reported zero is the reported value, never an absence.
+    expect(root?.cost).toBe(0);
+    expect(root?.warnings.some((warning) => warning.reason === "cost-missing")).toBe(false);
+  });
 });
 
-const opencode = (variant: StoreVariant = "full"): HarnessTelemetryCapture => {
-  const store = buildOpencodeStore({ variant });
-  roots.push(store.directory);
-  const result = createOpencodeTelemetryExtractor({
-    opener: (path) => createBunSqliteStoreOpener()(path),
-    storePath: store.path,
-    now: () => NOW,
-  }).extract({ workItemRef: WORK_ITEM_REF, runId: RUN_ID });
-  if (!result.ok) throw new Error(result.error.summary ?? "opencode extraction failed");
-  return result.value;
-};
-
-const claude = (): HarnessTelemetryCapture => {
-  const result = createClaudeTelemetryExtractor({
-    directory: "fixtures/claude-code",
-    reader: createFakeFileReader(CLAUDE_FIXTURE_FILES).reader,
-    now: () => NOW,
-  }).extract({ workItemRef: WORK_ITEM_REF, runId: RUN_ID });
-  if (!result.ok) throw new Error(result.error.summary ?? "claude extraction failed");
-  return result.value;
-};
-
-const shapeOf = (value: unknown): unknown => {
-  if (Array.isArray(value)) {
-    return value.length === 0 ? ["empty"] : [shapeOf(value[0])];
-  }
-  if (typeof value === "object" && value !== null) {
-    return Object.fromEntries(
-      Object.entries(value)
-        .filter(([, child]) => child !== undefined)
-        .sort(([left], [right]) => (left < right ? -1 : 1))
-        .map(([key, child]) => [key, shapeOf(child)]),
-    );
-  }
-  if (value === null) return "null";
-  return typeof value;
-};
-
-describe("TC-HARN-021 neutral statistics shape", () => {
-  test("both extractors produce the identical artificial shape; only values differ", () => {
-    const left = opencode();
-    const right = claude();
-    expect(left.records).toHaveLength(FULL_FIXTURE_TOTALS.sessions);
-    expect(right.records).toHaveLength(FULL_FIXTURE_TOTALS.sessions);
-    expect(shapeOf(left.records[0])).toEqual(shapeOf(right.records[0]));
-    expect(Object.keys(left).sort()).toEqual(Object.keys(right).sort());
+/**
+ * GH-335 review remediation F-6 / F-7 / F-8 — the observed transitions, the
+ * normalized version stamp, and the duration range guard.
+ */
+describe("F-6/F-7/F-8 review remediation", () => {
+  test("agent-switched/model-switched rows scope the following usage group", () => {
+    const store = buildOpencodeStore({ variant: "switched" });
+    const captured = extractOpencode({ store, heldSessionIds: [ROOT_SESSION] });
+    expect(captured.ok).toBe(true);
+    if (!captured.ok) return;
+    const rows = captured.value.records.filter((row) => row.sessionId === ROOT_SESSION);
+    // The baseline group (agent-a) and the switched group (agent-c/model-c).
+    expect(rows.some((row) => row.agent === ROOT_AGENT)).toBe(true);
+    const switched = rows.find((row) => row.agent === "agent-c");
+    expect(switched).toBeDefined();
+    expect(switched?.model).toBe("synthetic/model-c");
+    expect(switched?.tokens.input).toBe(2);
+    expect(switched?.absentObservedAxes).toBeUndefined();
+    // The stale session baseline never wins over the transition.
+    expect(rows.every((row) => row.agent !== "")).toBe(true);
   });
 
-  test("every record carries exactly the five token classes, calls, and bounded tool counts", () => {
-    for (const capture of [opencode(), claude()]) {
-      for (const record of capture.records) {
-        expect(Object.keys(record.tokens).sort()).toEqual([
-          "cacheRead",
-          "cacheWrite",
-          "input",
-          "output",
-          "reasoning",
-        ]);
-        expect(record.calls).toBeGreaterThanOrEqual(1);
-        expect(record.toolCounts.length).toBeGreaterThan(0);
-        expect(record.toolCounts.length).toBeLessThanOrEqual(24);
-      }
-    }
+  test("a stored version is normalized before stamping (v-prefix stripped)", () => {
+    const store = buildOpencodeStore({ variant: "version-prefixed" });
+    const captured = extractOpencode({ store, heldSessionIds: [ROOT_SESSION] });
+    expect(captured.ok).toBe(true);
+    if (!captured.ok) return;
+    const root = captured.value.records.find((row) => row.sessionId === ROOT_SESSION);
+    expect(root?.harnessVersion).toBe("2.2.5");
   });
 
-  test("per-session agent and model identity is not collapsed", () => {
-    for (const capture of [opencode(), claude()]) {
-      const agents = new Set(capture.records.map((record) => record.agent));
-      const models = new Set(capture.records.map((record) => record.model));
-      expect(agents.size).toBe(2);
-      expect(models.size).toBe(2);
-      expect(capture.agents.map((entry) => entry.agent).sort()).toEqual([...agents].sort());
-      expect(capture.models.map((entry) => entry.model).sort()).toEqual([...models].sort());
-    }
+  test("an unrepresentable timestamp pair is an absence and the rows still land", () => {
+    const store = buildOpencodeStore({ variant: "absurd-timestamps" });
+    const captured = extractOpencode({ store, heldSessionIds: [ROOT_SESSION] });
+    expect(captured.ok).toBe(true);
+    if (!captured.ok) return;
+    const root = captured.value.records.find((row) => row.sessionId === ROOT_SESSION);
+    expect(root).toBeDefined();
+    expect(root?.durations).toEqual({ status: "absent", reason: "duration-absent" });
+    expect(root?.warnings.some((warning) => warning.reason === "duration-absent")).toBe(true);
+    // The whole capture is not failed by one bad pair.
+    expect(captured.value.records.length).toBeGreaterThan(0);
   });
+});
 
-  test("one record per (session, agent, model) group with tree attribution", () => {
-    for (const capture of [opencode(), claude()]) {
-      expect(
-        new Set(
-          capture.records.map((record) => `${record.sessionId}|${record.agent}|${record.model}`),
-        ).size,
-      ).toBe(capture.records.length);
-      for (const record of capture.records) {
-        expect(record.workItemRef).toBe(WORK_ITEM_REF);
-        expect(record.treeRoot.length).toBeGreaterThan(0);
-        expect(record.runId).toBe(RUN_ID);
-        if (record.sessionId !== record.treeRoot)
-          expect(record.parentChain.length).toBeGreaterThan(0);
-      }
+/**
+ * GH-335 review remediation iteration 2 (F-5) — the stored-version stamp is
+ * normalized through the contracts tier's single home and bounded by
+ * `HARNESS_VERSION_MAX_CHARS`; an over-bound or unparseable stamp is the declared
+ * absence path, never a fabricated or clipped version.
+ */
+describe("F-5 the stored-version stamp is one bounded normalizer", () => {
+  const withVersion = (version: string) => {
+    const store = buildOpencodeStore();
+    const database = new Database(store.path);
+    try {
+      database.exec(`UPDATE session_v2 SET version = '${version}' WHERE id = 'ses_root'`);
+    } finally {
+      database.close();
     }
-  });
+    const captured = extractOpencode({ store, heldSessionIds: [ROOT_SESSION] });
+    expect(captured.ok).toBe(true);
+    if (!captured.ok) return undefined;
+    return captured.value.records.find((row) => row.sessionId === ROOT_SESSION);
+  };
 
-  test("intra-session (agent, model) group diversity is preserved, not collapsed", () => {
-    const capture = opencode("multi-group");
-    const root = capture.records.filter((record) => record.sessionId === "ses_root");
-    expect(root).toHaveLength(2);
-    expect(new Set(root.map((record) => `${record.agent}|${record.model}`)).size).toBe(2);
-    for (const record of root) {
-      expect(record.treeRoot).toBe("ses_root");
-      expect(record.workItemRef).toBe(WORK_ITEM_REF);
-    }
+  test("an over-bound stamp is an explicit absence, never a truncated identity", () => {
+    const row = withVersion(`2.2.5-${"x".repeat(60)}`);
+    expect(row?.harnessVersion).toBeNull();
     expect(
-      new Set(
-        capture.records.map((record) => `${record.sessionId}|${record.agent}|${record.model}`),
-      ).size,
-    ).toBe(capture.records.length);
+      row?.warnings.some(
+        (warning) =>
+          warning.reason === "optional-field-absent" && warning.field === "harnessVersion",
+      ),
+    ).toBe(true);
   });
 
-  test("harness kind and observed version travel with every record", () => {
-    const left = opencode();
-    const right = claude();
-    expect(left.records.every((record) => record.harnessKind === "opencode")).toBe(true);
-    expect(right.records.every((record) => record.harnessKind === "claude-code")).toBe(true);
-    expect(left.records.every((record) => record.harnessVersion === "1.0.0")).toBe(true);
-    expect(right.records.every((record) => record.harnessVersion === "1.0.0")).toBe(true);
+  test("an unparseable stamp is an explicit absence", () => {
+    const row = withVersion("build-unknown");
+    expect(row?.harnessVersion).toBeNull();
   });
 
-  test("no prompt, message body, transcript, diff, or tool output enters the payload", () => {
-    for (const capture of [opencode(), claude()]) {
-      expect(JSON.stringify(capture)).not.toContain(PRIVACY_CANARY);
-    }
-  });
-
-  test("the telemetry schema id is distinct and replay is byte-identical", () => {
-    expect(HARNESS_TELEMETRY_SCHEMA_ID).not.toBe(STATE_SCHEMA_VERSION);
-    expect(HARNESS_TELEMETRY_SCHEMA_ID).not.toBe(CLOSEOUT_SCHEMA_ID);
-    const first = opencode();
-    const second = opencode();
-    expect(canonicalHarnessJson(first)).toBe(canonicalHarnessJson(second));
-    expect(canonicalHarnessJson(claude())).toBe(canonicalHarnessJson(claude()));
+  test("the contracts tier is the single home of the stored-stamp grammar", async () => {
+    const contracts = await import("../../packages/core/src/contracts/index");
+    const adapters = await import("../../packages/adapters/src/harness/telemetry-opencode");
+    const adapterSource = readFileSync(
+      `${process.cwd()}/packages/adapters/src/harness/telemetry-opencode.ts`,
+      "utf8",
+    );
+    expect(contracts.normalizeStoredHarnessVersion("v2.2.5")).toBe("2.2.5");
+    expect(contracts.normalizeStoredHarnessVersion("2.2.5")).toBe("2.2.5");
+    expect(contracts.normalizeStoredHarnessVersion("x".repeat(40))).toBeNull();
+    expect(adapterSource).not.toContain("/^v?(\\\\d+)");
+    expect(typeof adapters.createOpencodeTelemetryExtractor).toBe("function");
   });
 });

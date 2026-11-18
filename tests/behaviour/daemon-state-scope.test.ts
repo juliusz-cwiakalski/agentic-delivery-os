@@ -84,6 +84,7 @@ const productionProgram = (options: {
 }) => {
   const brand = options.brand ?? mountBrand();
   const composer = createProductionComposer({
+    harnessVersionProbe: async () => ({ status: "answered" as const, stdout: "opencode v2.3.2" }),
     environment: options.environment,
     cwd: options.cwd,
     homeDirectory: options.home,

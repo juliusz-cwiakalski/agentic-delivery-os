@@ -150,6 +150,7 @@ export const runThroughComposition = async (input: {
     ...(input.bin === "jaiship" ? { priorWorkingName: "delivery-os" } : {}),
     credentialReferences: [],
     composeProgram: createProductionComposer({
+      harnessVersionProbe: async () => ({ status: "answered" as const, stdout: "opencode v2.3.2" }),
       environment,
       cwd: input.checkout,
       homeDirectory: input.home,

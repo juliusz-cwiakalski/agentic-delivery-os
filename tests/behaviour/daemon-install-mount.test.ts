@@ -145,6 +145,10 @@ describe("TC-DAEMON-100 the installed unit", () => {
       const recorder = createRecordingSupervisor();
       const entry = `${harness.root}/bin/${harness.brand.binaryName}`;
       const program = createProductionComposer({
+        harnessVersionProbe: async () => ({
+          status: "answered" as const,
+          stdout: "opencode v2.3.2",
+        }),
         environment: {
           HOME: harness.home,
           PATH: "/usr/bin",
@@ -250,6 +254,10 @@ describe("TC-DAEMON-100 the installed unit", () => {
         brand: harness.brand,
       });
       const program = createProductionComposer({
+        harnessVersionProbe: async () => ({
+          status: "answered" as const,
+          stdout: "opencode v2.3.2",
+        }),
         environment: {
           HOME: harness.home,
           PATH: "/usr/bin",
@@ -671,6 +679,10 @@ describe("TC-DAEMON-101 an unresolvable user configuration root (AC-F7-2)", () =
     try {
       const stateBinding = stateDirectoryName(harness.brand);
       const program = createProductionComposer({
+        harnessVersionProbe: async () => ({
+          status: "answered" as const,
+          stdout: "opencode v2.3.2",
+        }),
         // No home: an absolute state-directory override is the only scope.
         environment: {
           PATH: "/usr/bin",
@@ -751,6 +763,10 @@ describe("TC-DAEMON-101 an unresolvable user configuration root (AC-F7-2)", () =
     try {
       const recorder = createRecordingSupervisor({ installed: true });
       const program = createProductionComposer({
+        harnessVersionProbe: async () => ({
+          status: "answered" as const,
+          stdout: "opencode v2.3.2",
+        }),
         environment: {
           HOME: harness.home,
           PATH: "/usr/bin",
@@ -783,6 +799,10 @@ describe("TC-DAEMON-101 an unresolvable user configuration root (AC-F7-2)", () =
     try {
       const recorder = createRecordingSupervisor();
       const program = createProductionComposer({
+        harnessVersionProbe: async () => ({
+          status: "answered" as const,
+          stdout: "opencode v2.3.2",
+        }),
         environment: {
           HOME: harness.home,
           PATH: "/usr/bin",

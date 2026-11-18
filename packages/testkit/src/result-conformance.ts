@@ -9,7 +9,13 @@
 import type { BrandIdentity, ErrorCategory, ErrorConsequence } from "@delivery-os/core/contracts";
 import {
   COMMAND_FAILURE_DETAIL_MAX_CHARS,
+  COMMAND_FAILURE_HARNESS_VERSION_MAX_CHARS,
+  HARNESS_KINDS,
+  HARNESS_MODES,
+  HARNESS_VERSION_VERDICTS,
   RESULT_SCHEMA_VERSION,
+  VERIFY_SUITE_MAX_BREADTH,
+  VERIFY_SUITE_MAX_ID_CHARS,
 } from "@delivery-os/core/contracts";
 
 export const RULES = [
@@ -72,13 +78,89 @@ const ERROR_REQUIRED_KEYS = [
   "remediationHint",
 ] as const;
 const ERROR_ALLOWED_KEYS = [...ERROR_REQUIRED_KEYS, "summary"] as const;
-/** The only declared failure-envelope detail member (TDR-0027). */
-const FAILURE_OPTIONAL_DETAIL_MEMBERS = ["holder"] as const;
+/** The declared failure-envelope detail members (TDR-0027, TDR-0041, GH-300). */
+const FAILURE_OPTIONAL_DETAIL_MEMBERS = ["holder", "suiteBreadth", "harness"] as const;
+
+/** The declared `detail.harness` member set (TDR-0041). */
+const HARNESS_DETAIL_KEYS = ["kind", "observedVersion", "versionVerdict", "mode"] as const;
+
+/** The normalized bare-semantic-version shape the evidence member may carry. */
+const NORMALIZED_VERSION = /^[0-9]+\.[0-9]+\.[0-9]+$/;
 const CATEGORIES: readonly string[] = ["user", "platform", "transient", "permanent"];
 const CONSEQUENCES: readonly string[] = ["landed", "not_landed", "unknown"];
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
+
+/**
+ * Validate the declared `detail.harness` evidence member (TDR-0041): four closed
+ * keys, the closed vocabularies, a normalized version or explicit null, and a
+ * mode only where the version verdict is inside.
+ */
+const harnessDetailViolations = (
+  value: unknown,
+): readonly { readonly field: string; readonly message: string }[] => {
+  if (!isPlainObject(value)) {
+    return [{ field: "detail.harness", message: "detail.harness must be a plain object" }];
+  }
+  const violations: { field: string; message: string }[] = [];
+  for (const key of Object.keys(value)) {
+    if (!(HARNESS_DETAIL_KEYS as readonly string[]).includes(key)) {
+      violations.push({
+        field: `detail.harness.${key}`,
+        message: `unexpected detail.harness field ${key}`,
+      });
+    }
+  }
+  const kind = value.kind;
+  if (typeof kind !== "string" || !(HARNESS_KINDS as readonly string[]).includes(kind)) {
+    violations.push({
+      field: "detail.harness.kind",
+      message: "detail.harness.kind must be a declared harness kind",
+    });
+  }
+  const verdict = value.versionVerdict;
+  if (
+    typeof verdict !== "string" ||
+    !(HARNESS_VERSION_VERDICTS as readonly string[]).includes(verdict)
+  ) {
+    violations.push({
+      field: "detail.harness.versionVerdict",
+      message: "detail.harness.versionVerdict must be a declared verdict",
+    });
+  }
+  const observed = value.observedVersion;
+  const observedValid =
+    observed === null
+      ? verdict === "indeterminate"
+      : typeof observed === "string" &&
+        observed.length > 0 &&
+        observed.length <= COMMAND_FAILURE_HARNESS_VERSION_MAX_CHARS &&
+        NORMALIZED_VERSION.test(observed) &&
+        verdict !== "indeterminate";
+  if (!observedValid) {
+    violations.push({
+      field: "detail.harness.observedVersion",
+      message:
+        "detail.harness.observedVersion must be a normalized version, or null iff indeterminate",
+    });
+  }
+  if (Object.hasOwn(value, "mode")) {
+    const mode = value.mode;
+    if (typeof mode !== "string" || !(HARNESS_MODES as readonly string[]).includes(mode)) {
+      violations.push({
+        field: "detail.harness.mode",
+        message: "detail.harness.mode must be a declared integration mode",
+      });
+    } else if (verdict !== "inside") {
+      violations.push({
+        field: "detail.harness.mode",
+        message: "detail.harness.mode is present only where the version verdict is inside",
+      });
+    }
+  }
+  return violations;
+};
 
 const sameKeySet = (actual: readonly string[], expected: readonly string[]): boolean =>
   actual.length === expected.length && expected.every((key) => actual.includes(key));
@@ -288,6 +370,34 @@ export const assertEnvelopeContract = (parsed: unknown): Violation[] => {
             rule: "envelope.keys.failure",
             field: `detail.${key}`,
             message: `unexpected detail field ${key}`,
+          });
+        }
+      }
+      if (Object.hasOwn(detail, "suiteBreadth")) {
+        const breadth = detail.suiteBreadth;
+        const valid =
+          Array.isArray(breadth) &&
+          breadth.length <= VERIFY_SUITE_MAX_BREADTH &&
+          breadth.every(
+            (entry) =>
+              typeof entry === "string" &&
+              entry.length > 0 &&
+              entry.length <= VERIFY_SUITE_MAX_ID_CHARS,
+          );
+        if (!valid) {
+          violations.push({
+            rule: "envelope.keys.failure",
+            field: "detail.suiteBreadth",
+            message: "detail.suiteBreadth must be a bounded array of non-empty identifiers",
+          });
+        }
+      }
+      if (Object.hasOwn(detail, "harness")) {
+        for (const violation of harnessDetailViolations(detail.harness)) {
+          violations.push({
+            rule: "envelope.keys.failure",
+            field: violation.field,
+            message: violation.message,
           });
         }
       }

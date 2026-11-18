@@ -357,3 +357,75 @@ describe("TC-RESULT-006 golden-file sweep", () => {
     expect(KEY_SET.scriptedFailureKeys).toEqual(["error", "runId"]);
   });
 });
+
+/**
+ * TC-HARNESS-035 / TC-HARNESS-040 (pin half) — the declared `detail.harness`
+ * evidence member: the validator admits it, validates its four members against
+ * the closed vocabularies, and rejects an out-of-vocabulary or inconsistent
+ * value. The documented member list and the admitted list agree.
+ */
+describe("TC-HARNESS-035 detail.harness evidence member", () => {
+  const harnessEnvelope = (harness: Record<string, unknown>): Record<string, unknown> => ({
+    ...failureEnvelope(),
+    error: { ...errorObject(), code: "harness.version.unsupported" },
+    detail: { harness },
+  });
+
+  test("the documented member list carries holder, suiteBreadth, and harness", () => {
+    expect([...KEY_SET.failureDetailMembers].sort()).toEqual(["harness", "holder", "suiteBreadth"]);
+  });
+
+  test("the validator admits the four-fact member and the indeterminate no-mode form", () => {
+    expect(
+      assertEnvelopeContract(
+        harnessEnvelope({
+          kind: "opencode",
+          observedVersion: "2.1.7",
+          versionVerdict: "outside",
+        }),
+      ),
+    ).toEqual([]);
+    expect(
+      assertEnvelopeContract(
+        harnessEnvelope({
+          kind: "opencode",
+          observedVersion: null,
+          versionVerdict: "indeterminate",
+        }),
+      ),
+    ).toEqual([]);
+    expect(
+      assertEnvelopeContract(
+        harnessEnvelope({
+          kind: "opencode",
+          observedVersion: "2.3.2",
+          versionVerdict: "inside",
+          mode: "per-invocation-private-server",
+        }),
+      ),
+    ).toEqual([]);
+  });
+
+  test("the validator rejects an out-of-vocabulary or inconsistent member", () => {
+    for (const harness of [
+      { kind: "pi-dev", observedVersion: "2.3.2", versionVerdict: "inside" },
+      { kind: "opencode", observedVersion: "2.3.2", versionVerdict: "probable" },
+      { kind: "opencode", observedVersion: "v2.3.2", versionVerdict: "inside" },
+      { kind: "opencode", observedVersion: null, versionVerdict: "inside" },
+      { kind: "opencode", observedVersion: "2.3.2", versionVerdict: "inside", mode: "daemon" },
+      {
+        kind: "opencode",
+        observedVersion: "2.1.7",
+        versionVerdict: "outside",
+        mode: "per-invocation-private-server",
+      },
+      { kind: "opencode", observedVersion: "2.3.2", versionVerdict: "inside", extra: true },
+    ]) {
+      const violations = assertEnvelopeContract(harnessEnvelope(harness));
+      expect(violations.length, JSON.stringify(harness)).toBeGreaterThan(0);
+      expect(violations.some((violation) => violation.field.startsWith("detail.harness"))).toBe(
+        true,
+      );
+    }
+  });
+});

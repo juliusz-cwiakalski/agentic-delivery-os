@@ -1,0 +1,219 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-335
+branch: feat/GH-335/opencode-harness-telemetry
+status: PASS
+summary: >
+  Iteration 3 verdict: PASS. All 27 ACs hold; the three iteration-1 blockers and
+  every iteration-2 blocker/medium finding are genuinely closed on inspection of
+  the code, not just asserted. DEC-18 is declared in every place the change spec
+  needs it and the delivered refusal is exactly the declared shape (config.value.invalid,
+  kind config, field agent, a fixed 56-character summary with no caller value,
+  no envelope member), with DEC-17 precedence real in code and locked by a test.
+  The stored-version grammar now has one authored home in the contracts tier,
+  bounded by HARNESS_VERSION_MAX_CHARS, and I verified by direct execution that
+  over-bound, unparseable and empty inputs take the declared absence path while a
+  32-character stamp is accepted and nothing is clipped. The false "mounts no
+  profile wrapper" statements are gone from every shipped page and the corrected
+  text matches the code (mount, byte-identical role-less passthrough, closeout
+  shapes, edge durable facts, pinned-version drift, row-based LIMIT). The declared
+  gate invocation (TMPDIR=$PWD/tmp/tmpdir pnpm check) is green except one
+  load-induced 5 s timeout in an unrelated in-process suite that passes 26/26 in
+  1.96 s in isolation; every non-test stage exits 0 when run separately, the
+  41-commit range gate passes, and the reported clean totals reconcile
+  arithmetically with Phase 10's six added tests. Residuals are documentary and
+  non-blocking: Phase 10's declared scope.files omits nine changed files (three
+  mechanically required barrel/inventory consequences), task 10.2's
+  accepted-deviation sentence was never recorded, the memoisation comment claims
+  a guarantee the code does not provide, the F-5 single-home test's source guard
+  is escaped twice and cannot catch the form it forbids, and the spec revision log
+  says "no DEC count change" while adding DEC-18.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 5
+  info: 6
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-1
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/chg-GH-335-plan.yaml (phase 10 scope.files)
+    message: >
+      Commit 30f89e62 changes 23 files while Phase 10 declares 14. Undeclared:
+      doc/overview/architecture-overview.md, doc/spec/features/feature-dispatch-engine.md,
+      feature-provider-profiles.md, feature-state-layer.md, doc/spec/nonfunctional.md,
+      packages/core/src/contracts/index.ts, tests/fixtures/ports/v1-contract-inventory.json,
+      tests/structure/content-inventory.test.ts, and the plan file itself. Three are
+      mechanically forced by exporting two new contract symbols and carry no behaviour;
+      the five docs are the same correction class as task 10.1 and are accurate against
+      the code; the plan is the phase's own declaration. So this is under-declaration,
+      not undeclared behaviour, and it repeats the pattern of Phase 9.
+    suggestion: >
+      @pm at completion: record the nine files as an accepted Phase-10 scope deviation
+      in the same note F-2 asks for, or widen scope.files in a new phase entry; never
+      rewrite Phase 10.
+    suppressed: false
+  - id: F-2
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/chg-GH-335-pm-notes.yaml
+    message: >
+      Phase 10 task 10.2 required recording the four files changed outside Phase 9's
+      scope.files as an accepted deviation; no pm-notes entry does that (the only
+      "deviation" text is an unrelated test-plan adjudication). Phase 10 also has no
+      delivery-evidence note yet, which is correct before its declared exit (this
+      verdict) but must be written at the phase boundary. The substance is verifiable:
+      all four Phase-9 files are declared in phases 2/4/5/7.
+    suggestion: >
+      @pm at dod_check: one note carrying (a) Phase 10 delivery evidence — commit
+      30f89e62 and the gate result this review measured (10 577 tests / 1 349 files,
+      10 572 pass / 4 skip / 1 load-only timeout TC-ATTEMPT-003 that passes 26/26 in
+      isolation, boundaries/memory/prompt/help/forbidden-literals/privacy-literals/exports-parity
+      all exit 0, 41-commit range gate PASS) and (b) the accepted deviations for
+      Phases 9 and 10.
+    suppressed: false
+  - id: F-3
+    severity: low
+    confidence: high
+    category: maintainability
+    location: packages/cli/src/production.ts:2818-2830
+    message: >
+      The memoisation comment says the context "cannot drift from the one admission
+      read". It cannot guarantee that: nominationPredicate performs its own
+      acquireProjectConfiguration + resolveConfig + parse + selectProfile and
+      resolveProfileContextFrom performs a second independent one, so config edits or
+      a probe-clock difference between admission and the first port call still
+      diverge. Memoisation also freezes a failure (profileContextResolved is set before
+      the outcome), so a transient unreadable-config result refuses every spawn of that
+      dispatch. Both are safe under the documented one-dispatch-per-composition
+      invariant and fail closed, but the stated reason is stronger than the code.
+    suggestion: >
+      @coder/@pm: state what memoisation actually buys (one parse per dispatch; first
+      result, success or failure, is authoritative) and either resolve the context from
+      the nominated decision or record that the residual profileName/providerProfile
+      divergence is accepted under the one-dispatch invariant.
+    suppressed: false
+  - id: F-4
+    severity: low
+    confidence: high
+    category: test-quality
+    location: tests/behaviour/harness-telemetry-shape.test.ts:223
+    message: >
+      The "single home of the stored-stamp grammar" guard asserts the adapter source
+      does not contain "/^v?(\\\\d+)". That needle's runtime value carries two
+      backslashes, while a reintroduced regex literal reads with one, so the assertion
+      is false for exactly the form it was written to forbid (verified by evaluating
+      both strings). It only catches a new RegExp-style double-escaped reintroduction.
+      The behavioural bound tests carry the real weight, so this is a guard that does
+      not guard rather than a behavioural hole.
+    suggestion: >
+      @coder: use a needle that matches the source form (e.g. "v?([0-9]+)"), or assert
+      the adapter import and the absence of any "/^v?" literal, or drop the source-text
+      guard in favour of the behavioural tests plus content-inventory.
+    suppressed: false
+  - id: F-5
+    severity: low
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/chg-GH-335-spec.md (revision log 1.4, last correction)
+    message: >
+      The revision-log entry says "additive; no AC/DEC/DM identifier or count change,
+      27 criteria retained" while it adds DEC-18, so the DEC count does change 17 to
+      18. The rest of the sentence is accurate; the clause that is supposed to make the
+      spec's own change discipline auditable is untrue.
+    suggestion: >
+      @spec-writer on the next touch: "no AC/DM identifier or count change; one decision
+      added (DEC-18); 27 criteria retained". The spec was not edited by this review.
+    suppressed: false
+  - id: F-6
+    severity: info
+    confidence: high
+    category: code-quality
+    location: packages/cli/src/edge.ts:2502-2520
+    message: >
+      Iteration-2 F-11 (typed absence map, duplicated projection) is deliberately left
+      open. Plan 10.5 marks it optional so this is not a deviation, but no pm-notes line
+      records the decision, so a reader cannot distinguish deferred from forgotten.
+    suggestion: >
+      @pm: record the accepted F-11 carry-over and its owner in the completion note.
+    suppressed: false
+  - id: F-7
+    severity: info
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/chg-GH-335-live-observation.md:128
+    message: >
+      Iteration-2 F-12 persists unchanged: the token/cost row still attributes the
+      section-3 versus section-4 delta to "the capture is a point-in-time read of a live
+      session" while the quoted timestamp pair is byte-identical; the delta is the row's
+      per-message sums versus the session row's aggregate columns. No value is false.
+    suggestion: >
+      @pm on the next touch: name the two sources explicitly.
+    suppressed: false
+  - id: F-8
+    severity: info
+    confidence: high
+    category: code-quality
+    location: packages/cli/src/production.ts:1155-1170
+    message: >
+      resolveHarnessAdmissionBinding maps a resolver no-agent outcome to
+      config.value.invalid with the fixed summary "a named agent resolved no seat".
+      DEC-17's identity check precedes it, so the branch cannot fire for a present
+      non-empty identity: it is unreachable defence, but it is a fifth refusal shape
+      that DEC-18's count of four dispositions of a present agent identity does not
+      enumerate.
+    suggestion: >
+      @coder (optional): note that the branch is defensive and unreachable under
+      DEC-17/DEC-18, or delete it.
+    suppressed: false
+  - id: F-9
+    severity: info
+    confidence: high
+    category: commit-discipline
+    location: commit 30f89e62
+    message: >
+      The subject docs(GH-335): update doc/changes/2026-11/... describes a commit that
+      also changes three source files, two test files, a fixture and a structure
+      allowance. Conventional, single line, 82 characters, range gate PASS; same class
+      as iteration-2 F-15 and generated by the commit primitive.
+    suggestion: none
+    suppressed: false
+  - id: F-10
+    severity: info
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/chg-GH-335-spec.md (DM-10 / AC-F5-1)
+    message: >
+      The stored-stamp grammar is now an exported contract constant (optional v, three
+      numeric components, 32-character bound, null otherwise), but the change spec only
+      says "the session record's normalized harness version"; the accepted shape and the
+      bound are stated in the system spec and code comments, not in DM-10 or AC-F5-1.
+    suggestion: >
+      @spec-writer on the next touch: one clause in DM-10 or AC-F5-1 naming the accepted
+      stored-stamp shape and its bound.
+    suppressed: false
+  - id: F-11
+    severity: info
+    confidence: high
+    category: environment
+    location: full gate run
+    message: >
+      The full suite is 10 577 tests across 1 349 files; this run gave 10 572 pass /
+      4 skip / 1 fail. The failure is TC-ATTEMPT-003 "1 and 100 are accepted" in
+      tests/behaviour/dispatch-attempts-ref.test.ts timing out at 5 861 ms against a
+      5 000 ms bound; isolated re-run 26 pass / 0 fail in 1.96 s. The implicated test
+      has changed identity in every full run across three iterations, and an
+      unset-TMPDIR run reproduces a different environmental failure (ci-baseline-parity
+      git clone --local cross-device hardlink). Pre-existing load sensitivity; no GH-335
+      suite fails, and the reported clean totals (10 573 pass / 4 skip / 0 fail)
+      reconcile with Phase 10's six added tests.
+    suggestion: Record with the Phase-10 evidence; no code change.
+    suppressed: false
+reviewed_at: 2026-11-18T19:20:00Z
+next_step: PROCEED

@@ -66,7 +66,7 @@ decisions:
       request; a forced merge is not."
     date: "2026-11-18"
   - text: "Decision records authored by @decision-advisor and bound by this change:
-      ADR-0012 (provider-side landing is the lifecycle merge path), TDR-0040
+      ADR-0012 (provider-side landing is the lifecycle merge path), TDR-0044
       (phase truth = registry fold, mirror derived, additive
       lint.phases.divergent detection, no repair), ODR-0005 (closeout milestone
       sync as step 12 of 13 over one new closed close-milestone operation, one
@@ -265,7 +265,7 @@ notes:
       phase command is running, and verify the note count after each completion.
       Candidate follow-up: the phase write path should read the document under
       the same fence it writes under, or refuse a snapshot it has proven stale.
-      Out of scope for GH-349 (TDR-0040 fixes the derivation, not the
+      Out of scope for GH-349 (TDR-0044 fixes the derivation, not the
       read-modify-write race); not filed as a ticket because ticket creation
       needs human approval."
     type: risk
@@ -400,7 +400,7 @@ notes:
       (`149`, `148` and `+115` join the no-leftover scan; `151` is the
       delivered-row pin) and the two identity-count pages moved in ONE commit.
       `PM_NOTES_LINT_CODES` stays five. The three `Proposed` decision records
-      landed unedited (ADR-0012, TDR-0040, ODR-0005); the committed index needed
+      landed unedited (ADR-0012, TDR-0044, ODR-0005); the committed index needed
       no touch. Commit 0a3dc3ff2c426f28467ab0409258fce6917eed33, subject
       `chore(GH-349): update
       doc/changes/2026-11/2026-11-18--GH-349--merge-clo...`, messageSource

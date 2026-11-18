@@ -124,7 +124,7 @@ describe("coordinator production session effects", () => {
       );
       expect((data?.restarts as { count?: number } | undefined)?.count).toBe(0);
       expect(invocations).toHaveLength(1);
-      expect(invocations[0]?.args).toEqual(["run", "--format", "json"]);
+      expect(invocations[0]?.args).toEqual(["--standalone", "run", "--format", "json"]);
     } finally {
       removeRoot(root);
     }
@@ -158,6 +158,7 @@ describe("coordinator production session effects", () => {
       );
       expect(invocations).toHaveLength(1);
       expect(invocations[0]?.args).toEqual([
+        "--standalone",
         "run",
         "--format",
         "json",

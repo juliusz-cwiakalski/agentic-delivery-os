@@ -75,16 +75,18 @@ describe("TC-SUP-070 the supervise kind declares exactly two rows", () => {
   });
 
   test("every delivered row is byte-identical to the captured baseline and in place", () => {
-    expect(baseline.rows).toHaveLength(146);
+    expect(baseline.rows).toHaveLength(150);
     // The captured baseline predates GH-299's `metrics` row, the two supervise
-    // rows, and GH-349's three additive rows. Every baseline row must still be
-    // present, byte-identical, and in its delivered relative order; the rows
-    // outside the baseline are exactly those four additive declarations.
+    // rows, and GH-349's three additive rows; it carries the four GH-335 harness
+    // refusal rows. Every baseline row must still be present, byte-identical and
+    // in its delivered relative order, so the positional oracle is preserved;
+    // the rows outside the baseline are exactly those three additive
+    // declarations, named here so no fourth row can appear unnoticed.
     const baselineCodes = new Set(baseline.rows.map((row) => row[0]));
     const live = entries.filter(
       (entry) => entry.domainKind !== "supervise" && entry.domainKind !== "metrics",
     );
-    expect(live).toHaveLength(149);
+    expect(live).toHaveLength(153);
     for (const row of baseline.rows) {
       const found = entries.find((entry) => entry.code === row[0]);
       expect(found, row[0]).toBeDefined();
