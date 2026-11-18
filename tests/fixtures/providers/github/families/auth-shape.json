@@ -1,0 +1,17 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "provider": "github",
+  "family": "auth-shape",
+  "stimulus": {
+    "kind": "response",
+    "status": 401,
+    "body": {
+      "message": "authentication required"
+    }
+  },
+  "expected": {
+    "classification": "tracker.auth.rejected",
+    "ownsHttpStatus": true,
+    "zeroProviderRequests": false
+  }
+}

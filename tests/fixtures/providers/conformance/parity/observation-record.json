@@ -1,0 +1,375 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "record": {
+    "github": {
+      "read-work-item": {
+        "identity-scheme": {
+          "state": "observed",
+          "value": "provider-numeric-id"
+        },
+        "pipeline-model": {
+          "state": "not-observable",
+          "why": "only read-pipeline-run observes a pipeline item"
+        },
+        "state-vocabulary": {
+          "state": "observed",
+          "value": "native-status+label-tokens+refusal"
+        },
+        "pagination-model": {
+          "state": "not-observable",
+          "why": "the operation is not a collection read"
+        },
+        "carrier-absent": {
+          "state": "observed",
+          "value": "writable=[];readable=[];participation=not-observable"
+        },
+        "failure-classification": {
+          "state": "observed",
+          "value": "tracker.auth.rejected"
+        }
+      },
+      "write-work-item": {
+        "identity-scheme": {
+          "state": "not-observable",
+          "why": "the write result carries no entity identity"
+        },
+        "pipeline-model": {
+          "state": "not-observable",
+          "why": "only read-pipeline-run observes a pipeline item"
+        },
+        "state-vocabulary": {
+          "state": "not-observable",
+          "why": "the operation models no delivery or review state"
+        },
+        "pagination-model": {
+          "state": "not-observable",
+          "why": "the operation is not a collection read"
+        },
+        "carrier-absent": {
+          "state": "observed",
+          "value": "writable=[];readable=[];participation=not-observable"
+        },
+        "failure-classification": {
+          "state": "not-observable",
+          "why": "no error family fixture exercises this operation"
+        }
+      },
+      "transition-work-item": {
+        "identity-scheme": {
+          "state": "not-observable",
+          "why": "the write result carries no entity identity"
+        },
+        "pipeline-model": {
+          "state": "not-observable",
+          "why": "only read-pipeline-run observes a pipeline item"
+        },
+        "state-vocabulary": {
+          "state": "not-observable",
+          "why": "the operation models no delivery or review state"
+        },
+        "pagination-model": {
+          "state": "not-observable",
+          "why": "the operation is not a collection read"
+        },
+        "carrier-absent": {
+          "state": "observed",
+          "value": "writable=[];readable=[];participation=not-observable"
+        },
+        "failure-classification": {
+          "state": "not-observable",
+          "why": "no error family fixture exercises this operation"
+        }
+      },
+      "read-delivery-request": {
+        "identity-scheme": {
+          "state": "observed",
+          "value": "provider-numeric-id"
+        },
+        "pipeline-model": {
+          "state": "not-observable",
+          "why": "only read-pipeline-run observes a pipeline item"
+        },
+        "state-vocabulary": {
+          "state": "observed",
+          "value": "review-state-resolver+unknown-decision-fallback"
+        },
+        "pagination-model": {
+          "state": "not-observable",
+          "why": "the operation is not a collection read"
+        },
+        "carrier-absent": {
+          "state": "observed",
+          "value": "writable=[];readable=[];participation=not-observable"
+        },
+        "failure-classification": {
+          "state": "not-observable",
+          "why": "no error family fixture exercises this operation"
+        }
+      },
+      "write-delivery-request": {
+        "identity-scheme": {
+          "state": "observed",
+          "value": "provider-delivery-request-id"
+        },
+        "pipeline-model": {
+          "state": "not-observable",
+          "why": "only read-pipeline-run observes a pipeline item"
+        },
+        "state-vocabulary": {
+          "state": "not-observable",
+          "why": "the operation models no delivery or review state"
+        },
+        "pagination-model": {
+          "state": "not-observable",
+          "why": "the operation is not a collection read"
+        },
+        "carrier-absent": {
+          "state": "observed",
+          "value": "writable=[];readable=[];participation=not-observable"
+        },
+        "failure-classification": {
+          "state": "not-observable",
+          "why": "no error family fixture exercises this operation"
+        }
+      },
+      "read-pipeline-run": {
+        "identity-scheme": {
+          "state": "observed",
+          "value": "composite-check-run-identity"
+        },
+        "pipeline-model": {
+          "state": "observed",
+          "value": "check-run-unit+jobs+check-run-evidence"
+        },
+        "state-vocabulary": {
+          "state": "not-observable",
+          "why": "the operation models no delivery or review state"
+        },
+        "pagination-model": {
+          "state": "observed",
+          "value": "bound=declared;count=reported"
+        },
+        "carrier-absent": {
+          "state": "observed",
+          "value": "writable=[];readable=[];participation=not-observable"
+        },
+        "failure-classification": {
+          "state": "not-observable",
+          "why": "no error family fixture exercises this operation"
+        }
+      },
+      "write-comment": {
+        "identity-scheme": {
+          "state": "observed",
+          "value": "provider-comment-id"
+        },
+        "pipeline-model": {
+          "state": "not-observable",
+          "why": "only read-pipeline-run observes a pipeline item"
+        },
+        "state-vocabulary": {
+          "state": "not-observable",
+          "why": "the operation models no delivery or review state"
+        },
+        "pagination-model": {
+          "state": "not-observable",
+          "why": "the operation is not a collection read"
+        },
+        "carrier-absent": {
+          "state": "observed",
+          "value": "writable=[];readable=[];participation=skipped:capability-absent"
+        },
+        "failure-classification": {
+          "state": "not-observable",
+          "why": "no error family fixture exercises this operation"
+        }
+      },
+      "resolve-delivery-thread": {
+        "identity-scheme": {
+          "state": "not-observable",
+          "why": "the write result carries no entity identity"
+        },
+        "pipeline-model": {
+          "state": "not-observable",
+          "why": "only read-pipeline-run observes a pipeline item"
+        },
+        "state-vocabulary": {
+          "state": "not-observable",
+          "why": "the operation models no delivery or review state"
+        },
+        "pagination-model": {
+          "state": "not-observable",
+          "why": "the operation is not a collection read"
+        },
+        "carrier-absent": {
+          "state": "observed",
+          "value": "writable=[];readable=[];participation=not-observable"
+        },
+        "failure-classification": {
+          "state": "not-observable",
+          "why": "no error family fixture exercises this operation"
+        }
+      },
+      "merge-delivery-request": {
+        "identity-scheme": {
+          "state": "not-observable",
+          "why": "the write result carries no entity identity"
+        },
+        "pipeline-model": {
+          "state": "not-observable",
+          "why": "only read-pipeline-run observes a pipeline item"
+        },
+        "state-vocabulary": {
+          "state": "not-observable",
+          "why": "the operation models no delivery or review state"
+        },
+        "pagination-model": {
+          "state": "not-observable",
+          "why": "the operation is not a collection read"
+        },
+        "carrier-absent": {
+          "state": "observed",
+          "value": "writable=[];readable=[];participation=not-observable"
+        },
+        "failure-classification": {
+          "state": "not-observable",
+          "why": "no error family fixture exercises this operation"
+        }
+      }
+    },
+    "gitlab": {
+      "read-delivery-request": {
+        "identity-scheme": {
+          "state": "observed",
+          "value": "project-scoped-iid"
+        },
+        "pipeline-model": {
+          "state": "not-observable",
+          "why": "only read-pipeline-run observes a pipeline item"
+        },
+        "state-vocabulary": {
+          "state": "observed",
+          "value": "merge-status-table+unknown-fallback"
+        },
+        "pagination-model": {
+          "state": "not-observable",
+          "why": "the operation is not a collection read"
+        },
+        "carrier-absent": {
+          "state": "observed",
+          "value": "writable=[];readable=[];participation=not-observable"
+        },
+        "failure-classification": {
+          "state": "observed",
+          "value": "tracker.transport.failed"
+        }
+      },
+      "read-pipeline-run": {
+        "identity-scheme": {
+          "state": "observed",
+          "value": "bare-pipeline-id"
+        },
+        "pipeline-model": {
+          "state": "observed",
+          "value": "pipeline-unit+jobs+trace"
+        },
+        "state-vocabulary": {
+          "state": "not-observable",
+          "why": "the operation models no review state"
+        },
+        "pagination-model": {
+          "state": "observed",
+          "value": "bound=none;count=absent"
+        },
+        "carrier-absent": {
+          "state": "observed",
+          "value": "writable=[];readable=[];participation=not-observable"
+        },
+        "failure-classification": {
+          "state": "not-observable",
+          "why": "no error family fixture exercises this operation"
+        }
+      }
+    },
+    "jira": {
+      "read-work-item": {
+        "identity-scheme": {
+          "state": "observed",
+          "value": "issue-key"
+        },
+        "state-vocabulary": {
+          "state": "observed",
+          "value": "native-status-row+refusal"
+        },
+        "failure-classification": {
+          "state": "observed",
+          "value": "tracker.transport.failed"
+        },
+        "pipeline-model": {
+          "state": "not-observable",
+          "why": "only read-pipeline-run observes a pipeline item"
+        },
+        "pagination-model": {
+          "state": "not-observable",
+          "why": "the operation is not a collection read"
+        },
+        "carrier-absent": {
+          "state": "observed",
+          "value": "writable=[];readable=[];participation=not-observable"
+        }
+      },
+      "write-work-item": {
+        "identity-scheme": {
+          "state": "not-observable",
+          "why": "the write result carries no entity identity"
+        },
+        "state-vocabulary": {
+          "state": "not-observable",
+          "why": "the operation models no read state"
+        },
+        "failure-classification": {
+          "state": "not-observable",
+          "why": "no error family fixture exercises this operation"
+        },
+        "pipeline-model": {
+          "state": "not-observable",
+          "why": "only read-pipeline-run observes a pipeline item"
+        },
+        "pagination-model": {
+          "state": "not-observable",
+          "why": "the operation is not a collection read"
+        },
+        "carrier-absent": {
+          "state": "observed",
+          "value": "writable=[];readable=[];participation=not-observable"
+        }
+      },
+      "transition-work-item": {
+        "identity-scheme": {
+          "state": "not-observable",
+          "why": "the write result carries no entity identity"
+        },
+        "state-vocabulary": {
+          "state": "not-observable",
+          "why": "the operation models no read state"
+        },
+        "failure-classification": {
+          "state": "not-observable",
+          "why": "no error family fixture exercises this operation"
+        },
+        "pipeline-model": {
+          "state": "not-observable",
+          "why": "only read-pipeline-run observes a pipeline item"
+        },
+        "pagination-model": {
+          "state": "not-observable",
+          "why": "the operation is not a collection read"
+        },
+        "carrier-absent": {
+          "state": "observed",
+          "value": "writable=[];readable=[];participation=not-observable"
+        }
+      }
+    }
+  }
+}

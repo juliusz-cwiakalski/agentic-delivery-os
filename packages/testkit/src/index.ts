@@ -35,6 +35,11 @@ export {
   validateConformanceArtifact,
 } from "./conformance/artifact.js";
 export {
+  CAPSULE_CONFORMANCE_REGISTRY,
+  type CapsuleConformanceEntry,
+  capsuleConformanceViolations,
+} from "./conformance/capsule.js";
+export {
   LIVE_READ_OPERATIONS,
   runtimeCoverageViolations,
   structuralCoverageViolations,
@@ -51,7 +56,77 @@ export {
 } from "./conformance/harness.js";
 export type { MockTenantTransport } from "./conformance/mock-tenant.js";
 export { createMockTenantTransport, decodeMockTenant } from "./conformance/mock-tenant.js";
+export type {
+  ParityCell,
+  ParityCellEntry,
+  ParityCellKind,
+  ParityClauseId,
+  ParityDifferenceClass,
+  ParityEvidence,
+  ParityGateInput,
+  ParityMatrix,
+  ParityMatrixColumn,
+  ParityObservation,
+  ParityObservationRecord,
+  ParityObservationSet,
+  ParityRegisterEntry,
+  ParityViolation,
+} from "./conformance/parity.js";
+export {
+  buildParityMatrix,
+  PARITY_CELL_KINDS,
+  PARITY_CLAUSE_IDS,
+  PARITY_DETAIL_MAX_CHARS,
+  PARITY_DIFFERENCE_CLASSES,
+  PARITY_MATRIX,
+  parityViolations,
+  renderParityViolation,
+} from "./conformance/parity.js";
+export type {
+  ParticipationEntry,
+  ParticipationItem,
+  ParticipationRefusal,
+} from "./conformance/participation.js";
+export {
+  isClosedOperation,
+  operationRefusal,
+  PARTICIPATION_CONTRACT,
+  PARTICIPATION_ITEMS,
+  PARTICIPATION_REFUSALS,
+  participationRefusal,
+  participationViolations,
+} from "./conformance/participation.js";
 export { runConformance } from "./conformance/runner.js";
+export type {
+  StatefulEffect,
+  StatefulTenantOptions,
+  StatefulTenantTransport,
+} from "./conformance/stateful-double.js";
+export {
+  canonicalizeState,
+  createStatefulTenantTransport,
+  STATEFUL_EFFECTS,
+} from "./conformance/stateful-double.js";
+export type {
+  TrackerClassification,
+  TrackerDeliveredIdentity,
+  TrackerErrorClass,
+  TrackerErrorClassId,
+  TrackerFamilyOutcome,
+  TrackerObservableOutcome,
+  TrackerStructuredDiscriminator,
+  TrackerStructuredFailure,
+  TrackerTrapFamily,
+} from "./conformance/tracker-error-taxonomy.js";
+export {
+  classifyTrackerFailure,
+  classifyTrackerOutcome,
+  ownsHttpStatus,
+  TRACKER_ERROR_CLASS_IDS,
+  TRACKER_ERROR_TAXONOMY,
+  TRACKER_FAMILY_OUTCOMES,
+  TRACKER_TRAP_FAMILIES,
+} from "./conformance/tracker-error-taxonomy.js";
 export type {
   ConformanceAdapterClient,
   ConformanceAdapterRead,
@@ -94,11 +169,6 @@ export type {
   MockTenantRoute,
   RunConformanceInput,
 } from "./conformance/types.js";
-export {
-  type CapsuleConformanceEntry,
-  CAPSULE_CONFORMANCE_REGISTRY,
-  capsuleConformanceViolations,
-} from "./conformance/capsule.js";
 export type {
   RuleId,
   ScriptedRuleId,

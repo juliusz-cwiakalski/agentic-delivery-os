@@ -1,0 +1,540 @@
+change_id: GH-339
+title: "M3-S5: Adapter conformance and parity suite (M3)"
+delivery_mode: autonomous
+milestone: "M3: Harness and tracker integrations"
+phases:
+  clarify_scope: { started: null, completed: 2026-11-18T10:38:16.650Z }
+  specification: { started: null, completed: 2026-11-18T12:34:06.099Z }
+  test_planning: { started: null, completed: 2026-11-18T12:38:49.738Z }
+  delivery_planning: { started: null, completed: 2026-11-18T12:38:56.574Z }
+  dor_check: { started: null, completed: 2026-11-18T12:41:10.844Z }
+  delivery: { started: null, completed: 2026-11-18T15:40:11.809Z }
+  system_spec_update: { started: null, completed: 2026-11-18T15:41:54.200Z }
+  review_fix: { started: null, completed: 2026-11-18T17:42:36.343Z }
+  quality_gates: { started: null, completed: 2026-11-18T18:09:24.463Z }
+  dod_check: { started: null, completed: 2026-11-18T18:10:31.250Z }
+  pr_creation: { started: null, completed: 2026-11-18T18:12:58.256Z }
+decisions:
+  - text: "Scope is taken from the ticket body plus the committed M3 blueprint
+      (doc/planning/oss-tooling/milestones/m3/README.md §M3-S5, contracts.md
+      §Conformance): extend the M0-S20 adapter conformance suite to the tracker
+      primitives, add a typed error taxonomy and trap catalogs per adapter, add
+      a simulated tracker double for offline CI, and add a parity matrix gate in
+      CI. M3-S5 is the harness the later adapters (M3-S2 Jira, M3-S3 GitLab) are
+      built against; it does not implement those adapters."
+    date: "2026-11-18"
+  - text: "No M3 delivery question (#342) carries an answer, so the stated defaults
+      apply for any phase that reaches them. Relevant here: Q-03 credential
+      names (`GITHUB_TOKEN`, `GITLAB_TOKEN`, `JIRA_URL`/`JIRA_USER`/
+      `JIRA_TOKEN`) and Q-07 bounded pipeline evidence (status, failed job name,
+      bounded log excerpt, durations). Adapter completion itself is M3-S2/S3/S4,
+      not this change."
+    date: "2026-11-18"
+  - text: "Cross-reference hygiene: doc/planning/oss-tooling/cli-command-registry.md
+      maps `ados policy` to M3-S5 and TDR-0006 §succession names 'the policy
+      engine (M3-S5)'. The M3 rework (GH-333) redefined M3-S5 as this
+      conformance suite. The policy engine is out of scope; the decision whether
+      to restate those stale pointers is a documentation-reconciliation question
+      for phase 7, not a scope claim for this change."
+    date: "2026-11-18"
+open_questions: []
+blockers: []
+notes:
+  - text: "Clarify-scope current-state facts (read 2026-11-18): the M0-S20 suite
+      exists in `packages/testkit/src/conformance/` with a three-flow,
+      fourteen-step registry over the nine closed adapter operations
+      (`flows.ts`), capability gating and structural/runtime coverage gates
+      (`coverage.ts`), a registry of exactly the three shipped contracts
+      (`adapters.ts`), declarative exact-url stateless mock tenants
+      (`mock-tenant.ts` + `tests/fixtures/providers/conformance/*/tenant.json`),
+      the `delivery.conformance.v1` artifact (`artifact.ts`), a scheduled
+      read-only live tier, and the harness conformance registry (`harness.ts`).
+      Per-adapter trap catalogs live with the provider client seeds. The parity
+      suite's evidence lives in `tests/conformance/*` plus
+      `tests/structure/conformance-coverage.test.ts` and
+      `tests/checks/conformance-workflow.test.ts`."
+    type: info
+    date: "2026-11-18"
+  - text: "Clarify-scope gap analysis against AC ('the suite fails on undeclared
+      behavior differences; new adapters plug in without lifecycle changes'):
+      (a) there is no declared cross-adapter parity matrix and no gate that
+      fails when an adapter's declared capability/behavior differs from the
+      reference without a recorded difference; coverage.ts validates each
+      adapter's own deck, not parity across adapters; (b) the mock tenant is
+      stateless exact-url replay (tests/behaviour/providers/support.ts owns the
+      only stateful single-issue transport), so there is no simulated tracker
+      double for offline write-then-read flows; (c) tracker-error trap coverage
+      (rate limits, auth shapes, pagination truncation, workflow-state
+      mismatches) is scattered in provider unit suites rather than a
+      conformance-level catalog; (d) extensibility is proven by structure tests
+      over the three shipped contracts, not by a registration-only plug-in
+      proof. These four are the presumptive change surface; the spec must pin
+      each one."
+    type: info
+    date: "2026-11-18"
+  - text: "Doc-impact risks for phase 7:
+      doc/spec/features/feature-adapter-conformance.md is the primary
+      current-truth surface (registry, capability gating, coverage gates, mock
+      tier, live tier, artifact contract, CI topology statement);
+      feature-provider-client-seeds.md carries the trap-catalog contract;
+      feature-adapter-ports.md carries the operation/capability vocabulary;
+      feature-adapter-reference-behavior.md carries the declared-difference
+      posture; doc/spec/features/feature-quality-gates-and-pr.md and the CI
+      topology statement in feature-adapter-conformance.md §Security constrain
+      how a parity gate may enter CI; doc/overview/glossary.md and
+      doc/00-index.md may need entries. Constraint to respect: the M0-S20 spec
+      states that no workflow job is added to the pinned CI topology, so a CI
+      parity gate should ride the existing TypeScript test job unless the spec
+      justifies otherwise."
+    type: risk
+    date: "2026-11-18"
+  - text: "Operational prerequisite recorded at clarify_scope: the typed CLI does
+      not run from an unbuilt workspace (`pnpm exec jaiship` failed with `Cannot
+      find module '@delivery-os/adapters/credentials'` because packages/*/dist
+      was absent). `TMPDIR=$PWD/tmp/tmpdir pnpm build` (exit 0, 6/6 packages)
+      precedes every jaiship invocation in this change, and gate commands keep
+      the TMPDIR=$PWD/tmp/tmpdir convention the ticket requires."
+    type: info
+    date: "2026-11-18"
+  - text: "RETRO (clarify_scope): the transition landed as d804f27a, but the commit
+      primitive's template subject is width-truncated with a literal U+2026
+      (`docs(GH-339): update
+      doc/changes/2026-11/2026-11-18--GH-339--adapter-co…`, 75 bytes incl.
+      newline, cut mid-word). No message was composed by hand. Expect the
+      phase-9 range gate to name this; remediation belongs to @coder in the mode
+      the gate reports. Also observed: the transition created no `events.jsonl`
+      capsule file (the typed registry record landed; the folder holds only the
+      pm-notes document). Neither finding changes the phase outcome."
+    type: retro
+    date: "2026-11-18"
+  - text: "Specification complete (chg-GH-339-spec.md, 592 lines, 34 unique ACs).
+      Surface: F-1 declared parity matrix over the nine closed operations with a
+      declared reference adapter, a closed six-class difference vocabulary, a
+      bidirectional difference register and a three-way gate (matrix, capability
+      declaration, observed conformance outcome); F-2 conformance-level tracker
+      error taxonomy mapping the milestone's four class ids onto delivered
+      structured identities plus a six-family trap vocabulary with per-adapter
+      accounting; F-3 a runtime-neutral simulated stateful tracker double with
+      five declared effects and additive tenant state; F-4 registration-only
+      extensibility proven by an identity-free core invariant plus an injected
+      synthetic control registration; F-5 the gate riding the existing
+      TypeScript test job. Decisions: DEC-1..DEC-4 cite TDR-0036..TDR-0039;
+      DEC-5 records the gate riding pnpm test in ts-test with no workflow
+      change; DEC-6 records the additive non-decisions."
+    type: info
+    date: "2026-11-18"
+  - text: "Binding expectation for delivery (phases 6-9): no adapter behavior
+      changes. The five non-reference supported intersections (GitLab
+      read-delivery-request, GitLab read-pipeline-run, Jira read-work-item, Jira
+      write-work-item, Jira transition-work-item) are ADJUDICATED during
+      delivery — recorded as same-as-reference or as evidence-bearing declared
+      differences, never converged. Invariants the plan may not widen: 0 new
+      closed operations, 0 error-table rows or domain kinds, 0 artifact fields,
+      0 workflow files/jobs/triggers, 0 new emitted tracker.* codes, trap
+      entries stay four-field, the shipped registry stays three contracts,
+      testkit stays runtime-neutral."
+    type: risk
+    date: "2026-11-18"
+  - text: "Staging note: the four decision records TDR-0036..TDR-0039 and the
+      doc/decisions/00-index.md rows live outside the change folder, and a
+      non-delivery phase completion stages only the change folder. They are
+      therefore untracked after the specification commit by design (the GH-338
+      precedent): the implementation plan must declare them in an early delivery
+      phase's scope so @coder lands them on the branch, and the DoD check must
+      confirm they are committed before the PR."
+    type: info
+    date: "2026-11-18"
+  - text: "RETRO (specification): the first draft asserted 'no tracker. literal
+      appears in production source outside the taxonomy module', which is false
+      — packages/core/src/contracts/status.ts, contracts/doctor.ts,
+      domain/status.ts and domain/doctor.ts already carry eight pre-existing
+      tracker.* vocabulary codes. Caught by PM review before the phase closed
+      and restated as an exact two-tree scan (packages/testkit +
+      packages/adapters) with a single-file allowlist and the core vocabulary
+      declared out of scope. Process note for later stories: an absolute absence
+      claim must name its scan scope and its allowlist in the first draft,
+      because a repo-wide 'nowhere' claim is almost always wrong in this
+      codebase."
+    type: retro
+    date: "2026-11-18"
+  - text: "Test plan complete: chg-GH-339-test-plan.md, 61 TCs in nine groups
+      (PARITY-001..008, PMUT-001..011, ART-001..002, TAX-001..013,
+      DOUBLE-001..007, DMUT-001..004, REG-001..006, GATE-001..004,
+      FLOOR-001..006), 34/34 ACs mapped with zero unmapped, mutation rows
+      M1..M42, fixture inventory and gate battery. Test planning found two
+      blocking spec defects (status-less payload failures on GitLab/Jira made
+      AC-F2-2/-3/-5 unreachable; auth-shape family id mismatch). Both were fixed
+      by reopening specification (spec v1.1) and the test plan was realigned to
+      the two-arm classification obligation."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery planning complete: chg-GH-339-plan.yaml, 6 delivery phases, plan
+      validate verdict=valid tier=full readyForDevelopment=true; 61/61 TCs and
+      34/34 ACs each owned by exactly one phase. Phase 1 declares the
+      TDR-0036..0039 staging set; phase 2 owns all five adjudications without
+      pre-deciding the verdict; phase 5 owns the missing zero-jobs-added
+      workflow pin (GAP-TP-3). Plan-recorded adjudications: identity-construct
+      reading for AC-F4-4, the non-editing TC-REG-002 mechanism, the F-2 phase
+      split, and the GATE-002 base-dependent placement."
+    type: info
+    date: "2026-11-18"
+  - text: "DoR gate iteration 1 = NOT_READY (readiness-review/readiness-iter-1.md).
+      Ten facets: plan_coverage, test_traceability and decision_capture PASS;
+      three facets FAIL on artifact/code contradictions. Five blocking, seven
+      major, two nits. Reopened specification, test_planning and
+      delivery_planning. Blocking: (1) pagination-truncation has no truthful
+      posture on GitLab (its pipeline read has no bound, no per_page and no
+      truncation signal, both supported operations are supported so gap-backed
+      is unavailable, and recorded-difference is restricted to
+      failure-classification while the honest class is pagination-model); (2)
+      appended trap-catalog entries cannot replay green without editing the
+      three provider trap suites, which no phase declares; (3) TC-PARITY-005's
+      four-dimension comparison has no source — ConformanceStepResult carries no
+      assertionFamily and no truncation signal, and adding one would break
+      AC-F1-8; (4) TC-REG-002 still prescribes the module-fingerprint mechanism
+      the plan correctly rejected; (5) TC-GATE-002 item (iv) is placed in
+      tests/structure although ci-topology.validate fails closed without
+      origin/main-tools and that tier also runs in ts-exports."
+    type: info
+    date: "2026-11-18"
+  - text: "PM direction for the NOT_READY remediation (bounded, so the authors do
+      not re-open settled scope): (a) findings 1 and 12 are one defect — a cell
+      can differ on more than one dimension while the register admits exactly
+      one class. Direction: a register entry carries a NON-EMPTY SET of classes
+      from the closed vocabulary (each naming a differing dimension), the cell
+      keeps a single value, and the pagination-truncation family may be
+      accounted recorded-difference by reference to the entry whose class set
+      names the pagination model. @decision-advisor amends TDR-0036 first; the
+      spec follows. (b) Finding 2 is a scope omission, not a design change: the
+      three provider trap suites join phase 1 as append-only edits (no delivered
+      assertion removed, renamed or relaxed) and the 'unedited' wording becomes
+      'extended append-only'. (c) Finding 3 is an input-definition defect: the
+      gate's observed-outcome input is a gate-local observation record built
+      from the report plus the flow registry plus committed evidence, never a
+      new artifact field. (d) Findings 4-5 are test-plan text corrections to the
+      mechanisms the plan already bound. (e) Findings 6-11 are binding-artifact
+      wording: the identity-construct definition and column representation move
+      into AC-F4-4 / DM-6 / TDR-0039; the clause ids are enumerated in API-1
+      against TDR-0036; AC-F2-11 gains 'over the family-wired subset'; AC-F2-4
+      constrains the rate-limit fixture away from 401/403 or records the
+      throttle case; TDR-0037 C-1 adopts the exact two-tree scan; TDR-0036
+      states structured violations."
+    type: decision
+    date: "2026-11-18"
+  - text: "RETRO (DoR iteration 1): three of five blocking findings are the same
+      class of defect the earlier spec review caught — an AC or gate that
+      asserts a dimension the delivered report does not carry (no
+      assertionFamily, no truncation signal), and an accounting vocabulary with
+      no honest posture for one adapter. Both passed two author passes and a PM
+      review because every claim was checked against the *spec's own* vocabulary
+      rather than against the delivered types. Process fix for later stories:
+      any AC that asserts an observation must name the delivered field that
+      carries it, and any per-adapter matrix must be walked cell-by-cell against
+      the actual adapter capabilities before the DoR gate, not after."
+    type: retro
+    date: "2026-11-18"
+  - text: "DoR gate iteration 2 = NOT_READY (readiness-review/readiness-iter-2.md).
+      Eleven of thirteen iteration-1 findings resolved; one persistent in
+      narrowed form and one new. Persistent: the parity basis declares four
+      dimensions but maps six difference classes many-to-one, so
+      identity-scheme, pipeline-model and state-vocabulary land on
+      'assertion-family outcome' — a dimension whose observable is family plus
+      pass/fail, which normalization makes equal by construction. That makes
+      AC-F1-6 unsatisfiable for three classes and leaves two of the four
+      dimensions without a non-vacuity control. New: the 18-cell square totals
+      are wrong — the enumerated table yields 9 covered / 7 recorded-difference
+      / 2 gap-backed, not the 10/6/2 asserted in five places (GitHub 6 covered;
+      GitLab 1 covered / 4 RD / 1 gap; Jira 2 covered / 3 RD / 1 gap)."
+    type: info
+    date: "2026-11-18"
+  - text: "PM direction for DoR iteration 2 remediation: replace the four-dimension
+      parity basis with a SIX-dimension basis in which each closed difference
+      class is exactly one parity dimension with its own offline-observable
+      oracle (identity form; pipeline cardinality and shape; state-resolution
+      outcome; declared bound plus reported count; carrier declaration plus
+      carrier-step participation; API-2 failure classification).
+      same-as-reference then means all six observations agree. The class
+      vocabulary, cell vocabulary, entry key, bijection rules and nine clause
+      ids stay unchanged, and AC-F1-6 becomes true by construction. The 9/7/2
+      totals are a mechanical correction in the test plan and the plan.
+      @decision-advisor amends TDR-0036 first; spec, test plan and plan follow.
+      This is the last remediation iteration before escalation."
+    type: decision
+    date: "2026-11-18"
+  - text: "DoR gate iteration 3 = NOT_READY (readiness-review/readiness-iter-3.md).
+      No iteration-1 or iteration-2 blocking finding persists — the
+      six-dimension basis closed the parity observation defect. One new blocking
+      finding, purely editorial: six four-dimension remnants survived in the
+      test plan (TC-PARITY-004's 'four parity dimensions' and entry registerId,
+      TC-PARITY-008/RSK-TP-12's 'four AC-F1-5 arm mutations', and the
+      assertionFamily / absence-and-truncation composition language in sections
+      2, 7.6 and 8.2) plus one plan comment calling observation-record.json 'the
+      fourth observation dimension's ONLY source'. TDR-0037's pagination row was
+      still defined by a 'truncation signal' (second iteration carrying it)."
+    type: info
+    date: "2026-11-18"
+  - text: "DoR iteration-3 remediation applied and the three artifact phases
+      re-closed: specification v1.4 (fec6bcec — carrier-absent asymmetric
+      scoping in F-1/DM-1/API-1), test_planning v1.4 (175f6a8d — four-dimension
+      sweep, carrier scoping, trap-name digest oracle, PMUT range sweep, spec
+      v1.4 citation), delivery_planning v1.4 (903316c9 — six-dimension
+      observation wording, carrier scoping, spec v1.4 citation). TDR-0037 now
+      states the declared-bound-plus-reported-count observable and all three
+      family postures. Four gate iterations were needed; every blocking finding
+      was author-side and no resolved finding recurred."
+    type: info
+    date: "2026-11-18"
+  - text: "RETRO (DoR iterations 2-3): the pattern that cost the most was
+      terminology drift between an amended decision record and the artifacts
+      that cite it — each amendment fixed one layer and left 'four dimensions'
+      or 'truncation signal' alive in another, which the next gate then read as
+      a new blocking finding. Process fix: after amending a record, sweep every
+      citing artifact for the retired terms in the same pass and quote the
+      record's exact normative sentences rather than paraphrasing them. Second
+      pattern: an observation dimension is worthless unless its oracle names the
+      delivered field, the operation, and the comparison predicate — two of the
+      three iteration-1 blockers were exactly that."
+    type: retro
+    date: "2026-11-18"
+  - text: "DoR gate iteration 4 = NOT_READY, both findings editorial and neither
+      persistent: the new anti-regeneration digest fixture
+      tests/fixtures/pins/trap-names.sha256 was outside every phase scope, and
+      one test-plan fixture row still said 'four dimension observations'.
+      Remediated: plan phases 1 and 3 now declare the digest pair (scopes
+      20/11/12/11/12/7), the header pin block and the phase-1 gate require the
+      digest before any append, and the trigger fails by name on a regenerated
+      or mismatched digest; the test-plan row and version labels were corrected;
+      TDR-0039's runner note was restated as the disclosed exact allowlist
+      exception."
+    type: info
+    date: "2026-11-18"
+  - text: "DoR gate iteration 5 = READY_WITH_NOTES (readiness-review/
+      readiness-iter-5.md). All nine facets PASS; 15/15 iteration-1, 12/12
+      iteration-2, iteration-3 and iteration-4 findings all Resolved; no
+      blocking finding; delivery may start. Binding notes carried to the coder:
+      (1) a failure-classification difference arising because the reference has
+      no family on that operation must say 'unobservable on the reference', not
+      claim a provider divergence; (2) the two Jira write cells are
+      same-as-reference by agreement of not-observable/empty-declaration
+      observations and the adjudication record must say so; (3) author the pin
+      before any append, compute the digest once over its exact bytes, commit
+      both in phase 1 and never regenerate either; (4) the plan's residual
+      comment-only diff rides phase 6's change-folder scope so the branch
+      carries the plan the gate certified; (5) the test plan may gain a 1.5
+      revision row."
+    type: info
+    date: "2026-11-18"
+  - text: "Plan phase 1 complete — tracker error taxonomy and the six-family
+      vocabulary. Commit 00bdf3f0. Delivered: tracker-error-taxonomy.ts (four
+      class ids, structured-only projection, six families), the root export, the
+      exact two-tree tracker-literal scan, sixteen family stimuli, the three
+      flattened four-field catalogs with append-only trap-suite assertions, the
+      frozen pin pair tests/fixtures/pins/trap-names.json + .sha256 authored
+      BEFORE any append, the four TDRs and the 00-index row landed on the
+      branch, and the conformance-coverage pin extension. Gate: tracker-taxonomy
+      and tracker-literal-scan suites, tests/structure 1636 pass,
+      tests/behaviour/providers 286 pass, fixture sanitization/privacy,
+      typecheck, git diff --check."
+    type: info
+    date: "2026-11-18"
+  - text: "Plan phase 2 complete — parity matrix, class-set register, record gate.
+      Commit b5a91e0d. Delivered: parity.ts with derived columns (no authored
+      provider key), the cell vocabulary carrying registerId only, the entry
+      class-set shape with per-class evidence, the pure gate with the nine
+      clause ids and structured violation records, the observation-record
+      fixture, nine evidence fixtures, the five adjudications recorded honestly
+      (the two Jira write cells as same-as-reference by not-observable
+      agreement, and 'unobservable on the reference' rationales where no
+      reference family exists), and the thirteen structural plus nine
+      dimension/record mutations. Gate: parity/PMUT/GATE-003/004 and artifact
+      suites 49 pass, structure 1637 pass, typecheck, git diff --check."
+    type: info
+    date: "2026-11-18"
+  - text: "Plan phase 3 complete — per-adapter family accounting and offline replay.
+      Commit 32fc13a9. Delivered: accounting.json asserting the 18-cell square
+      as expected data (9 covered / 7 recorded-difference / 2 gap-backed), the
+      vacuous-covered refusal, both posture arms exercised every run, the
+      frozen-pin prefix and digest assertions, and the TAX-003..008 family
+      classification cases. Gate: accounting 18 pass, family classification 20
+      pass, taxonomy 61 pass, structure/conformance/providers green."
+    type: info
+    date: "2026-11-18"
+  - text: "Plan phase 4 complete — simulated stateful tracker double. Commit
+      b515d200. Delivered: stateful-double.ts with five declared effects on the
+      existing transport seam, additive tenant state in types.ts and
+      mock-tenant.ts, the state goldens, the fail-closed refusals, the census
+      extension naming the double module, and the live-tier inclusion assertion.
+      Gate: stateful suite 17 pass, census suite, boundaries 152 pass,
+      typecheck."
+    type: info
+    date: "2026-11-18"
+  - text: "Plan phase 5 complete — registration-only participation proof and the
+      workflow topology pin. Commit c04ff9d2. Delivered: participation.ts (five
+      supplied items), the composition-injected control registration with a full
+      matrix column and family accounting, the identity-construct scan against
+      the exact allowlist with the derived-column rule, the base-free
+      workflow-topology exact-set pin plus the base-dependent half in the
+      delivered checks suite, and the REG-001..006 cases. Gate:
+      registration/control/topology/wiring suites 66 pass, structure 1660 pass,
+      G7 ci-topology ok (7 bash jobs, 16 TS jobs), typecheck."
+    type: info
+    date: "2026-11-18"
+  - text: "Plan phase 6 complete — release floor and pinned hygiene. Commit
+      54b80eab. Delivered: the testkit-only privacy-release exemption preserving
+      version_impact none, the taxonomy class-id constants with the production
+      literal removal, plan discovery comments (k) and (l), and the plan's
+      residual comment diff. Gate: G1-G5 green, G7 ok, G8 doc-distribution no
+      drift (96 in-scope docs), G9 clean, plan validate valid/full/
+      readyForDevelopment, and the aggregate TMPDIR=$PWD/tmp/tmpdir pnpm check
+      exit 0 across lint, format, typecheck, test, boundaries, memory,
+      prompt/help/exports parity."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery summary for DoD: six plan phases, six commits (00bdf3f0,
+      b5a91e0d, 32fc13a9, b515d200, c04ff9d2, 54b80eab), aggregate gate green,
+      working tree clean. No adapter behaviour change, no new closed operation,
+      error-table row, domain kind, artifact field, workflow job, subpath or
+      dependency. Discovered pins moved minimally and recorded in the plan: the
+      GitHub exact trap-name array and its deletion mutation
+      (tests/structure/trap-catalog.test.ts, plan comment (k)) and the
+      publishable-path probe (tests/checks/privacy-release.test.ts, plan comment
+      (l)). Deviation: commit subjects are the primitive's template fallback
+      rather than the plan's declared feat(...) summaries, because the lifecycle
+      phase is dor_check at commit time; no message was hand-composed."
+    type: info
+    date: "2026-11-18"
+  - text: "System documentation reconciled (lifecycle phase 7): nine current-truth
+      pages updated — feature-adapter-conformance (primary: parity matrix and
+      six-dimension basis, class-set register and five adjudications, gate with
+      the observation record and nine clause ids, four-class taxonomy and the
+      six-family/18-cell accounting, the stateful double, participation,
+      unchanged CI placement and artifact schema), feature-provider-client-seeds
+      (trap family wiring, appended four-field entries, the frozen pin pair,
+      corrected catalog and fixture counts), feature-adapter-ports (no port or
+      operation added), feature-adapter-reference-behavior (the declarations are
+      the parity bar), feature-result-contract (tracker class ids are
+      conformance-only), doc/spec/nonfunctional.md (NFR-TOOL-007),
+      feature-monorepo-scaffold-toolchain (conformance QA row),
+      doc/overview/glossary.md and doc/00-index.md. No spec-coverage gap and no
+      residual documentation gap; the two pages outside phase 6's original scope
+      were declared as discovered scope (plan discovery (m)). Landed as
+      4079cca3. Guards: doc-distribution no drift (96 in-scope docs),
+      doc-conformance 19 pass, reference-behavior 16 pass, content inventory 12
+      pass, error-table 149/149, help-guide fully covered, conformance suites
+      157 pass."
+    type: info
+    date: "2026-11-18"
+  - text: "RETRO (phase primitive defect, lifecycle phase 7): committing the
+      reconciled docs required `commit --phase delivery`, which short-circuits
+      to a no-op once `delivery` is completed. Reopening `delivery` and
+      committing worked (4079cca3), but the paired `phase complete delivery`
+      then reported `no-op / already-completed` while reading the PRE-reopen
+      completion, and it rewrote the pm-notes mirror with the registry's
+      `started` value in the `completed` field (15:10:39.032Z instead of
+      15:40:11.809Z), leaving the working tree contradicting both HEAD and the
+      registry. The registry stayed correct (delivery started 15:10:39.032Z,
+      completed 15:40:11.809Z), so the repair was restoring the committed bytes.
+      Two defects worth a follow-up ticket: (a) `phase complete` after a reopen
+      must not read the stale completion flag; (b) the phase-completion write
+      path must never put a started value into a completed field. Process note:
+      stage documentation under the phase that owns it BEFORE completing that
+      phase, or complete `system_spec_update` first and let the doc commit ride
+      it."
+    type: retro
+    date: "2026-11-18"
+  - text: "Review iteration 1 = PASS_WITH_NOTES (code-review/review-iter-1.yaml): 0
+      blockers, 3 majors, 5 minors, 2 info. All 34 ACs backed by real oracles
+      and every additive non-goal held. Majors: (F-1) four of the six dimensions
+      had hand-authored rather than replay-derived observations, so adapter
+      drift would have stayed green on identity-scheme, pipeline-model,
+      state-vocabulary and carrier-absent; (F-2) the register loop never read
+      rationale/adjudicatedBy and TC-PARITY-004's mandated mutations were
+      absent; (F-3) the control adapter's 'full family accounting' was a token
+      scan and its all-covered postures contradicted its single supported
+      operation. Minors taken: allowlist count-pinning, contract-identity column
+      binding, the dead undecodable discriminant. One broad-run failure was an
+      environmental cross-file race (license-audit TC-LICREG-022 against a
+      concurrent packaging artefact), green in isolation."
+    type: info
+    date: "2026-11-18"
+  - text: "Review remediation landed as ab1bc9d8 (14 files): the four static
+      dimensions are now replay-corroborated from the production clients with
+      four mutated replays that fail naming the dimension's class; parity.ts
+      rejects an empty rationale, a missing/empty adjudicatedBy
+      (register-bijection) and an unresolvable per-class evidence pointer
+      through a new optional resolvesEvidence port (evidence-reproduction) with
+      five mutations and a resolving positive control; the DM-4 validator moved
+      to tests/conformance/support/fixtures.ts and is applied to the control's
+      own adapter list, whose postures are now 4 covered / 2 gap-backed with
+      negative mutations; the allowlist pins occurrence counts per permit and
+      rejects count-free permits; columns and register entries bind by imported
+      contract identity; undecodable now precedes the 401/403 branch. Commit
+      ab1bc9d8 was landed with the standalone form because every lifecycle phase
+      was already completed (both --phase variants no-op); the pm-notes
+      stale-timestamp write was reverted before the commit. Aggregate gate on an
+      idle machine: exit 0, 10759 pass / 0 fail / 4 pre-existing skips. A doc
+      re-verification follow-up (a11d2301) corrected the taxonomy ordering rule,
+      clause responsibilities, the resolver port and the allowlist/accounting
+      claims."
+    type: info
+    date: "2026-11-18"
+  - text: "Review iteration 2 = PASS_WITH_NOTES (code-review/review-iter-2.yaml): 0
+      blockers, 0 majors, 2 new minors, 2 info. Iteration-1 disposition: the
+      three majors and F-4/F-6/F-7 Resolved; F-5 and F-8 persistent by accepted
+      decision; F-9/F-10 unchanged. Non-gating notes accepted as follow-ups
+      rather than another remediation round: NF-1 the control's covered postures
+      are structural (validated by the delivered engine but not replayed like
+      the shipped ones); NF-2 the unresolvable-evidence violation carries the
+      offending path as its evidence reference; NF-3 contract-identifier binding
+      is invisible to the string-literal scan but is the disclosed permitted
+      home; NF-4 the review_fix phase records land when this phase closes."
+    type: info
+    date: "2026-11-18"
+  - text: "Quality gates (lifecycle phase 9) PASS. Aggregate TMPDIR=$PWD/tmp/tmpdir
+      pnpm check exit 0 across every stage: biome lint 2989 files (104 warnings
+      / 38 infos, 0 errors), format 2843 files, build 6 of 7 workspace projects,
+      typecheck 6 of 6, test 10759 pass / 4 skip / 0 fail over 10763 tests in
+      1331 files, depcruise 462 modules with no violations, ambient-globals 221
+      clean, workspace-entrypoints match, secret-read boundary 429 files with 5
+      allowlisted entries, memory 0 errors / 0 advisories, prompt-conformance 5
+      prompts clean, help-guide all covered, exports-parity 5 publishables.
+      Range lint gate: VERDICT PASS, base origin/main-tools (source=explicit,
+      merge-base 3cc5d0fe, head 7377c889), 30 commits in range, 0 offending
+      commits, 0 distinct rules hit, mode none (no MODE line on a PASS),
+      commitlint binary node_modules/.bin/commitlint (origin=repository-local),
+      ref origin/main-tools resolvable. The gate was re-run after the final
+      review artifact landed so its verdict covers the true PR head."
+    type: info
+    date: "2026-11-18"
+  - text: "Lint disposition: one warning intersects a changed file —
+      tests/conformance/family-classification.test.ts:76
+      lint/correctness/noUnusedFunctionParameters on the unused `cell: Cell`
+      callback parameter (FIXABLE, non-error; pnpm lint exits 0). All six new
+      testkit modules and the other new test files are diagnostic-clean. Left as
+      recorded rather than amended: fixing it would require another commit and a
+      ~25-minute aggregate re-run for a warning the repository already carries
+      104 of; noted as a follow-up polish item."
+    type: info
+    date: "2026-11-18"
+  - text: "DoD check PASS: 9/9 prerequisite lifecycle phases complete; review
+      iteration 2 records 34/34 ACs satisfied with zero non-satisfied verdicts;
+      all six plan-phase notes name the phase id, its commit hash and its gate
+      result; documentation reconciliation reports no residual gap (nine
+      current-truth pages, landed as 4079cca3 and a11d2301); quality gates
+      green; branch took 31 commits over origin/main-tools with a clean tree."
+    type: info
+    date: "2026-11-18"
+  - text: "PR ready for review:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/356 — base
+      main-tools, head feat/GH-339/adapter-conformance-parity, OPEN, not draft,
+      no auto-merge, MERGEABLE / BEHIND (main-tools advanced past the merge-base
+      after the branch forked; conflict-free). Diff: 32 commits, 99 files,
+      +16709 / -40. The body records the spec/goals, the six plan phases, 72 TCs
+      / 34 ACs, the five adjudications, the 9/7/2 accounting, the two discovered
+      pins, the Proposed status of TDR-0036..0039 awaiting owner acceptance at
+      this review, the aggregate and range-gate evidence at the true head, and
+      the two non-gating residuals (NF-1 structural control postures; the
+      unused-parameter lint warning). Nothing was merged, approved or
+      auto-merged; merge authority stays with the owner/CEO."
+    type: info
+    date: "2026-11-18"

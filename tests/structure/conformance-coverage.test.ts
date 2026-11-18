@@ -6,6 +6,7 @@
  * this module as the registrations and coverage gates are delivered.
  */
 import { describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import {
   existsSync,
   mkdirSync,
@@ -706,6 +707,81 @@ describe("TC-HARN-004 harness conformance registry coverage", () => {
   });
 });
 
+describe("TC-DOUBLE-001 the flow/step census is unchanged by the double", () => {
+  test("three flows and fourteen steps carry their exact delivered values", () => {
+    const steps = CONFORMANCE_FLOWS.flatMap((flow) =>
+      flow.steps.map((step) => ({
+        stepId: step.stepId,
+        operation: step.operation,
+        assertionFamily: step.assertionFamily,
+        requiresCarrier: step.requiresCarrier === true,
+      })),
+    );
+    expect(CONFORMANCE_FLOWS.map((flow) => flow.flowId)).toEqual([
+      "change-lifecycle",
+      "comment-provenance",
+      "label-semantics",
+    ]);
+    expect(steps).toHaveLength(14);
+    expect(steps.map((step) => step.stepId)).toEqual([
+      "change-lifecycle.read-work-item",
+      "change-lifecycle.read-delivery-request",
+      "change-lifecycle.read-pipeline-run",
+      "change-lifecycle.open-change",
+      "change-lifecycle.transition",
+      "change-lifecycle.create-delivery-request",
+      "change-lifecycle.comment",
+      "change-lifecycle.resolve-delivery-thread",
+      "change-lifecycle.merge-delivery-request",
+      "comment-provenance.read-comments",
+      "comment-provenance.carrier-roundtrip",
+      "label-semantics.read-labels",
+      "label-semantics.replace",
+      "label-semantics.sweep",
+    ]);
+    expect(steps.filter((step) => step.requiresCarrier)).toEqual([
+      {
+        stepId: "comment-provenance.carrier-roundtrip",
+        operation: "write-comment",
+        assertionFamily: "comment-provenance",
+        requiresCarrier: true,
+      },
+    ]);
+    expect(CONFORMANCE_ADAPTERS.map((adapter) => adapter.provider)).toEqual([
+      "github",
+      "gitlab",
+      "jira",
+    ]);
+  });
+});
+
+describe("TC-REG-003 the shipped registry stays exactly three contracts", () => {
+  test("the provider set is exactly github, gitlab and jira and the control is absent", () => {
+    expect(new Set(CONFORMANCE_ADAPTERS.map((adapter) => adapter.provider))).toEqual(
+      new Set(["github", "gitlab", "jira"]),
+    );
+    expect(CONFORMANCE_ADAPTERS.some((adapter) => adapter.provider === "control")).toBe(false);
+    for (const adapter of CONFORMANCE_ADAPTERS) {
+      expect(adapter.contract.adapterName).toBe(adapter.provider);
+    }
+    expect(
+      structuralCoverageViolations({ flows: CONFORMANCE_FLOWS, adapters: CONFORMANCE_ADAPTERS }),
+    ).toEqual([]);
+  });
+
+  test("an unknown registration is still rejected", () => {
+    const azure = {
+      ...(CONFORMANCE_ADAPTERS[0] as (typeof CONFORMANCE_ADAPTERS)[number]),
+      provider: "azure",
+    };
+    expect(
+      structuralCoverageViolations({ flows: CONFORMANCE_FLOWS, adapters: [azure] }).some(
+        (message) => message.includes("azure"),
+      ),
+    ).toBe(true);
+  });
+});
+
 describe("TC-CAP-002 capsule conformance registry coverage", () => {
   test("the shipped capsule registry is a bijection with the event vocabulary", async () => {
     const { CAPSULE_CONFORMANCE_REGISTRY, capsuleConformanceViolations } = await import(
@@ -716,5 +792,44 @@ describe("TC-CAP-002 capsule conformance registry coverage", () => {
     expect(CAPSULE_CONFORMANCE_REGISTRY.map((entry) => entry.kind).sort()).toEqual(
       [...CAPSULE_EVENT_KINDS].sort(),
     );
+  });
+});
+
+describe("TC-TAX-001 tracker taxonomy module and export pin", () => {
+  test("the taxonomy module is exported through the root with its closed vocabularies", async () => {
+    const exported = await import("@delivery-os/testkit");
+    expect(exported.TRACKER_ERROR_CLASS_IDS).toEqual([
+      "tracker.capability.unsupported",
+      "tracker.auth.rejected",
+      "tracker.transport.failed",
+      "tracker.payload.invalid",
+    ]);
+    expect(exported.TRACKER_TRAP_FAMILIES).toEqual([
+      "auth-shape",
+      "transport-failure",
+      "rate-limit",
+      "payload-shape",
+      "workflow-state-mismatch",
+      "pagination-truncation",
+    ]);
+    expect(exported.TRACKER_ERROR_TAXONOMY.map((entry) => entry.id)).toEqual([
+      ...exported.TRACKER_ERROR_CLASS_IDS,
+    ]);
+    expect(typeof exported.classifyTrackerOutcome).toBe("function");
+  });
+
+  test("the frozen trap-name baseline and its digest are the pre-append delivered state", () => {
+    const baselinePath = join(ROOT, "tests/fixtures/pins/trap-names.json");
+    const bytes = readFileSync(baselinePath);
+    const baseline = JSON.parse(bytes.toString("utf8")) as Record<string, string[]>;
+    expect(Object.keys(baseline).sort()).toEqual(["github", "gitlab", "jira"]);
+    expect(baseline.github).toHaveLength(37);
+    expect(baseline.gitlab).toHaveLength(3);
+    expect(baseline.jira).toHaveLength(7);
+    expect(baseline.github.at(-1)).toBe("GITHUB-THREAD-DISCUSSION-CAPS");
+    expect(baseline.gitlab.at(-1)).toBe("GL-MERGE-STATUS-MULTIVALUED");
+    expect(baseline.jira.at(-1)).toBe("JIRA-CLOSEOUT-LABEL-PRESERVE");
+    const digest = readFileSync(join(ROOT, "tests/fixtures/pins/trap-names.sha256"), "utf8").trim();
+    expect(digest).toBe(createHash("sha256").update(bytes).digest("hex"));
   });
 });

@@ -19,6 +19,36 @@
       "providerBehavior": "GitLab may report merge_status and detailed_merge_status simultaneously with different meanings.",
       "expectedNormalizedOutcome": "detailed_merge_status is authoritative when present and merge_status is the fallback; an unknown native value fails visibly instead of silently flattening to a delivery state.",
       "fixtureReference": "tests/fixtures/providers/gitlab/merge-status-multivalued.json"
+    },
+    {
+      "trapName": "GL339-AUTH-SHAPE",
+      "providerBehavior": "A GitLab non-2xx response is built without a structured status, so an authorization rejection is not distinguishable from a transport failure.",
+      "expectedNormalizedOutcome": "read-delivery-request resolves to tracker.transport.failed and the failure owns no httpStatus property; the difference is recorded as failure-classification.",
+      "fixtureReference": "tests/fixtures/providers/gitlab/families/auth-shape.json#/stimulus"
+    },
+    {
+      "trapName": "GL339-TRANSPORT-FAILURE",
+      "providerBehavior": "A GitLab transport rejection produces no provider response at all.",
+      "expectedNormalizedOutcome": "read-delivery-request resolves to tracker.transport.failed and owns no httpStatus property.",
+      "fixtureReference": "tests/fixtures/providers/gitlab/families/transport-failure.json#/stimulus"
+    },
+    {
+      "trapName": "GL339-RATE-LIMIT",
+      "providerBehavior": "A GitLab throttled response is built without a structured status.",
+      "expectedNormalizedOutcome": "read-delivery-request resolves to tracker.transport.failed because the status is structurally absent.",
+      "fixtureReference": "tests/fixtures/providers/gitlab/families/rate-limit.json#/stimulus"
+    },
+    {
+      "trapName": "GL339-PAYLOAD-SHAPE",
+      "providerBehavior": "A GitLab 2xx body that does not decode is a status-less payload failure.",
+      "expectedNormalizedOutcome": "read-delivery-request resolves to tracker.transport.failed and the difference is recorded as failure-classification.",
+      "fixtureReference": "tests/fixtures/providers/gitlab/families/payload-shape.json#/stimulus"
+    },
+    {
+      "trapName": "GL339-PAGINATION-TRUNCATION",
+      "providerBehavior": "A GitLab pipeline read declares no page bound and reports no page count.",
+      "expectedNormalizedOutcome": "read-pipeline-run returns a bare item list with no declared bound and no reported count, so the family is recorded through pagination-model.",
+      "fixtureReference": "tests/fixtures/providers/gitlab/families/pagination-truncation.json#/stimulus"
     }
   ]
 }

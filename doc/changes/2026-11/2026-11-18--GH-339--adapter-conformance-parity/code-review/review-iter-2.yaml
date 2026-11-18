@@ -1,0 +1,267 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-339
+branch: feat/GH-339/adapter-conformance-parity
+base: origin/main-tools (three-dot merge-base)
+status: PASS_WITH_NOTES
+summary: >
+  Iteration 2, after remediation (ab1bc9d8 + a11d2301; 14 files). All three
+  iteration-1 majors are genuinely closed with controls that fail when applied,
+  and no existing guard was deleted or moved to a vacuous form. F-1: the four
+  static dimensions (identity-scheme, pipeline-model, state-vocabulary,
+  carrier-absent) are now derived from real replays through the production
+  clients over the committed tenants and compared with the committed record,
+  with four mutated-replay controls that move the derived value and make the gate
+  name that dimension's class. F-2: parityViolations now rejects an empty
+  rationale and a missing/empty adjudicatedBy (register-bijection) and, through
+  an optional caller-supplied resolvesEvidence port, an unresolvable per-class
+  evidence path (evidence-reproduction); three mutations plus a resolving
+  positive control are present, and the gate stays pure/runtime-neutral (no fs
+  import; the resolver is injected). F-3: the DM-4 accounting rules were
+  generalised into tests/conformance/support/fixtures.ts and applied to the
+  control's own adapter list; the control now declares 4 covered / 2 gap-backed
+  honest postures with negative mutations that fail by name. Minor residuals
+  remain (the control's four covered postures share one generic tenant fixture
+  and are structural rather than replay-proven; the unresolvable-evidence
+  violation's evidence field is the offending path; parity.ts now references
+  three imported contract identifiers the string-literal scan cannot see). No
+  blocker and no major remains; F-5 (accepted) and F-8 (acknowledged) persist by
+  decision. Verdict PASS_WITH_NOTES.
+severity_breakdown:
+  blocker: 0
+  major: 0
+  minor: 2        # new this iteration (NF-1, NF-2); iteration-1 F-5/F-8 persist as accepted/acknowledged minors
+  info: 2         # NF-3, NF-4
+spec_compliance: PASS
+plan_compliance: PASS
+verification:
+  commits: [ab1bc9d8, a11d2301]
+  no_adapter_behavior_change: true
+  no_workflow_change: true
+  no_core_change: true
+  no_artifact_schema_change: true
+  no_new_subpath_or_dependency: true
+  gate_purity: "parity.ts imports no node:*/fs; resolvesEvidence is an optional caller port (tests pass existsSync)"
+  tests_run:
+    - "bun test tests/conformance/parity-gate.test.ts control-registration tracker-taxonomy family-classification -> 110 pass / 0 fail"
+    - "bun test tests/structure/registration-participation conformance-family-accounting + conformance/stateful-double artifact -> 62 pass / 0 fail"
+    - "bun test tests/checks/{tracker-literal-scan,parity-gate-wiring,privacy-release} -> 19 pass / 0 fail"
+    - "bun test tests/boundaries -> 152 pass / 0 fail (parity.ts adapter-contract value imports are the same allowed testkit->adapters edge as adapters.ts)"
+    - "bun test tests/conformance tests/structure tests/checks -> 3186 pass / 0 fail across 338 files (345s)"
+  environmental_notes: >
+    The broad conformance+structure+checks run passed 3186/0; the earlier
+    iteration-1 license-audit working-tree race did not recur. The review writer
+    creates only the untracked code-review/ directory (review-iter-2.yaml) and
+    modifies no tracked file.
+iteration_1_disposition:
+  - id: F-1
+    severity: major
+    disposition: Resolved
+    evidence: >
+      tests/conformance/parity-gate.test.ts:1524-1703. derivedFor/replayOperation
+      replay each committed tenant through the production clients and derive
+      identity-scheme (8 observed pairs), pipeline-model (2), state-vocabulary (4)
+      and carrier-absent (14), asserting equality with the committed observation
+      record; four mutated replays (dropped GitLab iid, removed GitLab trace,
+      unresolvable merge status, declared carrier) move the derived value and the
+      gate names that dimension's class (evidence-reproduction / observed-
+      contradiction). Non-vacuous: observedPairs lengths are asserted and the
+      mutations change the derived value away from the committed one.
+  - id: F-2
+    severity: major
+    disposition: Resolved
+    evidence: >
+      packages/testkit/src/conformance/parity.ts:708-831 add register-shape
+      checks (empty/whitespace rationale, missing/empty adjudicatedBy ->
+      register-bijection) and a per-class evidence-resolvability check via the
+      optional resolvesEvidence port (evidence-reproduction). Mutations at
+      parity-gate.test.ts:226-275 (empty rationale, whitespace rationale, empty
+      adjudicatedBy, undefined adjudicatedBy, unresolvable evidence path) each
+      fail naming the entry/class, with a resolving positive control that returns
+      []. The port keeps the gate pure: parity.ts imports no filesystem module.
+  - id: F-3
+    severity: major
+    disposition: Resolved
+    evidence: >
+      familyAccountingViolations (tests/conformance/support/fixtures.ts) is the
+      delivered DM-4 rule set, adapter-agnostic; control-registration.test.ts:134
+      applies it to CONTROL_ACCOUNTING over the control's own list and gets [];
+      postures are 4 covered / 2 gap-backed (control/column.ts:92-...); negative
+      mutations (covered on an unsupported operation, covered with a missing
+      fixture, missing trap catalog) fail by name. The token scan is gone. Minor
+      residual NF-1.
+  - id: F-4
+    severity: minor
+    disposition: Resolved
+    evidence: >
+      identity-scan-allowlist.json now pins an occurrence count per permit
+      (adapters.ts 6, types.ts 3, mock-tenant.ts literal 6 / comparison 3,
+      runner.ts 5); registration-participation.test.ts asserts scanFile count
+      equality for every permit, a planted extra comparison (observed 4 != pinned
+      3), and rejects a count-free permit. Doc says "file, construct, and
+      occurrence count".
+  - id: F-5
+    severity: minor
+    disposition: "Persistent — accepted by decision (trap-suite assertions validate fixture integrity; replay lives in the conformance family suites)"
+    evidence: "Unchanged tests/behaviour/providers/*-trap.test.ts familyFixture helpers; acceptable for a minor."
+  - id: F-6
+    severity: minor
+    disposition: Resolved
+    evidence: >
+      parity.ts:150-315 AUTHORED_COLUMNS/AUTHORED_REGISTER bind by imported
+      contract identity (authoredCellsFor / providerForContract); a registration
+      whose contract is not authored gets [] cells (cell-set violation) instead
+      of a neighbour's; the misleading "reused for the control run" comment is
+      replaced. Residual info NF-3 (contract identifiers are not string literals).
+  - id: F-7
+    severity: minor
+    disposition: Resolved
+    evidence: >
+      tracker-error-taxonomy.ts:140 classifyTrackerOutcome returns
+      tracker.payload.invalid when undecodable before the 401/403 branch;
+      tracker-taxonomy.test.ts adds undecodable-401 -> payload.invalid and decoded
+      401 -> auth.rejected; feature-adapter-conformance.md states the ordering.
+  - id: F-8
+    severity: minor
+    disposition: "Persistent — acknowledged (no history rewrite; phase-6 hunk was a constant substitution)"
+    evidence: "Commit 54b80eab unchanged."
+  - id: F-9
+    severity: info
+    disposition: "Persistent (info; no action — the declared, honest posture is unchanged)"
+    evidence: "adjudication.json Jira write cells still honestly 'same by not-observable agreement'."
+  - id: F-10
+    severity: info
+    disposition: "Persistent (info; unchanged)"
+    evidence: "parity.ts still does not flag a gap cell with no declared reason; relies on the structural coverage gate."
+acceptance_criteria:
+  - { id: AC-F1-1, verdict: satisfied, evidence: "TC-PARITY-001 (27 cells, 9/column); gate cell-set + column-registration; green." }
+  - { id: AC-F1-2, verdict: satisfied, evidence: "TC-PARITY-002 (github reference, 9 same-as-reference, no reference entry); gate reference-purity." }
+  - { id: AC-F1-3, verdict: satisfied, evidence: "TC-PARITY-003 (13 gaps, reason char-equality); gate declaration-agreement." }
+  - { id: AC-F1-4, verdict: satisfied, evidence: "Now gate-enforced: bijection, unique pair, non-empty class set, non-empty rationale, non-empty adjudicatedBy, and (with resolver) per-class evidence resolvability; mutations at parity-gate.test.ts:226-275." }
+  - { id: AC-F1-5, verdict: satisfied, evidence: "TC-PARITY-005 + PMUT-014..019 (one observation mutation per dimension names exactly that class)." }
+  - { id: AC-F1-6, verdict: satisfied, evidence: "evidence-reproduction + PMUT-021/022; plus F-1 replay corroboration of the four static dimensions and four mutated-replay controls." }
+  - { id: AC-F1-7, verdict: satisfied, evidence: "PMUT-001..013, PMUT-014..019, PMUT-020..022, plus the new empty-rationale/missing-adjudication/unresolvable-evidence controls; each names provider/operation/clause." }
+  - { id: AC-F1-8, verdict: satisfied, evidence: "TC-ART-001/002 + TC-CHECK-010; artifact.ts unchanged; green." }
+  - { id: AC-F2-1, verdict: satisfied, evidence: "TC-TAX-001 + tracker-literal-scan; four ids, structured-only, single-module two-tree scan." }
+  - { id: AC-F2-2, verdict: satisfied, evidence: "TC-TAX-003 + family-classification; github 401/403 -> auth.rejected, gitlab/jira recorded transport.failed." }
+  - { id: AC-F2-3, verdict: satisfied, evidence: "TC-TAX-004 (transport.failed no status on all three; distinguishable on status-bearing)." }
+  - { id: AC-F2-4, verdict: satisfied, evidence: "TC-TAX-005 (429 -> payload.invalid; 403 throttle -> auth.rejected)." }
+  - { id: AC-F2-5, verdict: satisfied, evidence: "TC-TAX-006 (github undecodable 2xx / contradicted 500 -> payload.invalid; gitlab/jira recorded)." }
+  - { id: AC-F2-6, verdict: satisfied, evidence: "TC-TAX-007 (github/jira refusal payload.invalid zero requests; gitlab gap-backed)." }
+  - { id: AC-F2-7, verdict: satisfied, evidence: "TC-TAX-008 (github bound/count; gitlab recorded pagination-model; jira gap-backed)." }
+  - { id: AC-F2-8, verdict: satisfied, evidence: "TC-TAX-009; undecodable now ordered before the 401/403 branch; read 404 outside, write 404 payload." }
+  - { id: AC-F2-9, verdict: satisfied, evidence: "TC-TAX-010 (capability class structural, empty provingFamilies)." }
+  - { id: AC-F2-10, verdict: satisfied, evidence: "TC-TAX-011 (18 cells 9/7/2, no dual posture, vacuous covered refused, unaccounted fails); validator now shared with the control." }
+  - { id: AC-F2-11, verdict: satisfied, evidence: "TC-TAX-012 + validateCatalogs (four-field entries 43/8/12; refs resolve; family-wired bidirectional)." }
+  - { id: AC-F3-1, verdict: satisfied, evidence: "TC-DOUBLE-001 (write-then-read via client factory; flows 3/14, adapters 3 unchanged)." }
+  - { id: AC-F3-2, verdict: satisfied, evidence: "TC-DOUBLE-002 (two replays deep-equal canonical state/reads; golden)." }
+  - { id: AC-F3-3, verdict: satisfied, evidence: "TC-DOUBLE-003 (undeclared request/effect/missing resource fail by name; no live fallback)." }
+  - { id: AC-F3-4, verdict: satisfied, evidence: "TC-DOUBLE-004 (guards zero calls, provably armed)." }
+  - { id: AC-F3-5, verdict: satisfied, evidence: "TC-DOUBLE-005 (stateless tenants byte-identical; no mutation)." }
+  - { id: AC-F3-6, verdict: satisfied, evidence: "TC-DOUBLE-006 + testkit-source-scan (no node:/bun:, no ambient reads)." }
+  - { id: AC-F3-7, verdict: satisfied, evidence: "TC-DMUT-001..004 (four malformed declarations fail naming the declaration)." }
+  - { id: AC-F4-1, verdict: satisfied, evidence: "TC-REG-001 + type test (exact five items; @ts-expect-error on sixth/lifecyclePhase/port)." }
+  - { id: AC-F4-2, verdict: satisfied, evidence: "TC-REG-002/006: passing injected run, complete 9-cell column, registry unchanged, control absent; six postures validated by the delivered DM-4 engine (4 covered / 2 gap-backed) with negative mutations. Minor residual NF-1 (control covered is structural, not replay-proven)." }
+  - { id: AC-F4-3, verdict: satisfied, evidence: "TC-REG-003 (provider set {github,gitlab,jira}, control absent, unknown rejected)." }
+  - { id: AC-F4-4, verdict: satisfied, evidence: "TC-REG-004: seven bound modules clean, runner five comparisons, per-permit occurrence counts pinned, derived/contract-bound columns, non-constructs asserted. Info NF-3." }
+  - { id: AC-F4-5, verdict: satisfied, evidence: "TC-REG-005 (out-of-set operation/lifecycle hook/runner branch refused by name)." }
+  - { id: AC-F5-1, verdict: satisfied, evidence: "TC-GATE-001/002 + unchanged workflows; zero workflow files changed (review-verified)." }
+  - { id: AC-F5-2, verdict: satisfied, evidence: "TC-GATE-003: nine-id span, provider/operation, resolving evidence for shipped violations, <=1024 detail, scalar values, no credential. Minor NF-2 (the new unresolvable-evidence violation points at the bad path)." }
+  - { id: AC-F5-3, verdict: satisfied, evidence: "TC-GATE-004 (two runs deep-equal, canonical order, insertion-order independent)." }
+findings:
+  - id: NF-1
+    severity: minor
+    confidence: high
+    category: spec-compliance
+    location: "tests/conformance/control-registration.test.ts:134-153 + tests/fixtures/providers/conformance/control/column.ts:99-... + control/tenant.json:23-34"
+    message: >
+      The control's four `covered` postures all point at one generic tenant
+      fixture whose single route returns 200 (no 401/429/transport-failure/undecodable
+      stimulus), and the control's client builder is a stub that never replays the
+      tenant. The DM-4 accounting validator checks `covered` structurally
+      (supported operation + existing catalog entry + existing fixture), so it
+      accepts them — the same structural check the shipped adapters pass — but the
+      shipped adapters' `covered` is separately replay-proven in
+      family-classification.test.ts, while the control is not replayed anywhere.
+      So the control's "covered" is a structural claim, not a replayed one.
+    suggestion: >
+      Give the control one per-family stimulus fixture for each covered family (or
+      reuse the committed family fixtures) and add a small replay assertion, or
+      state explicitly in the doc that the control's covered postures are
+      structural (its catalog + fixture exist) rather than replayed.
+  - id: NF-2
+    severity: minor
+    confidence: high
+    category: correctness
+    location: "packages/testkit/src/conformance/parity.ts:795-812"
+    message: >
+      The new unresolvable-evidence violation sets `evidence: evidencePath` — the
+      path that does not resolve — so that record's `evidence` is not a "resolving
+      fixture or evidence reference" under AC-F5-2/NFR-11, unlike every other
+      violation (which uses evidenceFor(entry) or a register differenceId). A
+      consumer that validates every violation's evidence reference (as the wiring
+      test's referenceResolves does for the induced set) would reject it.
+    suggestion: >
+      Use evidenceFor(entry) (the entry's first resolving class evidence) or the
+      register differenceId as the `evidence` field, and keep the offending path
+      in `received`/`detail`.
+  - id: NF-3
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: "packages/testkit/src/conformance/parity.ts:11-13"
+    message: >
+      The F-6 fix makes parity.ts import and reference the three provider-contract
+      constants (GITHUB/GITLAB/JIRA_ADAPTER_CONTRACT) as identifiers. The
+      identity-construct scan detects only full-value provider-name/contract
+      string literals and provider-discriminant comparisons, so it cannot see
+      these. This is within the permitted "parity matrix's columns" home and the
+      doc now says columns are "bound to its imported contract", so it is not an
+      overclaim — but the "identity-free parity engine" guarantee is now
+      "no provider-name literal or comparison", not "no provider identity".
+    suggestion: "No action required; optionally state the contract-identifier binding explicitly in the participation section so the distinction is obvious."
+  - id: NF-4
+    severity: info
+    confidence: high
+    category: process
+    location: "doc/changes/2026-11/2026-11-18--GH-339--adapter-conformance-parity/chg-GH-339-pm-notes.yaml:13"
+    message: >
+      The review_fix lifecycle phase is still { started: null, completed: null }
+      and no pm-notes note records the remediation commits (ab1bc9d8, a11d2301).
+      Expected to be recorded when @pm completes review_fix after this PASS; noted
+      so it is not silently lost.
+    suggestion: "Record review_fix completion with the remediation commit hashes and the re-review verdict as a pm-notes entry before advancing to quality_gates."
+reviewed_at: 2026-11-18T19:30:00Z
+next_step: PROCEED
+reviewer_notes: |
+  Verdict rationale: all three iteration-1 majors are genuinely closed and each
+  new control fails when its mutation is applied (verified by reading and by
+  green suites). No existing guard was weakened: conformance-family-accounting's
+  eight cases are preserved while its validator moved to fixtures.ts; the parity
+  suite retains every original describe and adds the F-1 block; the allowlist got
+  stricter (counts), not looser; the control's token scan was replaced by the
+  delivered engine. Remaining items are minor/info and do not gate:
+  NF-1 (control covered is structural), NF-2 (unresolvable-evidence violation's
+  evidence field), NF-3 (contract identifiers invisible to the literal scan),
+  NF-4 (review_fix not yet recorded). F-5 (accepted) and F-8 (acknowledged)
+  persist by decision.
+
+  Judge answers:
+  1. Majors closed: yes; each control fails on its mutation, and the control
+     accounting is now the delivered DM-4 engine over the control's own list.
+  2. No guard weakened / no test deleted / no assertion made vacuous: confirmed
+     by diff comparison with iteration 1.
+  3. New gate rules: shipped matrix passes (clean()), malformed entries fail
+     (empty rationale, missing adjudication, unresolvable evidence); the
+     resolvesEvidence port keeps the gate pure and runtime-neutral.
+  4. undecodable-before-401/403: consistent across code
+     (tracker-error-taxonomy.ts:140), docs (feature-adapter-conformance.md), and
+     the test (tracker-taxonomy.test.ts TC-TAX-009).
+  5. Docs describe delivered behaviour: yes, including the resolver port, the
+     clause responsibilities, the occurrence-count pinning, and the control's
+     postures; no overclaim found.
+  6. New defects: no dead code, no determinism loss, no hidden I/O in testkit, no
+     boundary violation (tests/boundaries green); the only type-level nit is the
+     "" sentinel in providerForContract for an unregistered contract, which is
+     fail-closed by the table.

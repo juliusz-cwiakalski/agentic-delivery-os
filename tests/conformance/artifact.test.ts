@@ -16,6 +16,9 @@ import {
   type ConformanceReport,
   type ConformanceStepResult,
   createMockTenantTransport,
+  PARITY_CELL_KINDS,
+  PARITY_DIFFERENCE_CLASSES,
+  PARITY_MATRIX,
   runConformance,
   serializeConformanceArtifact,
   toConformanceArtifact,
@@ -361,5 +364,115 @@ describe("TC-CHECK-010 the artifact carries no excerpt or thread-body evidence",
     ]) {
       expect(text.includes(evidenceKey), evidenceKey).toBe(false);
     }
+  });
+});
+
+const ARTIFACT_KEYS = [
+  "createdArtifacts",
+  "flows",
+  "generatedAt",
+  "mutationRequests",
+  "providers",
+  "runId",
+  "schema",
+  "status",
+  "steps",
+  "tier",
+  "totals",
+].sort();
+
+const scanParityVocabulary = (text: string): string[] => {
+  const needles = [
+    ...PARITY_DIFFERENCE_CLASSES,
+    ...PARITY_CELL_KINDS,
+    ...PARITY_MATRIX.register.map((entry) => entry.differenceId),
+  ];
+  return needles.filter(
+    (needle) => text.includes(`"${needle}"`) || text.includes(`\\"${needle}\\"`),
+  );
+};
+
+describe("TC-ART-001 the artifact schema, closed sets and caps are unchanged", () => {
+  test("the exact eleven keys and all seven caps are declared constants", async () => {
+    const artifact = await mockArtifact();
+    expect(Object.keys(artifact).sort()).toEqual(ARTIFACT_KEYS);
+    expect(Object.keys({ ...artifact, parity: {} }).sort()).not.toEqual(ARTIFACT_KEYS);
+    expect(Object.keys({ ...artifact, parity: {} }).sort()).toContain("parity");
+    expect(CONFORMANCE_LIMITS).toEqual({
+      maxProviders: 16,
+      maxFlows: 16,
+      maxStepsPerFlow: 64,
+      maxTotalSteps: 512,
+      maxMissingSettingsPerProvider: 16,
+      maxFailureDetailChars: 1024,
+      maxArtifactBytes: 262144,
+    });
+  });
+
+  test("a parity field inside a provider flow summary fails the delivered validator", async () => {
+    const artifact = await mockArtifact();
+    const provider = artifact.providers[0];
+    if (provider === undefined) throw new Error("no provider");
+    const summary = provider.flows[0];
+    if (summary === undefined) throw new Error("no summary");
+    const mutated = {
+      ...artifact,
+      providers: [
+        {
+          ...provider,
+          flows: [{ ...summary, parity: "recorded-difference" }, ...provider.flows.slice(1)],
+        },
+        ...artifact.providers.slice(1),
+      ],
+    };
+    expect(validateConformanceArtifact(mutated).some((message) => message.includes("parity"))).toBe(
+      true,
+    );
+  });
+});
+
+describe("TC-ART-002 no parity vocabulary or verdict appears in the artifact", () => {
+  test("the serialized artifact carries no class id, cell kind or difference id", async () => {
+    const artifact = await mockArtifact();
+    const text = serializeConformanceArtifact(artifact);
+    expect(scanParityVocabulary(text)).toEqual([]);
+    // The scan has a positive: the artifact does carry its own run evidence.
+    expect(text).toContain("artifact-run");
+    expect(text).toContain(CONFORMANCE_SCHEMA_ID);
+    for (const operation of [
+      "read-work-item",
+      "write-work-item",
+      "transition-work-item",
+      "read-delivery-request",
+      "write-delivery-request",
+      "read-pipeline-run",
+      "write-comment",
+      "resolve-delivery-thread",
+      "merge-delivery-request",
+    ]) {
+      expect(text).toContain(operation);
+    }
+  });
+
+  test("a planted class id or cell kind in a failure detail is detected with its field path", async () => {
+    const artifact = await mockArtifact();
+    const target = artifact.steps[0];
+    if (target === undefined) throw new Error("no step");
+    const poisoned = mutateStep(artifact, target.stepId, (step) => ({
+      ...step,
+      status: "failed" as const,
+      skipReason: null,
+      skipKind: null,
+      failure: {
+        assertion: "parity",
+        expected: "expected",
+        received: "received",
+        reference: "tenant:parity",
+        detail: 'planted "same-as-reference" and "tracker.payload.invalid"',
+      },
+    }));
+    const text = serializeConformanceArtifact(poisoned);
+    expect(scanParityVocabulary(text)).toContain("same-as-reference");
+    expect(text).toContain("tracker.payload.invalid");
   });
 });

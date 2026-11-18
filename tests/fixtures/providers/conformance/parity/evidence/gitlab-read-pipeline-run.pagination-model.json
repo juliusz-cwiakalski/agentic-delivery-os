@@ -1,0 +1,8 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "differenceId": "gitlab-read-pipeline-run",
+  "class": "pagination-model",
+  "referenceValue": "bound=declared;count=reported",
+  "adapterValue": "bound=none;count=absent",
+  "reproduces": true
+}

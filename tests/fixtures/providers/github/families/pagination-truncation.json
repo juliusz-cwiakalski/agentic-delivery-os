@@ -1,0 +1,24 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "provider": "github",
+  "family": "pagination-truncation",
+  "stimulus": {
+    "kind": "read-pipeline-run",
+    "body": {
+      "check_runs": [
+        {
+          "id": 7001,
+          "name": "build",
+          "status": "completed",
+          "conclusion": "success",
+          "details_url": "https://ci.example.com/runs/1"
+        }
+      ]
+    }
+  },
+  "expected": {
+    "classification": "bounded-observation",
+    "bound": "declared",
+    "count": "reported"
+  }
+}

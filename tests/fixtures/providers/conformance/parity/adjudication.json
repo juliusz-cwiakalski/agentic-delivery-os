@@ -1,0 +1,214 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "intersections": [
+    {
+      "provider": "gitlab",
+      "operation": "read-delivery-request",
+      "posture": "declared-difference",
+      "observations": {
+        "identity-scheme": {
+          "state": "observed",
+          "value": "project-scoped-iid"
+        },
+        "pipeline-model": {
+          "state": "not-observable",
+          "why": "only read-pipeline-run observes a pipeline item"
+        },
+        "state-vocabulary": {
+          "state": "observed",
+          "value": "merge-status-table+unknown-fallback"
+        },
+        "pagination-model": {
+          "state": "not-observable",
+          "why": "the operation is not a collection read"
+        },
+        "carrier-absent": {
+          "state": "observed",
+          "value": "writable=[];readable=[];participation=not-observable"
+        },
+        "failure-classification": {
+          "state": "observed",
+          "value": "tracker.transport.failed"
+        }
+      },
+      "classes": [
+        {
+          "class": "identity-scheme",
+          "evidence": "tests/fixtures/providers/conformance/parity/evidence/gitlab-read-delivery-request.identity-scheme.json"
+        },
+        {
+          "class": "state-vocabulary",
+          "evidence": "tests/fixtures/providers/conformance/parity/evidence/gitlab-read-delivery-request.state-vocabulary.json"
+        },
+        {
+          "class": "failure-classification",
+          "evidence": "tests/fixtures/providers/conformance/parity/evidence/gitlab-read-delivery-request.failure-classification.json"
+        }
+      ],
+      "adjudicatedBy": "TDR-0036",
+      "rationale": "GitLab differs in identity scheme, review-state mechanism, and failure classification; the failure-classification difference is unobservable on the reference on this operation because no reference family fixture exercises read-delivery-request, so it records the adapter's structural status absence and claims no provider divergence."
+    },
+    {
+      "provider": "gitlab",
+      "operation": "read-pipeline-run",
+      "posture": "declared-difference",
+      "observations": {
+        "identity-scheme": {
+          "state": "observed",
+          "value": "bare-pipeline-id"
+        },
+        "pipeline-model": {
+          "state": "observed",
+          "value": "pipeline-unit+jobs+trace"
+        },
+        "state-vocabulary": {
+          "state": "not-observable",
+          "why": "the operation models no review state"
+        },
+        "pagination-model": {
+          "state": "observed",
+          "value": "bound=none;count=absent"
+        },
+        "carrier-absent": {
+          "state": "observed",
+          "value": "writable=[];readable=[];participation=not-observable"
+        },
+        "failure-classification": {
+          "state": "not-observable",
+          "why": "no error family fixture exercises this operation"
+        }
+      },
+      "classes": [
+        {
+          "class": "identity-scheme",
+          "evidence": "tests/fixtures/providers/conformance/parity/evidence/gitlab-read-pipeline-run.identity-scheme.json"
+        },
+        {
+          "class": "pipeline-model",
+          "evidence": "tests/fixtures/providers/conformance/parity/evidence/gitlab-read-pipeline-run.pipeline-model.json"
+        },
+        {
+          "class": "pagination-model",
+          "evidence": "tests/fixtures/providers/conformance/parity/evidence/gitlab-read-pipeline-run.pagination-model.json"
+        }
+      ],
+      "adjudicatedBy": "TDR-0036",
+      "rationale": "GitLab identities are bare pipeline ids, one item is a provider pipeline with its own job list and trace, and the read declares no page bound and reports no page count."
+    },
+    {
+      "provider": "jira",
+      "operation": "read-work-item",
+      "posture": "declared-difference",
+      "observations": {
+        "identity-scheme": {
+          "state": "observed",
+          "value": "issue-key"
+        },
+        "state-vocabulary": {
+          "state": "observed",
+          "value": "native-status-row+refusal"
+        },
+        "failure-classification": {
+          "state": "observed",
+          "value": "tracker.transport.failed"
+        },
+        "pipeline-model": {
+          "state": "not-observable",
+          "why": "only read-pipeline-run observes a pipeline item"
+        },
+        "pagination-model": {
+          "state": "not-observable",
+          "why": "the operation is not a collection read"
+        },
+        "carrier-absent": {
+          "state": "observed",
+          "value": "writable=[];readable=[];participation=not-observable"
+        }
+      },
+      "classes": [
+        {
+          "class": "identity-scheme",
+          "evidence": "tests/fixtures/providers/conformance/parity/evidence/jira-read-work-item.identity-scheme.json"
+        },
+        {
+          "class": "state-vocabulary",
+          "evidence": "tests/fixtures/providers/conformance/parity/evidence/jira-read-work-item.state-vocabulary.json"
+        },
+        {
+          "class": "failure-classification",
+          "evidence": "tests/fixtures/providers/conformance/parity/evidence/jira-read-work-item.failure-classification.json"
+        }
+      ],
+      "adjudicatedBy": "TDR-0036",
+      "rationale": "Jira identifies by issue key, resolves native status through an exact workflow-map row that refuses the unmapped, and builds status-less payload failures."
+    },
+    {
+      "provider": "jira",
+      "operation": "write-work-item",
+      "posture": "same-as-reference",
+      "observations": {
+        "identity-scheme": {
+          "state": "not-observable",
+          "why": "the write result carries no entity identity"
+        },
+        "state-vocabulary": {
+          "state": "not-observable",
+          "why": "the operation models no read state"
+        },
+        "failure-classification": {
+          "state": "not-observable",
+          "why": "no error family fixture exercises this operation"
+        },
+        "pipeline-model": {
+          "state": "not-observable",
+          "why": "only read-pipeline-run observes a pipeline item"
+        },
+        "pagination-model": {
+          "state": "not-observable",
+          "why": "the operation is not a collection read"
+        },
+        "carrier-absent": {
+          "state": "observed",
+          "value": "writable=[];readable=[];participation=not-observable"
+        }
+      },
+      "classes": [],
+      "adjudicatedBy": "TDR-0036",
+      "rationale": "Same as the reference by agreement of not-observable observations: both columns report the write result as not-observable for identity, pipeline, state, pagination and classification, and both declare empty carrier arrays; no provider divergence is claimed."
+    },
+    {
+      "provider": "jira",
+      "operation": "transition-work-item",
+      "posture": "same-as-reference",
+      "observations": {
+        "identity-scheme": {
+          "state": "not-observable",
+          "why": "the write result carries no entity identity"
+        },
+        "state-vocabulary": {
+          "state": "not-observable",
+          "why": "the operation models no read state"
+        },
+        "failure-classification": {
+          "state": "not-observable",
+          "why": "no error family fixture exercises this operation"
+        },
+        "pipeline-model": {
+          "state": "not-observable",
+          "why": "only read-pipeline-run observes a pipeline item"
+        },
+        "pagination-model": {
+          "state": "not-observable",
+          "why": "the operation is not a collection read"
+        },
+        "carrier-absent": {
+          "state": "observed",
+          "value": "writable=[];readable=[];participation=not-observable"
+        }
+      },
+      "classes": [],
+      "adjudicatedBy": "TDR-0036",
+      "rationale": "Same as the reference by agreement of not-observable observations: both columns report the analogous write surface as not-observable and both declare empty carrier arrays; no provider divergence is claimed."
+    }
+  ]
+}

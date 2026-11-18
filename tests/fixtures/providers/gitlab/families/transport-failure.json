@@ -1,0 +1,13 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "provider": "gitlab",
+  "family": "transport-failure",
+  "stimulus": {
+    "kind": "transport-failure"
+  },
+  "expected": {
+    "classification": "tracker.transport.failed",
+    "ownsHttpStatus": false,
+    "zeroProviderRequests": false
+  }
+}

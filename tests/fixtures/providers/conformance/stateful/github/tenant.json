@@ -1,0 +1,173 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "provider": "github",
+  "adapterName": "github",
+  "instance": {
+    "instanceName": "github",
+    "systemKind": "vcs",
+    "baseUrl": "https://github.example.com",
+    "authMethod": {
+      "mechanism": "credential-reference",
+      "reference": {
+        "referenceName": "conformance-mock-github",
+        "sourceKey": {
+          "style": "literal",
+          "name": "CONFORMANCE_LIVE_GITHUB_TOKEN"
+        }
+      }
+    }
+  },
+  "credentialReferenceName": "github-read",
+  "addressing": {
+    "provider": "github",
+    "owner": "owner-placeholder",
+    "repo": "project-placeholder",
+    "issueNumber": 601,
+    "pullNumber": 504,
+    "commitSha": "1111111111111111111111111111111111111111",
+    "threadId": "PRRT_2"
+  },
+  "initialState": {
+    "issue": {
+      "fields": {
+        "number": 601,
+        "title": "Stateful initial title",
+        "state": "open"
+      },
+      "collections": {
+        "labels": [
+          {
+            "name": "planning"
+          }
+        ],
+        "comments": []
+      },
+      "subResources": {
+        "thread": {
+          "resolved": false
+        }
+      }
+    }
+  },
+  "identitySequences": {
+    "issue.comments": ["comment-1001", "comment-1002"]
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "url": "https://github.example.com/repos/owner-placeholder/project-placeholder/issues/601",
+      "status": 200,
+      "body": {},
+      "responseFromState": "issue"
+    },
+    {
+      "method": "PATCH",
+      "url": "https://github.example.com/repos/owner-placeholder/project-placeholder/issues/601",
+      "status": 200,
+      "body": {},
+      "effect": {
+        "kind": "set-field",
+        "resource": "issue",
+        "field": "state",
+        "value": "closed"
+      }
+    },
+    {
+      "method": "POST",
+      "url": "https://api.github.example.com/stateful/set-field",
+      "status": 200,
+      "body": {},
+      "effect": {
+        "kind": "set-field",
+        "resource": "issue",
+        "field": "title",
+        "value": "Set field value"
+      }
+    },
+    {
+      "method": "POST",
+      "url": "https://api.github.example.com/stateful/reset-field",
+      "status": 200,
+      "body": {},
+      "effect": {
+        "kind": "reset-field",
+        "resource": "issue",
+        "field": "title"
+      }
+    },
+    {
+      "method": "POST",
+      "url": "https://api.github.example.com/stateful/replace-collection",
+      "status": 200,
+      "body": {},
+      "effect": {
+        "kind": "replace-collection",
+        "resource": "issue",
+        "collection": "labels",
+        "entries": [
+          {
+            "name": "delivered"
+          }
+        ]
+      }
+    },
+    {
+      "method": "POST",
+      "url": "https://api.github.example.com/stateful/append-entry",
+      "status": 200,
+      "body": {},
+      "effect": {
+        "kind": "append-entry",
+        "resource": "issue",
+        "collection": "comments",
+        "entry": {
+          "body": "first"
+        },
+        "identityField": "id"
+      }
+    },
+    {
+      "method": "POST",
+      "url": "https://api.github.example.com/stateful/mark-resolved",
+      "status": 200,
+      "body": {},
+      "effect": {
+        "kind": "mark-resolved",
+        "resource": "issue",
+        "subResource": "thread"
+      }
+    },
+    {
+      "method": "POST",
+      "url": "https://api.github.example.com/stateful/effect-less",
+      "status": 200,
+      "body": {
+        "ok": true
+      }
+    },
+    {
+      "method": "GET",
+      "url": "https://api.github.example.com/stateful/write-lookalike",
+      "status": 200,
+      "body": {
+        "ok": true
+      }
+    },
+    {
+      "method": "POST",
+      "url": "https://api.github.example.com/stateful/payload-lookalike",
+      "status": 200,
+      "body": {
+        "state": "closed",
+        "title": "not applied"
+      }
+    }
+  ],
+  "expected": {
+    "change-lifecycle.read-work-item": {
+      "identity": {
+        "entityId": "601"
+      }
+    }
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "provider": "control",
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "entries": [
+    {
+      "trapName": "CONTROL-FAMILY-AUTH",
+      "providerBehavior": "The control's read-work-item is the operation an authorization-rejection family is accounted against.",
+      "expectedNormalizedOutcome": "auth-shape is covered on the control adapter's read-work-item.",
+      "fixtureReference": "tests/fixtures/providers/conformance/control/tenant.json#/routes/0"
+    },
+    {
+      "trapName": "CONTROL-FAMILY-TRANSPORT",
+      "providerBehavior": "The control's read-work-item is the operation a transport-failure family is accounted against.",
+      "expectedNormalizedOutcome": "transport-failure is covered on the control adapter's read-work-item.",
+      "fixtureReference": "tests/fixtures/providers/conformance/control/tenant.json#/routes/0"
+    },
+    {
+      "trapName": "CONTROL-FAMILY-RATE",
+      "providerBehavior": "The control's read-work-item is the operation a throttled-response family is accounted against.",
+      "expectedNormalizedOutcome": "rate-limit is covered on the control adapter's read-work-item.",
+      "fixtureReference": "tests/fixtures/providers/conformance/control/tenant.json#/routes/0"
+    },
+    {
+      "trapName": "CONTROL-FAMILY-PAYLOAD",
+      "providerBehavior": "The control's read-work-item is the operation an invalid-payload family is accounted against.",
+      "expectedNormalizedOutcome": "payload-shape is covered on the control adapter's read-work-item.",
+      "fixtureReference": "tests/fixtures/providers/conformance/control/tenant.json#/routes/0"
+    },
+    {
+      "trapName": "CONTROL-FAMILY-STATE",
+      "providerBehavior": "The control declares no transition operation, so a workflow-state mismatch is accounted from its own declared gap.",
+      "expectedNormalizedOutcome": "workflow-state-mismatch is gap-backed on the control adapter's transition-work-item (provider-unsupported).",
+      "fixtureReference": "tests/fixtures/providers/conformance/control/tenant.json#/routes/0"
+    },
+    {
+      "trapName": "CONTROL-FAMILY-PAGE",
+      "providerBehavior": "The control declares no pipeline read, so a bounded collection read is accounted from its own declared gap.",
+      "expectedNormalizedOutcome": "pagination-truncation is gap-backed on the control adapter's read-pipeline-run (provider-unsupported).",
+      "fixtureReference": "tests/fixtures/providers/conformance/control/tenant.json#/routes/0"
+    }
+  ]
+}

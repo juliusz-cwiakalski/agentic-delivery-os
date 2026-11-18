@@ -223,6 +223,42 @@
       "providerBehavior": "A review thread can carry more comments than the cap and individual comment bodies can exceed the per-body byte cap, including multi-byte text across the boundary.",
       "expectedNormalizedOutcome": "At most 50 oldest-first provider-ordered comments are returned with the provider total preserved, each body is a UTF-8 byte prefix of at most 4096 bytes that never splits a multi-byte sequence, and the thread-level truncated flag is true exactly when comments were dropped or a body was truncated.",
       "fixtureReference": "tests/fixtures/providers/github/thread-discussion.json#/cases/fiftyOne"
+    },
+    {
+      "trapName": "GH339-AUTH-SHAPE",
+      "providerBehavior": "A GitHub read answers 401 with a structured status, so an authorization rejection is distinguishable from a request that produced no response.",
+      "expectedNormalizedOutcome": "read-work-item resolves to tracker.auth.rejected with httpStatus 401 and keeps provider.payload.invalid as its delivered identity.",
+      "fixtureReference": "tests/fixtures/providers/github/families/auth-shape.json#/stimulus"
+    },
+    {
+      "trapName": "GH339-TRANSPORT-FAILURE",
+      "providerBehavior": "A GitHub transport rejection produces no provider response at all.",
+      "expectedNormalizedOutcome": "read-work-item resolves to tracker.transport.failed and the failure owns no httpStatus property.",
+      "fixtureReference": "tests/fixtures/providers/github/families/transport-failure.json#/stimulus"
+    },
+    {
+      "trapName": "GH339-RATE-LIMIT",
+      "providerBehavior": "A GitHub throttled response arrives with a structured status outside the authorization set.",
+      "expectedNormalizedOutcome": "read-work-item resolves to tracker.payload.invalid with the throttling status carried as httpStatus.",
+      "fixtureReference": "tests/fixtures/providers/github/families/rate-limit.json#/stimulus"
+    },
+    {
+      "trapName": "GH339-PAYLOAD-SHAPE",
+      "providerBehavior": "A GitHub 2xx body that does not decode is a payload failure stamped with its received status.",
+      "expectedNormalizedOutcome": "read-work-item resolves to tracker.payload.invalid with httpStatus 200 and never depends on prose.",
+      "fixtureReference": "tests/fixtures/providers/github/families/payload-shape.json#/stimulus"
+    },
+    {
+      "trapName": "GH339-WORKFLOW-STATE-MISMATCH",
+      "providerBehavior": "A GitHub label-swap transition with no current read is refused before any provider request.",
+      "expectedNormalizedOutcome": "transition-work-item resolves to tracker.payload.invalid with zero provider requests and no status.",
+      "fixtureReference": "tests/fixtures/providers/github/families/workflow-state-mismatch.json#/stimulus"
+    },
+    {
+      "trapName": "GH339-PAGINATION-TRUNCATION",
+      "providerBehavior": "A GitHub pipeline read declares a page bound and reports the number of items on the page.",
+      "expectedNormalizedOutcome": "read-pipeline-run returns a bounded observation: a declared bound and a reported page count.",
+      "fixtureReference": "tests/fixtures/providers/github/families/pagination-truncation.json#/stimulus"
     }
   ]
 }
