@@ -4,7 +4,7 @@ delivery_mode: autonomous
 milestone: "M3: Harness and tracker integrations"
 phases:
   clarify_scope: { started: null, completed: 2026-11-17T22:03:08.077Z }
-  specification: { started: null, completed: null }
+  specification: { started: null, completed: 2026-11-18T10:21:22.741Z }
   test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
@@ -147,12 +147,12 @@ notes:
       deterministic commit-message validator matches any XXX-NNN token, so a
       TDR/ADR id in the composed template subject (derived from the top staged
       path) is rejected as an invented tracker reference. Precedent GH-275
-      (TDR-0016) and GH-322. TDR-0031 therefore stays untracked until delivery
+      (TDR-0016) and GH-322. TDR-0033 therefore stays untracked until delivery
       Phase 1, where a lower-sorting path takes the template subject."
     type: blocker
     date: "2026-11-17"
-  - text: "Decision recorded: TDR-0031
-      (doc/decisions/TDR-0031-harness-dispatch-outcome-envelope-detail.md, R2,
+  - text: "Decision recorded: TDR-0033
+      (doc/decisions/TDR-0033-harness-dispatch-outcome-envelope-detail.md, R2,
       Proposed — human decides at PR review). The failure-envelope detail slot
       gains one harness member (kind, observedVersion|null, versionVerdict
       inside|outside|indeterminate, mode omitted when unresolved), present only
@@ -161,7 +161,7 @@ notes:
     type: decision
     date: "2026-11-17"
   - text: "Adjudication of plan conflicts after 1: NOT_READY remediation: (a)
-      TDR-0031's declaration, projection, pins, validator, fixture and doc
+      TDR-0033's declaration, projection, pins, validator, fixture and doc
       sentence land in Phase 2 while the behaviour file spans Phases 4 and 7 —
       accepted, because the record itself already names that file as push-later
       scope and the behaviour cannot exist before the refusals do; (b)
@@ -296,4 +296,62 @@ notes:
       move is to stop and ask rather than to narrow the ticket's AC
       unilaterally."
     type: retro
+    date: "2026-11-18"
+  - text: "SCOPE DECISION (resume, owner-directed continuation): the owner directed
+      delivery to proceed through pr_creation without selecting one of the three
+      options, so the recorded default applies — option 2, narrow the claim. The
+      propagation contract is proven at the harness-port boundary for a spawn
+      that names an agent (exactly one --agent and one --model, one seat per
+      spawn), and the shipped role-less dispatch path is disclosed as
+      unresolved-seat rather than claiming a resolved profile. AC-F3-1, DoD
+      clause 4, TC-HARNESS-045 and the plan's Phase-4 premise are narrowed to
+      match. Adding an agent-naming surface to dispatch stays out of scope and
+      is surfaced at PR review as a deliberate reduction of the ticket's
+      headline AC."
+    type: decision
+    date: "2026-11-18"
+  - text: "Iteration-3 findings to remediate: (1) the production agent source —
+      resolved by the scope decision above; (2) observedModel/agentRole
+      duplicate the delivered model/agent while null agent/model rows have no
+      representation; (3) the attribution scope across dispatch attempts at the
+      closeout capture point is undefined; (4) the ports v1 contract inventory
+      fixture must be declared and gated in Phase 2; (5) section 10 overclaims
+      the detail member for the reused identity and the scripted projection; (6)
+      TC-041 must name four records; (7) Phase 5 must gate the harness-contract
+      and privacy-literals test files; (8) pm-notes decisions must carry the
+      four record entries; (9) Appendix A must show which blueprint refusal was
+      dropped; (10) adjudication (k) wording must match the daemon record-shape
+      edits."
+    type: info
+    date: "2026-11-18"
+  - text: "Resume sync: merged origin/main-tools (GH-293 engine-first operations, 75
+      files) into the change branch. One conflict in doc/decisions/00-index.md,
+      resolved as a row union. The merge exposed a decision-record id collision:
+      main-tools now owns TDR-0031 (engine-first evaluation surfaces, GH-293),
+      so this change's envelope record was renumbered TDR-0031 -> TDR-0033 (file
+      renamed, front matter id, the TDR-0032 links and 61 references across the
+      spec, plan, test plan and pm-notes). The readiness-review history keeps
+      the id it reviewed, deliberately."
+    type: info
+    date: "2026-11-18"
+  - text: "Post-merge integration fact for delivery: packages/cli/src/production.ts
+      moved in GH-293; the harness block is now around lines 1751-1800, and
+      harnessFor(kind) gained an engine-path consumer (~2681) beside the
+      registry (~2390). The Phase-4 binding change must keep those callers
+      working."
+    type: risk
+    date: "2026-11-18"
+  - text: "Adjudication of the plan's iteration-3 residuals: (l) an absent observed
+      agent/model is represented by one additive marker member with a closed
+      axis vocabulary plus the delivered empty-string placeholder and the
+      delivered absence warning, never by making the delivered non-null fields
+      nullable — DEC-4 forbids widening them and a nullable pair would be a
+      larger delivered-contract change than this ticket needs; (m) the
+      invalid-session-identity supersession and the bounded attempt-ledger
+      truncation are stated in the spec so the taxonomy and the union scope are
+      not left implicit; (n) the union's identity cap is CAPSULE_MAX_SESSIONS
+      (64), the cap the checkpoint actually applies; (o) the readiness review
+      history keeps the record id it reviewed, so it is intentionally stale
+      after the TDR-0031 to TDR-0033 renumbering."
+    type: decision
     date: "2026-11-18"
