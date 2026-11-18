@@ -581,14 +581,36 @@ notes:
       edited; all four remain Proposed for human acceptance at the PR."
     type: risk
     date: "2026-11-18"
-  - text: "Second decision-record id collision, found on the PR sync merge: GH-338
-      landed TDR-0032..TDR-0035 on main-tools first, so this change's four
-      records were renumbered TDR-0040 (seat/spawn), TDR-0041 (envelope detail),
-      TDR-0042 (integration mode) and TDR-0043 (adapter contract). Files renamed,
-      front-matter ids, cross-references, the decisions index and register, this
-      change's artifacts and the harness pages were updated together. GH-338's
-      own citations were deliberately left at 0032..0035. Same rule that
-      renumbered the envelope record 0031 to 0033 earlier today."
+  - text: "Second decision-record id collision, found on the first PR sync merge:
+      GH-338 landed TDR-0032..TDR-0035 on main-tools first, so this change's
+      four records were renumbered to TDR-0036 (seat/spawn), TDR-0037 (envelope
+      detail), TDR-0038 (integration mode) and TDR-0039 (adapter contract). Files
+      renamed, front-matter ids, cross-references, the decisions index and
+      register, this change's artifacts and the harness pages were updated
+      together. GH-338's own citations were deliberately left at 0032..0035.
+      Same rule that renumbered the envelope record 0031 to 0033 earlier today."
+    type: info
+    date: "2026-11-18"
+  - text: "Third decision-record id collision, found on the second PR sync merge:
+      main-tools moved to 1e7ecf07 (GH-339, PR #356) after the first sync and
+      GH-339 owns TDR-0036..TDR-0039 (cross-adapter parity matrix, tracker error
+      taxonomy, simulated stateful double, registration-only extensibility
+      proof), so this change's four records moved again to TDR-0040 (seat/spawn),
+      TDR-0041 (envelope detail), TDR-0042 (integration mode) and TDR-0043
+      (adapter contract). Files renamed, front-matter ids, cross-references, the
+      decisions index and register, this change's live artifacts, the harness
+      code and test comments and the harness pages were updated together.
+      GH-338's and GH-339's own citations were deliberately left untouched.
+      Rule unchanged: the record that lands on main-tools first owns the id."
+    type: info
+    date: "2026-11-18"
+  - text: "Second sync merge onto current main-tools (GH-339 plus GH-338) resolved
+      as commit 1e554edc: seven content conflicts resolved as unions
+      (doc/00-index.md, doc/decisions/00-index.md, the glossary, the conformance,
+      ports and result-contract pages, and doc/spec/nonfunctional.md), the four
+      harness records renumbered 0036..0039 to 0040..0043. Review and
+      readiness history is frozen at the ids each iteration reviewed and is not
+      renumbered with the live artifacts."
     type: info
     date: "2026-11-18"
   - text: "Sync merge onto current main-tools (GH-338 plus three docs commits)
