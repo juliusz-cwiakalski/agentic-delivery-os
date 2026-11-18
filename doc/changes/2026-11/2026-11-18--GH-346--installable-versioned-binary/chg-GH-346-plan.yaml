@@ -2507,6 +2507,14 @@ phases:
         - doc/spec/features/feature-branding-seam.md
         - doc/planning/oss-tooling/milestones/m4/install-model.md
         - doc/planning/oss-tooling/milestones/m4/backlog.md
+        # The release changeset the privacy/release gate requires: adding any path
+        # under packages/** moves five publishable packages, and
+        # tests/checks/privacy-release.test.ts (TC-RELEASE-001) fails CI unless
+        # exactly one added five-package minor changeset lands in the same change.
+        # It was authored during delivery and could not be staged because no phase
+        # declared it; phase 6 owns it because the release evidence belongs with the
+        # documentation-truth and full-battery phase.
+        - .changeset/install-lifecycle-minor.md
         - tests/checks/install-lifecycle-docs.test.ts
         # Owns the branding-seam page's scoped required phrase, its two stale
         # phrases and the two-scan-scope fact, AND the entrypoint page's scoped
