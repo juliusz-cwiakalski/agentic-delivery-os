@@ -44,6 +44,7 @@ export const PRODUCTION_DEFAULTS = {
   },
   harness: {
     kind: "opencode",
+    mode: "per-invocation-private-server",
     execution: {
       kind: "host",
     },

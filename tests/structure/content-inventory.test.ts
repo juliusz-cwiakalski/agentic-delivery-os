@@ -1048,6 +1048,20 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "inspectHarnessCapability",
   ],
   "core/src/domain/harness-classify.ts": ["classifyHarnessEvidence"],
+  "core/src/domain/harness-mode.ts": ["evaluateHarnessModeAvailability", "resolveHarnessMode"],
+  "core/src/domain/harness-profile-propagation.ts": [
+    "bindingEnvironmentRecords",
+    "bindingInvocationArgs",
+    "evaluateModelExpressibility",
+    "harnessAgentIdentityViolation",
+    "resolveBinding",
+  ],
+  "core/src/domain/harness-version-window.ts": [
+    "evaluateHarnessVersion",
+    "harnessVersionInWindow",
+    "indeterminateHarnessVersion",
+    "normalizeHarnessVersion",
+  ],
   "core/src/domain/harness-liveness.ts": [
     "assembleHarnessLiveness",
     "createHarnessLivenessSignalSource",

@@ -16,8 +16,11 @@ import {
   HARNESS_KINDS,
   type HarnessExecutionKind,
   type HarnessKind,
+  type HarnessMode,
+  type HarnessModeOrigin,
   type Result,
 } from "#contracts";
+import { resolveHarnessMode } from "../domain/harness-mode.js";
 
 /**
  * One declared allowlist entry: a variable name (optionally optional) or a
@@ -30,6 +33,9 @@ export type HarnessEnvironmentSetting =
 /** The resolved harness branch. */
 export type HarnessSettings = {
   readonly kind: HarnessKind;
+  /** The declared integration mode and the origin it came from (DEC-2, TDR-0034). */
+  readonly mode: HarnessMode;
+  readonly modeOrigin: HarnessModeOrigin;
   readonly executionKind: HarnessExecutionKind;
   readonly opencodeDatabasePath: string;
   readonly claudeCodeSessionDirectory: string;
@@ -89,6 +95,15 @@ export const resolveHarnessSettings = (
   if (typeof kind !== "string" || !(HARNESS_KINDS as readonly string[]).includes(kind)) {
     return failure("config.value.invalid", origins, "harness.kind");
   }
+  // The integration mode is a declared value with an observable origin; an
+  // unknown value refuses and is never silently defaulted (AC-F2-4, GM-3).
+  const modeResolution = resolveHarnessMode({
+    declared: lookup(values, ["harness", "mode"]),
+    configured: Object.hasOwn(origins, "harness.mode"),
+    field: "harness.mode",
+  });
+  if (!modeResolution.ok) return failure("config.value.invalid", origins, "harness.mode");
+
   const executionKind = lookup(values, ["harness", "execution", "kind"]);
   if (
     typeof executionKind !== "string" ||
@@ -152,6 +167,8 @@ export const resolveHarnessSettings = (
     ok: true,
     value: {
       kind: kind as HarnessKind,
+      mode: modeResolution.mode,
+      modeOrigin: modeResolution.origin,
       executionKind: executionKind as HarnessExecutionKind,
       opencodeDatabasePath: stores.opencode as string,
       claudeCodeSessionDirectory: stores["claude-code"] as string,

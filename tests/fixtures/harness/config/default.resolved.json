@@ -1,5 +1,6 @@
 {
   "kind": "opencode",
+  "mode": "per-invocation-private-server",
   "execution": { "kind": "host" },
   "stores": {
     "opencode": { "databasePath": ".local/state/opencode/opencode.db" },
