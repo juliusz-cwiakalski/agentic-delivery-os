@@ -1,0 +1,69 @@
+version: 1
+iteration: 5
+mode: local
+work_item_ref: GH-293
+branch: feat/GH-293/engine-first-operations
+status: PASS
+summary: >-
+  Narrow fifth pass, confined to the single item iteration 4 left open. F-23 closes on independent
+  verification of the pin, coverage, revision identity, and scope-neutrality, and nothing regressed.
+  (a) The pins now agree end to end. The plan's SOURCES block pins `./chg-GH-293-spec.md (v1.6, ...)`
+  (chg-GH-293-plan.yaml:225) and `./chg-GH-293-test-plan.md (v1.6, 46 cases TC-ENGINE-001..095 ...)`
+  (:264); the test plan's front matter is `version: 1.6` (chg-GH-293-test-plan.md:4) with revision-log
+  row 1.6 (:1780); and the spec is `version: "1.6"` (chg-GH-293-spec.md:7). No machine-readable v1.5
+  pin remains: every surviving `v1.5` occurrence is historical revision narrative — the 1.6 amendment
+  block quoting the phrase it corrected (plan:19), the revision 1.1/1.2/1.5 narrative (:112, :122,
+  :241, :281), the revision 1.4 narrative about REM-1/REM-3 (:1581, :1749), and the pm-notes retro that
+  describes the finding itself (pm-notes:22-23) — plus test-plan revision-log rows 1.0/1.4/1.5 and the
+  spec's own 1.5 amendment notes. (b) The DEC coverage line is `DEC-1..DEC-19` in the plan's Tests
+  pin (:269) and its Spec pin (:228); the test plan's decision matrix reads `DEC-1..DEC-19` (19/19,
+  :173) and the spec declares DEC-1..DEC-19 exactly, so the escalation from DEC-17 is complete and
+  correct at the artifact's current version. (c) The revision identity is consistent: the plan header
+  reads `revision 1.6` (:1), an explicit `REVISION 1.6 AMENDMENT` block (:16-21) names F-23 and both
+  `code-review/review-iter-3.yaml` and `review-iter-4.yaml` and states documentation-only with no phase,
+  scope, case, or criterion moved, the test plan carries 1.6 in both front matter and revision log with
+  its row naming F-23 and §10.5, and the new pm-notes retro records the iteration-4 finding and the fix
+  "in plan revision 1.6" (pm-notes:21-27). The document title's parenthetical still summarizes the 1.5
+  amendment's content; that is retained revision history, disambiguated by the explicit 1.6 block, and
+  is not a defect. (d) No scope, phase, case, or criterion moved in this pass: a structural YAML
+  comparison of the plan between 4887ef46 and HEAD yields exactly one changed machine-readable path —
+  `$.remediation.verificationBatch.note` (prose) — with every other hunk a `#` comment, so `phases`,
+  `tier`, `defaultLeases`, `defaultWeightClass`, and every `remediation.entries[]` scope/verification
+  field are byte-identical; the test-plan change is its front-matter version, the §1 paragraph-5
+  F-22 wording already verified in iteration 4, the revision-log 1.6 note, and the appended §10.5
+  record (REM-8 / F-19, commit 4b295dac, and this F-22/F-23 doc pass) — no case, id, oracle, exit, or
+  AC mapping changed; and all three commits in the range touch only five files inside the change
+  folder, which sits under the declared scope folder entries (plan:697, :1521). (e) Nothing regressed:
+  `plan validate GH-293` is `valid`, tier full, `readyForDevelopment=true`; `lint plan GH-293` is
+  `valid` with no errors; `git diff --check main-tools...HEAD` is clean; `git status --porcelain` was
+  empty before this artifact was written and now reports only this untracked file; `phase list GH-293` shows `delivery_planning` complete at 05:10:53.104Z matching the pm-notes
+  mirror; and `verify change GH-293` still reports the expected `verify.ledger.incomplete`
+  (review_fix, quality_gates, dod_check, pr_creation ahead at phase 8). No source file, test file, or
+  gate configuration was modified by any reviewed commit, so the iteration-4 gate battery
+  (`pnpm check` exit 0, doc-distribution, commit-range PASS) stands unweakened and was not re-run. The
+  change is review-complete.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 0
+  info: 0
+spec_compliance: PASS
+plan_compliance: PASS
+findings: []
+reviewed_at: 2026-11-18T05:13:30Z
+next_step: >-
+  PROCEED. Review is complete: F-1..F-24 are all closed, no finding is open, every gate recorded in
+  the corpus is green, and the working tree is clean. Advance to lifecycle phase 9 (`quality_gates`,
+  @runner) and then phase 10 (`dod_check`). Residual risks to state in the PR body, unchanged by this
+  pass: (1) the declared `verify deploy` production stub — deploy confidence cannot be read through
+  the shipped composition (RSK-8, NG-8); (2) the emittable-set totality limit — the conformance scan
+  proves every refusal site the delivered code reaches is a member, but a future refusal branch that
+  never reaches `mergeReadCodeOf` escapes it (RSK-13, AMB-ENG-4); (3) the configuration-code tuple
+  pins "no code outside the taxonomy" but not "every reachable code listed" (F-20, reviewer's declared
+  no-action); (4) `repos list` scaling — the fleet read costs O(rows x ledger) per invocation (F-15);
+  (5) the commit primitive's 72-character path-template subjects and the absent
+  `events.jsonl`/`candidates/` change capsule for this change, a repo-wide tooling gap rather than a
+  defect of this change (F-16); and (6) two pre-existing biome items on
+  `tests/behaviour/repos-handover-gate.test.ts` (import-sorting assist, one unused-variable warning)
+  that reproduce before REM-8 and are not gated by `pnpm check` (F-24).
