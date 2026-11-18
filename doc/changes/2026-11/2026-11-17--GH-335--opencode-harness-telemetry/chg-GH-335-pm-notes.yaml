@@ -13,7 +13,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-18T18:12:43.982Z }
   quality_gates: { started: null, completed: 2026-11-18T18:35:08.879Z }
   dod_check: { started: null, completed: 2026-11-18T18:36:16.103Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-18T22:11:26.443Z }
 decisions:
   - text: "TDR-0040 — harness seat-to-spawn cardinality and seat resolution (one
       spawn binds exactly one seat; the caller supplies the agent identity, the
@@ -584,8 +584,8 @@ notes:
   - text: "Second decision-record id collision, found on the first PR sync merge:
       GH-338 landed TDR-0032..TDR-0035 on main-tools first, so this change's
       four records were renumbered to TDR-0036 (seat/spawn), TDR-0037 (envelope
-      detail), TDR-0038 (integration mode) and TDR-0039 (adapter contract). Files
-      renamed, front-matter ids, cross-references, the decisions index and
+      detail), TDR-0038 (integration mode) and TDR-0039 (adapter contract).
+      Files renamed, front-matter ids, cross-references, the decisions index and
       register, this change's artifacts and the harness pages were updated
       together. GH-338's own citations were deliberately left at 0032..0035.
       Same rule that renumbered the envelope record 0031 to 0033 earlier today."
@@ -595,22 +595,52 @@ notes:
       main-tools moved to 1e7ecf07 (GH-339, PR #356) after the first sync and
       GH-339 owns TDR-0036..TDR-0039 (cross-adapter parity matrix, tracker error
       taxonomy, simulated stateful double, registration-only extensibility
-      proof), so this change's four records moved again to TDR-0040 (seat/spawn),
-      TDR-0041 (envelope detail), TDR-0042 (integration mode) and TDR-0043
-      (adapter contract). Files renamed, front-matter ids, cross-references, the
-      decisions index and register, this change's live artifacts, the harness
-      code and test comments and the harness pages were updated together.
-      GH-338's and GH-339's own citations were deliberately left untouched.
-      Rule unchanged: the record that lands on main-tools first owns the id."
+      proof), so this change's four records moved again to TDR-0040
+      (seat/spawn), TDR-0041 (envelope detail), TDR-0042 (integration mode) and
+      TDR-0043 (adapter contract). Files renamed, front-matter ids,
+      cross-references, the decisions index and register, this change's live
+      artifacts, the harness code and test comments and the harness pages were
+      updated together. GH-338's and GH-339's own citations were deliberately
+      left untouched. Rule unchanged: the record that lands on main-tools first
+      owns the id."
     type: info
+    date: "2026-11-18"
+  - text: "Pull request:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/357 (base
+      main-tools, head feat/GH-335/opencode-harness-telemetry). Open, not draft,
+      not merged, no auto-merge — merge authority stays with the CEO. Title:
+      feat(GH-335): version-gate opencode and capture per-seat telemetry
+      (M3-S1). Body carries the DEC-15 scope boundary, the four Proposed records
+      needing acceptance (TDR-0040..0043), the non-blocking carry-overs and a
+      review reading order."
+    type: info
+    date: "2026-11-18"
+  - text: "Final state at hand-off: branch head bd9ab91a (final docs-only sync onto
+      main-tools tip 3bbd9466), 50 commits in range, merge-tree against the tip
+      clean, review iteration 5 PASS (0 critical / 0 high / 0 medium). Three
+      decision-record id collisions were absorbed during the two syncs — the
+      moving base kept claiming the ids this change had just allocated — so the
+      records moved 0032..0035 to 0036..0039 to 0040..0043. Each collision was
+      resolved by the first-to-land rule, and the other changes' records were
+      never touched."
+    type: info
+    date: "2026-11-18"
+  - text: "Process cost worth recording: the branch was synced three times because
+      main-tools advanced during a long delivery (GH-293, GH-338, GH-339, then
+      #362), and each advance moved the decision-record id frontier. Allocating
+      ids late in the change, rather than at authoring time, is what turned a
+      moving base into three renumbering sweeps. The cheaper pattern is to
+      allocate decision-record ids at the moment the record is first written and
+      to reserve the block on the base branch early."
+    type: retro
     date: "2026-11-18"
   - text: "Second sync merge onto current main-tools (GH-339 plus GH-338) resolved
       as commit 1e554edc: seven content conflicts resolved as unions
-      (doc/00-index.md, doc/decisions/00-index.md, the glossary, the conformance,
-      ports and result-contract pages, and doc/spec/nonfunctional.md), the four
-      harness records renumbered 0036..0039 to 0040..0043. Review and
-      readiness history is frozen at the ids each iteration reviewed and is not
-      renumbered with the live artifacts."
+      (doc/00-index.md, doc/decisions/00-index.md, the glossary, the
+      conformance, ports and result-contract pages, and
+      doc/spec/nonfunctional.md), the four harness records renumbered 0036..0039
+      to 0040..0043. Review and readiness history is frozen at the ids each
+      iteration reviewed and is not renumbered with the live artifacts."
     type: info
     date: "2026-11-18"
   - text: "Sync merge onto current main-tools (GH-338 plus three docs commits)
