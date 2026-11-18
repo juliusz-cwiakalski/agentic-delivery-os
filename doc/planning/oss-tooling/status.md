@@ -630,4 +630,5 @@ The M3 milestone (harness and tracker integrations) is the active scope
 (GH-335..GH-340, questions in GH-342), and M4 (Jaiship-native delivery) and M5
 (public release readiness) are planned. This addendum supersedes the earlier
 "M2 has not exited" statements; milestone acceptance by the owner is not
-recorded here.
+recorded here. (Checks re-triggered after a flaky daemon timing assertion; no
+content change.)
