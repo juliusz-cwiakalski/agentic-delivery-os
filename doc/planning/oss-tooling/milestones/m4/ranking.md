@@ -17,3 +17,4 @@ jaiship-only delivery, then the remaining product stories follow.
 | 9 | M4-S2 Jaiship namespace migration | — | Follows the flip: identity work does not block delivery |
 | 10 | M4-S5 Project-scoped queues and parallel projects | M4-S3, M3-S6 | After the flip and the multi-tracker story |
 | 11 | M4-S6 Delivery history and statistics export | M4-S5 | Last: needs project-scoped history |
+| 12 | M4-S12 Dispatch operator surface | M4-S9 | F1b: operator convenience; status and is-delivering gate the F6 evidence window |
