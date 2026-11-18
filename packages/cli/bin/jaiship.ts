@@ -31,6 +31,11 @@ export const completion: Promise<void> = runBinLauncher({
     execPath: process.execPath,
   }),
   buildIdentity: injectedBuildIdentity(),
+  runningArtifactPath: resolveReentryEntryPath({
+    argvEntry: process.argv[1],
+    execPath: process.execPath,
+  }),
+  ownsInstallation: true,
 }).then((exitCode) => {
   if (exitCode !== 0) process.exitCode = exitCode;
 });

@@ -96,6 +96,18 @@ export {
   replaceHostIndexFile,
 } from "./host-index-store.js";
 export {
+  classifyInstallDestination,
+  createNodeInstallFilePort,
+  INSTALL_ARTIFACT_MODE,
+  INSTALL_DESTINATION_CLASSES,
+  type InstallDestinationClass,
+  isCompiledArtifactAtPath,
+  isLauncherAtPath,
+  LAUNCHER_TARGET_MARKER,
+  launcherTargetOf,
+  symlinkTargetOf,
+} from "./install-destination.js";
+export {
   applyPromotionWrite,
   checkPromotionConfinement,
   type MemoryReadFileSystem,

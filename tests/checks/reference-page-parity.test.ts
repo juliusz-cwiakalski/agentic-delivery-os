@@ -12,6 +12,7 @@ import { allHelpEntries } from "../../packages/cli/src/help";
 const ROOT = process.cwd();
 const PAGE_ROOT = "doc/planning/oss-tooling/milestones/m1/commands";
 const M2_PAGE_ROOT = "doc/planning/oss-tooling/milestones/m2/commands";
+const M4_PAGE_ROOT = "doc/planning/oss-tooling/milestones/m4/commands";
 
 /** The per-command reference-page root (GH-288 DEC-13). */
 const pageFor = (command: string): string =>
@@ -35,7 +36,9 @@ const pageFor = (command: string): string =>
                     ? `${M2_PAGE_ROOT}/metrics.md`
                     : command === "supervise"
                       ? `${M2_PAGE_ROOT}/supervise.md`
-                      : `${PAGE_ROOT}/${command}.md`;
+                      : command === "install"
+                        ? `${M4_PAGE_ROOT}/install.md`
+                        : `${PAGE_ROOT}/${command}.md`;
 const coverage = JSON.parse(
   readFileSync(join(ROOT, "tests/fixtures/help-guide/coverage.json"), "utf8"),
 ) as { readonly commands: readonly string[]; readonly referencePages: readonly string[] };

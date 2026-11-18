@@ -68,7 +68,7 @@ describe("TC-GRPREG-001 repos is reachable from the root listing", () => {
         .split("\n")
         .filter((line) => /^ {2}\S+ {2}\S/u.test(line))
         .map((line) => (line.trim().split(/\s+/u)[0] ?? "").trim());
-      expect(families).toHaveLength(25);
+      expect(families).toHaveLength(26);
       expect(families).toContain("projects");
       expect(families).toContain("repos");
       expect(Math.abs(families.indexOf("repos") - families.indexOf("projects"))).toBe(1);

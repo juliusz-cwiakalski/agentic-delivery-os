@@ -51,6 +51,11 @@ export type BinLauncherOptions = {
    * process read.
    */
   readonly runningArtifactPath?: string;
+  /**
+   * Whether the invoking bin owns installation (GH-346 D6). The primary bin
+   * declares `true`; the alias declares nothing, and absent means NOT owning.
+   */
+  readonly ownsInstallation?: boolean;
   /** The closed composition transport policy; absent means the declared default. */
   readonly githubTransportPolicy?: GithubTransportPolicy;
   /** An injected CLI child runner so composition tests spawn nothing. */
@@ -118,6 +123,13 @@ export const runBinLauncher = async (options: BinLauncherOptions): Promise<numbe
         githubTransportSelection,
         ...(options.signalHost === undefined ? {} : { signalHost: options.signalHost }),
         ...(options.daemonEntry === undefined ? {} : { daemonEntry: options.daemonEntry }),
+        ...(options.buildIdentity === undefined ? {} : { buildIdentity: options.buildIdentity }),
+        ...(options.runningArtifactPath === undefined
+          ? {}
+          : { runningArtifactPath: options.runningArtifactPath }),
+        ...(options.ownsInstallation === undefined
+          ? {}
+          : { ownsInstallation: options.ownsInstallation }),
       })(brand, invocation);
     },
   });

@@ -17,6 +17,12 @@ export {
 export type CliOutputPlaceholder = { readonly __tier: "output" };
 export { renderDeployHuman } from "./deploy-text.js";
 export { renderEventsDescribeText, renderEventsListText } from "./events-text.js";
+export {
+  renderInstallFailure,
+  renderInstallOutcome,
+  renderInstallPlan,
+  renderInstallStatus,
+} from "./install-text.js";
 export { renderDryRunHuman, renderMergeHuman } from "./merge-text.js";
 export {
   daemonCell,

@@ -342,6 +342,54 @@ export {
   resolveQueueSettings,
   serializeProductionSchema,
 } from "./config/index.js";
+// GH-346: the install lifecycle contracts and its pure domain (DM-2..DM-6).
+export {
+  INSTALL_DESTINATION_DISPOSITIONS,
+  INSTALL_DEV_BUILD_CODE,
+  INSTALL_DOMAIN_CODES,
+  INSTALL_FAULT_STEPS,
+  INSTALL_LAUNCHER_DISPOSITIONS,
+  INSTALL_MAX_JUDGED_ROOTS,
+  INSTALL_OUTCOMES,
+  INSTALL_PROVENANCE_STATES,
+  INSTALL_RECORD_FILE_NAME,
+  INSTALL_RECORD_SCHEMA,
+  INSTALL_RECORD_STATES,
+  INSTALL_SHELL_PROFILE_MAPPING,
+  INSTALL_SLOT_STATES,
+  INSTALL_STATE_FORMAT_OUTCOMES,
+  INSTALL_STATE_ROOT_PROJECTS_DIRECTORY,
+  INSTALL_STATUS_SCHEMA,
+  INSTALL_TARGET_STABILITY_STATES,
+  type InstallArtifactIdentity,
+  type InstallDaemonPort,
+  type InstallDaemonState,
+  type InstallDestinationDisposition,
+  type InstallDomainCode,
+  type InstallFaultPort,
+  type InstallFaultStep,
+  type InstallFilePort,
+  type InstallFileStat,
+  type InstallGitRead,
+  type InstallLauncherDisposition,
+  type InstallOutcome,
+  type InstallOutcomeKind,
+  type InstallPathBlockRecord,
+  type InstallProvenance,
+  type InstallReconciliationReport,
+  type InstallRecord,
+  type InstallRecordState,
+  type InstallRunningIdentity,
+  type InstallRuntime,
+  type InstallSlotReport,
+  type InstallSlotState,
+  type InstallStagedWrite,
+  type InstallStateFormatOutcome,
+  type InstallStateFormatVerdict,
+  type InstallStateRootVerdict,
+  type InstallStatusPayload,
+  type InstallTargetStability,
+} from "./contracts/install.js";
 // GH-298: the shared typed message record and the `steer` family's declared
 // contract data. The full vocabulary lives in `@delivery-os/core/contracts`;
 // this entry re-exports the record schema, the shared closed sets, the filing
@@ -1107,6 +1155,18 @@ export {
   watchdogPreservedRefName,
   weightLoads,
 } from "./domain/index.js";
+export {
+  evaluateInstallAdmission,
+  type InstallAdmission,
+  installTargetStability,
+} from "./domain/install-admission.js";
+export {
+  assembleInstallStatus,
+  identityOfRecord,
+  recordStateOf,
+  runningIdentityOf,
+  slotReportOf,
+} from "./domain/install-status.js";
 export {
   createLaneLaunchPlanner,
   type LaneLaunchPlanFacts,

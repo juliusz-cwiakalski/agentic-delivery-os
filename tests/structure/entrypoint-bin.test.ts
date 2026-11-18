@@ -568,11 +568,12 @@ describe("TC-BIN-067 the family list and the delivered error rows", () => {
       "steer",
       "metrics",
       "supervise",
+      "install",
     ]);
     const help = renderRootHelp(brand);
     expect(help).not.toContain("--print-install-path");
     expect(help.split("\n").filter((line) => /^ {2}[a-z][a-z0-9-]* {2}/u.test(line)).length).toBe(
-      25,
+      26,
     );
   });
 
@@ -664,6 +665,21 @@ describe("GH-346 TC-INST-107 the identity-literal inventory has two declared sca
       expect(failures).toContain("PRIMARY_WORKING_NAME");
       expect(failures).toContain("delivery-os");
     });
+  });
+
+  test("the primary bin alone supplies the owning-role fact", () => {
+    const primary = readFileSync(join(ROOT, "packages/cli/bin/jaiship.ts"), "utf8");
+    const alias = readFileSync(join(ROOT, "packages/cli/bin/delivery-os.ts"), "utf8");
+    expect(primary).toContain("ownsInstallation: true");
+    expect(alias).not.toContain("ownsInstallation");
+    expect(alias).not.toContain("installation");
+    const launcher = readFileSync(join(ROOT, "packages/cli/src/bin-launcher.ts"), "utf8");
+    // The composer defaults to NOT owning, and ownership is a boolean fact —
+    // never a name derivation and never a working-name literal.
+    expect(launcher).toContain("options.ownsInstallation");
+    expect(
+      literalSites(ROOT).filter((site) => site.file === "packages/cli/src/bin-launcher.ts"),
+    ).toEqual([]);
   });
 
   test("both bins supply the injected identity and the resolved re-entry path", () => {

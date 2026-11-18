@@ -42,6 +42,8 @@ export const DOMAIN_KINDS = [
   "supervise",
   // GH-299 registers the metrics read-side kind with exactly one row.
   "metrics",
+  // GH-346 appends the install lifecycle kind and its eleven declared rows.
+  "install",
 ] as const;
 
 /**
@@ -51,7 +53,7 @@ export const DOMAIN_KINDS = [
  * rather than resolved to the kind's only row, so a malformed failure object
  * can never masquerade as the declared identity.
  */
-export const EXACT_CODE_DOMAIN_KINDS = ["spend", "metrics"] as const;
+export const EXACT_CODE_DOMAIN_KINDS = ["spend", "metrics", "install"] as const;
 export type ExactCodeDomainKind = (typeof EXACT_CODE_DOMAIN_KINDS)[number];
 
 /** Reserved containment code for broken invocations and unknown commands. */
@@ -1770,5 +1772,134 @@ export const ERROR_TABLE = [
       "Restore the committed measurement baseline log to a parseable, schema-valid document or remove it entirely; damaged canonical data is never treated as absence, and no report was produced.",
     projectionClass: "platform-provider",
     summary: "The committed measurement baseline log exists but cannot be parsed or validated.",
+  },
+
+  /**
+   * GH-346: the install lifecycle's eleven declared identities (Appendix E).
+   * All are category `user`, non-retryable, consequence `not_landed`, and the
+   * user-validation projection. `install.dev-build` is the kind-first
+   * two-segment code that joins the closed allowlist; the other ten are
+   * three-segment. There is no `install.*` family and no pattern widening.
+   */
+  {
+    code: "install.target.worktree",
+    domainKind: "install",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Build and install from the primary checkout or a prepared directory holding a released artifact; a lane worktree is deleted after merge, so nothing is written from it.",
+    projectionClass: "user-validation",
+    summary: "The install target resolves inside a linked git worktree.",
+  },
+  {
+    code: "install.dev-build",
+    domainKind: "install",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Build the artifact with `bun run build:binary` and run that artifact's `install`; a workspace run carries no injected identity and installs nothing.",
+    projectionClass: "user-validation",
+    summary: "The running artifact carries no injected build identity.",
+  },
+  {
+    code: "install.state.incompatible",
+    domainKind: "install",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Install the artifact whose accepted state format matches the named root, or move the state root aside deliberately; the check itself never writes.",
+    projectionClass: "user-validation",
+    summary: "A judged state root declares a format the artifact does not accept.",
+  },
+  {
+    code: "install.identity.not-owning",
+    domainKind: "install",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Run the lifecycle through the installed product binary; installation is owned by the primary identity and the compatibility alias writes nothing.",
+    projectionClass: "user-validation",
+    summary: "A lifecycle entry point ran on an identity that does not own installation.",
+  },
+  {
+    code: "install.shell-profile.unresolved",
+    domainKind: "install",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Pass `--shell-profile <path>` explicitly or set a shell the declared mapping recognizes (zsh, bash, sh); no profile file is written.",
+    projectionClass: "user-validation",
+    summary: "`--add-to-path` found no identifiable shell and no explicit profile path.",
+  },
+  {
+    code: "install.migration.unavailable",
+    domainKind: "install",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Perform the documented manual move of the prior-namespace artifacts; migration is owned by M4-S2 and nothing is moved, copied, or deleted here.",
+    projectionClass: "user-validation",
+    summary: "`--migrate` was supplied and migration is not available in this build.",
+  },
+  {
+    code: "install.daemon.running",
+    domainKind: "install",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Stop the named daemon holder, or repeat the run with `--stop-daemon` so it stops through the delivered stop path before the swap or removal.",
+    projectionClass: "user-validation",
+    summary: "A live daemon holds the artifact and `--stop-daemon` was not given.",
+  },
+  {
+    code: "install.record.unreadable",
+    domainKind: "install",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Install the artifact held in the rollback slot so the record names the pair the swap inverts; a refused rollback writes nothing.",
+    projectionClass: "user-validation",
+    summary: "The install record does not name the pair the rollback swap inverts.",
+  },
+  {
+    code: "install.slot.absent",
+    domainKind: "install",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Install a different compiled artifact first; rollback needs one recorded previous install, and nothing is written when it is absent.",
+    projectionClass: "user-validation",
+    summary: "Rollback found no rollback slot.",
+  },
+  {
+    code: "install.slot.invalid",
+    domainKind: "install",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Replace the slot with a compiled artifact built by `bun run build:binary`; a launcher or an identity-less binary is never restored.",
+    projectionClass: "user-validation",
+    summary: "Rollback found a slot that is not a compiled artifact or is unreadable.",
+  },
+  {
+    code: "install.purge.unconfirmed",
+    domainKind: "install",
+    category: "user",
+    retryable: false,
+    consequence: "not_landed",
+    remediationHint:
+      "Repeat the purge with `--yes` after reading the residual set that `install uninstall` prints; nothing is removed without it.",
+    projectionClass: "user-validation",
+    summary: "`install purge` ran without its confirmation input.",
   },
 ] as const satisfies readonly ErrorTableEntry[];

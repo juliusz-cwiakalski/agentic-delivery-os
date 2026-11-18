@@ -95,6 +95,8 @@
     "harness-telemetry.ts:HARNESS_TELEMETRY_RECORD_KEY_PREFIX": "harness.telemetry:",
     "harness-telemetry.ts:HARNESS_TELEMETRY_RECORD_KIND": "harness.telemetry",
     "harness-telemetry.ts:HARNESS_TELEMETRY_SCHEMA_ID": "delivery.harness.telemetry.v1",
+    "install.ts:INSTALL_RECORD_SCHEMA": "install.record.v1",
+    "install.ts:INSTALL_STATUS_SCHEMA": "install.status.v1",
     "merge.ts:MERGE_GATE_VERIFICATION_RECORD_KIND": "merge.gate-verification",
     "merge.ts:MERGE_GATE_VERIFICATION_SCHEMA": "delivery.merge.gate-verification.v1",
     "merge.ts:MERGE_TRANSACTION_RECORD_KIND": "merge.transaction",

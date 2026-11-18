@@ -43,8 +43,9 @@ describe("TC-SUP-070 the supervise kind declares exactly two rows", () => {
   test("DOMAIN_KINDS gains supervise once", () => {
     expect(DOMAIN_KINDS.filter((kind) => kind === "supervise")).toHaveLength(1);
     // GH-299's `metrics` kind mounts after `supervise`, so supervise is second-to-last.
-    expect(DOMAIN_KINDS.at(-2)).toBe("supervise");
-    expect(DOMAIN_KINDS.at(-1)).toBe("metrics");
+    expect(DOMAIN_KINDS.at(-3)).toBe("supervise");
+    expect(DOMAIN_KINDS.at(-2)).toBe("metrics");
+    expect(DOMAIN_KINDS.at(-1)).toBe("install");
   });
 
   test("exactly two rows carry the declared identity, category, consequence, and projection", () => {
@@ -76,15 +77,27 @@ describe("TC-SUP-070 the supervise kind declares exactly two rows", () => {
 
   test("every delivered row is byte-identical to the captured baseline and in place", () => {
     expect(baseline.rows).toHaveLength(146);
-    // The captured baseline predates both GH-299's `metrics` row and the two
-    // supervise rows, so the delivered comparison excludes both kinds.
+    // The captured baseline predates GH-299's `metrics` row, the two supervise
+    // rows, and GH-346's eleven install rows, so the delivered comparison
+    // excludes those three kinds.
     const live = entries.filter(
-      (entry) => entry.domainKind !== "supervise" && entry.domainKind !== "metrics",
+      (entry) =>
+        entry.domainKind !== "supervise" &&
+        entry.domainKind !== "metrics" &&
+        entry.domainKind !== "install",
     );
     expect(live).toHaveLength(146);
     expect(live.map(tupleOf)).toEqual(baseline.rows.map((row) => [...row]));
-    // The three new rows are appended after every delivered row: no reordering.
+    // The new rows are appended after every delivered row: no reordering.
     expect(entries.slice(0, 146).map(tupleOf)).toEqual(baseline.rows.map((row) => [...row]));
+    // Indices 146..148 hold supervise/metrics and 149..159 hold the eleven
+    // install rows, so the baseline prefix index stays while its meaning narrows.
+    expect(entries.slice(146).map((entry) => entry.domainKind)).toEqual([
+      "supervise",
+      "supervise",
+      "metrics",
+      ...new Array(11).fill("install"),
+    ]);
   });
 
   test("the identity is exact — no family or prefix widening", () => {

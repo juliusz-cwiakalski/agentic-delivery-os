@@ -269,6 +269,72 @@
       "text": "supervise.evidence-absent",
       "recognized": true,
       "resolves": true
+    },
+    {
+      "id": "install-target-worktree",
+      "text": "install.target.worktree",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "install-dev-build",
+      "text": "install.dev-build",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "install-state-incompatible",
+      "text": "install.state.incompatible",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "install-identity-not-owning",
+      "text": "install.identity.not-owning",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "install-shell-profile-unresolved",
+      "text": "install.shell-profile.unresolved",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "install-migration-unavailable",
+      "text": "install.migration.unavailable",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "install-daemon-running",
+      "text": "install.daemon.running",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "install-record-unreadable",
+      "text": "install.record.unreadable",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "install-slot-absent",
+      "text": "install.slot.absent",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "install-slot-invalid",
+      "text": "install.slot.invalid",
+      "recognized": true,
+      "resolves": true
+    },
+    {
+      "id": "install-purge-unconfirmed",
+      "text": "install.purge.unconfirmed",
+      "recognized": true,
+      "resolves": true
     }
   ]
 }
