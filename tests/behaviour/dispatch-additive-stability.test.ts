@@ -10,9 +10,11 @@
  * it is not asserted here.
  */
 import { describe, expect, test } from "bun:test";
+import { appendDispatchAttempt } from "../../packages/core/src/app/dispatch-ledger";
 import type { StateStorePort } from "../../packages/core/src/contracts/index";
 import { ATTEMPTS_REF, ledgerOf } from "../fixtures/dispatch/attempt-records";
 import { createAttemptsHarness } from "../fixtures/dispatch/attempts-harness";
+import { buildAttempts, eligibleSpecs } from "../fixtures/dispatch/evidence-windows";
 import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
 import { makeDivergence } from "../fixtures/dispatch/ledger";
 
@@ -78,7 +80,87 @@ describe("TC-ATTEMPT-034 cell 1 delivered data shapes and order", () => {
         "verdict",
         "unmetConditions",
         "floor",
+        "cleanDispatches",
+        "consecutiveCleanDispatches",
+        "conditions",
       ]);
+      // The delivered sixteen-key literal stays a prefix: nothing moved.
+      expect(Object.keys(data ?? {}).slice(0, 16)).toEqual([
+        "repository",
+        "windowStart",
+        "windowStartReason",
+        "windowEnd",
+        "dayCount",
+        "countedDeliveries",
+        "countedEvidenceClass",
+        "excludedEvidenceClasses",
+        "incidents",
+        "divergences",
+        "coverage",
+        "corroboration",
+        "eligibility",
+        "verdict",
+        "unmetConditions",
+        "floor",
+      ]);
+      expect(Object.hasOwn(data ?? {}, "truncation")).toBe(false);
+      expect(Array.isArray((data as { readonly unmetConditions?: unknown }).unmetConditions)).toBe(
+        true,
+      );
+      expect(typeof (data as { readonly countedDeliveries?: unknown }).countedDeliveries).toBe(
+        "number",
+      );
+      expect(typeof (data as { readonly floor?: unknown }).floor).toBe("object");
+    } finally {
+      scenario.dispose();
+    }
+  });
+
+  test("the summary appends only, keeping truncation last when it binds", async () => {
+    const scenario = createCommandScenario({ gate: { max: 5 } });
+    try {
+      for (const attempt of buildAttempts(eligibleSpecs())) {
+        const appended = appendDispatchAttempt(
+          scenario.state.store,
+          scenario.state.fenceToken,
+          attempt,
+        );
+        if (!appended.ok) throw new Error(`seed failed: ${appended.code}`);
+      }
+      const result = await scenario.invoke([
+        "dispatch",
+        "dual-run",
+        "summary",
+        "--repo",
+        "github.com/owner/repo",
+        "--json",
+      ]);
+      const data = result.envelope?.data as Record<string, unknown> | undefined;
+      const keys = Object.keys(data ?? {});
+      expect(keys.at(-1)).toBe("truncation");
+      expect(keys.slice(0, 19)).toEqual([
+        "repository",
+        "windowStart",
+        "windowStartReason",
+        "windowEnd",
+        "dayCount",
+        "countedDeliveries",
+        "countedEvidenceClass",
+        "excludedEvidenceClasses",
+        "incidents",
+        "divergences",
+        "coverage",
+        "corroboration",
+        "eligibility",
+        "verdict",
+        "unmetConditions",
+        "floor",
+        "cleanDispatches",
+        "consecutiveCleanDispatches",
+        "conditions",
+      ]);
+      const truncation = (data as { readonly truncation?: Record<string, unknown> }).truncation;
+      expect(Object.keys(truncation ?? {})).toEqual(["bound", "omittedRecords"]);
     } finally {
       scenario.dispose();
     }

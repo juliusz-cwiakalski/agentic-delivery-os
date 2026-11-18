@@ -80,6 +80,9 @@ export const renderDispatchSummaryText = (data: DispatchSummaryData): string => 
     `eligibility=${data.eligibility ? "true" : "false"}`,
     `verdict=${data.verdict}`,
     `unmet_conditions=${data.unmetConditions.map((entry) => entry.condition).join(",") || "none"}`,
+    `clean_dispatches=${data.cleanDispatches}`,
+    `consecutive_clean_dispatches=${data.consecutiveCleanDispatches}`,
+    `conditions=${data.conditions.map((entry) => `${entry.condition}:${entry.status}`).join(",")}`,
     ...(data.truncation === undefined
       ? []
       : [`truncation=bound:${data.truncation.bound},omitted:${data.truncation.omittedRecords}`]),

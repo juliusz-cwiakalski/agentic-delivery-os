@@ -116,6 +116,10 @@ export type DispatchEvidenceWindow = {
     readonly unsatisfied: number;
     readonly unsatisfiedRefs: readonly string[];
   };
+  /** The corroborated counted attempts; one derivation with `corroboration.satisfied`. */
+  readonly cleanDispatches: number;
+  /** The trailing run of corroborated counted attempts in ledger append order. */
+  readonly consecutiveCleanDispatches: number;
   readonly floorMet: boolean;
   readonly truncated?: { readonly bound: number; readonly omittedRecords: number };
   readonly unverifiable?: string;
@@ -191,6 +195,8 @@ export const foldEvidenceWindow = (input: {
       consecutiveDates: 0,
       coverage: { present: [], missing: [...DELIVERY_RESULT_TOKENS] },
       corroboration: { satisfied: 0, unsatisfied: 0, unsatisfiedRefs: [] },
+      cleanDispatches: 0,
+      consecutiveCleanDispatches: 0,
       floorMet: false,
       unverifiable: input.unreadable,
     };
@@ -235,6 +241,20 @@ export const foldEvidenceWindow = (input: {
     (attempt) => !corroborationSatisfied(attempt.corroboration),
   );
 
+  const isClean = (attempt: DispatchAttemptRecord): boolean =>
+    requiredCorroboration(attempt.token).length > 0 &&
+    corroborationSatisfied(attempt.corroboration);
+
+  // The trailing run, not the longest: a trailing non-clean counted attempt (or
+  // an empty window) is zero, so a broken streak cannot hide behind an earlier
+  // clean prefix.
+  let consecutiveCleanDispatches = 0;
+  for (let index = countedInWindow.length - 1; index >= 0; index -= 1) {
+    const attempt = countedInWindow[index];
+    if (attempt === undefined || !isClean(attempt)) break;
+    consecutiveCleanDispatches += 1;
+  }
+
   const floorMet =
     countedInWindow.length >= DISPATCH_FLOOR_DISPATCHES ||
     consecutiveDates >= DISPATCH_FLOOR_CONSECUTIVE_DATES;
@@ -254,6 +274,8 @@ export const foldEvidenceWindow = (input: {
       unsatisfied: unsatisfied.length,
       unsatisfiedRefs: unsatisfied.map((attempt) => attempt.attemptId),
     },
+    cleanDispatches: satisfied.length,
+    consecutiveCleanDispatches,
     floorMet,
   };
 };
@@ -349,6 +371,9 @@ export const toSummaryData = (
     consecutiveDates: window.consecutiveDates,
     onlyFloor: true,
   },
+  cleanDispatches: window.cleanDispatches,
+  consecutiveCleanDispatches: window.consecutiveCleanDispatches,
+  conditions: conditionStatuses(evaluation),
   ...(window.truncated === undefined ? {} : { truncation: window.truncated }),
 });
 

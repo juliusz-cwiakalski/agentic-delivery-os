@@ -19,7 +19,8 @@ open_questions: []
 blockers: []
 notes:
   - text: "Plan phase 1 complete (shared condition-status shape and the landed
-      TDR-0031 decision record). Declared the closed `met | open` pair and the
+      TDR-0031 decision record). Commit 48b69424. Declared the closed
+      `met | open` pair and the
       `{condition, status}` shape on the delivered four-condition order, added
       the one producer `conditionStatuses(evaluation)` in the domain gate module
       (open set equals `unmetConditions` by construction), re-exported both from

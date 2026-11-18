@@ -403,6 +403,12 @@ export type DispatchSummaryData = {
   readonly eligibility: boolean;
   readonly verdict: DispatchGateVerdict;
   readonly unmetConditions: readonly DispatchUnmetCondition[];
+  /** The corroborated counted attempts; declared identical to `corroboration.satisfied`. */
+  readonly cleanDispatches: number;
+  /** The trailing run of clean counted attempts ending at the window's last one. */
+  readonly consecutiveCleanDispatches: number;
+  /** The four ordered condition statuses (TDR-0031 D2); `open` equals `unmetConditions`. */
+  readonly conditions: readonly DispatchConditionStatus[];
   readonly floor: {
     readonly met: boolean;
     readonly countedDeliveries: number;
