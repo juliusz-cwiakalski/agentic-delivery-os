@@ -370,6 +370,14 @@
 #   its single owner; ownership follows the phase that COMPLETES the case. Every
 #   intermediate behaviour is a subset that is TRUE at that commit — never a
 #   claimed capability that does not exist):
+#   - THE THREE COUNT-BEARING PAGES ARE SPLIT BY ARTIFACT, NOT BY PHASE OF TRUTH:
+#     phase 2 EDITS the three pages (their numbers move there, and the leftover-scan
+#     class gate makes the move loud), while phase 6 AUTHORS their rows in the
+#     doc-conformance page-claim table (TC-INST-111/112), because that table is one
+#     artifact and phase 6 owns it. Neither half is an intermediate falsehood: the
+#     page is true from phase 2's boundary on, and phase 6's rows assert content
+#     that is already there, so the window is zero on both sides. This is the same
+#     division the result-contract page has with TC-INST-111 step 4.
 #   - TC-INST-001 (phase 2) asserts RESOLUTION of the five entry points. The four
 #     write verbs are exercised in their `--dry-run` form there (SPEC F-11: a
 #     dry-run is a pure plan, and every admission/identity refusal still applies);
