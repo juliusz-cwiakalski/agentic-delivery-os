@@ -534,10 +534,13 @@ const readValue = async (
 const writeMemberFor = (
   client: ConformanceAdapterClient,
   operation: AdapterOperation,
-): (() => Promise<{ readonly ok: true } | { readonly ok: false }>) | undefined => {
+):
+  | (() => Promise<{ readonly ok: true; readonly value: unknown } | { readonly ok: false }>)
+  | undefined => {
   if (operation === "write-work-item") return client.writeWorkItem;
   if (operation === "transition-work-item") return client.transitionWorkItem;
   if (operation === "resolve-delivery-thread") return client.resolveDeliveryThread;
+  if (operation === "merge-delivery-request") return client.mergeDeliveryRequest;
   return undefined;
 };
 
@@ -827,6 +830,29 @@ export const runConformance = async (input: RunConformanceInput): Promise<Confor
               ),
             });
             continue;
+          }
+          // A write step whose tenant declares an expected projection is
+          // compared exactly; a write step with no declared entry behaves as
+          // delivered, so every provider report that declares none is unchanged.
+          if (input.tier === "mock") {
+            const expected = tenant.expected[step.stepId];
+            if (expected !== undefined && stable(expected) !== stable(outcome.value)) {
+              flowSteps.push({
+                ...base,
+                status: "failed",
+                skipReason: null,
+                skipKind: null,
+                assertionCount: 0,
+                failure: failureFor(
+                  "expected-projection",
+                  summarize(expected),
+                  summarize(outcome.value),
+                  `tenant:${provider}:${step.stepId}`,
+                  "normalized write projection differs from the declared expectation",
+                ),
+              });
+              continue;
+            }
           }
           flowSteps.push({
             ...base,

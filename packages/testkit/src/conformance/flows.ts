@@ -52,6 +52,11 @@ export const CONFORMANCE_FLOWS: readonly ConformanceFlow[] = [
         operation: "resolve-delivery-thread",
         assertionFamily: "delivery-thread",
       },
+      {
+        stepId: "change-lifecycle.merge-delivery-request",
+        operation: "merge-delivery-request",
+        assertionFamily: "delivery-request",
+      },
     ],
   },
   {

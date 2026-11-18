@@ -172,6 +172,7 @@ const ALL_OPERATIONS: readonly AdapterOperation[] = [
   "read-pipeline-run",
   "write-comment",
   "resolve-delivery-thread",
+  "merge-delivery-request",
 ];
 
 const gapsExcept = (supported: readonly AdapterOperation[]): CapabilityGap[] => {

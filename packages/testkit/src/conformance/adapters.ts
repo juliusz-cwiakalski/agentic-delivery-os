@@ -78,6 +78,16 @@ export const CONFORMANCE_ADAPTERS: readonly ConformanceAdapterRegistration[] = [
             },
             threadId: addressing.threadId,
           }),
+        mergeDeliveryRequest: () =>
+          client.mergeDeliveryRequest({
+            deliveryRequest: {
+              systemName: tenant.instance.instanceName,
+              entityId: String(addressing.pullNumber),
+            },
+            strategy: "squash",
+            commitTitle: "chore: conformance landing",
+            commitMessage: "Conformance landing projection",
+          }),
       };
     },
   },

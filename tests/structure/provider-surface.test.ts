@@ -162,6 +162,7 @@ describe("TC-STATUS-022 unchanged operation set and collection-read surface", ()
       "write-work-item",
       "transition-work-item",
       "resolve-delivery-thread",
+      "merge-delivery-request",
     ]);
     expect(ADAPTER_OPERATIONS.filter((operation) => operation.startsWith("list-"))).toEqual([]);
     const credentials: CredentialPort = {
@@ -191,6 +192,7 @@ describe("TC-STATUS-022 unchanged operation set and collection-read surface", ()
       "listBlockedByDependents",
       "listDeliveryRequests",
       "listWorkItems",
+      "mergeDeliveryRequest",
       "readDeliveryRequest",
       "readPipelineRun",
       "readWorkItem",

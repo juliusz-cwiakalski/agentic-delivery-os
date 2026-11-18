@@ -155,7 +155,7 @@ export type ConformanceClientBuildInput = {
 };
 
 /** One provider-agnostic conformance client; the builder closes over addressing. */
-export type ConformanceAdapterWrite = ConformanceAdapterRead<void>;
+export type ConformanceAdapterWrite = ConformanceAdapterRead<unknown>;
 
 export type ConformanceAdapterClient = {
   readonly readWorkItem?: () => Promise<ConformanceAdapterRead<WorkItem>>;
@@ -164,6 +164,8 @@ export type ConformanceAdapterClient = {
   readonly writeWorkItem?: () => Promise<ConformanceAdapterWrite>;
   readonly transitionWorkItem?: () => Promise<ConformanceAdapterWrite>;
   readonly resolveDeliveryThread?: () => Promise<ConformanceAdapterWrite>;
+  /** The provider-side landing; its normalized outcome is projection-compared. */
+  readonly mergeDeliveryRequest?: () => Promise<ConformanceAdapterWrite>;
 };
 
 /** Input passed to a test-only control write handler. */

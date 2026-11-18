@@ -141,6 +141,7 @@ const ALL_OPERATIONS: readonly AdapterOperation[] = [
   "read-pipeline-run",
   "write-comment",
   "resolve-delivery-thread",
+  "merge-delivery-request",
 ];
 
 const gapsExcept = (supported: readonly AdapterOperation[]): CapabilityGap[] => {
@@ -681,6 +682,103 @@ describe("TC-CONF-015 exact-URL replay and the throwing-fetch guard", () => {
     } finally {
       globalThis.fetch = original;
     }
+  });
+});
+
+describe("TC-PARITY-004 the landing operation has a route and an expected projection", () => {
+  test("the landing step executes for GitHub with the declared projection", async () => {
+    const report = await runSingle("github", loadMockTenant("github"), "github-landing");
+    const landing = report.steps.find(
+      (step) => step.stepId === "change-lifecycle.merge-delivery-request",
+    );
+    expect(landing?.status).toBe("executed");
+    expect(landing?.operation).toBe("merge-delivery-request");
+    expect(report.status).toBe("passed");
+  });
+
+  test("GitLab and Jira skip the landing step with their declared gap reasons", async () => {
+    const report = await runProduction("landing-gaps");
+    const reasonFor = (provider: string): string | null | undefined =>
+      report.steps.find(
+        (step) =>
+          step.provider === provider && step.stepId === "change-lifecycle.merge-delivery-request",
+      )?.skipReason;
+    expect(reasonFor("gitlab")).toBe("adapter-not-implemented");
+    expect(reasonFor("jira")).toBe("provider-unsupported");
+  });
+
+  test("a corrupted landing projection fails naming the step", async () => {
+    const tenant = loadMockTenant("github");
+    const mutated: MockTenant = {
+      ...tenant,
+      expected: {
+        ...tenant.expected,
+        "change-lifecycle.merge-delivery-request": { merged: true, mergeCommitSha: "0".repeat(40) },
+      },
+    };
+    const report = await runSingle("github", mutated, "github-landing-corrupt");
+    const landing = report.steps.find(
+      (step) => step.stepId === "change-lifecycle.merge-delivery-request",
+    );
+    expect(landing?.status).toBe("failed");
+    expect(landing?.failure?.assertion).toBe("expected-projection");
+  });
+
+  test("removing the landing route fails the step instead of skipping it", async () => {
+    const tenant = loadMockTenant("github");
+    const mutated: MockTenant = {
+      ...tenant,
+      routes: tenant.routes.filter((route) => !route.url.endsWith("/merge")),
+    };
+    const report = await runSingle("github", mutated, "github-landing-missing-route");
+    const landing = report.steps.find(
+      (step) => step.stepId === "change-lifecycle.merge-delivery-request",
+    );
+    expect(landing?.status).toBe("failed");
+    expect(landing?.skipKind).toBeNull();
+  });
+});
+
+describe("TC-PARITY-008 the broken control still fires for the ninth operation", () => {
+  test("a landing step that cannot execute is a failure, never a vacuous pass", async () => {
+    const tenant = loadMockTenant("github");
+    const registration = registrationFor("github");
+    const withoutLanding: ConformanceAdapterRegistration = {
+      provider: registration.provider,
+      contract: registration.contract,
+      buildClient: (input) => {
+        const client = registration.buildClient(input);
+        return {
+          ...(client.readWorkItem !== undefined ? { readWorkItem: client.readWorkItem } : {}),
+          ...(client.readDeliveryRequest !== undefined
+            ? { readDeliveryRequest: client.readDeliveryRequest }
+            : {}),
+          ...(client.readPipelineRun !== undefined
+            ? { readPipelineRun: client.readPipelineRun }
+            : {}),
+          ...(client.writeWorkItem !== undefined ? { writeWorkItem: client.writeWorkItem } : {}),
+          ...(client.transitionWorkItem !== undefined
+            ? { transitionWorkItem: client.transitionWorkItem }
+            : {}),
+          ...(client.resolveDeliveryThread !== undefined
+            ? { resolveDeliveryThread: client.resolveDeliveryThread }
+            : {}),
+        };
+      },
+    };
+    const error = await caught(
+      runConformance({
+        adapters: [withoutLanding],
+        tenants: { github: tenant },
+        credentials: createCanaryCredentialPort(),
+        transportFactory: () => createMockTenantTransport(tenant),
+        nowIso: CLOCK,
+        runId: "missing-landing-handler",
+        tier: "mock",
+      }),
+    );
+    expect(error.message).toContain("merge-delivery-request");
+    expect(error.message).toContain("no handler");
   });
 });
 

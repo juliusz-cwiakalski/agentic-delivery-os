@@ -569,12 +569,91 @@ const httpStatusTrapCheck = async (): Promise<void> => {
   expect(malformedTransport.requests).toHaveLength(1);
 };
 
+const LANDING_FIXTURE = `${FIXTURES}/landing-responses.json`;
+
+/** Build a landing client over one declared landing fixture case. */
+const landingClient = (
+  caseName: string,
+): {
+  readonly client: GithubClient;
+  readonly transport: ReturnType<typeof createFixtureTransport>;
+} => {
+  const fixture = recordField(readJson(LANDING_FIXTURE), caseName);
+  const status = typeof fixture.status === "number" ? fixture.status : 200;
+  const routes: FixtureRoute[] = [
+    {
+      method: "PUT",
+      url: `${instance.baseUrl}${repoPath}/pulls/504/merge`,
+      status,
+      body: fixture.body,
+    },
+  ];
+  if (isRecord(fixture.readBack)) {
+    routes.push({
+      method: "GET",
+      url: `${instance.baseUrl}${repoPath}/pulls/504`,
+      body: fixture.readBack,
+    });
+  }
+  const transport = createFixtureTransport(routes);
+  return {
+    client: createGitHubClient({ instance, credentials, repository, transport }),
+    transport,
+  };
+};
+
+const landingInput = {
+  deliveryRequest: { systemName: "github", entityId: "504" },
+  strategy: "squash" as const,
+  commitTitle: "feat(GH-338): crafted squash title",
+  commitMessage: "Crafted squash message",
+};
+
 const defaultAssertions: TrapAssertions = {
   "GH-REVIEW-STATE": async () => {
     await reviewStateCheck(defaultPullReader);
     await unknownReviewDecisionCheck();
   },
   "GH-CHECK-RUNS-PER-SHA": () => checkRunsCheck(defaultCheckRunReader),
+  "GITHUB-LANDING-CRAFTED-METADATA": async () => {
+    const { client, transport } = landingClient("landedWithSha");
+    const result = await client.mergeDeliveryRequest(landingInput);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.merged).toBe(true);
+    expect(result.value.mergeCommitSha).toBe("4444444444444444444444444444444444444444");
+    const landing = transport.requests.find((request) => request.method === "PUT");
+    const body = JSON.parse(landing?.body ?? "{}") as Record<string, unknown>;
+    expect(body.commit_title).toBe("feat(GH-338): crafted squash title");
+    expect(body.commit_message).toBe("Crafted squash message");
+  },
+  "GITHUB-LANDING-IDENTITY-ABSENT": async () => {
+    const { client } = landingClient("landedWithoutSha");
+    const result = await client.mergeDeliveryRequest(landingInput);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(Object.hasOwn(result.value, "mergeCommitSha")).toBe(false);
+  },
+  "GITHUB-LANDING-GUARD-REFUSAL": async () => {
+    const { client, transport } = landingClient("headMismatch");
+    const result = await client.mergeDeliveryRequest({
+      ...landingInput,
+      expectedHeadSha: "1111111111111111111111111111111111111111",
+    });
+    expect(result.ok).toBe(false);
+    expect(transport.requests).toHaveLength(1);
+  },
+  "GITHUB-LANDING-ALREADY-MERGED-READBACK": async () => {
+    const { client, transport } = landingClient("alreadyMergedThenMergedTrue");
+    const result = await client.mergeDeliveryRequest(landingInput);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.mergeCommitSha).toBe("5555555555555555555555555555555555555555");
+    expect(transport.requests).toHaveLength(2);
+    const unmerged = landingClient("alreadyMergedThenMergedFalse");
+    const refused = await unmerged.client.mergeDeliveryRequest(landingInput);
+    expect(refused.ok).toBe(false);
+  },
   "GH-ISSUE-TO-WORKITEM": () => issueCheck(defaultIssueReader),
   "GITHUB-LIST-EXCLUDES-PRS": listWorkItemsCheck,
   "GITHUB-LIST-PAGE-LIMIT": listPageLimitCheck,
@@ -655,6 +734,10 @@ describe("TC-TRAP-002 GitHub trap catalog replays offline", () => {
       "GITHUB-CHECKRUN-404",
       "GITHUB-ISSUE-404",
       "GH-PAYLOAD-HTTP-STATUS",
+      "GITHUB-LANDING-CRAFTED-METADATA",
+      "GITHUB-LANDING-IDENTITY-ABSENT",
+      "GITHUB-LANDING-GUARD-REFUSAL",
+      "GITHUB-LANDING-ALREADY-MERGED-READBACK",
     ]);
   });
 

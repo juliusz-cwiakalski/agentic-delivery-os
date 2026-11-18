@@ -56,6 +56,34 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 1 complete (ninth closed operation `merge-delivery-request`;
+      optional `PipelineJob.startedAt`/`completedAt`; GitHub 7 supported + 2
+      declared gaps; the landing client member with squash-only crafted metadata,
+      the expected-head guard, classified non-2xx/transport failures, no retry,
+      and already-merged success only after a provider-asserted read-back; the
+      GitLab/Jira new-operation gap rows; the conformance registry landing step
+      (13 -> 14 steps) with the optional exact write projection; the GitHub
+      tenant landing route and projection; the landing fixtures, trap entries and
+      pins; the four decision records staged). Commit hash recorded in the
+      plan-phase-2 note. Verification: TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
+      green; bun test tests/structure tests/behaviour/providers
+      tests/conformance tests/boundaries green (2051 pass, 0 fail); bun test
+      tests/checks green (1174 pass, 0 fail); fixture sanitization/privacy green
+      (11 pass); git diff --check clean; TMPDIR=$PWD/tmp/tmpdir pnpm check green
+      at the boundary (10306 pass, 4 pre-existing skips, 0 fail). Delivery
+      notes carried: N3 (no provider-views edit needed — the file declares no
+      PipelineJob member and no ninth-operation consumer), N6 (partially: TDR-0031
+      item 8 still says 'unchanged apart from documentation' in the committed
+      record; spec §8.5 and plan refinement 1 carry the additive form, recorded
+      here as an unedited-record residue). Discovered pins moved in this commit,
+      outside the plan's declared list and required by the closed-set change: the
+      test-only control closed-set list in
+      tests/conformance/live/live-entrypoint.test.ts and the GitHub/Jira posture
+      pins in tests/behaviour/closeout-capabilities.test.ts. Both are mechanical
+      mirror lists of the closed set; the alternative was a red aggregate gate.
+      No contract, cap, case identity, or AC changed."
+    type: info
+    date: "2026-11-18"
   - text: "DoR gate iteration 3 = READY (readiness-review/readiness-iter-3.md), all
       ten facets PASS; 11 of 12 iteration-2 findings Resolved and R10 resolved
       with a recorded residue (the test plan still names the old resolver name

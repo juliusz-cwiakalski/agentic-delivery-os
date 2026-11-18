@@ -15,7 +15,12 @@ export const CARRIER_KINDS = [
 /** One adapter-chosen metadata carrier form. */
 export type CarrierKind = (typeof CARRIER_KINDS)[number];
 
-/** The closed set of operations an adapter can declare (F-2, DM-2). */
+/**
+ * The closed set of operations an adapter can declare (F-2, DM-2).
+ *
+ * The set appends and is never reordered: index 7 stays
+ * `resolve-delivery-thread` and the provider-side landing is the ninth member.
+ */
 export const ADAPTER_OPERATIONS = [
   "read-work-item",
   "write-work-item",
@@ -25,6 +30,7 @@ export const ADAPTER_OPERATIONS = [
   "read-pipeline-run",
   "write-comment",
   "resolve-delivery-thread",
+  "merge-delivery-request",
 ] as const;
 
 /** One adapter operation an adapter may or may not support. */

@@ -163,6 +163,16 @@
         "number": 601,
         "state": "closed"
       }
+    },
+    {
+      "method": "PUT",
+      "url": "https://github.example.com/repos/owner-placeholder/project-placeholder/pulls/504/merge",
+      "status": 200,
+      "body": {
+        "sha": "3333333333333333333333333333333333333333",
+        "merged": true,
+        "message": "Pull Request successfully merged"
+      }
     }
   ],
   "expected": {
@@ -331,6 +341,10 @@
         }
       ],
       "updatedAt": "2026-10-29T08:00:00Z"
+    },
+    "change-lifecycle.merge-delivery-request": {
+      "merged": true,
+      "mergeCommitSha": "3333333333333333333333333333333333333333"
     }
   }
 }

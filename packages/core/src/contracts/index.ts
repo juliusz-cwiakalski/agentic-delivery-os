@@ -1840,6 +1840,7 @@ export {
 export type {
   AdapterContract,
   DeliveryRequest,
+  DeliveryRequestLandingStrategy,
   DeliveryRequestMergeableState,
   DeliveryRequestReviewState,
   DeliveryStateAlias,
@@ -1848,6 +1849,8 @@ export type {
   ExternalSystemInstance,
   ExternalSystemKind,
   IdempotencyKey,
+  MergeDeliveryRequestInput,
+  MergeDeliveryRequestOutcome,
   PipelineJob,
   PipelineJobState,
   PipelineRun,
@@ -2088,6 +2091,7 @@ export {
 // document, the five `queue` error identities, the typed configuration keys, the
 // bounds, and the command envelope shapes. Data and types only.
 export {
+  QUEUE_BATTERY_ONLY_PARK_CAUSES,
   QUEUE_BLOCKING_REASONS,
   QUEUE_CLAIM_RESULTS,
   QUEUE_CONFIG_BRANCH,
@@ -2134,7 +2138,6 @@ export {
   QUEUE_MAX_NEXT_ACTIONS,
   QUEUE_MAX_REASONS,
   QUEUE_MAX_REF_CHARS,
-  QUEUE_BATTERY_ONLY_PARK_CAUSES,
   QUEUE_MEMBER_REF_SEPARATOR,
   QUEUE_MIN_RENEWAL_MS,
   QUEUE_MUTATION_RESULTS,

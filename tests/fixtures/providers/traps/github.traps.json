@@ -151,6 +151,30 @@
       "providerBehavior": "Non-2xx GitHub read responses fold into the adapter-local failure types whose only discriminant used to be the prose detail string.",
       "expectedNormalizedOutcome": "The read slice carries the structured numeric httpStatus on every non-2xx response and omits it on transport failures; the field is secret-free, the adapter-local identity is unchanged, and no prose is copied into it.",
       "fixtureReference": "tests/fixtures/providers/github/read-failure-statuses.json"
+    },
+    {
+      "trapName": "GITHUB-LANDING-CRAFTED-METADATA",
+      "providerBehavior": "A squash landing accepts a crafted commit title and message and echoes the landed commit identity.",
+      "expectedNormalizedOutcome": "Both crafted strings are transmitted byte-identically, merge_method is squash, and the outcome carries the provider-supplied merge commit identity.",
+      "fixtureReference": "tests/fixtures/providers/github/landing-responses.json#/landedWithSha"
+    },
+    {
+      "trapName": "GITHUB-LANDING-IDENTITY-ABSENT",
+      "providerBehavior": "A successful landing response omits the landing commit identity.",
+      "expectedNormalizedOutcome": "The outcome stays merged with no mergeCommitSha member: absence is unknown and is never derived from a branch head or a local commit.",
+      "fixtureReference": "tests/fixtures/providers/github/landing-responses.json#/landedWithoutSha"
+    },
+    {
+      "trapName": "GITHUB-LANDING-GUARD-REFUSAL",
+      "providerBehavior": "The expected head no longer matches the pull request head.",
+      "expectedNormalizedOutcome": "The guard is transmitted verbatim and the mismatch is one classified provider.payload.invalid refusal with the structured status, one request, and no retry.",
+      "fixtureReference": "tests/fixtures/providers/github/landing-responses.json#/headMismatch"
+    },
+    {
+      "trapName": "GITHUB-LANDING-ALREADY-MERGED-READBACK",
+      "providerBehavior": "The provider refuses with an already-merged refusal; merged truth is asserted only by a read-back.",
+      "expectedNormalizedOutcome": "Success is returned only when the read-back observes merged true; an unmerged read-back leaves the classified refusal standing, and the landing is never retried.",
+      "fixtureReference": "tests/fixtures/providers/github/landing-responses.json#/alreadyMergedThenMergedTrue"
     }
   ]
 }

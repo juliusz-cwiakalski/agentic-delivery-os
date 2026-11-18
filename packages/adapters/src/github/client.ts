@@ -13,6 +13,8 @@ import {
   type CredentialPort,
   type DeliveryRequest,
   type ExternalSystemInstance,
+  type MergeDeliveryRequestInput,
+  type MergeDeliveryRequestOutcome,
   type PipelineRun,
   STATUS_SOURCE_PIPELINE_LIMIT,
   type WorkItem,
@@ -101,6 +103,13 @@ export type GithubClient = {
     readonly entityId: string;
     readonly deliveryState: "done";
   }) => Promise<ProviderWriteResult>;
+  /**
+   * The provider-side squash landing (DM-1). One request, never retried, no
+   * representable force/bypass/auto-merge/queue/rebase/merge-commit strategy.
+   */
+  readonly mergeDeliveryRequest: (
+    input: MergeDeliveryRequestInput,
+  ) => Promise<ProviderWriteResult<MergeDeliveryRequestOutcome>>;
   readonly resolveDeliveryThread: (input: {
     readonly deliveryRequest: { readonly systemName: string; readonly entityId: string };
     readonly threadId: string;
@@ -118,6 +127,12 @@ const numericEntity = (entityId: string): number | undefined => {
   const value = Number(entityId);
   return Number.isSafeInteger(value) ? value : undefined;
 };
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+/** The documented "already merged" refusal prose; never a success signal itself. */
+const ALREADY_MERGED = /already\s+merged/i;
 
 const REVIEW_THREADS_QUERY =
   "query ReviewThreads($owner: String!, $name: String!, $number: Int!) { repository(owner: $owner, name: $name) { pullRequest(number: $number) { reviewThreads(first: 100) { nodes { id isResolved comments(first: 1) { totalCount nodes { author { login __typename } authorAssociation } } } } } } }";
@@ -458,6 +473,77 @@ export const createGitHubClient = (options: GithubClientOptions): GithubClient =
           state: "closed",
         }),
       ),
+    mergeDeliveryRequest: async (input) => {
+      const headers = authorizedHeaders();
+      if (!headers.ok) return headers;
+      const pullPath = `${repositoryPath}/pulls/${encodeURIComponent(input.deliveryRequest.entityId)}`;
+      const landingBody: Record<string, unknown> = { merge_method: input.strategy };
+      if (input.commitTitle !== undefined) landingBody.commit_title = input.commitTitle;
+      if (input.commitMessage !== undefined) landingBody.commit_message = input.commitMessage;
+      if (input.expectedHeadSha !== undefined) landingBody.sha = input.expectedHeadSha;
+      const serialized = JSON.stringify(landingBody);
+      const landed = async (): Promise<ProviderWriteResult<MergeDeliveryRequestOutcome>> => {
+        // A read-back is the only way an "already merged" refusal becomes
+        // success: the provider must assert merged truth (NFR-5).
+        const readBack = await get(pullPath);
+        if (!readBack.ok || !isRecord(readBack.value.body)) {
+          return providerPayloadFailure("GitHub landing read-back did not observe merged truth");
+        }
+        const body = readBack.value.body;
+        if (body.merged !== true) {
+          return providerPayloadFailure("GitHub landing read-back did not observe merged truth");
+        }
+        const sha = body.merge_commit_sha;
+        return {
+          ok: true,
+          value:
+            typeof sha === "string" && sha.length > 0
+              ? { merged: true, mergeCommitSha: sha }
+              : { merged: true },
+        };
+      };
+      let response: Awaited<ReturnType<ProviderTransport["send"]>>;
+      try {
+        response = await transport.send({
+          url: `${baseUrl}${pullPath}/merge`,
+          method: "PUT",
+          headers: { ...headers.value, "Content-Type": "application/json" },
+          body: serialized,
+          timeoutMs,
+        });
+      } catch (error: unknown) {
+        const name = error instanceof Error ? error.name : "unknown error";
+        // A transport failure is classified with no status, and nothing is
+        // re-issued on any other path: a landing is at most once.
+        return providerPayloadFailure(`GitHub landing request failed (${name})`);
+      }
+      if (response.status >= 200 && response.status < 300) {
+        if (isRecord(response.body) && response.body.merged === false) {
+          return providerPayloadFailure("GitHub landing response is not merged", response.status);
+        }
+        const sha = isRecord(response.body) ? response.body.sha : undefined;
+        return {
+          ok: true,
+          value:
+            typeof sha === "string" && sha.length > 0
+              ? { merged: true, mergeCommitSha: sha }
+              : { merged: true },
+        };
+      }
+      const message = isRecord(response.body) ? response.body.message : undefined;
+      if (
+        (response.status === 405 || response.status === 409) &&
+        typeof message === "string" &&
+        ALREADY_MERGED.test(message)
+      ) {
+        const observed = await landed();
+        if (observed.ok) return observed;
+      }
+      return providerPayloadFailure(
+        `GitHub landing returned HTTP ${response.status}`,
+        response.status,
+      );
+    },
     resolveDeliveryThread: async (input) => {
       const response = await send("POST", "/graphql", {
         query:
