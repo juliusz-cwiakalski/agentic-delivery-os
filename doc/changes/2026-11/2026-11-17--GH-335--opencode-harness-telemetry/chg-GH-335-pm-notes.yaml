@@ -12,7 +12,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-18T15:24:57.132Z }
   review_fix: { started: null, completed: 2026-11-18T18:12:43.982Z }
   quality_gates: { started: null, completed: 2026-11-18T18:35:08.879Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-18T18:36:16.103Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "TDR-0032 — harness seat-to-spawn cardinality and seat resolution (one
@@ -537,6 +537,19 @@ notes:
       form; the spec revision log says no DEC count change while adding DEC-18;
       F-11 (edge.ts projections) and F-12 carry-overs remain unrecorded in
       code."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery evidence, plan phase 9 (code-review remediation, iteration 1):
+      commit 435c74f0; declared gate suites 83 pass / 0 fail; `pnpm typecheck`
+      green; `pnpm check` on that tree 10565 pass / 4 skip / 2 fail, both
+      load-sensitive and passing in isolation; range gate PASS over 40 commits."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery evidence, plan phase 10 (code-review remediation, iteration 2):
+      commit 30f89e62; declared gate suites 9 + 9 + 9 pass plus doc-conformance
+      19 pass; broader affected set 125 pass / 0 fail; `pnpm check` EXIT 0 —
+      10573 pass / 4 skip / 0 fail across 1349 files; `plan validate` and `lint
+      plan` valid; range gate PASS over 41 commits."
     type: info
     date: "2026-11-18"
   - text: "Phase-9 quality gates (authoritative run, TMPDIR=$PWD/tmp/tmpdir): `pnpm
