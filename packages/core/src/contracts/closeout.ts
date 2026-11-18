@@ -15,7 +15,7 @@ import type {
   CloseoutCapsuleData,
   CloseoutResidueItem,
 } from "./capsule.js";
-import type { HarnessResult } from "./harness.js";
+import type { HarnessResult, HarnessSeatBinding } from "./harness.js";
 import type {
   HarnessTelemetryAppendReport,
   HarnessTelemetryCapture,
@@ -408,10 +408,23 @@ export type CloseoutRetroFacts = {
   readonly runId?: string;
 };
 
-/** The session-attribution facts the plan consumes (GH-240 F-9, DM-8). */
+/**
+ * The session-attribution facts the plan consumes (GH-240 F-9, GH-335 DM-8).
+ *
+ * `sessionIds` is the UNION of the session identities the work item's recorded
+ * dispatch attempts hold. Each attempt's recorded binding travels beside it, so
+ * capture cites the run's seat instead of re-deriving one from the current
+ * profile; an attempt that recorded no identity is counted, never inferred.
+ */
 export type CloseoutSessionFacts = {
   readonly available: boolean;
   readonly sessionIds: readonly string[];
+  /** Each held identity's recording binding, where its attempt recorded one. */
+  readonly bindings?: Readonly<Record<string, HarnessSeatBinding>>;
+  /** Recorded attempts that held no identity: counted, never inferred. */
+  readonly unattributedAttempts?: number;
+  /** The bounded attempt-ledger read's counted truncation (AC-F5-5). */
+  readonly attemptTruncation?: HarnessTruncation;
   readonly lastVerifiedCommit?: string;
   readonly unresolvedQuestions?: number;
   readonly workingStateFlushed?: boolean;
@@ -424,6 +437,11 @@ export type CloseoutTelemetryRuntime = {
   readonly extract: (input: {
     readonly workItemRef: string;
     readonly runId: string;
+    /** The union of held session identities; empty is the caller's `skipped-gap`. */
+    readonly heldSessionIds: readonly string[];
+    readonly bindings?: Readonly<Record<string, HarnessSeatBinding>>;
+    readonly unattributedAttempts?: number;
+    readonly attemptTruncation?: HarnessTruncation;
   }) => Promise<HarnessResult<HarnessTelemetryCapture>>;
   readonly append: (capture: HarnessTelemetryCapture) => StateResult<HarnessTelemetryAppendReport>;
 };

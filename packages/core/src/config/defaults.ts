@@ -50,7 +50,11 @@ export const PRODUCTION_DEFAULTS = {
     },
     stores: {
       opencode: {
-        databasePath: ".local/state/opencode/opencode.db",
+        // GH-335: the harness's own data directory, not its state directory.
+        // A leading `~/` is expanded at the runtime-aware edge; the harness's
+        // `OPENCODE_DB` override is honoured there through the injected
+        // environment record (core reads no ambient environment).
+        databasePath: "~/.local/share/opencode/opencode.db",
       },
       "claude-code": {
         sessionDirectory: ".local/state/claude-code",

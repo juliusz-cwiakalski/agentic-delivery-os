@@ -228,7 +228,7 @@ describe("TC-HARN-018 store locations resolve from configuration", () => {
     if (!settings.ok) return;
     expect(settings.value.opencodeDatabasePath).toBe("/bind-mount/synthetic-store/opencode.db");
     expect(settings.value.claudeCodeSessionDirectory).toBe("/bind-mount/synthetic-sessions");
-    expect(settings.value.opencodeDatabasePath).not.toBe(".local/state/opencode/opencode.db");
+    expect(settings.value.opencodeDatabasePath).not.toBe("~/.local/share/opencode/opencode.db");
   });
 
   test("removing the branch yields the default store location with defaults origin", () => {
@@ -238,7 +238,8 @@ describe("TC-HARN-018 store locations resolve from configuration", () => {
     const settings = resolveHarnessSettings(resolved.value.values, resolved.value.origins);
     expect(settings.ok).toBe(true);
     if (!settings.ok) return;
-    expect(settings.value.opencodeDatabasePath).toBe(".local/state/opencode/opencode.db");
+    // GH-335 reconciles the default with the harness's own data directory.
+    expect(settings.value.opencodeDatabasePath).toBe("~/.local/share/opencode/opencode.db");
     expect(resolved.value.origins["harness.stores.opencode.databasePath"]?.layer).toBe("defaults");
   });
 });

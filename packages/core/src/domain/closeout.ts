@@ -1658,6 +1658,17 @@ const captureTelemetry = async (
     const captured = await input.telemetry.extract({
       workItemRef: input.plan.workItemRef,
       runId,
+      // GH-335 DM-8: capture cites the union the caller resolved from the work
+      // item's recorded attempts; an empty union yields zero rows and the
+      // caller's own `skipped-gap` disclosure.
+      heldSessionIds: input.sessions?.sessionIds ?? [],
+      ...(input.sessions?.bindings === undefined ? {} : { bindings: input.sessions.bindings }),
+      ...(input.sessions?.unattributedAttempts === undefined
+        ? {}
+        : { unattributedAttempts: input.sessions.unattributedAttempts }),
+      ...(input.sessions?.attemptTruncation === undefined
+        ? {}
+        : { attemptTruncation: input.sessions.attemptTruncation }),
     });
     if (!captured.ok) return failed(captured.error.code);
     const appended = input.telemetry.append(captured.value);

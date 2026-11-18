@@ -111,6 +111,19 @@ export type OpencodeHarnessOptions = {
   readonly mode?: HarnessMode;
   readonly modeOrigin?: HarnessModeOrigin;
   /**
+   * The evaluated gate, read at each spawn/attach (GH-335 F-1).
+   *
+   * The composition supplies this when the dispatch admission resolved the
+   * facts for the run, so the adapter can never fall back to "inside" on a
+   * refused run. The coordinator and engine lanes supply none and keep their
+   * delivered behaviour.
+   */
+  readonly versionGate?: () => {
+    readonly verdict: HarnessVersionVerdict;
+    readonly observedVersion: string | null;
+    readonly mode: HarnessMode;
+  };
+  /**
    * The injected pure binding seams (GH-335 F-3, TDR-0032).
    *
    * The adapter maps the caller-supplied agent identity and the resolved
@@ -367,18 +380,18 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
   const timeout = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   const capabilities = options.capabilities ?? OPENCODE_CAPABILITIES;
   const mode = options.mode ?? DEFAULT_HARNESS_MODE;
-  const versionVerdict = options.versionVerdict ?? "inside";
-
   /**
    * The pre-session gate (GH-335 F-1, F-2): evaluated before any session-bearing
-   * process, any lease, and any attempt record. The production composition
-   * always supplies the evaluated verdict; an adapter constructed without one is
-   * a delivered test double and keeps its delivered spawn behaviour.
+   * process, any lease, and any attempt record. The gate is read at each call so
+   * a composition-resolved verdict reaches the adapter for its own run; an
+   * adapter constructed without one is a delivered test double and keeps its
+   * delivered spawn behaviour.
    */
   const preSessionRefusal = (): HarnessResult<never> | undefined => {
+    const versionVerdict = options.versionGate?.().verdict ?? options.versionVerdict ?? "inside";
     if (versionVerdict === "outside") {
       return failure("harness.version.unsupported", {
-        summary: `observed harness version ${options.observedVersion ?? "unknown"} is outside the supported window`,
+        summary: `observed harness version ${options.versionGate?.().observedVersion ?? options.observedVersion ?? "unknown"} is outside the supported window`,
       });
     }
     if (versionVerdict === "indeterminate") {
@@ -386,9 +399,10 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
         summary: "the harness version could not be determined",
       });
     }
-    if (mode !== DEFAULT_HARNESS_MODE) {
+    const resolvedMode = options.versionGate?.().mode ?? mode;
+    if (resolvedMode !== DEFAULT_HARNESS_MODE) {
       return failure("harness.mode.unavailable", {
-        summary: `requested mode ${mode} is unavailable; the available mode is ${DEFAULT_HARNESS_MODE}`,
+        summary: `requested mode ${resolvedMode} is unavailable; the available mode is ${DEFAULT_HARNESS_MODE}`,
       });
     }
     return undefined;

@@ -52,6 +52,12 @@ export type DaemonDispatchResultInput = {
   readonly repository: string;
   readonly sessionId: string;
   readonly spawnOrdinal: number;
+  /**
+   * The single-seat binding the daemon path resolved, when it resolved one
+   * (GH-335 adjudication (k)). The daemon lane claims no seat: an absent
+   * binding stays the honest unbound state, never a fabricated seat.
+   */
+  readonly binding?: DispatchAttemptRecord["binding"];
   readonly harnessKind: HarnessKind;
   readonly evidenceClass: DispatchEvidenceClass;
   readonly handoverState: DispatchHandoverState;
@@ -196,6 +202,11 @@ export const recordDaemonDispatchResult = (
     ...(input.prefillCostAcknowledged === undefined
       ? {}
       : { prefillCostAcknowledged: input.prefillCostAcknowledged }),
+    // GH-335: the held identity the daemon already receives, plus a binding
+    // ONLY when the daemon path resolved one (adjudication (k) — the daemon
+    // lane claims no seat and never resolves one on the supervisory path).
+    sessionIds: [input.sessionId],
+    ...(input.binding === undefined ? {} : { binding: input.binding }),
     evidenceRefs: [`attempt:${attemptId}`, "daemon:lane"],
     recordedAt: input.nowIso,
   };

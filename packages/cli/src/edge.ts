@@ -158,6 +158,7 @@ import {
   evaluateDispatchResumeEconomics,
   evaluateWorktreeSafety,
   fileRetroAction,
+  readDispatchAttempts,
   foldLanes,
   type HarnessSettings,
   handoverDispatchEvidence,
@@ -256,10 +257,13 @@ import { resolveBrandIdentity } from "@delivery-os/core/branding";
 import {
   ACTION_WIP_LIMIT,
   type AdapterCapabilityDeclaration,
+  CAPSULE_MAX_SESSIONS,
   AUDIT_IDENTITY_VARIABLE_SUFFIX,
   type AuditAgentIdentity,
   type AuditInvocationFacts,
   BLOCKER_DELEGATION_POLICY,
+  type HarnessSeatBinding,
+  type HarnessTruncation,
   type BlockerCapabilityFact,
   type BlockerDelegationPolicy,
   BOARD_MAX_LANES,
@@ -2108,6 +2112,60 @@ const closeoutHarnessExtractor = (
   return async (input) => extractor.extract(input);
 };
 
+/**
+ * Resolve the work item's session attribution from its recorded dispatch
+ * attempts (GH-335 DM-8, AC-F5-5).
+ *
+ * The union of every attempt's held identities, each attempt's recorded
+ * binding attached only to its own identities, and an attempt that recorded no
+ * identity counted — never inferred from the store, a title, or a directory.
+ * An empty union is the caller's `skipped-gap`, and a truncated attempt-ledger
+ * read is disclosed rather than silently narrowing the union.
+ */
+export const resolveSessionAttribution = (
+  store: StateStorePort,
+  workItemRef: string,
+): {
+  readonly heldSessionIds: readonly string[];
+  readonly bindings: Readonly<Record<string, HarnessSeatBinding>>;
+  readonly unattributedAttempts: number;
+  readonly attemptTruncation?: HarnessTruncation;
+} => {
+  const read = readDispatchAttempts(store);
+  if (!read.ok) {
+    return { heldSessionIds: [], bindings: {}, unattributedAttempts: 0 };
+  }
+  const identities = new Set<string>();
+  const bindings: Record<string, HarnessSeatBinding> = {};
+  let unattributedAttempts = 0;
+  for (const attempt of read.records) {
+    if (attempt.ref !== workItemRef) continue;
+    const sessionIds = attempt.sessionIds ?? [];
+    if (sessionIds.length === 0) {
+      unattributedAttempts += 1;
+      continue;
+    }
+    for (const sessionId of sessionIds) {
+      identities.add(sessionId);
+      if (attempt.binding !== undefined) bindings[sessionId] = attempt.binding;
+    }
+  }
+  return {
+    heldSessionIds: [...identities].sort(),
+    bindings,
+    unattributedAttempts,
+    ...(read.truncation === undefined
+      ? {}
+      : {
+          attemptTruncation: {
+            truncated: true as const,
+            omitted: read.truncation.omittedRecords,
+            cap: read.truncation.bound,
+          },
+        }),
+  };
+};
+
 /** The latest verified commit attributed to the delivery (F-9). */
 const latestVerifiedCommit = (store: StateStorePort, workItemRef: string): string | undefined => {
   const records = store.readRecords();
@@ -2300,23 +2358,36 @@ export const createCloseoutComposition = (
     }
 
     let sessions = options.sessions;
-    if (sessions === undefined && extractor !== undefined) {
-      const captured = await extractor({ workItemRef, runId: "closeout-attribution" });
+    if (sessions === undefined && options.harness !== undefined) {
+      // GH-335: attribution is the union the work item's recorded attempts hold.
+      // With no harness configured the step keeps its delivered no-op; with one
+      // configured an empty union is the declared attribution gap.
+      // An empty union is the delivered `skipped-gap`, never a store scan.
+      const attribution = resolveSessionAttribution(options.store, workItemRef);
       const commit = latestVerifiedCommit(options.store, workItemRef);
-      if (!captured.ok) {
-        sessions = {
-          available: false,
-          sessionIds: [],
-          ...(commit === undefined ? {} : { lastVerifiedCommit: commit }),
-        };
-      } else {
-        const ids = [...new Set(captured.value.records.map((record) => record.sessionId))];
-        sessions = {
-          available: ids.length > 0 || captured.value.failedSessions.length === 0,
-          sessionIds: ids,
-          ...(commit === undefined ? {} : { lastVerifiedCommit: commit }),
-        };
-      }
+      const capped = attribution.heldSessionIds.slice(0, CAPSULE_MAX_SESSIONS);
+      sessions = {
+        available: attribution.heldSessionIds.length > 0,
+        sessionIds: capped,
+        ...(attribution.heldSessionIds.length > capped.length
+          ? {
+              truncated: {
+                truncated: true,
+                omitted: attribution.heldSessionIds.length - capped.length,
+              },
+            }
+          : {}),
+        ...(Object.keys(attribution.bindings).length === 0
+          ? {}
+          : { bindings: attribution.bindings }),
+        ...(attribution.unattributedAttempts === 0
+          ? {}
+          : { unattributedAttempts: attribution.unattributedAttempts }),
+        ...(attribution.attemptTruncation === undefined
+          ? {}
+          : { attemptTruncation: attribution.attemptTruncation }),
+        ...(commit === undefined ? {} : { lastVerifiedCommit: commit }),
+      };
       sessionFacts.set(workItemRef, sessions);
     }
 
@@ -6855,6 +6926,35 @@ export type DispatchComposition = {
    * direct composition may omit it and keep the delivered run order.
    */
   readonly preflight?: (ref: string) => Promise<DispatchPreflightResult>;
+  /**
+   * The pre-session harness admission (GH-335 F-1, F-2; NFR-1): the version
+   * gate and the mode availability, evaluated once before the lease claim and
+   * before any session-bearing child process. A refusal claims no lease, opens
+   * no attempt record, and writes no telemetry.
+   */
+  readonly harnessAdmission?: () => Promise<
+    | { readonly ok: true; readonly facts?: DispatchPorts["harnessFacts"] }
+    | {
+        readonly ok: false;
+        readonly error: {
+          readonly kind: "harness" | "config" | "provider";
+          readonly code: string;
+          readonly summary?: string;
+          readonly field?: string;
+          readonly harness?: import("@delivery-os/core/contracts").CommandFailureHarnessDetail;
+        };
+      }
+  >;
+  /**
+   * The harness facts the admission resolved, read by the composition's port
+   * gate and disclosed on a pre-session refusal (TDR-0033). Absent on the
+   * non-dispatch lanes and for a harness kind outside the delivery window.
+   */
+  readonly harnessFacts?: () => DispatchPorts["harnessFacts"];
+  /** The caller-supplied agent identity for this run (DEC-16, DEC-15). */
+  readonly harnessAgent?: (ref: string) => string | undefined;
+  /** The composition-resolved single-seat binding for this run (TDR-0032). */
+  readonly harnessBinding?: (ref: string) => DispatchPorts["harnessBinding"];
   readonly claimLease: (ref: string, repository: string) => DispatchLeaseClaim;
   readonly releaseLease: (ref: string, cause: "completed" | "aborted") => boolean;
   readonly phaseLedger: (ref: string) => DispatchPhaseLedger;
@@ -7076,6 +7176,9 @@ export const createDispatchCommandRuntime = (
         }
       }
       const preflight = composition.preflight;
+      const harnessFacts = composition.harnessFacts?.();
+      const harnessAgent = composition.harnessAgent?.(input.ref);
+      const harnessBinding = composition.harnessBinding?.(input.ref);
       return runDispatch({
         store: composition.store,
         fenceToken: composition.fenceToken,
@@ -7093,6 +7196,29 @@ export const createDispatchCommandRuntime = (
         newDivergenceId: () => composition.newDivergenceId(input.ref),
         readTruth: () => composition.readTruth(input.ref),
         ...(preflight === undefined ? {} : { preflight: () => preflight(input.ref) }),
+        ...(composition.harnessAdmission === undefined
+          ? {}
+          : {
+              harnessAdmission: async () => {
+                const admitted = await composition.harnessAdmission?.();
+                if (admitted === undefined) return { ok: true };
+                if (admitted.ok) return { ok: true };
+                const error = admitted.error;
+                return {
+                  ok: false,
+                  error: {
+                    kind: error.kind,
+                    code: error.code,
+                    ...(error.summary === undefined ? {} : { summary: error.summary }),
+                    ...(error.field === undefined ? {} : { field: error.field }),
+                    ...(error.harness === undefined ? {} : { harness: error.harness }),
+                  },
+                };
+              },
+            }),
+        ...(harnessFacts === undefined ? {} : { harnessFacts }),
+        ...(harnessAgent === undefined ? {} : { harnessAgent }),
+        ...(harnessBinding === undefined ? {} : { harnessBinding }),
         claimLease: () => composition.claimLease(input.ref, repository),
         releaseLease: (cause) => composition.releaseLease(input.ref, cause),
         phaseLedger: composition.phaseLedger(input.ref),

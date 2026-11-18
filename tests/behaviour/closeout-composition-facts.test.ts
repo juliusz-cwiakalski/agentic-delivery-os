@@ -47,6 +47,12 @@ import {
   buildOpencodeStore,
   WORK_ITEM_REF as HARNESS_REF,
 } from "../fixtures/harness/opencode-store/build";
+import { appendDispatchAttempt } from "../../packages/core/src/app/dispatch-ledger";
+import {
+  createBunSqliteStoreOpener,
+  createOpencodeTelemetryExtractor,
+} from "../../packages/adapters/src/harness/index";
+import { buildAttempts, eligibleSpecs } from "../fixtures/dispatch/evidence-windows";
 import { makeIdentity, openStore, removeRoot } from "../fixtures/state/harness";
 import { bufferSink, SYNTHETIC_BRAND } from "../golden/helpers";
 
@@ -64,6 +70,7 @@ type CompositionFixture = {
   readonly repo: ReturnType<typeof createTempRepo>;
   readonly root: string;
   readonly store: ReturnType<typeof openStore>["store"];
+  readonly harnessStore?: ReturnType<typeof buildOpencodeStore>;
   readonly tree: ReturnType<typeof makeChangeTree>;
   readonly memory: ReturnType<typeof makeTempMemory>;
   readonly capsule: ReturnType<typeof makeCapsuleRuntime>;
@@ -80,6 +87,8 @@ const makeFixture = (options: {
   readonly dirtyWorktree?: boolean;
   readonly harness?: "opencode" | "claude-code" | "none";
   readonly sessions?: boolean;
+  /** Whether the fixture seeds the work item's recorded dispatch attempts. */
+  readonly seedAttempts?: boolean;
   readonly brokenHarness?: boolean;
   readonly unattributable?: boolean;
   readonly threads?: ReturnType<typeof makeMergedRequest>["threads"];
@@ -89,7 +98,7 @@ const makeFixture = (options: {
   const root = mkdtempSync(join(tmpdir(), "gh240-composition-"));
   const harnessStore =
     options.harness === "opencode" && options.sessions !== false
-      ? buildOpencodeStore({ variant: "full", workItemRef: WORK_ITEM_REF })
+      ? buildOpencodeStore({ variant: "full" })
       : undefined;
   const claudeDir = options.harness === "claude-code" ? emptyStore() : undefined;
   if (options.unattributable === true && claudeDir !== undefined) {
@@ -124,6 +133,30 @@ const makeFixture = (options: {
     payload: { changeRef: WORK_ITEM_REF, result: "merged", squashSha },
   });
   store.releaseFence(acquired.value.handle);
+  // GH-335: the fixture seeds the work item's recorded dispatch attempts, so
+  // attribution cites the held identities and the recorded binding rather than
+  // a store column (the retired `workItemRef` option has no replacement).
+  if (options.harness !== undefined && options.seedAttempts !== false) {
+    const [seed] = buildAttempts(eligibleSpecs());
+    if (seed !== undefined) {
+      expect(
+        appendDispatchAttempt(store, "seed-attempt-fence", {
+          ...seed,
+          ref: WORK_ITEM_REF,
+          sessionIds: harnessStore?.heldSessionIds ?? ["cc_seed_session"],
+          ...(harnessStore === undefined
+            ? {}
+            : {
+                binding: {
+                  agent: "agent-a",
+                  seat: "seat-judgment",
+                  resolvedModel: "zai/glm-5#judgment",
+                },
+              }),
+        }).ok,
+      ).toBe(true);
+    }
+  }
   if (options.retroRun === true) {
     expect(seedRetroRegistry(store, "retro-seed").ok).toBe(true);
     expect(
@@ -213,6 +246,7 @@ const makeFixture = (options: {
     repo,
     root,
     store,
+    ...(harnessStore === undefined ? {} : { harnessStore }),
     tree,
     memory,
     capsule,
@@ -475,49 +509,61 @@ describe("closeout production composition facts", () => {
     }
   });
 
-  test("an unreadable harness store is a declared attribution gap with residue", async () => {
+  test("an unreadable harness store is a non-gating extraction failure, not an attribution gap", async () => {
+    // GH-335 F-6: attribution comes from the recorded attempts, so an unreadable
+    // store no longer fabricates an attribution gap; the capture discloses the
+    // delivered extraction-failure identity and the closeout stays non-gating.
     const fixture = makeFixture({ harness: "opencode", brokenHarness: true });
     try {
       const applied = await fixture.run(true);
-      expect(applied.exitCode).toBe(1);
+      expect(applied.exitCode).toBe(0);
       const data = dataOf(applied.envelope);
-      expect(stepOf(data, "session-compaction")?.outcome).toBe("skipped-gap");
-      expect(stepOf(data, "session-compaction")?.reason).toBe("session-attribution-unavailable");
+      const capture = data.telemetryCapture as Record<string, unknown> | undefined;
+      expect(capture?.failed).toBe(1);
       expect(
-        (data.residue as Record<string, unknown>[]).some(
-          (item) => item.kind === "session-attribution-gap",
+        (capture?.warnings as Record<string, unknown>[]).some(
+          (warning) => warning.field === "harness.telemetry.extraction-failed",
         ),
       ).toBe(true);
+      expect(
+        ((data.residue ?? []) as Record<string, unknown>[]).some(
+          (item) => item.kind === "session-attribution-gap",
+        ),
+      ).toBe(false);
     } finally {
       fixture.cleanup();
     }
   });
 
-  test("an unattributable session is a declared attribution gap with residue", async () => {
+  test("a store session outside the held union is not attributed and is not a gap", async () => {
+    // GH-335 DM-8: attribution is the union the recorded attempts hold, so a
+    // store-only session is never guessed into the delivery nor turned into a gap.
     const fixture = makeFixture({ harness: "claude-code", unattributable: true });
     try {
       const applied = await fixture.run(true);
-      expect(applied.exitCode).toBe(1);
+      expect(applied.exitCode).toBe(0);
       const data = dataOf(applied.envelope);
-      expect(stepOf(data, "session-compaction")?.outcome).toBe("skipped-gap");
-      expect(stepOf(data, "session-compaction")?.reason).toBe("session-attribution-unavailable");
+      expect(stepOf(data, "session-compaction")?.outcome).toBe("applied");
       expect(
-        (data.residue as Record<string, unknown>[]).some(
+        ((data.residue ?? []) as Record<string, unknown>[]).some(
           (item) => item.kind === "session-attribution-gap",
         ),
-      ).toBe(true);
+      ).toBe(false);
     } finally {
       fixture.cleanup();
     }
   });
 
-  test("no sessions is skipped-noop, and an unreadable store is an attribution gap", async () => {
-    const noSessions = makeFixture({ harness: "claude-code" });
+  test("an empty held-identity union is the declared attribution gap, and no harness is a no-op", async () => {
+    // GH-335 AC-F5-5: with a harness configured, a work item whose recorded
+    // attempts hold no identity is the declared gap, never an empty success.
+    const noSessions = makeFixture({ harness: "claude-code", seedAttempts: false });
     try {
       const applied = await noSessions.run(true);
-      expect(applied.exitCode).toBe(0);
+      expect(applied.exitCode).toBe(1);
       const data = dataOf(applied.envelope);
-      expect(stepOf(data, "session-compaction")?.outcome).toBe("skipped-noop");
+      expect(stepOf(data, "session-compaction")?.outcome).toBe("skipped-gap");
+      expect(stepOf(data, "session-compaction")?.reason).toBe("session-attribution-unavailable");
     } finally {
       noSessions.cleanup();
     }

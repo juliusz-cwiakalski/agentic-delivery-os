@@ -1,28 +1,38 @@
 /**
- * The opencode telemetry extractor (GH-233 F-7, DEC-5, NFR-2, NFR-3).
+ * The opencode telemetry extractor over the OBSERVED store contract
+ * (GH-335 F-5, F-6; DM-10, DEC-4, DEC-9, DEC-13; TDR-0032 decision 4).
  *
- * Strictly read-only over the session store: read-only connection, query-only
- * pragma before the first read, bounded indexed queries only, parent-recursion
- * session-tree aggregation with an explicit session cap, and one neutral record
- * per session. Missing or unreadable stores are classified failures, never
- * crashes. The extractor never reads conversation content.
+ * Strictly read-only: read-only connection, the query-only pragma before the
+ * first read, bounded statements scoped by a held session identity, and no
+ * content projection. Two observed generations coexist (`session_v2`/
+ * `session_message` and `session`/`message`); the current one is read first and
+ * the legacy one is tolerated. A session's own `version` is the stamp, the seat
+ * and resolved model come from the recording attempt's binding, durations come
+ * from the store's timestamp pair, and an observed identity axis the store
+ * states nowhere lands with the declared absence marker and the empty-string
+ * placeholder rather than a fabricated value.
  */
 import {
   HARNESS_MAX_AGENTS,
   HARNESS_MAX_MODELS,
   HARNESS_MAX_SESSIONS,
-  HARNESS_MAX_TOOLS_PER_AGENT,
+  HARNESS_OBSERVED_ABSENCE_PLACEHOLDER,
   HARNESS_TELEMETRY_SCHEMA_ID,
   type HarnessAgentCount,
+  type HarnessCaptureAbsence,
   type HarnessModelCount,
+  type HarnessObservedAxis,
   type HarnessResult,
+  type HarnessSeatBinding,
   type HarnessTelemetryCapture,
+  type HarnessTelemetryDurations,
   type HarnessTelemetryRecord,
   type HarnessTelemetryWarning,
   type HarnessTokenCounts,
-  type HarnessToolCount,
+  type HarnessTruncation,
 } from "@delivery-os/core/contracts";
 import {
+  type HarnessSqliteHandle,
   type HarnessSqliteRow,
   type HarnessStoreOpener,
   openHarnessStoreReadOnly,
@@ -37,19 +47,53 @@ export type OpencodeTelemetryOptions = {
   readonly onStatement?: (sql: string) => void;
 };
 
-export type OpencodeTelemetryExtractor = {
-  readonly extract: (input: {
-    readonly workItemRef: string;
-    readonly runId: string;
-  }) => HarnessResult<HarnessTelemetryCapture>;
+/**
+ * One capture request: the work item still stamps the row, while the observed
+ * session identities the work item's recorded attempts hold select it (DM-8).
+ */
+export type OpencodeTelemetryInput = {
+  readonly workItemRef: string;
+  readonly runId: string;
+  /** The union of held session identities; an empty union is the caller's `skipped-gap`. */
+  readonly heldSessionIds: readonly string[];
+  /** Each held identity's recording binding, where its attempt recorded one. */
+  readonly bindings?: Readonly<Record<string, HarnessSeatBinding>>;
+  /** Recorded attempts that held no identity, counted and never inferred. */
+  readonly unattributedAttempts?: number;
+  /** The bounded attempt read's counted truncation, disclosed never silent. */
+  readonly attemptTruncation?: HarnessTruncation;
 };
 
-type SessionRow = {
-  readonly id: string;
-  readonly parentId: string | null;
-  readonly workItemRef: string | null;
-  readonly harnessVersion: string | null;
+export type OpencodeTelemetryExtractor = {
+  readonly extract: (input: OpencodeTelemetryInput) => HarnessResult<HarnessTelemetryCapture>;
 };
+
+type StoreGeneration = "current" | "legacy";
+
+type SessionFacts = {
+  readonly id: string;
+  readonly version: string | null;
+  readonly agent: string | null;
+  readonly model: string | null;
+  readonly cost: number | null;
+  readonly tokens: HarnessTokenCounts;
+  readonly timeCreated: number | null;
+  readonly timeUpdated: number | null;
+  readonly hasUsage: boolean;
+};
+
+type MessageFacts = {
+  readonly agent: string | null;
+  readonly model: string | null;
+  readonly cost: number | null;
+  readonly tokens: HarnessTokenCounts;
+};
+
+/** The per-session (agent, model) group cap (F-3, F-7). */
+const MAX_AGENT_MODEL_GROUPS = 16;
+
+/** The per-session message read bound (NFR-3): bounded, never a table scan. */
+const MAX_MESSAGES_PER_SESSION = 512;
 
 const str = (value: unknown): string | undefined =>
   typeof value === "string" && value.length > 0 ? value : undefined;
@@ -57,33 +101,71 @@ const str = (value: unknown): string | undefined =>
 const num = (value: unknown): number | null =>
   typeof value === "number" && Number.isFinite(value) ? value : null;
 
-const sessionRow = (row: HarnessSqliteRow): SessionRow | undefined => {
-  const id = str(row.id);
-  if (id === undefined) return undefined;
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const asRecord = (value: unknown): Record<string, unknown> | undefined => {
+  if (isRecord(value)) return value;
+  if (typeof value !== "string") return undefined;
+  try {
+    const parsed: unknown = JSON.parse(value);
+    return isRecord(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+/** Canonicalize one observed model object to a single identifier. */
+const canonicalModel = (value: unknown): string | null => {
+  const record = asRecord(value);
+  if (record === undefined) return str(value) ?? null;
+  const provider = str(record.providerID) ?? str(record.providerId);
+  const id = str(record.id);
+  if (provider === undefined || id === undefined) return null;
+  const variant = str(record.variant);
+  return variant === undefined || variant === "default"
+    ? `${provider}/${id}`
+    : `${provider}/${id}#${variant}`;
+};
+
+const tokenOf = (source: Record<string, unknown> | undefined, name: string): number | null =>
+  source === undefined ? null : num(source[name]);
+
+/** Normalize one observed `tokens` object. */
+const tokensOf = (value: unknown): HarnessTokenCounts => {
+  const tokens = asRecord(value);
+  const cache = tokens === undefined ? undefined : asRecord(tokens.cache);
   return {
-    id,
-    parentId: str(row.parent_id) ?? null,
-    workItemRef: str(row.work_item_ref) ?? null,
-    harnessVersion: str(row.harness_version) ?? null,
+    input: tokenOf(tokens, "input"),
+    output: tokenOf(tokens, "output"),
+    reasoning: tokenOf(tokens, "reasoning"),
+    cacheRead: tokenOf(cache, "read"),
+    cacheWrite: tokenOf(cache, "write"),
   };
 };
 
-const tokenColumn = (columns: ReadonlySet<string>, name: string): string | undefined =>
-  columns.has(name) ? name : undefined;
+/** Whether any token class states a non-zero count (a usage fact). */
+const hasAnyToken = (tokens: HarnessTokenCounts): boolean =>
+  [tokens.input, tokens.output, tokens.reasoning, tokens.cacheRead, tokens.cacheWrite].some(
+    (value) => value !== null && value > 0,
+  );
 
-const aggregateColumn = (column: string | undefined, alias: string): string =>
-  column === undefined ? `NULL AS ${alias}` : `SUM(${column}) AS ${alias}`;
+const addCounts = (left: number | null, right: number | null): number | null => {
+  if (left === null) return right;
+  if (right === null) return left;
+  return left + right;
+};
 
-const badColumn = (column: string | undefined, alias: string): string =>
-  column === undefined
-    ? `0 AS ${alias}`
-    : `SUM(CASE WHEN ${column} IS NOT NULL AND typeof(${column}) NOT IN ('integer','real') THEN 1 ELSE 0 END) AS ${alias}`;
+const failure = (summary: string): HarnessResult<never> => ({
+  ok: false,
+  error: { kind: "harness", code: "harness.telemetry.extraction-failed", summary },
+});
 
-const capCounts = <T extends { readonly calls: number }>(
+const fingerprint = <T extends { readonly calls: number }>(
   entries: readonly T[],
   cap: number,
   nameOf: (entry: T) => string,
-): { kept: readonly T[]; truncation?: { truncated: true; omitted: number; cap: number } } => {
+): { kept: readonly T[]; truncation?: HarnessTruncation } => {
   const sorted = [...entries].sort((left, right) => {
     if (right.calls !== left.calls) return right.calls - left.calls;
     return nameOf(left) < nameOf(right) ? -1 : 1;
@@ -95,288 +177,303 @@ const capCounts = <T extends { readonly calls: number }>(
   };
 };
 
-const failure = (summary: string): HarnessResult<never> => ({
-  ok: false,
-  error: { kind: "harness", code: "harness.telemetry.extraction-failed", summary },
-});
+const sessionFacts = (row: HarnessSqliteRow): SessionFacts | undefined => {
+  const id = str(row.id);
+  if (id === undefined) return undefined;
+  const tokens: HarnessTokenCounts = {
+    input: num(row.tokens_input),
+    output: num(row.tokens_output),
+    reasoning: num(row.tokens_reasoning),
+    cacheRead: num(row.tokens_cache_read),
+    cacheWrite: num(row.tokens_cache_write),
+  };
+  const cost = num(row.cost);
+  return {
+    id,
+    version: str(row.version) ?? null,
+    agent: str(row.agent) ?? null,
+    model: canonicalModel(row.model),
+    cost,
+    tokens,
+    timeCreated: num(row.time_created),
+    timeUpdated: num(row.time_updated),
+    // A reported zero is recorded as reported, but a session with no message
+    // and only zeros states no observable usage fact (OQ-8).
+    hasUsage: (cost ?? 0) > 0 || hasAnyToken(tokens),
+  };
+};
 
-/**
- * The per-session (agent, model) group cap (F-3, F-7).
- *
- * One telemetry record is emitted per group; a session spanning more groups
- * than this cap truncates with an explicit `truncated` warning carrying the
- * omitted group count. Never a silent drop.
- */
-const MAX_AGENT_MODEL_GROUPS = 16;
+const messageFacts = (row: HarnessSqliteRow): MessageFacts => {
+  const data = asRecord(row.data) ?? {};
+  return {
+    agent: str(data.agent) ?? null,
+    model: canonicalModel(data.model),
+    cost: num(data.cost),
+    tokens: tokensOf(data.tokens),
+  };
+};
+
+const SESSION_COLUMNS =
+  "id, parent_id, version, agent, model, cost, tokens_input, tokens_output, tokens_reasoning, tokens_cache_read, tokens_cache_write, time_created, time_updated";
+
+/** Per-message usage rows: the current generation scopes by type, legacy does not. */
+const messageSql = (generation: StoreGeneration): string =>
+  generation === "current"
+    ? `SELECT data FROM session_message WHERE session_id = ? AND type = 'assistant' ORDER BY seq LIMIT ${String(MAX_MESSAGES_PER_SESSION)}`
+    : `SELECT data FROM message WHERE session_id = ? ORDER BY time_created, id LIMIT ${String(MAX_MESSAGES_PER_SESSION)}`;
+
+const detectGeneration = (handle: HarnessSqliteHandle): StoreGeneration | undefined => {
+  const tables = new Set(
+    handle
+      .query("SELECT name FROM sqlite_master WHERE type = 'table'")
+      .map((row) => str(row.name))
+      .filter((name): name is string => name !== undefined),
+  );
+  if (tables.has("session_v2") && tables.has("session_message")) return "current";
+  if (tables.has("session") && tables.has("message")) return "legacy";
+  return undefined;
+};
+
+const durationsOf = (session: SessionFacts): HarnessTelemetryDurations => {
+  const start = session.timeCreated;
+  const end = session.timeUpdated;
+  if (start === null || end === null) return { status: "absent", reason: "duration-absent" };
+  const elapsedMs = end - start;
+  if (elapsedMs < 0) return { status: "absent", reason: "duration-absent" };
+  return {
+    status: "sourced",
+    start: new Date(start).toISOString(),
+    end: new Date(end).toISOString(),
+    elapsedMs,
+  };
+};
+
+type Group = {
+  readonly agent: string | null;
+  readonly model: string | null;
+  readonly calls: number;
+  readonly tokens: HarnessTokenCounts;
+  readonly cost: number | null;
+};
+
+/** Group one session's usage-bearing messages by observed (agent, model). */
+const groupsOf = (session: SessionFacts, messages: readonly MessageFacts[]): readonly Group[] => {
+  if (messages.length === 0) {
+    if (!session.hasUsage) return [];
+    return [
+      {
+        agent: session.agent,
+        model: session.model,
+        calls: 0,
+        tokens: session.tokens,
+        cost: session.cost,
+      },
+    ];
+  }
+  const groups = new Map<string, Group>();
+  for (const message of messages) {
+    const agent = message.agent ?? session.agent;
+    const model = message.model ?? session.model;
+    const key = `${agent ?? ""}\u0000${model ?? ""}`;
+    const existing = groups.get(key);
+    if (existing === undefined) {
+      groups.set(key, { agent, model, calls: 1, tokens: message.tokens, cost: message.cost });
+      continue;
+    }
+    groups.set(key, {
+      agent: existing.agent,
+      model: existing.model,
+      calls: existing.calls + 1,
+      tokens: {
+        input: addCounts(existing.tokens.input, message.tokens.input),
+        output: addCounts(existing.tokens.output, message.tokens.output),
+        reasoning: addCounts(existing.tokens.reasoning, message.tokens.reasoning),
+        cacheRead: addCounts(existing.tokens.cacheRead, message.tokens.cacheRead),
+        cacheWrite: addCounts(existing.tokens.cacheWrite, message.tokens.cacheWrite),
+      },
+      cost: addCounts(existing.cost, message.cost),
+    });
+  }
+  return [...groups.values()].sort((left, right) => {
+    if (right.calls !== left.calls) return right.calls - left.calls;
+    const leftKey = `${left.agent ?? ""}/${left.model ?? ""}`;
+    const rightKey = `${right.agent ?? ""}/${right.model ?? ""}`;
+    return leftKey < rightKey ? -1 : 1;
+  });
+};
 
 /** Build the opencode extractor over the injected read-only store seam. */
 export const createOpencodeTelemetryExtractor = (
   options: OpencodeTelemetryOptions,
 ): OpencodeTelemetryExtractor => ({
-  extract: ({ workItemRef, runId }) => {
+  extract: ({
+    workItemRef,
+    runId,
+    heldSessionIds,
+    bindings = {},
+    unattributedAttempts,
+    attemptTruncation,
+  }) => {
     const maxSessions = options.maxSessions ?? HARNESS_MAX_SESSIONS;
     const opened = openHarnessStoreReadOnly(options.opener, options.storePath, options.onStatement);
     if (!opened.ok) return failure("the opencode session store could not be opened read-only");
     const handle = opened.handle;
     try {
-      const messageColumns = new Set(
+      const generation = detectGeneration(handle);
+      if (generation === undefined) {
+        return failure("the opencode session store carries no recognised session generation");
+      }
+      const sessionTableName = generation === "current" ? "session_v2" : "session";
+      const readSession = (id: string): SessionFacts | undefined => {
+        const row = handle.query(
+          `SELECT ${SESSION_COLUMNS} FROM ${sessionTableName} WHERE id = ? LIMIT 1`,
+          [id],
+        )[0];
+        return row === undefined ? undefined : sessionFacts(row);
+      };
+      const readChildren = (parentId: string): readonly string[] =>
         handle
-          .query("PRAGMA table_info(message)")
-          .map((row) => row.name)
-          .filter((name): name is string => typeof name === "string"),
-      );
-      const input = tokenColumn(messageColumns, "input_tokens");
-      const output = tokenColumn(messageColumns, "output_tokens");
-      const reasoning = tokenColumn(messageColumns, "reasoning_tokens");
-      const cacheRead = tokenColumn(messageColumns, "cache_read_tokens");
-      const cacheWrite = tokenColumn(messageColumns, "cache_write_tokens");
-      const cost = tokenColumn(messageColumns, "cost");
+          .query(
+            `SELECT id FROM ${sessionTableName} WHERE parent_id = ? ORDER BY id LIMIT ${String(maxSessions + 1)}`,
+            [parentId],
+          )
+          .map((row) => str(row.id))
+          .filter((id): id is string => id !== undefined);
+      const readMessages = (sessionId: string): readonly MessageFacts[] =>
+        handle.query(messageSql(generation), [sessionId]).map(messageFacts);
 
-      const roots = handle
-        .query(
-          "SELECT id, parent_id, work_item_ref, harness_version FROM session WHERE parent_id IS NULL AND work_item_ref = ? ORDER BY id LIMIT ?",
-          [workItemRef, maxSessions + 1],
-        )
-        .map(sessionRow)
-        .filter((row): row is SessionRow => row !== undefined);
-      const failedSessions: Array<{
-        readonly sessionId: string | null;
-        readonly reason: HarnessTelemetryCapture["failedSessions"][number]["reason"];
-      }> = [];
-      // Store-scoped disclosure: parentless sessions without a work-item port
-      // belong to no delivery. They are counted as a bounded store warning,
-      // never fabricated as this delivery's failed sessions (GH-233 F-11).
-      const outOfPortOrphans =
-        num(
-          handle.query(
-            "SELECT COUNT(*) AS total FROM (SELECT id FROM session WHERE parent_id IS NULL AND (work_item_ref IS NULL OR work_item_ref = '') LIMIT ?)",
-            [maxSessions + 1],
-          )[0]?.total,
-        ) ?? 0;
-      const invalidIdentityRows =
-        num(
-          handle.query(
-            "SELECT COUNT(*) AS total FROM (SELECT id FROM session WHERE id IS NULL OR id = '' LIMIT ?)",
-            [maxSessions + 1],
-          )[0]?.total,
-        ) ?? 0;
+      const held = [...new Set(heldSessionIds)].sort();
+      const absences: HarnessCaptureAbsence[] = [];
+      const failedSessions: HarnessTelemetryCapture["failedSessions"][number][] = [];
+      const records: HarnessTelemetryRecord[] = [];
+      const truncationWarnings: HarnessTelemetryWarning[] = [];
+      let considered = 0;
 
-      const rootTotal =
-        roots.length > maxSessions
-          ? (num(
-              handle.query(
-                "SELECT COUNT(*) AS total FROM session WHERE parent_id IS NULL AND work_item_ref = ? LIMIT 1",
-                [workItemRef],
-              )[0]?.total,
-            ) ?? roots.length)
-          : roots.length;
-      const sessionTruncation =
-        roots.length > maxSessions
-          ? { truncated: true as const, omitted: rootTotal - maxSessions, cap: maxSessions }
-          : undefined;
-      const selectedRoots = roots.slice(0, maxSessions);
-      const tree: Array<{ session: SessionRow; root: SessionRow; parentChain: readonly string[] }> =
-        [];
-      for (const root of selectedRoots) {
-        tree.push({ session: root, root, parentChain: [] });
-        const queue: Array<{ session: SessionRow; chain: readonly string[] }> = [
+      for (const heldId of held) {
+        if (considered >= maxSessions) break;
+        const root = readSession(heldId);
+        if (root === undefined) {
+          absences.push({ sessionId: heldId, reason: "session-not-in-store" });
+          continue;
+        }
+        const tree: { readonly session: SessionFacts; readonly parentChain: readonly string[] }[] =
+          [{ session: root, parentChain: [] }];
+        const queue: { readonly session: SessionFacts; readonly chain: readonly string[] }[] = [
           { session: root, chain: [] },
         ];
-        while (queue.length > 0 && tree.length < maxSessions) {
+        while (queue.length > 0 && considered + tree.length < maxSessions) {
           const next = queue.shift();
           if (next === undefined) break;
-          const children = handle
-            .query(
-              "SELECT id, parent_id, work_item_ref, harness_version FROM session WHERE parent_id = ? ORDER BY id LIMIT ?",
-              [next.session.id, maxSessions + 1],
-            )
-            .map(sessionRow)
-            .filter((row): row is SessionRow => row !== undefined);
-          for (const child of children) {
-            if (tree.length >= maxSessions) break;
+          for (const childId of readChildren(next.session.id)) {
+            if (considered + tree.length >= maxSessions) break;
+            const child = readSession(childId);
+            if (child === undefined) continue;
             const chain = [...next.chain, next.session.id];
-            tree.push({ session: child, root, parentChain: chain });
+            tree.push({ session: child, parentChain: chain });
             queue.push({ session: child, chain });
           }
         }
-      }
-
-      const records: HarnessTelemetryRecord[] = [];
-      const groupTruncationWarnings: HarnessTelemetryWarning[] = [];
-      for (const entry of tree) {
-        const aggregate = handle.query(
-          `SELECT agent, model, COUNT(*) AS calls,
-             ${aggregateColumn(input, "input")}, ${aggregateColumn(output, "output")},
-             ${aggregateColumn(reasoning, "reasoning")},
-             ${aggregateColumn(cacheRead, "cacheRead")},
-             ${aggregateColumn(cacheWrite, "cacheWrite")},
-             ${cost === undefined ? "NULL" : `SUM(${cost})`} AS cost,
-             ${badColumn(input, "badInput")}, ${badColumn(output, "badOutput")},
-             ${badColumn(reasoning, "badReasoning")}, ${badColumn(cacheRead, "badCacheRead")},
-             ${badColumn(cacheWrite, "badCacheWrite")}, ${badColumn(cost, "badCost")}
-           FROM message WHERE session_id = ? GROUP BY agent, model
-           ORDER BY calls DESC, agent ASC, model ASC LIMIT ?`,
-          [entry.session.id, MAX_AGENT_MODEL_GROUPS + 1],
-        );
-        if (aggregate.length === 0) {
-          failedSessions.push({ sessionId: entry.session.id, reason: "invalid-session-identity" });
-          continue;
-        }
-        if (aggregate.length > MAX_AGENT_MODEL_GROUPS) {
-          const total =
-            num(
-              handle.query(
-                "SELECT COUNT(*) AS total FROM (SELECT 1 FROM message WHERE session_id = ? GROUP BY agent, model) LIMIT 1",
-                [entry.session.id],
-              )[0]?.total,
-            ) ?? aggregate.length;
-          groupTruncationWarnings.push({
-            reason: "truncated",
-            field: `agent-model-groups(omitted=${Math.max(
-              total - MAX_AGENT_MODEL_GROUPS,
-              0,
-            )},cap=${MAX_AGENT_MODEL_GROUPS})`,
-          });
-        }
-        const harnessVersion = entry.root.harnessVersion;
-        for (const row of aggregate.slice(0, MAX_AGENT_MODEL_GROUPS)) {
-          const warnings: HarnessTelemetryWarning[] = [];
-          const agent = str(row.agent);
-          const model = str(row.model);
-          if (agent === undefined || model === undefined) {
-            failedSessions.push({
-              sessionId: entry.session.id,
-              reason: "invalid-session-identity",
-            });
+        for (const entry of tree) {
+          considered += 1;
+          const groups = groupsOf(entry.session, readMessages(entry.session.id));
+          if (groups.length === 0) {
+            failedSessions.push({ sessionId: entry.session.id, reason: "no-usage-fact" });
             continue;
           }
-          const tokenFor = (
-            alias: string,
-            badAlias: string,
-            column: string | undefined,
-            field: string,
-          ): number | null => {
-            if (column === undefined) {
-              warnings.push({ reason: "optional-field-absent", field });
-              return null;
-            }
-            if ((num(row[badAlias]) ?? 0) > 0) {
-              warnings.push({ reason: "non-numeric-value", field });
-              return null;
-            }
-            return num(row[alias]);
-          };
-          const tokens: HarnessTokenCounts = {
-            input: tokenFor("input", "badInput", input, "input"),
-            output: tokenFor("output", "badOutput", output, "output"),
-            reasoning: tokenFor("reasoning", "badReasoning", reasoning, "reasoning"),
-            cacheRead: tokenFor("cacheRead", "badCacheRead", cacheRead, "cacheRead"),
-            cacheWrite: tokenFor("cacheWrite", "badCacheWrite", cacheWrite, "cacheWrite"),
-          };
-          let recordCost = num(row.cost);
-          if (cost === undefined) {
-            warnings.push({ reason: "cost-missing", field: "cost" });
-            recordCost = null;
-          } else if ((num(row.badCost) ?? 0) > 0) {
-            warnings.push({ reason: "non-numeric-value", field: "cost" });
-            recordCost = null;
-          } else if (recordCost === null) {
-            warnings.push({ reason: "cost-missing", field: "cost" });
-          }
-
-          const toolRows = handle
-            .query(
-              "SELECT part.tool AS tool, COUNT(*) AS calls FROM part JOIN message ON message.id = part.message_id WHERE part.session_id = ? AND message.agent = ? AND message.model = ? GROUP BY part.tool ORDER BY calls DESC, part.tool ASC LIMIT ?",
-              [entry.session.id, agent, model, HARNESS_MAX_TOOLS_PER_AGENT + 1],
-            )
-            .flatMap((toolRow): HarnessToolCount[] => {
-              const tool = str(toolRow.tool);
-              const calls = num(toolRow.calls);
-              if (tool === undefined || calls === null) return [];
-              return [{ tool, calls }];
-            });
-          const toolTruncation =
-            toolRows.length > HARNESS_MAX_TOOLS_PER_AGENT
-              ? {
-                  truncated: true as const,
-                  omitted: toolRows.length - HARNESS_MAX_TOOLS_PER_AGENT,
-                  cap: HARNESS_MAX_TOOLS_PER_AGENT,
-                }
-              : undefined;
-          if (
-            options.pinnedVersion !== undefined &&
-            harnessVersion !== null &&
-            harnessVersion !== options.pinnedVersion
-          ) {
-            warnings.push({
-              reason: "version-drift",
-              field: `harnessVersion(expected=${options.pinnedVersion},observed=${harnessVersion})`,
+          if (groups.length > MAX_AGENT_MODEL_GROUPS) {
+            truncationWarnings.push({
+              reason: "truncated",
+              field: `agent-model-groups(omitted=${String(groups.length - MAX_AGENT_MODEL_GROUPS)},cap=${String(MAX_AGENT_MODEL_GROUPS)})`,
             });
           }
-          records.push({
-            schemaId: HARNESS_TELEMETRY_SCHEMA_ID,
-            workItemRef,
-            runId,
-            sessionId: entry.session.id,
-            harnessKind: "opencode",
-            harnessVersion,
-            agent,
-            model,
-            treeRoot: entry.root.id,
-            parentChain: entry.parentChain,
-            tokens,
-            calls: num(row.calls) ?? 0,
-            toolCounts: toolRows.slice(0, HARNESS_MAX_TOOLS_PER_AGENT),
-            ...(toolTruncation === undefined ? {} : { toolTruncation }),
-            cost: recordCost,
-            capturedAt: options.now(),
-            warnings,
-          });
+          const binding = bindings[heldId];
+          const durations = durationsOf(entry.session);
+          for (const group of groups.slice(0, MAX_AGENT_MODEL_GROUPS)) {
+            const warnings: HarnessTelemetryWarning[] = [];
+            const absentAxes: HarnessObservedAxis[] = [];
+            if (group.agent === null) {
+              absentAxes.push("agent");
+              warnings.push({ reason: "optional-field-absent", field: "agent" });
+            }
+            if (group.model === null) {
+              absentAxes.push("model");
+              warnings.push({ reason: "optional-field-absent", field: "model" });
+            }
+            // The seat claim cites the recording attempt's binding, and attaches
+            // only to the group whose observed agent equals the binding's agent.
+            const bindsThisGroup = binding !== undefined && group.agent === binding.agent;
+            if (!bindsThisGroup) {
+              warnings.push({ reason: "unresolved-seat", field: "seat" });
+            } else if (group.model !== null && group.model !== binding.resolvedModel) {
+              warnings.push({ reason: "model-divergence", field: "model" });
+            }
+            if (binding !== undefined && group.agent !== null && group.agent !== binding.agent) {
+              warnings.push({ reason: "agent-divergence", field: "agent" });
+            }
+            const harnessVersion = entry.session.version;
+            if (harnessVersion === null) {
+              warnings.push({ reason: "optional-field-absent", field: "harnessVersion" });
+            } else if (
+              options.pinnedVersion !== undefined &&
+              harnessVersion !== options.pinnedVersion
+            ) {
+              warnings.push({ reason: "version-drift", field: "harnessVersion" });
+            }
+            if (durations.status === "absent") {
+              warnings.push({ reason: "duration-absent", field: "durations" });
+            }
+            // No observed generation exposes a populated tool source.
+            warnings.push({ reason: "no-tool-source", field: "toolCounts" });
+            if (group.cost === null && !hasAnyToken(group.tokens)) {
+              failedSessions.push({ sessionId: entry.session.id, reason: "no-usage-fact" });
+              continue;
+            }
+            records.push({
+              schemaId: HARNESS_TELEMETRY_SCHEMA_ID,
+              workItemRef,
+              runId,
+              sessionId: entry.session.id,
+              harnessKind: "opencode",
+              harnessVersion,
+              agent: group.agent ?? HARNESS_OBSERVED_ABSENCE_PLACEHOLDER,
+              model: group.model ?? HARNESS_OBSERVED_ABSENCE_PLACEHOLDER,
+              treeRoot: root.id,
+              parentChain: entry.parentChain,
+              tokens: group.tokens,
+              calls: group.calls,
+              toolCounts: [],
+              cost: group.cost,
+              capturedAt: options.now(),
+              warnings,
+              seat: bindsThisGroup ? (binding?.seat ?? null) : null,
+              resolvedModel: bindsThisGroup ? (binding?.resolvedModel ?? null) : null,
+              durations,
+              ...(absentAxes.length === 0 ? {} : { absentObservedAxes: absentAxes }),
+            });
+          }
         }
       }
 
-      const agentCounts: HarnessAgentCount[] = [];
-      const modelCounts: HarnessModelCount[] = [];
+      const agentTotals = new Map<string, number>();
+      const modelTotals = new Map<string, number>();
       for (const record of records) {
-        const existingAgent = agentCounts.find((entry) => entry.agent === record.agent);
-        if (existingAgent === undefined)
-          agentCounts.push({ agent: record.agent, calls: record.calls });
-        else
-          agentCounts[agentCounts.indexOf(existingAgent)] = {
-            agent: existingAgent.agent,
-            calls: existingAgent.calls + record.calls,
-          };
-        const existingModel = modelCounts.find((entry) => entry.model === record.model);
-        if (existingModel === undefined)
-          modelCounts.push({ model: record.model, calls: record.calls });
-        else
-          modelCounts[modelCounts.indexOf(existingModel)] = {
-            model: existingModel.model,
-            calls: existingModel.calls + record.calls,
-          };
+        agentTotals.set(record.agent, (agentTotals.get(record.agent) ?? 0) + record.calls);
+        modelTotals.set(record.model, (modelTotals.get(record.model) ?? 0) + record.calls);
       }
-      const agents = capCounts(agentCounts, HARNESS_MAX_AGENTS, (entry) => entry.agent);
-      const models = capCounts(modelCounts, HARNESS_MAX_MODELS, (entry) => entry.model);
-      const warnings = [
-        ...records.flatMap((record) => record.warnings),
-        ...groupTruncationWarnings,
-        ...(outOfPortOrphans === 0
-          ? []
-          : [
-              {
-                reason: "unattributable-session" as const,
-                field: `store:out-of-port-orphans=${outOfPortOrphans}`,
-              },
-            ]),
-        ...(invalidIdentityRows === 0
-          ? []
-          : [
-              {
-                reason: "invalid-session-identity" as const,
-                field: `store:invalid-identity=${invalidIdentityRows}`,
-              },
-            ]),
-      ];
+      const agentCounts: HarnessAgentCount[] = [...agentTotals].map(([agent, calls]) => ({
+        agent,
+        calls,
+      }));
+      const modelCounts: HarnessModelCount[] = [...modelTotals].map(([model, calls]) => ({
+        model,
+        calls,
+      }));
+      const agents = fingerprint(agentCounts, HARNESS_MAX_AGENTS, (entry) => entry.agent);
+      const models = fingerprint(modelCounts, HARNESS_MAX_MODELS, (entry) => entry.model);
+      const sessionTruncation: HarnessTruncation | undefined =
+        considered < held.length
+          ? { truncated: true, omitted: held.length - considered, cap: maxSessions }
+          : undefined;
       return {
         ok: true,
         value: {
@@ -387,10 +484,15 @@ export const createOpencodeTelemetryExtractor = (
           agents: agents.kept,
           models: models.kept,
           failedSessions,
-          warnings,
+          warnings: [...records.flatMap((record) => record.warnings), ...truncationWarnings],
           ...(sessionTruncation === undefined ? {} : { sessionTruncation }),
           ...(agents.truncation === undefined ? {} : { agentTruncation: agents.truncation }),
           ...(models.truncation === undefined ? {} : { modelTruncation: models.truncation }),
+          ...(absences.length === 0 ? {} : { absences }),
+          ...(unattributedAttempts === undefined || unattributedAttempts === 0
+            ? {}
+            : { unattributedAttempts }),
+          ...(attemptTruncation === undefined ? {} : { attemptTruncation }),
         },
       };
     } catch {

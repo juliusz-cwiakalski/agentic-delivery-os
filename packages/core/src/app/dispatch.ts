@@ -695,6 +695,9 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
     const budget = ports.restartBudget ?? 0;
     let resumeMode = ports.resumeMode;
     let prefillCostAcknowledged = ports.prefillCostAcknowledged;
+    // The one session identity this attempt held, set by a successful
+    // spawn/resume (GH-335 DM-8). A pre-session refusal leaves it unset.
+    let heldSessionId: string | undefined;
 
     const record = (input: {
       readonly token: DispatchToken;
@@ -731,6 +734,8 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
         ...(resumeMode === undefined ? {} : { resumeMode }),
         ...(prefillCostAcknowledged === undefined ? {} : { prefillCostAcknowledged }),
         ...(nomination === undefined ? {} : { providerProfile: nomination.profile }),
+        ...(heldSessionId === undefined ? {} : { sessionIds: [heldSessionId] }),
+        ...(ports.harnessBinding === undefined ? {} : { binding: ports.harnessBinding }),
         evidenceRefs: input.evidenceRefs,
         recordedAt: now,
       };
@@ -874,6 +879,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       });
     }
 
+    heldSessionId = session.value.sessionId;
     const collectPromise = ports.harness.collect({ handle: session.value });
 
     // Progress-based liveness (NFR-2, DEC-9): poll at the `lane.liveness-interval`

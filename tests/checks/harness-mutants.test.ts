@@ -209,7 +209,11 @@ describe("TC-HARN-029 named guard mutants", () => {
           now: () => "2026-11-06T00:00:00Z",
           onStatement: (sql: string) => statements.push(sql),
         })
-        .extract({ workItemRef: "GH-233", runId: "run" });
+        .extract({
+          workItemRef: "GH-233",
+          runId: "run",
+          heldSessionIds: built.heldSessionIds,
+        });
     } catch {
       // The mutant write is rejected by the read-only seam; the statement log
       // still names it.
@@ -224,13 +228,10 @@ describe("TC-HARN-029 named guard mutants", () => {
       "full-scan",
       (text) =>
         text
+          .replace("WHERE id = ? LIMIT 1", "")
           .replace(
-            "FROM part JOIN message ON message.id = part.message_id WHERE part.session_id = ? AND message.agent = ? AND message.model = ?",
-            "FROM part JOIN message ON message.id = part.message_id WHERE 1 = 1",
-          )
-          .replace(
-            "GROUP BY part.tool ORDER BY calls DESC, part.tool ASC LIMIT ?",
-            "GROUP BY part.tool ORDER BY calls DESC, part.tool ASC",
+            "WHERE session_id = ? AND type = 'assistant' ORDER BY seq LIMIT ",
+            "ORDER BY seq LIMIT ",
           ),
     );
     const store = await import("../fixtures/harness/opencode-store/build");
@@ -250,10 +251,13 @@ describe("TC-HARN-029 named guard mutants", () => {
         now: () => "2026-11-06T00:00:00Z",
         onStatement: (sql: string) => statements.push(sql),
       })
-      .extract({ workItemRef: "GH-233", runId: "run" });
+      .extract({
+        workItemRef: "GH-233",
+        runId: "run",
+        heldSessionIds: built.heldSessionIds,
+      });
     const scan = statements.find(
-      (sql) =>
-        sql.includes("FROM part") && (!sql.includes("LIMIT") || !sql.includes("session_id = ?")),
+      (sql) => sql.includes("FROM session_v2") && !sql.includes("WHERE"),
     );
     if (scan === undefined) passed("full-scan");
   });
@@ -262,11 +266,7 @@ describe("TC-HARN-029 named guard mutants", () => {
     const mutant = await loadMutant(
       "packages/adapters/src/harness/telemetry-opencode.ts",
       "cost-zero",
-      (text) =>
-        text.replace(
-          '} else if (recordCost === null) {\n            warnings.push({ reason: "cost-missing", field: "cost" });\n          }',
-          '} else if (recordCost === null) {\n            warnings.push({ reason: "cost-missing", field: "cost" });\n            recordCost = 0;\n          }',
-        ),
+      (text) => text.replace("cost: group.cost,", "cost: group.cost ?? 0,"),
     );
     const store = await import("../fixtures/harness/opencode-store/build");
     const built = store.buildOpencodeStore({ variant: "missing-cost" });
@@ -286,7 +286,11 @@ describe("TC-HARN-029 named guard mutants", () => {
         storePath: built.path,
         now: () => "2026-11-06T00:00:00Z",
       })
-      .extract({ workItemRef: "GH-233", runId: "run" });
+      .extract({
+        workItemRef: "GH-233",
+        runId: "run",
+        heldSessionIds: built.heldSessionIds,
+      });
     const fabricated = result.value?.records.find((record) => record.cost === 0);
     if (fabricated === undefined) passed("cost-zero");
   });
@@ -297,12 +301,12 @@ describe("TC-HARN-029 named guard mutants", () => {
       "drift-hard-fail",
       (text) =>
         text.replace(
-          'warnings.push({ reason: "optional-field-absent", field });\n              return null;',
-          'throw new Error("optional-field-absent");',
+          'warnings.push({ reason: "duration-absent", field: "durations" });',
+          'throw new Error("duration-absent");',
         ),
     );
     const store = await import("../fixtures/harness/opencode-store/build");
-    const built = store.buildOpencodeStore({ variant: "no-optional-column" });
+    const built = store.buildOpencodeStore({ variant: "inverted-timestamps" });
     temporary.push(`${built.directory}/opencode.db`);
     const adapters = await import("../../packages/adapters/src/harness/sqlite-loader");
     const module = (await import(mutant.url)) as {
@@ -316,7 +320,11 @@ describe("TC-HARN-029 named guard mutants", () => {
         storePath: built.path,
         now: () => "2026-11-06T00:00:00Z",
       })
-      .extract({ workItemRef: "GH-233", runId: "run" });
+      .extract({
+        workItemRef: "GH-233",
+        runId: "run",
+        heldSessionIds: built.heldSessionIds,
+      });
     if (result.ok) passed("drift-hard-fail");
   });
 

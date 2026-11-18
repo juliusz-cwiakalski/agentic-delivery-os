@@ -1029,7 +1029,8 @@ export const createHarnessAdmission = (input: {
   readonly versionProbe: HarnessVersionProbe;
   readonly now: () => number;
 }): (() => Promise<
-  { readonly ok: true } | { readonly ok: false; readonly error: ProductionHarnessRefusal }
+  | { readonly ok: true; readonly facts: ProductionHarnessFacts }
+  | { readonly ok: false; readonly error: ProductionHarnessRefusal }
 >) => {
   return async () => {
     const instance = await resolveHarnessInstance({
@@ -1057,7 +1058,7 @@ export const createHarnessAdmission = (input: {
       mode: instance.value.mode ?? input.mode,
     };
     const refusal = harnessFactsRefusal(facts);
-    return refusal === undefined ? { ok: true } : { ok: false, error: refusal };
+    return refusal === undefined ? { ok: true, facts } : { ok: false, error: refusal };
   };
 };
 
@@ -1205,6 +1206,27 @@ export const createHarnessProfilePort = (request: {
     deliver: bind(port.deliver),
     resume: bind(port.resume),
   };
+};
+
+/**
+ * Resolve the opencode store path at the runtime-aware edge (GH-335 F-5, §7.1).
+ *
+ * The delivered default names the harness's own data directory with a `~/`
+ * prefix, and the harness's observed `OPENCODE_DB` override wins when the
+ * injected environment record carries it. Core reads no ambient environment:
+ * both the value and the home directory arrive injected.
+ */
+export const reconcileOpencodeStorePath = (input: {
+  readonly configured: string;
+  readonly environment: Readonly<Record<string, string | undefined>>;
+  readonly homeDirectory: string;
+}): string => {
+  const override = input.environment.OPENCODE_DB;
+  const chosen =
+    override !== undefined && override.trim().length > 0 ? override.trim() : input.configured;
+  if (chosen === "~") return input.homeDirectory;
+  if (chosen.startsWith("~/")) return `${input.homeDirectory}/${chosen.slice(2)}`;
+  return chosen;
 };
 
 /**
@@ -2074,8 +2096,38 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         record: { DELIVERY_WORK_PATH: descriptor.workDirectory },
       });
 
+    /**
+     * The harness facts the dispatch admission resolved for the run in flight.
+     *
+     * Composition-instance scoped, never process-global: the admission writes it
+     * once per dispatch and the composed port's lazy gate reads it at spawn
+     * time, so the adapter can never fall back to "inside" on a refused run.
+     */
+    let dispatchHarnessFacts: ProductionHarnessFacts | undefined;
+
+    /** The gate the dispatch port reads; absent for the non-dispatch lanes. */
+    const dispatchVersionGate = () =>
+      dispatchHarnessFacts === undefined
+        ? {
+            verdict: "indeterminate" as const,
+            observedVersion: null,
+            mode: "per-invocation-private-server" as const,
+          }
+        : {
+            verdict: dispatchHarnessFacts.versionVerdict,
+            observedVersion: dispatchHarnessFacts.observedVersion,
+            mode: dispatchHarnessFacts.mode,
+          };
+
     /** Build the delivered session port for one configured kind. */
-    const harnessFor = (kind: HarnessKind): HarnessSessionPort => {
+    const harnessFor = (
+      kind: HarnessKind,
+      gate?: () => {
+        readonly verdict: "inside" | "outside" | "indeterminate";
+        readonly observedVersion: string | null;
+        readonly mode: HarnessMode;
+      },
+    ): HarnessSessionPort => {
       const common = {
         runner: harnessSpawnRunner,
         buildEnvironment: buildHarnessEnvironment,
@@ -2088,6 +2140,9 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             ...common,
             starter: harnessSpawnStarter,
             command: "opencode",
+            // The gate reads the facts the dispatch admission resolved for this
+            // run, so a refusal cannot be bypassed by the adapter's default.
+            ...(gate === undefined ? {} : { versionGate: gate }),
             // The binding's surface mapping is injected: the adapter owns no
             // second copy of the rules (GH-335 F-3, TDR-0032).
             bindingSeams: {
@@ -2702,6 +2757,59 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       });
     };
 
+    /**
+     * The pre-session harness admission for one dispatch (GH-335 F-1, F-2).
+     *
+     * The version window is evaluated on the opencode delivery harness only:
+     * claude-code stays a registered compatibility surface (NG-1) and keeps its
+     * delivered behaviour. The probe runs once, in the declared allowlist
+     * environment, and its facts are memoized for the composed port's gate.
+     */
+    const dispatchHarnessAdmission = (settings: HarnessSettings) => async () => {
+      if (settings.kind !== "opencode") return { ok: true as const };
+      const descriptor: HarnessExecutionEnvironmentDescriptor = {
+        kind: settings.executionKind,
+        workDirectory: cwd,
+        environment: harnessEnvironmentEntries(settings),
+      };
+      const built = buildHarnessSpawnEnvironment({
+        descriptor,
+        parentEnvironment: environment,
+        credentials: harnessCredentials,
+        record: { DELIVERY_WORK_PATH: cwd },
+      });
+      if (!built.ok) {
+        return {
+          ok: false as const,
+          error: {
+            kind: "harness" as const,
+            code: built.error.code,
+            ...(built.error.field === undefined ? {} : { field: built.error.field }),
+            ...(built.error.summary === undefined ? {} : { summary: built.error.summary }),
+          },
+        };
+      }
+      const probe = createHarnessVersionProbe({
+        runner: harnessSpawnRunner,
+        command: "opencode",
+        cwd,
+        environment: built.value,
+      });
+      const admitted = await createHarnessAdmission({
+        kind: settings.kind,
+        mode: settings.mode,
+        registrations: productionHarnessRegistrations,
+        versionProbe: probe,
+        now: nowMs,
+      })();
+      if (!admitted.ok) {
+        dispatchHarnessFacts = undefined;
+        return admitted;
+      }
+      dispatchHarnessFacts = admitted.facts;
+      return { ok: true as const, facts: admitted.facts };
+    };
+
     const dispatchComposition = (
       settings: HarnessSettings,
       lane: LaneSettings,
@@ -2713,8 +2821,13 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       nowIso,
       newAttemptId: (ref) => `attempt-${ref}-${nowMs()}-${newFenceToken()}`,
       newDivergenceId: (ref) => `DIV-${ref}-${newFenceToken()}`,
-      harnesses: { opencode: harnessFor("opencode"), "claude-code": harnessFor("claude-code") },
+      harnesses: {
+        opencode: harnessFor("opencode", dispatchVersionGate),
+        "claude-code": harnessFor("claude-code"),
+      },
       defaultHarness: settings.kind,
+      harnessAdmission: dispatchHarnessAdmission(settings),
+      harnessFacts: () => dispatchHarnessFacts,
       descriptor: {
         kind: settings.executionKind,
         workDirectory: cwd,
@@ -2824,9 +2937,19 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       if (!resolved.ok) return { ok: false, code: resolved.error.code };
       const settings = resolveHarnessSettings(resolved.value.values, resolved.value.origins);
       if (!settings.ok) return { ok: false, code: settings.error.code };
+      // GH-335 §7.1: reconcile the store location at the edge (the default's
+      // `~/` home expansion plus the harness's observed override).
+      const reconciled: HarnessSettings = {
+        ...settings.value,
+        opencodeDatabasePath: reconcileOpencodeStorePath({
+          configured: settings.value.opencodeDatabasePath,
+          environment,
+          homeDirectory,
+        }),
+      };
       const lane = resolveLaneSettings(resolved.value.values, resolved.value.origins);
       return lane.ok
-        ? { ok: true, settings: settings.value, lane: lane.value }
+        ? { ok: true, settings: reconciled, lane: lane.value }
         : { ok: false, code: lane.error.code };
     };
 
