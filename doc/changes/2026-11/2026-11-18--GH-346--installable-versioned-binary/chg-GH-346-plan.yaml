@@ -1,0 +1,1120 @@
+# GH-346 implementation plan — machine-readable projection (delivery.plan.v1).
+# Canonical plan artifact: this YAML document is the ONLY plan file for the
+# change. `plan validate`, `plan diff`, `plan overlap`, and `lint plan` read it
+# directly. Extra phase data (goal, contract, AC/TC acceptance, authored scope,
+# gate commands, commit subject) rides in YAML comments so the parsed document
+# stays schema-strict: the plan declares phases and scope only — no `tasks` key,
+# no progress log. Plan-phase progress is a pm-notes `notes:` entry naming the
+# plan phase id, the commit hash, and the test result.
+#
+# SOURCES (single source of truth; this plan invents no requirement):
+#   - Spec:      ./chg-GH-346-spec.md (v1.0: F-1..F-16; DM-1..DM-8;
+#                NFR-1..NFR-17; 34 ACs AC-F1-1..AC-F16-1; DEC-1..DEC-14;
+#                RSK-1..RSK-16; OQ-1..OQ-6; §5.1 capability details; §6 flows 1-9;
+#                §7.1 in-scope list; §8.1 invocation table; §8.3 data model;
+#                §8.5 backward compatibility; §16 affected components, the
+#                documentation obligations and the contract surfaces this change
+#                moves; §17 acceptance criteria with the ticket traceability and
+#                verification intent; §18 rollout order; normative Appendix A
+#                (token contract), B (seven replace steps), C.1-C.4 (admission,
+#                disposition, removal, dry-run plans), D (`install.status.v1`),
+#                E (eleven declared `install` rows)).
+#   - Test plan: ./chg-GH-346-test-plan.md (v1.0: 83 cases — TC-BIN-060..071 and
+#                TC-INST-001..123; 34/34 AC coverage in both directions; §3.5
+#                declared assertion bases and seams (BYTE/GIT/SPAWN/READ/ATOMIC/
+#                ORDER/FAULT/SEAM/CI/DOC/LIT-TP-1); §4.3 negative controls;
+#                §5.1 scenario index; §5.2 scenario details; §6.2 fixtures to
+#                author; §6.3 the numbered gate battery G0..G7 and the evidence
+#                shape; §7.1 new files; §7.2 the 27 delivered suites that move or
+#                are re-run as controls; §8.3 open questions OQ-TP-1..8).
+#   - PM record: ./chg-GH-346-pm-notes.yaml (milestone "M4: Jaiship-native
+#                delivery", story M4-S1; the five binding decisions
+#                TDR-0036..TDR-0040; the clarify-scope defect evidence; the
+#                staging fact that the five TDRs are untracked; the retro that
+#                lifecycle commands need `PATH="$PWD/node_modules/.bin:$PATH"`).
+#   - Decisions: doc/decisions/TDR-0036 (composed family), TDR-0037 (artifact and
+#                identity), TDR-0038 (stability and dev exclusion), TDR-0039
+#                (compatibility check), TDR-0040 (upgrade/rollback/uninstall/
+#                purge boundaries). All five are `Proposed`; owner acceptance is
+#                the pull-request review.
+#   - Schema:    doc/spec/features/feature-plan-schema.md (scope keys
+#                files/folders/packages, per-phase one-line summary, done
+#                artifacts, leases, weightClass, interactions, tier; no tasks
+#                key, no progress log).
+#   - Template:  doc/templates/implementation-plan-template.md.
+#   - Precedent: ./../2026-11-17--GH-338--github-adapter-completion/chg-GH-338-plan.yaml
+#                (comment-carried phase data, one commit per plan phase, the
+#                untracked-decision-record staging pattern, the SCOPE
+#                DECLARATION RULE, the split-case notes, the final-phase release
+#                obligations) and ./../2026-11-16--GH-299--metrics-spend/chg-GH-299-plan.yaml.
+#   - Rules:     .ai/rules/typescript.md (strict typing, injected
+#                environment/clock/randomness, pure domain, adapters own I/O,
+#                injected fakes over `mock.module`), .ai/rules/testing-strategy.md
+#                (`bun:test` under `tests/**/*.test.ts`, layers structure/
+#                behaviour/checks/boundaries, permanent suites assert the current
+#                tree and never a diff against a moving base branch, `pnpm check`
+#                is the aggregate gate), .ai/rules/bash.md (the two shell edits),
+#                AGENTS.md (branch model: branch from and target `main-tools`; the
+#                supplementary range gate; the doc-distribution obligation).
+#
+# COMMIT-BOUNDARY REALITY (binding on phase 1 — the untracked decision records):
+#   Five decision records are UNTRACKED in the worktree at plan time:
+#     doc/decisions/TDR-0036-install-lifecycle-composed-command-family.md
+#     doc/decisions/TDR-0037-self-contained-binary-build-identity.md
+#     doc/decisions/TDR-0038-install-target-stability-and-dev-build-exclusion.md
+#     doc/decisions/TDR-0039-installed-binary-state-format-compatibility-check.md
+#     doc/decisions/TDR-0040-upgrade-rollback-uninstall-purge-boundaries.md
+#   The commit primitive stages only plan-declared scope plus the change folder,
+#   so a phase that declares nothing for them would leave them untracked and the
+#   change would ship without its binding design. Phase 1 therefore declares the
+#   five exact paths plus doc/decisions/00-index.md and the doc/decisions/
+#   folder, and they land on `phase complete delivery_planning`. Their index rows
+#   and the `Proposed` status are already committed in doc/decisions/00-index.md,
+#   so the index is declared for staging authority (a status/typo touch stages
+#   with them); if it needs no edit this phase produces one advisory `plan diff`
+#   `undeclared-missing` finding, which is observational and not a failure.
+#
+# SCOPE DECLARATION RULE (binding on every phase; GH-338 precedent):
+#   A phase declares every path whose content it AUTHORS or EDITS — that is what
+#   gives the commit primitive staging authority. A file that is only RE-RUN as a
+#   delivered regression control is NOT declared: tests/checks/
+#   prompt-conformance.test.ts, tests/checks/help-guide-coverage.test.ts
+#   (non-mutant arms), tests/behaviour/entrypoint-help-isolation.test.ts,
+#   tests/behaviour/entrypoint-version.test.ts,
+#   tests/behaviour/identity-override.test.ts and tests/checks/ci-checks.test.ts
+#   are controls, so they appear in the gate commands and in no phase's scope.
+#   Declaring a control would only produce an advisory `undeclared-missing`
+#   finding for a file that needs no edit. Every file the test plan names as an
+#   assertion site to CREATE or EXTEND is declared by the phase that owns that
+#   half of the case (§7.1 and §7.2 of the test plan are both exhausted by the
+#   six phases below).
+#
+# PHASE ORDER AND THE COUPLING THAT FORCES PHASE 2 TO BE ONE COMMIT:
+#   Order follows spec §18 (artifact and identity, then the family with its
+#   admission rules, then the record and the replace, then removal and the
+#   dry-runs, then the guards, then the documentation correction). Three
+#   couplings are load-bearing and are NOT split:
+#   (1) THE CONFORMANCE SURFACE MOVES IN THE SAME COMMIT AS THE FAMILY. Once
+#       `install` joins `PROMPT_REQUIRED_COMMANDS`, `check:prompt`
+#       (prompt-conformance), `check:help` (help-guide-coverage) and the pinned
+#       count/tail suites (entrypoint-composition, entrypoint-two-bins,
+#       supervision-mounting, metrics-mounting and the other PINNING_FILES
+#       members) all fail unless the family entry, the five subcommand help
+#       entries, the M4 reference page, the page-root branch, the coverage
+#       inventory, the error-domain rows and the twelve pinned-count moves land in
+#       the same commit. Spec §16 declares that surface as one contract; the gates
+#       make it one commit. This is why spec §18's "(e) conformance surface"
+#       bullet has no phase of its own: it is delivered inside phase 2, and only
+#       the SHELL ownership guards remain as phase 5.
+#   (2) THE ERROR-DOMAIN REGISTER MOVES ONCE (phase 2). `pnpm check` runs
+#       `tests/checks/error-table-sync.test.ts`, which calls `runSyncCheck` over
+#       the live tree and compares the source table, the documented table in
+#       doc/spec/features/feature-result-contract.md and the corpora fixtures.
+#       Adding the `install` kind therefore cannot be done in two commits: phase 2
+#       declares the kind and all ELEVEN rows, documents them, moves the closed
+#       two-segment allowlist 65 -> 66 (exactly one row, `install.dev-build`, is
+#       kind-first two-segment) and adds one corpus row per identity. Each row's
+#       TRIGGER is then bound by the phase that owns the behaviour (see the
+#       trigger binding note in phase 2); a row with a declared identity is a
+#       register entry, never a wildcard, and RSK-14 binds every row to an AC.
+#   (3) DOCUMENTED-TABLE AND REFERENCE-PAGE OBLIGATIONS RIDE WITH THEIR GATE.
+#       Because of (2), doc/spec/features/feature-result-contract.md moves in
+#       phase 2 (documented rows plus the allowlist sentence), and because of (1)
+#       the M4 reference page doc/planning/oss-tooling/milestones/m4/commands/
+#       install.md moves in phase 2. These are the only two documentation edits
+#       outside phase 6; the rest of the documentation set (F-16) is phase 6.
+#   Two further orderings are declared rather than discovered:
+#   (4) THE PROCESS-EDGE RE-ENTRY FIX LANDS FIRST (phase 1). Nothing in phases
+#       2-6 installs a service unit — the lifecycle only stops a daemon through
+#       the delivered stop path — but the delivered daemon composition consumes
+#       `daemonEntry` for detached re-entry AND for the unit's executable, so an
+#       uncorrected compiled artifact would hand `/$bunfs/root/<name>` to a spawn
+#       or a unit. Phase 1 corrects the bins to supply `process.execPath` for a
+#       compiled run and the delivered script path otherwise, before any lifecycle
+#       commit exists (AC-F3-2, TC-BIN-069).
+#   (5) THE SHELL-INSTALLER GUARD LANDS AFTER THE FAMILY (phase 5). The
+#       installer's new refusal arm NAMES the lifecycle command and the
+#       uninstaller's reporting arm names the owning removal command, so both
+#       require the family to exist and be documented (phase 2). Their bash arms
+#       land with them (scripts/.tests/test-install.sh, test-uninstall.sh).
+#   The documentation phase is LAST (phase 6) and carries the release evidence:
+#   the guide, the four specification pages, the install-model correction, the
+#   documentation-truth gates, and the full G0..G7 battery including
+#   `bash scripts/.tests/test-doc-distribution.sh`. Two statements this change
+#   falsifies — the entrypoint page's "twenty-five families" count and the
+#   doc-distribution page's "no uninstall path exists" — are corrected in phase 6
+#   by design: no gate reads either sentence before then (verified: no assertion
+#   in tests/ reads them; doc-conformance pins the per-change delta tables phase 6
+#   extends), and the branch is unreleased for the whole window so no operator
+#   meets a false statement.
+#
+# AC OWNERSHIP (34/34; exactly one owning phase each; an earlier phase may
+#   produce a partial verdict, which is additive and never transfers ownership):
+#   Phase 1 (8): AC-F1-1, AC-F1-2, AC-F2-1, AC-F2-2, AC-F2-3, AC-F3-1,
+#                AC-F3-2, AC-F15-3
+#   Phase 2 (7): AC-F4-1, AC-F4-2, AC-F4-3, AC-F5-1, AC-F6-1, AC-F15-1,
+#                AC-F15-2
+#   Phase 3 (10): AC-F5-2, AC-F5-3, AC-F7-1, AC-F7-2, AC-F7-3, AC-F8-1,
+#                 AC-F8-2, AC-F9-1, AC-F9-2, AC-F9-3
+#   Phase 4 (6): AC-F9-4, AC-F10-1, AC-F10-2, AC-F11-1, AC-F12-1, AC-F13-1
+#   Phase 5 (2): AC-F14-1, AC-F14-2
+#   Phase 6 (1): AC-F16-1
+#   Count: 8 + 7 + 10 + 6 + 2 + 1 = 34. No AC is unowned and none is claimed
+#   twice. AC-F15-3 belongs to phase 1 because the build-side identity-literal
+#   derivation site is created by the build entry in that commit, and the
+#   bidirectional inventory comparison fails at phase 1's boundary if the site is
+#   not declared there; AC-F15-1 and AC-F15-2 belong to phase 2 because the
+#   family, the page, the inventory and the error register land there.
+#   GATE-EVIDENCE CASES (a case that supplies evidence for an AC owned by an
+#   earlier phase never moves that ownership — GH-338 phase-8 precedent):
+#     - AC-F1-2's build-output half is TC-BIN-063 (phase 1) and its documentation
+#       half is TC-INST-112 (phase 6, the page-claim table); the AC is declared met
+#       at DoD with both halves named.
+#     - AC-F15-1's and AC-F15-2's CONTRACT halves complete in phase 2
+#       (TC-INST-100..106); their battery-evidence cases are TC-INST-120,
+#       TC-INST-122 and TC-INST-123, run in phase 6's full battery. Phase 2's own
+#       boundary already runs the same aggregate gate, so the evidence is recorded
+#       once, at the phase that owns the battery.
+#     - AC-F11-1's and AC-F10-*'s real-artifact arms (TC-INST-050, TC-INST-060)
+#       are owned by phase 4 where the removal and dry-run contracts complete.
+#
+# TC -> PHASE MAP (83 ids; every id owned by exactly one phase — the phase whose
+#   commit lands the case together with the capability that makes it green):
+#   Phase 1 (13): TC-BIN-060..TC-BIN-071 (12), TC-INST-107
+#   Phase 2 (16): TC-INST-001..006 (6), TC-INST-010, TC-INST-013, TC-INST-014,
+#                 TC-INST-100..106 (7)
+#   Phase 3 (23): TC-INST-011, TC-INST-012, TC-INST-020..026 (7),
+#                 TC-INST-030..036 (7), TC-INST-040..046 (7)
+#   Phase 4 (20): TC-INST-050..056 (7), TC-INST-060..063 (4),
+#                 TC-INST-070..076 (7), TC-INST-080, TC-INST-081
+#   Phase 5 (4): TC-INST-090..093 (4)
+#   Phase 6 (7): TC-INST-110..112 (3), TC-INST-120..123 (4)
+#   Count: 13 + 16 + 23 + 20 + 4 + 7 = 83.
+#
+# SPLIT-CASE NOTES (a case whose suite or fixture is extended by two phases keeps
+#   its single owner; ownership follows the phase that COMPLETES the case. Every
+#   intermediate behaviour is a subset that is TRUE at that commit — never a
+#   claimed capability that does not exist):
+#   - TC-INST-001 (phase 2) asserts RESOLUTION of the five entry points. The four
+#     write verbs are exercised in their `--dry-run` form there (SPEC F-11: a
+#     dry-run is a pure plan, and every admission/identity refusal still applies);
+#     the declarative CONTENT of those plans is completed later and is owned by
+#     TC-INST-060..063 (phase 4).
+#   - TC-INST-020 (phase 3) owns the four-state disposition table. Phase 2 ships
+#     the table's three slot-free states (launcher discarded with its report,
+#     symlink replaced without write-through, absent destination created) and
+#     phase 3 adds the first state (a valid artifact becomes the slot through the
+#     step-5 rename) together with TC-INST-021/022/023.
+#   - TC-INST-050 and TC-INST-051 (phase 4) own the removal matrix and the
+#     three-way residual equality. Phase 2's `install uninstall` removes the only
+#     member that exists then (the artifact) and prints the residual set;
+#     phase 3's record and slot extend the member set; phase 4 completes the
+#     matrix, the block member and the equality.
+#   - TC-INST-060 (phase 4) owns the install dry-run's declared plan content.
+#     Phase 2 authors the renderer, phase 3 adds the slot and advisory lines,
+#     phase 4 adds the prior-namespace detection and the PATH block text.
+#   - TC-INST-080 (phase 4) owns the 4/4 daemon refusal. The install and rollback
+#     arms land in phase 3 because the replace is step 1's fourth gate
+#     (TC-INST-030 asserts it there); phase 4 extends the guard to the two removal
+#     paths (DEC-11) and completes the case.
+#   - TC-INST-011/012 (phase 3) own the recorded provenance and the dirty token in
+#     the record. The ADMISSION decision they rest on is phase 2's TC-INST-010.
+#   - TC-INST-121 (phase 6) owns the three bash suites. The installer and
+#     uninstaller arms land in phase 5 (their owning phase); the doc-distribution
+#     suite is delivered and is re-run there and here as the phase gate.
+#   - TC-INST-010's and TC-INST-013's "no write" proof uses the same snapshot
+#     helper across phases; tests/fixtures/install/home.ts and checkouts.ts are
+#     therefore declared by phase 2 and extended by phase 3/4 (both declared).
+#
+# RESOLVED OPEN QUESTIONS (test plan §8.3 — recorded as decisions here, not as
+#   tasks; no AC, case identity, exit code, cap or declared content is changed by
+#   any of them):
+#   OQ-TP-1 / FAULT-TP-1 (blocking for AC-F9-1) — HOW THE SEVEN-STEP CRASH MATRIX
+#     INDUCES ITS FAILURES. Decided: BOTH mechanisms, in this order.
+#     (a) A DECLARED TEST-ONLY INJECTION PORT on the replace runtime: an optional
+#     `installFault` construction input (`InstallFaultPort` in
+#     packages/core/src/contracts/install.ts) that names one of the six steps
+#     2..7 (`stage`, `verify`, `identity-compare`, `destination-to-slot`,
+#     `staged-to-destination`, `record-write`) and answers a typed failure. The
+#     production composition NEVER supplies it (asserted structurally in
+#     tests/structure/install-composition-absence.test.ts), and the family's
+#     declared runtime inputs are unchanged. The environment-value arm that
+#     FAULT-TP-1 offers as an alternative is DECLINED: NG-11 and spec §7.2 forbid
+#     a new environment variable, and an env-driven fault switch is exactly the
+#     ambient surface the change forbids. Fault implementations live in
+#     tests/fixtures/install/faults.ts.
+#     (b) CONSTRUCTED POST-FAILURE STATES on disk for steps 5, 6 and 7 (the two
+#     rename windows and the record write), because they are the states the
+#     invariant is about and they are assertable without any seam: destination
+#     absent with a runnable slot; slot valid with a staged file and no
+#     destination; destination and slot valid with a stale record. Step 1 is
+#     induced by its four gates (worktree, dev build, live daemon, pre-flight read
+#     error), which are refusal paths asserted independently.
+#     A step that can be induced by neither mechanism fails its case by name; it
+#     never reports a pass (test plan §3.5 FAULT-TP-1).
+#   OQ-TP-3 / SEAM-TP-1 (blocking for suite runtime) — IS THE BUILD IDENTITY
+#     INJECTABLE IN-PROCESS? Decided: YES, additively, and it is the primary
+#     mechanism. The delivered `EntrypointOptions` already carry optional
+#     `version`/`build` (`packages/cli/src/entrypoint.ts`), which production never
+#     supplies; phase 1 widens that existing seam to one optional DM-1 identity
+#     object (`buildIdentity`) behind the same presence guard, so a
+#     non-injected run keeps `0.0.0`/`dev` verbatim. Behaviour-tier lifecycle
+#     cases drive the composed program in-process with an injected identity and a
+#     scratch home/config/state/profile root, so no lifecycle case builds a
+#     107 MB artifact. The artifact tier (TC-BIN-*) and the single end-to-end arm
+#     (TC-INST-020, TC-INST-050) consume ONE cached compiled artifact. If the seam
+#     is not exposed, thirteen cases escalate to the artifact tier and the cost is
+#     recorded in test plan §10 — never a skip.
+#   OQ-TP-8 — WHERE THE ONE CACHED ARTIFACT LIVES. Decided: a SCRATCH output
+#     directory under `tmp/tmpdir/artifact/`, never `dist/`, so no case depends on
+#     a developer's prior build and `dist/` stays a product output only. The build
+#     entry takes `--out <dir>` with `dist` as its default, so AC-F1-1 asserts the
+#     default path and the artifact tier asserts the scratch path through the same
+#     entry (one build path, two declared output destinations).
+#   OQ-TP-7 — HOW THE OPERATOR'S SHELL IS IDENTIFIED FOR `--add-to-path`. Decided:
+#     the BASENAME OF THE INJECTED `SHELL` VALUE (never a login-shell probe, never
+#     a spawn), mapped exactly `zsh` -> `~/.zshrc`, `bash` -> `~/.bashrc`,
+#     `sh` -> `~/.profile`, with the leading home marker expanded against the
+#     injected home. The mapping is a pure function in
+#     packages/core/src/domain/install-path-block.ts and is the contract
+#     TC-INST-071 asserts. No resolver value and no configuration key is added
+#     (NG-11), and an unidentifiable shell without `--shell-profile` is the typed
+#     refusal `install.shell-profile.unresolved` (TC-INST-072). Explicit
+#     `--shell-profile <path>` always wins.
+#   OQ-TP-4 — OWNERSHIP OF THE DOC-CONFORMANCE PAGE-CLAIM TABLE. Decided: the
+#     phase-6 commit owns it, inside `tests/checks/doc-conformance.test.ts`, as a
+#     SELF-CONTAINED per-change requirement table over an exact declared page set
+#     (the GH-320 precedent), never an edit to a historical pinned set. `@pm` and
+#     `@doc-syncer` consume it at lifecycle phase 7/10; `@doc-syncer` does not
+#     author it. The table carries both directions (required phrases present,
+#     stale phrases absent) with one failing mutant per direction (TC-INST-112).
+#   OQ-TP-2 (owner @coder, phase 1) — observing the re-entry entry path without a
+#     detached spawn. Decided: the case asserts the VALUE the composition hands to
+#     the delivered daemon process port plus a static scan for a persisted bundle
+#     path; no new production surface is added for the test. A recording seam that
+#     is never reached fails TC-BIN-069 by name.
+#   OQ-TP-5 (owner @pm, lifecycle phase 9 quality_gates) — pre-CI evidence for
+#     AC-F15-2. Decided (CI-TP-1): the local run of
+#     `bun run scripts/checks/error-table-sync.ts` (allowlist reported as exactly
+#     66, eleven `install` rows) plus `tests/checks/ci-checks.test.ts` asserting
+#     the CI job still invokes the script and `pnpm check` still excludes it IS the
+#     evidence; CI remains the authority and a later CI failure is a review
+#     finding, never a silent pass.
+#   OQ-TP-6 (owner @pm / @readiness-reviewer, lifecycle phase 5 dor_check) —
+#     `TC-BIN-060+` colliding with three delivered GH-320 describe labels.
+#     Decided: every NEW describe title in a shared suite is prefixed `GH-346`
+#     (the delivered convention is already `GH-320 <id>`), no delivered label is
+#     renamed, and no new case reuses a delivered GH-320 scenario. Non-blocking;
+#     the DoR gate confirms it and no delivery work depends on it.
+#   OQ-5 (spec §14, corrected ticket reference) — the ticket cites a blueprint
+#     page that does not exist. Decided: `@pm` corrects the tracker reference at
+#     lifecycle phase 10/11 and the correction is recorded in the change record;
+#     NO repository file is created to satisfy a missing citation. GAP: no gate
+#     covers a tracker reference, so this is recorded rather than asserted, and
+#     the plan claims no AC for it.
+#
+# PLAN-LEVEL DECISIONS (module homes, seams and caches; GAP-T5 of the test plan
+#   makes production module naming delivery-bound, so the homes are DECLARED here
+#   for the commit primitive and the boundaries checks — no AC, NFR, cap or
+#   declared content is changed by any of them):
+#   D1. MODULE HOMES — core contracts and pure domain:
+#         packages/core/src/contracts/install.ts          DM-2 (`install.record.v1`),
+#           DM-4 (`install.status.v1`), the admission/provenance/disposition/
+#           record-state/slot-state/outcome vocabularies, the declared 128-root
+#           enumeration cap (DEC-9), the eleven row identities' trigger binding
+#           vocabulary, and the optional test-only `InstallFaultPort`.
+#         packages/core/src/domain/install-admission.ts   the pure admission
+#           predicate (S-1..S-3), the dev-build gate (D-2) and the disposition
+#           decision (C.2).
+#         packages/core/src/domain/install-record.ts      the record shape, its
+#           reader tolerance (`absent`/`unreadable`/`record-stale`) and the
+#           no-secret field set (DM-2, DEC-13).
+#         packages/core/src/domain/install-compatibility.ts the pure per-root
+#           verdict, the five-outcome vocabulary, the cap and the truncation
+#           report (DM-4, DEC-9, DEC-10).
+#         packages/core/src/domain/install-replace.ts     the seven-step plan
+#           (Appendix B), the identity comparison (step 4), the involutive
+#           rollback swap and the slot-content rule (DM-3).
+#         packages/core/src/domain/install-removal.ts     the removal matrix, its
+#           order and the residual-set computation (C.3, NFR-11).
+#         packages/core/src/domain/install-path-block.ts  the block rendering, the
+#           declared shell mapping, `--shell-profile` precedence and block removal
+#           (DM-5, OQ-TP-7).
+#         packages/core/src/domain/install-migration.ts   prior-namespace
+#           detection and the advisory/refusal copy (F-13, NG-1).
+#         packages/core/src/domain/install-status.ts      the DM-4 payload
+#           assembly and its deterministic order (NFR-16).
+#       ADAPTERS (I/O only, injected into the domain):
+#         packages/adapters/src/file/install-destination.ts  destination
+#           classification, staging in the destination directory, the two
+#           renames, slot read and the staged-file verification (steps 2,3,5,6).
+#         packages/adapters/src/file/install-record.ts       the atomic staged+
+#           renamed record write and its read (step 7, NFR-12).
+#         packages/adapters/src/file/install-state-roots.ts  the bounded header-only
+#           enumeration of the effective host root and its first-level project
+#           directories (DM-4, NFR-7).
+#         packages/adapters/src/file/install-profile.ts      the one operator-owned
+#           file: block append/replace/remove.
+#       CLI:
+#         packages/cli/src/commands/install.ts   grammar, the five handlers, the
+#           dry-run plans and the typed refusal mapping (no exit digit).
+#         packages/cli/src/output/install-text.ts the operator-facing lines.
+#         packages/cli/src/build-identity.ts      the DM-1 constant behind its
+#           presence guard, the artifact-name derivation (the one declared
+#           build-side site) and the token render.
+#         scripts/build-binary.ts                 the additive build entry
+#           registered as `build:binary` (repo-internal; never a member of
+#           ADOS_DELIVERY_SCRIPTS or ADOS_DELIVERY_TOOLS, never a second build
+#           path for library consumers).
+#       No new `@delivery-os/adapters` subpath is added: the install I/O lives in
+#       the delivered `./file` subpath, so no exports-parity baseline moves and no
+#       workspace-import entry is added.
+#   D2. THE ADMISSION SEAM IS THE DELIVERED GIT READ. `resolveCheckoutGitDirectories`
+#       / `readCheckoutIdentity` (packages/adapters/src/repo/index.ts) already
+#       answer the checkout root, the own git directory and the common git
+#       directory, or an absence. Admission therefore reuses them over the
+#       ARTIFACT'S OWN DIRECTORY and adds NO adapter export; DM-8's "pinned export
+#       surface moves once" is a conditional that does not fire. If the delivery
+#       finds a gap (for example an absence the read cannot express at that path),
+#       the additive read lands in the same file and moves
+#       `tests/checks/exports-parity.test.ts`, `tests/structure/inventory.json`
+#       and `tests/structure/content-inventory.test.ts` in PHASE 2 — the phase that
+#       consumes it; the failure mode otherwise is AC-F5-2's `unverified` arm
+#       failing by name.
+#   D3. PHASE-2 WRITE POSTURE (the declared intermediate). Phase 2's real `install`
+#       performs steps 1, 2, 3 and 6 (gates, stage, verify, staged->destination)
+#       and the slot-free dispositions; steps 4, 5 and 7 and the slot are phase 3;
+#       real `install rollback` answers `install.slot.absent` (which is TRUE until
+#       phase 3); real `install uninstall` removes the members that exist and
+#       prints the residual set; real `install purge` requires `--yes`. Phase 2's
+#       `install status` reports running identity, target stability, record state
+#       (`absent`), slot state (`absent`) and the managed block, and does NOT emit
+#       the state-format group; phase 3 adds it. No owned case asserts a complete
+#       payload before phase 3 (TC-INST-044/046 own it).
+#   D4. ONE PINNED INVENTORY, MOVED BY EVERY PHASE THAT ADDS PACKAGE SOURCE.
+#       tests/structure/inventory.json is an exact committed file list per package,
+#       so it is declared by phases 1, 2, 3 and 4 (the phases that add files under
+#       packages/**) and NOT by phases 5 and 6 (scripts, tests and docs only). The
+#       alternative — pre-declaring files that do not exist — is rejected because
+#       the inventory must equal the actual file set at every boundary.
+#   D5. NO NEW CONFIGURATION KEY, ENVIRONMENT VARIABLE, STATE RECORD KIND, EVENT
+#       TOPIC OR STATE-ROOT WRITE (NG-11, NFR-13): the install record lives in the
+#       config root, the status payload is derived and never persisted, and the
+#       compatibility verdict is computed per run. A phase that needs an ambient
+#       value takes it from the injected environment record instead.
+#   D6. THE ALIAS NAMES THE OWNING BINARY WITHOUT ADDING A LITERAL. The
+#       non-owning refusal must name the owning binary and may not hard-code it
+#       (spec F-4: "derived from the brand's binary name, no identity literal",
+#       and DM-7 keeps the product-surface literal inventory at five). Phase 2
+#       therefore has packages/cli/bin/delivery-os.ts import the primary bin's
+#       declared name from ./jaiship.ts as its OWNING name and pass it through
+#       `BinLauncherOptions`; the owning-role fact itself is declared by each bin
+#       (primary: owning; alias: absent, which defaults to not owning) and is
+#       threaded through packages/cli/src/bin-launcher.ts into the composition
+#       facts. No bin gains a second literal, the inventory stays at five
+#       product-surface sites, and the alias's own brand paths are untouched. If a
+#       literal is nevertheless introduced, TC-INST-107 fails by name.
+#
+# GATE SEQUENCE (every command runs from the repository root with the repo-local
+#   scratch temp directory, in the order the test plan's §6.3 battery declares;
+#   narrow-first at every phase, the aggregate gate where a pinned contract moves,
+#   and the full battery at the last phase):
+#   G0  TMPDIR=$PWD/tmp/tmpdir bun run build:binary                       (artifact tier, one cached build)
+#   G1  TMPDIR=$PWD/tmp/tmpdir pnpm check                                 (aggregate: lint, format, typecheck, all tests, boundaries, memory, prompt-conformance, help-guide-coverage, exports-parity)
+#   G2  TMPDIR=$PWD/tmp/tmpdir bun test <the phase's narrow suite set>
+#   G3  TMPDIR=$PWD/tmp/tmpdir bash scripts/.tests/test-install.sh
+#   G4  TMPDIR=$PWD/tmp/tmpdir bash scripts/.tests/test-uninstall.sh
+#   G5  TMPDIR=$PWD/tmp/tmpdir bash scripts/.tests/test-doc-distribution.sh
+#   G6  TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/error-table-sync.ts  (CI's own script, run locally; deliberately NOT in pnpm check)
+#   G7  TMPDIR=$PWD/tmp/tmpdir ./scripts/lint-commit-range.sh --base main-tools
+#   Phase 1 runs G2 (artifact/entrypoint suites), G0, and G1 because it moves the
+#   identity/entrypoint surfaces and the pinned source inventory. Phase 2 runs G2
+#   (family, admission, conformance), the three named checks, G6 and G1 because it
+#   moves the family count, the help/coverage inventory, the error register and
+#   the allowlist — the one phase where all of them meet. Phase 3 runs its narrow
+#   behaviour suites and G1 (it adds package files, moves the inventory and the
+#   status/record contracts). Phase 4 runs its narrow check-tier suites and G1 (it
+#   adds package files and the removal/dry-run contracts). Phase 5 runs G3, G4 and
+#   G2 over the two shell-adjacent suites (no G1 re-run: no package or pinned
+#   surface moves). Phase 6 runs the whole battery G0..G7, including G5. Every
+#   phase records one pm-notes `notes:` evidence entry in the §6.3 shape naming
+#   the commit and the exact counts (26 families, 66 two-segment identities,
+#   eleven `install` rows).
+#
+# INCONSISTENCIES: none blocking between spec v1.0, the five TDRs and test plan
+#   v1.0. One divergence is resolved rather than papered over and one is a
+#   conditional the plan declines to fire:
+#   (a) SPEC DM-8 says the worktree-topology read "changes a pinned adapter export
+#       surface and its parity baseline once"; test plan §3.2 says the delivered
+#       `readCheckoutIdentity` already returns both values and makes the inventory
+#       move conditional. The plan follows test plan §3.2 and the delivered code
+#       (D2): no new export, no exports-parity move. If a gap is found, D2 names
+#       the phase that absorbs it.
+#   (b) The ticket's `upgrade` task is realised as an install of a different
+#       artifact (spec DEC-6); no phase declares an `upgrade` verb.
+#   (c) Spec §18's "(e) conformance surface" bullet is delivered inside phase 2
+#       because the gates make it inseparable from the family (coupling 1).
+
+schemaVersion: delivery.plan.v1
+workItemRef: GH-346
+tier:
+  name: full
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+  escalationTriggers:
+    - "A phase boundary leaves the family count, the reference-page set, the coverage inventory or the two-segment allowlist between the old and the new value (AC-F15-1, AC-F15-2, NFR-14)"
+    - "A pinned count is relaxed to a floor, a family is removed to make a gate green, or a delivered row or assertion is renamed instead of moved exactly (NFR-14, test plan §4.4)"
+    - "The compiled shape hands a bundle-root value to a spawn or a service unit, or a non-compiled run stops answering the delivered script path (AC-F3-2, RSK-2)"
+    - "The alias creates a path under its namespace, writes anything on a lifecycle invocation, or stops being byte-identical for its delivered commands (AC-F4-2, RSK-4)"
+    - "A refused install writes: destination bytes or mtime change, a record appears, a profile line is added, or a staging file survives (NFR-10, RSK-5)"
+    - "A legacy launcher is promoted into the rollback slot, or the slot holds anything without an injected identity (AC-F5-3, RSK-3)"
+    - "The compatibility check becomes a state writer, a payload decoder, a below-project traversal, or a blocker on the write paths (AC-F7-1, AC-F7-3, RSK-7, RSK-8)"
+    - "A live daemon is replaced or removed without --stop-daemon, or the stop is ordered after the swap (AC-F9-4, RSK-10)"
+    - "The uninstall residual set and purge's removal set differ at one machine state, or purge removes a root without its confirmation input (AC-F10-1, AC-F10-2, RSK-11)"
+    - "Any dry-run writes, creates a directory, or takes a daemon action (AC-F11-1, NFR-5)"
+    - "The install record carries a credential, is written in place instead of staged and renamed, or a reader throws on an absent or damaged record (AC-F8-1, AC-F8-2, NFR-12)"
+    - "A new configuration key, environment variable, state record kind, event topic or state-root write is introduced (NG-11, NFR-13)"
+    - "The shell installer or uninstaller gains lifecycle semantics, deletes the other surface's artifacts, or fails to name the owner (AC-F14-1, AC-F14-2, NG-12)"
+    - "The artifact build joins the package build chain, an installer array, or the aggregate gate, or the change adds a CI job (RSK-15, test plan §1.2)"
+    - "A case is skipped, environment-gated, or made green by deleting an assertion; a guard ships without its failing negative control (test plan §4.3)"
+    - "TMPDIR=$PWD/tmp/tmpdir pnpm check is not green at a phase boundary, or an unresolved ERROR is recorded as PASS (NFR-14)"
+defaultLeases:
+  - repo:main-tools
+defaultWeightClass: standard
+phases:
+  # ---------------------------------------------------------------------------
+  # Phase 1 — Self-contained artifact, build identity, process edge, and the
+  # five untracked decision records (F-1, F-2, F-3; DM-1, DM-7; AC-F1-1,
+  # AC-F1-2, AC-F2-1..3, AC-F3-1, AC-F3-2, AC-F15-3; DEC-2; RSK-2, RSK-15;
+  # NFR-1, NFR-2, NFR-15).
+  #
+  # Goal: the product becomes one executable a machine can carry, whose identity
+  # is captured at build time and whose process edge is correct for the compiled
+  # shape — and the change ships with its binding design instead of five
+  # untracked files.
+  #
+  # Contract: `build:binary` is one additive root build entry
+  # (scripts/build-binary.ts) that captures version (root manifest), full commit,
+  # ISO-8601 UTC build instant and a tracked-files-only dirty flag, invokes the
+  # pinned compiler ONCE and fails loudly when the output is missing or not
+  # executable. It writes `dist/<binary-name>` by default and `--out <dir>`
+  # redirects the artifact tier to the scratch cache (OQ-TP-8), so there is one
+  # build path and two declared destinations. It never joins the package build
+  # chain, never appears in ADOS_DELIVERY_SCRIPTS or ADOS_DELIVERY_TOOLS, needs no
+  # clean tree and mutates no tracked file. The identity is one compile-time
+  # constant behind a presence guard (packages/cli/src/build-identity.ts); the
+  # seam is the DELIVERED optional `version`/`build` entrypoint input widened to
+  # one optional DM-1 object (OQ-TP-3), so a non-injected run keeps `0.0.0` and
+  # `dev` verbatim and no ambient read exists. `--version` keeps exactly
+  # `<binary-name> <version> (build <token>)`, one line, exit 0, `--json`
+  # byte-identical, build instant absent; the token is the short commit,
+  # `<short>-dirty`, `unknown` or `dev` (Appendix A). The bins supply the process
+  # facts and the injected identity; a compiled run supplies `process.execPath` as
+  # the re-entry entry path and a non-compiled run keeps the delivered script path
+  # (Appendix: the one behavioural change the artifact forces). Argv handling is
+  # unchanged in effect: the user slice still yields exactly the user arguments.
+  # The artifact name is derived at exactly one declared build-side site
+  # (scripts/build-binary.ts, scanned under its own build-side root) and adds no
+  # working-name literal, so the product-surface inventory stays at the delivered
+  # five.
+  #
+  # Layout note (declared, not discovered): scripts/build-binary.ts is a
+  # repo-internal Bun script beside the delivered scripts/checks/*.ts convention,
+  # not a `.sh` orchestration script, because it constructs typed build facts and
+  # the one compile argv; it is not a delivered installer script and appears in
+  # neither ADOS_DELIVERY_SCRIPTS nor ADOS_DELIVERY_TOOLS (asserted by
+  # TC-BIN-060). It is linted and formatted by the aggregate gate like every other
+  # TypeScript file.
+  #
+  # Decision to close in this phase: the `--define` identifier and the exact
+  # presence-guard shape are delivery-bound. Failure mode if not closed: the
+  # `unknown` token case (TC-BIN-064) and the four-token matrix fail by name; an
+  # environment-variable fallback is forbidden (NG-11) and must not be introduced
+  # as a shortcut.
+  #
+  # Decision records (COMMIT-BOUNDARY REALITY in the header): the five untracked
+  # TDRs, doc/decisions/00-index.md and the doc/decisions/ folder are declared
+  # here and land on `phase complete delivery_planning`.
+  #
+  # Acceptance: AC-F1-1 (TC-BIN-060, 061, 062, 071), AC-F1-2 (TC-BIN-063),
+  # AC-F2-1 (TC-BIN-064), AC-F2-2 (TC-BIN-065), AC-F2-3 (TC-BIN-066, 067),
+  # AC-F3-1 (TC-BIN-068), AC-F3-2 (TC-BIN-069, 070), AC-F15-3 (TC-INST-107).
+  #
+  # Gate (expected signal: exit 0 at every line; one artifact at the default path,
+  # the four tokens exact, zero git invocations from a self-description read):
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir bun run build:binary                            (G0)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/build-artifact-entry.test.ts tests/structure/entrypoint-bin.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/artifact-self-containment.test.ts tests/checks/artifact-identity.test.ts tests/checks/artifact-grammar.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/entrypoint-version.test.ts tests/behaviour/identity-override.test.ts tests/behaviour/entrypoint-help-isolation.test.ts   (controls: no edit)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                     (G1, binding: the identity/entrypoint surfaces and the pinned source inventory move here)
+  #
+  # Commit: feat(GH-346): self-contained artifact, build identity and process edge
+  # ---------------------------------------------------------------------------
+  - id: 1
+    title: "Self-contained artifact build entry, compile-time build identity, version token and compiled process edge, plus the five decision records"
+    kind: delivery
+    summary: "feat(GH-346): self-contained artifact, build identity and process edge"
+    scope:
+      files:
+        - package.json
+        - scripts/build-binary.ts
+        - packages/cli/src/build-identity.ts
+        - packages/cli/src/bin-launcher.ts
+        - packages/cli/src/entrypoint.ts
+        - packages/cli/bin/jaiship.ts
+        - packages/cli/bin/delivery-os.ts
+        - tests/structure/build-artifact-entry.test.ts
+        - tests/structure/entrypoint-bin.test.ts
+        # The exact committed package-source inventory moves by the one new file
+        # (D4). The inventory test itself reads the JSON and needs no edit.
+        - tests/structure/inventory.json
+        - tests/checks/artifact-self-containment.test.ts
+        - tests/checks/artifact-identity.test.ts
+        - tests/checks/artifact-grammar.test.ts
+        # The five untracked decision records land on this phase boundary
+        # (COMMIT-BOUNDARY REALITY). The index already carries their rows and the
+        # `Proposed` status; it is declared so a status/typo touch stages with
+        # them, and an unchanged index produces at most an advisory plan-diff
+        # finding.
+        - doc/decisions/TDR-0036-install-lifecycle-composed-command-family.md
+        - doc/decisions/TDR-0037-self-contained-binary-build-identity.md
+        - doc/decisions/TDR-0038-install-target-stability-and-dev-build-exclusion.md
+        - doc/decisions/TDR-0039-installed-binary-state-format-compatibility-check.md
+        - doc/decisions/TDR-0040-upgrade-rollback-uninstall-purge-boundaries.md
+        - doc/decisions/00-index.md
+      folders:
+        - doc/decisions
+    interactions:
+      - kind: contract-file
+        target: packages/cli/src/build-identity.ts
+        role: producer
+      - kind: contract-file
+        target: packages/cli/src/entrypoint.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 2 — The composed `install` family, its admission and dev gates, and the
+  # whole declared conformance surface in one commit (F-4, F-5, F-6, F-15;
+  # DM-6, DM-7; AC-F4-1..3, AC-F5-1, AC-F6-1, AC-F15-1, AC-F15-2; DEC-1, DEC-7,
+  # DEC-9, DEC-12; RSK-4, RSK-6, RSK-14, RSK-16; NFR-8, NFR-9, NFR-10, NFR-14).
+  #
+  # Goal: `install` is reachable through both composed programs as the
+  # twenty-sixth family, advertised with its alias restriction, admitted or
+  # refused before it writes anything — and every conformance surface the
+  # aggregate gate pins moves in the SAME commit, because a family cannot be
+  # reachable without it (header coupling 1 and 2).
+  #
+  # Contract: five entry points (`install`, `install status`, `install rollback`,
+  # `install uninstall`, `install purge`) registered unconditionally in the
+  # production composer with their runtime (home, process facts, file-system port,
+  # clock, daemon status read, git worktree read) and composed for BOTH bins; the
+  # bin's owning-role fact defaults to NOT owning, so the alias answers exactly one
+  # `install.identity.not-owning` refusal at exit 1, writes nothing and creates no
+  # path under its namespace, while its help entry states the restriction. The
+  # destination is not an input: a destination flag, a positional path or an
+  # environment value is a delivered `fallback.invocation` grammar refusal
+  # (AC-F4-3). One admission predicate (install-admission.ts) governs every
+  # executed path: S-1 a linked worktree (own git dir differs from the common git
+  # dir) refuses with `install.target.worktree` naming the target directory, both
+  # git directories, the two admissible origins and the deletion reason; S-2 an
+  # unreadable git state is ADMITTED as `unverified`; S-3 a stable checkout is
+  # admitted as `verified`; the dirty flag is never an admission question; S-4
+  # cannot fail by operator action. Detection is repository metadata, never a path
+  # prefix or a listing order, and it runs over the artifact's own directory
+  # (D2: the delivered `readCheckoutIdentity` answers the facts). The dev gate
+  # refuses a fallback-identity run with `install.dev-build` naming the build entry
+  # and the artifact path convention, and it is scoped to the write paths — a
+  # report (`install status`) is never refused by it (TC-INST-013 step 5). The
+  # composition constructs no HTTP client and spawns no build or package manager,
+  # asserted structurally with a planted control (NFR-8). Phase-2 write posture is
+  # D3: real `install` runs steps 1, 2, 3 and 6 and the slot-free dispositions,
+  # real `rollback` answers the TRUE `install.slot.absent`, real `uninstall`
+  # removes the artifact and prints the residual set, real `purge` requires
+  # `--yes`, and status omits the state-format group until phase 3.
+  #
+  # Conformance surface (the declared cost, all in this commit): the prompt-required
+  # set becomes exactly 26 with `install` LAST and `supervise` immediately before
+  # it; every pinned count and tail position in the PINNING_FILES set moves
+  # 25 -> 26; root help carries the family row (with the alias restriction) and
+  # each of the five entry points carries its own static-inventory help (usage,
+  # options, examples, exit codes, see-also, examples that parse); the new
+  # reference page doc/planning/oss-tooling/milestones/m4/commands/install.md
+  # exists with `--help` and `--version`; `help-guide-coverage.ts` gains the M4
+  # page root and the `install` branch (the default M1 root must not serve it) and
+  # `tests/checks/reference-page-parity.test.ts` moves with it so the two copies
+  # of the mapping cannot drift; the coverage inventory moves in both directions;
+  # the error register gains the `install` domain kind and all ELEVEN rows
+  # (`install.target.worktree`, `install.dev-build`, `install.state.incompatible`,
+  # `install.identity.not-owning`, `install.shell-profile.unresolved`,
+  # `install.migration.unavailable`, `install.daemon.running`,
+  # `install.record.unreadable`, `install.slot.absent`, `install.slot.invalid`,
+  # `install.purge.unconfirmed` — all category `user`, non-retryable,
+  # consequence `not_landed`, projection `user-validation`, exit 1), documented on
+  # the result-contract page, with the closed two-segment allowlist moved 65 -> 66
+  # by exactly `install.dev-build` and one corpus row per identity; and the
+  # identity-literal inventory gains no literal (phase 1 declared the build-side
+  # derivation site), with both directions plus a failing control asserted.
+  # TRIGGER BINDING (this phase's declared debt): every row's trigger is bound by
+  # the phase that owns the behaviour — phases 2 (`target.worktree`, `dev-build`,
+  # `identity.not-owning`), 3 (`state.incompatible`, `record.unreadable`,
+  # `slot.absent`, `slot.invalid`), 4 (`daemon.running`, `shell-profile.unresolved`,
+  # `migration.unavailable`, `purge.unconfirmed`). A row is a register entry, not a
+  # wildcard; no phase may add a twelfth row or a family code.
+  #
+  # Decision to close in this phase: the exact wording of the alias restriction in
+  # the family help entry and the exact shape of the refusal's owning-binary name
+  # (derived from the brand, never an identity literal). Failure mode: TC-INST-002's
+  # restriction assertion and TC-INST-004's single-line assertion fail by name; a
+  # second line or a hard-coded `jaiship` literal fails the literal inventory.
+  #
+  # Acceptance: AC-F4-1 (TC-INST-001, 002, 003), AC-F4-2 (TC-INST-004),
+  # AC-F4-3 (TC-INST-005, 006), AC-F5-1 (TC-INST-010), AC-F6-1 (TC-INST-013,
+  # 014), AC-F15-1 (TC-INST-100, 101, 102, 103, 104), AC-F15-2 (TC-INST-105, 106).
+  #
+  # Gate (expected signal: exit 0 at every line; the parsed family list is exactly
+  # the declared 26 in order, every prompt-required command has a page, the
+  # allowlist reads 66 with eleven `install` rows):
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/install-conformance.test.ts tests/structure/install-composition-absence.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/install-family-surface.test.ts tests/behaviour/install-admission.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/install-conformance-mutants.test.ts tests/checks/install-error-domain.test.ts tests/checks/help-guide-coverage-mutants.test.ts tests/checks/reference-page-parity.test.ts tests/checks/error-table-sync.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure tests/behaviour/entrypoint-composition.test.ts tests/behaviour/entrypoint-two-bins.test.ts tests/behaviour/entrypoint-help-coverage.test.ts tests/behaviour/repos-help.test.ts tests/behaviour/board-help.test.ts tests/behaviour/events-mount-help.test.ts tests/behaviour/ceremony-cli.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/prompt-conformance.test.ts tests/checks/help-guide-coverage.test.ts   (controls: no edit, must stay green)
+  #   TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/prompt-conformance.ts     (check:prompt)
+  #   TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/help-guide-coverage.ts    (check:help)
+  #   TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/error-table-sync.ts       (G6)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                       (G1, binding: family count, help coverage, error register and allowlist meet only here)
+  #
+  # Commit: feat(GH-346): install family, admission gates and conformance surface
+  # ---------------------------------------------------------------------------
+  - id: 2
+    title: "Composed install family with owning-role refusal, admission and dev gates, and the 26-family conformance surface in one commit"
+    kind: delivery
+    summary: "feat(GH-346): install family, admission gates and conformance surface"
+    scope:
+      files:
+        - packages/core/src/contracts/install.ts
+        - packages/core/src/contracts/error-table.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/index.ts
+        - packages/core/src/domain/install-admission.ts
+        - packages/core/src/domain/install-status.ts
+        - packages/adapters/src/file/install-destination.ts
+        - packages/adapters/src/file/index.ts
+        - packages/cli/src/commands/install.ts
+        - packages/cli/src/commands/index.ts
+        - packages/cli/src/output/install-text.ts
+        - packages/cli/src/output/index.ts
+        - packages/cli/src/production.ts
+        - packages/cli/src/help.ts
+        - packages/cli/src/help/prompt-required-commands.ts
+        # The owning-role fact and the owning-binary name the alias refusal
+        # derives without a literal (D6).
+        - packages/cli/src/bin-launcher.ts
+        - packages/cli/bin/jaiship.ts
+        - packages/cli/bin/delivery-os.ts
+        - scripts/checks/help-guide-coverage.ts
+        - scripts/checks/error-table-sync.ts
+        # Forced by the two gates (header coupling 2 and 3): the documented error
+        # table must agree with the source table in the same commit, and the M4
+        # page must exist for check:help.
+        - doc/spec/features/feature-result-contract.md
+        - doc/planning/oss-tooling/milestones/m4/commands/install.md
+        - tests/structure/install-conformance.test.ts
+        - tests/structure/install-composition-absence.test.ts
+        - tests/behaviour/install-family-surface.test.ts
+        - tests/behaviour/install-admission.test.ts
+        - tests/checks/install-conformance-mutants.test.ts
+        - tests/checks/install-error-domain.test.ts
+        - tests/checks/help-guide-coverage-mutants.test.ts
+        - tests/checks/reference-page-parity.test.ts
+        - tests/checks/error-table-sync.test.ts
+        - tests/structure/error-table.test.ts
+        - tests/fixtures/help-guide/coverage.json
+        - tests/fixtures/entrypoint/programs.ts
+        # The PINNING_FILES members whose 25 pin and family-tail statements move
+        # (test plan §7.2). Each is an exact assertion moved, never relaxed.
+        - tests/behaviour/entrypoint-composition.test.ts
+        - tests/behaviour/entrypoint-two-bins.test.ts
+        - tests/behaviour/entrypoint-help-coverage.test.ts
+        - tests/structure/supervision-mounting.test.ts
+        - tests/structure/metrics-mounting.test.ts
+        - tests/structure/board-mounting.test.ts
+        - tests/structure/events-production-composition.test.ts
+        - tests/structure/dispatch-attempts-composition.test.ts
+        - tests/structure/daemon-production-composition.test.ts
+        - tests/structure/steer-mounting.test.ts
+        - tests/behaviour/repos-help.test.ts
+        - tests/behaviour/board-help.test.ts
+        - tests/behaviour/events-mount-help.test.ts
+        - tests/behaviour/ceremony-cli.test.ts
+        - tests/fixtures/supervise/mounting.ts
+        - tests/fixtures/metrics/mounting.ts
+        # Shared lifecycle fixtures authored here because phase 2 owns their first
+        # consumers (the scratch home/snapshot helper and the linked-worktree
+        # fixture of TC-INST-010); phases 3 and 4 extend both.
+        - tests/fixtures/install/home.ts
+        - tests/fixtures/install/checkouts.ts
+        - tests/structure/inventory.json
+      folders:
+        - tests/fixtures/result/code-corpora
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/install.ts
+        role: producer
+      - kind: contract-file
+        target: packages/cli/src/help/prompt-required-commands.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/error-table.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 3 — Install record, seven-step atomic replace, dispositions, status and
+  # the compatibility check, upgrade and involutive rollback (F-5, F-7, F-8, F-9;
+  # DM-2, DM-3, DM-4, DM-6; AC-F5-2, AC-F5-3, AC-F7-1..3, AC-F8-1, AC-F8-2,
+  # AC-F9-1..3; DEC-3, DEC-4, DEC-9, DEC-10, DEC-13; RSK-1, RSK-3, RSK-7, RSK-8,
+  # RSK-9, RSK-10; NFR-3, NFR-4, NFR-6, NFR-7, NFR-9, NFR-12, NFR-16).
+  #
+  # Goal: an install can be upgraded, reported and undone, and a machine can be
+  # asked the one compatibility question it has before a delivery command fails.
+  # At every instant of a replace a runnable artifact exists at a known path.
+  #
+  # Contract: one record at `<config root>/install.json` under
+  # `install.record.v1`, written atomically (staged in the record's own directory,
+  # then renamed), never secret-bearing, every field of DM-2 present or
+  # legitimately absent, and tolerant on read by all four consumers (DEC-13:
+  # `install` overwrites damage, `uninstall` removes what it can and reports the
+  # block as unknown, `rollback` refuses `install.record.unreadable`). The replace
+  # is the seven normative steps of Appendix B with the step-4 identity-equal
+  # stop (zero bytes rewritten, slot not swapped, daemon undisturbed) and the
+  # one-slot rule that admits only a compiled artifact carrying an injected
+  # identity (a launcher is discarded with a report naming its recorded target and
+  # is never promoted). Upgrade is installing a different compiled artifact and
+  # reports BOTH identities; rollback swaps slot and destination with two renames
+  # in reverse order, is INVOLUTIVE, and refuses `install.slot.absent` /
+  # `install.slot.invalid` with zero writes. The compatibility check compares the
+  # artifact's accepted store-format identifier with each enumerated root's header
+  # identifier only — header files only, one project level, capped at the declared
+  # 128 judged roots (DEC-9), `unchecked` for an absent root and never collapsed
+  # into `accepted` (DEC-10), nothing persisted, `state.schema.mismatch` untouched
+  # — is advisory on `install`/`install rollback` (one line per not-accepted root,
+  # exit code unchanged) and is the typed verdict behind `install status`
+  # (`install.state.incompatible` at exit 1 with root, observed, accepted and the
+  # judged count). `install status` completes its DM-4 payload here: running
+  # identity, the record's identity and condition (`current`/`record-stale`/
+  # `unreadable`/`absent`), the slot's identity and condition
+  # (`present`/`absent`/`invalid`), target stability as DATA, and the state-format
+  # group — deterministic field and line order for a given machine state, and a
+  # crash between the renames and the record write is visible as `record-stale`
+  # rather than an exception. The daemon guard lands here for the two
+  # artifact-replacing paths (step 1's fourth gate: `install.daemon.running` unless
+  # `--stop-daemon`, whose stop runs through the delivered stop path BEFORE the
+  # swap); the removal-path extension is phase 4 (AC-F9-4).
+  # The crash matrix uses the phase-1-declared seam decision (OQ-TP-1): the
+  # optional test-only fault port for steps 2..7 plus constructed post-failure
+  # states for steps 5, 6 and 7, and step 1 through its four gates.
+  #
+  # Decision to close in this phase: the fault port's step vocabulary and the exact
+  # placement of the port's consultation inside the replace transaction
+  # (delivery-bound). Failure mode: a step that cannot be induced fails
+  # TC-INST-031..036 by name; the matrix must never degrade to "exit != 0" and a
+  # pass without the recovery re-run is not a pass (test plan §4.3).
+  #
+  # Acceptance: AC-F5-2 (TC-INST-011, 012), AC-F5-3 (TC-INST-020, 021),
+  # AC-F7-1 (TC-INST-043), AC-F7-2 (TC-INST-044, 046), AC-F7-3 (TC-INST-045),
+  # AC-F8-1 (TC-INST-040), AC-F8-2 (TC-INST-041, 042), AC-F9-1
+  # (TC-INST-030..036), AC-F9-2 (TC-INST-022, 033), AC-F9-3 (TC-INST-023, 024,
+  # 025, 026).
+  #
+  # Gate (expected signal: exit 0 at every line; 7/7 crash points leave a runnable
+  # artifact and recover, the identical install rewrites zero bytes, two rollbacks
+  # restore the original):
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/install-replace.test.ts tests/behaviour/install-crash-matrix.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/install-record.test.ts tests/behaviour/install-compatibility.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/install-lifecycle-e2e.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/error-table.test.ts tests/structure/install-composition-absence.test.ts   (the new rows' triggers; the structural mirror must stay exact)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                     (G1, binding: new package files move the inventory and the record/status contracts are new surfaces)
+  #
+  # Commit: feat(GH-346): install record, atomic replace, status and rollback
+  # ---------------------------------------------------------------------------
+  - id: 3
+    title: "Install record, seven-step atomic replace with dispositions and the single slot, status payload, compatibility verdict, upgrade and involutive rollback"
+    kind: delivery
+    summary: "feat(GH-346): install record, atomic replace, status and rollback"
+    scope:
+      files:
+        - packages/core/src/contracts/install.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/domain/install-record.ts
+        - packages/core/src/domain/install-compatibility.ts
+        - packages/core/src/domain/install-replace.ts
+        - packages/core/src/domain/install-status.ts
+        - packages/adapters/src/file/install-record.ts
+        - packages/adapters/src/file/install-state-roots.ts
+        - packages/adapters/src/file/install-destination.ts
+        - packages/adapters/src/file/index.ts
+        - packages/cli/src/commands/install.ts
+        - packages/cli/src/output/install-text.ts
+        - packages/cli/src/production.ts
+        - tests/behaviour/install-replace.test.ts
+        - tests/behaviour/install-crash-matrix.test.ts
+        - tests/behaviour/install-record.test.ts
+        - tests/behaviour/install-compatibility.test.ts
+        - tests/checks/install-lifecycle-e2e.test.ts
+        - tests/fixtures/install/home.ts
+        - tests/fixtures/install/checkouts.ts
+        - tests/fixtures/install/artifact.ts
+        - tests/fixtures/install/destinations.ts
+        - tests/fixtures/install/records.ts
+        - tests/fixtures/install/state-roots.ts
+        - tests/fixtures/install/daemon.ts
+        - tests/fixtures/install/faults.ts
+        - tests/structure/inventory.json
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/install.ts
+        role: producer
+      - kind: contract-file
+        target: packages/adapters/src/file/install-record.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 4 — Removal matrix, four zero-write dry-runs, the managed PATH block, the
+  # migration hook and the daemon guard on every mutating path (F-10, F-11, F-12,
+  # F-13, F-9; DM-5; AC-F9-4, AC-F10-1, AC-F10-2, AC-F11-1, AC-F12-1, AC-F13-1;
+  # DEC-5, DEC-11; RSK-10, RSK-11, RSK-13; NFR-5, NFR-10, NFR-11).
+  #
+  # Goal: the only genuinely dangerous operations in the story are bounded,
+  # reported, confirmable and previewable, and a live daemon can never be left
+  # holding a replaced or removed artifact.
+  #
+  # Contract: the removal matrix of Appendix C.3 in its declared order (artifact,
+  # slot, record, block, then the roots under purge only), `install uninstall`
+  # ALWAYS printing the residual set as what `purge` would additionally delete,
+  # `install purge` requiring `--yes` even when both roots are absent (where the
+  # answer is "nothing to remove" at exit 0), absent members reported as absent and
+  # a second uninstall a reported no-op, a damaged record degrading the block
+  # report to `unknown` rather than a guessed path, and a partial failure leaving
+  # the recoverable members in place. The residual set, `purge --dry-run`'s removal
+  # set and what `purge --yes` removes are equal path for path at one machine state
+  # (NFR-11) — compared as three computed sets at one instant, never across two
+  # machine states. All four write paths accept `--dry-run` and print the Appendix
+  # C.4 content with absolute paths, one line per path, and perform no write, no
+  # directory creation and no daemon action (a full paths/sizes/mtimeNs/modes
+  # snapshot must be unchanged 4/4). `--add-to-path` appends exactly one delimited
+  # block holding exactly one export line (markers derived from the declared binary
+  # name), records its file and marker, is idempotent for identical content,
+  # replaced in place when different and never duplicated; the file is
+  # `--shell-profile` when given, otherwise the DECLARED shell mapping of OQ-TP-7
+  # with the home expanded against the invoking home; an unidentifiable shell is
+  # `install.shell-profile.unresolved`; without the flag no profile file is written;
+  # uninstall and purge remove exactly that block. `--migrate` is DECLINED with
+  # `install.migration.unavailable` naming the M4-S2 owner and a remedy, while its
+  # absence only detects and advises; no migration port is composed and nothing is
+  # ever moved, copied or deleted. The daemon guard completes here: all four
+  # mutating paths refuse `install.daemon.running` without `--stop-daemon` (DEC-11),
+  # and the ordered log proves the stop precedes the first rename or removal.
+  #
+  # Decision to close in this phase: the exact residual-set label and the
+  # rendering of the two separated dry-run blocks (delivery-bound prose). Failure
+  # mode: TC-INST-051 compares three computed sets and TC-INST-062 asserts two
+  # separated blocks — a label or block boundary that changes the parsed set fails
+  # by name.
+  #
+  # Acceptance: AC-F9-4 (TC-INST-080, 081), AC-F10-1 (TC-INST-050, 051, 056),
+  # AC-F10-2 (TC-INST-052, 053, 054, 055), AC-F11-1 (TC-INST-060, 061, 062, 063),
+  # AC-F12-1 (TC-INST-070..074), AC-F13-1 (TC-INST-075, 076).
+  #
+  # Gate (expected signal: exit 0 at every line; three residual sets equal, four
+  # snapshots unchanged, one block appended once):
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/install-lifecycle-removal.test.ts tests/checks/install-lifecycle-dryrun.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/install-lifecycle-path.test.ts tests/checks/install-lifecycle-daemon.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/install-replace.test.ts tests/behaviour/install-crash-matrix.test.ts   (the removal paths share the disposition/slot fixtures)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                     (G1, binding: new package files move the inventory and the removal/dry-run contracts are new surfaces)
+  #
+  # Commit: feat(GH-346): removal, dry-runs, PATH block, migration and daemon guard
+  # ---------------------------------------------------------------------------
+  - id: 4
+    title: "Uninstall and purge with the always-printed residual set, four zero-write dry-runs, the managed PATH block, the migration hook and the daemon guard on all four paths"
+    kind: delivery
+    summary: "feat(GH-346): removal, dry-runs, PATH block, migration and daemon guard"
+    scope:
+      files:
+        - packages/core/src/contracts/install.ts
+        - packages/core/src/contracts/index.ts
+        - packages/core/src/domain/install-removal.ts
+        - packages/core/src/domain/install-path-block.ts
+        - packages/core/src/domain/install-migration.ts
+        - packages/core/src/domain/install-status.ts
+        - packages/adapters/src/file/install-profile.ts
+        - packages/adapters/src/file/install-destination.ts
+        - packages/adapters/src/file/install-state-roots.ts
+        - packages/adapters/src/file/index.ts
+        - packages/cli/src/commands/install.ts
+        - packages/cli/src/output/install-text.ts
+        - packages/cli/src/production.ts
+        - tests/checks/install-lifecycle-removal.test.ts
+        - tests/checks/install-lifecycle-dryrun.test.ts
+        - tests/checks/install-lifecycle-path.test.ts
+        - tests/checks/install-lifecycle-daemon.test.ts
+        - tests/fixtures/install/home.ts
+        - tests/fixtures/install/daemon.ts
+        - tests/fixtures/install/prior-namespace.ts
+        - tests/structure/inventory.json
+    interactions:
+      - kind: contract-file
+        target: packages/core/src/contracts/install.ts
+        role: producer
+      - kind: contract-file
+        target: packages/adapters/src/file/install-profile.ts
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 5 — One owner per artifact class: the shell installer's guarded launcher
+  # step and the shell uninstaller's reporting arm (F-14; AC-F14-1, AC-F14-2;
+  # DEC-1, DEC-5, DEC-8; RSK-5; NG-12, NFR-10, NFR-13).
+  #
+  # Goal: the live defect — a checkout pointer silently overwriting a managed
+  # binary — becomes impossible by a classified refusal, and the delivered shell
+  # uninstaller reports a managed install instead of touching it.
+  #
+  # Contract: with NO managed binary at the install path, the installer's launcher
+  # step behaves exactly as delivered: same target, content-idempotent, the two
+  # classified failures (no runtime; a resolved source tree with no CLI entry), the
+  # plan-only dry-run preview that writes nothing and exits 0, and independence
+  # from the tool selection (AC-F14-1 first half). With a managed binary (and its
+  # record) present, the step refuses, CLASSIFIED, names the lifecycle command as
+  # the update path, writes no launcher and leaves the binary and record
+  # byte-untouched. The uninstaller keeps its repository-artifact scope, its own
+  # 0/2/3/4/5 taxonomy, its two modes and its dry-run; it removes no binary, slot,
+  # record or Jaiship root, reports the managed install and names the owning removal
+  # command (AC-F14-2). Neither surface gains a lifecycle verb and neither deletes
+  # the other's artifacts (NG-12). The guard is ordered AFTER phase 2 because it
+  # names the family (header coupling 5), and its bash arm lands with it.
+  #
+  # Decision to close in this phase: which of the installer's existing classified
+  # exits the new refusal arm uses (its own numeric vocabulary — the product's
+  # error table is not a shell contract). Failure mode: a bare or invented exit
+  # code makes TC-INST-091's "declared classified failure, not a generic error"
+  # assertion fail by name, and the structural scanner must name a missing arm
+  # rather than pass.
+  #
+  # Acceptance: AC-F14-1 (TC-INST-090, 091, 093), AC-F14-2 (TC-INST-092, 093).
+  #
+  # Gate (expected signal: exit 0 at every line; the delivered arms are
+  # byte-identical, the new arms count as the declared increase):
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/install-ownership-split.test.ts tests/structure/install-launcher.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/install-launcher-installer.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bash scripts/.tests/test-install.sh            (G3)
+  #   TMPDIR=$PWD/tmp/tmpdir bash scripts/.tests/test-uninstall.sh          (G4)
+  #   TMPDIR=$PWD/tmp/tmpdir bash scripts/.tests/test-doc-distribution.sh   (G5, re-run: the scripts ship and the shell edits must not change the install set)
+  #   (no G1 re-run: no package or pinned-count surface moves in this phase)
+  #
+  # Commit: feat(GH-346): shell installer guard and uninstaller ownership split
+  # ---------------------------------------------------------------------------
+  - id: 5
+    title: "Shell installer managed-binary guard arm and shell uninstaller managed-install reporting arm, with their bash suite arms and the ownership-split scanner"
+    kind: delivery
+    summary: "feat(GH-346): shell installer guard and uninstaller ownership split"
+    scope:
+      files:
+        - scripts/install.sh
+        - scripts/uninstall.sh
+        - scripts/.tests/test-install.sh
+        - scripts/.tests/test-uninstall.sh
+        - tests/structure/install-launcher.test.ts
+        - tests/checks/install-launcher-installer.test.ts
+        - tests/structure/install-ownership-split.test.ts
+    interactions:
+      - kind: contract-file
+        target: scripts/install.sh
+        role: producer
+
+  # ---------------------------------------------------------------------------
+  # Phase 6 — Documentation truth and the release evidence (F-16; AC-F16-1;
+  # DEC-8; RSK-12, RSK-16; NFR-15, NFR-17).
+  #
+  # Goal: the operator cadence is documented, the two delivered statements this
+  # change falsifies are gone, the install model keeps its mechanics and loses its
+  # superseded surface, and the change closes with the full battery recorded.
+  #
+  # Contract: doc/guides/local-install.md states the cadence (install a release ->
+  # deliver iterations -> decide -> re-install), the admissible origins and the
+  # lane-worktree refusal WITH its reason, the dev-build requirement, upgrade as an
+  # install of a different artifact, rollback's single step, uninstall versus purge
+  # with the always-printed residual report, the opt-in PATH block and its removal,
+  # the compatibility asymmetry with its rationale (an install must be able to
+  # install the fix; a report must be able to say no) and the ownership split — and
+  # keeps its `ados_distribution: redistributable` marker. feature-cli-entrypoint.md
+  # states the artifact and its identity (four token situations, machine surface),
+  # the compiled versus non-compiled re-entry path, the twenty-six families, the
+  # lifecycle family with its flags and the alias restriction.
+  # feature-doc-distribution-marker.md replaces "no uninstall path exists" with the
+  # ownership split and the conditional launcher step. feature-state-layer.md states
+  # the ledger header as the compatibility surface, the check as read-only and
+  # advisory, and the hard gate unchanged. m4/install-model.md is corrected on
+  # SURFACE (no shell lifecycle entry point, no destructive flag forms) while its
+  # MECHANICS (layout, atomic replace, one slot, record fields, PATH block, daemon
+  # refusal, out-of-scope list) are preserved and the RECORD-WINS rule is stated
+  # (DEC-8). The M4 backlog marker reflects the delivered story and the surfaces
+  # now owned by the family. No page claims a behaviour the change does not
+  # deliver, asserted in both directions with one failing mutant per direction and
+  # backed by the review attestation at lifecycle phase 8 (DOC-TP-1). The measured
+  # artifact facts (size, host-only target, non-reproducibility) are stated as
+  # measured, never as a reproducibility claim (NFR-15, RSK-12).
+  #
+  # Decision to close in this phase: the page-claim requirement table itself — the
+  # exact required and stale phrases per page over an EXACT page set (OQ-TP-4).
+  # Failure mode: a page outside the declared set, or a missing required phrase,
+  # fails by name (TC-INST-112); the table must not become a rubber stamp, so both
+  # directions ship with a mutant.
+  #
+  # Release obligations (declared here, not as prose): this phase runs the whole
+  # battery G0..G7 and records ONE pm-notes evidence entry in the test plan §6.3
+  # shape (artifact size and host target; `pnpm check` all tests, 0 fail; the narrow
+  # tier count; three bash suite counts; the allowlist at exactly 66 with eleven
+  # `install` rows; the range gate verdict; the gated commit = the change-branch
+  # head). A FAIL names the failing suite and the remediation mode; an unresolved
+  # ERROR is recorded as ERROR and never rounded to PASS. Lifecycle phases 7-11
+  # (system_spec_update, review_fix, quality_gates, dod_check, pr_creation) then run
+  # on this content; the pull request targets `main-tools` and STOPS OPEN (merge
+  # authority is the owner's).
+  #
+  # Acceptance: AC-F16-1 (TC-INST-110, 111, 112, and the gate evidence TC-INST-120,
+  # 121, 122, 123).
+  #
+  # Gate (the full battery; expected signal: exit 0 at every line, verdicts
+  # recorded verbatim):
+  #   TMPDIR=$PWD/tmp/tmpdir bun run build:binary                            (G0)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                      (G1)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/install-lifecycle-docs.test.ts tests/checks/doc-conformance.test.ts tests/checks/identity-docs.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/install-*.test.ts tests/checks/install-*.test.ts tests/checks/artifact-*.test.ts tests/structure/install-*.test.ts tests/structure/build-artifact-entry.test.ts   (G2, the declared narrow tier)
+  #   TMPDIR=$PWD/tmp/tmpdir bash scripts/.tests/test-install.sh             (G3)
+  #   TMPDIR=$PWD/tmp/tmpdir bash scripts/.tests/test-uninstall.sh           (G4)
+  #   TMPDIR=$PWD/tmp/tmpdir bash scripts/.tests/test-doc-distribution.sh    (G5, required by the doc phase)
+  #   TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/error-table-sync.ts      (G6)
+  #   TMPDIR=$PWD/tmp/tmpdir ./scripts/lint-commit-range.sh --base main-tools (G7)
+  #
+  # Commit: docs(GH-346): install lifecycle guide and specification truth
+  # ---------------------------------------------------------------------------
+  - id: 6
+    title: "Local install guide, the four specification pages, the install-model correction on surface with mechanics preserved, the milestone marker and the full gate battery"
+    kind: delivery
+    summary: "docs(GH-346): install lifecycle guide and specification truth"
+    scope:
+      files:
+        - doc/guides/local-install.md
+        - doc/spec/features/feature-cli-entrypoint.md
+        - doc/spec/features/feature-doc-distribution-marker.md
+        - doc/spec/features/feature-state-layer.md
+        - doc/planning/oss-tooling/milestones/m4/install-model.md
+        - doc/planning/oss-tooling/milestones/m4/backlog.md
+        - tests/checks/install-lifecycle-docs.test.ts
+        - tests/checks/doc-conformance.test.ts
+        - tests/checks/identity-docs.test.ts
+    interactions:
+      - kind: contract-file
+        target: doc/guides/local-install.md
+        role: producer
