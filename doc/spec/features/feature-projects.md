@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-FEATURE-PROJECTS
 status: Current
 created: 2026-11-11
-last_updated: 2026-11-16
+last_updated: 2026-11-18
 owners: ["engineering"]
 service: delivery-os
 summary: "The host overview and the flat record set: the two-layer state scope (host root plus a per-repository project root), the checkout identity marker and its minted project key, the derived host index with bounded maintenance and the DEC-18 key guard, the read-only `repos list [--json]` surface with its `repos.v1` payload, deterministic table, exit projection, three `repos.*` contract error identities, handover and daemon projections, the four state-location outcomes, and the delivered `projects list --flat` alias that serves the byte-compatible `projects.v1` payload; the board reads the host index once per `--all`/`--project` run, unions it with the invoking checkout, and never maintains it."
 links:
-  related_changes: ["GH-288", "GH-289", "GH-309", "GH-320", "GH-297"]
-  related_decisions: ["TDR-0022", "ODR-0004"]
+  related_changes: ["GH-288", "GH-289", "GH-309", "GH-320", "GH-297", "GH-293"]
+  related_decisions: ["TDR-0022", "ODR-0004", "TDR-0031"]
 ---
 
 # Feature: Repositories and the Host Overview
@@ -207,8 +207,9 @@ and the conflicting identifier. It never adopts that state root.
   negative. Two runs over unchanged state are byte-identical.
 - **Exit projection.** `0` produced; `1` refused (unknown verb, an unusable
   state-directory override, or the invoking checkout's identity cannot be
-  read); `2` the host index or a project state location prevents an honest
-  answer. No other code is produced by the family.
+  read); `2` the host index, a project state location, or a row's gate
+  evaluation (an unreadable evidence ledger or an unresolvable row identity)
+  prevents an honest answer. No other code is produced by the family.
 - **Read-only.** No maintenance, no prune, no corrupt-file replacement, no
   project-root creation, no migration, and no index or store-content write.
   Exactly two side effects are permitted: the create-once identity marker minted
@@ -313,6 +314,9 @@ No automatic migration, migration command, or re-attribution exists.
   opened at the project root.
 - [Resident Dispatch Daemon](feature-resident-daemon.md) — the socket path derived
   from the project state root by the composing site.
+- [Engine-first Delivery Operations](../../guides/engine-first-operations.md) — the
+  operator routine that reads the `repos list` gate block and performs a
+  per-repository flip or reversal.
 - [Owner-Gate SLA](feature-owner-gate-sla.md) — the host-wide owner hold.
 - [Board](feature-board.md) — the fleet read that consumes this host index,
   per-repository state scope, and the `unbound` scope.

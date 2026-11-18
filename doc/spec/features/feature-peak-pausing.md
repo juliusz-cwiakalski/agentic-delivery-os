@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-PEAK-PAUSING
 status: Current
 created: 2026-11-13
-last_updated: 2026-11-17
+last_updated: 2026-11-18
 owners: ["engineering"]
 service: delivery-os
 summary: "Provider-aware peak pausing (M2-S17): the provider profile nominated at dispatch admission and recorded on lane and attempt records with the classified no-nomination pre-session refusal, peak-window rules as versioned per-profile data (windows, multipliers, buffers, grace bounded by the buffer, fail-closed validation, UTC-only), the resident daemon's window watch with bounded-grace in-flight parking and the preserved|session-state-not-preserved classification, classification-routed window-end resume from preserved session state or the delivered interrupted-lane recovery with per-profile isolation and owner-hold precedence, taxonomy v2 stop/parked/resumed/park-edge episode events, the window-scoped zero-spend evidence over telemetry v2 with classified absence, the status/brief/lanes/board park surfaces, and the composition-fact peak-enforcement read with the declared degradation to iteration-start gating when no composition supplies the watch."
 links:
-  related_changes: ["GH-294", "GH-297", "GH-287", "GH-295"]
+  related_changes: ["GH-294", "GH-297", "GH-287", "GH-295", "GH-293"]
   related_decisions: ["TDR-0025", "TDR-0028", "TDR-0029", "TDR-0030"]
   contracts:
     - "packages/core/src/contracts/provider-profile.ts"
@@ -115,6 +115,7 @@ read. The composing features name the same surfaces ([Dispatch Engine](feature-d
 from the feature that composes the watch.
 
 ## 9. Daemon-absent degradation
+
 Without a resident daemon there is no window watcher and no mid-flight park. The mode in the machine read reflects the composition fact: `peakEnforcement.mode` is `window-watch` iff the running composition actually supplies the profile-window watcher ports, otherwise `iteration-start-gating` — never an inference from daemon reachability, which says nothing about whether a watcher exists (the same rule the [Resident Dispatch Daemon](feature-resident-daemon.md) states). A composition without the watch declares `peakEnforcement: { mode: "iteration-start-gating", parkClaimed: false }` on the lanes read, projected from the same collector facts into status and brief: behavior is the delivered iteration-start gating — profiles in window are ineligible for new dispatches at admission, exactly as delivered — and no surface reports a parked lane, a stop, or a resume that did not happen. Runs without a composed watch synthesize no zero-spend episode reading for a park that never happened.
 
 ## 10. Testing

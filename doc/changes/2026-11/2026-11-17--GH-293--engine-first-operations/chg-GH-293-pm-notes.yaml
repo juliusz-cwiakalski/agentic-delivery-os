@@ -9,7 +9,7 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-17T23:53:31.703Z }
   dor_check: { started: null, completed: 2026-11-17T23:57:19.340Z }
   delivery: { started: null, completed: 2026-11-18T01:25:37.139Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-18T01:56:46.124Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
@@ -20,15 +20,15 @@ blockers: []
 notes:
   - text: "Plan phase 7 complete (cross-surface coherence, shell non-change, no-flip
       discipline, hermeticity, the recorded lifecycle-phase-7 reconciliation
-      handoff, and the release). Commit a7aa5d9b (deliverables) and a6d50ca8 (the
-      delivery-boundary phase completion, which also carries the two JSON
-      formatter fixes). Added the cross-surface matrix (six families,
-      three surfaces, identical statuses/verdicts/counters), the no-flip writer
-      scan and append audit, the hermeticity scan with a live no-network
-      control, the new stdout-identity shell parity suite across the four entry
-      points and two authority states, and the lockstep five-package minor
-      changeset. The two `doc/quality/test-specs/` pages are untouched and
-      staged for lifecycle phase 7: the HANDOFF is RECORDED here (owner
+      handoff, and the release). Commit a7aa5d9b (deliverables) and a6d50ca8
+      (the delivery-boundary phase completion, which also carries the two JSON
+      formatter fixes). Added the cross-surface matrix (six families, three
+      surfaces, identical statuses/verdicts/counters), the no-flip writer scan
+      and append audit, the hermeticity scan with a live no-network control, the
+      new stdout-identity shell parity suite across the four entry points and
+      two authority states, and the lockstep five-package minor changeset. The
+      two `doc/quality/test-specs/` pages are untouched and staged for lifecycle
+      phase 7: the HANDOFF is RECORDED here (owner
       `system_spec_update`/`@doc-syncer`, the two paths, satisfaction at DoD-7)
       and is not an exit condition of this phase. Deviations: the registry row
       for the new guide (`scripts/checks/forbidden-literals.registry.json`), the

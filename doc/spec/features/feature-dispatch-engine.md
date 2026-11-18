@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-DISPATCH-ENGINE
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-13
+last_updated: 2026-11-18
 owners: ["engineering"]
 service: delivery-os
 summary: "The typed per-ticket dispatch engine: the `dispatch` command family (`dispatch <ref>`, `dispatch attempts`, `dispatch dual-run summary|resolve`, `dispatch handover [--revert]`), harness resolution, the provider profile nomination recorded at admission on the attempt and lane records with the classified no-nomination pre-session refusal, the optional admission preflight (truth-read credential resolution plus one bounded work-item read) with status-keyed refusal identities, the dispatch family's per-ref single-flight admission predicate that refuses any live same-ref lease with `queue.single-flight` and names the holder at the envelope root, queue-lease claim, spawn or resume through the harness session port with handle acquisition before completion, progress-based liveness, artifact-first truth derivation into the closed TDR-0005 vocabulary, bash-continuity text and machine envelopes, the pinned failure-token mapping, durable attempt/divergence/handover records including the locally resolvable delivered-evidence divergence, the derived per-repository authority view, evidence-class counting and the incident-exclusive four-condition handover gate, the production composition of the evidence gate, the resume lane and restart-budget path and the rename-invariant identity resolver with its checkout-scoped first-use marker, the factory-proven daemon lane seam with the daemon-path attempt producer, the repository-scoped `dispatch attempts` read side over the durable attempt ledger, and the CLI-independent bash fallback authority read."
 links:
-  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288", "GH-289", "GH-292", "GH-294"]
-  related_decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "ADR-0008", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0021", "TDR-0024", "TDR-0026", "TDR-0027", "TDR-0028"]
+  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288", "GH-289", "GH-292", "GH-294", "GH-293"]
+  related_decisions: ["TDR-0015", "TDR-0005", "TDR-0010", "ADR-0008", "TDR-0016", "TDR-0019", "TDR-0020", "TDR-0021", "TDR-0024", "TDR-0026", "TDR-0027", "TDR-0028", "TDR-0031"]
   contracts:
     - "packages/core/src/contracts/dispatch.ts"
     - "packages/core/src/contracts/delivery-result.ts"
@@ -326,7 +326,7 @@ Eligibility for a repository is the conjunction of four separated facts over the
 
 The four conditions are one shape in one declared order (`DISPATCH_HANDOVER_CONDITIONS`: `truth`, `coverage`, `floor`, `corroboration`), each `{condition, status}` with `status` in `met | open` and no `detail` field, and one derivation produces them for the summary, the handover decision, and the fleet row. A condition is `open` exactly when the evaluation names it in `unmetConditions`, so the open set equals the unmet list in order by construction. `unverifiable` is a window-level verdict, never a third status: a truncated read reports `verdict: "unverifiable"` with `truncation` present and the statuses explicitly over the visible window.
 
-The fleet evaluation host is `repos list` (and only that read): every `ready` row carries `reversible` and a `handoverGate` block evaluated at read time, bound to the row's own repository identity and folded at the declared `production` scope. No other read evaluates the gate, and no new command, verb, flag, daemon tick, or scheduler exists. The row contract is documented in [Repositories and the Host Overview](feature-projects.md).
+The fleet evaluation host is `repos list` (and only that read): every row carries `reversible` and a `handoverGate` block — evaluated at read time for each `ready` row, and the declared empty-window evaluation for a `first-use` row — bound to the row's own repository identity and folded at the declared `production` scope. No other read evaluates the gate, and no new command, verb, flag, daemon tick, or scheduler exists. The row contract is documented in [Repositories and the Host Overview](feature-projects.md).
 
 `dispatch handover <repo>` evaluates the same predicate. A readable but unmet bar is a clean refusal at exit `1` that names every unmet condition and appends no authority-changing record. An unreadable or torn evidence read refuses at exit `2` with the classified identity and appends no authority-changing record. A met bar appends one handover record, flips only the resolved repository identity to `authoritative`, refreshes the authority view atomically, and reports the flip as recorded and reversible. Other repositories stay in `dual-run`.
 
@@ -407,7 +407,7 @@ The delivered state read verifies the JSONL ledger once. The attempt fold retain
 
 ## Quality evidence
 
-The enduring coverage map is the [dispatch engine test specification](../../quality/test-specs/test-spec-dispatch-engine.md). The principal suites are the dispatch truth, liveness, watch, evidence, gate, handover, resume, identity, admission-preflight, admission-read-mapping, admission-diagnostics, delivered-evidence-divergence, resolve-diagnostics, bash-fallback, help, daemon, production-composition, bounds, and controlled-proof suites; the attempt read side and the extended resolve result are covered by the attempt reference, contract, bounds, scope, refusals, and digest suites, the resolve-result and divergence-count suites, and the attempts taxonomy, count-rule, composition, additive-stability, and test-isolation suites; `pnpm check:help` and the aggregate `pnpm check` cover the registration and conformance surfaces. All run under `tests/behaviour/`, `tests/structure/`, `tests/checks/`, `tests/golden/`, `tests/conformance/dispatch/`, and `scripts/.tests/`.
+The enduring coverage map is the [dispatch engine test specification](../../quality/test-specs/test-spec-dispatch-engine.md). The principal suites are the dispatch truth, liveness, watch, evidence, gate, handover, clean-accrual, conditions-projection, handover-conditions, resume, identity, admission-preflight, admission-read-mapping, admission-diagnostics, delivered-evidence-divergence, resolve-diagnostics, bash-fallback, help, daemon, production-composition, bounds, and controlled-proof suites; the fleet row's additive fields and read-time evaluation are covered by the repos handover-gate, repos-list-contract, projects-flat-alias, engine-first-cross-surface, and engine-first-no-flip suites; the attempt read side and the extended resolve result are covered by the attempt reference, contract, bounds, scope, refusals, and digest suites, the resolve-result and divergence-count suites, and the attempts taxonomy, count-rule, composition, additive-stability, and test-isolation suites; `pnpm check:help` and the aggregate `pnpm check` cover the registration and conformance surfaces. All run under `tests/behaviour/`, `tests/structure/`, `tests/checks/`, `tests/golden/`, `tests/conformance/dispatch/`, and `scripts/.tests/`.
 
 ## Related
 
@@ -421,6 +421,9 @@ The enduring coverage map is the [dispatch engine test specification](../../qual
 - [Verify Change and Exit Taxonomy](feature-verify-change-and-exit-taxonomy.md) — the delivery-result vocabulary and the verify-change comparison baseline.
 - [Dispatch reference page](../../planning/oss-tooling/milestones/m1/commands/dispatch.md)
 - [Attempt read-side reference page](../../planning/oss-tooling/milestones/m2/commands/attempts.md)
+- [Engine-first Delivery Operations](../../guides/engine-first-operations.md) — the operator routine over these surfaces: the daily loop, reading the gate and the fleet row, flip and reversal, and the shell fallback.
+- [Repositories and the Host Overview](feature-projects.md) — the `repos list` row that hosts the read-time gate evaluation.
+- [TDR-0031 — Engine-first evaluation surfaces](../../decisions/TDR-0031-engine-first-evaluation-surfaces.md)
 - [Tracker Credential Provisioning](../../guides/tracker-credential-provisioning.md) — the supported truth-read key, the explicit `gh` export bridge, and rotation guidance.
 - [TDR-0015 — Dispatch handover gate operational semantics](../../decisions/TDR-0015-dispatch-handover-gate-operational-semantics.md)
 - [TDR-0019 — Dispatch admission credential preflight](../../decisions/TDR-0019-dispatch-admission-credential-preflight.md)
@@ -432,4 +435,4 @@ The enduring coverage map is the [dispatch engine test specification](../../qual
 - [TDR-0026 — Queue lifecycle removal and single-flight](../../decisions/TDR-0026-queue-lifecycle-removal-single-flight.md)
 - [TDR-0027 — Command failure envelope detail slot](../../decisions/TDR-0027-command-failure-envelope-detail-slot.md)
 
-**Change records:** `doc/changes/2026-11/2026-11-08--GH-239--dispatch-engine/` (the delivered engine), `doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/` (the admission preflight and delivered-evidence divergence), `doc/changes/2026-11/2026-11-11--GH-289--evidence-inspection/` (the attempt read side and the local-evidence resolve result), and `doc/changes/2026-11/2026-11-12--GH-292--queue-lifecycle/` (the per-ref single-flight admission refusal and its envelope-root holder detail).
+**Change records:** `doc/changes/2026-11/2026-11-08--GH-239--dispatch-engine/` (the delivered engine), `doc/changes/2026-11/2026-11-10--GH-279--dispatch-credential-preflight/` (the admission preflight and delivered-evidence divergence), `doc/changes/2026-11/2026-11-11--GH-289--evidence-inspection/` (the attempt read side and the local-evidence resolve result), `doc/changes/2026-11/2026-11-12--GH-292--queue-lifecycle/` (the per-ref single-flight admission refusal and its envelope-root holder detail), and `doc/changes/2026-11/2026-11-17--GH-293--engine-first-operations/` (clean accrual, condition projection, the handover outcome table, and the fleet read-time gate evaluation).

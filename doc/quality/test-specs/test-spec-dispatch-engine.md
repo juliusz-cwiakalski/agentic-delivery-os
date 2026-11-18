@@ -3,11 +3,11 @@ ados_distribution: internal
 id: TEST-SPEC-DISPATCH-ENGINE
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-11
+last_updated: 2026-11-18
 owners: ["engineering"]
 service: delivery-os
 links:
-  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-286", "GH-289"]
+  related_changes: ["GH-239", "GH-275", "GH-277", "GH-279", "GH-286", "GH-289", "GH-293"]
   feature_spec: doc/spec/features/feature-dispatch-engine.md
 ---
 
@@ -15,12 +15,12 @@ links:
 
 ## Overview
 
-The dispatch suite protects one property: a delivery verdict is trustworthy only when truth decides it, evidence is durable, and authority moves only through a recorded gate. The suite fails if an exit code alone can produce a success claim; if a dispatch that reaches classification appends no attempt record or appends more than one; if a pre-session refusal records a fake attempt or an admission refusal claims a lease or starts a session; if an admission read outcome is forwarded from the adapter instead of classified from its received status; if an exit-0-with-no-artifact run is counted clean; if a false-success incident is hidden or an incident does not reset the evidence window; if a delivered-evidence divergence duplicates, disappears, or becomes locally unresolvable; if evidence of the wrong class counts toward a production handover; if a handover flips more than one repository, cannot be reverted idempotently, or is lost on replay; if bash needs the typed CLI to decide fallback; if the daemon path and the one-shot path disagree; if a model call or secret enters help, summary, gate, record, or envelope; or if a merge path becomes reachable from dispatch.
+The dispatch suite protects one property: a delivery verdict is trustworthy only when truth decides it, evidence is durable, and authority moves only through a recorded gate. The suite fails if an exit code alone can produce a success claim; if a dispatch that reaches classification appends no attempt record or appends more than one; if a pre-session refusal records a fake attempt or an admission refusal claims a lease or starts a session; if an admission read outcome is forwarded from the adapter instead of classified from its received status; if an exit-0-with-no-artifact run is counted clean; if a false-success incident is hidden or an incident does not reset the evidence window; if a delivered-evidence divergence duplicates, disappears, or becomes locally unresolvable; if evidence of the wrong class counts toward a production handover; if a handover flips more than one repository, cannot be reverted idempotently, or is lost on replay; if the gate's four condition statuses are derived by a second rule, disagree with `unmetConditions`, or a window-level `unverifiable` becomes a third status; if `cleanDispatches` is a dispatch count rather than the corroborated number; if a handover outcome that reads gate evidence omits `conditions`, or the idempotent revert noop manufactures one; if the fleet row evaluates evidence that is not its own repository's, writes a binding, or fabricates a row when the ledger cannot be read; if bash needs the typed CLI to decide fallback; if the daemon path and the one-shot path disagree; if a model call or secret enters help, summary, gate, record, or envelope; or if a merge path becomes reachable from dispatch.
 
 ## Test Scope
 
-- Components under test: the dispatch contracts (`packages/core/src/contracts/dispatch.ts`), the pure domain (`dispatch-result`, `dispatch-liveness`, `dispatch-comparison`, `dispatch-identity`, `dispatch-authority`, `dispatch-gate`, `dispatch-attempts`, `dispatch-resume`, `lane-launch-plan`), the app tier (`dispatch`, `dispatch-ledger`, `dispatch-gate`, `dispatch-attempts`, `daemon-dispatch-result`, `daemon-supervision`), the checkout identity adapters (`packages/adapters/src/file/dispatch-identity.ts`, `packages/adapters/src/repo/index.ts`), the GitHub work-item read and its received-status stamp (`packages/adapters/src/github/client.ts`, `packages/adapters/src/github/normalize.ts`, `packages/adapters/src/io/provider-transport.ts`), the CLI surface (`packages/cli/src/commands/dispatch.ts`, `output/dispatch-text.ts`, `index.ts`, `edge.ts`, `production.ts`, `entrypoint.ts`, `daemon-compose.ts`), the help and prompt-required inventory, the four bash entry points plus `scripts/lib/dispatch-authority.sh`, and the four `dispatch` error rows.
-- Contracts under test: the optional `preflight` admission port and its status-keyed refusal identities, the trusted-refusal marker's narrow forwarding rule, the three additive record kinds and the derived authority document, the closed evidence-class and comparison vocabularies, the eleven-token taxonomy with its projection and derivation classes, the pinned failure-token pairs, the delivered-evidence divergence shape and its per-work-item dedupe, the local-only resolve typing, the four-condition handover gate, the `attempts.v1` read-side contract with its sixteen-field projection, total order and declared bounds, the additive resolve result (unconditional `local-evidence` mode, subject repository, shared repository-scoped divergence block), and the bounded read/output constants.
+- Components under test: the dispatch contracts (`packages/core/src/contracts/dispatch.ts`, `packages/core/src/contracts/projects.ts`), the pure domain (`dispatch-result`, `dispatch-liveness`, `dispatch-comparison`, `dispatch-identity`, `dispatch-authority`, `dispatch-gate`, `dispatch-attempts`, `dispatch-resume`, `lane-launch-plan`), the app tier (`dispatch`, `dispatch-ledger`, `dispatch-gate`, `dispatch-attempts`, `projects`, `daemon-dispatch-result`, `daemon-supervision`), the checkout identity adapters (`packages/adapters/src/file/dispatch-identity.ts`, `packages/adapters/src/repo/index.ts`), the GitHub work-item read and its received-status stamp (`packages/adapters/src/github/client.ts`, `packages/adapters/src/github/normalize.ts`, `packages/adapters/src/io/provider-transport.ts`), the CLI surface (`packages/cli/src/commands/dispatch.ts`, `output/dispatch-text.ts`, `index.ts`, `edge.ts`, `production.ts`, `entrypoint.ts`, `daemon-compose.ts`), the help and prompt-required inventory, the four bash entry points plus `scripts/lib/dispatch-authority.sh`, and the four `dispatch` error rows.
+- Contracts under test: the optional `preflight` admission port and its status-keyed refusal identities, the trusted-refusal marker's narrow forwarding rule, the three additive record kinds and the derived authority document, the closed evidence-class and comparison vocabularies, the eleven-token taxonomy with its projection and derivation classes, the pinned failure-token pairs, the delivered-evidence divergence shape and its per-work-item dedupe, the local-only resolve typing, the four-condition handover gate, the shared `DispatchConditionStatus` shape (`{condition, status: "met" | "open"}` in the declared `truth, coverage, floor, corroboration` order) with the invariant that the open set equals `unmetConditions` in order, the summary's `cleanDispatches` (identical to `corroboration.satisfied`) and trailing-run `consecutiveCleanDispatches`, the handover data's outcome table (four gate-reading outcomes carry `conditions` and `reversible`; the idempotent revert noop is the single evidence-read-free exemption), the `repos.v1` row's additive `reversible` and `handoverGate` fields at their declared order and the unchanged five-column text table, the `production` evidence scope, the read-only non-persisting row binding, the `attempts.v1` read-side contract with its sixteen-field projection, total order and declared bounds, the additive resolve result (unconditional `local-evidence` mode, subject repository, shared repository-scoped divergence block), and the bounded read/output constants.
 - Exclusions: no real repository is flipped and no real pilot evidence is accrued; the controlled proof uses the real state store and command path with injected harness, tracker, CI, and VCS ports. No live network, live model, or real merge is exercised. Evidence retention and cross-host authority are out of scope.
 
 ## Test Levels
@@ -61,6 +61,15 @@ The attempt read side and the extended resolve result (GH-289) are covered by:
 - `tests/behaviour/dispatch-resolve-result.test.ts`, `tests/behaviour/dispatch-divergence-count.test.ts`, `tests/structure/dispatch-attempts-count-rule.test.ts` — the resolve extension (unconditional mode, subject repository, exact counts), replay idempotency, the blank and long note cells, the one deterministic resolve line, the 25-open shared count with 20 identifiers and `idsTruncated`, and the single-computation structural pin with zero list-length derivation.
 - `tests/structure/dispatch-attempts-taxonomy.test.ts`, `tests/checks/dispatch-attempts-test-isolation.test.ts`, `tests/structure/dispatch-attempts-composition.test.ts`, `tests/behaviour/dispatch-additive-stability.test.ts` — taxonomy closure over the new surfaces, test isolation, the single pointer route from evidence to the gate, and the delivered shapes with the four delivered-form refusals under `acceptsAnyFlag`.
 
+### Evaluation-surface tests
+
+- `tests/behaviour/dispatch-clean-accrual.test.ts` — `cleanDispatches` equals `corroboration.satisfied` and is not a dispatch count, the trailing-run streak (a non-clean tail breaks it without changing accrual), an uncorroborated success claim counted but not clean, the empty-window zeros and declared empty-window statuses, the pure-fold agreement, the accrual walk (counted, clean, first-appearance coverage, streak), and a resolved divergence leaving the numbers unchanged.
+- `tests/behaviour/dispatch-conditions-projection.test.ts` — one shape in the declared order with exactly two keys per entry and closed statuses, an eligible window reading four `met`, a missing class opening `coverage` and `floor`, the open set equalling `unmetConditions` in order on every fixture family including the truncated one, and `corroboration`/`floor` opening without a fabricated status.
+- `tests/behaviour/dispatch-handover-conditions.test.ts` — the four gate-reading outcomes carrying four conditions and the noop carrying the declared absences; the no-record exemption; a torn attempts ledger or unreadable divergences ledger never refusing the noop; the `reversible` truth table; the recorded revert refusing under a torn attempts ledger while the noop answers; the unchanged record key set and replay; per-repository isolation; `verdict == "unverifiable" ⟺ truncation present` including the recorded revert's verdict; unchanged handover text; and the noop over a torn or unreadable **handover** ledger refused `dispatch.state-unverified` at exit `2` with no data.
+- `tests/behaviour/repos-handover-gate.test.ts`, `tests/behaviour/repos-list-contract.test.ts`, `tests/behaviour/projects-flat-alias.test.ts` — the row's two additive fields in the declared order, agreement with the summary over one ledger and exclusion of foreign records, an unreadable ledger or unresolvable identity failing `repos.state-unavailable` at exit `2` with no row, a truncated read reporting `unverifiable` plus `truncation`, two reads over unchanged state byte-identical, the read re-evaluating and writing nothing, and the `projects.v1` / `projects list --flat` alias carrying neither field byte-identically.
+- `tests/behaviour/engine-first-cross-surface.test.ts`, `tests/behaviour/dispatch-additive-stability.test.ts`, `tests/golden/dispatch-summary.test.ts` — the summary, handover, and row agreeing on one ledger; the delivered summary and handover shapes extended by appending only with key order pinned; and the summary text lines (`clean_dispatches=`, `consecutive_clean_dispatches=`, `conditions=`) in place before the optional truncation line.
+- `tests/checks/engine-first-no-flip.test.ts`, `tests/checks/engine-first-hermetic.test.ts`, `scripts/.tests/test-engine-first-shell-parity.sh` — the handover use case as the only authority writer with reads appending nothing, no live call in the change's surface, and the four entry points' stdout byte-identical across the two authority states with the pointer on stderr only.
+
 ### Registration, fallback, and daemon tests
 
 - `tests/behaviour/entrypoint-composition.test.ts`, `entrypoint-help-coverage.test.ts`, `dispatch-help-version.test.ts`, `tests/structure/dispatch-help-inventory.test.ts`, `tests/checks/dispatch-doc-conformance.test.ts` — prompt-required registration, help paths, reference-page coverage, and the stale-ring reconciliation.
@@ -75,7 +84,7 @@ The attempt read side and the extended resolve result (GH-289) are covered by:
 
 ## Test Data
 
-Dispatch suites drive `runCli` with an injected command program and injected harness, tracker, CI, VCS, clock, run-id, and fence seams. Fixtures under `tests/fixtures/dispatch/` supply harness evidence, truth reads, ledger records, evidence windows, authority documents, bash authority files, admission doubles (recording credential port and transport), golden refusal envelopes, golden text, and mutation cases. The controlled proof uses a real local state store and real change files with deterministic UTC date advance; only the command path produces its attempt, divergence, and handover records. The production-composition proof seeds attempt records through the delivered ledger append to reach an eligible window, then drives `summary`, `resolve`, `handover`, and resume through the shipped production composer. No fixture fabricates a command outcome.
+Dispatch suites drive `runCli` with an injected command program and injected harness, tracker, CI, VCS, clock, run-id, and fence seams. Fixtures under `tests/fixtures/dispatch/` supply harness evidence, truth reads, ledger records, evidence windows, authority documents, bash authority files, admission doubles (recording credential port and transport), golden refusal envelopes, golden text, and mutation cases. Evaluation-surface fixtures add the clean and uncorroborated success claims, a non-clean tail, an empty window, two repositories' records in one store, and handover ledgers in readable, truncated, torn, and unreadable states. The controlled proof uses a real local state store and real change files with deterministic UTC date advance; only the command path produces its attempt, divergence, and handover records. The production-composition proof seeds attempt records through the delivered ledger append to reach an eligible window, then drives `summary`, `resolve`, `handover`, and resume through the shipped production composer. No fixture fabricates a command outcome.
 
 ## Test Scenarios
 
@@ -198,8 +207,9 @@ Dispatch suites drive `runCli` with an injected command program and injected har
 - **Given** a false-success incident at time T and sufficient counted dispatches strictly after T
 - **When** the summary evaluates
 - **Then** `windowStart` is T, `windowStartReason` is `false-success-incident-reset`, and a dispatch recorded exactly at T is excluded.
+- **And** the four `conditions` read in the declared order (`truth`, `coverage`, `floor`, `corroboration`) with `truth` `open` while an incident or unresolved divergence is in the window, `cleanDispatches` equals `corroboration.satisfied`, and `consecutiveCleanDispatches` is the trailing clean run in ledger append order.
 - **And given** no further incident or unresolved divergence, all eleven classes, the floor, and corroboration
-- **Then** eligibility is true.
+- **Then** eligibility is true and all four conditions are `met`.
 
 ### Scenario: evidence-class counting
 
@@ -214,10 +224,31 @@ Dispatch suites drive `runCli` with an injected command program and injected har
 - **Given** a repository whose evidence bar is readable but unmet
 - **When** `dispatch handover <repo>` runs
 - **Then** it refuses at exit `1`, names every unmet condition, and changes no authority.
+- **And given** the bar is readable and not truncated
+- **Then** its data carries the four ordered `conditions` (the open set equal to `unmetConditions` in order), `reversible: false`, and no `truncation`, and `unmetConditions` stays refusal-only.
 - **And given** a met bar
 - **Then** it appends one handover record, flips only that repository, and refreshes the authority view atomically.
+- **And** its data reports the four `met` conditions, `verdict: "eligible"`, and `reversible: true`.
 - **And when** `--revert` runs
-- **Then** a reversal record restores `dual-run` and history remains; a second `--revert` is a noop at exit `0`.
+- **Then** a reversal record restores `dual-run` and history remains; its data carries the four conditions, `verdict`, `reversible: false`, and `truncation` iff the verdict is `unverifiable`; a second `--revert` is a noop at exit `0`.
+- **And given** the idempotent revert noop on an already-`dual-run` repository
+- **Then** its data carries `recorded: false`, `noop: true`, `operation: "dual-run"`, and `reversible: false`, and no `conditions`, `verdict`, or `truncation`, and a torn or unreadable attempts or divergences ledger never refuses it.
+- **And given** the same noop over an unreadable or torn **handover** ledger
+- **Then** it refuses `dispatch.state-unverified` at exit `2` with no data and appends no record.
+
+### Scenario: fleet read-time gate evaluation
+
+- **Given** two checkouts on one host root whose ready rows hold evidence for different repositories
+- **When** `repos list --json` runs
+- **Then** each row carries exactly `repoKey`, `root`, `stateLocation`, `daemonReachable`, `handoverState`, `reversible`, and `handoverGate`, and the block's `countedDeliveries`, `cleanDispatches`, and `conditions` count only that row's own repository identity at the declared `production` scope.
+- **And given** a `first-use` row
+- **Then** it reports the empty-window evaluation (`ineligible`; `truth` met, `corroboration` met vacuously, `coverage` and `floor` open; `countedDeliveries: 0`) and `reversible: false`, without opening a store.
+- **And given** a truncated attempts read
+- **Then** the row reports `verdict: "unverifiable"` with `truncation` over the visible window and the read succeeds at exit `0`.
+- **And given** an unreadable or torn attempts/divergences ledger, or a ready row whose repository identity cannot be resolved
+- **Then** the whole read fails `repos.state-unavailable` at exit `2` with no row and no binding written.
+- **And given** two reads over unchanged state
+- **Then** the payloads are byte-identical, and the text table stays the delivered five columns.
 
 ### Scenario: bash fallback
 

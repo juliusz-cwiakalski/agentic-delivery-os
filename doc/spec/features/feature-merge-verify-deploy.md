@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-MERGE-VERIFY-DEPLOY
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-15
+last_updated: 2026-11-18
 owners: ["engineering"]
 service: delivery-os
 summary: "The merge transaction and verify-deploy engine: the config-declared versioned gate registry shared by verify gates and merge, the fenced EVT-1 gate-verification record and freshness envelope, the post-verification tracker and CI probe, owner-gate classification as merge authority, recorded authorized waivers, the single rebase-refresh with no force path, the verified squash landing with idempotent convergence and dry-run, the lifecycle merge path the coordinator uses, the verify deploy trace verdict taxonomy, the recorded squash SHA and parent that anchor closeout's merged-diff sweep, and the merge.* / verify.deploy.* error identities."
 links:
-  related_changes: ["GH-225", "GH-237", "GH-240", "GH-242", "GH-300"]
-  related_decisions: ["ADR-0003", "ADR-0004", "PDR-0003"]
+  related_changes: ["GH-225", "GH-237", "GH-240", "GH-242", "GH-300", "GH-293"]
+  related_decisions: ["ADR-0003", "ADR-0004", "PDR-0003", "TDR-0031"]
   contracts:
     - "packages/core/src/contracts/merge.ts"
     - "packages/core/src/contracts/verify-deploy.ts"
@@ -192,11 +192,11 @@ with a declared existing platform identity, never a new `verify.deploy.*` fault
 row. Negative verdicts are classified errors at exit 1 with `runId` and no
 `data`; text mode keeps `verdict=` continuity.
 
-**Declared residual.** `verify deploy`'s production target-resolution remains a
-declared stub in this change: the command's delivered behaviour, its golden, and
-its error identities are unchanged, and target resolution is *not delivered* by
-this work. An operator reading this page or the engine-first guide must treat
-deploy verification as a residual gap rather than an engine-verified capability.
+**Declared residual.** `verify deploy`'s production target resolution remains a
+stub: the command's delivered behaviour, its golden, and its error identities are
+unchanged, and engine-verified deploy target resolution is *not delivered*. An
+operator reading this page or the engine-first guide must treat deploy
+verification as a residual gap rather than an engine-verified capability.
 
 The reason↔identity map is total and bidirectional: absent executed-step
 evidence (including a created-never-ran pipeline, which keeps that reason) maps
@@ -235,12 +235,18 @@ with no pattern widening.
   (65 536-byte machine data; 24-line/4 096-byte human summaries) with explicit
   `+N` marks.
 
+## Quality evidence
+
+The enduring coverage map is the [merge and verify-deploy test specification](../../quality/test-specs/test-spec-merge-verify-deploy.md). The production composition's reachability and classification are covered by the merge-production-composition, merge-dry-run, merge-classification, and merge-classification-conformance suites; the delivered determinism, budget, bounds, state-write, idempotency, no-force, coordinator-only, privacy, and verify-gates rows of that specification are unchanged.
+
 ## Related
 
 [Verify Gates](feature-verify-gates.md) · [Owner-Gate SLA](feature-owner-gate-sla.md) ·
 [Configuration Layer](feature-config-layer.md) · [State Layer](feature-state-layer.md) ·
 [Adapter Ports](feature-adapter-ports.md) · [Closeout Transaction](feature-closeout.md) ·
-[Result Contract and Error Table](feature-result-contract.md) · [Commit Primitive](feature-commit-primitive.md)
+[Result Contract and Error Table](feature-result-contract.md) · [Commit Primitive](feature-commit-primitive.md) ·
+[Engine-first Delivery Operations](../../guides/engine-first-operations.md) ·
+[TDR-0031 — Engine-first evaluation surfaces](../../decisions/TDR-0031-engine-first-evaluation-surfaces.md)
 
 ## Scheduling engine reconciliation (GH-237)
 

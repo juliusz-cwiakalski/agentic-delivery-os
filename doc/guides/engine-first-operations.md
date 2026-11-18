@@ -6,6 +6,9 @@ created: 2026-11-18
 last_updated: 2026-11-18
 owners: ["engineering"]
 summary: "Operating guide for engine-first delivery: the daily routine, how to read the handover gate and the fleet row, how a per-repository flip and its reversal are performed, and the shell fallback with the declared residuals."
+links:
+  related_changes: ["GH-293"]
+  related_decisions: ["TDR-0031"]
 ---
 
 # Engine-first delivery operations
@@ -87,16 +90,17 @@ dispatch handover <host/owner/name>            # flip once the gate reads eligib
 dispatch handover <host/owner/name> --revert   # restore dual-run
 ```
 
-- A met bar records the flip, reports `operation=authoritative`, `recorded=true`,
-  `reversible=true`, and moves only that repository.
+- A met bar records the flip; its `data` reports `operation=authoritative`,
+  `recorded=true`, `reversible=true`, and the four `met` conditions, and moves
+  only that repository.
 - A readable but unmet bar is a clean refusal at exit `1` naming every unmet
   condition; nothing is recorded.
-- A repository already `authoritative` answers an idempotent noop: `recorded=false`,
-  `reversible=true`, no second record.
-- `--revert` records a reversal and reports `reversible=false`; history is
-  preserved, never deleted. Repeating the revert on a `dual-run` repository answers
-  an idempotent noop with no conditions, no verdict, and no truncation — it changes
-  no authority, so a torn attempts ledger cannot refuse it.
+- A repository already `authoritative` answers an idempotent noop: its `data`
+  reports `recorded=false`, `reversible=true`, no second record.
+- `--revert` records a reversal and its `data` reports `reversible=false`; history
+  is preserved, never deleted. Repeating the revert on a `dual-run` repository
+  answers an idempotent noop with no conditions, no verdict, and no truncation — it
+  changes no authority, so a torn attempts ledger cannot refuse it.
 - An unreadable or torn **handover** ledger is still a classified
   `dispatch.state-unverified` refusal at exit `2`, on every path.
 
@@ -120,12 +124,11 @@ The shell stack is the documented fallback, not a deprecated path:
 
 ## 5. Declared residuals
 
-Two limits are stated so an operator does not plan around capability that does not
+Three limits are stated so an operator does not plan around capability that does not
 exist:
 
-- **`verify deploy` target resolution** is a declared residual in this change: the
-  command's delivered behaviour is unchanged and deploy confidence is not
-  engine-verified by this work.
+- **`verify deploy` target resolution** is a declared residual: the command's
+  delivered behaviour is unchanged and deploy confidence is not engine-verified.
 - **A declared peak window has no read surface** of its own: the engine exposes the
   park it causes (`status.laneParks`, the board `PARKED` section, the
   `peak-window` park record), never a window listing.
@@ -135,6 +138,9 @@ exist:
   the attempt history, the daemon lane records, `status.laneParks`, the board's
   `PARKED` section, and the window-scoped spend evidence.
 
-The two broader test specifications (`doc/quality/test-specs/test-spec-dispatch-engine.md`,
-`test-spec-merge-verify-deploy.md`) are reconciled to the delivered contracts by
-the lifecycle's `system_spec_update` phase, not by this guide.
+The broader suites behind these contracts are specified in
+[Test Specification: Dispatch Engine](../quality/test-specs/test-spec-dispatch-engine.md)
+and [Test Specification: Merge and Verify Deploy](../quality/test-specs/test-spec-merge-verify-deploy.md);
+those pages are reconciled at each change's `system_spec_update` lifecycle phase
+(phase 7), while this guide stays the operator reference. The contract details are
+in the feature pages linked above.

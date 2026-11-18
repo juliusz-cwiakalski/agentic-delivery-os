@@ -38,12 +38,30 @@ work, not current truth.
   so a bare negative always carries a degradation reason; an invocation
   outside any git work tree uses the declared `unbound` scope and is never an
   error), `handoverState` (the handover state: `engine`, `shell`, or
-  `in-transition`).
+  `in-transition`), `reversible` (`true` exactly when the row's latest folded
+  handover operation is `authoritative` — the same rule the authority document
+  applies to `reversalAvailable`), and `handoverGate` (the read-time gate
+  block: `verdict` in `eligible | ineligible | unverifiable`, the four ordered
+  `conditions` (`truth`, `coverage`, `floor`, `corroboration`; each
+  `{condition, status}` with `status` in `met | open`), `countedDeliveries`,
+  `cleanDispatches`, and `truncation` only when the bounded read omitted
+  records). The block is evaluated at read time for every `ready` row, bound to
+  the row's own normalized `host/owner/name` identity (resolved read-only and
+  non-persisting from the checkout, with foreign-repository records excluded)
+  and folded at the declared `production` evidence scope — the same scope
+  `dispatch dual-run summary --repo` and the handover decision use. A
+  `first-use` row reports the empty-window evaluation (`ineligible`; `truth`
+  met, `corroboration` met vacuously, `coverage` and `floor` open; both counters
+  `0`, `reversible: false`) without opening a store. An unreadable, torn, or
+  malformed attempts/divergences ledger, and an unresolvable repository identity
+  on a `ready` row, fail the whole read as `repos.state-unavailable` at exit
+  `2` with no fabricated row; a truncated attempts read is not a failure and
+  reports `verdict: "unverifiable"` with `truncation`.
 - **Envelope.** `<binary> repos list --json` returns `repos.v1` with
   `data.repos[]`, exactly those fields, and the host index revision
   `hostIndexRevision`. The delivered `projects.v1` payload survives unchanged
-  and remains reachable through the `projects list --flat` alias; the rename
-  rule states the whole transition once.
+  and remains reachable through the `projects list --flat` alias, carrying
+  neither additive field; the rename rule states the whole transition once.
 - **Repository vocabulary.** The `project-identity.json` marker, the
   `<host root>/projects/<key>` container, the host index's `projects[]` and
   `projectKey` fields, and the `--project-root` flag each denote a repository
