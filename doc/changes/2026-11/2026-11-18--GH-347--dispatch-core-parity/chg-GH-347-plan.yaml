@@ -1564,10 +1564,13 @@ phases:
   #   pm-notes and failing CI, an already-merged-PR `merged` still requires all
   #   three sources (an absent pm-notes source is a contradiction there), a
   #   nothing-to-do attempt records `tracker: satisfied` only, every other token's
-  #   requirement is byte-identical to today's map, the one-shot and daemon paths
-  #   record the SAME corroboration for the same facts, and the evidence-window
+  #   requirement is byte-identical to today's map, and the evidence-window
   #   gate's verdicts and counters are unchanged (token-level, delivered cases
-  #   green as read-only controls); 0 new tokens, projections, exits, attempt-schema
+  #   green as read-only controls). The DAEMON path's equality for the same facts
+  #   is asserted in phase 7 (TC-PARITY-006's attempt-level `corroboration` and
+  #   `falseSuccess`), not here: this phase's suites exercise the shared
+  #   comparison/classification functions, and the daemon lane harness belongs to
+  #   the battery. 0 new tokens, projections, exits, attempt-schema
   #   versions, or config keys):
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-parity-tracker.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-truth-derivation.test.ts
