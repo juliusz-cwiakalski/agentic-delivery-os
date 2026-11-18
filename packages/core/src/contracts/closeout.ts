@@ -17,6 +17,7 @@ import type {
 } from "./capsule.js";
 import type { HarnessResult, HarnessSeatBinding } from "./harness.js";
 import type {
+  HarnessCaptureAbsenceCount,
   HarnessTelemetryAppendReport,
   HarnessTelemetryCapture,
   HarnessTelemetryWarning,
@@ -425,6 +426,12 @@ export type CloseoutSessionFacts = {
   readonly unattributedAttempts?: number;
   /** The bounded attempt-ledger read's counted truncation (AC-F5-5). */
   readonly attemptTruncation?: HarnessTruncation;
+  /**
+   * The harness version the recorded dispatch attempt observed (GH-335 F-7,
+   * DM-9). Capture passes it as the extractor's pinned version so a session row
+   * that states a different version warns `version-drift`.
+   */
+  readonly observedVersion?: string | null;
   readonly lastVerifiedCommit?: string;
   readonly unresolvedQuestions?: number;
   readonly workingStateFlushed?: boolean;
@@ -442,6 +449,8 @@ export type CloseoutTelemetryRuntime = {
     readonly bindings?: Readonly<Record<string, HarnessSeatBinding>>;
     readonly unattributedAttempts?: number;
     readonly attemptTruncation?: HarnessTruncation;
+    /** The delivery run's observed harness version, for the drift comparison. */
+    readonly pinnedVersion?: string;
   }) => Promise<HarnessResult<HarnessTelemetryCapture>>;
   readonly append: (capture: HarnessTelemetryCapture) => StateResult<HarnessTelemetryAppendReport>;
 };
@@ -565,6 +574,12 @@ export type CloseoutTelemetryDisclosure = {
   readonly failed: number;
   readonly warnings: readonly HarnessTelemetryWarning[];
   readonly sessionTruncation?: HarnessTruncation;
+  /** The held sessions the readable store does not hold, by closed reason (F-4). */
+  readonly absences?: readonly HarnessCaptureAbsenceCount[];
+  /** Recorded attempts that held no session identity, counted (F-4). */
+  readonly unattributedAttempts?: number;
+  /** The bounded attempt read's counted truncation (F-4). */
+  readonly attemptTruncation?: HarnessTruncation;
 };
 
 /** The bounded `delivery.closeout.v1` machine payload (F-13). */

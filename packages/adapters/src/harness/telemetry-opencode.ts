@@ -213,13 +213,56 @@ const messageFacts = (row: HarnessSqliteRow): MessageFacts => {
   };
 };
 
+/**
+ * Project one ordered message stream into usage rows, applying the observed
+ * transitions (GH-335 F-6, spec §8.3).
+ *
+ * `agent-switched` updates the running agent and `model-switched` the running
+ * model; a usage row that states no value inherits the running baseline, so a
+ * mid-session switch scopes the following groups correctly. A legacy row carries
+ * no type and is treated as a usage row.
+ */
+const projectMessages = (
+  rows: readonly HarnessSqliteRow[],
+  baseline: { readonly agent: string | null; readonly model: string | null },
+): readonly MessageFacts[] => {
+  let runningAgent = baseline.agent;
+  let runningModel = baseline.model;
+  const facts: MessageFacts[] = [];
+  for (const row of rows) {
+    const type = str(row.type);
+    const data = asRecord(row.data) ?? {};
+    if (type === "agent-switched") {
+      runningAgent = str(data.agent) ?? runningAgent;
+      continue;
+    }
+    if (type === "model-switched") {
+      runningModel = canonicalModel(data.model) ?? runningModel;
+      continue;
+    }
+    const usage = messageFacts(row);
+    facts.push({
+      agent: usage.agent ?? runningAgent,
+      model: usage.model ?? runningModel,
+      cost: usage.cost,
+      tokens: usage.tokens,
+    });
+  }
+  return facts;
+};
+
 const SESSION_COLUMNS =
   "id, parent_id, version, agent, model, cost, tokens_input, tokens_output, tokens_reasoning, tokens_cache_read, tokens_cache_write, time_created, time_updated";
 
-/** Per-message usage rows: the current generation scopes by type, legacy does not. */
+/**
+ * Per-message usage rows: the current generation reads the assistant usage rows
+ * AND the observed `agent-switched` / `model-switched` transition rows in `seq`
+ * order (spec §8.3, plan 5.1); the legacy generation has no type column and is
+ * read in timestamp order.
+ */
 const messageSql = (generation: StoreGeneration): string =>
   generation === "current"
-    ? `SELECT data FROM session_message WHERE session_id = ? AND type = 'assistant' ORDER BY seq LIMIT ${String(MAX_MESSAGES_PER_SESSION)}`
+    ? `SELECT type, data FROM session_message WHERE session_id = ? AND type IN ('assistant', 'agent-switched', 'model-switched') ORDER BY seq LIMIT ${String(MAX_MESSAGES_PER_SESSION)}`
     : `SELECT data FROM message WHERE session_id = ? ORDER BY time_created, id LIMIT ${String(MAX_MESSAGES_PER_SESSION)}`;
 
 const detectGeneration = (handle: HarnessSqliteHandle): StoreGeneration | undefined => {
@@ -234,18 +277,54 @@ const detectGeneration = (handle: HarnessSqliteHandle): StoreGeneration | undefi
   return undefined;
 };
 
+/** The representable `Date` range in epoch milliseconds (±8.64e15). */
+const MAX_DATE_MS = 8.64e15;
+
+const isoOf = (milliseconds: number): string | undefined => {
+  if (!Number.isFinite(milliseconds) || Math.abs(milliseconds) > MAX_DATE_MS) return undefined;
+  try {
+    return new Date(milliseconds).toISOString();
+  } catch {
+    return undefined;
+  }
+};
+
 const durationsOf = (session: SessionFacts): HarnessTelemetryDurations => {
   const start = session.timeCreated;
   const end = session.timeUpdated;
   if (start === null || end === null) return { status: "absent", reason: "duration-absent" };
   const elapsedMs = end - start;
   if (elapsedMs < 0) return { status: "absent", reason: "duration-absent" };
+  const startIso = isoOf(start);
+  const endIso = isoOf(end);
+  if (startIso === undefined || endIso === undefined) {
+    return { status: "absent", reason: "duration-absent" };
+  }
   return {
     status: "sourced",
-    start: new Date(start).toISOString(),
-    end: new Date(end).toISOString(),
+    start: startIso,
+    end: endIso,
     elapsedMs,
   };
+};
+
+/**
+ * Normalize one stored session version (GH-335 F-7, AC-F5-1).
+ *
+ * The observed session row carries a bare semantic version (`2.2.5`); a `v`
+ * prefix or a product-token line is normalized too. Anything unparseable is
+ * `null` with the declared absence warning — never a raw, unnormalized stamp.
+ */
+const normalizeStoredVersion = (raw: string): string | null => {
+  // The observed session column carries a bare semantic version (DM-10); a `v`
+  // prefix is normalized away and anything else is not this column's shape, so
+  // it is an explicit absence rather than a guessed identity. The probe-line
+  // grammar lives in the contracts/domain tier and is not duplicated here.
+  const bare = /^v?(\d+)\.(\d+)\.(\d+)$/.exec(raw.trim());
+  if (bare === null) return null;
+  const [major, minor, patch] = [bare[1], bare[2], bare[3]];
+  if (major === undefined || minor === undefined || patch === undefined) return null;
+  return `${major}.${minor}.${patch}`;
 };
 
 type Group = {
@@ -339,8 +418,11 @@ export const createOpencodeTelemetryExtractor = (
           )
           .map((row) => str(row.id))
           .filter((id): id is string => id !== undefined);
-      const readMessages = (sessionId: string): readonly MessageFacts[] =>
-        handle.query(messageSql(generation), [sessionId]).map(messageFacts);
+      const readMessages = (session: SessionFacts): readonly MessageFacts[] =>
+        projectMessages(handle.query(messageSql(generation), [session.id]), {
+          agent: session.agent,
+          model: session.model,
+        });
 
       const held = [...new Set(heldSessionIds)].sort();
       const absences: HarnessCaptureAbsence[] = [];
@@ -375,7 +457,7 @@ export const createOpencodeTelemetryExtractor = (
         }
         for (const entry of tree) {
           considered += 1;
-          const groups = groupsOf(entry.session, readMessages(entry.session.id));
+          const groups = groupsOf(entry.session, readMessages(entry.session));
           if (groups.length === 0) {
             failedSessions.push({ sessionId: entry.session.id, reason: "no-usage-fact" });
             continue;
@@ -410,7 +492,8 @@ export const createOpencodeTelemetryExtractor = (
             if (binding !== undefined && group.agent !== null && group.agent !== binding.agent) {
               warnings.push({ reason: "agent-divergence", field: "agent" });
             }
-            const harnessVersion = entry.session.version;
+            const harnessVersion =
+              entry.session.version === null ? null : normalizeStoredVersion(entry.session.version);
             if (harnessVersion === null) {
               warnings.push({ reason: "optional-field-absent", field: "harnessVersion" });
             } else if (

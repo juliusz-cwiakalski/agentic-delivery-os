@@ -344,8 +344,17 @@ export type HarnessFailureCode = (typeof HARNESS_FAILURE_CODES)[number];
  * is carried unchanged (never duplicated) and names the declared reference.
  */
 export type HarnessFailure = {
-  readonly kind: "harness" | "config";
-  readonly code: HarnessFailureCode | "config.credential.missing" | "config.value.invalid";
+  /**
+   * `provider` is the delivered profile-selection domain: an agent the resolved
+   * profile assigns no seat refuses through `provider.profile.invalid` (GH-335
+   * AC-F3-4, TDR-0032 A-2), never through a new harness identity.
+   */
+  readonly kind: "harness" | "config" | "provider";
+  readonly code:
+    | HarnessFailureCode
+    | "config.credential.missing"
+    | "config.value.invalid"
+    | "provider.profile.invalid";
   readonly summary?: string;
   readonly field?: string;
   readonly reference?: string;

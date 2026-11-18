@@ -8,7 +8,7 @@
  * and would either fail spuriously or be loosened until it proves nothing.
  */
 import { describe, expect, test } from "bun:test";
-import { cpSync, mkdtempSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -72,7 +72,7 @@ describe("TC-HARNESS-046 the single probe seam", () => {
       expect(sites.length).toBe(2);
       expect(constructionSites(ROOT).length).toBe(1);
     } finally {
-      // The temp copy lives under the OS temp root the suite injected.
+      rmSync(copy, { recursive: true, force: true });
     }
   });
 

@@ -783,7 +783,7 @@ schemaVersion: delivery.plan.v1
 workItemRef: GH-335
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6, 7, 8]
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9]
   escalationTriggers:
     - "The human-gated live observation shows the harness does not report the resolved seat model on the honoured surface, or a resolved seat model cannot be expressed on it: delivery STOPS, the propagation decision reopens with the mode and adapter-contract records, and a human adjudicates before delivery resumes (spec §18, AC-F3-1, AC-F5-6, RSK-1)"
     - "A second authored copy of the version-window, version-verdict, mode-origin, binding, resolution-outcome, probe-grammar, seat-field, duration-field, observed-axis-absence, or warning-reason vocabulary would exist beside the Phase-2 contract modules, or the harness-reported agent or observed model is persisted twice — a member beside the delivered `agent`/`model` instead of those fields (GAP-5, TDR-0032 A-3, readiness finding 2)"
@@ -2532,6 +2532,161 @@ phases:
         - doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/chg-GH-335-pm-notes.yaml
       folders:
         - doc/planning/oss-tooling/milestones/m3
+    doneArtifacts:
+      mergeRequestUrl: "pull request for feat/GH-335/opencode-harness-telemetry targeting main-tools"
+      pipelineId: "CI pipeline for the GH-335 delivery branch"
+      trackerTransition: "in-review"
+
+  # ---------------------------------------------------------------------------
+  # Phase 9 — Code Review Remediation (Iteration 1). Appended by the reviewer
+  #   after review/review-iter-1.md returned FAIL. Earlier phases are unchanged.
+  #
+  # Goal: close the three blocking findings (F-1..F-3) and the seven minor ones
+  #   (F-4..F-10) so the change's evidence and its production seams match the
+  #   spec it is judged against. F-11..F-14 are optional polish and may ride the
+  #   same commit.
+  #
+  #  9.1 F-2 — mount the resolution call site (AC-F3-1 offline, DM-4, DEC-16,
+  #      §8.2; closes the plan's own escalation trigger "the resolution rule has
+  #      no production call site and only a test-built fixture proves it").
+  #      `packages/cli/src/production.ts`: wrap the opencode session port that
+  #      `dispatchComposition` hands to the dispatch engine in
+  #      `createHarnessProfilePort({ port, profile, selection, resolve:
+  #      resolveBinding })`, using the nominated profile/selection. A call that
+  #      supplies no `agent` must stay a byte-identical passthrough (DEC-15: the
+  #      shipped generic `dispatch` still sets no agent and binds nothing).
+  #      Add `tests/behaviour/harness-profile-composition-mount.test.ts` (new)
+  #      proving the production-composed port resolves a caller-supplied agent to
+  #      exactly one `--agent`/`--model` pair and that a role-less call sends
+  #      neither flag.
+  #
+  #  9.2 F-3 — the two refusal identities (AC-F3-4, AC-F3-1, DEC-17).
+  #      `resolveHarnessAdmissionBinding`: check `harnessAgentIdentityViolation`
+  #      FIRST and return `config.value.invalid` naming the `agent`-identity
+  #      field for a present empty/whitespace identity; keep `unassigned` →
+  #      `provider.profile.invalid` carrying agent, profile, and declared seats in
+  #      the bounded summary. `createHarnessProfilePort`'s `bind`: map an
+  #      `unassigned` resolution to the same `provider.profile.invalid` (agent,
+  #      profile, seats) instead of `config.value.invalid`; reserve
+  #      `config.value.invalid` for the invalid identity. Extend
+  #      `tests/behaviour/harness-profile-unrepresentable.test.ts` with the empty
+  #      agent through the admission helper and the unassigned agent through the
+  #      composed port.
+  #
+  #  9.3 F-1 — the live observation (AC-F5-6, AC-F3-1 live half, DoD clauses 1
+  #      and 4, plan 8.12). Re-record `chg-GH-335-live-observation.md` EITHER by
+  #      running the observation through the delivered path — a harness-port
+  #      `spawn` whose input carries `agent: "coder"` and the composition-resolved
+  #      binding, the attempt recorded, the closeout/extractor capture executed —
+  #      and pasting the ACTUAL landed row (schemaId, harnessVersion, agent,
+  #      model, seat, resolvedModel, tokens, cost, durations) and the state read;
+  #      the argv-only `opencode run …` transcript is not a port spawn and may not
+  #      stand as evidence. OR record an owner/PM-accepted deferral in the change
+  #      evidence with the exact boundary and remove the "met" claim. Never claim
+  #      a capture that was not executed (the captured scope is the recorded
+  #      attempt union; a raw CLI run yields `skipped-gap`).
+  #
+  #  9.4 F-4 — durable disclosure (AC-F5-5, AC-F6-2). Project the capture's
+  #      bounded `absences` (count + closed reasons), `unattributedAttempts`, and
+  #      `attemptTruncation` into `CloseoutTelemetryDisclosure`
+  #      (`packages/core/src/contracts/closeout.ts`) and
+  #      `HarnessCaptureOutcomeRecord` (`packages/core/src/contracts/
+  #      harness-telemetry.ts`), through `captureTelemetry`
+  #      (`packages/core/src/domain/closeout.ts`), the state parse/append
+  #      (`packages/core/src/state/harness-telemetry.ts`), and the edge
+  #      `buildTelemetry` outcome. Add a closeout oracle that an absent session and
+  #      a counted unattributed attempt survive into `data.telemetryCapture` and
+  #      the durable record.
+  #
+  #  9.5 F-5 — mode origin on the record (DM-3, plan 8.6). Add `modeOrigin` to
+  #      `ProductionHarnessFacts` and thread `settings.modeOrigin` through
+  #      `createHarnessAdmission` into `resolveHarnessInstance` so the attempt
+  #      records the configured/default origin instead of always `defaults`.
+  #
+  #  9.6 F-6 — observed-axis transitions (§8.3, plan 5.1). EITHER read
+  #      `agent-switched`/`model-switched` rows in `seq` order and apply them as
+  #      transitions before grouping (fixture + oracle in
+  #      `tests/fixtures/harness/opencode-store/build.ts` and
+  #      `tests/behaviour/harness-telemetry-shape.test.ts`) OR record an
+  #      owner-accepted §8.3/plan-5.1 erratum; do not leave the spec asserting a
+  #      source the code never reads.
+  #
+  #  9.7 F-7 — version divergence (DM-9, §10). Pass the admission's
+  #      `observedVersion` as the extractor's `pinnedVersion` for the delivery run
+  #      and normalize the store's `session_v2.version` through
+  #      `normalizeHarnessVersion` before stamping (null + warning when it does not
+  #      parse); add a drift oracle on the production composition path.
+  #
+  #  9.8 F-8 — duration range guard (NFR-6, NFR-11). Range-guard the timestamp
+  #      pair in `durationsOf` and return `duration-absent` for an unrepresentable
+  #      pair instead of letting the outer catch fail the whole capture; add the
+  #      out-of-range decode test.
+  #
+  #  9.9 F-9 — adapter barrel export. Re-export `type OpencodeBindingSeams` from
+  #      `packages/adapters/src/harness/index.ts` (and the root adapters barrel if
+  #      the options type is public); keep the fixture importing from the barrel.
+  #
+  #  9.10 F-10 — F-11 deferral text. Restate
+  #      `packages/adapters/src/harness/review-deferrals.ts` F-11 to the
+  #      held-identity/absence read discipline (no store-wide scan, NG-11), or mark
+  #      it superseded by GH-335.
+  #
+  #  9.11 Optional (F-11..F-14): correct the two inaccurate pm-notes gap
+  #      descriptions; `rmSync` the temp copy in
+  #      `tests/structure/harness-probe-construction-site.test.ts`; note TC-024's
+  #      collapsed damaged-store variants; document the single-dispatch-per-
+  #      composition invariant or pass `dispatchHarnessFacts` per run.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/harness-profile-composition-mount.test.ts
+  #   bun test tests/behaviour/harness-profile-unrepresentable.test.ts
+  #   bun test tests/behaviour/harness-profile-per-spawn.test.ts
+  #   bun test tests/behaviour/harness-telemetry-attribution.test.ts
+  #   bun test tests/behaviour/harness-telemetry-shape.test.ts
+  #   bun test tests/behaviour/harness-closeout-capture.test.ts
+  #   bun test tests/checks/harness-determinism.test.ts
+  #   bun test tests/checks/harness-mutants.test.ts
+  #   bun test tests/structure/harness-probe-construction-site.test.ts
+  #   jaiship plan validate GH-335
+  #   TMPDIR="$PWD/tmp/tmpdir" pnpm check
+  #   ./scripts/lint-commit-range.sh --base main-tools
+  #
+  # Exit: F-1 resolved (real capture evidence or an owner/PM-accepted deferral),
+  #   F-2/F-3 fixed and proven through the mounted production composition, and
+  #   every minor finding either fixed or explicitly accepted in pm-notes; all 27
+  #   ACs re-verified; review iteration 2 verdicts PASS.
+  # ---------------------------------------------------------------------------
+  - id: 9
+    title: "Code review remediation iteration 1: mount the production resolution call site, align the two profile refusal identities, re-record the live observation, and close the durable-disclosure, mode-origin, transition, divergence, duration-guard, barrel-export, and deferral-text findings"
+    kind: delivery
+    summary: "fix(harness): mount the resolver, align refusals, and re-record live evidence"
+    scope:
+      files:
+        - packages/cli/src/production.ts
+        - packages/cli/src/edge.ts
+        - packages/adapters/src/harness/opencode.ts
+        - packages/adapters/src/harness/telemetry-opencode.ts
+        - packages/adapters/src/harness/index.ts
+        - packages/adapters/src/harness/review-deferrals.ts
+        - packages/core/src/contracts/closeout.ts
+        - packages/core/src/contracts/harness-telemetry.ts
+        - packages/core/src/domain/closeout.ts
+        - packages/core/src/state/harness-telemetry.ts
+        - tests/fixtures/harness/propagation-harness.ts
+        - tests/fixtures/harness/opencode-store/build.ts
+        - tests/behaviour/harness-profile-composition-mount.test.ts
+        - tests/behaviour/harness-profile-unrepresentable.test.ts
+        - tests/behaviour/harness-telemetry-shape.test.ts
+        - tests/behaviour/harness-telemetry-attribution.test.ts
+        - tests/behaviour/harness-closeout-capture.test.ts
+        - tests/structure/harness-probe-construction-site.test.ts
+        - doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/chg-GH-335-live-observation.md
+        - doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/chg-GH-335-pm-notes.yaml
+    folders:
+      # The review artifacts this phase remediates (review-iter-1.md/.yaml) are the
+      # phase's own inputs and evidence; the folder is staged, never authored here.
+      - doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/review
     doneArtifacts:
       mergeRequestUrl: "pull request for feat/GH-335/opencode-harness-telemetry targeting main-tools"
       pipelineId: "CI pipeline for the GH-335 delivery branch"

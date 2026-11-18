@@ -2104,12 +2104,13 @@ const closeoutHarnessExtractor = (
     });
     return async (input) => extractor.extract(input);
   }
-  const extractor = createOpencodeTelemetryExtractor({
-    opener: createBunSqliteStoreOpener(),
-    storePath: settings.opencodeDatabasePath,
-    now: nowIso,
-  });
-  return async (input) => extractor.extract(input);
+  return async (input) =>
+    createOpencodeTelemetryExtractor({
+      opener: createBunSqliteStoreOpener(),
+      storePath: settings.opencodeDatabasePath,
+      now: nowIso,
+      ...(input.pinnedVersion === undefined ? {} : { pinnedVersion: input.pinnedVersion }),
+    }).extract(input);
 };
 
 /**
@@ -2128,6 +2129,7 @@ export const resolveSessionAttribution = (
 ): {
   readonly heldSessionIds: readonly string[];
   readonly bindings: Readonly<Record<string, HarnessSeatBinding>>;
+  readonly observedVersion?: string;
   readonly unattributedAttempts: number;
   readonly attemptTruncation?: HarnessTruncation;
 } => {
@@ -2150,9 +2152,16 @@ export const resolveSessionAttribution = (
       if (attempt.binding !== undefined) bindings[sessionId] = attempt.binding;
     }
   }
+  const observedVersion =
+    [...read.records]
+      .filter((attempt) => attempt.ref === workItemRef)
+      .map((attempt) => attempt.harnessVersion)
+      .find((version): version is string => typeof version === "string" && version.length > 0) ??
+    undefined;
   return {
     heldSessionIds: [...identities].sort(),
     bindings,
+    ...(observedVersion === undefined ? {} : { observedVersion }),
     unattributedAttempts,
     ...(read.truncation === undefined
       ? {}
@@ -2386,6 +2395,9 @@ export const createCloseoutComposition = (
         ...(attribution.attemptTruncation === undefined
           ? {}
           : { attemptTruncation: attribution.attemptTruncation }),
+        ...(attribution.observedVersion === undefined
+          ? {}
+          : { observedVersion: attribution.observedVersion }),
         ...(commit === undefined ? {} : { lastVerifiedCommit: commit }),
       };
       sessionFacts.set(workItemRef, sessions);
@@ -2487,6 +2499,10 @@ export const createCloseoutComposition = (
           appended += result.value.report.appended;
           skipped += result.value.report.skipped;
         }
+        const absenceCounts = new Map<string, number>();
+        for (const absence of capture.absences ?? []) {
+          absenceCounts.set(absence.reason, (absenceCounts.get(absence.reason) ?? 0) + 1);
+        }
         const outcome = {
           schemaId: HARNESS_TELEMETRY_CAPTURE_SCHEMA_ID,
           workItemRef: capture.workItemRef,
@@ -2495,6 +2511,19 @@ export const createCloseoutComposition = (
           degraded: capture.records.filter((record) => record.warnings.length > 0).length,
           failed: capture.failedSessions.length,
           warnings: capture.warnings,
+          ...(absenceCounts.size === 0
+            ? {}
+            : {
+                absences: [...absenceCounts]
+                  .map(([reason, count]) => ({ reason: reason as never, count }))
+                  .sort((left, right) => (left.reason < right.reason ? -1 : 1)),
+              }),
+          ...(capture.unattributedAttempts === undefined
+            ? {}
+            : { unattributedAttempts: capture.unattributedAttempts }),
+          ...(capture.attemptTruncation === undefined
+            ? {}
+            : { attemptTruncation: capture.attemptTruncation }),
           capturedAt: capture.capturedAt,
         };
         const appendedOutcome = appendHarnessCaptureOutcome(

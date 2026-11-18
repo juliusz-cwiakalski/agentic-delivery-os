@@ -233,7 +233,19 @@ export type HarnessCaptureOutcomeRecord = {
   readonly degraded: number;
   readonly failed: number;
   readonly warnings: readonly HarnessTelemetryWarning[];
+  /** The held sessions the readable store does not hold, by closed reason (GH-335 F-4). */
+  readonly absences?: readonly HarnessCaptureAbsenceCount[];
+  /** Recorded attempts that held no session identity, counted (F-4). */
+  readonly unattributedAttempts?: number;
+  /** The bounded attempt read's counted truncation (F-4). */
+  readonly attemptTruncation?: HarnessTruncation;
   readonly capturedAt: string;
+};
+
+/** One counted absence reason on the durable capture outcome. */
+export type HarnessCaptureAbsenceCount = {
+  readonly reason: HarnessAbsenceReason;
+  readonly count: number;
 };
 
 /** The machine-payload byte bound shared with the result contract (NFR-4). */

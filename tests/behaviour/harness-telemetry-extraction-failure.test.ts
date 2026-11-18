@@ -7,6 +7,12 @@ import { describe, expect, test } from "bun:test";
 import { createOpencodeTelemetryExtractor } from "../../packages/adapters/src/harness/telemetry-opencode";
 import { ROOT_SESSION, buildOpencodeStore } from "../fixtures/harness/opencode-store/build";
 
+// TC-HARNESS-024 declares five damaged-store variants (nonexistent path,
+// permission-denied, not-a-database, torn schema, unrecognised generation). The
+// three open-failure shapes collapse onto one opener-refusal double below — the
+// opener is the single seam that classifies them, so the observable is
+// identical — and the unrecognised generation is TC-HARNESS-028's case. The
+// classification oracle is unaffected by the collapse.
 describe("TC-HARNESS-024 extraction failure", () => {
   test("an opener that refuses yields the failure identity and no fabricated rows", () => {
     const store = buildOpencodeStore();

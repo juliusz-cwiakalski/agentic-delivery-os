@@ -21,7 +21,10 @@ export {
   createOpencodeInstance,
   createOpencodeSession,
   OPENCODE_CAPABILITIES,
+  type OpencodeBindingSeams,
+  type OpencodeExpressibility,
   type OpencodeHarnessOptions,
+  type OpencodeIdentityViolation,
 } from "./opencode.js";
 export {
   HARNESS_REVIEW_DEFERRALS,

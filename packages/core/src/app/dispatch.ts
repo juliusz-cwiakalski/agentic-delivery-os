@@ -483,7 +483,9 @@ const isDeliveredEvidenceDivergence = (
  */
 const detailOf = (failure: HarnessFailure): NonNullable<DispatchEnvelopeError["detail"]> => {
   const singleLine = (value: string): string => value.replace(/[\r\n]+/gu, " ").trim();
-  const kind = failure.kind;
+  // The attempt-stage detail slot keeps its delivered two-value kind; a provider
+  // identity reaches only the pre-session path, which carries no detail member.
+  const kind: "harness" | "config" = failure.kind === "harness" ? "harness" : "config";
   let code = singleLine(failure.code);
   let field = failure.field === undefined ? undefined : singleLine(failure.field);
   const size = (): number =>

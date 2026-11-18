@@ -154,3 +154,72 @@ describe("TC-HARNESS-014 an unassigned named agent (M-11)", () => {
     expect(readDispatchAttempts(state.store).records).toHaveLength(0);
   });
 });
+
+/**
+ * GH-335 review remediation F-3 — the two refusal identities do not swap:
+ * a present empty/whitespace agent identity is invalid input
+ * (`config.value.invalid` naming the field, DEC-17), while an unassigned named
+ * agent is the delivered profile refusal (`provider.profile.invalid` naming the
+ * agent, the profile, and the declared seats, AC-F3-4).
+ */
+describe("F-3 the refusal identities are aligned", () => {
+  test("the admission helper refuses an empty agent as invalid input", () => {
+    for (const agent of ["", "   ", "\t"]) {
+      const result = resolveHarnessAdmissionBinding({
+        agent,
+        profile: MULTI_SEAT_UNASSIGNED_PROFILE,
+        selection: MULTI_SEAT_UNASSIGNED_SELECTION,
+        profileName: "synthetic-profile",
+      });
+      expect(result.ok, JSON.stringify(agent)).toBe(false);
+      if (result.ok) continue;
+      expect(result.error.code).toBe("config.value.invalid");
+      expect(result.error.kind).toBe("config");
+      expect(result.error.field).toBe("agent");
+      // Never the profile identity, and never a fabricated seat.
+      expect(result.error.code).not.toBe("provider.profile.invalid");
+    }
+  });
+
+  test("the mounted port refuses an unassigned agent through provider.profile.invalid", async () => {
+    const harness = createPropagationHarness({
+      composed: true,
+      versionVerdict: "inside",
+      profile: MULTI_SEAT_UNASSIGNED_PROFILE,
+      selection: MULTI_SEAT_UNASSIGNED_SELECTION,
+    });
+    const result = await harness.port.spawn({
+      workItemRef: "GH-335",
+      prompt: "synthetic",
+      descriptor: SPAWN_ENV_DESCRIPTOR,
+      agent: "writer",
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe("provider.profile.invalid");
+    expect(result.error.kind).toBe("provider");
+    expect(result.error.summary ?? "").toContain("writer");
+    expect(result.error.summary ?? "").toContain("seat-judgment");
+    expect(harness.invocations).toHaveLength(0);
+  });
+
+  test("the mounted port still refuses an empty agent as invalid input", async () => {
+    const harness = createPropagationHarness({
+      composed: true,
+      versionVerdict: "inside",
+      profile: MULTI_SEAT_UNASSIGNED_PROFILE,
+      selection: MULTI_SEAT_UNASSIGNED_SELECTION,
+    });
+    const result = await harness.port.spawn({
+      workItemRef: "GH-335",
+      prompt: "synthetic",
+      descriptor: SPAWN_ENV_DESCRIPTOR,
+      agent: "",
+    });
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error.code).toBe("config.value.invalid");
+    expect(result.error.field).toBe("agent");
+    expect(harness.invocations).toHaveLength(0);
+  });
+});

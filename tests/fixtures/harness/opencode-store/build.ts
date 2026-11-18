@@ -40,6 +40,9 @@ export type StoreVariant =
   | "no-usage"
   | "empty-session"
   | "inverted-timestamps"
+  | "absurd-timestamps"
+  | "switched"
+  | "version-prefixed"
   | "unrelated"
   | "broken-identity";
 
@@ -254,6 +257,7 @@ const seed = (
   };
   const versionOf = (identity: string): string | null => {
     if (variant === "missing-version") return null;
+    if (variant === "version-prefixed") return `v${HARNESS_VERSION}`;
     if (variant === "version-drift" && identity === CHILD_SESSION) return "2.1.7";
     return HARNESS_VERSION;
   };
@@ -263,6 +267,9 @@ const seed = (
     return identity === CHILD_SESSION ? 0.4 : 0.75;
   };
   const times = (identity: string): { readonly created: number; readonly updated: number } => {
+    if (variant === "absurd-timestamps") {
+      return { created: 9_000_000_000_000_000, updated: 9_000_000_000_000_001 };
+    }
     const created = identity === CHILD_SESSION ? 1_700_000_003_000 : 1_700_000_000_000;
     const updated = identity === CHILD_SESSION ? 1_700_000_004_000 : 1_700_000_002_000;
     return variant === "inverted-timestamps"
@@ -325,6 +332,54 @@ const seed = (
     for (const item of [...seedsFor(ROOT_SESSION), ...seedsFor(CHILD_SESSION)]) insert(item);
     if (variant === "unrelated") insert(OTHER_MESSAGES[0] as MessageSeed);
     // `empty-session` deliberately seeds no message below ses_empty.
+  }
+
+  if (variant === "switched") {
+    const insertSwitch = (type: string, payload: Record<string, unknown>, seq: number): void => {
+      const data = JSON.stringify({ ...payload, time: { created: 1_700_000_002_500 } });
+      if (current) {
+        insertMessage.run(
+          `msg_switch_${seq}`,
+          ROOT_SESSION,
+          type,
+          seq,
+          1_700_000_002_500,
+          1_700_000_002_500,
+          data,
+        );
+      } else {
+        insertMessage.run(
+          `msg_switch_${seq}`,
+          ROOT_SESSION,
+          1_700_000_002_500,
+          1_700_000_002_500,
+          data,
+        );
+      }
+    };
+    insertSwitch("agent-switched", { agent: "agent-c", previous: ROOT_AGENT }, 3);
+    insertSwitch(
+      "model-switched",
+      { model: { providerID: "synthetic", id: "model-c" }, previous: ROOT_MODEL },
+      4,
+    );
+    // A usage row that states no identity after the switches inherits them.
+    insert(
+      message({
+        id: "msg_switched_usage",
+        sessionId: ROOT_SESSION,
+        seq: 5,
+        agent: null,
+        model: null,
+        input: 2,
+        output: 1,
+        reasoning: 0,
+        cacheRead: 0,
+        cacheWrite: 0,
+        cost: 0.05,
+        createdAt: 1_700_000_002_600,
+      }),
+    );
   }
 
   if (variant === "multi-group") {

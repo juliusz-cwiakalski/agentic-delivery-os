@@ -125,3 +125,48 @@ describe("TC-HARNESS-019 the current-generation row", () => {
     expect(root?.warnings.some((warning) => warning.reason === "cost-missing")).toBe(false);
   });
 });
+
+/**
+ * GH-335 review remediation F-6 / F-7 / F-8 — the observed transitions, the
+ * normalized version stamp, and the duration range guard.
+ */
+describe("F-6/F-7/F-8 review remediation", () => {
+  test("agent-switched/model-switched rows scope the following usage group", () => {
+    const store = buildOpencodeStore({ variant: "switched" });
+    const captured = extractOpencode({ store, heldSessionIds: [ROOT_SESSION] });
+    expect(captured.ok).toBe(true);
+    if (!captured.ok) return;
+    const rows = captured.value.records.filter((row) => row.sessionId === ROOT_SESSION);
+    // The baseline group (agent-a) and the switched group (agent-c/model-c).
+    expect(rows.some((row) => row.agent === ROOT_AGENT)).toBe(true);
+    const switched = rows.find((row) => row.agent === "agent-c");
+    expect(switched).toBeDefined();
+    expect(switched?.model).toBe("synthetic/model-c");
+    expect(switched?.tokens.input).toBe(2);
+    expect(switched?.absentObservedAxes).toBeUndefined();
+    // The stale session baseline never wins over the transition.
+    expect(rows.every((row) => row.agent !== "")).toBe(true);
+  });
+
+  test("a stored version is normalized before stamping (v-prefix stripped)", () => {
+    const store = buildOpencodeStore({ variant: "version-prefixed" });
+    const captured = extractOpencode({ store, heldSessionIds: [ROOT_SESSION] });
+    expect(captured.ok).toBe(true);
+    if (!captured.ok) return;
+    const root = captured.value.records.find((row) => row.sessionId === ROOT_SESSION);
+    expect(root?.harnessVersion).toBe("2.2.5");
+  });
+
+  test("an unrepresentable timestamp pair is an absence and the rows still land", () => {
+    const store = buildOpencodeStore({ variant: "absurd-timestamps" });
+    const captured = extractOpencode({ store, heldSessionIds: [ROOT_SESSION] });
+    expect(captured.ok).toBe(true);
+    if (!captured.ok) return;
+    const root = captured.value.records.find((row) => row.sessionId === ROOT_SESSION);
+    expect(root).toBeDefined();
+    expect(root?.durations).toEqual({ status: "absent", reason: "duration-absent" });
+    expect(root?.warnings.some((warning) => warning.reason === "duration-absent")).toBe(true);
+    // The whole capture is not failed by one bad pair.
+    expect(captured.value.records.length).toBeGreaterThan(0);
+  });
+});

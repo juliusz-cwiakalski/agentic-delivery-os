@@ -12,6 +12,7 @@
  */
 import {
   HARNESS_KINDS,
+  HARNESS_ABSENCE_REASONS,
   HARNESS_OBSERVED_AXES,
   HARNESS_OBSERVED_ABSENCE_PLACEHOLDER,
   HARNESS_TELEMETRY_CAPTURE_KEY_PREFIX,
@@ -227,6 +228,41 @@ const captureFrom = (
   }
   if (!isNonEmptyString(value.capturedAt)) return torn(location);
   if (!Array.isArray(value.warnings)) return torn(location);
+  if (value.absences !== undefined) {
+    if (!Array.isArray(value.absences) || value.absences.length === 0) return torn(location);
+    for (const absence of value.absences) {
+      if (!isRecord(absence)) return torn(location);
+      if (
+        typeof absence.reason !== "string" ||
+        !(HARNESS_ABSENCE_REASONS as readonly string[]).includes(absence.reason)
+      ) {
+        return torn(location);
+      }
+      if (
+        typeof absence.count !== "number" ||
+        !Number.isInteger(absence.count) ||
+        absence.count <= 0
+      ) {
+        return torn(location);
+      }
+    }
+  }
+  if (
+    value.unattributedAttempts !== undefined &&
+    (typeof value.unattributedAttempts !== "number" ||
+      !Number.isInteger(value.unattributedAttempts) ||
+      value.unattributedAttempts < 0)
+  ) {
+    return torn(location);
+  }
+  if (value.attemptTruncation !== undefined) {
+    if (!isRecord(value.attemptTruncation)) return torn(location);
+    if (value.attemptTruncation.truncated !== true) return torn(location);
+    for (const key of ["omitted", "cap"]) {
+      const field = value.attemptTruncation[key];
+      if (typeof field !== "number" || !Number.isInteger(field) || field < 0) return torn(location);
+    }
+  }
   return ok(value as unknown as HarnessCaptureOutcomeRecord);
 };
 
@@ -355,6 +391,26 @@ const capturePayload = (record: HarnessCaptureOutcomeRecord): StateJsonValue => 
   degraded: record.degraded,
   failed: record.failed,
   warnings: record.warnings.map((warning) => ({ reason: warning.reason, field: warning.field })),
+  ...(record.absences === undefined
+    ? {}
+    : {
+        absences: record.absences.map((absence) => ({
+          reason: absence.reason,
+          count: absence.count,
+        })),
+      }),
+  ...(record.unattributedAttempts === undefined
+    ? {}
+    : { unattributedAttempts: record.unattributedAttempts }),
+  ...(record.attemptTruncation === undefined
+    ? {}
+    : {
+        attemptTruncation: {
+          truncated: true,
+          omitted: record.attemptTruncation.omitted,
+          cap: record.attemptTruncation.cap,
+        },
+      }),
   capturedAt: record.capturedAt,
 });
 
