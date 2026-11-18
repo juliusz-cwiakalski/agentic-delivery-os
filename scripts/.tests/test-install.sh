@@ -1303,6 +1303,99 @@ test_tool_invalid_flag() {
   assert_exit_code "${EXIT_USAGE}" "${exit_code}" "Should exit with usage error for invalid tool"
 }
 
+
+# ============================================================================
+# THE MANAGED-ARTIFACT GUARD (GH-346 F-14, AC-F14-1)
+# ============================================================================
+
+# Create a source tree the launcher step can resolve, plus a fake bun that
+# answers `--print-install-path` and nothing else.
+create_launcher_fixture() {
+  local -r base="$1"
+  mkdir -p "${base}/source/packages/cli/bin" "${base}/bin" "${base}/home"
+  printf '#!/usr/bin/env bun\n' > "${base}/source/packages/cli/bin/jaiship.ts"
+  cat > "${base}/bin/bun" <<'FAKE_BUN'
+#!/usr/bin/env bash
+if [[ "$*" == *"--print-install-path"* ]]; then
+  printf '%s\n' "~/.fake-product/bin/fake-product"
+  exit 0
+fi
+exit 0
+FAKE_BUN
+  chmod +x "${base}/bin/bun"
+}
+
+# Run the launcher step with the fixture's PATH and HOME; answer its exit code.
+run_launcher_step() {
+  local -r base="$1"
+  PATH="${base}/bin:${PATH}" HOME="${base}/home" \
+    install_local_launcher "${base}/source" 2>&1
+}
+
+test_launcher_guard_refuses_foreign_content_without_a_record() {
+  local -r base="${_test_tmpdir}/guard-norecord"
+  create_launcher_fixture "${base}"
+  local -r install_path="${base}/home/.fake-product/bin/fake-product"
+  mkdir -p "$(dirname "${install_path}")"
+  printf '#!/usr/bin/env bash\nexit 0\n' > "${install_path}"
+  local -r before="$(cat "${install_path}")"
+  local output exit_code=0
+  output="$(run_launcher_step "${base}")" || exit_code=$?
+  assert_exit_code "${EXIT_CONFIG}" "${exit_code}" "the record-free state still refuses"
+  assert_contains "${output}" "refusing:" "the refusal is classified and named"
+  assert_contains "${output}" "install" "the refusal names the lifecycle command"
+  assert_eq "${before}" "$(cat "${install_path}")" "the content is byte-untouched"
+  assert_eq "" "$(ls -A "${base}/home/.fake-product/bin" | grep -v '^fake-product$' || true)" "no launcher or staging file is written"
+}
+
+test_launcher_guard_refuses_the_installed_artifact_under_a_current_record() {
+  local -r base="${_test_tmpdir}/guard-current"
+  create_launcher_fixture "${base}"
+  local -r install_path="${base}/home/.fake-product/bin/fake-product"
+  mkdir -p "$(dirname "${install_path}")"
+  printf '\177ELF fixture artifact\n' > "${install_path}"
+  local -r before="$(cat "${install_path}")"
+  printf '{"schemaVersion":"install.record.v1"}\n' > "${base}/home/.fake-product/install.json"
+  local output exit_code=0
+  output="$(run_launcher_step "${base}")" || exit_code=$?
+  assert_exit_code "${EXIT_CONFIG}" "${exit_code}" "a current record does not weaken the guard"
+  assert_contains "${output}" "refusing:" "the refusal is classified"
+  assert_eq "${before}" "$(cat "${install_path}")" "the artifact is byte-untouched"
+}
+
+test_launcher_guard_refuses_after_the_record_is_deleted_or_damaged() {
+  local -r base="${_test_tmpdir}/guard-damaged"
+  create_launcher_fixture "${base}"
+  local -r install_path="${base}/home/.fake-product/bin/fake-product"
+  mkdir -p "$(dirname "${install_path}")"
+  printf '\177ELF fixture artifact\n' > "${install_path}"
+  printf '{ damaged\n' > "${base}/home/.fake-product/install.json"
+  local output exit_code=0
+  output="$(run_launcher_step "${base}")" || exit_code=$?
+  assert_exit_code "${EXIT_CONFIG}" "${exit_code}"
+  assert_contains "${output}" "refusing:"
+  rm -f "${base}/home/.fake-product/install.json"
+  exit_code=0
+  output="$(run_launcher_step "${base}")" || exit_code=$?
+  assert_exit_code "${EXIT_CONFIG}" "${exit_code}" "the record-free state refuses too"
+}
+
+test_launcher_guard_allows_the_absent_path_and_the_delivered_launcher() {
+  local -r base="${_test_tmpdir}/guard-allow"
+  create_launcher_fixture "${base}"
+  local output exit_code=0
+  output="$(run_launcher_step "${base}")" || exit_code=$?
+  assert_exit_code 0 "${exit_code}" "an absent path is written as delivered"
+  local -r install_path="${base}/home/.fake-product/bin/fake-product"
+  assert_file_exists "${install_path}"
+  assert_contains "$(cat "${install_path}")" "# Installed by the local install"
+  # A second run over the delivered launcher is the delivered no-op.
+  local -r before="$(cat "${install_path}")"
+  output="$(run_launcher_step "${base}")" || exit_code=$?
+  assert_exit_code 0 "${exit_code}" "the delivered launcher is still owned by this step"
+  assert_eq "${before}" "$(cat "${install_path}")"
+}
+
 # ============================================================================
 # RUN TESTS
 # ============================================================================
@@ -1388,6 +1481,12 @@ main() {
   run_test "--tool claude sets TOOL variable" test_tool_claude_flag
   run_test "--tool all sets TOOL variable" test_tool_all_flag
   run_test "invalid --tool value shows error" test_tool_invalid_flag
+
+  # Managed-artifact guard (GH-346 F-14)
+  run_test "launcher guard refuses foreign content without a record" test_launcher_guard_refuses_foreign_content_without_a_record
+  run_test "launcher guard refuses the installed artifact under a current record" test_launcher_guard_refuses_the_installed_artifact_under_a_current_record
+  run_test "launcher guard refuses after the record is deleted or damaged" test_launcher_guard_refuses_after_the_record_is_deleted_or_damaged
+  run_test "launcher guard allows the absent path and the delivered launcher" test_launcher_guard_allows_the_absent_path_and_the_delivered_launcher
 
   print_summary
 }
