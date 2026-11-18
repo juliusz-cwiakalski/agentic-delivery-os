@@ -139,7 +139,10 @@ describe("TC-ENGINE-001 clean accrual and the trailing streak", () => {
     if (last === undefined) throw new Error("empty fixture");
     const tailUncorroborated: AttemptSpec[] = [
       ...specs.slice(0, -1),
-      { ...last, corroboration: { pmNotes: "unsatisfied", tracker: "unsatisfied", ci: "unsatisfied" } },
+      {
+        ...last,
+        corroboration: { pmNotes: "unsatisfied", tracker: "unsatisfied", ci: "unsatisfied" },
+      },
     ];
     const seeded = await seedAndSummarize(tailUncorroborated);
     try {
@@ -179,9 +182,7 @@ describe("TC-ENGINE-001 clean accrual and the trailing streak", () => {
     expect(toSummaryData(window, evaluation).consecutiveCleanDispatches).toBe(
       window.consecutiveCleanDispatches,
     );
-    expect(toSummaryData(window, evaluation).conditions).toEqual(
-      conditionStatuses(evaluation),
-    );
+    expect(toSummaryData(window, evaluation).conditions).toEqual(conditionStatuses(evaluation));
   });
 });
 

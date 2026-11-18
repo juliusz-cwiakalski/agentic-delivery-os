@@ -60,13 +60,7 @@ const tear = (store: StateStorePort, fenceToken: string, kind: string, key: stri
 };
 
 const handover = (scenario: Scenario, repository: string, revert = false) =>
-  scenario.invoke([
-    "dispatch",
-    "handover",
-    repository,
-    ...(revert ? ["--revert"] : []),
-    "--json",
-  ]);
+  scenario.invoke(["dispatch", "handover", repository, ...(revert ? ["--revert"] : []), "--json"]);
 
 const dataOf = (run: Awaited<ReturnType<Scenario["invoke"]>>): DispatchHandoverData => {
   const data = run.envelope?.data;
@@ -447,12 +441,7 @@ describe("TC-ENGINE-015 handover text is unchanged", () => {
       const jsonFlip = await handover(scenario, REPOSITORY);
       expect(textFlip.exit).toBe(jsonFlip.exit);
 
-      const textNoop = await scenario.invoke([
-        "dispatch",
-        "handover",
-        REPOSITORY,
-        "--revert",
-      ]);
+      const textNoop = await scenario.invoke(["dispatch", "handover", REPOSITORY, "--revert"]);
       expect(textNoop.exit).toBe(0);
       const noopJson = await handover(scenario, REPOSITORY, true);
       expect(textNoop.exit).toBe(noopJson.exit);
@@ -562,23 +551,19 @@ describe("TC-ENGINE-010 conditions under a controlled composition", () => {
     const scenario = createCommandScenario({ gate: {} });
     try {
       seed(scenario, eligibleSpecs());
-      appendDispatchDivergence(
-        scenario.state.store,
-        scenario.state.fenceToken,
-        {
-          schema: "delivery.dispatch.divergence.v1",
-          divergenceId: "DIV-1",
-          repository: REPOSITORY,
-          ref: "GH-239",
-          attemptId: "all11-0",
-          state: "open",
-          comparisonClass: "tracker-truth",
-          engineToken: "pr-open",
-          comparisonToken: "blocked",
-          evidenceRefs: ["attempt:all11-0"],
-          recordedAt: "2026-11-08T10:00:00.000Z",
-        },
-      );
+      appendDispatchDivergence(scenario.state.store, scenario.state.fenceToken, {
+        schema: "delivery.dispatch.divergence.v1",
+        divergenceId: "DIV-1",
+        repository: REPOSITORY,
+        ref: "GH-239",
+        attemptId: "all11-0",
+        state: "open",
+        comparisonClass: "tracker-truth",
+        engineToken: "pr-open",
+        comparisonToken: "blocked",
+        evidenceRefs: ["attempt:all11-0"],
+        recordedAt: "2026-11-08T10:00:00.000Z",
+      });
       const refusal = await handover(scenario, REPOSITORY);
       expect(refusal.exit).toBe(1);
       const data = dataOf(refusal);

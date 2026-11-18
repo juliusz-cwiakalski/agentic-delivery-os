@@ -110,7 +110,9 @@ const fleet = (label: string, options: { readonly bindings: "marker" | "remote" 
         ? `github.com/owner/${alpha.projectKey}`
         : "github.com/owner/alpha",
     betaRepository:
-      options.bindings === "marker" ? `github.com/owner/${beta.projectKey}` : "github.com/owner/beta",
+      options.bindings === "marker"
+        ? `github.com/owner/${beta.projectKey}`
+        : "github.com/owner/beta",
     alpha,
     beta,
     dispose: () => {
@@ -182,9 +184,7 @@ describe("TC-ENGINE-021 the row agrees with the summary and excludes foreign rec
       expect(gate.verdict).toBe(summary.verdict);
       expect(gate.countedDeliveries).toBe(summary.countedDeliveries);
       expect(gate.cleanDispatches).toBe(summary.cleanDispatches);
-      expect(gate.cleanDispatches).toBe(
-        (summary.corroboration as { satisfied: number }).satisfied,
-      );
+      expect(gate.cleanDispatches).toBe((summary.corroboration as { satisfied: number }).satisfied);
       expect(gate.countedDeliveries).toBe(20);
       expect(row.reversible).toBe(false);
 
@@ -202,7 +202,13 @@ describe("TC-ENGINE-021 the row agrees with the summary and excludes foreign rec
       // neither surface, a `pilot` record moves both by exactly one.
       seedProjectAttempts(value.host.hostRoot, value.alphaKey, [
         ...buildAttempts([
-          { token: "pr-open", id: "controlled-1", day: 20, repository: alphaRepository, evidenceClass: "controlled-proof" },
+          {
+            token: "pr-open",
+            id: "controlled-1",
+            day: 20,
+            repository: alphaRepository,
+            evidenceClass: "controlled-proof",
+          },
         ]),
       ]);
       const afterControlled = await value.alpha.run(["repos", "list", "--json"]);
@@ -212,9 +218,7 @@ describe("TC-ENGINE-021 the row agrees with the summary and excludes foreign rec
       seedProjectAttempts(
         value.host.hostRoot,
         value.alphaKey,
-        buildAttempts([
-          { token: "pr-open", id: "pilot-1", day: 21, repository: alphaRepository },
-        ]),
+        buildAttempts([{ token: "pr-open", id: "pilot-1", day: 21, repository: alphaRepository }]),
       );
       const afterPilot = await value.alpha.run(["repos", "list", "--json"]);
       const pilotGate = rowFor(afterPilot, value.alphaKey).handoverGate as Record<string, unknown>;
@@ -233,10 +237,7 @@ describe("TC-ENGINE-021 the row agrees with the summary and excludes foreign rec
       expect(pilotGate.countedDeliveries).toBe(summaryData?.countedDeliveries);
       expect(pilotGate.conditions).toEqual(summaryData?.conditions);
 
-      for (const payload of [
-        JSON.stringify(row),
-        JSON.stringify(summary),
-      ]) {
+      for (const payload of [JSON.stringify(row), JSON.stringify(summary)]) {
         for (const key of ["scope", "evidenceScope", "evidenceClass"]) {
           expect(payload).not.toContain(`"${key}"`);
         }
@@ -253,11 +254,7 @@ describe("TC-ENGINE-021 the row agrees with the summary and excludes foreign rec
       try {
         await prepare(value, { bindings });
         const repository = value.alphaRepository;
-        seedProjectAttempts(
-          value.host.hostRoot,
-          value.alphaKey,
-          attemptsFor(repository, "cell"),
-        );
+        seedProjectAttempts(value.host.hostRoot, value.alphaKey, attemptsFor(repository, "cell"));
         const run = await value.alpha.run(["repos", "list", "--json"]);
         expect(run.exitCode, run.stderr).toBe(0);
         const gate = rowFor(run, value.alphaKey).handoverGate as Record<string, unknown>;
@@ -280,11 +277,7 @@ describe("TC-ENGINE-021 the row agrees with the summary and excludes foreign rec
     try {
       await prepare(value, { bindings: "remote" });
       const repository = value.alphaRepository;
-      seedProjectAttempts(
-        value.host.hostRoot,
-        value.alphaKey,
-        attemptsFor(repository, "rev"),
-      );
+      seedProjectAttempts(value.host.hostRoot, value.alphaKey, attemptsFor(repository, "rev"));
       const before = await value.alpha.run(["repos", "list", "--json"]);
       expect(rowFor(before, value.alphaKey).reversible).toBe(false);
 
@@ -443,9 +436,7 @@ describe("TC-ENGINE-024 a truncated read is not a failure", () => {
       expect(truncation.bound).toBe(DISPATCH_MAX_ATTEMPT_RECORDS);
       expect(Number.isInteger(truncation.omittedRecords)).toBe(true);
       expect(truncation.omittedRecords).toBeGreaterThan(0);
-      expect(truncation.omittedRecords).toBeGreaterThanOrEqual(
-        override - truncation.bound,
-      );
+      expect(truncation.omittedRecords).toBeGreaterThanOrEqual(override - truncation.bound);
       expect(truncation.omittedRecords).toBeLessThanOrEqual(
         override + foreignRecords - truncation.bound,
       );
@@ -473,11 +464,7 @@ describe("TC-ENGINE-093 two reads over unchanged state are byte-identical", () =
     try {
       await prepare(value, { bindings: "remote" });
       const repository = value.alphaRepository;
-      seedProjectAttempts(
-        value.host.hostRoot,
-        value.alphaKey,
-        attemptsFor(repository, "det"),
-      );
+      seedProjectAttempts(value.host.hostRoot, value.alphaKey, attemptsFor(repository, "det"));
       const first = await value.alpha.run(["repos", "list", "--json"]);
       const second = await value.alpha.run(["repos", "list", "--json"]);
       expect(first.exitCode).toBe(0);
@@ -533,11 +520,7 @@ describe("TC-ENGINE-094 the fleet read re-evaluates and writes nothing", () => {
     try {
       await prepare(value, { bindings: "remote" });
       const repository = value.alphaRepository;
-      seedProjectAttempts(
-        value.host.hostRoot,
-        value.alphaKey,
-        attemptsFor(repository, "fresh"),
-      );
+      seedProjectAttempts(value.host.hostRoot, value.alphaKey, attemptsFor(repository, "fresh"));
       const first = await value.alpha.run(["repos", "list", "--json"]);
       const firstGate = rowFor(first, value.alphaKey).handoverGate as Record<string, unknown>;
       const before = snapshotTree(value.host.hostRoot);
@@ -550,11 +533,11 @@ describe("TC-ENGINE-094 the fleet read re-evaluates and writes nothing", () => {
       const snapshotBeforeRead = snapshotTree(value.host.hostRoot);
       const second = await value.alpha.run(["repos", "list", "--json"]);
       const secondGate = rowFor(second, value.alphaKey).handoverGate as Record<string, unknown>;
-      expect(secondGate.countedDeliveries).toBe(
-        (firstGate.countedDeliveries as number) + 1,
-      );
+      expect(secondGate.countedDeliveries).toBe((firstGate.countedDeliveries as number) + 1);
       expect(secondGate.cleanDispatches).toBe((firstGate.cleanDispatches as number) + 1);
-      expect(snapshotDifferences(snapshotBeforeRead, snapshotTree(value.host.hostRoot))).toEqual([]);
+      expect(snapshotDifferences(snapshotBeforeRead, snapshotTree(value.host.hostRoot))).toEqual(
+        [],
+      );
       expect(value.alpha.transportCalls).toEqual([]);
       expect(before).toBeDefined();
     } finally {

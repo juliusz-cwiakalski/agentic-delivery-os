@@ -89,6 +89,7 @@ import {
   type DispatchTruthReads,
   dispatchAdmissionRefusal,
   EvaluateVerifyChange,
+  emptyHandoverGate,
   evaluateRestartBudget,
   foldDispatchHandover,
   type HandoverEvidence,
@@ -119,13 +120,11 @@ import {
   readDaemonHeartbeat,
   readDaemonInstance,
   readDaemonLanes,
-  emptyHandoverGate,
   readDispatchGate,
   readDispatchHandover,
   readQueueEntries,
-  reposHandoverGateOf,
-  reversibilityOf,
   releaseQueueLease,
+  reposHandoverGateOf,
   reposListDataOf,
   resolveConfig,
   resolveCoordinatorSettings,
@@ -135,6 +134,7 @@ import {
   resolveOwnerHoldFact,
   resolveProjectGroupMember,
   resolveProjectScope,
+  reversibilityOf,
   type SupervisionEconomicsWritePort,
   type SupervisionRestartAdmission,
   selectDaemonReachability,
@@ -167,7 +167,6 @@ import {
   DELIVERY_RESULT_TOKENS,
   type DeliveryRequest,
   type DeliveryResultToken,
-  type WorkItem,
   DISPATCH_DEFAULT_EVIDENCE_CLASS,
   type DispatchLedgerVariant,
   type DispatchPhaseLedger,
@@ -176,6 +175,7 @@ import {
   ECONOMICS_RESTART_SCHEMA_ID,
   type ExternalSystemInstance,
   HARNESS_KINDS,
+  type HandoverState,
   type HarnessEnvironmentBuilder,
   type HarnessEnvironmentEntry,
   type HarnessExecutionEnvironmentDescriptor,
@@ -205,7 +205,6 @@ import {
   type QueueTrackerRead,
   REPOS_COMMAND_FAMILY,
   type ReposHandoverGate,
-  type HandoverState,
   renderPriorIdentityNotice,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
@@ -214,6 +213,7 @@ import {
   TELEMETRY_RUN_ID_UNAVAILABLE,
   type TelemetryIngestSink,
   VERIFY_GATES_CI_RUN_LIMIT,
+  type WorkItem,
 } from "@delivery-os/core/contracts";
 import {
   nominateProviderProfile,
@@ -1242,7 +1242,18 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     // Resolve the checkout facts once per invocation. An injected origin replaces
     // only the remote; the checkout root always comes from the working directory,
     // so a composition test can never supply a synthetic root (DEC-2, DEC-5).
-    const resolvedRepositoryFacts = readRepositoryFacts({ cwd, io: nodeRepositoryIo() });
+    // One memoized reader serves the composing checkout and every fleet row's
+    // own checkout, so a fleet read pays one metadata read per distinct checkout
+    // and never a second resolution of the same one.
+    const repositoryFactsByRoot = new Map<string, ReturnType<typeof readRepositoryFacts>>();
+    const repositoryFactsFor = (root: string): ReturnType<typeof readRepositoryFacts> => {
+      const cached = repositoryFactsByRoot.get(root);
+      if (cached !== undefined) return cached;
+      const facts = readRepositoryFacts({ cwd: root, io: nodeRepositoryIo() });
+      repositoryFactsByRoot.set(root, facts);
+      return facts;
+    };
+    const resolvedRepositoryFacts = repositoryFactsFor(cwd);
     const repositoryOriginUrl =
       facts.repositoryFacts === undefined
         ? resolvedRepositoryFacts.originUrl
@@ -1568,7 +1579,9 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
 
     const mergeWorkItem = async (
       changeRef: string,
-    ): Promise<{ readonly ok: true; readonly item: WorkItem } | { readonly ok: false; readonly code: string }> => {
+    ): Promise<
+      { readonly ok: true; readonly item: WorkItem } | { readonly ok: false; readonly code: string }
+    > => {
       const issueNumber = /^[A-Za-z]+-([0-9]+)$/u.exec(changeRef)?.[1];
       if (issueNumber === undefined) return { ok: false, code: "merge.transaction-aborted" };
       const read = await client.readWorkItem(Number(issueNumber));
@@ -1605,7 +1618,8 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           : open.value.items.find((item) => item.sourceRef === mergeBranch);
       if (match !== undefined) return { ok: true, request: match };
       // The convergence case: an already-merged request for the branch's ref.
-      const changeRef = mergeBranch === undefined ? undefined : /([A-Za-z]+-[0-9]+)/u.exec(mergeBranch)?.[1];
+      const changeRef =
+        mergeBranch === undefined ? undefined : /([A-Za-z]+-[0-9]+)/u.exec(mergeBranch)?.[1];
       if (changeRef !== undefined) {
         const merged = await client.findMergedDeliveryRequest({
           workItemRef: changeRef,
@@ -2844,9 +2858,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       // The composition's own checkout is the one whose remote the injection
       // seam already resolved; every other row is read from its own checkout.
       const remoteUrl =
-        root === cwd
-          ? repositoryFacts.originUrl
-          : readRepositoryFacts({ cwd: root, io: nodeRepositoryIo() }).originUrl;
+        root === cwd ? repositoryFacts.originUrl : repositoryFactsFor(root).originUrl;
       const resolution = resolveDispatchIdentity({
         ...(persistedMarker === undefined ? {} : { persistedMarker }),
         ...(remoteUrl === undefined ? {} : { remoteUrl }),

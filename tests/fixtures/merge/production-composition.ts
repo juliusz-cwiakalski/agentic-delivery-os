@@ -17,7 +17,11 @@ import type {
   HarnessSpawnRunnerResult,
   StateStorePort,
 } from "../../../packages/core/src/contracts/index";
-import { createNodeStateEdge, createStateStore, STATE_SCHEMA_VERSION } from "../../../packages/core/src/state/index";
+import {
+  createNodeStateEdge,
+  createStateStore,
+  STATE_SCHEMA_VERSION,
+} from "../../../packages/core/src/state/index";
 import { projectScopeFor } from "../projects/state-scope";
 import { type CliStreams, runCli } from "../../../packages/cli/src/index";
 import { createProductionComposer } from "../../../packages/cli/src/production";
@@ -107,51 +111,53 @@ const refusingCredentials = (counter: { value: number }): CredentialPort => ({
 const shaOf = (value: string): string => value.trim();
 
 /** The healthy reply set: a work item, a green check page, and one open request. */
-const healthyReply = (input: {
-  readonly headSha: string;
-  readonly branch: string;
-  readonly checkConclusion?: "success" | "failure";
-}): ((url: string) => MergeProviderReply) => (url) => {
-  if (url.includes("/issues/")) {
-    return {
-      status: 200,
-      body: { number: 293, title: "Engine-first operations", state: "open", labels: [] },
-    };
-  }
-  if (url.includes("/check-runs")) {
-    return {
-      status: 200,
-      body: {
-        check_runs: [
+const healthyReply =
+  (input: {
+    readonly headSha: string;
+    readonly branch: string;
+    readonly checkConclusion?: "success" | "failure";
+  }): ((url: string) => MergeProviderReply) =>
+  (url) => {
+    if (url.includes("/issues/")) {
+      return {
+        status: 200,
+        body: { number: 293, title: "Engine-first operations", state: "open", labels: [] },
+      };
+    }
+    if (url.includes("/check-runs")) {
+      return {
+        status: 200,
+        body: {
+          check_runs: [
+            {
+              id: 7001,
+              name: "CI / test",
+              status: "completed",
+              conclusion: input.checkConclusion ?? "success",
+            },
+          ],
+        },
+      };
+    }
+    if (url.includes("/pulls?")) {
+      return {
+        status: 200,
+        body: [
           {
-            id: 7001,
-            name: "CI / test",
-            status: "completed",
-            conclusion: input.checkConclusion ?? "success",
+            number: 301,
+            state: "open",
+            head: { ref: input.branch, sha: input.headSha },
+            base: { ref: MERGE_PROD_BASE },
+            commits: 1,
+            changed_files: 1,
+            mergeable: true,
           },
         ],
-      },
-    };
-  }
-  if (url.includes("/pulls?")) {
-    return {
-      status: 200,
-      body: [
-        {
-          number: 301,
-          state: "open",
-          head: { ref: input.branch, sha: input.headSha },
-          base: { ref: MERGE_PROD_BASE },
-          commits: 1,
-          changed_files: 1,
-          mergeable: true,
-        },
-      ],
-    };
-  }
-  if (url.includes("/graphql")) return { status: 200, body: { data: {} } };
-  return { status: 404, body: {} };
-};
+      };
+    }
+    if (url.includes("/graphql")) return { status: 200, body: { data: {} } };
+    return { status: 404, body: {} };
+  };
 
 /** Build one real checkout with `main-tools` and a one-commit feature branch. */
 const buildCheckout = (base: string): { readonly root: string; readonly headSha: string } => {
@@ -229,13 +235,13 @@ export const createMergeProductionHarness = (
       cwd: checkout.root,
       homeDirectory: host.home,
       workingName: "delivery-os",
-      repositoryFacts: { originUrl: MERGE_PROD_REPOSITORY.replace("github.com", "https://github.com") },
+      repositoryFacts: {
+        originUrl: MERGE_PROD_REPOSITORY.replace("github.com", "https://github.com"),
+      },
       harnessSpawnRunner: spawnRunner,
       harnessSpawnStarter: streamStarterFromRunner(spawnRunner),
       credentials:
-        credentialMode === "missing"
-          ? refusingCredentials(counter)
-          : resolvingCredentials(counter),
+        credentialMode === "missing" ? refusingCredentials(counter) : resolvingCredentials(counter),
       githubTransport: {
         send: async (request) => {
           transportCalls.push(request.url);

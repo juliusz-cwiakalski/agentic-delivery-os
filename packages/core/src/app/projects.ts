@@ -30,9 +30,9 @@ import {
   type ReposListEntry,
 } from "../contracts/projects.js";
 import {
+  conditionStatuses,
   type DispatchEvidenceWindow,
   type DispatchGateEvaluation,
-  conditionStatuses,
 } from "../domain/dispatch-gate.js";
 
 /** The folded latest handover evidence for the project, or none. */

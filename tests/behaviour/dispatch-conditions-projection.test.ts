@@ -128,12 +128,7 @@ describe("TC-ENGINE-003 one shape in one declared order", () => {
 
   test("an eligible window reads four met and a missing class opens coverage and floor", async () => {
     const eligible = await summaryOf({ name: "eligible", specs: eligibleSpecs() });
-    expect(eligible.conditions.map((entry) => entry.status)).toEqual([
-      "met",
-      "met",
-      "met",
-      "met",
-    ]);
+    expect(eligible.conditions.map((entry) => entry.status)).toEqual(["met", "met", "met", "met"]);
     const ineligible = await summaryOf({
       name: "coverage-missing",
       specs: missingClassSpecs("merged"),

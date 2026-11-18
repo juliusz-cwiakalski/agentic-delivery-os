@@ -23,10 +23,10 @@ import {
   reversibilityOf,
 } from "../domain/dispatch-authority.js";
 import {
+  conditionStatuses,
   type DispatchEvidenceWindow,
   type DispatchGateEvaluation,
   type DispatchRepositoryScope,
-  conditionStatuses,
   evaluateHandoverGate,
   foldEvidenceWindow,
   handoverConditionsSnapshot,

@@ -22,10 +22,7 @@ import {
 import { DISPATCH_HANDOVER_CONDITIONS } from "../../packages/core/src/contracts/dispatch";
 import { snapshotDifferences, snapshotTree } from "../fixtures/projects/host-root";
 import { seedProjectAttempts } from "../fixtures/projects/production";
-import {
-  setOriginRemote,
-  writeDispatchIdentityBinding,
-} from "../fixtures/projects/temp-repos";
+import { setOriginRemote, writeDispatchIdentityBinding } from "../fixtures/projects/temp-repos";
 import { buildAttempts, eligibleSpecs } from "../fixtures/dispatch/evidence-windows";
 import { hostIndexEntriesOf } from "../fixtures/projects/host-index";
 import {
@@ -256,9 +253,7 @@ describe("TC-ENGINE-020 the row carries the two additive fields in the declared 
       ]);
       expect(["eligible", "ineligible", "unverifiable"]).toContain(readyGate.verdict);
       const conditions = readyGate.conditions as readonly Record<string, unknown>[];
-      expect(conditions.map((entry) => entry.condition)).toEqual([
-        ...DISPATCH_HANDOVER_CONDITIONS,
-      ]);
+      expect(conditions.map((entry) => entry.condition)).toEqual([...DISPATCH_HANDOVER_CONDITIONS]);
       for (const entry of conditions) {
         expect(Object.keys(entry)).toEqual(["condition", "status"]);
         expect(["met", "open"]).toContain(entry.status);
@@ -271,7 +266,9 @@ describe("TC-ENGINE-020 the row carries the two additive fields in the declared 
 
       // The first-use row: the empty-window evaluation, no store, no write.
       const unusedGate = unusedRow.handoverGate as Record<string, unknown>;
-      expect(unusedRow.stateLocation).toBe(projectStateRoot(host.hostRoot, unusedHarness.projectKey));
+      expect(unusedRow.stateLocation).toBe(
+        projectStateRoot(host.hostRoot, unusedHarness.projectKey),
+      );
       expect(existsSync(unusedRow.stateLocation as string)).toBe(false);
       expect(unusedGate.verdict).toBe("ineligible");
       expect(unusedGate.countedDeliveries).toBe(0);

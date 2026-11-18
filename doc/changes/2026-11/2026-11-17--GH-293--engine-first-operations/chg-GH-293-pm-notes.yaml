@@ -18,9 +18,29 @@ decisions: []
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 7 complete (cross-surface coherence, shell non-change, no-flip
+      discipline, hermeticity, the recorded lifecycle-phase-7 reconciliation
+      handoff, and the release). Commit pending. Added the cross-surface matrix
+      (six families, three surfaces, identical statuses/verdicts/counters), the
+      no-flip writer scan and append audit, the hermeticity scan with a live
+      no-network control, the new stdout-identity shell parity suite across the
+      four entry points and two authority states, and the lockstep five-package
+      minor changeset. The two `doc/quality/test-specs/` pages are untouched and
+      staged for lifecycle phase 7: the HANDOFF is RECORDED here (owner
+      `system_spec_update`/`@doc-syncer`, the two paths, satisfaction at DoD-7)
+      and is not an exit condition of this phase. Deviations: the registry row
+      for the new guide (`scripts/checks/forbidden-literals.registry.json`), the
+      port inventory fixture rows, and the memoized per-checkout repository-facts
+      reader (keeping the delivered one-call structural pin) were required by the
+      delivered guards; the delivered `test-deliver-ticket.sh` fails one
+      pre-existing, environment-dependent case (TC-DT-SF-02, a readonly
+      `EXIT_FAILURE` collision) on `main-tools` as well, with the suite
+      byte-unmodified."
+    type: "info"
+    date: "2026-11-18"
   - text: "Plan phase 6 complete (the engine-first guide, six reconciled feature
       pages, the bounded lifecycle prose, the planning corpus, and the phase-7
-      test-spec handoff). Commit pending. Added
+      test-spec handoff). Commit 40c0ebcb. Added
       `doc/guides/engine-first-operations.md` (redistributable marker; the daily
       routine, reading the gate and the fleet row, flipping and reversing,
       the shell fallback, and the declared residuals); reconciled

@@ -66,9 +66,7 @@ const failingCheckRuns: (url: string) => MergeProviderReply = (url) => {
     return {
       status: 200,
       body: {
-        check_runs: [
-          { id: 1, name: "CI / test", status: "completed", conclusion: "failure" },
-        ],
+        check_runs: [{ id: 1, name: "CI / test", status: "completed", conclusion: "failure" }],
       },
     };
   }
@@ -215,9 +213,11 @@ describe("TC-ENGINE-050 the production dry run is real, declared, and honest", (
       "utf8",
     );
     const branch = catalog.slice(catalog.indexOf("const MERGE_BRANCH"));
-    const keys = [...branch.slice(0, branch.indexOf("} as const satisfies")).matchAll(
-      /^\s{4}"?([a-z-]+)"?: \{/gmu,
-    )].map((match) => match[1]);
+    const keys = [
+      ...branch
+        .slice(0, branch.indexOf("} as const satisfies"))
+        .matchAll(/^\s{4}"?([a-z-]+)"?: \{/gmu),
+    ].map((match) => match[1]);
     expect(keys).toEqual(["gate-freshness", "gates", "deploy-expectations"]);
     for (const forbidden of ["owner-principal", "branch-name", "base-ref"]) {
       expect(catalog).not.toContain(forbidden);
@@ -331,9 +331,9 @@ describe("TC-ENGINE-053 read and state faults stay classified on every path", ()
           expect(["provider.outage", "provider.auth.rejected"]).toContain(code);
           expect(run.exitCode).toBe(exitOf(code));
           expect(String(envelopeOf(run).error?.summary)).not.toContain("fallback.internal");
-          expect(
-            (MERGE_COMPOSITION_EMITTABLE_CODES as readonly string[]).includes(code),
-          ).toBe(true);
+          expect((MERGE_COMPOSITION_EMITTABLE_CODES as readonly string[]).includes(code)).toBe(
+            true,
+          );
         } finally {
           harness.dispose();
         }

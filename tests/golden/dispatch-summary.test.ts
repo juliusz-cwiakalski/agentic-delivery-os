@@ -80,11 +80,7 @@ describe("dispatch summary golden", () => {
         /^conditions=(?:truth|coverage|floor|corroboration):(?:met|open)(?:,(?:truth|coverage|floor|corroboration):(?:met|open)){3}$/,
       );
       // The delivered lines are unchanged in content and order.
-      for (const line of [
-        "floor_only=true",
-        "eligibility=false",
-        "verdict=unverifiable",
-      ]) {
+      for (const line of ["floor_only=true", "eligibility=false", "verdict=unverifiable"]) {
         expect(lines).toContain(line);
       }
     } finally {

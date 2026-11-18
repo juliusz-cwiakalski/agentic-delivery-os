@@ -39,7 +39,13 @@ describe("TC-ENGINE-040 the hold and window effect-surface mapping", () => {
     const mapping = normalized(section(peak, "### Effect-surface mapping"));
     expect(mapping.length).toBeGreaterThan(0);
     const lower = mapping.toLowerCase();
-    for (const token of ["owner hold", "admission", "queue blocking", "status.ownerhold", "ownerhold"]) {
+    for (const token of [
+      "owner hold",
+      "admission",
+      "queue blocking",
+      "status.ownerhold",
+      "ownerhold",
+    ]) {
       expect(lower, token).toContain(token);
     }
     expect(lower, "peak window").toContain("peak window");
@@ -249,9 +255,7 @@ describe("TC-ENGINE-061 the six feature pages state the declared contracts", () 
 
 describe("TC-ENGINE-062 the planning corpus carries the delivery", () => {
   test("progress line, status addendum, scenario row, and both restatements", () => {
-    const backlog = normalized(
-      read("doc/planning/oss-tooling/milestones/m2/backlog.md"),
-    );
+    const backlog = normalized(read("doc/planning/oss-tooling/milestones/m2/backlog.md"));
     expect(backlog).toContain("Progress: GH-293 delivered the engine-first evaluation surfaces");
     for (const token of [
       "cleanDispatches",
@@ -266,13 +270,9 @@ describe("TC-ENGINE-062 the planning corpus carries the delivery", () => {
     expect(status).toContain("Engine-first evaluation surfaces delivered (GH-293, M2-S16)");
 
     const readme = normalized(read("doc/planning/oss-tooling/milestones/m2/README.md"));
-    expect(readme).toContain(
-      "SC-M2-S16-01, SC-M2-S16-02, SC-M2-S16-03",
-    );
+    expect(readme).toContain("SC-M2-S16-01, SC-M2-S16-02, SC-M2-S16-03");
 
-    const scenarios = normalized(
-      read("doc/planning/oss-tooling/milestones/m2/test-scenarios.md"),
-    );
+    const scenarios = normalized(read("doc/planning/oss-tooling/milestones/m2/test-scenarios.md"));
     for (const token of [
       "countedDeliveries` grows by one",
       "at most one per dispatch",
@@ -299,9 +299,7 @@ describe("TC-ENGINE-062 the planning corpus carries the delivery", () => {
 describe("TC-ENGINE-063 the restatements are traceable and no AC is weakened", () => {
   test("the spec's Appendix B carries both rows with forcing facts and preserved ACs", () => {
     const spec = normalized(
-      read(
-        "doc/changes/2026-11/2026-11-17--GH-293--engine-first-operations/chg-GH-293-spec.md",
-      ),
+      read("doc/changes/2026-11/2026-11-17--GH-293--engine-first-operations/chg-GH-293-spec.md"),
     );
     expect(spec).toContain("Appendix B: Scenario restatements");
     expect(spec).toContain("countedDeliveries` grows by one per counted dispatch");
@@ -313,9 +311,7 @@ describe("TC-ENGINE-063 the restatements are traceable and no AC is weakened", (
     expect(spec).toContain("five-key");
     expect(spec).toContain("No story AC is weakened");
 
-    const scenarios = normalized(
-      read("doc/planning/oss-tooling/milestones/m2/test-scenarios.md"),
-    );
+    const scenarios = normalized(read("doc/planning/oss-tooling/milestones/m2/test-scenarios.md"));
     expect(scenarios).toContain("Restated by GH-293");
     expect(scenarios).toContain("No story AC is weakened");
     expect(scenarios).toContain("coverage is the eleven-token exposure");
@@ -408,10 +404,7 @@ describe("TC-ENGINE-065 the lifecycle prose names the engine and the fallback", 
     ]) {
       expect(agents, heading).toContain(heading);
     }
-    for (const heading of [
-      "### Commit Primitive Routing",
-      "### Pure-Writer Agents",
-    ]) {
+    for (const heading of ["### Commit Primitive Routing", "### Pure-Writer Agents"]) {
       expect(lifecycle, heading).toContain(heading);
     }
   });

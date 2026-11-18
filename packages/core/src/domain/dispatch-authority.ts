@@ -83,24 +83,26 @@ export const buildDispatchAuthorityView = (
   };
 };
 
-/** Validate a parsed view; an out-of-shape document is never authoritative. */export const parseDispatchAuthorityView = (value: unknown): DispatchAuthorityView | undefined => {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
-  const record = value as Partial<Record<keyof DispatchAuthorityView, unknown>>;
-  if (record.schema !== DISPATCH_AUTHORITY_SCHEMA) return undefined;
-  if (typeof record.repository !== "string" || record.repository.length === 0) return undefined;
-  if (record.authority !== "dual-run" && record.authority !== "authoritative") return undefined;
-  if (typeof record.recordedAt !== "string") return undefined;
-  if (typeof record.reversalAvailable !== "boolean") return undefined;
-  if (record.handoverRef !== undefined && typeof record.handoverRef !== "string") return undefined;
-  return {
-    schema: DISPATCH_AUTHORITY_SCHEMA,
-    repository: record.repository,
-    authority: record.authority,
-    ...(typeof record.handoverRef === "string" ? { handoverRef: record.handoverRef } : {}),
-    recordedAt: record.recordedAt,
-    reversalAvailable: record.reversalAvailable,
+/** Validate a parsed view; an out-of-shape document is never authoritative. */ export const parseDispatchAuthorityView =
+  (value: unknown): DispatchAuthorityView | undefined => {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+    const record = value as Partial<Record<keyof DispatchAuthorityView, unknown>>;
+    if (record.schema !== DISPATCH_AUTHORITY_SCHEMA) return undefined;
+    if (typeof record.repository !== "string" || record.repository.length === 0) return undefined;
+    if (record.authority !== "dual-run" && record.authority !== "authoritative") return undefined;
+    if (typeof record.recordedAt !== "string") return undefined;
+    if (typeof record.reversalAvailable !== "boolean") return undefined;
+    if (record.handoverRef !== undefined && typeof record.handoverRef !== "string")
+      return undefined;
+    return {
+      schema: DISPATCH_AUTHORITY_SCHEMA,
+      repository: record.repository,
+      authority: record.authority,
+      ...(typeof record.handoverRef === "string" ? { handoverRef: record.handoverRef } : {}),
+      recordedAt: record.recordedAt,
+      reversalAvailable: record.reversalAvailable,
+    };
   };
-};
 
 /** Read a view from text with a safe dual-run default for that repository. */
 export const parseDispatchAuthorityText = (

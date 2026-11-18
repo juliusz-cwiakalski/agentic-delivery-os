@@ -39,9 +39,10 @@ describe("TC-ENGINE-054 the emittable declaration is total and non-vacuous", () 
     );
     expect([...kinds].sort()).toEqual(["config", "merge", "provider"]);
     for (const prefix of ["config.", "provider.", "merge."]) {
-      expect(members.some((code) => code.startsWith(prefix)), `missing ${prefix} member`).toBe(
-        true,
-      );
+      expect(
+        members.some((code) => code.startsWith(prefix)),
+        `missing ${prefix} member`,
+      ).toBe(true);
     }
   });
 
@@ -85,12 +86,9 @@ describe("TC-ENGINE-054 the emittable declaration is total and non-vacuous", () 
     expect([...DOMAIN_KINDS]).toContain("config");
     expect([...DOMAIN_KINDS]).not.toContain("handover");
     for (const row of ERROR_TABLE) {
-      expect([
-        "success",
-        "user-validation",
-        "platform-provider",
-        "attention",
-      ]).toContain(row.projectionClass);
+      expect(["success", "user-validation", "platform-provider", "attention"]).toContain(
+        row.projectionClass,
+      );
     }
   });
 
@@ -101,9 +99,9 @@ describe("TC-ENGINE-054 the emittable declaration is total and non-vacuous", () 
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
     const block = source.slice(start, end);
-    const emitted = [...block.matchAll(/return "((?:config|provider|merge|state)\.[a-z0-9.-]+)"/gu)].map(
-      (match) => match[1] as string,
-    );
+    const emitted = [
+      ...block.matchAll(/return "((?:config|provider|merge|state)\.[a-z0-9.-]+)"/gu),
+    ].map((match) => match[1] as string);
     expect(emitted.length).toBeGreaterThan(0);
     for (const code of emitted) {
       expect(members, `refusal site ${code} is outside the declaration`).toContain(code);
@@ -112,8 +110,8 @@ describe("TC-ENGINE-054 the emittable declaration is total and non-vacuous", () 
     expect(emitted).toContain("config.credential.missing");
     expect(emitted).toContain("merge.transaction-aborted");
     expect(members.length).toBeGreaterThanOrEqual(emitted.length);
-    expect(readFileSync(join(ROOT, "packages/core/src/domain/merge-transaction.ts"), "utf8")).toContain(
-      "ERROR_TABLE.find",
-    );
+    expect(
+      readFileSync(join(ROOT, "packages/core/src/domain/merge-transaction.ts"), "utf8"),
+    ).toContain("ERROR_TABLE.find");
   });
 });

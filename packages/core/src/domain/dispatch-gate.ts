@@ -9,11 +9,11 @@
  */
 import {
   DELIVERY_RESULT_TOKENS,
+  type DeliveryResultToken,
   DISPATCH_FLOOR_CONSECUTIVE_DATES,
   DISPATCH_FLOOR_DISPATCHES,
   DISPATCH_HANDOVER_CONDITIONS,
   DISPATCH_MAX_DIVERGENCE_IDS,
-  type DeliveryResultToken,
   type DispatchAttemptRecord,
   type DispatchConditionStatus,
   type DispatchDivergenceBlock,
@@ -377,18 +377,19 @@ export const toSummaryData = (
   ...(window.truncated === undefined ? {} : { truncation: window.truncated }),
 });
 
-/** Build the handover conditions snapshot from the folded window. */export const handoverConditionsSnapshot = (
-  window: DispatchEvidenceWindow,
-  evaluation: DispatchGateEvaluation,
-): DispatchHandoverConditionsSnapshot => ({
-  verdict: evaluation.verdict,
-  windowStart: window.windowStart,
-  windowStartReason: window.windowStartReason,
-  countedDeliveries: window.countedInWindow.length,
-  coveragePresent: window.coverage.present,
-  coverageMissing: window.coverage.missing,
-  incidents: window.incidents,
-  unresolvedDivergences: window.divergences.unresolved,
-  floorMet: window.floorMet,
-  corroborationSatisfied: window.corroboration.satisfied,
-});
+/** Build the handover conditions snapshot from the folded window. */ export const handoverConditionsSnapshot =
+  (
+    window: DispatchEvidenceWindow,
+    evaluation: DispatchGateEvaluation,
+  ): DispatchHandoverConditionsSnapshot => ({
+    verdict: evaluation.verdict,
+    windowStart: window.windowStart,
+    windowStartReason: window.windowStartReason,
+    countedDeliveries: window.countedInWindow.length,
+    coveragePresent: window.coverage.present,
+    coverageMissing: window.coverage.missing,
+    incidents: window.incidents,
+    unresolvedDivergences: window.divergences.unresolved,
+    floorMet: window.floorMet,
+    corroborationSatisfied: window.corroboration.satisfied,
+  });

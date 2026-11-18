@@ -274,10 +274,7 @@ const gateFailureFor = (
   },
 });
 
-const stateFailure = (
-  reason: MergeStateReadReason,
-  detail?: string,
-): MergeFailure => {
+const stateFailure = (reason: MergeStateReadReason, detail?: string): MergeFailure => {
   // The kind comes from the resolved row, never from the call site: a
   // `merge.state-unverified` failure declared as `state` would be the very
   // kind/code contradiction that is contained as `fallback.internal`.
