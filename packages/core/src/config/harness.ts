@@ -12,15 +12,16 @@ import {
   type ConfigNodeOrigins,
   type ConfigOrigin,
   type ConfigValue,
+  DEFAULT_HARNESS_MODE,
   HARNESS_EXECUTION_KINDS,
   HARNESS_KINDS,
+  HARNESS_MODES,
   type HarnessExecutionKind,
   type HarnessKind,
   type HarnessMode,
   type HarnessModeOrigin,
   type Result,
 } from "#contracts";
-import { resolveHarnessMode } from "../domain/harness-mode.js";
 
 /**
  * One declared allowlist entry: a variable name (optionally optional) or a
@@ -96,13 +97,15 @@ export const resolveHarnessSettings = (
     return failure("config.value.invalid", origins, "harness.kind");
   }
   // The integration mode is a declared value with an observable origin; an
-  // unknown value refuses and is never silently defaulted (AC-F2-4, GM-3).
-  const modeResolution = resolveHarnessMode({
-    declared: lookup(values, ["harness", "mode"]),
-    configured: Object.hasOwn(origins, "harness.mode"),
-    field: "harness.mode",
-  });
-  if (!modeResolution.ok) return failure("config.value.invalid", origins, "harness.mode");
+  // unknown value refuses and is never silently defaulted (AC-F2-4, GM-3). The
+  // vocabulary and the default are the contract's, so the configuration tier
+  // reads them rather than restating them, and it stays contracts-only.
+  const declaredMode = lookup(values, ["harness", "mode"]);
+  if (declaredMode !== undefined && !(HARNESS_MODES as readonly unknown[]).includes(declaredMode)) {
+    return failure("config.value.invalid", origins, "harness.mode");
+  }
+  const mode = (declaredMode as HarnessMode | undefined) ?? DEFAULT_HARNESS_MODE;
+  const modeOrigin = Object.hasOwn(origins, "harness.mode") ? "configured" : "defaults";
 
   const executionKind = lookup(values, ["harness", "execution", "kind"]);
   if (
@@ -167,8 +170,8 @@ export const resolveHarnessSettings = (
     ok: true,
     value: {
       kind: kind as HarnessKind,
-      mode: modeResolution.mode,
-      modeOrigin: modeResolution.origin,
+      mode,
+      modeOrigin,
       executionKind: executionKind as HarnessExecutionKind,
       opencodeDatabasePath: stores.opencode as string,
       claudeCodeSessionDirectory: stores["claude-code"] as string,
