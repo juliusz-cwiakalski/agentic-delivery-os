@@ -1077,7 +1077,7 @@ export const productionHarnessRegistrations: readonly HarnessAdapterRegistration
  * bounded summary, and an unrepresentable seat model refuses through
  * `harness.profile.model-unrepresentable`.
  */
-export const resolveHarnessAdmissionBinding = (input: {
+export const resolveHarnessAdmissionBinding = (request: {
   readonly agent: string;
   readonly profile: HarnessProfileView;
   readonly selection: HarnessSelectionView;
@@ -1090,17 +1090,18 @@ export const resolveHarnessAdmissionBinding = (input: {
 }):
   | { readonly ok: true; readonly binding: HarnessSeatBinding }
   | { readonly ok: false; readonly error: ProductionHarnessRefusal } => {
-  const resolve = input.resolve ?? resolveBinding;
-  const resolution = resolve(input.profile, input.selection, input.agent);
+  const resolve = request.resolve ?? resolveBinding;
+  const resolution = resolve(request.profile, request.selection, request.agent);
   if (resolution.outcome === "unassigned") {
-    const seats = Object.keys(input.profile.seats).sort();
+    const profileSeats = request.profile.seats;
+    const seats = Object.keys(profileSeats).sort();
     return {
       ok: false,
       error: {
         kind: "provider",
         code: "provider.profile.invalid",
         field: "agent",
-        summary: `agent ${input.agent} has no seat in profile ${input.profileName ?? "selected"} (declared seats: ${seats.length === 0 ? "none" : seats.join(", ")})`,
+        summary: `agent ${request.agent} has no seat in profile ${request.profileName ?? "selected"} (declared seats: ${seats.length === 0 ? "none" : seats.join(", ")})`,
       },
     };
   }
@@ -1140,7 +1141,7 @@ export const resolveHarnessAdmissionBinding = (input: {
  * vocabulary cannot carry `provider.profile.invalid`), so a named agent that
  * reaches this wrapper without a resolvable binding is a contract violation.
  */
-export const createHarnessProfilePort = (input: {
+export const createHarnessProfilePort = (request: {
   readonly port: HarnessSessionPort;
   readonly profile?: HarnessProfileView;
   readonly selection?: HarnessSelectionView;
@@ -1167,7 +1168,7 @@ export const createHarnessProfilePort = (input: {
           },
         };
       }
-      if (input.profile === undefined || input.selection === undefined) {
+      if (request.profile === undefined || request.selection === undefined) {
         return {
           ok: false,
           error: {
@@ -1178,9 +1179,9 @@ export const createHarnessProfilePort = (input: {
           },
         };
       }
-      const resolution = (input.resolve ?? resolveBinding)(
-        input.profile,
-        input.selection,
+      const resolution = (request.resolve ?? resolveBinding)(
+        request.profile,
+        request.selection,
         callInput.agent,
       );
       if (resolution.outcome !== "binding") {
@@ -1197,11 +1198,12 @@ export const createHarnessProfilePort = (input: {
       return call({ ...callInput, binding: resolution.binding });
     };
   };
+  const { port } = request;
   return {
-    ...input.port,
-    spawn: bind(input.port.spawn),
-    deliver: bind(input.port.deliver),
-    resume: bind(input.port.resume),
+    ...port,
+    spawn: bind(port.spawn),
+    deliver: bind(port.deliver),
+    resume: bind(port.resume),
   };
 };
 
