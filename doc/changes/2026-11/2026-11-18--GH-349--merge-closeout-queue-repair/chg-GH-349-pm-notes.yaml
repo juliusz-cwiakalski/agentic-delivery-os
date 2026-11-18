@@ -1,0 +1,132 @@
+change_id: GH-349
+title: "M4-S11: Merge, closeout, and queue repair on the primitives (M4)"
+delivery_mode: autonomous
+milestone: "M4: Jaiship-native delivery"
+phases:
+  clarify_scope: { started: null, completed: 2026-11-18T18:54:05.715Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions:
+  - text: "Scope source: the GH-349 ticket body (M4-S11) plus the committed M4
+      blueprint (doc/planning/oss-tooling/milestones/m4/flip-plan.md F4,
+      backlog.md §M4-S11, ranking.md). The change makes the CEO merge, closeout
+      and queue-repair path primitives-only: no `gh pr merge`, no manual
+      worktree pruning, no manual issue closing, no manual milestone
+      bookkeeping. It is the reconciliation stage the merge specification
+      explicitly deferred ('Reconciling the two mechanisms is a separate
+      decision')."
+    date: "2026-11-18"
+  - text: "F4 phase truth source (PM position, to be recorded as a decision record):
+      the delivery-registry ledger stays the single truth and the pm-notes
+      document stays a derived mirror written from the post-landing fold.
+      Divergence is detected and reported (lint/verify), never silently repaired
+      from pre-existing document bytes, and never read back for idempotency. The
+      delivered stale-timestamp defect (a completion mirror taking the earliest
+      recorded completion instead of the latest fold) is one named regression to
+      fix, not a licence to move truth into pm-notes."
+    date: "2026-11-18"
+  - text: "Merge landing mechanism (PM position, to be recorded as a decision
+      record): reconcile the two coexisting mechanisms onto the declared closed
+      `merge-delivery-request` adapter operation as the lifecycle `merge` path,
+      carrying crafted squash title/message and an expected head SHA, so a
+      landing is one typed result with no platform CLI. The local-git path is
+      not deleted as a capability, but only one of the two is the `merge`
+      command's landing mechanism after this change; the record names which and
+      what happens to the other. Required-check awareness treats queued/pending
+      checks as not-green, and mergeability `unknown` is recovered by an exact
+      head-SHA re-read, not by a forced merge."
+    date: "2026-11-18"
+  - text: "Milestone sync (PM position, to be recorded as an operating decision):
+      closeout --apply gains milestone synchronization bounded by the delivered
+      milestone operating rule: verify the work item's tracker milestone
+      attachment against the change's declared milestone, and close the
+      milestone only when the exit review holds (every attached ticket closed or
+      detached with a recorded reason). It never creates a milestone, never
+      attaches new work, never reopens, and is idempotent and dry-run visible
+      like every other closeout operation."
+    date: "2026-11-18"
+  - text: "Queue integrity (PM position): repair the declared queue surface (claim,
+      park, reconcile, CRUD) for the defects evidenced by the M2/M3 delivery
+      runs. No new queue verb, no new record kind, no new state key; the
+      ticket's 'queue integrity' is repair and regression coverage of the
+      delivered operations, not a new surface."
+    date: "2026-11-18"
+  - text: "Every named defect (F1 merge `fallback.internal`, F4 pm-notes/registry
+      divergence, F8 serial-merge churn) must land with at least one regression
+      test that fails on the pre-fix behavior and is named after the defect. A
+      typed sync-required result is an acceptable outcome for a DIRTY/BEHIND
+      request; a forced merge is not."
+    date: "2026-11-18"
+open_questions: []
+blockers: []
+notes:
+  - text: "Clarify-scope state detection (2026-11-18): branch
+      feat/GH-349/merge-closeout-queue-repair existed with 0 commits ahead / 0
+      behind origin/main-tools (HEAD 1e7ecf07, the GH-339 merge), clean
+      worktree, no GH-349 change folder, no PR (the only 'GH-349' PR match was
+      PR #357 for GH-335), issue OPEN with label `change`, milestone M4, zero
+      comments. Detected as a fresh start, not a resume."
+    type: info
+    date: "2026-11-18"
+  - text: "Clarify-scope current-state facts (read 2026-11-18): (a) `merge` is
+      implemented as a verified local-git squash transaction
+      (packages/core/src/domain/merge-transaction.ts) with one rebase-refresh, a
+      freshness envelope over the newest gate-verification record, and a
+      classified-error posture; the adapter layer separately declares the closed
+      `merge-delivery-request` provider-side landing (expected head, crafted
+      commit title/message) and the merge specification states the two
+      mechanisms coexist deliberately and that reconciling them is a separate
+      decision. (b) `closeout` is a twelve-step dry-run-by-default transaction
+      (packages/core/src/domain/closeout.ts step inventory) with a SHA-256
+      operation ledger; there is no milestone step anywhere in packages/. (c)
+      `queue` ships claim/park/reconcile/CRUD over the scheduling engine's
+      append-only records. (d) `phase` writes one phase.transition ledger record
+      per landing and a derived phase-state projection; pm-notes is edited as a
+      mirror. (e) There is no merge-queue code and no `queued` check-run
+      awareness in the probe."
+    type: info
+    date: "2026-11-18"
+  - text: "Clarify-scope gap analysis against the AC: (1) mergeability `unknown` and
+      required-check coverage are not repaired today, so 'a DIRTY/BEHIND PR is
+      rebased or refused with a typed sync-required result' has no current
+      implementation for the UNKNOWN wedge; (2) no crafted squash
+      title/description contract exists on the lifecycle merge path; (3) no
+      milestone step exists for 'a synced milestone'; (4) the phase mirror write
+      path takes the earliest recorded completion for a re-completed phase
+      (packages/cli/src/commands/phase.ts:482) and has no divergence check
+      against the registry fold; (5) queue integrity has no defect-specific
+      regression coverage. These five are the presumptive change surface; the
+      spec must pin each one and cite its evidence."
+    type: info
+    date: "2026-11-18"
+  - text: "Doc-impact risks for phase 7:
+      doc/spec/features/feature-merge-verify-deploy.md (merge landing mechanism,
+      UNKNOWN recovery, required-check posture, crafted squash metadata),
+      feature-closeout.md (milestone step, thirteen-step inventory if a step is
+      added, residue/exit semantics), feature-queue-ready.md and
+      feature-scheduling-engine.md (queue repairs), and
+      feature-pm-notes-lint-and-phase-transitions.md (mirror/divergence rule)
+      are the primary current-truth surfaces; feature-result-contract.md carries
+      any new error identity; the command registry and help pages constrain
+      surface changes; doc/guides/milestone-management.md and PDR-0005 constrain
+      milestone behavior. Constraint: no new closed adapter operation is
+      required for milestone sync only if write-work-item can express it — the
+      spec must decide this explicitly rather than silently widening the
+      operation set."
+    type: risk
+    date: "2026-11-18"
+  - text: "Operational prerequisite: the workspace is unbuilt and the typed CLI
+      primitives (`phase`, `commit`) are absent from PATH and node_modules/.bin,
+      so `TMPDIR=$PWD/tmp/tmpdir pnpm build` precedes every primitive invocation
+      in this change; gate commands keep the TMPDIR=$PWD/tmp/tmpdir convention
+      the ticket requires."
+    type: info
+    date: "2026-11-18"
