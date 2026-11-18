@@ -472,8 +472,11 @@
 #   case is a type error), the `github-landing` and `github-collection` length
 #   pins, the THREE posture files (`provider-capabilities`,
 #   `closeout-capabilities`, `tests/fixtures/ports/capabilities.ts`) and the two
-#   control registrations, the two exact arrays (`registration-participation`,
-#   `provider-surface`), the `closeout-contract` closed-set and supported-set pins,
+#   control registrations, the exact arrays — **TWO of them in
+#   `tests/structure/provider-surface.test.ts`** (the supported-operations array
+#   at `:192-202` AND the provider client's `Object.keys(client)` method array at
+#   `:226-241`, which gains the new client method) plus the one in
+#   `registration-participation` — the `closeout-contract` closed-set and supported-set pins,
 #   the `reference-behavior` transport-table set-equality (which is why that PAGE
 #   is a carrier), `ALL_OPERATIONS` in BOTH conformance suites
 #   (`live-entrypoint` and `mock-conformance`), the control-registration cells and
@@ -628,7 +631,10 @@
 #     operation), `tests/behaviour/closeout-capabilities.test.ts` (Jira gaps 6→7,
 #     GitHub supported 9→10, the GitLab gap set), the exact arrays in
 #     `tests/structure/registration-participation.test.ts` and
-#     `tests/structure/provider-surface.test.ts`, the `closeout-contract` pins,
+#     `tests/structure/provider-surface.test.ts` — **TWO arrays in the latter**:
+#     `supportedOperations` (`:192-202`) AND `Object.keys(client).sort()`
+#     (`:226-241`), the provider client's method surface, which gains the new
+#     client method — the `closeout-contract` pins,
 #     the `reference-behavior` documented-table set-equality, the control column
 #     (`tests/fixtures/providers/conformance/control/column.ts`), the
 #     broken-adapter coverage (`tests/conformance/broken-adapter-control.test.ts`,
@@ -1877,7 +1883,10 @@ phases:
   #   `github-collection` length pins, the THREE posture files
   #   (`provider-capabilities`, `closeout-capabilities`,
   #   `tests/fixtures/ports/capabilities.ts`) and the two control registrations, the exact arrays in
-  #   `registration-participation` and `provider-surface`, the `closeout-contract`
+  #   `registration-participation` and `provider-surface` — the latter carries TWO
+  #   that must both move: the supported-operations array (`:192-202`) and the
+  #   provider client's `Object.keys(client)` method array (`:226-241`) — the
+  #   `closeout-contract`
   #   closed-set and supported-set pins, the `reference-behavior` documented-table
   #   set-equality, the control coverage **10 of 10**, `ALL_OPERATIONS` in both
   #   conformance suites, and the control-registration cells and parity
@@ -1947,7 +1956,10 @@ phases:
   #        key-set test and its "nine of nine" label, the two provider length
   #        pins, the THREE posture files (`provider-capabilities`,
   #        `closeout-capabilities`, `tests/fixtures/ports/capabilities.ts`) and the
-  #        two control registrations, the two exact arrays, the closeout-contract pins, the
+  #        two control registrations, the exact arrays (TWO in
+  #        `tests/structure/registration-participation.test.ts` and
+  #        `tests/structure/provider-surface.test.ts` — see 5.3b), the
+  #        closeout-contract pins, the
   #        reference-behavior table set-equality, `ALL_OPERATIONS` in BOTH
   #        conformance suites, the control-registration cells and the parity
   #        cells/supported pairs (M102, M103, M112..M116). **The posture content is asserted,
@@ -1958,6 +1970,24 @@ phases:
   #        `WRITE_METHODS` arm, and `operationLabel`'s tenth case proven by
   #        typecheck. The fourth delivered-check-bound carrier page moves with
   #        the set-equality it satisfies.
+  #   5.3b **TWO exact arrays live in
+  #        `tests/structure/provider-surface.test.ts`, and BOTH must move — the
+  #        file is already in scope, so this is an obligation, not a scope
+  #        change** (DoR iteration-4 residual P4):
+  #          (i)  `:192-202` — `GITHUB_ADAPTER_CONTRACT.capabilities.supportedOperations`
+  #               `toEqual([…])`, the nine-member SUPPORTED-OPERATIONS array
+  #               (→ ten, `close-milestone` appended);
+  #          (ii) `:226-241` — `expect(Object.keys(client).sort()).toEqual([…])`
+  #               over the GitHub provider CLIENT's method surface, a
+  #               fourteen-member array that gains the new client method (the
+  #               conformance/write dispatch member for `close-milestone`), so it
+  #               becomes fifteen. This second array is a DIFFERENT assertion from
+  #               the first: it pins the client's exported method keys, not the
+  #               capability membership, and moving only the capability array
+  #               leaves it red under G2. `tests/structure/adapter-operation-consumers.test.ts`
+  #               asserts BOTH, naming the second as the client-surface pin
+  #               (M102's naming covers all eighteen files, and this file carries
+  #               two of them).
   #   5.4 Author the milestone suites (outcome matrix with the ORDERED
   #       fixture↔outcome pairing, the withholding facts including the unknown
   #       state sharing `closure-withheld` with its state in evidence, the
@@ -1990,8 +2020,9 @@ phases:
   # operations with ALL EIGHTEEN pins at ten (and their posture content: GitHub
   # supported += close-milestone with an empty gap list, GitLab
   # adapter-not-implemented, Jira provider-unsupported, seed postures 9→10 /
-  # 7→8 / 6→7, the tenth WRITE_METHODS arm, operationLabel's tenth case) and the
-  # control coverage at 10 of 10,
+  # 7→8 / 6→7, the tenth WRITE_METHODS arm, operationLabel's tenth case), BOTH
+  # arrays in `provider-surface` moving (supported operations AND the client
+  # method set) and the control coverage at 10 of 10,
   # FIFTEEN flow steps, SEVEN assertion families, 30 parity cells with three
   # adjudicated, the registry and both gates at ten, the GitHub route and
   # projection present, SIX trap families / 18 cells unchanged, the inventory
@@ -2067,6 +2098,9 @@ phases:
         - tests/behaviour/providers/provider-capabilities.test.ts
         - tests/behaviour/closeout-capabilities.test.ts
         - tests/structure/registration-participation.test.ts
+        # TWO exact arrays in this one file, both 9→10 / 14→15: the
+        # supported-operations array at `:192-202` and the provider client's
+        # `Object.keys(client).sort()` method array at `:226-241` (P4).
         - tests/structure/provider-surface.test.ts
         - tests/structure/reference-behavior.test.ts
         - tests/fixtures/ports/capabilities.ts

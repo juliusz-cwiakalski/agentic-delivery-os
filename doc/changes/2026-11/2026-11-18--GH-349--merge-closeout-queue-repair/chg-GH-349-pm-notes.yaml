@@ -4,9 +4,9 @@ delivery_mode: autonomous
 milestone: "M4: Jaiship-native delivery"
 phases:
   clarify_scope: { started: null, completed: 2026-11-18T18:54:05.715Z }
-  specification: { started: null, completed: 2026-11-18T21:24:05.204Z }
-  test_planning: { started: null, completed: 2026-11-18T21:24:15.754Z }
-  delivery_planning: { started: null, completed: 2026-11-18T21:24:25.875Z }
+  specification: { started: null, completed: 2026-11-18T21:33:40.941Z }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -346,4 +346,17 @@ notes:
       spec appendix, and bind the plan's scope to the pin rows. Hand-written pin
       lists are the defect; a scan is the control."
     type: retro
+    date: "2026-11-18"
+  - text: "DoR gate iteration 4 = NOT_READY, one blocking residual
+      (readiness-review/readiness-iter-4.md). Disposition: B1 closed in
+      substance (all 18 pins real, staged, asserted, posture content stated, no
+      over-declaration), N9/N10/N11 resolved, nothing regressed. The blocker was
+      a two-cell classification error: Appendix H called
+      `packages/testkit/src/conformance/parity.ts` wholly derived while its
+      GitLab and Jira columns are literal and gain the tenth row (pinned by
+      Appendix E item 6, outside the eighteen). Residuals P2/P3 (stale pin
+      wording, TC-FLOOR-003 read-only target) and P4 (the second exact array in
+      provider-surface) also fixed. Spec v1.7, test plan v1.9, plan updated; no
+      scope change. The reviewer states explicitly this is not a stalemate."
+    type: info
     date: "2026-11-18"
