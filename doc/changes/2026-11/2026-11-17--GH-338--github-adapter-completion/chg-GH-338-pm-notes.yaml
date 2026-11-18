@@ -12,7 +12,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-18T07:13:51.961Z }
   review_fix: { started: null, completed: 2026-11-18T07:30:29.537Z }
   quality_gates: { started: null, completed: 2026-11-18T08:00:38.523Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-18T08:01:20.569Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "Scope is taken from the ticket body plus the committed M3 blueprint
@@ -56,6 +56,21 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "DoD check PASS. All nine prerequisite lifecycle phases are recorded
+      complete (clarify_scope, specification, test_planning, delivery_planning,
+      dor_check, delivery, system_spec_update, review_fix, quality_gates). Plan
+      completion: all eight declared plan phases (1-8) carry a pm-notes note
+      naming the phase id, its commit hash and its gate result — 1 edc7114e, 2
+      787a2643 + remediations, 3 ec24bf54, 4 8ab4512a, 5 94b31b47, 6 a3a52ebb, 7
+      dde7b661, 8 48a915a3 (self-hash f8096cbb). Acceptance: review iteration 2
+      records 40/40 ACs with real oracles and no unmet criterion (AC-F2-1,
+      AC-F2-3, AC-F2-4, AC-F6-1 and AC-F6-4 production-true after phase 8).
+      Documentation: the phase-7 reconciliation and its post-remediation re-run
+      both report no unresolved documentation gap, with the doc-distribution
+      guard clean at 95 in-scope docs. Quality gates green at aa4e68aa; range
+      gate PASS over 32 commits."
+    type: info
+    date: "2026-11-18"
   - text: "Quality gates (lifecycle phase 9) PASS at HEAD aa4e68aa. TMPDIR=$PWD/
       tmp/tmpdir pnpm check exit 0 with every stage green: lint, format:check,
       build, typecheck, test (10507 pass / 4 skip / 0 fail, 94709 expect calls,
