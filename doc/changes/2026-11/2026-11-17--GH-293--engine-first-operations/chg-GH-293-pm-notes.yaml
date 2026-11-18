@@ -18,6 +18,138 @@ decisions: []
 open_questions: []
 blockers: []
 notes:
+  - text: "REM-7 complete (F-7, F-8; no code). Commit c85f9753. Verified the two
+      claims the plan relies on: TC-ENGINE-065 asserts document content and
+      absence only, with no changed-line print (a permanent suite may not assert
+      a diff against a moving base); TC-ENGINE-054 asserts the constant's
+      three-domain totality (config, provider, merge; no state.* member) AND the
+      configuration-read branch, whose forwarded codes are members,
+      taxonomy-typed, and exercised by the new composition cells. Test plan
+      section 10.4 appended (the execution record is append-only): the seven
+      group commits, the re-run verification batch, and the statement that the
+      two section 10.3 gaps are closed rather than restated. Case count unchanged
+      at 46. Verification: engine-first-doc-reconciliation 16/16,
+      dispatch-doc-conformance + doc-conformance green (39/39 in the batch),
+      doc-distribution no drift (96 docs), lint conforms, plan validate valid."
+    type: "info"
+    date: "2026-11-18"
+  - text: "REM-6 complete (F-13). Commit ecdc483e. stateFailure derives its exit
+      from the same resolved error-table row it already reads the kind from
+      (projectExitCode over the row's projectionClass, as readFailure does), so
+      the claim that every emitted failure's exit is its row's declared
+      projection holds by construction instead of coinciding with a hard-coded
+      2. One helper (exitOfRow) serves both call sites; the absent-row case keeps
+      the containment default, exit 2. No emitted exit value moved today
+      (merge.state-unverified is platform-provider). Verification: pnpm
+      typecheck green; merge-production-composition 8/8,
+      merge-classification-conformance 7/7, error-table 126/126."
+    type: "info"
+    date: "2026-11-18"
+  - text: "REM-5 complete (F-12, F-14). Commit bf93d606. readProjectHandover
+      filters the folded handover truth to the row's resolved repository
+      identity before reversible and handoverState are read, using the same
+      resolution the gate block uses (one resolveRowRepository call per ready
+      row, reused by both, and none on the projects list path, so projects.v1
+      stays byte-identical); an unresolved identity keeps the delivered
+      cross-identity fold, which the gate path then refuses anyway.
+      emptyHandoverGate is now derived from the one pure empty-window fold
+      (conditionStatuses(evaluateHandoverGate(foldEvidenceWindow(empty)))) and
+      serializes byte-identically to the literal it replaces (verdict,
+      conditions, countedDeliveries, cleanDispatches in that order).
+      Verification: pnpm typecheck green; repos-handover-gate 9/9,
+      repos-list-contract 7/7, projects-list-contract 11/11,
+      projects-flat-alias 6/6, engine-first-cross-surface 2/2; a scratch proof
+      (not committed) seeded foreign authoritative handover records before and
+      after the row's own and confirmed the row stays reversible false /
+      shell, while the row's own authoritative record flips it true."
+    type: "info"
+    date: "2026-11-18"
+  - text: "REM-4 complete (F-9, F-10, F-11). Commit 5ab62f80. One declared
+      work-item-ref grammar (the delivered QUEUE_REF_PATTERN) is shared by the
+      merge command's validation and the composition's resolution, so a
+      digit-bearing prefix (ABC2-12) validates and resolves instead of being
+      refused merge.transaction-aborted; the branch-name convergence lookup
+      reads the first path segment that is a ref. The two as-casts are gone:
+      merge-transaction.ts narrows the row's domain kind through one guard and
+      the bulk-ledger fixture proves its payload is a StateJsonValue instead of
+      asserting it. reposListDataOf's gate projection is optional with the
+      delivered empty-gate default, so the library change stays additive and no
+      changeset body change is needed; the payload contract is untouched.
+      Verification: pnpm typecheck green; merge-production-composition 8/8
+      (including the digit-prefix cell), merge-classification-conformance 7/7,
+      changesets-group OK (one fixed group of five). Disclosure: the biome
+      reflow of the REM-2 conformance case landed in this commit."
+    type: "info"
+    date: "2026-11-18"
+  - text: "REM-3 complete (F-4). Commit c4ff6d05. The truncated family is no
+      longer a byte-identical copy of the eligible family and the no-op spread
+      is gone: its ledger exceeds the composition's declared read bound
+      (DISPATCH_MAX_ATTEMPT_RECORDS + 5 identity-bound records, framed once
+      through the delivered buildRecord/serializeRecord pair), so all three
+      surfaces read one genuinely truncated window. The case asserts, on that
+      one ledger: verdict unverifiable on summary, handover, and the fleet row;
+      a truncation object present on all three with the declared bound and a
+      positive omission count, identical across surfaces; the visible-window
+      statuses equal across surfaces with the open set equal to unmetConditions;
+      and zero appends by both read surfaces, with the handover recording
+      nothing. Verification: engine-first-cross-surface 2/2 (8.7 s),
+      dispatch-handover-conditions 13/13, repos-handover-gate 9/9."
+    type: "info"
+    date: "2026-11-18"
+  - text: "REM-2 complete (F-2). Commit 94396cbf. The merge composition's
+      configuration-read branch now contributes its forwarded codes to
+      MERGE_COMPOSITION_EMITTABLE_CODES: config.file.malformed and
+      config.value.invalid are members, and the tuple is typed against the
+      delivered ConfigErrorCode taxonomy so a code the taxonomy does not declare
+      cannot be forwarded (config.environment.unmapped and
+      config.warning.strict are excluded because this branch passes no
+      environment map and no strict flag). The conformance case's refusal-site
+      scan was widened from one helper's block to the whole composition (return
+      and code: literal sites) plus a dedicated case for the forwarded tuple,
+      with a source assertion that the forwarded value is typed. Three new
+      behaviour cells assert a malformed document (config.file.malformed) and an
+      invalid merge.gates / gate-freshness (config.value.invalid) each at exit 1,
+      never fallback.internal, with zero transport calls and zero records
+      appended. Row count, DOMAIN_KINDS, and exit classes unchanged.
+      Verification: merge-classification-conformance 7/7,
+      merge-production-composition 8/8, error-table 126/126, typecheck green."
+    type: "info"
+    date: "2026-11-18"
+  - text: "REM-1 complete (F-1, F-3; documentation only). Commit 3744a27e.
+      doc/quality/test-specs/test-spec-merge-verify-deploy.md restates the
+      emittable-code row over the three domains the composition emits (config,
+      provider, merge; explicitly no state.* member, with the state-read refusal
+      named as the declared merge.state-unverified row at its declared
+      projection and exit 2) and names the declared integration base
+      (CLOSEOUT_INTEGRATION_BASE, main-tools) with the branch still from the
+      checkout's git facts. doc/spec/features/feature-merge-verify-deploy.md was
+      CONFIRMED, not re-authored: it already states the declared integration
+      base. No member, row, kind, exit, or test assertion moved. Verification:
+      engine-first-doc-reconciliation 16/16, doc-conformance 19/19,
+      merge-classification-conformance 7/7, doc-distribution no drift (96 docs)."
+    type: "info"
+    date: "2026-11-18"
+  - text: "Review iteration 1 remediation closed as a batch: REM-1..REM-7
+      executed in the plan revision 1.4 remediation order, one commit per group
+      (3744a27e, 94396cbf, c4ff6d05, 5ab62f80, bf93d606, ecdc483e, c85f9753).
+      Verification batch re-run after the last group: the thirteen declared
+      change suites and the two declared controls pass (240 assertions-bearing
+      cases, 0 fail), doc-distribution no drift, TMPDIR=$PWD/tmp/tmpdir pnpm
+      check exit 0 with 10371 pass / 4 skip / 0 fail across 1314 files, and
+      lint-commit-range --base main-tools VERDICT PASS (33 commits, 0
+      offending). Additive only: no new command, verb, flag, error row,
+      DOMAIN_KINDS member, exit class, or configuration key; projects.v1 and
+      projects list --flat unchanged (projects-flat-alias 6/6,
+      projects-list-contract 11/11); no file under scripts/ changed (shell
+      untouched); no repository flipped. Findings with no remediation by
+      design: F-5 and F-6 are plan-declaration findings closed by plan revision
+      1.4 (it declares every changed path in the owning phase scope and records
+      the edge.ts gate.max wiring as phase 3 test-only wiring), and F-15/F-16
+      are the review's own no-action entries. The review gate stays FAIL until
+      review iteration 2 re-verifies AC-F7-11 and AC-F6-10 against spec v1.5;
+      review_fix is NOT marked complete and no PR was created."
+    type: "retro"
+    date: "2026-11-18"
   - text: "Review iteration 1: FAIL (code-review/review-iter-1.yaml; 2 high, 3
       medium, 7 low, 4 info). High F-1: AC-F7-11/NFR-12/TDR D9 require a state.*
       member in MERGE_COMPOSITION_EMITTABLE_CODES but the composition emits no
