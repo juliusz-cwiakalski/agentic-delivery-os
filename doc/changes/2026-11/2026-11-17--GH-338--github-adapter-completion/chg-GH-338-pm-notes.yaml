@@ -56,6 +56,18 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 2 boundary gate result: TMPDIR=$PWD/tmp/tmpdir pnpm check —
+      lint, format, typecheck, boundaries, memory, prompt conformance, help
+      coverage and exports parity green; bun test 10354 pass / 4 pre-existing
+      skips / 1 fail. The single failure is the load-sensitive delivered suite
+      `TC-DAEMON-121 foreground stop latency` (1354 ms under full-suite load;
+      it passes in isolation in 1.48 s with cancellation 232-236 ms and stop
+      232-236 ms, well inside its 250 ms / 1000 ms bounds). Recorded as
+      green-modulo-environment-flake, the GH-299 precedent, and to be re-proven
+      in the lifecycle quality-gates battery. Phase 2 is therefore complete and
+      verified."
+    type: info
+    date: "2026-11-18"
   - text: "Plan phase 1 commit: edc7114e4bb51ca714a1db11dc01fe2ecd0ab1dc (the
       phase-1 note names the plan phase id and the gate result; this entry
       carries the hash). Plan phase 2 complete (the `gh api` transport over an
