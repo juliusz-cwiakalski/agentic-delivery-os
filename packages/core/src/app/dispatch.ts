@@ -10,6 +10,7 @@
 import {
   DELIVERY_RESULT_TAXONOMY,
   DELIVERY_RESULT_TOKENS,
+  type CommandFailureHarnessDetail,
   type DeliveryResultToken,
   DISPATCH_ATTEMPT_PAYLOAD_SCHEMA,
   DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
@@ -29,9 +30,12 @@ import {
   type HarnessExecutionEnvironmentDescriptor,
   type HarnessFailure,
   type HarnessKind,
+  type HarnessMode,
   type HarnessOutcome,
+  type HarnessSeatBinding,
   type HarnessSessionHandle,
   type HarnessSessionPort,
+  type HarnessVersionVerdict,
   type ProjectionClass,
   type StateStorePort,
 } from "#contracts";
@@ -155,6 +159,52 @@ export type DispatchPreflightResult =
 export type DispatchPreflightPort = () => Promise<DispatchPreflightResult>;
 
 /**
+ * The harness resolution facts the four pre-session harness refusals disclose
+ * (GH-335 F-1/F-2, TDR-0033). The composition resolves them once per dispatch.
+ */
+export type DispatchHarnessFacts = {
+  readonly kind: HarnessKind;
+  readonly observedVersion: string | null;
+  readonly versionVerdict: HarnessVersionVerdict;
+  readonly mode: HarnessMode;
+};
+
+/** One pre-session harness admission refusal, classified and recordless. */
+export type DispatchHarnessAdmissionError = {
+  readonly kind: "harness" | "config" | "provider";
+  readonly code: string;
+  readonly summary?: string;
+  readonly field?: string;
+  readonly harness?: CommandFailureHarnessDetail;
+};
+
+/** The pre-session harness admission result. */
+export type DispatchHarnessAdmissionResult =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly error: DispatchHarnessAdmissionError };
+
+/**
+ * The pre-session harness admission (GH-335 F-1, F-2; NFR-1): evaluated once,
+ * before the lease claim and before any session. A refusal appends no attempt
+ * record, claims no lease, and writes no telemetry.
+ */
+export type DispatchHarnessAdmissionPort = () => Promise<DispatchHarnessAdmissionResult>;
+
+/**
+ * The pre-session refusal identities that never append an attempt record
+ * (GH-335): the four new harness refusals plus the invalid-identity and
+ * unassigned-agent refusals the profile path produces.
+ */
+export const HARNESS_PRESESSION_REFUSAL_CODES = [
+  "harness.version.unsupported",
+  "harness.version.unknown",
+  "harness.mode.unavailable",
+  "harness.profile.model-unrepresentable",
+  "provider.profile.invalid",
+  "config.value.invalid",
+] as const;
+
+/**
  * The classified no-nomination refusal (GH-294 F-1, DEC-9; TDR-0028 D2).
  *
  * The refusal carries the resolve identity the provider-profile seam already
@@ -237,6 +287,14 @@ export type DispatchPorts = {
   readonly resumePrompt?: string;
   readonly resumeMode?: DispatchResumeMode;
   readonly prefillCostAcknowledged?: boolean;
+  /** The caller-supplied agent identity for this run (DEC-16); absent is role-less. */
+  readonly harnessAgent?: string;
+  /** The composition-resolved single-seat binding for this run (TDR-0032 A-4). */
+  readonly harnessBinding?: HarnessSeatBinding;
+  /** The resolved harness facts the pre-session refusals disclose (TDR-0033). */
+  readonly harnessFacts?: DispatchHarnessFacts;
+  /** The pre-session harness admission; runs before the lease claim (NFR-1). */
+  readonly harnessAdmission?: DispatchHarnessAdmissionPort;
 };
 
 /** The run result: classified data, or a pre-session/state refusal. */
@@ -259,8 +317,50 @@ export type DispatchRunResult =
         readonly eligibility?: readonly string[];
         /** The narrow credential-refusal marker; set only for `config.credential.missing`. */
         readonly trustedRefusal?: true;
+        /** The four pre-session harness facts (TDR-0033); the four refusals only. */
+        readonly harness?: CommandFailureHarnessDetail;
       };
     };
+
+/**
+ * Map one pre-session refusal identity to its disclosed harness facts.
+ *
+ * Only the four new identities carry the member; the reused
+ * `provider.profile.invalid` and the invalid-identity `config.value.invalid`
+ * carry none (TDR-0032 A-2, TDR-0033).
+ */
+export const harnessRefusalDetail = (
+  code: string,
+  facts: DispatchHarnessFacts | undefined,
+): CommandFailureHarnessDetail | undefined => {
+  if (facts === undefined) return undefined;
+  switch (code) {
+    case "harness.version.unsupported":
+      return {
+        kind: facts.kind,
+        observedVersion: facts.observedVersion,
+        versionVerdict: "outside",
+      };
+    case "harness.version.unknown":
+      return { kind: facts.kind, observedVersion: null, versionVerdict: "indeterminate" };
+    case "harness.mode.unavailable":
+      return {
+        kind: facts.kind,
+        observedVersion: facts.observedVersion,
+        versionVerdict: "inside",
+        mode: facts.mode,
+      };
+    case "harness.profile.model-unrepresentable":
+      return {
+        kind: facts.kind,
+        observedVersion: facts.observedVersion,
+        versionVerdict: "inside",
+        mode: facts.mode,
+      };
+    default:
+      return undefined;
+  }
+};
 
 const projectionOf = (value: DispatchToken): ProjectionClass => {
   const row = DELIVERY_RESULT_TAXONOMY.find((entry) => entry.token === value);
@@ -554,6 +654,26 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
     if (!preflight.ok) return { ok: false, error: preflight.error };
   }
 
+  // The harness admission (GH-335 F-1/F-2, NFR-1): the version gate and the
+  // mode availability are evaluated once, before the lease claim and before any
+  // session-bearing child process. A refusal claims no lease, appends no
+  // attempt record, and writes no telemetry.
+  if (ports.harnessAdmission !== undefined) {
+    const admitted = await ports.harnessAdmission();
+    if (!admitted.ok) {
+      return {
+        ok: false,
+        error: {
+          kind: admitted.error.kind,
+          code: admitted.error.code,
+          ...(admitted.error.summary === undefined ? {} : { summary: admitted.error.summary }),
+          ...(admitted.error.field === undefined ? {} : { field: admitted.error.field }),
+          ...(admitted.error.harness === undefined ? {} : { harness: admitted.error.harness }),
+        },
+      };
+    }
+  }
+
   const claimed = ports.claimLease();
   if (!claimed.ok) {
     return {
@@ -697,21 +817,42 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
     }
 
     const session = await (async () => {
+      const propagation = {
+        ...(ports.harnessAgent === undefined ? {} : { agent: ports.harnessAgent }),
+        ...(ports.harnessBinding === undefined ? {} : { binding: ports.harnessBinding }),
+      };
       if (ports.resumePrompt !== undefined && ports.existingHandle !== undefined) {
         return ports.harness.resume({
           handle: ports.existingHandle,
           prompt: ports.resumePrompt,
           descriptor: ports.descriptor,
+          ...propagation,
         });
       }
       return ports.harness.spawn({
         workItemRef: ports.ref,
         prompt: ports.prompt,
         descriptor: ports.descriptor,
+        ...propagation,
       });
     })();
 
     if (!session.ok) {
+      // A pre-session harness refusal appends no attempt record (GH-335 NFR-1):
+      // the envelope carries the typed identity and its disclosed facts.
+      if ((HARNESS_PRESESSION_REFUSAL_CODES as readonly string[]).includes(session.error.code)) {
+        const detail = harnessRefusalDetail(session.error.code, ports.harnessFacts);
+        return {
+          ok: false,
+          error: {
+            kind: session.error.kind,
+            code: session.error.code,
+            ...(session.error.summary === undefined ? {} : { summary: session.error.summary }),
+            ...(session.error.field === undefined ? {} : { field: session.error.field }),
+            ...(detail === undefined ? {} : { harness: detail }),
+          },
+        };
+      }
       const reads = staleReads();
       return record({
         token: f,

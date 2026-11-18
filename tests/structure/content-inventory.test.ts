@@ -221,7 +221,12 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "serializeIdentityMarker",
   ],
   "core/src/app/dispatch-attempts.ts": ["readDispatchAttemptHistory"],
-  "core/src/app/dispatch.ts": ["boundLastMessage", "runDispatch"],
+  "core/src/app/dispatch.ts": [
+    "HARNESS_PRESESSION_REFUSAL_CODES",
+    "boundLastMessage",
+    "harnessRefusalDetail",
+    "runDispatch",
+  ],
   "core/src/app/dispatch-gate.ts": [
     "handoverDispatchEvidence",
     "readDispatchGate",
@@ -2287,6 +2292,13 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "daemonReachable",
     "daemonReentryEnvironment",
     "DECLARED_CREDENTIAL_REFERENCES",
+    "createHarnessAdmission",
+    "createHarnessProfilePort",
+    "createHarnessVersionProbe",
+    "harnessFactsRefusal",
+    "productionHarnessRegistrations",
+    "PRODUCTION_OPENCODE_ARGS",
+    "resolveHarnessAdmissionBinding",
   ],
   "cli/src/output/commit-text.ts": ["renderCommitHuman"],
   "cli/src/output/plan-text.ts": [

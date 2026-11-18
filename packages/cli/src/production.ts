@@ -52,7 +52,9 @@ import { createGitHubClient, type GithubClientOptions } from "@delivery-os/adapt
 import {
   CLAUDE_CAPABILITIES,
   createBunSqliteStoreOpener,
+  createClaudeInstance,
   createClaudeSession,
+  createOpencodeInstance,
   createOpencodeSession,
   createOpencodeSessionTotalsReader,
   mapCoordinatorNewTurn,
@@ -151,6 +153,21 @@ import {
   validateProjectGroupsDocument,
   type WorkspaceLocatedMember,
 } from "@delivery-os/core";
+import {
+  bindingEnvironmentRecords,
+  bindingInvocationArgs,
+  evaluateHarnessModeAvailability,
+  evaluateModelExpressibility,
+  harnessAgentIdentityViolation,
+  resolveBinding,
+  resolveHarnessInstance,
+} from "@delivery-os/core";
+import type {
+  HarnessAdapterRegistration,
+  HarnessBindingResolution,
+  HarnessProfileView,
+  HarnessSelectionView,
+} from "@delivery-os/core";
 import { resolveBrandIdentity } from "@delivery-os/core/branding";
 import {
   BLOCKER_QUESTION_PAYLOAD_SCHEMA,
@@ -174,6 +191,7 @@ import {
   ECONOMICS_EXHAUSTION_OPTIONS,
   ECONOMICS_EXHAUSTION_SCHEMA_ID,
   ECONOMICS_RESTART_SCHEMA_ID,
+  type CommandFailureHarnessDetail,
   type ExternalSystemInstance,
   HARNESS_KINDS,
   type HandoverState,
@@ -181,10 +199,15 @@ import {
   type HarnessEnvironmentEntry,
   type HarnessExecutionEnvironmentDescriptor,
   type HarnessKind,
+  type HarnessMode,
+  type HarnessSeatBinding,
+  type HarnessResult,
   type HarnessSessionHandle,
   type HarnessSessionPort,
   type HarnessSpawnRunner,
   type HarnessSpawnStarter,
+  type HarnessVersionProbe,
+  type HarnessVersionVerdict,
   HOST_INDEX_INITIAL_REVISION,
   type HostIndexEntry,
   IMPLEMENTED_TRACKER_KINDS,
@@ -900,6 +923,299 @@ export const createSupervisionEconomicsWritePort = (input: {
     },
   };
 };
+
+/* ------------------------------------------------------------------------- */
+/* GH-335 — the harness plane's single production seams.                      */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * Build the single production version probe (GH-335 F-1, DEC-11, §17.2 clause 6).
+ *
+ * One bounded, shell-free invocation of the harness's own version surface. The
+ * declared deadline is handed to the child-process runner's `timeout:` option;
+ * a timeout answers `timed-out`, and a non-zero exit is a rejection (which the
+ * resolver classifies as indeterminate). No shell, no prompt, no session args.
+ */
+export const createHarnessVersionProbe = (input: {
+  readonly runner: HarnessSpawnRunner;
+  readonly command: string;
+  readonly cwd: string;
+  readonly environment: Readonly<Record<string, string>>;
+}): HarnessVersionProbe => {
+  return async (probe) => {
+    const result = await input.runner(input.command, ["--version"], {
+      cwd: input.cwd,
+      env: input.environment,
+      timeout: probe.deadlineMs,
+    });
+    if (result.timedOut) return { status: "timed-out" };
+    if (result.status !== 0) {
+      throw new Error(`harness version probe exited ${String(result.status)}`);
+    }
+    return { status: "answered", stdout: result.stdout };
+  };
+};
+
+/** One pre-session harness refusal, classified and recordless. */
+export type ProductionHarnessRefusal = {
+  readonly kind: "harness" | "config" | "provider";
+  readonly code: string;
+  readonly summary?: string;
+  readonly field?: string;
+  readonly harness?: CommandFailureHarnessDetail;
+};
+
+/** The resolved harness facts one admission discloses (TDR-0033). */
+export type ProductionHarnessFacts = {
+  readonly kind: HarnessKind;
+  readonly observedVersion: string | null;
+  readonly versionVerdict: HarnessVersionVerdict;
+  readonly mode: HarnessMode;
+};
+
+/** The refusal a resolved facts set implies, or `undefined` when it admits. */
+export const harnessFactsRefusal = (
+  facts: ProductionHarnessFacts,
+): ProductionHarnessRefusal | undefined => {
+  if (facts.versionVerdict === "outside") {
+    return {
+      kind: "harness",
+      code: "harness.version.unsupported",
+      summary: `observed harness version ${facts.observedVersion ?? "unknown"} is outside the supported window`,
+      harness: {
+        kind: facts.kind,
+        observedVersion: facts.observedVersion,
+        versionVerdict: "outside",
+      },
+    };
+  }
+  if (facts.versionVerdict === "indeterminate") {
+    return {
+      kind: "harness",
+      code: "harness.version.unknown",
+      summary: "the harness version could not be determined",
+      harness: { kind: facts.kind, observedVersion: null, versionVerdict: "indeterminate" },
+    };
+  }
+  const availability = evaluateHarnessModeAvailability(facts.mode);
+  if (!availability.available) {
+    return {
+      kind: "harness",
+      code: "harness.mode.unavailable",
+      summary: `requested mode ${availability.requested} is unavailable; the available mode is ${availability.availableMode}`,
+      harness: {
+        kind: facts.kind,
+        observedVersion: facts.observedVersion,
+        versionVerdict: "inside",
+        mode: availability.requested,
+      },
+    };
+  }
+  return undefined;
+};
+
+/**
+ * Build the pre-session harness admission (GH-335 F-1/F-2, NFR-1).
+ *
+ * One resolution per dispatch: the injected probe runs once, the window is
+ * evaluated once, and the mode availability is classified. The admission runs
+ * before the lease claim, so a refusal claims no lease, starts no child, and
+ * appends no attempt record.
+ */
+export const createHarnessAdmission = (input: {
+  readonly kind: HarnessKind;
+  readonly mode: HarnessMode;
+  readonly registrations: readonly HarnessAdapterRegistration[];
+  readonly versionProbe: HarnessVersionProbe;
+  readonly now: () => number;
+}): (() => Promise<
+  { readonly ok: true } | { readonly ok: false; readonly error: ProductionHarnessRefusal }
+>) => {
+  return async () => {
+    const instance = await resolveHarnessInstance({
+      kind: input.kind,
+      registrations: input.registrations,
+      versionProbe: input.versionProbe,
+      now: input.now,
+      mode: input.mode,
+    });
+    if (!instance.ok) {
+      return {
+        ok: false,
+        error: {
+          kind: "config",
+          code: instance.error.code,
+          ...(instance.error.field === undefined ? {} : { field: instance.error.field }),
+          ...(instance.error.summary === undefined ? {} : { summary: instance.error.summary }),
+        },
+      };
+    }
+    const facts: ProductionHarnessFacts = {
+      kind: input.kind,
+      observedVersion: instance.value.observedVersion,
+      versionVerdict: instance.value.versionVerdict ?? "indeterminate",
+      mode: instance.value.mode ?? input.mode,
+    };
+    const refusal = harnessFactsRefusal(facts);
+    return refusal === undefined ? { ok: true } : { ok: false, error: refusal };
+  };
+};
+
+/** The delivered harness adapter registrations (one per closed kind). */
+export const productionHarnessRegistrations: readonly HarnessAdapterRegistration[] = [
+  { kind: "opencode", create: createOpencodeInstance },
+  { kind: "claude-code", create: createClaudeInstance },
+];
+
+/**
+ * Resolve one spawn's single-seat binding, or the pre-session refusal it implies
+ * (GH-335 F-3, DEC-16, TDR-0032 A-2).
+ *
+ * The caller supplies the agent identity; this is the composition's resolution
+ * call site. An unassigned named agent refuses through the delivered
+ * `provider.profile.invalid` with its agent, profile, and declared seats in the
+ * bounded summary, and an unrepresentable seat model refuses through
+ * `harness.profile.model-unrepresentable`.
+ */
+export const resolveHarnessAdmissionBinding = (input: {
+  readonly agent: string;
+  readonly profile: HarnessProfileView;
+  readonly selection: HarnessSelectionView;
+  readonly profileName?: string;
+  readonly resolve?: (
+    profile: HarnessProfileView,
+    selection: HarnessSelectionView,
+    agent?: string,
+  ) => HarnessBindingResolution;
+}):
+  | { readonly ok: true; readonly binding: HarnessSeatBinding }
+  | { readonly ok: false; readonly error: ProductionHarnessRefusal } => {
+  const resolve = input.resolve ?? resolveBinding;
+  const resolution = resolve(input.profile, input.selection, input.agent);
+  if (resolution.outcome === "unassigned") {
+    const seats = Object.keys(input.profile.seats).sort();
+    return {
+      ok: false,
+      error: {
+        kind: "provider",
+        code: "provider.profile.invalid",
+        field: "agent",
+        summary: `agent ${input.agent} has no seat in profile ${input.profileName ?? "selected"} (declared seats: ${seats.length === 0 ? "none" : seats.join(", ")})`,
+      },
+    };
+  }
+  if (resolution.outcome === "no-agent") {
+    return {
+      ok: false,
+      error: {
+        kind: "config",
+        code: "config.value.invalid",
+        field: "agent",
+        summary: "a named agent resolved no seat",
+      },
+    };
+  }
+  const expressibility = evaluateModelExpressibility(resolution.binding);
+  if (!expressibility.ok) {
+    return {
+      ok: false,
+      error: {
+        kind: "harness",
+        code: "harness.profile.model-unrepresentable",
+        field: "seat",
+        summary: expressibility.summary,
+      },
+    };
+  }
+  return { ok: true, binding: resolution.binding };
+};
+
+/**
+ * Wrap a harness session port in the composition's per-spawn resolution.
+ *
+ * The caller's agent identity is read from the port input's own member, the
+ * pure resolver is called once per spawn, and the returned single-seat binding
+ * is supplied on the sibling member. A role-less call binds nothing. The
+ * unassigned refusal is produced by the admission (the port's closed failure
+ * vocabulary cannot carry `provider.profile.invalid`), so a named agent that
+ * reaches this wrapper without a resolvable binding is a contract violation.
+ */
+export const createHarnessProfilePort = (input: {
+  readonly port: HarnessSessionPort;
+  readonly profile?: HarnessProfileView;
+  readonly selection?: HarnessSelectionView;
+  readonly resolve?: (
+    profile: HarnessProfileView,
+    selection: HarnessSelectionView,
+    agent?: string,
+  ) => HarnessBindingResolution;
+}): HarnessSessionPort => {
+  const bind = <TInput extends { readonly agent?: string; readonly binding?: HarnessSeatBinding }>(
+    call: (callInput: TInput) => Promise<HarnessResult<HarnessSessionHandle>>,
+  ) => {
+    return async (callInput: TInput): Promise<HarnessResult<HarnessSessionHandle>> => {
+      if (callInput.agent === undefined) return call(callInput);
+      const violation = harnessAgentIdentityViolation(callInput.agent);
+      if (violation !== undefined) {
+        return {
+          ok: false,
+          error: {
+            kind: "config",
+            code: "config.value.invalid",
+            field: violation.field,
+            summary: violation.summary,
+          },
+        };
+      }
+      if (input.profile === undefined || input.selection === undefined) {
+        return {
+          ok: false,
+          error: {
+            kind: "config",
+            code: "config.value.invalid",
+            field: "agent",
+            summary: "the composition resolved no profile for a caller-supplied agent",
+          },
+        };
+      }
+      const resolution = (input.resolve ?? resolveBinding)(
+        input.profile,
+        input.selection,
+        callInput.agent,
+      );
+      if (resolution.outcome !== "binding") {
+        return {
+          ok: false,
+          error: {
+            kind: "config",
+            code: "config.value.invalid",
+            field: "agent",
+            summary: `agent ${callInput.agent} resolved no seat before the port call`,
+          },
+        };
+      }
+      return call({ ...callInput, binding: resolution.binding });
+    };
+  };
+  return {
+    ...input.port,
+    spawn: bind(input.port.spawn),
+    deliver: bind(input.port.deliver),
+    resume: bind(input.port.resume),
+  };
+};
+
+/**
+ * The opencode invocation args per mode surface (GH-335 F-2, TDR-0034).
+ *
+ * The default mode's observed surface is `--standalone`; the composition owns
+ * the surface selection, so the adapter never invents a mode flag.
+ */
+export const PRODUCTION_OPENCODE_ARGS = {
+  spawn: ["--standalone", "run", "--format", "json"],
+  resume: ["--standalone", "run", "--format", "json", "--session"],
+  list: ["--standalone", "session", "list", "--format", "json"],
+} as const;
 
 export const createProductionComposer = (facts: ProductionCompositionFacts): EntrypointComposer => {
   return (brand: BrandIdentity, invocation?: EntrypointInvocationFact) => {
@@ -1770,9 +2086,17 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             ...common,
             starter: harnessSpawnStarter,
             command: "opencode",
-            spawnArgs: ["run", "--format", "json"],
-            resumeArgs: ["run", "--format", "json", "--session"],
-            listArgs: ["session", "list", "--format", "json"],
+            // The binding's surface mapping is injected: the adapter owns no
+            // second copy of the rules (GH-335 F-3, TDR-0032).
+            bindingSeams: {
+              identityViolation: harnessAgentIdentityViolation,
+              expressibility: evaluateModelExpressibility,
+              invocationArgs: bindingInvocationArgs,
+              environmentRecords: bindingEnvironmentRecords,
+            },
+            spawnArgs: PRODUCTION_OPENCODE_ARGS.spawn,
+            resumeArgs: PRODUCTION_OPENCODE_ARGS.resume,
+            listArgs: PRODUCTION_OPENCODE_ARGS.list,
             telemetrySinkFor: ({ workItemRef }) => {
               const resolution = resolveProductionHarnessSettings();
               if (!resolution.ok) return undefined;
