@@ -9,12 +9,11 @@
  * control is live, and no row, kind, or exit class was added.
  */
 import { describe, expect, test } from "bun:test";
-import { readFileSync } from "node:fs";
+import { readFileSync as read, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { classifyThrown, resolveAppErrorCode } from "../../packages/cli/src/classify";
-import { DOMAIN_KINDS, ERROR_TABLE } from "../../packages/core/src/contracts/index";
-import { readFileSync as read } from "node:fs";
 import { MERGE_COMPOSITION_EMITTABLE_CODES } from "../../packages/cli/src/production";
+import { DOMAIN_KINDS, ERROR_TABLE } from "../../packages/core/src/contracts/index";
 
 const ROOT = process.cwd();
 const members: readonly string[] = MERGE_COMPOSITION_EMITTABLE_CODES;
@@ -103,7 +102,9 @@ describe("TC-ENGINE-054 the emittable declaration is total and non-vacuous", () 
     expect(end).toBeGreaterThan(start);
     const block = source.slice(start, end);
     const emitted = [
-      ...block.matchAll(/(?:return|\bcode:)\s*"((?:config|provider|merge|state|input)\.[a-z0-9.-]+)"/gu),
+      ...block.matchAll(
+        /(?:return|\bcode:)\s*"((?:config|provider|merge|state|input)\.[a-z0-9.-]+)"/gu,
+      ),
     ].map((match) => match[1] as string);
     expect(emitted.length).toBeGreaterThan(0);
     for (const code of emitted) {
@@ -127,9 +128,9 @@ describe("TC-ENGINE-054 the emittable declaration is total and non-vacuous", () 
     const end = source.indexOf("export const MERGE_COMPOSITION_EMITTABLE_CODES");
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
-    const forwarded = [
-      ...source.slice(start, end).matchAll(/"((?:config)\.[a-z0-9.-]+)"/gu),
-    ].map((match) => match[1] as string);
+    const forwarded = [...source.slice(start, end).matchAll(/"((?:config)\.[a-z0-9.-]+)"/gu)].map(
+      (match) => match[1] as string,
+    );
     expect(forwarded.length).toBeGreaterThan(0);
     for (const code of forwarded) {
       expect(members, `forwarded configuration code ${code} is outside the declaration`).toContain(

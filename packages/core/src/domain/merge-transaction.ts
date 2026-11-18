@@ -13,6 +13,7 @@ import {
   type DeliveryRequest,
   ERROR_TABLE,
   ERROR_TABLE_FAMILIES,
+  type ErrorTableEntry,
   FALLBACK_INTERNAL_CODE,
   MERGE_GATE_FRESHNESS_DEFAULT_SECONDS,
   MERGE_GATE_VERIFICATION_SCHEMA,
@@ -274,16 +275,31 @@ const gateFailureFor = (
   },
 });
 
+/**
+ * Whether a declared domain kind is one a merge failure may carry.
+ *
+ * The row is the only source: a `fallback` row, or a kind outside the four the
+ * transaction can emit, narrows to the caller's declared default instead of
+ * being asserted onto the failure.
+ */
+const isMergeDomainKind = (kind: string): kind is MergeFailure["domainKind"] =>
+  kind === "merge" || kind === "state" || kind === "provider" || kind === "config";
+
+/** The kind the resolved row declares, or the caller's declared default. */
+const domainKindOf = (
+  row: ErrorTableEntry | undefined,
+  fallback: MergeFailure["domainKind"],
+): MergeFailure["domainKind"] =>
+  row !== undefined && isMergeDomainKind(row.domainKind) ? row.domainKind : fallback;
+
 const stateFailure = (reason: MergeStateReadReason, detail?: string): MergeFailure => {
   // The kind comes from the resolved row, never from the call site: a
   // `merge.state-unverified` failure declared as `state` would be the very
   // kind/code contradiction that is contained as `fallback.internal`.
   const row = ERROR_TABLE.find((entry) => entry.code === "merge.state-unverified");
-  const declaredKind = row?.domainKind as MergeFailure["domainKind"] | undefined;
-  const domainKind: MergeFailure["domainKind"] = declaredKind ?? "merge";
   return {
     code: "merge.state-unverified",
-    domainKind,
+    domainKind: domainKindOf(row, "merge"),
     exit: 2,
     evidence: { stateReason: reason, ...(detail === undefined ? {} : { detail }) },
   };
@@ -294,20 +310,17 @@ const readFailure = (code: string): MergeFailure => {
   // hard-coded: a kind/code pair that contradicts the table is exactly the
   // containment (`fallback.internal`, exit 2) this restoration removes.
   const row = ERROR_TABLE.find((entry) => entry.code === code);
-  if (row === undefined) {
-    return { code, domainKind: "provider", exit: 2, evidence: { detail: code } };
-  }
-  const kind =
-    row.domainKind === "merge" ||
-    row.domainKind === "state" ||
-    row.domainKind === "provider" ||
-    row.domainKind === "config"
-      ? row.domainKind
-      : "provider";
   // `success` is unreachable for a failure row; `platform-provider` keeps its
-  // exit `2`, and the two user-facing classes project exit `1`.
-  const exit = row.projectionClass === "platform-provider" ? 2 : 1;
-  return { code, domainKind: kind, exit, evidence: { detail: code } };
+  // exit `2`, the two user-facing classes project exit `1`, and an absent row
+  // is the containment default.
+  const exit: MergeFailure["exit"] =
+    row === undefined || row.projectionClass === "platform-provider" ? 2 : 1;
+  return {
+    code,
+    domainKind: domainKindOf(row, "provider"),
+    exit,
+    evidence: { detail: code },
+  };
 };
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>

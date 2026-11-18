@@ -196,13 +196,17 @@ export const orderRepoEntries = (entries: readonly ReposListEntry[]): readonly R
  * fields resolved by the caller's read-time gate projection. The alias never
  * passes through this projection, so the delivered payload stays byte-identical
  * (C-2).
+ *
+ * The gate projection is optional so the library signature stays additive: a
+ * caller that supplies none gets the declared empty-window evaluation, which is
+ * the same derivation a `first-use` row reports and needs no store.
  */
 export const reposListDataOf = (
   data: ProjectsListData,
   gateOf: (entry: ProjectsListEntry) => {
     readonly reversible: boolean;
     readonly handoverGate: ReposHandoverGate;
-  },
+  } = () => ({ reversible: false, handoverGate: emptyHandoverGate() }),
 ): ReposListData => ({
   repos: orderRepoEntries(
     data.projects.map((entry) =>

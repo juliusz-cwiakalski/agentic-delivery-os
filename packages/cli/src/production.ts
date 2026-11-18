@@ -201,6 +201,7 @@ import {
   type ProjectGroupValidated,
   type ProjectScopedMemberWork,
   QUEUE_DEFAULT_NEXT_ACTIONS,
+  QUEUE_REF_PATTERN,
   type QueueDegradationReason,
   type QueueEntryProjection,
   type QueueTrackerRead,
@@ -332,6 +333,23 @@ export const MERGE_COMPOSITION_EMITTABLE_CODES = [
  * taxonomy: `merged`, `blocked`, `pr-open`.
  */
 const [PR_MERGED_TOKEN, PR_BLOCKED_TOKEN, PR_OPEN_TOKEN] = DELIVERY_RESULT_TOKENS;
+
+/**
+ * The one declared work-item-ref grammar the merge surfaces accept.
+ *
+ * The command's own validation and this composition's ref resolution read the
+ * same delivered contract pattern, so a prefix carrying a digit (`ABC2-12`)
+ * validates and then resolves instead of being refused as unresolvable.
+ */
+const CHANGE_REF_GRAMMAR = new RegExp(QUEUE_REF_PATTERN, "u");
+
+/** The work-item number a ref carries, or `undefined` when it is not a ref. */
+const changeRefNumberOf = (ref: string): string | undefined =>
+  CHANGE_REF_GRAMMAR.test(ref) ? ref.slice(ref.lastIndexOf("-") + 1) : undefined;
+
+/** The change ref a branch name carries: the first path segment that is a ref. */
+const changeRefInBranch = (branch: string): string | undefined =>
+  branch.split("/").find((segment) => CHANGE_REF_GRAMMAR.test(segment));
 
 /** The bounded provider page the truth read addresses. */
 const TRUTH_PROVIDER_LIMIT = STATUS_SOURCE_ITEM_LIMIT;
@@ -1612,7 +1630,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     ): Promise<
       { readonly ok: true; readonly item: WorkItem } | { readonly ok: false; readonly code: string }
     > => {
-      const issueNumber = /^[A-Za-z]+-([0-9]+)$/u.exec(changeRef)?.[1];
+      const issueNumber = changeRefNumberOf(changeRef);
       if (issueNumber === undefined) return { ok: false, code: "merge.transaction-aborted" };
       const read = await client.readWorkItem(Number(issueNumber));
       return read.ok ? { ok: true, item: read.value } : { ok: false, code: mergeReadCodeOf(read) };
@@ -1648,8 +1666,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           : open.value.items.find((item) => item.sourceRef === mergeBranch);
       if (match !== undefined) return { ok: true, request: match };
       // The convergence case: an already-merged request for the branch's ref.
-      const changeRef =
-        mergeBranch === undefined ? undefined : /([A-Za-z]+-[0-9]+)/u.exec(mergeBranch)?.[1];
+      const changeRef = mergeBranch === undefined ? undefined : changeRefInBranch(mergeBranch);
       if (changeRef !== undefined) {
         const merged = await client.findMergedDeliveryRequest({
           workItemRef: changeRef,

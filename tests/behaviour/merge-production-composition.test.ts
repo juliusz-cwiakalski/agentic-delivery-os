@@ -11,6 +11,8 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync } from "node:fs";
 import { join } from "node:path";
+import { MERGE_COMPOSITION_EMITTABLE_CODES } from "../../packages/cli/src/production";
+import { projectExitCode } from "../../packages/cli/src/projection";
 import {
   ERROR_TABLE,
   MERGE_GATE_VERIFICATION_SCHEMA,
@@ -22,9 +24,6 @@ import {
   readMergeTransactions,
   readMergeWaivers,
 } from "../../packages/core/src/state/index";
-import { projectExitCode } from "../../packages/cli/src/projection";
-import { MERGE_COMPOSITION_EMITTABLE_CODES } from "../../packages/cli/src/production";
-import { createNoNetworkGuard } from "../fixtures/verify-gates/cases/network-guard";
 import {
   createMergeProductionHarness,
   MERGE_PROD_BRANCH,
@@ -34,6 +33,7 @@ import {
   type MergeProductionHarness,
   type MergeProviderReply,
 } from "../fixtures/merge/production-composition";
+import { createNoNetworkGuard } from "../fixtures/verify-gates/cases/network-guard";
 
 const exitOf = (code: string): number => {
   const row = ERROR_TABLE.find((entry) => entry.code === code);
@@ -221,6 +221,27 @@ describe("TC-ENGINE-050 the production dry run is real, declared, and honest", (
     expect(keys).toEqual(["gate-freshness", "gates", "deploy-expectations"]);
     for (const forbidden of ["owner-principal", "branch-name", "base-ref"]) {
       expect(catalog).not.toContain(forbidden);
+    }
+  });
+
+  test("a ref with a digit in its prefix validates and resolves like any other ref", async () => {
+    // The command's grammar and the composition's ref resolution read one
+    // declared pattern, so `ABC2-12` is no longer validated and then refused as
+    // unresolvable: the tracker read addresses issue 12.
+    const harness = createMergeProductionHarness({
+      label: "gh293-prod-digit-prefix",
+      reply: healthyReply,
+    });
+    try {
+      const run = await harness.run(["merge", "ABC2-12", "--dry-run", "--json"]);
+      expect(run.exitCode, run.stderr).toBe(0);
+      expect(envelopeOf(run).data?.result).toBe("verified");
+      const calls = harness.transportCalls.join("\n");
+      expect(calls).toContain("/issues/12");
+      expect(run.stdout).not.toContain("merge.transaction-aborted");
+      expect(run.stdout).not.toContain("fallback.internal");
+    } finally {
+      harness.dispose();
     }
   });
 });

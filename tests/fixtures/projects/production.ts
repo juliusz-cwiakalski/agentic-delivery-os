@@ -30,8 +30,13 @@ import type {
 } from "../../../packages/adapters/src/git/index";
 import { type CliStreams, runCli } from "../../../packages/cli/src/index";
 import { createProductionComposer } from "../../../packages/cli/src/production";
+import {
+  appendDispatchAttempt,
+  appendDispatchDivergence,
+} from "../../../packages/core/src/app/dispatch-ledger";
 import type { DaemonComposition } from "../../../packages/core/src/app/projects";
 import { queueGraphDocumentPath, readQueueEntries } from "../../../packages/core/src/app/queue";
+import { projectStateRoot } from "../../../packages/core/src/app/state-scope";
 import type {
   BrandIdentity,
   CredentialPort,
@@ -48,16 +53,11 @@ import {
   dispatchAttemptRecordKey,
 } from "../../../packages/core/src/contracts/index";
 import {
-  appendDispatchAttempt,
-  appendDispatchDivergence,
-} from "../../../packages/core/src/app/dispatch-ledger";
-import { buildRecord, serializeRecord } from "../../../packages/core/src/state/ledger";
-import { projectStateRoot } from "../../../packages/core/src/app/state-scope";
-import {
   createNodeStateEdge,
   createStateStore,
   STATE_SCHEMA_VERSION,
 } from "../../../packages/core/src/state/index";
+import { buildRecord, serializeRecord } from "../../../packages/core/src/state/ledger";
 import { streamStarterFromRunner } from "../harness/stream";
 import {
   APPROVED_BASE,
@@ -408,6 +408,30 @@ export const seedProjectDivergences = (
 };
 
 /**
+ * Whether a value is a `StateJsonValue`, mirroring what the ledger serializes.
+ *
+ * `undefined` members are JSON-transparent (the serializer drops them), so an
+ * optional member that a builder left undefined still frames to the same bytes.
+ */
+const isStateJsonValue = (value: unknown): value is StateJsonValue => {
+  if (value === undefined || value === null) return true;
+  const kind = typeof value;
+  if (kind === "string" || kind === "boolean") return true;
+  if (kind === "number") return Number.isFinite(value);
+  if (Array.isArray(value)) return value.every(isStateJsonValue);
+  if (kind === "object") return Object.values(value).every(isStateJsonValue);
+  return false;
+};
+
+/** The record's payload, proven to be a state JSON value rather than asserted. */
+const payloadOfAttempt = (record: DispatchAttemptRecord): StateJsonValue => {
+  if (!isStateJsonValue(record)) {
+    throw new Error(`attempt ${record.attemptId} is not a state JSON value`);
+  }
+  return record;
+};
+
+/**
  * Seed a large attempt ledger as one verified ledger file.
  *
  * OQ-TP-5 measured the delivered append path at ~106 ms per record here (each
@@ -440,7 +464,7 @@ export const seedProjectAttemptsLedger = (
           DISPATCH_ATTEMPT_RECORD_KIND,
           dispatchAttemptRecordKey(record.attemptId),
           index + 1,
-          record as unknown as StateJsonValue,
+          payloadOfAttempt(record),
         ),
       ),
     )
