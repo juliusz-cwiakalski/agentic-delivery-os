@@ -5,12 +5,15 @@
  * structurally rather than by a fixture family.
  */
 import { describe, expect, test } from "bun:test";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   ADAPTER_OPERATIONS,
   DELIVERY_RESULT_PROJECTION_CLASSES,
   DELIVERY_RESULT_TAXONOMY,
   DOMAIN_KINDS,
   ERROR_TABLE,
+  STATUS_SOURCE_PIPELINE_LIMIT,
 } from "@delivery-os/core/contracts";
 import {
   CONFORMANCE_ADAPTERS,
@@ -27,7 +30,11 @@ import {
   TRACKER_TRAP_FAMILIES,
   type TrackerErrorClass,
 } from "@delivery-os/testkit";
-import { createCanaryCredentialPort, loadMockTenants } from "./support/fixtures";
+import { createGitHubClient } from "../../packages/adapters/src/github/client";
+import { createGitLabClient } from "../../packages/adapters/src/gitlab/client";
+import type { ProviderReadResult } from "../../packages/adapters/src/io/provider-transport";
+import { createJiraClient } from "../../packages/adapters/src/jira/client";
+import { createCanaryCredentialPort, loadMockTenant, loadMockTenants } from "./support/fixtures";
 
 const CLOCK = "2026-10-31T00:00:00Z";
 
@@ -338,5 +345,333 @@ describe("TC-TAX-010 the capability class is proven structurally", () => {
         message.includes("failed step counted as passed"),
       ),
     ).toBe(true);
+  });
+});
+
+// --- TAX-003..008: family replay through the production clients -------------
+
+type FamilyStimulus = {
+  readonly kind: "response" | "transport-failure" | "transition" | "read-pipeline-run";
+  readonly status?: number;
+  readonly body?: unknown;
+  readonly deliveryState?: string;
+};
+
+type FamilyReplay =
+  | {
+      readonly kind: "failure";
+      readonly result: { readonly ok: false; readonly code: string; readonly httpStatus?: number };
+      readonly requests: number;
+      readonly ownsStatus: boolean;
+    }
+  | {
+      readonly kind: "pagination";
+      readonly bound: string;
+      readonly count: string;
+      readonly requests: number;
+      readonly url: string;
+    }
+  | { readonly kind: "success" };
+
+const ACCOUNTING = "tests/fixtures/providers/conformance/families/accounting.json";
+const accounting = JSON.parse(readFileSync(join(process.cwd(), ACCOUNTING), "utf8")) as {
+  providers: Record<
+    string,
+    Record<string, { posture: string; recordedClass?: string; gapReason?: string }>
+  >;
+};
+
+const stimulusOf = (provider: string, family: string): FamilyStimulus =>
+  (
+    JSON.parse(
+      readFileSync(
+        join(process.cwd(), "tests/fixtures/providers", provider, "families", `${family}.json`),
+        "utf8",
+      ),
+    ) as { stimulus: FamilyStimulus }
+  ).stimulus;
+
+const replayFamily = async (
+  provider: string,
+  family: string,
+  override?: Partial<FamilyStimulus>,
+  limit?: number,
+): Promise<FamilyReplay> => {
+  const stimulus = { ...stimulusOf(provider, family), ...override };
+  const tenant = loadMockTenant(provider);
+  const requests: string[] = [];
+  const transport = {
+    send: async (request: { method: string; url: string }) => {
+      requests.push(`${request.method} ${request.url}`);
+      if (stimulus.kind === "transport-failure") throw new Error("network down");
+      return { status: stimulus.status ?? 200, body: stimulus.body };
+    },
+  };
+  const credentials = createCanaryCredentialPort();
+  let result: ProviderReadResult<unknown>;
+  const addressing = tenant.addressing;
+  if (provider === "github") {
+    if (addressing.provider !== "github") throw new Error("github addressing missing");
+    const client = createGitHubClient({
+      instance: tenant.instance,
+      credentials,
+      repository: { owner: addressing.owner, name: addressing.repo },
+      transport,
+    });
+    if (family === "pagination-truncation") {
+      const read = await client.readPipelineRun(
+        addressing.commitSha,
+        limit === undefined ? undefined : limit,
+      );
+      if (!read.ok) {
+        return {
+          kind: "failure",
+          result: read,
+          requests: requests.length,
+          ownsStatus: Object.hasOwn(read, "httpStatus"),
+        };
+      }
+      const url = requests[0] ?? "";
+      return {
+        kind: "pagination",
+        bound: url.includes("per_page=") ? "declared" : "none",
+        count: "reported",
+        requests: requests.length,
+        url,
+      };
+    }
+    result =
+      family === "workflow-state-mismatch"
+        ? await client.transitionWorkItem({
+            entityId: String(addressing.issueNumber),
+            deliveryState: (stimulus.deliveryState ?? "canceled") as never,
+          })
+        : await client.readWorkItem(addressing.issueNumber);
+  } else if (provider === "gitlab") {
+    if (addressing.provider !== "gitlab") throw new Error("gitlab addressing missing");
+    const client = createGitLabClient({
+      instance: tenant.instance,
+      credentials,
+      projectPath: addressing.projectPath,
+      transport,
+    });
+    if (family === "pagination-truncation") {
+      const read = await client.readPipelineRun(addressing.commitSha);
+      if (!read.ok) {
+        return {
+          kind: "failure",
+          result: read,
+          requests: requests.length,
+          ownsStatus: Object.hasOwn(read, "httpStatus"),
+        };
+      }
+      const url = requests[0] ?? "";
+      return {
+        kind: "pagination",
+        bound: url.includes("per_page=") ? "declared" : "none",
+        count: "absent",
+        requests: requests.length,
+        url,
+      };
+    }
+    result = await client.readDeliveryRequest(addressing.mrIid);
+  } else {
+    if (addressing.provider !== "jira") throw new Error("jira addressing missing");
+    const client = createJiraClient({ instance: tenant.instance, credentials, transport });
+    result =
+      family === "workflow-state-mismatch"
+        ? await client.transitionWorkItem({
+            issueKey: addressing.issueKey,
+            deliveryState: (stimulus.deliveryState ?? "planned") as never,
+          })
+        : await client.readWorkItem(addressing.issueKey);
+  }
+  if (result.ok) return { kind: "success" };
+  return {
+    kind: "failure",
+    result,
+    requests: requests.length,
+    ownsStatus: Object.hasOwn(result, "httpStatus") && result.httpStatus !== undefined,
+  };
+};
+
+const classOf = (replay: FamilyReplay, operationKind: "read" | "write"): string => {
+  if (replay.kind !== "failure") throw new Error("expected a failure replay");
+  return classifyTrackerFailure(replay.result, {
+    operationKind,
+    adapterRefusal: replay.requests === 0,
+  });
+};
+
+describe("TC-TAX-003 the auth-shape posture", () => {
+  test("the status-bearing arm classifies a 401/403 as auth.rejected and stays distinguishable", async () => {
+    for (const status of [401, 403]) {
+      const replay = await replayFamily("github", "auth-shape", { status });
+      expect(classOf(replay, "read")).toBe("tracker.auth.rejected");
+      if (replay.kind !== "failure") throw new Error("expected failure");
+      expect(replay.result.httpStatus).toBe(status);
+      expect(replay.ownsStatus).toBe(true);
+    }
+    expect(
+      classifyTrackerFailure(
+        { ok: false, code: "config.credential.missing" },
+        { operationKind: "read" },
+      ),
+    ).toBe("outside-taxonomy");
+  });
+
+  test("the recorded-difference arm on GitLab and Jira matches the recorded class and cannot produce auth.rejected", async () => {
+    for (const provider of ["gitlab", "jira"]) {
+      const cell = accounting.providers[provider]?.["auth-shape"];
+      expect(cell?.posture).toBe("recorded-difference");
+      const replay = await replayFamily(provider, "auth-shape");
+      expect(classOf(replay, "read")).toBe(cell?.recordedClass);
+      expect(classOf(replay, "read")).toBe("tracker.transport.failed");
+      if (replay.kind !== "failure") throw new Error("expected failure");
+      expect(replay.ownsStatus).toBe(false);
+    }
+  });
+});
+
+describe("TC-TAX-004 the transport-failure posture", () => {
+  test("a thrown transport carries no status and the class differs from every status-bearing class", async () => {
+    for (const provider of ["github", "gitlab", "jira"]) {
+      const replay = await replayFamily(provider, "transport-failure");
+      expect(classOf(replay, "read")).toBe("tracker.transport.failed");
+      if (replay.kind !== "failure") throw new Error("expected failure");
+      expect(replay.ownsStatus).toBe(false);
+    }
+    const auth = await replayFamily("github", "auth-shape", { status: 401 });
+    const other = await replayFamily("github", "rate-limit", { status: 500 });
+    expect(classOf(auth, "read")).toBe("tracker.auth.rejected");
+    expect(classOf(other, "read")).toBe("tracker.payload.invalid");
+  });
+});
+
+describe("TC-TAX-005 the rate-limit posture", () => {
+  test("GitHub classifies a 429 as the payload class with its status, independent of prose", async () => {
+    const body = { message: "request quota exceeded" };
+    const first = await replayFamily("github", "rate-limit", { status: 429, body });
+    const second = await replayFamily("github", "rate-limit", {
+      status: 429,
+      body: { message: "unrelated prose" },
+    });
+    expect(classOf(first, "read")).toBe("tracker.payload.invalid");
+    expect(classOf(second, "read")).toBe("tracker.payload.invalid");
+    if (first.kind !== "failure") throw new Error("expected failure");
+    expect(first.result.httpStatus).toBe(429);
+  });
+
+  test("a 403 throttle is outside the covered rate-limit classification", async () => {
+    const replay = await replayFamily("github", "rate-limit", { status: 403 });
+    expect(classOf(replay, "read")).toBe("tracker.auth.rejected");
+    expect(classOf(replay, "read")).not.toBe("tracker.payload.invalid");
+  });
+
+  test("the status-less arms match their recorded class", async () => {
+    for (const provider of ["gitlab", "jira"]) {
+      const replay = await replayFamily(provider, "rate-limit", { status: 429 });
+      expect(classOf(replay, "read")).toBe("tracker.transport.failed");
+      expect(classOf(replay, "read")).toBe(
+        accounting.providers[provider]?.["rate-limit"]?.recordedClass,
+      );
+    }
+  });
+});
+
+describe("TC-TAX-006 the payload-shape posture", () => {
+  test("GitHub stamps the received status on an undecodable 2xx and on a prose-contradicted non-2xx", async () => {
+    const undecodable = await replayFamily("github", "payload-shape", {
+      status: 200,
+      body: { unexpected: "shape" },
+    });
+    expect(classOf(undecodable, "read")).toBe("tracker.payload.invalid");
+    if (undecodable.kind !== "failure") throw new Error("expected failure");
+    expect(undecodable.result.httpStatus).toBe(200);
+
+    const contradicted = await replayFamily("github", "payload-shape", {
+      status: 500,
+      body: { message: "success" },
+    });
+    expect(classOf(contradicted, "read")).toBe("tracker.payload.invalid");
+    if (contradicted.kind !== "failure") throw new Error("expected failure");
+    expect(contradicted.result.httpStatus).toBe(500);
+  });
+
+  test("GiLab and Jira produce status-less failures that match their recorded class", async () => {
+    for (const provider of ["gitlab", "jira"]) {
+      const replay = await replayFamily(provider, "payload-shape", {
+        status: 200,
+        body: { unexpected: "shape" },
+      });
+      expect(classOf(replay, "read")).toBe("tracker.transport.failed");
+      if (replay.kind !== "failure") throw new Error("expected failure");
+      expect(replay.ownsStatus).toBe(false);
+    }
+  });
+});
+
+describe("TC-TAX-007 the workflow-state-mismatch posture", () => {
+  test("GitHub and Jira refuse before dispatch with zero provider requests", async () => {
+    for (const provider of ["github", "jira"]) {
+      const replay = await replayFamily(provider, "workflow-state-mismatch");
+      expect(classOf(replay, "write")).toBe("tracker.payload.invalid");
+      if (replay.kind !== "failure") throw new Error("expected failure");
+      expect(replay.requests).toBe(0);
+      expect(replay.ownsStatus).toBe(false);
+    }
+  });
+
+  test("GitLab is gap-backed on its own transition operation with the exact reason", () => {
+    const cell = accounting.providers.gitlab?.["workflow-state-mismatch"];
+    expect(cell?.posture).toBe("gap-backed");
+    expect(cell?.gapReason).toBe("adapter-not-implemented");
+  });
+});
+
+describe("TC-TAX-008 the pagination-truncation posture", () => {
+  test("GitHub declares a bound and reports a count, with the bound reaching the wire", async () => {
+    const replay = await replayFamily("github", "pagination-truncation");
+    expect(replay.kind).toBe("pagination");
+    if (replay.kind !== "pagination") throw new Error("expected pagination");
+    expect(replay.bound).toBe("declared");
+    expect(replay.count).toBe("reported");
+    expect(replay.requests).toBe(1);
+    expect(replay.url).toContain(`per_page=${STATUS_SOURCE_PIPELINE_LIMIT}`);
+    const different = await replayFamily(
+      "github",
+      "pagination-truncation",
+      undefined,
+      STATUS_SOURCE_PIPELINE_LIMIT + 1,
+    );
+    if (different.kind !== "pagination") throw new Error("expected pagination");
+    expect(different.url).not.toBe(replay.url);
+  });
+
+  test("GitLab declares neither a bound nor a count, and Jira is gap-backed", async () => {
+    const replay = await replayFamily("gitlab", "pagination-truncation");
+    expect(replay.kind).toBe("pagination");
+    if (replay.kind !== "pagination") throw new Error("expected pagination");
+    expect(replay.bound).toBe("none");
+    expect(replay.count).toBe("absent");
+    expect(replay.url).not.toContain("per_page=");
+    const jira = accounting.providers.jira?.["pagination-truncation"];
+    expect(jira?.posture).toBe("gap-backed");
+    expect(jira?.gapReason).toBe("provider-unsupported");
+  });
+
+  test("the observation metadata matches the delivered presence facts", () => {
+    const record = JSON.parse(
+      readFileSync(
+        join(process.cwd(), "tests/fixtures/providers/conformance/parity/observation-record.json"),
+        "utf8",
+      ),
+    ) as { record: Record<string, Record<string, Record<string, { value?: string }>>> };
+    expect(record.record.github?.["read-pipeline-run"]?.["pagination-model"]?.value).toBe(
+      "bound=declared;count=reported",
+    );
+    expect(record.record.gitlab?.["read-pipeline-run"]?.["pagination-model"]?.value).toBe(
+      "bound=none;count=absent",
+    );
   });
 });
