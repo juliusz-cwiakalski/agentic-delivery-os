@@ -2839,6 +2839,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     const readProjectHandover = (
       stateLocation: string,
       projectKey: string,
+      repository?: string,
     ):
       | {
           readonly ok: true;
@@ -2868,7 +2869,14 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       let operation: HandoverEvidence = "none";
       let reversible = false;
       if (ledger.records.length > 0) {
-        const folded = foldDispatchHandover(ledger.records);
+        // The folded truth is per repository, and the row reads only its own:
+        // a store that accumulates a second identity (a rename or a remote
+        // change does not re-key history) can never report another repository's
+        // authority as this row's. When the row's identity is not resolved, the
+        // fold keeps the delivered cross-identity read.
+        const folded = foldDispatchHandover(ledger.records).filter(
+          (entry) => repository === undefined || entry.repository === repository,
+        );
         const latest = [...folded]
           .sort((left, right) =>
             left.recordedAt < right.recordedAt ? -1 : left.recordedAt > right.recordedAt ? 1 : 0,
@@ -2926,10 +2934,11 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       store: StateStorePort,
       root: string,
       projectKey: string,
+      resolvedRepository?: string,
     ):
       | { readonly ok: true; readonly gate: ReposHandoverGate }
       | { readonly ok: false; readonly summary: string } => {
-      const repository = resolveRowRepository(root);
+      const repository = resolvedRepository ?? resolveRowRepository(root);
       if (repository === undefined) {
         return {
           ok: false,
@@ -3096,10 +3105,15 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             summary: `project ${entry.projectKey} has a state location that is not a readable directory (${stateLocation})`,
           };
         }
+        // The row's own normalized identity, resolved once and used by both the
+        // handover fold and the gate block (GH-293 DM-7, DEC-15). It is resolved
+        // on the gate path only, so `projects list` performs no identity read.
+        const rowRepository =
+          withGate && classification === "ready" ? resolveRowRepository(entry.root) : undefined;
         const handover =
           classification === "first-use"
             ? ({ ok: true, state: "shell", reversible: false } as const)
-            : readProjectHandover(stateLocation, entry.projectKey);
+            : readProjectHandover(stateLocation, entry.projectKey, rowRepository);
         if (!handover.ok) {
           return { ok: false, code: "repos.state-unavailable", summary: handover.summary };
         }
@@ -3113,7 +3127,12 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
               summary: `project ${entry.projectKey} has no readable store for its gate evaluation`,
             };
           }
-          const evaluated = readRowHandoverGate(handover.store, entry.root, entry.projectKey);
+          const evaluated = readRowHandoverGate(
+            handover.store,
+            entry.root,
+            entry.projectKey,
+            rowRepository,
+          );
           if (!evaluated.ok) {
             return { ok: false, code: "repos.state-unavailable", summary: evaluated.summary };
           }

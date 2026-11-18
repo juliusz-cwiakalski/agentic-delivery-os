@@ -33,6 +33,8 @@ import {
   conditionStatuses,
   type DispatchEvidenceWindow,
   type DispatchGateEvaluation,
+  evaluateHandoverGate,
+  foldEvidenceWindow,
 } from "../domain/dispatch-gate.js";
 
 /** The folded latest handover evidence for the project, or none. */
@@ -227,21 +229,24 @@ export const reposListDataOf = (
  * The declared empty-window evaluation a `first-use` row reports (GH-293 F-3,
  * AC-F3-6, OQ-TP-4).
  *
- * No store is opened: truth is met, corroboration is met vacuously, coverage and
- * floor are open, both counters are zero, and reversibility is `false` because
- * the fold of no records is `dual-run`.
+ * No store is opened and no record is read: the value is the one production
+ * derivation — `conditionStatuses(evaluateHandoverGate(foldEvidenceWindow(...)))`
+ * — over an empty window, so a gate-rule change moves this row exactly as it
+ * moves the summary, the handover decision, and every ready row. Truth is met,
+ * corroboration is met vacuously, coverage and floor are open, both counters are
+ * zero, and reversibility is `false` because the fold of no records is
+ * `dual-run`.
  */
-export const emptyHandoverGate = (): ReposHandoverGate => ({
-  verdict: "ineligible",
-  conditions: [
-    { condition: "truth", status: "met" },
-    { condition: "coverage", status: "open" },
-    { condition: "floor", status: "open" },
-    { condition: "corroboration", status: "met" },
-  ],
-  countedDeliveries: 0,
-  cleanDispatches: 0,
-});
+export const emptyHandoverGate = (): ReposHandoverGate => {
+  const window = foldEvidenceWindow({
+    repository: "",
+    scope: "production",
+    attempts: [],
+    divergences: [],
+    windowEnd: "",
+  });
+  return reposHandoverGateOf({ window, evaluation: evaluateHandoverGate(window) });
+};
 
 /**
  * Project one folded window and its evaluation onto the row's gate block
