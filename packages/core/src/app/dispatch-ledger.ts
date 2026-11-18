@@ -132,7 +132,22 @@ const isAttemptRecord = (value: unknown): value is DispatchAttemptRecord =>
   // GH-335 additive facts: both optional, each validated when present so a
   // malformed binding is refused and a role-less record stays valid.
   (value.sessionIds === undefined || isSessionIds(value.sessionIds)) &&
-  (value.binding === undefined || isRecordedBinding(value.binding));
+  (value.binding === undefined || isRecordedBinding(value.binding)) &&
+  // GH-335 F-1/F-2 recorded-outcome facts: optional, validated when present.
+  (value.harnessVersion === undefined ||
+    value.harnessVersion === null ||
+    (typeof value.harnessVersion === "string" && value.harnessVersion.length > 0)) &&
+  (value.versionVerdict === undefined ||
+    value.versionVerdict === "inside" ||
+    value.versionVerdict === "outside" ||
+    value.versionVerdict === "indeterminate") &&
+  (value.mode === undefined ||
+    value.mode === "per-invocation-private-server" ||
+    value.mode === "managed-background-service" ||
+    value.mode === "running-server-client") &&
+  (value.modeOrigin === undefined ||
+    value.modeOrigin === "defaults" ||
+    value.modeOrigin === "configured");
 
 const isDivergenceRecord = (value: unknown): value is DispatchDivergenceRecord =>
   isRecord(value) &&

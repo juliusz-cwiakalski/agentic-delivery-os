@@ -112,7 +112,7 @@ describe("TC-HARNESS-006 the gate runs before the lease claim and the attempt ap
     },
     releaseLease: () => true,
     phaseLedger: { completed: 0, total: 9, variant: "full" as const },
-    harnessFacts: FACTS_OUTSIDE,
+    harnessFacts: () => FACTS_OUTSIDE,
     harnessAdmission,
   });
 

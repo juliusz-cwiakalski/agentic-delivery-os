@@ -148,3 +148,40 @@ export type Probes = [
   SummaryEligibility,
   SummaryVerdict,
 ];
+
+/* GH-335: the additive attempt facts are optional and closed. */
+
+import type {
+  HarnessMode,
+  HarnessModeOrigin,
+  HarnessVersionVerdict,
+} from "../../packages/core/src/contracts/harness";
+
+type SessionIdsAreOptional = Expect<
+  Equal<DispatchAttemptRecord["sessionIds"], readonly string[] | undefined>
+>;
+type BindingIsOptional = Expect<
+  Equal<
+    DispatchAttemptRecord["binding"],
+    import("../../packages/core/src/contracts/harness").HarnessSeatBinding | undefined
+  >
+>;
+type HarnessVersionFactIsOptional = Expect<
+  Equal<DispatchAttemptRecord["harnessVersion"], string | null | undefined>
+>;
+type VersionVerdictFactIsClosed = Expect<
+  Equal<DispatchAttemptRecord["versionVerdict"], HarnessVersionVerdict | undefined>
+>;
+type ModeFactIsClosed = Expect<Equal<DispatchAttemptRecord["mode"], HarnessMode | undefined>>;
+type ModeOriginFactIsClosed = Expect<
+  Equal<DispatchAttemptRecord["modeOrigin"], HarnessModeOrigin | undefined>
+>;
+
+export type Gh335Probes = [
+  SessionIdsAreOptional,
+  BindingIsOptional,
+  HarnessVersionFactIsOptional,
+  VersionVerdictFactIsClosed,
+  ModeFactIsClosed,
+  ModeOriginFactIsClosed,
+];

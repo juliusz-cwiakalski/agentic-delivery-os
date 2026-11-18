@@ -6933,7 +6933,7 @@ export type DispatchComposition = {
    * no attempt record, and writes no telemetry.
    */
   readonly harnessAdmission?: () => Promise<
-    | { readonly ok: true; readonly facts?: DispatchPorts["harnessFacts"] }
+    | { readonly ok: true }
     | {
         readonly ok: false;
         readonly error: {
@@ -6950,7 +6950,7 @@ export type DispatchComposition = {
    * gate and disclosed on a pre-session refusal (TDR-0033). Absent on the
    * non-dispatch lanes and for a harness kind outside the delivery window.
    */
-  readonly harnessFacts?: () => DispatchPorts["harnessFacts"];
+  readonly harnessFacts?: DispatchPorts["harnessFacts"];
   /** The caller-supplied agent identity for this run (DEC-16, DEC-15). */
   readonly harnessAgent?: (ref: string) => string | undefined;
   /** The composition-resolved single-seat binding for this run (TDR-0032). */
@@ -7176,7 +7176,6 @@ export const createDispatchCommandRuntime = (
         }
       }
       const preflight = composition.preflight;
-      const harnessFacts = composition.harnessFacts?.();
       const harnessAgent = composition.harnessAgent?.(input.ref);
       const harnessBinding = composition.harnessBinding?.(input.ref);
       return runDispatch({
@@ -7216,7 +7215,9 @@ export const createDispatchCommandRuntime = (
                 };
               },
             }),
-        ...(harnessFacts === undefined ? {} : { harnessFacts }),
+        ...(composition.harnessFacts === undefined
+          ? {}
+          : { harnessFacts: composition.harnessFacts }),
         ...(harnessAgent === undefined ? {} : { harnessAgent }),
         ...(harnessBinding === undefined ? {} : { harnessBinding }),
         claimLease: () => composition.claimLease(input.ref, repository),

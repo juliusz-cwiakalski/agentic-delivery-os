@@ -82,12 +82,12 @@ describe("TC-HARNESS-008 an unavailable mode", () => {
       },
       releaseLease: () => true,
       phaseLedger: { completed: 0, total: 9, variant: "full" },
-      harnessFacts: {
+      harnessFacts: () => ({
         kind: "opencode",
         observedVersion: "2.3.2",
         versionVerdict: "inside",
         mode: requested,
-      },
+      }),
       harnessAdmission: async () => ({
         ok: false,
         error: {

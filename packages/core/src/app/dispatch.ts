@@ -31,6 +31,7 @@ import {
   type HarnessFailure,
   type HarnessKind,
   type HarnessMode,
+  type HarnessModeOrigin,
   type HarnessOutcome,
   type HarnessSeatBinding,
   type HarnessSessionHandle,
@@ -167,6 +168,8 @@ export type DispatchHarnessFacts = {
   readonly observedVersion: string | null;
   readonly versionVerdict: HarnessVersionVerdict;
   readonly mode: HarnessMode;
+  /** The mode origin: the delivered default or a declared value (DEC-2). */
+  readonly modeOrigin?: HarnessModeOrigin;
 };
 
 /** One pre-session harness admission refusal, classified and recordless. */
@@ -291,8 +294,12 @@ export type DispatchPorts = {
   readonly harnessAgent?: string;
   /** The composition-resolved single-seat binding for this run (TDR-0032 A-4). */
   readonly harnessBinding?: HarnessSeatBinding;
-  /** The resolved harness facts the pre-session refusals disclose (TDR-0033). */
-  readonly harnessFacts?: DispatchHarnessFacts;
+  /**
+   * The resolved harness facts, read lazily: the admission writes them for the
+   * run in flight, so a pre-session refusal discloses them and a success records
+   * them on the attempt (GH-335 F-1/F-2, TDR-0033).
+   */
+  readonly harnessFacts?: () => DispatchHarnessFacts | undefined;
   /** The pre-session harness admission; runs before the lease claim (NFR-1). */
   readonly harnessAdmission?: DispatchHarnessAdmissionPort;
 };
@@ -736,6 +743,19 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
         ...(nomination === undefined ? {} : { providerProfile: nomination.profile }),
         ...(heldSessionId === undefined ? {} : { sessionIds: [heldSessionId] }),
         ...(ports.harnessBinding === undefined ? {} : { binding: ports.harnessBinding }),
+        // GH-335 F-1/F-2: the recorded outcome facts this run actually holds.
+        ...(ports.harnessFacts === undefined
+          ? {}
+          : (() => {
+              const facts = ports.harnessFacts?.();
+              if (facts === undefined) return {};
+              return {
+                harnessVersion: facts.observedVersion,
+                versionVerdict: facts.versionVerdict,
+                mode: facts.mode,
+                ...(facts.modeOrigin === undefined ? {} : { modeOrigin: facts.modeOrigin }),
+              };
+            })()),
         evidenceRefs: input.evidenceRefs,
         recordedAt: now,
       };
@@ -846,7 +866,7 @@ export const runDispatch = async (ports: DispatchPorts): Promise<DispatchRunResu
       // A pre-session harness refusal appends no attempt record (GH-335 NFR-1):
       // the envelope carries the typed identity and its disclosed facts.
       if ((HARNESS_PRESESSION_REFUSAL_CODES as readonly string[]).includes(session.error.code)) {
-        const detail = harnessRefusalDetail(session.error.code, ports.harnessFacts);
+        const detail = harnessRefusalDetail(session.error.code, ports.harnessFacts?.());
         return {
           ok: false,
           error: {

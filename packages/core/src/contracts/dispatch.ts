@@ -11,7 +11,14 @@
  */
 
 import type { DeliveryResultToken } from "./delivery-result.js";
-import type { HarnessKind, HarnessOutcome, HarnessSeatBinding } from "./harness.js";
+import type {
+  HarnessKind,
+  HarnessMode,
+  HarnessModeOrigin,
+  HarnessOutcome,
+  HarnessSeatBinding,
+  HarnessVersionVerdict,
+} from "./harness.js";
 import type { CommandResultError } from "./result.js";
 
 /** The result-token alias; keeps the payload field types readable and bounded. */
@@ -245,6 +252,16 @@ export type DispatchAttemptRecord = {
    * current profile.
    */
   readonly binding?: HarnessSeatBinding;
+  /**
+   * The normalized observed harness version this attempt ran on (GH-335 F-1;
+   * TDR-0033 decision 4). Absent on a pre-change record; never fabricated.
+   */
+  readonly harnessVersion?: string | null;
+  /** The window verdict the attempt ran under. */
+  readonly versionVerdict?: HarnessVersionVerdict;
+  /** The selected integration mode, and its origin (DEC-2, TDR-0034). */
+  readonly mode?: HarnessMode;
+  readonly modeOrigin?: HarnessModeOrigin;
   readonly evidenceRefs: readonly DispatchEvidenceReference[];
   readonly recordedAt: string;
 };
