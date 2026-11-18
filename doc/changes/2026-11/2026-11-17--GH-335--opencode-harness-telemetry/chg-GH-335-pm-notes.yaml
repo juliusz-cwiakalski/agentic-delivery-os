@@ -10,7 +10,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-18T11:07:59.204Z }
   delivery: { started: null, completed: 2026-11-18T15:06:36.221Z }
   system_spec_update: { started: null, completed: 2026-11-18T15:24:57.132Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-18T18:12:43.982Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -491,36 +491,62 @@ notes:
       and was withdrawn as evidence): a harness-port spawn with caller-supplied
       agent `coder` / `deepseek/deepseek-flash` on opencode v2.3.2, with the
       resolved binding recorded on the attempt; the landed row carries version
-      2.3.2, agent/model agreement, seat `coder-seat`, sourced durations
-      (4460 ms), a reported non-zero cost and a no-tool-source warning."
+      2.3.2, agent/model agreement, seat `coder-seat`, sourced durations (4460
+      ms), a reported non-zero cost and a no-tool-source warning."
     type: info
     date: "2026-11-18"
-  - text: "Declared gaps, corrected after Phase 9 remediation and the review's
-      F-11: the plan's `tests/fixtures/harness/scenarios/` folder does exist —
-      only an additional file under it was not needed, because the extension
-      executor supplies its facts inline with an equivalent data path;
+  - text: "Declared gaps, corrected after Phase 9 remediation and the review's F-11:
+      the plan's `tests/fixtures/harness/scenarios/` folder does exist — only an
+      additional file under it was not needed, because the extension executor
+      supplies its facts inline with an equivalent data path;
       `OpencodeBindingSeams` is now re-exported from the adapters harness barrel
       (F-9 closed, so the fixture's barrel import resolves for real); and
       `doc/00-index.md` WAS updated in cbf3b236 — an earlier note in this file
       claiming it was untouched was wrong."
     type: info
     date: "2026-11-18"
-  - text: "Review iteration 2: FAIL on plan compliance only (spec compliance PASS;
-      all three iteration-1 blockers verified genuinely closed, including the
-      re-recorded live observation checked numerically against the store). Remaining:
-      an undeclared no-profile-context refusal, a re-authored version grammar,
-      two stale system-spec statements, and an unrecorded Phase-9 gate result.
-      Phase 10 appended. Verdict artifacts: review/review-iter-2.md and
-      review-iter-2.yaml."
+  - text: "Phase 10 gate result as it actually ran: `pnpm check` EXIT=0 — 10573 pass
+      / 4 skip / 0 fail across 1349 files, with boundaries, memory, prompt,
+      help-guide coverage and exports parity green; declared Phase-10 suites
+      9+9+9 pass plus doc-conformance 19 pass; broader affected set 125 pass / 0
+      fail; range gate PASS over 41 commits; `plan validate` and `lint plan`
+      valid. A later independent re-run by the reviewer produced one failing
+      suite (dispatch-attempts-ref, 5861 ms against a 5000 ms bound, 26/26 in
+      1.96 s alone); the failing identity has changed in every run across three
+      iterations, which is environmental load sensitivity, not a regression.
+      Recorded trap: an unset TMPDIR fails ci-baseline-parity with a
+      cross-device git clone hardlink, so the documented
+      `TMPDIR=$PWD/tmp/tmpdir` invocation is load-bearing."
+    type: info
+    date: "2026-11-18"
+  - text: "Accepted deviations recorded for the Phase-9 and Phase-10 scope
+      declarations: Phase 9 touched contracts/harness.ts and app/dispatch.ts
+      because the delivered provider-kind widening and the attempt-stage detail
+      clamp are the pre-session refusal path's own contract surface, plus the
+      two fail-closed inventories that depend on any contracts export; Phase 10
+      adds contracts/index.ts re-exports and the same inventories for its two
+      new names. No iteration modified an earlier phase. Phase 10's task 10.2
+      therefore stands as an accepted deviation rather than an undeclared edit."
+    type: decision
+    date: "2026-11-18"
+  - text: "Review iteration 3: PASS (spec compliance PASS, plan compliance PASS, 11
+      non-blocking findings). Verdict artifacts: review/review-iter-3.md and
+      review-iter-3.yaml. Remaining notes are maintainability items: Phase-10
+      scope.files omits nine carried files; a memoisation comment overclaims;
+      the F-5 source-text guard is double-escaped and cannot match its regex
+      form; the spec revision log says no DEC count change while adding DEC-18;
+      F-11 (edge.ts projections) and F-12 carry-overs remain unrecorded in
+      code."
     type: info
     date: "2026-11-18"
   - text: "Phase 9 gate result as it actually ran (the finding was that no result
-      was recorded): the declared gate suites ran 83 pass / 0 fail;
-      `pnpm typecheck` green; `pnpm check` on the remediated tree reported 10565
-      pass / 4 skip / 2 fail, where both failures are load-sensitive subprocess
-      tests (TC-WIRE-002's 5 s spawn of check:privacy-literals and TC-BIN-084's
+      was recorded): the declared gate suites ran 83 pass / 0 fail; `pnpm
+      typecheck` green; `pnpm check` on the remediated tree reported 10565 pass
+      / 4 skip / 2 fail, where both failures are load-sensitive subprocess tests
+      (TC-WIRE-002's 5 s spawn of check:privacy-literals and TC-BIN-084's
       preloaded run) and both pass in isolation (14 pass / 16.6 s and 5 pass /
-      50.2 s respectively). The branch-range commit gate passed over 40 commits."
+      50.2 s respectively). The branch-range commit gate passed over 40
+      commits."
     type: info
     date: "2026-11-18"
   - text: "PR-review carry-over from the independent decision review: TDR-0032
