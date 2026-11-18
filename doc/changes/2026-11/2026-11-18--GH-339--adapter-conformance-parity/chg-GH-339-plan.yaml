@@ -39,7 +39,7 @@
 #               This plan never assumes a status-bearing classification a
 #               status-less adapter cannot produce, and never asks a read for a
 #               truncation signal no closed view carries.
-#   - Tests:    ./chg-GH-339-test-plan.md (v1.3: 72 TCs —
+#   - Tests:    ./chg-GH-339-test-plan.md (v1.4: 72 TCs —
 #               TC-PARITY-001..008, TC-PMUT-001..022, TC-ART-001..002,
 #               TC-TAX-001..013, TC-DOUBLE-001..007, TC-DMUT-001..004,
 #               TC-REG-001..006, TC-GATE-001..004, TC-FLOOR-001..006; 34/34 AC
@@ -129,10 +129,11 @@
 #   conditional touch only. It is never a licence to edit an unrelated row, and
 #   the DoD check confirms the index state either way.
 #   A PIN THAT GOVERNS AN EDITED SUITE IS DECLARED AT EVERY TOUCH POINT:
-#   `tests/fixtures/pins/trap-names.json` is authored in phase 1 and is declared
+#   `tests/fixtures/pins/trap-names.json` and its digest
+#   `tests/fixtures/pins/trap-names.sha256` are authored in phase 1 and declared
 #   again in phase 3, because phase 3 edits the three suites the pin governs and
 #   must prove the delivered names were not disturbed. The phase-3 declaration is a
-#   READ-PINNED declaration (the file is never edited there); it is declared so the
+#   READ-PINNED declaration (neither file is edited there); they are declared so the
 #   governing relationship is explicit where the risk lives, and it can produce at
 #   most an advisory `plan diff` `undeclared-missing`.
 #
@@ -464,7 +465,7 @@
 #       FLOOR-001..006 stay in phase 6.
 #
 # TEST PLAN §7.6 — THE FOUR VERBATIM OBLIGATIONS PLUS THE PIN BINDING (test plan
-#   v1.3; each is restated here in its own terms, and its home in this plan is
+#   v1.4; each is restated here in its own terms, and its home in this plan is
 #   named):
 #   (i) "TC-GATE-002 adds the base-free job-set and file-set equality that
 #       ci-topology.validate does not perform (GAP-TP-3), so 'no job added' is
@@ -684,7 +685,7 @@
 #       trigger set, check-name inventory); the base-dependent half stays with the
 #       DELIVERED `tests/checks/ci-checks.test.ts` under `ts-test` (which fetches
 #       the base) and with G7. No environment branch, no skip, and no base-reading
-#       import in the structure tier. Test plan v1.2 TC-GATE-002 states the same
+#       import in the structure tier. Test plan v1.4 TC-GATE-002 states the same
 #       split.
 #   (h) STALE `ados policy → M3-S5` POINTERS — DELIBERATELY UNCHANGED IN THIS
 #       CHANGE. `doc/planning/oss-tooling/cli-command-registry.md` (the
@@ -713,7 +714,7 @@
 #       gap-backed (GitHub 6/0/0, GitLab 1/4/1, Jira 2/3/1); five places said
 #       10/6/2. Corrected here in the phase-3 title, the contract, the arm
 #       invariant, obligation 3.2/3.4 and the gate expectation, and mirrored in
-#       test plan v1.3 so neither artifact asserts counts the other contradicts.
+#       test plan v1.4 so neither artifact asserts counts the other contradicts.
 #
 # DOC RECONCILIATION HANDOFF (lifecycle phase 7, @doc-syncer; the FILES are
 #   declared by phase 6 for STAGING ONLY — this plan authors none of them):
@@ -1322,7 +1323,7 @@ phases:
   # §18 requires; this phase adds per-adapter DATA and the replay that proves it,
   # and creates NO register entry — entries are phase 2's.
   #
-  # Contract (F-2, DM-4, DM-3, API-2; TDR-0037 is authority; spec v1.2 DM-4):
+  # Contract (F-2, DM-4, DM-3, API-2; TDR-0037 is authority; spec v1.4 DM-4):
   #   - Key set is exactly `providers(CONFORMANCE_ADAPTERS) × six families` = 18
   #     cells, derived from the registry and the exported vocabulary constant, not
   #     from a hard-coded name list. `auth-shape` is the first family id and the
@@ -1714,7 +1715,7 @@ phases:
   #       runner and coverage gates run over the injected adapter, which is what
   #       makes the proof non-vacuous. "The imported modules are the committed
   #       ones" is asserted WITHOUT editing any of them (discovery (f), now bound by
-  #       test plan v1.2 TC-REG-002): the control reaches the run only through
+  #       test plan v1.4 TC-REG-002): the control reaches the run only through
   #       `RunConformanceInput.adapters` (exact key set, registry unchanged before
   #       and after); the bound modules are pinned by the data they ALREADY export
   #       (census golden, registration list, artifact key set and caps, harness
@@ -1847,10 +1848,14 @@ phases:
   #     suites are green with their APPEND-ONLY extension — every appended entry
   #     asserting, each suite's exact ordered name array STARTING WITH the frozen
   #     baseline in `tests/fixtures/pins/trap-names.json` and followed by exactly
-  #     the appended names, the pin's bytes unchanged (no silent regeneration), and
+  #     the appended names, the pin's bytes unchanged (no silent regeneration), the
+  #     digest `tests/fixtures/pins/trap-names.sha256` equal to the SHA-256
+  #     RECOMPUTED over that baseline (so a pin edit and a digest edit are both
+  #     required to forge it, and either mismatch fails naming both files), and
   #     every pre-existing name still carrying a registered assertion.
   #     This is the case that makes "no delivered assertion was removed, renamed,
-  #     relaxed, or reordered" mechanical rather than a promise, and the pin is the
+  #     relaxed, or reordered" mechanical rather than a promise, and the pin-and-
+  #     digest pair is the
   #     tree-invariant baseline that keeps it from being circular.
   #   - FLOOR-002: the three capability postures are SET-and-REASON equal to the
   #     delivered ones — GitHub nine supported and zero gaps; GitLab
