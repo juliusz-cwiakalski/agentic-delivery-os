@@ -1,6 +1,8 @@
-# GH-293 delivery plan — machine-readable document (delivery.plan.v1), revision 1.4
-# (2026-11-18; review iteration 1 — a scope closure plus a declared remediation
-# section. Revision 1.3 carried readiness iteration 3's source re-pin and closure
+# GH-293 delivery plan — machine-readable document (delivery.plan.v1), revision 1.5
+# (2026-11-18; review iteration 2 — the planning corpus' twelfth scope closure,
+# one declared remediation entry (REM-8), and an EOF hygiene fix. Revision 1.4
+# carried review iteration 1's scope closure plus the declared remediation
+# section; revision 1.3 carried readiness iteration 3's source re-pin and closure
 # restatement; revision 1.2 carried readiness iteration 2's closure-model
 # correction; revision 1.1 carried readiness iteration 1's plan-routed findings
 # F-3, F-4, F-10 and the mechanical alignment to spec v1.2 / test plan v1.2 /
@@ -10,6 +12,59 @@
 # Canonical plan artifact: this YAML document is the only plan file for the
 # change. `plan validate`, `plan diff`, `plan overlap`, and `lint plan` read it
 # directly.
+#
+# REVISION 1.5 AMENDMENT (2026-11-18) — delivery review iteration 2
+# (`code-review/review-iter-2.yaml`, status FAIL: 1 medium, 2 low, 2 info;
+# findings F-17..F-21). No phase added, removed, or renumbered; no scope removed;
+# no acceptance criterion weakened; the DoD-1..DoD-10 mapping is unchanged; the
+# 46-case ownership map is unchanged (every TC id still appears in exactly one
+# phase row, and Phase 1 still lists none). Four things change:
+#   - F-18 SCOPE CLOSURE (the twelfth path). The documentation-reconciliation
+#     commit 4824caeb rewrote
+#     `doc/planning/oss-tooling/milestones/m1/commands/merge.md` to the delivered
+#     merge surface, and the page lay outside every phase's declared scope while
+#     the Phase 6 and Phase 7 notes called the staged planning set "three pages".
+#     The page is now declared in PHASE 7's `scope.files` beside the other three
+#     PHASE-7-STAGED pages, and every present-tense reference to the staged
+#     planning corpus reads FOUR pages. It is authored by lifecycle phase 7
+#     (`system_spec_update`, `@doc-syncer`) and declared for STAGING only, on the
+#     same terms as the other three and the two `doc/quality/test-specs/` files.
+#     The content is an accurate reconciliation and needs no edit; no scope key,
+#     file, or path is removed, and every already-declared path keeps its phase.
+#   - F-19 TESTING GAP — declared as REM-8. The identity-bound fold of review
+#     iteration 1's F-12 (the handover fold filtered to the row's own repository
+#     identity before `reversible` and `handoverState` are read) has no permanent
+#     case: `repos-handover-gate.test.ts` flips one identity inside one store and
+#     checks a second project's separate store, so a regression to the unfiltered
+#     fold, or a normalization mismatch between the record writer and the row's
+#     identity resolver, would stay green. REM-8 therefore requires one permanent
+#     foreign-identity cell in `tests/behaviour/repos-handover-gate.test.ts` that
+#     seeds a foreign-identity authoritative record beside the row's own and alone
+#     and asserts the row stays `reversible: false` / `handoverState: shell`, then
+#     seeds the row's own authoritative record and asserts the flip to `true`.
+#     That file is already declared in PHASE 4's `scope.files`, and Phase 4's
+#     left-green set already names the foreign-record scope, so the cell lands
+#     without reopening any phase's scope.
+#   - F-21 HYGIENE. The trailing blank line at EOF is removed: the document ends
+#     with exactly one newline after its last content line, so `git diff --check`
+#     is clean again after the review found `new blank line at EOF`.
+#   - SOURCE RE-PIN. SOURCES moves to spec v1.6 and test plan v1.5; no requirement
+#     is added by the re-pin and no case id moves. Spec v1.6 is review iteration
+#     2's F-17 pass: AC-F6-10's dry-run clause now states the delivered read shape
+#     (the dry run performs the head read, one work-item read, and one check-run
+#     page and the verification/gate projection; the request-detail and
+#     base-containment reads belong to the landing path) while the base stays the
+#     declared integration base supplied to the transaction as its `baseRef` — one
+#     source of truth, payload unchanged — and DEC-19 is restated beside it.
+#     Phase 5's objective and Phase 6's reconciliation bullet are
+#     worded to that amended shape; no other AC, NFR, decision, key, anchor, phase
+#     scope, or case expectation moves. Test plan v1.5 carries the matching F-17
+#     correction and adds no case, so the 46-case map stands.
+#   Two findings carry no remediation entry: F-17 is resolved in specification
+#   (v1.6) and the test plan (v1.5) and needs no plan scope, and F-20 is the
+#   reviewer's explicit no-action informational note (the configuration-code
+#   tuple's `as const satisfies` pin and `configFailure`'s literal `kind` are safe
+#   today; "no change required for this change").
 #
 # REVISION 1.4 AMENDMENT (2026-11-18) — delivery review iteration 1
 # (`code-review/review-iter-1.yaml`, 16 findings). No phase added, removed, or
@@ -29,9 +84,10 @@
 #     link, the `doc/overview/glossary.md` flat-record-set row,
 #     `doc/decisions/00-index.md`, and
 #     `scripts/checks/forbidden-literals.registry.json` (the new guide's
-#     registration) join PHASE 6; the three planning-corpus pages
+#     registration) join PHASE 6; the four planning-corpus pages
 #     (`milestones/m2/contracts.md`, `milestones/m2/commands/repos.md`,
-#     `milestones/m1/commands/dispatch.md`) are PHASE-7-STAGED — authored by
+#     `milestones/m1/commands/dispatch.md`, and — added by revision 1.5, F-18 —
+#     `milestones/m1/commands/merge.md`) are PHASE-7-STAGED — authored by
 #     lifecycle phase 7 (`system_spec_update`, `@doc-syncer`) and therefore
 #     declared in Phase 7's scope for staging, exactly like the two
 #     `doc/quality/test-specs/` files — and are named in both documentation rows;
@@ -160,7 +216,7 @@
 #     coder's.
 #
 # SOURCES (single source of truth):
-#   - Spec:      ./chg-GH-293-spec.md (v1.5, 14 ACs — AC-F1-1, AC-F1-2, AC-F2-3,
+#   - Spec:      ./chg-GH-293-spec.md (v1.6, 14 ACs — AC-F1-1, AC-F1-2, AC-F2-3,
 #                AC-F2-4, AC-F3-5, AC-F3-6, AC-F4-7, AC-F4-8, AC-F5-9, AC-F6-10,
 #                AC-F7-11, AC-F8-12, AC-F8-13, AC-NFR1-14; F-1..F-8; NFR-1..NFR-13;
 #                DM-1..DM-7; DEC-1..DEC-19; §5.1 capability details; §6 flows 1-5;
@@ -189,8 +245,17 @@
 #                with no new configuration key, constant, or second git-fact
 #                derivation (DEC-19). No other AC, NFR, decision, key, or anchor
 #                moved, and the credential rule is untouched
-#                (`config.credential.missing` -> `config` -> exit `1`).
-#   - Tests:     ./chg-GH-293-test-plan.md (v1.4, 46 cases TC-ENGINE-001..095 in
+#                (`config.credential.missing` -> `config` -> exit `1`). The v1.6
+#                amendment is review iteration 2's F-17 pass: AC-F6-10's dry-run
+#                clause states the DELIVERED read shape — the dry run performs the
+#                head read, one work-item read, one check-run page, and the
+#                verification/gate projection, while the request-detail and
+#                base-containment reads belong to the landing path — and the base
+#                stays the declared integration base supplied to the transaction as
+#                its `baseRef` (the payload carries no base field), with DEC-19
+#                restated beside it. No other criterion, requirement, decision, key,
+#                or anchor moves.
+#   - Tests:     ./chg-GH-293-test-plan.md (v1.5, 46 cases TC-ENGINE-001..095 in
 #                eight blocks — the handover block is `010`..`017` because
 #                TC-ENGINE-017 is the revert noop over an unreadable or torn handover
 #                ledger, AC-F2-3 therefore rests on five cases (`010`, `011`, `014`,
@@ -207,7 +272,15 @@
 #                review iteration 1's executed attestations in §10, aligns the two
 #                left-green sentences with what TC-ENGINE-065 and TC-ENGINE-054
 #                actually assert, and re-states the three-domain emittable set and
-#                the declared integration base in the plan's own prose. The 46-case
+#                the declared integration base in the plan's own prose. The v1.5
+#                revision carries review iteration 2's F-17 correction: the
+#                TC-ENGINE-050 base-assertion claim is aligned with the delivered
+#                dry-run reads (head, work item, one check-run page, and the
+#                verification/gate projection; the request-detail and
+#                base-containment reads belong to the landing path) and the base is
+#                stated as the declared integration base supplied to the transaction
+#                as its `baseRef`, with no case added and no case's expectation
+#                moved. The 46-case
 #                set, every id, oracle, identity, exit, and bound are unchanged, and
 #                none is reshaped by this plan; phase ownership of every id is
 #                declared in the TC -> PHASE MAP below.
@@ -920,7 +993,13 @@ phases:
   # source of truth, with no new configuration key, constant, or second git-fact
   # derivation of the base (AC-F6-10 as amended, DEC-19) — and the owner principal
   # as the owner component of the checkout's normalized `host/owner/name` identity
-  # supplied to the declared `ownerPrincipal` input. Simultaneously, failure
+  # supplied to the declared `ownerPrincipal` input. The dry run (`merge <ref>
+  # --dry-run --json`) performs exactly the head read, one work-item read, one
+  # check-run page, and the verification/gate projection; the request-detail and
+  # base-containment reads belong to the landing path (AC-F6-10 as amended in spec
+  # v1.6, F-17), and the base the transaction consumes is the declared integration
+  # base above, supplied as its `baseRef` — the dry-run payload gains no base field.
+  # Simultaneously, failure
   # classification derives `domainKind` from the resolved error-table row instead
   # of hard-coding `provider`: `config.credential.missing` emits `config` at its
   # declared projection and therefore exit 1 (`user-validation`, TDR-0031 D7), and
@@ -1044,8 +1123,9 @@ phases:
   # read), `feature-merge-verify-deploy.md` (production composition, the
   # error-table-derived classification, `MERGE_COMPOSITION_EMITTABLE_CODES` with
   # its three emitted domains and no `state.*` member, the declared credential-read
-  # exit projection at exit 1, the declared integration base the dry run reports as
-  # the base it used, and the `verify deploy` residual),
+  # exit projection at exit 1, the declared integration base the transaction
+  # consumes as its `baseRef` — the dry-run payload carries no base field
+  # (AC-F6-10 as amended in spec v1.6, F-17) — and the `verify deploy` residual),
   # `feature-result-contract.md` (the `repos` kind's `repos.state-unavailable` row
   # extended to name the per-row gate failures — an unreadable, torn, or malformed
   # evidence ledger, or a row whose repository identity cannot be resolved — at its
@@ -1110,13 +1190,18 @@ phases:
   # `scripts/checks/forbidden-literals.registry.json` (the guide's registration).
   # All six are declared in this phase's `scope.files`.
   #
-  # PHASE-7-STAGED PLANNING CORPUS (review iteration 1, F-5) — three planning pages
+  # PHASE-7-STAGED PLANNING CORPUS (review iteration 1, F-5; four pages since
+  # revision 1.5, review iteration 2 F-18) — four planning pages
   # are reconciled by LIFECYCLE PHASE 7 (`system_spec_update`, `@doc-syncer`), not
   # by this phase, and are declared in PHASE 7's `scope.files` for STAGING exactly
   # like the two `doc/quality/test-specs/` files:
   # `doc/planning/oss-tooling/milestones/m1/commands/dispatch.md` (the four
   # conditions, `reversible`, the declared revert-noop exemption, and the three
-  # additive summary fields), `doc/planning/oss-tooling/milestones/m2/commands/repos.md`
+  # additive summary fields),
+  # `doc/planning/oss-tooling/milestones/m1/commands/merge.md` (the delivered merge
+  # surface: the production composition and its declared sources, the
+  # error-table-derived classification, and the credential-read exit projection),
+  # `doc/planning/oss-tooling/milestones/m2/commands/repos.md`
   # (the `reversible` and `handoverGate` row fields, the read-time host, and the
   # extended `repos.state-unavailable` meaning), and
   # `doc/planning/oss-tooling/milestones/m2/contracts.md` (the `repos.v1` row
@@ -1361,7 +1446,7 @@ phases:
   # `verify deploy` is stated as a residual; TDR-0031 landed (as amended) in Phase 1;
   # the bounded lifecycle prose is reconciled in Phase 6 (TC-ENGINE-065); and the
   # lifecycle-phase-7 reconciliation HANDOFF is RECORDED (owner `@doc-syncer`, the
-  # two test-spec and three planning-corpus staged paths, satisfaction at DoD-7).
+  # two test-spec and four planning-corpus staged paths, satisfaction at DoD-7).
   # The reconciliation itself is NOT part of this exit: no phase of this plan may
   # close with in-scope work unlanded or with an AC whose in-scope portion is unmet;
   # the lifecycle-phase-7 reconciliation portion of AC-F8-12 is not in-scope work
@@ -1373,14 +1458,16 @@ phases:
   # check, never this phase's self-certification.
   #
   # No scope drift: tests, the one permitted new shell parity suite, the changeset,
-  # the change folder, the two test-spec files and the three planning-corpus pages
+  # the change folder, the two test-spec files and the four planning-corpus pages
   # staged for lifecycle phase 7, the contract-inventory fixture this phase's
   # additivity battery feeds, and nothing else — no production behaviour change, no
   # edit to an existing `scripts/*.sh` entry point or `scripts/lib/**`, no change to
   # shell behaviour, an exit, or the pinned five-key summary, no flip, and no
   # plan-goal amendment.
-  # PHASE-7-STAGED PLANNING CORPUS (review iteration 1, F-5):
+  # PHASE-7-STAGED PLANNING CORPUS (review iteration 1, F-5; the fourth page added
+  # by revision 1.5, review iteration 2 F-18):
   # `doc/planning/oss-tooling/milestones/m1/commands/dispatch.md`,
+  # `doc/planning/oss-tooling/milestones/m1/commands/merge.md`,
   # `doc/planning/oss-tooling/milestones/m2/commands/repos.md`, and
   # `doc/planning/oss-tooling/milestones/m2/contracts.md` are authored by LIFECYCLE
   # PHASE 7 (`system_spec_update`, `@doc-syncer`) and are declared here for STAGING
@@ -1421,6 +1508,7 @@ phases:
         - doc/quality/test-specs/test-spec-dispatch-engine.md
         - doc/quality/test-specs/test-spec-merge-verify-deploy.md
         - doc/planning/oss-tooling/milestones/m1/commands/dispatch.md
+        - doc/planning/oss-tooling/milestones/m1/commands/merge.md
         - doc/planning/oss-tooling/milestones/m2/commands/repos.md
         - doc/planning/oss-tooling/milestones/m2/contracts.md
       folders:
@@ -1432,32 +1520,52 @@ phases:
       trackerTransition: "in-review"
 
 # ===========================================================================
-# DECLARED REMEDIATION — delivery review iteration 1
+# DECLARED REMEDIATION — delivery review iteration 1 and iteration 2
 # (`./code-review/review-iter-1.yaml`, status FAIL: 2 high, 3 medium, 7 low,
-# 4 info; findings F-1..F-16).
+# 4 info; findings F-1..F-16. `./code-review/review-iter-2.yaml`, status FAIL:
+# 0 critical, 0 high, 1 medium, 2 low, 2 info; findings F-17..F-21).
 #
 # This block is additive declaration data beside the phases: `plan validate`
 # reads `phases` only, so it is inert to the verdict, and it is NOT a task log —
 # it declares what the review-fix iteration must change, where, and what proves
-# it, exactly as a phase declares scope. It is executed in lifecycle phase 8
-# (`review_fix`, `@coder`) before review iteration 2, in the declared order.
-# Every scope path below is also declared in the owning plan phase's
-# `scope.files` (REM-1's test-spec row and REM-4's changeset in Phase 7, the
-# production and merge paths in Phase 5, the projects paths in Phase 4, the
-# cross-surface suite in Phase 7), so the fix commits stage without reopening
-# the plan.
+# it, exactly as a phase declares scope. REM-1..REM-7 were executed in lifecycle
+# phase 8 (`review_fix`, `@coder`) before review iteration 2; REM-8 is the
+# iteration-2 remediation and runs in lifecycle phase 8 (`review_fix`, `@coder`)
+# before review iteration 3. Every scope path below is also declared in the
+# owning plan phase's `scope.files` (REM-1's test-spec row and REM-4's changeset
+# in Phase 7, the production and merge paths in Phase 5, the projects paths in
+# Phase 4, the cross-surface suite in Phase 7, and REM-8's
+# `tests/behaviour/repos-handover-gate.test.ts` in Phase 4), so the fix commits
+# stage without reopening the plan.
 #
-# Two findings carry no entry and are recorded here as no-action:
+# Two iteration-1 findings carry no entry and are recorded here as no-action:
 #   F-15 (info, performance) — `repos list`'s O(rows x ledger) cost is measured
 #        well inside the declared posture and is a scaling residual, not a defect;
 #        the review itself says no change is required now.
 #   F-16 (info, documentation) — the commit primitive's 72-character path template
 #        and the absent `events.jsonl`/`candidates/` capsule are a repo-wide tooling
 #        gap carried to the PR description and the retro, not a GH-293 defect.
+#
+# Iteration 2 carries one entry (REM-8, F-19) and four plan/artifact-side outcomes:
+#   F-17 (medium, spec-compliance) — resolved in SPECIFICATION and the TEST PLAN,
+#        not here: spec v1.6 narrows AC-F6-10's dry-run clause to the delivered
+#        read shape and test plan v1.5 carries the matching correction, both
+#        authored by their owning passes. No plan scope, phase, or case changes;
+#        the plan's own two prose sites are worded to the amended shape in this
+#        revision.
+#   F-18 (low, plan-compliance) — closed by THIS revision's Phase 7 scope
+#        declaration of `milestones/m1/commands/merge.md`; it is a plan-document
+#        correction, not review-fix work.
+#   F-20 (info, design) — no action; the reviewer states "no change required for
+#        this change" for `MERGE_COMPOSITION_CONFIGURATION_CODES`'s
+#        `as const satisfies` pin and `configFailure`'s literal `kind`.
+#   F-21 (info, hygiene) — closed by THIS revision's EOF fix; no review-fix work.
 # ===========================================================================
 remediation:
   reviewSource: doc/changes/2026-11/2026-11-17--GH-293--engine-first-operations/code-review/review-iter-1.yaml
+  reviewSourceIteration2: doc/changes/2026-11/2026-11-17--GH-293--engine-first-operations/code-review/review-iter-2.yaml
   executedIn: "lifecycle phase 8 (review_fix, @coder), before review iteration 2"
+  executedInIteration2: "lifecycle phase 8 (review_fix, @coder), after review iteration 2 and before review iteration 3"
   entries:
     - id: REM-1
       reviewFindings: [F-1, F-3]
@@ -1644,12 +1752,45 @@ remediation:
         - bun test tests/checks/dispatch-doc-conformance.test.ts
         - bun test tests/checks/doc-conformance.test.ts
 
+    - id: REM-8
+      reviewFindings: [F-19]
+      summary: "Pin the row-identity-bound handover fold with a permanent foreign-identity cell"
+      change: >-
+        No production code change. The identity-bound fold delivered under REM-5
+        (the handover fold filtered to the row's own resolved repository identity
+        before `reversible` and `handoverState` are read) is given its permanent
+        case in `tests/behaviour/repos-handover-gate.test.ts` as ONE new cell: seed
+        a foreign-identity authoritative handover record into the same store beside
+        the row's own project key — through the delivered `appendDispatchHandover`
+        writer, never a hand-built fixture record — and assert the row still reads
+        `reversible: false` / `handoverState: shell`; seed it a second time with the
+        row's own record present as well and assert the same two values (so the
+        foreign record present BEFORE or AFTER the row's own record is covered in
+        one cell); then seed the row's OWN authoritative record and assert the flip
+        to `reversible: true` / `handoverState: authoritative`. The cell fails if
+        the fold reverts to the unfiltered ledger fold or if the record writer's
+        normalization and the row's identity resolver disagree, and it adds no
+        fixture store, no new suite, and no second project. The delivered cells of
+        the same file (one-identity flip inside one store, a second project's
+        separate store) stay untouched; the case is appended, never rewritten.
+      scope:
+        files:
+          - tests/behaviour/repos-handover-gate.test.ts
+      verification:
+        - bun test tests/behaviour/repos-handover-gate.test.ts
+        - bun test tests/behaviour/repos-list-contract.test.ts
+        - bun test tests/behaviour/projects-handover.test.ts
+        - bun test tests/behaviour/engine-first-cross-surface.test.ts
+
   verificationBatch:
     note: >-
       Run after the last entry lands, in declared order, and record each verdict in
       the phase notes. A red row is remediated and the batch re-run; it is never
       recorded as a pass and no acceptance criterion or DoD item is marked met on a
-      red row.
+      red row. REM-8's new cell runs inside the `repos-handover-gate` row above; the
+      iteration-2 outcomes that are not review-fix work (F-17 in spec v1.6 and test
+      plan v1.5, F-18 and F-21 in this plan revision) are verified by their owning
+      passes, not by this batch.
     steps:
       - "bun test tests/behaviour/dispatch-clean-accrual.test.ts"
       - "bun test tests/behaviour/dispatch-conditions-projection.test.ts"
@@ -1672,11 +1813,11 @@ remediation:
 
   closureRule: >-
     A remediation entry is an obligation, never a substitute for evidence: closing
-    REM-1..REM-7 does not mark AC-F7-11, AC-F6-10, or any other acceptance criterion
-    met by itself, and the review gate stays FAIL until review iteration 2
-    re-verifies AC-F7-11 and AC-F6-10 against spec v1.5's amended text. No phase of
+    REM-1..REM-8 does not mark AC-F7-11, AC-F6-10, or any other acceptance criterion
+    met by itself, and the review gate stays FAIL until review iteration 3
+    re-verifies AC-F7-11 and AC-F6-10 against spec v1.6's amended text and
+    re-verifies F-19 against REM-8's committed cell. No phase of
     this plan may close with in-scope work unlanded or with an AC whose in-scope
     portion is unmet, and the CHANGE may not close with any acceptance criterion or
     spec §17.1 DoD item outstanding. An entry left undone leaves its finding open; it
     is never converted into a residual and never closed as documentation.
-
