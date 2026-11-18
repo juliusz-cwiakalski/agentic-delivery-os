@@ -26,7 +26,7 @@ $ which opencode
 
 $ head -3 /tmp/ados-standalone-bin/opencode
 #!/usr/bin/env bash
-exec /home/juliusz/.nvm/versions/node/v24.11.1/bin/opencode --standalone "$@"
+exec <node-bin-dir>/opencode --standalone "$@"
 
 $ opencode --version
 opencode v2.3.2
