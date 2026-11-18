@@ -1439,9 +1439,11 @@ phases:
   #       requirement change, and the requirement (class, family, posture) never
   #       moves to make a run green. A corrected catalog entry keeps its four-field
   #       shape, and its provider trap suite assertion is corrected APPEND-ONLY
-  #       (never a delivered assertion). THE FROZEN BASELINE IS READ, NEVER EDITED:
-  #       every correction is checked against `tests/fixtures/pins/trap-names.json`,
-  #       which this phase declares (read-pinned) and must leave byte-identical. A
+  #       (never a delivered assertion). THE FROZEN PIN PAIR IS READ, NEVER EDITED:
+  #       every correction is checked against `tests/fixtures/pins/trap-names.json`
+  #       and its digest `tests/fixtures/pins/trap-names.sha256`, both of which
+  #       this phase declares (read-pinned) and must leave byte-identical — the
+  #       digest is recomputed and compared, never rewritten. A
   #       family whose posture is `covered` but
   #       whose fixture is absent, or whose operation lacks the observed structure,
   #       fails TAX-011 by name and never degrades to `gap-backed` (GAP-TP-8).
