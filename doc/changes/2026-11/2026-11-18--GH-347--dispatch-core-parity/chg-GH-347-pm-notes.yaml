@@ -1,0 +1,116 @@
+change_id: GH-347
+title: "M4-S9: Dispatch core parity — durable lane, resume, admission,
+  classifier (M4)"
+delivery_mode: autonomous
+milestone: "M4: Jaiship-native delivery"
+phases:
+  clarify_scope: { started: null, completed: 2026-11-18T22:35:22.864Z }
+  specification: { started: null, completed: null }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
+  dor_check: { started: null, completed: null }
+  delivery: { started: null, completed: null }
+  system_spec_update: { started: null, completed: null }
+  review_fix: { started: null, completed: null }
+  quality_gates: { started: null, completed: null }
+  dod_check: { started: null, completed: null }
+  pr_creation: { started: null, completed: null }
+decisions:
+  - text: "Scope is the ticket body plus the CEO parity-gap analysis comment of
+      2026-11-18, which explicitly splits the work: GH-347 (F1a) owns gaps 1-10
+      (durable per-ref lane record, session capture/restore, resume over a
+      recorded attempt, concurrency-safe admission, tracker retry ladder with
+      honest state-unverified, kill/stuck handling, in-process restart,
+      --agent/--title spawn args, merged-from-tracker-done and partial-from-
+      artifacts class semantics); gaps 11-12 (per-ref status/log/is-delivering/
+      last-message and the pre-iteration hook port) are F1b, tracked separately
+      as GH-354, and are OUT of scope here."
+    date: "2026-11-18"
+  - text: "The pre-iteration hook is retired, not ported: provider policy (GH-350)
+      replaces its purpose. This change adds only a bounded, documented removal
+      path if the delivered tree still references it; it adds no new hook
+      capability."
+    date: "2026-11-18"
+  - text: "The typed state-unverified exit code stays 2 (asserted in
+      tests/behaviour/dispatch-exit-projection.test.ts); the shell lane's 1 is
+      not a parity target."
+    date: "2026-11-18"
+  - text: "PM-decided (autonomous): proceed with F1a while its declared predecessor
+      F0 (GH-346, installable versioned binary) is still unstarted. Rationale:
+      the parity ACs are engine-local and do not consume the install path;
+      blocking would strand the flip's critical path. The PR body must state
+      that install-artifact claims are unverified and that F0 sequencing was
+      overridden deliberately. Merge conflicts against a future GH-346 are
+      handled by normal branch sync."
+    date: "2026-11-18"
+open_questions: []
+blockers: []
+notes:
+  - text: "Clarify-scope current state (read 2026-11-18 on d8d762be): the eleven
+      result tokens and their projection already exist as a closed taxonomy
+      (contracts/delivery-result.ts, domain/dispatch-result.ts); the one-shot
+      engine in app/dispatch.ts already carries admission, lease claim,
+      progress-based liveness, restart admission, and artifact-first derivation.
+      The parity gap is therefore wiring and semantics, not a new engine."
+    type: info
+    date: "2026-11-18"
+  - text: "Verified seams for the ten in-scope gaps: (1) DispatchAttemptRecord has
+      no lane/session-owner record; (2) adapters/harness/opencode.ts reads the
+      session id from the spawn stream but the one-shot path persists only the
+      attempt-record sessionIds, not a resumable lane; (3) laneFactsFor in
+      cli/src/production.ts:2463-2490 only reads daemon lanes in
+      delivering/detached/preempted, so a finished attempt is invisible to
+      resume; (4) admission is a pre-read plus a non-blocking store fence whose
+      busy kind is relabelled 'queue'; (5) the truth read is one bounded call
+      with no retry ladder; (6) the composed engine has no kill operation for a
+      stalled session; (7) restart budget is enforced across invocations, not
+      in-process; (8) spawn args are the constant PRODUCTION_OPENCODE_ARGS.spawn
+      with no --agent/--title and the prompt is a constant sentence; (9)
+      partial-from-artifacts is unreachable; (10) merged is only derived from an
+      already-merged PR, not from tracker-done."
+    type: info
+    date: "2026-11-18"
+  - text: "Doc-impact risks for phase 7:
+      doc/spec/features/feature-dispatch-engine.md is the primary current-truth
+      surface (command grammar, one-shot flow, per-ref single-flight table,
+      result derivation, attempt record, daemon lane seam, restart admission).
+      Secondary: feature-delivery-lifecycle.md (dispatch as the typed lane),
+      feature-resident-daemon.md (lane record and supervision seam),
+      feature-harness-session-port.md (spawn args, resume, kill capability),
+      feature-auto-closeout/feature-merge-verify-deploy only if the classifier
+      truth inputs change, doc/overview/glossary.md for any new vocabulary such
+      as kill/intra-process restart, and doc/00-index.md."
+    type: risk
+    date: "2026-11-18"
+  - text: "Doc-conformance constraint: the dispatch spec currently states that the
+      session port exposes no kill operation and that a stalled lane is left to
+      supervision. Gap 6 changes that contract, so the spec, the port contract,
+      and the command help/reference page must move together; the change must
+      not leave a stale 'no kill operation' sentence behind."
+    type: risk
+    date: "2026-11-18"
+  - text: "Parity reference (scripts/deliver-ticket.sh on main-tools, read at
+      intake) for the authors: spawn command is `opencode run --agent pm
+      --session <id>` or `opencode run --agent pm --title ticket-<REF>` with the
+      default prompt (lines 1739-1745); tracker poll ladder is 5 attempts with
+      min(2*2^(n-1), 30s) backoff (1314-1355); tracker classification order is
+      closed->merged, blocked label->blocked, open PR->pr-open (1357-1390);
+      artifact ladder is open PR, merged PR, commits>0 with complete pm-notes
+      ->finished / incomplete pm-notes ->partial, no commits + permission
+      signature ->noop-lane-permission, no commits + reachable tracker
+      ->noop-lane-nothing-to-do, else none (1581-1634); decision table
+      (1648-1703) makes a clean exit terminal and only a stuck watchdog kill
+      restart-eligible, with max-restarts at iteration >= max (default 10); a
+      state-unverified classification does not burn a restart slot (1970-1982);
+      kill is kill_process_tree plus an escaped-runtime reap (1226-1272);
+      pr-open with an unresolved URL becomes pr-open-unverified (2110-2113)."
+    type: info
+    date: "2026-11-18"
+  - text: "Operational prerequisite: node_modules/.bin carries only the umbrella
+      `jaiship` (plus `delivery-os`); there is no standalone phase/plan/commit
+      binary, and `jaiship` fails from an unbuilt workspace. Every primitive
+      invocation in this change is preceded by `TMPDIR=$PWD/tmp/tmpdir pnpm
+      build`; gate commands keep the ticket's TMPDIR=$PWD/tmp/tmpdir
+      convention."
+    type: info
+    date: "2026-11-18"
