@@ -10,7 +10,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-18T12:41:10.844Z }
   delivery: { started: null, completed: 2026-11-18T15:40:11.809Z }
   system_spec_update: { started: null, completed: 2026-11-18T15:41:54.200Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-18T17:42:36.343Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -441,4 +441,52 @@ notes:
       phase, or complete `system_spec_update` first and let the doc commit ride
       it."
     type: retro
+    date: "2026-11-18"
+  - text: "Review iteration 1 = PASS_WITH_NOTES (code-review/review-iter-1.yaml): 0
+      blockers, 3 majors, 5 minors, 2 info. All 34 ACs backed by real oracles
+      and every additive non-goal held. Majors: (F-1) four of the six dimensions
+      had hand-authored rather than replay-derived observations, so adapter
+      drift would have stayed green on identity-scheme, pipeline-model,
+      state-vocabulary and carrier-absent; (F-2) the register loop never read
+      rationale/adjudicatedBy and TC-PARITY-004's mandated mutations were
+      absent; (F-3) the control adapter's 'full family accounting' was a token
+      scan and its all-covered postures contradicted its single supported
+      operation. Minors taken: allowlist count-pinning, contract-identity column
+      binding, the dead undecodable discriminant. One broad-run failure was an
+      environmental cross-file race (license-audit TC-LICREG-022 against a
+      concurrent packaging artefact), green in isolation."
+    type: info
+    date: "2026-11-18"
+  - text: "Review remediation landed as ab1bc9d8 (14 files): the four static
+      dimensions are now replay-corroborated from the production clients with
+      four mutated replays that fail naming the dimension's class; parity.ts
+      rejects an empty rationale, a missing/empty adjudicatedBy
+      (register-bijection) and an unresolvable per-class evidence pointer
+      through a new optional resolvesEvidence port (evidence-reproduction) with
+      five mutations and a resolving positive control; the DM-4 validator moved
+      to tests/conformance/support/fixtures.ts and is applied to the control's
+      own adapter list, whose postures are now 4 covered / 2 gap-backed with
+      negative mutations; the allowlist pins occurrence counts per permit and
+      rejects count-free permits; columns and register entries bind by imported
+      contract identity; undecodable now precedes the 401/403 branch. Commit
+      ab1bc9d8 was landed with the standalone form because every lifecycle phase
+      was already completed (both --phase variants no-op); the pm-notes
+      stale-timestamp write was reverted before the commit. Aggregate gate on an
+      idle machine: exit 0, 10759 pass / 0 fail / 4 pre-existing skips. A doc
+      re-verification follow-up (a11d2301) corrected the taxonomy ordering rule,
+      clause responsibilities, the resolver port and the allowlist/accounting
+      claims."
+    type: info
+    date: "2026-11-18"
+  - text: "Review iteration 2 = PASS_WITH_NOTES (code-review/review-iter-2.yaml): 0
+      blockers, 0 majors, 2 new minors, 2 info. Iteration-1 disposition: the
+      three majors and F-4/F-6/F-7 Resolved; F-5 and F-8 persistent by accepted
+      decision; F-9/F-10 unchanged. Non-gating notes accepted as follow-ups
+      rather than another remediation round: NF-1 the control's covered postures
+      are structural (validated by the delivered engine but not replayed like
+      the shipped ones); NF-2 the unresolvable-evidence violation carries the
+      offending path as its evidence reference; NF-3 contract-identifier binding
+      is invisible to the string-literal scan but is the disclosed permitted
+      home; NF-4 the review_fix phase records land when this phase closes."
+    type: info
     date: "2026-11-18"
