@@ -9,7 +9,9 @@
  * store seeded through the delivered ledger, and the row's identity declared
  * either as a persisted dispatch binding or as the normalized configured remote.
  * A foreign-repository record sits in the same store so a whole-store fold is
- * observable as a defect.
+ * observable as a defect. Handover records are seeded the same way, through the
+ * delivered `appendDispatchHandover` writer, so the row's folded authority is
+ * proven to be its own in either append order.
  */
 import { describe, expect, test } from "bun:test";
 import { chmodSync, existsSync, mkdirSync } from "node:fs";
@@ -17,7 +19,10 @@ import { join } from "node:path";
 import {
   DISPATCH_MAX_ATTEMPT_RECORDS,
   type DispatchAttemptRecord,
+  type DispatchHandoverOperation,
+  type DispatchHandoverRecord,
 } from "../../packages/core/src/contracts/index";
+import { appendDispatchHandover } from "../../packages/core/src/app/dispatch-ledger";
 import { projectStateRoot } from "../../packages/core/src/app/state-scope";
 import { snapshotDifferences, snapshotTree } from "../fixtures/projects/host-root";
 import {
@@ -37,7 +42,7 @@ import {
   writeDispatchIdentityBinding,
 } from "../fixtures/projects/temp-repos";
 import { buildAttempts, eligibleSpecs, dayAt } from "../fixtures/dispatch/evidence-windows";
-import { makeDivergence } from "../fixtures/dispatch/ledger";
+import { makeDivergence, makeHandover } from "../fixtures/dispatch/ledger";
 
 type Envelope = {
   readonly data?: Record<string, unknown>;
@@ -143,6 +148,26 @@ const prepare = async (
 
 const attemptsFor = (repository: string, prefix: string): readonly DispatchAttemptRecord[] =>
   buildAttempts(eligibleSpecs({ repository, prefix }));
+
+/** One handover record shape, so only the identity and the operation vary. */
+const handoverRecord = (
+  repository: string,
+  operation: DispatchHandoverOperation,
+  recordedAt: string,
+): DispatchHandoverRecord => makeHandover({ repository, operation, recordedAt });
+
+/**
+ * Append one handover record to a project's own store through the delivered
+ * writer (F-19): the fold is only as trustworthy as the writer that seeds it.
+ */
+const appendHandover = (value: Fleet, projectKey: string, record: DispatchHandoverRecord): void => {
+  const appended = appendDispatchHandover(
+    projectStoreFor(value.host.hostRoot, projectKey),
+    `fixture-handover-${record.repository}-${record.recordedAt}`,
+    record,
+  );
+  if (!appended.ok) throw new Error(`handover seed failed: ${appended.code}`);
+};
 
 describe("TC-ENGINE-021 the row agrees with the summary and excludes foreign records", () => {
   test("four facts agree, foreign records are excluded, and controlled scope is not folded", async () => {
@@ -286,6 +311,97 @@ describe("TC-ENGINE-021 the row agrees with the summary and excludes foreign rec
       const after = await value.alpha.run(["repos", "list", "--json"]);
       expect(rowFor(after, value.alphaKey).reversible).toBe(true);
       expect(rowFor(after, value.betaKey).reversible).toBe(false);
+    } finally {
+      value.dispose();
+    }
+  });
+
+  test("the handover fold takes its authority only from the row's own identity (F-19)", async () => {
+    const value = fleet("repos-handover-identity", { bindings: "remote" });
+    try {
+      await prepare(value, { bindings: "remote" });
+      // The row's identity is its normalized configured remote (DEC-15), which
+      // is also the string the delivered writer normalizes against.
+      const repository = value.alphaRepository;
+      const secondForeign = "github.com/other/gamma";
+      seedProjectAttempts(value.host.hostRoot, value.alphaKey, attemptsFor(repository, "own"));
+
+      const readRow = async (): Promise<{
+        readonly handoverState: unknown;
+        readonly reversible: unknown;
+        readonly gate: Record<string, unknown>;
+      }> => {
+        const run = await value.alpha.run(["repos", "list", "--json"]);
+        expect(run.exitCode, run.stderr).toBe(0);
+        const row = rowFor(run, value.alphaKey);
+        return {
+          handoverState: row.handoverState,
+          reversible: row.reversible,
+          gate: row.handoverGate as Record<string, unknown>,
+        };
+      };
+
+      const baseline = await readRow();
+      expect(baseline.handoverState).toBe("shell");
+      expect(baseline.reversible).toBe(false);
+
+      // (a) A foreign identity's authoritative record alone is not this row's
+      // authority: the unfiltered ledger fold would report `authoritative` and
+      // make the row reversible.
+      appendHandover(
+        value,
+        value.alphaKey,
+        handoverRecord(value.betaRepository, "authoritative", "2026-11-11T10:00:00.000Z"),
+      );
+      const foreignOnly = await readRow();
+      expect(foreignOnly.handoverState).toBe("shell");
+      expect(foreignOnly.reversible).toBe(false);
+      expect(foreignOnly.gate).toEqual(baseline.gate);
+
+      // (b) The row's own non-authoritative record, appended after the foreign
+      // one, is the authority that decides — and it is not authoritative.
+      appendHandover(
+        value,
+        value.alphaKey,
+        handoverRecord(repository, "dual-run", "2026-11-11T10:01:00.000Z"),
+      );
+      const ownDualRun = await readRow();
+      expect(ownDualRun.handoverState).toBe("shell");
+      expect(ownDualRun.reversible).toBe(false);
+      expect(ownDualRun.gate).toEqual(baseline.gate);
+
+      // (c) A second foreign authoritative record, appended after the row's own
+      // record and later in time: append order cannot move the fold, so this is
+      // a filter rather than a last-writer-wins coincidence.
+      appendHandover(
+        value,
+        value.alphaKey,
+        handoverRecord(secondForeign, "authoritative", "2026-11-11T10:02:00.000Z"),
+      );
+      const stillForeign = await readRow();
+      expect(stillForeign.handoverState).toBe("shell");
+      expect(stillForeign.reversible).toBe(false);
+      expect(stillForeign.gate).toEqual(baseline.gate);
+
+      // (d) The row's own authoritative record flips its own fold, with both
+      // foreign records still in the store. `reversible` is the folded truth's
+      // own reading (`reversibilityOf`); the row's `handoverState` vocabulary is
+      // engine/shell/in-transition, so a recorded authoritative handover whose
+      // derived document is still absent reads `in-transition` (DEC-7).
+      appendHandover(
+        value,
+        value.alphaKey,
+        handoverRecord(repository, "authoritative", "2026-11-11T10:03:00.000Z"),
+      );
+      const ownAuthority = await readRow();
+      expect(ownAuthority.reversible).toBe(true);
+      expect(ownAuthority.handoverState).toBe("in-transition");
+      // (e) No handover append is delivery evidence: the gate block never moved.
+      expect(ownAuthority.gate).toEqual(baseline.gate);
+      expect(ownAuthority.gate.verdict).toBe(baseline.gate.verdict);
+      expect(ownAuthority.gate.conditions).toEqual(baseline.gate.conditions);
+      expect(ownAuthority.gate.countedDeliveries).toBe(baseline.gate.countedDeliveries);
+      expect(ownAuthority.gate.cleanDispatches).toBe(baseline.gate.cleanDispatches);
     } finally {
       value.dispose();
     }
