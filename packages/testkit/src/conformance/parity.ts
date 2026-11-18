@@ -14,6 +14,10 @@ import {
   type CapabilityGapReason,
 } from "@delivery-os/core/contracts";
 import { CONFORMANCE_ADAPTERS } from "./adapters.js";
+import {
+  TRACKER_AUTH_REJECTED_CLASS,
+  TRACKER_TRANSPORT_FAILED_CLASS,
+} from "./tracker-error-taxonomy.js";
 import type { ConformanceAdapterRegistration } from "./types.js";
 
 /** The six closed difference classes; each IS one parity dimension. */
@@ -197,7 +201,7 @@ const AUTHORED_REGISTER: readonly AuthoredRegisterEntry[] = [
         "tests/fixtures/providers/conformance/parity/evidence/gitlab-read-delivery-request.failure-classification.json",
         "failure-classification",
         "not-observable:no-family-on-reference",
-        "tracker.transport.failed",
+        TRACKER_TRANSPORT_FAILED_CLASS,
       ),
     },
     adjudicatedBy: "TDR-0036",
@@ -254,8 +258,8 @@ const AUTHORED_REGISTER: readonly AuthoredRegisterEntry[] = [
       "failure-classification": evidence(
         "tests/fixtures/providers/conformance/parity/evidence/jira-read-work-item.failure-classification.json",
         "failure-classification",
-        "tracker.auth.rejected",
-        "tracker.transport.failed",
+        TRACKER_AUTH_REJECTED_CLASS,
+        TRACKER_TRANSPORT_FAILED_CLASS,
       ),
     },
     adjudicatedBy: "TDR-0036",

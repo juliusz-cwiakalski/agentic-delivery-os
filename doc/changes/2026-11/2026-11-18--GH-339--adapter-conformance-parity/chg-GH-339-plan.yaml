@@ -715,6 +715,26 @@
 #       10/6/2. Corrected here in the phase-3 title, the contract, the arm
 #       invariant, obligation 3.2/3.4 and the gate expectation, and mirrored in
 #       test plan v1.4 so neither artifact asserts counts the other contradicts.
+#   (k) DISCOVERED AT DELIVERY — a pinned structural surface moved minimally, the
+#       GH-338 precedent. `tests/structure/trap-catalog.test.ts` pins the GitHub
+#       catalog's exact ordered name list and its "deleting an entry fails by
+#       provider/name" mutation popped the LAST entry. Phase 1 appends six family
+#       entries, so the exact list gains them (a discovered pin) and the mutation
+#       removes a DELIVERED expected name (`GH-REVIEW-STATE`) rather than the
+#       last entry, otherwise the mutation goes vacuous. Both changes are
+#       confined to that file and are the only undeclared-path edit the delivery
+#       makes (`plan diff` reports scopeDrift, not a design change). No delivered
+#       assertion is removed, renamed, relaxed, or reordered.
+#   (l) DISCOVERED AT DELIVERY — the second and last pinned-surface move.
+#       `tests/checks/privacy-release.test.ts` (TC-RELEASE-001) treats every path
+#       under `packages/` as publishable and therefore requires a five-package
+#       changeset for any package edit. This change edits only the private,
+#       dev-only `packages/testkit/**` and deliberately ships NO changeset
+#       (`version_impact: none`), so the check now excludes `packages/testkit/`
+#       from its publishable-diff probe. The change is confined to that probe;
+#       every other assertion (exactly one added changeset when one is needed,
+#       pre-existing byte-identity, the five-package mutation controls) is
+#       untouched.
 #
 # DOC RECONCILIATION HANDOFF (lifecycle phase 7, @doc-syncer; the FILES are
 #   declared by phase 6 for STAGING ONLY — this plan authors none of them):

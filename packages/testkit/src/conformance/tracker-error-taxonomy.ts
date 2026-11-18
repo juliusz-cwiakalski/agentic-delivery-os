@@ -18,6 +18,12 @@ export const TRACKER_ERROR_CLASS_IDS = [
 
 export type TrackerErrorClassId = (typeof TRACKER_ERROR_CLASS_IDS)[number];
 
+/** Named literals: the class ids live in this module only (TDR-0037 C-1). */
+export const TRACKER_CAPABILITY_UNSUPPORTED_CLASS = "tracker.capability.unsupported" as const;
+export const TRACKER_AUTH_REJECTED_CLASS = "tracker.auth.rejected" as const;
+export const TRACKER_TRANSPORT_FAILED_CLASS = "tracker.transport.failed" as const;
+export const TRACKER_PAYLOAD_INVALID_CLASS = "tracker.payload.invalid" as const;
+
 /** The delivered identity a class resolves to. */
 export type TrackerDeliveredIdentity = "capability-gap" | "provider.payload.invalid";
 
