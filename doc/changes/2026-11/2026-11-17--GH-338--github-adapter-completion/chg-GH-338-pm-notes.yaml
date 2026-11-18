@@ -56,6 +56,44 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 6 complete (adapter reference behavior and the drift check).
+      Plan phase 5 commit: 94b31b47a7c7da2334cc8fcbff235544b60e1225 (the
+      phase-5 note names plan phase 5 and its gate result; this entry carries the
+      hash). Phase 6 delivered:
+      doc/spec/features/feature-adapter-reference-behavior.md as the normative
+      current-truth surface (transport matrix, capability posture, primary
+      failure identities, absence semantics, both evidence reads with caps and
+      truncation rules, the probe/selection/no-failover contract, the injected
+      seeded transition mapping with the mechanism-scoped label rule, four read
+      outcomes, writable set, terminal-read refusal, current-read-as-input
+      resolution, the validator's seven-rule rejection set and construction-time
+      timing, the unmapped sets, and the deliberate limitations), the one
+      locator fixture tests/fixtures/provider/reference-behavior.ts, and
+      tests/structure/reference-behavior.test.ts which parses the document
+      through that locator, asserts extraction counts before comparing (9
+      operation rows, 3 adapter postures, >=6 absence signals, 3 probe codes, 4
+      seed rows), and fails on one-row/one-digit mutations and on deleted prose
+      claims. doc/00-index.md registers the surface. Verification: G1 structure
+      1624 pass; G4 doc-conformance + decision-record 23 pass; the
+      doc-distribution guard reports no drift (95 in-scope docs);
+      G6 typecheck green (via the aggregate gate); G9 git diff --check clean; G10
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (10488 pass, 4 pre-existing skips,
+      0 fail; TC-DAEMON-121 green). One pin moved outside the phase-6 declared
+      list because the change makes it false: the new user-facing spec page had
+      to be registered and scanned in scripts/checks/forbidden-literals.registry.json
+      (the docs corpus fails closed on an unregistered user-facing doc), which
+      the aggregate gate requires. Residual for lifecycle phase 7 (@doc-syncer):
+      reconcile feature-provider-client-seeds.md (line 169's two-row mapping
+      sentence, capability table 9/0, operation list, normalization section,
+      transport section, trap minima, export-list correction),
+      feature-adapter-ports.md (nine operations, the two optional timestamps,
+      the additive-extension record, confinement wording),
+      feature-adapter-conformance.md (the five named sentences plus the flow/step
+      table, operation-set equality, mock routes/projections, carrier skip-kind,
+      coverage-gate wording), feature-merge-verify-deploy.md (coexistence), and
+      the two indexes."
+    type: info
+    date: "2026-11-18"
   - text: "Plan phase 5 complete (bounded review-thread discussion read). Plan
       phase 4 commit: 8ab4512a (the phase-4 note names plan phase 4 and its gate
       result; this entry carries the hash). Phase 5 delivered:

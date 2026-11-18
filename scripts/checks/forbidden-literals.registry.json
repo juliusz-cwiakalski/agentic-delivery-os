@@ -193,6 +193,7 @@
     "doc/quality/test-specs/test-spec-state-layer.md",
     "doc/spec/features/feature-adapter-conformance.md",
     "doc/spec/features/feature-adapter-ports.md",
+    "doc/spec/features/feature-adapter-reference-behavior.md",
     "doc/spec/features/feature-audit-ledger.md",
     "doc/spec/features/feature-blockers.md",
     "doc/spec/features/feature-board.md",
