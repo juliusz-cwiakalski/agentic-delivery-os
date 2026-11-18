@@ -20,7 +20,9 @@ blockers: []
 notes:
   - text: "Plan phase 7 complete (cross-surface coherence, shell non-change, no-flip
       discipline, hermeticity, the recorded lifecycle-phase-7 reconciliation
-      handoff, and the release). Added the cross-surface matrix (six families,
+      handoff, and the release). Commit a7aa5d9b (deliverables) and a6d50ca8 (the
+      delivery-boundary phase completion, which also carries the two JSON
+      formatter fixes). Added the cross-surface matrix (six families,
       three surfaces, identical statuses/verdicts/counters), the no-flip writer
       scan and append audit, the hermeticity scan with a live no-network
       control, the new stdout-identity shell parity suite across the four entry
