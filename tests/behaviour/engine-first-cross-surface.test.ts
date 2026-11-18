@@ -5,13 +5,16 @@
  * and the same repository identity addresses the summary, the handover decision,
  * and the fleet row. Any two surfaces disagreeing on status order, verdict,
  * counters, or the truncation pair fails; each family's ledger count is asserted
- * so the reads are proven side-effect free.
+ * so the reads are proven side-effect free. The `truncated` family's ledger
+ * exceeds the composition's declared read bound, so its truncation is real
+ * rather than declared.
  */
 import { describe, expect, test } from "bun:test";
 import { mkdirSync } from "node:fs";
 import { readDispatchHandover } from "../../packages/core/src/app/dispatch-ledger";
 import { projectStateRoot } from "../../packages/core/src/app/state-scope";
 import {
+  DISPATCH_MAX_ATTEMPT_RECORDS,
   type DispatchHandoverData,
   type DispatchSummaryData,
   ERROR_TABLE,
@@ -30,6 +33,7 @@ import {
   type ProductionProjectsHarness,
   type ProductionRun,
   seedProjectAttempts,
+  seedProjectAttemptsLedger,
 } from "../fixtures/projects/production";
 import { createHostFixture, type HostFixture } from "../fixtures/projects/state-scope";
 import {
@@ -41,6 +45,31 @@ import {
 type Family = {
   readonly name: string;
   readonly specs: readonly AttemptSpec[];
+  /**
+   * Seed a ledger that exceeds the composition's declared read bound, so the
+   * read really truncates (no test seam, no injected bound: the declared
+   * `DISPATCH_MAX_ATTEMPT_RECORDS` bound is what the three surfaces apply).
+   */
+  readonly overBound?: boolean;
+};
+
+/**
+ * One identity-bound attempt ledger longer than the declared bound.
+ *
+ * The records are framed and written once through the delivered
+ * `buildRecord`/`serializeRecord` pair (`seedProjectAttemptsLedger`), because
+ * the append path re-verifies the whole ledger per record; the reader still
+ * verifies framing, sequence continuity, and every checksum.
+ */
+const overBoundAttempts = (repository: string): readonly AttemptSpec[] => {
+  const template = eligibleSpecs({ repository, prefix: "xs-trunc" });
+  const specs: AttemptSpec[] = [];
+  for (let index = 0; index < DISPATCH_MAX_ATTEMPT_RECORDS + 5; index += 1) {
+    const source = template[index % template.length];
+    if (source === undefined) throw new Error("the over-bound template is empty");
+    specs.push({ ...source, id: `xs-trunc-${index}`, day: index % 7 });
+  }
+  return specs;
 };
 
 const families: readonly Family[] = [
@@ -60,7 +89,7 @@ const families: readonly Family[] = [
   { name: "coverage-missing", specs: missingClassSpecs("merged") },
   { name: "floor-missing", specs: gappedDates() },
   { name: "corroboration-unsatisfied", specs: uncorroboratedSpecs() },
-  { name: "truncated", specs: eligibleSpecs() },
+  { name: "truncated", specs: [], overBound: true },
 ];
 
 type Fleet = {
@@ -129,7 +158,15 @@ describe("TC-ENGINE-095 the three surfaces agree on one ledger", () => {
         const registered = await harness.run(["queue", "list", "--json"]);
         expect(registered.exitCode, registered.stderr).toBe(0);
         const specs = family.specs.map((spec) => ({ ...spec, repository }));
-        seedProjectAttempts(host.hostRoot, harness.projectKey, buildAttempts(specs));
+        if (family.overBound === true) {
+          seedProjectAttemptsLedger(
+            host.hostRoot,
+            harness.projectKey,
+            buildAttempts(overBoundAttempts(repository)),
+          );
+        } else {
+          seedProjectAttempts(host.hostRoot, harness.projectKey, buildAttempts(specs));
+        }
 
         const summaryRun = await harness.run([
           "dispatch",
@@ -137,7 +174,6 @@ describe("TC-ENGINE-095 the three surfaces agree on one ledger", () => {
           "summary",
           "--repo",
           repository,
-          ...(family.name === "truncated" ? [] : []),
           "--json",
         ]);
         expect(summaryRun.exitCode, `${family.name}: ${summaryRun.stderr}`).toBe(0);
@@ -177,17 +213,32 @@ describe("TC-ENGINE-095 the three surfaces agree on one ledger", () => {
         expect(gate.cleanDispatches, family.name).toBe(summary.cleanDispatches);
         expect(gate.cleanDispatches, family.name).toBe(summary.corroboration.satisfied);
 
-        const truncations = [summary.truncation, handover.truncation, gate.truncation].filter(
-          (value) => value !== undefined,
-        );
-        if (family.name !== "truncated") {
-          expect(truncations, family.name).toEqual([]);
+        const truncations = [summary.truncation, handover.truncation, gate.truncation];
+        const presentTruncations = truncations.filter((value) => value !== undefined);
+        if (family.overBound !== true) {
+          expect(presentTruncations, family.name).toEqual([]);
+          expect(summary.verdict, family.name).not.toBe("unverifiable");
+        } else {
+          // The truncation biconditional over ONE ledger, in both directions and
+          // on all three surfaces: the verdict is `unverifiable` and the
+          // truncation object is present on every reader of the same window.
+          expect(summary.verdict, family.name).toBe("unverifiable");
+          expect(handover.verdict, family.name).toBe("unverifiable");
+          expect(gate.verdict, family.name).toBe("unverifiable");
+          expect(presentTruncations, family.name).toHaveLength(3);
+          for (const value of presentTruncations) {
+            expect(value?.bound, family.name).toBe(DISPATCH_MAX_ATTEMPT_RECORDS);
+            expect(value?.omittedRecords, family.name).toBeGreaterThan(0);
+          }
+          // One window, one bound, one omission count: the surfaces do not
+          // re-derive their own truncation.
+          expect(new Set(presentTruncations.map((value) => JSON.stringify(value))).size).toBe(1);
+          expect(summary.countedDeliveries, family.name).toBeLessThanOrEqual(
+            DISPATCH_MAX_ATTEMPT_RECORDS,
+          );
         }
 
         const open = summary.conditions.filter((entry) => entry.status === "open");
-        for (const surface of [handover, row] as const) {
-          void surface;
-        }
         expect(
           open.map((entry) => entry.condition),
           family.name,
