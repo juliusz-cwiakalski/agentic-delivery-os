@@ -8,7 +8,7 @@
 # naming the plan phase id, the commit hash, and the gate result).
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:     ./chg-GH-349-spec.md (**v1.6**: F-1..F-7; 46 ACs —
+#   - Spec:     ./chg-GH-349-spec.md (**v1.8** — the merge reconciliation; F-1..F-7; 46 ACs —
 #               AC-F1-1..9, AC-F2-1..6, AC-F3-1..4, AC-F4-1..9, AC-F5-1..7,
 #               AC-F6-1..6, AC-F7-1..5; API-1..7; DM-1..9; NFR-1..13; NG-1..11;
 #               RSK-1..12; DEC-1..8; §18 sequencing; §24.1 Appendix A doc
@@ -20,7 +20,7 @@
 #               **§24.8 Appendix H — the closed-set consumer sweep transcribed
 #               from a mechanical scan (2 135 files, 329 hits), which is the
 #               SCOPE CONTRACT for every closed-set move**).
-#               **v1.3/v1.4/v1.5/v1.6 are binding on this plan.** v1.3 carried the
+#               **v1.3/v1.4/v1.5/v1.6/v1.7/v1.8 are binding on this plan.** v1.3 carried the
 #               DoR iteration-1 remediation (R1–R6, M1–M6 and the spec-side
 #               minors: the retired `refusal-rebase` scenario, the inverted merge
 #               suites, the SEVEN identity pin sites, the sync reason PAIR, the
@@ -71,18 +71,34 @@
 #               "delivered-check-bound carrier" to REGISTRY-BOUND PROSE reconciled
 #               in the documentation phase (no shipped check reads the page),
 #               keeping the delivered-check-bound set at exactly THREE.
-#   - Tests:    ./chg-GH-349-test-plan.md (**v1.8** — 87 TCs —
+#               **v1.7** (DoR iteration 4) refined Appendix H without changing a
+#               requirement: the parity module's GitHub column is derived while the
+#               GitLab/Jira columns are literal nine-row arrays pinned by the
+#               matrix's 27→30 move (not counted in the eighteen), three previously
+#               unclassified scan hits were classified, and the unreproducible raw
+#               hit count was replaced by "the pin set is the claim" with the
+#               reproducible 2 135-file population. **v1.8 is the MERGE
+#               RECONCILIATION** and is binding on this plan: the base moved
+#               149 → **153**, so the absolute totals are **156 / 155 / 67 /
+#               `+122`** with the delta unchanged at +3; the phase-truth record is
+#               **TDR-0044** (upstream took TDR-0040–0043; content unchanged); and
+#               the rollout section now declares the release changeset (five fixed
+#               packages at `minor`, `testkit` excluded). No acceptance criterion
+#               was added or changed — the rollout clause was extended in place.
+#               See the **MERGE RECONCILIATION** block below.
+#   - Tests:    ./chg-GH-349-test-plan.md (**v1.10** — 88 TCs —
 #               TC-F1-001..014 (14), TC-F2-001..008 (8), TC-F3-001..006 (6),
 #               TC-F4-001..015 (15), TC-F5-001..008 (8), TC-F6-001..012 (12),
-#               TC-F7-001..006 (6), TC-SYNC-001..010 (10), TC-FLOOR-001..008 (8);
+#               TC-F7-001..006 (6), TC-SYNC-001..011 (11), TC-FLOOR-001..008 (8);
 #               46/46 AC coverage, 0 orphans; §7.1 suite map incl. the changed-
 #               merge-suite, consumer-sweep and documentation rows; §7.2 fixtures
 #               to author; §7.3 extended-vs-authored sets (incl. the two closeout
 #               goldens); §7.4 gate battery G1..G12 with G12 binding; §7.5 the
-#               **116-row** mutation register M1..M116; §7.6 the phase/file
+#               **123-row** mutation register M1..M123; §7.6 the phase/file
 #               bindings this plan must carry, including the TEN obligations
-#               (i)..(x), the TC-SYNC-010 documentation row and the OQ-1 phase
-#               precondition; §8 the risks, assumptions and OQ-TP items;
+#               (i)..(x) **plus obligation (0)** (phase 1's changeset-and-pin
+#               duty, v1.10), the TC-SYNC-010 documentation row and the OQ-1
+#               phase precondition; §8 the risks, assumptions and OQ-TP items;
 #               §11.2 NO open finding).
 #               **v1.8 is the spec-v1.6 realignment, and the plan and the test
 #               plan now AGREE on every count** (no divergence to record):
@@ -118,14 +134,41 @@
 #               nine-section line) — with `tests/checks/operation-count-pages.test.ts`
 #               (new), and is owned by the DOCUMENTATION phase. Register 110 →
 #               111 in v1.7 (M109 narrowed to a prose page left at nine; M111 for
-#               wrong-phase ownership and page-wide `nine`→`ten` overreach) and
+#               wrong-phase ownership and page-wide `nine`→`ten` overreach),
 #               111 → 116 in v1.8 (M112..M116, the five new pin assertions
-#               above).
+#               above) and **116 → 123 in v1.10** (M117 zero added changesets,
+#               M118 two, M119 a patch bump, M120 a sixth package or `testkit`,
+#               M121 an empty body, M122 a modified pre-existing changeset file,
+#               M123 a hand-edited version).
 #               The two earlier added ids remain: **TC-SYNC-009** (the tenth
 #               operation's EIGHTEEN enforcing pins of Appendix H, each asserted
 #               at ten, plus the transport typecheck and the posture content) and
 #               **TC-F1-014** (the eight-changed / eight-green merge-suite split
 #               with three token-absence scans and the green inventories).
+#               **v1.10 is the MERGED-BASE reconciliation, and it adds the
+#               release case:** the upstream merge (`origin/main-tools` PR #357,
+#               merge commit `1bd66293`) moved the error-table base 149 → **153**
+#               (four upstream `harness` identities) while GH-349's delta stays
+#               **+3**, so `TC-SYNC-001` now asserts **156** documented / **155**
+#               delivered / **67** allowlist / `BASELINE_ROWS.length + 122` at all
+#               seven pin sites, the supervision oracle keeps its positional rule
+#               on the **150**-row baseline with `live` **153**, the legacy-token
+#               scan keeps `149`/`148`/`+115` and deliberately does NOT add
+#               `152`/`151`/`+118` (they never landed on the base) with **155** as
+#               the delivered-row pin, and the two identity pages read
+#               156/155/67/`+122`. **New `TC-SYNC-011`** (additive phase) requires
+#               **exactly one added changeset** for the five fixed packages at
+#               `minor` (`core`, `adapters`, `cli`, `mcp`, `opencode`; `testkit`
+#               absent; non-empty body; all 64 pre-existing changesets
+#               byte-identical against a phase-1 pin; no hand-edited version).
+#               Register 116 → **123** (M117 zero added changesets, M118 two, M119
+#               a patch bump, M120 a sixth package or `testkit`, M121 an empty
+#               body, M122 a modified pre-existing file, M123 a hand-edited
+#               version). §7.6 gains **obligation (0)** = phase 1's
+#               changeset-and-pin duty. The TDR renumbering is noted there too.
+#               (v1.9 was a two-passage count/scope micro-remediation with no TC
+#               change: AC-F4-1's summary now says "eighteen membership pins", and
+#               `TC-FLOOR-003`'s target states the narrowed read-only set.)
 #   - PM record: ./chg-GH-349-pm-notes.yaml (milestone "M4: Jaiship-native
 #               delivery", delivery_mode autonomous, the six positions, the
 #               TMPDIR=$PWD/tmp/tmpdir convention, the build-before-primitive
@@ -251,6 +294,40 @@
 #   5] (46), the TC vector stays [2, 23, 7, 9, 20, 12, 14] (87), the
 #   `ADAPTER_OPERATIONS` pin count stays EIGHTEEN, the mutation register stays at
 #   116, and every other phase's scope is byte-unchanged. The DoR verdict stands.
+#   **POST-MERGE ADDENDUM (do not read the 152 above as the current total):** the
+#   merged base moved to **153**, so the delivered totals are
+#   **156/155/67/`+122`**; the phase-1 commit's 152 was the pre-merge truth. See
+#   MERGE RECONCILIATION below, which supersedes every absolute count in this
+#   block and adds the release changeset. (The vectors above are also superseded:
+#   the TC vector is now [3, 23, 7, 9, 20, 12, 14] = 88 and the register is 123.)
+#
+# MERGE RECONCILIATION (spec v1.8, test plan v1.10; merge commit 1bd66293 —
+#   a COUNT/IDENTITY reconciliation, not a requirement change):
+#   The integration branch merged upstream work (`origin/main-tools` PR #357,
+#   merge commit `1bd66293`), and two facts moved under this change:
+#   1. THE ERROR-TABLE BASE MOVED 149 → 153. Upstream added FOUR `harness`
+#      identities; GH-349's own delta is UNCHANGED at **+3** (the two `merge`
+#      rows and the one `lint` row). The merged identity truth is therefore
+#      **156 documented / 155 delivered (ex-`spend`) / 67-entry two-segment
+#      allowlist / `BASELINE_ROWS.length + 122`**, at ALL SEVEN pin sites and on
+#      the two identity pages. The supervision family oracle keeps its positional
+#      rule on the **150-row** baseline fixture with `live` **153** and the same
+#      three outside rows. The legacy-token scan keeps `149`/`148`/`+115` and
+#      deliberately does NOT add `152`/`151`/`+118` — those totals belong to the
+#      pre-merge branch and never landed on the base; **155** is the delivered-row
+#      pin and **156**/`+122` are the live counts.
+#   2. THE PHASE-TRUTH RECORD WAS RENUMBERED **TDR-0040 → TDR-0044**. Upstream
+#      landed its own TDR-0040–TDR-0043, so this change's record moved to keep the
+#      decision index unique. **Its content is unchanged**, and every citation in
+#      this plan already reads
+#      `doc/decisions/TDR-0044-phase-truth-registry-fold-mirror.md` (SOURCES, the
+#      staging block, the phase-1 staged path, the phase-4 contract note). The
+#      record is still `Proposed`, still staged and never authored by a phase.
+#   NOTHING ELSE MOVED: the AC vector stays [0, 15, 4, 7, 9, 6, 5] (46); the TC
+#   vector becomes [3, 23, 7, 9, 20, 12, 14] (**88**, P1 gains the release case
+#   TC-SYNC-011); the `ADAPTER_OPERATIONS` pin count stays EIGHTEEN; the mutation
+#   register moves 116 → **123** (the seven changeset controls); every phase's
+#   ordering and every other phase's scope is unchanged. The DoR verdict stands.
 #
 # SCOPE DECLARATION RULE (binding on every phase; inherited from GH-338/GH-339):
 #   A phase declares every path whose content it AUTHORS or EDITS — that is what
@@ -320,20 +397,23 @@
 # ORDERING (spec §18 "by outcome, so each declaration lands with the evidence that
 # proves it"), made concrete. Seven phases; the reasons force the exact order:
 #
-#   (a) THE IDENTITY TOTAL MOVES ONCE (149 → 152 in a single commit).
+#   (a) THE IDENTITY TOTAL MOVES ONCE (149 → 156 in a single commit on the merged
+#       base; the phase-1 commit shipped 149 → 152 pre-merge and the merge
+#       reconciliation restates the absolute counts, delta unchanged).
 #       The delivered bidirectional sync check
 #       (`tests/checks/error-table-sync.test.ts` → `scripts/checks/error-table-sync.ts`)
 #       reads the DOCUMENTED table out of the live tree at
 #       `doc/spec/features/feature-result-contract.md`, and
-#       `tests/structure/error-table.test.ts` pins `149` in four places plus the
-#       documented statements and scans `APPENDIX_D_FILES` for a stale count —
+#       `tests/structure/error-table.test.ts` pins the total in four places plus
+#       the documented statements and scans `APPENDIX_D_FILES` for a stale count —
 #       which includes `doc/spec/features/feature-ceremony-runner.md`. SEVEN
 #       suites carry the total (`error-table-sync`, `supervision-error-socialization`,
 #       `error-table`, `dispatch-attempts-taxonomy`,
 #       `verify-gates-suite-map-contract`, `ceremony-contract`,
 #       `ceremony-nonregression`) and TWO prose pages state it
-#       (`feature-metrics.md`: 149/148/65/`+115` → 152/151/65/`+118`;
-#       `feature-ceremony-runner.md`: three `149 identities` statements). So the
+#       (`feature-metrics.md`: 149/148/65/`+115` pre-merge → 152/151/65/`+118`, and
+#       **156/155/67/`+122` on the merged base**;
+#       `feature-ceremony-runner.md`: three identity-count statements). So the
 #       three rows, both tables, all seven pins and both pages land in ONE commit.
 #       Splitting the total across phases would move every pin twice and turn
 #       RSK-6's "half-moved surface" risk into a scheduled event; this plan does
@@ -459,10 +539,13 @@
 # THE ADDITIVE SURFACE IS THREE MOVES, NEVER FOUR (Appendix D counts):
 #   1. phase 1: normalized title (0→1 optional field), concrete merge rows (7→9),
 #      lint family rows (5→6, lint-kind concrete rows 6→7), identity total
-#      (149→152) with the LEGACY-TOKEN extension (`149`, `148`, `+115` join the
-#      no-leftover scan; `151` becomes the delivered-row pin; planted stale-`149`
-#      and stale-`+115` controls), all SEVEN count pins, and the TWO identity
-#      prose pages (`feature-metrics.md`, `feature-ceremony-runner.md`).
+#      (149→152 on the pre-merge base; **156 on the merged base**, delta +3) with
+#      the LEGACY-TOKEN extension (`149`, `148`, `+115` join the no-leftover scan;
+#      **`155` is the delivered-row pin and `156`/`+122` the live counts**, while
+#      `152`/`151`/`+118` are deliberately NOT added because they never landed on
+#      the base; planted stale-`149` and stale-`+115` controls), all SEVEN count
+#      pins, and the TWO identity prose pages (`feature-metrics.md`,
+#      `feature-ceremony-runner.md`).
 #   2. phase 4: the sixth lint row's emitting branch (the divergence comparison)
 #      and the additive fold exposure on the lint registry read.
 #   3. phase 5: `CLOSEOUT_STEP_IDS` (12→13) WITH its two golden files (2 files,
@@ -622,20 +705,22 @@
 #     (documented) ↔ the SEVEN pin sites —
 #     `tests/checks/error-table-sync.test.ts`,
 #     `tests/checks/supervision-error-socialization.test.ts` (`sourceEntries` and
-#     `documentedRows`, plus its `BASELINE_ROWS.length + 115` arithmetic),
+#     `documentedRows`, plus its `BASELINE_ROWS.length + 122` arithmetic),
 #     `tests/structure/error-table.test.ts`,
 #     `tests/structure/dispatch-attempts-taxonomy.test.ts`,
 #     `tests/structure/verify-gates-suite-map-contract.test.ts`,
 #     `tests/structure/ceremony-contract.test.ts`,
 #     `tests/behaviour/ceremony-nonregression.test.ts` — ↔ the TWO identity prose
-#     pages `doc/spec/features/feature-metrics.md` (149/148/65/`+115` →
-#     152/151/65/`+118`) and `doc/spec/features/feature-ceremony-runner.md`
-#     (three `149 identities` statements) ↔ the LEGACY-TOKEN set in
+#     pages `doc/spec/features/feature-metrics.md` (149/148/65/`+115` pre-merge →
+#     152/151/65/`+118`; **156/155/67/`+122` on the merged base**) and
+#     `doc/spec/features/feature-ceremony-runner.md` (three identity-count
+#     statements) ↔ the LEGACY-TOKEN set in
 #     `tests/structure/error-table.test.ts` (`149`, `148` as a full legacy form
-#     and `+115` join the no-leftover scan; `151` becomes the delivered-row pin;
-#     `152`/`+118` are the live counts; planted stale-`149` and stale-`+115`
-#     controls prove the extension is not vacuous — spec v1.5 minors, M108)
-#                                                                        (phase 1)
+#     and `+115` join the no-leftover scan; **`155` is the delivered-row pin;
+#     `156`/`+122` are the live counts**; `152`/`151`/`+118` are deliberately NOT
+#     added because they never landed on the base; planted stale-`149` and
+#     stale-`+115` controls prove the extension is not vacuous — spec v1.5 minors,
+#     M108)                                                            (phase 1)
 #   - `CLOSEOUT_STEP_IDS` ↔ `closeoutStepDefinitions` ↔ the documented
 #     twelve-step inventory ↔ `EXPECTED_STEPS` in
 #     `tests/structure/closeout-contract.test.ts` ↔ `EXPECTED_STEP_IDS` in
@@ -863,9 +948,9 @@
 #   is enumerated above by id, so the claim is checkable id by id against spec
 #   §17.1..§17.7 without re-deriving a range.
 #
-# TC OWNERSHIP (87/87; every TC owned by exactly ONE phase — the phase whose
+# TC OWNERSHIP (88/88; every TC owned by exactly ONE phase — the phase whose
 #   commit lands the case together with the declaration that makes it green):
-#   Phase 1  (2):  TC-SYNC-001, TC-SYNC-004
+#   Phase 1  (3):  TC-SYNC-001, TC-SYNC-004, TC-SYNC-011
 #   Phase 2  (23): TC-F1-001..TC-F1-014 (14), TC-F2-001..TC-F2-008 (8),
 #                  TC-SYNC-005 (1)
 #   Phase 3  (7):  TC-F3-001..TC-F3-006 (6), TC-FLOOR-005 (1)
@@ -875,7 +960,7 @@
 #   Phase 6  (12): TC-F6-001..TC-F6-012
 #   Phase 7  (14): TC-F7-001..TC-F7-006 (6), TC-SYNC-010 (1),
 #                  TC-FLOOR-001..TC-FLOOR-004 (4), TC-FLOOR-006..TC-FLOOR-008 (3)
-#   Count: 2 + 23 + 7 + 9 + 20 + 12 + 14 = 87.
+#   Count: 3 + 23 + 7 + 9 + 20 + 12 + 14 = 88.
 #   Group check (every declared id is owned exactly once):
 #     TC-F1 001..014 → phase 2 (14/14; 011–013 are the v1.4 additions, 014 the
 #                      v1.6 merge-suite-split case; all four are landing-side)
@@ -885,11 +970,11 @@
 #     TC-F5 001..008 → phase 4 (8/8)
 #     TC-F6 001..012 → phase 6 (12/12)
 #     TC-F7 001..006 → phase 7 (6/6)
-#     TC-SYNC 001,004 → phase 1 | 005 → phase 2 | 006 → phase 4 |
-#             002,003,007,008,009 → phase 5 | 010 → phase 7 (10/10)
+#     TC-SYNC 001,004,011 → phase 1 | 005 → phase 2 | 006 → phase 4 |
+#             002,003,007,008,009 → phase 5 | 010 → phase 7 (11/11)
 #     TC-FLOOR 005 → phase 3 | 001,002,003,004,006,007,008 → phase 7 (8/8)
 #   Phase vectors: ACs [0, 15, 4, 7, 9, 6, 5] sum 46; TCs
-#   [2, 23, 7, 9, 20, 12, 14] sum 87.
+#   [3, 23, 7, 9, 20, 12, 14] sum 88.
 #   THE PIN SWEEP HAS ONE OWNER PER ASSERTION (test plan v1.7 fixed this, v1.8 kept it):
 #     - TC-SYNC-001 (owner phase 1) is the IDENTITY-TOTAL half only — seven pin
 #       sites, the legacy-token set, `PM_NOTES_LINT_CODES` at five, and the two
@@ -1000,9 +1085,10 @@
 #
 #   (2) CASE-BOUND — a case this change authors asserts the page's exact
 #       statements, and that case lives in the phase that moves them. ONE page:
-#       `doc/spec/features/feature-metrics.md` (149/148/65/`+115` →
-#       152/151/65/`+118`), asserted by **TC-SYNC-001** whose identity half is
-#       phase 1. It is NOT delivered-check-bound: no shipped suite reads it; the
+#       `doc/spec/features/feature-metrics.md` (149/148/65/`+115` pre-merge →
+#       152/151/65/`+118`; **156/155/67/`+122` on the merged base**, the numbers
+#       TC-SYNC-001 now asserts), asserted by **TC-SYNC-001** whose identity half
+#       is phase 1. It is NOT delivered-check-bound: no shipped suite reads it; the
 #       binding is the case, and the case's phase is phase 1.        (phase 1)
 #
 #   (3) AC-BOUND — an acceptance criterion itself requires the page's inventory,
@@ -1108,9 +1194,10 @@ tier:
     - "A second required-check evaluator or any prose matching appears in the check or refusal path (§24.3 C6, AC-F3-4, TC-F3-006)"
     - "`close-milestone`, the tenth operation, the thirteenth step, the seventh recorded operation name and its argument arm, the fifteenth conformance flow step, the seventh assertion family, the ninth residue kind, or the parity cells move over more than one commit; any Appendix E item or any Appendix H pin is left for later; or a closed-set consumer discovered during delivery is fixed without returning for a specification revision (§24.5, §24.8, NFR-6/7, RSK-6, TC-SYNC-002/TC-SYNC-003/TC-SYNC-009, M78/M83/M93/M94/M95/M102/M103)"
     - "The milestone vocabulary can express create, attach, detach, rename, or reopen, a milestone is created or attached by any actor, or a close is attempted on a truncated, unknown, or unavailable view (§24.3 C2, AC-F4-5, AC-F4-4, TC-F4-009, TC-SYNC-008, M50)"
-    - "A required pin is loosened, skipped, made vacuous, wildcarded, or moved without its counterpart; one of the EIGHTEEN Appendix H operation pins is left at nine, or its POSTURE CONTENT is wrong (GitHub supported without `close-milestone` or with a non-empty gap list, GitLab not `adapter-not-implemented`, Jira not `provider-unsupported`, `EXPECTED_SEED_POSTURES` not 9→10 / 7→8 / 6→7, a missing tenth `WRITE_METHODS` arm, or a missing `operationLabel` case); a merge golden outside the four declared paths moves or a retired golden is left present; a closeout golden is left at twelve step lines; the legacy-token set loses `149`/`148`/`+115` or a planted-stale control; `milestone-state` or `close-milestone` enters the trap-family vocabulary; or a fixture is regenerated to go green (§24.3 C17, NFR-6, spec v1.6 B1b/B1d, TC-FLOOR-001, TC-FLOOR-005, TC-SYNC-001, TC-SYNC-009, M78/M91/M100/M102/M104/M108/M112..M116)"
+    - "A required pin is loosened, skipped, made vacuous, wildcarded, or moved without its counterpart; one of the EIGHTEEN Appendix H operation pins is left at nine, or its POSTURE CONTENT is wrong (GitHub supported without `close-milestone` or with a non-empty gap list, GitLab not `adapter-not-implemented`, Jira not `provider-unsupported`, `EXPECTED_SEED_POSTURES` not 9→10 / 7→8 / 6→7, a missing tenth `WRITE_METHODS` arm, or a missing `operationLabel` case); a merge golden outside the four declared paths moves or a retired golden is left present; a closeout golden is left at twelve step lines; the legacy-token set loses `149`/`148`/`+115` or a planted-stale control; `milestone-state` or `close-milestone` enters the trap-family vocabulary; or a fixture is regenerated to go green (§24.3 C17, NFR-6, spec v1.6 B1b/B1d, TC-FLOOR-001, TC-FLOOR-005, TC-SYNC-001, TC-SYNC-009, M78/M91/M100/M102/M104/M108/M112..M116/M117..M123)"
     - "A type or a closed set is widened/appended without its delivered state-layer validator in the same commit — `landing.shaOnBase`'s widening without `packages/core/src/state/merge.ts`, or the seventh recorded closeout operation name without its arm in `packages/core/src/state/closeout.ts` — so the first record written by the new path reads back as torn state (spec v1.5 N2a/N2b, Appendix H, AC-F1-2/AC-F4-5, TC-F1-012/TC-SYNC-002, M105/M106)"
     - "`tests/behaviour/providers/**` is described as unchanged by obligation while `github-cli-transport`, `github-landing`, `github-collection` or `provider-capabilities` must move, or one of those FOUR provider-path items is declared read-only (spec v1.6 B1c/M2, test plan §7.6(x), TC-SYNC-009)"
+    - "The release changeset is wrong in any way: zero added `.changeset/*.md` while the diff is publishable, two added files, a `patch` bump on any of the five fixed packages, a sixth package or `@delivery-os/testkit` present, an empty body, a modified pre-existing changeset file, or a hand-edited package `version` instead of letting changesets own the bump (NFR-6/NFR-12, test plan v1.10 TC-SYNC-011 + §7.6(0), M117..M123)"
     - "An operation-count prose page (`feature-provider-client-seeds.md`, `doc/spec/nonfunctional.md`, `doc/overview/architecture-overview.md`) is left at nine; a page-wide `nine`→`ten` substitution also moves the nine clause ids or the `status` nine-section statement; those pages are asserted in the additive or milestone phase instead of the documentation phase; the delivered-check-bound reference-behavior page is moved a phase late instead of with the operation; or `feature-adapter-conformance.md` is treated as a carrier instead of registry-bound prose (spec v1.5 M2, spec v1.6 N10, Appendix E item 7, test plan v1.8, TC-SYNC-010/TC-SYNC-009, M109/M111)"
     - "`landing.shaOnBase` reports a locally derived `true` with no answering read, loses its `unknown` rendering, rejects a legacy boolean record, or widens past `boolean` | `\"unknown\"` (spec v1.3 M3, DM-3, AC-F1-2, TC-F1-011/TC-F1-012, M96)"
     - "Phase 5 starts before the owner's OQ-1 answer is recorded, or a delivery phase treats a global PDR-0005 reading as a local degradation instead of a specification revision and scope reduction (spec v1.3 OQ-1/RSK-2/Appendix G-6, test plan §7.6 precondition)"
@@ -1140,9 +1227,12 @@ phases:
   #       TCs — TC-SYNC-001 (the IDENTITY-TOTAL half: seven pin sites, the
   #       legacy-token scan, `PM_NOTES_LINT_CODES` at five, the two identity-count
   #       pages; its row-REACHABILITY assertion is authored in phase 7 as an
-  #       authoring split inside this one owner) and TC-SYNC-004. 2 of 87.
+  #       authoring split inside this one owner), TC-SYNC-004 and
+  #       **TC-SYNC-011** (the release changeset and its baseline pin, test plan
+  #       v1.10). 3 of 88.
   #       TC-SYNC-010 (the three prose-only operation-count pages) is a SEPARATE
-  #       case owned by phase 7 and is NOT claimed here (test plan v1.7, retained by v1.8).
+  #       case owned by phase 7 and is NOT claimed here (test plan v1.7, retained
+  #       by v1.10).
   #
   # Contract (DM-1, DM-2 rows, DM-8 row, API-2's reason PAIR; ADR-0012, TDR-0044
   # and ODR-0005 are cited, never duplicated):
@@ -1173,7 +1263,9 @@ phases:
   #   - The documented pm-notes lint ROW SET gains `lint.phases.divergent` as its
   #     sixth row in the declared rule order, documented and machine-declared
   #     together, so the `lint` kind's concrete MACHINE rows move 6 → 7 and the
-  #     identity total moves 149 → 152. The five delivered rows keep their codes
+  #     identity total moves **base 149 → 153 → 156** (delta +3; the phase-1
+  #     commit shipped the pre-merge 152 — see MERGE RECONCILIATION). The five
+  #     delivered rows keep their codes
   #     and remediation, and the plan-target row is untouched (DM-8, AC-F5-6).
   #     **`PM_NOTES_LINT_CODES` STAYS FIVE**: it declares the identities the
   #     pm-notes-only lint can emit, and the divergence finding is a cross-surface
@@ -1186,52 +1278,75 @@ phases:
   #     would leave a delivered structure gate red inside this commit.
   #
   # Pin movement IN THIS COMMIT (ORDERING (a); the pairs block in this file's
-  # header is the checklist):
+  # header is the checklist). **MERGED BASE: 149 → 153 → 156, delta +3** (see the
+  # header's MERGE RECONCILIATION block); the numbers below are the delivered
+  # post-merge truth, and the phase-1 commit's own 152 was the pre-merge truth:
   #   `doc/spec/features/feature-result-contract.md` gains the three rows, the
   #   `7 → 9` concrete merge-row statement, the `5 → 6` documented lint-row
-  #   statement and the `149 → 152` statements on BOTH sides;
-  #   `doc/spec/features/feature-ceremony-runner.md`'s three `149 identities`
+  #   statement and the **156/155/67/`+122`** statements on BOTH sides;
+  #   `doc/spec/features/feature-ceremony-runner.md`'s three identity-count
   #   statements move with them (it is read by the delivered no-leftover pin
   #   scan), and `doc/spec/features/feature-metrics.md`'s three carried statements
-  #   move 149/148/65/`+115` → 152/151/65/`+118`;
-  #   the SEVEN `149` pin sites move to `152` in the same commit (including
+  #   move to **156/155/67/`+122`**;
+  #   the SEVEN pin sites move to **156** in the same commit (including
   #   `tests/checks/supervision-error-socialization.test.ts`, whose
-  #   `sourceEntries`, `documentedRows` and `BASELINE_ROWS.length + 115`
+  #   `sourceEntries`, `documentedRows` and `BASELINE_ROWS.length + 122`
   #   arithmetic all move), and the documented↔machine comparison is extended to
   #   the three new rows with a paired negative for each (no wildcard, no
   #   exemption).
   #   THE LEGACY-TOKEN EXTENSION LANDS HERE TOO (spec v1.5 minors; N7; M108):
   #   `tests/structure/error-table.test.ts`'s no-leftover scan admits `149`, `148`
-  #   (promoted to a full legacy form) and `+115` to its legacy set, `151` becomes
-  #   the delivered-row pin while `152`/`+118` are the live counts, and the
+  #   (promoted to a full legacy form) and `+115` to its legacy set, **`155` is the
+  #   delivered-row pin while `156`/`+122` are the live counts**, and the
   #   planted-stale control gains a stale-`149` and a stale-`+115` case so the
   #   extension cannot pass vacuously — without it a stale total outside the seven
-  #   suites and two pages would stop being caught.
+  #   suites and two pages would stop being caught. `152`/`151`/`+118` are NOT
+  #   added to the legacy set: they never landed on the base (test plan v1.10).
   #   TWO-PHASE FILE DECLARED HERE AND IN PHASE 5 (spec v1.5 N1b; M110):
   #   `tests/behaviour/ceremony-nonregression.test.ts` carries the IDENTITY TOTAL
-  #   in this commit (149 → 152) and the STEP COUNT (12 → 13) in the step commit.
-  #   Moving it in one phase only is an escalation trigger.
+  #   in this commit (149 → **156**) and the STEP COUNT (12 → 13) in the step
+  #   commit. Moving it in one phase only is an escalation trigger.
   #   PAGES SPLIT BY TRUTH, NOT BY CONVENIENCE (ORDERING (k)): this commit edits
   #   the two identity pages plus the documented-table page; the three
   #   operation-count pages move in phase 7, because their 9 → 10 statements are
-  #   false until the operation exists. TC-SYNC-001's page half is asserted there.
+  #   false until the operation exists. TC-SYNC-010 (phase 7) asserts them.
   #
   # Obligations:
+  #   1.0 **AUTHOR THE RELEASE CHANGESET AND ITS BASELINE PIN, WITH THE CASE — a
+  #       RELEASE-METADATA obligation, NOT a version bump** (test plan v1.10
+  #       TC-SYNC-011; §7.6 obligation (0)). Add exactly ONE file,
+  #       `.changeset/gh-349-merge-closeout-queue-repair-minor.md`, whose front
+  #       matter declares exactly the FIVE fixed packages at `minor` —
+  #       `@delivery-os/core`, `@delivery-os/adapters`, `@delivery-os/cli`,
+  #       `@delivery-os/mcp`, `@delivery-os/opencode` — with
+  #       `@delivery-os/testkit` ABSENT (it is outside the fixed group) and no
+  #       sixth package, and whose body is non-empty prose naming the additive
+  #       surface (the two merge refusal rows, the sixth lint row, the request
+  #       title, the closeout step/operation name/residue kind, the tenth adapter
+  #       operation and the assertion family). Capture
+  #       `tests/fixtures/pins/changeset-baseline.json` from the PRE-CHANGE tree —
+  #       the **64** delivered `.changeset/*.md` names with per-file SHA-256
+  #       digests plus the five package `version` values — and author
+  #       `tests/structure/changeset-additivity.test.ts` over it. **NO package
+  #       `version` is edited by hand**: changesets owns the bump, and every
+  #       baseline file stays byte-identical (M117..M123). Nothing else under
+  #       `.changeset/` is declared or written.
   #   1.1 Declare the three rows, the title field, the reason pair, the
   #       attribution pair and the lint row; move every counter part in the same
   #       commit. A count that appears in several places moves in all of them
   #       (NFR-6). `PM_NOTES_LINT_CODES` is NOT touched.
   #   1.2 Author TC-SYNC-001's IDENTITY half and its pin sweep: bidirectional
-  #       agreement at 152 on both sides, exact-set delta of exactly three rows,
-  #       all SEVEN pin sites at 152, the TWO identity prose pages carrying the
-  #       moved numbers, no pattern widening, no removed or retyped row, and a
-  #       paired failing negative per assertion (M61, M78).
+  #       agreement at **156** on both sides, exact-set delta of exactly three
+  #       rows, all SEVEN pin sites at **156**, the TWO identity prose pages
+  #       carrying the moved numbers, no pattern widening, no removed or retyped
+  #       row, and a paired failing negative per assertion (M61, M78).
   #   1.2a Author the LEGACY-TOKEN extension and its two planted-stale controls
   #        (spec v1.5 minors; M108): `149`, `148` (full legacy form) and `+115`
-  #        join the no-leftover set, `151` is the delivered-row pin, `152`/`+118`
-  #        are the live counts, and a stale `149` and a stale `+115` are each
-  #        detected by name. Dropping a token or a control fails TC-SYNC-001.
-  #   1.2b Move `ceremony-nonregression`'s IDENTITY TOTAL only (149 → 152) and
+  #        join the no-leftover set, **`155` is the delivered-row pin** and
+  #        `156`/`+122` are the live counts, and a stale `149` and a stale `+115`
+  #        are each detected by name. Dropping a token or a control fails
+  #        TC-SYNC-001.
+  #   1.2b Move `ceremony-nonregression`'s IDENTITY TOTAL only (149 → **156**) and
   #        record the file as the first half of a two-phase obligation; its step
   #        count moves in phase 5 and this phase must not touch it (M110).
   #        TC-SYNC-001's row-REACHABILITY assertion is authored in phase 7 (the
@@ -1246,23 +1361,33 @@ phases:
   #       with it (no schema version change).
   #   1.4 Land the three decision records and, conditionally, the decision index
   #       (COMMIT-BOUNDARY REALITY). STAGING ONLY: do not edit, re-author, accept,
-  #       or re-status any record — acceptance is the owner's review act.
+  #       or re-status any record — acceptance is the owner's review act. The
+  #       phase-truth record is **TDR-0044** (renumbered from TDR-0040 by the
+  #       merge; content unchanged).
   #   1.5 Export inventory: the reason pair and the attribution pair are new
   #       executable exports of existing contract modules, so the per-file
   #       executable-export allowance moves in the same commit and exactly — one
   #       named symbol per new export, no wildcard, and no entry for a symbol the
   #       module does not export.
+  #   1.6 Author TC-SYNC-011 with its five packages and digest/version equalities:
+  #       exactly one added changeset, five `minor` entries, `testkit` absent, a
+  #       non-empty body, 64 byte-identical baseline files and five unchanged
+  #       package versions (M117..M123).
   #
-  # Verification (expected signal: exit 0; 152 identities on both sides with a
-  # three-row exact delta and zero pattern widening; all SEVEN count pins read 152
+  # Verification (expected signal: exit 0; **156** identities on both sides
+  # (155 delivered, 67 allowlist, `+122`) with a
+  # three-row exact delta and zero pattern widening; all SEVEN count pins read 156
   # and the THREE carrier pages carry the moved numbers (the documented table page
   # plus the two identity prose pages); the legacy set admits `149`, `148` and
-  # `+115` with `151` as the delivered-row pin and BOTH planted-stale controls
-  # detecting their token; `ceremony-nonregression`'s identity total reads 152
+  # `+115` with **155** as the delivered-row pin and BOTH planted-stale controls
+  # detecting their token; `ceremony-nonregression`'s identity total reads 156
   # while its step count is untouched; the documented lint row set reads six while
   # `PM_NOTES_LINT_CODES` still reads five; the reason pair declares exactly two
   # members; the port inventory carries `title` as optional and nothing else
-  # changed; the three records present and `Proposed`):
+  # changed; **exactly ONE added changeset for the five fixed packages at `minor`
+  # with `testkit` absent, 64 baseline changeset files byte-identical and no
+  # package version hand-edited**; the three records present and `Proposed`):
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/changeset-additivity.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/error-table-sync.test.ts tests/checks/supervision-error-socialization.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/error-table.test.ts tests/structure/port-contract-inventory.test.ts tests/structure/content-inventory.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/ceremony-contract.test.ts tests/structure/dispatch-attempts-taxonomy.test.ts tests/structure/verify-gates-suite-map-contract.test.ts
@@ -1274,7 +1399,7 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                    (G12, binding)
   # ---------------------------------------------------------------------------
   - id: 1
-    title: "Additive contract surface (request title, two merge rows, the sync reason pair, the attribution pair, the sixth documented lint row) with all seven identity pins and both prose pages moved to 152 in one commit, and the three decision records landed"
+    title: "Additive contract surface (request title, two merge rows, the sync reason pair, the attribution pair, the sixth documented lint row) with all seven identity pins and both prose pages moved to 156 on the merged base in one commit, the release changeset with its baseline pin, and the three decision records landed"
     kind: delivery
     summary: "feat(GH-349): additive contract surface for the landing, refusal and phase-divergence identities"
     weightClass: heavy
@@ -1324,6 +1449,14 @@ phases:
         - tests/structure/supervision-error-family.test.ts
         # The exact `DeliveryRequest` key-set probe gains `title`.
         - tests/types/delivery-thread.type-test.ts
+        # RELEASE METADATA (test plan v1.10 TC-SYNC-011; obligation 1.0). The
+        # delivery's SINGLE added changeset — five fixed packages at `minor`,
+        # `testkit` absent, non-empty body — plus its case and its pre-change
+        # baseline pin (64 file names with digests and the five package versions).
+        # No package version is edited here: changesets owns the bump.
+        - .changeset/gh-349-merge-closeout-queue-repair-minor.md
+        - tests/structure/changeset-additivity.test.ts
+        - tests/fixtures/pins/changeset-baseline.json
         # Untracked at plan time (COMMIT-BOUNDARY REALITY); `Proposed`, STAGED,
         # and never edited, re-authored, or accepted by any phase.
         - doc/decisions/ADR-0012-provider-side-merge-landing-path.md
@@ -2458,7 +2591,8 @@ phases:
   #   - TC-FLOOR-001: every moved pin moves exactly across the TEN moved sets
   #     PLUS the additions v1.5/v1.6/v1.8 name — (merge rows 7→9; lint machine rows
   #     6→7 with the documented set 5→6 and `PM_NOTES_LINT_CODES` staying five;
-  #     the identity total on all seven sites, the legacy-token set and the TWO
+  #     the identity total on all seven sites (**156 / 155 / 67 / +122**), the
+  #     legacy-token set and the TWO
   #     identity pages, with the three operation-count pages owned separately by
   #     this phase as TC-SYNC-010; closeout steps 12→13 with the two closeout
   #     goldens and the four count-pinning suites; recorded operation names 6→7

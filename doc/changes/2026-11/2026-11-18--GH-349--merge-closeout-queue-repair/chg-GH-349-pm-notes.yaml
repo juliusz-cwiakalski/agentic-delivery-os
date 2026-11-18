@@ -4,9 +4,9 @@ delivery_mode: autonomous
 milestone: "M4: Jaiship-native delivery"
 phases:
   clarify_scope: { started: null, completed: 2026-11-18T18:54:05.715Z }
-  specification: { started: null, completed: 2026-11-18T21:33:40.941Z }
-  test_planning: { started: null, completed: 2026-11-18T21:33:48.934Z }
-  delivery_planning: { started: null, completed: 2026-11-18T22:34:01.718Z }
+  specification: { started: null, completed: 2026-11-18T23:17:15.188Z }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: 2026-11-18T21:41:20.473Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -381,6 +381,39 @@ notes:
       none changes a criterion."
     type: decision
     date: "2026-11-18"
+  - text: "Plan phase 1 delivered as 0a3dc3ff (28 files, all gates green including
+      `pnpm check` 10777 pass). Six real pins moved that the plan had not
+      declared (error-table-sync script, error-table baseline fixture,
+      supervision-error-family, delivery-thread type test, plus two later-phase
+      files moved early). Plan scope amended (+4 files to phase 1, early-move
+      note added) and delivery_planning re-closed as 1755aef2; no requirement
+      changed."
+    type: info
+    date: "2026-11-18"
+  - text: "Sync with origin/main-tools produced a semantic conflict: upstream PR
+      #357 (GH-335 harness telemetry) added four harness identities, so the
+      identity base moved 149 -> 153 and the same twelve count-bearing files
+      conflicted. Resolved by computing the merged truth rather than taking a
+      side: the total is **156** = 153 + GH-349's three; documented 156,
+      delivered 155, two-segment allowlist 67, sync arithmetic +122; the event
+      baseline is 150 rows and the supervision oracle keeps its positional rule
+      at live 153. Upstream had taken TDR-0040..0043, so the phase-truth record
+      was renumbered **TDR-0044** (content unchanged) across the index and the
+      change artifacts. Merge commit 1bd66293."
+    type: blocker
+    date: "2026-11-19"
+  - text: "The merged aggregate gate exposed a real process gap: GH-349 changes
+      publishable packages but ships no changeset, so
+      `tests/checks/privacy-release.test.ts` fails (\"a publishable diff ships
+      exactly one changeset\"). This is pre-existing on the branch, not
+      merge-caused. Remediation: the plan declares
+      `.changeset/gh-349-merge-closeout-queue-repair-minor.md` in phase 1 with
+      the five fixed packages at `minor` (core, adapters, cli, mcp, opencode;
+      testkit excluded) and a non-empty body; the test plan gains a case for the
+      release metadata. Spec, test plan and plan are reopened to reconcile the
+      merged base and the changeset; no requirement changed."
+    type: blocker
+    date: "2026-11-19"
   - text: "Plan phase 1 records its part of the ONE two-phase file obligation (plan
       obligation 1.2b; spec v1.5 N1b; test plan TC-SYNC-002 and M110):
       `tests/behaviour/ceremony-nonregression.test.ts` carries the seven-site
