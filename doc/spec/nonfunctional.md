@@ -335,11 +335,15 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
 - Quality attribute: compatibility and testability. Applies: GitHub/GitLab/Jira seeds
   and adapter conformance. Requirement/status: existing reads, supported writes and explicit gaps.
 - [Seeds](features/feature-provider-client-seeds.md) expose normalized views and
-  credential-port-only authorization. [Closeout](features/feature-closeout.md)
+  credential-port-only authorization. GitHub supports the whole closed operation
+  set (including the comment write, the delivery-request content write, and the
+  provider-side landing) with no declared gap and a CLI-first transport that is
+  proven to normalize identically to the API fallback. [Closeout](features/feature-closeout.md)
   implements supported GitHub/Jira label/assignee and completion operations plus
   GitHub thread resolution. GitLab write gaps and no work-item read remain explicit.
 - [Conformance](features/feature-adapter-conformance.md) gates structural/runtime
-  coverage, exact-URL mock replay, explicit skips, and bounded artifacts (262144
+  coverage, exact-URL mock replay, explicit skips, cross-transport parity, zero
+  live child processes, and bounded artifacts (262144
   bytes). Mock conformance executes supported production writes; at least one
   executing step per adapter is not all-flow or live write coverage.
 - [Harness conformance](features/feature-harness-adapters.md) registers exactly the
@@ -348,7 +352,9 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
   coverage meta-check fails an unregistered closed-vocabulary kind or a missing
   scenario.
 - Evidence/test: `tests/conformance/mock-conformance.test.ts`,
+  `tests/conformance/github-transport-parity.test.ts`,
   `broken-adapter-control.test.ts`, `tests/structure/conformance-coverage.test.ts`,
+  `tests/structure/reference-behavior.test.ts`,
   `tests/conformance/harness-classification.test.ts`,
   `harness-liveness.test.ts`, `tests/structure/harness-neutrality.test.ts`.
 - Live v1 is GET-only, zero mutations/created artifacts, and scheduled evidence,

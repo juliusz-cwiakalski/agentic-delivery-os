@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-VERIFY-CHANGE-AND-EXIT-TAXONOMY
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-15
+last_updated: 2026-11-18
 owners: ["engineering"]
 service: delivery-os
 summary: "The `verify` command family: ledger-only `verify change` verification against a change's declared full or LITE phase set, a declaration-plus-registry overlay with per-phase precedence, the eleven-token delivery result vocabulary and its total projection/derivation taxonomy, one total exit taxonomy with the documented state-unverified divergence, the additive verify.ledger.incomplete identity beside reused lint.* and state.* identities, the `verify.gates.*` (including the narrowed-scope refusal) and `verify.deploy.*` rows of the sibling verify surfaces, a deterministic classification summary, and the non-zero guarantee for incomplete or unverifiable deliveries."
 links:
-  related_changes: ["GH-172", "GH-174", "GH-177", "GH-179", "GH-183", "GH-178", "GH-222", "GH-221", "GH-225", "GH-233", "GH-235", "GH-239", "GH-300"]
-  related_decisions: ["ADR-0003", "TDR-0005"]
+  related_changes: ["GH-172", "GH-174", "GH-177", "GH-179", "GH-183", "GH-178", "GH-222", "GH-221", "GH-225", "GH-233", "GH-235", "GH-239", "GH-300", "GH-338"]
+  related_decisions: ["ADR-0003", "TDR-0005", "TDR-0031"]
   contracts:
     - "packages/core/src/contracts/delivery-result.ts"
     - "packages/core/src/contracts/error-table.ts"
@@ -252,7 +252,7 @@ The change follows the established tier split:
 
 - **Tier:** contracts carry data and types only; domain imports contracts only; the state tier imports contracts and its own state modules; runtime I/O stays in the adapter and CLI edges. No new runtime-API location and no new runtime dependency.
 - **Single enum home:** the eleven tokens are declared once in contracts; no other production module declares a token list. Tests may hold an oracle, and the bash script remains the external reference.
-- **Read-only:** no write call, fence acquisition, projection rebuild, target-file mutation, network access, or process spawn occurs on any verify path.
+- **Read-only:** `verify change` performs no write call, fence acquisition, projection rebuild, target-file mutation, network access, or process spawn. `verify gates` and `verify deploy` reach CI through the injected provider transport, which the production composition may supply as the GitHub CLI transport; neither writes a provider artifact.
 - **Evidence precedence:** registry overrides declaration per mentioned phase; absent registry evidence never becomes negative evidence or a state error.
 - **Envelope exclusivity:** only `finished` yields `data`; every other reachable token yields `error`; no path carries both or neither.
 - **Exit projection:** digits live only in the projection module; the taxonomy declares classes; every reachable token's exit is in `{0, 1, 2}`.
@@ -266,7 +266,7 @@ The change follows the established tier split:
 | NFR-1 | Runtime neutrality and tier conformance | 0 contracts with behavior or I/O, 0 domain imports outside contracts, 0 new runtime-API locations; all boundary, ambient, and dependency-cruiser gates green |
 | NFR-2 | Machine-output validity | 100% of verify fixture runs emit exactly one valid envelope; 0 exits outside `{0, 1, 2}`; user-category failures project `1`; platform-category failures project `2` |
 | NFR-3 | Non-zero guarantee | 0 exit-`0` outcomes for incomplete, malformed, missing-target, or unverifiable inputs; 0 failure envelopes carrying `data`; 0 documented classes contained as `fallback.internal` |
-| NFR-4 | Determinism and read-only behavior | 0 verdict or summary drift across replays; 0 bytes written; 0 fences acquired; 0 network calls; 0 child processes spawned |
+| NFR-4 | Determinism and read-only behavior | 0 verdict or summary drift across replays; 0 bytes written; 0 fences acquired; `verify change` makes 0 network calls and spawns 0 child processes; `verify gates` and `verify deploy` read CI only through the injected provider transport and write nothing |
 | NFR-5 | Taxonomy binding | tokens equal the bash usage enum in set and order (11/11); each token has exactly one taxonomy row (11/11); 0 tokens without a valid projection class; 0 reachable-subset drift |
 | NFR-6 | Error-table binding | the `verify.ledger.incomplete` row round-trips with its documented row; 0 two-way documented-table drift; 0 existing rows modified |
 | NFR-7 | Real-corpus correctness | 0 crashes or unclassified fallbacks over the pinned committed-change fixtures; 0 incorrect tokens on those fixtures |

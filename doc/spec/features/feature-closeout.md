@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-CLOSEOUT
 status: Current
 created: 2026-11-01
-last_updated: 2026-11-15
+last_updated: 2026-11-18
 owners: ["engineering"]
 service: delivery-os
 summary: "The delivered closeout transaction: a dry-run-by-default `closeout <workItemRef>` command, the deterministic twelve-step plan, SHA-256 operation identities and the append-only `closeout.operation` ledger over the real JSONL state driver, a production CLI composition over the real provider clients, git seam (including bounded merged-diff and worktree facts), state store, and resolved harness settings, GitHub and Jira writes with declared GitLab gaps, authorship-gated review-thread resolution, the tracker-relation owed-flip sweep, checkout restore, local worktree cleanup, squash-safe local branch cleanup, the detection-only merged-diff sweep, read-only retro coverage, the bounded session-compaction checkpoint, the change-capsule validation and promotion ceremony, the automatic `landed` queue-entry removal after the closeout writes inside the held fence with its additive non-step `queueRemoval` disclosure and fail-open skips, the additive per-member report `data.members[]` for a plan declaring members (repo key, branch, mode-scoped cleanup, delivery request, mode-scoped issue closure, merge-truth landed) with one landing removal per member, the member tracked-issue identity `issue` as the only permitted member `ticket-to-done` target, the mode-scoped worst-case aggregate fold for member-mode `branch-cleanup` and `ticket-to-done` in which a member refusal keeps the delivered `closeout.branch.unsafe` refusal reachable and the change-level `ticket-to-done` transition is never dropped, the bounded deterministically ordered judgment residue with the additive `attention` exit class, the discriminated work-item read observation and the separate reverse-dependent no-surface vocabulary, provider-asserted label/relation availability signals, bounded output measured in UTF-8 bytes, the five `closeout` error identities plus the `closeout.step.<id>.failed` family, and the non-gating, idempotent harness telemetry capture built from the configured harness settings with bounded disclosure."
 links:
-  related_changes: ["GH-183", "GH-221", "GH-231", "GH-233", "GH-240", "GH-242", "GH-291", "GH-292", "GH-301", "GH-310"]
-  related_decisions: ["TDR-0008", "ODR-0003", "ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0008", "TDR-0026"]
+  related_changes: ["GH-183", "GH-221", "GH-231", "GH-233", "GH-240", "GH-242", "GH-291", "GH-292", "GH-301", "GH-310", "GH-338"]
+  related_decisions: ["TDR-0008", "ODR-0003", "ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0008", "TDR-0026", "TDR-0034"]
   contracts:
     - "packages/core/src/contracts/closeout.ts"
     - "packages/core/src/contracts/capsule.ts"
@@ -47,8 +47,8 @@ Provider writes are delivered for GitHub and Jira. GitLab remains a read slice w
 - Backfill of historical sessions; closeout performs only its own closeout-time capture. Per-step stream ingest and session-close baseline capture are owned by the harness adapter layer, not by the closeout transaction.
 - Remote branch or worktree deletion, remote ref cleanup, force push, or history rewrite.
 - GitLab write operations; GitLab writes and the work-item read remain declared gaps.
-- The full GitHub adapter, full issue lifecycle, releases, and operations beyond closeout (M3-S3).
-- Posting a closure comment or arbitrary tracker/PR comment writes; `write-comment` remains a declared gap.
+- The full issue lifecycle, releases, and provider operations beyond closeout: the closeout transaction consumes declared adapter capabilities and adds none.
+- Posting a closure comment or arbitrary tracker/PR comment writes: the closeout plan has no comment step, and a comment write is not a closeout operation.
 - Merge execution or merge verification.
 - A global closeout or group-scoped store, and multi-repository fan-out beyond one change's declared member set: closeout reports the member facts supplied through its composition and adds no store, no provider operation, and no discovery of repositories it was not given.
 - MCP and OpenCode/host closeout surfaces.
@@ -107,7 +107,7 @@ The ledger uses one additive record kind, `closeout.operation`, with payload sch
 
 The target work item is read through a discriminated observation. A provider not-found fails the command with `closeout.target.unobserved` and performs zero writes. A malformed payload fails as the adapter-local `provider.payload.invalid` and is never mapped to not-found. A provider without the work-item read yields a declared gap for the ticket-dependent steps.
 
-An observed item already in the delivery `done` state is `satisfied` with zero write. Otherwise the step schedules one `transition-work-item` operation with canonical `{ deliveryState: "done" }`. The adapter resolves its provider-specific transition: GitHub closes the issue; Jira executes its data-driven done transition by workflow-map name. If the adapter cannot represent the transition, the step is a declared gap and the transaction continues.
+An observed item already in the delivery `done` state is `satisfied` with zero write. Otherwise the step schedules one `transition-work-item` operation with canonical `{ deliveryState: "done" }`. The adapter resolves its provider-specific transition: GitHub performs exactly one state-only update (its `done` row is a `field-update` row, so the write neither reads nor writes labels and gains no new refusal path, and label cleanup stays the separate `lifecycle-label-sweep` step); Jira executes its data-driven done transition by workflow-map name. If the adapter cannot represent the transition, the step is a declared gap and the transaction continues.
 
 #### Lifecycle label sweep
 
@@ -262,14 +262,15 @@ Every closeout operation maps to one declared adapter operation. An operation ab
 |---|---|---|---|
 | `read-work-item` | supported | supported | gap (`adapter-not-implemented`) |
 | `write-work-item` | supported (labels, assignee clear) | supported (full-array label replace, assignee clear) | gap (`adapter-not-implemented`) |
-| `transition-work-item` | supported (issue close) | supported (data-driven done transition) | gap (`adapter-not-implemented`) |
+| `transition-work-item` | supported (one state-only issue close) | supported (data-driven done transition) | gap (`adapter-not-implemented`) |
 | `read-delivery-request` | supported | gap (`provider-unsupported`) | supported |
-| `write-delivery-request` | gap (`adapter-not-implemented`) | gap (`provider-unsupported`) | gap (`adapter-not-implemented`) |
+| `write-delivery-request` | supported (content write, create/update) | gap (`provider-unsupported`) | gap (`adapter-not-implemented`) |
 | `read-pipeline-run` | supported | gap (`provider-unsupported`) | supported |
-| `write-comment` | gap (`adapter-not-implemented`) | gap (`adapter-not-implemented`) | gap (`adapter-not-implemented`) |
+| `write-comment` | supported (carrier-free text only) | gap (`adapter-not-implemented`) | gap (`adapter-not-implemented`) |
 | `resolve-delivery-thread` | supported | gap (`provider-unsupported`) | gap (`adapter-not-implemented`) |
+| `merge-delivery-request` | supported (no closeout step maps to it) | gap (`provider-unsupported`) | gap (`adapter-not-implemented`) |
 
-`resolve-delivery-thread` is an additive member of the closed operation set, governed by TDR-0008. GitHub implements it; Jira declares it provider-unsupported; GitLab declares it adapter-not-implemented. GitLab's slice also has no work-item read, so its ticket, label, unassign, owed-flip, and thread steps are gaps while checkout restore and local branch cleanup still run from read evidence. The bounded reverse-dependent query is a query-shaped form of `read-work-item` and adds no closed operation.
+`resolve-delivery-thread` is an additive member of the closed operation set, governed by TDR-0008. GitHub implements it; Jira declares it provider-unsupported; GitLab declares it adapter-not-implemented. GitLab's slice also has no work-item read, so its ticket, label, unassign, owed-flip, and thread steps are gaps while checkout restore and local branch cleanup still run from read evidence. The bounded reverse-dependent query is a query-shaped form of `read-work-item` and adds no closed operation. The matrix states adapter posture, not closeout reach: closeout issues no comment and no delivery-request content write, and it never composes the adapter's provider-side landing. The per-operation transport, failure identities, and absence rules are stated in [Adapter Reference Behavior](feature-adapter-reference-behavior.md).
 
 #### Merged delivery request and merged head
 
@@ -442,7 +443,7 @@ Exit codes remain only in the CLI projection: `user-validation` → 1, `platform
 
 #### Read-only command isolation
 
-The git branch/checkout seam is a dedicated adapter I/O subpath behind a port. It is not the existing read-only repository metadata reader, and the read-only reader gains no spawn surface. `status`, `queue ready`, and `verify change` continue to consume only the read-only repository reader, read-only provider clients, and verified state reads. They do not import or compose the git cleanup seam, the closeout engine, or provider write operations. Boundary rules and negative fixtures prove the isolation, and their zero-write/zero-spawn tests remain green.
+The git branch/checkout seam is a dedicated adapter I/O subpath behind a port. It is not the existing read-only repository metadata reader, and the read-only reader gains no spawn surface. `status`, `queue ready`, and `verify change` continue to consume only the read-only repository reader, read-only provider clients, and verified state reads. They do not import or compose the git cleanup seam, the closeout engine, or provider write operations. Their provider reads ride the composed GitHub transport, which may be the adapter's CLI transport; boundary rules and negative fixtures prove the seam isolation, and their zero-write guarantees and spawn-free injected test compositions remain green.
 
 ### 3.2 User Flows
 
@@ -518,7 +519,7 @@ The closeout feature follows the delivered tier split. The runtime-neutral contr
 | `packages/core/src/contracts/closeout.ts` | `delivery.closeout.v1` vocabulary: step ids, outcomes, gap reasons, operation names, disposition and protected-ref data, bounds, plan/step/operation/data types, work-item and reverse-dependent observations (`CLOSEOUT_REVERSE_DEPENDENT_OBSERVATIONS`), canonical argument unions, identity inputs, ledger payload type, provider/git/state runtime contracts, the additive residue/capsule/detail/worktree/retro/session facts, the member-mode fold precedence, and the additive member-report types (`CloseoutMemberReport`, the four mode-scoped outcome columns, `CLOSEOUT_MAX_MEMBERS`, the `changeTicketOutcome` plan field, and `CrossRepositoryCloseoutObservation` with its optional `issue` identity). Types and `as const` data only. |
 | `packages/core/src/contracts/capsule.ts` | The capsule event envelope, closed event-kind/writer vocabularies, payload field sets, caps, candidate model, promotion routing/rejection vocabularies, residue kinds, and merged-diff marker/action data. |
 | `packages/core/src/contracts/ports.ts` | The primitive ports; `DeliveryRequest` carries the additive optional `headSha`. |
-| `packages/core/src/contracts/adapter-capabilities.ts` | The closed `ADAPTER_OPERATIONS` set including `resolve-delivery-thread`, and capability/gap types. |
+| `packages/core/src/contracts/adapter-capabilities.ts` | The closed `ADAPTER_OPERATIONS` set including `resolve-delivery-thread` and `merge-delivery-request`, and capability/gap types. |
 | `packages/core/src/contracts/error-table.ts` | The `closeout` domain kind, five concrete rows, and the `closeout.step.<id>.failed` family. |
 | `packages/core/src/domain/closeout.ts` | Pure planner, canonical JSON and SHA-256 operation identity, branch selection and safety predicate, outcome fold, summary, output bounding, residue dedupe/ordering, complete capsule pre-flight/close orchestration, apply orchestrator, the member-mode expanded `branch-cleanup`/`ticket-to-done` steps, the mode-scoped worst-case aggregate fold over the declared members and the change-level transition, the per-member landing-removal disclosures, and human renderer. |
 | `packages/core/src/domain/closeout-members.ts` | Pure per-member report projection: one entry per declared member in declared order, the mode-scoped `cleanup` and `issueClosure` columns applied over that member's observation and its own operation outcomes, merge-truth `landed`, the member-mode outcome fold (`foldCloseoutMemberOutcomes` with its closed precedence), and the member-ref form shared with the queue. |
@@ -529,7 +530,7 @@ The closeout feature follows the delivered tier split. The runtime-neutral contr
 | `packages/core/src/domain/closeout-worktree.ts` | The pure worktree safety predicate. |
 | `packages/core/src/domain/sha256.ts` | Pure SHA-256 implementation used by the operation identity and capsule digest; no runtime import in the domain path. |
 | `packages/core/src/state/closeout.ts` | `closeout.operation` append with post-append coverage verification, verified history read, store-scoped key, record validation (including `remove-worktree` canonical arguments), and first-terminal fold over the injected state port. |
-| `packages/adapters/src/github/{client,normalize}.ts` | Issue/PR reads, `merged_at` merge truth, merged-request lookup with a GraphQL thread re-read, head normalization, bounded reverse-dependent read (`/dependencies/blocking`) with a `no-surface` observation, blocker relations from `/dependencies/blocked_by`, label/relation/thread availability signals, thread root-author normalization, label/assignee writes, issue close, GraphQL thread resolution, and discriminated work-item observation. |
+| `packages/adapters/src/github/{client,normalize}.ts` | Issue/PR reads, `merged_at` merge truth, merged-request lookup with a GraphQL thread re-read, head normalization, verbatim job timings, workflow-map status resolution, bounded reverse-dependent read (`/dependencies/blocking`) with a `no-surface` observation, blocker relations from `/dependencies/blocked_by`, label/relation/thread availability signals, thread root-author normalization, label/assignee writes, mechanism-scoped transitions, the carrier-free comment write, the two-variant content write, the provider-side landing, GraphQL thread resolution, and discriminated work-item observation. |
 | `packages/adapters/src/jira/{client,normalize,workflow-map}.ts` | Issue reads, bounded outgoing-`blocks` dependent search with a `no-surface` observation, label/relation availability signals, transition-id done selection, raw-label full-array replace with preservation, assignee clear, and discriminated work-item observation. |
 | `packages/adapters/src/gitlab/{client,normalize}.ts` | Merge-request and pipeline reads; merged-head normalization when present; no writes. |
 | `packages/adapters/src/git/index.ts` | The dedicated branch/checkout/worktree/diff seam: fixed-argv, no-shell, local-only child processes with a 30 s default timeout, `SIGKILL`, and a bounded max buffer for the diff read; checkout facts, branch listing, ref resolution, cleanliness and worktree checks, `worktree list --porcelain`, `currentWorktreePath`, `isWorktreeClean`, bounded `readMergedDiff` over the recorded squash landing, local worktree removal with a pre-removal head/cleanliness re-check and no force flag, checkout restore, local branch deletion with a delete-time head re-check, and direct protected-ref rejection. |
@@ -651,7 +652,7 @@ No localization or accessibility surface is added. The human digest is determini
 | Golden | `tests/golden/closeout-{envelope,human,residue}.test.ts` | Recorded machine envelopes, human digests, and residue output for plan/apply outcomes. |
 | Checks | `tests/checks/closeout-mutants.test.ts`, `capsule-{bounds,determinism,latency,mutants,privacy,ci-parity,cli-parity}.test.ts`, `error-table-sync.test.ts`, `fixture-sanitization.test.ts` | Source-mutation non-vacuity controls, capsule bounds/determinism/latency/privacy, bidirectional table sync, family-slot validation, and fixture hygiene. |
 | Types | `tests/types/closeout-{headsha,attention}.type-test.ts`, `capsule.type-test.ts` | Optional `headSha`, the additive `attention` class, and capsule shapes through the root `typecheck`. |
-| Conformance | `tests/conformance/mock-conformance.test.ts`, `broken-adapter-control.test.ts`, `capsule-events.test.ts` | Production write execution in the mock tier, capability-gated skips, runtime coverage over the eight operations, and capsule event conformance. |
+| Conformance | `tests/conformance/mock-conformance.test.ts`, `broken-adapter-control.test.ts`, `capsule-events.test.ts` | Production write execution in the mock tier, capability-gated skips, runtime coverage over the nine operations, and capsule event conformance. |
 | Aggregate | The whole workspace | `pnpm check`. |
 
 ### 6.2 Test Data & Scenarios
@@ -686,7 +687,7 @@ Closeout adds no runtime dependency, service, daemon, or scheduled job. It reuse
 - **Depends on** the retro pipeline ([Retro Evidence Pipeline](feature-retro-pipeline.md)) for the read-only `retro.run`/level registry surface consumed by the coverage move.
 - **Depends on** the merge transaction ([Merge and Verify Deploy](feature-merge-verify-deploy.md)) for the recorded squash SHA that anchors the merged-diff sweep.
 - **Depends on** the session administration seam ([Session Database Administration](feature-session-database-admin.md)) for the read-only session-store discipline; `db` is consumed unchanged and supplies no attribution field.
-- **Depends on** the adapter conformance suite ([Adapter Conformance](feature-adapter-conformance.md)) for the eight-operation registry and write execution.
+- **Depends on** the adapter conformance suite ([Adapter Conformance](feature-adapter-conformance.md)) for the nine-operation registry and write execution.
 - **Depends on** the plan's member declaration ([Machine-Readable Plan Schema](feature-plan-schema.md)) for the member identity the report and its landing removals reuse, and on the scheduling engine's member-ref form for the entry each landing retires.
 - **Deferred member read seam:** the shipped composition does not yet supply a member read runtime (`readMembers` and the per-member read bundle), so the injected `CrossRepositoryCloseoutObservation` entries are the only input path and a member-declaring plan behaves member-less in the shipped CLI. The per-member report, the tracked-issue mapping, and the aggregate fold are complete and exercised through that seam.
 - **Consumed by** coordinators and delivery agents performing post-merge closeout; the memory curator consumes the promotion decisions and home-written records, and later retro/ceremony surfaces consume the capsule coverage and residue.

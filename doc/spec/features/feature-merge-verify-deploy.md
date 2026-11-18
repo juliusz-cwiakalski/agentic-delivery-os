@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-MERGE-VERIFY-DEPLOY
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-15
+last_updated: 2026-11-18
 owners: ["engineering"]
 service: delivery-os
-summary: "The merge transaction and verify-deploy engine: the config-declared versioned gate registry shared by verify gates and merge, the fenced EVT-1 gate-verification record and freshness envelope, the post-verification tracker and CI probe, owner-gate classification as merge authority, recorded authorized waivers, the single rebase-refresh with no force path, the verified squash landing with idempotent convergence and dry-run, the lifecycle merge path the coordinator uses, the verify deploy trace verdict taxonomy, the recorded squash SHA and parent that anchor closeout's merged-diff sweep, and the merge.* / verify.deploy.* error identities."
+summary: "The merge transaction and verify-deploy engine: the config-declared versioned gate registry shared by verify gates and merge, the fenced EVT-1 gate-verification record and freshness envelope, the post-verification tracker and CI probe, owner-gate classification as merge authority, recorded authorized waivers, the single rebase-refresh with no force path, the verified squash landing with idempotent convergence and dry-run, the lifecycle merge path the coordinator uses, the coexistence of the adapter's provider-side landing capability with that deliberately unchanged lifecycle path, the verify deploy trace verdict taxonomy, the recorded squash SHA and parent that anchor closeout's merged-diff sweep, and the merge.* / verify.deploy.* error identities."
 links:
-  related_changes: ["GH-225", "GH-237", "GH-240", "GH-242", "GH-300"]
-  related_decisions: ["ADR-0003", "ADR-0004", "PDR-0003"]
+  related_changes: ["GH-225", "GH-237", "GH-240", "GH-242", "GH-300", "GH-338"]
+  related_decisions: ["ADR-0003", "ADR-0004", "PDR-0003", "TDR-0032"]
   contracts:
     - "packages/core/src/contracts/merge.ts"
     - "packages/core/src/contracts/verify-deploy.ts"
@@ -36,6 +36,19 @@ no force operation exists in the mutation vocabulary.
 `verify change` and `phase list`, then runs `merge <ref>` for each ready item;
 the platform merge command (`gh pr merge`, `glab mr merge`) is not the primary
 path, and `@pr-manager` never merges.
+
+Two merge mechanisms coexist deliberately. The adapter layer now declares a
+provider-side landing capability — the closed `merge-delivery-request`
+operation, which lands one delivery request with a squash strategy, optional
+crafted commit title and message, and an optional expected head, at most once
+per invocation and never retried. The lifecycle merge path documented on this
+page is **not** rewired onto it: `merge` still lands through the recorded local
+git transaction described below, and no coordinator, daemon, dispatch, or
+closeout path composes the adapter landing. Reconciling the two mechanisms is a
+separate decision; until then a consumer that needs the provider-side landing
+calls the adapter operation directly and receives its own classified outcome.
+See [Adapter Reference Behavior](feature-adapter-reference-behavior.md) for the
+operation's contract.
 
 ## Command surfaces
 
@@ -136,7 +149,8 @@ remediation. No force variant exists in the declared mutation union.
 ## Squash landing and convergence
 
 With every enforced gate passing (by fresh verification plus probe, or a
-recorded authorized waiver) the request lands as one squash commit. The landing
+recorded authorized waiver) the request lands as one squash commit through the
+lifecycle merge transaction's own local git path. The landing
 is verified (squash SHA on the base, request merged) and recorded
 (`delivery.merge.transaction.v1`, kind `merge.transaction`) with the landing
 evidence, refresh attempts, waiver references, and post-landing step statuses
@@ -194,7 +208,9 @@ with no pattern widening.
   and never a waiver record, a transaction record, a git mutation,
   `result=merged`, or `squash=`.
 - No daemon or dispatch path composes the merge mutation surface; the merge
-  command is the only landing producer.
+  command is the only composed producer of the lifecycle merge. The adapter's
+  `merge-delivery-request` capability is not composed into it and is reachable
+  only by a direct adapter caller.
 - The mutation union declares no force variant; a production-source scan runs
   with a mandatory failing control.
 - Secrets, payloads, titles, bodies, and log lines never reach output or records;
@@ -208,7 +224,8 @@ with no pattern widening.
 
 [Verify Gates](feature-verify-gates.md) · [Owner-Gate SLA](feature-owner-gate-sla.md) ·
 [Configuration Layer](feature-config-layer.md) · [State Layer](feature-state-layer.md) ·
-[Adapter Ports](feature-adapter-ports.md) · [Closeout Transaction](feature-closeout.md) ·
+[Adapter Ports](feature-adapter-ports.md) · [Adapter Reference Behavior](feature-adapter-reference-behavior.md) ·
+[Closeout Transaction](feature-closeout.md) ·
 [Result Contract and Error Table](feature-result-contract.md) · [Commit Primitive](feature-commit-primitive.md)
 
 ## Scheduling engine reconciliation (GH-237)

@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-STATUS-DIGEST
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-16
+last_updated: 2026-11-18
 owners: ["engineering"]
 service: delivery-os
 summary: "The read-only status command and its bounded delivery.status.v1 digest: nine fixed sections in order, a closed five-value section state, a closed finding-code registry with grouped ranked findings, tri-state hygiene assertions, owner-gate ages, parked conditions, a ready-to-merge action list, declared lane attention-state vocabulary, the state-log-fed spend collector section and the state-sourced typed-questions section over the verified blocker ledger, bounded evidence and counts, deterministic rank keys and truncation, the four tracker families, changes and pull requests, bounded check-runs CI classification, providers read from configuration and the verified park fold with the open lane park fields for peak-pause episodes read through their own bounded records read, parked work from the git-ignored local PM context, origin-derived repository binding under a credential-reference-only composition guard, the machine envelope and extended human digest grammar, the additive stateSource identity shared with the brief and board, error-identity reuse, and the fixture plus opt-in live-smoke evidence model."
 links:
-  related_changes: ["GH-175", "GH-176", "GH-183", "GH-178", "GH-228", "GH-224", "GH-243", "GH-236", "GH-230", "GH-237", "GH-242", "GH-241", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288", "GH-291", "GH-294", "GH-309", "GH-297"]
-  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006", "TDR-0019"]
+  related_changes: ["GH-175", "GH-176", "GH-183", "GH-178", "GH-228", "GH-224", "GH-243", "GH-236", "GH-230", "GH-237", "GH-242", "GH-241", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288", "GH-291", "GH-294", "GH-309", "GH-297", "GH-338"]
+  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006", "TDR-0019", "TDR-0031"]
   contracts:
     - "packages/core/src/contracts/status.ts"
     - "packages/core/src/contracts/blockers.ts"
@@ -25,7 +25,7 @@ The coordinator iteration consumes the digest as its first step: the `typed-ques
 
 Each section carries one state from the closed set `observed`, `degraded`, `unknown`, `unavailable`, and `not-delivered`; a bounded evidence record naming its sources and reasons; uniform counts; a ranked, capped item surface; and an explicit truncation marker. Every section may also carry grouped, registry-coded `findings[]` describing the attention state of its observed evidence. A section state describes the quality and completeness of its evidence, never a global all-clear. A failed, absent, unattempted, or unresolved read is digest data, not a command failure: every successful run returns all nine sections, and only parser or containment failures produce an error envelope.
 
-The machine mode is the standard `CommandResult` envelope whose `data` is the full digest. Human mode is a deterministic, bounded digest rendered from the same data. Status performs zero writes, fences, state mutations, network writes, or child processes. It adds no error-table row, no configuration key, and no state-schema change; it introduces no new package, subpath, or runtime-API location. Closeout is a separate mutating surface: status does not import or compose the closeout engine, the git branch/checkout seam, or provider write operations, and its read-only guarantees are unchanged.
+The machine mode is the standard `CommandResult` envelope whose `data` is the full digest. Human mode is a deterministic, bounded digest rendered from the same data. Status performs zero writes, fences, state mutations, or network writes; its provider reads travel through the injected transport, which the production composition supplies as either the GitHub CLI transport or native `fetch`. It adds no error-table row, no configuration key, and no state-schema change; it introduces no new package, subpath, or runtime-API location. Closeout is a separate mutating surface: status does not import or compose the closeout engine, the git branch/checkout seam, or provider write operations, and its read-only guarantees are unchanged.
 
 The digest payload carries `stateSource: "delivery.status-facts.v1"`, the declared identity of the one fact bundle `collectStatusFacts` composes. The brief and the board carry the same additive member with the same value, so the shared-source claim is a runtime equality across the three payloads rather than a code-reading claim. Only the repository-scoped digest carries it: the group-scoped `status --project <groupKey>` form returns its own group payload and does not. The `lanes-or-queue` section remains a declared `not-delivered` gap of this collector even though the lane engine has shipped; the board's lanes section reads the delivered lane/queue fold directly, and the digest is not wired to it.
 
@@ -375,7 +375,7 @@ The status contracts and domain import only the shared contracts and their own m
 - **Read-only by construction:** status calls no write or fence API, no tracker, pull-request, or CI write, no provider engine, and no quota endpoint. It cannot mutate an artifact or provider state.
 - **Credential centralization:** the only credential access is the credential port resolving the declared GitHub credential reference. Status code reads no ambient environment, adds no secret-read allowlist entry, and adds no credential-material path.
 - **Composition guard:** only a credential-reference GitHub instance is admitted; an anonymous or otherwise configured instance is refused before any GitHub read while the local PM context remains readable.
-- **No shell or spawn:** repository binding and HEAD facts come from bounded git metadata reads through the repository adapter. Status spawns no child process and executes no shell.
+- **No shell or spawn for repository facts:** repository binding and HEAD facts come from bounded git metadata reads through the repository adapter; status spawns no process for them and executes no shell. Its provider reads use the composed transport, which may be the GitHub CLI transport in production.
 - **Bounded addressing:** only the `origin` remote is read; only `github.com` is accepted; userinfo and credentials are discarded; non-GitHub hosts are unavailable, not attempted.
 - **Bounded parsing:** the local PM context uses the same bounded YAML 1.2 core parsing as existing file reads; parse failures are classified as evidence, never raw parser output.
 - **Bounded input and output:** source pages, per-section items, evidence entries, machine bytes, and human bytes are capped, and truncation is explicit.
@@ -389,7 +389,7 @@ The status contracts and domain import only the shared contracts and their own m
 | Section totality | Exactly nine sections in fixed order; one state from the five-value set per section; evidence, counts, items, findings, and truncation present on every section; zero missing and zero extra sections. |
 | Non-verdict guarantee | Failed, absent, unattempted, or unresolved reads never render as observed, clear, green, available, or zero; active parks are never available; no-run CI is never succeeded; the queue is never an observed empty queue. |
 | Bounds | Serialized `data` digest at most 65 536 bytes; human digest at most 32 lines and 6144 bytes; every cap enforced; every dropped or limit-truncated case marked. |
-| Read-only and determinism | Zero writes, fence acquisitions, state mutations, network writes, or child processes; identical injected inputs produce identical digest and human bytes. |
+| Read-only and determinism | Zero writes, fence acquisitions, state mutations, or network writes; provider reads ride the composed transport (CLI or native `fetch`) and add no spawn of their own beyond that edge; identical injected inputs produce identical digest and human bytes. |
 | Output contract | `--json` produces exactly one valid envelope; human mode produces exactly nine section lines plus the attention rollup and optional header; rendering performs zero extra reads. |
 | Error-table stability | Zero new rows or domain kinds; zero documented-table drift; the sync check stays green. |
 | Boundaries and branding | Zero new runtime-API locations or secret-read allowlist entries; zero product literals; structure, boundary, ambient, and literal gates stay green. |

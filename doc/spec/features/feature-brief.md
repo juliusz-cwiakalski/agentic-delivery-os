@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-BRIEF
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-16
+last_updated: 2026-11-18
 owners: ["engineering"]
 service: delivery-os
 summary: "The read-only brief command and its delivery.brief.v1 payload: one deterministic, decision-first, one-screen render projected from the same injected collector facts as the status digest; the additive stateSource identity shared with status and the board; ten closed render surfaces (eight digest surfaces plus two named placeholders) as its own literal contract; three decision-first anchor groups (ready-to-merge, blocker-questions, owner-gate-ages) with a real ranked blocker group mirroring the digest items; the closed two-entry placeholder catalog; the spend citation surface with its reconciliation disclosure or classified absence; the providers surface's open lane park fields projected with zero added reads; exit 0 on collector unavailability with no status.collector identity; digest vocabulary and bounds reused by reference; no LLM in the render path."
 links:
-  related_changes: ["GH-228", "GH-243", "GH-230", "GH-242", "GH-241", "GH-277", "GH-291", "GH-294", "GH-297"]
+  related_changes: ["GH-228", "GH-243", "GH-230", "GH-242", "GH-241", "GH-277", "GH-291", "GH-294", "GH-297", "GH-338"]
   contracts:
     - "packages/core/src/contracts/brief.ts"
 ---
@@ -41,7 +41,7 @@ The surrounding contracts are described in [Status Digest](feature-status-digest
 - Return exactly ten surfaces in every successful payload: the eight digest surfaces the brief projects and the two named placeholders.
 - Put anchored actions first: ready-to-merge, blocker questions, and owner-gate ages.
 - Never turn a failed, absent, unattempted, or unresolved read into an observed, clear, green, available, or zero claim.
-- Keep the command deterministic, bounded, brand-neutral, read-only, and free of LLM calls, network capability, and child processes.
+- Keep the command deterministic, bounded, brand-neutral, and read-only, with no LLM call and no repository or provider write; provider reads ride the composed transport, which may be the GitHub CLI transport in production.
 
 ## User Experience & Functionality
 
@@ -187,7 +187,7 @@ The brief adds no error-table row and no domain kind. Section and placeholder fa
 - **Read-only by construction:** the command calls no write or fence API, no tracker, pull-request, or CI write, no provider engine, and no quota endpoint.
 - **Credential centralization:** the only credential access is the credential port resolving the declared GitHub credential reference. The brief code reads no ambient environment and adds no secret-read allowlist entry.
 - **Composition guard:** only a GitHub `vcs` instance whose auth mechanism is `credential-reference` is admitted; an anonymous or otherwise configured instance is refused at composition before any GitHub read, while the local PM context remains readable. The per-section outcomes are the status digest's fixed guard outcomes.
-- **No shell or spawn:** repository binding and HEAD facts come from bounded git metadata reads through the repository adapter. The brief spawns no child process and executes no shell.
+- **No shell or spawn for repository facts:** repository binding and HEAD facts come from bounded git metadata reads through the repository adapter; the brief spawns no process for them and executes no shell. Its provider reads use the shared status runtime and therefore the composed transport, which may be the GitHub CLI transport in production.
 - **No model or network capability in the render path:** the contract, domain, and command modules import no model SDK, HTTP client, or network module; the mechanical assertion is a structure/boundary scan, and review re-asserts it on every change to the render surface.
 - **Bounded parsing:** the local PM context uses the same bounded YAML core parsing as the status digest; parse failures are classified as evidence, never raw parser output.
 - **Bounded input and output:** source pages and digest item caps are inherited; the brief enforces the status human line and byte bounds in its renderer and relies on the digest's caps for the machine bound.
@@ -202,7 +202,7 @@ The brief adds no error-table row and no domain kind. Section and placeholder fa
 | Non-verdict guarantee | A failed, absent, unattempted, or unresolved read never renders as observed, clear, green, available, or zero; an unknown age is never `0`; no SLA state is fabricated; ready-to-merge is never a verdict. |
 | Shared truth | Every digest-derived state, count, truncation flag, and reason equals the digest's value for the same injected facts; `stateSource` equals `status.data.stateSource` and `board.data.stateSource`; the only derived claims are owner-gate ages under the declared parse-and-floor rule and the closed catalog entries. |
 | Bounds | Human output at most 32 lines and 6144 bytes; serialized `data` at most 65 536 bytes; every drop or limit-truncated case marked. |
-| Read-only, determinism | Zero writes, fence acquisitions, state mutations, network writes, or child processes; identical injected inputs produce identical payload and human bytes. |
+| Read-only, determinism | Zero writes, fence acquisitions, state mutations, or network writes; provider reads ride the shared status runtime's composed transport; identical injected inputs produce identical payload and human bytes. |
 | Output contract | `--json` produces exactly one valid envelope with an exit in `{0,1,2}`; human mode produces one bounded screen; rendering performs zero extra reads. |
 | Error-table stability | Zero new rows, domain kinds, or configuration keys; the sync check stays green. |
 | Boundaries and branding | Zero new runtime-API locations or secret-read allowlist entries; zero product literals; structure, boundary, ambient, and literal gates stay green. |
