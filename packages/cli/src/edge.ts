@@ -6895,6 +6895,20 @@ export const createLanesCommandRuntime = (
  * declared evidence class. The runtime never invents an exit literal and never
  * composes a merge port.
  */
+/** One pre-session harness admission refusal (GH-335 F-1, F-2; NFR-1). */
+export type DispatchHarnessAdmissionRefusal = {
+  readonly kind: "harness" | "config" | "provider";
+  readonly code: string;
+  readonly summary?: string;
+  readonly field?: string;
+  readonly harness?: import("@delivery-os/core/contracts").CommandFailureHarnessDetail;
+};
+
+/** The pre-session harness admission outcome. */
+export type DispatchHarnessAdmissionOutcome =
+  | { readonly ok: true }
+  | { readonly ok: false; readonly error: DispatchHarnessAdmissionRefusal };
+
 export type DispatchComposition = {
   readonly store: DispatchPorts["store"];
   readonly stateRoot: string;
@@ -6932,19 +6946,7 @@ export type DispatchComposition = {
    * before any session-bearing child process. A refusal claims no lease, opens
    * no attempt record, and writes no telemetry.
    */
-  readonly harnessAdmission?: () => Promise<
-    | { readonly ok: true }
-    | {
-        readonly ok: false;
-        readonly error: {
-          readonly kind: "harness" | "config" | "provider";
-          readonly code: string;
-          readonly summary?: string;
-          readonly field?: string;
-          readonly harness?: import("@delivery-os/core/contracts").CommandFailureHarnessDetail;
-        };
-      }
-  >;
+  readonly harnessAdmission?: () => Promise<DispatchHarnessAdmissionOutcome>;
   /**
    * The harness facts the admission resolved, read by the composition's port
    * gate and disclosed on a pre-session refusal (TDR-0033). Absent on the

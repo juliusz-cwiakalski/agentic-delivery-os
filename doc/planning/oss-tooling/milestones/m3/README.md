@@ -71,6 +71,9 @@ delivered with the tooling as-is.
   profile; telemetry rows land with schema version and per-seat models;
   unsupported versions degrade with a typed refusal.
 - Depends on: M1-S11, M2-S14.
+- Delivered (GH-335): version window and probe grammar, declared integration
+  mode, per-spawn seat binding, and seat-attributed telemetry over the observed
+  store contract.
 
 ### M3-S2 Jira backlog adapter (MCP-first)
 - Goal: Jira work items drive the same lifecycle primitives.

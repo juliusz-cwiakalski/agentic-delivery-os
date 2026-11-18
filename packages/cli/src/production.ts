@@ -512,6 +512,12 @@ export type ProductionCompositionFacts = {
    */
   readonly harnessSpawnRunner?: HarnessSpawnRunner;
   /**
+   * The injected version probe (GH-335 F-1). Production builds it over the host
+   * runner; a composed test supplies a deterministic answer so composition is
+   * proven without a harness process.
+   */
+  readonly harnessVersionProbe?: HarnessVersionProbe;
+  /**
    * The injected streaming spawn starter. Production uses the host starter; tests
    * inject a recording starter so composition is proven without a harness process.
    */
@@ -2789,12 +2795,14 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           },
         };
       }
-      const probe = createHarnessVersionProbe({
-        runner: harnessSpawnRunner,
-        command: "opencode",
-        cwd,
-        environment: built.value,
-      });
+      const probe =
+        facts.harnessVersionProbe ??
+        createHarnessVersionProbe({
+          runner: harnessSpawnRunner,
+          command: "opencode",
+          cwd,
+          environment: built.value,
+        });
       const admitted = await createHarnessAdmission({
         kind: settings.kind,
         mode: settings.mode,

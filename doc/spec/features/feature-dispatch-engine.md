@@ -202,6 +202,9 @@ Every dispatch that reaches classification, including an attempt-stage failure, 
 | Evidence class | Exactly one of `pilot`, `controlled-proof`, `smoke`, `fixture`, attached at record creation from a declared composition or configuration input, never inferred from the outcome, immutable after append. |
 | Result | Handover state at run, engine outcome, result token. |
 | Provider profile | The nominated profile recorded at admission (`providerProfile`); additive field, absent on pre-change records where reads render a classified absence. |
+| Held session identities | The session identities the attempt held, one per spawn or resume (`sessionIds`); additive and optional, absent on a pre-change record and on an attempt that held none. A pre-session refusal still records no attempt at all. |
+| Recorded binding | The single-seat binding the composition resolved for the attempt's spawn (`binding`: the agent identity, the seat, and that seat's resolved model); additive and optional, absent on a pre-change record and on a role-less run, and the daemon lane records one only when it resolved one. |
+| Recorded harness facts | The normalized observed harness version (`harnessVersion`), the window verdict (`versionVerdict`), the selected integration mode (`mode`), and its origin (`modeOrigin`); additive and optional, recorded only when the run holds them, so a pre-change record stays readable and nothing is fabricated. |
 | Comparison | Class (`verify-change`, `tracker-truth`, `not-applicable`), token or null, outcome (`match`, `mismatch`, `not-applicable`), optional reason, and `urlResolved` for tracker facts. |
 | Classification | False-success flag, divergence reference when a comparison mismatches, tri-state corroboration per source (`pm-notes`, `tracker`, `ci`). |
 | Resume | Resume mode and prefill-cost acknowledgement when the attempt resumed a lane. |

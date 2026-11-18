@@ -38,6 +38,7 @@ const projectRootOf = (harness: ReturnType<typeof createMountHarness>): string =
 
 const queueList = async (stateDirectory: string, home: string, root: string, brand: never) => {
   const program = createProductionComposer({
+    harnessVersionProbe: async () => ({ status: "answered" as const, stdout: "opencode v2.3.2" }),
     environment: {
       HOME: home,
       PATH: "/usr/bin",

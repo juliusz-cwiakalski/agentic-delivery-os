@@ -253,6 +253,45 @@ carrying the marker is `config.value.invalid`. The configured-kind registry
 validates that exactly the two shipped kinds are registered and never silently
 defaults.
 
+### Version window, integration mode, and seat propagation
+
+The supported harness window is pinned data, not a configuration key: the rule is
+the current minor line at delivery time plus one previous minor, and its value at
+delivery is `2.3.x` plus `2.2.x` (the installed `opencode v2.3.2`); the same rule
+read `2.2.x` plus `2.1.x` at intake. The accepted probe output is a product token,
+an optional `v`, and a three-part semantic version, newline-terminated, normalized
+to the bare semantic version; empty, non-zero, timed-out, multi-line, or
+off-grammar output is an indeterminate version. An observed version outside the
+window refuses `harness.version.unsupported` and an indeterminable version refuses
+`harness.version.unknown`, both before a lease is claimed and before any
+session-bearing process starts, with exactly one bounded probe invocation per
+dispatch through the single production construction site in the composition.
+
+The integration mode is a declared value on the `harness.mode` key: omitted
+resolves the delivered default (`per-invocation-private-server`, the observed
+`--standalone` surface) with the `defaults` origin, a declared value resolves
+`configured`, and an unknown value is `config.value.invalid` naming the path. The
+managed background service and the running-server client are declared members that
+refuse `harness.mode.unavailable` naming the requested and the available mode;
+there is no runtime fallback and no ambient inference.
+
+Seat propagation is a per-spawn contract at the harness port for a caller-supplied
+agent identity (DEC-15). The spawn and resume inputs each carry two additive
+optional members — the caller's agent identity and the resolver's single-seat
+binding (the agent identity, the seat, and that seat's resolved model, plus the
+declared variable name for a variable-consuming harness) — and the composition is
+the resolver's only production caller. The opencode adapter expresses the binding
+as exactly one `--agent <agent identity>` and one `--model
+<provider>/<model>[#<variant>]` per invocation, never the seat name where the two
+differ, and adds no environment entry; a resume reuses its spawn's single binding
+and never adds a seat. An unrepresentable resolved model refuses
+`harness.profile.model-unrepresentable` before any seam, a named agent the profile
+assigns no seat refuses through the delivered `provider.profile.invalid` with its
+agent, profile, and declared seats in the bounded `error.summary`, and a present
+empty or whitespace-only identity is invalid input refused as
+`config.value.invalid`. A spawn whose caller supplies no agent binds nothing and is
+disclosed as an unresolved seat; the shipped generic `dispatch` supplies none.
+
 The shipped `harness.environment` default declares `PATH` and `HOME` as required
 entries, `TMPDIR` as an optional entry, and the composition-injected
 `DELIVERY_WORK_PATH` as a required entry. It declares no model variable: model
@@ -264,6 +303,33 @@ optional entry is omitted while a present one is forwarded. The marker is
 variable-only and never applies to a credential entry.
 
 ## 5. Telemetry extraction
+
+Capture reads the observed store contract (DM-10): the current `session_v2`/
+`session_message` generation, tolerating the legacy `session`/`message`
+generation. The store carries no work-item column, no separate harness-version
+column, and no per-message token/agent/model/cost column; the session row's own
+`version` is the stamped version, its timestamp pair is the duration source, and
+its token columns and cost are the session baseline. The seat and resolved model
+on a row come from the recording dispatch attempt's binding, never from the store
+and never re-derived from the current profile, and attach only to the group whose
+observed agent equals the binding's agent. An observed agent or model axis the
+store states nowhere lands with the declared `absentObservedAxes` marker, the
+delivered empty-string placeholder in the non-null field, and the same-axis
+`optional-field-absent` warning, superseding the delivered
+`invalid-session-identity` for that case; a group whose observed agent is unstated
+carries a null seat with `unresolved-seat`. A store-reported zero cost is recorded
+as reported, a missing cost source is `null` with `cost-missing`, tool counts are
+absent with `no-tool-source` where no populated source exists, and a held session
+with no observable usage fact is a failed-session entry. An unreadable store keeps
+`harness.telemetry.extraction-failed`; a readable store that yields zero rows for a
+held session is a capture failure.
+
+The capture scope is the union of the session identities every dispatch attempt
+recorded for the work item holds, plus each attempt's recorded binding for its own
+identities; an attempt that recorded no identity contributes nothing and is
+disclosed as one counted unattributed attempt, an empty union is the delivered
+`skipped-gap` with `session-attribution-unavailable` and no rows, and a truncated
+attempt-ledger read is disclosed rather than silently narrowing the union.
 
 Both extractors emit neutral records carrying the five token classes (`input`,
 `output`, `reasoning`, `cacheRead`, `cacheWrite`), call counts, bounded per-tool

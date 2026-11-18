@@ -17,6 +17,10 @@ Ticket references are added when the story tickets are created.
   profile; telemetry rows land with schema version and per-seat models;
   unsupported versions refuse with a typed error.
 - Depends on: M1-S11, M2-S14.
+- Delivered: PR (GH-335, branch `feat/GH-335/opencode-harness-telemetry`). The
+  version window, the declared integration mode, the per-spawn seat binding, and
+  position-attributed telemetry over the observed store contract land together;
+  the delivered window's value at delivery is `2.3.x` plus `2.2.x`.
 
 ### M3-S2 Jira backlog adapter (MCP-first)
 - Ticket: GH-336 (milestone M3)

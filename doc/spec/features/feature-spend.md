@@ -123,6 +123,12 @@ Cost is reported only in v2: `costTotals` aggregates the harness-reported per-re
 
 `breakdowns` carries one array per declared dimension — `ticket`, `repository`, `lane`, `role`, and `model` — whose entries are `{ value, calls, tokens, cost }`. Each array's `tokens` sum equals the corresponding total exactly, so the breakdown never disagrees with `tokensByClass`. A record with an unattributed dimension contributes a `value: null` row and the closed `unattributable-step` warning; it is never defaulted into another dimension. Entries order by tokens descending, then value ascending, with the null row last. `--breakdown` changes only which section the human digest leads with.
 
+The captured row now also carries the recording seat, the resolved model, and
+store-sourced durations. The `role` breakdown keeps reporting the harness-reported
+agent: the seat is a row-level field, not a new breakdown dimension, and per-step
+rows and the session baseline stay one totals basis rather than being summed into
+one figure. `spend.telemetry-absent` keeps its delivered work-item-scoped meaning.
+
 ### Phase timing summaries
 
 `phaseTiming` carries one entry per transitioned phase: `phase`, `start`, `end`, `durationMs`, `stalls`, and `restarts`. Values derive from the ordered `phase.transition` history; a phase window is start-inclusive and end-exclusive, and stall and restart intervals join the delivered economics records rather than being re-estimated. An open phase (no completing transition) reports `end: null` and `durationMs: null`. The fold never synthesizes a duration.

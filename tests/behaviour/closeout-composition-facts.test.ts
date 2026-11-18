@@ -520,10 +520,9 @@ describe("closeout production composition facts", () => {
       const data = dataOf(applied.envelope);
       const capture = data.telemetryCapture as Record<string, unknown> | undefined;
       expect(capture?.failed).toBe(1);
+      const captureWarnings = (capture?.warnings ?? []) as Record<string, unknown>[];
       expect(
-        (capture?.warnings as Record<string, unknown>[]).some(
-          (warning) => warning.field === "harness.telemetry.extraction-failed",
-        ),
+        captureWarnings.some((warning) => warning.field === "harness.telemetry.extraction-failed"),
       ).toBe(true);
       expect(
         ((data.residue ?? []) as Record<string, unknown>[]).some(

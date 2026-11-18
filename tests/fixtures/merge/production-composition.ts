@@ -225,6 +225,7 @@ export const createMergeProductionHarness = (
   };
   const composeProgram = () => {
     const composer = createProductionComposer({
+      harnessVersionProbe: async () => ({ status: "answered" as const, stdout: "opencode v2.3.2" }),
       environment: {
         HOME: host.home,
         PATH: "/synthetic/bin",

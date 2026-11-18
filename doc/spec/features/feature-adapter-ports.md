@@ -93,6 +93,20 @@ The public, semver-visible mutating `SessionAdminPort` is recorded in [ADR-0010]
 
 An operation absent from `supportedOperations` is unsupported. Declared gaps add the explicit reason for known limitations; they never turn an undeclared operation into a success. Parity beyond the flags is not representable. Carrier selection is typed against the adapter's declared set: `CarrierSelectionInput<Declared>` admits only `Declared[number]`, so an undeclared carrier literal or a widened `string[]` set is rejected at compile time. The closed carrier kinds are `invisible-comment-block`, `provider-custom-field`, and `compact-marker`.
 
+### Additive harness members (GH-335)
+
+`HarnessInstance` gains three additive optional members beside the delivered
+`observedVersion` and `versionWarning`, which keep their meaning: `versionVerdict`
+(the closed `inside` | `outside` | `indeterminate` window verdict, evaluated once
+per resolution), `mode` (the resolved integration mode), and `modeOrigin`
+(`defaults` | `configured`). The spawn and resume inputs each gain two additive
+optional members: the caller's agent identity (`agent`) and the resolver's
+single-seat binding (`binding`), both optional so every delivered call site keeps
+compiling; the agent member's absence is the role-less `no-agent` state, never an
+empty string. `HarnessEnvironmentBuilder` gains an additive optional per-spawn
+context carrying the declared record map: a record value wins for a declared name
+and an undeclared name changes nothing. The port family itself is unchanged.
+
 ### Additive v1 contract extensions
 
 The contract evolves additively within v1, and a decision record governs each adapter-contract change. Two closeout extensions are delivered under [TDR-0008](../../decisions/TDR-0008-additive-adapter-contract-extensions-closeout-v1.md):

@@ -38,6 +38,41 @@ Every stored step carries five attribution dimensions: `ticket`, `repository`, `
 
 An absent dimension is stored as `null` and the record carries the closed `unattributable-step` warning naming the field. A dimension is never defaulted, guessed, or borrowed from another session.
 
+## 2a. Captured harness rows: seat, resolved model, and durations
+
+The closeout-captured `delivery.harness.telemetry.v1` row gains four additive
+optional members under the unchanged schema identity, and no delivered field is
+renamed, removed, or duplicated. `seat` and `resolvedModel` are the recording
+dispatch attempt's recorded binding (a single seat); they are `null` with the
+`unresolved-seat` warning where the attempt bound none, where the group's observed
+agent differs from the binding's agent (which also carries the `agent-divergence`
+warning with both values kept), or where the group's observed agent is unstated.
+`durations` is either the store's own timestamp pair with its literal start, end,
+and elapsed milliseconds or an explicit `{status: "absent"}` with the
+`duration-absent` warning; it is never estimated and never derived from the
+capture timestamp. The delivered non-null `agent` and `model` ARE the
+harness-reported agent and the observed model, so no duplicate member carries
+either; a model the store observes differently from the binding's resolved model
+adds the `model-divergence` warning with both values kept.
+
+An observed agent or model axis the store states nowhere lands with exactly one
+additive `absentObservedAxes` member over the closed `agent`/`model` vocabulary:
+the row still lands (the mandatory set is the session identity plus one observable
+usage fact), the delivered non-null field holds the declared empty-string
+placeholder, the delivered `optional-field-absent` warning names the same axis, and
+`invalid-session-identity` is not emitted for that group. The field is never
+widened to nullable, and an unstated observed agent forces a null seat with
+`unresolved-seat`. The delivered `invalid-session-identity` keeps only its literal
+meaning: a genuinely unusable group identity.
+
+A store-reported zero cost is recorded as the reported zero (no `cost-missing`
+warning); a missing cost source is `null` with `cost-missing`; a non-numeric cost
+is `null` with `non-numeric-value`. No observed generation exposes a populated
+tool source, so tool counts are absent with the `no-tool-source` warning. A held
+session with no observable usage fact is a failed-session entry with
+`no-usage-fact`, and a held session the readable store does not hold is an absence
+with `session-not-in-store` rather than damage.
+
 ## 3. Ingest rules
 
 | Frame fact | Behaviour |
