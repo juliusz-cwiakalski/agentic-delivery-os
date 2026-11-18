@@ -156,6 +156,7 @@ import {
   BLOCKER_QUESTION_PAYLOAD_SCHEMA,
   type BrandIdentity,
   CLOSEOUT_INTEGRATION_BASE,
+  type ConfigErrorCode,
   type ConfigNodeOrigins,
   type ConfigPriorOutcome,
   type ConfigValue,
@@ -274,16 +275,46 @@ import { PROMPT_REQUIRED_COMMANDS } from "./help/prompt-required-commands.js";
 import type { CommandDefinition, CommandProgram } from "./index.js";
 
 /**
+ * The configuration-document codes the merge composition's configuration-read
+ * branch can forward (GH-293 F-6; DEC-18).
+ *
+ * The branch resolves the one declared configuration document before the
+ * transaction reads anything and forwards the acquisition's or the resolver's
+ * own classified code instead of resolving an empty map. The tuple is typed
+ * against the delivered configuration taxonomy, so the branch cannot forward a
+ * code the taxonomy does not declare, and the conformance suite pins every
+ * member of this tuple as a member of the emittable declaration.
+ *
+ * Two taxonomy codes are deliberately absent because this branch cannot produce
+ * them: the resolver is called with no environment map, so an unmapped
+ * environment variable is unreachable; and with no strict flag, so a strict
+ * warning is unreachable.
+ */
+const MERGE_COMPOSITION_CONFIGURATION_CODES = [
+  "config.file.malformed",
+  "config.value.invalid",
+  "config.key.unknown",
+  "config.reset.invalid",
+  "config.interpolation.rejected",
+  "config.secret.forbidden",
+  "config.path.forbidden",
+] as const satisfies readonly ConfigErrorCode[];
+
+/**
  * The production merge composition's declared emittable failure codes (GH-293
  * F-7, DM-6; TDR-0031 D9).
  *
  * Exhaustive by construction over this composition's refusal branches: every
- * member is a code the delivered error table already declares, one member per
- * branch, and the classification conformance suite ranges over this declaration
- * rather than a hand-picked list. The set is a declaration, never a row source:
- * it adds no row, kind, or exit.
+ * member is a code the delivered error table already declares, and the
+ * classification conformance suite ranges over this declaration rather than a
+ * hand-picked list. The configuration-read branch contributes its own forwarded
+ * codes, so a configuration document that cannot be read or that carries an
+ * invalid `merge` value is classified by its declared identity rather than
+ * silently resolving defaults. The set is a declaration, never a row source: it
+ * adds no row, kind, or exit.
  */
 export const MERGE_COMPOSITION_EMITTABLE_CODES = [
+  ...MERGE_COMPOSITION_CONFIGURATION_CODES,
   "config.credential.missing",
   "provider.auth.rejected",
   "provider.outage",
@@ -1529,15 +1560,14 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
      * An absent document keeps the delivered defaults; an unreadable or invalid
      * document forwards its own classified code rather than silently resolving
      * `{}`. The declared keys stay exactly `gate-freshness`, `gates`, and
-     * `deploy-expectations`.
+     * `deploy-expectations`, and the forwarded code is a member of the delivered
+     * configuration taxonomy by type.
      */
-    let mergeConfigurationCache:
+    type MergeConfigurationRead =
       | { readonly ok: true; readonly values: Readonly<Record<string, ConfigValue>> }
-      | { readonly ok: false; readonly code: string; readonly detail?: string }
-      | undefined;
-    const mergeConfiguration = ():
-      | { readonly ok: true; readonly values: Readonly<Record<string, ConfigValue>> }
-      | { readonly ok: false; readonly code: string; readonly detail?: string } => {
+      | { readonly ok: false; readonly code: ConfigErrorCode; readonly detail?: string };
+    let mergeConfigurationCache: MergeConfigurationRead | undefined;
+    const mergeConfiguration = (): MergeConfigurationRead => {
       if (mergeConfigurationCache !== undefined) return mergeConfigurationCache;
       const acquired = acquireProjectConfiguration(gitRootForConfig());
       if (!acquired.ok) {

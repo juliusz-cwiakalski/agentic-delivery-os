@@ -94,13 +94,16 @@ describe("TC-ENGINE-054 the emittable declaration is total and non-vacuous", () 
 
   test("every refusal site in the composition names a declared member", () => {
     const source = read(join(ROOT, "packages/cli/src/production.ts"), "utf8");
+    // The scan covers the whole merge composition, not one helper's block: a
+    // refusal that returns a literal, or an outcome that carries a literal
+    // `code`, is a refusal site wherever it sits.
     const start = source.indexOf("const mergeReadCodeOf");
-    const end = source.indexOf("const mergeRuntimeBase");
+    const end = source.indexOf("const closeout = createCloseoutComposition");
     expect(start).toBeGreaterThan(0);
     expect(end).toBeGreaterThan(start);
     const block = source.slice(start, end);
     const emitted = [
-      ...block.matchAll(/return "((?:config|provider|merge|state)\.[a-z0-9.-]+)"/gu),
+      ...block.matchAll(/(?:return|\bcode:)\s*"((?:config|provider|merge|state|input)\.[a-z0-9.-]+)"/gu),
     ].map((match) => match[1] as string);
     expect(emitted.length).toBeGreaterThan(0);
     for (const code of emitted) {
@@ -113,5 +116,33 @@ describe("TC-ENGINE-054 the emittable declaration is total and non-vacuous", () 
     expect(
       readFileSync(join(ROOT, "packages/core/src/domain/merge-transaction.ts"), "utf8"),
     ).toContain("ERROR_TABLE.find");
+  });
+
+  test("a forwarded configuration code is taxonomy-typed and carries a member", () => {
+    const source = read(join(ROOT, "packages/cli/src/production.ts"), "utf8");
+    // The configuration-read branch forwards the acquisition's or resolver's own
+    // code, so its literals are the only codes the composition emits without a
+    // `return`/`code:` site: they are declared in one tuple.
+    const start = source.indexOf("const MERGE_COMPOSITION_CONFIGURATION_CODES");
+    const end = source.indexOf("export const MERGE_COMPOSITION_EMITTABLE_CODES");
+    expect(start).toBeGreaterThan(0);
+    expect(end).toBeGreaterThan(start);
+    const forwarded = [
+      ...source.slice(start, end).matchAll(/"((?:config)\.[a-z0-9.-]+)"/gu),
+    ].map((match) => match[1] as string);
+    expect(forwarded.length).toBeGreaterThan(0);
+    for (const code of forwarded) {
+      expect(members, `forwarded configuration code ${code} is outside the declaration`).toContain(
+        code,
+      );
+      // Every forwarded code is a configuration row, never another domain's.
+      expect(emittedKindOf(code), code).toBe("config");
+    }
+    // The branch's own refusal cases are members, not a claim about them.
+    expect(forwarded).toContain("config.file.malformed");
+    expect(forwarded).toContain("config.value.invalid");
+    // The forwarded value is the delivered taxonomy's code, so a code the
+    // taxonomy does not declare cannot reach the declaration unchecked.
+    expect(source).toContain("code: ConfigErrorCode");
   });
 });

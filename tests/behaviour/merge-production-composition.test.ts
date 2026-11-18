@@ -420,3 +420,71 @@ describe("TC-ENGINE-053 read and state faults stay classified on every path", ()
     }
   });
 });
+
+describe("TC-ENGINE-054 the configuration-read branch is classified, never contained", () => {
+  test("an unreadable, malformed, or invalid configuration document is its declared refusal", async () => {
+    const guard = createNoNetworkGuard();
+    try {
+      // Three cells, three declared rows: the acquisition's own malformed/read
+      // refusal, the declared gate-set refusal, and the declared freshness
+      // refusal. Each one is the composition's configuration document, never a
+      // provider read and never the contained `fallback.internal`. The gate-set
+      // and freshness values pass the typed catalog (a string version and a
+      // finite number), so only their own declared refusals can produce the
+      // code — a valid freshness refuses nothing (TC-ENGINE-050).
+      const cells: readonly {
+        readonly label: string;
+        readonly configYaml: string;
+        readonly code: string;
+      }[] = [
+        {
+          label: "malformed",
+          configYaml: "merge: [unterminated\n",
+          code: "config.file.malformed",
+        },
+        {
+          label: "invalid-gates",
+          configYaml:
+            "merge:\n  gates:\n    schemaVersion: delivery.merge.gates.v0\n    entries: []\n",
+          code: "config.value.invalid",
+        },
+        {
+          label: "invalid-freshness",
+          configYaml: "merge:\n  gate-freshness: -5\n",
+          code: "config.value.invalid",
+        },
+      ];
+      for (const cell of cells) {
+        const harness = createMergeProductionHarness({
+          label: `gh293-prod-config-${cell.label}`,
+          reply: healthyReply,
+          configYaml: cell.configYaml,
+        });
+        try {
+          const run = await harness.run(["merge", MERGE_PROD_REF, "--dry-run", "--json"]);
+          expect(run.exitCode, cell.label).toBe(exitOf(cell.code));
+          expect(exitOf(cell.code), cell.label).toBe(1);
+          const error = envelopeOf(run).error ?? {};
+          expect(error.code, cell.label).toBe(cell.code);
+          expect(String(error.summary), cell.label).not.toContain("fallback.internal");
+          // The refusal precedes every provider read and every append.
+          expect(harness.transportCalls, cell.label).toEqual([]);
+          const verifications = readMergeGateVerifications(harness.store, MERGE_PROD_REF);
+          expect(verifications.ok && verifications.records, cell.label).toEqual([]);
+          const transactions = readMergeTransactions(harness.store, MERGE_PROD_REF);
+          expect(transactions.ok && transactions.records, cell.label).toEqual([]);
+          // The forwarded identity is a declared member, not an incidental code.
+          expect(
+            (MERGE_COMPOSITION_EMITTABLE_CODES as readonly string[]).includes(cell.code),
+            cell.label,
+          ).toBe(true);
+        } finally {
+          harness.dispose();
+        }
+      }
+      expect(guard.calls).toEqual([]);
+    } finally {
+      guard.restore();
+    }
+  });
+});
