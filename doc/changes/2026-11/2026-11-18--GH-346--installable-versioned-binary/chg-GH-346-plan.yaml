@@ -1857,19 +1857,31 @@ phases:
   #   and spec v1.6 / test plan v1.6). The fixture is a readable `current` record whose
   #   `current` names the destination artifact A while its `previous` names X, an
   #   artifact that is NOT the slot's occupant P: PRESENT, and wrong. The arm asserts
-  #   the run PROCEEDS at exit 0 — the two renames happen in reverse order, the
-  #   destination then holds P's bytes and reports P's identity, the slot then holds
-  #   A's bytes, both identities are reported, the record is rewritten through the
-  #   declared atomic write with its `previous` carrying X VERBATIM (never a value
-  #   re-derived from the slot's contents), and `install status` reports the claim as
-  #   the record states it, naming the slot identity from the record rather than from
-  #   a re-read of the slot's occupant. Its STRUCTURAL assertions are what make the
-  #   limit observable: the declared `install.record.v1` field set carries NO slot
-  #   digest and no slot-derived identity field, so no code path can compare `previous`
-  #   with the slot's occupant, and the lifecycle composition contains no such
-  #   comparison. THE DISCRIMINATOR IS STATED SO THE ARM CANNOT PASS VACUOUSLY: a
-  #   refusal here, a `previous` normalized to P, or an added slot-digest field fails
-  #   this arm by name. The arm exists to prove the limit is DECLARED, never that a
+  #   the run PROCEEDS at exit 0 — the two renames happen in reverse order, so the
+  #   destination then holds the SLOT's bytes (P's) and the slot holds A's — and it
+  #   asserts the record the run WRITES with F-8's field roles: the CLAIMED name X
+  #   VERBATIM in the new `current` (never a value re-derived from the slot, never
+  #   normalized to its occupant) and the DISPLACED DESTINATION A in `previous`. That
+  #   inversion is the same one TC-INST-024 step 4 asserts for the ordinary case, and
+  #   it is what makes the record a claim rather than a fiction: `previous` = A is the
+  #   slot's new content, whose identity the run knows by construction.
+  #   WHAT THE RUN MAY REPORT IS ONLY WHAT IT CAN KNOW, AND THE SLOT'S OCCUPANT IS NOT
+  #   ON THAT LIST. The destination now holds P's bytes, but that artifact's identity
+  #   is UNKNOWABLE — an injected identity is a compile-time constant no process can
+  #   read out of a file, and DM-2 stores no slot digest — so the run reports exactly
+  #   the two recorded identities, X (the claim) and A (the displaced destination), and
+  #   NEVER P. It claims no slot read, because it performed none. `install status`
+  #   reports `current` per the record (X), which is precisely the claim the operator
+  #   can check; the destination's actual bytes may disagree with it, and that
+  #   disagreement IS the limit rather than a defect in the report. Its STRUCTURAL
+  #   boundary is the arm's GUARD, not an aside: the declared `install.record.v1` field
+  #   set carries NO slot digest and no slot-derived identity field, so no code path can
+  #   compare `previous` with the slot's occupant, and the lifecycle composition
+  #   contains no such comparison — which is what makes a slot-derived report
+  #   unwritable rather than merely unwritten. THE DISCRIMINATOR IS STATED SO THE ARM
+  #   CANNOT PASS VACUOUSLY: a refusal here, a claim normalized to P in `current`, X
+  #   written into `previous`, or an added slot-digest field fails this arm by name. The
+  #   arm exists to prove the limit is DECLARED, never that a
   #   wrong name is detected — nothing in the record lets an implementation police the
   #   SLOT leg (DM-2 has no slot digest, and a file's injected identity cannot be read
   #   out of it), which is why a refusal reading was withdrawn rather than implemented.
@@ -1944,7 +1956,8 @@ phases:
   # `recordState` report whose pair still holds — asserted as reported data, with no
   # rollback run (TC-INST-044 steps 7-8). Arm (g)'s direction is the SETTLED reading
   # ruled by TDR-0040 §4 and spec v1.6: a missing name refuses, a wrong one is
-  # admitted by declared limit.
+  # admitted by declared limit — and its REPORT is the record's own claim (X in
+  # `current`), never a slot read.
   # The daemon guard's INSTALL arm shipped in phase 2 (step 1's fourth gate); THIS
   # phase adds the ROLLBACK arm on the same guard — `install.daemon.running` unless
   # `--stop-daemon`, whose stop runs through the delivered stop path BEFORE the
@@ -1995,10 +2008,13 @@ phases:
   # (f2)) asserts the ordered daemon log is EMPTY, so "no daemon action" is a
   # comparison, not a claim. The case's arm (g) is the wrong-name cell and is the
   # record's DECLARED LIMIT, not an AC refusal: a `previous` that IS present and names
-  # a non-occupant PROCEEDS at exit 0 — the swap in reverse order, the claimed name
-  # recorded verbatim, `install status` reporting the claim — with the structural
-  # assertion that the declared record field set carries no slot digest and the
-  # composition holds no slot-digest comparison (TDR-0040 §4's declared limit; spec
+  # a non-occupant PROCEEDS at exit 0 — the swap in reverse order, the record's new
+  # `current` carrying the claim X verbatim with `previous` the displaced destination
+  # A, the run reporting exactly X and A (never the slot's occupant, never a slot
+  # read), and `install status` reporting `current` per the record — with the
+  # STRUCTURAL GUARD that the declared record field set carries no slot digest, no
+  # slot-derived identity field, and the composition holds no `previous`-versus-slot
+  # comparison (TDR-0040 §4's declared limit; spec
   # v1.6 F-8/§8.1/§12/DEC-13/AC-F8-2; OQ-TP-9 / TR-11 RESOLVED). AC-F8-2's four
   # refusing causes are MISSING-NAME conditions and nothing else),
   # AC-F9-1 (TC-INST-030..037: 7/7 injected steps leave a runnable artifact at a
@@ -2022,8 +2038,9 @@ phases:
   # and zero slot swaps with both content digests unchanged and no staging file,
   # every reconciliation arm ends `current` with the destination and slot untouched,
   # all four rollback record causes refuse and write nothing, arm (g) proceeds at exit
-  # 0 with the claimed `previous` name recorded verbatim and no slot-digest comparison
-  # anywhere, and two rollbacks
+  # 0 with its new `current` carrying the claim X verbatim beside `previous` = A, the
+  # run reporting X and A and never the slot's occupant, and no slot-digest or
+  # slot-derived comparison anywhere, and two rollbacks
   # restore the original):
   #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/install-replace.test.ts tests/behaviour/install-crash-matrix.test.ts
