@@ -613,10 +613,13 @@
 #   authority: TDR-0040 §4 (amended) and spec v1.6 / test plan v1.6 rule that a
 #   MISSING `previous` name refuses and a WRONG one is ADMITTED BY DECLARED LIMIT,
 #   because DM-2 stores no slot digest and the slot leg is therefore never knowable.
-#   TC-INST-042 arm (g) carries the PROCEED — exit 0, the swap performed, the claimed
-#   `previous` name recorded verbatim, `install status` reporting the claim — plus the
-#   STRUCTURAL assertion that the declared record field set carries no slot digest and
-#   the composition holds no slot-digest comparison. It is a settled reading, not a
+#   TC-INST-042 arm (g) carries the PROCEED — exit 0, the swap performed, the record's
+#   new `current` carrying the claim X verbatim with `previous` the displaced
+#   destination A, the run reporting X and A (never the slot's occupant, never a slot
+#   read), `install status` reporting `current` per the record — plus the
+#   STRUCTURAL guard that the declared record field set carries no slot digest, no
+#   slot-derived identity field and the composition holds no `previous`-versus-slot
+#   comparison. It is a settled reading, not a
 #   phase-3 decision; the four missing-name causes, the other 83 cases, the AC ids and
 #   the eleven documented rows are unchanged by it. See phase 3 and (j) above.
 #   OQ-TP-1 / FAULT-TP-1 (the question that blocked AC-F9-1 until it was decided) — HOW THE SEVEN-STEP CRASH MATRIX
@@ -1051,13 +1054,16 @@
 #       slot digest, so a MISSING name refuses and a WRONG one is ADMITTED BY DECLARED
 #       LIMIT (TDR-0040 §4's declared limit; spec v1.6 F-8/§8.1/§12/DEC-13/AC-F8-2).
 #       TC-INST-042 therefore carries the causes in step 3, (d), (e) and (f1)/(f2) and
-#       carries arm (g) as a PROCEED: exit 0, the swap performed, the claimed
-#       `previous` name recorded VERBATIM, `install status` reporting the claim, and a
-#       STRUCTURAL assertion that the declared record field set carries no slot digest
-#       and the composition holds no slot-digest comparison. TR-11 survives as the live
-#       risk that arm guards: a hardened refusal, a normalized `previous`, or an added
-#       slot-digest field fails it by name. No AC id, case id, row, total or allowlist
-#       moves with the resolution.
+#       carries arm (g) as a PROCEED: exit 0, the swap performed, the record's new
+#       `current` carrying the claim X VERBATIM with `previous` the displaced destination
+#       A, the run reporting X and A and never the slot's occupant (the destination's
+#       identity is unknowable once it holds the slot's bytes), `install status`
+#       reporting `current` per the record, and the STRUCTURAL guard that the declared
+#       record field set carries no slot digest, no slot-derived identity field and the
+#       composition holds no `previous`-versus-slot comparison. TR-11 survives as the
+#       live risk that arm guards: a hardened refusal, a claim normalized in `current`,
+#       X written into `previous`, or an added slot-digest field fails it by name. No AC
+#       id, case id, row, total or allowlist moves with the resolution.
 
 schemaVersion: delivery.plan.v1
 workItemRef: GH-346
