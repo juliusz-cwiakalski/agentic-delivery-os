@@ -111,7 +111,10 @@ describe("F-2 the production-composed port resolves a caller-supplied agent", ()
     expect(args).not.toContain("--model");
   });
 
-  test("an unresolvable profile refuses rather than binding silently", async () => {
+  test("an unresolvable profile refuses through the DEC-18 identity with a fixed summary", async () => {
+    // DEC-18: a pre-resolution input failure on the delivered `config.value.invalid`
+    // identity, naming the agent-identity field, with a fixed bounded summary and
+    // no interpolated caller value; no session starts.
     const { port, invocations } = buildMountedPort(undefined);
     const spawned = await port.spawn({
       workItemRef: "GH-335",
@@ -122,7 +125,80 @@ describe("F-2 the production-composed port resolves a caller-supplied agent", ()
     expect(spawned.ok).toBe(false);
     if (spawned.ok) return;
     expect(spawned.error.code).toBe("config.value.invalid");
+    expect(spawned.error.kind).toBe("config");
+    expect(spawned.error.field).toBe("agent");
+    expect(spawned.error.summary).toBe(
+      "no provider profile could be resolved for the supplied agent",
+    );
+    expect(spawned.error.summary).not.toContain("coder");
     expect(invocations).toHaveLength(0);
+  });
+
+  test("the invalid-identity check precedes the unresolvable-context check (DEC-18)", async () => {
+    const { port } = buildMountedPort(undefined);
+    const spawned = await port.spawn({
+      workItemRef: "GH-335",
+      prompt: "synthetic",
+      descriptor: SPAWN_ENV_DESCRIPTOR,
+      agent: "   ",
+    });
+    expect(spawned.ok).toBe(false);
+    if (spawned.ok) return;
+    // The invalid-identity refusal (DEC-17) wins over the missing context.
+    expect(spawned.error.summary).toContain("empty or whitespace-only");
+  });
+
+  test("a caller-supplied value in a refusal summary is single-line and bounded (F-9)", async () => {
+    const { port } = buildMountedPort({
+      profile: MULTI_SEAT_UNASSIGNED_PROFILE,
+      selection: MULTI_SEAT_UNASSIGNED_SELECTION,
+      profileName: "synthetic-profile",
+    });
+    const hostile = `writer\nsecond line ${"x".repeat(120)}`;
+    const spawned = await port.spawn({
+      workItemRef: "GH-335",
+      prompt: "synthetic",
+      descriptor: SPAWN_ENV_DESCRIPTOR,
+      agent: hostile,
+    });
+    expect(spawned.ok).toBe(false);
+    if (spawned.ok) return;
+    const summary = spawned.error.summary ?? "";
+    expect(summary).not.toContain("\n");
+    expect(summary.length).toBeLessThanOrEqual(256);
+    expect(summary).toContain("…");
+  });
+
+  test("the composition's context resolver selects the declared profile from real values (F-7)", async () => {
+    const { resolveProfileContextFrom } = await import("../../packages/cli/src/production");
+    const values = {
+      provider: {
+        credentials: { zai: { sourceKey: { style: "literal", name: "ZAI_API_KEY" } } },
+        entries: { "zai-coding-plan": { class: "subscription" } },
+        profiles: {
+          tiers: { regular: {} },
+          profiles: {
+            mixed: {
+              tier: "regular",
+              providers: ["zai-coding-plan"],
+              seats: {
+                pm: { model: "claude-opus", pacingClass: "judgment", capability: "text-only" },
+              },
+              agentOverrides: { coder: "pm" },
+            },
+          },
+          preferenceChain: { base: "mixed", fallbacks: [] },
+        },
+      },
+    };
+    const context = resolveProfileContextFrom(values as never, 0);
+    expect(context).toBeDefined();
+    expect(context?.profileName).toBe("mixed");
+    expect(Object.keys(context?.profile.seats ?? {})).toEqual(["pm"]);
+    expect(context?.selection.agentOverrides.coder).toBe("pm");
+    expect(context?.selection.seatModels.pm).toBeDefined();
+    // A configuration that declares no profile resolves no context.
+    expect(resolveProfileContextFrom({} as never, 0)).toBeUndefined();
   });
 
   test("an agent the selected multi-seat profile assigns no seat refuses provider.profile.invalid", async () => {

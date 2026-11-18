@@ -197,6 +197,7 @@ import {
   type HandoverState,
   type HarnessEnvironmentBuilder,
   type HarnessEnvironmentEntry,
+  type HarnessFailure,
   type HarnessExecutionEnvironmentDescriptor,
   type HarnessKind,
   type HarnessMode,
@@ -1083,6 +1084,23 @@ export const productionHarnessRegistrations: readonly HarnessAdapterRegistration
   { kind: "claude-code", create: createClaudeInstance },
 ];
 
+/** The declared bound for one caller-supplied value inside a refusal summary. */
+export const PROFILE_SUMMARY_MAX_CHARS = 64 as const;
+
+/** Single-line and bound one caller-supplied value for a refusal summary (F-9). */
+export const boundedSummaryValue = (value: string): string => {
+  // Control characters (including newlines and tabs) become spaces, then runs
+  // of whitespace collapse: the value can never open a second summary line.
+  const single = [...value]
+    .map((character) => ((character.codePointAt(0) ?? 0) < 0x20 ? " " : character))
+    .join("")
+    .replace(/\s+/gu, " ")
+    .trim();
+  return single.length <= PROFILE_SUMMARY_MAX_CHARS
+    ? single
+    : `${single.slice(0, PROFILE_SUMMARY_MAX_CHARS - 1)}…`;
+};
+
 /**
  * Resolve one spawn's single-seat binding, or the pre-session refusal it implies
  * (GH-335 F-3, DEC-16, TDR-0032 A-2).
@@ -1105,7 +1123,7 @@ export const resolveHarnessAdmissionBinding = (request: {
   ) => HarnessBindingResolution;
 }):
   | { readonly ok: true; readonly binding: HarnessSeatBinding }
-  | { readonly ok: false; readonly error: ProductionHarnessRefusal } => {
+  | { readonly ok: false; readonly error: HarnessFailure } => {
   // DEC-17 / AC-F3-1: a present empty or whitespace-only identity is invalid
   // input naming the agent-identity field, never a profile refusal.
   const violation = harnessAgentIdentityViolation(request.agent);
@@ -1123,15 +1141,15 @@ export const resolveHarnessAdmissionBinding = (request: {
   const resolve = request.resolve ?? resolveBinding;
   const resolution = resolve(request.profile, request.selection, request.agent);
   if (resolution.outcome === "unassigned") {
-    const profileSeats = request.profile.seats;
-    const seats = Object.keys(profileSeats).sort();
+    const seats = Object.keys(request.profile.seats).sort();
+    const profile = boundedSummaryValue(request.profileName ?? "selected");
     return {
       ok: false,
       error: {
         kind: "provider",
         code: "provider.profile.invalid",
         field: "agent",
-        summary: `agent ${request.agent} has no seat in profile ${request.profileName ?? "selected"} (declared seats: ${seats.length === 0 ? "none" : seats.join(", ")})`,
+        summary: `agent ${boundedSummaryValue(request.agent)} has no seat in profile ${profile} (declared seats: ${seats.length === 0 ? "none" : seats.join(", ")})`,
       },
     };
   }
@@ -1159,6 +1177,40 @@ export const resolveHarnessAdmissionBinding = (request: {
     };
   }
   return { ok: true, binding: resolution.binding };
+};
+
+/**
+ * Resolve the dispatch's selected profile context from already-resolved
+ * configuration values (GH-335 F-2, review F-7).
+ *
+ * The single home of the configuration → selected-profile → context mapping: the
+ * composition calls it with the resolved values and a test drives it directly, so
+ * the mount's context half has an oracle instead of only a source-text assertion.
+ */
+export const resolveProfileContextFrom = (
+  values: Readonly<Record<string, ConfigValue>>,
+  nowMs: number,
+): HarnessProfileContext | undefined => {
+  const providerParsed = parseAndValidateProviderConfiguration(values);
+  if (!providerParsed.ok) return undefined;
+  const profileParsed = parseAndValidateProfileConfiguration(values, providerParsed.config);
+  if (!profileParsed.ok) return undefined;
+  const selection = selectProfile({
+    profiles: profileParsed.config,
+    probe: createResolvedProviderProbe(providerParsed.config.entries, nowMs),
+    nowMs,
+  });
+  if (!selection.ok) return undefined;
+  const profile = profileParsed.config.profiles[selection.decision.profile];
+  if (profile === undefined) return undefined;
+  return {
+    profile: { seats: profile.seats, agentOverrides: profile.agentOverrides },
+    selection: {
+      agentOverrides: selection.decision.agentOverrides,
+      seatModels: selection.decision.seatModels,
+    },
+    profileName: selection.decision.profile,
+  };
 };
 
 /**
@@ -1223,45 +1275,30 @@ export const createHarnessProfilePort = (request: {
               ...(request.profileName === undefined ? {} : { profileName: request.profileName }),
             });
       if (context === undefined) {
+        // DEC-18: an unresolvable profile context is a pre-resolution input
+        // failure on the delivered `config.value.invalid` identity, naming the
+        // agent-identity field with a FIXED bounded summary (no interpolated
+        // caller value) — never a fourth resolution outcome.
         return {
           ok: false,
           error: {
             kind: "config",
             code: "config.value.invalid",
             field: "agent",
-            summary: "the composition resolved no profile for a caller-supplied agent",
+            summary: "no provider profile could be resolved for the supplied agent",
           },
         };
       }
-      const resolution = (request.resolve ?? resolveBinding)(
-        context.profile,
-        context.selection,
-        callInput.agent,
-      );
-      if (resolution.outcome === "unassigned") {
-        const seats = Object.keys(context.profile.seats).sort();
-        return {
-          ok: false,
-          error: {
-            kind: "provider",
-            code: "provider.profile.invalid",
-            field: "agent",
-            summary: `agent ${callInput.agent} has no seat in profile ${context.profileName ?? "selected"} (declared seats: ${seats.length === 0 ? "none" : seats.join(", ")})`,
-          },
-        };
-      }
-      if (resolution.outcome !== "binding") {
-        return {
-          ok: false,
-          error: {
-            kind: "config",
-            code: "config.value.invalid",
-            field: "agent",
-            summary: `agent ${callInput.agent} resolved no seat before the port call`,
-          },
-        };
-      }
-      return call({ ...callInput, binding: resolution.binding });
+      // One mapping: the wrapper delegates to the pure helper above.
+      const resolved = resolveHarnessAdmissionBinding({
+        agent: callInput.agent,
+        profile: context.profile,
+        selection: context.selection,
+        ...(context.profileName === undefined ? {} : { profileName: context.profileName }),
+        ...(request.resolve === undefined ? {} : { resolve: request.resolve }),
+      });
+      if (!resolved.ok) return { ok: false, error: resolved.error };
+      return call({ ...callInput, binding: resolved.binding });
     };
   };
   const { port } = request;
@@ -2781,34 +2818,20 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
      * an unresolvable context means a caller-supplied agent is refused, never
      * silently bound.
      */
+    // Resolved once per composition instance and reused for every spawn of the
+    // run, so the context the port resolves cannot drift from the one admission
+    // read (review F-8; the composition holds one dispatch per instance).
+    let dispatchProfileContext: HarnessProfileContext | undefined;
+    let profileContextResolved = false;
     const resolveProfileContext = (): HarnessProfileContext | undefined => {
+      if (profileContextResolved) return dispatchProfileContext;
+      profileContextResolved = true;
       const acquired = acquireProjectConfiguration(gitRootForConfig());
       if (!acquired.ok) return undefined;
       const resolved = resolveConfig({ sources: acquired.sources });
       if (!resolved.ok) return undefined;
-      const providerParsed = parseAndValidateProviderConfiguration(resolved.value.values);
-      if (!providerParsed.ok) return undefined;
-      const profileParsed = parseAndValidateProfileConfiguration(
-        resolved.value.values,
-        providerParsed.config,
-      );
-      if (!profileParsed.ok) return undefined;
-      const selection = selectProfile({
-        profiles: profileParsed.config,
-        probe: createResolvedProviderProbe(providerParsed.config.entries, nowMs()),
-        nowMs: nowMs(),
-      });
-      if (!selection.ok) return undefined;
-      const profile = profileParsed.config.profiles[selection.decision.profile];
-      if (profile === undefined) return undefined;
-      return {
-        profile: { seats: profile.seats, agentOverrides: profile.agentOverrides },
-        selection: {
-          agentOverrides: selection.decision.agentOverrides,
-          seatModels: selection.decision.seatModels,
-        },
-        profileName: selection.decision.profile,
-      };
+      dispatchProfileContext = resolveProfileContextFrom(resolved.value.values, nowMs());
+      return dispatchProfileContext;
     };
 
     const nominationPredicate = (): ReturnType<typeof nominateProviderProfile> => {

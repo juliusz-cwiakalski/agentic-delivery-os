@@ -9,6 +9,8 @@
  * exist.
  */
 import { describe, expect, test } from "bun:test";
+import { Database } from "bun:sqlite";
+import { readFileSync } from "node:fs";
 import {
   HARNESS_TELEMETRY_SCHEMA_ID,
   HARNESS_UNRESOLVED_SEAT_REASON,
@@ -168,5 +170,57 @@ describe("F-6/F-7/F-8 review remediation", () => {
     expect(root?.warnings.some((warning) => warning.reason === "duration-absent")).toBe(true);
     // The whole capture is not failed by one bad pair.
     expect(captured.value.records.length).toBeGreaterThan(0);
+  });
+});
+
+/**
+ * GH-335 review remediation iteration 2 (F-5) — the stored-version stamp is
+ * normalized through the contracts tier's single home and bounded by
+ * `HARNESS_VERSION_MAX_CHARS`; an over-bound or unparseable stamp is the declared
+ * absence path, never a fabricated or clipped version.
+ */
+describe("F-5 the stored-version stamp is one bounded normalizer", () => {
+  const withVersion = (version: string) => {
+    const store = buildOpencodeStore();
+    const database = new Database(store.path);
+    try {
+      database.exec(`UPDATE session_v2 SET version = '${version}' WHERE id = 'ses_root'`);
+    } finally {
+      database.close();
+    }
+    const captured = extractOpencode({ store, heldSessionIds: [ROOT_SESSION] });
+    expect(captured.ok).toBe(true);
+    if (!captured.ok) return undefined;
+    return captured.value.records.find((row) => row.sessionId === ROOT_SESSION);
+  };
+
+  test("an over-bound stamp is an explicit absence, never a truncated identity", () => {
+    const row = withVersion(`2.2.5-${"x".repeat(60)}`);
+    expect(row?.harnessVersion).toBeNull();
+    expect(
+      row?.warnings.some(
+        (warning) =>
+          warning.reason === "optional-field-absent" && warning.field === "harnessVersion",
+      ),
+    ).toBe(true);
+  });
+
+  test("an unparseable stamp is an explicit absence", () => {
+    const row = withVersion("build-unknown");
+    expect(row?.harnessVersion).toBeNull();
+  });
+
+  test("the contracts tier is the single home of the stored-stamp grammar", async () => {
+    const contracts = await import("../../packages/core/src/contracts/index");
+    const adapters = await import("../../packages/adapters/src/harness/telemetry-opencode");
+    const adapterSource = readFileSync(
+      `${process.cwd()}/packages/adapters/src/harness/telemetry-opencode.ts`,
+      "utf8",
+    );
+    expect(contracts.normalizeStoredHarnessVersion("v2.2.5")).toBe("2.2.5");
+    expect(contracts.normalizeStoredHarnessVersion("2.2.5")).toBe("2.2.5");
+    expect(contracts.normalizeStoredHarnessVersion("x".repeat(40))).toBeNull();
+    expect(adapterSource).not.toContain("/^v?(\\\\d+)");
+    expect(typeof adapters.createOpencodeTelemetryExtractor).toBe("function");
   });
 });

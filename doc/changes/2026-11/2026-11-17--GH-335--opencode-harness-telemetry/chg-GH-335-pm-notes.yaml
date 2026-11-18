@@ -486,19 +486,41 @@ notes:
       offending. doc-distribution and changesets-group green."
     type: info
     date: "2026-11-18"
-  - text: "Live observation recorded per DoD clause 4: a harness-port spawn with
-      caller-supplied agent `coder` / `deepseek/deepseek-flash` on opencode
-      v2.3.2; the landed row carries version 2.3.2, agent/model agreement, an
-      attached seat, sourced durations (5428 ms), a reported non-zero cost and
-      no tool source."
+  - text: "Live observation recorded per DoD clause 4, re-recorded in Phase 9
+      through the delivered port path (the first record was a raw CLI invocation
+      and was withdrawn as evidence): a harness-port spawn with caller-supplied
+      agent `coder` / `deepseek/deepseek-flash` on opencode v2.3.2, with the
+      resolved binding recorded on the attempt; the landed row carries version
+      2.3.2, agent/model agreement, seat `coder-seat`, sourced durations
+      (4460 ms), a reported non-zero cost and a no-tool-source warning."
     type: info
     date: "2026-11-18"
-  - text: "Declared gaps carried to review: the plan's declared
-      `tests/fixtures/harness/scenarios/` folder was not added (the extension
-      executor supplies facts inline with an equivalent data path);
-      `OpencodeBindingSeams` is not re-exported from the adapters harness barrel
-      (tests import it from the module); `doc/00-index.md` was conditional on a
-      new feature page and none was created."
+  - text: "Declared gaps, corrected after Phase 9 remediation and the review's
+      F-11: the plan's `tests/fixtures/harness/scenarios/` folder does exist —
+      only an additional file under it was not needed, because the extension
+      executor supplies its facts inline with an equivalent data path;
+      `OpencodeBindingSeams` is now re-exported from the adapters harness barrel
+      (F-9 closed, so the fixture's barrel import resolves for real); and
+      `doc/00-index.md` WAS updated in cbf3b236 — an earlier note in this file
+      claiming it was untouched was wrong."
+    type: info
+    date: "2026-11-18"
+  - text: "Review iteration 2: FAIL on plan compliance only (spec compliance PASS;
+      all three iteration-1 blockers verified genuinely closed, including the
+      re-recorded live observation checked numerically against the store). Remaining:
+      an undeclared no-profile-context refusal, a re-authored version grammar,
+      two stale system-spec statements, and an unrecorded Phase-9 gate result.
+      Phase 10 appended. Verdict artifacts: review/review-iter-2.md and
+      review-iter-2.yaml."
+    type: info
+    date: "2026-11-18"
+  - text: "Phase 9 gate result as it actually ran (the finding was that no result
+      was recorded): the declared gate suites ran 83 pass / 0 fail;
+      `pnpm typecheck` green; `pnpm check` on the remediated tree reported 10565
+      pass / 4 skip / 2 fail, where both failures are load-sensitive subprocess
+      tests (TC-WIRE-002's 5 s spawn of check:privacy-literals and TC-BIN-084's
+      preloaded run) and both pass in isolation (14 pass / 16.6 s and 5 pass /
+      50.2 s respectively). The branch-range commit gate passed over 40 commits."
     type: info
     date: "2026-11-18"
   - text: "PR-review carry-over from the independent decision review: TDR-0032

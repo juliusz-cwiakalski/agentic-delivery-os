@@ -210,7 +210,12 @@ Every dispatch that reaches classification, including an attempt-stage failure, 
 | Resume | Resume mode and prefill-cost acknowledgement when the attempt resumed a lane. |
 | Bounds | At most 16 bounded evidence references; no prompt, transcript, diff, credential, or raw provider payload. |
 
-The shipped generic dispatch composition supplies neither a caller agent identity nor a resolved binding, so its spawns are role-less and record no binding; the input members and the profile wrapper are the harness-port contract for a caller that names an agent, and a role-less run is never evidence of profile propagation.
+The composition mounts the profile wrapper on the opencode port, so a
+caller-supplied agent identity is resolved by the pure resolver and supplied as the
+invocation's one `--agent`/`--model` pair; a role-less call passes through
+unchanged. The shipped generic dispatch supplies no caller agent identity (DEC-15),
+so its spawns are role-less, record no binding, and are disclosed as an unresolved
+seat; a role-less run is never evidence of profile propagation.
 
 `token` is null if and only if the comparison class is `not-applicable`, and the comparison outcome is `not-applicable` if and only if the class is. A comparison divergence is appended when the outcome is `mismatch`; the delivered-evidence case below is the one additional, explicitly shaped divergence. Verify-family attempts compare against the verify-change ledger outcome; tracker-family attempts compare against the tracker fact; dispatch-session tokens and dispatch-derived failures carry a not-applicable comparison. A success claim contradicted by a readable artifact, tracker, or CI fact is recorded as a false-success incident with bounded evidence; a source whose read failed leaves the claim uncorroborated without creating an incident.
 

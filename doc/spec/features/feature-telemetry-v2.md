@@ -19,7 +19,7 @@ links:
 
 # Feature: Harness Telemetry v2
 
-> **Role of this Document:** Source of truth for the delivered harness telemetry v2 capture, attribution, and storage contract (M2-S14). It describes the ingest path, the attribution join, the baseline capture, the storage families, and the reading bases. The read side that consumes these records is specified in [Spend Read Side](feature-spend.md); the delivered closeout capture path is specified in [Harness Adapters](feature-harness-adapters.md) and is unchanged.
+> **Role of this Document:** Source of truth for the delivered harness telemetry v2 capture, attribution, and storage contract (M2-S14). It describes the ingest path, the attribution join, the baseline capture, the storage families, and the reading bases. The read side that consumes these records is specified in [Spend Read Side](feature-spend.md); the delivered closeout capture path is specified in [Harness Adapters](feature-harness-adapters.md).
 
 ## 1. Overview
 
@@ -74,6 +74,18 @@ source, so tool counts are absent with the `no-tool-source` warning. A held
 session with no observable usage fact is a failed-session entry with
 `no-usage-fact`, and a held session the readable store does not hold is an absence
 with `session-not-in-store` rather than damage.
+
+A row's `harnessVersion` is the session record's own `version` stamp normalized to
+the bare semantic version under the declared 32-character bound; a stamp that is
+absent, off-grammar, or over the bound lands as `null` with `optional-field-absent`
+naming `harnessVersion`, never fabricated or clipped into shape. When the recording
+attempt cited an observed version, a row whose normalized version differs carries
+the `version-drift` warning naming `harnessVersion`. On the current `session_message`
+generation the opencode group projection reads the assistant usage rows together
+with the observed `agent-switched` and `model-switched` transition rows in `seq`
+order and applies each switch as the running baseline, so a session that changes
+agent or model mid-run keeps one group per observed agent/model pair; the bounded
+per-session read counts rows, not usage rows.
 
 ## 3. Ingest rules
 
@@ -145,7 +157,7 @@ The metrics report is the second declared consumer: its `dispatch` block reads t
 - [Spend Read Side](feature-spend.md) — the fold, breakdowns, timing summaries, window-scoped zero-spend evidence, and reconciliation disclosure over these records.
 - [Metrics Report and Burn-Rate Alarms](feature-metrics.md) — the per-dispatch block and the windowed burn-rate evaluation over these records.
 - [Provider Peak Pausing](feature-peak-pausing.md) — the peak-pause consumer of the window-scoped evidence.
-- [Harness Adapters](feature-harness-adapters.md) — the delivered port surface, the streaming drain, and the unchanged closeout capture.
+- [Harness Adapters](feature-harness-adapters.md) — the delivered port surface, the streaming drain, and the closeout capture path.
 - [Session Lifecycle Economics](feature-session-lifecycle-economics.md) — the run and session identity the attribution joins.
 - [State Layer](feature-state-layer.md) — the record kind, fencing, verification, and classified damage identities.
 - [Status Digest](feature-status-digest.md) — section 8, fed by the same fold.

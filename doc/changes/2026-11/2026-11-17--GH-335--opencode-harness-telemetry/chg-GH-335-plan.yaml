@@ -783,7 +783,7 @@ schemaVersion: delivery.plan.v1
 workItemRef: GH-335
 tier:
   name: full
-  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9]
+  phases: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
   escalationTriggers:
     - "The human-gated live observation shows the harness does not report the resolved seat model on the honoured surface, or a resolved seat model cannot be expressed on it: delivery STOPS, the propagation decision reopens with the mode and adapter-contract records, and a human adjudicates before delivery resumes (spec §18, AC-F3-1, AC-F5-6, RSK-1)"
     - "A second authored copy of the version-window, version-verdict, mode-origin, binding, resolution-outcome, probe-grammar, seat-field, duration-field, observed-axis-absence, or warning-reason vocabulary would exist beside the Phase-2 contract modules, or the harness-reported agent or observed model is persisted twice — a member beside the delivered `agent`/`model` instead of those fields (GAP-5, TDR-0032 A-3, readiness finding 2)"
@@ -2691,3 +2691,102 @@ phases:
       mergeRequestUrl: "pull request for feat/GH-335/opencode-harness-telemetry targeting main-tools"
       pipelineId: "CI pipeline for the GH-335 delivery branch"
       trackerTransition: "in-review"
+
+  # ---------------------------------------------------------------------------
+  # Phase 10 — Code Review Remediation (Iteration 2). Appended by the reviewer
+  #   after review/review-iter-2.md returned FAIL. Earlier phases are unchanged.
+  #
+  # Goal: close the iteration-2 compliance findings. The three iteration-1
+  #   blockers (F-1..F-3) are already closed and all 27 ACs pass; this phase is
+  #   documentation, evidence, and one declared decision. No behavioural AC
+  #   remediation is required.
+  #
+  #  10.1 F-1/F-2 — system spec reconciliation (@doc-syncer).
+  #      `doc/spec/features/feature-harness-adapters.md`: the shipped generic
+  #      `dispatch` now DOES mount `createHarnessProfilePort` on the opencode port
+  #      (a role-less passthrough); the current sentence "mounts no profile
+  #      wrapper" is false, and `resolveHarnessAdmissionBinding` is not a
+  #      production caller. Restate both. `doc/spec/features/feature-closeout.md`:
+  #      add `CloseoutSessionFacts.observedVersion`,
+  #      `CloseoutTelemetryRuntime.extract.pinnedVersion`, and
+  #      `CloseoutTelemetryDisclosure.absences`/`unattributedAttempts`/
+  #      `attemptTruncation`. `doc/spec/features/feature-telemetry-v2.md`: state
+  #      the normalized stored-version stamp/drift and the
+  #      `agent-switched`/`model-switched` transitions.
+  #
+  #  10.2 F-3/F-6/F-10/F-14 — plan evidence and accepted deviations (@pm).
+  #      Add the standard "Delivery evidence, plan phase 9: commit 435c74f0;
+  #      gate ..." note with the post-remediation `pnpm check` result (10 565
+  #      pass / 4 skip / 2 load-only subprocess failures that pass in isolation;
+  #      the failing pair varies between runs — TC-WIRE-002/TC-BIN-084 in one,
+  #      forbidden-literals/daemon-bounds in another),
+  #      the 40-commit range-gate PASS, and the isolation evidence for
+  #      `TC-WIRE-002` and `TC-BIN-084`; record the four files changed outside
+  #      Phase 9's `scope.files` as an accepted deviation (they are declared in
+  #      phases 2/4/5/7); replace the stale "5 428 ms" live-observation duration
+  #      with the re-recorded run; commit the pm-notes correction with the review
+  #      artifacts.
+  #
+  #  10.3 F-4 — the undeclared refusal condition (@spec-writer with @coder).
+  #      Decide and record the wrapper's "the composition resolved no profile for
+  #      a caller-supplied agent" path: either declare it in section 8.2/section 10
+  #      (and DEC-17) with its identity, or map it to a delivered profile identity
+  #      (`provider.profile.absent`/`provider.profile.invalid`) instead of
+  #      `config.value.invalid` on a valid agent. Update the mount test to the
+  #      chosen contract.
+  #
+  #  10.4 F-5 — one bounded version normalizer (@coder).
+  #      Move the bare-version normalization into the contracts tier as the
+  #      single home (bounded by `HARNESS_VERSION_MAX_CHARS`) and import it in
+  #      `telemetry-opencode.ts`; or record the plan-9.7 deviation with its
+  #      reason. Do not leave a second authored version grammar beside the
+  #      Phase-2 contract.
+  #
+  #  10.5 Optional (F-7..F-9, F-11..F-13): add a composition-seam oracle for
+  #      `resolveProfileContext`; delegate the wrapper mapping to
+  #      `resolveHarnessAdmissionBinding` and resolve from the nominated
+  #      profile; bound/single-line the refusal summary; type the edge absence
+  #      map and factor the duplicate projection; clarify the live-observation
+  #      token-source note; note the `messageSql` bound basis.
+  #
+  # Gate:
+  #   pnpm typecheck
+  #   bun test tests/behaviour/harness-profile-composition-mount.test.ts
+  #   bun test tests/behaviour/harness-profile-unrepresentable.test.ts
+  #   bun test tests/behaviour/harness-telemetry-shape.test.ts
+  #   bun test tests/behaviour/harness-telemetry-drift.test.ts
+  #   bun test tests/behaviour/harness-closeout-capture.test.ts
+  #   bun test tests/checks/doc-conformance.test.ts
+  #   jaiship plan validate GH-335
+  #   jaiship lint plan GH-335
+  #   TMPDIR="$PWD/tmp/tmpdir" pnpm check
+  #   ./scripts/lint-commit-range.sh --base main-tools
+  #
+  # Exit: the system spec matches the delivered seam and disclosure shapes; the
+  #   Phase 9 gate evidence is recorded; the no-context refusal condition and the
+  #   version normalizer have one declared home; all 27 ACs remain green; review
+  #   iteration 3 verdicts PASS.
+  # ---------------------------------------------------------------------------
+  - id: 10
+    title: "Code review remediation iteration 2: reconcile the system spec with the delivered resolution seam and disclosure shapes, record the Phase 9 gate evidence and accepted deviations, and declare the no-context refusal and the single version normalizer"
+    kind: delivery
+    summary: "chore(harness): close the iteration-2 review compliance findings"
+    scope:
+      files:
+        - doc/spec/features/feature-harness-adapters.md
+        - doc/spec/features/feature-closeout.md
+        - doc/spec/features/feature-telemetry-v2.md
+        - doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/chg-GH-335-pm-notes.yaml
+        - doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/chg-GH-335-spec.md
+        - packages/core/src/contracts/harness.ts
+        - packages/adapters/src/harness/telemetry-opencode.ts
+        - packages/cli/src/production.ts
+        - tests/behaviour/harness-profile-composition-mount.test.ts
+        - tests/behaviour/harness-telemetry-shape.test.ts
+        # The review artifacts this phase remediates are the phase's own inputs
+        # and evidence; they are declared as concrete files so the commit
+        # primitive stages them (a `folders` entry alone was not staged).
+        - doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/review/review-iter-1.md
+        - doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/review/review-iter-1.yaml
+        - doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/review/review-iter-2.md
+        - doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/review/review-iter-2.yaml

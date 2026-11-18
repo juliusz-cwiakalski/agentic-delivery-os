@@ -1279,6 +1279,7 @@
       "HARNESS_MODE_SURFACES",
       "HARNESS_OPERATIONS",
       "HARNESS_OUTCOMES",
+      "HARNESS_STORED_VERSION_PATTERN",
       "HARNESS_SUPPORTED_VERSION_WINDOW",
       "HARNESS_VERSION_MAX_CHARS",
       "HARNESS_VERSION_PROBE_PATTERN",
@@ -1338,7 +1339,8 @@
       "HarnessVersionProbe",
       "HarnessVersionProbeOutcome",
       "HarnessVersionVerdict",
-      "HarnessVersionWarning"
+      "HarnessVersionWarning",
+      "normalizeStoredHarnessVersion"
     ],
     "index.ts": [
       "ACTION_AGING_BASIS",
@@ -2627,6 +2629,7 @@
       "HARNESS_OBSERVED_AXES",
       "HARNESS_OPERATIONS",
       "HARNESS_OUTCOMES",
+      "HARNESS_STORED_VERSION_PATTERN",
       "HARNESS_SUPPORTED_VERSION_WINDOW",
       "HARNESS_TELEMETRY_CAPTURE_KEY_PREFIX",
       "HARNESS_TELEMETRY_CAPTURE_SCHEMA_ID",
@@ -4182,6 +4185,7 @@
       "dispatchHandoverRecordKey",
       "isAuditRecordKind",
       "leaseClassForPhaseKind",
+      "normalizeStoredHarnessVersion",
       "outboxEffectRecordKey",
       "planArtifactPath",
       "priorIdentityNoticeToken",

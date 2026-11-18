@@ -274,9 +274,12 @@ Sources: [core entry](../../packages/core/src/index.ts), [CLI edge](../../packag
   runner, the deny-by-default execution-environment descriptor, and read-only
   telemetry extraction consumed by non-gating closeout capture. Harness
   resolution evaluates one pinned supported-version window and one declared
-  integration mode before the lease, and a caller-supplied agent on the spawn or
-  resume input resolves to exactly one seat expressed as one `--agent`/`--model`
-  pair; the shipped generic `dispatch` supplies no agent and binds nothing. The
+  integration mode before the lease, and the dispatch composition mounts the
+  per-spawn profile wrapper on the opencode port: a caller-supplied agent on the
+  spawn or resume input is resolved by the pure resolver against the selected
+  profile and supplies exactly one seat expressed as one `--agent`/`--model` pair,
+  while a role-less call passes through unchanged. The shipped generic `dispatch`
+  supplies no agent and therefore binds nothing and discloses `unresolved-seat`. The
   opencode adapter acquires its session handle from the first identified line of
   the `opencode run --format json` stream, keeps draining to process close, and
   resolves `collect` there, so a long lifecycle is never completion-gated and

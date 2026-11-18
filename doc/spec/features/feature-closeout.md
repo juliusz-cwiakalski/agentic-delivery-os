@@ -396,11 +396,19 @@ one harness-neutral capture shape of one record per captured session group;
 port. Extraction is scoped by the union of the session identities the work item's
 recorded dispatch attempts hold, plus each attempt's recorded binding for the seat
 claim: the store is never queried by a work-item column, and an attempt that
-recorded no identity contributes no session. The applied payload carries an
-optional `telemetryCapture` disclosure with captured, degraded, and failed counts,
-closed warning reasons (a group truncation surfaces as a `truncated` warning
-carrying the omitted-group and cap counts), and the session truncation mark when
-one applies.
+recorded no identity contributes no session. The session facts also carry the
+harness version a recorded attempt observed (`observedVersion`),
+which capture passes to the extractor as its pinned version, so a session row that
+states a different version carries the `version-drift` warning. The applied payload
+carries an optional `telemetryCapture` disclosure with captured, degraded, and
+failed counts, closed warning reasons (a group truncation surfaces as a `truncated`
+warning carrying the omitted-group and cap counts), the session truncation mark
+when one applies, the held sessions the readable store does not hold as counted
+`absences` by closed reason, the recorded attempts that held no identity as
+`unattributedAttempts`, and the bounded attempt-ledger read's counted
+`attemptTruncation`. The production edge writes the same three capture-derived
+facts onto the run-scoped capture-outcome record as well as the payload disclosure,
+so an all-absent capture stays visible after the run.
 
 Capture is non-gating. An extraction or append failure changes no step outcome,
 summary, or command verdict; the failure is disclosed in the counts and warning
@@ -606,11 +614,11 @@ The plan's step sequence is the declared `CLOSEOUT_STEP_IDS` order, and each ste
 - **`CloseoutGitRuntime`** — checkout facts, branch list/read, foreign-worktree and cleanliness checks, ref resolution, checkout restore, branch deletion whose optional `expectedHead` is re-checked immediately before deletion, optional `listWorktrees`, optional `currentWorktreePath`, optional `isWorktreeClean`, optional `readMergedDiff`, and optional `removeWorktree`.
 - **`CloseoutStateRuntime`** — fence acquisition/release, append, and verified history read over the real `StateStorePort` ledger.
 - **`CloseoutCapsuleFacts` / `CloseoutExpectedCapsuleEvent` / `CloseoutPromotionRuntime`** — the read-only capsule pre-flight facts, the expected events derived from durable state records, and the injected candidate/memory/write/preflight promotion runtime.
-- **`CloseoutDiffRead` / `CloseoutDiffSweepResult` / `CloseoutThreadAuthorFact` / `CloseoutWorktreeFacts` / `CloseoutRetroFacts` / `CloseoutSessionFacts`** — the bounded inputs for the sweep, thread policy, worktree predicate, retro coverage, and compaction checkpoint. `CloseoutSessionFacts` carries the union's session identities, each held identity's recorded binding, the counted unattributed attempts, and the counted attempt-ledger truncation.
+- **`CloseoutDiffRead` / `CloseoutDiffSweepResult` / `CloseoutThreadAuthorFact` / `CloseoutWorktreeFacts` / `CloseoutRetroFacts` / `CloseoutSessionFacts`** — the bounded inputs for the sweep, thread policy, worktree predicate, retro coverage, and compaction checkpoint. `CloseoutSessionFacts` carries the union's session identities, each held identity's recorded binding, the harness version a recorded attempt observed (`observedVersion`), the counted unattributed attempts, and the counted attempt-ledger truncation.
 - **`createCloseoutComposition(options)`** — builds the production composition from a raw provider source (`github`, `jira`, `gitlab`, or `declared`) or an injected provider runtime, an existing or constructible `GitBranchSeam`, a `StateStorePort`, an optional capsule runtime and memory root, resolved `HarnessSettings`, and injected retro facts. Its `planFacts` performs the read orchestration once, derives the worktree facts and bounded merged-diff read, derives session-attribution facts from the bounded dispatch attempt ledger, and reads retro coverage from the delivered registry; it exposes them through `sessionsFor`/`diffReadFor`/`retroFor` and constructs the telemetry capability from the harness settings unless `telemetry` overrides it. The engine then plans and applies over the bridge runtimes.
 - **`createCloseoutStateRuntime(store)`** — bridges the fenced store to `appendCloseoutOutcome` and `readCloseoutHistory`.
-- **`CloseoutTelemetryRuntime`** — the non-gating telemetry capability. The composition builds it from the harness settings; an injected runtime overrides it in tests. `extract({ workItemRef, runId, heldSessionIds, bindings?, unattributedAttempts?, attemptTruncation? })` returns a `HarnessResult<HarnessTelemetryCapture>`; `append(capture)` returns a state result carrying the appended and skipped counts.
-- **`CloseoutTelemetryDisclosure`** — the bounded applied-payload disclosure under `telemetryCapture`: captured, degraded, and failed counts, closed warning reasons, and an optional session truncation mark.
+- **`CloseoutTelemetryRuntime`** — the non-gating telemetry capability. The composition builds it from the harness settings; an injected runtime overrides it in tests. `extract({ workItemRef, runId, heldSessionIds, bindings?, unattributedAttempts?, attemptTruncation?, pinnedVersion? })` returns a `HarnessResult<HarnessTelemetryCapture>`, where `pinnedVersion` is a recorded attempt's observed harness version used for the drift comparison; `append(capture)` returns a state result carrying the appended and skipped counts.
+- **`CloseoutTelemetryDisclosure`** — the bounded applied-payload disclosure under `telemetryCapture`: captured, degraded, and failed counts, closed warning reasons, an optional session truncation mark, and, when the capture produced them, the counted `absences` by closed reason, the counted `unattributedAttempts`, and the counted `attemptTruncation`.
 - **`createCloseoutCommandRuntime(composition)`** — composes the pure plan and apply orchestrator over injected plan facts and runtimes.
 
 ## 5. Non-Functional Requirements

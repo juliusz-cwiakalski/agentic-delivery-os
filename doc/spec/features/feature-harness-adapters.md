@@ -283,20 +283,27 @@ agent identity (DEC-15). The spawn and resume inputs each carry two additive
 optional members — the caller's agent identity and the resolver's single-seat
 binding (the agent identity, the seat, and that seat's resolved model, plus the
 declared variable name for a variable-consuming harness). The pure resolver
-(`resolveBinding`) has its production callers in the CLI production tier, where
-the `createHarnessProfilePort` wrapper and the `resolveHarnessAdmissionBinding`
-helper call it; the shipped generic `dispatch` composes neither member and mounts
-no profile wrapper, so its spawns bind nothing. The opencode adapter expresses a
-supplied binding as exactly one `--agent <agent identity>` and one `--model
-<provider>/<model>[#<variant>]` per invocation, never the seat name where the two
-differ, and adds no environment entry; a resume reuses its spawn's single binding
-and never adds a seat. An unrepresentable resolved model refuses
+(`resolveBinding`) is called from the CLI production tier: the dispatch
+composition mounts the `createHarnessProfilePort` wrapper on the opencode port;
+for each caller-supplied agent identity the wrapper resolves the single-seat
+binding through `resolveHarnessAdmissionBinding` over the selected profile context
+the composition resolves from configuration, and supplies the result on the same
+call. A role-less call is a byte-identical passthrough: the wrapper invokes the
+mounted port with the unchanged input, so no resolution, no binding, and no
+refusal occurs. The shipped generic `dispatch` supplies no agent identity (DEC-15),
+so every shipped spawn is role-less and binds nothing. The opencode adapter
+expresses a supplied binding as exactly one `--agent <agent identity>` and one
+`--model <provider>/<model>[#<variant>]` per invocation, never the seat name where
+the two differ, and adds no environment entry; a resume reuses its spawn's single
+binding and never adds a seat. An unrepresentable resolved model refuses
 `harness.profile.model-unrepresentable` before any seam, a named agent the profile
 assigns no seat refuses through the delivered `provider.profile.invalid` with its
-agent, profile, and declared seats in the bounded `error.summary`, and a present
-empty or whitespace-only identity is invalid input refused as
-`config.value.invalid`. A spawn whose caller supplies no agent binds nothing and is
-disclosed as an unresolved seat.
+agent, profile, and declared seats in the bounded `error.summary`, a caller-supplied
+identity for which the composition resolves no profile context refuses as
+`config.value.invalid` naming the agent-identity field, and a present empty or
+whitespace-only identity is invalid input refused as `config.value.invalid`. A
+spawn whose caller supplies no agent binds nothing and is disclosed as an
+unresolved seat.
 
 The shipped `harness.environment` default declares `PATH` and `HOME` as required
 entries, `TMPDIR` as an optional entry, and the composition-injected
@@ -395,8 +402,10 @@ configured database or the Claude Code reader over the configured session
 directory. After the terminal steps, apply extracts, appends one
 `harness.telemetry` record per captured session group plus a run-scoped capture
 outcome, and discloses
-captured/degraded/failed counts and warning reasons in the bounded output; the
-captured count is the number of extracted session-group records. Appends are
+captured/degraded/failed counts, the capture-derived absence counts by closed
+reason, the counted unattributed attempts, the counted attempt truncation, and
+warning reasons in the bounded output; the captured count is the number of
+extracted session-group records. Appends are
 fenced and verified; session-group capture is idempotent by (work item, run,
 session, agent, model) and the capture outcome by (work item, run), so re-runs
 append nothing already captured. A failed capture writes no zero-valued record

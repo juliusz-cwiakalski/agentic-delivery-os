@@ -507,6 +507,37 @@ export const HARNESS_VERSION_WINDOW_RULE =
 export const HARNESS_VERSION_MAX_CHARS = 32 as const;
 
 /**
+ * The stored-stamp grammar: the bare semantic version a session record's own
+ * `version` column carries, with an optional `v` prefix (GH-335 DM-10, F-7).
+ *
+ * This is the single authored home of the stored-stamp grammar; the probe-output
+ * grammar above is the single home for probe lines. They are different inputs and
+ * neither is a copy of the other.
+ */
+export const HARNESS_STORED_VERSION_PATTERN = /^v?([0-9]+)\.([0-9]+)\.([0-9]+)$/;
+
+/**
+ * Normalize one stored harness version stamp (GH-335 F-7, review F-5).
+ *
+ * Returns the bare semantic version, or `null` when the value is not a stored
+ * stamp or exceeds `HARNESS_VERSION_MAX_CHARS`. `null` is the caller's declared
+ * absence path — a version is never fabricated, truncated, or clipped into
+ * shape.
+ */
+export const normalizeStoredHarnessVersion = (raw: string): string | null => {
+  const text = raw.trim();
+  if (text.length === 0 || text.length > HARNESS_VERSION_MAX_CHARS) return null;
+  const match = HARNESS_STORED_VERSION_PATTERN.exec(text);
+  if (match === null) return null;
+  const major = match[1];
+  const minor = match[2];
+  const patch = match[3];
+  if (major === undefined || minor === undefined || patch === undefined) return null;
+  const normalized = `${major}.${minor}.${patch}`;
+  return normalized.length > HARNESS_VERSION_MAX_CHARS ? null : normalized;
+};
+
+/**
  * The accepted probe-output grammar (GH-335 F-1, DEC-11, AC-F1-5).
  *
  * A product token, an optional `v`, and a three-part semantic version, matched

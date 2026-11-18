@@ -18,6 +18,7 @@ import {
   HARNESS_MAX_SESSIONS,
   HARNESS_OBSERVED_ABSENCE_PLACEHOLDER,
   HARNESS_TELEMETRY_SCHEMA_ID,
+  normalizeStoredHarnessVersion,
   type HarnessAgentCount,
   type HarnessCaptureAbsence,
   type HarnessModelCount,
@@ -258,7 +259,8 @@ const SESSION_COLUMNS =
  * Per-message usage rows: the current generation reads the assistant usage rows
  * AND the observed `agent-switched` / `model-switched` transition rows in `seq`
  * order (spec §8.3, plan 5.1); the legacy generation has no type column and is
- * read in timestamp order.
+ * read in timestamp order. The `LIMIT` bounds ROWS, not usage rows: a
+ * switch-heavy session consumes part of the same bound (review F-13).
  */
 const messageSql = (generation: StoreGeneration): string =>
   generation === "current"
@@ -306,25 +308,6 @@ const durationsOf = (session: SessionFacts): HarnessTelemetryDurations => {
     end: endIso,
     elapsedMs,
   };
-};
-
-/**
- * Normalize one stored session version (GH-335 F-7, AC-F5-1).
- *
- * The observed session row carries a bare semantic version (`2.2.5`); a `v`
- * prefix or a product-token line is normalized too. Anything unparseable is
- * `null` with the declared absence warning — never a raw, unnormalized stamp.
- */
-const normalizeStoredVersion = (raw: string): string | null => {
-  // The observed session column carries a bare semantic version (DM-10); a `v`
-  // prefix is normalized away and anything else is not this column's shape, so
-  // it is an explicit absence rather than a guessed identity. The probe-line
-  // grammar lives in the contracts/domain tier and is not duplicated here.
-  const bare = /^v?(\d+)\.(\d+)\.(\d+)$/.exec(raw.trim());
-  if (bare === null) return null;
-  const [major, minor, patch] = [bare[1], bare[2], bare[3]];
-  if (major === undefined || minor === undefined || patch === undefined) return null;
-  return `${major}.${minor}.${patch}`;
 };
 
 type Group = {
@@ -493,7 +476,9 @@ export const createOpencodeTelemetryExtractor = (
               warnings.push({ reason: "agent-divergence", field: "agent" });
             }
             const harnessVersion =
-              entry.session.version === null ? null : normalizeStoredVersion(entry.session.version);
+              entry.session.version === null
+                ? null
+                : normalizeStoredHarnessVersion(entry.session.version);
             if (harnessVersion === null) {
               warnings.push({ reason: "optional-field-absent", field: "harnessVersion" });
             } else if (
