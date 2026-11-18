@@ -6,6 +6,7 @@
  * this module as the registrations and coverage gates are delivered.
  */
 import { describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import {
   existsSync,
   mkdirSync,
@@ -716,5 +717,44 @@ describe("TC-CAP-002 capsule conformance registry coverage", () => {
     expect(CAPSULE_CONFORMANCE_REGISTRY.map((entry) => entry.kind).sort()).toEqual(
       [...CAPSULE_EVENT_KINDS].sort(),
     );
+  });
+});
+
+describe("TC-TAX-001 tracker taxonomy module and export pin", () => {
+  test("the taxonomy module is exported through the root with its closed vocabularies", async () => {
+    const exported = await import("@delivery-os/testkit");
+    expect(exported.TRACKER_ERROR_CLASS_IDS).toEqual([
+      "tracker.capability.unsupported",
+      "tracker.auth.rejected",
+      "tracker.transport.failed",
+      "tracker.payload.invalid",
+    ]);
+    expect(exported.TRACKER_TRAP_FAMILIES).toEqual([
+      "auth-shape",
+      "transport-failure",
+      "rate-limit",
+      "payload-shape",
+      "workflow-state-mismatch",
+      "pagination-truncation",
+    ]);
+    expect(exported.TRACKER_ERROR_TAXONOMY.map((entry) => entry.id)).toEqual([
+      ...exported.TRACKER_ERROR_CLASS_IDS,
+    ]);
+    expect(typeof exported.classifyTrackerOutcome).toBe("function");
+  });
+
+  test("the frozen trap-name baseline and its digest are the pre-append delivered state", () => {
+    const baselinePath = join(ROOT, "tests/fixtures/pins/trap-names.json");
+    const bytes = readFileSync(baselinePath);
+    const baseline = JSON.parse(bytes.toString("utf8")) as Record<string, string[]>;
+    expect(Object.keys(baseline).sort()).toEqual(["github", "gitlab", "jira"]);
+    expect(baseline.github).toHaveLength(37);
+    expect(baseline.gitlab).toHaveLength(3);
+    expect(baseline.jira).toHaveLength(7);
+    expect(baseline.github.at(-1)).toBe("GITHUB-THREAD-DISCUSSION-CAPS");
+    expect(baseline.gitlab.at(-1)).toBe("GL-MERGE-STATUS-MULTIVALUED");
+    expect(baseline.jira.at(-1)).toBe("JIRA-CLOSEOUT-LABEL-PRESERVE");
+    const digest = readFileSync(join(ROOT, "tests/fixtures/pins/trap-names.sha256"), "utf8").trim();
+    expect(digest).toBe(createHash("sha256").update(bytes).digest("hex"));
   });
 });

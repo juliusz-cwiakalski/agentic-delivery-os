@@ -2305,6 +2305,15 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   ],
   "testkit/src/conformance/mock-tenant.ts": ["createMockTenantTransport", "decodeMockTenant"],
   "testkit/src/conformance/runner.ts": ["runConformance"],
+  "testkit/src/conformance/tracker-error-taxonomy.ts": [
+    "classifyTrackerFailure",
+    "classifyTrackerOutcome",
+    "ownsHttpStatus",
+    "TRACKER_ERROR_CLASS_IDS",
+    "TRACKER_ERROR_TAXONOMY",
+    "TRACKER_FAMILY_OUTCOMES",
+    "TRACKER_TRAP_FAMILIES",
+  ],
   "testkit/src/conformance/coverage.ts": [
     "LIVE_READ_OPERATIONS",
     "runtimeCoverageViolations",

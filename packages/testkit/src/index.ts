@@ -35,6 +35,11 @@ export {
   validateConformanceArtifact,
 } from "./conformance/artifact.js";
 export {
+  CAPSULE_CONFORMANCE_REGISTRY,
+  type CapsuleConformanceEntry,
+  capsuleConformanceViolations,
+} from "./conformance/capsule.js";
+export {
   LIVE_READ_OPERATIONS,
   runtimeCoverageViolations,
   structuralCoverageViolations,
@@ -52,6 +57,26 @@ export {
 export type { MockTenantTransport } from "./conformance/mock-tenant.js";
 export { createMockTenantTransport, decodeMockTenant } from "./conformance/mock-tenant.js";
 export { runConformance } from "./conformance/runner.js";
+export type {
+  TrackerClassification,
+  TrackerDeliveredIdentity,
+  TrackerErrorClass,
+  TrackerErrorClassId,
+  TrackerFamilyOutcome,
+  TrackerObservableOutcome,
+  TrackerStructuredDiscriminator,
+  TrackerStructuredFailure,
+  TrackerTrapFamily,
+} from "./conformance/tracker-error-taxonomy.js";
+export {
+  classifyTrackerFailure,
+  classifyTrackerOutcome,
+  ownsHttpStatus,
+  TRACKER_ERROR_CLASS_IDS,
+  TRACKER_ERROR_TAXONOMY,
+  TRACKER_FAMILY_OUTCOMES,
+  TRACKER_TRAP_FAMILIES,
+} from "./conformance/tracker-error-taxonomy.js";
 export type {
   ConformanceAdapterClient,
   ConformanceAdapterRead,
@@ -94,11 +119,6 @@ export type {
   MockTenantRoute,
   RunConformanceInput,
 } from "./conformance/types.js";
-export {
-  type CapsuleConformanceEntry,
-  CAPSULE_CONFORMANCE_REGISTRY,
-  capsuleConformanceViolations,
-} from "./conformance/capsule.js";
 export type {
   RuleId,
   ScriptedRuleId,

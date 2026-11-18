@@ -430,6 +430,7 @@
     "src/conformance/harness.ts",
     "src/conformance/mock-tenant.ts",
     "src/conformance/runner.ts",
+    "src/conformance/tracker-error-taxonomy.ts",
     "src/conformance/types.ts",
     "src/index.ts",
     "src/result-conformance.ts"
