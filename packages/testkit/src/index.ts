@@ -84,6 +84,16 @@ export {
 } from "./conformance/parity.js";
 export { runConformance } from "./conformance/runner.js";
 export type {
+  StatefulEffect,
+  StatefulTenantOptions,
+  StatefulTenantTransport,
+} from "./conformance/stateful-double.js";
+export {
+  canonicalizeState,
+  createStatefulTenantTransport,
+  STATEFUL_EFFECTS,
+} from "./conformance/stateful-double.js";
+export type {
   TrackerClassification,
   TrackerDeliveredIdentity,
   TrackerErrorClass,

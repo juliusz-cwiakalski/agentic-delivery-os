@@ -1,0 +1,59 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "provider": "gitlab",
+  "adapterName": "gitlab",
+  "instance": {
+    "instanceName": "gitlab",
+    "systemKind": "vcs",
+    "baseUrl": "https://gitlab.example.com",
+    "authMethod": {
+      "mechanism": "credential-reference",
+      "reference": {
+        "referenceName": "conformance-mock-gitlab",
+        "sourceKey": {
+          "style": "literal",
+          "name": "CONFORMANCE_LIVE_GITLAB_TOKEN"
+        }
+      }
+    }
+  },
+  "credentialReferenceName": "gitlab-read",
+  "addressing": {
+    "provider": "gitlab",
+    "projectPath": "project-placeholder",
+    "mrIid": 42,
+    "commitSha": "a1b2c3d4e5f60718293a4b5c6d7e8f9012345678"
+  },
+  "initialState": {
+    "mergeRequest": {
+      "fields": {
+        "iid": 42,
+        "title": "Stateful MR",
+        "state": "opened"
+      },
+      "collections": {
+        "labels": [
+          {
+            "name": "planning"
+          }
+        ]
+      }
+    }
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "url": "https://gitlab.example.com/api/v4/projects/project-placeholder/merge_requests/42",
+      "status": 200,
+      "body": {},
+      "responseFromState": "mergeRequest"
+    }
+  ],
+  "expected": {
+    "change-lifecycle.read-delivery-request": {
+      "identity": {
+        "entityId": "42"
+      }
+    }
+  }
+}

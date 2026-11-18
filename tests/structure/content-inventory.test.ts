@@ -2315,6 +2315,11 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "renderParityViolation",
   ],
   "testkit/src/conformance/runner.ts": ["runConformance"],
+  "testkit/src/conformance/stateful-double.ts": [
+    "canonicalizeState",
+    "createStatefulTenantTransport",
+    "STATEFUL_EFFECTS",
+  ],
   "testkit/src/conformance/tracker-error-taxonomy.ts": [
     "classifyTrackerFailure",
     "classifyTrackerOutcome",

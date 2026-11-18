@@ -707,6 +707,54 @@ describe("TC-HARN-004 harness conformance registry coverage", () => {
   });
 });
 
+describe("TC-DOUBLE-001 the flow/step census is unchanged by the double", () => {
+  test("three flows and fourteen steps carry their exact delivered values", () => {
+    const steps = CONFORMANCE_FLOWS.flatMap((flow) =>
+      flow.steps.map((step) => ({
+        stepId: step.stepId,
+        operation: step.operation,
+        assertionFamily: step.assertionFamily,
+        requiresCarrier: step.requiresCarrier === true,
+      })),
+    );
+    expect(CONFORMANCE_FLOWS.map((flow) => flow.flowId)).toEqual([
+      "change-lifecycle",
+      "comment-provenance",
+      "label-semantics",
+    ]);
+    expect(steps).toHaveLength(14);
+    expect(steps.map((step) => step.stepId)).toEqual([
+      "change-lifecycle.read-work-item",
+      "change-lifecycle.read-delivery-request",
+      "change-lifecycle.read-pipeline-run",
+      "change-lifecycle.open-change",
+      "change-lifecycle.transition",
+      "change-lifecycle.create-delivery-request",
+      "change-lifecycle.comment",
+      "change-lifecycle.resolve-delivery-thread",
+      "change-lifecycle.merge-delivery-request",
+      "comment-provenance.read-comments",
+      "comment-provenance.carrier-roundtrip",
+      "label-semantics.read-labels",
+      "label-semantics.replace",
+      "label-semantics.sweep",
+    ]);
+    expect(steps.filter((step) => step.requiresCarrier)).toEqual([
+      {
+        stepId: "comment-provenance.carrier-roundtrip",
+        operation: "write-comment",
+        assertionFamily: "comment-provenance",
+        requiresCarrier: true,
+      },
+    ]);
+    expect(CONFORMANCE_ADAPTERS.map((adapter) => adapter.provider)).toEqual([
+      "github",
+      "gitlab",
+      "jira",
+    ]);
+  });
+});
+
 describe("TC-CAP-002 capsule conformance registry coverage", () => {
   test("the shipped capsule registry is a bijection with the event vocabulary", async () => {
     const { CAPSULE_CONFORMANCE_REGISTRY, capsuleConformanceViolations } = await import(
