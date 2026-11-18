@@ -257,4 +257,21 @@ describe("TC-CLOSE-002 additive adapter extensions and conformance registry", ()
     const source = readFileSync(join(ROOT, "packages/core/src/contracts/ports.ts"), "utf8");
     expect(source).toContain("readonly headSha?: string;");
   });
+
+  test("the thread-discussion evidence leaves the closed set, capabilities, and projections unchanged", () => {
+    expect([...ADAPTER_OPERATIONS]).toHaveLength(9);
+    expect(GITHUB_ADAPTER_CONTRACT.capabilities.supportedOperations).toHaveLength(9);
+    expect(GITHUB_ADAPTER_CONTRACT.capabilities.declaredGaps).toEqual([]);
+    const tenant = JSON.parse(
+      readFileSync(join(ROOT, "tests/fixtures/providers/conformance/github/tenant.json"), "utf8"),
+    ) as { expected: Record<string, unknown> };
+    expect(Object.keys(tenant.expected).some((key) => /discussion|body/iu.test(key))).toBe(false);
+    const ports = readFileSync(join(ROOT, "packages/core/src/contracts/ports.ts"), "utf8");
+    const start = ports.indexOf("export type DeliveryThread = {");
+    const end = ports.indexOf("};", start);
+    const threadBlock = ports.slice(start, end);
+    expect(threadBlock).toContain("readonly threadId: string;");
+    expect(threadBlock).toContain("readonly commentCount: number;");
+    expect(threadBlock).not.toContain("body");
+  });
 });

@@ -217,6 +217,12 @@
       "providerBehavior": "GitHub job log text can exceed the fixed excerpt cap and can contain multi-byte characters anywhere, including across the byte boundary.",
       "expectedNormalizedOutcome": "The excerpt is a faithful UTF-8 byte prefix of at most 8192 bytes that never splits a multi-byte sequence, byteLength equals the returned bytes, and truncated is the sole truncation authority.",
       "fixtureReference": "tests/fixtures/providers/github/check-run-log-excerpt.json#/cases/over8192Ascii"
+    },
+    {
+      "trapName": "GITHUB-THREAD-DISCUSSION-CAPS",
+      "providerBehavior": "A review thread can carry more comments than the cap and individual comment bodies can exceed the per-body byte cap, including multi-byte text across the boundary.",
+      "expectedNormalizedOutcome": "At most 50 oldest-first provider-ordered comments are returned with the provider total preserved, each body is a UTF-8 byte prefix of at most 4096 bytes that never splits a multi-byte sequence, and the thread-level truncated flag is true exactly when comments were dropped or a body was truncated.",
+      "fixtureReference": "tests/fixtures/providers/github/thread-discussion.json#/cases/fiftyOne"
     }
   ]
 }

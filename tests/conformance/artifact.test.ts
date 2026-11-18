@@ -355,6 +355,9 @@ describe("TC-CHECK-010 the artifact carries no excerpt or thread-body evidence",
       "bodyTruncated",
       "startedAt",
       "completedAt",
+      "authorLogin",
+      "commentBody",
+      "threadDiscussion",
     ]) {
       expect(text.includes(evidenceKey), evidenceKey).toBe(false);
     }

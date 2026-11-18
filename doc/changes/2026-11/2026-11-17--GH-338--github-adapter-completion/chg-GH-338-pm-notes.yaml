@@ -56,6 +56,42 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 5 complete (bounded review-thread discussion read). Plan
+      phase 4 commit: 8ab4512a (the phase-4 note names plan phase 4 and its gate
+      result; this entry carries the hash). Phase 5 delivered:
+      `packages/adapters/src/github/thread-discussion.ts` exports the two fixed
+      caps (50 comments per thread, 4096 UTF-8 bytes per body), the closed
+      five-key thread shape with the six-key per-comment shape, a pure
+      `normalizeThreadDiscussion` and the one-read reader (one POST, no
+      pagination/cursor, no retry, 404 and a provider-absent node -> not-found,
+      other non-2xx -> payload.invalid with status, transport throw ->
+      payload.invalid without status, malformed 2xx -> payload.invalid with 200,
+      zero count with an empty list observed empty). Truncation is true exactly
+      when fewer comments were returned than the provider total or any body was
+      truncated; bodies are byte prefixes trimmed on a UTF-8 boundary. The subpath
+      exports the reader, caps, normalizer and types additively.
+      tests/types/delivery-thread.type-test.ts pins DeliveryThread's exact field
+      set in both directions and rejects a body/reply field; the closeout
+      contract suite asserts the closed set, GitHub capabilities and the
+      conformance projections are unchanged; the write-authority scans prove no
+      write path imports the reader and that a discussion body never reaches the
+      closeout plan or residue; the artifact suite asserts no discussion/body
+      field appears in the serialized artifact; the trap catalog gained
+      GITHUB-THREAD-DISCUSSION-CAPS with its assertion and named mutation.
+      Verification: G1 structure 1612 pass; G2 behaviour/providers 279 pass; G3
+      conformance 177 pass; G4 checks 1175 pass; G5 boundaries 152 pass; G6
+      typecheck green; G7 secret-read boundary OK (5 allowlisted, unchanged); G8
+      fixture sanitization/privacy green; G9 git diff --check clean; G10
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (10476 pass, 4 pre-existing skips,
+      0 fail; TC-DAEMON-121 green). One in-scope fixture correction: an
+      undeclared author placeholder in the new fixture was replaced with the
+      declared `person-placeholder` (no shape or assertion change). No file
+      outside the phase-5 declared scope moved. Residual for phase 6/7 docs:
+      document the discussion shape, the 50/4096 caps, the truncation rule and
+      the no-write-authority/no-persistence discipline in the reference
+      behavior."
+    type: info
+    date: "2026-11-18"
   - text: "Plan phase 4 complete (verbatim provider job timings and the bounded
       log excerpt). Plan phase 3 commit:
       ec24bf54bcbec86479fd5ad3ae24acddd091aa57 (the phase-3 note names plan

@@ -19,6 +19,10 @@ import {
   GITHUB_LOG_EXCERPT_MAX_BYTES,
 } from "../../../packages/adapters/src/github/log-excerpt";
 import { GITHUB_UNKNOWN_REVIEW_DECISION_FALLBACK } from "../../../packages/adapters/src/github/review-state";
+import {
+  createGitHubThreadDiscussionReader,
+  GITHUB_THREAD_DISCUSSION_MAX_COMMENTS,
+} from "../../../packages/adapters/src/github/thread-discussion";
 import { GITHUB_WORKFLOW_MAP_SEED } from "../../../packages/adapters/src/github/workflow-map";
 import type {
   DeliveryRequest,
@@ -654,6 +658,32 @@ const ISSUE_WRITES = `${FIXTURES}/issue-writes.json`;
 const WORKFLOW_MAP_CASES = `${FIXTURES}/workflow-map-cases.json`;
 const TIMINGS_FIXTURE = `${FIXTURES}/check-run-timings.json`;
 const EXCERPT_FIXTURE = `${FIXTURES}/check-run-log-excerpt.json`;
+const THREAD_FIXTURE = `${FIXTURES}/thread-discussion.json`;
+
+const discussionCapsCheck = async (): Promise<void> => {
+  const fixture = recordField(recordField(readJson(THREAD_FIXTURE), "cases"), "fiftyOne");
+  const thread = recordField(fixture, "thread");
+  const transport = createFixtureTransport([
+    {
+      method: "POST",
+      url: `${instance.baseUrl}/graphql`,
+      body: {
+        data: {
+          node: {
+            isResolved: thread.isResolved,
+            comments: { totalCount: thread.totalCount, nodes: thread.comments },
+          },
+        },
+      },
+    },
+  ]);
+  const reader = createGitHubThreadDiscussionReader({ instance, credentials, transport });
+  const value = requireValue(await reader.readThreadDiscussion("PRRT_2"), "discussion");
+  expect(value.comments).toHaveLength(GITHUB_THREAD_DISCUSSION_MAX_COMMENTS);
+  expect(value.commentCount).toBe(51);
+  expect(value.truncated).toBe(true);
+  expect(transport.requests).toHaveLength(1);
+};
 
 const evidenceTimingsCheck = async (): Promise<void> => {
   const body = recordField(recordField(readJson(TIMINGS_FIXTURE), "cases"), "bothPresent");
@@ -835,6 +865,7 @@ const defaultAssertions: TrapAssertions = {
   "GITHUB-WORKFLOW-MAP-SEED-PRECEDENCE": workflowMapSeedCheck,
   "GITHUB-CHECK-RUN-TIMINGS": evidenceTimingsCheck,
   "GITHUB-LOG-EXCERPT-CAP": logExcerptCapCheck,
+  "GITHUB-THREAD-DISCUSSION-CAPS": discussionCapsCheck,
   "GITHUB-LANDING-ALREADY-MERGED-READBACK": async () => {
     const { client, transport } = landingClient("alreadyMergedThenMergedTrue");
     const result = await client.mergeDeliveryRequest(landingInput);
@@ -966,6 +997,18 @@ const mutationsForNewTraps = [
       expect(value.byteLength).toBe(GITHUB_LOG_EXCERPT_MAX_BYTES - 1);
     },
   },
+  {
+    trapName: "GITHUB-THREAD-DISCUSSION-CAPS",
+    assertion: async (): Promise<void> => {
+      await discussionCapsCheck();
+      // The mutated normalization keeps every comment and ignores the cap.
+      const fixture = recordField(recordField(readJson(THREAD_FIXTURE), "cases"), "fiftyOne");
+      const thread = recordField(fixture, "thread");
+      const nodes = Array.isArray(thread.comments) ? thread.comments : [];
+      expect(nodes).toHaveLength(GITHUB_THREAD_DISCUSSION_MAX_COMMENTS + 1);
+      expect(nodes).toHaveLength(GITHUB_THREAD_DISCUSSION_MAX_COMMENTS);
+    },
+  },
 ];
 
 const runWithGuard = async (options: Omit<TrapRunOptions, "provider">): Promise<TrapRun> => {
@@ -1020,6 +1063,7 @@ describe("TC-TRAP-002 GitHub trap catalog replays offline", () => {
       "GITHUB-WORKFLOW-MAP-SEED-PRECEDENCE",
       "GITHUB-CHECK-RUN-TIMINGS",
       "GITHUB-LOG-EXCERPT-CAP",
+      "GITHUB-THREAD-DISCUSSION-CAPS",
     ]);
   });
 

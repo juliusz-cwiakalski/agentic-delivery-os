@@ -20,7 +20,7 @@ const REQUIRED_KEYS = [
   "trapName",
 ];
 
-const MINIMA: Readonly<Record<string, number>> = { gitlab: 3, jira: 4, github: 32 };
+const MINIMA: Readonly<Record<string, number>> = { gitlab: 3, jira: 4, github: 33 };
 
 const EXPECTED_TRAPS: Readonly<Record<string, readonly string[]>> = {
   jira: [
@@ -70,6 +70,7 @@ const EXPECTED_TRAPS: Readonly<Record<string, readonly string[]>> = {
     "GITHUB-WORKFLOW-MAP-SEED-PRECEDENCE",
     "GITHUB-CHECK-RUN-TIMINGS",
     "GITHUB-LOG-EXCERPT-CAP",
+    "GITHUB-THREAD-DISCUSSION-CAPS",
   ],
 };
 
@@ -319,11 +320,14 @@ const BACKLOG_GITHUB_TRAPS: readonly string[] = [
   "GITHUB-WORKFLOW-MAP-SEED-PRECEDENCE",
 ];
 
-/** The two phase-4 evidence entries. */
+/** The phase-4 evidence entries. */
 const EVIDENCE_GITHUB_TRAPS: readonly string[] = [
   "GITHUB-CHECK-RUN-TIMINGS",
   "GITHUB-LOG-EXCERPT-CAP",
 ];
+
+/** The phase-5 discussion entry. */
+const THREAD_GITHUB_TRAPS: readonly string[] = ["GITHUB-THREAD-DISCUSSION-CAPS"];
 
 /** The single declared `expectedNormalizedOutcome` amendment. */
 const DECLARED_OUTCOME_AMENDMENT =
@@ -344,6 +348,7 @@ describe("TC-FLOOR-001 delivered trap names frozen with one declared outcome ame
       ...DELIVERED_GITHUB_TRAPS,
       ...BACKLOG_GITHUB_TRAPS,
       ...EVIDENCE_GITHUB_TRAPS,
+      ...THREAD_GITHUB_TRAPS,
     ]);
   });
 

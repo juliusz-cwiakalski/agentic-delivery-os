@@ -52,6 +52,16 @@ export {
   type GithubLogExcerptReader,
   type LogExcerptRepository,
 } from "./log-excerpt.js";
+export {
+  createGitHubThreadDiscussionReader,
+  GITHUB_THREAD_DISCUSSION_MAX_BODY_BYTES,
+  GITHUB_THREAD_DISCUSSION_MAX_COMMENTS,
+  type GithubThreadComment,
+  type GithubThreadDiscussion,
+  type GithubThreadDiscussionOptions,
+  type GithubThreadDiscussionReader,
+  normalizeThreadDiscussion,
+} from "./thread-discussion.js";
 /**
  * The declared issues transition seed, exported additively so the adapter's
  * reference behavior can be mechanically compared with the code it documents.

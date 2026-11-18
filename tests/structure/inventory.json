@@ -302,6 +302,7 @@
     "src/github/log-excerpt.ts",
     "src/github/normalize.ts",
     "src/github/review-state.ts",
+    "src/github/thread-discussion.ts",
     "src/github/workflow-map.ts",
     "src/gitlab/capabilities.ts",
     "src/gitlab/client.ts",
