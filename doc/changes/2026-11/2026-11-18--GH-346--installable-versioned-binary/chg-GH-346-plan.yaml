@@ -8,7 +8,7 @@
 # plan phase id, the commit hash, and the test result.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:      ./chg-GH-346-spec.md (v1.5: F-1..F-16; DM-1..DM-8;
+#   - Spec:      ./chg-GH-346-spec.md (v1.6: F-1..F-16; DM-1..DM-8;
 #                NFR-1..NFR-17; 34 ACs AC-F1-1..AC-F16-1; DEC-1..DEC-14;
 #                RSK-1..RSK-16; OQ-1..OQ-6; §5.1 capability details; §6 flows 1-9;
 #                §7.1 in-scope list; §8.1 invocation table; §8.3 data model;
@@ -78,32 +78,46 @@
 #                post-crash record is `record-stale` and refuses. The four causes
 #                (absent; unreadable; slot-silent; the post-crash pair), the eleven
 #                rows and the zero-write claim are unchanged.
-#                v1.5 is the source this plan is reconciled to, and it closes the one
-#                cross-artifact disagreement v1.4 carried rather than smoothed:
-#                ROLLBACK'S `previous` LEG IS CHECKED FOR PRESENCE ONLY. TDR-0040 §4
-#                declares the limit — DM-2 stores no slot digest, so the slot leg is
-#                never knowable: the run takes the record's `previous` at its word and
-#                the refusal is about a MISSING name, never a WRONG one — and spec v1.5
-#                restates it across F-8, F-9, §8.1, §12, DEC-13, Appendix C.4 and
-#                AC-F8-2. THE RULING IS `MISSING REFUSED / WRONG ADMITTED BY DECLARED
-#                LIMIT`, sourced to TDR-0040 §4 (amended) and spec v1.5. The wrong-name
-#                cell of rollback's pair precondition (TC-INST-042 arm (g)) is
-#                therefore a DECLARED-LIMIT PROCEED, not a refusal: the run proceeds at
-#                exit 0, the swap happens, the claimed `previous` name is recorded
-#                VERBATIM, `install status` reports the claim as the record states it,
-#                and a STRUCTURAL assertion shows `install.record.v1` carries no slot
-#                digest and the composition contains no slot-digest comparison. OQ-TP-9
-#                / TR-11 is RESOLVED on that reading (TDR-0040 §4 is the authority, and
-#                test plan v1.5 rewrites TR-11 as the live risk arm (g) guards — the
-#                limit being hardened into an undeclared refusal). The four causes are
-#                stated as MISSING-NAME conditions only: absent; unreadable; a readable
-#                `current` record naming no `previous` while a slot is present; and the
-#                post-crash pair, detected on the `current` leg. No AC id, case id,
-#                row, total or allowlist moves.
-#   - Test plan: ./chg-GH-346-test-plan.md (v1.5: 84 cases — 12 artifact/identity
+#                v1.5 closed the one cross-artifact disagreement v1.4 carried rather
+#                than smoothed: ROLLBACK'S `previous` LEG IS CHECKED FOR PRESENCE ONLY.
+#                TDR-0040 §4 declares the limit — DM-2 stores no slot digest, so the
+#                slot leg is never knowable: the run takes the record's `previous` at
+#                its word and the refusal is about a MISSING name, never a WRONG one —
+#                and spec v1.5 restated it across F-8, F-9, §8.1, §12, DEC-13, Appendix
+#                C.4 and AC-F8-2. THE RULING IS `MISSING REFUSED / WRONG ADMITTED BY
+#                DECLARED LIMIT`, sourced to TDR-0040 §4 (amended). The wrong-name cell
+#                of rollback's pair precondition (TC-INST-042 arm (g)) is therefore a
+#                DECLARED-LIMIT PROCEED, not a refusal. OQ-TP-9 / TR-11 is RESOLVED on
+#                that reading (TDR-0040 §4 is the authority, and test plan v1.5
+#                rewrote TR-11 as the live risk arm (g) guards — the limit being
+#                hardened into an undeclared refusal). The four causes are stated as
+#                MISSING-NAME conditions only: absent; unreadable; a readable `current`
+#                record naming no `previous` while a slot is present; and the
+#                post-crash pair, detected on the `current` leg.
+#                v1.6 is the source this plan is reconciled to, and it states what a
+#                PROCEEDING rollback WRITES and REPORTS — the clause v1.5 left implicit
+#                and the one arm (g) had read from the observer's side. THE FIELD IS
+#                `current`, NOT `previous`: the record the proceeding rollback writes
+#                carries the CLAIMED `previous` name X VERBATIM in its new `current`
+#                and the DISPLACED DESTINATION A in its `previous` — F-8's field roles,
+#                the same inversion TC-INST-024 step 4 asserts for the ordinary case —
+#                and the run reports exactly those two recorded identities, X and A,
+#                NEVER the slot's occupant: the destination then holds the slot's bytes
+#                while that artifact's identity is UNKNOWABLE, because an injected
+#                identity is a compile-time constant no process can read out of a file.
+#                So the run never claims a slot read, `install status` reports `current`
+#                per the record (X), and THAT CLAIM is what the operator can check; the
+#                destination's actual bytes may differ from it, which IS the limit. The
+#                STRUCTURAL boundary — `install.record.v1` carries no slot digest and no
+#                slot-derived identity field, and no `previous`-versus-slot comparison
+#                exists — is the arm's guard, because it is what makes a false report
+#                impossible to write in the first place. No AC id, case id, row, total
+#                or allowlist moves.
+#   - Test plan: ./chg-GH-346-test-plan.md (v1.6: 84 cases — 12 artifact/identity
 #                TC-BIN-060..071 (TC-BIN-060 step 6 asserts the artifact's file name
 #                equals the name its own `--version` prints) and 72 lifecycle
-#                TC-INST-001..123 (TC-INST-042 gained arms (d) and (e);
+#                TC-INST-001..123 (TC-INST-042 carries the four record-precondition
+#                causes and the declared-limit proceed, arm (g));
 #                TC-INST-111/112 carry the branding-seam scoped phrase pair;
 #                TC-INST-092 states the uninstaller's probe source); 34/34 AC
 #                coverage in both directions; §3.5 declared assertion bases and
@@ -113,10 +127,10 @@
 #                §5.2 scenario details including the agreement-reconciliation
 #                matrix TC-INST-037; §6.2 fixtures to author; §6.3 the numbered gate
 #                battery G0..G7 and the evidence shape; §7.1 new files (21); §7.2
-#                the 36 declared rows at v1.5 (35 at v1.2 — 32 that move, one
+#                the 36 declared rows at v1.6 (35 at v1.2 — 32 that move, one
 #                contingent row and two no-edit control rows, plus the row for the
 #                three count-bearing pages); §8.3 open questions OQ-TP-1..9, all nine
-#                RESOLVED — OQ-TP-9 by TDR-0040 §4 and spec v1.5 (a missing `previous`
+#                RESOLVED — OQ-TP-9 by TDR-0040 §4 and spec v1.6 (a missing `previous`
 #                name refuses, a wrong one is admitted by declared limit), so no
 #                question reaches delivery open).
 #                v1.3 is the same iteration-3 remediation on the test side, and it
@@ -132,7 +146,7 @@
 #                in-file moves, a row for the three count-bearing pages, and the
 #                corrected 146-row pre-change comparison (143-row events baseline +
 #                3 `events` rows).
-#                v1.4 is the iteration-4 remediation on the test side, and it keeps
+#                v1.4 was the iteration-4 remediation on the test side, and it keeps
 #                the case count at 84: TC-INST-111/112's ENTRYPOINT row gains the
 #                page's scoped identity-literal phrase as REQUIRED and the
 #                unqualified "exactly the declared five-site inventory" /
@@ -148,10 +162,13 @@
 #                and naming the destroyed predecessor Q (both legs refuse) — so
 #                neither refusal can be explained by a missing name, plus arm (g),
 #                the WRONG-NAME cell, which v1.4 asserted as a refusal and v1.5
-#                converts to a DECLARED-LIMIT PROCEED (exit 0, the swap performed, the
-#                claimed `previous` name recorded verbatim, no slot-digest comparison
-#                anywhere), with TR-11 rewritten to the live risk that arm guards and
-#                OQ-TP-9 resolved. TC-INST-044's
+#                converts to a DECLARED-LIMIT PROCEED (exit 0, the swap performed, no
+#                slot-digest comparison anywhere); test plan v1.6 then states what that
+#                proceeding run writes and reports — the record's new `current` carrying
+#                the claim X VERBATIM and its `previous` the displaced destination A,
+#                the run reporting X and A and never the slot's occupant, `install
+#                status` reporting `current` per the record — with TR-11 rewritten to
+#                the live risk that arm guards and OQ-TP-9 resolved. TC-INST-044's
 #                candidate-artifact arms (steps 7-8) stay REPORTING-ONLY: `record-stale`
 #                at exit 0 with no repair and no write, the pair asserted from the
 #                record and the disk, and NO rollback run.
@@ -229,7 +246,7 @@
 #   finding for a file that needs no edit. Every file the test plan names as an
 #   assertion site to CREATE or EXTEND is declared by the phase that owns that
 #   half of the case.
-#   EXHAUSTION, VERIFIED ROW BY ROW AGAINST TEST PLAN v1.4 §7.1 AND §7.2 (and
+#   EXHAUSTION, VERIFIED ROW BY ROW AGAINST TEST PLAN v1.6 §7.1 AND §7.2 (and
 #   against §16's documentation obligation table, which v1.3 widened from nine rows
 #   to twelve by adding the three count-bearing pages as their own rows):
 #     - §7.1 (21 new files) is exhausted by the six phases: 4 in phase 1, 6 in
@@ -266,13 +283,13 @@
 #       them inseparable from the family, plus THE THREE COUNT-BEARING PAGES —
 #       feature-ceremony-runner.md, feature-metrics.md and feature-supervise.md —
 #       because the numbers they state move in phase 2 and the same one-edit-set
-#       rule applies to them (spec v1.4 §16's class rule; DoR iterations 3 and 4).
+#       rule applies to them (spec v1.6 §16's class rule; DoR iterations 3 and 4).
 #       Declaring them in phase 2 means NO falsehood window exists for those three
 #       at any commit boundary; the branding-seam page and the entrypoint page's
 #       identity-literal sentences are the two documentation obligations that carry
 #       a declared window (coupling 3a), and they say so where they are declared.
 #     - THE SUPERVISION PAGE'S MOVING VALUE IS THE ALLOWLIST, NOT THE ORDINAL
-#       (spec v1.4 §16's supervision row and NFR-17; AC-F16-1; DoR iteration 4
+#       (spec v1.6 §16's supervision row and NFR-17; AC-F16-1; DoR iteration 4
 #       finding 2). `install` appends as the twenty-sixth family, so `supervise`
 #       REMAINS the twenty-fifth and its three delivered ordinal statements — "the
 #       mount as the 25th prompt-required family" (line 9), "presence of the 25th
@@ -293,7 +310,7 @@
 #       prompt-required family" (`tests/structure/supervision-mounting.test.ts`)
 #       stays as it is for the same reason.
 #     - THE ENTRYPOINT PAGE'S IDENTITY-LITERAL CLAIM IS A DECLARED OBLIGATION AND ITS
-#       WINDOW IS DECLARED (spec v1.4 §16's entrypoint row and AC-F16-1; DoR
+#       WINDOW IS DECLARED (spec v1.6 §16's entrypoint row and AC-F16-1; DoR
 #       iteration 4 finding 1). Phase 1 creates scripts/build-binary.ts — the one
 #       declared build-side identity-literal site, registered with its own scan root — so
 #       feature-cli-entrypoint.md's unqualified "The committed working-name literals
@@ -378,7 +395,7 @@
 #       then — the delivered doc-conformance check pins phrases on pages that are
 #       otherwise unchanged, so it stays green — and the branch is unreleased for the
 #       whole window, so no operator meets the stale sentence. What the plan does NOT
-#       do is leave either correction to a later sync: spec v1.4 §16 owns both in this
+#       do is leave either correction to a later sync: spec v1.6 §16 owns both in this
 #       change, and phase 6's page edits and phase 6's phrase edits are one
 #       edit-set. The entrypoint page cannot leave phase 6 without a different
 #       falsehood (its family and install-posture sentences are false until phase 2),
@@ -402,7 +419,7 @@
 #   layer and branding seam), the install-model correction, the documentation-truth
 #   gates, and the full G0..G7 battery including
 #   `bash scripts/.tests/test-doc-distribution.sh`. THE FALSIFIED STATEMENTS SPLIT
-#   ACROSS TWO PHASES, and the split is the point (spec v1.4 §16 and its
+#   ACROSS TWO PHASES, and the split is the point (spec v1.6 §16 and its
 #   count-bearing-page class): the three COUNT-BEARING page moves happen in PHASE 2,
 #   where their numbers move, so they are never false at a boundary at all; the
 #   statements this paragraph used to list — the entrypoint page's "twenty-five
@@ -434,7 +451,7 @@
 #   build entry in that commit, and the bidirectional inventory comparison fails at
 #   phase 1's boundary if the site is not declared there; AC-F15-1 and AC-F15-2
 #   belong to phase 2 because the family, the page, the inventory and the error
-#   register land there. The spec v1.5 WORDING of the owned ACs the remediation
+#   register land there. The spec v1.6 WORDING of the owned ACs the remediation
 #   touched is carried by the owning phase's acceptance paragraph and changes no
 #   ownership: AC-F4-2 (phase 2: invoked identity + owning role + remedy), AC-F8-2
 #   and AC-F9-1 and AC-F9-2 (phase 3: content agreement evaluated BEFORE staging,
@@ -442,11 +459,11 @@
 #   record precondition with its explicit zero-write claim, stated as the
 #   record/disk PAIR-INVERSION test — `current` against the destination, `previous`
 #   for PRESENCE only — whose wrong-name cell (arm (g)) is the RESOLVED
-#   DECLARED-LIMIT PROCEED ruled by TDR-0040 §4 and spec v1.5), AC-F14-1 and AC-F14-2
+#   DECLARED-LIMIT PROCEED ruled by TDR-0040 §4 and spec v1.6), AC-F14-1 and AC-F14-2
 #   (phase 5: the content predicate with its record-free arm, and the uninstaller's
 #   probe-sourced detection with its no-binary arm), AC-F16-1 (phase 6: the
 #   branding-seam page joins its page set with the scoped five-site wording and the
-#   two scan scopes — and, per spec v1.5, the KPI, NFR-9 and summary
+#   two scan scopes — and, per spec v1.6, the KPI, NFR-9 and summary
 #   identity-literal sentences restated with it, and the ENTRYPOINT page's two
 #   identity-literal sentences with their scoped restatement — while the THREE
 #   COUNT-BEARING pages are phase 2's page half of the same AC, delivered where
@@ -485,7 +502,7 @@
 #   case that gives AC-F8-2's reconciliation arm and AC-F9-1's step-7 recovery
 #   their evidence, and it cannot be green before the record writer and the
 #   replace transaction exist.
-#   TC-INST-042 (phase 3, test plan v1.5) carries the FOUR record-precondition causes
+#   TC-INST-042 (phase 3, test plan v1.6) carries the FOUR record-precondition causes
 #   as distinct steps beside its three tolerance givens: step 3 — the
 #   present-but-unreadable record; arm (d) — record absent, valid slot present ->
 #   `install.record.unreadable`, exit 1, zero writes, no record created; arm (e) — a
@@ -501,18 +518,24 @@
 #   "`previous` exists" rule — and arm (f2) carries the daemon-log assertion: the same
 #   refused run repeated WITH `--stop-daemon` leaves the EMPTY ordered daemon log.
 #   ARM (g) IS THE WRONG-NAME CELL, AND IT IS A DECLARED-LIMIT PROCEED (TDR-0040 §4;
-#   spec v1.5 F-8/F-9/§8.1/§12/DEC-13/AC-F8-2; test plan v1.5): a readable `current`
+#   spec v1.6 F-8/F-9/§8.1/§12/DEC-13/AC-F8-2; test plan v1.6): a readable `current`
 #   record whose `current` names the destination artifact A while `previous` names X,
 #   a NON-OCCUPANT, PRESENTS the name the precondition requires, and the run PROCEEDS
-#   at exit 0 — the two renames happen in reverse order, the claimed `previous` name
-#   is recorded VERBATIM (never normalized to the slot's occupant), and `install
-#   status` reports the claim as the record states it. The arm adds a STRUCTURAL
-#   assertion that the declared `install.record.v1` field set carries no slot digest
-#   and no slot-derived identity field, so no code path can compare the name. The four
+#   at exit 0 — the two renames happen in reverse order, and the record it writes
+#   carries the CLAIMED name X VERBATIM in its new `current` (never normalized to the
+#   slot's occupant) with the DISPLACED DESTINATION A in `previous`. The run reports
+#   exactly those two recorded identities — X and A — and never the slot's occupant:
+#   the destination then holds the slot's bytes while that artifact's identity is
+#   UNKNOWABLE, so no slot read is claimed. `install status` reports `current` per the
+#   record (X), which is the claim the operator can check. The arm's guard is the
+#   STRUCTURAL boundary: the declared `install.record.v1` field set carries no slot
+#   digest and no slot-derived identity field, so no code path can compare `previous`
+#   with the slot's occupant. The four
 #   refusing causes above are MISSING-NAME conditions only; a wrong name is not a
 #   fifth cause and no arm asserts a refusal for it. OQ-TP-9 / TR-11 is RESOLVED on
 #   this reading, and TR-11 survives as the risk arm (g) guards — a hardened refusal,
-#   a normalized `previous`, or an added slot-digest field fails the arm by name.
+#   a claim normalized in `current`, X written into `previous`, or an added
+#   slot-digest field fails the arm by name.
 #   TC-INST-026 owns the two SLOT arms and never reaches the record arm, so the two
 #   cases partition the ordered refusal set rather than overlapping it. The added arms
 #   change no case id and no AC: they are arms of TC-INST-042, whose owner and AC are
@@ -587,7 +610,7 @@
 #   any of them). ALL NINE ARE RESOLVED, and none is carried into delivery open.
 #   OQ-TP-9 / TR-11 (the wrong-name cell of rollback's pair precondition) was the one
 #   question this plan routed instead of deciding, and it is now RESOLVED by its own
-#   authority: TDR-0040 §4 (amended) and spec v1.5 / test plan v1.5 rule that a
+#   authority: TDR-0040 §4 (amended) and spec v1.6 / test plan v1.6 rule that a
 #   MISSING `previous` name refuses and a WRONG one is ADMITTED BY DECLARED LIMIT,
 #   because DM-2 stores no slot digest and the slot leg is therefore never knowable.
 #   TC-INST-042 arm (g) carries the PROCEED — exit 0, the swap performed, the claimed
@@ -596,7 +619,7 @@
 #   the composition holds no slot-digest comparison. It is a settled reading, not a
 #   phase-3 decision; the four missing-name causes, the other 83 cases, the AC ids and
 #   the eleven documented rows are unchanged by it. See phase 3 and (j) above.
-#   OQ-TP-1 / FAULT-TP-1 (blocking for AC-F9-1) — HOW THE SEVEN-STEP CRASH MATRIX
+#   OQ-TP-1 / FAULT-TP-1 (the question that blocked AC-F9-1 until it was decided) — HOW THE SEVEN-STEP CRASH MATRIX
 #     INDUCES ITS FAILURES. Decided: BOTH mechanisms, in this order.
 #     (a) A DECLARED TEST-ONLY INJECTION PORT on the replace runtime: an optional
 #     `installFault` construction input (`InstallFaultPort` in
@@ -619,7 +642,7 @@
 #     error), which are refusal paths asserted independently.
 #     A step that can be induced by neither mechanism fails its case by name; it
 #     never reports a pass (test plan §3.5 FAULT-TP-1).
-#   OQ-TP-3 / SEAM-TP-1 (blocking for suite runtime) — IS THE BUILD IDENTITY
+#   OQ-TP-3 / SEAM-TP-1 (the question that blocked the suite runtime until it was decided) — IS THE BUILD IDENTITY
 #     INJECTABLE IN-PROCESS? Decided: YES, additively, and it is the primary
 #     mechanism. The delivered `EntrypointOptions` already carry optional
 #     `version`/`build` (`packages/cli/src/entrypoint.ts`), which production never
@@ -950,9 +973,11 @@
 #   in the §6.3 shape naming the commit and the exact counts (26 families, 66
 #   two-segment identities, eleven `install` rows).
 #
-# INCONSISTENCIES: none blocking between spec v1.4, the five TDRs (TDR-0036 as
-#   amended at DoR iteration 1; TDR-0040 as amended at DoR iterations 1, 2 and 3,
-#   and TDR-0038 §5 read alongside its destination table) and test plan v1.4.
+# INCONSISTENCIES: none blocking between spec v1.6, the five TDRs (TDR-0036 as
+#   amended at DoR iteration 1; TDR-0040 as amended at DoR iterations 1, 2, 3, 4 and 5
+#   — its §4 carries both the pair-inversion precondition and the declared limit, so
+#   the record and the spec now say the same thing — and TDR-0038 §5 read alongside
+#   its destination table) and test plan v1.6.
 #   Ten points are resolved rather than papered over:
 #   (a) DM-8, as corrected in spec v1.1, states that the admission predicate
 #       CONSUMES the delivered worktree-topology read: no adapter export surface
@@ -977,7 +1002,7 @@
 #   (e) The phase-2 differing-artifact policy (D3) is an intermediate posture with
 #       no refusal identity, because Appendix E is closed at eleven rows; the
 #       reversible behaviour arrives in phase 3, in the same change.
-#   (f) THE THREE COUNT-BEARING PAGES ARE PHASE 2's, NOT A LATER SYNC (spec v1.4
+#   (f) THE THREE COUNT-BEARING PAGES ARE PHASE 2's, NOT A LATER SYNC (spec v1.6
 #       §16's class rule; DoR iteration 3 finding 1). They are not a second
 #       falsehood window: they are declared in the phase that moves their numbers,
 #       so no commit of this change leaves them stale — the opposite disposition
@@ -985,7 +1010,7 @@
 #       page carries the mounted family COUNT 25 -> 26, and the supervision page
 #       carries only its 65 -> 66 ALLOWLIST, because its "25th family" is
 #       `supervise`'s ordinal and stays true (see (i)).
-#   (g) THE ROLLBACK REFUSAL ORDER IS ONE ORDER AND IT IS THE TDR's (spec v1.4
+#   (g) THE ROLLBACK REFUSAL ORDER IS ONE ORDER AND IT IS THE TDR's (spec v1.6
 #       F-8/§8.1; DoR iteration 3 finding 3): slot absent, then slot invalid, then
 #       the record precondition, evaluated BEFORE the daemon stop — so a refused
 #       rollback performs no daemon action, and the plan's ordered set (phase 3)
@@ -999,7 +1024,7 @@
 #       TDR-0038 §5 and spec Appendix B/C.2. Phase 3's contract states the
 #       qualification, so the phase contract and the record agree sentence for
 #       sentence.
-#   (i) THE SUPERVISION PAGE'S ORDINAL IS NOT A COUNT (spec v1.4 §16's supervision
+#   (i) THE SUPERVISION PAGE'S ORDINAL IS NOT A COUNT (spec v1.6 §16's supervision
 #       row, NFR-17 and AC-F16-1; DoR iteration 4 finding 2). `install` is appended
 #       as the twenty-sixth family, so `supervise` remains the twenty-fifth: the
 #       page's three "25th" statements and the delivered suite title that says
@@ -1009,23 +1034,30 @@
 #       ("the mounted family count (25)"). Rewriting the ordinal to "26th" would put a
 #       false current-truth sentence on a specification page and is refused by name.
 #   (j) ROLLBACK'S RECORD PRECONDITION IS THE RECORD/DISK PAIR-INVERSION TEST, AND
-#       `recordState` IS A DIFFERENT COMPARISON (spec v1.4 F-8/F-9/§8.1/DEC-13/
-#       Appendix E; TDR-0040 §4 as amended at iteration 4; DoR iteration 4
-#       finding 3). The run proceeds only when the record is readable and names the
-#       artifact at the DESTINATION in `current` and the SLOT's occupant in
-#       `previous` — the two artifacts the two renames move — and refuses
-#       `install.record.unreadable` otherwise, across the same four causes (absent;
-#       unreadable; slot-silent; the post-crash pair). `recordState` is the record
+#       `recordState` IS A DIFFERENT COMPARISON (spec v1.6 F-8/F-9/§8.1/DEC-13/
+#       Appendix E; TDR-0040 §4 as amended at iterations 4 and 5; DoR iterations 4
+#       and 5). The run proceeds only when the record is readable, names the
+#       artifact at the DESTINATION in `current`, and carries a `previous` name —
+#       checked for PRESENCE only — and refuses `install.record.unreadable` otherwise,
+#       across the same four MISSING-NAME causes (absent; unreadable; a readable
+#       `current` record naming no `previous` while a slot is present; the post-crash
+#       pair, detected on the `current` leg). `recordState` is the record
 #       against the RUNNING identity, the predicate `install status` reports, so the
 #       two disagree by construction on the candidate-run state: `record-stale` for
 #       reporting, and the pair still holds, so rollback would proceed — asserted as
 #       reported data with no rollback run (TC-INST-044 steps 7-8). Phase 3's ordered
-#       set states this once; TC-INST-042 carries the causes in step 3, (d), (e),
-#       (f1)/(f2) and the wrong-name cell (g). OQ-TP-9 / TR-11 — whether a wrong
-#       `previous` name refuses (F-8's slot leg, DEC-13, AC-F8-2) or is admitted
-#       (TDR-0040 §4's "declared limit") — is BLOCKING for arm (g) only and is a
-#       phase-3 decision owned by `@decision-advisor`; the plan implements the pair
-#       predicate either way.
+#       set states this once. OQ-TP-9 / TR-11 IS RESOLVED, and it is resolved on the
+#       record's own side: the `previous` leg is never knowable because DM-2 stores no
+#       slot digest, so a MISSING name refuses and a WRONG one is ADMITTED BY DECLARED
+#       LIMIT (TDR-0040 §4's declared limit; spec v1.6 F-8/§8.1/§12/DEC-13/AC-F8-2).
+#       TC-INST-042 therefore carries the causes in step 3, (d), (e) and (f1)/(f2) and
+#       carries arm (g) as a PROCEED: exit 0, the swap performed, the claimed
+#       `previous` name recorded VERBATIM, `install status` reporting the claim, and a
+#       STRUCTURAL assertion that the declared record field set carries no slot digest
+#       and the composition holds no slot-digest comparison. TR-11 survives as the live
+#       risk that arm guards: a hardened refusal, a normalized `previous`, or an added
+#       slot-digest field fails it by name. No AC id, case id, row, total or allowlist
+#       moves with the resolution.
 
 schemaVersion: delivery.plan.v1
 workItemRef: GH-346
@@ -1046,6 +1078,7 @@ tier:
     - "The uninstall residual set and purge's removal set differ at one machine state, or purge removes a root without its confirmation input (AC-F10-1, AC-F10-2, RSK-11)"
     - "Any dry-run writes, creates a directory, or takes a daemon action (AC-F11-1, NFR-5)"
     - "The install record carries a credential, is written in place instead of staged and renamed, or a reader throws on an absent or damaged record (AC-F8-1, AC-F8-2, NFR-12)"
+    - "Rollback's `previous` leg is hardened into an undeclared refusal — a slot digest or slot-derived identity field is added to `install.record.v1`, `previous` is compared with the slot's occupant instead of being taken at its word, or a recorded claim is normalized to the occupant — since TDR-0040 §4 declares a wrong name admitted and only a missing one refused, and the declared limit must stay declared and observable (AC-F8-2, TR-11, NFR-12; spec v1.6)"
     - "A new configuration key, environment variable, state record kind, event topic or state-root write is introduced (NG-11, NFR-13)"
     - "The shell installer or uninstaller gains lifecycle semantics, deletes the other surface's artifacts, or fails to name the owner (AC-F14-1, AC-F14-2, NG-12)"
     - "The artifact build joins the package build chain, an installer array, or the aggregate gate, or the change adds a CI job (RSK-15, test plan §1.2)"
@@ -1103,7 +1136,7 @@ phases:
   # claim ("exactly five sites … no identity literal lives anywhere else"; "exactly
   # the declared five-site inventory"), which this phase's build-side site makes
   # stale; PHASE 6 restates both pages and moves both phrase pairs in one edit-set
-  # (spec v1.4 §16, AC-F16-1, header coupling 3a). The entrypoint page also cannot
+  # (spec v1.6 §16, AC-F16-1, header coupling 3a). The entrypoint page also cannot
   # move earlier without a different falsehood — its 26-family, lifecycle-family and
   # install-posture sentences are false until phase 2 — so its window is declared
   # beside the branding page's rather than closed early. D6's TRIPWIRE forbids only
@@ -1382,7 +1415,7 @@ phases:
   #     `allowlist of 65` / `65 declared identities`, `BASELINE_ROWS.length + 115`).
   #     The forms are matched WHOLE so the declared delta shapes `149 -> 160` and
   #     `65 -> 66` do not trip the scan; this is what turns the count-bearing-page
-  #     class into a gate rather than a review habit (spec v1.4 §16, and the
+  #     class into a gate rather than a review habit (spec v1.6 §16, and the
   #     mechanical-expression sentence that closes its class paragraph). THE SCAN
   #     CARRIES NO ORDINAL FORM AND MUST NOT GAIN ONE: `25th` and `twenty-fifth`
   #     statements about `supervise` are true, survive this change, and a token or
@@ -1408,7 +1441,7 @@ phases:
   #   something else and stays with a one-line reason. A hit that is neither is the
   #   half-move this phase's gate is designed to catch. No file is satisfied by
   #   moving only the first assertion the gate reports, and no hit is left unread.
-  #   THE `25` HITS SPLIT TWO WAYS, AND THE SPLIT IS THE WHOLE POINT (spec v1.4
+  #   THE `25` HITS SPLIT TWO WAYS, AND THE SPLIT IS THE WHOLE POINT (spec v1.6
   #   §16's supervision row; DoR iteration 4 finding 2): a `25` that states the
   #   MOUNTED FAMILY COUNT moves to 26 (the metrics page's "(25)" and every
   #   `toHaveLength(25)`/`toBe(25)` pin); a `25` that states `supervise`'s ORDINAL —
@@ -1429,7 +1462,7 @@ phases:
   # total (-> 160), and the allowlist `65 -> 66` sentence.
   #
   # THREE DELIVERED SPECIFICATION PAGES STATE THOSE SAME NUMBERS, SO THEY MOVE IN
-  # THIS COMMIT TOO (spec v1.4 §16's count-bearing-page class and AC-F16-1's page
+  # THIS COMMIT TOO (spec v1.6 §16's count-bearing-page class and AC-F16-1's page
   # set; DoR iterations 3 and 4). Each states the table total, the delivered-row
   # count, the allowlist size, the `BASELINE_ROWS` arithmetic or the mounted family
   # count in the PRESENT TENSE. NO PRE-EXISTING gate reads any of them (the
@@ -1470,7 +1503,7 @@ phases:
   #   change when a family is appended AFTER it; only a family inserted before it
   #   would move it. A page or suite carrying "the 25th family" about `supervise`
   #   after this change is CORRECT, and a phrase table, a stale-phrase list or a
-  #   leftover scan that requires its absence is the defect (spec v1.4 §16 and NFR-17
+  #   leftover scan that requires its absence is the defect (spec v1.6 §16 and NFR-17
   #   are scoped to the COUNT for exactly this reason; TC-INST-111's supervision row
   #   moves only the allowlist and asserts the ordinal still present, and TC-INST-112
   #   carries it as a REQUIRED phrase that no stale list may name). The count and the
@@ -1499,7 +1532,7 @@ phases:
   # second line, an owner-name derivation, or a hard-coded owning-name literal
   # fails TC-INST-004 or TC-INST-107's literal inventory.
   #
-  # Acceptance (spec v1.4 wording): AC-F4-1 (TC-INST-001, 002, 003), AC-F4-2
+  # Acceptance (spec v1.6 wording): AC-F4-1 (TC-INST-001, 002, 003), AC-F4-2
   # (TC-INST-004: one line naming the INVOKED IDENTITY, stating that INSTALLATION
   # IS OWNED BY THE PRIMARY IDENTITY, and giving the DOCUMENTED REMEDY, under both
   # the plain and the working-name-override arm, with no owner-name derivation and
@@ -1531,7 +1564,7 @@ phases:
   #   their own lines.
   #   NOTE — the THREE COUNT-BEARING specification pages get their MECHANICAL
   #   expression in this same commit, because no PRE-EXISTING gate reads them
-  #   (spec v1.4 §16's class rule). The delivered error-table leftover scan in
+  #   (spec v1.6 §16's class rule). The delivered error-table leftover scan in
   #   tests/structure/error-table.test.ts gains the class: `APPENDIX_D_FILES` gains
   #   feature-metrics.md and feature-supervise.md beside the already-listed
   #   feature-ceremony-runner.md, and the legacy token set gains THIS change's
@@ -1601,7 +1634,7 @@ phases:
         # page must exist for check:help.
         - doc/spec/features/feature-result-contract.md
         - doc/planning/oss-tooling/milestones/m4/commands/install.md
-        # THE THREE COUNT-BEARING PAGES (spec v1.4 §16's class rule, AC-F16-1's
+        # THE THREE COUNT-BEARING PAGES (spec v1.6 §16's class rule, AC-F16-1's
         # page set, DoR iterations 3 and 4). Each states the outgoing numbers in
         # the present tense — the ceremony page the 149/65 pair, the metrics page
         # the 149/148/65/`+ 115` tuple and the `25` family COUNT, the supervise page
@@ -1755,7 +1788,7 @@ phases:
   # two renames in reverse order and is INVOLUTIVE. ROLLBACK'S REFUSALS ARE ONE
   # ORDERED SET, in THIS order — slot absent, then slot invalid, then the record
   # precondition — and the whole set is evaluated BEFORE ANY WRITE AND BEFORE THE
-  # DAEMON STOP (spec v1.4 F-8/F-9/§8.1 and TDR-0040 §4; DoR iteration 3 findings 3
+  # DAEMON STOP (spec v1.6 F-8/F-9/§8.1 and TDR-0040 §4; DoR iteration 3 findings 3
   # and 7). Because the record precondition is decided ahead of the stop, a REFUSED
   # ROLLBACK PERFORMS NO DAEMON ACTION EVEN WITH `--stop-daemon`: a `--stop-daemon`
   # run that refuses leaves the daemon RUNNING and the ordered daemon log EMPTY, not
@@ -1767,67 +1800,82 @@ phases:
   #   1. `install.slot.absent` — rollback found no slot (TC-INST-026);
   #   2. `install.slot.invalid` — the slot is not a compiled artifact carrying an
   #      injected identity, or its bytes are unreadable (TC-INST-026);
-  #   3. `install.record.unreadable` — ONE identity with FOUR causes (F-8, DEC-13,
-  #      Appendix E and AC-F8-2 as amended at DoR iterations 2, 3 and 4): the record
-  #      is ABSENT; UNREADABLE; readable and `current` while naming no `previous`
-  #      (with a slot present); or the readable POST-CRASH PAIR, whose `current` names
-  #      an artifact that sits in the slot and whose `previous` names an artifact the
-  #      crashed run's step 5 destroyed.
+  #   3. `install.record.unreadable` — ONE identity with FOUR causes, each a
+  #      MISSING-NAME condition (F-8, F-9, §8.1, DEC-13, Appendix E and AC-F8-2 as
+  #      amended at DoR iterations 2, 3, 4 and 5): the record is ABSENT; UNREADABLE;
+  #      readable and `current` while naming no `previous` (with a slot present); or
+  #      the readable POST-CRASH PAIR, whose `current` names an artifact that sits in
+  #      the slot and whose `previous` names an artifact the crashed run's step 5
+  #      destroyed. A `previous` name that is present and WRONG is NOT a cause: it is
+  #      the record's declared limit and the run proceeds (see arm (g)).
   # THE PRECONDITION IS PAIR INVERSION OVER THE RECORD AND THE DISK, AND IT IS NOT
   #   `recordState`. A rollback inverts the two identity roles the record carries:
   #   `install` writes `current` = the artifact it IS (known by construction) and
   #   `previous` = the artifact it displaced (the one name DM-2 lets be absent),
   #   whereas a rollback must write `current` = the SLOT's occupant and `previous` =
   #   the DISPLACED destination. The gate therefore PROCEEDS only when the record is
-  #   readable and names BOTH artifacts the swap inverts — the artifact at the
-  #   DESTINATION in `current` and the SLOT's occupant in `previous` — and refuses
+  #   readable, names the artifact at the DESTINATION in `current`, and carries a
+  #   `previous` name — checked for PRESENCE ONLY — and refuses
   #   `install.record.unreadable` otherwise. It is a record-versus-DISK comparison.
   #   `recordState` (F-8, DM-4) is a DIFFERENT comparison — the record against the
   #   RUNNING identity, a comparison of two records that never reads the
   #   destination's bytes — and it is what `install status` reports (TC-INST-041
   #   step 3, TC-INST-041 step 5, TC-INST-026 step 5). Neither scope may be inferred
   #   from the other, and the two disagree by construction on one reachable state:
-  #   a candidate-artifact invocation whose record still names the destination and the
-  #   slot is `record-stale` FOR REPORTING and PROCEEDS for rollback, while the
-  #   post-crash record is `record-stale` and REFUSES because the pair it names is not
-  #   the pair the two renames move. What each leg can be checked against follows from
-  #   what is knowable: the DESTINATION leg is knowable exactly when the invoked
-  #   artifact is the one at the destination (the ordinary invocation), while the SLOT
-  #   leg is never knowable, because DM-2 stores no slot digest.
-  #   THE FOUR CAUSES AND THE PAIR ARMS (test plan v1.4 §5.2.6). The causes are
+  #   a candidate-artifact invocation whose record still names the destination and
+  #   carries a `previous` is `record-stale` FOR REPORTING and PROCEEDS for rollback,
+  #   while the post-crash record is `record-stale` and REFUSES because its `current`
+  #   does not name the destination artifact. What each leg can be checked against
+  #   follows from what is knowable: the DESTINATION leg is knowable exactly when the
+  #   invoked artifact is the one at the destination (the ordinary invocation), while
+  #   the SLOT leg is NEVER knowable, because DM-2 stores no slot digest — so that
+  #   leg is presence-only by DECLARED LIMIT (TDR-0040 §4; spec v1.6).
+  #   THE FOUR CAUSES AND THE PAIR ARMS (test plan v1.6 §5.2.6). The causes are
   #   carried by TC-INST-042 steps 3, (d), (e) and (f), one step per cause and none
   #   shared: step 3 = the present-but-UNREADABLE record; step 4/arm (d) = the ABSENT
   #   record with a valid slot present (no record created); step 5/arm (e) = a readable
   #   `current` record naming no `previous` while a slot is present (record
-  #   byte-unchanged); step 6/arms (f1) and (f2) = the two `record-stale` PAIR shapes
-  #   over the same fixture (the destination holds the running artifact A, the slot
+  #   byte-unchanged); step 6/arms (f1) and (f2) = the two REFUSING pair legs over the
+  #   same fixture (the destination holds the running artifact A, the slot
   #   holds predecessor P). ARM (f1) names P in `current` while `previous` is PRESENT
   #   and also names P, so the SLOT leg holds and only the DESTINATION leg refuses.
   #   ARM (f2) names P in `current` while `previous` is PRESENT and names Q, the
   #   artifact step 5 destroyed, so BOTH legs are inverted. Both arms assert the record
   #   is fully populated on both identity fields BEFORE the run, so neither refusal can
-  #   be explained by a missing name — which is what makes the pair predicate
-  #   distinguishable from a "`previous` exists" rule.
-  #   ARM (g) IS THE WRONG-NAME CELL, and its ruling is OPEN: a readable `current`
-  #   record whose `current` names the destination artifact A while its `previous`
-  #   names X, an artifact that is NOT the slot's occupant P — so the destination leg
-  #   holds and the slot leg does not, and a presence-only reading would have
-  #   proceeded. TC-INST-042 step 7 asserts the REFUSAL reading (the pair's slot leg
-  #   refuses), which is what F-8's slot-leg sentence, DEC-13 and AC-F8-2's fifth arm
-  #   state; the spec's §12 iteration-4 amendment note and TDR-0040 §4's "declared
-  #   limit" bullet still say a wrong name is ADMITTED. The disagreement is recorded,
-  #   not smoothed: it is OQ-TP-9 / TR-11, it is BLOCKING for arm (g) alone (the four
-  #   named causes are unaffected either way), and it is a decision to close in this
-  #   phase (see below) — `@decision-advisor` owns the ruling, and either direction
-  #   flips one arm of one case and no AC id, no row and no total. THE RULING MUST
-  #   LAND BEFORE THIS PHASE'S GATE, not after it: nothing in the record lets an
-  #   implementation police the SLOT leg (DM-2 has no slot digest, and the slot's
-  #   identity cannot be read out of a file), so arm (g) is unsatisfiable from the
-  #   record alone. The ruling either declares a slot-identity comparand — a DM-2
-  #   change that would arrive with its own declared obligation — or flips arm (g) to
-  #   a proceed cell. The phase must not begin with an arm nobody can implement, and
-  #   must not drop it either.
-  #   Every arm carries the same zero-write equality, and arm (f2) additionally
+  #   be explained by a missing `previous` name — which is what makes each refusal the
+  #   DESTINATION leg's, exactly as the presence-only rule requires. (f1) and (f2) are
+  #   the refusing pair legs and stay refusals; nothing else in the arm set refuses on
+  #   the `previous` leg.
+  #   ARM (g) IS THE WRONG-NAME CELL, AND IT IS A DECLARED-LIMIT PROCEED — a settled
+  #   reading, not an open ruling (OQ-TP-9 / TR-11 RESOLVED by TDR-0040 §4 as amended
+  #   and spec v1.6 / test plan v1.6). The fixture is a readable `current` record whose
+  #   `current` names the destination artifact A while its `previous` names X, an
+  #   artifact that is NOT the slot's occupant P: PRESENT, and wrong. The arm asserts
+  #   the run PROCEEDS at exit 0 — the two renames happen in reverse order, the
+  #   destination then holds P's bytes and reports P's identity, the slot then holds
+  #   A's bytes, both identities are reported, the record is rewritten through the
+  #   declared atomic write with its `previous` carrying X VERBATIM (never a value
+  #   re-derived from the slot's contents), and `install status` reports the claim as
+  #   the record states it, naming the slot identity from the record rather than from
+  #   a re-read of the slot's occupant. Its STRUCTURAL assertions are what make the
+  #   limit observable: the declared `install.record.v1` field set carries NO slot
+  #   digest and no slot-derived identity field, so no code path can compare `previous`
+  #   with the slot's occupant, and the lifecycle composition contains no such
+  #   comparison. THE DISCRIMINATOR IS STATED SO THE ARM CANNOT PASS VACUOUSLY: a
+  #   refusal here, a `previous` normalized to P, or an added slot-digest field fails
+  #   this arm by name. The arm exists to prove the limit is DECLARED, never that a
+  #   wrong name is detected — nothing in the record lets an implementation police the
+  #   SLOT leg (DM-2 has no slot digest, and a file's injected identity cannot be read
+  #   out of it), which is why a refusal reading was withdrawn rather than implemented.
+  #   TR-11 survives as the live risk this arm guards: hardening the limit into an
+  #   undeclared refusal. No AC id, case id, row, total or allowlist moves.
+  #   Every REFUSING arm carries the same zero-write equality (destination bytes and
+  #   `mtimeNs`, the slot digest, the record's bytes, the record path's absence, the
+  #   profile line count and the staged-file count unchanged, no rename, no daemon
+  #   action). Arm (g) is held to the equality its kind of run can satisfy: the two
+  #   renames and the one staged-and-renamed record write are the ONLY changes, with
+  #   the profile, the state roots and every other file byte-identical. Arm (f2)
+  #   additionally
   #   carries the daemon-log assertion: the same refused run is repeated WITH
   #   `--stop-daemon` over the ORDERED DAEMON SEAM carried by
   #   tests/fixtures/install/daemon.ts (declared by phase 2 and EXTENDED IN THIS
@@ -1870,7 +1918,7 @@ phases:
   # (`present`/`absent`/`invalid`), target stability as DATA, and the state-format
   # group — deterministic field and line order for a given machine state, and a
   # crash between the renames and the record write is visible as `record-stale`
-  # rather than an exception. The `recordState` PREDICATE is spec v1.4's (unchanged
+  # rather than an exception. The `recordState` PREDICATE is spec v1.6's (unchanged
   # from v1.2): `current`
   # and `record-stale` are decided by comparing the record's identity with the
   # RUNNING identity — a comparison of two records, never a content read of the
@@ -1881,14 +1929,16 @@ phases:
   # and the next `install` is what establishes agreement and corrects the record.
   # The two predicates are stated once, above, and are NOT interchangeable: the
   # rollback gate's pair-inversion test compares the record's `current`/`previous`
-  # PAIR against the destination and the slot (record versus DISK), while
+  # PAIR against the destination and the slot's PRESENCE (record versus DISK), while
   # `recordState` compares the record against the RUNNING identity and never reads the
   # destination. The arms keep them apart by assertion: arms (d), (e) and (f1)/(f2)
-  # are refused by the pair test, arm (g) is refused only by the pair's SLOT leg (a
-  # presence-only rule would have proceeded), and the CANDIDATE-RUN state is a
+  # are refused by the pair test, arm (g) PROCEEDS because its `previous` name is
+  # present and the slot leg is never knowable (the declared limit), and the
+  # CANDIDATE-RUN state is a
   # `recordState` report whose pair still holds — asserted as reported data, with no
-  # rollback run (TC-INST-044 steps 7-8). Arm (g)'s direction is the open ruling
-  # OQ-TP-9, not a settled fact of this plan.
+  # rollback run (TC-INST-044 steps 7-8). Arm (g)'s direction is the SETTLED reading
+  # ruled by TDR-0040 §4 and spec v1.6: a missing name refuses, a wrong one is
+  # admitted by declared limit.
   # The daemon guard's INSTALL arm shipped in phase 2 (step 1's fourth gate); THIS
   # phase adds the ROLLBACK arm on the same guard — `install.daemon.running` unless
   # `--stop-daemon`, whose stop runs through the delivered stop path BEFORE the
@@ -1905,22 +1955,21 @@ phases:
   # slot digest is unchanged from the displaced artifact (TC-INST-034).
   #
   # Decision to close in this phase: the fault port's step vocabulary and the exact
-  # placement of the port's consultation inside the replace transaction, the
+  # placement of the port's consultation inside the replace transaction, and the
   # reconciliation's reporting line (which condition it repaired and the previous
-  # identity it recorded, or that none was available) — both delivery-bound — and
-  # OQ-TP-9 / TR-11, the WRONG-NAME ruling (arm (g) of TC-INST-042): the pair's
-  # slot-leg refusal (F-8's slot-leg sentence, DEC-13, AC-F8-2) versus TDR-0040 §4's
-  # "a wrong name is admitted" limit. OQ-TP-9 is BLOCKING for that one arm and is
-  # owned by `@decision-advisor` (a decision record placeholder is opened if the
-  # ruling needs one); the plan implements the pair predicate either way, and the
-  # ruling flips arm (g) and re-words at most the three statements that name it —
-  # never an AC id, a case id, a row or the four causes.
+  # identity it recorded, or that none was available) — both delivery-bound. OQ-TP-9 /
+  # TR-11 is NOT on this list: it is RESOLVED before delivery by TDR-0040 §4 as
+  # amended and spec v1.6 — a MISSING `previous` name refuses, a WRONG one is admitted
+  # by declared limit — and this phase implements the pair predicate on that reading,
+  # with arm (g) asserting the proceed and the absence of any slot-digest comparison.
+  # The resolution flips one arm of one case and no AC id, case id, row, total or
+  # allowlist.
   # Failure mode: a step that cannot be induced fails TC-INST-030..037 by name; the
   # matrix must never degrade to "exit != 0", a pass without the recovery re-run is
   # not a pass, and an agreement arm that asserts the record without the slot
   # digest is not a pass (test plan §4.3, §4.4).
   #
-  # Acceptance (spec v1.4 wording): AC-F5-2 (TC-INST-011, 012), AC-F5-3
+  # Acceptance (spec v1.6 wording): AC-F5-2 (TC-INST-011, 012), AC-F5-3
   # (TC-INST-020, 021), AC-F7-1 (TC-INST-043), AC-F7-2 (TC-INST-044, 046), AC-F7-3
   # (TC-INST-045), AC-F8-1 (TC-INST-040), AC-F8-2 (TC-INST-041, 042, 036, 037:
   # `install status` reports `absent`/`unreadable`/`record-stale` as data at exit
@@ -1938,12 +1987,14 @@ phases:
   # Q, so both legs refuse; destination and slot digests and `mtimeNs` unchanged, no
   # record write, no rename) — and the `--stop-daemon` arm of that same case (over
   # (f2)) asserts the ordered daemon log is EMPTY, so "no daemon action" is a
-  # comparison, not a claim. The case's FIFTH cell, arm (g), is the wrong-name cell
-  # and is asserted as the pair's SLOT-leg refusal on a `previous` that IS present and
-  # names a non-occupant — the reading F-8's slot-leg sentence, DEC-13 and this AC's
-  # fifth arm state — while TDR-0040 §4's "declared limit" bullet and the spec's §12
-  # note still admit a wrong name; the disagreement is OQ-TP-9 / TR-11, decided before
-  # delivery, and flips one arm and nothing else),
+  # comparison, not a claim. The case's arm (g) is the wrong-name cell and is the
+  # record's DECLARED LIMIT, not an AC refusal: a `previous` that IS present and names
+  # a non-occupant PROCEEDS at exit 0 — the swap in reverse order, the claimed name
+  # recorded verbatim, `install status` reporting the claim — with the structural
+  # assertion that the declared record field set carries no slot digest and the
+  # composition holds no slot-digest comparison (TDR-0040 §4's declared limit; spec
+  # v1.6 F-8/§8.1/§12/DEC-13/AC-F8-2; OQ-TP-9 / TR-11 RESOLVED). AC-F8-2's four
+  # refusing causes are MISSING-NAME conditions and nothing else),
   # AC-F9-1 (TC-INST-030..037: 7/7 injected steps leave a runnable artifact at a
   # known path, no truncated destination and no staged file, and the recovery
   # re-run restores a complete install; on the step-7 record-write failure the
@@ -1964,8 +2015,9 @@ phases:
   # artifact and recover, the identical install performs zero destination renames
   # and zero slot swaps with both content digests unchanged and no staging file,
   # every reconciliation arm ends `current` with the destination and slot untouched,
-  # all four rollback record causes refuse and write nothing, arm (g) refuses on the
-  # pair's slot leg under the pending OQ-TP-9 ruling, and two rollbacks
+  # all four rollback record causes refuse and write nothing, arm (g) proceeds at exit
+  # 0 with the claimed `previous` name recorded verbatim and no slot-digest comparison
+  # anywhere, and two rollbacks
   # restore the original):
   #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/install-replace.test.ts tests/behaviour/install-crash-matrix.test.ts
@@ -2127,7 +2179,7 @@ phases:
   # uninstaller reports a managed install instead of touching it.
   #
   # Contract: ONE predicate governs the launcher step's guard (TDR-0036 §4,
-  # spec v1.4 F-14/AC-F14-1): ANYTHING present at the brand install path that is
+  # spec v1.6 F-14/AC-F14-1): ANYTHING present at the brand install path that is
   # not the delivered launcher — the installed artifact, the slot, or any other
   # content — is a managed or foreign artifact. Detection is by WHAT IS AT THE
   # PATH, never by the install record: the record-free state is legitimate and
@@ -2147,7 +2199,7 @@ phases:
   # own 0/2/3/4/5 taxonomy, its two modes and its dry-run; it removes no binary,
   # slot, record or Jaiship root, reports the managed install and names the owning
   # removal command (AC-F14-2). Its DETECTION SOURCE is DECIDED, not deferred
-  # (spec v1.4 F-14, TC-INST-092): scripts/uninstall.sh resolves BOTH the declared
+  # (spec v1.6 F-14, TC-INST-092): scripts/uninstall.sh resolves BOTH the declared
   # brand install path and the record path by asking a REACHABLE primary-identity
   # binary for its read-free `--print-install-path`, invoked with the working-name
   # override SCRUBBED from the child environment — the delivered scripts/install.sh
@@ -2183,7 +2235,7 @@ phases:
   # by name, an error exit on the no-binary arm fails TC-INST-092 arm (b) by name,
   # and the structural scanner must name a missing arm rather than pass.
   #
-  # Acceptance (spec v1.4 wording): AC-F14-1 (TC-INST-090, 091, 093, and the bash
+  # Acceptance (spec v1.6 wording): AC-F14-1 (TC-INST-090, 091, 093, and the bash
   # evidence TC-INST-121), AC-F14-2 (TC-INST-092 — both detection arms — 093, and
   # the bash evidence TC-INST-121).
   #
@@ -2300,7 +2352,7 @@ phases:
   #
   # THE ENTRYPOINT PAGE'S TWO IDENTITY-LITERAL SENTENCES ARE RESTATED HERE, IN THE
   # SAME EDIT-SET AS THEIR PHRASES, AND THE WINDOW IS DECLARED, NOT IGNORED (spec
-  # v1.4 §16's entrypoint row and AC-F16-1; DoR iteration 4 finding 1). Phase 1
+  # v1.6 §16's entrypoint row and AC-F16-1; DoR iteration 4 finding 1). Phase 1
   # creates scripts/build-binary.ts — the one declared build-side site with its own
   # scan root (D1, DM-7, AC-F15-3) — so feature-cli-entrypoint.md stops being true at
   # exactly two sentences: "The committed working-name literals are exactly the
@@ -2367,7 +2419,7 @@ phases:
   # on this content; the pull request targets `main-tools` and STOPS OPEN (merge
   # authority is the owner's).
   #
-  # Acceptance (spec v1.4 wording): AC-F16-1 (TC-INST-110, 111, 112 — the page set
+  # Acceptance (spec v1.6 wording): AC-F16-1 (TC-INST-110, 111, 112 — the page set
   # now INCLUDES feature-branding-seam.md with its scoped five-site wording, its
   # declared build-side site, its two scan scopes AND its restated KPI, NFR-9 and
   # summary identity-literal sentences, whose "outside the declared five-site
@@ -2402,7 +2454,7 @@ phases:
     scope:
       files:
         - doc/guides/local-install.md
-        # TWO-HALF-OF-A-CLAIM PAGE, restated here with its phrase pair (spec v1.4
+        # TWO-HALF-OF-A-CLAIM PAGE, restated here with its phrase pair (spec v1.6
         # §16's entrypoint row, AC-F16-1; DoR iteration 4 finding 1). Its "exactly
         # the declared five-site inventory" (line 36) and "the declared five-site
         # identity-literal inventory" (line 127) become "exactly the declared
