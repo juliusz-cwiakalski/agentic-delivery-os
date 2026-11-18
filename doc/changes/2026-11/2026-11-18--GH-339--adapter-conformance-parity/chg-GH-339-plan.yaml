@@ -21,7 +21,7 @@
 #               nine clause ids, DM-6/AC-F4-4 carry the binding identity-construct
 #               definition and the derived-column rule, AC-F2-11 is scoped to the
 #               family-wired subset, and AC-F2-4 keeps the rate-limit status
-#               outside {401, 403}. **v1.3 carries the DoR-iteration-2 repair**:
+#               outside {401, 403}. **v1.3 carried the DoR-iteration-2 repair**:
 #               the SIX-DIMENSION basis (one class per dimension, six offline
 #               oracles, assertion-family outcome and non-carrier step participation
 #               declared NON-dimensions), API-1's one observation per dimension per
@@ -30,6 +30,12 @@
 #               AC-F1-5 naming exactly one class id per differing dimension,
 #               AC-F1-6 requiring per-class evidence to reproduce THAT dimension's
 #               observation under its oracle, and AC-F1-7's 22 parity mutations.
+#               **v1.4 carries the DoR-iteration-3 clarification** of the
+#               `carrier-absent` scoping (34 ACs unchanged): its declaration half is
+#               one adapter-level fact read from the capability declaration, and its
+#               participation half is observed only on the pair whose operation is
+#               the carrier step (`write-comment`) — `not-observable` on every other
+#               pair, and absent where the carrier operation is a declared gap.
 #               This plan never assumes a status-bearing classification a
 #               status-less adapter cannot produce, and never asks a read for a
 #               truncation signal no closed view carries.
@@ -255,7 +261,7 @@
 #   the coder STOPS and reports: that is adapter completion (NG-1, §24.3(1)) and
 #   TC-FLOOR-002 fails it by name.
 #
-# THE PARITY BASIS IS SIX DIMENSIONS, ONE CLASS EACH (spec v1.3 F-1/DM-1/API-1;
+# THE PARITY BASIS IS SIX DIMENSIONS, ONE CLASS EACH (spec v1.4 F-1/DM-1/API-1;
 #   TDR-0036 §5.1–§5.4 is the authority; a DoR-iteration-2 finding and the
 #   persistent defect across both iterations):
 #   The dimension set IS the class set — six classes, six dimensions, 1:1, no
@@ -416,7 +422,7 @@
 #   Phase 5 (8):   TC-REG-001..006 (6), TC-GATE-001, TC-GATE-002 (2)
 #   Phase 6 (6):   TC-FLOOR-001..006
 #   Count: 4 + 34 + 9 + 11 + 8 + 6 = 72.
-#   The +9 over v1.2 is entirely phase 2 and entirely spec v1.3's six-dimension
+#   The +9 over v1.2 is entirely phase 2 and entirely spec v1.4's six-dimension
 #   basis: PMUT-014..019 (one control per dimension) and PMUT-020..022 (the three
 #   record/set rules). No existing id was repurposed, and the 13 structural ids
 #   are unchanged.
@@ -491,7 +497,7 @@
 #   Phase 1 (3):  AC-F2-1 (TAX-001/002), AC-F2-8 (TAX-009), AC-F2-9 (TAX-010)
 #   Phase 2 (10): AC-F1-1..AC-F1-8 (PARITY-001..008, PMUT-001..022, ART-001/002 —
 #                 with AC-F1-5 also carried by PMUT-014..020 and AC-F1-6 by
-#                 PMUT-021/022 under spec v1.3's six-dimension basis), AC-F5-2
+#                 PMUT-021/022 under spec v1.4's six-dimension basis), AC-F5-2
 #                 (GATE-003), AC-F5-3 (GATE-004)
 #   Phase 3 (8):  AC-F2-2..AC-F2-7 (TAX-003..008), AC-F2-10 (TAX-011/013),
 #                 AC-F2-11 (TAX-012)
@@ -689,7 +695,7 @@
 #       against it. The pm-notes cross-reference-hygiene note is therefore
 #       dispositioned as "unchanged here, follow-up owned outside this change" —
 #       not as a phase-7 task that cannot be staged.
-#   (i) RESOLVED UPSTREAM (spec v1.3 F-1/DM-1/API-1, TDR-0036 §5.1–§5.4): the
+#   (i) RESOLVED UPSTREAM (spec v1.4 F-1/DM-1/API-1, TDR-0036 §5.1–§5.4): the
 #       four-dimension basis with a many-to-one class mapping is GONE. The plan's
 #       v1.2 phase-2 contract, arm registry and mutation block repeated it; this
 #       revision carries the six dimensions with one class and one oracle each,
