@@ -1,0 +1,326 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-293
+branch: feat/GH-293/engine-first-operations
+status: FAIL
+summary: >-
+  The delivered surfaces are well built and well tested: the summary accrual and four-condition
+  projection, the handover outcome table with the single revert-noop exemption, the read-time
+  per-row gate bound to the row's own identity at the declared `production` scope, and the restored
+  merge composition all behave as specified, `projects.v1` / `projects list --flat` stay
+  byte-identical, and the delivered pinned suites are extended by appending only. Two acceptance
+  criteria are nevertheless claimed complete without their stated evidence: `AC-F7-11`/`NFR-12`
+  require `MERGE_COMPOSITION_EMITTABLE_CODES` to carry at least one `state.*` member (it carries
+  none, and the conformance test asserts the opposite while the reconciled test spec claims the
+  missing member), and the same criterion requires the enumeration to be exhaustive over the
+  composition's refusal branches while the composition's own configuration-read branch can emit
+  `config.value.invalid` / `config.file.malformed`, neither of which is a member. `AC-F6-10` says the
+  base reference comes from the checkout's git facts; the composition uses the `CLOSEOUT_INTEGRATION_BASE`
+  constant, and the reconciled feature page silently documents the softer rule. Three test/plan
+  evidence gaps and one plan scope deviation round out the review. Independently re-run: the change
+  suites (`dispatch-clean-accrual`, `dispatch-conditions-projection`, `dispatch-handover-conditions`,
+  `dispatch-additive-stability`, `repos-handover-gate`, `repos-list-contract`, `projects-flat-alias`,
+  `engine-first-cross-surface`, `engine-first-no-flip`, `engine-first-hermetic`,
+  `engine-first-doc-reconciliation`, `merge-production-composition`,
+  `merge-classification-conformance`, the structure/boundary controls, the doc-distribution guard and
+  the shell parity suite) all pass; `TMPDIR=$PWD/tmp/tmpdir pnpm check` exits 0 (10368 pass / 4 skip /
+  0 fail across 1314 files); `scripts/lint-commit-range.sh --base main-tools` reports
+  `VERDICT: PASS` (24 commits, 0 offending); `plan validate GH-293` is `valid`; and
+  `verify change GH-293` reports the expected `verify.ledger.incomplete` for the phases still ahead.
+  A first `pnpm check` attempt failed in `privacy-authoring` because a concurrently running suite
+  transiently packed `packages/opencode/*.tgz`; the clean sequential run is green and no source file
+  was modified by the review.
+severity_breakdown:
+  critical: 0
+  high: 2
+  medium: 3
+  low: 7
+  info: 4
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-1
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/production.ts:286
+    message: >-
+      AC-F7-11 / NFR-12 / DM-6 / TDR-0031 D9 require the emittable-code enumeration to carry at
+      least one `config.*`, `provider.*`, `state.*`, and `merge.*` member "so it cannot pass
+      vacuously". `MERGE_COMPOSITION_EMITTABLE_CODES` has no `state.*` member (the state-read branch
+      emits `merge.state-unverified`, a `merge.*` code), the conformance test asserts exactly
+      `["config","merge","provider"]` and loops over only those three prefixes, and the reconciled
+      `doc/quality/test-specs/test-spec-merge-verify-deploy.md:34` tells readers the constant spans a
+      `state.*` member. The acceptance criterion is therefore unmet as written, and documentation,
+      test oracle, and specification now disagree.
+    suggestion: >-
+      Resolve the internal contradiction before the PR — the AC's four-family clause conflicts with
+      its own totality clause because no `state.*` code is emitted. Preferred: amend AC-F7-11,
+      NFR-12, TDR-0031 D9, and the reconciled test-spec row to the three domains the composition
+      actually emits (`config`, `provider`, `merge`), with the owner recording the narrowing; only
+      then keep the conformance assertion as delivered. Do not add a `state.*` member unless the
+      state-read branch is deliberately re-pointed at a declared `state.*` row, which would move an
+      error identity and violate the same AC.
+    suppressed: false
+  - id: F-2
+    severity: high
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/production.ts:1658
+    message: >-
+      AC-F7-11 requires `MERGE_COMPOSITION_EMITTABLE_CODES` to be "exhaustive by construction over
+      the composition's refusal branches: every branch that can refuse contributes its code". The new
+      `merge.readConfig` wrapper forwards the composition's own configuration failures (at least
+      `config.value.invalid` from `resolveMergeGateSet`/freshness in `packages/cli/src/edge.ts:1422`
+      and `edge.ts:1438`, and the config-document codes from `acquireProjectConfiguration` /
+      `resolveConfig`), and the base `mergeRuntimeBase.readConfig` can also refuse with
+      `config.value.invalid`. None of those codes is a member of the constant. The conformance test's
+      "every refusal site" case scans only the `mergeReadCodeOf … mergeRuntimeBase` block, whose
+      literal returns cannot see forwarded codes, so the completeness claim is asserted but never
+      checked; the new branch is also untested.
+    suggestion: >-
+      Either extend `MERGE_COMPOSITION_EMITTABLE_CODES` with every code the config-read branch can
+      forward and add a conformance case that exercises that branch (unreadable/invalid config
+      document and an invalid `merge.gates` / `gate-freshness`), or narrow AC-F7-11's exhaustiveness
+      claim to the read-fault branches the constant covers and state the config-read branch's codes
+      separately. Widen the "every refusal site" scan so a forwarded `code` value from a refusal
+      branch must also be a member.
+    suppressed: false
+  - id: F-3
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/cli/src/production.ts:1509
+    message: >-
+      AC-F6-10 states the composition "resolves branch and base reference from the checkout's git
+      facts". The branch does come from `resolvedRepositoryFacts.head.branch`, but the base reference
+      is the constant `CLOSEOUT_INTEGRATION_BASE` ("main-tools"); `RepositoryFacts.head` exposes no
+      base fact. The reconciled `doc/spec/features/feature-merge-verify-deploy.md:41` documents the
+      actual behaviour ("the base reference from the declared integration base"), so the delivered
+      documentation and the binding acceptance criterion contradict each other and no test asserts a
+      git-derived base.
+    suggestion: >-
+      Amend AC-F6-10's wording to "the declared integration base" (the honest delivered rule), or
+      derive the base from a declared git fact and assert it. Do not leave the AC claiming a source
+      the implementation does not read.
+    suppressed: false
+  - id: F-4
+    severity: medium
+    confidence: high
+    category: correctness
+    location: tests/behaviour/engine-first-cross-surface.test.ts:63
+    message: >-
+      TC-ENGINE-095 claims six fixture families including a truncated one, and the plan says the case
+      proves "no violation of the truncation biconditional". The "truncated" family is
+      `specs: eligibleSpecs()` — byte-identical to the "eligible" family — the spread at line 140
+      (`...(family.name === "truncated" ? [] : [])`) is a no-op, and the truncation assertion at
+      line 180 is skipped for that family. The cross-surface `verdict == "unverifiable" ⟺ truncation`
+      agreement on one ledger is therefore never exercised by this case; the verdict/truncation cell
+      is covered only per-surface (TC-014, TC-024).
+    suggestion: >-
+      Make the "truncated" family genuinely truncated (a `gate.max`/bounded read that yields
+      `verdict: "unverifiable"` and `truncation`) and assert on all three surfaces the biconditional,
+      the visible-window statuses, and that the library read appended nothing. Remove the no-op
+      spread.
+    suppressed: false
+  - id: F-5
+    severity: medium
+    confidence: high
+    category: plan-compliance
+    location: doc/changes/2026-11/2026-11-17--GH-293--engine-first-operations/chg-GH-293-plan.yaml
+    message: >-
+      Eleven changed files lie outside every declared phase `scope.files`/`folders` (SCOPE_DEVIATION):
+      `packages/core/src/domain/dispatch-authority.ts` (the new `reversibilityOf` and the export),
+      `doc/spec/features/feature-result-contract.md`, `doc/planning/oss-tooling/milestones/m2/contracts.md`,
+      `.../m2/commands/repos.md`, `.../m1/commands/dispatch.md`, `doc/00-index.md`,
+      `doc/decisions/00-index.md`, `doc/guides/ados-processes.md`, `doc/overview/glossary.md`,
+      `scripts/checks/forbidden-literals.registry.json`, and
+      `tests/fixtures/ports/v1-contract-inventory.json`. Several are guard- or index-driven and
+      harmless, but a production domain module and a seventh feature page are substantive and the
+      plan's Phase 1/3/6 scopes do not name them; the plan's own `plan validate` cannot see diff
+      scope, so nothing caught it.
+    suggestion: >-
+      Add the missing paths to the owning phases' `scope.files` in a plan revision (notably
+      `packages/core/src/domain/dispatch-authority.ts` to Phases 1/3 and
+      `doc/spec/features/feature-result-contract.md` plus the planning/index pages to Phase 6), or
+      record an explicit deviation note per path. Keep `test-deliver-ticket.sh` claim out of scope.
+    suppressed: false
+  - id: F-6
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: packages/cli/src/edge.ts:6978
+    message: >-
+      The `gate.max` forwarding added to the handover/revert runtime is a change to
+      `packages/cli/src/edge.ts`, which is a Phase 5 scope file, not a Phase 3 one; Phase 3's declared
+      conditional rows name only `packages/cli/src/commands/dispatch.ts` and `tests/fixtures/dispatch/ledger.ts`.
+      The wiring is test-only (production never sets `gate.max`, and the default bound of 5000 makes
+      truncation reachable anyway), and it adds no flag, key, or contract change, so the risk is
+      documentation of scope rather than behaviour.
+    suggestion: >-
+      Record the file in Phase 3's scope (or move the wiring to a declared conditional row) and note
+      in the phase note that it exists only to make the truncated-handover cell reachable in the
+      controlled composition.
+    suppressed: false
+  - id: F-7
+    severity: low
+    confidence: high
+    category: evidence
+    location: doc/changes/2026-11/2026-11-17--GH-293--engine-first-operations/chg-GH-293-test-plan.md:1781
+    message: >-
+      Test-plan §10 still reads "No executions yet" and none of the reviewer attestations it declares
+      are recorded, even though the pm-notes list executed counts per phase. In addition, the plan's
+      Phase 6/7 "Left green" claims TC-ENGINE-065 asserts "the bounded-edit changed-line print" and
+      TC-ENGINE-054 asserts full totality; TC-ENGINE-065 does not do a changed-line print at all
+      (correctly — testing-strategy forbids branch-diff assertions), and TC-ENGINE-054's "every
+      refusal site" scan is narrower than claimed. The verification map therefore overstates its own
+      evidence.
+    suggestion: >-
+      Fill §10 with the executed rows and the attestations (or point §10 at the pm-notes evidence and
+      say so), and correct the two plan sentences to what the cases actually assert. Record the
+      no-flip audit result (this review found no `dispatch.handover` authority record in the tree or a
+      local state root) as the AMB-ENG-3 attestation.
+    suppressed: false
+  - id: F-8
+    severity: low
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-17--GH-293--engine-first-operations/chg-GH-293-test-plan.md:74
+    message: >-
+      The delivered test plan still binds spec v1.3 while the spec and plan are at v1.4, still calls
+      lifecycle phase 7 "the documentation phase" at lines 67 and 1313 (the v1.4 terminology pass
+      fixed the spec only), its NFR-4 row omits TC-ENGINE-017, and its front-matter/summary repeats
+      the `state.*`-spanning and "base reference from git facts" claims contradicted above. These were
+      the DoR iteration-4 nits carried as a delivery note; they are now permanent change artifacts.
+    suggestion: >-
+      Re-pin the test plan to spec v1.4, replace "documentation phase" with `system_spec_update`,
+      add TC-ENGINE-017 to the NFR-4 row, and align the two summary claims with F-1/F-3's outcome.
+    suppressed: false
+  - id: F-9
+    severity: low
+    confidence: high
+    category: correctness
+    location: packages/cli/src/production.ts:1580
+    message: >-
+      `mergeWorkItem` extracts the work-item number with `^[A-Za-z]+-([0-9]+)$`, but the merge
+      command's own grammar (`packages/cli/src/commands/merge.ts:116`) accepts
+      `^[A-Za-z][A-Za-z0-9]*-[0-9]+$`. A ref with a digit in the prefix (e.g. `ABC2-12`) passes
+      validation and is then refused `merge.transaction-aborted` as if it did not resolve. The same
+      narrower pattern appears in `mergeRequestDetail`'s `/([A-Za-z]+-[0-9]+)/`.
+    suggestion: >-
+      Use one shared change-ref pattern (the command's grammar, or the delivered ref parser) in
+      `mergeWorkItem` and `mergeRequestDetail`, and add a case with a digit-bearing prefix.
+    suppressed: false
+  - id: F-10
+    severity: low
+    confidence: medium
+    category: rules
+    location: packages/core/src/domain/merge-transaction.ts:282
+    message: >-
+      `.ai/rules/typescript.md` §0 forbids `as` casts that silence type errors. The new
+      `stateFailure` does `row?.domainKind as MergeFailure["domainKind"] | undefined`, and the new
+      bulk-ledger fixture does `record as unknown as StateJsonValue`
+      (`tests/fixtures/projects/production.ts:443`). Both are avoidable with a narrowing guard (the
+      sibling `readFailure` already builds one).
+    suggestion: >-
+      Reuse one safe narrowing helper for error-table domain kinds in `merge-transaction.ts`
+      (no cast), and type or validate the fixture payload without the double cast.
+    suppressed: false
+  - id: F-11
+    severity: low
+    confidence: high
+    category: api-compatibility
+    location: packages/core/src/app/projects.ts:200
+    message: >-
+      `reposListDataOf` gained a required second parameter and `repoListEntry` / `ReposListEntry`
+      gained required members, all exported from `@delivery-os/core`. The payload contract is additive,
+      but the library signature change is breaking, and the change ships under a single minor
+      changeset for five packages. No external consumer is known in-repo, so this is a semver
+      hygiene note rather than a defect.
+    suggestion: >-
+      Either make the new input optional with a delivered empty-gate default, or state the breaking
+      library change in the changeset body so a 0.x consumer sees it.
+    suppressed: false
+  - id: F-12
+    severity: low
+    confidence: medium
+    category: correctness
+    location: packages/cli/src/production.ts:2825
+    message: >-
+      `readProjectHandover` folds every handover record in the project store and then takes the
+      latest by `recordedAt` across repositories, so the row's `reversible` (and the delivered
+      `handoverState`) is not bound to the row's repository identity the way the new `handoverGate`
+      is. A store that accumulates two identities (a rename or remote change does not re-key history)
+      could report another repository's authority. This is a pre-existing pattern for `handoverState`
+      that `reversible` now inherits, and stores are normally one-repository, hence medium confidence.
+    suggestion: >-
+      Filter the fold to the row's resolved identity before reading `reversible`/`handoverState`, or
+      document why a project store can only ever hold one repository identity.
+    suppressed: false
+  - id: F-13
+    severity: info
+    confidence: high
+    category: reliability
+    location: packages/core/src/domain/merge-transaction.ts:287
+    message: >-
+      `stateFailure` derives `domainKind` from the resolved row but hard-codes `exit: 2`, while the
+      feature page states every emitted failure's exit "is that row's declared projection". They agree
+      only because `merge.state-unverified` is `platform-provider` today; a row projection change
+      would silently break the claim.
+    suggestion: >-
+      Derive the exit from the same row (as `readFailure` does) or state the coupling in the code
+      comment and the page.
+    suppressed: false
+  - id: F-14
+    severity: info
+    confidence: high
+    category: design
+    location: packages/core/src/app/projects.ts:230
+    message: >-
+      `emptyHandoverGate` is a hand-written literal of the empty-window evaluation, a second
+      derivation beside `conditionStatuses(evaluateHandoverGate(foldEvidenceWindow(...)))`. DM-3 says
+      the three surfaces share one derivation; the literal is pinned by the first-use row test today
+      but would not follow a gate-rule change.
+    suggestion: >-
+      Build the first-use gate from the pure empty fold (it needs no store) so the derivation stays
+      single, and keep the literal assertions in the contract test.
+    suppressed: false
+  - id: F-15
+    severity: info
+    confidence: high
+    category: performance
+    location: packages/cli/src/production.ts:2878
+    message: >-
+      `repos list` performs one bounded attempt read (up to 5,000 records) plus one divergence read
+      per ready row, so cost is O(rows × ledger). Measured 25 rows over 10 reads at ~0.98 s total in
+      this environment, well inside the declared posture; it is noted as a scaling residual for large
+      fleets with large ledgers, not as a defect.
+    suggestion: >-
+      No change required now. If fleets grow, cache the per-row fold within one read or push the
+      repository filter into the ledger read.
+    suppressed: false
+  - id: F-16
+    severity: info
+    confidence: high
+    category: documentation
+    location: doc/changes/2026-11/2026-11-17--GH-293--engine-first-operations/chg-GH-293-pm-notes.yaml:21
+    message: >-
+      Commit subjects are the commit primitive's 72-character path template (`chore(GH-293): update
+      <one path>`), so the commit that carried 29 files names only `.changeset/...`, and the doc-syncer
+      reconciliation landed as `docs(GH-293): update doc/00-index.md`. Commitlint passes and the
+      template fallback is documented; history readability is the only cost. Also noted: the change
+      capsule has no `events.jsonl`/`candidates/`, consistent with every other change folder in the
+      repository, so this is a repo-wide tooling gap rather than a GH-293 defect.
+    suggestion: >-
+      No action for this change. Carry the history/capsule observation to the PR description or the
+      retro; consider a follow-up where the commit primitive's template names the phase rather than
+      the first path.
+    suppressed: false
+reviewed_at: 2026-11-18T03:45:00Z
+next_step: >-
+  CALL_CODER after the AC/spec decisions in F-1 and F-3 are recorded (owner amendment for F-1's
+  four-family clause; wording amendment for F-3's base reference). Then: fix the emittable-set
+  completeness and its conformance evidence (F-1, F-2), make the truncated cross-surface family
+  real (F-4), and correct the plan/test-plan evidence and scope declarations (F-5..F-8). Re-review
+  iteration 2 must re-verify AC-F7-11 and AC-F6-10 against their amended text.

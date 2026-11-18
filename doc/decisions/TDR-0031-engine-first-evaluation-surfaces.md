@@ -5,7 +5,7 @@ status: Proposed
 created: 2026-11-17
 decision_date: null
 last_updated: 2026-11-18
-summary: "Resolve GH-293's contract semantics in eleven clauses: per-repository handover-gate evaluation is read-time and hosted on additive `repos list` row fields (`reversible` plus a `handoverGate` block), never a new command, a new verb, or a daemon tick; one `{condition, status: met|open}` shape in the declared four-condition order is shared by `dispatch handover`, `dispatch dual-run summary`, and the row, with window-level `unverifiable` expressed by `verdict` plus the `truncation` object rather than a third status; clean accrual is `cleanDispatches` (declared identical to `corroboration.satisfied`) and a trailing-run `consecutiveCleanDispatches`, and SC-M2-S16-02's 'coverage grows by one per dispatch' is restated because coverage is an eleven-token exposure set; per-repository reversibility is projected on the engine surfaces as `reversible` and SC-M2-S16-03's shell assertion is re-pointed there instead of growing the five-key shell summary; provider windows and holds stay documented on already-delivered effect surfaces with no new read, and the `QueueLane.providerProfile` doc/code gap becomes a declared known limitation rather than silent scope; this repository is not flipped to engine-authoritative; and the merge read-failure domain-kind mismatch is restoration of the declared error table, not a new decision. Beyond the original seven, four binding clauses come from later spec amendments, all carried in spec v1.3: spec v1.1 named the seams the test plan could not assert — the merge composition's owner principal as the provider-resolved repository owner with no new configuration key (D8), the composition's exported `MERGE_COMPOSITION_EMITTABLE_CODES` enumeration (D9), and the fleet row's read-only non-persisting binding to its own repository identity (D10) — with its fourth seam, the single evidence-read-free handover exemption (the idempotent revert noop), folded into D2, and spec v1.2 added the fleet row's `production` evidence-scope declaration as D11 (DEC-17)."
+summary: "Resolve GH-293's contract semantics in eleven clauses: per-repository handover-gate evaluation is read-time and hosted on additive `repos list` row fields (`reversible` plus a `handoverGate` block), never a new command, a new verb, or a daemon tick; one `{condition, status: met|open}` shape in the declared four-condition order is shared by `dispatch handover`, `dispatch dual-run summary`, and the row, with window-level `unverifiable` expressed by `verdict` plus the `truncation` object rather than a third status; clean accrual is `cleanDispatches` (declared identical to `corroboration.satisfied`) and a trailing-run `consecutiveCleanDispatches`, and SC-M2-S16-02's 'coverage grows by one per dispatch' is restated because coverage is an eleven-token exposure set; per-repository reversibility is projected on the engine surfaces as `reversible` and SC-M2-S16-03's shell assertion is re-pointed there instead of growing the five-key shell summary; provider windows and holds stay documented on already-delivered effect surfaces with no new read, and the `QueueLane.providerProfile` doc/code gap becomes a declared known limitation rather than silent scope; this repository is not flipped to engine-authoritative; and the merge read-failure domain-kind mismatch is restoration of the declared error table, not a new decision. Beyond the original seven, four binding clauses come from later spec amendments, all carried in spec v1.3-v1.5: spec v1.1 named the seams the test plan could not assert — the merge composition's owner principal as the provider-resolved repository owner with no new configuration key (D8), the composition's exported `MERGE_COMPOSITION_EMITTABLE_CODES` enumeration (D9), and the fleet row's read-only non-persisting binding to its own repository identity (D10) — with its fourth seam, the single evidence-read-free handover exemption (the idempotent revert noop), folded into D2, and spec v1.2 added the fleet row's `production` evidence-scope declaration as D11 (DEC-17)."
 owners: ["Juliusz Ćwiąkalski"]
 service: "delivery-os per-repository handover evaluation, fleet read, and shell fallback surfaces"
 decision_scope: repo
@@ -633,20 +633,32 @@ Legend: ✅ = passes · ❌ = fails. No accepted-risk exceptions are claimed; ev
      an operator-maintained setting, and it is observable through the waiver effect: a declaration
      authored by that principal is authorized (and records no waiver on a dry run), while the same
      declaration authored by any other principal refuses `merge.waiver-unauthorized` at exit `1`.
-     (Spec DEC-13, AC-F6-10.)
+     The composition's base reference is a declared input, not a second git-fact derivation: it is
+     the declared integration base the closeout path uses (`CLOSEOUT_INTEGRATION_BASE`, default
+     `main-tools`), and only the branch is read from the checkout's git facts.
+     (Spec DEC-13, DEC-19, AC-F6-10.)
   9. **D9 — Emittable-code enumeration.** The production merge composition exports
      **`MERGE_COMPOSITION_EMITTABLE_CODES`**, its declared emittable failure-code set, **exhaustive
      by construction** over the composition's refusal branches: every branch that can refuse
      contributes its code, and the constant is the single declaration the conformance test ranges
      over. The enumeration is non-empty, duplicate-free, and carries at least one `config.*`,
-     `provider.*`, `state.*`, and `merge.*` member so the claim cannot pass vacuously; every member
-     resolves to a declared error-table row whose `domainKind` equals the kind the composition emits
-     for that code, and no member is absent from the table. Deriving the set from the table would
-     test the table against itself, and a hand-picked example list cannot catch a branch added later;
-     that is why the enumeration is by construction from the branches. The error-table row count,
-     `DOMAIN_KINDS` membership, and exit classes stay unchanged, and a refusal branch without a
-     declared identity of its own is expressed through a code the table already declares — this
-     decision invents none. (Spec DEC-14, AC-F7-11.)
+     `provider.*`, and `merge.*` member — the three declared domains the composition actually
+     emits — so the claim cannot pass vacuously; every member resolves to a declared error-table row
+     whose `domainKind` equals the kind the composition emits for that code, and no member is absent
+     from the table. **No `state.*` member exists, because the composition emits no `state.*` code:**
+     the state-read refusal is the declared `merge.state-unverified` row, at its declared projection
+     (`domainKind: "merge"`, projection `platform-provider`, exit `2`). A `state.*` member would
+     either name a code nothing emits or force that branch onto a `state.*` identity, moving an error
+     identity the criterion forbids this change to move. The anti-vacuity requirement is therefore
+     carried by the three **emitted** domains and not by a fourth, invented one: it still forbids a
+     one-branch enumeration, because no single refusal branch spans a `config`, a `provider`, and a
+     `merge` code, and that is the property the clause exists to protect. Deriving the set from the
+     table would test the table against itself, and a hand-picked example list cannot catch a branch
+     added later; that is why the enumeration is by construction from the branches. The error-table
+     row count, `DOMAIN_KINDS` membership, and exit classes stay unchanged, and a refusal branch
+     without a declared identity of its own is expressed through a code the table already declares —
+     this decision invents none. (Spec DEC-14 and DEC-18; code review iteration 1, finding F-1;
+     AC-F7-11.)
   10. **D10 — Fleet row repository binding.** A `repos list` row's evaluation is bound to the
       normalized `host/owner/name` repository identity of **that row's own checkout**, resolved for
       the read through the delivered identity policy in its declared order — the persisted
@@ -721,8 +733,9 @@ Legend: ✅ = passes · ❌ = fails. No accepted-risk exceptions are claimed; ev
   production merge composition (new export; no new row, kind, or exit):
     MERGE_COMPOSITION_EMITTABLE_CODES: readonly AppErrorCode[]
       // one member per refusal branch; non-empty, duplicate-free, carrying at least
-      // one config.*, provider.*, state.*, and merge.* member; every member resolves
-      // to a declared row whose domainKind is the kind the composition emits
+      // one config.*, provider.*, and merge.* member — the three emitted domains; no
+      // state.* member exists because the state-read branch is merge.state-unverified;
+      // every member resolves to a declared row whose domainKind is the kind it emits
 
   unchanged: handover/reversal records, projects.v1 rows and `projects list --flat`
   byte-compatibility, the five-key shell summary, the error-table row count,
@@ -866,7 +879,8 @@ command, identity, row, kind, or exit class; C-7 by leaving the shell untouched;
   Target: 0 — Window: classification conformance suite.
 - Metric: `MERGE_COMPOSITION_EMITTABLE_CODES` members with no declared row, or a declared kind that
   differs from the emitted kind — Target: 0, with a non-empty, duplicate-free set covering
-  `config.*`, `provider.*`, `state.*`, and `merge.*` — Window: classification conformance suite.
+  `config.*`, `provider.*`, and `merge.*` (no `state.*` member: the state-read refusal is the
+  declared `merge.state-unverified` row) — Window: classification conformance suite.
 - Metric: `merge <ref> --dry-run` under a missing credential — Target: the declared `config` identity
   at its projected exit `1`, never `fallback.internal` at exit `2` — Window: behaviour suite.
 - Metric: `dispatch.handover` authoritative records attributable to this change for a real
@@ -886,8 +900,8 @@ reasoning, not evidence of operational accrual — that is measured after delive
 
 - Story: `doc/planning/oss-tooling/milestones/m2/backlog.md` §M2-S16 (lines 355-370)
 - Change spec: `doc/changes/2026-11/2026-11-17--GH-293--engine-first-operations/chg-GH-293-spec.md`
-  v1.3 (DEC-12–DEC-15 adopted here as D2 and D8–D10, DEC-17 as D11; AC-F2-3, AC-F3-5, AC-F6-10,
-  AC-F7-11)
+  v1.5 (DEC-12–DEC-15 adopted here as D2 and D8–D10, DEC-17 as D11, DEC-18 and DEC-19 amending D9's
+  non-vacuity set and D8's base input; AC-F2-3, AC-F3-5, AC-F6-10, AC-F7-11)
 - Scenarios: `doc/planning/oss-tooling/milestones/m2/test-scenarios.md` SC-M2-S16-01/02/03
 - Specs: `doc/spec/features/feature-dispatch-engine.md` (handover gate, bash fallback, daemon
   composition), `doc/spec/features/feature-projects.md` (`repos list` contract, handover projection),

@@ -1,14 +1,64 @@
-# GH-293 delivery plan — machine-readable document (delivery.plan.v1), revision 1.3
-# (2026-11-18; readiness iteration 3 — a source re-pin plus one closure-sentence
-# restatement. Revision 1.2 carried iteration 2's closure-model correction and one
-# wording narrowing; revision 1.1 carried iteration 1's plan-routed findings F-3,
-# F-4, F-10 and the mechanical alignment to spec v1.2 / test plan v1.2 / amended
-# TDR-0031.)
+# GH-293 delivery plan — machine-readable document (delivery.plan.v1), revision 1.4
+# (2026-11-18; review iteration 1 — a scope closure plus a declared remediation
+# section. Revision 1.3 carried readiness iteration 3's source re-pin and closure
+# restatement; revision 1.2 carried readiness iteration 2's closure-model
+# correction; revision 1.1 carried readiness iteration 1's plan-routed findings
+# F-3, F-4, F-10 and the mechanical alignment to spec v1.2 / test plan v1.2 /
+# amended TDR-0031.)
 # Revision 1.0 was authored in lifecycle phase 4 (`delivery_planning`) against spec
 # v1.1 and test plan v1.1 (44 cases).
 # Canonical plan artifact: this YAML document is the only plan file for the
 # change. `plan validate`, `plan diff`, `plan overlap`, and `lint plan` read it
 # directly.
+#
+# REVISION 1.4 AMENDMENT (2026-11-18) — delivery review iteration 1
+# (`code-review/review-iter-1.yaml`, 16 findings). No phase added, removed, or
+# renumbered; no scope removed; no acceptance criterion weakened; the
+# DoD-1..DoD-10 mapping is unchanged; the 46-case ownership map is unchanged
+# (every TC id still appears in exactly one phase row, and Phase 1 still lists
+# none). Two things change:
+#   - F-5 / F-6 SCOPE CLOSURE. Eleven changed paths lay outside every phase's
+#     declared scope, and `packages/cli/src/edge.ts` lay inside Phase 5's only
+#     while a Phase 3 edit of it existed. Each is now declared in the phase that
+#     owns the work: `packages/core/src/domain/dispatch-authority.ts` (the new
+#     `reversibilityOf` producer) and `packages/cli/src/edge.ts` (the `gate.max`
+#     pass-through on the handover/revert runtime, which is what makes the
+#     truncated handover cell reachable) join PHASE 3; the
+#     `doc/spec/features/feature-result-contract.md` row, the
+#     `doc/00-index.md` guide row, the `doc/guides/ados-processes.md` process-card
+#     link, the `doc/overview/glossary.md` flat-record-set row,
+#     `doc/decisions/00-index.md`, and
+#     `scripts/checks/forbidden-literals.registry.json` (the new guide's
+#     registration) join PHASE 6; the three planning-corpus pages
+#     (`milestones/m2/contracts.md`, `milestones/m2/commands/repos.md`,
+#     `milestones/m1/commands/dispatch.md`) are PHASE-7-STAGED — authored by
+#     lifecycle phase 7 (`system_spec_update`, `@doc-syncer`) and therefore
+#     declared in Phase 7's scope for staging, exactly like the two
+#     `doc/quality/test-specs/` files — and are named in both documentation rows;
+#     `tests/fixtures/ports/v1-contract-inventory.json` joins PHASE 7, whose
+#     structural additivity battery it feeds (its rows mirror the Phase 1 and
+#     Phase 4 contract exports). No scope key, file, or path is removed, and every
+#     already-declared path keeps its phase.
+#   - REMEDIATION DECLARATION. A top-level `remediation:` block (below the phases,
+#     `delivery.plan.v1` additive data — `plan validate` reads phases only and the
+#     block is inert to it) declares one executable entry per review finding group
+#     for the review-fix iteration: REM-1 (F-1, F-3), REM-2 (F-2), REM-3 (F-4),
+#     REM-4 (F-9, F-10, F-11), REM-5 (F-12, F-14), REM-6 (F-13), REM-7 (F-7, F-8),
+#     plus the declared verification batch. Each entry names its review findings,
+#     its scope files, what changes, and the command that verifies it. F-15 and
+#     F-16 carry no remediation entry: both are explicitly no-action findings.
+#   - F-1 / F-3 ALIGNMENT (spec v1.5). Phase 5's objective and left-green prose now
+#     state the three emitted domains (`config`, `provider`, `merge`, no `state.*`
+#     member — DEC-18) and the declared integration base
+#     (`CLOSEOUT_INTEGRATION_BASE`, `main-tools` — DEC-19) instead of the withdrawn
+#     four-family clause and the "base reference from git facts" wording.
+#   - F-7 EVIDENCE WORDING. The two overstated left-green claims are corrected:
+#     TC-ENGINE-065 asserts the lifecycle-prose wording, the absence scans, the
+#     marker facts, and the surrounding headings — never a changed-line print — and
+#     TC-ENGINE-054's refusal-site scan is stated as the `mergeReadCodeOf` block
+#     plus, after REM-2, the config-read wrapper's forwarded codes.
+#   - SOURCE RE-PIN. SOURCES moves to spec v1.5 and test plan v1.4; no requirement
+#     is added by the re-pin.
 #
 # REVISION 1.3 AMENDMENT (2026-11-18) — readiness iteration 3. No phase added,
 # removed, or renumbered; no scope removed; no acceptance criterion weakened; the
@@ -110,10 +160,10 @@
 #     coder's.
 #
 # SOURCES (single source of truth):
-#   - Spec:      ./chg-GH-293-spec.md (v1.4, 14 ACs — AC-F1-1, AC-F1-2, AC-F2-3,
+#   - Spec:      ./chg-GH-293-spec.md (v1.5, 14 ACs — AC-F1-1, AC-F1-2, AC-F2-3,
 #                AC-F2-4, AC-F3-5, AC-F3-6, AC-F4-7, AC-F4-8, AC-F5-9, AC-F6-10,
 #                AC-F7-11, AC-F8-12, AC-F8-13, AC-NFR1-14; F-1..F-8; NFR-1..NFR-13;
-#                DM-1..DM-7; DEC-1..DEC-17; §5.1 capability details; §6 flows 1-5;
+#                DM-1..DM-7; DEC-1..DEC-19; §5.1 capability details; §6 flows 1-5;
 #                §7.1/§7.2 scope (including the bounded lifecycle-prose boundary);
 #                §8.5 compatibility; §16 affected components; §17.1 Definition of
 #                Done DoD-1..DoD-10; Appendix A exact additive shapes, Appendix B
@@ -126,8 +176,21 @@
 #                the readiness-iteration-3 TERMINOLOGY pass only — lifecycle phase 7
 #                is `system_spec_update` (`@doc-syncer`), never a "documentation
 #                phase" — and changes no requirement, criterion, decision, key, or
-#                anchor.
-#   - Tests:     ./chg-GH-293-test-plan.md (v1.3, 46 cases TC-ENGINE-001..095 in
+#                anchor. The v1.5 amendment is review iteration 1's two-clause
+#                narrowing and is binding on this plan: AC-F7-11's non-vacuity
+#                clause is THREE-domain — `config`, `provider`, and `merge`, at least
+#                one member each and none in any other domain, with NO `state.*`
+#                member, because the composition's state-read refusal is the
+#                declared `merge.state-unverified` row emitted at its declared
+#                projection and exit `2` (DEC-18) — and AC-F6-10 resolves the branch
+#                from the checkout's git facts and the base reference from the
+#                DECLARED integration base the closeout path already uses
+#                (`CLOSEOUT_INTEGRATION_BASE`, `main-tools`), one source of truth
+#                with no new configuration key, constant, or second git-fact
+#                derivation (DEC-19). No other AC, NFR, decision, key, or anchor
+#                moved, and the credential rule is untouched
+#                (`config.credential.missing` -> `config` -> exit `1`).
+#   - Tests:     ./chg-GH-293-test-plan.md (v1.4, 46 cases TC-ENGINE-001..095 in
 #                eight blocks — the handover block is `010`..`017` because
 #                TC-ENGINE-017 is the revert noop over an unreadable or torn handover
 #                ledger, AC-F2-3 therefore rests on five cases (`010`, `011`, `014`,
@@ -139,11 +202,19 @@
 #                suite paths this plan declares; §8.3 OQ-TP-1..10; §10 review
 #                attestations). The v1.3 revision appended TC-ENGINE-017 to the
 #                handover block and requalified every readability claim; no existing
-#                id, oracle, identity, exit, bound, or AC/NFR mapping moved, and none
-#                is reshaped by this plan; phase ownership of every id is declared in
-#                the TC -> PHASE MAP below.
+#                id, oracle, identity, exit, bound, or AC/NFR mapping moved. The
+#                v1.4 revision carries no new case and no changed case: it records
+#                review iteration 1's executed attestations in §10, aligns the two
+#                left-green sentences with what TC-ENGINE-065 and TC-ENGINE-054
+#                actually assert, and re-states the three-domain emittable set and
+#                the declared integration base in the plan's own prose. The 46-case
+#                set, every id, oracle, identity, exit, and bound are unchanged, and
+#                none is reshaped by this plan; phase ownership of every id is
+#                declared in the TC -> PHASE MAP below.
 #   - Decisions: doc/decisions/TDR-0031-engine-first-evaluation-surfaces.md
-#                (status Proposed, UNTRACKED working-tree file, AMENDED 2026-11-18;
+#                (status Proposed, untracked at plan time and tracked on this
+#                branch since the Phase 1 landing commit 48b69424, AMENDED
+#                2026-11-18;
 #                eleven binding clauses D1..D11 — D2's five-outcome table with the
 #                single evidence-read-free exemption, D7's declared exit projection
 #                (the credential-read move 2 -> 1, no class, row, or exit added),
@@ -174,10 +245,13 @@
 #   evidence-read-free exemption, D7's declared credential-read exit projection
 #   (2 -> 1 with no class, row, or exit added), and the seam declarations
 #   D8..D11 — and owner acceptance is the GH-293 PR review, per the record's
-#   governance block. The index row is already correct and is not edited, so
-#   `doc/decisions/00-index.md` is not declared. TC-ENGINE-064 (Phase 6) proves
-#   the landing: file, index row, resolvable bidirectional reference, status
-#   agreement, and the D1..D11 clause set with the five-outcome table.
+#   governance block. Its index row landed on this branch (b0573fd8, the Phase 1
+#   landing commit) and is therefore a changed path this plan must account for:
+#   `doc/decisions/00-index.md` is declared in PHASE 6's scope (review iteration 1,
+#   F-5) for staging and accounting only — the row is already correct, Phase 6
+#   authors no change to it, and no phase depends on re-editing it. TC-ENGINE-064
+#   (Phase 6) proves the landing: file, index row, resolvable bidirectional reference,
+#   status agreement, and the D1..D11 clause set with the five-outcome table.
 #
 # OQ-TP PLACEMENTS (test plan §8.3; each is placed in a named phase and asserted
 # by the named case — a placement that cannot hold fails its case, never skips):
@@ -273,8 +347,10 @@
 #     recorded in test-plan §10;
 #   AMB-ENG-4 (the emittable set is a declaration; a future branch that forgets
 #     to extend it escapes) -> Phase 5 (TC-ENGINE-054: non-empty, duplicate-free,
-#     four-family spanning, per-member row/kind agreement, live mismatch
-#     control, refusal-site scan);
+#     three-domain spanning — `config`, `provider`, `merge`, no `state.*` member
+#     (DEC-18) — per-member row/kind agreement, live mismatch control, and the
+#     refusal-site scan widened by REM-2 to the config-read wrapper's forwarded
+#     codes);
 #   AMB-ENG-5 (the owner principal is observed through the waiver effect) ->
 #     Phase 5 (TC-ENGINE-050); BYTE-ENG-1 (flat-alias byte identity is a golden
 #     plus absence scans plus a repos read that does carry both fields) ->
@@ -685,6 +761,22 @@ phases:
   # No scope drift: no handover or reversal record field changes; no second
   # evidence-read-free outcome; the handover text renderer is untouched; no
   # summary or fleet-row key appears here.
+  #
+  # DECLARED SCOPE CLOSURE (review iteration 1, F-5/F-6) — two paths this phase
+  # actually edits and the delivery review found undeclared:
+  #   `packages/core/src/domain/dispatch-authority.ts` gains `reversibilityOf` (the
+  #   one rule `reversible` applies: the latest folded authority after the operation
+  #   is `authoritative`, identical to the authority document's `reversalAvailable`)
+  #   and its public export. It is declared here because `reversible` is this
+  #   phase's field; the domain module holds the fold, the phase holds the surface.
+  #   `packages/cli/src/edge.ts` gains the `gate.max` pass-through on the
+  #   handover/revert wiring of `createDispatchGateRuntime` (the summary path
+  #   already forwards it). It is a test-only seam: the production composition never
+  #   sets `gate.max`, the delivered bound of 5000 makes truncation reachable
+  #   anyway, and no flag, key, exit, or contract moves — it exists so a controlled
+  #   composition can reach the truncated handover cell that TC-ENGINE-014 and
+  #   TC-ENGINE-095 assert. The file is also a Phase 5 conditional row; both phases
+  #   declare it so either phase's commit can stage it.
   # Conditional rows: `packages/cli/src/commands/dispatch.ts` may need only a
   # narrowing in its exit-projection guard so the recorded revert's newly
   # populated `verdict` cannot reclassify it (the delivered guard already
@@ -700,7 +792,9 @@ phases:
       files:
         - packages/core/src/app/dispatch-gate.ts
         - packages/core/src/contracts/dispatch.ts
+        - packages/core/src/domain/dispatch-authority.ts
         - packages/cli/src/commands/dispatch.ts
+        - packages/cli/src/edge.ts
         - tests/behaviour/dispatch-handover-conditions.test.ts
         - tests/behaviour/dispatch-additive-stability.test.ts
         - tests/fixtures/dispatch/ledger.ts
@@ -820,20 +914,33 @@ phases:
   # `merge` branch of the resolved configuration document (keys remain exactly
   # `gate-freshness`, `gates`, `deploy-expectations`; an absent document keeps the
   # delivered defaults, an unreadable/invalid document forwards its own
-  # classified code rather than silently resolving `{}`), branch and base
-  # reference from the checkout's git facts, and the owner principal as the owner
-  # component of the checkout's normalized `host/owner/name` identity supplied to
-  # the declared `ownerPrincipal` input. Simultaneously, failure classification
-  # derives `domainKind` from the resolved error-table row instead of hard-coding
-  # `provider`: `config.credential.missing` emits `config` at its declared
-  # projection and therefore exit 1 (`user-validation`, TDR-0031 D7), and can no
-  # longer be contained as `fallback.internal`; exit 2 belongs to
+  # classified code rather than silently resolving `{}`), the branch from the
+  # checkout's git facts, the base reference from the DECLARED integration base the
+  # closeout path already uses (`CLOSEOUT_INTEGRATION_BASE`, `main-tools`) — one
+  # source of truth, with no new configuration key, constant, or second git-fact
+  # derivation of the base (AC-F6-10 as amended, DEC-19) — and the owner principal
+  # as the owner component of the checkout's normalized `host/owner/name` identity
+  # supplied to the declared `ownerPrincipal` input. Simultaneously, failure
+  # classification derives `domainKind` from the resolved error-table row instead
+  # of hard-coding `provider`: `config.credential.missing` emits `config` at its
+  # declared projection and therefore exit 1 (`user-validation`, TDR-0031 D7), and
+  # can no longer be contained as `fallback.internal`; exit 2 belongs to
   # `platform-provider` and is the repaired defect's signature, which no case on
   # this path may assert.
   # The composition publishes `MERGE_COMPOSITION_EMITTABLE_CODES` — its declared
   # emittable failure-code set, exhaustive by construction over its refusal
   # branches, one member per branch, every member a code the error table already
-  # declares. The only type widening is `MergeFailure.domainKind` admitting the
+  # declares, non-empty, duplicate-free, and carrying at least one code from each of
+  # the THREE domains the composition emits — `config`, `provider`, `merge` — with
+  # no member in any other domain and no `state.*` member, because the state-read
+  # refusal is the declared `merge.state-unverified` row in the `merge` domain
+  # emitted at its declared projection and exit 2 (AC-F7-11 as amended, DEC-18).
+  # Exhaustiveness covers the config-read branch too: the composition's own
+  # configuration-read wrapper forwards the codes `acquireProjectConfiguration` /
+  # `resolveConfig` / the merge gate and freshness reads can refuse with
+  # (`config.value.invalid`, `config.file.malformed` as applicable, and no other),
+  # and REM-2 records them as members and widens the conformance scan to forwarded
+  # codes. The only type widening is `MergeFailure.domainKind` admitting the
   # already-declared `config` kind. The adjacent `verify deploy` target-resolution
   # stub is untouched and stays a declared residual.
   #
@@ -859,9 +966,11 @@ phases:
   #   owner principal through the waiver effect with two other principals refused,
   #   the three-key configuration branch, the missing-credential classification at
   #   its declared exit, the read-fault matrix), merge-classification-conformance
-  #   (constant exported, non-empty, duplicate-free, four-family spanning, every
-  #   member resolving to a row with a matching kind, live mismatch control,
-  #   refusal-site scan), merge-dry-run (TC-MERGE-028, unmodified),
+  #   (constant exported, non-empty, duplicate-free, three-domain spanning — after
+  #   REM-2 including the config-read wrapper's forwarded members — every member
+  #   resolving to a row with a matching kind, live mismatch control, and the
+  #   refusal-site scan over both the `mergeReadCodeOf` block and the forwarded
+  #   config-read codes), merge-dry-run (TC-MERGE-028, unmodified),
   #   merge-classification + merge-waivers + merge-verification-record (delivered
   #   controls), merge-deploy-no-live-calls (module list extended by appending),
   #   error-table (row count, per-kind pins, and DOMAIN_KINDS unchanged),
@@ -933,9 +1042,14 @@ phases:
   # lane records, `status.laneParks`, board `PARKED`, spend window evidence; plus
   # the declared lanes-read profile blindness and the absence of any new window
   # read), `feature-merge-verify-deploy.md` (production composition, the
-  # error-table-derived classification, `MERGE_COMPOSITION_EMITTABLE_CODES`, the
-  # declared credential-read exit projection at exit 1, and
-  # the `verify deploy` residual), and the residual wording in
+  # error-table-derived classification, `MERGE_COMPOSITION_EMITTABLE_CODES` with
+  # its three emitted domains and no `state.*` member, the declared credential-read
+  # exit projection at exit 1, the declared integration base the dry run reports as
+  # the base it used, and the `verify deploy` residual),
+  # `feature-result-contract.md` (the `repos` kind's `repos.state-unavailable` row
+  # extended to name the per-row gate failures — an unreadable, torn, or malformed
+  # evidence ledger, or a row whose repository identity cannot be resolved — at its
+  # declared exit 2, with no row, kind, or exit added), and the residual wording in
   # `feature-autonomous-delivery.md` and `feature-resident-daemon.md` (the engine
   # is the regular path; the shell remains the documented fallback and the daemon
   # composition stays `supervise-only`); (c) the BOUNDED lifecycle-prose
@@ -946,7 +1060,14 @@ phases:
   # `milestones/m2/README.md` M2-S16 scenario cell gaining `SC-M2-S16-03` beside
   # `SC-M2-S16-01/02`, and the restated `SC-M2-S16-02` / `SC-M2-S16-03` text with
   # their forcing facts and story-AC traces in `test-scenarios.md` (OQ-TP-7 leaves
-  # the placement to `@doc-syncer`; both scenarios are selected by id).
+  # the placement to `@doc-syncer`; both scenarios are selected by id); and (e) the
+  # index and registration rows this change makes necessary: `doc/00-index.md` (the
+  # guide's row in the guides table), `doc/guides/ados-processes.md` (the
+  # delivery-process card's engine-first link), `doc/overview/glossary.md` (the
+  # flat-record-set entry restated with `reversible` and `handoverGate` and the
+  # flat alias's absence of both), and
+  # `scripts/checks/forbidden-literals.registry.json` (the new guide's registration
+  # in the literal-scan allowlist, without which the guide's own scan flags it).
   #
   # BOUNDED LIFECYCLE-PROSE CONSTRAINT (AC-F4-8, AC-F8-12, NFR-8; readiness F-3).
   #   Two documents still assert the opposite primary path — `AGENTS.md`'s
@@ -974,8 +1095,33 @@ phases:
   #       never as an ahead-of-implementation claim.
   #   TC-ENGINE-065 asserts the positive claim in both resolved spans, the
   #   whole-document absence scans, the no-flip/no-deprecation claims, the marker
-  #   facts, and the bounded-edit changed-line print. `doc-conformance` runs as the
+  #   facts, and the surrounding section headings that prove the edit stayed
+  #   bounded — it does not print changed lines (the testing strategy forbids a
+  #   branch-diff assertion), so no phase claims one. `doc-conformance` runs as the
   #   control so the new wording introduces no history phrasing.
+  #
+  # SCOPE CLOSURE (review iteration 1, F-5) — the documentation paths this phase
+  # owns beyond the six asserted feature pages: `feature-result-contract.md` (the
+  # `repos.state-unavailable` row restatement), `doc/00-index.md`,
+  # `doc/guides/ados-processes.md`, `doc/overview/glossary.md`,
+  # `doc/decisions/00-index.md` (the TDR-0031 index row that landed with the
+  # Phase 1 landing commit — declared here for staging and accounting only; the row
+  # is already correct and this phase authors no change to it), and
+  # `scripts/checks/forbidden-literals.registry.json` (the guide's registration).
+  # All six are declared in this phase's `scope.files`.
+  #
+  # PHASE-7-STAGED PLANNING CORPUS (review iteration 1, F-5) — three planning pages
+  # are reconciled by LIFECYCLE PHASE 7 (`system_spec_update`, `@doc-syncer`), not
+  # by this phase, and are declared in PHASE 7's `scope.files` for STAGING exactly
+  # like the two `doc/quality/test-specs/` files:
+  # `doc/planning/oss-tooling/milestones/m1/commands/dispatch.md` (the four
+  # conditions, `reversible`, the declared revert-noop exemption, and the three
+  # additive summary fields), `doc/planning/oss-tooling/milestones/m2/commands/repos.md`
+  # (the `reversible` and `handoverGate` row fields, the read-time host, and the
+  # extended `repos.state-unavailable` meaning), and
+  # `doc/planning/oss-tooling/milestones/m2/contracts.md` (the `repos.v1` row
+  # contract with the same fields). This phase neither authors nor asserts their
+  # content; declaring them anywhere else would borrow lifecycle phase 7's work.
   #
   # The two broader test specs (`doc/quality/test-specs/test-spec-dispatch-
   # engine.md`, `test-spec-merge-verify-deploy.md`) are NOT reconciled here: DEC-16
@@ -1032,16 +1178,22 @@ phases:
         - doc/guides/engine-first-operations.md
         - AGENTS.md
         - doc/guides/change-lifecycle.md
+        - doc/guides/ados-processes.md
+        - doc/00-index.md
+        - doc/overview/glossary.md
+        - doc/decisions/00-index.md
         - doc/spec/features/feature-dispatch-engine.md
         - doc/spec/features/feature-projects.md
         - doc/spec/features/feature-peak-pausing.md
         - doc/spec/features/feature-merge-verify-deploy.md
+        - doc/spec/features/feature-result-contract.md
         - doc/spec/features/feature-autonomous-delivery.md
         - doc/spec/features/feature-resident-daemon.md
         - doc/planning/oss-tooling/milestones/m2/backlog.md
         - doc/planning/oss-tooling/status.md
         - doc/planning/oss-tooling/milestones/m2/README.md
         - doc/planning/oss-tooling/milestones/m2/test-scenarios.md
+        - scripts/checks/forbidden-literals.registry.json
         - tests/checks/engine-first-doc-reconciliation.test.ts
         - tests/checks/doc-conformance.test.ts
         - tests/checks/dispatch-doc-conformance.test.ts
@@ -1209,7 +1361,7 @@ phases:
   # `verify deploy` is stated as a residual; TDR-0031 landed (as amended) in Phase 1;
   # the bounded lifecycle prose is reconciled in Phase 6 (TC-ENGINE-065); and the
   # lifecycle-phase-7 reconciliation HANDOFF is RECORDED (owner `@doc-syncer`, the
-  # two staged paths, satisfaction at DoD-7).
+  # two test-spec and three planning-corpus staged paths, satisfaction at DoD-7).
   # The reconciliation itself is NOT part of this exit: no phase of this plan may
   # close with in-scope work unlanded or with an AC whose in-scope portion is unmet;
   # the lifecycle-phase-7 reconciliation portion of AC-F8-12 is not in-scope work
@@ -1221,12 +1373,30 @@ phases:
   # check, never this phase's self-certification.
   #
   # No scope drift: tests, the one permitted new shell parity suite, the changeset,
-  # the change folder, the two test-spec files staged for lifecycle phase 7, and
-  # nothing else — no production behaviour change, no edit to an existing
-  # `scripts/*.sh` entry point or `scripts/lib/**`, no change to shell behaviour, an
-  # exit, or the pinned five-key summary, no flip, and no plan-goal amendment.
+  # the change folder, the two test-spec files and the three planning-corpus pages
+  # staged for lifecycle phase 7, the contract-inventory fixture this phase's
+  # additivity battery feeds, and nothing else — no production behaviour change, no
+  # edit to an existing `scripts/*.sh` entry point or `scripts/lib/**`, no change to
+  # shell behaviour, an exit, or the pinned five-key summary, no flip, and no
+  # plan-goal amendment.
+  # PHASE-7-STAGED PLANNING CORPUS (review iteration 1, F-5):
+  # `doc/planning/oss-tooling/milestones/m1/commands/dispatch.md`,
+  # `doc/planning/oss-tooling/milestones/m2/commands/repos.md`, and
+  # `doc/planning/oss-tooling/milestones/m2/contracts.md` are authored by LIFECYCLE
+  # PHASE 7 (`system_spec_update`, `@doc-syncer`) and are declared here for STAGING
+  # only, on the same terms as the two `doc/quality/test-specs/` files: this phase
+  # authors no content of them and asserts nothing about them; the declaration
+  # exists so the reconciliation commit can stage the pages without reopening the
+  # plan.
+  # `tests/fixtures/ports/v1-contract-inventory.json` is declared here because this
+  # phase's additivity battery reads it and its new rows mirror the Phase 1
+  # (`DISPATCH_CONDITION_STATES`, `DispatchConditionState`, `DispatchConditionStatus`)
+  # and Phase 4 (`REPOS_HANDOVER_GATE_FIELDS`, `ReposHandoverGate`) contract exports;
+  # it is a generated inventory, extended by appending, never hand-pruned.
   # Conditional rows: `tests/fixtures/dispatch` is declared folder-wise only if
-  # the closing battery reuses a fixture helper that must be extended. The two
+  # the closing battery reuses a fixture helper that must be extended; the same
+  # folder declaration covers the bounded-read fixture REM-3 may need.
+  # The two
   # `doc/quality/test-specs/` files are the HANDOFF OBLIGATION above (DEC-16, DoD-7),
   # declared here for STAGING only so the `@doc-syncer` edit is committable; they are
   # never optional, are satisfied in lifecycle phase 7, and no content of them is
@@ -1247,8 +1417,12 @@ phases:
         - tests/structure/dispatch-merge-boundary.test.ts
         - tests/structure/content-inventory.test.ts
         - tests/structure/inventory.json
+        - tests/fixtures/ports/v1-contract-inventory.json
         - doc/quality/test-specs/test-spec-dispatch-engine.md
         - doc/quality/test-specs/test-spec-merge-verify-deploy.md
+        - doc/planning/oss-tooling/milestones/m1/commands/dispatch.md
+        - doc/planning/oss-tooling/milestones/m2/commands/repos.md
+        - doc/planning/oss-tooling/milestones/m2/contracts.md
       folders:
         - doc/changes/2026-11/2026-11-17--GH-293--engine-first-operations
         - tests/fixtures/dispatch
@@ -1256,3 +1430,253 @@ phases:
       mergeRequestUrl: "pull request for feat/GH-293/engine-first-operations targeting main-tools"
       pipelineId: "CI pipeline for the GH-293 delivery branch"
       trackerTransition: "in-review"
+
+# ===========================================================================
+# DECLARED REMEDIATION — delivery review iteration 1
+# (`./code-review/review-iter-1.yaml`, status FAIL: 2 high, 3 medium, 7 low,
+# 4 info; findings F-1..F-16).
+#
+# This block is additive declaration data beside the phases: `plan validate`
+# reads `phases` only, so it is inert to the verdict, and it is NOT a task log —
+# it declares what the review-fix iteration must change, where, and what proves
+# it, exactly as a phase declares scope. It is executed in lifecycle phase 8
+# (`review_fix`, `@coder`) before review iteration 2, in the declared order.
+# Every scope path below is also declared in the owning plan phase's
+# `scope.files` (REM-1's test-spec row and REM-4's changeset in Phase 7, the
+# production and merge paths in Phase 5, the projects paths in Phase 4, the
+# cross-surface suite in Phase 7), so the fix commits stage without reopening
+# the plan.
+#
+# Two findings carry no entry and are recorded here as no-action:
+#   F-15 (info, performance) — `repos list`'s O(rows x ledger) cost is measured
+#        well inside the declared posture and is a scaling residual, not a defect;
+#        the review itself says no change is required now.
+#   F-16 (info, documentation) — the commit primitive's 72-character path template
+#        and the absent `events.jsonl`/`candidates/` capsule are a repo-wide tooling
+#        gap carried to the PR description and the retro, not a GH-293 defect.
+# ===========================================================================
+remediation:
+  reviewSource: doc/changes/2026-11/2026-11-17--GH-293--engine-first-operations/code-review/review-iter-1.yaml
+  executedIn: "lifecycle phase 8 (review_fix, @coder), before review iteration 2"
+  entries:
+    - id: REM-1
+      reviewFindings: [F-1, F-3]
+      summary: "Declare the amended facts, change no code"
+      change: >-
+        No code change. The internal contradiction F-1 and the base-reference
+        over-claim F-3 are resolved in specification (spec v1.5, now AC-F7-11's
+        three emitted domains with no `state.*` member and AC-F6-10's declared
+        integration base) and are carried into the reconciled documents: the
+        `MERGE_COMPOSITION_EMITTABLE_CODES` row of
+        `doc/quality/test-specs/test-spec-merge-verify-deploy.md` is restated over
+        the three domains `config`, `provider`, and `merge` with the state-read
+        refusal named as the declared `merge.state-unverified` row (no `state.*`
+        member), and `doc/spec/features/feature-merge-verify-deploy.md` is
+        CONFIRMED (not re-authored) to already state the declared integration base
+        the dry run reports as the base it used. TDR-0031 D9 and the conformance
+        oracle are read for agreement; no member, row, kind, exit, or test
+        assertion moves. If the accepted resolution is instead to add a `state.*`
+        member, that requires re-opening specification and the error table and is
+        outside this plan's authority.
+      scope:
+        files:
+          - doc/quality/test-specs/test-spec-merge-verify-deploy.md
+          - doc/spec/features/feature-merge-verify-deploy.md
+      verification:
+        - bun test tests/checks/engine-first-doc-reconciliation.test.ts
+        - bun test tests/checks/doc-conformance.test.ts
+        - bun test tests/structure/merge-classification-conformance.test.ts
+        - bash scripts/.tests/test-doc-distribution.sh
+
+    - id: REM-2
+      reviewFindings: [F-2]
+      summary: "Cover the config-read branch in the emittable set and its scan"
+      change: >-
+        `MERGE_COMPOSITION_EMITTABLE_CODES` gains the config-domain codes the
+        composition's own configuration-read wrapper can actually forward — at
+        minimum `config.value.invalid` (the merge gate and freshness reads) and
+        `config.file.malformed` where an unreadable or malformed configuration
+        document is the refusal — and no code from a domain no branch emits (in
+        particular no `state.*` member: the state-read refusal is
+        `merge.state-unverified` at its declared projection and exit 2, DEC-18).
+        The conformance case's "every refusal site" scan is widened past the
+        literal `return "<code>"` sites in the `mergeReadCodeOf` block so a
+        forwarded `code` value read out of a refusal branch must also be a member,
+        and the branch gains cases for an invalid or unreadable configuration
+        document and for an invalid `merge.gates` / `gate-freshness` value, each
+        asserting the forwarded code's declared kind and exit. The constant stays
+        non-empty, duplicate-free, three-domain spanning, and total over the
+        branches it enumerates.
+      scope:
+        files:
+          - packages/cli/src/production.ts
+          - tests/structure/merge-classification-conformance.test.ts
+          - tests/behaviour/merge-production-composition.test.ts
+      verification:
+        - bun test tests/structure/merge-classification-conformance.test.ts
+        - bun test tests/behaviour/merge-production-composition.test.ts
+        - bun test tests/structure/error-table.test.ts
+
+    - id: REM-3
+      reviewFindings: [F-4]
+      summary: "Make the cross-surface truncated family genuinely truncated"
+      change: >-
+        The `truncated` fixture family in TC-ENGINE-095 stops being a byte-identical
+        copy of the `eligible` family: it is produced by a bounded read that really
+        truncates — the composition's declared bound (`gate.max`, defaulting to
+        `DISPATCH_MAX_ATTEMPT_RECORDS = 5000`) over a ledger that exceeds it, with
+        the bound supplied through the declared pass-through on a controlled
+        composition and never by inventing a test seam. The no-op spread at the
+        summary invocation is removed. The case then asserts, on all three surfaces
+        over that one ledger: `verdict: "unverifiable"` with `truncation` present
+        (the biconditional, both directions), the visible-window statuses identical
+        across summary, handover, and the fleet row with the open set equal to
+        `unmetConditions` in order, and zero appends by the library reads (the
+        summary and fleet reads leave the handover ledger unchanged). If the
+        truncated cell cannot be reached without a new store seam, the coder stops
+        and reopens test planning rather than keeping a vacuous family.
+      scope:
+        files:
+          - tests/behaviour/engine-first-cross-surface.test.ts
+        conditionalFiles:
+          - tests/fixtures/projects/production.ts
+      verification:
+        - bun test tests/behaviour/engine-first-cross-surface.test.ts
+        - bun test tests/behaviour/dispatch-handover-conditions.test.ts
+        - bun test tests/behaviour/repos-handover-gate.test.ts
+
+    - id: REM-4
+      reviewFindings: [F-9, F-10, F-11]
+      summary: "One change-ref grammar, narrowing instead of casts, and an honest library-change declaration"
+      change: >-
+        One change-ref pattern is shared between the production composition
+        (`mergeWorkItem`, `mergeRequestDetail`) and the merge command's own grammar,
+        so a ref with a digit in its prefix (`ABC2-12`) validates and resolves
+        instead of being refused `merge.transaction-aborted`; a case with a
+        digit-bearing prefix pins it. The `as` casts are replaced with narrowing:
+        `stateFailure`'s `row?.domainKind as MergeFailure["domainKind"]` reuses one
+        safe domain-kind guard (as `readFailure` already builds) in
+        `packages/core/src/domain/merge-transaction.ts`, and the bulk-ledger
+        fixture's `record as unknown as StateJsonValue` is typed or validated
+        without the double cast. For the breaking library signature, either
+        `reposListDataOf`'s new input becomes optional with a delivered empty-gate
+        default (the pure empty fold, no store) or the changeset body states the
+        breaking `@delivery-os/core` library change beside the additive payload
+        promise — one of the two, never neither.
+      scope:
+        files:
+          - packages/cli/src/production.ts
+          - packages/cli/src/commands/merge.ts
+          - packages/core/src/domain/merge-transaction.ts
+          - tests/fixtures/projects/production.ts
+          - .changeset/gh-293-engine-first-operations-minor.md
+        conditionalFiles:
+          - packages/core/src/app/projects.ts
+      verification:
+        - pnpm typecheck
+        - bun test tests/behaviour/merge-production-composition.test.ts
+        - bun test tests/structure/merge-classification-conformance.test.ts
+        - bun run scripts/checks/changesets-group.ts
+
+    - id: REM-5
+      reviewFindings: [F-12, F-14]
+      summary: "Bind the reversible fold to the row identity and derive the empty gate once"
+      change: >-
+        `readProjectHandover`'s fold filters to the row's resolved repository
+        identity before `reversible` and `handoverState` are read, so a store that
+        accumulates two identities cannot report another repository's authority; if
+        the store is instead provably single-identity, that fact is stated explicitly
+        in the code comment and the feature page rather than left implicit. One of
+        the two, not both halves. Independently, `emptyHandoverGate` in
+        `packages/core/src/app/projects.ts` is DERIVED from the pure empty fold —
+        `conditionStatuses(evaluateHandoverGate(foldEvidenceWindow(...)))` over an
+        empty window, which needs no store — instead of a hand-written literal, so
+        DM-3's single derivation holds; the contract test's literal assertions stay
+        as the pin that the derived value did not move.
+      scope:
+        files:
+          - packages/cli/src/production.ts
+          - packages/core/src/app/projects.ts
+      verification:
+        - bun test tests/behaviour/repos-handover-gate.test.ts
+        - bun test tests/behaviour/repos-list-contract.test.ts
+        - bun test tests/behaviour/projects-list-contract.test.ts
+        - bun test tests/behaviour/engine-first-cross-surface.test.ts
+
+    - id: REM-6
+      reviewFindings: [F-13]
+      summary: "Derive the state-read failure's exit from its row"
+      change: >-
+        `stateFailure` in `packages/core/src/domain/merge-transaction.ts` derives the
+        emitted exit from the same resolved error-table row it already reads
+        `domainKind` from (`projectExitCode` over the row's `projectionClass`, as
+        `readFailure` does), instead of hard-coding `2`. The emitted exit value does
+        not change today — `merge.state-unverified` is `platform-provider` — so no
+        case's expectation moves; the claim that every emitted failure's exit is its
+        row's declared projection becomes true by construction.
+      scope:
+        files:
+          - packages/core/src/domain/merge-transaction.ts
+      verification:
+        - pnpm typecheck
+        - bun test tests/behaviour/merge-production-composition.test.ts
+        - bun test tests/structure/merge-classification-conformance.test.ts
+
+    - id: REM-7
+      reviewFindings: [F-7, F-8]
+      summary: "Record the executed attestations and retire the stale pins"
+      change: >-
+        No code. Test-plan §10 stops reading "No executions yet": it records the
+        executed rows with their source (the per-phase pm-notes evidence and the
+        reviewer's independently re-run suites) and the reviewer attestations the
+        plan relies on, including the no-flip audit result as the AMB-ENG-3
+        attestation; the two stale terminology pins still reading "the documentation
+        phase" become `system_spec_update`; the NFR-4 row keeps TC-ENGINE-017; and
+        the front-matter pins are re-stated to spec v1.5. The two plan sentences the
+        review found overstated are corrected in this revision (Phase 6's
+        TC-ENGINE-065 wording and Phase 5's TC-ENGINE-054 wording), so the
+        verification map and the plan agree with what the cases assert.
+      scope:
+        files:
+          - doc/changes/2026-11/2026-11-17--GH-293--engine-first-operations/chg-GH-293-test-plan.md
+      verification:
+        - bun test tests/checks/engine-first-doc-reconciliation.test.ts
+        - bun test tests/checks/dispatch-doc-conformance.test.ts
+        - bun test tests/checks/doc-conformance.test.ts
+
+  verificationBatch:
+    note: >-
+      Run after the last entry lands, in declared order, and record each verdict in
+      the phase notes. A red row is remediated and the batch re-run; it is never
+      recorded as a pass and no acceptance criterion or DoD item is marked met on a
+      red row.
+    steps:
+      - "bun test tests/behaviour/dispatch-clean-accrual.test.ts"
+      - "bun test tests/behaviour/dispatch-conditions-projection.test.ts"
+      - "bun test tests/behaviour/dispatch-handover-conditions.test.ts"
+      - "bun test tests/behaviour/dispatch-additive-stability.test.ts"
+      - "bun test tests/behaviour/repos-handover-gate.test.ts"
+      - "bun test tests/behaviour/repos-list-contract.test.ts"
+      - "bun test tests/behaviour/projects-flat-alias.test.ts"
+      - "bun test tests/behaviour/engine-first-cross-surface.test.ts"
+      - "bun test tests/checks/engine-first-no-flip.test.ts"
+      - "bun test tests/checks/engine-first-hermetic.test.ts"
+      - "bun test tests/checks/engine-first-doc-reconciliation.test.ts"
+      - "bun test tests/behaviour/merge-production-composition.test.ts"
+      - "bun test tests/structure/merge-classification-conformance.test.ts"
+      - "bun test tests/structure/error-table.test.ts"
+      - "bun test tests/structure/content-inventory.test.ts"
+      - "bash scripts/.tests/test-doc-distribution.sh"
+      - "TMPDIR=$PWD/tmp/tmpdir pnpm check"
+      - "./scripts/lint-commit-range.sh --base main-tools"
+
+  closureRule: >-
+    A remediation entry is an obligation, never a substitute for evidence: closing
+    REM-1..REM-7 does not mark AC-F7-11, AC-F6-10, or any other acceptance criterion
+    met by itself, and the review gate stays FAIL until review iteration 2
+    re-verifies AC-F7-11 and AC-F6-10 against spec v1.5's amended text. No phase of
+    this plan may close with in-scope work unlanded or with an AC whose in-scope
+    portion is unmet, and the CHANGE may not close with any acceptance criterion or
+    spec §17.1 DoD item outstanding. An entry left undone leaves its finding open; it
+    is never converted into a residual and never closed as documentation.
+
