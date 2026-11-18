@@ -17,6 +17,7 @@ import {
   readFileSync,
   rmSync,
   statSync,
+  writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
 import {
@@ -34,11 +35,24 @@ import { queueGraphDocumentPath, readQueueEntries } from "../../../packages/core
 import type {
   BrandIdentity,
   CredentialPort,
+  DispatchAttemptRecord,
+  DispatchDivergenceRecord,
   HarnessSpawnRunner,
   HarnessSpawnRunnerResult,
   QueueEntryRecord,
+  StateJsonValue,
   StateStorePort,
 } from "../../../packages/core/src/contracts/index";
+import {
+  DISPATCH_ATTEMPT_RECORD_KIND,
+  dispatchAttemptRecordKey,
+} from "../../../packages/core/src/contracts/index";
+import {
+  appendDispatchAttempt,
+  appendDispatchDivergence,
+} from "../../../packages/core/src/app/dispatch-ledger";
+import { buildRecord, serializeRecord } from "../../../packages/core/src/state/ledger";
+import { projectStateRoot } from "../../../packages/core/src/app/state-scope";
 import {
   createNodeStateEdge,
   createStateStore,
@@ -346,4 +360,90 @@ export const modeOf = (directory: string): number | undefined => {
 /** Remove one directory tree. */
 export const removeDirectoryTree = (directory: string): void => {
   rmSync(directory, { recursive: true, force: true });
+};
+
+/**
+ * The per-project store a project key resolves to (GH-293 F-3).
+ *
+ * The fleet row's gate evaluation reads the store the row pass already opens;
+ * a fixture seeds through this same derived location so the assertion is about
+ * the projection rather than about a hand-made directory.
+ */
+export const projectStoreFor = (hostRoot: string, projectKey: string) =>
+  createStateStore(
+    {
+      level: "local",
+      workspaceId: "default",
+      fenceNamespace: "cli",
+      schemaVersion: STATE_SCHEMA_VERSION,
+      stateDirectory: projectStateRoot(hostRoot, projectKey),
+    },
+    { driver: "jsonl", edge: createNodeStateEdge() },
+  );
+
+/** Make one project's state root `ready` and seed attempts through the ledger. */
+export const seedProjectAttempts = (
+  hostRoot: string,
+  projectKey: string,
+  records: readonly DispatchAttemptRecord[],
+): void => {
+  const store = projectStoreFor(hostRoot, projectKey);
+  for (const record of records) {
+    const appended = appendDispatchAttempt(store, `fixture-${projectKey}`, record);
+    if (!appended.ok) throw new Error(`attempt seed failed: ${appended.code}`);
+  }
+};
+
+/** Seed divergences into the same project store. */
+export const seedProjectDivergences = (
+  hostRoot: string,
+  projectKey: string,
+  records: readonly DispatchDivergenceRecord[],
+): void => {
+  const store = projectStoreFor(hostRoot, projectKey);
+  for (const record of records) {
+    const appended = appendDispatchDivergence(store, `fixture-${projectKey}`, record);
+    if (!appended.ok) throw new Error(`divergence seed failed: ${appended.code}`);
+  }
+};
+
+/**
+ * Seed a large attempt ledger as one verified ledger file.
+ *
+ * OQ-TP-5 measured the delivered append path at ~106 ms per record here (each
+ * append re-verifies the whole ledger), so 5,005 appends cost ~9 minutes. The
+ * records are therefore framed with the delivered `buildRecord` /
+ * `serializeRecord` pair and written once; the reader still verifies framing,
+ * sequence continuity, and every checksum, so the case exercises the real read
+ * and bound path rather than a relaxed one.
+ */
+export const seedProjectAttemptsLedger = (
+  hostRoot: string,
+  projectKey: string,
+  records: readonly DispatchAttemptRecord[],
+): void => {
+  const store = projectStoreFor(hostRoot, projectKey);
+  const read = store.readRecords();
+  if (!read.ok) throw new Error(`store path unavailable: ${read.error.code}`);
+  const ledgerPath = read.value.evidence.storePath;
+  const stateDirectory = projectStateRoot(hostRoot, projectKey);
+  mkdirSync(stateDirectory, { recursive: true, mode: 0o700 });
+  writeFileSync(
+    join(stateDirectory, "header.default.json"),
+    `${JSON.stringify({ schemaVersion: STATE_SCHEMA_VERSION })}\n`,
+    { mode: 0o600 },
+  );
+  const body = records
+    .map((record, index) =>
+      serializeRecord(
+        buildRecord(
+          DISPATCH_ATTEMPT_RECORD_KIND,
+          dispatchAttemptRecordKey(record.attemptId),
+          index + 1,
+          record as unknown as StateJsonValue,
+        ),
+      ),
+    )
+    .join("");
+  writeFileSync(ledgerPath, body, { mode: 0o600 });
 };

@@ -239,6 +239,7 @@ export {
   type HandoverEvidence,
   orderProjectEntries,
   orderRepoEntries,
+  emptyHandoverGate,
   type ProjectGroupMemberResolution,
   projectGroupEntry,
   projectGroupMemberEntry,
@@ -246,6 +247,7 @@ export {
   projectListEntry,
   projectMemberHealth,
   repoListEntry,
+  reposHandoverGateOf,
   reposListDataOf,
   resolveProjectGroupMember,
   selectDaemonReachability,
@@ -546,6 +548,7 @@ export {
   isAuthoritative,
   parseDispatchAuthorityText,
   parseDispatchAuthorityView,
+  reversibilityOf,
 } from "./domain/dispatch-authority.js";
 export {
   buildComparisonRecord,

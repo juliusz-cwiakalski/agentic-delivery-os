@@ -8,7 +8,7 @@
  * classified under `repos.*` with the delivered exit meanings.
  */
 import { describe, expect, test } from "bun:test";
-import { mkdirSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { hostIndexDocumentPath } from "../../packages/adapters/src/file/host-index-store";
 import { projectStateRoot } from "../../packages/core/src/app/state-scope";
@@ -19,6 +19,14 @@ import {
   REPOS_ENTRY_FIELDS,
   REPOS_LIST_DATA_FIELDS,
 } from "../../packages/core/src/contracts/projects";
+import { DISPATCH_HANDOVER_CONDITIONS } from "../../packages/core/src/contracts/dispatch";
+import { snapshotDifferences, snapshotTree } from "../fixtures/projects/host-root";
+import { seedProjectAttempts } from "../fixtures/projects/production";
+import {
+  setOriginRemote,
+  writeDispatchIdentityBinding,
+} from "../fixtures/projects/temp-repos";
+import { buildAttempts, eligibleSpecs } from "../fixtures/dispatch/evidence-windows";
 import { hostIndexEntriesOf } from "../fixtures/projects/host-index";
 import {
   createProductionProjectsHarness,
@@ -178,6 +186,177 @@ describe("TC-GRPREN-001 repos list returns repos.v1 with exact renamed fields", 
     } finally {
       for (const harness of harnesses) harness.dispose();
       removeDirectory(outside);
+      host.dispose();
+    }
+  });
+});
+
+describe("TC-ENGINE-020 the row carries the two additive fields in the declared order", () => {
+  test("seven ordered fields, the declared block, and an untouched first-use row", async () => {
+    const host = createHostFixture("repos-gate-shape");
+    const base = `${host.hostRoot}-repos`;
+    const harnesses: ProductionProjectsHarness[] = [];
+    try {
+      const ready = createRepository(base, "ready-repo");
+      const unused = createRepository(base, "unused-repo");
+      // The ready cell declares its identity through the persisted binding.
+      writeDispatchIdentityBinding(ready, "github.com/owner/ready");
+      const readyHarness = harnessFor(host, "ready", ready);
+      const unusedHarness = harnessFor(host, "unused", unused);
+      harnesses.push(readyHarness, unusedHarness);
+      await register(readyHarness);
+      await register(unusedHarness);
+
+      const readyState = projectStateRoot(host.hostRoot, readyHarness.projectKey);
+      mkdirSync(readyState, { recursive: true, mode: 0o700 });
+      seedProjectAttempts(
+        host.hostRoot,
+        readyHarness.projectKey,
+        buildAttempts(eligibleSpecs({ repository: "github.com/owner/ready" })),
+      );
+
+      const before = snapshotTree(host.hostRoot);
+      const bindingPath = join(ready, ".git", "dispatch-identity.json");
+      const bindingBefore = readFileSync(bindingPath, "utf8");
+
+      const run = await readyHarness.run(["repos", "list", "--json"]);
+      expect(run.exitCode, run.stderr).toBe(0);
+      const entries = reposOf(run);
+      for (const entry of entries) {
+        // Ordered, not sorted: an appended field may not reorder a delivered one.
+        expect(Object.keys(entry)).toEqual([
+          "repoKey",
+          "root",
+          "stateLocation",
+          "daemonReachable",
+          "handoverState",
+          "reversible",
+          "handoverGate",
+        ]);
+      }
+      expect([...REPOS_ENTRY_FIELDS]).toEqual([
+        "repoKey",
+        "root",
+        "stateLocation",
+        "daemonReachable",
+        "handoverState",
+        "reversible",
+        "handoverGate",
+      ]);
+
+      const readyRow = entries.find((entry) => entry.repoKey === readyHarness.projectKey);
+      const unusedRow = entries.find((entry) => entry.repoKey === unusedHarness.projectKey);
+      if (readyRow === undefined || unusedRow === undefined) throw new Error("missing row");
+      const readyGate = readyRow.handoverGate as Record<string, unknown>;
+      expect(Object.keys(readyGate)).toEqual([
+        "verdict",
+        "conditions",
+        "countedDeliveries",
+        "cleanDispatches",
+      ]);
+      expect(["eligible", "ineligible", "unverifiable"]).toContain(readyGate.verdict);
+      const conditions = readyGate.conditions as readonly Record<string, unknown>[];
+      expect(conditions.map((entry) => entry.condition)).toEqual([
+        ...DISPATCH_HANDOVER_CONDITIONS,
+      ]);
+      for (const entry of conditions) {
+        expect(Object.keys(entry)).toEqual(["condition", "status"]);
+        expect(["met", "open"]).toContain(entry.status);
+      }
+      expect(typeof readyGate.countedDeliveries).toBe("number");
+      expect(typeof readyGate.cleanDispatches).toBe("number");
+      expect(readyGate.countedDeliveries).toBe(20);
+      expect(readyGate.cleanDispatches).toBe(15);
+      expect(readyRow.reversible).toBe(false);
+
+      // The first-use row: the empty-window evaluation, no store, no write.
+      const unusedGate = unusedRow.handoverGate as Record<string, unknown>;
+      expect(unusedRow.stateLocation).toBe(projectStateRoot(host.hostRoot, unusedHarness.projectKey));
+      expect(existsSync(unusedRow.stateLocation as string)).toBe(false);
+      expect(unusedGate.verdict).toBe("ineligible");
+      expect(unusedGate.countedDeliveries).toBe(0);
+      expect(unusedGate.cleanDispatches).toBe(0);
+      expect(unusedRow.reversible).toBe(false);
+      const unusedConditions = unusedGate.conditions as readonly Record<string, unknown>[];
+      expect(
+        Object.fromEntries(unusedConditions.map((entry) => [entry.condition, entry.status])),
+      ).toEqual({ truth: "met", coverage: "open", floor: "open", corroboration: "met" });
+
+      // Non-persisting and side-effect free: the binding and the tree are intact.
+      expect(readFileSync(bindingPath, "utf8")).toBe(bindingBefore);
+      expect(snapshotDifferences(before, snapshotTree(host.hostRoot))).toEqual([]);
+
+      // The text table keeps exactly five columns.
+      const text = await readyHarness.run(["repos", "list"]);
+      const lines = text.stdout.trimEnd().split("\n");
+      expect(lines[0]).toBe("KEY  ROOT  STATE  DAEMON  HANDOVER");
+    } finally {
+      for (const harness of harnesses) harness.dispose();
+      removeDirectory(base);
+      host.dispose();
+    }
+  });
+
+  test("the declared production scope is folded, and no scope key exists", async () => {
+    const host = createHostFixture("repos-gate-scope");
+    const base = `${host.hostRoot}-repos`;
+    const harnesses: ProductionProjectsHarness[] = [];
+    try {
+      const checkout = createRepository(base, "scope-repo");
+      setOriginRemote(checkout, "https://github.com/owner/scope.git");
+      const harness = harnessFor(host, "scope", checkout);
+      harnesses.push(harness);
+      await register(harness);
+      mkdirSync(projectStateRoot(host.hostRoot, harness.projectKey), {
+        recursive: true,
+        mode: 0o700,
+      });
+      const repository = "github.com/owner/scope";
+      seedProjectAttempts(
+        host.hostRoot,
+        harness.projectKey,
+        buildAttempts(eligibleSpecs({ repository })),
+      );
+      const first = await harness.run(["repos", "list", "--json"]);
+      const before = reposOf(first).find((entry) => entry.repoKey === harness.projectKey);
+      if (before === undefined) throw new Error("no row");
+      const beforeGate = before.handoverGate as Record<string, unknown>;
+
+      seedProjectAttempts(host.hostRoot, harness.projectKey, [
+        ...buildAttempts([
+          {
+            token: "pr-open",
+            id: "controlled-1",
+            day: 20,
+            repository,
+            evidenceClass: "controlled-proof",
+          },
+        ]),
+      ]);
+      const afterControlled = await harness.run(["repos", "list", "--json"]);
+      const controlled = reposOf(afterControlled).find(
+        (entry) => entry.repoKey === harness.projectKey,
+      );
+      expect(controlled?.handoverGate).toEqual(beforeGate);
+
+      seedProjectAttempts(
+        host.hostRoot,
+        harness.projectKey,
+        buildAttempts([{ token: "pr-open", id: "pilot-1", day: 21, repository }]),
+      );
+      const afterPilot = await harness.run(["repos", "list", "--json"]);
+      const pilot = reposOf(afterPilot).find((entry) => entry.repoKey === harness.projectKey);
+      const pilotGate = pilot?.handoverGate as Record<string, unknown>;
+      expect(pilotGate.countedDeliveries).toBe(21);
+      expect(pilotGate.cleanDispatches).toBe(16);
+
+      const serialized = JSON.stringify(pilot);
+      for (const key of ["scope", "evidenceScope", "evidenceClass"]) {
+        expect(serialized).not.toContain(`"${key}"`);
+      }
+    } finally {
+      for (const harness of harnesses) harness.dispose();
+      removeDirectory(base);
       host.dispose();
     }
   });

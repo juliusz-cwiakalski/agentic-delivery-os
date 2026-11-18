@@ -18,9 +18,31 @@ decisions: []
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 4 complete (repos list read-time gate evaluation bound to
+      each row's own repository identity). Commit pending. The flat row carries
+      the five delivered fields plus `reversible` then `handoverGate`; the
+      evaluation rides a repos-only row pass over the store the row pass already
+      opened (one bounded attempts + one divergences read), folds the declared
+      `production` evidence scope, excludes foreign-repository records, resolves
+      the row's identity read-only and non-persisting (persisted binding, else
+      the checkout's normalized remote), fails the whole read as
+      `repos.state-unavailable` at exit 2 with no row for an unreadable ledger or
+      an unresolvable identity, and reports `unverifiable` + `truncation` on a
+      truncated read. `projects.v1` and `projects list --flat` are unchanged.
+      Verification: `pnpm typecheck` green; repos-handover-gate 9/9 (incl. the
+      5,005-record truncation contract, 25-row floor, determinism, freshness),
+      repos-list-contract 7/7, projects-flat-alias 6/6, the delivered projects
+      controls green, content-inventory green — 64/64 across the declared gate
+      set. Deviation: OQ-TP-5 measured the delivered append path at ~106 ms per
+      record, so seeding 5,005 records took ~9 minutes; the truncation fixture
+      now frames its records with the delivered `buildRecord`/`serializeRecord`
+      and writes the ledger once (~1 s), while the reader still verifies framing,
+      sequence continuity, and every checksum."
+    type: "info"
+    date: "2026-11-18"
   - text: "Plan phase 3 complete (handover conditions, the declared
       evidence-read-free revert noop, and per-repository reversibility).
-      Commit 5dd4a1d1. All four evidence-reading outcomes (recorded flip,
+      Commit f551ac06. All four evidence-reading outcomes (recorded flip,
       idempotent flip noop, clean refusal, recorded revert) carry the four
       ordered `conditions` and `reversible`; the recorded revert now carries
       `verdict` so `verdict == unverifiable ⟺ truncation` is expressible there;

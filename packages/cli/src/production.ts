@@ -119,8 +119,12 @@ import {
   readDaemonHeartbeat,
   readDaemonInstance,
   readDaemonLanes,
+  emptyHandoverGate,
+  readDispatchGate,
   readDispatchHandover,
   readQueueEntries,
+  reposHandoverGateOf,
+  reversibilityOf,
   releaseQueueLease,
   reposListDataOf,
   resolveConfig,
@@ -193,12 +197,13 @@ import {
   type ProjectGroupsConfig,
   type ProjectGroupValidated,
   type ProjectScopedMemberWork,
-  type ProjectsListEntry,
   QUEUE_DEFAULT_NEXT_ACTIONS,
   type QueueDegradationReason,
   type QueueEntryProjection,
   type QueueTrackerRead,
   REPOS_COMMAND_FAMILY,
+  type ReposHandoverGate,
+  type HandoverState,
   renderPriorIdentityNotice,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
@@ -2596,11 +2601,24 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
      * project-root creation, and no write of any kind. A present-but-unreadable
      * state location fails the whole answer instead of fabricating a row.
      */
+    /**
+     * One project's dispatch facts over the store the row already opens.
+     *
+     * The store is created once per row and reused for the handover fold and,
+     * on the `repos list` path, the read-time gate evaluation — no second store
+     * open, no write, no identity persistence.
+     */
     const readProjectHandover = (
       stateLocation: string,
       projectKey: string,
     ):
-      | { readonly ok: true; readonly state: "engine" | "shell" | "in-transition" }
+      | {
+          readonly ok: true;
+          readonly store: StateStorePort;
+          readonly state: "engine" | "shell" | "in-transition";
+          readonly operation: HandoverEvidence;
+          readonly reversible: boolean;
+        }
       | { readonly ok: false; readonly summary: string } => {
       const projectStore = createStateStore(
         {
@@ -2620,6 +2638,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         };
       }
       let operation: HandoverEvidence = "none";
+      let reversible = false;
       if (ledger.records.length > 0) {
         const folded = foldDispatchHandover(ledger.records);
         const latest = [...folded]
@@ -2628,13 +2647,93 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           )
           .at(-1);
         operation = latest?.authority ?? "none";
+        reversible = reversibilityOf(latest?.authority ?? "dual-run");
       }
       const fact = readDispatchAuthorityFact(stateLocation);
       const authority: AuthorityEvidence =
         fact.state === "valid"
           ? { state: "valid", authority: fact.view.authority }
           : { state: fact.state === "malformed" ? "malformed" : "absent" };
-      return { ok: true, state: projectHandoverState({ operation, authority }) };
+      return {
+        ok: true,
+        store: projectStore,
+        state: projectHandoverState({ operation, authority }),
+        operation,
+        reversible,
+      };
+    };
+
+    /**
+     * Resolve one row's own normalized `host/owner/name` identity read-only and
+     * non-persisting (GH-293 DM-7, DEC-15): the persisted create-once binding
+     * recorded with that checkout's git common directory first, then the
+     * checkout's configured VCS remote. No scheduler key exists on this path and
+     * the read never creates, repairs, or rewrites the binding.
+     */
+    const resolveRowRepository = (root: string): string | undefined => {
+      const checkout = readCheckoutIdentity({ cwd: root, io: nodeRepositoryIo() });
+      const commonDir = checkout.kind === "resolved" ? checkout.commonDir : undefined;
+      const persistedMarker = readDispatchIdentityMarkerText(commonDir);
+      // The composition's own checkout is the one whose remote the injection
+      // seam already resolved; every other row is read from its own checkout.
+      const remoteUrl =
+        root === cwd
+          ? repositoryFacts.originUrl
+          : readRepositoryFacts({ cwd: root, io: nodeRepositoryIo() }).originUrl;
+      const resolution = resolveDispatchIdentity({
+        ...(persistedMarker === undefined ? {} : { persistedMarker }),
+        ...(remoteUrl === undefined ? {} : { remoteUrl }),
+      });
+      return resolution.ok ? resolution.repository : undefined;
+    };
+
+    /**
+     * The read-time gate block for one ready row (GH-293 F-3, DM-4, DM-7).
+     *
+     * One bounded attempts read plus one divergences read over the row's own
+     * store, folded at the declared `production` evidence scope and bound to the
+     * row's own repository identity. An unreadable ledger or an unresolvable
+     * identity fails the whole read as `repos.state-unavailable` with no row; a
+     * truncated read reports `unverifiable` plus the declared truncation.
+     */
+    const readRowHandoverGate = (
+      store: StateStorePort,
+      root: string,
+      projectKey: string,
+    ):
+      | { readonly ok: true; readonly gate: ReposHandoverGate }
+      | { readonly ok: false; readonly summary: string } => {
+      const repository = resolveRowRepository(root);
+      if (repository === undefined) {
+        return {
+          ok: false,
+          summary: `project ${projectKey} has a ready state location whose repository identity cannot be resolved (${root})`,
+        };
+      }
+      const read = readDispatchGate({
+        store,
+        repository,
+        scope: "production",
+        nowIso: nowIso(),
+      });
+      if (!read.ok) {
+        return {
+          ok: false,
+          summary: `project ${projectKey} (${repository}) has a dispatch evidence ledger that cannot be read`,
+        };
+      }
+      return { ok: true, gate: reposHandoverGateOf(read) };
+    };
+
+    /** One row's resolved facts; the projection to each payload happens later. */
+    type ProjectRowFacts = {
+      readonly projectKey: string;
+      readonly root: string;
+      readonly stateLocation: string;
+      readonly daemonReachable: DaemonReachability;
+      readonly handoverState: HandoverState;
+      readonly reversible: boolean;
+      readonly handoverGate: ReposHandoverGate;
     };
 
     const readDaemonReachability = async (
@@ -2681,14 +2780,30 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       };
     };
 
-    const readProjects = async (): Promise<ProjectsRuntimeRead> => {
+    /**
+     * The shared project-row read (GH-288 F-3, F-4, F-5; GH-293 F-3).
+     *
+     * One host-index read, one row pass. `withGate` decides whether each ready
+     * row also evaluates the handover gate over the store it has already opened:
+     * `repos list` asks for it, `projects list` and its flat alias never do, so
+     * the delivered `projects.v1` payload cannot gain a field and the alias stays
+     * byte-identical.
+     */
+    const readProjectRows = async (
+      withGate: boolean,
+    ): Promise<
+      | {
+          readonly ok: true;
+          readonly rows: readonly ProjectRowFacts[];
+          readonly revision: number;
+          readonly warnings: readonly string[];
+        }
+      | { readonly ok: false; readonly code: string; readonly summary: string }
+    > => {
       hostIndexAccess.countList();
       const read = readHostIndexFile(hostRoot);
       if (read.state === "absent") {
-        return {
-          ok: true,
-          data: { projects: [], hostIndexRevision: HOST_INDEX_INITIAL_REVISION },
-        };
+        return { ok: true, rows: [], revision: HOST_INDEX_INITIAL_REVISION, warnings: [] };
       }
       const indexPath = hostIndexDocumentPath(hostRoot);
       if (read.state === "unreadable") {
@@ -2706,7 +2821,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           summary: `the host index at ${indexPath} is present but cannot be parsed`,
         };
       }
-      const entries: ProjectsListEntry[] = [];
+      const rows: ProjectRowFacts[] = [];
       const warnings: string[] = [];
       let legacyChecked = false;
       for (const entry of document.projects) {
@@ -2757,10 +2872,30 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         }
         const handover =
           classification === "first-use"
-            ? ({ ok: true, state: "shell" } as const)
+            ? ({ ok: true, state: "shell", reversible: false } as const)
             : readProjectHandover(stateLocation, entry.projectKey);
         if (!handover.ok) {
           return { ok: false, code: "repos.state-unavailable", summary: handover.summary };
+        }
+        let gate: ReposHandoverGate = emptyHandoverGate();
+        let reversible = handover.reversible;
+        if (withGate && classification === "ready") {
+          if (!("store" in handover)) {
+            return {
+              ok: false,
+              code: "repos.state-unavailable",
+              summary: `project ${entry.projectKey} has no readable store for its gate evaluation`,
+            };
+          }
+          const evaluated = readRowHandoverGate(handover.store, entry.root, entry.projectKey);
+          if (!evaluated.ok) {
+            return { ok: false, code: "repos.state-unavailable", summary: evaluated.summary };
+          }
+          gate = evaluated.gate;
+        }
+        if (classification === "first-use") {
+          reversible = false;
+          gate = emptyHandoverGate();
         }
         const daemon = await readDaemonReachability(stateLocation, classification === "ready");
         if (!daemon.ok) {
@@ -2773,38 +2908,84 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
               "the derived location is reported",
           );
         }
-        entries.push(
-          projectListEntry({
-            projectKey: entry.projectKey,
-            root: entry.root,
-            stateLocation,
-            daemonReachable: daemon.value,
-            handoverState: handover.state,
-          }),
-        );
+        rows.push({
+          projectKey: entry.projectKey,
+          root: entry.root,
+          stateLocation,
+          daemonReachable: daemon.value,
+          handoverState: handover.state,
+          reversible,
+          handoverGate: gate,
+        });
       }
+      return { ok: true, rows, revision: document.revision, warnings };
+    };
+
+    const readProjects = async (): Promise<ProjectsRuntimeRead> => {
+      const read = await readProjectRows(false);
+      if (!read.ok) return read;
+      // The delivered five-field row: the gate evaluation never reaches this
+      // payload, so `projects.v1` and the flat alias stay byte-identical.
+      const entries = read.rows.map((row) =>
+        projectListEntry({
+          projectKey: row.projectKey,
+          root: row.root,
+          stateLocation: row.stateLocation,
+          daemonReachable: row.daemonReachable,
+          handoverState: row.handoverState,
+        }),
+      );
       return {
         ok: true,
-        data: { projects: orderProjectEntries(entries), hostIndexRevision: document.revision },
-        ...(warnings.length === 0 ? {} : { warnings }),
+        data: { projects: orderProjectEntries(entries), hostIndexRevision: read.revision },
+        ...(read.warnings.length === 0 ? {} : { warnings: [...read.warnings] }),
       };
     };
 
     /**
-     * The `repos list` flat record set (GH-309 F-7, DM-3): one read over the
-     * same host index, projected onto the renamed `repos.v1` shape. The alias
-     * path never passes through this projection, so `projects list --flat`
-     * keeps the delivered payload byte-identical (C-2).
+     * The `repos list` flat record set (GH-309 F-7, DM-3; GH-293 F-3).
+     *
+     * The only read that evaluates the handover gate per row: one bounded
+     * attempts read plus one divergences read over the store the row pass already
+     * opened, bound to that row's own repository identity and folded at the
+     * declared `production` evidence scope. The alias path never passes through
+     * this projection, so `projects list --flat` keeps the delivered payload
+     * byte-identical (C-2).
      */
     const readRepos = async (): Promise<ReposRuntimeRead> => {
-      const read = await readProjects();
+      const read = await readProjectRows(true);
       if (!read.ok) return read;
+      const gates = new Map(
+        read.rows.map((row) => [
+          row.projectKey,
+          { reversible: row.reversible, handoverGate: row.handoverGate },
+        ]),
+      );
+      const data = reposListDataOf(
+        {
+          projects: read.rows.map((row) =>
+            projectListEntry({
+              projectKey: row.projectKey,
+              root: row.root,
+              stateLocation: row.stateLocation,
+              daemonReachable: row.daemonReachable,
+              handoverState: row.handoverState,
+            }),
+          ),
+          hostIndexRevision: read.revision,
+        },
+        (entry) => {
+          const gate = gates.get(entry.projectKey);
+          if (gate === undefined) {
+            throw new Error(`row ${entry.projectKey} has no resolved gate`);
+          }
+          return gate;
+        },
+      );
       return {
         ok: true,
-        data: reposListDataOf(read.data),
-        ...(read.warnings === undefined || read.warnings.length === 0
-          ? {}
-          : { warnings: read.warnings }),
+        data,
+        ...(read.warnings.length === 0 ? {} : { warnings: [...read.warnings] }),
       };
     };
 
