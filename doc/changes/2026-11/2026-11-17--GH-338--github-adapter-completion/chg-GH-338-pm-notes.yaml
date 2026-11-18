@@ -8,7 +8,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-17T23:34:06.905Z }
   delivery_planning: { started: null, completed: 2026-11-17T23:34:10.150Z }
   dor_check: { started: null, completed: 2026-11-17T23:39:09.787Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-18T04:47:34.979Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -57,9 +57,9 @@ open_questions: []
 blockers: []
 notes:
   - text: "Plan phase 7 complete (release obligations and the regression floor).
-      Plan phase 6 commit: a3a52ebb62e5582b559d77e172b7ae69e9e28604 (the
-      phase-6 note names plan phase 6 and its gate result; this entry carries the
-      hash). Phase 7 delivered: the lockstep five-publishable minor changeset
+      Plan phase 6 commit: a3a52ebb62e5582b559d77e172b7ae69e9e28604 (the phase-6
+      note names plan phase 6 and its gate result; this entry carries the hash).
+      Phase 7 delivered: the lockstep five-publishable minor changeset
       (.changeset/gh-338-github-adapter-completion-minor.md) verified, not
       duplicated; the TC-PARITY-005 completion roll-up in
       tests/conformance/mock-conformance.test.ts asserts each of the seven
@@ -70,22 +70,22 @@ notes:
       amended in this phase), and an executed closed-set half with a declared
       projection (a void write is held to its exact tenant route truth); the
       TC-PARITY-007 determinism case proves two whole-change replays are equal
-      and the committed tenants are byte-identical across loads; the TC-FLOOR-007
-      scope-boundary proofs assert the lifecycle merge transaction imports no
-      landing member and is not rewired, packages/core/src/state gains no new
-      record, no configuration surface exists in the GitHub subpath, and
-      DeliveryThread/DeliveryRequest/WorkItem field sets are exact in the type
-      probe and the source. Acceptance: AC-F8-4 (TC-PARITY-005), AC-F8-5
-      (TC-PARITY-007); the TC-FLOOR-001..007 delivered suites run green as
-      controls. Verification: `jaiship plan validate GH-338` -> verdict=valid,
-      tier=full, readyForDevelopment=true; G1 structure 1628 pass; G2
-      behaviour/providers 279 pass; G3 conformance 183 pass; G4 checks 1175 pass;
-      G5 boundaries 152 pass; G6 typecheck green; G7 secret-read boundary OK (5
-      allowlisted, unchanged); G8 fixture sanitization/privacy green;
-      error-table-sync OK (entries=149 documented=149); the doc-distribution
-      guard reports no drift; G9 git diff --check clean; G10
-      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (10498 pass, 4 pre-existing skips,
-      0 fail). No file outside the phase-7 declared scope moved; the four
+      and the committed tenants are byte-identical across loads; the
+      TC-FLOOR-007 scope-boundary proofs assert the lifecycle merge transaction
+      imports no landing member and is not rewired, packages/core/src/state
+      gains no new record, no configuration surface exists in the GitHub
+      subpath, and DeliveryThread/DeliveryRequest/WorkItem field sets are exact
+      in the type probe and the source. Acceptance: AC-F8-4 (TC-PARITY-005),
+      AC-F8-5 (TC-PARITY-007); the TC-FLOOR-001..007 delivered suites run green
+      as controls. Verification: `jaiship plan validate GH-338` ->
+      verdict=valid, tier=full, readyForDevelopment=true; G1 structure 1628
+      pass; G2 behaviour/providers 279 pass; G3 conformance 183 pass; G4 checks
+      1175 pass; G5 boundaries 152 pass; G6 typecheck green; G7 secret-read
+      boundary OK (5 allowlisted, unchanged); G8 fixture sanitization/privacy
+      green; error-table-sync OK (entries=149 documented=149); the
+      doc-distribution guard reports no drift; G9 git diff --check clean; G10
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (10498 pass, 4 pre-existing
+      skips, 0 fail). No file outside the phase-7 declared scope moved; the four
       declared feature specs and the two indexes stayed untouched for the
       lifecycle phase-7 @doc-syncer handoff (pm-notes carries the sentence-level
       checklist). Residual: lifecycle phase 7 docs; phase 8 review; phase 9
@@ -94,45 +94,45 @@ notes:
     type: info
     date: "2026-11-18"
   - text: "Plan phase 6 complete (adapter reference behavior and the drift check).
-      Plan phase 5 commit: 94b31b47a7c7da2334cc8fcbff235544b60e1225 (the
-      phase-5 note names plan phase 5 and its gate result; this entry carries the
-      hash). Phase 6 delivered:
-      doc/spec/features/feature-adapter-reference-behavior.md as the normative
-      current-truth surface (transport matrix, capability posture, primary
-      failure identities, absence semantics, both evidence reads with caps and
-      truncation rules, the probe/selection/no-failover contract, the injected
-      seeded transition mapping with the mechanism-scoped label rule, four read
-      outcomes, writable set, terminal-read refusal, current-read-as-input
-      resolution, the validator's seven-rule rejection set and construction-time
-      timing, the unmapped sets, and the deliberate limitations), the one
-      locator fixture tests/fixtures/provider/reference-behavior.ts, and
+      Plan phase 5 commit: 94b31b47a7c7da2334cc8fcbff235544b60e1225 (the phase-5
+      note names plan phase 5 and its gate result; this entry carries the hash).
+      Phase 6 delivered: doc/spec/features/feature-adapter-reference-behavior.md
+      as the normative current-truth surface (transport matrix, capability
+      posture, primary failure identities, absence semantics, both evidence
+      reads with caps and truncation rules, the probe/selection/no-failover
+      contract, the injected seeded transition mapping with the mechanism-scoped
+      label rule, four read outcomes, writable set, terminal-read refusal,
+      current-read-as-input resolution, the validator's seven-rule rejection set
+      and construction-time timing, the unmapped sets, and the deliberate
+      limitations), the one locator fixture
+      tests/fixtures/provider/reference-behavior.ts, and
       tests/structure/reference-behavior.test.ts which parses the document
       through that locator, asserts extraction counts before comparing (9
       operation rows, 3 adapter postures, >=6 absence signals, 3 probe codes, 4
       seed rows), and fails on one-row/one-digit mutations and on deleted prose
       claims. doc/00-index.md registers the surface. Verification: G1 structure
       1624 pass; G4 doc-conformance + decision-record 23 pass; the
-      doc-distribution guard reports no drift (95 in-scope docs);
-      G6 typecheck green (via the aggregate gate); G9 git diff --check clean; G10
-      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (10488 pass, 4 pre-existing skips,
-      0 fail; TC-DAEMON-121 green). One pin moved outside the phase-6 declared
-      list because the change makes it false: the new user-facing spec page had
-      to be registered and scanned in scripts/checks/forbidden-literals.registry.json
-      (the docs corpus fails closed on an unregistered user-facing doc), which
-      the aggregate gate requires. Residual for lifecycle phase 7 (@doc-syncer):
-      reconcile feature-provider-client-seeds.md (line 169's two-row mapping
-      sentence, capability table 9/0, operation list, normalization section,
-      transport section, trap minima, export-list correction),
-      feature-adapter-ports.md (nine operations, the two optional timestamps,
-      the additive-extension record, confinement wording),
-      feature-adapter-conformance.md (the five named sentences plus the flow/step
-      table, operation-set equality, mock routes/projections, carrier skip-kind,
-      coverage-gate wording), feature-merge-verify-deploy.md (coexistence), and
-      the two indexes."
+      doc-distribution guard reports no drift (95 in-scope docs); G6 typecheck
+      green (via the aggregate gate); G9 git diff --check clean; G10
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (10488 pass, 4 pre-existing
+      skips, 0 fail; TC-DAEMON-121 green). One pin moved outside the phase-6
+      declared list because the change makes it false: the new user-facing spec
+      page had to be registered and scanned in
+      scripts/checks/forbidden-literals.registry.json (the docs corpus fails
+      closed on an unregistered user-facing doc), which the aggregate gate
+      requires. Residual for lifecycle phase 7 (@doc-syncer): reconcile
+      feature-provider-client-seeds.md (line 169's two-row mapping sentence,
+      capability table 9/0, operation list, normalization section, transport
+      section, trap minima, export-list correction), feature-adapter-ports.md
+      (nine operations, the two optional timestamps, the additive-extension
+      record, confinement wording), feature-adapter-conformance.md (the five
+      named sentences plus the flow/step table, operation-set equality, mock
+      routes/projections, carrier skip-kind, coverage-gate wording),
+      feature-merge-verify-deploy.md (coexistence), and the two indexes."
     type: info
     date: "2026-11-18"
-  - text: "Plan phase 5 complete (bounded review-thread discussion read). Plan
-      phase 4 commit: 8ab4512a (the phase-4 note names plan phase 4 and its gate
+  - text: "Plan phase 5 complete (bounded review-thread discussion read). Plan phase
+      4 commit: 8ab4512a (the phase-4 note names plan phase 4 and its gate
       result; this entry carries the hash). Phase 5 delivered:
       `packages/adapters/src/github/thread-discussion.ts` exports the two fixed
       caps (50 comments per thread, 4096 UTF-8 bytes per body), the closed
@@ -143,8 +143,8 @@ notes:
       payload.invalid without status, malformed 2xx -> payload.invalid with 200,
       zero count with an empty list observed empty). Truncation is true exactly
       when fewer comments were returned than the provider total or any body was
-      truncated; bodies are byte prefixes trimmed on a UTF-8 boundary. The subpath
-      exports the reader, caps, normalizer and types additively.
+      truncated; bodies are byte prefixes trimmed on a UTF-8 boundary. The
+      subpath exports the reader, caps, normalizer and types additively.
       tests/types/delivery-thread.type-test.ts pins DeliveryThread's exact field
       set in both directions and rejects a body/reply field; the closeout
       contract suite asserts the closed set, GitHub capabilities and the
@@ -157,8 +157,8 @@ notes:
       conformance 177 pass; G4 checks 1175 pass; G5 boundaries 152 pass; G6
       typecheck green; G7 secret-read boundary OK (5 allowlisted, unchanged); G8
       fixture sanitization/privacy green; G9 git diff --check clean; G10
-      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (10476 pass, 4 pre-existing skips,
-      0 fail; TC-DAEMON-121 green). One in-scope fixture correction: an
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (10476 pass, 4 pre-existing
+      skips, 0 fail; TC-DAEMON-121 green). One in-scope fixture correction: an
       undeclared author placeholder in the new fixture was replaced with the
       declared `person-placeholder` (no shape or assertion change). No file
       outside the phase-5 declared scope moved. Residual for phase 6/7 docs:
@@ -167,31 +167,31 @@ notes:
       behavior."
     type: info
     date: "2026-11-18"
-  - text: "Plan phase 4 complete (verbatim provider job timings and the bounded
-      log excerpt). Plan phase 3 commit:
-      ec24bf54bcbec86479fd5ad3ae24acddd091aa57 (the phase-3 note names plan
-      phase 3 and its gate result; this entry carries the hash). Phase 4
-      delivered: `normalizeCheckRuns` copies `started_at`/`completed_at`
-      verbatim onto the optional PipelineJob fields, absence stays absence, and
-      no duration is derived; `packages/adapters/src/github/log-excerpt.ts`
-      exports the one fixed cap (GITHUB_LOG_EXCERPT_MAX_BYTES = 8192), the
-      closed four-key shape, a pure `boundLogExcerpt` that trims on a UTF-8
-      character boundary, and the one-read reader (one request, no pagination,
-      no retry, 404 -> not-found, other non-2xx -> payload.invalid with status,
-      transport throw -> payload.invalid without status, malformed 2xx ->
-      payload.invalid with 200, empty 2xx observed empty). The conformance GitHub
-      tenant's check-runs payload and its read-pipeline-run projection gained the
-      two timestamps in the same commit; the artifact suite asserts the top-level
-      key set is unchanged and no excerpt/body/timing evidence field appears in
-      the serialized artifact; the trap catalog gained
-      GITHUB-CHECK-RUN-TIMINGS and GITHUB-LOG-EXCERPT-CAP with assertions and
-      named mutations; the delivered-name snapshot still hashes the original 31
-      entries. Verification: G1 structure 1611 pass; G2 behaviour/providers 257
-      pass; G3 conformance 177 pass; G4 checks 1175 pass; G5 boundaries 152 pass;
-      G6 typecheck green; G7 secret-read boundary OK (5 allowlisted, unchanged);
-      G8 fixture sanitization/privacy green; G9 git diff --check clean; G10
-      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (10453 pass, 4 pre-existing skips,
-      0 fail; TC-DAEMON-121 green). One in-scope finding: a committed
+  - text: "Plan phase 4 complete (verbatim provider job timings and the bounded log
+      excerpt). Plan phase 3 commit: ec24bf54bcbec86479fd5ad3ae24acddd091aa57
+      (the phase-3 note names plan phase 3 and its gate result; this entry
+      carries the hash). Phase 4 delivered: `normalizeCheckRuns` copies
+      `started_at`/`completed_at` verbatim onto the optional PipelineJob fields,
+      absence stays absence, and no duration is derived;
+      `packages/adapters/src/github/log-excerpt.ts` exports the one fixed cap
+      (GITHUB_LOG_EXCERPT_MAX_BYTES = 8192), the closed four-key shape, a pure
+      `boundLogExcerpt` that trims on a UTF-8 character boundary, and the
+      one-read reader (one request, no pagination, no retry, 404 -> not-found,
+      other non-2xx -> payload.invalid with status, transport throw ->
+      payload.invalid without status, malformed 2xx -> payload.invalid with 200,
+      empty 2xx observed empty). The conformance GitHub tenant's check-runs
+      payload and its read-pipeline-run projection gained the two timestamps in
+      the same commit; the artifact suite asserts the top-level key set is
+      unchanged and no excerpt/body/timing evidence field appears in the
+      serialized artifact; the trap catalog gained GITHUB-CHECK-RUN-TIMINGS and
+      GITHUB-LOG-EXCERPT-CAP with assertions and named mutations; the
+      delivered-name snapshot still hashes the original 31 entries.
+      Verification: G1 structure 1611 pass; G2 behaviour/providers 257 pass; G3
+      conformance 177 pass; G4 checks 1175 pass; G5 boundaries 152 pass; G6
+      typecheck green; G7 secret-read boundary OK (5 allowlisted, unchanged); G8
+      fixture sanitization/privacy green; G9 git diff --check clean; G10
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (10453 pass, 4 pre-existing
+      skips, 0 fail; TC-DAEMON-121 green). One in-scope finding: a committed
       token-shaped redaction canary tripped the privacy-literal scan, so the
       test constructs the canary at runtime instead (no product or assertion
       change). No file outside the phase-4 declared scope moved. Residual for
@@ -209,32 +209,33 @@ notes:
       zero provider requests while the write still resolves against a real read.
       A label-swap write refuses on a done-resolving current read regardless of
       labels, on an unavailable label signal, and when no current read is
-      supplied, each with a distinct detail; a declared non-terminal field-update
-      alias, an undeclared alias, and a non-GitHub mechanism are named refusals
-      with zero requests. A field-update row writes provider state only and
-      admits only the terminal done row, so the delivered closeout write stays
-      one PATCH with body exactly {\"state\":\"closed\"} and zero label requests.
-      The map validator implements TDR-0034 §1's seven rules, runs exactly once
-      at construction on the resolved map (pinned by a source scan), captures its
-      failure rather than throwing, and every operation then refuses with zero
-      provider requests; the seed is held to the same checks. Read resolution is
-      the declared four outcomes plus the label-swap case-collision refusal;
-      CLOSED on a closed issue stays native terminal truth. The seed is exported
-      additively for the phase-6 document drift check. Verification: G1
-      structure 1611 pass; G2 behaviour/providers 234 pass; G3 conformance 176
-      pass; G4 checks 1175 pass; G5 boundaries 152 pass; G6 typecheck green; G7
-      secret-read boundary OK (5 allowlisted, unchanged); G8 fixture
-      sanitization/privacy green; G9 git diff --check clean; G10
-      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (10429 pass, 4 pre-existing skips,
-      0 fail; TC-DAEMON-121 green this run). Commit hash recorded in the phase-4
-      note (the phase-1/2 precedent). Pins moved in the same commit because the
-      change makes them false, outside the phase-3 declared list:
-      tests/behaviour/closeout-capabilities.test.ts (GitHub posture is now 9/0),
-      tests/behaviour/providers/github-landing.test.ts (TC-LAND-008 asserted the
-      content write was a gap with no member; it now asserts the supported
-      content write issues no landing), tests/conformance/live/live-entrypoint.test.ts
-      (a supported GitHub write-comment is now a live-read-only deferral; the
-      declared-gap half runs through a gap-declaring control), and
+      supplied, each with a distinct detail; a declared non-terminal
+      field-update alias, an undeclared alias, and a non-GitHub mechanism are
+      named refusals with zero requests. A field-update row writes provider
+      state only and admits only the terminal done row, so the delivered
+      closeout write stays one PATCH with body exactly {\"state\":\"closed\"}
+      and zero label requests. The map validator implements TDR-0034 §1's seven
+      rules, runs exactly once at construction on the resolved map (pinned by a
+      source scan), captures its failure rather than throwing, and every
+      operation then refuses with zero provider requests; the seed is held to
+      the same checks. Read resolution is the declared four outcomes plus the
+      label-swap case-collision refusal; CLOSED on a closed issue stays native
+      terminal truth. The seed is exported additively for the phase-6 document
+      drift check. Verification: G1 structure 1611 pass; G2 behaviour/providers
+      234 pass; G3 conformance 176 pass; G4 checks 1175 pass; G5 boundaries 152
+      pass; G6 typecheck green; G7 secret-read boundary OK (5 allowlisted,
+      unchanged); G8 fixture sanitization/privacy green; G9 git diff --check
+      clean; G10 TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (10429 pass, 4
+      pre-existing skips, 0 fail; TC-DAEMON-121 green this run). Commit hash
+      recorded in the phase-4 note (the phase-1/2 precedent). Pins moved in the
+      same commit because the change makes them false, outside the phase-3
+      declared list: tests/behaviour/closeout-capabilities.test.ts (GitHub
+      posture is now 9/0), tests/behaviour/providers/github-landing.test.ts
+      (TC-LAND-008 asserted the content write was a gap with no member; it now
+      asserts the supported content write issues no landing),
+      tests/conformance/live/live-entrypoint.test.ts (a supported GitHub
+      write-comment is now a live-read-only deferral; the declared-gap half runs
+      through a gap-declaring control), and
       tests/conformance/broken-adapter-control.test.ts (the test-only wrapper
       forwards the two new members and keeps its fail-closed control). Delivery
       notes carried: N5 (the config-surface scan lives in
@@ -250,33 +251,34 @@ notes:
   - text: "Delivery handoff after plan phases 1-2 (this session). Phase 3 onward is
       NOT started: the tree is green and the two delivered phases are verified,
       and `phase complete GH-338 delivery` was deliberately NOT run because the
-      Definition of Done requires all seven plan phases. Load-bearing finding for
-      the phase-3 coder: spec §8.4.1 and TDR-0034 §3.2 require a `label-swap`
-      write to be resolved against the issue's current read AND to refuse with
-      ZERO provider requests (TC-BACKLOG-004/006 assert request count 0, zero
-      label reads, zero label writes), while §3.2 also says such a write 'reads
-      the current label set'. Both hold only if the current-read precondition is
-      adapter-local INPUT data on the widened `transitionWorkItem` input (e.g. an
-      optional `current: { deliveryState, labels? }` fact the caller supplies),
-      not a read the adapter issues. That reading keeps the delivered
-      `done` field-update path byte-identical (it needs no precondition), keeps
-      the refusals at zero requests, and makes the read/write symmetry cases
-      writable. It must be documented in the phase-6 reference behavior. Also
-      unresolved for phase 3: the terminal-read refusal, the unavailable-signal
-      refusal and the non-terminal `field-update` refusal must be distinguished
-      by detail text; the map validator's seven TDR-0034 §1 rules run once per
-      construction with a captured (never thrown) failure; and the
-      GH-ISSUE-TO-WORKITEM trap outcome amendment is the ONE declared delivered
-      catalog amendment, owned by phase 3. Remaining plan phases and their gates
-      are unchanged in chg-GH-338-plan.yaml."
+      Definition of Done requires all seven plan phases. Load-bearing finding
+      for the phase-3 coder: spec §8.4.1 and TDR-0034 §3.2 require a
+      `label-swap` write to be resolved against the issue's current read AND to
+      refuse with ZERO provider requests (TC-BACKLOG-004/006 assert request
+      count 0, zero label reads, zero label writes), while §3.2 also says such a
+      write 'reads the current label set'. Both hold only if the current-read
+      precondition is adapter-local INPUT data on the widened
+      `transitionWorkItem` input (e.g. an optional `current: { deliveryState,
+      labels? }` fact the caller supplies), not a read the adapter issues. That
+      reading keeps the delivered `done` field-update path byte-identical (it
+      needs no precondition), keeps the refusals at zero requests, and makes the
+      read/write symmetry cases writable. It must be documented in the phase-6
+      reference behavior. Also unresolved for phase 3: the terminal-read
+      refusal, the unavailable-signal refusal and the non-terminal
+      `field-update` refusal must be distinguished by detail text; the map
+      validator's seven TDR-0034 §1 rules run once per construction with a
+      captured (never thrown) failure; and the GH-ISSUE-TO-WORKITEM trap outcome
+      amendment is the ONE declared delivered catalog amendment, owned by phase
+      3. Remaining plan phases and their gates are unchanged in
+      chg-GH-338-plan.yaml."
     type: risk
     date: "2026-11-18"
   - text: "Plan phase 2 boundary gate result: TMPDIR=$PWD/tmp/tmpdir pnpm check —
       lint, format, typecheck, boundaries, memory, prompt conformance, help
       coverage and exports parity green; bun test 10354 pass / 4 pre-existing
       skips / 1 fail. The single failure is the load-sensitive delivered suite
-      `TC-DAEMON-121 foreground stop latency` (1354 ms under full-suite load;
-      it passes in isolation in 1.48 s with cancellation 232-236 ms and stop
+      `TC-DAEMON-121 foreground stop latency` (1354 ms under full-suite load; it
+      passes in isolation in 1.48 s with cancellation 232-236 ms and stop
       232-236 ms, well inside its 250 ms / 1000 ms bounds). Recorded as
       green-modulo-environment-flake, the GH-299 precedent, and to be re-proven
       in the lifecycle quality-gates battery. Phase 2 is therefore complete and
@@ -312,51 +314,50 @@ notes:
       `createGithubNativeTransport`) and the release guard's publishable-path
       rule (the lockstep five-package minor changeset is added here rather than
       in plan phase 7 — the GH-299 precedent — so phase 7 verifies it instead of
-      authoring it). Delivery notes
-      carried: N1 (implemented the plan's names; the test plan's
-      `resolveGithubTransportSelection` is a stale reference), N2 (the
-      firing-canary assertion lives in
+      authoring it). Delivery notes carried: N1 (implemented the plan's names;
+      the test plan's `resolveGithubTransportSelection` is a stale reference),
+      N2 (the firing-canary assertion lives in
       tests/conformance/github-transport-parity.test.ts and the per-suite
       zero-spawn counter in mock-conformance.test.ts), N4 (the full spawn
       budget: one probe for a composing invocation, zero for the four
       self-description paths, zero provider requests), N10 (the
-      one-process-per-request count is driven on an already-selected
-      transport). Verification: pnpm typecheck green; bun test tests/structure
+      one-process-per-request count is driven on an already-selected transport).
+      Verification: pnpm typecheck green; bun test tests/structure
       tests/behaviour/providers tests/conformance tests/boundaries plus the
       secret-read, fixture-sanitization and fixture-privacy suites green (2138
       pass, 0 fail); bun run scripts/checks/secret-read-boundary.ts OK with 5
-      allowlisted entries (unchanged, exactly one credential-material);
-      git diff --check clean; the aggregate gate result is recorded in the
-      phase-3 note. Guard note: the child-process guard necessarily
-      substitutes the `node:child_process` builtin through bun's module mock;
-      its restore re-registers the real module because `mock.restore()` never
-      undoes a module substitution. The first attempt leaked the substitution
-      into later files in the same process (the daemon re-entry and
-      live-entrypoint suites spawn for real), which is why the restore is
-      explicit."
+      allowlisted entries (unchanged, exactly one credential-material); git diff
+      --check clean; the aggregate gate result is recorded in the phase-3 note.
+      Guard note: the child-process guard necessarily substitutes the
+      `node:child_process` builtin through bun's module mock; its restore
+      re-registers the real module because `mock.restore()` never undoes a
+      module substitution. The first attempt leaked the substitution into later
+      files in the same process (the daemon re-entry and live-entrypoint suites
+      spawn for real), which is why the restore is explicit."
     type: info
     date: "2026-11-18"
   - text: "Plan phase 1 complete (ninth closed operation `merge-delivery-request`;
       optional `PipelineJob.startedAt`/`completedAt`; GitHub 7 supported + 2
-      declared gaps; the landing client member with squash-only crafted metadata,
-      the expected-head guard, classified non-2xx/transport failures, no retry,
-      and already-merged success only after a provider-asserted read-back; the
-      GitLab/Jira new-operation gap rows; the conformance registry landing step
-      (13 -> 14 steps) with the optional exact write projection; the GitHub
-      tenant landing route and projection; the landing fixtures, trap entries and
-      pins; the four decision records staged). Commit hash recorded in the
-      plan-phase-2 note. Verification: TMPDIR=$PWD/tmp/tmpdir pnpm typecheck
-      green; bun test tests/structure tests/behaviour/providers
-      tests/conformance tests/boundaries green (2051 pass, 0 fail); bun test
-      tests/checks green (1174 pass, 0 fail); fixture sanitization/privacy green
-      (11 pass); git diff --check clean; TMPDIR=$PWD/tmp/tmpdir pnpm check green
-      at the boundary (10306 pass, 4 pre-existing skips, 0 fail). Delivery
-      notes carried: N3 (no provider-views edit needed — the file declares no
-      PipelineJob member and no ninth-operation consumer), N6 (partially: TDR-0031
-      item 8 still says 'unchanged apart from documentation' in the committed
-      record; spec §8.5 and plan refinement 1 carry the additive form, recorded
-      here as an unedited-record residue). Discovered pins moved in this commit,
-      outside the plan's declared list and required by the closed-set change: the
+      declared gaps; the landing client member with squash-only crafted
+      metadata, the expected-head guard, classified non-2xx/transport failures,
+      no retry, and already-merged success only after a provider-asserted
+      read-back; the GitLab/Jira new-operation gap rows; the conformance
+      registry landing step (13 -> 14 steps) with the optional exact write
+      projection; the GitHub tenant landing route and projection; the landing
+      fixtures, trap entries and pins; the four decision records staged). Commit
+      hash recorded in the plan-phase-2 note. Verification:
+      TMPDIR=$PWD/tmp/tmpdir pnpm typecheck green; bun test tests/structure
+      tests/behaviour/providers tests/conformance tests/boundaries green (2051
+      pass, 0 fail); bun test tests/checks green (1174 pass, 0 fail); fixture
+      sanitization/privacy green (11 pass); git diff --check clean;
+      TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary (10306 pass, 4
+      pre-existing skips, 0 fail). Delivery notes carried: N3 (no provider-views
+      edit needed — the file declares no PipelineJob member and no
+      ninth-operation consumer), N6 (partially: TDR-0031 item 8 still says
+      'unchanged apart from documentation' in the committed record; spec §8.5
+      and plan refinement 1 carry the additive form, recorded here as an
+      unedited-record residue). Discovered pins moved in this commit, outside
+      the plan's declared list and required by the closed-set change: the
       test-only control closed-set list in
       tests/conformance/live/live-entrypoint.test.ts and the GitHub/Jira posture
       pins in tests/behaviour/closeout-capabilities.test.ts. Both are mechanical
