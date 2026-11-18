@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-ADAPTER-PORTS
 status: Current
 created: 2026-10-30
-last_updated: 2026-11-10
+last_updated: 2026-11-18
 owners: ["engineering"]
 service: delivery-os
 summary: "The adapter-era contract substrate: nine typed provider-agnostic primitive ports in core ./contracts with capability/gap and carrier-kind declarations, the additive HarnessInstance/HarnessSession/execution-environment port family, the additive optional DeliveryRequest.headSha merged-head identity, the additive optional DeliveryThread root-author facts (login, normalized author kind, author association), the four optional verify-gates facts, resolve-delivery-thread operation, the additive optional harness environment-variable marker, one credential-resolution port with an environment-backed implementation at adapters ./credentials, the provider engine's credential-port-only quota authorization, the binding secret-read boundary invariant, the read-only SessionStorePort and mutating SessionAdminPort implemented over the opencode-CLI-backed adapters ./session subpath, the dedicated git seam covering branch, checkout, precise staging, and commit-object creation, the declared inference network edge behind the commit primitive's transport seam, the bounded GitHub deploy-job trace read behind the existing ports, and the delivery.metadata.v1 embedded-envelope data contract with its adapter-internal codec, required injected content policy, fail-closed content-policy failure, and visible graceful degradation."
 links:
-  related_changes: ["GH-174", "GH-179", "GH-180", "GH-181", "GH-182", "GH-183", "GH-184", "GH-188", "GH-189", "GH-178", "GH-227", "GH-231", "GH-225", "GH-233", "GH-240", "GH-238", "GH-277", "GH-279"]
-  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0008", "ADR-0010", "TDR-0005", "TDR-0008", "TDR-0019", "TDR-0021"]
+  related_changes: ["GH-174", "GH-179", "GH-180", "GH-181", "GH-182", "GH-183", "GH-184", "GH-188", "GH-189", "GH-178", "GH-227", "GH-231", "GH-225", "GH-233", "GH-240", "GH-238", "GH-277", "GH-279", "GH-335"]
+  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0005", "ADR-0006", "ADR-0008", "ADR-0010", "TDR-0005", "TDR-0008", "TDR-0019", "TDR-0021", "TDR-0032", "TDR-0035"]
   contracts:
     - "packages/core/src/contracts/envelope.ts"
     - "packages/core/src/contracts/session.ts"
@@ -95,15 +95,15 @@ An operation absent from `supportedOperations` is unsupported. Declared gaps add
 
 ### Additive harness members (GH-335)
 
-`HarnessInstance` gains three additive optional members beside the delivered
+`HarnessInstance` carries three additive optional members beside the delivered
 `observedVersion` and `versionWarning`, which keep their meaning: `versionVerdict`
 (the closed `inside` | `outside` | `indeterminate` window verdict, evaluated once
 per resolution), `mode` (the resolved integration mode), and `modeOrigin`
-(`defaults` | `configured`). The spawn and resume inputs each gain two additive
+(`defaults` | `configured`). The spawn and resume inputs each carry two additive
 optional members: the caller's agent identity (`agent`) and the resolver's
 single-seat binding (`binding`), both optional so every delivered call site keeps
 compiling; the agent member's absence is the role-less `no-agent` state, never an
-empty string. `HarnessEnvironmentBuilder` gains an additive optional per-spawn
+empty string. `HarnessEnvironmentBuilder` takes an additive optional per-spawn
 context carrying the declared record map: a record value wins for a declared name
 and an undeclared name changes nothing. The port family itself is unchanged.
 

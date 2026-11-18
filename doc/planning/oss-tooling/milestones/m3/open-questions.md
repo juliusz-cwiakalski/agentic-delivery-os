@@ -22,6 +22,7 @@ Question: must both modes be supported and tested, or is standalone the only
 delivery mode with the service mode best-effort?
 Proposed default: both supported; standalone is the default delivery mode.
 Answer: So here some spike or exploration will be required. I have no strong preferences. We can use either the background service or some APIs, depending on what open code provides. Probably we'll also need some portion of direct database access to, for example, scan and analyze the token usage, so I have no strong preference here. 
+Delivered (GH-335): the per-invocation private server (`--standalone`) is the one delivered mode; the managed background service and running-server client are declared but refuse `harness.mode.unavailable` (TDR-0034).
 
 ### OQ-M3-03 — Own MCP surface
 Context: the former plan had a "full MCP" story over our own engines; the
@@ -61,6 +62,7 @@ Question: reuse v2 rows for opencode v2.x extraction, or introduce v3?
 Proposed default: extend v2 additively; no new major version unless a field
 cannot be expressed.
 Answer: Well, for versioning we should just be backward compatible. If we want to stick to the same version, then we can only add fields but not remove. If we change structure, remove some fields, then we should introduce new versions. 
+Delivered (GH-335): extraction and the seat/duration/observed-axis facts stay inside `delivery.harness.telemetry.v1` with fields added and none removed or renamed.
 
 ### OQ-M3-08 — Credential sources
 Context: adapters must resolve credentials through the credential port.

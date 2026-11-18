@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-HARNESS-ADAPTERS
 status: Current
 created: 2026-11-06
-last_updated: 2026-11-13
+last_updated: 2026-11-18
 owners: ["engineering"]
 service: delivery-os
-summary: "The delivered harness adapter seam: the HarnessInstance and HarnessSession primitive ports with closed harness-kind, operation, lifecycle-capability, and liveness-kind vocabularies and explicit capability gaps; the opencode delivery adapter (line-acquired streaming spawn and resume/steer over the JSONL stream with completion-scoped collection, read-only session listing, sourced liveness, heartbeat-age and token-delta sourced-signal declarations); the additive streaming spawn starter beside the one-shot runner, with the benign child-stdin observer at both host seams; the Claude Code headless adapter (spawn and collect) with deliver, resume/steer, session listing, liveness kinds, and both sourced-signal kinds declared as gaps; the additive sourced-signal carriage beside the exact-three liveness kinds; the deny-by-default execution-environment descriptor with build-from-declaration spawn environments and use-time credential resolution; the variable-only optional marker on a declared environment variable; the typed harness configuration branch; one shared harness-neutral classifier with the outcome-to-delivery-result token projection; read-only bounded telemetry extraction from both stores into one harness-neutral statistics shape at one record per session group, with a bounded Claude byte read and store-scoped orphan/invalid-identity disclosure; the optional per-step stream ingest sink feeding attributed telemetry-step records with a bounded per-session totals read at stream close; the non-gating, idempotent closeout capture into additive harness.telemetry state records with bounded output, harness-store session attribution for the closeout compaction checkpoint, and the code-level GH-233 review-deferral record; the typed dispatch engine is the first production consumer of the session port."
+summary: "The delivered harness adapter seam: the HarnessInstance and HarnessSession primitive ports with closed harness-kind, operation, lifecycle-capability, and liveness-kind vocabularies and explicit capability gaps; the opencode delivery adapter (line-acquired streaming spawn and resume/steer over the JSONL stream with completion-scoped collection, read-only session listing, sourced liveness, heartbeat-age and token-delta sourced-signal declarations); the additive streaming spawn starter beside the one-shot runner, with the benign child-stdin observer at both host seams; the Claude Code headless adapter (spawn and collect) with deliver, resume/steer, session listing, liveness kinds, and both sourced-signal kinds declared as gaps; the additive sourced-signal carriage beside the exact-three liveness kinds; the deny-by-default execution-environment descriptor with build-from-declaration spawn environments and use-time credential resolution; the variable-only optional marker on a declared environment variable; the typed harness configuration branch; one shared harness-neutral classifier with the outcome-to-delivery-result token projection; read-only bounded telemetry extraction from both stores into one harness-neutral statistics shape at one record per session group, with a bounded Claude byte read and held-identity-scoped reads; the optional per-step stream ingest sink feeding attributed telemetry-step records with a bounded per-session totals read at stream close; the non-gating, idempotent closeout capture into additive harness.telemetry state records with bounded output, union session attribution for the closeout compaction checkpoint, and the code-level GH-233 review-deferral record; the pinned supported-version window and probe grammar with the version refusals, the declared integration mode with its origin, the per-spawn caller-supplied agent identity and single-seat binding mapped onto the honoured surface, the observed-store telemetry contract with seat, resolved-model, duration, and observed-axis-absence facts, and the conformance extension scenarios on the delivered registry; the typed dispatch engine is the first production consumer of the session port."
 links:
-  related_changes: ["GH-233", "GH-234", "GH-235", "GH-236", "GH-240", "GH-238", "GH-239", "GH-275", "GH-241", "GH-277", "GH-286", "GH-291"]
-  related_decisions: ["ADR-0008", "TDR-0005", "TDR-0016", "TDR-0021"]
+  related_changes: ["GH-233", "GH-234", "GH-235", "GH-236", "GH-240", "GH-238", "GH-239", "GH-275", "GH-241", "GH-277", "GH-286", "GH-291", "GH-335"]
+  related_decisions: ["ADR-0008", "TDR-0005", "TDR-0016", "TDR-0021", "TDR-0032", "TDR-0033", "TDR-0034", "TDR-0035"]
   contracts:
     - "packages/core/src/contracts/harness.ts"
     - "packages/core/src/contracts/economics.ts"
@@ -96,8 +96,11 @@ the dispatch composition; the adapters add no dispatch branch of their own.
 | `HARNESS_LIFECYCLE_CAPABILITIES` | Headless spawn, resume/steer injection, session introspection, telemetry extraction. |
 | `HARNESS_LIVENESS_KINDS` | Session traffic, worktree activity, process. |
 | `HARNESS_GAP_REASONS` | Closed gap reasons; an unlisted capability is a declared gap, never implied parity. |
-| `HarnessInstance` | Kind, observed version (explicit unknown plus warning), capability declaration. |
+| `HarnessInstance` | Kind, observed version (explicit unknown plus warning), capability declaration, and the additive `versionVerdict`, `mode`, and `modeOrigin` members. |
 | `HarnessSessionPort` | Spawn, deliver, resume, collect, classify, liveness, session listing. |
+| `HarnessSpawnInput`, `HarnessResumeInput` | The spawn, resume, and deliver inputs; each carries the additive optional caller-supplied `agent` identity and the additive optional single-seat `binding`, and its `agent` absence is the role-less `no-agent` state. |
+| `HarnessSeatBinding` | One resolved seat: the agent identity it was resolved for, the seat name, the resolved model, and the declared variable name for a variable-consuming harness. |
+| `HarnessVersionProbe` | The pinned version-probe seam: one bounded invocation with the declared deadline and injected clock, answering a stdout line or `timed-out`; the resolver treats a rejection as indeterminate and never retries. |
 | `HarnessSpawnRunner` | The one-shot child-process seam: resolves at process close and carries the bounded stdout, stderr, exit status, and timeout flag; used for read-only session listing and by the Claude Code adapter. |
 | `HarnessSpawnStarter` | The streaming child-process seam: starts a child and returns its line stream, completion promise, handle-acquisition acknowledgement, and idempotent kill; used by the opencode adapter for spawn, resume, and deliver. |
 | `HarnessSpawnStreamOptions`, `HarnessSpawnStream` | The starter's per-invocation options (working directory, environment, optional stdin, handle-acquisition bound, optional whole-session bound) and its stream handle. |
@@ -256,10 +259,10 @@ defaults.
 ### Version window, integration mode, and seat propagation
 
 The supported harness window is pinned data, not a configuration key: the rule is
-the current minor line at delivery time plus one previous minor, and its value at
-delivery is `2.3.x` plus `2.2.x` (the installed `opencode v2.3.2`); the same rule
-read `2.2.x` plus `2.1.x` at intake. The accepted probe output is a product token,
-an optional `v`, and a three-part semantic version, newline-terminated, normalized
+the current minor line at delivery time plus one previous minor, currently
+`2.3.x` plus `2.2.x` (derived from the installed `opencode v2.3.2`), which leaves
+`2.1.x` outside the window. The accepted probe output is a product token, an
+optional `v`, and a three-part semantic version, newline-terminated, normalized
 to the bare semantic version; empty, non-zero, timed-out, multi-line, or
 off-grammar output is an indeterminate version. An observed version outside the
 window refuses `harness.version.unsupported` and an indeterminable version refuses
@@ -279,9 +282,12 @@ Seat propagation is a per-spawn contract at the harness port for a caller-suppli
 agent identity (DEC-15). The spawn and resume inputs each carry two additive
 optional members — the caller's agent identity and the resolver's single-seat
 binding (the agent identity, the seat, and that seat's resolved model, plus the
-declared variable name for a variable-consuming harness) — and the composition is
-the resolver's only production caller. The opencode adapter expresses the binding
-as exactly one `--agent <agent identity>` and one `--model
+declared variable name for a variable-consuming harness). The pure resolver
+(`resolveBinding`) has its production callers in the CLI production tier, where
+the `createHarnessProfilePort` wrapper and the `resolveHarnessAdmissionBinding`
+helper call it; the shipped generic `dispatch` composes neither member and mounts
+no profile wrapper, so its spawns bind nothing. The opencode adapter expresses a
+supplied binding as exactly one `--agent <agent identity>` and one `--model
 <provider>/<model>[#<variant>]` per invocation, never the seat name where the two
 differ, and adds no environment entry; a resume reuses its spawn's single binding
 and never adds a seat. An unrepresentable resolved model refuses
@@ -290,7 +296,7 @@ assigns no seat refuses through the delivered `provider.profile.invalid` with it
 agent, profile, and declared seats in the bounded `error.summary`, and a present
 empty or whitespace-only identity is invalid input refused as
 `config.value.invalid`. A spawn whose caller supplies no agent binds nothing and is
-disclosed as an unresolved seat; the shipped generic `dispatch` supplies none.
+disclosed as an unresolved seat.
 
 The shipped `harness.environment` default declares `PATH` and `HOME` as required
 entries, `TMPDIR` as an optional entry, and the composition-injected
@@ -306,9 +312,10 @@ variable-only and never applies to a credential entry.
 
 Capture reads the observed store contract (DM-10): the current `session_v2`/
 `session_message` generation, tolerating the legacy `session`/`message`
-generation. The store carries no work-item column, no separate harness-version
-column, and no per-message token/agent/model/cost column; the session row's own
-`version` is the stamped version, its timestamp pair is the duration source, and
+generation. The store carries no work-item column, no harness-version column
+other than the session row's own `version`, and no per-message
+token/agent/model/cost column; the session row's own `version` is the stamped
+version, its timestamp pair is the duration source, and
 its token columns and cost are the session baseline. The seat and resolved model
 on a row come from the recording dispatch attempt's binding, never from the store
 and never re-derived from the current profile, and attach only to the group whose
@@ -317,25 +324,36 @@ store states nowhere lands with the declared `absentObservedAxes` marker, the
 delivered empty-string placeholder in the non-null field, and the same-axis
 `optional-field-absent` warning, superseding the delivered
 `invalid-session-identity` for that case; a group whose observed agent is unstated
-carries a null seat with `unresolved-seat`. A store-reported zero cost is recorded
-as reported, a missing cost source is `null` with `cost-missing`, tool counts are
-absent with `no-tool-source` where no populated source exists, and a held session
-with no observable usage fact is a failed-session entry. An unreadable store keeps
-`harness.telemetry.extraction-failed`; a readable store that yields zero rows for a
-held session is a capture failure.
+carries a null seat with `unresolved-seat`. The opencode store's `cost` column is
+non-null with a default of `0`, so a reported zero is recorded as reported and a
+missing cost source is not representable there; a held session the store holds but
+for which no usage fact (cost or token class) is observable is a failed-session
+entry with `no-usage-fact`, and a held session the readable store does not hold is
+a classified `session-not-in-store` absence. Tool counts are absent with
+`no-tool-source` where no populated source exists. An unreadable store keeps
+`harness.telemetry.extraction-failed`.
 
 The capture scope is the union of the session identities every dispatch attempt
 recorded for the work item holds, plus each attempt's recorded binding for its own
-identities; an attempt that recorded no identity contributes nothing and is
-disclosed as one counted unattributed attempt, an empty union is the delivered
-`skipped-gap` with `session-attribution-unavailable` and no rows, and a truncated
-attempt-ledger read is disclosed rather than silently narrowing the union.
+identities. An attempt that recorded no identity contributes nothing: its count
+travels as the capture result's `unattributedAttempts` member and no identity is
+inferred for it. A truncated attempt-ledger read travels as the counted
+`attemptTruncation` member rather than silently narrowing the union. An empty union
+yields no rows and the compaction checkpoint's delivered `skipped-gap` with
+`session-attribution-unavailable`.
+
+The configured opencode store path defaults to the harness's own data directory
+(`~/.local/share/opencode/opencode.db`, not its state directory); a leading `~/` is
+expanded at the runtime-aware edge against the injected home directory, and the
+harness's `OPENCODE_DB` override wins when the injected environment record carries
+it. Core reads no ambient environment.
 
 Both extractors emit neutral records carrying the five token classes (`input`,
 `output`, `reasoning`, `cacheRead`, `cacheWrite`), call counts, bounded per-tool
 counts, agent and model identity, tree root, parent chain, work-item ref, harness
-kind and version, a cost that is null (never zero) when missing, the injected
-captured-at timestamp, and warnings from a closed reason set. opencode emits one
+kind and version, a cost that is the reported value or explicit null where the
+source supplies none, the injected captured-at timestamp, and warnings from a
+closed reason set. opencode emits one
 record per (session, agent, model) group with that group's token and tool
 attribution, so a session spanning several agent/model pairs keeps every group
 instead of collapsing to one. A session whose agent/model groups exceed the
@@ -353,13 +371,12 @@ omitted-byte count, so a full transcript is never loaded before the cap is
 applied. A truncated file degrades with a `truncated` warning and never
 hard-fails.
 
-Optional-field drift degrades with a warning and never hard-fails. On the
-opencode store, parentless sessions without a work-item port are counted as a
-bounded store-level warning (`store:out-of-port-orphans=<n>`) and invalid
-session identities as `store:invalid-identity=<n>`; they are never fabricated as
-the capturing delivery's failed sessions. A session that is attributed to the
-capturing delivery but cannot be parsed is a classified failed capture with no
-fabricated record. Conversation content never enters the output.
+Optional-field drift degrades with a warning and never hard-fails. Extraction
+reads only the held session identities and their trees; it performs no store-wide
+scan, so a parentless or invalid session outside that scope is never read and is
+never fabricated as the capturing delivery's failed session. A held session that
+cannot be parsed is a classified failed capture with no fabricated record.
+Conversation content never enters the output.
 
 Beside the one-shot extractors, the opencode streaming spawn carries an optional
 per-step ingest sink: each decoded step frame is decoded, attributed, and stored
@@ -393,13 +410,14 @@ plan performs no extraction and no append. The state-layer `harness.telemetry`
 records remain in the event log and are the only source `spend` reads; the
 capsule stream carries no statistics.
 
-The same harness-neutral extractors attribute the delivery's sessions for the
-closeout compaction checkpoint when harness settings are supplied. An opencode
-work-item root or a Claude session tree yields the bounded session identities;
-an empty store is `skipped-noop` (`no-sessions`); an unavailable store or a
-store whose sessions cannot be attributed to the delivery is `skipped-gap`
-(`session-attribution-unavailable`) plus a `session-attribution-gap` residue
-item. Injected session facts override the derived attribution for tests.
+The closeout compaction checkpoint derives its session identities from the state
+layer, not from the harness store: when harness settings are supplied it reads the
+bounded dispatch-attempt ledger and takes the union of the session identities the
+work item's recorded attempts hold, so no work-item column and no store-wide scan
+is involved. An empty union is `skipped-gap` (`session-attribution-unavailable`)
+plus a `session-attribution-gap` residue item; with no harness configured the step
+is `skipped-noop` (`no-sessions`). Injected session facts override the derived
+attribution for tests.
 
 ### Review deferrals
 
@@ -410,7 +428,7 @@ with a status, reason, owning story, and revisit trigger:
 | Finding | Status | Reason and owner |
 |---|---|---|
 | F-8 (Claude Code file-read budget) | resolved | The reader checks the declared byte cap before the read and reads at most that many encoded bytes. Owner: GH-240. |
-| F-11 (store-scoped orphan/invalid disclosure) | resolved | Parentless sessions without a work-item port are a bounded store-level warning; only the capturing delivery's own unattributable or invalid sessions are failed sessions. Owner: GH-240. |
+| F-11 (store-scoped orphan/invalid disclosure) | resolved | The record is retained; the current extraction reads only the held session identities and their trees, so a parentless or invalid session outside that scope is never read and never becomes a failed session. Owner: GH-240. |
 | F-9 (host-runner semantics) | resolved | Dispatch (GH-239) is the first production consumer of host-runner sessions and drives them through the declared harness session port; the closeout extraction path is unaffected and consumes no host runner. Owner: GH-239. |
 
 The host module (`packages/adapters/src/host/index.ts`) carries two seams over
@@ -442,7 +460,7 @@ ad-hoc runner API, queue, or spawn-failure surface.
 
 ## 7. Out of scope
 
-No plugin generation (M3-S1), no
+No plugin generation, no
 containerized executor implementation, no spend projection or retro pipeline
 (M1-S19/M1-S8), no model-profile selection or pacing (specified in
 [Provider Profiles and Watching](feature-provider-profiles.md)), and adds no CLI
@@ -485,12 +503,30 @@ Worktree-activity sourcing and Claude Code liveness remain declared gaps.
   driven through the dispatch composition),
   `economics-liveness-sourcing.test.ts`, `economics-liveness-prefill.test.ts`,
   `economics-liveness-corroboration.test.ts`
-- `tests/conformance/harness-classification.test.ts`, `harness-liveness.test.ts`
+- `tests/conformance/harness-classification.test.ts`, `harness-liveness.test.ts`,
+  `harness-extension-scenarios.test.ts` (the four additive extension scenarios and
+  their refusal-to-scenario map on the unchanged registry)
 - `tests/behaviour/harness-telemetry-{opencode,claude,shape,drift}.test.ts`,
+  `harness-telemetry-generation.test.ts`, `harness-telemetry-durations.test.ts`,
+  `harness-telemetry-observed-axis-absence.test.ts`,
+  `harness-telemetry-classification.test.ts`,
+  `harness-telemetry-extraction-failure.test.ts`,
+  `harness-telemetry-mandatory-usage.test.ts`,
+  `harness-telemetry-attribution.test.ts`,
   `harness-telemetry-claude-budget.test.ts`,
   `harness-telemetry-opencode-orphan-scope.test.ts`,
   `harness-closeout-{capture,idempotency,nongating}.test.ts`,
   `harness-output-bounds.test.ts`
+- `tests/behaviour/harness-version-gate.test.ts`,
+  `harness-version-probe-seam.test.ts`, `harness-mode-refusal.test.ts`,
+  `harness-profile-unrepresentable.test.ts`, `harness-refusal-side-effects.test.ts`
+  (the pinned window and probe grammar, the mode origin and refusal, the two
+  profile refusals, and refusal side-effect freedom), and
+  `tests/structure/harness-probe-construction-site.test.ts`,
+  `harness-probe-grammar-contract.test.ts`, `harness-version-window-contract.test.ts`
+  (one probe construction site and the single evaluation site),
+  `tests/checks/fixture-store-shape.test.ts` (every extraction fixture derives from
+  the observed store contract)
 - `tests/fixtures/harness/stream/opencode-v2.2.5.jsonl`,
   `opencode-v2.2.5-tool-error.jsonl`, and
   `opencode-v2.2.5-stream-error.jsonl` — the pinned real-shape captures (clean
@@ -528,6 +564,16 @@ Worktree-activity sourcing and Claude Code liveness remain declared gaps.
   of the session port.
 - [ADR-0008](../../decisions/ADR-0008-harness-adapter-contract.md) — the binding
   harness adapter contract.
+- [TDR-0032](../../decisions/TDR-0032-harness-seat-spawn-cardinality-and-seat-resolution.md)
+  — one seat per spawn, the agent-to-seat resolution, the per-invocation carrier,
+  and the seat-attributed telemetry row.
+- [TDR-0033](../../decisions/TDR-0033-harness-dispatch-outcome-envelope-detail.md)
+  — the pre-session harness facts and their `detail.harness` envelope member.
+- [TDR-0034](../../decisions/TDR-0034-opencode-integration-mode.md) — the
+  per-invocation private-server integration mode.
+- [TDR-0035](../../decisions/TDR-0035-opencode-harness-adapter-contract.md) — the
+  version window, the mode declaration, the propagation contract, and the observed
+  store contract.
 - [TDR-0016](../../decisions/TDR-0016-harness-streaming-spawn-seam.md) — the
   additive streaming spawn seam and the handle-acquisition decision.
 - [TDR-0021](../../decisions/TDR-0021-additive-optional-harness-environment-marker.md)

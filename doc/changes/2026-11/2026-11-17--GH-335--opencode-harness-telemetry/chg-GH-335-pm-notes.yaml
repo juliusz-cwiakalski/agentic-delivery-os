@@ -9,12 +9,24 @@ phases:
   delivery_planning: { started: null, completed: 2026-11-18T10:59:06.975Z }
   dor_check: { started: null, completed: 2026-11-18T11:07:59.204Z }
   delivery: { started: null, completed: 2026-11-18T15:06:36.221Z }
-  system_spec_update: { started: null, completed: null }
+  system_spec_update: { started: null, completed: 2026-11-18T15:24:57.132Z }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
-decisions: []
+decisions:
+  - text: "TDR-0032 — harness seat-to-spawn cardinality and seat resolution (one
+      spawn binds exactly one seat; the caller supplies the agent identity, the
+      resolver returns the binding; Amendments A-1..A-4). Status: Proposed."
+    date: "2026-11-18"
+  - text: "TDR-0033 — harness dispatch-outcome disclosure on the failure-envelope
+      detail slot (one declared harness member on the four pre-session
+      refusals). Status: Proposed."
+    date: "2026-11-18"
+  - text: "TDR-0034 — opencode integration mode. Status: Proposed."
+    date: "2026-11-18"
+  - text: "TDR-0035 — opencode harness adapter contract. Status: Proposed."
+    date: "2026-11-18"
 open_questions: []
 blockers: []
 notes:
@@ -421,4 +433,78 @@ notes:
       observing the installed harness. Observing first would have collapsed two
       iterations."
     type: retro
+    date: "2026-11-18"
+  - text: "Delivery evidence, plan phase 1 (decision records, spike evidence,
+      independent review): commit 1be1e49a; gate `bun test` decision-record +
+      doc-conformance + fixture-privacy = 32 pass."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery evidence, plan phase 2 (contract layer): commit 79746a0b; gate
+      `pnpm typecheck` + 10 suites + error-table-sync + exports-parity = 336
+      pass, sync 153/153, parity OK."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery evidence, plan phase 3 (pure evaluation): commit f66a9d48; gate
+      `pnpm typecheck` + 7 suites + 3 controls + ambient-globals = 85 pass."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery evidence, plan phase 4 (dispatch path): commit 8c8d7550; gate
+      `pnpm typecheck` + 14 suites + 5 controls = 83 + 156 pass."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery evidence, plan phase 5 (attribution and per-seat telemetry,
+      including the production admission wiring and the observed-store extractor
+      rewrite): commit 031ec80d; gate `pnpm typecheck` + 29 named suites/checks
+      = 190 pass."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery evidence, plan phase 6 (conformance split and honesty battery):
+      commit 4cd235e3; gate `pnpm typecheck` + conformance/checks/structure
+      battery = 274 pass, 39 mutant tests."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery evidence, plan phase 7 (recorded-outcome disclosure): commit
+      8744e748; gate `pnpm typecheck` + 13 suites = 117 pass."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery evidence, plan phase 8 (docs reconciliation, live observation,
+      release): commit 8f2ff139; gate `plan validate`, `lint plan`, `pnpm
+      check`, range gate, doc-distribution, changesets = all green."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery boundary: `jaiship phase complete GH-335 delivery` landed as
+      f4140153. Post-boundary remediation commits: ce9899df (error-table-sync
+      literals), e1a65b16 (depcruise tier rule), 2e2720bb (privacy-literal path
+      in spike evidence), 2afbf380 (mirror counts + changeset)."
+    type: info
+    date: "2026-11-18"
+  - text: "Aggregate gate after delivery: `TMPDIR=$PWD/tmp/tmpdir pnpm check` exit 0
+      — lint, format:check, typecheck, test, boundaries, memory, prompt
+      conformance, help-guide coverage and exports parity all green; 10554 pass
+      / 4 skip / 0 fail across 1348 files. Branch-range commit gate
+      `./scripts/lint-commit-range.sh --base main-tools` = PASS, 37 commits, 0
+      offending. doc-distribution and changesets-group green."
+    type: info
+    date: "2026-11-18"
+  - text: "Live observation recorded per DoD clause 4: a harness-port spawn with
+      caller-supplied agent `coder` / `deepseek/deepseek-flash` on opencode
+      v2.3.2; the landed row carries version 2.3.2, agent/model agreement, an
+      attached seat, sourced durations (5428 ms), a reported non-zero cost and
+      no tool source."
+    type: info
+    date: "2026-11-18"
+  - text: "Declared gaps carried to review: the plan's declared
+      `tests/fixtures/harness/scenarios/` folder was not added (the extension
+      executor supplies facts inline with an equivalent data path);
+      `OpencodeBindingSeams` is not re-exported from the adapters harness barrel
+      (tests import it from the module); `doc/00-index.md` was conditional on a
+      new feature page and none was created."
+    type: info
+    date: "2026-11-18"
+  - text: "PR-review carry-over from the independent decision review: TDR-0032
+      predates DEC-17/AC-F5-7 (no invalid-identity outcome and no single-seat
+      empty-string criterion; A-5/A-6 suggested), and TDR-0032/TDR-0035 both
+      speak to the expressibility and binding-attachment homes. Records were not
+      edited; all four remain Proposed for human acceptance at the PR."
+    type: risk
     date: "2026-11-18"

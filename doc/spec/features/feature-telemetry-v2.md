@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-TELEMETRY-V2
 status: Current
 created: 2026-11-13
-last_updated: 2026-11-17
+last_updated: 2026-11-18
 owners: ["engineering"]
 service: delivery-os
-summary: "Harness telemetry v2: per-step token, calls, and cost ingest beside the delivered opencode JSONL drain with present-zero distinguished from omitted, five-dimension attribution joined from session economics and command-audit identity, one bounded read-only per-session totals query at stream close captured as a harness.telemetry.baseline record, schema-versioned additive step and baseline record families under delivery.telemetry.storage.v1 with re-read migration, classified damage, linear growth, the stream-ingest/closeout-capture/combined reading bases with the declared session-dedup combination rule, the storage identity the peak-pause window-scoped zero-spend evidence counts over, the metrics report's dispatch and burn-rate reads over the same families, and aggregates-only privacy."
+summary: "Harness telemetry v2: per-step token, calls, and cost ingest beside the delivered opencode JSONL drain with present-zero distinguished from omitted, five-dimension attribution joined from session economics and command-audit identity, one bounded read-only per-session totals query at stream close captured as a harness.telemetry.baseline record, schema-versioned additive step and baseline record families under delivery.telemetry.storage.v1 with re-read migration, classified damage, linear growth, the captured delivery.harness.telemetry.v1 row's additive seat, resolved-model, store-sourced duration, and observed-axis-absence members over the observed store contract, the stream-ingest/closeout-capture/combined reading bases with the declared session-dedup combination rule, the storage identity the peak-pause window-scoped zero-spend evidence counts over, the metrics report's dispatch and burn-rate reads over the same families, and aggregates-only privacy."
 links:
-  related_changes: ["GH-291", "GH-294", "GH-299"]
-  related_decisions: ["ADR-0003", "ADR-0008", "TDR-0004", "TDR-0016"]
+  related_changes: ["GH-291", "GH-294", "GH-299", "GH-335"]
+  related_decisions: ["ADR-0003", "ADR-0008", "TDR-0004", "TDR-0016", "TDR-0032", "TDR-0035"]
   contracts:
     - "packages/core/src/contracts/telemetry.ts"
     - "packages/core/src/contracts/harness-telemetry.ts"
@@ -40,7 +40,7 @@ An absent dimension is stored as `null` and the record carries the closed `unatt
 
 ## 2a. Captured harness rows: seat, resolved model, and durations
 
-The closeout-captured `delivery.harness.telemetry.v1` row gains four additive
+The closeout-captured `delivery.harness.telemetry.v1` row carries four additive
 optional members under the unchanged schema identity, and no delivered field is
 renamed, removed, or duplicated. `seat` and `resolvedModel` are the recording
 dispatch attempt's recorded binding (a single seat); they are `null` with the
@@ -66,9 +66,11 @@ widened to nullable, and an unstated observed agent forces a null seat with
 meaning: a genuinely unusable group identity.
 
 A store-reported zero cost is recorded as the reported zero (no `cost-missing`
-warning); a missing cost source is `null` with `cost-missing`; a non-numeric cost
-is `null` with `non-numeric-value`. No observed generation exposes a populated
-tool source, so tool counts are absent with the `no-tool-source` warning. A held
+warning); a cost source that supplies no value is `null` with `cost-missing`; a
+non-numeric cost is `null` with `non-numeric-value`. The opencode store's `cost`
+column is non-null with a zero default, so its reported zero is never read as an
+absence there. No observed opencode store generation exposes a populated tool
+source, so tool counts are absent with the `no-tool-source` warning. A held
 session with no observable usage fact is a failed-session entry with
 `no-usage-fact`, and a held session the readable store does not hold is an absence
 with `session-not-in-store` rather than damage.

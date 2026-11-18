@@ -1,6 +1,6 @@
 # M3 — Harness and tracker integrations (planning draft)
 
-Status: **draft for review** (planning PR GH-333). Owner directive 2026-11-17.
+Status: **in delivery** — M3-S1 delivered (GH-335); the remaining stories stay planned. Owner directive 2026-11-17.
 Open questions to answer in writing: [open-questions.md](open-questions.md).
 
 ## Goal
@@ -67,9 +67,11 @@ delivered with the tooling as-is.
   resume/attach); telemetry extraction (per-seat model, tokens, cost,
   durations) into the state layer; version detection and compatibility
   window; conformance tests against the harness port.
-- AC: a dispatch through the installed harness port runs with the resolved
-  profile; telemetry rows land with schema version and per-seat models;
-  unsupported versions degrade with a typed refusal.
+- AC: a harness-port spawn with a caller-supplied agent identity runs with the
+  resolved seat's model (the shipped generic `dispatch` supplies none, so its
+  spawns bind nothing and are disclosed as unresolved seats — DEC-15); telemetry
+  rows land with schema version and per-seat models; unsupported versions refuse
+  with a typed error.
 - Depends on: M1-S11, M2-S14.
 - Delivered (GH-335): version window and probe grammar, declared integration
   mode, per-spawn seat binding, and seat-attributed telemetry over the observed
