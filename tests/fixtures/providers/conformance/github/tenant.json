@@ -116,6 +116,8 @@
             "name": "build",
             "status": "completed",
             "conclusion": "success",
+            "started_at": "2026-10-29T08:00:00Z",
+            "completed_at": "2026-10-29T08:02:30Z",
             "details_url": "https://api.github.example.com/group-placeholder/project-placeholder/checks/9001"
           },
           {
@@ -123,6 +125,8 @@
             "name": "test",
             "status": "completed",
             "conclusion": "failure",
+            "started_at": "2026-10-29T08:02:31Z",
+            "completed_at": "2026-10-29T08:09:59Z",
             "details_url": "https://api.github.example.com/group-placeholder/project-placeholder/checks/9002"
           },
           {
@@ -279,7 +283,9 @@
         "jobs": [
           {
             "jobName": "build",
-            "jobState": "succeeded"
+            "jobState": "succeeded",
+            "startedAt": "2026-10-29T08:00:00Z",
+            "completedAt": "2026-10-29T08:02:30Z"
           }
         ],
         "traceEvidence": [
@@ -298,7 +304,9 @@
         "jobs": [
           {
             "jobName": "test",
-            "jobState": "failed"
+            "jobState": "failed",
+            "startedAt": "2026-10-29T08:02:31Z",
+            "completedAt": "2026-10-29T08:09:59Z"
           }
         ],
         "traceEvidence": [

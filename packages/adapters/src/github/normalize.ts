@@ -248,10 +248,21 @@ export const normalizeCheckRuns = (
       return providerPayloadFailure(`GitHub check run ${runId} has an unknown status pair`);
     }
     const detailsUrl = stringField(checkRun, "details_url");
+    // Provider-native timestamps are copied verbatim; absent stays absent and
+    // no duration is ever derived (DM-2).
+    const startedAt = stringField(checkRun, "started_at");
+    const completedAt = stringField(checkRun, "completed_at");
     runs.push({
       identity: { systemName: context.systemName, entityId: `${commitSha}:${runId}` },
       pipelineName: name,
-      jobs: [{ jobName: name, jobState }],
+      jobs: [
+        {
+          jobName: name,
+          jobState,
+          ...(startedAt === undefined ? {} : { startedAt }),
+          ...(completedAt === undefined ? {} : { completedAt }),
+        },
+      ],
       traceEvidence:
         detailsUrl === undefined ? [] : [{ evidenceName: "check-run", location: detailsUrl }],
     });

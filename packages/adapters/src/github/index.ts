@@ -43,6 +43,15 @@ export {
   type GithubDeployTraceReader,
   normalizeDeployTrace,
 } from "./deploy-trace.js";
+export {
+  boundLogExcerpt,
+  createGitHubLogExcerptReader,
+  GITHUB_LOG_EXCERPT_MAX_BYTES,
+  type GithubLogExcerpt,
+  type GithubLogExcerptOptions,
+  type GithubLogExcerptReader,
+  type LogExcerptRepository,
+} from "./log-excerpt.js";
 /**
  * The declared issues transition seed, exported additively so the adapter's
  * reference behavior can be mechanically compared with the code it documents.

@@ -205,6 +205,18 @@
       "providerBehavior": "GitHub issues carry either a native state or lifecycle labels, and the declared map has a load-bearing precedence order.",
       "expectedNormalizedOutcome": "The four-row seed is declared in precedence order; a closed issue resolves done regardless of labels, an exact-case label wins by declared precedence, a case collision with a declared label-swap token is a visible refusal, and an unknown or absent label resolves through the native-state row.",
       "fixtureReference": "tests/fixtures/providers/github/workflow-map-cases.json#/seedRows"
+    },
+    {
+      "trapName": "GITHUB-CHECK-RUN-TIMINGS",
+      "providerBehavior": "GitHub check runs expose provider-native started_at and completed_at timestamps that may be absent or partial.",
+      "expectedNormalizedOutcome": "PipelineJob.startedAt and completedAt copy the provider strings verbatim when present; an absent timestamp stays absent, an incomplete run has no completion time, and no duration or default is ever derived.",
+      "fixtureReference": "tests/fixtures/providers/github/check-run-timings.json#/cases/bothPresent"
+    },
+    {
+      "trapName": "GITHUB-LOG-EXCERPT-CAP",
+      "providerBehavior": "GitHub job log text can exceed the fixed excerpt cap and can contain multi-byte characters anywhere, including across the byte boundary.",
+      "expectedNormalizedOutcome": "The excerpt is a faithful UTF-8 byte prefix of at most 8192 bytes that never splits a multi-byte sequence, byteLength equals the returned bytes, and truncated is the sole truncation authority.",
+      "fixtureReference": "tests/fixtures/providers/github/check-run-log-excerpt.json#/cases/over8192Ascii"
     }
   ]
 }

@@ -299,6 +299,7 @@
     "src/github/client.ts",
     "src/github/deploy-trace.ts",
     "src/github/index.ts",
+    "src/github/log-excerpt.ts",
     "src/github/normalize.ts",
     "src/github/review-state.ts",
     "src/github/workflow-map.ts",

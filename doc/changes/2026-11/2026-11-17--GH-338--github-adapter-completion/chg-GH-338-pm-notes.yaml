@@ -56,6 +56,39 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 4 complete (verbatim provider job timings and the bounded
+      log excerpt). Plan phase 3 commit:
+      ec24bf54bcbec86479fd5ad3ae24acddd091aa57 (the phase-3 note names plan
+      phase 3 and its gate result; this entry carries the hash). Phase 4
+      delivered: `normalizeCheckRuns` copies `started_at`/`completed_at`
+      verbatim onto the optional PipelineJob fields, absence stays absence, and
+      no duration is derived; `packages/adapters/src/github/log-excerpt.ts`
+      exports the one fixed cap (GITHUB_LOG_EXCERPT_MAX_BYTES = 8192), the
+      closed four-key shape, a pure `boundLogExcerpt` that trims on a UTF-8
+      character boundary, and the one-read reader (one request, no pagination,
+      no retry, 404 -> not-found, other non-2xx -> payload.invalid with status,
+      transport throw -> payload.invalid without status, malformed 2xx ->
+      payload.invalid with 200, empty 2xx observed empty). The conformance GitHub
+      tenant's check-runs payload and its read-pipeline-run projection gained the
+      two timestamps in the same commit; the artifact suite asserts the top-level
+      key set is unchanged and no excerpt/body/timing evidence field appears in
+      the serialized artifact; the trap catalog gained
+      GITHUB-CHECK-RUN-TIMINGS and GITHUB-LOG-EXCERPT-CAP with assertions and
+      named mutations; the delivered-name snapshot still hashes the original 31
+      entries. Verification: G1 structure 1611 pass; G2 behaviour/providers 257
+      pass; G3 conformance 177 pass; G4 checks 1175 pass; G5 boundaries 152 pass;
+      G6 typecheck green; G7 secret-read boundary OK (5 allowlisted, unchanged);
+      G8 fixture sanitization/privacy green; G9 git diff --check clean; G10
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (10453 pass, 4 pre-existing skips,
+      0 fail; TC-DAEMON-121 green). One in-scope finding: a committed
+      token-shaped redaction canary tripped the privacy-literal scan, so the
+      test constructs the canary at runtime instead (no product or assertion
+      change). No file outside the phase-4 declared scope moved. Residual for
+      lifecycle phase 7 (docs) and phase 6 (reference behavior): document the
+      fixed 8192-byte cap, the byte-prefix/truncation rule, the not-persisted /
+      not-artifacted discipline, and the two optional timestamps."
+    type: info
+    date: "2026-11-18"
   - text: "Plan phase 3 complete (GitHub 9 supported / 0 declared gaps; the
       carrier-free comment write and the DM-9 content write; the injected,
       seeded workflow map driving read normalization and mapped transitions).

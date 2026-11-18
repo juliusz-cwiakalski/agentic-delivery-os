@@ -14,6 +14,10 @@ import {
   createGitHubClient,
   type GithubClient,
 } from "../../../packages/adapters/src/github/client";
+import {
+  createGitHubLogExcerptReader,
+  GITHUB_LOG_EXCERPT_MAX_BYTES,
+} from "../../../packages/adapters/src/github/log-excerpt";
 import { GITHUB_UNKNOWN_REVIEW_DECISION_FALLBACK } from "../../../packages/adapters/src/github/review-state";
 import { GITHUB_WORKFLOW_MAP_SEED } from "../../../packages/adapters/src/github/workflow-map";
 import type {
@@ -648,6 +652,41 @@ const landingInput = {
 
 const ISSUE_WRITES = `${FIXTURES}/issue-writes.json`;
 const WORKFLOW_MAP_CASES = `${FIXTURES}/workflow-map-cases.json`;
+const TIMINGS_FIXTURE = `${FIXTURES}/check-run-timings.json`;
+const EXCERPT_FIXTURE = `${FIXTURES}/check-run-log-excerpt.json`;
+
+const evidenceTimingsCheck = async (): Promise<void> => {
+  const body = recordField(recordField(readJson(TIMINGS_FIXTURE), "cases"), "bothPresent");
+  const transport = createFixtureTransport([{ url: checkRunsUrl(SHA_A), body }]);
+  const client = createGitHubClient({ instance, credentials, repository, transport });
+  const read = requireValue(await client.readPipelineRun(SHA_A), "timings");
+  const jobs = read.items.flatMap((run) => run.jobs);
+  expect(jobs[0]?.startedAt).toBe("2026-11-17T10:00:00Z");
+  expect(jobs[0]?.completedAt).toBe("2026-11-17T10:04:12Z");
+  expect(jobs[1]?.startedAt).toBe("2026-11-17T10:04:13Z");
+  expect(jobs[1]?.completedAt).toBe("2026-11-17T10:11:59Z");
+  for (const job of jobs) expect(Object.hasOwn(job, "durationMs")).toBe(false);
+};
+
+const logExcerptCapCheck = async (): Promise<void> => {
+  const fixture = recordField(recordField(readJson(EXCERPT_FIXTURE), "cases"), "over8192Ascii");
+  const transport = createFixtureTransport([
+    {
+      url: `${instance.baseUrl}${repoPath}/actions/jobs/9002/logs`,
+      body: fixture.body,
+    },
+  ]);
+  const reader = createGitHubLogExcerptReader({
+    instance,
+    credentials,
+    repository,
+    transport,
+  });
+  const value = requireValue(await reader.readLogExcerpt("9002"), "excerpt");
+  expect(value.byteLength).toBe(GITHUB_LOG_EXCERPT_MAX_BYTES);
+  expect(value.truncated).toBe(true);
+  expect(Buffer.byteLength(value.excerpt, "utf8")).toBe(GITHUB_LOG_EXCERPT_MAX_BYTES);
+};
 
 const commentCarrierFreeCheck = async (): Promise<void> => {
   const comment = recordField(recordField(readJson(ISSUE_WRITES), "comment"), "commentCreated");
@@ -794,6 +833,8 @@ const defaultAssertions: TrapAssertions = {
   "GITHUB-COMMENT-CARRIER-FREE": commentCarrierFreeCheck,
   "GITHUB-CONTENT-WRITE-NEVER-LANDS": contentWriteNeverLandsCheck,
   "GITHUB-WORKFLOW-MAP-SEED-PRECEDENCE": workflowMapSeedCheck,
+  "GITHUB-CHECK-RUN-TIMINGS": evidenceTimingsCheck,
+  "GITHUB-LOG-EXCERPT-CAP": logExcerptCapCheck,
   "GITHUB-LANDING-ALREADY-MERGED-READBACK": async () => {
     const { client, transport } = landingClient("alreadyMergedThenMergedTrue");
     const result = await client.mergeDeliveryRequest(landingInput);
@@ -899,6 +940,32 @@ const mutationsForNewTraps = [
       expect(GITHUB_WORKFLOW_MAP_SEED.states).toEqual([...rows].reverse());
     },
   },
+  {
+    trapName: "GITHUB-CHECK-RUN-TIMINGS",
+    assertion: async (): Promise<void> => {
+      await evidenceTimingsCheck();
+      // The mutated normalization derives a duration from the timings.
+      const body = recordField(recordField(readJson(TIMINGS_FIXTURE), "cases"), "bothPresent");
+      const transport = createFixtureTransport([{ url: checkRunsUrl(SHA_A), body }]);
+      const client = createGitHubClient({ instance, credentials, repository, transport });
+      const read = requireValue(await client.readPipelineRun(SHA_A), "timings mutation");
+      expect(Object.hasOwn(read.items[0]?.jobs[0] ?? {}, "durationMs")).toBe(true);
+    },
+  },
+  {
+    trapName: "GITHUB-LOG-EXCERPT-CAP",
+    assertion: async (): Promise<void> => {
+      await logExcerptCapCheck();
+      // The mutated bound truncates one byte early (a character-count bound).
+      const fixture = recordField(recordField(readJson(EXCERPT_FIXTURE), "cases"), "over8192Ascii");
+      const transport = createFixtureTransport([
+        { url: `${instance.baseUrl}${repoPath}/actions/jobs/9002/logs`, body: fixture.body },
+      ]);
+      const reader = createGitHubLogExcerptReader({ instance, credentials, repository, transport });
+      const value = requireValue(await reader.readLogExcerpt("9002"), "cap mutation");
+      expect(value.byteLength).toBe(GITHUB_LOG_EXCERPT_MAX_BYTES - 1);
+    },
+  },
 ];
 
 const runWithGuard = async (options: Omit<TrapRunOptions, "provider">): Promise<TrapRun> => {
@@ -951,6 +1018,8 @@ describe("TC-TRAP-002 GitHub trap catalog replays offline", () => {
       "GITHUB-COMMENT-CARRIER-FREE",
       "GITHUB-CONTENT-WRITE-NEVER-LANDS",
       "GITHUB-WORKFLOW-MAP-SEED-PRECEDENCE",
+      "GITHUB-CHECK-RUN-TIMINGS",
+      "GITHUB-LOG-EXCERPT-CAP",
     ]);
   });
 

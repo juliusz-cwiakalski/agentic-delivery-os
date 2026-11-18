@@ -20,7 +20,7 @@ const REQUIRED_KEYS = [
   "trapName",
 ];
 
-const MINIMA: Readonly<Record<string, number>> = { gitlab: 3, jira: 4, github: 30 };
+const MINIMA: Readonly<Record<string, number>> = { gitlab: 3, jira: 4, github: 32 };
 
 const EXPECTED_TRAPS: Readonly<Record<string, readonly string[]>> = {
   jira: [
@@ -68,6 +68,8 @@ const EXPECTED_TRAPS: Readonly<Record<string, readonly string[]>> = {
     "GITHUB-COMMENT-CARRIER-FREE",
     "GITHUB-CONTENT-WRITE-NEVER-LANDS",
     "GITHUB-WORKFLOW-MAP-SEED-PRECEDENCE",
+    "GITHUB-CHECK-RUN-TIMINGS",
+    "GITHUB-LOG-EXCERPT-CAP",
   ],
 };
 
@@ -317,6 +319,12 @@ const BACKLOG_GITHUB_TRAPS: readonly string[] = [
   "GITHUB-WORKFLOW-MAP-SEED-PRECEDENCE",
 ];
 
+/** The two phase-4 evidence entries. */
+const EVIDENCE_GITHUB_TRAPS: readonly string[] = [
+  "GITHUB-CHECK-RUN-TIMINGS",
+  "GITHUB-LOG-EXCERPT-CAP",
+];
+
 /** The single declared `expectedNormalizedOutcome` amendment. */
 const DECLARED_OUTCOME_AMENDMENT =
   "labelled `review`/`in-progress` issues resolve to `in-review`/`in-progress` by declared precedence, and an exact-case label equal to a declared `label-swap` token wins";
@@ -329,12 +337,13 @@ const DECLARED_OUTCOME_AMENDMENT =
 const DELIVERED_OUTCOME_DIGEST = "165e4b12d3c61aae427a95bebc5f270e9d5c3a60f5d81d36a747cbb99ec9fcde";
 
 describe("TC-FLOOR-001 delivered trap names frozen with one declared outcome amendment", () => {
-  test("the catalog is the delivered list plus exactly the three backlog entries", () => {
+  test("the catalog is the delivered list plus the declared phase entries", () => {
     const github = loadCatalogs(ROOT).github;
     if (github === undefined) throw new Error("github catalog is missing");
     expect(github.entries.map((entry) => entry.trapName)).toEqual([
       ...DELIVERED_GITHUB_TRAPS,
       ...BACKLOG_GITHUB_TRAPS,
+      ...EVIDENCE_GITHUB_TRAPS,
     ]);
   });
 

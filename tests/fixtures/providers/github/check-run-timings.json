@@ -1,0 +1,71 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-17",
+  "cases": {
+    "bothPresent": {
+      "check_runs": [
+        {
+          "id": 9101,
+          "name": "build",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-17T10:00:00Z",
+          "completed_at": "2026-11-17T10:04:12Z",
+          "details_url": "https://api.github.example.com/checks/9101"
+        },
+        {
+          "id": 9102,
+          "name": "test",
+          "status": "completed",
+          "conclusion": "failure",
+          "started_at": "2026-11-17T10:04:13Z",
+          "completed_at": "2026-11-17T10:11:59Z",
+          "details_url": "https://api.github.example.com/checks/9102"
+        }
+      ]
+    },
+    "completedRun": {
+      "check_runs": [
+        {
+          "id": 9103,
+          "name": "lint",
+          "status": "completed",
+          "conclusion": "success",
+          "started_at": "2026-11-17T10:00:00Z",
+          "completed_at": "2026-11-17T10:01:00Z"
+        }
+      ]
+    },
+    "startedOnly": {
+      "check_runs": [
+        {
+          "id": 9104,
+          "name": "deploy",
+          "status": "in_progress",
+          "conclusion": null,
+          "started_at": "2026-11-17T10:12:00Z"
+        }
+      ]
+    },
+    "nonePresent": {
+      "check_runs": [
+        {
+          "id": 9105,
+          "name": "queued-job",
+          "status": "queued",
+          "conclusion": null
+        }
+      ]
+    },
+    "incompleteRunCompletionAbsent": {
+      "check_runs": [
+        {
+          "id": 9106,
+          "name": "publish",
+          "status": "in_progress",
+          "conclusion": null,
+          "started_at": "2026-11-17T10:20:00Z"
+        }
+      ]
+    }
+  }
+}

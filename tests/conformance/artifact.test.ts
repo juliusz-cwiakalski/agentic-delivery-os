@@ -329,3 +329,34 @@ describe("TC-CONF-019 artifact bounds and redaction", () => {
     }
   });
 });
+
+describe("TC-CHECK-010 the artifact carries no excerpt or thread-body evidence", () => {
+  test("the top-level key set is unchanged and no evidence field appears", async () => {
+    const artifact = await mockArtifact();
+    expect(Object.keys(artifact).sort()).toEqual(
+      [
+        "createdArtifacts",
+        "flows",
+        "generatedAt",
+        "mutationRequests",
+        "providers",
+        "runId",
+        "schema",
+        "status",
+        "steps",
+        "tier",
+        "totals",
+      ].sort(),
+    );
+    const text = serializeConformanceArtifact(artifact);
+    for (const evidenceKey of [
+      "excerpt",
+      "byteLength",
+      "bodyTruncated",
+      "startedAt",
+      "completedAt",
+    ]) {
+      expect(text.includes(evidenceKey), evidenceKey).toBe(false);
+    }
+  });
+});
