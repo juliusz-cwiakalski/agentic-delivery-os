@@ -8,19 +8,19 @@
 # naming the plan phase id, the commit hash, and the gate result).
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:     ./chg-GH-349-spec.md (v1.5: F-1..F-7; 46 ACs —
+#   - Spec:     ./chg-GH-349-spec.md (**v1.6**: F-1..F-7; 46 ACs —
 #               AC-F1-1..9, AC-F2-1..6, AC-F3-1..4, AC-F4-1..9, AC-F5-1..7,
 #               AC-F6-1..6, AC-F7-1..5; API-1..7; DM-1..9; NFR-1..13; NG-1..11;
 #               RSK-1..12; DEC-1..8; §18 sequencing; §24.1 Appendix A doc
-#               impacts (lifecycle phase 7, NOT this plan, EXCEPT the four
-#               delivered-check-bound carriers named below); §24.3 Appendix C
-#               invariants BINDING on every phase; §24.4 Appendix D additive
-#               inventory with before→after counts; §24.5 Appendix E atomic
-#               conformance/parity ripple; §24.6 Appendix F defect register;
-#               §24.7 Appendix G declared boundaries; **§24.8 Appendix H — the
-#               closed-set consumer sweep, which is the SCOPE CONTRACT for every
-#               closed-set move**).
-#               **v1.3/v1.4/v1.5 are binding on this plan.** v1.3 carried the
+#               impacts (lifecycle phase 7, NOT this plan, EXCEPT the carriers
+#               classed below); §24.3 Appendix C invariants BINDING on every
+#               phase; §24.4 Appendix D additive inventory with before→after
+#               counts; §24.5 Appendix E atomic conformance/parity ripple; §24.6
+#               Appendix F defect register; §24.7 Appendix G declared boundaries;
+#               **§24.8 Appendix H — the closed-set consumer sweep transcribed
+#               from a mechanical scan (2 135 files, 329 hits), which is the
+#               SCOPE CONTRACT for every closed-set move**).
+#               **v1.3/v1.4/v1.5/v1.6 are binding on this plan.** v1.3 carried the
 #               DoR iteration-1 remediation (R1–R6, M1–M6 and the spec-side
 #               minors: the retired `refusal-rebase` scenario, the inverted merge
 #               suites, the SEVEN identity pin sites, the sync reason PAIR, the
@@ -38,14 +38,40 @@
 #               `landing.shaOnBase` with a write-then-verified-read round trip;
 #               N2b names the state-layer recorded-operation argument arm with
 #               its round trip; M1 states the delivered merge-suite split as
-#               **EIGHT of sixteen change** (three inverted, three re-pointed,
-#               two mechanically edited) with the other EIGHT green unedited; M2
-#               adds three operation-count pages to Appendix A and reclassifies
-#               the reference-behavior and conformance rows as delivered-check-
-#               bound carriers; and the minors add the LEGACY-TOKEN extension
-#               (`149`, `148`, `+115` join the no-leftover scan, `151` becomes
-#               the delivered-row pin).
-#   - Tests:    ./chg-GH-349-test-plan.md (v1.7: **87 TCs** —
+#               **EIGHT of sixteen change** with the other EIGHT green unedited;
+#               M2 adds three operation-count pages to Appendix A and reclassifies
+#               the reference-behavior row as delivered-check-bound; and the
+#               minors add the LEGACY-TOKEN extension (`149`, `148`, `+115` join
+#               the no-leftover scan, `151` becomes the delivered-row pin).
+#               **v1.6 carries the DoR iteration-3 remediation:** **B1b** states
+#               the POSTURE CONTENT of the tenth operation (GitHub supported +=
+#               `close-milestone` with an EMPTY gap list, GitLab
+#               `adapter-not-implemented`, Jira `provider-unsupported`,
+#               `EXPECTED_SEED_POSTURES` github 9→10 / gitlab 7→8 / jira 6→7, the
+#               literal `WRITE_METHODS` map's tenth arm, and `operationLabel`'s
+#               tenth case proven by typecheck); **B1c** makes the provider-path
+#               obligation FOUR items (`github-cli-transport`, `github-landing`,
+#               `github-collection`, `provider-capabilities`) with no other file
+#               under `tests/behaviour/providers/**` required to change; **B1d**
+#               rewrites Appendix H as the transcription of a mechanical scan and
+#               states the `ADAPTER_OPERATIONS` pin set as **EIGHTEEN files**
+#               (the earlier "13" was the sweep's own miss; the five additions are
+#               `tests/types/merge-delivery-request.type-test.ts`,
+#               `tests/behaviour/providers/provider-capabilities.test.ts`,
+#               `tests/behaviour/closeout-capabilities.test.ts`,
+#               `tests/fixtures/ports/capabilities.ts` and
+#               `tests/conformance/mock-conformance.test.ts`, each with its exact
+#               assertion), plus one recorded ambiguity
+#               (`tests/conformance/artifact.test.ts:124`, a 3×3 flow-provider
+#               count, re-checked at delivery and never dropped); **N9** makes
+#               the declared cross-phase citation set **FIVE** (AC-F4-1 → its
+#               documentation-phase case TC-SYNC-010 joins AC-F1-6, AC-F1-7,
+#               AC-F2-5 and AC-F2-6); **N10** reclassifies
+#               `doc/spec/features/feature-adapter-conformance.md` from
+#               "delivered-check-bound carrier" to REGISTRY-BOUND PROSE reconciled
+#               in the documentation phase (no shipped check reads the page),
+#               keeping the delivered-check-bound set at exactly THREE.
+#   - Tests:    ./chg-GH-349-test-plan.md (**v1.8** — 87 TCs —
 #               TC-F1-001..014 (14), TC-F2-001..008 (8), TC-F3-001..006 (6),
 #               TC-F4-001..015 (15), TC-F5-001..008 (8), TC-F6-001..012 (12),
 #               TC-F7-001..006 (6), TC-SYNC-001..010 (10), TC-FLOOR-001..008 (8);
@@ -53,12 +79,34 @@
 #               merge-suite, consumer-sweep and documentation rows; §7.2 fixtures
 #               to author; §7.3 extended-vs-authored sets (incl. the two closeout
 #               goldens); §7.4 gate battery G1..G12 with G12 binding; §7.5 the
-#               **111-row** mutation register M1..M111; §7.6 the phase/file
+#               **116-row** mutation register M1..M116; §7.6 the phase/file
 #               bindings this plan must carry, including the TEN obligations
 #               (i)..(x), the TC-SYNC-010 documentation row and the OQ-1 phase
 #               precondition; §8 the risks, assumptions and OQ-TP items;
 #               §11.2 NO open finding).
-#               **v1.7 is the ownership split:** `TC-SYNC-001` is narrowed to the
+#               **v1.8 is the spec-v1.6 realignment, and the plan and the test
+#               plan now AGREE on every count** (no divergence to record):
+#               `TC-SYNC-009` is extended in place from thirteen to **EIGHTEEN**
+#               membership pins — the five additions being
+#               `tests/types/merge-delivery-request.type-test.ts` (the exhaustive
+#               `operationLabel` tenth case), `tests/behaviour/closeout-capabilities.test.ts`,
+#               `tests/behaviour/providers/provider-capabilities.test.ts` (moved
+#               out of *derived*: the literal `WRITE_METHODS` arm),
+#               `tests/fixtures/ports/capabilities.ts` (`EXPECTED_SEED_POSTURES`)
+#               and `tests/conformance/mock-conformance.test.ts` (moved out of
+#               *derived*); the POSTURE CONTENT is asserted, not merely counted
+#               (GitHub supports `close-milestone` with an empty gap list, GitLab
+#               `adapter-not-implemented`, Jira `provider-unsupported`, seed
+#               postures github 9→10 / gitlab 7→8 / jira 6→7, the tenth
+#               `WRITE_METHODS` arm, `operationLabel`'s tenth case), and the one
+#               recorded ambiguity (`tests/conformance/artifact.test.ts:124` = 3
+#               flows × 3 providers) is asserted to stay nine. Register 111 →
+#               **116** (M112 the omitted `operationLabel` arm; M113 the
+#               closeout-capabilities counts; M114 the provider-capabilities
+#               partition and `WRITE_METHODS`; M115 `EXPECTED_SEED_POSTURES`;
+#               M116 the mock `ALL_OPERATIONS`), with M102 widened to all eighteen
+#               pins. The provider-path read-only exception is FOUR items.
+#               **v1.7 was the ownership split:** `TC-SYNC-001` is narrowed to the
 #               IDENTITY-TOTAL half (seven pin sites, the legacy-token scan,
 #               `PM_NOTES_LINT_CODES` at five, the two identity-count pages) and
 #               stays with the additive phase; the **new TC-SYNC-010** owns the
@@ -69,13 +117,15 @@
 #               unchanged neighbours (the nine clause ids; the `status`
 #               nine-section line) — with `tests/checks/operation-count-pages.test.ts`
 #               (new), and is owned by the DOCUMENTATION phase. Register 110 →
-#               111 (M109 narrowed to a prose page left at nine; M111 added for
-#               wrong-phase ownership and page-wide `nine`→`ten` overreach).
-#               The earlier added ids remain: **TC-SYNC-009** (the tenth
-#               operation's THIRTEEN enforcing pins of Appendix H, each asserted
-#               at ten, plus the transport typecheck) and **TC-F1-014** (the
-#               eight-changed / eight-green merge-suite split with three
-#               token-absence scans and the green inventories).
+#               111 in v1.7 (M109 narrowed to a prose page left at nine; M111 for
+#               wrong-phase ownership and page-wide `nine`→`ten` overreach) and
+#               111 → 116 in v1.8 (M112..M116, the five new pin assertions
+#               above).
+#               The two earlier added ids remain: **TC-SYNC-009** (the tenth
+#               operation's EIGHTEEN enforcing pins of Appendix H, each asserted
+#               at ten, plus the transport typecheck and the posture content) and
+#               **TC-F1-014** (the eight-changed / eight-green merge-suite split
+#               with three token-absence scans and the green inventories).
 #   - PM record: ./chg-GH-349-pm-notes.yaml (milestone "M4: Jaiship-native
 #               delivery", delivery_mode autonomous, the six positions, the
 #               TMPDIR=$PWD/tmp/tmpdir convention, the build-before-primitive
@@ -174,11 +224,13 @@
 #   `undeclared-missing` for a file that needs no edit. Every file the test plan
 #   names as an assertion site to CREATE or EXTEND is declared by the phase that
 #   owns that half of the case.
-#   `tests/behaviour/providers/**` IS NOT WHOLLY READ-ONLY (spec v1.5 M2): exactly
-#   THREE of its suites move with the tenth operation — `github-cli-transport`,
-#   `github-landing`, `github-collection` — and are declared in phase 5; every
-#   OTHER suite under that tree stays read-only. Appendix H's derived-consumer
-#   rows are the authority for which is which.
+#   `tests/behaviour/providers/**` IS NOT WHOLLY READ-ONLY (spec v1.5 M2, narrowed
+#   to FOUR items by spec v1.6 B1c): exactly FOUR provider-path items move with
+#   the tenth operation — `github-cli-transport`, `github-landing`,
+#   `github-collection` and `provider-capabilities` — and are declared in phase 5;
+#   every OTHER file under that tree stays read-only (no other provider suite is
+#   required to change). Appendix H's pin/derived rows are the authority for
+#   which is which.
 #   ONE DECLARED EXCEPTION, stated so rule and declaration do not contradict:
 #   `doc/decisions/00-index.md` in phase 1 is a CONDITIONAL-STAGING declaration.
 #   It is clean at plan time and its rows are committed; it may be touched (a
@@ -324,14 +376,19 @@
 #       sets. The same rule puts the closeout golden bytes (2 files, 12→13 step
 #       lines), the four count-pinning closeout suites and
 #       `ceremony-nonregression`'s STEP half in phase 5 with the step id.
-#   (j) THE THIRTEEN OPERATION PINS RIDE THE OPERATION, NOT A LATER CLEANUP
-#       (Appendix H; TC-SYNC-009). Adding the tenth member is a type error in the
-#       GitHub transport key map and a set-equality failure in six suites, a
-#       coverage failure in the two control registrations, and a cell-count
-#       failure in the control/parity pins. Phase 5 declares all thirteen, plus
-#       the new consumer sweep suite that asserts them, because its own G1/G2/G4/G6
-#       cannot be green otherwise; a pin discovered later is a specification
-#       defect (Appendix H's residue rule), never a delivery decision.
+#   (j) THE EIGHTEEN OPERATION PINS RIDE THE OPERATION, NOT A LATER CLEANUP
+#       (Appendix H; TC-SYNC-009). Spec v1.6's scan finds EIGHTEEN pin files, not
+#       thirteen: adding the tenth member is a type error in the GitHub transport
+#       key map and in `merge-delivery-request.type-test.ts`'s exhaustive
+#       `operationLabel`, a set-equality failure in six suites, a posture failure
+#       in the THREE posture files (`provider-capabilities`,
+#       `closeout-capabilities`, `tests/fixtures/ports/capabilities.ts`) and in
+#       the two control registrations, and a cell-count failure in the
+#       control/parity pins.
+#       Phase 5 declares all eighteen, plus the new consumer sweep suite that
+#       asserts them, because its own G1/G2/G4/G6 cannot be green otherwise; a pin
+#       discovered later is a defect in the sweep method and returns to
+#       specification (Appendix H's residue rule), never a delivery decision.
 #   (k) THE DOCUMENTATION SPLIT: A DOCUMENT MOVES WITH THE OBLIGATION THAT BINDS
 #       IT, AND EACH BOUND PAGE HAS EXACTLY ONE CASE.
 #       Phase 1 carries the pages bound by the identity total:
@@ -346,7 +403,7 @@
 #       prose pages (`feature-provider-client-seeds.md`, `doc/spec/nonfunctional.md`,
 #       `doc/overview/architecture-overview.md`), and they are asserted by
 #       **TC-SYNC-010**, a case of their own owned by that phase (test plan
-#       v1.7). No page's assertions straddle phases and no page has two owners:
+#       v1.7, kept by v1.8). No page's assertions straddle phases and no page has two owners:
 #       TC-SYNC-001 stays identity-only in phase 1, TC-SYNC-009 owns the
 #       reference-behavior table in phase 5, TC-SYNC-010 owns the three prose
 #       pages in phase 7 (M111 fails a wrong-phase owner).
@@ -367,7 +424,7 @@
 #      argument arm AND the state-layer argument arm); conformance flow steps
 #      (14→15); `ConformanceAssertionFamily` (6→7 with `milestone-state`, while
 #      TRAP families stay six and the 18-cell trap accounting is untouched);
-#      `ADAPTER_OPERATIONS` (9→10) WITH its THIRTEEN enforcing pins (Appendix H)
+#      `ADAPTER_OPERATIONS` (9→10) WITH its EIGHTEEN enforcing pins (Appendix H)
 #      and the control coverage 9 of 9 → 10 of 10; the parity matrix (27→30
 #      cells); the conformance registry, the runner dispatch and both coverage
 #      gates; the mock routes and their projections (GitHub tenant only); the
@@ -408,14 +465,24 @@
 #   set; (13) the help/reference coverage inventory keeps its command set and the
 #   touched pages keep `--help`/`--version`; (14) the topology contract test stays
 #   green with zero workflow-file, job, trigger, permission or upload change;
-#   (15) **the THIRTEEN operation pins of Appendix H all read ten** — the GitHub
+#   (15) **the EIGHTEEN operation pins of Appendix H all read ten** — the GitHub
 #   transport key map (a type error until the key exists) and its key-set test,
-#   the `github-landing` and `github-collection` length pins, the two exact arrays
-#   (`registration-participation`, `provider-surface`), the `closeout-contract`
-#   closed-set and supported-set pins, the `reference-behavior` transport-table
-#   set-equality (which is why that PAGE is a carrier), the two control
-#   registrations covering 10 of 10, `ALL_OPERATIONS`, the control-registration
-#   cells and the parity cells/supported pairs; (16) **the two closeout goldens
+#   the exhaustive `operationLabel` probe in
+#   `tests/types/merge-delivery-request.type-test.ts` (a `never` arm, so a missing
+#   case is a type error), the `github-landing` and `github-collection` length
+#   pins, the THREE posture files (`provider-capabilities`,
+#   `closeout-capabilities`, `tests/fixtures/ports/capabilities.ts`) and the two
+#   control registrations, the two exact arrays (`registration-participation`,
+#   `provider-surface`), the `closeout-contract` closed-set and supported-set pins,
+#   the `reference-behavior` transport-table set-equality (which is why that PAGE
+#   is a carrier), `ALL_OPERATIONS` in BOTH conformance suites
+#   (`live-entrypoint` and `mock-conformance`), the control-registration cells and
+#   the parity cells/supported pairs — with the POSTURE CONTENT those pins assert:
+#   GitHub `supportedOperations` gains `close-milestone` with an EMPTY gap list,
+#   GitLab declares `adapter-not-implemented`, Jira declares `provider-unsupported`,
+#   `EXPECTED_SEED_POSTURES` moves github 9→10 / gitlab 7→8 / jira 6→7, the
+#   literal `WRITE_METHODS` map gains its tenth arm, and `operationLabel` gains its
+#   tenth case (spec v1.6 B1b); (16) **the two closeout goldens
 #   move to thirteen step lines** with the four count-pinning suites and
 #   `ceremony-nonregression`'s step half; (17) the state-layer validators accept
 #   the values this change writes (both round trips proven); (18) the fourth
@@ -423,23 +490,36 @@
 #   (`doc/spec/features/feature-adapter-reference-behavior.md`) moves with the
 #   table set-equality it satisfies. A partial move is a RED GATE, not a partial
 #   success: TC-SYNC-003 fails naming the missing item, TC-SYNC-009 names the pin
-#   left at nine, and M83/M93/M94/M95/M101/M102/M103/M104/M105/M106/M109/M110/M111
+#   left at nine, and M83/M93/M94/M95/M101/M102/M103/M104/M105/M106/M109/M110/M111/M112/M113/M114/M115/M116
 #   mutate each supplied item.
 #   The six-TRAP-family × three-adapter accounting stays 18 cells, because
 #   `close-milestone` is NOT a trap family and neither it nor `milestone-state`
 #   may enter the trap-family vocabulary (DM-7, Appendix D).
 #
 # APPENDIX H IS THE SCOPE CONTRACT (test plan §7.6(x); spec §24.8):
-#   For every closed set this change touches, Appendix H classifies each consumer
-#   as a PIN (asserts a count or an exact array — must move), DERIVED (reads the
-#   declaration — no edit) or UNRELATED (a look-alike closed set). Every pin it
-#   names appears in the phase that moves its set in this plan; a pin discovered
-#   during delivery that is NOT in the table is a SPECIFICATION DEFECT, reported
-#   and returned for revision, never "just fixed" inside a phase. Derived
-#   consumers are deliberately NOT declared (the SCOPE DECLARATION RULE), and the
-#   look-alikes are named so they are not edited by mistake: the nine catalogue
-#   PRIMITIVE ports in `port-contract-inventory` stay nine, and the nine
-#   `verify` clause ids in `nonfunctional.md` stay nine.
+#   For every closed set this change touches, Appendix H — the TRANSCRIPTION OF A
+#   MECHANICAL SCAN over 2 135 files (329 hits), not a curated reading list —
+#   classifies each consumer as a PIN (asserts a count, an exact array or an
+#   exhaustive arm — must move), DERIVED (reads the declaration — no edit),
+#   UNRELATED (a look-alike closed set) or AMBIGUOUS (not decidable from the scan;
+#   re-checked at delivery and NEVER dropped). Every pin it names appears in the
+#   phase that moves its set in this plan — the `ADAPTER_OPERATIONS` set is
+#   EIGHTEEN files (spec v1.6 B1d supersedes the earlier thirteen, and the five
+#   additions are `tests/types/merge-delivery-request.type-test.ts`,
+#   `tests/behaviour/providers/provider-capabilities.test.ts`,
+#   `tests/behaviour/closeout-capabilities.test.ts`,
+#   `tests/fixtures/ports/capabilities.ts` and
+#   `tests/conformance/mock-conformance.test.ts`, all declared in phase 5). A pin
+#   that appears in the tree and not in the appendix is a defect in the SWEEP
+#   METHOD, reported and returned for revision, never "just fixed" inside a phase;
+#   the recorded ambiguity (`tests/conformance/artifact.test.ts:124`, a 3×3
+#   flow-provider count that is unrelated but not provably so from the text) is
+#   re-checked at delivery and recorded either way. Derived consumers are
+#   deliberately NOT declared (the SCOPE DECLARATION RULE), and the look-alikes
+#   are named so they are not edited by mistake: the nine catalogue PRIMITIVE
+#   ports in `port-contract-inventory`, the nine `verify` clause ids in
+#   `nonfunctional.md`, the `status` nine-section statement, and the trap-family
+#   / parity-clause / state-row / harness-code counts all stay as delivered.
 #
 # INVARIANTS BINDING ON EVERY PHASE (spec §24.3 Appendix C; a phase that needs to
 # cross one is out of scope and returns for a specification revision):
@@ -536,20 +616,38 @@
 #     `tests/behaviour/closeout-residue-provenance.test.ts`             (phase 5)
 #   - `ADAPTER_OPERATIONS` ↔ the three `capabilities.ts` declarations ↔ the flow
 #     registry ↔ both coverage gates ↔ the parity matrix and its register ↔ the
-#     GitHub tenant routes and projections ↔ the documented "nine operations"
-#     statements in `doc/spec/features/feature-adapter-conformance.md` ↔ **the
-#     THIRTEEN enforcing pins of Appendix H** — the GitHub transport key map
-#     (`packages/adapters/src/github/cli-transport.ts`) and
-#     `tests/behaviour/providers/github-cli-transport.test.ts`, the
-#     `github-landing` and `github-collection` length pins, the exact arrays in
+#     GitHub tenant routes and projections ↔ **the EIGHTEEN enforcing pins of
+#     Appendix H** — the GitHub transport key map
+#     (`packages/adapters/src/github/cli-transport.ts`), the exhaustive
+#     `operationLabel` probe (`tests/types/merge-delivery-request.type-test.ts`),
+#     `tests/behaviour/providers/github-cli-transport.test.ts` (key set + the
+#     "nine of nine" label), the `github-landing` and `github-collection` length
+#     pins, `tests/behaviour/providers/provider-capabilities.test.ts` (the literal
+#     `READ_METHODS`/`WRITE_METHODS` maps, one gap per unsupported operation, the
+#     supported-set equality, the posture partition and one method per supported
+#     operation), `tests/behaviour/closeout-capabilities.test.ts` (Jira gaps 6→7,
+#     GitHub supported 9→10, the GitLab gap set), the exact arrays in
 #     `tests/structure/registration-participation.test.ts` and
 #     `tests/structure/provider-surface.test.ts`, the `closeout-contract` pins,
 #     the `reference-behavior` documented-table set-equality, the control column
-#     (`tests/fixtures/providers/conformance/control/column.ts`) and
-#     `tests/conformance/broken-adapter-control.test.ts` (coverage 9 of 9 → 10 of
-#     10), `tests/conformance/live/live-entrypoint.test.ts`, and the
-#     control-registration and parity-gate cell/pair counts — asserted by
+#     (`tests/fixtures/providers/conformance/control/column.ts`), the
+#     broken-adapter coverage (`tests/conformance/broken-adapter-control.test.ts`,
+#     **9 of 9 → 10 of 10**), `ALL_OPERATIONS` in BOTH
+#     `tests/conformance/live/live-entrypoint.test.ts` and
+#     `tests/conformance/mock-conformance.test.ts`, the control-registration cells
+#     and the parity-gate cell/pair counts, and the posture fixtures in
+#     `tests/fixtures/ports/capabilities.ts` (`EXPECTED_SEED_POSTURES`: github
+#     9→10, gitlab 7→8, jira 6→7) — asserted by
 #     `tests/structure/adapter-operation-consumers.test.ts` (new)        (phase 5)
+#     The POSTURE CONTENT is part of the pin, not a comment: GitHub supported +=
+#     `close-milestone` with an EMPTY gap list, GitLab `adapter-not-implemented`,
+#     Jira `provider-unsupported`, the tenth `WRITE_METHODS` arm and
+#     `operationLabel`'s tenth case (spec v1.6 B1b). The documented "nine
+#     operations" statements in
+#     `doc/spec/features/feature-adapter-conformance.md` are NOT a phase-5 pin:
+#     that page is REGISTRY-BOUND PROSE reconciled in the documentation phase
+#     (spec v1.6 N10), so its numbers move in phase 7 with TC-SYNC-010's
+#     neighbours, never in the operation commit.
 #   - the documented pm-notes lint row set (5→6) ↔ the `lint` machine rows (6→7)
 #     ↔ the rule-order statement, while `PM_NOTES_LINT_CODES` STAYS FIVE (it
 #     declares the identities the pm-notes-only lint can emit, and the divergence
@@ -738,7 +836,7 @@
 #     TC-FLOOR 005 → phase 3 | 001,002,003,004,006,007,008 → phase 7 (8/8)
 #   Phase vectors: ACs [0, 15, 4, 7, 9, 6, 5] sum 46; TCs
 #   [2, 23, 7, 9, 20, 12, 14] sum 87.
-#   THE PIN SWEEP HAS ONE OWNER PER ASSERTION (test plan v1.7 fixed this):
+#   THE PIN SWEEP HAS ONE OWNER PER ASSERTION (test plan v1.7 fixed this, v1.8 kept it):
 #     - TC-SYNC-001 (owner phase 1) is the IDENTITY-TOTAL half only — seven pin
 #       sites, the legacy-token set, `PM_NOTES_LINT_CODES` at five, and the two
 #       identity-count pages. It no longer names an operation-count page.
@@ -757,9 +855,9 @@
 #     TWO-PHASE FILE (identity total in phase 1, step count in phase 5); both
 #     halves are asserted and the case stays phase-5-owned.
 #
-# CROSS-PHASE CARRIER CASES (declared, not silent — the FOUR ACs whose cited TC
+# CROSS-PHASE CARRIER CASES (declared, not silent — the FIVE ACs whose cited TC
 #   lives in a different phase than the AC's owner; test plan §7.6 obligation
-#   (ix) is the binding list and this table restates it):
+#   (ix) and spec v1.6 N9 are the binding list and this table restates it):
 #   1. AC-F1-6 (owner phase 2) cites TC-SYNC-004 (phase 1): the normalized title
 #      is a CONTRACT declaration that must exist before the landing can compose
 #      it; the title's absence semantics and its "no schema change" half are
@@ -782,9 +880,22 @@
 #      exists. The landing half is additionally carried by TC-F2-008 (phase 2) in
 #      `tests/types/merge-landing.type-test.ts`, so AC-F2-6 is asserted at its own
 #      phase boundary and again at phase 5.
+#   5. AC-F4-1 (owner phase 5) cites TC-SYNC-010 (phase 7): the criterion's
+#      documentation half — the three prose-only operation-count pages state ten —
+#      can only be true after the operation exists AND is asserted where those
+#      pages are reconciled. The step/name/flow/family/golden half of AC-F4-1 stays
+#      with TC-F4-001, TC-SYNC-002, TC-SYNC-003 and TC-SYNC-009 (phase 5), so the
+#      criterion is satisfied at its own boundary by five of its six cases and
+#      completed by the documentation case (spec v1.6 N9).
 #   No other AC cites a TC outside its owning phase, and no TC is owned twice.
-#   The set is FOUR, not three: a plan that says "three" is wrong against §7.6(ix)
-#   and must not drop the fourth without dropping the all-gaps assertion.
+#   The set is FIVE, not four: a plan that says "four" is wrong against §7.6(ix)
+#   and spec v1.6 N9, and must not drop the fifth without dropping AC-F4-1's
+#   documented-inventory half.
+#   NO AC IS COVERED ONLY BY A CASE OUTSIDE ITS OWNING PHASE: every one of the
+#   five citations is a PARTIAL carrier beside at least one case in the AC's own
+#   phase (AC-F1-6: TC-F1-001/006/007; AC-F1-7: TC-F1-008; AC-F2-5: TC-F2-007;
+#   AC-F2-6: TC-F2-008; AC-F4-1: TC-F4-001/TC-SYNC-002/003/009). The cross-phase
+#   case completes the criterion; it never carries it alone.
 #
 # GATE CONVENTIONS (NFR-12; every recorded command uses the repository-local temp
 #   root; the workspace is unbuilt at plan time, so `TMPDIR=$PWD/tmp/tmpdir pnpm build`
@@ -819,7 +930,8 @@
 #   are FOUR CARRIER CLASSES, each with its binding named:
 #
 #   (1) DELIVERED-CHECK-BOUND — a delivered suite reads the page's live content,
-#       so the page must move with the code that suite pins. THREE pages:
+#       so the page must move with the code that suite pins. THREE pages, and
+#       EXACTLY THREE (spec v1.6 N10 keeps this set closed):
 #       a. `doc/spec/features/feature-result-contract.md` — the documented error
 #          table and its `149` statements, read by
 #          `tests/checks/error-table-sync.test.ts` and
@@ -863,12 +975,18 @@
 #   lifecycle phase 7 (@doc-syncer) and is declared in the final plan phase for
 #   STAGING ONLY — an untracked or modified doc outside every declared scope is a
 #   stray the commit primitive never stages. That includes the SUBSTANCE halves of
-#   the five carrier pages and **the three PROSE-ONLY operation-count pages**
+#   the six classed pages (three check-bound, one case-bound, one AC-bound, one
+#   test-plan-bound), **the three PROSE-ONLY operation-count pages**
 #   (`doc/spec/features/feature-provider-client-seeds.md`,
 #   `doc/spec/nonfunctional.md:349`, `doc/overview/architecture-overview.md:107`),
 #   whose 9→10 statements are reconciled there and asserted there by
 #   **TC-SYNC-010** — a case of their own, not a half of TC-SYNC-001 (ORDERING
-#   (k); M111).
+#   (k); M111) — and **`doc/spec/features/feature-adapter-conformance.md`, which
+#   spec v1.6 N10 reclassifies as REGISTRY-BOUND PROSE, not a carrier**: no
+#   shipped check reads that page, so its nine-operations / fourteen-step
+#   statements move here in the documentation phase and never in the operation
+#   commit. The delivered-check-bound set therefore stays at exactly THREE, and a
+#   plan that adds a fourth page to it is wrong against spec v1.6.
 #   The redistributable pages touched there (`doc/guides/milestone-management.md`,
 #   `doc/00-index.md`, `doc/overview/glossary.md`) keep their
 #   `ados_distribution` marker, and G8 must pass in the same phase.
@@ -936,10 +1054,10 @@ tier:
     - "A second required-check evaluator or any prose matching appears in the check or refusal path (§24.3 C6, AC-F3-4, TC-F3-006)"
     - "`close-milestone`, the tenth operation, the thirteenth step, the seventh recorded operation name and its argument arm, the fifteenth conformance flow step, the seventh assertion family, the ninth residue kind, or the parity cells move over more than one commit; any Appendix E item or any Appendix H pin is left for later; or a closed-set consumer discovered during delivery is fixed without returning for a specification revision (§24.5, §24.8, NFR-6/7, RSK-6, TC-SYNC-002/TC-SYNC-003/TC-SYNC-009, M78/M83/M93/M94/M95/M102/M103)"
     - "The milestone vocabulary can express create, attach, detach, rename, or reopen, a milestone is created or attached by any actor, or a close is attempted on a truncated, unknown, or unavailable view (§24.3 C2, AC-F4-5, AC-F4-4, TC-F4-009, TC-SYNC-008, M50)"
-    - "A required pin is loosened, skipped, made vacuous, wildcarded, or moved without its counterpart; a merge golden outside the four declared paths moves or a retired golden is left present; a closeout golden is left at twelve step lines; the legacy-token set loses `149`/`148`/`+115` or a planted-stale control; `milestone-state` or `close-milestone` enters the trap-family vocabulary; or a fixture is regenerated to go green (§24.3 C17, NFR-6, TC-FLOOR-001, TC-FLOOR-005, TC-SYNC-001, M78/M91/M100/M104/M108)"
+    - "A required pin is loosened, skipped, made vacuous, wildcarded, or moved without its counterpart; one of the EIGHTEEN Appendix H operation pins is left at nine, or its POSTURE CONTENT is wrong (GitHub supported without `close-milestone` or with a non-empty gap list, GitLab not `adapter-not-implemented`, Jira not `provider-unsupported`, `EXPECTED_SEED_POSTURES` not 9→10 / 7→8 / 6→7, a missing tenth `WRITE_METHODS` arm, or a missing `operationLabel` case); a merge golden outside the four declared paths moves or a retired golden is left present; a closeout golden is left at twelve step lines; the legacy-token set loses `149`/`148`/`+115` or a planted-stale control; `milestone-state` or `close-milestone` enters the trap-family vocabulary; or a fixture is regenerated to go green (§24.3 C17, NFR-6, spec v1.6 B1b/B1d, TC-FLOOR-001, TC-FLOOR-005, TC-SYNC-001, TC-SYNC-009, M78/M91/M100/M102/M104/M108/M112..M116)"
     - "A type or a closed set is widened/appended without its delivered state-layer validator in the same commit — `landing.shaOnBase`'s widening without `packages/core/src/state/merge.ts`, or the seventh recorded closeout operation name without its arm in `packages/core/src/state/closeout.ts` — so the first record written by the new path reads back as torn state (spec v1.5 N2a/N2b, Appendix H, AC-F1-2/AC-F4-5, TC-F1-012/TC-SYNC-002, M105/M106)"
-    - "`tests/behaviour/providers/**` is described as unchanged by obligation while `github-cli-transport`, `github-landing` or `github-collection` must move, or one of those three suites is declared read-only (spec v1.5 N1a/M2, test plan §7.6(x), TC-SYNC-009)"
-    - "An operation-count prose page (`feature-provider-client-seeds.md`, `doc/spec/nonfunctional.md`, `doc/overview/architecture-overview.md`) is left at nine; a page-wide `nine`→`ten` substitution also moves the nine clause ids or the `status` nine-section statement; those pages are asserted in the additive or milestone phase instead of the documentation phase; or the delivered-check-bound reference-behavior page is moved a phase late instead of with the operation (spec v1.5 M2, Appendix E item 7, test plan v1.7, TC-SYNC-010/TC-SYNC-009, M109/M111)"
+    - "`tests/behaviour/providers/**` is described as unchanged by obligation while `github-cli-transport`, `github-landing`, `github-collection` or `provider-capabilities` must move, or one of those FOUR provider-path items is declared read-only (spec v1.6 B1c/M2, test plan §7.6(x), TC-SYNC-009)"
+    - "An operation-count prose page (`feature-provider-client-seeds.md`, `doc/spec/nonfunctional.md`, `doc/overview/architecture-overview.md`) is left at nine; a page-wide `nine`→`ten` substitution also moves the nine clause ids or the `status` nine-section statement; those pages are asserted in the additive or milestone phase instead of the documentation phase; the delivered-check-bound reference-behavior page is moved a phase late instead of with the operation; or `feature-adapter-conformance.md` is treated as a carrier instead of registry-bound prose (spec v1.5 M2, spec v1.6 N10, Appendix E item 7, test plan v1.8, TC-SYNC-010/TC-SYNC-009, M109/M111)"
     - "`landing.shaOnBase` reports a locally derived `true` with no answering read, loses its `unknown` rendering, rejects a legacy boolean record, or widens past `boolean` | `\"unknown\"` (spec v1.3 M3, DM-3, AC-F1-2, TC-F1-011/TC-F1-012, M96)"
     - "Phase 5 starts before the owner's OQ-1 answer is recorded, or a delivery phase treats a global PDR-0005 reading as a local degradation instead of a specification revision and scope reduction (spec v1.3 OQ-1/RSK-2/Appendix G-6, test plan §7.6 precondition)"
     - "A queue control claims to inject a production breach instead of declaring a derived comparison or a deliberately broken double, or the 7/7 property and 3/3 defect counts are conflated (spec v1.3 F10/F19, AC-F6-1, TC-F6-012, TC-F7-005, M98)"
@@ -970,7 +1088,7 @@ phases:
   #       pages; its row-REACHABILITY assertion is authored in phase 7 as an
   #       authoring split inside this one owner) and TC-SYNC-004. 2 of 87.
   #       TC-SYNC-010 (the three prose-only operation-count pages) is a SEPARATE
-  #       case owned by phase 7 and is NOT claimed here (test plan v1.7).
+  #       case owned by phase 7 and is NOT claimed here (test plan v1.7, retained by v1.8).
   #
   # Contract (DM-1, DM-2 rows, DM-8 row, API-2's reason PAIR; ADR-0012, TDR-0040
   # and ODR-0005 are cited, never duplicated):
@@ -1751,16 +1869,25 @@ phases:
   #
   # THE RIPPLE — ALL-OR-NOTHING IN THIS COMMIT (the header's eighteen-item list and
   #   Appendix H's pin table are the checklist; a partial move is a RED GATE):
-  #   the tenth operation appended (no index moving); **the THIRTEEN enforcing
+  #   the tenth operation appended (no index moving); **the EIGHTEEN enforcing
   #   pins of Appendix H all moving 9→10** — the GitHub transport key map (a type
-  #   error until the key exists) and its key-set test, the `github-landing` and
-  #   `github-collection` length pins, the exact arrays in
+  #   error until the key exists), the exhaustive `operationLabel` probe (a `never`
+  #   arm, so a missing case is a type error), the `github-cli-transport` key-set
+  #   test and its "nine of nine" label, the `github-landing` and
+  #   `github-collection` length pins, the THREE posture files
+  #   (`provider-capabilities`, `closeout-capabilities`,
+  #   `tests/fixtures/ports/capabilities.ts`) and the two control registrations, the exact arrays in
   #   `registration-participation` and `provider-surface`, the `closeout-contract`
   #   closed-set and supported-set pins, the `reference-behavior` documented-table
-  #   set-equality, the two control registrations covering **10 of 10**, the
-  #   `ALL_OPERATIONS` list, the control-registration cells and the parity
-  #   cells/supported pairs — asserted by `tests/structure/adapter-operation-consumers.test.ts`
-  #   (TC-SYNC-009, M102/M103); the SEVENTH recorded closeout operation name with
+  #   set-equality, the control coverage **10 of 10**, `ALL_OPERATIONS` in both
+  #   conformance suites, and the control-registration cells and parity
+  #   cells/supported pairs — asserted by
+  #   `tests/structure/adapter-operation-consumers.test.ts` (TC-SYNC-009,
+  #   M102/M103/M112..M116), WITH the posture content they assert: GitHub supported +=
+  #   `close-milestone` and an EMPTY gap list, GitLab `adapter-not-implemented`,
+  #   Jira `provider-unsupported`, `EXPECTED_SEED_POSTURES` github 9→10 /
+  #   gitlab 7→8 / jira 6→7, the tenth `WRITE_METHODS` arm and `operationLabel`'s
+  #   tenth case (spec v1.6 B1b); the SEVENTH recorded closeout operation name with
   #   its single-operand argument arm AND its state-layer validator arm (spec
   #   v1.3 R5, v1.5 N2b; round trip proven); the flow registry step that executes
   #   it on GitHub and reaches the declared gap on GitLab and Jira, with the flat
@@ -1785,11 +1912,13 @@ phases:
   #   (M111 fails the wrong-phase owner). The six-TRAP-family × three-adapter accounting stays 18 and neither
   #   the new operation nor the new assertion family may enter the trap-family
   #   vocabulary (M95).
-  #   READ-ONLY, NARROWED (spec v1.5 M2; §7.6(x)): `tests/behaviour/providers/**`
-  #   is NOT "unchanged by obligation". Exactly three of its suites move with the
-  #   operation — `github-cli-transport`, `github-landing`, `github-collection` —
-  #   and every OTHER provider suite stays read-only. A phase that calls the three
-  #   read-only cannot end green inside its own scope.
+  #   READ-ONLY, NARROWED (spec v1.5 M2 → spec v1.6 B1c; §7.6(x)):
+  #   `tests/behaviour/providers/**` is NOT "unchanged by obligation". Exactly
+  #   FOUR provider-path items move with the operation — `github-cli-transport`,
+  #   `github-landing`, `github-collection` and `provider-capabilities` — and every
+  #   OTHER provider file stays read-only; no other file under that tree is
+  #   required to change. A phase that calls those four read-only cannot end green
+  #   inside its own scope.
   #
   # Obligations:
   #   5.1 Insert the step, its label/definition, its predicate and its outcome
@@ -1812,14 +1941,22 @@ phases:
   #       count and the appended step, the seventh assertion family with the
   #       runner's dispatch branch, the export inventory and every
   #       step/operation-name/residue pin (PIN MOVEMENT).
-  #   5.3a Move ALL THIRTEEN Appendix H operation pins 9→10 and prove them with
+  #   5.3a Move ALL EIGHTEEN Appendix H operation pins 9→10 and prove them with
   #        `tests/structure/adapter-operation-consumers.test.ts` (TC-SYNC-009):
-  #        the transport key map and its key-set test, the two provider length
-  #        pins, the two exact arrays, the closeout-contract pins, the
-  #        reference-behavior table set-equality, the control column and the
-  #        broken-adapter coverage (**9 of 9 → 10 of 10**), `ALL_OPERATIONS`, the
-  #        control-registration cells and the parity cells/supported pairs
-  #        (M102, M103). The fourth delivered-check-bound carrier page moves with
+  #        the transport key map, the exhaustive `operationLabel` probe, the
+  #        key-set test and its "nine of nine" label, the two provider length
+  #        pins, the THREE posture files (`provider-capabilities`,
+  #        `closeout-capabilities`, `tests/fixtures/ports/capabilities.ts`) and the
+  #        two control registrations, the two exact arrays, the closeout-contract pins, the
+  #        reference-behavior table set-equality, `ALL_OPERATIONS` in BOTH
+  #        conformance suites, the control-registration cells and the parity
+  #        cells/supported pairs (M102, M103, M112..M116). **The posture content is asserted,
+  #        not just the counts** (spec v1.6 B1b): GitHub supported +=
+  #        `close-milestone` with an EMPTY gap list, GitLab
+  #        `adapter-not-implemented`, Jira `provider-unsupported`,
+  #        `EXPECTED_SEED_POSTURES` github 9→10 / gitlab 7→8 / jira 6→7, the tenth
+  #        `WRITE_METHODS` arm, and `operationLabel`'s tenth case proven by
+  #        typecheck. The fourth delivered-check-bound carrier page moves with
   #        the set-equality it satisfies.
   #   5.4 Author the milestone suites (outcome matrix with the ORDERED
   #       fixture↔outcome pairing, the withholding facts including the unknown
@@ -1836,7 +1973,8 @@ phases:
   #       moved.
   #   5.6 Author TC-SYNC-007 (the four distinct milestone facts), TC-SYNC-008
   #       (forbidden acts unrepresentable across the landing, mutation and
-  #       `close-milestone` vocabularies) and TC-SYNC-009 (the thirteen pins).
+  #       `close-milestone` vocabularies) and TC-SYNC-009 (the eighteen pins and
+  #       their posture content).
   #
   # Verification (expected signal: exit 0; thirteen steps with `milestone-sync` at
   # 12 and `capsule` at 13 resolved by id; SEVEN closeout operation names with the
@@ -1849,7 +1987,11 @@ phases:
   # and truncated-page fixtures; one read per run and no second page; zero writes
   # in plan mode; one close across two applies; `closeout.write.failed` at exit 2
   # with no capsule close on a failed write and convergence on retry; ten
-  # operations with ALL THIRTEEN pins at ten and the control coverage at 10 of 10,
+  # operations with ALL EIGHTEEN pins at ten (and their posture content: GitHub
+  # supported += close-milestone with an empty gap list, GitLab
+  # adapter-not-implemented, Jira provider-unsupported, seed postures 9→10 /
+  # 7→8 / 6→7, the tenth WRITE_METHODS arm, operationLabel's tenth case) and the
+  # control coverage at 10 of 10,
   # FIFTEEN flow steps, SEVEN assertion families, 30 parity cells with three
   # adjudicated, the registry and both gates at ten, the GitHub route and
   # projection present, SIX trap families / 18 cells unchanged, the inventory
@@ -1858,7 +2000,8 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/closeout-capsule-plan.test.ts tests/behaviour/closeout-queue-removal-block.test.ts tests/behaviour/closeout-residue-provenance.test.ts tests/behaviour/ceremony-nonregression.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/closeout-contract.test.ts tests/structure/closeout-additive.test.ts tests/structure/closeout-milestone-contract.test.ts tests/structure/capsule-contract.test.ts tests/structure/conformance-coverage.test.ts tests/structure/content-inventory.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/adapter-operation-consumers.test.ts tests/structure/registration-participation.test.ts tests/structure/provider-surface.test.ts tests/structure/reference-behavior.test.ts
-  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/providers/github-cli-transport.test.ts tests/behaviour/providers/github-landing.test.ts tests/behaviour/providers/github-collection.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/providers/github-cli-transport.test.ts tests/behaviour/providers/github-landing.test.ts tests/behaviour/providers/github-collection.test.ts tests/behaviour/providers/provider-capabilities.test.ts tests/behaviour/closeout-capabilities.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/types/merge-delivery-request.type-test.ts tests/behaviour/port-capabilities.test.ts     (the exhaustive operationLabel probe + the derived posture consumer)
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance/control-registration.test.ts tests/conformance/broken-adapter-control.test.ts tests/conformance/live/live-entrypoint.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/golden/closeout-human.test.ts tests/golden/closeout-envelope.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/capsule-bounds.test.ts
@@ -1872,7 +2015,7 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                          (G12, binding)
   # ---------------------------------------------------------------------------
   - id: 5
-    title: "Milestone synchronization as step 12 of 13 over one closed close-milestone operation and one bounded page read, with the tenth operation and its THIRTEEN enforcing pins, the seventh recorded closeout operation name and its state-layer arm, the thirteenth step with its two goldens and four count pins, the fifteenth conformance flow step, the seventh assertion family, the ninth residue kind, and the fourth delivered-check-bound carrier in one atomic commit"
+    title: "Milestone synchronization as step 12 of 13 over one closed close-milestone operation and one bounded page read, with the tenth operation and its EIGHTEEN enforcing pins plus posture content, the seventh recorded closeout operation name and its state-layer arm, the thirteenth step with its two goldens and four count pins, the fifteenth conformance flow step, the seventh assertion family, the ninth residue kind, and the fourth delivered-check-bound carrier in one atomic commit"
     kind: delivery
     summary: "feat(GH-349): exit-review-gated milestone synchronization and the atomic operation-set ripple"
     weightClass: heavy
@@ -1910,14 +2053,23 @@ phases:
         - packages/testkit/src/conformance/parity.ts
         - packages/testkit/src/conformance/participation.ts
         - packages/testkit/src/conformance/mock-tenant.ts
-        # The THIRTEEN operation pins of Appendix H (TC-SYNC-009), each 9→10.
+        # The EIGHTEEN operation pins of Appendix H (TC-SYNC-009), each 9→10,
+        # including the posture content (spec v1.6 B1b): GitHub supported +=
+        # close-milestone with an EMPTY gap list, GitLab adapter-not-implemented,
+        # Jira provider-unsupported, EXPECTED_SEED_POSTURES github 9→10 /
+        # gitlab 7→8 / jira 6→7, the tenth WRITE_METHODS arm, and operationLabel's
+        # tenth case (typecheck).
         - tests/structure/adapter-operation-consumers.test.ts
+        - tests/types/merge-delivery-request.type-test.ts
         - tests/behaviour/providers/github-cli-transport.test.ts
         - tests/behaviour/providers/github-landing.test.ts
         - tests/behaviour/providers/github-collection.test.ts
+        - tests/behaviour/providers/provider-capabilities.test.ts
+        - tests/behaviour/closeout-capabilities.test.ts
         - tests/structure/registration-participation.test.ts
         - tests/structure/provider-surface.test.ts
         - tests/structure/reference-behavior.test.ts
+        - tests/fixtures/ports/capabilities.ts
         - tests/fixtures/providers/conformance/control/column.ts
         - tests/conformance/broken-adapter-control.test.ts
         - tests/conformance/live/live-entrypoint.test.ts
@@ -2190,7 +2342,7 @@ phases:
   #     and the SEVEN pin sites, the legacy-token set and the TWO identity pages
   #     are re-asserted as a whole (M78, M108).
   #   - TC-FLOOR-001: every moved pin moves exactly across the TEN moved sets
-  #     PLUS the additions v1.5/v1.7 name — (merge rows 7→9; lint machine rows
+  #     PLUS the additions v1.5/v1.6/v1.8 name — (merge rows 7→9; lint machine rows
   #     6→7 with the documented set 5→6 and `PM_NOTES_LINT_CODES` staying five;
   #     the identity total on all seven sites, the legacy-token set and the TWO
   #     identity pages, with the three operation-count pages owned separately by
@@ -2199,7 +2351,7 @@ phases:
   #     with seven argument arms and the state-layer arm; conformance flow steps
   #     14→15; assertion families 6→7 with TRAP families six and the 18-cell
   #     accounting unchanged; residue kinds 8→9; adapter operations 9→10 with the
-  #     THIRTEEN Appendix H pins, the control coverage at 10 of 10 and parity
+  #     EIGHTEEN Appendix H pins and their posture content, the control coverage at 10 of 10 and parity
   #     cells 27→30; and the merge golden set 2 moved / 2 retired / 11 unchanged),
   #     and fails by name when only one side moves or a pin is loosened (M78,
   #     M93..M95, M100, M102..M104, M109, M111).
@@ -2256,8 +2408,8 @@ phases:
   # Verification (expected signal: exit 0 at every line; the three defect suites
   # green WITH their substituted controls failing as declared and each control's
   # shape named; reachability complete; every pin exact in both directions across
-  # the ten moved sets PLUS the legacy-token set, the thirteen operation pins and
-  # the two closeout goldens; the six carrier pages and TC-SYNC-010's three prose
+  # the ten moved sets PLUS the legacy-token set, the eighteen operation pins
+  # (with their posture content) and the two closeout goldens; the six carrier pages and TC-SYNC-010's three prose
   # pages stating their moved numbers with the two neighbours unchanged; the
   # merge golden set at 2 moved / 2 absent / 11 identical and the closeout pair at
   # thirteen step lines; the topology pin green with zero workflow changes; plan
@@ -2309,6 +2461,9 @@ phases:
         - doc/spec/features/feature-result-contract.md
         - doc/spec/features/feature-adapter-ports.md
         - doc/spec/features/feature-adapter-reference-behavior.md
+        # Registry-bound PROSE (spec v1.6 N10), NOT a carrier: no shipped check
+        # reads the page, so its nine-operations / fourteen-step statements are
+        # reconciled and asserted here in the documentation phase.
         - doc/spec/features/feature-adapter-conformance.md
         - doc/spec/features/feature-capsule.md
         # Split touch with phase 1: the counts moved there; the SUBSTANCE halves

@@ -4,9 +4,9 @@ delivery_mode: autonomous
 milestone: "M4: Jaiship-native delivery"
 phases:
   clarify_scope: { started: null, completed: 2026-11-18T18:54:05.715Z }
-  specification: { started: null, completed: 2026-11-18T21:05:33.105Z }
-  test_planning: { started: null, completed: 2026-11-18T21:05:42.366Z }
-  delivery_planning: { started: null, completed: 2026-11-18T21:05:51.672Z }
+  specification: { started: null, completed: 2026-11-18T21:24:05.204Z }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -320,4 +320,30 @@ notes:
       ADR-0012 carries the shaOnBase carrier and the retired-golden clause.
       Awaiting DoR iteration 3."
     type: info
+    date: "2026-11-18"
+  - text: "DoR gate iteration 3 = NOT_READY (readiness-review/readiness-iter-3.md).
+      Iteration-2 disposition: 5 Resolved, 1 Resolved-with-nit, 1 Persistent
+      (N1), 0 regressed. One blocking finding B1: five delivered consumers of
+      the tenth operation's membership were undeclared or mislabelled derived —
+      the exhaustive operationLabel type test (a typecheck hard fail), the
+      closeout-capabilities arrays, the provider-capabilities gap partition, the
+      ports capability fixture, and the mock-conformance ALL_OPERATIONS list.
+      Majors/minors: the cross-phase citation set is five not four, and the
+      adapter-conformance page was mislabelled a delivered-check-bound carrier.
+      Remediated as spec v1.6 (a mechanical scan over 2,135 files, 329 hits,
+      transcribed as Appendix H, 13 to 18 pins), test plan v1.8 (87 TCs, 116
+      controls), plan phase 5 at 64 files. This was beyond the third permitted
+      iteration; the next gate run is decisive and escalates on anything still
+      blocking."
+    type: blocker
+    date: "2026-11-18"
+  - text: "RETRO (DoR iteration 3): the class persisted for a third round because
+      each remediation enumerated what a reviewer named instead of running the
+      scan the reviewer's own method implies. The fix that finally worked was
+      mechanical and is recorded as the method for any future closed-set change:
+      grep the whole source and test tree for the set's members and its size,
+      classify every hit as pin/derived/unrelated, transcribe the table into the
+      spec appendix, and bind the plan's scope to the pin rows. Hand-written pin
+      lists are the defect; a scan is the control."
+    type: retro
     date: "2026-11-18"
