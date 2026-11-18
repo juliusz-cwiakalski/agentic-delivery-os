@@ -108,6 +108,11 @@ export {
   symlinkTargetOf,
 } from "./install-destination.js";
 export {
+  INSTALL_PROFILE_MODE,
+  readProfileText,
+  writeProfileText,
+} from "./install-profile.js";
+export {
   INSTALL_RECORD_MODE,
   removeInstallRecord,
   writeInstallRecordText,

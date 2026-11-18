@@ -15,7 +15,9 @@ import {
   classifyInstallDestination,
   isCompiledArtifactAtPath,
   launcherTargetOf,
+  readProfileText,
   writeInstallRecordText,
+  writeProfileText,
 } from "@delivery-os/adapters/file";
 import {
   compatibilityAdvisories as advisoriesOf,
@@ -24,18 +26,28 @@ import {
   incompatibleRoots,
   installTargetStability,
   judgeStateFormat,
+  mergePathBlock,
+  migrationAdvisory,
+  migrationUnavailableSummary,
   parseInstallRecord,
   planReplace,
   provenanceOfAdmission,
+  purgeMembers,
+  type RemovalFacts,
   type ReplacePlan,
   readInstallRecord,
   reconciliationRecordOf,
+  removePathBlock,
+  renderPathBlock,
   replacingRecordOf,
+  residualSet,
+  resolveProfilePath,
   rollbackCauseSentence,
   rollbackPrecondition,
   rollbackRecordOf,
   type StateRootObservation,
   serializeInstallRecord,
+  uninstallMembers,
 } from "@delivery-os/core";
 import type {
   InstallArtifactIdentity,
@@ -236,15 +248,39 @@ const slotReportOf = (runtime: InstallRuntime, read: InstallRecordRead): Install
     : { path: runtime.slotPath, state: "present", identity };
 };
 
-/** The residual set: what `purge` would additionally delete (F-10, NFR-11). */
-export const residualSetOf = (runtime: InstallRuntime): readonly string[] => {
-  const paths: string[] = [];
-  if (runtime.fs.exists(runtime.configRoot)) paths.push(runtime.configRoot);
-  for (const root of runtime.stateRoots) {
-    if (runtime.fs.exists(root)) paths.push(root);
-  }
-  return [...new Set(paths)].sort();
-};
+/**
+ * The residual set: every absolute path that exists at this moment under the
+ * configuration and state roots, as `purge` would additionally delete it.
+ */
+export const residualSetOf = (runtime: InstallRuntime): readonly string[] =>
+  residualSet({
+    configRoot: runtime.configRoot,
+    configRootEntries: runtime.fs.exists(runtime.configRoot)
+      ? runtime.fs.list(runtime.configRoot)
+      : [],
+    stateRoots: runtime.stateRoots.map((path) => ({
+      path,
+      entries: runtime.fs.exists(path) ? runtime.fs.list(path) : [],
+    })),
+  });
+
+/** The removal facts the matrix decides from (only what exists at this moment). */
+const removalFactsOf = (
+  runtime: InstallRuntime,
+  pathBlock?: InstallRecord["pathBlock"],
+): RemovalFacts => ({
+  destinationPath: runtime.destinationPath,
+  destinationExists: runtime.fs.exists(runtime.destinationPath),
+  slotPath: runtime.slotPath,
+  slotExists: runtime.fs.exists(runtime.slotPath),
+  recordPath: runtime.recordPath,
+  recordExists: runtime.fs.exists(runtime.recordPath),
+  ...(pathBlock === undefined ? {} : { pathBlock }),
+  pathBlockExists: pathBlock === undefined ? false : runtime.fs.exists(pathBlock.file),
+  configRoot: runtime.configRoot,
+  configRootExists: runtime.fs.exists(runtime.configRoot),
+  stateRoots: runtime.stateRoots.map((path) => ({ path, exists: runtime.fs.exists(path) })),
+});
 
 /** The declared install plan content (Appendix C.4). */
 const installPlanLines = (input: {
@@ -308,13 +344,8 @@ const runInstall = async (
   },
 ): Promise<unknown> => {
   const { runtime } = command;
-  if (options.migrate) {
-    return refusal(
-      "install.migration.unavailable",
-      "refused: migration is not available in this build; M4-S2 owns the namespace move — " +
-        "perform the documented manual move of the prior-namespace artifacts; nothing was moved, " +
-        "copied, or deleted",
-    );
+  if (options.migrate && !options.dryRun) {
+    return refusal("install.migration.unavailable", migrationUnavailableSummary("M4-S2"));
   }
   if (runtime.runningArtifactPath.length === 0) {
     return internalFailure(
@@ -336,7 +367,14 @@ const runInstall = async (
   if (!gate.ok) return gate.refusal;
 
   const verdict = stateFormatVerdict(runtime);
-  const advisories = advisoriesOf(verdict);
+  const priorAdvisory =
+    runtime.priorNamespaceArtifacts.length === 0
+      ? []
+      : [migrationAdvisory(runtime.priorNamespaceArtifacts)];
+  const migrationPlanLine = options.migrate
+    ? "migration: nothing would be migrated (M4-S2 owns the move; the detection list above is advisory only)"
+    : undefined;
+  const advisories = [...advisoriesOf(verdict), ...priorAdvisory];
   const record = readRecord(runtime);
   const recordState = recordStateOf(record, running);
   const facts = destinationFacts(runtime);
@@ -352,6 +390,46 @@ const runInstall = async (
     facts.launcherTarget === undefined ? plan : { ...plan, launcherTarget: facts.launcherTarget };
   const provenance = provenanceOfAdmission(admission);
   const installedAt = runtime.clock.nowIso();
+  const profilePlan = (():
+    | {
+        readonly ok: true;
+        readonly file?: string;
+        readonly blockText?: string;
+        readonly merged?: string;
+        readonly block?: ReturnType<typeof renderPathBlock>;
+      }
+    | { readonly ok: false; readonly refusal: Refusal } => {
+    if (!options.addToPath) return { ok: true };
+    const file = resolveProfilePath({
+      ...(options.shellProfile === undefined ? {} : { explicit: options.shellProfile }),
+      ...(runtime.environment.SHELL === undefined ? {} : { shell: runtime.environment.SHELL }),
+      homeDirectory: runtime.homeDirectory,
+    });
+    if (file === undefined) {
+      return {
+        ok: false,
+        refusal: refusal(
+          "install.shell-profile.unresolved",
+          "refused: `--add-to-path` found no identifiable shell and no explicit `--shell-profile`; " +
+            "pass `--shell-profile <path>` or set SHELL to zsh, bash, or sh; no profile file was written",
+        ),
+      };
+    }
+    const block = renderPathBlock({
+      binaryName: runtime.invokedIdentity,
+      installDirectory: runtime.installDirectory,
+      file,
+    });
+    const existing = readProfileText({ fs: runtime.fs, path: file });
+    return {
+      ok: true,
+      file,
+      blockText: block.text,
+      merged: mergePathBlock(existing, block),
+      block,
+    };
+  })();
+  if (!profilePlan.ok) return profilePlan.refusal;
 
   if (options.dryRun) {
     return {
@@ -365,20 +443,35 @@ const runInstall = async (
         recordState,
         daemon: gate.state,
         advisories,
-        plan: installPlanLines({
-          runtime,
-          plan: plannedPlan,
-          advisories,
-          daemon: gate.state,
-          addToPath: options.addToPath,
-          ...(options.shellProfile === undefined ? {} : { shellProfile: options.shellProfile }),
-        }),
+        plan: [
+          ...installPlanLines({
+            runtime,
+            plan: plannedPlan,
+            advisories,
+            daemon: gate.state,
+            addToPath: options.addToPath,
+            ...(options.shellProfile === undefined ? {} : { shellProfile: options.shellProfile }),
+          }),
+          ...(profilePlan.file === undefined
+            ? []
+            : [
+                `profile: ${profilePlan.file}`,
+                `block: ${String(profilePlan.blockText).replace(/\n/gu, " / ")}`,
+              ]),
+          ...(migrationPlanLine === undefined ? [] : [migrationPlanLine]),
+        ],
       } satisfies InstallOutcome,
     };
   }
 
   if (runtime.fault?.failAt("identity-compare") === true) {
     return internalFailure("the artifact-agreement step was injected to fail; nothing is staged");
+  }
+
+  // The managed PATH block is written once per run, before the artifact decision
+  // narrows to the agreement path, so both paths carry the operator's request.
+  if (profilePlan.file !== undefined && profilePlan.block !== undefined) {
+    writeProfileText({ fs: runtime.fs, path: profilePlan.file, text: profilePlan.merged ?? "" });
   }
 
   // Step 4: the artifact-agreement gate and the in-place record reconciliation.
@@ -391,6 +484,11 @@ const runInstall = async (
         ...provenance,
         installedAt,
         record,
+        ...(profilePlan.block === undefined
+          ? record.kind === "record" && record.record.pathBlock !== undefined
+            ? { pathBlock: record.record.pathBlock }
+            : {}
+          : { pathBlock: { file: profilePlan.block.file, marker: profilePlan.block.marker } }),
       });
       if (runtime.fault?.failAt("record-write") === true) {
         return internalFailure(
@@ -488,6 +586,9 @@ const runInstall = async (
       "the record write was injected to fail; both artifacts are valid and install status reports record-stale",
     );
   }
+  if (profilePlan.file !== undefined && profilePlan.block !== undefined) {
+    writeProfileText({ fs: runtime.fs, path: profilePlan.file, text: profilePlan.merged ?? "" });
+  }
   const recordToWrite = replacingRecordOf({
     running,
     stateSchemaVersion: runtime.acceptedStateSchemaVersion,
@@ -498,6 +599,11 @@ const runInstall = async (
     installedAt,
     plan: plannedPlan,
     record,
+    ...(profilePlan.block === undefined
+      ? record.kind === "record" && record.record.pathBlock !== undefined
+        ? { pathBlock: record.record.pathBlock }
+        : {}
+      : { pathBlock: { file: profilePlan.block.file, marker: profilePlan.block.marker } }),
   });
   const written = writeRecord(runtime, recordToWrite);
   const finalRecord = readRecord(runtime);
@@ -517,6 +623,11 @@ const runInstall = async (
       recordState: written ? "current" : "record-stale",
       daemon: gate.state,
       advisories,
+      ...(profilePlan.block === undefined
+        ? finalRecord.kind === "record" && finalRecord.record.pathBlock !== undefined
+          ? { pathBlock: finalRecord.record.pathBlock }
+          : {}
+        : { pathBlock: { file: profilePlan.block.file, marker: profilePlan.block.marker } }),
     } satisfies InstallOutcome,
   };
 };
@@ -687,11 +798,20 @@ const runRollback = async (
   };
 };
 
-/** The members the removal matrix owns on this machine state. */
-const removalMembers = (runtime: InstallRuntime): readonly string[] =>
-  [runtime.destinationPath, runtime.slotPath, runtime.recordPath].filter((path) =>
-    runtime.fs.exists(path),
-  );
+/** Remove the managed block from the recorded profile, when it was recorded. */
+const removeRecordedBlock = (runtime: InstallRuntime, record: InstallRecordRead): boolean => {
+  if (record.kind !== "record" || record.record.pathBlock === undefined) return true;
+  const block = renderPathBlock({
+    binaryName: runtime.invokedIdentity,
+    installDirectory: runtime.installDirectory,
+    file: record.record.pathBlock.file,
+  });
+  const current = readProfileText({ fs: runtime.fs, path: record.record.pathBlock.file });
+  const next = removePathBlock(current, { ...block, marker: record.record.pathBlock.marker });
+  return next === current
+    ? true
+    : writeProfileText({ fs: runtime.fs, path: record.record.pathBlock.file, text: next });
+};
 
 /** `install uninstall` — removal matrix minus the roots; residual always printed. */
 const runUninstall = async (
@@ -701,9 +821,15 @@ const runUninstall = async (
   const { runtime } = command;
   const gate = await daemonGate(runtime, options.stopDaemon);
   if (!gate.ok) return gate.refusal;
-  const residual = residualSetOf(runtime);
-  const members = removalMembers(runtime);
   const record = readRecord(runtime);
+  const facts = removalFactsOf(
+    runtime,
+    record.kind === "record" ? record.record.pathBlock : undefined,
+  );
+  const members = uninstallMembers(facts).filter((member) => member.exists);
+  const residual = residualSetOf(runtime).filter(
+    (path) => !members.some((member) => member.path === path),
+  );
   if (options.dryRun) {
     return {
       data: {
@@ -715,13 +841,22 @@ const runUninstall = async (
         recordState: recordStateOf(record, runtime.runningIdentity),
         daemon: gate.state,
         advisories: [],
-        plan: members,
+        removed: members.map((member) =>
+          member.member === "path-block" ? `${member.path} (managed block only)` : member.path,
+        ),
         residual,
       } satisfies InstallOutcome,
     };
   }
   const removed: string[] = [];
-  for (const path of members) if (runtime.fs.remove(path)) removed.push(path);
+  for (const member of members) {
+    if (member.member === "path-block") {
+      if (removeRecordedBlock(runtime, record)) removed.push(`${member.path} (managed block only)`);
+      continue;
+    }
+    if (!runtime.fs.remove(member.path)) break;
+    removed.push(member.path);
+  }
   return {
     data: {
       outcome: "uninstalled",
@@ -738,7 +873,7 @@ const runUninstall = async (
   };
 };
 
-/** `install purge` — confirmation required, both roots removed. */
+/** `install purge` — confirmation required even when both roots are absent. */
 const runPurge = async (
   command: InstallCommandInput,
   options: { readonly dryRun: boolean; readonly stopDaemon: boolean; readonly confirmed: boolean },
@@ -754,7 +889,15 @@ const runPurge = async (
   const gate = await daemonGate(runtime, options.stopDaemon);
   if (!gate.ok) return gate.refusal;
   const record = readRecord(runtime);
-  const removal = [...removalMembers(runtime), ...residualSetOf(runtime)];
+  const facts = removalFactsOf(
+    runtime,
+    record.kind === "record" ? record.record.pathBlock : undefined,
+  );
+  const members = purgeMembers(facts).filter((member) => member.exists);
+  const residual = residualSetOf(runtime);
+  const removal = [...new Set([...members.map((member) => member.path), ...residual])].sort(
+    (left, right) => right.split("/").length - left.split("/").length || left.localeCompare(right),
+  );
   if (options.dryRun) {
     return {
       data: {
@@ -767,17 +910,38 @@ const runPurge = async (
         daemon: gate.state,
         advisories: [],
         plan: removal,
+        residual,
+      } satisfies InstallOutcome,
+    };
+  }
+  if (removal.length === 0) {
+    return {
+      data: {
+        outcome: "purged",
+        running: runningOf(runtime),
+        destination: runtime.destinationPath,
+        slot: { path: runtime.slotPath, state: "absent" },
+        recordPath: runtime.recordPath,
+        recordState: "absent",
+        daemon: gate.state,
+        advisories: ["nothing to remove"],
+        removed: [],
       } satisfies InstallOutcome,
     };
   }
   const removed: string[] = [];
+  let blockRemoved = false;
   for (const path of removal) {
-    if (!runtime.fs.exists(path)) continue;
-    if (path === runtime.configRoot || path === runtime.stateRoot) {
-      runtime.fs.removeTree(path);
-    } else {
-      runtime.fs.remove(path);
+    if (path === (record.kind === "record" ? record.record.pathBlock?.file : undefined)) {
+      blockRemoved = removeRecordedBlock(runtime, record);
+      if (blockRemoved) removed.push(`${path} (managed block only)`);
+      else break;
+      continue;
     }
+    if (!runtime.fs.exists(path)) continue;
+    const stats = runtime.fs.stat(path);
+    const ok = stats?.kind === "directory" ? runtime.fs.removeTree(path) : runtime.fs.remove(path);
+    if (!ok) break;
     removed.push(path);
   }
   return {

@@ -90,10 +90,16 @@ export const renderInstallPlan = (outcome: InstallOutcome): string => {
     `slot: ${outcome.slot.state} (${outcome.slot.path})`,
     `record: ${outcome.recordState} (${outcome.recordPath})`,
     ...(outcome.plan ?? []),
-    ...pathLines("would remove", outcome.removed ?? []),
+    ...(outcome.removed === undefined
+      ? []
+      : ["", "would remove:", ...pathLines("path", outcome.removed)]),
     ...(outcome.residual === undefined
       ? []
-      : pathLines("residual set (what purge would additionally delete)", outcome.residual)),
+      : [
+          "",
+          "residual set (what purge would additionally delete):",
+          ...pathLines("path", outcome.residual),
+        ]),
   ];
   return `${lines.join("\n")}\n`;
 };

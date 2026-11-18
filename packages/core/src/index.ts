@@ -1167,6 +1167,22 @@ export {
   judgeStateRoot,
   type StateRootObservation,
 } from "./domain/install-compatibility.js";
+export {
+  detectPriorNamespace,
+  migrationAdvisory,
+  migrationUnavailableSummary,
+  PRIOR_NAMESPACE_NAMES,
+  priorNamespacePaths,
+} from "./domain/install-migration.js";
+export {
+  hasIdenticalBlock,
+  mergePathBlock,
+  type PathBlock,
+  removePathBlock,
+  renderPathBlock,
+  resolveProfilePath,
+  shellProfileFor,
+} from "./domain/install-path-block.js";
 // GH-346 phase 3: the install record, the compatibility verdict, and the
 // seven-step replace plan (DM-2, DM-4, Appendix B).
 export {
@@ -1176,6 +1192,19 @@ export {
   readInstallRecord,
   serializeInstallRecord,
 } from "./domain/install-record.js";
+// GH-346 phase 4: the removal matrix, the managed PATH block, and the migration
+// hook (DM-5, Appendix C.3).
+export {
+  INSTALL_REMOVAL_ORDER,
+  type InstallRemovalMember,
+  NOTHING_TO_REMOVE,
+  purgeMembers,
+  RESIDUAL_LABEL,
+  type RemovalFacts,
+  type RemovalMember,
+  residualSet,
+  uninstallMembers,
+} from "./domain/install-removal.js";
 export {
   planReplace,
   provenanceOfAdmission,

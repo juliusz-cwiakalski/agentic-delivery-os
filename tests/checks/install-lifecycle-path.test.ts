@@ -1,0 +1,232 @@
+/**
+ * GH-346 TC-INST-070..076 — the managed PATH block and the migration hook
+ * (F-12, F-13; DM-5, OQ-TP-7, NG-1).
+ */
+import { afterAll, beforeAll, describe, expect, test } from "bun:test";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+import { createInstallCommandDefinition } from "../../packages/cli/src/commands/install";
+import { resolveBrandIdentity } from "../../packages/core/src/branding";
+import {
+  createFixtureArtifact,
+  type FixtureArtifact,
+  removeFixtureArtifact,
+} from "../fixtures/install/artifact";
+import {
+  createInstallRuntime,
+  createInstallScratch,
+  fixtureIdentity,
+  type InstallScratch,
+} from "../fixtures/install/home";
+
+const brand = (() => {
+  const resolved = resolveBrandIdentity({ workingName: "jaiship" });
+  if (!resolved.ok) throw new Error("the resolver rejected jaiship");
+  return resolved.value;
+})();
+
+type Output = {
+  readonly data?: Record<string, unknown>;
+  readonly error?: { readonly code?: string; readonly summary?: string };
+};
+const dataOf = (outcome: Output): Record<string, unknown> => outcome.data ?? {};
+
+const invoke = async (
+  runtime: ReturnType<typeof createInstallRuntime>,
+  positionals: readonly string[] = [],
+  flags: Readonly<Record<string, string | true>> = {},
+): Promise<Output> => {
+  const definition = createInstallCommandDefinition(runtime);
+  return (await definition.handler({
+    command: "install",
+    flags,
+    argv: ["install", ...positionals],
+    positionals,
+    brand,
+  } as never)) as Output;
+};
+
+let running: FixtureArtifact;
+let base: InstallScratch;
+
+beforeAll(() => {
+  running = createFixtureArtifact("path-running");
+  base = createInstallScratch("path-base");
+});
+
+afterAll(() => {
+  removeFixtureArtifact(running);
+  base.dispose();
+});
+
+const fresh = (): InstallScratch => createInstallScratch("path");
+const runtimeFor = (target: InstallScratch, shell?: string) =>
+  createInstallRuntime({
+    scratch: target,
+    runningArtifactPath: running.path,
+    identity: fixtureIdentity(),
+    environment: { HOME: target.home, ...(shell === undefined ? {} : { SHELL: shell }) },
+  });
+
+describe("TC-INST-070 the PATH block is appended once, recorded, and replaced in place", () => {
+  test("an identical block is not re-appended and different content is replaced", async () => {
+    const target = fresh();
+    try {
+      mkdirSync(target.home, { recursive: true });
+      const profile = join(target.home, ".zshrc");
+      writeFileSync(profile, "# operator profile\n");
+      const first = await invoke(runtimeFor(target, "/bin/zsh"), [], { "--add-to-path": true });
+      expect(first.error).toBeUndefined();
+      const recorded = dataOf(first).pathBlock as {
+        readonly file?: string;
+        readonly marker?: string;
+      };
+      expect(recorded.file).toBe(profile);
+      expect(recorded.marker).toBe("jaiship-install-path");
+      const textOnce = readFileSync(profile, "utf8");
+      expect(textOnce.match(/jaiship-install-path >>>/gu)).toHaveLength(1);
+      expect(textOnce).toContain(`export PATH="${target.installDirectory}:$PATH"`);
+      // Idempotent re-run.
+      await invoke(runtimeFor(target, "/bin/zsh"), [], { "--add-to-path": true });
+      expect(readFileSync(profile, "utf8")).toBe(textOnce);
+      // Different content is replaced in place, never duplicated.
+      writeFileSync(profile, textOnce.replace(target.installDirectory, "/old/place"));
+      await invoke(runtimeFor(target, "/bin/zsh"), [], { "--add-to-path": true });
+      const replaced = readFileSync(profile, "utf8");
+      expect(replaced.match(/jaiship-install-path >>>/gu)).toHaveLength(1);
+      expect(replaced).toContain(target.installDirectory);
+      expect(replaced).not.toContain("/old/place");
+      expect(replaced.startsWith("# operator profile\n")).toBe(true);
+    } finally {
+      target.dispose();
+    }
+  });
+});
+
+describe("TC-INST-071 the shell mapping selects exactly one declared profile file", () => {
+  test("zsh, bash, and sh map to their declared files", async () => {
+    for (const [shell, file] of [
+      ["/bin/zsh", ".zshrc"],
+      ["/usr/bin/bash", ".bashrc"],
+      ["/bin/sh", ".profile"],
+    ] as const) {
+      const target = fresh();
+      try {
+        mkdirSync(target.home, { recursive: true });
+        await invoke(runtimeFor(target, shell), [], { "--add-to-path": true });
+        expect({ shell, exists: existsSync(join(target.home, file)) }).toEqual({
+          shell,
+          exists: true,
+        });
+        expect(readFileSync(join(target.home, file), "utf8")).toContain(target.installDirectory);
+        for (const other of [".zshrc", ".bashrc", ".profile"].filter((name) => name !== file)) {
+          expect(existsSync(join(target.home, other))).toBe(false);
+        }
+      } finally {
+        target.dispose();
+      }
+    }
+  });
+});
+
+describe("TC-INST-072 an unidentifiable shell refuses typedly and writes no profile", () => {
+  test("no SHELL and no explicit path is install.shell-profile.unresolved", async () => {
+    const target = fresh();
+    try {
+      mkdirSync(target.home, { recursive: true });
+      const refused = await invoke(runtimeFor(target, "/bin/fish"), [], { "--add-to-path": true });
+      expect(refused.error?.code).toBe("install.shell-profile.unresolved");
+      expect(refused.error?.summary).toContain("--shell-profile");
+      expect(existsSync(join(target.home, ".zshrc"))).toBe(false);
+      expect(existsSync(join(target.home, ".bashrc"))).toBe(false);
+      expect(existsSync(join(target.home, ".profile"))).toBe(false);
+    } finally {
+      target.dispose();
+    }
+  });
+});
+
+describe("TC-INST-073 without --add-to-path no profile file is written", () => {
+  test("the run completes and no profile appears", async () => {
+    const target = fresh();
+    try {
+      mkdirSync(target.home, { recursive: true });
+      const outcome = await invoke(runtimeFor(target, "/bin/zsh"), []);
+      expect(outcome.error).toBeUndefined();
+      expect(existsSync(join(target.home, ".zshrc"))).toBe(false);
+      expect(dataOf(outcome).pathBlock).toBeUndefined();
+    } finally {
+      target.dispose();
+    }
+  });
+});
+
+describe("TC-INST-074 removal deletes exactly the managed block and nothing else", () => {
+  test("uninstall leaves the rest of the profile byte-identical", async () => {
+    const target = fresh();
+    try {
+      mkdirSync(target.home, { recursive: true });
+      const profile = join(target.home, ".bashrc");
+      writeFileSync(profile, "# operator profile\nkubectl() { :; }\n");
+      await invoke(runtimeFor(target, "/bin/bash"), [], { "--add-to-path": true });
+      await invoke(runtimeFor(target, "/bin/bash"), ["uninstall"]);
+      expect(readFileSync(profile, "utf8")).toBe("# operator profile\nkubectl() { :; }\n");
+    } finally {
+      target.dispose();
+    }
+  });
+});
+
+describe("TC-INST-075 prior-namespace artifacts are detected and advised, never moved", () => {
+  test("one advisory line names them and no file changes", async () => {
+    const target = fresh();
+    try {
+      const prior = join(target.home, ".delivery-os");
+      mkdirSync(prior, { recursive: true });
+      writeFileSync(join(prior, "config.yaml"), "provider: fixture\n");
+      const runtime = createInstallRuntime({
+        scratch: target,
+        runningArtifactPath: running.path,
+        identity: fixtureIdentity(),
+        environment: { HOME: target.home },
+        priorNamespaceArtifacts: [prior],
+      });
+      const outcome = await invoke(runtime, []);
+      const advisories = dataOf(outcome).advisories as readonly string[];
+      expect(advisories.some((line) => line.includes(prior))).toBe(true);
+      expect(advisories.some((line) => line.includes("documented manual move"))).toBe(true);
+      expect(readFileSync(join(prior, "config.yaml"), "utf8")).toBe("provider: fixture\n");
+      expect(existsSync(join(target.home, ".jaiship"))).toBe(true);
+    } finally {
+      target.dispose();
+    }
+  });
+});
+
+describe("TC-INST-076 --migrate refuses typedly and a dry-run still detects", () => {
+  test("the refusal names M4-S2 and the dry-run prints the detection list", async () => {
+    const target = fresh();
+    try {
+      const prior = join(target.home, ".delivery-os");
+      mkdirSync(prior, { recursive: true });
+      const runtime = createInstallRuntime({
+        scratch: target,
+        runningArtifactPath: running.path,
+        identity: fixtureIdentity(),
+        environment: { HOME: target.home },
+        priorNamespaceArtifacts: [prior],
+      });
+      const refused = await invoke(runtime, [], { "--migrate": true });
+      expect(refused.error?.code).toBe("install.migration.unavailable");
+      expect(refused.error?.summary).toContain("M4-S2");
+      expect(refused.error?.summary).toContain("nothing was moved");
+      const dry = await invoke(runtime, [], { "--migrate": true, "--dry-run": true });
+      expect(dry.error).toBeUndefined();
+      const joined = (dataOf(dry).plan as readonly string[]).join("\n");
+      expect(joined).toContain(prior);
+      expect(joined).toContain("nothing would be migrated");
+    } finally {
+      target.dispose();
+    }
+  });
+});

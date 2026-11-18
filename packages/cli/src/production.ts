@@ -100,6 +100,7 @@ import {
   type DispatchRead,
   type DispatchTrackerFacts,
   type DispatchTruthReads,
+  detectPriorNamespace,
   dispatchAdmissionRefusal,
   EvaluateVerifyChange,
   emptyHandoverGate,
@@ -4074,7 +4075,10 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           },
         },
         daemon: daemonPort,
-        priorNamespaceArtifacts: [],
+        priorNamespaceArtifacts: detectPriorNamespace({
+          homeDirectory,
+          exists: (path: string) => installFs.exists(path),
+        }),
       };
     })();
     const installProgram = {
