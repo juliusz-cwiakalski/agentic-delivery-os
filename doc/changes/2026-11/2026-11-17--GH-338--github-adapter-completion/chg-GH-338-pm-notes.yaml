@@ -13,7 +13,7 @@ phases:
   review_fix: { started: null, completed: 2026-11-18T07:30:29.537Z }
   quality_gates: { started: null, completed: 2026-11-18T08:00:38.523Z }
   dod_check: { started: null, completed: 2026-11-18T08:01:20.569Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-18T09:28:51.219Z }
 decisions:
   - text: "Scope is taken from the ticket body plus the committed M3 blueprint
       (doc/planning/oss-tooling/milestones/m3/): full primitive coverage for the
@@ -56,6 +56,24 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "PR ready for review:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/344 — base
+      main-tools, head c75016df, 37 commits, MERGEABLE / CLEAN, 47 checks pass /
+      0 pending / 0 fail (runs 44273213864 and 44273222232 both success). Final
+      state includes the main-tools sync (merge 936ad950 over 3ea2aec9 / GH-293
+      #343) with the four doc conflicts resolved keeping both sides, the
+      decision-record renumber to TDR-0032..TDR-0035 (30 files; GH-293's
+      TDR-0031 untouched), the CI hermeticity fix (scratch in-window gh stub
+      first on the child PATH in entrypoint-two-bins; the byte comparison is
+      unchanged; proven with an out-of-window gh 3.10.0 first on PATH), and the
+      merged-tree reconciliation of GH-293's TC-ENGINE-092 (composition
+      references createGithubNativeTransport with zero fetch sites; one declared
+      fetch in the adapter client). Gates at c75016df: pnpm check 10590 pass / 4
+      skip / 0 fail over 10594 tests in 1321 files; range gate PASS, 37 commits,
+      0 offending, mode none, repository-local commitlint, origin/main-tools
+      resolvable. Merge authority is the owner's — this session does not merge."
+    type: info
+    date: "2026-11-18"
   - text: "Sync with main-tools and CI hermeticity repair. The sync merge is
       936ad950 (parents 6397f6ee on the branch and 3ea2aec9, origin/main-tools
       GH-293 PR #343), so 3ea2aec9 is the merge-base the range gate measures.
@@ -70,25 +88,25 @@ notes:
       TDR-0031-engine-first-evaluation-surfaces.md stays untouched and
       authoritative. CI run 44263517194 root cause repaired in
       tests/behaviour/entrypoint-two-bins.test.ts: every child now gets a
-      scratch `gh` stub first on PATH that answers `--version` with
-      `gh version 2.91.0`, so the composition probe takes the in-window branch
-      on every host and the byte-identical stderr baseline stays an exact
-      comparison; the ambient PATH is preserved after the stub and the scratch
-      directory is removed in afterAll. A poisoned sweep of tests/behaviour +
-      tests/structure with an out-of-window `gh` (3.10.0) first on PATH is
-      8736 pass / 4 skip / 0 fail, so no other suite deterministically leaks.
-      Merged-tree interaction also repaired: GH-293's TC-ENGINE-092 expected
+      scratch `gh` stub first on PATH that answers `--version` with `gh version
+      2.91.0`, so the composition probe takes the in-window branch on every host
+      and the byte-identical stderr baseline stays an exact comparison; the
+      ambient PATH is preserved after the stub and the scratch directory is
+      removed in afterAll. A poisoned sweep of tests/behaviour + tests/structure
+      with an out-of-window `gh` (3.10.0) first on PATH is 8736 pass / 4 skip /
+      0 fail, so no other suite deterministically leaks. Merged-tree interaction
+      also repaired: GH-293's TC-ENGINE-092 expected
       packages/cli/src/production.ts to own the one native fetch, but TDR-0032
       moved that seam to the adapter, so the invariant now asserts production
       has zero fetch sites and references createGithubNativeTransport( while
       packages/adapters/src/github/client.ts owns exactly one. Re-gated on the
       merged tree: TC-BIN 18 pass / 0 fail; TC-BIN-084 5 pass / 0 fail;
-      prompt-conformance 5 prompts clean; TMPDIR=$PWD/tmp/tmpdir pnpm check
-      exit 0 (lint 2934 files, 103 warnings / 0 errors; format 2788 files;
-      typecheck; test 10590 pass / 4 skip / 0 fail, 96141 expect calls, 10594
-      tests across 1321 files; boundaries 458 modules, ambient-globals 221
-      clean, workspace-entrypoints OK, secret-read 425 files; memory 0 errors /
-      0 advisories; prompt-conformance clean; help-guide all covered;
+      prompt-conformance 5 prompts clean; TMPDIR=$PWD/tmp/tmpdir pnpm check exit
+      0 (lint 2934 files, 103 warnings / 0 errors; format 2788 files; typecheck;
+      test 10590 pass / 4 skip / 0 fail, 96141 expect calls, 10594 tests across
+      1321 files; boundaries 458 modules, ambient-globals 221 clean,
+      workspace-entrypoints OK, secret-read 425 files; memory 0 errors / 0
+      advisories; prompt-conformance clean; help-guide all covered;
       exports-parity 5 publishables). Range gate VERDICT PASS — base main-tools
       (source=explicit, merge-base 3ea2aec9, head 936ad950), 36 commits in
       range, 0 offending commits, 0 distinct rules hit; commitlint binary
@@ -97,23 +115,24 @@ notes:
       229.36-233.58 ms under the full suite and passed."
     type: info
     date: "2026-11-18"
-  - text: "PR created: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/344
-      (base main-tools, head feat/GH-338/github-adapter-completion at ba95f8ca, title
+  - text: "PR created:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/344 (base
+      main-tools, head feat/GH-338/github-adapter-completion at ba95f8ca, title
       'feat(GH-338): complete the GitHub reference adapter', OPEN, not draft, no
       auto-merge). CI run 44263517194: 21 checks pass; 2 fail (TS tests, TS
       aggregate check) from one root cause — TC-BIN-002 asserts byte-identical
-      stderr for `status --json` with an ambient PATH, and the CI runner's `gh` is
-      outside GITHUB_CLI_VERSION_WINDOW (max 2.99.99), so composition emits a
+      stderr for `status --json` with an ambient PATH, and the CI runner's `gh`
+      is outside GITHUB_CLI_VERSION_WINDOW (max 2.99.99), so composition emits a
       provider.cli.version-unsupported degradation line the baseline lacks;
       TC-BIN-084 half (b) fails as a consequence. This is a real hermeticity
       defect introduced by the change (review-iter-2 note 8 upgraded from low to
       gate-blocking), fixable by pinning PATH in the two GH-320 suites the way
-      install-launcher-installer.test.ts already does. Also: the PR is CONFLICTING
-      because main-tools advanced to 3ea2aec9 (GH-293, PR #343) after our merge-base
-      1250d789; four doc files conflict and main-tools already carries
-      TDR-0031-engine-first-evaluation-surfaces.md, so this change's four decision
-      records must be renumbered from 0031-0034 to 0032-0035 with every reference
-      updated."
+      install-launcher-installer.test.ts already does. Also: the PR is
+      CONFLICTING because main-tools advanced to 3ea2aec9 (GH-293, PR #343)
+      after our merge-base 1250d789; four doc files conflict and main-tools
+      already carries TDR-0031-engine-first-evaluation-surfaces.md, so this
+      change's four decision records must be renumbered from 0031-0034 to
+      0032-0035 with every reference updated."
     type: info
     date: "2026-11-18"
   - text: "DoD check PASS. All nine prerequisite lifecycle phases are recorded
