@@ -292,15 +292,26 @@ const domainKindOf = (
 ): MergeFailure["domainKind"] =>
   row !== undefined && isMergeDomainKind(row.domainKind) ? row.domainKind : fallback;
 
+/**
+ * The exit the resolved row's projection class declares.
+ *
+ * `platform-provider` keeps exit `2` and the two user-facing classes project
+ * exit `1`; an absent row is the containment default, exit `2`. Every emitted
+ * failure's exit is therefore its row's declared projection by construction, so
+ * a row whose projection class moves takes its emitted exit with it.
+ */
+const exitOfRow = (row: ErrorTableEntry | undefined): MergeFailure["exit"] =>
+  row === undefined || row.projectionClass === "platform-provider" ? 2 : 1;
+
 const stateFailure = (reason: MergeStateReadReason, detail?: string): MergeFailure => {
-  // The kind comes from the resolved row, never from the call site: a
-  // `merge.state-unverified` failure declared as `state` would be the very
+  // The kind and the exit come from the resolved row, never from the call site:
+  // a `merge.state-unverified` failure declared as `state` would be the very
   // kind/code contradiction that is contained as `fallback.internal`.
   const row = ERROR_TABLE.find((entry) => entry.code === "merge.state-unverified");
   return {
     code: "merge.state-unverified",
     domainKind: domainKindOf(row, "merge"),
-    exit: 2,
+    exit: exitOfRow(row),
     evidence: { stateReason: reason, ...(detail === undefined ? {} : { detail }) },
   };
 };
@@ -310,15 +321,10 @@ const readFailure = (code: string): MergeFailure => {
   // hard-coded: a kind/code pair that contradicts the table is exactly the
   // containment (`fallback.internal`, exit 2) this restoration removes.
   const row = ERROR_TABLE.find((entry) => entry.code === code);
-  // `success` is unreachable for a failure row; `platform-provider` keeps its
-  // exit `2`, the two user-facing classes project exit `1`, and an absent row
-  // is the containment default.
-  const exit: MergeFailure["exit"] =
-    row === undefined || row.projectionClass === "platform-provider" ? 2 : 1;
   return {
     code,
     domainKind: domainKindOf(row, "provider"),
-    exit,
+    exit: exitOfRow(row),
     evidence: { detail: code },
   };
 };
