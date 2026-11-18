@@ -5,9 +5,9 @@ milestone: "M4: Jaiship-native delivery"
 story_code: M4-S1
 phases:
   clarify_scope: { started: "2026-11-18T16:53:00Z", completed: 2026-11-18T16:09:23.758Z }
-  specification: { started: null, completed: 2026-11-18T17:56:36.919Z }
-  test_planning: { started: null, completed: 2026-11-18T17:56:43.765Z }
-  delivery_planning: { started: null, completed: 2026-11-18T17:56:50.293Z }
+  specification: { started: null, completed: 2026-11-18T18:10:23.053Z }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -196,4 +196,30 @@ notes:
       f6921d74, delivery_planning v2 faf5b9a6. The five TDRs remain untracked
       and land in the phase-1 delivery commit."
     type: info
+    date: "2026-11-18"
+  - text: "DoR iteration 2: NOT_READY, but both iteration-1 blockers verified CLOSED
+      on the merits (the agreement/no-op state matrix and the ownsInstallation
+      mechanism were re-derived against the code). New: 3 MAJOR (nine delivered
+      error-table count suites undeclared and 149 to 160; the build-side literal
+      falsifying feature-branding-seam.md with no phase owning it; rollback with
+      an absent record unadjudicated), 6 MINOR, 1 NIT. Reopened specification,
+      test_planning and delivery_planning again."
+    type: blocker
+    date: "2026-11-18"
+  - text: "Iteration-2 remediation: TDR-0040 second amendment rules that `install
+      rollback` REFUSES with the existing install.record.unreadable unless the
+      record can name the artifact the swap would install (absent, unreadable,
+      record-stale, or naming no previous), refuses write nothing, eleven rows
+      and the allowlist unchanged. Spec v1.2 reproduces that sentence, owns the
+      branding page in §16 and AC-F16-1, qualifies step 5 so only a differing
+      compiled artifact fills the slot, defines recordState against the running
+      identity, makes the pre-staging agreement read required, and declares the
+      149 to 160 count surface. Test plan v1.2 lists nine count suites,
+      TC-INST-042 (d)/(e), the branding phrase pair, runningArtifactPath, the
+      uninstaller probe, and the name-agreement assertion. Plan v1.2 adds D7,
+      the nine suites and the artifact fixture to phase 2, the branding page to
+      phase 6, narrows the D6 tripwire to the owner-name route, fixes the
+      phase-2 differing-artifact policy, and settles the uninstaller detection
+      source."
+    type: resolved
     date: "2026-11-18"

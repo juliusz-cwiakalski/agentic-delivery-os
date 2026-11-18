@@ -8,7 +8,7 @@
 # plan phase id, the commit hash, and the test result.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:      ./chg-GH-346-spec.md (v1.2: F-1..F-16; DM-1..DM-8;
+#   - Spec:      ./chg-GH-346-spec.md (v1.3: F-1..F-16; DM-1..DM-8;
 #                NFR-1..NFR-17; 34 ACs AC-F1-1..AC-F16-1; DEC-1..DEC-14;
 #                RSK-1..RSK-16; OQ-1..OQ-6; §5.1 capability details; §6 flows 1-9;
 #                §7.1 in-scope list; §8.1 invocation table; §8.3 data model;
@@ -39,7 +39,22 @@
 #                the RUNNING identity; the agreement gate required BEFORE staging;
 #                and the ordered rollback record precondition in F-8, DEC-13,
 #                Appendix E, AC-F8-2 and C.4.
-#   - Test plan: ./chg-GH-346-test-plan.md (v1.2: 84 cases — 12 artifact/identity
+#                v1.3 is the DoR iteration-3 remediation this plan follows: §16's
+#                obligation table and AC-F16-1's page set gain the three
+#                COUNT-BEARING pages (feature-ceremony-runner.md,
+#                feature-metrics.md, feature-supervise.md) under the class rule
+#                "every page stating the table total, the allowlist size, the
+#                `BASELINE_ROWS` arithmetic or the mounted family count moves with
+#                the register"; F-16/§8.5's "exactly two" delivered statements
+#                become the full falsified set; the rollback refusal order is stated
+#                once (slot absent, then slot invalid, then the record
+#                precondition) and the trigger is worded "does not name, in
+#                `previous`, the artifact the swap would install"; the ordered
+#                refusal set is stated to be evaluated BEFORE the daemon stop; the
+#                branding-seam page's KPI, NFR-9 and summary identity-literal
+#                sentences are named as false and restated; and TDR-0040 §2 step 5
+#                carries its destination qualification.
+#   - Test plan: ./chg-GH-346-test-plan.md (v1.3: 84 cases — 12 artifact/identity
 #                TC-BIN-060..071 (TC-BIN-060 step 6 asserts the artifact's file name
 #                equals the name its own `--version` prints) and 72 lifecycle
 #                TC-INST-001..123 (TC-INST-042 gained arms (d) and (e);
@@ -54,6 +69,19 @@
 #                battery G0..G7 and the evidence shape; §7.1 new files (21); §7.2
 #                the 35 declared rows — 32 that move, one contingent row and two
 #                no-edit control rows; §8.3 open questions OQ-TP-1..8).
+#                v1.3 is the same iteration-3 remediation on the test side, and it
+#                keeps the case count at 84: TC-INST-042 gains ARM (f) — a readable
+#                `record-stale` record whose `current` names predecessor P while the
+#                slot holds P — so the four record-precondition causes are carried
+#                by steps 3, (d), (e) and (f); TC-INST-061 gains the
+#                unmet-precondition `install rollback --dry-run` step (exit 0, the
+#                refusal identity, cause and remedy printed in place of a plan, the
+#                snapshot unchanged); TC-INST-111/112's page set and phrase table
+#                gain the three count-bearing pages and the branding page's
+#                KPI/NFR/summary identity-literal sentences; §7.2 gains the omitted
+#                in-file moves, a row for the three count-bearing pages, and the
+#                corrected 146-row pre-change comparison (143-row events baseline +
+#                3 `events` rows).
 #   - PM record: ./chg-GH-346-pm-notes.yaml (milestone "M4: Jaiship-native
 #                delivery", story M4-S1; the five binding decisions
 #                TDR-0036..TDR-0040; the clarify-scope defect evidence; the
@@ -124,33 +152,48 @@
 #   finding for a file that needs no edit. Every file the test plan names as an
 #   assertion site to CREATE or EXTEND is declared by the phase that owns that
 #   half of the case.
-#   EXHAUSTION, VERIFIED ROW BY ROW AGAINST TEST PLAN v1.2 §7.1 AND §7.2 (and
-#   against §16's nine-row documentation obligation table):
+#   EXHAUSTION, VERIFIED ROW BY ROW AGAINST TEST PLAN v1.3 §7.1 AND §7.2 (and
+#   against §16's documentation obligation table, which v1.3 widens from nine rows
+#   to twelve by adding the three count-bearing pages as their own rows):
 #     - §7.1 (21 new files) is exhausted by the six phases: 4 in phase 1, 6 in
 #       phase 2, 5 in phase 3, 4 in phase 4, 1 in phase 5, 1 in phase 6 (the
 #       battery cases TC-INST-120..123 have no suite of their own).
-#     - §7.2 (35 rows in v1.2: 32 rows that move, one contingent row, two no-edit
-#       control rows) is exhausted too, row by row. PHASE 2 DECLARES THE SEVEN
+#     - §7.2 (thirty-five rows in v1.2 — 32 that move, one contingent row and two
+#       no-edit control rows; test plan v1.3 names the in-file moves those rows left
+#       implicit, which this plan's phase 2 also names, and adds ONE row for the
+#       three count-bearing pages, which phase 2 declares) is exhausted too, row by
+#       row. PHASE 2 DECLARES THE SEVEN
 #       DELIVERED COUNT/MEMBERSHIP SUITES — cross-repository-contract,
 #       supervision-error-family, supervision-error-socialization,
 #       ceremony-contract, dispatch-attempts-taxonomy,
 #       verify-gates-suite-map-contract, ceremony-nonregression — beside the two
 #       mirrors it already declared (tests/structure/error-table.test.ts and
 #       tests/checks/error-table-sync.test.ts); those NINE are the delivered count
-#       suites the phase-2 `pnpm check` moves. THREE DECLARED EXCEPTIONS, none an
+#       suites the phase-2 `pnpm check` moves. FOUR DECLARED EXCEPTIONS, none an
 #       omission: `tests/checks/exports-parity.test.ts` fires only under D2's
 #       contingent path and this change claims no export move, so no phase
 #       declares it; `tests/checks/ci-checks.test.ts` is re-run unchanged as a
-#       control; and the five-suite control row (prompt-conformance,
+#       control; the five-suite control row (prompt-conformance,
 #       help-guide-coverage's non-mutant arms, entrypoint-help-isolation,
 #       entrypoint-version, identity-override) is re-run with no edit (SCOPE
-#       DECLARATION RULE above).
-#     - The DOCUMENTATION OBLIGATION SET (§16's nine rows and AC-F16-1's page set)
-#       is exhausted by two phases: phase 6 owns the local install guide, the
-#       entrypoint page, the doc-distribution page, the state-layer page, THE
-#       BRANDING-SEAM PAGE, the install model and the M4 backlog marker; phase 2
-#       owns the result-contract page and the M4 reference page, because their
-#       gates (header couplings 2 and 3) make them inseparable from the family.
+#       DECLARATION RULE above); and
+#       `tests/fixtures/events/error-table-baseline.json` is READ, never edited —
+#       it holds 143 rows and the comparison adds the 3 `events` rows (146), so the
+#       `+ 115` arithmetic base moves in the SUITE, not in this fixture.
+#     - The DOCUMENTATION OBLIGATION SET (§16's rows and AC-F16-1's page set) is
+#       exhausted by two phases over TWELVE declared documentation paths. Phase 6
+#       owns the local install guide, the entrypoint page, the doc-distribution
+#       page, the state-layer page, THE BRANDING-SEAM PAGE, the install model and
+#       the M4 backlog marker (7). PHASE 2 OWNS FIVE: the result-contract page and
+#       the M4 reference page, because their gates (header couplings 2 and 3) make
+#       them inseparable from the family, plus THE THREE COUNT-BEARING PAGES —
+#       feature-ceremony-runner.md, feature-metrics.md and feature-supervise.md —
+#       because the numbers they state move in phase 2 and the same one-edit-set
+#       rule applies to them (spec v1.3 §16's class rule; DoR iteration 3
+#       finding 1). Declaring them in phase 2 means NO falsehood window exists for
+#       those three at any commit boundary; the branding-seam page is the only
+#       documentation obligation that carries a declared window (coupling 3a), and
+#       it says so where it is declared.
 #     - Suites and fixtures declared by TWO OR MORE phases keep ONE owner and name
 #       both halves at both ends: `tests/structure/entrypoint-bin.test.ts`
 #       (phase 1: process edge, identity supply, the build-side literal scan and
@@ -233,15 +276,18 @@
 #   the guide, the four specification pages (entrypoint, doc-distribution, state
 #   layer and branding seam), the install-model correction, the documentation-truth
 #   gates, and the full G0..G7 battery including
-#   `bash scripts/.tests/test-doc-distribution.sh`. Three statements this change
-#   falsifies — the entrypoint page's "twenty-five families" count, the
-#   doc-distribution page's "no uninstall path exists", and the branding-seam
-#   page's unqualified "exactly five sites … no identity literal lives anywhere
-#   else" — are corrected in phase 6 by design: no gate reads any of them before
-#   then (verified: no assertion in tests/ reads the first two; doc-conformance
-#   pins phrase tables over unchanged pages, which phase 6 moves with the pages),
-#   and the branch is unreleased for the whole window so no operator meets a false
-#   statement.
+#   `bash scripts/.tests/test-doc-distribution.sh`. THE FALSIFIED STATEMENTS SPLIT
+#   ACROSS TWO PHASES, and the split is the point (spec v1.3 §16 and its
+#   count-bearing-page class): the three COUNT-BEARING page moves happen in PHASE 2,
+#   where their numbers move, so they are never false at a boundary at all; the
+#   three statements this paragraph used to list — the entrypoint page's
+#   "twenty-five families" count, the doc-distribution page's "no uninstall path
+#   exists", and the branding-seam page's unqualified "exactly five sites … no
+#   identity literal lives anywhere else" (now four sentences: inventory, KPI,
+#   NFR-9 and summary) — are corrected in phase 6 by design, because no gate reads
+#   them before then and moving them earlier would split each page from the
+#   doc-conformance phrase that pins it (coupling 3a). The branch is unreleased for
+#   the whole window, so no operator meets a false statement either way.
 #
 # AC OWNERSHIP (34/34; exactly one owning phase each; an earlier phase may
 #   produce a partial verdict, which is additive and never transfers ownership):
@@ -260,7 +306,7 @@
 #   build entry in that commit, and the bidirectional inventory comparison fails at
 #   phase 1's boundary if the site is not declared there; AC-F15-1 and AC-F15-2
 #   belong to phase 2 because the family, the page, the inventory and the error
-#   register land there. The spec v1.2 WORDING of the owned ACs the remediation
+#   register land there. The spec v1.3 WORDING of the owned ACs the remediation
 #   touched is carried by the owning phase's acceptance paragraph and changes no
 #   ownership: AC-F4-2 (phase 2: invoked identity + owning role + remedy), AC-F8-2
 #   and AC-F9-1 and AC-F9-2 (phase 3: content agreement evaluated BEFORE staging,
@@ -269,7 +315,10 @@
 #   (phase 5: the content predicate with its record-free arm, and the uninstaller's
 #   probe-sourced detection with its no-binary arm), AC-F16-1 (phase 6: the
 #   branding-seam page joins its page set with the scoped five-site wording and the
-#   two scan scopes).
+#   two scan scopes — and, per spec v1.3, the KPI, NFR-9 and summary
+#   identity-literal sentences restated with it — while the THREE COUNT-BEARING
+#   pages are phase 2's page half of the same AC, delivered where their numbers
+#   move).
 #   GATE-EVIDENCE CASES (a case that supplies evidence for an AC owned by an
 #   earlier phase never moves that ownership — GH-338 phase-8 precedent):
 #     - AC-F1-2's build-output half is TC-BIN-063 (phase 1) and its documentation
@@ -303,13 +352,19 @@
 #   case that gives AC-F8-2's reconciliation arm and AC-F9-1's step-7 recovery
 #   their evidence, and it cannot be green before the record writer and the
 #   replace transaction exist.
-#   TC-INST-042 (phase 3) now carries FOUR rollback refusal arms beside its three
-#   tolerance givens: arm (d) — record absent, valid slot present ->
-#   `install.record.unreadable`, exit 1, zero writes, no record created — and arm
-#   (e) — a readable `current` record naming no `previous`, valid slot present ->
-#   the same identity, the same exit and the same zero-write equality. TC-INST-026
-#   owns the two SLOT arms and never reaches the record arm, so the two cases
-#   partition the ordered refusal set rather than overlapping it.
+#   TC-INST-042 (phase 3, test plan v1.3) carries the FOUR record-precondition causes
+#   as four distinct steps beside its three tolerance givens: step 3 — the
+#   present-but-unreadable record; arm (d) — record absent, valid slot present ->
+#   `install.record.unreadable`, exit 1, zero writes, no record created; arm (e) — a
+#   readable `current` record naming no `previous`, valid slot present -> the same
+#   identity, the same exit and the same zero-write equality; arm (f) — a readable
+#   `record-stale` record whose `current` names predecessor P while the slot holds
+#   P, the POST-CRASH shape, with the same identity, exit and zero-write equality
+#   (destination and slot digests and `mtimeNs`, no record write, no record
+#   created, no rename) and, on the run repeated with `--stop-daemon`, an EMPTY
+#   ordered daemon log. TC-INST-026 owns the two SLOT arms and never reaches the
+#   record arm, so the two cases partition the ordered refusal set rather than
+#   overlapping it.
 #
 # SPLIT-CASE NOTES (a case whose suite or fixture is extended by two phases keeps
 #   its single owner; ownership follows the phase that COMPLETES the case. Every
@@ -721,9 +776,10 @@
 #   in the §6.3 shape naming the commit and the exact counts (26 families, 66
 #   two-segment identities, eleven `install` rows).
 #
-# INCONSISTENCIES: none blocking between spec v1.2, the five TDRs (TDR-0036 as
-#   amended at DoR iteration 1; TDR-0040 as amended at DoR iterations 1 and 2) and
-#   test plan v1.2. Five points are resolved rather than papered over:
+# INCONSISTENCIES: none blocking between spec v1.3, the five TDRs (TDR-0036 as
+#   amended at DoR iteration 1; TDR-0040 as amended at DoR iterations 1, 2 and 3,
+#   and TDR-0038 §5 read alongside its destination table) and test plan v1.3.
+#   Eight points are resolved rather than papered over:
 #   (a) DM-8, as corrected in spec v1.1, states that the admission predicate
 #       CONSUMES the delivered worktree-topology read: no adapter export surface
 #       moves and no parity baseline moves (D2), and the contingent path is
@@ -744,6 +800,25 @@
 #   (e) The phase-2 differing-artifact policy (D3) is an intermediate posture with
 #       no refusal identity, because Appendix E is closed at eleven rows; the
 #       reversible behaviour arrives in phase 3, in the same change.
+#   (f) THE THREE COUNT-BEARING PAGES ARE PHASE 2's, NOT A LATER SYNC (spec v1.3
+#       §16's class rule; DoR iteration 3 finding 1). They are not a second
+#       falsehood window: they are declared in the phase that moves their numbers,
+#       so no commit of this change leaves them stale — the opposite disposition
+#       from (d), and the reason (d) is still the only declared window.
+#   (g) THE ROLLBACK REFUSAL ORDER IS ONE ORDER AND IT IS THE TDR's (spec v1.3
+#       F-8/§8.1; DoR iteration 3 finding 3): slot absent, then slot invalid, then
+#       the record precondition, evaluated BEFORE the daemon stop — so a refused
+#       rollback performs no daemon action, and the plan's ordered set (phase 3)
+#       and TC-INST-026/042 assert that order rather than a read-the-record-first
+#       reading.
+#   (h) TDR-0040 §2 step 5 IS QUALIFIED, AND THE QUALIFICATION IS WHAT PHASE 3
+#       IMPLEMENTS (DoR iteration 3 finding 4, persisting from iteration 2). The
+#       record's step 5 now promotes ONLY a differing regular compiled artifact,
+#       discards a launcher with the slot unchanged, and replaces a symlink
+#       without promoting it (slot unchanged, target untouched) — mirroring
+#       TDR-0038 §5 and spec Appendix B/C.2. Phase 3's contract states the
+#       qualification, so the phase contract and the record agree sentence for
+#       sentence.
 
 schemaVersion: delivery.plan.v1
 workItemRef: GH-346
@@ -753,6 +828,7 @@ tier:
   escalationTriggers:
     - "A phase boundary leaves the family count, the reference-page set, the coverage inventory, the declared error-table total (149 -> 160) or the two-segment allowlist between the old and the new value (AC-F15-1, AC-F15-2, NFR-14)"
     - "A pinned count is relaxed to a floor, a family is removed to make a gate green, or a delivered row or assertion is renamed instead of moved exactly (NFR-14, test plan §4.4)"
+    - "A delivered specification page still states the outgoing error-table total, delivered-row count, allowlist size, `BASELINE_ROWS` arithmetic or mounted family count at a phase boundary, or a page's sentence moves without its number (AC-F15-2, AC-F16-1, NFR-14)"
     - "The compiled shape hands a bundle-root value to a spawn or a service unit, or a non-compiled run stops answering the delivered script path (AC-F3-2, RSK-2)"
     - "The alias creates a path under its namespace, writes anything on a lifecycle invocation, or stops being byte-identical for its delivered commands (AC-F4-2, RSK-4)"
     - "A refused install writes: destination bytes or mtime change, a record appears, a profile line is added, or a staging file survives (NFR-10, RSK-5)"
@@ -1037,9 +1113,13 @@ phases:
   # `sourceEntries`/`documentedRows` 149 -> 160 and the page-total assertion) and
   # the seven suites spec §16 names, each with its named move:
   #   tests/structure/cross-repository-contract.test.ts — the `additive` set gains
-  #     the eleven `install` codes, so `delivered` still equals the 149-row events
-  #     baseline; `DOMAIN_KINDS` becomes the baseline kinds + `events` + `install`
-  #     and its length assertion moves +1 -> +2.
+  #     the eleven `install` codes, so `delivered` still equals the 146-ROW
+  #     PRE-CHANGE COMPARISON (the 143-row events baseline fixture PLUS the 3
+  #     `events` rows), which is what the delivered assertion compares against —
+  #     NOT "the 149-row events baseline", a description that confuses the current
+  #     table total with the fixture and would make the expectation wrong;
+  #     `DOMAIN_KINDS` becomes the baseline kinds + `events` + `install` and its
+  #     length assertion moves +1 -> +2.
   #   tests/structure/supervision-error-family.test.ts — `DOMAIN_KINDS.at(-2)` /
   #     `.at(-1)` (today `supervise`/`metrics`) move to `.at(-3)`/`.at(-2)` because
   #     `install` appends and is the NEW TAIL (the tail is re-expressed, not
@@ -1057,6 +1137,53 @@ phases:
   #     `sourceEntries`/`documentedRows` pair 149/149 -> 160/160.
   #   tests/behaviour/ceremony-nonregression.test.ts — `ERROR_TABLE` length 149 ->
   #     160; the two-row `ceremony` count is unchanged.
+  # THE MOVES INSIDE THE DECLARED FILES THAT THE ROWS ABOVE DID NOT NAME (DoR
+  # iteration 3 finding 6 — every one is a LOUD failure inside an already-declared
+  # file, so this is precision, not silent drift; named so no coder has to discover
+  # them from a red gate):
+  #   tests/checks/error-table-sync.test.ts — `BASELINE_ROWS.length + 115` becomes
+  #     `BASELINE_ROWS.length + 126` (34 baseline rows + 126 = 160) in FOUR
+  #     occurrences at THREE sites: the length guard and its failure message, the
+  #     reported counts block, and the `sourceEntries` assertion. A miss reads
+  #     `table length 160 != baseline + 115`.
+  #   tests/structure/error-table.test.ts — the TWO per-kind TUPLE STUBS carry
+  #     `entries: 149, documented: 149, delivered: 148, allowlist: 65` (one stub
+  #     omits `delivered`; both move to 160 / 160 / 159 / 66); the THREE
+  #     `the same 149 identities` assertions become `the same 160 identities`; the
+  #     THREE `exact two-segment allowlist of 65 declared identities` assertions
+  #     become 66; and the per-kind blocks carry FOUR `149 machine identities`
+  #     assertions, three of them beside the one "`149 identities`" doc assertion
+  #     the row already names — all four move, none is a title.
+  #   tests/structure/supervision-mounting.test.ts — the tail positions move by one
+  #     beyond the `.at(-1)` supervise assertion the row names:
+  #     `PROMPT_REQUIRED_COMMANDS.at(-2)` is `"metrics"` today and becomes
+  #     `at(-3)` (`install` takes `at(-1)`, `supervise` takes `at(-2)`), and the
+  #     same file's last-family-line assertions (`families.at(-1)` naming
+  #     `supervise`) follow the same appended-tail move.
+  #   tests/structure/error-table.test.ts, THE LEFTOVER SCAN — `APPENDIX_D_FILES`
+  #     gains doc/spec/features/feature-metrics.md and feature-supervise.md beside
+  #     the already-listed feature-ceremony-runner.md, and the legacy token set
+  #     gains this change's outgoing whole forms (`toHaveLength(149)`,
+  #     `149 identities`, `149 machine identities`, `149 entries`,
+  #     `allowlist of 65` / `65 declared identities`, `BASELINE_ROWS.length + 115`).
+  #     The forms are matched WHOLE so the declared delta shapes `149 -> 160` and
+  #     `65 -> 66` do not trip the scan; this is what turns the count-bearing-page
+  #     class into a gate rather than a review habit (spec v1.3 §16, and the
+  #     mechanical-expression sentence that closes its class paragraph).
+  #   TWO TEST TITLES still name 149 (one in each mirror). A title is ALLOWED to
+  #     keep a historical number, but the total it narrates moved, so each title is
+  #     either moved or left — the grep rule below makes the coder choose
+  #     deliberately rather than miss it.
+  # THE GREP RULE INSIDE EACH DECLARED FILE — applies to all NINE count/membership
+  #   suites, the three count-bearing pages below and the two result-contract prose
+  #   moves: search every declared file for EACH outgoing token — `149`, `148`,
+  #   `65`, `+ 115`, the family count `25` where it means the mounted family count,
+  #   and the `at(-2)` metrics tail — and ACCOUNT FOR EVERY HIT in exactly one of
+  #   two ways: it MOVES to the new value (160 / 159 / 66 / + 126 / 26 / the
+  #   appended tail position), or it is a TITLE, a docblock, or a literal naming
+  #   something else and stays with a one-line reason. A hit that is neither is the
+  #   half-move this phase's gate is designed to catch. No file is satisfied by
+  #   moving only the first assertion the gate reports, and no hit is left unread.
   # THE PAGE PHRASE AND THE MIRROR SUITES MOVE AS ONE EDIT-SET with
   # doc/spec/features/feature-result-contract.md, because `pnpm check` runs
   # tests/checks/error-table-sync.test.ts over the live tree (source vs documented vs
@@ -1067,6 +1194,40 @@ phases:
   # enumeration, the exact-code classification chain, the `149 machine identities`
   # total (-> 160), and the allowlist `65 -> 66` sentence.
   #
+  # THREE DELIVERED SPECIFICATION PAGES STATE THOSE SAME NUMBERS, SO THEY MOVE IN
+  # THIS COMMIT TOO (spec v1.3 §16's count-bearing-page class and AC-F16-1's page
+  # set; DoR iteration 3 finding 1). Each states the table total, the delivered-row
+  # count, the allowlist size, the `BASELINE_ROWS` arithmetic or the mounted family
+  # count in the PRESENT TENSE, and no delivered gate reads any of them (the
+  # error-table leftover scan looks only for the LEGACY tokens; doc-conformance's
+  # page sets exclude all three), so leaving them is exactly the silent-drift class
+  # this plan refuses:
+  #   doc/spec/features/feature-ceremony-runner.md — "two-way sync at 149 identities
+  #     and a 65-entry reserved two-segment allowlist", "Delivered at 149 identities
+  #     and a 65-entry allowlist", and "Two-way error sync, 149 identities,
+  #     65-entry allowlist" become 160 identities and a 66-entry allowlist.
+  #   doc/spec/features/feature-metrics.md — "the table holds 149 entries, 148
+  #     delivered rows, and 65 allowlisted two-segment codes, with the sync-suite
+  #     arithmetic at `BASELINE_ROWS.length + 115`", the "149 entries / 148
+  #     delivered / 65 allowlist / +115" row, and "The error-table counts (149 /
+  #     148 / 65 / +115) and the mounted family count (25) are pinned …" become
+  #     160 entries / 159 delivered / 66 allowlist / + 126, and 26. The last of the
+  #     three is the page that INSTRUCTS that a future identity or family addition
+  #     moves these counts; this change is that addition, so the instruction is
+  #     followed here rather than quoted.
+  #   doc/spec/features/feature-supervise.md — "exact two error rows and the
+  #     65-member allowlist" and "presence of the 25th family and every
+  #     family-count pin" become the 66-member allowlist and the 26th family; the
+  #     link row's "the 65-member two-segment allowlist" follows.
+  # WHY THIS PHASE AND NOT PHASE 6: these three pages become false the instant the
+  # eleven rows and the twenty-sixth family land, so declaring them HERE means NO
+  # FALSEHOOD WINDOW EXISTS for them at any commit boundary of this change —
+  # including this phase's own. The branding-seam page is the one documentation
+  # obligation that cannot be treated this way (its correction carries a pinned
+  # phrase of its own), so it is the one that declares a window (coupling 3a). Moving
+  # these three later would create exactly the window this ordering removes, and no
+  # gate would notice in between.
+  #
   # Decision to close in this phase: the exact wording of the alias restriction in
   # the family help entry, and the exact rendering of the refusal's three facts
   # (invoked identity, owning role, documented remedy) — a single line, no owner
@@ -1075,7 +1236,7 @@ phases:
   # second line, an owner-name derivation, or a hard-coded owning-name literal
   # fails TC-INST-004 or TC-INST-107's literal inventory.
   #
-  # Acceptance (spec v1.2 wording): AC-F4-1 (TC-INST-001, 002, 003), AC-F4-2
+  # Acceptance (spec v1.3 wording): AC-F4-1 (TC-INST-001, 002, 003), AC-F4-2
   # (TC-INST-004: one line naming the INVOKED IDENTITY, stating that INSTALLATION
   # IS OWNED BY THE PRIMARY IDENTITY, and giving the DOCUMENTED REMEDY, under both
   # the plain and the working-name-override arm, with no owner-name derivation and
@@ -1105,6 +1266,22 @@ phases:
   #   covers six (the five structure-tier members of the seven plus the structure
   #   mirror), and the two check-tier members and the behaviour member are named on
   #   their own lines.
+  #   NOTE — the THREE COUNT-BEARING specification pages get their MECHANICAL
+  #   expression in this same commit, because no PRE-EXISTING gate reads them
+  #   (spec v1.3 §16's class rule). The delivered error-table leftover scan in
+  #   tests/structure/error-table.test.ts gains the class: `APPENDIX_D_FILES` gains
+  #   feature-metrics.md and feature-supervise.md beside the already-listed
+  #   feature-ceremony-runner.md, and the legacy token set gains THIS change's
+  #   outgoing whole FORMS (`toHaveLength(149)`, `149 identities`, `149 machine
+  #   identities`, `149 entries`, `allowlist of 65` / `65 declared identities`,
+  #   `BASELINE_ROWS.length + 115`) — matched as whole forms, so the declared delta
+  #   shapes `149 -> 160` and `65 -> 66` do not trip the scan. A page or suite left
+  #   at the outgoing form therefore FAILS BY NAME at this boundary, and the class
+  #   is caught by a gate the next time a domain lands rather than by a reviewer
+  #   remembering three file names. The accounted-for grep below remains the
+  #   coder's working method; the scan is the evidence. Phase 6's page-claim table
+  #   (TC-INST-112) then pins the resulting phrases per page, over content that is
+  #   already true — which is why the window is zero rather than merely short.
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/install-conformance.test.ts tests/structure/install-composition-absence.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/install-family-surface.test.ts tests/behaviour/install-admission.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/install-conformance-mutants.test.ts tests/checks/install-error-domain.test.ts tests/checks/help-guide-coverage-mutants.test.ts tests/checks/reference-page-parity.test.ts tests/checks/error-table-sync.test.ts tests/checks/supervision-error-socialization.test.ts
@@ -1161,6 +1338,18 @@ phases:
         # page must exist for check:help.
         - doc/spec/features/feature-result-contract.md
         - doc/planning/oss-tooling/milestones/m4/commands/install.md
+        # THE THREE COUNT-BEARING PAGES (spec v1.3 §16's class rule, AC-F16-1's
+        # page set, DoR iteration 3 finding 1). Each states the outgoing numbers in
+        # the present tense — the ceremony page the 149/65 pair, the metrics page
+        # the 149/148/65/`+ 115` tuple and the `25` family count, the supervise page
+        # the 65-member allowlist and the `25th` family — and their numbers move in
+        # THIS commit. Declaring them here is what removes the falsehood window
+        # entirely: no commit of this change is truthful only if one of these pages
+        # is still stale. No delivered gate reads them, so the phase comment above
+        # names each move and the grep rule the coder applies inside each file.
+        - doc/spec/features/feature-ceremony-runner.md
+        - doc/spec/features/feature-metrics.md
+        - doc/spec/features/feature-supervise.md
         - tests/structure/install-conformance.test.ts
         - tests/structure/install-composition-absence.test.ts
         - tests/behaviour/install-family-surface.test.ts
@@ -1282,36 +1471,68 @@ phases:
   # Only the step 5->6 window has no destination, and in it the slot holds a
   # runnable artifact. The replace also carries the one-slot rule that admits only
   # a compiled artifact carrying an injected identity (a launcher is discarded with
-  # a report naming its recorded target and is never promoted). Upgrade is
+  # a report naming its recorded target and is never promoted). THAT ONE-SLOT RULE
+  # IS TDR-0040 §2 STEP 5 AS QUALIFIED AT DoR ITERATION 3, and it now MIRRORS
+  # TDR-0038 §5 and spec Appendix B/C.2 sentence for sentence — only a DIFFERING
+  # REGULAR COMPILED ARTIFACT is promoted into the slot; a delivered launcher is
+  # DISCARDED with a report and the EXISTING SLOT IS LEFT UNCHANGED; a SYMLINK is
+  # REPLACED (never written through) and is NOT PROMOTED, so the slot is unchanged
+  # and the link's recorded target is untouched; and step 5 is skipped when the
+  # destination is absent. The record's step-5 sentence, §2.1's disposition row and
+  # this phase's contract therefore agree; a coder reading the record is not being
+  # pointed at a different slot fate than the spec's, and the phase must not
+  # re-derive a slot rule of its own. Upgrade is
   # installing a different compiled artifact and reports BOTH identities, and a
   # rebuild of the same commit is a different artifact (different build instant),
   # so it is an upgrade and not a no-op. Rollback swaps slot and destination with
   # two renames in reverse order and is INVOLUTIVE. ROLLBACK'S REFUSALS ARE ONE
-  # ORDERED SET, evaluated before any write, each with the zero-write claim
-  # (destination bytes and `mtimeNs`, the slot's content digest, the record's bytes,
-  # the record path's
+  # ORDERED SET, in THIS order — slot absent, then slot invalid, then the record
+  # precondition — and the whole set is evaluated BEFORE ANY WRITE AND BEFORE THE
+  # DAEMON STOP (spec v1.3 F-8/F-9/§8.1 and TDR-0040 §4; DoR iteration 3 findings 3
+  # and 7). Because the record precondition is decided ahead of the stop, a REFUSED
+  # ROLLBACK PERFORMS NO DAEMON ACTION EVEN WITH `--stop-daemon`: a `--stop-daemon`
+  # run that refuses leaves the daemon RUNNING and the ordered daemon log EMPTY, not
+  # "stopped and then refused". Each arm carries the zero-write claim (destination
+  # bytes and
+  # `mtimeNs`, the slot's content digest, the record's bytes, the record path's
   # absence, the profile line count and the staged-file count all unchanged, no
   # rename, no daemon action):
   #   1. `install.slot.absent` — rollback found no slot (TC-INST-026);
   #   2. `install.slot.invalid` — the slot is not a compiled artifact carrying an
   #      injected identity, or its bytes are unreadable (TC-INST-026);
-  #   3. `install.record.unreadable` — the record cannot name the artifact the swap
-  #      would install. This is ONE identity with FOUR causes (F-8, DEC-13,
-  #      Appendix E and AC-F8-2 as amended at DoR iteration 2): the record is
-  #      ABSENT, UNREADABLE, `record-stale`, or readable and `current` while naming
-  #      no `previous`. The reason is structural, not stylistic: the record a
-  #      rollback writes carries the slot's occupant in `current`, the one identity
-  #      field with no unknown allowance, no process can read an injected identity
-  #      out of a file (TDR-0037 §2), and a proceeding rollback would therefore
-  #      have to write an unrepresentable record or copy forward a guessed name that
-  #      the next install would inherit. Refusal is the only conformant answer; it
-  #      adds NO twelfth row, moves no allowlist and no total, and the paved remedy
-  #      is installing the slot artifact. TC-INST-042 arms (d) and (e) carry the two
-  #      new causes; TC-INST-026 owns the two slot arms and never reaches this gate,
-  #      so the two cases partition the set.
+  #   3. `install.record.unreadable` — the record does not name, IN `previous`, the
+  #      artifact the swap would install (the trigger wording is v1.3's: "cannot
+  #      name" is false for the `record-stale` cause, where `current` does name the
+  #      slot's occupant but `previous` does not). This is ONE identity with FOUR
+  #      causes (F-8, DEC-13, Appendix E and AC-F8-2 as amended at DoR iterations 2
+  #      and 3): the record is ABSENT, UNREADABLE, `record-stale`, or readable and
+  #      `current` while naming no `previous`. The reason is structural, not
+  #      stylistic: the record a rollback writes carries the slot's occupant in
+  #      `current`, the one identity field with no unknown allowance, no process can
+  #      read an injected identity out of a file (TDR-0037 §2), and a proceeding
+  #      rollback would therefore have to write an unrepresentable record or copy
+  #      forward a guessed name that the next install would inherit. Refusal is the
+  #      only conformant answer; it adds NO twelfth row, moves no allowlist and no
+  #      total, and the paved remedy is installing the slot artifact.
+  #      THE FOUR CAUSES ARE CARRIED BY TC-INST-042 STEPS 3, (d), (e) AND (f), one
+  #      step per cause and none shared: step 3 = the present-but-UNREADABLE record;
+  #      step 4/arm (d) = the ABSENT record with a valid slot present;
+  #      step 5/arm (e) = a readable `current` record naming no `previous`;
+  #      step 6/arm (f) = a readable `record-stale` record whose `current` names
+  #      predecessor P while the slot holds P (the post-crash shape). Arm (f) also
+  #      carries the daemon-log assertion: the same refused run is repeated WITH
+  #      `--stop-daemon` over the ORDERED DAEMON SEAM carried by
+  #      tests/fixtures/install/daemon.ts (declared by phase 2 and EXTENDED IN THIS
+  #      PHASE, which is what lets the arm run here; TC-INST-081 — phase 4 — asserts
+  #      the four-arm stop-before-swap log over the same fixture), and the log is
+  #      EMPTY — which is what makes the "no daemon action" clause of every arm
+  #      testable rather than asserted in prose. TC-INST-026 owns the two slot
+  #      arms and never reaches this gate, so
+  #      the two cases partition the ordered set rather than overlapping it.
   # `install rollback --dry-run` prints the refusal identity, its cause and the
   # remedy IN PLACE OF A PLAN when the precondition is unmet, and writes nothing
-  # (Appendix C.4 as amended).
+  # (Appendix C.4 as amended; TC-INST-061's unmet-precondition step — exit 0, the
+  # three facts printed, the snapshot unchanged, no daemon action).
   # The compatibility check compares the artifact's accepted store-format identifier
   # with each enumerated root's header
   # identifier only — header files only, one project level, capped at the declared
@@ -1326,7 +1547,8 @@ phases:
   # (`present`/`absent`/`invalid`), target stability as DATA, and the state-format
   # group — deterministic field and line order for a given machine state, and a
   # crash between the renames and the record write is visible as `record-stale`
-  # rather than an exception. The `recordState` PREDICATE is spec v1.2's: `current`
+  # rather than an exception. The `recordState` PREDICATE is spec v1.3's (unchanged
+  # from v1.2): `current`
   # and `record-stale` are decided by comparing the record's identity with the
   # RUNNING identity — a comparison of two records, never a content read of the
   # destination — so a status invoked through a CANDIDATE artifact before
@@ -1358,17 +1580,21 @@ phases:
   # not a pass, and an agreement arm that asserts the record without the slot
   # digest is not a pass (test plan §4.3, §4.4).
   #
-  # Acceptance (spec v1.2 wording): AC-F5-2 (TC-INST-011, 012), AC-F5-3
+  # Acceptance (spec v1.3 wording): AC-F5-2 (TC-INST-011, 012), AC-F5-3
   # (TC-INST-020, 021), AC-F7-1 (TC-INST-043), AC-F7-2 (TC-INST-044, 046), AC-F7-3
   # (TC-INST-045), AC-F8-1 (TC-INST-040), AC-F8-2 (TC-INST-041, 042, 036, 037:
   # `install status` reports `absent`/`unreadable`/`record-stale` as data at exit
   # 0; `install` restores `current` after a successful replace and by in-place
   # reconciliation on an agreement run; `install uninstall` removes what it can and
   # reports the block unknown; and `install rollback`, WITH A SLOT PRESENT, refuses
-  # `install.record.unreadable` at exit 1 and writes NOTHING in all four arms — the
-  # absent record (TC-INST-042 arm (d), no record created), the damaged record,
-  # the `record-stale` record, and a readable `current` record naming no
-  # `previous` (TC-INST-042 arm (e), record byte-unchanged)),
+  # `install.record.unreadable` at exit 1 and writes NOTHING in all four arms, one
+  # TC-INST-042 step per cause — the damaged/unreadable record (step 3), the absent
+  # record (arm (d), NO record created), a readable `current` record naming no
+  # `previous` (arm (e), record byte-unchanged), and the `record-stale` record
+  # (arm (f), the post-crash shape: `current` names predecessor P, the slot holds P,
+  # destination and slot digests and `mtimeNs` unchanged, no record write, no
+  # rename) — and the `--stop-daemon` arm of that same case asserts the ordered
+  # daemon log is EMPTY, so "no daemon action" is a comparison, not a claim),
   # AC-F9-1 (TC-INST-030..037: 7/7 injected steps leave a runnable artifact at a
   # known path, no truncated destination and no staged file, and the recovery
   # re-run restores a complete install; on the step-7 record-write failure the
@@ -1551,7 +1777,7 @@ phases:
   # uninstaller reports a managed install instead of touching it.
   #
   # Contract: ONE predicate governs the launcher step's guard (TDR-0036 §4,
-  # spec v1.2 F-14/AC-F14-1): ANYTHING present at the brand install path that is
+  # spec v1.3 F-14/AC-F14-1): ANYTHING present at the brand install path that is
   # not the delivered launcher — the installed artifact, the slot, or any other
   # content — is a managed or foreign artifact. Detection is by WHAT IS AT THE
   # PATH, never by the install record: the record-free state is legitimate and
@@ -1571,7 +1797,7 @@ phases:
   # own 0/2/3/4/5 taxonomy, its two modes and its dry-run; it removes no binary,
   # slot, record or Jaiship root, reports the managed install and names the owning
   # removal command (AC-F14-2). Its DETECTION SOURCE is DECIDED, not deferred
-  # (spec v1.2 F-14, TC-INST-092): scripts/uninstall.sh resolves BOTH the declared
+  # (spec v1.3 F-14, TC-INST-092): scripts/uninstall.sh resolves BOTH the declared
   # brand install path and the record path by asking a REACHABLE primary-identity
   # binary for its read-free `--print-install-path`, invoked with the working-name
   # override SCRUBBED from the child environment — the delivered scripts/install.sh
@@ -1607,7 +1833,7 @@ phases:
   # by name, an error exit on the no-binary arm fails TC-INST-092 arm (b) by name,
   # and the structural scanner must name a missing arm rather than pass.
   #
-  # Acceptance (spec v1.2 wording): AC-F14-1 (TC-INST-090, 091, 093, and the bash
+  # Acceptance (spec v1.3 wording): AC-F14-1 (TC-INST-090, 091, 093, and the bash
   # evidence TC-INST-121), AC-F14-2 (TC-INST-092 — both detection arms — 093, and
   # the bash evidence TC-INST-121).
   #
@@ -1645,9 +1871,13 @@ phases:
   # Phase 6 — Documentation truth and the release evidence (F-16; AC-F16-1;
   # DEC-8; RSK-12, RSK-16; NFR-15, NFR-17).
   #
-  # Goal: the operator cadence is documented, the three delivered statements this
-  # change falsifies are gone, the install model keeps its mechanics and loses its
+  # Goal: the operator cadence is documented, the delivered statements this change
+  # falsifies are gone — the three pages THIS phase owns plus the branding page's
+  # full sentence set — the install model keeps its mechanics and loses its
   # superseded surface, and the change closes with the full battery recorded.
+  # (The three COUNT-BEARING pages are the other half of the falsified set and are
+  # phase 2's, declared there with the numbers they move; this plan's §16 map
+  # states the split, and neither phase depends on the other's edit.)
   #
   # Contract: doc/guides/local-install.md states the cadence (install a release ->
   # deliver iterations -> decide -> re-install), the admissible origins and the
@@ -1677,32 +1907,60 @@ phases:
   # artifact facts (size, host-only target, non-reproducibility) are stated as
   # measured, never as a reproducibility claim (NFR-15, RSK-12).
   #
-  # THE BRANDING-SEAM PAGE IS RESTATED HERE, AND ITS PHRASE MOVES WITH IT (spec
-  # §16's page obligation, AC-F16-1's page set, DoR iteration 2 finding 2). The
-  # build-side identity literal that phase 1 declared falsifies the page's absolute
-  # claim, so feature-branding-seam.md is restated in THIS commit to: exactly five
-  # sites IN THE PRODUCT-SURFACE INVENTORY, plus ONE declared build-side site under
+  # THE BRANDING-SEAM PAGE IS RESTATED HERE, AND ITS PHRASES MOVE WITH IT (spec
+  # §16's page obligation, AC-F16-1's page set, DoR iteration 2 finding 2 and
+  # iteration 3 finding 8). The build-side identity literal that phase 1 declared
+  # falsifies the page's absolute claim — at FIVE sentences, not one — so
+  # feature-branding-seam.md is restated in THIS commit to: exactly five sites IN
+  # THE PRODUCT-SURFACE INVENTORY, plus ONE declared build-side site under
   # `scripts/` REGISTERED WITH ITS OWN SCAN ROOT; the guard's TWO scan scopes are
   # stated together (the product-surface source-node scan of `packages/**` and the
   # build-side site's own root); and the page's unconditional "no identity literal
   # lives anywhere else" claim is SCOPED to the product surface instead of left
-  # unqualified. tests/checks/doc-conformance.test.ts OWNS the scoped phrase in the
-  # SAME commit: the pinned phrase moves off "exactly five sites" onto the scoped
-  # sentence, the unqualified sentence becomes a STALE phrase, the two-scan-scope
-  # fact becomes a REQUIRED phrase, and the pair keeps two non-vacuous arms — an
-  # injected sixth product-surface site fails, and an undeclared or dropped
-  # build-side site fails (TC-INST-111 step 5, TC-INST-112 steps 2-4, DOC-TP-1).
-  # Page and phrase are ONE edit-set: the page without the table, or the table
-  # without the page, fails the doc gate at this boundary.
+  # unqualified. THE SENTENCE SET IS THE OBLIGATION, NOT THE FILE: the overview's
+  # "bounded and declared five-site identity-literal inventory" (the summary
+  # claim), the KPI "0 committed working-name literals outside the declared
+  # five-site inventory, and 0 seed literals outside the DEC-8 allowlist", and
+  # NFR-9's identical "0 committed working-name literals outside the declared
+  # five-site inventory" are false the moment one committed literal sits under
+  # `scripts/`, and each is restated. THE REQUIRED WORDING is: "zero committed
+  # working-name literals outside the PRODUCT-SURFACE INVENTORY, plus the one
+  # declared build-side site under `scripts/`"; the summary line becomes
+  # "product-surface inventory plus one declared build-side site"; and the
+  # UNQUALIFIED phrase "outside the declared five-site inventory" is RETIRED
+  # (it is the shape that made the three sentences false). A page edited to the
+  # scoped sentence while leaving those three claims intact is the failure this
+  # paragraph exists to prevent.
+  # tests/checks/doc-conformance.test.ts OWNS THE PHRASES in the SAME commit: the
+  # pinned phrase moves off "exactly five sites" onto the scoped sentence, the
+  # unqualified sentence becomes a STALE phrase, the two-scan-scope fact becomes a
+  # REQUIRED phrase, the KPI/NFR wording becomes a REQUIRED phrase and the retired
+  # "outside the declared five-site inventory" wording a STALE one, and the pair
+  # keeps two non-vacuous arms — an injected sixth product-surface site fails, and
+  # an undeclared or dropped build-side site fails (TC-INST-111 step 5,
+  # TC-INST-112 steps 2-4, DOC-TP-1). Page and phrases are ONE edit-set: the page
+  # without the table, or the table without the page, fails the doc gate at this
+  # boundary.
   # D6 does not forbid this edit: D6 forbids the OWNER-NAME route only (D6's
   # TRIPWIRE). D1 owns the build-side literal this page now has to describe; §16 and
   # AC-F16-1 own the page; this phase delivers it.
   #
   # Decision to close in this phase: the page-claim requirement table itself — the
-  # exact required and stale phrases per page over an EXACT page set (OQ-TP-4),
-  # INCLUDING the branding-seam page's scoped required phrase and its two stale
-  # phrases. Failure mode: a page outside the declared set, or a missing required
-  # phrase, fails by name (TC-INST-112); the table must not become a rubber stamp,
+  # exact required and stale phrases per page over an EXACT EIGHT-PAGE set (OQ-TP-4):
+  # the five current-truth pages this phase edits, plus THE THREE COUNT-BEARING
+  # PAGES PHASE 2 EDITED, each in its OWN row with AT LEAST ONE required and ONE
+  # stale phrase (160 identities / 66-entry allowlist; 160 entries / 159 delivered /
+  # 66 allowlist / `BASELINE_ROWS.length + 126`; the 66-member allowlist — against
+  # the outgoing `149`/`65`/`+ 115` forms), so no row can pass with an empty list
+  # (TC-INST-112 step 5). The branding-seam row carries its scoped required phrases
+  # (the scoped five-site claim, the two scan scopes, and the KPI/NFR
+  # "product-surface inventory plus one declared build-side site" wording) and its
+  # stale phrases (the unqualified "no identity literal lives anywhere else" and
+  # "outside the declared five-site inventory"). Failure mode: a page outside the
+  # declared set, or a missing required phrase, fails by name (TC-INST-112); a page
+  # whose KPI, NFR-9 or summary sentence still reads "outside the declared
+  # five-site inventory" fails the stale-phrase direction by name; a count-bearing
+  # row with an empty list fails by name; the table must not become a rubber stamp,
   # so both directions ship with a mutant.
   #
   # Release obligations (declared here, not as prose): this phase runs the whole
@@ -1717,10 +1975,15 @@ phases:
   # on this content; the pull request targets `main-tools` and STOPS OPEN (merge
   # authority is the owner's).
   #
-  # Acceptance (spec v1.2 wording): AC-F16-1 (TC-INST-110, 111, 112 — the page set
+  # Acceptance (spec v1.3 wording): AC-F16-1 (TC-INST-110, 111, 112 — the page set
   # now INCLUDES feature-branding-seam.md with its scoped five-site wording, its
-  # declared build-side site and its two scan scopes — and the gate evidence
-  # TC-INST-120, 121, 122, 123).
+  # declared build-side site, its two scan scopes AND its restated KPI, NFR-9 and
+  # summary identity-literal sentences, whose "outside the declared five-site
+  # inventory" wording is retired; the page set's three COUNT-BEARING pages are
+  # asserted by the same table but DELIVERED in phase 2, where their numbers move,
+  # so this phase's assertion over them is an evidence check on content phase 2
+  # produced rather than a second edit — and the gate evidence TC-INST-120, 121,
+  # 122, 123).
   #
   # Gate (the full battery; expected signal: exit 0 at every line, verdicts
   # recorded verbatim):
@@ -1750,9 +2013,14 @@ phases:
         # §16's page obligation, AC-F16-1, D1's declared site): restated to the
         # scoped five-site claim plus the one declared build-side site under
         # `scripts/` with its own scan root, the two scan scopes stated together,
-        # and the unqualified "no identity literal lives anywhere else" claim
-        # scoped to the product surface. Its scoped phrase moves in
-        # tests/checks/doc-conformance.test.ts in THIS commit — one edit-set.
+        # the unqualified "no identity literal lives anywhere else" claim scoped to
+        # the product surface, AND the three identity-literal sentences beyond the
+        # five-site claim — the overview's summary claim, the KPI bullet and NFR-9 —
+        # restated to "zero committed working-name literals outside the
+        # product-surface inventory, plus the one declared build-side site under
+        # `scripts/`", with "outside the declared five-site inventory" retired. Its
+        # scoped phrases move in tests/checks/doc-conformance.test.ts in THIS
+        # commit — one edit-set.
         - doc/spec/features/feature-branding-seam.md
         - doc/planning/oss-tooling/milestones/m4/install-model.md
         - doc/planning/oss-tooling/milestones/m4/backlog.md
