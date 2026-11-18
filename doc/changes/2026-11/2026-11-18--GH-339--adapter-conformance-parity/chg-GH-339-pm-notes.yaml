@@ -8,7 +8,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-18T12:38:49.738Z }
   delivery_planning: { started: null, completed: 2026-11-18T12:38:56.574Z }
   dor_check: { started: null, completed: 2026-11-18T12:41:10.844Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-18T15:10:39.032Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -322,5 +322,84 @@ notes:
       comment-only diff rides phase 6's change-folder scope so the branch
       carries the plan the gate certified; (5) the test plan may gain a 1.5
       revision row."
+    type: info
+    date: "2026-11-18"
+  - text: "Plan phase 1 complete — tracker error taxonomy and the six-family
+      vocabulary. Commit 00bdf3f0. Delivered: tracker-error-taxonomy.ts (four
+      class ids, structured-only projection, six families), the root export, the
+      exact two-tree tracker-literal scan, sixteen family stimuli, the three
+      flattened four-field catalogs with append-only trap-suite assertions, the
+      frozen pin pair tests/fixtures/pins/trap-names.json + .sha256 authored
+      BEFORE any append, the four TDRs and the 00-index row landed on the
+      branch, and the conformance-coverage pin extension. Gate: tracker-taxonomy
+      and tracker-literal-scan suites, tests/structure 1636 pass,
+      tests/behaviour/providers 286 pass, fixture sanitization/privacy,
+      typecheck, git diff --check."
+    type: info
+    date: "2026-11-18"
+  - text: "Plan phase 2 complete — parity matrix, class-set register, record gate.
+      Commit b5a91e0d. Delivered: parity.ts with derived columns (no authored
+      provider key), the cell vocabulary carrying registerId only, the entry
+      class-set shape with per-class evidence, the pure gate with the nine
+      clause ids and structured violation records, the observation-record
+      fixture, nine evidence fixtures, the five adjudications recorded honestly
+      (the two Jira write cells as same-as-reference by not-observable
+      agreement, and 'unobservable on the reference' rationales where no
+      reference family exists), and the thirteen structural plus nine
+      dimension/record mutations. Gate: parity/PMUT/GATE-003/004 and artifact
+      suites 49 pass, structure 1637 pass, typecheck, git diff --check."
+    type: info
+    date: "2026-11-18"
+  - text: "Plan phase 3 complete — per-adapter family accounting and offline replay.
+      Commit 32fc13a9. Delivered: accounting.json asserting the 18-cell square
+      as expected data (9 covered / 7 recorded-difference / 2 gap-backed), the
+      vacuous-covered refusal, both posture arms exercised every run, the
+      frozen-pin prefix and digest assertions, and the TAX-003..008 family
+      classification cases. Gate: accounting 18 pass, family classification 20
+      pass, taxonomy 61 pass, structure/conformance/providers green."
+    type: info
+    date: "2026-11-18"
+  - text: "Plan phase 4 complete — simulated stateful tracker double. Commit
+      b515d200. Delivered: stateful-double.ts with five declared effects on the
+      existing transport seam, additive tenant state in types.ts and
+      mock-tenant.ts, the state goldens, the fail-closed refusals, the census
+      extension naming the double module, and the live-tier inclusion assertion.
+      Gate: stateful suite 17 pass, census suite, boundaries 152 pass,
+      typecheck."
+    type: info
+    date: "2026-11-18"
+  - text: "Plan phase 5 complete — registration-only participation proof and the
+      workflow topology pin. Commit c04ff9d2. Delivered: participation.ts (five
+      supplied items), the composition-injected control registration with a full
+      matrix column and family accounting, the identity-construct scan against
+      the exact allowlist with the derived-column rule, the base-free
+      workflow-topology exact-set pin plus the base-dependent half in the
+      delivered checks suite, and the REG-001..006 cases. Gate:
+      registration/control/topology/wiring suites 66 pass, structure 1660 pass,
+      G7 ci-topology ok (7 bash jobs, 16 TS jobs), typecheck."
+    type: info
+    date: "2026-11-18"
+  - text: "Plan phase 6 complete — release floor and pinned hygiene. Commit
+      54b80eab. Delivered: the testkit-only privacy-release exemption preserving
+      version_impact none, the taxonomy class-id constants with the production
+      literal removal, plan discovery comments (k) and (l), and the plan's
+      residual comment diff. Gate: G1-G5 green, G7 ok, G8 doc-distribution no
+      drift (96 in-scope docs), G9 clean, plan validate valid/full/
+      readyForDevelopment, and the aggregate TMPDIR=$PWD/tmp/tmpdir pnpm check
+      exit 0 across lint, format, typecheck, test, boundaries, memory,
+      prompt/help/exports parity."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery summary for DoD: six plan phases, six commits (00bdf3f0,
+      b5a91e0d, 32fc13a9, b515d200, c04ff9d2, 54b80eab), aggregate gate green,
+      working tree clean. No adapter behaviour change, no new closed operation,
+      error-table row, domain kind, artifact field, workflow job, subpath or
+      dependency. Discovered pins moved minimally and recorded in the plan: the
+      GitHub exact trap-name array and its deletion mutation
+      (tests/structure/trap-catalog.test.ts, plan comment (k)) and the
+      publishable-path probe (tests/checks/privacy-release.test.ts, plan comment
+      (l)). Deviation: commit subjects are the primitive's template fallback
+      rather than the plan's declared feat(...) summaries, because the lifecycle
+      phase is dor_check at commit time; no message was hand-composed."
     type: info
     date: "2026-11-18"
