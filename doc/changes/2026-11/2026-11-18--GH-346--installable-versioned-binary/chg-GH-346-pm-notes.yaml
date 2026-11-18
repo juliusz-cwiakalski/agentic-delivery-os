@@ -9,7 +9,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-18T18:42:08.248Z }
   delivery_planning: { started: null, completed: 2026-11-18T23:51:33.056Z }
   dor_check: { started: null, completed: 2026-11-18T18:48:25.093Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-18T23:52:31.017Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -279,3 +279,69 @@ notes:
       history is iterations 1-6."
     type: resolved
     date: "2026-11-18"
+  - text: "delivery — plan phase 1 complete: commit 4e6d16c4. G0 build:binary
+      produced dist/jaiship (112,167,088 bytes, linux-x64);
+      artifact/structure/behaviour suites green; G1 pnpm check 10,612 pass / 4
+      skip / 0 fail. The five TDRs are tracked; identity-literal inventory is
+      five product-surface sites plus the one declared build-side site under
+      scripts/."
+    type: info
+    date: "2026-11-19"
+  - text: "delivery — plan phase 2 complete: commit 657c48a3.
+      PROMPT_REQUIRED_COMMANDS is 26 (install last, supervise 25th); every
+      pinned count/tail moved in one edit-set; the install error domain has 11
+      rows, table total 160, allowlist 66, corpora 81; M4 reference page,
+      page-root branch and coverage inventory green; the three count-bearing
+      pages moved with the register. G1 10,653 pass / 4 skip / 0 fail; G6
+      green."
+    type: info
+    date: "2026-11-19"
+  - text: "delivery — plan phase 3 complete: commit bb4c04cd. 7/7 replace steps
+      recover; agreement runs create no staging file; reconciliation is in place
+      for current/stale/unreadable/absent; rollback refuses the four
+      missing-name causes and proceeds on the wrong-name cell by declared limit;
+      status is deterministic with the full DM-4 payload. G1 10,686 pass / 4
+      skip / 0 fail."
+    type: info
+    date: "2026-11-19"
+  - text: "delivery — plan phase 4 complete: commit 5777029e. Residual and purge
+      sets agree, four dry-runs leave full snapshots unchanged with zero daemon
+      actions, one PATH block is appended once/recorded/replaced/removed,
+      migration detects and refuses without moving anything, daemon guard on all
+      four paths with the stop before any write. G1 10,708 pass / 4 skip / 0
+      fail."
+    type: info
+    date: "2026-11-19"
+  - text: "delivery — plan phase 5 complete: commit d6c7a6b5. The installer refuses
+      any non-launcher content at the brand path under
+      current/stale/absent/damaged records (keyed on content, never the record)
+      and leaves it byte-untouched; the uninstaller reports a managed install,
+      names install uninstall, removes no lifecycle member, and reports no
+      managed install without an error when no binary is reachable. G3 60/60, G4
+      34/34, G5 green, G1 10,720 pass / 4 skip / 0 fail."
+    type: info
+    date: "2026-11-19"
+  - text: "delivery — plan phase 6 complete: commit 0968c204. The guide and the
+      current- truth pages state the delivered truth, the branding-seam and
+      entrypoint identity- literal claims are scoped, the install model keeps
+      its mechanics and loses its superseded surface. Full battery G0..G7 green;
+      G1 10,731 pass / 4 skip / 0 fail; G7 lint-commit-range PASS (26 commits, 0
+      offending)."
+    type: info
+    date: "2026-11-19"
+  - text: "Delivery gap closed: the release changeset required by
+      tests/checks/privacy-release.test.ts (TC-RELEASE-001) was authored during
+      delivery but no plan phase declared .changeset/, so the commit primitive
+      left it untracked and CI would have failed. Added
+      .changeset/install-lifecycle-minor.md to plan phase 6 scope (commit
+      382696c2), then landed the file with the commit primitive (b51fa605).
+      Working tree clean."
+    type: resolved
+    date: "2026-11-19"
+  - text: "Tool-gap note: the commit primitive's template subject is 'chore(GH-346):
+      update <first staged path>'; the plan's per-phase feat(...) subjects are
+      not producible because no model transport is configured. Six delivery
+      commits therefore carry path-derived subjects. Recorded rather than worked
+      around; the branch-range gate still passes."
+    type: info
+    date: "2026-11-19"
