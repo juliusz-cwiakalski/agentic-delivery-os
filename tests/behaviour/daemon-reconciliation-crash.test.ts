@@ -2,11 +2,11 @@
  * TC-RECON-007/008 (classification half) — kill-and-restart decision points.
  */
 import { describe, expect, test } from "bun:test";
+import { decideDaemonLane } from "../../packages/core/src/domain/daemon-reconcile";
 import {
   DAEMON_LANE_PAYLOAD_SCHEMA,
   type DaemonLaneRecord,
 } from "../../packages/core/src/contracts/index";
-import { decideDaemonLane } from "../../packages/core/src/domain/daemon-reconcile";
 
 const lane: DaemonLaneRecord = {
   schema: DAEMON_LANE_PAYLOAD_SCHEMA,

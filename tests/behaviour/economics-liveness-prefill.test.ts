@@ -8,7 +8,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import type { HarnessLivenessFacts } from "../../packages/core/src/contracts/index";
 import { createSourcedWatchdogSignalSource } from "../../packages/core/src/domain/index";
 import { PREFILL_CASES } from "../fixtures/economics/cases";
-import { mutationCalls, runnerSideEffectCalls, runWatchdogCli } from "../fixtures/watchdog/harness";
+import { mutationCalls, runWatchdogCli, runnerSideEffectCalls } from "../fixtures/watchdog/harness";
 import {
   createWatchdogRepository,
   type WatchdogTempRepository,

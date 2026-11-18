@@ -5,8 +5,8 @@
  * body-free and diff-free payload, and non-gating disclosure on failure.
  */
 import { describe, expect, test } from "bun:test";
-import { makeRecordingProducer } from "../fixtures/capsule/producer";
 import { withCommitHarness } from "../fixtures/commit/harness";
+import { makeRecordingProducer } from "../fixtures/capsule/producer";
 import {
   COMMIT_REF,
   commitDataOf,

@@ -5,21 +5,21 @@
  * tracker-corroborated pr-open-unverified).
  */
 import { describe, expect, test } from "bun:test";
-import { summarizeDispatchEvidence } from "../../packages/core/src/app/dispatch-gate";
 import {
   appendDispatchAttempt,
   appendDispatchDivergence,
 } from "../../packages/core/src/app/dispatch-ledger";
+import { summarizeDispatchEvidence } from "../../packages/core/src/app/dispatch-gate";
 import { DELIVERY_RESULT_TOKENS } from "../../packages/core/src/contracts/index";
+import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
+import { dayAt } from "../fixtures/dispatch/evidence-windows";
 import {
-  type AttemptSpec,
   buildAttempts,
-  dayAt,
   eligibleSpecs,
   missingClassSpecs,
   uncorroboratedSpecs,
+  type AttemptSpec,
 } from "../fixtures/dispatch/evidence-windows";
-import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
 import { makeDivergence, REPOSITORY } from "../fixtures/dispatch/ledger";
 
 const seed = (

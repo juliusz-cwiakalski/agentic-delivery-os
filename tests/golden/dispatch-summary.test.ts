@@ -9,8 +9,8 @@ import {
   appendDispatchAttempt,
   appendDispatchDivergence,
 } from "../../packages/core/src/app/dispatch-ledger";
-import { buildAttempts, eligibleSpecs } from "../fixtures/dispatch/evidence-windows";
 import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
+import { buildAttempts, eligibleSpecs } from "../fixtures/dispatch/evidence-windows";
 import { makeDivergence, REPOSITORY } from "../fixtures/dispatch/ledger";
 
 const GOLDEN = join(process.cwd(), "tests/fixtures/dispatch/golden/summary.txt");

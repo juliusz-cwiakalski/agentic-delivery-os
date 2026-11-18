@@ -16,13 +16,13 @@ import {
   ECONOMICS_EXIT_UNAVAILABLE,
   type EconomicsBudgetPolicyPort,
   type EconomicsExhaustionRecord,
-  type EconomicsRestartRecord,
   type EconomicsResumeCapabilityDeclaration,
   type EconomicsResumeComposition,
   type EconomicsResumeCompositionMode,
   type EconomicsResumeDecision,
   type EconomicsResumeInput,
   type EconomicsResumeStorePort,
+  type EconomicsRestartRecord,
 } from "#contracts";
 import { evaluateRestartBudget } from "./economics-budget.js";
 import {

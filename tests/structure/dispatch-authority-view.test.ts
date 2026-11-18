@@ -7,21 +7,21 @@ import { describe, expect, test } from "bun:test";
 import { chmodSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  listDispatchAuthority,
-  readDispatchAuthority,
-} from "../../packages/adapters/src/file/dispatch-authority";
-import {
-  appendDispatchHandover,
-  readDispatchHandover,
-  writeDispatchAuthority,
-} from "../../packages/core/src/app/dispatch-ledger";
-import {
   buildDispatchAuthorityView,
   dualRunAuthority,
   foldDispatchHandover,
   parseDispatchAuthorityText,
   parseDispatchAuthorityView,
 } from "../../packages/core/src/domain/dispatch-authority";
+import {
+  appendDispatchHandover,
+  readDispatchHandover,
+  writeDispatchAuthority,
+} from "../../packages/core/src/app/dispatch-ledger";
+import {
+  listDispatchAuthority,
+  readDispatchAuthority,
+} from "../../packages/adapters/src/file/dispatch-authority";
 import { createDispatchState } from "../fixtures/dispatch/harness";
 import { makeHandover, REPOSITORY, REPOSITORY_BETA } from "../fixtures/dispatch/ledger";
 

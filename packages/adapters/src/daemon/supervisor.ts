@@ -7,10 +7,9 @@
  * only what this installation created. launchd and Windows return the classified
  * unsupported outcome. Every filesystem and process call is injected.
  */
-
-import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname } from "node:path";
+import { spawnSync } from "node:child_process";
 import type {
   DaemonSupervisorDescriptor,
   SupervisorInspection,

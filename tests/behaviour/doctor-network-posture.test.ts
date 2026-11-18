@@ -9,12 +9,12 @@ import {
   DOCTOR_TRACKER_READ_LIMIT,
 } from "../../packages/core/src/contracts/index";
 import {
+  READ_FAILED,
+  UNRESOLVED_BINDING,
   fakeDoctorRuntime,
   parseEnvelope,
-  READ_FAILED,
   runCliWithRuntime,
   runDoctorCli,
-  UNRESOLVED_BINDING,
 } from "../fixtures/doctor/harness";
 
 describe("TC-DOCTOR-024 hermetic default suite", () => {

@@ -6,9 +6,9 @@
  */
 import { describe, expect, test } from "bun:test";
 import { capsuleGateEventKey } from "../../packages/core/src/domain/capsule";
+import { combinedRuntime, runVerify } from "../fixtures/verify-gates/cases/harness";
 import { makeRecordingProducer } from "../fixtures/capsule/producer";
 import { baseFacts } from "../fixtures/verify-gates/cases/facts";
-import { combinedRuntime, runVerify } from "../fixtures/verify-gates/cases/harness";
 
 const REF = "GH-178";
 

@@ -1,10 +1,10 @@
 /** TC-CAP-029 — human leaves residue, non-human resolves, unknown/absent is human. */
 import { describe, expect, test } from "bun:test";
+import { buildCloseoutPlan } from "../../../packages/core/src/domain/closeout";
+import { makeFacts, makeMergedRequest } from "../../fixtures/closeout/harness";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { normalizeReviewThreads } from "../../../packages/adapters/src/github/normalize";
-import { buildCloseoutPlan } from "../../../packages/core/src/domain/closeout";
-import { makeFacts, makeMergedRequest } from "../../fixtures/closeout/harness";
 
 const threads = [
   {

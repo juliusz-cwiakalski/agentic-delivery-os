@@ -6,14 +6,14 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  CONTROL_PROTOCOL_CURRENT,
-  LOCAL_CALLER_PRINCIPAL,
-} from "../../packages/core/src/contracts/index";
-import {
   decodeControlLine,
   encodeControlFrame,
 } from "../../packages/core/src/domain/control-codec";
 import { createControlSession } from "../../packages/core/src/domain/control-session";
+import {
+  CONTROL_PROTOCOL_CURRENT,
+  LOCAL_CALLER_PRINCIPAL,
+} from "../../packages/core/src/contracts/index";
 
 const ROOT = process.cwd();
 const PROTOCOL_FILES = [

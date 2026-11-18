@@ -24,13 +24,13 @@ import {
 import {
   AGENT_ROLE,
   LANE,
-  MODEL_A,
   makeBaselineRecord,
   makeStepRecord,
+  MODEL_A,
   REPOSITORY,
   RUN_A,
-  SESSION_A,
   seedBaselines,
+  SESSION_A,
   TELEMETRY_REF,
   tokens as telemetryTokens,
 } from "../fixtures/telemetry";

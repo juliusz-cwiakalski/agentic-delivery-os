@@ -14,8 +14,8 @@ import {
   fixture,
   planRuntime,
   planWorld,
-  planYamlParser,
   runPlanCli,
+  planYamlParser,
 } from "../fixtures/plan/harness/index";
 
 const READS = {

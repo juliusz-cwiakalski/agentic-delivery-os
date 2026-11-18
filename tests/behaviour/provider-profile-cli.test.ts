@@ -4,23 +4,23 @@
  * and classified invalid grammar with no side effects.
  */
 import { describe, expect, test } from "bun:test";
-import {
-  createProviderCommandDefinition,
-  type ProviderCommandRuntime,
-} from "../../packages/cli/src/commands/provider";
-import { type CliDependencies, runCli } from "../../packages/cli/src/index";
 import type {
   ProfileSelectionResult,
   ProviderResolveResult,
   ProviderWatchConditionView,
 } from "../../packages/core/src/contracts/index";
 import {
+  createProviderCommandDefinition,
+  type ProviderCommandRuntime,
+} from "../../packages/cli/src/commands/provider";
+import { type CliDependencies, runCli } from "../../packages/cli/src/index";
+import { SYNTHETIC_BRAND } from "../golden/helpers";
+import {
   envRecord,
   refusedResult,
   selectedResult,
   watchProviders,
 } from "../fixtures/provider/profile/golden/data";
-import { SYNTHETIC_BRAND } from "../golden/helpers";
 
 const NOW = 1_700_000_000_000;
 

@@ -2,11 +2,11 @@
  * GH-301 derivable-content advisories (TC-MEMHEUR-001, TC-MEMHEUR-002).
  */
 import { describe, expect, test } from "bun:test";
-import {
-  type MemoryEvaluationResult,
-  STATEMENT_MAX_CHARS,
-} from "../../packages/core/src/contracts/index";
 import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
+import {
+  STATEMENT_MAX_CHARS,
+  type MemoryEvaluationResult,
+} from "../../packages/core/src/contracts/index";
 import { cleanBody, commandEchoBody, fileListingBody } from "../fixtures/memory/bodies";
 import { recordText, treeWith, validLessonFields } from "../fixtures/memory/tree";
 

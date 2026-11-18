@@ -10,16 +10,15 @@
 import { describe, expect, setDefaultTimeout, test } from "bun:test";
 
 setDefaultTimeout(120_000);
-
 import { createHash } from "node:crypto";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createCloseoutCommandDefinition } from "../../packages/cli/src/commands/closeout";
 import {
-  createCloseoutCommandRuntime,
   createCloseoutComposition,
+  createCloseoutCommandRuntime,
 } from "../../packages/cli/src/edge";
+import { createCloseoutCommandDefinition } from "../../packages/cli/src/commands/closeout";
 import { type CliDependencies, runCli } from "../../packages/cli/src/index";
 import {
   CLOSEOUT_MAX_MACHINE_BYTES,

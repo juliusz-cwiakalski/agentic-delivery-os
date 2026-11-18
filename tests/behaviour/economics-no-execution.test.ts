@@ -11,11 +11,11 @@ import type { EconomicsResumeStorePort } from "../../packages/core/src/contracts
 import { createSourcedWatchdogSignalSource } from "../../packages/core/src/domain/index";
 import {
   createEconomicsRuntime,
-  type EconomicsRuntime,
   runtimeEvidence,
   seedRestarts,
+  type EconomicsRuntime,
 } from "../fixtures/economics/harness";
-import { runnerSideEffectCalls, runWatchdogCli } from "../fixtures/watchdog/harness";
+import { runWatchdogCli, runnerSideEffectCalls } from "../fixtures/watchdog/harness";
 import { createWatchdogRepository } from "../fixtures/watchdog/temp-git";
 
 const ROOT = process.cwd();

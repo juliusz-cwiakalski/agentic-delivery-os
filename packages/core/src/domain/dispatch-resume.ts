@@ -8,10 +8,10 @@
  */
 import {
   DELIVERY_RESULT_TOKENS,
-  type DispatchResumeMode,
   ECONOMICS_RESTART_SCHEMA_ID,
-  type EconomicsRestartRecord,
   HARNESS_OUTCOMES,
+  type DispatchResumeMode,
+  type EconomicsRestartRecord,
 } from "#contracts";
 import { evaluateRestartBudget } from "./economics-budget.js";
 

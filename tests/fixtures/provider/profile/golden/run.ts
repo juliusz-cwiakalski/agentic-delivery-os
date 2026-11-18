@@ -2,13 +2,12 @@
  * Deterministic CLI runner for the provider profile/watch golden suites.
  * Data only: no process streams, clock, or filesystem.
  */
-
+import type { ProfileSelectionResult } from "../../../../../packages/core/src/contracts/index";
 import {
   createProviderCommandDefinition,
   type ProviderCommandRuntime,
 } from "../../../../../packages/cli/src/commands/provider";
 import { type CliDependencies, runCli } from "../../../../../packages/cli/src/index";
-import type { ProfileSelectionResult } from "../../../../../packages/core/src/contracts/index";
 import { SYNTHETIC_BRAND } from "../../../../golden/helpers";
 import { envRecord, selectedResult, watchProviders } from "./data";
 

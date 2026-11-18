@@ -7,25 +7,24 @@
  * The fixture exposes no ledger writer; a provenance guard counts
  * command-originated appends so no test can hand-insert evidence.
  */
-
+import { runCli, type CliStreams } from "../../../packages/cli/src/index";
 import { createDispatchCommandDefinition } from "../../../packages/cli/src/commands/dispatch";
 import {
   createDispatchCommandRuntime,
   type DispatchCommandRuntime,
 } from "../../../packages/cli/src/edge";
-import { type CliStreams, runCli } from "../../../packages/cli/src/index";
-import type { DispatchTruthReads } from "../../../packages/core/src/app/dispatch";
-import { readDispatchAttempts } from "../../../packages/core/src/app/dispatch-ledger";
 import { resolveBrandIdentity } from "../../../packages/core/src/branding/index";
+import { classifyHarnessEvidence } from "../../../packages/core/src/domain/harness-classify";
 import type {
   DispatchAttemptRecord,
   DispatchEnvelopeData,
   HarnessEvidence,
   HarnessSessionPort,
 } from "../../../packages/core/src/contracts/index";
-import { classifyHarnessEvidence } from "../../../packages/core/src/domain/harness-classify";
-import { readsFrom } from "../../fixtures/dispatch/golden/harness";
+import type { DispatchTruthReads } from "../../../packages/core/src/app/dispatch";
+import { readDispatchAttempts } from "../../../packages/core/src/app/dispatch-ledger";
 import { createDispatchState, type DispatchState } from "../../fixtures/dispatch/harness";
+import { readsFrom } from "../../fixtures/dispatch/golden/harness";
 import { REPOSITORY } from "../../fixtures/dispatch/ledger";
 
 const BRAND = (() => {

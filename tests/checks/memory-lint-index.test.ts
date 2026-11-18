@@ -3,11 +3,11 @@
  * (TC-MEMINDEX-001, TC-MEMINDEX-002, TC-MEMINDEX-003, TC-MEMLAY-002 steps 2-4).
  */
 import { describe, expect, test } from "bun:test";
+import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
 import {
   HINT_MAX_CHARS,
   type MemoryEvaluationResult,
 } from "../../packages/core/src/contracts/index";
-import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
 import {
   archiveIndexReadme,
   indexReadme,

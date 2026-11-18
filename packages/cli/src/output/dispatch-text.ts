@@ -8,9 +8,9 @@
 import {
   ATTEMPTS_HUMAN_ROW_BUDGET,
   DELIVERY_RESULT_TAXONOMY,
-  type DeliveryResultToken,
   DISPATCH_MAX_HUMAN_BYTES,
   DISPATCH_MAX_HUMAN_LINES,
+  type DeliveryResultToken,
   type DispatchAttemptsData,
   type DispatchCorroborationRecord,
   type DispatchEnvelopeData,

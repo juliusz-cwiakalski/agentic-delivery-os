@@ -1,7 +1,7 @@
 /** TC-CAP-037 — every failing condition refuses and names the retained worktree. */
 import { describe, expect, test } from "bun:test";
-import { buildCloseoutPlan } from "../../packages/core/src/domain/closeout";
 import { evaluateWorktreeSafety } from "../../packages/core/src/domain/closeout-worktree";
+import { buildCloseoutPlan } from "../../packages/core/src/domain/closeout";
 import { makeFacts } from "../fixtures/closeout/harness";
 
 const base = {

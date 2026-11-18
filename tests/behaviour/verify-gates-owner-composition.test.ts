@@ -1,13 +1,13 @@
 /** TC-VGATES-032..034, 048..052, 061 — owner gate and read-only composition. */
 import { describe, expect, test } from "bun:test";
-import { createEnvironmentCredentialPort } from "../../packages/adapters/src/credentials/index";
+import { evaluateVerifyGates } from "../../packages/core/src/domain/index";
 import { createVerifyGatesCommandRuntime } from "../../packages/cli/src/edge";
 import type {
   ExternalSystemInstance,
   StateStorePort,
 } from "../../packages/core/src/contracts/index";
-import { evaluateVerifyGates } from "../../packages/core/src/domain/index";
 import { fixtureBrand } from "../fixtures/credentials/cases";
+import { createEnvironmentCredentialPort } from "../../packages/adapters/src/credentials/index";
 import { baseFacts, clone, lifecycle, workItem } from "../fixtures/verify-gates/cases/facts";
 
 const owner = (facts: ReturnType<typeof baseFacts>) => evaluateVerifyGates(facts).gates[3];

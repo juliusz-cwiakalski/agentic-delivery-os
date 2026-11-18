@@ -25,8 +25,8 @@ import {
   SESSION_POLICY,
   SYNTHETIC_DB_PATH,
 } from "../fixtures/session-admin/harness";
-import { allInvalidIds, OVER_CAP_PATH, VALID_IDS } from "../fixtures/session-admin/ids";
-import { makeSession, type SessionFixture, sessionRow } from "../fixtures/session-admin/store";
+import { OVER_CAP_PATH, allInvalidIds, VALID_IDS } from "../fixtures/session-admin/ids";
+import { makeSession, sessionRow, type SessionFixture } from "../fixtures/session-admin/store";
 
 const createSessionAdmin = (io: Parameters<typeof createSessionAdminBase>[0]) =>
   createSessionAdminBase(io, SESSION_POLICY);

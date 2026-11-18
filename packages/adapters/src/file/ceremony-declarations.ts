@@ -10,8 +10,8 @@
  */
 import { existsSync, readFileSync, statSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { CEREMONY_DECLARATION_LIMITS } from "@delivery-os/core/contracts";
 import { parse } from "yaml";
+import { CEREMONY_DECLARATION_LIMITS } from "@delivery-os/core/contracts";
 
 /** The committed ceremony declaration document file name (F-6). */
 export const CEREMONY_DECLARATIONS_FILE_NAME = "ceremonies.yaml" as const;

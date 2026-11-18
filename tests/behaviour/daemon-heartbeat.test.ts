@@ -4,12 +4,12 @@
  */
 import { describe, expect, test } from "bun:test";
 import { appendDaemonHeartbeat, readDaemonHeartbeat } from "../../packages/core/src/app/index";
+import { buildHeartbeat, foldDaemonLiveness } from "../../packages/core/src/domain/index";
 import {
   DAEMON_INSTANCE_PAYLOAD_SCHEMA,
   type DaemonHeartbeatRecord,
   type DaemonInstanceRecord,
 } from "../../packages/core/src/contracts/index";
-import { buildHeartbeat, foldDaemonLiveness } from "../../packages/core/src/domain/index";
 import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/state/harness";
 
 const NOW = "2026-11-08T10:00:00Z";

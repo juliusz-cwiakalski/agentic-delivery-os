@@ -6,6 +6,16 @@
 import { describe, expect, spyOn, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { scan } from "../../scripts/checks/ambient-globals";
+import { matchSeedLiteral } from "../../scripts/checks/forbidden-literals";
+import {
+  createProviderFactsProbe,
+  createProfileEvent,
+  evaluateProfileLifecycle,
+  resolveProfileForSpawn,
+  selectProfile,
+} from "../../packages/core/src/provider/index";
+import { createProviderWatchStatus } from "../../packages/core/src/provider/index";
 import { createProviderWatchMappings } from "../../packages/adapters/src/provider-quota/index";
 import type {
   CredentialPort,
@@ -14,22 +24,12 @@ import type {
   QuotaTransportRequest,
 } from "../../packages/core/src/contracts/index";
 import {
-  createProfileEvent,
-  createProfileTargetRecord,
-  createProviderFactsProbe,
-  createProviderWatchStatus,
-  evaluateProfileLifecycle,
-  resolveProfileForSpawn,
-  selectProfile,
-} from "../../packages/core/src/provider/index";
-import { scan } from "../../scripts/checks/ambient-globals";
-import { matchSeedLiteral } from "../../scripts/checks/forbidden-literals";
-import {
   available,
   exhausted,
   mixedChain,
   peak,
 } from "../fixtures/provider/profile/selection/fixtures";
+import { createProfileTargetRecord } from "../../packages/core/src/provider/index";
 
 const ROOT = process.cwd();
 const NOW = 1_700_000_000_000;

@@ -8,13 +8,13 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import {
+  ERROR_TABLE,
+  type ErrorTableEntry,
   CEREMONY_RECORD_BOUNDARY_DECLARATION,
   CEREMONY_RUN_RECORD_KEY_PREFIX,
   CEREMONY_RUN_RECORD_KIND,
   CEREMONY_STEP_RECORD_KEY_PREFIX,
   CEREMONY_STEP_RECORD_KIND,
-  ERROR_TABLE,
-  type ErrorTableEntry,
   STATE_ARTIFACT_FIELD_TYPES,
   STATE_BOUNDARY_VERDICTS,
   STATE_LEVELS,

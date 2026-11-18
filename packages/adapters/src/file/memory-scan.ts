@@ -5,10 +5,10 @@
  * parses YAML frontmatter. It enumerates `.ai/memory/**` plus the repository
  * `AGENTS.md`, performs exactly one read per file, and writes nothing.
  */
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
-import type { MemoryFrontmatter, MemoryScannedFile } from "@delivery-os/core/contracts";
 import { parse } from "yaml";
+import type { MemoryFrontmatter, MemoryScannedFile } from "@delivery-os/core/contracts";
 
 /** One directory entry the scanner walk consumes. */
 export type MemoryScanDirectoryEntry = {

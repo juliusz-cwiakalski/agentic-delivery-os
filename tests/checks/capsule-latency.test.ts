@@ -11,22 +11,22 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { performance } from "node:perf_hooks";
 import {
-  createBunSqliteStoreOpener,
-  createOpencodeTelemetryExtractor,
-} from "../../packages/adapters/src/harness/index";
-import {
   CAPSULE_MAX_EVENTS,
   type HarnessTelemetryCapture,
 } from "../../packages/core/src/contracts/index";
 import { parseCapsuleEvents } from "../../packages/core/src/domain/capsule";
 import { evaluateDiffSweep } from "../../packages/core/src/domain/closeout-diff-sweep";
+import {
+  createBunSqliteStoreOpener,
+  createOpencodeTelemetryExtractor,
+} from "../../packages/adapters/src/harness/index";
 import { readRetroRegistry, seedRetroRegistry } from "../../packages/core/src/state/index";
+import { makeIdentity, openStore, removeRoot } from "../fixtures/state/harness";
+import { buildOpencodeStore, WORK_ITEM_REF } from "../fixtures/harness/opencode-store/build";
 import { makeChangeTree } from "../fixtures/capsule/harness";
 import { makeCapsuleRuntime } from "../fixtures/capsule/producer";
 import { runCloseoutCli } from "../fixtures/closeout/cli";
 import { makeFacts } from "../fixtures/closeout/harness";
-import { buildOpencodeStore, WORK_ITEM_REF } from "../fixtures/harness/opencode-store/build";
-import { makeIdentity, openStore, removeRoot } from "../fixtures/state/harness";
 
 const measure = (runs: number, body: () => void | Promise<void>): number[] => {
   const values: number[] = [];

@@ -25,6 +25,7 @@ import {
   DOCTOR_SUMMARY_PREFIX,
   DOCTOR_SUMMARY_SEPARATOR,
   DOCTOR_WIRING_NEUTRAL_CONDITIONS,
+  OWNER_HOLD_MAX_REASON_CHARS,
   type DoctorArea,
   type DoctorAreaFacts,
   type DoctorCheck,
@@ -47,11 +48,10 @@ import {
   type DoctorTrackerFacts,
   type DoctorVerdict,
   type DoctorWiringRead,
-  OWNER_HOLD_MAX_REASON_CHARS,
-  type OwnerHoldFact,
   type ProviderAnnouncementRecord,
   type ProviderConfiguration,
   type ProviderParkRecord,
+  type OwnerHoldFact,
 } from "#contracts";
 
 /* ------------------------------- primitives ------------------------------- */

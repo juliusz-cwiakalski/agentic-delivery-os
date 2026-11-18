@@ -11,6 +11,7 @@
  */
 import {
   type BrandIdentity,
+  type SpendBreakdownField,
   SPEND_BREAKDOWN_FIELDS,
   SPEND_DISCLOSURES,
   SPEND_MAX_HUMAN_BYTES,
@@ -18,7 +19,6 @@ import {
   SPEND_PHASE_UNKNOWN,
   SPEND_TRUNCATION_MARKER,
   type SpendBreakdownEntry,
-  type SpendBreakdownField,
   type SpendReport,
   type SpendTruncation,
 } from "#contracts";

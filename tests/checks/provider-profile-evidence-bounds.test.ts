@@ -4,19 +4,19 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
-  PROFILE_EVIDENCE_FIELDS,
-  PROFILE_EVIDENCE_MAX_BYTES,
-  PROFILE_EVIDENCE_MAX_FIELDS,
-  type ProfileProviderAvailability,
-  type ProviderProfileConfiguration,
-} from "../../packages/core/src/contracts/index";
-import {
   createProfileEvent,
   createProfileTargetRecord,
   createProviderFactsProbe,
   projectProfileEvidence,
   selectProfile,
 } from "../../packages/core/src/provider/index";
+import {
+  type ProfileProviderAvailability,
+  PROFILE_EVIDENCE_FIELDS,
+  PROFILE_EVIDENCE_MAX_BYTES,
+  PROFILE_EVIDENCE_MAX_FIELDS,
+  type ProviderProfileConfiguration,
+} from "../../packages/core/src/contracts/index";
 
 const NOW = 1_700_000_000_000;
 

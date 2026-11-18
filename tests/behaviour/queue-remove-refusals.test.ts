@@ -4,6 +4,7 @@
  * pre-fence identities, identical bytes, and no projected event.
  */
 import { describe, expect, test } from "bun:test";
+import { ledgerDigest, ledgerText, listStoreFiles } from "../fixtures/state/harness";
 import {
   MALFORMED_REASONS,
   REMOVAL_REF,
@@ -11,7 +12,6 @@ import {
   UNKNOWN_REF,
 } from "../fixtures/queue/removal/cases";
 import { createRemovalHarness } from "../fixtures/queue/removal/harness";
-import { ledgerDigest, ledgerText, listStoreFiles } from "../fixtures/state/harness";
 
 const json = (text: string): Record<string, unknown> => JSON.parse(text) as Record<string, unknown>;
 const errorOf = (text: string): Record<string, unknown> =>

@@ -5,15 +5,15 @@
  * byte-identically, and derivation is read-only with no harness query.
  */
 import { afterEach, describe, expect, test } from "bun:test";
-import { deriveEconomicsView } from "../../packages/core/src/domain/index";
 import { createStateStore, readEconomicsRecords } from "../../packages/core/src/state/index";
+import { createTestEdge, makeIdentity } from "../fixtures/state/harness";
+import { deriveEconomicsView } from "../../packages/core/src/domain/index";
 import {
   createEconomicsRuntime,
-  type EconomicsRuntime,
   runtimeEvidence,
   seedRestarts,
+  type EconomicsRuntime,
 } from "../fixtures/economics/harness";
-import { createTestEdge, makeIdentity } from "../fixtures/state/harness";
 
 const runtimes: EconomicsRuntime[] = [];
 afterEach(() => {

@@ -11,10 +11,10 @@ import {
   makeOutcomeRecord,
   makeSessionRecord,
   removeRoot,
-  type SpendSeed,
   SYNTHETIC_BRAND,
   tokens,
   warning,
+  type SpendSeed,
 } from "../fixtures/spend/harness";
 
 const degraded: SpendSeed = {

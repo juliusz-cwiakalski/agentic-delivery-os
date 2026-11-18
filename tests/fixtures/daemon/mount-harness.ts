@@ -14,12 +14,12 @@
  */
 import { chmodSync, existsSync, mkdirSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
+import type { DaemonComposition } from "../../../packages/cli/src/daemon-compose";
 import {
   ensureProjectIdentityMarkerText,
   readProjectIdentityMarker,
 } from "../../../packages/adapters/src/file/project-identity";
 import { nodeRepositoryIo, readCheckoutIdentity } from "../../../packages/adapters/src/repo/index";
-import type { DaemonComposition } from "../../../packages/cli/src/daemon-compose";
 import { resolveProjectScope, stateScopeRoots } from "../../../packages/core/src/app/state-scope";
 import { resolveDaemonSettings } from "../../../packages/core/src/config/index";
 import type { BrandIdentity } from "../../../packages/core/src/contracts/index";

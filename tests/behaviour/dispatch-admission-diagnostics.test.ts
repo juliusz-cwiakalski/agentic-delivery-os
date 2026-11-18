@@ -13,9 +13,9 @@ import type {
   ExternalSystemInstance,
   StateStorePort,
 } from "../../packages/core/src/contracts/index";
+import { DISPATCH_NOW } from "../fixtures/dispatch/harness";
 import { ADMISSION_CANARY, createAdmissionHarness } from "../fixtures/dispatch/admission";
 import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
-import { DISPATCH_NOW } from "../fixtures/dispatch/harness";
 import { makeDivergence } from "../fixtures/dispatch/ledger";
 
 const asRecord = (value: unknown): Record<string, unknown> =>

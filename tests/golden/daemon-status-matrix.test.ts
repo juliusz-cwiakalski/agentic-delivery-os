@@ -4,8 +4,8 @@
  */
 import { describe, expect, test } from "bun:test";
 import { createDaemonCommandDefinition } from "../../packages/cli/src/commands/daemon";
-import type { DaemonStatusData } from "../../packages/core/src/contracts/index";
 import { renderDaemonStatusHuman } from "../../packages/core/src/domain/daemon-status";
+import type { DaemonStatusData } from "../../packages/core/src/contracts/index";
 import { runProgram } from "../fixtures/queue-ready/harness";
 
 const base = (state: "running" | "stale" | "stopped"): DaemonStatusData => ({

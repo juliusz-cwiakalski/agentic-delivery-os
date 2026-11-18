@@ -7,8 +7,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   PHASE_TRANSITION_KIND,
-  PROVIDER_RECORD_KINDS,
   type ProviderParkEvidence,
+  PROVIDER_RECORD_KINDS,
 } from "../../packages/core/src/contracts/index";
 import { resolveProviderChain } from "../../packages/core/src/provider/chain";
 import {

@@ -8,12 +8,12 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { createCeremonyCommandRuntime } from "../../packages/cli/src/edge";
 import type { CeremonyDeclaration } from "../../packages/core/src/contracts/index";
 import { catchUpCeremonies, runCeremony } from "../../packages/core/src/domain/index";
 import { readCeremonyRuns } from "../../packages/core/src/state/index";
-import { FIXTURE_DIR, readFixture, withPath } from "../fixtures/ceremony/declarations";
+import { createCeremonyCommandRuntime } from "../../packages/cli/src/edge";
 import { makeEngineHarness } from "../fixtures/ceremony/engine";
+import { FIXTURE_DIR, readFixture, withPath } from "../fixtures/ceremony/declarations";
 import { makeCeremonyState, NOW_MS } from "../fixtures/ceremony/state";
 
 const daily = (): CeremonyDeclaration =>

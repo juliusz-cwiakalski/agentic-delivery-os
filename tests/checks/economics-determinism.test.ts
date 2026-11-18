@@ -8,17 +8,17 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { createSourcedWatchdogSignalSource } from "../../packages/core/src/domain/index";
-import {
-  createEconomicsRuntime,
-  type EconomicsRuntime,
-  runtimeEvidence,
-  seedRestarts,
-} from "../fixtures/economics/harness";
 import { normalizeEnvelopeText, runWatchdogCli } from "../fixtures/watchdog/harness";
 import {
   createWatchdogRepository,
   type WatchdogTempRepository,
 } from "../fixtures/watchdog/temp-git";
+import {
+  createEconomicsRuntime,
+  runtimeEvidence,
+  seedRestarts,
+  type EconomicsRuntime,
+} from "../fixtures/economics/harness";
 
 const ROOT = process.cwd();
 const repos: WatchdogTempRepository[] = [];

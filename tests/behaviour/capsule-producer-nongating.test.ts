@@ -9,8 +9,8 @@ import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { makeFileProducer, makeRecordingProducer } from "../fixtures/capsule/producer";
 import { withPhaseHarness } from "./phase-support";
+import { makeFileProducer, makeRecordingProducer } from "../fixtures/capsule/producer";
 
 const ROOT = process.cwd();
 const FULL = readFileSync(join(ROOT, "tests/fixtures/phase/full-open.yaml"), "utf8");

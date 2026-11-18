@@ -3,8 +3,8 @@
  * exactly one live acquisition and 99 evidenced refusals.
  */
 import { describe, expect, test } from "bun:test";
-import type { DaemonLockRecord } from "../../packages/core/src/contracts/index";
 import { daemonScopeDigest, evaluateDaemonLock } from "../../packages/core/src/domain/index";
+import type { DaemonLockRecord } from "../../packages/core/src/contracts/index";
 import { createDaemonLockPort } from "../../packages/core/src/state/index";
 import { createTestEdge, makeTempRoot, removeRoot } from "../fixtures/state/harness";
 

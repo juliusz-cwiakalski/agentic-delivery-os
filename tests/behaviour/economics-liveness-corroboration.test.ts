@@ -6,18 +6,15 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
-  WATCHDOG_SIGNAL_KEYS,
   WATCHDOG_STALL_HEARTBEAT_MS,
   type WatchdogSignals,
+  WATCHDOG_SIGNAL_KEYS,
 } from "../../packages/core/src/contracts/index";
-import {
-  classifyWatchdogLiveness,
-  parseRefusalCorpus,
-  createSourcedWatchdogSignalSource as source,
-} from "../../packages/core/src/domain/index";
+import { classifyWatchdogLiveness, parseRefusalCorpus } from "../../packages/core/src/domain/index";
 import { CORROBORATION_CASES } from "../fixtures/economics/cases";
 import { runWatchdogCli } from "../fixtures/watchdog/harness";
 import { createWatchdogRepository } from "../fixtures/watchdog/temp-git";
+import { createSourcedWatchdogSignalSource as source } from "../../packages/core/src/domain/index";
 
 const outcomeOf = (signals: WatchdogSignals): string => {
   const evaluation = classifyWatchdogLiveness(signals);

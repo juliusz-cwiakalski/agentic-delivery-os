@@ -13,8 +13,8 @@ import { appendFileSync } from "node:fs";
 import { createQueueCommandRuntime } from "../../packages/cli/src/edge";
 import { createProductionComposer, daemonReachable } from "../../packages/cli/src/production";
 import { readDaemonHeartbeat, readDaemonInstance } from "../../packages/core/src/app/index";
-import type { QueueDegradationReason } from "../../packages/core/src/contracts/index";
 import { foldDaemonLiveness } from "../../packages/core/src/domain/daemon-heartbeat";
+import type { QueueDegradationReason } from "../../packages/core/src/contracts/index";
 import {
   createMountHarness,
   openMountStore,

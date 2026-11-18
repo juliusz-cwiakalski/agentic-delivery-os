@@ -8,8 +8,8 @@
  */
 import {
   CEREMONY_CADENCE_WINDOW_DAYS,
-  CEREMONY_LEVELS,
   CEREMONY_NOTE_SCHEMA,
+  CEREMONY_LEVELS,
   CEREMONY_SCOPE_KEY_KINDS,
   type CeremonyCadence,
   type CeremonyDeclaration,

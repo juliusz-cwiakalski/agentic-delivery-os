@@ -11,10 +11,10 @@
  */
 import {
   ECONOMICS_SOURCED_SIGNAL_KINDS,
+  HARNESS_LIVENESS_KINDS,
   type EconomicsSourcedSignalAbsenceReason,
   type EconomicsSourcedSignalKind,
   type EconomicsSourcedSignalReading,
-  HARNESS_LIVENESS_KINDS,
   type HarnessLivenessAbsenceReason,
   type HarnessLivenessFacts,
   type HarnessLivenessKind,

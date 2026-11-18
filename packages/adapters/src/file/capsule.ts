@@ -5,13 +5,13 @@
  * whole file first and writes nothing when the file is damaged. There is no
  * truncate, repair, reorder, or compaction API by design.
  */
-
+import { parse as parseYaml } from "yaml";
 import {
   appendFileSync,
   existsSync,
   mkdirSync,
-  readdirSync,
   readFileSync,
+  readdirSync,
   rmSync,
   statSync,
   writeFileSync,
@@ -19,17 +19,17 @@ import {
 import {
   CAPSULE_CANDIDATES_DIRECTORY,
   CAPSULE_CONTRACT_VERSION,
-  CAPSULE_EVENT_KINDS,
   CAPSULE_EVENTS_FILE,
   CAPSULE_LOCK_MAX_ATTEMPTS,
   CAPSULE_LOCK_RETRY_MS,
+  CAPSULE_WRITERS,
+  CAPSULE_EVENT_KINDS,
   CAPSULE_MAX_BYTES,
   CAPSULE_MAX_CANDIDATE_BYTES,
   CAPSULE_MAX_CANDIDATES,
-  CAPSULE_MAX_EVENT_PAYLOAD_BYTES,
   CAPSULE_MAX_EVENTS,
+  CAPSULE_MAX_EVENT_PAYLOAD_BYTES,
   CAPSULE_SCHEMA_ID,
-  CAPSULE_WRITERS,
   type CapsuleAppendRequest,
   type CapsuleAppendResult,
   type CapsuleCandidateDocumentRead,
@@ -48,7 +48,6 @@ import {
   type CapsuleRules,
   type CapsuleWriter,
 } from "@delivery-os/core/contracts";
-import { parse as parseYaml } from "yaml";
 import { type ChangeFolderFileSystem, resolveChangeFolder } from "./change-folder.js";
 
 /** The runtime construction options (every dynamic fact is injected). */

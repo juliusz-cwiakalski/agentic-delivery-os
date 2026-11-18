@@ -8,12 +8,12 @@ import { describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { ceremonyArtifactsDirectory } from "../../packages/adapters/src/file/index";
-import { createCeremonyCommandRuntime } from "../../packages/cli/src/edge";
 import { CEREMONY_NOTE_SCHEMA } from "../../packages/core/src/contracts/index";
 import { readCeremonySteps } from "../../packages/core/src/state/index";
-import { NOTE_WINDOW } from "../fixtures/ceremony/notes";
+import { ceremonyArtifactsDirectory } from "../../packages/adapters/src/file/index";
+import { createCeremonyCommandRuntime } from "../../packages/cli/src/edge";
 import { makeCeremonyState, NOW_MS } from "../fixtures/ceremony/state";
+import { NOTE_WINDOW } from "../fixtures/ceremony/notes";
 
 const WORKSPACE = "workspace-runtime";
 

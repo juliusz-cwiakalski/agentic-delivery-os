@@ -6,14 +6,14 @@
 import { describe, expect, test } from "bun:test";
 import { projectExitCode } from "../../packages/cli/src/projection";
 import {
+  classifyDispatchFailure,
+  classifySpawnRefusal,
+} from "../../packages/core/src/domain/dispatch-result";
+import {
   DELIVERY_RESULT_TAXONOMY,
   DELIVERY_RESULT_TOKENS,
   type DeliveryResultToken,
 } from "../../packages/core/src/contracts/index";
-import {
-  classifyDispatchFailure,
-  classifySpawnRefusal,
-} from "../../packages/core/src/domain/dispatch-result";
 
 const exitFor = (resultToken: DeliveryResultToken): number => {
   const row = DELIVERY_RESULT_TAXONOMY.find((entry) => entry.token === resultToken);

@@ -9,14 +9,14 @@ import { describe, expect, test } from "bun:test";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { readCeremonyDeclarationDocument } from "../../packages/adapters/src/file/index";
 import {
-  builtinCeremonyDeclaration,
   CEREMONY_DECLARATIONS_SCHEMA,
+  builtinCeremonyDeclaration,
 } from "../../packages/core/src/contracts/index";
 import { buildCeremonyRegistry, runCeremony } from "../../packages/core/src/domain/index";
-import { readCeremonyRuns } from "../../packages/core/src/state/index";
+import { readCeremonyDeclarationDocument } from "../../packages/adapters/src/file/index";
 import { makeEngineHarness } from "../fixtures/ceremony/engine";
+import { readCeremonyRuns } from "../../packages/core/src/state/index";
 
 const FIXTURES = join(process.cwd(), "tests/fixtures/ceremony/declarations");
 const CONFIG_DIR = ".synthetic";

@@ -3,8 +3,8 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { assertEnvelopeContract } from "../../packages/testkit/src/result-conformance";
-import { baseFacts, clone, EXPECTED_JOBS, run } from "../fixtures/verify-gates/cases/facts";
 import { combinedRuntime, runVerify } from "../fixtures/verify-gates/cases/harness";
+import { baseFacts, clone, EXPECTED_JOBS, run } from "../fixtures/verify-gates/cases/facts";
 
 const ROOT = process.cwd();
 const GOLDEN = join(ROOT, "tests/fixtures/verify-gates/golden");

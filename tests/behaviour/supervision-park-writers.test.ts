@@ -11,13 +11,13 @@
 import { describe, expect, test } from "bun:test";
 import {
   claimQueueLease,
-  createStateSupervisionWritePort,
   declareQueueEntry,
   readQueueEntries,
   readQueueLeases,
   readQueueParks,
   releaseQueueLease,
 } from "../../packages/core/src/app/index";
+import { createStateSupervisionWritePort } from "../../packages/core/src/app/index";
 import {
   QUEUE_BATTERY_ONLY_PARK_CAUSES,
   QUEUE_PARK_CAUSES,

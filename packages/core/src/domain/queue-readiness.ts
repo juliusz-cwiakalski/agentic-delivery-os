@@ -11,7 +11,6 @@
  */
 
 import {
-  type OwnerHoldFact,
   QUEUE_READY_CONDITION_ORDER,
   QUEUE_READY_OWNER_ATTENTION_LABELS,
   QUEUE_READY_TIER_LABELS,
@@ -27,6 +26,7 @@ import {
   type QueueReadyReason,
   type QueueWeightClass,
   type QueueWeightClassSource,
+  type OwnerHoldFact,
 } from "#contracts";
 import type { QueueGraphFold } from "./queue-graph.js";
 

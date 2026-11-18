@@ -11,9 +11,9 @@
 import {
   DELIVERY_RESULT_TAXONOMY,
   DELIVERY_RESULT_TOKENS,
+  HARNESS_OUTCOMES,
   type DeliveryResultToken,
   type DispatchHandoverState,
-  HARNESS_OUTCOMES,
   type HarnessOutcome,
   type ProjectionClass,
 } from "#contracts";

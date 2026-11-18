@@ -1,11 +1,11 @@
 /** TC-CAP-030 — thread and residue caps with explicit truncation. */
 import { describe, expect, test } from "bun:test";
+import { evaluateThreadPolicy } from "../../packages/core/src/domain/closeout-thread-policy";
 import {
   CAPSULE_MAX_HUMAN_THREADS,
   CAPSULE_MAX_RESIDUE_ITEMS,
   type CloseoutThreadAuthorFact,
 } from "../../packages/core/src/contracts/index";
-import { evaluateThreadPolicy } from "../../packages/core/src/domain/closeout-thread-policy";
 
 const human = (index: number): CloseoutThreadAuthorFact => ({
   threadId: `thread-${index}`,

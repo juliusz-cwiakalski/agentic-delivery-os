@@ -9,7 +9,6 @@ import {
   supervisionExhaustionQuestionId,
 } from "../../packages/cli/src/production";
 import { readQueueParks } from "../../packages/core/src/app/index";
-import { readBlockerLedger } from "../../packages/core/src/state/index";
 import { createComposedSupervisionHarness } from "../fixtures/supervise/harness";
 import {
   coordinatorClaim,
@@ -19,6 +18,7 @@ import {
   seedLivenessPark,
   seedRestart,
 } from "../fixtures/supervise/records";
+import { readBlockerLedger } from "../../packages/core/src/state/index";
 
 type Envelope = {
   readonly runId: string;

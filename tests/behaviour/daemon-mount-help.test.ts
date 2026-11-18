@@ -9,16 +9,16 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { runEntrypoint } from "../../packages/cli/src/entrypoint";
 import {
   allHelpEntries,
   helpEntryFor,
   renderHelp,
   renderRootHelp,
 } from "../../packages/cli/src/help";
+import { runEntrypoint } from "../../packages/cli/src/entrypoint";
 import { PROMPT_REQUIRED_COMMANDS } from "../../packages/cli/src/help/prompt-required-commands";
-import * as helpComposerInvoked from "../fixtures/daemon/mount-mutants/help-composer-invoked";
 import { bufferSink, SYNTHETIC_BRAND } from "../golden/helpers";
+import * as helpComposerInvoked from "../fixtures/daemon/mount-mutants/help-composer-invoked";
 
 const helpText = (path: readonly string[]): string => {
   const entry = helpEntryFor(path);

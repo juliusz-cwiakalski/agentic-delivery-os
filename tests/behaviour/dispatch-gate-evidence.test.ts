@@ -10,11 +10,12 @@ import {
   appendDispatchAttempt,
   appendDispatchDivergence,
 } from "../../packages/core/src/app/dispatch-ledger";
-import { requiredCorroboration } from "../../packages/core/src/domain/dispatch-comparison";
 import {
   evaluateHandoverGate,
   foldEvidenceWindow,
 } from "../../packages/core/src/domain/dispatch-gate";
+import { requiredCorroboration } from "../../packages/core/src/domain/dispatch-comparison";
+import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
 import {
   buildAttempts,
   dayAt,
@@ -22,8 +23,8 @@ import {
   missingClassSpecs,
   uncorroboratedSpecs,
 } from "../fixtures/dispatch/evidence-windows";
-import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
-import { makeAttempt, REPOSITORY } from "../fixtures/dispatch/ledger";
+import { makeAttempt } from "../fixtures/dispatch/ledger";
+import { REPOSITORY } from "../fixtures/dispatch/ledger";
 
 const seed = (
   scenario: ReturnType<typeof createCommandScenario>,

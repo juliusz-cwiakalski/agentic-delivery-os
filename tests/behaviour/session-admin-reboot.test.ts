@@ -17,6 +17,7 @@ import {
   computeDbLiveBoundaryMs,
   renderSessionAdminHuman,
 } from "../../packages/core/src/domain/session-admin";
+import { SYNTHETIC_BRAND } from "../golden/helpers";
 import {
   callsOf,
   createFakeIo,
@@ -25,7 +26,6 @@ import {
   SESSION_POLICY,
   SYNTHETIC_DB_PATH,
 } from "../fixtures/session-admin/harness";
-import { SYNTHETIC_BRAND } from "../golden/helpers";
 
 const createSessionAdmin = (io: Parameters<typeof createSessionAdminBase>[0]) =>
   createSessionAdminBase(io, SESSION_POLICY);

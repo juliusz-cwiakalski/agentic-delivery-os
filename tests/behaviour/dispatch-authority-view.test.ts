@@ -4,14 +4,14 @@
  * merge; after a recorded handover the same dispatch reports `authoritative`.
  */
 import { describe, expect, test } from "bun:test";
-import { readDispatchAuthority } from "../../packages/adapters/src/file/dispatch-authority";
 import {
   appendDispatchAttempt,
   readDispatchAttempts,
 } from "../../packages/core/src/app/dispatch-ledger";
-import { buildAttempts, eligibleSpecs } from "../fixtures/dispatch/evidence-windows";
+import { readDispatchAuthority } from "../../packages/adapters/src/file/dispatch-authority";
 import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
 import { COMPLETED_EVIDENCE } from "../fixtures/dispatch/harness";
+import { buildAttempts, eligibleSpecs } from "../fixtures/dispatch/evidence-windows";
 import { REPOSITORY } from "../fixtures/dispatch/ledger";
 
 const seed = (

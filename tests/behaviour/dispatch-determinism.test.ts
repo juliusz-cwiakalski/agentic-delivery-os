@@ -4,11 +4,11 @@
  * no model or provider call participates.
  */
 import { describe, expect, test } from "bun:test";
-import { summarizeDispatchEvidence } from "../../packages/core/src/app/dispatch-gate";
 import { appendDispatchAttempt } from "../../packages/core/src/app/dispatch-ledger";
+import { summarizeDispatchEvidence } from "../../packages/core/src/app/dispatch-gate";
 import { evaluateHandoverGate } from "../../packages/core/src/domain/dispatch-gate";
-import { buildAttempts, dayAt, eligibleSpecs } from "../fixtures/dispatch/evidence-windows";
 import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
+import { buildAttempts, dayAt, eligibleSpecs } from "../fixtures/dispatch/evidence-windows";
 import { REPOSITORY } from "../fixtures/dispatch/ledger";
 
 const seed = (scenario: ReturnType<typeof createCommandScenario>) => {

@@ -8,12 +8,12 @@
  * or status-cap import exists in this module (DEC-10).
  */
 
-import type { OwnerHoldFact } from "./owner-hold.js";
 import type {
   ProviderAnnouncementRecord,
   ProviderConfiguration,
   ProviderParkRecord,
 } from "./provider.js";
+import type { OwnerHoldFact } from "./owner-hold.js";
 
 /** The five fixed check areas in their declared order (DM-2, Appendix A). */
 export const DOCTOR_AREAS = ["repo", "tracker", "provider", "state", "ci"] as const;

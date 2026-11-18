@@ -8,24 +8,24 @@
  * case invokes a composed command handler directly, never `runEntrypoint`.
  */
 import { describe, expect, test } from "bun:test";
-import { createSupervisorAdapter } from "../../packages/adapters/src/daemon/supervisor";
-import { nodeRepositoryIo, readCheckoutIdentity } from "../../packages/adapters/src/repo/index";
 import { createDaemonCommandDefinition } from "../../packages/cli/src/commands/daemon";
 import { createDaemonCommandRuntime } from "../../packages/cli/src/daemon-compose";
-import { createProductionComposer } from "../../packages/cli/src/production";
 import { projectExitCode } from "../../packages/cli/src/projection";
-import { readDaemonInstance } from "../../packages/core/src/app/index";
+import { createProductionComposer } from "../../packages/cli/src/production";
+import { nodeRepositoryIo, readCheckoutIdentity } from "../../packages/adapters/src/repo/index";
+import { createSupervisorAdapter } from "../../packages/adapters/src/daemon/supervisor";
 import {
   DAEMON_SUPERVISOR_COMMAND_FORMS,
+  ERROR_TABLE,
   DAEMON_SUPERVISOR_RESTART_POLICIES,
   DAEMON_SUPERVISOR_SERVICE_TYPES,
   type DaemonSupervisorDescriptor,
-  ERROR_TABLE,
   type SupervisorInstallRequest,
   type SupervisorPort,
 } from "../../packages/core/src/contracts/index";
-import { daemonScopeDigest } from "../../packages/core/src/domain/daemon-lock";
 import { renderSystemdUnit } from "../../packages/core/src/domain/daemon-supervisor";
+import { daemonScopeDigest } from "../../packages/core/src/domain/daemon-lock";
+import { readDaemonInstance } from "../../packages/core/src/app/index";
 import {
   createMemorySupervisor,
   createMountHarness,

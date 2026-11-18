@@ -9,8 +9,8 @@ import {
   type LanesCommandRuntime,
 } from "../../packages/cli/src/commands/lanes";
 import {
-  type DaemonLaneRecord,
   QUEUE_LANES_SCHEMA_VERSION,
+  type DaemonLaneRecord,
   type QueueLanesData,
 } from "../../packages/core/src/contracts/index";
 import { foldLanes, selectLane } from "../../packages/core/src/domain/index";

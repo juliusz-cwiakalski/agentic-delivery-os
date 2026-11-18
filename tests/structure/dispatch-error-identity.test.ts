@@ -9,8 +9,8 @@ import { classifyDomainKind, resolveAppErrorCode } from "../../packages/cli/src/
 import {
   DOMAIN_KINDS,
   ERROR_TABLE,
-  type ErrorTableEntry,
   EXACT_CODE_DOMAIN_KINDS,
+  type ErrorTableEntry,
   FALLBACK_INTERNAL_CODE,
 } from "../../packages/core/src/contracts/index";
 

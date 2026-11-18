@@ -10,7 +10,7 @@ export const REMOVAL_REF = "GH-241";
 /** A ref that never entered the queue. */
 export const UNKNOWN_REF = "GH-999";
 /** The invoking repository's constant from the cli harness. */
-export { NOW_ISO, NOW_MS, REPO_A } from "../cli/harness";
+export { REPO_A, NOW_ISO, NOW_MS } from "../cli/harness";
 
 /** One accepted-reason case: the four closed vocabulary values. */
 export type AcceptedReasonCase = {

@@ -7,10 +7,6 @@
  * winner's full critical section (append + release) before the loser's acquire.
  * Neither uses a sleep, a timer, or a wall clock.
  */
-
-import { mkdtempSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import type {
   CoordinatorFenceRecord,
   StateStorePort,
@@ -20,6 +16,9 @@ import {
   readCoordinatorRecords,
 } from "../../../packages/core/src/state/index";
 import { makeIdentity, openStore } from "../state/harness";
+import { mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { COORDINATOR_ID, EPOCH_ID, fenceRecord } from "./states";
 
 export type ClaimHandles = {

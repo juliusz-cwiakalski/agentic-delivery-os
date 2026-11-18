@@ -11,14 +11,14 @@
 import { describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import type { WatchdogSignalSource } from "../../packages/core/src/contracts/index";
-import { createSourcedWatchdogSignalSource } from "../../packages/core/src/domain/index";
 import {
   normalizeEnvelopeText,
   normalizeText,
   runWatchdogCli,
   type WatchdogRun,
 } from "../fixtures/watchdog/harness";
+import { createSourcedWatchdogSignalSource } from "../../packages/core/src/domain/index";
+import type { WatchdogSignalSource } from "../../packages/core/src/contracts/index";
 import {
   createWatchdogRepository,
   makeClean,

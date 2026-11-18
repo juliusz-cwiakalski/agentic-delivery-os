@@ -13,11 +13,11 @@ import {
   readDispatchDivergences,
   resolveDispatchDivergence,
 } from "../../packages/core/src/app/dispatch-ledger";
+import { DISPATCH_DIVERGENCE_RECORD_KIND } from "../../packages/core/src/contracts/index";
 import type {
   DispatchDivergenceRecord,
   StateStorePort,
 } from "../../packages/core/src/contracts/index";
-import { DISPATCH_DIVERGENCE_RECORD_KIND } from "../../packages/core/src/contracts/index";
 import { createDispatchState } from "../fixtures/dispatch/harness";
 import { makeDivergence, REPOSITORY } from "../fixtures/dispatch/ledger";
 

@@ -4,12 +4,8 @@
  * eligibility, and a resolved divergence does not reset the window.
  */
 import { describe, expect, test } from "bun:test";
-import {
-  dayAt,
-  evaluateSpecs,
-  incidentSpecs,
-  resolvedDivergenceSet,
-} from "../fixtures/dispatch/evidence-windows";
+import { evaluateSpecs } from "../fixtures/dispatch/evidence-windows";
+import { dayAt, incidentSpecs, resolvedDivergenceSet } from "../fixtures/dispatch/evidence-windows";
 
 describe("TC-GATE-009 the incident lower bound is exclusive", () => {
   const fixture = incidentSpecs();

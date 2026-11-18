@@ -4,9 +4,9 @@
  * cycle check, even on a cyclic graph.
  */
 import { describe, expect, test } from "bun:test";
+import { ledgerDigest } from "../fixtures/state/harness";
 import { CONSUMER_REF, PRODUCER_REF } from "../fixtures/queue/depend/grammar-cases";
 import { createRemovalHarness } from "../fixtures/queue/removal/harness";
-import { ledgerDigest } from "../fixtures/state/harness";
 
 const json = (text: string): Record<string, unknown> => JSON.parse(text) as Record<string, unknown>;
 const errorOf = (text: string): Record<string, unknown> =>

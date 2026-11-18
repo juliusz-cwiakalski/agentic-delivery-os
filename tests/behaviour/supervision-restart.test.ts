@@ -6,11 +6,11 @@
  * DEC-7).
  */
 import { describe, expect, test } from "bun:test";
+import { readQueueParks } from "../../packages/core/src/app/index";
 import {
   SUPERVISION_EXHAUSTION_QUESTION_OPTIONS,
   supervisionExhaustionQuestionId,
 } from "../../packages/cli/src/production";
-import { readQueueParks } from "../../packages/core/src/app/index";
 import { readBlockerLedger } from "../../packages/core/src/state/index";
 import { createSupervisionHarness } from "../fixtures/supervise/harness";
 import { LANE_REF, stalledAndParked } from "../fixtures/supervise/records";

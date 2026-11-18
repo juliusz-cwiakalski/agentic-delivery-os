@@ -58,7 +58,7 @@ export {
 } from "../status/harness";
 
 /** Re-export the reserved-slot fact builder for the brief reserved golden. */
-export type { reservedSlotFacts };
+export { reservedSlotFacts };
 
 /** The brief runtime is the status runtime: it exposes exactly the same members. */
 export const briefRuntime = statusRuntime;

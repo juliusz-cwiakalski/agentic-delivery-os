@@ -7,7 +7,6 @@ import { afterEach, describe, expect, test } from "bun:test";
 import {
   foldTelemetryStore,
   makeRestartRecord,
-  makeStepRecord,
   removeRoot,
   T0,
   T1,
@@ -15,6 +14,7 @@ import {
   T3,
   T4,
   tokens,
+  makeStepRecord,
 } from "../fixtures/telemetry";
 
 const roots: string[] = [];

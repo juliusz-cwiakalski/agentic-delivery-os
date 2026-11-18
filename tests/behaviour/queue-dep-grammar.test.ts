@@ -3,6 +3,7 @@
  * two-positional add, and the grammar refusals hold in both spellings.
  */
 import { describe, expect, test } from "bun:test";
+import { ledgerDigest } from "../fixtures/state/harness";
 import {
   ADD_SPELLINGS,
   CONSUMER_REF,
@@ -12,7 +13,6 @@ import {
   UNOBSERVED_REF,
 } from "../fixtures/queue/depend/grammar-cases";
 import { createRemovalHarness } from "../fixtures/queue/removal/harness";
-import { ledgerDigest } from "../fixtures/state/harness";
 
 const json = (text: string): Record<string, unknown> => JSON.parse(text) as Record<string, unknown>;
 const errorOf = (text: string): Record<string, unknown> =>

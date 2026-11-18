@@ -9,10 +9,10 @@
  */
 
 import {
+  capsuleDisclosureOf,
   type CommitActOutcome,
   type CommitActRequest,
   type CommitTransportPorts,
-  capsuleDisclosureOf,
   resolveCommitSkeleton,
   templateCommitMessage,
 } from "@delivery-os/core";

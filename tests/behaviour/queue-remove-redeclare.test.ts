@@ -4,8 +4,8 @@
  * text — including when `recordedAt` values are equal in both append orders.
  */
 import { describe, expect, test } from "bun:test";
-import { declareQueueEntry } from "../../packages/core/src/app/index";
 import { readQueueRemovals } from "../../packages/core/src/app/queue";
+import { declareQueueEntry } from "../../packages/core/src/app/index";
 import { REMOVAL_REF } from "../fixtures/queue/removal/cases";
 import { createRemovalHarness } from "../fixtures/queue/removal/harness";
 

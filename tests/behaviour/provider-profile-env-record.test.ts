@@ -6,12 +6,12 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import type { ProviderProfileSeat } from "../../packages/core/src/contracts/index";
 import {
   buildProfileEnvRecord,
   serializeEnvRecord,
   validateEnvRecord,
 } from "../../packages/core/src/provider/index";
+import type { ProviderProfileSeat } from "../../packages/core/src/contracts/index";
 
 const ROOT = process.cwd();
 const fixture = (relative: string): string =>

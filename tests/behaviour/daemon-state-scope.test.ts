@@ -17,10 +17,10 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
+import { resolveHostStateRoot } from "../../packages/core/src/app/state-scope";
 import { createDaemonCommandDefinition } from "../../packages/cli/src/commands/daemon";
 import { createDaemonCommandRuntime } from "../../packages/cli/src/daemon-compose";
 import { createProductionComposer } from "../../packages/cli/src/production";
-import { resolveHostStateRoot } from "../../packages/core/src/app/state-scope";
 import { ERROR_TABLE } from "../../packages/core/src/contracts/index";
 import { daemonScopeDigest } from "../../packages/core/src/domain/daemon-lock";
 import {

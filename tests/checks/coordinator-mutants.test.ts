@@ -4,14 +4,14 @@
  * mutant must trip the behavioural oracle.
  */
 import { describe, expect, test } from "bun:test";
-import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import ts from "typescript";
 import {
+  evaluateStuck,
   type CoordinatorEvidenceFacts,
   type CoordinatorStuckEvaluation,
-  evaluateStuck,
 } from "../../packages/core/src/domain/index";
 import { staleBaseline } from "../fixtures/coordinator/evidence";
 

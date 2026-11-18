@@ -19,13 +19,13 @@ import {
   HOST_INDEX_INITIAL_REVISION,
   HOST_INDEX_MAX_ENTRIES,
   HOST_INDEX_SCHEMA,
+  PROJECT_KEY_MAX_BASENAME_LENGTH,
+  PROJECT_KEY_PATTERN,
   type HostIndexConflict,
   type HostIndexDocument,
   type HostIndexEntry,
   type HostIndexMaintenanceOutcome,
   type HostIndexRegistration,
-  PROJECT_KEY_MAX_BASENAME_LENGTH,
-  PROJECT_KEY_PATTERN,
 } from "../contracts/projects.js";
 import { projectStateRoot, sanitizeProjectBasename } from "./state-scope.js";
 

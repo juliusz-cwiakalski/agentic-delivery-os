@@ -4,7 +4,6 @@
  * identity is unchanged, and every v2 addition sits beside them under `data`.
  */
 import { afterEach, describe, expect, test } from "bun:test";
-import { createSpendCommandDefinition } from "../../packages/cli/src/commands/spend";
 import {
   SPEND_DATA_KEYS,
   SPEND_DATA_SCHEMA_ID,
@@ -13,6 +12,7 @@ import {
   SPEND_V2_DATA_KEYS,
   type SpendReport,
 } from "../../packages/core/src/contracts/index";
+import { createSpendCommandDefinition } from "../../packages/cli/src/commands/spend";
 import { runSpendCli, spendRuntimeOver } from "../fixtures/spend/harness";
 import {
   foldTelemetryStore,

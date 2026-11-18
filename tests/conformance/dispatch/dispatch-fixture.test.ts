@@ -7,10 +7,10 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { createControlledRepo } from "./controlled-repo";
 import { summarizeDispatchEvidence } from "../../../packages/core/src/app/dispatch-gate";
 import { appendDispatchAttempt } from "../../../packages/core/src/app/dispatch-ledger";
 import { makeAttemptFor, REPOSITORY, REPOSITORY_BETA } from "../../fixtures/dispatch/ledger";
-import { createControlledRepo } from "./controlled-repo";
 
 const ALL = [
   "pr-open",

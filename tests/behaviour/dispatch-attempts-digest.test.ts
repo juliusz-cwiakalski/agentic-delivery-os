@@ -7,15 +7,15 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { renderDispatchAttemptsText } from "../../packages/cli/src/output/dispatch-text";
 import {
   DISPATCH_MAX_HUMAN_BYTES,
   DISPATCH_MAX_HUMAN_LINES,
   type DispatchAttemptsData,
 } from "../../packages/core/src/contracts/index";
+import { renderDispatchAttemptsText } from "../../packages/cli/src/output/dispatch-text";
 import { ATTEMPTS_REF, ledgerOf, maximalAttempt } from "../fixtures/dispatch/attempt-records";
 import { createAttemptsHarness } from "../fixtures/dispatch/attempts-harness";
-import { type corroborationFor, REPOSITORY } from "../fixtures/dispatch/ledger";
+import { corroborationFor, REPOSITORY } from "../fixtures/dispatch/ledger";
 
 const GOLDEN = join(process.cwd(), "tests/fixtures/dispatch/golden");
 

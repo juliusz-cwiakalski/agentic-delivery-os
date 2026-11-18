@@ -1,11 +1,11 @@
 /** TC-CAP-040/041 — read-only retro coverage and the unreadable-registry gap. */
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { parseCapsuleEvents } from "../../packages/core/src/domain/capsule";
+import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
+import { WORK_ITEM_REF, makeFacts } from "../fixtures/closeout/harness";
 import { makeChangeTree } from "../fixtures/capsule/harness";
 import { makeCapsuleRuntime } from "../fixtures/capsule/producer";
-import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
-import { makeFacts, WORK_ITEM_REF } from "../fixtures/closeout/harness";
+import { parseCapsuleEvents } from "../../packages/core/src/domain/capsule";
 
 const tree = () =>
   makeChangeTree({

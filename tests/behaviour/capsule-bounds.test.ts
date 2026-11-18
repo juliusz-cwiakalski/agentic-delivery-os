@@ -7,10 +7,10 @@
 import { describe, expect, test } from "bun:test";
 import {
   CAPSULE_MAX_BYTES,
-  CAPSULE_MAX_CANDIDATE_BYTES,
   CAPSULE_MAX_CANDIDATES,
-  CAPSULE_MAX_EVENT_PAYLOAD_BYTES,
+  CAPSULE_MAX_CANDIDATE_BYTES,
   CAPSULE_MAX_EVENTS,
+  CAPSULE_MAX_EVENT_PAYLOAD_BYTES,
   type CapsuleEvent,
 } from "../../packages/core/src/contracts/index";
 import {

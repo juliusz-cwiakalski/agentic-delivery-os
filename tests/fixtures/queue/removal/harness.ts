@@ -23,10 +23,10 @@ import {
 import { createParkRecord } from "../../../../packages/core/src/domain/index";
 import type { StoreWriteLog } from "../cli/harness";
 import {
+  type QueueEdgeHarness,
   createQueueEdgeHarness,
   NOW_ISO,
   NOW_MS,
-  type QueueEdgeHarness,
   REPO_A,
 } from "../cli/harness";
 

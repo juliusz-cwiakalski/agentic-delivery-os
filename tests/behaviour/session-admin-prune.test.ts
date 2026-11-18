@@ -26,6 +26,7 @@ import {
   renderSessionAdminHuman,
   selectPruneCandidates,
 } from "../../packages/core/src/domain/session-admin";
+import { SYNTHETIC_BRAND } from "../golden/helpers";
 import {
   BOUNDARY_CASES,
   BOUNDARY_IDS,
@@ -45,8 +46,7 @@ import {
   SESSION_POLICY,
 } from "../fixtures/session-admin/harness";
 import { malformedQueryError, unavailableError } from "../fixtures/session-admin/malformed";
-import { makeSession, type SessionFixture, sessionRow } from "../fixtures/session-admin/store";
-import { SYNTHETIC_BRAND } from "../golden/helpers";
+import { makeSession, sessionRow, type SessionFixture } from "../fixtures/session-admin/store";
 
 const createSessionAdmin = (io: Parameters<typeof createSessionAdminBase>[0]) =>
   createSessionAdminBase(io, SESSION_POLICY);

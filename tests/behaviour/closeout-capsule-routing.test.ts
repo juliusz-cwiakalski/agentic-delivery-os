@@ -1,7 +1,7 @@
 /** TC-CAP-021 — the closed routing matrix and path confinement. */
 import { describe, expect, test } from "bun:test";
-import { checkPromotionConfinement } from "../../packages/adapters/src/file/memory-promotion";
 import { candidateYaml, runPromotionCloseout } from "../fixtures/capsule/promotion";
+import { checkPromotionConfinement } from "../../packages/adapters/src/file/memory-promotion";
 
 const candidatesOf = (run: Awaited<ReturnType<typeof runPromotionCloseout>>) =>
   ((run.data?.capsule ?? {}) as Record<string, unknown>).candidates as Record<string, unknown>[];

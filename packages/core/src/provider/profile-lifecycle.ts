@@ -9,12 +9,12 @@
  * schema-version bump.
  */
 import {
-  PROFILE_TARGET_RECORD_KEY,
-  PROFILE_TARGET_SCHEMA_ID,
   type ProfileEvent,
   type ProfileSelectionResult,
-  type ProfileTargetReason,
   type ProfileTargetRecord,
+  type ProfileTargetReason,
+  PROFILE_TARGET_RECORD_KEY,
+  PROFILE_TARGET_SCHEMA_ID,
   type ProviderProfileConfiguration,
   type StateJsonValue,
   type StateResult,

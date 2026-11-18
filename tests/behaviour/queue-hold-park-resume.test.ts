@@ -15,8 +15,8 @@ import {
   recoverQueueParks,
 } from "../../packages/core/src/app/index";
 import {
-  type OwnerHoldFact,
   QUEUE_PARK_RECORD_KIND,
+  type OwnerHoldFact,
   type QueueParkRecord,
 } from "../../packages/core/src/contracts/index";
 import {

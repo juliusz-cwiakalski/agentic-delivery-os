@@ -7,9 +7,9 @@
  * atomically from the folded handover ledger. Identical replays append nothing.
  */
 import {
-  DISPATCH_ATTEMPT_KEY_PREFIX,
   DISPATCH_ATTEMPT_PAYLOAD_SCHEMA,
   DISPATCH_ATTEMPT_RECORD_KIND,
+  DISPATCH_ATTEMPT_KEY_PREFIX,
   DISPATCH_AUTHORITY_DOCUMENT_NAME,
   DISPATCH_DIVERGENCE_KEY_PREFIX,
   DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
@@ -25,14 +25,14 @@ import {
   type DispatchAuthorityView,
   type DispatchDivergenceRecord,
   type DispatchHandoverRecord,
-  dispatchAttemptRecordKey,
-  dispatchDivergenceRecordKey,
-  dispatchHandoverRecordKey,
   type StateAppendOutcome,
   type StateFailureCode,
   type StateJsonValue,
   type StateReadEvidence,
   type StateStorePort,
+  dispatchAttemptRecordKey,
+  dispatchDivergenceRecordKey,
+  dispatchHandoverRecordKey,
 } from "#contracts";
 
 /** One verified ledger read, with any declared truncation. */

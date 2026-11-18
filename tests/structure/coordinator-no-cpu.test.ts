@@ -8,10 +8,10 @@
  * verdict is decided by artifacts alone.
  */
 import { describe, expect, test } from "bun:test";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { evaluateStuck } from "../../packages/core/src/domain/index";
-import { NOW_MS, STUCK_WINDOW_MS, staleBaseline } from "../fixtures/coordinator/evidence";
+import { staleBaseline, NOW_MS, STUCK_WINDOW_MS } from "../fixtures/coordinator/evidence";
 
 const ROOT = process.cwd();
 const TIERS = ["packages/core/src/domain", "packages/core/src/state"];

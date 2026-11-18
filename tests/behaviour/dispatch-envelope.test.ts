@@ -11,7 +11,7 @@ import {
   PREMATURE_END_EVIDENCE,
   TOOL_FAILURE_EVIDENCE,
 } from "../fixtures/dispatch/harness";
-import { artifacts, ledger, prNone, readFail, readOk } from "../fixtures/dispatch/truth";
+import { artifacts, ledger, prNone, readOk, readFail } from "../fixtures/dispatch/truth";
 
 const attemptsOf = (scenario: ReturnType<typeof createCommandScenario>) => {
   const read = readDispatchAttempts(scenario.state.store);

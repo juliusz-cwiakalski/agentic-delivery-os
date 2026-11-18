@@ -347,7 +347,6 @@ import {
   type ProviderConfiguration,
   type ProviderParkRecord,
   type ProviderSleep,
-  QUEUE_BATTERY_ONLY_PARK_CAUSES,
   type QueueDegradationReason,
   type QueueTrackerRead,
   type QuotaTransport,
@@ -381,6 +380,7 @@ import {
   type WatchdogSignalSource,
   type WorkItem,
 } from "@delivery-os/core/contracts";
+import { QUEUE_BATTERY_ONLY_PARK_CAUSES } from "@delivery-os/core/contracts";
 import {
   createProfileProbePort,
   createProviderEngine,

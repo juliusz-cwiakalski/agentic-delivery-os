@@ -4,9 +4,9 @@
  * document once, and a repeat dependency add on a declared edge churns nothing.
  */
 import { describe, expect, test } from "bun:test";
+import { ledgerDigest, ledgerText, listStoreFiles } from "../fixtures/state/harness";
 import { REMOVAL_REF } from "../fixtures/queue/removal/cases";
 import { createRemovalHarness } from "../fixtures/queue/removal/harness";
-import { ledgerDigest, ledgerText, listStoreFiles } from "../fixtures/state/harness";
 
 describe("TC-QLC-009 removal is append-only and the document moves only on truth change", () => {
   test("a refused removal changes no file byte and an accepted one is a pure suffix append", async () => {

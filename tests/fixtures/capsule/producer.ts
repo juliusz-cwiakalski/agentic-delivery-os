@@ -5,18 +5,17 @@
  * `makeFileProducer` writes through the real append-only runtime over a temp
  * change tree. Both are injected; no command reaches a real surface.
  */
-
-import {
-  createCapsuleFileRuntime,
-  nodeCapsuleFileSystemFacts,
-} from "../../../packages/adapters/src/file/capsule";
 import type {
   CapsuleAppendResult,
   CapsuleFileRuntime,
   CapsuleProducerPort,
   CapsuleProducerRequest,
 } from "../../../packages/core/src/contracts/index";
-import { CAPSULE_NOW, CAPSULE_REF, capsuleRules } from "./harness";
+import {
+  createCapsuleFileRuntime,
+  nodeCapsuleFileSystemFacts,
+} from "../../../packages/adapters/src/file/capsule";
+import { capsuleRules, CAPSULE_NOW, CAPSULE_REF } from "./harness";
 
 export type ProducerMode = "ok" | "busy" | "throw" | "closed";
 

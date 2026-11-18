@@ -12,10 +12,10 @@
  * exit codes.
  */
 import {
-  type CommitActOutcome,
-  type CommitActRequest,
   capsuleDisclosureOf,
   capsulePhaseEventKey,
+  type CommitActOutcome,
+  type CommitActRequest,
   classifyCommitDelta,
   lintPmNotes,
   type PmNotesLintFinding,
@@ -23,8 +23,6 @@ import {
 } from "@delivery-os/core";
 import {
   CANONICAL_PHASE_IDS,
-  type CapsuleDisclosure,
-  type CapsuleProducerPort,
   type CommitIntentBasis,
   type CommitPlanPhaseContext,
   FALLBACK_INTERNAL_CODE,
@@ -35,6 +33,8 @@ import {
   type PmNotesParseFailure,
   type PmNotesVariant,
   REGISTRY_SCHEMA_VERSION,
+  type CapsuleDisclosure,
+  type CapsuleProducerPort,
   type StateFailure,
   type StateReadEvidence,
   type StateResult,

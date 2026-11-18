@@ -3,7 +3,7 @@
  * ambient inputs.
  */
 import { describe, expect, test } from "bun:test";
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { createCoordinatorHarness } from "../fixtures/coordinator/harness";
 

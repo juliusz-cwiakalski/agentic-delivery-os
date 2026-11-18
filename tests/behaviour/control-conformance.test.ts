@@ -8,12 +8,12 @@ import { createStdioTransport } from "../../packages/adapters/src/daemon/stdio";
 import { createControlServer } from "../../packages/core/src/app/control-server";
 import {
   CONTROL_PROTOCOL_CURRENT,
+  LOCAL_CALLER_PRINCIPAL,
   type ControlConnection,
   type ControlFrame,
   type ControlRequestFrame,
   type ControlTransport,
   type DaemonClockPort,
-  LOCAL_CALLER_PRINCIPAL,
 } from "../../packages/core/src/contracts/index";
 import { createMemoryTransportPair } from "../fixtures/daemon/transport/pair";
 

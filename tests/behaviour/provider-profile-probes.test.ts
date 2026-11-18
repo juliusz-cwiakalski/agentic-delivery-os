@@ -5,13 +5,13 @@
 import { describe, expect, test } from "bun:test";
 import type { ProviderProfileConfiguration } from "../../packages/core/src/contracts/index";
 import { selectProfile } from "../../packages/core/src/provider/index";
-import { recordingProbe } from "../fixtures/provider/profile/probes/fixtures";
 import {
   available,
   exhausted,
   profile,
   seat,
 } from "../fixtures/provider/profile/selection/fixtures";
+import { recordingProbe } from "../fixtures/provider/profile/probes/fixtures";
 
 const NOW = 1_700_000_000_000;
 

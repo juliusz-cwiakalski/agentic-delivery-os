@@ -25,6 +25,7 @@ import {
   evaluateQueueReady,
   renderQueueReadyHuman,
 } from "../../packages/core/src/domain/queue-ready";
+import { ciCases } from "../fixtures/queue-ready/ci/cases";
 import {
   labelSentinel,
   nonAsciiByteBudgetControlFacts,
@@ -32,7 +33,6 @@ import {
   nonAsciiRefs,
   relationSentinel,
 } from "../fixtures/queue-ready/caps/non-ascii-byte-budget";
-import { ciCases } from "../fixtures/queue-ready/ci/cases";
 import { closeCases } from "../fixtures/queue-ready/close/cases";
 import { extraCorpusCases } from "../fixtures/queue-ready/corpus/cases";
 import { depsCases } from "../fixtures/queue-ready/deps/cases";

@@ -6,7 +6,7 @@
  * writer fence; staleness is `heartbeat age >= daemon.lock-staleness`, with the
  * at-bound value stale.
  */
-import type { DaemonInstanceRecord, DaemonLockRead, DaemonLockRecord } from "#contracts";
+import type { DaemonInstanceRecord, DaemonLockRecord, DaemonLockRead } from "#contracts";
 import { DAEMON_SCOPE_DIGEST_LENGTH } from "#contracts";
 import { sha256Hex } from "./sha256.js";
 

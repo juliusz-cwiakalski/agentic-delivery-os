@@ -7,8 +7,8 @@ import { describe, expect, test } from "bun:test";
 import type { CeremonyDeclaration } from "../../packages/core/src/contracts/index";
 import { runCeremony } from "../../packages/core/src/domain/index";
 import { readCeremonyRuns } from "../../packages/core/src/state/index";
-import { readFixture, withPath } from "../fixtures/ceremony/declarations";
 import { makeEngineHarness } from "../fixtures/ceremony/engine";
+import { readFixture, withPath } from "../fixtures/ceremony/declarations";
 import { conformingNote } from "../fixtures/ceremony/notes";
 
 const multiTrigger = (): CeremonyDeclaration =>

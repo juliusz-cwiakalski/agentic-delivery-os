@@ -16,8 +16,8 @@ import {
 } from "../../packages/core/src/domain/index";
 import {
   createMemoryResumeStore,
-  type MemoryResumeStore,
   sessionEvidence,
+  type MemoryResumeStore,
 } from "../fixtures/economics/cases";
 
 const depsFor = (

@@ -9,10 +9,10 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseCapsuleEvents } from "../../packages/core/src/domain/capsule";
-import { makeChangeTree } from "../fixtures/capsule/harness";
-import { makeCapsuleRuntime } from "../fixtures/capsule/producer";
 import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
 import { WORK_ITEM_REF } from "../fixtures/closeout/harness";
+import { makeChangeTree } from "../fixtures/capsule/harness";
+import { makeCapsuleRuntime } from "../fixtures/capsule/producer";
 
 describe("TC-CAP-015 review verdict ingestion", () => {
   test("readable verdicts are events and an unreadable artifact is residue", async () => {

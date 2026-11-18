@@ -6,12 +6,12 @@
  * `noop-lane-nothing-to-do` is derived only when no work remains.
  */
 import { describe, expect, test } from "bun:test";
-import { DELIVERY_RESULT_TOKENS } from "../../packages/core/src/contracts/index";
 import {
   classifyDispatchFailure,
   classifySpawnRefusal,
   deriveDispatchResult,
 } from "../../packages/core/src/domain/dispatch-result";
+import { DELIVERY_RESULT_TOKENS } from "../../packages/core/src/contracts/index";
 import {
   COMPLETED_EVIDENCE,
   PREMATURE_END_EVIDENCE,

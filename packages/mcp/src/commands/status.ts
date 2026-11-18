@@ -8,7 +8,6 @@
  */
 import { aggregateStatus } from "@delivery-os/core";
 import {
-  type OwnerHoldFact,
   type SpendDigestSection,
   STATUS_SOURCE_ITEM_LIMIT,
   STATUS_SOURCE_PIPELINE_LIMIT,
@@ -22,6 +21,7 @@ import {
   type StatusRepositoryFacts,
   type StatusRepositoryTarget,
   type StatusWorkItemRead,
+  type OwnerHoldFact,
 } from "@delivery-os/core/contracts";
 import { failureFromValue, type McpToolResult } from "../output/payload.js";
 

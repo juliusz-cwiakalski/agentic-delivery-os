@@ -9,8 +9,8 @@
  */
 import type { QueueReadyFacts } from "../../../../../packages/core/src/contracts/index";
 import {
-  BRANCH,
   baseFacts,
+  BRANCH,
   deliveryRequestRead,
   job,
   localContext,

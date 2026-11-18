@@ -3,8 +3,6 @@
  * configuration-only cadence.
  */
 import { describe, expect, test } from "bun:test";
-import { createResidentPolling } from "../../packages/core/src/app/polling";
-import { resolvePollSettings } from "../../packages/core/src/config/index";
 import {
   nextPollDelayMs,
   pollDue,
@@ -12,6 +10,8 @@ import {
   pollIssued,
   pollSuccess,
 } from "../../packages/core/src/domain/poll-policy";
+import { createResidentPolling } from "../../packages/core/src/app/polling";
+import { resolvePollSettings } from "../../packages/core/src/config/index";
 
 const settings = { baseIntervalMs: 1_000, maxIntervalMs: 8_000, minSpacingMs: 500 };
 

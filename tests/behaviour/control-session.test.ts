@@ -3,13 +3,13 @@
  * subscriptions, overflow degradation, and injected-clock timeouts.
  */
 import { describe, expect, test } from "bun:test";
+import { createControlSession } from "../../packages/core/src/domain/control-session";
 import {
   CONTROL_PROTOCOL_CURRENT,
+  LOCAL_CALLER_PRINCIPAL,
   type ControlRequestFrame,
   type DaemonClockPort,
-  LOCAL_CALLER_PRINCIPAL,
 } from "../../packages/core/src/contracts/index";
-import { createControlSession } from "../../packages/core/src/domain/control-session";
 
 const clock = (start = 1_000): DaemonClockPort & { advance: (ms: number) => void } => {
   let now = start;

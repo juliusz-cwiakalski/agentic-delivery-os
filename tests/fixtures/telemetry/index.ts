@@ -29,7 +29,6 @@ import {
   type TelemetryWarning,
   type TelemetryWarningReason,
 } from "../../../packages/core/src/contracts/index";
-import { computeSpendReport } from "../../../packages/core/src/domain/spend";
 import type { TelemetryAttributionSubstrates } from "../../../packages/core/src/domain/telemetry-attribution";
 import {
   decodeTelemetryStepFrame,
@@ -37,6 +36,7 @@ import {
   type TelemetryFrameContext,
   tallyFrame,
 } from "../../../packages/core/src/domain/telemetry-ingest";
+import { computeSpendReport } from "../../../packages/core/src/domain/spend";
 import {
   appendEconomicsRestartEvent,
   appendHarnessTelemetry,

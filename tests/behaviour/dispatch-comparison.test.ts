@@ -5,15 +5,15 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
-  DELIVERY_RESULT_TOKENS,
-  type DeliveryResultToken,
-} from "../../packages/core/src/contracts/index";
-import {
   buildComparisonRecord,
   dispatchFamilyOf,
   isComparisonDivergence,
   isComparisonShapeValid,
 } from "../../packages/core/src/domain/dispatch-comparison";
+import {
+  DELIVERY_RESULT_TOKENS,
+  type DeliveryResultToken,
+} from "../../packages/core/src/contracts/index";
 import { comparisonForToken } from "../fixtures/dispatch/ledger";
 
 describe("TC-EVID-007 comparison record shape across the eleven tokens", () => {

@@ -5,8 +5,7 @@
  *
  * Fixtures are data only; the real classifier and the real derivation are used.
  */
-
-import type { HarnessEvidence } from "../../../packages/core/src/contracts/index";
+import { classifyHarnessEvidence } from "../../../packages/core/src/domain/harness-classify";
 import type {
   DispatchArtifactFacts,
   DispatchHarnessFacts,
@@ -17,7 +16,7 @@ import type {
   DispatchTrackerFacts,
   DispatchTruthInput,
 } from "../../../packages/core/src/domain/dispatch-result";
-import { classifyHarnessEvidence } from "../../../packages/core/src/domain/harness-classify";
+import type { HarnessEvidence } from "../../../packages/core/src/contracts/index";
 import { COMPLETED_EVIDENCE, DISPATCH_NOW } from "./harness";
 
 export const readOk = <T>(value: T): DispatchRead<T> => ({ ok: true, value });

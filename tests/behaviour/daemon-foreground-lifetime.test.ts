@@ -15,13 +15,13 @@ import {
   readDaemonLanes,
 } from "../../packages/core/src/app/index";
 import type { DaemonLockPort } from "../../packages/core/src/contracts/index";
+import { appendLane } from "../fixtures/daemon/mount-states";
 import {
   createMountClock,
   createMountHarness,
   mountComposition,
   openMountStore,
 } from "../fixtures/daemon/mount-harness";
-import { appendLane } from "../fixtures/daemon/mount-states";
 
 /** A recording signal host: it never touches the test process's signals. */
 export const createSignalHost = () => {

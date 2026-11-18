@@ -9,9 +9,9 @@
  */
 import {
   type EconomicsAmplificationFlag,
-  type EconomicsExhaustionRecord,
   type EconomicsRestartHistoryEntry,
   type EconomicsRestartRecord,
+  type EconomicsExhaustionRecord,
   type EconomicsView,
   type EconomicsWarning,
   RESUME_AMPLIFICATION_BASELINE,

@@ -2,31 +2,26 @@
  * GH-301 concurrency proofs (TC-MEMCONC-001, TC-MEMCONC-002).
  */
 import { describe, expect, test } from "bun:test";
-import { spawnSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { spawnSync } from "node:child_process";
 import { parse } from "yaml";
+import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
+import { evaluateCandidates } from "../../packages/core/src/domain/capsule-candidates";
 import {
   applyPromotionWrite,
   readMemoryFacts,
 } from "../../packages/adapters/src/file/memory-promotion";
 import { scanMemoryTree } from "../../packages/adapters/src/file/memory-scan";
+import { MEMORY_ROOT } from "../../packages/core/src/contracts/index";
+import { scanMemoryFolder } from "../fixtures/memory/tree";
 import type {
   MemoryEvaluationResult,
   MemoryPrivacyVocabulary,
 } from "../../packages/core/src/contracts/index";
-import { MEMORY_ROOT } from "../../packages/core/src/contracts/index";
-import { evaluateCandidates } from "../../packages/core/src/domain/capsule-candidates";
-import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
 import { candidateYaml, makeTempMemory } from "../fixtures/capsule/promotion";
-import {
-  indexReadme,
-  indexRow,
-  recordText,
-  scanMemoryFolder,
-  validLessonFields,
-} from "../fixtures/memory/tree";
+import { indexReadme, indexRow, recordText, validLessonFields } from "../fixtures/memory/tree";
 
 const TODAY = "2026-11-15";
 const EMPTY_VOCABULARY: MemoryPrivacyVocabulary = { rules: [], suppressionClasses: [] };

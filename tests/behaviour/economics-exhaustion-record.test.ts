@@ -12,9 +12,9 @@ import {
 import { parseRefusalCorpus } from "../../packages/core/src/domain/index";
 import {
   createEconomicsRuntime,
-  type EconomicsRuntime,
   runtimeEvidence,
   seedRestarts,
+  type EconomicsRuntime,
 } from "../fixtures/economics/harness";
 
 const runtimes: EconomicsRuntime[] = [];

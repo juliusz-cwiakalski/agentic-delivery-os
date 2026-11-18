@@ -5,8 +5,8 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
-  CEREMONY_CHECK_STATE_VALUES,
   CEREMONY_DECLARED_CHECKS,
+  CEREMONY_CHECK_STATE_VALUES,
 } from "../../packages/core/src/domain/index";
 import { prepareBuiltin, runPrepared } from "../fixtures/ceremony/builtins";
 
