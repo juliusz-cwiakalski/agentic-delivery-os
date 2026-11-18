@@ -13,11 +13,22 @@ phases:
   review_fix: { started: null, completed: 2026-11-18T05:14:06.363Z }
   quality_gates: { started: null, completed: 2026-11-18T05:34:43.558Z }
   dod_check: { started: null, completed: 2026-11-18T05:36:06.482Z }
-  pr_creation: { started: null, completed: null }
+  pr_creation: { started: null, completed: 2026-11-18T06:09:51.930Z }
 decisions: []
 open_questions: []
 blockers: []
 notes:
+  - text: "PR #343 created against main-tools:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/343. Title
+      'feat(GH-293): make engine-first delivery operations operable'; body
+      authored from chg-GH-293-spec.md, chg-GH-293-plan.yaml and this pm-notes
+      with the GH-293 link, the operational story, the plan-phase-to-commit map,
+      and the gate/review/documentation evidence. Verified open, base
+      main-tools, head 168a60f6, no auto-merge and no merge attempted. Range
+      lint re-run before creation at 47 commits: PASS, 0 offending. pr_creation
+      completes with this record; merge authority is the CEO."
+    type: "info"
+    date: "2026-11-18"
   - text: "DoD check: PASS. Nine lifecycle phases complete; every plan phase 1-7
       carries a pm-notes entry with commit hash and test result; plan validates
       and pm-notes lint conforms; all 14 spec ACs verified by the test-plan
