@@ -755,6 +755,33 @@ describe("TC-DOUBLE-001 the flow/step census is unchanged by the double", () => 
   });
 });
 
+describe("TC-REG-003 the shipped registry stays exactly three contracts", () => {
+  test("the provider set is exactly github, gitlab and jira and the control is absent", () => {
+    expect(new Set(CONFORMANCE_ADAPTERS.map((adapter) => adapter.provider))).toEqual(
+      new Set(["github", "gitlab", "jira"]),
+    );
+    expect(CONFORMANCE_ADAPTERS.some((adapter) => adapter.provider === "control")).toBe(false);
+    for (const adapter of CONFORMANCE_ADAPTERS) {
+      expect(adapter.contract.adapterName).toBe(adapter.provider);
+    }
+    expect(
+      structuralCoverageViolations({ flows: CONFORMANCE_FLOWS, adapters: CONFORMANCE_ADAPTERS }),
+    ).toEqual([]);
+  });
+
+  test("an unknown registration is still rejected", () => {
+    const azure = {
+      ...(CONFORMANCE_ADAPTERS[0] as (typeof CONFORMANCE_ADAPTERS)[number]),
+      provider: "azure",
+    };
+    expect(
+      structuralCoverageViolations({ flows: CONFORMANCE_FLOWS, adapters: [azure] }).some(
+        (message) => message.includes("azure"),
+      ),
+    ).toBe(true);
+  });
+});
+
 describe("TC-CAP-002 capsule conformance registry coverage", () => {
   test("the shipped capsule registry is a bijection with the event vocabulary", async () => {
     const { CAPSULE_CONFORMANCE_REGISTRY, capsuleConformanceViolations } = await import(

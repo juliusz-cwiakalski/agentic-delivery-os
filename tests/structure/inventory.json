@@ -430,6 +430,7 @@
     "src/conformance/harness.ts",
     "src/conformance/mock-tenant.ts",
     "src/conformance/parity.ts",
+    "src/conformance/participation.ts",
     "src/conformance/runner.ts",
     "src/conformance/stateful-double.ts",
     "src/conformance/tracker-error-taxonomy.ts",

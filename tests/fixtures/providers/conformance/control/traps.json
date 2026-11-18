@@ -1,0 +1,42 @@
+{
+  "provider": "control",
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "entries": [
+    {
+      "trapName": "CONTROL-FAMILY-AUTH",
+      "providerBehavior": "A control adapter can classify an authorization rejection.",
+      "expectedNormalizedOutcome": "auth-shape is declared covered on the control adapter.",
+      "fixtureReference": "tests/fixtures/providers/conformance/control/tenant.json#/routes/0"
+    },
+    {
+      "trapName": "CONTROL-FAMILY-TRANSPORT",
+      "providerBehavior": "A control adapter can classify a transport failure.",
+      "expectedNormalizedOutcome": "transport-failure is declared covered on the control adapter.",
+      "fixtureReference": "tests/fixtures/providers/conformance/control/tenant.json#/routes/0"
+    },
+    {
+      "trapName": "CONTROL-FAMILY-RATE",
+      "providerBehavior": "A control adapter can classify a throttled response.",
+      "expectedNormalizedOutcome": "rate-limit is declared covered on the control adapter.",
+      "fixtureReference": "tests/fixtures/providers/conformance/control/tenant.json#/routes/0"
+    },
+    {
+      "trapName": "CONTROL-FAMILY-PAYLOAD",
+      "providerBehavior": "A control adapter can classify an invalid payload.",
+      "expectedNormalizedOutcome": "payload-shape is declared covered on the control adapter.",
+      "fixtureReference": "tests/fixtures/providers/conformance/control/tenant.json#/routes/0"
+    },
+    {
+      "trapName": "CONTROL-FAMILY-STATE",
+      "providerBehavior": "A control adapter can classify a workflow-state mismatch.",
+      "expectedNormalizedOutcome": "workflow-state-mismatch is declared covered on the control adapter.",
+      "fixtureReference": "tests/fixtures/providers/conformance/control/tenant.json#/routes/0"
+    },
+    {
+      "trapName": "CONTROL-FAMILY-PAGE",
+      "providerBehavior": "A control adapter can account for a bounded collection read.",
+      "expectedNormalizedOutcome": "pagination-truncation is declared covered on the control adapter.",
+      "fixtureReference": "tests/fixtures/providers/conformance/control/tenant.json#/routes/0"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "provider": "control",
+  "adapterName": "control",
+  "instance": {
+    "instanceName": "control-tracker",
+    "systemKind": "tracker",
+    "baseUrl": "https://control.example.com",
+    "authMethod": {
+      "mechanism": "anonymous"
+    }
+  },
+  "credentialReferenceName": "control-read",
+  "addressing": {
+    "provider": "github",
+    "owner": "owner-placeholder",
+    "repo": "project-placeholder",
+    "issueNumber": 1,
+    "pullNumber": 1,
+    "commitSha": "1111111111111111111111111111111111111111",
+    "threadId": "thread-1"
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "url": "https://control.example.com/work-items/1",
+      "status": 200,
+      "body": {
+        "id": "1",
+        "title": "Control work item",
+        "state": "open"
+      }
+    }
+  ],
+  "expected": {
+    "change-lifecycle.read-work-item": {}
+  }
+}

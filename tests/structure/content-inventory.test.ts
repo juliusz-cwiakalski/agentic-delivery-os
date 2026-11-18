@@ -2314,6 +2314,15 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "parityViolations",
     "renderParityViolation",
   ],
+  "testkit/src/conformance/participation.ts": [
+    "isClosedOperation",
+    "operationRefusal",
+    "PARTICIPATION_CONTRACT",
+    "PARTICIPATION_ITEMS",
+    "PARTICIPATION_REFUSALS",
+    "participationRefusal",
+    "participationViolations",
+  ],
   "testkit/src/conformance/runner.ts": ["runConformance"],
   "testkit/src/conformance/stateful-double.ts": [
     "canonicalizeState",

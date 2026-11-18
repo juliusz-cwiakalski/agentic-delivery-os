@@ -168,3 +168,86 @@ describe("TC-GATE-003 parity diagnostics", () => {
     expect(JSON.stringify(crafted)).toContain(canary);
   });
 });
+
+// --- TC-GATE-001: the gate is discovered by the existing aggregate path ------
+
+import {
+  CONFORMANCE_ADAPTERS as ADAPTERS,
+  createMockTenantTransport,
+  runConformance,
+} from "@delivery-os/testkit";
+import { parse } from "yaml";
+import { createCanaryCredentialPort, loadMockTenants } from "../conformance/support/fixtures";
+
+const NEW_SUITES = [
+  "tests/conformance/parity-gate.test.ts",
+  "tests/conformance/tracker-taxonomy.test.ts",
+  "tests/conformance/family-classification.test.ts",
+  "tests/conformance/stateful-double.test.ts",
+  "tests/conformance/control-registration.test.ts",
+  "tests/checks/parity-gate-wiring.test.ts",
+  "tests/checks/tracker-literal-scan.test.ts",
+  "tests/structure/conformance-family-accounting.test.ts",
+  "tests/structure/registration-participation.test.ts",
+  "tests/structure/ci-topology-pin.test.ts",
+];
+
+const globMatches = (pattern: string, path: string): boolean => {
+  const escaped = pattern
+    .replaceAll(/[.+^${}()|[\]\\]/g, "\\$&")
+    .replaceAll("**/", "\u0000")
+    .replaceAll("**", ".*")
+    .replaceAll("*", "[^/]*")
+    .replaceAll("\u0000", "(?:.*/)?");
+  return new RegExp(`^${escaped}$`).test(path);
+};
+
+describe("TC-GATE-001 the gate rides the existing aggregate test path", () => {
+  test("the ts-test job runs exactly `pnpm test` and the script is exactly `bun test`", () => {
+    const workflow = parse(readFileSync(join(ROOT, ".github/workflows/ci.yml"), "utf8")) as {
+      jobs?: Record<string, { steps?: Array<{ name?: string; run?: string }> }>;
+    };
+    const steps = workflow.jobs?.["ts-test"]?.steps ?? [];
+    const runs = steps.flatMap((step) => (typeof step.run === "string" ? [step.run] : []));
+    expect(runs).toContain("pnpm test");
+    expect(runs.some((run) => /pnpm test\s+\S|bun test\s+tests\//.test(run))).toBe(false);
+    const packageJson = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")) as {
+      scripts: Record<string, string>;
+    };
+    expect(packageJson.scripts.test).toBe("bun test");
+  });
+
+  test("the discovery root is `.` and no new suite path is ignored", () => {
+    const bunfig = readFileSync(join(ROOT, "bunfig.toml"), "utf8");
+    expect(bunfig).toMatch(/root\s*=\s*"\."/);
+    const ignored = [...bunfig.matchAll(/"([^"]+)"/g)]
+      .map((match) => match[1] ?? "")
+      .filter((value) => value.includes("*") || value.includes("/"));
+    for (const suite of NEW_SUITES) {
+      expect(existsSync(join(ROOT, suite)), suite).toBe(true);
+      for (const pattern of ignored) {
+        expect(globMatches(pattern, suite), `${suite} matched ${pattern}`).toBe(false);
+      }
+    }
+    expect(globMatches("tmp/**", "tests/conformance/parity-gate.test.ts")).toBe(false);
+  });
+
+  test("the gate actually ran over the production matrix and the mock tier executed steps", async () => {
+    const before = PARITY_MATRIX;
+    expect(parityViolations({ matrix: before, adapters: CONFORMANCE_ADAPTERS })).toEqual([]);
+    expect(before).toBe(PARITY_MATRIX);
+
+    const tenants = loadMockTenants();
+    const report = await runConformance({
+      adapters: ADAPTERS,
+      tenants,
+      credentials: createCanaryCredentialPort(),
+      transportFactory: (provider) =>
+        createMockTenantTransport(tenants[provider as keyof typeof tenants] as never),
+      nowIso: "2026-10-31T00:00:00Z",
+      runId: "gate-wiring-run",
+      tier: "mock",
+    });
+    expect(report.steps.filter((step) => step.status === "executed").length).toBeGreaterThan(0);
+  });
+});

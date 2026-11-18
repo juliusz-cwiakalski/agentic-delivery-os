@@ -82,6 +82,20 @@ export {
   parityViolations,
   renderParityViolation,
 } from "./conformance/parity.js";
+export type {
+  ParticipationEntry,
+  ParticipationItem,
+  ParticipationRefusal,
+} from "./conformance/participation.js";
+export {
+  isClosedOperation,
+  operationRefusal,
+  PARTICIPATION_CONTRACT,
+  PARTICIPATION_ITEMS,
+  PARTICIPATION_REFUSALS,
+  participationRefusal,
+  participationViolations,
+} from "./conformance/participation.js";
 export { runConformance } from "./conformance/runner.js";
 export type {
   StatefulEffect,
