@@ -25,7 +25,7 @@ classification:
 governance:
   driver: "@decision-advisor (via GH-188 planning)"
   decider: "Juliusz Ćwiąkalski (human acceptance pending at PR review)"
-  contributors: ["@decision-advisor (analysis)", "@spec-writer (GH-188 spec OQ-4/DEC-1 framing)", "@decision-advisor (2026-11-17 editorial pointer to TDR-0031 for the GH-338 reviewed extension; no decision text changed)"]
+  contributors: ["@decision-advisor (analysis)", "@spec-writer (GH-188 spec OQ-4/DEC-1 framing)", "@decision-advisor (2026-11-17 editorial pointer to TDR-0032 for the GH-338 reviewed extension; no decision text changed)"]
   reviewers: ["@readiness-reviewer", "@reviewer", "Owner (human final acceptance)"]
   performers: ["@coder", "@doc-syncer"]
   informed: ["ADOS contributors", "Future provider-seed stories (azure, ci)"]
@@ -47,7 +47,7 @@ links:
   spec: ["doc/spec/features/feature-monorepo-scaffold-toolchain.md", "doc/spec/features/feature-adapter-ports.md"]
   contracts: [".dependency-cruiser.cjs"]
   diagrams: []
-  decisions: ["ADR-0003", "TDR-0031"]
+  decisions: ["ADR-0003", "TDR-0032"]
   experiments: []
   metrics: []
   roadmap_items: []
@@ -174,7 +174,7 @@ ADR-0003's operative confinement sentence is generic ("the adapter I/O subpaths"
 - **Decider:** Owner (Juliusz Ćwiąkalski) — acceptance pending at GH-188 PR review; this record stays Proposed until then.
 - **Conditions for revisit:** See `revisit_triggers` in the front matter; notably any request for runtime APIs beyond network I/O in a provider subpath, or any allowlist growth that is not reason-bearing and reviewed.
 
-> **Editorial pointer (2026-11-17).** The process-access revisit trigger above has fired once and has been answered, not overridden: [TDR-0031](TDR-0031-github-adapter-cli-first-provider-transport.md) is the reviewed extension ADR-0005 routes process access to, and it admits one bounded fixed-argv, no-shell `gh` child invocation inside `packages/adapters/src/github/` for the CLI-first transport. This record's decision statement is unchanged: provider client subpaths remain admitted for network I/O on the terms stated, the mechanical allowlist and its exact-path reasons are untouched, the secret-read allowlist stays unchanged, and no other provider subpath gains a process edge. A reader of this record alone must follow exactly one pointer — this one — for the current meaning of the `github` admission.
+> **Editorial pointer (2026-11-17).** The process-access revisit trigger above has fired once and has been answered, not overridden: [TDR-0032](TDR-0032-github-adapter-cli-first-provider-transport.md) is the reviewed extension ADR-0005 routes process access to, and it admits one bounded fixed-argv, no-shell `gh` child invocation inside `packages/adapters/src/github/` for the CLI-first transport. This record's decision statement is unchanged: provider client subpaths remain admitted for network I/O on the terms stated, the mechanical allowlist and its exact-path reasons are untouched, the secret-read allowlist stays unchanged, and no other provider subpath gains a process edge. A reader of this record alone must follow exactly one pointer — this one — for the current meaning of the `github` admission.
 
 ### Constraint Compliance Attestation
 

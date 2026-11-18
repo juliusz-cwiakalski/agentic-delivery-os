@@ -100,6 +100,7 @@ import {
   type DispatchTruthReads,
   dispatchAdmissionRefusal,
   EvaluateVerifyChange,
+  emptyHandoverGate,
   evaluateRestartBudget,
   foldDispatchHandover,
   type HandoverEvidence,
@@ -130,9 +131,11 @@ import {
   readDaemonHeartbeat,
   readDaemonInstance,
   readDaemonLanes,
+  readDispatchGate,
   readDispatchHandover,
   readQueueEntries,
   releaseQueueLease,
+  reposHandoverGateOf,
   reposListDataOf,
   resolveConfig,
   resolveCoordinatorSettings,
@@ -142,6 +145,7 @@ import {
   resolveOwnerHoldFact,
   resolveProjectGroupMember,
   resolveProjectScope,
+  reversibilityOf,
   type SupervisionEconomicsWritePort,
   type SupervisionRestartAdmission,
   selectDaemonReachability,
@@ -163,6 +167,7 @@ import {
   BLOCKER_QUESTION_PAYLOAD_SCHEMA,
   type BrandIdentity,
   CLOSEOUT_INTEGRATION_BASE,
+  type ConfigErrorCode,
   type ConfigNodeOrigins,
   type ConfigPriorOutcome,
   type ConfigValue,
@@ -172,6 +177,7 @@ import {
   type DaemonReachability,
   type DaemonSettings,
   DELIVERY_RESULT_TOKENS,
+  type DeliveryRequest,
   type DeliveryResultToken,
   DISPATCH_DEFAULT_EVIDENCE_CLASS,
   type DispatchLedgerVariant,
@@ -181,6 +187,7 @@ import {
   ECONOMICS_RESTART_SCHEMA_ID,
   type ExternalSystemInstance,
   HARNESS_KINDS,
+  type HandoverState,
   type HarnessEnvironmentBuilder,
   type HarnessEnvironmentEntry,
   type HarnessExecutionEnvironmentDescriptor,
@@ -204,12 +211,13 @@ import {
   type ProjectGroupsConfig,
   type ProjectGroupValidated,
   type ProjectScopedMemberWork,
-  type ProjectsListEntry,
   QUEUE_DEFAULT_NEXT_ACTIONS,
+  QUEUE_REF_PATTERN,
   type QueueDegradationReason,
   type QueueEntryProjection,
   type QueueTrackerRead,
   REPOS_COMMAND_FAMILY,
+  type ReposHandoverGate,
   renderPriorIdentityNotice,
   STATUS_OWNER_ATTENTION_LABELS,
   STATUS_SOURCE_ITEM_LIMIT,
@@ -218,6 +226,7 @@ import {
   TELEMETRY_RUN_ID_UNAVAILABLE,
   type TelemetryIngestSink,
   VERIFY_GATES_CI_RUN_LIMIT,
+  type WorkItem,
 } from "@delivery-os/core/contracts";
 import {
   nominateProviderProfile,
@@ -277,13 +286,81 @@ import { workingNameEnvironmentVariable } from "./entrypoint.js";
 import { PROMPT_REQUIRED_COMMANDS } from "./help/prompt-required-commands.js";
 import type { CommandDefinition, CommandProgram } from "./index.js";
 
-const PROVIDER_FAILURE = "config.credential.missing";
+/**
+ * The configuration-document codes the merge composition's configuration-read
+ * branch can forward (GH-293 F-6; DEC-18).
+ *
+ * The branch resolves the one declared configuration document before the
+ * transaction reads anything and forwards the acquisition's or the resolver's
+ * own classified code instead of resolving an empty map. The tuple is typed
+ * against the delivered configuration taxonomy, so the branch cannot forward a
+ * code the taxonomy does not declare, and the conformance suite pins every
+ * member of this tuple as a member of the emittable declaration.
+ *
+ * Two taxonomy codes are deliberately absent because this branch cannot produce
+ * them: the resolver is called with no environment map, so an unmapped
+ * environment variable is unreachable; and with no strict flag, so a strict
+ * warning is unreachable.
+ */
+const MERGE_COMPOSITION_CONFIGURATION_CODES = [
+  "config.file.malformed",
+  "config.value.invalid",
+  "config.key.unknown",
+  "config.reset.invalid",
+  "config.interpolation.rejected",
+  "config.secret.forbidden",
+  "config.path.forbidden",
+] as const satisfies readonly ConfigErrorCode[];
+
+/**
+ * The production merge composition's declared emittable failure codes (GH-293
+ * F-7, DM-6; TDR-0031 D9).
+ *
+ * Exhaustive by construction over this composition's refusal branches: every
+ * member is a code the delivered error table already declares, and the
+ * classification conformance suite ranges over this declaration rather than a
+ * hand-picked list. The configuration-read branch contributes its own forwarded
+ * codes, so a configuration document that cannot be read or that carries an
+ * invalid `merge` value is classified by its declared identity rather than
+ * silently resolving defaults. The set is a declaration, never a row source: it
+ * adds no row, kind, or exit.
+ */
+export const MERGE_COMPOSITION_EMITTABLE_CODES = [
+  ...MERGE_COMPOSITION_CONFIGURATION_CODES,
+  "config.credential.missing",
+  "provider.auth.rejected",
+  "provider.outage",
+  "merge.transaction-aborted",
+  "merge.state-unverified",
+  "merge.gates-stale",
+  "merge.waiver-unauthorized",
+  "merge.owner-gate-override-without-waiver",
+  "merge.rebase-conflict",
+  "merge.landing-unverified",
+] as const;
 
 /**
  * The tracker-family tokens the truth read derives, resolved from the one
  * taxonomy: `merged`, `blocked`, `pr-open`.
  */
 const [PR_MERGED_TOKEN, PR_BLOCKED_TOKEN, PR_OPEN_TOKEN] = DELIVERY_RESULT_TOKENS;
+
+/**
+ * The one declared work-item-ref grammar the merge surfaces accept.
+ *
+ * The command's own validation and this composition's ref resolution read the
+ * same delivered contract pattern, so a prefix carrying a digit (`ABC2-12`)
+ * validates and then resolves instead of being refused as unresolvable.
+ */
+const CHANGE_REF_GRAMMAR = new RegExp(QUEUE_REF_PATTERN, "u");
+
+/** The work-item number a ref carries, or `undefined` when it is not a ref. */
+const changeRefNumberOf = (ref: string): string | undefined =>
+  CHANGE_REF_GRAMMAR.test(ref) ? ref.slice(ref.lastIndexOf("-") + 1) : undefined;
+
+/** The change ref a branch name carries: the first path segment that is a ref. */
+const changeRefInBranch = (branch: string): string | undefined =>
+  branch.split("/").find((segment) => CHANGE_REF_GRAMMAR.test(segment));
 
 /** The bounded provider page the truth read addresses. */
 const TRUTH_PROVIDER_LIMIT = STATUS_SOURCE_ITEM_LIMIT;
@@ -355,11 +432,6 @@ const unavailableDaemonRuntime = (): DaemonCommandRuntime => {
     uninstall: async () => refuse(),
   };
 };
-
-const credentialRefusal = async (): Promise<{ readonly ok: false; readonly code: string }> => ({
-  ok: false,
-  code: PROVIDER_FAILURE,
-});
 
 /** The declared truth-read credential reference (names only, never material). */
 const githubReadReference: CredentialReference = {
@@ -1288,7 +1360,18 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     // Resolve the checkout facts once per invocation. An injected origin replaces
     // only the remote; the checkout root always comes from the working directory,
     // so a composition test can never supply a synthetic root (DEC-2, DEC-5).
-    const resolvedRepositoryFacts = readRepositoryFacts({ cwd, io: nodeRepositoryIo() });
+    // One memoized reader serves the composing checkout and every fleet row's
+    // own checkout, so a fleet read pays one metadata read per distinct checkout
+    // and never a second resolution of the same one.
+    const repositoryFactsByRoot = new Map<string, ReturnType<typeof readRepositoryFacts>>();
+    const repositoryFactsFor = (root: string): ReturnType<typeof readRepositoryFacts> => {
+      const cached = repositoryFactsByRoot.get(root);
+      if (cached !== undefined) return cached;
+      const facts = readRepositoryFacts({ cwd: root, io: nodeRepositoryIo() });
+      repositoryFactsByRoot.set(root, facts);
+      return facts;
+    };
+    const resolvedRepositoryFacts = repositoryFactsFor(cwd);
     const repositoryOriginUrl =
       facts.repositoryFacts === undefined
         ? resolvedRepositoryFacts.originUrl
@@ -1540,17 +1623,167 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       readSuiteMap,
     });
 
-    const merge = createMergeCommandRuntime({
+    /** The declared integration base the checkout's base reference resolves to. */
+    const mergeBaseRef = CLOSEOUT_INTEGRATION_BASE;
+    /** The checkout's own current branch, read from its git facts. */
+    const mergeBranch = resolvedRepositoryFacts.head.branch;
+
+    /**
+     * The provider-resolved repository owner (GH-293 DEC-13, TDR-0031 D8): the
+     * owner component of the checkout's normalized `host/owner/name` identity,
+     * resolved through the delivered identity policy with no new configuration
+     * key and no persistence on this path.
+     */
+    const mergeOwnerPrincipalOf = (): string | undefined => {
+      const repository = resolveProductionRepository(undefined, { persist: false });
+      if (repository === undefined) return undefined;
+      const parts = repository.split("/");
+      return parts.length === 3 ? parts[1] : undefined;
+    };
+
+    /**
+     * One declared configuration resolution for the merge branch (GH-293 F-6).
+     *
+     * An absent document keeps the delivered defaults; an unreadable or invalid
+     * document forwards its own classified code rather than silently resolving
+     * `{}`. The declared keys stay exactly `gate-freshness`, `gates`, and
+     * `deploy-expectations`, and the forwarded code is a member of the delivered
+     * configuration taxonomy by type.
+     */
+    type MergeConfigurationRead =
+      | { readonly ok: true; readonly values: Readonly<Record<string, ConfigValue>> }
+      | { readonly ok: false; readonly code: ConfigErrorCode; readonly detail?: string };
+    let mergeConfigurationCache: MergeConfigurationRead | undefined;
+    const mergeConfiguration = (): MergeConfigurationRead => {
+      if (mergeConfigurationCache !== undefined) return mergeConfigurationCache;
+      const acquired = acquireProjectConfiguration(gitRootForConfig());
+      if (!acquired.ok) {
+        mergeConfigurationCache = { ok: false, code: acquired.error.code };
+        return mergeConfigurationCache;
+      }
+      const resolved = resolveConfig({ sources: acquired.sources });
+      if (!resolved.ok) {
+        mergeConfigurationCache = { ok: false, code: resolved.error.code };
+        return mergeConfigurationCache;
+      }
+      mergeConfigurationCache = { ok: true, values: resolved.value.values };
+      return mergeConfigurationCache;
+    };
+
+    /**
+     * Map one adapter read failure onto the composition's declared identities
+     * (GH-293 F-7, OQ-TP-6). Every mapped code is a member of the declaration
+     * above; a read fault never reaches `fallback.internal`.
+     */
+    const mergeReadCodeOf = (read: {
+      readonly code: string;
+      readonly httpStatus?: number;
+    }): string => {
+      if (read.code === "config.credential.missing") return "config.credential.missing";
+      if (read.code === "provider.auth.rejected") return "provider.auth.rejected";
+      if (read.code === "provider.outage") return "provider.outage";
+      if (read.code === "provider.payload.invalid") {
+        return read.httpStatus === 401 || read.httpStatus === 403
+          ? "provider.auth.rejected"
+          : "provider.outage";
+      }
+      // An absent request or work item cannot be resolved: the transaction
+      // aborts cleanly before any landing mutation, and a re-run with a valid
+      // reference converges (the declared `merge.transaction-aborted` meaning).
+      if (read.code === "provider.not-found") return "merge.transaction-aborted";
+      return "provider.outage";
+    };
+
+    const mergeWorkItem = async (
+      changeRef: string,
+    ): Promise<
+      { readonly ok: true; readonly item: WorkItem } | { readonly ok: false; readonly code: string }
+    > => {
+      const issueNumber = changeRefNumberOf(changeRef);
+      if (issueNumber === undefined) return { ok: false, code: "merge.transaction-aborted" };
+      const read = await client.readWorkItem(Number(issueNumber));
+      return read.ok ? { ok: true, item: read.value } : { ok: false, code: mergeReadCodeOf(read) };
+    };
+
+    const mergeCheckRuns = async (
+      sha: string,
+    ): Promise<
+      | {
+          readonly ok: true;
+          readonly items: readonly PipelineRun[];
+          readonly pageItemCount: number;
+          readonly sha?: string;
+        }
+      | { readonly ok: false; readonly code: string }
+    > => {
+      const read = await client.readPipelineRun(sha, VERIFY_GATES_CI_RUN_LIMIT);
+      return read.ok
+        ? { ok: true, items: read.value.items, pageItemCount: read.value.pageItemCount, sha }
+        : { ok: false, code: mergeReadCodeOf(read) };
+    };
+
+    const mergeRequestDetail = async (): Promise<
+      | { readonly ok: true; readonly request: DeliveryRequest }
+      | { readonly ok: false; readonly code: string }
+    > => {
+      if (target === undefined) return { ok: false, code: "merge.transaction-aborted" };
+      const open = await client.listDeliveryRequests(TRUTH_PROVIDER_LIMIT);
+      if (!open.ok) return { ok: false, code: mergeReadCodeOf(open) };
+      const match =
+        mergeBranch === undefined
+          ? undefined
+          : open.value.items.find((item) => item.sourceRef === mergeBranch);
+      if (match !== undefined) return { ok: true, request: match };
+      // The convergence case: an already-merged request for the branch's ref.
+      const changeRef = mergeBranch === undefined ? undefined : changeRefInBranch(mergeBranch);
+      if (changeRef !== undefined) {
+        const merged = await client.findMergedDeliveryRequest({
+          workItemRef: changeRef,
+          limit: TRUTH_PROVIDER_LIMIT,
+        });
+        if (merged.observation === "observed") return { ok: true, request: merged.value };
+      }
+      return { ok: false, code: "merge.transaction-aborted" };
+    };
+
+    const mergeRuntimeBase = createMergeCommandRuntime({
       store,
       git: createGitMergeSeam({ cwd }),
-      values: () => ({}),
-      readWorkItem: credentialRefusal,
-      readCheckRuns: credentialRefusal,
-      readRequestDetail: credentialRefusal,
+      values: () => {
+        const configuration = mergeConfiguration();
+        return configuration.ok ? configuration.values : {};
+      },
+      readWorkItem: mergeWorkItem,
+      readCheckRuns: mergeCheckRuns,
+      readRequestDetail: mergeRequestDetail,
+      // Resolved lazily from the checkout's identity policy: the owner component
+      // of the normalized `host/owner/name`, never a configuration key.
+      get ownerPrincipal() {
+        return mergeOwnerPrincipalOf();
+      },
+      baseRef: mergeBaseRef,
+      ...(mergeBranch === undefined ? {} : { branch: mergeBranch }),
       nowIso,
       nowMs,
       newFenceToken,
     });
+
+    // The configuration document is resolved once per invocation, so its own
+    // classified failure is forwarded before the transaction reads anything.
+    const merge = {
+      readConfig: (changeRef: string) => {
+        const configuration = mergeConfiguration();
+        if (!configuration.ok) {
+          return {
+            ok: false as const,
+            code: configuration.code,
+            ...(configuration.detail === undefined ? {} : { detail: configuration.detail }),
+          };
+        }
+        return mergeRuntimeBase.readConfig(changeRef);
+      },
+      createPorts: mergeRuntimeBase.createPorts,
+    };
 
     const closeout = createCloseoutComposition({
       workspaceId,
@@ -2665,11 +2898,25 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
      * project-root creation, and no write of any kind. A present-but-unreadable
      * state location fails the whole answer instead of fabricating a row.
      */
+    /**
+     * One project's dispatch facts over the store the row already opens.
+     *
+     * The store is created once per row and reused for the handover fold and,
+     * on the `repos list` path, the read-time gate evaluation — no second store
+     * open, no write, no identity persistence.
+     */
     const readProjectHandover = (
       stateLocation: string,
       projectKey: string,
+      repository?: string,
     ):
-      | { readonly ok: true; readonly state: "engine" | "shell" | "in-transition" }
+      | {
+          readonly ok: true;
+          readonly store: StateStorePort;
+          readonly state: "engine" | "shell" | "in-transition";
+          readonly operation: HandoverEvidence;
+          readonly reversible: boolean;
+        }
       | { readonly ok: false; readonly summary: string } => {
       const projectStore = createStateStore(
         {
@@ -2689,21 +2936,108 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
         };
       }
       let operation: HandoverEvidence = "none";
+      let reversible = false;
       if (ledger.records.length > 0) {
-        const folded = foldDispatchHandover(ledger.records);
+        // The folded truth is per repository, and the row reads only its own:
+        // a store that accumulates a second identity (a rename or a remote
+        // change does not re-key history) can never report another repository's
+        // authority as this row's. When the row's identity is not resolved, the
+        // fold keeps the delivered cross-identity read.
+        const folded = foldDispatchHandover(ledger.records).filter(
+          (entry) => repository === undefined || entry.repository === repository,
+        );
         const latest = [...folded]
           .sort((left, right) =>
             left.recordedAt < right.recordedAt ? -1 : left.recordedAt > right.recordedAt ? 1 : 0,
           )
           .at(-1);
         operation = latest?.authority ?? "none";
+        reversible = reversibilityOf(latest?.authority ?? "dual-run");
       }
       const fact = readDispatchAuthorityFact(stateLocation);
       const authority: AuthorityEvidence =
         fact.state === "valid"
           ? { state: "valid", authority: fact.view.authority }
           : { state: fact.state === "malformed" ? "malformed" : "absent" };
-      return { ok: true, state: projectHandoverState({ operation, authority }) };
+      return {
+        ok: true,
+        store: projectStore,
+        state: projectHandoverState({ operation, authority }),
+        operation,
+        reversible,
+      };
+    };
+
+    /**
+     * Resolve one row's own normalized `host/owner/name` identity read-only and
+     * non-persisting (GH-293 DM-7, DEC-15): the persisted create-once binding
+     * recorded with that checkout's git common directory first, then the
+     * checkout's configured VCS remote. No scheduler key exists on this path and
+     * the read never creates, repairs, or rewrites the binding.
+     */
+    const resolveRowRepository = (root: string): string | undefined => {
+      const checkout = readCheckoutIdentity({ cwd: root, io: nodeRepositoryIo() });
+      const commonDir = checkout.kind === "resolved" ? checkout.commonDir : undefined;
+      const persistedMarker = readDispatchIdentityMarkerText(commonDir);
+      // The composition's own checkout is the one whose remote the injection
+      // seam already resolved; every other row is read from its own checkout.
+      const remoteUrl =
+        root === cwd ? repositoryFacts.originUrl : repositoryFactsFor(root).originUrl;
+      const resolution = resolveDispatchIdentity({
+        ...(persistedMarker === undefined ? {} : { persistedMarker }),
+        ...(remoteUrl === undefined ? {} : { remoteUrl }),
+      });
+      return resolution.ok ? resolution.repository : undefined;
+    };
+
+    /**
+     * The read-time gate block for one ready row (GH-293 F-3, DM-4, DM-7).
+     *
+     * One bounded attempts read plus one divergences read over the row's own
+     * store, folded at the declared `production` evidence scope and bound to the
+     * row's own repository identity. An unreadable ledger or an unresolvable
+     * identity fails the whole read as `repos.state-unavailable` with no row; a
+     * truncated read reports `unverifiable` plus the declared truncation.
+     */
+    const readRowHandoverGate = (
+      store: StateStorePort,
+      root: string,
+      projectKey: string,
+      resolvedRepository?: string,
+    ):
+      | { readonly ok: true; readonly gate: ReposHandoverGate }
+      | { readonly ok: false; readonly summary: string } => {
+      const repository = resolvedRepository ?? resolveRowRepository(root);
+      if (repository === undefined) {
+        return {
+          ok: false,
+          summary: `project ${projectKey} has a ready state location whose repository identity cannot be resolved (${root})`,
+        };
+      }
+      const read = readDispatchGate({
+        store,
+        repository,
+        scope: "production",
+        nowIso: nowIso(),
+      });
+      if (!read.ok) {
+        return {
+          ok: false,
+          summary: `project ${projectKey} (${repository}) has a dispatch evidence ledger that cannot be read`,
+        };
+      }
+      return { ok: true, gate: reposHandoverGateOf(read) };
+    };
+
+    /** One row's resolved facts; the projection to each payload happens later. */
+    type ProjectRowFacts = {
+      readonly projectKey: string;
+      readonly root: string;
+      readonly stateLocation: string;
+      readonly daemonReachable: DaemonReachability;
+      readonly handoverState: HandoverState;
+      readonly reversible: boolean;
+      readonly handoverGate: ReposHandoverGate;
     };
 
     const readDaemonReachability = async (
@@ -2750,14 +3084,30 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       };
     };
 
-    const readProjects = async (): Promise<ProjectsRuntimeRead> => {
+    /**
+     * The shared project-row read (GH-288 F-3, F-4, F-5; GH-293 F-3).
+     *
+     * One host-index read, one row pass. `withGate` decides whether each ready
+     * row also evaluates the handover gate over the store it has already opened:
+     * `repos list` asks for it, `projects list` and its flat alias never do, so
+     * the delivered `projects.v1` payload cannot gain a field and the alias stays
+     * byte-identical.
+     */
+    const readProjectRows = async (
+      withGate: boolean,
+    ): Promise<
+      | {
+          readonly ok: true;
+          readonly rows: readonly ProjectRowFacts[];
+          readonly revision: number;
+          readonly warnings: readonly string[];
+        }
+      | { readonly ok: false; readonly code: string; readonly summary: string }
+    > => {
       hostIndexAccess.countList();
       const read = readHostIndexFile(hostRoot);
       if (read.state === "absent") {
-        return {
-          ok: true,
-          data: { projects: [], hostIndexRevision: HOST_INDEX_INITIAL_REVISION },
-        };
+        return { ok: true, rows: [], revision: HOST_INDEX_INITIAL_REVISION, warnings: [] };
       }
       const indexPath = hostIndexDocumentPath(hostRoot);
       if (read.state === "unreadable") {
@@ -2775,7 +3125,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
           summary: `the host index at ${indexPath} is present but cannot be parsed`,
         };
       }
-      const entries: ProjectsListEntry[] = [];
+      const rows: ProjectRowFacts[] = [];
       const warnings: string[] = [];
       let legacyChecked = false;
       for (const entry of document.projects) {
@@ -2824,12 +3174,42 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             summary: `project ${entry.projectKey} has a state location that is not a readable directory (${stateLocation})`,
           };
         }
+        // The row's own normalized identity, resolved once and used by both the
+        // handover fold and the gate block (GH-293 DM-7, DEC-15). It is resolved
+        // on the gate path only, so `projects list` performs no identity read.
+        const rowRepository =
+          withGate && classification === "ready" ? resolveRowRepository(entry.root) : undefined;
         const handover =
           classification === "first-use"
-            ? ({ ok: true, state: "shell" } as const)
-            : readProjectHandover(stateLocation, entry.projectKey);
+            ? ({ ok: true, state: "shell", reversible: false } as const)
+            : readProjectHandover(stateLocation, entry.projectKey, rowRepository);
         if (!handover.ok) {
           return { ok: false, code: "repos.state-unavailable", summary: handover.summary };
+        }
+        let gate: ReposHandoverGate = emptyHandoverGate();
+        let reversible = handover.reversible;
+        if (withGate && classification === "ready") {
+          if (!("store" in handover)) {
+            return {
+              ok: false,
+              code: "repos.state-unavailable",
+              summary: `project ${entry.projectKey} has no readable store for its gate evaluation`,
+            };
+          }
+          const evaluated = readRowHandoverGate(
+            handover.store,
+            entry.root,
+            entry.projectKey,
+            rowRepository,
+          );
+          if (!evaluated.ok) {
+            return { ok: false, code: "repos.state-unavailable", summary: evaluated.summary };
+          }
+          gate = evaluated.gate;
+        }
+        if (classification === "first-use") {
+          reversible = false;
+          gate = emptyHandoverGate();
         }
         const daemon = await readDaemonReachability(stateLocation, classification === "ready");
         if (!daemon.ok) {
@@ -2842,38 +3222,84 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
               "the derived location is reported",
           );
         }
-        entries.push(
-          projectListEntry({
-            projectKey: entry.projectKey,
-            root: entry.root,
-            stateLocation,
-            daemonReachable: daemon.value,
-            handoverState: handover.state,
-          }),
-        );
+        rows.push({
+          projectKey: entry.projectKey,
+          root: entry.root,
+          stateLocation,
+          daemonReachable: daemon.value,
+          handoverState: handover.state,
+          reversible,
+          handoverGate: gate,
+        });
       }
+      return { ok: true, rows, revision: document.revision, warnings };
+    };
+
+    const readProjects = async (): Promise<ProjectsRuntimeRead> => {
+      const read = await readProjectRows(false);
+      if (!read.ok) return read;
+      // The delivered five-field row: the gate evaluation never reaches this
+      // payload, so `projects.v1` and the flat alias stay byte-identical.
+      const entries = read.rows.map((row) =>
+        projectListEntry({
+          projectKey: row.projectKey,
+          root: row.root,
+          stateLocation: row.stateLocation,
+          daemonReachable: row.daemonReachable,
+          handoverState: row.handoverState,
+        }),
+      );
       return {
         ok: true,
-        data: { projects: orderProjectEntries(entries), hostIndexRevision: document.revision },
-        ...(warnings.length === 0 ? {} : { warnings }),
+        data: { projects: orderProjectEntries(entries), hostIndexRevision: read.revision },
+        ...(read.warnings.length === 0 ? {} : { warnings: [...read.warnings] }),
       };
     };
 
     /**
-     * The `repos list` flat record set (GH-309 F-7, DM-3): one read over the
-     * same host index, projected onto the renamed `repos.v1` shape. The alias
-     * path never passes through this projection, so `projects list --flat`
-     * keeps the delivered payload byte-identical (C-2).
+     * The `repos list` flat record set (GH-309 F-7, DM-3; GH-293 F-3).
+     *
+     * The only read that evaluates the handover gate per row: one bounded
+     * attempts read plus one divergences read over the store the row pass already
+     * opened, bound to that row's own repository identity and folded at the
+     * declared `production` evidence scope. The alias path never passes through
+     * this projection, so `projects list --flat` keeps the delivered payload
+     * byte-identical (C-2).
      */
     const readRepos = async (): Promise<ReposRuntimeRead> => {
-      const read = await readProjects();
+      const read = await readProjectRows(true);
       if (!read.ok) return read;
+      const gates = new Map(
+        read.rows.map((row) => [
+          row.projectKey,
+          { reversible: row.reversible, handoverGate: row.handoverGate },
+        ]),
+      );
+      const data = reposListDataOf(
+        {
+          projects: read.rows.map((row) =>
+            projectListEntry({
+              projectKey: row.projectKey,
+              root: row.root,
+              stateLocation: row.stateLocation,
+              daemonReachable: row.daemonReachable,
+              handoverState: row.handoverState,
+            }),
+          ),
+          hostIndexRevision: read.revision,
+        },
+        (entry) => {
+          const gate = gates.get(entry.projectKey);
+          if (gate === undefined) {
+            throw new Error(`row ${entry.projectKey} has no resolved gate`);
+          }
+          return gate;
+        },
+      );
       return {
         ok: true,
-        data: reposListDataOf(read.data),
-        ...(read.warnings === undefined || read.warnings.length === 0
-          ? {}
-          : { warnings: read.warnings }),
+        data,
+        ...(read.warnings.length === 0 ? {} : { warnings: [...read.warnings] }),
       };
     };
 

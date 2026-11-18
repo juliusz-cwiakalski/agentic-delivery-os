@@ -1,5 +1,5 @@
 /**
- * The GitHub Issues transition map (GH-338 F-6, DM-6, TDR-0034).
+ * The GitHub Issues transition map (GH-338 F-6, DM-6, TDR-0035).
  *
  * One injected, seeded `WorkflowMap` drives BOTH read normalization and the
  * mechanism-scoped transition write, so the two directions can never disagree.
@@ -75,7 +75,7 @@ const isMechanism = (value: unknown): value is WorkflowTransitionMechanism =>
   typeof value === "string" && (TRANSITION_MECHANISMS as readonly string[]).includes(value);
 
 /**
- * Validate a resolved map against TDR-0034 §1's seven-rule rejection set.
+ * Validate a resolved map against TDR-0035 §1's seven-rule rejection set.
  *
  * Never throws: the construction call captures the returned failure and every
  * operation then refuses with zero provider requests. The seed is held to

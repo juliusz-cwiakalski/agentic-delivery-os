@@ -15,6 +15,16 @@ import {
   type DispatchHandoverState,
 } from "#contracts";
 
+/**
+ * The one reversibility rule: authority is reversible exactly when it is
+ * `authoritative` (TDR-0031 D4).
+ *
+ * The authority document's `reversalAvailable` and the handover/repos data's
+ * `reversible` read this same derivation, so the two readers cannot disagree.
+ */
+export const reversibilityOf = (authority: DispatchHandoverState): boolean =>
+  authority === "authoritative";
+
 /** The folded authority fact for one repository: latest operation wins. */
 export type DispatchAuthorityFold = {
   readonly repository: string;
@@ -51,7 +61,7 @@ export const foldDispatchHandover = (
       authority: authorityOf(record.operation),
       handoverRef: `${record.repository}#${record.recordedAt}`,
       recordedAt: record.recordedAt,
-      reversalAvailable: authorityOf(record.operation) === "authoritative",
+      reversalAvailable: reversibilityOf(authorityOf(record.operation)),
     }))
     .sort((left, right) => (left.repository < right.repository ? -1 : 1));
 };
@@ -73,25 +83,26 @@ export const buildDispatchAuthorityView = (
   };
 };
 
-/** Validate a parsed view; an out-of-shape document is never authoritative. */
-export const parseDispatchAuthorityView = (value: unknown): DispatchAuthorityView | undefined => {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
-  const record = value as Partial<Record<keyof DispatchAuthorityView, unknown>>;
-  if (record.schema !== DISPATCH_AUTHORITY_SCHEMA) return undefined;
-  if (typeof record.repository !== "string" || record.repository.length === 0) return undefined;
-  if (record.authority !== "dual-run" && record.authority !== "authoritative") return undefined;
-  if (typeof record.recordedAt !== "string") return undefined;
-  if (typeof record.reversalAvailable !== "boolean") return undefined;
-  if (record.handoverRef !== undefined && typeof record.handoverRef !== "string") return undefined;
-  return {
-    schema: DISPATCH_AUTHORITY_SCHEMA,
-    repository: record.repository,
-    authority: record.authority,
-    ...(typeof record.handoverRef === "string" ? { handoverRef: record.handoverRef } : {}),
-    recordedAt: record.recordedAt,
-    reversalAvailable: record.reversalAvailable,
+/** Validate a parsed view; an out-of-shape document is never authoritative. */ export const parseDispatchAuthorityView =
+  (value: unknown): DispatchAuthorityView | undefined => {
+    if (typeof value !== "object" || value === null || Array.isArray(value)) return undefined;
+    const record = value as Partial<Record<keyof DispatchAuthorityView, unknown>>;
+    if (record.schema !== DISPATCH_AUTHORITY_SCHEMA) return undefined;
+    if (typeof record.repository !== "string" || record.repository.length === 0) return undefined;
+    if (record.authority !== "dual-run" && record.authority !== "authoritative") return undefined;
+    if (typeof record.recordedAt !== "string") return undefined;
+    if (typeof record.reversalAvailable !== "boolean") return undefined;
+    if (record.handoverRef !== undefined && typeof record.handoverRef !== "string")
+      return undefined;
+    return {
+      schema: DISPATCH_AUTHORITY_SCHEMA,
+      repository: record.repository,
+      authority: record.authority,
+      ...(typeof record.handoverRef === "string" ? { handoverRef: record.handoverRef } : {}),
+      recordedAt: record.recordedAt,
+      reversalAvailable: record.reversalAvailable,
+    };
   };
-};
 
 /** Read a view from text with a safe dual-run default for that repository. */
 export const parseDispatchAuthorityText = (

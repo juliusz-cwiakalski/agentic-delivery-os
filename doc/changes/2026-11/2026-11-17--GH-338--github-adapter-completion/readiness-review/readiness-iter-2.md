@@ -11,7 +11,7 @@ re-review of the change's shape.
 
 Inputs read in full: `readiness-iter-1.md`; `chg-GH-338-spec.md` v1.1 (692 lines);
 `chg-GH-338-test-plan.md` v1.1 (1159 lines); `chg-GH-338-plan.yaml` (1345 lines);
-`chg-GH-338-pm-notes.yaml`; TDR-0031, TDR-0032, TDR-0033, TDR-0034 (amended), ADR-0005
+`chg-GH-338-pm-notes.yaml`; TDR-0032, TDR-0033, TDR-0034, TDR-0035 (amended), ADR-0005
 (editorial pointer); ticket GH-338 and #342 via `gh`; M3 blueprint `README.md` exit criteria.
 Code re-read as needed for the residuals: `packages/cli/src/{bin-launcher,entrypoint,production}.ts`,
 `packages/adapters/src/github/{client,capabilities,review-state}.ts`,
@@ -49,8 +49,8 @@ confirms only the four TDRs are untracked — ADR-0005's pointer is **already co
 | F1 `write-delivery-request` create/update shape | blocker | **Resolved** | DM-9 declares both variants (spec 269); F-6/API-6/AC-F6-1/Table A restate them; TC-BACKLOG-002 asserts create and update separately, required-input refusal with zero provider requests, never-lands/no-merge-state; TC-PARITY-003 declares both tenant routes + the direct update call. |
 | F2 probe cannot run where placed | blocker | **Resolved** | Plan refinement 7 + obligations 2.1–2.3 bind async launcher → resolved fact → synchronous composer; `packages/cli/src/bin-launcher.ts` and `production.ts` are in phase-2 scope; the composer stays synchronous. Every file the mechanism needs is declared. |
 | F3 child-process site-set pin not in phase 2 | blocker | **Resolved** | `tests/structure/harness-imports.test.ts` is in phase-2 scope (plan 793) with obligation 2.8: 12 → 13 sites, exact new file `packages/adapters/src/github/cli-transport.ts`, header comment stays a declared inventory. Delivered set is exactly 12 files (`harness-imports.test.ts:20-32`). |
-| F4 `closed → done` label-rule contradiction | major | **Resolved** | Mechanism-scoped rule now stated once and identically in spec F-6 (125–127), Table A (284), AC-F6-4 (526), §8.5 (357), §24.3 #9/#10 (653–654), TDR-0034 C-6/§3.2, plan phase 3 (836–849), TC-BACKLOG-004/005/006 and TC-FLOOR-001. The delivered write is provably unchanged (`client.ts:455-460` = one `PATCH {state:"closed"}`; `github-closeout.test.ts:223-228`) and TC-FLOOR-001 pins count 1 / `PATCH` / exact body / zero label requests / success on a labelless issue. |
-| F5 read-side refusal contradiction | major | **Resolved** | Spec F-6 (129), Table E read rule (336), AC-F6-2 (524), §24.4 (660) all state one refusal class / four outcomes, `CLOSED` resolving natively, and the case collision scoped to `label-swap` tokens. TC-BACKLOG-008 is the six-row truth table, re-pointed to AC-F6-2, with an anti-vacuity lower-case mutation and a `CLOSED` non-collision mutation; GAP-TP-1 and §6 say casing is decided, not fixture-decided. Consistent with TDR-0034 §3.1. |
+| F4 `closed → done` label-rule contradiction | major | **Resolved** | Mechanism-scoped rule now stated once and identically in spec F-6 (125–127), Table A (284), AC-F6-4 (526), §8.5 (357), §24.3 #9/#10 (653–654), TDR-0035 C-6/§3.2, plan phase 3 (836–849), TC-BACKLOG-004/005/006 and TC-FLOOR-001. The delivered write is provably unchanged (`client.ts:455-460` = one `PATCH {state:"closed"}`; `github-closeout.test.ts:223-228`) and TC-FLOOR-001 pins count 1 / `PATCH` / exact body / zero label requests / success on a labelless issue. |
+| F5 read-side refusal contradiction | major | **Resolved** | Spec F-6 (129), Table E read rule (336), AC-F6-2 (524), §24.4 (660) all state one refusal class / four outcomes, `CLOSED` resolving natively, and the case collision scoped to `label-swap` tokens. TC-BACKLOG-008 is the six-row truth table, re-pointed to AC-F6-2, with an anti-vacuity lower-case mutation and a `CLOSED` non-collision mutation; GAP-TP-1 and §6 say casing is decided, not fixture-decided. Consistent with TDR-0035 §3.1. |
 | F6 AC-F2-2 degradation had no shape/home | major | **Resolved** | DM-10 declares `{ policy, selected, degradation? }` with exact presence rules (270); F-2, Table C, AC-F2-2, §10, §4.1 metric and §24.3 #7 point at it; TC-CLI-011 asserts the exact value per policy (`Object.hasOwn` for absent `degradation`), exactly one rendered line (count 1), zero persisted copies, zero probe spawns under `api-only`, plus mutation controls; plan 2.2/2.3 binds the delivery. |
 | F7 phase-1 read-back helper home | major | **Resolved** | `tests/behaviour/providers/support.ts` is in phase-1 scope (plan 623) with obligation 1.9 and refinement 3 (one stateful scripted transport, reused by phase 3; tenant stays stateless). |
 | N1 §2.1 child-process enumeration | minor | **Resolved** | Spec §2.1 (41) now states the pin-guarded inventory and that this change adds exactly one site; no false enumeration remains. |
@@ -62,7 +62,7 @@ confirms only the four TDRs are untracked — ADR-0005's pointer is **already co
 | N7 transition-input widening unnamed | minor | **Resolved** | §7.1 (205), DM-6 (266), §8.5 (358) name the widened adapter-local input, the writable set, and the un-widened core `CloseoutWritePort`. |
 | N8 vacuous redaction obligation | minor | **Resolved** | AC-F4-4/AC-F5-6 now state "the change adds no new rendering surface, and any consumer surface that renders it…"; §21 (578) states the obligation is a forward-looking invariant at the one chokepoint; plan refinement 6 binds the same. TC-CHECK-011/TC-THREAD-010 exercise the chokepoint with paired positives. |
 | N9 child-environment `PATH` | minor | **Resolved** | Plan refinement 8 + obligation 2.4: base record is the composition's injected `environment` (supplies `PATH`), no ambient read, no absolute path injection, exact key set asserted in TC-CLI-003. |
-| N10 ADR-0005 back-pointer | minor | **Resolved** | ADR-0005 line 177 carries the editorial pointer; TDR-0031 Decision item 9 and its related-decisions list state the refinement; `links.decisions` includes ADR-0005. |
+| N10 ADR-0005 back-pointer | minor | **Resolved** | ADR-0005 line 177 carries the editorial pointer; TDR-0032 Decision item 9 and its related-decisions list state the refinement; `links.decisions` includes ADR-0005. |
 
 No iteration-1 finding is still open. All severity labels for F1–F7 and N1–N10 are closed.
 
@@ -72,14 +72,14 @@ No iteration-1 finding is still open. All severity labels for F1–F7 and N1–N
 
 - **Facet:** spec_completeness / cross_artifact_consistency
 - **Severity:** major (blocking)
-- **Artifact + location:** `TDR-0034` §3.2 (line 316: "If the current read resolves to `done`, the
+- **Artifact + location:** `TDR-0035` §3.2 (line 316: "If the current read resolves to `done`, the
   write refuses with zero provider requests: terminal truth would outrank the token it adds, so the
   write could not be observed, and reopening is not part of this mechanism.") vs
   `chg-GH-338-spec.md` §5 F-6 (129), §6 Flow 6 (187), §8.4.1 "Writable set (normative)" (338),
   AC-F6-3 (525), AC-F6-4 (526), AC-F6-5 (527), NFR-11 (378); `chg-GH-338-test-plan.md`
   TC-BACKLOG-004 (734–736), TC-BACKLOG-006 (752–754); `chg-GH-338-plan.yaml` phase 3 obligation 3.1
   (869–875) and goal text (836–849).
-- **Gap:** The four decision records are binding artifacts cited by the spec (DEC-4), and TDR-0034
+- **Gap:** The four decision records are binding artifacts cited by the spec (DEC-4), and TDR-0035
   now requires a fourth transition refusal: a `label-swap` write whose *current read* resolves to
   `done` must refuse with zero provider requests. None of the three downstream artifacts states it,
   and no TC asserts it. The omission is not cosmetic: without that refusal, AC-F6-3 and NFR-11
@@ -95,7 +95,7 @@ No iteration-1 finding is still open. All severity labels for F1–F7 and N1–N
   provider requests, because terminal precedence would make the write unobservable." Add the
   corresponding obligation to plan phase 3, add the refusal row to TC-BACKLOG-004 (or one new case),
   and pin TC-BACKLOG-006's `labelless-issue` fixture as `open` so its refusal is unambiguously the
-  unavailable-signal one. No new decision record is needed — the rule is already in TDR-0034.
+  unavailable-signal one. No new decision record is needed — the rule is already in TDR-0035.
 
 ### R2 — TC-CLI-005's route table requires client members that cannot exist in its owning phase (major)
 
@@ -207,16 +207,16 @@ No iteration-1 finding is still open. All severity labels for F1–F7 and N1–N
 - **Artifact + location:** `chg-GH-338-test-plan.md` TC-BACKLOG-010 (786–789: invalid maps include
   "a row set with no `done` row"); `chg-GH-338-plan.yaml` phase 3 (833–834, which adopts it "per
   TC-BACKLOG-010's invalid-map set"); `chg-GH-338-spec.md` DM-6 (266) and §8.5 (355) — no validator
-  rejection set; `TDR-0034` §1 Validation (line 282) — non-empty `systemName`, ≥1 row, unique
+  rejection set; `TDR-0035` §1 Validation (line 282) — non-empty `systemName`, ≥1 row, unique
   `nativeStatus`, closed sets, ≤1 row per alias; **no** required `done` row.
 - **Gap:** The test asserts construction rejection for a map with no `done` row; neither the spec nor
   the decision record requires it, and the plan silently adopted the test's rule. An implementer
-  following TDR-0034 would fail the case; an implementer following the case widens construction
+  following TDR-0035 would fail the case; an implementer following the case widens construction
   validation beyond the record. The underlying rationale is sound (the delivered closeout needs a
   `done` row), which is exactly why it belongs in the contract rather than in a case. See adjudication (e).
 - **Suggested remediation target phase:** specification
 - **Suggested fix:** Declare DM-6's validator rejection set explicitly (adopting the `done`-row rule and
-  asking `@decision-advisor` to add it to TDR-0034 §1 in the same pass), or delete that one invalid-map
+  asking `@decision-advisor` to add it to TDR-0035 §1 in the same pass), or delete that one invalid-map
   case from TC-BACKLOG-010 and keep the record's five checks.
 
 ### R8 — Three undeclared split cases in the plan's scope map (minor)
@@ -246,11 +246,11 @@ No iteration-1 finding is still open. All severity labels for F1–F7 and N1–N
 - **Severity:** minor
 - **Artifact + location:** `chg-GH-338-spec.md` §8.5 (353: "`createGitHubClient` and its options keep
   their delivered shape"), F-6 (123: "No new operation and no core contract change is introduced"),
-  AC-F6-1 (523, same clause); `TDR-0034` §1 (280: `GithubClientOptions` gains optional `workflowMap`),
-  `TDR-0031` item 8 (283, same "keep their delivered shape" claim); spec DM-1 (261) and DM-2 (262).
+  AC-F6-1 (523, same clause); `TDR-0035` §1 (280: `GithubClientOptions` gains optional `workflowMap`),
+  `TDR-0032` item 8 (283, same "keep their delivered shape" claim); spec DM-1 (261) and DM-2 (262).
 - **Gap:** The change adds an optional `workflowMap` option and the ninth operation plus two optional
   `PipelineJob` fields. The three sentences are correct only in their local scope ("for the content
-  write", "no breaking change"), but read globally they contradict DM-1/DM-2 and TDR-0034. A reviewer
+  write", "no breaking change"), but read globally they contradict DM-1/DM-2 and TDR-0035. A reviewer
   can legitimately flag either the option or the ninth operation as a violation of §8.5/F-6.
 - **Suggested remediation target phase:** specification
 - **Suggested fix:** Phrase the guarantee as additive: "existing call sites and option objects keep
@@ -330,11 +330,11 @@ class as accepted and review it per phase; do not "fix" it by deleting declarati
 
 **(e) TC-BACKLOG-010's "invalid map with no `done` row" — the test plan asserts beyond the spec, and
 beyond the decision record.** The spec's DM-6/§8.5 declare the seed, the vocabulary, the injection and
-the writable set, but no validator rejection set; TDR-0034 §1 lists non-empty `systemName`, ≥1 row,
+the writable set, but no validator rejection set; TDR-0035 §1 lists non-empty `systemName`, ≥1 row,
 unique tokens, closed sets and ≤1 row per alias — no required `done` row. The plan adopted the test's
 rule verbatim, so all three delivery-facing artifacts now carry a rule that only the test asserts. The
 rule is defensible on its merits (the delivered closeout needs a `done` row to resolve), which is
-precisely why it should be declared in DM-6 and in TDR-0034 §1 rather than invented by a case. Resolve
+precisely why it should be declared in DM-6 and in TDR-0035 §1 rather than invented by a case. Resolve
 per R7.
 
 ## What is now sound (so the remaining pass stays surgical)
@@ -350,19 +350,19 @@ per R7.
   and the plan owns each id exactly once with declared split-case exceptions.
 - The specification's current-state snapshot (§2.1) is now accurate against the delivered tree,
   including the pin-guarded child-process inventory and the pre-existing provider-surface doc drift.
-- The four decisions are consistently cited (DEC-1…DEC-4 = TDR-0031…0034), the ADR-0005 pointer is
+- The four decisions are consistently cited (DEC-1…DEC-4 = TDR-0032…0034), the ADR-0005 pointer is
   committed, and none of the remediation asks to widen a record.
 
 ## May delivery start?
 
 No. Two blocking majors remain and both are author-side, small, and local: the spec must carry
-TDR-0034's terminal-read write refusal (R1 — without it AC-F6-3/NFR-11's symmetry claim is false for a
+TDR-0035's terminal-read write refusal (R1 — without it AC-F6-3/NFR-11's symmetry claim is false for a
 closed issue, and two existing TCs have unstated preconditions), and the test plan must reconcile
 TC-CLI-005's route table with the phase-2 capability state (R2 — as written it requires client members
 that must not exist until phase 3). `specification` reopens for R1, R3, R4, R7 and R9; `test_planning`
 reopens for R2, R6, R8 and R11; `delivery_planning` needs only R5 and R10, which can ride the same
-pass. No human decision is required and no pause is raised: R1's rule already exists in TDR-0034, so
+pass. No human decision is required and no pause is raised: R1's rule already exists in TDR-0035, so
 the spec only has to carry it; if R7's `done`-row rule is kept, `@decision-advisor` should add it to
-TDR-0034 §1 in the same edit. Everything else about the change is sound, and the remaining work is a
+TDR-0035 §1 in the same edit. Everything else about the change is sound, and the remaining work is a
 narrow third confirmation pass — not a redesign. If the third iteration confirms only R1/R2 closed and
 the minors dispositioned, delivery can start.

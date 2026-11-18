@@ -9,7 +9,7 @@ service: delivery-os
 summary: "The read-only status command and its bounded delivery.status.v1 digest: nine fixed sections in order, a closed five-value section state, a closed finding-code registry with grouped ranked findings, tri-state hygiene assertions, owner-gate ages, parked conditions, a ready-to-merge action list, declared lane attention-state vocabulary, the state-log-fed spend collector section and the state-sourced typed-questions section over the verified blocker ledger, bounded evidence and counts, deterministic rank keys and truncation, the four tracker families, changes and pull requests, bounded check-runs CI classification, providers read from configuration and the verified park fold with the open lane park fields for peak-pause episodes read through their own bounded records read, parked work from the git-ignored local PM context, origin-derived repository binding under a credential-reference-only composition guard, the machine envelope and extended human digest grammar, the additive stateSource identity shared with the brief and board, error-identity reuse, and the fixture plus opt-in live-smoke evidence model."
 links:
   related_changes: ["GH-175", "GH-176", "GH-183", "GH-178", "GH-228", "GH-224", "GH-243", "GH-236", "GH-230", "GH-237", "GH-242", "GH-241", "GH-277", "GH-279", "GH-280", "GH-286", "GH-288", "GH-291", "GH-294", "GH-309", "GH-297", "GH-338"]
-  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006", "TDR-0019", "TDR-0031"]
+  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006", "TDR-0019", "TDR-0032"]
   contracts:
     - "packages/core/src/contracts/status.ts"
     - "packages/core/src/contracts/blockers.ts"

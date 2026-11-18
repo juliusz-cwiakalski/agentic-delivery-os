@@ -67,9 +67,20 @@ dispatch, inclusive. The summary always reports the window start and its reason.
 Handover flips one repository, is recorded, and is reversible with
 `dispatch handover <repo> --revert`; a reversal appends a record rather than
 deleting history and an already-dual-run repository is an idempotent noop. The
-four bash entry points read the derived authority view as a plain file, so an
-absent or malformed view means dual-run and the typed CLI is never required to
-decide fallback.
+handover data carries the four ordered `conditions` and `reversible` on every
+outcome that performs the gate evidence read — a recorded flip, an idempotent
+flip noop, a clean refusal, and a recorded revert — and the recorded revert also
+carries `verdict`, so `verdict == "unverifiable"` holds exactly when `truncation`
+is present. `reversible` is `true` exactly when the repository's latest folded
+authority after the operation is `authoritative`. The single exemption is the
+idempotent revert noop: it is answered before any gate evidence read (the folded
+handover is still read to establish it) and carries no `conditions`, no
+`verdict`, and no `truncation`, so an unreadable or torn attempts or divergences
+ledger cannot refuse an operation that changes no authority; an unreadable or
+torn handover ledger still refuses `dispatch.state-unverified` at exit `2` with
+no data on this path too. The four bash entry points read the derived authority
+view as a plain file, so an absent or malformed view means dual-run and the
+typed CLI is never required to decide fallback.
 
 `dispatch` never fires a merge. `result=merged` is already-merged detection only;
 a merge-ready PR stays `pr-open` or `pr-open-unverified` for the coordinator's
@@ -134,7 +145,16 @@ Text: the bash-continuity summary keys in order (`result=`, `pr_url=`,
 count, counted deliveries, counted evidence class and cross-class exclusions,
 incidents, divergences (reported, resolved, unresolved, identifiers), class
 coverage as exposure, corroboration of success claims, the floor-only marker, the
-eligibility verdict, and every unmet condition.
+eligibility verdict, and every unmet condition. After `floor` it appends
+`cleanDispatches` (the corroborated counted attempts, declared identical to
+`corroboration.satisfied`), `consecutiveCleanDispatches` (the trailing run of
+clean counted attempts in ledger append order; `0` when the window's last counted
+attempt is not clean or the window is empty), and `conditions` (four
+`{condition, status}` entries in the declared order `truth`, `coverage`, `floor`,
+`corroboration`, each `met` or `open`); `truncation` stays last. The summary text
+appends `clean_dispatches=`, `consecutive_clean_dispatches=`, and
+`conditions=truth:<status>,coverage:<status>,floor:<status>,corroboration:<status>`
+after `unmet_conditions=` and before the optional truncation line.
 
 ## EXIT STATUS
 

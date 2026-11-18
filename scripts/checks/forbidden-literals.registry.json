@@ -63,6 +63,7 @@
   ],
   "registered": [
     "doc/guides/ceremony-runner.md",
+    "doc/guides/engine-first-operations.md",
     "doc/guides/local-install.md",
     "doc/guides/migrating-to-per-repository-state.md",
     "doc/guides/milestone-management.md",

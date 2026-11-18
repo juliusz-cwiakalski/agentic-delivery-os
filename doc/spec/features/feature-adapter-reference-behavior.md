@@ -9,7 +9,7 @@ service: delivery-os provider adapters
 summary: "The normative reference behavior of the closed adapter contract: per-operation preferred and fallback transports, primary failure identities, absence semantics, the two bounded evidence reads with their fixed caps and truncation signals, the CLI probe and composition-edge transport selection value, the mechanism-scoped GitHub Issues transition mapping with its injected seeded map and four read outcomes, and the deliberate limitations of both."
 links:
   related_changes: ["GH-338"]
-  related_decisions: ["ADR-0005", "TDR-0031", "TDR-0032", "TDR-0033", "TDR-0034"]
+  related_decisions: ["ADR-0005", "TDR-0032", "TDR-0033", "TDR-0034", "TDR-0035"]
   contracts:
     - "packages/core/src/contracts/adapter-capabilities.ts"
     - "packages/core/src/contracts/ports.ts"

@@ -9,11 +9,13 @@
  */
 import {
   DELIVERY_RESULT_TOKENS,
+  type DeliveryResultToken,
   DISPATCH_FLOOR_CONSECUTIVE_DATES,
   DISPATCH_FLOOR_DISPATCHES,
+  DISPATCH_HANDOVER_CONDITIONS,
   DISPATCH_MAX_DIVERGENCE_IDS,
-  type DeliveryResultToken,
   type DispatchAttemptRecord,
+  type DispatchConditionStatus,
   type DispatchDivergenceBlock,
   type DispatchDivergenceRecord,
   type DispatchEvidenceClass,
@@ -114,6 +116,10 @@ export type DispatchEvidenceWindow = {
     readonly unsatisfied: number;
     readonly unsatisfiedRefs: readonly string[];
   };
+  /** The corroborated counted attempts; one derivation with `corroboration.satisfied`. */
+  readonly cleanDispatches: number;
+  /** The trailing run of corroborated counted attempts in ledger append order. */
+  readonly consecutiveCleanDispatches: number;
   readonly floorMet: boolean;
   readonly truncated?: { readonly bound: number; readonly omittedRecords: number };
   readonly unverifiable?: string;
@@ -189,6 +195,8 @@ export const foldEvidenceWindow = (input: {
       consecutiveDates: 0,
       coverage: { present: [], missing: [...DELIVERY_RESULT_TOKENS] },
       corroboration: { satisfied: 0, unsatisfied: 0, unsatisfiedRefs: [] },
+      cleanDispatches: 0,
+      consecutiveCleanDispatches: 0,
       floorMet: false,
       unverifiable: input.unreadable,
     };
@@ -233,6 +241,20 @@ export const foldEvidenceWindow = (input: {
     (attempt) => !corroborationSatisfied(attempt.corroboration),
   );
 
+  const isClean = (attempt: DispatchAttemptRecord): boolean =>
+    requiredCorroboration(attempt.token).length > 0 &&
+    corroborationSatisfied(attempt.corroboration);
+
+  // The trailing run, not the longest: a trailing non-clean counted attempt (or
+  // an empty window) is zero, so a broken streak cannot hide behind an earlier
+  // clean prefix.
+  let consecutiveCleanDispatches = 0;
+  for (let index = countedInWindow.length - 1; index >= 0; index -= 1) {
+    const attempt = countedInWindow[index];
+    if (attempt === undefined || !isClean(attempt)) break;
+    consecutiveCleanDispatches += 1;
+  }
+
   const floorMet =
     countedInWindow.length >= DISPATCH_FLOOR_DISPATCHES ||
     consecutiveDates >= DISPATCH_FLOOR_CONSECUTIVE_DATES;
@@ -252,6 +274,8 @@ export const foldEvidenceWindow = (input: {
       unsatisfied: unsatisfied.length,
       unsatisfiedRefs: unsatisfied.map((attempt) => attempt.attemptId),
     },
+    cleanDispatches: satisfied.length,
+    consecutiveCleanDispatches,
     floorMet,
   };
 };
@@ -294,6 +318,29 @@ export const evaluateHandoverGate = (window: DispatchEvidenceWindow): DispatchGa
   };
 };
 
+/**
+ * Project the folded window and its evaluation onto the four ordered condition
+ * statuses (TDR-0031 D2, DM-3).
+ *
+ * One derivation for the three readers: a condition is `open` exactly when the
+ * evaluation names it in `unmetConditions`, so
+ * `conditions.filter(status === "open")` equals `unmetConditions` in order by
+ * construction and no second status rule can appear. The declared
+ * `DISPATCH_HANDOVER_CONDITIONS` declaration is the only order authority, and
+ * an `unverifiable` window still answers statuses — over the visible window —
+ * because unverifiability is carried by `verdict` plus `truncation`, never by a
+ * third status.
+ */
+export const conditionStatuses = (
+  evaluation: DispatchGateEvaluation,
+): readonly DispatchConditionStatus[] => {
+  const open = new Set(evaluation.unmetConditions.map((entry) => entry.condition));
+  return DISPATCH_HANDOVER_CONDITIONS.map((condition) => ({
+    condition,
+    status: open.has(condition) ? "open" : "met",
+  }));
+};
+
 /** Build the DM-6 summary data from the folded window and verdict. */
 export const toSummaryData = (
   window: DispatchEvidenceWindow,
@@ -324,22 +371,25 @@ export const toSummaryData = (
     consecutiveDates: window.consecutiveDates,
     onlyFloor: true,
   },
+  cleanDispatches: window.cleanDispatches,
+  consecutiveCleanDispatches: window.consecutiveCleanDispatches,
+  conditions: conditionStatuses(evaluation),
   ...(window.truncated === undefined ? {} : { truncation: window.truncated }),
 });
 
-/** Build the handover conditions snapshot from the folded window. */
-export const handoverConditionsSnapshot = (
-  window: DispatchEvidenceWindow,
-  evaluation: DispatchGateEvaluation,
-): DispatchHandoverConditionsSnapshot => ({
-  verdict: evaluation.verdict,
-  windowStart: window.windowStart,
-  windowStartReason: window.windowStartReason,
-  countedDeliveries: window.countedInWindow.length,
-  coveragePresent: window.coverage.present,
-  coverageMissing: window.coverage.missing,
-  incidents: window.incidents,
-  unresolvedDivergences: window.divergences.unresolved,
-  floorMet: window.floorMet,
-  corroborationSatisfied: window.corroboration.satisfied,
-});
+/** Build the handover conditions snapshot from the folded window. */ export const handoverConditionsSnapshot =
+  (
+    window: DispatchEvidenceWindow,
+    evaluation: DispatchGateEvaluation,
+  ): DispatchHandoverConditionsSnapshot => ({
+    verdict: evaluation.verdict,
+    windowStart: window.windowStart,
+    windowStartReason: window.windowStartReason,
+    countedDeliveries: window.countedInWindow.length,
+    coveragePresent: window.coverage.present,
+    coverageMissing: window.coverage.missing,
+    incidents: window.incidents,
+    unresolvedDivergences: window.divergences.unresolved,
+    floorMet: window.floorMet,
+    corroborationSatisfied: window.corroboration.satisfied,
+  });

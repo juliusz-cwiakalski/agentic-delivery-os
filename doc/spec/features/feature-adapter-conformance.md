@@ -9,7 +9,7 @@ service: delivery-os provider adapters
 summary: "The provider-agnostic adapter conformance suite: one three-flow, fourteen-step registry over the nine closed adapter operations, capability-gated execution with explicit declared-gap and capability-absent skips, production write execution in the mock tier including the provider-side landing, the comment write, and the delivery-request content write, deterministic exact-URL mock tenants, cross-transport normalization parity, structural and runtime coverage gates, the throwing-fetch and child-process guards, the delivery.conformance.v1 artifact, a scheduled read-only live evidence tier, and the harness conformance registry with its streaming-starter registration, six-scenario classification floor, and liveness read."
 links:
   related_changes: ["GH-189", "GH-183", "GH-231", "GH-225", "GH-233", "GH-275", "GH-338"]
-  related_decisions: ["ADR-0003", "ADR-0005", "TDR-0008", "TDR-0031", "TDR-0032"]
+  related_decisions: ["ADR-0003", "ADR-0005", "TDR-0008", "TDR-0032", "TDR-0033"]
 ---
 
 # Feature: Adapter Conformance Suite

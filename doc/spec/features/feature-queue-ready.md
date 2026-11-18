@@ -9,7 +9,7 @@ service: delivery-os
 summary: "The read-only queue-ready ready-set command: the `queue ready` grammar and canonical-ref bounds, the six closed tri-state readiness conditions and their declared sources, the all-six-satisfied ready rule with named blocking conditions, provider-agnostic identity resolution and the numeric suffix bridge, close association and classification by the repository branch convention, deterministic class ranking, the six-group bounded reason vocabulary, the nine provider-derived output caps with the single `value-clamped` marker and deterministic byte-budget reduction, the bounded `delivery.queue-ready.v1` machine payload and human digest, the read-only and credential boundary posture, error-identity reuse, and the fixture corpus plus opt-in live-smoke evidence model."
 links:
   related_changes: ["GH-176", "GH-183", "GH-238", "GH-338"]
-  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006", "ADR-0007", "ODR-0003", "TDR-0031"]
+  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006", "ADR-0007", "ODR-0003", "TDR-0032"]
   contracts:
     - "packages/core/src/contracts/queue-ready.ts"
 ---

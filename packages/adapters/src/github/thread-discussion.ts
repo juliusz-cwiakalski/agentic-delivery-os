@@ -1,6 +1,6 @@
 /**
  * `@delivery-os/adapters/github` bounded review-thread discussion read
- * (GH-338 F-5, DM-3, TDR-0033).
+ * (GH-338 F-5, DM-3, TDR-0034).
  *
  * One bounded, adapter-local read outside the closed operation set: one thread's
  * resolution state, the provider's asserted comment total, and at most 50

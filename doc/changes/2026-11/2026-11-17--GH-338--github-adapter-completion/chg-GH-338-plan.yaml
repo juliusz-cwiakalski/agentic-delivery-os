@@ -53,7 +53,7 @@
 #               writable-set round trips, non-terminal `field-update` refusal)
 #               and `issue-writes.json` (DM-9 variants, label-free `done` write)).
 #               Three further v1.2 bindings. (i) TC-BACKLOG-010
-#               takes its invalid-map set from TDR-0034 §1 — never the reverse —
+#               takes its invalid-map set from TDR-0035 §1 — never the reverse —
 #               and asserts the construction-time/zero-request property: the
 #               resolved map is validated once at construction, the failure is
 #               captured rather than thrown, the first operation returns the
@@ -70,7 +70,7 @@
 #               and phase 3 extends the SAME table and suite with the comment and
 #               content-write routes.
 #   - PM record: ./chg-GH-338-pm-notes.yaml (the four accepted decision records
-#               DEC-1..DEC-4 = TDR-0031..TDR-0034; the current-state facts; the
+#               DEC-1..DEC-4 = TDR-0032..TDR-0035; the current-state facts; the
 #               delivery conventions — gate commands carry
 #               `TMPDIR=$PWD/tmp/tmpdir`, conventional commit subjects,
 #               body/footer lines <= 100 chars, PR targets main-tools, merge
@@ -79,16 +79,16 @@
 #               files/folders/packages, per-phase one-line summary, done
 #               artifacts, leases, weightClass, interactions, tier; no tasks
 #               key, no progress log).
-#   - Decisions: doc/decisions/TDR-0031 (one CLI-first ProviderTransport over
+#   - Decisions: doc/decisions/TDR-0032 (one CLI-first ProviderTransport over
 #               `gh api`, probe-gated, no per-request failover, isolated child
 #               environment, declared matrix, native-fetch factory exported),
-#               TDR-0032 (the ninth closed operation `merge-delivery-request`
+#               TDR-0033 (the ninth closed operation `merge-delivery-request`
 #               with squash-only crafted metadata and an optional head guard;
 #               optional PipelineJob `startedAt`/`completedAt`; one bounded
 #               8192-byte adapter-local log excerpt; merge transaction NOT
-#               rewired), TDR-0033 (bounded adapter-local thread discussion
+#               rewired), TDR-0034 (bounded adapter-local thread discussion
 #               read, 50 comments / 4096 bytes per body, DeliveryThread
-#               unchanged), TDR-0034 (core `WorkflowMap` as injected, seeded
+#               unchanged), TDR-0035 (core `WorkflowMap` as injected, seeded
 #               construction data with an internal validator and no
 #               configuration schema).
 #   - Precedent: ./../2026-11-16--GH-299--metrics-spend/chg-GH-299-plan.yaml
@@ -100,14 +100,14 @@
 #
 # COMMIT-BOUNDARY REALITY (binding on phase 1):
 #   Four decision records are UNTRACKED in the worktree at plan time. The
-#   ADR-0005 editorial pointer to TDR-0031 is ALREADY COMMITTED (`f2c2ad27`) and
+#   ADR-0005 editorial pointer to TDR-0032 is ALREADY COMMITTED (`f2c2ad27`) and
 #   its file is clean in this branch state, so phase 1 declares nothing for it: a
 #   declared path that needs no edit would only produce an advisory `plan diff`
 #   `undeclared-missing` finding for a file no phase touches.
-#     doc/decisions/TDR-0031-github-adapter-cli-first-provider-transport.md   (untracked)
-#     doc/decisions/TDR-0032-github-adapter-completion-contract-extensions.md (untracked)
-#     doc/decisions/TDR-0033-review-thread-discussion-bodies-bounded-adapter-read.md (untracked)
-#     doc/decisions/TDR-0034-github-issues-transition-mapping-injected-workflow-map.md (untracked)
+#     doc/decisions/TDR-0032-github-adapter-cli-first-provider-transport.md   (untracked)
+#     doc/decisions/TDR-0033-github-adapter-completion-contract-extensions.md (untracked)
+#     doc/decisions/TDR-0034-review-thread-discussion-bodies-bounded-adapter-read.md (untracked)
+#     doc/decisions/TDR-0035-github-issues-transition-mapping-injected-workflow-map.md (untracked)
 #   The commit primitive stages only plan-declared scope plus the change
 #   folder, so phase 1 declares those four exact paths (and the doc/decisions
 #   folder) and they land on `phase complete delivery_planning`. Their
@@ -241,7 +241,7 @@
 #       explicitly, and TC-BACKLOG-002 gains the case, so prose and wire
 #       behaviour agree and the disagreement cannot return unobserved.
 #   D5. `label-swap` PRESERVATION SEMANTICS ARE THE CONTRACT (m-2). AC-F6-4,
-#       DM-6 and TDR-0034 §3.2 said "no full-array replace" while the delivered
+#       DM-6 and TDR-0035 §3.2 said "no full-array replace" while the delivered
 #       write transmits the computed target set in one issue `PATCH`; the oracle
 #       always read the clause as preservation semantics. The records are
 #       restated to what the code satisfies: the write removes present declared
@@ -251,7 +251,7 @@
 #       introduced. The residual limit is recorded, not hidden: a label added by
 #       another actor between the caller's read and the write is not preserved
 #       (the current read is adapter-local input data, so the adapter issues no
-#       read of its own) — a declared limitation in TDR-0034, consistent with
+#       read of its own) — a declared limitation in TDR-0035, consistent with
 #       the reference behavior.
 #
 # TC -> PHASE MAP (84 ids; every id owned by exactly one phase — the phase whose
@@ -364,7 +364,7 @@
 #          resolver `resolveTransportSelection({ policy, probe })`;
 #        packages/adapters/src/github/workflow-map.ts   — the four-row
 #          precedence-ordered seed, the injected-map acceptance, the confined
-#          validator (`validateGithubWorkflowMap`, TDR-0034 §1's seven-rule
+#          validator (`validateGithubWorkflowMap`, TDR-0035 §1's seven-rule
 #          rejection set, run once at construction on the resolved map and
 #          captured rather than thrown), the writable-set derivation (`done` plus
 #          each `label-swap` alias), and the one resolver used by read
@@ -375,7 +375,7 @@
 #        packages/adapters/src/github/thread-discussion.ts — the bounded
 #          per-thread discussion read and its closed shape.
 #      The native-fetch transport factory becomes an additive export so
-#      composition can choose explicitly (TDR-0031 item 2). Contract evolution
+#      composition can choose explicitly (TDR-0032 item 2). Contract evolution
 #      here is ADDITIVE (spec v1.2 §8.5): `GithubClientOptions` gains exactly one
 #      optional `workflowMap` member, every existing call site and option object
 #      keeps compiling, and no member is removed, retyped, or made required.
@@ -391,7 +391,7 @@
 #      direct client call in the conformance suite (the TC-CONF-008 pattern).
 #      This is the declared oracle change: TC-PARITY-003 v1.2 states it in those
 #      words, so neither artifact denies it. No second `write-delivery-request`
-#      step is added — a second step would contradict TDR-0032's "append a
+#      step is added — a second step would contradict TDR-0033's "append a
 #      `merge-delivery-request` step" and buy no coverage.
 #   3. STATEFUL REPLAY FOR READ-BACK CASES: the mock-tenant transport is
 #      stateless and body-keyed (packages/testkit/src/conformance/mock-tenant.ts,
@@ -502,9 +502,9 @@
 #      suppressor. No secret enters argv, and no absolute binary path is
 #      injected (the `PATH`-based resolution is the bound option; a future
 #      absolute-path injection would be its own change).
-#   9. WORKFLOW-MAP VALIDATION AND THE TRANSITION REFUSALS (TDR-0034 §1 and
+#   9. WORKFLOW-MAP VALIDATION AND THE TRANSITION REFUSALS (TDR-0035 §1 and
 #      §3.2, restated normatively in spec v1.2 DM-6/§8.4.1/AC-F6-3/AC-F6-4). The
-#      AUTHORITY is TDR-0034 §1 — never a test case's fixture list; the plan and
+#      AUTHORITY is TDR-0035 §1 — never a test case's fixture list; the plan and
 #      the cases follow the record. The confined validator runs exactly once per
 #      client construction on the RESOLVED map (the injected map when supplied,
 #      otherwise the seed), before the first operation, never lazily and never per
@@ -661,10 +661,10 @@
 #     unchanged and not rewired).
 #   - doc/00-index.md: index the new reference-behavior surface; confirm the
 #     prompt-required command help/reference coverage is unaffected.
-#   - doc/decisions/00-index.md: confirm the TDR-0031..TDR-0034 rows and the
+#   - doc/decisions/00-index.md: confirm the TDR-0032..TDR-0035 rows and the
 #     ADR-0005 pointer state (Appendix A).
 #
-# INCONSISTENCIES: none blocking between spec v1.2, TDR-0034 (as amended) and
+# INCONSISTENCIES: none blocking between spec v1.2, TDR-0035 (as amended) and
 #   test plan v1.2. The earlier ambiguities are RESOLVED upstream, and this plan
 #   binds the resolved readings rather than a private interpretation:
 #   (a) TC-PARITY-003 v1.2 states the one-step resolution itself (one registry
@@ -683,7 +683,7 @@
 #       and TC-CLI-010 pins the launcher's spawn budget (one probe for a composing
 #       invocation, zero for `--version`/`--help`/`--print-install-path`/command
 #       help). No phase claims "one probe per launcher invocation".
-#   (d) The map validator's rejection set and timing are TDR-0034 §1's, restated
+#   (d) The map validator's rejection set and timing are TDR-0035 §1's, restated
 #       by spec v1.2 DM-6/AC-F6-3; the plan and TC-BACKLOG-010 follow the record.
 #       The `done`-row rule and the `done`-row-shape rule are contract, not
 #       fixture taste.
@@ -710,7 +710,7 @@ tier:
     - "An excerpt exceeds 8192 bytes, a thread exceeds 50 comments or 4096 bytes per body, evidence is persisted, or evidence enters the conformance artifact (AC-F4-4, AC-F5-6, NFR-6)"
     - "A thread body, a log excerpt, or other provider prose decides a lifecycle or closeout outcome (AC-F5-5, NFR-6)"
     - "The workflow map is split into a read map and a write map, a `label-swap` transition replaces the whole label array, an unavailable label signal is treated as empty, or a `field-update` transition reads or writes labels (AC-F6-3, AC-F6-4, DM-6)"
-    - "The map validator runs lazily or per request, throws instead of capturing its failure, exempts the seed from the injected map's checks, or a refusal issues a provider request; or a `label-swap` write to an issue whose current read resolves to `done` issues a provider request (AC-F6-3, AC-F6-4, DM-6, TDR-0034 §1)"
+    - "The map validator runs lazily or per request, throws instead of capturing its failure, exempts the seed from the injected map's checks, or a refusal issues a provider request; or a `label-swap` write to an issue whose current read resolves to `done` issues a provider request (AC-F6-3, AC-F6-4, DM-6, TDR-0035 §1)"
     - "A declared non-terminal `field-update` alias becomes writable, or a `write-delivery-request` create lands/sets merge state, an update creates, or a write missing required input issues a provider request (AC-F6-1, AC-F6-4, DM-9)"
     - "A configuration key, settings type, catalog branch, or file format is added for the transport policy or the mapping (AC-F6-6, NG-2)"
     - "The lifecycle merge transaction, the CLI merge composition, DeliveryThread, or DeliveryRequest is touched (NG-1, NG-4)"
@@ -882,10 +882,10 @@ phases:
         # declared: it is already committed (`f2c2ad27`) and clean, so declaring
         # it would only produce an advisory `plan diff` finding. The index already
         # carries the four TDR rows.
-        - doc/decisions/TDR-0031-github-adapter-cli-first-provider-transport.md
-        - doc/decisions/TDR-0032-github-adapter-completion-contract-extensions.md
-        - doc/decisions/TDR-0033-review-thread-discussion-bodies-bounded-adapter-read.md
-        - doc/decisions/TDR-0034-github-issues-transition-mapping-injected-workflow-map.md
+        - doc/decisions/TDR-0032-github-adapter-cli-first-provider-transport.md
+        - doc/decisions/TDR-0033-github-adapter-completion-contract-extensions.md
+        - doc/decisions/TDR-0034-review-thread-discussion-bodies-bounded-adapter-read.md
+        - doc/decisions/TDR-0035-github-issues-transition-mapping-injected-workflow-map.md
         - doc/decisions/00-index.md
       folders:
         - doc/decisions
@@ -900,7 +900,7 @@ phases:
   # ---------------------------------------------------------------------------
   # Phase 2 — CLI-first transport, probe, composition selection, and the
   # cross-transport parity proof (F-2; DM-5, DM-7; AC-F2-1..5, AC-F8-3;
-  # DEC-1/TDR-0031; RSK-1, RSK-2, RSK-3, RSK-10; NFR-1, NFR-2, NFR-3, NFR-4,
+  # DEC-1/TDR-0032; RSK-1, RSK-2, RSK-3, RSK-10; NFR-1, NFR-2, NFR-3, NFR-4,
   # NFR-9).
   #
   # Goal: one second ProviderTransport over `gh api`, selected once at the
@@ -1158,7 +1158,7 @@ phases:
   # `in-review` label-swap; `in-progress` -> `in-progress` label-swap; `open` ->
   # `ready` field-update), optionally injected, with status tokens being native
   # issue states or lifecycle label names.
-  # MAP VALIDATION — AUTHORITY IS TDR-0034 §1, which spec v1.2 DM-6 restates; no
+  # MAP VALIDATION — AUTHORITY IS TDR-0035 §1, which spec v1.2 DM-6 restates; no
   # test case defines the contract. The confined validator rejects exactly this
   # set, naming the offending row: (1) `systemName` not a non-empty string;
   # (2) `states` not an array, empty, or holding a non-object row; (3) a
@@ -1188,7 +1188,7 @@ phases:
   # with zero provider requests; the writable set is exactly `done` plus each
   # declared `label-swap` alias. An undeclared alias is a named adapter-local
   # typed refusal with zero provider writes.
-  # EVERY TRANSITION RESOLVES AGAINST THE ISSUE'S CURRENT READ (TDR-0034 §3.2,
+  # EVERY TRANSITION RESOLVES AGAINST THE ISSUE'S CURRENT READ (TDR-0035 §3.2,
   # spec v1.2 §8.4.1 "Write resolution against the current read", AC-F6-4):
   # a `label-swap` write to an issue whose current read resolves to `done`
   # refuses with a named typed failure and ZERO provider requests REGARDLESS OF
@@ -1222,7 +1222,7 @@ phases:
   #   3.1 Author the workflow-map module (seed, injection, validator, writable-set
   #       derivation, one resolver) and route read normalization and the
   #       mechanism-scoped transition write through it. The validator implements
-  #       TDR-0034 §1's seven rules, runs once at construction on the resolved map
+  #       TDR-0035 §1's seven rules, runs once at construction on the resolved map
   #       and captures its result (never throws), and the adapter returns the
   #       named `provider.payload.invalid` refusal with zero provider requests on
   #       every operation when the construction check failed. A `field-update` row
@@ -1262,7 +1262,7 @@ phases:
   #       to `done` refuses a `label-swap` write with zero provider requests,
   #       asserted both with and without a lingering `label-swap` label);
   #       `labelless-issue` is pinned native `open`. The invalid-map fixture set
-  #       covers TDR-0034 §1's seven rules — blank `systemName`, non-array/empty
+  #       covers TDR-0035 §1's seven rules — blank `systemName`, non-array/empty
   #       `states`, a non-object row, a blank or duplicate `nativeStatus`, an
   #       unknown `deliveryState`, an unknown `transitionMechanism`, a duplicate
   #       delivery alias, NO `done` row, and a `done` row that is not the
@@ -1306,7 +1306,7 @@ phases:
   #   create and update asserted separately, refusals with zero requests), AC-F6-2
   #   (TC-BACKLOG-003/008/011 — the four read outcomes), AC-F6-3
   #   (TC-BACKLOG-004/010 — the writable set, read/write symmetry, and the
-  #   construction-time validation: seven-rule rejection set from TDR-0034 §1,
+  #   construction-time validation: seven-rule rejection set from TDR-0035 §1,
   #   failure captured not thrown, first operation returns the named refusal with
   #   zero provider requests, the seed held to the same checks), AC-F6-4
   #   (TC-BACKLOG-004/005/006 — label-swap scope, the TERMINAL-READ refusal on a
@@ -1386,7 +1386,7 @@ phases:
 
   # ---------------------------------------------------------------------------
   # Phase 4 — Failure evidence: verbatim job timings and one bounded,
-  # non-persisted log excerpt (F-4; DM-2, DM-4; AC-F4-1..4; DEC-2/TDR-0032;
+  # non-persisted log excerpt (F-4; DM-2, DM-4; AC-F4-1..4; DEC-2/TDR-0033;
   # RSK-6, RSK-8; NFR-4, NFR-6, NFR-10).
   #
   # Goal: failure triage without leakage. Check-run normalization copies the
@@ -1469,7 +1469,7 @@ phases:
 
   # ---------------------------------------------------------------------------
   # Phase 5 — Bounded review-thread discussion evidence with no write authority
-  # (F-5; DM-3, DM-8; AC-F5-1..6 and AC-F8-6 completion; DEC-3/TDR-0033;
+  # (F-5; DM-3, DM-8; AC-F5-1..6 and AC-F8-6 completion; DEC-3/TDR-0034;
   # RSK-6; NFR-6, NFR-10).
   #
   # Goal: one bounded per-thread read returns exactly
@@ -1694,7 +1694,7 @@ phases:
   #       confinement wording;
   #       feature-merge-verify-deploy.md — the coexistence statement;
   #       doc/00-index.md and doc/decisions/00-index.md — the new surface and the
-  #       TDR-0031..TDR-0034 / ADR-0005 pointer confirmation.
+  #       TDR-0032..TDR-0035 / ADR-0005 pointer confirmation.
   #
   # Acceptance: AC-F8-4 (TC-PARITY-005, rolling up the per-behavior fixtures of
   #   phases 1/3/4/5 and the landing projection TC-PARITY-004), AC-F8-5
@@ -1776,7 +1776,7 @@ phases:
   # check tier also spawned whatever `gh` the host happened to have (M-2). Phase
   # 8 repairs all three, proves them through the real `execFile` runner against
   # an offline stub binary, and converges three normative sentences (DM-9's
-  # write-side 404, AC-F6-4's "no full-array replace", TDR-0031 item 8) with the
+  # write-side 404, AC-F6-4's "no full-array replace", TDR-0032 item 8) with the
   # delivered behaviour. It adds no contract shape, no configuration surface, no
   # operation, no cap, no error identity, and no pinned-surface relaxation.
   #
@@ -1871,14 +1871,14 @@ phases:
   #       no retry, `provider.payload.invalid`, `httpStatus: 404`. No client
   #       change and no error-table row.
   #   8.8 m-2 preservation semantics (D5). Restate AC-F6-4/DM-6 (change folder),
-  #       TDR-0034 §3.2 and its metric line, the reference-behavior mapping
+  #       TDR-0035 §3.2 and its metric line, the reference-behavior mapping
   #       paragraph, and TC-BACKLOG-005's wording to the delivered mechanism, and
   #       record both the current-read-as-input realisation and the read-to-write
-  #       TOCTOU limitation in TDR-0034. TC-BACKLOG-005's assertions are
+  #       TOCTOU limitation in TDR-0035. TC-BACKLOG-005's assertions are
   #       unchanged, so `tests/behaviour/providers/github-workflow-map.test.ts` is
   #       not declared and no wire behaviour moves.
   #   8.9 m-4/N6 and N12, named and owned. N6 (owner `@decision-advisor`): align
-  #       TDR-0031 item 8 with the optional `workflowMap` member TDR-0034 §1 adds.
+  #       TDR-0032 item 8 with the optional `workflowMap` member TDR-0035 §1 adds.
   #       N12 (owner `@pm`): the DoR iteration-2 verdict note, the spec-v1.2 note,
   #       and the superseded DM-10 sentence in `chg-GH-338-pm-notes.yaml` — the
   #       coder records phase-8 evidence and never rewrites a historical note.
@@ -1978,8 +1978,8 @@ phases:
         - tests/fixtures/providers/github/cli-process-edge.json
         - tests/fixtures/providers/github/issue-writes.json
         - doc/spec/features/feature-adapter-reference-behavior.md
-        - doc/decisions/TDR-0031-github-adapter-cli-first-provider-transport.md
-        - doc/decisions/TDR-0034-github-issues-transition-mapping-injected-workflow-map.md
+        - doc/decisions/TDR-0032-github-adapter-cli-first-provider-transport.md
+        - doc/decisions/TDR-0035-github-issues-transition-mapping-injected-workflow-map.md
       folders:
         - doc/changes/2026-11/2026-11-17--GH-338--github-adapter-completion
     interactions:

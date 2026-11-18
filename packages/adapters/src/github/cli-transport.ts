@@ -1,6 +1,6 @@
 /**
  * The GitHub CLI transport: one `ProviderTransport` over `gh api` (F-2, DM-5,
- * DM-7, DM-10; TDR-0031).
+ * DM-7, DM-10; TDR-0032).
  *
  * The vendor CLI is used strictly as an authenticated API caller: an
  * already-shaped `ProviderRequest` is mapped onto one fixed argv array, the
@@ -13,7 +13,7 @@
  * the mapped value is REQUIRED construction data.
  *
  * Runtime APIs (a bounded fixed-argv `gh` invocation) are admitted for this file
- * by ADR-0005's exact `github` provider-subpath entry, refined by TDR-0031 item
+ * by ADR-0005's exact `github` provider-subpath entry, refined by TDR-0032 item
  * 9: the admitted meaning now covers this one bounded, no-shell child
  * invocation in addition to network I/O. No ambient environment is read.
  */
@@ -77,7 +77,7 @@ export type GithubTransportPreference = {
  *
  * Uniform by design: `gh api` is transport-level, so every closed operation
  * declares the same preferred/fallback pair. A future per-primitive divergence
- * needs its own decision (TDR-0031 revisit trigger).
+ * needs its own decision (TDR-0032 revisit trigger).
  */
 export const GITHUB_TRANSPORT_MATRIX: Readonly<
   Record<AdapterOperation, GithubTransportPreference>

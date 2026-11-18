@@ -217,7 +217,7 @@ const selectMerged = (requests: readonly DeliveryRequest[]): DeliveryRequest | u
 };
 
 /**
- * The delivered native-`fetch` transport, exported additively (TDR-0031 item 2)
+ * The delivered native-`fetch` transport, exported additively (TDR-0032 item 2)
  * so composition can choose it explicitly when the CLI transport is not
  * selected, and so an embedder can construct it without ambient state.
  */

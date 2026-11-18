@@ -1,5 +1,5 @@
 ---
-id: TDR-0034
+id: TDR-0035
 decision_type: tdr
 status: Proposed
 created: 2026-11-17
@@ -76,7 +76,7 @@ links:
   roadmap_items: ["M3-S4", "M3-S2", "M3-S6", "M3-S5"]
 ---
 
-# TDR-0034: GitHub Issues Transition Mapping — The Core `WorkflowMap` as Injected, Seeded Construction Data
+# TDR-0035: GitHub Issues Transition Mapping — The Core `WorkflowMap` as Injected, Seeded Construction Data
 
 ## Context
 
@@ -137,7 +137,7 @@ The unifying principle this record adopts: **an adapter consumes provider-specif
 ### C-5: Truthful read/write symmetry
 
 - **Statement:** A transition the adapter performs must be observable by its own read path: after a mapped transition, re-reading the issue must yield the alias that was written, or the mismatch must be a named anomaly — never a silent ready/done collapse.
-- **Source:** Capability honesty (TDR-0032 C-2 principle); Jira's mapped-transition precedent.
+- **Source:** Capability honesty (TDR-0033 C-2 principle); Jira's mapped-transition precedent.
 - **Verification:** Test — round-trip per mapped alias through the mock tenant and through normalization.
 - **Negotiable:** no.
 
@@ -430,4 +430,4 @@ Five consequences are recorded rather than treated as exceptions:
 - [ADR-0003](ADR-0003-oss-monorepo-structure.md) — tier and subpath confinement
 - [ADR-0005](ADR-0005-runtime-confinement-provider-client-subpaths.md) — provider subpath surface discipline
 - [ADR-0006](ADR-0006-workitem-custom-fields-and-comment-omission-representation.md) — declared mapping data over speculative contract surface
-- [TDR-0032](TDR-0032-github-adapter-completion-contract-extensions.md) — the capability-honesty and absence discipline this record follows
+- [TDR-0033](TDR-0033-github-adapter-completion-contract-extensions.md) — the capability-honesty and absence discipline this record follows

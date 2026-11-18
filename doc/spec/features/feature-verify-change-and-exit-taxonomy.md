@@ -9,7 +9,7 @@ service: delivery-os
 summary: "The `verify` command family: ledger-only `verify change` verification against a change's declared full or LITE phase set, a declaration-plus-registry overlay with per-phase precedence, the eleven-token delivery result vocabulary and its total projection/derivation taxonomy, one total exit taxonomy with the documented state-unverified divergence, the additive verify.ledger.incomplete identity beside reused lint.* and state.* identities, the `verify.gates.*` (including the narrowed-scope refusal) and `verify.deploy.*` rows of the sibling verify surfaces, a deterministic classification summary, and the non-zero guarantee for incomplete or unverifiable deliveries."
 links:
   related_changes: ["GH-172", "GH-174", "GH-177", "GH-179", "GH-183", "GH-178", "GH-222", "GH-221", "GH-225", "GH-233", "GH-235", "GH-239", "GH-300", "GH-338"]
-  related_decisions: ["ADR-0003", "TDR-0005", "TDR-0031"]
+  related_decisions: ["ADR-0003", "TDR-0005", "TDR-0032"]
   contracts:
     - "packages/core/src/contracts/delivery-result.ts"
     - "packages/core/src/contracts/error-table.ts"

@@ -347,6 +347,7 @@ import {
   type ProviderConfiguration,
   type ProviderParkRecord,
   type ProviderSleep,
+  QUEUE_BATTERY_ONLY_PARK_CAUSES,
   type QueueDegradationReason,
   type QueueTrackerRead,
   type QuotaTransport,
@@ -380,7 +381,6 @@ import {
   type WatchdogSignalSource,
   type WorkItem,
 } from "@delivery-os/core/contracts";
-import { QUEUE_BATTERY_ONLY_PARK_CAUSES } from "@delivery-os/core/contracts";
 import {
   createProfileProbePort,
   createProviderEngine,
@@ -1391,7 +1391,7 @@ export type MergeCommandComposition = {
     | { readonly ok: true; readonly request: DeliveryRequest }
     | { readonly ok: false; readonly code: string }
   >;
-  readonly ownerPrincipal?: string;
+  readonly ownerPrincipal?: string | undefined;
   readonly baseRef?: string;
   readonly branch?: string;
   readonly nowIso: () => string;
@@ -6978,6 +6978,7 @@ export const createDispatchGateRuntime = (
               scope: composition.gate.scope,
               nowIso: composition.nowIso(),
               principal: composition.gate.principal,
+              ...(composition.gate.max === undefined ? {} : { max: composition.gate.max }),
             })
           : handoverDispatchEvidence({
               store: composition.store,
@@ -6986,6 +6987,7 @@ export const createDispatchGateRuntime = (
               scope: composition.gate.scope,
               nowIso: composition.nowIso(),
               principal: composition.gate.principal,
+              ...(composition.gate.max === undefined ? {} : { max: composition.gate.max }),
             });
       },
     },

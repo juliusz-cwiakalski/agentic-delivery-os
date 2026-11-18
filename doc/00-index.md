@@ -78,6 +78,7 @@ ados_distribution: redistributable
 | [Decision Records Management](guides/decision-records-management.md) | Decision record types, lifecycle, governance |
 | [Meeting Preparation and Summarization](guides/meeting-preparation-and-summarization.md) | How to prepare, run, document, and follow up on meetings |
 | [Delivery Modes](guides/delivery-modes.md) | The two unattended delivery modes (Mode A CEO loop, Mode B manual batch) + behavioral invariants |
+| [Engine-first Delivery Operations](guides/engine-first-operations.md) | Daily engine-first routine: reading the handover gate and `repos list` row, per-repository flip and reversal, shell fallback, declared residuals |
 | [Milestone Management](guides/milestone-management.md) | The milestone-first operating rule: naming, creation, attachment, entry and exit review, closure, extension, and enforcement |
 | [Autonomous Batch Delivery](guides/autonomous-batch-delivery.md) | Unattended multi-ticket delivery: `batch-deliver.sh`, `deliver-ticket.sh`, liveness, approvals |
 | [Provider Conditions and Parks](guides/provider-conditions-and-parks.md) | Provider pauses: condition kinds, park causes and expiry, fail-loud announcements, configuration pointer |

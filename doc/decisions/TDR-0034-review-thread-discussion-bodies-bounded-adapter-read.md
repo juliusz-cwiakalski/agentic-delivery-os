@@ -1,5 +1,5 @@
 ---
-id: TDR-0033
+id: TDR-0034
 decision_type: tdr
 status: Proposed
 created: 2026-11-17
@@ -24,7 +24,7 @@ classification:
   blast_radius: team
   recurrence: recurring
 governance:
-  driver: "@decision-advisor (GH-338: TDR-0032 recorded this as an unrouted decision and the GH-338 specification cannot start until it is settled)"
+  driver: "@decision-advisor (GH-338: TDR-0033 recorded this as an unrouted decision and the GH-338 specification cannot start until it is settled)"
   decider: "Juliusz Ćwiąkalski — human acceptance at the GH-338 PR review; AI does not accept this R2 record"
   contributors:
     - "@decision-advisor (repository analysis and this record)"
@@ -67,13 +67,13 @@ links:
     - "packages/adapters/src/github/client.ts"
     - "packages/adapters/src/github/deploy-trace.ts"
   diagrams: []
-  decisions: ["ADR-0004", "ADR-0006", "TDR-0032"]
+  decisions: ["ADR-0004", "ADR-0006", "TDR-0033"]
   experiments: []
   metrics: []
   roadmap_items: ["M3-S4", "M3-S3", "M3-S5"]
 ---
 
-# TDR-0033: Review-Thread Discussion Bodies — A Bounded Adapter-Local Read with the Core Contract Left Body-Free
+# TDR-0034: Review-Thread Discussion Bodies — A Bounded Adapter-Local Read with the Core Contract Left Body-Free
 
 ## Context
 
@@ -87,7 +87,7 @@ links:
 - **FACT:** The adapter conformance suite pins its registry to the closed operation set and executes supported writes through the client's write members; the deploy-trace and merge reads sit outside the three-flow registry today, and expected projections are exact-equality fixtures (`doc/spec/features/feature-adapter-conformance.md`, `packages/testkit/src/conformance/flows.ts`, read 2026-11-17).
 - **FACT:** The provider subpaths export an exact, test-pinned surface: `tests/structure/provider-surface.test.ts` holds `EXPECTED_SURFACE` per provider, and `tests/structure/content-inventory.test.ts` holds a per-file executable-export allowlist (read 2026-11-17).
 - **FACT:** The single serialization/redaction chokepoint every human-facing payload passes is `packages/cli/src/output/serialize.ts` (`doc/spec/features/feature-audit-ledger.md`, read 2026-11-17).
-- **FACT:** TDR-0032 recorded this question as an explicit non-decision with an unrouted item, recommending either an additive optional `comments?` array with a per-thread cap or a bounded adapter-local read (`doc/decisions/TDR-0032-github-adapter-completion-contract-extensions.md` §5, Unresolved Questions, read 2026-11-17).
+- **FACT:** TDR-0033 recorded this question as an explicit non-decision with an unrouted item, recommending either an additive optional `comments?` array with a per-thread cap or a bounded adapter-local read (`doc/decisions/TDR-0033-github-adapter-completion-contract-extensions.md` §5, Unresolved Questions, read 2026-11-17).
 - **FACT:** GH-338's scope line names "PRs with threaded discussions and resolution"; resolution and thread metadata are delivered, and thread bodies were never named as an acceptance criterion (`doc/changes/2026-11/2026-11-17--GH-338--github-adapter-completion/chg-GH-338-pm-notes.yaml`, read 2026-11-17).
 
 ## Problem Framing (Clarified)
@@ -113,14 +113,14 @@ The second-order consequence decides the matter. If bodies enter the contract, t
 ### C-2: Truthful absence and measurable truncation
 
 - **Statement:** Any discussion read must distinguish "not fetched" from "provider-asserted empty", and must make truncation measurable by the consumer; it never returns an empty collection to mean "unknown", and never presents a truncated set as complete.
-- **Source:** ADR-0004 / ADR-0006 absence rule; TDR-0032 C-7.
+- **Source:** ADR-0004 / ADR-0006 absence rule; TDR-0033 C-7.
 - **Verification:** Paired present/absent/empty/truncated fixtures; type-level optionality; assertions on the truncation signal.
 - **Negotiable:** no.
 
 ### C-3: Bounded evidence, never persisted, never captured
 
 - **Statement:** Comment text is bounded by one declared fixed cap with no caller override, is never written to persisted state, never written into the conformance artifact, never paginated in a follow loop, and passes the single redaction chokepoint before any human surface.
-- **Source:** Deploy-trace precedent ("No log bodies"); TDR-0032 C-6; redaction chokepoint (result contract).
+- **Source:** Deploy-trace precedent ("No log bodies"); TDR-0033 C-6; redaction chokepoint (result contract).
 - **Verification:** Test — bound and truncation assertions, no-persistence assertion, no-artifact assertion, redaction assertion.
 - **Negotiable:** no.
 
@@ -347,7 +347,7 @@ Three consequences are recorded rather than treated as exceptions:
 ## References
 
 - GH-338 change workspace (clarify-scope decisions, current-state facts, doc-impact risks): `doc/changes/2026-11/2026-11-17--GH-338--github-adapter-completion/chg-GH-338-pm-notes.yaml`
-- Predecessor record and the unrouted question this answers: [TDR-0032](TDR-0032-github-adapter-completion-contract-extensions.md) §5 and Unresolved Questions
+- Predecessor record and the unrouted question this answers: [TDR-0033](TDR-0033-github-adapter-completion-contract-extensions.md) §5 and Unresolved Questions
 - M3 blueprint — M3-S4 tasks/AC, EC-2/EC-4: `doc/planning/oss-tooling/milestones/m3/README.md`
 - Delivered contract and normalization: `packages/core/src/contracts/ports.ts`, `packages/adapters/src/github/normalize.ts`, `packages/adapters/src/gitlab/normalize.ts`
 - Delivered bounded-read precedent: `packages/adapters/src/github/deploy-trace.ts`

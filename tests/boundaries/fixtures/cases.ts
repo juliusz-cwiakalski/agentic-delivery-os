@@ -713,7 +713,7 @@ export const RULE_CASES: RuleCase[] = [
     "packages/adapters/src/github/probe.ts",
     'import fs from "node:fs";\nexport const value = fs;\n',
   ),
-  // TDR-0031 item 9: the `github` subpath's ADR-0005 admission now covers the
+  // TDR-0032 item 9: the `github` subpath's ADR-0005 admission now covers the
   // one bounded fixed-argv child invocation the CLI transport owns.
   clean(
     "runtime-control-provider-github-cli-transport",

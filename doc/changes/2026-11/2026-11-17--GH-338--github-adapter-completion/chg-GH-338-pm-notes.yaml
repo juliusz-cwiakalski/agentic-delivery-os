@@ -40,15 +40,15 @@ decisions:
       additive-v1/decision-record rule; the spec must record the chosen option
       before delivery planning."
     date: "2026-11-17"
-  - text: "Resolved by @decision-advisor before specification: TDR-0031 (CLI-first
+  - text: "Resolved by @decision-advisor before specification: TDR-0032 (CLI-first
       transport as one ProviderTransport over `gh api`, probe-gated, no
       per-request failover, isolated child env, declared preferred/fallback
-      matrix); TDR-0032 (ninth closed operation `merge-delivery-request`;
+      matrix); TDR-0033 (ninth closed operation `merge-delivery-request`;
       additive optional PipelineJob startedAt/completedAt with durationMs
       deferred; bounded 8192-byte adapter-local log excerpt; merge transaction
-      deliberately not rewired); TDR-0033 (thread discussion bodies as a bounded
+      deliberately not rewired); TDR-0034 (thread discussion bodies as a bounded
       adapter-local read: 50 comments per thread, 4096 bytes per body,
-      DeliveryThread unchanged); TDR-0034 (GitHub Issues transitions via an
+      DeliveryThread unchanged); TDR-0035 (GitHub Issues transitions via an
       injected, seeded core WorkflowMap; no new configuration schema). All four
       are status Proposed on the branch and are accepted by the human at PR
       review."
@@ -132,7 +132,7 @@ notes:
       DM-10 sentence ('carried on the composed runtime') is superseded by the
       resolver-return-value formulation; (c) the doc-reconciliation commit
       5e5da451 is recorded by the reconciliation note above, superseding plan
-      obligation 8.10's narrower doc reach; (d) TDR-0031 now names
+      obligation 8.10's narrower doc reach; (d) TDR-0032 now names
       githubCliHostname in its decision text and TC-CLI-004 names exactly the
       delivered status-block fixtures. Remaining future-work notes
       (production.ts glue TC, shared /tmp config-dir collision hardening, two
@@ -150,7 +150,7 @@ notes:
   - text: "Post-remediation doc reconciliation (lifecycle phase 7 re-run):
       feature-provider-client-seeds, feature-adapter-ports,
       feature-cli-entrypoint, feature-result-contract, doc/overview/glossary,
-      doc/guides/tracker-credential-provisioning and TDR-0031 C-6 were corrected
+      doc/guides/tracker-credential-provisioning and TDR-0032 C-6 were corrected
       for the host-identity mapping, the absolute isolated child environment,
       and the read-scoped provider.not-found (writes classify every non-2xx as
       provider.payload.invalid). Guards: test-doc-distribution OK (95 in-scope
@@ -202,17 +202,17 @@ notes:
       structured `httpStatus`; `provider.not-found` is read-scoped), the
       reference-behavior write row states it, and TC-BACKLOG-002 asserts it over
       the new `pullUpdateNotFound` fixture row (one request, no retry). D5/m-2:
-      AC-F6-4/DM-6 (change folder), TDR-0034 C-6/§3.2 and its label-safety
+      AC-F6-4/DM-6 (change folder), TDR-0035 C-6/§3.2 and its label-safety
       metric line, the reference-behavior mapping paragraph and the test plan's
       TC-BACKLOG-005/§1.1 are restated to the delivered preservation semantics
       (one issue `PATCH` carrying the computed target set; never a single-token
       array; never an undeclared removal), with the current-read-as-input
-      realisation and the read-to-write TOCTOU limit recorded in TDR-0034.
+      realisation and the read-to-write TOCTOU limit recorded in TDR-0035.
       n-1/8.6: `parseIncludedResponse` scans only the FIRST status block's
       pre-body region and skips an intermediate bodyless block, so a
       status-shaped body line can never override the real status;
       `cli-status-blocks.json` gains the `body-with-status-line` case plus its
-      rationale. 8.9: TDR-0031 item 8 now states the one additive optional
+      rationale. 8.9: TDR-0032 item 8 now states the one additive optional
       `GithubClientOptions.workflowMap` member and its status-block open
       question is closed; N12 and m-3/n-4/n-6 stay @pm bookkeeping (no
       historical note was rewritten), and m-5 stays a recorded SCOPE_DEVIATION
@@ -248,7 +248,7 @@ notes:
       (`messageSource: template`, `transport: none`) rather than the plan's
       declared phase-8 subject, exactly as phases 1-7 did; no message was
       composed by hand. (2) Two superseded clauses still carried the old 'no
-      full-array replace' wording after the first remediation pass — TDR-0034's
+      full-array replace' wording after the first remediation pass — TDR-0035's
       label-safety metric line (named by obligation 8.8) and test plan §1.1 —
       and were restated in this phase; both live inside the phase-8 declared
       scope or the change folder. No AC, operation, cap, error identity,
@@ -456,7 +456,7 @@ notes:
       named refusals with zero requests. A field-update row writes provider
       state only and admits only the terminal done row, so the delivered
       closeout write stays one PATCH with body exactly {\"state\":\"closed\"}
-      and zero label requests. The map validator implements TDR-0034 §1's seven
+      and zero label requests. The map validator implements TDR-0035 §1's seven
       rules, runs exactly once at construction on the resolved map (pinned by a
       source scan), captures its failure rather than throwing, and every
       operation then refuses with zero provider requests; the seed is held to
@@ -494,7 +494,7 @@ notes:
       NOT started: the tree is green and the two delivered phases are verified,
       and `phase complete GH-338 delivery` was deliberately NOT run because the
       Definition of Done requires all seven plan phases. Load-bearing finding
-      for the phase-3 coder: spec §8.4.1 and TDR-0034 §3.2 require a
+      for the phase-3 coder: spec §8.4.1 and TDR-0035 §3.2 require a
       `label-swap` write to be resolved against the issue's current read AND to
       refuse with ZERO provider requests (TC-BACKLOG-004/006 assert request
       count 0, zero label reads, zero label writes), while §3.2 also says such a
@@ -508,7 +508,7 @@ notes:
       reference behavior. Also unresolved for phase 3: the terminal-read
       refusal, the unavailable-signal refusal and the non-terminal
       `field-update` refusal must be distinguished by detail text; the map
-      validator's seven TDR-0034 §1 rules run once per construction with a
+      validator's seven TDR-0035 §1 rules run once per construction with a
       captured (never thrown) failure; and the GH-ISSUE-TO-WORKITEM trap outcome
       amendment is the ONE declared delivered catalog amendment, owned by phase
       3. Remaining plan phases and their gates are unchanged in
@@ -595,7 +595,7 @@ notes:
       TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary (10306 pass, 4
       pre-existing skips, 0 fail). Delivery notes carried: N3 (no provider-views
       edit needed — the file declares no PipelineJob member and no
-      ninth-operation consumer), N6 (partially: TDR-0031 item 8 still says
+      ninth-operation consumer), N6 (partially: TDR-0032 item 8 still says
       'unchanged apart from documentation' in the committed record; spec §8.5
       and plan refinement 1 carry the additive form, recorded here as an
       unedited-record residue). Discovered pins moved in this commit, outside
@@ -634,11 +634,11 @@ notes:
       site set over packages/** and is not in phase-2 scope, so the new
       transport would fail phase 2's own gate (delivery_planning); F4 the
       closed->done field-update transition's label-removal/refusal rule
-      contradicts itself between AC-F6-4 (label-based only) and TDR-0034 section
+      contradicts itself between AC-F6-4 (label-based only) and TDR-0035 section
       3 (every transition), which would silently widen the delivered closeout
-      terminal write (specification + TDR-0034); F5 unmapped/case-mismatched
-      label tokens fall back to native state in TDR-0034 but Appendix D and
-      TC-BACKLOG-008 require a visible refusal (specification + TDR-0034); F6
+      terminal write (specification + TDR-0035); F5 unmapped/case-mismatched
+      label tokens fall back to native state in TDR-0035 but Appendix D and
+      TC-BACKLOG-008 require a visible refusal (specification + TDR-0035); F6
       AC-F2-2's declared degradation has no name, shape or observable surface
       (specification); F7 phase 1 owns TC-LAND-004/005 read-back while the
       stateful helper lives in a file declared only in phases 2 and 3
@@ -681,7 +681,7 @@ notes:
       capabilities (F-1..F-8), AC-F1-1..AC-F8-6, no open questions, and the
       reference-behavior surface (F-7) that satisfies the ticket's second AC.
       Four decision records carry the settled choices (DEC-1..DEC-4 =
-      TDR-0031..0034). They remain untracked in the worktree by design: the
+      TDR-0032..0034). They remain untracked in the worktree by design: the
       commit primitive stages only plan-declared scope, so the four TDRs and
       doc/decisions/00-index.md must be declared in the delivery plan's phase
       scope paths and will land on `phase complete delivery_planning`."

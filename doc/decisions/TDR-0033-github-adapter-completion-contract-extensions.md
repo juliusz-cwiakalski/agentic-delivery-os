@@ -1,5 +1,5 @@
 ---
-id: TDR-0032
+id: TDR-0033
 decision_type: tdr
 status: Proposed
 created: 2026-11-17
@@ -50,7 +50,7 @@ ai_assistance:
 revisit_triggers:
   - "A provider supplies a native job duration (GitLab CI jobs do): add optional `durationMs` in its own additive round with the provider-asserted-only rule; never back-fill it by deriving from the GitHub timestamps."
   - "The merge transaction is next revised: decide deliberately whether provider-side squash merge replaces, composes with, or sits beside the delivered local-git `squashLand` + push path; this record does not rewire it and must not be read as doing so."
-  - "A lifecycle consumer needs review-thread comment bodies or replies in the normalized view: review-thread bodies were routed to TDR-0033 and kept out of core; a port-side need is a new additive decision with a named consumer, not an extension of this record."
+  - "A lifecycle consumer needs review-thread comment bodies or replies in the normalized view: review-thread bodies were routed to TDR-0034 and kept out of core; a port-side need is a new additive decision with a named consumer, not an extension of this record."
   - "Log excerpts prove to carry secret material often enough to matter: tighten to a narrower excerpt, a redaction-before-return rule, or a declared opt-in, rather than growing the bound."
   - "A provider's merge needs force/bypass/merge-queue semantics: decide those as separate operations with their own safety story; never widen `merge-delivery-request`."
   - "The v1→v2 contract boundary is ever opened: restate the absence semantics and the closed-operation gap discipline deliberately at that boundary."
@@ -68,13 +68,13 @@ links:
     - "packages/core/src/contracts/ports.ts"
     - "packages/testkit/src/conformance/flows.ts"
   diagrams: []
-  decisions: ["ADR-0003", "ADR-0004", "ADR-0006", "TDR-0008", "TDR-0033"]
+  decisions: ["ADR-0003", "ADR-0004", "ADR-0006", "TDR-0008", "TDR-0034"]
   experiments: []
   metrics: []
   roadmap_items: ["M3-S4", "M3-S3", "M3-S5"]
 ---
 
-# TDR-0032: GitHub Adapter Completion Contract Extensions — `merge-delivery-request`, Pipeline-Job Timings, and a Bounded Log-Excerpt Read
+# TDR-0033: GitHub Adapter Completion Contract Extensions — `merge-delivery-request`, Pipeline-Job Timings, and a Bounded Log-Excerpt Read
 
 ## Context
 
@@ -102,7 +102,7 @@ Three superficially different questions are one decision class: **how provider t
 
 The unifying principle this record adopts: **lifecycle facts normalize into core with explicit absence semantics; bulk evidence stays adapter-local behind a bounded read.** It is not a new rule — it is the rule the delivered contract already follows — but stating it makes the three sub-decisions checkable against one another, and it is what makes "bounded log excerpt" and "timing fields" land in different places on purpose rather than by accident.
 
-A fourth question was routed separately and is settled by a companion record: threaded-discussion *bodies* and replies. `DeliveryThread` carries `threadId`, `resolved`, `commentCount`, and optional root-author facts — no comment text. This record does not change that shape; [TDR-0033](TDR-0033-review-thread-discussion-bodies-bounded-adapter-read.md) decides the bodies as a bounded adapter-local evidence read and keeps the normalized contract body-free.
+A fourth question was routed separately and is settled by a companion record: threaded-discussion *bodies* and replies. `DeliveryThread` carries `threadId`, `resolved`, `commentCount`, and optional root-author facts — no comment text. This record does not change that shape; [TDR-0034](TDR-0034-review-thread-discussion-bodies-bounded-adapter-read.md) decides the bodies as a bounded adapter-local evidence read and keeps the normalized contract body-free.
 
 ## Constraints (Hard Requirements)
 
@@ -205,7 +205,7 @@ A fourth question was routed separately and is settled by a companion record: th
 | GitHub reports "already merged" as a non-2xx refusal rather than a success body. | TO-CONFIRM | Provider behaviour; proven by fixture | The adapter's read-back rule makes the outcome safe either way: a refusal is never treated as success without provider-asserted merged truth. | Low-Medium |
 | The exact provider surface for a check's log text (check-run `output` fields versus an Actions job log endpoint) is not settled. | TO-CONFIRM | Provider surfaces | This record fixes the bounded shape and bound, not the surface; the fixture proves which surface the reference adapter reads. | Low-Medium |
 | A bounded excerpt is sufficient for failure triage; full archives are out of scope. | FACT (decision input) | GH-338 applied default Q-07 | A need for full archives would require a separate read, not a wider excerpt. | High |
-| No delivered port-side consumer reads thread comment bodies; the one body consumer is the platform-CLI-mediated review-feedback flow. | FACT | Consumer scan (read 2026-11-17); routed to [TDR-0033](TDR-0033-review-thread-discussion-bodies-bounded-adapter-read.md) | A named port-side consumer would make an additive core field eligible, which TDR-0033 keeps open as a revisit trigger. | High |
+| No delivered port-side consumer reads thread comment bodies; the one body consumer is the platform-CLI-mediated review-feedback flow. | FACT | Consumer scan (read 2026-11-17); routed to [TDR-0034](TDR-0034-review-thread-discussion-bodies-bounded-adapter-read.md) | A named port-side consumer would make an additive core field eligible, which TDR-0034 keeps open as a revisit trigger. | High |
 
 ## Mental Models & Techniques Used
 
@@ -330,7 +330,7 @@ This record adds the provider-side capability; it does **not** change `packages/
 
 ### 5. Explicit non-decision — review-thread comment bodies
 
-Threaded-discussion *bodies* and replies are not added to the normalized contract by this record. `DeliveryThread` stays as delivered, and [TDR-0033](TDR-0033-review-thread-discussion-bodies-bounded-adapter-read.md) decides the content as a bounded adapter-local evidence read alongside the log-excerpt read — evidence, not lifecycle truth.
+Threaded-discussion *bodies* and replies are not added to the normalized contract by this record. `DeliveryThread` stays as delivered, and [TDR-0034](TDR-0034-review-thread-discussion-bodies-bounded-adapter-read.md) decides the content as a bounded adapter-local evidence read alongside the log-excerpt read — evidence, not lifecycle truth.
 
 - **Rationale (tied to drivers):** Each element lands where its consumer already reads, so no consumer learns a provider identity (driver 2, C-8). Capability granularity is preserved — one honest name per capability that actually differs (driver 1, with C-2 and C-3 as the gates). The destructive action gets its own name, guard, and read-back rule (driver 3). The additive surface is two optional scalars plus one bounded read (driver 4). The closed-set ripple is paid once, in this change, with the registry (driver 5, C-4). Evidence buys the most triage signal per byte (driver 6) while the highest-risk payload stays out of the contract (C-6). Every element follows a delivered precedent (driver 7).
 - **Decider:** Juliusz Ćwiąkalski — human acceptance at the GH-338 PR review; this record stays `Proposed` until then.
@@ -370,7 +370,7 @@ Three consequences are recorded rather than treated as exceptions:
 - [ ] Exact GitHub merge response shape, the status code used for an already-merged refusal, and the guard-rejection shape — proven by fixtures; the read-back rule makes the outcome safe in every variant (owner: `@coder`, GH-338 delivery).
 - [ ] Exact check-run timing field names and whether an incomplete run ever carries a completion timestamp (owner: `@coder`; absence stays truthful).
 - [ ] Which provider surface supplies the bounded log text for a check (check-run `output` versus an Actions job log endpoint), and whether that surface exists for every check run (owner: `@coder`; an absent surface is `provider.not-found`, never an empty success).
-- [x] **Review-thread comment bodies and replies — decided in [TDR-0033](TDR-0033-review-thread-discussion-bodies-bounded-adapter-read.md).** Bodies stay out of the core contract and are served by one bounded per-thread adapter-local read (50 comments, 4096 bytes per body, explicit truncation), matching this record's evidence-tier principle. Consequences: no closed-operation change, no `DeliveryThread` reshape, no conformance projection re-widening, and GitLab/Jira take an explicit parity position on the reference behavior.
+- [x] **Review-thread comment bodies and replies — decided in [TDR-0034](TDR-0034-review-thread-discussion-bodies-bounded-adapter-read.md).** Bodies stay out of the core contract and are served by one bounded per-thread adapter-local read (50 comments, 4096 bytes per body, explicit truncation), matching this record's evidence-tier principle. Consequences: no closed-operation change, no `DeliveryThread` reshape, no conformance projection re-widening, and GitLab/Jira take an explicit parity position on the reference behavior.
 - [ ] When, and whether, the lifecycle merge path adopts provider-side merge (owner: the merge-capability change; a separate record).
 
 ## Implementation Plan
