@@ -46,9 +46,8 @@ describe("TC-ENGINE-092 no live call in the change's surface", () => {
       const source = readFileSync(join(ROOT, file), "utf8");
       expect(scanForLiveCalls(source), file).toEqual([]);
     }
-    // The composition root legitimately owns the one native fetch transport; the
-    // merge and fleet blocks this change added must not call a live seam, and the
-    // injected transport is what every read under test uses.
+    // The merge and fleet blocks this change added must not call a live seam, and
+    // the injected transport is what every read under test uses.
     const production = readFileSync(join(ROOT, "packages/cli/src/production.ts"), "utf8");
     for (const [start, end] of [
       ["const mergeWorkItem", "const mergeRuntimeBase"],
@@ -58,7 +57,16 @@ describe("TC-ENGINE-092 no live call in the change's surface", () => {
       expect(block.length, start).toBeGreaterThan(0);
       expect(scanForLiveCalls(block), start).toEqual([]);
     }
-    expect(production.split("fetch(").length - 1).toBe(1);
+    // The one native fetch transport is the adapter's exported factory
+    // (TDR-0032): composition references it and holds no fetch site of its own,
+    // while the factory module owns exactly one live call.
+    expect(scanForLiveCalls(production)).toEqual([]);
+    expect(production).toContain("createGithubNativeTransport(");
+    const nativeTransport = readFileSync(
+      join(ROOT, "packages/adapters/src/github/client.ts"),
+      "utf8",
+    );
+    expect(nativeTransport.split("fetch(").length - 1).toBe(1);
   });
 
   test("no suite sleeps, spawns a harness, or resolves a live home path", () => {

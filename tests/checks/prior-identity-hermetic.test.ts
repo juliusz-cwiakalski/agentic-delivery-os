@@ -54,11 +54,13 @@ export const networkSurfaceViolations = (
     const fetches = module.text.split("fetch(").length - 1;
     if (module.file.endsWith("production.ts")) {
       // The delivered injected GitHub transport is the one declared network
-      // seam; nothing else may reach the network.
-      if (fetches !== 1) {
-        failures.push(`${module.file}: ${String(fetches)} fetch sites, expected the one transport`);
+      // seam; it is the adapter's exported native transport (the CLI transport
+      // is the second, selected transport), so production itself holds no
+      // `fetch` site and may only reference the delivered factory.
+      if (fetches !== 0) {
+        failures.push(`${module.file}: ${String(fetches)} fetch sites, expected none`);
       }
-      if (!module.text.includes("const response = await fetch(")) {
+      if (!module.text.includes("createGithubNativeTransport(")) {
         failures.push(`${module.file}: the network seam is not the delivered transport default`);
       }
       continue;

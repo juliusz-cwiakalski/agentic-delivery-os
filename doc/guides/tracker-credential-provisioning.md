@@ -30,8 +30,24 @@ Command substitution keeps the value off the terminal and out of your history:
 export GITHUB_TOKEN="$(gh auth token)"
 ```
 
-Then re-run dispatch. The product does not invoke `gh` at any point; the command
-above runs in your shell, under your control.
+Then re-run dispatch. The product never runs `gh auth token` and never reads your
+stored `gh` login: this command runs in your shell, under your control. The GitHub
+provider adapter may separately invoke `gh api` as its preferred provider
+transport when the composition selects it; that invocation receives `GITHUB_TOKEN`
+resolved through the credential port as child-environment data, uses an isolated
+CLI configuration directory, suppresses prompts, and never falls back to an
+operator's stored login. Compose the adapter with its documented API-only policy
+to remove the CLI dependency entirely.
+
+Two properties of that invocation are worth knowing when you audit it. It targets
+your instance's declared host identity rather than its REST endpoint, so the cloud
+instance calls `github.com` and a GitHub Enterprise instance keeps its own host.
+Its child environment is absolute in every case: `GH_CONFIG_DIR` and
+`XDG_CONFIG_HOME` share an isolated config root, `XDG_STATE_HOME` and
+`XDG_CACHE_HOME` are isolated beside it, `HOME` is never forwarded, and the base
+is your injected `TMPDIR` when it is absolute and the operating system's temporary
+directory otherwise. A composing invocation therefore writes nothing into your
+working directory.
 
 Because `export` places the token in the process environment, treat the value as
 readable by same-user processes and by `/proc`. Do not run the export in a shell
@@ -43,7 +59,11 @@ shell.
 
 Export a read-scoped credential where the provider supports one. The truth-read
 reference needs only read access to the work item and the repository the
-dispatch is verifying; do not export an administrative token.
+dispatch is verifying; do not export an administrative token. A workflow that
+also uses the adapter's write operations — a comment, a delivery-request content
+write, a thread resolution, or a provider-side landing — needs the corresponding
+write permission on that same reference, so grant exactly the scope the workflow
+uses and keep the truth-read export separate where your policy requires it.
 
 Rotate any token you export into an environment on a schedule your security
 policy defines, and revoke it immediately if it may have leaked. After a

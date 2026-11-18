@@ -1843,6 +1843,7 @@ export {
 export type {
   AdapterContract,
   DeliveryRequest,
+  DeliveryRequestLandingStrategy,
   DeliveryRequestMergeableState,
   DeliveryRequestReviewState,
   DeliveryStateAlias,
@@ -1851,6 +1852,8 @@ export type {
   ExternalSystemInstance,
   ExternalSystemKind,
   IdempotencyKey,
+  MergeDeliveryRequestInput,
+  MergeDeliveryRequestOutcome,
   PipelineJob,
   PipelineJobState,
   PipelineRun,

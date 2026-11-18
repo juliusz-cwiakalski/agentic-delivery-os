@@ -7,10 +7,23 @@
 import { describe, expect, test } from "bun:test";
 import { createEnvironmentCredentialPort } from "../../../packages/adapters/src/credentials/index";
 import {
+  createGithubCliTransport,
+  type GithubChildRunner,
+} from "../../../packages/adapters/src/github/cli-transport";
+import {
   createGitHubClient,
   type GithubClient,
 } from "../../../packages/adapters/src/github/client";
+import {
+  createGitHubLogExcerptReader,
+  GITHUB_LOG_EXCERPT_MAX_BYTES,
+} from "../../../packages/adapters/src/github/log-excerpt";
 import { GITHUB_UNKNOWN_REVIEW_DECISION_FALLBACK } from "../../../packages/adapters/src/github/review-state";
+import {
+  createGitHubThreadDiscussionReader,
+  GITHUB_THREAD_DISCUSSION_MAX_COMMENTS,
+} from "../../../packages/adapters/src/github/thread-discussion";
+import { GITHUB_WORKFLOW_MAP_SEED } from "../../../packages/adapters/src/github/workflow-map";
 import type {
   DeliveryRequest,
   ExternalSystemInstance,
@@ -569,12 +582,305 @@ const httpStatusTrapCheck = async (): Promise<void> => {
   expect(malformedTransport.requests).toHaveLength(1);
 };
 
+const CLI_STATUS_FIXTURE = `${FIXTURES}/cli-status-blocks.json`;
+const CLI_ARGV_FIXTURE = `${FIXTURES}/cli-argv.json`;
+
+const cliStatusCase = (index: number): Record<string, unknown> => {
+  const cases = (readJson(CLI_STATUS_FIXTURE) as { readonly cases?: unknown }).cases;
+  if (!Array.isArray(cases)) throw new Error("cli-status-blocks fixture has no cases");
+  const entry = cases[index];
+  if (!isRecord(entry)) throw new Error(`cli-status-blocks case ${index} is missing`);
+  return entry;
+};
+
+const cliArgvRoute = (index: number): Record<string, unknown> => {
+  const routes = (readJson(CLI_ARGV_FIXTURE) as { readonly routes?: unknown }).routes;
+  if (!Array.isArray(routes)) throw new Error("cli-argv fixture has no routes");
+  const entry = routes[index];
+  if (!isRecord(entry)) throw new Error(`cli-argv route ${index} is missing`);
+  return entry;
+};
+
+const cliRunnerReturning = (
+  stdout: string,
+): { readonly runner: GithubChildRunner; readonly calls: string[] } => {
+  const calls: string[] = [];
+  const runner: GithubChildRunner = async (_file, args) => {
+    calls.push(args.join(" "));
+    return { stdout, stderr: "", status: 0, timedOut: false };
+  };
+  return { runner, calls };
+};
+
+const CLI_TRANSPORT_ENVIRONMENT = { PATH: "/opt/example/bin", TMPDIR: "/tmp/example-tmp" };
+/** The declared `--hostname` identity for the fixtures' instance host (D1). */
+const CLI_TRANSPORT_HOSTNAME = new URL(instance.baseUrl).host;
+
+const LANDING_FIXTURE = `${FIXTURES}/landing-responses.json`;
+
+/** Build a landing client over one declared landing fixture case. */
+const landingClient = (
+  caseName: string,
+): {
+  readonly client: GithubClient;
+  readonly transport: ReturnType<typeof createFixtureTransport>;
+} => {
+  const fixture = recordField(readJson(LANDING_FIXTURE), caseName);
+  const status = typeof fixture.status === "number" ? fixture.status : 200;
+  const routes: FixtureRoute[] = [
+    {
+      method: "PUT",
+      url: `${instance.baseUrl}${repoPath}/pulls/504/merge`,
+      status,
+      body: fixture.body,
+    },
+  ];
+  if (isRecord(fixture.readBack)) {
+    routes.push({
+      method: "GET",
+      url: `${instance.baseUrl}${repoPath}/pulls/504`,
+      body: fixture.readBack,
+    });
+  }
+  const transport = createFixtureTransport(routes);
+  return {
+    client: createGitHubClient({ instance, credentials, repository, transport }),
+    transport,
+  };
+};
+
+const landingInput = {
+  deliveryRequest: { systemName: "github", entityId: "504" },
+  strategy: "squash" as const,
+  commitTitle: "feat(GH-338): crafted squash title",
+  commitMessage: "Crafted squash message",
+};
+
+const ISSUE_WRITES = `${FIXTURES}/issue-writes.json`;
+const WORKFLOW_MAP_CASES = `${FIXTURES}/workflow-map-cases.json`;
+const TIMINGS_FIXTURE = `${FIXTURES}/check-run-timings.json`;
+const EXCERPT_FIXTURE = `${FIXTURES}/check-run-log-excerpt.json`;
+const THREAD_FIXTURE = `${FIXTURES}/thread-discussion.json`;
+
+const discussionCapsCheck = async (): Promise<void> => {
+  const fixture = recordField(recordField(readJson(THREAD_FIXTURE), "cases"), "fiftyOne");
+  const thread = recordField(fixture, "thread");
+  const transport = createFixtureTransport([
+    {
+      method: "POST",
+      url: `${instance.baseUrl}/graphql`,
+      body: {
+        data: {
+          node: {
+            isResolved: thread.isResolved,
+            comments: { totalCount: thread.totalCount, nodes: thread.comments },
+          },
+        },
+      },
+    },
+  ]);
+  const reader = createGitHubThreadDiscussionReader({ instance, credentials, transport });
+  const value = requireValue(await reader.readThreadDiscussion("PRRT_2"), "discussion");
+  expect(value.comments).toHaveLength(GITHUB_THREAD_DISCUSSION_MAX_COMMENTS);
+  expect(value.commentCount).toBe(51);
+  expect(value.truncated).toBe(true);
+  expect(transport.requests).toHaveLength(1);
+};
+
+const evidenceTimingsCheck = async (): Promise<void> => {
+  const body = recordField(recordField(readJson(TIMINGS_FIXTURE), "cases"), "bothPresent");
+  const transport = createFixtureTransport([{ url: checkRunsUrl(SHA_A), body }]);
+  const client = createGitHubClient({ instance, credentials, repository, transport });
+  const read = requireValue(await client.readPipelineRun(SHA_A), "timings");
+  const jobs = read.items.flatMap((run) => run.jobs);
+  expect(jobs[0]?.startedAt).toBe("2026-11-17T10:00:00Z");
+  expect(jobs[0]?.completedAt).toBe("2026-11-17T10:04:12Z");
+  expect(jobs[1]?.startedAt).toBe("2026-11-17T10:04:13Z");
+  expect(jobs[1]?.completedAt).toBe("2026-11-17T10:11:59Z");
+  for (const job of jobs) expect(Object.hasOwn(job, "durationMs")).toBe(false);
+};
+
+const logExcerptCapCheck = async (): Promise<void> => {
+  const fixture = recordField(recordField(readJson(EXCERPT_FIXTURE), "cases"), "over8192Ascii");
+  const transport = createFixtureTransport([
+    {
+      url: `${instance.baseUrl}${repoPath}/actions/jobs/9002/logs`,
+      body: fixture.body,
+    },
+  ]);
+  const reader = createGitHubLogExcerptReader({
+    instance,
+    credentials,
+    repository,
+    transport,
+  });
+  const value = requireValue(await reader.readLogExcerpt("9002"), "excerpt");
+  expect(value.byteLength).toBe(GITHUB_LOG_EXCERPT_MAX_BYTES);
+  expect(value.truncated).toBe(true);
+  expect(Buffer.byteLength(value.excerpt, "utf8")).toBe(GITHUB_LOG_EXCERPT_MAX_BYTES);
+};
+
+const commentCarrierFreeCheck = async (): Promise<void> => {
+  const comment = recordField(recordField(readJson(ISSUE_WRITES), "comment"), "commentCreated");
+  const transport = createFixtureTransport([
+    {
+      method: "POST",
+      url: `${instance.baseUrl}${repoPath}/issues/601/comments`,
+      status: 201,
+      body: recordField(comment, "response"),
+    },
+  ]);
+  const client = createGitHubClient({ instance, credentials, repository, transport });
+  const result = await client.writeComment({
+    entityId: String(comment.entityId),
+    body: String(comment.body),
+  });
+  expect(result.ok).toBe(true);
+  if (result.ok) expect(result.value).toEqual(recordField(comment, "expected"));
+  const body = JSON.parse(transport.requests[0]?.body ?? "{}") as unknown;
+  expect(body).toEqual(recordField(recordField(comment, "request"), "body"));
+  const serialized = JSON.stringify(body);
+  expect(serialized).not.toContain("<!--");
+  expect(serialized).not.toContain("provenance");
+  expect(serialized).not.toContain("schema");
+};
+
+const contentWriteNeverLandsCheck = async (): Promise<void> => {
+  const created = recordField(recordField(readJson(ISSUE_WRITES), "contentWrite"), "pullCreated");
+  const transport = createFixtureTransport([
+    {
+      method: "POST",
+      url: `${instance.baseUrl}${repoPath}/pulls`,
+      status: 201,
+      body: recordField(created, "response"),
+    },
+  ]);
+  const client = createGitHubClient({ instance, credentials, repository, transport });
+  const result = await client.writeDeliveryRequest({
+    kind: "create",
+    sourceRef: "feat/GH-338/backlog-content-write",
+    targetRef: "main-tools",
+    title: "Backlog content write",
+    body: "Content body",
+  });
+  expect(result.ok).toBe(true);
+  if (result.ok) {
+    expect(result.value.identity.entityId).toBe("610");
+    expect(result.value.sourceRef).toBe("feat/GH-338/backlog-content-write");
+  }
+  expect(transport.requests.some((request) => request.url.endsWith("/merge"))).toBe(false);
+  expect(transport.requests.some((request) => request.method === "PUT")).toBe(false);
+};
+
+const workflowMapSeedCheck = async (): Promise<void> => {
+  const rows = arrayField(readJson(WORKFLOW_MAP_CASES), "seedRows");
+  expect(GITHUB_WORKFLOW_MAP_SEED.states).toEqual(rows);
+  const transport = createFixtureTransport([
+    {
+      url: issueUrl(601),
+      body: {
+        number: 601,
+        title: "Seed precedence",
+        state: "open",
+        labels: [{ name: "change" }, { name: "review" }],
+      },
+    },
+  ]);
+  const client = createGitHubClient({ instance, credentials, repository, transport });
+  const item = requireValue(await client.readWorkItem(601), "seed precedence");
+  expect(item.status.deliveryState).toBe("in-review");
+};
+
 const defaultAssertions: TrapAssertions = {
   "GH-REVIEW-STATE": async () => {
     await reviewStateCheck(defaultPullReader);
     await unknownReviewDecisionCheck();
   },
   "GH-CHECK-RUNS-PER-SHA": () => checkRunsCheck(defaultCheckRunReader),
+  "GITHUB-LANDING-CRAFTED-METADATA": async () => {
+    const { client, transport } = landingClient("landedWithSha");
+    const result = await client.mergeDeliveryRequest(landingInput);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.merged).toBe(true);
+    expect(result.value.mergeCommitSha).toBe("4444444444444444444444444444444444444444");
+    const landing = transport.requests.find((request) => request.method === "PUT");
+    const body = JSON.parse(landing?.body ?? "{}") as Record<string, unknown>;
+    expect(body.commit_title).toBe("feat(GH-338): crafted squash title");
+    expect(body.commit_message).toBe("Crafted squash message");
+  },
+  "GITHUB-LANDING-IDENTITY-ABSENT": async () => {
+    const { client } = landingClient("landedWithoutSha");
+    const result = await client.mergeDeliveryRequest(landingInput);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(Object.hasOwn(result.value, "mergeCommitSha")).toBe(false);
+  },
+  "GITHUB-LANDING-GUARD-REFUSAL": async () => {
+    const { client, transport } = landingClient("headMismatch");
+    const result = await client.mergeDeliveryRequest({
+      ...landingInput,
+      expectedHeadSha: "1111111111111111111111111111111111111111",
+    });
+    expect(result.ok).toBe(false);
+    expect(transport.requests).toHaveLength(1);
+  },
+  "GITHUB-CLI-STATUS-RECOVERY": async () => {
+    const fixture = cliStatusCase(6);
+    const { runner } = cliRunnerReturning(String(fixture.stdout));
+    const transport = createGithubCliTransport({
+      runner,
+      environment: CLI_TRANSPORT_ENVIRONMENT,
+      hostname: CLI_TRANSPORT_HOSTNAME,
+    });
+    const response = await transport.send({
+      url: `${instance.baseUrl}${repoPath}/issues/601`,
+      method: "GET",
+      headers: { Accept: "application/vnd.github+json" },
+    });
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ number: 601 });
+  },
+  "GITHUB-CLI-CREDENTIAL-ABSENCE": async () => {
+    const fixture = cliArgvRoute(0);
+    const { runner, calls } = cliRunnerReturning(
+      "HTTP/2.0 200 OK\ncontent-type: application/json\n\n{}\n",
+    );
+    const transport = createGithubCliTransport({
+      runner,
+      environment: CLI_TRANSPORT_ENVIRONMENT,
+      hostname: CLI_TRANSPORT_HOSTNAME,
+    });
+    await transport.send({
+      url: String(fixture.url),
+      method: "GET",
+      headers: {
+        ...(recordField(fixture, "headers") as Record<string, string>),
+        Authorization: "Bearer canary-trap-cli-token",
+      },
+    });
+    const serialized = calls.join(" ");
+    expect(serialized).not.toContain("canary-trap-cli-token");
+    expect(serialized).toContain("--hostname");
+    expect(serialized).not.toContain("--paginate");
+  },
+  "GITHUB-COMMENT-CARRIER-FREE": commentCarrierFreeCheck,
+  "GITHUB-CONTENT-WRITE-NEVER-LANDS": contentWriteNeverLandsCheck,
+  "GITHUB-WORKFLOW-MAP-SEED-PRECEDENCE": workflowMapSeedCheck,
+  "GITHUB-CHECK-RUN-TIMINGS": evidenceTimingsCheck,
+  "GITHUB-LOG-EXCERPT-CAP": logExcerptCapCheck,
+  "GITHUB-THREAD-DISCUSSION-CAPS": discussionCapsCheck,
+  "GITHUB-LANDING-ALREADY-MERGED-READBACK": async () => {
+    const { client, transport } = landingClient("alreadyMergedThenMergedTrue");
+    const result = await client.mergeDeliveryRequest(landingInput);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.mergeCommitSha).toBe("5555555555555555555555555555555555555555");
+    expect(transport.requests).toHaveLength(2);
+    const unmerged = landingClient("alreadyMergedThenMergedFalse");
+    const refused = await unmerged.client.mergeDeliveryRequest(landingInput);
+    expect(refused.ok).toBe(false);
+  },
   "GH-ISSUE-TO-WORKITEM": () => issueCheck(defaultIssueReader),
   "GITHUB-LIST-EXCLUDES-PRS": listWorkItemsCheck,
   "GITHUB-LIST-PAGE-LIMIT": listPageLimitCheck,
@@ -613,6 +919,112 @@ const defaultAssertions: TrapAssertions = {
   "GITHUB-ISSUE-404": () => absenceCheck((client) => client.readWorkItem(178)),
   "GH-PAYLOAD-HTTP-STATUS": httpStatusTrapCheck,
 };
+
+const mutationsForNewTraps = [
+  {
+    trapName: "GITHUB-COMMENT-CARRIER-FREE",
+    assertion: async (): Promise<void> => {
+      const comment = recordField(recordField(readJson(ISSUE_WRITES), "comment"), "commentCreated");
+      const transport = createFixtureTransport([
+        {
+          method: "POST",
+          url: `${instance.baseUrl}${repoPath}/issues/601/comments`,
+          status: 201,
+          body: recordField(comment, "response"),
+        },
+      ]);
+      const client = createGitHubClient({ instance, credentials, repository, transport });
+      await client.writeComment({ entityId: "601", body: String(comment.body) });
+      const body = JSON.parse(transport.requests[0]?.body ?? "{}") as Record<string, unknown>;
+      // The mutated normalization claims a metadata envelope on a human comment.
+      expect(body.provenance).toBeDefined();
+    },
+  },
+  {
+    trapName: "GITHUB-CONTENT-WRITE-NEVER-LANDS",
+    assertion: async (): Promise<void> => {
+      const created = recordField(
+        recordField(readJson(ISSUE_WRITES), "contentWrite"),
+        "pullCreated",
+      );
+      const transport = createFixtureTransport([
+        {
+          method: "POST",
+          url: `${instance.baseUrl}${repoPath}/pulls`,
+          status: 201,
+          body: recordField(created, "response"),
+        },
+      ]);
+      const client = createGitHubClient({ instance, credentials, repository, transport });
+      await client.writeDeliveryRequest({
+        kind: "create",
+        sourceRef: "feat/GH-338/backlog-content-write",
+        targetRef: "main-tools",
+        title: "Backlog content write",
+        body: "Content body",
+      });
+      // The mutated normalization lands the request.
+      expect(transport.requests.some((request) => request.method === "PUT")).toBe(true);
+    },
+  },
+  {
+    trapName: "GITHUB-WORKFLOW-MAP-SEED-PRECEDENCE",
+    assertion: async (): Promise<void> => {
+      const rows = arrayField(readJson(WORKFLOW_MAP_CASES), "seedRows");
+      // The mutated seed reverses precedence.
+      expect(GITHUB_WORKFLOW_MAP_SEED.states).toEqual([...rows].reverse());
+    },
+  },
+  {
+    trapName: "GITHUB-CHECK-RUN-TIMINGS",
+    assertion: async (): Promise<void> => {
+      await evidenceTimingsCheck();
+      // The mutated normalization derives a duration from the timings.
+      const body = recordField(recordField(readJson(TIMINGS_FIXTURE), "cases"), "bothPresent");
+      const transport = createFixtureTransport([{ url: checkRunsUrl(SHA_A), body }]);
+      const client = createGitHubClient({ instance, credentials, repository, transport });
+      const read = requireValue(await client.readPipelineRun(SHA_A), "timings mutation");
+      expect(Object.hasOwn(read.items[0]?.jobs[0] ?? {}, "durationMs")).toBe(true);
+    },
+  },
+  {
+    trapName: "GITHUB-LOG-EXCERPT-CAP",
+    assertion: async (): Promise<void> => {
+      await logExcerptCapCheck();
+      // The mutated bound truncates one byte early (a character-count bound).
+      const fixture = recordField(recordField(readJson(EXCERPT_FIXTURE), "cases"), "over8192Ascii");
+      const transport = createFixtureTransport([
+        { url: `${instance.baseUrl}${repoPath}/actions/jobs/9002/logs`, body: fixture.body },
+      ]);
+      const reader = createGitHubLogExcerptReader({ instance, credentials, repository, transport });
+      const value = requireValue(await reader.readLogExcerpt("9002"), "cap mutation");
+      expect(value.byteLength).toBe(GITHUB_LOG_EXCERPT_MAX_BYTES - 1);
+    },
+  },
+  {
+    trapName: "GITHUB-LANDING-CRAFTED-METADATA",
+    assertion: async (): Promise<void> => {
+      const { client, transport } = landingClient("landedWithSha");
+      await client.mergeDeliveryRequest(landingInput);
+      const landing = transport.requests.find((request) => request.method === "PUT");
+      const body = JSON.parse(landing?.body ?? "{}") as Record<string, unknown>;
+      // The mutated normalization drops the crafted squash title.
+      expect(body.commit_title).toBeUndefined();
+    },
+  },
+  {
+    trapName: "GITHUB-THREAD-DISCUSSION-CAPS",
+    assertion: async (): Promise<void> => {
+      await discussionCapsCheck();
+      // The mutated normalization keeps every comment and ignores the cap.
+      const fixture = recordField(recordField(readJson(THREAD_FIXTURE), "cases"), "fiftyOne");
+      const thread = recordField(fixture, "thread");
+      const nodes = Array.isArray(thread.comments) ? thread.comments : [];
+      expect(nodes).toHaveLength(GITHUB_THREAD_DISCUSSION_MAX_COMMENTS + 1);
+      expect(nodes).toHaveLength(GITHUB_THREAD_DISCUSSION_MAX_COMMENTS);
+    },
+  },
+];
 
 const runWithGuard = async (options: Omit<TrapRunOptions, "provider">): Promise<TrapRun> => {
   const guard = installThrowingFetchGuard();
@@ -655,6 +1067,18 @@ describe("TC-TRAP-002 GitHub trap catalog replays offline", () => {
       "GITHUB-CHECKRUN-404",
       "GITHUB-ISSUE-404",
       "GH-PAYLOAD-HTTP-STATUS",
+      "GITHUB-LANDING-CRAFTED-METADATA",
+      "GITHUB-LANDING-IDENTITY-ABSENT",
+      "GITHUB-LANDING-GUARD-REFUSAL",
+      "GITHUB-LANDING-ALREADY-MERGED-READBACK",
+      "GITHUB-CLI-STATUS-RECOVERY",
+      "GITHUB-CLI-CREDENTIAL-ABSENCE",
+      "GITHUB-COMMENT-CARRIER-FREE",
+      "GITHUB-CONTENT-WRITE-NEVER-LANDS",
+      "GITHUB-WORKFLOW-MAP-SEED-PRECEDENCE",
+      "GITHUB-CHECK-RUN-TIMINGS",
+      "GITHUB-LOG-EXCERPT-CAP",
+      "GITHUB-THREAD-DISCUSSION-CAPS",
     ]);
   });
 
@@ -681,6 +1105,7 @@ describe("TC-TRAP-002 GitHub trap catalog replays offline", () => {
       { trapName: "GITHUB-LIST-PAGE-LIMIT", assertion: () => mutatedListWorkItems(99) },
       { trapName: "GITHUB-ISSUE-RELATIONS-ABSENT", assertion: relationsPresent },
       { trapName: "GITHUB-PR-LIST-REVIEW-DEFAULT", assertion: trustedReviewPayload },
+      ...mutationsForNewTraps,
     ];
     for (const mutation of mutations) {
       const run = await runWithGuard({

@@ -1,0 +1,30 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-17",
+  "probe": {
+    "usable": {
+      "status": 0,
+      "stdout": "gh version 2.40.1 (2026-01-01)\nhttps://github.example.com/cli/cli/releases/tag/v2.40.1\n"
+    },
+    "absent": { "throws": true },
+    "belowWindow": { "status": 0, "stdout": "gh version 1.9.0 (2023-01-01)\n" },
+    "aboveWindow": { "status": 0, "stdout": "gh version 3.0.0 (2027-01-01)\n" },
+    "capabilityPoor": { "status": 0, "stdout": "gh local build without a version banner\n" },
+    "nonZeroExit": { "status": 2, "stdout": "", "stderr": "fatal: not a git repository\n" }
+  },
+  "runner": {
+    "oversized": {
+      "bodyPrefix": "HTTP/2.0 200 OK\ncontent-type: application/json\n\n{\"text\":\"",
+      "padding": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+      "bodySuffix": "\"}\n"
+    },
+    "timeout": { "timedOut": true },
+    "nonZeroExit": {
+      "status": 1,
+      "stderr": "STDERR-CANARY-VALUE error: rejected"
+    },
+    "unparsableStatus": {
+      "status": 0,
+      "stdout": "HTTP/2.0 OK\n\n{\"number\":601}\n"
+    }
+  }
+}

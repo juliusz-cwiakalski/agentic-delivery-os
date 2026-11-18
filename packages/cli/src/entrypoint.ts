@@ -70,11 +70,17 @@ export type EntrypointInvocationFact = {
   readonly onCompositionNotice?: (notice: string) => void;
 };
 
-/** Composes the prompt-required program; help/version never calls it. */
+/**
+ * Composes the prompt-required program; help/version never calls it.
+ *
+ * The return widens additively to a promise so composition may await one
+ * edge-time decision (the transport selection) at the one invocation boundary.
+ * Every delivered synchronous injector keeps compiling.
+ */
 export type EntrypointComposer = (
   brand: BrandIdentity,
   invocation?: EntrypointInvocationFact,
-) => CommandProgram;
+) => CommandProgram | Promise<CommandProgram>;
 
 /** Injected entrypoint facts; every dynamic value arrives through options. */
 export type EntrypointOptions = {
@@ -410,21 +416,23 @@ export const runEntrypoint = async (
   // composition that fails (or is discarded for an uncomposed command) still
   // reports its fallback read through the delivered warnings channel (F-1).
   const compositionNotices: string[] = [];
-  const composed = (() => {
+  // The await stays inside the containment `try`: a rejected composition (a
+  // synchronous throw or a rejected promise) yields the containment identity
+  // instead of an unhandled rejection, exactly as the delivered sync path did.
+  const composed = await (async (): Promise<CommandProgram> => {
     try {
-      return selectPromptRequiredProgram(
-        entrypoint.composeProgram(entrypoint.brand, {
-          command,
-          runId,
-          groupScoped: isGroupScopedInvocation(command, argv),
-          ...(options.priorWorkingName === undefined
-            ? {}
-            : { priorWorkingName: options.priorWorkingName }),
-          onCompositionNotice: (notice) => {
-            compositionNotices.push(notice);
-          },
-        }),
-      );
+      const program = await entrypoint.composeProgram(entrypoint.brand, {
+        command,
+        runId,
+        groupScoped: isGroupScopedInvocation(command, argv),
+        ...(options.priorWorkingName === undefined
+          ? {}
+          : { priorWorkingName: options.priorWorkingName }),
+        onCompositionNotice: (notice) => {
+          compositionNotices.push(notice);
+        },
+      });
+      return selectPromptRequiredProgram(program);
     } catch {
       // A composition gap is reported as the containment identity, never as a
       // silent success or an unclassified crash.

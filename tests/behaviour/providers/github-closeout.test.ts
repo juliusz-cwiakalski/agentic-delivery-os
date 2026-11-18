@@ -306,3 +306,38 @@ describe("TC-CLOSE-006 fixture route method awareness", () => {
     expect(methodAwareMismatch("PATCH", "GET")).toBe(true);
   });
 });
+
+describe("TC-FLOOR-001 the delivered closeout terminal write is byte-identical", () => {
+  test("the done transition is exactly one state-only PATCH with no label request", async () => {
+    const { client, transport } = makeGithubClient();
+    const result = await client.transitionWorkItem({ entityId: "183", deliveryState: "done" });
+    expect(result.ok).toBe(true);
+    const writes = transport.requests.filter((request) => request.method !== "GET");
+    expect(writes).toHaveLength(1);
+    expect(writes[0]?.method).toBe("PATCH");
+    expect(writes[0]?.url).toBe(issueUrl(183));
+    expect(writes[0]?.body).toBe('{"state":"closed"}');
+    expect(writes.filter((request) => request.body?.includes("labels"))).toHaveLength(0);
+  });
+
+  test("the done write succeeds when the label signal is unavailable", async () => {
+    const payload = { ...(githubIssueFixture() as Record<string, unknown>) };
+    delete payload.labels;
+    const { client, transport } = makeGithubClient([
+      { method: "GET", url: issueUrl(183), body: payload },
+      { method: "PATCH", url: issueUrl(183), body: { number: 183, state: "closed" } },
+    ]);
+    const observation = await client.readWorkItemObservation("183");
+    expect(observation.observation).toBe("observed");
+    if (observation.observation === "observed") {
+      expect(observation.signals?.labels).toBe("unavailable");
+    }
+    const requestCount = transport.requests.length;
+    const result = await client.transitionWorkItem({ entityId: "183", deliveryState: "done" });
+    expect(result.ok).toBe(true);
+    const writes = transport.requests.slice(requestCount);
+    expect(writes).toHaveLength(1);
+    expect(writes[0]?.method).toBe("PATCH");
+    expect(writes[0]?.body).toBe('{"state":"closed"}');
+  });
+});

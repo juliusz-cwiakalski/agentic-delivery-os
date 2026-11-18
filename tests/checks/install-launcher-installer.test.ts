@@ -29,6 +29,11 @@ const INSTALLER = join(REPO, "scripts/install.sh");
 const CLI_ENTRY = join(REPO, "packages/cli/bin/jaiship.ts");
 const BASE = join(REPO, "tmp/tmpdir/gh320-installer");
 
+/** The Bun binary's directory: the launcher and every shim PATH need it. */
+const BUN_DIR = dirname(
+  spawnSync("bash", ["-lc", "command -v bun"], { encoding: "utf8" }).stdout.trim(),
+);
+
 type Scratch = {
   readonly root: string;
   readonly home: string;
@@ -61,6 +66,44 @@ const makeShim = (shim: string, log: string): void => {
       `exec ${JSON.stringify(REAL_GIT)} "$@"`,
     ].join("\n"),
   );
+  // A recording `gh` stub: the launcher's composition probe answers with a
+  // usable version and every invocation is recorded. No live `gh` is reachable
+  // from a launcher run, so the check tier never depends on the host.
+  script(
+    "gh",
+    [
+      `printf 'gh %s\\n' "$*" >> ${JSON.stringify(log)}`,
+      `printf 'gh version 2.91.0 (2026-01-01)\\n'`,
+    ].join("\n"),
+  );
+};
+
+/**
+ * A `PATH` with every host tool except `gh`, plus Bun.
+ *
+ * The absent-CLI arm must be genuinely empty of `gh` on a host that has one, so
+ * the directory is populated from the real tool directories with that one name
+ * skipped.
+ */
+const noGhPath = (root: string): string => {
+  const directory = join(root, "no-gh-bin");
+  mkdirSync(directory, { recursive: true });
+  spawnSync(
+    "bash",
+    [
+      "-c",
+      [
+        "shopt -s nullglob",
+        `for entry in /usr/bin/* /bin/*; do`,
+        `  name=$(basename "$entry")`,
+        `  if [ "$name" = "gh" ]; then continue; fi`,
+        `  ln -sf "$entry" ${JSON.stringify(directory)}/"$name"`,
+        "done",
+      ].join("\n"),
+    ],
+    { encoding: "utf8" },
+  );
+  return `${directory}:${BUN_DIR}`;
 };
 
 const scratch = (label: string): Scratch => {
@@ -140,7 +183,12 @@ const runLauncher = (
     {
       cwd,
       encoding: "utf8",
-      env: { PATH: process.env.PATH ?? "", HOME: s.home, ...env },
+      // The scratch shim leads (and a `gh` stub lives there), so no launcher
+      // invocation can reach the host's real `gh` and the composition branch is
+      // deterministic. The system directories answer `bash` for the shebang; the
+      // shim still shadows their `gh`. An arm that needs the absent-CLI branch
+      // overrides PATH.
+      env: { PATH: `${s.shim}:${BUN_DIR}:/usr/bin:/bin`, HOME: s.home, ...env },
     },
     120_000,
   );
@@ -530,6 +578,69 @@ describe("TC-BIN-056 the installer's preconditions are classified, not skipped",
         expect(withTool.status).toBe(0);
         expect(readFileSync(launcherPath(s), "utf8")).toBe(content);
       }
+    } finally {
+      s.dispose();
+    }
+  }, 120_000);
+});
+
+describe("TC-BIN-057 both composition branches are exercised offline on an injected PATH", () => {
+  const ghCalls = (s: Scratch): readonly string[] =>
+    networkLog(s).filter((line) => line.startsWith("gh "));
+
+  const degradationLines = (stderr: string): readonly string[] =>
+    stderr.split("\n").filter((line) => line.includes("provider.cli."));
+
+  test("arm A: a stub gh on PATH is probed once per composing invocation", () => {
+    const s = scratch("gh-present");
+    try {
+      installOnce(s);
+      const first = runLauncher(s, ["status", "--json"]);
+      expect(first.status).toBe(0);
+      expect(ghCalls(s)).toEqual(["gh --version"]);
+      expect(degradationLines(first.stderr)).toEqual([]);
+      expect(JSON.parse(first.stdout)).toBeDefined();
+
+      // A self-description invocation composes nothing and probes nothing.
+      const version = runLauncher(s, ["--version"]);
+      expect(version.status).toBe(0);
+      expect(ghCalls(s)).toEqual(["gh --version"]);
+
+      const second = runLauncher(s, ["status", "--json"]);
+      expect(second.status).toBe(0);
+      expect(ghCalls(s)).toEqual(["gh --version", "gh --version"]);
+    } finally {
+      s.dispose();
+    }
+  }, 120_000);
+
+  test("arm B: a PATH with no gh degrades with exactly one named line and still succeeds", () => {
+    const s = scratch("gh-absent");
+    try {
+      installOnce(s);
+      const path = noGhPath(s.root);
+      const resolved = spawnSync("bash", ["-c", "command -v gh"], {
+        encoding: "utf8",
+        env: { PATH: path },
+      });
+      expect(resolved.status).not.toBe(0);
+      expect(resolved.stdout.trim()).toBe("");
+
+      const status = runLauncher(s, ["status", "--json"], { PATH: path });
+      expect(status.status).toBe(0);
+      expect(JSON.parse(status.stdout)).toBeDefined();
+      const lines = degradationLines(status.stderr);
+      expect(lines).toHaveLength(1);
+      expect(lines[0]).toContain("provider.cli.unavailable");
+      // Zero spawns: the stub is not even on this PATH, so the log stays absent.
+      expect(ghCalls(s)).toEqual([]);
+
+      // A non-zero composing exit keeps the same single line (the degradation is
+      // a composition fact, not a command outcome).
+      const grammar = runLauncher(s, ["queue", "add", "--json"], { PATH: path });
+      expect(grammar.status).toBe(1);
+      expect(degradationLines(grammar.stderr)).toHaveLength(1);
+      expect(ghCalls(s)).toEqual([]);
     } finally {
       s.dispose();
     }

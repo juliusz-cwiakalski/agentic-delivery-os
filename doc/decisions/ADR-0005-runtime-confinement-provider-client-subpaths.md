@@ -4,7 +4,7 @@ decision_type: adr
 status: Proposed
 created: 2026-10-31
 decision_date: null
-last_updated: 2026-10-31
+last_updated: 2026-11-17
 summary: "Refine ADR-0003's runtime-API confinement wording so provider client subpaths performing network I/O (github, gitlab, jira) join the adapter I/O edge as exact, reason-bearing, reviewed entries while the registry subpath stays non-I/O; recorded as a refining decision record plus an editorial pointer in ADR-0003, not an in-place semantic rewrite."
 owners:
   - "Juliusz Ćwiąkalski"
@@ -25,7 +25,7 @@ classification:
 governance:
   driver: "@decision-advisor (via GH-188 planning)"
   decider: "Juliusz Ćwiąkalski (human acceptance pending at PR review)"
-  contributors: ["@decision-advisor (analysis)", "@spec-writer (GH-188 spec OQ-4/DEC-1 framing)"]
+  contributors: ["@decision-advisor (analysis)", "@spec-writer (GH-188 spec OQ-4/DEC-1 framing)", "@decision-advisor (2026-11-17 editorial pointer to TDR-0032 for the GH-338 reviewed extension; no decision text changed)"]
   reviewers: ["@readiness-reviewer", "@reviewer", "Owner (human final acceptance)"]
   performers: ["@coder", "@doc-syncer"]
   informed: ["ADOS contributors", "Future provider-seed stories (azure, ci)"]
@@ -41,13 +41,13 @@ revisit_triggers:
   - "The registry subpath ever needs I/O; re-open rather than quietly adding it."
   - "Allowlist growth shows drift beyond reason-bearing reviewed entries; tighten the check (per-entry reasons mechanically validated, mirroring the secret-read registry)."
 links:
-  related_changes: ["GH-188", "GH-170", "GH-181"]
+  related_changes: ["GH-188", "GH-170", "GH-181", "GH-338"]
   supersedes: []
   superseded_by: []
   spec: ["doc/spec/features/feature-monorepo-scaffold-toolchain.md", "doc/spec/features/feature-adapter-ports.md"]
   contracts: [".dependency-cruiser.cjs"]
   diagrams: []
-  decisions: ["ADR-0003"]
+  decisions: ["ADR-0003", "TDR-0032"]
   experiments: []
   metrics: []
   roadmap_items: []
@@ -173,6 +173,8 @@ ADR-0003's operative confinement sentence is generic ("the adapter I/O subpaths"
 - **Rationale (tied to drivers):** It is the only option that yields one authoritative reading (driver 1) with auditable, least-privilege growth (driver 2) at proportional ceremony (driver 3) while keeping decision history durable (driver 4) and provider I/O in its declared home (driver 5).
 - **Decider:** Owner (Juliusz Ćwiąkalski) — acceptance pending at GH-188 PR review; this record stays Proposed until then.
 - **Conditions for revisit:** See `revisit_triggers` in the front matter; notably any request for runtime APIs beyond network I/O in a provider subpath, or any allowlist growth that is not reason-bearing and reviewed.
+
+> **Editorial pointer (2026-11-17).** The process-access revisit trigger above has fired once and has been answered, not overridden: [TDR-0032](TDR-0032-github-adapter-cli-first-provider-transport.md) is the reviewed extension ADR-0005 routes process access to, and it admits one bounded fixed-argv, no-shell `gh` child invocation inside `packages/adapters/src/github/` for the CLI-first transport. This record's decision statement is unchanged: provider client subpaths remain admitted for network I/O on the terms stated, the mechanical allowlist and its exact-path reasons are untouched, the secret-read allowlist stays unchanged, and no other provider subpath gains a process edge. A reader of this record alone must follow exactly one pointer — this one — for the current meaning of the `github` admission.
 
 ### Constraint Compliance Attestation
 

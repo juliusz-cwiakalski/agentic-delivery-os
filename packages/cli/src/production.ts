@@ -48,7 +48,18 @@ import {
   createGitMergeSeam,
   type GitChildRunner,
 } from "@delivery-os/adapters/git";
-import { createGitHubClient, type GithubClientOptions } from "@delivery-os/adapters/github";
+import {
+  createGitHubClient,
+  createGithubCliTransport,
+  createGithubNativeTransport,
+  githubCliHostname,
+  type GithubChildRunner,
+  type GithubClientOptions,
+  type GithubTransportPolicy,
+  type GithubTransportSelection,
+  probeGithubCli,
+  resolveTransportSelection,
+} from "@delivery-os/adapters/github";
 import {
   CLAUDE_CAPABILITIES,
   createBunSqliteStoreOpener,
@@ -446,18 +457,6 @@ const githubInstance = (): ExternalSystemInstance => ({
 
 type RepositoryTarget = { readonly owner: string; readonly name: string };
 
-const nativeTransport: NonNullable<GithubClientOptions["transport"]> = {
-  send: async (request) => {
-    const response = await fetch(request.url, {
-      method: request.method,
-      headers: request.headers,
-      ...(request.body === undefined ? {} : { body: request.body }),
-    });
-    const body: unknown = await response.json();
-    return { status: response.status, body };
-  },
-};
-
 const repositoryTargetOf = (originUrl: string | undefined): RepositoryTarget | undefined => {
   const parsed = parseGitHubRemote(originUrl);
   return parsed.ok ? { owner: parsed.owner, name: parsed.name } : undefined;
@@ -498,6 +497,19 @@ export type ProductionCompositionFacts = {
    * a recording transport so the truth read is proven without network access.
    */
   readonly githubTransport?: GithubClientOptions["transport"];
+  /**
+   * The composition-edge transport selection (DM-10). Production supplies it
+   * from `resolveCompositionTransportSelection`; tests and embedders may omit
+   * it, in which case the delivered native-`fetch` transport serves with no
+   * probe and no selection value.
+   */
+  readonly githubTransportSelection?: GithubTransportSelection;
+  /**
+   * The injected CLI child runner. Production omits it (the adapter's bounded
+   * `execFile` default applies); tests inject a recording runner so composition
+   * is proven without a live process.
+   */
+  readonly githubCliRunner?: GithubChildRunner;
   /**
    * The injected provider instance. Production uses the declared `github-read`
    * reference; tests may inject a prefixed reference to prove key derivation.
@@ -901,6 +913,40 @@ export const createSupervisionEconomicsWritePort = (input: {
   };
 };
 
+/**
+ * The composition-edge transport facts (DM-10, Table C).
+ *
+ * `policy` is the closed composition choice; an absent policy means the declared
+ * `prefer-cli` default. `runner` is injected by tests so no live process runs.
+ */
+export type CompositionTransportFacts = {
+  readonly policy?: GithubTransportPolicy;
+  readonly environment: Readonly<Record<string, string | undefined>>;
+  readonly runner?: GithubChildRunner;
+  readonly timeoutMs?: number;
+};
+
+/**
+ * Resolve the transport selection at the launcher edge (async, DM-10).
+ *
+ * `api-only` never probes; `prefer-cli` awaits exactly one bounded probe and
+ * degrades to the API transport with the probe refusal code. This function is
+ * distinct from the adapter's pure `resolveTransportSelection` on purpose: one
+ * is the launcher edge, the other is synchronous data resolution.
+ */
+export const resolveCompositionTransportSelection = async (
+  facts: CompositionTransportFacts,
+): Promise<GithubTransportSelection> => {
+  const policy = facts.policy ?? "prefer-cli";
+  if (policy === "api-only") return resolveTransportSelection({ policy });
+  const probe = await probeGithubCli({
+    ...(facts.runner === undefined ? {} : { runner: facts.runner }),
+    environment: facts.environment,
+    ...(facts.timeoutMs === undefined ? {} : { timeoutMs: facts.timeoutMs }),
+  });
+  return resolveTransportSelection({ policy, probe });
+};
+
 export const createProductionComposer = (facts: ProductionCompositionFacts): EntrypointComposer => {
   return (brand: BrandIdentity, invocation?: EntrypointInvocationFact) => {
     const environment = facts.environment;
@@ -931,6 +977,15 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     // the serializer in every mode and never into the payload.
     const emittedNotices = new Set<string>();
     const compositionNotices: string[] = [];
+    // The declared degradation is composition data whose only observable
+    // surface is exactly one rendered line (DM-10, AC-F2-2): no persisted copy,
+    // no new readable surface on the composed program object.
+    const selectionDegradation = facts.githubTransportSelection?.degradation;
+    if (selectionDegradation !== undefined) {
+      const selectionLine = `GitHub CLI transport unavailable (${selectionDegradation.code}); using the API transport.`;
+      compositionNotices.push(selectionLine);
+      invocation?.onCompositionNotice?.(selectionLine);
+    }
     const emitNotice = (notice: PriorIdentityNotice): void => {
       if (emittedNotices.has(notice.reason)) return;
       emittedNotices.add(notice.reason);
@@ -1283,7 +1338,21 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             referenceName: truthReadReference.referenceName,
             sourceKey: resolveCredentialSourceKey(truthReadReference, brand),
           };
-    const transport = facts.githubTransport ?? nativeTransport;
+    // An injected transport bypasses selection entirely (probe-free). A present
+    // selection picks the CLI transport or the exported native-`fetch` factory;
+    // an absent selection is the declared third state: native `fetch`, no probe,
+    // no DM-10 value. The CLI host identity is computed ONCE from the declared
+    // instance base URL, so no request can re-derive it (D1).
+    const cliHostname = githubCliHostname(new URL(instance.baseUrl).host);
+    const transport =
+      facts.githubTransport ??
+      (facts.githubTransportSelection?.selected === "gh"
+        ? createGithubCliTransport({
+            ...(facts.githubCliRunner === undefined ? {} : { runner: facts.githubCliRunner }),
+            environment,
+            hostname: cliHostname,
+          })
+        : createGithubNativeTransport());
     const gitBranches = createGitBranchSeam({
       cwd,
       ...(facts.gitChildRunner === undefined ? {} : { childRunner: facts.gitChildRunner }),

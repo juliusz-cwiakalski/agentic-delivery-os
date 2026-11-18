@@ -5,13 +5,17 @@
  * registry never gains a control registration or a write handler.
  */
 import { describe, expect, test } from "bun:test";
-import type {
-  AdapterOperation,
-  CapabilityGap,
-  CarrierKind,
-  DeliveryRequest,
-  PipelineRun,
-  WorkItem,
+import { existsSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import { createGitHubClient } from "@delivery-os/adapters/github";
+import {
+  ADAPTER_OPERATIONS,
+  type AdapterOperation,
+  type CapabilityGap,
+  type CarrierKind,
+  type DeliveryRequest,
+  type PipelineRun,
+  type WorkItem,
 } from "@delivery-os/core/contracts";
 import {
   CONFORMANCE_ADAPTERS,
@@ -29,6 +33,7 @@ import {
 } from "@delivery-os/testkit";
 import {
   createCanaryCredentialPort,
+  installChildProcessGuard,
   installThrowingFetchGuard,
   loadMockTenant,
   loadMockTenants,
@@ -141,6 +146,7 @@ const ALL_OPERATIONS: readonly AdapterOperation[] = [
   "read-pipeline-run",
   "write-comment",
   "resolve-delivery-thread",
+  "merge-delivery-request",
 ];
 
 const gapsExcept = (supported: readonly AdapterOperation[]): CapabilityGap[] => {
@@ -301,8 +307,14 @@ describe("TC-CONF-011 runtime coverage is non-vacuous", () => {
         steps.some((step) => step.status === "executed"),
         provider,
       ).toBe(true);
+    }
+    const githubGaps = report.steps.filter(
+      (step) => step.provider === "github" && step.skipKind === "declared-gap",
+    );
+    expect(githubGaps).toEqual([]);
+    for (const provider of ["gitlab", "jira"]) {
       expect(
-        steps.some((step) => step.status === "skipped" && step.skipKind === "declared-gap"),
+        report.steps.some((step) => step.provider === provider && step.skipKind === "declared-gap"),
         provider,
       ).toBe(true);
     }
@@ -339,15 +351,14 @@ describe("TC-CONF-011 runtime coverage is non-vacuous", () => {
     const mutated: ConformanceReport = {
       ...report,
       steps: report.steps.map((step) =>
-        step.provider === "github" && step.operation === "write-delivery-request"
+        step.provider === "gitlab" && step.operation === "write-comment"
           ? { ...step, skipReason: "wrong-reason" }
           : step,
       ),
     };
     expect(
       runtimeCoverageViolations(mutated, CONFORMANCE_ADAPTERS, "mock").some(
-        (message) =>
-          message.includes("github") && message.includes("declared gap write-delivery-request"),
+        (message) => message.includes("gitlab") && message.includes("declared gap write-comment"),
       ),
     ).toBe(true);
   });
@@ -509,6 +520,7 @@ describe("TC-CONF-015 exact-URL replay and the throwing-fetch guard", () => {
     const tenants = loadMockTenants();
     const transports: ReturnType<typeof createMockTenantTransport>[] = [];
     const guard = installThrowingFetchGuard();
+    const childGuard = installChildProcessGuard();
     try {
       const report = await runConformance({
         adapters: CONFORMANCE_ADAPTERS,
@@ -527,7 +539,10 @@ describe("TC-CONF-015 exact-URL replay and the throwing-fetch guard", () => {
       });
       expect(report.status).toBe("passed");
       expect(guard.calls).toHaveLength(0);
+      // The mock tier spawns nothing: every CLI path takes an injected runner.
+      expect(childGuard.calls).toEqual([]);
     } finally {
+      childGuard.restore();
       guard.restore();
     }
     for (const transport of transports) {
@@ -684,9 +699,281 @@ describe("TC-CONF-015 exact-URL replay and the throwing-fetch guard", () => {
   });
 });
 
+describe("TC-PARITY-004 the landing operation has a route and an expected projection", () => {
+  test("the landing step executes for GitHub with the declared projection", async () => {
+    const report = await runSingle("github", loadMockTenant("github"), "github-landing");
+    const landing = report.steps.find(
+      (step) => step.stepId === "change-lifecycle.merge-delivery-request",
+    );
+    expect(landing?.status).toBe("executed");
+    expect(landing?.operation).toBe("merge-delivery-request");
+    expect(report.status).toBe("passed");
+  });
+
+  test("GitLab and Jira skip the landing step with their declared gap reasons", async () => {
+    const report = await runProduction("landing-gaps");
+    const reasonFor = (provider: string): string | null | undefined =>
+      report.steps.find(
+        (step) =>
+          step.provider === provider && step.stepId === "change-lifecycle.merge-delivery-request",
+      )?.skipReason;
+    expect(reasonFor("gitlab")).toBe("adapter-not-implemented");
+    expect(reasonFor("jira")).toBe("provider-unsupported");
+  });
+
+  test("a corrupted landing projection fails naming the step", async () => {
+    const tenant = loadMockTenant("github");
+    const mutated: MockTenant = {
+      ...tenant,
+      expected: {
+        ...tenant.expected,
+        "change-lifecycle.merge-delivery-request": { merged: true, mergeCommitSha: "0".repeat(40) },
+      },
+    };
+    const report = await runSingle("github", mutated, "github-landing-corrupt");
+    const landing = report.steps.find(
+      (step) => step.stepId === "change-lifecycle.merge-delivery-request",
+    );
+    expect(landing?.status).toBe("failed");
+    expect(landing?.failure?.assertion).toBe("expected-projection");
+  });
+
+  test("removing the landing route fails the step instead of skipping it", async () => {
+    const tenant = loadMockTenant("github");
+    const mutated: MockTenant = {
+      ...tenant,
+      routes: tenant.routes.filter((route) => !route.url.endsWith("/merge")),
+    };
+    const report = await runSingle("github", mutated, "github-landing-missing-route");
+    const landing = report.steps.find(
+      (step) => step.stepId === "change-lifecycle.merge-delivery-request",
+    );
+    expect(landing?.status).toBe("failed");
+    expect(landing?.skipKind).toBeNull();
+  });
+});
+
+describe("TC-PARITY-008 the broken control still fires for the ninth operation", () => {
+  test("a landing step that cannot execute is a failure, never a vacuous pass", async () => {
+    const tenant = loadMockTenant("github");
+    const registration = registrationFor("github");
+    const withoutLanding: ConformanceAdapterRegistration = {
+      provider: registration.provider,
+      contract: registration.contract,
+      buildClient: (input) => {
+        const client = registration.buildClient(input);
+        return {
+          ...(client.readWorkItem !== undefined ? { readWorkItem: client.readWorkItem } : {}),
+          ...(client.readDeliveryRequest !== undefined
+            ? { readDeliveryRequest: client.readDeliveryRequest }
+            : {}),
+          ...(client.readPipelineRun !== undefined
+            ? { readPipelineRun: client.readPipelineRun }
+            : {}),
+          ...(client.writeWorkItem !== undefined ? { writeWorkItem: client.writeWorkItem } : {}),
+          ...(client.transitionWorkItem !== undefined
+            ? { transitionWorkItem: client.transitionWorkItem }
+            : {}),
+          ...(client.resolveDeliveryThread !== undefined
+            ? { resolveDeliveryThread: client.resolveDeliveryThread }
+            : {}),
+          ...(client.writeComment !== undefined ? { writeComment: client.writeComment } : {}),
+          ...(client.createDeliveryRequest !== undefined
+            ? { createDeliveryRequest: client.createDeliveryRequest }
+            : {}),
+        };
+      },
+    };
+    const error = await caught(
+      runConformance({
+        adapters: [withoutLanding],
+        tenants: { github: tenant },
+        credentials: createCanaryCredentialPort(),
+        transportFactory: () => createMockTenantTransport(tenant),
+        nowIso: CLOCK,
+        runId: "missing-landing-handler",
+        tier: "mock",
+      }),
+    );
+    expect(error.message).toContain("merge-delivery-request");
+    expect(error.message).toContain("no handler");
+  });
+});
+
 // ---------------------------------------------------------------------------
-// P4 provider matrices: TC-CONF-006/007/008/009/012
+// P3 backlog completion: TC-PARITY-001/002/003
 // ---------------------------------------------------------------------------
+
+const carrierStepFor = (
+  report: ConformanceReport,
+  provider: string,
+): { readonly skipKind: string | null; readonly skipReason: string | null } | undefined => {
+  const step = report.steps.find(
+    (entry) =>
+      entry.provider === provider && entry.stepId === "comment-provenance.carrier-roundtrip",
+  );
+  return step === undefined ? undefined : { skipKind: step.skipKind, skipReason: step.skipReason };
+};
+
+describe("TC-PARITY-001 registry equals the closed set and coverage is non-vacuous", () => {
+  test("the flow registry operation set equals the nine-operation closed set", () => {
+    const registry = new Set(
+      CONFORMANCE_FLOWS.flatMap((flow) => flow.steps.map((s) => s.operation)),
+    );
+    expect([...registry].sort()).toEqual([...ADAPTER_OPERATIONS].sort());
+    expect(CONFORMANCE_FLOWS.flatMap((flow) => flow.steps)).toHaveLength(14);
+  });
+
+  test("every supported operation of every adapter executes and every declared gap is encountered", async () => {
+    const report = await runProduction("parity-coverage");
+    expect(runtimeCoverageViolations(report, CONFORMANCE_ADAPTERS, "mock")).toEqual([]);
+    for (const registration of CONFORMANCE_ADAPTERS) {
+      const steps = report.steps.filter((step) => step.provider === registration.provider);
+      const executed = new Set(
+        steps.filter((step) => step.status === "executed").map((step) => step.operation),
+      );
+      for (const operation of registration.contract.capabilities.supportedOperations) {
+        expect(executed.has(operation), `${registration.provider}:${operation}`).toBe(true);
+      }
+      for (const gap of registration.contract.capabilities.declaredGaps) {
+        expect(
+          steps.some(
+            (step) =>
+              step.operation === gap.operation &&
+              step.status === "skipped" &&
+              step.skipKind === "declared-gap" &&
+              step.skipReason === gap.reason,
+          ),
+          `${registration.provider}:${gap.operation}:${gap.reason}`,
+        ).toBe(true);
+      }
+    }
+  });
+
+  test("GitHub executes all nine supported operations", async () => {
+    const report = await runSingle("github", loadMockTenant("github"), "github-parity-coverage");
+    const executed = new Set(
+      report.steps
+        .filter((step) => step.provider === "github" && step.status === "executed")
+        .map((step) => step.operation),
+    );
+    expect([...executed].sort()).toEqual([...ADAPTER_OPERATIONS].sort());
+  });
+
+  test("a tenth operation in the registry fails structural coverage by name", () => {
+    const flows = CONFORMANCE_FLOWS.map((flow) => ({
+      ...flow,
+      steps:
+        flow.flowId === "change-lifecycle"
+          ? [
+              ...flow.steps,
+              {
+                stepId: "change-lifecycle.publish-release",
+                operation: "publish-release",
+                assertionFamily: "work-item",
+              },
+            ]
+          : flow.steps,
+    }));
+    expect(
+      structuralCoverageViolations({ flows, adapters: CONFORMANCE_ADAPTERS }).some((message) =>
+        message.includes("unknown operation publish-release"),
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("TC-PARITY-002 the carrier roundtrip is capability-absent for GitHub", () => {
+  test("GitHub records capability-absent and GitLab/Jira keep their declared gap", async () => {
+    const report = await runProduction("carrier-skip-kinds");
+    expect(carrierStepFor(report, "github")).toEqual({
+      skipKind: "capability-absent",
+      skipReason: "no-declared-carrier",
+    });
+    for (const provider of ["gitlab", "jira"]) {
+      expect(carrierStepFor(report, provider)).toEqual({
+        skipKind: "declared-gap",
+        skipReason: "adapter-not-implemented",
+      });
+    }
+  });
+
+  test("reclassifying the GitHub carrier skip as declared-gap fails the assertion", async () => {
+    const report = await runProduction("carrier-skip-mutant");
+    const mutated: ConformanceReport = {
+      ...report,
+      steps: report.steps.map((step) =>
+        step.provider === "github" && step.stepId === "comment-provenance.carrier-roundtrip"
+          ? { ...step, skipKind: "declared-gap" }
+          : step,
+      ),
+    };
+    expect(carrierStepFor(mutated, "github")).not.toEqual({
+      skipKind: "capability-absent",
+      skipReason: "no-declared-carrier",
+    });
+  });
+});
+
+describe("TC-PARITY-003 one write-delivery-request step with routes and projections", () => {
+  test("the registry carries exactly one write-delivery-request step whose member is the create", async () => {
+    const steps = CONFORMANCE_FLOWS.flatMap((flow) =>
+      flow.steps.filter((step) => step.operation === "write-delivery-request"),
+    );
+    expect(steps.map((step) => step.stepId)).toEqual(["change-lifecycle.create-delivery-request"]);
+    const report = await runSingle("github", loadMockTenant("github"), "content-write-step");
+    const executed = report.steps.filter(
+      (step) => step.operation === "write-delivery-request" && step.status === "executed",
+    );
+    expect(executed).toHaveLength(1);
+  });
+
+  test("the comment and create projections equal the declared expectations exactly", async () => {
+    const tenant = loadMockTenant("github");
+    const report = await runSingle("github", tenant, "content-write-projection");
+    for (const stepId of ["change-lifecycle.comment", "change-lifecycle.create-delivery-request"]) {
+      const step = report.steps.find((entry) => entry.stepId === stepId);
+      expect(step?.status, stepId).toBe("executed");
+    }
+    expect(tenant.expected["change-lifecycle.comment"]).toEqual({ commentId: "9001" });
+    expect(
+      (tenant.expected["change-lifecycle.create-delivery-request"] as { identity: unknown })
+        .identity,
+    ).toEqual({ systemName: "github", entityId: "610" });
+  });
+
+  test("the update route is exercised by a direct client call, never a second registry step", async () => {
+    const tenant = loadMockTenant("github");
+    if (tenant.addressing.provider !== "github") throw new Error("expected github addressing");
+    const transport = createMockTenantTransport(tenant);
+    const client = createGitHubClient({
+      instance: tenant.instance,
+      credentials: createCanaryCredentialPort(),
+      repository: {
+        owner: tenant.addressing.owner,
+        name: tenant.addressing.repo,
+      },
+      transport,
+    });
+    const result = await client.writeDeliveryRequest({
+      kind: "update",
+      deliveryRequest: { systemName: tenant.instance.instanceName, entityId: "504" },
+      title: "Conformance content write updated",
+      body: "Updated body",
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.identity).toEqual({ systemName: "github", entityId: "504" });
+      expect(result.value.sourceRef).toBe("feat/GH-188/client-seeds-trap-catalogs");
+      expect(result.value.targetRef).toBe("main-tools");
+      expect(result.value.reviewState).toBe("open");
+    }
+    const patch = transport.requests.find(
+      (request) => request.method === "PATCH" && request.url.endsWith("/pulls/504"),
+    );
+    expect(patch).toBeDefined();
+  });
+});
 
 const registrationFor = (provider: string): ConformanceAdapterRegistration => {
   const registration = CONFORMANCE_ADAPTERS.find((entry) => entry.provider === provider);
@@ -730,11 +1017,12 @@ const runSingle = async (
   });
 
 describe("TC-CONF-006 mock suite green for all three adapters", () => {
-  test("each adapter produces three flows and twelve registry-ordered step results", async () => {
+  test("each adapter produces three flows and fourteen registry-ordered step results", async () => {
     const report = await runProduction("matrix-run");
     const expectedStepIds = CONFORMANCE_FLOWS.flatMap((flow) =>
       flow.steps.map((step) => step.stepId),
     );
+    expect(expectedStepIds).toHaveLength(14);
     expect(report.status).toBe("passed");
     for (const provider of ["github", "gitlab", "jira"]) {
       const flows = report.flows.filter((flow) => flow.provider === provider);
@@ -746,7 +1034,14 @@ describe("TC-CONF-006 mock suite green for all three adapters", () => {
       const steps = report.steps.filter((step) => step.provider === provider);
       expect(steps.map((step) => step.stepId)).toEqual(expectedStepIds);
       expect(steps.some((step) => step.status === "executed")).toBe(true);
-      expect(steps.some((step) => step.skipKind === "declared-gap")).toBe(true);
+      if (provider === "github") {
+        // GitHub closes its last two gaps in this change; its one skip is the
+        // carrier roundtrip, whose skip kind is `capability-absent`.
+        expect(steps.some((step) => step.skipKind === "declared-gap")).toBe(false);
+        expect(steps.some((step) => step.skipKind === "capability-absent")).toBe(true);
+      } else {
+        expect(steps.some((step) => step.skipKind === "declared-gap")).toBe(true);
+      }
     }
   });
 
@@ -810,22 +1105,30 @@ describe("TC-CONF-006 mock suite green for all three adapters", () => {
 });
 
 describe("TC-CONF-007 GitHub operation matrix", () => {
-  test("all GitHub reads execute and all writes skip adapter-not-implemented", async () => {
+  test("every GitHub supported operation executes and only the carrier roundtrip skips", async () => {
     const report = await runSingle("github", loadMockTenant("github"), "github-matrix");
     const steps = report.steps;
     for (const stepId of [
       "change-lifecycle.read-work-item",
       "change-lifecycle.read-delivery-request",
       "change-lifecycle.read-pipeline-run",
+      "change-lifecycle.open-change",
+      "change-lifecycle.transition",
+      "change-lifecycle.create-delivery-request",
+      "change-lifecycle.comment",
+      "change-lifecycle.resolve-delivery-thread",
+      "change-lifecycle.merge-delivery-request",
       "comment-provenance.read-comments",
       "label-semantics.read-labels",
+      "label-semantics.replace",
+      "label-semantics.sweep",
     ]) {
       expect(steps.find((step) => step.stepId === stepId)?.status, stepId).toBe("executed");
     }
-    for (const step of steps.filter((entry) => entry.status === "skipped")) {
-      expect(step.skipKind).toBe("declared-gap");
-      expect(step.skipReason).toBe("adapter-not-implemented");
-    }
+    const skipped = steps.filter((step) => step.status === "skipped");
+    expect(skipped.map((step) => step.stepId)).toEqual(["comment-provenance.carrier-roundtrip"]);
+    expect(skipped[0]?.skipKind).toBe("capability-absent");
+    expect(report.status).toBe("passed");
     expect(report.steps.some((step) => step.failure?.assertion === "primitive-purity")).toBe(false);
   });
 
@@ -982,7 +1285,7 @@ describe("TC-CONF-009 Jira operation matrix", () => {
 });
 
 describe("TC-CONF-012 comment provenance and shipped carrier skip", () => {
-  test("the flow is registered for every adapter and the carrier step always skips", async () => {
+  test("the flow is registered for every adapter and the carrier step skips by provider posture", async () => {
     const report = await runProduction("comment-provenance-run");
     for (const provider of ["github", "gitlab", "jira"]) {
       expect(
@@ -997,8 +1300,15 @@ describe("TC-CONF-012 comment provenance and shipped carrier skip", () => {
     expect(carrierSteps).toHaveLength(3);
     for (const step of carrierSteps) {
       expect(step.status).toBe("skipped");
-      expect(step.skipKind).toBe("declared-gap");
-      expect(step.skipReason).toBe("adapter-not-implemented");
+      if (step.provider === "github") {
+        // write-comment is supported now, so the shipped empty carrier arrays
+        // make the roundtrip `capability-absent`, never `declared-gap`.
+        expect(step.skipKind).toBe("capability-absent");
+        expect(step.skipReason).toBe("no-declared-carrier");
+      } else {
+        expect(step.skipKind).toBe("declared-gap");
+        expect(step.skipReason).toBe("adapter-not-implemented");
+      }
     }
   });
 
@@ -1073,5 +1383,156 @@ describe("TC-CLOSE-065 Jira closeout write execution", () => {
           step.skipReason === "provider-unsupported",
       ),
     ).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// P7 release floor: TC-PARITY-005 and TC-PARITY-007
+// ---------------------------------------------------------------------------
+
+const TRAP_CATALOG_FILE = "tests/fixtures/providers/traps/github.traps.json";
+const GITHUB_TRAP_SUITE = "tests/behaviour/providers/github-trap.test.ts";
+
+/** One trap entry per AC-F8-4 behavior; a behavior cannot satisfy one half alone. */
+const NEW_BEHAVIOR_TRAPS: Readonly<Record<string, string>> = {
+  landing: "GITHUB-LANDING-CRAFTED-METADATA",
+  timings: "GITHUB-CHECK-RUN-TIMINGS",
+  excerpt: "GITHUB-LOG-EXCERPT-CAP",
+  discussion: "GITHUB-THREAD-DISCUSSION-CAPS",
+  "comment-write": "GITHUB-COMMENT-CARRIER-FREE",
+  "content-write": "GITHUB-CONTENT-WRITE-NEVER-LANDS",
+  "mapped-transition": "GITHUB-WORKFLOW-MAP-SEED-PRECEDENCE",
+};
+
+const CLOSED_SET_BEHAVIOR_STEPS: Readonly<Record<string, string>> = {
+  landing: "change-lifecycle.merge-delivery-request",
+  timings: "change-lifecycle.read-pipeline-run",
+  "comment-write": "change-lifecycle.comment",
+  "content-write": "change-lifecycle.create-delivery-request",
+  "mapped-transition": "change-lifecycle.transition",
+};
+
+const catalogEntries = (): readonly Record<string, unknown>[] => {
+  const parsed = JSON.parse(readFileSync(join(process.cwd(), TRAP_CATALOG_FILE), "utf8")) as {
+    entries?: unknown;
+  };
+  return Array.isArray(parsed.entries)
+    ? parsed.entries.filter((entry): entry is Record<string, unknown> => isRecordValue(entry))
+    : [];
+};
+
+const pointerResolves = (value: unknown, pointer: string): boolean => {
+  if (pointer.length === 0) return true;
+  if (!pointer.startsWith("/")) return false;
+  let current = value;
+  for (const raw of pointer.slice(1).split("/")) {
+    const token = raw.replaceAll("~1", "/").replaceAll("~0", "~");
+    if (Array.isArray(current)) {
+      const index = Number(token);
+      if (!Number.isInteger(index) || index < 0 || index >= current.length) return false;
+      current = current[index];
+    } else if (isRecordValue(current)) {
+      if (!(token in current)) return false;
+      current = current[token];
+    } else {
+      return false;
+    }
+  }
+  return true;
+};
+
+const referenceResolves = (reference: string): boolean => {
+  const hashIndex = reference.indexOf("#");
+  const path = hashIndex === -1 ? reference : reference.slice(0, hashIndex);
+  const pointer = hashIndex === -1 ? "" : reference.slice(hashIndex + 1);
+  if (!existsSync(join(process.cwd(), path))) return false;
+  const parsed: unknown = JSON.parse(readFileSync(join(process.cwd(), path), "utf8"));
+  return pointerResolves(parsed, pointer);
+};
+
+describe("TC-PARITY-005 every new behavior has a trap entry and an executed half", () => {
+  test("the seven behaviors each have one four-field entry with a resolving fixture", () => {
+    const entries = catalogEntries();
+    const names = entries.map((entry) => String(entry.trapName));
+    for (const [behavior, trapName] of Object.entries(NEW_BEHAVIOR_TRAPS)) {
+      expect(
+        names.filter((name) => name === trapName),
+        behavior,
+      ).toHaveLength(1);
+      const entry = entries.find((candidate) => candidate.trapName === trapName);
+      if (entry === undefined) throw new Error(`missing trap entry ${trapName}`);
+      expect(Object.keys(entry).sort(), trapName).toEqual([
+        "expectedNormalizedOutcome",
+        "fixtureReference",
+        "providerBehavior",
+        "trapName",
+      ]);
+      expect(referenceResolves(String(entry.fixtureReference)), trapName).toBe(true);
+    }
+    expect(Object.keys(NEW_BEHAVIOR_TRAPS)).toHaveLength(7);
+  });
+
+  test("each new entry has a named mutation in the trap suite", () => {
+    const suite = readFileSync(join(process.cwd(), GITHUB_TRAP_SUITE), "utf8");
+    for (const trapName of Object.values(NEW_BEHAVIOR_TRAPS)) {
+      expect(suite.includes(`trapName: "${trapName}"`), trapName).toBe(true);
+    }
+  });
+
+  test("each closed-set behavior executes with a declared projection", async () => {
+    const tenant = loadMockTenant("github");
+    const report = await runProduction("parity-roll-up");
+    for (const [behavior, stepId] of Object.entries(CLOSED_SET_BEHAVIOR_STEPS)) {
+      const step = report.steps.find(
+        (entry) => entry.provider === "github" && entry.stepId === stepId,
+      );
+      expect(step?.status, behavior).toBe("executed");
+      if (stepId === "change-lifecycle.transition") {
+        // A void write declares its truth as the exact tenant route body.
+        const route = tenant.routes.find(
+          (candidate) => candidate.method === "PATCH" && candidate.url.endsWith("/issues/601"),
+        );
+        expect(route?.body, behavior).toEqual({ number: 601, state: "closed" });
+        continue;
+      }
+      expect(tenant.expected[stepId], behavior).toBeDefined();
+    }
+    expect(String(JSON.stringify(tenant.expected["change-lifecycle.read-pipeline-run"]))).toContain(
+      "startedAt",
+    );
+  });
+
+  test("dropping a behavior from either half fails by name", () => {
+    const names = catalogEntries().map((entry) => String(entry.trapName));
+    const missing = Object.entries(NEW_BEHAVIOR_TRAPS).find(
+      ([, trapName]) => !names.includes(trapName),
+    );
+    expect(missing).toBeUndefined();
+    expect(names.includes("GITHUB-LANDING-CRAFTED-METADATA")).toBe(true);
+    const withoutLanding = names.filter((name) => name !== "GITHUB-LANDING-CRAFTED-METADATA");
+    expect(withoutLanding.includes("GITHUB-LANDING-CRAFTED-METADATA")).toBe(false);
+  });
+});
+
+describe("TC-PARITY-007 a replay is deterministic across the whole change", () => {
+  test("two runs of the same tenants produce identical reports and skip decisions", async () => {
+    const first = await runProduction("determinism-run");
+    const second = await runProduction("determinism-run");
+    expect(second).toEqual(first);
+    expect(first.generatedAt).toBe(CLOCK);
+    expect(second.steps.map((step) => `${step.provider}|${step.stepId}|${step.status}`)).toEqual(
+      first.steps.map((step) => `${step.provider}|${step.stepId}|${step.status}`),
+    );
+    for (const step of first.steps) {
+      if (step.status === "skipped") {
+        expect(["declared-gap", "capability-absent", "live-read-only"]).toContain(step.skipKind);
+      }
+    }
+  });
+
+  test("the committed tenants are byte-identical across loads", () => {
+    const first = loadMockTenants();
+    const second = loadMockTenants();
+    expect(JSON.stringify(second)).toBe(JSON.stringify(first));
   });
 });

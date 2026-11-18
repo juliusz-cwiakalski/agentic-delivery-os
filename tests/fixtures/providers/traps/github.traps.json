@@ -17,7 +17,7 @@
     {
       "trapName": "GH-ISSUE-TO-WORKITEM",
       "providerBehavior": "GitHub issue payloads carry labels, an optional assignee, open/closed state, an optional updated_at, issue links, and a state_reason on live closed issues.",
-      "expectedNormalizedOutcome": "Issues normalize to WorkItem with labels, an optional assignee, a closed-set status alias (open to ready, closed to done), updatedAt verbatim when present (absent otherwise), and typed relations only when the payload records them. state_reason is not modeled: closed maps to done regardless of not_planned, and live-shape revalidation plus any canceled distinction is deferred to M0-S20.",
+      "expectedNormalizedOutcome": "Issues normalize to WorkItem with labels, an optional assignee, a closed-set status alias (open to ready, closed to done), updatedAt verbatim when present (absent otherwise), and typed relations only when the payload records them. state_reason is not modeled: closed maps to done regardless of not_planned, and live-shape revalidation plus any canceled distinction is deferred to M0-S20. labelled `review`/`in-progress` issues resolve to `in-review`/`in-progress` by declared precedence, and an exact-case label equal to a declared `label-swap` token wins",
       "fixtureReference": "tests/fixtures/providers/github/issues.json#/issues"
     },
     {
@@ -151,6 +151,78 @@
       "providerBehavior": "Non-2xx GitHub read responses fold into the adapter-local failure types whose only discriminant used to be the prose detail string.",
       "expectedNormalizedOutcome": "The read slice carries the structured numeric httpStatus on every non-2xx response and omits it on transport failures; the field is secret-free, the adapter-local identity is unchanged, and no prose is copied into it.",
       "fixtureReference": "tests/fixtures/providers/github/read-failure-statuses.json"
+    },
+    {
+      "trapName": "GITHUB-LANDING-CRAFTED-METADATA",
+      "providerBehavior": "A squash landing accepts a crafted commit title and message and echoes the landed commit identity.",
+      "expectedNormalizedOutcome": "Both crafted strings are transmitted byte-identically, merge_method is squash, and the outcome carries the provider-supplied merge commit identity.",
+      "fixtureReference": "tests/fixtures/providers/github/landing-responses.json#/landedWithSha"
+    },
+    {
+      "trapName": "GITHUB-LANDING-IDENTITY-ABSENT",
+      "providerBehavior": "A successful landing response omits the landing commit identity.",
+      "expectedNormalizedOutcome": "The outcome stays merged with no mergeCommitSha member: absence is unknown and is never derived from a branch head or a local commit.",
+      "fixtureReference": "tests/fixtures/providers/github/landing-responses.json#/landedWithoutSha"
+    },
+    {
+      "trapName": "GITHUB-LANDING-GUARD-REFUSAL",
+      "providerBehavior": "The expected head no longer matches the pull request head.",
+      "expectedNormalizedOutcome": "The guard is transmitted verbatim and the mismatch is one classified provider.payload.invalid refusal with the structured status, one request, and no retry.",
+      "fixtureReference": "tests/fixtures/providers/github/landing-responses.json#/headMismatch"
+    },
+    {
+      "trapName": "GITHUB-LANDING-ALREADY-MERGED-READBACK",
+      "providerBehavior": "The provider refuses with an already-merged refusal; merged truth is asserted only by a read-back.",
+      "expectedNormalizedOutcome": "Success is returned only when the read-back observes merged true; an unmerged read-back leaves the classified refusal standing, and the landing is never retried.",
+      "fixtureReference": "tests/fixtures/providers/github/landing-responses.json#/alreadyMergedThenMergedTrue"
+    },
+    {
+      "trapName": "GITHUB-CLI-STATUS-RECOVERY",
+      "providerBehavior": "`gh api --include` output can carry a proxy status block before the authoritative one.",
+      "expectedNormalizedOutcome": "The final status block decides the status and the remaining bytes are the body; an unparsable or absent status block is refused instead of being assumed to be 200.",
+      "fixtureReference": "tests/fixtures/providers/github/cli-status-blocks.json#/cases/6"
+    },
+    {
+      "trapName": "GITHUB-CLI-CREDENTIAL-ABSENCE",
+      "providerBehavior": "An already-shaped request arrives with an Authorization header the CLI must not forward.",
+      "expectedNormalizedOutcome": "The credential appears only as GH_TOKEN in the constructed child environment; argv carries no credential, the header is removed from the forwarded headers, and the isolated GH_CONFIG_DIR plus prompt suppression are present.",
+      "fixtureReference": "tests/fixtures/providers/github/cli-argv.json#/routes/0"
+    },
+    {
+      "trapName": "GITHUB-COMMENT-CARRIER-FREE",
+      "providerBehavior": "A carrier-free human comment write reaches the issue comment surface with no metadata envelope and no declared carrier.",
+      "expectedNormalizedOutcome": "The recorded request body is exactly the human text, no envelope block or carrier marker is present, the declaration keeps empty carrier arrays, and the provider comment identity is returned.",
+      "fixtureReference": "tests/fixtures/providers/github/issue-writes.json#/comment/commentCreated"
+    },
+    {
+      "trapName": "GITHUB-CONTENT-WRITE-NEVER-LANDS",
+      "providerBehavior": "A delivery-request create/update is a content write; the provider also exposes a landing surface that must never be used by it.",
+      "expectedNormalizedOutcome": "A create posts the head/base refs, title and body verbatim and returns the normalized delivery-request view; no landing request and no merge-state write occurs, and an update never creates.",
+      "fixtureReference": "tests/fixtures/providers/github/issue-writes.json#/contentWrite/pullCreated"
+    },
+    {
+      "trapName": "GITHUB-WORKFLOW-MAP-SEED-PRECEDENCE",
+      "providerBehavior": "GitHub issues carry either a native state or lifecycle labels, and the declared map has a load-bearing precedence order.",
+      "expectedNormalizedOutcome": "The four-row seed is declared in precedence order; a closed issue resolves done regardless of labels, an exact-case label wins by declared precedence, a case collision with a declared label-swap token is a visible refusal, and an unknown or absent label resolves through the native-state row.",
+      "fixtureReference": "tests/fixtures/providers/github/workflow-map-cases.json#/seedRows"
+    },
+    {
+      "trapName": "GITHUB-CHECK-RUN-TIMINGS",
+      "providerBehavior": "GitHub check runs expose provider-native started_at and completed_at timestamps that may be absent or partial.",
+      "expectedNormalizedOutcome": "PipelineJob.startedAt and completedAt copy the provider strings verbatim when present; an absent timestamp stays absent, an incomplete run has no completion time, and no duration or default is ever derived.",
+      "fixtureReference": "tests/fixtures/providers/github/check-run-timings.json#/cases/bothPresent"
+    },
+    {
+      "trapName": "GITHUB-LOG-EXCERPT-CAP",
+      "providerBehavior": "GitHub job log text can exceed the fixed excerpt cap and can contain multi-byte characters anywhere, including across the byte boundary.",
+      "expectedNormalizedOutcome": "The excerpt is a faithful UTF-8 byte prefix of at most 8192 bytes that never splits a multi-byte sequence, byteLength equals the returned bytes, and truncated is the sole truncation authority.",
+      "fixtureReference": "tests/fixtures/providers/github/check-run-log-excerpt.json#/cases/over8192Ascii"
+    },
+    {
+      "trapName": "GITHUB-THREAD-DISCUSSION-CAPS",
+      "providerBehavior": "A review thread can carry more comments than the cap and individual comment bodies can exceed the per-body byte cap, including multi-byte text across the boundary.",
+      "expectedNormalizedOutcome": "At most 50 oldest-first provider-ordered comments are returned with the provider total preserved, each body is a UTF-8 byte prefix of at most 4096 bytes that never splits a multi-byte sequence, and the thread-level truncated flag is true exactly when comments were dropped or a body was truncated.",
+      "fixtureReference": "tests/fixtures/providers/github/thread-discussion.json#/cases/fiftyOne"
     }
   ]
 }

@@ -259,8 +259,10 @@ module.exports = {
           // GH-233 — the harness adapter I/O subpath: read-only telemetry
           // extraction (node:fs reads, read-only SQLite). Exact path only.
           "^packages/adapters/src/harness/",
-          // ADR-0005 C-2 — `github` provider client subpath: GitHub REST reads
-          // for the minimal status/verify input slice (GH-188).
+          // ADR-0005 C-2, refined by TDR-0031 item 9 — `github` provider client
+          // subpath: network I/O for the GitHub client, plus the one bounded,
+          // fixed-argv, no-shell `gh api` child invocation the CLI transport
+          // owns (exact path only; no wildcard, no new entry).
           "^packages/adapters/src/github/",
           // ADR-0005 C-2 — `gitlab` provider client subpath: GitLab MR and
           // pipeline reads (GH-188).

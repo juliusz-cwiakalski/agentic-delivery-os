@@ -15,6 +15,8 @@ import {
   installThrowingFetchGuard,
   isRecord,
   readJson,
+  recordField,
+  requireRecord,
   requireValue,
 } from "../providers/support";
 
@@ -325,7 +327,7 @@ describe("TC-DOCTOR-031 GH-PAYLOAD-HTTP-STATUS trap coverage", () => {
     }
     const { ADAPTER_OPERATIONS } = await import("../../../packages/core/src/contracts/index");
     const { GITHUB_ADAPTER_CONTRACT } = await import("../../../packages/adapters/src/github/index");
-    expect(ADAPTER_OPERATIONS).toHaveLength(8);
+    expect(ADAPTER_OPERATIONS).toHaveLength(9);
     expect(ADAPTER_OPERATIONS).not.toContain("doctor-read");
     expect(GITHUB_ADAPTER_CONTRACT.capabilities.supportedOperations).not.toContain(
       "doctor-read" as never,
@@ -382,4 +384,184 @@ describe("TC-ATT-004 mapped milestone provenance", () => {
     expect("milestone" in (result.items[1] ?? {})).toBe(false);
     expect(transport.requests).toHaveLength(1);
   });
+});
+
+const ISSUE_WRITES = `${FIXTURES}/issue-writes.json`;
+const issueWrites = requireRecord(readJson(ISSUE_WRITES), "issue writes");
+const contentWriteCases = recordField(issueWrites, "contentWrite");
+const contentWriteCase = (key: string): Record<string, unknown> =>
+  recordField(contentWriteCases, key);
+
+type RecordedWrite = { readonly method: string; readonly url: string; readonly body?: string };
+
+const createWriteClient = (
+  routes: Parameters<typeof createFixtureTransport>[0],
+): {
+  readonly client: ReturnType<typeof createGitHubClient>;
+  readonly transport: ReturnType<typeof createFixtureTransport>;
+} => {
+  const transport = createFixtureTransport(routes);
+  return {
+    client: createGitHubClient({ instance, credentials, repository, transport }),
+    transport,
+  };
+};
+
+const writeBody = (request: RecordedWrite | undefined): Record<string, unknown> => {
+  const parsed: unknown = JSON.parse(request?.body ?? "{}");
+  if (!isRecord(parsed)) throw new Error("expected a JSON object write body");
+  return parsed;
+};
+
+describe("TC-BACKLOG-001 the comment write is supported and carrier-free", () => {
+  const comment = recordField(recordField(issueWrites, "comment"), "commentCreated");
+
+  test("the recorded request carries exactly the human text and returns the provider identity", async () => {
+    const response = recordField(comment, "response");
+    const { client, transport } = createWriteClient([
+      {
+        method: "POST",
+        url: `${instance.baseUrl}${repoPath}/issues/601/comments`,
+        body: response,
+        status: 201,
+      },
+    ]);
+    const result = await client.writeComment({
+      entityId: String(comment.entityId),
+      body: String(comment.body),
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.value).toEqual(recordField(comment, "expected"));
+    const request = transport.requests[0] as RecordedWrite | undefined;
+    expect(request?.method).toBe("POST");
+    expect(writeBody(request)).toEqual(recordField(recordField(comment, "request"), "body"));
+    const serialized = JSON.stringify(writeBody(request));
+    for (const carrier of ["<!--", "schema", "provenance", "envelope", "payload"]) {
+      expect(serialized, carrier).not.toContain(carrier);
+    }
+  });
+});
+
+describe("TC-BACKLOG-002 the content write creates and updates, never lands", () => {
+  test("a create transmits both refs, the title, the body and no fabricated draft", async () => {
+    const created = contentWriteCase("pullCreated");
+    const { client, transport } = createWriteClient([
+      {
+        method: "POST",
+        url: `${instance.baseUrl}${repoPath}/pulls`,
+        body: recordField(created, "response"),
+        status: 201,
+      },
+    ]);
+    const result = await client.writeDeliveryRequest(
+      created.input as Parameters<ReturnType<typeof createGitHubClient>["writeDeliveryRequest"]>[0],
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.identity.entityId).toBe("610");
+      expect(result.value.sourceRef).toBe("feat/GH-338/backlog-content-write");
+      expect(result.value.targetRef).toBe("main-tools");
+      expect(result.value.reviewState).toBe("open");
+    }
+    const request = transport.requests[0] as RecordedWrite | undefined;
+    expect(request?.method).toBe("POST");
+    expect(writeBody(request)).toEqual(recordField(recordField(created, "request"), "body"));
+    expect(transport.requests.some((entry) => entry.url.endsWith("/merge"))).toBe(false);
+    expect(transport.requests.some((entry) => entry.method === "PUT")).toBe(false);
+  });
+
+  test("an absent draft is absent, never fabricated", async () => {
+    const created = contentWriteCase("pullCreatedDefaultDraft");
+    const { client, transport } = createWriteClient([
+      {
+        method: "POST",
+        url: `${instance.baseUrl}${repoPath}/pulls`,
+        body: recordField(created, "response"),
+        status: 201,
+      },
+    ]);
+    const result = await client.writeDeliveryRequest(
+      created.input as Parameters<ReturnType<typeof createGitHubClient>["writeDeliveryRequest"]>[0],
+    );
+    expect(result.ok).toBe(true);
+    const body = writeBody(transport.requests[0] as RecordedWrite | undefined);
+    expect(Object.hasOwn(body, "draft")).toBe(false);
+    expect(body).toEqual(recordField(recordField(created, "request"), "body"));
+  });
+
+  test("an update targets the declared identity with only the supplied fields and never creates", async () => {
+    const updated = contentWriteCase("pullUpdated");
+    const { client, transport } = createWriteClient([
+      {
+        method: "PATCH",
+        url: `${instance.baseUrl}${repoPath}/pulls/504`,
+        body: recordField(updated, "response"),
+      },
+    ]);
+    const result = await client.writeDeliveryRequest(
+      updated.input as Parameters<ReturnType<typeof createGitHubClient>["writeDeliveryRequest"]>[0],
+    );
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.value.identity.entityId).toBe("504");
+      expect(result.value.sourceRef).toBe("feat/GH-338/existing-request");
+      expect(result.value.reviewState).toBe("open");
+    }
+    const request = transport.requests[0] as RecordedWrite | undefined;
+    expect(request?.method).toBe("PATCH");
+    expect(request?.url).toBe(`${instance.baseUrl}${repoPath}/pulls/504`);
+    expect(writeBody(request)).toEqual(recordField(recordField(updated, "request"), "body"));
+    expect(transport.requests.some((entry) => entry.method === "POST")).toBe(false);
+  });
+
+  test("a content-write 404 is the uniform write classification: one request, no retry, structured status", async () => {
+    const missing = contentWriteCase("pullUpdateNotFound");
+    const response = recordField(missing, "response");
+    const { client, transport } = createWriteClient([
+      {
+        method: "PATCH",
+        url: `${instance.baseUrl}${repoPath}/pulls/504`,
+        body: response.body,
+        status: Number(response.status),
+      },
+    ]);
+    const result = await client.writeDeliveryRequest(
+      missing.input as Parameters<ReturnType<typeof createGitHubClient>["writeDeliveryRequest"]>[0],
+    );
+    const expected = recordField(missing, "expected");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      // The write family is uniform: 404 is NOT promoted to `provider.not-found`
+      // (that identity is read-scoped). One request, no retry, status preserved.
+      expect(result.code).toBe(expected.code as string);
+      expect(result.httpStatus).toBe(expected.httpStatus as number);
+    }
+    expect(transport.requests).toHaveLength(1);
+    const request = transport.requests[0] as RecordedWrite | undefined;
+    expect(request?.method).toBe("PATCH");
+    expect(writeBody(request)).toEqual(recordField(recordField(missing, "request"), "body"));
+  });
+
+  for (const key of [
+    "pullCreateMissingRef",
+    "pullCreateMissingTargetRef",
+    "pullCreateEmptyTitle",
+    "pullUpdateEmpty",
+  ]) {
+    test(`${key} is a named refusal naming the missing field with zero provider requests`, async () => {
+      const entry = contentWriteCase(key);
+      const { client, transport } = createWriteClient([]);
+      const result = await client.writeDeliveryRequest(
+        entry.input as Parameters<ReturnType<typeof createGitHubClient>["writeDeliveryRequest"]>[0],
+      );
+      expect(result.ok).toBe(false);
+      if (!result.ok) {
+        expect(result.code).toBe("provider.payload.invalid");
+        for (const mention of arrayField(entry, "mentions")) {
+          expect(result.detail).toContain(String(mention));
+        }
+      }
+      expect(transport.requests).toEqual([]);
+    });
+  }
 });

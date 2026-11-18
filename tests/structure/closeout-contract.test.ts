@@ -212,16 +212,17 @@ describe("TC-CLOSE-001 closeout contract vocabulary", () => {
 });
 
 describe("TC-CLOSE-002 additive adapter extensions and conformance registry", () => {
-  test("resolve-delivery-thread is the appended eighth closed operation", () => {
-    expect([...ADAPTER_OPERATIONS]).toHaveLength(8);
+  test("the closed set appends the landing operation ninth and never reorders", () => {
+    expect([...ADAPTER_OPERATIONS]).toHaveLength(9);
     expect(ADAPTER_OPERATIONS[7]).toBe("resolve-delivery-thread");
+    expect(ADAPTER_OPERATIONS[8]).toBe("merge-delivery-request");
   });
 
   test("the flow registry covers the closed operation set exactly", () => {
     expect([...operationsInFlows].sort()).toEqual([...ADAPTER_OPERATIONS].sort());
   });
 
-  test("the change-lifecycle flow appends the thread step last", () => {
+  test("the change-lifecycle flow appends the landing step last", () => {
     const changeLifecycle = CONFORMANCE_FLOWS.find((flow) => flow.flowId === "change-lifecycle");
     expect(changeLifecycle?.steps.map((step) => step.stepId)).toEqual([
       "change-lifecycle.read-work-item",
@@ -232,10 +233,14 @@ describe("TC-CLOSE-002 additive adapter extensions and conformance registry", ()
       "change-lifecycle.create-delivery-request",
       "change-lifecycle.comment",
       "change-lifecycle.resolve-delivery-thread",
+      "change-lifecycle.merge-delivery-request",
     ]);
-    expect(CONFORMANCE_FLOWS.flatMap((flow) => flow.steps)).toHaveLength(13);
+    expect(CONFORMANCE_FLOWS.flatMap((flow) => flow.steps)).toHaveLength(14);
     expect(CONFORMANCE_FLOWS.flatMap((flow) => flow.steps)[7]?.stepId).toBe(
       "change-lifecycle.resolve-delivery-thread",
+    );
+    expect(CONFORMANCE_FLOWS.flatMap((flow) => flow.steps)[8]?.stepId).toBe(
+      "change-lifecycle.merge-delivery-request",
     );
   });
 
@@ -251,5 +256,22 @@ describe("TC-CLOSE-002 additive adapter extensions and conformance registry", ()
   test("headSha is declared optional on DeliveryRequest", () => {
     const source = readFileSync(join(ROOT, "packages/core/src/contracts/ports.ts"), "utf8");
     expect(source).toContain("readonly headSha?: string;");
+  });
+
+  test("the thread-discussion evidence leaves the closed set, capabilities, and projections unchanged", () => {
+    expect([...ADAPTER_OPERATIONS]).toHaveLength(9);
+    expect(GITHUB_ADAPTER_CONTRACT.capabilities.supportedOperations).toHaveLength(9);
+    expect(GITHUB_ADAPTER_CONTRACT.capabilities.declaredGaps).toEqual([]);
+    const tenant = JSON.parse(
+      readFileSync(join(ROOT, "tests/fixtures/providers/conformance/github/tenant.json"), "utf8"),
+    ) as { expected: Record<string, unknown> };
+    expect(Object.keys(tenant.expected).some((key) => /discussion|body/iu.test(key))).toBe(false);
+    const ports = readFileSync(join(ROOT, "packages/core/src/contracts/ports.ts"), "utf8");
+    const start = ports.indexOf("export type DeliveryThread = {");
+    const end = ports.indexOf("};", start);
+    const threadBlock = ports.slice(start, end);
+    expect(threadBlock).toContain("readonly threadId: string;");
+    expect(threadBlock).toContain("readonly commentCount: number;");
+    expect(threadBlock).not.toContain("body");
   });
 });

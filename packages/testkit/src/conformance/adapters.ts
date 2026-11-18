@@ -78,6 +78,29 @@ export const CONFORMANCE_ADAPTERS: readonly ConformanceAdapterRegistration[] = [
             },
             threadId: addressing.threadId,
           }),
+        mergeDeliveryRequest: () =>
+          client.mergeDeliveryRequest({
+            deliveryRequest: {
+              systemName: tenant.instance.instanceName,
+              entityId: String(addressing.pullNumber),
+            },
+            strategy: "squash",
+            commitTitle: "chore: conformance landing",
+            commitMessage: "Conformance landing projection",
+          }),
+        writeComment: () =>
+          client.writeComment({
+            entityId: String(addressing.issueNumber),
+            body: "Conformance carrier-free comment",
+          }),
+        createDeliveryRequest: () =>
+          client.writeDeliveryRequest({
+            kind: "create",
+            sourceRef: "feat/GH-338/conformance-content-write",
+            targetRef: "main-tools",
+            title: "Conformance content write",
+            body: "Conformance delivery request body",
+          }),
       };
     },
   },
