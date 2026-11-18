@@ -8,36 +8,44 @@
 # gate result).
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:     ./chg-GH-339-spec.md (v1.2: F-1..F-5; 34 ACs AC-F1-1..AC-F5-3;
+#   - Spec:     ./chg-GH-339-spec.md (v1.3: F-1..F-5; 34 ACs AC-F1-1..AC-F5-3;
 #               API-1..API-5; DM-1..DM-7; NFR-1..NFR-11; NG-1..NG-11;
 #               DEC-1..DEC-6; RSK-1..RSK-11; §6 flows 1–5; §7.1 in-scope list;
 #               §8.3 data model; §17 criteria; §18 sequencing; §24.1 Appendix A
 #               doc impacts; §24.3 Appendix C deliberate non-decisions BINDING on
-#               this plan; §24.4 Appendix D fixture-decided details). v1.1 stated
-#               the delivered status asymmetry as fact and gave AC-F2-2, AC-F2-3
-#               and AC-F2-5 the recorded-difference escape; v1.2 carries the
-#               DoR-iteration-1 repair this plan follows: DM-1's cell carries ONLY
-#               a registerId (no class), DM-2's entry carries a NON-EMPTY class
-#               SET with per-class evidence, DM-4 makes the pagination family
-#               truthful (GitLab recorded `pagination-model`, Jira `gap-backed`),
-#               API-1 defines the gate-local observation record and enumerates the
+#               this plan; §24.4 Appendix D fixture-decided details). v1.2 carried
+#               the DoR-iteration-1 repair this plan follows: DM-1's cell carries
+#               ONLY a registerId (no class), DM-2's entry carries a NON-EMPTY
+#               class SET with per-class evidence, DM-4 makes the pagination family
+#               truthful, API-1 defines the gate-local observation record and the
 #               nine clause ids, DM-6/AC-F4-4 carry the binding identity-construct
 #               definition and the derived-column rule, AC-F2-11 is scoped to the
 #               family-wired subset, and AC-F2-4 keeps the rate-limit status
-#               outside {401, 403}. This plan never assumes a status-bearing
-#               classification a status-less adapter cannot produce, and never
-#               asks a read for a truncation signal no closed view carries.
-#   - Tests:    ./chg-GH-339-test-plan.md (v1.2: 63 TCs —
-#               TC-PARITY-001..008, TC-PMUT-001..013, TC-ART-001..002,
+#               outside {401, 403}. **v1.3 carries the DoR-iteration-2 repair**:
+#               the SIX-DIMENSION basis (one class per dimension, six offline
+#               oracles, assertion-family outcome and non-carrier step participation
+#               declared NON-dimensions), API-1's one observation per dimension per
+#               pair as `{state:"observed", value}` or
+#               `{state:"not-observable", why}` (never agreement by default),
+#               AC-F1-5 naming exactly one class id per differing dimension,
+#               AC-F1-6 requiring per-class evidence to reproduce THAT dimension's
+#               observation under its oracle, and AC-F1-7's 22 parity mutations.
+#               This plan never assumes a status-bearing classification a
+#               status-less adapter cannot produce, and never asks a read for a
+#               truncation signal no closed view carries.
+#   - Tests:    ./chg-GH-339-test-plan.md (v1.3: 72 TCs —
+#               TC-PARITY-001..008, TC-PMUT-001..022, TC-ART-001..002,
 #               TC-TAX-001..013, TC-DOUBLE-001..007, TC-DMUT-001..004,
 #               TC-REG-001..006, TC-GATE-001..004, TC-FLOOR-001..006; 34/34 AC
 #               coverage, 0 orphans; §7.1 suite map; §7.2 fixtures to author incl.
-#               the gate's observation-record evidence; §7.3 the append-only trap
-#               extension; §7.4 gate commands G1..G10 with G10 binding; §7.5 the
-#               mutation register M1..M46 — PMUT-001..011 are M1..M11, PMUT-012 is
-#               M43, PMUT-013 is M44, M41 silent-pass, M42 unreachable-class,
-#               M45 the trap-append/prefix control, M46 the derived-column
-#               control, M32 the identity-construct planting set —
+#               the gate's observation-record evidence and the frozen trap-name
+#               baseline; §7.3 the append-only trap extension; §7.4 gate commands
+#               G1..G10 with G10 binding (22 parity mutations); §7.5 the mutation
+#               register M1..M55 — PMUT-001..011 are M1..M11; PMUT-012..013 are
+#               M43..M44; PMUT-014..019 are M47..M52 (one per dimension);
+#               PMUT-020..022 are M53..M55 (the record/set rules); M41 silent-pass,
+#               M42 unreachable-class, M45 the trap-append/prefix control, M46 the
+#               derived-column control, M32 the identity-construct planting set —
 #               §7.6 the phase/file bindings this plan must carry; GAP-TP-1..8,
 #               OQ-TP-1..7). GAP-TP-1 (the five intersections are adjudicated
 #               during delivery, verdict unknown except the one DM-4 fixes by
@@ -53,7 +61,10 @@
 #               `packages/testkit/src/conformance/parity.ts`; rows imported, columns
 #               DERIVED from the registration list — no hand-authored column set;
 #               `registerId`-only cells; a per-entry CLASS SET with per-class
-#               evidence; the nine clause ids; clause-tagged violation RECORDS),
+#               evidence; the nine clause ids; clause-tagged violation RECORDS; and
+#               **§5.1–§5.4's six-dimension basis** — one class per dimension with
+#               its offline oracle, the `observed`/`not-observable` observation
+#               record, the three cell semantics, and the explicit non-dimensions),
 #               TDR-0037 (four class ids over delivered identities, the total
 #               five-outcome rule, six families with declared outcomes, taxonomy
 #               home `tracker-error-taxonomy.ts`, the exact two-tree `tracker.`
@@ -111,6 +122,13 @@
 #   typo) while the four TDRs it indexes land, and it is declared for that
 #   conditional touch only. It is never a licence to edit an unrelated row, and
 #   the DoD check confirms the index state either way.
+#   A PIN THAT GOVERNS AN EDITED SUITE IS DECLARED AT EVERY TOUCH POINT:
+#   `tests/fixtures/pins/trap-names.json` is authored in phase 1 and is declared
+#   again in phase 3, because phase 3 edits the three suites the pin governs and
+#   must prove the delivered names were not disturbed. The phase-3 declaration is a
+#   READ-PINNED declaration (the file is never edited there); it is declared so the
+#   governing relationship is explicit where the risk lives, and it can produce at
+#   most an advisory `plan diff` `undeclared-missing`.
 #
 # TRAP-CATALOG APPEND-ONLY RULE (binding on phases 1 and 3; a DoR finding):
 #   Appending a four-field catalog entry is NOT a data-only edit. The delivered
@@ -125,14 +143,25 @@
 #   entry's assertion and must never touch a delivered one. TC-FLOOR-001 asserts
 #   the prefix property, so a silent reorder or drop fails by name. Neither the
 #   plan nor any phase may describe these three suites as read-only or unedited.
+#   THE PREFIX NEEDS A FROZEN BASELINE, AND IT IS A COMMITTED PIN:
+#   `tests/fixtures/pins/trap-names.json` holds one ordered name array per
+#   provider, captured from the DELIVERED suites BEFORE any append, committed in
+#   the same phase that appends (phase 1), and NEVER REGENERATED in this change.
+#   It is a tree-invariant golden, not a base-ref comparison (which
+#   `.ai/rules/testing-strategy.md` forbids). TC-FLOOR-001 asserts each post-append
+#   array STARTS WITH the pinned array, that the added suffix equals exactly the
+#   appended catalog names, and that the pin's bytes are unchanged — so editing the
+#   pin to match a broken suite fails naming the file. Phases 1 and 3 declare it;
+#   phase 2 may read it but authors nothing there.
 #
 # SEQUENCING (spec §18 "by outcome, so each declaration lands with the evidence
 # that proves it"), made concrete. Two facts force the exact order:
 #
-#   (a) The taxonomy must precede the gate, not merely precede the fixtures: the
-#       parity gate's THIRD comparison dimension is "the tracker error class
-#       resolved for that operation's family" (DM-1, AC-F1-5), so the parity
-#       engine cannot be authored without the class table and the total
+#   (a) The taxonomy must precede the gate, not merely precede the fixtures: ONE OF
+#       the parity gate's six dimensions is `failure-classification`, whose oracle
+#       is "the API-2 class resolved from the structured result of a trap-family
+#       stimulus" (TDR-0036 §5.1, DM-1, AC-F1-5), so the parity engine cannot be
+#       authored without the class table, the family vocabulary and the total
 #       decision function. §18's "taxonomy and family vocabulary first — they
 #       are inputs to fixture authoring" is therefore also a hard build
 #       dependency of phase 2.
@@ -150,17 +179,18 @@
 #
 #   Phase 1  Tracker error taxonomy + six-family vocabulary + family stimuli +
 #            four-field catalog entries + the trap-suite append they oblige + the
-#            exact two-tree `tracker.` scan (F-2 vocabulary; AC-F2-1, AC-F2-8,
-#            AC-F2-9; TC-FLOOR-001's trap half authored here). TDRs land here.
+#            frozen trap-name baseline + the exact two-tree `tracker.` scan
+#            (F-2 vocabulary; AC-F2-1, AC-F2-8, AC-F2-9; TC-FLOOR-001's trap half
+#            authored here). TDRs land here.
 #   Phase 2  Parity matrix + difference register + parity gate over the gate-local
-#            observation record + adjudication of the five non-reference supported
-#            intersections + artifact invariance (F-1, F-5 diagnostics;
-#            AC-F1-1..8, AC-F5-2, AC-F5-3).
-#   Phase 3  Per-adapter × per-family accounting + offline replay classification
-#            through the production clients, with the covered and
-#            recorded-difference replay arms and the gap-backed encounter all
-#            exercised on every run (F-2 evidence; AC-F2-2..7, AC-F2-10,
-#            AC-F2-11).
+#            SIX-dimension observation record + adjudication of the five
+#            non-reference supported intersections + artifact invariance (F-1,
+#            F-5 diagnostics; AC-F1-1..8, AC-F5-2, AC-F5-3).
+#   Phase 3  Per-adapter × per-family accounting (the expected 9/7/2 square) +
+#            offline replay classification through the production clients, with the
+#            covered and recorded-difference replay arms and the gap-backed
+#            encounter all exercised on every run (F-2 evidence; AC-F2-2..7,
+#            AC-F2-10, AC-F2-11).
 #   Phase 4  Deterministic simulated stateful tracker double + its scenarios +
 #            the additive tenant extension (F-3; AC-F3-1..7).
 #   Phase 5  Registration-only participation contract + identity-construct
@@ -182,28 +212,34 @@
 #     5. Jira   `transition-work-item`
 #   For each, phase 2 records EITHER `{kind: "same-as-reference"}` OR a
 #   `{kind: "declared-difference", registerId}` cell whose register entry carries a
-#   NON-EMPTY class set (each class naming one differing parity dimension), a
-#   non-empty rationale, PER-CLASS resolvable evidence, and an `adjudicatedBy`
-#   reference. The CELL CARRIES NO CLASS: a pair that differs on several
-#   dimensions is ONE cell with ONE entry whose class set names all of them, so
-#   the cell and its adjudication cannot disagree about which dimensions differ.
-#   A class whose evidence shows reference-equal behaviour on ITS OWN dimension
-#   fails naming that class; one dimension's evidence never justifies another's.
+#   NON-EMPTY class set that names EXACTLY the differing dimensions (no omission,
+#   no padding — the class set IS the dimension set), a non-empty rationale,
+#   PER-CLASS resolvable evidence reproducing THAT class's dimension observation,
+#   and an `adjudicatedBy` reference. The CELL CARRIES NO CLASS: a pair that
+#   differs on several dimensions is ONE cell with ONE entry whose class set names
+#   all of them, so the cell and its adjudication cannot disagree about which
+#   dimensions differ. A class whose evidence shows reference-equal behaviour on
+#   ITS OWN dimension fails naming that class; one dimension's evidence never
+#   justifies another's.
 #   THIS PLAN DOES NOT PRE-DECIDE ANY VERDICT and neither may the coder: the
 #   verdict is what the replay shows — with ONE spec-fixed exception, stated so it
 #   is not mistaken for a verdict: `(gitlab, read-pipeline-run)` MUST be a
-#   `declared-difference` whose class set contains `pagination-model`, because
+#   `declared-difference` whose class set CONTAINS `pagination-model`, because
 #   DM-4's delivered `pagination-truncation` posture for GitLab IS that recorded
 #   difference (the pipeline read declares no bound and reports no page count).
-#   The other four are adjudicated from evidence.
+#   That entry may legitimately carry further classes (TDR-0036 §3 instructs
+#   recording pipeline model and failure classification together on that pair), and
+#   the exact set is what the observed dimensions yield — the spec fixes ONE member,
+#   never the whole set. The other four are adjudicated from evidence.
 #   Evidence homes (fixed, so the record and the artefacts cannot drift):
 #     - one evidence document per (differenceId, class) pair:
 #       tests/fixtures/providers/conformance/parity/evidence/
-#     - the gate's declared absence-and-truncation evidence per
-#       (adapter, operation), never a report or artifact field:
+#     - the gate's declared observation record — one `observed`/`not-observable`
+#       observation per dimension per (adapter, operation) — never a report or
+#       artifact field:
 #       tests/fixtures/providers/conformance/parity/observation-record.json
 #     - the five-intersection record with provider, operation, chosen posture,
-#       the four dimension observations and the reference:
+#       the SIX dimension observations and a per-class reference:
 #       tests/fixtures/providers/conformance/parity/adjudication.json
 #     - the declared matrix and register themselves:
 #       packages/testkit/src/conformance/parity.ts
@@ -218,6 +254,56 @@
 #   If an adjudication could only be `same-as-reference` by CHANGING an adapter,
 #   the coder STOPS and reports: that is adapter completion (NG-1, §24.3(1)) and
 #   TC-FLOOR-002 fails it by name.
+#
+# THE PARITY BASIS IS SIX DIMENSIONS, ONE CLASS EACH (spec v1.3 F-1/DM-1/API-1;
+#   TDR-0036 §5.1–§5.4 is the authority; a DoR-iteration-2 finding and the
+#   persistent defect across both iterations):
+#   The dimension set IS the class set — six classes, six dimensions, 1:1, no
+#   many-to-one mapping and no extra dimension. A class with no dimension, a
+#   dimension with no class, or a class outside the closed set is a
+#   `difference-class` failure. Each dimension has ONE offline oracle the mock tier
+#   can produce, and a differing dimension is reported by naming its class id, so
+#   no divergence has two candidate names:
+#     identity-scheme        the normalized entity identity FORM (provider numeric
+#                            id, project-scoped `iid`, issue `key`,
+#                            `<commitSha>:<runId>` item identity, bare provider id);
+#                            the observed value is diagnostic, the SCHEME is the
+#                            predicate.
+#     pipeline-model         one `PipelineRun` item's GRANULARITY UNIT and per-item
+#                            COMPOSITION (one check run vs one pipeline; jobs
+#                            synthesised per check run vs the provider's own job
+#                            list). Item COUNT is diagnostic, never equality.
+#     state-vocabulary       the operation's state RESOLUTION MECHANISM and outcome
+#                            (signal read, refusal rule, reachable aliases) for a
+#                            declared native value. Row spelling is never compared.
+#     pagination-model       the read's DECLARED PAGE BOUND (or "none declared") and
+#                            WHETHER A PAGE COUNT IS REPORTED. The numeric bound and
+#                            count are diagnostic, never equality.
+#     carrier-absent         the adapter's declared carrier arrays plus the carrier
+#                            step's PARTICIPATION (executed, or skipped
+#                            `capability-absent` / `no-declared-carrier`).
+#     failure-classification the API-2 class resolved from a trap-family stimulus on
+#                            the family's declared operation (identity plus status
+#                            presence and value), never prose.
+#   OBSERVATIONS ARE PER DIMENSION PER PAIR AND MAY BE UNOBSERVABLE: each is
+#   `{state: "observed", value}` or `{state: "not-observable", why}`; a
+#   declared-gap pair has NO observation. `not-observable` is not agreement by
+#   default — two `not-observable` agree only when BOTH report it, and
+#   `observed` vs `not-observable` IS A DIFFERENCE that must be recorded. Cell
+#   semantics follow: `same-as-reference` = all six agree; `gap` = no observation,
+#   reason from the declaration; `declared-difference` = the entry's class set
+#   names EXACTLY the differing dimensions.
+#   ASSERTION-FAMILY OUTCOME AND NON-CARRIER STEP PARTICIPATION ARE NOT DIMENSIONS
+#   (TDR-0036 §5.4): the assertion family is declared on the shared registry step,
+#   so it is the same value in every column, and on the mock tier a step is skipped
+#   only for a declared unsupported operation, the live-only deferral, or a missing
+#   declared carrier. A divergence there is a DEFECT, not a provider-model fact: a
+#   `declared-gap` skip on a supported operation already fails clause (a)
+#   (`declaration-agreement`), and the runtime coverage gate fails a supported
+#   operation with no executed step or an unexercised declared carrier. Giving them
+#   a class would invent a legitimate-looking difference for an illegitimate one.
+#   No phase may reintroduce them as dimensions; TC-PARITY-005 asserts that
+#   flipping either produces NO parity violation.
 #
 # NO ADAPTER BEHAVIOUR CHANGE (NG-1, §24.3(1); pm-notes binding expectation):
 #   No phase may edit `packages/adapters/src/{github,gitlab,jira}/**`, their
@@ -259,23 +345,40 @@
 #
 # MUTATION CONTROLS ARE FIRST-CLASS (test plan §7.5; NFR-2): every gate rule and
 #   every mutation has exactly one home, never a catch-all task.
-#     - TC-PMUT-001..013 (M1..M11, M43, M44): PHASE 2, in
+#     - TC-PMUT-001..022 (22 parity mutations in three named groups): PHASE 2, in
 #       `tests/conformance/parity-gate.test.ts`
 #       with typed mutation builders in
 #       `tests/fixtures/providers/conformance/parity/mutations.ts`. Each asserts
 #       the NAMED violation (provider, operation, clause of the nine-id closed
-#       clause set) AND a paired clean pass in the same case. PMUT-012 (a cell
-#       carrying a difference class → `cell-vocabulary`) and PMUT-013 (an entry
-#       with an empty class set → `difference-class`) are the two mutations spec
-#       v1.2 added to AC-F1-7. Non-vacuity statement: a
+#       clause set, and — for an observation mutation — exactly that dimension's
+#       class id) AND a paired clean pass in the same case. The groups, in the
+#       test plan's own taxonomy:
+#         * 13 STRUCTURAL: PMUT-001..013 = M1..M11, M43, M44 (missing/duplicate/
+#           extra cell, out-of-set value, out-of-set class, contradiction,
+#           unregistered column, non-resolving `registerId`, orphan entry,
+#           duplicate entry, a cell carrying a class, an empty class set);
+#         * 6 DIMENSION: PMUT-014..019 = M47..M52 — ONE PER DIMENSION
+#           (`identity-scheme`, `pipeline-model`, `state-vocabulary`,
+#           `pagination-model`, `carrier-absent`, `failure-classification`), each
+#           flipping ONLY that dimension's observation and asserting
+#           `observed-contradiction` naming that class and no other, so 6/6
+#           dimensions carry a control (NFR-2);
+#         * 3 RECORD/SET RULES: PMUT-020 = M53 (`observed` vs `not-observable`, the
+#           reverse, a dropped `why`, an observation on a gap pair), PMUT-021 = M54
+#           (a differing dimension omitted from the class set), PMUT-022 = M55 (a
+#           padded class whose dimension agrees).
+#       Non-vacuity statement: a
 #       mutation that stops producing its named violation is a BLOCKING finding —
 #       it is never repaired by deleting the mutation or relaxing the expected
-#       clause.
-#     - M12/M13 (dimension divergence, falsified evidence): PHASE 2, the two
-#       adjudication arms of TC-PARITY-005/006, and TC-PARITY-008 runs four
-#       AC-F1-5 dimension mutations plus one AC-F1-6 falsified-evidence mutation
-#       on EVERY run from an arm registry independent of the record's contents, so
-#       neither arm can be deleted while the suite stays green.
+#       clause. The two exclusions are controls in their own right: flipping the
+#       assertion family or a non-carrier step's participation must produce NO
+#       parity violation (it fails the delivered coverage gates instead).
+#     - M12/M13 (adjudication arms): PHASE 2, the two
+#       adjudication arms of TC-PARITY-005/006 plus the dimension mutations above,
+#       and TC-PARITY-008 runs the six per-dimension observation mutations, the
+#       falsified-evidence mutation and the registered six-dimension set on
+#       EVERY run from an arm registry independent of the record's contents, so
+#       neither arm and no dimension can be deleted while the suite stays green.
 #     - TC-DMUT-001..004 (M29): PHASE 4, in `tests/conformance/stateful-double.test.ts`
 #       with typed case literals in
 #       `tests/fixtures/providers/conformance/stateful/invalid-effects.ts`. Each
@@ -299,17 +402,21 @@
 #   `everything is same-as-reference` and `everything is a declared difference`
 #   are both impossible states.
 #
-# TC -> PHASE MAP (63 ids; every id owned by exactly one phase — the phase whose
+# TC -> PHASE MAP (72 ids; every id owned by exactly one phase — the phase whose
 #   commit lands the case together with the declaration that makes it green):
 #   Phase 1 (4):   TC-TAX-001, TC-TAX-002, TC-TAX-009, TC-TAX-010
-#   Phase 2 (25):  TC-PARITY-001..008 (8), TC-PMUT-001..013 (13),
+#   Phase 2 (34):  TC-PARITY-001..008 (8), TC-PMUT-001..022 (22),
 #                  TC-ART-001, TC-ART-002 (2), TC-GATE-003, TC-GATE-004 (2)
 #   Phase 3 (9):   TC-TAX-003, TC-TAX-004, TC-TAX-005, TC-TAX-006, TC-TAX-007,
 #                  TC-TAX-008 (6), TC-TAX-011, TC-TAX-012, TC-TAX-013 (3)
 #   Phase 4 (11):  TC-DOUBLE-001..007 (7), TC-DMUT-001..004 (4)
 #   Phase 5 (8):   TC-REG-001..006 (6), TC-GATE-001, TC-GATE-002 (2)
 #   Phase 6 (6):   TC-FLOOR-001..006
-#   Count: 4 + 25 + 9 + 11 + 8 + 6 = 63.
+#   Count: 4 + 34 + 9 + 11 + 8 + 6 = 72.
+#   The +9 over v1.2 is entirely phase 2 and entirely spec v1.3's six-dimension
+#   basis: PMUT-014..019 (one control per dimension) and PMUT-020..022 (the three
+#   record/set rules). No existing id was repurposed, and the 13 structural ids
+#   are unchanged.
 #   SPLIT-CASE NOTE (the files more than one phase touches; each id still has ONE
 #   owner):
 #   1. `tests/conformance/tracker-taxonomy.test.ts` is CREATED in phase 1 with the
@@ -342,8 +449,9 @@
 #       phase 6 re-runs them as release evidence and declares no file for them.
 #       FLOOR-001..006 stay in phase 6.
 #
-# TEST PLAN §7.6 — THE FOUR OBLIGATIONS THIS PLAN CARRIES VERBATIM (test plan v1.2;
-#   each is restated here in its own terms, and its home in this plan is named):
+# TEST PLAN §7.6 — THE FOUR VERBATIM OBLIGATIONS PLUS THE PIN BINDING (test plan
+#   v1.3; each is restated here in its own terms, and its home in this plan is
+#   named):
 #   (i) "TC-GATE-002 adds the base-free job-set and file-set equality that
 #       ci-topology.validate does not perform (GAP-TP-3), so 'no job added' is
 #       enforced rather than asserted, while its base-dependent half stays in
@@ -352,22 +460,35 @@
 #       GAP-TP-3 block in this header.
 #   (ii) "TC-PARITY-008 and TC-TAX-013 run their posture arms unconditionally from
 #       a mutation registry, so neither adjudication arm nor either family posture
-#       arm can disappear." → PHASE 2 obligation 2.3 and PHASE 3 obligations 3.2
-#       and 3.4.
+#       arm can disappear." → PHASE 2 obligation 2.3 (the six-dimension arm
+#       registry) and PHASE 3 obligations 3.2 and 3.4.
 #   (iii) "the gate's observed-outcome input is a gate-local observation record —
 #       never a field on ConformanceReport, never an artifact field, never
 #       persisted (API-1) — so no phase may add a report property to make a
-#       dimension observable." → PHASE 2 contract and obligation 2.8.
+#       dimension observable." → PHASE 2 contract and obligation 2.8. The record is
+#       one `observed`/`not-observable` observation PER DIMENSION per pair.
 #   (iv) "appending a trap-catalog entry obliges an append-only edit to that
 #       provider's trap suite, so those three files belong in the appending phase's
 #       scope and no phase may describe them as read-only or unedited." → PHASE 1
 #       obligation 1.5 and scope, PHASE 3 obligation 3.5 and scope, FLOOR-001, and
 #       the TRAP-CATALOG APPEND-ONLY RULE in this header.
+#   (v) §7.6's editable-targets row also names
+#       `tests/fixtures/pins/trap-names.json` "(baseline authored by the appending
+#       phase)". The baseline is therefore authored and declared in PHASE 1 (the
+#       appending phase), declared again in PHASE 3 (which edits the governed
+#       suites and must prove it did not disturb delivered names), read by
+#       TC-FLOOR-001 in PHASE 6, and NEVER regenerated in this change. §7.6 lists
+#       it beside the parity fixtures because those fixtures share a directory
+#       lineage, not because phase 2 produces it: phase 2 declares it for nothing
+#       and reads it for nothing.
 #
 # AC OWNERSHIP (34/34; exactly one owning phase each; every TC cited for an AC
 #   lives in that AC's owning phase, so no AC is satisfied across a phase
-#   boundary):#   Phase 1 (3):  AC-F2-1 (TAX-001/002), AC-F2-8 (TAX-009), AC-F2-9 (TAX-010)
-#   Phase 2 (10): AC-F1-1..AC-F1-8 (PARITY/PMUT-001..013/ART), AC-F5-2
+#   boundary):
+#   Phase 1 (3):  AC-F2-1 (TAX-001/002), AC-F2-8 (TAX-009), AC-F2-9 (TAX-010)
+#   Phase 2 (10): AC-F1-1..AC-F1-8 (PARITY-001..008, PMUT-001..022, ART-001/002 —
+#                 with AC-F1-5 also carried by PMUT-014..020 and AC-F1-6 by
+#                 PMUT-021/022 under spec v1.3's six-dimension basis), AC-F5-2
 #                 (GATE-003), AC-F5-3 (GATE-004)
 #   Phase 3 (8):  AC-F2-2..AC-F2-7 (TAX-003..008), AC-F2-10 (TAX-011/013),
 #                 AC-F2-11 (TAX-012)
@@ -565,15 +686,31 @@
 #       against it. The pm-notes cross-reference-hygiene note is therefore
 #       dispositioned as "unchanged here, follow-up owned outside this change" —
 #       not as a phase-7 task that cannot be staged.
+#   (i) RESOLVED UPSTREAM (spec v1.3 F-1/DM-1/API-1, TDR-0036 §5.1–§5.4): the
+#       four-dimension basis with a many-to-one class mapping is GONE. The plan's
+#       v1.2 phase-2 contract, arm registry and mutation block repeated it; this
+#       revision carries the six dimensions with one class and one oracle each,
+#       the `observed`/`not-observable` record, and the explicit non-dimensions.
+#       The persistent DoR finding across iterations 1 and 2 is closed by the
+#       basis itself, not by a wording patch: no class has two candidate ids and no
+#       dimension is uncontrolled.
+#   (j) THE 18-CELL TOTALS WERE WRONG IN v1.2 AND ARE NOW 9/7/2. The table and the
+#       fixed rows always yielded 9 covered / 7 recorded-difference / 2
+#       gap-backed (GitHub 6/0/0, GitLab 1/4/1, Jira 2/3/1); five places said
+#       10/6/2. Corrected here in the phase-3 title, the contract, the arm
+#       invariant, obligation 3.2/3.4 and the gate expectation, and mirrored in
+#       test plan v1.3 so neither artifact asserts counts the other contradicts.
 #
 # DOC RECONCILIATION HANDOFF (lifecycle phase 7, @doc-syncer; the FILES are
 #   declared by phase 6 for STAGING ONLY — this plan authors none of them):
 #   - doc/spec/features/feature-adapter-conformance.md — add the parity matrix and
 #     its gate (reference designation, registerId-only cell vocabulary, per-entry
-#     class set with per-class evidence, the four-dimension basis with each
-#     dimension's observation source, the derived columns, the nine clause ids, the
-#     gate-local observation record), the tracker taxonomy and the 18-cell family
-#     accounting (with the pagination postures stated as delivered facts), the
+#     class set with per-class evidence, the SIX-dimension basis with each
+#     dimension's oracle and observation source, the
+#     `observed`/`not-observable` rule, the explicit non-dimensions, the derived
+#     columns, the nine clause ids, the gate-local observation record), the tracker
+#     taxonomy and the 18-cell family
+#     accounting (9/7/2, with the pagination postures stated as delivered facts), the
 #     simulated double and its declared state/five-effect contract with the
 #     stateless default preserved, the registration-only participation contract with
 #     both proofs and the enumerated identity-construct allowlist (including the
@@ -611,7 +748,9 @@ tier:
     - "The delivery.conformance.v1 schema, field set, closed statuses, skip kinds, bounds, or serialized bytes gain a parity field or a parity verdict (NG-6, §24.3(4), AC-F1-8, TC-ART-001)"
     - "A workflow file, job, trigger, permission, or upload changes, or the parity gate stops being discovered by pnpm test inside the existing ts-test job (NG-7, §24.3(5), AC-F5-1, TC-GATE-001/002)"
     - "The five non-reference supported intersections are adjudicated without an evidence-bearing record, or one is adjudicated before the replay that decides it, or (gitlab, read-pipeline-run) is recorded without pagination-model in its class set (GAP-TP-1, DM-4, AC-F1-4/AC-F1-6, TC-PARITY-007/008)"
-    - "A register entry lacks a non-empty class set, rationale, per-class resolving evidence, or adjudication; a class's evidence shows reference-equal behavior on that class's dimension; a cell carries a difference class; or two entries name one (adapter, operation) (DM-1/DM-2, AC-F1-4/AC-F1-6, TC-PARITY-004/006, TC-PMUT-012/013)"
+    - "A register entry lacks a non-empty class set, rationale, per-class resolving evidence, or adjudication; a class's evidence shows reference-equal behavior on that class's dimension; a cell carries a difference class; the class set omits a differing dimension or pads a non-differing one; or two entries name one (adapter, operation) (DM-1/DM-2, AC-F1-4/AC-F1-6, TC-PARITY-004/006, TC-PMUT-012/013/021/022)"
+    - "The gate compares fewer or more than SIX dimensions, maps two classes onto one dimension, treats assertion-family outcome or non-carrier step participation as a parity dimension, or lets a dimension lack its own observation mutation (DM-1, API-1, TDR-0036 §5, NFR-2, TC-PARITY-005, TC-PMUT-014..019)"
+    - "`not-observable` is treated as agreement by default, an `observed` against a `not-observable` is not recorded as a difference, or a declared-gap pair carries an observation (API-1, AC-F1-5, TC-PMUT-020)"
     - "The gate reads a parity dimension from a ConformanceReport property or a delivery.conformance.v1 field instead of the gate-local observation record, or a parity dimension degrades to undefined === undefined (API-1, AC-F1-5, TC-PARITY-005/ART-001)"
     - "A gate clause or an adjudication arm loses its falsifying mutation, or a mutation stops producing its named violation (NFR-2, test plan §7.5)"
     - "A status-less adapter is credited with a status-bearing class it cannot produce, a recorded difference is dropped, or the covered, recorded-difference or gap-backed arm executes zero times in a run (AC-F2-2/3/5, DM-4, TC-TAX-003/004/006/013)"
@@ -624,7 +763,7 @@ tier:
     - "The shipped registry gains or loses a registration, the control adapter enters CONFORMANCE_ADAPTERS, or an adapter identity CONSTRUCT appears outside the enumerated permit list (AC-F4-3/AC-F4-4, DM-6, TC-REG-003/004)"
     - "The parity module authors a provider-name column key instead of deriving its columns from CONFORMANCE_ADAPTERS (DM-6, TDR-0039 §2, AC-F4-4, TC-REG-004)"
     - "The identity-construct allowlist grows beyond the enumerated permits, gains a wildcard or prefix entry, or the runner's pinned five comparisons become six (NFR-10, §24.3(14), TC-REG-004)"
-    - "A trap-catalog append lands without its append-only trap-suite assertion, or a delivered trap assertion is removed, renamed, relaxed, or reordered, or the delivered name list stops being a prefix (TC-FLOOR-001, §7.3)"
+    - "A trap-catalog append lands without its append-only trap-suite assertion, a delivered trap assertion is removed, renamed, relaxed, or reordered, the delivered name list stops being a prefix of the extended array, or the frozen baseline `tests/fixtures/pins/trap-names.json` is regenerated to match an edited suite (TC-FLOOR-001, §7.3)"
     - "A pinned structural surface is relaxed instead of updated exactly: a wildcard allowance, a deleted assertion, a narrowed inventory, or a new suite placed under an ignored path (NFR-8, RSK-9, TC-FLOOR-004)"
     - "A delivered suite is made green by deleting or renaming an assertion, or a new case is skipped or environment-gated (test plan §3.4 no-skip rule, TC-FLOOR-001)"
     - "Credential material reaches a gate diagnostic, double state, fixture, or report; a fixture host stops being example-only; or the secret-read allowlist gains an entry (NFR-9, AC-F5-2, TC-FLOOR-005)"
@@ -735,28 +874,35 @@ phases:
   #       is out of scope and unchanged).
   #   1.5 Author the family stimuli that have no delivered equivalent; append the
   #       four-field catalog entries that name them; keep the delivered entries
-  #       byte-frozen. THEN extend the three provider trap suites APPEND-ONLY: a
-  #       new assertion per appended entry and the exact ordered name array
-  #       extended by exactly the appended names, delivered names preserved as a
-  #       prefix. A family whose posture will be `recorded-difference` (the
+  #       byte-frozen. A family whose posture will be `recorded-difference` (the
   #       status-less GitLab/Jira cells phase 3 accounts) still needs its stimulus
   #       fixture here — the evidence is phase 2's, the stimulus is this phase's.
-  #   1.6 Stage the four decision records and, conditionally, the decision index
+  #   1.6 CAPTURE THE FROZEN BASELINE FIRST, THEN APPEND (order is binding):
+  #       before touching any suite, write `tests/fixtures/pins/trap-names.json`
+  #       with one ordered trap-name array per provider, read from the DELIVERED
+  #       suites as they stand. It is a golden of the pre-append state, committed
+  #       in this phase and NEVER REGENERATED in this change. Then extend the three
+  #       provider trap suites APPEND-ONLY: a new assertion per appended entry and
+  #       the exact ordered name array extended by exactly the appended names, with
+  #       the pinned delivered names a preserved prefix. Correcting the pin to match
+  #       an edited suite is the failure TC-FLOOR-001 names by file.
+  #   1.7 Stage the four decision records and, conditionally, the decision index
   #       (see COMMIT-BOUNDARY REALITY). Nothing else outside the change surface.
   #
   # Acceptance: AC-F2-1 (TC-TAX-001, TC-TAX-002), AC-F2-8 (TC-TAX-009),
   #   AC-F2-9 (TC-TAX-010). TAX-003..008 and TAX-011..013 are NOT claimed here:
   #   their posture comes from phase 3's accounting, whose recorded-difference
   #   cells resolve to phase 2's register. TC-FLOOR-001's TRAP HALF is authored
-  #   here (the append-only extension and its prefix property) while the case is
-  #   OWNED by phase 6, which is the only phase that can range over the assembled
-  #   change.
+  #   here (the frozen baseline, the append-only extension and its prefix property)
+  #   while the case is OWNED by phase 6, which is the only phase that can range
+  #   over the assembled change.
   #
   # Gate (expected signal: exit 0; four class ids and six family ids compared as
   # exact sets, zero `tracker.` hits outside the one module, the two planted
-  # literals failing by file+construct, the out-of-scope core copy passing, EVERY
+  # literals failing by file+construct, the out-of-scope core copy passing, the pin
+  # file present with its three frozen arrays and its bytes never rewritten, EVERY
   # appended catalog entry replayed green by its provider suite through a NEW
-  # assertion, each suite's exact ordered name array equal to the delivered names
+  # assertion, each suite's exact ordered name array equal to the PINNED names
   # followed by exactly the appended names, and the inventory/allowance equality
   # holding in both directions):
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance/tracker-taxonomy.test.ts
@@ -795,6 +941,9 @@ phases:
         - tests/behaviour/providers/github-trap.test.ts
         - tests/behaviour/providers/gitlab-trap.test.ts
         - tests/behaviour/providers/jira-trap.test.ts
+        # The FROZEN BASELINE for the prefix assertion, captured from the delivered
+        # suites BEFORE the append and never regenerated in this change.
+        - tests/fixtures/pins/trap-names.json
         # Untracked at plan time (COMMIT-BOUNDARY REALITY).
         - doc/decisions/TDR-0036-cross-adapter-parity-matrix-declared-difference-register.md
         - doc/decisions/TDR-0037-tracker-error-taxonomy-delivered-identities.md
@@ -819,15 +968,15 @@ phases:
 
   # ---------------------------------------------------------------------------
   # Phase 2 — Parity matrix, declared-difference register, parity gate over the
-  # gate-local observation record, the five adjudications, and artifact invariance
-  # (F-1, F-5 diagnostics).
+  # gate-local SIX-dimension observation record, the five adjudications, and
+  # artifact invariance (F-1, F-5 diagnostics).
   #
   # Goal: switching trackers cannot change the lifecycle contract without a gate
   # failing. One declared matrix relates every registered adapter to the reference
   # adapter across the nine closed operations; every divergence is recorded with the
-  # FULL set of dimensions it spans, evidenced per class, and adjudicated; the gate
-  # is a pure validation over matrix + capability declarations + register + the
-  # observation record the case composes.
+  # FULL set of the six dimensions it spans, evidenced per class, and adjudicated;
+  # the gate is a pure validation over matrix + capability declarations + register +
+  # the observation record the case composes.
   #
   # Contract (F-1, DM-1, DM-2, DM-7, API-1; TDR-0036 is authority):
   #   - Matrix ROWS are exactly `ADAPTER_OPERATIONS` and COLUMNS are exactly the
@@ -846,37 +995,87 @@ phases:
   #     `(adapter, operation)`; fields `differenceId, adapter, operation,
   #     differenceClasses, rationale, evidence, adjudicatedBy`.
   #     `differenceClasses` is a NON-EMPTY SET drawn from the closed six-class
-  #     vocabulary — `identity-scheme`, `pipeline-model`, `state-vocabulary`,
-  #     `pagination-model`, `carrier-absent`, `failure-classification` — each class
-  #     naming exactly ONE of the four parity dimensions (identity/pipeline/state →
-  #     assertion-family outcome; pagination → absence and truncation; carrier →
-  #     step participation; failure → tracker error class). An empty set, an
-  #     out-of-vocabulary class, or a class naming no dimension fails.
+  #     vocabulary, and EACH CLASS IS EXACTLY ONE DIMENSION — the class set and the
+  #     dimension set are ONE six-member closed set, 1:1, with no many-to-one
+  #     mapping. The set names EXACTLY the differing dimensions: no omission (an
+  #     unrecorded differing dimension fails) and no padding (a class whose
+  #     dimension agrees fails). An empty set, an out-of-vocabulary class, or a
+  #     class outside the closed set is a `difference-class` failure.
   #     `evidence` is PER CLASS: a resolving committed fixture for each class, and
-  #     a class whose evidence shows reference-equal behaviour ON ITS OWN dimension
-  #     fails naming that class. Adjudication is per ENTRY, not per class.
+  #     that fixture must reproduce THAT class's dimension observation under its
+  #     oracle; a class whose evidence shows agreement on its dimension fails
+  #     naming the class. Adjudication is per ENTRY, not per class.
   #   - Bidirectional bijection over the entry: a declared-difference cell whose
   #     registerId resolves to no entry fails, an entry naming no cell fails, and
   #     two entries for one pair fail.
-  #   - THE GATE'S OBSERVED-OUTCOME INPUT IS A GATE-LOCAL OBSERVATION RECORD,
-  #     composed by the CASE from three inputs and never carried by the report:
-  #     (i) the conformance report — step participation from step statuses plus
-  #         skipKind/skipReason per provider and operation;
-  #     (ii) the flow registry — `assertionFamily` is NOT on
-  #         `ConformanceStepResult`, so the record joins report `stepId`/`status` to
-  #         `CONFORMANCE_FLOWS` BY `stepId`; a missing join fails the composition
-  #         naming the step, so the dimension can never degrade to
-  #         `undefined === undefined`;
-  #     (iii) committed declared absence-and-truncation evidence per
-  #         (adapter, operation), plus the API-2 trap-family classification for the
-  #         tracker-error dimension.
-  #     It is an INPUT ONLY: never a `ConformanceReport` property, never a
+  #   - THE PARITY BASIS IS SIX DIMENSIONS, ONE CLASS EACH, EACH WITH ONE OFFLINE
+  #     ORACLE (TDR-0036 §5.1; the dimension id IS the class id):
+  #       `identity-scheme`        the normalized entity identity FORM on the
+  #                                declared tenant — provider numeric id,
+  #                                project-scoped `iid`, issue `key`,
+  #                                `<commitSha>:<runId>` item identity, bare provider
+  #                                id. The value is diagnostic; the SCHEME is the
+  #                                predicate.
+  #       `pipeline-model`         one `PipelineRun` item's GRANULARITY UNIT and
+  #                                per-item COMPOSITION (one check run vs one
+  #                                pipeline; jobs synthesised per check run vs the
+  #                                provider's own job list). Count is diagnostic,
+  #                                never equality.
+  #       `state-vocabulary`       the operation's state RESOLUTION MECHANISM and
+  #                                outcome for a declared native value — the signal
+  #                                read (native status plus exact-case label tokens
+  #                                with terminal-first precedence, vs native status
+  #                                alone, vs a review-state table), the refusal rule,
+  #                                and the reachable aliases. Row spelling is never
+  #                                compared.
+  #       `pagination-model`       the read's DECLARED PAGE BOUND (or none declared)
+  #                                and WHETHER A PAGE COUNT IS REPORTED. The numeric
+  #                                bound and count are diagnostic, never equality.
+  #       `carrier-absent`         the adapter's declared carrier arrays plus the
+  #                                carrier step's PARTICIPATION (executed, or skipped
+  #                                `capability-absent` / `no-declared-carrier`).
+  #       `failure-classification` the API-2 class resolved from a trap-family
+  #                                stimulus on the family's declared operation
+  #                                (identity plus status presence and value), never
+  #                                prose.
+  #     Parity for a pair means all six observations AGREE. There is no byte
+  #     equality of normalized views and no extra dimension.
+  #   - THE GATE'S OBSERVED-OUTCOME INPUT IS A GATE-LOCAL OBSERVATION RECORD: ONE
+  #     observation PER DIMENSION PER `(provider, operation)` PAIR, each either
+  #     `{state: "observed", value}` or `{state: "not-observable", why}`; a
+  #     declared-gap pair has NO observation. It is composed by the CASE from the
+  #     report, the flow registry and declared evidence, and never carried by the
+  #     report:
+  #     (i) identity form, pipeline unit/composition and state mechanism come from
+  #         the REPLAYED NORMALIZED RESULT on the pair's declared tenant;
+  #     (ii) bound-and-count PRESENCE comes from the read's declared metadata and
+  #          the read's own report;
+  #     (iii) the carrier declaration comes from the capability declaration and the
+  #           carrier step's participation from the report;
+  #     (iv) the class comes from API-2's classification of a trap-family stimulus.
+  #     `not-observable` IS NOT AGREEMENT BY DEFAULT: two `not-observable`
+  #     observations agree only when BOTH report it, and `observed` against
+  #     `not-observable` IS A DIFFERENCE that must be recorded (PMUT-020).
+  #     The record is an INPUT ONLY: never a `ConformanceReport` property, never a
   #     `delivery.conformance.v1` field, never persisted. A phase that makes a
   #     dimension observable by adding a report field has broken AC-F1-8.
+  #   - ASSERTION-FAMILY OUTCOME AND NON-CARRIER STEP PARTICIPATION ARE NOT
+  #     DIMENSIONS (TDR-0036 §5.4). The assertion family is declared on the shared
+  #     registry step, so it is the SAME value in every column; on the mock tier a
+  #     step is skipped only for a declared unsupported operation, the live-only
+  #     deferral, or a missing declared carrier. A divergence there is a DEFECT, not
+  #     a provider-model fact: a `declared-gap` skip on a supported operation fails
+  #     clause (a) (`declaration-agreement`), and the runtime coverage gate fails a
+  #     supported operation with no executed step or an unexercised declared
+  #     carrier. No phase may reintroduce either as a dimension, and TC-PARITY-005
+  #     asserts that flipping either produces NO parity violation.
   #   - Violations are RECORDS `{provider, operation, clause, dimensions, detail,
   #     expected, received, evidence}`, ordered deterministically, with at most
   #     1024 detail characters, scalar-only expected/received, and a resolving
-  #     evidence reference. `clause` comes from exactly NINE closed ids:
+  #     evidence reference. On `observed-contradiction`, `dimensions` names EXACTLY
+  #     the implicated class id(s) — one id per differing dimension, and a pair
+  #     differing on several names each of them in closed-set order. `clause` comes
+  #     from exactly NINE closed ids:
   #     `declaration-agreement`, `observed-contradiction`, `register-bijection`,
   #     `column-registration`, `cell-set`, `reference-purity`, `cell-vocabulary`,
   #     `difference-class`, `evidence-reproduction`. Any other id is an engine
@@ -888,13 +1087,15 @@ phases:
   #   owns all five — GitLab `read-delivery-request`, GitLab `read-pipeline-run`,
   #   Jira `read-work-item`, Jira `write-work-item`, Jira `transition-work-item`.
   #   Evidence homes: `.../parity/evidence/` (one document per
-  #   `(differenceId, class)`), `.../parity/observation-record.json` (the declared
-  #   absence-and-truncation facts), `.../parity/adjudication.json` (the record).
+  #   `(differenceId, class)`), `.../parity/observation-record.json` (one
+  #   `observed`/`not-observable` observation per dimension per pair — the gate's
+  #   ONLY observation source), `.../parity/adjudication.json` (the record).
   #   NO VERDICT IS PRE-DECIDED — see the header. ONE spec-fixed exception:
   #   `(gitlab, read-pipeline-run)` MUST be a declared difference whose class set
   #   contains `pagination-model`, because DM-4 defines GitLab's
-  #   `pagination-truncation` posture through it. The other four are adjudicated
-  #   from evidence.
+  #   `pagination-truncation` posture through it; that entry may legitimately carry
+  #   further classes, and the exact set is what the observed dimensions yield. The
+  #   other four are adjudicated from evidence.
   #   The state-vocabulary class is deliberately narrow: a difference is recorded
   #   only when the adapter's DECLARED MAPPING cannot express the reference
   #   behaviour (a different mechanism for the same alias, or a state the map has
@@ -910,29 +1111,39 @@ phases:
   #       BY DERIVATION and is inside DM-6's seven-module bound set.
   #   2.2 Adjudicate the five intersections from replay evidence and write the
   #       evidence documents, `observation-record.json` and `adjudication.json`:
-  #       provider, operation, chosen posture, the four dimension observations, and
+  #       provider, operation, chosen posture, the SIX dimension observations, and
   #       one evidence/adjudication reference PER CLASS the entry declares. Author
   #       the `failure-classification` register entries the status-less adapters
   #       need (the class sits in the entry's set, with `httpStatus` ABSENCE as the
   #       deciding structured field — §24.4: delivered code, not a fixture choice).
   #   2.3 Author `tests/conformance/parity-gate.test.ts`: PARITY-001..008,
-  #       PMUT-001..013, GATE-004, plus GATE-003's violation-record assertions
+  #       PMUT-001..022, GATE-004, plus GATE-003's violation-record assertions
   #       over the induced violation set (its diagnostics/secret assertions live in
   #       obligation 2.4's file, so GATE-003 has two sites and one owner). Every
   #       mutation asserts its NAMED
-  #       violation AND a paired clean pass; PARITY-004 asserts the class set as a
-  #       SET with a cardinality floor and per-class evidence, and its type probe
-  #       proves a cell cannot carry a class; PARITY-005 composes the observation
-  #       record (report + registry by stepId + declared evidence) and its four
-  #       mutations inject a differing OBSERVATION, never a report field;
-  #       PARITY-007 derives the intersection
-  #       set from the contracts and the matrix (never a hard-coded name list),
-  #       compares it as a SET against the record, and asserts the
-  #       `(gitlab, read-pipeline-run)` `pagination-model` link; PARITY-008 runs
-  #       four AC-F1-5
-  #       dimension mutations plus one AC-F1-6 falsified-evidence mutation on
-  #       every run from an arm registry independent of the record's contents and
-  #       reports the executed arm per intersection in the test name.
+  #       violation AND a paired clean pass. Per case:
+  #         PARITY-004 asserts the class set as a SET with a cardinality floor,
+  #           exactly-one-dimension-per-class, and per-class evidence; its type
+  #           probe proves a cell cannot carry a class.
+  #         PARITY-005 composes the observation record (report + registry + declared
+  #           evidence), asserts each dimension is read from its OWN source, runs
+  #           SIX observation mutations — PMUT-014..019, one per dimension, each
+  #           flipping only that dimension — plus a two-dimension mutation that must
+  #           name both ids in closed-set order and no third, and asserts that
+  #           flipping the assertion family or a non-carrier step's participation
+  #           produces NO parity violation.
+  #         PARITY-006 asserts per-class evidence reproduction under each dimension's
+  #           oracle and the exact class set (omission = PMUT-021, padding =
+  #           PMUT-022).
+  #         PARITY-007 derives the intersection set from the contracts and the matrix
+  #           (never a hard-coded name list), compares it as a SET against the
+  #           record, asserts each entry's class set equals the differing-observation
+  #           set, and asserts the `(gitlab, read-pipeline-run)` `pagination-model`
+  #           link.
+  #         PARITY-008 runs the adjudication arms AND the registered six-dimension
+  #           mutation set on EVERY run from an arm registry independent of the
+  #           record's contents, reporting the executed arm and executed dimensions
+  #           in the test name.
   #   2.4 Create `tests/checks/parity-gate-wiring.test.ts` with GATE-003's
   #       diagnostics half only (the wiring chain is phase 5's GATE-001): every
   #       violation over a violation set spanning all nine clauses carries non-empty
@@ -946,10 +1157,12 @@ phases:
   #   2.5 Author the typed mutation builders in
   #       `tests/fixtures/providers/conformance/parity/mutations.ts` — typed
   #       literal builders over the production shapes, so a mutation that stops
-  #       being a mutation is a compile error and not a passing no-op. PMUT-012
-  #       (cell carrying a class) and PMUT-013 (empty class set) live here with
-  #       their variants (a sibling class on a `gap` cell; a missing/null/empty
-  #       string set).
+  #       being a mutation is a compile error and not a passing no-op. The file
+  #       carries the 13 STRUCTURAL (PMUT-001..013), the 6 DIMENSION
+  #       (PMUT-014..019, built on the `same-as-reference` observation baseline) and
+  #       the 3 RECORD/SET-RULE (PMUT-020..022) mutations, with the variants the
+  #       test plan names (a sibling class on a `gap` cell; a missing/null/empty
+  #       string set; a dropped `why`; an observation on a gap pair).
   #   2.6 Create `tests/types/conformance-participation.type-test.ts` with the
   #       CELL/ENTRY half only: a free-text cell value, a `differenceClass` on a
   #       cell, and a seventh class are not representable. Phase 5 extends the same
@@ -964,22 +1177,30 @@ phases:
   #       (`tests/structure/inventory.json`, `EXECUTABLE_ALLOWANCES`).
   #       `packages/testkit/src/conformance/artifact.ts` is NOT edited: AC-F1-8
   #       and §24.3(4) make it a read-only control. The `ConformanceReport` shape is
-  #       likewise untouched: no observation, assertion-family, or
-  #       truncation field is added to it.
+  #       likewise untouched: no observation, observation-state, identity-scheme,
+  #       pipeline-model, state-vocabulary, pagination, carrier, assertion-family or
+  #       truncation field is added to it, and no dimension may be made observable
+  #       by widening the report.
   #
   # Acceptance: AC-F1-1 (PARITY-001/007), AC-F1-2 (002), AC-F1-3 (003),
-  #   AC-F1-4 (004), AC-F1-5 (005/008), AC-F1-6 (006/008),
-  #   AC-F1-7 (PMUT-001..013), AC-F1-8 (ART-001/002), AC-F5-2 (GATE-003),
+  #   AC-F1-4 (004), AC-F1-5 (005/008 + PMUT-014..020), AC-F1-6 (006/008 +
+  #   PMUT-021/022), AC-F1-7 (PMUT-001..022 — 22 parity mutations: 13 structural,
+  #   6 dimension, 3 record/set rule), AC-F1-8 (ART-001/002), AC-F5-2 (GATE-003),
   #   AC-F5-3 (GATE-004).
   #
   # Gate (expected signal: exit 0; the unmutated observation yields `[]`, the matrix
   # cell multiset is exactly 27 with set equality both directions, the columns
   # equal the registration-derived set, the reference column is nine
   # `same-as-reference` cells with zero register entries, every entry's class set
-  # is non-empty with per-class evidence, every intersection's executed arm is
-  # printed in the test name, every mutation names
-  # provider/operation/clause (PMUT-012 `cell-vocabulary`, PMUT-013
-  # `difference-class`), the artifact key set is exactly eleven and its
+  # is non-empty, exactly one dimension per class, and per-class evidenced, every
+  # intersection's executed arm and every executed dimension are printed in the
+  # test name, each of the SIX dimensions has a mutation that flips only it and
+  # names only its class, `observed` vs `not-observable` is recorded as a
+  # difference, the two non-dimensions produce no parity violation, every mutation
+  # names provider/operation/clause (PMUT-012 `cell-vocabulary`, PMUT-013
+  # `difference-class`, PMUT-020 `observed-contradiction`, PMUT-021
+  # `observed-contradiction`, PMUT-022 `evidence-reproduction`), the artifact key
+  # set is exactly eleven and its
   # bytes contain no parity vocabulary, and the report object passed to the gate
   # has no observation field):
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance/parity-gate.test.ts
@@ -991,7 +1212,7 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                     (G10, binding)
   # ---------------------------------------------------------------------------
   - id: 2
-    title: "Declared parity matrix over the nine closed operations with registration-derived columns, an adjudicated difference register with per-class evidence, the pure clause-tagged record gate over the gate-local observation record, and artifact invariance"
+    title: "Declared parity matrix over the nine closed operations with registration-derived columns, an adjudicated difference register with per-class evidence over the SIX-dimension basis, the pure clause-tagged record gate over the gate-local six-dimension observation record, and artifact invariance"
     kind: delivery
     summary: "feat(GH-339): parity matrix, difference register and parity gate"
     scope:
@@ -1074,7 +1295,17 @@ phases:
   #     adapter and family.
   #   - THE DELIVERED 18-CELL SQUARE IS EXPECTED DATA, asserted as a table so a
   #     silent posture change is a named failure rather than a re-read of the
-  #     accounting: 10 `covered`, 6 `recorded-difference`, 2 `gap-backed`.
+  #     accounting: 9 `covered`, 7 `recorded-difference`, 2 `gap-backed` (= 18).
+  #     Counted ROW BY ROW, whichever axis you read it on: GitHub 6 covered / 0
+  #     recorded / 0 gap-backed; GitLab 1 covered + 4 recorded-difference + 1
+  #     gap-backed; Jira 2 covered + 3 recorded-difference + 1 gap-backed. The
+  #     seven recorded cells are the six status-less `failure-classification` cells
+  #     (GitLab and Jira × auth-shape, rate-limit, payload-shape) plus GitLab's
+  #     `pagination-model` cell; the nine covered cells are GitHub's six, GitLab's
+  #     `transport-failure`, and Jira's `transport-failure` and
+  #     `workflow-state-mismatch`. The totals are asserted BESIDE the cells, so a
+  #     posture move that keeps the square total but shifts the mix fails naming
+  #     adapter, family and the changed posture.
   #     The fixed rows (the rest is delivery-decided within each adapter's
   #     supported set, §24.4):
   #       pagination-truncation: GitHub `covered` (declared bound + reported page
@@ -1098,7 +1329,9 @@ phases:
   #   - Suite-level arm invariant over EVERY posture kind: at least one `covered`
   #     cell, at least one `recorded-difference` cell and at least one
   #     `gap-backed` encounter execute on EVERY run, asserted from an
-  #     arm-mutation registry independent of the accounting's contents. A run with
+  #     arm-mutation registry independent of the accounting's contents; the three
+  #     counts are ALSO read from the accounting and asserted equal to 9 / 7 / 2, so
+  #     a drifting mix fails naming the posture and both numbers. A run with
   #     zero executions of any arm fails naming the missing arm. M41 (declare
   #     `covered` on a status-less adapter), M42 (record the unreachable class) and
   #     the vacuous-`covered` mutation are the falsifying controls.
@@ -1114,7 +1347,7 @@ phases:
   #       under `tests/fixtures` (a permitted identity home) so the taxonomy table
   #       stays provider-free. Provenance marker, example-only hosts, sanitized.
   #   3.2 Author `tests/structure/conformance-family-accounting.test.ts`:
-  #       TAX-011 (18-cell set equality, the EXPECTED 10/6/2 table above,
+  #       TAX-011 (18-cell set equality, the EXPECTED 9/7/2 table above,
   #       per-posture field assertions stated against the family's operation, the
   #       mutual exclusion, the vacuous-`covered` failure, the unreachable-class
   #       contradiction, the unexplained-`recorded-difference` failure, and 18
@@ -1144,14 +1377,19 @@ phases:
   #       reported OUTSIDE the taxonomy in both arms.
   #   3.4 Author `tests/conformance/family-classification.test.ts`: TAX-013 —
   #       one replay per non-`gap-backed` posture through the production clients,
-  #       the declared-outcome comparison, and the suite-level arm invariant with
-  #       its three falsifying controls (covered, recorded-difference, gap-backed).
+  #       the declared-outcome comparison, the three arm counts read from the
+  #       accounting and asserted equal to 9 / 7 / 2, and the suite-level arm
+  #       invariant with its three falsifying controls (covered,
+  #       recorded-difference, gap-backed).
   #   3.5 Correct a phase-1 stimulus or catalog entry ONLY where the replay shows it
   #       does not produce its declared outcome: that is a FIXTURE correction, not a
   #       requirement change, and the requirement (class, family, posture) never
   #       moves to make a run green. A corrected catalog entry keeps its four-field
   #       shape, and its provider trap suite assertion is corrected APPEND-ONLY
-  #       (never a delivered assertion). A family whose posture is `covered` but
+  #       (never a delivered assertion). THE FROZEN BASELINE IS READ, NEVER EDITED:
+  #       every correction is checked against `tests/fixtures/pins/trap-names.json`,
+  #       which this phase declares (read-pinned) and must leave byte-identical. A
+  #       family whose posture is `covered` but
   #       whose fixture is absent, or whose operation lacks the observed structure,
   #       fails TAX-011 by name and never degrades to `gap-backed` (GAP-TP-8).
   #
@@ -1160,11 +1398,14 @@ phases:
   #   AC-F2-10 (TAX-011/013), AC-F2-11 (TAX-012).
   #
   # Gate (expected signal: exit 0; 18 accounting cells with set equality AGAINST
-  # the expected 10/6/2 table, the wired catalog subset equal in both directions, a
+  # the expected 9/7/2 table and the row-by-row counts behind it (GitHub 6/0/0,
+  # GitLab 1/4/1, Jira 2/3/1), the wired catalog subset equal in both directions, a
   # NON-EMPTY wired subset, every non-gap posture replayed with its declared
   # outcome, the covered, recorded-difference and gap-backed arms all executed and
-  # reported, a status-less adapter's recorded class equal to the observed one,
-  # GitLab's pagination cell rendered `pagination-model` and Jira's gap-backed with
+  # reported with their counts equal to 9/7/2, a status-less adapter's recorded
+  # class equal to the observed one, the trap-name pin byte-identical to its phase-1
+  # commit, GitLab's pagination cell rendered `pagination-model` and Jira's
+  # gap-backed with
   # its exact `provider-unsupported` reason, and zero `test.skip`):
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure/conformance-family-accounting.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance/family-classification.test.ts
@@ -1176,7 +1417,7 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                     (G10, binding)
   # ---------------------------------------------------------------------------
   - id: 3
-    title: "Per-adapter x per-family accounting as the expected 18-cell square (10 covered, 6 recorded-difference, 2 gap-backed) and offline replay classification with every posture arm executed on every run"
+    title: "Per-adapter x per-family accounting as the expected 18-cell square (9 covered, 7 recorded-difference, 2 gap-backed) and offline replay classification with every posture arm executed on every run"
     kind: delivery
     summary: "feat(GH-339): family accounting and offline classification replay"
     scope:
@@ -1198,6 +1439,10 @@ phases:
         - tests/behaviour/providers/github-trap.test.ts
         - tests/behaviour/providers/gitlab-trap.test.ts
         - tests/behaviour/providers/jira-trap.test.ts
+        # READ-PINNED declaration (never edited here; see the pin clause in the
+        # SCOPE DECLARATION RULE): this phase edits the three suites the frozen
+        # baseline governs, so it must prove the delivered names were not disturbed.
+        - tests/fixtures/pins/trap-names.json
       folders:
         - tests/fixtures/providers/github/families
         - tests/fixtures/providers/gitlab/families
@@ -1542,10 +1787,13 @@ phases:
   #     and workflow suites stay green with unchanged check-name inventories;
   #     3 flows / 14 steps / three skip kinds unchanged; AND the three provider trap
   #     suites are green with their APPEND-ONLY extension — every appended entry
-  #     asserting, the exact ordered name array equal to the delivered names
-  #     followed by exactly the appended names, and the delivered names a PREFIX.
+  #     asserting, each suite's exact ordered name array STARTING WITH the frozen
+  #     baseline in `tests/fixtures/pins/trap-names.json` and followed by exactly
+  #     the appended names, the pin's bytes unchanged (no silent regeneration), and
+  #     every pre-existing name still carrying a registered assertion.
   #     This is the case that makes "no delivered assertion was removed, renamed,
-  #     relaxed, or reordered" mechanical rather than a promise.
+  #     relaxed, or reordered" mechanical rather than a promise, and the pin is the
+  #     tree-invariant baseline that keeps it from being circular.
   #   - FLOOR-002: the three capability postures are SET-and-REASON equal to the
   #     delivered ones — GitHub nine supported and zero gaps; GitLab
   #     `read-delivery-request` + `read-pipeline-run` supported with seven
