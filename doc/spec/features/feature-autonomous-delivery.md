@@ -27,6 +27,15 @@ Autonomous Delivery is the unattended neighborhood of the delivery lifecycle: it
 
 > **Canonical detail lives in the guide.** The full modes table, component-responsibility matrix, mermaid diagrams, recovery semantics, configuration, and troubleshooting are in [doc/guides/delivery-modes.md](../../guides/delivery-modes.md) (the canonical modes guide) and [doc/guides/autonomous-batch-delivery.md](../../guides/autonomous-batch-delivery.md) (canonical for Mode B operations). This spec names the capabilities, invariants, and the merge/liveness contracts; it does not restate the guide tables. Where the two describe the same machinery, they are kept consistent.
 
+> **Engine-first operating definition.** The regular delivery path is the typed
+> engine: `dispatch <ref>` appends real `pilot` attempt records, and the lifecycle
+> merge and closeout run through the engine primitives. The bash entry points this
+> page specifies remain the documented, still-executable fallback: they keep their
+> five-key delivery-summary tail, their exits, and the delivered authoritative-mode
+> deprecation pointer. No repository is flipped by this change; a flip is a
+> separate owner act executed with `dispatch handover <repo>` once the gate reads
+> eligible, and its reversal is `dispatch handover <repo> --revert`.
+
 > **Planned-scope precondition.** An unattended run assumes the milestone and every ticket attached to it already exist in the tracker, and that intake verified the attachment before delivery. The precondition is owned by the milestone-first operating rule in [milestone-management.md](../../guides/milestone-management.md); this spec does not enforce it and adds no milestone logic to the delivery scripts.
 
 ## Business Context

@@ -163,14 +163,48 @@ and the conflicting identifier. It never adopts that state root.
   classification at exit `1` before the index is read.
 - **Envelope.** `data` carries exactly `repos` and `hostIndexRevision`; each entry
   carries exactly `repoKey`, `root`, `stateLocation`, `daemonReachable`
-  (`{ reachable }` or `{ reachable: false, reason }`), and `handoverState`.
-  Entries are ordered by `repoKey`. No new top-level envelope key exists. The
-  payload's `repoKey` is the checkout's project key: the host index keeps the
-  field name `projectKey`, and the record's contract name is `repoKey`.
+  (`{ reachable }` or `{ reachable: false, reason }`), `handoverState`,
+  `reversible`, and `handoverGate`. Entries are ordered by `repoKey`. No new
+  top-level envelope key exists. The payload's `repoKey` is the checkout's project
+  key: the host index keeps the field name `projectKey`, and the record's
+  contract name is `repoKey`.
+- **Gate block.** `reversible` is `true` exactly when the row's latest folded
+  handover operation is `authoritative` (the same rule the authority document
+  applies to `reversalAvailable`). `handoverGate` carries `verdict`
+  (`eligible`, `ineligible`, `unverifiable`), the four ordered `conditions`
+  (`truth`, `coverage`, `floor`, `corroboration`, each `{condition, status}` with
+  `status` in `met | open`), `countedDeliveries`, `cleanDispatches`, and
+  `truncation` only when the bounded read omitted records. The block is evaluated
+  at read time, for every `ready` row, over one bounded attempts read plus one
+  divergences read on the store the row pass already opened — no write, network
+  call, model call, cache, or scheduler.
+- **Repository binding.** The evaluation is bound to the row's own normalized
+  `host/owner/name` identity, resolved read-only and non-persisting through the
+  delivered identity policy (the persisted create-once binding recorded with that
+  checkout's git common directory, otherwise the checkout's configured VCS
+  remote). Records of another repository in the same store are excluded from
+  `countedDeliveries`, `conditions`, and `cleanDispatches`.
+- **Evidence scope.** The row folds the declared `production` scope (it counts
+  `pilot` attempts), the same scope `dispatch dual-run summary --repo` and the
+  handover decision use, so the row's `conditions` and `cleanDispatches` are
+  comparable with the summary's over the same ledger. The `controlled` scope
+  (which counts `controlled-proof`) stays available to controlled compositions and
+  fixtures and is never the row's scope. No scope key, flag, or configuration
+  member exists: the declaration is the delivered counting rule, not an input.
+- **Degraded evidence.** An unreadable, torn, or malformed attempts/divergences
+  ledger — and an unresolvable repository identity on a `ready` row — fails the
+  whole read as `repos.state-unavailable` at exit `2` with no row and no binding
+  written. A truncated attempts read is not a failure: the row reports
+  `verdict: "unverifiable"` with the `truncation` object over the visible window at
+  exit `0`. A `first-use` row reports the empty-window evaluation (`ineligible`;
+  `truth` met, `corroboration` met vacuously, `coverage` and `floor` open;
+  `countedDeliveries: 0`, `cleanDispatches: 0`, `reversible: false`) without
+  opening a store.
 - **Text.** A deterministic table with the columns `key`, `root`, `state`,
-  `daemon`, `handover`, sorted by repo key. The `daemon` cell carries the reason
-  token when unreachable, never a bare negative. Two runs over unchanged state
-  are byte-identical.
+  `daemon`, `handover`, sorted by repo key. The five columns are unchanged: the
+  gate detail is a JSON read, and the human per-condition view is the summary
+  text. The `daemon` cell carries the reason token when unreachable, never a bare
+  negative. Two runs over unchanged state are byte-identical.
 - **Exit projection.** `0` produced; `1` refused (unknown verb, an unusable
   state-directory override, or the invoking checkout's identity cannot be
   read); `2` the host index or a project state location prevents an honest

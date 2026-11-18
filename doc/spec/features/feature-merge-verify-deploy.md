@@ -32,6 +32,19 @@ rebase-refresh when the request is behind its base, lands one squash commit,
 verifies the landing, and records the outcome. No daemon path fires a merge and
 no force operation exists in the mutation vocabulary.
 
+The production composition supplies the transaction's reads for real: the tracker
+work-item read, the check-run page, and the request-detail read run through the
+delivered provider adapters and credential seam, and the composition resolves its
+inputs from declared sources only — configuration from the resolved document's
+typed `merge` branch (an absent document keeps the delivered defaults; an
+unreadable or invalid document forwards its own classified identity rather than
+resolving an empty map), the branch from the checkout's git facts, the base
+reference from the declared integration base, and the **owner principal** from the
+provider-resolved repository owner: the owner component of the checkout's
+normalized `host/owner/name` identity, resolved through the delivered identity
+policy with no new configuration key. The declared `merge` configuration keys stay
+exactly `gate-freshness`, `gates`, and `deploy-expectations`.
+
 `merge` is the lifecycle merge path. The coordinator verifies finalization with
 `verify change` and `phase list`, then runs `merge <ref>` for each ready item;
 the platform merge command (`gh pr merge`, `glab mr merge`) is not the primary
@@ -108,6 +121,18 @@ primary and the probe observation rides as additional evidence.
 
 ## Classification and waivers
 
+Every failure the production composition emits carries the `domainKind` its
+resolved error-table row declares, and its exit is that row's declared
+projection: `config.credential.missing` is a `config` refusal at `user-validation`
+(exit `1`), never the contained `fallback.internal` at exit `2`. The composition
+publishes its emittable failure-code set as one named exported constant,
+`MERGE_COMPOSITION_EMITTABLE_CODES`, exhaustive by construction over its refusal
+branches and a declaration only — it adds no row, kind, or exit. A read fault the
+table already declares is expressed through that declared identity: a rejected
+credential is `provider.auth.rejected` at exit `1`, an unreachable or malformed
+provider answer is `provider.outage` at exit `2`, and a request or work item that
+does not resolve aborts as `merge.transaction-aborted` at exit `1`.
+
 The PDR-0003 two-row kind/class policy is consumed as declared and extended with
 a per-class waiver-authorization policy: `owner-review` is never-merge and
 owner-authored; `waiver` is defaultable. A declaration names the gate and the
@@ -166,6 +191,12 @@ evidence degrades to `unknown`, never `verified`. A trace-read fault is exit 2
 with a declared existing platform identity, never a new `verify.deploy.*` fault
 row. Negative verdicts are classified errors at exit 1 with `runId` and no
 `data`; text mode keeps `verdict=` continuity.
+
+**Declared residual.** `verify deploy`'s production target-resolution remains a
+declared stub in this change: the command's delivered behaviour, its golden, and
+its error identities are unchanged, and target resolution is *not delivered* by
+this work. An operator reading this page or the engine-first guide must treat
+deploy verification as a residual gap rather than an engine-verified capability.
 
 The reason↔identity map is total and bidirectional: absent executed-step
 evidence (including a created-never-ran pipeline, which keeps that reason) maps

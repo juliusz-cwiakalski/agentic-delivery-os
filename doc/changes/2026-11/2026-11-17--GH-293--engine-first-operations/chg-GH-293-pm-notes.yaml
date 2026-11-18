@@ -18,9 +18,36 @@ decisions: []
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 6 complete (the engine-first guide, six reconciled feature
+      pages, the bounded lifecycle prose, the planning corpus, and the phase-7
+      test-spec handoff). Commit pending. Added
+      `doc/guides/engine-first-operations.md` (redistributable marker; the daily
+      routine, reading the gate and the fleet row, flipping and reversing,
+      the shell fallback, and the declared residuals); reconciled
+      `feature-dispatch-engine.md` (summary/handover additions, the condition
+      shape, the fleet host, the declared exemption, no-flip),
+      `feature-projects.md` (the seven-field row, binding, production scope,
+      degraded evidence, five-column table, unchanged alias),
+      `feature-peak-pausing.md` (the corrected nomination sentence, the
+      effect-surface mapping, the declared lanes limitation),
+      `feature-merge-verify-deploy.md` (the real composition, the owner
+      principal, the emittable-code constant, row-derived classification, the
+      `verify deploy` residual), and the residual wording in
+      `feature-autonomous-delivery.md` / `feature-resident-daemon.md`; the
+      bounded lifecycle paragraphs in `AGENTS.md` and
+      `doc/guides/change-lifecycle.md`; and the M2-S16 backlog progress line,
+      the status addendum, the README scenario row, and both restated scenarios.
+      Verification: engine-first-doc-reconciliation 16/16, doc-conformance +
+      dispatch-doc-conformance green, doc-distribution no drift (96 docs),
+      content-inventory green. Deviations: the pages' headed spans were extended
+      rather than rewritten, and the phase-7 handoff is stated in the guide and
+      the pages while the two broader test specs are untouched, as DEC-16
+      requires."
+    type: "info"
+    date: "2026-11-18"
   - text: "Plan phase 5 complete (production merge composition on real reads and
       declared sources, with error-table-derived classification). Commit
-      4c1a5f9e. The composition performs real tracker, check-run, and
+      d89b2912. The composition performs real tracker, check-run, and
       request-detail reads through the delivered adapters and credential seam;
       configuration comes from the resolved document's `merge` branch (the
       document's own classified failure is forwarded, absent keeps the delivered

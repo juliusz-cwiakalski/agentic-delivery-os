@@ -474,6 +474,17 @@ The daemon-side dispatch composition is covered by the
 
 The dispatch loop, prompt selection, dual-run evidence, per-repo handover, and
 session resume are delivered by the dispatch engine ([Dispatch Engine](feature-dispatch-engine.md)).
+The engine is the regular delivery path, and the bash entry points remain the
+documented fallback with the delivered pointer; nothing in this page claims a
+daemon-hosted periodic gate evaluation — the per-repository gate is evaluated at
+read time on `repos list` ([Repositories and the Host Overview](feature-projects.md)).
+The peak-pause episode the watch produces is visible on the delivered surfaces the
+mapping names — `status.laneParks`, the brief park fields, `lanes`
+`peakEnforcement`, the board `PARKED` section, the `stop`/`parked` events, and the
+window-scoped spend evidence — and a declared window has no read surface of its
+own ([Provider Peak Pausing](feature-peak-pausing.md)). A produced park is
+`peak-window` with `until` and `preservation`, and the mode reads
+`iteration-start-gating` whenever the composition supplies no watcher.
 The dispatch engine composes the lane seam and proves the daemon-path attempt
 producer; the production composition mounts the daemon family without a lane
 composition, so supplying it remains resident-daemon production scope (GH-238).

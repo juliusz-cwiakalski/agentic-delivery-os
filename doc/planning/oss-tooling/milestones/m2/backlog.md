@@ -368,6 +368,14 @@ the project family separately.
   the shell path remains usable and documented throughout; any flip is
   per-repository and reversible.
 - Depends on: M1-S9, M1-S18, M1-S21, M2-S12, M2-S13, and the owner-hold hook change (#280).
+- Progress: GH-293 delivered the engine-first evaluation surfaces: the summary's
+  `cleanDispatches` / `consecutiveCleanDispatches` / `conditions`, the handover
+  data's four ordered conditions plus `reversible` with the declared
+  evidence-read-free revert noop, the read-time per-repository `handoverGate` on
+  `repos list` bound to the row's own identity at the declared `production`
+  scope, the production merge composition restored to real reads with
+  error-table-derived classification, and the shell stack unchanged and
+  documented as the fallback. No repository was flipped.
 
 ### M2-S17 Provider-aware peak pausing
 - Ticket: GH-294 (milestone M2)

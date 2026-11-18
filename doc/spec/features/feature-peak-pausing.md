@@ -31,7 +31,9 @@ Lanes on other providers are untouched throughout: the park and resume decisions
 
 ## 2. Nomination at admission
 
-Every admitted delivery records its nominated provider profile as the additive `providerProfile` field on the dispatch attempt record family (`delivery.dispatch.attempt.v1`) and on the daemon lane record family, on both admission paths (one-shot `dispatch` and the composed daemon supervision claim); the attempt-history read, the lanes read, and the records agree. The nomination is a stored record field, never a rendering-time inference, and no read defaults, guesses, or borrows a profile.
+Every admitted delivery records its nominated provider profile as the additive `providerProfile` field on the dispatch attempt record family (`delivery.dispatch.attempt.v1`) and on the daemon lane record family, on both admission paths (one-shot `dispatch` and the composed daemon supervision claim). The surfaces that carry the nomination are the attempt history, the daemon lane records, the `status.laneParks[]` park fields, the board's `PARKED` section, and the window-scoped spend evidence. The nomination is a stored record field, never a rendering-time inference, and no read defaults, guesses, or borrows a profile.
+
+**Known limitation (lanes read).** `QueueLane` carries no `providerProfile` member and the `lanes` read projects none, so a `lanes list` reader cannot attribute a running lane to a provider profile from that read alone; the declared surfaces above are the ones that carry it. This is a declared limitation of the lanes projection, not a capability the read claims.
 
 A delivery that cannot nominate is refused at dispatch admission as a classified **pre-session refusal** — no lease, attempt, lane, or queue record and no event — carrying the provider-profile resolve identity for its shape: `provider.profile.absent` (empty or chain-less branch), `provider.profile.invalid` (invalid explicit nomination), or `provider.profile.capability-denied` at exit `1`, and `provider.profile.unavailable` (all candidates ineligible) at exit `2` with the eligibility list. No `dispatch.*` identity is added. The nomination gate runs immediately after input validation and before the credential preflight, the owner-hold gate, and the lease/single-flight predicates. There is no dispatch-default nomination: the preference chain's base profile remains the declared default through the normal resolve seam. Resumes never re-nominate — a pre-change lane resumes on its recorded absence, classified, and is simply not window-pausable (TDR-0028).
 
@@ -95,8 +97,24 @@ Zero is a positive reading backed by present telemetry; telemetry absence is a c
 - **`brief`** — the providers surface projects the identical park fields with zero added reads, rendering one `lane-park <ref> <reason> until=<instant|absent> <preservation>` line per open episode.
 - **`board`** — the `PARKED` section is the open lane park-episode population (`peak-window` and `owner-hold` only) with `ref`, `reason`, `until`, optional `preservation`, and optional `providerProfile`; an owner-hold row carries the classified `owner-hold-no-expiry` absence, and a `provider-quota` park never appears. The host-wide owner hold is carried once on the board payload as `ownerHold` ([Board](feature-board.md)).
 
-## 9. Daemon-absent degradation
+### Effect-surface mapping
 
+A hold or a peak window is an *input* to admission and parking; the engine-visible
+data an operator acts on is the effect it causes. The mapping is declared here, and
+no read of the input itself exists:
+
+| Input condition | Delivered engine-visible effect surfaces |
+|---|---|
+| Owner hold (host-wide, no expiry) | Dispatch admission refusal; queue blocking; `status.ownerHold`; board `ownerHold` |
+| Peak window (declared UTC window) | Lane parks with `reason: "peak-window"`, `until`, `preservation`; `status.laneParks`; brief park fields; `lanes` `peakEnforcement`; window-scoped spend evidence; `stop` and `parked` events |
+
+A declared or currently open peak window has **no read surface** of its own: it is
+not listed, polled, or projected as a window object, and this change adds no such
+read. The composing features name the same surfaces ([Dispatch Engine](feature-dispatch-engine.md),
+[Resident Dispatch Daemon](feature-resident-daemon.md)), so the mapping is reachable
+from the feature that composes the watch.
+
+## 9. Daemon-absent degradation
 Without a resident daemon there is no window watcher and no mid-flight park. The mode in the machine read reflects the composition fact: `peakEnforcement.mode` is `window-watch` iff the running composition actually supplies the profile-window watcher ports, otherwise `iteration-start-gating` — never an inference from daemon reachability, which says nothing about whether a watcher exists (the same rule the [Resident Dispatch Daemon](feature-resident-daemon.md) states). A composition without the watch declares `peakEnforcement: { mode: "iteration-start-gating", parkClaimed: false }` on the lanes read, projected from the same collector facts into status and brief: behavior is the delivered iteration-start gating — profiles in window are ineligible for new dispatches at admission, exactly as delivered — and no surface reports a parked lane, a stop, or a resume that did not happen. Runs without a composed watch synthesize no zero-spend episode reading for a park that never happened.
 
 ## 10. Testing
