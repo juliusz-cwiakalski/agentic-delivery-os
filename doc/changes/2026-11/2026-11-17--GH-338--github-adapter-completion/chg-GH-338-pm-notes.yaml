@@ -56,6 +56,20 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 8 remediation commit:
+      48a915a329f413c79efd7d3317b495c34fb2f1ea (this entry carries the hash the
+      phase-8 note names, per the phase-4..7 convention). The commit landed 24
+      files — including the new
+      tests/fixtures/providers/github/cli-process-edge.json and
+      review/review-iter-1.md — with zero scope drift and an empty
+      untracked-not-staged set. Its subject is primitive-derived
+      (`messageSource: template`, `transport: none`), so it reads
+      `docs(GH-338): update doc/changes/...` instead of the plan's declared
+      phase-8 subject, the same deviation phases 1-7 recorded. `delivery` stays
+      open: the re-review gate (`review-iter-2`) is next and `phase complete
+      GH-338 delivery` has deliberately not been recorded."
+    type: info
+    date: "2026-11-18"
   - text: "Plan phase 8 complete (remediation: CLI host identity, absolute isolated
       child environment, offline stub-gh process edge, host-independent check
       tier, normative convergence). Plan phase 7 commit: dde7b661 (the phase-7
