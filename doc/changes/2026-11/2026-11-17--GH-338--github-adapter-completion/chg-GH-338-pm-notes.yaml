@@ -10,7 +10,7 @@ phases:
   dor_check: { started: null, completed: 2026-11-17T23:39:09.787Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: 2026-11-18T07:13:51.961Z }
-  review_fix: { started: null, completed: null }
+  review_fix: { started: null, completed: 2026-11-18T07:30:29.537Z }
   quality_gates: { started: null, completed: null }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
@@ -65,40 +65,42 @@ notes:
       with no live gh; the write family classifies every non-2xx uniformly and
       provider.not-found is read-scoped in code, spec, reference table and test
       plan; preservation semantics converge; githubCliHostname is a disclosed
-      forced surface move. 40/40 ACs have real oracles with AC-F2-1/2-3/2-4/6-1/6-4
-      now production-true. No new correctness or security defect found. Residual
-      notes are bookkeeping and optional hardening only."
+      forced surface move. 40/40 ACs have real oracles with
+      AC-F2-1/2-3/2-4/6-1/6-4 now production-true. No new correctness or
+      security defect found. Residual notes are bookkeeping and optional
+      hardening only."
     type: info
     date: "2026-11-18"
   - text: "PM-owned review bookkeeping closed at DoD (review-iter-2 residual notes
       1-3 and 7): (a) the two unattributed phase-2 commits are now named —
       6bbf3c73 reverted the blanket-format rewrite of 269 delivered files and
       528a2cb4 moved the prior-identity-hermetic and publishable-path pins and
-      added the lockstep changeset; (b) the DoR iteration-2 verdict and spec v1.2
-      revision are recorded by this and the DoR note, and the superseded DM-10
-      sentence ('carried on the composed runtime') is superseded by the
+      added the lockstep changeset; (b) the DoR iteration-2 verdict and spec
+      v1.2 revision are recorded by this and the DoR note, and the superseded
+      DM-10 sentence ('carried on the composed runtime') is superseded by the
       resolver-return-value formulation; (c) the doc-reconciliation commit
       5e5da451 is recorded by the reconciliation note above, superseding plan
       obligation 8.10's narrower doc reach; (d) TDR-0031 now names
       githubCliHostname in its decision text and TC-CLI-004 names exactly the
-      delivered status-block fixtures. Remaining future-work notes (production.ts
-      glue TC, shared /tmp config-dir collision hardening, two GH-320 suites that
-      compose on ambient PATH) are recorded as follow-ups, not defects."
+      delivered status-block fixtures. Remaining future-work notes
+      (production.ts glue TC, shared /tmp config-dir collision hardening, two
+      GH-320 suites that compose on ambient PATH) are recorded as follow-ups,
+      not defects."
     type: info
     date: "2026-11-18"
   - text: "Range lint gate (lifecycle phase 9 prerequisite): VERDICT PASS — base
-      main-tools (source=explicit, merge-base 1250d789, head 86ed3d24), 29 commits
-      in range, 0 offending commits, 0 distinct rules hit; commitlint binary
-      node_modules/.bin/commitlint (origin=repository-local); range ref
+      main-tools (source=explicit, merge-base 1250d789, head 86ed3d24), 29
+      commits in range, 0 offending commits, 0 distinct rules hit; commitlint
+      binary node_modules/.bin/commitlint (origin=repository-local); range ref
       refs/remotes/origin/main-tools resolvable, so no ERROR or SKIP downgrade."
     type: info
     date: "2026-11-18"
   - text: "Post-remediation doc reconciliation (lifecycle phase 7 re-run):
-      feature-provider-client-seeds, feature-adapter-ports, feature-cli-entrypoint,
-      feature-result-contract, doc/overview/glossary,
+      feature-provider-client-seeds, feature-adapter-ports,
+      feature-cli-entrypoint, feature-result-contract, doc/overview/glossary,
       doc/guides/tracker-credential-provisioning and TDR-0031 C-6 were corrected
-      for the host-identity mapping, the absolute isolated child environment, and
-      the read-scoped provider.not-found (writes classify every non-2xx as
+      for the host-identity mapping, the absolute isolated child environment,
+      and the read-scoped provider.not-found (writes classify every non-2xx as
       provider.payload.invalid). Guards: test-doc-distribution OK (95 in-scope
       docs, no drift), doc-conformance + decision-record 23 pass, forbidden
       literals 0 violations. Landed as 5e5da451 and the phase transition as
