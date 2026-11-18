@@ -1,0 +1,58 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "provider": "jira",
+  "adapterName": "jira",
+  "instance": {
+    "instanceName": "jira",
+    "systemKind": "tracker",
+    "baseUrl": "https://jira.example.com",
+    "authMethod": {
+      "mechanism": "credential-reference",
+      "reference": {
+        "referenceName": "conformance-mock-jira",
+        "sourceKey": {
+          "style": "literal",
+          "name": "CONFORMANCE_LIVE_JIRA_TOKEN"
+        }
+      }
+    }
+  },
+  "credentialReferenceName": "jira-read",
+  "addressing": {
+    "provider": "jira",
+    "issueKey": "TRACK-101"
+  },
+  "initialState": {
+    "issue": {
+      "fields": {
+        "key": "TRACK-101",
+        "summary": "Stateful issue",
+        "status": "In Progress"
+      },
+      "collections": {
+        "labels": [
+          {
+            "name": "planning"
+          }
+        ],
+        "comments": []
+      }
+    }
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "url": "https://jira.example.com/rest/api/2/issue/TRACK-101",
+      "status": 200,
+      "body": {},
+      "responseFromState": "issue"
+    }
+  ],
+  "expected": {
+    "change-lifecycle.read-work-item": {
+      "identity": {
+        "entityId": "TRACK-101"
+      }
+    }
+  }
+}

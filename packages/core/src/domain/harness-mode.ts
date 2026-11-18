@@ -1,5 +1,5 @@
 /**
- * The declared integration mode and its origin (GH-335 F-2; DEC-2, TDR-0038).
+ * The declared integration mode and its origin (GH-335 F-2; DEC-2, TDR-0042).
  *
  * Pure: the mode is a declared value or the delivered default. It is never
  * inferred from ambient state, never read from an environment variable, and

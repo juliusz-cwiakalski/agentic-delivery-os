@@ -6,6 +6,7 @@
  * before detailed) and must fail naming the trap entry.
  */
 import { describe, expect, test } from "bun:test";
+import { TRACKER_ERROR_CLASS_IDS, TRACKER_FAMILY_OUTCOMES } from "@delivery-os/testkit";
 import { createEnvironmentCredentialPort } from "../../../packages/adapters/src/credentials/index";
 import {
   createGitLabClient,
@@ -292,6 +293,25 @@ describe("TC-GITLAB-003 merge-status normalization", () => {
 
 // --- The catalog ------------------------------------------------------------
 
+const familyFixture = (family: string): void => {
+  const document = requireRecord(
+    readJson(`tests/fixtures/providers/gitlab/families/${family}.json`),
+    `${family} fixture`,
+  );
+  if (document.provenance !== "hand-authored-synthetic 2026-11-18") {
+    throw new Error(`${family}: provenance marker is missing`);
+  }
+  const expected = requireRecord(document.expected, `${family} expected`);
+  const outcome = TRACKER_FAMILY_OUTCOMES[family as keyof typeof TRACKER_FAMILY_OUTCOMES];
+  if (outcome === undefined) throw new Error(`${family}: family is not declared`);
+  const classification = expected.classification;
+  const valid =
+    classification === "bounded-observation" ||
+    (TRACKER_ERROR_CLASS_IDS as readonly string[]).includes(String(classification));
+  if (!valid)
+    throw new Error(`${family}: classification ${String(classification)} is not declared`);
+};
+
 const defaultAssertions: TrapAssertions = {
   "GL-PIPELINE-MULTIPLICITY": () => pipelineCheck(defaultPipelineReader),
   "GL-MERGE-STATUS-ASYNC": () => {
@@ -300,6 +320,11 @@ const defaultAssertions: TrapAssertions = {
   "GL-MERGE-STATUS-MULTIVALUED": () => {
     mergeMultivaluedCheck(resolveGitLabReviewState);
   },
+  "GL339-AUTH-SHAPE": () => familyFixture("auth-shape"),
+  "GL339-TRANSPORT-FAILURE": () => familyFixture("transport-failure"),
+  "GL339-RATE-LIMIT": () => familyFixture("rate-limit"),
+  "GL339-PAYLOAD-SHAPE": () => familyFixture("payload-shape"),
+  "GL339-PAGINATION-TRUNCATION": () => familyFixture("pagination-truncation"),
 };
 
 const runWithGuard = async (options: Omit<TrapRunOptions, "provider">): Promise<TrapRun> => {
@@ -321,6 +346,11 @@ describe("TC-TRAP-002 GitLab trap catalog replays offline", () => {
       "GL-PIPELINE-MULTIPLICITY",
       "GL-MERGE-STATUS-ASYNC",
       "GL-MERGE-STATUS-MULTIVALUED",
+      "GL339-AUTH-SHAPE",
+      "GL339-TRANSPORT-FAILURE",
+      "GL339-RATE-LIMIT",
+      "GL339-PAYLOAD-SHAPE",
+      "GL339-PAGINATION-TRUNCATION",
     ]);
   });
 

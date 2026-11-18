@@ -192,7 +192,7 @@ findings:
       mid-session switch, the code falls back to the stale session baseline (or reports
       absence) rather than the switched value, which can mis-scope a group's seat claim. The
       practical impact is narrow (per-message agent/model are present on the observed
-      assistant rows), and TDR-0039's prose omits the switch-event source, so this is also a
+      assistant rows), and TDR-0043's prose omits the switch-event source, so this is also a
       spec/TDR inconsistency.
     suggestion: >
       Either implement the transition (read `agent-switched`/`model-switched` rows in `seq`

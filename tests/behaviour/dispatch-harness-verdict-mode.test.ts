@@ -2,7 +2,7 @@
  * TC-HARNESS-040 / TC-HARNESS-037 — the recorded outcome and the refusal
  * disclosure, plus the proof the gate work left the delivered stream, handle
  * acquisition, and output bounds undisturbed (AC-F1-1, AC-F1-3, AC-F2-1,
- * AC-F2-3, AC-F3-4 disclosure half; NFR-8; TDR-0037 decision 4).
+ * AC-F2-3, AC-F3-4 disclosure half; NFR-8; TDR-0041 decision 4).
  */
 import { describe, expect, test } from "bun:test";
 import { readFileSync, readdirSync } from "node:fs";

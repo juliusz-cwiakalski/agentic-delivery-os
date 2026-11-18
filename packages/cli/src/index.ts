@@ -245,7 +245,7 @@ const explicitSuiteBreadth = (value: unknown): readonly string[] | undefined => 
 const NORMALIZED_VERSION = /^[0-9]+\.[0-9]+\.[0-9]+$/;
 
 /**
- * Project the declared `detail.harness` evidence member (TDR-0037).
+ * Project the declared `detail.harness` evidence member (TDR-0041).
  *
  * Closed-key, member-by-member: a member that is out of vocabulary, over its
  * bound, or inconsistent with the version verdict drops the whole member — it is

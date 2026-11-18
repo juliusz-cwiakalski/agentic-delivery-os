@@ -370,7 +370,7 @@ const HARNESS_BRANCH = {
   type: "object",
   fields: {
     kind: { type: "string" },
-    /** The declared integration mode (GH-335 F-2, DEC-2, TDR-0038). */
+    /** The declared integration mode (GH-335 F-2, DEC-2, TDR-0042). */
     mode: { type: "string" },
     execution: {
       type: "object",

@@ -1,6 +1,6 @@
 /**
  * The opencode telemetry extractor over the OBSERVED store contract
- * (GH-335 F-5, F-6; DM-10, DEC-4, DEC-9, DEC-13; TDR-0036 decision 4).
+ * (GH-335 F-5, F-6; DM-10, DEC-4, DEC-9, DEC-13; TDR-0040 decision 4).
  *
  * Strictly read-only: read-only connection, the query-only pragma before the
  * first read, bounded statements scoped by a held session identity, and no

@@ -1,0 +1,124 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "providers": {
+    "github": {
+      "auth-shape": {
+        "posture": "covered",
+        "operation": "read-work-item",
+        "catalogEntries": ["GH339-AUTH-SHAPE"],
+        "fixture": "tests/fixtures/providers/github/families/auth-shape.json"
+      },
+      "transport-failure": {
+        "posture": "covered",
+        "operation": "read-work-item",
+        "catalogEntries": ["GH339-TRANSPORT-FAILURE"],
+        "fixture": "tests/fixtures/providers/github/families/transport-failure.json"
+      },
+      "rate-limit": {
+        "posture": "covered",
+        "operation": "read-work-item",
+        "catalogEntries": ["GH339-RATE-LIMIT"],
+        "fixture": "tests/fixtures/providers/github/families/rate-limit.json"
+      },
+      "payload-shape": {
+        "posture": "covered",
+        "operation": "read-work-item",
+        "catalogEntries": ["GH339-PAYLOAD-SHAPE"],
+        "fixture": "tests/fixtures/providers/github/families/payload-shape.json"
+      },
+      "workflow-state-mismatch": {
+        "posture": "covered",
+        "operation": "transition-work-item",
+        "catalogEntries": ["GH339-WORKFLOW-STATE-MISMATCH"],
+        "fixture": "tests/fixtures/providers/github/families/workflow-state-mismatch.json"
+      },
+      "pagination-truncation": {
+        "posture": "covered",
+        "operation": "read-pipeline-run",
+        "catalogEntries": ["GH339-PAGINATION-TRUNCATION"],
+        "fixture": "tests/fixtures/providers/github/families/pagination-truncation.json"
+      }
+    },
+    "gitlab": {
+      "auth-shape": {
+        "posture": "recorded-difference",
+        "operation": "read-delivery-request",
+        "registerId": "gitlab-read-delivery-request",
+        "recordedClass": "tracker.transport.failed",
+        "catalogEntries": ["GL339-AUTH-SHAPE"]
+      },
+      "transport-failure": {
+        "posture": "covered",
+        "operation": "read-delivery-request",
+        "catalogEntries": ["GL339-TRANSPORT-FAILURE"],
+        "fixture": "tests/fixtures/providers/gitlab/families/transport-failure.json"
+      },
+      "rate-limit": {
+        "posture": "recorded-difference",
+        "operation": "read-delivery-request",
+        "registerId": "gitlab-read-delivery-request",
+        "recordedClass": "tracker.transport.failed",
+        "catalogEntries": ["GL339-RATE-LIMIT"]
+      },
+      "payload-shape": {
+        "posture": "recorded-difference",
+        "operation": "read-delivery-request",
+        "registerId": "gitlab-read-delivery-request",
+        "recordedClass": "tracker.transport.failed",
+        "catalogEntries": ["GL339-PAYLOAD-SHAPE"]
+      },
+      "workflow-state-mismatch": {
+        "posture": "gap-backed",
+        "operation": "transition-work-item",
+        "gapReason": "adapter-not-implemented"
+      },
+      "pagination-truncation": {
+        "posture": "recorded-difference",
+        "operation": "read-pipeline-run",
+        "registerId": "gitlab-read-pipeline-run",
+        "recordedClass": "pagination-model",
+        "catalogEntries": ["GL339-PAGINATION-TRUNCATION"]
+      }
+    },
+    "jira": {
+      "auth-shape": {
+        "posture": "recorded-difference",
+        "operation": "read-work-item",
+        "registerId": "jira-read-work-item",
+        "recordedClass": "tracker.transport.failed",
+        "catalogEntries": ["JIRA339-AUTH-SHAPE"]
+      },
+      "transport-failure": {
+        "posture": "covered",
+        "operation": "read-work-item",
+        "catalogEntries": ["JIRA339-TRANSPORT-FAILURE"],
+        "fixture": "tests/fixtures/providers/jira/families/transport-failure.json"
+      },
+      "rate-limit": {
+        "posture": "recorded-difference",
+        "operation": "read-work-item",
+        "registerId": "jira-read-work-item",
+        "recordedClass": "tracker.transport.failed",
+        "catalogEntries": ["JIRA339-RATE-LIMIT"]
+      },
+      "payload-shape": {
+        "posture": "recorded-difference",
+        "operation": "read-work-item",
+        "registerId": "jira-read-work-item",
+        "recordedClass": "tracker.transport.failed",
+        "catalogEntries": ["JIRA339-PAYLOAD-SHAPE"]
+      },
+      "workflow-state-mismatch": {
+        "posture": "covered",
+        "operation": "transition-work-item",
+        "catalogEntries": ["JIRA339-WORKFLOW-STATE-MISMATCH"],
+        "fixture": "tests/fixtures/providers/jira/families/workflow-state-mismatch.json"
+      },
+      "pagination-truncation": {
+        "posture": "gap-backed",
+        "operation": "read-pipeline-run",
+        "gapReason": "provider-unsupported"
+      }
+    }
+  }
+}

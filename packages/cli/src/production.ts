@@ -986,7 +986,7 @@ export type ProductionHarnessRefusal = {
   readonly harness?: CommandFailureHarnessDetail;
 };
 
-/** The resolved harness facts one admission discloses (TDR-0037). */
+/** The resolved harness facts one admission discloses (TDR-0041). */
 export type ProductionHarnessFacts = {
   readonly kind: HarnessKind;
   readonly observedVersion: string | null;
@@ -1115,7 +1115,7 @@ export const boundedSummaryValue = (value: string): string => {
 
 /**
  * Resolve one spawn's single-seat binding, or the pre-session refusal it implies
- * (GH-335 F-3, DEC-16, TDR-0036 A-2).
+ * (GH-335 F-3, DEC-16, TDR-0040 A-2).
  *
  * The caller supplies the agent identity; this is the composition's resolution
  * call site. An unassigned named agent refuses through the delivered
@@ -1236,7 +1236,7 @@ export const resolveProfileContextFrom = (
  *
  * An `unassigned` named agent refuses through the delivered
  * `provider.profile.invalid`, naming the agent, the profile, and the declared
- * seats (AC-F3-4, TDR-0036 A-2); `config.value.invalid` is reserved for the
+ * seats (AC-F3-4, TDR-0040 A-2); `config.value.invalid` is reserved for the
  * invalid identity and the contract-violation case.
  */
 export type HarnessProfileContext = {
@@ -1344,7 +1344,7 @@ export const reconcileOpencodeStorePath = (input: {
 };
 
 /**
- * The opencode invocation args per mode surface (GH-335 F-2, TDR-0038).
+ * The opencode invocation args per mode surface (GH-335 F-2, TDR-0042).
  *
  * The default mode's observed surface is `--standalone`; the composition owns
  * the surface selection, so the adapter never invents a mode flag.
@@ -2319,7 +2319,7 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
             // run, so a refusal cannot be bypassed by the adapter's default.
             ...(gate === undefined ? {} : { versionGate: gate }),
             // The binding's surface mapping is injected: the adapter owns no
-            // second copy of the rules (GH-335 F-3, TDR-0036).
+            // second copy of the rules (GH-335 F-3, TDR-0040).
             bindingSeams: {
               identityViolation: harnessAgentIdentityViolation,
               expressibility: evaluateModelExpressibility,

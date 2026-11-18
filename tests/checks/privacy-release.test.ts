@@ -138,7 +138,10 @@ describe("TC-RELEASE-001 exactly one new five-package minor changeset", () => {
       // ship no changeset. Anything touching a publishable path must ship one.
       const publishable = git(["diff", "--name-only", `${BASE}...HEAD`, "--", "packages/"])
         .split("\n")
-        .filter((line) => line.length > 0);
+        .filter((line) => line.length > 0)
+        // `@delivery-os/testkit` is private and dev-only: a testkit-only
+        // delivery changes no publishable surface and ships no changeset.
+        .filter((line) => !line.startsWith("packages/testkit/"));
       expect(publishable).toEqual([]);
       return;
     }

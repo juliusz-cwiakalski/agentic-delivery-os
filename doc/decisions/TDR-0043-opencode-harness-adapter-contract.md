@@ -1,11 +1,11 @@
 ---
-id: TDR-0039
+id: TDR-0043
 decision_type: tdr
 status: Proposed
 created: 2026-11-18
 decision_date: null
 last_updated: 2026-11-18
-summary: "The harness adapter contract for opencode under GH-335: the supported-version window stated as a rule (the current minor line at delivery time plus one previous minor) with its value at delivery (`2.3.x` plus `2.2.x`, derived from the installed `v2.3.2`), the accepted probe grammar and its normalization to a bare semantic version with two distinct refusals (outside → `harness.version.unsupported`, indeterminate → `harness.version.unknown`), the integration mode as a declared value with its `defaults`/`configured` origin, the propagation contract by reference to TDR-0036 and the unassigned/expressibility refusals with the expressibility check as an in-process grammar/bounds predicate and NO recognised-model catalogue and NO second pre-session child process, the recorded per-attempt binding as a run fact, and the per-seat telemetry fields over the OBSERVED store contract — seat and resolved model from the recording attempt's binding beside the harness-reported agent and observed model, store-sourced durations with explicit absence, reported zero cost recorded as reported, and an unstated observed axis carried by one declared absence marker with the delivered empty-string placeholder and the same-axis `optional-field-absent` warning, superseding the delivered `invalid-session-identity` for a merely unstated axis while keeping it for a genuinely unusable one."
+summary: "The harness adapter contract for opencode under GH-335: the supported-version window stated as a rule (the current minor line at delivery time plus one previous minor) with its value at delivery (`2.3.x` plus `2.2.x`, derived from the installed `v2.3.2`), the accepted probe grammar and its normalization to a bare semantic version with two distinct refusals (outside → `harness.version.unsupported`, indeterminate → `harness.version.unknown`), the integration mode as a declared value with its `defaults`/`configured` origin, the propagation contract by reference to TDR-0040 and the unassigned/expressibility refusals with the expressibility check as an in-process grammar/bounds predicate and NO recognised-model catalogue and NO second pre-session child process, the recorded per-attempt binding as a run fact, and the per-seat telemetry fields over the OBSERVED store contract — seat and resolved model from the recording attempt's binding beside the harness-reported agent and observed model, store-sourced durations with explicit absence, reported zero cost recorded as reported, and an unstated observed axis carried by one declared absence marker with the delivered empty-string placeholder and the same-axis `optional-field-absent` warning, superseding the delivered `invalid-session-identity` for a merely unstated axis while keeping it for a genuinely unusable one."
 owners:
   - "Juliusz Ćwiąkalski"
 service: "delivery-os harness plane (version window and probe grammar, integration-mode contract, opencode adapter contract, per-seat telemetry over the observed store)"
@@ -54,7 +54,7 @@ revisit_triggers:
   - "A second harness kind is added: the window and mode become per-kind data, and a per-kind record is required rather than widening this one for all kinds."
   - "The observed store gains or loses a readable field, or a third generation appears: DM-10 is re-observed and the fixture builders move with it; the reader never guesses a column."
   - "A consumer needs an absent observed axis as a nullable field: refused by this contract — the marker plus the placeholder is the absence signal, and widening a delivered non-null field is a schema decision of its own."
-  - "The seat/carrier rules need to change: that is a TDR-0036 revision (and this record's reference is updated), not an edit here, because TDR-0036 is their single home."
+  - "The seat/carrier rules need to change: that is a TDR-0040 revision (and this record's reference is updated), not an edit here, because TDR-0040 is their single home."
 links:
   related_changes: ["GH-335"]
   supersedes: []
@@ -73,13 +73,13 @@ links:
     - "packages/adapters/src/harness/opencode.ts"
     - "packages/adapters/src/harness/telemetry-opencode.ts"
   diagrams: []
-  decisions: ["ADR-0008", "TDR-0016", "TDR-0021", "TDR-0036", "TDR-0037", "TDR-0038"]
+  decisions: ["ADR-0008", "TDR-0016", "TDR-0021", "TDR-0040", "TDR-0041", "TDR-0042"]
   experiments: []
   metrics: []
   roadmap_items: ["M3-S1"]
 ---
 
-# TDR-0039: opencode Harness Adapter Contract — Version Window, Mode, Propagation Reference, and Observed-Store Telemetry
+# TDR-0043: opencode Harness Adapter Contract — Version Window, Mode, Propagation Reference, and Observed-Store Telemetry
 
 ## Context
 
@@ -91,18 +91,18 @@ links:
 - **FACT:** The delivered row is non-null in `agent` and `model`, and `sameSessionGroup` already keys groups on that pair (`packages/core/src/contracts/harness-telemetry.ts:82-100`; `packages/core/src/domain/harness-telemetry.ts`).
 - **FACT:** `invalid-session-identity` is a delivered warning reason used today to classify a group whose agent/model is unreadable (`packages/core/src/contracts/harness-telemetry.ts:39-49`).
 - **FACT:** The delivered per-seat model record is a convention with no consumer on this harness: opencode exposes no per-seat variable family, and per-invocation selection is what it honours (spec §2.1).
-- **FACT:** TDR-0036 (with Amendments A-1..A-4) is the single home of the seat cardinality, the resolution chain, the two-member carrier, the surface mapping, the seat identity with no argv carrier, the unassigned refusal, and the role-less `unresolved-seat` disclosure; TDR-0037 is the single home of the failure-envelope `detail.harness` member (read 2026-11-18).
+- **FACT:** TDR-0040 (with Amendments A-1..A-4) is the single home of the seat cardinality, the resolution chain, the two-member carrier, the surface mapping, the seat identity with no argv carrier, the unassigned refusal, and the role-less `unresolved-seat` disclosure; TDR-0041 is the single home of the failure-envelope `detail.harness` member (read 2026-11-18).
 - **Why now:** GH-335 changes the adapter contract and must be governed by a record (G-6, DEC-7); the delivered telemetry path cannot land a row against a real store (G7), so the store contract, the field set, and the absence taxonomy must be stated before the code moves.
 
 ## Problem Framing (Clarified)
 
 **Question.** What does the opencode adapter contract become under GH-335, and what may the telemetry path read and emit, so that a harness-port spawn either runs on a compatible harness with a disclosed outcome or refuses with a typed identity, and a landed row can be attributed and read without fabrication?
 
-**Clarified problem.** Four contract surfaces change at once and must be stated together because they share facts: the version window and its probe grammar; the integration mode and its origin; the propagation contract at the port boundary (whose rules live in TDR-0036); and the telemetry field set over the store that actually exists. Stating them separately invites drift; stating them together with explicit reference boundaries keeps one home per rule.
+**Clarified problem.** Four contract surfaces change at once and must be stated together because they share facts: the version window and its probe grammar; the integration mode and its origin; the propagation contract at the port boundary (whose rules live in TDR-0040); and the telemetry field set over the store that actually exists. Stating them separately invites drift; stating them together with explicit reference boundaries keeps one home per rule.
 
 **In scope.** The version window rule and its delivery value; the probe grammar, normalization, and the two version refusals; the mode declaration, origin, and unavailable-mode refusal; the propagation contract by reference; the expressibility-only refusal (no catalogue, no second child process); the recorded binding as a run fact; the per-seat telemetry fields; the observed store contract; the absence taxonomy including the observed-axis absence marker.
 
-**Out of scope.** Seat cardinality, the resolution chain, the two-member carrier, the surface mapping, the seat identity's argv treatment, the unassigned refusal, and the role-less disclosure (TDR-0036 owns them; this record cites them). The envelope member (TDR-0037). The mode selection itself (TDR-0038).
+**Out of scope.** Seat cardinality, the resolution chain, the two-member carrier, the surface mapping, the seat identity's argv treatment, the unassigned refusal, and the role-less disclosure (TDR-0040 owns them; this record cites them). The envelope member (TDR-0041). The mode selection itself (TDR-0042).
 
 ## Constraints (Hard Requirements)
 
@@ -120,11 +120,11 @@ An observed version outside the window refuses `harness.version.unsupported`, na
 
 ### C-4: The mode is declared with an origin, and an unavailable mode refuses
 
-The mode is a declared value on the typed harness branch: omitted → the delivered default with origin `defaults`; present → `configured`. An unknown value is the delivered `config.value.invalid` naming the path. A recognised non-default mode refuses `harness.mode.unavailable` naming the requested and the available mode. No runtime fallback. The selected default and its surface are TDR-0038's decision.
+The mode is a declared value on the typed harness branch: omitted → the delivered default with origin `defaults`; present → `configured`. An unknown value is the delivered `config.value.invalid` naming the path. A recognised non-default mode refuses `harness.mode.unavailable` naming the requested and the available mode. No runtime fallback. The selected default and its surface are TDR-0042's decision.
 
 ### C-5: The propagation rules are referenced, not restated
 
-Seat cardinality, the resolution chain, the two-member carrier on the spawn/resume inputs, the exactly-one-`--agent`/one-`--model` surface mapping, the seat identity with no argv carrier, the unassigned named agent's refusal through the delivered `provider.profile.invalid`, and the role-less `unresolved-seat` disclosure are TDR-0036's contract (as amended by A-1..A-4). This record CITES and LINKS them and carries no obligation of its own over them; a restatement or redefinition here is a defect of this record, not a second contract.
+Seat cardinality, the resolution chain, the two-member carrier on the spawn/resume inputs, the exactly-one-`--agent`/one-`--model` surface mapping, the seat identity with no argv carrier, the unassigned named agent's refusal through the delivered `provider.profile.invalid`, and the role-less `unresolved-seat` disclosure are TDR-0040's contract (as amended by A-1..A-4). This record CITES and LINKS them and carries no obligation of its own over them; a restatement or redefinition here is a defect of this record, not a second contract.
 
 ### C-6: The expressibility refusal is a predicate, not a catalogue
 
@@ -192,7 +192,7 @@ Making the window configuration-driven satisfies C-1's availability half but fai
 
 ### Alternative 2 — Selected: Pinned Window, One Grammar, Reference-Only Seat Rules, Observed-Store Fields, Declared Absence
 
-The window is data with a rule and a delivery value; the grammar is one constant; the seat rules stay in TDR-0036 and are cited; the telemetry fields follow the store that exists; and every absence is declared. It satisfies C-1 through C-10. Selected.
+The window is data with a rule and a delivery value; the grammar is one constant; the seat rules stay in TDR-0040 and are cited; the telemetry fields follow the store that exists; and every absence is declared. It satisfies C-1 through C-10. Selected.
 
 ## Decision
 
@@ -202,11 +202,11 @@ The window is data with a rule and a delivery value; the grammar is one constant
 
 - **Probe grammar and normalization (C-2).** Accepted: a product token, an optional `v`, a three-part semantic version, newline-terminated; `opencode v2.3.2` → `2.3.2`, `opencode v2.2.5` → `2.2.5`. Everything else is indeterminate. Near-misses (`2.20.0`, `12.2.5`) parse and are out of window.
 
-- **Version refusals (C-3).** `harness.version.unsupported` (outside, observed version named) and `harness.version.unknown` (indeterminate, no fabricated version), both pre-session, both with a `user-validation` projection, both carrying the TDR-0037 evidence member. One bounded, shell-free probe per dispatch; no retry.
+- **Version refusals (C-3).** `harness.version.unsupported` (outside, observed version named) and `harness.version.unknown` (indeterminate, no fabricated version), both pre-session, both with a `user-validation` projection, both carrying the TDR-0041 evidence member. One bounded, shell-free probe per dispatch; no retry.
 
-- **Mode (C-4).** Declared value with origin; unknown value → `config.value.invalid`; a recognised non-default mode → `harness.mode.unavailable` naming requested and available; no fallback. The selected default and its observed surface are TDR-0038's decision.
+- **Mode (C-4).** Declared value with origin; unknown value → `config.value.invalid`; a recognised non-default mode → `harness.mode.unavailable` naming requested and available; no fallback. The selected default and its observed surface are TDR-0042's decision.
 
-- **Propagation (C-5).** By reference only. TDR-0036, as amended by A-1..A-4, is the single home of the seat cardinality, the resolution chain, the two-member carrier, the surface mapping, the seat identity with no argv carrier, the unassigned refusal through the delivered `provider.profile.invalid`, and the role-less `unresolved-seat` disclosure. This record cites `DEC-13` and `TDR-0036` for the seat rule, and adds no obligation of its own over them.
+- **Propagation (C-5).** By reference only. TDR-0040, as amended by A-1..A-4, is the single home of the seat cardinality, the resolution chain, the two-member carrier, the surface mapping, the seat identity with no argv carrier, the unassigned refusal through the delivered `provider.profile.invalid`, and the role-less `unresolved-seat` disclosure. This record cites `DEC-13` and `TDR-0040` for the seat rule, and adds no obligation of its own over them.
 
 - **Expressibility (C-6).** The predicate refuses `harness.profile.model-unrepresentable` for an empty segment, a missing separator, whitespace or control characters, or a value beyond the adapter's bound. In-process only; no catalogue; no second child process.
 
@@ -218,7 +218,7 @@ The window is data with a rule and a delivery value; the grammar is one constant
 
 ### Constraint Compliance Attestation
 
-C-1 through C-10 are satisfied as stated. No accepted-risk exception is claimed. C-5 is honoured by reference: this record names TDR-0036 and DEC-13 and deliberately does not enumerate their rules as its own obligations.
+C-1 through C-10 are satisfied as stated. No accepted-risk exception is claimed. C-5 is honoured by reference: this record names TDR-0040 and DEC-13 and deliberately does not enumerate their rules as its own obligations.
 
 ## Trade-offs & Consequences
 
@@ -269,7 +269,7 @@ The harness adapters page states the window rule and its value, the grammar, the
 - The observed probe lines normalize (`opencode v2.3.2` → `2.3.2`, `opencode v2.2.5` → `2.2.5`); every off-grammar shape in the grammar matrix is indeterminate and refuses `harness.version.unknown`; `2.20.0` and `12.2.5` parse and refuse `harness.version.unsupported`.
 - Exactly one bounded probe invocation per dispatch, with the declared deadline and the injected clock, reaped before the verdict; no retry.
 - The mode resolves with its origin; an unknown value is `config.value.invalid`; a non-default mode is `harness.mode.unavailable` naming requested and available; no fallback and no second transport attempt.
-- The seat rules are verified only through TDR-0036's criteria; this record's suites assert that the contract names no rule of its own (the reference boundary) and that no catalogue or second child process exists.
+- The seat rules are verified only through TDR-0040's criteria; this record's suites assert that the contract names no rule of its own (the reference boundary) and that no catalogue or second child process exists.
 - An unrepresentable seat model refuses `harness.profile.model-unrepresentable` before any seam, with no partial binding.
 - A row from a complete current-generation fixture carries the schema identity, the session's own version, the recorded seat and resolved model, the observed agent and model, the five token classes, calls, cost, and durations from the store pair; the same holds through the legacy generation with tool counts absent.
 - A reported zero cost stays `0` with no `cost-missing` warning; an absent cost source is `null` with the warning; a non-numeric cost is `null` with `non-numeric-value`.
@@ -289,6 +289,6 @@ The harness adapters page states the window rule and its value, the grammar, the
 - [GH-335 spike evidence](../changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/chg-GH-335-spike-evidence.md) — the read-only re-observation of the version line and the store.
 - [ADR-0008](ADR-0008-harness-adapter-contract.md) — the harness adapter contract this record extends additively.
 - [TDR-0016](TDR-0016-harness-streaming-spawn-seam.md), [TDR-0021](TDR-0021-additive-optional-harness-environment-marker.md) — the additive-extension precedent.
-- [TDR-0036](TDR-0036-harness-seat-spawn-cardinality-and-seat-resolution.md) — the single home of the seat/carrier rules this record cites.
-- [TDR-0037](TDR-0037-harness-dispatch-outcome-envelope-detail.md) — the single home of the failure-envelope `detail.harness` member.
-- [TDR-0038](TDR-0038-opencode-integration-mode.md) — the integration-mode selection this record's mode constraint assumes.
+- [TDR-0040](TDR-0040-harness-seat-spawn-cardinality-and-seat-resolution.md) — the single home of the seat/carrier rules this record cites.
+- [TDR-0041](TDR-0041-harness-dispatch-outcome-envelope-detail.md) — the single home of the failure-envelope `detail.harness` member.
+- [TDR-0042](TDR-0042-opencode-integration-mode.md) — the integration-mode selection this record's mode constraint assumes.

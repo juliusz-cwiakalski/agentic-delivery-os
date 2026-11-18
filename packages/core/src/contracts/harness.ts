@@ -119,7 +119,7 @@ export type HarnessInstance = {
    * harness resolution; every consumer reads this one verdict.
    */
   readonly versionVerdict?: HarnessVersionVerdict;
-  /** Additive resolved integration mode (GH-335 F-2, DEC-2, TDR-0038). */
+  /** Additive resolved integration mode (GH-335 F-2, DEC-2, TDR-0042). */
   readonly mode?: HarnessMode;
   /** Additive mode origin: the delivered default or a declared value (DEC-2). */
   readonly modeOrigin?: HarnessModeOrigin;
@@ -277,7 +277,7 @@ export type HarnessSessionHandle = {
  * The spawn input carried by the port (F-2, F-5).
  *
  * `agent` and `binding` are the two additive optional per-spawn members
- * (GH-335 DEC-16, DEC-17, TDR-0036 A-4): `agent` is the CALLER-supplied agent
+ * (GH-335 DEC-16, DEC-17, TDR-0040 A-4): `agent` is the CALLER-supplied agent
  * identity the pure resolution function is called with, and `binding` is that
  * resolution's single-seat OUTPUT, supplied by the composition as per-spawn
  * data. `agent`'s ABSENCE is the `no-agent` state; a present empty or
@@ -299,7 +299,7 @@ export type HarnessResumeInput = {
   readonly descriptor?: HarnessExecutionEnvironmentDescriptor;
   /** The caller-supplied agent identity (DEC-16); absence is `no-agent`. */
   readonly agent?: string;
-  /** The resolved single-seat binding for this invocation (TDR-0036 A-4). */
+  /** The resolved single-seat binding for this invocation (TDR-0040 A-4). */
   readonly binding?: HarnessSeatBinding;
 };
 
@@ -347,7 +347,7 @@ export type HarnessFailure = {
   /**
    * `provider` is the delivered profile-selection domain: an agent the resolved
    * profile assigns no seat refuses through `provider.profile.invalid` (GH-335
-   * AC-F3-4, TDR-0036 A-2), never through a new harness identity.
+   * AC-F3-4, TDR-0040 A-2), never through a new harness identity.
    */
   readonly kind: "harness" | "config" | "provider";
   readonly code:
@@ -440,7 +440,7 @@ export type HarnessEnvironmentBuilder = (
   context?: HarnessEnvironmentContext,
 ) => HarnessResult<Readonly<Record<string, string>>>;
 
-/** The additive per-spawn environment context (GH-335 F-3, TDR-0036). */
+/** The additive per-spawn environment context (GH-335 F-3, TDR-0040). */
 export type HarnessEnvironmentContext = {
   readonly record?: Readonly<Record<string, string>>;
 };
@@ -503,7 +503,7 @@ export const HARNESS_SUPPORTED_VERSION_WINDOW = {
 export const HARNESS_VERSION_WINDOW_RULE =
   "the current minor line at delivery time plus one previous minor" as const;
 
-/** The longest accepted normalized version stamp (TDR-0037's version bound). */
+/** The longest accepted normalized version stamp (TDR-0041's version bound). */
 export const HARNESS_VERSION_MAX_CHARS = 32 as const;
 
 /**
@@ -547,7 +547,7 @@ export const normalizeStoredHarnessVersion = (raw: string): string | null => {
 export const HARNESS_VERSION_PROBE_PATTERN =
   /^(?:[A-Za-z][A-Za-z0-9._-]*) v?([0-9]+)\.([0-9]+)\.([0-9]+)$/;
 
-/** The closed version-verdict vocabulary (DM-2, TDR-0037). */
+/** The closed version-verdict vocabulary (DM-2, TDR-0041). */
 export const HARNESS_VERSION_VERDICTS = ["inside", "outside", "indeterminate"] as const;
 
 export type HarnessVersionVerdict = (typeof HARNESS_VERSION_VERDICTS)[number];
@@ -574,7 +574,7 @@ export type HarnessVersionProbe = (input: {
 
 /**
  * The closed integration-mode vocabulary with its observed surface per member
- * (GH-335 F-2, DM-3, DEC-2, TDR-0038).
+ * (GH-335 F-2, DM-3, DEC-2, TDR-0042).
  */
 export const HARNESS_MODES = [
   "per-invocation-private-server",
@@ -591,7 +591,7 @@ export const HARNESS_MODE_SURFACES = {
   "running-server-client": "--server / api",
 } as const satisfies Readonly<Record<HarnessMode, string>>;
 
-/** The one delivered default mode (TDR-0038's chosen mode). */
+/** The one delivered default mode (TDR-0042's chosen mode). */
 export const DEFAULT_HARNESS_MODE = "per-invocation-private-server" as const;
 
 /** The closed mode-origin vocabulary: omitted → defaults, present → configured. */
@@ -600,7 +600,7 @@ export const HARNESS_MODE_ORIGINS = ["defaults", "configured"] as const;
 export type HarnessModeOrigin = (typeof HARNESS_MODE_ORIGINS)[number];
 
 /**
- * One resolved seat binding (GH-335 F-3, DM-4, TDR-0036 decision 1).
+ * One resolved seat binding (GH-335 F-3, DM-4, TDR-0040 decision 1).
  *
  * Exactly one seat: the agent identity the binding was resolved for, the seat
  * name the profile assigns that agent, and that seat's resolved model in
@@ -615,7 +615,7 @@ export type HarnessSeatBinding = {
   readonly envName?: string;
 };
 
-/** The closed resolution-outcome vocabulary (TDR-0036 decision 2, A-1, A-2). */
+/** The closed resolution-outcome vocabulary (TDR-0040 decision 2, A-1, A-2). */
 export const HARNESS_BINDING_RESOLUTION_OUTCOMES = ["binding", "no-agent", "unassigned"] as const;
 
 export type HarnessBindingResolutionOutcome = (typeof HARNESS_BINDING_RESOLUTION_OUTCOMES)[number];

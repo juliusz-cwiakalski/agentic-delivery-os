@@ -15,17 +15,17 @@ phases:
   dod_check: { started: null, completed: 2026-11-18T18:36:16.103Z }
   pr_creation: { started: null, completed: null }
 decisions:
-  - text: "TDR-0036 — harness seat-to-spawn cardinality and seat resolution (one
+  - text: "TDR-0040 — harness seat-to-spawn cardinality and seat resolution (one
       spawn binds exactly one seat; the caller supplies the agent identity, the
       resolver returns the binding; Amendments A-1..A-4). Status: Proposed."
     date: "2026-11-18"
-  - text: "TDR-0037 — harness dispatch-outcome disclosure on the failure-envelope
+  - text: "TDR-0041 — harness dispatch-outcome disclosure on the failure-envelope
       detail slot (one declared harness member on the four pre-session
       refusals). Status: Proposed."
     date: "2026-11-18"
-  - text: "TDR-0038 — opencode integration mode. Status: Proposed."
+  - text: "TDR-0042 — opencode integration mode. Status: Proposed."
     date: "2026-11-18"
-  - text: "TDR-0039 — opencode harness adapter contract. Status: Proposed."
+  - text: "TDR-0043 — opencode harness adapter contract. Status: Proposed."
     date: "2026-11-18"
 open_questions: []
 blockers: []
@@ -159,12 +159,12 @@ notes:
       deterministic commit-message validator matches any XXX-NNN token, so a
       TDR/ADR id in the composed template subject (derived from the top staged
       path) is rejected as an invented tracker reference. Precedent GH-275
-      (TDR-0016) and GH-322. TDR-0037 therefore stays untracked until delivery
+      (TDR-0016) and GH-322. TDR-0041 therefore stays untracked until delivery
       Phase 1, where a lower-sorting path takes the template subject."
     type: blocker
     date: "2026-11-17"
-  - text: "Decision recorded: TDR-0037
-      (doc/decisions/TDR-0037-harness-dispatch-outcome-envelope-detail.md, R2,
+  - text: "Decision recorded: TDR-0041
+      (doc/decisions/TDR-0041-harness-dispatch-outcome-envelope-detail.md, R2,
       Proposed — human decides at PR review). The failure-envelope detail slot
       gains one harness member (kind, observedVersion|null, versionVerdict
       inside|outside|indeterminate, mode omitted when unresolved), present only
@@ -173,7 +173,7 @@ notes:
     type: decision
     date: "2026-11-17"
   - text: "Adjudication of plan conflicts after 1: NOT_READY remediation: (a)
-      TDR-0037's declaration, projection, pins, validator, fixture and doc
+      TDR-0041's declaration, projection, pins, validator, fixture and doc
       sentence land in Phase 2 while the behaviour file spans Phases 4 and 7 —
       accepted, because the record itself already names that file as push-later
       scope and the behaviour cannot exist before the refusals do; (b)
@@ -237,7 +237,7 @@ notes:
       path."
     type: decision
     date: "2026-11-18"
-  - text: "Decision recorded: TDR-0036 (R2, Proposed — human decides at PR review).
+  - text: "Decision recorded: TDR-0040 (R2, Proposed — human decides at PR review).
       One spawn binds exactly one seat; N seats are N spawns, N sessions, N row
       sets; the seat resolves from the spawn's agent identity; exactly one
       --agent (the agent identity, never the seat name) and one --model per
@@ -261,11 +261,11 @@ notes:
     type: decision
     date: "2026-11-18"
   - text: "dor_check iteration 2 remediation complete: spec (26 ACs, DEC-13/14,
-      TDR-0036 applied, DoD narrowed, sections 21 and 10 corrected, Appendix C
+      TDR-0040 applied, DoD narrowed, sections 21 and 10 corrected, Appendix C
       corrected), test plan (46 TCs, TC-011 re-cut to one pair per spawn, TC-046
       added for the probe construction site), plan (8 phases, 46/46 TCs, 26/26
       ACs, validate + lint both valid, capsule and telemetry route files
-      declared). TDR-0036 amended by its author. Re-running the gate as
+      declared). TDR-0040 amended by its author. Re-running the gate as
       iteration 3."
     type: info
     date: "2026-11-18"
@@ -340,8 +340,8 @@ notes:
       files) into the change branch. One conflict in doc/decisions/00-index.md,
       resolved as a row union. The merge exposed a decision-record id collision:
       main-tools now owns TDR-0031 (engine-first evaluation surfaces, GH-293),
-      so this change's envelope record was renumbered TDR-0031 -> TDR-0037 (file
-      renamed, front matter id, the TDR-0036 links and 61 references across the
+      so this change's envelope record was renumbered TDR-0031 -> TDR-0041 (file
+      renamed, front matter id, the TDR-0040 links and 61 references across the
       spec, plan, test plan and pm-notes). The readiness-review history keeps
       the id it reviewed, deliberately."
     type: info
@@ -364,7 +364,7 @@ notes:
       not left implicit; (n) the union's identity cap is CAPSULE_MAX_SESSIONS
       (64), the cap the checkpoint actually applies; (o) the readiness review
       history keeps the record id it reviewed, so it is intentionally stale
-      after the TDR-0031 to TDR-0037 renumbering."
+      after the TDR-0031 to TDR-0041 renumbering."
     type: decision
     date: "2026-11-18"
   - text: "dor_check iteration 4: NOT_READY (3 major, 2 minor, 3 nit). Verdict
@@ -398,11 +398,11 @@ notes:
     date: "2026-11-18"
   - text: "dor_check iteration 5: NOT_READY (1 major, 5 minor, 4 nit). All facets
       pass except cross-artifact consistency and decision capture, both on the
-      single major: TDR-0036 still described a one-member carrier while the
+      single major: TDR-0040 still described a one-member carrier while the
       settled design is two. Everything else was minor or nit."
     type: info
     date: "2026-11-18"
-  - text: "Iteration-5 remediation: TDR-0036 amended (A-4 — the caller supplies the
+  - text: "Iteration-5 remediation: TDR-0040 amended (A-4 — the caller supplies the
       agent identity on its own additive optional member, the binding member
       carries the resolver's return value, both in the contract phase, shipped
       dispatch sets neither); spec nits (DoD clause 6 split into construction vs
@@ -411,12 +411,12 @@ notes:
       absence-marker property, stale 41 figure); plan (harness-contract phase
       rule narrowed to the harness surface, Phase-5 gate re-runs the Phase-4
       propagation suite, agent-divergence reserved for a stated observed agent,
-      Phase 2.1 cites TDR-0036 A-4 beside DEC-16). validate + lint both valid."
+      Phase 2.1 cites TDR-0040 A-4 beside DEC-16). validate + lint both valid."
     type: info
     date: "2026-11-18"
   - text: "dor_check iteration 6: READY — all ten facets PASS, no critical or major
       gap. Verdict artifact: readiness-review/readiness-iter-6.md. Five
-      non-blocking findings ride delivery: TDR-0036 Alternative 3's leftover
+      non-blocking findings ride delivery: TDR-0040 Alternative 3's leftover
       single-carrier sentence; three second-order sentences attributing the
       binding to the caller; the empty-string agent boundary enforced nowhere;
       Phase 1.3 needing the adapters-contract record to be reference-only so the
@@ -574,10 +574,28 @@ notes:
       commits."
     type: info
     date: "2026-11-18"
-  - text: "PR-review carry-over from the independent decision review: TDR-0036
+  - text: "PR-review carry-over from the independent decision review: TDR-0040
       predates DEC-17/AC-F5-7 (no invalid-identity outcome and no single-seat
-      empty-string criterion; A-5/A-6 suggested), and TDR-0036/TDR-0039 both
+      empty-string criterion; A-5/A-6 suggested), and TDR-0040/TDR-0043 both
       speak to the expressibility and binding-attachment homes. Records were not
       edited; all four remain Proposed for human acceptance at the PR."
     type: risk
+    date: "2026-11-18"
+  - text: "Second decision-record id collision, found on the PR sync merge: GH-338
+      landed TDR-0032..TDR-0035 on main-tools first, so this change's four
+      records were renumbered TDR-0040 (seat/spawn), TDR-0041 (envelope detail),
+      TDR-0042 (integration mode) and TDR-0043 (adapter contract). Files renamed,
+      front-matter ids, cross-references, the decisions index and register, this
+      change's artifacts and the harness pages were updated together. GH-338's
+      own citations were deliberately left at 0032..0035. Same rule that
+      renumbered the envelope record 0031 to 0033 earlier today."
+    type: info
+    date: "2026-11-18"
+  - text: "Sync merge onto current main-tools (GH-338 plus three docs commits)
+      resolved as commit c4f519dc: eight content conflicts resolved as unions,
+      with both behaviours preserved in production.ts (this change's harness
+      composition mount and GH-338's transport selection). Re-verified after the
+      merge: `pnpm check` EXIT 0 — 10791 pass / 4 skip / 0 fail across 1359
+      files; range gate PASS over 45 commits, 0 offending."
+    type: info
     date: "2026-11-18"

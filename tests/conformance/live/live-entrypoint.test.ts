@@ -27,7 +27,11 @@ import {
 } from "@delivery-os/testkit";
 import { SECRET_READ_ALLOWLIST } from "../../../scripts/checks/secret-read-boundary";
 import { createCanaryCredentialPort, loadMockTenants } from "../support/fixtures";
-import { scanSourceMap, scanTestkitSource } from "../support/testkit-source-scan";
+import {
+  scanSourceMap,
+  scanTestkitSource,
+  testkitSourceFiles,
+} from "../support/testkit-source-scan";
 import {
   isConfigured,
   PROVIDER_LIVE_SETTINGS,
@@ -590,6 +594,9 @@ describe("TC-CONF-025 live injection determinism", () => {
 
   test("testkit source contains no ambient time, randomness or environment access", () => {
     expect(scanTestkitSource(ROOT)).toEqual([]);
+    expect(testkitSourceFiles(ROOT)).toContain(
+      "packages/testkit/src/conformance/stateful-double.ts",
+    );
     const hits = scanSourceMap({
       "packages/testkit/src/conformance/probe.ts":
         "const a = Date.now();\nconst b = Math.random();\nconst c = process.env.SECRET;\n",

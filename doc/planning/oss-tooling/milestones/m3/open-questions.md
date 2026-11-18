@@ -22,7 +22,7 @@ Question: must both modes be supported and tested, or is standalone the only
 delivery mode with the service mode best-effort?
 Proposed default: both supported; standalone is the default delivery mode.
 Answer: So here some spike or exploration will be required. I have no strong preferences. We can use either the background service or some APIs, depending on what open code provides. Probably we'll also need some portion of direct database access to, for example, scan and analyze the token usage, so I have no strong preference here. 
-Delivered (GH-335): the per-invocation private server (`--standalone`) is the one delivered mode; the managed background service and running-server client are declared but refuse `harness.mode.unavailable` (TDR-0038).
+Delivered (GH-335): the per-invocation private server (`--standalone`) is the one delivered mode; the managed background service and running-server client are declared but refuse `harness.mode.unavailable` (TDR-0042).
 
 ### OQ-M3-03 — Own MCP surface
 Context: the former plan had a "full MCP" story over our own engines; the

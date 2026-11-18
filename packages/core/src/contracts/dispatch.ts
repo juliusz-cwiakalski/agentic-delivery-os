@@ -247,19 +247,19 @@ export type DispatchAttemptRecord = {
   readonly sessionIds?: readonly string[];
   /**
    * The single-seat binding the composition resolved for this attempt's spawn
-   * (GH-335 DM-4, TDR-0036 decision 4). Absent on a pre-change record and on a
+   * (GH-335 DM-4, TDR-0040 decision 4). Absent on a pre-change record and on a
    * role-less run; capture cites it rather than re-deriving a seat from the
    * current profile.
    */
   readonly binding?: HarnessSeatBinding;
   /**
    * The normalized observed harness version this attempt ran on (GH-335 F-1;
-   * TDR-0037 decision 4). Absent on a pre-change record; never fabricated.
+   * TDR-0041 decision 4). Absent on a pre-change record; never fabricated.
    */
   readonly harnessVersion?: string | null;
   /** The window verdict the attempt ran under. */
   readonly versionVerdict?: HarnessVersionVerdict;
-  /** The selected integration mode, and its origin (DEC-2, TDR-0038). */
+  /** The selected integration mode, and its origin (DEC-2, TDR-0042). */
   readonly mode?: HarnessMode;
   readonly modeOrigin?: HarnessModeOrigin;
   readonly evidenceRefs: readonly DispatchEvidenceReference[];

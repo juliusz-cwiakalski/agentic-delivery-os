@@ -60,7 +60,7 @@ SUBCOMMANDS
 harness already runs on this host, it needs no long-lived service for the tooling to own,
 and it depends on no ambient server. Selecting it describes today's delivery instead of
 changing it; the other two stay declared members that refuse rather than degrade. The
-record is [TDR-0038](../decisions/TDR-0038-opencode-integration-mode.md), and its chosen
+record is [TDR-0042](../decisions/TDR-0042-opencode-integration-mode.md), and its chosen
 mode value is the value the Phase-2 `DEFAULT_HARNESS_MODE` constant must carry.
 
 ## 4. Store path and generation facts the telemetry path consumes
@@ -145,10 +145,10 @@ than failing or dropping.
 
 | Record | Path | Status |
 |---|---|---|
-| Integration mode (this pass's spike) | [TDR-0038](../../../../decisions/TDR-0038-opencode-integration-mode.md) | `Proposed` |
-| Adapters contract (window, grammar, mode, propagation by reference, observed-store telemetry, absence taxonomy) | [TDR-0039](../../../../decisions/TDR-0039-opencode-harness-adapter-contract.md) | `Proposed` |
-| Dispatch-outcome envelope `detail.harness` member | [TDR-0037](../../../../decisions/TDR-0037-harness-dispatch-outcome-envelope-detail.md) | `Proposed` |
-| Seat–spawn cardinality, seat resolution, and the two-member carrier (with Amendments A-1..A-4) | [TDR-0036](../../../../decisions/TDR-0036-harness-seat-spawn-cardinality-and-seat-resolution.md) | `Proposed` |
+| Integration mode (this pass's spike) | [TDR-0042](../../../../decisions/TDR-0042-opencode-integration-mode.md) | `Proposed` |
+| Adapters contract (window, grammar, mode, propagation by reference, observed-store telemetry, absence taxonomy) | [TDR-0043](../../../../decisions/TDR-0043-opencode-harness-adapter-contract.md) | `Proposed` |
+| Dispatch-outcome envelope `detail.harness` member | [TDR-0041](../../../../decisions/TDR-0041-harness-dispatch-outcome-envelope-detail.md) | `Proposed` |
+| Seat–spawn cardinality, seat resolution, and the two-member carrier (with Amendments A-1..A-4) | [TDR-0040](../../../../decisions/TDR-0040-harness-seat-spawn-cardinality-and-seat-resolution.md) | `Proposed` |
 
 All four are `Proposed`; the human owner accepts them at the GH-335 pull request. The
 independent review of this set is

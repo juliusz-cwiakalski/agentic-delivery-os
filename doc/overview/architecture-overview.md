@@ -8,7 +8,7 @@ owners: [engineering]
 area: engineering
 document_classification: working-analysis
 links:
-  related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, TDR-0012, ADR-0010, TDR-0016, TDR-0023, TDR-0024, TDR-0025, TDR-0032, TDR-0033, TDR-0034, TDR-0035, TDR-0036, TDR-0037, TDR-0038, TDR-0039]
+  related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, TDR-0012, ADR-0010, TDR-0016, TDR-0023, TDR-0024, TDR-0025, TDR-0032, TDR-0033, TDR-0034, TDR-0035, TDR-0036, TDR-0037, TDR-0038, TDR-0039, TDR-0040, TDR-0041, TDR-0042, TDR-0043]
   related_changes: ["GH-290", "GH-291", "GH-292", "GH-300", "GH-320", "GH-287", "GH-295", "GH-335"]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---

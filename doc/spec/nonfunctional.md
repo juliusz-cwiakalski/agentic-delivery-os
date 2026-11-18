@@ -6,7 +6,7 @@ last_updated: 2026-11-18
 owners: [engineering]
 ados_distribution: internal
 links:
-  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243, GH-230, GH-235, GH-238, GH-242, GH-275, GH-291, GH-320, GH-296, GH-287, GH-299, GH-335]
+  related_changes: [GH-200, GH-222, GH-221, GH-227, GH-228, GH-229, GH-224, GH-231, GH-225, GH-251, GH-233, GH-232, GH-243, GH-230, GH-235, GH-238, GH-242, GH-275, GH-291, GH-320, GH-296, GH-287, GH-299, GH-335, GH-339]
 summary: "Cross-cutting index of implemented tooling quality contracts and separately proposed validation targets."
 ---
 
@@ -348,6 +348,19 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
   live child processes, and bounded artifacts (262144
   bytes). Mock conformance executes supported production writes; at least one
   executing step per adapter is not all-flow or live write coverage.
+- Cross-adapter parity is a declared matrix over the nine closed operations and the
+  registered adapters with a six-dimension basis, an adjudicated class-set
+  difference register, and a pure gate over a gate-local observation record whose
+  violations name provider, operation, and one of nine closed clause ids. The gate
+  and the double-backed flows ride the existing TypeScript test job through the
+  aggregate test path: no workflow file, job, trigger, permission, or upload
+  changes, and the `delivery.conformance.v1` artifact gains no parity field. A
+  conformance-level tracker error taxonomy maps the four classes onto delivered
+  structured identities and is never an emitted failure identity; each adapter
+  accounts for all six trap families (9 covered / 7 recorded-difference /
+  2 gap-backed across the 18-cell square). The stateful double is deterministic,
+  runtime-neutral, and fail-closed, and registration-only participation is proven
+  by an identity-construct scan plus a composition-injected control registration.
 - [Harness conformance](features/feature-harness-adapters.md) registers exactly the
   two shipped harnesses, each covering the six-scenario classification floor
   through the one shared classifier, the four additive extension scenarios
@@ -359,6 +372,12 @@ path; see [CLI Entrypoint and Self-Description](features/feature-cli-entrypoint.
   `tests/conformance/github-transport-parity.test.ts`,
   `broken-adapter-control.test.ts`, `tests/structure/conformance-coverage.test.ts`,
   `tests/structure/reference-behavior.test.ts`,
+  `tests/conformance/parity-gate.test.ts`, `tracker-taxonomy.test.ts`,
+  `family-classification.test.ts`, `stateful-double.test.ts`,
+  `control-registration.test.ts`, `tests/structure/conformance-family-accounting.test.ts`,
+  `tests/structure/registration-participation.test.ts`,
+  `tests/structure/ci-topology-pin.test.ts`, `tests/checks/parity-gate-wiring.test.ts`,
+  `tests/checks/tracker-literal-scan.test.ts`,
   `tests/conformance/harness-classification.test.ts`,
   `harness-liveness.test.ts`, `tests/structure/harness-neutrality.test.ts`.
 - Live v1 is GET-only, zero mutations/created artifacts, and scheduled evidence,

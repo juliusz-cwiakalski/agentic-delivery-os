@@ -1,6 +1,6 @@
 /**
  * The pure agent-to-seat resolution, the surface mapping, and the expressibility
- * predicate (GH-335 F-3; DEC-6, DEC-13, DEC-14, DEC-16, TDR-0036).
+ * predicate (GH-335 F-3; DEC-6, DEC-13, DEC-14, DEC-16, TDR-0040).
  *
  * One spawn binds exactly one seat. The agent identity is the caller-supplied
  * value carried on the spawn/resume input's own optional member; this module
@@ -22,7 +22,7 @@ import {
   type ProviderProfileSeat,
 } from "#contracts";
 
-/** The closed resolution outcomes (TDR-0036 decision 2, A-1, A-2). */
+/** The closed resolution outcomes (TDR-0040 decision 2, A-1, A-2). */
 export type HarnessBindingResolution =
   | { readonly outcome: "binding"; readonly binding: HarnessSeatBinding }
   | { readonly outcome: "no-agent" }

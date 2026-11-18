@@ -9,7 +9,7 @@ service: delivery-os
 summary: "The Learn-family spend read side: the read-only `spend [--ref <ref>] [--phase <phase>] [--breakdown <field>] [--amplification] [--window-evidence --from <iso> --through <iso>] [--json]` command folding the closeout-captured harness.telemetry session-group and capture-outcome records, the v2 per-step and session-baseline telemetry families, and phase.transition history into five-class token totals, calls, per-agent/model roll-ups, capture-time per-phase attribution with the named unknown fallback, restart counts over the union of run identities, the TDR-0011 resume-amplification ratio with the additive progressRun field and named restart-loop prefill re-pay events, the additive v2 cost totals, five-dimension breakdowns, per-phase timing summaries, the telemetry-state disclosure, the window-scoped zero-spend evidence for peak-pause episodes with its closed four-value exclusion-reason set and classified telemetry absence, the DEC-5 reconciliation disclosure against summed harness session totals at the stated 0.02 tolerance, the closed degradation disclosure, bounded deterministic human and machine output with breakdown-aware truncation, the single spend.telemetry-absent error row, and the status digest section 8 projection fed by the same fold."
 links:
   related_changes: ["GH-236", "GH-240", "GH-291", "GH-294", "GH-299", "GH-335"]
-  related_decisions: ["TDR-0011", "ADR-0003", "TDR-0004", "TDR-0005", "TDR-0036"]
+  related_decisions: ["TDR-0011", "ADR-0003", "TDR-0004", "TDR-0005", "TDR-0040"]
   contracts:
     - "packages/core/src/contracts/spend.ts"
     - "packages/core/src/contracts/telemetry.ts"

@@ -1,0 +1,40 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "boundModules": [
+    "packages/testkit/src/conformance/flows.ts",
+    "packages/testkit/src/conformance/coverage.ts",
+    "packages/testkit/src/conformance/artifact.ts",
+    "packages/testkit/src/conformance/harness.ts",
+    "packages/testkit/src/conformance/parity.ts",
+    "packages/testkit/src/conformance/tracker-error-taxonomy.ts",
+    "packages/testkit/src/conformance/stateful-double.ts"
+  ],
+  "permits": [
+    {
+      "file": "packages/testkit/src/conformance/adapters.ts",
+      "construct": "provider-name-literal",
+      "count": 6
+    },
+    {
+      "file": "packages/testkit/src/conformance/types.ts",
+      "construct": "provider-name-literal",
+      "count": 3
+    },
+    {
+      "file": "packages/testkit/src/conformance/mock-tenant.ts",
+      "construct": "provider-name-literal",
+      "count": 6
+    },
+    {
+      "file": "packages/testkit/src/conformance/mock-tenant.ts",
+      "construct": "provider-comparison",
+      "count": 3
+    },
+    {
+      "file": "packages/testkit/src/conformance/runner.ts",
+      "construct": "provider-comparison",
+      "count": 5
+    }
+  ],
+  "parityColumnDerivation": "CONFORMANCE_ADAPTERS"
+}

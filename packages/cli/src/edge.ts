@@ -6978,13 +6978,13 @@ export type DispatchComposition = {
   readonly harnessAdmission?: () => Promise<DispatchHarnessAdmissionOutcome>;
   /**
    * The harness facts the admission resolved, read by the composition's port
-   * gate and disclosed on a pre-session refusal (TDR-0037). Absent on the
+   * gate and disclosed on a pre-session refusal (TDR-0041). Absent on the
    * non-dispatch lanes and for a harness kind outside the delivery window.
    */
   readonly harnessFacts?: DispatchPorts["harnessFacts"];
   /** The caller-supplied agent identity for this run (DEC-16, DEC-15). */
   readonly harnessAgent?: (ref: string) => string | undefined;
-  /** The composition-resolved single-seat binding for this run (TDR-0036). */
+  /** The composition-resolved single-seat binding for this run (TDR-0040). */
   readonly harnessBinding?: (ref: string) => DispatchPorts["harnessBinding"];
   readonly claimLease: (ref: string, repository: string) => DispatchLeaseClaim;
   readonly releaseLease: (ref: string, cause: "completed" | "aborted") => boolean;

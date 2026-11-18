@@ -1,7 +1,7 @@
 /**
  * TC-HARNESS-011 — the pinned M3-HARNESS-001 scenario at row grain: one seat per
  * spawn across N spawns, and seat-attributed rows whose models agree (AC-F3-1,
- * AC-F5-1, TDR-0036).
+ * AC-F5-1, TDR-0040).
  */
 import { describe, expect, test } from "bun:test";
 import {

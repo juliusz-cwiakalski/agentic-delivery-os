@@ -1,0 +1,27 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "provider": "gitlab",
+  "family": "pagination-truncation",
+  "stimulus": {
+    "kind": "read-pipeline-run",
+    "body": {
+      "pipelines": [
+        {
+          "id": 9001,
+          "status": "success",
+          "jobs": [
+            {
+              "name": "build",
+              "status": "success"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "expected": {
+    "classification": "bounded-observation",
+    "bound": "none",
+    "count": "absent"
+  }
+}

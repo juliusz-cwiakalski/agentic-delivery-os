@@ -57,7 +57,7 @@ export const HARNESS_WARNING_REASONS = [
 
 export type HarnessWarningReason = (typeof HARNESS_WARNING_REASONS)[number];
 
-/** The one reason a null seat cites (GH-335, TDR-0036 A-3). */
+/** The one reason a null seat cites (GH-335, TDR-0040 A-3). */
 export const HARNESS_UNRESOLVED_SEAT_REASON = "unresolved-seat" as const;
 
 /** The closed observed-identity axis vocabulary (GH-335 AC-F5-7). */
@@ -139,7 +139,7 @@ export type HarnessTelemetryRecord = {
   readonly harnessKind: HarnessKind;
   readonly harnessVersion: string | null;
   /**
-   * The harness-reported agent (the field TDR-0036 A-3 calls `agentRole`).
+   * The harness-reported agent (the field TDR-0040 A-3 calls `agentRole`).
    * Non-null; holds the declared empty-string placeholder when the store states
    * no agent, with `absentObservedAxes` naming that axis.
    */

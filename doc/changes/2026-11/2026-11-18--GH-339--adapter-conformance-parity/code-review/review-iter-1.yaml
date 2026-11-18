@@ -1,0 +1,312 @@
+version: 1
+iteration: 1
+mode: local
+work_item_ref: GH-339
+branch: feat/GH-339/adapter-conformance-parity
+base: origin/main-tools (three-dot merge-base)
+status: PASS_WITH_NOTES
+summary: >
+  Iteration 1. The change delivers a declared six-dimension parity matrix, a
+  class-set difference register, and a pure nine-clause record gate; a
+  conformance-level four-class tracker taxonomy with a six-family trap
+  vocabulary and a replay-proven 18-cell accounting (9 covered / 7
+  recorded-difference / 2 gap-backed); a deterministic, runtime-neutral
+  five-effect stateful double; and a registration-only participation proof
+  (five items, an identity-construct scan with an exact file-plus-construct
+  allowlist, derived columns, and a composition-injected control). All 34
+  acceptance criteria are satisfied by real code and real oracles, the additive
+  non-goals hold (no adapter behaviour change, no new operation/error row/domain
+  kind/artifact field/workflow job/subpath/dependency, testkit runtime-neutral),
+  and the six plan phases plus documentation reconciliation are complete with
+  named evidence. No blocker remains. Three majors and six minors/notes are
+  recorded: the observation record and per-class evidence are hand-authored
+  declared data for four of six dimensions (only pagination-model and
+  failure-classification are replay-tied), so the parity claim for
+  identity-scheme/pipeline-model/state-vocabulary/carrier-absent is only as
+  fresh as the committed evidence; TC-PARITY-004's named non-vacuity mutations
+  for an empty rationale, a missing adjudication reference, and an unresolvable
+  evidence pointer are not implemented (and the reusable gate has no such
+  rule); and the synthetic control adapter's "full family accounting" is a
+  trap-name token scan whose six "covered" postures are not backed by fixtures
+  and are inconsistent with the control's single supported operation. None
+  invalidates the delivered shipped-adapter property. Verdict PASS_WITH_NOTES.
+severity_breakdown:
+  blocker: 0
+  major: 3
+  minor: 5
+  info: 2
+spec_compliance: PASS
+plan_compliance: PASS
+verification:
+  commits: [00bdf3f0, b5a91e0d, 32fc13a9, b515d200, c04ff9d2, 54b80eab, d41c3b07, 4079cca3, 64b9aeab]
+  no_adapter_behavior_change: true      # diff touches no packages/adapters/** source
+  no_workflow_change: true             # diff touches no .github/workflows/**
+  no_core_change: true                 # diff touches no packages/core/**
+  no_artifact_schema_change: true      # artifact.ts unchanged; artifact.test.ts asserts invariance
+  no_new_subpath_or_dependency: true   # testkit package.json + lockfile unchanged
+  tests_run:
+    - "bun test tests/conformance/parity-gate.test.ts -> 45 pass / 0 fail"
+    - "bun test tests/conformance tests/structure/{conformance-family-accounting,registration-participation,trap-catalog,ci-topology-pin}.test.ts tests/checks/{tracker-literal-scan,parity-gate-wiring}.test.ts -> 344 pass / 0 fail"
+    - "bun test tests/checks/{privacy-release,conformance-workflow}.test.ts -> 15 pass / 0 fail"
+    - "bun test tests/structure tests/checks tests/behaviour/providers -> 3156 pass / 1 fail; the sole failure (license-audit-exit TC-LICREG-022, a git-status before==after assertion) is a cross-file working-tree race (a concurrent packaging test transiently created packages/adapters/delivery-os-adapters-0.0.0.tgz and this review's own code-review/ dir appeared mid-run), not a GH-339 defect; the suite passes 4/4 when run alone"
+  environmental_notes: >
+    The review writer created doc/changes/.../code-review/ during the aggregate run,
+    and a concurrent packaging test transiently wrote packages/adapters/delivery-os-adapters-0.0.0.tgz;
+    both perturb the working-tree git status that license-audit-exit asserts. No tracked
+    file was modified by this review; the only working-tree change is the untracked review dir.
+acceptance_criteria:
+  - { id: AC-F1-1, verdict: satisfied, evidence: "TC-PARITY-001 (27 cells, 9/column, set equality); gate cell-set + column-registration; run green." }
+  - { id: AC-F1-2, verdict: satisfied, evidence: "TC-PARITY-002 (github reference, 9 same-as-reference, no reference entry); gate reference-purity." }
+  - { id: AC-F1-3, verdict: satisfied, evidence: "TC-PARITY-003 (13 gaps, reason char-equality both ways); gate declaration-agreement." }
+  - { id: AC-F1-4, verdict: satisfied, evidence: "TC-PARITY-004/PMUT-008/009/010/013: cell<->entry bijection, unique pair, non-empty class set enforced by gate; non-empty rationale/adjudicatedBy asserted on the committed matrix only (see F-2)." }
+  - { id: AC-F1-5, verdict: satisfied, evidence: "TC-PARITY-005 + PMUT-014..019: one observation mutation per dimension flips one dimension and fails observed-contradiction naming exactly its class id." }
+  - { id: AC-F1-6, verdict: satisfied, evidence: "gate evidence-reproduction (parity.ts:871-907) + PMUT-021/022; class set exactness proven. Residual: evidence is hand-authored, not oracle-produced for 4 dims (F-1)." }
+  - { id: AC-F1-7, verdict: satisfied, evidence: "PMUT-001..013 structural set, PMUT-014..019 per-dimension, PMUT-020..022 record/set rules; each names provider/operation/clause." }
+  - { id: AC-F1-8, verdict: satisfied, evidence: "TC-ART-001/002 + TC-CHECK-010: exact eleven artifact keys, seven caps, no parity vocabulary/verdict; artifact.ts unchanged." }
+  - { id: AC-F2-1, verdict: satisfied, evidence: "TC-TAX-001 + tracker-literal-scan: four ids, one identity each, structured-only, single-module two-tree scan empty outside allowlist." }
+  - { id: AC-F2-2, verdict: satisfied, evidence: "TC-TAX-003 + family-classification: github 401/403 -> auth.rejected (ownsStatus); gitlab/jira recorded transport.failed; credential outside." }
+  - { id: AC-F2-3, verdict: satisfied, evidence: "TC-TAX-004: thrown transport -> transport.failed no status on all three; distinguishable on status-bearing adapter." }
+  - { id: AC-F2-4, verdict: satisfied, evidence: "TC-TAX-005: 429 -> payload.invalid with status; 403 throttle -> auth.rejected, never covered rate-limit; prose-independent." }
+  - { id: AC-F2-5, verdict: satisfied, evidence: "TC-TAX-006: github undecodable 2xx and contradicted 500 -> payload.invalid with status; gitlab/jira recorded transport.failed." }
+  - { id: AC-F2-6, verdict: satisfied, evidence: "TC-TAX-007: github/jira transition refusal payload.invalid with zero requests; gitlab gap-backed." }
+  - { id: AC-F2-7, verdict: satisfied, evidence: "TC-TAX-008: github bound=declared/count=reported on the wire; gitlab no bound/count -> recorded pagination-model; jira gap-backed." }
+  - { id: AC-F2-8, verdict: satisfied, evidence: "TC-TAX-009: total ordered projection; read 404 outside, write 404 payload, credential outside, no new identity." }
+  - { id: AC-F2-9, verdict: satisfied, evidence: "TC-TAX-010: capability class structural (empty provingFamilies), proven by coverage gates + runtime declared-gap encounter." }
+  - { id: AC-F2-10, verdict: satisfied, evidence: "TC-TAX-011: 18 cells, exact 9/7/2 table, no dual posture, vacuous covered refused, unaccounted fails by adapter/family." }
+  - { id: AC-F2-11, verdict: satisfied, evidence: "TC-TAX-012 + validateCatalogs: four-field entries (43/8/12), refs resolve, family-wired subset bidirectional." }
+  - { id: AC-F3-1, verdict: satisfied, evidence: "TC-DOUBLE-001: write-then-read through createGitHubClient; flows 3/14 and adapters 3 unchanged." }
+  - { id: AC-F3-2, verdict: satisfied, evidence: "TC-DOUBLE-002: two replays deep-equal canonical state, requests, and normalized reads; matches committed golden." }
+  - { id: AC-F3-3, verdict: satisfied, evidence: "TC-DOUBLE-003: unfixtured request, undeclared effect, missing resource fail by method/URL/effect; state unchanged; no live fallback." }
+  - { id: AC-F3-4, verdict: satisfied, evidence: "TC-DOUBLE-004: throwing-fetch and child-process guards observe zero calls, provably armed." }
+  - { id: AC-F3-5, verdict: satisfied, evidence: "TC-DOUBLE-005: committed stateless tenants decode with no state/effect; byte-identical bodies; write-shaped bodies do not mutate." }
+  - { id: AC-F3-6, verdict: satisfied, evidence: "TC-DOUBLE-006 + testkit-source-scan: double imports no node:/bun:, ambient-pattern scan empty; fixtures/guards under tests/." }
+  - { id: AC-F3-7, verdict: satisfied, evidence: "TC-DMUT-001..004: out-of-vocab effect, two effects/route, unresolvable operands, missing identity sequence all fail naming the declaration." }
+  - { id: AC-F4-1, verdict: satisfied, evidence: "TC-REG-001 + type test: exact five items, @ts-expect-error on a sixth/lifecyclePhase/port." }
+  - { id: AC-F4-2, verdict: satisfied, evidence: "TC-REG-002/006: passing injected run, complete 9-cell column through the gate, CONFORMANCE_ADAPTERS unchanged, control absent; no-edit half review-verified. Family-accounting half is shallow (F-3)." }
+  - { id: AC-F4-3, verdict: satisfied, evidence: "TC-REG-003: provider set == {github,gitlab,jira}, control absent, unknown registration rejected." }
+  - { id: AC-F4-4, verdict: satisfied, evidence: "TC-REG-004: seven bound modules scan clean, runner five comparisons pinned, parity authors no provider key, non-constructs asserted. mock-tenant permits not count-pinned (F-4)." }
+  - { id: AC-F4-5, verdict: satisfied, evidence: "TC-REG-005: out-of-set operation, lifecycle hook, runner branch each refused by name; closed set unchanged." }
+  - { id: AC-F5-1, verdict: satisfied, evidence: "TC-GATE-001 asserts ts-test runs pnpm test (bun test) with no suite ignored; TC-GATE-002 pins workflow file/job/trigger/check-name sets; zero workflow files changed (review-verified)." }
+  - { id: AC-F5-2, verdict: satisfied, evidence: "TC-GATE-003: nine-id clause span, provider/operation, resolving evidence, <=1024 detail, scalar values, no credential canary; other clause is a defect." }
+  - { id: AC-F5-3, verdict: satisfied, evidence: "TC-GATE-004: two runs deep-equal, canonical order by clause/provider/operation/dimension, insertion-order independent." }
+findings:
+  - id: F-1
+    severity: major
+    confidence: high
+    category: spec-compliance
+    location: "tests/fixtures/providers/conformance/parity/observation-record.json:1 + tests/fixtures/providers/conformance/parity/evidence/*.json:1 + packages/testkit/src/conformance/parity.ts:871"
+    message: >
+      The gate-local observation record and the nine per-class evidence documents
+      are hand-authored JSON. The evidence fixtures only restate the pair
+      (referenceValue/adapterValue + a decorative `reproduces: true`), and the
+      gate's evidence-reproduction clause compares those values against the same
+      hand-authored observation record. Only pagination-model (TC-TAX-008 replay)
+      and failure-classification (TC-TAX-003..007 replay) are corroborated by a
+      live replay; identity-scheme, pipeline-model, state-vocabulary and
+      carrier-absent are not derived from a read and are not tied to any
+      delivered-behaviour test. Spec RSK-11 ("stale evidence fails") is therefore
+      weaker than stated for those four dimensions: an adapter behaviour drift on
+      them would leave the gate green because the record is static. This follows
+      the spec's "declared evidence reviewed like any other declared surface"
+      framing, so it is not a blocker, but it narrows the "proven, not asserted"
+      claim.
+    suggestion: >
+      Add one cross-check test that replays each supported (adapter, operation)
+      pair through the production client and asserts the observation record's
+      identity-scheme / state-vocabulary / pipeline-model / carrier-absent values
+      equal the replayed normalized read (as TC-TAX-008 already does for
+      pagination), so a stale record fails by name. Alternatively, derive the
+      record in-test from the replay rather than from a static fixture.
+  - id: F-2
+    severity: major
+    confidence: high
+    category: test-coverage
+    location: "packages/testkit/src/conformance/parity.ts:617-709 (register loop) + tests/conformance/parity-gate.test.ts:184"
+    message: >
+      The test plan's TC-PARITY-004 requires case-level mutations for an empty
+      rationale, a missing/empty adjudicatedBy, and an unresolvable evidence
+      pointer, each failing naming the field/differenceId/class. None is
+      implemented, and the reusable gate has no rule for them: parityViolations
+      never reads `entry.rationale` or `entry.adjudicatedBy`, and it only checks
+      that an evidence path string is non-empty (it cannot resolve paths, being
+      runtime-neutral). The committed matrix is well-formed and TC-PARITY-004
+      asserts `rationale.trim().length > 0` / `adjudicatedBy.trim().length > 0`
+      over it, so the delivered data satisfies AC-F1-4 — but the mandated
+      non-vacuity controls are absent and a programmatic consumer of the gate
+      would accept a malformed entry.
+    suggestion: >
+      Add two register-loop checks in parityViolations (an empty rationale and an
+      empty adjudicatedBy, reported under an existing clause such as
+      register-bijection or difference-class), plus the three TC-PARITY-004
+      mutations. For the unresolvable-pointer case, assert the resolution in the
+      suite (existsSync over the mutated path), since the gate itself is
+      filesystem-free.
+  - id: F-3
+    severity: major
+    confidence: high
+    category: spec-compliance
+    location: "tests/conformance/control-registration.test.ts:76-85 + tests/fixtures/providers/conformance/control/column.ts:92-99"
+    message: >
+      AC-F4-2 requires the synthetic control to show "full family accounting".
+      The control declares six postures, all `covered`, but the proof is a
+      trap-name token scan (CONTROL_FAMILY_ACCOUNTING vs trapName substrings), not
+      the delivered accounting engine used for the shipped adapters. The control
+      supports only read-work-item and its trap catalog entries all point at the
+      same tenant route, so `pagination-truncation` and `workflow-state-mismatch`
+      cannot be `covered` under DM-4's definition (a committed fixture replayed
+      for an operation that declares the observed structure). The six `covered`
+      postures are therefore inconsistent with the control's capability
+      declaration and pass only because the real accounting rules are not applied
+      to the control.
+    suggestion: >
+      Apply the delivered accounting validator (generalised to a passed-in
+      adapter list) to the control, or declare honest postures — `gap-backed`
+      for the families whose operation the control declares unsupported — so the
+      control's accounting is non-vacuous. Keep one mutation that removes an
+      item and fails by name (already TC-REG-006).
+  - id: F-4
+    severity: minor
+    confidence: high
+    category: spec-compliance
+    location: "tests/fixtures/providers/conformance/parity/identity-scan-allowlist.json:21-33 + tests/structure/registration-participation.test.ts:107-116"
+    message: >
+      The allowlist pins runner.ts by construct AND count (exactly five
+      provider-comparisons) but pins mock-tenant.ts only by (file, construct),
+      with no count. A new provider-discriminant branch added anywhere in
+      mock-tenant.ts would be absorbed silently. The doc
+      (feature-adapter-conformance.md) says the scan "cannot absorb a new branch
+      quietly", which overclaims for mock-tenant.
+    suggestion: >
+      Record a `count` for the mock-tenant permits and assert equality, as the
+      runner permit already does, or narrow the mock-tenant permit to the
+      addressing-decode function; then align the doc sentence.
+  - id: F-5
+    severity: minor
+    confidence: high
+    category: test-coverage
+    location: "tests/behaviour/providers/github-trap.test.ts:795 (familyFixture) + gitlab-trap.test.ts:293 + jira-trap.test.ts:309"
+    message: >
+      The append-only trap-suite assertions for the appended catalog entries
+      (GH339-*/GL339-*/JIRA339-*) only validate the fixture's provenance marker
+      and that its `expected.classification` is a declared class; they do not
+      replay the stimulus. The genuine replay/classification proof lives in
+      tests/conformance/{tracker-taxonomy,family-classification}.test.ts. The
+      test plan wording ("replayed green by its provider suite through a NEW
+      assertion") overstates what the trap-suite assertion does.
+    suggestion: >
+      Either have familyFixture replay the stimulus and assert the class (it
+      already has the fixture), or reword the plan/test-plan to say the trap
+      entry's assertion is a fixture-integrity check while the classification
+      replay is owned by the conformance family suite.
+  - id: F-6
+    severity: minor
+    confidence: medium
+    category: correctness
+    location: "packages/testkit/src/conformance/parity.ts:269-287"
+    message: >
+      buildParityMatrix binds AUTHORED_COLUMNS positionally to the registration
+      list (`AUTHORED_COLUMNS[index]`), so its comment "reused for the control
+      run" is inaccurate (the control test builds its own matrix). Reordering the
+      registration list would attach GitLab's/Jira's authored cells to the wrong
+      provider. The gate's declaration-agreement clause would then catch it, so
+      it is not silent, but the helper is a latent footgun and the comment
+      misleads.
+    suggestion: >
+      Key the authored columns by a stable non-provider discriminator (e.g. the
+      registration's adapterName isn't allowed either since it is a provider
+      name) — or drop the "reused for the control run" comment and document that
+      the authored columns are positional and must stay aligned with
+      CONFORMANCE_ADAPTERS order, with a structure test pinning that order.
+  - id: F-7
+    severity: minor
+    confidence: high
+    category: correctness
+    location: "packages/testkit/src/conformance/tracker-error-taxonomy.ts:106-117"
+    message: >
+      TrackerObservableOutcome carries an `undecodable?: boolean` on the `status`
+      variant, but classifyTrackerOutcome never reads it — an undecodable 2xx
+      falls through to the final `tracker.payload.invalid` return only by
+      position, and an (impossible) undecodable 401 would classify as
+      auth.rejected. The discriminant is effectively dead and its intent is
+      unenforced.
+    suggestion: >
+      Either remove `undecodable` (the fall-through already yields payload.invalid
+      for non-401/403) or make it explicit: if `undecodable` is true, return
+      tracker.payload.invalid before the 401/403 branch, and add a case.
+  - id: F-8
+    severity: minor
+    confidence: high
+    category: plan-compliance
+    location: "commit 54b80eab (plan phase 6)"
+    message: >
+      Phase 6's declared scope lists the doc files and the change folder only,
+      but its commit also edited packages/testkit/src/conformance/parity.ts
+      (constant substitution), tracker-error-taxonomy.ts (named class-id
+      constants) and tests/structure/content-inventory.test.ts. These paths are
+      declared in earlier phases (1/2/5) but not phase 6, and the plan records
+      only trap-catalog.test.ts (discovery k) and privacy-release.test.ts
+      (discovery l) as undeclared-path edits. No behaviour change (pure constant
+      substitution, additive allowlist entries), but a strict per-phase scope
+      audit reports drift.
+    suggestion: >
+      Record the parity.ts / tracker-error-taxonomy.ts / content-inventory.test.ts
+      edits as a phase-6 discovery note, or move them to the phase that owns
+      those files, so the phase->file binding is exact.
+  - id: F-9
+    severity: info
+    confidence: high
+    category: spec-compliance
+    location: "tests/fixtures/providers/conformance/parity/adjudication.json:145-212"
+    message: >
+      The two Jira write cells are `same-as-reference` purely by agreement of
+      `not-observable` observations (five dimensions) plus identical empty carrier
+      arrays; no write behaviour is actually compared. This is the spec's declared
+      scope and the adjudication record states it honestly ("no provider
+      divergence is claimed"), so it is correct — recorded here so a reader does
+      not mistake "same as reference" for an observed behavioural equivalence.
+    suggestion: "No action; keep the honest rationale."
+  - id: F-10
+    severity: info
+    confidence: medium
+    category: correctness
+    location: "packages/testkit/src/conformance/parity.ts:561-611"
+    message: >
+      For a `gap` cell whose operation is neither supported nor present in
+      declaredGaps, the gate emits nothing (it only compares the reason when a
+      declared gap exists). This relies on the structural coverage gate rejecting
+      such a declaration first; it is not independently caught by the parity gate.
+    suggestion: "Optional: treat a gap cell with no declared gap reason as a declaration-agreement violation, for defence in depth."
+reviewed_at: 2026-11-18T18:30:00Z
+next_step: CALL_CODER
+reviewer_notes: |
+  Verdict rationale: 0 blockers, 3 majors, so PASS_WITH_NOTES. Every one of the
+  34 ACs is backed by real code plus a passing oracle; the majors are integrity /
+  non-vacuity gaps, not functional failures of the delivered shipped-adapter
+  property.
+
+  The strongest parts: the family accounting is genuinely replayed
+  (tracker-taxonomy TC-TAX-003..008 and family-classification replay all 16
+  non-gap cells through the production clients and assert the recorded class);
+  the double is deterministic and fail-closed with a committed golden; the
+  gate's structural mutation set plus per-dimension observation mutations are
+  real and each names its provider/operation/clause; and the artifact-invariance
+  and CI-topology pins are concrete (not diff-based).
+
+  The three majors, in priority order: F-1 (declared observation/evidence not
+  replay-derived for 4 dimensions), F-2 (TC-PARITY-004's named mutations absent;
+  gate has no rationale/adjudication rule), F-3 (control adapter's "full family
+  accounting" is a token scan).
+
+  Honest adjudications confirmed: the GitLab read-delivery-request
+  failure-classification difference says "unobservable on the reference"; the two
+  Jira write cells say "same as reference by agreement of not-observable
+  observations"; no provider was converged to force a same-as-reference verdict.
+
+  Non-goals confirmed by the diff: no packages/adapters, packages/core, or
+  .github/workflows changes; testkit package.json/lockfile untouched (no new
+  subpath or dependency); artifact.ts untouched.
+
+  Test plan / scope deviations: the test-plan TC-PARITY-005 fixture description
+  ("replayed to obtain the normalized results") is not met — the delivered test
+  loads a static record (F-1); TC-PARITY-004's enumerated mutations are not
+  implemented (F-2); phase 6 crossed into earlier-phase files (F-8).
