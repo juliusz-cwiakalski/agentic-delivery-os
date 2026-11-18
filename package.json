@@ -12,6 +12,7 @@
     "format:check": "biome format .",
     "typecheck": "pnpm -r typecheck && pnpm exec tsc -p tests/types/tsconfig.json",
     "test": "bun test",
+    "build:binary": "bun run scripts/build-binary.ts",
     "check:boundaries": "depcruise packages && bun run scripts/checks/ambient-globals.ts && bun run scripts/checks/workspace-entrypoints.ts && bun run scripts/checks/secret-read-boundary.ts",
     "check:forbidden-literals": "bun run scripts/checks/forbidden-literals.ts",
     "check:privacy-literals": "bun run scripts/checks/privacy-literals.ts",

@@ -2220,7 +2220,13 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "cli/src/index.ts": ["runCli"],
   "cli/bin/delivery-os.ts": ["completion"],
   "cli/bin/jaiship.ts": ["completion"],
-  "cli/src/bin-launcher.ts": ["runBinLauncher"],
+  "cli/src/bin-launcher.ts": ["resolveReentryEntryPath", "runBinLauncher"],
+  "cli/src/build-identity.ts": [
+    "buildTokenOf",
+    "fallbackVersion",
+    "injectedBuildIdentity",
+    "shortCommitOf",
+  ],
   "cli/src/entrypoint.ts": [
     "workingNameEnvironmentVariable",
     "PROMPT_REQUIRED_COMMANDS",
@@ -3518,7 +3524,10 @@ test("TC-BIN-061 the new bins join the file set with per-file allowances", () =>
   expect(inventory.cli).toContain("src/entrypoint.ts");
   expect(EXECUTABLE_ALLOWANCES["cli/bin/jaiship.ts"]).toEqual(["completion"]);
   expect(EXECUTABLE_ALLOWANCES["cli/bin/delivery-os.ts"]).toEqual(["completion"]);
-  expect(EXECUTABLE_ALLOWANCES["cli/src/bin-launcher.ts"]).toEqual(["runBinLauncher"]);
+  expect(EXECUTABLE_ALLOWANCES["cli/src/bin-launcher.ts"]).toEqual([
+    "resolveReentryEntryPath",
+    "runBinLauncher",
+  ]);
   for (const relative of ["bin/jaiship.ts", "bin/delivery-os.ts", "src/bin-launcher.ts"]) {
     expect(declaredExports(ROOT, "cli", relative).sort()).toEqual(
       [...(EXECUTABLE_ALLOWANCES[`cli/${relative}`] ?? [])].sort(),

@@ -68,3 +68,7 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0038](TDR-0038-install-target-stability-and-dev-build-exclusion.md) | TDR | Install-Target Stability Rule and Dev-Build Exclusion | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | [TDR-0039](TDR-0039-installed-binary-state-format-compatibility-check.md) | TDR | Installed-Binary ↔ State-Format Compatibility Check — One Delivered Identifier, Read-Only, Never Blocking | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | [TDR-0040](TDR-0040-upgrade-rollback-uninstall-purge-boundaries.md) | TDR | Upgrade, Rollback, Uninstall and Purge Boundaries | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+
+Decisions TDR-0036 … TDR-0040 are the binding design of change GH-346; their owner
+acceptance is that change's pull-request review, and their status moves from
+`Proposed` there rather than in the delivery commits.

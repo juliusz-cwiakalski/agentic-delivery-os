@@ -346,6 +346,7 @@
     "bin/delivery-os.ts",
     "bin/jaiship.ts",
     "src/bin-launcher.ts",
+    "src/build-identity.ts",
     "src/classify.ts",
     "src/commands/blockers.ts",
     "src/commands/board.ts",

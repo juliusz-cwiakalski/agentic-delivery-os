@@ -20,6 +20,7 @@ import { resolveBrandIdentity } from "../../packages/core/src/branding";
 import { ERROR_TABLE } from "../../packages/core/src/contracts/index";
 import { bufferSink } from "../golden/helpers";
 import { validateSeam } from "./branding-seam.test";
+import { buildSideLiteralSites, buildSideViolations } from "./build-artifact-entry.test";
 
 const ROOT = process.cwd();
 const CLI_DIR = join(ROOT, "packages/cli");
@@ -634,5 +635,46 @@ describe("delivered secret redaction reaches the chokepoint", () => {
     expect(stdout.value).not.toContain(canary);
     expect(stdout.value).toContain("[redacted]");
     expect(stderr.value).not.toContain(canary);
+  });
+});
+
+describe("GH-346 TC-INST-107 the identity-literal inventory has two declared scan scopes", () => {
+  test("the build-side root declares exactly one site beside the five product-surface sites", () => {
+    const buildSide = buildSideLiteralSites(ROOT);
+    expect(buildSide.map((site) => `${site.file}:${site.constant}=${site.value}`)).toEqual([
+      "scripts/build-binary.ts:PRIMARY_WORKING_NAME=jaiship",
+    ]);
+    expect(buildSideViolations(ROOT)).toEqual([]);
+    expect(literalSites(ROOT).length).toBe(5);
+    const buildSource = readFileSync(join(ROOT, "scripts/build-binary.ts"), "utf8");
+    expect(buildSource).toContain("PRIMARY_WORKING_NAME");
+    expect(buildSource).toContain("packages/cli/bin/jaiship.ts");
+  });
+
+  test("an undeclared build-side literal fails by name", () => {
+    withRoot("build-side-literal", (root) => {
+      write(root, "scripts/build-binary.ts", 'const PRIMARY_WORKING_NAME = "jaiship";\n');
+      expect(buildSideViolations(root)).toEqual([]);
+      write(root, "scripts/other-build.ts", 'const PRODUCT = "jaiship";\n');
+      expect(buildSideViolations(root).join("\n")).toContain(
+        "undeclared build-side literal scripts/other-build.ts:PRODUCT",
+      );
+      write(root, "scripts/build-binary.ts", 'const OTHER = "delivery-os";\n');
+      const failures = buildSideViolations(root).join("\n");
+      expect(failures).toContain("PRIMARY_WORKING_NAME");
+      expect(failures).toContain("delivery-os");
+    });
+  });
+
+  test("both bins supply the injected identity and the resolved re-entry path", () => {
+    for (const name of ["jaiship", "delivery-os"]) {
+      const source = readFileSync(join(ROOT, `packages/cli/bin/${name}.ts`), "utf8");
+      expect(source).toContain("injectedBuildIdentity()");
+      expect(source).toContain("resolveReentryEntryPath({");
+      expect(source).not.toContain("process.argv[1],\n  daemonEntry");
+    }
+    const launcher = readFileSync(join(ROOT, "packages/cli/src/bin-launcher.ts"), "utf8");
+    expect(launcher).not.toContain("process.");
+    expect(launcher).toContain("resolveReentryEntryPath");
   });
 });
