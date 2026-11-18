@@ -13,6 +13,7 @@ import { GITHUB_ADAPTER_CONTRACT } from "../../packages/adapters/src/github/capa
 import {
   GITHUB_CLI_REFUSAL_CODES,
   GITHUB_TRANSPORT_MATRIX,
+  githubCliHostname,
 } from "../../packages/adapters/src/github/cli-transport";
 import { GITHUB_LOG_EXCERPT_MAX_BYTES } from "../../packages/adapters/src/github/log-excerpt";
 import {
@@ -28,11 +29,13 @@ import {
   type AdapterOperation,
 } from "../../packages/core/src/contracts/index";
 import { PRODUCTION_CATALOG } from "../../packages/core/src/index";
-import { arrayField, readJson } from "../behaviour/providers/support";
+import { arrayField, isRecord, readJson } from "../behaviour/providers/support";
 import {
   REFERENCE_BEHAVIOR_DOCUMENT,
+  REFERENCE_BEHAVIOR_HOST_MAPPING_FIXTURE,
   REFERENCE_BEHAVIOR_INDEX,
   REFERENCE_BEHAVIOR_INDEX_TARGET,
+  REFERENCE_BEHAVIOR_ISOLATION_VARIABLES,
   REFERENCE_BEHAVIOR_SECTIONS,
   REFERENCE_BEHAVIOR_TABLE_HEADERS,
 } from "../fixtures/provider/reference-behavior";
@@ -62,6 +65,28 @@ const tableOf = (section: string): string[][] =>
     .filter((line) => line.trim().startsWith("|"))
     .map((line) => cellsOf(line))
     .filter((cells) => !cells.every((cell) => /^:?-{2,}:?$/u.test(cell)));
+
+/** The table blocks of one section: one row list per markdown table. */
+const tableBlocksOf = (section: string): string[][][] =>
+  section
+    .split(/\n\s*\n/u)
+    .map((block) =>
+      block
+        .split("\n")
+        .filter((line) => line.trim().startsWith("|"))
+        .map((line) => cellsOf(line))
+        .filter((cells) => !cells.every((cell) => /^:?-{2,}:?$/u.test(cell))),
+    )
+    .filter((rows) => rows.length > 0);
+
+/** The rows of the one table in `section` whose header equals `header`. */
+const tableWithHeader = (
+  section: string,
+  header: readonly string[],
+): readonly string[][] | undefined =>
+  tableBlocksOf(section)
+    .find((rows) => (rows[0] ?? []).join("|") === header.join("|"))
+    ?.slice(1);
 
 const REQUIRED_HEADERS = REFERENCE_BEHAVIOR_TABLE_HEADERS;
 
@@ -277,6 +302,108 @@ const probeFailures = (text: string): string[] => {
   return failures;
 };
 
+const declaredHostMapping = (): readonly {
+  readonly instanceHost: string;
+  readonly cliHost: string;
+}[] => {
+  const parsed = readJson(REFERENCE_BEHAVIOR_HOST_MAPPING_FIXTURE);
+  if (!isRecord(parsed) || !Array.isArray(parsed.hostMapping)) {
+    throw new Error("cli-argv fixture has no hostMapping block");
+  }
+  return parsed.hostMapping
+    .filter((entry): entry is Record<string, unknown> => isRecord(entry))
+    .map((entry) => ({ instanceHost: String(entry.instanceHost), cliHost: String(entry.cliHost) }));
+};
+
+/**
+ * The documented host mapping agrees with the exported mapping function.
+ *
+ * The extraction count is asserted against the fixture's declared rows before
+ * any comparison, so a deleted or vacuous host table fails; and the rows are
+ * matched by instance host, so a documented identity change fails by name.
+ */
+const hostFailures = (text: string): string[] => {
+  const section = sectionOf(text, REFERENCE_BEHAVIOR_SECTIONS.transport) ?? "";
+  const rows = tableWithHeader(section, REQUIRED_HEADERS.hosts);
+  const expected = declaredHostMapping();
+  const failures: string[] = [];
+  if (rows === undefined) return ["hosts: the host-mapping table is missing"];
+  if (rows.length !== expected.length) {
+    failures.push(`hosts: ${rows.length} documented rows != ${expected.length} declared rows`);
+  }
+  const byHost = new Map(expected.map((row) => [row.instanceHost, row.cliHost]));
+  for (const cells of rows) {
+    const instanceHost = cells[0] ?? "";
+    const documented = cells[1] ?? "";
+    const machine = githubCliHostname(instanceHost);
+    if (documented !== machine) {
+      failures.push(`document row ${instanceHost} -> ${documented} != ${machine}`);
+    }
+    const declared = byHost.get(instanceHost);
+    if (declared === undefined) {
+      failures.push(`hosts: ${instanceHost} is not a declared mapping row`);
+      continue;
+    }
+    if (documented !== declared) {
+      failures.push(`document row ${instanceHost} -> ${documented} != ${declared}`);
+    }
+  }
+  for (const instanceHost of byHost.keys()) {
+    if (!rows.some((cells) => (cells[0] ?? "") === instanceHost)) {
+      failures.push(`hosts: ${instanceHost} is not documented`);
+    }
+  }
+  if (!rows.some((cells) => (cells[0] ?? "") !== (cells[1] ?? ""))) {
+    failures.push("hosts: every documented row is an identity mapping");
+  }
+  return failures;
+};
+
+/**
+ * The documented isolation row agrees with the constructed environment.
+ *
+ * The document must name every path-valued variable the transport sets and the
+ * one variable it deliberately does not forward; the source must still set them
+ * and still refuse to forward `HOME`, so neither side can drift silently.
+ */
+const isolationFailures = (text: string): string[] => {
+  const section = sectionOf(text, REFERENCE_BEHAVIOR_SECTIONS.transport) ?? "";
+  const rows = tableWithHeader(section, ["Aspect", "Reference behavior"]);
+  const row = rows?.find((cells) => (cells[0] ?? "") === "Child environment");
+  const failures: string[] = [];
+  if (row === undefined) return ["child environment: the documented row is missing"];
+  const documented = (row[1] ?? "").toLowerCase();
+  const source = read("packages/adapters/src/github/cli-transport.ts");
+  for (const variable of REFERENCE_BEHAVIOR_ISOLATION_VARIABLES) {
+    if (!documented.includes(variable.toLowerCase())) {
+      failures.push(`child environment: ${variable} is not documented`);
+    }
+  }
+  for (const variable of ["GH_CONFIG_DIR", "XDG_CONFIG_HOME", "XDG_STATE_HOME", "XDG_CACHE_HOME"]) {
+    if (!source.includes(variable)) {
+      failures.push(`child environment: the transport no longer sets ${variable}`);
+    }
+  }
+  for (const directory of ["jaiship-gh-config", "jaiship-gh-state", "jaiship-gh-cache"]) {
+    if (!source.includes(directory)) {
+      failures.push(`child environment: the transport no longer isolates ${directory}`);
+    }
+    if (!new RegExp(`${directory}(?![\\w-])`, "u").test(documented)) {
+      failures.push(`child environment: ${directory} is not documented`);
+    }
+  }
+  if (!source.includes("tmpdir()")) {
+    failures.push("child environment: the transport lost its absolute base fallback");
+  }
+  if (/\bHOME\s*:/u.test(source)) {
+    failures.push("child environment: the transport forwards HOME");
+  }
+  if (!documented.includes("home")) {
+    failures.push("child environment: the not-forwarded HOME rule is not documented");
+  }
+  return failures;
+};
+
 const seedFailures = (text: string): string[] => {
   const section = sectionOf(text, REFERENCE_BEHAVIOR_SECTIONS.mapping) ?? "";
   const rows = tableOf(section).filter((cells) => /^\d+$/u.test(cells[0] ?? ""));
@@ -341,7 +468,9 @@ const unmappedFailures = (text: string): string[] => {
 };
 
 const MAPPING_CLAIMS: readonly string[] = [
-  "Only a `label-swap` transition reads, removes, or adds labels and refuses on an unavailable label signal;",
+  "Only a `label-swap` transition changes labels and refuses on an unavailable label signal.",
+  "every other label in the supplied current read is preserved",
+  "a label another actor adds between that read and the write is not preserved",
   "The writable aliases are `done` plus each declared `label-swap` row's alias; a declared non-terminal `field-update` alias is readable but read-only.",
   "A `label-swap` write to an issue whose current read resolves to `done` refuses with a named typed failure and zero provider requests, regardless of the issue's labels;",
   "which the caller supplies as adapter-local input data; the adapter issues no read to obtain it, so every refusal costs zero provider requests.",
@@ -385,6 +514,8 @@ describe("TC-REF-002 documented transports, caps, and gaps agree with the declar
     expect(transportFailures(text)).toEqual([]);
     expect(capabilityFailures(text)).toEqual([]);
     expect(evidenceFailures(text)).toEqual([]);
+    expect(hostFailures(text)).toEqual([]);
+    expect(isolationFailures(text)).toEqual([]);
   });
 
   test("a one-digit cap change and a transport change fail naming the row", () => {
@@ -397,6 +528,30 @@ describe("TC-REF-002 documented transports, caps, and gaps agree with the declar
     );
     expect(
       transportFailures(transportMutation).some((failure) => failure.includes("read-work-item")),
+    ).toBe(true);
+
+    // A documented host or isolation value that drifts from the machine value
+    // fails by name, and deleting the cloud row fails the extraction count.
+    const hostMutation = text.replace(
+      "| `api.github.com` | `github.com` |",
+      "| `api.github.com` | `api.github.com` |",
+    );
+    expect(hostMutation).not.toBe(text);
+    expect(hostFailures(hostMutation).some((failure) => failure.includes("api.github.com"))).toBe(
+      true,
+    );
+    const deletedHostRow = text.replace("| `api.github.com` | `github.com` |\n", "");
+    expect(deletedHostRow).not.toBe(text);
+    expect(
+      hostFailures(deletedHostRow).some((failure) => failure.includes("documented rows")),
+    ).toBe(true);
+    const isolationMutation = text.replace(
+      "`XDG_STATE_HOME` is `<base>/jaiship-gh-state`",
+      "`XDG_STATE_HOME` is `<base>/jaiship-gh-state-x`",
+    );
+    expect(isolationMutation).not.toBe(text);
+    expect(
+      isolationFailures(isolationMutation).some((failure) => failure.includes("jaiship-gh-state")),
     ).toBe(true);
   });
 });
@@ -475,7 +630,7 @@ describe("TC-REF-006 mapping documentation agrees with the seed and states the r
       unmappedFailures(droppedToken).some((failure) => failure.includes("unmapped tokens")),
     ).toBe(true);
     const sweeping = text.replace(
-      "Only a `label-swap` transition reads, removes, or adds labels and refuses on an unavailable label signal;",
+      "Only a `label-swap` transition changes labels and refuses on an unavailable label signal.",
       "Every transition sweeps the declared lifecycle labels;",
     );
     expect(mappingClaimFailures(sweeping).some((failure) => failure.includes("label-swap"))).toBe(

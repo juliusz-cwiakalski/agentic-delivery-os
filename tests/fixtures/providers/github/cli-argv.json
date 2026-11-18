@@ -4,15 +4,29 @@
     "minimum": "2.0.0",
     "maximum": "2.99.99"
   },
+  "hostMapping": [
+    { "name": "cloud", "instanceHost": "api.github.com", "cliHost": "github.com" },
+    { "name": "cloud-web", "instanceHost": "github.com", "cliHost": "github.com" },
+    { "name": "ghes", "instanceHost": "ghes.example.com", "cliHost": "ghes.example.com" },
+    {
+      "name": "ghes-api-prefixed",
+      "instanceHost": "api.ghes.example.com",
+      "cliHost": "api.ghes.example.com"
+    }
+  ],
   "environment": {
     "basePath": "/opt/example/bin",
-    "configSuffix": "jaiship-gh-config"
+    "base": "/tmp/example-tmp",
+    "configDirectory": "jaiship-gh-config",
+    "stateDirectory": "jaiship-gh-state",
+    "cacheDirectory": "jaiship-gh-cache"
   },
   "routes": [
     {
       "name": "read-issue",
       "method": "GET",
       "url": "https://api.github.example.com/repos/group-placeholder/project-placeholder/issues/601",
+      "hostname": "api.github.example.com",
       "headers": {
         "Accept": "application/vnd.github+json"
       },
@@ -32,6 +46,7 @@
       "name": "list-issues",
       "method": "GET",
       "url": "https://api.github.example.com/repos/group-placeholder/project-placeholder/issues?state=open&per_page=100&sort=updated&direction=desc",
+      "hostname": "api.github.example.com",
       "headers": {
         "Accept": "application/vnd.github+json"
       },
@@ -51,6 +66,7 @@
       "name": "transition-issue",
       "method": "PATCH",
       "url": "https://api.github.example.com/repos/group-placeholder/project-placeholder/issues/601",
+      "hostname": "api.github.example.com",
       "headers": {
         "Accept": "application/vnd.github+json",
         "Content-Type": "application/json"
@@ -76,6 +92,7 @@
       "name": "land-pull-request",
       "method": "PUT",
       "url": "https://api.github.example.com/repos/group-placeholder/project-placeholder/pulls/504/merge",
+      "hostname": "api.github.example.com",
       "headers": {
         "Accept": "application/vnd.github+json",
         "Content-Type": "application/json"
@@ -101,6 +118,7 @@
       "name": "comment-write-transport-level",
       "method": "POST",
       "url": "https://api.github.example.com/repos/group-placeholder/project-placeholder/issues/601/comments",
+      "hostname": "api.github.example.com",
       "headers": {
         "Accept": "application/vnd.github+json",
         "Content-Type": "application/json"
@@ -126,6 +144,7 @@
       "name": "content-write-transport-level",
       "method": "POST",
       "url": "https://api.github.example.com/repos/group-placeholder/project-placeholder/pulls",
+      "hostname": "api.github.example.com",
       "headers": {
         "Accept": "application/vnd.github+json",
         "Content-Type": "application/json"

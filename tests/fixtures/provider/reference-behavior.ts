@@ -34,4 +34,24 @@ export const REFERENCE_BEHAVIOR_TABLE_HEADERS = {
   absence: ["Signal", "Absent means", "Never"],
   seed: ["Precedence", "Token", "Delivery alias", "Mechanism"],
   probe: ["Refusal code", "Meaning"],
+  hosts: ["Instance host", "CLI --hostname"],
 } as const;
+
+/**
+ * The declared host-mapping rows the document must state, and the exported
+ * function each row is compared against.
+ *
+ * The rows are binding data on both sides: the argv fixture carries the same
+ * pairs, so a documented or implemented mapping that moves fails by name.
+ */
+export const REFERENCE_BEHAVIOR_HOST_MAPPING_FIXTURE =
+  "tests/fixtures/providers/github/cli-argv.json";
+
+/** The documented child-environment variables the isolation row must name. */
+export const REFERENCE_BEHAVIOR_ISOLATION_VARIABLES = [
+  "GH_CONFIG_DIR",
+  "XDG_CONFIG_HOME",
+  "XDG_STATE_HOME",
+  "XDG_CACHE_HOME",
+  "HOME",
+] as const;

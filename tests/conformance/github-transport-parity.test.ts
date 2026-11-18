@@ -187,6 +187,7 @@ describe("TC-CLI-005 both transports produce identical views and failures", () =
         transport: createGithubCliTransport({
           runner: cli.runner,
           environment: { PATH: "/opt/example/bin", TMPDIR: "/tmp/example-tmp" },
+          hostname: new URL(BASE_URL).host,
         }),
       });
       const viaApi = await invoke(apiClient, route.member, route.argument);
@@ -228,6 +229,7 @@ describe("TC-PARITY-006 zero network and zero live child processes", () => {
           transport: createGithubCliTransport({
             runner: cli.runner,
             environment: { PATH: "/opt/example/bin", TMPDIR: "/tmp/example-tmp" },
+            hostname: new URL(BASE_URL).host,
           }),
         });
         await invoke(client, route.member, route.argument);

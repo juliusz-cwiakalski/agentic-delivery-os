@@ -52,6 +52,7 @@ import {
   createGitHubClient,
   createGithubCliTransport,
   createGithubNativeTransport,
+  githubCliHostname,
   type GithubChildRunner,
   type GithubClientOptions,
   type GithubTransportPolicy,
@@ -1268,13 +1269,16 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
     // An injected transport bypasses selection entirely (probe-free). A present
     // selection picks the CLI transport or the exported native-`fetch` factory;
     // an absent selection is the declared third state: native `fetch`, no probe,
-    // no DM-10 value.
+    // no DM-10 value. The CLI host identity is computed ONCE from the declared
+    // instance base URL, so no request can re-derive it (D1).
+    const cliHostname = githubCliHostname(new URL(instance.baseUrl).host);
     const transport =
       facts.githubTransport ??
       (facts.githubTransportSelection?.selected === "gh"
         ? createGithubCliTransport({
             ...(facts.githubCliRunner === undefined ? {} : { runner: facts.githubCliRunner }),
             environment,
+            hostname: cliHostname,
           })
         : createGithubNativeTransport());
     const gitBranches = createGitBranchSeam({

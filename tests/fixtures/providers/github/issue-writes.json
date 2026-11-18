@@ -7,10 +7,16 @@
       "request": {
         "method": "POST",
         "path": "/repos/group-placeholder/project-placeholder/issues/601/comments",
-        "body": { "body": "Carrier-free backlog comment" }
+        "body": {
+          "body": "Carrier-free backlog comment"
+        }
       },
-      "response": { "id": 9001 },
-      "expected": { "commentId": "9001" }
+      "response": {
+        "id": 9001
+      },
+      "expected": {
+        "commentId": "9001"
+      }
     }
   },
   "contentWrite": {
@@ -42,10 +48,15 @@
           "ref": "feat/GH-338/backlog-content-write",
           "sha": "1111111111111111111111111111111111111111"
         },
-        "base": { "ref": "main-tools" }
+        "base": {
+          "ref": "main-tools"
+        }
       },
       "expected": {
-        "identity": { "systemName": "github", "entityId": "610" },
+        "identity": {
+          "systemName": "github",
+          "entityId": "610"
+        },
         "sourceRef": "feat/GH-338/backlog-content-write",
         "targetRef": "main-tools",
         "reviewState": "open",
@@ -84,20 +95,28 @@
           "ref": "feat/GH-338/draft-absent",
           "sha": "2222222222222222222222222222222222222222"
         },
-        "base": { "ref": "main-tools" }
+        "base": {
+          "ref": "main-tools"
+        }
       }
     },
     "pullUpdated": {
       "input": {
         "kind": "update",
-        "deliveryRequest": { "systemName": "github", "entityId": "504" },
+        "deliveryRequest": {
+          "systemName": "github",
+          "entityId": "504"
+        },
         "title": "Updated title",
         "body": "Updated body"
       },
       "request": {
         "method": "PATCH",
         "path": "/repos/group-placeholder/project-placeholder/pulls/504",
-        "body": { "title": "Updated title", "body": "Updated body" }
+        "body": {
+          "title": "Updated title",
+          "body": "Updated body"
+        }
       },
       "response": {
         "number": 504,
@@ -109,7 +128,9 @@
           "ref": "feat/GH-338/existing-request",
           "sha": "3333333333333333333333333333333333333333"
         },
-        "base": { "ref": "main-tools" }
+        "base": {
+          "ref": "main-tools"
+        }
       }
     },
     "pullCreateMissingRef": {
@@ -145,9 +166,39 @@
     "pullUpdateEmpty": {
       "input": {
         "kind": "update",
-        "deliveryRequest": { "systemName": "github", "entityId": "504" }
+        "deliveryRequest": {
+          "systemName": "github",
+          "entityId": "504"
+        }
       },
       "mentions": ["title or body"]
+    },
+    "pullUpdateNotFound": {
+      "input": {
+        "kind": "update",
+        "deliveryRequest": {
+          "systemName": "github",
+          "entityId": "504"
+        },
+        "title": "Renumbered title"
+      },
+      "request": {
+        "method": "PATCH",
+        "path": "/repos/group-placeholder/project-placeholder/pulls/504",
+        "body": {
+          "title": "Renumbered title"
+        }
+      },
+      "response": {
+        "status": 404,
+        "body": {
+          "message": "Not Found"
+        }
+      },
+      "expected": {
+        "code": "provider.payload.invalid",
+        "httpStatus": 404
+      }
     }
   },
   "doneWrite": {
@@ -155,7 +206,9 @@
       "entityId": "601",
       "expected": {
         "method": "PATCH",
-        "body": { "state": "closed" },
+        "body": {
+          "state": "closed"
+        },
         "labelRequestCount": 0
       }
     }

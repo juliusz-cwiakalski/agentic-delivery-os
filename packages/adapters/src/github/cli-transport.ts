@@ -4,9 +4,13 @@
  *
  * The vendor CLI is used strictly as an authenticated API caller: an
  * already-shaped `ProviderRequest` is mapped onto one fixed argv array, the
- * child environment is constructed entirely from injected data, and the final
+ * child environment is constructed entirely from injected data, and the FIRST
  * `--include` status block is authoritative. There is no shell, no pagination,
  * no output transform, no retry, and no per-request failover.
+ *
+ * The CLI host is a declared identity, never a request-URL derivation: `gh api
+ * --hostname` takes the host identity (`github.com` for the cloud instance), so
+ * the mapped value is REQUIRED construction data.
  *
  * Runtime APIs (a bounded fixed-argv `gh` invocation) are admitted for this file
  * by ADR-0005's exact `github` provider-subpath entry, refined by TDR-0031 item
@@ -14,6 +18,8 @@
  * invocation in addition to network I/O. No ambient environment is read.
  */
 import { execFile } from "node:child_process";
+import { tmpdir } from "node:os";
+import { isAbsolute } from "node:path";
 import { type AdapterOperation, CLOSEOUT_OPERATION_TIMEOUT_MS } from "@delivery-os/core/contracts";
 import type {
   ProviderRequest,
@@ -109,11 +115,31 @@ export type GithubCliTransportOptions = {
   readonly runner?: GithubChildRunner;
   /** The composition's injected environment; it supplies `PATH`, nothing else ambient. */
   readonly environment: Readonly<Record<string, string | undefined>>;
-  /** An optional `--hostname` override; otherwise derived from the request URL. */
-  readonly host?: string;
+  /**
+   * The declared `gh api --hostname` identity (D1). Required: the transport can
+   * never re-derive a host from a request URL.
+   */
+  readonly hostname: string;
   readonly timeoutMs?: number;
   readonly maxResponseBytes?: number;
 };
+
+/** The one declared cloud REST host, whose CLI identity is the web host. */
+const CLOUD_REST_HOST = "api.github.com";
+
+/** The cloud instance's CLI host identity. */
+const CLOUD_CLI_HOST = "github.com";
+
+/**
+ * Map a declared instance host onto the `gh api --hostname` identity (D1).
+ *
+ * The mapping is exact and frozen: `api.github.com` -> `github.com`; every other
+ * host is unchanged, because a GHES host identity is already the host. There is
+ * no generic `api.` prefix strip: a GHES instance whose host starts with `api.`
+ * keeps its host.
+ */
+export const githubCliHostname = (instanceHost: string): string =>
+  instanceHost === CLOUD_REST_HOST ? CLOUD_CLI_HOST : instanceHost;
 
 /** The declared CLI version window; a version outside it is refused at the probe. */
 export const GITHUB_CLI_VERSION_WINDOW = { minimum: "2.0.0", maximum: "2.99.99" } as const;
@@ -183,21 +209,37 @@ const DECLARED_MAXIMUM = parseVersion(`gh version ${GITHUB_CLI_VERSION_WINDOW.ma
   2, 99, 99,
 ];
 
+/** The three isolated directories the child environment points at (D2). */
+const ISOLATED_CONFIG_NAME = "jaiship-gh-config";
+const ISOLATED_STATE_NAME = "jaiship-gh-state";
+const ISOLATED_CACHE_NAME = "jaiship-gh-cache";
+
+/**
+ * The isolated base directory: absolute in every case (D2).
+ *
+ * The injected `TMPDIR` is used when it is absolute; otherwise the operating
+ * system temporary directory answers. A relative value is never constructed, so
+ * no child path is ever derived from the caller's working directory.
+ */
+const isolatedBase = (environment: Readonly<Record<string, string | undefined>>): string => {
+  const temporary = environment.TMPDIR;
+  if (temporary !== undefined && temporary.length > 0 && isAbsolute(temporary)) {
+    return temporary.replace(/\/+$/u, "");
+  }
+  return tmpdir().replace(/\/+$/u, "");
+};
+
 /**
  * The isolated CLI configuration directory, derived from injected data only.
  *
  * `gh` reads its own host configuration and stored login unless redirected, so
  * an isolated directory keeps a declared credential from silently acting as an
- * operator's stored account. The value is never the operator's home config.
+ * operator's stored account. The value is always absolute and never the
+ * operator's home config.
  */
 export const resolveGithubCliConfigDirectory = (
   environment: Readonly<Record<string, string | undefined>>,
-): string => {
-  const temporary = environment.TMPDIR;
-  return temporary !== undefined && temporary.length > 0
-    ? `${temporary.replace(/\/+$/u, "")}/jaiship-gh-config`
-    : ".jaiship-gh-config";
-};
+): string => `${isolatedBase(environment)}/${ISOLATED_CONFIG_NAME}`;
 
 /** Extract the credential material the client already placed on the request. */
 const credentialOf = (headers: Readonly<Record<string, string>>): string | undefined => {
@@ -209,27 +251,40 @@ const credentialOf = (headers: Readonly<Record<string, string>>): string | undef
   return undefined;
 };
 
-/** Build the child environment from injected data only (N9, NFR-3). */
+/**
+ * Build the child environment from injected data only (N9, NFR-3, D2).
+ *
+ * Every path-valued variable is absolute and isolated: the three XDG roots sit
+ * under the isolated base, and `GH_CONFIG_DIR` shares the config root so `gh`
+ * cannot fall back to an operator's stored login. `HOME` is not forwarded, so no
+ * `gh` path can reach the operator's home.
+ */
 const environmentFor = (input: {
   readonly environment: Readonly<Record<string, string | undefined>>;
   readonly token?: string;
-}): Readonly<Record<string, string>> => ({
-  PATH: input.environment.PATH ?? input.environment.Path ?? "",
-  GH_CONFIG_DIR: resolveGithubCliConfigDirectory(input.environment),
-  GH_PROMPT_DISABLED: "1",
-  NO_COLOR: "1",
-  GH_NO_UPDATE_NOTIFIER: "1",
-  ...(input.token === undefined ? {} : { GH_TOKEN: input.token }),
-});
+}): Readonly<Record<string, string>> => {
+  const base = isolatedBase(input.environment);
+  return {
+    PATH: input.environment.PATH ?? input.environment.Path ?? "",
+    GH_CONFIG_DIR: `${base}/${ISOLATED_CONFIG_NAME}`,
+    XDG_CONFIG_HOME: `${base}/${ISOLATED_CONFIG_NAME}`,
+    XDG_STATE_HOME: `${base}/${ISOLATED_STATE_NAME}`,
+    XDG_CACHE_HOME: `${base}/${ISOLATED_CACHE_NAME}`,
+    GH_PROMPT_DISABLED: "1",
+    NO_COLOR: "1",
+    GH_NO_UPDATE_NOTIFIER: "1",
+    ...(input.token === undefined ? {} : { GH_TOKEN: input.token }),
+  };
+};
 
 /** Build the one fixed argv array for a request; no shell, no pagination. */
-const argvFor = (request: ProviderRequest, host: string): readonly string[] => {
+const argvFor = (request: ProviderRequest, hostname: string): readonly string[] => {
   const url = new URL(request.url);
   const path = `${url.pathname}${url.search}`;
   const headers = Object.entries(request.headers)
     .filter(([name]) => name.toLowerCase() !== "authorization")
     .sort(([left], [right]) => left.localeCompare(right, "en"));
-  const argv = ["api", path, "--method", request.method, "--hostname", host, "--include"];
+  const argv = ["api", path, "--method", request.method, "--hostname", hostname, "--include"];
   for (const [name, value] of headers) argv.push("--header", `${name}: ${value}`);
   if (request.body !== undefined) argv.push("--input", "-");
   return argv;
@@ -240,8 +295,14 @@ const STATUS_LINE = /^HTTP\/[\d.]+\s+(\d{3})(?:\s|$)/u;
 /**
  * Reconstruct `{ status, body }` from `--include` output.
  *
- * The final status block is authoritative; an unparsable or absent status block
- * is refused rather than assumed to be 200 (RSK-2).
+ * The FIRST status block is authoritative (n-1): the scan for a status line
+ * stops at that block's pre-body region, so a body line shaped like
+ * `HTTP/<ver> <code>` can never override the real status. A status block whose
+ * body region begins with another status line is an intermediate response (a
+ * proxy preamble or a redirect hop with no body) and the scan continues; the
+ * block that begins its body with non-status content is the one that counts. An
+ * unparsable or absent status block is refused rather than assumed to be 200
+ * (RSK-2).
  */
 const parseIncludedResponse = (stdout: string, boundBytes: number): ProviderResponse => {
   if (Buffer.byteLength(stdout, "utf8") > boundBytes) {
@@ -249,18 +310,31 @@ const parseIncludedResponse = (stdout: string, boundBytes: number): ProviderResp
   }
   const lines = stdout.split(/\r?\n/u);
   let status: number | undefined;
-  let statusIndex = -1;
-  for (const [index, line] of lines.entries()) {
-    const match = STATUS_LINE.exec(line);
-    if (match?.[1] === undefined) continue;
+  let bodyStart = -1;
+  let index = 0;
+  while (index < lines.length) {
+    const match = STATUS_LINE.exec(lines[index] ?? "");
+    if (match?.[1] === undefined) {
+      index += 1;
+      continue;
+    }
+    // The header region ends at the first empty line after the status line.
+    let terminator = index + 1;
+    while (terminator < lines.length && (lines[terminator] ?? "").length > 0) terminator += 1;
+    const afterTerminator = terminator + 1;
+    const nextLine = afterTerminator < lines.length ? (lines[afterTerminator] ?? "") : undefined;
+    if (nextLine !== undefined && STATUS_LINE.test(nextLine)) {
+      index = afterTerminator;
+      continue;
+    }
     status = Number(match[1]);
-    statusIndex = index;
+    bodyStart = afterTerminator;
+    break;
   }
-  if (status === undefined || statusIndex < 0) {
+  if (status === undefined) {
     throw new Error("GitHub CLI output has no parsable status block");
   }
-  const separatorIndex = lines.findIndex((line, index) => index > statusIndex && line.length === 0);
-  const bodyText = (separatorIndex < 0 ? [] : lines.slice(separatorIndex + 1)).join("\n").trim();
+  const bodyText = lines.slice(bodyStart).join("\n").trim();
   if (bodyText.length === 0) return { status, body: undefined };
   try {
     const body: unknown = JSON.parse(bodyText);
@@ -277,9 +351,8 @@ export const createGithubCliTransport = (options: GithubCliTransportOptions): Pr
   const maxResponseBytes = options.maxResponseBytes ?? GITHUB_CLI_MAX_OUTPUT_BYTES;
   return {
     send: async (request: ProviderRequest): Promise<ProviderResponse> => {
-      const host = options.host ?? new URL(request.url).host;
       const token = credentialOf(request.headers);
-      const argv = argvFor(request, host);
+      const argv = argvFor(request, options.hostname);
       let result: GithubChildRunnerResult;
       try {
         result = await runner("gh", argv, {

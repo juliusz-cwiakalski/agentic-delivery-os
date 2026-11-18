@@ -73,6 +73,7 @@ const EXPECTED_SURFACE: Readonly<Record<Provider, readonly string[]>> = {
     "boundLogExcerpt",
     "createGitHubLogExcerptReader",
     "createGitHubThreadDiscussionReader",
+    "githubCliHostname",
     "normalizeDeployTrace",
     "normalizeThreadDiscussion",
     "probeGithubCli",

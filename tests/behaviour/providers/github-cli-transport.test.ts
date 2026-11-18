@@ -1,12 +1,27 @@
 /**
- * TC-CLI-001..013 — the CLI-first transport, probe, environment, status
- * recovery, and the composition-edge selection (F-2; DM-5, DM-7, DM-10;
- * AC-F2-1..5, AC-F8-3).
+ * TC-CLI-001..015 — the CLI-first transport, probe, environment, status
+ * recovery, the composition-edge selection, and the real process edge (F-2;
+ * DM-5, DM-7, DM-10; AC-F2-1..5, AC-F8-3).
  *
- * Every CLI invocation goes through an injected child runner: no case spawns a
- * live process, requires a `gh` binary, or reaches the network.
+ * Every case but TC-CLI-014/015 uses an injected child runner, so the mock tier
+ * spawns nothing. TC-CLI-014/015 drive the production `execFile` runner against
+ * an offline stub `gh` placed on an INJECTED `PATH`: zero network, zero live
+ * `gh`, and no live GitHub.
  */
 import { describe, expect, test } from "bun:test";
+import { spawnSync } from "node:child_process";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
+import { isAbsolute, join } from "node:path";
+import { tmpdir } from "node:os";
 import { ADAPTER_OPERATIONS } from "@delivery-os/core/contracts";
 import { createEnvironmentCredentialPort } from "../../../packages/adapters/src/credentials/index";
 import {
@@ -16,6 +31,7 @@ import {
   GITHUB_TRANSPORT_MATRIX,
   type GithubChildRunner,
   type GithubChildRunnerResult,
+  githubCliHostname,
   probeGithubCli,
   resolveGithubCliConfigDirectory,
   resolveTransportSelection,
@@ -31,11 +47,15 @@ import {
   resolveCompositionTransportSelection,
 } from "../../../packages/cli/src/production";
 import { fixtureBrand } from "../../fixtures/credentials/cases";
-import { isRecord, readJson, recordField } from "./support";
+import { arrayField, isRecord, readJson, recordField } from "./support";
 
 const ARGV_FIXTURE = "tests/fixtures/providers/github/cli-argv.json";
 const STATUS_FIXTURE = "tests/fixtures/providers/github/cli-status-blocks.json";
 const FAILURE_FIXTURE = "tests/fixtures/providers/github/cli-failures.json";
+const PROCESS_EDGE_FIXTURE = "tests/fixtures/providers/github/cli-process-edge.json";
+
+/** The declared host identity the injected-runner cases construct the transport for. */
+const HOSTNAME = "api.github.example.com";
 
 type SpawnRecord = {
   readonly file: string;
@@ -108,7 +128,11 @@ describe("TC-CLI-002 golden argv carries no credential and no shell", () => {
         status: 0,
         timedOut: false,
       }));
-      const transport = createGithubCliTransport({ runner, environment: environment() });
+      const transport = createGithubCliTransport({
+        runner,
+        environment: environment(),
+        hostname: String(route.hostname),
+      });
       await transport.send(request);
       expect(spawns).toHaveLength(1);
       const spawn = spawns[0];
@@ -122,6 +146,48 @@ describe("TC-CLI-002 golden argv carries no credential and no shell", () => {
       expect(spawn?.options.killSignal).toBe("SIGKILL");
     });
   }
+
+  test("the declared host mapping is exact and the cloud argv never names the REST host", async () => {
+    const parsed = readJson(ARGV_FIXTURE);
+    const mapping = (parsed as { readonly hostMapping?: unknown }).hostMapping;
+    if (!Array.isArray(mapping)) throw new Error("cli-argv fixture has no hostMapping block");
+    const rows = mapping.filter((entry): entry is Record<string, unknown> => isRecord(entry));
+    // Non-vacuity: the mapping is data, so an empty or one-row block fails here.
+    expect(rows.map((row) => String(row.name))).toEqual([
+      "cloud",
+      "cloud-web",
+      "ghes",
+      "ghes-api-prefixed",
+    ]);
+    const argvByRow = new Map<string, readonly string[]>();
+    for (const row of rows) {
+      const instanceHost = String(row.instanceHost);
+      const cliHost = String(row.cliHost);
+      expect(githubCliHostname(instanceHost), instanceHost).toBe(cliHost);
+      const { runner, spawns } = recordingRunner(() => ({
+        stdout: statusBlock(200, {}),
+        stderr: "",
+        status: 0,
+        timedOut: false,
+      }));
+      await createGithubCliTransport({
+        runner,
+        environment: environment(),
+        hostname: githubCliHostname(instanceHost),
+      }).send({
+        url: `https://${instanceHost}/repos/o/r/issues/601`,
+        method: "GET",
+        headers: { Accept: "application/vnd.github+json" },
+      });
+      const args = spawns[0]?.args ?? [];
+      argvByRow.set(String(row.name), args);
+      expect(args[args.indexOf("--hostname") + 1], instanceHost).toBe(cliHost);
+    }
+    // B-1's assertion: the cloud argv carries the host IDENTITY, never the REST host.
+    const cloudArgv = JSON.stringify(argvByRow.get("cloud") ?? []);
+    expect(cloudArgv).toContain('"github.com"');
+    expect(cloudArgv).not.toContain("api.github.com");
+  });
 });
 
 describe("TC-CLI-003 the child environment is isolated and credential-bearing", () => {
@@ -132,7 +198,11 @@ describe("TC-CLI-003 the child environment is isolated and credential-bearing", 
       status: 0,
       timedOut: false,
     }));
-    await createGithubCliTransport({ runner, environment: environment() }).send({
+    await createGithubCliTransport({
+      runner,
+      environment: environment(),
+      hostname: HOSTNAME,
+    }).send({
       url: "https://api.github.example.com/repos/o/r/issues/1",
       method: "GET",
       headers: {
@@ -144,6 +214,9 @@ describe("TC-CLI-003 the child environment is isolated and credential-bearing", 
     expect(env).toEqual({
       PATH: "/opt/example/bin",
       GH_CONFIG_DIR: "/tmp/example-tmp/jaiship-gh-config",
+      XDG_CONFIG_HOME: "/tmp/example-tmp/jaiship-gh-config",
+      XDG_STATE_HOME: "/tmp/example-tmp/jaiship-gh-state",
+      XDG_CACHE_HOME: "/tmp/example-tmp/jaiship-gh-cache",
       GH_PROMPT_DISABLED: "1",
       NO_COLOR: "1",
       GH_NO_UPDATE_NOTIFIER: "1",
@@ -159,7 +232,11 @@ describe("TC-CLI-003 the child environment is isolated and credential-bearing", 
       status: 0,
       timedOut: false,
     }));
-    await createGithubCliTransport({ runner, environment: environment() }).send({
+    await createGithubCliTransport({
+      runner,
+      environment: environment(),
+      hostname: HOSTNAME,
+    }).send({
       url: "https://api.github.example.com/repos/o/r/issues/1",
       method: "GET",
       headers: { Accept: "application/vnd.github+json" },
@@ -185,14 +262,24 @@ describe("TC-CLI-004 --include status parsing classifies 2xx/404/non-2xx", () =>
         status: 0,
         timedOut: false,
       }));
-      const transport = createGithubCliTransport({ runner, environment: environment() });
+      const transport = createGithubCliTransport({
+        runner,
+        environment: environment(),
+        hostname: HOSTNAME,
+      });
       const request: ProviderRequest = {
         url: "https://api.github.example.com/repos/o/r/issues/601",
         method: "GET",
         headers: { Accept: "application/vnd.github+json" },
       };
       if (expected.unparsable === true) {
-        await expect(transport.send(request)).rejects.toThrow(/status block|not JSON/u);
+        // A declared reason discriminates "no status block" from "body not JSON";
+        // the body-with-status-line case proves the injected line never wins.
+        const pattern =
+          typeof expected.reason === "string"
+            ? new RegExp(expected.reason, "u")
+            : /status block|not JSON/u;
+        await expect(transport.send(request)).rejects.toThrow(pattern);
         return;
       }
       const response = await transport.send(request);
@@ -226,7 +313,11 @@ describe("TC-CLI-004 --include status parsing classifies 2xx/404/non-2xx", () =>
         },
         credentials,
         repository: { owner: "o", name: "r" },
-        transport: createGithubCliTransport({ runner, environment: environment() }),
+        transport: createGithubCliTransport({
+          runner,
+          environment: environment(),
+          hostname: HOSTNAME,
+        }),
       });
       const result = await client.readWorkItem(601);
       expect(result.ok).toBe(false);
@@ -261,6 +352,7 @@ describe("TC-CLI-006/007/008 the runner failure modes are classified", () => {
     const transport = createGithubCliTransport({
       runner,
       environment: environment(),
+      hostname: HOSTNAME,
       maxResponseBytes: 64,
     });
     await expect(transport.send(request)).rejects.toThrow(/output bound/u);
@@ -275,7 +367,11 @@ describe("TC-CLI-006/007/008 the runner failure modes are classified", () => {
       status: 124,
       timedOut: true,
     }));
-    const transport = createGithubCliTransport({ runner, environment: environment() });
+    const transport = createGithubCliTransport({
+      runner,
+      environment: environment(),
+      hostname: HOSTNAME,
+    });
     await expect(transport.send(request)).rejects.toThrow(/timed out/u);
     expect(spawns).toHaveLength(1);
   });
@@ -297,7 +393,11 @@ describe("TC-CLI-006/007/008 the runner failure modes are classified", () => {
       },
       credentials: createEnvironmentCredentialPort({ environment: {}, brand: fixtureBrand }),
       repository: { owner: "o", name: "r" },
-      transport: createGithubCliTransport({ runner, environment: environment() }),
+      transport: createGithubCliTransport({
+        runner,
+        environment: environment(),
+        hostname: HOSTNAME,
+      }),
     });
     const result = await client.readWorkItem(601);
     expect(result.ok).toBe(false);
@@ -319,7 +419,11 @@ describe("TC-CLI-009 malformed or unparsable status is refused", () => {
       status: 0,
       timedOut: false,
     }));
-    const transport = createGithubCliTransport({ runner, environment: environment() });
+    const transport = createGithubCliTransport({
+      runner,
+      environment: environment(),
+      hostname: HOSTNAME,
+    });
     await expect(
       transport.send({
         url: "https://api.github.example.com/repos/o/r/issues/601",
@@ -386,7 +490,11 @@ describe("TC-CLI-010 the probe returns exactly one closed refusal code", () => {
     }));
     // The module is already imported; constructing nothing must not spawn.
     expect(spawns).toHaveLength(0);
-    const transport = createGithubCliTransport({ runner, environment: environment() });
+    const transport = createGithubCliTransport({
+      runner,
+      environment: environment(),
+      hostname: HOSTNAME,
+    });
     expect(transport).toBeDefined();
     expect(spawns).toHaveLength(0);
   });
@@ -542,7 +650,11 @@ describe("TC-CLI-012 no per-request failover", () => {
       },
       credentials: createEnvironmentCredentialPort({ environment: {}, brand: fixtureBrand }),
       repository: { owner: "o", name: "r" },
-      transport: createGithubCliTransport({ runner, environment: environment() }),
+      transport: createGithubCliTransport({
+        runner,
+        environment: environment(),
+        hostname: HOSTNAME,
+      }),
     });
     const result = await client.transitionWorkItem({ entityId: "601", deliveryState: "done" });
     expect(result.ok).toBe(false);
@@ -565,7 +677,11 @@ describe("TC-CLI-013 exactly one process per request", () => {
       status: 0,
       timedOut: false,
     }));
-    const transport = createGithubCliTransport({ runner, environment: environment() });
+    const transport = createGithubCliTransport({
+      runner,
+      environment: environment(),
+      hostname: HOSTNAME,
+    });
     const request: ProviderRequest = {
       url: "https://api.github.example.com/repos/o/r/issues/601",
       method: "GET",
@@ -596,5 +712,225 @@ describe("TC-CLI-013 exactly one process per request", () => {
     expect(apiClient).toBeDefined();
     expect(unused).toBeDefined();
     expect(unusedSpawns).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TC-CLI-014 / TC-CLI-015 — the real process edge over an offline stub `gh`.
+// ---------------------------------------------------------------------------
+
+const SCRATCH_BASE = join(process.cwd(), "tmp/tmpdir");
+
+type StubScratch = {
+  readonly root: string;
+  readonly bin: string;
+  readonly cwd: string;
+  readonly tempBase: string;
+  readonly calls: () => readonly string[];
+  readonly recorded: (file: string) => string;
+  readonly dispose: () => void;
+};
+
+const stubScratch = (label: string): StubScratch => {
+  mkdirSync(SCRATCH_BASE, { recursive: true });
+  const root = mkdtempSync(join(SCRATCH_BASE, `${label}-`));
+  const stub = recordField(readJson(PROCESS_EDGE_FIXTURE), "stub");
+  const layout = recordField(readJson(PROCESS_EDGE_FIXTURE), "environment");
+  const bin = join(root, String(layout.stubDirectory));
+  const cwd = join(root, String(layout.cwdDirectory));
+  const tempBase = join(root, String(layout.tempBaseDirectory));
+  for (const directory of [bin, cwd, tempBase]) mkdirSync(directory, { recursive: true });
+  const shim = join(bin, String(stub.name));
+  writeFileSync(shim, String(stub.script));
+  chmodSync(shim, 0o755);
+  const responses = recordField(stub, "responses");
+  writeFileSync(join(root, "read-response.txt"), String(responses.read));
+  writeFileSync(join(root, "write-response.txt"), String(responses.write));
+  return {
+    root,
+    bin,
+    cwd,
+    tempBase,
+    calls: () => {
+      const path = join(root, "calls.txt");
+      if (!existsSync(path)) return [];
+      return readFileSync(path, "utf8").split("\n");
+    },
+    recorded: (file) => {
+      const path = join(root, file);
+      return existsSync(path) ? readFileSync(path, "utf8") : "";
+    },
+    dispose: () => rmSync(root, { recursive: true, force: true }),
+  };
+};
+
+/** The recorded argv of the nth invocation (0-based); the stub marks each call. */
+const recordedArgv = (scratch: StubScratch, index: number): readonly string[] => {
+  const lines = scratch.calls();
+  const invocations: string[][] = [];
+  let current: string[] = [];
+  for (const line of lines) {
+    if (line === "call") {
+      if (current.length > 0) invocations.push(current);
+      current = [];
+      continue;
+    }
+    if (line.length === 0) continue;
+    current.push(line);
+  }
+  if (current.length > 0) invocations.push(current);
+  return invocations[index] ?? [];
+};
+
+const invocationCount = (scratch: StubScratch): number =>
+  scratch.calls().filter((line) => line === "call").length;
+
+const edgeCase = (
+  name: "read" | "write",
+): { readonly entry: Record<string, unknown>; readonly request: ProviderRequest } => {
+  const cases = recordField(readJson(PROCESS_EDGE_FIXTURE), "cases");
+  const entry = recordField(cases, name);
+  const request = recordField(entry, "request");
+  const headers = recordField(request, "headers");
+  return {
+    entry,
+    request: {
+      url: String(request.url),
+      method: String(request.method) as ProviderRequest["method"],
+      headers: {
+        ...Object.fromEntries(Object.entries(headers).map(([key, value]) => [key, String(value)])),
+        Authorization: `Bearer ${RUNTIME_CREDENTIAL}`,
+      },
+      ...(typeof request.body === "string" ? { body: request.body } : {}),
+    },
+  };
+};
+
+describe("TC-CLI-014 the production runner carries a real request through an offline stub gh", () => {
+  test("one read and one write: recorded argv, credential placement, stdin body, parsed status/body", async () => {
+    const mapping = recordField(readJson(PROCESS_EDGE_FIXTURE), "hostMapping");
+    const scratch = stubScratch("gh-cli-edge");
+    try {
+      // No injected runner: the production `execFile` default is the code under test.
+      const transport = createGithubCliTransport({
+        environment: { PATH: `${scratch.bin}:/usr/bin:/bin`, TMPDIR: scratch.tempBase },
+        hostname: githubCliHostname(String(mapping.instanceHost)),
+      });
+
+      const read = edgeCase("read");
+      const readResponse = await transport.send(read.request);
+      expect(readResponse).toEqual(recordField(read.entry, "expected"));
+      expect(invocationCount(scratch)).toBe(1);
+      const readArgv = recordedArgv(scratch, 0);
+      expect([...readArgv]).toEqual(arrayField(read.entry, "expectedArgv").map(String));
+      expect(readArgv[readArgv.indexOf("--hostname") + 1]).toBe(String(mapping.cliHost));
+      expect(readArgv.join(" ")).toContain("github.com");
+      expect(readArgv.join(" ")).not.toContain("api.github.com");
+
+      const write = edgeCase("write");
+      const writeResponse = await transport.send(write.request);
+      expect(writeResponse).toEqual(recordField(write.entry, "expected"));
+      expect(invocationCount(scratch)).toBe(2);
+      const writeArgv = recordedArgv(scratch, 1);
+      expect([...writeArgv]).toEqual(arrayField(write.entry, "expectedArgv").map(String));
+      expect(scratch.recorded("stdin.txt")).toBe(String(write.entry.expectedStdin));
+
+      // The credential is child-environment data: absent from every argv, present
+      // in the child environment of both invocations.
+      expect(JSON.stringify([readArgv, writeArgv])).not.toContain(RUNTIME_CREDENTIAL);
+      expect(scratch.recorded("token.txt")).toBe(RUNTIME_CREDENTIAL);
+      // `HOME` is not forwarded, so no `gh` path can reach the operator's home.
+      expect(scratch.recorded("home.txt")).toBe("<unset>");
+    } finally {
+      scratch.dispose();
+    }
+  });
+});
+
+describe("TC-CLI-015 the constructed child environment is absolute and leaves the caller's directory alone", () => {
+  const pathVariables = [
+    "GH_CONFIG_DIR",
+    "XDG_CONFIG_HOME",
+    "XDG_STATE_HOME",
+    "XDG_CACHE_HOME",
+  ] as const;
+
+  test("every constructed path is absolute with an injected TMPDIR and without one", async () => {
+    const arms: ReadonlyArray<readonly [string, Readonly<Record<string, string>>]> = [
+      ["injected-tmpdir", { PATH: "/opt/example/bin", TMPDIR: "/tmp/example-tmp" }],
+      ["no-tmpdir", { PATH: "/opt/example/bin" }],
+    ];
+    for (const [label, injected] of arms) {
+      const { runner, spawns } = recordingRunner(() => ({
+        stdout: statusBlock(200, {}),
+        stderr: "",
+        status: 0,
+        timedOut: false,
+      }));
+      await createGithubCliTransport({ runner, environment: injected, hostname: HOSTNAME }).send({
+        url: "https://api.github.example.com/repos/o/r/issues/1",
+        method: "GET",
+        headers: { Accept: "application/vnd.github+json" },
+      });
+      const env = spawns[0]?.options.env;
+      if (env === undefined) throw new Error(`${label}: no recorded child environment`);
+      for (const name of pathVariables) {
+        const value = env[name];
+        expect(typeof value, `${label}:${name}`).toBe("string");
+        expect(isAbsolute(value ?? ""), `${label}:${name}=${value ?? ""}`).toBe(true);
+      }
+      const base = injected.TMPDIR ?? tmpdir();
+      expect(env.GH_CONFIG_DIR, label).toBe(join(base, "jaiship-gh-config"));
+      expect(env.XDG_CONFIG_HOME, label).toBe(join(base, "jaiship-gh-config"));
+      expect(env.XDG_STATE_HOME, label).toBe(join(base, "jaiship-gh-state"));
+      expect(env.XDG_CACHE_HOME, label).toBe(join(base, "jaiship-gh-cache"));
+      expect(Object.hasOwn(env, "HOME"), label).toBe(false);
+    }
+  });
+
+  test("a provider invocation in an empty scratch directory leaves it empty", async () => {
+    const mapping = recordField(readJson(PROCESS_EDGE_FIXTURE), "hostMapping");
+    const scratch = stubScratch("gh-cli-cwd");
+    const request = edgeCase("read").request;
+    const previous = process.cwd();
+    try {
+      const transport = createGithubCliTransport({
+        environment: { PATH: `${scratch.bin}:/usr/bin:/bin`, TMPDIR: scratch.tempBase },
+        hostname: githubCliHostname(String(mapping.instanceHost)),
+      });
+      // The child inherits the working directory, so the residue assertion is real.
+      process.chdir(scratch.cwd);
+      try {
+        await transport.send(request);
+      } finally {
+        process.chdir(previous);
+      }
+      expect(readdirSync(scratch.cwd)).toEqual([]);
+      expect(scratch.recorded("state.txt")).toBe(join(scratch.tempBase, "jaiship-gh-state"));
+      expect(scratch.recorded("state.txt").startsWith(scratch.tempBase)).toBe(true);
+    } finally {
+      process.chdir(previous);
+      scratch.dispose();
+    }
+  });
+
+  test("the negative control: without XDG_STATE_HOME the same stub writes into the CWD", () => {
+    const scratch = stubScratch("gh-cli-cwd-control");
+    try {
+      const result = spawnSync(join(scratch.bin, "gh"), ["--version"], {
+        cwd: scratch.cwd,
+        encoding: "utf8",
+        env: {
+          PATH: `${scratch.bin}:/usr/bin:/bin`,
+          GH_CONFIG_DIR: join(scratch.tempBase, "jaiship-gh-config"),
+        },
+      });
+      expect(result.status).toBe(0);
+      // Dropping the XDG state root reproduces the defect M-1 reported, so the
+      // cleanliness assertion above cannot pass vacuously.
+      expect(existsSync(join(scratch.cwd, ".local/state/gh/device-id"))).toBe(true);
+    } finally {
+      scratch.dispose();
+    }
   });
 });

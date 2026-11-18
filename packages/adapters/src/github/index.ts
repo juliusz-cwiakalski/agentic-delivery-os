@@ -23,6 +23,7 @@ export {
   type GithubTransportPreference,
   type GithubTransportSelection,
   probeGithubCli,
+  githubCliHostname,
   resolveGithubCliConfigDirectory,
   resolveTransportSelection,
 } from "./cli-transport.js";

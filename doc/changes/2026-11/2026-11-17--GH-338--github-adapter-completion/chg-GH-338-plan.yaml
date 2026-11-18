@@ -171,9 +171,90 @@
 #   obligation (AC-F8-6); (6) the reference-behavior document must follow the
 #   declarations it must agree with, and precede the DoD (not lifecycle phase 7
 #   discovery); (7) the release phase rolls up the regression floor, determinism
-#   and trap-completeness proofs and the aggregate gate.
+#   and trap-completeness proofs and the aggregate gate; (8) phase 8 exists
+#   because the delivered seven-phase change passed every declared gate while
+#   the preferred transport could not carry a request against the real provider
+#   and the child environment wrote into the caller's working directory: the
+#   oracles were green and the production process edge was unproven. Repairing
+#   the edge and the oracles in one commit, then re-reviewing, is the only
+#   honest order — see REMEDIATION PHASE 8 immediately below.
 #
-# TC -> PHASE MAP (81 ids; every id owned by exactly one phase — the phase whose
+# REMEDIATION PHASE 8 (review iteration 1; `review/review-iter-1.md`). Phase 8
+#   is a delivery phase that closes every open finding of the review and takes
+#   NO ownership of a delivered AC or a delivered case (see AC OWNERSHIP). It
+#   changes no contract shape, adds no configuration surface, relaxes no pinned
+#   surface, and re-runs the delivered suites as controls. The five decisions
+#   this phase binds — each is a decision the review asked to be made, not left
+#   open:
+#   D1. THE CLI HOST IS A DECLARED IDENTITY, NEVER A REQUEST-URL DERIVATION.
+#       `gh api --hostname` takes a host identity (`github.com`), not the REST
+#       host (`api.github.com`); the delivered transport forwarded the REST
+#       host, so `gh` resolved `api.api.github.com` and every production request
+#       failed while the injected-runner suite stayed green (B-1). The mapping
+#       is EXACT and frozen: `api.github.com` -> `github.com`; every other host
+#       is unchanged (a GHES host identity is already the host). No generic
+#       `api.` prefix strip exists — a GHES instance whose host starts with
+#       `api.` keeps its host. The mapped value is REQUIRED construction data on
+#       the transport (`hostname`), so no code path can re-derive it from a
+#       request; composition computes it once from the declared instance
+#       `baseUrl`. `GithubCliTransportOptions` is introduced by this change and
+#       has no released consumer, so requiring the member breaks nobody and
+#       touches no core contract (DEC-5 covers core contracts only).
+#   D2. THE CHILD ENVIRONMENT IS ABSOLUTE IN EVERY CASE (M-1). The isolated
+#       base is the injected `TMPDIR` when that value is absolute, otherwise
+#       `os.tmpdir()`; a relative value is never constructed. `GH_CONFIG_DIR`
+#       and `XDG_CONFIG_HOME` share `<base>/jaiship-gh-config`; `XDG_STATE_HOME`
+#       and `XDG_CACHE_HOME` are `<base>/jaiship-gh-state` and
+#       `<base>/jaiship-gh-cache`. `HOME` is not forwarded, so no `gh` path can
+#       reach the operator's home, and nothing is derived from the working
+#       directory. The adapter creates and cleans nothing: the base is created
+#       on demand by `gh` under an OS or repo temporary root, never in the
+#       working tree. The residue already in this checkout
+#       (`.local/state/gh/device-id`, untracked) is deleted as a worktree action
+#       and is NEVER added to git; no `.gitignore` rule is added, because the
+#       mechanism is fixed and an ignore rule would hide a regression instead of
+#       preventing it. `os.tmpdir()` is the only new ambient call and it is not a
+#       `process.env` read, so the secret-read allowlist and its count are
+#       untouched.
+#   D3. THE CHECK TIER STAYS OFFLINE ON THE TEST SIDE (M-2). No environment
+#       override, flag, or configuration key is added for the transport policy:
+#       NG-2/AC-F6-6 forbid a new configuration surface, and the delivered
+#       `BinLauncherOptions` seam is unavailable to a suite that execs the
+#       installed launcher. The composition and the probe therefore stay exactly
+#       as delivered, and `tests/checks/install-launcher-installer.test.ts`
+#       injects `PATH` itself: one arm carries a recording `gh` stub (the same
+#       stub technique the suite already uses for `curl`/`wget`/`git`) and one
+#       arm carries a `PATH` with no `gh` at all, so both composition branches
+#       are exercised with zero live `gh` and no host dependence. The test
+#       plan's blanket claim is restated truthfully instead of amended with a
+#       caveat: nothing in the battery requires a live `gh`.
+#   D4. DM-9's WRITE-SIDE 404 IS REMOVED, NOT IMPLEMENTED (m-1). The delivered
+#       writes classify every non-2xx as `provider.payload.invalid` with the
+#       structured `httpStatus`, uniformly: `write-work-item`,
+#       `transition-work-item`, `write-comment`, and `write-delivery-request`.
+#       Singling out the content write for `provider.not-found` would make the
+#       write family inconsistent, would need matching oracle changes in the
+#       delivered write cases, and would buy a distinction no caller consumes.
+#       The honest repair is the normative one: DM-9, F-6 and NFR-4 are restated
+#       to the delivered classification (NFR-4's 404 clause becomes read-scoped),
+#       the reference-behavior write row states the 404 classification
+#       explicitly, and TC-BACKLOG-002 gains the case, so prose and wire
+#       behaviour agree and the disagreement cannot return unobserved.
+#   D5. `label-swap` PRESERVATION SEMANTICS ARE THE CONTRACT (m-2). AC-F6-4,
+#       DM-6 and TDR-0034 §3.2 said "no full-array replace" while the delivered
+#       write transmits the computed target set in one issue `PATCH`; the oracle
+#       always read the clause as preservation semantics. The records are
+#       restated to what the code satisfies: the write removes present declared
+#       lifecycle tokens, adds the row token, and preserves every other label in
+#       the caller-supplied current read; it never sends a single-token array and
+#       never removes an undeclared label. Per-label add/remove requests are NOT
+#       introduced. The residual limit is recorded, not hidden: a label added by
+#       another actor between the caller's read and the write is not preserved
+#       (the current read is adapter-local input data, so the adapter issues no
+#       read of its own) — a declared limitation in TDR-0034, consistent with
+#       the reference behavior.
+#
+# TC -> PHASE MAP (84 ids; every id owned by exactly one phase — the phase whose
 #   commit lands the case together with the capability that makes it green):
 #   Phase 1 contract/posture/landing (13): TC-LAND-001..008, TC-PARITY-004,
 #            TC-PARITY-008, TC-PARITY-010, TC-POSTURE-002, TC-POSTURE-003
@@ -185,7 +266,19 @@
 #   Phase 6 reference behavior (6): TC-REF-001..006
 #   Phase 7 release/floor (9): TC-PARITY-005, TC-PARITY-007,
 #            TC-FLOOR-001..007
-#   Count: 13 + 14 + 15 + 12 + 12 + 6 + 9 = 81.
+#   Phase 8 remediation (3): TC-CLI-014 (the production `execFile` runner
+#            driven against an offline stub `gh` on an injected `PATH`: recorded
+#            argv, method, path, stdin body, and the parsed `{status, body}`),
+#            TC-CLI-015 (the constructed child environment is absolute and a
+#            composing invocation leaves the working directory untouched),
+#            TC-BIN-057 (the install-launcher check tier exercises both
+#            composition branches with an injected `PATH` and never a live `gh`)
+#   Count: 13 + 14 + 15 + 12 + 12 + 6 + 9 + 3 = 84.
+#   Phase 8 also REPINS two delivered oracles without changing their identity
+#   (TC-CLI-002's golden argv host, TC-CLI-003's golden child environment) and
+#   extends one delivered case (TC-BACKLOG-002 gains the content-write 404
+#   classification). A repin or an extension never moves a case's owning phase;
+#   the test plan records the same three changes in its own revision block.
 #   SPLIT-CASE NOTES (a case whose suite is extended by two phases stays green
 #   at both boundaries; ownership follows the phase that completes it):
 #   TC-POSTURE-001's expected posture moves 7/2 in phase 1 and 9/0 in phase 3
@@ -226,6 +319,24 @@
 #   Phase 6 (5): AC-F7-1..AC-F7-5
 #   Phase 7 (2): AC-F8-4, AC-F8-5
 #   Count: 7 + 6 + 9 + 4 + 7 + 5 + 2 = 40.
+#   NO OWNERSHIP MOVES IN PHASE 8. Phase 8 owns no AC and no delivered case: the
+#   AC set, the case identities, the oracles' meaning, the caps, and the exit
+#   codes are unchanged. What phase 8 changes is EVIDENCE QUALITY, and its
+#   acceptance block names exactly which ACs it re-establishes and how:
+#     AC-F2-1, AC-F2-3, AC-F2-4 — the production process edge (TC-CLI-014) and
+#       the absolute child environment (TC-CLI-015) make the preferred transport
+#       carry a real request through the real runner, which the delivered
+#       evidence never proved (B-1, M-1);
+#     AC-F6-1 — the content write's failure classification is asserted instead
+#       of only described (D4);
+#     AC-F6-4 — the normative wording equals the delivered preservation
+#       mechanism (D5);
+#     AC-F2-2, AC-F2-5, AC-F8-3, AC-F8-6, NFR-2, NFR-3, NFR-9 — re-verified
+#       green as controls, with AC-F8-6's pinned export list and per-file
+#       inventory moved exactly for the one new adapter export.
+#   A reviewer who wants ownership to move instead is asking for a plan
+#   revision, not a silent transfer; the DoD still reads "40/40 ACs met", with
+#   phase 8 supplying the production evidence for the three ACs above.
 #   PARTIAL-VERDICT NOTES: phase 1 declares the whole ninth-operation shape and
 #   the per-operation failure identities the reference behavior documents, and
 #   produces the GitLab/Jira gap rows of AC-F1-2; AC-F1-1 needs phase 3 because
@@ -415,8 +526,11 @@
 #
 # DoD MAPPING (spec §17 ACs -> this plan's owning phases) is exactly the AC
 #   ownership block. The change-level Definition of Done is: all 40 ACs met with
-#   the named TC evidence; all seven plan phases complete with per-phase pm-notes
-#   `notes:` evidence (phase id, commit hash, gate result);
+#   the named TC evidence; all eight plan phases complete with per-phase
+#   pm-notes `notes:` evidence (phase id, commit hash, gate result) — phase 8
+#   recorded as the remediation that re-establishes AC-F2-1/AC-F2-3/AC-F2-4 in
+#   production, and re-reviewed (`review-iter-2`) with the AC table rows for
+#   AC-F2-3, AC-F2-4 and AC-F6-4 re-verified;
 #   `TMPDIR=$PWD/tmp/tmpdir pnpm check` green at the delivered HEAD;
 #   `plan validate GH-338` valid at the delivered HEAD; the four decision
 #   records tracked and the ADR-0005 editorial pointer already committed
@@ -505,6 +619,7 @@
 #   phase 5  feat(GH-338): bounded review-thread discussion read
 #   phase 6  docs(GH-338): adapter reference behavior and the drift check
 #   phase 7  chore(GH-338): release obligations and the regression floor
+#   phase 8  fix(GH-338): CLI host mapping, isolated child env and convergence
 #
 # LIFECYCLE PHASE 7 HANDOFF OBLIGATIONS (system_spec_update, @doc-syncer;
 #   declared here so nothing is dropped after DoD — NOT plan authoring beyond
@@ -604,6 +719,8 @@ tier:
     - "The reference-behavior document drifts from the exported matrix, capabilities, seed, caps, or probe codes, or is deferred to lifecycle phase 7 discovery (AC-F7-2)"
     - "A delivered suite is made green by deleting or renaming an assertion, or a new case is skipped or environment-gated (test plan §3.4)"
     - "TMPDIR=$PWD/tmp/tmpdir pnpm check is not green at a phase boundary (NFR-8)"
+    - "The `gh --hostname` value is derived from a request URL instead of the declared instance host, or the `api.github.com` -> `github.com` mapping grows a generic `api.` strip (AC-F2-1, AC-F2-4, D1)"
+    - "A constructed child-environment path is relative, `HOME` is forwarded instead of an absolute isolated base, the working directory gains a file after a composing invocation, or `.local/` is added to git (AC-F2-3, NFR-3, D2)"
 defaultLeases:
   - repo:main-tools
 defaultWeightClass: standard
@@ -1640,4 +1757,242 @@ phases:
     doneArtifacts:
       mergeRequestUrl: "pull request for feat/GH-338/github-adapter-completion targeting main-tools, left open for human review (lifecycle phase 11; merge authority stays with the owner/CEO)"
       pipelineId: "CI pipeline for the GH-338 delivery branch (required checks green on the pushed HEAD)"
+      trackerTransition: "in-review"
+
+  # ---------------------------------------------------------------------------
+  # Phase 8 — Review-iteration-1 remediation: the production process edge and
+  # the normative convergence (`review/review-iter-1.md`: B-1, M-1, M-2, m-1,
+  # m-2, m-4/N6 and N12, m-5; n-1 as the parsing half of the B-1 proof; decisions
+  # D1..D5 in the header). Phases 1–7 are untouched and re-run as controls.
+  #
+  # Goal: make the preferred transport DO what the delivered suite said it did,
+  # and make the normative prose say what the code does. Two production defects
+  # survived a green seven-phase delivery because every oracle was author-created
+  # and none of them crossed the real process edge: the transport forwarded the
+  # REST host to `gh api --hostname`, so `gh` resolved `api.api.github.com` and
+  # every production request failed (B-1), and the child environment was
+  # relative and home-less, so every composing invocation wrote
+  # `.local/state/gh/device-id` into the caller's working directory (M-1). The
+  # check tier also spawned whatever `gh` the host happened to have (M-2). Phase
+  # 8 repairs all three, proves them through the real `execFile` runner against
+  # an offline stub binary, and converges three normative sentences (DM-9's
+  # write-side 404, AC-F6-4's "no full-array replace", TDR-0031 item 8) with the
+  # delivered behaviour. It adds no contract shape, no configuration surface, no
+  # operation, no cap, no error identity, and no pinned-surface relaxation.
+  #
+  # WHY THE STUB IS NOT A LIVE TEST (and why GAP-TP-3 stays true): the stub is an
+  # executable script the case writes into its own scratch directory and puts on
+  # an INJECTED `PATH`. It receives the argv and stdin the real binary would
+  # receive, emits a canned `--include` block, and records what it saw. Zero
+  # network, zero real `gh`, zero host dependence, and the PRODUCTION
+  # `execFileRunner` (no injected runner) is the code under test — this is the
+  # case that would have caught B-1. The stub models exactly ONE `gh` behaviour,
+  # its XDG fallback, so the working-directory residue gets a real negative
+  # control: drop an XDG variable from the constructed environment and the case
+  # fails by creating `.local/state/gh/device-id` in the scratch CWD.
+  #
+  # Obligations:
+  #   8.1 B-1 host identity (D1). Export the pure `githubCliHostname(instanceHost)`
+  #       from `packages/adapters/src/github/cli-transport.ts` and re-export it
+  #       through `./github`; the mapping is EXACT (`api.github.com` ->
+  #       `github.com`, every other host unchanged, no generic `api.` strip).
+  #       Make `GithubCliTransportOptions.hostname` REQUIRED and delete the
+  #       `request.url` host derivation from `argvFor`, so no code path can
+  #       re-infer a host. In `packages/cli/src/production.ts` compute the value
+  #       ONCE from the declared instance `baseUrl` and pass it to the factory.
+  #       Move the two pinned surfaces exactly (no wildcard, no prefix
+  #       allowance, no deleted assertion): the github export list in
+  #       `tests/structure/provider-surface.test.ts` and the per-file executable
+  #       export lists in `tests/structure/content-inventory.test.ts`.
+  #   8.2 B-1 argv repin. `tests/fixtures/providers/github/cli-argv.json` gains a
+  #       `hostMapping` block (`api.github.com` -> `github.com`; `github.com`
+  #       unchanged; a GHES host unchanged) plus a per-route `hostname`, and
+  #       every `expectedArgv` carries the identity. TC-CLI-002 deep-equals the
+  #       repinned argv and, for the cloud route, asserts the argv contains
+  #       `github.com` and does NOT contain `api.github.com` — the assertion B-1
+  #       would have failed. The two suites that must now state a host
+  #       (`tests/conformance/github-transport-parity.test.ts`,
+  #       `tests/behaviour/providers/github-trap.test.ts`) are declared for that
+  #       one-line reason only; no assertion in either changes meaning.
+  #   8.3 B-1/M-1 process-edge smoke (TC-CLI-014). The new fixture
+  #       `tests/fixtures/providers/github/cli-process-edge.json` declares the
+  #       stub's script body, its canned `--include` blocks, the expected
+  #       recorded argv, the expected stdin body, and the expected parsed
+  #       `{status, body}` for one read and one write. The case writes and chmods
+  #       the stub, builds the transport WITHOUT a runner (the production
+  #       `execFileRunner`), and asserts one spawn per request, the exact
+  #       host/method/path, the credential absent from argv but present in the
+  #       child environment, the write body arriving on stdin, and the returned
+  #       status/body parsed from the canned block. It runs in the behaviour
+  #       tier, where the child-process guard is not installed; the adapter's
+  #       `node:child_process` site count is unchanged (the runner IS the
+  #       delivered 13th site), so `tests/structure/harness-imports.test.ts` does
+  #       not move.
+  #   8.4 M-1 absolute isolated environment (D2; TC-CLI-003 repin, TC-CLI-015).
+  #       `resolveGithubCliConfigDirectory` returns an absolute base in every
+  #       case (the injected `TMPDIR` when absolute, else `os.tmpdir()`), and
+  #       `environmentFor` adds `XDG_CONFIG_HOME`, `XDG_STATE_HOME` and
+  #       `XDG_CACHE_HOME` nested under that base, sharing the delivered
+  #       `jaiship-gh-config` directory for the config half and keeping `HOME`
+  #       unforwarded. TC-CLI-003's pinned key set and the fixture's
+  #       `environment` block move together (exact equality, never a subset).
+  #       TC-CLI-015 asserts that every constructed path-valued variable is
+  #       absolute, that this holds when the injected environment carries no
+  #       `TMPDIR`, and that a composing invocation in an empty scratch CWD
+  #       leaves that CWD empty while the device id lands under
+  #       `XDG_STATE_HOME`. Delete the delivered `.local/state/gh/device-id`
+  #       residue from the worktree: it is untracked, it is never staged, and it
+  #       is never added to git.
+  #   8.5 M-2 host-independent check tier (D3; TC-BIN-057). In
+  #       `tests/checks/install-launcher-installer.test.ts` extend the existing
+  #       shim factory with a recording `gh` stub and pass `PATH` explicitly to
+  #       `runLauncher`: arm A (stub `gh` on `PATH`) records exactly one
+  #       `gh --version` per composing invocation and renders no degradation
+  #       line; arm B (`PATH` with no `gh`) records zero spawns, renders exactly
+  #       one degradation line naming `provider.cli.unavailable`, and the command
+  #       still succeeds. No launcher, composition, or policy code changes, and
+  #       no environment override is invented (NG-2/AC-F6-6). Restate the test
+  #       plan truthfully — §1 ("nothing here requires a live `gh`"), §4 ("no
+  #       test … a real `gh`") and GAP-TP-3 gain the injected-`PATH` statement,
+  #       and the case list gains TC-BIN-057.
+  #   8.6 n-1 status parsing. Restrict `parseIncludedResponse` to the FIRST status
+  #       block's pre-body region so a body line shaped like `HTTP/<ver> <code>`
+  #       can never override the real status;
+  #       `tests/fixtures/providers/github/cli-status-blocks.json` gains that body
+  #       as a case, asserted through TC-CLI-004's suite (case identity
+  #       unchanged).
+  #   8.7 m-1 write-side 404 (D4). Revise the change folder's DM-9, F-6 and NFR-4
+  #       to the delivered write classification (404 -> `provider.payload.invalid`
+  #       with `httpStatus: 404`; NFR-4's 404 clause becomes read-scoped) and make
+  #       the reference-behavior `write-delivery-request` row state it. Add the
+  #       case to TC-BACKLOG-002
+  #       (`tests/behaviour/providers/github-collection.test.ts`) over a new 404
+  #       row in `tests/fixtures/providers/github/issue-writes.json`: one request,
+  #       no retry, `provider.payload.invalid`, `httpStatus: 404`. No client
+  #       change and no error-table row.
+  #   8.8 m-2 preservation semantics (D5). Restate AC-F6-4/DM-6 (change folder),
+  #       TDR-0034 §3.2 and its metric line, the reference-behavior mapping
+  #       paragraph, and TC-BACKLOG-005's wording to the delivered mechanism, and
+  #       record both the current-read-as-input realisation and the read-to-write
+  #       TOCTOU limitation in TDR-0034. TC-BACKLOG-005's assertions are
+  #       unchanged, so `tests/behaviour/providers/github-workflow-map.test.ts` is
+  #       not declared and no wire behaviour moves.
+  #   8.9 m-4/N6 and N12, named and owned. N6 (owner `@decision-advisor`): align
+  #       TDR-0031 item 8 with the optional `workflowMap` member TDR-0034 §1 adds.
+  #       N12 (owner `@pm`): the DoR iteration-2 verdict note, the spec-v1.2 note,
+  #       and the superseded DM-10 sentence in `chg-GH-338-pm-notes.yaml` — the
+  #       coder records phase-8 evidence and never rewrites a historical note.
+  #       m-5 is recorded, not moved: the changeset was authored in the phase-2
+  #       range while its declaration sits in phase 7, and this plan ACCEPTS the
+  #       recorded deviation; `.changeset/**` is therefore not declared here and
+  #       the file is not moved, re-created, or re-versioned.
+  #   8.10 Documentation convergence, only where a documented value moves. B-1
+  #       changes the documented host derivation and M-1 the documented isolation,
+  #       so `doc/spec/features/feature-adapter-reference-behavior.md` moves with
+  #       them (the CLI transport table's host and child-execution rows) and the
+  #       drift surface moves in the SAME commit:
+  #       `tests/fixtures/provider/reference-behavior.ts` and
+  #       `tests/structure/reference-behavior.test.ts` gain the host-mapping rows
+  #       plus their extraction-count and non-vacuity assertions, so a documented
+  #       host or isolation value that drifts from the machine value fails by
+  #       name. No other `doc/spec/**` file moves: no capability, operation set,
+  #       cap, seed, or skip kind changes, so the lifecycle-phase-7
+  #       reconciliation of the four feature specs needs no re-run.
+  #       `doc/00-index.md` and `doc/decisions/00-index.md` are not declared (no
+  #       index row changes). The change folder's spec and test plan bump their
+  #       own version fields in this commit (spec v1.3: F-6/DM-9/NFR-4/AC-F6-4;
+  #       test plan v1.3: §1, §4, GAP-TP-3, the TC-CLI-002/003/004 and
+  #       TC-BACKLOG-002/005 rows, plus TC-CLI-014/015 and TC-BIN-057), and the
+  #       test plan's revision row names those changed claims.
+  #
+  # NOT IN PHASE 8 (named so scope cannot creep): m-3's missing pm-notes hashes
+  #   (owner `@pm`; bookkeeping, no file in this phase's scope), n-2 (a real
+  #   capability probe is a design change, not a remediation), n-3 (the stale
+  #   test-plan symbol is corrected only inside the §1/§4/GAP-TP-3 sentences this
+  #   phase already rewrites), n-4/n-6 (commit history and note wording, `@pm`),
+  #   n-5 (the non-numeric update identity stays a declared refusal; its prose is
+  #   confirmed, not reshaped), and any trap-catalog entry (the stub-shim case is
+  #   a process-edge proof, not a replay behaviour; its protection is the declared
+  #   TC-CLI-014 plus the gate that names it, and a trap entry would move
+  #   EXPECTED_TRAPS for no coverage).
+  #
+  # Acceptance (re-establishes evidence; owns no AC — see AC OWNERSHIP):
+  #   AC-F2-1 (TC-CLI-014: the preferred transport carries a real request through
+  #   the real runner), AC-F2-3 (TC-CLI-002's repinned host, TC-CLI-003's repinned
+  #   absolute environment, TC-CLI-015's residue proof), AC-F2-4 (TC-CLI-014's read
+  #   and write status/body equality plus the unchanged cross-transport table),
+  #   AC-F6-1 (TC-BACKLOG-002's content-write 404 classification), AC-F6-4 (the
+  #   wording equals the mechanism), and the controls AC-F2-2, AC-F2-5, AC-F8-3,
+  #   AC-F8-6, NFR-2 (TC-BIN-057 makes the check tier offline), NFR-3, NFR-9.
+  #
+  # Gate (expected signal: exit 0; the stub records exactly the repinned argv for
+  #   the read and the write and the parsed status/body equal the fixture; the
+  #   scratch CWD is empty afterwards with the device id under XDG_STATE_HOME;
+  #   `gh` is spawned once per composing launcher invocation and zero times when
+  #   the injected `PATH` carries none; the export list and per-file inventory
+  #   equal the declared sets including `githubCliHostname`; the child-process
+  #   site set stays the declared thirteen; the content-write 404 returns
+  #   `provider.payload.invalid` with `httpStatus: 404` in one request; the drift
+  #   suite reports the documented host and isolation values equal to the machine
+  #   values; `git status --porcelain` shows no `.local/` entry; `plan validate`
+  #   valid; the aggregate gate green):
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm typecheck                                   (G6)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/behaviour/providers               (G2)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/conformance                       (G3)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/structure                         (G1)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks                           (G4)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/boundaries                        (G5)
+  #   TMPDIR=$PWD/tmp/tmpdir bun run scripts/checks/secret-read-boundary.ts   (G7)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/fixture-sanitization.test.ts tests/checks/fixture-privacy.test.ts  (G8)
+  #   TMPDIR=$PWD/tmp/tmpdir bun test tests/checks/doc-conformance.test.ts tests/checks/decision-record.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir bash scripts/.tests/test-doc-distribution.sh
+  #   TMPDIR=$PWD/tmp/tmpdir PATH="$PWD/node_modules/.bin:$PATH" bun packages/cli/bin/jaiship.ts plan validate GH-338
+  #   TMPDIR=$PWD/tmp/tmpdir git status --porcelain      (expect no ".local/" entry)
+  #   TMPDIR=$PWD/tmp/tmpdir git diff --check                                 (G9)
+  #   TMPDIR=$PWD/tmp/tmpdir pnpm check                                       (G10, binding)
+  #   RE-REVIEW GATE: `@reviewer` re-runs the review against this HEAD
+  #   (`review-iter-2`), and the phase is complete only when its AC table rows for
+  #   AC-F2-3, AC-F2-4 and AC-F6-4 are PASS on the new evidence; the verdict is
+  #   recorded as a pm-notes `notes:` entry.
+  # ---------------------------------------------------------------------------
+  - id: 8
+    title: "Remediation: CLI host identity, absolute isolated child environment, offline stub-gh process-edge smoke, host-independent check tier, and normative convergence"
+    kind: delivery
+    summary: "fix(GH-338): CLI host mapping, isolated child env and convergence"
+    scope:
+      files:
+        - packages/adapters/src/github/cli-transport.ts
+        - packages/adapters/src/github/index.ts
+        - packages/cli/src/production.ts
+        - tests/behaviour/providers/github-cli-transport.test.ts
+        - tests/behaviour/providers/github-collection.test.ts
+        - tests/behaviour/providers/github-trap.test.ts
+        - tests/conformance/github-transport-parity.test.ts
+        - tests/checks/install-launcher-installer.test.ts
+        - tests/structure/provider-surface.test.ts
+        - tests/structure/content-inventory.test.ts
+        - tests/structure/reference-behavior.test.ts
+        - tests/fixtures/provider/reference-behavior.ts
+        - tests/fixtures/providers/github/cli-argv.json
+        - tests/fixtures/providers/github/cli-status-blocks.json
+        - tests/fixtures/providers/github/cli-process-edge.json
+        - tests/fixtures/providers/github/issue-writes.json
+        - doc/spec/features/feature-adapter-reference-behavior.md
+        - doc/decisions/TDR-0031-github-adapter-cli-first-provider-transport.md
+        - doc/decisions/TDR-0034-github-issues-transition-mapping-injected-workflow-map.md
+      folders:
+        - doc/changes/2026-11/2026-11-17--GH-338--github-adapter-completion
+    interactions:
+      - kind: contract-file
+        target: packages/adapters/src/github/cli-transport.ts
+        role: producer
+      - kind: contract-file
+        target: tests/fixtures/providers/github/cli-argv.json
+        role: consumer
+      - kind: contract-file
+        target: doc/spec/features/feature-adapter-reference-behavior.md
+        role: producer
+    doneArtifacts:
+      mergeRequestUrl: "the existing pull request for feat/GH-338/github-adapter-completion targeting main-tools, updated with the phase-8 commit and left open for human review (merge authority stays with the owner/CEO)"
+      pipelineId: "CI pipeline for the remediation HEAD (required checks green, including the offline stub-gh process-edge case)"
       trackerTransition: "in-review"

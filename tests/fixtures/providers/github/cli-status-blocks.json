@@ -4,62 +4,118 @@
     {
       "name": "200-json",
       "stdout": "HTTP/2.0 200 OK\ncontent-type: application/json\n\n{\"number\":601,\"state\":\"open\"}\n",
-      "expected": { "status": 200, "body": { "number": 601, "state": "open" } }
+      "expected": {
+        "status": 200,
+        "body": {
+          "number": 601,
+          "state": "open"
+        }
+      }
     },
     {
       "name": "201-json",
       "stdout": "HTTP/2.0 201 Created\ncontent-type: application/json\n\n{\"id\":9001}\n",
-      "expected": { "status": 201, "body": { "id": 9001 } }
+      "expected": {
+        "status": 201,
+        "body": {
+          "id": 9001
+        }
+      }
     },
     {
       "name": "204-empty",
       "stdout": "HTTP/2.0 204 No Content\n\n",
-      "expected": { "status": 204, "body": null }
+      "expected": {
+        "status": 204,
+        "body": null
+      }
     },
     {
       "name": "404",
       "stdout": "HTTP/2.0 404 Not Found\ncontent-type: application/json\n\n{\"message\":\"Not Found\"}\n",
-      "expected": { "status": 404, "body": { "message": "Not Found" } }
+      "expected": {
+        "status": 404,
+        "body": {
+          "message": "Not Found"
+        }
+      }
     },
     {
       "name": "403",
       "stdout": "HTTP/2.0 403 Forbidden\ncontent-type: application/json\n\n{\"message\":\"Forbidden\"}\n",
-      "expected": { "status": 403, "body": { "message": "Forbidden" } }
+      "expected": {
+        "status": 403,
+        "body": {
+          "message": "Forbidden"
+        }
+      }
     },
     {
       "name": "500",
       "stdout": "HTTP/2.0 500 Internal Server Error\ncontent-type: application/json\n\n{\"message\":\"Server Error\"}\n",
-      "expected": { "status": 500, "body": { "message": "Server Error" } }
+      "expected": {
+        "status": 500,
+        "body": {
+          "message": "Server Error"
+        }
+      }
     },
     {
       "name": "two-status-blocks",
       "stdout": "HTTP/1.1 200 Connection established\n\nHTTP/2.0 200 OK\ncontent-type: application/json\n\n{\"number\":601}\n",
-      "expected": { "status": 200, "body": { "number": 601 } }
+      "expected": {
+        "status": 200,
+        "body": {
+          "number": 601
+        }
+      }
     },
     {
-      "name": "two-conflicting-final-blocks",
+      "name": "two-body-bearing-blocks",
       "stdout": "HTTP/2.0 404 Not Found\ncontent-type: application/json\n\n{\"message\":\"first\"}\nHTTP/2.0 200 OK\ncontent-type: application/json\n\n{\"number\":601}\n",
-      "expected": { "status": 200, "body": { "number": 601 } }
+      "expected": {
+        "unparsable": true,
+        "reason": "not JSON"
+      },
+      "rationale": "The first status block owns the status: a later status line in the remaining bytes can never override it. Two body-bearing blocks are not a shape this transport can split without a length header, so the unparsable body is refused instead of being reclassified."
+    },
+    {
+      "name": "body-with-status-line",
+      "stdout": "HTTP/2.0 200 OK\ncontent-type: application/json\n\n{\"number\":601,\n\"note\":\"first\"}\nHTTP/2.0 503 Service Unavailable\n{\"note\":\"injected\"}\n",
+      "expected": {
+        "unparsable": true,
+        "reason": "not JSON"
+      },
+      "rationale": "A body line shaped like `HTTP/<ver> <code>` is body text, never a status: the scan stops at the first block\u2019s pre-body region."
     },
     {
       "name": "unparsable-status",
       "stdout": "HTTP/2.0 OK\ncontent-type: application/json\n\n{}\n",
-      "expected": { "unparsable": true }
+      "expected": {
+        "unparsable": true
+      }
     },
     {
       "name": "body-without-status",
       "stdout": "content-type: application/json\n\n{\"number\":601}\n",
-      "expected": { "unparsable": true }
+      "expected": {
+        "unparsable": true
+      }
     },
     {
       "name": "status-without-body",
       "stdout": "HTTP/2.0 200 OK\ncontent-type: application/json\n\n",
-      "expected": { "status": 200, "body": null }
+      "expected": {
+        "status": 200,
+        "body": null
+      }
     },
     {
       "name": "non-json-body",
       "stdout": "HTTP/2.0 200 OK\ncontent-type: text/plain\n\nnot-json\n",
-      "expected": { "unparsable": true }
+      "expected": {
+        "unparsable": true
+      }
     }
   ]
 }

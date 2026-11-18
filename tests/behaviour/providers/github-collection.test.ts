@@ -514,6 +514,34 @@ describe("TC-BACKLOG-002 the content write creates and updates, never lands", ()
     expect(transport.requests.some((entry) => entry.method === "POST")).toBe(false);
   });
 
+  test("a content-write 404 is the uniform write classification: one request, no retry, structured status", async () => {
+    const missing = contentWriteCase("pullUpdateNotFound");
+    const response = recordField(missing, "response");
+    const { client, transport } = createWriteClient([
+      {
+        method: "PATCH",
+        url: `${instance.baseUrl}${repoPath}/pulls/504`,
+        body: response.body,
+        status: Number(response.status),
+      },
+    ]);
+    const result = await client.writeDeliveryRequest(
+      missing.input as Parameters<ReturnType<typeof createGitHubClient>["writeDeliveryRequest"]>[0],
+    );
+    const expected = recordField(missing, "expected");
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      // The write family is uniform: 404 is NOT promoted to `provider.not-found`
+      // (that identity is read-scoped). One request, no retry, status preserved.
+      expect(result.code).toBe(expected.code as string);
+      expect(result.httpStatus).toBe(expected.httpStatus as number);
+    }
+    expect(transport.requests).toHaveLength(1);
+    const request = transport.requests[0] as RecordedWrite | undefined;
+    expect(request?.method).toBe("PATCH");
+    expect(writeBody(request)).toEqual(recordField(recordField(missing, "request"), "body"));
+  });
+
   for (const key of [
     "pullCreateMissingRef",
     "pullCreateMissingTargetRef",

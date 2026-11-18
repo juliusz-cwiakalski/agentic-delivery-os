@@ -55,18 +55,18 @@ A declaration is honest: an operation is either supported or carries exactly one
 
 ## Failure identities
 
-A failure is classifiable from structured data, never from prose. A read distinguishes definitive absence from a classified payload or transport failure; a write classifies the same way and never silently flattens.
+A failure is classifiable from structured data, never from prose. A read distinguishes definitive absence from a classified payload or transport failure; a write classifies the same way and never silently flattens. Only a read promotes an explicit `404` to `provider.not-found`; every write classifies any non-2xx, `404` included, as `provider.payload.invalid` with the structured `httpStatus`, so a deleted or renumbered resource is not mistaken for a definitive absence by a write.
 
 | Operation | Primary failure identities |
 |---|---|
 | `read-work-item` | 404 -> `provider.not-found`; other non-2xx -> `provider.payload.invalid` with `httpStatus`; transport failure -> `provider.payload.invalid` without status; credential -> `config.credential.missing` |
-| `write-work-item` | classified write failure -> `provider.payload.invalid`; an unavailable label signal refuses |
-| `transition-work-item` | classified write failure -> `provider.payload.invalid`; an undeclared alias, a declared non-terminal `field-update` alias, an unavailable label signal on a `label-swap` row, and a `done`-resolving current read are named refusals with zero provider requests |
+| `write-work-item` | any non-2xx (404 included) -> `provider.payload.invalid` with `httpStatus`; transport failure -> `provider.payload.invalid` without status; an unavailable label signal refuses |
+| `transition-work-item` | any non-2xx (404 included) -> `provider.payload.invalid` with `httpStatus`; transport failure -> `provider.payload.invalid` without status; an undeclared alias, a declared non-terminal `field-update` alias, an unavailable label signal on a `label-swap` row, and a `done`-resolving current read are named refusals with zero provider requests |
 | `read-delivery-request` | 404 -> `provider.not-found`; other non-2xx -> `provider.payload.invalid` with `httpStatus`; transport failure -> `provider.payload.invalid` without status; credential -> `config.credential.missing` |
-| `write-delivery-request` | classified content-write failure -> `provider.payload.invalid`; a missing required input is a named refusal with zero provider requests; a create never lands and an update never creates |
+| `write-delivery-request` | any non-2xx (404 included) -> `provider.payload.invalid` with `httpStatus`; transport failure -> `provider.payload.invalid` without status; a missing required input is a named refusal with zero provider requests; a create never lands and an update never creates |
 | `read-pipeline-run` | 404 -> `provider.not-found`; other non-2xx -> `provider.payload.invalid` with `httpStatus`; transport failure -> `provider.payload.invalid` without status; credential -> `config.credential.missing` |
-| `write-comment` | classified write failure -> `provider.payload.invalid`; carrier-free text only |
-| `resolve-delivery-thread` | classified write failure -> `provider.payload.invalid`; a mutation that leaves the thread unresolved is a failure |
+| `write-comment` | any non-2xx (404 included) -> `provider.payload.invalid` with `httpStatus`; transport failure -> `provider.payload.invalid` without status; carrier-free text only |
+| `resolve-delivery-thread` | any non-2xx (404 included) -> `provider.payload.invalid` with `httpStatus`; transport failure -> `provider.payload.invalid` without status; a mutation that leaves the thread unresolved is a failure |
 | `merge-delivery-request` | a guard rejection and any non-2xx are classified -> `provider.payload.invalid` with `httpStatus`; a transport failure -> `provider.payload.invalid` without status; already-merged is success only after a read-back that observes provider-asserted merged truth; no retry |
 
 ## Absence semantics
@@ -109,6 +109,17 @@ GitLab and Jira take an explicit same-behavior-or-absent position outside the cl
 
 `gh` is an optional runtime dependency of the preferred transport. It is version-windowed at the probe, never invoked through a shell, never asked to paginate or transform output, and never allowed to use an operator's stored login. The direct REST/GraphQL API remains the declared fallback and the offline deterministic default.
 
+`gh api --hostname` takes a host identity, never the REST endpoint host. The mapping is exact and frozen, and the mapped value is required construction data computed once from the declared instance address, so no request can re-derive a host.
+
+| Instance host | CLI `--hostname` |
+|---|---|
+| `api.github.com` | `github.com` |
+| `github.com` | `github.com` |
+| `ghes.example.com` | `ghes.example.com` |
+| `api.ghes.example.com` | `api.ghes.example.com` |
+
+The mapping is a single exact pair, `api.github.com` -> `github.com`. Every other host is unchanged because a GitHub Enterprise Server host identity is already the host; there is no generic `api.` prefix strip, so an enterprise host that begins with `api.` keeps its host.
+
 | Aspect | Reference behavior |
 |---|---|
 | Probe | One bounded version invocation at composition time only. The probe runs at composition time only; it never runs at module load, never per request, never on a self-description path that does not compose, and never in the mock tier. |
@@ -116,7 +127,10 @@ GitLab and Jira take an explicit same-behavior-or-absent position outside the cl
 | Policy | Closed `prefer-cli` (default) or `api-only`; the selection is a composition decision, not a request decision. An absent composition fact selects the delivered native-`fetch` transport with no probe, no policy claim, and no selection value. |
 | Degradation | When the preferred CLI is unusable, the API transport serves. A fallback carries exactly one composition-scoped `GithubTransportSelection` value whose `policy`, `selected: "api"`, and `degradation.code` name the probe refusal; the value is never persisted and renders exactly one diagnostic line naming the refusal code, and no new readable surface exists on the composed program object. |
 | Failover | There is no per-request failover: a mid-run CLI failure is a classified transport failure and a write is never re-issued on the other transport. |
+| Host identity | The `--hostname` value is the declared host identity from the mapping above, never the request URL's host. |
+| Status recovery | The FIRST `--include` status block is authoritative: a body line shaped like a status line can never override the real status, and a status block whose body region begins with another status line is an intermediate response (a proxy preamble or a bodyless redirect hop) rather than the answer. An absent or unparsable status block is refused, never assumed to be a success. |
 | Child execution | Fixed argv, no shell, no pagination, no interactive prompt, bounded timeout and output, an adapter-constructed environment, an isolated configuration directory, and prompt suppression. |
+| Child environment | Absolute in every case: the isolated base is the injected temporary directory when that value is absolute and the operating system's temporary directory otherwise. `GH_CONFIG_DIR` and `XDG_CONFIG_HOME` share `<base>/jaiship-gh-config`; `XDG_STATE_HOME` is `<base>/jaiship-gh-state` and `XDG_CACHE_HOME` is `<base>/jaiship-gh-cache`. `HOME` is not forwarded, nothing is derived from the working directory, and the adapter creates no directory: the base is created on demand under a temporary root. |
 | Credential | Credential material arrives from the credential port as child-environment data; it never appears in argv, stdout, stderr, diagnostics, or a failure detail. |
 
 The probe returns exactly one of the following closed refusal codes:
@@ -140,7 +154,7 @@ Issue reads and transition writes resolve through one injected `WorkflowMap`, se
 
 Read resolution has exactly one refusal class and four declared outcomes: a `closed` issue resolves to `done` regardless of labels; otherwise the first row in declared precedence whose token equals a present label name exactly wins; otherwise a label differing from a declared `label-swap` token by case alone is a visible normalization failure carried by `provider.payload.invalid`, naming the label and the declared token; otherwise the issue resolves through its native-state row. An unrecognized label, an issue carrying no lifecycle label, and an unavailable label signal never refuse a read. Only the absence of a row for the resolved native state refuses, naming that state.
 
-Only a `label-swap` transition reads, removes, or adds labels and refuses on an unavailable label signal; a `field-update` transition writes provider state only, performs no label read and no label write, and gains no label-signal refusal. The writable aliases are `done` plus each declared `label-swap` row's alias; a declared non-terminal `field-update` alias is readable but read-only. A `label-swap` transition is resolved against the issue's current read result, which the caller supplies as adapter-local input data; the adapter issues no read to obtain it, so every refusal costs zero provider requests. A `label-swap` write to an issue whose current read resolves to `done` refuses with a named typed failure and zero provider requests, regardless of the issue's labels; a declared non-terminal `field-update` alias and an undeclared alias refuse the same way.
+Only a `label-swap` transition changes labels and refuses on an unavailable label signal. Its write is one issue `PATCH` carrying the computed target set: every present declared `label-swap` token is removed, the row's token is added, and every other label in the supplied current read is preserved. It never sends a single-token array, never removes an undeclared label, and never invents a label it was not given. The preserved set is the caller's read, so a label another actor adds between that read and the write is not preserved — a declared read-to-write limitation of this mechanism, not a hidden guarantee. A `field-update` transition writes provider state only, performs no label read and no label write, and gains no label-signal refusal. The writable aliases are `done` plus each declared `label-swap` row's alias; a declared non-terminal `field-update` alias is readable but read-only. A `label-swap` transition is resolved against the issue's current read result, which the caller supplies as adapter-local input data; the adapter issues no read to obtain it, so every refusal costs zero provider requests. A `label-swap` write to an issue whose current read resolves to `done` refuses with a named typed failure and zero provider requests, regardless of the issue's labels; a declared non-terminal `field-update` alias and an undeclared alias refuse the same way.
 
 The map is validated exactly once per client construction on the resolved map, before the first operation; a failure is captured rather than thrown and every operation then refuses with the existing `provider.payload.invalid` identity with zero provider requests. The rejection set is: a non-string or empty `systemName`; `states` that is not a non-empty array of objects; a non-string or duplicate `nativeStatus`; a `deliveryState` or `transitionMechanism` outside its closed set; two rows declaring the same delivery alias; no row resolving to `done`; and a `done` row that is not the `field-update` row on the native issue state `closed`.
 

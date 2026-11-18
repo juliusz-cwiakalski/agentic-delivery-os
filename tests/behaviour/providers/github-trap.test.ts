@@ -613,6 +613,8 @@ const cliRunnerReturning = (
 };
 
 const CLI_TRANSPORT_ENVIRONMENT = { PATH: "/opt/example/bin", TMPDIR: "/tmp/example-tmp" };
+/** The declared `--hostname` identity for the fixtures' instance host (D1). */
+const CLI_TRANSPORT_HOSTNAME = new URL(instance.baseUrl).host;
 
 const LANDING_FIXTURE = `${FIXTURES}/landing-responses.json`;
 
@@ -829,6 +831,7 @@ const defaultAssertions: TrapAssertions = {
     const transport = createGithubCliTransport({
       runner,
       environment: CLI_TRANSPORT_ENVIRONMENT,
+      hostname: CLI_TRANSPORT_HOSTNAME,
     });
     const response = await transport.send({
       url: `${instance.baseUrl}${repoPath}/issues/601`,
@@ -846,6 +849,7 @@ const defaultAssertions: TrapAssertions = {
     const transport = createGithubCliTransport({
       runner,
       environment: CLI_TRANSPORT_ENVIRONMENT,
+      hostname: CLI_TRANSPORT_HOSTNAME,
     });
     await transport.send({
       url: String(fixture.url),

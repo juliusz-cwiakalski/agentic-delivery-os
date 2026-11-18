@@ -1,0 +1,84 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "stub": {
+    "name": "gh",
+    "script": "#!/usr/bin/env bash\nset -euo pipefail\nroot=\"$(cd \"$(dirname \"$0\")/..\" && pwd)\"\n# One marker line per invocation, then the exact argv the transport produced.\nprintf 'call\\n' >> \"$root/calls.txt\"\nprintf '%s\\n' \"$@\" >> \"$root/calls.txt\"\n# The constructed child environment, recorded as data, never as a secret surface.\nprintf '%s' \"${GH_TOKEN-}\" > \"$root/token.txt\"\nprintf '%s' \"${HOME-<unset>}\" > \"$root/home.txt\"\nprintf '%s' \"${XDG_STATE_HOME-<unset>}\" > \"$root/state.txt\"\nhas_input=0\nfor arg in \"$@\"; do\n  if [[ \"$arg\" == \"--input\" ]]; then has_input=1; fi\ndone\nif [[ \"$has_input\" == \"1\" ]]; then\n  cat > \"$root/stdin.txt\"\nfi\nmethod=GET\nprevious=\"\"\nfor arg in \"$@\"; do\n  if [[ \"$previous\" == \"--method\" ]]; then method=\"$arg\"; fi\n  previous=\"$arg\"\ndone\n# gh's XDG state fallback, modelled exactly: no XDG_STATE_HOME writes into the CWD.\nstate=\"${XDG_STATE_HOME:-$PWD/.local/state}\"\nmkdir -p \"$state/gh\"\nprintf 'device\\n' > \"$state/gh/device-id\"\nif [[ \"$method\" == \"GET\" ]]; then\n  cat \"$root/read-response.txt\"\nelse\n  cat \"$root/write-response.txt\"\nfi\n",
+    "responses": {
+      "read": "HTTP/2.0 200 OK\ncontent-type: application/json\n\n{\"number\":601,\"title\":\"Stub edge read\",\"state\":\"open\",\"labels\":[]}\n",
+      "write": "HTTP/2.0 201 Created\ncontent-type: application/json\n\n{\"id\":9001}\n"
+    }
+  },
+  "hostMapping": {
+    "instanceHost": "api.github.com",
+    "cliHost": "github.com"
+  },
+  "environment": {
+    "stubDirectory": "bin",
+    "cwdDirectory": "cwd",
+    "tempBaseDirectory": "tmp-base"
+  },
+  "cases": {
+    "read": {
+      "request": {
+        "url": "https://api.github.example.com/repos/group-placeholder/project-placeholder/issues/601",
+        "method": "GET",
+        "headers": {
+          "Accept": "application/vnd.github+json"
+        }
+      },
+      "expectedArgv": [
+        "api",
+        "/repos/group-placeholder/project-placeholder/issues/601",
+        "--method",
+        "GET",
+        "--hostname",
+        "github.com",
+        "--include",
+        "--header",
+        "Accept: application/vnd.github+json"
+      ],
+      "expected": {
+        "status": 200,
+        "body": {
+          "number": 601,
+          "title": "Stub edge read",
+          "state": "open",
+          "labels": []
+        }
+      }
+    },
+    "write": {
+      "request": {
+        "url": "https://api.github.example.com/repos/group-placeholder/project-placeholder/issues/601/comments",
+        "method": "POST",
+        "headers": {
+          "Accept": "application/vnd.github+json",
+          "Content-Type": "application/json"
+        },
+        "body": "{\"body\":\"Stub edge write\"}"
+      },
+      "expectedArgv": [
+        "api",
+        "/repos/group-placeholder/project-placeholder/issues/601/comments",
+        "--method",
+        "POST",
+        "--hostname",
+        "github.com",
+        "--include",
+        "--header",
+        "Accept: application/vnd.github+json",
+        "--header",
+        "Content-Type: application/json",
+        "--input",
+        "-"
+      ],
+      "expectedStdin": "{\"body\":\"Stub edge write\"}",
+      "expected": {
+        "status": 201,
+        "body": {
+          "id": 9001
+        }
+      }
+    }
+  }
+}
