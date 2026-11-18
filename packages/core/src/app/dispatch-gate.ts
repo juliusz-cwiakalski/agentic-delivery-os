@@ -9,13 +9,21 @@
  */
 import {
   DISPATCH_HANDOVER_PAYLOAD_SCHEMA,
+  type DispatchConditionStatus,
+  type DispatchHandoverOperation,
   type DispatchHandoverRecord,
+  type DispatchHandoverState,
   type DispatchResolveData,
   type DispatchSummaryData,
   type StateStorePort,
 } from "#contracts";
-import { buildDispatchAuthorityView, foldDispatchHandover } from "../domain/dispatch-authority.js";
 import {
+  buildDispatchAuthorityView,
+  foldDispatchHandover,
+  reversibilityOf,
+} from "../domain/dispatch-authority.js";
+import {
+  conditionStatuses,
   type DispatchEvidenceWindow,
   type DispatchGateEvaluation,
   type DispatchRepositoryScope,
@@ -156,23 +164,73 @@ export const resolveDispatchDivergenceEvidence = (input: {
   };
 };
 
+/** One truncation object as the handover data carries it. */
+type DispatchHandoverTruncation = {
+  readonly bound: number;
+  readonly omittedRecords: number;
+};
+
+/**
+ * The handover/reversal result.
+ *
+ * The declared outcome table (TDR-0031 D2, spec Appendix E.1): the four
+ * evidence-reading outcomes carry the four ordered `conditions` and
+ * `reversible`; the recorded revert additionally carries `verdict`, so the
+ * `verdict == "unverifiable" ⟺ truncation present` invariant is expressible
+ * there. The single declared exemption — the idempotent revert noop — carries
+ * none of those three keys and answers before any gate evidence read. Key order
+ * is the delivered order, extended by appending only.
+ */
+export type DispatchHandoverData = {
+  readonly repository: string;
+  readonly operation: DispatchHandoverOperation;
+  readonly recorded: boolean;
+  readonly noop: boolean;
+  readonly verdict?: string;
+  readonly unmetConditions?: readonly {
+    readonly condition: string;
+    readonly detail: string;
+  }[];
+  readonly conditions?: readonly DispatchConditionStatus[];
+  readonly reversible: boolean;
+  readonly truncation?: DispatchHandoverTruncation;
+};
+
 /** The handover/reversal result. */
 export type DispatchHandoverResult =
-  | {
-      readonly ok: true;
-      readonly data: {
-        readonly repository: string;
-        readonly operation: "authoritative" | "dual-run";
-        readonly recorded: boolean;
-        readonly noop: boolean;
-        readonly verdict?: string;
-        readonly unmetConditions?: readonly {
-          readonly condition: string;
-          readonly detail: string;
-        }[];
-      };
-    }
+  | { readonly ok: true; readonly data: DispatchHandoverData }
   | { readonly ok: false; readonly error: { readonly kind: string; readonly code: string } };
+
+/** The read-side facts one data-returning outcome projects. */
+type HandoverReadFacts = {
+  readonly window: DispatchEvidenceWindow;
+  readonly evaluation: DispatchGateEvaluation;
+};
+
+/** The evidence-read projection shared by every gate-reading outcome. */
+const handoverReadData = (
+  input: {
+    readonly repository: string;
+    readonly operation: DispatchHandoverOperation;
+    readonly recorded: boolean;
+    readonly noop: boolean;
+    readonly authority: DispatchHandoverState;
+    readonly unmetConditions?: readonly {
+      readonly condition: string;
+      readonly detail: string;
+    }[];
+  } & HandoverReadFacts,
+): DispatchHandoverData => ({
+  repository: input.repository,
+  operation: input.operation,
+  recorded: input.recorded,
+  noop: input.noop,
+  verdict: input.evaluation.verdict,
+  ...(input.unmetConditions === undefined ? {} : { unmetConditions: input.unmetConditions }),
+  conditions: conditionStatuses(input.evaluation),
+  reversible: reversibilityOf(input.authority),
+  ...(input.window.truncated === undefined ? {} : { truncation: input.window.truncated }),
+});
 
 const refreshAuthorityView = (input: {
   readonly store: StateStorePort;
@@ -211,27 +269,32 @@ export const handoverDispatchEvidence = (input: {
   if (current !== undefined && current.authority === "authoritative") {
     return {
       ok: true,
-      data: {
+      data: handoverReadData({
         repository: input.repository,
         operation: "authoritative",
         recorded: false,
         noop: true,
-        verdict: read.evaluation.verdict,
-      },
+        authority: current.authority,
+        window: read.window,
+        evaluation: read.evaluation,
+      }),
     };
   }
 
   if (!read.evaluation.eligibility) {
     return {
       ok: true,
-      data: {
+      data: handoverReadData({
         repository: input.repository,
         operation: "authoritative",
         recorded: false,
         noop: false,
-        verdict: read.evaluation.verdict,
+        // A refusal leaves the folded authority untouched.
+        authority: current?.authority ?? "dual-run",
+        window: read.window,
+        evaluation: read.evaluation,
         unmetConditions: read.evaluation.unmetConditions,
-      },
+      }),
     };
   }
   const record: DispatchHandoverRecord = {
@@ -252,13 +315,18 @@ export const handoverDispatchEvidence = (input: {
   }
   return {
     ok: true,
-    data: {
+    data: handoverReadData({
       repository: input.repository,
       operation: "authoritative",
       recorded: appended.appended,
       noop: !appended.appended,
-      verdict: read.evaluation.verdict,
-    },
+      // The flip just landed (or was already current): the folded authority
+      // after the operation is authoritative, exactly as the authority
+      // document's `reversalAvailable` reads it.
+      authority: "authoritative",
+      window: read.window,
+      evaluation: read.evaluation,
+    }),
   };
 };
 
@@ -277,6 +345,10 @@ export const revertDispatchHandoverEvidence = (input: {
   const folded = foldDispatchHandover(handover.records);
   const current = folded.find((entry) => entry.repository === input.repository);
   if (current === undefined || current.authority === "dual-run") {
+    // The single declared exemption (TDR-0031 D2, DEC-12): answered from the
+    // folded handover before any gate evidence read, so a torn or unreadable
+    // attempts/divergences ledger cannot refuse an operation that changes no
+    // authority. No `conditions`, no `verdict`, no `truncation`.
     return {
       ok: true,
       data: {
@@ -284,6 +356,7 @@ export const revertDispatchHandoverEvidence = (input: {
         operation: "dual-run",
         recorded: false,
         noop: true,
+        reversible: reversibilityOf("dual-run"),
       },
     };
   }
@@ -307,11 +380,14 @@ export const revertDispatchHandoverEvidence = (input: {
   }
   return {
     ok: true,
-    data: {
+    data: handoverReadData({
       repository: input.repository,
       operation: "dual-run",
       recorded: appended.appended,
       noop: !appended.appended,
-    },
+      authority: "dual-run",
+      window: read.window,
+      evaluation: read.evaluation,
+    }),
   };
 };

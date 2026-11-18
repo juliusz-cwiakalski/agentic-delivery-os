@@ -579,3 +579,26 @@ corpus scan behind the CI proxy and the curated escaped-defect floor, the one
 (147 entries / 146 delivered / 63 allowlist / +113), and the 24th
 prompt-required mount with its M2 reference page. The delivered aggregate gate
 is green at `TMPDIR=$PWD/tmp/tmpdir pnpm check`.
+
+## Engine-first evaluation surfaces delivered (GH-293, M2-S16)
+
+GH-293 delivered the engine-first evaluation surfaces through the full lifecycle:
+the summary reports `cleanDispatches` (identical to `corroboration.satisfied`) and
+the trailing `consecutiveCleanDispatches` plus the four ordered `conditions`; the
+handover data carries the same four conditions and `reversible` on every
+gate-reading outcome, with the single declared exemption (the idempotent revert
+noop) and `verdict` on the recorded revert; `repos list` evaluates the gate per
+row at read time, bound to the row's own repository identity at the declared
+`production` evidence scope, and reports `reversible` plus a `handoverGate`
+block (unreadable evidence or an unresolvable identity fails the read as
+`repos.state-unavailable` at exit 2 with no row; a truncated read is
+`unverifiable` plus `truncation`); and the production merge composition performs
+real tracker/check-run/request-detail reads with configuration, branch, base
+reference, and owner principal resolved from declared sources, publishing
+`MERGE_COMPOSITION_EMITTABLE_CODES` and deriving every failure's kind and exit
+from the resolved error-table row (a missing credential is
+`config.credential.missing` at exit 1). The shell stack is unchanged and
+documented as the fallback; `projects.v1` and `projects list --flat` stay
+byte-identical; no repository was flipped and no handover record was inserted by
+the change. The `verify deploy` target-resolution stub and the lanes-read profile
+blindness remain declared residuals. M2 has not exited.

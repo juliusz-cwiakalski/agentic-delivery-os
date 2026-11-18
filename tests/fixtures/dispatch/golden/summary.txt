@@ -17,3 +17,6 @@ floor_rule=floor-only; never substitutes for coverage, incident truth, or corrob
 eligibility=false
 verdict=ineligible
 unmet_conditions=truth
+clean_dispatches=15
+consecutive_clean_dispatches=10
+conditions=truth:open,coverage:met,floor:met,corroboration:met

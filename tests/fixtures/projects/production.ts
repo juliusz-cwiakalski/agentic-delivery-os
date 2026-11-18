@@ -17,6 +17,7 @@ import {
   readFileSync,
   rmSync,
   statSync,
+  writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
 import {
@@ -29,21 +30,34 @@ import type {
 } from "../../../packages/adapters/src/git/index";
 import { type CliStreams, runCli } from "../../../packages/cli/src/index";
 import { createProductionComposer } from "../../../packages/cli/src/production";
+import {
+  appendDispatchAttempt,
+  appendDispatchDivergence,
+} from "../../../packages/core/src/app/dispatch-ledger";
 import type { DaemonComposition } from "../../../packages/core/src/app/projects";
 import { queueGraphDocumentPath, readQueueEntries } from "../../../packages/core/src/app/queue";
+import { projectStateRoot } from "../../../packages/core/src/app/state-scope";
 import type {
   BrandIdentity,
   CredentialPort,
+  DispatchAttemptRecord,
+  DispatchDivergenceRecord,
   HarnessSpawnRunner,
   HarnessSpawnRunnerResult,
   QueueEntryRecord,
+  StateJsonValue,
   StateStorePort,
+} from "../../../packages/core/src/contracts/index";
+import {
+  DISPATCH_ATTEMPT_RECORD_KIND,
+  dispatchAttemptRecordKey,
 } from "../../../packages/core/src/contracts/index";
 import {
   createNodeStateEdge,
   createStateStore,
   STATE_SCHEMA_VERSION,
 } from "../../../packages/core/src/state/index";
+import { buildRecord, serializeRecord } from "../../../packages/core/src/state/ledger";
 import { streamStarterFromRunner } from "../harness/stream";
 import {
   APPROVED_BASE,
@@ -346,4 +360,114 @@ export const modeOf = (directory: string): number | undefined => {
 /** Remove one directory tree. */
 export const removeDirectoryTree = (directory: string): void => {
   rmSync(directory, { recursive: true, force: true });
+};
+
+/**
+ * The per-project store a project key resolves to (GH-293 F-3).
+ *
+ * The fleet row's gate evaluation reads the store the row pass already opens;
+ * a fixture seeds through this same derived location so the assertion is about
+ * the projection rather than about a hand-made directory.
+ */
+export const projectStoreFor = (hostRoot: string, projectKey: string) =>
+  createStateStore(
+    {
+      level: "local",
+      workspaceId: "default",
+      fenceNamespace: "cli",
+      schemaVersion: STATE_SCHEMA_VERSION,
+      stateDirectory: projectStateRoot(hostRoot, projectKey),
+    },
+    { driver: "jsonl", edge: createNodeStateEdge() },
+  );
+
+/** Make one project's state root `ready` and seed attempts through the ledger. */
+export const seedProjectAttempts = (
+  hostRoot: string,
+  projectKey: string,
+  records: readonly DispatchAttemptRecord[],
+): void => {
+  const store = projectStoreFor(hostRoot, projectKey);
+  for (const record of records) {
+    const appended = appendDispatchAttempt(store, `fixture-${projectKey}`, record);
+    if (!appended.ok) throw new Error(`attempt seed failed: ${appended.code}`);
+  }
+};
+
+/** Seed divergences into the same project store. */
+export const seedProjectDivergences = (
+  hostRoot: string,
+  projectKey: string,
+  records: readonly DispatchDivergenceRecord[],
+): void => {
+  const store = projectStoreFor(hostRoot, projectKey);
+  for (const record of records) {
+    const appended = appendDispatchDivergence(store, `fixture-${projectKey}`, record);
+    if (!appended.ok) throw new Error(`divergence seed failed: ${appended.code}`);
+  }
+};
+
+/**
+ * Whether a value is a `StateJsonValue`, mirroring what the ledger serializes.
+ *
+ * `undefined` members are JSON-transparent (the serializer drops them), so an
+ * optional member that a builder left undefined still frames to the same bytes.
+ */
+const isStateJsonValue = (value: unknown): value is StateJsonValue => {
+  if (value === undefined || value === null) return true;
+  const kind = typeof value;
+  if (kind === "string" || kind === "boolean") return true;
+  if (kind === "number") return Number.isFinite(value);
+  if (Array.isArray(value)) return value.every(isStateJsonValue);
+  if (kind === "object") return Object.values(value).every(isStateJsonValue);
+  return false;
+};
+
+/** The record's payload, proven to be a state JSON value rather than asserted. */
+const payloadOfAttempt = (record: DispatchAttemptRecord): StateJsonValue => {
+  if (!isStateJsonValue(record)) {
+    throw new Error(`attempt ${record.attemptId} is not a state JSON value`);
+  }
+  return record;
+};
+
+/**
+ * Seed a large attempt ledger as one verified ledger file.
+ *
+ * OQ-TP-5 measured the delivered append path at ~106 ms per record here (each
+ * append re-verifies the whole ledger), so 5,005 appends cost ~9 minutes. The
+ * records are therefore framed with the delivered `buildRecord` /
+ * `serializeRecord` pair and written once; the reader still verifies framing,
+ * sequence continuity, and every checksum, so the case exercises the real read
+ * and bound path rather than a relaxed one.
+ */
+export const seedProjectAttemptsLedger = (
+  hostRoot: string,
+  projectKey: string,
+  records: readonly DispatchAttemptRecord[],
+): void => {
+  const store = projectStoreFor(hostRoot, projectKey);
+  const read = store.readRecords();
+  if (!read.ok) throw new Error(`store path unavailable: ${read.error.code}`);
+  const ledgerPath = read.value.evidence.storePath;
+  const stateDirectory = projectStateRoot(hostRoot, projectKey);
+  mkdirSync(stateDirectory, { recursive: true, mode: 0o700 });
+  writeFileSync(
+    join(stateDirectory, "header.default.json"),
+    `${JSON.stringify({ schemaVersion: STATE_SCHEMA_VERSION })}\n`,
+    { mode: 0o600 },
+  );
+  const body = records
+    .map((record, index) =>
+      serializeRecord(
+        buildRecord(
+          DISPATCH_ATTEMPT_RECORD_KIND,
+          dispatchAttemptRecordKey(record.attemptId),
+          index + 1,
+          payloadOfAttempt(record),
+        ),
+      ),
+    )
+    .join("");
+  writeFileSync(ledgerPath, body, { mode: 0o600 });
 };

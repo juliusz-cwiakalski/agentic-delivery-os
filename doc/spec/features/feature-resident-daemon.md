@@ -3,12 +3,12 @@ ados_distribution: internal
 id: SPEC-RESIDENT-DAEMON
 status: Current
 created: 2026-11-08
-last_updated: 2026-11-17
+last_updated: 2026-11-18
 owners: ["engineering"]
 service: delivery-os
 summary: "The resident dispatch daemon: the start/stop/status/install family, composed unconditionally and mounted at the production entrypoint, with a signal-owned foreground lifetime, the composing pid recorded, a brand-derived install identity, and queue/lanes degradation derived from durable state, fence-style single-instance ownership, durable instance/heartbeat/lane/reconciliation/preemption records, control protocol v1 over stdio and unix with the published six-topic event taxonomy v2 (two snapshot topics, four event topics with every declared kind emitted including `queue.graph/remove` and the peak-pause kinds `stop`/`parked`/`resumed`/`park-edge`, the eight-field envelope, per-lane sequence, overflow-to-repoll carriage, and the unknown-topic refusal), state-mediated truth and the daemon-down one-shot surface, startup reconciliation, lane supervision through the composed lane-launch planner and lane executor seam with the conditional owner-hold and per-ref single-flight claim guarantees, the supervision-supplied profile-window watch with bounded-grace in-flight peak parking, classification-routed window-end resume, and the composition-fact peak-enforcement read, the external-effect protocol with message-independent commit crash safety, safe-boundary preemption, bounded live watch, per-platform polling, the optional systemd user unit, and the daemon-path dispatch attempt record."
 links:
-  related_changes: ["GH-238", "GH-239", "GH-241", "GH-280", "GH-284", "GH-286", "GH-288", "GH-290", "GH-292", "GH-294", "GH-295"]
+  related_changes: ["GH-238", "GH-239", "GH-241", "GH-280", "GH-284", "GH-286", "GH-288", "GH-290", "GH-292", "GH-294", "GH-295", "GH-293"]
   related_decisions: ["TDR-0025", "TDR-0029", "TDR-0030"]
   contracts:
     - "packages/core/src/contracts/daemon.ts"
@@ -474,6 +474,17 @@ The daemon-side dispatch composition is covered by the
 
 The dispatch loop, prompt selection, dual-run evidence, per-repo handover, and
 session resume are delivered by the dispatch engine ([Dispatch Engine](feature-dispatch-engine.md)).
+The engine is the regular delivery path, and the bash entry points remain the
+documented fallback with the delivered pointer; nothing in this page claims a
+daemon-hosted periodic gate evaluation — the per-repository gate is evaluated at
+read time on `repos list` ([Repositories and the Host Overview](feature-projects.md)).
+The peak-pause episode the watch produces is visible on the delivered surfaces the
+mapping names — `status.laneParks`, the brief park fields, `lanes`
+`peakEnforcement`, the board `PARKED` section, the `stop`/`parked` events, and the
+window-scoped spend evidence — and a declared window has no read surface of its
+own ([Provider Peak Pausing](feature-peak-pausing.md)). A produced park is
+`peak-window` with `until` and `preservation`, and the mode reads
+`iteration-start-gating` whenever the composition supplies no watcher.
 The dispatch engine composes the lane seam and proves the daemon-path attempt
 producer; the production composition mounts the daemon family without a lane
 composition, so supplying it remains resident-daemon production scope (GH-238).

@@ -1,0 +1,171 @@
+version: 1
+iteration: 2
+mode: local
+work_item_ref: GH-293
+branch: feat/GH-293/engine-first-operations
+status: FAIL
+summary: >-
+  Fourteen of the sixteen iteration-1 findings are closed on independent verification. F-1/F-2 are
+  closed: `MERGE_COMPOSITION_EMITTABLE_CODES` now carries a `ConfigErrorCode`-typed tuple of the
+  seven configuration codes the composition's config-read branch can actually forward
+  (`config.environment.unmapped` and `config.warning.strict` are genuinely unreachable here — the
+  resolver is called with no environment source and no strict flag), the forwarded value is typed
+  `ConfigErrorCode`, the refusal-site scan covers the whole
+  merge composition (`return` and `code:` literals) plus a forwarded-codes case, and three new
+  behaviour cells prove a malformed document (`config.file.malformed`), an invalid `merge.gates` and
+  an invalid `gate-freshness` (`config.value.invalid`) each at exit `1`, with zero transport calls
+  and zero appends. The widened scan finds no uncovered literal. F-4 is closed with a genuinely
+  truncated family (5,005 records against the declared 5,000 bound), `unverifiable` plus an identical
+  `truncation` on all three surfaces and zero appends by the read surfaces. F-5/F-6 close for all
+  eleven iteration-1 paths, `edge.ts` is declared in Phases 3 and 5, F-7/F-8 are closed by test-plan
+  v1.4 §10.4 and the v1.5 pin, F-9 shares one `QUEUE_REF_PATTERN` (anchored, so no substring
+  widening) with a digit-prefix cell, F-10's casts are gone, F-11's input is optional, F-12/F-13/F-14
+  are delivered as declared. AC-F7-11 now holds as written in spec v1.5. AC-F6-10 does not: its
+  dry-run clause still requires a request-detail read and a base-containment evaluation that the dry
+  run never performs (`runDryRun` reads head, work item and one check-run page only; the case itself
+  says the request-detail read belongs to the landing path), and the declared base has no case at all
+  while test plan v1.4 claims TC-ENGINE-050 asserts it through a containment query the dry run does
+  not issue. That is the one blocker; the other three findings are one undeclared planning page, the
+  missing permanent cell for the new identity-bound fold (pm-notes discloses the scratch-only proof),
+  and two informational notes. Independently re-run: the thirteen declared change suites plus
+  `error-table`/`content-inventory` (240 cases) all pass; `TMPDIR=$PWD/tmp/tmpdir pnpm check` exits 0
+  (10371 pass / 4 skip / 0 fail, 1314 files); `scripts/.tests/test-doc-distribution.sh` reports no
+  drift (96 docs); `./scripts/lint-commit-range.sh --base main-tools` is `VERDICT: PASS` (36 commits,
+  0 offending); `plan validate GH-293` is `valid`/`readyForDevelopment=true`; `lint plan GH-293` is
+  `valid`; `verify change GH-293` reports the expected `verify.ledger.incomplete`
+  (`review_fix, quality_gates, dod_check, pr_creation` still ahead). No source file was modified by
+  the review; the working tree is clean and the branch restored.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 1
+  low: 2
+  info: 2
+spec_compliance: FAIL
+plan_compliance: FAIL
+findings:
+  - id: F-17
+    severity: medium
+    confidence: high
+    category: spec-compliance
+    location: packages/core/src/domain/merge-transaction.ts:923
+    message: >-
+      AC-F6-10 in spec v1.5 still says that when `merge <ref> --dry-run --json` runs "the composition
+      performs real tracker work-item, check-run, and request-detail reads" and that the base the dry
+      run used is "reported as the base it used through the resolved `merge` configuration the dry run
+      consumes and the base-containment evaluation it reads". The delivered dry run performs exactly
+      the head read, one work-item read and one check-run page (`runDryRun`, lines 934-940);
+      `readRequestDetail` (line 443) and `readBaseContainment` (lines 383, 401, 451) are never called
+      on that path, and the behaviour case states it plainly ("the request-detail read belongs to the
+      landing path", `tests/behaviour/merge-production-composition.test.ts:136`). No case asserts the
+      declared base either, while test-plan v1.4 — authored by this remediation — says TC-ENGINE-050
+      gains that assertion "through the base-containment query the dry run issues"
+      (`chg-GH-293-test-plan.md:1651`, `:1731`), and DEC-19's decision column repeats the same clause.
+      The substantive rule (declared base, one source of truth, no second git-fact derivation,
+      branch from git facts) does hold; the criterion's dry-run observables do not.
+    suggestion: >-
+      Amend the AC-F6-10 / DEC-19 dry-run clause to the delivered shape — the composition supplies
+      the real request-detail and base-containment reads to the landing path, and the dry run's base
+      is the declared integration base carried in the resolved `merge` configuration it consumes (the
+      payload carries no base field) — and then correct or delete the TC-ENGINE-050 base-assertion
+      claim in the test plan. Alternatively make the dry run issue the request-detail read and one
+      containment evaluation against the declared base and assert both; the amendment alone needs no
+      code change.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-18
+    severity: low
+    confidence: high
+    category: plan-compliance
+    location: doc/planning/oss-tooling/milestones/m1/commands/merge.md:1
+    message: >-
+      The documentation-reconciliation commit `4824caeb` rewrote this page to the delivered merge
+      surface (207 added lines) and it lies outside every declared scope: Phase 7's `scope.files`
+      names `.../m1/commands/dispatch.md`, `.../m2/commands/repos.md` and `.../m2/contracts.md`, and
+      its own note says "the three planning-corpus pages" (`chg-GH-293-plan.yaml:1379-1387`), so the
+      fourth page is an undeclared SCOPE_DEVIATION of the same class as iteration-1 F-5 — a fresh one,
+      since all eleven original paths are now declared. `plan validate` cannot see diff scope, so
+      nothing catches it.
+    suggestion: >-
+      Add `doc/planning/oss-tooling/milestones/m1/commands/merge.md` to Phase 7's `scope.files` in a
+      plan revision and change "three planning-corpus pages" to four. The content is an accurate
+      reconciliation and needs no edit.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-19
+    severity: low
+    confidence: high
+    category: testing-gap
+    location: packages/cli/src/production.ts:2877
+    message: >-
+      The substance of F-12 — the fold now filtered to the row's own repository identity
+      (`foldDispatchHandover(ledger.records).filter(entry => repository === undefined ||
+      entry.repository === repository)`, resolved once per ready row and reused by the gate block) —
+      has no permanent case. `projects-handover.test.ts` exercises the alias, which deliberately keeps
+      the delivered cross-record fold; `repos-handover-gate.test.ts` flips one identity inside one
+      store and checks a second project's separate store; the pm-notes record the foreign-record
+      exclusion only as an uncommitted scratch proof. A regression back to the unfiltered fold, or a
+      normalization mismatch between the record writer and `resolveRowRepository`, would stay green.
+    suggestion: >-
+      Commit the scratch proof as one cell in `repos-handover-gate.test.ts`: seed a foreign-identity
+      authoritative handover record beside the row's own (and alone) through `appendDispatchHandover`,
+      assert the row stays `reversible: false` / `handoverState: shell`, then seed the row's own
+      authoritative record and assert the flip to `true`.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-20
+    severity: info
+    confidence: high
+    category: design
+    location: packages/cli/src/production.ts:294
+    message: >-
+      `MERGE_COMPOSITION_CONFIGURATION_CODES` is `as const satisfies readonly ConfigErrorCode[]`, so
+      it pins "no code outside the taxonomy" but not "every reachable code is listed": a new
+      `ConfigErrorCode` made reachable from the acquisition or resolver would compile and leave the
+      tuple silently short, and the conformance case only checks tuple→declaration, never
+      declaration→reachable. `configFailure` (`packages/cli/src/commands/merge.ts:68`) also hard-codes
+      `kind: "config"` for the forwarded codes instead of deriving the row kind the way the F-7
+      constructors do (safe today, because every `config.*` row is `config`).
+    suggestion: >-
+      No change required for this change. If the configuration taxonomy is expected to grow, type the
+      tuple as `Exclude<ConfigErrorCode, "config.environment.unmapped" | "config.warning.strict">` so
+      an addition becomes a compile error here, and derive the kind from the resolved row in
+      `configFailure`.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-21
+    severity: info
+    confidence: high
+    category: hygiene
+    location: doc/changes/2026-11/2026-11-17--GH-293--engine-first-operations/chg-GH-293-plan.yaml:1682
+    message: >-
+      `git diff --check main-tools...HEAD` now reports `new blank line at EOF` for the plan (revision
+      1.4 ends with an empty line); iteration 1 recorded the diff check clean.
+    suggestion: Drop the trailing blank line. No semantic effect.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-18T04:03:50Z
+next_step: >-
+  CALL_CODER for documentation and one test cell only; no production code change is required. Close
+  F-17 by amending AC-F6-10 (and DEC-19) to the delivered dry-run reads and by correcting or deleting
+  the TC-ENGINE-050 base-assertion claim in test plan §3.1/§6/§10.4; close F-18 by adding
+  `doc/planning/oss-tooling/milestones/m1/commands/merge.md` to Phase 7 scope; close F-19 by
+  committing the foreign-record cell into `repos-handover-gate.test.ts`; F-20/F-21 are optional.
+  Re-review iteration 3 must re-verify AC-F6-10 against its amended text (AC-F7-11 already holds) and
+  re-run the change suites, `plan validate`/`lint plan`, the doc-distribution guard and
+  `TMPDIR=$PWD/tmp/tmpdir pnpm check`. The PR description should carry the residual risks below.

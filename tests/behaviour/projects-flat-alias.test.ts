@@ -22,7 +22,13 @@ import {
   type ProductionRun,
 } from "../fixtures/projects/production";
 import { createHostFixture, type HostFixture } from "../fixtures/projects/state-scope";
-import { createRepository, removeDirectory } from "../fixtures/projects/temp-repos";
+import {
+  createRepository,
+  removeDirectory,
+  setOriginRemote,
+} from "../fixtures/projects/temp-repos";
+import { seedProjectAttempts } from "../fixtures/projects/production";
+import { buildAttempts, eligibleSpecs } from "../fixtures/dispatch/evidence-windows";
 
 const ROOT = process.cwd();
 const GOLDEN = "tests/golden/fixtures/projects-flat-alias.json";
@@ -197,6 +203,93 @@ describe("TC-GRPREN-003 the alias returns the delivered projects.v1 payload unch
       expect(rows).toHaveLength(2);
       const keys = rows.map((row) => row.split(/\s{2,}/)[0] ?? "");
       expect(keys).toEqual(["alpha-repo-1a2b3c4d", "beta-repo-5e6f7a8b"]);
+    } finally {
+      fixture.dispose();
+    }
+  });
+});
+
+describe("TC-ENGINE-022 the flat alias carries neither additive row field", () => {
+  test("the golden is unchanged, both fields are absent, and the repos row carries them", async () => {
+    const fixture = createAliasFixture("flat-alias-gate");
+    try {
+      const alias = await fixture.harness.run(["projects", "list", "--flat", "--json"]);
+      expect(alias.exitCode, alias.stderr).toBe(0);
+      const data = dataOf(alias);
+      const normalized = normalizeAliasData(data, fixture.host, {
+        "<repo-root-alpha>": fixture.alpha,
+        "<repo-root-beta>": fixture.beta,
+      });
+      const golden = JSON.parse(readFileSync(join(ROOT, GOLDEN), "utf8")) as Record<
+        string,
+        unknown
+      >;
+      expect(JSON.stringify(normalized)).toBe(JSON.stringify(golden));
+
+      // Neither additive field, nor a summary/conditions field, at any depth.
+      const serialized = JSON.stringify(data);
+      for (const key of [
+        "reversible",
+        "handoverGate",
+        "cleanDispatches",
+        "consecutiveCleanDispatches",
+        "conditions",
+        "scope",
+        "evidenceScope",
+        "evidenceClass",
+      ]) {
+        expect(serialized).not.toContain(`"${key}"`);
+      }
+      expect(Object.keys(data).sort()).toEqual(["hostIndexRevision", "projects"]);
+
+      // Over the same host the repos row does carry them: the absence above is
+      // a projection difference, not an empty read.
+      const repoRun = await fixture.harness.run(["repos", "list", "--json"]);
+      expect(repoRun.exitCode, repoRun.stderr).toBe(0);
+      const repos = dataOf(repoRun).repos as readonly Record<string, unknown>[];
+      expect(repos.length).toBeGreaterThan(0);
+      for (const row of repos) {
+        expect(Object.hasOwn(row, "reversible")).toBe(true);
+        expect(Object.hasOwn(row, "handoverGate")).toBe(true);
+      }
+    } finally {
+      fixture.dispose();
+    }
+  });
+
+  test("a gated ready row still leaves the flat payload untouched", async () => {
+    const fixture = createAliasFixture("flat-alias-gated");
+    try {
+      const repository = "github.com/owner/alpha";
+      setOriginRemote(fixture.alpha, `${repository}.git`);
+      const ready = createRepository(`${fixture.host.hostRoot}-gated`, "gated");
+      setOriginRemote(ready, "https://github.com/owner/gated.git");
+      const gatedHarness = harnessFor(fixture.host, "gated", ready);
+      try {
+        await register(gatedHarness);
+        mkdirSync(projectStateRoot(fixture.host.hostRoot, gatedHarness.projectKey), {
+          recursive: true,
+          mode: 0o700,
+        });
+        seedProjectAttempts(
+          fixture.host.hostRoot,
+          gatedHarness.projectKey,
+          buildAttempts(eligibleSpecs({ repository: "github.com/owner/gated" })),
+        );
+        const alias = await gatedHarness.run(["projects", "list", "--flat", "--json"]);
+        expect(alias.exitCode, alias.stderr).toBe(0);
+        const serialized = JSON.stringify(dataOf(alias));
+        expect(serialized).not.toContain('"reversible"');
+        expect(serialized).not.toContain('"handoverGate"');
+        const repoRun = await gatedHarness.run(["repos", "list", "--json"]);
+        const rows = dataOf(repoRun).repos as readonly Record<string, unknown>[];
+        const row = rows.find((entry) => entry.repoKey === gatedHarness.projectKey);
+        expect(row).toBeDefined();
+        const gate = row?.handoverGate as Record<string, unknown>;
+        expect(gate.countedDeliveries).toBe(20);
+      } finally {
+        gatedHarness.dispose();
+      }
     } finally {
       fixture.dispose();
     }

@@ -9,6 +9,7 @@
  * name resolves from the injected brand identity.
  */
 
+import type { DispatchConditionStatus, DispatchGateVerdict } from "./dispatch.js";
 import type { QueueEntryProjection } from "./queue.js";
 
 /** The git-common-directory marker holding one checkout's minted identity. */
@@ -448,25 +449,65 @@ export const REPOS_ERROR_CODES = [
 ] as const;
 export type ReposErrorCode = (typeof REPOS_ERROR_CODES)[number];
 
-/** The exact flat entry field set, in output order (F-7, DM-3). */
+/**
+ * The exact flat entry field set, in output order (F-7, DM-3; GH-293 DM-4):
+ * the delivered five fields, then `reversible`, then `handoverGate`. The gate
+ * block rides the `repos` row only — `projects.v1` and the `projects list
+ * --flat` alias carry neither field.
+ */
 export const REPOS_ENTRY_FIELDS = [
   "repoKey",
   "root",
   "stateLocation",
   "daemonReachable",
   "handoverState",
+  "reversible",
+  "handoverGate",
 ] as const;
 
 /** The exact flat `data` field set, in output order; no new top-level key (F-7). */
 export const REPOS_LIST_DATA_FIELDS = ["repos", "hostIndexRevision"] as const;
 
-/** One `repos list` row: exactly the five contract fields, with the renamed key. */
+/**
+ * The read-time gate block on one flat row (GH-293 F-3, DM-4, DM-7).
+ *
+ * Folded at the declared `production` evidence scope over the row's own
+ * repository identity: `countedDeliveries` counts that repository's counted
+ * attempts, `cleanDispatches` its corroborated ones (declared identical to the
+ * summary's `cleanDispatches`), and `conditions` are the four ordered statuses.
+ * `truncation` appears only when the bounded read omitted records, and then the
+ * verdict is `unverifiable` over the visible window. No scope key exists.
+ */
+export type ReposHandoverGate = {
+  readonly verdict: DispatchGateVerdict;
+  readonly conditions: readonly DispatchConditionStatus[];
+  readonly countedDeliveries: number;
+  readonly cleanDispatches: number;
+  readonly truncation?: {
+    readonly bound: number;
+    readonly omittedRecords: number;
+  };
+};
+
+/** The exact `handoverGate` field set, in output order; `truncation` is last and optional. */
+export const REPOS_HANDOVER_GATE_FIELDS = [
+  "verdict",
+  "conditions",
+  "countedDeliveries",
+  "cleanDispatches",
+  "truncation",
+] as const;
+
+/** One `repos list` row: the five delivered fields plus the two additive ones. */
 export type ReposListEntry = {
   readonly repoKey: string;
   readonly root: string;
   readonly stateLocation: string;
   readonly daemonReachable: DaemonReachability;
   readonly handoverState: HandoverState;
+  /** `true` iff the row's latest folded authority is `authoritative` (DEC-4). */
+  readonly reversible: boolean;
+  readonly handoverGate: ReposHandoverGate;
 };
 
 /** The `repos.v1` machine payload: the renamed rows plus the producing revision. */

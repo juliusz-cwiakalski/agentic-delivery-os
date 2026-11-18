@@ -1,0 +1,102 @@
+version: 1
+iteration: 4
+mode: local
+work_item_ref: GH-293
+branch: feat/GH-293/engine-first-operations
+status: FAIL
+summary: >-
+  Targeted fourth pass over the iteration-3 residue. Two of the three findings close on independent
+  verification and the earlier corrections still stand; F-23 does not close, because the remediation
+  edited the plan's narrative to claim the source re-pin while leaving the plan's SOURCES block and
+  verificationBatch note at test plan v1.5, so the plan now contradicts itself. F-22 closes: test plan
+  §1 paragraph 5 now states the delivered oracle — `TC-ENGINE-050` asserts the base the composition
+  supplies to the transaction (`baseRef`) is `CLOSEOUT_INTEGRATION_BASE` (`main-tools`) at the
+  composition/config level, the dry run issues no base-containment query and reports no base, and the
+  payload carries no base field — and no other passage claims a dry-run containment read or a reported
+  base: every remaining `containment` occurrence is either landing-path (steps 8's landing clause, the
+  §8.2 note, OQ-TP-12) or an explicit denial ("no containment query"/"reports no base" at steps 4 and
+  8, the expected outcome, the read split, the §7 row, the §6 fixture bullet, AMB-ENG-5), and the
+  phrase survives affirmatively only in the v1.4 revision-log row, which the v1.5 row supersedes by
+  name. F-24 closes: test plan §10.5 records the iteration-2 remediation (REM-8
+  commit 4b295dac, the fold mutation check, `repos-handover-gate` 10/10 and the sibling suites, and the
+  F-22/F-23 doc revision). The earlier `in-transition` correction stands — row vocabulary
+  `engine | shell | in-transition` (packages/core/src/contracts/projects.ts:141), `reversible: true`
+  with `in-transition` at test-plan steps 7 and 9(d), the case summary, the §7 row, §10.5 and the
+  executed cell (tests/behaviour/repos-handover-gate.test.ts:398), and no `authoritative` row value
+  asserted anywhere except append-only revision history. AC-F6-10 (spec v1.6) matches the delivered
+  code exactly (`runDryRun` reads head, one work item, one check-run page and the verification
+  records, merge-transaction.ts:933-942; `readRequestDetail`/`readBaseContainment` only at :443 and
+  :383/:401/:451 on the landing path; `baseRef: mergeBaseRef = CLOSEOUT_INTEGRATION_BASE`,
+  packages/cli/src/production.ts:1558/:1695; `MergeDryRunReport` has no base field,
+  contracts/merge.ts:290), and AC-F7-11 (spec v1.5) holds with the conformance and error-table suites
+  green. No regression: the fifteen change/control suites pass 241/241; `TMPDIR=$PWD/tmp/tmpdir pnpm
+  check` exits 0 (10,372 pass / 4 skip / 0 fail, 1,314 files); `bash
+  scripts/.tests/test-doc-distribution.sh` reports no drift (96 docs); `./scripts/lint-commit-range.sh
+  --base main-tools` is `VERDICT: PASS` (43 commits, 0 offending); `plan validate GH-293` is
+  `valid`/`readyForDevelopment=true`; `lint plan GH-293` is `valid`; `verify change GH-293` reports the
+  expected `verify.ledger.incomplete` (review_fix, quality_gates, dod_check, pr_creation still ahead);
+  `git diff --check main-tools...HEAD` is clean; and all 73 changed paths lie inside a declared
+  `scope.files` entry or a declared scope folder. The only open item is a version pin inside the plan
+  that its own header claims was moved; no source file was modified by this review, the working tree
+  is clean, and the branch is unchanged.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 0
+  low: 1
+  info: 0
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-23
+    severity: low
+    confidence: high
+    category: closure-mechanics
+    location: doc/changes/2026-11/2026-11-17--GH-293--engine-first-operations/chg-GH-293-plan.yaml:258
+    message: >-
+      F-23 remains open, and the partial fix has made the plan self-contradictory. The test plan's
+      front matter is now `version: 1.6` (chg-GH-293-test-plan.md:4) with revision-log row 1.6, and the
+      plan's revision-1.5 bullet was edited to read "SOURCE RE-PIN. SOURCES moves to spec v1.6 and test
+      plan v1.6" (chg-GH-293-plan.yaml:51) and "test plan v1.6 carries the matching correction"
+      (:1552) — but the plan's authoritative SOURCES block still pins `Tests:
+      ./chg-GH-293-test-plan.md (v1.5, 46 cases ...)` (:258), its `remediation.verificationBatch` note
+      still says "F-17 in spec v1.6 and test plan v1.5" (:1791-1792), and the same revision-1.5 bullet
+      still says "Test plan v1.5 carries the matching F-17 correction" (:61) and "the test plan
+      (v1.5)" (:64). The exact two locations F-23 named — SOURCES and the verificationBatch note —
+      were not touched, so the plan advertises a re-pin it did not perform, and one bullet now asserts
+      both v1.6 and v1.5 for the same artifact. The stall is also stale: SOURCES still claims
+      "DEC-1..DEC-17 coverage" (:264) while the test plan binds DEC-1..DEC-19 (19/19), as the plan's own
+      spec pin states (:219). The edit was made inside revision 1.5's narrative without a plan revision
+      bump (header still reads "revision 1.5", :1), and no pm-notes note records the doc pass — only the
+      test plan's own §10.5 row does. Downstream effect is documentation-only: `plan validate` and
+      `lint plan` are green, no code, AC, oracle, or case expectation is affected.
+    suggestion: >-
+      Finish the mechanical pin: set chg-GH-293-plan.yaml:258 to `(v1.6, ...)` and correct its coverage
+      line to DEC-1..DEC-19, change :61, :64 and :1792 to "test plan v1.6", and either bump the plan to
+      revision 1.6 with a one-line amendment note naming the F-22/F-23 doc pass or record that pass
+      inside revision 1.5 consistently (not a mix). Add one pm-notes `info` note naming the doc-only
+      revision and its commit, so the iteration-3 closure is auditable outside the test plan. No code,
+      no AC, no scope, and no case assertion changes.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-18T05:09:06Z
+next_step: >-
+  CALL_CODER for one documentation-only edit. Close F-23 by pinning the plan's SOURCES block and the
+  `remediation.verificationBatch` note to test plan v1.6, fixing the stale DEC-1..DEC-17 line, and
+  resolving the revision identity (bump to 1.6 or fold the pass into 1.5 consistently), plus one
+  pm-notes note for the doc pass. Nothing else is open: AC-F6-10 (spec v1.6), AC-F7-11 (spec v1.5),
+  F-18 scope honesty, the F-19 cell, the `in-transition` vocabulary, F-22 and F-24 are all verified,
+  every gate is green, and 73/73 changed paths are in declared scope. Re-review iteration 5 needs only
+  the plan's SOURCES block, its revision header, lines 61/64/1792 and the new pm-notes note; no code
+  or test run is required. Residual risks for the PR description are unchanged by this finding: the
+  declared `verify deploy` production stub (RSK-8, NG-8); the emittable-set totality limit — a future
+  refusal branch that never reaches `mergeReadCodeOf` escapes the scan (RSK-13, AMB-ENG-4); the
+  configuration-code tuple pinning "no code outside the taxonomy" but not "every reachable code
+  listed" (F-20, no action taken); `repos list`'s O(rows x ledger) cost as a scaling residual (F-15);
+  the commit primitive's 72-character path-template subjects and the absent `events.jsonl`/`candidates/`
+  capsule as a repo-wide tooling gap (F-16); and the two pre-existing biome items on
+  `tests/behaviour/repos-handover-gate.test.ts` (import-sorting assist, one unused-variable warning)
+  that reproduce before REM-8 and are not gated by `pnpm check` (F-24).

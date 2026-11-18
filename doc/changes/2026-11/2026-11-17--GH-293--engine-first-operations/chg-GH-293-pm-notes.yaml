@@ -1,0 +1,501 @@
+change_id: GH-293
+title: "M2-S16: Engine-first delivery operations (M2)"
+milestone: "M2: Ceremonies, measurement, and memory"
+delivery_mode: autonomous
+phases:
+  clarify_scope: { started: null, completed: 2026-11-17T22:09:42.800Z }
+  specification: { started: null, completed: 2026-11-18T04:15:07.336Z }
+  test_planning: { started: null, completed: 2026-11-18T04:49:25.260Z }
+  delivery_planning: { started: null, completed: 2026-11-18T05:10:53.104Z }
+  dor_check: { started: null, completed: 2026-11-17T23:57:19.340Z }
+  delivery: { started: null, completed: 2026-11-18T01:25:37.139Z }
+  system_spec_update: { started: null, completed: 2026-11-18T03:37:47.599Z }
+  review_fix: { started: null, completed: 2026-11-18T05:14:06.363Z }
+  quality_gates: { started: null, completed: 2026-11-18T05:34:43.558Z }
+  dod_check: { started: null, completed: 2026-11-18T05:36:06.482Z }
+  pr_creation: { started: null, completed: 2026-11-18T06:09:51.930Z }
+decisions: []
+open_questions: []
+blockers: []
+notes:
+  - text: "PR #343 created against main-tools:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/343. Title
+      'feat(GH-293): make engine-first delivery operations operable'; body
+      authored from chg-GH-293-spec.md, chg-GH-293-plan.yaml and this pm-notes
+      with the GH-293 link, the operational story, the plan-phase-to-commit map,
+      and the gate/review/documentation evidence. Verified open, base
+      main-tools, head 168a60f6, no auto-merge and no merge attempted. Range
+      lint re-run before creation at 47 commits: PASS, 0 offending. pr_creation
+      completes with this record; merge authority is the CEO."
+    type: "info"
+    date: "2026-11-18"
+  - text: "DoD check: PASS. Nine lifecycle phases complete; every plan phase 1-7
+      carries a pm-notes entry with commit hash and test result; plan validates
+      and pm-notes lint conforms; all 14 spec ACs verified by the test-plan
+      cases and review iteration 5 PASS; documentation set reconciled with no
+      residual gap (feature pages, test specs, new engine-first guide, AGENTS.md
+      and change-lifecycle bounded edits, planning corpus, TDR-0031); quality
+      gates green including the range lint PASS; no repository flipped; verify
+      change reports only dod_check and pr_creation outstanding before this
+      transition."
+    type: "info"
+    date: "2026-11-18"
+  - text: "Quality gates: PASS. pnpm build green; TMPDIR=$PWD/tmp/tmpdir pnpm check
+      exit 0 with 10372 pass / 4 skip / 0 fail across 1314 files (boundaries,
+      memory, prompt-conformance, help-guide-coverage, exports-parity all OK);
+      doc-distribution no drift over 96 in-scope docs; plan validate valid and
+      pm-notes lint conforms. Range lint gate: outcome PASS, commits=45,
+      offending=0, mode=none, commitlint binary=node_modules/.bin/commitlint,
+      origin=repository-local, base=main-tools merge-base 1250d789. verify
+      change correctly reports partial with quality_gates, dod_check and
+      pr_creation outstanding before this transition."
+    type: "info"
+    date: "2026-11-18"
+  - text: "Review iteration 5: PASS (code-review/review-iter-5.yaml). F-23 closed;
+      all review findings F-1..F-23 are closed with no open defect.
+      Review-complete."
+    type: "info"
+    date: "2026-11-18"
+  - text: "Review iteration 4: one low finding (F-23) — plan SOURCES and
+      verificationBatch still pinned test plan v1.5, the DEC coverage line read
+      DEC-1..DEC-17, and the documentation pass carried no plan revision bump.
+      Fixed in plan revision 1.6 (pins to test plan v1.6, DEC-1..DEC-19,
+      explicit 1.6 amendment note); no phase, scope, case, or criterion moved.
+      All review findings F-1..F-22 are closed and every gate is green."
+    type: "retro"
+    date: "2026-11-18"
+  - text: "REM-8 complete (F-19). Commit 4b295dac. One permanent cell added to
+      tests/behaviour/repos-handover-gate.test.ts (TC-ENGINE-021 step 9; no
+      production change), seeded only through appendDispatchHandover against the
+      row's own project store in the normalized-remote identity cell: (a) a
+      foreign-identity authoritative record alone leaves handoverState shell /
+      reversible false (the unfiltered fold would report authoritative); (b) the
+      row's own dual-run record appended after it leaves the same values; (c) a
+      second foreign authoritative record appended after the row's own and later
+      in time leaves them again (order-independent); (d) the row's own
+      authoritative record flips reversible to true; (e) the gate block
+      (verdict, conditions, countedDeliveries, cleanDispatches) is unchanged by
+      every append. Deviation stated as delivered: step 9(d)'s handoverState ==
+      authoritative literal is not a delivered value (the row's vocabulary is
+      engine|shell|in-transition), so the cell asserts the delivered projection
+      in-transition, with reversible true as the folded truth's own reading; no
+      derived authority document is written, so the cell stays on the
+      handover-writer path. Mutation check: reverting the fold filter in
+      production.ts fails the cell at (a) with in-transition; restored.
+      Verification: repos-handover-gate 10/10, repos-list-contract +
+      projects-list-contract + projects-flat-alias + engine-first-cross-surface
+      26/26, pnpm typecheck green, biome format clean (the file's one
+      pre-existing lint warning is untouched)."
+    type: "info"
+    date: "2026-11-18"
+  - text: "REM-7 complete (F-7, F-8; no code). Commit c85f9753. Verified the two
+      claims the plan relies on: TC-ENGINE-065 asserts document content and
+      absence only, with no changed-line print (a permanent suite may not assert
+      a diff against a moving base); TC-ENGINE-054 asserts the constant's
+      three-domain totality (config, provider, merge; no state.* member) AND the
+      configuration-read branch, whose forwarded codes are members,
+      taxonomy-typed, and exercised by the new composition cells. Test plan
+      section 10.4 appended (the execution record is append-only): the seven
+      group commits, the re-run verification batch, and the statement that the
+      two section 10.3 gaps are closed rather than restated. Case count
+      unchanged at 46. Verification: engine-first-doc-reconciliation 16/16,
+      dispatch-doc-conformance + doc-conformance green (39/39 in the batch),
+      doc-distribution no drift (96 docs), lint conforms, plan validate valid."
+    type: "info"
+    date: "2026-11-18"
+  - text: "REM-6 complete (F-13). Commit ecdc483e. stateFailure derives its exit
+      from the same resolved error-table row it already reads the kind from
+      (projectExitCode over the row's projectionClass, as readFailure does), so
+      the claim that every emitted failure's exit is its row's declared
+      projection holds by construction instead of coinciding with a hard-coded
+      2. One helper (exitOfRow) serves both call sites; the absent-row case
+      keeps the containment default, exit 2. No emitted exit value moved today
+      (merge.state-unverified is platform-provider). Verification: pnpm
+      typecheck green; merge-production-composition 8/8,
+      merge-classification-conformance 7/7, error-table 126/126."
+    type: "info"
+    date: "2026-11-18"
+  - text: "REM-5 complete (F-12, F-14). Commit bf93d606. readProjectHandover filters
+      the folded handover truth to the row's resolved repository identity before
+      reversible and handoverState are read, using the same resolution the gate
+      block uses (one resolveRowRepository call per ready row, reused by both,
+      and none on the projects list path, so projects.v1 stays byte-identical);
+      an unresolved identity keeps the delivered cross-identity fold, which the
+      gate path then refuses anyway. emptyHandoverGate is now derived from the
+      one pure empty-window fold
+      (conditionStatuses(evaluateHandoverGate(foldEvidenceWindow(empty)))) and
+      serializes byte-identically to the literal it replaces (verdict,
+      conditions, countedDeliveries, cleanDispatches in that order).
+      Verification: pnpm typecheck green; repos-handover-gate 9/9,
+      repos-list-contract 7/7, projects-list-contract 11/11, projects-flat-alias
+      6/6, engine-first-cross-surface 2/2; a scratch proof (not committed)
+      seeded foreign authoritative handover records before and after the row's
+      own and confirmed the row stays reversible false / shell, while the row's
+      own authoritative record flips it true."
+    type: "info"
+    date: "2026-11-18"
+  - text: "REM-4 complete (F-9, F-10, F-11). Commit 5ab62f80. One declared
+      work-item-ref grammar (the delivered QUEUE_REF_PATTERN) is shared by the
+      merge command's validation and the composition's resolution, so a
+      digit-bearing prefix (ABC2-12) validates and resolves instead of being
+      refused merge.transaction-aborted; the branch-name convergence lookup
+      reads the first path segment that is a ref. The two as-casts are gone:
+      merge-transaction.ts narrows the row's domain kind through one guard and
+      the bulk-ledger fixture proves its payload is a StateJsonValue instead of
+      asserting it. reposListDataOf's gate projection is optional with the
+      delivered empty-gate default, so the library change stays additive and no
+      changeset body change is needed; the payload contract is untouched.
+      Verification: pnpm typecheck green; merge-production-composition 8/8
+      (including the digit-prefix cell), merge-classification-conformance 7/7,
+      changesets-group OK (one fixed group of five). Disclosure: the biome
+      reflow of the REM-2 conformance case landed in this commit."
+    type: "info"
+    date: "2026-11-18"
+  - text: "REM-3 complete (F-4). Commit c4ff6d05. The truncated family is no longer
+      a byte-identical copy of the eligible family and the no-op spread is gone:
+      its ledger exceeds the composition's declared read bound
+      (DISPATCH_MAX_ATTEMPT_RECORDS + 5 identity-bound records, framed once
+      through the delivered buildRecord/serializeRecord pair), so all three
+      surfaces read one genuinely truncated window. The case asserts, on that
+      one ledger: verdict unverifiable on summary, handover, and the fleet row;
+      a truncation object present on all three with the declared bound and a
+      positive omission count, identical across surfaces; the visible-window
+      statuses equal across surfaces with the open set equal to unmetConditions;
+      and zero appends by both read surfaces, with the handover recording
+      nothing. Verification: engine-first-cross-surface 2/2 (8.7 s),
+      dispatch-handover-conditions 13/13, repos-handover-gate 9/9."
+    type: "info"
+    date: "2026-11-18"
+  - text: "REM-2 complete (F-2). Commit 94396cbf. The merge composition's
+      configuration-read branch now contributes its forwarded codes to
+      MERGE_COMPOSITION_EMITTABLE_CODES: config.file.malformed and
+      config.value.invalid are members, and the tuple is typed against the
+      delivered ConfigErrorCode taxonomy so a code the taxonomy does not declare
+      cannot be forwarded (config.environment.unmapped and config.warning.strict
+      are excluded because this branch passes no environment map and no strict
+      flag). The conformance case's refusal-site scan was widened from one
+      helper's block to the whole composition (return and code: literal sites)
+      plus a dedicated case for the forwarded tuple, with a source assertion
+      that the forwarded value is typed. Three new behaviour cells assert a
+      malformed document (config.file.malformed) and an invalid merge.gates /
+      gate-freshness (config.value.invalid) each at exit 1, never
+      fallback.internal, with zero transport calls and zero records appended.
+      Row count, DOMAIN_KINDS, and exit classes unchanged. Verification:
+      merge-classification-conformance 7/7, merge-production-composition 8/8,
+      error-table 126/126, typecheck green."
+    type: "info"
+    date: "2026-11-18"
+  - text: "REM-1 complete (F-1, F-3; documentation only). Commit 3744a27e.
+      doc/quality/test-specs/test-spec-merge-verify-deploy.md restates the
+      emittable-code row over the three domains the composition emits (config,
+      provider, merge; explicitly no state.* member, with the state-read refusal
+      named as the declared merge.state-unverified row at its declared
+      projection and exit 2) and names the declared integration base
+      (CLOSEOUT_INTEGRATION_BASE, main-tools) with the branch still from the
+      checkout's git facts. doc/spec/features/feature-merge-verify-deploy.md was
+      CONFIRMED, not re-authored: it already states the declared integration
+      base. No member, row, kind, exit, or test assertion moved. Verification:
+      engine-first-doc-reconciliation 16/16, doc-conformance 19/19,
+      merge-classification-conformance 7/7, doc-distribution no drift (96
+      docs)."
+    type: "info"
+    date: "2026-11-18"
+  - text: "Review iteration 1 remediation closed as a batch: REM-1..REM-7 executed
+      in the plan revision 1.4 remediation order, one commit per group
+      (3744a27e, 94396cbf, c4ff6d05, 5ab62f80, bf93d606, ecdc483e, c85f9753).
+      Verification batch re-run after the last group: the thirteen declared
+      change suites and the two declared controls pass (240 assertions-bearing
+      cases, 0 fail), doc-distribution no drift, TMPDIR=$PWD/tmp/tmpdir pnpm
+      check exit 0 with 10371 pass / 4 skip / 0 fail across 1314 files, and
+      lint-commit-range --base main-tools VERDICT PASS (33 commits, 0
+      offending). Additive only: no new command, verb, flag, error row,
+      DOMAIN_KINDS member, exit class, or configuration key; projects.v1 and
+      projects list --flat unchanged (projects-flat-alias 6/6,
+      projects-list-contract 11/11); no file under scripts/ changed (shell
+      untouched); no repository flipped. Findings with no remediation by design:
+      F-5 and F-6 are plan-declaration findings closed by plan revision 1.4 (it
+      declares every changed path in the owning phase scope and records the
+      edge.ts gate.max wiring as phase 3 test-only wiring), and F-15/F-16 are
+      the review's own no-action entries. The review gate stays FAIL until
+      review iteration 2 re-verifies AC-F7-11 and AC-F6-10 against spec v1.5;
+      review_fix is NOT marked complete and no PR was created."
+    type: "retro"
+    date: "2026-11-18"
+  - text: "Review iteration 1: FAIL (code-review/review-iter-1.yaml; 2 high, 3
+      medium, 7 low, 4 info). High F-1: AC-F7-11/NFR-12/TDR D9 require a state.*
+      member in MERGE_COMPOSITION_EMITTABLE_CODES but the composition emits no
+      state.* code (the state-read branch is merge.state-unverified). High F-2:
+      the constant is not exhaustive over the refusal branches - the new
+      merge.readConfig wrapper can emit config.value.invalid and
+      config.file.malformed, absent from the constant and untested. Medium F-3:
+      AC-F6-10 says the base reference comes from git facts but the composition
+      uses the CLOSEOUT_INTEGRATION_BASE constant. Medium F-4: TC-ENGINE-095's
+      truncated family is a no-op spread, so the cross-surface truncation cell
+      is never exercised. Medium F-5/F-6: 11 files outside declared plan scope
+      plus edge.ts landing in phase 3. Low/info F-7..F-16: test-plan section 10
+      attestations unfilled and stale pins, merge ref regex narrower than the
+      command grammar, type casts, reposListDataOf breaking signature,
+      reversible fold not row-bound, emptyHandoverGate second derivation, fleet
+      read cost, template commit subjects. PM decisions: amend AC-F7-11 to the
+      three emitted domains (config, provider, merge) with non-vacuity plus the
+      declared merge.state-unverified state branch, and amend AC-F6-10 to the
+      declared integration base closeout uses. Remediation delegated to coder
+      with a doc-syncer re-run after code changes."
+    type: "retro"
+    date: "2026-11-18"
+  - text: "Plan phase 7 complete (cross-surface coherence, shell non-change, no-flip
+      discipline, hermeticity, the recorded lifecycle-phase-7 reconciliation
+      handoff, and the release). Commit a7aa5d9b (deliverables) and a6d50ca8
+      (the delivery-boundary phase completion, which also carries the two JSON
+      formatter fixes). Added the cross-surface matrix (six families, three
+      surfaces, identical statuses/verdicts/counters), the no-flip writer scan
+      and append audit, the hermeticity scan with a live no-network control, the
+      new stdout-identity shell parity suite across the four entry points and
+      two authority states, and the lockstep five-package minor changeset. The
+      two `doc/quality/test-specs/` pages are untouched and staged for lifecycle
+      phase 7: the HANDOFF is RECORDED here (owner
+      `system_spec_update`/`@doc-syncer`, the two paths, satisfaction at DoD-7)
+      and is not an exit condition of this phase. Deviations: the registry row
+      for the new guide (`scripts/checks/forbidden-literals.registry.json`), the
+      port inventory fixture rows, and the memoized per-checkout
+      repository-facts reader (keeping the delivered one-call structural pin)
+      were required by the delivered guards; the delivered
+      `test-deliver-ticket.sh` fails one pre-existing, environment-dependent
+      case (TC-DT-SF-02, a readonly `EXIT_FAILURE` collision) on `main-tools` as
+      well, with the suite byte-unmodified. Verification at the boundary:
+      engine-first-cross-surface 2/2, engine-first-no-flip 3/3,
+      engine-first-hermetic 3/3, dispatch-imports + dispatch-merge-boundary +
+      content-inventory green (27/27 in that batch); shell suites:
+      dispatch-bash-fallback 9/9, deliver-ticket 135/136 (the one pre-existing
+      environment failure above), engine-first-shell-parity 2/2;
+      doc-distribution no drift (96 docs); changesets-group OK (one fixed group
+      of five); `./scripts/lint-commit-range.sh --base main-tools` VERDICT PASS
+      (20 commits, 0 offending); `TMPDIR=$PWD/tmp/tmpdir pnpm check` EXIT 0 with
+      10368 pass / 4 pre-existing skip / 0 fail across 1314 files; `plan
+      validate GH-293` verdict=valid; `lint GH-293` conforms; `git diff --check`
+      clean. HANDOFF RECORDED:
+      `doc/quality/test-specs/test-spec-dispatch-engine.md` and
+      `test-spec-merge-verify-deploy.md` remain untouched, owned by lifecycle
+      phase 7 (`system_spec_update`, `@doc-syncer`), satisfied there and
+      verified at DoD-7; no phase of this plan closes with in-scope work
+      unlanded."
+    type: "info"
+    date: "2026-11-18"
+  - text: "Plan phase 6 complete (the engine-first guide, six reconciled feature
+      pages, the bounded lifecycle prose, the planning corpus, and the phase-7
+      test-spec handoff). Commit 40c0ebcb. Added
+      `doc/guides/engine-first-operations.md` (redistributable marker; the daily
+      routine, reading the gate and the fleet row, flipping and reversing, the
+      shell fallback, and the declared residuals); reconciled
+      `feature-dispatch-engine.md` (summary/handover additions, the condition
+      shape, the fleet host, the declared exemption, no-flip),
+      `feature-projects.md` (the seven-field row, binding, production scope,
+      degraded evidence, five-column table, unchanged alias),
+      `feature-peak-pausing.md` (the corrected nomination sentence, the
+      effect-surface mapping, the declared lanes limitation),
+      `feature-merge-verify-deploy.md` (the real composition, the owner
+      principal, the emittable-code constant, row-derived classification, the
+      `verify deploy` residual), and the residual wording in
+      `feature-autonomous-delivery.md` / `feature-resident-daemon.md`; the
+      bounded lifecycle paragraphs in `AGENTS.md` and
+      `doc/guides/change-lifecycle.md`; and the M2-S16 backlog progress line,
+      the status addendum, the README scenario row, and both restated scenarios.
+      Verification: engine-first-doc-reconciliation 16/16, doc-conformance +
+      dispatch-doc-conformance green, doc-distribution no drift (96 docs),
+      content-inventory green. Deviations: the pages' headed spans were extended
+      rather than rewritten, and the phase-7 handoff is stated in the guide and
+      the pages while the two broader test specs are untouched, as DEC-16
+      requires."
+    type: "info"
+    date: "2026-11-18"
+  - text: "Plan phase 5 complete (production merge composition on real reads and
+      declared sources, with error-table-derived classification). Commit
+      d89b2912. The composition performs real tracker, check-run, and
+      request-detail reads through the delivered adapters and credential seam;
+      configuration comes from the resolved document's `merge` branch (the
+      document's own classified failure is forwarded, absent keeps the delivered
+      defaults), branch from the checkout's git facts, the base reference from
+      the declared integration base, and the owner principal from the owner
+      component of the checkout's normalized identity (resolved through the
+      delivered policy, no new key). `MERGE_COMPOSITION_EMITTABLE_CODES` is
+      exported and total over the refusal branches; `MergeFailure.domainKind`
+      admits the already-declared `config` kind and both `readFailure` and
+      `stateFailure` derive kind and exit from the resolved row, so a missing
+      credential is `config.credential.missing` at exit 1 and no legitimate
+      failure reaches `fallback.internal`. Verification: `pnpm typecheck` green;
+      merge-production-composition 6/6, merge-classification-conformance 6/6,
+      the four delivered merge controls green, error-table + content-inventory
+      green — 186/186 across the declared gate set. Deviations: (a) the
+      composition's provider read faults are mapped onto declared identities
+      (401/403 -> `provider.auth.rejected`, other payload/transport faults ->
+      `provider.outage`, 404/absent request -> `merge.transaction-aborted`), as
+      OQ-TP-6 requires, so the adapter's undeclared `provider.payload.invalid` /
+      `provider.not-found` never becomes an emitted pair; (b) the emittable set
+      spans the declared kinds it can emit (config, provider, merge) because the
+      state-read branch is the declared `merge.state-unverified` row, and a
+      `state.*` member would name a code the composition never emits; (c)
+      `packages/cli/src/edge.ts` widened
+      `MergeCommandComposition.ownerPrincipal` to admit `undefined` so the
+      lazily resolved principal typechecks."
+    type: "info"
+    date: "2026-11-18"
+  - text: "Plan phase 4 complete (repos list read-time gate evaluation bound to each
+      row's own repository identity). Commit 16531a5d. The flat row carries the
+      five delivered fields plus `reversible` then `handoverGate`; the
+      evaluation rides a repos-only row pass over the store the row pass already
+      opened (one bounded attempts + one divergences read), folds the declared
+      `production` evidence scope, excludes foreign-repository records, resolves
+      the row's identity read-only and non-persisting (persisted binding, else
+      the checkout's normalized remote), fails the whole read as
+      `repos.state-unavailable` at exit 2 with no row for an unreadable ledger
+      or an unresolvable identity, and reports `unverifiable` + `truncation` on
+      a truncated read. `projects.v1` and `projects list --flat` are unchanged.
+      Verification: `pnpm typecheck` green; repos-handover-gate 9/9 (incl. the
+      5,005-record truncation contract, 25-row floor, determinism, freshness),
+      repos-list-contract 7/7, projects-flat-alias 6/6, the delivered projects
+      controls green, content-inventory green — 64/64 across the declared gate
+      set. Deviation: OQ-TP-5 measured the delivered append path at ~106 ms per
+      record, so seeding 5,005 records took ~9 minutes; the truncation fixture
+      now frames its records with the delivered `buildRecord`/`serializeRecord`
+      and writes the ledger once (~1 s), while the reader still verifies
+      framing, sequence continuity, and every checksum."
+    type: "info"
+    date: "2026-11-18"
+  - text: "Plan phase 3 complete (handover conditions, the declared
+      evidence-read-free revert noop, and per-repository reversibility). Commit
+      f551ac06. All four evidence-reading outcomes (recorded flip, idempotent
+      flip noop, clean refusal, recorded revert) carry the four ordered
+      `conditions` and `reversible`; the recorded revert now carries `verdict`
+      so `verdict == unverifiable ⟺ truncation` is expressible there; the
+      idempotent revert noop answers before any gate evidence read with
+      `reversible: false` and no `conditions`/`verdict`/`truncation`, while a
+      corrupt handover ledger still refuses `dispatch.state-unverified` at exit
+      2 with no data. Reversibility is one derivation (`reversibilityOf`) shared
+      with the authority document's `reversalAvailable`. Verification: `pnpm
+      typecheck` green; dispatch-handover-conditions 13/13,
+      dispatch-additive-stability 15/15, the four delivered handover controls
+      green, golden dispatch-text green, content-inventory green — 62/62 across
+      the declared gate set. Deviations: `packages/cli/src/edge.ts` now forwards
+      the composition's declared `gate.max` into the handover/revert use cases
+      (a wiring omission, no new flag or key) so the declared truncated-handover
+      cell is reachable; the content-inventory executable allowance gained
+      `reversibilityOf`."
+    type: "info"
+    date: "2026-11-18"
+  - text: "Plan phase 2 complete (summary clean accrual, the trailing streak, and
+      the four-condition projection). Commit aa92d3b8. Appended
+      `cleanDispatches` (declared identical to `corroboration.satisfied`, one
+      derivation), `consecutiveCleanDispatches` (trailing run over the counted
+      window in ledger append order), and `conditions` (four ordered
+      `{condition, status}` entries) after `floor`, with `truncation` last; the
+      text form gained `clean_dispatches=`, `consecutive_clean_dispatches=`, and
+      `conditions=` between `unmet_conditions=` and the truncation line. The
+      summary golden was regenerated once (three additive lines only).
+      Verification: `pnpm typecheck` green; dispatch-clean-accrual 8/8,
+      dispatch-conditions-projection 5/5, dispatch-additive-stability 9/9,
+      dispatch-dual-run-summary + dispatch-gate-window + dispatch-false-success
+      + dispatch-truth-derivation + dispatch-unevaluable green, golden
+      dispatch-summary 2/2, dispatch-text green, content-inventory green — 70/70
+      across the declared gate set."
+    type: "info"
+    date: "2026-11-18"
+  - text: "Plan phase 1 complete (shared condition-status shape and the landed
+      TDR-0031 decision record). Commit 48b69424. Declared the closed `met |
+      open` pair and the `{condition, status}` shape on the delivered
+      four-condition order, added the one producer
+      `conditionStatuses(evaluation)` in the domain gate module (open set equals
+      `unmetConditions` by construction), re-exported both from the contract and
+      package indices, and landed TDR-0031 with the index row that was already
+      committed. Verification: `pnpm typecheck` green; exports-parity OK (5
+      publishables); error-table-sync OK (149/149); decision-record +
+      error-table + content-inventory 142/142 pass; `delivery-os lint GH-293`
+      conforms. Scope note: the content-inventory executable-allowance rows for
+      the two new exports were appended as tracked pending work (the phase gate
+      names that suite green)."
+    type: "info"
+    date: "2026-11-18"
+  - text: "DoR iteration 4: READY (readiness-review/readiness-iter-4.md). Iteration
+      3 findings closed; five non-blocking nits remain (test plan still says
+      'documentation phase' at three lines, test plan §2 binds spec v1.3 vs
+      v1.4, plan OQ-TP-3 omits TC-ENGINE-017 from its both-directions list, test
+      plan NFR-4 row omits 017, spec DoD-2 prose states only half the two-sided
+      NFR-11). Iteration cap exceeded but the gate passed, so delivery proceeds;
+      nit 1 carried forward as a delivery note."
+    type: "info"
+    date: "2026-11-18"
+  - text: "DoR iterations 2 and 3 remediation: spec v1.3 qualified NFR-11 and every
+      exemption statement to the attempts/divergences evidence read (a torn
+      handover ledger still refuses dispatch.state-unverified at exit 2, even
+      for the noop), v1.4 fixed lifecycle-phase naming (phase 7 is
+      system_spec_update, not a documentation phase); plan revision 1.2 replaced
+      the self-contradictory phase-7 closure with a recorded HANDOFF obligation
+      satisfied in lifecycle phase 7 and verified at DoD-7, narrowed DECLARED
+      CONTROLS to permit only the declared new scripts/.tests parity suite, and
+      revision 1.3 restated the closure rule over in-scope obligations and
+      re-pinned SOURCES to spec v1.4 / test plan v1.3 (46 cases); test plan v1.3
+      mirrors the two-sided NFR-11 threshold and adds TC-ENGINE-017 for the
+      unreadable/torn handover ledger. Evidence-gate iteration count is high
+      because findings kept shrinking mechanically; no AC or DoD item is
+      weakened."
+    type: "retro"
+    date: "2026-11-18"
+  - text: "DoR iteration 1 remediation: TDR-0031 amended (D2 five-outcome handover
+      table with the single exempt revert noop; D7 exit projection
+      config.credential.missing => exit 1, exit 2 is the defect signature; new
+      D8 owner principal, D9 emittable-code constant, D10 row binding, D11
+      production-scope fold). Spec amended to v1.2 (DEC-17 production evidence
+      scope, AC-F4-8 lifecycle-prose bounded edits to AGENTS.md and
+      doc/guides/change-lifecycle.md, AC-F8-12 mandatory test-spec
+      reconciliation, §17.1 DoD-1..DoD-10). Test plan amended to v1.2 (45 cases,
+      exit-1 assertion, contract-shaped truncation assertion, TC-ENGINE-065
+      lifecycle prose, DoD map). Plan amended to revision 1.1 (phase 6 scopes
+      AGENTS.md + change-lifecycle.md with a bounded-edit constraint; phase 7
+      carries a mandatory test-spec landing row gated on system_spec_update;
+      OQ-TP-6 selection criterion stated). No phase pre-authorizes an unmet AC."
+    type: "retro"
+    date: "2026-11-18"
+  - text: "DoR iteration 1: NOT_READY (readiness-review/readiness-iter-1.md). Ten
+      findings. Critical F-1: TDR-0031 D2 says conditions is always present
+      while spec v1.1 AC-F2-3/DEC-12 declares the revert noop exempt, and the
+      TDR lacks the v1.1 decisions (owner principal, emittable-code constant,
+      row binding). Major F-2: test-plan TC-ENGINE-052 asserts exit 2 for a
+      missing credential, but config.credential.missing projects exit 1 (exit 2
+      is the defect's fallback.internal). Major F-3: AGENTS.md:50 and
+      doc/guides/change-lifecycle.md:77 still call the shell entry points
+      'retained primary entry points' against AC-F4-8. Major F-4: plan phase 7
+      pre-authorized closing with the two doc/quality/test-specs reconciliations
+      unmet. Minor F-5..F-10: merge-scope owner confirmation + CEO-D-097
+      precedent, fleet-row evidence-class fold undeclared, stale TDR open
+      questions, missing change-specific DoD, truncation count assertion,
+      delivery-bound refusal-code criterion. Reopened specification; queued
+      test_planning and delivery_planning amendments behind it."
+    type: "retro"
+    date: "2026-11-18"
+  - text: "State detection: issue #293 OPEN with label change, milestone 'M2:
+      Ceremonies, measurement, and memory' attached; branch
+      feat/GH-293/engine-first-operations exists at origin/main-tools (1250d789)
+      with zero commits, never pushed; no open or merged PR for the ticket; no
+      change artifacts on disk. Fresh delivery."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Milestone attachment verified (M2) before artifact phases, per intake
+      policy."
+    type: "info"
+    date: "2026-11-17"
+  - text: "Ticket comment (owner-authored, 2026-11-15) scopes an engine merge
+      primitive defect on this ticket: production merge composition stubs
+      readWorkItem/readCheckRuns/readRequestDetail to credentialRefusal, and
+      classifyThrown collapses config.credential.missing into fallback.internal,
+      so merge <ref> --dry-run is unusable for every ref. Interpreted as
+      in-scope requirement for M2-S16 (regular delivery through the engine
+      cannot operate without the lifecycle merge path); recorded as a PM
+      decision and surfaced for owner confirmation at PR review."
+    type: "decision"
+    date: "2026-11-17"
+  - text: "Delivery conventions from ticket: full 11-phase lifecycle; plan phases
+      declared in plan.yaml; commits through the commit primitive with
+      conventional subjects and body/footer lines <= 100 characters; quality
+      gate TMPDIR=$PWD/tmp/tmpdir pnpm check; PR targets main-tools; maintain
+      doc/planning/oss-tooling backlog markers and status."
+    type: "info"
+    date: "2026-11-17"
