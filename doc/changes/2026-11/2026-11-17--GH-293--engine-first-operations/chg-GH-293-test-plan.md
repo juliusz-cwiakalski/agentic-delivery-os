@@ -1825,3 +1825,29 @@ Each row names the delivered suite that exercises the cases and what iteration 1
 | `scripts/.tests/test-deliver-ticket.sh` | `TC-ENGINE-032` | 2026-11-18 | 135/136 | pm-notes, phase 7 — the single failure is the pre-existing, environment-dependent `TC-DT-SF-02`, not the five-key order case (OQ-TP-13); `TC-ENGINE-032`'s "passes in full" is therefore evaluated against the base-branch baseline, not this host |
 | Delivered vocabulary battery (§7, `TC-ENGINE-091`) | `TC-ENGINE-091` | 2026-11-18 | pass | reviewer, iteration 1 (counts in the no-new-identity attestation) |
 | Delivered pins battery (§7, `TC-ENGINE-090`) | `TC-ENGINE-090` | 2026-11-18 | pass | reviewer, iteration 1 |
+
+### 10.4 Review iteration 1 remediation runs
+
+Appended, never rewritten: §10.1–§10.3 keep the observations they recorded (including the two gaps they named), and this subsection records the runs that followed the remediation declared in `chg-GH-293-plan.yaml` revision 1.4's `remediation:` block. Source: `coder, review_fix (iteration 1 remediation)`.
+
+| Group | Findings | Commit | What the verified run covered |
+|---|---|---|---|
+| `REM-1` | F-1, F-3 | `3744a27e` | Documentation only: `test-spec-merge-verify-deploy.md` restated over the three emitted domains (`config`, `provider`, `merge`, no `state.*`; the state-read refusal named as the declared `merge.state-unverified` row at its declared projection and exit `2`) and over the declared integration base (`CLOSEOUT_INTEGRATION_BASE`, `main-tools`, branch from git facts). `feature-merge-verify-deploy.md` was confirmed, not re-authored. |
+| `REM-2` | F-2 | `94396cbf` | The composition's configuration-read branch contributes its forwarded `config.*` codes to `MERGE_COMPOSITION_EMITTABLE_CODES`; the refusal-site scan covers the whole composition, and the forwarded tuple is pinned. Three new behaviour cells: a malformed document (`config.file.malformed`), an invalid `merge.gates` and an invalid `gate-freshness` (`config.value.invalid`), each at exit `1`, with zero transport calls and zero appends. |
+| `REM-3` | F-4 | `c4ff6d05` | The `truncated` family is a ledger longer than the declared bound, so truncation is real: `verdict: "unverifiable"` with an identical `truncation` object on the summary, the handover, and the fleet row, and zero appends by the two read surfaces. |
+| `REM-4` | F-9, F-10, F-11 | `5ab62f80` | One declared ref grammar across the merge command and the composition (a digit-bearing prefix resolves), the `as` casts replaced by narrowing, and `reposListDataOf`'s gate projection made optional with the delivered empty-gate default. |
+| `REM-5` | F-12, F-14 | `bf93d606` | The row's handover fold is bound to the row's own resolved identity (the same binding the gate block uses), and `emptyHandoverGate` is derived from the one empty-window fold instead of a second literal. |
+| `REM-6` | F-13 | `ecdc483e` | `stateFailure` derives its exit from the same resolved row it reads the kind from, so every emitted failure's exit is its row's declared projection by construction. |
+| `REM-7` | F-7, F-8 | this revision | Verification of the two claims the plan relies on: `TC-ENGINE-065` asserts document content and absence only (no changed-line print, which `testing-strategy.md` bars from a permanent suite), and `TC-ENGINE-054` asserts the constant's three-domain totality **and** the config-read branch (its forwarded codes are members, taxonomy-typed, and exercised). |
+
+The change's verification batch was re-run after the last group landed, in the declared order:
+
+| Battery | Result |
+|---|---|
+| Thirteen declared change suites (`dispatch-clean-accrual` 8, `dispatch-conditions-projection` 5, `dispatch-handover-conditions` 13, `dispatch-additive-stability` 15, `repos-handover-gate` 9, `repos-list-contract` 7, `projects-flat-alias` 6, `engine-first-cross-surface` 2, `engine-first-no-flip` 3, `engine-first-hermetic` 3, `engine-first-doc-reconciliation` 16, `merge-production-composition` 8, `merge-classification-conformance` 7) | all pass |
+| Declared controls `error-table` (126) and `content-inventory` (12) | all pass |
+| `bash scripts/.tests/test-doc-distribution.sh` | exit `0`, no drift — 96 in-scope docs |
+| `TMPDIR=$PWD/tmp/tmpdir pnpm check` | exit `0` — 10371 pass / 4 skip / 0 fail across 1314 files |
+| `./scripts/lint-commit-range.sh --base main-tools` | `VERDICT: PASS` — 33 commits in range, 0 offending (head `ecdc483e`) |
+
+The two §10.3 gaps are closed by this batch, not restated: the cross-surface truncation cell is exercised on one over-bound ledger across all three surfaces (`TC-ENGINE-095`), and the configuration-read branch's codes are members, pinned and exercised (`TC-ENGINE-054`, `TC-ENGINE-050`/`053` cells). No case count moved: the plan still carries **46 cases**, and the new cells belong to existing cases rather than adding cases.
