@@ -56,6 +56,47 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "Sync with main-tools and CI hermeticity repair. The sync merge is
+      936ad950 (parents 6397f6ee on the branch and 3ea2aec9, origin/main-tools
+      GH-293 PR #343), so 3ea2aec9 is the merge-base the range gate measures.
+      Four conflicts resolved by hand: doc/decisions/00-index.md,
+      doc/overview/glossary.md, doc/spec/features/feature-merge-verify-deploy.md
+      and doc/spec/features/feature-result-contract.md each keep GH-293's
+      engine-first text beside this change's adapter text, with this change's
+      decision references renamed. The four decision records moved
+      TDR-0031..0034 -> TDR-0032..0035 (30 files touched: the four renamed
+      records plus every branch reference in the change artifacts, system spec,
+      adapter code and boundary fixtures), while GH-293's incoming
+      TDR-0031-engine-first-evaluation-surfaces.md stays untouched and
+      authoritative. CI run 44263517194 root cause repaired in
+      tests/behaviour/entrypoint-two-bins.test.ts: every child now gets a
+      scratch `gh` stub first on PATH that answers `--version` with
+      `gh version 2.91.0`, so the composition probe takes the in-window branch
+      on every host and the byte-identical stderr baseline stays an exact
+      comparison; the ambient PATH is preserved after the stub and the scratch
+      directory is removed in afterAll. A poisoned sweep of tests/behaviour +
+      tests/structure with an out-of-window `gh` (3.10.0) first on PATH is
+      8736 pass / 4 skip / 0 fail, so no other suite deterministically leaks.
+      Merged-tree interaction also repaired: GH-293's TC-ENGINE-092 expected
+      packages/cli/src/production.ts to own the one native fetch, but TDR-0032
+      moved that seam to the adapter, so the invariant now asserts production
+      has zero fetch sites and references createGithubNativeTransport( while
+      packages/adapters/src/github/client.ts owns exactly one. Re-gated on the
+      merged tree: TC-BIN 18 pass / 0 fail; TC-BIN-084 5 pass / 0 fail;
+      prompt-conformance 5 prompts clean; TMPDIR=$PWD/tmp/tmpdir pnpm check
+      exit 0 (lint 2934 files, 103 warnings / 0 errors; format 2788 files;
+      typecheck; test 10590 pass / 4 skip / 0 fail, 96141 expect calls, 10594
+      tests across 1321 files; boundaries 458 modules, ambient-globals 221
+      clean, workspace-entrypoints OK, secret-read 425 files; memory 0 errors /
+      0 advisories; prompt-conformance clean; help-guide all covered;
+      exports-parity 5 publishables). Range gate VERDICT PASS — base main-tools
+      (source=explicit, merge-base 3ea2aec9, head 936ad950), 36 commits in
+      range, 0 offending commits, 0 distinct rules hit; commitlint binary
+      node_modules/.bin/commitlint (origin=repository-local); ref
+      refs/remotes/origin/main-tools resolvable. TC-DAEMON-121 measured
+      229.36-233.58 ms under the full suite and passed."
+    type: info
+    date: "2026-11-18"
   - text: "PR created: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/344
       (base main-tools, head feat/GH-338/github-adapter-completion at ba95f8ca, title
       'feat(GH-338): complete the GitHub reference adapter', OPEN, not draft, no
