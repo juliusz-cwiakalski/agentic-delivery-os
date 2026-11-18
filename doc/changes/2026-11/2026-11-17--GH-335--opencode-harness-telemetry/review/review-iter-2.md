@@ -74,7 +74,7 @@ Residual references below (`F-4`, `F-5`, …) are this iteration’s findings, n
 | AC-F1-1, AC-F1-4 | PASS | Window is pinned data; `versionVerdict` on the instance; no config key. |
 | AC-F1-2, AC-F1-3, AC-F1-5 | PASS | Unchanged from iter-1; `harness-version-gate`/`-window`/`-probe-grammar-contract` green. |
 | AC-F2-1, AC-F2-3, AC-F2-4 | PASS | Default mode + `--standalone`; unknown/unavailable refusals; `modeOrigin` now recorded (F-5 iter-1 closed). |
-| AC-F2-2 | PASS | TDR-0042 + linked feature spec; records remain Proposed. |
+| AC-F2-2 | PASS | TDR-0038 + linked feature spec; records remain Proposed. |
 | AC-F3-1 (offline) | PASS | Composition mount present; wrapper resolves one `--agent`/`--model`; role-less passthrough. Caveat F-7. |
 | AC-F3-1 (live half) | PASS | Re-recorded observation §2–§4 (F-1 iter-1 closed). |
 | AC-F3-2, AC-F3-3 | PASS | Record-wins / undeclared-ignored; `profile-precedence`/`-neutrality` green. |

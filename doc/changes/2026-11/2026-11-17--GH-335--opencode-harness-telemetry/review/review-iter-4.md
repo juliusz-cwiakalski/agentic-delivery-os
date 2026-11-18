@@ -13,10 +13,10 @@ started: **`main-tools` advanced three minutes after the sync merge and already 
 decision-record ids this change renumbered to.**
 
 - **F-1 (blocking).** `origin/main-tools` head `1e7ecf07` (GH-339, PR #356, committed 2026-11-18
-  19:50:33 +0100) contains `TDR-0040-cross-adapter-parity-matrix-declared-difference-register.md`,
-  `TDR-0041-tracker-error-taxonomy-delivered-identities.md`,
-  `TDR-0042-simulated-stateful-tracker-double-declared-effects.md`,
-  `TDR-0043-registration-only-adapter-extensibility-proof.md`. The sync merge (`c4f519dc`, 19:47:37
+  19:50:33 +0100) contains `TDR-0036-cross-adapter-parity-matrix-declared-difference-register.md`,
+  `TDR-0037-tracker-error-taxonomy-delivered-identities.md`,
+  `TDR-0038-simulated-stateful-tracker-double-declared-effects.md`,
+  `TDR-0039-registration-only-adapter-extensibility-proof.md`. The sync merge (`c4f519dc`, 19:47:37
   +0100) renumbered this change's four harness records **to those same ids**. The merge's renumber is
   internally complete and correct against the base it actually merged (`ec1a2626`), but **against the
   branch the PR targets the ids are already taken**. Pushing `c4f519dc` and re-syncing will produce
@@ -57,12 +57,12 @@ decision files are renames `R099/R099/R098/R095` — id text only.
 | File | GH-338 side preserved | GH-335 side preserved | Verdict |
 |---|---|---|---|
 | `doc/00-index.md` | new *Adapter Reference Behavior* row; *Merge and Verify Deploy* row wording | the six harness/adapter rows GH-335 rewrote (telemetry-v2, closeout, harness-adapters, dispatch-engine, conformance, merge-verify-deploy) | union ✓ |
-| `doc/decisions/00-index.md` | rows TDR-0032…0035 with GH-338 filenames/titles | rows TDR-0040…0039, ascending, correct filenames, `Proposed` | union ✓ |
+| `doc/decisions/00-index.md` | rows TDR-0032…0035 with GH-338 filenames/titles | rows TDR-0036…0039, ascending, correct filenames, `Proposed` | union ✓ |
 | `doc/overview/glossary.md` | seven new adapter-contract rows (CLI-first transport, transport matrix, probe, transport selection, workflow map, evidence read, provider-side landing); `provider.not-found` read-scope clause; `GH-338` in `related_changes` | *Integration mode* and *Harness seat binding* rows intact | union ✓ |
-| `feature-adapter-conformance.md` | fourteen-step registry over nine closed operations (all "eight"/"thirteen" wording gone); cross-transport parity; GH-338 evidence files | harness conformance registry, unchanged six-scenario floor, four additive extension scenarios, refusal map, `TDR-0043` link | union ✓ |
+| `feature-adapter-conformance.md` | fourteen-step registry over nine closed operations (all "eight"/"thirteen" wording gone); cross-transport parity; GH-338 evidence files | harness conformance registry, unchanged six-scenario floor, four additive extension scenarios, refusal map, `TDR-0039` link | union ✓ |
 | `feature-adapter-ports.md` | nine operations incl. `merge-delivery-request`; additive extension block; verbatim job timings; four new adapter source rows | harness port family summary | union ✓ |
-| `feature-closeout.md` | `transition-work-item` "one state-only issue close", `write-delivery-request` supported, `write-comment` supported, `merge-delivery-request` row, nine-operation counts, `TDR-0035` | `session-compaction` / telemetry-capture text, harness source rows, `TDR-0040` | union ✓ |
-| `feature-result-contract.md` | `steer` kind and the main-tools row set (the 149-identity count of the pre-merge page) | 153 identities, thirteen harness rows, four new refusal rows (`harness.version.*`, `harness.mode.unavailable`, `harness.profile.model-unrepresentable`), `detail.harness` member prose, `TDR-0041` | union ✓ |
+| `feature-closeout.md` | `transition-work-item` "one state-only issue close", `write-delivery-request` supported, `write-comment` supported, `merge-delivery-request` row, nine-operation counts, `TDR-0035` | `session-compaction` / telemetry-capture text, harness source rows, `TDR-0036` | union ✓ |
+| `feature-result-contract.md` | `steer` kind and the main-tools row set (the 149-identity count of the pre-merge page) | 153 identities, thirteen harness rows, four new refusal rows (`harness.version.*`, `harness.mode.unavailable`, `harness.profile.model-unrepresentable`), `detail.harness` member prose, `TDR-0037` | union ✓ |
 | `packages/cli/src/production.ts` | GitHub CLI transport selection, probe, degradation notice, `githubTransportSelection`/`githubCliRunner` facts, exported native-transport factory | `dispatchComposition` mount of `createHarnessProfilePort`, memoised `resolveProfileContextFrom`, admission/facts wiring, `PRODUCTION_OPENCODE_ARGS` | both ✓ |
 
 Line-level presence checks on the nine files both branches changed but git auto-merged
@@ -86,7 +86,7 @@ adapter contract 0035→**0039**.
   test plan, plan, decision-review, spike evidence, pm-notes, code, contracts, harness pages) cites an
   old id. The only exceptions are the two readiness-history snapshots recorded as F-3.
 - The four records' front matter ids match their filenames, their mutual cross-references are
-  correct (TDR-0040 → 0037; TDR-0042 → 0036/0037; TDR-0043 → 0036/0037/0038), and the index and
+  correct (TDR-0036 → 0037; TDR-0038 → 0036/0037; TDR-0039 → 0036/0037/0038), and the index and
   register rows are correct and ordered.
 - **No wrong-direction renumber.** Every surviving 0032–0035 citation in a file this change owns
   genuinely means a GH-338 record: `packages/adapters/src/github/{cli-transport,client,
@@ -162,7 +162,7 @@ matching bun's own line). Info-level (F-6).
 
 | ID | Sev | Location | Finding | Fix |
 |---|---|---|---|---|
-| F-1 | **high (blocking)** | `doc/decisions/` + 57 citing files | The four records were renumbered to TDR-0040…0039, which `origin/main-tools` already assigns to GH-339's four records (`1e7ecf07`, 294 citations). Duplicate ids across the target branch. | Renumber to **TDR-0040** (seat/spawn), **0041** (envelope), **0042** (integration mode), **0043** (adapter contract): filenames, front matter, cross-references, index, register, this change's artifacts and harness pages. Leave GH-338's 0032–0035 and GH-339's 0036–0039 alone. |
+| F-1 | **high (blocking)** | `doc/decisions/` + 57 citing files | The four records were renumbered to TDR-0036…0039, which `origin/main-tools` already assigns to GH-339's four records (`1e7ecf07`, 294 citations). Duplicate ids across the target branch. | Renumber to **TDR-0036** (seat/spawn), **0041** (envelope), **0042** (integration mode), **0043** (adapter contract): filenames, front matter, cross-references, index, register, this change's artifacts and harness pages. Leave GH-338's 0032–0035 and GH-339's 0036–0039 alone. |
 | F-2 | **high (blocking)** | merge state | Head does not merge with `origin/main-tools` (`1e7ecf07`): 7 content conflicts, 4 auto-merged files needing verification. PR head still `0d729713`. | Second sync onto `1e7ecf07`, same union discipline, **together with** F-1's renumber; re-run `pnpm check` + range gate. |
 | F-3 | low | `readiness-review/readiness-iter-2.md:18,28,63,95,98,112,129,130`; `readiness-iter-3.md:18,28,62,68,78,80,97,111` | Readiness history is a hybrid: iters 3–6 were partially renumbered (0032→0036) while iters 1–2 were not, so two files still cite the non-existent `TDR-0031-harness-dispatch-outcome-envelope-detail.md` and twenty `TDR-0031` references across the two (ten each) now read as GH-293's unrelated engine-first record. Adjudication (o) says history keeps the id it reviewed. | With F-1, freeze readiness/review history at the ids it reviewed and add one line saying so; renumber only live artifacts (spec, test plan, plan, pm-notes, decision-review, spike evidence, code comments, spec pages). |
 | F-4 | info | `tests/checks/decision-record.test.ts`; `scripts/checks/` | No invariant checks decision-id uniqueness, so `pnpm check` is green on a tree whose ids are already taken. The only id assertions are a fixed four-id list. | Add a repo check: front-matter `id` unique across `doc/decisions/**`, every index row matches an existing file and vice versa. |

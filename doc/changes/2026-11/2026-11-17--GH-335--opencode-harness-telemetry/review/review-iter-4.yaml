@@ -18,8 +18,8 @@ summary: >
   internally complete and directionally correct: 523 citations of 0036-0039 across 57 files,
   and every surviving 0032-0035 citation genuinely denotes a GH-338 record. But the target
   ids are already taken: origin/main-tools head 1e7ecf07 (GH-339, PR #356, landed 19:50:33,
-  three minutes after the sync at 19:47:37) owns TDR-0040..0039 with 294 citations, so the
-  four harness records must move again to TDR-0040..0043; and the head does not merge with
+  three minutes after the sync at 19:47:37) owns TDR-0036..0039 with 294 citations, so the
+  four harness records must move again to TDR-0036..0043; and the head does not merge with
   the current base (seven doc conflicts), while PR #357 still points at the pre-sync head.
   Gates are otherwise green: TMPDIR-scoped pnpm check EXIT 0 with 10791 pass / 4 skip /
   0 fail across 1356 files, the 45-commit range gate PASS, doc-distribution PASS, and
@@ -37,9 +37,9 @@ findings:
     severity: high
     confidence: high
     category: decision-record-identity
-    location: doc/decisions/TDR-0040-harness-seat-spawn-cardinality-and-seat-resolution.md (and 56 other citing files)
+    location: doc/decisions/TDR-0036-harness-seat-spawn-cardinality-and-seat-resolution.md (and 56 other citing files)
     message: >
-      BLOCKING. The sync renumbered this change's four harness records to TDR-0040 (seat/spawn),
+      BLOCKING. The sync renumbered this change's four harness records to TDR-0036 (seat/spawn),
       0037 (envelope detail), 0038 (integration mode) and 0039 (adapter contract), but
       origin/main-tools head 1e7ecf07 (GH-339, PR #356, committed 2026-11-18 19:50:33 +0100) already
       owns those exact ids for its cross-adapter parity matrix, tracker error taxonomy, simulated
@@ -50,8 +50,8 @@ findings:
       across 57 files, no wrong-direction citation), but against the branch the PR targets it
       produces two different records per id. GH-339 landed first, so this change must renumber.
     suggestion: >
-      Renumber to TDR-0040 (seat/spawn), TDR-0041 (envelope detail), TDR-0042 (integration mode),
-      TDR-0043 (adapter contract; 0040-0043 are free on main-tools): rename the four files, update
+      Renumber to TDR-0036 (seat/spawn), TDR-0037 (envelope detail), TDR-0038 (integration mode),
+      TDR-0039 (adapter contract; 0040-0043 are free on main-tools): rename the four files, update
       front-matter ids, mutual cross-references, doc/decisions/00-index.md and 00-register.md, this
       change's spec/test-plan/plan/pm-notes/decision-review/spike-evidence and the harness spec
       pages and code comments. Leave GH-338's 0032-0035 and GH-339's 0036-0039 untouched.
@@ -71,7 +71,7 @@ findings:
       unpushed and the PR keeps reporting CONFLICTING.
     suggestion: >
       Second sync onto 1e7ecf07, resolving the doc conflicts with the same union discipline, in the
-      same pass as the TDR-0040..0043 renumber, then re-run TMPDIR-scoped pnpm check, the range gate
+      same pass as the TDR-0036..0043 renumber, then re-run TMPDIR-scoped pnpm check, the range gate
       and the doc-distribution test before pushing.
     suppressed: false
   - id: F-3
@@ -86,7 +86,7 @@ findings:
       references across the two files (ten each) now read as GH-293's unrelated engine-first record.
       Adjudication (o) in pm-notes says the readiness history keeps the id it reviewed, so the
       correct state is either fully frozen or fully renumbered, not this mixture; the pending
-      TDR-0040..0043 renumber would make a third variant.
+      TDR-0036..0043 renumber would make a third variant.
     suggestion: >
       Freeze readiness/review history at the ids it reviewed with one explicit line saying so, and
       renumber only live artifacts; or complete the renumber everywhere including the envelope
@@ -116,7 +116,7 @@ findings:
     message: >
       The two notes describing this collision round (second-collision narrative and post-merge gate
       evidence) are uncommitted working-tree changes; the reviewed commit records only the first
-      collision (0031 to 0037). They will need a third entry after the TDR-0040..0043 renumber.
+      collision (0031 to 0037). They will need a third entry after the TDR-0036..0043 renumber.
     suggestion: Commit the notes with the re-sync and extend them to the new ids.
     suppressed: false
   - id: F-6
