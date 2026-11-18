@@ -8,7 +8,7 @@ phases:
   test_planning: { started: null, completed: 2026-11-17T23:53:14.180Z }
   delivery_planning: { started: null, completed: 2026-11-17T23:53:31.703Z }
   dor_check: { started: null, completed: 2026-11-17T23:57:19.340Z }
-  delivery: { started: null, completed: null }
+  delivery: { started: null, completed: 2026-11-18T01:25:37.139Z }
   system_spec_update: { started: null, completed: null }
   review_fix: { started: null, completed: null }
   quality_gates: { started: null, completed: null }
@@ -20,30 +20,46 @@ blockers: []
 notes:
   - text: "Plan phase 7 complete (cross-surface coherence, shell non-change, no-flip
       discipline, hermeticity, the recorded lifecycle-phase-7 reconciliation
-      handoff, and the release). Commit pending. Added the cross-surface matrix
-      (six families, three surfaces, identical statuses/verdicts/counters), the
-      no-flip writer scan and append audit, the hermeticity scan with a live
-      no-network control, the new stdout-identity shell parity suite across the
-      four entry points and two authority states, and the lockstep five-package
-      minor changeset. The two `doc/quality/test-specs/` pages are untouched and
+      handoff, and the release). Added the cross-surface matrix (six families,
+      three surfaces, identical statuses/verdicts/counters), the no-flip writer
+      scan and append audit, the hermeticity scan with a live no-network
+      control, the new stdout-identity shell parity suite across the four entry
+      points and two authority states, and the lockstep five-package minor
+      changeset. The two `doc/quality/test-specs/` pages are untouched and
       staged for lifecycle phase 7: the HANDOFF is RECORDED here (owner
       `system_spec_update`/`@doc-syncer`, the two paths, satisfaction at DoD-7)
       and is not an exit condition of this phase. Deviations: the registry row
       for the new guide (`scripts/checks/forbidden-literals.registry.json`), the
-      port inventory fixture rows, and the memoized per-checkout repository-facts
-      reader (keeping the delivered one-call structural pin) were required by the
-      delivered guards; the delivered `test-deliver-ticket.sh` fails one
-      pre-existing, environment-dependent case (TC-DT-SF-02, a readonly
-      `EXIT_FAILURE` collision) on `main-tools` as well, with the suite
-      byte-unmodified."
+      port inventory fixture rows, and the memoized per-checkout
+      repository-facts reader (keeping the delivered one-call structural pin)
+      were required by the delivered guards; the delivered
+      `test-deliver-ticket.sh` fails one pre-existing, environment-dependent
+      case (TC-DT-SF-02, a readonly `EXIT_FAILURE` collision) on `main-tools` as
+      well, with the suite byte-unmodified. Verification at the boundary:
+      engine-first-cross-surface 2/2, engine-first-no-flip 3/3,
+      engine-first-hermetic 3/3, dispatch-imports + dispatch-merge-boundary +
+      content-inventory green (27/27 in that batch); shell suites:
+      dispatch-bash-fallback 9/9, deliver-ticket 135/136 (the one pre-existing
+      environment failure above), engine-first-shell-parity 2/2;
+      doc-distribution no drift (96 docs); changesets-group OK (one fixed group
+      of five); `./scripts/lint-commit-range.sh --base main-tools` VERDICT PASS
+      (20 commits, 0 offending); `TMPDIR=$PWD/tmp/tmpdir pnpm check` EXIT 0 with
+      10368 pass / 4 pre-existing skip / 0 fail across 1314 files; `plan
+      validate GH-293` verdict=valid; `lint GH-293` conforms; `git diff --check`
+      clean. HANDOFF RECORDED:
+      `doc/quality/test-specs/test-spec-dispatch-engine.md` and
+      `test-spec-merge-verify-deploy.md` remain untouched, owned by lifecycle
+      phase 7 (`system_spec_update`, `@doc-syncer`), satisfied there and
+      verified at DoD-7; no phase of this plan closes with in-scope work
+      unlanded."
     type: "info"
     date: "2026-11-18"
   - text: "Plan phase 6 complete (the engine-first guide, six reconciled feature
       pages, the bounded lifecycle prose, the planning corpus, and the phase-7
       test-spec handoff). Commit 40c0ebcb. Added
       `doc/guides/engine-first-operations.md` (redistributable marker; the daily
-      routine, reading the gate and the fleet row, flipping and reversing,
-      the shell fallback, and the declared residuals); reconciled
+      routine, reading the gate and the fleet row, flipping and reversing, the
+      shell fallback, and the declared residuals); reconciled
       `feature-dispatch-engine.md` (summary/handover additions, the condition
       shape, the fleet host, the declared exemption, no-flip),
       `feature-projects.md` (the seven-field row, binding, production scope,
@@ -90,22 +106,23 @@ notes:
       `provider.not-found` never becomes an emitted pair; (b) the emittable set
       spans the declared kinds it can emit (config, provider, merge) because the
       state-read branch is the declared `merge.state-unverified` row, and a
-      `state.*` member would name a code the composition never emits;
-      (c) `packages/cli/src/edge.ts` widened `MergeCommandComposition.ownerPrincipal`
-      to admit `undefined` so the lazily resolved principal typechecks."
+      `state.*` member would name a code the composition never emits; (c)
+      `packages/cli/src/edge.ts` widened
+      `MergeCommandComposition.ownerPrincipal` to admit `undefined` so the
+      lazily resolved principal typechecks."
     type: "info"
     date: "2026-11-18"
-  - text: "Plan phase 4 complete (repos list read-time gate evaluation bound to
-      each row's own repository identity). Commit 16531a5d. The flat row carries
-      the five delivered fields plus `reversible` then `handoverGate`; the
+  - text: "Plan phase 4 complete (repos list read-time gate evaluation bound to each
+      row's own repository identity). Commit 16531a5d. The flat row carries the
+      five delivered fields plus `reversible` then `handoverGate`; the
       evaluation rides a repos-only row pass over the store the row pass already
       opened (one bounded attempts + one divergences read), folds the declared
       `production` evidence scope, excludes foreign-repository records, resolves
       the row's identity read-only and non-persisting (persisted binding, else
       the checkout's normalized remote), fails the whole read as
-      `repos.state-unavailable` at exit 2 with no row for an unreadable ledger or
-      an unresolvable identity, and reports `unverifiable` + `truncation` on a
-      truncated read. `projects.v1` and `projects list --flat` are unchanged.
+      `repos.state-unavailable` at exit 2 with no row for an unreadable ledger
+      or an unresolvable identity, and reports `unverifiable` + `truncation` on
+      a truncated read. `projects.v1` and `projects list --flat` are unchanged.
       Verification: `pnpm typecheck` green; repos-handover-gate 9/9 (incl. the
       5,005-record truncation contract, 25-row floor, determinism, freshness),
       repos-list-contract 7/7, projects-flat-alias 6/6, the delivered projects
@@ -113,27 +130,27 @@ notes:
       set. Deviation: OQ-TP-5 measured the delivered append path at ~106 ms per
       record, so seeding 5,005 records took ~9 minutes; the truncation fixture
       now frames its records with the delivered `buildRecord`/`serializeRecord`
-      and writes the ledger once (~1 s), while the reader still verifies framing,
-      sequence continuity, and every checksum."
+      and writes the ledger once (~1 s), while the reader still verifies
+      framing, sequence continuity, and every checksum."
     type: "info"
     date: "2026-11-18"
   - text: "Plan phase 3 complete (handover conditions, the declared
-      evidence-read-free revert noop, and per-repository reversibility).
-      Commit f551ac06. All four evidence-reading outcomes (recorded flip,
-      idempotent flip noop, clean refusal, recorded revert) carry the four
-      ordered `conditions` and `reversible`; the recorded revert now carries
-      `verdict` so `verdict == unverifiable ⟺ truncation` is expressible there;
-      the idempotent revert noop answers before any gate evidence read with
+      evidence-read-free revert noop, and per-repository reversibility). Commit
+      f551ac06. All four evidence-reading outcomes (recorded flip, idempotent
+      flip noop, clean refusal, recorded revert) carry the four ordered
+      `conditions` and `reversible`; the recorded revert now carries `verdict`
+      so `verdict == unverifiable ⟺ truncation` is expressible there; the
+      idempotent revert noop answers before any gate evidence read with
       `reversible: false` and no `conditions`/`verdict`/`truncation`, while a
-      corrupt handover ledger still refuses `dispatch.state-unverified` at exit 2
-      with no data. Reversibility is one derivation (`reversibilityOf`) shared
-      with the authority document's `reversalAvailable`. Verification:
-      `pnpm typecheck` green; dispatch-handover-conditions 13/13,
+      corrupt handover ledger still refuses `dispatch.state-unverified` at exit
+      2 with no data. Reversibility is one derivation (`reversibilityOf`) shared
+      with the authority document's `reversalAvailable`. Verification: `pnpm
+      typecheck` green; dispatch-handover-conditions 13/13,
       dispatch-additive-stability 15/15, the four delivered handover controls
       green, golden dispatch-text green, content-inventory green — 62/62 across
       the declared gate set. Deviations: `packages/cli/src/edge.ts` now forwards
-      the composition's declared `gate.max` into the handover/revert use cases (a
-      wiring omission, no new flag or key) so the declared truncated-handover
+      the composition's declared `gate.max` into the handover/revert use cases
+      (a wiring omission, no new flag or key) so the declared truncated-handover
       cell is reachable; the content-inventory executable allowance gained
       `reversibilityOf`."
     type: "info"
@@ -149,25 +166,25 @@ notes:
       summary golden was regenerated once (three additive lines only).
       Verification: `pnpm typecheck` green; dispatch-clean-accrual 8/8,
       dispatch-conditions-projection 5/5, dispatch-additive-stability 9/9,
-      dispatch-dual-run-summary + dispatch-gate-window + dispatch-false-success +
-      dispatch-truth-derivation + dispatch-unevaluable green, golden
+      dispatch-dual-run-summary + dispatch-gate-window + dispatch-false-success
+      + dispatch-truth-derivation + dispatch-unevaluable green, golden
       dispatch-summary 2/2, dispatch-text green, content-inventory green — 70/70
       across the declared gate set."
     type: "info"
     date: "2026-11-18"
   - text: "Plan phase 1 complete (shared condition-status shape and the landed
-      TDR-0031 decision record). Commit 48b69424. Declared the closed
-      `met | open` pair and the
-      `{condition, status}` shape on the delivered four-condition order, added
-      the one producer `conditionStatuses(evaluation)` in the domain gate module
-      (open set equals `unmetConditions` by construction), re-exported both from
-      the contract and package indices, and landed TDR-0031 with the index row
-      that was already committed. Verification: `pnpm typecheck` green;
-      exports-parity OK (5 publishables); error-table-sync OK (149/149);
-      decision-record + error-table + content-inventory 142/142 pass;
-      `delivery-os lint GH-293` conforms. Scope note: the content-inventory
-      executable-allowance rows for the two new exports were appended as tracked
-      pending work (the phase gate names that suite green)."
+      TDR-0031 decision record). Commit 48b69424. Declared the closed `met |
+      open` pair and the `{condition, status}` shape on the delivered
+      four-condition order, added the one producer
+      `conditionStatuses(evaluation)` in the domain gate module (open set equals
+      `unmetConditions` by construction), re-exported both from the contract and
+      package indices, and landed TDR-0031 with the index row that was already
+      committed. Verification: `pnpm typecheck` green; exports-parity OK (5
+      publishables); error-table-sync OK (149/149); decision-record +
+      error-table + content-inventory 142/142 pass; `delivery-os lint GH-293`
+      conforms. Scope note: the content-inventory executable-allowance rows for
+      the two new exports were appended as tracked pending work (the phase gate
+      names that suite green)."
     type: "info"
     date: "2026-11-18"
   - text: "DoR iteration 4: READY (readiness-review/readiness-iter-4.md). Iteration
