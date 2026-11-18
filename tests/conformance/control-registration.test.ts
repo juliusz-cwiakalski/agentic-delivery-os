@@ -2,6 +2,11 @@
  * TC-REG-002 / TC-REG-006 — the composition-injected synthetic control adapter
  * runs green with a complete column and six family postures, and dropping any
  * one of its five supplied items produces a distinct named failure.
+ *
+ * The family-accounting half is the DELIVERED DM-4 validator
+ * (`familyAccountingViolations`) applied to the control's own postures — no
+ * token scan over trap names, and no `covered` posture on an operation the
+ * control's declaration does not support.
  */
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
@@ -18,16 +23,21 @@ import {
   runConformance,
   runtimeCoverageViolations,
   structuralCoverageViolations,
+  TRACKER_TRAP_FAMILIES,
 } from "@delivery-os/testkit";
 import {
+  CONTROL_ACCOUNTING,
   CONTROL_COLUMN,
   CONTROL_CONTRACT,
-  CONTROL_FAMILY_ACCOUNTING,
   CONTROL_PROVIDER,
   CONTROL_REGISTRATION,
   CONTROL_TENANT,
 } from "../fixtures/providers/conformance/control/column";
-import { createCanaryCredentialPort } from "./support/fixtures";
+import {
+  createCanaryCredentialPort,
+  type FamilyAccountingContext,
+  familyAccountingViolations,
+} from "./support/fixtures";
 
 const ROOT = process.cwd();
 const CLOCK = "2026-10-31T00:00:00Z";
@@ -64,25 +74,19 @@ const trapCatalog = (): { entries: readonly { trapName: string }[] } =>
     readFileSync(join(ROOT, "tests/fixtures/providers/conformance/control/traps.json"), "utf8"),
   ) as { entries: readonly { trapName: string }[] };
 
-const FAMILY_TOKENS: Readonly<Record<string, string>> = {
-  "auth-shape": "AUTH",
-  "transport-failure": "TRANSPORT",
-  "rate-limit": "RATE",
-  "payload-shape": "PAYLOAD",
-  "workflow-state-mismatch": "STATE",
-  "pagination-truncation": "PAGE",
-};
+/** The control's accounting context: its own registration, catalog and matrix. */
+const controlAccountingContext = (
+  entries: readonly { trapName: string }[] = trapCatalog().entries,
+): FamilyAccountingContext => ({
+  adapters: [CONTROL_REGISTRATION],
+  catalogs: { [CONTROL_PROVIDER]: { entries } },
+  register: [],
+});
 
-const controlFamilyViolations = (entries: readonly { trapName: string }[]): string[] => {
-  const violations: string[] = [];
-  for (const cell of CONTROL_FAMILY_ACCOUNTING) {
-    const marker = FAMILY_TOKENS[cell.family] ?? cell.family;
-    if (!entries.some((entry) => entry.trapName.includes(marker))) {
-      violations.push(`${CONTROL_PROVIDER}/${cell.family}: no family fixture`);
-    }
-  }
-  return violations;
-};
+const controlAccountingViolations = (
+  accounting: typeof CONTROL_ACCOUNTING = CONTROL_ACCOUNTING,
+  context: FamilyAccountingContext = controlAccountingContext(),
+): string[] => familyAccountingViolations(accounting, context);
 
 describe("TC-REG-002 the injected control adapter passes with a complete column and six postures", () => {
   test("the control run is passed and every operation executes or declares its gap", async () => {
@@ -127,10 +131,73 @@ describe("TC-REG-002 the injected control adapter passes with a complete column 
     ).toEqual([]);
   });
 
-  test("the control has six family postures with its own trap catalog", () => {
-    expect(CONTROL_FAMILY_ACCOUNTING).toHaveLength(6);
-    expect(CONTROL_FAMILY_ACCOUNTING.map((cell) => cell.posture)).toEqual(Array(6).fill("covered"));
-    expect(controlFamilyViolations(trapCatalog().entries)).toEqual([]);
+  test("the delivered accounting validator accepts the control's six postures", () => {
+    const cells = CONTROL_ACCOUNTING.providers.control;
+    expect(Object.keys(cells).sort()).toEqual([...TRACKER_TRAP_FAMILIES].sort());
+    expect(controlAccountingViolations()).toEqual([]);
+    const postures = Object.values(cells).map((cell) => cell.posture);
+    expect(postures.filter((posture) => posture === "covered")).toHaveLength(4);
+    expect(postures.filter((posture) => posture === "gap-backed")).toHaveLength(2);
+    expect(postures.filter((posture) => posture === "recorded-difference")).toHaveLength(0);
+    for (const [family, cell] of Object.entries(cells)) {
+      if (cell.posture === "covered") {
+        expect(CONTROL_CONTRACT.capabilities.supportedOperations, family).toContain(
+          cell.operation as never,
+        );
+      } else {
+        const declared = CONTROL_CONTRACT.capabilities.declaredGaps.find(
+          (gap) => gap.operation === cell.operation,
+        );
+        expect(declared?.reason, family).toBe(cell.gapReason);
+      }
+    }
+  });
+
+  test("the validator refuses a covered posture on the control's unsupported operation", () => {
+    const mutated = {
+      ...CONTROL_ACCOUNTING,
+      providers: {
+        control: {
+          ...CONTROL_ACCOUNTING.providers.control,
+          "pagination-truncation": {
+            posture: "covered" as const,
+            operation: "read-pipeline-run",
+            catalogEntries: ["CONTROL-FAMILY-PAGE"],
+            fixture: "tests/fixtures/providers/conformance/control/tenant.json",
+          },
+        },
+      },
+    };
+    const violations = controlAccountingViolations(mutated);
+    expect(
+      violations.some(
+        (message) =>
+          message.startsWith(`${CONTROL_PROVIDER}/pagination-truncation`) &&
+          message.includes("unsupported"),
+      ),
+    ).toBe(true);
+  });
+
+  test("the validator refuses a covered posture whose fixture does not resolve", () => {
+    const mutated = {
+      ...CONTROL_ACCOUNTING,
+      providers: {
+        control: {
+          ...CONTROL_ACCOUNTING.providers.control,
+          "auth-shape": {
+            ...CONTROL_ACCOUNTING.providers.control["auth-shape"],
+            fixture: "tests/fixtures/providers/conformance/control/absent.json",
+          },
+        },
+      },
+    };
+    expect(
+      controlAccountingViolations(mutated).some(
+        (message) =>
+          message.startsWith(`${CONTROL_PROVIDER}/auth-shape`) &&
+          message.includes("does not resolve"),
+      ),
+    ).toBe(true);
   });
 
   test("the run is impossible without the injected seam", () => {
@@ -186,10 +253,11 @@ describe("TC-REG-006 each of the five removals produces a distinct named failure
   });
 
   test("(e) a missing trap catalog fails naming adapter and family", () => {
-    expect(controlFamilyViolations([])).toEqual(
-      CONTROL_FAMILY_ACCOUNTING.map(
-        (cell) => `${CONTROL_PROVIDER}/${cell.family}: no family fixture`,
-      ),
-    );
+    expect(controlAccountingViolations(CONTROL_ACCOUNTING, controlAccountingContext([]))).toEqual([
+      `${CONTROL_PROVIDER}/auth-shape: catalog entry CONTROL-FAMILY-AUTH does not exist`,
+      `${CONTROL_PROVIDER}/transport-failure: catalog entry CONTROL-FAMILY-TRANSPORT does not exist`,
+      `${CONTROL_PROVIDER}/rate-limit: catalog entry CONTROL-FAMILY-RATE does not exist`,
+      `${CONTROL_PROVIDER}/payload-shape: catalog entry CONTROL-FAMILY-PAYLOAD does not exist`,
+    ]);
   });
 });

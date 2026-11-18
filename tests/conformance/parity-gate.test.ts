@@ -12,6 +12,11 @@ import { join } from "node:path";
 import { ADAPTER_OPERATIONS } from "@delivery-os/core/contracts";
 import {
   CONFORMANCE_ADAPTERS,
+  type ConformanceAdapterRegistration,
+  type ConformanceReport,
+  createMockTenantTransport,
+  type MockTenant,
+  type MockTenantRoute,
   PARITY_CELL_KINDS,
   PARITY_CLAUSE_IDS,
   PARITY_DIFFERENCE_CLASSES,
@@ -22,7 +27,12 @@ import {
   type ParityViolation,
   parityViolations,
   renderParityViolation,
+  runConformance,
 } from "@delivery-os/testkit";
+import { createGitHubClient } from "../../packages/adapters/src/github/client";
+import { GITHUB_UNKNOWN_REVIEW_DECISION_FALLBACK } from "../../packages/adapters/src/github/review-state";
+import { createGitLabClient } from "../../packages/adapters/src/gitlab/client";
+import { createJiraClient } from "../../packages/adapters/src/jira/client";
 import {
   addCell,
   addColumn,
@@ -36,13 +46,17 @@ import {
   removeColumn,
   removeEvidence,
   removeRegisterEntry,
+  setAdjudicatedBy,
   setClasses,
   setEvidence,
+  setEvidencePath,
   setObservation,
   setPair,
+  setRationale,
   setRawCell,
   updateEntry,
 } from "../fixtures/providers/conformance/parity/mutations";
+import { createCanaryCredentialPort, loadMockTenant, loadMockTenants } from "./support/fixtures";
 
 const ROOT = process.cwd();
 const PARITY_ROOT = "tests/fixtures/providers/conformance/parity";
@@ -207,6 +221,57 @@ describe("TC-PARITY-004 register bijection, class sets, per-class evidence and a
       expect(entry.adjudicatedBy.trim().length).toBeGreaterThan(0);
     }
     clean(gate());
+  });
+
+  test("an empty rationale and a missing adjudication reference fail as register-bijection naming the entry", () => {
+    const cases = [
+      setRationale(PARITY_MATRIX, "jira-read-work-item", ""),
+      setRationale(PARITY_MATRIX, "jira-read-work-item", "   "),
+      setAdjudicatedBy(PARITY_MATRIX, "jira-read-work-item", ""),
+      setAdjudicatedBy(PARITY_MATRIX, "jira-read-work-item", undefined),
+    ];
+    for (const mutated of cases) {
+      const violation = named(gate(mutated), {
+        provider: "jira",
+        operation: "read-work-item",
+        clause: "register-bijection",
+      });
+      expect(violation.detail).toContain("jira-read-work-item");
+    }
+    clean(gate());
+  });
+
+  test("an unresolvable evidence pointer fails as evidence-reproduction naming the class and entry", () => {
+    const missing = `${PARITY_ROOT}/evidence/absent.pipeline-model.json`;
+    expect(existsSync(join(ROOT, missing))).toBe(false);
+    const mutated = setEvidencePath(
+      PARITY_MATRIX,
+      "gitlab-read-pipeline-run",
+      "pipeline-model",
+      missing,
+    );
+    const result = parityViolations({
+      matrix: mutated,
+      adapters: CONFORMANCE_ADAPTERS,
+      observation: OBSERVATION,
+      resolvesEvidence: (path) => existsSync(join(ROOT, path)),
+    });
+    const violation = named(result, {
+      provider: "gitlab",
+      operation: "read-pipeline-run",
+      clause: "evidence-reproduction",
+      dimension: "pipeline-model",
+    });
+    expect(violation.detail).toContain("gitlab-read-pipeline-run");
+    // Positive control: the delivered paths all resolve through the same resolver.
+    clean(
+      parityViolations({
+        matrix: PARITY_MATRIX,
+        adapters: CONFORMANCE_ADAPTERS,
+        observation: OBSERVATION,
+        resolvesEvidence: (path) => existsSync(join(ROOT, path)),
+      }),
+    );
   });
 });
 
@@ -996,3 +1061,643 @@ function setCellRaw(
 ): ParityMatrix {
   return setRawCell(matrix, provider, operation, cell);
 }
+
+// --- The four static dimensions are replay-corroborated (review F-1) ---------
+//
+// identity-scheme, pipeline-model, state-vocabulary and carrier-absent are read
+// back out of a REAL replay through the production clients over the committed
+// mock tenants, then compared to the gate-local observation record. A stale
+// record therefore fails here, and each mutation harness changes the replayed
+// input so the derived value moves and the gate names that dimension's class.
+
+type DerivedObservation =
+  | { readonly state: "observed"; readonly value: string }
+  | { readonly state: "not-observable"; readonly why: string };
+
+type ReplayOutcome = {
+  readonly ok: boolean;
+  readonly code?: string;
+  readonly value?: unknown;
+};
+
+const asRecord = (value: unknown): Record<string, unknown> | undefined =>
+  typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
+
+/** Clone one tenant and patch the first matching route's object body. */
+const withRoute = (
+  tenant: MockTenant,
+  match: (route: MockTenantRoute) => boolean,
+  patch: (body: Record<string, unknown>) => void,
+): MockTenant => {
+  const clone = JSON.parse(JSON.stringify(tenant)) as MockTenant;
+  const route = (clone.routes as readonly MockTenantRoute[]).find(match);
+  if (route === undefined) throw new Error("replay route is missing");
+  const body = asRecord(route.body);
+  if (body === undefined) throw new Error("replay route has no object body");
+  patch(body);
+  return clone;
+};
+
+/** Replay one supported (adapter, operation) through the production client. */
+const replayOperation = async (tenant: MockTenant, operation: string): Promise<ReplayOutcome> => {
+  const credentials = createCanaryCredentialPort();
+  const transport = createMockTenantTransport(tenant);
+  const addressing = tenant.addressing;
+  const shape = (result: { readonly ok: boolean; readonly code?: string; value?: unknown }) => ({
+    ok: result.ok,
+    value: result.value,
+    ...(result.ok ? {} : { code: result.code }),
+  });
+  if (addressing.provider === "github") {
+    const client = createGitHubClient({
+      instance: tenant.instance,
+      credentials,
+      repository: { owner: addressing.owner, name: addressing.repo },
+      transport,
+    });
+    switch (operation) {
+      case "read-work-item":
+        return shape(await client.readWorkItem(addressing.issueNumber));
+      case "read-delivery-request":
+        return shape(await client.readDeliveryRequest(addressing.pullNumber));
+      case "read-pipeline-run": {
+        const pipeline = await client.readPipelineRun(addressing.commitSha);
+        if (!pipeline.ok) return shape(pipeline);
+        return { ok: true, value: pipeline.value.items };
+      }
+      case "write-delivery-request":
+        return shape(
+          await client.writeDeliveryRequest({
+            kind: "create",
+            sourceRef: "feat/GH-339/static-dimension-replay",
+            targetRef: "main-tools",
+            title: "Static dimension replay",
+            body: "Static dimension replay",
+          }),
+        );
+      case "write-comment":
+        return shape(
+          await client.writeComment({
+            entityId: String(addressing.issueNumber),
+            body: "static dimension replay",
+          }),
+        );
+      default:
+        throw new Error(`no github replay for ${operation}`);
+    }
+  }
+  if (addressing.provider === "gitlab") {
+    const client = createGitLabClient({
+      instance: tenant.instance,
+      credentials,
+      projectPath: addressing.projectPath,
+      transport,
+    });
+    if (operation === "read-delivery-request") {
+      return shape(await client.readDeliveryRequest(addressing.mrIid));
+    }
+    if (operation === "read-pipeline-run") {
+      return shape(await client.readPipelineRun(addressing.commitSha));
+    }
+    throw new Error(`no gitlab replay for ${operation}`);
+  }
+  const client = createJiraClient({ instance: tenant.instance, credentials, transport });
+  if (operation === "read-work-item") return shape(await client.readWorkItem(addressing.issueKey));
+  throw new Error(`no jira replay for ${operation}`);
+};
+
+const identityOf = (value: unknown): string => {
+  const record = asRecord(value);
+  const identity = asRecord(record?.identity);
+  const entityId = identity?.entityId;
+  if (typeof entityId !== "string" || entityId.length === 0) {
+    throw new Error("the replayed result carries no entity identity");
+  }
+  return entityId;
+};
+
+const commentIdOf = (value: unknown): string => {
+  const record = asRecord(value);
+  const commentId = record?.commentId;
+  if (typeof commentId !== "string" || commentId.length === 0) {
+    throw new Error("the replayed comment write carries no comment identity");
+  }
+  return commentId;
+};
+
+const observed = (value: string): DerivedObservation => ({ state: "observed", value });
+const notObservable = (why: string): DerivedObservation => ({ state: "not-observable", why });
+
+/** Classify the replayed identity into its scheme token (never the value). */
+const identitySchemeOf = (
+  provider: string,
+  operation: string,
+  entityId: string,
+  payload: unknown,
+): string => {
+  if (provider === "jira") {
+    return /^[A-Za-z][A-Za-z0-9]*-\d+$/.test(entityId) ? "issue-key" : "provider-numeric-id";
+  }
+  if (entityId.includes(":")) return "composite-check-run-identity";
+  if (provider === "gitlab" && operation === "read-delivery-request") {
+    const body = asRecord(payload);
+    return body !== undefined &&
+      body.id !== undefined &&
+      body.iid !== undefined &&
+      String(body.iid) === entityId &&
+      body.id !== body.iid
+      ? "project-scoped-iid"
+      : "provider-numeric-id";
+  }
+  if (provider === "gitlab") return "bare-pipeline-id";
+  if (operation === "write-delivery-request") return "provider-delivery-request-id";
+  if (operation === "write-comment") return "provider-comment-id";
+  return "provider-numeric-id";
+};
+
+/** Classify the replayed pipeline set into its unit + composition token. */
+const pipelineModelOf = (value: unknown): DerivedObservation => {
+  const items = Array.isArray(value) ? value : [];
+  if (items.length === 0) return notObservable("the replayed read returns no pipeline item");
+  const identities = items.map((item) => identityOf(item));
+  const unit = identities.every((identity) => identity.includes(":"))
+    ? "check-run-unit"
+    : "pipeline-unit";
+  const jobs = items.every((item) => {
+    const record = asRecord(item);
+    return Array.isArray(record?.jobs) && record.jobs.length > 0;
+  })
+    ? "jobs"
+    : "no-jobs";
+  const evidence = items.some((item) => {
+    const record = asRecord(item);
+    return Array.isArray(record?.traceEvidence) && record.traceEvidence.length > 0;
+  })
+    ? unit === "check-run-unit"
+      ? "check-run-evidence"
+      : "trace"
+    : "no-evidence";
+  return observed([unit, jobs, evidence].join("+"));
+};
+
+const deliveryStateOf = (value: unknown): string | undefined => {
+  const record = asRecord(value);
+  const status = asRecord(record?.status);
+  const deliveryState = status?.deliveryState;
+  return typeof deliveryState === "string" ? deliveryState : undefined;
+};
+
+const reviewStateOf = (value: unknown): string | undefined => {
+  const record = asRecord(value);
+  const reviewState = record?.reviewState;
+  return typeof reviewState === "string" ? reviewState : undefined;
+};
+
+/** The replayed state-resolution mechanism, probed (never a literal table). */
+const stateVocabularyOf = async (
+  provider: string,
+  operation: string,
+  tenant: MockTenant,
+): Promise<DerivedObservation> => {
+  const addressing = tenant.addressing;
+  if (provider === "github" && operation === "read-work-item") {
+    if (addressing.provider !== "github") throw new Error("github addressing required");
+    const base = await replayOperation(tenant, operation);
+    if (!base.ok || deliveryStateOf(base.value) === undefined) {
+      return notObservable("the replayed issue read resolves no delivery state");
+    }
+    const labelled = await replayOperation(
+      withRoute(
+        tenant,
+        (route) =>
+          route.method === "GET" && route.url.endsWith(`/issues/${addressing.issueNumber}`),
+        (body) => {
+          body.labels = [{ name: "review" }];
+        },
+      ),
+      operation,
+    );
+    const labelsParticipate = labelled.ok && deliveryStateOf(labelled.value) === "in-review";
+    const refused = await replayOperation(
+      withRoute(
+        tenant,
+        (route) =>
+          route.method === "GET" && route.url.endsWith(`/issues/${addressing.issueNumber}`),
+        (body) => {
+          body.state = "sideways";
+        },
+      ),
+      operation,
+    );
+    return observed(
+      [
+        "native-status",
+        labelsParticipate ? "label-tokens" : undefined,
+        refused.ok ? undefined : "refusal",
+      ]
+        .filter((token): token is string => token !== undefined)
+        .join("+"),
+    );
+  }
+  if (provider === "jira" && operation === "read-work-item") {
+    const base = await replayOperation(tenant, operation);
+    if (!base.ok || deliveryStateOf(base.value) === undefined) {
+      return notObservable("the replayed issue read resolves no delivery state");
+    }
+    const issueRoute = (route: MockTenantRoute): boolean =>
+      route.method === "GET" && route.url.includes("/rest/api/2/issue/");
+    const labelled = await replayOperation(
+      withRoute(tenant, issueRoute, (body) => {
+        const fields = asRecord(body.fields);
+        if (fields !== undefined) fields.labels = ["review"];
+      }),
+      operation,
+    );
+    const baseState = deliveryStateOf(base.value);
+    const labelsParticipate = labelled.ok && deliveryStateOf(labelled.value) !== baseState;
+    const refused = await replayOperation(
+      withRoute(tenant, issueRoute, (body) => {
+        const fields = asRecord(body.fields);
+        const status = asRecord(fields?.status);
+        if (status !== undefined) status.name = "Sideways";
+      }),
+      operation,
+    );
+    return observed(
+      [
+        labelsParticipate ? "native-status" : "native-status-row",
+        labelsParticipate ? "label-tokens" : undefined,
+        refused.ok ? undefined : "refusal",
+      ]
+        .filter((token): token is string => token !== undefined)
+        .join("+"),
+    );
+  }
+  if (provider === "github" && operation === "read-delivery-request") {
+    if (addressing.provider !== "github") throw new Error("github addressing required");
+    const base = await replayOperation(tenant, operation);
+    if (!base.ok || reviewStateOf(base.value) === undefined) {
+      return notObservable("the replayed pull-request read resolves no review state");
+    }
+    const unknown = await replayOperation(
+      withRoute(
+        tenant,
+        (route) => route.method === "GET" && route.url.includes("/pulls/"),
+        (body) => {
+          body.reviewDecision = "SOMEWHERE_ELSE";
+        },
+      ),
+      operation,
+    );
+    const fallsBack =
+      unknown.ok && reviewStateOf(unknown.value) === GITHUB_UNKNOWN_REVIEW_DECISION_FALLBACK;
+    return observed(
+      fallsBack ? "review-state-resolver+unknown-decision-fallback" : "review-state-resolver",
+    );
+  }
+  if (provider === "gitlab" && operation === "read-delivery-request") {
+    const mergeRequestRoute = (route: MockTenantRoute): boolean =>
+      route.method === "GET" && route.url.includes("/merge_requests/");
+    const base = await replayOperation(tenant, operation);
+    if (!base.ok || reviewStateOf(base.value) === undefined) {
+      return notObservable("the replayed merge-request read resolves no review state");
+    }
+    const tableProbe = await replayOperation(
+      withRoute(tenant, mergeRequestRoute, (body) => {
+        body.detailed_merge_status = "discussions_not_resolved";
+      }),
+      operation,
+    );
+    const tableWorks = tableProbe.ok && reviewStateOf(tableProbe.value) === "changes-requested";
+    const fallbackProbe = await replayOperation(
+      withRoute(tenant, mergeRequestRoute, (body) => {
+        delete body.detailed_merge_status;
+      }),
+      operation,
+    );
+    return observed(
+      [
+        tableWorks ? "merge-status-table" : "unmapped-status-table",
+        fallbackProbe.ok ? "unknown-fallback" : "no-fallback",
+      ].join("+"),
+    );
+  }
+  throw new Error(`no state-vocabulary derivation for ${provider}/${operation}`);
+};
+
+let reportPromise: Promise<ConformanceReport> | undefined;
+/** One mock conformance run, read only for the carrier step's participation. */
+const mockReport = (): Promise<ConformanceReport> => {
+  reportPromise ??= runConformance({
+    adapters: CONFORMANCE_ADAPTERS,
+    tenants: loadMockTenants(),
+    credentials: createCanaryCredentialPort(),
+    transportFactory: (provider) => createMockTenantTransport(loadMockTenant(provider)),
+    nowIso: "2026-10-31T00:00:00Z",
+    runId: "static-dimension-replay",
+    tier: "mock",
+  });
+  return reportPromise;
+};
+
+/** The declared carrier arrays plus the carrier step's replayed participation. */
+const carrierAbsentOf = async (
+  registration: ConformanceAdapterRegistration,
+  operation: string,
+): Promise<DerivedObservation> => {
+  const capabilities = registration.contract.capabilities;
+  const writable = [...capabilities.writableCarriers].join(",");
+  const readable = [...capabilities.readableCarriers].join(",");
+  let participation = "not-observable";
+  if (operation === "write-comment") {
+    if (capabilities.writableCarriers.length > 0 || capabilities.readableCarriers.length > 0) {
+      participation = "executed";
+    } else {
+      const step = (await mockReport()).steps.find(
+        (candidate) =>
+          candidate.provider === registration.provider &&
+          candidate.operation === "write-comment" &&
+          candidate.stepId.includes("carrier-roundtrip"),
+      );
+      participation =
+        step?.skipKind === "capability-absent"
+          ? "skipped:capability-absent"
+          : (step?.status ?? "not-observable");
+    }
+  }
+  return observed(`writable=[${writable}];readable=[${readable}];participation=${participation}`);
+};
+
+const STATIC_DIMENSIONS = [
+  "identity-scheme",
+  "pipeline-model",
+  "state-vocabulary",
+  "carrier-absent",
+] as const;
+
+type StaticDimension = (typeof STATIC_DIMENSIONS)[number];
+
+const observedPairs = (dimension: StaticDimension): { provider: string; operation: string }[] =>
+  Object.entries(OBSERVATION).flatMap(([provider, operations]) =>
+    Object.entries(operations).flatMap(([operation, set]) =>
+      set?.[dimension]?.state === "observed" ? [{ provider, operation }] : [],
+    ),
+  );
+
+const registrationOf = (provider: string): ConformanceAdapterRegistration => {
+  const registration = CONFORMANCE_ADAPTERS.find((entry) => entry.provider === provider);
+  if (registration === undefined) throw new Error(`no registration for ${provider}`);
+  return registration;
+};
+
+/** Read one route body from a tenant without mutating it. */
+const routeBodyOf = (tenant: MockTenant, match: (route: MockTenantRoute) => boolean): unknown =>
+  (tenant.routes as readonly MockTenantRoute[]).find(match)?.body;
+
+/** Derive one static dimension from a live replay for one pair. */
+const derivedFor = async (
+  provider: string,
+  operation: string,
+  dimension: StaticDimension,
+  options: {
+    readonly tenant?: MockTenant;
+    readonly registration?: ConformanceAdapterRegistration;
+  } = {},
+): Promise<DerivedObservation> => {
+  if (dimension === "carrier-absent") {
+    return carrierAbsentOf(options.registration ?? registrationOf(provider), operation);
+  }
+  const tenant = options.tenant ?? loadMockTenant(provider);
+  const replay = await replayOperation(tenant, operation);
+  if (dimension === "identity-scheme") {
+    if (!replay.ok) return notObservable(`the replay fails: ${replay.code ?? "unknown"}`);
+    const payload =
+      provider === "gitlab" && operation === "read-delivery-request"
+        ? routeBodyOf(
+            tenant,
+            (route) => route.method === "GET" && route.url.includes("/merge_requests/"),
+          )
+        : undefined;
+    const identityValue = Array.isArray(replay.value) ? replay.value[0] : replay.value;
+    const entityId =
+      operation === "write-comment" ? commentIdOf(identityValue) : identityOf(identityValue);
+    return observed(identitySchemeOf(provider, operation, entityId, payload));
+  }
+  if (dimension === "pipeline-model") {
+    if (!replay.ok) return notObservable(`the replay fails: ${replay.code ?? "unknown"}`);
+    return pipelineModelOf(replay.value);
+  }
+  if (dimension === "state-vocabulary") {
+    return stateVocabularyOf(provider, operation, tenant);
+  }
+  throw new Error(`no derivation for ${dimension}`);
+};
+
+const withDimension = (
+  record: ParityObservationRecord,
+  provider: string,
+  operation: string,
+  dimension: ParityDifferenceClass,
+  derived: DerivedObservation,
+): ParityObservationRecord =>
+  setObservation(
+    JSON.parse(JSON.stringify(record)) as ParityObservationRecord,
+    provider,
+    operation,
+    dimension,
+    derived,
+  );
+
+const committedValue = (
+  provider: string,
+  operation: string,
+  dimension: ParityDifferenceClass,
+): DerivedObservation => {
+  const entry = OBSERVATION[provider]?.[operation]?.[dimension];
+  if (entry === undefined)
+    throw new Error(`no committed ${dimension} for ${provider}/${operation}`);
+  return entry;
+};
+
+describe("review F-1 remediation: the four static dimensions are replay-corroborated", () => {
+  test("identity-scheme equals the replayed identity scheme on every observed pair", async () => {
+    const pairs = observedPairs("identity-scheme");
+    expect(pairs).toHaveLength(8);
+    for (const pair of pairs) {
+      const derived = await derivedFor(pair.provider, pair.operation, "identity-scheme");
+      expect(derived, `${pair.provider}/${pair.operation}`).toEqual(
+        committedValue(pair.provider, pair.operation, "identity-scheme"),
+      );
+    }
+  });
+
+  test("pipeline-model equals the replayed pipeline unit and composition", async () => {
+    const pairs = observedPairs("pipeline-model");
+    expect(pairs).toHaveLength(2);
+    for (const pair of pairs) {
+      const derived = await derivedFor(pair.provider, pair.operation, "pipeline-model");
+      expect(derived, `${pair.provider}/${pair.operation}`).toEqual(
+        committedValue(pair.provider, pair.operation, "pipeline-model"),
+      );
+    }
+  });
+
+  test("state-vocabulary equals the replayed resolution mechanism", async () => {
+    const pairs = observedPairs("state-vocabulary");
+    expect(pairs).toHaveLength(4);
+    for (const pair of pairs) {
+      const derived = await derivedFor(pair.provider, pair.operation, "state-vocabulary");
+      expect(derived, `${pair.provider}/${pair.operation}`).toEqual(
+        committedValue(pair.provider, pair.operation, "state-vocabulary"),
+      );
+    }
+  });
+
+  test("carrier-absent equals the declared carrier arrays plus the replayed participation", async () => {
+    const pairs = observedPairs("carrier-absent");
+    expect(pairs).toHaveLength(14);
+    for (const pair of pairs) {
+      const derived = await derivedFor(pair.provider, pair.operation, "carrier-absent");
+      expect(derived, `${pair.provider}/${pair.operation}`).toEqual(
+        committedValue(pair.provider, pair.operation, "carrier-absent"),
+      );
+    }
+    // The participation half is not decoration: the carrier step is recorded as
+    // skipped for the one adapter that supports it and carries none.
+    expect(committedValue("github", "write-comment", "carrier-absent")).toMatchObject({
+      value: "writable=[];readable=[];participation=skipped:capability-absent",
+    });
+  });
+
+  test("a dropped GitLab iid moves identity-scheme and the gate names that class", async () => {
+    const tenant = withRoute(
+      loadMockTenant("gitlab"),
+      (route) => route.method === "GET" && route.url.includes("/merge_requests/"),
+      (body) => {
+        delete body.iid;
+      },
+    );
+    const derived = await derivedFor("gitlab", "read-delivery-request", "identity-scheme", {
+      tenant,
+    });
+    expect(derived).not.toEqual(
+      committedValue("gitlab", "read-delivery-request", "identity-scheme"),
+    );
+    expect(derived).toEqual({ state: "observed", value: "provider-numeric-id" });
+    named(
+      gate(
+        PARITY_MATRIX,
+        withDimension(OBSERVATION, "gitlab", "read-delivery-request", "identity-scheme", derived),
+      ),
+      {
+        provider: "gitlab",
+        operation: "read-delivery-request",
+        clause: "evidence-reproduction",
+        dimension: "identity-scheme",
+      },
+    );
+  });
+
+  test("removing the GitLab trace moves pipeline-model and the gate names that class", async () => {
+    const tenant = withRoute(
+      loadMockTenant("gitlab"),
+      (route) => route.method === "GET" && route.url.includes("/pipelines?sha="),
+      (body) => {
+        for (const pipeline of Array.isArray(body.pipelines) ? body.pipelines : []) {
+          const record = asRecord(pipeline);
+          if (record !== undefined) delete record.trace;
+        }
+      },
+    );
+    const derived = await derivedFor("gitlab", "read-pipeline-run", "pipeline-model", { tenant });
+    expect(derived).not.toEqual(committedValue("gitlab", "read-pipeline-run", "pipeline-model"));
+    named(
+      gate(
+        PARITY_MATRIX,
+        withDimension(OBSERVATION, "gitlab", "read-pipeline-run", "pipeline-model", derived),
+      ),
+      {
+        provider: "gitlab",
+        operation: "read-pipeline-run",
+        clause: "evidence-reproduction",
+        dimension: "pipeline-model",
+      },
+    );
+  });
+
+  test("an unresolvable GitLab merge status moves state-vocabulary and the gate names that class", async () => {
+    const tenant = withRoute(
+      loadMockTenant("gitlab"),
+      (route) => route.method === "GET" && route.url.includes("/merge_requests/"),
+      (body) => {
+        body.detailed_merge_status = "not_a_native_status";
+        delete body.merge_status;
+      },
+    );
+    const derived = await derivedFor("gitlab", "read-delivery-request", "state-vocabulary", {
+      tenant,
+    });
+    expect(derived).not.toEqual(
+      committedValue("gitlab", "read-delivery-request", "state-vocabulary"),
+    );
+    expect(derived.state).toBe("not-observable");
+    named(
+      gate(
+        PARITY_MATRIX,
+        withDimension(OBSERVATION, "gitlab", "read-delivery-request", "state-vocabulary", derived),
+      ),
+      {
+        provider: "gitlab",
+        operation: "read-delivery-request",
+        clause: "evidence-reproduction",
+        dimension: "state-vocabulary",
+      },
+    );
+  });
+
+  test("a declared carrier moves carrier-absent and the gate names that class", async () => {
+    const gitlab = registrationOf("gitlab");
+    const mutatedRegistration: ConformanceAdapterRegistration = {
+      ...gitlab,
+      contract: {
+        ...gitlab.contract,
+        capabilities: {
+          ...gitlab.contract.capabilities,
+          writableCarriers: ["comment"],
+        },
+      },
+    };
+    const derived = await derivedFor("gitlab", "read-pipeline-run", "carrier-absent", {
+      registration: mutatedRegistration,
+    });
+    expect(derived).toEqual({
+      state: "observed",
+      value: "writable=[comment];readable=[];participation=not-observable",
+    });
+    expect(derived).not.toEqual(committedValue("gitlab", "read-pipeline-run", "carrier-absent"));
+    const adapters = CONFORMANCE_ADAPTERS.map((entry) =>
+      entry.provider === "gitlab" ? mutatedRegistration : entry,
+    );
+    named(
+      parityViolations({
+        matrix: PARITY_MATRIX,
+        adapters,
+        observation: withDimension(
+          OBSERVATION,
+          "gitlab",
+          "read-pipeline-run",
+          "carrier-absent",
+          derived,
+        ),
+      }),
+      {
+        provider: "gitlab",
+        operation: "read-pipeline-run",
+        clause: "observed-contradiction",
+        dimension: "carrier-absent",
+      },
+    );
+  });
+});

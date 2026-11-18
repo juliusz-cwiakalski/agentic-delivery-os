@@ -239,6 +239,20 @@ describe("TC-TAX-009 the decision rule is total, ordered, and deterministic", ()
         undecodable: true,
       }),
     ).toBe("tracker.payload.invalid");
+    // The undecodable discriminant is load-bearing: an undecodable body decides
+    // the payload class even when the transport carried an auth status, while the
+    // same status with a decoded body stays auth.rejected.
+    expect(
+      classifyTrackerOutcome({
+        kind: "status",
+        httpStatus: 401,
+        operationKind: "read",
+        undecodable: true,
+      }),
+    ).toBe("tracker.payload.invalid");
+    expect(classifyTrackerOutcome({ kind: "status", httpStatus: 401, operationKind: "read" })).toBe(
+      "tracker.auth.rejected",
+    );
     expect(classifyTrackerOutcome({ kind: "decoded-success" })).toBe("success");
     const once = classifyTrackerOutcome({ kind: "no-response" });
     expect(classifyTrackerOutcome({ kind: "no-response" })).toBe(once);

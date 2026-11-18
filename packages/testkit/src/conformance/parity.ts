@@ -8,8 +8,12 @@
  * performs no I/O, reads no ambient input, and returns clause-tagged violation
  * records; a rendered string is only their presentation.
  */
+import { GITHUB_ADAPTER_CONTRACT } from "@delivery-os/adapters/github";
+import { GITLAB_ADAPTER_CONTRACT } from "@delivery-os/adapters/gitlab";
+import { JIRA_ADAPTER_CONTRACT } from "@delivery-os/adapters/jira";
 import {
   ADAPTER_OPERATIONS,
+  type AdapterContract,
   type AdapterOperation,
   type CapabilityGapReason,
 } from "@delivery-os/core/contracts";
@@ -122,13 +126,22 @@ export type ParityGateInput = {
   readonly matrix: ParityMatrix;
   readonly adapters: readonly ConformanceAdapterRegistration[];
   readonly observation?: ParityObservationRecord;
+  /**
+   * Optional evidence-path resolver. The gate itself performs no I/O, so a
+   * caller that owns a filesystem supplies one (the suite passes `existsSync`);
+   * without it, evidence is only checked for a reference that reproduces its
+   * class. A path the resolver rejects fails as `evidence-reproduction`.
+   */
+  readonly resolvesEvidence?: (path: string) => boolean;
 };
 
 /** Longest permitted violation detail. */
 export const PARITY_DETAIL_MAX_CHARS = 1024 as const;
 
 type AuthoredColumn = readonly ParityCellEntry[];
-type AuthoredRegisterEntry = Omit<ParityRegisterEntry, "adapter"> & { readonly column: number };
+type AuthoredRegisterEntry = Omit<ParityRegisterEntry, "adapter"> & {
+  readonly contract: AdapterContract;
+};
 
 const EVERY_OPERATION = ADAPTER_OPERATIONS;
 
@@ -140,34 +153,60 @@ const difference = (registerId: string): ParityCell => ({
 });
 
 /**
- * The authored columns, in registration order. Index 0 is the reference
- * column, uniformly `same-as-reference`; the provider names never appear here.
+ * The authored columns, each BOUND TO ITS CONTRACT, never to a list position.
+ *
+ * A registration is looked up by contract identity, so reordering the
+ * registration list can never attach one adapter's authored cells to another
+ * adapter, and a registration whose contract is not authored here (the
+ * composition-injected control) receives no cells instead of a neighbour's. The
+ * provider names never appear in this module: the matrix derives them from the
+ * registration list.
  */
-const AUTHORED_COLUMNS: readonly AuthoredColumn[] = [
-  EVERY_OPERATION.map((operation) => ({ operation, cell: same() })),
-  [
-    { operation: "read-work-item", cell: gap("adapter-not-implemented") },
-    { operation: "write-work-item", cell: gap("adapter-not-implemented") },
-    { operation: "transition-work-item", cell: gap("adapter-not-implemented") },
-    { operation: "read-delivery-request", cell: difference("gitlab-read-delivery-request") },
-    { operation: "write-delivery-request", cell: gap("adapter-not-implemented") },
-    { operation: "read-pipeline-run", cell: difference("gitlab-read-pipeline-run") },
-    { operation: "write-comment", cell: gap("adapter-not-implemented") },
-    { operation: "resolve-delivery-thread", cell: gap("adapter-not-implemented") },
-    { operation: "merge-delivery-request", cell: gap("adapter-not-implemented") },
-  ],
-  [
-    { operation: "read-work-item", cell: difference("jira-read-work-item") },
-    { operation: "write-work-item", cell: same() },
-    { operation: "transition-work-item", cell: same() },
-    { operation: "read-delivery-request", cell: gap("provider-unsupported") },
-    { operation: "write-delivery-request", cell: gap("provider-unsupported") },
-    { operation: "read-pipeline-run", cell: gap("provider-unsupported") },
-    { operation: "write-comment", cell: gap("adapter-not-implemented") },
-    { operation: "resolve-delivery-thread", cell: gap("provider-unsupported") },
-    { operation: "merge-delivery-request", cell: gap("provider-unsupported") },
-  ],
+const AUTHORED_COLUMNS: readonly {
+  readonly contract: AdapterContract;
+  readonly cells: AuthoredColumn;
+}[] = [
+  {
+    contract: GITHUB_ADAPTER_CONTRACT,
+    cells: EVERY_OPERATION.map((operation) => ({ operation, cell: same() })),
+  },
+  {
+    contract: GITLAB_ADAPTER_CONTRACT,
+    cells: [
+      { operation: "read-work-item", cell: gap("adapter-not-implemented") },
+      { operation: "write-work-item", cell: gap("adapter-not-implemented") },
+      { operation: "transition-work-item", cell: gap("adapter-not-implemented") },
+      { operation: "read-delivery-request", cell: difference("gitlab-read-delivery-request") },
+      { operation: "write-delivery-request", cell: gap("adapter-not-implemented") },
+      { operation: "read-pipeline-run", cell: difference("gitlab-read-pipeline-run") },
+      { operation: "write-comment", cell: gap("adapter-not-implemented") },
+      { operation: "resolve-delivery-thread", cell: gap("adapter-not-implemented") },
+      { operation: "merge-delivery-request", cell: gap("adapter-not-implemented") },
+    ],
+  },
+  {
+    contract: JIRA_ADAPTER_CONTRACT,
+    cells: [
+      { operation: "read-work-item", cell: difference("jira-read-work-item") },
+      { operation: "write-work-item", cell: same() },
+      { operation: "transition-work-item", cell: same() },
+      { operation: "read-delivery-request", cell: gap("provider-unsupported") },
+      { operation: "write-delivery-request", cell: gap("provider-unsupported") },
+      { operation: "read-pipeline-run", cell: gap("provider-unsupported") },
+      { operation: "write-comment", cell: gap("adapter-not-implemented") },
+      { operation: "resolve-delivery-thread", cell: gap("provider-unsupported") },
+      { operation: "merge-delivery-request", cell: gap("provider-unsupported") },
+    ],
+  },
 ];
+
+const authoredCellsFor = (registration: ConformanceAdapterRegistration): AuthoredColumn =>
+  AUTHORED_COLUMNS.find((entry) => entry.contract === registration.contract)?.cells ?? [];
+
+const providerForContract = (
+  adapters: readonly ConformanceAdapterRegistration[],
+  contract: AdapterContract,
+): string => adapters.find((registration) => registration.contract === contract)?.provider ?? "";
 
 const evidence = (
   path: string,
@@ -178,7 +217,7 @@ const evidence = (
 
 const AUTHORED_REGISTER: readonly AuthoredRegisterEntry[] = [
   {
-    column: 1,
+    contract: GITLAB_ADAPTER_CONTRACT,
     differenceId: "gitlab-read-delivery-request",
     operation: "read-delivery-request",
     differenceClasses: ["identity-scheme", "state-vocabulary", "failure-classification"],
@@ -207,7 +246,7 @@ const AUTHORED_REGISTER: readonly AuthoredRegisterEntry[] = [
     adjudicatedBy: "TDR-0036",
   },
   {
-    column: 1,
+    contract: GITLAB_ADAPTER_CONTRACT,
     differenceId: "gitlab-read-pipeline-run",
     operation: "read-pipeline-run",
     differenceClasses: ["identity-scheme", "pipeline-model", "pagination-model"],
@@ -236,7 +275,7 @@ const AUTHORED_REGISTER: readonly AuthoredRegisterEntry[] = [
     adjudicatedBy: "TDR-0036",
   },
   {
-    column: 2,
+    contract: JIRA_ADAPTER_CONTRACT,
     differenceId: "jira-read-work-item",
     operation: "read-work-item",
     differenceClasses: ["identity-scheme", "state-vocabulary", "failure-classification"],
@@ -266,18 +305,26 @@ const AUTHORED_REGISTER: readonly AuthoredRegisterEntry[] = [
   },
 ];
 
-/** Build one matrix from a registration list; reused for the control run. */
+/**
+ * Build one matrix from a registration list.
+ *
+ * The reference is the FIRST registered adapter (DM-7), and columns/cells are
+ * bound by contract identity, so no authored column reaches an adapter it was
+ * not written for. A registration whose contract is not authored here receives
+ * an empty column, which the gate reports as a missing cell set rather than
+ * silently borrowing a neighbour's cells.
+ */
 export const buildParityMatrix = (
   adapters: readonly ConformanceAdapterRegistration[],
 ): ParityMatrix => ({
   reference: adapters[0]?.provider ?? "",
-  columns: adapters.map((registration, index) => ({
+  columns: adapters.map((registration) => ({
     provider: registration.provider,
-    cells: AUTHORED_COLUMNS[index] ?? [],
+    cells: authoredCellsFor(registration),
   })),
   register: AUTHORED_REGISTER.map((entry) => ({
     differenceId: entry.differenceId,
-    adapter: adapters[entry.column]?.provider ?? "",
+    adapter: providerForContract(adapters, entry.contract),
     operation: entry.operation,
     differenceClasses: entry.differenceClasses,
     rationale: entry.rationale,
@@ -384,7 +431,7 @@ const malformedObservation = (entry: ParityObservation | undefined): string | un
  * when one is supplied. The result is canonically ordered and empty on pass.
  */
 export const parityViolations = (input: ParityGateInput): ParityViolation[] => {
-  const { matrix, adapters, observation } = input;
+  const { matrix, adapters, observation, resolvesEvidence } = input;
   const violations: ParityViolation[] = [];
   const registrationByProvider = new Map(adapters.map((entry) => [entry.provider, entry]));
   const columnProviders = matrix.columns.map((column) => column.provider);
@@ -661,6 +708,36 @@ export const parityViolations = (input: ParityGateInput): ParityViolation[] => {
     }
     entryByPair.set(pair, entry);
 
+    // Register shape: an entry is an adjudicated, reasoned claim, and each class
+    // it claims must carry evidence that resolves when a resolver is supplied.
+    if (typeof entry.rationale !== "string" || entry.rationale.trim().length === 0) {
+      violations.push(
+        violation({
+          provider: entry.adapter,
+          operation: String(entry.operation),
+          clause: "register-bijection",
+          detail: `entry ${entry.differenceId} has an empty rationale`,
+          expected: "non-empty rationale",
+          received: typeof entry.rationale === "string" ? entry.rationale : "missing",
+          evidence: evidenceFor(entry),
+        }),
+      );
+    }
+    if (typeof entry.adjudicatedBy !== "string" || entry.adjudicatedBy.trim().length === 0) {
+      violations.push(
+        violation({
+          provider: entry.adapter,
+          operation: String(entry.operation),
+          clause: "register-bijection",
+          detail: `entry ${entry.differenceId} has no adjudication reference`,
+          expected: "non-empty adjudicatedBy",
+          received:
+            typeof entry.adjudicatedBy === "string" ? entry.adjudicatedBy : "missing adjudicatedBy",
+          evidence: evidenceFor(entry),
+        }),
+      );
+    }
+
     const classes = entry.differenceClasses;
     if (!Array.isArray(classes) || classes.length === 0) {
       violations.push(
@@ -704,6 +781,28 @@ export const parityViolations = (input: ParityGateInput): ParityViolation[] => {
           );
         }
         seenClasses.add(differenceClass);
+        if (resolvesEvidence !== undefined && CLASS_SET.has(differenceClass)) {
+          const rawEvidence = entry.evidence?.[differenceClass as ParityDifferenceClass];
+          const evidencePath = rawEvidence?.path;
+          if (
+            evidencePath !== undefined &&
+            evidencePath.trim().length > 0 &&
+            !resolvesEvidence(evidencePath)
+          ) {
+            violations.push(
+              violation({
+                provider: entry.adapter,
+                operation: String(entry.operation),
+                clause: "evidence-reproduction",
+                dimensions: [differenceClass],
+                detail: `entry ${entry.differenceId} class ${differenceClass} evidence does not resolve`,
+                expected: "resolving evidence path",
+                received: evidencePath,
+                evidence: evidencePath,
+              }),
+            );
+          }
+        }
       }
     }
   }

@@ -123,8 +123,10 @@ export type TrackerClassification = TrackerErrorClassId | "outside-taxonomy" | "
  * Classify one observable outcome, in the declared order.
  *
  * Order is binding: capability gap, adapter refusal, no response, a read's 404,
- * then any other status or undecodable success. The function reads no prose and
- * branches on no provider.
+ * an undecodable response, then the status-bearing classes, then any other
+ * status. An undecodable body decides the payload class even when the transport
+ * carried a 401/403, because the adapter had nothing to decode. The function
+ * reads no prose and branches on no provider.
  */
 export const classifyTrackerOutcome = (
   outcome: TrackerObservableOutcome,
@@ -135,6 +137,7 @@ export const classifyTrackerOutcome = (
   if (outcome.kind === "read-not-found") return "outside-taxonomy";
   if (outcome.kind === "decoded-success") return "success";
   if (outcome.operationKind === "read" && outcome.httpStatus === 404) return "outside-taxonomy";
+  if (outcome.undecodable === true) return "tracker.payload.invalid";
   if (outcome.httpStatus === 401 || outcome.httpStatus === 403) return "tracker.auth.rejected";
   return "tracker.payload.invalid";
 };

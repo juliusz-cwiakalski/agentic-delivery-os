@@ -12,19 +12,23 @@
   "permits": [
     {
       "file": "packages/testkit/src/conformance/adapters.ts",
-      "construct": "provider-name-literal"
+      "construct": "provider-name-literal",
+      "count": 6
     },
     {
       "file": "packages/testkit/src/conformance/types.ts",
-      "construct": "provider-name-literal"
+      "construct": "provider-name-literal",
+      "count": 3
     },
     {
       "file": "packages/testkit/src/conformance/mock-tenant.ts",
-      "construct": "provider-name-literal"
+      "construct": "provider-name-literal",
+      "count": 6
     },
     {
       "file": "packages/testkit/src/conformance/mock-tenant.ts",
-      "construct": "provider-comparison"
+      "construct": "provider-comparison",
+      "count": 3
     },
     {
       "file": "packages/testkit/src/conformance/runner.ts",

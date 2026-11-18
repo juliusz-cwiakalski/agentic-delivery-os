@@ -185,6 +185,38 @@ export const removeEvidence = (
     return { ...entry, evidence: next };
   });
 
+/** Replace one class's evidence path, keeping the rest of the document. */
+export const setEvidencePath = (
+  matrix: ParityMatrix,
+  differenceId: string,
+  differenceClass: ParityDifferenceClass,
+  path: string,
+): ParityMatrix =>
+  updateEntry(matrix, differenceId, (entry) => {
+    const existing = entry.evidence[differenceClass];
+    if (existing === undefined)
+      throw new Error(`evidence ${differenceId}/${differenceClass} missing`);
+    return { ...entry, evidence: { ...entry.evidence, [differenceClass]: { ...existing, path } } };
+  });
+
+/** Replace one entry's free-text rationale (including with an empty string). */
+export const setRationale = (
+  matrix: ParityMatrix,
+  differenceId: string,
+  rationale: string,
+): ParityMatrix => updateEntry(matrix, differenceId, (entry) => ({ ...entry, rationale }));
+
+/** Replace or drop one entry's adjudication reference. */
+export const setAdjudicatedBy = (
+  matrix: ParityMatrix,
+  differenceId: string,
+  adjudicatedBy: string | undefined,
+): ParityMatrix =>
+  updateEntry(matrix, differenceId, (entry) => ({
+    ...entry,
+    adjudicatedBy: adjudicatedBy as string,
+  }));
+
 const withObservationPair = (
   record: ParityObservationRecord,
   provider: string,

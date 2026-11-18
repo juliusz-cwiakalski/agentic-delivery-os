@@ -5,30 +5,22 @@
  */
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { CONFORMANCE_ADAPTERS, PARITY_MATRIX, TRACKER_TRAP_FAMILIES } from "@delivery-os/testkit";
+import {
+  type FamilyAccounting,
+  type FamilyAccountingContext,
+  type FamilyCell,
+  type FamilyPosture,
+  familyAccountingViolations,
+} from "../conformance/support/fixtures";
 import { loadCatalogs, validateCatalogs } from "./trap-catalog.test";
 
 const ROOT = process.cwd();
 const ACCOUNTING = "tests/fixtures/providers/conformance/families/accounting.json";
 
-type Posture = "covered" | "recorded-difference" | "gap-backed";
-
-type Cell = {
-  readonly posture: Posture;
-  readonly operation: string;
-  readonly catalogEntries?: readonly string[];
-  readonly fixture?: string;
-  readonly registerId?: string;
-  readonly recordedClass?: string;
-  readonly gapReason?: string;
-};
-
-type Accounting = {
-  readonly provenance: string;
-  readonly providers: Readonly<Record<string, Readonly<Record<string, Cell>>>>;
-};
+type Accounting = FamilyAccounting;
 
 const loadAccounting = (): Accounting =>
   JSON.parse(readFileSync(join(ROOT, ACCOUNTING), "utf8")) as Accounting;
@@ -45,7 +37,7 @@ const OBSERVATION = (
   ) as { record: Record<string, Record<string, Record<string, unknown>>> }
 ).record;
 
-const EXPECTED_TABLE: Readonly<Record<string, Readonly<Record<string, Posture>>>> = {
+const EXPECTED_TABLE: Readonly<Record<string, Readonly<Record<string, FamilyPosture>>>> = {
   github: {
     "auth-shape": "covered",
     "transport-failure": "covered",
@@ -72,130 +64,25 @@ const EXPECTED_TABLE: Readonly<Record<string, Readonly<Record<string, Posture>>>
   },
 };
 
-const adapterFor = (provider: string) =>
-  CONFORMANCE_ADAPTERS.find((entry) => entry.provider === provider);
-
 const catalogNames = (provider: string): readonly string[] =>
   CATALOGS[provider]?.entries.map((entry) => String(entry.trapName)) ?? [];
 
-/** Validate the accounting; every failure names adapter and family. */
-export const accountingViolations = (
-  accounting: Accounting,
-  catalogs: Readonly<Record<string, { entries: readonly Record<string, unknown>[] }>> = CATALOGS,
-  observation: Record<string, Record<string, Record<string, unknown>>> = OBSERVATION,
-): string[] => {
-  const violations: string[] = [];
-  const providers = CONFORMANCE_ADAPTERS.map((entry) => entry.provider);
-  const keys = Object.keys(accounting.providers);
-  for (const provider of providers) {
-    const cellSet = accounting.providers[provider];
-    if (cellSet === undefined) {
-      violations.push(`${provider}: no accounting cells`);
-      continue;
-    }
-    for (const family of TRACKER_TRAP_FAMILIES) {
-      const cell = cellSet[family];
-      const where = `${provider}/${family}`;
-      if (cell === undefined) {
-        violations.push(`${where}: family is unaccounted`);
-        continue;
-      }
-      const adapter = adapterFor(provider);
-      if (adapter === undefined) {
-        violations.push(`${where}: no registration`);
-        continue;
-      }
-      const supported = adapter.contract.capabilities.supportedOperations as readonly string[];
-      const gaps = adapter.contract.capabilities.declaredGaps;
-      const declaredGap = gaps.find((gap) => gap.operation === cell.operation);
-      const expected = EXPECTED_TABLE[provider]?.[family];
-      if (expected !== undefined && cell.posture !== expected) {
-        violations.push(`${where}: expected ${expected}, observed ${cell.posture}`);
-      }
-      if (supported.includes(cell.operation) && declaredGap !== undefined) {
-        violations.push(`${where}: ${cell.operation} is both supported and a declared gap`);
-      }
-      if (cell.posture === "covered") {
-        if (!supported.includes(cell.operation)) {
-          violations.push(`${where}: covered posture names unsupported ${cell.operation}`);
-        }
-        if (cell.gapReason !== undefined) violations.push(`${where}: dual posture`);
-        const entries = cell.catalogEntries ?? [];
-        if (entries.length === 0)
-          violations.push(`${where}: covered posture names no catalog entry`);
-        for (const name of entries) {
-          if (!catalogNames(provider).includes(name)) {
-            violations.push(`${where}: catalog entry ${name} does not exist`);
-          }
-        }
-        if (cell.fixture === undefined || !existsSync(join(ROOT, cell.fixture))) {
-          violations.push(`${where}: fixture reference does not resolve`);
-        }
-        if (family === "pagination-truncation") {
-          const value = observation[provider]?.[cell.operation]?.["pagination-model"];
-          const observed = (value as { state?: string; value?: string } | undefined)?.value ?? "";
-          if (
-            (value as { state?: string } | undefined)?.state !== "observed" ||
-            !observed.includes("bound=declared") ||
-            !observed.includes("count=reported")
-          ) {
-            violations.push(`${where}: vacuous covered posture, no declared bound and page count`);
-          }
-        }
-      } else if (cell.posture === "recorded-difference") {
-        if (declaredGap !== undefined) {
-          violations.push(`${where}: recorded-difference on a declared gap ${cell.operation}`);
-        }
-        const registerEntry = PARITY_MATRIX.register.find(
-          (entry) => entry.differenceId === cell.registerId,
-        );
-        if (registerEntry === undefined) {
-          violations.push(`${where}: registerId ${String(cell.registerId)} does not resolve`);
-        } else if (
-          registerEntry.adapter !== provider ||
-          registerEntry.operation !== cell.operation
-        ) {
-          violations.push(`${where}: register entry is keyed to another pair`);
-        } else {
-          const explaining =
-            family === "pagination-truncation" ? "pagination-model" : "failure-classification";
-          if (!registerEntry.differenceClasses.includes(explaining as never)) {
-            violations.push(
-              `${where}: class set ${registerEntry.differenceClasses.join(",")} does not explain the family`,
-            );
-          }
-        }
-        if (cell.recordedClass === undefined || cell.recordedClass.trim().length === 0) {
-          violations.push(`${where}: recorded class is missing`);
-        }
-      } else if (cell.posture === "gap-backed") {
-        if (cell.catalogEntries !== undefined || cell.fixture !== undefined) {
-          violations.push(`${where}: dual posture (fixture and gap)`);
-        }
-        if (declaredGap === undefined) {
-          violations.push(`${where}: ${cell.operation} is not a declared gap`);
-        } else if (declaredGap.reason !== cell.gapReason) {
-          violations.push(
-            `${where}: gap reason ${String(cell.gapReason)} differs from ${declaredGap.reason}`,
-          );
-        }
-      } else {
-        violations.push(`${where}: unknown posture ${String(cell.posture)}`);
-      }
-    }
-    for (const extra of Object.keys(cellSet).filter(
-      (family) => !(TRACKER_TRAP_FAMILIES as readonly string[]).includes(family),
-    )) {
-      violations.push(`${provider}/${extra}: unknown family`);
-    }
-  }
-  for (const extra of keys.filter((provider) => !providers.includes(provider))) {
-    violations.push(`${extra}: unregistered adapter column`);
-  }
-  return violations;
+/** The shipped accounting context: the delivered validator over the three seeds. */
+export const SHIPPED_ACCOUNTING_CONTEXT: FamilyAccountingContext = {
+  adapters: CONFORMANCE_ADAPTERS,
+  catalogs: CATALOGS,
+  register: PARITY_MATRIX.register,
+  observation: OBSERVATION,
+  expectation: EXPECTED_TABLE,
 };
 
-const tally = (accounting: Accounting, posture: Posture): number =>
+/** Validate the shipped accounting; every failure names adapter and family. */
+export const accountingViolations = (
+  accounting: Accounting,
+  context: FamilyAccountingContext = SHIPPED_ACCOUNTING_CONTEXT,
+): string[] => familyAccountingViolations(accounting, context);
+
+const tally = (accounting: Accounting, posture: FamilyPosture): number =>
   Object.values(accounting.providers)
     .flatMap((cells) => Object.values(cells))
     .filter((cell) => cell.posture === posture).length;
@@ -273,7 +160,7 @@ describe("TC-TAX-011 the 18-cell posture square is total and non-vacuous", () =>
     const vacuous = JSON.parse(JSON.stringify(ACCOUNTING_DOC)) as Accounting;
     const gitlab = vacuous.providers.gitlab;
     if (gitlab === undefined) throw new Error("gitlab missing");
-    (gitlab as Record<string, Cell>)["pagination-truncation"] = {
+    (gitlab as Record<string, FamilyCell>)["pagination-truncation"] = {
       posture: "covered",
       operation: "read-pipeline-run",
       catalogEntries: ["GL339-PAGINATION-TRUNCATION"],
@@ -286,8 +173,8 @@ describe("TC-TAX-011 the 18-cell posture square is total and non-vacuous", () =>
     const dual = JSON.parse(JSON.stringify(ACCOUNTING_DOC)) as Accounting;
     const github = dual.providers.github;
     if (github === undefined) throw new Error("github missing");
-    (github as Record<string, Cell>)["auth-shape"] = {
-      ...(github["auth-shape"] as Cell),
+    (github as Record<string, FamilyCell>)["auth-shape"] = {
+      ...(github["auth-shape"] as FamilyCell),
       gapReason: "adapter-not-implemented",
     };
     expect(accountingViolations(dual).some((message) => message.includes("dual posture"))).toBe(
@@ -297,7 +184,7 @@ describe("TC-TAX-011 the 18-cell posture square is total and non-vacuous", () =>
     const unreachable = JSON.parse(JSON.stringify(ACCOUNTING_DOC)) as Accounting;
     const gitlabUnreachable = unreachable.providers.gitlab;
     if (gitlabUnreachable === undefined) throw new Error("gitlab missing");
-    (gitlabUnreachable as Record<string, Cell>)["auth-shape"] = {
+    (gitlabUnreachable as Record<string, FamilyCell>)["auth-shape"] = {
       posture: "covered",
       operation: "read-delivery-request",
       catalogEntries: ["GL339-AUTH-SHAPE"],
@@ -314,7 +201,7 @@ describe("TC-TAX-011 the 18-cell posture square is total and non-vacuous", () =>
     const mutated = JSON.parse(JSON.stringify(ACCOUNTING_DOC)) as Accounting;
     const gitlab = mutated.providers.gitlab;
     if (gitlab === undefined) throw new Error("gitlab missing");
-    (gitlab as Record<string, Cell>)["pagination-truncation"] = {
+    (gitlab as Record<string, FamilyCell>)["pagination-truncation"] = {
       posture: "recorded-difference",
       operation: "read-pipeline-run",
       registerId: "gitlab-read-delivery-request",
@@ -364,8 +251,8 @@ describe("TC-TAX-012 catalog-family wiring over the family-wired subset", () => 
     const renamed = JSON.parse(JSON.stringify(ACCOUNTING_DOC)) as Accounting;
     const gl = renamed.providers.gitlab;
     if (gl === undefined) throw new Error("gitlab missing");
-    (gl as Record<string, Cell>)["auth-shapes"] = gl["auth-shape"] as Cell;
-    delete (gl as Record<string, Cell>)["auth-shape"];
+    (gl as Record<string, FamilyCell>)["auth-shapes"] = gl["auth-shape"] as FamilyCell;
+    delete (gl as Record<string, FamilyCell>)["auth-shape"];
     expect(accountingViolations(renamed).some((message) => message.includes("auth-shapes"))).toBe(
       true,
     );
@@ -373,8 +260,8 @@ describe("TC-TAX-012 catalog-family wiring over the family-wired subset", () => 
     const absent = JSON.parse(JSON.stringify(ACCOUNTING_DOC)) as Accounting;
     const gh = absent.providers.github;
     if (gh === undefined) throw new Error("github missing");
-    (gh as Record<string, Cell>)["auth-shape"] = {
-      ...(gh["auth-shape"] as Cell),
+    (gh as Record<string, FamilyCell>)["auth-shape"] = {
+      ...(gh["auth-shape"] as FamilyCell),
       catalogEntries: ["NO-SUCH-ENTRY"],
     };
     expect(accountingViolations(absent).some((message) => message.includes("does not exist"))).toBe(

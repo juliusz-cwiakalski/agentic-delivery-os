@@ -88,12 +88,56 @@ export const CONTROL_COLUMN = [
   })),
 ];
 
-/** The control's six family postures; all covered by its own trap catalog. */
-export const CONTROL_FAMILY_ACCOUNTING = [
-  "auth-shape",
-  "transport-failure",
-  "rate-limit",
-  "payload-shape",
-  "workflow-state-mismatch",
-  "pagination-truncation",
-].map((family) => ({ family, posture: "covered" as const }));
+/**
+ * The control's six family postures, stated against the operation each family
+ * exercises on this adapter. The control supports only `read-work-item`, so the
+ * two families whose structure lives on another operation are `gap-backed` by
+ * the control's OWN declaration (`provider-unsupported` on
+ * `transition-work-item` and `read-pipeline-run`) — a `covered` posture there
+ * would name an unsupported operation and the delivered accounting validator
+ * rejects it. The four read-work-item families carry the control's one committed
+ * fixture set and its own catalog entries.
+ */
+const CONTROL_TENANT_FIXTURE = "tests/fixtures/providers/conformance/control/tenant.json";
+
+export const CONTROL_ACCOUNTING = {
+  provenance: "hand-authored-synthetic 2026-11-18",
+  providers: {
+    control: {
+      "auth-shape": {
+        posture: "covered",
+        operation: "read-work-item",
+        catalogEntries: ["CONTROL-FAMILY-AUTH"],
+        fixture: CONTROL_TENANT_FIXTURE,
+      },
+      "transport-failure": {
+        posture: "covered",
+        operation: "read-work-item",
+        catalogEntries: ["CONTROL-FAMILY-TRANSPORT"],
+        fixture: CONTROL_TENANT_FIXTURE,
+      },
+      "rate-limit": {
+        posture: "covered",
+        operation: "read-work-item",
+        catalogEntries: ["CONTROL-FAMILY-RATE"],
+        fixture: CONTROL_TENANT_FIXTURE,
+      },
+      "payload-shape": {
+        posture: "covered",
+        operation: "read-work-item",
+        catalogEntries: ["CONTROL-FAMILY-PAYLOAD"],
+        fixture: CONTROL_TENANT_FIXTURE,
+      },
+      "workflow-state-mismatch": {
+        posture: "gap-backed",
+        operation: "transition-work-item",
+        gapReason: "provider-unsupported",
+      },
+      "pagination-truncation": {
+        posture: "gap-backed",
+        operation: "read-pipeline-run",
+        gapReason: "provider-unsupported",
+      },
+    },
+  },
+} as const;

@@ -104,12 +104,27 @@ const allowlistViolations = (value: Allowlist): string[] => {
   if (permitKeys.some((key) => key.includes("*"))) {
     violations.push("permit list contains a wildcard");
   }
+  for (const permit of value.permits) {
+    if (!Number.isInteger(permit.count) || (permit.count ?? 0) < 1) {
+      violations.push(`${permit.file}|${permit.construct}: permit must pin an occurrence count`);
+    }
+  }
   const runner = value.permits.filter((permit) => permit.file.endsWith("/runner.ts"));
   if (runner.length !== 1 || runner[0]?.construct !== "provider-comparison") {
     violations.push("runner.ts must have exactly one provider-comparison permit");
   }
   if (runner[0]?.count !== 5) {
     violations.push("runner.ts permit must record exactly five comparisons");
+  }
+  const addressingDecode = value.permits.filter((permit) =>
+    permit.file.endsWith("/mock-tenant.ts"),
+  );
+  if (
+    addressingDecode.length !== 2 ||
+    !addressingDecode.some((permit) => permit.construct === "provider-comparison") ||
+    !addressingDecode.some((permit) => permit.construct === "provider-name-literal")
+  ) {
+    violations.push("mock-tenant.ts must pin its literal and comparison constructs separately");
   }
   if (value.permits.some((permit) => permit.file.endsWith("/parity.ts"))) {
     violations.push("parity.ts must have no permit: its columns are derived");
@@ -176,6 +191,48 @@ describe("TC-REG-004 the bound set is identity-construct free with an exact allo
       (hit) => hit.construct === "provider-comparison",
     );
     expect(hits).toHaveLength(5);
+  });
+
+  test("every permit pins its occurrence count, so a new branch is never absorbed quietly", () => {
+    const counts = allowlist.permits.map((permit) => ({
+      key: `${permit.file}|${permit.construct}`,
+      expected: permit.count,
+      observed: scanFile(permit.file).filter((hit) => hit.construct === permit.construct).length,
+    }));
+    for (const count of counts) {
+      expect(count.observed, count.key).toBe(count.expected);
+    }
+    const addressing = counts.find(
+      (count) =>
+        count.key === "packages/testkit/src/conformance/mock-tenant.ts|provider-comparison",
+    );
+    expect(addressing?.observed).toBe(3);
+
+    // Mutation: one more provider-discriminant branch in the addressing decode
+    // raises the observed count above the pinned one, so the equality above
+    // fails naming the file and construct.
+    const text = readFileSync(
+      join(ROOT, "packages/testkit/src/conformance/mock-tenant.ts"),
+      "utf8",
+    );
+    const planted = identityConstructs(
+      "packages/testkit/src/conformance/mock-tenant.ts",
+      `${text}\nconst extra = provider === "github";\n`,
+    ).filter((hit) => hit.construct === "provider-comparison");
+    expect(planted).toHaveLength(4);
+    expect(planted.length).not.toBe(addressing?.observed);
+
+    // A count-free permit is itself a violation: it would re-open the silence.
+    expect(
+      allowlistViolations({
+        ...allowlist,
+        permits: allowlist.permits.map((permit) =>
+          permit.file.endsWith("/mock-tenant.ts") && permit.construct === "provider-comparison"
+            ? { file: permit.file, construct: permit.construct }
+            : permit,
+        ),
+      }).some((message) => message.includes("must pin an occurrence count")),
+    ).toBe(true);
   });
 
   test("planting a full-value provider literal in each bound module fails by file and construct", () => {

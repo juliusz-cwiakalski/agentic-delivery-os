@@ -4,38 +4,38 @@
   "entries": [
     {
       "trapName": "CONTROL-FAMILY-AUTH",
-      "providerBehavior": "A control adapter can classify an authorization rejection.",
-      "expectedNormalizedOutcome": "auth-shape is declared covered on the control adapter.",
+      "providerBehavior": "The control's read-work-item is the operation an authorization-rejection family is accounted against.",
+      "expectedNormalizedOutcome": "auth-shape is covered on the control adapter's read-work-item.",
       "fixtureReference": "tests/fixtures/providers/conformance/control/tenant.json#/routes/0"
     },
     {
       "trapName": "CONTROL-FAMILY-TRANSPORT",
-      "providerBehavior": "A control adapter can classify a transport failure.",
-      "expectedNormalizedOutcome": "transport-failure is declared covered on the control adapter.",
+      "providerBehavior": "The control's read-work-item is the operation a transport-failure family is accounted against.",
+      "expectedNormalizedOutcome": "transport-failure is covered on the control adapter's read-work-item.",
       "fixtureReference": "tests/fixtures/providers/conformance/control/tenant.json#/routes/0"
     },
     {
       "trapName": "CONTROL-FAMILY-RATE",
-      "providerBehavior": "A control adapter can classify a throttled response.",
-      "expectedNormalizedOutcome": "rate-limit is declared covered on the control adapter.",
+      "providerBehavior": "The control's read-work-item is the operation a throttled-response family is accounted against.",
+      "expectedNormalizedOutcome": "rate-limit is covered on the control adapter's read-work-item.",
       "fixtureReference": "tests/fixtures/providers/conformance/control/tenant.json#/routes/0"
     },
     {
       "trapName": "CONTROL-FAMILY-PAYLOAD",
-      "providerBehavior": "A control adapter can classify an invalid payload.",
-      "expectedNormalizedOutcome": "payload-shape is declared covered on the control adapter.",
+      "providerBehavior": "The control's read-work-item is the operation an invalid-payload family is accounted against.",
+      "expectedNormalizedOutcome": "payload-shape is covered on the control adapter's read-work-item.",
       "fixtureReference": "tests/fixtures/providers/conformance/control/tenant.json#/routes/0"
     },
     {
       "trapName": "CONTROL-FAMILY-STATE",
-      "providerBehavior": "A control adapter can classify a workflow-state mismatch.",
-      "expectedNormalizedOutcome": "workflow-state-mismatch is declared covered on the control adapter.",
+      "providerBehavior": "The control declares no transition operation, so a workflow-state mismatch is accounted from its own declared gap.",
+      "expectedNormalizedOutcome": "workflow-state-mismatch is gap-backed on the control adapter's transition-work-item (provider-unsupported).",
       "fixtureReference": "tests/fixtures/providers/conformance/control/tenant.json#/routes/0"
     },
     {
       "trapName": "CONTROL-FAMILY-PAGE",
-      "providerBehavior": "A control adapter can account for a bounded collection read.",
-      "expectedNormalizedOutcome": "pagination-truncation is declared covered on the control adapter.",
+      "providerBehavior": "The control declares no pipeline read, so a bounded collection read is accounted from its own declared gap.",
+      "expectedNormalizedOutcome": "pagination-truncation is gap-backed on the control adapter's read-pipeline-run (provider-unsupported).",
       "fixtureReference": "tests/fixtures/providers/conformance/control/tenant.json#/routes/0"
     }
   ]
