@@ -53,7 +53,7 @@ describe("TC-CEREMONY-057 delivered surfaces are unchanged", () => {
 
   test("the error table grew by exactly the two ceremony rows", () => {
     expect(ERROR_TABLE.filter((entry) => entry.domainKind === "ceremony")).toHaveLength(2);
-    expect(ERROR_TABLE).toHaveLength(149);
+    expect(ERROR_TABLE).toHaveLength(153);
   });
 
   test("the brief command and its render contract are untouched by ceremony", () => {

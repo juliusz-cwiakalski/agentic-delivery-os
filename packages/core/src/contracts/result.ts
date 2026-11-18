@@ -9,6 +9,8 @@
  * rendered into.
  */
 
+import type { HarnessKind, HarnessMode, HarnessVersionVerdict } from "./harness.js";
+
 /** The only home of the v1 envelope schema identifier (DEC-8, DEC-9). */
 export const RESULT_SCHEMA_VERSION = "delivery.result.v1" as const;
 
@@ -62,6 +64,26 @@ export const COMMAND_FAILURE_DETAIL_MAX_CHARS = 128 as const;
 export type CommandResultDetail = {
   readonly holder?: string;
   readonly suiteBreadth?: readonly string[];
+  readonly harness?: CommandFailureHarnessDetail;
+};
+
+/** The bounded normalized-version member of the harness evidence slot (TDR-0033). */
+export const COMMAND_FAILURE_HARNESS_VERSION_MAX_CHARS = 32 as const;
+
+/**
+ * The declared `detail.harness` evidence member (TDR-0033).
+ *
+ * Exactly four closed facts, populated only on the four new pre-session harness
+ * refusals: the harness kind, the normalized observed version (explicit `null`
+ * when indeterminable), the window verdict, and — only where mode resolution
+ * ran — the mode. The vocabularies are imported type-only from the harness
+ * contract and never restated here.
+ */
+export type CommandFailureHarnessDetail = {
+  readonly kind: HarnessKind;
+  readonly observedVersion: string | null;
+  readonly versionVerdict: HarnessVersionVerdict;
+  readonly mode?: HarnessMode;
 };
 
 /** An explicit empty success payload for void successes (D7). */

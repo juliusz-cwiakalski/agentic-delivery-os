@@ -5,6 +5,7 @@
  * and no gate-record or citation type gained a field.
  */
 import type {
+  CommandFailureHarnessDetail,
   CommandResultDetail,
   CrossRepositoryVerifyGatesReport,
   VerifyGateCitation,
@@ -35,7 +36,15 @@ type DetailCarriesHolder = Expect<Equal<CommandResultDetail["holder"], string | 
 type DetailCarriesSuiteBreadth = Expect<
   Equal<CommandResultDetail["suiteBreadth"], readonly string[] | undefined>
 >;
-type DetailKeySetIsClosed = Expect<Equal<keyof CommandResultDetail, "holder" | "suiteBreadth">>;
+type DetailCarriesHarness = Expect<
+  Equal<CommandResultDetail["harness"], CommandFailureHarnessDetail | undefined>
+>;
+type HarnessDetailKeySetIsClosed = Expect<
+  Equal<keyof CommandFailureHarnessDetail, "kind" | "observedVersion" | "versionVerdict" | "mode">
+>;
+type DetailKeySetIsClosed = Expect<
+  Equal<keyof CommandResultDetail, "holder" | "suiteBreadth" | "harness">
+>;
 type GateRecordKeysUnchanged = Expect<
   Equal<keyof VerifyGateRecord, "id" | "verdict" | "reason" | "citation">
 >;
@@ -65,6 +74,8 @@ export type Probes = [
   CrossMirrorsJobType,
   DetailCarriesHolder,
   DetailCarriesSuiteBreadth,
+  DetailCarriesHarness,
+  HarnessDetailKeySetIsClosed,
   DetailKeySetIsClosed,
   GateRecordKeysUnchanged,
   CitationKeysUnchanged,

@@ -12,12 +12,17 @@ import {
   type AuditInvocationFacts,
   type BrandIdentity,
   COMMAND_FAILURE_DETAIL_MAX_CHARS,
+  COMMAND_FAILURE_HARNESS_VERSION_MAX_CHARS,
+  type CommandFailureHarnessDetail,
   type CommandResult,
   type CommandResultDetail,
   type CommandResultError,
   type ErrorTableEntry,
   FALLBACK_INTERNAL_CODE,
   FALLBACK_INVOCATION_CODE,
+  HARNESS_KINDS,
+  HARNESS_MODES,
+  HARNESS_VERSION_VERDICTS,
   type ProjectionClass,
   RESULT_SCHEMA_VERSION,
   VERIFY_GATES_MAX_EXPECTED_JOB_NAME_CHARS,
@@ -236,10 +241,75 @@ const explicitSuiteBreadth = (value: unknown): readonly string[] | undefined => 
   return result;
 };
 
+/** The normalized bare-semantic-version shape the evidence member may carry. */
+const NORMALIZED_VERSION = /^[0-9]+\.[0-9]+\.[0-9]+$/;
+
+/**
+ * Project the declared `detail.harness` evidence member (TDR-0033).
+ *
+ * Closed-key, member-by-member: a member that is out of vocabulary, over its
+ * bound, or inconsistent with the version verdict drops the whole member — it is
+ * never coerced, clipped, or defaulted. The failure's identity, exit, summary,
+ * and remediation hint are unchanged by the member's presence.
+ */
+const explicitHarnessDetail = (value: unknown): CommandFailureHarnessDetail | undefined => {
+  if (!isRecord(value)) return undefined;
+  const allowed = new Set(["kind", "observedVersion", "versionVerdict", "mode"]);
+  if (Object.keys(value).some((key) => !allowed.has(key))) return undefined;
+  const kind = value.kind;
+  if (typeof kind !== "string" || !(HARNESS_KINDS as readonly string[]).includes(kind)) {
+    return undefined;
+  }
+  const versionVerdict = value.versionVerdict;
+  if (
+    typeof versionVerdict !== "string" ||
+    !(HARNESS_VERSION_VERDICTS as readonly string[]).includes(versionVerdict)
+  ) {
+    return undefined;
+  }
+  const observedVersion = value.observedVersion;
+  if (observedVersion === undefined) return undefined;
+  if (observedVersion === null) {
+    if (versionVerdict !== "indeterminate") return undefined;
+  } else {
+    if (
+      typeof observedVersion !== "string" ||
+      observedVersion.length === 0 ||
+      observedVersion.length > COMMAND_FAILURE_HARNESS_VERSION_MAX_CHARS ||
+      !NORMALIZED_VERSION.test(observedVersion) ||
+      versionVerdict === "indeterminate"
+    ) {
+      return undefined;
+    }
+  }
+  const mode = value.mode;
+  if (mode !== undefined) {
+    if (
+      typeof mode !== "string" ||
+      !(HARNESS_MODES as readonly string[]).includes(mode) ||
+      versionVerdict !== "inside"
+    ) {
+      return undefined;
+    }
+  }
+  return {
+    kind: kind as CommandFailureHarnessDetail["kind"],
+    observedVersion,
+    versionVerdict: versionVerdict as CommandFailureHarnessDetail["versionVerdict"],
+    ...(mode === undefined
+      ? {}
+      : { mode: mode as NonNullable<CommandFailureHarnessDetail["mode"]> }),
+  };
+};
+
 const explicitDetail = (value: unknown): CommandResultDetail | undefined => {
   if (!isRecord(value) || !isRecord(value.detail)) return undefined;
   const raw = value.detail;
-  const detail: { holder?: string; suiteBreadth?: readonly string[] } = {};
+  const detail: {
+    holder?: string;
+    suiteBreadth?: readonly string[];
+    harness?: CommandFailureHarnessDetail;
+  } = {};
   const holder = raw.holder;
   if (typeof holder === "string" && holder.length > 0) {
     if (holder.length <= COMMAND_FAILURE_DETAIL_MAX_CHARS && !hasHolderControlCharacter(holder)) {
@@ -248,6 +318,8 @@ const explicitDetail = (value: unknown): CommandResultDetail | undefined => {
   }
   const suiteBreadth = explicitSuiteBreadth(raw.suiteBreadth);
   if (suiteBreadth !== undefined) detail.suiteBreadth = suiteBreadth;
+  const harness = explicitHarnessDetail(raw.harness);
+  if (harness !== undefined) detail.harness = harness;
   return Object.keys(detail).length === 0 ? undefined : detail;
 };
 

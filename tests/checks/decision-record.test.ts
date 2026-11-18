@@ -17,6 +17,7 @@
 import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
+import { DEFAULT_HARNESS_MODE, HARNESS_MODES } from "../../packages/core/src/contracts/index";
 
 const ROOT = process.cwd();
 const TDR = "doc/decisions/TDR-0013-agent-session-commit-guard-reversal.md";
@@ -136,6 +137,18 @@ describe("TC-HARNESS-010 GH-335 decision records", () => {
     // The observed-axis absence marker and its supersession of the delivered classification.
     expect(adapters).toContain("absentObservedAxes");
     expect(adapters).toContain("invalid-session-identity");
+  });
+});
+
+describe("TC-HARNESS-010 the record and the code cannot drift", () => {
+  test("the integration-mode record's chosen mode equals the delivered constant", () => {
+    const mode = read(MODE_RECORD);
+    expect(HARNESS_MODES as readonly string[]).toContain(DEFAULT_HARNESS_MODE);
+    expect(DEFAULT_HARNESS_MODE).toBe("per-invocation-private-server");
+    expect(mode).toContain(`**Chosen mode value:** \`${DEFAULT_HARNESS_MODE}\``);
+    for (const member of HARNESS_MODES) {
+      expect(mode, member).toContain(member);
+    }
   });
 });
 

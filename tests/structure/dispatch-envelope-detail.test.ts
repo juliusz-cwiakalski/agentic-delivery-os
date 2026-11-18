@@ -170,3 +170,137 @@ describe("TC-HDA-029 dispatch-specific additive error detail", () => {
     expect(Object.hasOwn(envelope.error, "field")).toBe(false);
   });
 });
+
+/**
+ * TC-HARNESS-035 / TC-HARNESS-040 (pin half) — the `detail.harness` member is
+ * declared on the closed `CommandResultDetail` contract, projected by the edge
+ * member by member, dropped when malformed, and absent on a non-harness failure.
+ */
+describe("TC-HARNESS-035 detail.harness projection", () => {
+  const HARNESS_DETAIL = {
+    kind: "opencode",
+    observedVersion: "2.1.7",
+    versionVerdict: "outside",
+  } as const;
+
+  test("the closed detail contract declares the harness member and its version bound", () => {
+    const detail = typeAliasText(RESULT_CONTRACT, "CommandResultDetail");
+    expect(detail).toBeDefined();
+    expect(detail).toContain("readonly harness?: CommandFailureHarnessDetail");
+    const member = typeAliasText(RESULT_CONTRACT, "CommandFailureHarnessDetail");
+    expect(member).toBeDefined();
+    for (const key of ["kind", "observedVersion", "versionVerdict", "mode"]) {
+      expect(member).toContain(`readonly ${key}`);
+    }
+    expect(sourceOf(RESULT_CONTRACT)).toContain("COMMAND_FAILURE_HARNESS_VERSION_MAX_CHARS = 32");
+    const index = sourceOf(CONTRACTS_INDEX);
+    expect(index).toContain("COMMAND_FAILURE_HARNESS_VERSION_MAX_CHARS");
+    expect(index).toContain("type CommandFailureHarnessDetail");
+  });
+
+  test("a harness refusal projects its four facts at the envelope root", async () => {
+    const command: CommandDefinition = {
+      handler: () => ({
+        error: {
+          kind: "harness",
+          code: "harness.version.unsupported",
+          summary: "observed 2.1.7 outside the supported window",
+          detail: { harness: HARNESS_DETAIL },
+        },
+      }),
+    };
+    const run = await invoke(command, ["synthetic", "--json"]);
+    expect(run.exit).toBe(1);
+    const envelope = JSON.parse(run.stdout) as {
+      readonly error: CommandResultError;
+      readonly detail?: { readonly harness?: Record<string, unknown> };
+    };
+    expect(envelope.error.code).toBe("harness.version.unsupported");
+    expect(envelope.detail?.harness).toEqual(HARNESS_DETAIL);
+    expect(Object.keys(envelope.error).sort()).toEqual([...COMMAND_RESULT_ERROR_KEYS]);
+  });
+
+  test("the mode refusal carries the requested mode and an inside verdict", async () => {
+    const command: CommandDefinition = {
+      handler: () => ({
+        error: {
+          kind: "harness",
+          code: "harness.mode.unavailable",
+          summary: "requested managed-background-service",
+          detail: {
+            harness: {
+              kind: "opencode",
+              observedVersion: "2.3.2",
+              versionVerdict: "inside",
+              mode: "managed-background-service",
+            },
+          },
+        },
+      }),
+    };
+    const run = await invoke(command, ["synthetic", "--json"]);
+    const envelope = JSON.parse(run.stdout) as {
+      readonly detail?: { readonly harness?: Record<string, unknown> };
+    };
+    expect(envelope.detail?.harness).toEqual({
+      kind: "opencode",
+      observedVersion: "2.3.2",
+      versionVerdict: "inside",
+      mode: "managed-background-service",
+    });
+  });
+
+  test("a malformed member is dropped rather than coerced, and the identity is unchanged", async () => {
+    for (const harness of [
+      { kind: "pi-dev", observedVersion: "2.3.2", versionVerdict: "inside" },
+      { kind: "opencode", observedVersion: "v2.3.2", versionVerdict: "inside" },
+      { kind: "opencode", observedVersion: null, versionVerdict: "inside" },
+      {
+        kind: "opencode",
+        observedVersion: "2.1.7",
+        versionVerdict: "outside",
+        mode: "per-invocation-private-server",
+      },
+      { kind: "opencode", observedVersion: "2.3.2", versionVerdict: "inside", extra: true },
+    ]) {
+      const command: CommandDefinition = {
+        handler: () => ({
+          error: {
+            kind: "harness",
+            code: "harness.version.unsupported",
+            summary: "synthetic malformed evidence",
+            detail: { harness },
+          },
+        }),
+      };
+      const run = await invoke(command, ["synthetic", "--json"]);
+      expect(run.exit).toBe(1);
+      const envelope = JSON.parse(run.stdout) as {
+        readonly error: CommandResultError;
+        readonly detail?: Record<string, unknown>;
+      };
+      expect(envelope.error.code).toBe("harness.version.unsupported");
+      expect(envelope.error.remediationHint.length).toBeGreaterThan(0);
+      expect(envelope.detail).toBeUndefined();
+    }
+  });
+
+  test("a non-harness failure carries no harness member", async () => {
+    const command: CommandDefinition = {
+      handler: () => ({
+        error: {
+          kind: "harness",
+          code: "harness.session.unknown",
+          summary: "no such session",
+          detail: { holder: "lane-2" },
+        },
+      }),
+    };
+    const run = await invoke(command, ["synthetic", "--json"]);
+    const envelope = JSON.parse(run.stdout) as {
+      readonly detail?: { readonly holder?: string; readonly harness?: unknown };
+    };
+    expect(envelope.detail?.holder).toBe("lane-2");
+    expect(envelope.detail?.harness).toBeUndefined();
+  });
+});

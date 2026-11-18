@@ -17,6 +17,7 @@ import {
   ATTEMPTS_LIMIT_PATTERN,
   ATTEMPTS_MAX_LIMIT,
   ATTEMPTS_MIN_LIMIT,
+  type CommandFailureHarnessDetail,
   DELIVERY_RESULT_TAXONOMY,
   type DeliveryResultToken,
   type DispatchAttemptsData,
@@ -55,6 +56,12 @@ export type DispatchRuntimeFailure = {
   readonly eligibility?: readonly string[];
   /** The narrow trusted-refusal marker; set only for `config.credential.missing`. */
   readonly trustedRefusal?: true;
+  /**
+   * The four pre-session harness facts (TDR-0033); populated only on the four
+   * harness refusals and never on the reused `provider.profile.invalid`
+   * unassigned-agent refusal, whose facts ride the bounded summary.
+   */
+  readonly harness?: CommandFailureHarnessDetail;
 };
 
 /**
@@ -67,6 +74,16 @@ export type DispatchRuntimeFailure = {
 const runtimeFailureOf = (
   error: DispatchRuntimeFailure,
 ): { readonly error: DispatchRuntimeFailure | Record<string, unknown> } => {
+  if (error.harness !== undefined) {
+    return {
+      error: {
+        kind: error.kind,
+        code: error.code,
+        ...(error.summary === undefined ? {} : { summary: error.summary }),
+        detail: { harness: { ...error.harness } },
+      },
+    };
+  }
   if (error.holder !== undefined) {
     return {
       error: {
