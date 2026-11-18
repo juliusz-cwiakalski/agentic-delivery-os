@@ -6,7 +6,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-18T18:54:05.715Z }
   specification: { started: null, completed: 2026-11-18T21:33:40.941Z }
   test_planning: { started: null, completed: 2026-11-18T21:33:48.934Z }
-  delivery_planning: { started: null, completed: 2026-11-18T21:33:56.261Z }
+  delivery_planning: { started: null, completed: 2026-11-18T22:34:01.718Z }
   dor_check: { started: null, completed: 2026-11-18T21:41:20.473Z }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -381,12 +381,48 @@ notes:
       none changes a criterion."
     type: decision
     date: "2026-11-18"
-  - text: "Plan phase 1 records its part of the ONE two-phase file obligation
-      (plan obligation 1.2b; spec v1.5 N1b; test plan TC-SYNC-002 and M110):
+  - text: "Plan phase 1 records its part of the ONE two-phase file obligation (plan
+      obligation 1.2b; spec v1.5 N1b; test plan TC-SYNC-002 and M110):
       `tests/behaviour/ceremony-nonregression.test.ts` carries the seven-site
       error-table total in this phase's identity commit (149 -> 152) and its
       `CLOSEOUT_STEP_IDS` step count in the closeout-step commit (12 -> 13, plan
       phase 5). Moving the file in only one of the two phases is an escalation
       trigger, and this phase must not touch the step count."
+    type: info
+    date: "2026-11-18"
+  - text: "Plan phase 1 complete (the additive contract surface and its synchronized
+      pins): the normalized delivery-request `title` as one additive optional
+      field, the two `merge` rows `merge.sync-required` (closed reason pair
+      `dirty` | `behind-unconfirmed`) and `merge.mergeability-unknown`, the
+      closed attribution pair `recorded` | `probe`, and the sixth documented
+      pm-notes lint row `lint.phases.divergent`, with the identity total 149 ->
+      152 on both tables, all SEVEN pin sites, the legacy-token extension
+      (`149`, `148` and `+115` join the no-leftover scan; `151` is the
+      delivered-row pin) and the two identity-count pages moved in ONE commit.
+      `PM_NOTES_LINT_CODES` stays five. The three `Proposed` decision records
+      landed unedited (ADR-0012, TDR-0040, ODR-0005); the committed index needed
+      no touch. Commit 0a3dc3ff2c426f28467ab0409258fce6917eed33, subject
+      `chore(GH-349): update
+      doc/changes/2026-11/2026-11-18--GH-349--merge-clo...`, messageSource
+      `template`, no lifecycle transition. Gates, all exit 0 with
+      TMPDIR=$PWD/tmp/tmpdir: the four phase-1 suite commands; G2 `bun test
+      tests/structure` (1679 pass); G3 `bun test tests/checks` (1211 pass); G6
+      `pnpm typecheck`; G9 `git diff --check`; G12 `pnpm check` (10777 pass, 4
+      skip, 0 fail). SWEEP GAP reported to the PM: six enforcing pins outside
+      the plan's phase-1 scope had to move with their set. Four were undeclared
+      and now appear as `scopeDrift` in the commit envelope:
+      `scripts/checks/error-table-sync.ts` (its `RESERVED_TWO_SEGMENT_CODES`
+      mirror gains the two merge codes, so the allowlist moves 65 -> 67 and the
+      file is NOT read-only as the scope note assumed),
+      `tests/fixtures/events/error-table-baseline.json` (captured row baseline
+      +3), `tests/structure/supervision-error-family.test.ts` (its positional
+      prefix oracle re-expressed as presence plus delivered relative order) and
+      `tests/types/delivery-thread.type-test.ts` (the exact `DeliveryRequest`
+      key set gains `title`). Two were already declared by later phases and
+      moved here because phase 1 lands the rows: phase 2's
+      `tests/structure/merge-classification-conformance.test.ts` (merge rows 7
+      -> 9) and phase 5's `tests/structure/reference-behavior.test.ts` (the
+      `DeliveryRequest` field-set probe gains `title`). No pin was loosened,
+      wildcarded, or dropped."
     type: info
     date: "2026-11-18"

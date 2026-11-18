@@ -214,16 +214,64 @@
 #   phase does not touch it, `plan diff` reports at most an ADVISORY
 #   `undeclared-missing` for it, never a validation failure.
 #
+# PHASE 1 AS DELIVERED (commit 0a3dc3ff — a DECLARATION CORRECTION, not a
+#   re-plan; no requirement, criterion, gate or phase ordering changes):
+#   Phase 1 shipped as `0a3dc3ff` (28 files) with every gate green, including
+#   `pnpm check` at 10777 passing. Its commit envelope reported `scopeDrift` for
+#   FOUR paths the plan had not declared, and two more paths the plan had declared
+#   only for LATER phases also had to move — a SIX-PIN SWEEP GAP in the additive
+#   contract surface: the coder correctly edited every file the three rows and the
+#   new field actually move. The four are now declared in phase 1, together with
+#   the reason each one had to move:
+#     - `scripts/checks/error-table-sync.ts` — its `RESERVED_TWO_SEGMENT_CODES`
+#       MIRROR gains the two additive two-segment `merge` codes (allowlist
+#       65→67). The plan's earlier claim that `scripts/checks/**` is never
+#       editable was WRONG; the SCOPE DECLARATION RULE carries the correction.
+#     - `tests/fixtures/events/error-table-baseline.json` — the captured baseline
+#       gains the three additive rows.
+#     - `tests/structure/supervision-error-family.test.ts` — its positional
+#       PREFIX oracle is re-expressed as PRESENCE + delivered relative order (146
+#       captured rows still present and byte-identical; the live filtered set
+#       grows 146→149).
+#     - `tests/types/delivery-thread.type-test.ts` — the exact `DeliveryRequest`
+#       key-set probe gains `title`.
+#   TWO DECLARED-BY-A-LATER-PHASE FILES MOVED EARLY IN PHASE 1, deliberately,
+#   because phase 1 lands the rows and the field they pin:
+#     - `tests/structure/merge-classification-conformance.test.ts` (declared
+#       phase 2) — its hard-coded merge-row array had to gain the two rows.
+#     - `tests/structure/reference-behavior.test.ts` (declared phase 5) — its
+#       exact `DeliveryRequest` key-set table had to gain `title`.
+#   THE LATER PHASES MUST NOT RE-EDIT EITHER FILE unless their own delta requires
+#   a further change (phase 2's family/totality proof, phase 5's ten-row transport
+#   set-equality). Consequence for `plan diff`, stated so nobody reads it as drift:
+#   both paths classify `within` at phase 1, and the later phase may show an
+#   ADVISORY `undeclared-missing` for a file it declares but no longer edits —
+#   exactly the advisory pattern the SCOPE DECLARATION RULE already accepts.
+#   NOTHING ELSE MOVES IN THIS CORRECTION: the AC vector stays [0, 15, 4, 7, 9, 6,
+#   5] (46), the TC vector stays [2, 23, 7, 9, 20, 12, 14] (87), the
+#   `ADAPTER_OPERATIONS` pin count stays EIGHTEEN, the mutation register stays at
+#   116, and every other phase's scope is byte-unchanged. The DoR verdict stands.
+#
 # SCOPE DECLARATION RULE (binding on every phase; inherited from GH-338/GH-339):
 #   A phase declares every path whose content it AUTHORS or EDITS — that is what
 #   gives the commit primitive staging authority. A file that is only RE-RUN as a
 #   regression control (the delivered read-only suites, the topology pin
-#   `tests/structure/ci-topology-pin.test.ts`, `scripts/checks/**`,
-#   `.github/workflows/**`, `tests/boundaries/**`, `packages/adapters/src/git/merge.ts`)
-#   is NOT declared: declaring it would only produce an advisory `plan diff`
-#   `undeclared-missing` for a file that needs no edit. Every file the test plan
-#   names as an assertion site to CREATE or EXTEND is declared by the phase that
-#   owns that half of the case.
+#   `tests/structure/ci-topology-pin.test.ts`, `.github/workflows/**`,
+#   `tests/boundaries/**`, `packages/adapters/src/git/merge.ts`) is NOT declared:
+#   declaring it would only produce an advisory `plan diff` `undeclared-missing`
+#   for a file that needs no edit. Every file the test plan names as an assertion
+#   site to CREATE or EXTEND is declared by the phase that owns that half of the
+#   case.
+#   **`scripts/checks/**` IS NOT BLANKET READ-ONLY** (corrected after phase 1 as
+#   delivered, commit 0a3dc3ff): a repository-invariant script that MIRRORS a
+#   pinned machine declaration moves with it and MUST be declared. The concrete
+#   case is `scripts/checks/error-table-sync.ts`, whose `RESERVED_TWO_SEGMENT_CODES`
+#   is a copy of the machine allowlist — the two additive two-segment `merge` rows
+#   move it 65→67, and phase 1 declares the file. An earlier revision of this rule
+#   listed `scripts/checks/**` among the never-declared control-only paths, and
+#   that claim was WRONG: it produced `scopeDrift` in phase 1's commit. Only the
+#   scripts that merely RE-RUN a check are control-only; a script carrying a
+#   mirrored pin is an editable surface.
 #   `tests/behaviour/providers/**` IS NOT WHOLLY READ-ONLY (spec v1.5 M2, narrowed
 #   to FOUR items by spec v1.6 B1c): exactly FOUR provider-path items move with
 #   the tenth operation — `github-cli-transport`, `github-landing`,
@@ -1256,6 +1304,26 @@ phases:
         - tests/structure/port-contract-inventory.test.ts
         - tests/types/delivery-request-title.type-test.ts
         - tests/structure/content-inventory.test.ts
+        # PHASE-1-AS-DELIVERED PINS (commit 0a3dc3ff; see the header's
+        # PHASE 1 AS DELIVERED note). The plan's sweep missed these four files and
+        # the commit surfaced them as `scopeDrift`; they are declared here so the
+        # staging authority matches what phase 1 actually had to edit. No phase's
+        # scope or count changes — only phase 1's declaration is completed.
+        #
+        # The sync check's MIRROR ALLOWLIST gains the two merge codes (65→67):
+        # `RESERVED_TWO_SEGMENT_CODES` is a copy of the machine allowlist, so a
+        # new two-segment identity moves BOTH sides (the plan's earlier claim that
+        # `scripts/checks/**` never needs an edit was WRONG — see the SCOPE
+        # DECLARATION RULE's corrected note).
+        - scripts/checks/error-table-sync.ts
+        # The captured error-table baseline gains the three additive rows.
+        - tests/fixtures/events/error-table-baseline.json
+        # The positional PREFIX oracle over the baseline is re-expressed as
+        # presence + delivered relative order (146 captured rows still present and
+        # byte-identical; the live filtered set grows 146→149).
+        - tests/structure/supervision-error-family.test.ts
+        # The exact `DeliveryRequest` key-set probe gains `title`.
+        - tests/types/delivery-thread.type-test.ts
         # Untracked at plan time (COMMIT-BOUNDARY REALITY); `Proposed`, STAGED,
         # and never edited, re-authored, or accepted by any phase.
         - doc/decisions/ADR-0012-provider-side-merge-landing-path.md
@@ -1508,6 +1576,12 @@ phases:
         # TC-F1-014: the eight-changed / eight-green split, asserted both ways.
         - tests/structure/merge-suite-obligations.test.ts
         - tests/structure/merge-refusal-rows.test.ts
+        # MOVED EARLY IN PHASE 1 (commit 0a3dc3ff): its hard-coded merge-row
+        # array had to gain the two rows phase 1 declares, so phase 1 edited it
+        # while this phase owned the declaration. Deliberate, and this phase must
+        # NOT re-edit it unless its own delta (the eight-row/family proof) requires
+        # a further change; `plan diff` shows it `within` at phase 1 and may show
+        # an advisory `undeclared-missing` here.
         - tests/structure/merge-classification-conformance.test.ts
         - tests/structure/merge-contract.test.ts
         - tests/types/merge-landing.type-test.ts
@@ -2102,6 +2176,12 @@ phases:
         # supported-operations array at `:192-202` and the provider client's
         # `Object.keys(client).sort()` method array at `:226-241` (P4).
         - tests/structure/provider-surface.test.ts
+        # MOVED EARLY IN PHASE 1 (commit 0a3dc3ff): its exact `DeliveryRequest`
+        # key-set table had to gain `title`, so phase 1 edited it while this phase
+        # owned the declaration. Deliberate; this phase must NOT re-edit it unless
+        # its own delta (the transport-table set-equality at ten rows) requires a
+        # further change, and `plan diff` will show it `within` at phase 1 and may
+        # show an advisory `undeclared-missing` here.
         - tests/structure/reference-behavior.test.ts
         - tests/fixtures/ports/capabilities.ts
         - tests/fixtures/providers/conformance/control/column.ts
