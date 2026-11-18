@@ -6,7 +6,7 @@ phases:
   clarify_scope: { started: null, completed: 2026-11-17T22:09:42.800Z }
   specification: { started: null, completed: 2026-11-18T04:15:07.336Z }
   test_planning: { started: null, completed: 2026-11-18T04:49:25.260Z }
-  delivery_planning: { started: null, completed: 2026-11-18T04:49:37.884Z }
+  delivery_planning: { started: null, completed: 2026-11-18T05:10:53.104Z }
   dor_check: { started: null, completed: 2026-11-17T23:57:19.340Z }
   delivery: { started: null, completed: 2026-11-18T01:25:37.139Z }
   system_spec_update: { started: null, completed: 2026-11-18T03:37:47.599Z }
@@ -18,6 +18,14 @@ decisions: []
 open_questions: []
 blockers: []
 notes:
+  - text: "Review iteration 4: one low finding (F-23) — plan SOURCES and
+      verificationBatch still pinned test plan v1.5, the DEC coverage line read
+      DEC-1..DEC-17, and the documentation pass carried no plan revision bump.
+      Fixed in plan revision 1.6 (pins to test plan v1.6, DEC-1..DEC-19,
+      explicit 1.6 amendment note); no phase, scope, case, or criterion moved.
+      All review findings F-1..F-22 are closed and every gate is green."
+    type: "retro"
+    date: "2026-11-18"
   - text: "REM-8 complete (F-19). Commit 4b295dac. One permanent cell added to
       tests/behaviour/repos-handover-gate.test.ts (TC-ENGINE-021 step 9; no
       production change), seeded only through appendDispatchHandover against the

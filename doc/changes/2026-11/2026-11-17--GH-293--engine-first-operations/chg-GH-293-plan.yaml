@@ -1,4 +1,4 @@
-# GH-293 delivery plan — machine-readable document (delivery.plan.v1), revision 1.5
+# GH-293 delivery plan — machine-readable document (delivery.plan.v1), revision 1.6
 # (2026-11-18; review iteration 2 — the planning corpus' twelfth scope closure,
 # one declared remediation entry (REM-8), and an EOF hygiene fix. Revision 1.4
 # carried review iteration 1's scope closure plus the declared remediation
@@ -12,6 +12,12 @@
 # Canonical plan artifact: this YAML document is the only plan file for the
 # change. `plan validate`, `plan diff`, `plan overlap`, and `lint plan` read it
 # directly.
+#
+# REVISION 1.6 AMENDMENT (2026-11-18) — delivery review iteration 3 residue
+# (`code-review/review-iter-3.yaml` and `review-iter-4.yaml`, finding F-23).
+# Documentation only: SOURCES and the verificationBatch note now pin test plan
+# v1.6, the DEC coverage line reads DEC-1..DEC-19, and every "test plan v1.5"
+# reference in this plan is corrected. No phase, scope, case, or criterion moves.
 #
 # REVISION 1.5 AMENDMENT (2026-11-18) — delivery review iteration 2
 # (`code-review/review-iter-2.yaml`, status FAIL: 1 medium, 2 low, 2 info;
@@ -58,10 +64,10 @@
 #     source of truth, payload unchanged — and DEC-19 is restated beside it.
 #     Phase 5's objective and Phase 6's reconciliation bullet are
 #     worded to that amended shape; no other AC, NFR, decision, key, anchor, phase
-#     scope, or case expectation moves. Test plan v1.5 carries the matching F-17
+#     scope, or case expectation moves. Test plan v1.6 carries the matching F-17
 #     correction and adds no case, so the 46-case map stands.
 #   Two findings carry no remediation entry: F-17 is resolved in specification
-#   (v1.6) and the test plan (v1.5) and needs no plan scope, and F-20 is the
+#   (v1.6) and the test plan (v1.6) and needs no plan scope, and F-20 is the
 #   reviewer's explicit no-action informational note (the configuration-code
 #   tuple's `as const satisfies` pin and `configFailure`'s literal `kind` are safe
 #   today; "no change required for this change").
@@ -255,12 +261,12 @@
 #                its `baseRef` (the payload carries no base field), with DEC-19
 #                restated beside it. No other criterion, requirement, decision, key,
 #                or anchor moves.
-#   - Tests:     ./chg-GH-293-test-plan.md (v1.5, 46 cases TC-ENGINE-001..095 in
+#   - Tests:     ./chg-GH-293-test-plan.md (v1.6, 46 cases TC-ENGINE-001..095 in
 #                eight blocks — the handover block is `010`..`017` because
 #                TC-ENGINE-017 is the revert noop over an unreadable or torn handover
 #                ledger, AC-F2-3 therefore rests on five cases (`010`, `011`, `014`,
 #                `016`, `017`), and TC-ENGINE-065 is the bounded lifecycle-prose
-#                case; 14/14 AC coverage; DEC-1..DEC-17 coverage; TDR-0031 clause
+#                case; 14/14 AC coverage; DEC-1..DEC-19 coverage; TDR-0031 clause
 #                coverage D1..D11; §3.5 substitute assertions AMB-ENG-1..5,
 #                BYTE-ENG-1, TRUNC-ENG-1, SCOPE-ENG-1; §3.6 the spec §17.1
 #                DoD-1..DoD-10 trace; §4 layers; §7 automation map with the planned
@@ -1789,7 +1795,7 @@ remediation:
       recorded as a pass and no acceptance criterion or DoD item is marked met on a
       red row. REM-8's new cell runs inside the `repos-handover-gate` row above; the
       iteration-2 outcomes that are not review-fix work (F-17 in spec v1.6 and test
-      plan v1.5, F-18 and F-21 in this plan revision) are verified by their owning
+      plan v1.6, F-18 and F-21 in this plan revision) are verified by their owning
       passes, not by this batch.
     steps:
       - "bun test tests/behaviour/dispatch-clean-accrual.test.ts"
