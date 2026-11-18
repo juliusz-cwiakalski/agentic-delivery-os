@@ -11,7 +11,7 @@ phases:
   delivery: { started: null, completed: 2026-11-18T15:06:36.221Z }
   system_spec_update: { started: null, completed: 2026-11-18T15:24:57.132Z }
   review_fix: { started: null, completed: 2026-11-18T18:12:43.982Z }
-  quality_gates: { started: null, completed: null }
+  quality_gates: { started: null, completed: 2026-11-18T18:35:08.879Z }
   dod_check: { started: null, completed: null }
   pr_creation: { started: null, completed: null }
 decisions:
@@ -537,6 +537,18 @@ notes:
       form; the spec revision log says no DEC count change while adding DEC-18;
       F-11 (edge.ts projections) and F-12 carry-overs remain unrecorded in
       code."
+    type: info
+    date: "2026-11-18"
+  - text: "Phase-9 quality gates (authoritative run, TMPDIR=$PWD/tmp/tmpdir): `pnpm
+      check` PASS exit 0 — lint 2952 files (109 warnings, 0 errors),
+      format:check 2806 files, typecheck 6 packages plus tests/types, test 10573
+      pass / 4 skip / 0 fail across 1349 files, boundaries (458 modules), memory
+      (3 records / 8 areas / 0 errors), prompt conformance (5 prompts),
+      help-guide coverage, exports parity (5 publishables). Range commit gate
+      `./scripts/lint-commit-range.sh --base origin/main-tools`: VERDICT PASS,
+      42 commits in range, 0 offending, 0 distinct rules hit, remediation mode
+      none named, commitlint binary node_modules/.bin/commitlint with origin
+      repository-local. Doc distribution: OK, 96 in-scope docs, no drift."
     type: info
     date: "2026-11-18"
   - text: "Phase 9 gate result as it actually ran (the finding was that no result
