@@ -56,6 +56,25 @@ decisions:
 open_questions: []
 blockers: []
 notes:
+  - text: "PR created: https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/344
+      (base main-tools, head feat/GH-338/github-adapter-completion at ba95f8ca, title
+      'feat(GH-338): complete the GitHub reference adapter', OPEN, not draft, no
+      auto-merge). CI run 44263517194: 21 checks pass; 2 fail (TS tests, TS
+      aggregate check) from one root cause — TC-BIN-002 asserts byte-identical
+      stderr for `status --json` with an ambient PATH, and the CI runner's `gh` is
+      outside GITHUB_CLI_VERSION_WINDOW (max 2.99.99), so composition emits a
+      provider.cli.version-unsupported degradation line the baseline lacks;
+      TC-BIN-084 half (b) fails as a consequence. This is a real hermeticity
+      defect introduced by the change (review-iter-2 note 8 upgraded from low to
+      gate-blocking), fixable by pinning PATH in the two GH-320 suites the way
+      install-launcher-installer.test.ts already does. Also: the PR is CONFLICTING
+      because main-tools advanced to 3ea2aec9 (GH-293, PR #343) after our merge-base
+      1250d789; four doc files conflict and main-tools already carries
+      TDR-0031-engine-first-evaluation-surfaces.md, so this change's four decision
+      records must be renumbered from 0031-0034 to 0032-0035 with every reference
+      updated."
+    type: info
+    date: "2026-11-18"
   - text: "DoD check PASS. All nine prerequisite lifecycle phases are recorded
       complete (clarify_scope, specification, test_planning, delivery_planning,
       dor_check, delivery, system_spec_update, review_fix, quality_gates). Plan
