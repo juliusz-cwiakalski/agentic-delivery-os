@@ -735,6 +735,22 @@
 #       every other assertion (exactly one added changeset when one is needed,
 #       pre-existing byte-identity, the five-package mutation controls) is
 #       untouched.
+#   (m) DISCOVERED IN LIFECYCLE PHASE 7 (system_spec_update) — two current-truth
+#       pages that the change made INCOMPLETE were not in phase 6's declared scope,
+#       so the commit primitive reported them as scope drift. They are now declared
+#       targets of the same documentation-reconciliation obligation:
+#         - `doc/spec/nonfunctional.md` — NFR-TOOL-007 now states the parity basis,
+#           the taxonomy's non-identity posture, the 18-cell family accounting, the
+#           double's determinism and the participation contract.
+#         - `doc/spec/features/feature-monorepo-scaffold-toolchain.md` — the
+#           conformance QA row now names the parity gate and the stateful double.
+#       This is a DISCOVERED-SCOPE entry, not a widening of the change's product
+#       surface: both edits are DOCUMENTATION ONLY. No contract, code, artifact,
+#       workflow, error identity or topology changes, and no AC or TC is added,
+#       moved or restated (34/34 ACs, 72/72 TCs unchanged). The two pages carry
+#       conformance statements the change made stale, which is exactly what
+#       lifecycle phase 7 exists to reconcile; phase 6 declares them so their
+#       reconciliation is stageable rather than drift.
 #
 # DOC RECONCILIATION HANDOFF (lifecycle phase 7, @doc-syncer; the FILES are
 #   declared by phase 6 for STAGING ONLY — this plan authors none of them):
@@ -1958,6 +1974,13 @@ phases:
         - doc/spec/features/feature-result-contract.md
         - doc/overview/glossary.md
         - doc/00-index.md
+        # DISCOVERED IN LIFECYCLE PHASE 7 (discovery (m)): two current-truth
+        # pages carry conformance statements this change made incomplete. Both are
+        # DOCUMENTATION-ONLY reconciliation targets landed under the same staging
+        # obligation — no contract, code, artifact or topology change, and no
+        # widening of the product surface.
+        - doc/spec/nonfunctional.md
+        - doc/spec/features/feature-monorepo-scaffold-toolchain.md
       folders:
         - doc/changes/2026-11/2026-11-18--GH-339--adapter-conformance-parity
     doneArtifacts:
