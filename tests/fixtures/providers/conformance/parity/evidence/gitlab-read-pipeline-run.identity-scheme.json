@@ -1,0 +1,8 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "differenceId": "gitlab-read-pipeline-run",
+  "class": "identity-scheme",
+  "referenceValue": "composite-check-run-identity",
+  "adapterValue": "bare-pipeline-id",
+  "reproduces": true
+}

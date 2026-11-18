@@ -56,6 +56,32 @@ export {
 } from "./conformance/harness.js";
 export type { MockTenantTransport } from "./conformance/mock-tenant.js";
 export { createMockTenantTransport, decodeMockTenant } from "./conformance/mock-tenant.js";
+export type {
+  ParityCell,
+  ParityCellEntry,
+  ParityCellKind,
+  ParityClauseId,
+  ParityDifferenceClass,
+  ParityEvidence,
+  ParityGateInput,
+  ParityMatrix,
+  ParityMatrixColumn,
+  ParityObservation,
+  ParityObservationRecord,
+  ParityObservationSet,
+  ParityRegisterEntry,
+  ParityViolation,
+} from "./conformance/parity.js";
+export {
+  buildParityMatrix,
+  PARITY_CELL_KINDS,
+  PARITY_CLAUSE_IDS,
+  PARITY_DETAIL_MAX_CHARS,
+  PARITY_DIFFERENCE_CLASSES,
+  PARITY_MATRIX,
+  parityViolations,
+  renderParityViolation,
+} from "./conformance/parity.js";
 export { runConformance } from "./conformance/runner.js";
 export type {
   TrackerClassification,

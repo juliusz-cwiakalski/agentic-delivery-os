@@ -2304,6 +2304,16 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "harnessConformanceViolations",
   ],
   "testkit/src/conformance/mock-tenant.ts": ["createMockTenantTransport", "decodeMockTenant"],
+  "testkit/src/conformance/parity.ts": [
+    "buildParityMatrix",
+    "PARITY_CELL_KINDS",
+    "PARITY_CLAUSE_IDS",
+    "PARITY_DETAIL_MAX_CHARS",
+    "PARITY_DIFFERENCE_CLASSES",
+    "PARITY_MATRIX",
+    "parityViolations",
+    "renderParityViolation",
+  ],
   "testkit/src/conformance/runner.ts": ["runConformance"],
   "testkit/src/conformance/tracker-error-taxonomy.ts": [
     "classifyTrackerFailure",

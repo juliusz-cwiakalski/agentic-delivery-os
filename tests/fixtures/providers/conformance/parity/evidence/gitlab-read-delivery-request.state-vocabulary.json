@@ -1,0 +1,8 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "differenceId": "gitlab-read-delivery-request",
+  "class": "state-vocabulary",
+  "referenceValue": "review-state-resolver+unknown-decision-fallback",
+  "adapterValue": "merge-status-table+unknown-fallback",
+  "reproduces": true
+}

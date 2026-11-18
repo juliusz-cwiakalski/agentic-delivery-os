@@ -429,6 +429,7 @@
     "src/conformance/flows.ts",
     "src/conformance/harness.ts",
     "src/conformance/mock-tenant.ts",
+    "src/conformance/parity.ts",
     "src/conformance/runner.ts",
     "src/conformance/tracker-error-taxonomy.ts",
     "src/conformance/types.ts",

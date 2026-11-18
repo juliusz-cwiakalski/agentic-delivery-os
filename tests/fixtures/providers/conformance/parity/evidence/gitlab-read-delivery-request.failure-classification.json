@@ -1,0 +1,8 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-18",
+  "differenceId": "gitlab-read-delivery-request",
+  "class": "failure-classification",
+  "referenceValue": "not-observable:no-family-on-reference",
+  "adapterValue": "tracker.transport.failed",
+  "reproduces": true
+}
