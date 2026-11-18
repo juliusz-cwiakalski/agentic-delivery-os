@@ -43,18 +43,19 @@ set instead of waiting for M3 to close.
 | Stage | Story | Ticket | Depends on |
 |---|---|---|---|
 | F0 | Installable, versioned binary | GH-346 (M4-S1) | — |
-| F1 | Dispatch parity (one command replaces the lane) | GH-347 (M4-S9) | F0, M3-S1 |
+| F1a | Dispatch core parity (durable lane, resume, admission, classifier) | GH-347 (M4-S9) | F0, M3-S1 |
+| F1b | Dispatch operator surface (status, log, is-delivering, last-message) | GH-354 (M4-S12) | F1a |
 | F2 | Provider policy: quota, peak, cost routing | GH-350 (M4-S4) | F0, M3-S1 |
 | F3 | CEO loop supervision inside jaiship | GH-348 (M4-S10) | F1 |
 | F4 | Merge, closeout, queue repair | GH-349 (M4-S11) | F0 |
 | F5 | Agent prompts on Jaiship primitives | GH-351 (M4-S7) | F1, F2, F3, F4 |
 | F6 | Jaiship-only dogfood, thin wrappers | GH-352 (M4-S8) | F1-F5 |
 
-F1 and F2 both sit on the harness port (M3-S1) because both need per-spawn
+F1a and F2 both sit on the harness port (M3-S1) because both need per-spawn
 resolution: F1 for supervision, F2 for provider/model injection. F3 and F4 are
 disjoint surfaces and may run in parallel once F0 and F1 are settled.
 
-## F1 parity contract
+## F1a parity contract
 
 The dispatch result taxonomy is the contract the loop and the classifier
 already depend on. The parity battery must replay all eleven classes:
@@ -94,12 +95,24 @@ exhaustion that reports success or PARTIAL on unverified tracker state.
 - The milestone gate is amended for this period: flip work in M4 runs
   concurrently with the open M3 milestone, recorded here and in the M3 ranking.
 
+## F1 split rationale
+
+The parity analysis (comment on GH-347) separated the delivery-critical gaps
+(durable lane record, session capture and restore, resume over a recorded
+attempt, concurrency-safe admission, tracker retries with an honest
+`state-unverified`, kill/stuck handling, in-process restart, agent/title
+spawn args, `merged`-from-tracker-done and `partial`-from-artifacts class
+semantics) from the operator conveniences (`status`, `log`, `is-delivering`,
+`last-message`). Only the former gate a real jaiship-only delivery; the latter
+gate the F6 evidence window. The pre-iteration hook is retired rather than
+ported: provider policy (F2) replaces its purpose.
+
 ## Verification bar per stage
 
 | Stage | Bar |
 |---|---|
 | F0 | clean-profile install; dirty or mid-change repository still delivers; upgrade reversible; version+commit reported; worktree target refused |
-| F1 | eleven-class replay battery; two concurrent dispatches admit; resume over a pr-open attempt continues; poll exhaustion never reports success |
+| F1a | eleven-class replay battery; two concurrent dispatches admit; resume over a pr-open attempt continues; poll exhaustion never reports success |
 | F2 | policy simulation reproduces documented routing; a delivery runs with the hook and profiles disabled; spend attributable per dimension |
 | F3 | loop start/stop/status/log/reset parity; durable stop across restarts; single instance; stuck session restarted |
 | F4 | merge lands with crafted metadata without a platform CLI; DIRTY/BEHIND returns a typed sync-required result; closeout is idempotent |

@@ -25,7 +25,7 @@ created (after plan approval).
   state; scan fails on new old-namespace identifiers.
 - Depends on: none.
 
-### M4-S9 Dispatch parity — one command replaces the delivery lane
+### M4-S9 Dispatch core parity — durable lane, resume, admission, classifier
 - Goal: `dispatch` is a complete typed replacement for the shell lane.
 - Tasks: harness spawn; session capture/attach/resume; heartbeat and stuck
   detection; restart budget; eleven result classes; poll exhaustion fallback;
@@ -34,6 +34,16 @@ created (after plan approval).
   admit; poll exhaustion never reports success.
 - Depends on: M4-S1, M3-S1.
 - Ticket: GH-347 (milestone M4)
+
+### M4-S12 Dispatch operator surface
+- Goal: per-ref inspection without the shell lane.
+- Tasks: per-ref status (delivering, pid, session, stale); bounded per-ref log;
+  is-delivering query; last-message from the persisted transcript; persist
+  harness output per ref.
+- AC: the four queries answer for live, finished, and absent refs; the log is
+  bounded; last-message is the PM's final message; no shell script is read.
+- Depends on: M4-S9.
+- Ticket: GH-354 (milestone M4)
 
 ### M4-S10 CEO loop supervision inside jaiship
 - Goal: the outer loop is a jaiship command; the shell loop is not needed.
