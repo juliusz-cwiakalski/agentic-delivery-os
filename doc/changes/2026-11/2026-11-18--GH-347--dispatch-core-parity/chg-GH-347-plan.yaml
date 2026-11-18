@@ -9,7 +9,7 @@
 # the commit hash, and the gate result.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:     ./chg-GH-347-spec.md (v1.3; F-1..F-9; API-1..API-7;
+#   - Spec:     ./chg-GH-347-spec.md (v1.4; F-1..F-9; API-1..API-7;
 #               DM-1..DM-9; NFR-1..NFR-11; NG-1..NG-12; RSK-1..RSK-11;
 #               DEC-1..DEC-11; §6 flows 1–5; §7.1 in-scope list; §8.5 backward
 #               compatibility and the deliberate behaviour changes; §17 the 42
@@ -65,7 +65,7 @@
 # PLAN SHAPE: eight phases, all `kind: delivery` (each edits the repository and
 #   takes the default `repo:main-tools` lease), zero `planning` phases. A planning
 #   phase would declare no scope to compute and this change has no design work
-#   left: the spec is complete at v1.3, the test plan is complete, and the six
+#   left: the spec is complete at v1.4, the test plan is complete, and the six
 #   governing records are authored. `tier.phases` below lists the LIFECYCLE phase
 #   ids [1..11] (the ceremony tier engine's vocabulary), not this plan's eight
 #   phase ids; the two are different namespaces and the plan never renumbers the
@@ -182,12 +182,15 @@
 #            failure.
 #   Phase 4  Tracker retry ladder, the `pmNotes` artifact fact, and the total
 #            derivation order including tracker-done `merged`, artifact
-#            `partial`, the retired ledger no-work arm, arm-aware corroboration,
-#            and the shared-derivation consequence.
+#            `partial`, the retired ledger no-work arm, arm-aware corroboration
+#            across the one-shot path, the daemon path and the evidence-window
+#            gate, and the shared-derivation consequence.
 #   Phase 5  Stall termination and the in-process restart loop: `terminate` joins
 #            the closed operation set, capability declarations move, the engine
 #            decides TERM→KILL within the borrowed grace, the bounded loop
-#            restarts only stalls, and attempt/lane/restart cardinality holds.
+#            restarts only stalls, the restart-admission split keeps the loop's
+#            refusal and admits the operator resume, and attempt/lane/restart
+#            cardinality holds.
 #   Phase 6  Spawn identity, title, and lifecycle prompt: the production
 #            composition supplies `pm` and the binding, the adapter renders one
 #            `--agent`/`--model` and one fresh `--title`, and the prompt is the
@@ -208,7 +211,7 @@
 #   `--title`, and the prompt on a fresh spawn. Phase 8 is last because the
 #   aggregate gate and the doc reconciliation range over the assembled change.
 #
-#   FOUR INVARIANTS WOULD CROSS A PHASE BOUNDARY; EACH IS PLACED WHOLE AND THE
+#   FIVE INVARIANTS WOULD CROSS A PHASE BOUNDARY; EACH IS PLACED WHOLE AND THE
 #   REASON IS STATED (test plan §8.3's warning, honoured rather than papered
 #   over):
 #     (a) TC-LANE-003 and its AC-F1-2 are OWNED BY PHASE 5, not phase 3. The
@@ -220,15 +223,24 @@
 #         seeds it and phase 3's own AC-F1-3/TC-LANE-004 prove the append-failure
 #         disclosure). Keeping the case whole is preferred to splitting it; no
 #         AC is evidenced across the boundary.
-#     (b) AC-F2-1's "the loser appends no lane" clause is VACUOUS in phase 2
-#         (no lane writer is wired yet). The non-vacuous control is
-#         TC-LANE-002 in PHASE 3 ("every pre-session refusal appends no lane and
-#         no attempt"), run over the same admission refusals with the writer
-#         present. Phase 2 proves the load-bearing clauses (verdict, holder,
-#         exit, zero attempts, zero leases, no `fallback.internal`, no second
-#         claim); phase 3 closes the vacuity. This is the unavoidable
+#     (b) THE NO-LANE / NO-ATTEMPT / ZERO-RECORD CLAUSES OF THE PHASE-2
+#         ADMISSION ACs ARE VACUOUS IN PHASE 2. No lane writer and no
+#         refusal-adjacent append path is wired until phase 3, so the clauses
+#         "appends no lane" (AC-F2-1), "no attempt and no lane" (AC-F2-2) and
+#         "zero records" (AC-F2-4) are all trivially true at the phase-2
+#         boundary: nothing in the tree can append at all. The non-vacuous
+#         control for all three is TC-LANE-002 in PHASE 3 ("every pre-session
+#         refusal appends no lane and no attempt"), run over the SAME admission
+#         refusal table with the lane writer and the attempt writer present, plus
+#         the delivered `readDispatchAttempts` empty-history read asserted over a
+#         refused ref. Phase 2 therefore proves the load-bearing clauses
+#         (declared verdict, holder, exit, no `fallback.internal`, no second
+#         claim, the empty-history read) and explicitly disclaims the three
+#         vacuous ones; phase 3 closes the vacuity. This is the unavoidable
 #         consequence of the required admission-before-lane order and is stated
-#         rather than hidden.
+#         rather than hidden. No AC and no case changes owner: AC-F2-2 stays with
+#         phase 2 and AC-F2-4 with phase 2; the phase-3 control is a
+#         non-vacuity re-observation, not a second owner.
 #     (c) The `terminate` CONTRACT and its IMPLEMENTATION are split at the
 #         property level, each half proven by its own gate: phase 1 adds the
 #         OPTIONAL port member and result type (a port double without it stays
@@ -245,6 +257,23 @@
 #         from the delivered pm-notes classification (DM-3). Adding a required
 #         fact in phase 1 would break every artifact-facts constructor before the
 #         derivation can consume it; the vocabulary alone is inert and provable.
+#     (e) TC-RESUME-102 AND AC-F3-2 ARE OWNED BY PHASE 5, not phase 3. AC-F3-2's
+#         load-bearing clause is "the restart budget does not refuse an operator
+#         resume", and the refusal is decided in the operator-resume admission
+#         path in `packages/cli/src/edge.ts` (the `admitDispatchRestart` call at
+#         the lane branch), not in the resume resolution phase 3 builds. That
+#         path also carries the DELIVERED expectation
+#         `tests/behaviour/dispatch-restart-budget.test.ts` (TC-RESUME-002), which
+#         must be rewritten in the SAME commit that stops the refusal, and the
+#         rewrite's subject is the loop/restart-budget contract that phase 5
+#         owns. Phase 3 therefore implements the resume rules (recorded-lane
+#         resolution, no ordinal consumed, mode and fresh-spawn facts) and this
+#         plan drops AC-F3-2 from phase 3's acceptance list rather than claiming
+#         a clause it cannot make gate-green; the case stays WHOLE in phase 5
+#         (`tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts`,
+#         authored in phase 3 and extended by phase 5) instead of being split
+#         across the boundary. Every AC and every TC still has exactly one owner
+#         and the 42/50 totals are unchanged (see AC OWNERSHIP and the TC map).
 #
 # AC OWNERSHIP (42/42; exactly one owning phase each; 0 orphans, 0 double-owned).
 #   "Owning phase" = the phase whose commit lands the case(s) that make the AC
@@ -256,10 +285,10 @@
 #   Phase 2 (5):  AC-F2-1 (ADMIT-001), AC-F2-2 (ADMIT-002),
 #                 AC-F2-3 (ADMIT-003/004), AC-F2-4 (ADMIT-005),
 #                 AC-F2-5 (ADMIT-006).
-#   Phase 3 (7):  AC-F1-1 (LANE-001/002), AC-F1-3 (LANE-004),
+#   Phase 3 (6):  AC-F1-1 (LANE-001/002), AC-F1-3 (LANE-004),
 #                 AC-F1-4 (LANE-005), AC-F3-1 (RESUME-101),
-#                 AC-F3-2 (RESUME-102), AC-F3-3 (RESUME-103),
-#                 AC-F3-4 (RESUME-104).
+#                 AC-F3-3 (RESUME-103), AC-F3-4 (RESUME-104). AC-F3-2 moves to
+#                 phase 5 (sequencing block (e)).
 #   Phase 4 (9):  AC-F4-1..AC-F4-4 (TRACKER-001..004), AC-F8-1 (DERIVE-001),
 #                 AC-F8-2 (DERIVE-002), AC-F8-3 (DERIVE-003/004),
 #                 AC-F8-4 (DERIVE-005), AC-F8-5 (DERIVE-006). The test plan also
@@ -267,11 +296,11 @@
 #                 AC-F8-5; those are the phase-7 daemon-path and 11-class
 #                 re-observations of the SAME shared derivation and are not the
 #                 sole evidence for any AC (see the TC map note).
-#   Phase 5 (12): AC-F1-2 (LANE-003), AC-F5-1 (TERM-001), AC-F5-2 (TERM-002),
-#                 AC-F5-3 (TERM-003/004 + LOOP-003), AC-F5-4 (TERM-005),
-#                 AC-F5-5 (TERM-006), AC-F6-1 (LOOP-001), AC-F6-2 (LOOP-002),
-#                 AC-F6-3 (LOOP-003), AC-F6-4 (LOOP-004), AC-F6-5 (LOOP-005),
-#                 AC-F6-6 (LOOP-006).
+#   Phase 5 (13): AC-F1-2 (LANE-003), AC-F3-2 (RESUME-102), AC-F5-1 (TERM-001),
+#                 AC-F5-2 (TERM-002), AC-F5-3 (TERM-003/004 + LOOP-003),
+#                 AC-F5-4 (TERM-005), AC-F5-5 (TERM-006), AC-F6-1 (LOOP-001),
+#                 AC-F6-2 (LOOP-002), AC-F6-3 (LOOP-003), AC-F6-4 (LOOP-004),
+#                 AC-F6-5 (LOOP-005), AC-F6-6 (LOOP-006).
 #   Phase 6 (4):  AC-F7-1..AC-F7-4 (SPAWN-001..004).
 #   Phase 7 (5):  AC-F9-1 (PARITY-001), AC-F9-2 (PARITY-002),
 #                 AC-F9-3 (PARITY-003), AC-F9-4 (SHELL-001),
@@ -279,48 +308,56 @@
 #   Phase 8 (0):  the release floor re-establishes evidence for the whole set; it
 #                 owns no AC and moves none. A reviewer who wants ownership to
 #                 move is asking for a plan revision, not a silent transfer.
-#   COUNT: 0 + 5 + 7 + 9 + 12 + 4 + 5 + 0 = 42.
+#   COUNT: 0 + 5 + 6 + 9 + 13 + 4 + 5 + 0 = 42.
 #   Per-feature reconciliation against spec §17: F-1 4 (3 in phase 3, 1 in
-#   phase 5), F-2 5 (phase 2), F-3 4 (phase 3), F-4 4 (phase 4), F-5 5
-#   (phase 5), F-6 6 (phase 5), F-7 4 (phase 6), F-8 5 (phase 4), F-9 5
-#   (phase 7) = 42.
+#   phase 5), F-2 5 (phase 2), F-3 4 (3 in phase 3, 1 in phase 5), F-4 4
+#   (phase 4), F-5 5 (phase 5), F-6 6 (phase 5), F-7 4 (phase 6), F-8 5
+#   (phase 4), F-9 5 (phase 7) = 42.
 #
 # TC -> PHASE MAP (50 ids; every id owned by exactly one phase — the phase whose
 #   commit lands the case together with the declaration that makes it green):
 #   Phase 1 (0)
 #   Phase 2 (6):   TC-ADMIT-001, TC-ADMIT-002, TC-ADMIT-003, TC-ADMIT-004,
 #                  TC-ADMIT-005, TC-ADMIT-006
-#   Phase 3 (8):   TC-LANE-001, TC-LANE-002, TC-LANE-004, TC-LANE-005 (4),
-#                  TC-RESUME-101, TC-RESUME-102, TC-RESUME-103, TC-RESUME-104 (4)
+#   Phase 3 (7):   TC-LANE-001, TC-LANE-002, TC-LANE-004, TC-LANE-005 (4),
+#                  TC-RESUME-101, TC-RESUME-103, TC-RESUME-104 (3)
 #   Phase 4 (10):  TC-TRACKER-001..004 (4), TC-DERIVE-001..006 (6)
-#   Phase 5 (13):  TC-LANE-003 (1), TC-TERM-001..006 (6), TC-LOOP-001..006 (6)
+#   Phase 5 (14):  TC-LANE-003 (1), TC-RESUME-102 (1), TC-TERM-001..006 (6),
+#                  TC-LOOP-001..006 (6)
 #   Phase 6 (4):   TC-SPAWN-001..004
 #   Phase 7 (9):   TC-PARITY-001..006 (6), TC-SHELL-001, TC-SHELL-002 (2),
 #                  TC-CONTRACT-001 (1)
 #   Phase 8 (0)
-#   COUNT: 0 + 6 + 8 + 10 + 13 + 4 + 9 + 0 = 50. 0 orphans (every id above), 0
+#   COUNT: 0 + 6 + 7 + 10 + 14 + 4 + 9 + 0 = 50. 0 orphans (every id above), 0
 #   double-owned (each id appears once), 0 unmapped (the eleven group totals
 #   LANE 5 + ADMIT 6 + RESUME 4 + TRACKER 4 + TERM 6 + LOOP 6 + SPAWN 4 +
 #   DERIVE 6 + PARITY 6 + SHELL 2 + CONTRACT 1 = 50).
 #   TCs DELIBERATELY OWNED BY THE PHASE THAT ALSO OWNS THEIR FIXTURE:
 #     - TC-ADMIT-001..006 ↔ `tests/fixtures/dispatch/parity/{harness,process-runner,
 #       interleave}.ts` (phase 2 authors them).
-#     - TC-LANE-001/002/004/005 and TC-RESUME-101..104 ↔
+#     - TC-LANE-001/002/004/005 and TC-RESUME-101/103/104 ↔
 #       `tests/fixtures/dispatch/parity/lane.ts` (phase 3 authors it).
 #     - TC-TRACKER-001..004 and TC-DERIVE-001..006 ↔
 #       `tests/fixtures/dispatch/parity/pm-notes.ts` plus the extended
 #       `tests/fixtures/dispatch/truth.ts` (phase 4 authors both).
-#     - TC-LANE-003, TC-TERM-001..006, TC-LOOP-001..006 ↔
+#     - TC-LANE-003, TC-RESUME-102, TC-TERM-001..006, TC-LOOP-001..006 ↔
 #       `tests/fixtures/dispatch/parity/terminate.ts` plus the extended
 #       `tests/fixtures/dispatch/harness.ts` (phase 5 authors both).
+#       TC-RESUME-102 additionally reads the phase-3 `parity/lane.ts` seeder and
+#       extends the phase-3 `dispatch-parity-lane-resume.test.ts`; both are
+#       re-run as read-only controls, never re-authored (see SPLIT-FILE NOTE 5).
 #     - TC-PARITY-001..006 ↔ `tests/fixtures/dispatch/parity/{evidence,seams}.ts`
-#       (phase 7 authors both; `harness.ts` is extended, not re-authored).
+#       (phase 7 authors both; `harness.ts` is extended, not re-authored). The
+#       whole-battery rows read the one case registry
+#       `tests/fixtures/dispatch/parity/cases.ts` (phase 7 authors it; see
+#       PARITY-COVERAGE MATRIX ALLOCATION).
 #   FIXTURE-FIRST RULE: the shared parity fixture family is authored
 #   INCREMENTALLY at first need, never as one battery-phase drop. That is why the
-#   eight `tests/fixtures/dispatch/parity/*` modules are split across phases 2, 3,
+#   nine `tests/fixtures/dispatch/parity/*` modules are split across phases 2, 3,
 #   4, 5, and 7 instead of all landing in phase 7: a case never depends on a
-#   fixture committed after it, and the battery phase authors only the two
-#   fixtures only it consumes.
+#   fixture committed after it, and the battery phase authors only the fixtures
+#   only it consumes (the class table, the seam manifest, and the case registry;
+#   the registry's entries reference builders authored in phases 2–6).
 #   SPLIT-FILE NOTE (a file touched by more than one phase; each id still has one
 #   owner):
 #     1. `packages/core/src/app/dispatch.ts` is edited in phases 1 (delay fact),
@@ -338,11 +375,22 @@
 #        is declared by phases 1, 3, 4, and 6 (phase 1 adds exported names to
 #        existing files, so only the allowance moves and the file set does not).
 #        Phase 7 declares neither: it adds no package module.
-#   TEST-PLAN DEVIATIONS (declared, not silent):
+#     5. `tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts` is
+#        AUTHORED in phase 3 (LANE-001/002/004/005, RESUME-101/103/104) and
+#        EXTENDED in phase 5 with TC-RESUME-102, whose budget-admission half can
+#        only be green once phase 5 stops the operator-resume refusal (sequencing
+#        block (e)). The phase-3 case set is unchanged by the extension; the
+#        phase-5 edit appends one case and rewrites nothing.
+#     6. `tests/behaviour/dispatch-token-closure.test.ts` is declared by phase 4
+#        (the DERIVE-006 arm/closure extension) and by phase 5 (the narrowed
+#        persisted-count restart arm). Each phase edits only its own rows.
+#
+# TEST-PLAN DEVIATIONS (declared, not silent):
 #     (a) §7.3 maps TC-LANE-003 to the lane/resume suite and TC-LANE-001..005 to
 #         phase 3 in the implied reading. Placement above moves ONLY TC-LANE-003
 #         (and AC-F1-2) to phase 5, because its scenario is a restarted
-#         iteration. Every other LANE and RESUME id stays where §7.3 puts it.
+#         iteration. Every other LANE id and TC-RESUME-101/103/104 stay where
+#         §7.3 puts them.
 #     (b) §7.4 says the 82-row mutation register is executed by the
 #         reviewer/fixer and is NOT committed as a permanent suite. The plan
 #         therefore carries NO mutation-harness phase: the register is allocated
@@ -355,6 +403,9 @@
 #         `shell: false` on both, the idempotent TERM→KILL starter kill). Phase 7
 #         declares the REAL path; the surface-existence assertion would otherwise
 #         fail closed. This is a reported correction, not an invented path.
+#     (d) TC-RESUME-102 (and AC-F3-2) is placed in phase 5, not phase 3, for the
+#         ordering reason stated in sequencing block (e). The case, its AC, and
+#         its assertions are unchanged; only the owning phase moves.
 #
 # MUTATION REGISTER ALLOCATION (§7.4, 82 rows; each row's owning case is named so
 #   no invariant is uncontrolled):
@@ -362,7 +413,8 @@
 #                                   TC-DERIVE-001, M8 → TC-DERIVE-003, M9 →
 #                                   TC-DERIVE-005, M11 → TC-TRACKER-002 (phase 4).
 #   M12..M21 (admission paths)    → TC-ADMIT-001..006 (phase 2).
-#   M22..M26 (resume rules)       → TC-RESUME-101..104 (phase 3).
+#   M22..M26 (resume rules)       → TC-RESUME-101/102/103/104 (phase 3 authors
+#                                   the suite; TC-RESUME-102 is phase 5's).
 #   M27..M33 (ladder bounds)      → TC-TRACKER-001..004 (phase 4).
 #   M34..M43 (terminate safety)   → TC-TERM-001..006 (phase 5).
 #   M44..M52 (loop decisions)     → TC-LOOP-001..006 (phase 5).
@@ -384,13 +436,47 @@
 #   S-terminate and S-loop (phase 5), S-spawn (phase 6), S-derive (phase 4, shared
 #   with the daemon path), S-exec (phase 7's guarded runner). No row may be
 #   satisfied by a seam reimplementation (TC-PARITY-002).
+#   THE WHOLE-BATTERY REGISTRY (finding 9): the eleven class rows are NOT the
+#   whole battery. TC-PARITY-003 ("two consecutive runs identical") and
+#   TC-SHELL-001 ("zero shell invocations across the battery") both need a
+#   runnable row list covering the classes PLUS race, resume, outage, loop,
+#   terminate and spawn, and no artifact declared one — which forced those two
+#   cases either to re-author seven suites' scenarios or to under-run. Phase 7
+#   therefore authors `tests/fixtures/dispatch/parity/cases.ts`, the SINGLE case
+#   registry: one entry per parity row, `{id, kind, scenario, seam, expected
+#   token, expected exit}` where `kind` is one of `class | race | resume |
+#   outage | loop | terminate | spawn` and `scenario` is a reference to the
+#   scenario BUILDER the owning suite already uses (imported from
+#   `parity/lane.ts`, `parity/pm-notes.ts`, `parity/terminate.ts`,
+#   `parity/interleave.ts`, `parity/harness.ts`, or `parity/evidence.ts`).
+#   `evidence.ts` stays the 11-class table (class, fixture inputs, seam, token,
+#   exit, mutation hooks, `PARITY_PROOF_BOUNDARY`, canonicalizer) and the
+#   registry's `class` rows point at it; the registry adds the six non-class
+#   rows. No scenario is expressed twice: the registry holds a reference, not a
+#   second description. Every dedicated suite consumes its registry entry rather
+#   than re-expressing the scenario, so a scenario change is one edit.
 #
-# PROOF BOUNDARY (spec Appendix C, NORMATIVE for phase 7): TC-PARITY-004 compares
-#   the fixture's `PARITY_PROOF_BOUNDARY` (eight proven ids, six not-proven ids in
-#   order) against spec Appendix C AND against the TEST PLAN's own §1.2 table —
-#   it reads `chg-GH-347-test-plan.md`, not a doc/spec page, so no documentation
-#   edit is needed for the drift check. A change to either side without the other
-#   fails by name (`proof boundary drift: item`).
+# PROOF BOUNDARY (spec Appendix C, NORMATIVE; F12-corrected): the boundary's
+#   machine-checked source is the PERMANENT fixture constant
+#   `PARITY_PROOF_BOUNDARY` in `tests/fixtures/dispatch/parity/evidence.ts`
+#   (eight proven ids, six not-proven ids, in order) plus the CURRENT-TRUTH page
+#   `doc/spec/features/feature-dispatch-engine.md`, which PUBLISHES the same
+#   list. Neither machine-checked source is a change artifact: the change folder
+#   is temporary and no suite may read it, and no suite may read the test plan
+#   either. SEQUENCING (explicit, so no gate is red waiting for a later one):
+#     (i)   DELIVERY PHASE 7 asserts the fixture constant: its internal shape,
+#           the eight/six membership and order, that every parity row's declared
+#           seam appears in the proven list, and that no row claims a not-proven
+#           surface. No page text is required for this assertion.
+#     (ii)  LIFECYCLE PHASE 7 (@doc-syncer) publishes the identical eight/six
+#           list on the current-truth page and the constant↔page equality is
+#           checked there (`proof boundary drift: item` names any divergence).
+#     (iii) PHASE 8's aggregate gate and the post-reconciliation doc guards run
+#           over the reconciled page; a page edit that drops or reorders an id
+#           fails that check by name.
+#   A change to the constant without the page (or the reverse) is a finding; the
+#   constant is copied FROM the spec's Appendix C at delivery time and becomes
+#   the permanent record once the page carries it.
 #
 # CODE-AREA / BOUNDARY RISKS (dependency-cruiser rules and pinned surfaces):
 #   - `packages/core/**` may NOT import `packages/adapters|cli|mcp|opencode/**`
@@ -434,7 +520,11 @@
 #     and arm-aware corroboration; expand the per-ref single-flight table with the
 #     atomic-claim and bounded-wait rules and the dispatch-vs-`queue claim`
 #     renewal difference; update the result-derivation bullets and the
-#     failure-token mapping; REPLACE the stale "the delivered session port exposes
+#     failure-token mapping; PUBLISH the parity proof boundary (the eight proven
+#     ids and the six not-proven ids, in the fixture's order) so the permanent
+#     `PARITY_PROOF_BOUNDARY` constant and this page are the two machine-checked
+#     sources of the boundary — no change artifact is; REPLACE the stale "the
+#     delivered session port exposes
 #     no kill operation" sentence (one-shot step 7).
 #   - doc/spec/features/feature-session-lifecycle-economics.md — REPLACE both
 #     stale "no kill operation" statements (the one-shot stall paragraph and the
@@ -558,12 +648,20 @@
 #   declared by the phase that owns the change, and every edit cites its clause —
 #   an assertion is UPDATED, never deleted, renamed, relaxed, or reordered):
 #   1. tests/behaviour/dispatch-restart-budget.test.ts — TC-RESUME-002 becomes
-#      TC-LOOP-006 (a persisted count at/above the bound no longer refuses
-#      admission; only a stall produces `max-restarts`). Clause: §8.5, AC-F6-6,
-#      DEC-5, R5. Phase 5.
-#   2. tests/behaviour/dispatch-resume-economics.test.ts — an operator resume is
-#      never budget-refused. Clause: AC-F3-2, DEC-3. Phase 3 (conditional; only
-#      the budget-refusal expectation moves).
+#      TC-LOOP-006: the case moves from "a persisted count at/above the bound
+#      refuses the operator resume" to "an admitted iteration at/above the bound
+#      runs once and only a stall produces `max-restarts`". Clause: §8.5, AC-F3-2,
+#      AC-F6-6, DEC-5, R5. Phase 5 (with the admission change in
+#      `packages/cli/src/edge.ts`).
+#   2. tests/behaviour/dispatch-resume-economics.test.ts — the unit row
+#      "restart admission refuses at the bound and never below it" (asserted over
+#      `admitDispatchRestart` with no caller scope supplied) becomes the CONTROL
+#      for the caller-scoped flag's default and is expected to stay GREEN
+#      UNCHANGED: the default keeps today's refusing behaviour, so only an
+#      explicit admitting caller admits. No command-level case in this file
+#      reaches the bound, so the operator-resume admission change does not move
+#      any of its assertions. Clause: AC-F3-2, AC-F6-6, DEC-5. Phase 5 (declared
+#      by phase 3 as a read-only re-run and by phase 5 as the default control).
 #   3. tests/behaviour/dispatch-truth-derivation.test.ts and
 #      tests/behaviour/dispatch-token-closure.test.ts — tracker-done `merged`
 #      first, artifact `partial`, the retired ledger no-work arm, the subsumed
@@ -572,8 +670,12 @@
 #   4. tests/behaviour/dispatch-comparison.test.ts,
 #      tests/behaviour/dispatch-gate-evidence.test.ts, and
 #      tests/conformance/dispatch/dispatch-fixture.test.ts — conditional: only a
-#      case whose fixture input relied on the retired ledger no-work arm moves,
-#      and it cites DEC-6. Phase 4.
+#      case whose fixture input relied on the retired ledger no-work arm or on the
+#      OLD token-level corroboration requirement for the two arm-aware tokens
+#      moves, and it cites AC-F8-1 / AC-F8-4 / DEC-6. The evidence-window gate
+#      STAYS TOKEN-LEVEL, so every delivered `dispatch-gate-evidence.test.ts`
+#      assertion is expected green unchanged; a moved assertion there is a
+#      finding, not a licence. Phase 4.
 #   5. tests/behaviour/dispatch-liveness.test.ts — a below-bound stall is now
 #      terminated and restarted, not "left to lane supervision". Clause: §8.5,
 #      DEC-4, DEC-5. Phase 5.
@@ -581,12 +683,24 @@
 #      terminate-capability assertion; the seven required members and the
 #      no-`kill`-alias assertion stay. Phase 5.
 #   7. tests/structure/dispatch-composition.test.ts — additive assertions for the
-#      two new seam mounts and the delay fact; nothing removed. Phases 3, 5.
+#      two new seam mounts, the delay fact, the restart-admission caller scope,
+#      and the peak-pause recovery's retained refusal; nothing removed.
+#      Phases 3, 5.
 #   8. tests/checks/dispatch-doc-conformance.test.ts — its required phrases are
 #      PRESERVED; phase 8 declares the page, lifecycle phase 7 adds text.
 #   9. tests/fixtures/queue/single-flight/harness.ts — `dispatchClaim` is rewired
 #      to the atomic seam; its assertion set in the delivered suite is unchanged.
 #      Phase 2.
+#  10. tests/behaviour/dispatch-token-closure.test.ts (PW-DERIV) — the delivered
+#      row "the restart-budget branch refuses a non-completed session at the
+#      bound" is NARROWED with the code it pins: a harness-reported timeout at the
+#      bound keeps `max-restarts` with the `dispatch.restart-budget-exceeded`
+#      identity and message (unchanged), while a clean session exit at the bound
+#      (a premature end, a tool failure, a non-zero exit) keeps its own classifier
+#      classification instead of being re-keyed. The completed-session exemption
+#      already asserted in the same test is unchanged. Clause: §8.5
+#      "Persisted-bound re-key narrowed", AC-F6-4, AC-F6-6, Appendix F(D), DEC-5.
+#      Phase 5.
 #
 # CONSTRAINTS BINDING ON EVERY PHASE (spec §7.2/§8.5; do not reshape at delivery):
 #   1.  The eleven tokens, projections, exits, attempt-record schema version,
@@ -675,6 +789,52 @@
 #       preserve them; no test is edited to accommodate a rewrite.
 #   (k) There is no `doc/documentation-profile.md` (engineering-repo default), so
 #       no `doc/business/**` area is created or touched.
+#   (l) THE RESTART BUDGET HAS THREE CALLERS, NOT ONE. `admitDispatchRestart`
+#       (`packages/core/src/domain/dispatch-resume.ts:74-119`) is called by the
+#       LOOP's stall decision (`packages/core/src/app/dispatch.ts:1006`), by the
+#       operator-resume admission path (`packages/cli/src/edge.ts`, the lane
+#       branch that runs on `--resume-prompt`), and by peak-pause recovery
+#       (`packages/core/src/domain/daemon-peak-pause.ts:336`,
+#       `recoverInterruptedLane`). A single global change would silently remove
+#       the loop's `max-restarts` AND peak-pause recovery's bound refusal, so the
+#       change is CALLER-SCOPED: the flag lives in `dispatch-resume.ts` with a
+#       DEFAULT of the budget-consulting scope, so an omitted scope keeps today's
+#       refusing behaviour (no caller can silently begin admitting); exactly the
+#       operator-resume path passes the admitting scope. `recoverInterruptedLane`
+#       keeps today's refusal and states its scope EXPLICITLY (a code edit, not an
+#       omission), and its delivered suites are re-run as read-only controls.
+#       Deliveries: phase 5.
+#   (m) THE DERIVATION'S PERSISTED-COUNT RESTART ARM HAS ITS OWN DELIVERED
+#       ASSERTION. `packages/core/src/domain/dispatch-result.ts:190-202` re-keys a
+#       non-completed session at `count >= bound` to `max-restarts`, and
+#       `tests/behaviour/dispatch-token-closure.test.ts` pins it for both a
+#       harness-reported timeout and a premature end. Narrowing the arm therefore
+#       edits that delivered row (declared expectation 10), not only the source.
+#       The arm is NARROWED, not removed: removal would drop the
+#       `dispatch.restart-budget-exceeded` identity and message from the
+#       timeout-at-bound path, which the loop's exhaustion evidence and AC-F6-2
+#       rely on. After narrowing, a premature end at the bound keeps `partial`
+#       (Appendix F(C)(9)) and the loop remains the producer of `max-restarts` for
+#       the stall path.
+#   (n) ARM-AWARE CORROBORATION HAS TWO EVALUATION SITES AND ONE PERSISTED
+#       CONSUMER. `buildCorroborationRecord`/`classifyFalseSuccess` are called by
+#       the one-shot path (`packages/core/src/app/dispatch.ts`) and by the daemon
+#       path (`packages/core/src/app/daemon-dispatch-result.ts:150-165`), and the
+#       sufficiency rule is the token-keyed map
+#       `DISPATCH_CORROBORATION_SUFFICIENCY` in
+#       `packages/core/src/contracts/dispatch.ts:145-157`. The persisted consumer
+#       is the evidence-window gate (`packages/core/src/domain/dispatch-gate.ts`,
+#       `requiredCorroboration` at :235/:245), which reads an ATTEMPT RECORD and
+#       therefore has no arm to consult: an arm discriminator on the record would
+#       be an attempt-schema change and is forbidden (NFR-3). The gate therefore
+#       STAYS TOKEN-LEVEL by decision, and that decision is declared in the code
+#       and in phase 4's obligations.
+#   (o) THE WHOLE-BATTERY REGISTRY HAD NO OWNER. `tests/fixtures/dispatch/parity/
+#       evidence.ts` is the 11-class table only, while TC-PARITY-003 and
+#       TC-SHELL-001 iterate "all 11 rows + race + resume + outage + loop +
+#       terminate + spawn". Phase 7 now authors
+#       `tests/fixtures/dispatch/parity/cases.ts` as the single row registry; no
+#       delivered file is displaced and `evidence.ts` keeps its class table role.
 #
 schemaVersion: delivery.plan.v1
 workItemRef: GH-347
@@ -693,6 +853,9 @@ tier:
     - "The tracker ladder exceeds 5 attempts, changes 2/4/8/16 s, exceeds 30 s added latency, or exhaustion yields a success token; or a decisive artifact does not survive an unreadable tracker (API-4, NFR-2, AC-F4-1..AC-F4-4, TC-TRACKER-001..004)"
     - "A stall is restarted on a clean exit; a decisive artifact outside the terminal pre-restart verdict set short-circuits a stall; an unverified stall consumes a slot; a terminate-incapable adapter starts a second session; or terminate signals by a broad pattern or an unrelated pid (AC-F5-1..AC-F5-5, AC-F6-1..AC-F6-6, NFR-6, TC-TERM-001..006, TC-LOOP-001..006)"
     - "The `\"pm-notes\"` corroboration source is re-pointed at the pmNotes artifact fact, falseSuccess is suppressed, or a new incident kind/divergent shape appears (DEC-11, AC-F8-3, TC-DERIVE-004)"
+    - "The corroboration requirement becomes arm-aware for any arm other than the tracker-done `merged` arm and the nothing-to-do arm, the already-merged-PR `merged` arm loses a required source, or the evidence-window gate is made arm-aware by adding an arm discriminator to the persisted attempt record (an attempt-schema change) (NFR-3, AC-F8-1, AC-F8-4, DEC-6, TC-DERIVE-001, TC-PARITY-006)"
+    - "A caller other than the operator-resume admission admits at or above the bound, the caller-scoped restart flag's default stops refusing, or peak-pause recovery (`recoverInterruptedLane`) loses its bound refusal (AC-F3-2, AC-F6-6, DEC-5, R5, TC-RESUME-102, TC-LOOP-006)"
+    - "A parity suite re-expresses a scenario instead of consuming its `tests/fixtures/dispatch/parity/cases.ts` entry, or the registry omits a class, race, resume, outage, loop, terminate, or spawn row (AC-F9-3, AC-F9-4, NFR-1, TC-PARITY-003, TC-SHELL-001)"
     - "A spawn omits `--agent pm`, renders more than one `--agent`/`--model`, omits `--title ticket-<REF>` on a fresh spawn, carries a title on a resume, or builds a constant prompt; or a role-less composition records a binding (API-6, DM-6, AC-F7-1..AC-F7-4, TC-SPAWN-001..004)"
     - "The parity battery performs a live network call, starts a real child process, asserts wall-clock time, or its two runs differ in envelope, attempt count, or class coverage (NFR-1, AC-F9-3, TC-PARITY-003)"
     - "A shell invocation or a script-path literal appears in the dispatch flow, a spawn omits `shell: false`, or the no-shell invariant's surface/list/allowlist is widened to silence a hit (API-7, NFR-5, AC-F9-4, AC-F9-5, TC-SHELL-001/002)"
@@ -1082,25 +1245,34 @@ phases:
   #       `laneFactsFor` closure and its daemon-only filter. Relocate
   #       `DispatchLaneFacts` and re-export it from `edge.ts`.
   #   3.4 Implement the resume rules: recorded-lane resume over `pr-open`
-  #       (attach-continue where supported), no ordinal and no budget refusal for
-  #       an operator resume, explicit fresh spawn with a recorded fresh-spawn fact
-  #       when no lane exists, and a classified failure with exactly one attempt
-  #       when the adapter reports the session unknown.
+  #       (attach-continue where supported), an operator resume consuming NO
+  #       restart ordinal and appending no `economics.restart`, explicit fresh
+  #       spawn with a recorded fresh-spawn fact when no lane exists, and a
+  #       classified failure with exactly one attempt when the adapter reports the
+  #       session unknown. The ADMISSION-TIME budget consultation that currently
+  #       refuses a resume at the persisted bound is NOT this phase's: it lives in
+  #       `packages/cli/src/edge.ts` and lands in phase 5 with AC-F3-2 /
+  #       TC-RESUME-102 (sequencing block (e)); phase 3 must not edit that call
+  #       site and must not claim AC-F3-2.
   #   3.5 Author `tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts`
-  #       for LANE-001/002/004/005 and RESUME-101..104 over the real store, and
+  #       for LANE-001/002/004/005 and RESUME-101/103/104 over the real store, and
   #       author `tests/fixtures/dispatch/parity/lane.ts` (seeders/readers for
   #       active and terminal dispatch lanes plus the daemon states, the
   #       store wrapper that fails only `dispatch.lane` appends, and the
-  #       "lane exists before any attempt" probe).
+  #       "lane exists before any attempt" probe). TC-RESUME-102 is phase 5's and
+  #       extends this file (sequencing block (e)); phase 3 lands the file
+  #       without it.
   #   3.6 Extend `tests/structure/dispatch-composition.test.ts` with the new mount
   #       and extend `tests/fixtures/dispatch/parity/harness.ts` with the lane
   #       observation; move `tests/structure/inventory.json` and the
   #       `EXECUTABLE_ALLOWANCES` entry for the new module exactly.
-  #   3.7 Conditional delivered-expectation edit:
-  #       `tests/behaviour/dispatch-resume-economics.test.ts` only where a case
-  #       expects a budget refusal for an operator resume; the edit cites
-  #       AC-F3-2/DEC-3 and no assertion is relaxed.
-  #   3.8 Mutation rows M22..M26 fail their named cases.
+  #   3.7 No delivered expectation moves in this phase: the operator-resume
+  #       budget-refusal expectation is phase 5's (declared expectation 1/2), and
+  #       `tests/behaviour/dispatch-resume-economics.test.ts` is re-run here only
+  #       as a read-only control (every command-level case seeds a count below the
+  #       bound, so it stays green unchanged).
+  #   3.8 Mutation rows M22..M26 fail their named cases (TC-RESUME-102's rows are
+  #       discharged at the phase-5 boundary, where the case lands).
   #
   # Code areas (concrete):
   #   packages/core/src/contracts/dispatch.ts  (DispatchLaneFacts relocation)
@@ -1120,19 +1292,21 @@ phases:
   #   packages/core/src/state/** is NOT touched.
   #
   # Acceptance: AC-F1-1 (LANE-001/002), AC-F1-3 (LANE-004), AC-F1-4 (LANE-005),
-  #   AC-F3-1 (RESUME-101), AC-F3-2 (RESUME-102), AC-F3-3 (RESUME-103),
-  #   AC-F3-4 (RESUME-104). AC-F1-2 and TC-LANE-003 are phase 5's (restart
-  #   scenario); the terminal append is implemented here because a `pr-open`
-  #   lane must be terminally shaped before RESUME-101 can resolve it.
+  #   AC-F3-1 (RESUME-101), AC-F3-3 (RESUME-103), AC-F3-4 (RESUME-104). AC-F3-2
+  #   and TC-RESUME-102 are phase 5's (sequencing block (e)). AC-F1-2 and
+  #   TC-LANE-003 are also phase 5's (restart scenario); the terminal append is
+  #   implemented here because a `pr-open` lane must be terminally shaped before
+  #   RESUME-101 can resolve it.
   #
   # Gate (expected signal: exit 0; one active lane at acquisition with the exact
   #   DM-1 field set and no forbidden key; zero lanes and zero attempts for every
   #   pre-session refusal; a failed append disclosed without changing the token; a
   #   seeded terminal `pr-open` lane resumed with 0 spawn calls; no ordinal
-  #   consumed and no budget refusal on an operator resume; an explicit fresh spawn
-  #   when no lane exists; an unknown session a classified failure with exactly one
-  #   attempt; daemon lanes read unchanged and the dispatch lane invisible to the
-  #   daemon family):
+  #   consumed and no `economics.restart` appended on an operator resume; an
+  #   explicit fresh spawn when no lane exists; an unknown session a classified
+  #   failure with exactly one attempt; daemon lanes read unchanged and the
+  #   dispatch lane invisible to the daemon family; `dispatch-resume-economics`
+  #   green UNCHANGED as a read-only control):
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-resume.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-resume-economics.test.ts
@@ -1207,12 +1381,43 @@ phases:
   #     carried but gates nothing). The typed-only exit-0-no-artifact `failed` arm
   #     is SUBSUMED. A decisive artifact resolves on a COMPLETED session; at a
   #     stall only the terminal pre-restart verdict set does (phase 5 applies it).
-  #   - Arm-aware corroboration: tracker-done `merged` and nothing-to-do are
-  #     corroborated by the tracker fact; the corroboration record's tri-state
-  #     shape is unchanged. The `"pm-notes"` source stays the phase ledger and is
-  #     NOT re-pointed (DEC-11): a divergent ledger still yields `finished`,
-  #     recorded as a delivered-evidence divergence, with `falseSuccess` never
-  #     suppressed and no new incident kind.
+  #   - Arm-aware corroboration (TDR-0048; AC-F8-1, AC-F8-4): the corroboration
+  #     REQUIREMENT is arm-aware for exactly TWO arms — the tracker-done `merged`
+  #     arm (Appendix F(C)(2)) and the nothing-to-do arm (Appendix F(C)(8)) — and
+  #     every other token keeps today's requirement. Tracker-done `merged` and
+  #     nothing-to-do are corroborated by the tracker fact ALONE, so absent
+  #     pm-notes or CI does not make the claim uncorroborated and cannot raise a
+  #     false-success incident. The already-merged-PR `merged` arm (F(C)(5)) keeps
+  #     the delivered `["pm-notes","tracker","ci"]` requirement, and `blocked`,
+  #     `pr-open`, `pr-open-unverified`, `finished` keep theirs. The corroboration
+  #     record's tri-state shape is unchanged (three keys, `satisfied` |
+  #     `unsatisfied` | `not-applicable`) and the two unrequired sources are
+  #     recorded `not-applicable` on an arm-aware claim. The `"pm-notes"` source
+  #     stays the phase ledger and is NOT re-pointed (DEC-11): a divergent ledger
+  #     still yields `finished`, recorded as a delivered-evidence divergence, with
+  #     `falseSuccess` never suppressed and no new incident kind.
+  #   - The arm is decided ONCE, inside the one derivation (a closed arm
+  #     discriminator on the derivation result), and consumed by BOTH evaluation
+  #     sites: the one-shot path (`app/dispatch.ts`) and the daemon path
+  #     (`app/daemon-dispatch-result.ts`). Neither call site re-derives the arm
+  #     from its own inputs (that would be a second classification, and
+  #     TC-PARITY-002 rejects reimplementations).
+  #   - THE EVIDENCE-WINDOW GATE STAYS TOKEN-LEVEL (decision, recorded in the code
+  #     and asserted): `domain/dispatch-gate.ts` evaluates `attempt.corroboration`
+  #     from a PERSISTED attempt record, which carries no arm; adding one would be
+  #     an attempt-record schema change and is forbidden (NFR-3). Behaviour
+  #     consequence and why it is acceptable: a tracker-done `merged` attempt is
+  #     still counted as a success claim (the token's requirement is non-empty)
+  #     and reads SATISFIED, because its persisted record carries
+  #     `tracker: satisfied` and `not-applicable` for the two unrequired sources,
+  #     and `corroborationSatisfied` treats `not-applicable` as satisfied — so the
+  #     window's incident, streak, floor, and coverage arithmetic is unchanged and
+  #     no false-success incident resets the window. The only thing the gate
+  #     cannot do is distinguish "corroborated by the tracker alone" from
+  #     "corroborated by all three"; no gate decision depends on that distinction.
+  #     The gate's two `requiredCorroboration` reads are pinned to the TOKEN-LEVEL
+  #     requirement through one named accessor so the arm-aware rule cannot leak
+  #     into the window by accident.
   #   - One implementation, shared: `deriveDispatchResult` is called by the daemon
   #     path too, so the daemon inherits the new arms (phase 7's TC-PARITY-006 is
   #     the mandated regression observation).
@@ -1227,17 +1432,33 @@ phases:
   #       only a completeness projection is added; parse behaviour is unchanged).
   #   4.3 Reorder and totalise the ladder in `domain/dispatch-result.ts` exactly as
   #       Appendix F; retire the ledger no-work arm; subsume the exit-0-no-artifact
-  #       `failed` arm; keep every token, projection, and exit. Make success
-  #       corroboration ARM-AWARE in `app/dispatch.ts`
-  #       (`corroborationFactsOf` / `isDeliveredEvidence`): tracker-done `merged`
-  #       and nothing-to-do are corroborated by the tracker fact, the
-  #       corroboration record's tri-state shape is unchanged, and the
-  #       `"pm-notes"` source stays `phasesComplete` (DEC-11 — do NOT re-point it
-  #       at `pmNotes`). `falseSuccess` is never suppressed.
-  #   4.4 Wrap the production tracker read with the ladder in `production.ts`,
+  #       `failed` arm; keep every token, projection, and exit. Set the closed
+  #       corroboration-arm discriminator on the derivation result at the two
+  #       arm-aware branches (tracker-done `merged`, nothing-to-do) and nowhere
+  #       else, so the arm is decided once and only the one derivation decides it.
+  #   4.4 Make success corroboration ARM-AWARE for exactly those two arms and no
+  #       others: the arm-keyed requirement lives with the arm vocabulary in
+  #       `contracts/dispatch.ts` (the delivered
+  #       `DISPATCH_CORROBORATION_SUFFICIENCY` keeps the token-level entries every
+  #       other token uses, and the two arm entries are the only additions);
+  #       `domain/dispatch-comparison.ts`'s `requiredCorroboration`,
+  #       `buildCorroborationRecord`, and `classifyFalseSuccess` take the arm as
+  #       data; `app/dispatch.ts` and `app/daemon-dispatch-result.ts` pass the
+  #       derivation's arm. Keep the record's tri-state shape and the
+  #       `"pm-notes"` source on `phasesComplete` (DEC-11 — do NOT re-point it at
+  #       `pmNotes`). `falseSuccess` is never suppressed. A delivered assertion may
+  #       not be relaxed to make either arm pass; the authorising clause is
+  #       AC-F8-1/AC-F8-4.
+  #   4.5 Keep the evidence-window gate TOKEN-LEVEL (the decision in the Contract
+  #       block): pin its two `requiredCorroboration` reads to one named
+  #       token-level accessor, record in a comment why the window cannot be
+  #       arm-aware without an attempt-schema change, and assert the retained
+  #       behaviour through the delivered gate cases as read-only controls. No
+  #       incident, streak, floor, coverage, or window-start arithmetic moves.
+  #   4.6 Wrap the production tracker read with the ladder in `production.ts`,
   #       named in evidence by `tracker:exhausted` on exhaustion, and keep the
   #       artifact read decisive on a completed session.
-  #   4.5 Author `tests/conformance/dispatch/dispatch-parity-tracker.test.ts` for
+  #   4.7 Author `tests/conformance/dispatch/dispatch-parity-tracker.test.ts` for
   #       TRACKER-001..003; extend `tests/behaviour/dispatch-truth-derivation.test.ts`
   #       (DERIVE-001/002/003/005/006 plus TRACKER-004's policy half) and
   #       CREATE `tests/checks/dispatch-contract-invariance.test.ts` with
@@ -1247,7 +1468,7 @@ phases:
   #       `tests/behaviour/dispatch-token-closure.test.ts` (DERIVE-006),
   #       `tests/behaviour/dispatch-delivered-evidence-divergence.test.ts` and
   #       `tests/behaviour/dispatch-false-success.test.ts` (DERIVE-004).
-  #   4.6 Author `tests/fixtures/dispatch/parity/pm-notes.ts` (real on-disk
+  #   4.8 Author `tests/fixtures/dispatch/parity/pm-notes.ts` (real on-disk
   #       documents: complete, incomplete, absent, malformed, and the
   #       divergent-ledger document) and extend `tests/fixtures/dispatch/truth.ts`
   #       with the `pmNotes` builders, `tracker({state: "done"})`, and the
@@ -1258,24 +1479,45 @@ phases:
   #       facts as a literal are `dispatch-token-closure.test.ts` and
   #       `dispatch-watch.test.ts`; both are declared here and gain the explicit
   #       member. Every other case goes through the builder and needs no edit.
-  #   4.7 Move `tests/structure/inventory.json` and the allowance for the new
-  #       domain module exactly.
-  #   4.8 Conditional delivered-expectation edits (each cites §8.5/Appendix F/
-  #       DEC-6): `tests/behaviour/dispatch-comparison.test.ts`,
+  #   4.9 Move `tests/structure/inventory.json` and the allowance for the new
+  #       domain module exactly, and move
+  #       `tests/fixtures/ports/v1-contract-inventory.json` exactly for the new
+  #       corroboration-arm vocabulary exported from `contracts/dispatch.ts` (the
+  #       arm id union and the arm-keyed requirement entries; no wildcard).
+  #   4.10 Conditional delivered-expectation edits (each cites §8.5/Appendix F/
+  #       DEC-6/AC-F8-1/AC-F8-4): `tests/behaviour/dispatch-comparison.test.ts`,
   #       `tests/behaviour/dispatch-gate-evidence.test.ts`, and
   #       `tests/conformance/dispatch/dispatch-fixture.test.ts` — only a case whose
-  #       fixture input relied on the retired ledger arm or the old blocked-first
-  #       order. No assertion is deleted or relaxed.
-  #   4.9 Mutation rows M1–M11's derivation links (M2, M8, M9, M11), M27..M33, and
-  #       M60..M72 fail their named cases.
+  #       fixture input relied on the retired ledger arm, the old blocked-first
+  #       order, or the old TOKEN-level requirement on the two arm-aware arms. The
+  #       window-gate cases move ONLY if a fixture input relied on the old
+  #       requirement; a gate verdict change is a finding, not a licence. No
+  #       assertion is deleted or relaxed.
+  #   4.11 Mutation rows M1–M11's derivation links (M2, M8, M9, M11), M27..M33, and
+  #       M60..M72 fail their named cases; M61 (require a visible PR for the
+  #       tracker-done arm) is the arm's own control and must still fail
+  #       `TC-DERIVE-001` by name.
   #
   # Code areas (concrete):
   #   packages/core/src/domain/dispatch-tracker.ts (NEW ladder)
-  #   packages/core/src/domain/dispatch-result.ts  (pmNotes fact, total order)
+  #   packages/core/src/domain/dispatch-result.ts  (pmNotes fact, total order,
+  #                                                 corroboration-arm discriminator)
   #   packages/core/src/domain/index.ts            (export)
+  #   packages/core/src/contracts/dispatch.ts      (corroboration-arm vocabulary +
+  #                                                 the two arm-keyed requirements)
+  #   packages/core/src/domain/dispatch-comparison.ts (arm-aware
+  #                                                 requiredCorroboration /
+  #                                                 buildCorroborationRecord /
+  #                                                 classifyFalseSuccess)
+  #   packages/core/src/domain/dispatch-gate.ts    (token-level requirement pinned
+  #                                                 through one named accessor; no
+  #                                                 arithmetic change)
   #   packages/core/src/app/dispatch.ts            (derivation input wiring,
   #                                                 arm-aware corroboration,
   #                                                 exhaustion evidence)
+  #   packages/core/src/app/daemon-dispatch-result.ts (pass the derivation's arm to
+  #                                                 the corroboration and
+  #                                                 false-success classifiers)
   #   packages/cli/src/production.ts               (ladder around the tracker read,
   #                                                 pmNotes derivation)
   #   packages/adapters/src/file/pm-notes-parser.ts (completeness projection only)
@@ -1295,6 +1537,7 @@ phases:
   #   tests/fixtures/dispatch/parity/pm-notes.ts (new)
   #   tests/fixtures/dispatch/parity/harness.ts (extend)
   #   tests/structure/inventory.json + tests/structure/content-inventory.test.ts
+  #   tests/fixtures/ports/v1-contract-inventory.json (arm vocabulary exports)
   #   Re-run as read-only controls: tests/behaviour/dispatch-state-unverified.test.ts
   #   (an unreadable tracker with NO decisive artifact still derives
   #   `state-unverified`), tests/behaviour/dispatch-exit-projection.test.ts,
@@ -1315,8 +1558,17 @@ phases:
   #   incomplete/absent/malformed = `partial`; no commits + readable tracker =
   #   `noop-lane-nothing-to-do`; a complete ledger with commits is never
   #   nothing-to-do; the divergent ledger still yields `finished` with
-  #   `falseSuccess: true` and the delivered divergence shape; 0 new tokens,
-  #   projections, exits, or config keys):
+  #   `falseSuccess: true` and the delivered divergence shape; ARM-AWARE
+  #   CORROBORATION: a tracker-done `merged` attempt records `tracker: satisfied`
+  #   with `pmNotes`/`ci` `not-applicable` and `falseSuccess: false` with absent
+  #   pm-notes and failing CI, an already-merged-PR `merged` still requires all
+  #   three sources (an absent pm-notes source is a contradiction there), a
+  #   nothing-to-do attempt records `tracker: satisfied` only, every other token's
+  #   requirement is byte-identical to today's map, the one-shot and daemon paths
+  #   record the SAME corroboration for the same facts, and the evidence-window
+  #   gate's verdicts and counters are unchanged (token-level, delivered cases
+  #   green as read-only controls); 0 new tokens, projections, exits, attempt-schema
+  #   versions, or config keys):
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-parity-tracker.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-truth-derivation.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-token-closure.test.ts
@@ -1330,7 +1582,7 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
   # ---------------------------------------------------------------------------
   - id: 4
-    title: "Bounded tracker retry ladder with an injected delay, the pmNotes completeness artifact fact, and the total derivation order with tracker-done merged, artifact partial, and the retired ledger arm"
+    title: "Bounded tracker retry ladder with an injected delay, the pmNotes completeness artifact fact, and the total derivation order with tracker-done merged, artifact partial, the retired ledger arm, and arm-aware corroboration across the one-shot path, the daemon path and the token-level evidence-window gate"
     kind: delivery
     summary: "feat(GH-347): tracker ladder, pm-notes fact and total derivation"
     scope:
@@ -1338,7 +1590,11 @@ phases:
         - packages/core/src/domain/dispatch-tracker.ts
         - packages/core/src/domain/dispatch-result.ts
         - packages/core/src/domain/index.ts
+        - packages/core/src/contracts/dispatch.ts
+        - packages/core/src/domain/dispatch-comparison.ts
+        - packages/core/src/domain/dispatch-gate.ts
         - packages/core/src/app/dispatch.ts
+        - packages/core/src/app/daemon-dispatch-result.ts
         - packages/cli/src/production.ts
         - packages/adapters/src/file/pm-notes-parser.ts
         - tests/conformance/dispatch/dispatch-parity-tracker.test.ts
@@ -1356,11 +1612,15 @@ phases:
         - tests/fixtures/dispatch/parity/harness.ts
         - tests/structure/inventory.json
         - tests/structure/content-inventory.test.ts
+        - tests/fixtures/ports/v1-contract-inventory.json
       folders:
         - tests/fixtures/dispatch/parity
     interactions:
       - kind: contract-file
         target: packages/core/src/domain/dispatch-result.ts
+        role: producer
+      - kind: contract-file
+        target: packages/core/src/contracts/dispatch.ts
         role: producer
       - kind: contract-file
         target: tests/fixtures/dispatch/truth.ts
@@ -1403,8 +1663,46 @@ phases:
   #   - Cardinality: exactly one attempt record at the terminal classification
   #     regardless of iteration count; a restarted iteration appends none; a
   #     pre-session refusal appends none. A persisted count at/above the bound
-  #     NEVER refuses admission: one iteration runs; a clean exit keeps its
-  #     classification and only a stall in that iteration yields `max-restarts`.
+  #     NEVER refuses an admitted dispatch: one iteration runs; a session exit
+  #     keeps its own classification and only a stall in that iteration yields
+  #     `max-restarts`. The envelope's `restarts` is the PERSISTED TOTAL after this
+  #     dispatch (the recorded count plus the ordinals this dispatch consumed),
+  #     never the invocation's consumed count alone (AC-F6-5).
+  #   - Restart admission is CALLER-SCOPED (finding 2; AC-F3-2, AC-F6-6, DEC-5):
+  #     `admitDispatchRestart` keeps ONE implementation and gains a caller-scoped
+  #     flag whose home is `domain/dispatch-resume.ts`. The DEFAULT is the
+  #     budget-consulting scope, so an omitted flag keeps today's refusal and no
+  #     caller can silently start admitting. The three callers are stated, not
+  #     inferred: (i) the LOOP's stall decision in `app/dispatch.ts` (the call that
+  #     produces `max-restarts` at the bound) keeps the budget-consulting scope;
+  #     (ii) the OPERATOR-RESUME admission path in `packages/cli/src/edge.ts` (the
+  #     call that today refuses a `--resume-prompt` at the persisted bound, the
+  #     behaviour `tests/behaviour/dispatch-restart-budget.test.ts` TC-RESUME-002
+  #     pins) stops consulting the budget; (iii) `recoverInterruptedLane` in
+  #     `domain/daemon-peak-pause.ts` KEEPS today's refusing behaviour and states
+  #     its scope EXPLICITLY. The authorising clause for (iii) is that peak-pause
+  #     recovery is a coordinator-family re-entry that consumes an ordinal, not an
+  #     operator resume: AC-F3-2 admits only the operator resume, AC-F6-6 governs
+  #     an admitted dispatch iteration, and TDR-0047's bound is the dispatch lane's
+  #     loop bound. A global change to the shared function would silently remove
+  #     peak-pause recovery's refusal and the loop's `max-restarts`; neither is
+  #     acceptable.
+  #   - The derivation's OWN persisted-count arm is NARROWED (finding 4; AC-F6-4,
+  #     AC-F6-6, §8.5 "Persisted-bound re-key narrowed", Appendix F(D)):
+  #     `domain/dispatch-result.ts` re-keys a session to `max-restarts` when
+  #     `count >= bound && !harnessCompleted`. That guard exempts a completed
+  #     harness but still re-keys a premature end, a tool failure, or a non-zero
+  #     exit at the bound, which AC-F6-4 makes terminal under their own
+  #     classification. After this phase the arm fires ONLY for the restart-eligible
+  #     harness-reported timeout (a terminal stall, not a clean exit), so every
+  #     clean session exit at or above the bound keeps its own classification and
+  #     the LOOP remains the producer of `max-restarts` for the stall path (it
+  #     records directly and never re-derives). The arm is NARROWED, not removed,
+  #     because removal would also drop the `dispatch.restart-budget-exceeded`
+  #     identity and message from the timeout-at-bound path that the loop's
+  #     exhaustion evidence and AC-F6-2 name. The delivered assertion in
+  #     `tests/behaviour/dispatch-token-closure.test.ts` is updated with it
+  #     (delivered expectation 10).
   #   - The lane's terminal half (AC-F1-2/TC-LANE-003) lands here: records in
   #     order are active(1), active(2, restartsConsumed 1), then exactly one
   #     terminal; no terminal record exists between the active records; "the
@@ -1432,35 +1730,71 @@ phases:
   #       verdict and terminate result as bounded evidence.
   #   5.4 Implement the bounded loop and its accounting: one ordinal/one
   #       `economics.restart` per restart, no attempt for a restarted iteration,
-  #       one attempt at the terminal classification, `restarts` = consumed
-  #       ordinals, the bound from `lane.restart-budget` (NOT
-  #       `coordinator.restart-budget`).
-  #   5.5 Change restart ADMISSION in `domain/dispatch-resume.ts` so a persisted
-  #       count at/above the bound does not refuse admission (TC-LOOP-006).
-  #   5.6 Add the stall-decision helper (the terminal pre-restart verdict set) to
+  #       one attempt at the terminal classification, the envelope's `restarts` =
+  #       the persisted total after this dispatch (the recorded count plus the
+  #       ordinals this dispatch consumed, AC-F6-5), the bound from
+  #       `lane.restart-budget` (NOT `coordinator.restart-budget`).
+  #   5.5 Split the restart ADMISSION by caller in `domain/dispatch-resume.ts` and
+  #       its three consumers: add the caller-scoped flag to
+  #       `admitDispatchRestart` with the DEFAULT of the budget-consulting scope
+  #       (so an omitted flag keeps today's refusal); stop the operator-resume
+  #       admission in `packages/cli/src/edge.ts` from consulting the restart
+  #       budget (the `admitDispatchRestart` call in the `--resume-prompt` lane
+  #       branch passes the admitting scope; the ordinal and economics rules stay);
+  #       keep the LOOP's stall decision in `app/dispatch.ts` on the
+  #       budget-consulting scope so it still refuses at the bound and produces
+  #       `max-restarts` with the exhaustion record; and state the scope
+  #       EXPLICITLY at `recoverInterruptedLane` in `domain/daemon-peak-pause.ts`,
+  #       which KEEPS today's refusing behaviour (authorising clauses: AC-F3-2
+  #       admits only the operator resume, AC-F6-6 governs an admitted dispatch
+  #       iteration, TDR-0047's bound is the lane loop bound; peak-pause recovery
+  #       is a coordinator-family re-entry that consumes an ordinal). Rewrite
+  #       `tests/behaviour/dispatch-restart-budget.test.ts` TC-RESUME-002 into
+  #       TC-LOOP-006 in the same commit (delivered expectation 1).
+  #   5.6 NARROW the derivation's persisted-count restart arm in
+  #       `domain/dispatch-result.ts` (the `count >= bound && !harnessCompleted`
+  #       re-key) to the restart-eligible harness-reported timeout only, so every
+  #       clean session exit at or above the bound keeps its own classifier
+  #       classification, and the loop's stall decision remains the producer of
+  #       `max-restarts`. Cite AC-F6-4, AC-F6-6, §8.5 "Persisted-bound re-key
+  #       narrowed", Appendix F(D); update the delivered `dispatch-token-closure`
+  #       row with it (delivered expectation 10); do not remove the
+  #       `dispatch.restart-budget-exceeded` identity.
+  #   5.7 Add the stall-decision helper (the terminal pre-restart verdict set) to
   #       `domain/dispatch-liveness.ts`; keep the delivered two-consecutive-
   #       no-advance corroboration and the current-state (not latch) rule.
-  #   5.7 Author `tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts`
+  #   5.8 Author `tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts`
   #       for TERM-001, TERM-003..006, LOOP-001..005 and LANE-003; extend
-  #       `tests/behaviour/dispatch-liveness.test.ts` (TERM-002) and REWRITE
+  #       `tests/behaviour/dispatch-liveness.test.ts` (TERM-002); EXTEND the
+  #       phase-3 `tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts`
+  #       with TC-RESUME-102 (both seeded counts 3 and 4 admitted, session resumed,
+  #       no ordinal consumed, envelope `restarts` at the persisted total, one
+  #       attempt record) without touching its phase-3 cases; and rewrite
   #       `tests/behaviour/dispatch-restart-budget.test.ts`'s TC-RESUME-002 into
-  #       TC-LOOP-006 (cite §8.5/AC-F6-6/DEC-5/R5; the old expectation is
+  #       TC-LOOP-006 (cite §8.5/AC-F3-2/AC-F6-6/DEC-5/R5; the old expectation is
   #       superseded, not forgotten).
-  #   5.8 Author `tests/fixtures/dispatch/parity/terminate.ts` (the process-tree
+  #   5.9 Author `tests/fixtures/dispatch/parity/terminate.ts` (the process-tree
   #       model with per-pid signal logs, a capable double, an incapable double
   #       that records any call as a violation) and extend
   #       `tests/fixtures/dispatch/harness.ts` with an optional terminate member
   #       plus a capability flag (existing behaviour stays the default).
-  #   5.9 Extend `tests/structure/harness-stream-contract.test.ts` with the
+  #   5.10 Extend `tests/structure/harness-stream-contract.test.ts` with the
   #       terminate-capability assertion; keep the seven required members and the
   #       no-`kill`-alias assertion. Extend
-  #       `tests/structure/dispatch-composition.test.ts` with the grace wiring.
-  #   5.10 Conditional delivered-expectation edits: `tests/behaviour/dispatch-resume-economics.test.ts`
-  #        and `tests/structure/dispatch-composition.test.ts` only where an
-  #        expectation encodes admission-time budget refusal; each cites
-  #        §8.5/AC-F6-6/DEC-5.
-  #   5.11 Mutation rows M34..M43 (terminate) and M44..M52 (loop) fail their named
-  #        cases; M36/M37/M39/M41/M44/M48 are the load-bearing controls.
+  #       `tests/structure/dispatch-composition.test.ts` with the grace wiring and
+  #       the restart-admission caller scope.
+  #   5.11 Delivered-expectation edits, each with its clause: the
+  #       `dispatch-restart-budget` rewrite (expectation 1), the
+  #       `dispatch-token-closure` arm row (expectation 10), and, ONLY where an
+  #       expectation encodes admission-time budget refusal for an operator resume,
+  #       `tests/behaviour/dispatch-resume-economics.test.ts` /
+  #       `tests/structure/dispatch-composition.test.ts` (cite
+  #       §8.5/AC-F3-2/AC-F6-6/DEC-5). The `admitDispatchRestart` unit row in
+  #       `dispatch-resume-economics.test.ts` is expected GREEN UNCHANGED: it is
+  #       the control for the flag's default.
+  #   5.12 Mutation rows M34..M43 (terminate) and M44..M52 (loop) fail their named
+  #        cases, plus M22..M26's TC-RESUME-102 rows discharged here;
+  #        M36/M37/M39/M41/M44/M48/M50 are the load-bearing controls.
   #
   # Code areas (concrete):
   #   packages/core/src/contracts/harness.ts        (terminate in the closed set)
@@ -1470,25 +1804,39 @@ phases:
   #   packages/core/src/app/dispatch.ts             (terminate decision, loop,
   #                                                  cardinality, terminal lane)
   #   packages/core/src/domain/dispatch-liveness.ts (stall decision / verdict set)
-  #   packages/core/src/domain/dispatch-resume.ts   (at-bound admission)
+  #   packages/core/src/domain/dispatch-resume.ts   (caller-scoped restart
+  #                                                  admission; the flag's home)
+  #   packages/core/src/domain/daemon-peak-pause.ts (explicit budget-consulting
+  #                                                  scope; refusal retained)
+  #   packages/core/src/domain/dispatch-result.ts   (narrowed persisted-count arm)
   #   packages/core/src/domain/index.ts
   #   packages/cli/src/production.ts                (grace delay, loop bound, mount)
-  #   packages/cli/src/edge.ts                      (composition facts)
+  #   packages/cli/src/edge.ts                      (operator-resume admission:
+  #                                                  no budget consultation)
   #   tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts (new)
+  #   tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts (extend,
+  #                                                  TC-RESUME-102 only)
   #   tests/behaviour/dispatch-liveness.test.ts (extend)
   #   tests/behaviour/dispatch-restart-budget.test.ts (rewrite TC-RESUME-002)
-  #   tests/behaviour/dispatch-resume-economics.test.ts (conditional)
+  #   tests/behaviour/dispatch-token-closure.test.ts (narrowed arm row)
+  #   tests/behaviour/dispatch-resume-economics.test.ts (conditional; default
+  #                                                  control expected green)
   #   tests/fixtures/dispatch/parity/terminate.ts (new)
   #   tests/fixtures/dispatch/harness.ts (extend, additive)
   #   tests/fixtures/dispatch/parity/harness.ts (extend)
   #   tests/structure/harness-stream-contract.test.ts (extend)
   #   tests/structure/dispatch-composition.test.ts (extend)
   #   packages/core/src/state/** is NOT touched.
+  #   Re-run as read-only controls: tests/behaviour/daemon-peak-window-resume.test.ts
+  #   and tests/behaviour/peak-pause-determinism.test.ts (peak-pause recovery still
+  #   refuses at the bound: `dispatch.restart-budget-exceeded` recorded and
+  #   escalated), tests/behaviour/dispatch-resume-economics.test.ts's unit row (the
+  #   flag's default still refuses).
   #
-  # Acceptance: AC-F1-2 (LANE-003), AC-F5-1 (TERM-001), AC-F5-2 (TERM-002),
-  #   AC-F5-3 (TERM-003/004 + LOOP-003), AC-F5-4 (TERM-005), AC-F5-5 (TERM-006),
-  #   AC-F6-1 (LOOP-001), AC-F6-2 (LOOP-002), AC-F6-3 (LOOP-003), AC-F6-4
-  #   (LOOP-004), AC-F6-5 (LOOP-005), AC-F6-6 (LOOP-006).
+  # Acceptance: AC-F1-2 (LANE-003), AC-F3-2 (RESUME-102), AC-F5-1 (TERM-001),
+  #   AC-F5-2 (TERM-002), AC-F5-3 (TERM-003/004 + LOOP-003), AC-F5-4 (TERM-005),
+  #   AC-F5-5 (TERM-006), AC-F6-1 (LOOP-001), AC-F6-2 (LOOP-002), AC-F6-3
+  #   (LOOP-003), AC-F6-4 (LOOP-004), AC-F6-5 (LOOP-005), AC-F6-6 (LOOP-006).
   #
   # Gate (expected signal: exit 0; signals ordered [SIGTERM, SIGKILL] with
   #   SIGKILL at >= 20 000 ms of virtual time; 0 terminate on a clean exit and on
@@ -1498,12 +1846,29 @@ phases:
   #   stall consumes exactly 1 ordinal and 1 economics.restart with 0 attempts;
   #   at-bound yields max-restarts with 1 attempt; an unverified stall consumes 0
   #   ordinals; a clean exit always 1 iteration; the envelope's `restarts` is the
-  #   consumed count; one terminal lane and no terminal between actives; 0 new
-  #   config keys):
+  #   PERSISTED TOTAL after the dispatch (3 at a seeded count of 3 with no restart
+  #   consumed, 4 at a seeded count of 4), never the invocation's consumed count;
+  #   RESTART ADMISSION: the flag's DEFAULT is the budget-consulting scope, so
+  #   `admitDispatchRestart({count: 3, bound: 3})` with no scope supplied still
+  #   refuses with `dispatch.restart-budget-exceeded` (the
+  #   `dispatch-resume-economics` unit row green UNCHANGED), the operator resume is
+  #   admitted at seeded counts 3 and 4 with 0 ordinals consumed and 1 attempt,
+  #   the loop still refuses at the bound and produces `max-restarts` with the
+  #   exhaustion record, and DAEMON CONTROL: `recoverInterruptedLane` still refuses
+  #   at the bound so `daemon-peak-window-resume` records and escalates
+  #   `dispatch.restart-budget-exceeded` with the two peak-pause suites green
+  #   UNCHANGED; DERIVATION ARM: a premature end at the bound keeps `partial`, a
+  #   non-zero exit keeps `failed`, a harness-reported timeout at the bound keeps
+  #   `max-restarts` with `dispatch.restart-budget-exceeded`, and a completed
+  #   harness at the bound is never re-keyed; one terminal lane and no terminal
+  #   between actives; 0 new config keys):
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-liveness.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-restart-budget.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-resume-economics.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/dispatch-token-closure.test.ts
+  #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/daemon-peak-window-resume.test.ts tests/behaviour/peak-pause-determinism.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/behaviour/economics-restart-record.test.ts tests/behaviour/economics-exhaustion-record.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/harness-contract.test.ts tests/structure/harness-stream-contract.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/structure/dispatch-composition.test.ts
@@ -1511,7 +1876,7 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
   # ---------------------------------------------------------------------------
   - id: 5
-    title: "Capability-gated terminate within the borrowed grace with exact-identity reap, the bounded in-process restart loop, one-attempt cardinality, and the terminal lane evidence"
+    title: "Capability-gated terminate within the borrowed grace with exact-identity reap, the bounded in-process restart loop, the caller-scoped restart admission, the narrowed persisted-count derivation arm, one-attempt cardinality, and the terminal lane evidence"
     kind: delivery
     summary: "feat(GH-347): stall termination and in-process restart loop"
     scope:
@@ -1523,12 +1888,16 @@ phases:
         - packages/core/src/app/dispatch.ts
         - packages/core/src/domain/dispatch-liveness.ts
         - packages/core/src/domain/dispatch-resume.ts
+        - packages/core/src/domain/daemon-peak-pause.ts
+        - packages/core/src/domain/dispatch-result.ts
         - packages/core/src/domain/index.ts
         - packages/cli/src/production.ts
         - packages/cli/src/edge.ts
         - tests/conformance/dispatch/dispatch-parity-stall-loop.test.ts
+        - tests/conformance/dispatch/dispatch-parity-lane-resume.test.ts
         - tests/behaviour/dispatch-liveness.test.ts
         - tests/behaviour/dispatch-restart-budget.test.ts
+        - tests/behaviour/dispatch-token-closure.test.ts
         - tests/behaviour/dispatch-resume-economics.test.ts
         - tests/fixtures/dispatch/parity/terminate.ts
         - tests/fixtures/dispatch/harness.ts
@@ -1706,13 +2075,29 @@ phases:
   #     rule name and `file:line`; the false-positive controls (`shell: false`, a
   #     `scripts/checks` reference outside the surface, a `.md` mention) report
   #     nothing.
-  #   - The proof boundary is PUBLISHED and drift-checked against spec Appendix C
-  #     and the TEST PLAN's §1.2 table (not a doc/spec page), eight proven ids and
-  #     six not-proven ids in order.
+  #   - The proof boundary is PUBLISHED from ONE machine-checked source: the
+  #     permanent `PARITY_PROOF_BOUNDARY` constant in `parity/evidence.ts` (eight
+  #     proven ids, six not-proven ids, in order) whose in-repo publication is
+  #     `doc/spec/features/feature-dispatch-engine.md`. This phase asserts the
+  #     constant (shape, membership, order, row-seam membership, no row on a
+  #     not-proven surface); the constant↔page equality is lifecycle phase 7's
+  #     check and the post-reconciliation doc guards re-run it. NO suite reads the
+  #     change spec or the test plan: both are temporary artifacts.
   #   - The daemon path inherits the shared derivation: tracker-done `merged`,
   #     artifact `partial`, and the retired ledger arm are observed through the
   #     delivered lane harness (`createLaneExecutor`, `runSupervisionCycle`,
-  #     `recordDaemonDispatchResult`), so no new daemon fixture is needed.
+  #     `recordDaemonDispatchResult`), so no new daemon fixture is needed. The
+  #     observation asserts the daemon ATTEMPT, not only the token: for the
+  #     tracker-done row the daemon's persisted `corroboration` is
+  #     `{pmNotes: not-applicable, tracker: satisfied, ci: not-applicable}` and
+  #     `falseSuccess` is `false` with absent pm-notes and failing CI (AC-F8-1),
+  #     which is what makes the shared arm-aware corroboration observable on the
+  #     daemon path.
+  #   - The whole battery has ONE row registry: every parity row — the eleven
+  #     classes plus race, resume, outage, loop, terminate, and spawn — is one
+  #     entry in `tests/fixtures/dispatch/parity/cases.ts`, and TC-PARITY-003 and
+  #     TC-SHELL-001 iterate that registry rather than re-expressing any suite's
+  #     scenario.
   #   - The closed contract surface is pinned: 0 new/changed tokens, projections,
   #     exits, error rows, domain kinds, or schema versions; 0 new config keys;
   #     the four consumed defaults unchanged.
@@ -1725,33 +2110,54 @@ phases:
   #       the mutation hooks, `PARITY_PROOF_BOUNDARY`, the canonicalizer) and
   #       `tests/fixtures/dispatch/parity/seams.ts` (the import-identity manifest
   #       and reimplementation-signature registry).
-  #   7.2 Extend `tests/conformance/dispatch/controlled-repo.ts` (accept the new
+  #   7.2 Author `tests/fixtures/dispatch/parity/cases.ts`, the SINGLE whole-
+  #       battery case registry (finding 9): one entry per parity row with
+  #       `{id, kind, scenario, seam, expectedToken, expectedExit}`, where `kind`
+  #       covers `class | race | resume | outage | loop | terminate | spawn` and
+  #       `scenario` is a reference to the builder the owning suite already uses
+  #       (`parity/lane.ts`, `parity/pm-notes.ts`, `parity/terminate.ts`,
+  #       `parity/interleave.ts`, `parity/harness.ts`, `parity/evidence.ts`).
+  #       `class` rows point at the `evidence.ts` table; the six non-class rows
+  #       are the registry's own. TC-PARITY-003 and TC-SHELL-001 DRIVE THE
+  #       REGISTRY (they iterate every entry instead of enumerating rows), and
+  #       every dedicated suite consumes the same entry for its scenario rather
+  #       than re-expressing it. The registry holds references, never a second
+  #       scenario description, and a row may not be added to a suite without a
+  #       registry entry.
+  #   7.3 Extend `tests/conformance/dispatch/controlled-repo.ts` (accept the new
   #       class rows without changing its `provenance()` guard or its no-ledger-
   #       writer surface) and `tests/conformance/dispatch/dispatch-e2e.test.ts`
   #       (the 11-row driver stays the single home).
-  #   7.3 Author `tests/conformance/dispatch/dispatch-parity-no-shell.test.ts`
+  #   7.4 Author `tests/conformance/dispatch/dispatch-parity-no-shell.test.ts`
   #       (SHELL-001), `scripts/checks/no-shell-dispatch.ts` and
-  #       `tests/checks/no-shell-dispatch.test.ts` (SHELL-002).
-  #   7.4 Extend `tests/conformance/dispatch/dispatch-daemon-lane.test.ts` with
+  #       `tests/checks/no-shell-dispatch.test.ts` (SHELL-002). SHELL-001 iterates
+  #       the registry (7.2), so its sweep and TC-PARITY-003's sweep are the same
+  #       row list.
+  #   7.5 Extend `tests/conformance/dispatch/dispatch-daemon-lane.test.ts` with
   #       PARITY-006. This TC is the phase-7 DAEMON REGRESSION; AC-F8-1..AC-F8-4
   #       are owned by phase 4 via DERIVE-001..005, and PARITY-006 is an
   #       additional shared-derivation observation, never the sole evidence for an
-  #       AC.
-  #   7.5 EXTEND `tests/checks/dispatch-contract-invariance.test.ts` (created in
+  #       AC. For the tracker-done row it asserts the daemon ATTEMPT, not only the
+  #       token: `corroboration` equals
+  #       `{pmNotes: "not-applicable", tracker: "satisfied", ci: "not-applicable"}`
+  #       and `falseSuccess` is `false` with absent pm-notes and failing CI
+  #       (AC-F8-1), which is the daemon half of the arm-aware corroboration. It
+  #       also asserts the already-merged-PR row keeps all three sources required.
+  #   7.6 EXTEND `tests/checks/dispatch-contract-invariance.test.ts` (created in
   #       phase 4 with TRACKER-004's no-key assertion) with CONTRACT-001's full
   #       closed-surface pin, and extend `tests/behaviour/dispatch-additive-stability.test.ts`,
   #       `tests/checks/error-table-sync.test.ts`,
   #       `tests/behaviour/dispatch-exit-projection.test.ts`, and
   #       `tests/structure/dispatch-token-home.test.ts`.
-  #   7.6 Extend `tests/behaviour/dispatch-privacy.test.ts` and
+  #   7.7 Extend `tests/behaviour/dispatch-privacy.test.ts` and
   #       `tests/behaviour/dispatch-attempts-bounds.test.ts` with PARITY-005's
   #       bounds/redaction half (lane key allowlist, owner shape, one session id,
   #       no canary, <= 16 refs, deterministic truncation, single-line bounded
   #       diagnostics).
-  #   7.7 The no-shell invariant is discovered by `bun test` through
+  #   7.8 The no-shell invariant is discovered by `bun test` through
   #       `tests/checks/no-shell-dispatch.test.ts`; no package.json script, CI job,
   #       or topology change is made.
-  #   7.8 Mutation rows M1..M11 (parity arms), M73..M79 (no-shell + battery), M80..
+  #   7.9 Mutation rows M1..M11 (parity arms), M73..M79 (no-shell + battery), M80..
   #       M81 (daemon), and M82 (closed surface) fail their named cases.
   #
   # Code areas (concrete):
@@ -1764,6 +2170,7 @@ phases:
   #   tests/conformance/dispatch/dispatch-e2e.test.ts (extend)
   #   tests/conformance/dispatch/controlled-repo.ts (extend)
   #   tests/fixtures/dispatch/parity/evidence.ts (NEW)
+  #   tests/fixtures/dispatch/parity/cases.ts (NEW; the whole-battery registry)
   #   tests/fixtures/dispatch/parity/seams.ts (NEW)
   #   tests/fixtures/dispatch/parity/harness.ts (extend)
   #   tests/behaviour/dispatch-privacy.test.ts (extend)
@@ -1779,15 +2186,23 @@ phases:
   # Acceptance: AC-F9-1 (PARITY-001), AC-F9-2 (PARITY-002), AC-F9-3 (PARITY-003),
   #   AC-F9-4 (SHELL-001), AC-F9-5 (SHELL-002 + PARITY-004).
   #
-  # Gate (expected signal: exit 0; 11/11 classes by token and exit; every row's
-  #   seam imported from its production module; the planted reimplementation
-  #   rejected by name; two runs byte-identical after normalization with
-  #   liveNetworkRequests = realChildStarts = shellInvocations =
-  #   scriptPathInvocations = 0; the boundary equal to Appendix C and the test
-  #   plan §1.2; the daemon token `merged` for done+blocked, `partial` for
-  #   incomplete pm-notes, no ledger-arm nothing-to-do; the closed surface
-  #   unchanged; the static invariant clean live and each planted rule failing by
-  #   name, with `shell: false` and out-of-surface references NOT reported):
+  # Gate (expected signal: exit 0; 11/11 classes by token and exit; EVERY parity
+  #   row driven from the single `cases.ts` registry (class, race, resume, outage,
+  #   loop, terminate, spawn — no suite enumerates rows of its own and no suite
+  #   re-expresses another suite's scenario); every row's seam imported from its
+  #   production module; the planted reimplementation rejected by name; two runs
+  #   byte-identical after normalization with liveNetworkRequests =
+  #   realChildStarts = shellInvocations = scriptPathInvocations = 0; the proof
+  #   boundary's fixture constant internally consistent (eight proven ids, six
+  #   not-proven ids, in order, every row's seam in the proven list, no row on a
+  #   not-proven surface) and published on the current-truth page by lifecycle
+  #   phase 7 (no suite reads the change spec or the test plan); the daemon token
+  #   `merged` for done+blocked, `partial` for incomplete pm-notes, no ledger-arm
+  #   nothing-to-do, AND the daemon tracker-done attempt's `corroboration`
+  #   `{pmNotes: not-applicable, tracker: satisfied, ci: not-applicable}` with
+  #   `falseSuccess: false`; the closed surface unchanged; the static invariant
+  #   clean live and each planted rule failing by name, with `shell: false` and
+  #   out-of-surface references NOT reported):
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/conformance/dispatch
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/no-shell-dispatch.test.ts tests/checks/dispatch-contract-invariance.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun run scripts/checks/no-shell-dispatch.ts
@@ -1798,7 +2213,7 @@ phases:
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH git diff --check
   # ---------------------------------------------------------------------------
   - id: 7
-    title: "Offline deterministic parity battery over the real production seams, the published proof boundary, the static no-shell invariant with its planted controls, the daemon-path regression, and the closed-contract pin"
+    title: "Offline deterministic parity battery over the real production seams driven by the single whole-battery case registry, the published proof-boundary constant, the static no-shell invariant with its planted controls, the daemon-path regression with its attempt-level corroboration, and the closed-contract pin"
     kind: delivery
     summary: "feat(GH-347): parity battery and no-shell invariant"
     scope:
@@ -1812,6 +2227,7 @@ phases:
         - tests/conformance/dispatch/dispatch-e2e.test.ts
         - tests/conformance/dispatch/controlled-repo.ts
         - tests/fixtures/dispatch/parity/evidence.ts
+        - tests/fixtures/dispatch/parity/cases.ts
         - tests/fixtures/dispatch/parity/seams.ts
         - tests/fixtures/dispatch/parity/harness.ts
         - tests/behaviour/dispatch-privacy.test.ts
@@ -1864,6 +2280,17 @@ phases:
   #       are re-run after reconciliation. The stale-phrase scan must return ZERO
   #       hits (DOD-6):
   #         grep -rn "no kill operation" doc/spec/features/feature-dispatch-engine.md doc/spec/features/feature-session-lifecycle-economics.md
+  #   8.4a THE PROOF BOUNDARY IS PUBLISHED, NOT COPIED INTO A CHANGE ARTIFACT
+  #        (F12). Sequencing across phases: delivery phase 7 asserts the permanent
+  #        `PARITY_PROOF_BOUNDARY` constant; LIFECYCLE PHASE 7 (@doc-syncer)
+  #        publishes the identical eight/six list on
+  #        `doc/spec/features/feature-dispatch-engine.md` and the constant↔page
+  #        equality is checked there, failing by name
+  #        (`proof boundary drift: <item>`); THIS phase's aggregate and doc guards
+  #        then run over the reconciled page. No suite reads the change spec or
+  #        the test plan — both are temporary — so a boundary edit that misses one
+  #        of the two permanent sources fails the lifecycle-phase-7 check or the
+  #        re-run doc guard, never a case that has silently rotted.
   #   8.5 The aggregate `TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm check`
   #       exits 0 through lint → format:check → typecheck → test →
   #       check:boundaries → check:memory → prompt/help/exports, with the new
@@ -1878,7 +2305,11 @@ phases:
   #   minor changeset with pre-existing ones byte-identical; `plan validate` valid
   #   and `readyForDevelopment=true`; `lint plan` valid; the doc-conformance,
   #   reference-page and doc-distribution guards green; zero stale "no kill
-  #   operation" hits; the aggregate gate green):
+  #   operation" hits; the aggregate gate green). NOTE on 8.4a: the boundary's
+  #   PAGE publication and its constant↔page equality are LIFECYCLE PHASE 7's
+  #   check; no phase-8 line asserts page text that the reconciliation has not
+  #   produced yet, and the post-reconciliation re-run of 8.4's guards is what
+  #   closes it:
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bash scripts/.tests/test-doc-distribution.sh
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH bun test tests/checks/doc-conformance.test.ts tests/checks/dispatch-doc-conformance.test.ts tests/checks/reference-page-parity.test.ts
   #   TMPDIR=$PWD/tmp/tmpdir PATH=$PWD/node_modules/.bin:$PATH pnpm build

@@ -1,6 +1,6 @@
 ---
 id: chg-GH-347-test-plan
-status: Proposed
+status: Updated
 created: 2026-11-19
 last_updated: 2026-11-19
 owners: ["engineering"]
@@ -34,7 +34,7 @@ The plan is offline and deterministic: no live opencode, no live GitHub, no mode
 
 ### 1.2 Out of Scope & Known Gaps
 
-Not tested, by design, and acceptable for the reasons given (spec §25.3, Appendix C; risk `RSK-7`):
+Not tested, by design, and acceptable for the reasons given (design provenance: spec §25.3 Appendix C; risk `RSK-7`):
 
 | Not proven | Why this is acceptable |
 |------------|------------------------|
@@ -44,6 +44,8 @@ Not tested, by design, and acceptable for the reasons given (spec §25.3, Append
 | A real lifecycle-agent outcome or a real merge | The change is parity of classification and supervision, not of the agent's work. Effects remain fixtures. |
 | Cross-process race freedom beyond the state store's fence guarantee | The two-invocation interleaving is deterministic by construction (§6.2), which is what makes the verdict assertion meaningful; an arbitrary OS schedule would prove nothing repeatable. |
 | Long-run retry behaviour under a real 30-second outage | The declared attempt/limit facts are asserted exactly with an injected recorder; the wall-clock duration adds no contract. |
+
+This table documents the boundary; it is not the boundary's source. The permanent source is the fixture constant `PARITY_PROOF_BOUNDARY` in `tests/fixtures/dispatch/parity/evidence.ts` (eight proven ids, six not-proven ids, declared order), and `TC-PARITY-004` asserts only that constant. The same boundary is published on `doc/spec/features/feature-dispatch-engine.md` and reconciled there in lifecycle phase 7; a page/constant mismatch is a documentation-phase defect, verified by the current-truth doc guard that runs in the aggregate (`pnpm check` → `bun test tests/checks/doc-conformance.test.ts`), never by `TC-PARITY-004`. Neither this plan nor the change specification is a permanent source, and no permanent suite reads `doc/changes/**`.
 
 Also out of scope (spec §7.2, `NG-1`…`NG-12`): the F1b operator surface (`status`, `log`, `is-delivering`, `last-message`, per-ref logs — GH-354), the retired pre-iteration hook, merge/closeout/queue CRUD/provider-policy/namespace-migration/installed-binary work, any change to tokens/projections/exits/error-table/domain kinds/attempt schema version, the shell entry points' deletion, and the `commitlint` PATH defect (M4-S3).
 
@@ -119,7 +121,7 @@ Also out of scope (spec §7.2, `NG-1`…`NG-12`): the F1b operator surface (`sta
 | `AC-F9-4` | F-9 | `TC-SHELL-001` | Planned |
 | `AC-F9-5` | F-9 | `TC-SHELL-002`, `TC-PARITY-004` | Planned |
 
-**Arithmetic.** 4 + 5 + 4 + 4 + 5 + 6 + 4 + 5 + 5 = 42 acceptance criteria, reconciled against spec §17 (`F-1` 4, `F-2` 5, `F-3` 4, `F-4` 4, `F-5` 5, `F-6` 6, `F-7` 4, `F-8` 5, `F-9` 5). 42 of 42 appear above with at least one named case; 0 are marked TODO; 0 carry a case id that has no §5.2 entry. The matrix carries **53** AC→case links (42 + 11 extras) because nine criteria need more than one observation: `AC-F1-1` (+1), `AC-F2-3` (+1), `AC-F5-3` (+2), `AC-F8-1`…`AC-F8-4` (+4, the daemon inheritance), `AC-F8-5` (+1), `AC-F9-5` (+1). Case inventory: **50** cases across 11 groups, every one linked back to an `AC-*` or an `NFR-*` — 0 orphan cases (`TC-PARITY-005` → `NFR-7`, `TC-CONTRACT-001` → `NFR-3`/`NFR-11`).
+**Arithmetic.** 4 + 5 + 4 + 4 + 5 + 6 + 4 + 5 + 5 = 42 acceptance criteria, reconciled against spec §17 (`F-1` 4, `F-2` 5, `F-3` 4, `F-4` 4, `F-5` 5, `F-6` 6, `F-7` 4, `F-8` 5, `F-9` 5). 42 of 42 appear above with at least one named case; 0 are marked TODO; 0 carry a case id that has no §5.2 entry. The matrix carries **53** AC→case links (42 + 11 extras) because nine criteria need more than one observation. The extras sum to 11 exactly: `AC-F1-1` (+1), `AC-F2-3` (+1), `AC-F5-3` (+2: `TC-TERM-003`, `TC-TERM-004`, `TC-LOOP-003`), `AC-F8-1` (+1), `AC-F8-2` (+1), `AC-F8-3` (+2: `TC-DERIVE-003`, `TC-DERIVE-004`, `TC-PARITY-006`), `AC-F8-4` (+1) — these four are the daemon-inheritance observation — `AC-F8-5` (+1), `AC-F9-5` (+1). Case inventory: **50** cases across 11 groups, every one linked back to an `AC-*` or an `NFR-*` — 0 orphan cases (`TC-PARITY-005` → `NFR-7`, `TC-CONTRACT-001` → `NFR-3`/`NFR-11`).
 
 ### 3.2 Interface Coverage (API-#, EVT-#, DM-#)
 
@@ -156,8 +158,10 @@ Also out of scope (spec §7.2, `NG-1`…`NG-12`): the F1b operator surface (`sta
 | `NFR-7` record bounds and redaction | `TC-PARITY-005`, `TC-LANE-004` | Lane key allowlist, no prompt/transcript/diff/credential/provider payload, ≤16 evidence refs, single-line identifier-only diagnostics |
 | `NFR-8` concurrency safety | `TC-ADMIT-001`, `TC-ADMIT-003`, `TC-ADMIT-004` | Exactly 1 admitted + 1 `queue.single-flight`, 0 `fallback.internal`, 0 double-claim, fence wait ≤ `queue.lease-ttl` |
 | `NFR-9` resume continuity | `TC-RESUME-101`, `TC-RESUME-104` | 1/1 recorded `pr-open` resumes; unknown session is a classified failure, never a fresh spawn |
-| `NFR-10` backward compatibility and proof honesty | `TC-PARITY-002`, `TC-PARITY-004`, `TC-LANE-005` | Real seams, no reimplementation, published boundary, pre-change records and daemon lanes read unchanged |
+| `NFR-10` backward compatibility and proof honesty | `TC-PARITY-002`, `TC-PARITY-004`, `TC-LANE-005` | Real seams, no reimplementation, a permanent boundary constant consistent with the registry, pre-change records and daemon lanes read unchanged |
 | `NFR-11` configuration invariance | `TC-CONTRACT-001`, `TC-LOOP-005`, `TC-TRACKER-004` | 0 new keys; defaults `30000`/`3`/`20000`/`90000` pinned |
+
+**Exit-literal rule (`NFR-3`).** Every exit literal stated in §5.2 is the delivered projection of the token or error row that produces it, computed from `DELIVERY_RESULT_TAXONOMY` × `PROJECTION` (`success` → 0, `user-validation` → 1, `platform-provider` → 2): `merged`/0, `blocked`/0, `pr-open`/0, `pr-open-unverified`/0, `finished`/0, `noop-lane-nothing-to-do`/0, `failed`/1, `max-restarts`/1, `partial`/1, `noop-lane-permission`/1, `state-unverified`/2. No case may state an exit literal the delivered matrix does not project, and `TC-CONTRACT-001` pins the matrix (taxonomy, projection map, and every error-table row's projection class) against the baseline, so a case that contradicts the matrix fails the invariance check rather than silently editing a test expectation.
 
 ## 4. Test Types and Layers
 
@@ -230,7 +234,7 @@ Two drivers are used and both are production code:
 | `TC-PARITY-001` | All 11 classes replay through the real derivation and command path | Integration | Conformance | Critical | `AC-F9-1`, `AC-F8-5` | Extended (`dispatch-e2e.test.ts` fixtures) |
 | `TC-PARITY-002` | Every case exercises the real production seam; a reimplementation is rejected | Structure | Conformance | Critical | `AC-F9-2` | New |
 | `TC-PARITY-003` | Two consecutive runs are identical with zero live network and zero live processes | Integration | Conformance | Critical | `AC-F9-3`, `NFR-1` | New |
-| `TC-PARITY-004` | The proved / not-proved boundary is published and drift-checked | Structure | Conformance | High | `AC-F9-5` | New |
+| `TC-PARITY-004` | The proved / not-proved boundary is a permanent constant and is self-consistent | Structure | Conformance | High | `AC-F9-5` | New |
 | `TC-PARITY-005` | Record bounds and redaction hold across the whole battery | Integration | Conformance | Critical | `NFR-7`, `NFR-4` | Extended (`dispatch-privacy.test.ts`, `dispatch-attempts-bounds.test.ts`) |
 | `TC-PARITY-006` | Daemon-path regression: it inherits tracker-done `merged`, artifact `partial`, the retired ledger arm | Integration | Conformance | Critical | `AC-F8-1`…`AC-F8-4`, `DM-4` | Extended (`dispatch-daemon-lane.test.ts`) |
 | `TC-SHELL-001` | The injected runner records zero shell invocations across the battery | Integration | Conformance | Critical | `AC-F9-4` | New |
@@ -591,7 +595,7 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 
 **Expected Outcome**:
 - Both runs are admitted (no `dispatch.restart-budget-exceeded`), resume the session, and classify normally.
-- No ordinal is consumed: the count of `economics.restart` records is unchanged and the envelope's `restarts` does not increase (it stays at the persisted count).
+- No ordinal is consumed: the count of `economics.restart` records is unchanged, and the envelope's `restarts` stays at the **persisted total** (3 and 4 respectively) — the same persisted-total definition `TC-LOOP-005` pins.
 - Exactly one attempt record per run.
 
 #### TC-RESUME-103 - No recorded lane → an explicit fresh spawn with a recorded fresh-spawn fact
@@ -816,7 +820,7 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 2. Assert the token, exit, restart count, and the number of starter session acquisitions.
 
 **Expected Outcome**:
-- Tokens: `merged`/0, `blocked`/1, `pr-open`/0.
+- Tokens: `merged`/0, `blocked`/0, `pr-open`/0 (all three project `success`; `blocked` is not exit 1).
 - `economics.restart` records: 0 for every member; `restarts` unchanged; exactly one starter session acquisition.
 - The session was terminated (capable adapter) before the attempt was recorded, and the attempt carries the stall + termination evidence.
 
@@ -947,10 +951,12 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 2. Assert iterations, termination, token, records.
 
 **Expected Outcome**:
-- The loop terminates at the bound: `result === "max-restarts"`, exit 2.
-- Exactly one attempt record with token `max-restarts`; exactly one delivered terminal exhaustion record; `restarts === 3`.
+- The loop terminates at the bound: `result === "max-restarts"`, exit 1 (`max-restarts` projects `user-validation`).
+- **4 iterations**: 1 fresh spawn (iteration 1) + 3 resumes (iterations 2–4), i.e. **4 sessions total**, matching `TC-LOOP-001`'s spawn-then-resume model and `TC-LANE-003`'s active-ordinal shape.
+- `restarts === 3` — the persisted total after the dispatch (initialised from the recorded count 0 and incremented once per consumed ordinal).
+- Exactly one attempt record with token `max-restarts`; exactly one delivered terminal exhaustion record.
 - Each stalled session was terminated before the next iteration; no session is left running at the end (process-tree model: all started pids exited or signalled).
-- No fourth session acquisition.
+- 0 further session acquisitions after the bound decision (no fifth spawn or resume).
 
 #### TC-LOOP-003 - An unverified stall consumes no ordinal and starts no second session
 
@@ -1021,10 +1027,13 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 2. Assert no dispatch ever has two attempt records.
 
 **Expected Outcome**:
-- `restarts` equals the ordinals consumed in that invocation (0, 1, 0 respectively) from a zero persisted baseline, and the count never exceeds the iterations actually restarted.
+- `restarts` is the **persisted total after the dispatch**: initialised from the recorded restart count and incremented by each ordinal this invocation consumes. The three zero-baseline runs therefore report 0, 1, 0; a persisted-3 run with no consumption reports 3 (`TC-RESUME-102`).
+- The reported value never exceeds the iterations actually restarted (no double count).
 - Attempt count: 1, 1, 0.
 - The default bound is 3 and the pinned bound is honoured; `coordinator.restart-budget` (10) is never consulted for this surface (assert by pinning it to a distinct value and observing no effect).
 - No configuration key or default is added (`TC-CONTRACT-001` asserts the surface).
+
+**Notes**: The mutation row `M52` states this definition directly: reporting only this invocation's consumed count where the persisted total is required fails by name.
 
 #### TC-LOOP-006 - A persisted count at or above the bound admits one iteration
 
@@ -1170,15 +1179,16 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 
 **Preconditions**:
 - Tracker fact: `{state:"done", blocking:false}`; PR fact `none`; commits 0; pm-notes absent; CI unreadable.
+- Two read-precedence rows: the same done tracker with an **unreadable artifact read** (`artifact.read-unreadable`), and with an **unreadable ledger read** (`ledger.read-unreadable`).
 
 **Steps**:
-1. Pure: `deriveDispatchResult(truthInput({tracker: readOk(tracker({state:"done"}))}))`.
-2. Command: the same facts through the composed program.
+1. Pure: `deriveDispatchResult(truthInput({tracker: readOk(tracker({state:"done"}))}))`, then the same input with `artifacts: readFail("artifact", …)` and with `ledger: readFail("ledger", …)`.
+2. Command: all three inputs through the composed program.
 3. Read the attempt record's corroboration and divergences.
 
 **Expected Outcome**:
-- Token `merged`, exit 0, `urlResolved === false`, `prUrl === ""`.
-- Corroboration: `tracker === "satisfied"` (arm-aware); `pmNotes`/`ci` do not gate the arm.
+- All three inputs yield token `merged`, exit 0, `urlResolved === false`, `prUrl === ""` — the tracker-done arm precedes every artifact read, so an unreadable artifact or ledger does not degrade it to `state-unverified`.
+- Corroboration: `tracker === "satisfied"` (arm-aware); `pmNotes`/`ci` do not gate the arm; the unreadable ledger is disclosed (`unreadable` corroboration source) without changing the token.
 - `falseSuccess === false`; divergence count for the pair is 0 (absent pm-notes and unreadable CI raise no false-success incident for this arm).
 
 #### TC-DERIVE-002 - Tracker-done wins over a blocking label
@@ -1194,16 +1204,17 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 **Seam**: `S-derive` — the real order (pure and through the command path)
 
 **Preconditions**:
-- `{state:"done", blocking:true}`; also `{state:"delivery-blocked", blocking:true}` for the converse.
+- `{state:"done", blocking:true}`; `{state:"delivery-blocked", blocking:true}` for the converse; and `{state:"delivery-blocked", blocking:true}` with an **unreadable artifact read** as the read-precedence row.
 
 **Steps**:
-1. Derive both; assert tokens and order-sensitivity.
-2. Command-run both.
+1. Derive all three; assert tokens and order-sensitivity.
+2. Command-run all three.
 
 **Expected Outcome**:
 - Done + blocking → `merged` (tracker-done precedes blocking).
-- Blocking without done → `blocked`, exit 1.
-- The two inputs are distinguishable: neither yields both tokens, and swapping the ladder order changes the first assertion (see `M60`).
+- Blocking without done → `blocked`, exit 0 (the `blocked` row projects `success`; this is the delivered baseline, not a change).
+- Blocking without done **plus an unreadable artifact read** → `blocked`, exit 0: the blocking arm precedes the artifact read, so an unreadable artifact never degrades it to `state-unverified`.
+- The inputs are distinguishable: none yields two tokens, and swapping the ladder order changes the first assertion (see `M60`).
 
 #### TC-DERIVE-003 - Commits + complete pm-notes → `finished`; incomplete/absent → `partial`
 
@@ -1244,22 +1255,24 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 **Seam**: `S-derive` + `S-lane` — the real derivation, the real corroboration/false-success classifier, the real divergence ledger
 
 **Preconditions**:
+- Two rows over the same divergent ledger: (a) the verify-change read reports **no outcome** (`verifyOutcome: null`); (b) the verify-change read reports a **non-complete** outcome (e.g. `partial`).
 - Commits 2, PR `none`, pm-notes `complete` (real pm-notes file with a non-null `delivery` completion).
 - Ledger fact: `progressed: false`, `completed < total` (not complete); `phasesComplete: false` (the ledger-sourced corroboration source, deliberately unchanged by DEC-11).
 - Tracker readable, non-done, non-blocked.
 
 **Steps**:
-1. Run the dispatch twice against the same state (the second run exercises dedupe).
-2. Read the attempt record, the divergences, and the false-success classification.
+1. Row (a): run the dispatch twice against the same state; read the attempt record, the comparison, the divergences, and the false-success classification.
+2. Row (b): run once; read the same observations and the appended divergence record.
 
 **Expected Outcome**:
-- Token `finished`, exit 0 — the divergent ledger does not move the token.
-- `corroboration.pmNotes === "unsatisfied"` (ledger-sourced by design) and `falseSuccess === true`: the honesty signal is present and never silently suppressed.
-- Divergences for `(repository, ref)`: at most one, and every record present matches the delivered shape (`comparisonClass`, `engineToken`, `comparisonToken` from the delivered contract) — no new incident kind, no new divergence class.
-- The second run does not create a second divergence for the same pair (dedupe) and does not append a second attempt per dispatch beyond its own.
+- Token `finished`, exit 0 in both rows — the divergent ledger does not move the token.
+- `corroboration.pmNotes === "unsatisfied"` (ledger-sourced by design) and `falseSuccess === true` in both rows: the honesty signal is present and never silently suppressed.
+- **No `state-unverified` delivered-evidence divergence in either row.** That path is `su`-gated over `isDeliveredEvidence`, and a `finished` token cannot reach it: assert the count of records matching the delivered-evidence shape (`comparisonClass === "not-applicable"`, `engineToken === "state-unverified"`, `comparisonToken === null`) is exactly 0.
+- Row (a): the comparison class is `not-applicable` and the divergence count for `(repository, ref)` is exactly 0; the second run appends no divergence either.
+- Row (b): exactly **one** divergence with `comparisonClass === "verify-change"`, `engineToken === "finished"`, and `comparisonToken` equal to the verify read's outcome — the delivered `verify-change` record shape, no new incident kind, no new divergence class. The delivered evidence-divergence dedupe is `su`-gated and is deliberately not claimed here; per-attempt `verify-change` records are the delivered behaviour.
 - The delivered `isDeliveredEvidence` predicate is unchanged: the `state-unverified` delivered-evidence divergence path still behaves as its own suite asserts.
 
-**Notes**: This is mandated observation (b). It pins the boundary DEC-11 records; re-pointing the `pm-notes` source is out of scope and would be a different decision.
+**Notes**: This is mandated observation (b) and the mechanism-precise half of finding 6. It pins the boundary DEC-11 records: the corroboration source stays the ledger, `falseSuccess` is never suppressed, and the only divergence a divergent-ledger `finished` can produce is the conditional `verify-change` record. Re-pointing the `pm-notes` source is out of scope and would be a different decision.
 
 #### TC-DERIVE-005 - The nothing-to-do arm requires no commits and a readable tracker; the ledger arm is retired
 
@@ -1299,15 +1312,21 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 **Seam**: `S-derive` — the real total order, the real taxonomy, and the real projection
 
 **Preconditions**:
-- A fixture matrix of one minimal input per arm (Appendix F arms A1–A9, B1–B4, C1–C10, D1–D5) plus pairwise combinations chosen to collide (done+blocking, done+open PR, open PR + commits, commits 0 + complete ledger).
+- A fixture table of **30 inputs**:
+  - **23 declared-arm inputs** — Appendix F arms A1–A9 (pre-session, 9), B1–B4 (attempt-stage, 4), C1–C10 (completed-session ladder, 10). The stall ladder (D) is a loop decision, not a pure-derivation arm: it is covered by `TC-TERM-003`/`TC-TERM-004`/`TC-LOOP-001`…`003` and is deliberately excluded here.
+  - **4 collision inputs** — done+blocking, done+open PR, open PR + commits, commits 0 + complete ledger.
+  - **3 read-precedence inputs** — tracker-done + unreadable artifact read, tracker-blocking + unreadable artifact read, tracker-done + unreadable ledger.
+- Each input declares the one arm it must match and the token that arm projects.
 
 **Steps**:
-1. Assert each arm produces exactly its token.
-2. Assert pairwise disjointness: for every input, exactly one arm matches (instrument the ladder with a declared arm identifier returned alongside the derivation, or derive it from the fixture's arm tag and assert the token set has one member).
-3. Assert the taxonomy: 11 tokens, projection per token, exit per projection (`state-unverified` 2, `partial` 1), attempt-record schema version unchanged.
+1. For each input, assert the derived token equals the token its declared arm projects.
+2. Assert per-input disjointness: exactly one arm matches each input (instrument the ladder with a declared arm identifier returned alongside the derivation, or derive it from the fixture's arm tag and assert the match set has exactly one member).
+3. Assert the observed token set equals the taxonomy subset those arms project — **10 tokens**: `merged`, `blocked`, `pr-open`, `pr-open-unverified`, `failed`, `finished`, `state-unverified`, `partial`, `noop-lane-permission`, `noop-lane-nothing-to-do`. `max-restarts` is a loop/bound outcome, not an arm in this table, and is covered by `TC-LOOP-002`/`TC-LOOP-006`.
+4. Assert the taxonomy: 11 tokens, projection per token, exit per projection (`state-unverified` 2, `partial` 1, `blocked` 0, `max-restarts` 1), attempt-record schema version unchanged.
 
 **Expected Outcome**:
-- 11/11 arms map to distinct tokens; zero input yields two arms.
+- 30/30 inputs yield the token their declared arm projects; 0 inputs yield two arms; 0 inputs yield a token outside the projected subset.
+- An arm is not a token: the table's 30 inputs cover **10 of the 11** tokens, with more than one arm each for `merged` (tracker-done, already-merged PR), `partial` (incomplete pm-notes, classifier tool-failure) and `failed` (spawn failure, classifier failure). `max-restarts` is the eleventh token and is proven by the loop cases, not by an arm in this table.
 - `DELIVERY_RESULT_TOKENS` length 11 and order unchanged; `DELIVERY_RESULT_TAXONOMY` projections unchanged; the exit of every token equals its projection's exit.
 - `DISPATCH_ATTEMPT_PAYLOAD_SCHEMA` version unchanged.
 
@@ -1324,19 +1343,19 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 **Seam**: all five — `S-claim`, `S-lane`, `S-spawn`, `S-ladder`, `S-terminate` — plus `S-derive`, each row declaring the one it exercises
 
 **Preconditions**:
-- The 11-arm fixture table (§6.1) built on the extended `dispatch` truth/harness fixtures and the composed production program.
+- The registry `tests/fixtures/dispatch/parity/cases.ts`, filtered to its `class` group (11 rows).
 - Every row declares: class, fixture inputs, production seam exercised, expected token, expected exit.
 
 **Steps**:
-1. For each row: run one dispatch, capture exit, token, envelope, attempt record.
+1. For each `cases.ts` `class` entry, call its `scenario` builder and run one dispatch; capture exit, token, envelope, attempt record.
 2. Assert the token and exit; assert the row's declared seam was actually exercised (e.g. spawn refusal row: the session port recorded a refusal; terminate row: the starter recorded signals).
 3. Assert 11 distinct classes were observed exactly once each.
 
 **Expected Outcome**:
 - 11/11 tokens produced, each by its declared arm, each with the delivered exit.
 - The observed class set equals the taxonomy set (no missing, no extra).
-- Each row's `seam` field is one of the five production seams (§7.1) and the corresponding observation is non-empty; a row whose seam observation is empty fails.
-- This is the extension of the delivered `dispatch-e2e.test.ts` class driver, not a parallel table: the existing `ALL_CLASSES`/`drive` shape is reused and extended with the new arms and seams.
+- Each row's `declaredSeam` is one of the five production seams (§7.1) and the corresponding observation is non-empty; a row whose seam observation is empty fails.
+- This is the extension of the delivered `dispatch-e2e.test.ts` class driver, not a parallel table: the existing `ALL_CLASSES`/`drive` shape is reused and extended with the new arms and seams, and the rows come from the registry rather than being re-authored in this suite.
 
 #### TC-PARITY-002 - Every case exercises the real production seam; a reimplementation is rejected
 
@@ -1376,20 +1395,23 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 **Seam**: all five — every seam is replayed under the guards and the canonicalizer
 
 **Preconditions**:
+- The registry `tests/fixtures/dispatch/parity/cases.ts` (§6.1): every group — `class` (11), `admission`, `resume`, `tracker-outage`, `loop`, `terminate`, `spawn`. The registry is the only place a parity scenario is defined.
 - A fresh temp checkout/state per run, a fixed clock, a fixed id sequence, and the canonicalizer that replaces the temp root with `<root>`.
 - Guards: the injected transport counts live requests; a network guard fails any real `fetch`; the runner/starter guard records real process starts.
 
 **Steps**:
-1. Run the full battery (all 11 rows + race + resume + outage + loop + spawn) twice in isolated roots.
-2. Canonicalize and compare envelopes, attempt counts per class, and class coverage.
+1. Call `runAllParityCases()` twice, in isolated roots. No scenario is re-authored in this suite: the registry is the driver, so "whole battery" is defined by the registry's contents, not by a list in the test body.
+2. Canonicalize and compare envelopes, attempt counts per group and per class, and class coverage.
 3. Assert the guard counters.
+4. Assert the registry is complete: the observed groups equal the declared group set, and the observed case count equals `PARITY_CASES.length` (a registry row that is never executed fails).
 
 **Expected Outcome**:
 - Canonical output is byte-identical between the runs (fixed clock/ids make non-path values identical; only root paths are normalized).
-- Per-class attempt counts identical; class coverage identical (11/11 both runs).
+- Per-group and per-class attempt counts identical; class coverage identical (11/11 both runs).
 - `liveNetworkRequests === 0`, `realChildStarts === 0`, `shellInvocations === 0` across both runs; the injected transport saw every request.
+- Every declared registry entry executed at least once in each run — no case is silently skipped.
 
-#### TC-PARITY-004 - The proved / not-proved boundary is published and drift-checked
+#### TC-PARITY-004 - The proved / not-proved boundary is a permanent constant and is self-consistent
 
 **Scenario Type**: Structure
 **Impact Level**: High
@@ -1399,20 +1421,28 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 **Automation Level**: Automated
 **Target Layer / Location**: `tests/conformance/dispatch/dispatch-parity-battery.test.ts` + `tests/fixtures/dispatch/parity/evidence.ts`
 **Tags**: @backend, @parity, @offline
-**Seam**: none executed; the published boundary manifest is compared against spec Appendix C and this plan's §1.2
+**Seam**: none executed; the permanent fixture constant `PARITY_PROOF_BOUNDARY` is checked for shape, declared order, and consistency with the parity registry
 
 **Preconditions**:
-- `PARITY_PROOF_BOUNDARY` in the parity fixture: six not-proven items (live opencode, live provider, OS-level termination, real lifecycle outcome, cross-process race freedom, long-run outage) and eight proven items, each with an id.
-- This plan's §1.2 and spec Appendix C.
+- `PARITY_PROOF_BOUNDARY` in `tests/fixtures/dispatch/parity/evidence.ts`: `proven` = exactly eight ids in the declared order (`claim`, `lane`, `spawn`, `ladder`, `terminate`, `loop`, `class-coverage`, `no-shell`); `notProven` = exactly six ids in the declared order (`live-opencode`, `live-provider`, `os-termination`, `real-lifecycle-outcome`, `cross-process-race`, `long-run-outage`).
+- The registry `PARITY_CASES` from `tests/fixtures/dispatch/parity/cases.ts`, each entry carrying its `declaredSeam`.
+- No other input: the case reads no change artifact, no `doc/changes/**` path, and no specification.
 
 **Steps**:
-1. Assert the fixture's not-proven list equals the spec Appendix C list: the six item ids in the same order, and the same eight proven items.
-2. Assert every parity row's declared seam appears in the proven list and no row claims a not-proven surface.
-3. Assert this plan's §1.2 table names the same six ids in the same order (the plan path is read by the test, so a silent edit on either side fails).
+1. Assert `PARITY_PROOF_BOUNDARY.proven` deep-equals the eight-id array above (count and order).
+2. Assert `PARITY_PROOF_BOUNDARY.notProven` deep-equals the six-id array above (count and order).
+3. Assert every `PARITY_CASES` entry's `declaredSeam` is a member of `proven`; assert no entry's seam is a member of `notProven` and none starts with `live-`.
+4. Planted controls in a temp-workspace copy of the constant, each of which must fail by name: append a ninth id to `proven`; remove one id from `proven`; swap two ids in `proven`; append a seventh id to `notProven`; and add a registry entry whose `declaredSeam` is `live-opencode`.
+5. Assert this suite's own source contains no `doc/changes/` reference, so the boundary check can never regress into reading a change artifact.
 
 **Expected Outcome**:
-- Lists are identical; a changed plan §1.2 without a fixture change fails the test by name (`proof boundary drift: <item>`).
-- No row's seam is `live-*`; a row that declares a not-proven surface fails.
+- `proven` is exactly 8 ids and `notProven` is exactly 6 ids, each byte-equal and in the declared order; the check passes on the live tree.
+- Every parity row's `declaredSeam` is a proven surface; zero rows declare a not-proven or unclassified surface.
+- The planted controls fail by name: `proof boundary drift: proven expected 8 ids, received 9`; `proof boundary drift: proven expected 8 ids, received 7`; `proof boundary drift: proven order expected [<declared>], received [<swapped>]`; `proof boundary drift: notProven expected 6 ids, received 7`; `parity row <id> declares a not-proven seam live-opencode`.
+- The suite source scan finds 0 `doc/changes/` references; a re-added one fails by name.
+- The case asserts nothing about the current-truth page: publication and page/constant agreement belong to phase 7 and the doc guard in the aggregate (§1.2).
+
+**Notes**: This is the permanent half of finding 12. The boundary's single source is the fixture constant; the same boundary is published on `doc/spec/features/feature-dispatch-engine.md` and reconciled in phase 7, whose page/constant mismatch is a documentation-phase defect caught by the doc guard in `pnpm check`. Neither the change specification nor this plan is read by a permanent suite.
 
 #### TC-PARITY-005 - Record bounds and redaction hold across the whole battery
 
@@ -1483,16 +1513,18 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 
 **Preconditions**:
 - The guarded process runner factory used for every injected child seam: `harnessSpawnRunner`, `harnessSpawnStarter`, `gitChildRunner`, `githubCliRunner`.
-- The guard records `{seam, file, args}` and fails by name on a shell file (`bash|sh|zsh|dash|cmd|powershell`) or a script-path argument (`.sh`, `scripts/`, `tools/`, `deliver-ticket`).
+- The guard records `{seam, file, args}` and fails by name on a shell file (`bash|sh|zsh|dash|cmd|powershell`) or a script-path argument (a value ending `.sh`, or starting `scripts/`, `tools/`, or containing `deliver-ticket`).
+- The whole registry `tests/fixtures/dispatch/parity/cases.ts` — every group it declares, no subset.
 
 **Steps**:
-1. Run the whole battery (11 classes + race + resume + outage + loop + terminate + spawn) under the guarded runner.
+1. Call `runAllParityCases()` under the guarded runner. The registry, not the test body, defines the sweep, so no group can be omitted by omission of a call site.
 2. Assert the guard's records, the argv shape of every spawn, and the `shell` option.
+3. Assert the executed case count equals `PARITY_CASES.length` and every group the registry declares was observed.
 
 **Expected Outcome**:
 - `shellInvocations === 0`, `scriptPathInvocations === 0` across every seam and every row, including the loop and terminate paths.
 - Every harness invocation is the harness command with a fixed argv; `shell:false` is the only value observed at the spawn call site.
-- No recorded argv element is a `.sh` path or a `scripts/` path.
+- No recorded argv element is a `.sh` path or a `scripts/`/`tools/` path.
 - A requested shell or script path is a hard failure with the seam and the offending value in the message.
 
 #### TC-SHELL-002 - The static no-shell invariant passes and a planted reference fails it by name
@@ -1508,18 +1540,20 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 **Seam**: `S-exec` — the static invariant over the declared dispatch-flow surface
 
 **Preconditions**:
-- A declared dispatch-flow surface list (see §7.2), and a registry of precise rules (not a blanket grep).
+- A declared dispatch-flow surface list (see §7.2), and a registry of precise rules (not a blanket grep): `R1` is anchored on whole string-literal values (ends `.sh`, is a `scripts/`/`tools/` path, or contains `deliver-ticket`), never on raw substrings.
 - A temp workspace writer for the planted-reference control (the `forbidden-literals` pattern).
 
 **Steps**:
 1. Run the invariant over the live tree: assert zero violations and assert every declared surface file exists and is reachable from the dispatch entry (so the list cannot silently rot).
-2. Write a temp workspace with one planted violation per rule class (a `.sh` literal in a dispatch module; a `spawn(..., {shell:true})`; an `execSync` import) and assert each is reported by rule name and file.
-3. Assert the rules do not fire on the legitimate controls: `shell:false` in the host starter, `scripts/checks/*.ts` references outside the surface, and `scripts/` in documentation.
+2. Write a temp workspace with one planted violation per rule class (a string literal `"scripts/deliver-ticket.sh"`; a `spawn(..., {shell:true})`; an `execSync` import) and assert each is reported by rule name and file.
+3. Assert the rules do not fire on the legitimate controls: `shell: false` in the host starter; a `scripts/checks/*.ts` reference outside the surface; `scripts/` in documentation; the `.sha` member accesses in `packages/cli/src/edge.ts` (`facts.head.sha`, `head.sha`, `read.sha`) and any `.sha` member access in `packages/cli/src/production.ts`; and `queue.shift()` in `packages/adapters/src/host/index.ts`. A named control file that carries no such token today gets a planted one in the temp-workspace copy, so the control is never vacuous.
+4. Negative control for `R1`'s anchoring: plant a member access/identifier shaped like a violating literal (`head.sha`, `queue.shift`) and assert it is **not** reported; then plant the literal `"head.sh"` and assert it **is** reported — proving the rule distinguishes a literal from a member name.
 
 **Expected Outcome**:
 - Live tree: 0 violations, surface list non-empty and all files present.
 - Each planted reference fails by name (`no-shell invariant: script-path literal`, `no-shell invariant: shell-enabled spawn`, `no-shell invariant: shell-exec import`) with `file:line`.
-- Zero false positives on the controls; a `shell:false` call site is accepted.
+- Zero false positives on all five controls; a `shell:false` call site is accepted, and `.sha`/`shift` never match `R1`.
+- The allowlist is empty; a violation cannot be silenced without a recorded justification in the check source.
 
 #### TC-CONTRACT-001 - The closed contract surface is unchanged against a pinned baseline
 
@@ -1579,7 +1613,8 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 | `tests/fixtures/dispatch/parity/interleave.ts` | The deterministic two-invocation interleaving: a latch (`arrive`/`release`) wired to the injected fence wait; an external fence holder handle for the persistent-contention case; the virtual clock and the cumulative-wait recorder. |
 | `tests/fixtures/dispatch/parity/lane.ts` | Seeders and readers for `dispatch.lane` (active/terminal) and daemon lane records; a store wrapper that fails only `dispatch.lane` appends; the "lane exists before any attempt" probe. |
 | `tests/fixtures/dispatch/parity/pm-notes.ts` | Real pm-notes documents on disk: `complete` (delivery phase with a non-null completion), `incomplete` (delivery phase null), `absent` (no file), `malformed` (unparseable), plus the **divergent-ledger** document used by `TC-DERIVE-004` (complete document + a phase ledger that has not progressed and is not complete). |
-| `tests/fixtures/dispatch/parity/evidence.ts` | The 11-row class table (class, fixture inputs, production seam, expected token, expected exit), the 11-arm mutation hooks, the `PARITY_PROOF_BOUNDARY` id set, and the canonicalizer (temp-root normalization + stable JSON) for `TC-PARITY-003`. |
+| `tests/fixtures/dispatch/parity/cases.ts` | **The one case registry.** `PARITY_CASES` enumerates **every** parity row with `{ id, group, declaredSeam, scenario: (h) => Promise<Observation>, expected }`, where `group` is one of `class` (11), `admission` (same-ref race, other-ref lease), `resume` (`pr-open` lane, no lane, unknown session), `tracker-outage` (with artifact, without artifact), `loop` (below-bound restart, at-bound `max-restarts`, unverified stall, clean-exit terminal, persisted ≥ bound), `terminate` (capable, incapable, exact-identity reap), `spawn` (fresh, resume). Exports `runParityCase(entry)` and `runAllParityCases()`. Every suite consumes its registry entry's `scenario` builder; no suite re-expresses a scenario. `TC-PARITY-001` drives the `class` group, `TC-PARITY-003` and `TC-SHELL-001` drive `runAllParityCases()`. |
+| `tests/fixtures/dispatch/parity/evidence.ts` | The 11-row **class** fixture table (class, fixture inputs, production seam, expected token, expected exit) that `cases.ts` composes for its `class` group, the 11-arm mutation hooks, the **permanent `PARITY_PROOF_BOUNDARY`** (8 proven ids and 6 not-proven ids, declared order — the only source for the boundary, asserted by `TC-PARITY-004`), and the canonicalizer (temp-root normalization + stable JSON) for `TC-PARITY-003`. |
 | `tests/fixtures/dispatch/parity/seams.ts` | Import-identity manifest: each production seam symbol → its production module → the battery consumer, plus the reimplementation-signature registry consumed by `TC-PARITY-002`. |
 | `scripts/checks/no-shell-dispatch.ts` | The static invariant: declared surface list, rule set, `scan(root)` returning violations `{rule,file,line}`, exit non-zero and name the offending rule/file. |
 | `tests/checks/no-shell-dispatch.test.ts` | Live-tree cleanliness, surface-list existence (non-vacuity), one planted reference per rule through a temp workspace, false-positive controls. |
@@ -1618,6 +1653,8 @@ Numbering note: `TC-RESUME-101`…`104` start at 101 because `TC-RESUME-001` and
 
 The engine (`runDispatch`), the command definition, the CLI runtime, the projection, the attempt ledger, and the state store are always the production ones.
 
+**One case registry (`tests/fixtures/dispatch/parity/cases.ts`).** Every parity case — the 11 classes plus the same-ref race, the other-ref lease, the `pr-open` resume, the no-lane resume, the unknown-session resume, tracker-outage with and without a decisive artifact, the below-bound restart, the at-bound `max-restarts`, the unverified stall, the clean-exit terminal, the persisted-at-bound admission, the three terminate rows, and the two spawn rows — is one entry with a `scenario` builder. The dedicated suites import their entry's builder instead of re-expressing the scenario, so a suite and the whole-battery driver cannot drift. `TC-PARITY-001` drives the `class` group; `TC-PARITY-003` and `TC-SHELL-001` call `runAllParityCases()`, which is what makes "the full battery" a declared, runnable thing rather than a list in a test body.
+
 **Reimplementation detection (three independent mechanisms, all in `TC-PARITY-002`):**
 
 1. **Import identity.** `seams.ts` declares each seam symbol and its production module; the battery must import that symbol from that module. A test-local copy has a different module and fails.
@@ -1628,21 +1665,23 @@ No case may satisfy itself with a fixture-written record: `controlled-repo.ts`'s
 
 ### 7.2 No-shell proof design
 
-Two complementary observations, exactly as Appendix C specifies.
+Two complementary observations. Their permanent contract is the fixture constant `PARITY_PROOF_BOUNDARY` and the invariant check named below; the change specification is design provenance only.
 
 **(a) The injected process runner.** `guardedRunner({seam})` wraps every injected child seam (`harnessSpawnRunner`, `harnessSpawnStarter`, `gitChildRunner`, `githubCliRunner`). It records `{seam, file, args}` and fails the run by name when:
 - the executable is a shell (`bash`, `sh`, `zsh`, `dash`, `cmd`, `powershell`), or
 - an argument is a script path (ends `.sh`, starts `scripts/` or `tools/`, or contains `deliver-ticket`), or
 - the options carry a shell-enabling member.
 
-It also asserts, for every spawn, that the call site passed `shell:false` (the adapter's fixed argv contract). The battery records `shellInvocations === 0` and `scriptPathInvocations === 0` for the whole 11-class + race + resume + outage + loop + terminate sweep.
+It also asserts, for every spawn, that the call site passed `shell:false` (the adapter's fixed argv contract). The battery records `shellInvocations === 0` and `scriptPathInvocations === 0` for every entry in `PARITY_CASES` (the registry, not a list in the test body, defines the sweep).
+
+**Publication is not this case's job.** The same boundary is published on `doc/spec/features/feature-dispatch-engine.md` and reconciled there in lifecycle phase 7; a page/constant mismatch is a documentation-phase defect verified by the current-truth doc guard in the aggregate (`pnpm check` → `bun test tests/checks/doc-conformance.test.ts`), not by `TC-PARITY-004`. Neither the change specification nor this plan is a permanent source, and no permanent suite reads `doc/changes/**`.
 
 **(b) The static invariant.** `scripts/checks/no-shell-dispatch.ts`, mutation-tested by `tests/checks/no-shell-dispatch.test.ts`. It lives beside the repository's other invariant checks and follows `forbidden-literals`' shape (declared surface + precise rules + non-vacuity controls).
 
 - **Surface (declared, not inferred):** the dispatch flow = `packages/core/src/app/dispatch.ts`, `packages/core/src/app/dispatch-*.ts`, `packages/core/src/domain/dispatch-*.ts`, `packages/core/src/domain/harness-spawn-env.ts`, `packages/cli/src/commands/dispatch.ts`, `packages/cli/src/edge.ts`, `packages/cli/src/production.ts`, `packages/adapters/src/harness/opencode.ts`, `packages/adapters/src/host/spawn*.ts`, `packages/adapters/src/daemon/lane-executor.ts`. Each listed file must exist and must be reachable from the dispatch entry, asserted by the check, so the list cannot silently shrink to nothing.
-- **Rules:** `R1` no `.sh` string literal and no `scripts/`, `tools/`, or `deliver-ticket` path literal inside the surface; `R2` no `shell: true`; `R3` no `exec`/`execSync`/`execFile`/`execFileSync`/`spawnSync` import or call inside the surface; `R4` every `spawn(` call site in the surface carries a literal `shell: false` within the same call.
+- **Rules:** `R1` **script-path literals, matched on whole string-literal values, not substrings**: a string literal whose value *ends* in `.sh`, or *is* a path whose first segment is `scripts/` or `tools/`, or *contains* `deliver-ticket`. `R2` no `shell: true`; `R3` no `exec`/`execSync`/`execFile`/`execFileSync`/`spawnSync` import or call inside the surface; `R4` every `spawn(` call site in the surface carries a literal `shell: false` within the same call. `R1`'s literal anchoring is what keeps `.sha` member accesses (`head.sha`, `facts.head.sha`) and `queue.shift()` from matching; an unanchored substring or bare-regex implementation is a defect, and the controls below prove the difference.
 - **Avoiding false positives on legitimate shell usage elsewhere:** the surface is an explicit file list, so the repository's real shell scripts (`scripts/**`, `tools/**`, `tests/**/*.test.ts`, `tmp/**`) are out of scope entirely and are never scanned. Within the surface, `shell: false` (which the host starter legitimately uses) is accepted by `R4`; documentation and comment references are excluded by matching code tokens only, and `.md` files are out of scope. A line allowlist exists but starts empty; any future entry needs a written justification in the check source, so it cannot be used to silence a real violation.
-- **Non-vacuity controls:** (i) the surface-existence assertion; (ii) one planted reference per rule class in a temp workspace, each of which must be reported by rule name and `file:line`; (iii) the false-positive controls (`shell:false`, a `scripts/checks` reference outside the surface, a `scripts/` mention in a doc) must report nothing.
+- **Non-vacuity controls:** (i) the surface-existence assertion; (ii) one planted reference per rule class in a temp workspace, each of which must be reported by rule name and `file:line`; (iii) the false-positive controls — `shell: false`, a `scripts/checks` reference outside the surface, a `scripts/` mention in a doc, the `.sha` member accesses in `packages/cli/src/edge.ts` (which also carries the dispatch-flow `.sha`-shaped member names today, e.g. `facts.head.sha`, `head.sha`, `read.sha`), and `queue.shift()` in `packages/adapters/src/host/index.ts` — must report nothing. Where a named control file carries no such token today, the control plants one in the temp-workspace copy so it can never become vacuous. All controls are inside the declared surface where applicable, so a substring implementation fails the suite rather than passing it.
 
 ### 7.3 File mapping (new vs extended)
 
@@ -1660,6 +1699,7 @@ It also asserts, for every spawn, that the call site passed `shell:false` (the a
 | `TC-SPAWN-004` | same + `tests/structure/dispatch-help-inventory.test.ts` | Existing – update |
 | `TC-DERIVE-001`…`003`, `005`, `006` | `tests/behaviour/dispatch-truth-derivation.test.ts`, `tests/behaviour/dispatch-token-closure.test.ts` | Existing – update |
 | `TC-DERIVE-004` | `tests/behaviour/dispatch-delivered-evidence-divergence.test.ts`, `tests/behaviour/dispatch-false-success.test.ts` | Existing – update |
+| `TC-PARITY-001`…`006`, `TC-SHELL-001` (all parity suites) | `tests/fixtures/dispatch/parity/cases.ts` — the one whole-battery registry every parity suite imports its `scenario` from | To implement (new) |
 | `TC-PARITY-001`…`005` | `tests/conformance/dispatch/dispatch-parity-battery.test.ts` | To implement (new) |
 | `TC-PARITY-006` | `tests/conformance/dispatch/dispatch-daemon-lane.test.ts` | Existing – update |
 | `TC-PARITY-005` (bounds/redaction half) | `tests/behaviour/dispatch-privacy.test.ts`, `tests/behaviour/dispatch-attempts-bounds.test.ts` | Existing – update |
@@ -1667,7 +1707,7 @@ It also asserts, for every spawn, that the call site passed `shell:false` (the a
 | `TC-SHELL-002` | `tests/checks/no-shell-dispatch.test.ts` (+ `scripts/checks/no-shell-dispatch.ts`) | To implement (new) |
 | `TC-CONTRACT-001` | `tests/checks/dispatch-contract-invariance.test.ts` (+ extensions to `dispatch-additive-stability.test.ts`, `error-table-sync.test.ts`, `dispatch-exit-projection.test.ts`, `dispatch-token-home.test.ts`) | To implement (new) + existing – update |
 
-Split: **9 new test suites** (`dispatch-parity-{lane-resume,admission,tracker,stall-loop,spawn,battery,no-shell}.test.ts` = 7 + `tests/checks/no-shell-dispatch.test.ts` + `tests/checks/dispatch-contract-invariance.test.ts`), **1 new check module** (`scripts/checks/no-shell-dispatch.ts`), **8 new fixture modules** under `tests/fixtures/dispatch/parity/`, and **15 extended suites** (`dispatch-single-flight`, `dispatch-liveness`, `dispatch-restart-budget`, `dispatch-truth-derivation`, `dispatch-token-closure`, `dispatch-delivered-evidence-divergence`, `dispatch-false-success`, `dispatch-daemon-lane`, `dispatch-privacy`, `dispatch-attempts-bounds`, `dispatch-help-inventory`, `dispatch-additive-stability`, `error-table-sync`, `dispatch-exit-projection`, `dispatch-token-home`) plus **4 extended fixtures** (`truth.ts`, `harness.ts`, `golden/harness.ts`, `controlled-repo.ts`). Case-level split: **36 new cases, 13 extended cases, 1 new-and-extended** (`TC-SPAWN-004`) = 50. Everything shares the delivered fixtures rather than duplicating them; there is one parity fixture family under `tests/fixtures/dispatch/parity/`.
+Split: **9 new test suites** (`dispatch-parity-{lane-resume,admission,tracker,stall-loop,spawn,battery,no-shell}.test.ts` = 7 + `tests/checks/no-shell-dispatch.test.ts` + `tests/checks/dispatch-contract-invariance.test.ts`), **1 new check module** (`scripts/checks/no-shell-dispatch.ts`), **9 new fixture modules** under `tests/fixtures/dispatch/parity/` (including the `cases.ts` whole-battery registry), and **15 extended suites** (`dispatch-single-flight`, `dispatch-liveness`, `dispatch-restart-budget`, `dispatch-truth-derivation`, `dispatch-token-closure`, `dispatch-delivered-evidence-divergence`, `dispatch-false-success`, `dispatch-daemon-lane`, `dispatch-privacy`, `dispatch-attempts-bounds`, `dispatch-help-inventory`, `dispatch-additive-stability`, `error-table-sync`, `dispatch-exit-projection`, `dispatch-token-home`) plus **4 extended fixtures** (`truth.ts`, `harness.ts`, `golden/harness.ts`, `controlled-repo.ts`). Case-level split: **36 new cases, 13 extended cases, 1 new-and-extended** (`TC-SPAWN-004`) = 50. Everything shares the delivered fixtures rather than duplicating them; there is one parity fixture family under `tests/fixtures/dispatch/parity/`.
 
 ### 7.4 Mutation register
 
@@ -1679,7 +1719,7 @@ Each row is a source mutation applied to the implementation; the named case must
 |---|----------|-----------|-------------------------|
 | M1 | Delete arm 1 (spawn refusal) | `TC-PARITY-001` | `expected noop-lane-permission at exit 1, received <token> at exit <n>` |
 | M2 | Delete arm 2 (tracker-done `merged`) | `TC-PARITY-001`, `TC-DERIVE-001` | `expected merged, received <token>` |
-| M3 | Delete arm 3 (blocking `blocked`) | `TC-PARITY-001` | `expected blocked at exit 1, received <token>` |
+| M3 | Delete arm 3 (blocking `blocked`) | `TC-PARITY-001` | `expected blocked at exit 0, received <token>` |
 | M4 | Delete arm 4 (open PR) | `TC-PARITY-001` | `expected pr-open at exit 0, received <token>` |
 | M5 | Delete the URL-resolution branch (empty URL → `pr-open`) | `TC-PARITY-001` | `expected pr-open-unverified at exit 0, received pr-open` |
 | M6 | Delete arm 5 (already-merged PR) | `TC-PARITY-001` | `expected merged, received <token>` |
@@ -1752,8 +1792,8 @@ Each row is a source mutation applied to the implementation; the named case must
 | M48 | Off-by-one bound (restart at the bound) | `TC-LOOP-002` | `expected max-restarts at count 3 of 3, received a 4th iteration` |
 | M49 | Consume a slot for an unverified stall | `TC-LOOP-003` | `restarts expected 0, received 1` |
 | M50 | Refuse admission when the persisted count >= bound | `TC-LOOP-006` | `expected one iteration, received a pre-session refusal` |
-| M51 | Read the bound from `coordinator.restart-budget` | `TC-LOOP-002`, `TC-LOOP-005` | `max-restarts expected at 3, received at 9` |
-| M52 | Report the persisted count in `restarts` | `TC-LOOP-005` | `restarts expected 1, received 4` |
+| M51 | Read the loop bound from `coordinator.restart-budget` (10) instead of `lane.restart-budget` (3) | `TC-LOOP-002`, `TC-LOOP-005` | `max-restarts expected at count 3 (iteration 4), received count 10 (iteration 11)` |
+| M52 | Report only this invocation's consumed ordinals instead of the persisted total | `TC-RESUME-102`, `TC-LOOP-005` | `restarts expected 3 (persisted total, 0 consumed), received 0` |
 
 **Spawn facts (7).**
 
@@ -1767,7 +1807,7 @@ Each row is a source mutation applied to the implementation; the named case must
 | M58 | Record a binding for a role-less composition | `TC-SPAWN-004` | `binding expected absent, received {...}` |
 | M59 | Expose the agent/title as a CLI flag | `TC-SPAWN-004`, `TC-CONTRACT-001` | `unknown option --agent must be rejected; received exit 0` |
 
-**Derivation arms and boundaries (12).**
+**Derivation arms and boundaries (14).**
 
 | # | Mutation | Must fail | Expected failure family |
 |---|----------|-----------|-------------------------|
@@ -1782,30 +1822,41 @@ Each row is a source mutation applied to the implementation; the named case must
 | M68 | Project `state-unverified` to exit 1 | `TC-DERIVE-006` | `state-unverified exit expected 2, received 1` |
 | M69 | Let two arms claim one input | `TC-DERIVE-006` | `arm disjointness violated for input <id>` |
 | M70 | Force `falseSuccess` to false on the divergent-ledger `finished` | `TC-DERIVE-004` | `falseSuccess expected true, received false` |
-| M71 | Break the divergence dedupe | `TC-DERIVE-004` | `divergences expected <= 1 for (repository, ref), received 2` |
-| M72 | Raise a new incident kind / off-shape divergence | `TC-DERIVE-004` | `divergence outside the delivered shape: <field>` |
+| M71 | Route a divergent-ledger `finished` through the `su`-gated delivered-evidence divergence (drop the `token === su` gate) | `TC-DERIVE-004` | `expected 0 delivered-evidence divergences for a finished token, received 1` |
+| M72 | Suppress the `verify-change` record for a non-complete verify outcome, or change its shape | `TC-DERIVE-004` | `expected 1 verify-change divergence (engineToken finished), received 0` / `divergence outside the delivered shape: <field>` |
+| M73 | Restore the early `state-unverified` return before the tracker arms (the delivered `read`-loop over ledger/tracker/artifact) | `TC-DERIVE-001`, `TC-DERIVE-002`, `TC-DERIVE-006` | `expected merged, received state-unverified (unreadable artifact read)` / `expected blocked, received state-unverified` |
 
 **No-shell and parity machinery (7).**
 
 | # | Mutation | Must fail | Expected failure family |
 |---|----------|-----------|-------------------------|
-| M73 | Invoke a shell with a script path in a parity case | `TC-SHELL-001` | `shell invocation recorded: bash scripts/deliver-ticket.sh` |
-| M74 | Spawn with `shell: true` | `TC-SHELL-001` | `spawn option shell expected false, received true` |
-| M75 | Plant a `.sh` literal in a dispatch-flow file | `TC-SHELL-002` | `no-shell invariant: script-path literal at <file>:<line>` |
-| M76 | Reimplement the claim/ladder/terminate in a battery file | `TC-PARITY-002` | `reimplementation of <seam> in <file>` |
-| M77 | Introduce nondeterminism (ambient clock/random) | `TC-PARITY-003` | `run 1 and run 2 differ: <field>` |
-| M78 | Perform a live network call or start a real process | `TC-PARITY-003` | `live transport request observed: <url>` / `real process started: <file>` |
-| M79 | Append a 17th evidence ref or a forbidden lane field | `TC-PARITY-005` | `evidenceRefs expected <= 16, received 17` / `lane record carries forbidden key <k>` |
+| M74 | Invoke a shell with a script path in a parity case | `TC-SHELL-001` | `shell invocation recorded: bash scripts/deliver-ticket.sh` |
+| M75 | Spawn with `shell: true` | `TC-SHELL-001` | `spawn option shell expected false, received true` |
+| M76 | Plant a `.sh` literal in a dispatch-flow file | `TC-SHELL-002` | `no-shell invariant: script-path literal at <file>:<line>` |
+| M77 | Reimplement the claim/ladder/terminate in a battery file | `TC-PARITY-002` | `reimplementation of <seam> in <file>` |
+| M78 | Introduce nondeterminism (ambient clock/random) | `TC-PARITY-003` | `run 1 and run 2 differ: <field>` |
+| M79 | Perform a live network call or start a real process | `TC-PARITY-003` | `live transport request observed: <url>` / `real process started: <file>` |
+| M80 | Append a 17th evidence ref or a forbidden lane field | `TC-PARITY-005` | `evidenceRefs expected <= 16, received 17` / `lane record carries forbidden key <k>` |
+
+**Lane record and proof boundary (5).**
+
+| # | Mutation | Must fail | Expected failure family |
+|---|----------|-----------|-------------------------|
+| M81 | Write the lane only at classification (drop the acquisition-time append) | `TC-LANE-001`, `TC-LANE-003` | `expected 1 active lane record at acquisition, received a terminal-only record` |
+| M82 | Append two active records per session acquisition | `TC-LANE-001`, `TC-LANE-003`, `TC-PARITY-005` | `expected 1 active record per acquisition, received 2` |
+| M83 | Append a terminal record for a restarted stalled iteration | `TC-LANE-003` | `expected no terminal record between the two active records, received terminal at position 2` |
+| M84 | Append a lane record on a pre-session refusal | `TC-LANE-002` | `expected 0 lane records for a pre-session refusal, received 1` |
+| M85 | Add, drop, or reorder an id in `PARITY_PROOF_BOUNDARY` (or declare a not-proven surface in a parity row) | `TC-PARITY-004` | `proof boundary drift: <control>` / `parity row <id> declares a not-proven seam <seam>` |
 
 **Shared derivation and closed contract (3).**
 
 | # | Mutation | Must fail | Expected failure family |
 |---|----------|-----------|-------------------------|
-| M80 | Fork the daemon path to the old order | `TC-PARITY-006` | `daemon token expected merged, received blocked` |
-| M81 | Keep the ledger no-work arm on the daemon path | `TC-PARITY-006` | `daemon token expected finished, received noop-lane-nothing-to-do` |
-| M82 | Add a token, projection, error row, domain kind, config key, or schema version | `TC-CONTRACT-001` | `closed surface changed: <surface> +<added>` |
+| M86 | Fork the daemon path to the old order | `TC-PARITY-006` | `daemon token expected merged, received blocked` |
+| M87 | Keep the ledger no-work arm on the daemon path | `TC-PARITY-006` | `daemon token expected finished, received noop-lane-nothing-to-do` |
+| M88 | Add a token, projection, error row, domain kind, config key, or schema version | `TC-CONTRACT-001` | `closed surface changed: <surface> +<added>` |
 
-Total: **82 mutations**; every load-bearing invariant named in `§1` has at least one row, and every row names the case that must fail.
+Total: **88 mutations** (11 parity arms + 10 admission + 5 resume + 7 ladder + 10 terminate + 9 loop + 7 spawn + 14 derivation + 7 no-shell/machinery + 5 lane/boundary + 3 shared-derivation/contract); every load-bearing invariant named in `§1` has at least one row, and every row names the case that must fail.
 
 ### 7.5 Gate battery
 
@@ -1883,7 +1934,7 @@ Rationale for the split: `pnpm check` also builds, typechecks, and runs every un
 
 | Risk | Impact | Mitigation in this plan |
 |------|--------|--------------------------|
-| The battery proves fixtures, not behaviour (`RSK-7`) | H | Every case names the production seam it exercises; `TC-PARITY-002` rejects reimplementations; `TC-PARITY-004` publishes the boundary and drift-checks it against spec Appendix C. |
+| The battery proves fixtures, not behaviour (`RSK-7`) | H | Every case names the production seam it exercises; `TC-PARITY-002` rejects reimplementations; `TC-PARITY-004` checks the permanent `PARITY_PROOF_BOUNDARY` constant for shape, order and registry consistency, and the current-truth page carries the same boundary (reconciled in phase 7, guarded by the doc check). |
 | A test becomes the second implementation | H | `TC-PARITY-002` import identity + forbidden-signature scan + planted control; D2 is limited to port boundaries and never re-expresses engine logic. |
 | Timing flakiness | M | No wall-clock assertion; the injected delay recorder and virtual clock are the only time source; the two-invocation interleaving is a latch, not a sleep. |
 | The interleaving is too weak (both invocations effectively serialized) | H | The loser's fence acquisition is *parked before* its verdict and released after the winner's lease is durable, so a pre-read-only implementation double-claims and fails `TC-ADMIT-001`; both orders run. |
@@ -1915,6 +1966,8 @@ The one gap this plan cannot close alone: the seam exports in assumption 1 are p
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
 | 0.1 | 2026-11-19 | @test-plan-writer | Initial test plan for GH-347 against spec v1.3: 50 cases in 11 groups, 42/42 AC traceability (0 unmapped, 0 orphan), the parity battery design with five production seams, the no-shell proof with its static invariant and non-vacuity control, the 82-row mutation register, the fixture inventory (authored vs extended), the gate battery with the `TMPDIR`/`PATH` conventions, the non-functional verification, and the Appendix C not-proven list. |
+| 0.2 | 2026-11-19 | @test-plan-writer | DoR-iteration-1 remediation (findings 1, 5, 6, 8, 9, 10, 13, 14, 15, 18). Corrected the two wrong exit literals (`blocked` 0, `max-restarts` 1), swept §5.2 against the delivered matrix, and added the exit-literal rule (`TC-CONTRACT-001` pins the matrix). Added the three read-precedence observations and mutation `M73`. Declared the whole-battery registry `tests/fixtures/dispatch/parity/cases.ts` and pointed `TC-PARITY-003`/`TC-SHELL-001` at it. Anchored no-shell rule `R1` on whole string literals and added the `head.sha`/`queue.shift()` false-positive controls. Added five lane/proof-boundary mutations (`M81`…`M85`), fixed the derivation heading and `M51`/`M52`. Restated `TC-DERIVE-006` as 30 inputs / 10 projected tokens, `TC-LOOP-002` as 4 iterations, `restarts` as the persisted total, and the `AC-F8-3` (+2) arithmetic. Case count unchanged at 50; mutations 82 → 88. |
+| 0.3 | 2026-11-19 | @test-plan-writer | Finding-12 test half. `TC-PARITY-004` now reads only the permanent fixture constant `PARITY_PROOF_BOUNDARY`: eight proven ids and six not-proven ids in the declared order, every registry row's seam proven, no row on a not-proven surface, and planted add/drop/reorder/live-seam controls that fail by name. Removed the plan and spec reads from the case (seam line, preconditions, steps, outcome) and added a source scan forbidding `doc/changes/` references in the suite. §1.2 and §7.2 now state the permanent source, the phase-7 publication on `doc/spec/features/feature-dispatch-engine.md`, and the doc guard in the aggregate that owns page/constant agreement. Driver note and `M85` aligned. Counts unchanged: 50 cases, 42/42 ACs, 53 links, 88 mutations. |
 
 ## 10. Test Execution Log
 
