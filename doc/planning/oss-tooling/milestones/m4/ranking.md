@@ -18,3 +18,7 @@ jaiship-only delivery, then the remaining product stories follow.
 | 10 | M4-S5 Project-scoped queues and parallel projects | M4-S3, M3-S6 | After the flip and the multi-tracker story |
 | 11 | M4-S6 Delivery history and statistics export | M4-S5 | Last: needs project-scoped history |
 | 12 | M4-S12 Dispatch operator surface | M4-S9 | F1b: operator convenience; status and is-delivering gate the F6 evidence window |
+| 13 | M4-S13 Runner identity and execution topology | M4-S5, M3-S1 | Post-flip: needed before any multi-runner or commercial surface |
+| 14 | M4-S15 Human question inbox completion | M4-S9, M4-S5 | Post-flip: durability and cross-project gaps an inbox exposes |
+| 15 | M4-S14 Artifact reference model | M4-S6 | Post-flip: references are cheap now and expensive to retrofit |
+
