@@ -153,7 +153,7 @@ Deliberately out of scope, so the boundary is reviewable: no harness configurati
 
 ### C-5: Delivered port, dispatch, and command surfaces stay valid
 
-- **Statement:** `HarnessSpawnInput`, `HarnessResumeInput`, `HarnessSessionPort`, `DispatchPorts` and the `dispatch` command's flag set keep their members and meaning; the binding and the recorded binding are additive optional data; no new command, verb, exit projection, or required user input appears; one dispatch attempt still holds one lease and one attempt record.
+- **Statement:** `HarnessSpawnInput`, `HarnessResumeInput`, `HarnessSessionPort`, `DispatchPorts` and the `dispatch` command's flag set keep their members and meaning; the agent-identity member, the binding member, and the recorded binding are additive optional data; no new command, verb, exit projection, or required user input appears; one dispatch attempt still holds one lease and one attempt record.
 - **Source:** AC (§8.5 backward compatibility, NG-9, §17.2 clause 12)
 - **Verification:** test (existing port and dispatch suites green unchanged; the delivered flag grammar rejects nothing new) + code review
 - **Negotiable:** no
@@ -266,7 +266,7 @@ Legend: ✅ passes · ❌ fails. Every constraint is `negotiable: no`, so no acc
 - **Constraint compliance:** Passes C-1 … C-6 (matrix above). Table stakes are satisfied trivially.
 - **Driver fit:** Best on drivers 1, 2, 4 and 5; driver 3 is satisfied by using only the documented argv fields; driver 6 holds because deletion of the additive members restores the delivered surface.
 - **Pros:** The claim becomes checkable end to end (profile → binding → argv → store → row); the seat vocabulary is reused rather than invented; a multi-seat profile works without new orchestration (one launch per role, which is what the delivery already does); every mismatch becomes a warning instead of a substitution; the test can assert the argv production sends.
-- **Cons:** The "per-seat models" phrasing must be restated (N spawns, N sessions, N rows); a role-less dispatch binds nothing and must be disclosed; one additive field plus one recorded binding are needed; and the unassigned-agent case needs a refusal identity (reused, not added).
+- **Cons:** The "per-seat models" phrasing must be restated (N spawns, N sessions, N rows); a role-less dispatch binds nothing and must be disclosed; two additive input members — the caller's agent identity and the binding the resolver returns, both in the same contract phase — plus one recorded binding are needed; and the unassigned-agent case needs a refusal identity (reused, not added).
 - **Why chosen:** It is the only alternative that satisfies every `negotiable: no` constraint, and it is the only one whose test oracle can be the real invocation.
 
 ### Alternative 4 — One Dispatch Call Spawns One Session per Seat

@@ -331,6 +331,32 @@
 #      3.3's resolver input and Phase 4.3's composition read carry the same
 #      citation. No member, phase, scope, TC, AC or default changes.
 #
+# REVISION 1.6 (readiness iteration 6, findings 2 and 4 — plan-side precision
+#   only, so Phase 1 authors a record that cannot seed carrier drift).
+#   Surgical: no phase is added, removed, or reordered, no phase id changes, no
+#   scope entry changes, and the 47/47 TC map and 27/27 AC matrix are unchanged.
+#   1. THE ADAPTERS-CONTRACT RECORD IS REFERENCE-ONLY FOR THE CARRIER (finding
+#      4). Phase 1.3 no longer asks that record to restate TDR-0032's
+#      cardinality, resolution and carrier rules "as the record's contract", and
+#      no longer enumerates DEC-16's two input members there. It now states the
+#      constraint explicitly: TDR-0032 (as amended by A-4) is the single home of
+#      the seat cardinality, the resolution chain, the two-member carrier, the
+#      surface mapping, the seat identity with no argv carrier, the unassigned
+#      refusal and the role-less `unresolved-seat` disclosure; TDR-0033 is the
+#      single home of the `detail.harness` member; the record may cite, link and
+#      summarise them but must not restate, redefine, or contradict them, and a
+#      reviewer treats such a restatement as a defect of that phase. Everything
+#      else 1.3 governs (the window rule and its delivery value, the mode and its
+#      origin, the expressibility-only refusal, the recorded binding, the
+#      telemetry fields with the observed store contract, and the absence
+#      taxonomy) is unchanged.
+#   2. THE PHASE-4 GOAL ATTRIBUTES THE BINDING TO THE RESOLVER (finding 2).
+#      Phase 4's Goal reads "the resolver-produced single-seat binding" and
+#      states the split in the same sentence — the caller supplies only the agent
+#      identity, the binding is the resolver's output the composition supplies on
+#      the sibling member (DEC-16, TDR-0032 A-4). No phase, scope, TC, AC,
+#      default, or gate changes.
+#
 # TC -> PHASE MAP (47 ids; none unassigned; none assigned twice). A TC is owned
 #   by the phase that first makes its COMPLETE suite set green; where §11.5 of
 #   the test plan suggests otherwise the deviation is stated at the phase and is
@@ -820,24 +846,32 @@ phases:
   #      (DEC-11) — the record states the RULE (current minor line at delivery
   #      time plus one previous minor) and its value at delivery (`2.3.x` plus
   #      `2.2.x`), never a frozen pair presented as the rule — the mode
-  #      declaration and its origin, the surface-mapped
-  #      propagation contract (DEC-8) with TDR-0032's cardinality, resolution and
-  #      carrier rules restated as the record's contract (one seat per spawn,
-  #      agent->seat resolution, one `--agent`/one `--model`, seat identity with
-  #      no argv carrier, the unassigned refusal via `provider.profile.invalid`,
-  #      the role-less `unresolved-seat` disclosure) together with DEC-16's two
-  #      additive input members (the caller's agent identity and the binding, the
-  #      resolution the composition performs with the first and supplies as the
-  #      second), the expressibility-only
-  #      refusal (DEC-6 narrowed by DEC-14 — explicitly NO recognised-model
-  #      catalogue and no second child process), the recorded binding, the
-  #      seat/resolved/observed/duration telemetry fields with the observed store
-  #      contract (DEC-9), and the absence taxonomy (DEC-10) including the
-  #      observed-axis absence marker and its `invalid-session-identity`
-  #      supersession (AC-F5-7). It references
-  #      TDR-0033 and TDR-0032 rather than restating or re-deciding them, does not
-  #      supersede ADR-0008, and follows the TDR-0016/TDR-0021 additive
-  #      precedent.
+  #      declaration and its origin, the surface-mapped propagation contract
+  #      (DEC-8) BY REFERENCE ONLY (see the constraint below), the
+  #      expressibility-only refusal (DEC-6 narrowed by DEC-14 — explicitly NO
+  #      recognised-model catalogue and no second child process), the recorded
+  #      binding, the seat/resolved/observed/duration telemetry fields with the
+  #      observed store contract (DEC-9), and the absence taxonomy (DEC-10)
+  #      including the observed-axis absence marker and its
+  #      `invalid-session-identity` supersession (AC-F5-7). It does not supersede
+  #      ADR-0008 and follows the TDR-0016/TDR-0021 additive precedent.
+  #      THE SEAT AND CARRIER CONTRACT IS REFERENCE-ONLY IN THAT RECORD
+  #      (readiness iteration 6, finding 4). `TDR-0032`, as amended by A-4, is
+  #      the SINGLE HOME of the seat cardinality, the resolution chain, the
+  #      two-member carrier, the exactly-one-`--agent`/one-`--model` surface
+  #      mapping, the seat identity with no argv carrier, the unassigned refusal
+  #      through the delivered `provider.profile.invalid`, and the role-less
+  #      `unresolved-seat` disclosure; `TDR-0033` is the SINGLE HOME of the
+  #      failure-envelope `detail.harness` member. The adapters-contract record
+  #      CITES and LINKS both records and may SUMMARISE them in prose that
+  #      carries no obligation of its own; it MUST NOT restate, redefine,
+  #      paraphrase as its own contract, or contradict the two-member carrier,
+  #      the seat cardinality, the resolution chain, or the refusal identities,
+  #      because a fourth authored home for those rules is a drift-capable copy
+  #      of the change's headline criterion. A reviewer treats any restatement,
+  #      redefinition, or contradiction of them in that record as a DEFECT of
+  #      this phase rather than as record content, and the phase does not commit
+  #      until the record reads reference-only.
   #  1.4 TDR-0033 and TDR-0032 are staged in this change: both record files are
   #      committed with their index rows and their `Proposed` status preserved
   #      (TDR-0033's member is delivered in Phase 2 and its behaviour proof in
@@ -1389,9 +1423,11 @@ phases:
   # OQ-6, OQ-7, OQ-10, TDR-0032 decision 3).
   #
   # Goal: make the composed dispatch either run on a compatible harness with the
-  # caller-supplied single-seat binding on the honoured surface, or refuse with a
-  # typed identity and its machine-readable facts before a lease is claimed and
-  # before a session exists.
+  # resolver-produced single-seat binding on the honoured surface — the caller
+  # supplies only the agent identity, and the binding is the resolver's output the
+  # composition supplies on the sibling member (DEC-16, TDR-0032 A-4) — or refuse
+  # with a typed identity and its machine-readable facts before a lease is claimed
+  # and before a session exists.
   #  4.1 `packages/adapters/src/harness/opencode.ts`: the adapter maps the binding
   #      onto the invocation the harness honours — exactly one `--agent <agent
   #      identity>` and exactly one `--model <provider>/<model>[#<variant>]` per
