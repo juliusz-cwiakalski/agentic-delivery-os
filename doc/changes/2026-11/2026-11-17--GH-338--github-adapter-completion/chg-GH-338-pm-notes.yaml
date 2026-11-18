@@ -70,7 +70,22 @@ notes:
       entrypoint's promised-program await inside the containment try; the
       launcher's one async wrapper; the child-process guard beside the
       throwing-`fetch` guard; the parity route table over the seven members that
-      exist now). Commit hash recorded in the plan-phase-3 note. Delivery notes
+      exist now). Commits: 787a2643c4aaca14826219245ce896f1df46a81c (the phase
+      itself) plus one remediation commit recorded in the phase-3 note. The
+      aggregate gate first failed on a self-inflicted scope violation: a blanket
+      `biome check --write packages tests` rewrote 269 delivered files
+      (formatting-only, and one rewrite of `new RegExp` to a regex literal that
+      the repository's `noControlCharactersInRegex` lint rule rejects), and the
+      phase-2 commit therefore contained them. The remediation commit reverts
+      exactly those 269 files to their delivered content and leaves the 25
+      intended files; the net phase-1+phase-2 diff is 25 files. Two further
+      delivered pins moved in the remediation because the change makes them
+      false: tests/checks/prior-identity-hermetic.test.ts (production.ts now
+      holds zero `fetch` sites and references the adapter's exported
+      `createGithubNativeTransport`) and the release guard's publishable-path
+      rule (the lockstep five-package minor changeset is added here rather than
+      in plan phase 7 — the GH-299 precedent — so phase 7 verifies it instead of
+      authoring it). Delivery notes
       carried: N1 (implemented the plan's names; the test plan's
       `resolveGithubTransportSelection` is a stale reference), N2 (the
       firing-canary assertion lives in
@@ -94,7 +109,7 @@ notes:
       explicit."
     type: info
     date: "2026-11-18"
- (ninth closed operation `merge-delivery-request`;
+  - text: "Plan phase 1 complete (ninth closed operation `merge-delivery-request`;
       optional `PipelineJob.startedAt`/`completedAt`; GitHub 7 supported + 2
       declared gaps; the landing client member with squash-only crafted metadata,
       the expected-head guard, classified non-2xx/transport failures, no retry,
