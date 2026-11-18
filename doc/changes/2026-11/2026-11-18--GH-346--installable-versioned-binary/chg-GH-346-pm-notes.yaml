@@ -5,9 +5,9 @@ milestone: "M4: Jaiship-native delivery"
 story_code: M4-S1
 phases:
   clarify_scope: { started: "2026-11-18T16:53:00Z", completed: 2026-11-18T16:09:23.758Z }
-  specification: { started: null, completed: 2026-11-18T16:16:02.183Z }
-  test_planning: { started: null, completed: 2026-11-18T16:39:51.574Z }
-  delivery_planning: { started: null, completed: 2026-11-18T16:48:23.017Z }
+  specification: { started: null, completed: 2026-11-18T17:09:25.433Z }
+  test_planning: { started: null, completed: null }
+  delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
   delivery: { started: null, completed: null }
   system_spec_update: { started: null, completed: null }
@@ -107,5 +107,66 @@ notes:
   - text: "Retro: the first @test-plan-writer delegation returned an empty message
       and wrote no file. Re-delegated with an explicit write-first instruction.
       Cost: one full cycle; no partial artifact, so no cleanup."
+    type: retro
+    date: "2026-11-18"
+  - text: "delivery_planning landed as bed6182f with plan validate verdict=valid and
+      readyForDevelopment=true. The five TDRs were NOT staged at that boundary
+      (reported untrackedNotStaged), although the plan declares them in phase 1
+      scope: the lifecycle-boundary commit stages the change folder only. They
+      stage in the phase 1 delivery commit, which declares the five exact paths
+      plus the doc/decisions folder. Do not hand-stage them."
+    type: info
+    date: "2026-11-18"
+  - text: "DoR iteration 1: NOT_READY. Verdict artifact
+      readiness-review/readiness-iter-1.md. Facets FAIL: ac_quality,
+      test_traceability, cross_artifact_consistency, system_spec_consistency,
+      plan_code_area_coverage. Reopened specification and delivery_planning. No
+      delivery finding. Verified-clean facets: spec_completeness, plan_coverage,
+      decision_capture, plan_doc_update_coverage, dod_defined."
+    type: blocker
+    date: "2026-11-18"
+  - text: "DoR BLOCKER 1 (specification): AC-F9-2 says an identical re-install
+      leaves the record unchanged, but Appendix B step 4 also requires the
+      record to match before it stops; in the reachable step-7-crash state
+      (destination + slot valid, record stale) the run proceeds to step 5 and
+      renames the destination onto the slot, destroying the still-valid previous
+      artifact. C.2 has no row for compiled-artifact-plus-stale-record, and
+      TC-INST-022 narrows the AC to a valid record so nothing tests it. TDR-0040
+      carries the same tension (2 step 4 vs 3 'no-op by identity comparison')."
+    type: blocker
+    date: "2026-11-18"
+  - text: "DoR BLOCKER 2 (delivery_planning): plan decision D6's alias owning-binary
+      name mechanism is impossible as written. `DEFAULT_WORKING_NAME` in
+      packages/cli/bin/jaiship.ts must stay unexported (entrypoint-bin.test.ts
+      fails exported sites), importing that module executes runBinLauncher at
+      load (double composition, two lines, alias byte-identity broken), and the
+      only workable route adds identity-literal sites plus
+      feature-branding-seam.md's 'five sites / three CLI selector sites'
+      documentation, which no phase declares."
+    type: blocker
+    date: "2026-11-18"
+  - text: "DoR MAJOR findings to close in remediation: (a)
+      tests/structure/content-inventory.test.ts (the per-file executable
+      allowlist) is declared by no phase although phases 1-4 each add package
+      files; (b) tests/structure/entrypoint-bin.test.ts is declared only by
+      phase 1 but must move in phase 2; (c) TC-BIN-061 is owned by phase 1 yet
+      drives `install status --json`, which cannot exist until phase 2; (d)
+      AC-F14-1 / TC-INST-091 key the installer guard on binary AND record while
+      F-14/RSK-5 key it on a managed binary being present, leaving the
+      record-absent arm untested; (e) DM-8's adapter-export claim is false (the
+      delivered read already returns both dirs); (f) RSK-15's 'gated probe'
+      claim is untrue; (g) two files are each called 'the one build-side literal
+      site'; (h) phase 2 ships step 1 without the daemon guard; (i) phase 5
+      skips the aggregate gate its tier trigger demands."
+    type: blocker
+    date: "2026-11-18"
+  - text: "Retro: the DoR gate caught a real data-loss contradiction in the
+      replacement protocol (stale record sent a no-op re-install through a slot
+      swap) and a plan mechanism that could not compile. Both originated in the
+      decision records, which the spec and plan faithfully transcribed. Cost:
+      two remediated artifact phases before delivery. Lesson for future
+      decisions: a state machine step that gates a destructive rename needs its
+      reachable post-crash states enumerated at decision time, not at readiness
+      time."
     type: retro
     date: "2026-11-18"
