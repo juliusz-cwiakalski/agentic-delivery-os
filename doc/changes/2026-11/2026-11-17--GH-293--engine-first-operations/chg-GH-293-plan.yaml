@@ -48,7 +48,7 @@
 #   - F-21 HYGIENE. The trailing blank line at EOF is removed: the document ends
 #     with exactly one newline after its last content line, so `git diff --check`
 #     is clean again after the review found `new blank line at EOF`.
-#   - SOURCE RE-PIN. SOURCES moves to spec v1.6 and test plan v1.5; no requirement
+#   - SOURCE RE-PIN. SOURCES moves to spec v1.6 and test plan v1.6; no requirement
 #     is added by the re-pin and no case id moves. Spec v1.6 is review iteration
 #     2's F-17 pass: AC-F6-10's dry-run clause now states the delivered read shape
 #     (the dry run performs the head read, one work-item read, and one check-run
@@ -1549,7 +1549,7 @@ phases:
 # Iteration 2 carries one entry (REM-8, F-19) and four plan/artifact-side outcomes:
 #   F-17 (medium, spec-compliance) — resolved in SPECIFICATION and the TEST PLAN,
 #        not here: spec v1.6 narrows AC-F6-10's dry-run clause to the delivered
-#        read shape and test plan v1.5 carries the matching correction, both
+#        read shape and test plan v1.6 carries the matching correction, both
 #        authored by their owning passes. No plan scope, phase, or case changes;
 #        the plan's own two prose sites are worded to the amended shape in this
 #        revision.

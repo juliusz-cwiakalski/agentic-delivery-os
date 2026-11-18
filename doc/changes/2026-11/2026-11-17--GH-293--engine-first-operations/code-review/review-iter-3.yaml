@@ -1,0 +1,138 @@
+version: 1
+iteration: 3
+mode: local
+work_item_ref: GH-293
+branch: feat/GH-293/engine-first-operations
+status: FAIL
+summary: >-
+  Iteration 2's substantive remediation holds on independent verification, but one F-17 residual and
+  one version-identity inconsistency remain, so the change is not yet clean to pass. AC-F6-10 (spec
+  v1.6) now states the delivered dry-run read shape exactly — head, tracker work item, one check-run
+  page, plus the verification/gate projection — with the request-detail and base-containment reads on
+  the landing path and the payload carrying no base field; the code confirms it (`runDryRun` reads
+  the head, one work item, one check-run page and the verification records at
+  packages/core/src/domain/merge-transaction.ts:923-960; `readRequestDetail` at :443 and
+  `readBaseContainment` at :383/:401/:451 are only on the landing path; `baseRef` is
+  `CLOSEOUT_INTEGRATION_BASE` at packages/cli/src/production.ts:1558/:1695; `MergeDryRunReport` has
+  no base field). AC-F7-11 holds as written: `MERGE_COMPOSITION_EMITTABLE_CODES` carries `config`,
+  `provider` and `merge` members, no `state.*`, and every member resolves — conformance and
+  error-table suites green. F-18 is closed: `doc/planning/oss-tooling/milestones/m1/commands/merge.md`
+  is now in Phase 7 `scope.files` and every reference reads "four" planning pages; a programmatic
+  check confirms all 72 changed paths lie inside declared phase scope. F-19 is closed: commit
+  4b295dac adds a permanent foreign-identity cell seeded only through `appendDispatchHandover` in
+  both append orders — a foreign authoritative record alone and after the row's own leaves the row
+  `shell`/`false`, the row's own authoritative record flips `reversible` true, and the gate block
+  never moves; the cell is per-test isolated (unique label, `dispose()` in `finally`) under
+  `tmp/tmpdir`, and the mutation claim is sound (an unfiltered fold would read `in-transition`/`true`
+  at step (a), failing the `shell`/`false` assertion). The `in-transition` correction is correct:
+  the row vocabulary is `engine | shell | in-transition`
+  (packages/core/src/contracts/projects.ts:141) and `projectHandoverState` maps an authoritative
+  operation with an absent derived document to `in-transition`
+  (packages/core/src/app/projects.ts:61-77), which the cell asserts with `reversible: true`; test-plan
+  steps 7/9(d), the case summary and the §7 row carry it. F-21 is closed (`git diff --check` clean;
+  the plan ends in exactly one newline). F-20's no-action is acceptable for an info note: the tuple's
+  `as const satisfies readonly ConfigErrorCode[]` pins tuple→taxonomy and the three behaviour cells
+  exercise the forwarded configuration codes, and `configFailure`'s literal `kind: "config"` is safe
+  while every `config.*` row is `config`. What does NOT close: the test plan's §1 "Fifth" paragraph
+  still states TC-ENGINE-050's base is "reported through the resolved `merge` configuration and the
+  base-containment evaluation the dry run reads" — the exact F-17 over-claim — while the same
+  document's §3.5 (line 1130), §8.2 and the amended AC say the opposite, and the v1.5 revision note
+  falsely claims that paragraph was corrected (F-22). A second, mechanical defect: the test-plan front
+  matter is `version: 1.5` and the plan pins "test plan v1.5", but the test-plan revision log ends at
+  row 1.6 (F-23). Independently re-run: the sixteen change/control suites 243/243 pass;
+  `TMPDIR=$PWD/tmp/tmpdir pnpm check` exits 0 (10372 pass / 4 skip / 0 fail, 1314 files);
+  `bash scripts/.tests/test-doc-distribution.sh` reports no drift (96 docs);
+  `./scripts/lint-commit-range.sh --base main-tools` is `VERDICT: PASS` (41 commits, 0 offending);
+  `plan validate GH-293` is `valid`/`readyForDevelopment=true`; `lint plan GH-293` is `valid`;
+  `verify change GH-293` reports the expected `verify.ledger.incomplete` (review_fix, quality_gates,
+  dod_check, pr_creation still ahead); `git diff --check main-tools...HEAD` is clean. No source file
+  was modified by the review; the working tree is clean and the branch is restored.
+severity_breakdown:
+  critical: 0
+  high: 0
+  medium: 1
+  low: 1
+  info: 1
+spec_compliance: PASS
+plan_compliance: PASS
+findings:
+  - id: F-22
+    severity: medium
+    confidence: high
+    category: traceability
+    location: doc/changes/2026-11/2026-11-17--GH-293--engine-first-operations/chg-GH-293-test-plan.md:32
+    message: >-
+      F-17's over-claim survives in §1's "Fifth" paragraph: it says TC-ENGINE-050's base is
+      "reported through the resolved `merge` configuration and the base-containment evaluation the
+      dry run reads" — i.e. that the dry run reads the base-containment evaluation and reports the
+      base. The delivered `runDryRun` reads only the head, one work item, one check-run page and the
+      verification records (merge-transaction.ts:923-960); `readRequestDetail` (:443) and
+      `readBaseContainment` (:383/:401/:451) are landing-path only, and `MergeDryRunReport`
+      (contracts/merge.ts:290) carries no base field. The same document's §3.5 (line 1130: "No cell
+      of this case asserts that the dry run issues a containment query or reports a base"), §8.2
+      (line 1745) and AC-F6-10 v1.6 all state the opposite, so the summary contradicts both the code
+      and the document's own case steps. The v1.5 revision note (line 1778) asserts the correction
+      was applied to "§1 (paragraph 5)"; every other location it lists is corrected, this one is not
+      — a false closure claim on a named finding.
+    suggestion: >-
+      Replace the closing clause of the §1 "Fifth" paragraph with the delivered fact, e.g.
+      "`TC-ENGINE-050` asserts the transaction's base reference is `CLOSEOUT_INTEGRATION_BASE`
+      (`main-tools`) as the composition-supplied `baseRef`, the branch from the checkout's git facts,
+      and zero base fields on the dry-run payload (DEC-19)." No code change; AC-F6-10 already holds.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-23
+    severity: low
+    confidence: high
+    category: closure-mechanics
+    location: doc/changes/2026-11/2026-11-17--GH-293--engine-first-operations/chg-GH-293-test-plan.md:4
+    message: >-
+      Version identity disagrees across the artifact set. The test-plan front matter reads
+      `version: 1.5` (line 4), and the plan pins "test plan v1.5" in its SOURCES block
+      (chg-GH-293-plan.yaml:258) and in `remediation.verificationBatch`, but the test-plan revision
+      log ends at row 1.6 (line 1780, the `in-transition` correction landed by commit 4887ef46). The
+      artifact therefore reports a version older than its own last revision, and downstream pins
+      point at the pre-correction version. (The 1.5 log row still showing `handoverState:
+      "authoritative"` is acceptable append-only history, superseded by the 1.6 row.)
+    suggestion: >-
+      Bump the test-plan front matter to `version: 1.6` and re-pin the plan's SOURCES and
+      verificationBatch note to "test plan v1.6" in a plan revision — or, if the correction is meant
+      to fold into 1.5, relabel the last revision row instead of 1.6. No code, no AC, no scope change.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+  - id: F-24
+    severity: info
+    confidence: high
+    category: evidence
+    location: doc/changes/2026-11/2026-11-17--GH-293--engine-first-operations/chg-GH-293-test-plan.md:1863
+    message: >-
+      Test-plan §10.4 records only the iteration-1 remediation battery (`repos-handover-gate` 9, head
+      `ecdc483e`); there is no appended iteration-2/REM-8 row, so REM-8's run (now 10 tests in that
+      suite) is recorded only in the pm-notes. Separately, the `assist/source/organizeImports` error
+      and the `lint/correctness/noUnusedVariables` warning that `biome check` reports on
+      `tests/behaviour/repos-handover-gate.test.ts` are NOT introduced by REM-8 — both reproduce on
+      the pre-REM-8 file — and neither is gated: CI runs `pnpm lint` and `pnpm format:check`
+      separately, and neither runs the import-sorting assist (`pnpm check` is green).
+    suggestion: >-
+      Optional: append an iteration-2 evidence row to the test plan's execution log pointing at the
+      pm-notes REM-8 entry. The pre-existing biome items need no action for this change.
+    suppressed: false
+    published_url: null
+    published_at: null
+    published_comment_id: null
+    published_thread_id: null
+reviewed_at: 2026-11-18T04:47:17Z
+next_step: >-
+  CALL_CODER for documentation only. Close F-22 by replacing the §1 "Fifth" paragraph's base clause
+  with the delivered oracle (composition-supplied `baseRef` = `CLOSEOUT_INTEGRATION_BASE`, branch from
+  git facts, zero dry-run base fields); close F-23 by setting the test-plan front matter to 1.6 and
+  re-pinning the plan's SOURCES/verificationBatch to test plan v1.6. No production code change is
+  required: AC-F6-10 (v1.6), AC-F7-11, F-18, F-19, F-20 and F-21 are already verified. Re-review
+  needs only to re-read those two passages and confirm the version identity; the code, the executed
+  cell and every gate are green.
