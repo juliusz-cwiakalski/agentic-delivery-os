@@ -231,6 +231,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
   "core/src/domain/dispatch-attempts.ts": ["orderAttempts", "projectAttempt", "selectAttemptsPage"],
   "core/src/domain/dispatch-gate.ts": [
     "COUNTED_EVIDENCE_CLASS",
+    "conditionStatuses",
     "countedEvidenceClass",
     "evaluateHandoverGate",
     "foldEvidenceWindow",
@@ -796,6 +797,7 @@ const EXECUTABLE_ALLOWANCES: Record<string, string[]> = {
     "DISPATCH_COMPARISON_CLASSES",
     "DISPATCH_COMPARISON_OUTCOMES",
     "DISPATCH_COMPARISON_REASONS",
+    "DISPATCH_CONDITION_STATES",
     "DISPATCH_CORROBORATION_SOURCES",
     "DISPATCH_CORROBORATION_STATES",
     "DISPATCH_CORROBORATION_SUFFICIENCY",

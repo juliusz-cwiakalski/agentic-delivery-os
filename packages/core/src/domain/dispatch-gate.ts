@@ -11,9 +11,11 @@ import {
   DELIVERY_RESULT_TOKENS,
   DISPATCH_FLOOR_CONSECUTIVE_DATES,
   DISPATCH_FLOOR_DISPATCHES,
+  DISPATCH_HANDOVER_CONDITIONS,
   DISPATCH_MAX_DIVERGENCE_IDS,
   type DeliveryResultToken,
   type DispatchAttemptRecord,
+  type DispatchConditionStatus,
   type DispatchDivergenceBlock,
   type DispatchDivergenceRecord,
   type DispatchEvidenceClass,
@@ -294,6 +296,29 @@ export const evaluateHandoverGate = (window: DispatchEvidenceWindow): DispatchGa
   };
 };
 
+/**
+ * Project the folded window and its evaluation onto the four ordered condition
+ * statuses (TDR-0031 D2, DM-3).
+ *
+ * One derivation for the three readers: a condition is `open` exactly when the
+ * evaluation names it in `unmetConditions`, so
+ * `conditions.filter(status === "open")` equals `unmetConditions` in order by
+ * construction and no second status rule can appear. The declared
+ * `DISPATCH_HANDOVER_CONDITIONS` declaration is the only order authority, and
+ * an `unverifiable` window still answers statuses — over the visible window —
+ * because unverifiability is carried by `verdict` plus `truncation`, never by a
+ * third status.
+ */
+export const conditionStatuses = (
+  evaluation: DispatchGateEvaluation,
+): readonly DispatchConditionStatus[] => {
+  const open = new Set(evaluation.unmetConditions.map((entry) => entry.condition));
+  return DISPATCH_HANDOVER_CONDITIONS.map((condition) => ({
+    condition,
+    status: open.has(condition) ? "open" : "met",
+  }));
+};
+
 /** Build the DM-6 summary data from the folded window and verdict. */
 export const toSummaryData = (
   window: DispatchEvidenceWindow,
@@ -327,8 +352,7 @@ export const toSummaryData = (
   ...(window.truncated === undefined ? {} : { truncation: window.truncated }),
 });
 
-/** Build the handover conditions snapshot from the folded window. */
-export const handoverConditionsSnapshot = (
+/** Build the handover conditions snapshot from the folded window. */export const handoverConditionsSnapshot = (
   window: DispatchEvidenceWindow,
   evaluation: DispatchGateEvaluation,
 ): DispatchHandoverConditionsSnapshot => ({

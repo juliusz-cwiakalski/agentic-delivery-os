@@ -159,6 +159,29 @@ export const DISPATCH_HANDOVER_CONDITIONS = [
 
 export type DispatchHandoverCondition = (typeof DISPATCH_HANDOVER_CONDITIONS)[number];
 
+/**
+ * The closed condition-status pair (TDR-0031 D2, DM-3).
+ *
+ * `unverifiable` is a window-level verdict, never a condition status: a
+ * truncated read reports `verdict: "unverifiable"` plus `truncation`, and the
+ * statuses stay explicitly "over the visible window".
+ */
+export const DISPATCH_CONDITION_STATES = ["met", "open"] as const;
+
+export type DispatchConditionState = (typeof DISPATCH_CONDITION_STATES)[number];
+
+/**
+ * One condition's status in the declared order (TDR-0031 D2, DM-3).
+ *
+ * Exactly `{condition, status}` — no `detail`. The detail text stays where it
+ * already lives (`unmetConditions` on the handover surface, the typed summary
+ * fields), so the shared shape carries no second detail vocabulary.
+ */
+export type DispatchConditionStatus = {
+  readonly condition: DispatchHandoverCondition;
+  readonly status: DispatchConditionState;
+};
+
 /** The closed window-start reasons (DM-6, DEC-10). */
 export const DISPATCH_WINDOW_START_REASONS = [
   "first-counted-dispatch",

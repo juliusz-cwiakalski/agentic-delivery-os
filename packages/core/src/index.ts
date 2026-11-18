@@ -563,6 +563,7 @@ export {
 } from "./domain/dispatch-comparison.js";
 export {
   COUNTED_EVIDENCE_CLASS,
+  conditionStatuses,
   countedEvidenceClass,
   type DispatchEvidenceWindow,
   type DispatchGateEvaluation,

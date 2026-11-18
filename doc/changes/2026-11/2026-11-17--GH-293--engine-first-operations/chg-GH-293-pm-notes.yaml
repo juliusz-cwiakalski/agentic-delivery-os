@@ -18,6 +18,20 @@ decisions: []
 open_questions: []
 blockers: []
 notes:
+  - text: "Plan phase 1 complete (shared condition-status shape and the landed
+      TDR-0031 decision record). Declared the closed `met | open` pair and the
+      `{condition, status}` shape on the delivered four-condition order, added
+      the one producer `conditionStatuses(evaluation)` in the domain gate module
+      (open set equals `unmetConditions` by construction), re-exported both from
+      the contract and package indices, and landed TDR-0031 with the index row
+      that was already committed. Verification: `pnpm typecheck` green;
+      exports-parity OK (5 publishables); error-table-sync OK (149/149);
+      decision-record + error-table + content-inventory 142/142 pass;
+      `delivery-os lint GH-293` conforms. Scope note: the content-inventory
+      executable-allowance rows for the two new exports were appended as tracked
+      pending work (the phase gate names that suite green)."
+    type: "info"
+    date: "2026-11-18"
   - text: "DoR iteration 4: READY (readiness-review/readiness-iter-4.md). Iteration
       3 findings closed; five non-blocking nits remain (test plan still says
       'documentation phase' at three lines, test plan §2 binds spec v1.3 vs
