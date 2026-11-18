@@ -12,7 +12,7 @@ phases:
   system_spec_update: { started: null, completed: 2026-11-18T15:41:54.200Z }
   review_fix: { started: null, completed: 2026-11-18T17:42:36.343Z }
   quality_gates: { started: null, completed: 2026-11-18T18:09:24.463Z }
-  dod_check: { started: null, completed: null }
+  dod_check: { started: null, completed: 2026-11-18T18:10:31.250Z }
   pr_creation: { started: null, completed: null }
 decisions:
   - text: "Scope is taken from the ticket body plus the committed M3 blueprint
