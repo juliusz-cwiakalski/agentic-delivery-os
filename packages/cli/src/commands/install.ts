@@ -13,24 +13,42 @@
 
 import {
   classifyInstallDestination,
+  isCompiledArtifactAtPath,
   launcherTargetOf,
-  symlinkTargetOf,
+  writeInstallRecordText,
 } from "@delivery-os/adapters/file";
-import { evaluateInstallAdmission, installTargetStability } from "@delivery-os/core";
+import {
+  compatibilityAdvisories as advisoriesOf,
+  evaluateInstallAdmission,
+  type InstallRecordRead,
+  incompatibleRoots,
+  installTargetStability,
+  judgeStateFormat,
+  parseInstallRecord,
+  planReplace,
+  provenanceOfAdmission,
+  type ReplacePlan,
+  readInstallRecord,
+  reconciliationRecordOf,
+  replacingRecordOf,
+  rollbackCauseSentence,
+  rollbackPrecondition,
+  rollbackRecordOf,
+  type StateRootObservation,
+  serializeInstallRecord,
+} from "@delivery-os/core";
 import type {
   InstallArtifactIdentity,
   InstallDaemonState,
-  InstallDestinationDisposition,
   InstallOutcome,
+  InstallRecord,
+  InstallRecordState,
   InstallRuntime,
+  InstallSlotReport,
   InstallStateFormatVerdict,
   InstallStateRootVerdict,
 } from "@delivery-os/core/contracts";
-import {
-  INSTALL_DEV_BUILD_CODE,
-  INSTALL_MAX_JUDGED_ROOTS,
-  INSTALL_STATE_FORMAT_OUTCOMES,
-} from "@delivery-os/core/contracts";
+import { INSTALL_DEV_BUILD_CODE, INSTALL_MAX_JUDGED_ROOTS } from "@delivery-os/core/contracts";
 import type { CommandDefinition, CommandInvocation } from "../index.js";
 import {
   renderInstallFailure,
@@ -131,102 +149,39 @@ const daemonGate = async (
   return { ok: true, state: "stopped" };
 };
 
-/**
- * The read-only compatibility pre-flight (F-7, advisory on the write paths).
- *
- * One line per not-accepted root; the exit code is never changed, and the check
- * writes nothing. The full verdict is the report path's.
- */
-export const compatibilityAdvisories = (runtime: InstallRuntime): readonly string[] => {
-  const advisories: string[] = [];
-  const roots = runtime.stateRoots.slice(0, INSTALL_MAX_JUDGED_ROOTS);
-  for (const root of roots) {
-    const files = runtime.fs.list(root).filter((name) => name.startsWith("header."));
-    if (files.length === 0) continue;
-    for (const name of files) {
-      const text = runtime.fs.readText(`${root}/${name}`);
-      if (text === undefined) continue;
-      let observed: string | undefined;
-      try {
-        const parsed = JSON.parse(text) as { readonly schemaVersion?: unknown };
-        observed = typeof parsed.schemaVersion === "string" ? parsed.schemaVersion : undefined;
-      } catch {
-        observed = undefined;
-      }
-      if (observed === undefined) {
-        advisories.push(
-          `advisory: ${root} declares no readable state format; the artifact accepts ` +
-            `${runtime.acceptedStateSchemaVersion}; the check is read-only`,
-        );
-        continue;
-      }
-      if (observed !== runtime.acceptedStateSchemaVersion) {
-        advisories.push(
-          `advisory: ${root} declares state format ${observed}; this artifact accepts ` +
-            `${runtime.acceptedStateSchemaVersion} — install the artifact that matches the root ` +
-            "if the install is refused later (the install surface stays able to install it)",
-        );
-      }
-    }
-  }
-  return advisories;
-};
+/** The running artifact's directory, or the empty string when unresolved. */
+const artifactDirectoryOf = (runtime: InstallRuntime): string =>
+  runtime.runningArtifactPath.replace(/\/[^/]+$/u, "");
 
-/** The state-format verdict behind `install status` (DM-4). */
+/** The state-format verdict over the declared roots (read-only, bounded). */
 export const stateFormatVerdict = (runtime: InstallRuntime): InstallStateFormatVerdict => {
   const truncated = runtime.stateRoots.length > INSTALL_MAX_JUDGED_ROOTS;
-  const judged = runtime.stateRoots.slice(0, INSTALL_MAX_JUDGED_ROOTS);
-  const roots: InstallStateRootVerdict[] = judged.map((root) => {
-    if (!runtime.fs.exists(root)) {
-      return {
-        root,
-        observed: null,
-        outcome: INSTALL_STATE_FORMAT_OUTCOMES[3],
-        reason: "the root is absent and is never collapsed into accepted",
-      };
-    }
-    const headers = runtime.fs.list(root).filter((name) => name.startsWith("header."));
-    if (headers.length === 0) {
-      return {
-        root,
-        observed: null,
-        outcome: INSTALL_STATE_FORMAT_OUTCOMES[3],
-        reason: "no ledger header exists at this root",
-      };
-    }
-    let observed: string | undefined;
-    try {
-      const parsed = JSON.parse(runtime.fs.readText(`${root}/${headers[0] as string}`) ?? "") as {
-        readonly schemaVersion?: unknown;
-      };
-      observed = typeof parsed.schemaVersion === "string" ? parsed.schemaVersion : undefined;
-    } catch {
-      observed = undefined;
-    }
-    if (observed === undefined) {
-      return {
-        root,
-        observed: null,
-        outcome: INSTALL_STATE_FORMAT_OUTCOMES[2],
-        reason: "the header exists but declares no readable format identifier",
-      };
-    }
-    return observed === runtime.acceptedStateSchemaVersion
-      ? {
-          root,
-          observed,
-          outcome: INSTALL_STATE_FORMAT_OUTCOMES[0],
-          reason: "the header declares the format this artifact accepts",
-        }
-      : {
-          root,
-          observed,
-          outcome: INSTALL_STATE_FORMAT_OUTCOMES[1],
-          reason: `the header declares ${observed}; this artifact accepts ${runtime.acceptedStateSchemaVersion}`,
-        };
+  const judgedRoots = runtime.stateRoots.slice(0, INSTALL_MAX_JUDGED_ROOTS);
+  const observations: StateRootObservation[] = judgedRoots.map((root) => {
+    const stats = runtime.fs.stat(root);
+    const exists = stats !== undefined && stats.kind === "directory";
+    const headers = exists
+      ? runtime.fs.list(root).filter((name) => name.startsWith("header."))
+      : [];
+    const texts = headers.map((name) => runtime.fs.readText(`${root}/${name}`));
+    return {
+      root,
+      exists,
+      headerTexts: texts,
+      unreadable: exists && texts.some((t) => t === undefined),
+    };
   });
-  return { accepted: runtime.acceptedStateSchemaVersion, roots, judged: judged.length, truncated };
+  return judgeStateFormat({
+    accepted: runtime.acceptedStateSchemaVersion,
+    observations,
+    judged: judgedRoots.length,
+    truncated,
+  });
 };
+
+/** The write-path advisory lines (one per not-accepted or unreadable root). */
+export const compatibilityAdvisories = (runtime: InstallRuntime): readonly string[] =>
+  advisoriesOf(stateFormatVerdict(runtime));
 
 /** The running identity group of every outcome. */
 const runningOf = (runtime: InstallRuntime) => ({
@@ -238,17 +193,47 @@ const runningOf = (runtime: InstallRuntime) => ({
   artifactPath: runtime.runningArtifactPath,
 });
 
-/** The slot condition, read without ever promoting or writing. */
-const slotStateOf = (
-  runtime: InstallRuntime,
-): {
-  readonly state: "present" | "absent" | "invalid";
-  readonly identity?: InstallArtifactIdentity;
-} => {
-  const stat = runtime.fs.stat(runtime.slotPath);
-  if (stat === undefined) return { state: "absent" };
-  if (stat.kind === "file" && stat.size > 0) return { state: "present" };
-  return { state: "invalid" };
+const readRecord = (runtime: InstallRuntime): InstallRecordRead =>
+  readInstallRecord({
+    exists: runtime.fs.exists,
+    readText: runtime.fs.readText,
+    path: runtime.recordPath,
+  });
+
+const recordStateOf = (
+  read: InstallRecordRead,
+  running: InstallArtifactIdentity | undefined,
+): InstallRecordState => {
+  if (read.kind === "absent") return "absent";
+  if (read.kind === "unreadable") return "unreadable";
+  if (running === undefined) return "record-stale";
+  const record = read.record;
+  return record.version === running.version &&
+    record.commit === running.commit &&
+    record.builtAt === running.builtAt &&
+    record.dirty === running.dirty &&
+    record.channel === running.channel
+    ? "current"
+    : "record-stale";
+};
+
+const writeRecord = (runtime: InstallRuntime, record: InstallRecord): boolean =>
+  writeInstallRecordText({
+    fs: runtime.fs,
+    path: runtime.recordPath,
+    text: serializeInstallRecord(record),
+  });
+
+/** The slot report, read from disk and named only by a readable record. */
+const slotReportOf = (runtime: InstallRuntime, read: InstallRecordRead): InstallSlotReport => {
+  const stats = runtime.fs.stat(runtime.slotPath);
+  if (stats === undefined) return { path: runtime.slotPath, state: "absent" };
+  if (stats.kind !== "file" || stats.size === 0)
+    return { path: runtime.slotPath, state: "invalid" };
+  const identity = read.kind === "record" ? read.record.previous : undefined;
+  return identity === undefined
+    ? { path: runtime.slotPath, state: "present" }
+    : { path: runtime.slotPath, state: "present", identity };
 };
 
 /** The residual set: what `purge` would additionally delete (F-10, NFR-11). */
@@ -261,77 +246,56 @@ export const residualSetOf = (runtime: InstallRuntime): readonly string[] => {
   return [...new Set(paths)].sort();
 };
 
-type InstallPlan = {
-  readonly destination: string;
-  readonly agreement: boolean;
-  readonly disposition: InstallDestinationDisposition;
-  readonly recordPath: string;
-  readonly slotPath: string;
-  readonly launcherTarget?: string;
-  readonly profileFile?: string;
-  readonly lines: readonly string[];
-};
-
-/** The declared install plan content (Appendix C.4, phase-2 depth). */
-const installPlanOf = (
-  runtime: InstallRuntime,
-  planOptions: { readonly addToPath: boolean; readonly shellProfile?: string },
-): InstallPlan => {
-  const destinationClass = classifyInstallDestination(runtime.fs, runtime.destinationPath);
-  const agreement =
-    destinationClass === "compiled-artifact" &&
-    runtime.fs.digest(runtime.destinationPath) === runtime.fs.digest(runtime.runningArtifactPath);
-  const disposition: InstallDestinationDisposition =
-    destinationClass === "absent"
-      ? "created"
-      : agreement
-        ? "unchanged"
-        : destinationClass === "launcher"
-          ? "launcher-discarded"
-          : destinationClass === "symlink"
-            ? "symlink-replaced"
-            : destinationClass === "compiled-artifact"
-              ? "replaced"
-              : "replaced";
-  const launcherTarget =
-    destinationClass === "launcher"
-      ? launcherTargetOf(runtime.fs, runtime.destinationPath)
-      : undefined;
-  const linkTarget =
-    destinationClass === "symlink" ? symlinkTargetOf(runtime.destinationPath) : undefined;
-  const lines = [
+/** The declared install plan content (Appendix C.4). */
+const installPlanLines = (input: {
+  readonly runtime: InstallRuntime;
+  readonly plan: ReplacePlan;
+  readonly advisories: readonly string[];
+  readonly daemon: string;
+  readonly addToPath: boolean;
+  readonly shellProfile?: string;
+}): readonly string[] => {
+  const { runtime, plan } = input;
+  return [
     `running: ${runtime.runningIdentity?.version ?? "0.0.0"} (build ${runtime.runningIdentity?.commit ?? "dev"}) from ${runtime.runningArtifactPath}`,
     `destination: ${runtime.destinationPath}`,
-    agreement
+    plan.agreement
       ? "step 4: the destination's content is this artifact — the run would stop, with no staging file, no rename and no slot swap"
-      : `disposition: ${disposition}${launcherTarget === undefined ? "" : ` (the launcher's recorded target ${launcherTarget} is discarded and is not preserved)`}${linkTarget === undefined ? "" : ` (the link to ${linkTarget} is replaced without writing through it)`}`,
+      : `disposition: ${plan.disposition}${plan.launcherTarget === undefined ? "" : ` (the launcher's recorded target ${plan.launcherTarget} is discarded and is not preserved)`}`,
+    ...(plan.reconcilesRecord ? ["record: would be reconciled in place"] : []),
+    `slot: ${runtime.slotPath}${plan.slotSwap ? " (would receive the displaced artifact)" : " (unchanged)"}`,
     `record: ${runtime.recordPath}`,
-    `slot: ${runtime.slotPath}`,
-    ...(planOptions.addToPath
+    ...(input.addToPath
       ? [
-          `profile: ${planOptions.shellProfile ?? "the declared shell mapping"}`,
+          `profile: ${input.shellProfile ?? "the declared shell mapping"}`,
           "block: one export line between the declared markers",
         ]
       : []),
+    `daemon: ${input.daemon}`,
+    ...input.advisories,
   ];
+};
+
+/** Read the destination class and the two digests the plan needs. */
+const destinationFacts = (runtime: InstallRuntime) => {
+  const destinationClass = classifyInstallDestination(runtime.fs, runtime.destinationPath);
   return {
-    destination: runtime.destinationPath,
-    agreement,
-    disposition,
-    recordPath: runtime.recordPath,
-    slotPath: runtime.slotPath,
-    ...(launcherTarget === undefined ? {} : { launcherTarget }),
-    ...(planOptions.addToPath && planOptions.shellProfile !== undefined
-      ? { profileFile: planOptions.shellProfile }
-      : {}),
-    lines,
+    destinationClass,
+    destinationDigest:
+      destinationClass === "compiled-artifact"
+        ? runtime.fs.digest(runtime.destinationPath)
+        : undefined,
+    runningDigest: runtime.fs.digest(runtime.runningArtifactPath),
+    launcherTarget:
+      destinationClass === "launcher"
+        ? launcherTargetOf(runtime.fs, runtime.destinationPath)
+        : undefined,
   };
 };
 
 /**
- * The phase-2 write posture (D3): step 1 in full, then steps 2, 3 and 6, the
- * pre-staging agreement stop, and the slot-free dispositions. Steps 5 and 7
- * arrive with the record and the slot.
+ * The replacing install (TDR-0040 §2). The agreement gate is evaluated BEFORE
+ * staging, so a no-op creates no staging file at all.
  */
 const runInstall = async (
   command: InstallCommandInput,
@@ -344,7 +308,6 @@ const runInstall = async (
   },
 ): Promise<unknown> => {
   const { runtime } = command;
-  const advisories = compatibilityAdvisories(runtime);
   if (options.migrate) {
     return refusal(
       "install.migration.unavailable",
@@ -353,123 +316,382 @@ const runInstall = async (
         "copied, or deleted",
     );
   }
-  const artifactDirectory = runtime.runningArtifactPath.replace(/\/[^/]+$/u, "");
+  if (runtime.runningArtifactPath.length === 0) {
+    return internalFailure(
+      "the running artifact path composition fact is unresolved; no install was attempted",
+    );
+  }
+  if (runtime.runningIdentity === undefined) {
+    return admissionRefusal({ code: INSTALL_DEV_BUILD_CODE });
+  }
+  const running = runtime.runningIdentity;
+  const artifactDirectory = artifactDirectoryOf(runtime);
   const admission = evaluateInstallAdmission({
     artifactDirectory,
-    ...(runtime.runningIdentity === undefined ? {} : { identity: runtime.runningIdentity }),
+    identity: running,
     git: runtime.git.readCheckout(artifactDirectory),
   });
   if (!admission.ok) return admissionRefusal(admission);
   const gate = await daemonGate(runtime, options.stopDaemon);
   if (!gate.ok) return gate.refusal;
 
-  const plan = installPlanOf(runtime, {
-    addToPath: options.addToPath,
-    ...(options.shellProfile === undefined ? {} : { shellProfile: options.shellProfile }),
+  const verdict = stateFormatVerdict(runtime);
+  const advisories = advisoriesOf(verdict);
+  const record = readRecord(runtime);
+  const recordState = recordStateOf(record, running);
+  const facts = destinationFacts(runtime);
+  const plan = planReplace({
+    destinationClass: facts.destinationClass,
+    ...(facts.destinationDigest === undefined
+      ? {}
+      : { destinationDigest: facts.destinationDigest }),
+    ...(facts.runningDigest === undefined ? {} : { runningDigest: facts.runningDigest }),
+    recordState,
   });
+  const plannedPlan: ReplacePlan =
+    facts.launcherTarget === undefined ? plan : { ...plan, launcherTarget: facts.launcherTarget };
+  const provenance = provenanceOfAdmission(admission);
+  const installedAt = runtime.clock.nowIso();
+
   if (options.dryRun) {
     return {
       data: {
         outcome: "plan",
         running: runningOf(runtime),
         destination: runtime.destinationPath,
-        disposition: plan.agreement ? "unchanged" : plan.disposition,
-        slot: { path: runtime.slotPath, state: slotStateOf(runtime).state },
+        disposition: plannedPlan.disposition,
+        slot: slotReportOf(runtime, record),
         recordPath: runtime.recordPath,
-        recordState: "absent",
+        recordState,
         daemon: gate.state,
         advisories,
-        plan: plan.lines,
+        plan: installPlanLines({
+          runtime,
+          plan: plannedPlan,
+          advisories,
+          daemon: gate.state,
+          addToPath: options.addToPath,
+          ...(options.shellProfile === undefined ? {} : { shellProfile: options.shellProfile }),
+        }),
       } satisfies InstallOutcome,
     };
   }
 
-  const disposition = plan.agreement ? "unchanged" : plan.disposition;
-  if (disposition !== "unchanged") {
-    if (!runtime.fs.mkdirp(runtime.installDirectory)) {
-      return internalFailure(`the install directory ${runtime.installDirectory} cannot be created`);
+  if (runtime.fault?.failAt("identity-compare") === true) {
+    return internalFailure("the artifact-agreement step was injected to fail; nothing is staged");
+  }
+
+  // Step 4: the artifact-agreement gate and the in-place record reconciliation.
+  if (plannedPlan.agreement) {
+    let reconciliation: InstallOutcome["reconciliation"];
+    if (plannedPlan.reconcilesRecord) {
+      const reconciled = reconciliationRecordOf({
+        running,
+        stateSchemaVersion: runtime.acceptedStateSchemaVersion,
+        ...provenance,
+        installedAt,
+        record,
+      });
+      if (runtime.fault?.failAt("record-write") === true) {
+        return internalFailure(
+          "the record write was injected to fail; the destination is this artifact and is untouched",
+        );
+      }
+      const written = writeRecord(runtime, reconciled.record);
+      reconciliation = { from: recordState, previous: reconciled.previous };
+      if (!written) {
+        return internalFailure(
+          "the record could not be reconciled; the destination and slot are untouched",
+        );
+      }
     }
-    if (runtime.fault?.failAt("stage") === true) {
-      return internalFailure("the staging step was injected to fail; the destination is untouched");
-    }
-    const staged = runtime.fs.copyStaged(
-      runtime.destinationPath,
-      runtime.runningArtifactPath,
-      0o755,
-    );
-    if (!staged.ok) return internalFailure(staged.reason);
-    const stagedStat = runtime.fs.stat(staged.stagedPath);
-    const verified =
-      stagedStat !== undefined &&
-      stagedStat.size > 0 &&
-      stagedStat.executable &&
-      runtime.fs.digest(staged.stagedPath) === runtime.fs.digest(runtime.runningArtifactPath);
-    if (runtime.fault?.failAt("verify") === true || !verified) {
-      runtime.fs.remove(staged.stagedPath);
-      return internalFailure("the staged copy did not verify; the destination is untouched");
-    }
-    if (!runtime.fs.rename(staged.stagedPath, runtime.destinationPath)) {
-      runtime.fs.remove(staged.stagedPath);
-      return internalFailure("the staged artifact could not be renamed into place");
+    return {
+      data: {
+        outcome: "unchanged",
+        running: runningOf(runtime),
+        destination: runtime.destinationPath,
+        disposition: "unchanged",
+        slot: slotReportOf(runtime, readRecord(runtime)),
+        recordPath: runtime.recordPath,
+        recordState: plannedPlan.reconcilesRecord ? "current" : recordState,
+        ...(reconciliation === undefined ? {} : { reconciliation }),
+        daemon: gate.state,
+        advisories,
+      } satisfies InstallOutcome,
+    };
+  }
+
+  // Step 2: stage the running artifact's bytes beside the destination.
+  if (runtime.fault?.failAt("stage") === true) {
+    return internalFailure("the staging step was injected to fail; the destination is untouched");
+  }
+  if (!runtime.fs.mkdirp(runtime.installDirectory)) {
+    return internalFailure(`the install directory ${runtime.installDirectory} cannot be created`);
+  }
+  // A staged copy orphaned by a crashed run is this run's own artifact class: it
+  // is swept before a new copy is staged, so a recovery leaves no temporary file.
+  for (const name of runtime.fs.list(runtime.installDirectory)) {
+    if (name.startsWith(`.${runtime.destinationPath.split("/").pop() ?? ""}.staged-`)) {
+      runtime.fs.remove(`${runtime.installDirectory}/${name}`);
     }
   }
+  const staged = runtime.fs.copyStaged(runtime.destinationPath, runtime.runningArtifactPath, 0o755);
+  if (!staged.ok) return internalFailure(staged.reason);
+
+  // Step 3: verify the staged copy completely.
+  const stagedStat = runtime.fs.stat(staged.stagedPath);
+  const verified =
+    stagedStat !== undefined &&
+    stagedStat.size > 0 &&
+    stagedStat.executable &&
+    runtime.fs.digest(staged.stagedPath) === facts.runningDigest;
+  if (runtime.fault?.failAt("verify") === true || !verified) {
+    runtime.fs.remove(staged.stagedPath);
+    return internalFailure("the staged copy did not verify; the destination is untouched");
+  }
+
+  // Step 5: move the destination into the slot (only a differing compiled
+  // artifact); a launcher is discarded with a report and a symlink is replaced
+  // without write-through — neither is promoted.
+  if (plannedPlan.disposition === "launcher-discarded") {
+    runtime.fs.remove(runtime.destinationPath);
+  }
+  if (plannedPlan.slotSwap) {
+    const moved = runtime.fs.rename(runtime.destinationPath, runtime.slotPath);
+    if (!moved) {
+      runtime.fs.remove(staged.stagedPath);
+      return internalFailure(
+        "the displaced artifact could not be moved into the slot; nothing was replaced",
+      );
+    }
+  }
+  if (runtime.fault?.failAt("destination-to-slot") === true) {
+    return internalFailure(
+      "the destination-to-slot step was injected to fail; the slot holds a runnable artifact and a re-run recovers",
+    );
+  }
+
+  // Step 6: the staged copy becomes the destination.
+  if (runtime.fault?.failAt("staged-to-destination") === true) {
+    return internalFailure(
+      "the staged-to-destination step was injected to fail; the slot holds a runnable artifact and a re-run recovers",
+    );
+  }
+  if (!runtime.fs.rename(staged.stagedPath, runtime.destinationPath)) {
+    runtime.fs.remove(staged.stagedPath);
+    return internalFailure("the staged artifact could not be renamed into place");
+  }
+
+  // Step 7: the record, staged and renamed.
+  if (runtime.fault?.failAt("record-write") === true) {
+    return internalFailure(
+      "the record write was injected to fail; both artifacts are valid and install status reports record-stale",
+    );
+  }
+  const recordToWrite = replacingRecordOf({
+    running,
+    stateSchemaVersion: runtime.acceptedStateSchemaVersion,
+    ...(facts.destinationClass === "symlink"
+      ? { launcherDisposition: plannedPlan.launcherDisposition }
+      : {}),
+    ...provenance,
+    installedAt,
+    plan: plannedPlan,
+    record,
+  });
+  const written = writeRecord(runtime, recordToWrite);
+  const finalRecord = readRecord(runtime);
 
   return {
     data: {
-      outcome: disposition === "unchanged" ? "unchanged" : "installed",
+      outcome: "installed",
       running: runningOf(runtime),
       destination: runtime.destinationPath,
-      disposition,
-      slot: { path: runtime.slotPath, state: slotStateOf(runtime).state },
+      disposition: plannedPlan.disposition,
+      ...(plannedPlan.launcherTarget === undefined
+        ? {}
+        : { launcherTarget: plannedPlan.launcherTarget }),
+      ...(recordToWrite.previous === undefined ? {} : { previous: recordToWrite.previous }),
+      slot: slotReportOf(runtime, finalRecord),
       recordPath: runtime.recordPath,
-      recordState: "absent",
+      recordState: written ? "current" : "record-stale",
       daemon: gate.state,
       advisories,
-      ...(plan.launcherTarget === undefined ? {} : { launcherTarget: plan.launcherTarget }),
     } satisfies InstallOutcome,
   };
 };
 
 /** `install status` — read-only, deterministic, never repairing (DM-4). */
-const runStatus = async (runtime: InstallRuntime): Promise<unknown> => ({
-  data: {
+const runStatus = async (runtime: InstallRuntime): Promise<unknown> => {
+  const verdict = stateFormatVerdict(runtime);
+  const record = readRecord(runtime);
+  const recordState = recordStateOf(record, runtime.runningIdentity);
+  const installed =
+    record.kind === "record"
+      ? {
+          version: record.record.version,
+          commit: record.record.commit,
+          builtAt: record.record.builtAt,
+          dirty: record.record.dirty,
+          channel: record.record.channel,
+        }
+      : null;
+  const payload = {
     schemaVersion: "install.status.v1",
     running: runningOf(runtime),
-    installed: null,
-    recordState: "absent",
+    installed,
+    recordState,
     recordPath: runtime.recordPath,
-    rollback: { path: runtime.slotPath, state: slotStateOf(runtime).state },
-    targetStability: installTargetStability(
-      runtime.git.readCheckout(runtime.runningArtifactPath.replace(/\/[^/]+$/u, "")),
-    ),
-    pathBlock: null,
-  },
-});
+    rollback: slotReportOf(runtime, record),
+    targetStability: installTargetStability(runtime.git.readCheckout(artifactDirectoryOf(runtime))),
+    stateFormat: verdict,
+    pathBlock: record.kind === "record" ? (record.record.pathBlock ?? null) : null,
+  };
+  const incompatible = incompatibleRoots(verdict);
+  if (incompatible.length === 0) return { data: payload };
+  const first = incompatible[0] as InstallStateRootVerdict;
+  return refusal(
+    "install.state.incompatible",
+    `the judged state root ${first.root} declares ${String(first.observed)}; this artifact accepts ` +
+      `${verdict.accepted} (judged ${String(verdict.judged)} root(s), ` +
+      `${String(verdict.truncated ? "truncated" : "complete")})`,
+  );
+};
 
-/** `install rollback` — the ordered refusals; the slot refusals come first. */
-const runRollback = async (command: InstallCommandInput): Promise<unknown> => {
+/** `install rollback` — the ordered refusals, then the reverse swap. */
+const runRollback = async (
+  command: InstallCommandInput,
+  options: { readonly dryRun: boolean; readonly stopDaemon: boolean },
+): Promise<unknown> => {
   const { runtime } = command;
-  const slot = slotStateOf(runtime);
-  if (slot.state === "absent") {
+  const slotStat = runtime.fs.stat(runtime.slotPath);
+  if (slotStat === undefined) {
     return refusal(
       "install.slot.absent",
       `refused: no rollback slot exists at ${runtime.slotPath}; install a different compiled ` +
         "artifact first; nothing was written",
     );
   }
-  if (slot.state === "invalid") {
+  if (!isCompiledArtifactAtPath(runtime.fs, runtime.slotPath)) {
     return refusal(
       "install.slot.invalid",
       `refused: the rollback slot at ${runtime.slotPath} is not a compiled artifact or is ` +
         "unreadable; nothing was written",
     );
   }
-  return refusal(
-    "install.record.unreadable",
-    `refused: the install record at ${runtime.recordPath} does not name the pair the swap ` +
-      "inverts; install the artifact held in the slot; nothing was written",
-  );
+  const record = readRecord(runtime);
+  const destinationIsRunning =
+    runtime.runningArtifactPath.length > 0 &&
+    isCompiledArtifactAtPath(runtime.fs, runtime.destinationPath) &&
+    runtime.fs.digest(runtime.destinationPath) === runtime.fs.digest(runtime.runningArtifactPath);
+  const running = runtime.runningIdentity;
+  const precondition = rollbackPrecondition({
+    record,
+    running: running ?? {
+      version: "0.0.0",
+      commit: "dev",
+      builtAt: "",
+      dirty: false,
+      channel: "dev",
+    },
+    destinationIsRunning,
+  });
+
+  if (options.dryRun) {
+    const plan = precondition.ok
+      ? [
+          `restore: ${precondition.claimedCurrent.version} (build ${precondition.claimedCurrent.commit}) from the slot`,
+          `displace: ${precondition.claimedPrevious.version} (build ${precondition.claimedPrevious.commit}) into the slot`,
+          "rename 1: destination -> slot (the displaced artifact)",
+          "rename 2: slot -> destination (the restored artifact)",
+          "record: current = the slot's claimed artifact, previous = the displaced destination",
+        ]
+      : [
+          "refusal: install.record.unreadable",
+          `cause: ${rollbackCauseSentence(precondition.cause)}`,
+          "remedy: install the artifact held in the rollback slot; nothing would be written",
+        ];
+    return {
+      data: {
+        outcome: "plan",
+        running: runningOf(runtime),
+        destination: runtime.destinationPath,
+        slot: slotReportOf(runtime, record),
+        recordPath: runtime.recordPath,
+        recordState: recordStateOf(record, running),
+        daemon: "absent",
+        advisories: [],
+        plan,
+      } satisfies InstallOutcome,
+    };
+  }
+
+  if (!precondition.ok) {
+    return refusal(
+      "install.record.unreadable",
+      `refused: ${rollbackCauseSentence(precondition.cause)} at ${runtime.recordPath}; install the ` +
+        "artifact held in the rollback slot; nothing was written",
+    );
+  }
+
+  // The ordered set is decided before the daemon stop: a refused rollback
+  // performs no daemon action even with --stop-daemon.
+  const gate = await daemonGate(runtime, options.stopDaemon);
+  if (!gate.ok) return gate.refusal;
+
+  // The involutive swap: the destination moves aside, the slot takes its place,
+  // and the displaced destination becomes the new slot.
+  const swapTemp = `${runtime.slotPath}.rollback-tmp`;
+  if (!runtime.fs.rename(runtime.destinationPath, swapTemp)) {
+    return internalFailure(
+      "the rollback could not move the destination aside; nothing was swapped",
+    );
+  }
+  if (!runtime.fs.rename(runtime.slotPath, runtime.destinationPath)) {
+    runtime.fs.rename(swapTemp, runtime.destinationPath);
+    return internalFailure("the rollback could not restore the slot artifact; nothing was swapped");
+  }
+  if (!runtime.fs.rename(swapTemp, runtime.slotPath)) {
+    return internalFailure("the rollback could not place the displaced artifact in the slot");
+  }
+
+  const recordToWrite = rollbackRecordOf({
+    precondition,
+    stateSchemaVersion: runtime.acceptedStateSchemaVersion,
+    provenance: record.kind === "record" ? record.record.provenance : "unverified",
+    installedAt: runtime.clock.nowIso(),
+    launcherDisposition: "none",
+    ...(record.kind === "record" && record.record.pathBlock !== undefined
+      ? { pathBlock: record.record.pathBlock }
+      : {}),
+  });
+  if (runtime.fault?.failAt("record-write") === true) {
+    return internalFailure(
+      "the record write was injected to fail; both artifacts are valid and install status reports record-stale",
+    );
+  }
+  const written = writeRecord(runtime, recordToWrite);
+  return {
+    data: {
+      outcome: "rolled-back",
+      running: runningOf(runtime),
+      destination: runtime.destinationPath,
+      disposition: "replaced",
+      previous: precondition.claimedCurrent,
+      slot: slotReportOf(runtime, readRecord(runtime)),
+      recordPath: runtime.recordPath,
+      recordState: written ? "current" : "record-stale",
+      daemon: gate.state,
+      advisories: [],
+    } satisfies InstallOutcome,
+  };
 };
+
+/** The members the removal matrix owns on this machine state. */
+const removalMembers = (runtime: InstallRuntime): readonly string[] =>
+  [runtime.destinationPath, runtime.slotPath, runtime.recordPath].filter((path) =>
+    runtime.fs.exists(path),
+  );
 
 /** `install uninstall` — removal matrix minus the roots; residual always printed. */
 const runUninstall = async (
@@ -480,32 +702,32 @@ const runUninstall = async (
   const gate = await daemonGate(runtime, options.stopDaemon);
   if (!gate.ok) return gate.refusal;
   const residual = residualSetOf(runtime);
-  const present = runtime.fs.exists(runtime.destinationPath);
-  const removals = present ? [runtime.destinationPath] : [];
+  const members = removalMembers(runtime);
+  const record = readRecord(runtime);
   if (options.dryRun) {
     return {
       data: {
         outcome: "plan",
         running: runningOf(runtime),
         destination: runtime.destinationPath,
-        slot: { path: runtime.slotPath, state: slotStateOf(runtime).state },
+        slot: slotReportOf(runtime, record),
         recordPath: runtime.recordPath,
-        recordState: "absent",
+        recordState: recordStateOf(record, runtime.runningIdentity),
         daemon: gate.state,
         advisories: [],
-        plan: removals,
+        plan: members,
         residual,
       } satisfies InstallOutcome,
     };
   }
   const removed: string[] = [];
-  if (present && runtime.fs.remove(runtime.destinationPath)) removed.push(runtime.destinationPath);
+  for (const path of members) if (runtime.fs.remove(path)) removed.push(path);
   return {
     data: {
       outcome: "uninstalled",
       running: runningOf(runtime),
       destination: runtime.destinationPath,
-      slot: { path: runtime.slotPath, state: slotStateOf(runtime).state },
+      slot: { path: runtime.slotPath, state: "absent" },
       recordPath: runtime.recordPath,
       recordState: "absent",
       daemon: gate.state,
@@ -531,21 +753,17 @@ const runPurge = async (
   }
   const gate = await daemonGate(runtime, options.stopDaemon);
   if (!gate.ok) return gate.refusal;
-  const removal = [
-    runtime.destinationPath,
-    runtime.slotPath,
-    runtime.recordPath,
-    ...residualSetOf(runtime),
-  ];
+  const record = readRecord(runtime);
+  const removal = [...removalMembers(runtime), ...residualSetOf(runtime)];
   if (options.dryRun) {
     return {
       data: {
         outcome: "plan",
         running: runningOf(runtime),
         destination: runtime.destinationPath,
-        slot: { path: runtime.slotPath, state: slotStateOf(runtime).state },
+        slot: slotReportOf(runtime, record),
         recordPath: runtime.recordPath,
-        recordState: "absent",
+        recordState: recordStateOf(record, runtime.runningIdentity),
         daemon: gate.state,
         advisories: [],
         plan: removal,
@@ -591,6 +809,25 @@ export const createInstallCommandDefinition = (runtime: InstallRuntime): Command
     return renderInstallOutcome(data as InstallOutcome);
   },
   humanFailureText: (error, brand) => renderInstallFailure(error, brand),
+  exitProjection: (data) => {
+    if (typeof data === "object" && data !== null) {
+      const record = data as Record<string, unknown>;
+      if (record.schemaVersion === "install.status.v1") {
+        const format = record.stateFormat;
+        if (typeof format === "object" && format !== null) {
+          const roots = (format as { readonly roots?: readonly unknown[] }).roots ?? [];
+          const incompatible = roots.some(
+            (entry) =>
+              typeof entry === "object" &&
+              entry !== null &&
+              (entry as { readonly outcome?: unknown }).outcome === "not-accepted",
+          );
+          if (incompatible) return "user-validation";
+        }
+      }
+    }
+    return "success";
+  },
   handler: async (invocation) => {
     if (!runtime.ownsInstallation) return notOwningRefusal(runtime);
     const command: InstallCommandInput = { runtime, invocation };
@@ -605,7 +842,12 @@ export const createInstallCommandDefinition = (runtime: InstallRuntime): Command
         );
       }
       if (subcommand === "status") return runStatus(runtime);
-      if (subcommand === "rollback") return runRollback(command);
+      if (subcommand === "rollback") {
+        return runRollback(command, {
+          dryRun: boolFlag(command, "--dry-run"),
+          stopDaemon: boolFlag(command, "--stop-daemon"),
+        });
+      }
       if (subcommand === "uninstall") {
         return runUninstall(command, {
           dryRun: boolFlag(command, "--dry-run"),
@@ -629,3 +871,6 @@ export const createInstallCommandDefinition = (runtime: InstallRuntime): Command
     });
   },
 });
+
+/** Re-export the record parser so the record suite asserts the same one writer. */
+export { parseInstallRecord };

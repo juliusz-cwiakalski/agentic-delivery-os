@@ -6,10 +6,9 @@
  * real roots. The snapshot helper proves the zero-write claims (paths, sizes,
  * `mtimeNs`, modes).
  */
-import { mkdtempSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { createNodeInstallFilePort } from "../../../packages/adapters/src/file/index";
-import { STATE_SCHEMA_VERSION } from "../../../packages/core/src/contracts/state";
 import type {
   InstallArtifactIdentity,
   InstallDaemonPort,
@@ -17,6 +16,7 @@ import type {
   InstallGitRead,
   InstallRuntime,
 } from "../../../packages/core/src/contracts/install";
+import { STATE_SCHEMA_VERSION } from "../../../packages/core/src/contracts/state";
 
 const ROOT = process.cwd();
 
@@ -77,6 +77,7 @@ export type InstallRuntimeOptions = {
   readonly stateRoots?: readonly string[];
   readonly priorNamespaceArtifacts?: readonly string[];
   readonly fs?: InstallFilePort;
+  readonly fault?: InstallRuntime["fault"];
 };
 
 /** Compose one runtime over the scratch roots with every seam injected. */
@@ -103,6 +104,7 @@ export const createInstallRuntime = (options: InstallRuntimeOptions): InstallRun
     stop: async () => ({ ok: true }),
   },
   priorNamespaceArtifacts: options.priorNamespaceArtifacts ?? [],
+  ...(options.fault === undefined ? {} : { fault: options.fault }),
 });
 
 /** A sorted `relative-path|size|mtimeNs|mode` snapshot of one tree. */

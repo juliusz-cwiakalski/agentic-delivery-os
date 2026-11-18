@@ -1161,6 +1161,37 @@ export {
   installTargetStability,
 } from "./domain/install-admission.js";
 export {
+  compatibilityAdvisories,
+  incompatibleRoots,
+  judgeStateFormat,
+  judgeStateRoot,
+  type StateRootObservation,
+} from "./domain/install-compatibility.js";
+// GH-346 phase 3: the install record, the compatibility verdict, and the
+// seven-step replace plan (DM-2, DM-4, Appendix B).
+export {
+  buildInstallRecord,
+  type InstallRecordRead,
+  parseInstallRecord,
+  readInstallRecord,
+  serializeInstallRecord,
+} from "./domain/install-record.js";
+export {
+  planReplace,
+  provenanceOfAdmission,
+  type ReplacePlan,
+  ROLLBACK_RECORD_CAUSES,
+  type RollbackPrecondition,
+  type RollbackRecordCause,
+  reconciliationRecordOf,
+  replacingRecordOf,
+  rollbackCauseSentence,
+  rollbackPrecondition,
+  rollbackRecordOf,
+  slotCondition,
+  targetStabilityOf,
+} from "./domain/install-replace.js";
+export {
   assembleInstallStatus,
   identityOfRecord,
   recordStateOf,

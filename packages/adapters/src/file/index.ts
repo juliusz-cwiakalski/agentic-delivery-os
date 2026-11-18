@@ -108,6 +108,16 @@ export {
   symlinkTargetOf,
 } from "./install-destination.js";
 export {
+  INSTALL_RECORD_MODE,
+  removeInstallRecord,
+  writeInstallRecordText,
+} from "./install-record.js";
+export {
+  enumerateStateRoots,
+  type StateRootEnumeration,
+  type StateRootFacts,
+} from "./install-state-roots.js";
+export {
   applyPromotionWrite,
   checkPromotionConfinement,
   type MemoryReadFileSystem,

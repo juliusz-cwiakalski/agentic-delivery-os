@@ -21,6 +21,7 @@ import {
   createNodeInstallFilePort,
   ensureDispatchIdentityMarkerText,
   ensureProjectIdentityMarkerText,
+  enumerateStateRoots,
   type FileSystemFacts,
   type HostIndexAccess,
   hostIndexDocumentPath,
@@ -4002,12 +4003,13 @@ export const createProductionComposer = (facts: ProductionCompositionFacts): Ent
       const installDirectory = dirname(absoluteInstallPath);
       const configRoot = `${homeDirectory}/${brand.configDirectoryName}`;
       const installFs = createNodeInstallFilePort();
-      const projectsContainer = `${hostRoot}/${INSTALL_STATE_ROOT_PROJECTS_DIRECTORY}`;
-      const projectRoots = installFs
-        .list(projectsContainer)
-        .map((name) => `${projectsContainer}/${name}`)
-        .filter((path) => installFs.stat(path)?.kind === "directory");
-      const stateRoots = [hostRoot, ...projectRoots].slice(0, INSTALL_MAX_JUDGED_ROOTS);
+      const enumeration = enumerateStateRoots({
+        fs: installFs,
+        hostRoot,
+        projectsDirectory: `${hostRoot}/${INSTALL_STATE_ROOT_PROJECTS_DIRECTORY}`,
+        cap: INSTALL_MAX_JUDGED_ROOTS,
+      });
+      const stateRoots = enumeration.roots.map((entry) => entry.root);
       const daemonPort: InstallDaemonPort = {
         status: async () => {
           const read = await daemonRuntime.status({ live: false });
