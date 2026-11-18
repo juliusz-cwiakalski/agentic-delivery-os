@@ -1,9 +1,9 @@
 /** TC-CAP-034 (P6 subset) — apply data + exit 1, plan exit 0, failures carry no residue. */
 import { describe, expect, test } from "bun:test";
-import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
-import { WORK_ITEM_REF, makeFacts, makeProvider } from "../fixtures/closeout/harness";
 import { makeChangeTree } from "../fixtures/capsule/harness";
 import { makeCapsuleRuntime } from "../fixtures/capsule/producer";
+import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
+import { makeFacts, makeProvider, WORK_ITEM_REF } from "../fixtures/closeout/harness";
 
 const humanFacts = () =>
   makeFacts({

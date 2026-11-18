@@ -155,7 +155,12 @@ const selectMerged = (requests: readonly DeliveryRequest[]): DeliveryRequest | u
   return selected;
 };
 
-const nativeFetchTransport = (): ProviderTransport => ({
+/**
+ * The delivered native-`fetch` transport, exported additively (TDR-0031 item 2)
+ * so composition can choose it explicitly when the CLI transport is not
+ * selected, and so an embedder can construct it without ambient state.
+ */
+export const createGithubNativeTransport = (): ProviderTransport => ({
   send: async (request) => {
     const response = await fetch(request.url, {
       method: request.method,
@@ -174,7 +179,7 @@ const trimBaseUrl = (baseUrl: string): string => baseUrl.replace(/\/+$/, "");
 export const createGitHubClient = (options: GithubClientOptions): GithubClient => {
   const baseUrl = trimBaseUrl(options.instance.baseUrl);
   const repositoryPath = `/repos/${encodeURIComponent(options.repository.owner)}/${encodeURIComponent(options.repository.name)}`;
-  const transport = options.transport ?? nativeFetchTransport();
+  const transport = options.transport ?? createGithubNativeTransport();
   const timeoutMs = options.timeoutMs ?? CLOSEOUT_OPERATION_TIMEOUT_MS;
   const context = { systemName: options.instance.instanceName };
 

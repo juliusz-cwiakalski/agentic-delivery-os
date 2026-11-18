@@ -10,10 +10,10 @@ import { join } from "node:path";
 import {
   BUILTIN_CEREMONY_DECLARATIONS,
   BUILTIN_CEREMONY_IDS,
+  builtinCeremonyDeclaration,
   CEREMONY_SCOPE_KEY_KINDS,
   CEREMONY_STEP_KINDS,
   CEREMONY_VERIFICATION_MODES,
-  builtinCeremonyDeclaration,
 } from "../../packages/core/src/contracts/index";
 import {
   ceremonyFollowThroughFirst,

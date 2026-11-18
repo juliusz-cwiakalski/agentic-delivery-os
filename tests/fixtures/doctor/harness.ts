@@ -21,12 +21,12 @@ import {
   type DoctorStateStoresRead,
   type DoctorTrackerFacts,
   type DoctorWiringRead,
+  type OwnerHoldFact,
   PROVIDER_ANNOUNCEMENT_SCHEMA_ID,
   PROVIDER_PARK_SCHEMA_ID,
   type ProviderAnnouncementRecord,
   type ProviderConfiguration,
   type ProviderParkRecord,
-  type OwnerHoldFact,
 } from "../../../packages/core/src/contracts/index";
 import { bufferSink, SYNTHETIC_BRAND } from "../../golden/helpers";
 

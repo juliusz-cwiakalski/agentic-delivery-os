@@ -9,6 +9,9 @@
  */
 import {
   type EnvRecord,
+  PROFILE_EVENT_SEVERITIES,
+  PROFILE_EVIDENCE_FIELDS,
+  PROFILE_EVIDENCE_MAX_BYTES,
   type ProfileBlocker,
   type ProfileEligibility,
   type ProfileEvent,
@@ -17,9 +20,6 @@ import {
   type ProfileProviderAvailability,
   type ProfileSelectionDecision,
   type ProfileSelectionResult,
-  PROFILE_EVIDENCE_FIELDS,
-  PROFILE_EVIDENCE_MAX_BYTES,
-  PROFILE_EVENT_SEVERITIES,
   type ProviderEnvRecordPolicy,
   type ProviderProfile,
   type ProviderProfileConfiguration,

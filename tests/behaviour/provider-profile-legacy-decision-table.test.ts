@@ -3,15 +3,18 @@
  * chain order and lazy probes. Groups 3-5 land with the lifecycle/watch phases.
  */
 import { describe, expect, test } from "bun:test";
+import { createProviderFactsProbe, selectProfile } from "../../packages/core/src/provider/index";
 import {
   parseAndValidateProfileConfiguration,
   parseProviderConfiguration,
 } from "../../packages/core/src/provider/validate";
-import { selectProfile } from "../../packages/core/src/provider/index";
-import { available, exhausted } from "../fixtures/provider/profile/selection/fixtures";
-import { capabilityChain, mixedChain } from "../fixtures/provider/profile/selection/fixtures";
-import { createProviderFactsProbe } from "../../packages/core/src/provider/index";
 import { recordingProbe } from "../fixtures/provider/profile/probes/fixtures";
+import {
+  available,
+  capabilityChain,
+  exhausted,
+  mixedChain,
+} from "../fixtures/provider/profile/selection/fixtures";
 
 const NOW = 1_700_000_000_000;
 
@@ -214,11 +217,11 @@ describe("TC-PROFILE-052 no-silent-path matrix (groups 1-2)", () => {
 
 import {
   createProfileTargetRecord,
-  evaluateProfileLifecycle,
   evaluatePacing,
+  evaluateProfileLifecycle,
 } from "../../packages/core/src/provider/index";
-import { peak } from "../fixtures/provider/profile/selection/fixtures";
 import { holdJudgmentPacing } from "../fixtures/provider/profile/lifecycle/fixtures";
+import { peak } from "../fixtures/provider/profile/selection/fixtures";
 
 describe("TC-PROFILE-049 ported group 3 — park versus switch", () => {
   test("an expensive window parks with cause and expiry", () => {
@@ -356,11 +359,11 @@ describe("TC-PROFILE-050 ported group 4 — revert", () => {
 
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { evaluatePeakWindow } from "../../packages/core/src/provider/peak";
 import {
   normalizeCodingPlanWindows,
   normalizeOpenAiUsage,
 } from "../../packages/adapters/src/provider-quota/index";
+import { evaluatePeakWindow } from "../../packages/core/src/provider/peak";
 
 const watchFixture = (relative: string): string =>
   readFileSync(join(process.cwd(), "tests/fixtures/provider/watch", relative), "utf8");

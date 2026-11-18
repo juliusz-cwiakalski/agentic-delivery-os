@@ -7,8 +7,8 @@
  * The record-level and window-level slices land with phases 3 and 6.
  */
 import { describe, expect, test } from "bun:test";
-import { deriveDispatchResult } from "../../packages/core/src/domain/dispatch-result";
 import { ERROR_TABLE, type ErrorTableEntry } from "../../packages/core/src/contracts/index";
+import { deriveDispatchResult } from "../../packages/core/src/domain/dispatch-result";
 import { unreadableInputs } from "../fixtures/dispatch/truth";
 
 const entries = ERROR_TABLE as readonly ErrorTableEntry[];

@@ -6,13 +6,13 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { parseEnvelope, planRuntime, planWorld, runPlanCli } from "../fixtures/plan/harness/index";
 import {
   baseFacts,
   createRecorder as createQueueRecorder,
   queueRuntime,
   runQueueReadyCli,
 } from "../fixtures/queue-ready/harness";
-import { parseEnvelope, planRuntime, planWorld, runPlanCli } from "../fixtures/plan/harness/index";
 
 const BASELINE_STDOUT = readFileSync(
   join(import.meta.dir, "..", "fixtures", "plan", "queue-ready", "baseline.stdout.json"),

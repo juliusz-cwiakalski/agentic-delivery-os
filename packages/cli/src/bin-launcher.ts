@@ -8,8 +8,13 @@
  * bins are the declared process edges and pass the facts in.
  */
 
+import type { GithubChildRunner, GithubTransportPolicy } from "@delivery-os/adapters/github";
 import { runEntrypoint, workingNameEnvironmentVariable } from "./entrypoint.js";
-import { createProductionComposer, DECLARED_CREDENTIAL_REFERENCES } from "./production.js";
+import {
+  createProductionComposer,
+  DECLARED_CREDENTIAL_REFERENCES,
+  resolveCompositionTransportSelection,
+} from "./production.js";
 
 /** The one sink shape the launcher forwards to the entrypoint. */
 export type LauncherStreams = {
@@ -33,6 +38,10 @@ export type BinLauncherOptions = {
     readonly removeListener: (event: "SIGINT" | "SIGTERM", listener: () => void) => void;
   };
   readonly daemonEntry?: string;
+  /** The closed composition transport policy; absent means the declared default. */
+  readonly githubTransportPolicy?: GithubTransportPolicy;
+  /** An injected CLI child runner so composition tests spawn nothing. */
+  readonly githubCliRunner?: GithubChildRunner;
 };
 
 /**
@@ -56,14 +65,28 @@ export const runBinLauncher = async (options: BinLauncherOptions): Promise<numbe
       ? {}
       : { priorWorkingName: options.priorWorkingName }),
     credentialReferences: DECLARED_CREDENTIAL_REFERENCES,
-    composeProgram: createProductionComposer({
-      environment,
-      cwd: options.cwd,
-      homeDirectory: environment.HOME ?? environment.USERPROFILE ?? "",
-      workingName,
-      processId: options.processId ?? 0,
-      ...(options.signalHost === undefined ? {} : { signalHost: options.signalHost }),
-      ...(options.daemonEntry === undefined ? {} : { daemonEntry: options.daemonEntry }),
-    }),
+    // The one composition path: the wrapper runs only when the entrypoint
+    // composes, so every self-description path returns before the probe. The
+    // resolver's value is forwarded as a composition fact; the composer stays
+    // synchronous and the launcher keeps no composition logic of its own.
+    composeProgram: async (brand, invocation) => {
+      const githubTransportSelection = await resolveCompositionTransportSelection({
+        environment,
+        ...(options.githubTransportPolicy === undefined
+          ? {}
+          : { policy: options.githubTransportPolicy }),
+        ...(options.githubCliRunner === undefined ? {} : { runner: options.githubCliRunner }),
+      });
+      return createProductionComposer({
+        environment,
+        cwd: options.cwd,
+        homeDirectory: environment.HOME ?? environment.USERPROFILE ?? "",
+        workingName,
+        processId: options.processId ?? 0,
+        githubTransportSelection,
+        ...(options.signalHost === undefined ? {} : { signalHost: options.signalHost }),
+        ...(options.daemonEntry === undefined ? {} : { daemonEntry: options.daemonEntry }),
+      })(brand, invocation);
+    },
   });
 };

@@ -17,7 +17,6 @@ import {
   DB_SCHEMA_VERSION,
 } from "../../packages/core/src/contracts/index";
 import { renderSessionAdminHuman } from "../../packages/core/src/domain/session-admin";
-import { SYNTHETIC_BRAND } from "../golden/helpers";
 import { BOUNDARY_CASES, BOUNDARY_IDS, cutoffMs } from "../fixtures/session-admin/boundaries";
 import {
   callsOf,
@@ -30,6 +29,7 @@ import {
   SYNTHETIC_DB_PATH,
 } from "../fixtures/session-admin/harness";
 import { makeSession, sessionRow, sessions } from "../fixtures/session-admin/store";
+import { SYNTHETIC_BRAND } from "../golden/helpers";
 
 const createSessionStore = (io: Parameters<typeof createSessionStoreBase>[0]) =>
   createSessionStoreBase(io, SESSION_POLICY);

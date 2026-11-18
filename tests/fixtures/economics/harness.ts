@@ -20,6 +20,7 @@ import type {
   EconomicsResumeInput,
   EconomicsSessionEvidence,
   EconomicsSourcedSignalReading,
+  EconomicsView,
   StateStoreIdentity,
   StateStorePort,
 } from "../../../packages/core/src/contracts/index";
@@ -28,7 +29,6 @@ import {
   createSupervisedResumeComposition,
   deriveEconomicsView,
 } from "../../../packages/core/src/domain/index";
-import type { EconomicsView } from "../../../packages/core/src/contracts/index";
 import {
   createEconomicsResumeStorePort,
   createStateStore,

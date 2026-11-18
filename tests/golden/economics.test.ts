@@ -8,13 +8,13 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { mkdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { ROOT } from "./helpers";
 import {
   createEconomicsRuntime,
+  type EconomicsRuntime,
   runtimeEvidence,
   seedRestarts,
-  type EconomicsRuntime,
 } from "../fixtures/economics/harness";
+import { ROOT } from "./helpers";
 
 const GOLDEN_ROOT = join(ROOT, "tests/fixtures/economics/golden");
 const UPDATE = process.env.ECONOMICS_UPDATE_GOLDENS === "1";

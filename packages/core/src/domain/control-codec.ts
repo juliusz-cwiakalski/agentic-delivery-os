@@ -7,21 +7,21 @@
  * delivered error table.
  */
 import {
+  CALLER_PRINCIPAL_KINDS,
+  CALLER_PRINCIPAL_MAX_ID_CHARS,
   CONTROL_FRAME_KINDS,
   CONTROL_PROTOCOL_CURRENT,
   CONTROL_PROTOCOL_FLOOR,
   CONTROL_PROTOCOL_OFFERED,
   CONTROL_WIRE_TYPES,
-  CALLER_PRINCIPAL_KINDS,
-  CALLER_PRINCIPAL_MAX_ID_CHARS,
-  DAEMON_MAX_FRAME_BYTES,
   type ControlDecodeResult,
   type ControlErrorData,
   type ControlFrame,
   type ControlFrameKind,
   type ControlWireType,
+  DAEMON_MAX_FRAME_BYTES,
+  ERROR_TABLE,
 } from "#contracts";
-import { ERROR_TABLE } from "#contracts";
 
 const errorData = (code: string): ControlErrorData => {
   const entry = ERROR_TABLE.find((candidate) => candidate.code === code);

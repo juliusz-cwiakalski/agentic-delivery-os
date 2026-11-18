@@ -1,12 +1,12 @@
 /** TC-CAP-026 — diff budget and zero source/remote mutation. */
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { evaluateDiffSweep } from "../../packages/core/src/domain/closeout-diff-sweep";
 import {
   CAPSULE_MAX_DIFF_BYTES,
   CAPSULE_MAX_DIFF_FILES,
   CAPSULE_MAX_DIFF_HITS,
 } from "../../packages/core/src/contracts/index";
+import { evaluateDiffSweep } from "../../packages/core/src/domain/closeout-diff-sweep";
 import { makeDiff } from "../fixtures/closeout/diff";
 
 describe("TC-CAP-026 merged-diff budget", () => {

@@ -1,7 +1,7 @@
 /** TC-CAP-036 — the full predicate removes one local worktree without force. */
 import { describe, expect, test } from "bun:test";
-import { evaluateWorktreeSafety } from "../../packages/core/src/domain/closeout-worktree";
 import { buildCloseoutPlan } from "../../packages/core/src/domain/closeout";
+import { evaluateWorktreeSafety } from "../../packages/core/src/domain/closeout-worktree";
 import { makeFacts } from "../fixtures/closeout/harness";
 
 const safeInput = {

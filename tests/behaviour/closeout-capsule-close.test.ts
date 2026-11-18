@@ -10,10 +10,10 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { capsuleDigest, parseCapsuleEvents } from "../../packages/core/src/domain/capsule";
-import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
-import { WORK_ITEM_REF } from "../fixtures/closeout/harness";
 import { makeChangeTree } from "../fixtures/capsule/harness";
 import { makeCapsuleRuntime } from "../fixtures/capsule/producer";
+import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
+import { WORK_ITEM_REF } from "../fixtures/closeout/harness";
 
 const makeTree = () =>
   makeChangeTree({

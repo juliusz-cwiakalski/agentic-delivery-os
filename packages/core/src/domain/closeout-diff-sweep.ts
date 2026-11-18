@@ -5,7 +5,7 @@
  * never edits source, removes a marker, commits, pushes, or reads history; its
  * only products are resolved owed-flip evidence and ambiguous-hit residue.
  */
-import { sha256Hex } from "./sha256.js";
+
 import {
   CAPSULE_DIFF_ACTIONS,
   CAPSULE_DIFF_MARKER_KINDS,
@@ -18,6 +18,7 @@ import {
   type CloseoutDiffRead,
   type CloseoutDiffSweepResult,
 } from "#contracts";
+import { sha256Hex } from "./sha256.js";
 
 const REF_PATTERN = /\b[A-Z][A-Z0-9]*-\d+\b/g;
 

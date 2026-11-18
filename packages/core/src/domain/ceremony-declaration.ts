@@ -12,8 +12,8 @@ import {
   CEREMONY_AT_PATTERN,
   CEREMONY_CADENCES,
   CEREMONY_CATCH_UP_MODES,
-  CEREMONY_DECLARATIONS_SCHEMA,
   CEREMONY_DECLARATION_LIMITS,
+  CEREMONY_DECLARATIONS_SCHEMA,
   CEREMONY_ID_PATTERN,
   CEREMONY_INPUT_SOURCES,
   CEREMONY_OUTPUT_SLOTS,
@@ -23,8 +23,8 @@ import {
   CEREMONY_VERIFICATION_MODES,
   type CeremonyDeclaration,
   type CeremonyDocument,
+  PLAN_KNOWN_TIERS,
 } from "#contracts";
-import { PLAN_KNOWN_TIERS } from "#contracts";
 
 /** The refusal identity the validator reports (DM-9). */
 export const CEREMONY_DECLARATION_INVALID = "ceremony.declaration.invalid" as const;

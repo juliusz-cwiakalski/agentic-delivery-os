@@ -4,6 +4,7 @@
  * render.
  */
 import { describe, expect, test } from "bun:test";
+import { renderCeremonyText } from "../../packages/cli/src/output/ceremony-text";
 import {
   CEREMONY_COMPACTION_MAX_BYTES,
   CEREMONY_COMPACTION_MAX_LINES,
@@ -11,7 +12,6 @@ import {
   CEREMONY_STEP_RECORD_MAX_BYTES,
 } from "../../packages/core/src/contracts/index";
 import { compactCeremonyCarried } from "../../packages/core/src/domain/index";
-import { renderCeremonyText } from "../../packages/cli/src/output/ceremony-text";
 import { prepareBuiltin, runPrepared } from "../fixtures/ceremony/builtins";
 import { runRecord, stepRecord } from "../fixtures/ceremony/state";
 

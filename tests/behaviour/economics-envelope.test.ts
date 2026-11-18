@@ -5,16 +5,16 @@
  * error object key set is unchanged (DEC-9).
  */
 import { describe, expect, test } from "bun:test";
+import { type CliDependencies, type CommandProgram, runCli } from "../../packages/cli/src/index";
 import type { EconomicsResumeDecision } from "../../packages/core/src/contracts/index";
-import { assertEnvelopeContract } from "../../packages/testkit/src/result-conformance";
-import { runCli, type CliDependencies, type CommandProgram } from "../../packages/cli/src/index";
-import { bufferSink, SYNTHETIC_BRAND } from "../golden/helpers";
-import { runWatchdogCli } from "../fixtures/watchdog/harness";
-import { createWatchdogRepository } from "../fixtures/watchdog/temp-git";
 import {
   createSourcedWatchdogSignalSource,
   parseRefusalCorpus,
 } from "../../packages/core/src/domain/index";
+import { assertEnvelopeContract } from "../../packages/testkit/src/result-conformance";
+import { runWatchdogCli } from "../fixtures/watchdog/harness";
+import { createWatchdogRepository } from "../fixtures/watchdog/temp-git";
+import { bufferSink, SYNTHETIC_BRAND } from "../golden/helpers";
 
 const ERROR_KEYS = ["code", "category", "retryable", "consequence", "remediationHint", "summary"];
 

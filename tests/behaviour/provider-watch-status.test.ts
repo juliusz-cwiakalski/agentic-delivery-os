@@ -6,6 +6,7 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { createProviderWatchMappings } from "../../packages/adapters/src/provider-quota/index";
 import type {
   CredentialPort,
   CredentialReference,
@@ -16,7 +17,6 @@ import type {
   QuotaTransportResult,
 } from "../../packages/core/src/contracts/index";
 import { createProviderWatchStatus } from "../../packages/core/src/provider/index";
-import { createProviderWatchMappings } from "../../packages/adapters/src/provider-quota/index";
 
 const ROOT = process.cwd();
 const NOW = 1_700_000_000_000;

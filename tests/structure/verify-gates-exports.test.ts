@@ -6,7 +6,6 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { parse } from "yaml";
 import {
   EvaluateVerifyChange,
   evaluateVerifyGates,
@@ -15,10 +14,11 @@ import {
   renderVerifyGatesHuman,
   resolveOpenPr,
 } from "@delivery-os/core";
+import { parse } from "yaml";
 import { createVerifyCommandDefinition } from "../../packages/cli/src/commands/verify";
 import type { VerifyGatesCommandRuntime } from "../../packages/cli/src/commands/verify-gates";
-import { baseFacts } from "../fixtures/verify-gates/cases/facts";
 import { resolveMergeGateSet } from "../../packages/core/src/domain/merge-gate-set";
+import { baseFacts } from "../fixtures/verify-gates/cases/facts";
 
 const ROOT = process.cwd();
 

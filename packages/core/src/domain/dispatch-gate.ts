@@ -9,10 +9,10 @@
  */
 import {
   DELIVERY_RESULT_TOKENS,
+  type DeliveryResultToken,
   DISPATCH_FLOOR_CONSECUTIVE_DATES,
   DISPATCH_FLOOR_DISPATCHES,
   DISPATCH_MAX_DIVERGENCE_IDS,
-  type DeliveryResultToken,
   type DispatchAttemptRecord,
   type DispatchDivergenceBlock,
   type DispatchDivergenceRecord,

@@ -4,9 +4,9 @@
  * is the supported remedy.
  */
 import { describe, expect, test } from "bun:test";
-import { observed, ciSucceeded } from "../fixtures/queue/schedule/harness";
 import { REMOVAL_REF } from "../fixtures/queue/removal/cases";
 import { createRemovalHarness } from "../fixtures/queue/removal/harness";
+import { ciSucceeded, observed } from "../fixtures/queue/schedule/harness";
 
 const CONSUMER = "GH-242";
 const json = (text: string): Record<string, unknown> => JSON.parse(text) as Record<string, unknown>;

@@ -4,14 +4,14 @@
  * recorded, with resolution `note`.
  */
 import { describe, expect, test } from "bun:test";
-import { readCeremonyRuns } from "../../packages/core/src/state/index";
+import { builtinCeremonyDeclaration } from "../../packages/core/src/contracts/index";
 import {
   RETRO_LEVEL_TRIGGER_LABELS,
   retroDeclarationShape,
 } from "../../packages/core/src/domain/index";
+import { readCeremonyRuns } from "../../packages/core/src/state/index";
 import { prepareBuiltin, runPrepared } from "../fixtures/ceremony/builtins";
 import { retroNote } from "../fixtures/ceremony/notes";
-import { builtinCeremonyDeclaration } from "../../packages/core/src/contracts/index";
 
 const LEVELS = ["session", "incident", "window", "project"] as const;
 

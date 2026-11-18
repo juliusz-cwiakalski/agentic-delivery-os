@@ -35,13 +35,13 @@ import {
 } from "../../packages/core/src/contracts/index";
 import { canonicalChangeRef, parseMemberRef } from "../../packages/core/src/domain/plan-members";
 import {
-  appendMergeGateVerification,
-  readMergeGateVerifications,
-} from "../../packages/core/src/state/index";
-import {
   planDocumentFromValidateData,
   validatePlan,
 } from "../../packages/core/src/domain/plan-validate";
+import {
+  appendMergeGateVerification,
+  readMergeGateVerifications,
+} from "../../packages/core/src/state/index";
 import { assertEnvelopeContract } from "../../packages/testkit/src/result-conformance";
 import { runCloseoutCli } from "../fixtures/closeout/cli";
 import { consumeMemberCloseout, consumeMemberGates } from "../fixtures/closeout/legacy-consumer";
@@ -59,8 +59,8 @@ import {
 import {
   declaredMember,
   greenMemberReads,
-  memberGatesRuntime,
   type MemberGatesWorld,
+  memberGatesRuntime,
   runMemberGates,
 } from "../fixtures/cross-repository/facts";
 import { memberSpec, planYaml, twoMemberPlanYaml } from "../fixtures/cross-repository/plan";

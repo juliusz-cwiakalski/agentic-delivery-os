@@ -9,10 +9,10 @@ import { claimQueueLease, declareQueueEntry } from "../../packages/core/src/app/
 import type { OwnerHoldFact } from "../../packages/core/src/contracts/index";
 import {
   createQueueEdgeHarness,
-  trackingStore,
   type StoreWriteLog,
+  trackingStore,
 } from "../fixtures/queue/cli/harness";
-import { recordingStore, REPO } from "../fixtures/queue/leases/fence-harness";
+import { REPO, recordingStore } from "../fixtures/queue/leases/fence-harness";
 import { makeAuditStore } from "../fixtures/state/harness";
 
 const HOLD: OwnerHoldFact = {

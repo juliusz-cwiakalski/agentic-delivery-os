@@ -6,10 +6,10 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
-  evaluateDispatchLiveness,
+  DISPATCH_LIVENESS_ABSENCE_REASONS,
   type DispatchLivenessReading,
+  evaluateDispatchLiveness,
 } from "../../packages/core/src/domain/dispatch-liveness";
-import { DISPATCH_LIVENESS_ABSENCE_REASONS } from "../../packages/core/src/domain/dispatch-liveness";
 
 const CADENCE_MS = 30_000;
 

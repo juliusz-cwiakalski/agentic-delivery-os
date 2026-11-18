@@ -7,6 +7,7 @@ import { spawnSync } from "node:child_process";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parse } from "yaml";
+import { scanMemoryTree } from "../../packages/adapters/src/file/memory-scan";
 import {
   CAPSULE_CANDIDATE_STATUSES,
   CAPSULE_CANDIDATE_TRUST,
@@ -19,6 +20,7 @@ import {
   MEMORY_RECORD_BASIS_VALUES,
   MEMORY_RECORD_CAPSULE_STATUSES,
   MEMORY_RECORD_EVIDENCE_PREFIXES,
+  MEMORY_RECORD_HOME_BY_KIND,
   MEMORY_RECORD_KINDS,
   MEMORY_RECORD_OPTIONAL_KEYS,
   MEMORY_RECORD_REQUIRED_KEYS,
@@ -29,9 +31,7 @@ import {
   MEMORY_ROOT,
   STATEMENT_MAX_CHARS,
 } from "../../packages/core/src/contracts/index";
-import { MEMORY_RECORD_HOME_BY_KIND } from "../../packages/core/src/contracts/index";
 import { frontmatterOf, relativeToMemory } from "../fixtures/memory/tree";
-import { scanMemoryTree } from "../../packages/adapters/src/file/memory-scan";
 
 const ROOT = process.cwd();
 const read = (relative: string): string => readFileSync(join(ROOT, relative), "utf8");

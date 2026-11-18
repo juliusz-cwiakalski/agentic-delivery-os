@@ -5,14 +5,14 @@
  * appends the `daemon.preemption` record, never duplicates a target/close pair,
  * and never signals a lane. Pending records are re-evaluated on restart.
  */
-import {
-  type DaemonPreemptionBoundary,
-  type DaemonPreemptionRecord,
-  type DaemonPreemptionState,
-  type StateStorePort,
+import type {
+  DaemonPreemptionBoundary,
+  DaemonPreemptionRecord,
+  DaemonPreemptionState,
+  StateStorePort,
 } from "#contracts";
-import { appendDaemonPreemption, readDaemonPreemptions } from "./daemon.js";
 import { decidePreemption, type PreemptionInput } from "../domain/daemon-preemption.js";
+import { appendDaemonPreemption, readDaemonPreemptions } from "./daemon.js";
 
 export type PreemptionReleasePort = {
   readonly releaseAndPark: (input: {

@@ -9,10 +9,10 @@ import { describe, expect, test } from "bun:test";
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseCapsuleEvents } from "../../packages/core/src/domain/capsule";
-import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
-import { WORK_ITEM_REF } from "../fixtures/closeout/harness";
 import { makeChangeTree } from "../fixtures/capsule/harness";
 import { makeCapsuleRuntime } from "../fixtures/capsule/producer";
+import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
+import { WORK_ITEM_REF } from "../fixtures/closeout/harness";
 
 describe("TC-CAP-013 pre-contract backfill", () => {
   test("a folder with no capsule is completed with opened and one backfill gap", async () => {

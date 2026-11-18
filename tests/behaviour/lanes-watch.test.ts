@@ -1,8 +1,8 @@
 /** TC-WATCH-002 — lanes watch keeps finding codes and honours the frame bound. */
 import { describe, expect, test } from "bun:test";
 import { createLanesCommandDefinition } from "../../packages/cli/src/commands/lanes";
-import { runProgram } from "../fixtures/queue-ready/harness";
 import { laneData } from "../fixtures/queue/lanes/harness";
+import { runProgram } from "../fixtures/queue-ready/harness";
 
 const program = () =>
   ({

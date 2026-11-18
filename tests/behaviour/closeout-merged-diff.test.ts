@@ -1,17 +1,17 @@
 /** TC-CAP-024 — attributed hits across the four marker kinds. */
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { evaluateDiffSweep } from "../../packages/core/src/domain/closeout-diff-sweep";
 import {
   CAPSULE_DIFF_ACTIONS,
   CAPSULE_DIFF_MARKER_KINDS,
   CLOSEOUT_DIFF_MARKERS,
 } from "../../packages/core/src/contracts/index";
-import { attributedLines, makeDiff } from "../fixtures/closeout/diff";
-import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
-import { WORK_ITEM_REF } from "../fixtures/closeout/harness";
+import { evaluateDiffSweep } from "../../packages/core/src/domain/closeout-diff-sweep";
 import { makeChangeTree } from "../fixtures/capsule/harness";
 import { makeCapsuleRuntime } from "../fixtures/capsule/producer";
+import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
+import { attributedLines, makeDiff } from "../fixtures/closeout/diff";
+import { WORK_ITEM_REF } from "../fixtures/closeout/harness";
 
 describe("TC-CAP-024 attributed merged-diff hits", () => {
   test("each attributed kind resolves with its declared action", () => {

@@ -1,10 +1,10 @@
 /** TC-CAP-027 — the unavailable-diff gap and re-run stability. */
 import { describe, expect, test } from "bun:test";
 import { evaluateDiffSweep } from "../../packages/core/src/domain/closeout-diff-sweep";
-import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
-import { WORK_ITEM_REF } from "../fixtures/closeout/harness";
 import { makeChangeTree } from "../fixtures/capsule/harness";
 import { makeCapsuleRuntime } from "../fixtures/capsule/producer";
+import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
+import { WORK_ITEM_REF } from "../fixtures/closeout/harness";
 
 describe("TC-CAP-027 merged-diff gap", () => {
   test("no merge transaction is a declared skipped-gap", () => {

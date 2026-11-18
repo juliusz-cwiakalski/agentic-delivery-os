@@ -4,11 +4,11 @@
  * lane executor reports available with the selected session port and descriptor.
  */
 import { describe, expect, test } from "bun:test";
+import { createLaneExecutor } from "../../packages/adapters/src/daemon/lane-executor";
 import {
   createLaneLaunchPlanner,
   planLaneLaunch,
 } from "../../packages/core/src/domain/lane-launch-plan";
-import { createLaneExecutor } from "../../packages/adapters/src/daemon/lane-executor";
 import { createScriptedHarness } from "../fixtures/dispatch/harness";
 
 const request = { ref: "GH-239", repository: "github.com/owner/repo", weightClass: "standard" };

@@ -11,9 +11,12 @@
  * with no descent into `documents.<workspace>/` or `quarantine.<workspace>/`.
  */
 import { readdirSync } from "node:fs";
-import { HOST_INDEX_ARTIFACT_NAME } from "@delivery-os/core/contracts";
-import { OWNER_HOLD_MARKER_NAME } from "@delivery-os/core/contracts";
-import { PROJECTS_CONTAINER_SEGMENT, PROJECT_UNBOUND_SEGMENT } from "@delivery-os/core/contracts";
+import {
+  HOST_INDEX_ARTIFACT_NAME,
+  OWNER_HOLD_MARKER_NAME,
+  PROJECT_UNBOUND_SEGMENT,
+  PROJECTS_CONTAINER_SEGMENT,
+} from "@delivery-os/core/contracts";
 
 /** The delivered store artifact shapes, under one workspace id. */
 const STORE_FILE_PATTERNS: readonly RegExp[] = [

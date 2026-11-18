@@ -175,6 +175,18 @@
       "providerBehavior": "The provider refuses with an already-merged refusal; merged truth is asserted only by a read-back.",
       "expectedNormalizedOutcome": "Success is returned only when the read-back observes merged true; an unmerged read-back leaves the classified refusal standing, and the landing is never retried.",
       "fixtureReference": "tests/fixtures/providers/github/landing-responses.json#/alreadyMergedThenMergedTrue"
+    },
+    {
+      "trapName": "GITHUB-CLI-STATUS-RECOVERY",
+      "providerBehavior": "`gh api --include` output can carry a proxy status block before the authoritative one.",
+      "expectedNormalizedOutcome": "The final status block decides the status and the remaining bytes are the body; an unparsable or absent status block is refused instead of being assumed to be 200.",
+      "fixtureReference": "tests/fixtures/providers/github/cli-status-blocks.json#/cases/6"
+    },
+    {
+      "trapName": "GITHUB-CLI-CREDENTIAL-ABSENCE",
+      "providerBehavior": "An already-shaped request arrives with an Authorization header the CLI must not forward.",
+      "expectedNormalizedOutcome": "The credential appears only as GH_TOKEN in the constructed child environment; argv carries no credential, the header is removed from the forwarded headers, and the isolated GH_CONFIG_DIR plus prompt suppression are present.",
+      "fixtureReference": "tests/fixtures/providers/github/cli-argv.json#/routes/0"
     }
   ]
 }

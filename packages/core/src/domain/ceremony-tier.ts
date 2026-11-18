@@ -12,14 +12,14 @@
 import {
   CANONICAL_PHASE_IDS,
   CEREMONY_ESCALATION_TRIGGERS,
-  PLAN_KNOWN_TIERS,
-  PM_NOTES_REQUIRED_PHASES_BY_VARIANT,
   type CeremonyEscalationTrigger,
   type CeremonyTierFinding,
   type CeremonyTierTriggerEvaluation,
   type CeremonyTierVerdict,
-  type PmNotesVariant,
+  PLAN_KNOWN_TIERS,
   type PlanTierDeclaration,
+  PM_NOTES_REQUIRED_PHASES_BY_VARIANT,
+  type PmNotesVariant,
 } from "#contracts";
 
 /** One evidence fact per closed escalation trigger. */

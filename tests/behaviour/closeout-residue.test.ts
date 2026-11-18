@@ -1,13 +1,13 @@
 /** TC-CAP-032 — residue kinds, deterministic order, and the 50-item cap. */
 import { describe, expect, test } from "bun:test";
-import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
-import { WORK_ITEM_REF, makeFacts, makeMergedRequest } from "../fixtures/closeout/harness";
-import { makeChangeTree } from "../fixtures/capsule/harness";
-import { makeCapsuleRuntime } from "../fixtures/capsule/producer";
 import {
   CAPSULE_MAX_RESIDUE_ITEMS,
   CAPSULE_RESIDUE_KINDS,
 } from "../../packages/core/src/contracts/index";
+import { makeChangeTree } from "../fixtures/capsule/harness";
+import { makeCapsuleRuntime } from "../fixtures/capsule/producer";
+import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
+import { makeFacts, makeMergedRequest, WORK_ITEM_REF } from "../fixtures/closeout/harness";
 
 describe("TC-CAP-032 residue contract", () => {
   test("residue is ordered by kind then location and capped with an omitted mark", async () => {

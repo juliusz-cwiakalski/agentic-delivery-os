@@ -4,6 +4,7 @@
  * honest parked decisions, dedupe, and 100-run lifecycle replay.
  */
 import { afterEach, describe, expect, test } from "bun:test";
+import type { ProfileSelectionResult } from "../../packages/core/src/contracts/index";
 import {
   createProfileTargetRecord,
   createProviderFactsProbe,
@@ -14,14 +15,13 @@ import {
 } from "../../packages/core/src/provider/index";
 import { createParkRecord } from "../../packages/core/src/provider/parks";
 import { evaluatePeakWindow } from "../../packages/core/src/provider/peak";
-import type { ProfileSelectionResult } from "../../packages/core/src/contracts/index";
+import { lifecycleChain, peakWindow } from "../fixtures/provider/profile/lifecycle/fixtures";
 import {
   available,
   exhausted,
   mixedChain,
   peak,
 } from "../fixtures/provider/profile/selection/fixtures";
-import { lifecycleChain, peakWindow } from "../fixtures/provider/profile/lifecycle/fixtures";
 import { makeIdentity, makeTempRoot, openStore, removeRoot } from "../fixtures/state/harness";
 
 const NOW = 1_700_000_000_000;

@@ -2,8 +2,9 @@
  * TC-CAP-051 type probe — `attention` is an additive projection class and the
  * data-bearing closeout fields stay optional.
  */
-import type { ProjectionClass } from "../../packages/core/src/contracts/result";
+
 import type { CloseoutData } from "../../packages/core/src/contracts/closeout";
+import type { ProjectionClass } from "../../packages/core/src/contracts/result";
 
 type Equal<A, B> = [A] extends [B] ? ([B] extends [A] ? true : false) : false;
 type Expect<T extends true> = T;

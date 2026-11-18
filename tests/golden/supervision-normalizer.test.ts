@@ -6,11 +6,11 @@ import { describe, expect, test } from "bun:test";
 import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  NORMALIZER_REPLACEMENTS,
-  VOLATILE_GOLDEN_VALUES,
   hasVolatileTiming,
+  NORMALIZER_REPLACEMENTS,
   normalizeHuman,
   normalizeMachine,
+  VOLATILE_GOLDEN_VALUES,
 } from "../fixtures/supervise/golden/normalize";
 import { volatilePayload } from "../fixtures/supervise/records";
 

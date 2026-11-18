@@ -8,11 +8,11 @@
 import type { DaemonClockPort, PlatformPollSettings } from "#contracts";
 import {
   nextPollDelayMs,
+  type PollPolicyState,
   pollDue,
   pollFailure,
   pollIssued,
   pollSuccess,
-  type PollPolicyState,
 } from "../domain/poll-policy.js";
 
 export type ResidentPollingInput = {

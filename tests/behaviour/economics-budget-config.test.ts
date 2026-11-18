@@ -7,20 +7,20 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { resolveConfig, resolveLaneSettings } from "../../packages/core/src/index";
 import { createOneShotResumeComposition } from "../../packages/core/src/domain/index";
+import { resolveConfig, resolveLaneSettings } from "../../packages/core/src/index";
 import {
   createEconomicsResumeStorePort,
   createStateStore,
   readEconomicsRecords,
 } from "../../packages/core/src/state/index";
-import { createTestEdge, makeIdentity } from "../fixtures/state/harness";
 import { laneSource } from "../fixtures/config/lane";
 import {
   createEconomicsRuntime,
-  runtimeEvidence,
   type EconomicsRuntime,
+  runtimeEvidence,
 } from "../fixtures/economics/harness";
+import { createTestEdge, makeIdentity } from "../fixtures/state/harness";
 
 const ROOT = process.cwd();
 const runtimes: EconomicsRuntime[] = [];

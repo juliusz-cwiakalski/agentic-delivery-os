@@ -1,9 +1,9 @@
 /** TC-CAP-043 — no sessions, attribution unavailable, and same-digest re-runs. */
 import { describe, expect, test } from "bun:test";
-import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
-import { WORK_ITEM_REF, makeFacts } from "../fixtures/closeout/harness";
 import { makeChangeTree } from "../fixtures/capsule/harness";
 import { makeCapsuleRuntime } from "../fixtures/capsule/producer";
+import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
+import { makeFacts, WORK_ITEM_REF } from "../fixtures/closeout/harness";
 
 const tree = () =>
   makeChangeTree({

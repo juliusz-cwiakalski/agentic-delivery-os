@@ -15,8 +15,8 @@ import { createToolset } from "../../packages/mcp/src/index";
 import { exitCodeFor } from "../../packages/mcp/src/lifecycle";
 import { runProtocol } from "../../packages/mcp/src/output/protocol";
 import { scanRoot } from "../../scripts/checks/exit-code-literals";
-import { SYNTHETIC_BRAND } from "../golden/helpers";
 import { type Client, PINNED_PROTOCOL_VERSION, startClient } from "../fixtures/mcp/protocol/client";
+import { SYNTHETIC_BRAND } from "../golden/helpers";
 
 const ROOT = process.cwd();
 const tempRoots: string[] = [];

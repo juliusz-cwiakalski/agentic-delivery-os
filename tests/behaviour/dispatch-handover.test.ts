@@ -8,17 +8,17 @@
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { readDispatchAuthority } from "../../packages/adapters/src/file/dispatch-authority";
 import {
   appendDispatchAttempt,
   readDispatchHandover,
 } from "../../packages/core/src/app/dispatch-ledger";
-import { readDispatchAuthority } from "../../packages/adapters/src/file/dispatch-authority";
-import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
 import {
   buildAttempts,
   eligibleSpecs,
   missingClassSpecs,
 } from "../fixtures/dispatch/evidence-windows";
+import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
 import { REPOSITORY, REPOSITORY_BETA } from "../fixtures/dispatch/ledger";
 
 const seed = (

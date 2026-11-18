@@ -11,20 +11,20 @@ import { join } from "node:path";
 import ts from "typescript";
 import {
   ECONOMICS_EXHAUSTION_OPTIONS,
-  ECONOMICS_OUTCOMES,
   ECONOMICS_OUTCOME_MATRIX,
+  ECONOMICS_OUTCOMES,
   ECONOMICS_RESTART_HISTORY_FIELDS,
   ECONOMICS_RESTART_REASONS,
   ECONOMICS_RESUME_MODES,
   ECONOMICS_SOURCED_SIGNAL_KINDS,
   ECONOMICS_VIEW_FIELDS,
+  type EconomicsOutcomeMatrixRow,
+  ERROR_TABLE,
+  type ErrorTableEntry,
   HARNESS_LIVENESS_KINDS,
   STATE_SCHEMA_VERSION,
   WATCHDOG_ERROR_CODES,
   WATCHDOG_SIGNAL_KEYS,
-  type EconomicsOutcomeMatrixRow,
-  type ErrorTableEntry,
-  ERROR_TABLE,
 } from "../../packages/core/src/contracts/index";
 
 const ROOT = process.cwd();

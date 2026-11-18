@@ -19,7 +19,7 @@ const REQUIRED_KEYS = [
   "trapName",
 ];
 
-const MINIMA: Readonly<Record<string, number>> = { gitlab: 3, jira: 4, github: 25 };
+const MINIMA: Readonly<Record<string, number>> = { gitlab: 3, jira: 4, github: 27 };
 
 const EXPECTED_TRAPS: Readonly<Record<string, readonly string[]>> = {
   jira: [
@@ -62,6 +62,8 @@ const EXPECTED_TRAPS: Readonly<Record<string, readonly string[]>> = {
     "GITHUB-LANDING-IDENTITY-ABSENT",
     "GITHUB-LANDING-GUARD-REFUSAL",
     "GITHUB-LANDING-ALREADY-MERGED-READBACK",
+    "GITHUB-CLI-STATUS-RECOVERY",
+    "GITHUB-CLI-CREDENTIAL-ABSENCE",
   ],
 };
 

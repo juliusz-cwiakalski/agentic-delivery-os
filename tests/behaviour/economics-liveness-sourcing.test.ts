@@ -5,6 +5,7 @@
  * unchanged (DEC-8); no CPU key exists.
  */
 import { describe, expect, test } from "bun:test";
+import { createWatchdogCommandRuntime } from "../../packages/cli/src/edge";
 import type {
   EconomicsSourcedSignalReading,
   HarnessLivenessReport,
@@ -13,7 +14,6 @@ import {
   classifyWatchdogLiveness,
   createSourcedWatchdogSignalSource,
 } from "../../packages/core/src/domain/index";
-import { createWatchdogCommandRuntime } from "../../packages/cli/src/edge";
 import { runWatchdogCli } from "../fixtures/watchdog/harness";
 
 const FACT_NOW = "2026-11-07T00:00:09Z";

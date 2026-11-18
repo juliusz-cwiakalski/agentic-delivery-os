@@ -6,8 +6,8 @@
  * state is `blocked`. No command is invoked and no ledger record is appended.
  */
 import { describe, expect, test } from "bun:test";
-import { deriveDispatchResult } from "../../packages/core/src/domain/dispatch-result";
 import { DELIVERY_RESULT_TOKENS } from "../../packages/core/src/contracts/index";
+import { deriveDispatchResult } from "../../packages/core/src/domain/dispatch-result";
 import {
   blockedInput,
   mergedInput,

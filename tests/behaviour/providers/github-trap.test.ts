@@ -7,6 +7,10 @@
 import { describe, expect, test } from "bun:test";
 import { createEnvironmentCredentialPort } from "../../../packages/adapters/src/credentials/index";
 import {
+  createGithubCliTransport,
+  type GithubChildRunner,
+} from "../../../packages/adapters/src/github/cli-transport";
+import {
   createGitHubClient,
   type GithubClient,
 } from "../../../packages/adapters/src/github/client";
@@ -569,6 +573,38 @@ const httpStatusTrapCheck = async (): Promise<void> => {
   expect(malformedTransport.requests).toHaveLength(1);
 };
 
+const CLI_STATUS_FIXTURE = `${FIXTURES}/cli-status-blocks.json`;
+const CLI_ARGV_FIXTURE = `${FIXTURES}/cli-argv.json`;
+
+const cliStatusCase = (index: number): Record<string, unknown> => {
+  const cases = (readJson(CLI_STATUS_FIXTURE) as { readonly cases?: unknown }).cases;
+  if (!Array.isArray(cases)) throw new Error("cli-status-blocks fixture has no cases");
+  const entry = cases[index];
+  if (!isRecord(entry)) throw new Error(`cli-status-blocks case ${index} is missing`);
+  return entry;
+};
+
+const cliArgvRoute = (index: number): Record<string, unknown> => {
+  const routes = (readJson(CLI_ARGV_FIXTURE) as { readonly routes?: unknown }).routes;
+  if (!Array.isArray(routes)) throw new Error("cli-argv fixture has no routes");
+  const entry = routes[index];
+  if (!isRecord(entry)) throw new Error(`cli-argv route ${index} is missing`);
+  return entry;
+};
+
+const cliRunnerReturning = (
+  stdout: string,
+): { readonly runner: GithubChildRunner; readonly calls: string[] } => {
+  const calls: string[] = [];
+  const runner: GithubChildRunner = async (_file, args) => {
+    calls.push(args.join(" "));
+    return { stdout, stderr: "", status: 0, timedOut: false };
+  };
+  return { runner, calls };
+};
+
+const CLI_TRANSPORT_ENVIRONMENT = { PATH: "/opt/example/bin", TMPDIR: "/tmp/example-tmp" };
+
 const LANDING_FIXTURE = `${FIXTURES}/landing-responses.json`;
 
 /** Build a landing client over one declared landing fixture case. */
@@ -642,6 +678,43 @@ const defaultAssertions: TrapAssertions = {
     });
     expect(result.ok).toBe(false);
     expect(transport.requests).toHaveLength(1);
+  },
+  "GITHUB-CLI-STATUS-RECOVERY": async () => {
+    const fixture = cliStatusCase(6);
+    const { runner } = cliRunnerReturning(String(fixture.stdout));
+    const transport = createGithubCliTransport({
+      runner,
+      environment: CLI_TRANSPORT_ENVIRONMENT,
+    });
+    const response = await transport.send({
+      url: `${instance.baseUrl}${repoPath}/issues/601`,
+      method: "GET",
+      headers: { Accept: "application/vnd.github+json" },
+    });
+    expect(response.status).toBe(200);
+    expect(response.body).toEqual({ number: 601 });
+  },
+  "GITHUB-CLI-CREDENTIAL-ABSENCE": async () => {
+    const fixture = cliArgvRoute(0);
+    const { runner, calls } = cliRunnerReturning(
+      "HTTP/2.0 200 OK\ncontent-type: application/json\n\n{}\n",
+    );
+    const transport = createGithubCliTransport({
+      runner,
+      environment: CLI_TRANSPORT_ENVIRONMENT,
+    });
+    await transport.send({
+      url: String(fixture.url),
+      method: "GET",
+      headers: {
+        ...(recordField(fixture, "headers") as Record<string, string>),
+        Authorization: "Bearer canary-trap-cli-token",
+      },
+    });
+    const serialized = calls.join(" ");
+    expect(serialized).not.toContain("canary-trap-cli-token");
+    expect(serialized).toContain("--hostname");
+    expect(serialized).not.toContain("--paginate");
   },
   "GITHUB-LANDING-ALREADY-MERGED-READBACK": async () => {
     const { client, transport } = landingClient("alreadyMergedThenMergedTrue");
@@ -738,6 +811,8 @@ describe("TC-TRAP-002 GitHub trap catalog replays offline", () => {
       "GITHUB-LANDING-IDENTITY-ABSENT",
       "GITHUB-LANDING-GUARD-REFUSAL",
       "GITHUB-LANDING-ALREADY-MERGED-READBACK",
+      "GITHUB-CLI-STATUS-RECOVERY",
+      "GITHUB-CLI-CREDENTIAL-ABSENCE",
     ]);
   });
 

@@ -29,6 +29,7 @@ import {
 } from "@delivery-os/testkit";
 import {
   createCanaryCredentialPort,
+  installChildProcessGuard,
   installThrowingFetchGuard,
   loadMockTenant,
   loadMockTenants,
@@ -510,6 +511,7 @@ describe("TC-CONF-015 exact-URL replay and the throwing-fetch guard", () => {
     const tenants = loadMockTenants();
     const transports: ReturnType<typeof createMockTenantTransport>[] = [];
     const guard = installThrowingFetchGuard();
+    const childGuard = installChildProcessGuard();
     try {
       const report = await runConformance({
         adapters: CONFORMANCE_ADAPTERS,
@@ -528,7 +530,10 @@ describe("TC-CONF-015 exact-URL replay and the throwing-fetch guard", () => {
       });
       expect(report.status).toBe("passed");
       expect(guard.calls).toHaveLength(0);
+      // The mock tier spawns nothing: every CLI path takes an injected runner.
+      expect(childGuard.calls).toEqual([]);
     } finally {
+      childGuard.restore();
       guard.restore();
     }
     for (const transport of transports) {

@@ -178,7 +178,7 @@ describe("TC-HOLDFACT-007 the reason is one control-free line of at most 160 cha
     expect(reason).toBe("red line tab spaces");
     expect(reason?.length ?? 0).toBeLessThanOrEqual(OWNER_HOLD_MAX_REASON_CHARS);
     expect(reason).not.toContain("\u001b");
-    expect(reason).not.toMatch(new RegExp("[\\u0000-\\u001f\\u007f-\\u009f]", "u"));
+    expect(reason).not.toMatch(/[\u0000-\u001f\u007f-\u009f]/u);
   });
 
   test("the 160 bound truncates with no ellipsis and preserves shorter values", () => {

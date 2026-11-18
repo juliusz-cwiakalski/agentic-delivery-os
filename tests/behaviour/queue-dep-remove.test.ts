@@ -5,10 +5,14 @@
  */
 import { describe, expect, test } from "bun:test";
 import { readQueueFold } from "../../packages/core/src/app/queue";
-import { REMOVE_PAYLOAD_KEYS, ADD_PAYLOAD_KEYS } from "../fixtures/queue/depend/grammar-cases";
-import { CONSUMER_REF, PRODUCER_REF } from "../fixtures/queue/depend/grammar-cases";
+import {
+  ADD_PAYLOAD_KEYS,
+  CONSUMER_REF,
+  PRODUCER_REF,
+  REMOVE_PAYLOAD_KEYS,
+} from "../fixtures/queue/depend/grammar-cases";
 import { createRemovalHarness } from "../fixtures/queue/removal/harness";
-import { observed, ciSucceeded } from "../fixtures/queue/schedule/harness";
+import { ciSucceeded, observed } from "../fixtures/queue/schedule/harness";
 
 const json = (text: string): Record<string, unknown> => JSON.parse(text) as Record<string, unknown>;
 

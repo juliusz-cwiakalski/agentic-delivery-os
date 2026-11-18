@@ -8,12 +8,12 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
-  PM_NOTES_REQUIRED_PHASES_BY_VARIANT,
   type PlanTierDeclaration,
+  PM_NOTES_REQUIRED_PHASES_BY_VARIANT,
 } from "../../packages/core/src/contracts/index";
 import {
-  evaluateCeremonyTier,
   type CeremonyTierEvidence,
+  evaluateCeremonyTier,
 } from "../../packages/core/src/domain/index";
 
 type TierCase = {

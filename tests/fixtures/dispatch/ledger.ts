@@ -5,11 +5,11 @@
  * durable append goes through the core ledger functions.
  */
 import {
+  type DeliveryResultToken,
   DISPATCH_ATTEMPT_PAYLOAD_SCHEMA,
   DISPATCH_AUTHORITY_SCHEMA,
   DISPATCH_DIVERGENCE_PAYLOAD_SCHEMA,
   DISPATCH_HANDOVER_PAYLOAD_SCHEMA,
-  type DeliveryResultToken,
   type DispatchAttemptRecord,
   type DispatchAuthorityView,
   type DispatchComparisonRecord,
@@ -22,8 +22,8 @@ import {
 import {
   buildComparisonRecord,
   buildCorroborationRecord,
-  dispatchFamilyOf,
   type CorroborationFacts,
+  dispatchFamilyOf,
 } from "../../../packages/core/src/domain/dispatch-comparison";
 import { DISPATCH_NOW } from "./harness";
 

@@ -6,7 +6,7 @@
 import { describe, expect, test } from "bun:test";
 import { readQueueFold } from "../../packages/core/src/app/queue";
 import { QUEUE_REMOVAL_RECORD_KIND } from "../../packages/core/src/contracts/index";
-import { ACCEPTED_REASONS, REPO_A, REMOVAL_REF } from "../fixtures/queue/removal/cases";
+import { ACCEPTED_REASONS, REMOVAL_REF, REPO_A } from "../fixtures/queue/removal/cases";
 import { createRemovalHarness } from "../fixtures/queue/removal/harness";
 
 const json = (text: string): Record<string, unknown> => JSON.parse(text) as Record<string, unknown>;

@@ -1,11 +1,11 @@
 /** TC-CAP-042 — the checkpoint content and the declared harness gap. */
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
-import { WORK_ITEM_REF, makeFacts } from "../fixtures/closeout/harness";
+import { parseCapsuleEvents } from "../../packages/core/src/domain/capsule";
 import { makeChangeTree } from "../fixtures/capsule/harness";
 import { makeCapsuleRuntime } from "../fixtures/capsule/producer";
-import { parseCapsuleEvents } from "../../packages/core/src/domain/capsule";
+import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
+import { makeFacts, WORK_ITEM_REF } from "../fixtures/closeout/harness";
 
 describe("TC-CAP-042 compaction checkpoint", () => {
   test("a checkpoint records bounded identities, flags, and the last commit", async () => {

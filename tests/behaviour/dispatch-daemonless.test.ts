@@ -4,9 +4,9 @@
  * daemon dependency; an unavailable planner reports honest supervise-only mode.
  */
 import { describe, expect, test } from "bun:test";
-import { readDispatchAttempts } from "../../packages/core/src/app/dispatch-ledger";
-import { runSupervisionCycle } from "../../packages/core/src/app/daemon-supervision";
 import { createLaneExecutor } from "../../packages/adapters/src/daemon/lane-executor";
+import { runSupervisionCycle } from "../../packages/core/src/app/daemon-supervision";
+import { readDispatchAttempts } from "../../packages/core/src/app/dispatch-ledger";
 import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
 import { COMPLETED_EVIDENCE, createScriptedHarness } from "../fixtures/dispatch/harness";
 

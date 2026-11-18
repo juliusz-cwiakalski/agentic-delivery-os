@@ -56,7 +56,45 @@ decisions:
 open_questions: []
 blockers: []
 notes:
-  - text: "Plan phase 1 complete (ninth closed operation `merge-delivery-request`;
+  - text: "Plan phase 1 commit: edc7114e4bb51ca714a1db11dc01fe2ecd0ab1dc (the
+      phase-1 note names the plan phase id and the gate result; this entry
+      carries the hash). Plan phase 2 complete (the `gh api` transport over an
+      injected fixed-argv runner: one argv array, the credential removed from
+      the forwarded headers and supplied only as GH_TOKEN child-environment
+      data, isolated GH_CONFIG_DIR, prompt suppression, bounded timeout/output,
+      the final `--include` status block authoritative with an unparsable block
+      refused; the three-code bounded probe; the declared
+      GITHUB_TRANSPORT_MATRIX over all nine operations; the pure
+      `resolveTransportSelection`; the async
+      `resolveCompositionTransportSelection` at the launcher edge; the
+      entrypoint's promised-program await inside the containment try; the
+      launcher's one async wrapper; the child-process guard beside the
+      throwing-`fetch` guard; the parity route table over the seven members that
+      exist now). Commit hash recorded in the plan-phase-3 note. Delivery notes
+      carried: N1 (implemented the plan's names; the test plan's
+      `resolveGithubTransportSelection` is a stale reference), N2 (the
+      firing-canary assertion lives in
+      tests/conformance/github-transport-parity.test.ts and the per-suite
+      zero-spawn counter in mock-conformance.test.ts), N4 (the full spawn
+      budget: one probe for a composing invocation, zero for the four
+      self-description paths, zero provider requests), N10 (the
+      one-process-per-request count is driven on an already-selected
+      transport). Verification: pnpm typecheck green; bun test tests/structure
+      tests/behaviour/providers tests/conformance tests/boundaries plus the
+      secret-read, fixture-sanitization and fixture-privacy suites green (2138
+      pass, 0 fail); bun run scripts/checks/secret-read-boundary.ts OK with 5
+      allowlisted entries (unchanged, exactly one credential-material);
+      git diff --check clean; the aggregate gate result is recorded in the
+      phase-3 note. Guard note: the child-process guard necessarily
+      substitutes the `node:child_process` builtin through bun's module mock;
+      its restore re-registers the real module because `mock.restore()` never
+      undoes a module substitution. The first attempt leaked the substitution
+      into later files in the same process (the daemon re-entry and
+      live-entrypoint suites spawn for real), which is why the restore is
+      explicit."
+    type: info
+    date: "2026-11-18"
+ (ninth closed operation `merge-delivery-request`;
       optional `PipelineJob.startedAt`/`completedAt`; GitHub 7 supported + 2
       declared gaps; the landing client member with squash-only crafted metadata,
       the expected-head guard, classified non-2xx/transport failures, no retry,

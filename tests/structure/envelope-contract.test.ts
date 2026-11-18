@@ -20,13 +20,13 @@ import {
   isClosedV1Payload,
   serializeEnvelope,
 } from "../../packages/adapters/src/io/envelope-codec";
+import { createCeremonyCommandDefinition } from "../../packages/cli/src/commands/ceremony";
+import { runCli } from "../../packages/cli/src/index";
 import {
   type CommentWriteRequest,
   ENVELOPE_SCHEMA_ID,
 } from "../../packages/core/src/contracts/index";
 import { matchSeedLiteral } from "../../scripts/checks/forbidden-literals";
-import { createCeremonyCommandDefinition } from "../../packages/cli/src/commands/ceremony";
-import { runCli } from "../../packages/cli/src/index";
 import { bufferSink, SYNTHETIC_BRAND } from "../golden/helpers";
 
 const ROOT = process.cwd();

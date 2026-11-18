@@ -4,17 +4,17 @@
  * writer fence.
  */
 import { describe, expect, test } from "bun:test";
-import {
-  daemonScopeDigest,
-  evaluateDaemonLock,
-  takeoverEvidence,
-} from "../../packages/core/src/domain/index";
 import { appendDaemonInstance, readDaemonInstance } from "../../packages/core/src/app/index";
 import {
   DAEMON_INSTANCE_PAYLOAD_SCHEMA,
   type DaemonInstanceRecord,
   type DaemonLockRecord,
 } from "../../packages/core/src/contracts/index";
+import {
+  daemonScopeDigest,
+  evaluateDaemonLock,
+  takeoverEvidence,
+} from "../../packages/core/src/domain/index";
 import { createDaemonLockPort } from "../../packages/core/src/state/index";
 import {
   createTestEdge,

@@ -9,10 +9,10 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { parseCapsuleEvents } from "../../packages/core/src/domain/capsule";
-import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
-import { WORK_ITEM_REF } from "../fixtures/closeout/harness";
 import { eventsText, makeChangeTree, makeEvent, payloadFor } from "../fixtures/capsule/harness";
 import { makeCapsuleRuntime } from "../fixtures/capsule/producer";
+import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
+import { WORK_ITEM_REF } from "../fixtures/closeout/harness";
 
 describe("TC-CAP-010/011 capsule event gap cross-check", () => {
   test("a missing expected commit event is one named capsule-event-gap residue", async () => {

@@ -9,29 +9,29 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import {
   HARNESS_TOKEN_CLASSES,
+  type HarnessTokenClass,
   SPEND_BREAKDOWN_FIELDS,
   SPEND_V2_DATA_KEYS,
-  type HarnessTokenClass,
 } from "../../packages/core/src/contracts/index";
 import { runSpendCli, spendRuntimeOver } from "../fixtures/spend/harness";
 import {
   AGENT_ROLE,
+  foldTelemetryStore,
   LANE,
-  makeBaselineRecord,
-  makeStepRecord,
   MODEL_A,
   MODEL_B,
+  makeBaselineRecord,
+  makeStepRecord,
   REPOSITORY,
-  removeRoot,
   RUN_A,
   RUN_B,
+  removeRoot,
   SESSION_A,
   SESSION_B,
   T1,
   T2,
   TELEMETRY_REF,
   tokens,
-  foldTelemetryStore,
 } from "../fixtures/telemetry";
 
 const roots: string[] = [];

@@ -10,9 +10,9 @@
  * token. The default interactive `daemon start` remains spawn-and-return.
  */
 import type {
+  DaemonSupervisorCommandForm,
   DaemonSupervisorDescriptor,
   DaemonSupervisorKind,
-  DaemonSupervisorCommandForm,
 } from "#contracts";
 
 export type SupervisorPlatform = "linux" | "darwin" | "win32";

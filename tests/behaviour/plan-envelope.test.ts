@@ -6,11 +6,11 @@
 import { describe, expect, test } from "bun:test";
 import { assertEnvelopeContract } from "../../packages/testkit/src/result-conformance";
 import {
+  type PlanWorld,
   parseEnvelope,
   planRuntime,
   planWorld,
   runPlanCli,
-  type PlanWorld,
 } from "../fixtures/plan/harness/index";
 
 type Case = {

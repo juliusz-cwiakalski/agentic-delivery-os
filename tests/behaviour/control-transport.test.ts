@@ -9,9 +9,9 @@ import { createControlServer } from "../../packages/core/src/app/control-server"
 import { resolveDaemonSettings } from "../../packages/core/src/config/index";
 import {
   CONTROL_PROTOCOL_CURRENT,
-  LOCAL_CALLER_PRINCIPAL,
   type ControlFrame,
   type DaemonClockPort,
+  LOCAL_CALLER_PRINCIPAL,
 } from "../../packages/core/src/contracts/index";
 import { createTestEdge, makeTempRoot, removeRoot } from "../fixtures/state/harness";
 

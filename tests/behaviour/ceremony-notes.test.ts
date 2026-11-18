@@ -7,8 +7,8 @@
 import { describe, expect, test } from "bun:test";
 import type { CeremonyDeclaration, CeremonyNote } from "../../packages/core/src/contracts/index";
 import { runCeremony } from "../../packages/core/src/domain/index";
-import { makeEngineHarness } from "../fixtures/ceremony/engine";
 import { readFixture } from "../fixtures/ceremony/declarations";
+import { makeEngineHarness } from "../fixtures/ceremony/engine";
 import { conformingNote, NOTE_WINDOW } from "../fixtures/ceremony/notes";
 
 const noteDeclaration = (): CeremonyDeclaration =>

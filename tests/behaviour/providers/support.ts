@@ -5,7 +5,10 @@
  * Nothing here reaches the network; an unfixtured request throws instead of
  * falling back to a live call (GH-188 NFR-3 / TC-TRAP-002).
  */
+
+import { mock } from "bun:test";
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { join } from "node:path";
 import type {
   ProviderReadResult,
@@ -93,6 +96,46 @@ export const requireValue = <T>(result: ProviderReadResult<T>, label: string): T
   if (result.ok) return result.value;
   const detail = "detail" in result ? result.detail : result.code;
   throw new Error(`${label}: ${detail}`);
+};
+
+export type ChildProcessGuard = {
+  readonly calls: readonly string[];
+  readonly restore: () => void;
+};
+
+/**
+ * Replace every child-process entry point with a throwing counter.
+ *
+ * The mock tier must spawn nothing: the CLI transport always takes an injected
+ * runner, so a live spawn can only mean a composition mistake. `mock.module` is
+ * the only way to intercept a builtin binding, and it is process-scoped, so
+ * `restore` re-registers the real module rather than relying on `mock.restore()`
+ * (which never undoes a module substitution).
+ */
+export const installChildProcessGuard = (): ChildProcessGuard => {
+  const calls: string[] = [];
+  const actual = createRequire(import.meta.url)("node:child_process") as unknown;
+  const denied = (name: string) => {
+    return (): never => {
+      calls.push(name);
+      throw new Error(`mock tier must not spawn a live child process (${name})`);
+    };
+  };
+  mock.module("node:child_process", () => ({
+    spawn: denied("spawn"),
+    spawnSync: denied("spawnSync"),
+    exec: denied("exec"),
+    execFile: denied("execFile"),
+    execFileSync: denied("execFileSync"),
+    execSync: denied("execSync"),
+    fork: denied("fork"),
+  }));
+  return {
+    calls,
+    restore: () => {
+      mock.module("node:child_process", () => actual);
+    },
+  };
 };
 
 export type FetchGuard = {

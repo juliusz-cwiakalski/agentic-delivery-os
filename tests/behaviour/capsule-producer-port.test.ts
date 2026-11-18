@@ -1,7 +1,7 @@
 /** TC-CAP-007/008 — the exported production capsule producer port itself. */
 import { describe, expect, test } from "bun:test";
-import { createCapsuleProducerPort } from "../../packages/cli/src/edge";
 import { nodeCapsuleFileSystemFacts } from "../../packages/adapters/src/file";
+import { createCapsuleProducerPort } from "../../packages/cli/src/edge";
 import { makeChangeTree } from "../fixtures/capsule/harness";
 import { makeCapsuleRuntime } from "../fixtures/capsule/producer";
 

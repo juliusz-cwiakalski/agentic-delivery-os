@@ -5,7 +5,7 @@
  * cursor/finding identity, preserved finding codes, and explicit truncation.
  * No snapshot or event exceeds the frame bound.
  */
-import { DAEMON_MAX_FRAME_BYTES, type ControlDegradedReason, type ControlTopic } from "#contracts";
+import { type ControlDegradedReason, type ControlTopic, DAEMON_MAX_FRAME_BYTES } from "#contracts";
 
 export type WatchLine = { readonly text: string; readonly cursor: number };
 

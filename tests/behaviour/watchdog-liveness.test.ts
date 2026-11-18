@@ -11,12 +11,12 @@ import {
   WATCHDOG_VERDICTS,
   type WatchdogSignals,
 } from "../../packages/core/src/contracts/index";
+import { createSourcedWatchdogSignalSource } from "../../packages/core/src/domain/index";
 import {
   buildWatchdogTeardownData,
   buildWatchdogVerdictData,
   classifyWatchdogLiveness,
 } from "../../packages/core/src/domain/watchdog";
-import { createSourcedWatchdogSignalSource } from "../../packages/core/src/domain/index";
 
 /** Probe an undeclared CPU fact without widening the real input type. */
 const withUndeclaredCpu = (cpu: unknown): WatchdogSignals =>

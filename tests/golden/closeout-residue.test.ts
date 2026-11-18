@@ -1,9 +1,9 @@
 /** TC-CAP-052 residue golden — deterministic ordering across mixed kinds. */
 import { describe, expect, test } from "bun:test";
-import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
-import { WORK_ITEM_REF, makeFacts } from "../fixtures/closeout/harness";
 import { makeChangeTree } from "../fixtures/capsule/harness";
 import { makeCapsuleRuntime } from "../fixtures/capsule/producer";
+import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
+import { makeFacts, WORK_ITEM_REF } from "../fixtures/closeout/harness";
 
 describe("closeout residue golden", () => {
   test("two runs over identical facts render identical residue", async () => {

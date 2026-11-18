@@ -44,7 +44,7 @@ export const ownerHoldEnvironmentVariableName = (environmentPrefix: string): str
 const ESCAPE = String.fromCharCode(27);
 const ANSI_ESCAPE = new RegExp(`${ESCAPE}\\[[0-?]*[ -/]*[@-~]`, "gu");
 const LINE_BREAKS_AND_TABS = /[\r\n\t\v\f\u0085]+/gu;
-const C0_C1_CONTROL = new RegExp("[\\u0000-\\u001f\\u007f-\\u009f]", "gu");
+const C0_C1_CONTROL = /[\u0000-\u001f\u007f-\u009f]/gu;
 const WHITESPACE_RUN = /\s+/gu;
 
 /**

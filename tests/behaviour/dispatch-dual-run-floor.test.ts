@@ -6,10 +6,10 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
+  eligibleSpecs,
   evaluateSpecs,
   fourteenOnSevenDates,
   gappedDates,
-  eligibleSpecs,
   missingClassSpecs,
   twentyOnSixDates,
   uncorroboratedSpecs,

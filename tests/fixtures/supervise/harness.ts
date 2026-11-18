@@ -9,6 +9,7 @@
 import { mkdirSync } from "node:fs";
 import { basename, join } from "node:path";
 import { createSuperviseCommandDefinition } from "../../../packages/cli/src/commands/supervise";
+import { createSupervisionEconomicsWritePort } from "../../../packages/cli/src/production";
 import type {
   SupervisionClaimRefusal,
   SupervisionEconomicsWritePort,
@@ -31,16 +32,15 @@ import type {
 import { foldLanes, type QueueLaneEconomics } from "../../../packages/core/src/domain/queue-lanes";
 import { createParkRecord } from "../../../packages/core/src/domain/queue-park";
 import { computeQueueSchedule } from "../../../packages/core/src/domain/queue-precedence";
-import { createSupervisionEconomicsWritePort } from "../../../packages/cli/src/production";
-import { activeLease, makeFacts, REPO_A } from "../queue/schedule/harness";
-import { type QueueCliRun, runProgram } from "../queue-ready/harness";
 import {
   createProductionProjectsHarness,
   makeBaseDirectory,
-  removeDirectoryTree,
   type ProductionRun,
+  removeDirectoryTree,
 } from "../projects/production";
 import { createRepository } from "../projects/temp-repos";
+import { activeLease, makeFacts, REPO_A } from "../queue/schedule/harness";
+import { type QueueCliRun, runProgram } from "../queue-ready/harness";
 import { makeIdentity, openStore } from "../state/harness";
 import type { SupervisionSeedTarget } from "./records";
 import { isoAt } from "./records";

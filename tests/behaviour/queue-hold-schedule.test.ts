@@ -9,16 +9,16 @@ import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import type { OwnerHoldFact } from "../../packages/core/src/contracts/index";
+import { computeQueueSchedule, foldLanes } from "../../packages/core/src/domain/index";
 import type {
   QueueParkEvaluation,
   QueuePlanFact,
 } from "../../packages/core/src/domain/queue-readiness";
-import { computeQueueSchedule, foldLanes } from "../../packages/core/src/domain/index";
 import {
   activeLease,
+  type EntrySpec,
   makeFacts,
   observed,
-  type EntrySpec,
 } from "../fixtures/queue/schedule/harness";
 
 type HoldCase = {

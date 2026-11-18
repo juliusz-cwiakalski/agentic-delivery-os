@@ -17,10 +17,10 @@ import {
 } from "../../packages/core/src/domain/index";
 import {
   createMemoryResumeStore,
+  type MemoryResumeStore,
   RESUME_PRECEDENCE_CASES,
   restartRecord,
   sessionEvidence,
-  type MemoryResumeStore,
 } from "../fixtures/economics/cases";
 
 const PROMPT_REENTRY: EconomicsResumeCapabilityDeclaration = { modes: ["prompt-reentry"] };

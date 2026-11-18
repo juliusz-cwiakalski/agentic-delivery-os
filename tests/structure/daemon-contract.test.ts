@@ -4,6 +4,7 @@
  * bounds, and the additive daemon/poll configuration branches are declared once.
  */
 import { describe, expect, test } from "bun:test";
+import { PRODUCTION_CATALOG } from "../../packages/core/src/config/index";
 import {
   COMMAND_RECEIPT_KEY_PREFIX,
   COMMAND_RECEIPT_PAYLOAD_SCHEMA,
@@ -36,7 +37,6 @@ import {
   QUEUE_LANE_STATES,
   STATE_SCHEMA_VERSION,
 } from "../../packages/core/src/contracts/index";
-import { PRODUCTION_CATALOG } from "../../packages/core/src/config/index";
 
 const RECORDS = [
   [DAEMON_INSTANCE_RECORD_KIND, DAEMON_INSTANCE_PAYLOAD_SCHEMA, DAEMON_INSTANCE_RECORD_KEY],
@@ -103,6 +103,7 @@ describe("GH-238 daemon contract declarations", () => {
 });
 
 import type { CommitGitPort } from "../../packages/core/src/contracts/index";
+
 type HasLogSince = "logSince" extends keyof CommitGitPort ? true : false;
 const logSinceIsDeclared: HasLogSince = true;
 void logSinceIsDeclared;

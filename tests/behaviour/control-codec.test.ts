@@ -4,14 +4,14 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
+  CONTROL_PROTOCOL_CURRENT,
+  type ControlRequestFrame,
+  LOCAL_CALLER_PRINCIPAL,
+} from "../../packages/core/src/contracts/index";
+import {
   decodeControlLine,
   encodeControlFrame,
 } from "../../packages/core/src/domain/control-codec";
-import {
-  CONTROL_PROTOCOL_CURRENT,
-  LOCAL_CALLER_PRINCIPAL,
-  type ControlRequestFrame,
-} from "../../packages/core/src/contracts/index";
 
 const request = (overrides: Partial<ControlRequestFrame> = {}): ControlRequestFrame => ({
   v: CONTROL_PROTOCOL_CURRENT,

@@ -15,9 +15,9 @@ import {
   openMountStore,
   productionStateRoot,
 } from "../fixtures/daemon/mount-harness";
-import { appendHeartbeat, appendInstance, scopeOf } from "../fixtures/daemon/mount-states";
-import * as hardcodedDegradation from "../fixtures/daemon/mount-mutants/hardcoded-degradation";
 import * as capturedDegradation from "../fixtures/daemon/mount-mutants/captured-degradation";
+import * as hardcodedDegradation from "../fixtures/daemon/mount-mutants/hardcoded-degradation";
+import { appendHeartbeat, appendInstance, scopeOf } from "../fixtures/daemon/mount-states";
 
 const isFailure = (value: unknown): value is { error: { code: string } } =>
   typeof value === "object" && value !== null && "error" in value;

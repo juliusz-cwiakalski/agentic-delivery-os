@@ -6,6 +6,11 @@
 import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import {
+  type CapsuleRuntimeOptions,
+  createCapsuleFileRuntime,
+  nodeCapsuleFileSystemFacts,
+} from "../../../packages/adapters/src/file/capsule";
 import type {
   CapsuleEvent,
   CapsuleEventKind,
@@ -22,11 +27,6 @@ import {
   payloadFieldViolations,
   serializeCapsuleEvent,
 } from "../../../packages/core/src/domain/capsule";
-import {
-  createCapsuleFileRuntime,
-  type CapsuleRuntimeOptions,
-  nodeCapsuleFileSystemFacts,
-} from "../../../packages/adapters/src/file/capsule";
 
 export const CAPSULE_NOW = "2026-11-07T10:00:00Z";
 export const CAPSULE_REF = "GH-240";

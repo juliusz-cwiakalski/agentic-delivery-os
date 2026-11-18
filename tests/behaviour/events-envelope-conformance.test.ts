@@ -7,7 +7,6 @@ import { describe, expect, test } from "bun:test";
 import type { ControlFrame } from "../../packages/core/src/contracts/index";
 import { TAXONOMY } from "../../packages/core/src/contracts/taxonomy";
 import { compareFrames } from "../fixtures/events/drift-mutants";
-import { requiredFields } from "../fixtures/events/projection-cases";
 import {
   answerRecord,
   attemptRecord,
@@ -17,6 +16,7 @@ import {
   laneRecord,
   questionRecord,
 } from "../fixtures/events/event-harness";
+import { requiredFields } from "../fixtures/events/projection-cases";
 
 const eventFrames = (frames: readonly ControlFrame[]): Record<string, unknown>[] =>
   frames.filter((frame) => frame.kind === "event").map(dataOf);

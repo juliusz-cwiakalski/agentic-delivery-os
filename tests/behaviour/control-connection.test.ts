@@ -6,12 +6,12 @@ import { describe, expect, test } from "bun:test";
 import { createControlServer } from "../../packages/core/src/app/control-server";
 import {
   CONTROL_PROTOCOL_CURRENT,
-  LOCAL_CALLER_PRINCIPAL,
   type ControlConnection,
   type ControlErrorFrame,
   type ControlFrame,
   type ControlRequestFrame,
   type DaemonClockPort,
+  LOCAL_CALLER_PRINCIPAL,
 } from "../../packages/core/src/contracts/index";
 import { createMemoryTransportPair } from "../fixtures/daemon/transport/pair";
 

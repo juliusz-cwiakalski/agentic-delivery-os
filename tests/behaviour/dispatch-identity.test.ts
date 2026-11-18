@@ -9,6 +9,12 @@ import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
+  dispatchIdentityMarkerPath,
+  ensureDispatchIdentityMarkerText,
+  readDispatchIdentityMarkerText,
+  replaceDispatchIdentityMarkerText,
+} from "../../packages/adapters/src/file/dispatch-identity";
+import {
   DISPATCH_IDENTITY_SCHEMA,
   isRepositoryIdentity,
   normalizeDispatchRepositoryKey,
@@ -17,12 +23,6 @@ import {
   resolveDispatchIdentity,
   serializeIdentityMarker,
 } from "../../packages/core/src/domain/dispatch-identity";
-import {
-  dispatchIdentityMarkerPath,
-  ensureDispatchIdentityMarkerText,
-  readDispatchIdentityMarkerText,
-  replaceDispatchIdentityMarkerText,
-} from "../../packages/adapters/src/file/dispatch-identity";
 
 /**
  * Resolve through the delivered policy against one checkout's git common

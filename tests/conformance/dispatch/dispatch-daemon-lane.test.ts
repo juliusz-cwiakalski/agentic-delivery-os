@@ -5,18 +5,18 @@
  * dispatch over the same evidence, and a replay/resume appends none.
  */
 import { describe, expect, test } from "bun:test";
-import { runDispatch } from "../../../packages/core/src/app/dispatch";
-import { recordDaemonDispatchResult } from "../../../packages/core/src/app/daemon-dispatch-result";
-import { readDispatchAttempts } from "../../../packages/core/src/app/dispatch-ledger";
-import { runSupervisionCycle } from "../../../packages/core/src/app/daemon-supervision";
-import { createLaneLaunchPlanner } from "../../../packages/core/src/domain/lane-launch-plan";
 import { createLaneExecutor } from "../../../packages/adapters/src/daemon/lane-executor";
+import { recordDaemonDispatchResult } from "../../../packages/core/src/app/daemon-dispatch-result";
+import { runSupervisionCycle } from "../../../packages/core/src/app/daemon-supervision";
+import { runDispatch } from "../../../packages/core/src/app/dispatch";
+import { readDispatchAttempts } from "../../../packages/core/src/app/dispatch-ledger";
+import { createLaneLaunchPlanner } from "../../../packages/core/src/domain/lane-launch-plan";
+import { readsFrom } from "../../fixtures/dispatch/golden/harness";
 import {
   COMPLETED_EVIDENCE,
   createDispatchState,
   createScriptedHarness,
 } from "../../fixtures/dispatch/harness";
-import { readsFrom } from "../../fixtures/dispatch/golden/harness";
 
 const NOW = "2026-11-08T10:00:00.000Z";
 const repository = "github.com/owner/repo";

@@ -13,11 +13,11 @@ import {
 } from "../../packages/core/src/contracts/index";
 import { aggregateDoctorReport } from "../../packages/core/src/domain/index";
 import {
+  type DoctorWorld,
   doctorWorld,
   FOLD_OK,
   parkRecord,
   runDoctorCli,
-  type DoctorWorld,
 } from "../fixtures/doctor/harness";
 
 const HOLD: OwnerHoldFact = {

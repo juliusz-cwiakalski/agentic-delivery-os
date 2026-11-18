@@ -8,8 +8,8 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { STATE_SCHEMA_VERSION } from "../../packages/core/src/contracts/index";
 import {
   createEconomicsRuntime,
-  runtimeEvidence,
   type EconomicsRuntime,
+  runtimeEvidence,
 } from "../fixtures/economics/harness";
 
 const runtimes: EconomicsRuntime[] = [];

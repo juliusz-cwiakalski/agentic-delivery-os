@@ -5,7 +5,7 @@
  */
 import { describe, expect, test } from "bun:test";
 import { classifyDomainKind } from "../../packages/cli/src/classify";
-import { createFakeRuntime, runDbCli, type FakeDbRuntime } from "../fixtures/session-admin/harness";
+import { createFakeRuntime, type FakeDbRuntime, runDbCli } from "../fixtures/session-admin/harness";
 
 type Run = Awaited<ReturnType<typeof runDbCli>>;
 

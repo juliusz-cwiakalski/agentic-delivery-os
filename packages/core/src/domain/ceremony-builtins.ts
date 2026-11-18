@@ -7,10 +7,10 @@
  * model, network, ambient read, or per-ceremony branch lives here.
  */
 import {
+  CEREMONY_ASSESS_VERDICTS,
   CEREMONY_CARRY_OVER_REASONS,
   CEREMONY_CHECK_STATES,
   CEREMONY_FOLLOW_THROUGH_VERDICTS,
-  CEREMONY_ASSESS_VERDICTS,
   type CeremonyNote,
 } from "#contracts";
 

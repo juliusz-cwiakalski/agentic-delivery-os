@@ -19,7 +19,7 @@ import { describe, expect, test } from "bun:test";
 import { createLanesCommandRuntime, createQueueCommandRuntime } from "../../packages/cli/src/edge";
 import { daemonReachable } from "../../packages/cli/src/production";
 import type { QueueDegradationReason } from "../../packages/core/src/contracts/index";
-import { createMountHarness, openMountStore } from "../fixtures/daemon/mount-harness";
+import { createMountHarness, type openMountStore } from "../fixtures/daemon/mount-harness";
 import {
   appendHeartbeat,
   appendInstance,

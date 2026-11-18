@@ -4,16 +4,16 @@
  * and never rewrites the original open record; the summary reports both totals.
  */
 import { describe, expect, test } from "bun:test";
+import { summarizeDispatchEvidence } from "../../packages/core/src/app/dispatch-gate";
 import {
   readDispatchAttempts,
   readDispatchDivergences,
 } from "../../packages/core/src/app/dispatch-ledger";
-import { summarizeDispatchEvidence } from "../../packages/core/src/app/dispatch-gate";
+import { dayAt } from "../fixtures/dispatch/evidence-windows";
 import { createCommandScenario, readsFrom } from "../fixtures/dispatch/golden/harness";
 import { COMPLETED_EVIDENCE } from "../fixtures/dispatch/harness";
-import { artifacts, prNone, readOk } from "../fixtures/dispatch/truth";
-import { dayAt } from "../fixtures/dispatch/evidence-windows";
 import { REPOSITORY } from "../fixtures/dispatch/ledger";
+import { artifacts, prNone, readOk } from "../fixtures/dispatch/truth";
 
 const mismatchReads = () =>
   readsFrom({

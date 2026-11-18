@@ -7,10 +7,12 @@ import { describe, expect, test } from "bun:test";
 import { runDispatch } from "../../packages/core/src/app/dispatch";
 import { readDispatchAttempts } from "../../packages/core/src/app/dispatch-ledger";
 import { buildHarnessSpawnEnvironment } from "../../packages/core/src/domain/harness-spawn-env";
-import { createDispatchState, createScriptedHarness } from "../fixtures/dispatch/harness";
-import { readsFrom } from "../fixtures/dispatch/golden/harness";
-import { createCommandScenario } from "../fixtures/dispatch/golden/harness";
-import { COMPLETED_EVIDENCE } from "../fixtures/dispatch/harness";
+import { createCommandScenario, readsFrom } from "../fixtures/dispatch/golden/harness";
+import {
+  COMPLETED_EVIDENCE,
+  createDispatchState,
+  createScriptedHarness,
+} from "../fixtures/dispatch/harness";
 
 const CANARIES = [
   "CANARY-PROMPT-7f3a",

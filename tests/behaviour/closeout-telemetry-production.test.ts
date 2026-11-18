@@ -1,10 +1,10 @@
 /** TC-CAP-045/046 — production wiring: state log receives, capsule does not, plan silent. */
 import { describe, expect, test } from "bun:test";
-import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
-import { WORK_ITEM_REF } from "../fixtures/closeout/harness";
+import type { HarnessTelemetryCapture } from "../../packages/core/src/contracts/index";
 import { makeChangeTree } from "../fixtures/capsule/harness";
 import { makeCapsuleRuntime } from "../fixtures/capsule/producer";
-import type { HarnessTelemetryCapture } from "../../packages/core/src/contracts/index";
+import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
+import { WORK_ITEM_REF } from "../fixtures/closeout/harness";
 
 const capture = (): HarnessTelemetryCapture => ({
   workItemRef: WORK_ITEM_REF,

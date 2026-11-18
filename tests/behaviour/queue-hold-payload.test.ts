@@ -6,11 +6,11 @@
  */
 import { describe, expect, test } from "bun:test";
 import { toQueuePlanData, toQueueReadData } from "../../packages/cli/src/commands/queue";
-import { type OwnerHoldFact, type QueueReadyFacts } from "../../packages/core/src/contracts/index";
-import { evaluateQueueReady } from "../../packages/core/src/domain/queue-ready";
+import type { OwnerHoldFact, QueueReadyFacts } from "../../packages/core/src/contracts/index";
 import { computeQueueSchedule, foldLanes } from "../../packages/core/src/domain/index";
-import { canonicalFacts } from "../fixtures/queue-ready/golden/canonical";
+import { evaluateQueueReady } from "../../packages/core/src/domain/queue-ready";
 import { makeFacts } from "../fixtures/queue/schedule/harness";
+import { canonicalFacts } from "../fixtures/queue-ready/golden/canonical";
 
 const HOLD: OwnerHoldFact = {
   active: true,

@@ -16,8 +16,8 @@ import {
   defectiveDeclaration,
   readDefects,
   readFixture,
-  withPath,
   type UnknownRecord,
+  withPath,
 } from "./../fixtures/ceremony/declarations";
 
 const base = (): UnknownRecord => readFixture("valid-repository.json");

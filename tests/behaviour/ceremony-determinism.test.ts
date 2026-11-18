@@ -5,12 +5,12 @@
  * verdict line.
  */
 import { describe, expect, test } from "bun:test";
+import { renderCeremonyText } from "../../packages/cli/src/output/ceremony-text";
 import {
   ceremonyRunDurationMs,
   foldCeremonyPhaseDurations,
   foldCeremonyRunVerdict,
 } from "../../packages/core/src/state/index";
-import { renderCeremonyText } from "../../packages/cli/src/output/ceremony-text";
 import { prepareBuiltin, runPrepared } from "../fixtures/ceremony/builtins";
 import { stepRecord } from "../fixtures/ceremony/state";
 

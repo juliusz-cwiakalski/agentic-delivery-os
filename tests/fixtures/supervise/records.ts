@@ -50,8 +50,8 @@ import {
   type StateJsonValue,
   type StateStorePort,
 } from "../../../packages/core/src/contracts/index";
-import { appendEconomicsRestartEvent } from "../../../packages/core/src/state/economics";
 import { clearObservedRecord } from "../../../packages/core/src/domain/queue-park";
+import { appendEconomicsRestartEvent } from "../../../packages/core/src/state/economics";
 import {
   appendCoordinatorFence,
   appendCoordinatorIteration,

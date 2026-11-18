@@ -7,20 +7,20 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { rmSync } from "node:fs";
 import { STATE_SCHEMA_VERSION } from "../../packages/core/src/contracts/index";
 import {
+  createOneShotResumeComposition,
+  deriveEconomicsView,
+} from "../../packages/core/src/domain/index";
+import {
   createEconomicsResumeStorePort,
   createStateStore,
   readEconomicsRecords,
 } from "../../packages/core/src/state/index";
 import {
-  createOneShotResumeComposition,
-  deriveEconomicsView,
-} from "../../packages/core/src/domain/index";
-import { makeIdentity, createTestEdge } from "../fixtures/state/harness";
-import {
   createEconomicsRuntime,
-  runtimeEvidence,
   type EconomicsRuntime,
+  runtimeEvidence,
 } from "../fixtures/economics/harness";
+import { createTestEdge, makeIdentity } from "../fixtures/state/harness";
 
 const runtimes: EconomicsRuntime[] = [];
 const extraRoots: string[] = [];

@@ -1,10 +1,10 @@
 /** TC-CAP-055 — a restart re-run converges: nothing duplicates. */
 import { describe, expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
-import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
-import { WORK_ITEM_REF, makeFacts, makeState } from "../fixtures/closeout/harness";
 import { makeChangeTree } from "../fixtures/capsule/harness";
 import { makeCapsuleRuntime } from "../fixtures/capsule/producer";
+import { closeoutData, runCloseoutCli } from "../fixtures/closeout/cli";
+import { makeFacts, makeState, WORK_ITEM_REF } from "../fixtures/closeout/harness";
 
 describe("TC-CAP-055 restart convergence", () => {
   test("a re-run appends nothing, duplicates no decision, and converges", async () => {

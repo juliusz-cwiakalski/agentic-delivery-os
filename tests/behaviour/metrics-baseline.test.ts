@@ -28,9 +28,9 @@ import {
   BASELINE_RELATIVE,
   documentText,
   entriesById,
-  makeMemoryProjectFs,
   METRICS_REF,
   type MetricsFixture,
+  makeMemoryProjectFs,
   runMetrics,
 } from "../fixtures/metrics/harness";
 

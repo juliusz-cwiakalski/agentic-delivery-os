@@ -9,9 +9,9 @@ import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
 import { readFileSync, statSync, writeFileSync } from "node:fs";
 import {
+  CAPSULE_EVENT_KINDS,
   type CapsuleEvent,
   type CapsuleEventKind,
-  CAPSULE_EVENT_KINDS,
   type CapsuleWriter,
 } from "../../packages/core/src/contracts/index";
 import { parseCapsuleEvents } from "../../packages/core/src/domain/capsule";

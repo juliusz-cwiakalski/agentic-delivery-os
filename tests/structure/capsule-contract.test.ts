@@ -7,21 +7,21 @@
  */
 import { describe, expect, test } from "bun:test";
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { resolveChangeFolder } from "../../packages/adapters/src/file/change-folder";
 import {
   CAPSULE_ENVELOPE_KEYS,
   CAPSULE_EVENT_KINDS,
-  CAPSULE_MAX_CANDIDATES,
-  CAPSULE_MAX_CANDIDATE_BYTES,
-  CAPSULE_MAX_EVENTS,
-  CAPSULE_MAX_EVENT_PAYLOAD_BYTES,
-  CAPSULE_MAX_INDEX_LINES,
   CAPSULE_MAX_BYTES,
+  CAPSULE_MAX_CANDIDATE_BYTES,
+  CAPSULE_MAX_CANDIDATES,
+  CAPSULE_MAX_EVENT_PAYLOAD_BYTES,
+  CAPSULE_MAX_EVENTS,
+  CAPSULE_MAX_INDEX_LINES,
   CAPSULE_SCHEMA_ID,
   CAPSULE_WRITERS,
 } from "../../packages/core/src/contracts/index";
-import { resolveChangeFolder } from "../../packages/adapters/src/file/change-folder";
 import {
   CAPSULE_FOLDER,
   CAPSULE_NOW,

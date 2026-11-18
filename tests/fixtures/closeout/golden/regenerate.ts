@@ -15,7 +15,7 @@ import {
   renderCloseoutHuman,
 } from "../../../../packages/core/src/domain/closeout";
 import { closeoutData, runCloseoutCli } from "../cli";
-import { WORK_ITEM_REF, makeFacts } from "../harness";
+import { makeFacts, WORK_ITEM_REF } from "../harness";
 
 const ROOT = process.cwd();
 const WRITE = process.argv.includes("--write");

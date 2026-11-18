@@ -25,8 +25,8 @@ import { daemonReachable } from "../../packages/cli/src/production";
 import { evaluateDaemonLock } from "../../packages/core/src/domain/daemon-lock";
 import {
   createMountHarness,
-  mountComposition,
   type MountHarness,
+  mountComposition,
 } from "../fixtures/daemon/mount-harness";
 import { appendHeartbeat, appendInstance, scopeOf } from "../fixtures/daemon/mount-states";
 

@@ -13,6 +13,7 @@
  */
 
 import {
+  type OwnerHoldSource,
   QUEUE_BLOCKING_REASONS,
   QUEUE_DEFAULT_NEXT_ACTIONS,
   QUEUE_DEFAULT_PRIORITY,
@@ -37,7 +38,6 @@ import {
   type QueueListData,
   type QueueNextAction,
   type QueueParkedReason,
-  type OwnerHoldSource,
   type QueueParkProjection,
   type QueuePlanData,
   type QueueRankClass,

@@ -7,19 +7,19 @@
  */
 import { describe, expect, test } from "bun:test";
 import {
-  STATUS_SECTION_ORDER,
-  STATUS_SCHEMA_VERSION,
   type OwnerHoldFact,
+  STATUS_SCHEMA_VERSION,
+  STATUS_SECTION_ORDER,
   type StatusProviderFacts,
 } from "../../packages/core/src/contracts/index";
 import { aggregateStatus, renderStatusHuman } from "../../packages/core/src/domain/index";
-import { SYNTHETIC_BRAND } from "../golden/helpers";
 import {
   baseFacts,
   providerConfig,
   providerConfigRead,
   providers,
 } from "../fixtures/status/harness";
+import { SYNTHETIC_BRAND } from "../golden/helpers";
 
 const HOLD: OwnerHoldFact = {
   active: true,

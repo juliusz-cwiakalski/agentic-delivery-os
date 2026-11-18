@@ -1,0 +1,198 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-17",
+  "repository": {
+    "owner": "group-placeholder",
+    "name": "project-placeholder"
+  },
+  "issueNumber": 601,
+  "pullNumber": 504,
+  "commitSha": "1111111111111111111111111111111111111111",
+  "threadId": "PRRT_2",
+  "routes": [
+    {
+      "name": "read-work-item",
+      "member": "readWorkItem",
+      "argument": 601,
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/repos/group-placeholder/project-placeholder/issues/601",
+          "status": 200,
+          "body": {
+            "number": 601,
+            "title": "Transport parity issue",
+            "state": "open",
+            "labels": [
+              {
+                "name": "tracker"
+              }
+            ],
+            "updated_at": "2026-10-29T08:00:00Z"
+          }
+        }
+      ]
+    },
+    {
+      "name": "write-work-item",
+      "member": "writeWorkItem",
+      "argument": {
+        "entityId": "601",
+        "add": ["delivered"],
+        "remove": ["planning"]
+      },
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/repos/group-placeholder/project-placeholder/issues/601",
+          "status": 200,
+          "body": {
+            "number": 601,
+            "title": "Transport parity issue",
+            "state": "open",
+            "labels": [
+              {
+                "name": "planning"
+              },
+              {
+                "name": "vendor-label"
+              }
+            ]
+          }
+        },
+        {
+          "method": "GET",
+          "path": "/repos/group-placeholder/project-placeholder/issues/601/dependencies/blocked_by?per_page=200",
+          "status": 200,
+          "body": []
+        },
+        {
+          "method": "PATCH",
+          "path": "/repos/group-placeholder/project-placeholder/issues/601",
+          "status": 200,
+          "body": {
+            "number": 601
+          }
+        }
+      ]
+    },
+    {
+      "name": "transition-work-item",
+      "member": "transitionWorkItem",
+      "argument": {
+        "entityId": "601",
+        "deliveryState": "done"
+      },
+      "requests": [
+        {
+          "method": "PATCH",
+          "path": "/repos/group-placeholder/project-placeholder/issues/601",
+          "status": 200,
+          "body": {
+            "number": 601
+          }
+        }
+      ]
+    },
+    {
+      "name": "read-delivery-request",
+      "member": "readDeliveryRequest",
+      "argument": 504,
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/repos/group-placeholder/project-placeholder/pulls/504",
+          "status": 200,
+          "body": {
+            "number": 504,
+            "state": "open",
+            "draft": false,
+            "merged": false,
+            "reviewDecision": "APPROVED",
+            "head": {
+              "ref": "feat/GH-338/transport-parity",
+              "sha": "1111111111111111111111111111111111111111"
+            },
+            "base": {
+              "ref": "main-tools"
+            },
+            "review_threads": []
+          }
+        }
+      ]
+    },
+    {
+      "name": "read-pipeline-run",
+      "member": "readPipelineRun",
+      "argument": "1111111111111111111111111111111111111111",
+      "requests": [
+        {
+          "method": "GET",
+          "path": "/repos/group-placeholder/project-placeholder/commits/1111111111111111111111111111111111111111/check-runs?per_page=20",
+          "status": 200,
+          "body": {
+            "check_runs": [
+              {
+                "id": 9002,
+                "name": "test",
+                "status": "completed",
+                "conclusion": "failure",
+                "details_url": "https://api.github.example.com/checks/9002"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "resolve-delivery-thread",
+      "member": "resolveDeliveryThread",
+      "argument": {
+        "deliveryRequest": {
+          "systemName": "github",
+          "entityId": "504"
+        },
+        "threadId": "PRRT_2"
+      },
+      "requests": [
+        {
+          "method": "POST",
+          "path": "/graphql",
+          "status": 200,
+          "body": {
+            "data": {
+              "resolveReviewThread": {
+                "thread": {
+                  "isResolved": true
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "merge-delivery-request",
+      "member": "mergeDeliveryRequest",
+      "argument": {
+        "deliveryRequest": {
+          "systemName": "github",
+          "entityId": "504"
+        },
+        "strategy": "squash",
+        "commitTitle": "feat(GH-338): transport parity",
+        "commitMessage": "Parity landing"
+      },
+      "requests": [
+        {
+          "method": "PUT",
+          "path": "/repos/group-placeholder/project-placeholder/pulls/504/merge",
+          "status": 200,
+          "body": {
+            "sha": "6666666666666666666666666666666666666666",
+            "merged": true
+          }
+        }
+      ]
+    }
+  ]
+}

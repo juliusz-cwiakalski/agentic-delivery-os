@@ -12,9 +12,9 @@
  */
 
 import {
+  type OwnerHoldFact,
   QUEUE_DEFAULT_LEASE_TTL_MS,
   QUEUE_MIN_RENEWAL_MS,
-  type OwnerHoldFact,
   type QueueActiveLease,
   type QueueBlockingReason,
   type QueueLeaseRecord,

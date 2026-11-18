@@ -3,12 +3,12 @@
  * (TC-MEMPROV-001).
  */
 import { describe, expect, test } from "bun:test";
-import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
 import {
   MEMORY_RECORD_EVIDENCE_PREFIXES,
   MEMORY_RECORD_SOURCES,
   type MemoryEvaluationResult,
 } from "../../packages/core/src/contracts/index";
+import { evaluateMemory } from "../../packages/core/src/domain/memory-lint";
 import { provenanceMutants } from "../fixtures/memory/mutants";
 import { recordText, treeWith, validLessonFields } from "../fixtures/memory/tree";
 
