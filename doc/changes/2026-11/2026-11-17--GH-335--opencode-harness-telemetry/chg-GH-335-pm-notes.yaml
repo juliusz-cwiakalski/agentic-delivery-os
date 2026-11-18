@@ -4,7 +4,7 @@ delivery_mode: autonomous
 milestone: "M3: Harness and tracker integrations"
 phases:
   clarify_scope: { started: null, completed: 2026-11-17T22:03:08.077Z }
-  specification: { started: null, completed: 2026-11-18T10:21:22.741Z }
+  specification: { started: null, completed: 2026-11-18T10:45:01.837Z }
   test_planning: { started: null, completed: 2026-11-18T10:21:28.084Z }
   delivery_planning: { started: null, completed: 2026-11-18T10:21:35.751Z }
   dor_check: { started: null, completed: null }
@@ -354,4 +354,33 @@ notes:
       history keeps the record id it reviewed, so it is intentionally stale
       after the TDR-0031 to TDR-0033 renumbering."
     type: decision
+    date: "2026-11-18"
+  - text: "dor_check iteration 4: NOT_READY (3 major, 2 minor, 3 nit). Verdict
+      artifact: readiness-review/readiness-iter-4.md. Iteration-1..3 findings
+      are all verified resolved, including the DEC-15 settlement. New blockers:
+      the installed harness moved to opencode v2.3.2 while every artifact pinned
+      2.2.x+2.1.x; the caller's agent identity had no declared carrier, so the
+      resolution rule was provable only by a test-built fixture; and the
+      observed-axis absence representation had no criterion."
+    type: info
+    date: "2026-11-18"
+  - text: "Quality gate run after the sync merge (TMPDIR=$PWD/tmp/tmpdir pnpm
+      check): lint, format:check and typecheck PASS; test FAILED with 4 failures
+      — one genuine (TC-PRIVACY-020: absolute home paths in this change's spec,
+      now redacted to home-relative notation) and three load-sensitive
+      cascades/timeouts that pass in isolation (privacy-ci-wiring,
+      prior-identity-hermetic). Remaining stages unverified because the chain
+      stops at test."
+    type: info
+    date: "2026-11-18"
+  - text: "Iteration-4 remediation: spec v1.4 (window re-derived to 2.3.x+2.2.x
+      under DEC-1's rule as applied at delivery time, 27 ACs with the new
+      AC-F5-7 for observed-axis absence, additive agent-identity member declared
+      as the caller's carrier, privacy paths redacted, DEC-16 added), test plan
+      rev 1.6 (47 TCs, new TC-047, window matrix re-derived, TC-028 narrowed,
+      seat oracles extended, TC-011/015 now assert the caller-supplied agent),
+      plan (47/47 TCs, 27/27 ACs, both contract members declared once in Phase 2
+      with a no-later-member rule, feature-closeout added to Phase 8, validate +
+      lint both valid)."
+    type: info
     date: "2026-11-18"

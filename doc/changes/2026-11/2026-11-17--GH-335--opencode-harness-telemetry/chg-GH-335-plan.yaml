@@ -4,8 +4,8 @@
 # directly.
 #
 # SOURCES (single source of truth; this plan invents no requirement):
-#   - Spec:      ./chg-GH-335-spec.md (v1.3) — F-1..F-7, DM-1..DM-10,
-#                NFR-1..NFR-11, DEC-1..DEC-15, RSK-1..RSK-10, OQ-1..OQ-5 (OQ-2,
+#   - Spec:      ./chg-GH-335-spec.md (v1.4) — F-1..F-7, DM-1..DM-10,
+#                NFR-1..NFR-11, DEC-1..DEC-16, RSK-1..RSK-10, OQ-1..OQ-5 (OQ-2,
 #                OQ-3 and OQ-4 CLOSED — OQ-4 is the DEC-15 port boundary), §4.1
 #                the restated propagation and telemetry metrics, §5.1 capability
 #                details (F-3 cardinality / resolution / carrier and its DEC-15
@@ -14,15 +14,19 @@
 #                store-location reconciliation), §8.2/§8.3/§8.4/§8.5 interface,
 #                data-model and compatibility contracts, §10 observability (the
 #                refusal disclosure routed to `detail.harness`), §16 affected
-#                components, §17 AC table (26 ACs AC-F1-1..AC-F5-6,
+#                components, §17 AC table (27 ACs AC-F1-1..AC-F5-7,
 #                AC-F6-1..AC-F6-2, AC-F7-1..AC-F7-3, AC-N1-1), §17.1
 #                traceability, §17.2 Definition of Done (13 clauses; clauses 1,
-#                4 and 6 are the testable, non-self-deferrable, machine-checked
-#                forms), §18 rollout, §19 migration, §21 security review,
-#                Appendix B pinned blueprints TC-M3-HARNESS-001/002, and
-#                Appendix C observed evidence (opencode v2.2.5).
-#   - Tests:     ./chg-GH-335-test-plan.md (v1.5) — 46 cases
-#                TC-HARNESS-001..046; 26/26 AC coverage (§3.1); refusal/oracle
+#                4, 5 and 6 are the testable, non-self-deferrable,
+#                machine-checked forms — clause 5 is the recorded
+#                `opencode v2.3.2` line and clause 6 the single probe
+#                construction site), §18 rollout, §19 migration, §21 security
+#                review, Appendix B pinned blueprints TC-M3-HARNESS-001/002, and
+#                Appendix C observed evidence (the intake pass on
+#                opencode v2.2.5 and the delivery pass on v2.3.2).
+#   - Tests:     ./chg-GH-335-test-plan.md (v1.6) — 47 cases
+#                TC-HARNESS-001..047 (047 is the observed-agent/observed-model
+#                axis-absence oracle for AC-F5-7); 27/27 AC coverage (§3.1); refusal/oracle
 #                matrix M-01..M-11 with precedence P-01..P-04 and the
 #                `detail.harness` column; version verdict and probe grammar
 #                matrix V-01..V-19; telemetry field matrix T-01..T-16;
@@ -32,8 +36,8 @@
 #                observed store contract (DM-10); §4.2 non-vacuity contract;
 #                §4.4a pinned probe seam; §4 layer table; §6 environments; §7
 #                automation map; §8 gaps GAP-1..GAP-7 and open questions
-#                OQ-4..OQ-12; §11 change log (11.1..11.8) including its §11.5
-#                phase-ownership suggestions and the 1.3/1.4/1.5 TC re-cuts.
+#                OQ-4..OQ-12; §11 change log (11.1..11.9) including its §11.5
+#                phase-ownership suggestions and the 1.3/1.4/1.5/1.6 TC re-cuts.
 #   - Decisions: doc/decisions/TDR-0033-harness-dispatch-outcome-envelope-detail.md
 #                (Proposed) — one `harness` member on the failure-envelope
 #                `detail` slot: `kind`, `observedVersion` (normalized bare semver
@@ -62,9 +66,20 @@
 #                obligations, the contract owns the names, so the delivered
 #                `agent`/`model` carry the harness-reported agent and the observed
 #                model and gain no duplicate member here).
+#                Spec DEC-16 (the readiness-iteration-4 settlement) is the
+#                change-level decision this plan implements: the caller's agent
+#                identity is its OWN additive optional member on the spawn and
+#                resume input, beside and distinct from the additive optional
+#                binding member, and the composition calls the pure resolution
+#                function with it; both members are delivered in the contract
+#                phase (Phase 2) and no later phase adds a contract member; the
+#                observed-agent/observed-model axis absence is the AC-bearing
+#                AC-F5-7; and the supported window's value at delivery is
+#                `2.3.x` + `2.2.x` under DEC-1's own time-relative rule.
 #   - PM record: ./chg-GH-335-pm-notes.yaml — delivery_mode autonomous, the
-#                delivered-seam cross-check, gaps G1..G5, observed harness
-#                v2.2.5, the GH-342 Q-06 default, the gate-command convention
+#                delivered-seam cross-check, gaps G1..G5, the observed harness
+#                line (v2.2.5 at intake, v2.3.2 at delivery), the GH-342 Q-06
+#                default, the gate-command convention
 #                (TMPDIR=$PWD/tmp/tmpdir), the merge authority (CEO), the
 #                2026-11-18 adjudications including the withdrawal of (a), the
 #                narrowed (g), the named store-override obligation (f) and the
@@ -167,7 +182,9 @@
 #
 # REVISION 1.3 (readiness iteration 3 remediation; spec v1.3, test plan v1.5).
 #   Surgical: no phase is added or removed, no TC or AC id moves, and the
-#   46/46 TC map and 26/26 AC matrix below are unchanged. What changed here, so
+#   46/46 TC map and 26/26 AC matrix it inherited are unchanged (revision 1.4
+#   below re-derives them to 47/47 and 27/27; this block is history). What
+#   changed here, so
 #   the next gate can check rather than infer:
 #   1. ONE FACT, ONE FIELD (finding 2). Phase 2.2 no longer adds `observedModel`
 #      and renames nothing: the delivered `agent`/`model` members ARE TDR-0032
@@ -227,7 +244,62 @@
 #      engine path (~2681). Phase 4 keeps those callers working, which is why the
 #      new spawn/resume inputs and the builder context stay optional.
 #
-# TC -> PHASE MAP (46 ids; none unassigned; none assigned twice). A TC is owned
+# REVISION 1.4 (readiness iteration 4 remediation; spec v1.4, test plan v1.6).
+#   Surgical: no phase is added or removed, no phase id changes, and no AC or TC
+#   id is renumbered. What changed here, so the next gate can check rather than
+#   infer:
+#   1. THE CARRIER IS DECLARED, TWICE, IN ONE PHASE (finding 1, DEC-16). Phase 2.1
+#      declares BOTH additive optional input members on `HarnessSpawnInput` and
+#      `HarnessResumeInput` — the caller's AGENT IDENTITY and the BINDING its
+#      resolution produces — as two distinct members, and Phase 2 states the
+#      phase rule that NO LATER PHASE ADDS A CONTRACT MEMBER to those inputs (a
+#      later phase that needs one reopens Phase 2, because the commit primitive
+#      stages declared scope only). Phase 3.3 fixes the resolver's signature
+#      (`resolveBinding(profile, selection, agent)`) and names the composition as
+#      its one production caller; Phase 4.3 states that the composition reads the
+#      agent identity off that member and calls the resolver once per spawn
+#      before handing the resulting binding to the spawn/resume call. The
+#      resolution rule therefore has a production call site and TC-011/TC-015 no
+#      longer assert a binding the test itself built — the gap iteration 4's
+#      finding 1 named.
+#   2. THE WINDOW IS THE RULE'S VALUE AT DELIVERY (finding 3, DEC-1/DEC-16).
+#      Phase 2.1 pins `2.3.x` + `2.2.x` (the installed `opencode v2.3.2`), states
+#      the rule it applies (current minor line at delivery time plus one previous
+#      minor), and keeps `2.2.5` as an in-window input so the refusal direction is
+#      still exercised on a real observed line.
+#   3. THE ABSENCE BEHAVIOUR HAS AN ORACLE (finding 2, AC-F5-7). Phase 5.1 states
+#      the five obligations as behaviour, Phase 5.5 requires the placeholder to
+#      survive the state-layer projection uncoerced, Phase 5.10 requires the
+#      rebuilt delivered suites to assert them, and a NEW phase-owned suite
+#      `tests/behaviour/harness-telemetry-observed-axis-absence.test.ts` carries
+#      TC-HARNESS-047 (the absent axis still lands, the marker names that axis
+#      only, the non-null field holds the declared empty-string placeholder,
+#      `optional-field-absent` names the same axis, `invalid-session-identity` is
+#      NOT emitted, no field is widened to nullable, and an unstated observed
+#      agent yields a null seat with `unresolved-seat`). The suites are gated in
+#      Phase 5, so the criterion is proven at the boundary that first makes it
+#      green.
+#   4. FORTY-SEVEN test cases, not forty-six: TC-HARNESS-047 is owned by Phase 5
+#      (the phase that first makes its suite green), and the phase arithmetic and
+#      the AC matrix below are re-derived: 0 + 2 + 6 + 10 + 15 + 10 + 2 + 2 = 47,
+#      and 27 ACs with AC-F5-7 -> Phase 5 (047).
+#   5. THE PROBE CHECK COUNTS BOTH SITES (finding 6): Phase 6.10 pins exactly ONE
+#      CONSTRUCTION site (the composition in `packages/cli/src/production.ts`)
+#      and exactly ONE INVOCATION site (`resolveHarnessInstance` in
+#      `packages/core/src/domain/harness-registry.ts`), and the non-vacuity mutant
+#      adds a second CONSTRUCTION, not a second reference.
+#   6. THE CLOSEOUT PAGE MOVES WITH THE BEHAVIOUR (finding 4):
+#      `doc/spec/features/feature-closeout.md` is in Phase 8's doc scope, beside
+#      `feature-session-database-admin.md`, because it states the work-item-root
+#      attribution Phase 5 replaces.
+#   7. THE OBSERVATION FIGURE IS NOT A CONSTANT (finding 7): the plan no longer
+#      quotes a fixed null-agent/null-model pair; it states the growing
+#      observation the spec's Appendix C report describes.
+#   8. THE LIVE EVIDENCE NAMES THE DELIVERY-PASS LINE (DoD clause 5): Phase 1.6
+#      and Phase 8.12 record `opencode v2.3.2` and its `2.3.2` normalization
+#      beside the intake `v2.2.5` line, so clause 5 has a recorded real output.
+#
+# TC -> PHASE MAP (47 ids; none unassigned; none assigned twice). A TC is owned
 #   by the phase that first makes its COMPLETE suite set green; where §11.5 of
 #   the test plan suggests otherwise the deviation is stated at the phase and is
 #   forced by that rule.
@@ -242,11 +314,11 @@
 #   Phase 4 dispatch path (10): TC-HARNESS-001, TC-HARNESS-002,
 #            TC-HARNESS-003, TC-HARNESS-006, TC-HARNESS-007, TC-HARNESS-008,
 #            TC-HARNESS-014, TC-HARNESS-016, TC-HARNESS-017, TC-HARNESS-018.
-#   Phase 5 attribution and per-seat telemetry (14): TC-HARNESS-011,
+#   Phase 5 attribution and per-seat telemetry (15): TC-HARNESS-011,
 #            TC-HARNESS-015, TC-HARNESS-019, TC-HARNESS-020, TC-HARNESS-021,
 #            TC-HARNESS-022, TC-HARNESS-023, TC-HARNESS-024, TC-HARNESS-025,
 #            TC-HARNESS-026, TC-HARNESS-027, TC-HARNESS-028, TC-HARNESS-043,
-#            TC-HARNESS-044.
+#            TC-HARNESS-044, TC-HARNESS-047.
 #   Phase 6 conformance and cross-cutting battery (10): TC-HARNESS-029,
 #            TC-HARNESS-030, TC-HARNESS-031, TC-HARNESS-032, TC-HARNESS-033,
 #            TC-HARNESS-034, TC-HARNESS-036, TC-HARNESS-038, TC-HARNESS-039,
@@ -255,8 +327,15 @@
 #            TC-HARNESS-037, TC-HARNESS-040.
 #   Phase 8 documentation, live evidence, and release (2): TC-HARNESS-041,
 #            TC-HARNESS-045.
-#   Total 0 + 2 + 6 + 10 + 14 + 10 + 2 + 2 = 46.
+#   Total 0 + 2 + 6 + 10 + 15 + 10 + 2 + 2 = 47.
 #   Deviations from test-plan §11.5, each forced by the ownership rule:
+#   - TC-HARNESS-047 is owned by Phase 5: its complete oracle is a LANDED row
+#     (the absence marker, the empty-string placeholder in the delivered non-null
+#     field, the same-axis `optional-field-absent` warning, no
+#     `invalid-session-identity`, and an unstated observed agent's null seat with
+#     `unresolved-seat`), so it is green only once extraction and the state-layer
+#     projection exist; its no-widening half is a Phase-2 type pin, not a
+#     separate ownership.
 #   - TC-HARNESS-011 is owned by Phase 5 (not Phase 4): its complete oracle is
 #     three spawns' recorded argv AND three seat-attributed row sets whose
 #     observed models agree with the recorded bindings, read from a
@@ -274,7 +353,7 @@
 #     the one-invocation/deadline half of the same file is TC-HARNESS-006 in
 #     Phase 4, which extends the file Phase 3 creates.
 #
-# AC -> PHASE MATRIX (all 26 ACs; derived from test-plan §3.1, so no oracle or
+# AC -> PHASE MATRIX (all 27 ACs; derived from test-plan §3.1, so no oracle or
 #   criterion is reshaped):
 #   AC-F1-1 -> Phase 4 (001, 006), Phase 3 (004, 042), Phase 7 (040),
 #              Phase 6 (046)
@@ -292,12 +371,13 @@
 #   AC-F3-3 -> Phase 3 (013)
 #   AC-F3-4 -> Phase 4 (014), Phase 6 (036), Phase 7 (040)
 #   AC-F4-1 -> Phase 4 (016, 017, 018)
-#   AC-F5-1 -> Phase 5 (011, 019, 026, 028)
+#   AC-F5-1 -> Phase 5 (011, 019, 026, 028, 047)
 #   AC-F5-2 -> Phase 5 (020)
 #   AC-F5-3 -> Phase 5 (021)
 #   AC-F5-4 -> Phase 5 (022, 028)
 #   AC-F5-5 -> Phase 5 (023, 025, 043, 044)
 #   AC-F5-6 -> Phase 8 (045; never a CI oracle)
+#   AC-F5-7 -> Phase 5 (047)
 #   AC-F6-1 -> Phase 5 (023)
 #   AC-F6-2 -> Phase 5 (023, 024, 028, 044)
 #   AC-F7-1 -> Phase 6 (031)
@@ -319,7 +399,10 @@
 #         declare the name (an explicit seat `envName` or the derived
 #         `OC_<PREFIX>_AGENT_<SEAT>_MODEL`) and the delivery supplies its declared
 #         value through the per-spawn record map; an undeclared record name
-#         changes nothing. Pure resolution and the surface mapping land in
+#         changes nothing. The agent the resolution is called with is the value the
+#         caller supplied on the spawn/resume input's own agent-identity member,
+#         and the resolution's result travels on the sibling binding member
+#         (DEC-16). Pure resolution and the surface mapping land in
 #         Phase 3; the composed wiring lands in Phase 4.
 #   OQ-5  Refusal projection is DECIDED: `harness.version.unsupported`,
 #         `harness.version.unknown`, `harness.mode.unavailable`, and
@@ -412,20 +495,24 @@
 #     (Appendix C), so only the mode choice and the contract recording remain.
 #   Phase 2 declares every identity and vocabulary the later phases assert
 #     through — including TDR-0032's single-seat binding type and resolution
-#     outcomes — lands the four error rows with their documented counterparts,
+#     outcomes, and BOTH additive optional input members (the caller's agent
+#     identity and the binding its resolution produces) on the spawn and resume
+#     input — lands the four error rows with their documented counterparts,
 #     and lands the whole `detail.harness` evidence channel (contract, edge
 #     projection, pins, validator, fixture, documented member sentence) so no
 #     consumer can pin behaviour against a not-yet-declared name and the closed
 #     slot cannot silently drop the new member.
 #   Phase 3 lands the pure evaluation: window parsing/normalization/comparison,
 #     the pinned-window policy with no configuration key, mode resolution with
-#     its origin, the pure agent->seat resolution with its three outcomes, the
-#     expressibility predicate, and the registry carrying one verdict plus the
-#     resolved mode. No adapter, no process, no store, no catalogue, no ambient
-#     read.
+#     its origin, the pure agent->seat resolution with its three outcomes and its
+#     named production caller (the composition), the expressibility predicate, and
+#     the registry carrying one verdict plus the resolved mode. No adapter, no
+#     process, no store, no catalogue, no ambient read.
 #   Phase 4 lands the dispatch path: the single production probe point, the
 #     version gate before any session, mode selection with no runtime fallback,
-#     exactly one `--agent`/`--model` pair per spawn mapped from the binding,
+#     the composition resolving the binding ONCE PER SPAWN from the agent identity
+#     the caller supplied on the input's agent-identity member, exactly one
+#     `--agent`/`--model` pair per spawn mapped from that binding,
 #     resume/attach under the same contract, and the four refusal paths with
 #     their `detail.harness` facts plus the unassigned refusal in the bounded
 #     `error.summary` — all produced before the lease claim and the attempt
@@ -437,13 +524,15 @@
 #     the delivered `skipped-gap` on an empty union, the union-derived compaction
 #     set), the session record's own
 #     version, seat and both models with group scoping and both divergence axes,
+#     the observed-axis absence oracle (AC-F5-7),
 #     store-sourced durations, the four-way absence taxonomy, the bounded read
 #     discipline, the corrected state-layer payload allowlist, and the
 #     store-location reconciliation.
 #   Phase 6 lands conformance and the cross-cutting battery: the floor/extension
 #     split with the additive executor, refusal side-effect freedom (including
 #     the unassigned case), mutants, determinism, bounds, privacy, offline
-#     hermeticity, and the single-probe-construction-site check.
+#     hermeticity, and the single-probe check that counts one construction site
+#     and one invocation site separately.
 #   Phase 7 lands the success-side recorded disclosure (attempt facts) and proves
 #     the new gate work leaves the delivered stream, handle acquisition, output
 #     bounds, and audit behaviour undisturbed.
@@ -476,6 +565,18 @@
 #   runs that test in its gate. The same obligation binds any later phase that
 #   adds a `packages/core/src/contracts/*.ts` export; no later phase does — Phases
 #   5 and 7 add members to already-exported types, which changes no exported name.
+#   CONTRACT MEMBERS ARE DECLARED ONCE, IN PHASE 2 (DEC-16): both additive
+#   optional members of `HarnessSpawnInput`/`HarnessResumeInput` — the caller's
+#   agent identity and the binding — are declared in Phase 2.1, in the same
+#   commit, and NO LATER PHASE ADDS A CONTRACT MEMBER to the harness port inputs
+#   (or to any other `packages/core/src/contracts/*.ts` type): Phase 3 consumes
+#   them, Phase 4 reads the agent identity off the member and supplies the
+#   resolved binding on the sibling member, and Phases 5 and 7 add per-attempt
+#   facts on the dispatch record, never an input member. A later phase that needs
+#   another port-input member reopens Phase 2 rather than editing the contract
+#   under a scope it does not own, because the commit primitive stages declared
+#   scope only and a green phase would otherwise ship an undeclared contract
+#   change.
 #   CHANGE CAPSULE STAGING: Phase 1 additionally declares the change folder's
 #   `doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/
 #   readiness-review` folder, because the readiness/DoD verdict artifacts live
@@ -624,6 +725,7 @@ tier:
     - "Any of the nine delivered harness failure codes is renamed or re-semanted, a new refusal identity ships without an error-table row, a documented row, and a registered scenario, the unassigned named agent adds a code of its own instead of reusing `provider.profile.invalid`, or `harness.telemetry.absent` is introduced anywhere in the closed vocabulary, the error table, or a test (RSK-5, DEC-10, AC-F7-2, TDR-0032 C-6)"
     - "The `detail.harness` member grows a fifth member, becomes an open key-value map, is written as `null` where mode resolution has not run, is populated on any identity outside the four new pre-session harness refusals (including the unassigned named agent, whose facts ride the bounded `error.summary`), or is declared without its edge projection, pins, validator, fixture, and documented member sentence in the same phase (TDR-0033, TDR-0032 A-2)"
     - "A binding carries more than one seat, a seat map, or a repeated `--agent`/`--model`, a seat name is sent as `--agent` where it differs from the agent identity, a binding is carried through process-global state, a profile's N seats are collapsed into one spawn, or a role-less spawn binds a seat in any profile shape (DEC-13, TDR-0032 A-1, TC-HARNESS-011/015)"
+    - "The caller's agent identity reaches the resolution function from anywhere but the spawn/resume input's declared agent-identity member — an environment variable, a process-global value, ambient state, an argv convention, an empty string read as `no-agent`, or a member added outside Phase 2 — or the binding is resolved before the spawn by a site other than the composition, so the resolution rule has no production call site and only a test-built fixture proves it (DEC-16, AC-F3-1, TC-HARNESS-011/015)"
     - "A named agent that the resolved profile assigns no seat is not refused before the lease claim and the attempt append, or its refusal carries a `detail.harness` member, a new error-table row, or an attempt record (AC-F3-4, NFR-1, M-11, TDR-0032 A-2)"
     - "A recognised-agent or recognised-model catalogue is read, injected, or declared anywhere in the delivery, a second pre-session child process is introduced for a catalogue or a configuration read, or an unknown agent or model is turned into a pre-session refusal (DEC-14, TDR-0032 C-2, AC-N1-1)"
     - "The deny-by-default spawn environment widens, an `OC_*` per-seat variable family is emitted on a harness that does not consume it, a record name reaches the child environment without a declaration, an ambient parent variable is forwarded, or the static allowlist is mutated by profile data (AC-F3-3, NG-10, RSK-6, DEC-8)"
@@ -637,6 +739,7 @@ tier:
     - "A zero-row capture for a session the dispatch ran and the store can read is reported as a pass, as absence, or as an empty success; absence is reused for damage or damage for absence (AC-F5-1, AC-F6-2, DEC-9)"
     - "A seat is claimed for a group whose observed agent differs from the binding's agent, or an unbound run's row carries anything but a null seat with `unresolved-seat` (AC-F5-1, AC-F5-3, TDR-0032 decision 4)"
     - "A missing duration, cost, token class, seat, version, observed agent, or observed model is fabricated as zero, an estimate, an empty identity read as a real one, a neighbour group's identity, or derived from the capture timestamp instead of being explicitly absent with a warning, a store-reported zero is converted into absence, or an absent observed axis drops a usage-bearing row instead of landing it with the declared absence marker (NFR-6, AC-F5-4, AC-F5-1)"
+    - "An absent observed agent or model is handled by widening the delivered non-null `agent`/`model` to nullable, by a fabricated or neighbouring identity, by `invalid-session-identity`, by a marker naming an axis other than the absent one, by a warning naming a different axis than the marker, or by a seat claimed for a group whose observed agent is unstated instead of the null seat with `unresolved-seat` (AC-F5-7, AC-F5-1, DEC-4)"
     - "The telemetry read path performs a write, a non-indexed or message/part full scan, or widens any of the 64/16/16/24 caps (NFR-3, TC-HARNESS-025)"
     - "The delivered six classification scenarios are renamed, reordered, or removed, the extension constant widens the floor constant, the propagation scenario does not assert one pair per invocation, or the extension is registered or executed through a second conformance path beside the delivered registry and its additive executor (AC-F7-1, TC-HARNESS-031/032/033)"
     - "Seat attribution becomes a second totals basis, so per-step rows and the session baseline are summed into one figure, or the seat becomes a spend breakdown dimension beside the delivered `role` (RSK-7, TC-HARNESS-026)"
@@ -650,7 +753,8 @@ phases:
   # ---------------------------------------------------------------------------
   # Phase 1 — Mode spike confirmation, the two governing decision records, the
   # staged TDR-0033 and TDR-0032, and the independent decision review
-  # (DEC-2, DEC-7, DEC-8, DEC-13, OQ-1, RSK-1, RSK-3, AC-F2-2, G-8, DoD clause 10).
+  # (DEC-2, DEC-7, DEC-8, DEC-13, DEC-16, OQ-1, RSK-1, RSK-3, AC-F2-2, G-8,
+  # DoD clauses 5 and 10).
   #
   # Goal: retire the one remaining question, record the decisions that gate every
   # later phase before any governed code exists, and have those records
@@ -673,16 +777,24 @@ phases:
   #      equal by TC-HARNESS-010 in Phase 2 and by TC-HARNESS-041 in Phase 8.
   #  1.3 The adapters-contract record (DEC-7) governing: the supported window and
   #      the two version refusals with the probe grammar and normalization
-  #      (DEC-11), the mode declaration and its origin, the surface-mapped
+  #      (DEC-11) — the record states the RULE (current minor line at delivery
+  #      time plus one previous minor) and its value at delivery (`2.3.x` plus
+  #      `2.2.x`), never a frozen pair presented as the rule — the mode
+  #      declaration and its origin, the surface-mapped
   #      propagation contract (DEC-8) with TDR-0032's cardinality, resolution and
   #      carrier rules restated as the record's contract (one seat per spawn,
   #      agent->seat resolution, one `--agent`/one `--model`, seat identity with
   #      no argv carrier, the unassigned refusal via `provider.profile.invalid`,
-  #      the role-less `unresolved-seat` disclosure), the expressibility-only
+  #      the role-less `unresolved-seat` disclosure) together with DEC-16's two
+  #      additive input members (the caller's agent identity and the binding, the
+  #      resolution the composition performs with the first and supplies as the
+  #      second), the expressibility-only
   #      refusal (DEC-6 narrowed by DEC-14 — explicitly NO recognised-model
   #      catalogue and no second child process), the recorded binding, the
   #      seat/resolved/observed/duration telemetry fields with the observed store
-  #      contract (DEC-9), and the absence taxonomy (DEC-10). It references
+  #      contract (DEC-9), and the absence taxonomy (DEC-10) including the
+  #      observed-axis absence marker and its `invalid-session-identity`
+  #      supersession (AC-F5-7). It references
   #      TDR-0033 and TDR-0032 rather than restating or re-deciding them, does not
   #      supersede ADR-0008, and follows the TDR-0016/TDR-0021 additive
   #      precedent.
@@ -697,7 +809,11 @@ phases:
   #      new records.
   #  1.6 `chg-GH-335-spike-evidence.md` in the change folder: the mode surfaces
   #      re-observed, the chosen-mode rationale, the store path and generation
-  #      facts the telemetry path consumes, the exact commands run, and a
+  #      facts the telemetry path consumes, the exact commands run, the harness
+  #      version line observed on this pass — `opencode v2.3.2`, normalizing to
+  #      `2.3.2` — recorded beside the intake pass's `opencode v2.2.5` line, so
+  #      the DoD's "one real harness version output is recorded" clause (clause 5)
+  #      has a real recorded output and two in-window lines, and a
   #      "Decision records" section naming all four records (mode, adapters
   #      contract, TDR-0033, TDR-0032) with their paths — the change-side link
   #      half of AC-F2-2.
@@ -777,17 +893,24 @@ phases:
 
   # ---------------------------------------------------------------------------
   # Phase 2 — Contract layer: four refusal identities, the closed vocabularies,
-  # the single-seat binding type, the additive telemetry fields, and the declared
-  # failure-envelope evidence member (F-1..F-7 vocabulary; AC-F2-2 content half,
-  # AC-N1-1 identity half; OQ-5, OQ-8, OQ-10, GAP-5, RSK-5, DEC-13, TDR-0033
-  # C-1..C-6, TDR-0032 C-1..C-6).
+  # the single-seat binding type, BOTH additive optional input members (the
+  # caller's agent identity and the binding), the additive telemetry fields, and
+  # the declared failure-envelope evidence member (F-1..F-7 vocabulary; AC-F2-2
+  # content half, AC-N1-1 identity half, AC-F5-7 no-widening half; OQ-5, OQ-8,
+  # OQ-10, GAP-5, RSK-5, DEC-13, DEC-16, TDR-0033 C-1..C-6, TDR-0032
+  # C-1..C-6).
   #
   # Goal: declare every name later phases assert through, in one commit, so no
   # consumer pins behaviour against a not-yet-declared identity and the closed
   # evidence slot cannot silently drop the new member.
   #  2.1 `packages/core/src/contracts/harness.ts`:
-  #      - the pinned supported-window data (`2.2.x` + `2.1.x`, DEC-1) with its
-  #        revisit note;
+  #      - the pinned supported-window data with the rule it applies (DEC-1):
+  #        the current minor line at delivery time plus one previous minor, whose
+  #        value at delivery is `2.3.x` + `2.2.x` (the installed
+  #        `opencode v2.3.2`; the intake pass applied the same rule as `2.2.x` +
+  #        `2.1.x` from `v2.2.5`). `2.2.5` stays an IN-WINDOW input so a real
+  #        observed line still proves the accepting direction beside a real
+  #        out-of-window one (`2.1.x`), and the constant carries its revisit note;
   #      - the accepted probe-output grammar constant (product token, optional
   #        `v`, three-part semver, newline-terminated) and the normalization
   #        rule as the SINGLE home of the pattern (DEC-11, AC-F1-5);
@@ -805,8 +928,31 @@ phases:
   #        binding was resolved for, the seat name, and that seat's resolved
   #        model in `provider/model#variant` form — never a seat map, plus the
   #        optional declared variable name for a harness that consumes
-  #        variables; and its additive optional `binding` member on
-  #        `HarnessSpawnInput` and `HarnessResumeInput` (DEC-8, DEC-13, DM-4);
+  #        variables;
+  #      - BOTH ADDITIVE OPTIONAL INPUT MEMBERS, declared HERE together (DEC-16,
+  #        DM-4, F-3's "Carrier"): (a) the caller's AGENT IDENTITY, its own
+  #        member distinct from the binding member — the value the pure
+  #        resolution function is called with and the value expressed as
+  #        `--agent` only through the resolved binding — whose ABSENCE is the
+  #        `no-agent` state (never an empty string, never an inferred value, never
+  #        an environment variable, a process-global value or ambient state); and
+  #        (b) the BINDING its resolution produces (`binding`), supplied as
+  #        per-spawn data. Both sit on `HarnessSpawnInput` and
+  #        `HarnessResumeInput` and both are optional, so every delivered call
+  #        site keeps compiling and the shipped generic `dispatch` sets neither
+  #        (DEC-15);
+  #      - PHASE RULE — NO LATER PHASE ADDS A CONTRACT MEMBER: both members are
+  #        declared in this one commit, and no later phase (3, 4, 5, 6, 7, 8) adds
+  #        a member to `HarnessSpawnInput`, `HarnessResumeInput`, or any other
+  #        `packages/core/src/contracts/*.ts` type. Phase 3 consumes the member in
+  #        its pure signature, Phase 4 reads it off the input and supplies the
+  #        resolved binding on its sibling member, and Phases 5 and 7 add members
+  #        to the DISPATCH attempt record (a different type, additively). A later
+  #        phase needing a port-input member reopens this phase; declaring it
+  #        under a scope this phase does not own would ship an undeclared contract
+  #        change (the commit primitive stages declared scope only) and would leave
+  #        the resolution rule provable again only from a fixture the test itself
+  #        built — the vacuity class this declaration closes;
   #      - the closed resolution-outcome vocabulary `binding` / `no-agent` /
   #        `unassigned` (TDR-0032 decision 2, A-1, A-2) and the expressibility
   #        predicate's shape (a non-empty provider and model segment, one variant
@@ -856,8 +1002,11 @@ phases:
   #      `model` are non-null and DEC-4 forbids a delivered-field change, an
   #      absent axis holds the declared empty-string placeholder — a placeholder
   #      that names no identity, never a fabricated or neighbouring model — while
-  #      `absentObservedAxes` is the machine-readable absence signal, so the live
-  #      store's 23 null session agents and 487 null models are representable and
+  #      `absentObservedAxes` is the machine-readable absence signal, so the store
+  #      rows that state neither identity — the observation is in the tens of
+  #      null agents and ~500 null models and grows with every intake pass (484 at
+  #      intake, 502 at delivery; the figures are observations, not fixture
+  #      constants) — are representable and
   #      neither an absence nor a present value is ever stated twice. The
   #      `agents`/`models` roll-ups keep grouping by the record's field values and
   #      gain no member; spend's `role` breakdown is unchanged (Phase 8.5).
@@ -898,10 +1047,17 @@ phases:
   #      projection, malformed-value drop, non-harness failure carries none),
   #      `tests/structure/result-contract.test.ts` (validator accepts a
   #      `detail.harness` envelope and rejects an out-of-vocabulary member), and
-  #      `tests/structure/harness-contract.test.ts` (the additive instance and
-  #      binding members, the single-seat shape, the four new codes, the
+  #      `tests/structure/harness-contract.test.ts` (the additive instance members
+  #      and BOTH input members — the agent identity and the binding, each
+  #      optional, each typed, the agent member's absence being `no-agent` and
+  #      never an empty string — the single-seat shape, the four new codes, the
   #      resolution-outcome vocabulary, the projection mapping, the absence of any
-  #      telemetry-absence code and of any code for the unassigned agent).
+  #      telemetry-absence code and of any code for the unassigned agent), and
+  #      `tests/types/harness.type-test.ts` (a type-level pin that a spawn/resume
+  #      input may omit both members, that a supplied agent identity is a plain
+  #      string in the input position, and that the delivered non-null telemetry
+  #      `agent`/`model` are NOT widened to nullable — AC-F5-7's no-widening
+  #      half).
   #  2.7 `doc/spec/features/feature-dispatch-engine.md`: the delivered sentence
   #      claiming that only `queue.single-flight` populates the envelope `detail`
   #      is replaced by the harness-refusal disclosure (TDR-0033 C-6).
@@ -919,10 +1075,22 @@ phases:
   #      `HARNESS_VERSION_PROBE_TIMEOUT_MS`, `DEFAULT_HARNESS_MODE`, the window and
   #      mode and verdict and origin vocabularies, the single-seat binding type,
   #      the resolution-outcome vocabulary, the observed-axis vocabulary, the
+  #      agent-identity carrier type where the contract declares one, the
   #      mandatory-field constants, `CommandFailureHarnessDetail` and its bound,
   #      and their `index.ts` re-exports) are APPENDED PER MODULE in each row's
   #      sorted order; no name is removed or renamed, and `error-table.ts` gains
-  #      no export name (only rows). Without this declaration the phase's own
+  #      no export name (only rows). BOTH INPUT MEMBERS ARE COVERED HERE: the
+  #      `harness.ts` row already carries the `HarnessSpawnInput` and
+  #      `HarnessResumeInput` type names and must reach exactness for every name
+  #      this phase exports (a row that omits the module's own new export fails the
+  #      bidirectional comparison), and the two MEMBERS are covered where members
+  #      live — `tests/structure/harness-contract.test.ts` for the runtime shape
+  #      (both members present and optional, the agent member's absence being
+  #      `no-agent` and never an empty string, the binding a single seat) and
+  #      `tests/types/harness.type-test.ts` for the optionality and the
+  #      no-widening pins — because the inventory compares exported NAMES, not
+  #      type members, so claiming it covers a member would be false. Without this
+  #      declaration the phase's own
   #      suites pass while the repository is red, and the fix would land in a later
   #      phase that stages only its declared scope.
   #
@@ -933,13 +1101,17 @@ phases:
   #   its projection, its pins, its validator, its fixture, and its documented
   #   sentence), 12 (the inventory discipline), C1-C3's contract half (TDR-0032's
   #   type and vocabularies), M3 (the expressibility-only predicate with no
-  #   catalogue).
+  #   catalogue); iteration 4 finding 1 (BOTH input members declared here, in one
+  #   phase, with the no-later-member rule) and iteration 4 finding 3 (the window
+  #   is the rule's value at delivery, `2.3.x` + `2.2.x`).
   #
   # AC/TC coverage: AC-F2-2 record-content half (TC-HARNESS-010 completes: the
   #   record's chosen mode equals `DEFAULT_HARNESS_MODE` and is a declared mode
   #   member), AC-N1-1 identity half (TC-HARNESS-035: four rows, the delivered
   #   nine unchanged, no telemetry-absence identity, no code for the unassigned
-  #   agent, the derived exits, and the three-member closed pin set).
+  #   agent, the derived exits, and the three-member closed pin set), and
+  #   AC-F5-7's NO-WIDENING half (the type pin in 2.6; the behaviour half is
+  #   TC-HARNESS-047 in Phase 5).
   #
   # Gate:
   #   pnpm typecheck
@@ -1012,7 +1184,7 @@ phases:
   # normalization, the declared mode with its origin, and the pure agent->seat
   # resolution (F-1, F-2 domain half, F-3 domain half; AC-F1-4, AC-F1-5,
   # AC-F2-4, AC-F3-2, AC-F3-3, AC-F1-1 parse half; DEC-1, DEC-8, DEC-11, DEC-13,
-  # OQ-4, OQ-10, TDR-0032 decision 2).
+  # DEC-16, OQ-4, OQ-10, TDR-0032 decision 2).
   #
   # Goal: make every decision a pure function over injected data — no process,
   # no store, no catalogue, no ambient environment read.
@@ -1037,10 +1209,15 @@ phases:
   #      variable name where the harness consumes variables); `no-agent` when the
   #      spawn names no agent (unasked, no binding, whatever the seat count —
   #      TDR-0032 A-1); `unassigned` when a named agent has no seat in a
-  #      multi-seat profile (TDR-0032 A-2). `agent` is the CALLER-SUPPLIED spawn
-  #      input (DEC-15): this module invents none, reads no configuration key for
-  #      one, and treats "no agent supplied" as the ordinary `no-agent` outcome
-  #      rather than an error. Plus the surface mapping — for a
+  #      multi-seat profile (TDR-0032 A-2). `agent` is the CALLER-SUPPLIED value
+  #      carried on the spawn/resume input's additive optional AGENT-IDENTITY
+  #      member (DEC-16, the member Phase 2.1 declares and Phase 4.3 reads): this
+  #      module invents none, reads no configuration key, environment variable, or
+  #      ambient state for one, treats the member's absence (and only its absence —
+  #      never an empty string) as the ordinary `no-agent` outcome rather than an
+  #      error, and is called by the composition and by nobody else in production,
+  #      so the resolution rule has a declared production call site. Plus the
+  #      surface mapping — for a
   #      per-invocation surface exactly one `--agent <agent identity>` (never the
   #      seat name where the two differ) and exactly one
   #      `--model <provider>/<model>[#<variant>]`, for a variable-consuming
@@ -1082,7 +1259,10 @@ phases:
   #        whose seat name differs from its agent identity, a multi-seat profile
   #        with an agent it does not assign (the `unassigned` case), the
   #        role-less case exercised against a multi-seat AND a single-seat
-  #        profile, one unrepresentable seat model per expressibility variant, the
+  #        profile with the member ABSENT — absence is the member's absence
+  #        alone, never an empty string, so no fixture encodes `no-agent` as
+  #        `""` — one
+  #        unrepresentable seat model per expressibility variant, the
   #        conflicting ambient parent values, and the undeclared record names with
   #        unique canaries. NO recognised-model catalogue fixture exists
   #        (DEC-14).
@@ -1153,8 +1333,8 @@ phases:
   # spawn, resume/attach under the same contract, and the refusal paths
   # (F-1 behaviour, F-2 behaviour, F-3 at its DEC-15 port boundary, F-4; AC-F1-1,
   # AC-F1-2, AC-F1-3, AC-F2-1, AC-F2-3, AC-F3-1 argv half, AC-F3-4, AC-F4-1;
-  # NFR-1, NFR-2, NFR-8, NFR-9; DEC-8, DEC-11, DEC-13, DEC-14, DEC-15, OQ-6,
-  # OQ-7, OQ-10, TDR-0032 decision 3).
+  # NFR-1, NFR-2, NFR-8, NFR-9; DEC-8, DEC-11, DEC-13, DEC-14, DEC-15, DEC-16,
+  # OQ-6, OQ-7, OQ-10, TDR-0032 decision 3).
   #
   # Goal: make the composed dispatch either run on a compatible harness with the
   # caller-supplied single-seat binding on the honoured surface, or refuse with a
@@ -1179,14 +1359,20 @@ phases:
   #      `timeout: HARNESS_VERSION_PROBE_TIMEOUT_MS` and the injected clock, then
   #      resolution carrying the verdict and the resolved mode into the composed
   #      dispatch.
-  #      THE BINDING IS A CALLER-SUPPLIED SPAWN INPUT (DEC-15), not a fact the
-  #      delivery already names: the composition resolves
-  #      `resolveBinding(profile, selection, agent)` from the agent the CALLER
-  #      supplies on the spawn call, supplies that binding on the spawn/resume
-  #      call as per-spawn data (never process-global state), and hands the
+  #      THE AGENT IS READ OFF THE INPUT MEMBER AND THE BINDING IS ITS RESULT
+  #      (DEC-16, DEC-15). The composition reads the caller-supplied agent
+  #      identity from the spawn/resume input's additive optional agent-identity
+  #      member — the member Phase 2.1 declares and Phase 3.3's resolver takes as
+  #      its third argument — calls `resolveBinding(profile, selection, agent)`
+  #      ONCE per spawn, and supplies the returned binding on the SAME input's
+  #      sibling `binding` member as per-spawn data (never process-global state).
+  #      It never derives the agent from an environment variable, a process-global
+  #      value, an argv convention, or ambient state, and it is the resolver's only
+  #      production caller: the resolution rule is exercised through the port, not
+  #      through a binding a test built for itself. The composition also hands the
   #      per-spawn record map to the environment builder's additive context; the
   #      static `harness.environment` allowlist is read, never mutated. The shipped
-  #      generic `dispatch` supplies no agent identity, so every shipped dispatch
+  #      generic `dispatch` sets neither input member, so every shipped dispatch
   #      resolves `no-agent`, sends no `--agent`/`--model`, records no binding, and
   #      lands a null seat with `unresolved-seat` — the honest state, and never
   #      counted as propagation evidence. NO PHASE adds an agent value flag or a
@@ -1218,8 +1404,9 @@ phases:
   #      carried on the pre-session path — in the delivered pre-session position,
   #      before `claimLease` and before the attempt append — without fabricating
   #      an attempt record, a lease, or a telemetry row. The binding the
-  #      composition resolved is passed to the spawn; recording it on the attempt
-  #      record is Phase 5's half (5.6).
+  #      composition resolved — from the agent identity the caller supplied on the
+  #      input member — is passed to the spawn on the sibling member; recording it
+  #      on the attempt record is Phase 5's half (5.6).
   #  4.6 Suites (new or extended): `harness-version-gate.test.ts` (M-01, M-02,
   #      V-01..V-04, V-07..V-09 with paired in-window controls, the zero-session
   #      assertion, and the `detail.harness` member set per identity),
@@ -1230,9 +1417,13 @@ phases:
   #      `--standalone` once in argv, transport call census, failure never
   #      switches mode), `harness-mode-refusal.test.ts` (M-03, both non-default
   #      modes, requested and available named, `mode` = requested),
-  #      `harness-profile-propagation.test.ts` (the binding carried as data and
-  #      the argv mapping: ONE `--agent` and ONE `--model` per invocation, never
-  #      two, never the seat name as `--agent`; spawn/deliver/resume share one
+  #      `harness-profile-propagation.test.ts` (driven THROUGH THE PORT: the case
+  #      supplies the agent identity on the spawn input's agent-identity member
+  #      and asserts the composition's own resolution — one `--agent` and one
+  #      `--model` per invocation, never two, never the seat name as `--agent`,
+  #      and a spawn with the member absent sending neither, so the resolution
+  #      rule is proven at its production call site rather than from a binding the
+  #      test built; spawn/deliver/resume share one
   #      contract), `harness-profile-unrepresentable.test.ts` (M-05's three
   #      expressibility variants with no partial binding, `mode` = resolved; plus
   #      M-11's `unassigned` case: `provider.profile.invalid`, agent/profile/
@@ -1244,7 +1435,10 @@ phases:
   #      once with the cap, spawn zero, over-cap truncation mark, idempotent kill,
   #      no orphan).
   #  4.7 Fixture modules under `tests/fixtures/harness/` EXTENDED from Phase 3
-  #      (never replaced): `profile.ts` gains the composed spawn/resume cases, the
+  #      (never replaced): `profile.ts` gains the composed spawn/resume cases —
+  #      including the case that supplies the agent identity on the input member
+  #      and the case that omits it, so both directions of the carrier are
+  #      exercised — the
   #      argv-and-environment recording spawn double (capturing each invocation's
   #      argv and environment so a doubled flag is observable), and the
   #      unassigned-agent fixture with its attempt-record and spawn seams;
@@ -1257,8 +1451,9 @@ phases:
   #   deadline, and one-invocation half (006), AC-F2-1 (007), AC-F2-3 (008),
   #   AC-F3-4 both halves (014), the argv halves of AC-F3-1/AC-F3-2 (016 and the
   #   propagation suite) — stated at the DEC-15 port boundary: a spawn whose
-  #   caller supplies an agent, and the role-less control that binds nothing —
-  #   with their complete oracles TC-HARNESS-011/015 in Phase 5, AC-F4-1 (016,
+  #   caller supplies an agent on the input member, and the role-less control that
+  #   binds nothing — with their complete oracles TC-HARNESS-011/015 in Phase 5,
+  #   AC-F4-1 (016,
   #   017, 018), AC-N1-1 refusal path (002, 003, 006, 008, 014).
   #
   # Gate:
@@ -1314,11 +1509,13 @@ phases:
   # Phase 5 — Attribution and per-seat telemetry from the observed store: the
   # per-attempt recorded facts, the moved capture seam, attribution by the UNION
   # of every recorded attempt's held identities, the session's own version, seat
-  # and both models, store-sourced durations, the absence taxonomy, the
+  # and both models, store-sourced durations, the absence taxonomy including the
+  # observed-axis absence, the
   # state-layer payload and the store location (F-5, F-6;
-  # AC-F3-1 row half, AC-F5-1..AC-F5-5, AC-F6-1, AC-F6-2; NFR-3, NFR-5, NFR-6,
-  # NFR-11; DEC-4, DEC-5, DEC-9, DEC-10, DEC-13, DM-4, DM-5, DM-6, DM-8, DM-9,
-  # DM-10, OQ-8, RSK-4, RSK-7, RSK-9, RSK-10, TDR-0032 decision 4).
+  # AC-F3-1 row half, AC-F5-1..AC-F5-5, AC-F5-7, AC-F6-1, AC-F6-2; NFR-3, NFR-5,
+  # NFR-6, NFR-11; DEC-4, DEC-5, DEC-9, DEC-10, DEC-13, DEC-16, DM-4, DM-5,
+  # DM-6, DM-8, DM-9, DM-10, OQ-8, RSK-4, RSK-7, RSK-9, RSK-10, TDR-0032
+  # decision 4).
   #
   # Goal: land rows a reader can attribute and a reader cannot misread, sourced
   # from the store that exists and cited from the run that produced them.
@@ -1346,10 +1543,23 @@ phases:
   #      marker, while a malformed or unusable group identity is still classified
   #      as delivered. The delivered suite oracles that asserted the old
   #      classification are Phase 5's owned updates (5.10), not an escalation.
+  #      AC-F5-7's FIVE OBLIGATIONS, stated here as behaviour and proven by
+  #      TC-HARNESS-047 (5.14): (i) the row LANDS — the mandatory set is the
+  #      session identity plus one observable usage fact, and an unstated identity
+  #      axis is not a usage fact; (ii) `absentObservedAxes` names EXACTLY the
+  #      absent axis (and only that axis, never both when one is stated); (iii) the
+  #      delivered non-null `agent`/`model` field holds the declared
+  #      empty-string placeholder and is NOT widened to nullable; (iv) the
+  #      delivered `optional-field-absent` warning names the SAME axis, and the
+  #      delivered `invalid-session-identity` is NOT emitted for that group; and
+  #      (v) when the group's observed agent is unstated the seat claim degrades to
+  #      a NULL SEAT with `unresolved-seat` — it never asserts the recording
+  #      attempt's seat, because no observed agent can equal the binding's agent.
   #      Attach the binding's facts
   #      ONLY to the group whose observed agent equals the binding's agent (any
   #      other group carries a null seat with `unresolved-seat` and the
-  #      agent-divergence warning), warn on model divergence while keeping both
+  #      agent-divergence warning — the unstated case included), warn on model
+  #      divergence while keeping both
   #      values (DEC-5), read the five token classes and calls from usage-bearing
   #      message rows, record a reported zero cost AS reported, yield null with the
   #      declared warning where the store exposes no cost source, take durations
@@ -1381,12 +1591,20 @@ phases:
   #      fields and every declared warning reason, and a pre-change payload still
   #      parses with those fields explicitly absent. It persists NO separate
   #      observed-model member: the delivered `agent`/`model` are that fact
-  #      (Phase 2.2), so a row states each observed identity exactly once. This
+  #      (Phase 2.2), so a row states each observed identity exactly once. The
+  #      declared empty-string placeholder in `agent`/`model` SURVIVES this
+  #      projection unchanged — it is never coerced to `null`, never dropped as an
+  #      empty value, and never re-read as a real identity — because the
+  #      machine-readable absence signal is `absentObservedAxes`, not the field's
+  #      emptiness (AC-F5-7); a round trip of a placeholder-bearing row therefore
+  #      returns the marker, the placeholder, and the same-axis warning intact.
+  #      This
   #      edit is REQUIRED: without it the fields are dropped before the ledger and
   #      AC-F5-1's landed rows cannot carry them. Its round trip is asserted in
   #      this phase's gate.
   #  5.6 THE RUN RECORD AND THE CAPTURE SEAM (readiness iteration 2 finding C3,
-  #      iteration 3 finding 3; DM-8, TDR-0032 decision 4 and implementation step
+  #      iteration 3 finding 3, iteration 4 finding 1; DM-8, DEC-16, TDR-0032
+  #      decision 4 and implementation step
   #      4). Capture must cite the recorded runs instead of re-deriving them, so
   #      this phase lands every half in one commit:
   #      - `packages/core/src/contracts/dispatch.ts`: additive OPTIONAL
@@ -1396,8 +1614,13 @@ phases:
   #        payload schema bump, and a pre-change record stays readable with both
   #        facts classified absent.
   #      - `packages/core/src/app/dispatch.ts`: the attempt append writes those
-  #        facts from the run it just executed (the handle it acquired and the
-  #        binding it supplied to the spawn); a role-less run appends the held
+  #        facts from the run it just executed — the handle it acquired and the
+  #        binding THE COMPOSITION RESOLVED for that spawn (from the agent identity
+  #        the caller supplied on the spawn input's agent-identity member, DEC-16)
+  #        and passed on the spawn's binding member. The append records that
+  #        resolved value; it does not resolve, re-derive, or pre-resolve a binding
+  #        of its own, and no binding exists before the composition resolves one.
+  #        A role-less run appends the held
   #        identity and no binding; a pre-session refusal still appends none.
   #      - `packages/core/src/app/dispatch-ledger.ts`: the structural attempt
   #        guard validates both additive facts when present (a malformed binding
@@ -1476,7 +1699,10 @@ phases:
   #      importer suites and the golden regenerator compile. Variants are declared
   #      by NAMED REMOVAL (missing optional column, null/inverted/equal timestamp
   #      pair, reported zero cost, no cost source, missing token class, missing
-  #      version, version drift, unresolved seat, no-usage held session, orphan
+  #      version, version drift, an UNSTATED OBSERVED AGENT and separately an
+  #      UNSTATED OBSERVED MODEL — each with a usage fact present, so the row must
+  #      land with the absence marker and the placeholder (AC-F5-7) —, unresolved
+  #      seat, no-usage held session, orphan
   #      and unrelated sessions, over-cap populations, unrecognised generation,
   #      permission-denied, not-a-database, torn schema, absent session, plus the
   #      group-scoping and agent-divergence variants). Every variant is built in a
@@ -1496,7 +1722,12 @@ phases:
   #      no harness-version column, no populated tool source, attribution by the
   #      held identities of the recorded attempts, and the declared
   #      observed-identity absence replacing the old `invalid-session-identity`
-  #      classification of an unreadable group identity), and
+  #      classification of an unreadable group identity, with AC-F5-7's oracles
+  #      asserted on the rebuilt fixtures: the marker names the absent axis, the
+  #      non-null field holds the declared placeholder, `optional-field-absent`
+  #      names the same axis, `invalid-session-identity` is not emitted, and the
+  #      unstated observed agent's group carries a null seat with
+  #      `unresolved-seat`), and
   #      `harness-telemetry-drift.test.ts` (its
   #      no-warning positive control now carries the declared tool-source
   #      absence). This is the declared exception to "delivered controls are not
@@ -1557,13 +1788,55 @@ phases:
   #      binding and the role-less absence are read from that attempt's recorded
   #      facts (5.6) and compared against the landed row, so the run fact and the
   #      row are one claim rather than two.
+  #  5.14 `tests/behaviour/harness-telemetry-observed-axis-absence.test.ts` (new,
+  #      TC-HARNESS-047, AC-F5-7, AC-F5-1, NFR-6) — the observed-axis absence
+  #      oracle, over the 5.8 variants (every variant carries the session identity
+  #      and at least one usage fact; the type half runs in
+  #      `tests/structure/harness-contract.test.ts`, re-run here). Variants: (1)
+  #      agent axis unstated with the model present; (2) model axis unstated with
+  #      the agent present; (3) BOTH axes unstated; (4) the complete control; (5)
+  #      variant 1 with a recorded binding — the null-seat case. It asserts, on the
+  #      LANDED row rather than on the
+  #      extractor's internals: (i) the row EXISTS in every variant (the mandatory
+  #      set is the
+  #      session identity plus one observable usage fact — an unstated identity
+  #      axis is not a usage fact — so no usage-bearing row is dropped and none
+  #      becomes a failed session); (ii) `absentObservedAxes` names exactly the
+  #      absent axis — `agent` only on variant 1, `model` only on variant 2, and
+  #      exactly `{agent, model}` on variant 3, never an entry for an axis the
+  #      store states; (iii) the delivered non-null `agent`/`model` field holds the
+  #      DECLARED empty-string constant (so a different sentinel fails), which
+  #      names no identity and matches no
+  #      neighbouring group; (iv) the delivered `optional-field-absent` warning
+  #      names the SAME axis as the marker, and the delivered
+  #      `invalid-session-identity` is NOT emitted for that group (the
+  #      supersession, F-6) — while the unusable-identity control still emits it,
+  #      so a change that deleted the classification everywhere fails;
+  #      (v) no delivered field was widened to nullable (the type pin is Phase
+  #      2.6, the runtime assertion and the projection's no-null cast are here);
+  #      and (vi) on variant 5 the row's `seat === null` with `unresolved-seat`
+  #      even though the run recorded a binding — the binding's seat is never
+  #      asserted on a group whose agent the store does not state — with variant 2
+  #      as the contrast where the matching observed agent still receives the
+  #      binding's seat. The complete control (variant 4) carries no marker, no
+  #      placeholder and no `optional-field-absent` warning and still attaches its
+  #      seat — the non-vacuity control (§4.2 rule 1). The delivery-observation
+  #      null counts are cited in the test plan as a drifting observation and are
+  #      never a fixture constant here.
   #
-  # AC/TC coverage: AC-F3-1 row half and AC-F5-1 (011, 019), the recorded-binding
+  # AC/TC coverage: AC-F3-1 row half and AC-F5-1 (011, 019; 047 also satisfies
+  #   AC-F5-1's unstated-axis clause through the declared marker), the
+  #   recorded-binding
   #   and role-less halves of AC-F3-1/AC-F3-2 (015), AC-F5-2 (020), AC-F5-3 (021),
   #   AC-F5-4 (022, 028), AC-F5-5 (023, 025, 043, 044 — 043 carries the
   #   two-attempt union, the per-attempt binding attachment, the counted
   #   unattributed attempt, the empty-union `skipped-gap`, and the union-derived
-  #   compaction set), AC-F6-1 (023), AC-F6-2 (023, 024, 028, 044), NFR-3 (025),
+  #   compaction set), AC-F5-7 (047 — the absent observed axis still lands, the
+  #   marker names that axis, the non-null field holds the declared placeholder,
+  #   `optional-field-absent` names the same axis, `invalid-session-identity` is
+  #   not emitted, no field is widened, and the unstated observed agent yields a
+  #   null seat with `unresolved-seat`), AC-F6-1 (023), AC-F6-2 (023, 024, 028,
+  #   044), NFR-3 (025),
   #   totals basis (026), NFR-5 (027), store generations and tolerance (028),
   #   AC-F5-1 zero-row failure (011, 019, 043).
   #
@@ -1581,6 +1854,7 @@ phases:
   #   bun test tests/behaviour/harness-telemetry-bounds.test.ts
   #   bun test tests/behaviour/harness-telemetry-seat-totals.test.ts
   #   bun test tests/behaviour/harness-telemetry-attribution.test.ts
+  #   bun test tests/behaviour/harness-telemetry-observed-axis-absence.test.ts
   #   bun test tests/behaviour/harness-telemetry-privacy.test.ts
   #   bun test tests/behaviour/harness-profile-per-spawn.test.ts
   #   bun test tests/behaviour/harness-telemetry-opencode.test.ts
@@ -1609,6 +1883,11 @@ phases:
   #   union, the per-attempt binding attachment, the counted unattributed
   #   attempt, the empty-union `skipped-gap`, and the union-derived compaction
   #   set), harness-telemetry-privacy,
+  #   harness-telemetry-observed-axis-absence (TC-HARNESS-047 complete: the landed
+  #   row, the single-axis marker, the declared placeholder, the same-axis
+  #   warning, the `invalid-session-identity` non-emission, the no-widening
+  #   assertion, and the null seat with `unresolved-seat` for an unstated observed
+  #   agent),
   #   harness-profile-per-spawn (TC-HARNESS-015 complete),
   #   harness-telemetry-opencode and harness-telemetry-opencode-orphan-scope
   #   (rebuilt oracles), harness-telemetry-drift (adapted positive control),
@@ -1623,7 +1902,7 @@ phases:
   #   propagation suite and the delivered claude telemetry suites as controls.
   # ---------------------------------------------------------------------------
   - id: 5
-    title: "Attribution and per-seat telemetry from the observed store: the per-attempt recorded facts, the moved capture seam, attribution by the union of every recorded attempt's held identities, session version, seat and both models with group scoping, store-sourced durations, the absence taxonomy, the state payload allowlist, and the store-location reconciliation"
+    title: "Attribution and per-seat telemetry from the observed store: the per-attempt recorded facts, the moved capture seam, attribution by the union of every recorded attempt's held identities, session version, seat and both models with group scoping, store-sourced durations, the absence taxonomy including the observed-axis absence, the state payload allowlist, and the store-location reconciliation"
     kind: delivery
     summary: "feat(harness): attribute telemetry per seat from the store and recorded attempts"
     scope:
@@ -1658,6 +1937,7 @@ phases:
         - tests/behaviour/harness-telemetry-bounds.test.ts
         - tests/behaviour/harness-telemetry-seat-totals.test.ts
         - tests/behaviour/harness-telemetry-attribution.test.ts
+        - tests/behaviour/harness-telemetry-observed-axis-absence.test.ts
         - tests/behaviour/harness-telemetry-privacy.test.ts
         - tests/behaviour/harness-telemetry-opencode.test.ts
         - tests/behaviour/harness-telemetry-opencode-orphan-scope.test.ts
@@ -1699,10 +1979,12 @@ phases:
   #      - a `runHarnessConformanceScenario`-shaped executor consumes
   #        `{ registration, scenarioId, io, deps }` and returns the scenario's
   #        declared outcome, with the facts injected as data (probe outcome,
-  #        requested mode, resolved single-seat binding, store row set) and no
+  #        requested mode, the caller-supplied agent identity and the resolved
+  #        single-seat binding it produced (DEC-16), store row set) and no
   #        live resolution, no catalogue, and no child process (DEC-14);
   #      - the `profile-propagation` scenario asserts exactly one
-  #        `--agent`/`--model` pair per invocation and one seat per spawn, and
+  #        `--agent`/`--model` pair per invocation, one seat per spawn, the
+  #        binding's agent identity equal to the supplied agent identity, and
   #        fails an invocation carrying two of either (TDR-0032 decision 5);
   #      - `harnessConformanceViolations` names both the harness and the missing
   #        scenario, and fails an identity with no registered scenario through a
@@ -1739,8 +2021,12 @@ phases:
   #      current-only-extractor, zero-row-as-pass,
   #      absence-as-capture-failure, capture-failure-as-absence,
   #      ignore-missing-scenario) over the re-derived fixtures Phase 5 landed. The
-  #      seat rules are proven by TC-HARNESS-011/015/019/021 (behaviour), not by
-  #      widening this declared mutant set.
+  #      seat rules are proven by TC-HARNESS-011/015/019/021 (behaviour), and the
+  #      observed-axis absence rules — the landed row, the single-axis marker, the
+  #      declared placeholder, the same-axis warning, the
+  #      `invalid-session-identity` non-emission, the no-widening assertion, and
+  #      the null seat with `unresolved-seat` — by TC-HARNESS-047 (behaviour), not
+  #      by widening this declared mutant set.
   #  6.7 `tests/checks/harness-determinism.test.ts` (update) and
   #      `tests/checks/harness-hermetic.test.ts` (new): byte-identical repeat
   #      output over identical injected facts with shuffled store order across
@@ -1756,11 +2042,21 @@ phases:
   #      fixtures (probe outcomes, invocation-surface echo, store rows) with no
   #      process and no store.
   #  6.10 `tests/structure/harness-probe-construction-site.test.ts` (new,
-  #      TC-HARNESS-046, spec §17.2 clause 6): scans the production composition
-  #      and asserts exactly ONE construction site of the probe seam — the
-  #      dispatch path's harness resolution — with every other occurrence an
-  #      injected double under `tests/**`; non-vacuity is a temp-copy mutant that
-  #      adds a second call site and must fail naming the added file; the check is
+  #      TC-HARNESS-046, spec §17.2 clause 6): TWO COUNTS, STATED SEPARATELY,
+  #      because they are not the same number. It asserts exactly ONE
+  #      CONSTRUCTION site of the probe seam — the composition in
+  #      `packages/cli/src/production.ts`, which builds the production probe and
+  #      hands it to harness resolution — and exactly ONE INVOCATION site of the
+  #      injected probe — `resolveHarnessInstance` in
+  #      `packages/core/src/domain/harness-registry.ts`, which legitimately calls
+  #      the injected function once per resolution. A naive reference-count scan
+  #      would find two legitimate occurrences and either fail spuriously or be
+  #      loosened until it proves nothing, so the check distinguishes
+  #      construction from invocation by the seam's identity (the value built
+  #      versus the parameter called). Every other occurrence is an injected double
+  #      under `tests/**`; non-vacuity is a temp-copy mutant that adds a SECOND
+  #      CONSTRUCTION site (not a second reference) and must fail naming the added
+  #      file; the check is
   #      discovered by `bun test tests/structure` and therefore by `pnpm check`,
   #      and its verdict is recorded in the change's evidence. Zero live probe
   #      invocations, zero sockets, and no diff against a moving base branch.
@@ -1785,7 +2081,8 @@ phases:
   #
   # Suites left green: conformance (classification floor unchanged, extension
   #   proven through the executor), conformance-coverage,
-  #   harness-probe-construction-site (one production site, mutant fails),
+  #   harness-probe-construction-site (one production construction site and one
+  #   invocation site, mutant fails),
   #   harness-refusal-side-effects (M-01..M-05, M-11, P-01..P-04), harness-mutants,
   #   harness-determinism, harness-hermetic, harness-output-bounds, fixture-privacy,
   #   content-inventory; delivered controls harness-ci-parity and
@@ -1926,16 +2223,22 @@ phases:
   # ---------------------------------------------------------------------------
   # Phase 8 — Documentation reconciliation, the human-gated live observation, the
   # changeset, and the release obligations (G-8, §17.2 Definition of Done,
-  # AC-F2-2 link half, AC-F5-6; TC-HARNESS-041, TC-HARNESS-045).
+  # AC-F2-2 link half, AC-F5-6; TC-HARNESS-041, TC-HARNESS-045; DEC-15, DEC-16).
   #
   # Goal: make every page that states the harness contract true again, record the
   # one live fact no fixture may claim, and declare the release.
   #  8.1 `doc/spec/features/feature-harness-adapters.md`: the pinned window with
-  #      the probe grammar and normalization and its two refusals, the mode
+  #      the RULE beside its value at delivery (`2.3.x` + `2.2.x`, re-evaluated
+  #      when the harness minor advances — `2.2.x` + `2.1.x` was the same rule at
+  #      intake), the probe grammar and normalization and its two refusals, the
+  #      mode
   #      declaration with its observed surface mapping and its origin, the
   #      surface-mapped propagation contract as TDR-0032 states it — one seat per
-  #      spawn resolved from the CALLER-SUPPLIED agent identity at the harness port
-  #      (DEC-15: the shipped generic `dispatch` supplies none, so its spawns bind
+  #      spawn resolved by the composition from the CALLER-SUPPLIED agent identity
+  #      on the spawn/resume input's agent-identity member (DEC-16: both additive
+  #      optional input members, the agent identity and the binding, are contract
+  #      data; DEC-15: the shipped generic `dispatch` sets neither, so its spawns
+  #      bind
   #      nothing and are disclosed `unresolved-seat`), exactly one `--agent
   #      <agent>` and one `--model <provider>/<model>[#<variant>]`, the seat
   #      identity with no argv carrier and recorded on the run, the expressibility
@@ -1943,8 +2246,10 @@ phases:
   #      `provider.profile.invalid` with its facts in the bounded `error.summary`,
   #      and the role-less `unresolved-seat` disclosure — plus resume/attach under
   #      the same contract, and the seat/resolved/observed/duration telemetry
-  #      fields with group scoping, both divergence axes, and the absence
-  #      taxonomy; linking the integration-mode record.
+  #      fields with group scoping, both divergence axes, the absence
+  #      taxonomy and the observed-axis absence marker with its
+  #      `invalid-session-identity` supersession (AC-F5-7); linking the
+  #      integration-mode record.
   #  8.2 `doc/spec/features/feature-config-layer.md`: the `harness.mode` row and
   #      the store-location semantics — `harness.stores.opencode.databasePath`
   #      reconciled with the harness data directory, the observed `OPENCODE_DB`
@@ -1955,6 +2260,9 @@ phases:
   #      (`absentObservedAxes` over the closed `agent`/`model` vocabulary, with the
   #      delivered `agent`/`model` being the harness-reported agent and observed
   #      model and the delivered empty-string placeholder under absence), the
+  #      supersession of the delivered `invalid-session-identity` for a merely
+  #      unstated axis (AC-F5-7), the null seat with `unresolved-seat` that an
+  #      unstated observed agent forces, the
   #      model, agent and version divergence warnings, the group-scoping rule, and
   #      the corrected store contract under the unchanged schema identity.
   #  8.4 `doc/spec/features/feature-state-layer.md`: the `harness.telemetry`
@@ -1975,17 +2283,26 @@ phases:
   #      channel, the role-less disclosure, and the removal of the "no other
   #      dispatch refusal populates it" claim (TDR-0033, TDR-0032).
   #  8.7 `doc/spec/features/feature-adapter-ports.md`: the `HarnessInstance`
-  #      additive members, the single-seat binding-carrying spawn/resume inputs,
-  #      and the builder context, with the port family unchanged.
-  #  8.8 `doc/spec/features/feature-session-database-admin.md`: the opencode
-  #      attribution claim is corrected — the store carries no work-item column,
-  #      so attribution is the UNION of the held session identities and recorded
+  #      additive members, the spawn/resume inputs' TWO additive optional members —
+  #      the caller's agent identity and the binding its resolution produces, both
+  #      optional so every delivered call site is unchanged (DEC-16) — and the
+  #      builder context, with the port family unchanged.
+  #  8.8 `doc/spec/features/feature-session-database-admin.md` AND
+  #      `doc/spec/features/feature-closeout.md`: the opencode
+  #      attribution claim is corrected in both pages — the store carries no
+  #      work-item column, so attribution is the UNION of the held session
+  #      identities and recorded
   #      bindings across every dispatch attempt the state layer records for the
   #      work item (DM-8), with the counted unattributed attempt and the delivered
   #      `skipped-gap`/`session-attribution-unavailable` outcome on an empty union,
   #      the compaction checkpoint reporting that union's sorted identity set under
   #      the delivered session cap, and the store path being the harness data
-  #      directory with its `OPENCODE_DB` override.
+  #      directory with its `OPENCODE_DB` override. `feature-closeout.md` is the
+  #      page that still states the work-item-root attribution this change
+  #      REPLACES (the session-compaction section), so it is reconciled in the same
+  #      commit as the page beside it rather than left as a stale attribution
+  #      contract; leaving it alone is what readiness iteration 4 (finding 4)
+  #      named.
   #  8.9 `doc/quality/test-specs/test-spec-dispatch-engine.md`: the attempt
   #      projection with its additive facts, the additive envelope `detail`
   #      member, and the four refusal identities plus the reused M-11 identity.
@@ -1999,11 +2316,20 @@ phases:
   #      mode record while the change artifacts name it — the link half of AC-F2-2
   #      that TC-HARNESS-010 deliberately does not own. TDR-0031 is an unrelated
   #      GH-293 record and is neither asserted nor referenced here.
-  #  8.12 `chg-GH-335-live-observation.md` (TC-HARNESS-045, AC-F5-6): date, the
-  #      harness version output, the HARNESS-PORT SPAWN invocation with the
-  #      CALLER-SUPPLIED agent identity it carried and how it reached the port (the
-  #      observation need not run through the `dispatch` command, which supplies no
-  #      agent identity — DEC-15), the redacted session identity, the captured
+  #  8.12 `chg-GH-335-live-observation.md` (TC-HARNESS-045, AC-F5-6, DoD clauses 4
+  #      and 5): the date; the harness version line this delivery host reports —
+  #      `opencode v2.3.2`, normalizing to `2.3.2`, i.e. an IN-WINDOW line under
+  #      the delivered window (the intake `opencode v2.2.5` line is recorded in
+  #      Phase 1's spike evidence, so clause 5 has one real recorded output at
+  #      each pass and the observation runs against the line the window was pinned
+  #      from); the HARNESS-PORT SPAWN invocation with the
+  #      CALLER-SUPPLIED agent identity it carried and how it reached the port —
+  #      supplied on the spawn/resume input's additive optional agent-identity
+  #      member (DEC-16), not through an environment variable or an argv
+  #      convention; the
+  #      observation need not run through the `dispatch` command, which sets
+  #      neither input member and therefore supplies no
+  #      agent identity — DEC-15); the redacted session identity, the captured
   #      row's stamped version/seat/tokens, the resolved-versus-observed model and
   #      agent comparison, and the store path family. A role-less run binds nothing
   #      and is recorded as an `unresolved-seat` OBSERVATION that is never accepted
@@ -2023,8 +2349,11 @@ phases:
   #      feature page is created (declared as a conditional edit).
   #  8.15 `chg-GH-335-pm-notes.yaml` records the delivery evidence required by the
   #      Definition-of-Done clauses (per-phase gate results, the plan verdicts, the
-  #      single-probe-site verdict, the independent decision-review verdict, the
-  #      union-attribution evidence, the live-observation outcome — or its accepted
+  #      single-production-probe verdict with its construction and invocation
+  #      counts stated separately, the independent decision-review verdict, the
+  #      union-attribution evidence, the observed-axis absence evidence
+  #      (TC-HARNESS-047), the recorded `opencode v2.3.2` line and its `2.3.2`
+  #      normalization (clause 5), the live-observation outcome — or its accepted
   #      deferral with its exact boundary and accepting human/PM decision — and the
   #      range-gate verdict).
   #  8.16 `.changeset/gh-335-opencode-harness-telemetry-minor.md`: one lockstep
@@ -2054,7 +2383,7 @@ phases:
   #   bun test tests/structure/content-inventory.test.ts
   #   git diff --check
   #
-  # Exit: all 26 ACs are met and every declared phase is complete (AC -> PHASE
+  # Exit: all 27 ACs are met and every declared phase is complete (AC -> PHASE
   #   MATRIX), or the only deferral is the human-gated live observation accepted
   #   and recorded by the human owner/`@pm` with its exact boundary stated and
   #   every offline criterion green; the four new identities and the nine
@@ -2087,6 +2416,7 @@ phases:
         - doc/spec/features/feature-dispatch-engine.md
         - doc/spec/features/feature-adapter-ports.md
         - doc/spec/features/feature-session-database-admin.md
+        - doc/spec/features/feature-closeout.md
         - doc/quality/test-specs/test-spec-dispatch-engine.md
         - doc/decisions/00-index.md
         - doc/planning/oss-tooling/backlog.md
