@@ -161,7 +161,7 @@ export type DispatchPreflightPort = () => Promise<DispatchPreflightResult>;
 
 /**
  * The harness resolution facts the four pre-session harness refusals disclose
- * (GH-335 F-1/F-2, TDR-0033). The composition resolves them once per dispatch.
+ * (GH-335 F-1/F-2, TDR-0037). The composition resolves them once per dispatch.
  */
 export type DispatchHarnessFacts = {
   readonly kind: HarnessKind;
@@ -292,12 +292,12 @@ export type DispatchPorts = {
   readonly prefillCostAcknowledged?: boolean;
   /** The caller-supplied agent identity for this run (DEC-16); absent is role-less. */
   readonly harnessAgent?: string;
-  /** The composition-resolved single-seat binding for this run (TDR-0032 A-4). */
+  /** The composition-resolved single-seat binding for this run (TDR-0036 A-4). */
   readonly harnessBinding?: HarnessSeatBinding;
   /**
    * The resolved harness facts, read lazily: the admission writes them for the
    * run in flight, so a pre-session refusal discloses them and a success records
-   * them on the attempt (GH-335 F-1/F-2, TDR-0033).
+   * them on the attempt (GH-335 F-1/F-2, TDR-0037).
    */
   readonly harnessFacts?: () => DispatchHarnessFacts | undefined;
   /** The pre-session harness admission; runs before the lease claim (NFR-1). */
@@ -324,7 +324,7 @@ export type DispatchRunResult =
         readonly eligibility?: readonly string[];
         /** The narrow credential-refusal marker; set only for `config.credential.missing`. */
         readonly trustedRefusal?: true;
-        /** The four pre-session harness facts (TDR-0033); the four refusals only. */
+        /** The four pre-session harness facts (TDR-0037); the four refusals only. */
         readonly harness?: CommandFailureHarnessDetail;
       };
     };
@@ -334,7 +334,7 @@ export type DispatchRunResult =
  *
  * Only the four new identities carry the member; the reused
  * `provider.profile.invalid` and the invalid-identity `config.value.invalid`
- * carry none (TDR-0032 A-2, TDR-0033).
+ * carry none (TDR-0036 A-2, TDR-0037).
  */
 export const harnessRefusalDetail = (
   code: string,

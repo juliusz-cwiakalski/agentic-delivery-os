@@ -20,6 +20,7 @@ export const GITLAB_ADAPTER_CONTRACT: AdapterContract = {
       { operation: "transition-work-item", reason: "adapter-not-implemented" },
       { operation: "write-comment", reason: "adapter-not-implemented" },
       { operation: "resolve-delivery-thread", reason: "adapter-not-implemented" },
+      { operation: "merge-delivery-request", reason: "adapter-not-implemented" },
     ],
     writableCarriers: [],
     readableCarriers: [],

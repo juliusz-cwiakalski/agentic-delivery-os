@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-QUEUE-READY
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-08
+last_updated: 2026-11-18
 owners: ["engineering"]
 service: delivery-os
 summary: "The read-only queue-ready ready-set command: the `queue ready` grammar and canonical-ref bounds, the six closed tri-state readiness conditions and their declared sources, the all-six-satisfied ready rule with named blocking conditions, provider-agnostic identity resolution and the numeric suffix bridge, close association and classification by the repository branch convention, deterministic class ranking, the six-group bounded reason vocabulary, the nine provider-derived output caps with the single `value-clamped` marker and deterministic byte-budget reduction, the bounded `delivery.queue-ready.v1` machine payload and human digest, the read-only and credential boundary posture, error-identity reuse, and the fixture corpus plus opt-in live-smoke evidence model."
 links:
-  related_changes: ["GH-176", "GH-183", "GH-238"]
-  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006", "ADR-0007", "ODR-0003"]
+  related_changes: ["GH-176", "GH-183", "GH-238", "GH-338"]
+  related_decisions: ["ADR-0003", "ADR-0004", "ADR-0006", "ADR-0007", "ODR-0003", "TDR-0032"]
   contracts:
     - "packages/core/src/contracts/queue-ready.ts"
 ---
@@ -24,7 +24,7 @@ Every candidate carries exactly six readiness conditions in a fixed order — `d
 
 The command also classifies each candidate as a close item or a new start. A close item is an open pull request associated with the candidate by the repository branch convention. `merge-ready` requires an observed approval on a non-draft open pull request; `review-pending` covers every other associated open pull request, including an unknown review signal. Close items rank above ready new starts.
 
-Machine mode returns one bounded `delivery.queue-ready.v1` payload in the standard `CommandResult` envelope. Human mode renders a deterministic digest from the same data. The command performs zero writes, fences, state mutations, network writes, provider-engine calls, child processes, and ambient credential reads. It reuses the delivered status read results and classifications and adds no adapter read, error-table row, configuration key, state-schema change, package, subpath, or runtime-API location. The status digest's M1-S10 ready-to-merge section consumes this same merge-ready/review-pending classification read-only; the queue-ready payload, ranking, and caps are unchanged by that consumption. Closeout is a separate mutating surface: queue ready does not import or compose the closeout engine, the git branch/checkout seam, or provider write operations, and its read-only guarantees are unchanged.
+Machine mode returns one bounded `delivery.queue-ready.v1` payload in the standard `CommandResult` envelope. Human mode renders a deterministic digest from the same data. The command performs zero writes, fences, state mutations, network writes, provider-engine calls, and ambient credential reads; it reuses the delivered status read results, whose provider reads ride the composed transport (the GitHub CLI transport or native `fetch`). It adds no adapter read, error-table row, configuration key, state-schema change, package, subpath, or runtime-API location. The status digest's M1-S10 ready-to-merge section consumes this same merge-ready/review-pending classification read-only; the queue-ready payload, ranking, and caps are unchanged by that consumption. Closeout is a separate mutating surface: queue ready does not import or compose the closeout engine, the git branch/checkout seam, or provider write operations, and its read-only guarantees are unchanged.
 
 The surrounding contracts are described in [Status Digest](feature-status-digest.md), [Provider Engine](feature-provider-engine.md), [State Layer](feature-state-layer.md), [Configuration Layer and Inspection](feature-config-layer.md), [Result Contract and Error Table](feature-result-contract.md), [Provider Client Seeds and Trap Catalogs](feature-provider-client-seeds.md), [Adapter Ports, Credential Resolution, and Embedded Metadata](feature-adapter-ports.md), and [Monorepo Scaffold and Toolchain](feature-monorepo-scaffold-toolchain.md). Package placement follows [ADR-0003](../../decisions/ADR-0003-oss-monorepo-structure.md); absence semantics follow [ADR-0004](../../decisions/ADR-0004-workitem-activity-timestamp-additive-v1.md) and [ADR-0006](../../decisions/ADR-0006-workitem-custom-fields-and-comment-omission-representation.md); park semantics follow [ADR-0007](../../decisions/ADR-0007-provider-engine-v1-placement-fail-loud-parks-cost-policy.md); the command name is locked by [ODR-0003](../../decisions/ODR-0003-cli-command-naming-v1-lock.md).
 
@@ -262,7 +262,7 @@ The contracts and domain import only the shared contracts and their own modules.
 
 - **Read-only by construction:** the command calls no write or fence API, no tracker, pull-request, or CI write, no provider engine, and no quota endpoint. It cannot mutate an artifact or provider state.
 - **Credential centralization:** the only credential access is the credential port resolving the declared GitHub credential reference. Command code reads no ambient environment and adds no secret-read allowlist entry.
-- **No shell or spawn:** repository binding and HEAD facts come from bounded git metadata reads through the repository adapter. The command spawns no child process and executes no shell.
+- **No shell or spawn for repository facts:** repository binding and HEAD facts come from bounded git metadata reads through the repository adapter; the command spawns no process for them and executes no shell. Its provider reads ride the reused status read results and the composed transport.
 - **Bounded addressing:** only the `origin` remote is read; only `github.com` is accepted; userinfo and credentials are discarded; non-GitHub hosts are unavailable, not attempted.
 - **Bounded parsing:** the local PM context uses the existing bounded YAML read; parse failures are classified as evidence, never raw parser output.
 - **Bounded input and output:** refs, conditions, evidence records, detail characters, provider-derived values, machine bytes, and human bytes are capped, with explicit truncation and `value-clamped` marking.
@@ -277,7 +277,7 @@ The contracts and domain import only the shared contracts and their own modules.
 | Non-verdict guarantee | An absent, failed, unattempted, unavailable, unobserved, or unresolved source never yields `satisfied`, never contributes to `ready`, and never prints as zero; no `merge-ready` without observed approval on a non-draft open pull request; no-run CI is never healthy. |
 | Identity truthfulness | Exact canonical matching and the unique numeric suffix bridge over full values; ambiguity and leading-zero mismatch stay unobserved; no substring, prefix-only, or numeric coercion. |
 | Bounds | Input refs ≤8; canonical ref ≤64 characters with over-length rejection; evidence ≤2 per condition; reasons ≤6; detail ≤160 code points; nine provider-derived caps applied by code point; serialized `data` ≤65 536 UTF-8 bytes; human ≤16 lines and 4 096 UTF-8 bytes, with byte-capped header fields and provider segments (32-byte segments; owner/name ≤128 and branch ≤256 UTF-8 bytes), a ≤400-byte candidate line, a ≤620-byte header plus summary, and a reverse-rank line drop that keeps the renderer total; every dropped, limited, or clamped case marked. |
-| Read-only and determinism | Zero writes, fences, state mutations, network writes, provider-engine calls, quota fetches, child processes, or ambient environment reads; identical injected inputs produce byte-identical payload and human text. |
+| Read-only and determinism | Zero writes, fences, state mutations, or network writes; zero provider-engine calls, quota fetches, or ambient environment reads; provider reads ride the composed transport and add no write and no spawn of their own beyond that edge; identical injected inputs produce byte-identical payload and human text. |
 | Read cost | At most three outbound read-only GitHub requests, one logical verified park-fold read, one configuration resolve, and one local PM-context read per invocation; zero retries or loops. |
 | Output contract | `--json` produces exactly one valid envelope; human mode produces one summary line plus one line per candidate; rendering performs zero extra reads. |
 | Error-table stability | Zero new rows or domain kinds; zero documented-table drift; the sync check stays green. |

@@ -116,6 +116,8 @@
             "name": "build",
             "status": "completed",
             "conclusion": "success",
+            "started_at": "2026-10-29T08:00:00Z",
+            "completed_at": "2026-10-29T08:02:30Z",
             "details_url": "https://api.github.example.com/group-placeholder/project-placeholder/checks/9001"
           },
           {
@@ -123,6 +125,8 @@
             "name": "test",
             "status": "completed",
             "conclusion": "failure",
+            "started_at": "2026-10-29T08:02:31Z",
+            "completed_at": "2026-10-29T08:09:59Z",
             "details_url": "https://api.github.example.com/group-placeholder/project-placeholder/checks/9002"
           },
           {
@@ -162,6 +166,62 @@
       "body": {
         "number": 601,
         "state": "closed"
+      }
+    },
+    {
+      "method": "PUT",
+      "url": "https://github.example.com/repos/owner-placeholder/project-placeholder/pulls/504/merge",
+      "status": 200,
+      "body": {
+        "sha": "3333333333333333333333333333333333333333",
+        "merged": true,
+        "message": "Pull Request successfully merged"
+      }
+    },
+    {
+      "method": "POST",
+      "url": "https://github.example.com/repos/owner-placeholder/project-placeholder/issues/601/comments",
+      "status": 201,
+      "body": {
+        "id": 9001
+      }
+    },
+    {
+      "method": "POST",
+      "url": "https://github.example.com/repos/owner-placeholder/project-placeholder/pulls",
+      "status": 201,
+      "body": {
+        "number": 610,
+        "title": "Conformance content write",
+        "state": "open",
+        "draft": false,
+        "merged": false,
+        "head": {
+          "ref": "feat/GH-338/conformance-content-write",
+          "sha": "2222222222222222222222222222222222222222"
+        },
+        "base": {
+          "ref": "main-tools"
+        }
+      }
+    },
+    {
+      "method": "PATCH",
+      "url": "https://github.example.com/repos/owner-placeholder/project-placeholder/pulls/504",
+      "status": 200,
+      "body": {
+        "number": 504,
+        "title": "Conformance content write updated",
+        "state": "open",
+        "draft": false,
+        "merged": false,
+        "head": {
+          "ref": "feat/GH-188/client-seeds-trap-catalogs",
+          "sha": "1111111111111111111111111111111111111111"
+        },
+        "base": {
+          "ref": "main-tools"
+        }
       }
     }
   ],
@@ -223,7 +283,9 @@
         "jobs": [
           {
             "jobName": "build",
-            "jobState": "succeeded"
+            "jobState": "succeeded",
+            "startedAt": "2026-10-29T08:00:00Z",
+            "completedAt": "2026-10-29T08:02:30Z"
           }
         ],
         "traceEvidence": [
@@ -242,7 +304,9 @@
         "jobs": [
           {
             "jobName": "test",
-            "jobState": "failed"
+            "jobState": "failed",
+            "startedAt": "2026-10-29T08:02:31Z",
+            "completedAt": "2026-10-29T08:09:59Z"
           }
         ],
         "traceEvidence": [
@@ -331,6 +395,26 @@
         }
       ],
       "updatedAt": "2026-10-29T08:00:00Z"
+    },
+    "change-lifecycle.merge-delivery-request": {
+      "merged": true,
+      "mergeCommitSha": "3333333333333333333333333333333333333333"
+    },
+    "change-lifecycle.comment": {
+      "commentId": "9001"
+    },
+    "change-lifecycle.create-delivery-request": {
+      "identity": {
+        "systemName": "github",
+        "entityId": "610"
+      },
+      "sourceRef": "feat/GH-338/conformance-content-write",
+      "targetRef": "main-tools",
+      "reviewState": "open",
+      "threads": [],
+      "headSha": "2222222222222222222222222222222222222222",
+      "sourceHeadSha": "2222222222222222222222222222222222222222",
+      "mergeableState": "unknown"
     }
   }
 }

@@ -3,13 +3,13 @@ ados_distribution: internal
 id: SPEC-VERIFY-GATES
 status: Current
 created: 2026-10-31
-last_updated: 2026-11-15
+last_updated: 2026-11-18
 owners: ["engineering"]
 service: delivery-os
 summary: "The verify gates surface: the config-declared merge battery (default five built-ins in shipped order), cited pass/fail/unknown verdicts, structured VerifyLedgerEvaluation consumption, deterministic open-PR resolution, read-specific 404 absence, shared status vocabulary, bounded deterministic output, the appended EVT-1 gate-verification record with byte-identical verdicts, the delivered-shape projection of that record's member gates (`member` dropped, order and count preserved) so the ledger reads back non-`torn`, the non-gating capsule `gate.outcome` append with a bounded disclosure, the three verify gates rows (`verify.gates.failed`, `verify.gates.unavailable`, and the narrowed-scope refusal with its `detail.suiteBreadth` evidence member), the additive `data.suiteBreadth`/`data.mirrorsJob` suite-breadth fields on both report types, the suite-map declaration's fail-closed document posture, its four-outcome breadth resolution, and its two map-side refusals with their one bounded `cause:` line, and the additive cross-repository report type: one shared definition of done over the declared member set with per-(member, gate) records, per-member CI corroboration and member verdicts, landing-ordered evidence, an untruncated blocking-member list, one review flow with a stable run identity, and the data-bearing negative report at exit 1 while the delivered member-less report keeps its literal overall and exits."
 links:
-  related_changes: ["GH-178", "GH-225", "GH-240", "GH-310", "GH-300"]
-  related_decisions: ["ADR-0003", "ADR-0006", "TDR-0005"]
+  related_changes: ["GH-178", "GH-225", "GH-240", "GH-310", "GH-300", "GH-338"]
+  related_decisions: ["ADR-0003", "ADR-0006", "TDR-0005", "TDR-0032"]
   contracts:
     - "packages/core/src/contracts/verify-gates.ts"
     - "packages/core/src/domain/verify-gates-members.ts"
@@ -31,11 +31,10 @@ battery. The overall result is `pass` only when every evaluated gate passes;
 any `fail` is definitive; `unknown` is never a pass. The battery is evaluated
 without short-circuit, so every report is complete.
 
-The command performs no merge, auto-merge, provider mutation, or child
-process. It performs bounded local reads (ledger, repository HEAD/branch, CI workflow,
+The command performs no merge, auto-merge, or provider mutation. It performs bounded local reads (ledger, repository HEAD/branch, CI workflow,
 and the project-committed configuration document) and at most one bounded page
 or item per provider source: one open-PR page, one matched detail read, one
-check-run page, and one work-item read. One bounded configuration-document
+check-run page, and one work-item read. Those provider reads travel through the injected transport, which the production composition may supply as the GitHub CLI transport, so the command itself spawns no process of its own. One bounded configuration-document
 resolution attempt is the only added access: at most one stat-class existence
 probe and at most one bounded content read, with no content read when the
 document is absent, performed with or without a declaration and adding no read of

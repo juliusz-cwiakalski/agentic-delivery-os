@@ -11,9 +11,12 @@ import {
   decodeMockTenant,
   type MockTenant,
 } from "@delivery-os/testkit";
-import { installThrowingFetchGuard } from "../../behaviour/providers/support";
+import {
+  installChildProcessGuard,
+  installThrowingFetchGuard,
+} from "../../behaviour/providers/support";
 
-export { installThrowingFetchGuard };
+export { installChildProcessGuard, installThrowingFetchGuard };
 
 const TENANT_ROOT = "tests/fixtures/providers/conformance";
 const PROVIDERS = ["github", "gitlab", "jira"] as const;

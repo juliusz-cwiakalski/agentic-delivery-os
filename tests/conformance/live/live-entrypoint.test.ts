@@ -172,6 +172,7 @@ const ALL_OPERATIONS: readonly AdapterOperation[] = [
   "read-pipeline-run",
   "write-comment",
   "resolve-delivery-thread",
+  "merge-delivery-request",
 ];
 
 const gapsExcept = (supported: readonly AdapterOperation[]): CapabilityGap[] => {
@@ -446,13 +447,43 @@ describe("TC-CONF-023 live read-only and no-mutation proof", () => {
   });
 
   test("an unsupported non-read step records its declared gap and never dispatches", async () => {
-    const { result } = await runOnce({ environment: githubOnlyEnvironment() });
+    // GitHub declares no gap once the backlog writes land, so the declared-gap
+    // control uses a registration whose declaration really carries the gap.
+    const control: ConformanceAdapterRegistration = {
+      provider: "github",
+      contract: {
+        adapterName: "github",
+        systemKind: "vcs",
+        capabilities: {
+          supportedOperations: ["read-work-item"],
+          declaredGaps: gapsExcept(["read-work-item"]),
+          writableCarriers: [],
+          readableCarriers: [],
+        },
+      },
+      buildClient: () => ({
+        readWorkItem: async () => ({ ok: true, value: controlWorkItem() }),
+      }),
+    };
+    const { result } = await runOnce({
+      environment: githubOnlyEnvironment(),
+      adapters: [control],
+    });
     const declareGap = result.artifact.steps.find(
       (step) => step.operation === "write-comment" && step.provider === "github",
     );
     expect(declareGap?.status).toBe("skipped");
     expect(declareGap?.skipKind).toBe("declared-gap");
     expect(declareGap?.skipReason).toBe("adapter-not-implemented");
+  });
+
+  test("the production GitHub comment write is a live-read-only deferral now that it is supported", async () => {
+    const { result } = await runOnce({ environment: githubOnlyEnvironment() });
+    const comment = result.artifact.steps.find(
+      (step) => step.operation === "write-comment" && step.provider === "github",
+    );
+    expect(comment?.status).toBe("skipped");
+    expect(comment?.skipKind).toBe("live-read-only");
   });
 
   test("both mutation counters are pinned to zero in every status", async () => {

@@ -1,6 +1,6 @@
 /**
  * TC-HARNESS-015 — propagation is per spawn, not process-global, and a role-less
- * spawn binds nothing in any profile shape (AC-F3-1, AC-F3-2, TDR-0032 A-1).
+ * spawn binds nothing in any profile shape (AC-F3-1, AC-F3-2, TDR-0036 A-1).
  */
 import { describe, expect, test } from "bun:test";
 import type { HarnessBindingResolution } from "../../packages/core/src/domain/index";

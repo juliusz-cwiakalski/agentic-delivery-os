@@ -107,7 +107,7 @@ export type OpencodeHarnessOptions = {
    */
   readonly versionVerdict?: HarnessVersionVerdict;
   readonly observedVersion?: string | null;
-  /** The resolved integration mode and its origin (GH-335 F-2, TDR-0034). */
+  /** The resolved integration mode and its origin (GH-335 F-2, TDR-0038). */
   readonly mode?: HarnessMode;
   readonly modeOrigin?: HarnessModeOrigin;
   /**
@@ -124,7 +124,7 @@ export type OpencodeHarnessOptions = {
     readonly mode: HarnessMode;
   };
   /**
-   * The injected pure binding seams (GH-335 F-3, TDR-0032).
+   * The injected pure binding seams (GH-335 F-3, TDR-0036).
    *
    * The adapter maps the caller-supplied agent identity and the resolved
    * single-seat binding onto the honoured surface; the rules themselves are the
@@ -370,7 +370,7 @@ type SessionRecord = {
   readonly handle: HarnessSessionHandle;
   readonly descriptor: HarnessSpawnInput["descriptor"];
   readonly completion: Promise<HarnessEvidence>;
-  /** The single-seat binding the spawn was resolved for (TDR-0032 A-4). */
+  /** The single-seat binding the spawn was resolved for (TDR-0036 A-4). */
   readonly binding?: HarnessSeatBinding;
 };
 
@@ -409,7 +409,7 @@ export const createOpencodeSession = (options: OpencodeHarnessOptions): HarnessS
   };
 
   /**
-   * The per-spawn binding check (GH-335 F-3, TDR-0032): the caller supplies one
+   * The per-spawn binding check (GH-335 F-3, TDR-0036): the caller supplies one
    * agent identity or none, and the composition supplies the resolver's single
    * seat. A named agent that arrives without a resolved binding is a contract
    * violation and never becomes a silent spawn; an unrepresentable resolved

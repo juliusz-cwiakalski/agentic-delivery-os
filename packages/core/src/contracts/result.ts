@@ -67,11 +67,11 @@ export type CommandResultDetail = {
   readonly harness?: CommandFailureHarnessDetail;
 };
 
-/** The bounded normalized-version member of the harness evidence slot (TDR-0033). */
+/** The bounded normalized-version member of the harness evidence slot (TDR-0037). */
 export const COMMAND_FAILURE_HARNESS_VERSION_MAX_CHARS = 32 as const;
 
 /**
- * The declared `detail.harness` evidence member (TDR-0033).
+ * The declared `detail.harness` evidence member (TDR-0037).
  *
  * Exactly four closed facts, populated only on the four new pre-session harness
  * refusals: the harness kind, the normalized observed version (explicit `null`

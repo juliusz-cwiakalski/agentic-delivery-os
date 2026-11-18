@@ -1,5 +1,5 @@
 ---
-id: TDR-0034
+id: TDR-0038
 decision_type: tdr
 status: Proposed
 created: 2026-11-18
@@ -68,13 +68,13 @@ links:
     - "packages/core/src/config/defaults.ts"
     - "packages/core/src/config/harness.ts"
   diagrams: []
-  decisions: ["ADR-0008", "TDR-0016", "TDR-0021", "TDR-0032", "TDR-0033"]
+  decisions: ["ADR-0008", "TDR-0016", "TDR-0021", "TDR-0036", "TDR-0037"]
   experiments: []
   metrics: []
   roadmap_items: ["M3-S1"]
 ---
 
-# TDR-0034: opencode Integration Mode — One Declared Default, Selected Never Inferred
+# TDR-0038: opencode Integration Mode — One Declared Default, Selected Never Inferred
 
 ## Context
 
@@ -117,7 +117,7 @@ The telemetry path opens the harness store read-only, sets `PRAGMA query_only` b
 
 ### C-5: The mode is additive within the delivered configuration and result contracts
 
-No configuration key is removed or renamed; the mode key is additive on the harness branch. No result-envelope shape changes beyond the declared `detail.harness` member of TDR-0033, and no new command, verb, or exit projection is added.
+No configuration key is removed or renamed; the mode key is additive on the harness branch. No result-envelope shape changes beyond the declared `detail.harness` member of TDR-0037, and no new command, verb, or exit projection is added.
 
 ### C-6: The chosen mode's value is the single authored constant
 
@@ -195,7 +195,7 @@ The installed line exposes it, the observation host's wrapper already runs it, a
 
 - **Decision statement.** Exactly one mode is the default for dispatch. The mode is a declared configuration value on the typed harness branch (`harness.mode`): omitted → the default with the `defaults` origin; present and recognised → `configured`; present and unrecognised → the delivered `config.value.invalid` naming the path, never a silent default. A recognised non-default mode refuses with `harness.mode.unavailable`, naming the requested and the available mode, before any session exists. No dispatch falls back between modes and no two modes run concurrently. The mode value the contract constant `DEFAULT_HARNESS_MODE` carries is `per-invocation-private-server`; the record and the constant are asserted equal in the delivering change.
 - **Read-only direct-store rationale for telemetry.** The rows the change lands must carry facts only the harness store holds (the session's own version, the observed agent and model, token classes, cost, timestamps). The store is a file in the harness data directory; the capture opens it read-only with `PRAGMA query_only` before the first read, issues bounded indexed statements scoped by the held session identities, and projects non-content fields only. No alternative was viable: the streaming stdout carries no version stamp and no durable per-session usage, and a harness-side configuration mutation or write is out of scope (NG-5, NG-11).
-- **Constraint compliance.** C-1: one default, one refusal identity, named alternatives. C-2: configuration-or-default only, with the origin recorded. C-3: one mode per dispatch, no fallback. C-4: read-only, query-only, bounded. C-5: additive key, no shape change beyond TDR-0033's member. C-6: one authored constant, asserted equal to this record's chosen value.
+- **Constraint compliance.** C-1: one default, one refusal identity, named alternatives. C-2: configuration-or-default only, with the origin recorded. C-3: one mode per dispatch, no fallback. C-4: read-only, query-only, bounded. C-5: additive key, no shape change beyond TDR-0037's member. C-6: one authored constant, asserted equal to this record's chosen value.
 
 ### Constraint Compliance Attestation
 
@@ -261,5 +261,5 @@ The harness adapters page and the configuration-layer page state the default, th
 - [GH-335 spike evidence](../changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/chg-GH-335-spike-evidence.md) — the read-only mode-surface re-observation.
 - [ADR-0008](ADR-0008-harness-adapter-contract.md) — the harness adapter contract this decision extends additively.
 - [TDR-0016](TDR-0016-harness-streaming-spawn-seam.md), [TDR-0021](TDR-0021-additive-optional-harness-environment-marker.md) — the additive-extension precedent.
-- [TDR-0032](TDR-0032-harness-seat-spawn-cardinality-and-seat-resolution.md) — the seat/carrier contract this record does not restate.
-- [TDR-0033](TDR-0033-harness-dispatch-outcome-envelope-detail.md) — the refusal-disclosure member that carries the selected mode on a mode refusal.
+- [TDR-0036](TDR-0036-harness-seat-spawn-cardinality-and-seat-resolution.md) — the seat/carrier contract this record does not restate.
+- [TDR-0037](TDR-0037-harness-dispatch-outcome-envelope-detail.md) — the refusal-disclosure member that carries the selected mode on a mode refusal.

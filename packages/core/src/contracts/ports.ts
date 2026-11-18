@@ -204,6 +204,16 @@ export type PipelineJobState =
 export type PipelineJob = {
   readonly jobName: string;
   readonly jobState: PipelineJobState;
+  /**
+   * The provider-asserted start timestamp, copied verbatim. Absent = the
+   * provider did not assert it (unknown), never derived or defaulted (DM-2).
+   */
+  readonly startedAt?: string;
+  /**
+   * The provider-asserted completion timestamp, copied verbatim. Absent = the
+   * run has not completed or the provider omitted it; never derived (DM-2).
+   */
+  readonly completedAt?: string;
 };
 
 /** A pointer to pipeline trace evidence — never a bare status colour (DM-7). */
@@ -238,4 +248,37 @@ export type RetryPolicy = {
 export type IdempotencyKey = {
   readonly keyValue: string;
   readonly scope: string;
+};
+
+/**
+ * The closed landing strategy set (DM-1).
+ *
+ * Squash is the only representable strategy: force, branch-protection bypass,
+ * auto-merge, merge queues, rebase, and merge-commit strategies are absent from
+ * the type rather than rejected at runtime.
+ */
+export type DeliveryRequestLandingStrategy = "squash";
+
+/** The canonical argument shape of the `merge-delivery-request` operation (DM-1). */
+export type MergeDeliveryRequestInput = {
+  /** The delivery request to land (the provider's request identity). */
+  readonly deliveryRequest: ProviderQualifiedIdentity;
+  readonly strategy: DeliveryRequestLandingStrategy;
+  /** The crafted squash commit title, transmitted verbatim when supplied. */
+  readonly commitTitle?: string;
+  /** The crafted squash commit message, transmitted verbatim when supplied. */
+  readonly commitMessage?: string;
+  /** The optional expected-head guard; a mismatch refuses the landing. */
+  readonly expectedHeadSha?: string;
+};
+
+/**
+ * The landing outcome (DM-1).
+ *
+ * The landing commit identity is present only when the provider supplied it:
+ * absence is unknown, never derived from a local commit or a branch head.
+ */
+export type MergeDeliveryRequestOutcome = {
+  readonly merged: true;
+  readonly mergeCommitSha?: string;
 };

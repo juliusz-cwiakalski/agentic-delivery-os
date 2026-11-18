@@ -9,7 +9,7 @@ service: delivery-os
 summary: "The typed `db` command-family session-database administration surface: four closed subcommands (`size`, `list`, `prune`, `reboot`) over the opencode SQLite session store, a read-only `SessionStorePort` for size/list and a mutating `SessionAdminPort` for prune/reboot, dry-run-by-default mutation, the 15-minute activity-based live window, the 30-day default prune threshold, leaf-only candidate selection with a pre-delete TOCTOU re-check, official `opencode session delete` per candidate, one bounded WAL checkpoint on reboot, the `message`/`part` current store pin with legacy-empty `session_message`, the `db` error kind and four rows, bounded metadata-only output, the closeout compaction checkpoint's attribution (derived from the dispatch attempt ledger, not from this surface), and the ADR-0003 C-11 owner merge gate."
 links:
   related_changes: ["GH-180", "GH-233", "GH-240", "GH-335"]
-  related_decisions: ["ADR-0003", "ADR-0010", "TDR-0032"]
+  related_decisions: ["ADR-0003", "ADR-0010", "TDR-0036"]
   contracts:
     - "packages/core/src/contracts/session.ts"
     - "packages/core/src/contracts/error-table.ts"

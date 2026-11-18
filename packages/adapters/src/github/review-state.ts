@@ -1,12 +1,16 @@
 /**
- * GitHub review-state and issue-status mappings (GH-188 F-4).
+ * GitHub pull-request review-state mapping (GH-188 F-4).
  *
- * Declared, reviewable tables. The review state derives from the PR's merged /
+ * A declared, reviewable table. The review state derives from the PR's merged /
  * state / draft flags first (terminal truth wins) and then the native review
  * decision; a `reviewDecision` that disagrees with the PR state never hides a
  * merged or closed PR.
+ *
+ * Issue-status mapping is not declared here: it comes from the one injected
+ * `WorkflowMap` (`workflow-map.ts`), so read normalization and transition
+ * writes cannot disagree.
  */
-import type { DeliveryRequestReviewState, DeliveryStateAlias } from "@delivery-os/core/contracts";
+import type { DeliveryRequestReviewState } from "@delivery-os/core/contracts";
 
 /** One declared native review-decision row. */
 export type GithubReviewDecisionRule = {
@@ -36,18 +40,6 @@ export const GITHUB_REVIEW_DECISION_STATES: readonly GithubReviewDecisionRule[] 
 /** The declared review state for a native decision outside the table. */
 export const GITHUB_UNKNOWN_REVIEW_DECISION_FALLBACK = "open" as const;
 
-/** One declared native issue-state row. */
-export type GithubWorkItemStatusRule = {
-  readonly nativeStatus: string;
-  readonly deliveryState: DeliveryStateAlias;
-};
-
-/** The declared issue-state table. */
-export const GITHUB_WORK_ITEM_STATUS_MAP: readonly GithubWorkItemStatusRule[] = [
-  { nativeStatus: "open", deliveryState: "ready" },
-  { nativeStatus: "closed", deliveryState: "done" },
-];
-
 /** The fields the review-state rule consumes. */
 export type GithubReviewStateInput = {
   readonly state: string;
@@ -69,7 +61,3 @@ export const resolveGithubReviewState = (
       : GITHUB_REVIEW_DECISION_STATES.find((rule) => rule.nativeDecision === input.reviewDecision);
   return decision?.reviewState ?? GITHUB_UNKNOWN_REVIEW_DECISION_FALLBACK;
 };
-
-/** Resolve one issue's delivery status alias. */
-export const workItemStatusFor = (nativeStatus: string): DeliveryStateAlias | undefined =>
-  GITHUB_WORK_ITEM_STATUS_MAP.find((rule) => rule.nativeStatus === nativeStatus)?.deliveryState;

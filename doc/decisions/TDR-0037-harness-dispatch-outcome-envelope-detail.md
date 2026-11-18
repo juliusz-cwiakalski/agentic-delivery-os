@@ -1,5 +1,5 @@
 ---
-id: TDR-0033
+id: TDR-0037
 decision_type: tdr
 status: Proposed
 created: 2026-11-17
@@ -80,7 +80,7 @@ links:
   roadmap_items: ["M3-S1"]
 ---
 
-# TDR-0033: Harness Dispatch-Outcome Disclosure on the Failure-Envelope `detail` Slot
+# TDR-0037: Harness Dispatch-Outcome Disclosure on the Failure-Envelope `detail` Slot
 
 ## Context
 

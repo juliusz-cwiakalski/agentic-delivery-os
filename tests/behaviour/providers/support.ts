@@ -5,7 +5,10 @@
  * Nothing here reaches the network; an unfixtured request throws instead of
  * falling back to a live call (GH-188 NFR-3 / TC-TRAP-002).
  */
+
+import { mock } from "bun:test";
 import { readFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { join } from "node:path";
 import type {
   ProviderReadResult,
@@ -26,6 +29,63 @@ export type FixtureRoute = {
 /** A transport that records every request and throws on anything unfixtured. */
 export type RecordingTransport = ProviderTransport & {
   readonly requests: readonly ProviderRequest[];
+};
+
+/**
+ * A stateful, single-issue transport for read-after-write cases.
+ *
+ * The conformance mock tenant stays stateless and body-keyed; read-back and the
+ * current-read precondition are proven here instead. GET returns the current
+ * issue, PATCH applies the exact request body (state and/or labels) and returns
+ * the updated issue. Anything else is unfixtured.
+ */
+export type StatefulIssueTransport = ProviderTransport & {
+  readonly requests: readonly ProviderRequest[];
+  readonly current: () => Readonly<Record<string, unknown>>;
+};
+
+export type StatefulIssueOptions = {
+  readonly issueUrl: string;
+  readonly issue: Readonly<Record<string, unknown>>;
+};
+
+const appliedIssue = (
+  issue: Readonly<Record<string, unknown>>,
+  body: Record<string, unknown>,
+): Record<string, unknown> => {
+  const next: Record<string, unknown> = { ...issue };
+  if (typeof body.state === "string") next.state = body.state;
+  if (Array.isArray(body.labels)) {
+    next.labels = body.labels.map((name) => ({ name }));
+  }
+  return next;
+};
+
+export const createStatefulIssueTransport = (
+  options: StatefulIssueOptions,
+): StatefulIssueTransport => {
+  const requests: ProviderRequest[] = [];
+  let current: Record<string, unknown> = { ...options.issue };
+  return {
+    requests,
+    current: () => current,
+    send: async (request) => {
+      requests.push(request);
+      if (request.url !== options.issueUrl) {
+        throw new Error(`unfixtured provider request ${request.method} ${request.url}`);
+      }
+      if (request.method === "GET") {
+        return { status: 200, body: current };
+      }
+      if (request.method === "PATCH") {
+        const parsed: unknown = request.body === undefined ? {} : JSON.parse(request.body);
+        if (!isRecord(parsed)) throw new Error("expected a JSON object write body");
+        current = appliedIssue(current, parsed);
+        return { status: 200, body: current };
+      }
+      throw new Error(`unfixtured provider request ${request.method} ${request.url}`);
+    },
+  };
 };
 
 /** Read a committed JSON fixture from the repository root. */
@@ -93,6 +153,46 @@ export const requireValue = <T>(result: ProviderReadResult<T>, label: string): T
   if (result.ok) return result.value;
   const detail = "detail" in result ? result.detail : result.code;
   throw new Error(`${label}: ${detail}`);
+};
+
+export type ChildProcessGuard = {
+  readonly calls: readonly string[];
+  readonly restore: () => void;
+};
+
+/**
+ * Replace every child-process entry point with a throwing counter.
+ *
+ * The mock tier must spawn nothing: the CLI transport always takes an injected
+ * runner, so a live spawn can only mean a composition mistake. `mock.module` is
+ * the only way to intercept a builtin binding, and it is process-scoped, so
+ * `restore` re-registers the real module rather than relying on `mock.restore()`
+ * (which never undoes a module substitution).
+ */
+export const installChildProcessGuard = (): ChildProcessGuard => {
+  const calls: string[] = [];
+  const actual = createRequire(import.meta.url)("node:child_process") as unknown;
+  const denied = (name: string) => {
+    return (): never => {
+      calls.push(name);
+      throw new Error(`mock tier must not spawn a live child process (${name})`);
+    };
+  };
+  mock.module("node:child_process", () => ({
+    spawn: denied("spawn"),
+    spawnSync: denied("spawnSync"),
+    exec: denied("exec"),
+    execFile: denied("execFile"),
+    execFileSync: denied("execFileSync"),
+    execSync: denied("execSync"),
+    fork: denied("fork"),
+  }));
+  return {
+    calls,
+    restore: () => {
+      mock.module("node:child_process", () => actual);
+    },
+  };
 };
 
 export type FetchGuard = {

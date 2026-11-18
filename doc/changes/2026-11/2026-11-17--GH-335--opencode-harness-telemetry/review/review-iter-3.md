@@ -77,7 +77,7 @@ The 27 criteria are unchanged since iteration 2 (this iteration's code delta is 
 | AC-F1-1, AC-F1-4 | PASS | Window is pinned data, `versionVerdict` on the instance, no configuration key; `harness-version-window`/`-version-window-contract` green. |
 | AC-F1-2, AC-F1-3, AC-F1-5 | PASS | Out-of-window `harness.version.unsupported`, unknown `harness.version.unknown`, single construction + single invocation site; `harness-version-gate`, `harness-probe-seam`, `harness-probe-construction-site`, `harness-probe-grammar-contract` green. |
 | AC-F2-1, AC-F2-3, AC-F2-4 | PASS | Declared default mode + `--standalone`, unknown/unavailable refusals naming requested and available, `modeOrigin` recorded; `harness-mode-selection`/`-mode-refusal` green. |
-| AC-F2-2 | PASS | Integration-mode decision record (`TDR-0034`) + linked feature page; records remain Proposed for human acceptance. |
+| AC-F2-2 | PASS | Integration-mode decision record (`TDR-0038`) + linked feature page; records remain Proposed for human acceptance. |
 | AC-F3-1 (offline) | PASS | Mounted wrapper, exactly one `--agent`/one `--model`, role-less passthrough; `harness-profile-propagation`/`-per-spawn`/`harness-profile-composition-mount` green. |
 | AC-F3-1 (live half) | PASS | Re-recorded observation §2–§4 (unchanged this iteration; numerically consistent with the store). |
 | AC-F3-2, AC-F3-3 | PASS | Record value wins; undeclared names change nothing; `harness-profile-precedence`/`-neutrality` green. |

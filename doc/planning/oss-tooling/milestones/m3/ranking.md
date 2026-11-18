@@ -2,6 +2,12 @@
 
 Stories from [backlog.md](backlog.md) top to bottom in the suggested order.
 
+Sequencing amendment (2026-11-18): the jaiship-only flip
+(`../m4/flip-plan.md`, tickets GH-346..GH-352) takes precedence over the
+remaining adapter stories. S2, S3, and S6 start only after the flip gate
+(F1-F4) is green, or when a lane is free and no flip work is ready. S5 stays in
+flight because the flip's parity work builds on it.
+
 | # | Story | Depends on | Why here |
 |---|---|---|---|
 | 1 | M3-S4 GitHub adapter completion | M0-S19 | Reference code host + backlog first; parity targets need a reference |

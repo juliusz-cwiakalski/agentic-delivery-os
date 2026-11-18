@@ -34,7 +34,7 @@ export type HarnessEnvironmentSetting =
 /** The resolved harness branch. */
 export type HarnessSettings = {
   readonly kind: HarnessKind;
-  /** The declared integration mode and the origin it came from (DEC-2, TDR-0034). */
+  /** The declared integration mode and the origin it came from (DEC-2, TDR-0038). */
   readonly mode: HarnessMode;
   readonly modeOrigin: HarnessModeOrigin;
   readonly executionKind: HarnessExecutionKind;

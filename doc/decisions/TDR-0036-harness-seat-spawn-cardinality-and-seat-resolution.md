@@ -1,5 +1,5 @@
 ---
-id: TDR-0032
+id: TDR-0036
 decision_type: tdr
 status: Proposed
 created: 2026-11-18
@@ -78,13 +78,13 @@ links:
     - "packages/cli/src/production.ts"
     - "packages/cli/src/commands/dispatch.ts"
   diagrams: []
-  decisions: ["ADR-0008", "TDR-0016", "TDR-0021", "TDR-0033"]
+  decisions: ["ADR-0008", "TDR-0016", "TDR-0021", "TDR-0037"]
   experiments: []
   metrics: []
   roadmap_items: ["M3-S1"]
 ---
 
-# TDR-0032: Harness Seat–Spawn Cardinality, Seat Resolution, and Per-Seat Telemetry Identity
+# TDR-0036: Harness Seat–Spawn Cardinality, Seat Resolution, and Per-Seat Telemetry Identity
 
 ## Context
 
@@ -140,7 +140,7 @@ Deliberately out of scope, so the boundary is reviewable: no harness configurati
 ### C-3: Telemetry states what was requested and what ran, without fabrication or overwrite
 
 - **Statement:** A row carries the run's recorded seat and resolved model beside the harness-reported agent and model; divergence on either axis is disclosed with a closed warning and both values are kept. A fact the store does not hold is null with a warning; a seat the run never declared is null with `unresolved-seat`; no seat, model, or divergence is fabricated, and no value is reconciled by overwriting the other.
-- **Source:** AC (NFR-6, DEC-5, AC-F5-1, AC-F5-3, §10) + prior decision (TDR-0033's no-fabrication discipline)
+- **Source:** AC (NFR-6, DEC-5, AC-F5-1, AC-F5-3, §10) + prior decision (TDR-0037's no-fabrication discipline)
 - **Verification:** test (per-row field equality; a divergent row keeps both values and warns; an unbound run yields null seat plus the warning and never a guessed seat) + code review
 - **Negotiable:** no
 
@@ -161,7 +161,7 @@ Deliberately out of scope, so the boundary is reviewable: no harness configurati
 ### C-6: Refusals stay pre-session and the closed identity set is not widened by this decision
 
 - **Statement:** An unassigned agent refuses before any session-bearing child exists and appends no attempt record, reusing an existing closed identity whose disclosure rides the delivered bounded error summary plus that identity's remediation hint; this record adds no error-table row, no `detail.harness` member mapping, and no change to the failure-envelope shape.
-- **Source:** AC (AC-N1-1, NFR-1, DEC-12) + prior decision (TDR-0033 decision 2 and its identity mapping)
+- **Source:** AC (AC-N1-1, NFR-1, DEC-12) + prior decision (TDR-0037 decision 2 and its identity mapping)
 - **Verification:** test (zero sessions, zero attempts, zero telemetry rows on the refusal; `HARNESS_FAILURE_CODES` length unchanged) + code review
 - **Negotiable:** no
 
@@ -185,7 +185,7 @@ Deliberately out of scope, so the boundary is reviewable: no harness configurati
 - **Performers:** `@coder` (single-seat binding, agent→seat resolution, one-pair argv mapping, unassigned-agent refusal, per-run recorded binding, seat-attributed rows); `@doc-syncer` (harness adapters, telemetry, spend, dispatch-engine pages).
 - **Informed:** M3-S5 conformance and parity suite; every future harness adapter; operators declaring multi-seat profiles.
 
-**Type note.** This is a TDR, following TDR-0016/TDR-0021 for harness-contract governance and TDR-0033 for the same change's adjacent contract detail. The ADR/TDR tie-breaker prefers ADR at `blast_radius >= team`; here the architecture-level question ("is propagation surface-mapped, and is the binding a harness-neutral record?") was decided by ADR-0008 and spec DEC-8, and is not reopened — this record fixes the cardinality, the resolution input, and the row identity *inside* that decided shape, so the narrower type is the paved road. Rigor is R2, not R1: the rule governs the change's headline acceptance criterion, the adapter contract, the telemetry row identity, and a new per-run record member, and it sets the precedent for every later adapter; it is not R3 because every load-bearing fact is repo-local or directly observed read-only, the change is reversible by deleting additive fields, and nothing irreversible, legal, financial, or safety-critical is involved.
+**Type note.** This is a TDR, following TDR-0016/TDR-0021 for harness-contract governance and TDR-0037 for the same change's adjacent contract detail. The ADR/TDR tie-breaker prefers ADR at `blast_radius >= team`; here the architecture-level question ("is propagation surface-mapped, and is the binding a harness-neutral record?") was decided by ADR-0008 and spec DEC-8, and is not reopened — this record fixes the cardinality, the resolution input, and the row identity *inside* that decided shape, so the narrower type is the paved road. Rigor is R2, not R1: the rule governs the change's headline acceptance criterion, the adapter contract, the telemetry row identity, and a new per-run record member, and it sets the precedent for every later adapter; it is not R3 because every load-bearing fact is repo-local or directly observed read-only, the change is reversible by deleting additive fields, and nothing irreversible, legal, financial, or safety-critical is involved.
 
 ## Evidence, Assumptions & Unknowns
 
@@ -327,7 +327,7 @@ Decision 2's third bullet previously read: *"the spawn binds nothing only if the
 
 ### A-2 (2026-11-18) — The unassigned-agent refusal is disclosed through the bounded error summary
 
-Decision 2's first bullet required the refusal to name the agent, the profile and the declared seats without stating where. Corrected: those facts ride the delivered failure envelope's bounded `error.summary` (NFR-4-bounded) together with the identity's remediation hint. The refusal adds **no** `detail.harness` member — TDR-0033 reserves that slot for the four new harness identities and states that every other identity, including a reused one, carries none — and adds no error-table row, no exit projection, and no envelope-shape change. A coder must neither widen `CommandResultDetail` nor author a new identity for this refusal; a reviewer must treat either as a violation of C-6.
+Decision 2's first bullet required the refusal to name the agent, the profile and the declared seats without stating where. Corrected: those facts ride the delivered failure envelope's bounded `error.summary` (NFR-4-bounded) together with the identity's remediation hint. The refusal adds **no** `detail.harness` member — TDR-0037 reserves that slot for the four new harness identities and states that every other identity, including a reused one, carries none — and adds no error-table row, no exit projection, and no envelope-shape change. A coder must neither widen `CommandResultDetail` nor author a new identity for this refusal; a reviewer must treat either as a violation of C-6.
 
 ### A-3 (2026-11-18) — Field literals are obligations; the constant names belong to the contract
 
@@ -355,7 +355,7 @@ All four amendments ratify what the spec remediation already applied, so they im
 - Per-seat telemetry becomes an emergent property of how the delivery already runs (one named role per invocation) rather than a new orchestration feature.
 - The seat vocabulary stops being conflated with the harness agent: a divergence between them is now visible as evidence instead of being invisible.
 - Mid-session agent switches are attributed honestly (unresolved seat) instead of silently inheriting the spawn's seat.
-- The refusal path adds no identity, no error-table row, and no envelope member, so DEC-12 and TDR-0033 stay true.
+- The refusal path adds no identity, no error-table row, and no envelope member, so DEC-12 and TDR-0037 stay true.
 
 ### Negative Outcomes
 
@@ -373,7 +373,7 @@ All four amendments ratify what the spec remediation already applied, so they im
 
 ### Consequences for the change artifacts (the exact edits this decision implies)
 
-The spec, test plan and plan are **not** edited by this record; the owning writers apply these, and the change's decision log records that TDR-0032 governs them.
+The spec, test plan and plan are **not** edited by this record; the owning writers apply these, and the change's decision log records that TDR-0036 governs them.
 
 - **§4.1 metric "Profile propagation (TC-M3-HARNESS-001)"** — replace "On a resolved profile with N seats, every spawn carries its seat's resolved binding … zero seats unattributed" with: every spawn that binds a seat carries **exactly one** `--agent` and one `--model` for the seat the profile assigns to the agent the run names; a profile's N seats are exercised by N spawns, each its own session and its own rows; zero bound spawns unattributed, and every unbound run disclosed as `unresolved-seat`.
 - **§5.1 F-3** — state the cardinality rule, the agent→seat resolution input and its two outcomes (with the unassigned-agent refusal's facts carried by the bounded error summary and remediation hint, A-2, and a role-less spawn binding nothing whatever the seat count, A-1), the carrier table (agent identity → `--agent`, resolved model → `--model`, seat identity → no carrier, recorded per run), and the refusal for an inexpressible model; add that a seat name is never sent as `--agent`.
@@ -405,7 +405,7 @@ The spec, test plan and plan are **not** edited by this record; the owning write
 - A three-seat profile exercised as three spawns: three sessions, three recorded bindings, three row sets with distinct `seat` values and the matching `resolvedModel` per row; no invocation carries more than one `--agent` or `--model`; zero bound spawns unattributed.
 - A named agent with no seat assignment in a multi-seat profile: refusal with `provider.profile.invalid` naming the agent, the profile and the declared seats **in the bounded `error.summary` and the remediation hint**, exit `1`, zero sessions, zero attempt records, zero telemetry rows, no `detail.harness` member, and `HARNESS_FAILURE_CODES` unchanged.
 - A spawn that names no agent against **any** profile, single-seat included: no `--agent`/`--model` in argv, no binding recorded, rows carry a null seat with the unresolved-seat reason, and the observed agent/model are still reported (Amendment A-1).
-- A resolved model that is not `provider/model[#variant]`-shaped (empty segment, whitespace, control character, over-bound): `harness.profile.model-unrepresentable` naming the seat, before any session, with the delivered `detail.harness` member set unchanged from TDR-0033.
+- A resolved model that is not `provider/model[#variant]`-shaped (empty segment, whitespace, control character, over-bound): `harness.profile.model-unrepresentable` naming the seat, before any session, with the delivered `detail.harness` member set unchanged from TDR-0037.
 - A session whose group agent differs from the binding agent (mid-session switch): that group's rows carry `seat: null` with `unresolved-seat`; the matching group carries the seat; spend's `role` breakdown still reports the harness agent for both.
 - A row whose observed model differs from the resolved model: both values present, model divergence warned, neither overwritten; the same for a differing agent.
 - `delivery.harness.telemetry.v1` unchanged as the identifier; pre-change rows read unmodified; `HARNESS_FAILURE_CODES` length unchanged; the delivered port, dispatch and command grammar suites stay green unchanged.
@@ -417,7 +417,7 @@ The spec, test plan and plan are **not** edited by this record; the owning write
 ## References
 
 - Change: `doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry/chg-GH-335-spec.md` (§4.1, §5.1 F-3/F-5, §6 Flow 2, §8.3, §10, §17, Appendix C), `chg-GH-335-test-plan.md` (§3.1, §5.2 TC-HARNESS-011), `chg-GH-335-plan.yaml` (Phases 2–5), `readiness-review/readiness-iter-2.md` (findings C1, C2, M3).
-- Prior decisions: ADR-0008 (harness adapter contract); TDR-0016 (streaming spawn seam); TDR-0021 (optional environment marker); TDR-0027 (failure-envelope detail slot); TDR-0033 (harness dispatch-outcome disclosure on that slot); TDR-0028 (no-nomination refusal reusing provider-profile identities).
+- Prior decisions: ADR-0008 (harness adapter contract); TDR-0016 (streaming spawn seam); TDR-0021 (optional environment marker); TDR-0027 (failure-envelope detail slot); TDR-0037 (harness dispatch-outcome disclosure on that slot); TDR-0028 (no-nomination refusal reusing provider-profile identities).
 - Specs: `doc/spec/features/feature-harness-adapters.md` (§4 environment, §5 telemetry extraction, §6 closeout capture); `feature-provider-profiles.md` (seats, `agentOverrides`, resolve-before-spawn); `feature-telemetry-v2.md`; `feature-spend.md`; `feature-dispatch-engine.md`.
 - Contracts and code: `packages/core/src/contracts/harness.ts`; `packages/core/src/contracts/telemetry.ts`; `packages/core/src/provider/profile.ts`; `packages/core/src/provider/validate.ts`; `packages/adapters/src/harness/opencode.ts`; `packages/cli/src/production.ts`; `packages/core/src/app/dispatch.ts`; `packages/core/src/contracts/error-table.ts`.
 - Harness observation (read-only, 2026-11-18): `opencode run --help`; `sqlite3 "file:~/.local/share/opencode/opencode.db?mode=ro"` with `PRAGMA query_only=ON` — `session_v2` agent/model distribution and `session_message` type counts.

@@ -1,0 +1,170 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-17",
+  "versionWindow": {
+    "minimum": "2.0.0",
+    "maximum": "2.99.99"
+  },
+  "hostMapping": [
+    { "name": "cloud", "instanceHost": "api.github.com", "cliHost": "github.com" },
+    { "name": "cloud-web", "instanceHost": "github.com", "cliHost": "github.com" },
+    { "name": "ghes", "instanceHost": "ghes.example.com", "cliHost": "ghes.example.com" },
+    {
+      "name": "ghes-api-prefixed",
+      "instanceHost": "api.ghes.example.com",
+      "cliHost": "api.ghes.example.com"
+    }
+  ],
+  "environment": {
+    "basePath": "/opt/example/bin",
+    "base": "/tmp/example-tmp",
+    "configDirectory": "jaiship-gh-config",
+    "stateDirectory": "jaiship-gh-state",
+    "cacheDirectory": "jaiship-gh-cache"
+  },
+  "routes": [
+    {
+      "name": "read-issue",
+      "method": "GET",
+      "url": "https://api.github.example.com/repos/group-placeholder/project-placeholder/issues/601",
+      "hostname": "api.github.example.com",
+      "headers": {
+        "Accept": "application/vnd.github+json"
+      },
+      "expectedArgv": [
+        "api",
+        "/repos/group-placeholder/project-placeholder/issues/601",
+        "--method",
+        "GET",
+        "--hostname",
+        "api.github.example.com",
+        "--include",
+        "--header",
+        "Accept: application/vnd.github+json"
+      ]
+    },
+    {
+      "name": "list-issues",
+      "method": "GET",
+      "url": "https://api.github.example.com/repos/group-placeholder/project-placeholder/issues?state=open&per_page=100&sort=updated&direction=desc",
+      "hostname": "api.github.example.com",
+      "headers": {
+        "Accept": "application/vnd.github+json"
+      },
+      "expectedArgv": [
+        "api",
+        "/repos/group-placeholder/project-placeholder/issues?state=open&per_page=100&sort=updated&direction=desc",
+        "--method",
+        "GET",
+        "--hostname",
+        "api.github.example.com",
+        "--include",
+        "--header",
+        "Accept: application/vnd.github+json"
+      ]
+    },
+    {
+      "name": "transition-issue",
+      "method": "PATCH",
+      "url": "https://api.github.example.com/repos/group-placeholder/project-placeholder/issues/601",
+      "hostname": "api.github.example.com",
+      "headers": {
+        "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json"
+      },
+      "body": "{\"state\":\"closed\"}",
+      "expectedArgv": [
+        "api",
+        "/repos/group-placeholder/project-placeholder/issues/601",
+        "--method",
+        "PATCH",
+        "--hostname",
+        "api.github.example.com",
+        "--include",
+        "--header",
+        "Accept: application/vnd.github+json",
+        "--header",
+        "Content-Type: application/json",
+        "--input",
+        "-"
+      ]
+    },
+    {
+      "name": "land-pull-request",
+      "method": "PUT",
+      "url": "https://api.github.example.com/repos/group-placeholder/project-placeholder/pulls/504/merge",
+      "hostname": "api.github.example.com",
+      "headers": {
+        "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json"
+      },
+      "body": "{\"merge_method\":\"squash\"}",
+      "expectedArgv": [
+        "api",
+        "/repos/group-placeholder/project-placeholder/pulls/504/merge",
+        "--method",
+        "PUT",
+        "--hostname",
+        "api.github.example.com",
+        "--include",
+        "--header",
+        "Accept: application/vnd.github+json",
+        "--header",
+        "Content-Type: application/json",
+        "--input",
+        "-"
+      ]
+    },
+    {
+      "name": "comment-write-transport-level",
+      "method": "POST",
+      "url": "https://api.github.example.com/repos/group-placeholder/project-placeholder/issues/601/comments",
+      "hostname": "api.github.example.com",
+      "headers": {
+        "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json"
+      },
+      "body": "{\"body\":\"Carrier-free human comment\"}",
+      "expectedArgv": [
+        "api",
+        "/repos/group-placeholder/project-placeholder/issues/601/comments",
+        "--method",
+        "POST",
+        "--hostname",
+        "api.github.example.com",
+        "--include",
+        "--header",
+        "Accept: application/vnd.github+json",
+        "--header",
+        "Content-Type: application/json",
+        "--input",
+        "-"
+      ]
+    },
+    {
+      "name": "content-write-transport-level",
+      "method": "POST",
+      "url": "https://api.github.example.com/repos/group-placeholder/project-placeholder/pulls",
+      "hostname": "api.github.example.com",
+      "headers": {
+        "Accept": "application/vnd.github+json",
+        "Content-Type": "application/json"
+      },
+      "body": "{\"title\":\"Content write\",\"head\":\"feat/GH-338/x\",\"base\":\"main-tools\"}",
+      "expectedArgv": [
+        "api",
+        "/repos/group-placeholder/project-placeholder/pulls",
+        "--method",
+        "POST",
+        "--hostname",
+        "api.github.example.com",
+        "--include",
+        "--header",
+        "Accept: application/vnd.github+json",
+        "--header",
+        "Content-Type: application/json",
+        "--input",
+        "-"
+      ]
+    }
+  ]
+}

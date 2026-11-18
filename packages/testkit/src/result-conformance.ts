@@ -78,10 +78,10 @@ const ERROR_REQUIRED_KEYS = [
   "remediationHint",
 ] as const;
 const ERROR_ALLOWED_KEYS = [...ERROR_REQUIRED_KEYS, "summary"] as const;
-/** The declared failure-envelope detail members (TDR-0027, TDR-0033, GH-300). */
+/** The declared failure-envelope detail members (TDR-0027, TDR-0037, GH-300). */
 const FAILURE_OPTIONAL_DETAIL_MEMBERS = ["holder", "suiteBreadth", "harness"] as const;
 
-/** The declared `detail.harness` member set (TDR-0033). */
+/** The declared `detail.harness` member set (TDR-0037). */
 const HARNESS_DETAIL_KEYS = ["kind", "observedVersion", "versionVerdict", "mode"] as const;
 
 /** The normalized bare-semantic-version shape the evidence member may carry. */
@@ -93,7 +93,7 @@ const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
 /**
- * Validate the declared `detail.harness` evidence member (TDR-0033): four closed
+ * Validate the declared `detail.harness` evidence member (TDR-0037): four closed
  * keys, the closed vocabularies, a normalized version or explicit null, and a
  * mode only where the version verdict is inside.
  */

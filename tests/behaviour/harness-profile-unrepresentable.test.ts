@@ -85,7 +85,7 @@ describe("TC-HARNESS-014 an unassigned named agent (M-11)", () => {
     expect(result.error.summary ?? "").toContain("synthetic-profile");
     expect(result.error.summary ?? "").toContain("seat-judgment");
     expect(result.error.summary ?? "").toContain("seat-execution");
-    // No envelope member for this refusal (TDR-0032 A-2).
+    // No envelope member for this refusal (TDR-0036 A-2).
     expect(result.error.harness).toBeUndefined();
   });
 

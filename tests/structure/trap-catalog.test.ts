@@ -6,6 +6,7 @@
  * Mutations run on deep copies; committed catalogs are never rewritten.
  */
 import { describe, expect, test } from "bun:test";
+import { createHash } from "node:crypto";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -19,7 +20,7 @@ const REQUIRED_KEYS = [
   "trapName",
 ];
 
-const MINIMA: Readonly<Record<string, number>> = { gitlab: 3, jira: 4, github: 21 };
+const MINIMA: Readonly<Record<string, number>> = { gitlab: 3, jira: 4, github: 33 };
 
 const EXPECTED_TRAPS: Readonly<Record<string, readonly string[]>> = {
   jira: [
@@ -58,6 +59,18 @@ const EXPECTED_TRAPS: Readonly<Record<string, readonly string[]>> = {
     "GITHUB-CHECKRUN-404",
     "GITHUB-ISSUE-404",
     "GH-PAYLOAD-HTTP-STATUS",
+    "GITHUB-LANDING-CRAFTED-METADATA",
+    "GITHUB-LANDING-IDENTITY-ABSENT",
+    "GITHUB-LANDING-GUARD-REFUSAL",
+    "GITHUB-LANDING-ALREADY-MERGED-READBACK",
+    "GITHUB-CLI-STATUS-RECOVERY",
+    "GITHUB-CLI-CREDENTIAL-ABSENCE",
+    "GITHUB-COMMENT-CARRIER-FREE",
+    "GITHUB-CONTENT-WRITE-NEVER-LANDS",
+    "GITHUB-WORKFLOW-MAP-SEED-PRECEDENCE",
+    "GITHUB-CHECK-RUN-TIMINGS",
+    "GITHUB-LOG-EXCERPT-CAP",
+    "GITHUB-THREAD-DISCUSSION-CAPS",
   ],
 };
 
@@ -259,5 +272,139 @@ describe("TC-TRAP-001 trap catalog schema and coverage", () => {
     expect(
       failures.some((message) => message.includes("jira:") && message.includes("minimum")),
     ).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TC-FLOOR-001 — the delivered catalog is frozen except ONE declared amendment.
+// ---------------------------------------------------------------------------
+
+const DELIVERED_GITHUB_TRAPS: readonly string[] = [
+  "GH-REVIEW-STATE",
+  "GH-CHECK-RUNS-PER-SHA",
+  "GH-ISSUE-TO-WORKITEM",
+  "GITHUB-LIST-EXCLUDES-PRS",
+  "GITHUB-LIST-PAGE-LIMIT",
+  "GITHUB-ISSUE-RELATIONS-ABSENT",
+  "GITHUB-PR-LIST-REVIEW-DEFAULT",
+  "GH-CLOSEOUT-MERGED-HEAD",
+  "GH-CLOSEOUT-LABEL-PRESERVE",
+  "GH-CLOSEOUT-THREAD-GRAPHQL",
+  "GITHUB-PR-MERGEABLE-NULL",
+  "GITHUB-PR-MERGEABLE-DIRTY",
+  "GITHUB-PR-MERGEABLE-BLOCKED",
+  "GITHUB-PR-HEAD-SHA-ABSENT",
+  "GITHUB-PR-COMMIT-SURFACE-ABSENT",
+  "GITHUB-PR-ZERO-COMMITS",
+  "GITHUB-CHECKRUN-EMPTY",
+  "GITHUB-CHECKRUN-ALL-SKIPPED",
+  "GITHUB-CHECKRUN-PAGE-LIMIT",
+  "GITHUB-ISSUE-COMMENTS-ABSENT",
+  "GITHUB-PR-LIST-404",
+  "GITHUB-PR-DETAIL-404",
+  "GITHUB-CHECKRUN-404",
+  "GITHUB-ISSUE-404",
+  "GH-PAYLOAD-HTTP-STATUS",
+  "GITHUB-LANDING-CRAFTED-METADATA",
+  "GITHUB-LANDING-IDENTITY-ABSENT",
+  "GITHUB-LANDING-GUARD-REFUSAL",
+  "GITHUB-LANDING-ALREADY-MERGED-READBACK",
+  "GITHUB-CLI-STATUS-RECOVERY",
+  "GITHUB-CLI-CREDENTIAL-ABSENCE",
+];
+
+/** The three phase-3 entries that close the backlog behaviors. */
+const BACKLOG_GITHUB_TRAPS: readonly string[] = [
+  "GITHUB-COMMENT-CARRIER-FREE",
+  "GITHUB-CONTENT-WRITE-NEVER-LANDS",
+  "GITHUB-WORKFLOW-MAP-SEED-PRECEDENCE",
+];
+
+/** The phase-4 evidence entries. */
+const EVIDENCE_GITHUB_TRAPS: readonly string[] = [
+  "GITHUB-CHECK-RUN-TIMINGS",
+  "GITHUB-LOG-EXCERPT-CAP",
+];
+
+/** The phase-5 discussion entry. */
+const THREAD_GITHUB_TRAPS: readonly string[] = ["GITHUB-THREAD-DISCUSSION-CAPS"];
+
+/** The single declared `expectedNormalizedOutcome` amendment. */
+const DECLARED_OUTCOME_AMENDMENT =
+  "labelled `review`/`in-progress` issues resolve to `in-review`/`in-progress` by declared precedence, and an exact-case label equal to a declared `label-swap` token wins";
+
+/**
+ * SHA-256 over `[[trapName, expectedNormalizedOutcome], ...]` for the delivered
+ * entries as they stood before this phase. Restoring the one declared amendment
+ * must reproduce this digest, so a second silent amendment fails by name.
+ */
+const DELIVERED_OUTCOME_DIGEST = "165e4b12d3c61aae427a95bebc5f270e9d5c3a60f5d81d36a747cbb99ec9fcde";
+
+describe("TC-FLOOR-001 delivered trap names frozen with one declared outcome amendment", () => {
+  test("the catalog is the delivered list plus the declared phase entries", () => {
+    const github = loadCatalogs(ROOT).github;
+    if (github === undefined) throw new Error("github catalog is missing");
+    expect(github.entries.map((entry) => entry.trapName)).toEqual([
+      ...DELIVERED_GITHUB_TRAPS,
+      ...BACKLOG_GITHUB_TRAPS,
+      ...EVIDENCE_GITHUB_TRAPS,
+      ...THREAD_GITHUB_TRAPS,
+    ]);
+  });
+
+  test("exactly GH-ISSUE-TO-WORKITEM carries the declared amendment and every other outcome is unchanged", () => {
+    const github = loadCatalogs(ROOT).github;
+    if (github === undefined) throw new Error("github catalog is missing");
+    const delivered = github.entries.filter((entry) =>
+      DELIVERED_GITHUB_TRAPS.includes(String(entry.trapName)),
+    );
+    expect(delivered).toHaveLength(DELIVERED_GITHUB_TRAPS.length);
+
+    const amended = delivered.filter((entry) =>
+      String(entry.expectedNormalizedOutcome).endsWith(DECLARED_OUTCOME_AMENDMENT),
+    );
+    expect(amended.map((entry) => entry.trapName)).toEqual(["GH-ISSUE-TO-WORKITEM"]);
+
+    const restored = delivered.map((entry) =>
+      entry.trapName === "GH-ISSUE-TO-WORKITEM"
+        ? [
+            entry.trapName,
+            String(entry.expectedNormalizedOutcome)
+              .slice(0, -DECLARED_OUTCOME_AMENDMENT.length)
+              .trimEnd(),
+          ]
+        : [entry.trapName, entry.expectedNormalizedOutcome],
+    );
+    expect(createHash("sha256").update(JSON.stringify(restored)).digest("hex")).toBe(
+      DELIVERED_OUTCOME_DIGEST,
+    );
+  });
+
+  test("a second silent outcome amendment fails the digest", () => {
+    const github = loadCatalogs(ROOT).github;
+    if (github === undefined) throw new Error("github catalog is missing");
+    const delivered = github.entries
+      .filter((entry) => DELIVERED_GITHUB_TRAPS.includes(String(entry.trapName)))
+      .map((entry) =>
+        entry.trapName === "GH-REVIEW-STATE"
+          ? {
+              ...entry,
+              expectedNormalizedOutcome: `${String(entry.expectedNormalizedOutcome)} (silently amended)`,
+            }
+          : entry,
+      );
+    const restored = delivered.map((entry) =>
+      entry.trapName === "GH-ISSUE-TO-WORKITEM"
+        ? [
+            entry.trapName,
+            String(entry.expectedNormalizedOutcome)
+              .slice(0, -DECLARED_OUTCOME_AMENDMENT.length)
+              .trimEnd(),
+          ]
+        : [entry.trapName, entry.expectedNormalizedOutcome],
+    );
+    expect(createHash("sha256").update(JSON.stringify(restored)).digest("hex")).not.toBe(
+      DELIVERED_OUTCOME_DIGEST,
+    );
   });
 });

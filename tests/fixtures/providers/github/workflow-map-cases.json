@@ -1,0 +1,333 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-17",
+  "seedRows": [
+    { "nativeStatus": "closed", "deliveryState": "done", "transitionMechanism": "field-update" },
+    { "nativeStatus": "review", "deliveryState": "in-review", "transitionMechanism": "label-swap" },
+    {
+      "nativeStatus": "in-progress",
+      "deliveryState": "in-progress",
+      "transitionMechanism": "label-swap"
+    },
+    { "nativeStatus": "open", "deliveryState": "ready", "transitionMechanism": "field-update" }
+  ],
+  "readOutcomes": [
+    {
+      "name": "exact-case-twin",
+      "nativeStatus": "open",
+      "labels": ["change", "in-progress"],
+      "expected": "in-progress"
+    },
+    {
+      "name": "case-collision-label-swap",
+      "nativeStatus": "open",
+      "labels": ["In-Progress"],
+      "refusalMentions": ["In-Progress", "in-progress"]
+    },
+    {
+      "name": "case-variant-state-label-closed",
+      "nativeStatus": "closed",
+      "labels": ["CLOSED"],
+      "expected": "done"
+    },
+    {
+      "name": "case-variant-state-label-open",
+      "nativeStatus": "open",
+      "labels": ["CLOSED"],
+      "expected": "ready"
+    },
+    {
+      "name": "unknown-labels",
+      "nativeStatus": "open",
+      "labels": ["change", "bug", "vendor-label"],
+      "expected": "ready"
+    },
+    { "name": "labelless-read", "nativeStatus": "open", "expected": "ready" },
+    {
+      "name": "native-state-row-missing",
+      "nativeStatus": "open",
+      "map": "missing-native-row",
+      "refusalMentions": ["open", "workflow-map row"]
+    }
+  ],
+  "maps": {
+    "missing-native-row": {
+      "systemName": "project",
+      "states": [
+        {
+          "nativeStatus": "closed",
+          "deliveryState": "done",
+          "transitionMechanism": "field-update"
+        },
+        {
+          "nativeStatus": "review",
+          "deliveryState": "in-review",
+          "transitionMechanism": "label-swap"
+        }
+      ]
+    },
+    "injected-map": {
+      "systemName": "project",
+      "states": [
+        {
+          "nativeStatus": "closed",
+          "deliveryState": "done",
+          "transitionMechanism": "field-update"
+        },
+        {
+          "nativeStatus": "readiness-passed",
+          "deliveryState": "ready",
+          "transitionMechanism": "label-swap"
+        },
+        {
+          "nativeStatus": "open",
+          "deliveryState": "backlog",
+          "transitionMechanism": "field-update"
+        }
+      ]
+    }
+  },
+  "issues": {
+    "label-swap-before": {
+      "number": 601,
+      "title": "Label swap issue",
+      "state": "open",
+      "labels": [{ "name": "change" }, { "name": "vendor-label" }, { "name": "in-progress" }]
+    },
+    "labelless-open-issue": {
+      "number": 601,
+      "title": "Labelless open issue",
+      "state": "open"
+    },
+    "labelless-closed-issue": {
+      "number": 601,
+      "title": "Labelless closed issue",
+      "state": "closed"
+    },
+    "labelled-closed-issue": {
+      "number": 601,
+      "title": "Labelled closed issue",
+      "state": "closed",
+      "labels": [{ "name": "in-progress" }, { "name": "review" }]
+    },
+    "labelled-open-review-issue": {
+      "number": 601,
+      "title": "Labelled open issue",
+      "state": "open",
+      "labels": [{ "name": "change" }, { "name": "review" }]
+    }
+  },
+  "labelSwap": {
+    "before": ["change", "vendor-label", "in-progress"],
+    "expectedAfter": ["change", "vendor-label", "review"]
+  },
+  "writableRoundTrips": [
+    {
+      "alias": "done",
+      "current": { "deliveryState": "in-review", "labels": ["change", "review"] }
+    },
+    {
+      "alias": "in-review",
+      "current": { "deliveryState": "in-progress", "labels": ["change", "in-progress"] }
+    },
+    {
+      "alias": "in-progress",
+      "current": { "deliveryState": "in-review", "labels": ["change", "review"] }
+    }
+  ],
+  "refusals": [
+    {
+      "name": "non-terminal-field-update",
+      "alias": "ready",
+      "current": { "deliveryState": "ready", "labels": [] },
+      "mentions": ["ready", "field-update"]
+    },
+    {
+      "name": "terminal-read-labelless",
+      "alias": "in-review",
+      "current": { "deliveryState": "done" },
+      "mentions": ["in-review", "resolves to done"]
+    },
+    {
+      "name": "terminal-read-labelled",
+      "alias": "in-review",
+      "current": { "deliveryState": "done", "labels": ["in-progress", "review"] },
+      "mentions": ["in-review", "resolves to done"]
+    },
+    {
+      "name": "unavailable-label-signal",
+      "alias": "in-review",
+      "current": { "deliveryState": "ready" },
+      "mentions": ["in-review", "unavailable"]
+    },
+    {
+      "name": "undeclared-alias-backlog",
+      "alias": "backlog",
+      "mentions": ["backlog", "not declared"]
+    },
+    {
+      "name": "undeclared-alias-canceled",
+      "alias": "canceled",
+      "mentions": ["canceled", "not declared"]
+    }
+  ],
+  "unmappedTokens": [
+    "change",
+    "planning",
+    "spec-ready",
+    "readiness-passed",
+    "delivered",
+    "blocked",
+    "backlog-capture"
+  ],
+  "unmappedAliases": ["backlog", "canceled"],
+  "invalidMaps": [
+    {
+      "name": "blank-system-name",
+      "map": {
+        "systemName": "",
+        "states": [
+          {
+            "nativeStatus": "closed",
+            "deliveryState": "done",
+            "transitionMechanism": "field-update"
+          }
+        ]
+      },
+      "mentions": ["systemName"]
+    },
+    {
+      "name": "states-absent",
+      "map": { "systemName": "project" },
+      "mentions": ["states"]
+    },
+    {
+      "name": "states-non-array",
+      "map": { "systemName": "project", "states": {} },
+      "mentions": ["states"]
+    },
+    {
+      "name": "states-empty",
+      "map": { "systemName": "project", "states": [] },
+      "mentions": ["states"]
+    },
+    {
+      "name": "states-non-object-row",
+      "map": { "systemName": "project", "states": ["closed"] },
+      "mentions": ["row 0"]
+    },
+    {
+      "name": "blank-native-status",
+      "map": {
+        "systemName": "project",
+        "states": [
+          { "nativeStatus": "", "deliveryState": "done", "transitionMechanism": "field-update" }
+        ]
+      },
+      "mentions": ["nativeStatus"]
+    },
+    {
+      "name": "duplicate-native-status",
+      "map": {
+        "systemName": "project",
+        "states": [
+          {
+            "nativeStatus": "closed",
+            "deliveryState": "done",
+            "transitionMechanism": "field-update"
+          },
+          {
+            "nativeStatus": "closed",
+            "deliveryState": "in-review",
+            "transitionMechanism": "label-swap"
+          }
+        ]
+      },
+      "mentions": ["duplicate native status"]
+    },
+    {
+      "name": "unknown-delivery-state",
+      "map": {
+        "systemName": "project",
+        "states": [
+          {
+            "nativeStatus": "closed",
+            "deliveryState": "deploying",
+            "transitionMechanism": "field-update"
+          }
+        ]
+      },
+      "mentions": ["deliveryState", "deploying"]
+    },
+    {
+      "name": "unknown-transition-mechanism",
+      "map": {
+        "systemName": "project",
+        "states": [
+          {
+            "nativeStatus": "closed",
+            "deliveryState": "done",
+            "transitionMechanism": "teleport"
+          }
+        ]
+      },
+      "mentions": ["transitionMechanism", "teleport"]
+    },
+    {
+      "name": "duplicate-delivery-alias",
+      "map": {
+        "systemName": "project",
+        "states": [
+          {
+            "nativeStatus": "closed",
+            "deliveryState": "done",
+            "transitionMechanism": "field-update"
+          },
+          {
+            "nativeStatus": "review",
+            "deliveryState": "done",
+            "transitionMechanism": "label-swap"
+          }
+        ]
+      },
+      "mentions": ["duplicate delivery alias"]
+    },
+    {
+      "name": "no-done-row",
+      "map": {
+        "systemName": "project",
+        "states": [
+          {
+            "nativeStatus": "review",
+            "deliveryState": "in-review",
+            "transitionMechanism": "label-swap"
+          },
+          {
+            "nativeStatus": "open",
+            "deliveryState": "ready",
+            "transitionMechanism": "field-update"
+          }
+        ]
+      },
+      "mentions": ["no row resolving to done"]
+    },
+    {
+      "name": "done-row-is-label-swap",
+      "map": {
+        "systemName": "project",
+        "states": [
+          {
+            "nativeStatus": "merged-label",
+            "deliveryState": "done",
+            "transitionMechanism": "label-swap"
+          },
+          {
+            "nativeStatus": "open",
+            "deliveryState": "ready",
+            "transitionMechanism": "field-update"
+          }
+        ]
+      },
+      "mentions": ["done row", "field-update", "closed"]
+    }
+  ]
+}

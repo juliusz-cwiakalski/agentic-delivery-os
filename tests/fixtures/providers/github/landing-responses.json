@@ -1,0 +1,97 @@
+{
+  "provenance": "hand-authored-synthetic 2026-11-17",
+  "landedWithSha": {
+    "status": 200,
+    "body": {
+      "sha": "4444444444444444444444444444444444444444",
+      "merged": true,
+      "message": "Pull Request successfully merged"
+    }
+  },
+  "landedWithoutSha": {
+    "status": 200,
+    "body": {
+      "merged": true,
+      "message": "Pull Request successfully merged"
+    }
+  },
+  "headMismatch": {
+    "status": 409,
+    "body": {
+      "message": "Head branch was modified. Review and try the merge again."
+    }
+  },
+  "alreadyMergedThenMergedTrue": {
+    "status": 405,
+    "body": {
+      "message": "Pull Request is already merged"
+    },
+    "readBack": {
+      "number": 504,
+      "state": "closed",
+      "merged": true,
+      "merge_commit_sha": "5555555555555555555555555555555555555555",
+      "head": {
+        "ref": "feat/GH-338/conformance-landing",
+        "sha": "1111111111111111111111111111111111111111"
+      },
+      "base": {
+        "ref": "main-tools"
+      }
+    }
+  },
+  "alreadyMergedThenMergedFalse": {
+    "status": 405,
+    "body": {
+      "message": "Pull Request is already merged"
+    },
+    "readBack": {
+      "number": 504,
+      "state": "open",
+      "merged": false,
+      "head": {
+        "ref": "feat/GH-338/conformance-landing",
+        "sha": "1111111111111111111111111111111111111111"
+      },
+      "base": {
+        "ref": "main-tools"
+      }
+    }
+  },
+  "refusalWithoutMergedTruth": {
+    "status": 409,
+    "body": {
+      "message": "Pull Request is already merged"
+    },
+    "readBack": {
+      "number": 504,
+      "state": "open",
+      "merged": false,
+      "head": {
+        "ref": "feat/GH-338/conformance-landing",
+        "sha": "1111111111111111111111111111111111111111"
+      },
+      "base": {
+        "ref": "main-tools"
+      }
+    }
+  },
+  "unprocessable": {
+    "status": 422,
+    "body": {
+      "message": "Validation Failed"
+    }
+  },
+  "serverError": {
+    "status": 500,
+    "body": {
+      "message": "Server Error"
+    }
+  },
+  "forbidden": {
+    "status": 403,
+    "body": {
+      "message": "Resource not accessible by integration"
+    }
+  }
+}

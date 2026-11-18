@@ -7,11 +7,11 @@
  * configuration, the install-path read answers per identity, and the alias's
  * observable self-description is byte-identical to the captured baseline.
  */
-import { describe, expect, test } from "bun:test";
+import { afterAll, describe, expect, test } from "bun:test";
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { delimiter, join } from "node:path";
 import { runEntrypoint } from "../../packages/cli/src/entrypoint";
 import { allHelpEntries, renderHelp, renderRootHelp } from "../../packages/cli/src/help";
 import { PROMPT_REQUIRED_COMMANDS } from "../../packages/cli/src/help/prompt-required-commands";
@@ -29,8 +29,24 @@ type ProcResult = {
   readonly stderr: string;
 };
 
+/**
+ * The producer of the composed GitHub transport probes `gh --version` and emits
+ * a degradation line when the host binary is outside the declared window. The
+ * containment baseline below pins stderr byte-for-byte, so the probe must take
+ * the same branch on every host: every child sees a scratch `gh` first on PATH
+ * that reports an in-window version, and the rest of the ambient PATH stays for
+ * the tools the cases legitimately need. The stub answers `--version` only.
+ */
+const ghStubRoot = mkdtempSync(join(tmpdir(), "gh320-gh-stub-"));
+afterAll(() => rmSync(ghStubRoot, { recursive: true, force: true }));
+writeFileSync(
+  join(ghStubRoot, "gh"),
+  '#!/bin/sh\nif [ "$1" = "--version" ]; then\n  echo \'gh version 2.91.0 (2025-01-01)\'\n  exit 0\nfi\nexit 1\n',
+  { mode: 0o755 },
+);
+
 const BASE_ENVIRONMENT: Record<string, string> = {
-  PATH: process.env.PATH ?? "",
+  PATH: `${ghStubRoot}${delimiter}${process.env.PATH ?? ""}`,
   HOME: process.env.HOME ?? "",
   TMPDIR: process.env.TMPDIR ?? "",
 };

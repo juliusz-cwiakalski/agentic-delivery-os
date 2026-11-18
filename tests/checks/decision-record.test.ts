@@ -4,10 +4,10 @@
  * GH-242 spec references the record.
  *
  * TC-HARNESS-010 (record-content half) — the GH-335 decision set: the integration-mode
- * record, the adapters-contract record, TDR-0033 and TDR-0032 are present with the
+ * record, the adapters-contract record, TDR-0037 and TDR-0036 are present with the
  * decision-record convention's frontmatter, each carries an R2 body (problem framing,
  * alternatives, consequences, verification criteria), each has its index row, the
- * adapters-contract record cites TDR-0032 and DEC-13 for the seat rule, and the
+ * adapters-contract record cites TDR-0036 and DEC-13 for the seat rule, and the
  * independent decision review artifact names every record with a tri-state verdict.
  *
  * The constant-equality half of TC-HARNESS-010 (the record's chosen mode equals the
@@ -27,10 +27,10 @@ const SPEC = "doc/changes/2026-11/2026-11-07--GH-242--agent-integration/chg-GH-2
 const read = (relative: string): string => readFileSync(join(ROOT, relative), "utf8");
 
 const GH335_PREFIX = "doc/changes/2026-11/2026-11-17--GH-335--opencode-harness-telemetry";
-const MODE_RECORD = "doc/decisions/TDR-0034-opencode-integration-mode.md";
-const ADAPTERS_RECORD = "doc/decisions/TDR-0035-opencode-harness-adapter-contract.md";
-const ENVELOPE_RECORD = "doc/decisions/TDR-0033-harness-dispatch-outcome-envelope-detail.md";
-const SEAT_RECORD = "doc/decisions/TDR-0032-harness-seat-spawn-cardinality-and-seat-resolution.md";
+const MODE_RECORD = "doc/decisions/TDR-0038-opencode-integration-mode.md";
+const ADAPTERS_RECORD = "doc/decisions/TDR-0039-opencode-harness-adapter-contract.md";
+const ENVELOPE_RECORD = "doc/decisions/TDR-0037-harness-dispatch-outcome-envelope-detail.md";
+const SEAT_RECORD = "doc/decisions/TDR-0036-harness-seat-spawn-cardinality-and-seat-resolution.md";
 const REVIEW = `${GH335_PREFIX}/chg-GH-335-decision-review.md`;
 
 const GH335_RECORDS = [MODE_RECORD, ADAPTERS_RECORD, ENVELOPE_RECORD, SEAT_RECORD] as const;
@@ -122,15 +122,15 @@ describe("TC-HARNESS-010 GH-335 decision records", () => {
     expect(mode).toContain("PRAGMA query_only");
   });
 
-  test("the adapters-contract record cites TDR-0032 and DEC-13 for the seat rule, reference-only", () => {
+  test("the adapters-contract record cites TDR-0036 and DEC-13 for the seat rule, reference-only", () => {
     const adapters = read(ADAPTERS_RECORD);
-    expect(adapters).toContain("TDR-0032");
+    expect(adapters).toContain("TDR-0036");
     expect(adapters).toContain("DEC-13");
     // The record states the rule and its delivery value, never a frozen pair as the rule.
     expect(adapters).toContain("current minor line at delivery time plus one previous minor");
     expect(adapters).toContain("2.3.x");
     expect(adapters).toContain("2.2.x");
-    // The seat/carrier rules stay TDR-0032's home; this record cites rather than restates.
+    // The seat/carrier rules stay TDR-0036's home; this record cites rather than restates.
     expect(adapters).toContain("By reference only");
     // The expressibility refusal is a predicate: no catalogue and no second child process.
     expect(adapters).toContain("NO recognised-agent or recognised-model catalogue");
@@ -157,7 +157,7 @@ describe("TC-HARNESS-010 independent decision review", () => {
     expect(existsSync(join(ROOT, REVIEW)), `${REVIEW} must exist`).toBe(true);
     const review = read(REVIEW);
     expect(review).toContain("@decision-critic");
-    for (const id of ["TDR-0032", "TDR-0033", "TDR-0034", "TDR-0035"]) {
+    for (const id of ["TDR-0036", "TDR-0037", "TDR-0038", "TDR-0039"]) {
       expect(review, `the review must name ${id}`).toContain(id);
     }
     const verdicts = review.match(/\b(PASS_WITH_RISKS|PASS|REWORK)\b/g) ?? [];

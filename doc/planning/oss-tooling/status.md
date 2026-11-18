@@ -2,9 +2,26 @@
 > History pointer: the 2026-11-10 M2 planning snapshot below records the M1 delivery and M2 planning state; this title and the sections below are history, not a live claim.
 
 Date: 2026-11-01. Owner-of-record: CEO agent under user-delegated autonomous
-authority. Source of truth for scope and order: [backlog.md](backlog.md) and
-[backlog-ranking.md](backlog-ranking.md). This file is a status snapshot; the
-backlog remains canonical.
+authority. Source of truth for scope and order: the per-milestone backlogs and
+rankings under [milestones/](milestones/) (the root backlog holds unplanned
+ideas only). This file is a status snapshot; the backlogs remain canonical.
+
+## M2 exit and M3 start (2026-11-18)
+
+- **M2 closed at 24/24.** The last story, M2-S16 (engine-first delivery
+  operations, GH-293), merged as PR #343 (`3ea2aec9`). Engine-first operations
+  are the documented regular delivery path; the shell entry points remain the
+  documented, still-executable fallback; repository handover stays an owner
+  act (`dispatch handover`), and no repository was flipped by the change.
+- **M3 started.** Milestone "M3: Harness and tracker integrations" carries
+  GH-335..GH-340 (opencode v2.x harness and telemetry; GitHub reference
+  adapter; GitLab code-host adapter; Jira backlog adapter; adapter conformance
+  and parity suite; multi-tracker per project). Non-blocking owner questions
+  are recorded in GH-342 with stated defaults.
+- **Planning corpus split.** Scope and order are now per-milestone
+  (`milestones/mN/backlog.md` and `ranking.md`); the root files list only
+  unplanned ideas. The milestone renumbering is recorded in the roadmap
+  (M3 integrations, M4 Jaiship-native delivery, M5 public release readiness).
 
 ## M3-S1 delivery record (GH-335, 2026-11-18)
 
@@ -616,3 +633,16 @@ documented as the fallback; `projects.v1` and `projects list --flat` stay
 byte-identical; no repository was flipped and no handover record was inserted by
 the change. The `verify deploy` target-resolution stub and the lanes-read profile
 blindness remain declared residuals. M2 has not exited.
+
+## M2 delivery snapshot addendum (2026-11-18): M2 exits at 24/24 recorded with GH-334
+
+M2 has exited: all 24 M2 stories are delivered and merged to `main-tools`
+through the full lifecycle, with the final story (M2-S16, GH-293) merged as
+PR #343. The engine-first operating model is documented and the shell stack is
+the declared fallback (no per-repository flip, no handover record inserted).
+The M3 milestone (harness and tracker integrations) is the active scope
+(GH-335..GH-340, questions in GH-342), and M4 (Jaiship-native delivery) and M5
+(public release readiness) are planned. This addendum supersedes the earlier
+"M2 has not exited" statements; milestone acceptance by the owner is not
+recorded here. (Checks re-triggered after a flaky daemon timing assertion; no
+content change.)

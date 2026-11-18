@@ -57,7 +57,7 @@ export type DispatchRuntimeFailure = {
   /** The narrow trusted-refusal marker; set only for `config.credential.missing`. */
   readonly trustedRefusal?: true;
   /**
-   * The four pre-session harness facts (TDR-0033); populated only on the four
+   * The four pre-session harness facts (TDR-0037); populated only on the four
    * harness refusals and never on the reused `provider.profile.invalid`
    * unassigned-agent refusal, whose facts ride the bounded summary.
    */

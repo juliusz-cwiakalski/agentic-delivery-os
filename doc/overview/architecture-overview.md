@@ -8,7 +8,7 @@ owners: [engineering]
 area: engineering
 document_classification: working-analysis
 links:
-  related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, TDR-0012, ADR-0010, TDR-0016, TDR-0023, TDR-0024, TDR-0025, TDR-0032, TDR-0033, TDR-0034, TDR-0035]
+  related_decisions: [ADR-0003, ADR-0005, ADR-0007, TDR-0004, TDR-0005, TDR-0006, TDR-0009, TDR-0012, ADR-0010, TDR-0016, TDR-0023, TDR-0024, TDR-0025, TDR-0032, TDR-0033, TDR-0034, TDR-0035, TDR-0036, TDR-0037, TDR-0038, TDR-0039]
   related_changes: ["GH-290", "GH-291", "GH-292", "GH-300", "GH-320", "GH-287", "GH-295", "GH-335"]
 summary: "Phase 3 reconstruction of the local OSS tooling: implemented modules, composition limits, contracts, topology, and architecture risks."
 ---
@@ -44,7 +44,7 @@ flowchart LR
   Operator --> Tooling
   Agents --> Tooling
   Tooling <--> Repo
-   Tooling <-->|"reads; supported GitHub/Jira closeout writes"| Providers
+   Tooling <-->|"reads; supported provider writes and the squash landing"| Providers
   Tooling -->|"quota transport available; host wiring pending"| Quota
   Tooling -->|"metadata reads and bounded administration"| Sessions
 ```
@@ -104,7 +104,7 @@ production composes no lane executor, so a resident daemon runs the declared
 | `core/src/app/`, core `createRuntime` | Application tier: the runtime-neutral state-scope policy (host root, project identity, host index) and the `projects` projections; the dispatch engine, handover ledger, and dispatch gate; the queue, polling, and watch folds; the daemon runtime, control server, dispatch-result, status, supervision, reconcile, and preemption behaviour. `createRuntime` remains an `export declare` composition signature, not a callable implementation. |
 | `cli/bin/`, `cli/src/bin-launcher.ts`, `cli/src/entrypoint.ts`, `production.ts`, `help.ts` | Executable surface: two declared Bun bins (`delivery-os` as the compatibility alias and `jaiship`) over one shared launcher composition, per-bin declared default identities with the working-name override seam, self-description covering root and command help, version, and the install path, the prompt-required composition, and fail-closed containment for an uncomposed invocation. Self-description reads no state, network, git, or configuration. |
 | `cli/src/index.ts`, `edge.ts`, `commands/` | In-process parser/result boundary; config acquisition and optional command registration; thin handlers, the coordinator command family and foreground-loop engine, the mounted daemon lifecycle family, and bounded status collectors. |
-| `adapters/src/github/`, `gitlab/`, `jira/` | Normalized reads plus supported GitHub/Jira closeout writes. GitLab retains declared write gaps and no work-item read. GitHub reads feed status and gate composition, and the bounded deploy-job trace read feeds `verify deploy`. |
+| `adapters/src/github/`, `gitlab/`, `jira/` | Normalized reads plus supported writes. GitHub is the complete reference: all nine closed operations — reads, labels/assignee, mechanism-scoped issue transitions, thread resolution, carrier-free comments, delivery-request content create/update, and the provider-side squash landing — over a CLI-first transport with a declared API fallback. GitLab retains declared write gaps and no work-item read; Jira keeps its closeout write slice. GitHub reads feed status and gate composition, the bounded deploy-job trace read feeds `verify deploy`, and the bounded log-excerpt and thread-discussion reads supply evidence without entering the normalized contract. |
 | `adapters/src/git/` | Fixed-argv local process edge; protected-ref checks, merged-head equality, checkout/foreign-worktree safety, delete-time recheck, worktree listing/current/clean facts, no-force local worktree removal, and a bounded merged-diff read over the recorded squash landing. |
 | `adapters/src/file/`, `repo/`, `legacy/` | YAML/config and pm-notes acquisition/staging, repository facts, legacy-name mapping, the append-only capsule runtime, confined memory-home writes, and the read-only memory-tree scan with YAML frontmatter parsing. |
 | `adapters/src/credentials/`, `provider-quota/` | Credential-reference resolution and injectable quota HTTP transport. Factories exist, but production host mounting is not established. |
@@ -369,8 +369,8 @@ These are existing decision criteria, not a new package-splitting decision.
 | Client to credentials | `CredentialPort.resolve(reference): CredentialResolution` | `config.credential.missing`; no diagnostic channel; material only on success. |
 | Edge to provider | `createProviderEngine(deps).resolve({config, chainName?, persist?})` | Typed decision/park/announcement; state failures remain visible. |
 | Status collector to GitHub | `listWorkItems(limit)`, `listDeliveryRequests(limit)`, `readPipelineRun(sha, limit?)` | `ProviderReadResult<T>`: normalized value or credential/payload failure, mapped into status availability. |
-| Closeout to provider/git/state | Eight declared provider operations including `resolve-delivery-thread`; capability-qualified GitHub/Jira writes and local git cleanup | Classified provider/state/safety failure with consequence; unsupported operations remain gaps. No general comments, remote branch cleanup or merge execution inferred. |
-| Merge transaction to provider/git/state | One verification read, one work-item read, one check-run page and one request-detail read per invocation; the declared mutation union carries one rebase-refresh, one squash landing, and post-landing cleanup | Classified `merge.*` or state identity with exit projection; no force variant exists and the merge command is the only landing producer. |
+| Closeout to provider/git/state | Nine declared provider operations including `resolve-delivery-thread` and `merge-delivery-request`; capability-qualified GitHub/Jira writes and local git cleanup | Classified provider/state/safety failure with consequence; unsupported operations remain gaps. Closeout issues no comment and no content write, and never composes the adapter's provider-side landing: its terminal transition is one state-only write, label cleanup is its separate `write-work-item` step, and remote branch cleanup stays out of scope. |
+| Merge transaction to provider/git/state | One verification read, one work-item read, one check-run page and one request-detail read per invocation; the declared mutation union carries one rebase-refresh, one squash landing, and post-landing cleanup | Classified `merge.*` or state identity with exit projection; no force variant exists and the merge command is the only composed producer of the lifecycle merge. The adapter's `merge-delivery-request` capability is not composed into it. |
 | Consumer to state | `read({requiredKeys})`, `append(handle, request)`, `replaceDocument(handle, request)` | `StateResult<T>`; verified-empty differs from torn/missing required keys. Writes require acquired fence handle. |
 | Session caller to adapter | `SessionStorePort` reads; `SessionAdminPort` prune/reboot with explicit `apply` | Classified `db.*` errors; metadata-only output, no transcript or raw command output. |
 | Handler to CLI | `{data}` or `{error}`; `runCli(argv, streams, deps): Promise<number>` | Declared kind/code to error table; malformed/unclassifiable values become `fallback.internal`. |

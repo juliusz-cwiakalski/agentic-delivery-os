@@ -9,7 +9,7 @@ service: delivery-os
 summary: "Harness telemetry v2: per-step token, calls, and cost ingest beside the delivered opencode JSONL drain with present-zero distinguished from omitted, five-dimension attribution joined from session economics and command-audit identity, one bounded read-only per-session totals query at stream close captured as a harness.telemetry.baseline record, schema-versioned additive step and baseline record families under delivery.telemetry.storage.v1 with re-read migration, classified damage, linear growth, the captured delivery.harness.telemetry.v1 row's additive seat, resolved-model, store-sourced duration, and observed-axis-absence members over the observed store contract, the stream-ingest/closeout-capture/combined reading bases with the declared session-dedup combination rule, the storage identity the peak-pause window-scoped zero-spend evidence counts over, the metrics report's dispatch and burn-rate reads over the same families, and aggregates-only privacy."
 links:
   related_changes: ["GH-291", "GH-294", "GH-299", "GH-335"]
-  related_decisions: ["ADR-0003", "ADR-0008", "TDR-0004", "TDR-0016", "TDR-0032", "TDR-0035"]
+  related_decisions: ["ADR-0003", "ADR-0008", "TDR-0004", "TDR-0016", "TDR-0036", "TDR-0039"]
   contracts:
     - "packages/core/src/contracts/telemetry.ts"
     - "packages/core/src/contracts/harness-telemetry.ts"

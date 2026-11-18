@@ -1,0 +1,807 @@
+change_id: GH-338
+title: "M3-S4: GitHub adapter completion, code host + backlog (M3)"
+delivery_mode: autonomous
+milestone: "M3: Harness and tracker integrations"
+phases:
+  clarify_scope: { started: null, completed: 2026-11-17T22:02:46.502Z }
+  specification: { started: null, completed: 2026-11-17T23:34:03.600Z }
+  test_planning: { started: null, completed: 2026-11-17T23:34:06.905Z }
+  delivery_planning: { started: null, completed: 2026-11-17T23:34:10.150Z }
+  dor_check: { started: null, completed: 2026-11-17T23:39:09.787Z }
+  delivery: { started: null, completed: 2026-11-18T07:30:33.207Z }
+  system_spec_update: { started: null, completed: 2026-11-18T07:13:51.961Z }
+  review_fix: { started: null, completed: 2026-11-18T07:30:29.537Z }
+  quality_gates: { started: null, completed: 2026-11-18T08:00:38.523Z }
+  dod_check: { started: null, completed: 2026-11-18T08:01:20.569Z }
+  pr_creation: { started: null, completed: 2026-11-18T09:28:51.219Z }
+decisions:
+  - text: "Scope is taken from the ticket body plus the committed M3 blueprint
+      (doc/planning/oss-tooling/milestones/m3/): full primitive coverage for the
+      GitHub adapter as the reference implementation for BOTH code hosting and
+      backlog management — PRs with threaded discussions and resolution, checks
+      with failure job/log/timing access, squash merge with crafted
+      title/description and squash commit message, and GitHub Issues backlog
+      primitives (read/update, comments, transitions), delivered CLI-first over
+      `gh` with direct API fallback (M3 EC-3), with the reference behavior
+      documented in the adapter contract."
+    date: "2026-11-17"
+  - text: "M3 delivery questions ticket #342 carries no answers; the stated defaults
+      apply for the phases that reach them. Applied defaults: Q-03 credential
+      name `GITHUB_TOKEN`; Q-04 GitHub Issues lifecycle mapping is
+      project-configurable and seeded with this repository's label conventions;
+      Q-07 pipeline analytics depth is status + failed job/task name + bounded
+      log excerpt + durations, with full log archives out of scope."
+    date: "2026-11-17"
+  - text: "A provider-side squash merge is named by the ticket but has no
+      destination in the current closed operation set (ADAPTER_OPERATIONS has
+      eight operations; `write-delivery-request` is a declared gap today).
+      Whether merge becomes a new closed operation or another shape is a
+      contract decision owned by @decision-advisor under the
+      additive-v1/decision-record rule; the spec must record the chosen option
+      before delivery planning."
+    date: "2026-11-17"
+  - text: "Resolved by @decision-advisor before specification: TDR-0032 (CLI-first
+      transport as one ProviderTransport over `gh api`, probe-gated, no
+      per-request failover, isolated child env, declared preferred/fallback
+      matrix); TDR-0033 (ninth closed operation `merge-delivery-request`;
+      additive optional PipelineJob startedAt/completedAt with durationMs
+      deferred; bounded 8192-byte adapter-local log excerpt; merge transaction
+      deliberately not rewired); TDR-0034 (thread discussion bodies as a bounded
+      adapter-local read: 50 comments per thread, 4096 bytes per body,
+      DeliveryThread unchanged); TDR-0035 (GitHub Issues transitions via an
+      injected, seeded core WorkflowMap; no new configuration schema). All four
+      are status Proposed on the branch and are accepted by the human at PR
+      review."
+    date: "2026-11-17"
+open_questions: []
+blockers: []
+notes:
+  - text: "Final settled PR state: 47/47 CI checks pass, 0 pending, 0 fail at head
+      e8e20f8a (final runs 44276380554 push and 44276370966 merge-group, plus
+      44276380431 base guard); mergeable MERGEABLE, mergeStateStatus CLEAN,
+      isDraft false, autoMergeRequest null. Branch protection requires eight named
+      check contexts and no review count, so the earlier BLOCKED reading was the
+      fresh run still in flight after the docs-only follow-up commit, not a
+      failure. Issue #338 is OPEN, labelled change + review, assigned to
+      juliusz-cwiakalski, milestone M3. Every lifecycle phase is complete. Nothing
+      was merged, approved, or auto-merged by this session."
+    type: info
+    date: "2026-11-18"
+  - text: "PR ready for review:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/344 — base
+      main-tools, head c75016df, 37 commits, MERGEABLE / CLEAN, 47 checks pass /
+      0 pending / 0 fail (runs 44273213864 and 44273222232 both success). Final
+      state includes the main-tools sync (merge 936ad950 over 3ea2aec9 / GH-293
+      #343) with the four doc conflicts resolved keeping both sides, the
+      decision-record renumber to TDR-0032..TDR-0035 (30 files; GH-293's
+      TDR-0031 untouched), the CI hermeticity fix (scratch in-window gh stub
+      first on the child PATH in entrypoint-two-bins; the byte comparison is
+      unchanged; proven with an out-of-window gh 3.10.0 first on PATH), and the
+      merged-tree reconciliation of GH-293's TC-ENGINE-092 (composition
+      references createGithubNativeTransport with zero fetch sites; one declared
+      fetch in the adapter client). Gates at c75016df: pnpm check 10590 pass / 4
+      skip / 0 fail over 10594 tests in 1321 files; range gate PASS, 37 commits,
+      0 offending, mode none, repository-local commitlint, origin/main-tools
+      resolvable. Merge authority is the owner's — this session does not merge."
+    type: info
+    date: "2026-11-18"
+  - text: "Sync with main-tools and CI hermeticity repair. The sync merge is
+      936ad950 (parents 6397f6ee on the branch and 3ea2aec9, origin/main-tools
+      GH-293 PR #343), so 3ea2aec9 is the merge-base the range gate measures.
+      Four conflicts resolved by hand: doc/decisions/00-index.md,
+      doc/overview/glossary.md, doc/spec/features/feature-merge-verify-deploy.md
+      and doc/spec/features/feature-result-contract.md each keep GH-293's
+      engine-first text beside this change's adapter text, with this change's
+      decision references renamed. The four decision records moved
+      TDR-0031..0034 -> TDR-0032..0035 (30 files touched: the four renamed
+      records plus every branch reference in the change artifacts, system spec,
+      adapter code and boundary fixtures), while GH-293's incoming
+      TDR-0031-engine-first-evaluation-surfaces.md stays untouched and
+      authoritative. CI run 44263517194 root cause repaired in
+      tests/behaviour/entrypoint-two-bins.test.ts: every child now gets a
+      scratch `gh` stub first on PATH that answers `--version` with `gh version
+      2.91.0`, so the composition probe takes the in-window branch on every host
+      and the byte-identical stderr baseline stays an exact comparison; the
+      ambient PATH is preserved after the stub and the scratch directory is
+      removed in afterAll. A poisoned sweep of tests/behaviour + tests/structure
+      with an out-of-window `gh` (3.10.0) first on PATH is 8736 pass / 4 skip /
+      0 fail, so no other suite deterministically leaks. Merged-tree interaction
+      also repaired: GH-293's TC-ENGINE-092 expected
+      packages/cli/src/production.ts to own the one native fetch, but TDR-0032
+      moved that seam to the adapter, so the invariant now asserts production
+      has zero fetch sites and references createGithubNativeTransport( while
+      packages/adapters/src/github/client.ts owns exactly one. Re-gated on the
+      merged tree: TC-BIN 18 pass / 0 fail; TC-BIN-084 5 pass / 0 fail;
+      prompt-conformance 5 prompts clean; TMPDIR=$PWD/tmp/tmpdir pnpm check exit
+      0 (lint 2934 files, 103 warnings / 0 errors; format 2788 files; typecheck;
+      test 10590 pass / 4 skip / 0 fail, 96141 expect calls, 10594 tests across
+      1321 files; boundaries 458 modules, ambient-globals 221 clean,
+      workspace-entrypoints OK, secret-read 425 files; memory 0 errors / 0
+      advisories; prompt-conformance clean; help-guide all covered;
+      exports-parity 5 publishables). Range gate VERDICT PASS — base main-tools
+      (source=explicit, merge-base 3ea2aec9, head 936ad950), 36 commits in
+      range, 0 offending commits, 0 distinct rules hit; commitlint binary
+      node_modules/.bin/commitlint (origin=repository-local); ref
+      refs/remotes/origin/main-tools resolvable. TC-DAEMON-121 measured
+      229.36-233.58 ms under the full suite and passed."
+    type: info
+    date: "2026-11-18"
+  - text: "PR created:
+      https://github.com/juliusz-cwiakalski/agentic-delivery-os/pull/344 (base
+      main-tools, head feat/GH-338/github-adapter-completion at ba95f8ca, title
+      'feat(GH-338): complete the GitHub reference adapter', OPEN, not draft, no
+      auto-merge). CI run 44263517194: 21 checks pass; 2 fail (TS tests, TS
+      aggregate check) from one root cause — TC-BIN-002 asserts byte-identical
+      stderr for `status --json` with an ambient PATH, and the CI runner's `gh`
+      is outside GITHUB_CLI_VERSION_WINDOW (max 2.99.99), so composition emits a
+      provider.cli.version-unsupported degradation line the baseline lacks;
+      TC-BIN-084 half (b) fails as a consequence. This is a real hermeticity
+      defect introduced by the change (review-iter-2 note 8 upgraded from low to
+      gate-blocking), fixable by pinning PATH in the two GH-320 suites the way
+      install-launcher-installer.test.ts already does. Also: the PR is
+      CONFLICTING because main-tools advanced to 3ea2aec9 (GH-293, PR #343)
+      after our merge-base 1250d789; four doc files conflict and main-tools
+      already carries TDR-0031-engine-first-evaluation-surfaces.md, so this
+      change's four decision records must be renumbered from 0031-0034 to
+      0032-0035 with every reference updated."
+    type: info
+    date: "2026-11-18"
+  - text: "DoD check PASS. All nine prerequisite lifecycle phases are recorded
+      complete (clarify_scope, specification, test_planning, delivery_planning,
+      dor_check, delivery, system_spec_update, review_fix, quality_gates). Plan
+      completion: all eight declared plan phases (1-8) carry a pm-notes note
+      naming the phase id, its commit hash and its gate result — 1 edc7114e, 2
+      787a2643 + remediations, 3 ec24bf54, 4 8ab4512a, 5 94b31b47, 6 a3a52ebb, 7
+      dde7b661, 8 48a915a3 (self-hash f8096cbb). Acceptance: review iteration 2
+      records 40/40 ACs with real oracles and no unmet criterion (AC-F2-1,
+      AC-F2-3, AC-F2-4, AC-F6-1 and AC-F6-4 production-true after phase 8).
+      Documentation: the phase-7 reconciliation and its post-remediation re-run
+      both report no unresolved documentation gap, with the doc-distribution
+      guard clean at 95 in-scope docs. Quality gates green at aa4e68aa; range
+      gate PASS over 32 commits."
+    type: info
+    date: "2026-11-18"
+  - text: "Quality gates (lifecycle phase 9) PASS at HEAD aa4e68aa. TMPDIR=$PWD/
+      tmp/tmpdir pnpm check exit 0 with every stage green: lint, format:check,
+      build, typecheck, test (10507 pass / 4 skip / 0 fail, 94709 expect calls,
+      10511 tests across 1311 files), check:boundaries (depcruise 458 modules no
+      violations; ambient-globals clean; workspace-entrypoints match;
+      secret-read boundary 425 files, 5 allowlisted entries), check:memory,
+      prompt-conformance, help-guide-coverage, exports-parity. An earlier run of
+      the same tree showed the known load-sensitive TC-DAEMON-121 timing flake
+      (252.25 ms against a 250 ms ceiling) with 10506 pass / 1 fail; the
+      serialized rerun measured 233-238.86 ms and passed, and the test also
+      passes in isolation — an environment-timing flake, not a regression. Range
+      lint gate: VERDICT PASS, base main-tools (source=explicit, merge-base
+      1250d789, head aa4e68aa), 32 commits in range, 0 offending commits, mode
+      none, commitlint binary node_modules/.bin/commitlint
+      (origin=repository-local), range ref refs/remotes/origin/main-tools
+      resolvable."
+    type: info
+    date: "2026-11-18"
+  - text: "Review iteration 2 = PASS_WITH_NOTES (review/review-iter-2.md). B-1, M-1,
+      M-2 and every actionable minor are closed on executed evidence: the host
+      identity mapping is exact (api.github.com -> github.com, others unchanged)
+      with a real-process stub-gh proof for one read and one write; the child
+      environment is absolute in every case with the drop-XDG negative control
+      producing the residue; the check tier has asserted present and absent arms
+      with no live gh; the write family classifies every non-2xx uniformly and
+      provider.not-found is read-scoped in code, spec, reference table and test
+      plan; preservation semantics converge; githubCliHostname is a disclosed
+      forced surface move. 40/40 ACs have real oracles with
+      AC-F2-1/2-3/2-4/6-1/6-4 now production-true. No new correctness or
+      security defect found. Residual notes are bookkeeping and optional
+      hardening only."
+    type: info
+    date: "2026-11-18"
+  - text: "PM-owned review bookkeeping closed at DoD (review-iter-2 residual notes
+      1-3 and 7): (a) the two unattributed phase-2 commits are now named —
+      6bbf3c73 reverted the blanket-format rewrite of 269 delivered files and
+      528a2cb4 moved the prior-identity-hermetic and publishable-path pins and
+      added the lockstep changeset; (b) the DoR iteration-2 verdict and spec
+      v1.2 revision are recorded by this and the DoR note, and the superseded
+      DM-10 sentence ('carried on the composed runtime') is superseded by the
+      resolver-return-value formulation; (c) the doc-reconciliation commit
+      5e5da451 is recorded by the reconciliation note above, superseding plan
+      obligation 8.10's narrower doc reach; (d) TDR-0032 now names
+      githubCliHostname in its decision text and TC-CLI-004 names exactly the
+      delivered status-block fixtures. Remaining future-work notes
+      (production.ts glue TC, shared /tmp config-dir collision hardening, two
+      GH-320 suites that compose on ambient PATH) are recorded as follow-ups,
+      not defects."
+    type: info
+    date: "2026-11-18"
+  - text: "Range lint gate (lifecycle phase 9 prerequisite): VERDICT PASS — base
+      main-tools (source=explicit, merge-base 1250d789, head 86ed3d24), 29
+      commits in range, 0 offending commits, 0 distinct rules hit; commitlint
+      binary node_modules/.bin/commitlint (origin=repository-local); range ref
+      refs/remotes/origin/main-tools resolvable, so no ERROR or SKIP downgrade."
+    type: info
+    date: "2026-11-18"
+  - text: "Post-remediation doc reconciliation (lifecycle phase 7 re-run):
+      feature-provider-client-seeds, feature-adapter-ports,
+      feature-cli-entrypoint, feature-result-contract, doc/overview/glossary,
+      doc/guides/tracker-credential-provisioning and TDR-0032 C-6 were corrected
+      for the host-identity mapping, the absolute isolated child environment,
+      and the read-scoped provider.not-found (writes classify every non-2xx as
+      provider.payload.invalid). Guards: test-doc-distribution OK (95 in-scope
+      docs, no drift), doc-conformance + decision-record 23 pass, forbidden
+      literals 0 violations. Landed as 5e5da451 and the phase transition as
+      86ed3d24."
+    type: info
+    date: "2026-11-18"
+  - text: "Plan phase 8 remediation commit: 48a915a329f413c79efd7d3317b495c34fb2f1ea
+      (this entry carries the hash the phase-8 note names, per the phase-4..7
+      convention). The commit landed 24 files — including the new
+      tests/fixtures/providers/github/cli-process-edge.json and
+      review/review-iter-1.md — with zero scope drift and an empty
+      untracked-not-staged set. Its subject is primitive-derived
+      (`messageSource: template`, `transport: none`), so it reads `docs(GH-338):
+      update doc/changes/...` instead of the plan's declared phase-8 subject,
+      the same deviation phases 1-7 recorded. `delivery` stays open: the
+      re-review gate (`review-iter-2`) is next and `phase complete GH-338
+      delivery` has deliberately not been recorded."
+    type: info
+    date: "2026-11-18"
+  - text: "Plan phase 8 complete (remediation: CLI host identity, absolute isolated
+      child environment, offline stub-gh process edge, host-independent check
+      tier, normative convergence). Plan phase 7 commit: dde7b661 (the phase-7
+      note names plan phase 7 and its gate result; this entry carries the hash).
+      Phase 8 closed review iteration 1 (review/review-iter-1.md, verdict FAIL)
+      without re-opening scope and without taking ownership of an AC. D1/B-1:
+      `githubCliHostname` is the exact, frozen identity mapping
+      (`api.github.com` -> `github.com`; every other host unchanged, no generic
+      `api.` strip), exported additively through `./github`;
+      `GithubCliTransportOptions.hostname` is REQUIRED, the `request.url` host
+      derivation is deleted, and composition computes the value ONCE from the
+      declared instance `baseUrl`. D2/M-1: the isolated base is absolute in
+      every case (the injected `TMPDIR` when absolute, otherwise `os.tmpdir()`),
+      with `GH_CONFIG_DIR` and `XDG_CONFIG_HOME` on `<base>/jaiship-gh-config`,
+      `XDG_STATE_HOME` on `<base>/jaiship-gh-state`, `XDG_CACHE_HOME` on
+      `<base>/jaiship-gh-cache`, and `HOME` never forwarded; the delivered
+      `.local/state/gh/device-id` residue was deleted from the worktree, never
+      staged, and no `.gitignore` rule was added (the mechanism is fixed, so an
+      ignore rule would hide a regression). D3/M-2: the check tier injects
+      `PATH` itself — arm A carries a recording `gh` stub (exactly one probe per
+      composing invocation, no degradation line, none on a self-description
+      path), arm B carries a `PATH` with no `gh` at all (zero spawns, exactly
+      one `provider.cli.unavailable` line, the command still succeeds) — so no
+      launcher, composition, or policy code changed and no configuration surface
+      was invented. D4/m-1: the write-side 404 is REMOVED, not implemented —
+      DM-9/F-6/NFR-4 are restated to the delivered uniform write classification
+      (any non-2xx, 404 included -> `provider.payload.invalid` with the
+      structured `httpStatus`; `provider.not-found` is read-scoped), the
+      reference-behavior write row states it, and TC-BACKLOG-002 asserts it over
+      the new `pullUpdateNotFound` fixture row (one request, no retry). D5/m-2:
+      AC-F6-4/DM-6 (change folder), TDR-0035 C-6/§3.2 and its label-safety
+      metric line, the reference-behavior mapping paragraph and the test plan's
+      TC-BACKLOG-005/§1.1 are restated to the delivered preservation semantics
+      (one issue `PATCH` carrying the computed target set; never a single-token
+      array; never an undeclared removal), with the current-read-as-input
+      realisation and the read-to-write TOCTOU limit recorded in TDR-0035.
+      n-1/8.6: `parseIncludedResponse` scans only the FIRST status block's
+      pre-body region and skips an intermediate bodyless block, so a
+      status-shaped body line can never override the real status;
+      `cli-status-blocks.json` gains the `body-with-status-line` case plus its
+      rationale. 8.9: TDR-0032 item 8 now states the one additive optional
+      `GithubClientOptions.workflowMap` member and its status-block open
+      question is closed; N12 and m-3/n-4/n-6 stay @pm bookkeeping (no
+      historical note was rewritten), and m-5 stays a recorded SCOPE_DEVIATION
+      with `.changeset/**` untouched. 8.10: the reference-behavior document
+      gains the host-mapping table and the absolute child-environment row, and
+      the drift fixture/test gain the host rows plus their extraction-count and
+      non-vacuity assertions; spec v1.3 (F-6/DM-9/NFR-4/AC-F6-4) and test plan
+      v1.3 (§1, §4, GAP-TP-3, the TC-CLI-002/003/004 and TC-BACKLOG-002/005
+      rows, TC-CLI-014/015, TC-BIN-057) are recorded in their own revision
+      tables. Pinned surfaces moved exactly and non-vacuously:
+      `EXPECTED_SURFACE` for `./github` and both per-file executable allowances
+      gain `githubCliHostname`; the `node:child_process` site set stays the
+      declared thirteen. Verification, all from the repository root with
+      TMPDIR=$PWD/tmp/tmpdir: G6 typecheck exit 0; G2 behaviour/providers 286
+      pass 0 fail; G3 conformance 183 pass 0 fail; G1 structure 1628 pass 0
+      fail; G4 checks 1177 pass 0 fail (TC-DAEMON-121 green under full load — no
+      isolation re-run needed); G5 boundaries 152 pass 0 fail; G7
+      secret-read-boundary OK (425 production files, 5 allowlisted entries,
+      unchanged); G8 fixture sanitization/privacy 11 pass and doc-conformance +
+      decision-record 23 pass; `bash scripts/.tests/test-doc-distribution.sh` no
+      drift (95 in-scope docs); `jaiship plan validate GH-338` verdict=valid
+      tier=full readyForDevelopment=true; G9 `git diff --check` clean; `git
+      status --porcelain` shows no `.local/` entry and `.local/` is absent from
+      the worktree; G10 `TMPDIR=$PWD/tmp/tmpdir pnpm check` exit 0 (10507 pass,
+      4 pre-existing skips, 0 fail) with depcruise, ambient-globals,
+      workspace-entrypoints, memory-lint, prompt-conformance,
+      help-guide-coverage and exports-parity green. Four touched files were then
+      re-formatted with `biome format --write` on exactly those files
+      (line-break only; `biome format packages tests` reports no drift
+      afterwards) and G1/G2/ G3 plus the whole suite inside G10 were re-run at
+      the final tree, so the recorded counts are post-format. Deviations: (1)
+      the commit primitive produced a deterministic template subject
+      (`messageSource: template`, `transport: none`) rather than the plan's
+      declared phase-8 subject, exactly as phases 1-7 did; no message was
+      composed by hand. (2) Two superseded clauses still carried the old 'no
+      full-array replace' wording after the first remediation pass — TDR-0035's
+      label-safety metric line (named by obligation 8.8) and test plan §1.1 —
+      and were restated in this phase; both live inside the phase-8 declared
+      scope or the change folder. No AC, operation, cap, error identity,
+      configuration surface, or pinned allowance moved, and AC ownership is
+      unchanged: phase 8 re-establishes the evidence for AC-F2-1, AC-F2-3 and
+      AC-F2-4 (TC-CLI-014/015 plus the repinned TC-CLI- 002/003 oracles) and for
+      AC-F6-1 and AC-F6-4 (TC-BACKLOG-002/005 wording), and re-verified AC-F2-2,
+      AC-F2-5, AC-F8-3, AC-F8-6, NFR-2, NFR-3 and NFR-9 as controls. Residual:
+      the re-review (`review-iter-2`) is the next gate; `phase complete GH-338
+      delivery` is deliberately NOT recorded here."
+    type: info
+    date: "2026-11-18"
+  - text: "Review iteration 1 = FAIL (review/review-iter-1.md). One blocker and two
+      majors, all real: B-1 the CLI transport passes the REST host to `gh api
+      --hostname`, so gh builds https://api.api.github.com and every production
+      provider request fails while the suite stays green (the golden argv
+      fixture pins the wrong host and GAP-TP-3 has no live-binary smoke) —
+      remediation must derive the gh hostname from the instance, repin the argv,
+      and add an offline stub-gh shim smoke through the real execFileRunner; M-1
+      the child environment drops HOME/XDG_* and GH_CONFIG_DIR falls back to a
+      relative path, so gh writes ./.local/state/gh/device-id into the caller's
+      CWD (residue present in this repo, untracked and not gitignored),
+      contradicting the nothing-is-persisted claim TC-CLI-003 pins; M-2 the
+      launcher probes on every composing invocation so the check tier spawns a
+      real gh, making the test plan's no-live-gh claim false and the check tier
+      host-dependent (unrecorded). Minors: DM-9/F-6 declare a write-side 404
+      that nothing implements; AC-F6-4's no-full-array-replace wording versus
+      the whole-array PATCH; unattributed commits; two DoR notes only partially
+      carried; the changeset authored in phase 2 while declared in phase 7.
+      Reviewer confirmed: child-process guard non-vacuous, done transition
+      byte-identical to pre-change, all six moved pins forced or disclosed,
+      TC-DAEMON-121 a pre-existing environment flake, 10 of 12 DoR notes
+      honoured."
+    type: info
+    date: "2026-11-18"
+  - text: "RETRO (review iteration 1): the DoR gate passed a design whose central
+      claim — CLI-first transport — had no test that exercised the real binary
+      boundary. Every fixture mocked the child runner, so a wrong `--hostname`
+      semantic survived three readiness iterations, two delivery phases and a
+      green pnpm check. Two process fixes for future M3 stories: any adapter
+      that shells out needs one offline shim-level smoke (a stub executable on
+      PATH) before the DoR gate, and the review gate's first question on a
+      transport change should be what the argv means to the vendor binary rather
+      than whether the fixture matches the implementation. Also: the blanket
+      biome --write incident in phase 2 cost a 269-file revert; the
+      no-repo-wide- format rule needs to be stated at delivery start, not at
+      phase 2."
+    type: retro
+    date: "2026-11-18"
+  - text: "Plan phase 7 complete (release obligations and the regression floor).
+      Plan phase 6 commit: a3a52ebb62e5582b559d77e172b7ae69e9e28604 (the phase-6
+      note names plan phase 6 and its gate result; this entry carries the hash).
+      Phase 7 delivered: the lockstep five-publishable minor changeset
+      (.changeset/gh-338-github-adapter-completion-minor.md) verified, not
+      duplicated; the TC-PARITY-005 completion roll-up in
+      tests/conformance/mock-conformance.test.ts asserts each of the seven
+      AC-F8-4 behaviors (landing, timings, excerpt, discussion, comment write,
+      content write, mapped transition) has exactly one four-field catalog entry
+      whose fixtureReference resolves, a named mutation in the trap suite (the
+      landing mutation added as an assertion extension; no trap entry added or
+      amended in this phase), and an executed closed-set half with a declared
+      projection (a void write is held to its exact tenant route truth); the
+      TC-PARITY-007 determinism case proves two whole-change replays are equal
+      and the committed tenants are byte-identical across loads; the
+      TC-FLOOR-007 scope-boundary proofs assert the lifecycle merge transaction
+      imports no landing member and is not rewired, packages/core/src/state
+      gains no new record, no configuration surface exists in the GitHub
+      subpath, and DeliveryThread/DeliveryRequest/WorkItem field sets are exact
+      in the type probe and the source. Acceptance: AC-F8-4 (TC-PARITY-005),
+      AC-F8-5 (TC-PARITY-007); the TC-FLOOR-001..007 delivered suites run green
+      as controls. Verification: `jaiship plan validate GH-338` ->
+      verdict=valid, tier=full, readyForDevelopment=true; G1 structure 1628
+      pass; G2 behaviour/providers 279 pass; G3 conformance 183 pass; G4 checks
+      1175 pass; G5 boundaries 152 pass; G6 typecheck green; G7 secret-read
+      boundary OK (5 allowlisted, unchanged); G8 fixture sanitization/privacy
+      green; error-table-sync OK (entries=149 documented=149); the
+      doc-distribution guard reports no drift; G9 git diff --check clean; G10
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (10498 pass, 4 pre-existing
+      skips, 0 fail). No file outside the phase-7 declared scope moved; the four
+      declared feature specs and the two indexes stayed untouched for the
+      lifecycle phase-7 @doc-syncer handoff (pm-notes carries the sentence-level
+      checklist). Residual: lifecycle phase 7 docs; phase 8 review; phase 9
+      quality gates incl. the branch-range commit gate; phase 11 PR left open
+      against main-tools (merge authority stays with the owner/CEO)."
+    type: info
+    date: "2026-11-18"
+  - text: "Plan phase 6 complete (adapter reference behavior and the drift check).
+      Plan phase 5 commit: 94b31b47a7c7da2334cc8fcbff235544b60e1225 (the phase-5
+      note names plan phase 5 and its gate result; this entry carries the hash).
+      Phase 6 delivered: doc/spec/features/feature-adapter-reference-behavior.md
+      as the normative current-truth surface (transport matrix, capability
+      posture, primary failure identities, absence semantics, both evidence
+      reads with caps and truncation rules, the probe/selection/no-failover
+      contract, the injected seeded transition mapping with the mechanism-scoped
+      label rule, four read outcomes, writable set, terminal-read refusal,
+      current-read-as-input resolution, the validator's seven-rule rejection set
+      and construction-time timing, the unmapped sets, and the deliberate
+      limitations), the one locator fixture
+      tests/fixtures/provider/reference-behavior.ts, and
+      tests/structure/reference-behavior.test.ts which parses the document
+      through that locator, asserts extraction counts before comparing (9
+      operation rows, 3 adapter postures, >=6 absence signals, 3 probe codes, 4
+      seed rows), and fails on one-row/one-digit mutations and on deleted prose
+      claims. doc/00-index.md registers the surface. Verification: G1 structure
+      1624 pass; G4 doc-conformance + decision-record 23 pass; the
+      doc-distribution guard reports no drift (95 in-scope docs); G6 typecheck
+      green (via the aggregate gate); G9 git diff --check clean; G10
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (10488 pass, 4 pre-existing
+      skips, 0 fail; TC-DAEMON-121 green). One pin moved outside the phase-6
+      declared list because the change makes it false: the new user-facing spec
+      page had to be registered and scanned in
+      scripts/checks/forbidden-literals.registry.json (the docs corpus fails
+      closed on an unregistered user-facing doc), which the aggregate gate
+      requires. Residual for lifecycle phase 7 (@doc-syncer): reconcile
+      feature-provider-client-seeds.md (line 169's two-row mapping sentence,
+      capability table 9/0, operation list, normalization section, transport
+      section, trap minima, export-list correction), feature-adapter-ports.md
+      (nine operations, the two optional timestamps, the additive-extension
+      record, confinement wording), feature-adapter-conformance.md (the five
+      named sentences plus the flow/step table, operation-set equality, mock
+      routes/projections, carrier skip-kind, coverage-gate wording),
+      feature-merge-verify-deploy.md (coexistence), and the two indexes."
+    type: info
+    date: "2026-11-18"
+  - text: "Plan phase 5 complete (bounded review-thread discussion read). Plan phase
+      4 commit: 8ab4512a (the phase-4 note names plan phase 4 and its gate
+      result; this entry carries the hash). Phase 5 delivered:
+      `packages/adapters/src/github/thread-discussion.ts` exports the two fixed
+      caps (50 comments per thread, 4096 UTF-8 bytes per body), the closed
+      five-key thread shape with the six-key per-comment shape, a pure
+      `normalizeThreadDiscussion` and the one-read reader (one POST, no
+      pagination/cursor, no retry, 404 and a provider-absent node -> not-found,
+      other non-2xx -> payload.invalid with status, transport throw ->
+      payload.invalid without status, malformed 2xx -> payload.invalid with 200,
+      zero count with an empty list observed empty). Truncation is true exactly
+      when fewer comments were returned than the provider total or any body was
+      truncated; bodies are byte prefixes trimmed on a UTF-8 boundary. The
+      subpath exports the reader, caps, normalizer and types additively.
+      tests/types/delivery-thread.type-test.ts pins DeliveryThread's exact field
+      set in both directions and rejects a body/reply field; the closeout
+      contract suite asserts the closed set, GitHub capabilities and the
+      conformance projections are unchanged; the write-authority scans prove no
+      write path imports the reader and that a discussion body never reaches the
+      closeout plan or residue; the artifact suite asserts no discussion/body
+      field appears in the serialized artifact; the trap catalog gained
+      GITHUB-THREAD-DISCUSSION-CAPS with its assertion and named mutation.
+      Verification: G1 structure 1612 pass; G2 behaviour/providers 279 pass; G3
+      conformance 177 pass; G4 checks 1175 pass; G5 boundaries 152 pass; G6
+      typecheck green; G7 secret-read boundary OK (5 allowlisted, unchanged); G8
+      fixture sanitization/privacy green; G9 git diff --check clean; G10
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (10476 pass, 4 pre-existing
+      skips, 0 fail; TC-DAEMON-121 green). One in-scope fixture correction: an
+      undeclared author placeholder in the new fixture was replaced with the
+      declared `person-placeholder` (no shape or assertion change). No file
+      outside the phase-5 declared scope moved. Residual for phase 6/7 docs:
+      document the discussion shape, the 50/4096 caps, the truncation rule and
+      the no-write-authority/no-persistence discipline in the reference
+      behavior."
+    type: info
+    date: "2026-11-18"
+  - text: "Plan phase 4 complete (verbatim provider job timings and the bounded log
+      excerpt). Plan phase 3 commit: ec24bf54bcbec86479fd5ad3ae24acddd091aa57
+      (the phase-3 note names plan phase 3 and its gate result; this entry
+      carries the hash). Phase 4 delivered: `normalizeCheckRuns` copies
+      `started_at`/`completed_at` verbatim onto the optional PipelineJob fields,
+      absence stays absence, and no duration is derived;
+      `packages/adapters/src/github/log-excerpt.ts` exports the one fixed cap
+      (GITHUB_LOG_EXCERPT_MAX_BYTES = 8192), the closed four-key shape, a pure
+      `boundLogExcerpt` that trims on a UTF-8 character boundary, and the
+      one-read reader (one request, no pagination, no retry, 404 -> not-found,
+      other non-2xx -> payload.invalid with status, transport throw ->
+      payload.invalid without status, malformed 2xx -> payload.invalid with 200,
+      empty 2xx observed empty). The conformance GitHub tenant's check-runs
+      payload and its read-pipeline-run projection gained the two timestamps in
+      the same commit; the artifact suite asserts the top-level key set is
+      unchanged and no excerpt/body/timing evidence field appears in the
+      serialized artifact; the trap catalog gained GITHUB-CHECK-RUN-TIMINGS and
+      GITHUB-LOG-EXCERPT-CAP with assertions and named mutations; the
+      delivered-name snapshot still hashes the original 31 entries.
+      Verification: G1 structure 1611 pass; G2 behaviour/providers 257 pass; G3
+      conformance 177 pass; G4 checks 1175 pass; G5 boundaries 152 pass; G6
+      typecheck green; G7 secret-read boundary OK (5 allowlisted, unchanged); G8
+      fixture sanitization/privacy green; G9 git diff --check clean; G10
+      TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (10453 pass, 4 pre-existing
+      skips, 0 fail; TC-DAEMON-121 green). One in-scope finding: a committed
+      token-shaped redaction canary tripped the privacy-literal scan, so the
+      test constructs the canary at runtime instead (no product or assertion
+      change). No file outside the phase-4 declared scope moved. Residual for
+      lifecycle phase 7 (docs) and phase 6 (reference behavior): document the
+      fixed 8192-byte cap, the byte-prefix/truncation rule, the not-persisted /
+      not-artifacted discipline, and the two optional timestamps."
+    type: info
+    date: "2026-11-18"
+  - text: "Plan phase 3 complete (GitHub 9 supported / 0 declared gaps; the
+      carrier-free comment write and the DM-9 content write; the injected,
+      seeded workflow map driving read normalization and mapped transitions).
+      The load-bearing design resolution: the current-read precondition is
+      adapter-local INPUT data on the widened GithubClient.transitionWorkItem
+      input (`current: { deliveryState, labels? }`), so every refusal issues
+      zero provider requests while the write still resolves against a real read.
+      A label-swap write refuses on a done-resolving current read regardless of
+      labels, on an unavailable label signal, and when no current read is
+      supplied, each with a distinct detail; a declared non-terminal
+      field-update alias, an undeclared alias, and a non-GitHub mechanism are
+      named refusals with zero requests. A field-update row writes provider
+      state only and admits only the terminal done row, so the delivered
+      closeout write stays one PATCH with body exactly {\"state\":\"closed\"}
+      and zero label requests. The map validator implements TDR-0035 §1's seven
+      rules, runs exactly once at construction on the resolved map (pinned by a
+      source scan), captures its failure rather than throwing, and every
+      operation then refuses with zero provider requests; the seed is held to
+      the same checks. Read resolution is the declared four outcomes plus the
+      label-swap case-collision refusal; CLOSED on a closed issue stays native
+      terminal truth. The seed is exported additively for the phase-6 document
+      drift check. Verification: G1 structure 1611 pass; G2 behaviour/providers
+      234 pass; G3 conformance 176 pass; G4 checks 1175 pass; G5 boundaries 152
+      pass; G6 typecheck green; G7 secret-read boundary OK (5 allowlisted,
+      unchanged); G8 fixture sanitization/privacy green; G9 git diff --check
+      clean; G10 TMPDIR=$PWD/tmp/tmpdir pnpm check exit 0 (10429 pass, 4
+      pre-existing skips, 0 fail; TC-DAEMON-121 green this run). Commit hash
+      recorded in the phase-4 note (the phase-1/2 precedent). Pins moved in the
+      same commit because the change makes them false, outside the phase-3
+      declared list: tests/behaviour/closeout-capabilities.test.ts (GitHub
+      posture is now 9/0), tests/behaviour/providers/github-landing.test.ts
+      (TC-LAND-008 asserted the content write was a gap with no member; it now
+      asserts the supported content write issues no landing),
+      tests/conformance/live/live-entrypoint.test.ts (a supported GitHub
+      write-comment is now a live-read-only deferral; the declared-gap half runs
+      through a gap-declaring control), and
+      tests/conformance/broken-adapter-control.test.ts (the test-only wrapper
+      forwards the two new members and keeps its fail-closed control). Delivery
+      notes carried: N5 (the config-surface scan lives in
+      config-contract.test.ts plus config-default-positions.test.ts), N7 (no
+      read, label access, or label-signal refusal added to the field-update done
+      path), N11 (labelless-open-issue / labelless-closed-issue fixture keys).
+      Residual for lifecycle phase 7 (docs): feature-provider-client-seeds.md
+      line 169's two-row mapping sentence is now false; the reference behavior
+      document (plan phase 6) must state the current-read-as-input resolution
+      and the mechanism-scoped label rule."
+    type: info
+    date: "2026-11-18"
+  - text: "Delivery handoff after plan phases 1-2 (this session). Phase 3 onward is
+      NOT started: the tree is green and the two delivered phases are verified,
+      and `phase complete GH-338 delivery` was deliberately NOT run because the
+      Definition of Done requires all seven plan phases. Load-bearing finding
+      for the phase-3 coder: spec §8.4.1 and TDR-0035 §3.2 require a
+      `label-swap` write to be resolved against the issue's current read AND to
+      refuse with ZERO provider requests (TC-BACKLOG-004/006 assert request
+      count 0, zero label reads, zero label writes), while §3.2 also says such a
+      write 'reads the current label set'. Both hold only if the current-read
+      precondition is adapter-local INPUT data on the widened
+      `transitionWorkItem` input (e.g. an optional `current: { deliveryState,
+      labels? }` fact the caller supplies), not a read the adapter issues. That
+      reading keeps the delivered `done` field-update path byte-identical (it
+      needs no precondition), keeps the refusals at zero requests, and makes the
+      read/write symmetry cases writable. It must be documented in the phase-6
+      reference behavior. Also unresolved for phase 3: the terminal-read
+      refusal, the unavailable-signal refusal and the non-terminal
+      `field-update` refusal must be distinguished by detail text; the map
+      validator's seven TDR-0035 §1 rules run once per construction with a
+      captured (never thrown) failure; and the GH-ISSUE-TO-WORKITEM trap outcome
+      amendment is the ONE declared delivered catalog amendment, owned by phase
+      3. Remaining plan phases and their gates are unchanged in
+      chg-GH-338-plan.yaml."
+    type: risk
+    date: "2026-11-18"
+  - text: "Plan phase 2 boundary gate result: TMPDIR=$PWD/tmp/tmpdir pnpm check —
+      lint, format, typecheck, boundaries, memory, prompt conformance, help
+      coverage and exports parity green; bun test 10354 pass / 4 pre-existing
+      skips / 1 fail. The single failure is the load-sensitive delivered suite
+      `TC-DAEMON-121 foreground stop latency` (1354 ms under full-suite load; it
+      passes in isolation in 1.48 s with cancellation 232-236 ms and stop
+      232-236 ms, well inside its 250 ms / 1000 ms bounds). Recorded as
+      green-modulo-environment-flake, the GH-299 precedent, and to be re-proven
+      in the lifecycle quality-gates battery. Phase 2 is therefore complete and
+      verified."
+    type: info
+    date: "2026-11-18"
+  - text: "Plan phase 1 commit: edc7114e4bb51ca714a1db11dc01fe2ecd0ab1dc (the
+      phase-1 note names the plan phase id and the gate result; this entry
+      carries the hash). Plan phase 2 complete (the `gh api` transport over an
+      injected fixed-argv runner: one argv array, the credential removed from
+      the forwarded headers and supplied only as GH_TOKEN child-environment
+      data, isolated GH_CONFIG_DIR, prompt suppression, bounded timeout/output,
+      the final `--include` status block authoritative with an unparsable block
+      refused; the three-code bounded probe; the declared
+      GITHUB_TRANSPORT_MATRIX over all nine operations; the pure
+      `resolveTransportSelection`; the async
+      `resolveCompositionTransportSelection` at the launcher edge; the
+      entrypoint's promised-program await inside the containment try; the
+      launcher's one async wrapper; the child-process guard beside the
+      throwing-`fetch` guard; the parity route table over the seven members that
+      exist now). Commits: 787a2643c4aaca14826219245ce896f1df46a81c (the phase
+      itself) plus one remediation commit recorded in the phase-3 note. The
+      aggregate gate first failed on a self-inflicted scope violation: a blanket
+      `biome check --write packages tests` rewrote 269 delivered files
+      (formatting-only, and one rewrite of `new RegExp` to a regex literal that
+      the repository's `noControlCharactersInRegex` lint rule rejects), and the
+      phase-2 commit therefore contained them. The remediation commit reverts
+      exactly those 269 files to their delivered content and leaves the 25
+      intended files; the net phase-1+phase-2 diff is 25 files. Two further
+      delivered pins moved in the remediation because the change makes them
+      false: tests/checks/prior-identity-hermetic.test.ts (production.ts now
+      holds zero `fetch` sites and references the adapter's exported
+      `createGithubNativeTransport`) and the release guard's publishable-path
+      rule (the lockstep five-package minor changeset is added here rather than
+      in plan phase 7 — the GH-299 precedent — so phase 7 verifies it instead of
+      authoring it). Delivery notes carried: N1 (implemented the plan's names;
+      the test plan's `resolveGithubTransportSelection` is a stale reference),
+      N2 (the firing-canary assertion lives in
+      tests/conformance/github-transport-parity.test.ts and the per-suite
+      zero-spawn counter in mock-conformance.test.ts), N4 (the full spawn
+      budget: one probe for a composing invocation, zero for the four
+      self-description paths, zero provider requests), N10 (the
+      one-process-per-request count is driven on an already-selected transport).
+      Verification: pnpm typecheck green; bun test tests/structure
+      tests/behaviour/providers tests/conformance tests/boundaries plus the
+      secret-read, fixture-sanitization and fixture-privacy suites green (2138
+      pass, 0 fail); bun run scripts/checks/secret-read-boundary.ts OK with 5
+      allowlisted entries (unchanged, exactly one credential-material); git diff
+      --check clean; the aggregate gate result is recorded in the phase-3 note.
+      Guard note: the child-process guard necessarily substitutes the
+      `node:child_process` builtin through bun's module mock; its restore
+      re-registers the real module because `mock.restore()` never undoes a
+      module substitution. The first attempt leaked the substitution into later
+      files in the same process (the daemon re-entry and live-entrypoint suites
+      spawn for real), which is why the restore is explicit."
+    type: info
+    date: "2026-11-18"
+  - text: "Plan phase 1 complete (ninth closed operation `merge-delivery-request`;
+      optional `PipelineJob.startedAt`/`completedAt`; GitHub 7 supported + 2
+      declared gaps; the landing client member with squash-only crafted
+      metadata, the expected-head guard, classified non-2xx/transport failures,
+      no retry, and already-merged success only after a provider-asserted
+      read-back; the GitLab/Jira new-operation gap rows; the conformance
+      registry landing step (13 -> 14 steps) with the optional exact write
+      projection; the GitHub tenant landing route and projection; the landing
+      fixtures, trap entries and pins; the four decision records staged). Commit
+      hash recorded in the plan-phase-2 note. Verification:
+      TMPDIR=$PWD/tmp/tmpdir pnpm typecheck green; bun test tests/structure
+      tests/behaviour/providers tests/conformance tests/boundaries green (2051
+      pass, 0 fail); bun test tests/checks green (1174 pass, 0 fail); fixture
+      sanitization/privacy green (11 pass); git diff --check clean;
+      TMPDIR=$PWD/tmp/tmpdir pnpm check green at the boundary (10306 pass, 4
+      pre-existing skips, 0 fail). Delivery notes carried: N3 (no provider-views
+      edit needed — the file declares no PipelineJob member and no
+      ninth-operation consumer), N6 (partially: TDR-0032 item 8 still says
+      'unchanged apart from documentation' in the committed record; spec §8.5
+      and plan refinement 1 carry the additive form, recorded here as an
+      unedited-record residue). Discovered pins moved in this commit, outside
+      the plan's declared list and required by the closed-set change: the
+      test-only control closed-set list in
+      tests/conformance/live/live-entrypoint.test.ts and the GitHub/Jira posture
+      pins in tests/behaviour/closeout-capabilities.test.ts. Both are mechanical
+      mirror lists of the closed set; the alternative was a red aggregate gate.
+      No contract, cap, case identity, or AC changed."
+    type: info
+    date: "2026-11-18"
+  - text: "DoR gate iteration 3 = READY (readiness-review/readiness-iter-3.md), all
+      ten facets PASS; 11 of 12 iteration-2 findings Resolved and R10 resolved
+      with a recorded residue (the test plan still names the old resolver name
+      once). Two remediated majors: R1 terminal-read write refusal (a label-swap
+      write to a done-resolving issue refuses with zero provider requests, owned
+      by AC-F6-4) and R2 the phase-2 cross-transport route table restricted to
+      members that exist after phase 1 with the write routes as a declared
+      phase-3 extension. Adjudicated scope delta accepted: packages/cli/src/
+      entrypoint.ts joins phase-2 scope with an additive EntrypointComposer
+      return widening (CommandProgram | Promise<CommandProgram>); the await must
+      stay inside the existing try so a rejected composition keeps the
+      containment identity. Twelve delivery notes (nit-level, each with an
+      owning plan phase and an instruction) are recorded in the verdict file and
+      must be carried by the coder rather than reopening a phase."
+    type: info
+    date: "2026-11-18"
+  - text: "DoR gate iteration 1 = NOT_READY (readiness-review/readiness-iter-1.md),
+      no pause flag, 7 blocking findings + 10 minors, all author-side. Reopened
+      delivery_planning, test_planning and specification. Blockers: F1
+      write-delivery-request create has no defined argument shape
+      (specification); F2 the probe cannot run where the plan puts it because
+      the entrypoint composer is synchronous while the probe is Promise-based,
+      and bin-launcher is out of phase-2 scope (delivery_planning); F3
+      tests/structure/harness-imports.test.ts pins the exact node:child_process
+      site set over packages/** and is not in phase-2 scope, so the new
+      transport would fail phase 2's own gate (delivery_planning); F4 the
+      closed->done field-update transition's label-removal/refusal rule
+      contradicts itself between AC-F6-4 (label-based only) and TDR-0035 section
+      3 (every transition), which would silently widen the delivered closeout
+      terminal write (specification + TDR-0035); F5 unmapped/case-mismatched
+      label tokens fall back to native state in TDR-0035 but Appendix D and
+      TC-BACKLOG-008 require a visible refusal (specification + TDR-0035); F6
+      AC-F2-2's declared degradation has no name, shape or observable surface
+      (specification); F7 phase 1 owns TC-LAND-004/005 read-back while the
+      stateful helper lives in a file declared only in phases 2 and 3
+      (delivery_planning). Adjudications: deviation 1 accepted in substance but
+      the TC wording and the plan's no-oracle-change claim must be corrected;
+      deviation 2 - the set reading of AC-F1-1 is preferred over the plan's
+      ordered reading; deviation 3 REJECTED as written; deviation 4 approved
+      (reference behavior authored in delivery phase 6, indexed in phase 7);
+      deviation 5 approved."
+    type: info
+    date: "2026-11-17"
+  - text: "Delivery planning complete: chg-GH-338-plan.yaml validates (tier=full,
+      readyForDevelopment=true) with 7 delivery phases; 81/81 TCs and 40/40 ACs
+      placed on exactly one owning phase. Plan-reported upstream refinements for
+      the DoR gate to adjudicate: (1) TC-PARITY-003 speaks of create+update
+      steps while the registry carries one write-delivery-request step and the
+      change adds three dispatch members (writeComment, createDeliveryRequest,
+      mergeDeliveryRequest) — plan proves update through the behaviour suite and
+      a direct client call; (2) the delivered GitHub supportedOperations order
+      is not closed-set order, so the plan binds the strong reading and moves
+      the provider-surface pin twice (P1, P3); (3) AC-F2-2's 'declared
+      degradation recorded' has no declared home in a no-new-record constraint,
+      so the plan binds it as composition data on the composed runtime, never
+      persisted; (4) the reference-behavior surface is authored in delivery plan
+      phase 6 rather than discovered in lifecycle phase 7 (AC-F7-* must bind at
+      DoD); (5) the reference-behavior document path is bound to
+      doc/spec/features/feature-adapter-reference-behavior.md with a single
+      locator fixture."
+    type: info
+    date: "2026-11-17"
+  - text: "Commit-boundary fact discovered at delivery_planning: the phase command
+      stages the declared plan-phase scope only when the lifecycle phase id
+      matches a plan phase id (it does not for the lifecycle-only phases), so
+      the four TDRs remain untracked after delivery_planning. They are declared
+      in delivery plan phase 1 scope and therefore land with the first delivery
+      phase commit — not with the planning commits."
+    type: info
+    date: "2026-11-17"
+  - text: "Specification complete: chg-GH-338-spec.md authored with 8 functional
+      capabilities (F-1..F-8), AC-F1-1..AC-F8-6, no open questions, and the
+      reference-behavior surface (F-7) that satisfies the ticket's second AC.
+      Four decision records carry the settled choices (DEC-1..DEC-4 =
+      TDR-0032..0034). They remain untracked in the worktree by design: the
+      commit primitive stages only plan-declared scope, so the four TDRs and
+      doc/decisions/00-index.md must be declared in the delivery plan's phase
+      scope paths and will land on `phase complete delivery_planning`."
+    type: info
+    date: "2026-11-17"
+  - text: "clarify_scope cross-check complete against
+      doc/spec/features/feature-adapter-ports.md,
+      feature-provider-client-seeds.md, feature-adapter-conformance.md, and the
+      M3 blueprint. Ticket requirements are complete and consistent with the
+      current spec; no blocking questions. State at intake: branch
+      feat/GH-338/github-adapter-completion sits exactly on origin/main-tools
+      (1250d789), zero commits, no PR; issue #338 OPEN with label `change` and
+      milestone `M3: Harness and tracker integrations` (#6)."
+    type: info
+    date: "2026-11-17"
+  - text: "Current-state facts the spec must reconcile: (a)
+      packages/adapters/src/github is API-only over the injected fetch-shaped
+      ProviderTransport — no `gh` CLI seam exists anywhere in packages/ (the
+      only production child-process sites are adapters ./host for harness spawn,
+      ./git for the local git seam, and ./daemon/supervisor.ts); (b)
+      GITHUB_ADAPTER_CONTRACT declares `write-comment` and
+      `write-delivery-request` as adapter-not-implemented gaps, so the
+      conformance suite records both as declared-gap skips today; (c)
+      review-thread reads already exist over GraphQL (root author
+      login/kind/association, 100-thread bound, resolution mutation delivered),
+      but per-thread comment bodies/replies and pagination are absent; (d)
+      PipelineJob carries only jobName + jobState — no timing and no log
+      surface, so 'failure job/log/timing access' needs an additive extension or
+      an adapter-local bounded read (the createGitHubDeployTraceReader
+      precedent); (e) the merge transaction
+      (packages/core/src/domain/merge-transaction.ts) lands a squash commit
+      through the local git seam, not through a provider API, so provider-side
+      squash merge is genuinely new surface."
+    type: info
+    date: "2026-11-17"
+  - text: "Known doc-impact risks for phase 7: feature-provider-client-seeds.md
+      (capability table, operation list, trap catalog minima, QA table),
+      feature-adapter-ports.md (closed operation set / additive extension /
+      confinement + secret-read boundary entries for a CLI seam),
+      feature-adapter-conformance.md (registry coverage and mock tenant routes
+      once write-comment and write-delivery-request become supported), a new
+      reference-behavior document for the adapter contract, plus
+      index/help-guide and decision records."
+    type: risk
+    date: "2026-11-17"
+  - text: "Delivery conventions from the ticket: full 11-phase lifecycle; plan
+      phases declared in plan.yaml; commits through the commit primitive with
+      conventional subjects; every gate command recorded in pm-notes uses
+      TMPDIR=$PWD/tmp/tmpdir; PR targets main-tools and stays open (merge
+      authority is the CEO/human, never this session)."
+    type: info
+    date: "2026-11-17"

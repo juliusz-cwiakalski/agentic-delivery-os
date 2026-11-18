@@ -1,6 +1,6 @@
 /**
  * TC-HARNESS-011 — one seat per spawn across N spawns, driven through the port
- * and resolved by the composition (DEC-16, DEC-15, TDR-0032).
+ * and resolved by the composition (DEC-16, DEC-15, TDR-0036).
  *
  * The test supplies the agent identity as the caller; the composition calls the
  * pure resolver once per spawn and supplies its returned single-seat binding on

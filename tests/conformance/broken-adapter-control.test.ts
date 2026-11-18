@@ -56,6 +56,13 @@ const corruptRegistration = (
         ...(client.resolveDeliveryThread !== undefined
           ? { resolveDeliveryThread: client.resolveDeliveryThread }
           : {}),
+        ...(client.mergeDeliveryRequest !== undefined
+          ? { mergeDeliveryRequest: client.mergeDeliveryRequest }
+          : {}),
+        ...(client.writeComment !== undefined ? { writeComment: client.writeComment } : {}),
+        ...(client.createDeliveryRequest !== undefined
+          ? { createDeliveryRequest: client.createDeliveryRequest }
+          : {}),
       };
     },
   };
@@ -202,8 +209,16 @@ describe("TC-CONF-017 failure diagnostics and redaction", () => {
             { operation: "write-delivery-request", reason: "adapter-not-implemented" },
             { operation: "read-pipeline-run", reason: "adapter-not-implemented" },
             { operation: "resolve-delivery-thread", reason: "adapter-not-implemented" },
+            { operation: "merge-delivery-request", reason: "adapter-not-implemented" },
           ],
         },
+      },
+      // A supported non-read step with no dispatch member must fail closed.
+      buildClient: (input) => {
+        const client = failClosed.buildClient(input);
+        return {
+          ...(client.readWorkItem !== undefined ? { readWorkItem: client.readWorkItem } : {}),
+        };
       },
     };
     const error = await caught(runControl([withoutHandler], "fail-closed-run", credentials));

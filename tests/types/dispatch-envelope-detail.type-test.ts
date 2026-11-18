@@ -37,7 +37,7 @@ const failureWithDetail: CommandResultFailure = {
   detail: refusalDetail,
 };
 
-/** The declared harness evidence member (TDR-0033): four closed facts. */
+/** The declared harness evidence member (TDR-0037): four closed facts. */
 const harnessEvidence: CommandResultDetail = {
   harness: {
     kind: "opencode",
