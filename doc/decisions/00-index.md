@@ -21,8 +21,10 @@ All decision records for this repository, ordered by type and number.
 | [ADR-0009](ADR-0009-release-model-v1.md) | ADR | Release Model v1 | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
 | [ADR-0010](ADR-0010-session-admin-port-mutating-contract.md) | ADR | Separate Mutating `SessionAdminPort` from the Read-Only `SessionStore` (ADR-0003 Reconciliation) | Proposed | 2026-10-31 | Juliusz Ćwiąkalski |
 | [ADR-0011](ADR-0011-canonical-memory-record-schema.md) | ADR | One Canonical Agent-Memory Record Schema — Required Spine, Closed Optional Set, Dispositions, and a One-Way Reconciliation Direction | Proposed | 2026-11-15 | Juliusz Ćwiąkalski |
+| [ADR-0012](ADR-0012-provider-side-merge-landing-path.md) | ADR | Provider-Side Landing Is the Lifecycle Merge Path — One Mechanism, Exact-Head Guards, and Typed Sync-Required Outcomes | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | ODR-0001 | ODR | Classify doc/templates/*.yaml register templates as redistributable | Accepted | 2026-06-25 | Juliusz Ćwiąkalski |
 | [ODR-0004](ODR-0004-flat-record-set-rename-projects-to-repos.md) | ODR | Flat Record Set Command Rename (`projects` → `repos`) — Scoped ODR-0003 Supersession | Proposed | 2026-11-14 | Juliusz Ćwiąkalski |
+| [ODR-0005](ODR-0005-closeout-milestone-synchronization.md) | ODR | Milestone Synchronization in `closeout --apply` — Attachment Verification and Exit-Review-Gated Closure | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | PDR-0001 | PDR | Tribal Knowledge Extraction Taxonomy | Accepted | 2026-06-27 | Juliusz Ćwiąkalski |
 | PDR-0002 | PDR | Mode-Aware Spec-Coverage Resolution for Autonomous Delivery | Proposed | 2026-07-02 | Juliusz Ćwiąkalski |
 | [PDR-0003](PDR-0003-owner-gate-sla-default-map.md) | PDR | Owner-Gate SLA Initial Default Map | Proposed | 2026-11-06 | Juliusz Ćwiąkalski |
@@ -67,3 +69,4 @@ All decision records for this repository, ordered by type and number.
 | [TDR-0037](TDR-0037-tracker-error-taxonomy-delivered-identities.md) | TDR | Tracker Error Taxonomy — Parity Assertion over Delivered Identities, Not a New Closed Identity Set | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | [TDR-0038](TDR-0038-simulated-stateful-tracker-double-declared-effects.md) | TDR | Simulated Stateful Tracker Double — A Runtime-Neutral In-Memory Tenant with Declared Effects | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
 | [TDR-0039](TDR-0039-registration-only-adapter-extensibility-proof.md) | TDR | Registration-Only Adapter Extensibility — Five Supplied Items, a Provider-Name-Free Core, and a Synthetic Registration Proof | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |
+| [TDR-0040](TDR-0040-phase-truth-registry-fold-mirror.md) | TDR | One Phase Truth Source — Ledger Fold Authority, Fold-Written Mirror, and Detected Divergence | Proposed | 2026-11-18 | Juliusz Ćwiąkalski |

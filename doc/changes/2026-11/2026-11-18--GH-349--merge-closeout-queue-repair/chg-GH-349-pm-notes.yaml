@@ -4,7 +4,7 @@ delivery_mode: autonomous
 milestone: "M4: Jaiship-native delivery"
 phases:
   clarify_scope: { started: null, completed: 2026-11-18T18:54:05.715Z }
-  specification: { started: null, completed: null }
+  specification: { started: null, completed: 2026-11-18T19:12:06.745Z }
   test_planning: { started: null, completed: null }
   delivery_planning: { started: null, completed: null }
   dor_check: { started: null, completed: null }
@@ -64,6 +64,17 @@ decisions:
       test that fails on the pre-fix behavior and is named after the defect. A
       typed sync-required result is an acceptable outcome for a DIRTY/BEHIND
       request; a forced merge is not."
+    date: "2026-11-18"
+  - text: "Decision records authored by @decision-advisor and bound by this change:
+      ADR-0012 (provider-side landing is the lifecycle merge path), TDR-0040
+      (phase truth = registry fold, mirror derived, additive
+      lint.phases.divergent detection, no repair), ODR-0005 (closeout milestone
+      sync as step 12 of 13 over one new closed close-milestone operation, one
+      adapter-local bounded read, exit-review-gated, withheld otherwise). Queue
+      integrity is recorded as R0 — repair plus defect-named regressions on the
+      delivered surface, no decision record. All three records are Proposed (R2;
+      AI must not accept them) and untracked; the delivery plan must land them
+      and their 00-index rows on the branch."
     date: "2026-11-18"
 open_questions: []
 blockers: []
@@ -129,4 +140,32 @@ notes:
       in this change; gate commands keep the TMPDIR=$PWD/tmp/tmpdir convention
       the ticket requires."
     type: info
+    date: "2026-11-18"
+  - text: "Clarify-scope risks carried into the spec as binding: (1) 'a synced
+      milestone' must mean verified attachment plus a recorded exit-review
+      verdict, not 'GH-349 closes M4' — M4 still has open attached tickets, so
+      GH-349's own closeout is expected to withhold the closure; (2) the
+      merged-diff sweep degrades to skipped-gap/merged-diff-unavailable after a
+      provider-side landing until the operator fetches, because the squash
+      object is not in the local checkout; (3) merge refuses on GitLab, so the
+      F4 evidence window is GitHub-only; (4) merge.rebase-conflict stays
+      machine-declared but becomes unreachable from the command; (5) the
+      additive-surface inventory (one optional DeliveryRequest.title, two merge
+      rows, one lint row plus the LintRegistryRead fold field, 12 to 13 closeout
+      steps, 8 to 9 residue kinds, 9 to 10 adapter operations) must move the
+      conformance registry, parity matrix, coverage gates, mock routes and
+      expected projections in the same change."
+    type: risk
+    date: "2026-11-18"
+  - text: "Decision-advisor challenge worth carrying: the PM position framed merge
+      as a choice between two equivalent mechanisms. The evidence says they are
+      not equivalent — the local squash transaction performs
+      checkout/merge/commit only, never publishes, and its requestState merged
+      value is a string literal, so the delivered command's success report
+      described a request the provider never merged. The direction survives; the
+      premise was wrong. Likewise, queued/pending checks are already not-green
+      in the delivered gate evaluation, so the required-check repair is the
+      probe's failed-only detection plus provider-refusal classification, not a
+      new evaluator."
+    type: decision
     date: "2026-11-18"
