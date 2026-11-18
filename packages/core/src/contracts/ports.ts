@@ -189,6 +189,14 @@ export type DeliveryRequest = {
   readonly commitCount?: number;
   /** The provider-asserted changed-file count; absent/non-finite/negative means unknown. */
   readonly changedFileCount?: number;
+  /**
+   * The provider-asserted request title, copied verbatim (DM-1).
+   *
+   * One additive optional field: absent means unknown and is never derived from
+   * a ref, an identity, or any other signal. It participates only in the
+   * crafted landing subject.
+   */
+  readonly title?: string;
 };
 
 /** A pipeline job state (DM-7). */

@@ -51,9 +51,13 @@ describe("TC-CEREMONY-057 delivered surfaces are unchanged", () => {
     expect(log.metrics.filter((metric) => metric.id === "MET-CEREMONY-SHARE")).toHaveLength(1);
   });
 
+  // GH-349 — TWO-PHASE FILE (spec v1.5 N1b, TC-SYNC-002): this case carries the
+  // seven-site error-table total in the identity commit; the `CLOSEOUT_STEP_IDS`
+  // step-count pin below moves with the closeout step (12 -> 13) in that
+  // commit. Neither half may be left stale.
   test("the error table grew by exactly the two ceremony rows", () => {
     expect(ERROR_TABLE.filter((entry) => entry.domainKind === "ceremony")).toHaveLength(2);
-    expect(ERROR_TABLE).toHaveLength(149);
+    expect(ERROR_TABLE).toHaveLength(152);
   });
 
   test("the brief command and its render contract are untouched by ceremony", () => {

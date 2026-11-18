@@ -723,6 +723,8 @@ describe("TC-FLOOR-007 the change respects the declared non-decisions", () => {
       "mergeableState",
       "commitCount",
       "changedFileCount",
+      // GH-349's one additive optional field.
+      "title",
     ]);
     const workItemStart = ports.indexOf("export type WorkItem = {");
     const workItemBlock = ports.slice(workItemStart, ports.indexOf("};", workItemStart));

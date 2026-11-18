@@ -175,6 +175,10 @@ const RESERVED_TWO_SEGMENT_CODES = new Set([
   "merge.state-unverified",
   "merge.landing-unverified",
   "merge.transaction-aborted",
+  // GH-349 adds the two sync/mergeability rows; they are kind-first
+  // two-segment codes, so they join the exact allowlist with no wildcard.
+  "merge.sync-required",
+  "merge.mergeability-unknown",
   // GH-236 pins the spend read-side identity exactly; it is a two-segment code.
   "spend.telemetry-absent",
   // GH-237 pins the four two-segment queue identities exactly.

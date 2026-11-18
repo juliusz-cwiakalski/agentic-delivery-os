@@ -381,3 +381,12 @@ notes:
       none changes a criterion."
     type: decision
     date: "2026-11-18"
+  - text: "Plan phase 1 records its part of the ONE two-phase file obligation
+      (plan obligation 1.2b; spec v1.5 N1b; test plan TC-SYNC-002 and M110):
+      `tests/behaviour/ceremony-nonregression.test.ts` carries the seven-site
+      error-table total in this phase's identity commit (149 -> 152) and its
+      `CLOSEOUT_STEP_IDS` step count in the closeout-step commit (12 -> 13, plan
+      phase 5). Moving the file in only one of the two phases is an escalation
+      trigger, and this phase must not touch the step count."
+    type: info
+    date: "2026-11-18"
